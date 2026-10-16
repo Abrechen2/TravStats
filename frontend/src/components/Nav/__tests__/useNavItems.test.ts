@@ -190,7 +190,8 @@ describe("useNavItems — Mehr › Werkzeuge", () => {
     authState.user = { isAdmin: true };
     useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
     const tools = section(run().more, "tools");
-    expect(tools.map((c) => c.path)).toEqual(["/parser"]);
+    // The encrypted share (rework 2026-10-16) joins it behind its own beta key.
+    expect(tools.map((c) => c.path)).toEqual(["/parser", "/encrypted-share"]);
     expect(Object.keys(tools[0])).not.toContain("betaBadge");
   });
 
@@ -200,9 +201,15 @@ describe("useNavItems — Mehr › Werkzeuge", () => {
     expect(section(run().more, "tools").map((c) => c.path)).toEqual(["/parser"]);
   });
 
-  it("leaves Werkzeuge empty for a normal user", () => {
+  it("offers a normal user only the encrypted share in Werkzeuge while the switch is on", () => {
     authState.user = { isAdmin: false };
     useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
+    expect(section(run().more, "tools").map((c) => c.path)).toEqual(["/encrypted-share"]);
+  });
+
+  it("leaves Werkzeuge empty for a normal user with the switch OFF", () => {
+    authState.user = { isAdmin: false };
+    useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: false });
     expect(section(run().more, "tools")).toEqual([]);
   });
 
@@ -221,5 +228,38 @@ describe("isPathActive", () => {
     expect(isPathActive("/places", "/places/lists")).toBe(true);
     expect(isPathActive("/trips", "/trips")).toBe(true);
     expect(isPathActive("/stats", "/statsx")).toBe(false);
+  });
+});
+
+describe("comparison and encrypted share (rework 2026-10-16)", () => {
+  beforeEach(() => {
+    authState.user = { isAdmin: false };
+    useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
+  });
+
+  it("gives the comparison its own icon, apart from the achievements trophy", () => {
+    const collections = section(run().more, "collections");
+    expect(collections.find((l) => l.id === "comparison")).toMatchObject({
+      path: "/compare",
+      icon: "users",
+    });
+    expect(collections.find((l) => l.id === "achievements")?.icon).toBe("trophy");
+    const ids = collections.map((l) => l.id);
+    expect(ids.indexOf("comparison")).toBe(ids.indexOf("wrapped") + 1);
+  });
+
+  it("offers the encrypted share as a tool behind its own key", () => {
+    expect(section(run().more, "tools").find((l) => l.id === "encrypted-share")).toMatchObject({
+      path: "/encrypted-share",
+      icon: "key-round",
+      label: "encryptedShare:nav",
+    });
+  });
+
+  it("hides both while the beta switch is off", () => {
+    useSettingsStore.setState({ betaFeaturesEnabled: false });
+    const all = run().more.flatMap((s) => s.items.map((l) => l.id));
+    expect(all).not.toContain("comparison");
+    expect(all).not.toContain("encrypted-share");
   });
 });

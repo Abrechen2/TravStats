@@ -4,12 +4,7 @@ import { AppShell, Button, PageHeader } from "../ui";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useAuthStore } from "../../store/authStore";
-import {
-  encryptedShareGet,
-  COMPARISON_METRICS,
-  type Link,
-  type Circle,
-} from "../../lib/api/encryptedShare";
+import { encryptedShareGet, type Link, type Circle } from "../../lib/api/encryptedShare";
 import {
   audienceDevices,
   publish,
@@ -26,15 +21,14 @@ import FriendManager from "./FriendManager";
 import SealedGroups from "./SealedGroups";
 import GrantEditor, { initialScope } from "./GrantEditor";
 import TravelComparison, { type TravelPerson } from "./TravelComparison";
-import { rankRows, type Metric, type ComparisonRow } from "./ranking";
 export default function SealedWorkspace() {
-  const { t, i18n } = useTranslation("encryptedShare"),
+  const { t } = useTranslation("encryptedShare"),
     { enabled } = useEnabledDomains();
   const user = useAuthStore((s) => s.user)!;
   const [device, setDevice] = useState<DeviceKeys | null>(null),
     [links, setLinks] = useState<Link[]>([]),
     [trips, setTrips] = useState<Array<{ id: string; name: string }>>([]);
-  const [tab, setTab] = useState("leaderboard"),
+  const [tab, setTab] = useState("data"),
     [target, setTarget] = useState<Target | null>(null),
     [audience, setAudience] = useState<Audience | null>(null),
     [circle, setCircle] = useState<Circle | null>(null);
@@ -43,13 +37,10 @@ export default function SealedWorkspace() {
     [error, setError] = useState(false),
     [notice, setNotice] = useState("");
   const [people, setPeople] = useState<TravelPerson[]>([]),
-    [rows, setRows] = useState<ComparisonRow[]>([]),
-    [metric, setMetric] = useState<Metric>("distance"),
     [year, setYear] = useState<number | null>(null);
   const receiveDevice = useCallback((d: DeviceKeys | null) => {
     setDevice(d);
     setPeople([]);
-    setRows([]);
   }, []);
   const load = useCallback(async () => {
     const [l, tr] = await Promise.all([
@@ -79,7 +70,6 @@ export default function SealedWorkspace() {
     setAudience(null);
     setCircle(selectedCircle);
     setPeople([]);
-    setRows([]);
     setShareLink(null);
     setTab("sharing");
     const a = await audienceDevices(next);
@@ -107,7 +97,6 @@ export default function SealedWorkspace() {
       return;
     }
     setPeople([]);
-    setRows([]);
     const mine = await sourceData({
       ...initialScope(enabled),
       statistics: true,
@@ -120,9 +109,8 @@ export default function SealedWorkspace() {
       year,
     });
     const nextPeople: TravelPerson[] = [
-        { id: "self", label: t("you"), data: mine, opened: ownDataView(mine) },
-      ],
-      nextRows: ComparisonRow[] = [{ id: "self", label: t("you"), snapshot: mine.snapshot }];
+      { id: "self", label: t("you"), data: mine, opened: ownDataView(mine) },
+    ];
     if (groupOnly && target?.circleId && audience) {
       const fresh = await audienceDevices(target);
       if (fresh.audience !== audience.audience) {
@@ -141,9 +129,8 @@ export default function SealedWorkspace() {
           );
           if (!opened) throw Error("not published");
           nextPeople.push({ id: member.source, label, data: opened.data, opened });
-          nextRows.push({ id: member.source, label, snapshot: opened.data.snapshot });
         } catch {
-          nextRows.push({ id: member.source, label, snapshot: null });
+          /* An unpublished or unreadable source simply has no data column. */
         }
       }
     } else {
@@ -159,21 +146,13 @@ export default function SealedWorkspace() {
           );
           if (!opened) throw Error("not published");
           nextPeople.push({ id: link.id, label: link.label, data: opened.data, opened });
-          nextRows.push({ id: link.id, label: link.label, snapshot: opened.data.snapshot });
         } catch {
-          nextRows.push({ id: link.id, label: link.label, snapshot: null });
+          /* An unpublished or unreadable source simply has no data column. */
         }
       }
     }
     setPeople(nextPeople);
-    setRows(nextRows);
   };
-  const ranked = rankRows(
-    rows,
-    metric,
-    year,
-    people.find((p) => p.id === "self")?.data.snapshot.currency
-  );
   return (
     <AppShell width="table" className="encrypted-share-surface">
       <PageHeader
@@ -182,7 +161,7 @@ export default function SealedWorkspace() {
         actions={<Button onClick={() => setTab("friends")}>{t("connect")}</Button>}
       />
       <nav className="flex flex-wrap gap-2 mb-6" aria-label={t("views")}>
-        {["leaderboard", "friends", "circles", "sharingOverview", "devices"].map((key) => (
+        {["data", "friends", "circles", "sharingOverview", "devices"].map((key) => (
           <Button
             key={key}
             disabled={busy}
@@ -190,15 +169,16 @@ export default function SealedWorkspace() {
             onClick={() => {
               setTab(key);
               setPeople([]);
-              setRows([]);
             }}
           >
             {t(
-              key === "devices"
-                ? "e2e.devices"
-                : key === "sharingOverview"
-                  ? "e2e.sharingOverview"
-                  : key
+              key === "data"
+                ? "e2e.data"
+                : key === "devices"
+                  ? "e2e.devices"
+                  : key === "sharingOverview"
+                    ? "e2e.sharingOverview"
+                    : key
             )}
           </Button>
         ))}
@@ -290,19 +270,9 @@ export default function SealedWorkspace() {
           )}
         </section>
       )}
-      {(tab === "leaderboard" || tab === "sharing") && (
+      {(tab === "data" || tab === "sharing") && (
         <section className="space-y-5 mt-6">
           <div className="flex flex-wrap gap-4 items-end">
-            <label>
-              {t("rankBy")}
-              <select value={metric} onChange={(e) => setMetric(e.target.value as Metric)}>
-                {COMPARISON_METRICS.map((m) => (
-                  <option key={m} value={m}>
-                    {t(`metric.${m}`)}
-                  </option>
-                ))}
-              </select>
-            </label>
             <label>
               {t("year")}
               <input
@@ -314,7 +284,6 @@ export default function SealedWorkspace() {
                 onChange={(e) => {
                   setYear(e.target.value ? Number(e.target.value) : null);
                   setPeople([]);
-                  setRows([]);
                 }}
               />
             </label>
@@ -326,37 +295,6 @@ export default function SealedWorkspace() {
             </Button>
           </div>
           <p>{t("e2e.freshness")}</p>
-          <div className="overflow-x-auto rounded-2xl border border-[var(--ts-border)]">
-            <table className="w-full min-w-[620px] text-left">
-              <thead>
-                <tr>
-                  <th className="p-4">{t("rank")}</th>
-                  <th className="p-4">{t("person")}</th>
-                  <th className="p-4">{t(`metric.${metric}`)}</th>
-                  <th className="p-4">{t("updated")}</th>
-                  <th className="p-4">{t("year")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ranked.map((r) => (
-                  <tr key={r.id} className="border-t border-[var(--ts-border)]">
-                    <td className="p-4">{r.rank ?? "—"}</td>
-                    <th className="p-4">{r.label}</th>
-                    <td className="p-4">
-                      {r.snapshot?.metrics[metric] == null
-                        ? "—"
-                        : new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 2 }).format(
-                            r.snapshot.metrics[metric]!
-                          )}
-                    </td>
-                    <td className="p-4">{r.snapshot?.asOf ?? t("e2e.unavailable")}</td>
-                    <td className="p-4">{r.snapshot ? (r.snapshot.year ?? t("lifetime")) : "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p>{t("rankingHelp")}</p>
           {people.length > 0 && <TravelComparison people={people} />}
         </section>
       )}

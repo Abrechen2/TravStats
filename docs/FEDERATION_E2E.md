@@ -22,10 +22,17 @@ and exported copies are outside this protection. Non-extractable keys prevent or
 export, not malicious scripts from invoking them. Metadata remains visible: friendships,
 rosters, public keys, sharing scopes, timing, sizes, recipients and access events.
 
-There is no plaintext fallback. `/comparison/links/:id/read`, `/comparison/circles/read` and
+There is no plaintext fallback. `/encrypted-share/links/:id/read`, `/encrypted-share/circles/read` and
 the peer protocol's old travel-read operations refuse requests. Own-data preview remains
 available only in the authenticated owner's session. Existing v1 grants need a device-encrypted
 publication before any travel data is readable by a friend.
+
+**Amendment 2026-10-16 (owner decision).** The leaderboard is no longer built on this protocol.
+Its aggregate totals travel WITHOUT end-to-end encryption over the signed server-to-server peer
+link; this lifts "no plaintext fallback" for leaderboard aggregates only (snapshot schema
+`travstats-leaderboard` v1, `backend/src/schemas/comparison.ts` — totals, no records). Full
+records never travel unencrypted. This protocol now lives at `/encrypted-share` behind the beta
+key `encryptedShare`.
 
 ## Keys and verification
 

@@ -55,9 +55,9 @@ import { PlacesRouteGuard } from "./components/places/PlacesRouteGuard";
 import NavigationBar from "./components/NavigationBar";
 import { AdminOnlyNotice } from "./components/AdminOnlyNotice";
 import { LOYALTY_SETTINGS_PATH } from "./pages/Settings/settingsModel";
+import { planRoutes } from "./pages/planRoutes";
 const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage"));
-const TravPlanPage = lazy(() => import("./pages/TravPlanRoute"));
 const TripsPage = lazy(() => import("./pages/TripsPage"));
 const TripDetailPage = lazy(() => import("./pages/TripDetailPage"));
 const TripRouteEditorPage = lazy(() => import("./pages/TripRouteEditorPage"));
@@ -234,16 +234,13 @@ function AppContent() {
         <Suspense fallback={<LoadingFallback />}>
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
-              <Route path="/compare" element={<ComparisonPage />} />
+              {/* One lazy page for both: it picks the leaderboard or the encrypted share. */}
+              {["/compare", "/encrypted-share"].map((path) => (
+                <Route key={path} path={path} element={<ComparisonPage />} />
+              ))}
               {/* Public routes */}
               <Route path="/setup" element={<SetupPage />} />
-              {["/plan", "/plan/admin", "/plan/:tripId/:section?"].map((path) => (
-                <Route
-                  key={path}
-                  path={path}
-                  element={isAuthenticated ? <TravPlanPage /> : <Navigate to="/login" />}
-                />
-              ))}
+              {planRoutes(isAuthenticated)}
               <Route
                 path="/login"
                 element={isAuthenticated ? <Navigate to="/" /> : <LoginPage />}

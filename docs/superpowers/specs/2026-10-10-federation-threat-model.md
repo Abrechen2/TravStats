@@ -15,6 +15,21 @@ verify device keys and decrypt, and shared groups can explicitly include all tra
 Legacy plaintext read endpoints are disabled. The historical sections below preserve the
 product discussion; consult the linked protocol for actual behaviour and limits.
 
+## Implementation update: comparison rework (2026-10-16)
+
+The owner decided on 2026-10-16, verbatim:
+
+- The leaderboard is rebuilt as aggregates only. Across servers, the aggregate numbers travel
+  WITHOUT end-to-end encryption over the existing signed (Ed25519) server-to-server peer link;
+  this explicitly lifts the rule "no unencrypted fallback" for leaderboard aggregates only.
+  Full records never travel unencrypted.
+- The full-record E2E transfer is separated from the comparison page, kept behind its OWN beta
+  key (e.g. `encryptedShare`), not deleted, until the owner decides to keep or cut it.
+
+The rebuilt leaderboard (`/compare`) and the encrypted share (`/encrypted-share`, beta key
+`encryptedShare`) are specified in
+[the comparison rework design](2026-10-16-comparison-rework-design.md).
+
 ## 1. Product direction and decision status
 
 Owner direction on 2026-10-13: people who explicitly want to compare should be able to
