@@ -1,7 +1,21 @@
-import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
-import type { PlanView, PlanOperation } from "../../lib/api/travplan";
+import { Button, Card } from "../../components/ui";
+import type { PlanView, PlanOperation, PlanItem, PlanState } from "../../lib/api/travplan";
 import { ActualRecordPicker } from "./ActualRecordPicker";
+import { PlanActions, PlanCardHead, PlanGrow, PlanLink, PlanRow, PlanStack } from "./planLayout";
+
+const CONFIRMABLE_KINDS = ["activity", "free", "transfer", "flight", "hotel"];
+
+/** Only what the plan itself made can be confirmed here; a record taken over from the log already counts. */
+function confirmable(state: PlanState, i: PlanItem): boolean {
+  return (
+    (CONFIRMABLE_KINDS.includes(i.kind) &&
+      !i.source?.kind.startsWith("existing:") &&
+      state.bookings.find((b) => b.id === i.bookingId)?.source !== "existing") ||
+    i.execution === "confirmed"
+  );
+}
+
 export function PlanHandover({
   plan,
   busy,
@@ -14,41 +28,36 @@ export function PlanHandover({
   const { t } = useTranslation("travplan"),
     { state, tripId } = plan;
   return (
-    <>
-      <div className="tp-card">
-        <h2>{t("readyIntro")}</h2>
-        <p>{t("noAutoCount")}</p>
-        <div className="tp-actions">
+    <PlanStack>
+      <Card>
+        <PlanCardHead title={t("readyIntro")} />
+        <p className="t-body">{t("noAutoCount")}</p>
+        <PlanActions>
           {state.status === "planning" ? (
-            <button
-              className="tp-primary"
+            <Button
+              variant="primary"
               disabled={busy}
               onClick={() => void mutate({ type: "handover" })}
             >
               {t("handover")}
-            </button>
+            </Button>
           ) : (
-            <p>{t("handoverDone")}</p>
+            <p className="t-body">{t("handoverDone")}</p>
           )}
-          <Link className="tp-button" to={"/trips/" + tripId}>
-            {t("stats")}
-          </Link>
-        </div>
-      </div>
-      <div className="tp-card">
+          <PlanLink to={"/trips/" + tripId}>{t("stats")}</PlanLink>
+        </PlanActions>
+      </Card>
+      <Card>
         {state.items.map((i) => (
-          <div key={i.id} className="tp-row">
-            <div className="tp-grow">
-              <h3>{i.title}</h3>
-              <p>
+          <PlanRow key={i.id}>
+            <PlanGrow>
+              <h3 className="t-card-title">{i.title}</h3>
+              <p className="t-body">
                 {i.day} · {t("options." + i.kind)}
               </p>
-            </div>
-            {((["activity", "free", "transfer", "flight", "hotel"].includes(i.kind) &&
-              !i.source?.kind.startsWith("existing:") &&
-              state.bookings.find((b) => b.id === i.bookingId)?.source !== "existing") ||
-              i.execution === "confirmed") && (
-              <button
+            </PlanGrow>
+            {confirmable(state, i) && (
+              <Button
                 disabled={busy}
                 onClick={() =>
                   void mutate({
@@ -59,7 +68,7 @@ export function PlanHandover({
                 }
               >
                 {t(i.execution === "confirmed" ? "unconfirmVisit" : "confirmVisit")}
-              </button>
+              </Button>
             )}
             <ActualRecordPicker
               tripId={tripId}
@@ -67,9 +76,9 @@ export function PlanHandover({
               busy={busy}
               onLink={(sourceId) => void mutate({ type: "link_actual", id: i.id, sourceId })}
             />
-          </div>
+          </PlanRow>
         ))}
-      </div>
-    </>
+      </Card>
+    </PlanStack>
   );
 }

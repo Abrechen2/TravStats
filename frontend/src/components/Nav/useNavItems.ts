@@ -4,6 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useAuthStore } from "../../store/authStore";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
+import { useTravPlanVisible } from "../../hooks/useTravPlanVisible";
 import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
 import type { IconName } from "../ui/Icon";
 
@@ -71,7 +72,7 @@ function collapseSingleChild(group: NavGroup): NavNode {
  * Import-Logbuch page and Mitreisende page do not exist yet, so they are not
  * here — an entry that leads nowhere is worse than none.
  */
-export function useNavItems(pathname = "/"): {
+export function useNavItems(): {
   primary: NavNode[];
   more: NavSection[];
 } {
@@ -92,31 +93,9 @@ export function useNavItems(pathname = "/"): {
   const isAdmin = user?.isAdmin ?? false;
   const { isFeatureVisible } = useBetaFeatures();
   const comparisonVisible = isFeatureVisible("comparison");
+  const travPlanVisible = useTravPlanVisible();
 
   return useMemo(() => {
-    if (pathname.startsWith("/plan")) {
-      const match = /^\/plan\/([\da-f-]{36})/.exec(pathname);
-      const prefix = match ? `/plan/${match[1]}` : "/plan";
-      const leaf = (section: string): NavLeaf => ({
-        kind: "leaf",
-        id: `plan-${section}`,
-        path: match ? `${prefix}/${section}` : prefix,
-        label: t(`travplan:sections.${section}`),
-      });
-      return {
-        primary: (match ? ["overview", "workspace", "import", "packing"] : ["overview"]).map(leaf),
-        more: match
-          ? [
-              {
-                id: "planning",
-                label: t("travplan:title"),
-                items: ["transfer", "budget", "ai", "handover"].map(leaf),
-              },
-            ]
-          : [],
-      };
-    }
-
     // `poi` asks through `usePlacesVisible`, the one home of the places rule;
     // every other domain's beta switch is already applied by `isEnabled`.
     const domainChildren: NavLeaf[] = AVAILABLE_DOMAINS.filter((key) =>
@@ -238,11 +217,29 @@ export function useNavItems(pathname = "/"): {
         : []),
     ];
 
+    // TravPlan used to swap this whole model for its own eight sections on
+    // `/plan*`, so a planner lost the way back to the rest of the app. It is
+    // one destination here instead; its sections live on its own page.
+    const planning: NavLeaf[] = travPlanVisible
+      ? [
+          {
+            kind: "leaf",
+            id: "travplan",
+            path: "/plan",
+            label: t("travplan:title"),
+            icon: "calendar",
+          },
+        ]
+      : [];
+
     const more: NavSection[] = [
       { id: "collections", label: t("dashboard:nav.collections"), items: collections },
       { id: "tools", label: t("dashboard:nav.tools"), items: tools },
+      ...(planning.length > 0
+        ? [{ id: "planning", label: t("travplan:title"), items: planning }]
+        : []),
     ];
 
     return { primary, more };
-  }, [t, pathname, isEnabled, placesVisible, isAdmin, comparisonVisible]);
+  }, [t, isEnabled, placesVisible, isAdmin, comparisonVisible, travPlanVisible]);
 }

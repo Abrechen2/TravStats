@@ -1,5 +1,11 @@
+import { useId } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { Card, Field, Select } from "../../components/ui";
+import { PlanCardHead } from "./planLayout";
 import type { PlanState, PlanOperation } from "../../lib/api/travplan";
+
+const DAY_MS = 864e5;
+const WASHING_CYCLE_DAYS = 7;
 export function PackingProfile({
   state,
   mutate,
@@ -9,20 +15,26 @@ export function PackingProfile({
   mutate: (op: PlanOperation) => Promise<boolean>;
   busy: boolean;
 }) {
-  const { t } = useTranslation("travplan");
+  const { t } = useTranslation("travplan"),
+    uid = useId();
   const days =
     state.startDay && state.endDay
-      ? Math.max(1, Math.round((Date.parse(state.endDay) - Date.parse(state.startDay)) / 864e5) + 1)
+      ? Math.max(
+          1,
+          Math.round((Date.parse(state.endDay) - Date.parse(state.startDay)) / DAY_MS) + 1
+        )
       : null;
-  const clothes = days ? Math.min(days, state.packingProfile.washing === "yes" ? 7 : days) : null;
+  const clothes = days
+    ? Math.min(days, state.packingProfile.washing === "yes" ? WASHING_CYCLE_DAYS : days)
+    : null;
   return (
-    <div className="tp-card">
-      <h2>{t("packingProfile")}</h2>
-      <div className="tp-form">
+    <Card>
+      <PlanCardHead title={t("packingProfile")} />
+      <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: "var(--ts-space-lg)" }}>
         {(["washing", "luggage"] as const).map((key) => (
-          <label key={key}>
-            {t("fields." + key)}
-            <select
+          <Field key={key} label={t("fields." + key)} htmlFor={uid + key}>
+            <Select
+              id={uid + key}
               disabled={busy}
               value={state.packingProfile[key]}
               onChange={(e) =>
@@ -39,14 +51,14 @@ export function PackingProfile({
                   </option>
                 )
               )}
-            </select>
-          </label>
+            </Select>
+          </Field>
         ))}
       </div>
-      <p className="tp-muted">
+      <p className="t-caption" style={{ marginTop: "var(--ts-space-md)" }}>
         {clothes ? t("clothingGuide", { days: clothes }) : t("clothingUnknown")}
       </p>
-      <p className="tp-muted">{t("packingGuide")}</p>
-    </div>
+      <p className="t-caption">{t("packingGuide")}</p>
+    </Card>
   );
 }
