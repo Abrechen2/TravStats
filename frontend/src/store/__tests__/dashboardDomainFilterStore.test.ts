@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useDashboardDomainFilterStore } from "../dashboardDomainFilterStore";
-import { HIDDEN_DOMAINS_STORAGE_KEY } from "../../shared/dashboardDomainFilter";
+import {
+  FILTER_DOMAIN_ORDER,
+  HIDDEN_DOMAINS_STORAGE_KEY,
+} from "../../shared/dashboardDomainFilter";
 
 describe("dashboardDomainFilterStore", () => {
   beforeEach(() => {
@@ -46,7 +49,8 @@ describe("dashboardDomainFilterStore", () => {
 
   it("showNone hides every domain, showAll clears it", () => {
     useDashboardDomainFilterStore.getState().showNone();
-    expect(useDashboardDomainFilterStore.getState().hidden.size).toBe(9);
+    // Every row of the filter, however many domains it has grown to.
+    expect(useDashboardDomainFilterStore.getState().hidden.size).toBe(FILTER_DOMAIN_ORDER.length);
     useDashboardDomainFilterStore.getState().showAll();
     expect(useDashboardDomainFilterStore.getState().hidden.size).toBe(0);
   });
@@ -60,7 +64,8 @@ describe("dashboardDomainFilterStore", () => {
     expect(hidden.has("rail")).toBe(true);
     expect(hidden.has("rental")).toBe(true);
     expect(hidden.has("bus")).toBe(true);
-    expect(hidden.size).toBe(8);
+    expect(hidden.has("ferry")).toBe(true);
+    expect(hidden.size).toBe(FILTER_DOMAIN_ORDER.length - 1);
   });
 
   it("a shared link's selection does not touch storage until adopted", () => {

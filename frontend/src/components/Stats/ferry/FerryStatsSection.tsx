@@ -11,6 +11,7 @@ import { adaptFerry } from "../../../lib/stats/domain-stats/ferryStatsAdapter";
 import { ferryYear } from "../../../shared/ferryCounting";
 import type { PeriodScope } from "../useStatsPeriod";
 import StatCard from "../StatCard";
+import CountingHelp from "../counting/CountingHelp";
 
 /**
  * The ferry numbers on the statistics page. Ferry was the one transport domain
@@ -92,44 +93,55 @@ export default function FerryStatsSection({
   return (
     <section data-testid="ferry-stats">
       {visibility.isVisible("kpis") && (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            accent={accent}
-            valueSize="md"
-            title={t("ferry:stats.crossings")}
-            value={num(stats.totalEvents ?? 0)}
-            description={t("ferry:stats.crossingsDesc")}
-          />
-          <StatCard
-            accent={accent}
-            valueSize="md"
-            title={t("ferry:stats.km")}
-            value={`${num(stats.totalDistanceKm ?? 0)} km`}
-            description={
-              <span data-testid="ferry-km-split">
-                {[
-                  measuredKm > 0 && t("ferry:stats.kmMeasured", { km: num(measuredKm) }),
-                  straightKm > 0 && t("ferry:stats.kmStraight", { km: num(straightKm) }),
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </span>
-            }
-          />
-          <StatCard
-            accent={accent}
-            valueSize="md"
-            title={t("ferry:stats.hours")}
-            // Abstention: no crossing with both times is "unknown", not 0 h.
-            value={stats.totalDurationHours ? `${num(stats.totalDurationHours, 1)} h` : "–"}
-            description={t("ferry:stats.hoursDesc")}
-          />
-          <StatCard
-            accent={accent}
-            valueSize="md"
-            title={t("ferry:stats.countries")}
-            value={num(stats.countries?.length ?? 0)}
-            description={(stats.countries ?? []).map((c) => regionNames?.of(c) ?? c).join(", ")}
+        <div>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              accent={accent}
+              valueSize="md"
+              title={t("ferry:stats.crossings")}
+              value={num(stats.totalEvents ?? 0)}
+              description={t("ferry:stats.crossingsDesc")}
+            />
+            <StatCard
+              accent={accent}
+              valueSize="md"
+              title={t("ferry:stats.km")}
+              value={`${num(stats.totalDistanceKm ?? 0)} km`}
+              description={
+                <span data-testid="ferry-km-split">
+                  {[
+                    measuredKm > 0 && t("ferry:stats.kmMeasured", { km: num(measuredKm) }),
+                    straightKm > 0 && t("ferry:stats.kmStraight", { km: num(straightKm) }),
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              }
+            />
+            <StatCard
+              accent={accent}
+              valueSize="md"
+              title={t("ferry:stats.hours")}
+              // Abstention: no crossing with both times is "unknown", not 0 h.
+              value={stats.totalDurationHours ? `${num(stats.totalDurationHours, 1)} h` : "–"}
+              description={t("ferry:stats.hoursDesc")}
+            />
+            <StatCard
+              accent={accent}
+              valueSize="md"
+              title={t("ferry:stats.countries")}
+              value={num(stats.countries?.length ?? 0)}
+              description={(stats.countries ?? []).map((c) => regionNames?.of(c) ?? c).join(", ")}
+            />
+          </div>
+          <CountingHelp
+            testId="ferry-kpis-help"
+            entries={[
+              { term: t("ferry:stats.crossings"), helpKey: "ferry:stats.help.crossings" },
+              { term: t("ferry:stats.km"), helpKey: "ferry:stats.help.km" },
+              { term: t("ferry:stats.hours"), helpKey: "ferry:stats.help.hours" },
+              { term: t("ferry:stats.countries"), helpKey: "ferry:stats.help.countries" },
+            ]}
           />
         </div>
       )}

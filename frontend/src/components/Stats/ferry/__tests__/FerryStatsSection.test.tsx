@@ -48,14 +48,16 @@ describe("FerryStatsSection", () => {
   it("counts the completed crossings of the picked year only", async () => {
     draw(2025);
     expect(await screen.findByTestId("ferry-stats")).toBeTruthy();
-    expect(screen.getByText("ferry:stats.crossings").parentElement?.textContent).toContain("1");
+    expect(screen.getAllByText("ferry:stats.crossings")[0].parentElement?.textContent).toContain(
+      "1"
+    );
     expect(screen.getByTestId("ferry-km-split").textContent).toContain("ferry:stats.kmStraight");
   });
 
   it("abstains on hours when no crossing of the year carries both times", async () => {
     draw(2024);
     await screen.findByTestId("ferry-stats");
-    expect(screen.getByText("ferry:stats.hours").parentElement?.textContent).toContain("–");
+    expect(screen.getAllByText("ferry:stats.hours")[0].parentElement?.textContent).toContain("–");
   });
 
   it("says a year without crossings is empty", async () => {
