@@ -4,6 +4,7 @@
   "you": "Du",
   "addPerson": "Person hinzufügen",
   "loadFailed": "Der Vergleich konnte nicht geladen werden.",
+  "peopleLoadFailed": "Deine Personen und Anfragen konnten nicht geladen werden.",
   "period": {
     "label": "Zeitraum",
     "all": "Gesamt"

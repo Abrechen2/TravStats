@@ -128,6 +128,32 @@ describe("LeaderboardPage", () => {
     quiet.mockRestore();
   });
 
+  it("keeps saying the people list failed while the leaderboard loads, and retries it", async () => {
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.mocked(comparisonApi.people).mockRejectedValueOnce(new Error("down"));
+    vi.mocked(comparisonApi.leaderboard).mockResolvedValue(two);
+    render(<LeaderboardPage />);
+    expect(await screen.findByRole("button", { name: "common:buttons.retry" })).toBeInTheDocument();
+    // A later leaderboard load (another period) must not wipe the people list's failure.
+    const year = screen.getByLabelText("period.label") as HTMLSelectElement;
+    fireEvent.change(year, { target: { value: year.options[1].value } });
+    await waitFor(() =>
+      expect(comparisonApi.leaderboard).toHaveBeenLastCalledWith(
+        Number(year.options[1].value),
+        undefined
+      )
+    );
+    expect(await screen.findByTestId("metric-flightKm")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "common:buttons.retry" })).toBeInTheDocument();
+    expect(screen.getByText("peopleLoadFailed")).toBeInTheDocument();
+    expect(screen.queryByText("loadFailed")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+    await waitFor(() => expect(screen.queryByText("peopleLoadFailed")).toBeNull());
+    expect(await screen.findByRole("button", { name: "people-changed" })).toBeInTheDocument();
+    quiet.mockRestore();
+  });
+
   it("shows one unreachable friend as a row status, not as a page error", async () => {
     vi.mocked(comparisonApi.leaderboard).mockResolvedValue({
       year: null,

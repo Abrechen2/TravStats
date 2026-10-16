@@ -37,7 +37,10 @@ export default function LeaderboardPage(): JSX.Element {
   const query = `${year ?? "all"}|${board}`;
   const [loaded, setLoaded] = useState<{ query: string; data: LeaderboardResponse } | null>(null);
   const [people, setPeople] = useState<PeopleResponse | null>(null);
-  const [failed, setFailed] = useState(false);
+  // One flag per load: each effect clears only its own, so a leaderboard reload (another
+  // period) cannot hide that the people list — requests and groups — did not arrive.
+  const [peopleFailed, setPeopleFailed] = useState(false);
+  const [boardFailed, setBoardFailed] = useState(false);
   const [version, setVersion] = useState(0);
   const addRef = useRef<HTMLDivElement>(null);
 
@@ -45,13 +48,14 @@ export default function LeaderboardPage(): JSX.Element {
   // filter answers 404 — the group list must still refresh, or nothing can clear the filter.
   useEffect(() => {
     let alive = true;
+    setPeopleFailed(false);
     comparisonApi.people().then(
       (nextPeople) => {
         if (alive) setPeople(nextPeople);
       },
       (failure: unknown) => {
         logger.error("comparison: people load failed", failure);
-        if (alive) setFailed(true);
+        if (alive) setPeopleFailed(true);
       }
     );
     return () => {
@@ -61,7 +65,7 @@ export default function LeaderboardPage(): JSX.Element {
 
   useEffect(() => {
     let alive = true;
-    setFailed(false);
+    setBoardFailed(false);
     comparisonApi.leaderboard(year, board || undefined).then(
       (nextData) => {
         if (alive) setLoaded({ query, data: nextData });
@@ -75,7 +79,7 @@ export default function LeaderboardPage(): JSX.Element {
         }
         logger.error("comparison: load failed", failure);
         // A failed load says so; empty tiles would claim "nobody travelled".
-        setFailed(true);
+        setBoardFailed(true);
       }
     );
     return () => {
@@ -143,7 +147,7 @@ export default function LeaderboardPage(): JSX.Element {
           </Field>
         )}
       </div>
-      {failed ? (
+      {boardFailed ? (
         <EmptyState
           kind="degraded"
           title={tr("loadFailed")}
@@ -173,7 +177,15 @@ export default function LeaderboardPage(): JSX.Element {
           <p className="t-caption">{tr("tile.partialHint")}</p>
         </>
       )}
-      {people && <PeopleSection people={people} onChanged={reload} />}
+      {peopleFailed ? (
+        <EmptyState
+          kind="degraded"
+          title={tr("peopleLoadFailed")}
+          action={<Button onClick={reload}>{tr("common:buttons.retry")}</Button>}
+        />
+      ) : (
+        people && <PeopleSection people={people} onChanged={reload} />
+      )}
       <div ref={addRef}>
         <AddPersonCard onChanged={reload} />
       </div>

@@ -4,6 +4,7 @@
   "you": "You",
   "addPerson": "Add person",
   "loadFailed": "The comparison could not be loaded.",
+  "peopleLoadFailed": "Your people and requests could not be loaded.",
   "period": {
     "label": "Period",
     "all": "All time"
