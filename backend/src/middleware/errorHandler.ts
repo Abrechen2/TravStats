@@ -446,6 +446,7 @@ export type ApiErrorCode =
   | "COMPARISON_PEER_KEY_INVALID"
   | "COMPARISON_BOARD_NOT_FOUND"
   | "COMPARISON_BOARD_MEMBER_INVALID"
+  | "COMPARISON_BOARD_LIMIT"
   | "COMPARISON_YEAR_NOT_SHARED"
   /** A rental evidence category on a document not filed with a rental (forgejo#239). */
   | "DOCUMENT_CATEGORY_NOT_RENTAL"

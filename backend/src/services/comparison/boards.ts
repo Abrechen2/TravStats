@@ -6,6 +6,7 @@
  * same consent is accepted again; a pending offer or question never admits anyone.
  */
 import { prisma } from "../../db";
+import type { Prisma } from "../../prisma";
 import type { BoardView } from "../../schemas/comparison";
 import { localKey, remoteKey } from "./consents";
 import { comparisonError } from "./errors";
@@ -13,32 +14,52 @@ import { comparisonError } from "./errors";
 const boardNotFound = (userId: string, boardId: string) =>
   comparisonError("COMPARISON_BOARD_NOT_FOUND", 404, "No such group", { userId, boardId });
 
+/** Per-user cap on groups; saveBoard enforces it so no group is ever persisted out of reach. */
+export const MAX_BOARDS_PER_USER = 50;
+
+type Db = Pick<typeof prisma, "leaderboardBoard" | "leaderboardConsent" | "leaderboardRemote">;
+
+/** Members the owner can see right now: remotes, and locals whose consent is accepted. */
+const visibleMembers = {
+  where: {
+    OR: [
+      { remoteId: { not: null } },
+      { consent: { status: "accepted", owner: { isActive: true } } },
+    ],
+  },
+  include: { consent: { select: { ownerId: true } } },
+} satisfies Prisma.LeaderboardBoard$membersArgs;
+
+type BoardRow = Prisma.LeaderboardBoardGetPayload<{ include: { members: typeof visibleMembers } }>;
+
+const toView = (b: BoardRow): BoardView => ({
+  id: b.id,
+  name: b.name,
+  members: b.members.map((m) =>
+    m.consent ? localKey(m.consent.ownerId) : remoteKey(m.remoteId as string)
+  ),
+});
+
+async function findBoard(db: Db, userId: string, boardId: string): Promise<BoardView> {
+  const board = await db.leaderboardBoard.findFirst({
+    where: { id: boardId, userId },
+    include: { members: visibleMembers },
+  });
+  if (!board) throw boardNotFound(userId, boardId);
+  return toView(board);
+}
+
 export async function listBoards(userId: string): Promise<BoardView[]> {
   const boards = await prisma.leaderboardBoard.findMany({
     where: { userId },
-    include: {
-      members: {
-        where: {
-          OR: [
-            { remoteId: { not: null } },
-            { consent: { status: "accepted", owner: { isActive: true } } },
-          ],
-        },
-        include: { consent: { select: { ownerId: true } } },
-      },
-    },
+    include: { members: visibleMembers },
     orderBy: { createdAt: "asc" },
-    take: 50,
+    take: MAX_BOARDS_PER_USER,
   });
-  return boards.map((b) => ({
-    id: b.id,
-    name: b.name,
-    members: b.members.map((m) =>
-      m.consent ? localKey(m.consent.ownerId) : remoteKey(m.remoteId as string)
-    ),
-  }));
+  return boards.map(toView);
 }
-async function resolveMembers(userId: string, keys: readonly string[]) {
+
+async function resolveMembers(db: Db, userId: string, keys: readonly string[]) {
   const unique = [...new Set(keys)];
   const invalid = () =>
     comparisonError(
@@ -57,7 +78,7 @@ async function resolveMembers(userId: string, keys: readonly string[]) {
     .filter((k) => k.startsWith("remote:"))
     .map((k) => k.slice("remote:".length));
   const [consents, remotes] = await Promise.all([
-    prisma.leaderboardConsent.findMany({
+    db.leaderboardConsent.findMany({
       where: {
         viewerId: userId,
         ownerId: { in: localIds },
@@ -66,7 +87,7 @@ async function resolveMembers(userId: string, keys: readonly string[]) {
       },
       select: { id: true },
     }),
-    prisma.leaderboardRemote.findMany({
+    db.leaderboardRemote.findMany({
       where: { userId, id: { in: remoteIds } },
       select: { id: true },
     }),
@@ -83,28 +104,34 @@ export async function saveBoard(
   input: { name: string; members: string[] },
   boardId?: string
 ): Promise<BoardView> {
-  if (boardId && !(await prisma.leaderboardBoard.findFirst({ where: { id: boardId, userId } })))
-    throw boardNotFound(userId, boardId);
-  const members = await resolveMembers(userId, input.members);
-  let id = boardId;
-  if (id) {
-    await prisma.$transaction([
-      prisma.leaderboardBoardMember.deleteMany({ where: { boardId: id } }),
-      prisma.leaderboardBoard.update({
+  return prisma.$transaction(async (tx) => {
+    // Serialises this user's group writes so the limit check and the create cannot interleave.
+    await tx.$queryRaw`SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtextextended(${`boards|${userId}`}::text, 0))) l`;
+    if (boardId) await findBoard(tx, userId, boardId);
+    else if ((await tx.leaderboardBoard.count({ where: { userId } })) >= MAX_BOARDS_PER_USER)
+      throw comparisonError(
+        "COMPARISON_BOARD_LIMIT",
+        409,
+        `At most ${MAX_BOARDS_PER_USER} groups are allowed`,
+        { userId }
+      );
+    const members = await resolveMembers(tx, userId, input.members);
+    let id = boardId;
+    if (id) {
+      await tx.leaderboardBoardMember.deleteMany({ where: { boardId: id } });
+      await tx.leaderboardBoard.update({
         where: { id },
         data: { name: input.name, members: { create: members } },
-      }),
-    ]);
-  } else {
-    id = (
-      await prisma.leaderboardBoard.create({
-        data: { userId, name: input.name, members: { create: members } },
-      })
-    ).id;
-  }
-  const saved = (await listBoards(userId)).find((b) => b.id === id);
-  if (!saved) throw boardNotFound(userId, id);
-  return saved;
+      });
+    } else {
+      id = (
+        await tx.leaderboardBoard.create({
+          data: { userId, name: input.name, members: { create: members } },
+        })
+      ).id;
+    }
+    return findBoard(tx, userId, id);
+  });
 }
 
 export async function deleteBoard(userId: string, boardId: string): Promise<{ deleted: true }> {
@@ -114,7 +141,5 @@ export async function deleteBoard(userId: string, boardId: string): Promise<{ de
 }
 
 export async function boardMemberKeys(userId: string, boardId: string): Promise<Set<string>> {
-  const board = (await listBoards(userId)).find((b) => b.id === boardId);
-  if (!board) throw boardNotFound(userId, boardId);
-  return new Set(board.members);
+  return new Set((await findBoard(prisma, userId, boardId)).members);
 }

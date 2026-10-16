@@ -85,3 +85,42 @@ it("does not find another user's board", async () => {
   });
   expect(await deleteBoard(a, board.id)).toEqual({ deleted: true });
 });
+
+it("refuses the 51st group and persists nothing", async () => {
+  const a = await user();
+  await prisma.leaderboardBoard.createMany({
+    data: Array.from({ length: 50 }, (_, i) => ({ userId: a, name: `g${i}` })),
+  });
+  await expect(saveBoard(a, { name: "one too many", members: [] })).rejects.toMatchObject({
+    code: "COMPARISON_BOARD_LIMIT",
+  });
+  expect(await prisma.leaderboardBoard.count({ where: { userId: a } })).toBe(50);
+});
+
+it("reaches any group however many others exist, and still edits at the limit", async () => {
+  const [a, b] = [await user(), await user()];
+  await share(b, a, "accepted");
+  const board = await saveBoard(a, { name: "Target", members: [`local:${b}`] });
+  await prisma.leaderboardBoard.createMany({
+    data: Array.from({ length: 50 }, (_, i) => ({ userId: a, name: `later${i}` })),
+  });
+  expect(await boardMemberKeys(a, board.id)).toEqual(new Set([`local:${b}`]));
+  const last = await prisma.leaderboardBoard.findFirstOrThrow({
+    where: { userId: a, name: "later49" },
+  });
+  expect(await boardMemberKeys(a, last.id)).toEqual(new Set());
+  expect(await saveBoard(a, { name: "Renamed", members: [] }, last.id)).toMatchObject({
+    id: last.id,
+    name: "Renamed",
+  });
+});
+
+it("keeps the old members when a replacement names someone invalid", async () => {
+  const [a, b, c] = [await user(), await user(), await user()];
+  await share(b, a, "accepted");
+  const board = await saveBoard(a, { name: "G", members: [`local:${b}`] });
+  await expect(
+    saveBoard(a, { name: "G2", members: [`local:${c}`] }, board.id)
+  ).rejects.toMatchObject({ code: "COMPARISON_BOARD_MEMBER_INVALID" });
+  expect(await boardMemberKeys(a, board.id)).toEqual(new Set([`local:${b}`]));
+});
