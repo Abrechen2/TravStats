@@ -31,6 +31,7 @@ model User {
   comparisonDevices ComparisonDevice[]
   comparisonPublications ComparisonPublication[]
   comparisonLinks ComparisonLink[]
+  comparisonAudits ComparisonAudit[]
   comparisonInvites ComparisonInvite[]
   comparisonGroups ComparisonGroup[]
   comparisonCircles ComparisonCircle[]
@@ -4732,6 +4733,7 @@ model ComparisonLink {
   createdAt DateTime @default(now()) @map("created_at")
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   grants ComparisonGrant[]
+  publications ComparisonPublication[]
   @@unique([userId, channel])
   @@index([channel, origin])
   @@map("comparison_links")
@@ -4767,6 +4769,7 @@ model ComparisonAudit {
   revision Int
   operation String
   createdAt DateTime @default(now()) @map("created_at")
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   @@index([ownerId, createdAt])
   @@map("comparison_audit")
 }
@@ -4818,6 +4821,7 @@ model ComparisonPublication {
  expiresAt DateTime @map("expires_at")
  createdAt DateTime @default(now()) @map("created_at")
  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+ link ComparisonLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
  chunks ComparisonChunk[]
  @@index([userId, audience, ready])
  @@index([linkId])

@@ -82,6 +82,20 @@ it("classifies every scalar on every traversed travel model (new fields fail clo
     expect(new Set(Object.values(inventory).flatMap(words)).size).toBe(scalar.length);
   }
 });
+it("never classifies a cost or personal-looking field as a plain detail", () => {
+  // Flight taxes/fees, a ferry's number plate and a stay's guest list once sat in `details`,
+  // so a statistics-and-details grant published them with no cost or personal consent.
+  const costOrPersonal = /price|tax|fee|amount|cost|registration|plate|guest/i;
+  // An aircraft tail number is a public fact about the aeroplane, not about the traveller.
+  const publicFacts = new Set(["Flight.aircraftRegistration"]);
+  const leaks = Object.entries(FIELD_INVENTORY).flatMap(([model, inventory]) =>
+    words(inventory.details)
+      .filter((field) => costOrPersonal.test(field) && !publicFacts.has(`${model}.${field}`))
+      .map((field) => `${model}.${field}`)
+  );
+  expect(leaks).toEqual([]);
+  expect(words(FIELD_INVENTORY.Flight.personal)).toContain("boardingGroup");
+});
 it("collects the complete graph and keeps ownership, personal categories and credentials separate", async () => {
   const a = await user(),
     b = await user();
@@ -91,17 +105,22 @@ it("collects the complete graph and keeps ownership, personal categories and cre
   await prisma.note.create({
     data: {
       userId: a,
-      body: "private note deliberately shared",
+      body: "shareable note deliberately shared",
       occurredAt: new Date("2026-01-01Z"),
       occurredZone: "UTC",
+      visibility: "shareable",
     },
+  });
+  // forgejo#146: a private note never leaves its owner, even under a personal grant.
+  await prisma.note.create({
+    data: { userId: a, body: "OWNER-ONLY NOTE", occurredAt: new Date(), occurredZone: "UTC" },
   });
   await prisma.note.create({
     data: { userId: b, body: "STRANGER", occurredAt: new Date(), occurredZone: "UTC" },
   });
   const all = await collectComparison(a, await prepareScope(a, scope));
-  expect(JSON.stringify(all.sections)).toContain("private note deliberately shared");
-  expect(JSON.stringify(all)).not.toMatch(/STRANGER|passwordHash|test-only/);
+  expect(JSON.stringify(all.sections)).toContain("shareable note deliberately shared");
+  expect(JSON.stringify(all)).not.toMatch(/STRANGER|OWNER-ONLY NOTE|passwordHash|test-only/);
   expect(all.sections).toHaveProperty("ferryJourneys");
   expect(all.sections).toHaveProperty("tourRoutes");
   const restricted = await collectComparison(
@@ -115,7 +134,7 @@ it("collects the complete graph and keeps ownership, personal categories and cre
     })
   );
   expect(restricted.sections.notes).toBeUndefined();
-  expect(JSON.stringify(restricted)).not.toContain("private note deliberately shared");
+  expect(JSON.stringify(restricted)).not.toContain("shareable note deliberately shared");
 });
 it("stores ciphertext only, commits atomically, authenticates the device and stops reads after revocation", async () => {
   const a = await user(),
@@ -234,4 +253,72 @@ it("relays group ciphertext for three members and invalidates it when membership
   ).rejects.toThrow();
   await removeMember(host, circle.id, hb.a.channel);
   await expect(groupRead(host, circle.id, request, hb.a)).rejects.toThrow();
+});
+
+it("hands a friend only the ciphertext addressed to the friend's own devices", async () => {
+  // readSealed checked only that the fingerprint was in the manifest, so the friend could ask for
+  // the copy wrapped for the OWNER's device and walk away with every recipient's envelope.
+  const a = await user(),
+    b = await user(),
+    links = await pair(a, b);
+  const sender = await generateDevice("sender"),
+    receiver = await generateDevice("receiver");
+  await registerDevice(a, sender.device.public);
+  await registerDevice(b, receiver.device.public);
+  const grant = await saveGrant(a, links.a.id, "", scope);
+  const c = {
+    version: 2 as const,
+    id: randomUUID(),
+    channel: links.a.channel,
+    audience: "",
+    revision: grant.revision,
+    sender: sender.device.public.fingerprint,
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 600000).toISOString(),
+  };
+  const sealed = await createPublication(sender.device, c, [
+    receiver.device.public,
+    sender.device.public,
+  ]);
+  await beginPublication(a, links.a.id, c);
+  await putChunk(a, c.id, await sealed.chunk(new TextEncoder().encode("value")));
+  await finishPublication(a, c.id, await sealed.finish());
+  expect(await readSealed(links.a, "", receiver.device.public.fingerprint)).not.toBeNull();
+  await expect(readSealed(links.a, "", sender.device.public.fingerprint)).rejects.toThrow();
+});
+it("deletes a grant's ciphertext when the grant or the friendship is revoked", async () => {
+  // Revocation only flipped `active`; the encrypted copies stayed on the server until expiry.
+  const a = await user(),
+    b = await user(),
+    links = await pair(a, b);
+  const sender = await generateDevice("sender"),
+    receiver = await generateDevice("receiver");
+  await registerDevice(a, sender.device.public);
+  await registerDevice(b, receiver.device.public);
+  const publish = async () => {
+    const grant = await saveGrant(a, links.a.id, "", scope);
+    const c = {
+      version: 2 as const,
+      id: randomUUID(),
+      channel: links.a.channel,
+      audience: "",
+      revision: grant.revision,
+      sender: sender.device.public.fingerprint,
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 600000).toISOString(),
+    };
+    const sealed = await createPublication(sender.device, c, [receiver.device.public]);
+    await beginPublication(a, links.a.id, c);
+    await putChunk(a, c.id, await sealed.chunk(new TextEncoder().encode("value")));
+    await finishPublication(a, c.id, await sealed.finish());
+  };
+  const stored = () => prisma.comparisonPublication.count({ where: { linkId: links.a.id } });
+  await publish();
+  expect(await stored()).toBe(1);
+  await revokeGrant(a, links.a.id, "");
+  expect(await stored()).toBe(0);
+  await publish();
+  expect(await stored()).toBe(1);
+  await changeLink(b, links.b.id, "revoke");
+  expect(await stored()).toBe(0);
 });

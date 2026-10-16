@@ -192,6 +192,8 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   comparisonLinks: "private recipient permissions, not portable travel records",
   comparisonInvites: "single-use credentials",
   comparisonGroups: "private comparison audiences, re-established after restore",
+  comparisonAudits:
+    "access log of comparison grants and reads, bound to links that are not exported",
   twoFactorRecoveryCodes: "credential material",
   webauthnCredentials: "credential material",
   apiTokens: "credential material",

@@ -1,5 +1,6 @@
 import type { PlanTransaction } from "./execution";
 import type { PlanState } from "./types";
+import { ACTUAL_TRIP_RELATIONS } from "./planShell";
 const date = (day: string | null) => (day ? new Date(day + "T00:00:00Z") : null);
 /** Feed upcoming-trip views without asserting that any travel has happened. */
 export async function mirrorEmptyTrip(tx: PlanTransaction, tripId: string, state: PlanState) {
@@ -7,18 +8,7 @@ export async function mirrorEmptyTrip(tx: PlanTransaction, tripId: string, state
     where: { id: tripId },
     select: {
       _count: {
-        select: {
-          flights: true,
-          lodgingStays: true,
-          railJourneys: true,
-          busJourneys: true,
-          ferryJourneys: true,
-          cruises: true,
-          rentalBookings: true,
-          journalEntries: true,
-          placeVisits: true,
-          stops: true,
-        },
+        select: Object.fromEntries(ACTUAL_TRIP_RELATIONS.map((relation) => [relation, true])),
       },
     },
   });

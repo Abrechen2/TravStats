@@ -1,17 +1,79 @@
 /** Materialize travel evidence only after an explicit confirmation. */
 import type { Prisma } from "../../prisma";
 import { prisma } from "../../db";
-import { resolveCountryCode } from "../../shared/geo/countryCode";
 import { AppError } from "../../middleware/errorHandler";
 import { createFlightSchema } from "../../schemas/flight";
 import { buildFlightCreateData } from "../flights/flightCreateData";
 import { fxColumnsFor, getBaseCurrency, type FxColumns } from "../fx/snapshot";
+import { createLodgingSchema, createStaySchema } from "../../schemas/lodging";
+import { buildLodgingCreateData } from "../lodging/createLodging";
+import { buildStayCreateData, type StayCreateColumns } from "../lodging/stayWrites";
 import type { PlanState, PlanBooking } from "./types";
 import { propagateWrite, propagateDelete, shareSnapshot } from "../sharing/propagate";
 export type PlanTransaction = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 export interface PreparedExecution {
   flight?: Prisma.FlightUncheckedCreateInput;
+  stay?: StayCreateColumns;
+  lodging?: Prisma.LodgingUncheckedCreateInput;
   fx?: FxColumns;
+}
+const HH_MM = /^([01]\d|2[0-3]):[0-5]\d$/;
+/**
+ * Every booking of a package carries the PACKAGE total (frontend bookingDrafts), shared through
+ * priceGroupId. That price belongs on the one actual Booking; on a stay it counted the whole
+ * holiday as hotel spend, once per hotel - the package commit leaves stays unpriced too.
+ */
+const sharesGroupPrice = (b: PlanBooking) => !!b.priceGroupId || b.details.packageTotal === true;
+/**
+ * A confirmed hotel goes through the same derivations as every other stay writer
+ * (buildLodgingCreateData / buildStayCreateData, like trip/package/commit.ts). The hand-written
+ * row it replaced had no check-in/-out instants, no check-out time and no coordinates.
+ */
+async function prepareHotel(userId: string, b: PlanBooking) {
+  const checkOutTime =
+    typeof b.details.checkOutTime === "string" && HH_MM.test(b.details.checkOutTime)
+      ? b.details.checkOutTime
+      : null;
+  const priced = !sharesGroupPrice(b) && b.amount !== null;
+  const stay = await buildStayCreateData(
+    userId,
+    b.timezone,
+    createStaySchema.parse({
+      checkIn: b.day,
+      checkOut: b.endDay,
+      checkInTime: b.day ? b.time : null,
+      checkOutTime: b.endDay ? checkOutTime : null,
+      datePrecision: b.day || b.endDay ? "DAY" : "NONE",
+      status: "completed",
+      // The Booking row keeps a longer reference in full; a stay column holds 40 characters.
+      bookingReference: b.reference && b.reference.length <= 40 ? b.reference : null,
+      totalPrice: priced ? b.amount : null,
+      currency: b.currency,
+      receiptUrl: null,
+    }),
+    { dataSource: "manual", origin: "machine" }
+  );
+  const coordinates = createLodgingSchema
+    .pick({ lat: true, lon: true })
+    .safeParse({ lat: b.details.lat, lon: b.details.lon });
+  const lodging = await buildLodgingCreateData(
+    userId,
+    {
+      type: "hotel",
+      name: b.title,
+      city: b.city || null,
+      country: b.country || null,
+      address: b.address || null,
+      visited: true,
+      ...(coordinates.success &&
+      typeof coordinates.data.lat === "number" &&
+      typeof coordinates.data.lon === "number"
+        ? { lat: coordinates.data.lat, lon: coordinates.data.lon }
+        : {}),
+    },
+    { dataSource: "manual" }
+  );
+  return { stay, lodging };
 }
 const refused = () =>
   new AppError("Review the actual travel record in TravStats first", 409, "PLAN_EXECUTION_EDITED");
@@ -70,7 +132,7 @@ export async function prepareExecution(
     },
     await getBaseCurrency(userId)
   );
-  if (item.kind === "hotel") return { fx };
+  if (item.kind === "hotel") return { fx, ...(await prepareHotel(userId, b)) };
   const depCode = String(b.details.depIata ?? b.originPlace ?? "")
       .trim()
       .toUpperCase(),
@@ -161,8 +223,15 @@ async function actualBooking(
     const existing = await tx.booking.findFirst({
       where: { id: b.actualBookingId, userId, tripId },
     });
-    if (!existing) throw refused();
-    return existing;
+    if (existing) return existing;
+    // A row that still exists elsewhere was moved by the user: a conflict to review. A row that is
+    // gone was deleted by un-confirming, and undo restores a state that still names it - that
+    // refusal made every undo of an un-confirmation answer 409. Book it anew instead.
+    if (await tx.booking.findUnique({ where: { id: b.actualBookingId }, select: { id: true } }))
+      throw refused();
+    const stale = b.actualBookingId;
+    for (const related of state.bookings)
+      if (related.actualBookingId === stale) related.actualBookingId = null;
   }
   const created = await tx.booking.create({
     data: {
@@ -267,7 +336,7 @@ export async function synchronizeExecution(
           version: persisted.updatedAt.toISOString(),
           bookingVersion: booking.updatedAt.toISOString(),
         };
-      } else if (item.kind === "hotel" && ready?.fx && b) {
+      } else if (item.kind === "hotel" && ready?.fx && ready.stay && ready.lodging && b) {
         // A name alone is not venue identity. Use only location fields exposed in booking review.
         const city = b.city || null,
           country = b.country || null,
@@ -280,43 +349,17 @@ export async function synchronizeExecution(
             : null;
         let createdAux = false;
         if (!lodging) {
-          lodging = await tx.lodging.create({
-            data: {
-              userId,
-              name: b.title,
-              city,
-              country,
-              isoCountryCode: country ? resolveCountryCode(country) : null,
-              address,
-              visited: true,
-            },
-          });
+          lodging = await tx.lodging.create({ data: ready.lodging });
           createdAux = true;
         }
         const booking = await actualBooking(tx, userId, tripId, b, ready.fx, next),
           created = await tx.lodgingStay.create({
             data: {
+              ...ready.stay,
               userId,
               tripId,
               lodgingId: lodging.id,
               bookingId: booking.id,
-              checkIn: b.day ? new Date(b.day + "T00:00:00Z") : null,
-              checkOut: b.endDay ? new Date(b.endDay + "T00:00:00Z") : null,
-              stayZone: b.timezone,
-              checkInTime: b.time,
-              checkInDate: b.day ? new Date(b.day + "T00:00:00Z") : null,
-              checkOutDate: b.endDay ? new Date(b.endDay + "T00:00:00Z") : null,
-              datePrecision: b.day ? "DAY" : "NONE",
-              status: "completed",
-              bookingReference: b.reference,
-              totalPrice: b.amount,
-              currency: b.currency,
-              totalPriceBase: ready.fx.priceBase,
-              fxRate: ready.fx.fxRate,
-              fxRateDate: ready.fx.fxRateDate,
-              fxBaseCurrency: ready.fx.fxBaseCurrency,
-              fxSource: ready.fx.fxSource,
-              dataSource: "manual",
               externalRef: "travplan:" + item.id,
             },
           });
