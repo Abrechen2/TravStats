@@ -175,6 +175,29 @@ describe("automatic public market catalog", () => {
     expect(result.coverage.status).toBe("cancelled");
     expect(s.complete).toHaveBeenCalled();
   });
+  it("keeps a region complete when one boundary in it is broken", async () => {
+    // One invalid OSM relation used to mark every scan of its region partial,
+    // permanently, because the broken boundary stays in the cached tile.
+    const broken = {
+      elements: [
+        ...raw.elements,
+        {
+          type: "relation",
+          id: 99,
+          tags: { amenity: "marketplace", name: "Broken" },
+          geometry: shape.slice(0, 3),
+        },
+      ],
+    };
+    const result = await discoverMarketAreas(points, {
+      store: store(),
+      isAllowed: async () => true,
+      fetcher: async () => Response.json(broken),
+    });
+    expect(result.areas).toHaveLength(1);
+    expect(result.coverage.invalidAreaCount).toBe(1);
+    expect(result.coverage.status).toBe("complete");
+  });
   it("preserves stale cached data during outage and reports partial coverage", async () => {
     const s = store(),
       fetcher = jest.fn(async () => response());

@@ -199,9 +199,12 @@ export async function discoverMarketAreas(
     }
   }
   coverage.missingAreaCount = missing.size;
+  // A broken boundary is skipped (and logged when parsed), not a gap in the
+  // coverage: it lives in the cached tile, so counting it here kept every scan
+  // of its region `partial` for as long as OSM kept the broken relation.
   if (
     coverage.status !== "cancelled" &&
-    (coverage.limited || coverage.failedTiles || coverage.staleTiles || coverage.invalidAreaCount)
+    (coverage.limited || coverage.failedTiles || coverage.staleTiles)
   )
     coverage.status = "partial";
   return { areas: [...areas.values()], missingAreas: [...missing.values()], coverage };
