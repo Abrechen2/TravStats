@@ -171,6 +171,7 @@ export const NON_TRAVEL_RELATIONS = [
   "comparisonDevices",
   "comparisonPublications",
   "comparisonLinks",
+  "comparisonAudits",
   "comparisonInvites",
   "comparisonGroups",
   "comparisonCircles",

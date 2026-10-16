@@ -93,12 +93,16 @@ it("lists only the owner's publication metadata without ciphertext or sender key
   const other = await prisma.user.create({
     data: { username: `comparison-other-${randomUUID()}`, passwordHash: "test-only" },
   });
-  const make = (owner: string) =>
+  const make = async (owner: string) =>
     prisma.comparisonPublication.create({
       data: {
         id: randomUUID(),
         userId: owner,
-        linkId: randomUUID(),
+        linkId: (
+          await prisma.comparisonLink.create({
+            data: { userId: owner, channel: randomUUID(), origin: "local", label: "friend" },
+          })
+        ).id,
         audience: "",
         revision: 1,
         sender: "must-not-be-in-status",
