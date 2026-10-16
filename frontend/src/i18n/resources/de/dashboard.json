@@ -333,7 +333,10 @@
     "rentalOneWay": "Mietwagen · Einweg, keine Fahrstrecke",
     "bus": "Bus",
     "busRoad": "Bus · Straßenverlauf",
-    "busStraight": "Bus · Luftlinie"
+    "busStraight": "Bus · Luftlinie",
+    "ferry": "Fähre",
+    "ferryDrawn": "Fähre (eingezeichnet)",
+    "ferryStraight": "Fähre (Luftlinie)"
   },
   "userMenu": {
     "label": "Konto-Menü"

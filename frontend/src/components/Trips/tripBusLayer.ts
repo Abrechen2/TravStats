@@ -14,12 +14,27 @@ export interface BusPathDatum {
 }
 
 /**
+ * What `busPaths` reads of a ride — a bus ride, or a ferry crossing, whose two
+ * ports carry the same columns and whose stored line (a hand-drawn one) means
+ * the same: drawn where it exists, else the chord.
+ */
+export interface TerminalRideLine {
+  id: string;
+  status: string;
+  depLat: number;
+  depLon: number;
+  arrLat: number;
+  arrLon: number;
+  geometry: [number, number][] | null;
+}
+
+/**
  * The line of each bus ride on the trip map (forgejo#180): its frozen road
  * geometry where one was fetched, else the straight chord between the two
  * terminals — drawn thinner and fainter then, so a chord does not pass for the
  * road the coach took. A ride whose terminals have no coordinates is left out.
  */
-export function busPaths(rides: readonly TripBusJourney[]): BusPathDatum[] {
+export function busPaths(rides: readonly TerminalRideLine[]): BusPathDatum[] {
   const out: BusPathDatum[] = [];
   for (const ride of rides) {
     if (ride.status === "cancelled") continue;
