@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { prisma } from "../../../db";
+import { prisma, type DbTransaction } from "../../../db";
 import logger from "../../../utils/logger";
 import type { LeaderboardScope } from "../../../schemas/comparison";
 import {
@@ -8,6 +8,7 @@ import {
   endLocal,
   listPeople,
   requestComparison,
+  updateScope,
 } from "../consents";
 
 const SCOPE: LeaderboardScope = { groups: ["distance", "trips"], domains: ["flight"], year: null };
@@ -184,4 +185,110 @@ it("lists a person whose stored scope no longer parses instead of failing the pa
     expect.any(String)
   );
   warn.mockRestore();
+});
+
+/**
+ * Runs the next `prisma.$transaction` with `between()` injected after its second consent read:
+ * a writer that moves the pair after the reads and before the writes.
+ */
+function interleave(between: () => Promise<unknown>) {
+  const real = prisma.$transaction.bind(prisma) as unknown as (
+    fn: (tx: DbTransaction) => Promise<unknown>
+  ) => Promise<unknown>;
+  let reads = 0;
+  const bound = <T extends object>(target: T, key: string | symbol) => {
+    const v = Reflect.get(target, key) as unknown;
+    return typeof v === "function" ? (v as (...a: unknown[]) => unknown).bind(target) : v;
+  };
+  jest.spyOn(prisma, "$transaction").mockImplementationOnce(((
+    fn: (tx: DbTransaction) => Promise<unknown>
+  ) =>
+    real((tx) =>
+      fn(
+        new Proxy(tx, {
+          get(t, key) {
+            if (key !== "leaderboardConsent") return bound(t, key);
+            return new Proxy(t.leaderboardConsent, {
+              get(d, m) {
+                if (m !== "findUnique") return bound(d, m);
+                return async (args: Parameters<typeof d.findUnique>[0]) => {
+                  const row = await d.findUnique(args);
+                  if (++reads === 2) await between();
+                  return row;
+                };
+              },
+            });
+          },
+        })
+      )
+    )) as never);
+}
+
+it("asking back does not revive an offer its asker took back meanwhile", async () => {
+  const [a, b] = [await user(), await user()];
+  await requestComparison(a.id, b.username, SCOPE);
+  // Anna withdraws her offer after Ben's ask has read it, before it writes.
+  interleave(() =>
+    prisma.leaderboardConsent.updateMany({
+      where: { ownerId: a.id, viewerId: b.id },
+      data: { status: "withdrawn" },
+    })
+  );
+  await expect(requestComparison(b.id, a.username, SCOPE)).rejects.toMatchObject({
+    code: "COMPARISON_NOT_PENDING",
+  });
+  expect(await sees(a.id, b.id)).toBe(false);
+  expect(await sees(b.id, a.id)).toBe(false);
+  // Ben's own row rolled back with it: still Anna's open question, not a yes.
+  expect(
+    await prisma.leaderboardConsent.findFirst({ where: { ownerId: b.id, viewerId: a.id } })
+  ).toMatchObject({ status: "pending", decidedAt: null });
+});
+
+it("two people asking each other at the same moment both succeed and end up comparing", async () => {
+  const [a, b] = [await user(), await user()];
+  const views = await Promise.all([
+    requestComparison(a.id, b.username, SCOPE),
+    requestComparison(b.id, a.username, SCOPE),
+  ]);
+  expect(views).toHaveLength(2);
+  expect(await sees(a.id, b.id)).toBe(true);
+  expect(await sees(b.id, a.id)).toBe(true);
+});
+
+it("a one-way share of the asker's own still lets her ask the other way", async () => {
+  const [a, b] = [await user(), await user()];
+  await prisma.leaderboardConsent.create({
+    data: {
+      ownerId: a.id,
+      viewerId: b.id,
+      status: "accepted",
+      scope: SCOPE,
+      decidedAt: new Date(),
+    },
+  });
+  const view = await requestComparison(a.id, b.username, SCOPE);
+  expect(view).toMatchObject({ mine: { status: "accepted" }, theirs: { status: "pending" } });
+  expect((await listPeople(b.id)).requests).toEqual([
+    expect.objectContaining({ person: expect.objectContaining({ key: `local:${a.id}` }) }),
+  ]);
+  await expect(requestComparison(a.id, b.username, SCOPE)).rejects.toMatchObject({
+    code: "COMPARISON_DUPLICATE",
+  });
+});
+
+it("changes the scope of an accepted consent only, never of an open offer or question", async () => {
+  const [a, b] = [await user(), await user()];
+  const asked = await requestComparison(a.id, b.username, SCOPE);
+  const question = (await listPeople(b.id)).requests[0];
+  await expect(updateScope(a.id, asked.mine!.consentId, SCOPE)).rejects.toMatchObject({
+    code: "COMPARISON_NOT_FOUND",
+  });
+  await expect(updateScope(b.id, question.consentId, SCOPE)).rejects.toMatchObject({
+    code: "COMPARISON_NOT_FOUND",
+  });
+  expect(await sees(b.id, a.id)).toBe(false);
+  await acceptConsent(b.id, question.consentId, SCOPE);
+  const changed = await updateScope(a.id, asked.mine!.consentId, { ...SCOPE, year: 2023 });
+  expect(changed.mine).toMatchObject({ status: "accepted", scope: { year: 2023 } });
 });

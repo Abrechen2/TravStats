@@ -18,7 +18,7 @@
  *  - an OFFER by its owner (`decidedAt` set, scope chosen): the asker's own yes, held back until
  *    the other side answers. Acceptance turns it accepted, a decline withdraws it.
  */
-import { prisma } from "../../db";
+import { prisma, type DbTransaction } from "../../db";
 import { Prisma } from "../../prisma";
 import logger from "../../utils/logger";
 import { PERSON_SELECT, toPerson } from "../sharing/people";
@@ -92,6 +92,32 @@ const notPending = (userId: string, consentId: string) =>
     consentId,
   });
 
+type Tx = DbTransaction;
+
+/**
+ * Serialises every write on one local pair. Two people asking each other at the same moment
+ * would otherwise both read "nothing yet", both create, and one would die on the unique index.
+ * The rows may not exist yet, so a row lock cannot do this; an advisory lock on the pair can.
+ */
+async function lockPair(tx: Tx, a: string, b: string): Promise<void> {
+  const key = a < b ? `${a}|${b}` : `${b}|${a}`;
+  await tx.$queryRaw`SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtextextended(${key}::text, 0))) l`;
+}
+
+/**
+ * A write that holds only if the row is still in the state it was read in. A count of 0 means
+ * the other side moved first (ended, answered); the transaction rolls back as a whole.
+ */
+async function guarded(
+  tx: Tx,
+  where: Prisma.LeaderboardConsentWhereInput & { id: string },
+  data: Prisma.LeaderboardConsentUpdateManyMutationInput,
+  userId: string
+): Promise<void> {
+  const changed = await tx.leaderboardConsent.updateMany({ where, data });
+  if (changed.count === 0) throw notPending(userId, where.id);
+}
+
 export async function requestComparison(
   requesterId: string,
   username: string,
@@ -111,42 +137,57 @@ export async function requestComparison(
       userId: requesterId,
     });
   await prisma.$transaction(async (tx) => {
-    const mineKey = { ownerId_viewerId: { ownerId: requesterId, viewerId: target.id } };
-    const theirsKey = { ownerId_viewerId: { ownerId: target.id, viewerId: requesterId } };
+    await lockPair(tx, requesterId, target.id);
     const [mine, theirs] = await Promise.all([
-      tx.leaderboardConsent.findUnique({ where: mineKey }),
-      tx.leaderboardConsent.findUnique({ where: theirsKey }),
+      tx.leaderboardConsent.findUnique({
+        where: { ownerId_viewerId: { ownerId: requesterId, viewerId: target.id } },
+      }),
+      tx.leaderboardConsent.findUnique({
+        where: { ownerId_viewerId: { ownerId: target.id, viewerId: requesterId } },
+      }),
     ]);
-    if (mine?.status === "accepted" || isOffer(mine))
+    // The other side has already said yes — they asked first, or they share already. Asking
+    // back is then the answer, and both directions take effect together.
+    const answered = isOffer(theirs) || theirs?.status === "accepted";
+    const iShare = mine?.status === "accepted";
+    // A one-way share (a copied grant) still lets the asker put the question the other way.
+    if (isOffer(mine) || (iShare && (answered || isQuestion(theirs))))
       throw comparisonError("COMPARISON_DUPLICATE", 409, "Already asked or sharing", {
         userId: requesterId,
       });
     const now = new Date();
-    // The other side has already said yes — they asked first, or they share already. Asking
-    // back is then the answer, and both directions take effect together.
-    const answered = isOffer(theirs) || theirs?.status === "accepted";
     const status = answered ? "accepted" : "pending";
-    await tx.leaderboardConsent.upsert({
-      where: mineKey,
-      create: { ownerId: requesterId, viewerId: target.id, status, scope: parsed, decidedAt: now },
-      update: { status, scope: parsed, decidedAt: now, ...(answered ? {} : { createdAt: now }) },
-    });
+    if (!mine)
+      await tx.leaderboardConsent.create({
+        data: { ownerId: requesterId, viewerId: target.id, status, scope: parsed, decidedAt: now },
+      });
+    else if (!iShare)
+      await guarded(
+        tx,
+        { id: mine.id, status: mine.status, decidedAt: mine.decidedAt },
+        { status, scope: parsed, decidedAt: now, ...(answered ? {} : { createdAt: now }) },
+        requesterId
+      );
     if (answered) {
       if (theirs && isOffer(theirs))
-        await tx.leaderboardConsent.update({
-          where: { id: theirs.id },
-          data: { status: "accepted", decidedAt: now },
-        });
+        await guarded(
+          tx,
+          { id: theirs.id, status: "pending", decidedAt: { not: null } },
+          { status: "accepted", decidedAt: now },
+          requesterId
+        );
       return;
     }
     if (!theirs)
       await tx.leaderboardConsent.create({ data: { ownerId: target.id, viewerId: requesterId } });
     else if (!isQuestion(theirs))
       // The answer belongs to the asked side; a new question deserves a new answer.
-      await tx.leaderboardConsent.update({
-        where: { id: theirs.id },
-        data: { status: "pending", scope: Prisma.DbNull, createdAt: now, decidedAt: null },
-      });
+      await guarded(
+        tx,
+        { id: theirs.id, status: theirs.status, decidedAt: theirs.decidedAt },
+        { status: "pending", scope: Prisma.DbNull, createdAt: now, decidedAt: null },
+        requesterId
+      );
   });
   return personView(requesterId, localKey(target.id));
 }
@@ -178,6 +219,7 @@ export async function acceptConsent(
   if (!isQuestion(row)) throw notPending(ownerId, consentId);
   const parsed = scopeJson(leaderboardScopeSchema.parse(scope));
   await prisma.$transaction(async (tx) => {
+    if (row.viewerId) await lockPair(tx, ownerId, row.viewerId);
     const now = new Date();
     // Conditional on still being a question: two answers racing must not both win.
     const answered = await tx.leaderboardConsent.updateMany({
@@ -202,6 +244,7 @@ export async function declineConsent(
   const row = await ownedConsent(ownerId, consentId);
   if (!isQuestion(row)) throw notPending(ownerId, consentId);
   await prisma.$transaction(async (tx) => {
+    if (row.viewerId) await lockPair(tx, ownerId, row.viewerId);
     const now = new Date();
     const answered = await tx.leaderboardConsent.updateMany({
       where: { id: row.id, status: "pending", decidedAt: null },
@@ -235,15 +278,18 @@ export async function updateScope(
 
 /** Either side ends a local comparison — or takes back a question; both directions stop. */
 export async function endLocal(userId: string, otherUserId: string): Promise<void> {
-  const ended = await prisma.leaderboardConsent.updateMany({
-    where: {
-      status: { not: "withdrawn" },
-      OR: [
-        { ownerId: userId, viewerId: otherUserId },
-        { ownerId: otherUserId, viewerId: userId },
-      ],
-    },
-    data: { status: "withdrawn", decidedAt: new Date() },
+  const ended = await prisma.$transaction(async (tx) => {
+    await lockPair(tx, userId, otherUserId);
+    return tx.leaderboardConsent.updateMany({
+      where: {
+        status: { not: "withdrawn" },
+        OR: [
+          { ownerId: userId, viewerId: otherUserId },
+          { ownerId: otherUserId, viewerId: userId },
+        ],
+      },
+      data: { status: "withdrawn", decidedAt: new Date() },
+    });
   });
   if (ended.count === 0) throw notFound(userId);
 }

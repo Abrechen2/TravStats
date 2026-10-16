@@ -4867,13 +4867,16 @@ model ComparisonChunk {
 
 /// One direction: the owner's totals may be seen by ONE viewer — a local account or a remote
 /// friend. pending | accepted | declined | withdrawn. Comparison rework 2026-10-16.
+/// Only `accepted` is ever read. pending + decidedAt null = a question to the owner;
+/// pending + decidedAt set = the owner's held-back offer, invisible to every reader until the
+/// other side accepts (services/comparison/consents.ts).
 model LeaderboardConsent {
   id        String    @id @default(uuid())
   ownerId   String    @map("owner_id")
   viewerId  String?   @map("viewer_id")
   remoteId  String?   @map("remote_id")
   status    String    @default("pending")
-  /// LeaderboardScope (schemas/comparison.ts); null until accepted.
+  /// LeaderboardScope (schemas/comparison.ts); set on accepted rows and on offers.
   scope     Json?
   createdAt DateTime  @default(now()) @map("created_at")
   decidedAt DateTime? @map("decided_at")
