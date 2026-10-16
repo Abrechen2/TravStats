@@ -1,4 +1,5 @@
 import mapConfigRoutes from "./mapConfig";
+import encryptedShareRoutes from "./encryptedShare";
 import comparisonRoutes from "./comparison";
 import comparisonPeerRoutes from "./comparisonPeer";
 /**
@@ -169,6 +170,7 @@ export interface ApiMount {
 
 export const apiMounts: ApiMount[] = [
   { id: "map-config", base: "/api/v1/map-config", router: mapConfigRoutes },
+  { id: "encrypted-share", base: "/api/v1/encrypted-share", router: encryptedShareRoutes },
   { id: "comparison", base: "/api/v1/comparison", router: comparisonRoutes },
   { id: "comparison-peer", base: "/api/v1/comparison-peer", router: comparisonPeerRoutes },
   { id: "travplan", base: "/api/v1", router: travplanRoutes },

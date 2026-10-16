@@ -17,6 +17,7 @@ import usageStatsRouter from "./usageStats";
 import passwordResetRequestsRouter from "./passwordResetRequests";
 import timeMigrationRouter from "./timeMigration";
 import pushAdminRouter from "./push";
+import federationAdminRouter from "./federation";
 
 const router = Router();
 
@@ -57,5 +58,6 @@ router.use("/", usageStatsRouter);
 router.use("/", passwordResetRequestsRouter);
 router.use("/", timeMigrationRouter);
 router.use("/push", pushAdminRouter);
+router.use("/federation", federationAdminRouter);
 
 export default router;

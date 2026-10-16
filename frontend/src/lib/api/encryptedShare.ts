@@ -1,0 +1,126 @@
+import { api } from "./client";
+export interface Scope {
+  statistics: boolean;
+  details: boolean;
+  costs: boolean;
+  personal: boolean;
+  photos: boolean;
+  documents: boolean;
+  domains: string[];
+  tripIds: string[];
+  futureTrips: boolean;
+  year: number | null;
+  precision: "exact" | "rounded";
+  expiresAt: string | null;
+}
+export interface Link {
+  id: string;
+  channel: string;
+  origin: string;
+  label: string;
+  confirmed: boolean;
+  remoteConfirmed: boolean;
+  code: string;
+  grants: Array<{
+    audience: string;
+    active: boolean;
+    revision: number;
+    /** As stored: "all existing trips" comes back with the trip ids the server resolved. */
+    scope: Scope & { allExisting?: boolean; acceptedAt?: string };
+  }>;
+}
+export interface Snapshot {
+  version: 1;
+  definition: string;
+  asOf: string;
+  year: number | null;
+  precision: "exact" | "rounded";
+  coverage: "all" | "selection";
+  domains: string[];
+  currency: string;
+  metrics: Partial<
+    Record<
+      | "cruises"
+      | "cruiseDistance"
+      | "cruisePorts"
+      | "stays"
+      | "nights"
+      | "railRides"
+      | "railTicketKm"
+      | "railTracedKm"
+      | "railStraightKm"
+      | "busRides"
+      | "busTicketKm"
+      | "busRouteKm"
+      | "rentals"
+      | "rentalDays"
+      | "rentalKm",
+      number | null
+    >
+  > &
+    Record<"flights" | "distance" | "minutes" | "countries" | "daysAway" | "cost", number | null>;
+  details: boolean;
+  trips: Array<{ id: string; name: string }>;
+}
+/** One domain of a consent preview, cut from the same projection a grant publishes. */
+export interface RecordPage {
+  domain: string;
+  nextCursor: null;
+  rows: Array<{
+    key: string;
+    fields: Array<{ name: string; value: string | number | boolean | null }>;
+  }>;
+}
+export interface Peer {
+  origin: string;
+  publicKey: string;
+  enabled: boolean;
+  verifiedAt: string | null;
+}
+export interface PeerState {
+  local: { origin: string; publicKey: string; fingerprint: string } | null;
+  peers: Peer[];
+}
+/** The E2E transfer's own API (moved from /comparison, 2026-10-16). */
+const BASE = "/encrypted-share";
+export async function encryptedShareGet<T>(path: string): Promise<T> {
+  return (await api.get<{ success: true; data: T }>(`${BASE}${path}`)).data.data;
+}
+export async function encryptedSharePost<T>(path: string, body: unknown = {}): Promise<T> {
+  return (await api.post<{ success: true; data: T }>(`${BASE}${path}`, body)).data.data;
+}
+export async function encryptedShareDelete(path: string): Promise<void> {
+  await api.delete(`${BASE}${path}`);
+}
+export interface Circle {
+  id: string;
+  name: string;
+  version: number;
+  linkId: string | null;
+  host: string;
+  members: Array<{ channel: string; label: string; origin: string; accepted: boolean }>;
+}
+
+export const COMPARISON_METRICS = [
+  "flights",
+  "distance",
+  "minutes",
+  "countries",
+  "daysAway",
+  "cost",
+  "cruises",
+  "cruiseDistance",
+  "cruisePorts",
+  "stays",
+  "nights",
+  "railRides",
+  "railTicketKm",
+  "railTracedKm",
+  "railStraightKm",
+  "busRides",
+  "busTicketKm",
+  "busRouteKm",
+  "rentals",
+  "rentalDays",
+  "rentalKm",
+] as const;

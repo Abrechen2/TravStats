@@ -11,7 +11,6 @@ import {
 } from "../links";
 import { ownedLink } from "../links";
 import { currentGrant, storedScope } from "../snapshots";
-import { saveBoard } from "../groups";
 import { prepareScope } from "../permissions";
 import { collectComparison } from "../e2e/source";
 import { readSealed } from "../e2e/store";
@@ -145,17 +144,6 @@ describe("friend comparison authorisation (isolated database)", () => {
     const source = await prisma.comparisonLink.findUniqueOrThrow({ where: { id: link.a } });
     await expect(readSealed(source, "", ANY_DEVICE)).rejects.toThrow();
     await expect(currentGrant(source, "")).rejects.toThrow();
-  });
-  it("isolates personal boards and admits only one's confirmed contacts", async () => {
-    const a = await user(),
-      b = await user(),
-      c = await user();
-    const link = await pair(a, b);
-    const channel = (await listLinks(a))[0].channel;
-    const board = await saveBoard(a, { name: "Friends", channels: [channel] });
-    await expect(saveBoard(c, { id: board.id, name: "Stolen", channels: [] })).rejects.toThrow();
-    await expect(saveBoard(c, { name: "Other", channels: [channel] })).rejects.toThrow();
-    expect((await listLinks(b))[0].id).toBe(link.b);
   });
   it("details require their own grant and do not expose costs or notes through general trip data", async () => {
     const a = await user();

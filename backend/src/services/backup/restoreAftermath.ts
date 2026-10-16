@@ -40,6 +40,9 @@ const INSTANCE_IDENTITY_SELECT = {
   pushInstanceId: true,
   pushInstanceSecret: true,
   pushRelayUrl: true,
+  federationEnabled: true,
+  federationOrigin: true,
+  federationPrivateKey: true,
 } as const satisfies Prisma.AdminSettingsSelect;
 
 type InstanceIdentity = Prisma.AdminSettingsGetPayload<{
@@ -50,7 +53,10 @@ type IdentityColumn = keyof InstanceIdentity;
 const INSTANCE_IDENTITY_COLUMNS = Object.keys(INSTANCE_IDENTITY_SELECT) as IdentityColumn[];
 
 /** Encrypted at rest, but ciphertext still has no business in a log line. */
-const SECRET_IDENTITY_COLUMNS: ReadonlySet<IdentityColumn> = new Set(["pushInstanceSecret"]);
+const SECRET_IDENTITY_COLUMNS: ReadonlySet<IdentityColumn> = new Set([
+  "pushInstanceSecret",
+  "federationPrivateKey",
+]);
 
 export async function readInstanceIdentity(): Promise<InstanceIdentity | null> {
   const row = await prisma.adminSettings.findFirst({

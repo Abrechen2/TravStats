@@ -5,7 +5,7 @@ import fs from "node:fs";
 import { randomUUID, createHash, generateKeyPairSync } from "node:crypto";
 import peerRouter from "../../backend/src/routes/comparisonPeer";
 import { prisma } from "../../backend/src/db";
-import { identity, exchange, envelope } from "../../backend/src/services/federation/security";
+import { loadIdentity, exchange, envelope } from "../../backend/src/services/federation/security";
 import {
   invite,
   claim,
@@ -29,7 +29,7 @@ import {
   openPublication,
   type PublicDevice,
   type Manifest,
-} from "../../frontend/src/lib/comparison/crypto";
+} from "../../frontend/src/lib/encryptedShare/crypto";
 
 if (
   process.env.FEDERATION_SANDBOX !== "1" ||
@@ -90,13 +90,11 @@ control.post("/", async (req, res) => {
     const p = req.body;
     let result: unknown;
     switch (p.action) {
-      case "info":
-        result = {
-          origin: identity().origin,
-          publicKey: identity().publicKey,
-          device: device.device.public,
-        };
+      case "info": {
+        const local = await loadIdentity();
+        result = { origin: local.origin, publicKey: local.publicKey, device: device.device.public };
         break;
+      }
       case "peer":
         await prisma.comparisonPeer.upsert({
           where: { origin: p.origin },
@@ -216,7 +214,7 @@ control.post("/", async (req, res) => {
         result = { ok: true };
         break;
       case "replay": {
-        const signed = envelope({ action: "ping" }, p.origin);
+        const signed = envelope({ action: "ping" }, p.origin, await loadIdentity());
         result = {
           first: await raw(p.origin, signed),
           second: await raw(p.origin, signed),

@@ -173,8 +173,12 @@ export const NON_TRAVEL_RELATIONS = [
   "comparisonLinks",
   "comparisonAudits",
   "comparisonInvites",
-  "comparisonGroups",
   "comparisonCircles",
+  "leaderboardConsentsOwned",
+  "leaderboardConsentsViewed",
+  "leaderboardRemotes",
+  "leaderboardInvites",
+  "leaderboardBoards",
   "devicePushes",
   "clientWriteRefs",
   // Per-day AI/weather limits are operational counters, not shared travel data.

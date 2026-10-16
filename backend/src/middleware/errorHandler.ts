@@ -421,6 +421,35 @@ export type ApiErrorCode =
   | "SHARE_UNDO_UNAVAILABLE"
   /** The caller's own copy of the entry is gone (deleted or moved away) (409). */
   | "SHARE_COPY_NOT_FOUND"
+  /** Comparison (leaderboard) — rework 2026-10-16. The beta switch is off. */
+  | "COMPARISON_DISABLED"
+  /** A personal access token: the comparison is a browser-session feature. */
+  | "COMPARISON_TOKEN_REFUSED"
+  | "COMPARISON_USER_NOT_FOUND"
+  | "COMPARISON_SELF"
+  /** The caller already shares with that person. */
+  | "COMPARISON_DUPLICATE"
+  | "COMPARISON_NOT_FOUND"
+  | "COMPARISON_NOT_PENDING"
+  /** An invitation code that is malformed, unknown, used or expired. */
+  | "COMPARISON_INVITE_INVALID"
+  | "COMPARISON_INVITE_LIMIT"
+  /** This server has no federation identity. */
+  | "COMPARISON_FEDERATION_OFF"
+  /** The identity is set by environment variables and cannot be changed in the UI. */
+  | "COMPARISON_FEDERATION_ENV"
+  /** The admin has not pinned and verified that server. */
+  | "COMPARISON_PEER_UNKNOWN"
+  | "COMPARISON_PEER_UNREACHABLE"
+  /** The other server predates the leaderboard protocol. */
+  | "COMPARISON_PEER_OUTDATED"
+  | "COMPARISON_PEER_KEY_INVALID"
+  | "COMPARISON_BOARD_NOT_FOUND"
+  | "COMPARISON_BOARD_MEMBER_INVALID"
+  | "COMPARISON_BOARD_LIMIT"
+  /** The user already holds the maximum number of friendships with people on other servers. */
+  | "COMPARISON_REMOTE_LIMIT"
+  | "COMPARISON_YEAR_NOT_SHARED"
   /** A rental evidence category on a document not filed with a rental (forgejo#239). */
   | "DOCUMENT_CATEGORY_NOT_RENTAL"
   /** Merging two places (forgejo#232, `services/places/placeMerge.ts`): a

@@ -1,22 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { createInstance } from "i18next";
-import deComparison from "../resources/de/comparison.json";
-import enComparison from "../resources/en/comparison.json";
+import deEncryptedShare from "../resources/de/encryptedShare.json";
+import enEncryptedShare from "../resources/en/encryptedShare.json";
 import { DOMAIN_KEYS } from "../../shared/domains";
-import { comparisonFieldLabel } from "../../components/comparison/fieldLabel";
+import { comparisonFieldLabel } from "../../components/encryptedShare/fieldLabel";
 
 /**
  * The consent screen (GrantEditor's record preview) and the record browser
- * label every shared column with `comparison:field.<name>`. Those labels were
+ * label every shared column with `encryptedShare:field.<name>`. Those labels were
  * generated from the column names and read "anchor Stop Kennung", "created am",
  * "Arr icao", "Dep lat" — the one screen where a user decides what a friend may
  * see was the one nobody could read. And one name means different things per
  * domain: a flight's `departureTime` is "Abflug", a train's is "Abfahrt".
  */
-const de = deComparison.field as Record<string, string>;
-const en = enComparison.field as Record<string, string>;
-const byDomain = deComparison.fieldByDomain as Record<string, Record<string, string>>;
-const byDomainEn = enComparison.fieldByDomain as Record<string, Record<string, string>>;
+const de = deEncryptedShare.field as Record<string, string>;
+const en = enEncryptedShare.field as Record<string, string>;
+const byDomain = deEncryptedShare.fieldByDomain as Record<string, Record<string, string>>;
+const byDomainEn = enEncryptedShare.fieldByDomain as Record<string, Record<string, string>>;
 
 describe("comparison field labels read as written by hand", () => {
   it.each(Object.keys(de))("%s", (key) => {
@@ -45,9 +45,12 @@ describe("a field shared by several domains carries each domain's own word", () 
   void instance.init({
     lng: "de",
     fallbackLng: false,
-    resources: { de: { comparison: deComparison }, en: { comparison: enComparison } },
+    resources: {
+      de: { encryptedShare: deEncryptedShare },
+      en: { encryptedShare: enEncryptedShare },
+    },
   });
-  const t = instance.getFixedT("de", "comparison");
+  const t = instance.getFixedT("de", "encryptedShare");
 
   it.each([
     ["flight", "departureTime", "Abflug"],

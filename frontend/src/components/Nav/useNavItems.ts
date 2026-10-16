@@ -57,7 +57,8 @@ function collapseSingleChild(group: NavGroup): NavNode {
  *
  * Four primary destinations — Dashboard, Logbuch, Reisen, Statistik — and
  * everything else in "Mehr", in two sections: Sammlungen (Erfolge, Reisepass,
- * Ortslisten) and Werkzeuge (Parser, while an admin's beta switch is on).
+ * Ortslisten, Vergleich) and Werkzeuge (Parser for admins; the encrypted share
+ * while the beta switch is on).
  * Settings, Admin and logout live behind the avatar (`UserMenu`); Posteingang
  * is the header's own icon (`NavigationBar`), with its own badge. The old
  * header carried seven top-level entries plus Support and System chips, and
@@ -85,6 +86,7 @@ export function useNavItems(): {
     "stats",
     "notes",
     "comparison",
+    "encryptedShare",
     "travplan",
   ]);
   const user = useAuthStore((s) => s.user);
@@ -93,6 +95,7 @@ export function useNavItems(): {
   const isAdmin = user?.isAdmin ?? false;
   const { isFeatureVisible } = useBetaFeatures();
   const comparisonVisible = isFeatureVisible("comparison");
+  const encryptedShareVisible = isFeatureVisible("encryptedShare");
   const travPlanVisible = useTravPlanVisible();
 
   return useMemo(() => {
@@ -126,17 +129,6 @@ export function useNavItems(): {
     ];
 
     const collections: NavLeaf[] = [
-      ...(comparisonVisible
-        ? [
-            {
-              kind: "leaf" as const,
-              id: "comparison",
-              path: "/compare",
-              label: t("comparison:title"),
-              icon: "trophy" as const,
-            },
-          ]
-        : []),
       {
         kind: "leaf",
         id: "achievements",
@@ -183,6 +175,19 @@ export function useNavItems(): {
             },
           ]
         : []),
+      // Friends' totals beside the year in review: the other "how am I doing" page. Its own
+      // icon — the trophy belongs to the achievements (rework 2026-10-16).
+      ...(comparisonVisible
+        ? [
+            {
+              kind: "leaf" as const,
+              id: "comparison",
+              path: "/compare",
+              label: t("comparison:title"),
+              icon: "users" as const,
+            },
+          ]
+        : []),
       ...(placesVisible
         ? [
             {
@@ -215,6 +220,17 @@ export function useNavItems(): {
             },
           ]
         : []),
+      ...(encryptedShareVisible
+        ? [
+            {
+              kind: "leaf" as const,
+              id: "encrypted-share",
+              path: "/encrypted-share",
+              label: t("encryptedShare:nav"),
+              icon: "key-round" as const,
+            },
+          ]
+        : []),
     ];
 
     // TravPlan used to swap this whole model for its own eight sections on
@@ -241,5 +257,13 @@ export function useNavItems(): {
     ];
 
     return { primary, more };
-  }, [t, isEnabled, placesVisible, isAdmin, comparisonVisible, travPlanVisible]);
+  }, [
+    t,
+    isEnabled,
+    placesVisible,
+    isAdmin,
+    comparisonVisible,
+    encryptedShareVisible,
+    travPlanVisible,
+  ]);
 }

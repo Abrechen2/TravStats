@@ -22,7 +22,7 @@ import {
   generateDevice,
   createPublication,
   openPublication,
-} from "../../../../../frontend/src/lib/comparison/crypto";
+} from "../../../../../frontend/src/lib/encryptedShare/crypto";
 const users: string[] = [];
 const scope = scopeSchema.parse({
   statistics: true,

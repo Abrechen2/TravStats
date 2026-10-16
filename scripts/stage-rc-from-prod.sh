@@ -127,7 +127,11 @@ SELECT coalesce(string_agg(
          key, key, value), E'\n'), '')
 FROM admin_settings a, LATERAL jsonb_each_text(to_jsonb(a))
 WHERE value IS NOT NULL
-  AND key ~ '(api_key|client_id|client_secret|_token|_secret)$';
+  AND (key ~ '(api_key|client_id|client_secret|_token|_secret)$'
+     -- Server identity (federation_*): the RC keeps its own key, origin and switch.
+     -- Prod's key and origin would make the RC sign as prod, or sit switched off with
+     -- a key it cannot decrypt. The `_private_key` suffix is not matched above.
+     OR key IN ('federation_enabled', 'federation_origin', 'federation_private_key'));
 GENSQL
   ssh_node "pct exec $CT_RC -- docker cp $GEN_SQL $DB_RC_CONTAINER:$GEN_SQL"
   ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER psql -U $DB_USER -d $DB_NAME -At -o $KEY_SQL -f $GEN_SQL" || true
@@ -187,6 +191,14 @@ set_rc_url() {  # $1 = column, $2 = value
   echo "==> Re-set RC $col = $val (if the column exists)"
   ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER psql -U $DB_USER -d $DB_NAME -c \"DO \\$\\$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='admin_settings' AND column_name='$col') THEN UPDATE admin_settings SET $col='$val'; ELSE RAISE NOTICE '$col column absent (pre-pairing schema) — skipped'; END IF; END \\$\\$;\""
 }
+
+# Server identity (federation_*) describes the machine, like the URLs above. Clear what prod's
+# row just brought in; step 5b re-applies the RC's own values. Without this an RC that never had
+# an identity would come up signing as prod. KEEP_INHERITED_KEYS opts out, as for the API keys.
+if [ -z "${KEEP_INHERITED_KEYS:-}" ]; then
+  echo "==> Clear prod's federation identity on the RC (if the columns exist)"
+  ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER psql -U $DB_USER -d $DB_NAME -c \"DO \\$\\$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='admin_settings' AND column_name='federation_private_key') THEN UPDATE admin_settings SET federation_enabled=false, federation_origin=NULL, federation_private_key=NULL; END IF; END \\$\\$;\""
+fi
 
 set_rc_url public_url   "${RC_PUBLIC_URL:-}"
 set_rc_url frontend_url "$RC_FRONTEND_URL"

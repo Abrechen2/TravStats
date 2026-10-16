@@ -62,9 +62,15 @@ export interface BetaFeatureMeta {
 export const BETA_FEATURES = Object.freeze({
   comparison: Object.freeze({
     reason: "beta",
-    why: "Friend comparisons and federation require owner acceptance and security review (forgejo#40).",
+    why: "The friend leaderboard was rebuilt on 2026-10-16 from server-side totals under per-person consent (spec docs/superpowers/specs/2026-10-16-comparison-rework-design.md). Across servers the totals travel signed but not end-to-end encrypted, by owner decision; that, and the load of ~9 loaders per friend, wants an RC look first (forgejo#40).",
     returnsWhen:
-      "The owner accepts scoped sharing, remote-peer security and group behaviour on RC.",
+      "The owner accepts the rebuilt leaderboard on the RC — same-instance and one cross-server pair — and the leaderboard load is measured there.",
+  }),
+  encryptedShare: Object.freeze({
+    reason: "beta",
+    why: "The full-record, device-encrypted transfer (protocol v2, docs/FEDERATION_E2E.md) was split off the comparison page on 2026-10-16 and kept, unchanged, until the owner decides to keep or cut it. It has had no independent cryptographic review.",
+    returnsWhen:
+      "The owner decides to keep it AND an independent review of protocol v2 is done; if the owner cuts it, the entry goes with the code.",
   }),
   /**
    * The "Devices" section in user settings (QR claim-code pairing flow).

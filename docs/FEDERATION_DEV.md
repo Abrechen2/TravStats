@@ -1,4 +1,4 @@
-# Friend comparisons — DEV forgejo#40
+# Encrypted sharing and server connections — DEV forgejo#40
 
 Branch: `dev/federation-40`. Experimental, beta-gated; no deployment.
 The current implementation is **device-encrypted protocol v2**. See
@@ -9,11 +9,14 @@ plaintext friend/group reads are disabled, and groups may explicitly share full 
 ## Enable in a DEV environment
 
 Apply the Prisma migrations through the normal DEV workflow. Enable the instance beta flag.
-The UI entry is `/comparison` under More, in German and English. It requires an authenticated
+The UI entry is `/encrypted-share` under Tools, behind the beta key `encryptedShare`, in German and English. It requires an authenticated
 cookie session; personal API tokens are rejected. Browser crypto requires HTTPS or localhost.
 First create a device key and save its encrypted backup and recovery code separately.
 
-Cross-instance communication additionally requires this on each server (examples only):
+Cross-instance communication needs a server identity. Since 2026-10-16 an admin sets it in
+**Admin → Instanz → Server-Verbindungen** (origin, key generated in the UI, peers pinned there).
+`FEDERATION_ENABLED=1` with the variables below still overrides the UI, so existing installs keep
+their key:
 
 ```dotenv
 FEDERATION_ENABLED=1
@@ -36,8 +39,9 @@ rejected. Do not weaken the network policy for LAN testing. Same-instance compar
 without network federation. For remote tests use admitted public HTTPS DEV servers with
 synthetic data. Original production data is unnecessary.
 
-The cookie UI API is `/api/v1/comparison`; encrypted publication routes are nested under
-`/sealed`. The signed server peer API is `/api/v1/comparison-peer`. No public user directory.
+The cookie UI API is `/api/v1/encrypted-share`; encrypted publication routes are nested under
+`/sealed`. The friend leaderboard at `/compare` is a separate feature (spec 2026-10-16) and needs
+no device keys. The signed server peer API is `/api/v1/comparison-peer`. No public user directory.
 The source-data/file endpoints are owner-only; they never let a friend fetch plaintext.
 
 The supported restore hook revokes grants/links/devices, disables peers and deletes ciphertext.

@@ -1,329 +1,183 @@
-import sealedRouter from "./comparisonSealed";
-import { prepareScope } from "../services/federation/permissions";
-import { previewRecords, recordDomain } from "../services/federation/records";
-import {
-  createCircle,
-  listCircles,
-  grantCircle,
-  ownerGrant,
-  leaveCircle,
-  removeMember,
-  addMember,
-} from "../services/federation/circles";
+/**
+ * The leaderboard's cookie API (spec 2026-10-16 §9.1). Enveloped family. Browser sessions
+ * only: a personal access token is refused, as is everything while the instance beta switch
+ * is off. Every refusal carries a COMPARISON_* code and is logged (services/comparison/errors).
+ *
+ * Every route is throttled per user by the read limiter; the four that create something —
+ * asking a person, minting and redeeming an invitation, creating a group — also by the hourly
+ * write limiter. No route sets a cache header: the `/api` no-store default stays in charge.
+ */
 import { Router, type Response, type NextFunction } from "express";
-import { z } from "zod";
-import rateLimit, { ipKeyGenerator } from "express-rate-limit";
-import { createPublicKey } from "crypto";
-import { authenticate, requireAdmin, type AuthRequest } from "../middleware/auth";
+import { authenticate, type AuthRequest } from "../middleware/auth";
 import { rejectDemo } from "../middleware/demoGuard";
+import { comparisonReadLimiter, comparisonWriteLimiter } from "../middleware/comparisonRateLimit";
 import { getInstanceSettings } from "../services/instanceSettingsService";
-import { prisma } from "../db";
+import { comparisonError } from "../services/comparison/errors";
+import { buildLeaderboardSnapshot } from "../services/comparison/aggregates";
 import {
-  grantInput,
-  claimInput,
-  id,
-  label,
-  origin,
-  scopeSchema,
-} from "../services/federation/contract";
+  acceptConsent,
+  declineConsent,
+  endLocal,
+  listPeople,
+  requestComparison,
+  updateScope,
+} from "../services/comparison/consents";
+import { deleteBoard, listBoards, saveBoard } from "../services/comparison/boards";
+import { claimInvite, createInvite, endRemote } from "../services/comparison/remote";
+import { readLeaderboard } from "../services/comparison/leaderboard";
 import {
-  invite,
-  claim,
-  changeLink,
-  saveGrant,
-  revokeGrant,
-  listLinks,
-} from "../services/federation/links";
-import { buildSnapshot } from "../services/federation/snapshots";
-import { exchange, identity, refused, hash } from "../services/federation/security";
-import { saveBoard } from "../services/federation/groups";
+  boardBodySchema,
+  claimBodySchema,
+  consentRequestBodySchema,
+  leaderboardQuerySchema,
+  leaderboardScopeSchema,
+  personKeySchema,
+  scopeBodySchema,
+  uuidParamSchema,
+} from "../schemas/comparison";
 
 const router = Router();
 type Handler = (req: AuthRequest, res: Response) => Promise<void>;
 const handle = (fn: Handler) => (req: AuthRequest, res: Response, next: NextFunction) => {
   void fn(req, res).catch(next);
 };
+const send = (res: Response, data: unknown, status = 200): void => {
+  res.status(status).json({ success: true, data });
+};
+
 router.use(authenticate, rejectDemo);
 router.use((req: AuthRequest, _res, next) => {
+  if (req.apiToken) {
+    next(
+      comparisonError("COMPARISON_TOKEN_REFUSED", 403, "Comparison is a browser feature", {
+        userId: req.userId,
+      })
+    );
+    return;
+  }
   void getInstanceSettings()
-    .then((s) => {
-      if (req.apiToken || !s.betaFeaturesEnabled) throw refused();
-      next();
-    })
+    .then((s) =>
+      next(
+        s.betaFeaturesEnabled
+          ? undefined
+          : comparisonError("COMPARISON_DISABLED", 403, "Comparison is off on this server", {
+              userId: req.userId,
+            })
+      )
+    )
     .catch(next);
 });
-router.use(
-  rateLimit({
-    windowMs: 60_000,
-    limit: 1200,
-    standardHeaders: true,
-    legacyHeaders: false,
-    keyGenerator: (req) => (req as AuthRequest).userId ?? ipKeyGenerator(req.ip ?? "unknown"),
+router.use(comparisonReadLimiter);
+
+/**
+ * No route-level timeout applies here: a remote pull is bounded by REMOTE_PULL_DEADLINE_MS
+ * (12 s) inside readLeaderboard, and an unanswered pull becomes that row's "unreachable".
+ */
+router.get(
+  "/leaderboard",
+  handle(async (req, res) => {
+    const q = leaderboardQuerySchema.parse(req.query);
+    send(
+      res,
+      await readLeaderboard(req.userId!, {
+        year: q.year === "all" ? null : q.year,
+        boardId: q.board,
+      })
+    );
   })
 );
-router.use("/sealed", sealedRouter);
-router.get(
-  "/links",
+router.post(
+  "/preview",
   handle(async (req, res) => {
-    res.json({ success: true, data: await listLinks(req.userId!) });
+    const scope = leaderboardScopeSchema.parse(req.body);
+    send(res, await buildLeaderboardSnapshot(req.userId!, scope, scope.year));
+  })
+);
+router.get(
+  "/people",
+  handle(async (req, res) => {
+    const [people, boards] = await Promise.all([listPeople(req.userId!), listBoards(req.userId!)]);
+    send(res, { ...people, boards });
+  })
+);
+router.post(
+  "/requests",
+  comparisonWriteLimiter,
+  handle(async (req, res) => {
+    const body = consentRequestBodySchema.parse(req.body);
+    send(res, await requestComparison(req.userId!, body.username, body.scope), 201);
+  })
+);
+router.post(
+  "/consents/:id/accept",
+  handle(async (req, res) => {
+    const id = uuidParamSchema.parse(req.params.id);
+    const { scope } = scopeBodySchema.parse(req.body);
+    send(res, await acceptConsent(req.userId!, id, scope));
+  })
+);
+router.post(
+  "/consents/:id/decline",
+  handle(async (req, res) => {
+    send(res, await declineConsent(req.userId!, uuidParamSchema.parse(req.params.id)));
+  })
+);
+router.put(
+  "/consents/:id",
+  handle(async (req, res) => {
+    const id = uuidParamSchema.parse(req.params.id);
+    const { scope } = scopeBodySchema.parse(req.body);
+    send(res, await updateScope(req.userId!, id, scope));
+  })
+);
+/**
+ * Ending works locally whatever the other side does: a remote friend whose server no longer
+ * answers is removed here at once, and their server is told best-effort (endRemote).
+ */
+router.delete(
+  "/people/:key",
+  handle(async (req, res) => {
+    const key = personKeySchema.parse(req.params.key);
+    if (key.startsWith("local:")) await endLocal(req.userId!, key.slice("local:".length));
+    else await endRemote(req.userId!, key.slice("remote:".length));
+    send(res, { ended: true });
   })
 );
 router.post(
   "/invites",
+  comparisonWriteLimiter,
   handle(async (req, res) => {
-    res.json({ success: true, data: await invite(req.userId!) });
+    send(res, await createInvite(req.userId!), 201);
   })
 );
 router.post(
-  "/claim",
+  "/invites/claim",
+  comparisonWriteLimiter,
   handle(async (req, res) => {
-    res.json({ success: true, data: await claim(req.userId!, claimInput.parse(req.body)) });
+    // The scope is validated here, before claimInvite asks the other server anything.
+    const body = claimBodySchema.parse(req.body);
+    send(res, await claimInvite(req.userId!, body.code, body.scope), 201);
   })
 );
 router.post(
-  "/links/:id/confirm",
+  "/boards",
+  comparisonWriteLimiter,
   handle(async (req, res) => {
-    const b = z.strictObject({ label, code: z.string().regex(/^\d{6}$/) }).parse(req.body);
-    res.json({
-      success: true,
-      data: await changeLink(req.userId!, id.parse(req.params.id), "confirm", b.label, b.code),
-    });
+    send(res, await saveBoard(req.userId!, boardBodySchema.parse(req.body)), 201);
+  })
+);
+router.put(
+  "/boards/:id",
+  handle(async (req, res) => {
+    const id = uuidParamSchema.parse(req.params.id);
+    send(res, await saveBoard(req.userId!, boardBodySchema.parse(req.body), id));
   })
 );
 router.delete(
-  "/links/:id",
+  "/boards/:id",
   handle(async (req, res) => {
-    res.json({
-      success: true,
-      data: await changeLink(req.userId!, id.parse(req.params.id), "revoke"),
-    });
-  })
-);
-router.post(
-  "/links/:id/grant",
-  handle(async (req, res) => {
-    const b = grantInput.parse(req.body);
-    res.json({
-      success: true,
-      data: await saveGrant(req.userId!, id.parse(req.params.id), b.audience, b.scope),
-    });
-  })
-);
-router.post(
-  "/links/:id/revoke",
-  handle(async (req, res) => {
-    const b = z.strictObject({ audience: z.string().max(100) }).parse(req.body);
-    res.json({
-      success: true,
-      data: await revokeGrant(req.userId!, id.parse(req.params.id), b.audience),
-    });
-  })
-);
-// The plaintext friend and group reads were retired for sealed publications. 410 tells an old
-// client the endpoint is gone for good, where 403 read like a permission it might yet obtain.
-const retired = (_req: unknown, res: Response) => {
-  res.status(410).json({ error: "COMPARISON_PLAINTEXT_READ_RETIRED" });
-};
-router.post("/links/:id/read", retired);
-router.post("/circles/read", retired);
-router.post(
-  "/preview",
-  handle(async (req, res) => {
-    const scope = scopeSchema.parse(req.body);
-    res.json({
-      success: true,
-      data: await buildSnapshot(req.userId!, await prepareScope(req.userId!, scope), scope.year),
-    });
-  })
-);
-router.get(
-  "/trips",
-  handle(async (req, res) => {
-    res.json({
-      success: true,
-      data: await prisma.trip.findMany({
-        where: { userId: req.userId! },
-        select: { id: true, name: true },
-        orderBy: { startDate: "desc" },
-        take: 500,
-      }),
-    });
-  })
-);
-router.get(
-  "/audit",
-  handle(async (req, res) => {
-    res.json({
-      success: true,
-      data: await prisma.comparisonAudit.findMany({
-        where: { ownerId: req.userId! },
-        select: { channel: true, audience: true, revision: true, operation: true, createdAt: true },
-        orderBy: { createdAt: "desc" },
-        take: 100,
-      }),
-    });
-  })
-);
-router.get(
-  "/boards",
-  handle(async (req, res) => {
-    res.json({
-      success: true,
-      data: await prisma.comparisonGroup.findMany({ where: { userId: req.userId! } }),
-    });
-  })
-);
-router.post(
-  "/boards",
-  handle(async (req, res) => {
-    const b = z
-      .strictObject({ id: id.optional(), name: label, channels: z.array(id).max(20) })
-      .parse(req.body);
-    res.json({ success: true, data: await saveBoard(req.userId!, b) });
-  })
-);
-router.get(
-  "/peers",
-  requireAdmin,
-  handle(async (_req, res) => {
-    let local = null;
-    try {
-      const i = identity();
-      local = { origin: i.origin, publicKey: i.publicKey, fingerprint: i.fingerprint };
-    } catch {
-      /* Explicitly unconfigured. */
-    }
-    res.json({ success: true, data: { local, peers: await prisma.comparisonPeer.findMany() } });
-  })
-);
-router.post(
-  "/peers",
-  requireAdmin,
-  handle(async (req, res) => {
-    const b = z
-      .strictObject({
-        origin,
-        publicKey: z.string().min(40).max(500),
-        fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
-        enabled: z.boolean(),
-      })
-      .parse(req.body);
-    if (b.origin === "local" || b.origin === identity().origin) throw refused();
-    const key = createPublicKey(b.publicKey);
-    if (key.asymmetricKeyType !== "ed25519") throw refused();
-    const pem = key.export({ type: "spki", format: "pem" }).toString();
-    if (hash(pem) !== b.fingerprint) throw refused();
-    const previous = await prisma.comparisonPeer.findUnique({ where: { origin: b.origin } });
-    if (previous && previous.publicKey !== pem) {
-      await prisma.comparisonLink.updateMany({
-        where: { origin: b.origin },
-        data: { revoked: true },
-      });
-    }
-    res.json({
-      success: true,
-      data: await prisma.comparisonPeer.upsert({
-        where: { origin: b.origin },
-        create: { origin: b.origin, publicKey: pem, enabled: b.enabled },
-        update: { publicKey: pem, enabled: b.enabled, verifiedAt: null },
-      }),
-    });
-  })
-);
-router.post(
-  "/peers/verify",
-  requireAdmin,
-  handle(async (req, res) => {
-    const b = z.strictObject({ origin }).parse(req.body);
-    const reply = await exchange(b.origin, { action: "ping" });
-    if (!reply || typeof reply !== "object" || !("ready" in reply) || reply.ready !== true)
-      throw refused();
-    await prisma.comparisonPeer.update({
-      where: { origin: b.origin },
-      data: { verifiedAt: new Date() },
-    });
-    res.json({ success: true, data: { verified: true } });
+    send(res, await deleteBoard(req.userId!, uuidParamSchema.parse(req.params.id)));
   })
 );
 
-router.get(
-  "/circles",
-  handle(async (req, res) => {
-    res.json({ success: true, data: await listCircles(req.userId!) });
-  })
-);
-router.post(
-  "/circles",
-  handle(async (req, res) => {
-    const b = z.strictObject({ name: label, linkIds: z.array(id).min(1).max(19) }).parse(req.body);
-    res.json({ success: true, data: await createCircle(req.userId!, b.name, b.linkIds) });
-  })
-);
-const circleAction = z.strictObject({
-  circleId: id,
-  linkId: id.nullable(),
-  version: z.number().int().positive(),
-});
-router.post(
-  "/circles/grant",
-  handle(async (req, res) => {
-    const b = circleAction.extend({ scope: scopeSchema }).parse(req.body);
-    res.json({
-      success: true,
-      data: b.linkId
-        ? await grantCircle(req.userId!, b.linkId, b.circleId, b.version, b.scope)
-        : await ownerGrant(req.userId!, b.circleId, b.version, b.scope),
-    });
-  })
-);
-router.post(
-  "/circles/leave",
-  handle(async (req, res) => {
-    const b = circleAction.parse(req.body);
-    if (!b.linkId) throw refused();
-    res.json({
-      success: true,
-      data: await leaveCircle(req.userId!, b.linkId, b.circleId, b.version),
-    });
-  })
-);
-router.post(
-  "/circles/remove",
-  handle(async (req, res) => {
-    const b = z.strictObject({ circleId: id, channel: id }).parse(req.body);
-    res.json({ success: true, data: await removeMember(req.userId!, b.circleId, b.channel) });
-  })
-);
-router.post(
-  "/peers/suspend",
-  requireAdmin,
-  handle(async (req, res) => {
-    const b = z.strictObject({ origin }).parse(req.body);
-    await prisma.comparisonPeer.update({
-      where: { origin: b.origin },
-      data: { enabled: false, verifiedAt: null },
-    });
-    res.json({ success: true, data: { suspended: true } });
-  })
-);
-router.post(
-  "/preview/records",
-  handle(async (req, res) => {
-    const b = z
-      .strictObject({
-        scope: scopeSchema,
-        domain: recordDomain,
-      })
-      .parse(req.body);
-    const scope = await prepareScope(req.userId!, b.scope);
-    res.json({ success: true, data: await previewRecords(req.userId!, scope, b.domain) });
-  })
-);
-router.post(
-  "/circles/add",
-  handle(async (req, res) => {
-    const b = z.strictObject({ circleId: id, linkId: id }).parse(req.body);
-    res.json({ success: true, data: await addMember(req.userId!, b.circleId, b.linkId) });
-  })
-);
 export default router;

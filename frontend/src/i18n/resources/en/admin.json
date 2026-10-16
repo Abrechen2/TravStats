@@ -184,7 +184,11 @@
           },
           "comparison": {
             "name": "Friend comparisons",
-            "what": "Compare travel data between linked people after explicit consent."
+            "what": "Compare your travel totals with friends who agreed, as a leaderboard — no individual records."
+          },
+          "encryptedShare": {
+            "name": "Encrypted sharing",
+            "what": "Send full travel records, encrypted on your device, to verified friends — not yet independently reviewed."
           }
         }
       },
@@ -1079,6 +1083,37 @@
         "dryRunFailed": "The dry run failed. Nothing was changed.",
         "applyFailed": "The re-resolution failed. A new dry run shows what is still open."
       }
+    }
+  },
+  "federation": {
+    "title": "Server connections",
+    "description": "Connect this server to other TravStats servers so people can compare across servers. Only totals travel, signed but not end-to-end encrypted.",
+    "envNote": "Set by environment variables (FEDERATION_*). Change it there.",
+    "enabled": "Connect to other servers",
+    "enabledSub": "Without this, comparing stays on this server.",
+    "origin": "Public address of this server",
+    "originHint": "https, no port or path — the way other servers reach it.",
+    "generateKey": "Generate key",
+    "rotateWarning": "A new key replaces the old one. Connected servers have to pin it again.",
+    "fingerprint": "Fingerprint — give it to the other server's admin through a second channel (e.g. a phone call):",
+    "peers": "Trusted servers",
+    "verifiedAt": "verified on {{date}}",
+    "unverified": "not verified yet",
+    "outdated": "needs an update",
+    "verify": "Verify",
+    "suspend": "Suspend",
+    "peerOrigin": "Address of the other server",
+    "peerKey": "Public key of the other server",
+    "peerFingerprint": "Fingerprint of the other server",
+    "peerFingerprintHint": "Compare it with the one the other admin told you.",
+    "pin": "Pin server",
+    "error": {
+      "COMPARISON_PEER_KEY_INVALID": "The key and fingerprint do not match, or the key is not a valid Ed25519 key. Ask the other admin for both again. You cannot pin this server's own address.",
+      "COMPARISON_PEER_UNREACHABLE": "The other server did not answer or refused our request. Check its address and that it has enabled connections on its side.",
+      "COMPARISON_PEER_UNKNOWN": "You have not pinned this server. Reload the page and try again.",
+      "COMPARISON_FEDERATION_ENV": "This server's identity comes from environment variables (FEDERATION_*) and cannot be changed here.",
+      "generic": "That did not work. Check the details and try again.",
+      "refresh": "Done, but the list could not be reloaded. Reload the page."
     }
   }
 }

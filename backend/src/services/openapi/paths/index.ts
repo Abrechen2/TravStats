@@ -65,6 +65,7 @@ import "./integrations";
 import "./photoJourneys";
 import "./tripSuggestions";
 import "./sharing";
+import "./comparison";
 import "./shareLinks";
 import "./catalog";
 import "./misc";
