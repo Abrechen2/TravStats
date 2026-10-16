@@ -34,6 +34,7 @@ import { classifyVisit } from "../../shared/placeCounting";
 import { loadRoadtripStations } from "./roadtripEvidenceLoader";
 import { loadRailEnds } from "./railEvidenceLoader";
 import { loadBusEnds } from "./busEvidence";
+import { loadFerryEnds } from "./ferryEvidence";
 import { loadVisibleDomains } from "../domainVisibility";
 import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "./departureClock";
 import { departureDayOf } from "../../utils/stats/departureClock";
@@ -53,7 +54,7 @@ export async function loadCountryDetail(
   const inputs = await loadCountryDetailInputs(userId);
   const detail = buildCountryDetail(code, ...inputs);
   if (!detail) return null;
-  const [flights, airports, home, ports, places, lodgings, , , stations, rail, bus] = inputs;
+  const [flights, airports, home, ports, places, lodgings, , , stations, rail, bus, ferry] = inputs;
   const homeCountries = await loadHomeCountries(userId, new Date().toISOString().slice(0, 10));
   // Reuse the same fold and loaded records. No second database scan or local rule.
   const passport = buildPassport(
@@ -70,7 +71,8 @@ export async function loadCountryDetail(
     rail,
     undefined,
     bus,
-    homeCountries
+    homeCountries,
+    ferry
   );
   const row = passport.countries.find((country) => country.code === detail.code);
   return {
@@ -131,6 +133,7 @@ export async function loadCountryDetailInputs(userId: string): Promise<CountryDe
     stations,
     rail,
     bus,
+    ferry,
   ] = await Promise.all([
     loadAirportCountries(passportAirportCodes(flights)),
     prisma.cruiseStop.findMany({
@@ -201,6 +204,10 @@ export async function loadCountryDetailInputs(userId: string): Promise<CountryDe
     loadVisibleDomains(userId).then((visible) =>
       visible.includes("bus") ? loadBusEnds(userId) : []
     ),
+    // The ninth: ferry port ends, only while ferry is visible.
+    loadVisibleDomains(userId).then((visible) =>
+      visible.includes("ferry") ? loadFerryEnds(userId) : []
+    ),
   ]);
 
   return [
@@ -254,5 +261,6 @@ export async function loadCountryDetailInputs(userId: string): Promise<CountryDe
     stations,
     rail,
     bus,
+    ferry,
   ];
 }

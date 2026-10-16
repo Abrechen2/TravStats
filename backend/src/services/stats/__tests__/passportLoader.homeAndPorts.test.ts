@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "@jest/globals";
 
 import { prisma } from "../../../db";
+import { getInstanceSettings, updateInstanceSettings } from "../../instanceSettingsService";
 import { achievementCountries } from "../../../utils/achievementCountries";
 import { loadCountryDetail } from "../countryDetailLoader";
 import { loadPassport } from "../passportLoader";
@@ -73,6 +74,7 @@ describe("loaders: home country and port calls (forgejo#299)", () => {
     await prisma.cruiseStop.deleteMany({ where: { cruise: { userId } } });
     await prisma.cruise.deleteMany({ where: { userId } });
     await prisma.port.deleteMany({ where: { id: { in: portIds } } });
+    await prisma.ferryJourney.deleteMany({ where: { userId } });
     portIds = [];
     await setHome(null);
   });
@@ -147,5 +149,71 @@ describe("loaders: home country and port calls (forgejo#299)", () => {
     expect(passport.countries.find((c) => c.code === "NO")).toMatchObject({ visited: true });
     expect(await loadCountryDetail(userId, "NO")).toMatchObject({ visited: true });
     expect([...(await achievementCountries(userId, new Set()))]).toEqual(["NO"]);
+  });
+
+  /** Kiel -> Göteborg and back: a ferry round trip (owner ruling 2026-10-16 #3). */
+  const ferryRoundTrip = async () => {
+    const crossing = (from: [string, string, string], to: [string, string, string], at: string) =>
+      prisma.ferryJourney.create({
+        data: {
+          userId,
+          status: "completed",
+          depStationName: from[0],
+          depLat: 54.3,
+          depLon: 10.1,
+          depCountry: from[1],
+          depTimezone: from[2],
+          arrStationName: to[0],
+          arrLat: 57.7,
+          arrLon: 11.9,
+          arrCountry: to[1],
+          arrTimezone: to[2],
+          departureTime: new Date(at),
+          arrivalTime: new Date(new Date(at).getTime() + 14 * 3_600_000),
+        },
+      });
+    const kiel: [string, string, string] = ["Kiel", "DE", "Europe/Berlin"];
+    const goeteborg: [string, string, string] = ["Göteborg", "SE", "Europe/Stockholm"];
+    await crossing(kiel, goeteborg, "2025-07-01T17:00:00Z");
+    await crossing(goeteborg, kiel, "2025-07-08T17:00:00Z");
+  };
+
+  it("counts a ferry round trip on the passport, the country page and the badge while ferry is visible", async () => {
+    const betaBefore = (await getInstanceSettings()).betaFeaturesEnabled;
+    try {
+      await updateInstanceSettings({ betaFeaturesEnabled: true });
+      await prisma.userSettings.update({
+        where: { userId },
+        data: { enabledDomains: ["flight", "cruise", "ferry"] },
+      });
+      await ferryRoundTrip();
+
+      const passport = await loadPassport(userId);
+      expect(passport.countries.find((c) => c.code === "SE")).toMatchObject({
+        visited: true,
+        kinds: ["ferry"],
+        visitSources: [{ domain: "ferry", years: [2025], undated: false }],
+      });
+      expect(await loadCountryDetail(userId, "SE")).toMatchObject({
+        visited: true,
+        evidence: "ferry",
+        ferryCrossings: 2,
+      });
+      expect([...(await achievementCountries(userId, new Set()))]).toEqual(["SE"]);
+
+      // Hidden: the crossings prove nothing anywhere.
+      await prisma.userSettings.update({
+        where: { userId },
+        data: { enabledDomains: ["flight", "cruise"] },
+      });
+      expect((await loadPassport(userId)).countries.map((c) => c.code)).toEqual([]);
+      expect([...(await achievementCountries(userId, new Set()))]).toEqual([]);
+    } finally {
+      await updateInstanceSettings({ betaFeaturesEnabled: betaBefore });
+      await prisma.userSettings.update({
+        where: { userId },
+        data: { enabledDomains: ["flight", "cruise"] },
+      });
+    }
   });
 });

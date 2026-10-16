@@ -13,6 +13,7 @@ const NOW = new Date("2026-10-16T12:00:00Z");
 const AIRPORTS = new Map<string, string | null>([
   ["MUC", "DE"],
   ["FCO", "IT"],
+  ["ARN", "SE"],
 ]);
 
 type Station = { name: string; country: string; tz: string };
@@ -23,6 +24,9 @@ const MILANO: Station = { name: "Milano Centrale", country: "IT", tz: "Europe/Ro
 const ROMA: Station = { name: "Roma Termini", country: "IT", tz: "Europe/Rome" };
 const PRAHA: Station = { name: "Praha Florenc", country: "CZ", tz: "Europe/Prague" };
 const WIEN: Station = { name: "Wien Erdberg", country: "AT", tz: "Europe/Vienna" };
+const KIEL: Station = { name: "Kiel Schwedenkai", country: "DE", tz: "Europe/Berlin" };
+const GOETEBORG: Station = { name: "Göteborg Stena", country: "SE", tz: "Europe/Stockholm" };
+const OSLO: Station = { name: "Oslo Color Line", country: "NO", tz: "Europe/Oslo" };
 
 let seq = 0;
 const ride = (from: Station, to: Station, departs: string, hours = 3): RailEvidenceRide => {
@@ -59,6 +63,7 @@ const passport = (o: {
   flights?: PassportFlight[];
   rail?: RailEvidenceRide[];
   bus?: RailEvidenceRide[];
+  ferry?: RailEvidenceRide[];
   home?: string[];
 }) =>
   buildPassport(
@@ -75,7 +80,8 @@ const passport = (o: {
     railEnds(o.rail ?? []),
     "UTC",
     railEnds(o.bus ?? [], "bus"),
-    o.home ?? []
+    o.home ?? [],
+    railEnds(o.ferry ?? [], "ferry")
   );
 
 const row = (p: ReturnType<typeof buildPassport>, code: string) =>
@@ -162,5 +168,65 @@ describe("owner ruling 2026-10-16: rail and bus count like flights", () => {
     });
 
     expect(row(p, "DE")).toMatchObject({ visited: true, visitUncertain: false });
+  });
+});
+
+describe("owner ruling 2026-10-16 #3: ferry crossings count like rail and bus", () => {
+  it("a ferry crossing out and back proves the destination visited", () => {
+    const p = passport({
+      ferry: [
+        ride(KIEL, GOETEBORG, "2025-07-01T17:00:00Z", 14),
+        ride(GOETEBORG, KIEL, "2025-07-08T17:00:00Z", 14),
+      ],
+    });
+
+    expect(row(p, "SE")).toMatchObject({
+      visited: true,
+      kinds: ["ferry"],
+      visitSources: [{ domain: "ferry", years: [2025], undated: false }],
+    });
+  });
+
+  it("a one-way crossing leaves its port unclear", () => {
+    const p = passport({ ferry: [ride(KIEL, GOETEBORG, "2025-07-01T17:00:00Z", 14)] });
+
+    expect(row(p, "SE")).toMatchObject({
+      groundPresence: true,
+      visited: false,
+      visitUncertain: true,
+      visitUncertainReasons: ["openChain"],
+    });
+  });
+
+  it("flying out and taking the ferry back closes the round trip", () => {
+    const p = passport({
+      flights: [flight("MUC", "ARN", "2025-07-01")],
+      ferry: [ride(GOETEBORG, KIEL, "2025-07-08T17:00:00Z", 14)],
+    });
+
+    expect(row(p, "SE")).toMatchObject({
+      visited: true,
+      kinds: ["ferry", "flight"],
+    });
+  });
+
+  it("the port of an intermediate leg is ground presence only", () => {
+    // Kiel -> Oslo -> Göteborg and back the same way: Sweden is the
+    // turnaround, Norway only the port on the way, both ways.
+    const p = passport({
+      ferry: [
+        ride(KIEL, OSLO, "2025-07-01T14:00:00Z", 20),
+        ride(OSLO, GOETEBORG, "2025-07-02T12:00:00Z", 8),
+        ride(GOETEBORG, OSLO, "2025-07-09T10:00:00Z", 8),
+        ride(OSLO, KIEL, "2025-07-09T20:00:00Z", 20),
+      ],
+    });
+
+    expect(row(p, "SE")).toMatchObject({ visited: true });
+    expect(row(p, "NO")).toMatchObject({
+      groundPresence: true,
+      visited: false,
+      visitUncertain: false,
+    });
   });
 });
