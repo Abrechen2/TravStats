@@ -104,6 +104,11 @@
     },
     "leave": "Geteilte Reise verlassen"
   },
+  "menu": {
+    "button": "Teilen",
+    "companions": "Mit Mitreisenden (eigene Kopie)",
+    "link": "Öffentlicher Link"
+  },
   "trip": {
     "leaveConfirm": "Geteilte Reise verlassen? Deine Kopie bleibt als eigene Reise erhalten; die anderen werden benachrichtigt.",
     "left": "Du hast die geteilte Reise verlassen. Deine Reise bleibt erhalten.",

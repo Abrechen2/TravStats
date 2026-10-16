@@ -9,6 +9,7 @@ import { FlagImg } from "../../lib/countryFlag";
 import { countryName } from "../../shared/geo/countryCode";
 import { statusPillStyle } from "../table/statusPillStyle";
 import Button from "../ui/Button";
+import TripShareMenu from "../sharing/TripShareMenu";
 import { TripExportModal } from "./TripExportModal";
 
 /** Trip status → the shared status palette (planned reads as scheduled). */
@@ -146,6 +147,7 @@ export default function TripHead({
             )}
           </div>
           <div className="flex shrink-0 flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
+            <TripShareMenu tripId={trip.id} />
             <Button onClick={() => setExporting(true)}>{t("trips:export.button")}</Button>
             <Button onClick={onEdit}>{t("common:buttons.edit")}</Button>
             <Button variant="danger" onClick={onDelete}>

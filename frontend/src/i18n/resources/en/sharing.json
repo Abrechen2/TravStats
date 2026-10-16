@@ -104,6 +104,11 @@
     },
     "leave": "Leave shared trip"
   },
+  "menu": {
+    "button": "Share",
+    "companions": "With travel companions (own copy)",
+    "link": "Public link"
+  },
   "trip": {
     "leaveConfirm": "Leave the shared trip? Your copy stays as your own trip; the others are notified.",
     "left": "You left the shared trip. Your trip stays.",

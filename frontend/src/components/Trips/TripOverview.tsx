@@ -16,7 +16,6 @@ import TripSummaryPanel from "./TripSummaryPanel";
 import { useTripRoadtrips } from "../Roadtrips/useTripRoadtrips";
 import DocumentsSection from "../documents/DocumentsSection";
 import TripPeopleSection from "../sharing/TripPeopleSection";
-import ShareLinkButton from "../shareLinks/ShareLinkButton";
 import { useDomainVisible } from "../../hooks/useDomainVisible";
 
 type T = ReturnType<typeof useTranslation>["t"];
@@ -450,12 +449,6 @@ export default function TripOverview({
               companionNames={trip.companions}
               onChanged={onChanged}
             />
-            {/* A public, expiring link — the share card (forgejo#281). */}
-            {!isSharedDemo && (
-              <div>
-                <ShareLinkButton kind="trip" targetId={trip.id} />
-              </div>
-            )}
             <TripSummaryPanel trip={trip} t={t} language={language} onChanged={onChanged} />
             {trip.tags.length > 0 && (
               <DetailSection title={t("trips:detail.tags")}>
