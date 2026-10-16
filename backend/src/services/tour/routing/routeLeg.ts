@@ -280,5 +280,11 @@ export async function routeLegGeometry(
     [input.to.lon, input.to.lat],
     provider.cacheProfile?.(input) ?? [input.mode, input.vehicle ?? null],
   ]);
-  return roadRouteStore.resolve(key, compute, (result) => result.source === "routed");
+  return roadRouteStore.resolve(
+    key,
+    compute,
+    (result) => result.source === "routed",
+    // A budget refusal is the originating caller's alone; see RouteStore.resolve.
+    (result) => result.fallbackReason !== "rate_limited"
+  );
 }
