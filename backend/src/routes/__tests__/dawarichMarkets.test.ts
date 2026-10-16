@@ -7,6 +7,11 @@ import { generateToken } from "../../utils/jwt";
 import { reserveScan, scanStays } from "../../services/dawarich/stays/scan";
 import type { DawarichClient, DawarichPoint } from "../../services/dawarich/dawarichClient";
 jest.mock("../../utils/achievements", () => ({ recheckAchievements: jest.fn(async () => {}) }));
+// Accepting a stay completes the new place's address from its pin; no test reaches Nominatim.
+jest.mock("../../services/geo/nominatim", () => ({
+  ...jest.requireActual("../../services/geo/nominatim"),
+  completeAddressFromCoordinates: jest.fn(async () => null),
+}));
 const now = new Date("2026-10-11T06:00:00Z");
 const points: DawarichPoint[] = [0, 10, 20, 30].map((m, i) => ({
   id: i + 1,
