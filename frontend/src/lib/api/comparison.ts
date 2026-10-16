@@ -71,12 +71,6 @@ export interface RecordPage {
     fields: Array<{ name: string; value: string | number | boolean | null }>;
   }>;
 }
-export interface Board {
-  id: string;
-  name: string;
-  channels: string[];
-  version: number;
-}
 export interface Peer {
   origin: string;
   publicKey: string;
@@ -87,14 +81,16 @@ export interface PeerState {
   local: { origin: string; publicKey: string; fingerprint: string } | null;
   peers: Peer[];
 }
+/** The E2E transfer's own API (moved from /comparison, 2026-10-16). */
+const BASE = "/encrypted-share";
 export async function comparisonGet<T>(path: string): Promise<T> {
-  return (await api.get<{ success: true; data: T }>(`/comparison${path}`)).data.data;
+  return (await api.get<{ success: true; data: T }>(`${BASE}${path}`)).data.data;
 }
 export async function comparisonPost<T>(path: string, body: unknown = {}): Promise<T> {
-  return (await api.post<{ success: true; data: T }>(`/comparison${path}`, body)).data.data;
+  return (await api.post<{ success: true; data: T }>(`${BASE}${path}`, body)).data.data;
 }
 export async function comparisonDelete(path: string): Promise<void> {
-  await api.delete(`/comparison${path}`);
+  await api.delete(`${BASE}${path}`);
 }
 export interface Circle {
   id: string;

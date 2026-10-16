@@ -1,4 +1,4 @@
-import sealedRouter from "./comparisonSealed";
+import sealedRouter from "./encryptedShareSealed";
 import { prepareScope } from "../services/federation/permissions";
 import { previewRecords, recordDomain } from "../services/federation/records";
 import {
@@ -36,8 +36,12 @@ import {
 } from "../services/federation/links";
 import { buildSnapshot } from "../services/federation/snapshots";
 import { exchange, identity, refused, hash } from "../services/federation/security";
-import { saveBoard } from "../services/federation/groups";
 
+/**
+ * The full-record, device-encrypted transfer (protocol v2, docs/FEDERATION_E2E.md), moved here
+ * from /comparison on 2026-10-16 so the leaderboard no longer depends on it. Behind its own beta
+ * key `encryptedShare` until the owner keeps or cuts it. Behaviour unchanged.
+ */
 const router = Router();
 type Handler = (req: AuthRequest, res: Response) => Promise<void>;
 const handle = (fn: Handler) => (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -148,38 +152,6 @@ router.get(
         take: 500,
       }),
     });
-  })
-);
-router.get(
-  "/audit",
-  handle(async (req, res) => {
-    res.json({
-      success: true,
-      data: await prisma.comparisonAudit.findMany({
-        where: { ownerId: req.userId! },
-        select: { channel: true, audience: true, revision: true, operation: true, createdAt: true },
-        orderBy: { createdAt: "desc" },
-        take: 100,
-      }),
-    });
-  })
-);
-router.get(
-  "/boards",
-  handle(async (req, res) => {
-    res.json({
-      success: true,
-      data: await prisma.comparisonGroup.findMany({ where: { userId: req.userId! } }),
-    });
-  })
-);
-router.post(
-  "/boards",
-  handle(async (req, res) => {
-    const b = z
-      .strictObject({ id: id.optional(), name: label, channels: z.array(id).max(20) })
-      .parse(req.body);
-    res.json({ success: true, data: await saveBoard(req.userId!, b) });
   })
 );
 router.get(

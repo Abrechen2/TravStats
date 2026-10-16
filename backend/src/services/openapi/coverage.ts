@@ -39,7 +39,10 @@ export interface MountedEndpoint {
  * integration is meant to drive.
  */
 export const UNDOCUMENTED_MOUNTS: ReadonlyMap<string, string> = new Map([
-  ["comparison", "Experimental cookie-session-only comparison UI; no PAT integration contract yet"],
+  [
+    "encrypted-share",
+    "Beta, cookie-session-only device-encrypted transfer (protocol v2) under independent review; no integration contract",
+  ],
   ["comparison-peer", "Pinned-key federation protocol; not a user-token API"],
   ["admin", "Admin console API — admin-scope only, free to change between minor versions"],
   ["setup", "First-boot wizard — unauthenticated, single-use, not an integration surface"],

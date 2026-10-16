@@ -60,7 +60,7 @@ export const audienceDevices = (target: Target) => post<Audience>("/recipients",
 const CHUNK = 256 * 1024;
 const post = <T>(path: string, body: unknown) =>
   api
-    .post<{ data: T }>(`/comparison/sealed${path}`, body, { timeout: 120000 })
+    .post<{ data: T }>(`/encrypted-share/sealed${path}`, body, { timeout: 120000 })
     .then((r) => r.data.data);
 export async function publish(
   account: string,
@@ -104,7 +104,7 @@ export async function publish(
       version: Number(audience.audience.split(":")[1]),
       scope,
     });
-    const list = (await api.get<{ data: Link[] }>("/comparison/links")).data.data;
+    const list = (await api.get<{ data: Link[] }>("/encrypted-share/links")).data.data;
     revision = list
       .find((l) => l.id === selectedLink.id)!
       .grants.find((g) => g.audience === audience.audience && g.active)!.revision;
@@ -142,7 +142,7 @@ export async function publish(
       progress(`${index + 1}/${data.assets.length}: ${asset.name}`);
       const blob = (
         await api.get<Blob>(
-          `/comparison/sealed/asset/${encodeURIComponent(asset.kind)}/${encodeURIComponent(asset.id)}`,
+          `/encrypted-share/sealed/asset/${encodeURIComponent(asset.kind)}/${encodeURIComponent(asset.id)}`,
           {
             params: asset.assetId ? { assetId: asset.assetId } : undefined,
             responseType: "blob",
@@ -166,7 +166,7 @@ export async function publish(
     const manifest = await sealed.finish(indexStart, parts - indexStart);
     await post(`/${context.id}/finish`, manifest);
   } catch (error) {
-    await api.delete(`/comparison/sealed/${context.id}`).catch(() => undefined);
+    await api.delete(`/encrypted-share/sealed/${context.id}`).catch(() => undefined);
     throw error;
   }
 }
@@ -268,7 +268,7 @@ export function ownDataView(data: SourceData): OpenData {
       if (!asset) throw Error("E2E_FILE");
       return (
         await api.get<Blob>(
-          `/comparison/sealed/asset/${encodeURIComponent(asset.kind)}/${encodeURIComponent(asset.id)}`,
+          `/encrypted-share/sealed/asset/${encodeURIComponent(asset.kind)}/${encodeURIComponent(asset.id)}`,
           {
             params: asset.assetId ? { assetId: asset.assetId } : undefined,
             responseType: "blob",

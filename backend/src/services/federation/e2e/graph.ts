@@ -173,7 +173,6 @@ export const NON_TRAVEL_RELATIONS = [
   "comparisonLinks",
   "comparisonAudits",
   "comparisonInvites",
-  "comparisonGroups",
   "comparisonCircles",
   "devicePushes",
   "clientWriteRefs",

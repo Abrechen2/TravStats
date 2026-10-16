@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { prisma } from "../../../db";
 import { getInstanceSettings } from "../../instanceSettingsService";
 import { errorHandler } from "../../../middleware/errorHandler";
-import comparison from "../../../routes/comparison";
+import comparison from "../../../routes/encryptedShare";
 
 jest.mock("../../../middleware/auth", () => ({
   ...jest.requireActual("../../../middleware/auth"),
@@ -21,7 +21,7 @@ jest.mock("../../../middleware/auth", () => ({
 jest.mock("../../instanceSettingsService", () => ({ getInstanceSettings: jest.fn() }));
 const app = express();
 app.use(express.json());
-app.use("/api/v1/comparison", comparison);
+app.use("/api/v1/encrypted-share", comparison);
 app.use(errorHandler);
 let userId: string;
 beforeAll(async () => {
@@ -39,7 +39,7 @@ afterAll(async () => {
 });
 it("rejects PATs even when the browser feature is enabled", async () => {
   const response = await request(app)
-    .get("/api/v1/comparison/links")
+    .get("/api/v1/encrypted-share/links")
     .set("x-test-user", userId)
     .set("x-test-pat", "yes");
   expect(response.status).toBe(403);
@@ -47,20 +47,20 @@ it("rejects PATs even when the browser feature is enabled", async () => {
 it("fails closed while the instance beta switch is disabled", async () => {
   jest.mocked(getInstanceSettings).mockResolvedValue({ betaFeaturesEnabled: false } as never);
   expect(
-    (await request(app).get("/api/v1/comparison/links").set("x-test-user", userId)).status
+    (await request(app).get("/api/v1/encrypted-share/links").set("x-test-user", userId)).status
   ).toBe(403);
 });
 it("does not allow an ordinary account to admit peers", async () => {
   expect(
-    (await request(app).get("/api/v1/comparison/peers").set("x-test-user", userId)).status
+    (await request(app).get("/api/v1/encrypted-share/peers").set("x-test-user", userId)).status
   ).toBe(403);
 });
 it("returns only this user's links and refuses oversized or unknown grant fields", async () => {
-  const res = await request(app).get("/api/v1/comparison/links").set("x-test-user", userId);
+  const res = await request(app).get("/api/v1/encrypted-share/links").set("x-test-user", userId);
   expect(res.status).toBe(200);
   expect(res.body).toEqual({ success: true, data: [] });
   const bad = await request(app)
-    .post(`/api/v1/comparison/links/${randomUUID()}/grant`)
+    .post(`/api/v1/encrypted-share/links/${randomUUID()}/grant`)
     .set("x-test-user", userId)
     .send({ audience: "", scope: { all: true } });
   expect(bad.status).toBe(400);
@@ -70,19 +70,23 @@ it("has no plaintext comparison fallback and applies the same cookie gate to enc
   expect(
     (
       await request(app)
-        .post(`/api/v1/comparison/links/${randomUUID()}/read`)
+        .post(`/api/v1/encrypted-share/links/${randomUUID()}/read`)
         .set("x-test-user", userId)
         .send({ year: null })
     ).status
   ).toBe(410);
   expect(
-    (await request(app).post("/api/v1/comparison/circles/read").set("x-test-user", userId).send({}))
-      .status
+    (
+      await request(app)
+        .post("/api/v1/encrypted-share/circles/read")
+        .set("x-test-user", userId)
+        .send({})
+    ).status
   ).toBe(410);
   expect(
     (
       await request(app)
-        .get("/api/v1/comparison/sealed/devices")
+        .get("/api/v1/encrypted-share/sealed/devices")
         .set("x-test-user", userId)
         .set("x-test-pat", "yes")
     ).status
@@ -114,7 +118,7 @@ it("lists only the owner's publication metadata without ciphertext or sender key
   try {
     const foreign = await make(other.id);
     const response = await request(app)
-      .get("/api/v1/comparison/sealed/publications")
+      .get("/api/v1/encrypted-share/sealed/publications")
       .set("x-test-user", userId);
     expect(response.status).toBe(200);
     expect(response.body.data.map((p: { id: string }) => p.id)).toEqual([own.id]);
@@ -125,7 +129,7 @@ it("lists only the owner's publication metadata without ciphertext or sender key
     expect(
       (
         await request(app)
-          .get("/api/v1/comparison/sealed/publications")
+          .get("/api/v1/encrypted-share/sealed/publications")
           .set("x-test-user", userId)
           .set("x-test-pat", "yes")
       ).status
@@ -177,11 +181,11 @@ it("previews exactly the fields a grant publishes, from the same inventory", asy
       ...extra,
     };
     const preview = await request(app)
-      .post("/api/v1/comparison/preview/records")
+      .post("/api/v1/encrypted-share/preview/records")
       .set("x-test-user", userId)
       .send({ scope, domain: "flight" });
     const published = await request(app)
-      .post("/api/v1/comparison/sealed/source")
+      .post("/api/v1/encrypted-share/sealed/source")
       .set("x-test-user", userId)
       .send(scope);
     expect(preview.status).toBe(200);

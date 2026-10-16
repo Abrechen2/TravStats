@@ -1,4 +1,4 @@
-/** Mounted AFTER comparison cookie/beta/demo/rate guards. Never mount directly. */
+/** Mounted AFTER the encrypted-share cookie/beta/demo/rate guards. Never mount directly. */
 import { Router, type Response, type NextFunction } from "express";
 import { z } from "zod";
 import type { AuthRequest } from "../middleware/auth";

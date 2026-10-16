@@ -33,7 +33,6 @@ model User {
   comparisonLinks ComparisonLink[]
   comparisonAudits ComparisonAudit[]
   comparisonInvites ComparisonInvite[]
-  comparisonGroups ComparisonGroup[]
   comparisonCircles ComparisonCircle[]
   id                     String                   @id @default(uuid())
   devicePushes           DevicePush[]
@@ -4775,16 +4774,6 @@ model ComparisonGrant {
   link ComparisonLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
   @@unique([linkId, audience])
   @@map("comparison_grants")
-}
-model ComparisonGroup {
-  id String @id @default(uuid())
-  userId String @map("user_id")
-  name String
-  channels String[]
-  version Int @default(1)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  @@index([userId])
-  @@map("comparison_groups")
 }
 model ComparisonAudit {
   id String @id @default(uuid())
