@@ -1402,6 +1402,18 @@
       "name": "New stops",
       "description": "Visited ten different bus terminals"
     },
+    "FERRY_FIRST": {
+      "name": "Cast off",
+      "description": "Completed your first ferry crossing"
+    },
+    "FERRY_NIGHT": {
+      "name": "A night on board",
+      "description": "An overnight ferry crossing, shown by its departure and arrival times"
+    },
+    "FERRY_PORTS_5": {
+      "name": "Port to port",
+      "description": "Called at five different ferry ports"
+    },
     "TRIP_THREE_MODES": {
       "name": "Three ways to travel",
       "description": "A completed trip with three different modes of transport"

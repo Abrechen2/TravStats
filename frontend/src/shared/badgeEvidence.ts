@@ -257,8 +257,14 @@ export const BADGE_PROOF_TYPES: readonly string[] = [
   "xmas_flights",
 ];
 
-/** Rules with no list of entries, each with the reason. None today. */
-export const BADGE_WITHOUT_EVIDENCE: Readonly<Record<string, string>> = {};
+/** Rules with no list of entries, each with the reason. */
+export const BADGE_WITHOUT_EVIDENCE: Readonly<Record<string, string>> = {
+  // The ferry domain serves no statistics measure that lists its crossings
+  // yet; its badges open no list until it does.
+  ferry_count: "The ferry domain serves no evidence measures yet.",
+  ferry_night_crossings: "The ferry domain serves no evidence measures yet.",
+  ferry_ports: "The ferry domain serves no evidence measures yet.",
+};
 
 /**
  * The evidence key of a rule's proof: `badge` + the rule in PascalCase —

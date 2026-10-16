@@ -36,15 +36,6 @@ export function filterAchievementsByDomain(
   );
 }
 
-/**
- * The domains whose badges this reader sees: their enabled ones, which already
- * lack every domain behind a closed beta switch (`useEnabledDomains`), minus
- * ferry, which has no badges yet.
- */
-export function achievementDomains(enabled: readonly DomainKey[]): DomainKey[] {
-  return enabled.filter((d) => d !== "ferry");
-}
-
 const TIERS = ["bronze", "silver", "gold", "platinum", "diamond"] as const;
 const CATEGORIES = [
   "explorer",
@@ -119,8 +110,9 @@ export default function AchievementsPage(): JSX.Element {
   const { t } = useTranslation(["achievements", "common"]);
   const locale = useLocale();
   const { addToast } = useToastStore();
-  const { enabled: enabledDomains } = useEnabledDomains();
-  const enabled = useMemo(() => achievementDomains(enabledDomains), [enabledDomains]);
+  // Every domain has badges; a domain behind a closed beta switch is already
+  // missing from `enabled` (`useEnabledDomains`).
+  const { enabled } = useEnabledDomains();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   /** The card whose detail dialog is open, or null (#330). */
   const [selected, setSelected] = useState<Achievement | null>(null);
@@ -331,8 +323,6 @@ export default function AchievementsPage(): JSX.Element {
           <Pill active={selectedDomain === "all"} onClick={() => setSelectedDomain("all")}>
             {t("achievements:filters.allDomains")}
           </Pill>
-          {/* `enabled` is `achievementDomains`: the reader's domains with
-              their beta switches applied, minus any domain without badges. */}
           {AVAILABLE_DOMAINS.filter((d) => enabled.includes(d)).map((d) => (
             <Pill key={d} active={selectedDomain === d} onClick={() => setSelectedDomain(d)}>
               {t(DOMAIN_LABEL[d])}

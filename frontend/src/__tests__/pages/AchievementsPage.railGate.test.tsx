@@ -3,7 +3,6 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 import type { Achievement } from "../../types";
-import { achievementDomains } from "../../pages/AchievementsPage";
 
 /**
  * Rail badges (2.7) live behind the `railDomain` beta gate like every rail
@@ -72,18 +71,6 @@ async function renderPage(): Promise<void> {
 describe("AchievementsPage — rail badges follow the rail beta gate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  // The beta switches are applied by `useEnabledDomains` before the list gets
-  // here; this only drops a domain that has no badges.
-  it("passes the gated enabled list through, minus a domain without badges", () => {
-    expect(achievementDomains(["flight", "rail", "rental", "bus"])).toEqual([
-      "flight",
-      "rail",
-      "rental",
-      "bus",
-    ]);
-    expect(achievementDomains(["flight", "ferry"])).toEqual(["flight"]);
   });
 
   it("hides rail badges and the rail pill with the gate closed", async () => {
