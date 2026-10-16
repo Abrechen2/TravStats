@@ -20,6 +20,7 @@
   "edit": "Überfahrt bearbeiten",
   "empty": "Noch keine Überfahrten.",
   "error": "Überfahrten konnten nicht geladen werden.",
+  "invalidNumber": "Bitte gib bei „{{field}}“ eine gültige Zahl ab 0 ein (z. B. 39,90).",
   "saveError": "Speichern fehlgeschlagen. Bitte Eingaben prüfen.",
   "departure": "Abfahrtshafen",
   "arrival": "Ankunftshafen",

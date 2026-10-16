@@ -288,6 +288,7 @@
     "bookedOnHint": "Der Preis wird zum Kurs dieses Tages umgerechnet.",
     "travellers": "Anzahl Personen",
     "travellersInvalid": "Bitte eine ganze Zahl von 1 bis 50 eingeben.",
+    "priceInvalid": "Bitte gib einen gültigen Preis ab 0 ein (z. B. 39,90).",
     "forPersons_one": "für {{count}} Person",
     "forPersons_other": "für {{count}} Personen",
     "created": "Buchung angelegt",

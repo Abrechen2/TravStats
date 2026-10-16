@@ -261,6 +261,7 @@
     "receiptSection": "Receipt",
     "notesSection": "Notes",
     "saveError": "Could not save stay",
+    "invalidPrice": "Enter a valid price of 0 or more (e.g. 39.90).",
     "companionsHint": "This booking covered {{count}} people. Add the companions — the confirmation only names the booker.",
     "tripSection": "Trip",
     "boardSuggestion": "Usually: {{board}}",

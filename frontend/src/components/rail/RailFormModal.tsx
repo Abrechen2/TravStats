@@ -43,6 +43,7 @@ import {
   railFieldId,
   saveErrorFrom,
   toRailInput,
+  invalidRailPrice,
   withClock,
   type RailFormDraft,
   type RailFormErrorField,
@@ -319,6 +320,11 @@ export function RailFormModal({
     failure.clear();
     setRetryConnect(thenConnect);
     setProgressRefreshFailed(false);
+    if (invalidRailPrice(draft)) {
+      setRefusal({ key: "rail:form.errors.invalidPrice", field: "price" });
+      failure.fail("rail:form.errors.invalidPrice");
+      return;
+    }
     const input = toRailInput(draft);
     // The request and what follows are two steps (forgejo#247): a list that
     // fails to reload must not turn a stored ride into "nicht gespeichert" —

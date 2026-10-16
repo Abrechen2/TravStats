@@ -192,3 +192,30 @@ describe("CruiseImportPreviewModal — status (#status-from-dates)", () => {
     expect(payload.status).toBe("scheduled");
   });
 });
+
+describe("CruiseImportPreviewModal — price notation", () => {
+  // `Number("39,90")` is NaN, which JSON sends as null: a German price typed
+  // into the import review was silently dropped from the stored cruise.
+  beforeEach(() => vi.mocked(cruiseApi.create).mockReset());
+  const priceInput = (): HTMLInputElement =>
+    screen.getByText("field.price").parentElement!.parentElement!.querySelector("input")!;
+
+  it("sends 1.500,00 as 1500", async () => {
+    vi.mocked(cruiseApi.create).mockResolvedValue({ id: "c1" } as unknown as Cruise);
+    render(<CruiseImportPreviewModal entries={[baseEntry]} onCancel={vi.fn()} onSaved={vi.fn()} />);
+    expect(priceInput()).toHaveAttribute("inputmode", "decimal");
+    await userEvent.type(priceInput(), "1.500,00");
+    await userEvent.click(screen.getByText("cruise:import.save"));
+    await waitFor(() => expect(cruiseApi.create).toHaveBeenCalled());
+    expect(vi.mocked(cruiseApi.create).mock.calls[0][0].price).toBe(1500);
+  });
+
+  it("refuses a price that is not a number instead of dropping it", async () => {
+    render(<CruiseImportPreviewModal entries={[baseEntry]} onCancel={vi.fn()} onSaved={vi.fn()} />);
+    await userEvent.type(priceInput(), "abc");
+    expect(priceInput()).toHaveAttribute("aria-invalid", "true");
+    await userEvent.click(screen.getByText("cruise:import.save"));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(cruiseApi.create).not.toHaveBeenCalled();
+  });
+});

@@ -20,6 +20,7 @@
   "edit": "Edit crossing",
   "empty": "No crossings yet.",
   "error": "Could not load crossings.",
+  "invalidNumber": "Enter a valid number of 0 or more for “{{field}}” (e.g. 39.90).",
   "saveError": "Could not save. Please check the fields.",
   "departure": "Departure port",
   "arrival": "Arrival port",

@@ -288,6 +288,7 @@
     "bookedOnHint": "The price is converted at this day's rate.",
     "travellers": "Number of travellers",
     "travellersInvalid": "Please enter a whole number from 1 to 50.",
+    "priceInvalid": "Enter a valid price of 0 or more (e.g. 39.90).",
     "forPersons_one": "for {{count}} person",
     "forPersons_other": "for {{count}} people",
     "created": "Booking added",
