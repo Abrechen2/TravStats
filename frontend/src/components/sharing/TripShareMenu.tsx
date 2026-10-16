@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import type { JSX, KeyboardEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { FocusEvent, JSX, KeyboardEvent } from "react";
+import { createPortal } from "react-dom";
 
+import { useClickOutside } from "../../hooks/useClickOutside";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useTranslation } from "../../hooks/useTranslation";
 import { sharingApi } from "../../lib/api/sharing";
@@ -15,12 +17,47 @@ import ShareTripDialog from "./ShareTripDialog";
 const ITEMS = ["companions", "link"] as const;
 type MenuItem = (typeof ITEMS)[number];
 
+/** Menu width, the gap to the trigger and the margin kept to the viewport edge. */
+const MENU_WIDTH = 260;
+const GAP = 6;
+const GUTTER = 16;
+
+interface Anchor {
+  top: number;
+  bottom: number;
+  right: number;
+}
+
+/**
+ * Where the panel goes (`position: fixed`, viewport coordinates): right edge
+ * aligned to the trigger's, below it — above when there is no room below and
+ * more above — and clamped inside the viewport with a gutter, so a trigger
+ * near the left edge of a phone never pushes it off-screen. Pure, so it is
+ * tested without a layout engine.
+ */
+export function placeMenu(
+  anchor: Anchor,
+  panelHeight: number,
+  viewport: { width: number; height: number }
+): { left: number; top: number; width: number } {
+  const width = Math.min(MENU_WIDTH, viewport.width - 2 * GUTTER);
+  const left = Math.max(GUTTER, Math.min(anchor.right - width, viewport.width - width - GUTTER));
+  const below = anchor.bottom + GAP;
+  const fitsBelow = below + panelHeight <= viewport.height - GUTTER;
+  const top =
+    fitsBelow || anchor.top < viewport.height / 2 ? below : anchor.top - GAP - panelHeight;
+  return { left, top: Math.max(GUTTER, top), width };
+}
+
 /**
  * The trip head's "Teilen" (spec 2026-10-16, D10): one entry point, two kinds
  * of sharing kept apart in words (D11) — "Mit Mitreisenden (eigene Kopie)"
  * copies the trip into a companion's account, "Öffentlicher Link" is the
  * public, expiring link of forgejo#281. Not for the shared demo account,
  * which is every visitor at once.
+ *
+ * The panel is portaled to the body: the head's hero card clips its overflow
+ * (the cover image needs that), which would cut an inline dropdown off.
  *
  * The people are loaded when the companions entry is picked, so the dialog
  * always opens on the current state. A failed load is said out loud and the
@@ -35,17 +72,44 @@ export default function TripShareMenu({ tripId }: { tripId: string }): JSX.Eleme
   const [dialog, setDialog] = useState<MenuItem | null>(null);
   // Tagged with its trip, so a trip change never offers the previous trip's people.
   const [loaded, setLoaded] = useState<{ tripId: string; people: TripPerson[] } | null>(null);
+  const [placement, setPlacement] = useState<ReturnType<typeof placeMenu> | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  useEffect(() => {
-    if (!open) return;
-    itemRefs.current[0]?.focus();
-    const close = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+  // The panel lives in a portal, so "inside" means the trigger's root OR the panel.
+  const closeOnOutside = useCallback((e: MouseEvent | TouchEvent) => {
+    if (panelRef.current?.contains(e.target as Node)) return;
+    setOpen(false);
+  }, []);
+  useClickOutside(rootRef, closeOnOutside);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setPlacement(null);
+      return;
+    }
+    const reposition = (): void => {
+      const trigger = rootRef.current?.querySelector("button")?.getBoundingClientRect();
+      if (!trigger) return;
+      setPlacement(
+        placeMenu(trigger, panelRef.current?.offsetHeight ?? 0, {
+          width: window.innerWidth,
+          height: window.innerHeight,
+        })
+      );
     };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
+    reposition();
+    window.addEventListener("scroll", reposition, true);
+    window.addEventListener("resize", reposition);
+    return () => {
+      window.removeEventListener("scroll", reposition, true);
+      window.removeEventListener("resize", reposition);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (open) itemRefs.current[0]?.focus();
   }, [open]);
 
   useEffect(() => {
@@ -75,12 +139,31 @@ export default function TripShareMenu({ tripId }: { tripId: string }): JSX.Eleme
     setDialog(which);
   };
 
+  // Tabbing out of trigger and panel closes the menu; a target that is not an
+  // element (a click on nothing focusable) is the outside-click hook's business.
+  const onBlur = (e: FocusEvent<HTMLDivElement>) => {
+    const next = e.relatedTarget;
+    if (
+      next instanceof Element &&
+      !rootRef.current?.contains(next) &&
+      !panelRef.current?.contains(next)
+    ) {
+      setOpen(false);
+    }
+  };
+
   const onMenuKey = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Escape") {
       e.preventDefault();
       setOpen(false);
-      // The trigger is the first button of the root, before the menu.
-      rootRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+      // The trigger is the root's only button while the panel is portaled away.
+      rootRef.current?.querySelector("button")?.focus();
+      return;
+    }
+    if (e.key === "Tab") {
+      // The portaled panel sits at the end of the document, so Tab would leave
+      // the page rather than the menu's neighbourhood: close and let it go.
+      setOpen(false);
       return;
     }
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
@@ -93,34 +176,43 @@ export default function TripShareMenu({ tripId }: { tripId: string }): JSX.Eleme
   const people = loaded?.tripId === tripId ? loaded.people : null;
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} onBlur={onBlur}>
       <Button aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
         {t("sharing:menu.button")}
       </Button>
-      {open && (
-        <div
-          role="menu"
-          onKeyDown={onMenuKey}
-          className="absolute right-0 top-full z-70 mt-1.5 flex min-w-[260px] flex-col rounded-lg p-2 shadow-xl"
-          style={{ background: "var(--ts-surface)", border: "1px solid var(--ts-border)" }}
-        >
-          {ITEMS.map((which, i) => (
-            <button
-              key={which}
-              ref={(el) => {
-                itemRefs.current[i] = el;
-              }}
-              type="button"
-              role="menuitem"
-              onClick={() => pick(which)}
-              className="rounded-md px-2.5 py-2 text-left text-sm hover:bg-[var(--ts-tile)]"
-              style={{ color: "var(--ts-text)" }}
-            >
-              {t(`sharing:menu.${which}`)}
-            </button>
-          ))}
-        </div>
-      )}
+      {open &&
+        createPortal(
+          <div
+            ref={panelRef}
+            role="menu"
+            onKeyDown={onMenuKey}
+            onBlur={onBlur}
+            className="fixed z-70 flex flex-col rounded-lg p-2 shadow-xl"
+            style={{
+              ...(placement ?? { left: GUTTER, top: GUTTER, width: MENU_WIDTH }),
+              visibility: placement ? "visible" : "hidden",
+              background: "var(--ts-surface)",
+              border: "1px solid var(--ts-border)",
+            }}
+          >
+            {ITEMS.map((which, i) => (
+              <button
+                key={which}
+                ref={(el) => {
+                  itemRefs.current[i] = el;
+                }}
+                type="button"
+                role="menuitem"
+                onClick={() => pick(which)}
+                className="rounded-md px-2.5 py-2 text-left text-sm hover:bg-[var(--ts-tile)]"
+                style={{ color: "var(--ts-text)" }}
+              >
+                {t(`sharing:menu.${which}`)}
+              </button>
+            ))}
+          </div>,
+          document.body
+        )}
       {dialog === "link" && (
         <ShareLinkDialog open onClose={() => setDialog(null)} kind="trip" targetId={tripId} />
       )}

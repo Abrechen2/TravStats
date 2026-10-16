@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import TripShareMenu from "../TripShareMenu";
+import TripShareMenu, { placeMenu } from "../TripShareMenu";
 import { sharingApi } from "../../../lib/api/sharing";
 
 /**
@@ -89,5 +89,87 @@ describe("TripShareMenu", () => {
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("menu")).toBeNull();
     expect(document.activeElement).toBe(trigger);
+  });
+
+  it("ArrowUp from the first item wraps to the last", async () => {
+    render(<TripShareMenu tripId="t1" />);
+    await userEvent.click(screen.getByRole("button", { name: "sharing:menu.button" }));
+    await userEvent.keyboard("{ArrowUp}");
+    expect(document.activeElement).toBe(
+      screen.getByRole("menuitem", { name: "sharing:menu.link" })
+    );
+  });
+
+  it("closes on an outside click but not on a click inside the panel", async () => {
+    render(<TripShareMenu tripId="t1" />);
+    await userEvent.click(screen.getByRole("button", { name: "sharing:menu.button" }));
+    await userEvent.click(screen.getByRole("menu"));
+    expect(screen.queryByRole("menu")).not.toBeNull();
+    await userEvent.click(document.body);
+    expect(screen.queryByRole("menu")).toBeNull();
+  });
+
+  it("closes when Tab leaves the menu", async () => {
+    render(
+      <div>
+        <TripShareMenu tripId="t1" />
+        <button type="button">elsewhere</button>
+      </div>
+    );
+    await userEvent.click(screen.getByRole("button", { name: "sharing:menu.button" }));
+    await userEvent.tab();
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+    // Focus moving to another element in the page closes it as well.
+    await userEvent.click(screen.getByRole("button", { name: "sharing:menu.button" }));
+    act(() => screen.getByRole("button", { name: "elsewhere" }).focus());
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+  });
+
+  it("renders the panel in a portal, outside the clipping container, and inside the viewport", async () => {
+    const { container } = render(<TripShareMenu tripId="t1" />);
+    const trigger = screen.getByRole("button", { name: "sharing:menu.button" });
+    vi.spyOn(trigger, "getBoundingClientRect").mockReturnValue({
+      top: 100,
+      bottom: 140,
+      left: 4,
+      right: 90,
+      width: 86,
+      height: 40,
+      x: 4,
+      y: 100,
+      toJSON: () => ({}),
+    });
+    Object.defineProperty(window, "innerWidth", { value: 375, configurable: true });
+    await userEvent.click(trigger);
+    const menu = screen.getByRole("menu");
+    expect(container.contains(menu)).toBe(false);
+    expect(document.body.contains(menu)).toBe(true);
+    expect(menu.style.left).toBe("16px");
+    expect(menu.style.visibility).toBe("visible");
+  });
+});
+
+describe("placeMenu", () => {
+  const viewport = { width: 375, height: 700 };
+
+  it("keeps a panel for a trigger near the left edge inside the gutter", () => {
+    const p = placeMenu({ top: 100, bottom: 140, right: 90 }, 100, viewport);
+    expect(p.left).toBe(16);
+    expect(p.left + p.width).toBeLessThanOrEqual(375 - 16);
+  });
+
+  it("clamps a trigger at the right edge to the right gutter", () => {
+    const p = placeMenu({ top: 100, bottom: 140, right: 400 }, 100, viewport);
+    expect(p.left + p.width).toBe(375 - 16);
+  });
+
+  it("opens above when there is no room below and more above", () => {
+    const p = placeMenu({ top: 640, bottom: 680, right: 300 }, 100, viewport);
+    expect(p.top).toBe(640 - 6 - 100);
+  });
+
+  it("narrows on a very narrow viewport", () => {
+    const p = placeMenu({ top: 0, bottom: 40, right: 300 }, 100, { width: 200, height: 700 });
+    expect(p.width).toBe(168);
   });
 });
