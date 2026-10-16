@@ -11,6 +11,7 @@
  */
 import { randomBytes } from "crypto";
 import { ZodError } from "zod";
+import type { AppError } from "../../middleware/errorHandler";
 import { prisma, type DbTransaction } from "../../db";
 import { Prisma, type LeaderboardRemote } from "../../prisma";
 import logger from "../../utils/logger";
@@ -24,6 +25,7 @@ import {
   SERVED_VERSIONS,
   aggregateReplySchema,
   lbClaimReplySchema,
+  type AggregateReply,
   type LbClaimReply,
   leaderboardScopeSchema,
   type LeaderboardScope,
@@ -31,7 +33,15 @@ import {
   type PersonView,
   type RowStatus,
 } from "../../schemas/comparison";
-import { lockRemotePair, personView, remoteKey, scopeJson } from "./consents";
+import {
+  REMOTE_FRIEND_LIMIT,
+  countLiveRemotes,
+  lockRemoteFriends,
+  lockRemotePair,
+  personView,
+  remoteKey,
+  scopeJson,
+} from "./consents";
 import { comparisonError } from "./errors";
 
 const INVITE_TTL_MS = 72 * 3_600_000;
@@ -43,9 +53,12 @@ export type RemoteResult =
   | { status: "ok"; snapshot: LeaderboardSnapshot }
   | { status: Exclude<RowStatus, "ok">; sharedYear?: number };
 
+/** Why a reply that parsed was still not used. */
+type UnexpectedReplyKind = "wrong-year" | "nameless" | "channel-reused";
+
 /** A reply that parsed but does not answer what was asked (another year, a reused channel). */
 class UnexpectedReply extends Error {
-  constructor(readonly kind: string) {
+  constructor(readonly kind: UnexpectedReplyKind) {
     super(`Unexpected peer reply: ${kind}`);
     this.name = "UnexpectedReply";
   }
@@ -118,8 +131,9 @@ export async function pullRemote(
   const readiness = await peerReadiness(remote.origin);
   if (readiness === "outdated") return { status: "outdated" };
   if (readiness !== "ready") return { status: "unreachable" };
+  let reply: AggregateReply;
   try {
-    const reply = aggregateReplySchema.parse(
+    reply = aggregateReplySchema.parse(
       await exchange(remote.origin, {
         action: "aggregate",
         channel: remote.channel,
@@ -127,15 +141,9 @@ export async function pullRemote(
         accept: [...SERVED_VERSIONS],
       })
     );
-    if (reply.status === "ok") {
-      // Totals for a year nobody asked for would be shown under the wrong heading.
-      if (reply.snapshot.year !== year) throw new UnexpectedReply("wrong-year");
-      return { status: "ok", snapshot: reply.snapshot };
-    }
-    if (reply.status === "yearNotShared")
-      return { status: "yearNotShared", sharedYear: reply.year };
-    if (reply.status === "unsupportedVersion") return { status: "outdated" };
-    return { status: reply.status };
+    // Totals for a year nobody asked for would be shown under the wrong heading.
+    if (reply.status === "ok" && reply.snapshot.year !== year)
+      throw new UnexpectedReply("wrong-year");
   } catch (error) {
     // A malformed reply is treated like no reply: nothing unvalidated reaches the page.
     logger.warn(
@@ -144,6 +152,18 @@ export async function pullRemote(
     );
     return { status: "unreachable" };
   }
+  if (reply.status === "ok") return { status: "ok", snapshot: reply.snapshot };
+  if (reply.status === "yearNotShared") return { status: "yearNotShared", sharedYear: reply.year };
+  if (reply.status === "unsupportedVersion") {
+    // The stored list said "ready" and the peer disagrees: forget it, so the next readiness
+    // check pings again instead of trusting it. Only while the peer still holds that list.
+    await prisma.comparisonPeer.updateMany({
+      where: { origin: remote.origin, leaderboardVersions: { hasSome: [...SERVED_VERSIONS] } },
+      data: { leaderboardVersions: [] },
+    });
+    return { status: "outdated" };
+  }
+  return { status: reply.status };
 }
 
 async function connectedIdentity(userId: string): Promise<Identity> {
@@ -211,9 +231,21 @@ async function requireReadyPeer(userId: string, origin: string): Promise<void> {
 
 type AcceptedClaim = Extract<LbClaimReply, { accepted: true }>;
 
+const remoteLimit = (userId: string) =>
+  comparisonError("COMPARISON_REMOTE_LIMIT", 409, "Too many friends on other servers", { userId });
+
+/** A claim the other server accepted but this one will not record; the peer is told after. */
+class ClaimNotRecorded extends Error {
+  constructor(readonly refusal: AppError) {
+    super(refusal.message);
+    this.name = "ClaimNotRecorded";
+  }
+}
+
 /**
  * Writes the claim's result: the remote friend and the claimant's own yes, which IS the claim
- * (the inviter answers on their own server). Runs after the network call, never around it.
+ * (the inviter answers on their own server). Runs after the network call, never around it,
+ * under the user's remote-friends lock so parallel claims cannot all pass the limit.
  */
 async function recordClaim(
   userId: string,
@@ -223,12 +255,26 @@ async function recordClaim(
 ): Promise<string> {
   try {
     return await prisma.$transaction(async (tx) => {
+      await lockRemoteFriends(tx, userId);
       // A channel the other server already gave us belongs to another friendship; reusing it
       // would let one of the two read under the other's consent.
       const taken = await tx.leaderboardRemote.findUnique({
         where: { origin_channel: { origin, channel: answer.channel } },
       });
       if (taken) throw new UnexpectedReply("channel-reused");
+      if ((await countLiveRemotes(tx, userId)) >= REMOTE_FRIEND_LIMIT)
+        throw new ClaimNotRecorded(remoteLimit(userId));
+      const same = await tx.leaderboardRemote.findFirst({
+        where: { userId, origin, username: answer.username },
+        select: { id: true },
+      });
+      if (same)
+        throw new ClaimNotRecorded(
+          comparisonError("COMPARISON_DUPLICATE", 409, "Already a friend on that server", {
+            userId,
+            origin,
+          })
+        );
       const remote = await tx.leaderboardRemote.create({
         data: {
           userId,
@@ -251,11 +297,31 @@ async function recordClaim(
       return remote.id;
     });
   } catch (error) {
+    if (error instanceof ClaimNotRecorded) {
+      // The other server already holds a question for this fresh channel; withdraw it there
+      // so the inviter is not asked about a friendship that does not exist here.
+      await tellEnded(origin, answer.channel);
+      throw error.refusal;
+    }
     const reused =
       error instanceof UnexpectedReply ||
       (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002");
+    // No withdrawal for a reused channel: on the other server it names a friendship that exists.
     if (reused) throw unreachable(userId, origin, "channel-reused");
     throw error;
+  }
+}
+
+/** Best-effort: tells the other server a friendship on this channel is over. */
+async function tellEnded(origin: string, channel: string): Promise<void> {
+  try {
+    await exchange(origin, { action: "lb-state", channel, status: "withdrawn" });
+  } catch (error) {
+    // Its pulls are refused (unknown channel) from now on, so nothing more is served.
+    logger.warn(
+      { operation: "comparison_remote_end_unsent", origin, kind: failureKind(error) },
+      "The other server was not told that a comparison ended"
+    );
   }
 }
 
@@ -276,6 +342,8 @@ export async function claimInvite(
       "A code from this server: add the person by username",
       { userId }
     );
+  // Before the peer is asked, so a full list does not spend the friend's invitation.
+  if ((await countLiveRemotes(prisma, userId)) >= REMOTE_FRIEND_LIMIT) throw remoteLimit(userId);
   await requireReadyPeer(userId, parsed.origin);
   const me = toPerson(
     await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: PERSON_SELECT })
@@ -317,21 +385,5 @@ export async function endRemote(userId: string, remoteId: string): Promise<void>
   });
   if (removed.count === 0)
     throw comparisonError("COMPARISON_NOT_FOUND", 404, "No such comparison", { userId, remoteId });
-  try {
-    await exchange(remote.origin, {
-      action: "lb-state",
-      channel: remote.channel,
-      status: "withdrawn",
-    });
-  } catch (error) {
-    // Its pulls are refused (unknown channel) from now on, so nothing more is served.
-    logger.warn(
-      {
-        operation: "comparison_remote_end_unsent",
-        origin: remote.origin,
-        kind: failureKind(error),
-      },
-      "The other server was not told that a comparison ended"
-    );
-  }
+  await tellEnded(remote.origin, remote.channel);
 }

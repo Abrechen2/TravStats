@@ -23,7 +23,13 @@ import {
   type LbStateRequest,
 } from "../../schemas/comparison";
 import { buildLeaderboardSnapshot } from "./aggregates";
-import { lockRemotePair, readScope } from "./consents";
+import {
+  REMOTE_FRIEND_LIMIT,
+  countLiveRemotes,
+  lockRemoteFriends,
+  lockRemotePair,
+  readScope,
+} from "./consents";
 
 export async function serveAggregate(
   origin: string,
@@ -60,8 +66,9 @@ export async function serveAggregate(
  * asked (a question: pending, no scope, undecided) before their totals are served; the
  * claimant's server asserted the claimant's name under its signature.
  *
- * An unknown, used, expired or orphaned code all read `{ accepted: false }` alike, so the
- * reply says nothing about which codes or users exist.
+ * An unknown, used, expired or orphaned code — or an inviter who already has the maximum
+ * number of remote friends — all read `{ accepted: false }` alike, so the reply says nothing
+ * about which codes or users exist.
  */
 export async function serveClaim(origin: string, body: LbClaimRequest): Promise<LbClaimReply> {
   return prisma.$transaction(async (tx) => {
@@ -70,6 +77,11 @@ export async function serveClaim(origin: string, body: LbClaimRequest): Promise<
       include: { user: { select: { ...PERSON_SELECT, isActive: true } } },
     });
     if (!invite || invite.usedAt || invite.expiresAt <= new Date() || !invite.user.isActive)
+      return { accepted: false as const };
+    // A full list refuses like a bad code, and before the code is spent, so the inviter can
+    // still hand it to someone once a place is free.
+    await lockRemoteFriends(tx, invite.userId);
+    if ((await countLiveRemotes(tx, invite.userId)) >= REMOTE_FRIEND_LIMIT)
       return { accepted: false as const };
     // Conditional on still being unused: two claims racing for one code must not both win.
     const used = await tx.leaderboardInvite.updateMany({

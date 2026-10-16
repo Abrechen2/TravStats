@@ -273,3 +273,56 @@ it("does not let another server end a friendship it does not hold", async () => 
   expect(reply.status).toBe(403);
   expect(await prisma.leaderboardRemote.count({ where: { channel } })).toBe(1);
 });
+
+describe("the limit of 20 friends on other servers", () => {
+  async function inviterWith(live: number) {
+    const id = (
+      await prisma.user.create({
+        data: { username: `lb-cap-${randomUUID().slice(0, 8)}`, passwordHash: "test-only" },
+      })
+    ).id;
+    for (let i = 0; i < live; i += 1)
+      await prisma.leaderboardRemote.create({
+        data: {
+          userId: id,
+          origin: REMOTE,
+          channel: randomUUID(),
+          username: `f${i}`,
+          displayName: `F${i}`,
+          consents: { create: { ownerId: id } },
+        },
+      });
+    return id;
+  }
+  const claim = (code: string, username: string) =>
+    send("remote", { action: "lb-claim", code, username, displayName: username });
+
+  it("refuses a claim on a full list like a bad code, and leaves the code unspent", async () => {
+    const inviter = await inviterWith(20);
+    try {
+      const code = await invite(inviter);
+      expect((await claim(code, "omar")).data).toEqual({ accepted: false });
+      const row = await prisma.leaderboardInvite.findUniqueOrThrow({ where: { hash: hash(code) } });
+      expect(row.usedAt).toBeNull();
+    } finally {
+      await prisma.user.delete({ where: { id: inviter } });
+    }
+  });
+
+  it("accepts at most 20 when many claims arrive at once", async () => {
+    // 17 live: not a multiple of the test pool's 5 connections (see remote.test.ts).
+    const inviter = await inviterWith(17);
+    try {
+      const codes = await Promise.all(Array.from({ length: 10 }, () => invite(inviter)));
+      const replies = await Promise.all(codes.map((code, i) => claim(code, `c${i}`)));
+      expect(replies.filter((r) => r.data?.accepted === true)).toHaveLength(3);
+      expect(replies.filter((r) => r.data?.accepted === false)).toHaveLength(7);
+      expect(await prisma.leaderboardRemote.count({ where: { userId: inviter } })).toBe(20);
+      expect(
+        await prisma.leaderboardInvite.count({ where: { userId: inviter, usedAt: null } })
+      ).toBe(7);
+    } finally {
+      await prisma.user.delete({ where: { id: inviter } });
+    }
+  });
+});

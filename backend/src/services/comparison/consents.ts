@@ -114,6 +114,26 @@ export async function lockRemotePair(tx: Tx, userId: string, remoteId: string): 
   await lockPair(tx, userId, remoteKey(remoteId));
 }
 
+/** Remote friendships one user may hold at once, counted on both servers (controller ruling). */
+export const REMOTE_FRIEND_LIMIT = 20;
+const LIVE_STATUSES = ["pending", "accepted"];
+
+/**
+ * Serialises the writers that add a remote friend for one user — the claim on this server and
+ * the other server's lb-claim alike — so parallel claims cannot all pass the count.
+ */
+export async function lockRemoteFriends(tx: Tx, userId: string): Promise<void> {
+  const key = `leaderboard-remote-friends|${userId}`;
+  await tx.$queryRaw`SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtextextended(${key}::text, 0))) l`;
+}
+
+/** The user's remote friendships whose own consent is still a question or a yes. */
+export function countLiveRemotes(db: Tx | typeof prisma, userId: string): Promise<number> {
+  return db.leaderboardRemote.count({
+    where: { userId, consents: { some: { ownerId: userId, status: { in: LIVE_STATUSES } } } },
+  });
+}
+
 /**
  * A write that holds only if the row is still in the state it was read in. A count of 0 means
  * the other side moved first (ended, answered); the transaction rolls back as a whole.

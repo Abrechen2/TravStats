@@ -254,6 +254,89 @@ describe("claiming an invitation", () => {
   });
 });
 
+describe("the limit of 20 friends on other servers", () => {
+  async function withLiveRemotes(count: number) {
+    const owner = await newUser("lb-cap");
+    for (let i = 0; i < count; i += 1) await remoteFor(owner);
+    return owner;
+  }
+
+  it("refuses a 21st friend before the other server's invitation is spent", async () => {
+    const owner = await withLiveRemotes(20);
+    try {
+      await expect(claimInvite(owner, `${PEER}#${"1".repeat(64)}`, SCOPE)).rejects.toMatchObject({
+        code: "COMPARISON_REMOTE_LIMIT",
+      });
+      expect(exchange).not.toHaveBeenCalled();
+    } finally {
+      await prisma.user.delete({ where: { id: owner } });
+    }
+  });
+
+  it("keeps at most 20 when many claims run at once, and withdraws the extra ones there", async () => {
+    const owner = await withLiveRemotes(17);
+    const handedOut: string[] = [];
+    const withdrawn: string[] = [];
+    jest.mocked(exchange).mockImplementation(async (_origin, body) => {
+      if (body.action === "ping") return ping;
+      if (body.action === "lb-state") {
+        withdrawn.push(body.channel);
+        return { ok: true };
+      }
+      const channel = randomUUID();
+      handedOut.push(channel);
+      return claimed(channel, `p${handedOut.length}`);
+    });
+    try {
+      const results = await Promise.allSettled(
+        Array.from({ length: 10 }, () => claimInvite(owner, `${PEER}#${"2".repeat(64)}`, SCOPE))
+      );
+      const codes = results
+        .filter((r): r is PromiseRejectedResult => r.status === "rejected")
+        .map((r) => (r.reason as { code?: string }).code);
+      expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(3);
+      expect(codes).toEqual(Array(7).fill("COMPARISON_REMOTE_LIMIT"));
+      const stored = (
+        await prisma.leaderboardRemote.findMany({
+          where: { userId: owner },
+          select: { channel: true },
+        })
+      ).map((r) => r.channel);
+      expect(stored).toHaveLength(20);
+      expect([...withdrawn].sort()).toEqual(handedOut.filter((c) => !stored.includes(c)).sort());
+    } finally {
+      await prisma.user.delete({ where: { id: owner } });
+    }
+  });
+
+  it("refuses the same person on the same server twice and withdraws the new question", async () => {
+    const owner = await withLiveRemotes(0);
+    try {
+      jest
+        .mocked(exchange)
+        .mockResolvedValueOnce(ping)
+        .mockResolvedValueOnce(claimed(randomUUID(), "anna"));
+      await claimInvite(owner, `${PEER}#${"3".repeat(64)}`, SCOPE);
+      const second = randomUUID();
+      jest
+        .mocked(exchange)
+        .mockResolvedValueOnce(claimed(second, "anna"))
+        .mockResolvedValueOnce({ ok: true });
+      await expect(claimInvite(owner, `${PEER}#${"4".repeat(64)}`, SCOPE)).rejects.toMatchObject({
+        code: "COMPARISON_DUPLICATE",
+      });
+      expect(exchange).toHaveBeenLastCalledWith(PEER, {
+        action: "lb-state",
+        channel: second,
+        status: "withdrawn",
+      });
+      expect(await prisma.leaderboardRemote.count({ where: { userId: owner } })).toBe(1);
+    } finally {
+      await prisma.user.delete({ where: { id: owner } });
+    }
+  });
+});
+
 describe("pulling a remote friend's totals", () => {
   const remote = () => ({
     id: randomUUID(),
@@ -270,8 +353,6 @@ describe("pulling a remote friend's totals", () => {
 
   it("maps the other server's answers onto row statuses", async () => {
     const friend = remote();
-    jest.mocked(exchange).mockResolvedValueOnce({ status: "unsupportedVersion", supported: [2] });
-    expect(await pullRemote(friend, null)).toEqual({ status: "outdated" });
     jest.mocked(exchange).mockResolvedValueOnce({ status: "yearNotShared", year: 2024 });
     expect(await pullRemote(friend, 2025)).toEqual({ status: "yearNotShared", sharedYear: 2024 });
     jest.mocked(exchange).mockResolvedValueOnce({ status: "withdrawn" });
@@ -285,6 +366,17 @@ describe("pulling a remote friend's totals", () => {
     expect(await pullRemote(friend, null)).toEqual({ status: "unreachable" });
     jest.mocked(exchange).mockResolvedValueOnce({ status: "ok", snapshot: snapshot(2025) });
     expect(await pullRemote(friend, 2025)).toEqual({ status: "ok", snapshot: snapshot(2025) });
+  });
+
+  it("reports a version mismatch as outdated and stops trusting the stored version list", async () => {
+    jest.mocked(exchange).mockResolvedValueOnce({ status: "unsupportedVersion", supported: [2] });
+    expect(await pullRemote(remote(), null)).toEqual({ status: "outdated" });
+    const peer = await prisma.comparisonPeer.findUniqueOrThrow({ where: { origin: PEER } });
+    expect(peer.leaderboardVersions).toEqual([]);
+    // The next check asks the peer again instead of reading "ready" from the stale list.
+    jest.mocked(exchange).mockResolvedValueOnce({ ready: true, leaderboard: [2] });
+    expect(await pullRemote(remote(), null)).toEqual({ status: "outdated" });
+    expect(exchange).toHaveBeenLastCalledWith(PEER, { action: "ping" });
   });
 
   it("asks for the friend's channel, the year and the versions it reads", async () => {
@@ -350,16 +442,23 @@ describe("invitations", () => {
             expiresAt: new Date(Date.now() + 3_600_000),
             usedAt: new Date(),
           },
+          // 17 open: not a multiple of the test pool's 5 connections, so transactions that
+          // merely happen to run in batches of five cannot land on 20 by luck.
+          ...Array.from({ length: 17 }, () => ({
+            hash: randomUUID(),
+            userId: owner,
+            expiresAt: new Date(Date.now() + 3_600_000),
+          })),
         ],
       });
       const results = await Promise.allSettled(
-        Array.from({ length: 26 }, () => createInvite(owner))
+        Array.from({ length: 10 }, () => createInvite(owner))
       );
       const refusedCodes = results
         .filter((r): r is PromiseRejectedResult => r.status === "rejected")
         .map((r) => (r.reason as { code?: string }).code);
-      expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(20);
-      expect(refusedCodes).toEqual(Array(6).fill("COMPARISON_INVITE_LIMIT"));
+      expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(3);
+      expect(refusedCodes).toEqual(Array(7).fill("COMPARISON_INVITE_LIMIT"));
       expect(await prisma.leaderboardInvite.count({ where: { userId: owner, usedAt: null } })).toBe(
         21
       );
