@@ -127,7 +127,14 @@ registry.registerPath({
   path: "/ferry/roadtrip-legs",
   tags: ["Ferry"],
   summary: "List owned roadtrip legs available for linking",
-  responses: { 200: { description: "Legs", content: json(envelope(z.array(leg))) }, ...errors },
+  description: "Newest first, at most 500; `meta.truncated` says whether older legs were left out.",
+  responses: {
+    200: {
+      description: "Legs",
+      content: json(envelope(z.array(leg)).extend({ meta: z.object({ truncated: z.boolean() }) })),
+    },
+    ...errors,
+  },
 });
 registry.registerPath({
   method: "put",
@@ -135,7 +142,7 @@ registry.registerPath({
   tags: ["Ferry"],
   summary: "Link a crossing to a roadtrip leg, or unlink with null",
   description:
-    "Linking marks the leg as ferry and clears road routing. Unlinking preserves its ferry mode. A crossing and roadtrip must belong to the same trip.",
+    "Linking marks the leg as ferry and clears road routing, keeping the leg's previous routing on the crossing (`roadtripLegBefore`). Unlinking, or linking another leg, gives the previous leg that routing back unless it was edited after linking. A crossing and roadtrip must belong to the same trip.",
   request: { params, body: { content: json(z.object({ legId: z.string().uuid().nullable() })) } },
   responses: {
     200: {
