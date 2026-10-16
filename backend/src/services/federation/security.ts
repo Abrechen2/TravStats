@@ -1,45 +1,21 @@
-import {
-  createPrivateKey,
-  createPublicKey,
-  randomBytes,
-  sign,
-  verify,
-  type KeyObject,
-} from "crypto";
-import fs from "fs";
-import { isAbsolute } from "path";
+import { createPublicKey, randomBytes, sign, verify } from "crypto";
 import { BlockList, isIP } from "net";
 import { lookup } from "dns/promises";
 import https from "https";
+import type { ComparisonPeer } from "../../prisma";
 import { prisma } from "../../db";
 import { origin as originSchema, signedEnvelope, type Envelope, type PeerBody } from "./contract";
 
 import { refused, hash } from "./refusal";
 export { refused, hash, PeerRefusal, type PeerRefusalKind } from "./refusal";
-type Identity = { origin: string; key: KeyObject; publicKey: string; fingerprint: string };
-// Every signed packet re-read and re-parsed the key file synchronously, blocking the event loop
-// once per request. The key is loaded once per configuration; a rotated file needs a restart.
-let cachedIdentity: { config: string; value: Identity } | null = null;
-export function identity(): Identity {
-  const origin = originSchema.parse(process.env.FEDERATION_PUBLIC_ORIGIN);
-  const file = process.env.FEDERATION_KEY_FILE;
-  if (process.env.FEDERATION_ENABLED !== "1" || origin === "local" || !file || !isAbsolute(file))
-    throw refused("federation-off");
-  const config = `${origin}|${file}`;
-  if (cachedIdentity?.config === config) return cachedIdentity.value;
-  const key = createPrivateKey(fs.readFileSync(file));
-  if (key.asymmetricKeyType !== "ed25519") throw refused("federation-off");
-  const publicKey = createPublicKey(key).export({ type: "spki", format: "pem" }).toString();
-  const value = { origin, key, publicKey, fingerprint: hash(publicKey) };
-  cachedIdentity = { config, value };
-  return value;
-}
+import { loadIdentity, type Identity } from "./identity";
+export { loadIdentity } from "./identity";
 export function envelope(
   body: unknown,
   destination: string,
+  local: Identity,
   nonce = randomBytes(32).toString("hex")
 ): Envelope {
-  const local = identity();
   const unsigned = {
     origin: local.origin,
     destination,
@@ -108,7 +84,7 @@ export function publicAddress(address: string): boolean {
 /** Connect to the exact DNS answer checked here; no redirects, proxy env or arbitrary media URLs. */
 export async function exchange(remoteOrigin: string, body: PeerBody): Promise<unknown> {
   originSchema.parse(remoteOrigin);
-  const local = identity();
+  const local = await loadIdentity();
   const peer = await prisma.comparisonPeer.findUnique({ where: { origin: remoteOrigin } });
   if (
     !peer?.enabled ||
@@ -121,7 +97,7 @@ export async function exchange(remoteOrigin: string, body: PeerBody): Promise<un
   const answers = await lookup(url.hostname, { all: true });
   if (!answers.length || !answers.every((a) => publicAddress(a.address))) throw refused();
   const selected = answers[0];
-  const outgoing = envelope(body, remoteOrigin);
+  const outgoing = envelope(body, remoteOrigin, local);
   const bytes = Buffer.from(JSON.stringify(outgoing));
   if (bytes.length > 16_384) throw refused();
   const raw = await new Promise<Buffer>((resolve, reject) => {
@@ -171,12 +147,14 @@ export async function exchange(remoteOrigin: string, body: PeerBody): Promise<un
   return JSON.parse(received.body) as unknown;
 }
 /** Signature and admission only. The nonce is consumed separately, once the peer may act. */
-export async function authenticatePeer(value: unknown) {
-  const local = identity();
+export async function authenticatePeer(
+  value: unknown
+): Promise<{ message: Envelope; peer: ComparisonPeer; local: Identity }> {
+  const local = await loadIdentity();
   const candidate = signedEnvelope.parse(value);
   const peer = await prisma.comparisonPeer.findUnique({ where: { origin: candidate.origin } });
   if (!peer?.enabled) throw refused("unknown-peer");
-  return { message: verifyEnvelope(candidate, peer.publicKey, local.origin), peer };
+  return { message: verifyEnvelope(candidate, peer.publicKey, local.origin), peer, local };
 }
 /** Replay protection. Called only for a verified peer, so an unverified key cannot fill the table. */
 export async function consumeNonce(message: Envelope) {

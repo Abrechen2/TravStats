@@ -35,7 +35,7 @@ import {
   listLinks,
 } from "../services/federation/links";
 import { buildSnapshot } from "../services/federation/snapshots";
-import { exchange, identity, refused, hash } from "../services/federation/security";
+import { exchange, loadIdentity, refused, hash } from "../services/federation/security";
 
 /**
  * The full-record, device-encrypted transfer (protocol v2, docs/FEDERATION_E2E.md), moved here
@@ -160,7 +160,7 @@ router.get(
   handle(async (_req, res) => {
     let local = null;
     try {
-      const i = identity();
+      const i = await loadIdentity();
       local = { origin: i.origin, publicKey: i.publicKey, fingerprint: i.fingerprint };
     } catch {
       /* Explicitly unconfigured. */
@@ -180,7 +180,7 @@ router.post(
         enabled: z.boolean(),
       })
       .parse(req.body);
-    if (b.origin === "local" || b.origin === identity().origin) throw refused();
+    if (b.origin === "local" || b.origin === (await loadIdentity()).origin) throw refused();
     const key = createPublicKey(b.publicKey);
     if (key.asymmetricKeyType !== "ed25519") throw refused();
     const pem = key.export({ type: "spki", format: "pem" }).toString();

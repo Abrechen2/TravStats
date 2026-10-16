@@ -34,7 +34,7 @@ router.post("/", async (req, res) => {
       raw.body.length > MAX_PACKET_BODY
     )
       throw refused("packet-too-large");
-    const { message, peer } = await authenticatePeer(raw);
+    const { message, peer, local } = await authenticatePeer(raw);
     const body = packetBody.parse(JSON.parse(message.body));
     // A replayed ping is harmless; anything else needs a verified peer BEFORE a nonce row is kept.
     if (body.action !== "ping" && !peer.verifiedAt) throw refused("unverified-peer");
@@ -66,7 +66,7 @@ router.post("/", async (req, res) => {
         }
       }
     } else throw refused(); // Legacy plaintext travel reads are deliberately disabled.
-    const signed = envelope(data, message.origin, message.nonce);
+    const signed = envelope(data, message.origin, local, message.nonce);
     if (Buffer.byteLength(JSON.stringify(signed)) > 10_000_000) throw refused();
     res.setHeader("Cache-Control", "no-store");
     res.json(signed);

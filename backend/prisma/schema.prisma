@@ -1200,6 +1200,13 @@ model AdminSettings {
   /// default: a link hands a person's travel data to anyone holding the URL.
   /// Switching it off deletes every existing link.
   shareLinksEnabled Boolean @default(false) @map("share_links_enabled")
+  /// Server-to-server connections (comparison rework 2026-10-16). Until then the identity came
+  /// only from FEDERATION_* env vars; those still win when FEDERATION_ENABLED=1 (identity.ts).
+  federationEnabled    Boolean @default(false) @map("federation_enabled")
+  /// This server's public https origin, as peers address it.
+  federationOrigin     String? @map("federation_origin")
+  /// Ed25519 private key, PKCS#8 PEM, encrypted at application level like the push secret.
+  federationPrivateKey String? @map("federation_private_key")
 
   /// The instance's STARTING POINT for "a country counts as visited from …" —
   /// one of `COUNTRY_TIERS` (shared/countryEvidence.ts). Spec §3.2: a fresh
@@ -4734,6 +4741,8 @@ model ComparisonPeer {
   publicKey String @map("public_key")
   enabled Boolean @default(true)
   verifiedAt DateTime? @map("verified_at")
+  /// Leaderboard snapshot versions the peer advertised in its last ping; [] = predates them.
+  leaderboardVersions Int[] @default([]) @map("leaderboard_versions")
   @@map("comparison_peers")
 }
 model ComparisonInvite {

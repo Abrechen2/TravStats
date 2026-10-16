@@ -6,7 +6,7 @@ import { prisma } from "../../db";
 import { type Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import { scopeSchema, type Scope } from "./contract";
-import { exchange, hash, identity, refused } from "./security";
+import { exchange, hash, loadIdentity, refused } from "./security";
 
 export async function ownedLink(userId: string, id: string) {
   const link = await prisma.comparisonLink.findFirst({
@@ -28,7 +28,7 @@ export async function invite(userId: string) {
   await prisma.comparisonInvite.create({ data: { hash: hash(code), userId, expiresAt } });
   let origin = "local";
   try {
-    origin = identity().origin;
+    origin = (await loadIdentity()).origin;
   } catch {
     /* Local-only comparison remains available. */
   }
