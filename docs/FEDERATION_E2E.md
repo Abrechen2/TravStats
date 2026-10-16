@@ -123,9 +123,10 @@ are served through owner-authorised source endpoints; external credentials and U
 forwarded. A missing file, unreachable linked library or capped album listing aborts publication
 rather than producing a silently incomplete package.
 
-The receiving UI provides the established 21-metric leaderboard plus a generic comparison of
-any shared field, including nested fields, across people: values, counts, sums, averages and
-extrema. Missing observations stay absent. Different currencies are not silently combined.
+The receiving UI (`/encrypted-share`) has no ranking table of its own; the leaderboard is the
+separate `/compare` page, built from server-side aggregates only and never from these
+packages. What the receiving UI provides is a generic comparison of any shared field,
+including nested fields, across people: values, counts, sums, averages and extrema. Missing observations stay absent. Different currencies are not silently combined.
 Full records can be inspected/exported, recorded lines compared locally without tile-provider
 requests, photos explicitly previewed as safe bitmap blobs, and original files downloaded.
 This gives field-level coverage; it does not reproduce every specialised statistics dashboard.
