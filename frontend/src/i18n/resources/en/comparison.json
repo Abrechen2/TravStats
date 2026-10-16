@@ -59,6 +59,7 @@
   "status": {
     "notShared": "not shared (yet)",
     "metricNotShared": "does not share this figure",
+    "domainOff": "{{domain}} switched off",
     "yearNotShared": "shares {{year}} only",
     "withdrawn": "stopped sharing",
     "unreachable": "not reachable right now",

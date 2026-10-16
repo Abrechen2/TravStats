@@ -3,6 +3,7 @@ import { Card, ListRow, StatTile } from "../ui";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useSettingsStore } from "../../store/settingsStore";
+import { DOMAINS } from "../../shared/domains";
 import { rankPeople, type RankedEntry } from "../../lib/comparison/ranking";
 import { ABSENT_MARKER, formatMetricValue } from "../../lib/comparison/formatMetric";
 import type { LeaderboardMetric, LeaderboardRow } from "../../lib/comparison/types";
@@ -22,7 +23,7 @@ interface Props {
  * (never a hard-coded swatch); cross-domain figures use the accent.
  */
 export default function LeaderboardTile({ metric, rows, year }: Props): JSX.Element {
-  const { t, i18n } = useTranslation(["comparison", "stats"]);
+  const { t, i18n } = useTranslation(["comparison", "stats", "common"]);
   const { colorOf } = useDomainColors();
   const distanceUnit = useSettingsStore((s) => s.units.distanceUnit);
   const tr = (key: string, options?: Record<string, unknown>): string =>
@@ -51,7 +52,10 @@ export default function LeaderboardTile({ metric, rows, year }: Props): JSX.Elem
               title={entry.row.person.kind === "self" ? tr("you") : entry.row.person.displayName}
               subtitle={
                 entry.reason
-                  ? tr(`status.${entry.reason}`, { year: entry.row.sharedYear })
+                  ? tr(`status.${entry.reason}`, {
+                      year: entry.row.sharedYear,
+                      domain: metric.domain ? tr(`common:${DOMAINS[metric.domain].i18nKey}`) : "",
+                    })
                   : undefined
               }
               trailing={show(entry)}

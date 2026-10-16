@@ -7,7 +7,12 @@ import { LEADERBOARD_METRICS, type MetricKey } from "../../shared/comparisonMetr
 import type { LeaderboardRow, RowStatus } from "./types";
 
 export type UnrankedReason =
-  Exclude<RowStatus, "ok"> | "metricNotShared" | "unknown" | "otherYear" | "notComparable";
+  | Exclude<RowStatus, "ok">
+  | "metricNotShared"
+  | "domainOff"
+  | "unknown"
+  | "otherYear"
+  | "notComparable";
 
 export interface RankedEntry {
   row: LeaderboardRow;
@@ -19,6 +24,9 @@ export interface RankedEntry {
 
 const CROSS_DOMAIN: ReadonlySet<string> = new Set(
   LEADERBOARD_METRICS.filter((m) => m.domain === null).map((m) => m.key)
+);
+const DOMAIN_OF: ReadonlyMap<string, string | null> = new Map(
+  LEADERBOARD_METRICS.map((m) => [m.key, m.domain])
 );
 const domainSet = (domains: readonly string[]) => [...domains].sort().join(",");
 
@@ -35,7 +43,13 @@ function judge(
   if (!Object.prototype.hasOwnProperty.call(snapshot.metrics, metric))
     return { value: null, reason: "metricNotShared" };
   const value = snapshot.metrics[metric];
-  if (typeof value !== "number") return { value: null, reason: "unknown" };
+  if (typeof value !== "number") {
+    // In the consent but not among the domains the snapshot covers: the person switched that
+    // domain off. Shared, just not tracked — never "does not share this figure".
+    const domain = DOMAIN_OF.get(metric) ?? null;
+    const off = domain !== null && !snapshot.domains.includes(domain);
+    return { value: null, reason: off ? "domainOff" : "unknown" };
+  }
   if (
     CROSS_DOMAIN.has(metric) &&
     selfDomains !== null &&

@@ -59,6 +59,7 @@
   "status": {
     "notShared": "teilt das (noch) nicht",
     "metricNotShared": "teilt diese Zahl nicht",
+    "domainOff": "nutzt {{domain}} nicht",
     "yearNotShared": "teilt nur {{year}}",
     "withdrawn": "hat das Teilen beendet",
     "unreachable": "gerade nicht erreichbar",

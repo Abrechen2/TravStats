@@ -87,6 +87,21 @@ describe("rankPeople", () => {
     });
   });
 
+  it("says a consented domain the person does not use is switched off, not withheld", () => {
+    // ben consented to flights and cruises but tracks only flights: his server sends the cruise
+    // figure as null and lists only "flight" among the domains it covers.
+    const ranked = rankPeople(
+      [
+        row("self", { cruiseKm: 10 }, { domains: ["flight", "cruise"] }),
+        row("ben", { cruiseKm: null }),
+      ],
+      "cruiseKm",
+      2025
+    );
+    const ben = ranked.find((e) => e.row.person.key === "ben");
+    expect(ben).toMatchObject({ value: null, rank: null, reason: "domainOff" });
+  });
+
   it("compares cross-domain figures only between equal domain sets", () => {
     const ranked = rankPeople(
       [

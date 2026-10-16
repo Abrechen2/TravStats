@@ -8,7 +8,7 @@ vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
 }));
 
-const snap = (metrics: Record<string, number>, partial: string[] = []) => ({
+const snap = (metrics: Record<string, number | null>, partial: string[] = []) => ({
   schema: "travstats-leaderboard" as const,
   version: 1 as const,
   asOf: "2026-10-16T00:00:00.000Z",
@@ -117,6 +117,23 @@ describe("LeaderboardTile", () => {
     expect(eva).toHaveTextContent("status.metricNotShared");
     expect(eva).toHaveTextContent("—");
     expect(eva).not.toHaveTextContent("0 ");
+  });
+
+  it("shows a consented domain the person does not use as switched off, not as not shared", () => {
+    const off: LeaderboardRow[] = [
+      { ...rows[0], snapshot: { ...snap({ cruiseKm: 7 }), domains: ["flight", "cruise"] } },
+      {
+        person: person("ben", "local"),
+        status: "ok",
+        snapshot: snap({ cruiseKm: null }),
+        sharedYear: null,
+      },
+    ];
+    render(<LeaderboardTile metric={metricOf("cruiseKm")} rows={off} year={2025} />);
+    const ben = itemsOf()[1];
+    expect(ben).toHaveTextContent("status.domainOff");
+    expect(ben).toHaveTextContent("—");
+    expect(ben).not.toHaveTextContent("status.metricNotShared");
   });
 
   it("colours the left edge from the domain colour store, and from the accent across domains", () => {

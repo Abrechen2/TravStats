@@ -15,7 +15,10 @@ import { comparisonError } from "./errors";
  * One person's totals under one consent scope (spec §8).
  *
  * A metric whose group or domain the consent leaves out is ABSENT; one in scope that cannot be
- * derived is null. Cross-domain figures (days away, countries) are only derivable when the
+ * derived is null — including every metric of a consented domain the owner has switched off
+ * since: they shared it, they just do not track it, and "absent" would tell the reader the
+ * opposite. `domains` stays the consented domains the owner actually sees, so a receiver can tell
+ * "switched off" (null, domain not listed) from "not derivable" (null, domain listed). Cross-domain figures (days away, countries) are only derivable when the
  * consent covers every domain the owner has visible: their loaders have no domain mask, and a
  * whole-account figure would leak the domains the owner kept back — the rule snapshots.ts
  * already applied. `countries` has no per-year loader and is null for a year.
@@ -35,10 +38,15 @@ export async function buildLeaderboardSnapshot(
   const domains = visible.filter((d) => scope.domains.includes(d));
   const wholeAccount = domains.length === visible.length;
   const allowed = LEADERBOARD_METRICS.filter(
-    (m) => scope.groups.includes(m.group) && (m.domain === null || domains.includes(m.domain))
+    (m) => scope.groups.includes(m.group) && (m.domain === null || scope.domains.includes(m.domain))
   );
   const allowedKeys = new Set<string>(allowed.map((m) => m.key));
-  const values: Partial<Record<MetricKey, number | null>> = {};
+  // Consented but switched off: no loader runs for it, so its figures stay null.
+  const values: Partial<Record<MetricKey, number | null>> = Object.fromEntries(
+    allowed
+      .filter((m) => m.domain !== null && !domains.includes(m.domain))
+      .map((m) => [m.key, null])
+  );
   const partial: MetricKey[] = [];
   // Independent loaders, one per shared domain: read them side by side, merge in domain order.
   const loaded = await Promise.all(

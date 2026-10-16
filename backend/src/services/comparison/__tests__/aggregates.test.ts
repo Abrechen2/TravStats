@@ -87,6 +87,19 @@ it("abstains from cross-domain figures when the consent leaves a visible domain 
   expect(s.metrics.countries).toBeNull();
 });
 
+it("reports a consented domain the owner has switched off as null, not absent", async () => {
+  // Absent means "outside the consent"; ferry is inside it, the owner just does not track it.
+  jest.mocked(loadVisibleDomains).mockResolvedValue(["poi"]);
+  const s = await buildLeaderboardSnapshot(
+    userId,
+    { groups: ["distance", "trips"], domains: ["ferry", "poi"], year: null },
+    null
+  );
+  expect(s.metrics).toEqual({ ferryCrossings: null, ferryKm: null, placeVisits: 1 });
+  expect(s.domains).toEqual(["poi"]);
+  expect(s.partial).toEqual([]);
+});
+
 it("marks the tour km a lower bound when a counted recording stopped at the import limit", async () => {
   const tour = await prisma.tripRoute.create({
     data: {
