@@ -22,6 +22,8 @@
 
 import { detachTrip } from "./sharing/detach";
 import { propagateWrites } from "./sharing/propagate";
+import { idsOnTrips } from "./sharing/keyOps";
+import { SHARE_ENTITIES, type ShareEntity } from "./sharing/shareTypes";
 import type { Prisma } from "../prisma";
 import { prisma } from "../db";
 import { linkRowsFor, resolveCompanions } from "./companionService";
@@ -264,16 +266,10 @@ export async function mergeTrips(
     // A shared source trip leaves its group before it goes (its members keep
     // their copies and are told); what lands on a shared target is copied.
     for (const source of sources) await detachTrip(tx, userId, source);
-    const onSources = { where: { tripId: { in: sourceIds } }, select: { id: true } } as const;
-    const moved = {
-      flight: await tx.flight.findMany(onSources),
-      cruise: await tx.cruise.findMany(onSources),
-      lodgingStay: await tx.lodgingStay.findMany(onSources),
-      rail: await tx.railJourney.findMany(onSources),
-      bus: await tx.busJourney.findMany(onSources),
-      rental: await tx.rentalBooking.findMany(onSources),
-      stop: await tx.tripStop.findMany(onSources),
-    };
+    const moved = new Map<ShareEntity, string[]>();
+    for (const entity of SHARE_ENTITIES) {
+      moved.set(entity, await idsOnTrips(tx, entity, sourceIds));
+    }
     const move = { where: { tripId: { in: sourceIds } }, data: { tripId: targetId } };
     await tx.flight.updateMany(move);
     await tx.cruise.updateMany(move);
@@ -354,13 +350,8 @@ export async function mergeTrips(
     }
 
     await tx.trip.deleteMany({ where: { id: { in: sourceIds }, userId } });
-    for (const [entity, rows] of Object.entries(moved)) {
-      await propagateWrites(
-        tx,
-        userId,
-        entity as keyof typeof moved,
-        rows.map((r) => r.id)
-      );
+    for (const [entity, ids] of moved) {
+      await propagateWrites(tx, userId, entity, ids);
     }
   });
 

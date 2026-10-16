@@ -4,7 +4,6 @@ import { AppError } from "../../middleware/errorHandler";
 import type { Prisma } from "../../prisma";
 import { consentRequired, hasAcceptedConsent } from "./consent";
 import {
-  assignShareKeys,
   copyCruises,
   copyFlights,
   copyLodgingStays,
@@ -17,6 +16,7 @@ import {
 } from "./copyEntries";
 import { groupBookingTotals, type MemberBookingTotal } from "./bookingTotals";
 import { detachTrip } from "./detach";
+import { assignShareKeys } from "./keyOps";
 import { acceptedWith } from "./members";
 import { tripFacts } from "./facts";
 import { PERSON_SELECT, toPerson, type SharePerson } from "./people";

@@ -1,5 +1,7 @@
 import type { DbTransaction } from "../../../db";
 import type { Prisma, TripStop } from "../../../prisma";
+import { REF_DELEGATES, delegateOf, findByUserKey } from "../keyOps";
+import type { ShareDelegate } from "../shareTypes";
 import { STOP_FACT_FIELDS, pickFacts, stopFacts, type StopFactField } from "../facts";
 import { plainData, type EntityAdapter, type SharedRow } from "./types";
 
@@ -12,34 +14,19 @@ import { plainData, type EntityAdapter, type SharedRow } from "./types";
  */
 
 export interface EntryRef {
-  table: "flight" | "lodgingStay" | "cruise" | "railJourney" | "busJourney" | "rentalBooking";
+  table: ShareDelegate;
   key: string;
 }
-
-const REF_TABLES = [
-  "flight",
-  "lodgingStay",
-  "cruise",
-  "railJourney",
-  "busJourney",
-  "rentalBooking",
-] as const;
 
 /** id → reference by share key, for every id that names a keyed entry. */
 async function refsOf(c: DbTransaction, ids: string[]): Promise<Map<string, EntryRef>> {
   const out = new Map<string, EntryRef>();
   if (ids.length === 0) return out;
-  const where = { id: { in: ids }, shareKey: { not: null } };
-  const select = { id: true, shareKey: true } as const;
-  const found: [EntryRef["table"], { id: string; shareKey: string | null }[]][] = [
-    ["flight", await c.flight.findMany({ where, select })],
-    ["lodgingStay", await c.lodgingStay.findMany({ where, select })],
-    ["cruise", await c.cruise.findMany({ where, select })],
-    ["railJourney", await c.railJourney.findMany({ where, select })],
-    ["busJourney", await c.busJourney.findMany({ where, select })],
-    ["rentalBooking", await c.rentalBooking.findMany({ where, select })],
-  ];
-  for (const [table, rows] of found) {
+  for (const table of REF_DELEGATES) {
+    const rows = await delegateOf(c, table).findMany({
+      where: { id: { in: ids }, shareKey: { not: null } },
+      select: { id: true, shareKey: true },
+    });
     for (const row of rows) if (row.shareKey) out.set(row.id, { table, key: row.shareKey });
   }
   return out;
@@ -51,22 +38,8 @@ async function resolveRef(
   ref: EntryRef | null | undefined,
   userId: string
 ): Promise<string | null> {
-  if (!ref || !REF_TABLES.includes(ref.table)) return null;
-  const where = { userId_shareKey: { userId, shareKey: ref.key } };
-  const select = { id: true } as const;
-  const row =
-    ref.table === "flight"
-      ? await c.flight.findUnique({ where, select })
-      : ref.table === "lodgingStay"
-        ? await c.lodgingStay.findUnique({ where, select })
-        : ref.table === "cruise"
-          ? await c.cruise.findUnique({ where, select })
-          : ref.table === "railJourney"
-            ? await c.railJourney.findUnique({ where, select })
-            : ref.table === "busJourney"
-              ? await c.busJourney.findUnique({ where, select })
-              : await c.rentalBooking.findUnique({ where, select });
-  return row?.id ?? null;
+  if (!ref || !REF_DELEGATES.includes(ref.table)) return null;
+  return (await findByUserKey(c, ref.table, userId, ref.key))?.id ?? null;
 }
 
 type StopWithTrip = TripStop & { trip: { userId: string } | null };

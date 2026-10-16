@@ -1,5 +1,3 @@
-import { randomUUID } from "crypto";
-
 import type { DbTransaction } from "../../db";
 import { deriveLodgingStatus } from "../../shared/statusDerivation";
 import {
@@ -50,43 +48,6 @@ export interface CopyCounts {
 }
 
 export const SHARED_SOURCE = "shared";
-
-/**
- * Give every entry of the sharer's trip a key, if it has none yet (first
- * share). One update per row: each needs its own uuid.
- */
-export async function assignShareKeys(tx: DbTransaction, ownerId: string, tripId: string) {
-  const where = { tripId, userId: ownerId, shareKey: null };
-  const keyed = async (rows: { id: string }[], update: (id: string) => Promise<unknown>) => {
-    for (const row of rows) await update(row.id);
-  };
-  const key = () => ({ shareKey: randomUUID() });
-  await keyed(await tx.flight.findMany({ where, select: { id: true } }), (id) =>
-    tx.flight.update({ where: { id }, data: key() })
-  );
-  await keyed(await tx.lodgingStay.findMany({ where, select: { id: true } }), (id) =>
-    tx.lodgingStay.update({ where: { id }, data: key() })
-  );
-  await keyed(await tx.cruise.findMany({ where, select: { id: true } }), (id) =>
-    tx.cruise.update({ where: { id }, data: key() })
-  );
-  await keyed(await tx.railJourney.findMany({ where, select: { id: true } }), (id) =>
-    tx.railJourney.update({ where: { id }, data: key() })
-  );
-  await keyed(await tx.busJourney.findMany({ where, select: { id: true } }), (id) =>
-    tx.busJourney.update({ where: { id }, data: key() })
-  );
-  await keyed(await tx.rentalBooking.findMany({ where, select: { id: true } }), (id) =>
-    tx.rentalBooking.update({ where: { id }, data: key() })
-  );
-  await keyed(
-    await tx.tripStop.findMany({
-      where: { tripId, shareKey: null, routeId: null, viaPoint: false },
-      select: { id: true },
-    }),
-    (id) => tx.tripStop.update({ where: { id }, data: key() })
-  );
-}
 
 /** Which of `keys` the recipient already holds, as key → their row id. */
 function held(rows: { id: string; shareKey: string | null }[]): Map<string, string> {
