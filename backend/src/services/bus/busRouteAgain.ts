@@ -65,32 +65,40 @@ export async function routeStraightRide(
   }
   // The road line is a shared fact of a ride on a shared trip: the members'
   // copies follow it (design 2026-10-09), so the state before the write is
-  // read first, like every other writer of a bus ride does.
-  const before = await shareSnapshot(prisma, "bus", ride.id);
-  // Written only while the ride is still the one that was read: an edit that
-  // moved a terminal or drew a line meanwhile must not be overwritten.
-  const written = await prisma.busJourney.updateMany({
-    where: {
-      id: ride.id,
-      userId,
-      geometrySource: "straight",
-      depLat: ride.depLat,
-      depLon: ride.depLon,
-      arrLat: ride.arrLat,
-      arrLon: ride.arrLon,
-    },
-    data: {
-      ...busGeometryColumns(line),
-      ...(ride.distanceSource !== "user" && {
-        distanceKm: line.routedKm,
-        distanceSource: "route",
-      }),
-    },
+  // read first, like every other writer of a bus ride does. Snapshot, write
+  // and propagation are one transaction, so the members' copies never follow
+  // a write that did not land, nor miss one that did.
+  const written = await prisma.$transaction(async (tx) => {
+    const before = await shareSnapshot(tx, "bus", ride.id);
+    // Written only while the ride is still the one that was read: an edit that
+    // moved a terminal, drew a line or typed a distance meanwhile must not be
+    // overwritten — the distance source was unguarded, so a ticket distance
+    // typed during the provider call was replaced by the road distance.
+    const result = await tx.busJourney.updateMany({
+      where: {
+        id: ride.id,
+        userId,
+        geometrySource: "straight",
+        depLat: ride.depLat,
+        depLon: ride.depLon,
+        arrLat: ride.arrLat,
+        arrLon: ride.arrLon,
+        distanceSource: ride.distanceSource,
+      },
+      data: {
+        ...busGeometryColumns(line),
+        ...(ride.distanceSource !== "user" && {
+          distanceKm: line.routedKm,
+          distanceSource: "route",
+        }),
+      },
+    });
+    if (result.count === 1) await propagateWrite(tx, userId, "bus", ride.id, before);
+    return result.count === 1;
   });
-  if (written.count !== 1) {
+  if (!written) {
     return { outcome: "unchanged", geometrySource: "straight", fallback: null };
   }
-  await propagateWrite(prisma, userId, "bus", ride.id, before);
   return { outcome: "routed", geometrySource: "road", fallback: null };
 }
 
