@@ -35,6 +35,7 @@ import { importLodging, importLodgingStays } from "./lodging";
 import { importPlaceVisits, importPlaces } from "./places";
 import { importRail } from "./rail";
 import { importBus } from "./bus";
+import { importFerry } from "./ferry";
 import { importRentals } from "./rentals";
 import { importRoadtripStations } from "./roadtripStations";
 import { importRoadtripExpenses } from "./roadtripExpenses";
@@ -80,6 +81,8 @@ const HANDLERS: Record<string, Handler> = {
   rail: importRail,
   // Bus rides (forgejo#180) point at trips only — beside rail, as the export writes them.
   bus: importBus,
+  // Ferry crossings point at trips only — beside bus, as the export writes them.
+  ferry: importFerry,
   // Rentals (forgejo#267) point at trips and roadtrips — after both sheets.
   rental: importRentals,
 };

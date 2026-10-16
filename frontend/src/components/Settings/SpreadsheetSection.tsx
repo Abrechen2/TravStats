@@ -34,6 +34,7 @@ import {
 import type { ParsedSheet } from "../../lib/xlsx/workbook";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { busApi } from "../../lib/api/bus";
+import { ferryApi } from "../../lib/api/ferry";
 import { rentalApi } from "../../lib/api/rental";
 import { Icon } from "../ui/Icon";
 import { SettingRow } from "../ui/SettingRow";
@@ -116,6 +117,7 @@ export default function SpreadsheetSection(): JSX.Element {
   const rentalVisible = useDomainVisible("rental");
   // Bus likewise: behind `busDomain` and the user's domain (forgejo#180).
   const busVisible = useDomainVisible("bus");
+  const ferryVisible = useDomainVisible("ferry");
   const toursVisible = useToursVisible();
   const [status, setStatus] = useState<Status>("idle");
 
@@ -125,7 +127,7 @@ export default function SpreadsheetSection(): JSX.Element {
       // Only domains this instance actually runs. Asking the cruise endpoint
       // on an instance with cruises switched off would 404 and fail the whole
       // export over data the user does not have.
-      const [flights, cruises, lodging, places, roadtrips, tours, rail, rentals, bus] =
+      const [flights, cruises, lodging, places, roadtrips, tours, rail, rentals, bus, ferry] =
         await Promise.all([
           // Walked page by page, like the other domains. One "large" page was
           // never enough: the server caps `limit` at 500 whatever is asked for,
@@ -155,11 +157,12 @@ export default function SpreadsheetSection(): JSX.Element {
           railVisible ? railApi.listAll() : Promise.resolve([]),
           rentalVisible ? rentalApi.listAll() : Promise.resolve([]),
           busVisible ? busApi.listAll() : Promise.resolve([]),
+          ferryVisible ? ferryApi.listAll() : Promise.resolve([]),
         ]);
 
       const blob = await exportWorkbook(
         t,
-        { flights, cruises, lodging, places, roadtrips, tours, rail, rentals, bus },
+        { flights, cruises, lodging, places, roadtrips, tours, rail, rentals, bus, ferry },
         i18n.language
       );
       if (!blob) {
@@ -181,7 +184,16 @@ export default function SpreadsheetSection(): JSX.Element {
     } catch {
       setStatus("failed");
     }
-  }, [isEnabled, toursVisible, railVisible, rentalVisible, busVisible, t, i18n.language]);
+  }, [
+    isEnabled,
+    toursVisible,
+    railVisible,
+    rentalVisible,
+    busVisible,
+    ferryVisible,
+    t,
+    i18n.language,
+  ]);
 
   const [importStatus, setImportStatus] = useState<ImportStatus>("idle");
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
@@ -205,7 +217,7 @@ export default function SpreadsheetSection(): JSX.Element {
         const sheets = await readWorkbookForImport(
           t,
           file,
-          { rail: railVisible, bus: busVisible, rental: rentalVisible },
+          { rail: railVisible, bus: busVisible, ferry: ferryVisible, rental: rentalVisible },
           otherLanguages
         );
         if (sheets.length === 0) {
@@ -221,7 +233,7 @@ export default function SpreadsheetSection(): JSX.Element {
         setImportStatus("failed");
       }
     },
-    [t, mode, railVisible, rentalVisible]
+    [t, mode, railVisible, busVisible, ferryVisible, rentalVisible]
   );
 
   const handleApply = useCallback(async () => {
