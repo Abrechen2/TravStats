@@ -1,3 +1,4 @@
+import type { UpdateBusJourneyInput } from "../../schemas/bus";
 import {
   mergeTerminalRide,
   terminalColumns,
@@ -28,7 +29,7 @@ const BUS_CODES = {
 export function mergeBusJourney(
   existing: BusJourneyState | null,
   /** A UpdateBusJourneyInput, or the importer's narrower terminal-ride input. */
-  input: TerminalRideInput,
+  input: UpdateBusJourneyInput | TerminalRideInput,
   now: Date = new Date()
 ): BusJourneyState {
   return mergeTerminalRide(existing, input, BUS_CODES, now);

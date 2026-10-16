@@ -1,3 +1,4 @@
+import type { UpdateFerryJourneyInput } from "../../schemas/ferry";
 /** Ferry crossings (dennis/TravStats forgejo#293). */
 import {
   mergeTerminalRide,
@@ -25,7 +26,7 @@ const FERRY_CODES = {
 export function mergeFerryJourney(
   existing: FerryJourneyState | null,
   /** A UpdateFerryJourneyInput, or the importer's narrower terminal-ride input. */
-  input: TerminalRideInput,
+  input: UpdateFerryJourneyInput | TerminalRideInput,
   now: Date = new Date()
 ): FerryJourneyState {
   return mergeTerminalRide(existing, input, FERRY_CODES, now);

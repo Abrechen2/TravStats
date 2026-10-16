@@ -686,11 +686,12 @@ describe("Ferry rides API", () => {
     const original = prisma.ferryJourney.deleteMany.bind(prisma.ferryJourney);
     const spy = jest
       .spyOn(prisma.ferryJourney, "deleteMany")
-      .mockImplementationOnce(async (args) => {
+      // A plain async function stands in for Prisma's PrismaPromise-returning delegate.
+      .mockImplementationOnce((async (args?: Parameters<typeof original>[0]) => {
         // The other device's delete lands between the lookup and this one.
         await original({ where: { id: ride.id } });
         return original(args);
-      });
+      }) as unknown as typeof original);
     try {
       const res = await request(app)
         .delete(`/api/v1/ferry/${ride.id}`)
