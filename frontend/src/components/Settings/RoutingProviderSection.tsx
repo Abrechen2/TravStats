@@ -5,8 +5,8 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { adminApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { ROUTING_PROVIDER_IDS, type RoutingProviderId } from "../../types/tour";
-import { useBusOffered } from "../../hooks/useBusVisible";
 import { useToursVisible } from "../../hooks/useToursVisible";
+import { useDomainOffered } from "../../hooks/useDomainVisible";
 
 type LoadStatus = "loading" | "error" | "ready";
 
@@ -30,7 +30,7 @@ interface RoutingProviderSectionProps {
  */
 export function InstanceRoutingProviderCard(): JSX.Element | null {
   const toursVisible = useToursVisible();
-  const busVisible = useBusOffered();
+  const busVisible = useDomainOffered("bus");
   return toursVisible || busVisible ? <RoutingProviderSection isAdmin /> : null;
 }
 

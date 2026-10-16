@@ -46,43 +46,26 @@ export function parseStatsTab(tab: string | null): StatsTab {
  * `usePlacesAccess`. Pending keeps the tab (the app does not know yet);
  * denied removes it.
  *
- * Rail asks the INSTANCE half separately (`railOffered`, the `railDomain` beta
- * gate — `useRailOffered`); `enabledDomains` already carries the user half. It
- * defaults to hidden, so a caller that forgets to pass it hides rail rather
- * than showing a beta domain on an instance that switched it off.
+ * The beta switches of rail, rental, bus, ferry and roadtrip are already
+ * applied to `enabledDomains` (`useEnabledDomains`), so a gated domain has no
+ * tab and no deep link here without being asked again.
  */
 export function visibleStatsTabs(
   enabledDomains: readonly DomainKey[],
-  placesAccess: PlacesAccess,
-  railOffered = false,
-  rentalOffered = false,
-  /** The `busDomain` gate (forgejo#263); hidden unless a caller says otherwise, as rail. */
-  busOffered = false
+  placesAccess: PlacesAccess
 ): DomainKey[] {
   return enabledDomains.filter(
-    (key) =>
-      (key !== "poi" || placesAccess !== "denied") &&
-      (key !== "rail" || railOffered) &&
-      (key !== "rental" || rentalOffered) &&
-      (key !== "bus" || busOffered) &&
-      key !== "ferry"
+    (key) => (key !== "poi" || placesAccess !== "denied") && key !== "ferry"
   );
 }
 
 export function resolveStatsTab(
   requested: StatsTab,
   enabledDomains: readonly DomainKey[],
-  placesAccess: PlacesAccess,
-  railOffered = false,
-  rentalOffered = false,
-  busOffered = false
+  placesAccess: PlacesAccess
 ): StatsTab {
   if (requested === "all" || requested === "ferry") return "all";
   if (requested === "poi") return placesAccess === "denied" ? "all" : "poi";
-  // Rail behind a closed beta gate has no tab to land on, however it was asked.
-  if (requested === "rail" && !railOffered) return "all";
-  if (requested === "rental" && !rentalOffered) return "all";
-  if (requested === "bus" && !busOffered) return "all";
   // Falling back to the overview rather than showing nothing: the reader asked
   // for statistics, and a page they can use beats an empty panel.
   return enabledDomains.includes(requested) ? requested : "all";

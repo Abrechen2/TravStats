@@ -3,8 +3,14 @@ import { renderHook, waitFor } from "@testing-library/react";
 
 const gates = vi.hoisted(() => ({ rental: false, bus: false }));
 const api = vi.hoisted(() => ({ rentalStats: vi.fn(), busStats: vi.fn() }));
-vi.mock("../../../hooks/useRentalVisible", () => ({ useRentalVisible: () => gates.rental }));
-vi.mock("../../../hooks/useBusVisible", () => ({ useBusVisible: () => gates.bus }));
+vi.mock("../../../hooks/useDomainVisible", () => ({
+  useDomainVisible: (key: string): boolean =>
+    (
+      (({ rental: () => gates.rental, bus: () => gates.bus }) as Record<string, () => boolean>)[
+        key
+      ] ?? (() => false)
+    )(),
+}));
 vi.mock("../../api/rentalLinks", () => ({ rentalLinksApi: { stats: api.rentalStats } }));
 vi.mock("../../api/bus", () => ({ busApi: { stats: api.busStats } }));
 vi.mock("../../logger", () => ({ logger: { error: vi.fn() } }));

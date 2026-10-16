@@ -9,9 +9,9 @@ import { legendRow, type LegendRowFn } from "./allTabLegendRows";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import { useDashboardFilterStore } from "../../../store/dashboardFilterStore";
 import { busApi } from "../../../lib/api/bus";
-import { useBusVisible } from "../../../hooks/useBusVisible";
 import { logger } from "../../../lib/logger";
 import type { BusJourney } from "../../../types/bus";
+import { useDomainVisible } from "../../../hooks/useDomainVisible";
 
 type Translate = (key: string) => string;
 
@@ -127,7 +127,7 @@ export interface BusOverlay {
  * is added here, so a hidden domain never reaches the network.
  */
 export function useBusOverlay(wanted: boolean, onGlobe: boolean, t: Translate): BusOverlay {
-  const show = useBusVisible() && wanted;
+  const show = useDomainVisible("bus") && wanted;
   const year = useDashboardFilterStore((s) => s.year);
   const rides = useDashboardBus(show, year);
   const { colorOf } = useDomainColors();

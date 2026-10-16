@@ -4,17 +4,17 @@ import { renderHook, waitFor } from "@testing-library/react";
 vi.mock("../../../api/rail", () => ({
   railApi: { listAll: vi.fn(async () => []) },
 }));
-const ENABLED = ["rail"];
-vi.mock("../../../../hooks/useEnabledDomains", () => ({
-  useEnabledDomains: () => ({ enabled: ENABLED }),
-}));
-const gate = { offered: false };
-vi.mock("../../../../hooks/useRailVisible", () => ({
-  useRailOffered: () => gate.offered,
-}));
+// The real gate: `useEnabledDomains` over the store's beta flag.
+vi.unmock("../../../../store/settingsStore");
+const gate = {
+  set offered(value: boolean) {
+    useSettingsStore.setState({ enabledDomains: ["rail"], betaFeaturesEnabled: value });
+  },
+};
 
 import { railApi } from "../../../api/rail";
 import { useDomainStats } from "../useDomainStats";
+import { useSettingsStore } from "../../../../store/settingsStore";
 import type { Flight } from "../../../../types";
 
 const NO_FLIGHTS: Flight[] = [];

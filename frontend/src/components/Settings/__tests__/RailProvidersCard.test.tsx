@@ -8,7 +8,10 @@ vi.mock("../../../lib/logger", () => ({
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
 let offered = true;
-vi.mock("../../../hooks/useRailVisible", () => ({ useRailOffered: () => offered }));
+vi.mock("../../../hooks/useDomainVisible", () => ({
+  useDomainOffered: (key: string): boolean =>
+    ((({ rail: () => offered }) as Record<string, () => boolean>)[key] ?? (() => false))(),
+}));
 const getInstanceSettings = vi.fn();
 const updateInstanceSettings = vi.fn();
 const testRailRouting = vi.fn();

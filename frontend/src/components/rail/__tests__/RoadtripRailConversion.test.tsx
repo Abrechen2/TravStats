@@ -9,7 +9,10 @@ vi.mock("../../../lib/logger", () => ({
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
 const railVisible = vi.fn(() => true);
-vi.mock("../../../hooks/useRailVisible", () => ({ useRailVisible: () => railVisible() }));
+vi.mock("../../../hooks/useDomainVisible", () => ({
+  useDomainVisible: (key: string): boolean =>
+    ((({ rail: () => railVisible() }) as Record<string, () => boolean>)[key] ?? (() => false))(),
+}));
 const navigate = vi.fn();
 vi.mock("react-router-dom", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-router-dom")>()),

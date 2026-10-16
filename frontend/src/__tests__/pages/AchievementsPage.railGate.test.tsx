@@ -8,8 +8,8 @@ import { achievementDomains } from "../../pages/AchievementsPage";
 /**
  * Rail badges (2.7) live behind the `railDomain` beta gate like every rail
  * surface. A user who switched rail on while the gate was open keeps `rail` in
- * their enabled domains after the instance closes it — so the enabled list
- * alone would still show the badges and the "Bahn" pill.
+ * their stored domains after the instance closes it; the page asks the real
+ * `useEnabledDomains`, which drops it.
  */
 
 vi.mock("../../components/NavigationBar", () => ({
@@ -50,17 +50,14 @@ vi.mock("../../lib/api", () => ({
   },
 }));
 
-vi.mock("../../hooks/useEnabledDomains", () => ({
-  useEnabledDomains: (): { enabled: string[]; isEnabled: (k: string) => boolean } => ({
-    enabled: ["flight", "rail"],
-    isEnabled: (k: string) => ["flight", "rail"].includes(k),
-  }),
-}));
+vi.unmock("../../store/settingsStore");
+import { useSettingsStore } from "../../store/settingsStore";
 
-const railGate = { open: false };
-vi.mock("../../hooks/useRailVisible", () => ({
-  useRailVisible: (): boolean => railGate.open,
-}));
+const railGate = {
+  set open(value: boolean) {
+    useSettingsStore.setState({ enabledDomains: ["flight", "rail"], betaFeaturesEnabled: value });
+  },
+};
 
 async function renderPage(): Promise<void> {
   const { default: AchievementsPage } = await import("../../pages/AchievementsPage");
@@ -77,24 +74,16 @@ describe("AchievementsPage — rail badges follow the rail beta gate", () => {
     vi.clearAllMocks();
   });
 
-  it("drops rail from the badge domains only while rail is not visible", () => {
-    expect(achievementDomains(["flight", "rail"], false)).toEqual(["flight"]);
-    expect(achievementDomains(["flight", "rail"], true)).toEqual(["flight", "rail"]);
-  });
-
-  // forgejo#262 / #263: rental and bus badges follow their own beta gates.
-  it("drops rental and bus unless their gates are open, and reads a missing gate as closed", () => {
-    const all = ["flight", "rental", "bus"] as const;
-    expect(achievementDomains([...all], false)).toEqual(["flight"]);
-    expect(achievementDomains([...all], false, { rentalVisible: true })).toEqual([
+  // The beta switches are applied by `useEnabledDomains` before the list gets
+  // here; this only drops a domain that has no badges.
+  it("passes the gated enabled list through, minus a domain without badges", () => {
+    expect(achievementDomains(["flight", "rail", "rental", "bus"])).toEqual([
       "flight",
-      "rental",
-    ]);
-    expect(achievementDomains([...all], false, { rentalVisible: true, busVisible: true })).toEqual([
-      "flight",
+      "rail",
       "rental",
       "bus",
     ]);
+    expect(achievementDomains(["flight", "ferry"])).toEqual(["flight"]);
   });
 
   it("hides rail badges and the rail pill with the gate closed", async () => {

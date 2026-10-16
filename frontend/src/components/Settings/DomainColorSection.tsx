@@ -6,11 +6,9 @@ import { useDomainColors } from "../../hooks/useDomainColors";
 import { useDomainColorStore } from "../../store/domainColorStore";
 import { isBrandDefault, needsOutline } from "../../lib/domainColor";
 import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
-import { useRailVisible } from "../../hooks/useRailVisible";
-import { useRentalVisible } from "../../hooks/useRentalVisible";
-import { useFerryVisible } from "../../hooks/useFerryVisible";
-import { useBusVisible } from "../../hooks/useBusVisible";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
+import { useEnabledDomains } from "../../hooks/useEnabledDomains";
+import { DOMAIN_BETA_GATES } from "../../config/domainBetaGates";
 
 /**
  * One colour per domain, for everywhere that is not the map.
@@ -35,19 +33,14 @@ export default function DomainColorSection(): JSX.Element | null {
   // Roadtrips are beta (2.7): no colour to pick for a domain the instance
   // does not show — the same rule as the module switch beside it.
   const { isFeatureVisible } = useBetaFeatures();
-  // Rail's row appears with the domain itself (beta gate + domain choice).
-  const railVisible = useRailVisible();
-  const rentalVisible = useRentalVisible();
-  const busVisible = useBusVisible();
-  const ferryVisible = useFerryVisible();
-  const keys = AVAILABLE_DOMAINS.filter((key) => {
-    if (key === "roadtrip") return isFeatureVisible("roadtrips");
-    if (key === "rail") return railVisible;
-    if (key === "rental") return rentalVisible;
-    if (key === "ferry") return ferryVisible;
-    if (key === "bus") return busVisible;
-    return true;
-  });
+  // Every other gated domain's row appears with the domain itself (beta
+  // switch + domain choice); an ungated domain always has its row.
+  const { isEnabled } = useEnabledDomains();
+  const keys = AVAILABLE_DOMAINS.filter((key) =>
+    key === "roadtrip"
+      ? isFeatureVisible("roadtrips")
+      : DOMAIN_BETA_GATES[key] === undefined || isEnabled(key)
+  );
 
   return (
     <SectionCard>

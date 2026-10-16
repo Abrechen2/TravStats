@@ -73,10 +73,6 @@ vi.mock("../../places/PlaceFormModal", () => ({
 }));
 
 // The bus gate (beta switch AND domain) has its own tests; here it is open.
-vi.mock("../../../hooks/useBusVisible", () => ({
-  useBusVisible: () => true,
-  useBusOffered: () => true,
-}));
 
 // The real form pulls in the geocoder; a stub that can report a save is enough.
 vi.mock("../../bus/BusFormModal", () => ({

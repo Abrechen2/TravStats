@@ -9,8 +9,6 @@ import type { DomainKey } from "../../../shared/domains";
 import type { DomainStatsMap } from "../../../lib/stats/domain-stats";
 import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
 import { usePlacesAccess } from "../../../hooks/usePlacesVisible";
-import { useBusOffered } from "../../../hooks/useBusVisible";
-import { useRailOffered } from "../../../hooks/useRailVisible";
 import { visibleStatsTabs } from "../../../pages/statsTabAccess";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { StatsPeriod } from "../useStatsPeriod";
@@ -58,16 +56,15 @@ export default function OverviewTab({
   // beta flag off for an account that had the domain on from beta days.
   const { enabled: enabledDomains } = useEnabledDomains();
   const placesAccess = usePlacesAccess();
-  const railOffered = useRailOffered();
-  // Bus behind its own switch (forgejo#265). Rental has a tab but no place in
-  // the cross-domain folds (rental spec §11 D3), so it is dropped here.
-  const busOffered = useBusOffered();
+  // The beta switches are already applied to `enabledDomains`. Rental has a
+  // tab but no place in the cross-domain folds (rental spec §11 D3), so it is
+  // dropped here; ferry has folds but, as yet, no tab of its own.
   const enabled = useMemo(
     () => [
-      ...visibleStatsTabs(enabledDomains, placesAccess, railOffered, false, busOffered),
+      ...visibleStatsTabs(enabledDomains, placesAccess).filter((key) => key !== "rental"),
       ...enabledDomains.filter((key) => key === "ferry"),
     ],
-    [enabledDomains, placesAccess, railOffered, busOffered]
+    [enabledDomains, placesAccess]
   );
   const { selectedYear, compareYear, compareEnabled } = period;
   const show = visibility.isVisible;

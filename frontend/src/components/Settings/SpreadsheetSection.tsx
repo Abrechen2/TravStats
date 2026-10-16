@@ -33,13 +33,11 @@ import {
 } from "../../lib/xlsx/importClient";
 import type { ParsedSheet } from "../../lib/xlsx/workbook";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
-import { useRailVisible } from "../../hooks/useRailVisible";
-import { useRentalVisible } from "../../hooks/useRentalVisible";
-import { useBusVisible } from "../../hooks/useBusVisible";
 import { busApi } from "../../lib/api/bus";
 import { rentalApi } from "../../lib/api/rental";
 import { Icon } from "../ui/Icon";
 import { SettingRow } from "../ui/SettingRow";
+import { useDomainVisible } from "../../hooks/useDomainVisible";
 
 /** The languages a TravStats export can be written in. */
 const WORKBOOK_LANGUAGES = ["de", "en"] as const;
@@ -113,11 +111,11 @@ export default function SpreadsheetSection(): JSX.Element {
   const { t, i18n } = useTranslation(["xlsx", "common"]);
   const { isEnabled } = useEnabledDomains();
   // Rail is beta: behind the `railDomain` gate the export carries no rail sheet.
-  const railVisible = useRailVisible();
+  const railVisible = useDomainVisible("rail");
   // Rentals likewise: behind `rentalDomain` and the user's domain (forgejo#267).
-  const rentalVisible = useRentalVisible();
+  const rentalVisible = useDomainVisible("rental");
   // Bus likewise: behind `busDomain` and the user's domain (forgejo#180).
-  const busVisible = useBusVisible();
+  const busVisible = useDomainVisible("bus");
   const toursVisible = useToursVisible();
   const [status, setStatus] = useState<Status>("idle");
 

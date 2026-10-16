@@ -64,7 +64,12 @@ vi.mock("../../hooks/useEnabledDomains", () => ({
 }));
 
 const railVisible = vi.hoisted(() => ({ value: true }));
-vi.mock("../../hooks/useRailVisible", () => ({ useRailVisible: () => railVisible.value }));
+vi.mock("../../hooks/useDomainVisible", () => ({
+  useDomainVisible: (key: string): boolean =>
+    (
+      (({ rail: () => railVisible.value }) as Record<string, () => boolean>)[key] ?? (() => false)
+    )(),
+}));
 
 vi.mock("../../components/NavigationBar", () => ({
   default: () => <div data-testid="nav-stub" />,

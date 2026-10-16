@@ -7,6 +7,7 @@ import {
   isBetaFeatureKey,
   type BetaFeatureKey,
 } from "../../config/betaFeatures";
+import { DOMAIN_BETA_GATES } from "../../config/domainBetaGates";
 
 const SRC = resolve(__dirname, "../..");
 
@@ -42,7 +43,8 @@ function sourceFiles(dir: string, acc: string[] = []): string[] {
  * `gatedSections` table arrived with the settings routes in 2.7.0 and is the
  * same story: the settings page now resolves its gate from a variable, so a
  * scan that only knows call sites would have declared `devicePairing`
- * ungated on the day it moved into a table.
+ * ungated on the day it moved into a table. The domain switches moved into
+ * `DOMAIN_BETA_GATES` the same way (2026-10-16).
  */
 function gateKeysInSource(): { key: string; file: string }[] {
   const found: { key: string; file: string }[] = [];
@@ -61,6 +63,11 @@ function gateKeysInSource(): { key: string; file: string }[] {
         found.push({ key: entry[1], file });
       }
     }
+  }
+  // The domain switches are data too, read from the map itself rather than
+  // scanned: `useEnabledDomains` applies every entry of it.
+  for (const key of Object.values(DOMAIN_BETA_GATES)) {
+    found.push({ key, file: join(SRC, "config", "domainBetaGates.ts") });
   }
   return found;
 }

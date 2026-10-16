@@ -28,8 +28,6 @@ import {
 import { useRailOverlay } from "./railMapOverlay";
 import { useRentalOverlay } from "./rentalMapOverlay";
 import { useBusOverlay } from "./busMapOverlay";
-import { useRailVisible } from "../../../hooks/useRailVisible";
-import { useRentalVisible } from "../../../hooks/useRentalVisible";
 import { MAP_LAYER_COLORS } from "../../../types/mapTheme";
 import { logger } from "../../../lib/logger";
 import { useCruiseColorStore } from "../../../store/cruiseColorStore";
@@ -71,6 +69,7 @@ import { useDomainColors } from "../../../hooks/useDomainColors";
 import { DomainFilterButton } from "./DomainFilterButton";
 import { DomainFilterEmptyOverlay } from "./DomainFilterEmptyOverlay";
 import { allTabAppearanceDomains, useAllTabDomainVisibility } from "./useAllTabDomainVisibility";
+import { useDomainVisible } from "../../../hooks/useDomainVisible";
 
 // Maps the dashboard-level AllMode to what MapContainer3D's visMode prop expects.
 // "journey" uses extraLayers with showInternalCruises=false so it has full
@@ -502,9 +501,9 @@ export function AllTab(): JSX.Element {
   // browser). `visMode` already resolves "globe" vs "routes"/"heatmap"/
   // "journey" a few lines up.
   // Rail and rentals beside the tours, each behind its own gates and filter row.
-  const railOn = useRailVisible() && showTours && domainFilter.isVisible("rail");
+  const railOn = useDomainVisible("rail") && showTours && domainFilter.isVisible("rail");
   const rail = useRailOverlay(railOn, visMode === "globe", t);
-  const rentalOn = useRentalVisible() && showTours && domainFilter.isVisible("rental");
+  const rentalOn = useDomainVisible("rental") && showTours && domainFilter.isVisible("rental");
   const rental = useRentalOverlay(rentalOn, visMode === "globe", t);
   const bus = useBusOverlay(showTours && domainFilter.isVisible("bus"), visMode === "globe", t);
   const tourDeck = useTourDeckLayers(tourPathData, visMode === "globe");

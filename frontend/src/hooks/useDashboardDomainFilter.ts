@@ -2,9 +2,6 @@ import { useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useEnabledDomains } from "./useEnabledDomains";
 import { useToursVisible } from "./useToursVisible";
-import { useRailVisible } from "./useRailVisible";
-import { useRentalVisible } from "./useRentalVisible";
-import { useBusVisible } from "./useBusVisible";
 import { useDashboardCountsStore } from "../store/dashboardCountsStore";
 import { useDashboardDomainFilterStore } from "../store/dashboardDomainFilterStore";
 import { useDashboardRoute } from "./useDashboardRoute";
@@ -76,9 +73,6 @@ const hasOwnView = (key: FilterDomainKey): key is ViewKey => !NO_OWN_VIEW.has(ke
 export function useDashboardDomainFilter(tourCount: number | null): DashboardDomainFilterResult {
   const { isEnabled } = useEnabledDomains();
   const toursVisible = useToursVisible();
-  const railVisible = useRailVisible();
-  const rentalVisible = useRentalVisible();
-  const busVisible = useBusVisible();
   const counts = useDashboardCountsStore((s) => s.counts);
   const [search] = useSearchParams();
   const { tab, setTab } = useDashboardRoute();
@@ -134,12 +128,10 @@ export function useDashboardDomainFilter(tourCount: number | null): DashboardDom
       poi: isEnabled("poi"),
       tour: toursVisible,
       roadtrip: isEnabled("roadtrip"),
-      // Both halves of rail's own gate live in `useRailVisible`: the instance
-      // beta switch AND the user's domain.
-      rail: railVisible,
-      // Bus: the `busDomain` beta switch AND the user's domain (`useBusVisible`).
-      bus: busVisible,
-      rental: rentalVisible,
+      // A gated domain's beta switch is already applied by `isEnabled`.
+      rail: isEnabled("rail"),
+      bus: isEnabled("bus"),
+      rental: isEnabled("rental"),
     };
     const rowCount: Record<FilterDomainKey, number | null> = {
       flight: counts.flight,
@@ -160,16 +152,7 @@ export function useDashboardDomainFilter(tourCount: number | null): DashboardDom
       count: rowCount[key],
       beta: BETA_ROWS.has(key),
     }));
-  }, [
-    isEnabled,
-    toursVisible,
-    railVisible,
-    busVisible,
-    rentalVisible,
-    counts,
-    tourCount,
-    effectiveHidden,
-  ]);
+  }, [isEnabled, toursVisible, counts, tourCount, effectiveHidden]);
 
   const visibleCount = rows.filter((r) => r.visible).length;
   const totalCount = rows.length;

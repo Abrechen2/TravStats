@@ -56,7 +56,10 @@ const mockRoadtripDomain = vi.hoisted(() => vi.fn(() => true));
 vi.mock("../../../../hooks/useEnabledDomains", () => ({
   useEnabledDomains: () => ({
     enabled: ["flight", "cruise", "lodging"],
-    isEnabled: (key: string) => (key === "roadtrip" ? mockRoadtripDomain() : true),
+    // The transport domains are off: since `useEnabledDomains` carries their
+    // beta switches, answering true here would load (unmocked) rides.
+    isEnabled: (key: string) =>
+      key === "roadtrip" ? mockRoadtripDomain() : !["rail", "rental", "bus", "ferry"].includes(key),
   }),
 }));
 

@@ -16,8 +16,6 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
-import { useRailVisible } from "../../hooks/useRailVisible";
-import { useRentalVisible } from "../../hooks/useRentalVisible";
 import { useToursVisible } from "../../hooks/useToursVisible";
 import {
   OVERLAY_SIZE_RANGE,
@@ -32,6 +30,7 @@ import {
   type AppearanceDomain,
   MUTED_TEXT,
 } from "./controlPanelKit";
+import { useDomainVisible } from "../../hooks/useDomainVisible";
 
 type NumericKey = Exclude<keyof OverlayAppearance, "rentalShowLine">;
 
@@ -97,8 +96,8 @@ function RentalLineToggle(): JSX.Element {
  */
 function useShownOverlayDomains(domains: readonly AppearanceDomain[]): Set<AppearanceDomain> {
   const toursVisible = useToursVisible();
-  const railVisible = useRailVisible();
-  const rentalVisible = useRentalVisible();
+  const railVisible = useDomainVisible("rail");
+  const rentalVisible = useDomainVisible("rental");
   const { isEnabled } = useEnabledDomains();
   const allowed: Partial<Record<AppearanceDomain, boolean>> = {
     tour: toursVisible,

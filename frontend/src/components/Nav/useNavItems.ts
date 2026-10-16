@@ -4,10 +4,6 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useAuthStore } from "../../store/authStore";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
-import { useRailVisible } from "../../hooks/useRailVisible";
-import { useRentalVisible } from "../../hooks/useRentalVisible";
-import { useFerryVisible } from "../../hooks/useFerryVisible";
-import { useBusVisible } from "../../hooks/useBusVisible";
 import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
 import type { IconName } from "../ui/Icon";
 
@@ -93,10 +89,6 @@ export function useNavItems(pathname = "/"): {
   const user = useAuthStore((s) => s.user);
   const { isEnabled } = useEnabledDomains();
   const placesVisible = usePlacesVisible();
-  const railVisible = useRailVisible();
-  const rentalVisible = useRentalVisible();
-  const busVisible = useBusVisible();
-  const ferryVisible = useFerryVisible();
   const isAdmin = user?.isAdmin ?? false;
   const { isFeatureVisible } = useBetaFeatures();
   const comparisonVisible = isFeatureVisible("comparison");
@@ -125,20 +117,10 @@ export function useNavItems(pathname = "/"): {
       };
     }
 
-    // `poi` asks through `usePlacesVisible`, the one home of the places rule.
-    // `rail`, `rental` and `bus` ask their own hooks: the beta gate AND the domain choice.
+    // `poi` asks through `usePlacesVisible`, the one home of the places rule;
+    // every other domain's beta switch is already applied by `isEnabled`.
     const domainChildren: NavLeaf[] = AVAILABLE_DOMAINS.filter((key) =>
-      key === "poi"
-        ? placesVisible
-        : key === "rail"
-          ? railVisible
-          : key === "rental"
-            ? rentalVisible
-            : key === "bus"
-              ? busVisible
-              : key === "ferry"
-                ? ferryVisible
-                : isEnabled(key)
+      key === "poi" ? placesVisible : isEnabled(key)
     ).map((key) => ({
       kind: "leaf",
       id: `domain-${key}`,
@@ -262,16 +244,5 @@ export function useNavItems(pathname = "/"): {
     ];
 
     return { primary, more };
-  }, [
-    t,
-    pathname,
-    isEnabled,
-    placesVisible,
-    railVisible,
-    rentalVisible,
-    busVisible,
-    ferryVisible,
-    isAdmin,
-    comparisonVisible,
-  ]);
+  }, [t, pathname, isEnabled, placesVisible, isAdmin, comparisonVisible]);
 }

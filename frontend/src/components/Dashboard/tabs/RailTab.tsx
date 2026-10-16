@@ -5,7 +5,6 @@ import type { Layer } from "@deck.gl/core";
 import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
 import { useDashboardRail } from "../../../hooks/useDashboardRail";
 import { useDomainColors } from "../../../hooks/useDomainColors";
-import { useRailVisible } from "../../../hooks/useRailVisible";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useDashboardFilterStore } from "../../../store/dashboardFilterStore";
 import { formatStationTime } from "../../../lib/railTime";
@@ -16,6 +15,7 @@ import { SidebarToggle } from "../SidebarToggle";
 import { legendRow } from "./allTabLegendRows";
 import { buildRailLegendRows, buildRailMapLayers, useRailMapStyle } from "./railMapOverlay";
 import { dateLocaleForLanguage } from "../../../lib/units";
+import { useDomainVisible } from "../../../hooks/useDomainVisible";
 
 const PANEL_STYLE = {
   background: "rgba(22,27,34,0.85)",
@@ -32,7 +32,7 @@ const PANEL_STYLE = {
  * every tab opens on (owner ruling 2026-09-20).
  *
  * The colour is the domain colour store's (`useDomainColors`), for the line and
- * the key alike. The fetch is gated on `useRailVisible` — beta switch AND the
+ * the key alike. The fetch is gated on `useDomainVisible("rail")` — beta switch AND the
  * user's domain — so a hidden rail never reaches the network from here, even
  * if a guard above were wrong.
  */
@@ -40,7 +40,7 @@ export function RailTab(): JSX.Element {
   const { mode } = useDashboardRoute();
   const { t, i18n } = useTranslation(["dashboard", "rail", "common"]);
   const locale = dateLocaleForLanguage(i18n.language);
-  const railVisible = useRailVisible();
+  const railVisible = useDomainVisible("rail");
   const year = useDashboardFilterStore((s) => s.year);
   const { journeys, loading, loadError, reload } = useDashboardRail(railVisible, year);
   const { colorOf } = useDomainColors();
