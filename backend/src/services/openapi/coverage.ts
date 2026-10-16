@@ -43,7 +43,10 @@ export const UNDOCUMENTED_MOUNTS: ReadonlyMap<string, string> = new Map([
     "encrypted-share",
     "Beta, cookie-session-only device-encrypted transfer (protocol v2) under independent review; no integration contract",
   ],
-  ["comparison-peer", "Pinned-key federation protocol; not a user-token API"],
+  [
+    "comparison-peer",
+    "Server-to-server protocol between admin-pinned peers (Ed25519-signed envelopes); no user token reaches it",
+  ],
   ["admin", "Admin console API — admin-scope only, free to change between minor versions"],
   ["setup", "First-boot wizard — unauthenticated, single-use, not an integration surface"],
   ["openapi", "The spec and Swagger UI themselves"],

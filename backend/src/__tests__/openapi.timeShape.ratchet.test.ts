@@ -65,6 +65,9 @@ const BOOKKEEPING_INSTANTS = new Set([
   "effectiveExpiresAt",
   "lastViewedAt",
   "recordedAt",
+  // Leaderboard snapshots (comparison rework 2026-10-16): when a server computed a set of
+  // totals — its own clock, possibly another server's, and no traveller's place.
+  "asOf",
 ]);
 
 const doc = buildOpenApiDocument() as unknown as { paths: Json; components: { schemas: Json } };

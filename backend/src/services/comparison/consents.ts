@@ -301,9 +301,17 @@ export async function updateScope(
 ): Promise<PersonView> {
   const row = await ownedConsent(ownerId, consentId);
   if (row.status !== "accepted") throw notFound(ownerId, consentId);
-  await prisma.leaderboardConsent.update({
-    where: { id: row.id },
-    data: { scope: scopeJson(leaderboardScopeSchema.parse(scope)), decidedAt: new Date() },
+  const parsed = scopeJson(leaderboardScopeSchema.parse(scope));
+  await prisma.$transaction(async (tx) => {
+    if (row.viewerId) await lockPair(tx, ownerId, row.viewerId);
+    else if (row.remoteId) await lockRemotePair(tx, ownerId, row.remoteId);
+    // Conditional on still being accepted: the other side may have ended it since the read
+    // above (an lb-state deletes the row outright). A plain update would then die on P2025.
+    const changed = await tx.leaderboardConsent.updateMany({
+      where: { id: row.id, ownerId, status: "accepted" },
+      data: { scope: parsed, decidedAt: new Date() },
+    });
+    if (changed.count === 0) throw notFound(ownerId, consentId);
   });
   return personView(ownerId, keyOf(row));
 }

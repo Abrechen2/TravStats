@@ -137,6 +137,7 @@
     "bus.ts",
     "bus/entrySuggestions.ts",
     "bus/stats.ts",
+    "comparison.ts",
     "cruises.ts",
     "cruises/facets.ts",
     "cruises/list.ts",
