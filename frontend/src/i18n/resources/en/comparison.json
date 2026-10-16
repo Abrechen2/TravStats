@@ -4,8 +4,14 @@
   "you": "You",
   "addPerson": "Add person",
   "loadFailed": "The comparison could not be loaded.",
-  "period": { "label": "Period", "all": "All time" },
-  "board": { "label": "Group", "all": "Everyone" },
+  "period": {
+    "label": "Period",
+    "all": "All time"
+  },
+  "board": {
+    "label": "Group",
+    "all": "Everyone"
+  },
   "group": {
     "label": "Figures",
     "distance": "Distance",
@@ -111,7 +117,12 @@
     "createInvite": "Create invitation code",
     "inviteHint": "Pass this code on. It is valid for 72 hours and only once.",
     "claimLabel": "Invitation code",
-    "claim": "Redeem code"
+    "claim": "Redeem code",
+    "inviteCodeLabel": "Your invitation code",
+    "copy": "Copy",
+    "copied": "Copied",
+    "inviteOnce": "This code is shown only now. Copy it before you close this page.",
+    "claimInvalid": "That is not an invitation code. It looks like https://server.example#… followed by 64 characters."
   },
   "boards": {
     "title": "Groups",
@@ -120,7 +131,11 @@
     "members": "People",
     "save": "Save",
     "delete": "Delete",
-    "empty": "No groups yet."
+    "empty": "No groups yet.",
+    "deleteTitle": "Delete group “{{name}}”?",
+    "deleteBody": "Only the group is deleted. Nobody stops sharing with you.",
+    "deleteConfirm": "Delete group",
+    "noPeople": "Once someone shares their numbers with you, you can group them here."
   },
   "error": {
     "COMPARISON_DISABLED": "The comparison is switched off on this server.",

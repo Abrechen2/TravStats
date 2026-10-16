@@ -4,8 +4,14 @@
   "you": "Du",
   "addPerson": "Person hinzufügen",
   "loadFailed": "Der Vergleich konnte nicht geladen werden.",
-  "period": { "label": "Zeitraum", "all": "Gesamt" },
-  "board": { "label": "Gruppe", "all": "Alle Personen" },
+  "period": {
+    "label": "Zeitraum",
+    "all": "Gesamt"
+  },
+  "board": {
+    "label": "Gruppe",
+    "all": "Alle Personen"
+  },
   "group": {
     "label": "Kennzahlen",
     "distance": "Strecke",
@@ -111,7 +117,12 @@
     "createInvite": "Einladungscode erstellen",
     "inviteHint": "Gib diesen Code weiter. Er gilt 72 Stunden und nur einmal.",
     "claimLabel": "Einladungscode",
-    "claim": "Code einlösen"
+    "claim": "Code einlösen",
+    "inviteCodeLabel": "Dein Einladungscode",
+    "copy": "Kopieren",
+    "copied": "Kopiert",
+    "inviteOnce": "Dieser Code wird nur jetzt angezeigt. Kopiere ihn, bevor du die Seite verlässt.",
+    "claimInvalid": "Das ist kein Einladungscode. Er sieht so aus: https://server.example#… gefolgt von 64 Zeichen."
   },
   "boards": {
     "title": "Gruppen",
@@ -120,7 +131,11 @@
     "members": "Personen",
     "save": "Speichern",
     "delete": "Löschen",
-    "empty": "Noch keine Gruppen."
+    "empty": "Noch keine Gruppen.",
+    "deleteTitle": "Gruppe „{{name}}“ löschen?",
+    "deleteBody": "Nur die Gruppe wird gelöscht. Niemand hört auf, mit dir zu teilen.",
+    "deleteConfirm": "Gruppe löschen",
+    "noPeople": "Sobald jemand seine Zahlen mit dir teilt, kannst du sie hier zusammenfassen."
   },
   "error": {
     "COMPARISON_DISABLED": "Der Vergleich ist auf diesem Server ausgeschaltet.",
