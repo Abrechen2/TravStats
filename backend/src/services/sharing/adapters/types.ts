@@ -2,20 +2,9 @@ import type { DbTransaction } from "../../../db";
 import { Prisma } from "../../../prisma";
 import type { FactRecord } from "../factValues";
 
-/**
- * The seven shareable entry types (design 2026-10-09). The names are the
- * `ShareNotice.entityType` vocabulary the inbox reads.
- */
-export const SHARE_ENTITIES = [
-  "flight",
-  "lodgingStay",
-  "cruise",
-  "rail",
-  "bus",
-  "rental",
-  "stop",
-] as const;
-export type ShareEntity = (typeof SHARE_ENTITIES)[number];
+import type { ShareEntity } from "../shareTypes";
+
+export { SHARE_ENTITIES, type ShareEntity } from "../shareTypes";
 
 /**
  * One entry as propagation sees it: who owns it, where it is filed, its key,
