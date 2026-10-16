@@ -940,6 +940,7 @@
     "colStation": "Station",
     "colBefore": "Bisher",
     "colAfter": "Neu",
+    "previewCaption": "Vorschau: bisherige und neue Daten je Station",
     "noticesTitle": "Bitte prüfen",
     "notice": {
       "beforePrevious": "„{{name}}“ beginnt dann, bevor „{{previous}}“ endet.",
