@@ -2,6 +2,7 @@ import { prisma } from "../../db";
 import type { DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import { detachAfterWithdrawal } from "./detach";
+import { consentStatusSchema, type ConsentStatus } from "../../schemas/sharing";
 import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
 
 /**
@@ -11,7 +12,7 @@ import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
  * accepted. Either side may withdraw; copies already made stay where they are.
  */
 
-export type ConsentStatus = "pending" | "accepted" | "declined" | "withdrawn";
+export type { ConsentStatus };
 
 export interface ConsentView {
   id: string;
@@ -35,7 +36,7 @@ function view(
 ): ConsentView {
   return {
     id: row.id,
-    status: row.status as ConsentStatus,
+    status: consentStatusSchema.parse(row.status),
     createdAt: row.createdAt.toISOString(),
     decidedAt: row.decidedAt?.toISOString() ?? null,
     person: toPerson(person),

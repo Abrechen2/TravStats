@@ -1,7 +1,8 @@
 import { prisma, type DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import type { Prisma } from "../../prisma";
-import { ADAPTERS, SHARE_ENTITIES, type ShareEntity, type SharedRow } from "./adapters";
+import { shareEntityTypeSchema } from "../../schemas/sharing";
+import { ADAPTERS, type ShareEntity, type SharedRow } from "./adapters";
 import { revivedRecord, sameFact } from "./factValues";
 import { propagateDelete, propagateWrite, shareSnapshot } from "./propagate";
 
@@ -24,10 +25,11 @@ async function ownNotice(userId: string, noticeId: string) {
 }
 
 function entityOf(type: string | null): ShareEntity {
-  if (!type || !(SHARE_ENTITIES as readonly string[]).includes(type)) {
+  const parsed = shareEntityTypeSchema.safeParse(type);
+  if (!parsed.success || parsed.data === "trip") {
     throw new AppError("This notice names no entry", 409, "SHARE_UNDO_UNAVAILABLE");
   }
-  return type as ShareEntity;
+  return parsed.data;
 }
 
 /** The caller's own copy behind a share key, or a 409 that says it is gone. */

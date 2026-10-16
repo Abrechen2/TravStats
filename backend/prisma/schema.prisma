@@ -4427,7 +4427,7 @@ model ShareConsent {
   id          String    @id @default(uuid())
   requesterId String    @map("requester_id")
   targetId    String    @map("target_id")
-  /// pending | accepted | declined | withdrawn
+  /// pending | accepted | declined | withdrawn — CHECK share_consents_status_check, schemas/sharing.ts
   status      String    @default("pending")
   createdAt   DateTime  @default(now()) @map("created_at")
   decidedAt   DateTime? @map("decided_at")
@@ -4466,9 +4466,9 @@ model ShareNotice {
   userId     String    @map("user_id")
   groupId    String?   @map("group_id")
   actorId    String?   @map("actor_id")
-  /// shared | created | updated | deleted | left
+  /// shared | created | updated | deleted | left — CHECK share_notices_kind_check, schemas/sharing.ts
   kind       String
-  /// trip | flight | lodgingStay | cruise | rail | bus | ferry | rental | stop — services/sharing/shareTypes.ts
+  /// trip | flight | lodgingStay | cruise | rail | bus | ferry | rental | stop — services/sharing/shareTypes.ts; CHECK share_notices_entity_type_check
   entityType String?   @map("entity_type")
   /// The entry's shareKey; for `trip` the RECIPIENT's own trip id.
   entityKey  String?   @map("entity_key")
