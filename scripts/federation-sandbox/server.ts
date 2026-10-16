@@ -90,13 +90,11 @@ control.post("/", async (req, res) => {
     const p = req.body;
     let result: unknown;
     switch (p.action) {
-      case "info":
-        result = {
-          origin: (await loadIdentity()).origin,
-          publicKey: (await loadIdentity()).publicKey,
-          device: device.device.public,
-        };
+      case "info": {
+        const local = await loadIdentity();
+        result = { origin: local.origin, publicKey: local.publicKey, device: device.device.public };
         break;
+      }
       case "peer":
         await prisma.comparisonPeer.upsert({
           where: { origin: p.origin },

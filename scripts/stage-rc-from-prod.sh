@@ -127,7 +127,7 @@ SELECT coalesce(string_agg(
          key, key, value), E'\n'), '')
 FROM admin_settings a, LATERAL jsonb_each_text(to_jsonb(a))
 WHERE value IS NOT NULL
-  AND key ~ '(api_key|client_id|client_secret|_token|_secret)$'
+  AND (key ~ '(api_key|client_id|client_secret|_token|_secret)$'
      -- Server identity (federation_*): the RC keeps its own key, origin and switch.
      -- Prod's key and origin would make the RC sign as prod, or sit switched off with
      -- a key it cannot decrypt. The `_private_key` suffix is not matched above.

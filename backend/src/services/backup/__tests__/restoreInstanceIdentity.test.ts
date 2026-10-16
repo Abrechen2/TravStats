@@ -147,6 +147,45 @@ describe("restoreInstanceIdentity", () => {
     }
   });
 
+  it("keeps this instance's federation identity, so a foreign dump cannot make it sign as another server", async () => {
+    const COLUMNS = {
+      federationEnabled: true,
+      federationOrigin: true,
+      federationPrivateKey: true,
+    };
+    const row = await prisma.adminSettings.findFirstOrThrow({ orderBy: { id: "asc" } });
+    const originalFederation = await prisma.adminSettings.findUniqueOrThrow({
+      where: { id: row.id },
+      select: COLUMNS,
+    });
+    const own = {
+      federationEnabled: true,
+      federationOrigin: "https://own.federation.example",
+      federationPrivateKey: "own-key-ciphertext",
+    };
+    try {
+      await prisma.adminSettings.update({ where: { id: row.id }, data: own });
+      const before = await readInstanceIdentity();
+
+      await prisma.adminSettings.update({
+        where: { id: row.id },
+        data: {
+          federationEnabled: false,
+          federationOrigin: "https://someone-else.federation.example",
+          federationPrivateKey: "their-key-ciphertext",
+        },
+      });
+
+      await restoreInstanceIdentity(before);
+
+      expect(
+        await prisma.adminSettings.findUniqueOrThrow({ where: { id: row.id }, select: COLUMNS })
+      ).toEqual(own);
+    } finally {
+      await prisma.adminSettings.update({ where: { id: row.id }, data: originalFederation });
+    }
+  });
+
   it("leaves the row alone when the archive agreed with it", async () => {
     await write(OWN);
     const before = await readInstanceIdentity();
