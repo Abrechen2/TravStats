@@ -34,7 +34,7 @@ import {
   startRouteAllJob,
 } from "../services/bus/busRouteAgain";
 import { describeRoutingAvailability } from "../services/tour/routing/resolveProvider";
-import { recomputeTripStatus } from "../services/tripStatusService";
+import { restatusTrips } from "../services/trip/restatusTrips";
 import { busYear } from "../shared/busCounting";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
@@ -69,13 +69,6 @@ function primaryOrder(query: BusQueryInput): Prisma.BusJourneyOrderByWithRelatio
   return column === "distanceKm"
     ? { distanceKm: { sort: query.order, nulls: "last" } }
     : { [column]: query.order };
-}
-
-/** A ride extends its trip's span; every write re-derives the trip it was in and the trip it is in now. */
-async function restatusTrips(...tripIds: Array<string | null | undefined>): Promise<void> {
-  for (const id of new Set(tripIds.filter((t): t is string => Boolean(t)))) {
-    await recomputeTripStatus(id);
-  }
 }
 
 function refuseStrayFold(body: unknown): void {
@@ -327,7 +320,7 @@ async function createBusRide(userId: string, body: unknown, claim: ClaimClientRe
   });
 
   await linkDocuments(userId, documentIds, { type: "busJourney", id: ride.id });
-  await restatusTrips(ride.tripId);
+  await restatusTrips([ride.tripId]);
   logger.info({ operation: "bus_journey_create", busJourneyId: ride.id, userId });
   return { ride: withBusTimes(ride), report: busGeometryReport(edit, "straight") };
 }
@@ -398,7 +391,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       return tx.busJourney.findUniqueOrThrow({ where: { id: existing.id }, include: BUS_INCLUDE });
     });
 
-    await restatusTrips(existing.tripId, ride.tripId);
+    await restatusTrips([existing.tripId, ride.tripId]);
     res.json({
       success: true,
       data: withBusTimes(ride),
@@ -448,7 +441,7 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
       await tx.busJourney.delete({ where: { id: existing.id } });
       await propagateDelete(tx, userId, gone);
     });
-    await restatusTrips(existing.tripId);
+    await restatusTrips([existing.tripId]);
     res.status(204).send();
   } catch (err) {
     next(err);
