@@ -51,7 +51,9 @@ export default function ShareNoticeCard({
     notice.kind === "deleted" && after.reason === "movedOut"
       ? "movedOut"
       : notice.kind === "created" && after.movedFrom
-        ? "joinedMoved"
+        ? after.via === "share"
+          ? "joinedMovedOnShare"
+          : "joinedMoved"
         : notice.kind === "created" && after.joined
           ? "joined"
           : notice.kind;

@@ -112,7 +112,12 @@ async function noticeMovedIn(
       kind: "created",
       entity,
       shareKey: entry.source.shareKey as string,
-      after: { ...noticeMeta(entry.source, recipient, entry.id), ...joinedMeta(entry) },
+      // `via: "share"`: the share moved it, not a later addition of the actor's.
+      after: {
+        ...noticeMeta(entry.source, recipient, entry.id),
+        ...joinedMeta(entry),
+        via: "share",
+      },
     });
   }
 }

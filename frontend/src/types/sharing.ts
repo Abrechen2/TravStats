@@ -142,6 +142,8 @@ export interface ShareNoticeAfter {
   joined?: boolean;
   /** `created`, joined: the reader's own entry was moved here from this trip of theirs. */
   movedFrom?: { tripId: string; tripName: string };
+  /** `created`, moved: "share" when sharing the trip moved it, absent for a later addition. */
+  via?: "share";
 }
 
 export interface ShareNotice {

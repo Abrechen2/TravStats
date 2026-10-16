@@ -100,6 +100,7 @@ describe("sharing — the recipient's own entry on another trip is moved in", ()
     const after = (await createdNotice()).after as Record<string, unknown>;
     expect(after.joined).toBe(true);
     expect(after.movedFrom).toEqual({ tripId: other.id, tripName: "Lissabon allein" });
+    expect(after.via).toBeUndefined();
 
     const before = await shareSnapshot(prisma, "flight", annas.id);
     await prisma.flight.update({ where: { id: annas.id }, data: { aircraft: "A321neo" } });
@@ -137,6 +138,8 @@ describe("sharing — the recipient's own entry on another trip is moved in", ()
     expect(moved.shareKey).not.toBeNull();
     const after = (await createdNotice()).after as Record<string, unknown>;
     expect(after.movedFrom).toEqual({ tripId: other.id, tripName: "Portugal 2025" });
+    // Moved by the share itself, not by a later addition of Anna's.
+    expect(after.via).toBe("share");
   });
 
   it("undoing the notice moves it back and unlinks it", async () => {

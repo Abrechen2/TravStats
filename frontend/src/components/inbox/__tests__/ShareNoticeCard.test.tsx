@@ -80,6 +80,25 @@ describe("ShareNoticeCard", () => {
     expect(h.onUndo).toHaveBeenCalled();
   });
 
+  it("says the trip was shared when the share itself moved the own entry", () => {
+    renderCard(
+      notice({
+        kind: "created",
+        changes: [],
+        after: {
+          label: "TP571 FRA → LIS",
+          tripId: "t1",
+          entryId: "f1",
+          joined: true,
+          via: "share",
+          movedFrom: { tripId: "t-old", tripName: "Portugal 2025" },
+        },
+      })
+    );
+    expect(screen.getByText("sharing:inbox.notices.joinedMovedOnShare")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "sharing:inbox.notices.undoMove" })).toBeTruthy();
+  });
+
   it("offers no undo for a plain join", () => {
     renderCard(
       notice({
