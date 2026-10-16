@@ -10,16 +10,18 @@ import type { ShareEntity } from "./shareTypes";
  * entry and the ferry backfill all put an entry into another member's
  * account through here:
  *
- * 1. the recipient's own unkeyed row that IS this entry (`adapter.ownMatch`)
+ * 1. the recipient's own unkeyed row that IS this entry (`adapter.ownMatches`)
  *    takes the key and is filed on their trip of the group — moved there from
  *    another of their trips if need be (owner decision 2026-10-16: left where
  *    it was, no copy lookup found it, the shared trip never showed it and
  *    their next own edit cleared the key again). The trip it came from is
  *    returned, for the notice and its undo. Its private fields (their seat,
  *    their notes) stay as they are;
- *    An own entry on a trip of ANOTHER share group is left alone — neither
- *    moved (that group would silently lose it) nor copied (a duplicate):
- *    `null`, and the caller records nothing (controller ruling 2026-10-16);
+ *    An own entry on a trip of ANOTHER share group is never taken (that group
+ *    would silently lose it); the first match that may be taken wins. When
+ *    every match sits in another group, nothing is copied either (a
+ *    duplicate): `null`, and the caller records nothing (controller ruling
+ *    2026-10-16);
  * 2. otherwise the adapter creates a copy from the facts.
  *
  * Before the rework the share path joined own flights and propagation did
@@ -43,6 +45,39 @@ export interface CopyResult {
   movedFrom?: MovedFrom;
 }
 
+interface OwnMatch {
+  id: string;
+  tripId: string | null;
+}
+
+/**
+ * The first match that may be taken: unfiled, on the recipient's group trip,
+ * or on a trip of theirs outside any share group (`from`, the trip it leaves).
+ */
+async function firstTakeable(
+  c: DbTransaction,
+  matches: readonly OwnMatch[],
+  groupTripId: string
+): Promise<{ own: OwnMatch; from: { id: string; name: string } | null } | null> {
+  const elsewhere = [
+    ...new Set(matches.flatMap((m) => (m.tripId && m.tripId !== groupTripId ? [m.tripId] : []))),
+  ];
+  const trips = new Map(
+    (
+      await c.trip.findMany({
+        where: { id: { in: elsewhere } },
+        select: { id: true, name: true, shareGroupId: true },
+      })
+    ).map((t) => [t.id, t])
+  );
+  for (const own of matches) {
+    if (!own.tripId || own.tripId === groupTripId) return { own, from: null };
+    const trip = trips.get(own.tripId);
+    if (trip && !trip.shareGroupId) return { own, from: { id: trip.id, name: trip.name } };
+  }
+  return null;
+}
+
 export async function copyInto(
   c: DbTransaction,
   entity: ShareEntity,
@@ -50,16 +85,11 @@ export async function copyInto(
   recipient: Recipient
 ): Promise<CopyResult | null> {
   const adapter = ADAPTERS[entity];
-  const own = adapter.ownMatch ? await adapter.ownMatch(c, source, recipient.userId) : null;
-  if (own) {
-    const from =
-      own.tripId && own.tripId !== recipient.tripId
-        ? await c.trip.findUniqueOrThrow({
-            where: { id: own.tripId },
-            select: { id: true, name: true, shareGroupId: true },
-          })
-        : null;
-    if (from?.shareGroupId) return null;
+  const matches = adapter.ownMatches ? await adapter.ownMatches(c, source, recipient.userId) : [];
+  if (matches.length > 0) {
+    const pick = await firstTakeable(c, matches, recipient.tripId);
+    if (!pick) return null;
+    const { own, from } = pick;
     await keyedDelegate(c, entity).update({
       where: { id: own.id },
       data: { shareKey: source.shareKey, tripId: recipient.tripId },

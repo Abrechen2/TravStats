@@ -212,6 +212,42 @@ describe("sharing — the recipient's own entry on another trip is moved in", ()
     ).toBe(0);
   });
 
+  it("joins an eligible own flight even when an ineligible one is found first", async () => {
+    const pair = await sharedPair(anna, ben);
+    const groupB = await prisma.tripShareGroup.create({ data: { createdById: ben.id } });
+    const bTrip = await prisma.trip.create({
+      data: { userId: ben.id, name: "Lissabon mit Carl", shareGroupId: groupB.id },
+    });
+    // Same flight logged twice by Ben: the earlier row sits in group B, the later one is unfiled.
+    const inB = await tp576(ben.id, bTrip.id);
+    const unfiled = await prisma.flight.create({
+      data: {
+        userId: ben.id,
+        flightNumber: "TP576",
+        depIata: "LIS",
+        arrIata: "FRA",
+        depLat: 38.7742,
+        depLon: -9.1342,
+        arrLat: 50.0379,
+        arrLon: 8.5622,
+        departureTime: new Date("2025-05-08T18:05:00.000Z"),
+        depTimezone: "Europe/Lisbon",
+      },
+    });
+    const annas = await tp576(anna.id, pair.full.trip.id);
+
+    await propagateWrite(prisma, anna.id, "flight", annas.id);
+
+    const key = (await prisma.flight.findUniqueOrThrow({ where: { id: annas.id } })).shareKey;
+    const joined = await prisma.flight.findUniqueOrThrow({ where: { id: unfiled.id } });
+    expect(joined.shareKey).toBe(key);
+    expect(joined.tripId).toBe(pair.memberTrip.id);
+    const untouched = await prisma.flight.findUniqueOrThrow({ where: { id: inB.id } });
+    expect(untouched.tripId).toBe(bTrip.id);
+    expect(untouched.shareKey).toBeNull();
+    expect(await prisma.flight.count({ where: { userId: ben.id, flightNumber: "TP576" } })).toBe(2);
+  });
+
   it("leaves an own crossing on a trip of another share group in that group during the ferry backfill", async () => {
     const annasTrip = await prisma.trip.create({ data: { userId: anna.id, name: "Fjorde" } });
     const companion = await linkWithConsent(anna, ben);

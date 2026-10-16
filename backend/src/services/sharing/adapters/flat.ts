@@ -82,11 +82,12 @@ export const flightAdapter: EntityAdapter = {
   async remove(c, id) {
     await c.flight.delete({ where: { id } });
   },
-  async ownMatch(c, source, recipientId) {
+  async ownMatches(c, source, recipientId) {
     const identity = source.facts as unknown as FlightIdentity;
     const candidates = await ownFlightCandidates(c, recipientId, [identity]);
-    const hit = candidates.find((f) => sameFlight(identity, f));
-    return hit ? { id: hit.id, tripId: hit.tripId } : null;
+    return candidates
+      .filter((f) => sameFlight(identity, f))
+      .map((f) => ({ id: f.id, tripId: f.tripId }));
   },
 };
 

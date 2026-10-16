@@ -77,10 +77,10 @@ export const ferryAdapter: EntityAdapter = {
     await c.ferryJourney.delete({ where: { id } });
   },
   /** The recipient's own crossing: the same two terminals on the same local day. */
-  async ownMatch(c, source, recipientId) {
+  async ownMatches(c, source, recipientId) {
     const f = source.facts as Pick<FerryJourney, FerryFactField>;
     const zone = f.depTimezone;
-    if (!zone) return null;
+    if (!zone) return [];
     const day = localDay(f.departureTime, zone);
     const at = f.departureTime.getTime();
     const rows = await c.ferryJourney.findMany({
@@ -102,12 +102,13 @@ export const ferryAdapter: EntityAdapter = {
       },
       orderBy: [{ departureTime: "asc" }, { id: "asc" }],
     });
-    const hit = rows.find(
-      (r) =>
-        localDay(r.departureTime, r.depTimezone ?? zone) === day &&
-        sameTerminal({ lat: r.depLat, lon: r.depLon }, { lat: f.depLat, lon: f.depLon }) &&
-        sameTerminal({ lat: r.arrLat, lon: r.arrLon }, { lat: f.arrLat, lon: f.arrLon })
-    );
-    return hit ? { id: hit.id, tripId: hit.tripId } : null;
+    return rows
+      .filter(
+        (r) =>
+          localDay(r.departureTime, r.depTimezone ?? zone) === day &&
+          sameTerminal({ lat: r.depLat, lon: r.depLon }, { lat: f.depLat, lon: f.depLon }) &&
+          sameTerminal({ lat: r.arrLat, lon: r.arrLon }, { lat: f.arrLat, lon: f.arrLon })
+      )
+      .map((r) => ({ id: r.id, tripId: r.tripId }));
   },
 };

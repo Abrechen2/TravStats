@@ -69,15 +69,17 @@ export interface EntityAdapter {
   ): Promise<void>;
   remove(c: DbTransaction, id: string): Promise<void>;
   /**
-   * The recipient's own unkeyed row that IS this entry — a flight the
-   * companion logged themselves — or null. Joined instead of copied
-   * (`copyInto`), so no statistic counts the journey twice. Absent: never joins.
+   * The recipient's own unkeyed rows that ARE this entry — a flight the
+   * companion logged themselves — in the adapter's order, possibly none.
+   * `copyInto` joins the first one it may take instead of copying, so no
+   * statistic counts the journey twice. All of them, not the first: one filed
+   * in another share group must not block a valid one. Absent: never joins.
    */
-  ownMatch?(
+  ownMatches?(
     c: DbTransaction,
     source: SharedRow,
     recipientId: string
-  ): Promise<{ id: string; tripId: string | null } | null>;
+  ): Promise<{ id: string; tripId: string | null }[]>;
 }
 
 /**
