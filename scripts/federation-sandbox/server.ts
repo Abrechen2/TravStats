@@ -29,7 +29,7 @@ import {
   openPublication,
   type PublicDevice,
   type Manifest,
-} from "../../frontend/src/lib/comparison/crypto";
+} from "../../frontend/src/lib/encryptedShare/crypto";
 
 if (
   process.env.FEDERATION_SANDBOX !== "1" ||
