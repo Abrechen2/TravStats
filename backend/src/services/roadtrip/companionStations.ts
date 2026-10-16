@@ -3,6 +3,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { haversineKm } from "../../shared/geo/haversine";
 import { reverseGeocode } from "../geo/nominatim";
 import { lockRoute } from "./lockRoute";
+import { propagateWrites, shareSnapshots } from "../sharing/propagate";
 import { recomputeLegs, type StopCoords } from "../tour/legRecompute";
 import { autoRouteNewLegs } from "../tour/routing/autoRouteLegs";
 import {
@@ -194,6 +195,7 @@ export async function appendStation(
         orderBy: { routeOrderIdx: "asc" },
         select: { id: true, lat: true, lon: true, routeOrderIdx: true },
       });
+      // share-exempt: a roadtrip's own station sits on no trip — never shared
       const station = await tx.tripStop.create({
         data: {
           tripId: null,
@@ -278,6 +280,8 @@ export async function removeStation(
           select: { id: true, lat: true, lon: true },
         })
       ).filter((s) => s.id !== stationId);
+      // A released timeline stop is an ordinary stop of its trip again.
+      const before = released ? await shareSnapshots(tx, "stop", [stationId]) : undefined;
       if (released) {
         await tx.tripStop.update({
           where: { id: stationId },
@@ -292,6 +296,7 @@ export async function removeStation(
       for (const [index, s] of rest.entries()) {
         await tx.tripStop.update({ where: { id: s.id }, data: { routeOrderIdx: index } });
       }
+      if (released) await propagateWrites(tx, userId, "stop", [stationId], before);
       return recomputeLegs(tx, routeId, mode, rest);
     },
     { timeout: 20_000 }

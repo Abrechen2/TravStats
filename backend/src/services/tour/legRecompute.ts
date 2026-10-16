@@ -213,6 +213,7 @@ export async function updateStopAndLegs(
       (body.lon !== undefined && body.lon !== existing.lon));
 
   return prismaClient.$transaction(async (tx: Tx) => {
+    // share-exempt: stop update helper; routes/trips/tripStops.ts propagates around it
     const updated = await tx.tripStop.update({
       where: { id: stopId },
       data: {

@@ -445,6 +445,7 @@ export async function synchronizeExecution(
           (lodging.updatedAt.toISOString() !== old.source.auxVersion || lodging.photos.length)
         )
           throw refused();
+        // share-exempt: deletes the house the plan itself created for the stay it just replaced
         await tx.lodging.deleteMany({ where: { id: old.source.auxId, userId } });
       }
       const booking = next.bookings.find((x) => x.id === old.bookingId);

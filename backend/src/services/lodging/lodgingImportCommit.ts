@@ -129,6 +129,7 @@ async function createLodging(
   fields: LodgingCandidateFields
 ): Promise<string> {
   const chainId = await resolveChainId(userId, fields.chainName, fields.createChain === true);
+  // share-exempt: a new house has no stay yet; the stay below propagates
   const lodging = await prisma.lodging.create({
     data: {
       userId,

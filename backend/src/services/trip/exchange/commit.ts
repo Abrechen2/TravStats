@@ -13,6 +13,7 @@
  * keeps its booking; a row on another trip stays where it is.
  */
 import { propagateWrites } from "../../sharing/propagate";
+import { SHARE_ENTITIES, SHARE_TYPES } from "../../sharing/shareTypes";
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
@@ -388,15 +389,11 @@ async function writeAll(
   return ids;
 }
 
-const SHARED_KINDS = [
-  ["flight", "flight"],
-  ["stay", "lodgingStay"],
-  ["cruise", "cruise"],
-  ["rail", "rail"],
-  ["bus", "bus"],
-  ["rental", "rental"],
-  ["stop", "stop"],
-] as const;
+/** Imported into a shared trip: copied to its members — registry order, stops last. */
+const SHARED_KINDS = SHARE_ENTITIES.flatMap((entity) => {
+  const kind = SHARE_TYPES[entity].exchangeKind;
+  return kind === null ? [] : [[kind, entity] as const];
+});
 
 function bookingOfEntry(
   file: TripFile,
@@ -433,6 +430,7 @@ async function createEntry(
   const byKey = <T extends { key: string }>(list: T[]) => list.find((e) => e.key === entry.key)!;
   switch (entry.kind) {
     case "flight":
+      // share-exempt: returns the id to writeAll, which propagates ids[kind] after every kind is written
       return (
         await tx.flight.create({ data: flightRow(userId, byKey(file.flights), ctx, link), select })
       ).id;
@@ -445,6 +443,7 @@ async function createEntry(
         lodgings.resolve(s.lodging, s.checkInDate ?? s.checkIn?.slice(0, 10) ?? null).lodgingId ??
         pickHouse(lodgingCreated, s.lodging)?.id;
       if (!lodgingId) {
+        // share-exempt: a new house has no stay yet; its stay is created below and propagated by writeAll
         lodgingId = (await tx.lodging.create({ data: lodgingRow(userId, s), select })).id;
         const l = s.lodging;
         lodgingCreated.push({
@@ -457,6 +456,7 @@ async function createEntry(
           lon: l.lon,
         });
       }
+      // share-exempt: returns the id to writeAll, which propagates ids[kind] after every kind is written
       return (
         await tx.lodgingStay.create({
           data: stayRow(userId, s, ctx, { ...link, lodgingId }),
@@ -465,18 +465,22 @@ async function createEntry(
       ).id;
     }
     case "cruise":
+      // share-exempt: returns the id to writeAll, which propagates ids[kind] after every kind is written
       return (
         await tx.cruise.create({ data: cruiseRow(userId, byKey(file.cruises), ctx, link), select })
       ).id;
     case "rail":
+      // share-exempt: returns the id to writeAll, which propagates ids[kind] after every kind is written
       return (
         await tx.railJourney.create({ data: railRow(userId, byKey(file.rail), ctx, link), select })
       ).id;
     case "bus":
+      // share-exempt: returns the id to writeAll, which propagates ids[kind] after every kind is written
       return (
         await tx.busJourney.create({ data: busRow(userId, byKey(file.bus), ctx, link), select })
       ).id;
     case "rental":
+      // share-exempt: returns the id to writeAll, which propagates ids[kind] after every kind is written
       return (
         await tx.rentalBooking.create({
           data: rentalRow(userId, byKey(file.rentals), ctx, link.tripId),

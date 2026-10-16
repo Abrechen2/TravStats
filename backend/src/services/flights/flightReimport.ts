@@ -48,6 +48,7 @@ export async function findReimportedFlight(
   if (!columns.onlineCheckInOpensAt) return { id: existing.id };
   // Only while still empty: read and written apart, an opening stored in
   // between was overwritten by a fill meant for an empty field.
+  // share-exempt: onlineCheckInOpensAt/Zone — booking terms, not a shared fact
   const { count } = await prisma.flight.updateMany({
     where: { id: existing.id, onlineCheckInOpensAt: null },
     data: columns,

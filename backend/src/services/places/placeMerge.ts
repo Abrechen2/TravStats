@@ -120,6 +120,7 @@ export async function mergePlaces(
       });
     }
 
+    // share-exempt: re-points the owner's own stations to the kept place; copies point at their own places
     const stations = await tx.tripStop.updateMany({
       where: { placeId: source.id },
       data: { placeId: target.id },

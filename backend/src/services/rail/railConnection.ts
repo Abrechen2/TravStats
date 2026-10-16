@@ -34,6 +34,7 @@ export async function bindConnection(
   const booking = await tx.booking.create({
     data: { userId, tripId: previous.tripId, pnr: previous.bookingReference },
   });
+  // share-exempt: booking link — private
   await tx.railJourney.update({ where: { id: previous.id }, data: { bookingId: booking.id } });
   return { bookingId: booking.id, tripId: previous.tripId };
 }

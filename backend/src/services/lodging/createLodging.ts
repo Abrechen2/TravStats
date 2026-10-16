@@ -40,6 +40,7 @@ export async function createLodgingRecord<I extends Prisma.LodgingInclude>(
     data: await buildLodgingCreateData(userId, input, opts),
     include: opts.include,
   };
+  // share-exempt: a new house has no stay yet
   return prisma.lodging.create(args) as unknown as Promise<
     Prisma.LodgingGetPayload<{ include: I }>
   >;

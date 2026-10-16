@@ -182,6 +182,7 @@ router.delete(
         });
 
         for (let idx = 0; idx < survivors.length; idx++) {
+          // share-exempt: renumbers the remaining stations of a tour — route order is not a fact
           await tx.tripStop.update({
             where: { id: survivors[idx].id },
             data: { routeOrderIdx: idx },
