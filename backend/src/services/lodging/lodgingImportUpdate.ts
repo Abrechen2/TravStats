@@ -95,7 +95,8 @@ export async function updateStay(
     throw new MissingStayReferenceError();
   }
 
-  const changes = stayChanges(fields, stored);
+  const zone = await zoneOfLodging(stored.lodgingId);
+  const changes = stayChanges(fields, stored, zone !== null);
   if (changes.length === 0) return null;
 
   const data: Prisma.LodgingStayUpdateInput = {};
@@ -162,20 +163,17 @@ export async function updateStay(
           checkInTime: stored.checkInTime,
           checkOutTime: stored.checkOutTime,
         },
-        await zoneOfLodging(stored.lodgingId),
+        zone,
         "machine"
       )
     );
   }
 
   // Empty deadlines filled from the mail, never over stored ones (forgejo#285).
-  const fill = await fillEmptyDeadlines(
-    fields,
-    stored,
-    await zoneOfLodging(stored.lodgingId),
-    userId
-  );
+  const fill = await fillEmptyDeadlines(fields, stored, zone, userId);
   Object.assign(data, fill.columns);
+  // Nothing to write is no update: neither counted nor logged as one.
+  if (Object.keys(data).length === 0) return null;
   // A changed booking moved the dates: on a shared trip, the copies follow.
   const before = await shareSnapshot(prisma, "lodgingStay", stored.id);
   await prisma.lodgingStay.update({ where: { id: stored.id }, data });

@@ -172,6 +172,26 @@ describe("lodging import — deadlines from a template (forgejo#285)", () => {
       expect(after.paymentDueOn?.toISOString().slice(0, 10)).toBe("2027-04-01");
     });
 
+    // A cancellation TIME needs the hotel's clock. Without a position there
+    // is none, so the fill writes nothing — and was still offered and
+    // counted as an update.
+    it("offers and counts no update for a cancellation time it cannot place", async () => {
+      const { preview, result, after } = await reimport(
+        "RE-3",
+        {},
+        { freeCancellationUntil: "2027-04-30T18:00" },
+        async (id) => {
+          const { lodgingId } = await prisma.lodgingStay.findUniqueOrThrow({ where: { id } });
+          await prisma.lodging.update({ where: { id: lodgingId }, data: { lat: null, lon: null } });
+        }
+      );
+      expect(preview.changes).toEqual([]);
+      expect(preview.action).toBe("skip");
+      expect(result.updatedStays).toBe(0);
+      expect(result.filledDeadlines).toEqual([]);
+      expect(after.freeCancellationUntil).toBeNull();
+    });
+
     it("never overwrites a deadline the user set", async () => {
       const { preview, result, after } = await reimport(
         "RE-2",
