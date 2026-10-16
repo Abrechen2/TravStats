@@ -222,6 +222,7 @@ registry.registerPath({
                   "consentPending",
                   "groupConsentMissing",
                   "alreadyMember",
+                  "accountInactive",
                 ])
                 .nullable(),
             })

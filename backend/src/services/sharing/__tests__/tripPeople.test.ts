@@ -120,4 +120,26 @@ describe("tripPeople", () => {
     const { linkableUsers } = await tripPeople(anna.id, trip);
     expect(linkableUsers.map((u) => u.id)).toEqual([ben.id]);
   });
+
+  it("blocks a deactivated account that has accepted, and still lists a deactivated member", async () => {
+    const { full } = await sharedPair(anna, ben);
+    const trip = await prisma.trip.findUniqueOrThrow({ where: { id: full.trip.id } });
+    const carlLink = await linkWithConsent(anna, carl);
+    await prisma.tripCompanion.create({
+      data: { tripId: trip.id, companionId: carlLink.id, position: 5 },
+    });
+    await prisma.user.update({ where: { id: carl.id }, data: { isActive: false } });
+    await prisma.user.update({ where: { id: ben.id }, data: { isActive: false } });
+    const { people } = await tripPeople(anna.id, trip);
+    expect(people.find((p) => p.account?.id === carl.id)).toMatchObject({
+      consent: "accepted",
+      member: false,
+      shareBlockedBy: "accountInactive",
+    });
+    expect(people.find((p) => p.account?.id === ben.id)).toMatchObject({
+      member: true,
+      receivesChanges: true,
+      shareBlockedBy: "accountInactive",
+    });
+  });
 });

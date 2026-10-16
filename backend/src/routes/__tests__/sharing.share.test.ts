@@ -56,6 +56,13 @@ describe("sharing — share a trip", () => {
       },
     });
 
+  it("refuses to share into a deactivated account and copies nothing", async () => {
+    await prisma.user.update({ where: { id: ben.id }, data: { isActive: false } });
+    const res = await share(anna, full.trip.id, companionId).expect(404);
+    expect(res.body.error?.code ?? res.body.code).toBe("SHARE_USER_NOT_FOUND");
+    expect(await prisma.trip.count({ where: { userId: ben.id } })).toBe(0);
+  });
+
   it("copies the trip and every entry type into the companion's account", async () => {
     const res = await share(anna, full.trip.id, companionId).expect(200);
     expect(res.body.success).toBe(true);

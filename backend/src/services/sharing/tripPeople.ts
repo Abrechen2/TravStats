@@ -14,7 +14,12 @@ import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
  * action the server would refuse (`shareTrip` checks the same rules).
  */
 export type ShareBlock =
-  "notLinked" | "consentMissing" | "consentPending" | "groupConsentMissing" | "alreadyMember";
+  | "notLinked"
+  | "consentMissing"
+  | "consentPending"
+  | "groupConsentMissing"
+  | "alreadyMember"
+  | "accountInactive";
 
 export interface TripPerson {
   /** "c:<companionId>" for a companion, "u:<userId>" for a member who is none. */
@@ -56,6 +61,18 @@ export async function tripPeople(
   const members = memberTrips.map((t) => toPerson(t.user));
   const memberIds = members.map((m) => m.id);
   const consentOf = new Map(outgoing.map((c) => [c.targetId, consentStatusSchema.parse(c.status)]));
+  const accountIds = [
+    ...memberIds,
+    ...links.flatMap((l) => (l.companion.linkedUser ? [l.companion.linkedUser.id] : [])),
+  ];
+  const inactive = new Set(
+    (
+      await prisma.user.findMany({
+        where: { id: { in: accountIds }, isActive: false },
+        select: { id: true },
+      })
+    ).map((u) => u.id)
+  );
   const receiving = await acceptedWith(prisma, userId, memberIds);
 
   // The onward-share rule has one home (`missingGroupConsent`), shared with `shareTrip`.
@@ -73,6 +90,7 @@ export async function tripPeople(
     const consent = account ? (consentOf.get(account.id) ?? "none") : "none";
     let shareBlockedBy: ShareBlock | null = null;
     if (!account) shareBlockedBy = "notLinked";
+    else if (inactive.has(account.id)) shareBlockedBy = "accountInactive";
     else if (member) shareBlockedBy = "alreadyMember";
     else if (consent === "pending") shareBlockedBy = "consentPending";
     else if (consent !== "accepted") shareBlockedBy = "consentMissing";

@@ -101,6 +101,13 @@ export async function shareTrip(
           "SHARE_COMPANION_NOT_LINKED"
         );
       }
+      // Same answer as `requestConsent` gives for a deactivated account.
+      const recipient = await tx.user.findFirst({
+        where: { id: recipientId, isActive: true },
+        select: { id: true },
+      });
+      if (!recipient)
+        throw new AppError("No such user on this server", 404, "SHARE_USER_NOT_FOUND");
       // Asked again on every share, not only when linking: a consent can be
       // withdrawn after the link was made.
       if (!(await hasAcceptedConsent(tx, userId, recipientId))) throw consentRequired();
