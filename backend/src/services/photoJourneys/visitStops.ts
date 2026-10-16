@@ -1,6 +1,7 @@
 import { localDay } from "../../shared/time/instant";
 import { zoneOfCoordinates } from "../../shared/time/resolveInput";
 import { distanceKm, type PhotoCluster } from "./cluster";
+import { tripSpan, visitDay } from "../places/visitTrip";
 
 /**
  * Which stops inside a recorded trip are worth asking about (forgejo#211).
@@ -37,6 +38,11 @@ export interface VisitStopTrip {
   name: string;
   startDate: Date | null;
   endDate: Date | null;
+  /** The time model's day columns; absent on a row the backfill has not reached. */
+  startDay?: Date | null;
+  endDay?: Date | null;
+  startZone?: string | null;
+  endZone?: string | null;
 }
 
 export interface VisitStopPlace {
@@ -45,7 +51,12 @@ export interface VisitStopPlace {
   localName: string | null;
   lat: number;
   lon: number;
-  visits: readonly { visitedAt: Date | string | null }[];
+  visits: readonly {
+    visitedAt: Date | string | null;
+    visitedAtUtc?: Date | null;
+    visitedZone?: string | null;
+    visitedPrecision?: string | null;
+  }[];
 }
 
 /** A lodging the user has a stay at. Coordinates may be absent on `Lodging`. */
@@ -101,20 +112,27 @@ function daysOf(cluster: PhotoCluster, zone: string | null): readonly string[] {
 /**
  * The trip whose days hold the stop — the shortest one when several do, so a
  * fortnight filed as one trip and a city break filed inside it name the city
- * break. A trip's days are stored as UTC midnights of its own calendar, and
- * the stop's days are read on its own clock, so the comparison is day to day
- * and a Seoul morning is not pushed into the previous evening.
+ * break. A trip's days are read by the shared rule (`tripSpan`): the day
+ * column, else the legacy anchor as the backfill reads it — its UTC date put a
+ * trip a UTC+2 browser saved at local midnight one day early. The stop's days
+ * are read on its own clock, so the comparison is day to day.
  */
 function tripOf(days: readonly string[], trips: readonly VisitStopTrip[]): VisitStopTrip | null {
   const first = days[0];
   const last = days[days.length - 1];
   let best: { trip: VisitStopTrip; spanMs: number } | null = null;
   for (const trip of trips) {
-    if (trip.startDate === null || trip.endDate === null) continue;
-    const from = isoDay(trip.startDate);
-    const to = isoDay(trip.endDate);
-    if (first < from || last > to) continue;
-    const spanMs = trip.endDate.getTime() - trip.startDate.getTime();
+    const span = tripSpan({
+      id: trip.id,
+      startDay: trip.startDay ?? null,
+      endDay: trip.endDay ?? null,
+      startDate: trip.startDate,
+      endDate: trip.endDate,
+      startZone: trip.startZone ?? null,
+      endZone: trip.endZone ?? null,
+    });
+    if (span === null || first < span.first || last > span.last) continue;
+    const spanMs = Date.parse(span.last) - Date.parse(span.first);
     if (best === null || spanMs < best.spanMs) best = { trip, spanMs };
   }
   return best?.trip ?? null;
@@ -128,9 +146,12 @@ const within = (
   other.lon != null &&
   distanceKm(at, { lat: other.lat, lon: other.lon }) * 1000 <= VISIT_STOP_EXPLAINED_M;
 
-/** A visit's day, as the rest of the scan reads it (`shared/photoScan.ts`). */
+/** A visit's day on its own clock where known (`visitDay`), else the legacy column's. */
 const visitedOn = (place: VisitStopPlace, days: readonly string[]): boolean =>
-  place.visits.some((visit) => visit.visitedAt != null && days.includes(isoDay(visit.visitedAt)));
+  place.visits.some((visit) => {
+    const day = visitDay(visit);
+    return day !== null && days.includes(day);
+  });
 
 function flightExplains(
   at: { lat: number; lon: number },
