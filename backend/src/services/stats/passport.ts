@@ -25,14 +25,12 @@ import {
   type EvidenceInput,
   type EvidenceKind,
 } from "../../shared/countryEvidence";
+import { FLOWN, flightDay, flightEvidence, isoDayOf, type PassportFlight } from "./flightEvidence";
 import {
-  FLOWN,
-  flightDay,
-  flightEvidence,
-  isoDayOf,
-  type PassportFlight,
-  type VisitUnclearReason,
-} from "./flightEvidence";
+  countryAnnotations,
+  type CountryVisitSource,
+  type PassportUnclearReason,
+} from "./countryAnnotations";
 import {
   unconfirmedTrackCountries,
   type CountryDayRow,
@@ -158,13 +156,7 @@ const strongestKind = (kinds: readonly EvidenceKind[]): PassportEvidence =>
  */
 export const PASSPORT_COUNTRY_THRESHOLD: CountryTier = DEFAULT_COUNTRY_TIER;
 
-/**
- * Why a ground-presence country may or may not have been visited — the
- * flight chain's own reasons, plus `stationOnly`: a train or bus station
- * proves ground contact, and nothing records whether the traveller went
- * further than the platform.
- */
-export type PassportUnclearReason = VisitUnclearReason | "stationOnly";
+export type { PassportUnclearReason };
 
 export interface PassportCountry {
   /** "Am Boden gewesen" — every row is, by construction. */
@@ -179,6 +171,8 @@ export interface PassportCountry {
   visitUncertain: boolean;
   /** Sorted, distinct; empty unless `visitUncertain`. */
   visitUncertainReasons: PassportUnclearReason[];
+  /** Which domains prove the visit, in which years; empty unless `visited`. */
+  visitSources: CountryVisitSource[];
   /** ISO-3166 alpha-2. What a client shows — never a flag: flags are political and age. */
   code: string;
   continent: Continent | null;
@@ -617,16 +611,8 @@ export function buildPassport(
     ...busEvidence(busEnds),
   ];
   const evidence = foldCountryEvidence(evidenceInputs);
-  const unclearOf = new Map<string, Set<PassportUnclearReason>>();
-  const noteUnclear = (country: string | null, reason: PassportUnclearReason) => {
-    const code = isoCountryCode(country);
-    if (!code) return;
-    unclearOf.set(code, (unclearOf.get(code) ?? new Set()).add(reason));
-  };
-  for (const input of flightInputs) if (input.unclear) noteUnclear(input.country, input.unclear);
-  for (const input of [...railEvidence(railEnds), ...busEvidence(busEnds)]) {
-    noteUnclear(input.country, "stationOnly");
-  }
+  const annotations = countryAnnotations(evidenceInputs);
+  const liftedHome = new Set<string>();
   const firstVisitYears = new Map(
     foldCountryEvidence(
       evidenceInputs.filter((input) => input.tier === "visited" || input.tier === "slept")
@@ -679,6 +665,7 @@ export function buildPassport(
       if (!acc.counted) {
         acc.tier = "visited";
         acc.counted = true;
+        liftedHome.add(row.code);
       }
     }
   }
@@ -722,8 +709,9 @@ export function buildPassport(
       counted: acc.counted,
       groundPresence: true,
       visited: acc.counted,
-      visitUncertain: !acc.counted && (unclearOf.get(code)?.size ?? 0) > 0,
-      visitUncertainReasons: acc.counted ? [] : [...(unclearOf.get(code) ?? [])].sort(),
+      visitUncertain: !acc.counted && annotations.unclearReasons(code).length > 0,
+      visitUncertainReasons: acc.counted ? [] : annotations.unclearReasons(code),
+      visitSources: acc.counted ? annotations.visitSources(code, liftedHome.has(code)) : [],
       portCalls: evidenceCounts.get(code)?.portCalls ?? 0,
       places: evidenceCounts.get(code)?.places ?? 0,
       lodging: lodgingStamps.get(code) ?? null,

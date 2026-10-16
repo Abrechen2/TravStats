@@ -17,6 +17,7 @@ import type { StatsPeriod } from "../useStatsPeriod";
 import type { SectionVisibility } from "../../../hooks/useSectionVisibility";
 import { comparisonWindow, type ComparisonKind } from "../../../lib/stats/comparisonWindow";
 import { aggregate, collectYears, foldedDomains } from "./aggregate";
+import { useVisitedCountryIndex } from "./useVisitedCountryIndex";
 import CrossDomainKpis from "./CrossDomainKpis";
 import CrossDomainActivityChart from "./CrossDomainActivityChart";
 import CrossDomainHeatmap from "./CrossDomainHeatmap";
@@ -99,13 +100,19 @@ export default function OverviewTab({
   // big number at odds with the evidence panel behind it, which answers for
   // the whole year. The DELTA pair is windowed on both sides, because that is
   // the only comparison worth publishing.
-  const agg = aggregate(stats, visible, selectedYear, null);
+  // "Länder besucht" counts by the passport's visited rule (forgejo#299).
+  const visitedIndex = useVisitedCountryIndex();
+  const agg = aggregate(stats, visible, selectedYear, null, visitedIndex);
   // The evidence scope names the population the KPI numbers describe, which
   // is what the fold READ — not the chip state (see `foldedDomains`).
   const folded = useMemo(() => foldedDomains(stats, visible), [stats, visible]);
   const comparing = compareEnabled && selectedYear !== null && compareYear !== null;
-  const currentAgg = comparing ? aggregate(stats, visible, selectedYear, comparison) : null;
-  const prevAgg = comparing ? aggregate(stats, visible, compareYear, comparison) : null;
+  const currentAgg = comparing
+    ? aggregate(stats, visible, selectedYear, comparison, visitedIndex)
+    : null;
+  const prevAgg = comparing
+    ? aggregate(stats, visible, compareYear, comparison, visitedIndex)
+    : null;
   // Falls back to the year it is in the profile zone (Q1), not the reader's.
   const heatmapYear =
     selectedYear ?? years[years.length - 1] ?? Number(todayIn(todayZoneNow()).slice(0, 4));

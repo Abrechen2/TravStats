@@ -285,3 +285,63 @@ describe("owner ruling 2026-10-16: a port call is a visit", () => {
     expect(p.summary).toMatchObject({ groundCountries: 2, visitedCountries: 2, countries: 2 });
   });
 });
+
+describe("forgejo#299: per-domain visit sources for the overview tile", () => {
+  it("names only the domains whose records prove the visit, with their years", () => {
+    const p = passport({
+      flights: DOHA_HANOI,
+      places: [{ isoCountryCode: "BE", at: null }],
+      lodgings: [
+        {
+          isoCountryCode: "VN",
+          stays: [
+            {
+              status: "completed",
+              checkIn: new Date("2025-01-03T00:00:00Z"),
+              checkOut: new Date("2025-01-05T00:00:00Z"),
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(row(p, "VN")?.visitSources).toEqual([
+      { domain: "flight", years: [2025], undated: false },
+      { domain: "lodging", years: [2025], undated: false },
+    ]);
+    // Qatar is ground presence: no domain proves a visit there.
+    expect(row(p, "QA")?.visitSources).toEqual([]);
+    // An undated place proves the visit for the lifetime figure only.
+    expect(row(p, "BE")?.visitSources).toEqual([{ domain: "poi", years: [], undated: true }]);
+  });
+
+  it("leaves out a domain whose records there are ground presence only", () => {
+    // Qatar is visited through a city walk; the flights only connected there,
+    // so the flight chip alone must not show Qatar as visited.
+    const p = passport({
+      flights: DOHA_HANOI,
+      places: [{ isoCountryCode: "QA", at: new Date("2025-01-21T12:00:00Z") }],
+    });
+
+    expect(row(p, "QA")?.visitSources).toEqual([{ domain: "poi", years: [2025], undated: false }]);
+  });
+
+  it("lets every record of a lifted home country stand for its visit", () => {
+    const p = passport({
+      flights: [flight("MUC", "BKK", "2024-02-01"), flight("PNH", "MUC", "2024-02-20")],
+      homeCountries: ["DE"],
+    });
+
+    expect(row(p, "DE")?.visitSources).toEqual([
+      { domain: "flight", years: [2024], undated: false },
+    ]);
+  });
+
+  it("files a port call under the cruise domain", () => {
+    const p = passport({ ports: [{ country: "Norway", at: new Date("2023-07-04T08:00:00Z") }] });
+
+    expect(row(p, "NO")?.visitSources).toEqual([
+      { domain: "cruise", years: [2023], undated: false },
+    ]);
+  });
+});

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render as rtlRender, screen } from "@testing-library/react";
+import { render as rtlRender, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { MemoryRouter } from "react-router-dom";
 import type { DomainStatsMap } from "../../../../lib/stats/domain-stats";
@@ -19,6 +19,7 @@ vi.mock("@/lib/api/stats", async (importOriginal) => {
       ...actual.statsApi,
       getTravelAccount: vi.fn().mockResolvedValue(null),
       getDomainRecords: vi.fn().mockResolvedValue([]),
+      getPassport: vi.fn().mockResolvedValue({ countries: [] }),
     },
   };
 });
@@ -30,6 +31,7 @@ vi.mock("../../roadtrip/TourStatsSection", () => ({
 
 import OverviewTab from "../OverviewTab";
 import { useSettingsStore } from "../../../../store/settingsStore";
+import { statsApi } from "../../../../lib/api/stats";
 import { hiding } from "../../__tests__/sectionVisibilityStub";
 
 // The card's "Details" is a router link now (B04), so it needs a router.
@@ -154,5 +156,44 @@ describe("OverviewTab carries the tour figures where the roadtrip tab is not", (
     useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: false });
     renderOverview();
     expect(screen.queryByTestId("tour-stats")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * forgejo#299: the "Länder besucht" tile counts the passport's VISITED
+ * countries, not the countries a domain's records touched. The flight adapter
+ * here touched only DE; the passport proves visits to JP and KR by flight in
+ * 2024 and lists DE as ground presence only.
+ */
+describe("OverviewTab — the countries tile uses the passport's visited rule", () => {
+  /** The big figure drawn right above the tile's label. */
+  const countriesValue = (): string | null | undefined =>
+    screen.getAllByText("stats:overviewKpis.countries").find((el) => el.tagName === "H3")
+      ?.previousElementSibling?.textContent;
+
+  beforeEach(() => {
+    localStorage.clear();
+    useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
+  });
+
+  it("shows the visited count from the passport index", async () => {
+    vi.mocked(statsApi.getPassport).mockResolvedValue({
+      countries: [
+        { code: "DE", visitSources: [] },
+        { code: "JP", visitSources: [{ domain: "flight", years: [2024], undated: false }] },
+        { code: "KR", visitSources: [{ domain: "flight", years: [2024], undated: false }] },
+      ],
+    } as unknown as Awaited<ReturnType<typeof statsApi.getPassport>>);
+    renderOverview(hiding());
+
+    // Touched by the flight adapter: 1 (DE). Visited by the passport: 2.
+    await waitFor(() => expect(countriesValue()).toBe("2"));
+  });
+
+  it("shows a dash, not the touched countries, when the passport cannot be loaded", async () => {
+    vi.mocked(statsApi.getPassport).mockRejectedValue(new Error("boom"));
+    renderOverview(hiding());
+
+    await waitFor(() => expect(countriesValue()).toBe("—"));
   });
 });

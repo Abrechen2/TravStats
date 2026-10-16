@@ -84,13 +84,16 @@ describe("aggregate — a running year is compared against the same span", () =>
   });
 
   it("leaves the country set uncut — there is no day to cut it on", () => {
-    // Three of the four domains get `countriesByYear` from the server and it
-    // is year-keyed; deriving a day-level one on the client would be a second
-    // source of truth for a figure the evidence panel answers from the first.
-    // So the fold keeps reporting the year's whole set, and the KPI strip
-    // withholds the country DELTA for a same-period window instead of
-    // publishing a comparison of two different spans (see CrossDomainKpis).
+    // The passport's visit index is keyed by year; deriving a day-level one
+    // on the client would be a second source of truth for a figure the
+    // evidence panel answers from the first. So the fold keeps reporting the
+    // year's whole visited set, and the KPI strip withholds the country
+    // DELTA for a same-period window (see CrossDomainKpis).
     const window = comparisonWindow(2026, 2025, SEPTEMBER_18_2026);
-    expect(aggregate(statsMap, visible, 2025, window).countriesCount).toBe(2);
+    const visited = [
+      { code: "DE", domain: "flight" as const, years: [2025], undated: false },
+      { code: "US", domain: "flight" as const, years: [2025], undated: false },
+    ];
+    expect(aggregate(statsMap, visible, 2025, window, visited).countriesCount).toBe(2);
   });
 });

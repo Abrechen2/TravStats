@@ -1,3 +1,4 @@
+import type { DomainKey } from "../shared/domains";
 /**
  * The passport, exactly as the server derives it.
  *
@@ -121,6 +122,11 @@ export interface PassportCountry {
   visited?: boolean;
   visitUncertain?: boolean;
   visitUncertainReasons?: PassportUnclearReason[];
+  /**
+   * Which domains prove the visit, in which years (forgejo#299) — the index
+   * the Stats overview's "Länder besucht" tile folds by chip and year.
+   */
+  visitSources?: Array<{ domain: DomainKey; years: number[]; undated: boolean }>;
   /** ISO-3166 alpha-2 — the glyph shown, deliberately not a flag. */
   code: string;
   continent: Continent | null;

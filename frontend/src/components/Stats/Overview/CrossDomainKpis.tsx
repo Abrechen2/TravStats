@@ -115,7 +115,9 @@ export default function CrossDomainKpis({
     },
     {
       label: t("stats:overviewKpis.countries"),
-      value: agg.countriesCount,
+      // Null while the passport's visit index is not there: a dash, never a
+      // count of touched countries under the "besucht" label.
+      value: agg.countriesCount ?? "—",
       // No country delta while the window is a same-period one. The country
       // index is keyed by YEAR and three of the four domains get it from the
       // server, so it cannot be cut at today; the only delta available here is
@@ -125,7 +127,12 @@ export default function CrossDomainKpis({
       // a word reads as a badge that was forgotten.
       hint: showDelta && partialYear ? t("stats:overviewKpis.countriesNoComparison") : undefined,
       delta:
-        showDelta && currentAgg && prevAgg && !partialYear
+        showDelta &&
+        currentAgg &&
+        prevAgg &&
+        !partialYear &&
+        agg.countriesCount !== null &&
+        prevAgg.countriesCount !== null
           ? delta(agg.countriesCount, prevAgg.countriesCount)
           : null,
       evidenceKey: "crossDomainCountryCount",

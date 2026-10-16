@@ -45,11 +45,11 @@
         "exclusions": "Geplantes und Storniertes zählt nicht. Mietwagen und Tagestouren zählen hier nicht. Ein Roadtrip und die mit ihm verknüpften Aufenthalte sind verschiedene Einträge und zählen je einmal; ihre Nächte und Tage werden hier nicht addiert."
       },
       "countries": {
-        "unit": "Ein Land, belegt durch irgendeinen Eintrag; ein Land, das mehrere Bereiche belegen, zählt einmal.",
-        "time": "Im gewählten Jahr nach der Zeitregel jedes Bereichs, sonst über alle Jahre.",
-        "source": "Die Länder der Einträge in den eingeschalteten Bereichen.",
-        "coverage": "Ein Eintrag ohne bekanntes Land trägt nichts bei. Im laufenden Jahr gibt es keinen Vergleich gleicher Zeiträume, weil Länder je Jahr und nicht je Tag vorliegen. Ein Tipp auf die Zahl zeigt, welcher Eintrag welches Land belegt.",
-        "exclusions": "Geplantes und Storniertes zählt nicht. Mietwagen und Tagestouren tragen kein Land bei."
+        "unit": "Ein Land, das du besucht hast – wie im Reisepass: Übernachtung, Orts- oder Arbeitsbesuch, Landgang, Hin- und Rückflug ans Ziel oder dein Wohnland. Umstiege, Durchfahrten und unklare Flugketten zählen nicht. Ein Land, das mehrere Bereiche belegen, zählt einmal.",
+        "time": "Im gewählten Jahr zählen Besuche mit Datum in diesem Jahr, sonst alle Jahre. Ein Besuch ohne Datum zählt nur über alle Jahre.",
+        "source": "Die Besuche, die die Einträge der eingeschalteten Bereiche belegen.",
+        "coverage": "Lässt sich der Reisepass nicht laden, steht hier ein Strich statt einer Zahl. Im laufenden Jahr gibt es keinen Vergleich gleicher Zeiträume, weil Besuche je Jahr und nicht je Tag vorliegen. Ein Tipp auf die Zahl zeigt, welcher Eintrag welchen Besuch belegt.",
+        "exclusions": "Geplantes und Storniertes zählt nicht, Standortpunkte allein auch nicht. Mietwagen, Fähren und Tagestouren tragen kein Land bei."
       },
       "activeDays": {
         "unit": "Ein Kalendertag, an dem mindestens ein Eintrag stattfand; ein Tag mit Flug und Hotelnacht zählt einmal.",
