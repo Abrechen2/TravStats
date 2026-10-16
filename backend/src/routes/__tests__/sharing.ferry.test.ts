@@ -29,6 +29,7 @@ describe("trip sharing — ferry crossings", () => {
         userId,
         operator: "Stena Line",
         vesselName: "Stena Germanica",
+        vesselMmsi: "265177000",
         depStationName: "Kiel Schwedenkai",
         depLat: 54.3167,
         depLon: 10.1394,
@@ -79,6 +80,8 @@ describe("trip sharing — ferry crossings", () => {
     expect(copy).toMatchObject({
       operator: "Stena Line",
       vesselName: "Stena Germanica",
+      // The MMSI binds the live position to the owner's booking; it is private.
+      vesselMmsi: null,
       depStationName: "Kiel Schwedenkai",
       distanceKm: 452,
       seat: null,
@@ -106,6 +109,24 @@ describe("trip sharing — ferry crossings", () => {
     const bensTrip = await prisma.trip.findFirstOrThrow({ where: { userId: ben.id } });
     expect(rows[0].shareKey).not.toBeNull();
     expect(rows[0].tripId).toBe(bensTrip.id);
+  });
+
+  it.each([
+    ["a terminal about 1.5 km away", { depLat: 54.3167 + 0.0135 }],
+    // 22:45 UTC is 00:45 on the next day in Berlin — inside the 2-day window.
+    ["a different local day", { departureTime: new Date("2026-06-01T22:45:00Z") }],
+    ["a cancelled crossing", { status: "cancelled" }],
+  ])("does not join Ben's own crossing with %s", async (_label, differs) => {
+    await crossing(anna.id, { tripId });
+    const own = await crossing(ben.id, { seat: "BEN-SEAT", ...differs });
+    const companion = await linkWithConsent(anna, ben);
+    const result = await shareTrip(anna.id, tripId, companion.id);
+    expect(result.created.ferryJourneys).toBe(1);
+    const rows = await bens();
+    expect(rows).toHaveLength(2);
+    const untouched = rows.find((r) => r.id === own.id);
+    expect(untouched).toMatchObject({ seat: "BEN-SEAT", shareKey: null, tripId: null });
+    expect(rows.find((r) => r.id !== own.id)?.shareKey).not.toBeNull();
   });
 
   it("follows an edit and tells Ben about a delete", async () => {
