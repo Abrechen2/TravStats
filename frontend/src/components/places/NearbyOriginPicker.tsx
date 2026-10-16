@@ -94,7 +94,7 @@ export function NearbyOriginPicker({
                 ? {
                     border: "1px solid var(--domain-poi)",
                     color: "var(--domain-poi)",
-                    background: "rgba(94,194,178,0.1)",
+                    background: "var(--domain-poi-soft)",
                   }
                 : { border: "1px solid var(--color-border)", color: "var(--text-muted)" }
             }

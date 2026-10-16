@@ -117,7 +117,7 @@ export function useNavItems(pathname = "/"): {
           ? [
               {
                 id: "planning",
-                label: "TravPlan",
+                label: t("travplan:title"),
                 items: ["transfer", "budget", "ai", "handover"].map(leaf),
               },
             ]

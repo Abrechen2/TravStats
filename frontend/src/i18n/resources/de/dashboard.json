@@ -200,7 +200,8 @@
       "roadtrip": "Roadtrips",
       "rail": "Bahn",
       "rental": "Mietwagen",
-      "bus": "Bus"
+      "bus": "Bus",
+      "ferry": "Fähren"
     },
     "disabledHint": "Bereich deaktiviert — Einstellungen → Bereiche"
   },

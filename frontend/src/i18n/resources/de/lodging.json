@@ -409,7 +409,8 @@
         "unexpected_error": "unerwarteter Fehler",
         "missing_stay_reference": "kein Aufenthalt deines Kontos"
       },
-      "updatedSuffix": " {{count}} bestehende Aufenthalte aktualisiert.",
+      "updatedSuffix_one": " 1 bestehender Aufenthalt aktualisiert.",
+      "updatedSuffix_other": " {{count}} bestehende Aufenthalte aktualisiert.",
       "deadlinesFilledSuffix_one": " Bei {{count}} Aufenthalt wurden fehlende Fristen ergänzt.",
       "deadlinesFilledSuffix_other": " Bei {{count}} Aufenthalten wurden fehlende Fristen ergänzt."
     },

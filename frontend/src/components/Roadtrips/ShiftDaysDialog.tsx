@@ -8,6 +8,7 @@ import IconButton from "../ui/IconButton";
 import { Icon } from "../ui/Icon";
 import { Field, Input } from "../ui/Field";
 import { SaveBlockedHint } from "../form";
+import TableScroll from "../ui/TableScroll";
 import type { MissingStep } from "../form";
 import { useTranslation } from "../../hooks/useTranslation";
 import { roadtripsApi } from "../../lib/api/roadtrips";
@@ -28,6 +29,7 @@ import type { Lodging } from "../../types/lodging";
 
 const DAYS_ID = "roadtrip-shift-days";
 const HINT_ID = "roadtrip-shift-blocked";
+const PREVIEW_ID = "roadtrip-shift-preview";
 
 /** Every stay of the lodging library, as the shift checks it: exact days only. */
 export function stayRefs(lodgings: readonly Lodging[] | null): StayRef[] {
@@ -278,26 +280,33 @@ export default function ShiftDaysDialog({
         <p className="t-caption">{t("roadtrips:shift.daysHint")}</p>
 
         {preview.rows.length > 0 && (
-          <table className="w-full text-sm" data-testid="shift-preview">
-            <thead>
-              <tr className="text-left">
-                <th className="t-label-mono">{t("roadtrips:shift.colStation")}</th>
-                <th className="t-label-mono">{t("roadtrips:shift.colBefore")}</th>
-                <th className="t-label-mono">{t("roadtrips:shift.colAfter")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {preview.rows.map((row) => (
-                <tr key={row.station.key}>
-                  <td style={{ fontWeight: 700, padding: "4px 8px 4px 0" }}>{name(row.station)}</td>
-                  <td style={{ padding: "4px 8px 4px 0" }}>
-                    {span(row.before.start, row.before.end)}
-                  </td>
-                  <td style={{ padding: "4px 0" }}>{span(row.after.start, row.after.end)}</td>
+          <TableScroll labelledBy={PREVIEW_ID}>
+            <table className="w-full text-sm" data-testid="shift-preview">
+              <caption id={PREVIEW_ID} className="sr-only">
+                {t("roadtrips:shift.previewCaption")}
+              </caption>
+              <thead>
+                <tr className="text-left">
+                  <th className="t-label-mono">{t("roadtrips:shift.colStation")}</th>
+                  <th className="t-label-mono">{t("roadtrips:shift.colBefore")}</th>
+                  <th className="t-label-mono">{t("roadtrips:shift.colAfter")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {preview.rows.map((row) => (
+                  <tr key={row.station.key}>
+                    <td style={{ fontWeight: 700, padding: "4px 8px 4px 0" }}>
+                      {name(row.station)}
+                    </td>
+                    <td style={{ padding: "4px 8px 4px 0" }}>
+                      {span(row.before.start, row.before.end)}
+                    </td>
+                    <td style={{ padding: "4px 0" }}>{span(row.after.start, row.after.end)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableScroll>
         )}
 
         {(preview.notices.length > 0 || contextFailed) && (

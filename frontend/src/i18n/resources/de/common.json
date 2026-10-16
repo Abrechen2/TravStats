@@ -207,7 +207,8 @@
     "rental_desc": "Mietwagen mit Station, Zeitraum, Fahrzeug und Kilometern aus der Rechnung. (Beta)",
     "bus": "Bus",
     "bus_desc": "Fernbus-, Intercity- und Shuttlefahrten: Terminals, Linie, Sitzplatz, Kilometer. Kein Stadtverkehr. (Beta)",
-    "ferry": "Fähren"
+    "ferry": "Fähren",
+    "ferry_desc": "Fährüberfahrten wie Flüge: Häfen, Reederei, Schiff, Fahrzeug an Bord, Kabine, Kilometer. (Beta)"
   },
   "settings": {
     "modules": {

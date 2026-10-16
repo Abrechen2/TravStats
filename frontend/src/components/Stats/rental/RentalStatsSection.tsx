@@ -3,7 +3,7 @@ import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import { rentalLinksApi, type RentalStats } from "../../../lib/api/rentalLinks";
-import { formatAmount } from "../../../lib/units";
+import { formatAmount, dateLocaleForLanguage } from "../../../lib/units";
 import { countryName } from "../../../shared/geo/countryCode";
 import { logger } from "../../../lib/logger";
 import {
@@ -52,7 +52,7 @@ export default function RentalStatsSection({
   const { t, i18n } = useTranslation(["rental", "stats"]);
   const { colorOf } = useDomainColors();
   const accent = colorOf("rental");
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   const { year, compareYear } = scope;
   const [stats, setStats] = useState<RentalStats | null>(null);
   const [pair, setPair] = useState<{

@@ -13,6 +13,7 @@ import DeltaBadge from "./DeltaBadge";
 import EvidenceTrigger from "../EvidenceTrigger";
 import CountingHelp from "../counting/CountingHelp";
 import { delta } from "./aggregate";
+import { dateLocaleForLanguage } from "../../../lib/units";
 
 interface Props {
   /** The whole selected year — what the big number on each tile says. */
@@ -64,7 +65,7 @@ export default function CrossDomainKpis({
 }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["stats", "common"]);
   // The reader's language decides the thousands separator (#319).
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   const showDelta =
     compareEnabled && currentAgg !== null && prevAgg !== null && selectedYear !== null;
   const partialYear = comparisonKind === "samePeriod";

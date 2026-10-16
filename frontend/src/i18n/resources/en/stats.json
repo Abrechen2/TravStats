@@ -174,7 +174,7 @@
       "busRides": "Bus rides",
       "busKmMeasured": "Distance (road or ticket)",
       "busKmStraight": "Straight line",
-      "ferryRides": "Fähre rides",
+      "ferryRides": "Crossings",
       "ferryKmMeasured": "Ticket distance",
       "ferryKmStraight": "Straight line"
     },
@@ -855,7 +855,8 @@
   },
   "punctuality": {
     "title": "Punctuality",
-    "subtitle": "From {{count}} flights with a recorded delay.",
+    "subtitle_one": "From 1 flight with a recorded delay.",
+    "subtitle_other": "From {{count}} flights with a recorded delay.",
     "avgDelay": "Avg delay",
     "minutes_one": "{{count}} min",
     "minutes_other": "{{count}} min",

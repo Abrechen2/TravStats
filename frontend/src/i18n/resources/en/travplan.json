@@ -130,7 +130,12 @@
     "PLAN_ANCHOR_STALE": "A fixed booking changed in TravStats. Refresh the plan’s source bookings first.",
     "LLM_DISABLED": "AI is disabled on this server.",
     "LLM_CLOUD_NOT_CONSENTED": "Cloud providers have not been approved on this server.",
-    "LLM_UNREACHABLE": "The AI provider is currently unreachable."
+    "LLM_UNREACHABLE": "The AI provider is currently unreachable.",
+    "PLAN_TOO_LARGE": "The plan is too large to save. Remove entries or ideas you no longer need, then try again.",
+    "PLAN_ITEM_NOT_FOUND": "This entry no longer exists – it was probably deleted in the meantime. Reload the page to see the current version.",
+    "PLAN_PROPOSAL_NOT_FOUND": "This proposal no longer exists. Generate a new one if you need it.",
+    "PLAN_DOCUMENT_NOT_FOUND": "A linked document does not belong to this trip (any more). Remove it from the booking and save again.",
+    "PLAN_WEATHER_INVALID": "The weather provider returned unusable data. The saved forecast is preserved; try again later."
   },
   "enabled": "Enable TravPlan on this server",
   "config": "TravPlan settings",
@@ -158,7 +163,6 @@
   },
   "conscious": "Keep intentionally open",
   "dismiss": "Not needed",
-  "allChecks": "View all hints",
   "freeDay": "Keep this day intentionally free",
   "openDay": "Open this day to ideas again",
   "fixed": "Booked · fixed anchor",
@@ -193,7 +197,6 @@
   "apply": "Apply proposal",
   "reject": "Keep as is",
   "stale": "This proposal no longer matches the current plan. Please generate it again.",
-  "noAI": "Manual planning and trip checks also work without AI.",
   "packIntro": "Packing help for your destination and plans. Your own quantities are preserved.",
   "forecast": "Get weather forecast",
   "weatherUnknown": "No forecast is available for this period yet. Missing data does not mean good weather.",
@@ -220,7 +223,6 @@
   "newItem": "New itinerary item",
   "newIdea": "Keep an idea",
   "newPacking": "Add a packing item",
-  "newTask": "Keep a task",
   "newCost": "Add a cost item",
   "packingIdeas": {
     "rain": "Rain jacket or rain protection",

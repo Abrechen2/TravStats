@@ -140,7 +140,8 @@
   "values": {
     "yes": "ja",
     "no": "nein",
-    "list": "{{count}} Einträge",
+    "list_one": "1 Eintrag",
+    "list_other": "{{count}} Einträge",
     "other": "geändert"
   },
   "fields": {

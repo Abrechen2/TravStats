@@ -345,7 +345,8 @@
       "done": "{{routed}} routed along the road, {{straight}} stayed a straight line.",
       "reasons": "Reasons: {{reasons}}.",
       "stopped": "Stopped: {{reason}}",
-      "remaining": "{{count}} rides are still open; run the routing again.",
+      "remaining_one": "1 ride is still open; run the routing again.",
+      "remaining_other": "{{count}} rides are still open; run the routing again.",
       "failed": "Routing could not be completed. Please try again.",
       "lost": "The state of the routing can no longer be read. Reload the list to see what is already done."
     },

@@ -25,7 +25,13 @@ import {
   type OverlayAppearance,
 } from "../../lib/overlayAppearance";
 import { useOverlayAppearanceStore } from "../../store/overlayAppearanceStore";
-import { CollapsibleSection, Slider, Toggle, type AppearanceDomain } from "./controlPanelKit";
+import {
+  CollapsibleSection,
+  Slider,
+  Toggle,
+  type AppearanceDomain,
+  MUTED_TEXT,
+} from "./controlPanelKit";
 
 type NumericKey = Exclude<keyof OverlayAppearance, "rentalShowLine">;
 
@@ -70,7 +76,7 @@ function RentalLineToggle(): JSX.Element {
         icon="↔️"
         label={t("map:globe.panel.rentalShowLine")}
       />
-      <div className="px-2 text-[10px] leading-snug" style={{ color: "rgba(241,245,249,0.45)" }}>
+      <div className="px-2 text-[10px] leading-snug" style={{ color: MUTED_TEXT }}>
         {t("map:globe.panel.rentalShowLineHint")}
       </div>
       {/* The width of a line that is not drawn is not a control — hidden with it. */}

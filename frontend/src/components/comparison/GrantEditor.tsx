@@ -1,6 +1,7 @@
 import { sourceData, type SourceData } from "../../lib/comparison/transport";
 import { downloadBlob } from "./DevicePanel";
 import type { RecordPage } from "./RecordBrowser";
+import { comparisonFieldLabel } from "./fieldLabel";
 import { useState } from "react";
 import { Button } from "../ui";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -249,7 +250,7 @@ export default function GrantEditor({
                     .filter((f) => f.value !== null && f.value !== "")
                     .map((f) => (
                       <div key={f.name}>
-                        <dt>{t(`field.${f.name}`)}</dt>
+                        <dt>{comparisonFieldLabel(t, recordPreview.domain, f.name)}</dt>
                         <dd>{String(f.value)}</dd>
                       </div>
                     ))}

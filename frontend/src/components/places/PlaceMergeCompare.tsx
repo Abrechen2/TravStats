@@ -93,7 +93,7 @@ export function PlaceMergeCompare({
                     className={`flex flex-col items-start rounded-lg px-3 py-2 text-left text-sm ${COARSE}`}
                     style={{
                       border: on ? "2px solid var(--domain-poi)" : "1px solid var(--color-border)",
-                      background: on ? "rgba(94,194,178,0.1)" : "transparent",
+                      background: on ? "var(--domain-poi-soft)" : "transparent",
                     }}
                   >
                     <span className="t-caption">{t(`places:merge.side.${option}`)}</span>

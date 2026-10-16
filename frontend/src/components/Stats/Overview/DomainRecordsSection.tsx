@@ -9,6 +9,7 @@ import { useDomainColors } from "../../../hooks/useDomainColors";
 import type { DomainRecord, DomainRecordId } from "../../../types/domainRecords";
 import StatCard from "../StatCard";
 import CountingHelp from "../counting/CountingHelp";
+import { dateLocaleForLanguage } from "../../../lib/units";
 
 /**
  * Travel records beyond flights (forgejo#265): the longest cruise, stay,
@@ -56,7 +57,7 @@ export default function DomainRecordsSection(): JSX.Element | null {
   }, []);
 
   if (records === null || records.length === 0) return null;
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   const value = (r: DomainRecord): string =>
     t(`stats:domainRecords.units.${r.unit}`, {
       count: r.value,

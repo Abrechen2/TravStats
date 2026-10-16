@@ -10,7 +10,6 @@
   "summary": {
     "countries": "Countries visited",
     "countriesTotal": "counted / with evidence",
-    "countriesTotalExplained": "Countries visited counts actual stays. Ground presence also includes confirmed transit stops and travel through a country.",
     "airports": "Airports",
     "entries": "Entries",
     "continents": "Continents",
@@ -36,7 +35,7 @@
     "lodging": "Lodging",
     "port": "Port call",
     "place": "Place",
-    "roadtrip": "Road trip",
+    "roadtrip": "Roadtrip",
     "track": "Location history",
     "rail": "Train",
     "bus": "Bus"

@@ -46,11 +46,11 @@ export default function TravPlanModeSwitcher() {
       <LogoMark
         size={26}
         color={isPlan ? "var(--ts-accent)" : "var(--accent)"}
-        title={isPlan ? "TravPlan" : "TravStats"}
+        title={isPlan ? t("title") : "TravStats"}
       />
       <span className="hidden min-[400px]:flex">
         {isPlan ? (
-          <strong style={{ fontSize: 19, color: "var(--ts-accent)" }}>TravPlan</strong>
+          <strong style={{ fontSize: 19, color: "var(--ts-accent)" }}>{t("title")}</strong>
         ) : (
           <LogoWordmark size={16} />
         )}

@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { ExpandableEventCard } from "../Trip/ExpandableEventCard";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatRailSpan } from "../../lib/railTime";
-import { formatAmount } from "../../lib/units";
+import { formatAmount, dateLocaleForLanguage } from "../../lib/units";
 import type { TripFerryJourney } from "../../types/ferry";
 
 function serviceOf(ride: TripFerryJourney): string | null {
@@ -22,7 +22,7 @@ export function FerryTripCard({
   dateLabel: string;
 }): JSX.Element {
   const { t, i18n } = useTranslation(["ferry", "trips"]);
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   const [open, setOpen] = useState(false);
   const rows: Array<[string, string | null]> = [
     [t("ferry:form.operator"), serviceOf(ride)],

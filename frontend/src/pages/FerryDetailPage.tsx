@@ -25,6 +25,7 @@ import { ferryApi } from "../lib/api/ferry";
 import { railArrival, railDeparture } from "../lib/entityTimes";
 import { formatStationTime, railDurationMinutes } from "../lib/railTime";
 import type { FerryJourney } from "../types/ferry";
+import { dateLocaleForLanguage } from "../lib/units";
 export default function FerryDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -90,7 +91,7 @@ export default function FerryDetailPage() {
   const dep = railDeparture(ride),
     arr = railArrival(ride),
     duration = dep ? railDurationMinutes(dep, arr) : null;
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   const distanceLabel = t(
     ride.distanceSource === "user" ? "ferry:distanceKm" : "ferry:straightDistance"
   );

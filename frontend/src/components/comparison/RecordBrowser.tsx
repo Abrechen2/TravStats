@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "../ui";
 import { useTranslation } from "../../hooks/useTranslation";
 import { comparisonPost } from "../../lib/api/comparison";
+import { comparisonFieldLabel } from "./fieldLabel";
 export interface RecordPage {
   domain: string;
   nextCursor: string | null;
@@ -73,7 +74,9 @@ export default function RecordBrowser({
                 .filter((f) => f.value !== null && f.value !== "")
                 .map((field) => (
                   <div key={field.name}>
-                    <dt className="text-xs text-[var(--text-muted)]">{t(`field.${field.name}`)}</dt>
+                    <dt className="text-xs text-[var(--text-muted)]">
+                      {comparisonFieldLabel(t, page.domain, field.name)}
+                    </dt>
                     <dd className="break-words whitespace-pre-wrap">
                       {typeof field.value === "boolean"
                         ? t(field.value ? "yes" : "no")

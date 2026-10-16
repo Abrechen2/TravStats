@@ -855,7 +855,8 @@
   },
   "punctuality": {
     "title": "Pünktlichkeit",
-    "subtitle": "Aus {{count}} Flügen mit erfasster Verspätung.",
+    "subtitle_one": "Aus 1 Flug mit erfasster Verspätung.",
+    "subtitle_other": "Aus {{count}} Flügen mit erfasster Verspätung.",
     "avgDelay": "Ø Verspätung",
     "minutes_one": "{{count}} Min",
     "minutes_other": "{{count}} Min",
