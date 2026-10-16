@@ -8,6 +8,19 @@ import Button from "../../ui/Button";
 import type { InboxAction } from "./FlagQuickEditor";
 import { W } from "./model";
 
+/** `actualDeparture`/`actualArrival` are instants too, though their names do not end in "Time". */
+const TIME_FIELD = /Time$|^actual(Departure|Arrival)$/;
+
+/**
+ * A `datetime-local` value, read as UTC, as a full ISO instant. The input omits
+ * ":00" seconds, and `${value}Z` without seconds was refused by the server, so
+ * a time typed to the minute made the whole edit fail.
+ */
+function utcInputToIso(value: string): string | null {
+  const at = new Date(`${value}Z`);
+  return Number.isNaN(at.getTime()) ? null : at.toISOString();
+}
+
 /** All proposed fields stay visible. Saving the draft and applying it are separate API acts. */
 export default function FlightUpdateCard({
   update,
@@ -58,7 +71,7 @@ export default function FlightUpdateCard({
       <fieldset disabled={busy || expired} className="min-w-0 space-y-3">
         <legend className="t-label-mono mb-2">{t(`${W}.compare`)}</legend>
         {changes.map((change) => {
-          const isTime = /Time$/.test(change.field);
+          const isTime = TIME_FIELD.test(change.field);
           const current = Object.prototype.hasOwnProperty.call(draft, change.field)
             ? draft[change.field]
             : proposed[change.field];
@@ -125,7 +138,7 @@ export default function FlightUpdateCard({
                               : originalType === "number"
                                 ? Number(e.target.value)
                                 : isTime
-                                  ? `${e.target.value}Z`
+                                  ? utcInputToIso(e.target.value)
                                   : e.target.value,
                         }))
                       }
