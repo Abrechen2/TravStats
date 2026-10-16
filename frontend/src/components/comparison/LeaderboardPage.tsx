@@ -10,7 +10,7 @@ import {
   METRIC_GROUPS,
   type MetricGroup,
 } from "../../shared/comparisonMetrics";
-import { comparisonApi } from "../../lib/api/comparison";
+import { comparisonApi, comparisonFailureCode } from "../../lib/api/comparison";
 import type { LeaderboardResponse, PeopleResponse } from "../../lib/comparison/types";
 import { recentYears } from "../../lib/comparison/years";
 import { logger } from "../../lib/logger";
@@ -41,19 +41,41 @@ export default function LeaderboardPage(): JSX.Element {
   const [version, setVersion] = useState(0);
   const addRef = useRef<HTMLDivElement>(null);
 
+  // The people list loads on its own: when the leaderboard fails — a group deleted under the
+  // filter answers 404 — the group list must still refresh, or nothing can clear the filter.
+  useEffect(() => {
+    let alive = true;
+    comparisonApi.people().then(
+      (nextPeople) => {
+        if (alive) setPeople(nextPeople);
+      },
+      (failure: unknown) => {
+        logger.error("comparison: people load failed", failure);
+        if (alive) setFailed(true);
+      }
+    );
+    return () => {
+      alive = false;
+    };
+  }, [version]);
+
   useEffect(() => {
     let alive = true;
     setFailed(false);
-    Promise.all([comparisonApi.leaderboard(year, board || undefined), comparisonApi.people()]).then(
-      ([nextData, nextPeople]) => {
-        if (!alive) return;
-        setLoaded({ query, data: nextData });
-        setPeople(nextPeople);
+    comparisonApi.leaderboard(year, board || undefined).then(
+      (nextData) => {
+        if (alive) setLoaded({ query, data: nextData });
       },
       (failure: unknown) => {
+        if (!alive) return;
+        // The selected group is gone on the server: show everyone instead of failing on it.
+        if (board && comparisonFailureCode(failure) === "COMPARISON_BOARD_NOT_FOUND") {
+          setBoard("");
+          return;
+        }
         logger.error("comparison: load failed", failure);
         // A failed load says so; empty tiles would claim "nobody travelled".
-        if (alive) setFailed(true);
+        setFailed(true);
       }
     );
     return () => {

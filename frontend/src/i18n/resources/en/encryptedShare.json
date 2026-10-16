@@ -3,7 +3,7 @@
   "nav": "Encrypted sharing",
   "subtitle": "Connect through travel. Choose what to share.",
   "connect": "Connect a friend",
-  "views": "Comparison views",
+  "views": "Views",
   "friends": "Friends & sharing",
   "boards": "Friend lists",
   "audit": "Sharing history",
@@ -462,7 +462,7 @@
   "allSupported": "Select all available travel data",
   "e2e": {
     "data": "Compare data",
-    "subtitle": "Compare — decrypted on your devices.",
+    "subtitle": "Share travel data with friends, end-to-end encrypted – decrypted only on your devices.",
     "deviceTitle": "Your comparison key",
     "devices": "Devices & keys",
     "boundary": "Only verified devices decrypt these shares. Your own server still holds your original travel data.",
@@ -513,7 +513,6 @@
     "error": "Comparison unavailable. Check connectivity, device keys, sharing and group membership. There is no unencrypted fallback.",
     "published": "Fully encrypted and published. Your friends can now retrieve the package.",
     "freshness": "Freshness reflects the last encrypted package. Updates require the sender’s device. Packages expire after at most 30 days. Annual rankings require matching shared periods.",
-    "unavailable": "Not shared, not verified or not published",
     "section": {
       "flights": "Flights",
       "cruises": "Cruises",

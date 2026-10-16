@@ -21,6 +21,8 @@ describe("the encrypted share stands apart from the leaderboard", () => {
   });
 
   it("is never imported by the leaderboard", () => {
+    // pages/ComparisonPage.tsx is left out on purpose: it is the route dispatcher for both pages
+    // and loads the encrypted share lazily, so it never joins the leaderboard's chunk.
     const leaderboard = [
       ...sources(path.join(SRC, "components", "comparison")),
       ...sources(path.join(SRC, "lib", "comparison")),

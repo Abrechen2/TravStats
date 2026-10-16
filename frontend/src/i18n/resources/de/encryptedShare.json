@@ -3,7 +3,7 @@
   "nav": "Verschlüsselt teilen",
   "subtitle": "Reisen verbinden. Freigaben selbst bestimmen.",
   "connect": "Freund verbinden",
-  "views": "Vergleichsansichten",
+  "views": "Ansichten",
   "friends": "Freunde & Freigaben",
   "boards": "Freundeslisten",
   "audit": "Freigabeprotokoll",
@@ -462,7 +462,7 @@
   "allSupported": "Alle verfügbaren Reisedaten auswählen",
   "e2e": {
     "data": "Daten vergleichen",
-    "subtitle": "Vergleichen – auf deinen Geräten entschlüsselt.",
+    "subtitle": "Reisedaten Ende-zu-Ende verschlüsselt mit Freunden teilen – entschlüsselt nur auf euren Geräten.",
     "deviceTitle": "Dein Schlüssel für Vergleiche",
     "devices": "Geräte & Schlüssel",
     "boundary": "Nur bestätigte Geräte entschlüsseln diese Freigaben. Dein eigener Server hält weiterhin deine ursprünglichen Reisedaten.",
@@ -513,7 +513,6 @@
     "error": "Vergleich nicht verfügbar. Prüfe Verbindung, Geräteschlüssel, Freigabe und Gruppenstand. Es erfolgt kein unverschlüsselter Ersatzabruf.",
     "published": "Vollständig verschlüsselt veröffentlicht. Deine Freunde können das Paket jetzt abrufen.",
     "freshness": "Der Stand stammt vom letzten verschlüsselten Paket. Aktualisierungen benötigen das Gerät des Absenders. Ein Paket läuft spätestens nach 30 Tagen ab. Für Jahresranglisten müssen die freigegebenen Zeiträume übereinstimmen.",
-    "unavailable": "Nicht freigegeben, nicht geprüft oder nicht veröffentlicht",
     "section": {
       "flights": "Flüge",
       "cruises": "Kreuzfahrten",

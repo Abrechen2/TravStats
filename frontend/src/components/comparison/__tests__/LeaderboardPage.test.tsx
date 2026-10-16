@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { AxiosError, type AxiosResponse } from "axios";
 import LeaderboardPage from "../LeaderboardPage";
 import { comparisonApi } from "../../../lib/api/comparison";
 import type { LeaderboardResponse } from "../../../lib/comparison/types";
@@ -159,6 +160,41 @@ describe("LeaderboardPage", () => {
         expect(comparisonApi.leaderboard).toHaveBeenLastCalledWith(null, undefined)
       );
       await screen.findByTestId("metric-flightKm");
+    });
+
+    it("recovers when the selected group was deleted and the server no longer knows it", async () => {
+      const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      vi.mocked(comparisonApi.leaderboard).mockResolvedValue(two);
+      vi.mocked(comparisonApi.people).mockResolvedValue({
+        requests: [],
+        people: [],
+        boards: [crew],
+      });
+      render(<LeaderboardPage />);
+      fireEvent.change(await screen.findByLabelText("board.label"), { target: { value: "b1" } });
+      await waitFor(() => expect(comparisonApi.leaderboard).toHaveBeenLastCalledWith(null, "b1"));
+      await screen.findByTestId("metric-flightKm");
+
+      // The group is deleted: the people list no longer has it, and the server refuses its id.
+      vi.mocked(comparisonApi.people).mockResolvedValue({ requests: [], people: [], boards: [] });
+      vi.mocked(comparisonApi.leaderboard).mockImplementation((_year, board) =>
+        board
+          ? Promise.reject(
+              new AxiosError("gone", "ERR_BAD_REQUEST", undefined, undefined, {
+                status: 404,
+                data: { code: "COMPARISON_BOARD_NOT_FOUND" },
+              } as AxiosResponse)
+            )
+          : Promise.resolve(two)
+      );
+      fireEvent.click(screen.getByRole("button", { name: "people-changed" }));
+      await waitFor(() =>
+        expect(comparisonApi.leaderboard).toHaveBeenLastCalledWith(null, undefined)
+      );
+      expect(await screen.findByTestId("metric-flightKm")).toBeInTheDocument();
+      expect(screen.queryByLabelText("board.label")).toBeNull();
+      expect(screen.queryByText("loadFailed")).toBeNull();
+      quiet.mockRestore();
     });
 
     it("says the group shows nobody, rather than inviting, when only you are left in it", async () => {
