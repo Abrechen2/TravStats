@@ -66,6 +66,9 @@ export async function acceptedWith(
  * The other members' trips in `groupId` that may receive `actorId`'s changes.
  * A deactivated account receives nothing — no copy, no update, no notice —
  * while it is switched off; copy, update and removal notice all read this list.
+ * What it misses is NOT replayed when the account is reactivated: the copies
+ * stay as they were until the next change to the entry, or until the entry is
+ * shared again (the rollout backfill does that for crossings).
  */
 export async function receivingMembers(
   c: Pick<DbTransaction, "trip" | "shareConsent">,
