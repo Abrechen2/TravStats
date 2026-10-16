@@ -84,7 +84,6 @@ describe("buildPassport — years and first visits on the departure airport's da
       ],
       COUNTRIES,
       [],
-      // After both flights: a flight dated after "now" is a booking and proves nothing.
       new Date("2026-10-14T12:00:00Z")
     );
     expect(p.countries.find((c) => c.code === "JP")?.airports).toEqual(["NRT", "HND"]);
@@ -124,7 +123,10 @@ describe("buildPassport — years and first visits on the departure airport's da
     // country first stamped that morning is new THIS year for a Tokyo user;
     // the UTC year still said 2025.
     const morning = new Date("2025-12-31T23:00:00Z");
-    const flights = [flight("NRT", "MUC", "2025-12-31T22:30:00Z", "2026-01-01")];
+    const flights = [
+      flight("MUC", "NRT", "2025-12-31T22:00:00Z", "2026-01-01"),
+      flight("NRT", "MUC", "2025-12-31T22:30:00Z", "2026-01-01"),
+    ];
     const build = (zone?: string) =>
       buildPassport(flights, COUNTRIES, [], morning, [], [], [], undefined, [], [], [], zone);
     expect(build("Asia/Tokyo").countries.find((c) => c.code === "JP")?.isNew).toBe(true);

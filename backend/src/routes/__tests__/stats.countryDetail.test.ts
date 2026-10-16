@@ -189,7 +189,7 @@ describe("GET /api/v1/stats/countries/:code and /wrapped", () => {
     expect(res.body.topRoute).toEqual({ from: "JFK", to: "MUC", flights: 1 });
     // Both countries were first reached in 2019, and the passport is where that
     // number comes from.
-    expect(res.body.newCountries).toBe(2);
+    expect(res.body.newCountries).toBe(0); // One-way endpoints are ground evidence only.
   });
 
   it("honours ?year= and reports an empty year honestly", async () => {

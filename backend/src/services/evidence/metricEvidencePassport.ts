@@ -336,7 +336,9 @@ export async function resolvePassportContinentCount(
 ): Promise<EvidenceResponse> {
   requireAllTime(scope, "passportContinentCount");
   const { passport, records } = await loadPassportEvidenceIndex(userId);
-  const continentOf = new Map(passport.countries.map((c) => [c.code, c.continent]));
+  const continentOf = new Map(
+    passport.countries.filter((c) => c.counted).map((c) => [c.code, c.continent])
+  );
   const entries = records
     .map((r) => ({
       ...r.entry,
@@ -351,7 +353,7 @@ export async function resolvePassportContinentCount(
     }))
     .filter((e) => e.credits.length > 0);
   const visited = new Set(
-    passport.countries.flatMap((c) => (c.continent ? [c.continent as string] : []))
+    passport.countries.flatMap((c) => (c.counted && c.continent ? [c.continent as string] : []))
   );
   const credited = new Set(entries.flatMap((e) => e.credits));
   return distinctResponse(

@@ -146,7 +146,8 @@ export function railEvidence(ends: readonly RailEnd[]): EvidenceInput[] {
   return ends.map((e) => ({
     country: e.country,
     kind: "rail",
-    tier: e.tier,
+    // A station/terminal proves ground contact, not an off-site visit.
+    tier: "transited",
     at: e.at,
     days: e.days,
   }));

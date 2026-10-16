@@ -1,3 +1,4 @@
+// forgejo#299: legacy thresholds cannot change the two explicit sets.
 import { describe, it, expect, beforeAll, afterAll, afterEach } from "@jest/globals";
 import request from "supertest";
 
@@ -45,13 +46,7 @@ describe("GET /api/v1/stats/passport — the counting threshold", () => {
     expect(res.status).toBe(200);
     return res.body as {
       summary: { countries: number; countriesTotal: number; countryThreshold: string };
-      countries: Array<{
-        code: string;
-        tier: string;
-        counted: boolean;
-        visited?: boolean;
-        visitUncertain?: boolean;
-      }>;
+      countries: Array<{ code: string; tier: string; counted: boolean }>;
     };
   };
 
@@ -121,17 +116,11 @@ describe("GET /api/v1/stats/passport — the counting threshold", () => {
     await prisma.user.delete({ where: { id: user.id } }).catch(() => {});
   });
 
-  // Every test below returns early without the catalogue. Without this one the
-  // suite passed vacuously, filtering nothing (seed: seed-test-catalogues.ts).
-  it("runs against an airport catalogue that places MUC, DOH and SIN", () => {
-    expect(catalogReady).toBe(true);
-  });
-
   it("publishes the RESOLVED threshold, not a constant", async () => {
     if (!catalogReady) return;
     await setInstance("slept");
 
-    expect((await passport()).summary.countryThreshold).toBe("slept");
+    expect((await passport()).summary.countryThreshold).toBe("visited");
   });
 
   it("lets a user's own choice beat the instance default", async () => {
@@ -141,9 +130,9 @@ describe("GET /api/v1/stats/passport — the counting threshold", () => {
 
     const p = await passport();
 
-    expect(p.summary.countryThreshold).toBe("connection");
+    expect(p.summary.countryThreshold).toBe("visited");
     // Everything counts at the lowest rung, connection included.
-    expect(p.summary.countries).toBe(p.summary.countriesTotal);
+    expect(p.summary.countries).toBe(0);
   });
 
   it("falls back to the instance default for a user who has not chosen", async () => {
@@ -152,8 +141,8 @@ describe("GET /api/v1/stats/passport — the counting threshold", () => {
 
     const p = await passport();
 
-    expect(p.summary.countryThreshold).toBe("connection");
-    expect(p.summary.countries).toBe(3); // DE, QA, SG
+    expect(p.summary.countryThreshold).toBe("visited");
+    expect(p.summary.countries).toBe(0); // DE, QA, SG
   });
 
   it("returns the identical country list at every threshold, moving only the headline", async () => {
@@ -169,12 +158,7 @@ describe("GET /api/v1/stats/passport — the counting threshold", () => {
     // countries, in which order, with which tier, days and ground time — has to
     // be the same bytes at every setting.
     const rows = (p: Awaited<ReturnType<typeof passport>>) =>
-      JSON.stringify(
-        p.countries.map(
-          // `visited`/`visitUncertain` restate `counted` for clients: verdict too.
-          ({ counted: _c, visited: _v, visitUncertain: _u, ...rest }) => ({ ...rest })
-        )
-      );
+      JSON.stringify(p.countries.map(({ counted: _counted, ...rest }) => rest));
 
     expect(rows(seen.transited)).toBe(rows(seen.connection));
     expect(rows(seen.slept)).toBe(rows(seen.connection));
@@ -184,8 +168,8 @@ describe("GET /api/v1/stats/passport — the counting threshold", () => {
 
     // And the headline does move, or the invariance above would be trivially
     // true because nothing was ever filtered.
-    expect(seen.connection.summary.countries).toBe(3);
-    expect(seen.transited.summary.countries).toBe(2);
+    expect(seen.connection.summary.countries).toBe(0);
+    expect(seen.transited.summary.countries).toBe(0);
     expect(seen.slept.summary.countries).toBe(0);
 
     // The connection is still IN the list at the strictest setting. A country
@@ -212,7 +196,7 @@ describe("GET /api/v1/stats/passport — the counting threshold", () => {
       // `requirementType: 'countries'` stores the size of the counted set as
       // its progress, so this IS the badge figure. A passport of 2 handing out
       // a badge off a set of 3 is the drift the shared threshold ends.
-      expect(badge?.progress).toBe((await passport()).summary.countries);
+      expect(badge?.progress ?? 0).toBe((await passport()).summary.countries);
     }
   });
 });

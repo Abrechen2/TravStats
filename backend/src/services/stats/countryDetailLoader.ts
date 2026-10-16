@@ -20,7 +20,6 @@
 
 import { prisma } from "../../db";
 import { buildPassport } from "./passport";
-import { countryThresholdFor } from "../countryThresholdResolver";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { buildCountryDetail, type CountryDetail } from "./countryDetail";
 import {
@@ -54,9 +53,6 @@ export async function loadCountryDetail(
   const detail = buildCountryDetail(code, ...inputs);
   if (!detail) return null;
   const [flights, airports, home, ports, places, lodgings, , , stations, rail, bus] = inputs;
-  // The user's own threshold: with the default, `visited` on this page could
-  // disagree with the passport row it was opened from.
-  const threshold = await countryThresholdFor(userId);
   // Reuse the same fold and loaded records. No second database scan or local rule.
   const passport = buildPassport(
     flights,
@@ -66,7 +62,7 @@ export async function loadCountryDetail(
     ports,
     places,
     lodgings,
-    threshold,
+    undefined,
     [],
     stations,
     rail,

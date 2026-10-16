@@ -232,11 +232,9 @@ const evidenceKindSchema = z.enum([
 const countryTierSchema = z.enum(["slept", "visited", "transited", "connection"]);
 
 const passportCountrySchema = z.object({
-  groundPresence: z.boolean().describe("Always true: every listed row has evidence"),
-  visited: z.boolean().describe("Alias of `counted`"),
-  visitUncertain: z
-    .boolean()
-    .describe("Not counted, and only transport records (flight, port, rail, bus) name it"),
+  groundPresence: z.boolean(),
+  visited: z.boolean(),
+  visitUncertain: z.boolean(),
   code: z
     .string()
     .describe("ISO 3166-1 alpha-2. A code, never a flag: flags are political and age"),
@@ -249,7 +247,7 @@ const passportCountrySchema = z.object({
   lastYear: z.number().nullable(),
   airports: z.array(z.string()).describe("IATA codes used here, first visit first"),
   isHome: z.boolean(),
-  isNew: z.boolean().describe("`firstYear` is the current calendar year"),
+  isNew: z.boolean().describe("First confirmed visit in the current calendar year"),
   evidence: evidenceKindSchema.describe("The strongest KIND of record behind this country"),
   tier: countryTierSchema.describe("How strong that evidence is"),
   kinds: z.array(evidenceKindSchema).describe("Every kind that contributed, alphabetical"),
@@ -289,8 +287,10 @@ const passportResponse = registry.register(
   z
     .object({
       summary: z.object({
-        groundCountries: z.number().describe("Alias of `countriesTotal`"),
-        visitedCountries: z.number().describe("Alias of `countries`"),
+        groundCountries: z
+          .number()
+          .describe("Countries with attested ground contact, including transit"),
+        visitedCountries: z.number().describe("Countries with a visit beyond a transit stop"),
         countries: z
           .number()
           .describe("THE HEADLINE — countries whose evidence reaches `countryThreshold`"),
