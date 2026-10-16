@@ -69,7 +69,9 @@
   },
   "empty": {
     "title": "Nobody to compare with yet",
-    "description": "Invite someone — you will then see each other's totals."
+    "description": "Invite someone — you will then see each other's totals.",
+    "boardTitle": "Nobody from this group to show",
+    "boardDescription": "Nobody in this group shares their totals with you yet. Choose “Everyone” to see all."
   },
   "consent": {
     "title": "{{name}} sees these numbers",

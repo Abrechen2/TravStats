@@ -6,8 +6,9 @@ import { logger } from "../../lib/logger";
 import ConsentDialog from "./ConsentDialog";
 
 /**
- * `https://<lowercase host>#<64 hex>` — exactly what the server accepts: https only, no
- * port, no path. Anything else is refused there, so it is refused here before sending.
+ * `https://<lowercase host>#<64 hex>` — a pre-check of the server's origin rule: https only,
+ * no port, no path. It spares a round trip for a code the server would refuse; the server's
+ * check stays the one that counts.
  */
 const INVITE_CODE = /^https:\/\/[a-z0-9.-]+#[a-f0-9]{64}$/;
 

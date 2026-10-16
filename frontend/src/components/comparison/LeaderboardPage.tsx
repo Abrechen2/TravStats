@@ -32,7 +32,10 @@ export default function LeaderboardPage(): JSX.Element {
   const [group, setGroup] = useState<MetricGroup>("distance");
   const [year, setYear] = useState<number | null>(null);
   const [board, setBoard] = useState("");
-  const [data, setData] = useState<LeaderboardResponse | null>(null);
+  // The answer remembers which period and group it is for: after a filter changes, the old
+  // numbers are not shown under the new filter while its answer is on the way.
+  const query = `${year ?? "all"}|${board}`;
+  const [loaded, setLoaded] = useState<{ query: string; data: LeaderboardResponse } | null>(null);
   const [people, setPeople] = useState<PeopleResponse | null>(null);
   const [failed, setFailed] = useState(false);
   const [version, setVersion] = useState(0);
@@ -44,7 +47,7 @@ export default function LeaderboardPage(): JSX.Element {
     Promise.all([comparisonApi.leaderboard(year, board || undefined), comparisonApi.people()]).then(
       ([nextData, nextPeople]) => {
         if (!alive) return;
-        setData(nextData);
+        setLoaded({ query, data: nextData });
         setPeople(nextPeople);
       },
       (failure: unknown) => {
@@ -58,6 +61,13 @@ export default function LeaderboardPage(): JSX.Element {
     };
   }, [year, board, version]);
 
+  // A group that was deleted (here or by a reload) leaves the filter, rather than filtering
+  // to nothing under a name the picker no longer offers.
+  useEffect(() => {
+    if (board && people && !people.boards.some((b) => b.id === board)) setBoard("");
+  }, [board, people]);
+
+  const data = loaded?.query === query ? loaded.data : null;
   const reload = (): void => setVersion((v) => v + 1);
   // `scrollIntoView` is missing in jsdom, hence the second `?.`.
   const addPerson = (): void => addRef.current?.scrollIntoView?.({ behavior: "smooth" });
@@ -119,6 +129,12 @@ export default function LeaderboardPage(): JSX.Element {
         />
       ) : !data ? (
         <p className="t-caption">{tr("common:loading.default")}</p>
+      ) : rows.length <= 1 && board ? (
+        <EmptyState
+          title={tr("empty.boardTitle")}
+          description={tr("empty.boardDescription")}
+          action={<Button onClick={() => setBoard("")}>{tr("board.all")}</Button>}
+        />
       ) : rows.length <= 1 ? (
         <EmptyState
           title={tr("empty.title")}

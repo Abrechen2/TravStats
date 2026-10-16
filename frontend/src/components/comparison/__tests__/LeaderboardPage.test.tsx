@@ -1,8 +1,10 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import LeaderboardPage from "../LeaderboardPage";
 import { comparisonApi } from "../../../lib/api/comparison";
 import type { LeaderboardResponse } from "../../../lib/comparison/types";
+import { setClockForTests } from "../../../shared/time/clock";
+import { useSettingsStore } from "../../../store/settingsStore";
 import type { DomainKey } from "../../../shared/domains";
 
 const domains = vi.hoisted(() => ({ enabled: ["flight"] as string[] }));
@@ -20,7 +22,14 @@ vi.mock("../../../hooks/useEnabledDomains", () => ({
 vi.mock("../../ui/AppShell", () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
-vi.mock("../PeopleSection", () => ({ default: () => null }));
+// A button in place of the section, so a test can fire the reload a consent change causes.
+vi.mock("../PeopleSection", () => ({
+  default: ({ onChanged }: { onChanged: () => void }) => (
+    <button type="button" onClick={onChanged}>
+      people-changed
+    </button>
+  ),
+}));
 vi.mock("../AddPersonCard", () => ({ default: () => null }));
 vi.mock("../BoardsSection", () => ({ default: () => null }));
 vi.mock("../../../lib/api/comparison", async (original) => ({
@@ -127,5 +136,87 @@ describe("LeaderboardPage", () => {
     expect(await screen.findByTestId("metric-flightKm")).toBeInTheDocument();
     expect(screen.getByText("status.unreachable")).toBeInTheDocument();
     expect(screen.queryByText("loadFailed")).toBeNull();
+  });
+
+  describe("after a filter changes (review of 2026-10-16)", () => {
+    const crew = { id: "b1", name: "Crew", members: ["local:1"] };
+    afterEach(() => setClockForTests(null));
+
+    it("drops a group filter whose group no longer exists", async () => {
+      vi.mocked(comparisonApi.leaderboard).mockResolvedValue(two);
+      vi.mocked(comparisonApi.people).mockResolvedValue({
+        requests: [],
+        people: [],
+        boards: [crew],
+      });
+      render(<LeaderboardPage />);
+      fireEvent.change(await screen.findByLabelText("board.label"), { target: { value: "b1" } });
+      await waitFor(() => expect(comparisonApi.leaderboard).toHaveBeenLastCalledWith(null, "b1"));
+
+      vi.mocked(comparisonApi.people).mockResolvedValue({ requests: [], people: [], boards: [] });
+      fireEvent.click(screen.getByRole("button", { name: "people-changed" }));
+      await waitFor(() =>
+        expect(comparisonApi.leaderboard).toHaveBeenLastCalledWith(null, undefined)
+      );
+      await screen.findByTestId("metric-flightKm");
+    });
+
+    it("says the group shows nobody, rather than inviting, when only you are left in it", async () => {
+      vi.mocked(comparisonApi.leaderboard).mockResolvedValue(two);
+      vi.mocked(comparisonApi.people).mockResolvedValue({
+        requests: [],
+        people: [],
+        boards: [crew],
+      });
+      render(<LeaderboardPage />);
+      await screen.findByTestId("metric-flightKm");
+      vi.mocked(comparisonApi.leaderboard).mockResolvedValue({ year: null, rows: [two.rows[0]] });
+      fireEvent.change(screen.getByLabelText("board.label"), { target: { value: "b1" } });
+      expect(await screen.findByText("empty.boardTitle")).toBeInTheDocument();
+      expect(screen.queryByText("empty.title")).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "board.all" }));
+      await waitFor(() =>
+        expect(comparisonApi.leaderboard).toHaveBeenLastCalledWith(null, undefined)
+      );
+    });
+
+    it("does not show the previous period's numbers while the new one loads", async () => {
+      vi.mocked(comparisonApi.leaderboard).mockResolvedValue(two);
+      render(<LeaderboardPage />);
+      await screen.findByTestId("metric-flightKm");
+      let settle: (value: LeaderboardResponse) => void = () => undefined;
+      vi.mocked(comparisonApi.leaderboard).mockReturnValue(
+        new Promise((resolve) => {
+          settle = resolve;
+        })
+      );
+      const year = screen.getByLabelText("period.label") as HTMLSelectElement;
+      fireEvent.change(year, { target: { value: year.options[1].value } });
+      expect(await screen.findByText("common:loading.default")).toBeInTheDocument();
+      expect(screen.queryByTestId("metric-flightKm")).toBeNull();
+      settle(two);
+      expect(await screen.findByTestId("metric-flightKm")).toBeInTheDocument();
+    });
+
+    it("offers the years of the reader's zone, not the browser's", async () => {
+      // 12:00 UTC on New Year's Eve is already 2027 in Kiritimati (UTC+14).
+      setClockForTests("2026-12-31T12:00:00.000Z");
+      const store = vi.mocked(useSettingsStore);
+      const original = store.getMockImplementation();
+      // The suite's stub state, with a zone added: the tiles read units from it too.
+      const base = (store as unknown as { getState: () => { display: object } }).getState();
+      const state = { ...base, display: { ...base.display, timezone: "Pacific/Kiritimati" } };
+      store.mockImplementation(((select?: (s: typeof state) => unknown) =>
+        select ? select(state) : state) as never);
+      try {
+        vi.mocked(comparisonApi.leaderboard).mockResolvedValue(two);
+        render(<LeaderboardPage />);
+        await screen.findByTestId("metric-flightKm");
+        const year = screen.getByLabelText("period.label") as HTMLSelectElement;
+        expect(year.options[1].value).toBe("2027");
+      } finally {
+        store.mockImplementation(original!);
+      }
+    });
   });
 });

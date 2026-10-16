@@ -69,7 +69,9 @@
   },
   "empty": {
     "title": "Noch niemand zum Vergleichen",
-    "description": "Lade jemanden ein – ihr seht dann gegenseitig eure Summen."
+    "description": "Lade jemanden ein – ihr seht dann gegenseitig eure Summen.",
+    "boardTitle": "Niemand aus dieser Gruppe zu sehen",
+    "boardDescription": "Mit dir teilt noch niemand aus dieser Gruppe seine Summen. Wähle „Alle Personen“, um alle zu sehen."
   },
   "consent": {
     "title": "{{name}} sieht diese Zahlen",
