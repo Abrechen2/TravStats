@@ -130,7 +130,9 @@ export default function ShareNoticeCard({
             </Button>
           )}
           {changes.length > INLINE && (
-            <Button onClick={() => setDetails((d) => !d)}>{t(`${NS}.details`)}</Button>
+            <Button aria-expanded={details} onClick={() => setDetails((d) => !d)}>
+              {t(`${NS}.details`)}
+            </Button>
           )}
           {unread && (
             <Button disabled={busy} onClick={onRead}>

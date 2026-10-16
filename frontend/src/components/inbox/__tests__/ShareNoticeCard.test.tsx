@@ -70,6 +70,20 @@ describe("ShareNoticeCard", () => {
     expect(screen.getByText("flown")).toBeTruthy();
   });
 
+  it("reports the Details toggle state with aria-expanded", async () => {
+    renderCard(notice({}));
+    const toggle = screen.getByRole("button", { name: "sharing:inbox.notices.details" });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    await userEvent.click(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("shows all changes and no Details button when there are three or fewer", () => {
+    renderCard(notice({ changes: notice({}).changes.slice(0, 3) }));
+    expect(screen.getAllByTestId("share-change")).toHaveLength(3);
+    expect(screen.queryByRole("button", { name: "sharing:inbox.notices.details" })).toBeNull();
+  });
+
   it("offers deleting the own copy after a delete, and no undo there", () => {
     renderCard(notice({ kind: "deleted", changes: [] }));
     expect(screen.getByRole("button", { name: "sharing:inbox.notices.deleteCopy" })).toBeTruthy();
