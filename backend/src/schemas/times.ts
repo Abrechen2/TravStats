@@ -73,6 +73,12 @@ export const busTimesSchema = z
   .openapi("BusTimes", { description: "Planned and actual times at their terminals." });
 export type BusTimes = z.infer<typeof busTimesSchema>;
 
+/** A ferry crossing's times — rail's shape under the ferry name (its ports carry rail's columns). */
+export const ferryTimesSchema = z
+  .object({ departure: time, arrival: time, actualDeparture: time, actualArrival: time })
+  .openapi("FerryTimes", { description: "Planned and actual times at their ports." });
+export type FerryTimes = z.infer<typeof ferryTimesSchema>;
+
 export const rentalTimesSchema = z
   .object({
     pickup: time.describe(
@@ -179,6 +185,7 @@ export const TIMES_SCHEMAS = {
   FlightTimes: flightTimesSchema,
   RailTimes: railTimesSchema,
   BusTimes: busTimesSchema,
+  FerryTimes: ferryTimesSchema,
   RentalTimes: rentalTimesSchema,
   StayTimes: stayTimesSchema,
   BookingTimes: bookingTimesSchema,

@@ -10,7 +10,7 @@ import {
 import { clientRefBodySchema } from "../../../schemas/clientRef";
 import { clientRefResponses } from "./clientRef";
 import { documentIdsBodySchema } from "../../../schemas/document";
-import { railTimesSchema } from "../../../schemas/times";
+import { ferryTimesSchema } from "../../../schemas/times";
 import { errorContent, timeRefused } from "./shared";
 // The link snapshot never leaves the server (see withFerryTimes).
 const { roadtripLegBefore: _linkSnapshot, ...ferryColumns } = prismaColumns("FerryJourney");
@@ -19,7 +19,7 @@ const journey = registry.register(
   z.object({
     ...ferryColumns,
     trip: z.object({ id: z.string(), name: z.string(), color: z.string() }).nullable().optional(),
-    times: railTimesSchema,
+    times: ferryTimesSchema,
   })
 );
 const envelope = <T extends z.ZodTypeAny>(data: T) => z.object({ success: z.literal(true), data });
