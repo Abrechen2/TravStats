@@ -248,10 +248,11 @@ export function parseCountryTier(value: unknown): CountryTier | null {
  * 2026-10-16 both are graded like flights, in one chain with them
  * (`services/stats/journeyEvidence.ts`): out and back proves a visit, a
  * change station is `transited` (ground, never `connection`, which stays the
- * airside change of planes), an open chain is unclear.
+ * airside change of planes), an open chain is unclear. `ferry` is a port end
+ * of a completed crossing, graded the same way (owner ruling 2026-10-16 #3).
  */
 export type EvidenceKind =
-  "flight" | "lodging" | "port" | "place" | "rail" | "bus" | "roadtrip" | "track";
+  "flight" | "lodging" | "port" | "place" | "rail" | "bus" | "ferry" | "roadtrip" | "track";
 
 /**
  * How long the traveller was on the ground in a country — spec §3.4b.

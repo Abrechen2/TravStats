@@ -13,6 +13,7 @@ export async function badgePassportSources(userId: string): Promise<PassportSour
   return {
     rail: visible.has("rail"),
     bus: visible.has("bus"),
+    ferry: visible.has("ferry"),
     roadtrip: visible.has("roadtrip"),
     track: false,
   };

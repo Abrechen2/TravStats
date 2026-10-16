@@ -21,6 +21,7 @@ export const evidenceKindSchema = z.enum([
   "place",
   "rail",
   "bus",
+  "ferry",
   "roadtrip",
   "track",
 ]);

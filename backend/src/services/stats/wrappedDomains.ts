@@ -307,6 +307,7 @@ export async function loadWrappedPassport(
   return loadPassport(userId, visible.has("flight") ? flights : [], {
     rail: visible.has("rail"),
     bus: visible.has("bus"),
+    ferry: visible.has("ferry"),
     roadtrip: visible.has("roadtrip"),
     place: visible.has("poi"),
   });

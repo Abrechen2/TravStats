@@ -15,6 +15,9 @@
  *   visit; a change station is ground presence only; an open or undecidable
  *   chain is unclear. All three modes form ONE chain, so flying out and
  *   taking the train back closes a round trip as well.
+ * - **Owner ruling 2026-10-16 #3:** ferry crossings join the same chain on
+ *   the same terms (the port of an intermediate leg is ground presence).
+ *   Rental cars do not feed the chain.
  *
  * ## A spell is not a stay
  *
@@ -51,7 +54,7 @@ export interface JourneyEvidenceInput extends EvidenceInput {
   unclear?: VisitUnclearReason;
 }
 
-export type JourneyMode = "flight" | "rail" | "bus";
+export type JourneyMode = "flight" | "rail" | "bus" | "ferry";
 
 /** One leg of the chain, already reduced to countries and local days. */
 export interface JourneyLeg {

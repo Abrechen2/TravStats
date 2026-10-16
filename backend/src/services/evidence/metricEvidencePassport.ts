@@ -153,6 +153,19 @@ function recordOf(
           date: dayOf(row.date),
         },
       };
+    // Owner ruling 2026-10-16 #3 — a ferry crossing with a port in the country.
+    case "ferry":
+      return {
+        key: `ferry:${row.rideId}`,
+        entry: {
+          domain: "ferry",
+          id: row.rideId,
+          href: `/ferry/${row.rideId}`,
+          title: { text: row.rideLabel },
+          subtitle: { text: row.stationName },
+          date: dayOf(row.date),
+        },
+      };
     case "roadtrip":
       return {
         key: `roadtrip:${row.roadtripId}`,
@@ -192,6 +205,7 @@ interface PassportEvidenceIndex {
 const SOURCE_OF_ROW: Partial<Record<CountryTimelineEntry["kind"], keyof PassportSources>> = {
   rail: "rail",
   bus: "bus",
+  ferry: "ferry",
   roadtrip: "roadtrip",
   place: "place",
   track: "track",

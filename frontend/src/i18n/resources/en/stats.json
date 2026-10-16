@@ -45,11 +45,11 @@
         "exclusions": "Scheduled and cancelled entries do not count. Rentals and day tours do not count here. A roadtrip and the stays linked to it are different entries and count once each; their nights and days are not added here."
       },
       "countries": {
-        "unit": "A country you visited – as in the passport: a night, a place or work visit, a port call, an outbound and return trip to the destination (by air, rail or bus, mixed too), or the country you live in. Connections, drive-throughs and unclear trip chains do not count. A country several domains prove counts once.",
+        "unit": "A country you visited – as in the passport: a night, a place or work visit, a port call, an outbound and return trip to the destination (by air, rail, bus or ferry, mixed too), or the country you live in. Connections, drive-throughs, intermediate ports and unclear trip chains do not count. A country several domains prove counts once.",
         "time": "In the selected year, visits dated in that year count, otherwise all years. An undated visit counts across all years only.",
         "source": "The visits the entries of the domains switched on prove.",
         "coverage": "If the passport cannot be loaded, a dash stands here instead of a number. In a running year there is no same-span comparison, because visits are known per year, not per day. Tap the number to see which entry proves which visit.",
-        "exclusions": "Scheduled and cancelled entries do not count, nor do location points alone. Rentals, ferries and day tours add no country."
+        "exclusions": "Scheduled and cancelled entries do not count, nor do location points alone. Rentals and day tours add no country."
       },
       "activeDays": {
         "unit": "A calendar day on which at least one entry took place; a day with a flight and a hotel night counts once.",

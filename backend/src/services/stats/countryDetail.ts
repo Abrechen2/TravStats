@@ -188,6 +188,7 @@ const KIND_RANK: Record<CountryTimelineEntry["kind"], number> = {
   lodging: 3,
   rail: 4,
   bus: 4.5,
+  ferry: 4.6,
   roadtrip: 5,
   track: 6,
 };
@@ -221,7 +222,9 @@ export function buildCountryDetail(
   roadtripStations: readonly CountryDetailRoadtripStation[] = [],
   railEnds: readonly RailEnd[] = [],
   /** Bus terminal ends (`./busEvidence.ts`), while the bus domain is visible (forgejo#265). */
-  busEnds: readonly RailEnd[] = []
+  busEnds: readonly RailEnd[] = [],
+  /** Ferry port ends (`./ferryEvidence.ts`), while the ferry domain is visible. */
+  ferryEnds: readonly RailEnd[] = []
 ): CountryDetail | null {
   const wanted = isoCountryCode(code);
   if (!wanted) return null;
@@ -413,6 +416,22 @@ export function buildCountryDetail(
   }
   const busRideCount = busRideIds.size;
 
+  /** A ferry crossing with a port here (owner ruling 2026-10-16 #3) — one entry per crossing. */
+  const ferryIds = new Set<string>();
+  for (const e of ferryEnds) {
+    if (e.country !== wanted || ferryIds.has(e.rideId)) continue;
+    ferryIds.add(e.rideId);
+    stretchYears(e.at);
+    timeline.push({
+      kind: "ferry",
+      date: e.days[0] ?? null,
+      rideId: e.rideId,
+      rideLabel: e.rideLabel,
+      stationName: e.stationName,
+    });
+  }
+  const ferryCrossingCount = ferryIds.size;
+
   /**
    * Measured presence, folded into ONE entry rather than one per day.
    *
@@ -446,6 +465,7 @@ export function buildCountryDetail(
     roadtripStationCount === 0 &&
     railRideCount === 0 &&
     busRideCount === 0 &&
+    ferryCrossingCount === 0 &&
     trackDayCount === 0
   ) {
     return null;
@@ -484,9 +504,11 @@ export function buildCountryDetail(
               ? "rail"
               : busRideCount > 0
                 ? "bus"
-                : roadtripStationCount > 0
-                  ? "roadtrip"
-                  : "track";
+                : ferryCrossingCount > 0
+                  ? "ferry"
+                  : roadtripStationCount > 0
+                    ? "roadtrip"
+                    : "track";
 
   return {
     code: wanted,
@@ -507,6 +529,7 @@ export function buildCountryDetail(
     roadtripStations: roadtripStationCount,
     railRides: railRideCount,
     busRides: busRideCount,
+    ferryCrossings: ferryCrossingCount,
     trackDays: trackDayCount,
     anchor: anchored ? { iata: anchored[0], lat: anchored[1].lat, lon: anchored[1].lon } : null,
     timeline: ordered.slice(0, timelineLimit),

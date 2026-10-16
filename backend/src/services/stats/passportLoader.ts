@@ -38,6 +38,7 @@ import { isValidZone } from "../../shared/time/zonedParts";
 import { loadRoadtripStations } from "./roadtripEvidenceLoader";
 import { loadRailEnds } from "./railEvidenceLoader";
 import { loadBusEnds } from "./busEvidence";
+import { loadFerryEnds } from "./ferryEvidence";
 import { loadVisibleDomains } from "../domainVisibility";
 
 /**
@@ -159,6 +160,8 @@ export interface PassportSources {
   rail?: boolean;
   /** Omitted: read while the user sees the bus domain (its beta switch included). */
   bus?: boolean;
+  /** Omitted: read while the user sees the ferry domain (its beta switch included). */
+  ferry?: boolean;
   roadtrip?: boolean;
   place?: boolean;
   track?: boolean;
@@ -193,7 +196,12 @@ export async function loadPassport(
   const readTrack = sources.track ?? true;
   // Bus is the one source the page itself gates (forgejo#265): a ride proves a
   // country only while the bus domain is visible to this user.
-  const readBus = sources.bus ?? (await loadVisibleDomains(userId)).includes("bus");
+  const visibleDomains =
+    sources.bus === undefined || sources.ferry === undefined
+      ? await loadVisibleDomains(userId)
+      : [];
+  const readBus = sources.bus ?? visibleDomains.includes("bus");
+  const readFerry = sources.ferry ?? visibleDomains.includes("ferry");
   // One clock for the whole load, so two evidence sources cannot disagree
   // about whether a visit has happened yet.
   const now = new Date();
@@ -254,7 +262,7 @@ export async function loadPassport(
    * "Deutschland" and "Germany" are one country and only the code knows that.
    */
   // prettier-ignore
-  const [airportCountries, portCalls, placeVisits, lodgings, homeIatas, countryDays, threshold, roadtripStations, railEnds, busEnds, homeCountries] = await Promise.all([
+  const [airportCountries, portCalls, placeVisits, lodgings, homeIatas, countryDays, threshold, roadtripStations, railEnds, busEnds, homeCountries, ferryEnds] = await Promise.all([
     loadAirportCountries(passportAirportCodes(flights)),
     prisma.cruiseStop.findMany({
       where: {
@@ -351,6 +359,7 @@ export async function loadPassport(
     readRail ? loadRailEnds(userId) : [],
     readBus ? loadBusEnds(userId) : [],
     loadHomeCountries(userId, now.toISOString().slice(0, 10)),
+    readFerry ? loadFerryEnds(userId) : [],
   ]);
 
   return buildPassport(
@@ -408,6 +417,7 @@ export async function loadPassport(
     railEnds,
     profile.zone,
     busEnds,
-    homeCountries
+    homeCountries,
+    ferryEnds
   );
 }
