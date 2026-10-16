@@ -26,7 +26,15 @@ export interface ImportBatchSummary {
   fileName: string | null;
   createdAt: string;
   /** Rows this batch still owns, per kind — a reverted-around row is gone from here. */
-  counts: { lodgings: number; stays: number; flights: number; cruises: number; places: number };
+  counts: {
+    lodgings: number;
+    stays: number;
+    flights: number;
+    cruises: number;
+    places: number;
+    /** Trip stops a Takeout import wrote; absent from an older server. */
+    stops?: number;
+  };
 }
 
 export interface ImportRevertSummary {
@@ -61,7 +69,7 @@ export async function createImportBatch(
 
 /** One row an import brought in. */
 export interface ImportBatchItem {
-  kind: "flight" | "cruise" | "lodging" | "stay";
+  kind: "flight" | "cruise" | "lodging" | "stay" | "place" | "stop";
   id: string;
   label: string;
   date: string | null;

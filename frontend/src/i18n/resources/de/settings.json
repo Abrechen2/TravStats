@@ -654,7 +654,10 @@
         "cruises_other": "{{count}} Kreuzfahrten",
         "places": "{{count}} Orte",
         "places_one": "{{count}} Ort",
-        "places_other": "{{count}} Orte"
+        "places_other": "{{count}} Orte",
+        "stops": "{{count}} Stopps",
+        "stops_one": "{{count}} Stopp",
+        "stops_other": "{{count}} Stopps"
       },
       "confirm": {
         "title": "Import wirklich rückgängig machen?",

@@ -1910,6 +1910,9 @@ model TripStop {
   /// has no user column, so the key is unique per TRIP — which is per user,
   /// since a trip has exactly one owner.
   shareKey      String?   @map("share_key")
+  /// The import that wrote this stop (Takeout "trip stop" rows), so undoing
+  /// the import takes it back. Null for every stop typed or planned by hand.
+  importBatchId String?   @map("import_batch_id")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
@@ -1935,6 +1938,7 @@ model TripStop {
   legsTo          TripRouteLeg[] @relation("LegTo")
   lodgingStay     LodgingStay?   @relation(fields: [lodgingStayId], references: [id], onDelete: SetNull)
   place           Place?         @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  importBatch     ImportBatch?   @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
   /// Tours that started from this station ("Preikestolen, from Mosvangen").
   anchoredTours   TripRoute[]    @relation("TourAnchor")
   /// Trip photos filed at this station (forgejo#139).
@@ -1950,6 +1954,7 @@ model TripStop {
   @@index([routeId])
   @@index([lodgingStayId])
   @@index([placeId])
+  @@index([importBatchId])
   @@map("trip_stops")
 }
 
@@ -3445,6 +3450,7 @@ model ImportBatch {
   ferry      FerryJourney[]
   rentals  RentalBooking[]
   places   Place[]
+  tripStops TripStop[]
 
   @@index([userId])
   @@index([userId, domain])

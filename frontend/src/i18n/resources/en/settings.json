@@ -654,7 +654,10 @@
         "cruises_other": "{{count}} cruises",
         "places": "{{count}} places",
         "places_one": "{{count}} place",
-        "places_other": "{{count}} places"
+        "places_other": "{{count}} places",
+        "stops": "{{count}} trip stops",
+        "stops_one": "{{count}} trip stop",
+        "stops_other": "{{count}} trip stops"
       },
       "confirm": {
         "title": "Undo this import?",

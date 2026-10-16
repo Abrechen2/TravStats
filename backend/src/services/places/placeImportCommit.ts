@@ -97,11 +97,11 @@ export async function commitPlaceImport(
       }
 
       if (row.treatment === "trip_stop") {
-        const outcome = await writeTripStop(userId, {
-          ...row,
-          lat: row.lat as number,
-          lon: row.lon as number,
-        });
+        const outcome = await writeTripStop(
+          userId,
+          { ...row, lat: row.lat as number, lon: row.lon as number },
+          batch.id
+        );
         if (outcome === "ok") stops += 1;
         else if (outcome === "exists") stopsSkipped += 1;
         else fail(row.sourceRowIndex, outcome);
