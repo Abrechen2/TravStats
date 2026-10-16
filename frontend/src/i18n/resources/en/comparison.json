@@ -122,7 +122,8 @@
     "copy": "Copy",
     "copied": "Copied",
     "inviteOnce": "This code is shown only now. Copy it before you close this page.",
-    "claimInvalid": "That is not an invitation code. It looks like https://server.example#… followed by 64 characters."
+    "claimInvalid": "That is not an invitation code. It looks like https://server.example#… followed by 64 characters.",
+    "copyFailed": "Could not copy – select the code and copy it by hand"
   },
   "boards": {
     "title": "Groups",
@@ -135,7 +136,8 @@
     "deleteTitle": "Delete group “{{name}}”?",
     "deleteBody": "Only the group is deleted. Nobody stops sharing with you.",
     "deleteConfirm": "Delete group",
-    "noPeople": "Once someone shares their numbers with you, you can group them here."
+    "noPeople": "Once someone shares their numbers with you, you can group them here.",
+    "memberGone": "A person who no longer shares"
   },
   "error": {
     "COMPARISON_DISABLED": "The comparison is switched off on this server.",

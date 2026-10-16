@@ -5,8 +5,11 @@ import { comparisonApi, comparisonFailureCode } from "../../lib/api/comparison";
 import { logger } from "../../lib/logger";
 import ConsentDialog from "./ConsentDialog";
 
-/** `<origin>#<64 hex>` — the shape the server mints; anything else is a typo, caught before sending. */
-const INVITE_CODE = /^https?:\/\/[^\s#]+#[a-f0-9]{64}$/;
+/**
+ * `https://<lowercase host>#<64 hex>` — exactly what the server accepts: https only, no
+ * port, no path. Anything else is refused there, so it is refused here before sending.
+ */
+const INVITE_CODE = /^https:\/\/[a-z0-9.-]+#[a-f0-9]{64}$/;
 
 type Pending =
   { kind: "username"; username: string } | { kind: "code"; code: string; origin: string | null };
@@ -24,6 +27,7 @@ export default function AddPersonCard({ onChanged }: { onChanged: () => void }):
   const [code, setCode] = useState("");
   const [invite, setInvite] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
 
@@ -34,6 +38,7 @@ export default function AddPersonCard({ onChanged }: { onChanged: () => void }):
   const createInvite = async (): Promise<void> => {
     setFailed(null);
     setCopied(false);
+    setCopyFailed(false);
     try {
       setInvite((await comparisonApi.createInvite()).code);
     } catch (failure) {
@@ -42,12 +47,15 @@ export default function AddPersonCard({ onChanged }: { onChanged: () => void }):
   };
   const copyInvite = async (): Promise<void> => {
     if (!invite) return;
+    setCopyFailed(false);
     try {
       await navigator.clipboard.writeText(invite);
       setCopied(true);
     } catch (failure) {
-      // The field stays selectable, so copying by hand still works.
+      // The field stays selectable, so copying by hand still works — say so.
       logger.debug("invite copy failed", failure);
+      setCopied(false);
+      setCopyFailed(true);
     }
   };
 
@@ -94,6 +102,7 @@ export default function AddPersonCard({ onChanged }: { onChanged: () => void }):
                 {tr(copied ? "add.copied" : "add.copy")}
               </Button>
             </div>
+            {copyFailed && <p role="status">{tr("add.copyFailed")}</p>}
           </Field>
         )}
 

@@ -131,4 +131,34 @@ describe("BoardsSection", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("error.unknown");
     expect(screen.getByLabelText("boards.name")).toBeInTheDocument();
   });
+
+  it("drops a failed save's message when the dialog is closed", async () => {
+    vi.mocked(comparisonApi.saveBoard).mockRejectedValueOnce(new Error("boom"));
+    render(
+      <BoardsSection
+        boards={[]}
+        people={[{ person: ben, mine: null, theirs: { status: "accepted" } }]}
+        onChanged={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "boards.create" }));
+    fireEvent.change(await screen.findByLabelText("boards.name"), { target: { value: "X" } });
+    fireEvent.click(screen.getByRole("button", { name: "boards.save" }));
+    await screen.findByRole("alert");
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.cancel" }));
+    await waitFor(() => expect(screen.queryByLabelText("boards.name")).toBeNull());
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("never prints a raw person key for a member who no longer shares", () => {
+    render(
+      <BoardsSection
+        boards={[{ id: "b-1", name: "Familie", members: [ben.key, cleo.key] }]}
+        people={[{ person: ben, mine: null, theirs: { status: "accepted" } }]}
+        onChanged={vi.fn()}
+      />
+    );
+    expect(screen.queryByText(/local:|remote:/)).toBeNull();
+    expect(screen.getByText("Ben, boards.memberGone")).toBeInTheDocument();
+  });
 });

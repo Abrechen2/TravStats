@@ -98,4 +98,32 @@ describe("AddPersonCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "add.createInvite" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("error.unknown");
   });
+
+  it("keeps the button disabled for an http:// code, which the server refuses", () => {
+    render(<AddPersonCard onChanged={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText("add.claimLabel"), {
+      target: { value: "http://far.example#" + "b".repeat(64) },
+    });
+    expect(screen.getByRole("button", { name: "add.claim" })).toBeDisabled();
+  });
+
+  it.each([
+    ["a port", "https://far.example:8443#" + "b".repeat(64)],
+    ["a path", "https://far.example/x#" + "b".repeat(64)],
+    ["an upper-case host", "https://Far.Example#" + "b".repeat(64)],
+  ])("keeps the button disabled for a code with %s", (_name, value) => {
+    render(<AddPersonCard onChanged={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText("add.claimLabel"), { target: { value } });
+    expect(screen.getByRole("button", { name: "add.claim" })).toBeDisabled();
+  });
+
+  it("says so when the clipboard refuses, instead of only logging", async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error("denied"));
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    render(<AddPersonCard onChanged={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "add.createInvite" }));
+    await screen.findByDisplayValue(MINE);
+    fireEvent.click(screen.getByRole("button", { name: "add.copy" }));
+    expect(await screen.findByText("add.copyFailed")).toBeInTheDocument();
+  });
 });

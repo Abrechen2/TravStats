@@ -35,8 +35,9 @@ export default function BoardsSection({
     (p) => p.person.kind === "remote" || p.theirs?.status === "accepted"
   );
   const visibleKeys = new Set(visible.map((p) => p.person.key));
+  // A member who stopped sharing is no longer in `people`; the key is an internal id, never copy.
   const nameOf = (key: string): string =>
-    people.find((p) => p.person.key === key)?.person.displayName ?? key;
+    people.find((p) => p.person.key === key)?.person.displayName ?? tr("boards.memberGone");
 
   const openEditor = (next: Draft): void => {
     setFailed(null);
@@ -112,7 +113,10 @@ export default function BoardsSection({
 
       <Dialog
         open={draft !== null}
-        onClose={() => setDraft(null)}
+        onClose={() => {
+          setDraft(null);
+          setFailed(null);
+        }}
         title={tr("boards.title")}
         dismissLabel={tr("common:buttons.cancel")}
         busy={saving}

@@ -122,7 +122,8 @@
     "copy": "Kopieren",
     "copied": "Kopiert",
     "inviteOnce": "Dieser Code wird nur jetzt angezeigt. Kopiere ihn, bevor du die Seite verlässt.",
-    "claimInvalid": "Das ist kein Einladungscode. Er sieht so aus: https://server.example#… gefolgt von 64 Zeichen."
+    "claimInvalid": "Das ist kein Einladungscode. Er sieht so aus: https://server.example#… gefolgt von 64 Zeichen.",
+    "copyFailed": "Kopieren nicht möglich – markiere den Code"
   },
   "boards": {
     "title": "Gruppen",
@@ -135,7 +136,8 @@
     "deleteTitle": "Gruppe „{{name}}“ löschen?",
     "deleteBody": "Nur die Gruppe wird gelöscht. Niemand hört auf, mit dir zu teilen.",
     "deleteConfirm": "Gruppe löschen",
-    "noPeople": "Sobald jemand seine Zahlen mit dir teilt, kannst du sie hier zusammenfassen."
+    "noPeople": "Sobald jemand seine Zahlen mit dir teilt, kannst du sie hier zusammenfassen.",
+    "memberGone": "Person, die nicht mehr teilt"
   },
   "error": {
     "COMPARISON_DISABLED": "Der Vergleich ist auf diesem Server ausgeschaltet.",
