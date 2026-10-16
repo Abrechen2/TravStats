@@ -519,6 +519,30 @@ describe("GET /api/v1/upcoming", () => {
       expect(entry.detailId).toBe(entry.id);
     });
 
+    it("hands a day-only train out with its station's day under `times`, not a bare instant", async () => {
+      // Only bus filled `times`, while the schema promised it for every entry;
+      // the countdown then had no station day for a date-only train and said
+      // "today" for tomorrow's ride.
+      await enableDomains(["flight", "rail"]);
+      const day = new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10);
+      await prisma.railJourney.create({
+        data: {
+          ...ride(new Date(`${day}T00:00:00Z`)),
+          depTimezone: "UTC",
+          depPrecision: "day",
+          arrTimezone: "Europe/Zurich",
+          arrivalTime: new Date(`${day}T00:00:00Z`),
+          arrPrecision: "day",
+        },
+      });
+      const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
+      const entry = res.body.data.entries.find((e: { domain: string }) => e.domain === "rail");
+      expect(entry.startsAtPrecision).toBe("day");
+      expect(entry.times.departure).toMatchObject({ zone: "UTC", precision: "day" });
+      expect(entry.times.departure.local.slice(0, 10)).toBe(day);
+      expect(entry.times.arrival).toMatchObject({ zone: "Europe/Zurich", precision: "day" });
+    });
+
     it("finds tomorrow's train behind more than twenty trains that already left today", async () => {
       // The candidate query read 20 rows from 38 h ago and filtered the departed
       // ones afterwards, so a busy day of trains hid every later ride.

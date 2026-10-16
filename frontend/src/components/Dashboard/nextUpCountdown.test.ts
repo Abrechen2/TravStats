@@ -55,3 +55,31 @@ describe("open bus tickets on the terminal calendar", () => {
     ).toEqual({ kind: "hours", count: 2 });
   });
 });
+
+describe("a day-only ride without terminal times", () => {
+  // Rail entries said `startsAtPrecision: "day"` with no `times`; the
+  // fallback mapped anything under a day ahead to "today", so a train
+  // tomorrow read "heute" from noon on.
+  const rail = (startsAt: string): UpcomingEntry => ({
+    domain: "rail",
+    id: "rail",
+    detailId: "rail",
+    startsAt,
+    startsAtPrecision: "day",
+    tripId: null,
+    tripName: null,
+    primary: "Frankfurt → Basel",
+    secondary: null,
+  });
+  const at = (day: number, hour: number) => new Date(2026, 9, day, hour).getTime();
+
+  it("counts tomorrow as one day, even twelve hours before its midnight", () => {
+    const startsAt = new Date(at(13, 0)).toISOString();
+    expect(entryCountdown(rail(startsAt), at(12, 12))).toEqual({ kind: "days", count: 1 });
+  });
+
+  it("says today on the day itself", () => {
+    const startsAt = new Date(at(13, 0)).toISOString();
+    expect(entryCountdown(rail(startsAt), at(13, 8))).toEqual({ kind: "today" });
+  });
+});

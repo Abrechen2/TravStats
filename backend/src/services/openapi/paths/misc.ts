@@ -196,7 +196,12 @@ registry.registerPath({
                     ),
                   times: busTimesSchema
                     .optional()
-                    .describe("Bus: departure and arrival on the terminal clocks."),
+                    .describe(
+                      "Rail and bus: departure and arrival on the station/terminal " +
+                        "clocks (a ride with changes ends at its last train's arrival). " +
+                        "Not yet carried by the other domains, whose `startsAt` is " +
+                        "still a bare instant."
+                    ),
                   tripId: z.string().uuid().nullable(),
                   tripName: z.string().nullable(),
                   primary: z
