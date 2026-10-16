@@ -142,7 +142,7 @@
     "blockedTitle": "Not possible right now",
     "blocked": {
       "notLinked": "{{name}} is not linked to an account.",
-      "consentMissing": "{{name}} has not agreed to share with you yet. You have not sent a request.",
+      "consentMissing": "{{name}} has not agreed to share with you yet. You have not sent a request yet — you can do that via “Link to account” on the row or in Settings.",
       "consentPending": "Your request to {{name}} is still open.",
       "groupConsentMissing": "{{name}} first has to connect with everyone who already shares this trip.",
       "alreadyMember": "{{name}} is already part of this shared trip.",

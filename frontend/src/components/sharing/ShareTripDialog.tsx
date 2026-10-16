@@ -19,49 +19,66 @@ const NS = "sharing:shareDialog";
  * listed with the one reason they cannot be chosen yet. A refusal stays on the
  * dialog in its own words.
  *
- * Callers mount this once the people are loaded, so the initial selection
- * sees the final list.
+ * The form is mounted only while the dialog is open, so every opening starts
+ * from the then-current people, with no stale selection or error.
  */
-export default function ShareTripDialog({
-  open,
-  onClose,
-  tripId,
-  people,
-  preselectedKey,
-  onShared,
-}: {
+export default function ShareTripDialog(props: ShareTripDialogProps): JSX.Element | null {
+  return props.open ? <ShareTripForm {...props} /> : null;
+}
+
+interface ShareTripDialogProps {
   open: boolean;
   onClose: () => void;
   tripId: string;
   people: readonly TripPerson[];
   preselectedKey?: string;
   onShared: () => void;
-}): JSX.Element {
+}
+
+function ShareTripForm({
+  open,
+  onClose,
+  tripId,
+  people,
+  preselectedKey,
+  onShared,
+}: ShareTripDialogProps): JSX.Element {
   const { t } = useTranslation(["sharing"]);
   const addToast = useToastStore((s) => s.addToast);
   const eligible = people.filter((p) => p.shareBlockedBy === null && p.companionId && p.account);
   const blocked = people.filter((p) => p.shareBlockedBy !== null);
-  const [key, setKey] = useState(preselectedKey ?? eligible[0]?.key ?? "");
+  const [key, setKey] = useState(
+    eligible.some((p) => p.key === preselectedKey)
+      ? (preselectedKey ?? "")
+      : (eligible[0]?.key ?? "")
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const person = eligible.find((p) => p.key === key) ?? null;
-  // A preselected person who cannot be shared with is explained, not offered.
+  // A preselected person who cannot be shared with is explained and the user
+  // picks someone else; the picker is hidden only for a selectable preselection.
+  const preselectionSelectable = eligible.some((p) => p.key === preselectedKey);
   const shownBlocked = preselectedKey ? blocked.filter((p) => p.key === preselectedKey) : blocked;
 
   const share = async (): Promise<void> => {
     if (!person?.companionId) return;
     setBusy(true);
     setError(null);
+    let shared = false;
     try {
       await sharingApi.shareTrip(tripId, person.companionId);
-      addToast("success", t(`${NS}.done`, { name: person.name }));
-      onShared();
-      onClose();
+      shared = true;
     } catch (err) {
       logger.error("Failed to share trip:", err);
       setError(t(sharingErrorKey(err, "sharing:trip.errors.shareFailed")));
     } finally {
       setBusy(false);
+    }
+    // Outside the try: a failing callback is not "could not be shared".
+    if (shared) {
+      addToast("success", t(`${NS}.done`, { name: person.name }));
+      onShared();
+      onClose();
     }
   };
 
@@ -84,7 +101,7 @@ export default function ShareTripDialog({
           <p className="text-sm">{t(`${NS}.nobody`)}</p>
         ) : (
           <>
-            {!preselectedKey && (
+            {!preselectionSelectable && (
               <Field label={t(`${NS}.person`)} htmlFor="share-trip-person">
                 <Select id="share-trip-person" value={key} onChange={(e) => setKey(e.target.value)}>
                   {eligible.map((p) => (
@@ -95,11 +112,15 @@ export default function ShareTripDialog({
                 </Select>
               </Field>
             )}
-            <p className="text-sm">{t(`${NS}.copied`, { name: person?.name ?? "" })}</p>
-            <p className="text-sm">{t(`${NS}.private`)}</p>
-            <p className="text-sm" style={{ color: "var(--ts-warn)" }}>
-              {t(`${NS}.final`, { name: person?.name ?? "" })}
-            </p>
+            {person && (
+              <>
+                <p className="text-sm">{t(`${NS}.copied`, { name: person.name })}</p>
+                <p className="text-sm">{t(`${NS}.private`)}</p>
+                <p className="text-sm" style={{ color: "var(--ts-warn)" }}>
+                  {t(`${NS}.final`, { name: person.name })}
+                </p>
+              </>
+            )}
           </>
         )}
         {shownBlocked.length > 0 && (

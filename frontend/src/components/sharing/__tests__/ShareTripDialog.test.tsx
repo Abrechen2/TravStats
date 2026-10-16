@@ -136,4 +136,39 @@ describe("ShareTripDialog", () => {
     expect(screen.queryByRole("button", { name: "sharing:shareDialog.confirm" })).toBeNull();
     expect(screen.getByText("sharing:shareDialog.blocked.accountInactive")).toBeTruthy();
   });
+
+  it("explains a blocked preselected person and lets the user pick an eligible one instead", async () => {
+    api.shareTrip.mockResolvedValue({ groupId: "g", tripCreated: true, created: {} as never });
+    render(
+      <ShareTripDialog
+        open
+        onClose={vi.fn()}
+        tripId="t1"
+        people={[ben, { ...ilse, shareBlockedBy: "consentPending" }]}
+        preselectedKey="c:c-ilse"
+        onShared={vi.fn()}
+      />
+    );
+    expect(screen.getByText("sharing:shareDialog.blocked.consentPending")).toBeTruthy();
+    expect(screen.queryByText("sharing:shareDialog.nobody")).toBeNull();
+    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["Ben (@ben)"]);
+    // Only a chosen, selectable person gets the copy paragraphs and the confirm.
+    expect(screen.getByText("sharing:shareDialog.final")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "sharing:shareDialog.confirm" }));
+    expect(api.shareTrip).toHaveBeenCalledWith("t1", "c-ben");
+  });
+
+  it("starts clean when reopened: no stale refusal from the last opening", async () => {
+    api.shareTrip.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 403, data: { code: "SHARE_GROUP_CONSENT_REQUIRED" } },
+    });
+    const props = { onClose: vi.fn(), tripId: "t1", people: [ben], onShared: vi.fn() };
+    const { rerender } = render(<ShareTripDialog open {...props} />);
+    await userEvent.click(screen.getByRole("button", { name: "sharing:shareDialog.confirm" }));
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    rerender(<ShareTripDialog open={false} {...props} />);
+    rerender(<ShareTripDialog open {...props} />);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
 });

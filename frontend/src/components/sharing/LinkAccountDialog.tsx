@@ -16,20 +16,27 @@ const NS = "sharing:linkDialog";
  * needs an accepted consent from that account (decision 4): with one, pick the
  * account; without any, the dialog sends the request instead — the link
  * follows once the other side agrees. Einstellungen keeps the full list.
+ * Mounted only while open, so every opening starts clean.
  */
-export default function LinkAccountDialog({
-  open,
-  onClose,
-  companion,
-  linkableUsers,
-  onLinked,
-}: {
+export default function LinkAccountDialog(props: LinkAccountDialogProps): JSX.Element | null {
+  return props.open ? <LinkAccountForm {...props} /> : null;
+}
+
+interface LinkAccountDialogProps {
   open: boolean;
   onClose: () => void;
   companion: { id: string; name: string };
   linkableUsers: readonly SharePerson[];
   onLinked: () => void;
-}): JSX.Element {
+}
+
+function LinkAccountForm({
+  open,
+  onClose,
+  companion,
+  linkableUsers,
+  onLinked,
+}: LinkAccountDialogProps): JSX.Element {
   const { t } = useTranslation(["sharing"]);
   const addToast = useToastStore((s) => s.addToast);
   const [userId, setUserId] = useState("");
@@ -38,29 +45,42 @@ export default function LinkAccountDialog({
   const [error, setError] = useState<string | null>(null);
   const canLink = linkableUsers.length > 0;
 
-  const run = async (action: () => Promise<string>, fallback: string): Promise<void> => {
+  const run = async (
+    action: () => Promise<string>,
+    fallback: string,
+    afterSuccess?: () => void
+  ): Promise<void> => {
     setBusy(true);
     setError(null);
+    let message: string | null = null;
     try {
-      addToast("success", await action());
-      onClose();
+      message = await action();
     } catch (err) {
       logger.error("Sharing link dialog failed:", err);
       setError(t(sharingErrorKey(err, fallback)));
     } finally {
       setBusy(false);
     }
+    // Outside the try: a failing callback is not "could not be linked".
+    if (message !== null) {
+      addToast("success", message);
+      afterSuccess?.();
+      onClose();
+    }
   };
 
   const link = (): Promise<void> =>
-    run(async () => {
-      const linked = await sharingApi.linkCompanion(companion.id, userId);
-      onLinked();
-      return t(`${NS}.linked`, {
-        name: companion.name,
-        username: linked.linkedUser?.username ?? "",
-      });
-    }, "sharing:settings.errors.linkFailed");
+    run(
+      async () => {
+        const linked = await sharingApi.linkCompanion(companion.id, userId);
+        return t(`${NS}.linked`, {
+          name: companion.name,
+          username: linked.linkedUser?.username ?? "",
+        });
+      },
+      "sharing:settings.errors.linkFailed",
+      onLinked
+    );
 
   const request = (): Promise<void> =>
     run(async () => {

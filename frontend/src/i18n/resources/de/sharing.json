@@ -142,7 +142,7 @@
     "blockedTitle": "Gerade nicht möglich",
     "blocked": {
       "notLinked": "{{name}} ist mit keinem Konto verknüpft.",
-      "consentMissing": "{{name}} hat dem Teilen mit dir noch nicht zugestimmt. Du hast noch keine Anfrage gesendet.",
+      "consentMissing": "{{name}} hat dem Teilen mit dir noch nicht zugestimmt. Du hast noch keine Anfrage gesendet — das geht über „Mit Konto verknüpfen“ an der Zeile oder unter Einstellungen.",
       "consentPending": "Deine Anfrage an {{name}} ist noch offen.",
       "groupConsentMissing": "{{name}} muss sich erst mit allen verbinden, die diese Reise schon teilen.",
       "alreadyMember": "{{name}} ist schon Teil dieser geteilten Reise.",
@@ -155,7 +155,7 @@
     "choose": "Konto wählen",
     "link": "Verknüpfen",
     "linked": "{{name}} ist jetzt mit @{{username}} verknüpft.",
-    "requestIntro": "Noch hat niemand deiner Anfrage zugestimmt. Schick {{name}} eine Anfrage über den Benutzernamen; sobald sie zustimmt, kannst du hier verknüpfen.",
+    "requestIntro": "Noch hat niemand deiner Anfrage zugestimmt. Schick {{name}} eine Anfrage über den Benutzernamen; sobald die Person zustimmt, kannst du hier verknüpfen.",
     "username": "Benutzername",
     "request": "Anfrage senden",
     "requested": "Anfrage an @{{username}} gesendet."
