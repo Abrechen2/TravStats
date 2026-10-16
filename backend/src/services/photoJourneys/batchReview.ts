@@ -71,6 +71,7 @@ function codeOf(error: unknown): BatchFailureCode {
     if (error.code === "VISIT_NAME_REQUIRED" || error.code === "VISIT_PLACE_NOT_FOUND") {
       return error.code;
     }
+    if (error.code === "VISIT_ALREADY_ANSWERED") return "ALREADY_ANSWERED";
     if (error.code && TIME_CODES.has(error.code)) return "TIME_INVALID";
     if (error.statusCode === 404) return "NOT_FOUND";
   }

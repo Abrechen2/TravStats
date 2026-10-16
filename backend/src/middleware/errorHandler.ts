@@ -91,6 +91,9 @@ export type ApiErrorCode =
    *  (forgejo#211, the batch review's "correct the place"): gone since the
    *  list was read, or never theirs. */
   | "VISIT_PLACE_NOT_FOUND"
+  /** A `visit` finding was accepted after it had been answered — dismissed, or
+   *  accepted by a request that won the race. Nothing is written. */
+  | "VISIT_ALREADY_ANSWERED"
   /** A training annotation whose offsets do not cut their own value out of
    *  the text being saved. The two used to be allowed to disagree, which
    *  corrupted every derivation built on it in silence. */
