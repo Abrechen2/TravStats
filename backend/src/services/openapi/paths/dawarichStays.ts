@@ -40,8 +40,10 @@ registry.registerPath({
   tags,
   summary: "Own location-history suggestions and retained decisions",
   description:
-    "Conservative stationary clusters; not proof of GPS measurement or overnight accommodation. Original evidence and corrected times remain separate. Up to 200 most recent rows per status.",
-  request: { query: z.object({ status: z.enum(["pending", "accepted", "rejected"]).optional() }) },
+    "Conservative stationary clusters; not proof of GPS measurement or overnight accommodation. Original evidence and corrected times remain separate. Up to 200 most recent rows per status. `covered` lists findings resolved because a recorded place visit or lodging stay already holds them (within 250 m, a visit clock within 2 h or on the same local day); `evidence.coveredBy` names that record. Reading `pending` resolves newly covered findings first.",
+  request: {
+    query: z.object({ status: z.enum(["pending", "accepted", "rejected", "covered"]).optional() }),
+  },
   responses: { 200: response(z.array(stay)) },
 });
 registry.registerPath({

@@ -735,7 +735,12 @@
     "status": {
       "pending": "Zu prüfen",
       "accepted": "Übernommen",
-      "rejected": "Verworfen"
+      "rejected": "Verworfen",
+      "covered": "Bereits erfasst"
+    },
+    "coveredBy": {
+      "visit": "Bereits erfasst als Besuch: {{name}}",
+      "lodging": "Bereits erfasst als Unterkunft: {{name}}"
     },
     "uncertainty": {
       "staleMapData": "Die verwendeten Ortsflächen sind älter.",

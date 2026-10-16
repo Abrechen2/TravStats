@@ -152,16 +152,22 @@ async function loadHistory(
       })),
     };
   }
-  const [accepted, rejected] = await Promise.all([
+  const [accepted, rejected, covered] = await Promise.all([
     dawarichStaysApi.list("accepted"),
     dawarichStaysApi.list("rejected"),
+    dawarichStaysApi.list("covered"),
   ]);
   return {
     totals: null,
-    rows: [...accepted, ...rejected].map((stay) => ({
+    rows: [...accepted, ...rejected, ...covered].map((stay) => ({
       key: stay.id,
       title: stay.name ?? t("trips:dawarichStays.unnamed"),
-      status: t(`trips:dawarichStays.status.${stay.status}`),
+      // A covered finding says what already holds it, not just that it left.
+      status: stay.evidence.coveredBy
+        ? t(`trips:dawarichStays.coveredBy.${stay.evidence.coveredBy.kind}`, {
+            name: stay.evidence.coveredBy.name,
+          })
+        : t(`trips:dawarichStays.status.${stay.status}`),
       when: stay.resolvedAt ?? stay.startAt,
     })),
   };
