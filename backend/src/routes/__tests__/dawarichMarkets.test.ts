@@ -400,6 +400,34 @@ describe("Automatic market suggestions", () => {
       wikidataId: "Q5678",
     });
   });
+  it("asks for map consent again after the scan was switched off", async () => {
+    await prisma.userSettings.update({
+      where: { userId },
+      data: {
+        dawarichBaseUrl: "https://dawarich.example.test",
+        dawarichApiKey: encryptApiKey("synthetic-key"),
+      },
+    });
+    await prisma.dawarichStayScan.update({
+      where: { userId },
+      data: { marketEnabled: true, venueEnabled: true },
+    });
+    const off = await api()
+      .patch("/api/v1/dawarich-stays/settings")
+      .set("Cookie", cookie)
+      .send({ enabled: false });
+    expect(off.status).toBe(200);
+    expect(off.body.data).toMatchObject({ marketEnabled: false, venueEnabled: false });
+    const on = await api()
+      .patch("/api/v1/dawarich-stays/settings")
+      .set("Cookie", cookie)
+      .send({ enabled: true });
+    expect(on.body.data).toMatchObject({
+      enabled: true,
+      marketEnabled: false,
+      venueEnabled: false,
+    });
+  });
   it("does not broaden market consent into other venue types", async () => {
     await prisma.dawarichStayScan.update({ where: { userId }, data: { marketEnabled: true } });
     await run({

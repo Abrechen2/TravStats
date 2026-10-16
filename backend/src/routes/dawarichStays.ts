@@ -111,7 +111,13 @@ router.patch("/settings", rejectDemo, async (req: AuthRequest, res, next) => {
       },
       // Invalidate an in-flight reservation across off/on consent changes.
       // Its delayed response may never write under a later consent.
-      update: { ...patch, leaseUntil: null },
+      // Switching the scan off withdraws the map consents too. Left set, a later
+      // switch-on resumed Overpass queries the user had not been asked about again.
+      update: {
+        ...patch,
+        ...(patch.enabled === false ? { marketEnabled: false, venueEnabled: false } : {}),
+        leaseUntil: null,
+      },
     });
     res.json({ success: true, data: withScanTimes(state) });
   } catch (e) {
