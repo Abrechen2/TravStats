@@ -1,4 +1,4 @@
-import { prisma } from "../../db";
+import { prisma, type DbTransaction } from "../../db";
 import logger from "../../utils/logger";
 import { dayAnchorNow } from "./clock";
 import { isValidZone } from "./zonedParts";
@@ -37,8 +37,11 @@ export function profileZoneFromSettings(data: unknown): ProfileZone {
  * answers "today" in UTC for most of its users says so instead of doing it
  * in silence.
  */
-export async function profileZoneOf(userId: string): Promise<ProfileZone> {
-  const settings = await prisma.userSettings.findUnique({
+export async function profileZoneOf(
+  userId: string,
+  db: Pick<DbTransaction, "userSettings"> = prisma
+): Promise<ProfileZone> {
+  const settings = await db.userSettings.findUnique({
     where: { userId },
     select: { data: true },
   });
@@ -56,10 +59,13 @@ export async function profileZoneOf(userId: string): Promise<ProfileZone> {
 }
 
 /**
- * "Now" against a DAY column, on `userId`'s own calendar (ADR 0002 D4) � the
+ * "Now" against a DAY column, on `userId`'s own calendar (ADR 0002 D4) — the
  * one home of what `stayWrites.ts` (`stayStatusNow`) and `createCruise.ts`
  * each wrote inline, and what a shared copy is derived with for its recipient.
  */
-export async function dayAnchorNowFor(userId: string): Promise<Date> {
-  return dayAnchorNow((await profileZoneOf(userId)).zone);
+export async function dayAnchorNowFor(
+  userId: string,
+  db: Pick<DbTransaction, "userSettings"> = prisma
+): Promise<Date> {
+  return dayAnchorNow((await profileZoneOf(userId, db)).zone);
 }

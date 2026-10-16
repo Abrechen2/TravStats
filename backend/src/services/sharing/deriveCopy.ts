@@ -48,7 +48,7 @@ export const DERIVE: Readonly<Record<ShareEntity, DeriveCopy>> = {
       checkIn: s.checkIn,
       checkOut: s.checkOut,
       current: s.status,
-      now: await dayAnchorNowFor(recipientId),
+      now: await dayAnchorNowFor(recipientId, c),
     });
     if (status !== s.status) await c.lodgingStay.update({ where: { id }, data: { status } });
   },
@@ -61,7 +61,7 @@ export const DERIVE: Readonly<Record<ShareEntity, DeriveCopy>> = {
       startDate: r.startDate,
       endDate: r.endDate,
       current: r.status,
-      now: await dayAnchorNowFor(recipientId),
+      now: await dayAnchorNowFor(recipientId, c),
     });
     if (status !== r.status) await c.cruise.update({ where: { id }, data: { status } });
   },
