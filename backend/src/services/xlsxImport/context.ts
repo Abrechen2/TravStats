@@ -121,8 +121,16 @@ export function errorRow(row: number, label: string, message: string): RowOutcom
  * has never meant "destroy what it points at".
  */
 export function keepDespiteError(seen: Set<string>, id: string | undefined): void {
-  if (id) seen.add(id);
+  seen.add(id || UNIDENTIFIED_REFUSAL);
 }
+
+/**
+ * Marks a sheet in which a row WITHOUT an id was refused. Which record such a
+ * row names cannot be told, so the replace prune deletes nothing for that
+ * sheet: without the mark it deleted the very record the unreadable row
+ * stood for. Not a uuid, so it never matches a stored row.
+ */
+export const UNIDENTIFIED_REFUSAL = "refused-row-without-id";
 
 /** Only the keys the sheet actually carried — an untouched column must not
  *  become a null that erases a stored value. */

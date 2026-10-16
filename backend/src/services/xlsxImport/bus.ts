@@ -39,7 +39,7 @@ import {
   type RowOutcome,
   type SheetOutcome,
 } from "./types";
-import { changedOnly, droppedOrNone, enumCell } from "./values";
+import { changedOnly, droppedOrNone, enumCell, priceRefusal } from "./values";
 
 const DAY_MS = 86_400_000;
 type End = "dep" | "arr";
@@ -250,6 +250,11 @@ export async function importBus(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOu
     const fields = plainFields(raw, dropped);
     if (Number.isNaN(fields.price) || Number.isNaN(fields.delayMinutes)) {
       refuse("invalid_number");
+      continue;
+    }
+    const moneyProblem = priceRefusal(fields);
+    if (moneyProblem) {
+      refuse(moneyProblem);
       continue;
     }
     const dep = terminalCells(raw, "dep");

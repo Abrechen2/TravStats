@@ -270,6 +270,7 @@
       "rail_needs_route": "A new train ride needs From, To and the departure.",
       "expense_needs_amount": "A cost needs an amount of 0 or more.",
       "invalid_currency": "The currency is not an ISO code such as EUR or NOK.",
+      "negative_price": "A price cannot be negative.",
       "expense_needs_roadtrip": "The cost names no roadtrip.",
       "expense_station_or_leg": "A cost belongs to a station OR to a leg — not both.",
       "rental_needs_booking": "A new rental needs a provider, a pickup station and the booked pickup and return.",

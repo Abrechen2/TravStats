@@ -270,6 +270,7 @@
       "rail_needs_route": "Eine neue Zugfahrt braucht Von, Nach und die Abfahrt.",
       "expense_needs_amount": "Eine Ausgabe braucht einen Betrag von 0 oder mehr.",
       "invalid_currency": "Die Währung ist kein ISO-Code wie EUR oder NOK.",
+      "negative_price": "Ein Preis kann nicht negativ sein.",
       "expense_needs_roadtrip": "Die Ausgabe nennt keinen Roadtrip.",
       "expense_station_or_leg": "Eine Ausgabe gehört zu einer Station ODER zu einer Strecke – nicht zu beidem.",
       "rental_needs_booking": "Eine neue Miete braucht Anbieter, Abholstation sowie gebuchte Abholung und Rückgabe.",

@@ -15,6 +15,7 @@
  */
 
 import * as cell from "./cells";
+import { isCurrencyCode } from "../../shared/currencies";
 import type { DroppedValue, RowOutcome } from "./types";
 
 /**
@@ -111,4 +112,19 @@ export function keepStoredClock(
 ): Date | undefined {
   if (!incoming || !stored || cell.hasClock(raw)) return incoming;
   return DAY(incoming) === DAY(stored) ? stored : incoming;
+}
+
+/**
+ * Why a ride's price cells cannot be stored, or null when they can. The ride
+ * write routes refuse a negative price and a currency that is no ISO code
+ * (Zod); the sheet importer wrote both as they stood — the roadtrip cost
+ * sheet already refused them (`roadtripExpenses.ts`).
+ */
+export function priceRefusal(fields: {
+  price?: number;
+  currency?: string;
+}): "negative_price" | "invalid_currency" | null {
+  if (fields.price !== undefined && fields.price < 0) return "negative_price";
+  if (fields.currency !== undefined && !isCurrencyCode(fields.currency)) return "invalid_currency";
+  return null;
 }

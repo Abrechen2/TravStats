@@ -45,7 +45,7 @@ import {
   type RowOutcome,
   type SheetOutcome,
 } from "./types";
-import { changedOnly, droppedOrNone, enumCell } from "./values";
+import { changedOnly, droppedOrNone, enumCell, priceRefusal } from "./values";
 
 const DAY_MS = 86_400_000;
 
@@ -240,6 +240,11 @@ export async function importRail(sheet: IncomingSheet, ctx: Ctx): Promise<SheetO
     const fields = plainFields(raw, dropped);
     if (Number.isNaN(fields.price) || Number.isNaN(fields.delayMinutes)) {
       refuse("invalid_number");
+      continue;
+    }
+    const moneyProblem = priceRefusal(fields);
+    if (moneyProblem) {
+      refuse(moneyProblem);
       continue;
     }
     const cells = { dep: stationCells(raw, "dep"), arr: stationCells(raw, "arr") };
