@@ -1,5 +1,4 @@
 import {
-  createHash,
   createPrivateKey,
   createPublicKey,
   randomBytes,
@@ -13,11 +12,10 @@ import { BlockList, isIP } from "net";
 import { lookup } from "dns/promises";
 import https from "https";
 import { prisma } from "../../db";
-import { AppError } from "../../middleware/errorHandler";
 import { origin as originSchema, signedEnvelope, type Envelope, type PeerBody } from "./contract";
 
-export const refused = () => new AppError("Comparison request refused", 403);
-export const hash = (v: string) => createHash("sha256").update(v).digest("hex");
+import { refused, hash } from "./refusal";
+export { refused, hash, PeerRefusal, type PeerRefusalKind } from "./refusal";
 type Identity = { origin: string; key: KeyObject; publicKey: string; fingerprint: string };
 // Every signed packet re-read and re-parsed the key file synchronously, blocking the event loop
 // once per request. The key is loaded once per configuration; a rotated file needs a restart.
@@ -26,11 +24,11 @@ export function identity(): Identity {
   const origin = originSchema.parse(process.env.FEDERATION_PUBLIC_ORIGIN);
   const file = process.env.FEDERATION_KEY_FILE;
   if (process.env.FEDERATION_ENABLED !== "1" || origin === "local" || !file || !isAbsolute(file))
-    throw refused();
+    throw refused("federation-off");
   const config = `${origin}|${file}`;
   if (cachedIdentity?.config === config) return cachedIdentity.value;
   const key = createPrivateKey(fs.readFileSync(file));
-  if (key.asymmetricKeyType !== "ed25519") throw refused();
+  if (key.asymmetricKeyType !== "ed25519") throw refused("federation-off");
   const publicKey = createPublicKey(key).export({ type: "spki", format: "pem" }).toString();
   const value = { origin, key, publicKey, fingerprint: hash(publicKey) };
   cachedIdentity = { config, value };
@@ -60,16 +58,17 @@ export function verifyEnvelope(
 ): Envelope {
   const parsed = signedEnvelope.parse(value);
   const { signature, ...unsigned } = parsed;
-  if (parsed.destination !== destination || Math.abs(parsed.time - now) > 300_000) throw refused();
+  if (parsed.destination !== destination) throw refused("bad-signature");
+  if (Math.abs(parsed.time - now) > 300_000) throw refused("stale");
   try {
     const key = createPublicKey(publicKey);
     if (
       key.asymmetricKeyType !== "ed25519" ||
       !verify(null, Buffer.from(JSON.stringify(unsigned)), key, Buffer.from(signature, "base64"))
     )
-      throw refused();
+      throw refused("bad-signature");
   } catch {
-    throw refused();
+    throw refused("bad-signature");
   }
   return parsed;
 }
@@ -176,7 +175,7 @@ export async function authenticatePeer(value: unknown) {
   const local = identity();
   const candidate = signedEnvelope.parse(value);
   const peer = await prisma.comparisonPeer.findUnique({ where: { origin: candidate.origin } });
-  if (!peer?.enabled) throw refused();
+  if (!peer?.enabled) throw refused("unknown-peer");
   return { message: verifyEnvelope(candidate, peer.publicKey, local.origin), peer };
 }
 /** Replay protection. Called only for a verified peer, so an unverified key cannot fill the table. */
@@ -187,6 +186,6 @@ export async function consumeNonce(message: Envelope) {
       data: { id: hash(message.origin + message.nonce), expiresAt: new Date(Date.now() + 600_000) },
     });
   } catch {
-    throw refused();
+    throw refused("replay");
   }
 }

@@ -1,11 +1,18 @@
 import { handleSealed } from "../services/federation/e2e/relay";
 import { listAtHub, circleInfo, acceptAtHub } from "../services/federation/circles";
 import { Router } from "express";
+import { ZodError } from "zod";
 import rateLimit from "express-rate-limit";
 import { prisma } from "../db";
 import { getInstanceSettings } from "../services/instanceSettingsService";
 import { packetBody } from "../services/federation/contract";
-import { authenticatePeer, consumeNonce, envelope, refused } from "../services/federation/security";
+import {
+  authenticatePeer,
+  consumeNonce,
+  envelope,
+  refused,
+  PeerRefusal,
+} from "../services/federation/security";
 import logger from "../utils/logger";
 import { receiveClaim, receiveState } from "../services/federation/links";
 
@@ -16,7 +23,7 @@ router.use(
 );
 router.post("/", async (req, res) => {
   try {
-    if (!(await getInstanceSettings()).betaFeaturesEnabled) throw refused();
+    if (!(await getInstanceSettings()).betaFeaturesEnabled) throw refused("beta-off");
     // Size first: an 8 MB body was signature-checked, parsed and validated before this refused it.
     const raw: unknown = req.body;
     if (
@@ -26,11 +33,11 @@ router.post("/", async (req, res) => {
       typeof raw.body !== "string" ||
       raw.body.length > MAX_PACKET_BODY
     )
-      throw refused();
+      throw refused("packet-too-large");
     const { message, peer } = await authenticatePeer(raw);
     const body = packetBody.parse(JSON.parse(message.body));
     // A replayed ping is harmless; anything else needs a verified peer BEFORE a nonce row is kept.
-    if (body.action !== "ping" && !peer.verifiedAt) throw refused();
+    if (body.action !== "ping" && !peer.verifiedAt) throw refused("unverified-peer");
     if (peer.verifiedAt) await consumeNonce(message);
     let data: unknown;
     if (body.action === "ping") data = { ready: true };
@@ -42,13 +49,13 @@ router.post("/", async (req, res) => {
       const link = await prisma.comparisonLink.findFirst({
         where: { origin: message.origin, channel: body.channel, revoked: false },
       });
-      if (!link) throw refused();
+      if (!link) throw refused("unknown-channel");
       data = await handleSealed(link, body);
     } else if (body.action === "circle") {
       const link = await prisma.comparisonLink.findFirst({
         where: { origin: message.origin, channel: body.channel, revoked: false },
       });
-      if (!link) throw refused();
+      if (!link) throw refused("unknown-channel");
       if (body.operation === "list") data = await listAtHub(link);
       else {
         if (!body.circleId) throw refused();
@@ -65,9 +72,16 @@ router.post("/", async (req, res) => {
     res.json(signed);
   } catch (error) {
     // The peer learns nothing; the operator learns why a federation partner is being turned away.
+    const kind =
+      error instanceof PeerRefusal
+        ? error.kind
+        : error instanceof ZodError || error instanceof SyntaxError
+          ? "malformed"
+          : "refused";
     logger.warn(
       {
         operation: "comparison_peer_refused",
+        kind,
         reason: error instanceof Error ? error.message : String(error),
       },
       "Comparison peer packet refused"

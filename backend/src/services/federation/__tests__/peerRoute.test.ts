@@ -112,3 +112,32 @@ it("reads the instance key once, not on every packet", async () => {
   ).toBeLessThanOrEqual(1);
   read.mockRestore();
 });
+
+it("logs the refusal kind for an unverified peer's non-ping packet", async () => {
+  const warn = jest.spyOn(logger, "warn");
+  const state = signed(
+    JSON.stringify({
+      action: "state",
+      channel: "00000000-0000-4000-8000-000000000000",
+      confirmed: true,
+      revoked: false,
+    })
+  );
+  expect((await request(app).post("/api/v1/comparison-peer").send(state)).status).toBe(403);
+  expect(warn).toHaveBeenCalledWith(
+    expect.objectContaining({ operation: "comparison_peer_refused", kind: "unverified-peer" }),
+    "Comparison peer packet refused"
+  );
+  warn.mockRestore();
+});
+
+it("logs packet-too-large for an oversized body", async () => {
+  const warn = jest.spyOn(logger, "warn");
+  const huge = signed(JSON.stringify({ action: "ping", pad: "x".repeat(20_000) }));
+  await request(app).post("/api/v1/comparison-peer").send(huge);
+  expect(warn).toHaveBeenCalledWith(
+    expect.objectContaining({ kind: "packet-too-large" }),
+    "Comparison peer packet refused"
+  );
+  warn.mockRestore();
+});
