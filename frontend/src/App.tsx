@@ -57,7 +57,7 @@ import { AdminOnlyNotice } from "./components/AdminOnlyNotice";
 import { LOYALTY_SETTINGS_PATH } from "./pages/Settings/settingsModel";
 const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage"));
-const TravPlanPage = lazy(() => import("./pages/TravPlanPage"));
+const TravPlanPage = lazy(() => import("./pages/TravPlanRoute"));
 const TripsPage = lazy(() => import("./pages/TripsPage"));
 const TripDetailPage = lazy(() => import("./pages/TripDetailPage"));
 const TripRouteEditorPage = lazy(() => import("./pages/TripRouteEditorPage"));
@@ -241,15 +241,7 @@ function AppContent() {
                 <Route
                   key={path}
                   path={path}
-                  element={
-                    isAuthenticated ? (
-                      <BetaFeatureRouteGuard feature="travPlan" redirectTo="/dashboard">
-                        <TravPlanPage />
-                      </BetaFeatureRouteGuard>
-                    ) : (
-                      <Navigate to="/login" />
-                    )
-                  }
+                  element={isAuthenticated ? <TravPlanPage /> : <Navigate to="/login" />}
                 />
               ))}
               <Route
