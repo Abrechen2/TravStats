@@ -75,7 +75,21 @@ describe("accepting a visit finding", () => {
       acceptVisitFinding(userId, row.id, {}),
       acceptVisitFinding(userId, row.id, {}),
     ]);
-    expect(outcomes.filter((o) => o.status === "fulfilled")).toHaveLength(1);
+    // Which way the loser answers depends on timing: still waiting on the claim
+    // it is refused (409); arriving after the winner committed it is an
+    // idempotent replay that hands back the same visit and creates nothing.
+    // Either way exactly one accept creates the visit.
+    const created = outcomes.filter((o) => o.status === "fulfilled" && o.value.visitCreated);
+    expect(created).toHaveLength(1);
+    for (const o of outcomes) {
+      if (o.status === "rejected") {
+        expect(o.reason).toMatchObject({ statusCode: 409, code: "VISIT_ALREADY_ANSWERED" });
+      } else if (!o.value.visitCreated) {
+        expect(o.value.placeVisitId).toBe(
+          (created[0] as PromiseFulfilledResult<{ placeVisitId: string }>).value.placeVisitId
+        );
+      }
+    }
     expect(await prisma.place.count({ where: { userId } })).toBe(1);
     expect(await prisma.placeVisit.count({ where: { userId } })).toBe(1);
   });
