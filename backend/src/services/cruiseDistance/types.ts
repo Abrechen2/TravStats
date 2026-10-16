@@ -32,6 +32,12 @@ export interface ComputedLeg {
   notes: string | null;
 }
 
+/** What a calculator may know about the leg beyond its two ports. */
+export interface LegContext {
+  /** The cruise's kind (`shared/cruiseKind.ts`); absent reads as ocean. */
+  cruiseKind?: string | null;
+}
+
 export interface DistanceCalculator {
   readonly method: DistanceMethod;
   readonly routerVersion: string;
@@ -42,7 +48,7 @@ export interface DistanceCalculator {
    * a non-null result. Haversine is the always-true fallback at the
    * bottom of the chain.
    */
-  accepts(from: PortPoint, to: PortPoint): boolean;
+  accepts(from: PortPoint, to: PortPoint, context?: LegContext): boolean;
   /**
    * Compute the routed distance. Returning `null` means "after
    * inspection I decline this leg" — the orchestrator continues

@@ -450,6 +450,7 @@
     "source": {
       "track": "Aufzeichnung",
       "drawn": "Von Hand gezeichnet",
+      "river": "Entlang des Flusses",
       "sea_route": "Berechnete Seeroute",
       "pending": "Noch nicht berechnet",
       "chord": "Luftlinie"

@@ -7,6 +7,8 @@ import {
   resolveRecordedLegs,
   type CruiseTrackCoverageRow,
 } from "../cruiseDistance/recordedLegs";
+import { isInlandLeg } from "../cruiseDistance/inlandLeg";
+import { riverLegPath } from "../cruiseDistance/riverCalculator";
 
 /**
  * The map line of every leg of one cruise — moved out of `routes/cruises.ts`
@@ -15,11 +17,16 @@ import {
  *
  * Precedence per leg, the same order `cruiseLegService.ts` measures in:
  * recorded track (when its coverage verdict allows it) → hand-drawn line →
- * schematic sea route → straight chord (the router's own fallback).
+ * river line (an inland leg, `inlandLeg.ts`) or schematic sea route →
+ * straight chord (the fallback of both).
+ *
+ * A leg from a port to itself (the ship lies in Luxor overnight, so Luxor
+ * follows Luxor) has no computed line at all: it measures 0 km, and the sea
+ * router answered it with an out-and-back spike to the nearest coast.
  */
 
 /** Where a leg's line came from — the label the map and the cruise page show. */
-export type CruiseGeometrySource = "track" | "drawn" | "sea_route" | "chord";
+export type CruiseGeometrySource = "track" | "drawn" | "river" | "sea_route" | "chord";
 
 export interface GeometryFeature {
   type: "Feature";
@@ -36,7 +43,8 @@ export interface GeometryFeature {
       | "coarse_a_star"
       | "direct"
       | "manual_polyline"
-      | "recorded_track";
+      | "recorded_track"
+      | "river_line";
     geometrySource: CruiseGeometrySource;
     /** The recording the line was cut from; only on `geometrySource: "track"`. */
     trackId?: string;
@@ -52,6 +60,8 @@ type CruiseStopWithPort = Prisma.CruiseStopGetPayload<{ include: { port: true } 
 type PortRow = Prisma.PortGetPayload<Record<string, never>>;
 
 export interface CruiseGeometryInput {
+  /** "ocean" | "river" (`shared/cruiseKind.ts`); absent reads as ocean. */
+  kind?: string | null;
   stops: CruiseStopWithPort[];
   departurePort: PortRow | null;
   arrivalPort: PortRow | null;
@@ -149,6 +159,14 @@ export async function buildCruiseGeometry(
       continue;
     }
 
+    if (isSamePort(a, b)) continue;
+
+    if (isInlandLeg(a, b, cruise.kind)) {
+      features.push(await inlandFeature(a, b));
+      directLegs++;
+      continue;
+    }
+
     const route = await computeSchematicRoute(toSchematicPort(a), toSchematicPort(b));
     features.push({
       type: "Feature",
@@ -168,6 +186,51 @@ export async function buildCruiseGeometry(
   }
 
   return { collection: { type: "FeatureCollection", features }, routedLegs, directLegs };
+}
+
+function isSamePort(a: PortRow, b: PortRow): boolean {
+  return a.id === b.id || (a.lat === b.lat && a.lon === b.lon);
+}
+
+/**
+ * An inland leg is never handed to the sea router: on its land/water mask a
+ * Nile port is land, and the router drew every leg of a Nile cruise out to the
+ * Red Sea and back (prod, 2026-10-16). The river line when both ports sit on
+ * one known river — the polyline `riverCalculator` measures the kilometres on
+ * — else the chord, which is what the distance chain then measures too.
+ */
+async function inlandFeature(a: PortRow, b: PortRow): Promise<GeometryFeature> {
+  const path = await riverLegPath(toPortPoint(a), toPortPoint(b));
+  const base = { fromPortId: a.id, toPortId: b.id, routed: false, protectedSuffixCount: 0 };
+  if (path !== null) {
+    return {
+      type: "Feature",
+      geometry: { type: "LineString", coordinates: path },
+      // Every vertex protected, as for a recording: a spline through sparse
+      // river anchors would bow off the line the kilometres were counted on.
+      properties: {
+        ...base,
+        protectedPrefixCount: path.length,
+        method: "river_line",
+        geometrySource: "river",
+      },
+    };
+  }
+  return {
+    type: "Feature",
+    geometry: {
+      type: "LineString",
+      coordinates: [
+        [a.lon, a.lat],
+        [b.lon, b.lat],
+      ],
+    },
+    properties: { ...base, protectedPrefixCount: 0, method: "direct", geometrySource: "chord" },
+  };
+}
+
+function toPortPoint(p: PortRow): Parameters<typeof riverLegPath>[0] {
+  return { id: p.id, lat: p.lat, lon: p.lon, unlocode: p.unlocode, region: p.region };
 }
 
 function toSchematicPort(p: PortRow): Parameters<typeof computeSchematicRoute>[0] {
