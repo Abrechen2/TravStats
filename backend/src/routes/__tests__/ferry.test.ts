@@ -602,6 +602,60 @@ describe("Ferry rides API", () => {
       .expect(204);
   });
 
+  it("answers a stale edit and delete with the crossing as it is now, like every other domain", async () => {
+    // The 409 carried only `{error, code}`, so a client could not show what
+    // changed or retry on the current version without another read.
+    const ride = (await create(base)).body.data;
+    await request(app)
+      .patch(`/api/v1/ferry/${ride.id}`)
+      .set("Cookie", cookie)
+      .send({ notes: "first edit", baseVersion: ride.updatedAt })
+      .expect(200);
+    const stored = await prisma.ferryJourney.findUniqueOrThrow({ where: { id: ride.id } });
+    for (const res of [
+      await request(app)
+        .patch(`/api/v1/ferry/${ride.id}`)
+        .set("Cookie", cookie)
+        .send({ notes: "stale", baseVersion: ride.updatedAt }),
+      await request(app)
+        .delete(`/api/v1/ferry/${ride.id}`)
+        .set("Cookie", cookie)
+        .set("If-Match", ride.updatedAt),
+    ]) {
+      expect(res.status).toBe(409);
+      expect(res.body).toMatchObject({
+        code: "VERSION_CONFLICT",
+        entity: "ferry_journey",
+        id: ride.id,
+        baseVersion: ride.updatedAt,
+        currentVersion: stored.updatedAt.toISOString(),
+        changedFields: null,
+        current: { id: ride.id, notes: "first edit" },
+      });
+    }
+  });
+
+  it("answers 404, not a version conflict, when a racing delete removed the crossing first", async () => {
+    const ride = (await create(base)).body.data;
+    const original = prisma.ferryJourney.deleteMany.bind(prisma.ferryJourney);
+    const spy = jest
+      .spyOn(prisma.ferryJourney, "deleteMany")
+      .mockImplementationOnce(async (args) => {
+        // The other device's delete lands between the lookup and this one.
+        await original({ where: { id: ride.id } });
+        return original(args);
+      });
+    try {
+      const res = await request(app)
+        .delete(`/api/v1/ferry/${ride.id}`)
+        .set("Cookie", cookie)
+        .set("If-Match", ride.updatedAt);
+      expect(res.status).toBe(404);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("allows only one concurrent edit based on the same version", async () => {
     const created = await create(base);
     const ride = created.body.data;
