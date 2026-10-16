@@ -228,6 +228,20 @@ describe("TripPeopleSection", () => {
     expect(screen.getAllByText("Ben")).toHaveLength(1);
   });
 
+  it("counts a companion name once even when it differs in case or spacing", async () => {
+    api.tripSharing.mockResolvedValue({
+      ...view,
+      people: [row({ key: "c:ilse", companionId: "ilse", name: "Ilse" })],
+    });
+    render(
+      <MemoryRouter>
+        <TripPeopleSection tripId="t1" companionNames={["ilse "]} />
+      </MemoryRouter>
+    );
+    await screen.findByRole("button", { name: "sharing:people.leave" });
+    expect(screen.getAllByText(/ilse/i)).toHaveLength(1);
+  });
+
   it("says why nothing can be done for a deactivated account", async () => {
     api.tripSharing.mockResolvedValue({
       ...view,

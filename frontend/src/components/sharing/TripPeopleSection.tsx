@@ -227,18 +227,28 @@ export default function TripPeopleSection({
 }
 
 /**
+ * "ilse " and "Ilse" are one person. The same fold as the server's companion
+ * identity (`canonicalizeCompanionName`, backend `utils/companionName.ts`), so
+ * the page never splits a person the server holds as one.
+ */
+const nameKey = (name: string): string =>
+  name.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
+
+/**
  * The trip's companion names that no companion row stands for, as plain rows.
  * A trip may carry bare legacy names with no companion entry behind them, and
  * then only share-group members have person rows — those names must still
- * show. Each companion row covers one occurrence of its name, so nobody
+ * show. Each companion row covers one occurrence of its name (compared by
+ * `nameKey`, the original string is what is shown), so nobody
  * appears twice and two people of the same name both stay.
  */
 function uncoveredNameRows(names: readonly string[], people: readonly TripPerson[]): PersonRow[] {
-  const covered = people.filter((p) => p.companionId !== null).map((p) => p.name);
-  const count = (list: readonly string[], name: string): number =>
-    list.filter((n) => n === name).length;
+  const covered = people.filter((p) => p.companionId !== null).map((p) => nameKey(p.name));
+  const keys = names.map(nameKey);
+  const count = (list: readonly string[], key: string): number =>
+    list.filter((k) => k === key).length;
   return names
-    .map((name, index) => ({ name, index }))
-    .filter(({ name, index }) => count(names.slice(0, index), name) >= count(covered, name))
+    .map((name, index) => ({ name, index, key: keys[index] ?? "" }))
+    .filter(({ index, key }) => count(keys.slice(0, index), key) >= count(covered, key))
     .map(({ name, index }) => ({ key: `n:${index}:${name}`, name }));
 }
