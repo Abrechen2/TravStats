@@ -126,3 +126,37 @@ describe("GET /dawarich-stays/settings", () => {
     }
   });
 });
+
+describe("GET /dawarich-stays/choices", () => {
+  it("is bounded, ordered totally, and says when it cut the list", async () => {
+    await prisma.place.createMany({
+      data: Array.from({ length: 2001 }, (_, i) => ({
+        userId,
+        name: i < 3 ? "Same name" : `Place ${String(i).padStart(4, "0")}`,
+        lat: 1,
+        lon: 1,
+      })),
+    });
+    const r = await api().get("/api/v1/dawarich-stays/choices").set("Cookie", cookie);
+    expect(r.status).toBe(200);
+    expect(r.body.data.places).toHaveLength(2000);
+    expect(r.body.data.truncated).toEqual({ places: true, trips: false });
+    const same = r.body.data.places
+      .filter((p: { name: string }) => p.name === "Same name")
+      .map((p: { id: string }) => p.id);
+    expect(same).toEqual([...same].sort());
+  });
+  it("finds a place by name beyond the cap", async () => {
+    await prisma.place.createMany({
+      data: Array.from({ length: 2001 }, (_, i) => ({
+        userId,
+        name: `Place ${String(i).padStart(4, "0")}`,
+        lat: 1,
+        lon: 1,
+      })),
+    });
+    const r = await api().get("/api/v1/dawarich-stays/choices?q=place 2000").set("Cookie", cookie);
+    expect(r.status).toBe(200);
+    expect(r.body.data.places.map((p: { name: string }) => p.name)).toEqual(["Place 2000"]);
+  });
+});

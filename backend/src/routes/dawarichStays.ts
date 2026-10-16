@@ -148,22 +148,46 @@ router.get("/", async (req: AuthRequest, res, next) => {
     next(e);
   }
 });
+/**
+ * The review form's place and trip pickers. Bounded: an account with thousands
+ * of places loaded every one on each inbox open. `q` narrows by name so a place
+ * past the cap stays findable, and `truncated` says when the list was cut — a
+ * picker that silently shows a subset is a picker that loses the right answer.
+ */
+const CHOICE_PLACES_CAP = 2000;
+const CHOICE_TRIPS_CAP = 500;
+const choicesQuery = z.object({ q: z.string().trim().max(200).optional() }).strict();
 router.get("/choices", async (req: AuthRequest, res, next) => {
   try {
     const userId = user(req);
+    const { q } = choicesQuery.parse(req.query);
+    const name = q ? { contains: q, mode: "insensitive" as const } : undefined;
     const [places, trips] = await Promise.all([
       prisma.place.findMany({
-        where: { userId },
+        where: { userId, ...(name ? { name } : {}) },
         select: { id: true, name: true, lat: true, lon: true },
-        orderBy: { name: "asc" },
+        // name is not unique; the id keeps the cut at the cap stable.
+        orderBy: [{ name: "asc" }, { id: "asc" }],
+        take: CHOICE_PLACES_CAP + 1,
       }),
       prisma.trip.findMany({
-        where: { userId },
+        where: { userId, ...(name ? { name } : {}) },
         select: { id: true, name: true },
-        orderBy: { startDate: "desc" },
+        orderBy: [{ startDate: { sort: "desc", nulls: "last" } }, { id: "asc" }],
+        take: CHOICE_TRIPS_CAP + 1,
       }),
     ]);
-    res.json({ success: true, data: { places, trips } });
+    res.json({
+      success: true,
+      data: {
+        places: places.slice(0, CHOICE_PLACES_CAP),
+        trips: trips.slice(0, CHOICE_TRIPS_CAP),
+        truncated: {
+          places: places.length > CHOICE_PLACES_CAP,
+          trips: trips.length > CHOICE_TRIPS_CAP,
+        },
+      },
+    });
   } catch (e) {
     next(e);
   }

@@ -126,6 +126,9 @@ registry.registerPath({
   path: "/dawarich-stays/choices",
   tags,
   summary: "Own places and trips for reviewing a finding",
+  description:
+    "At most 2000 places (by name) and 500 trips (newest first); `q` narrows both by name, and `truncated` says when a list was cut.",
+  request: { query: z.object({ q: z.string().max(200).optional() }) },
   responses: {
     200: response(
       z.object({
@@ -133,6 +136,7 @@ registry.registerPath({
           z.object({ id: z.string(), name: z.string(), lat: z.number(), lon: z.number() })
         ),
         trips: z.array(z.object({ id: z.string(), name: z.string() })),
+        truncated: z.object({ places: z.boolean(), trips: z.boolean() }),
       })
     ),
   },
