@@ -6,7 +6,7 @@ import { airportDisplayName } from "../utils/airportDisplay";
 import { stayStartsAt } from "../utils/stayInstant";
 import type { DomainKey } from "../shared/domains";
 import { loadVisibleDomains } from "../services/domainVisibility";
-import { endHasClock, rideEndsAt } from "../shared/railClock";
+import { CLOCKLESS_PRECISIONS, endHasClock, rideEndsAt } from "../shared/railClock";
 import { groupRailLegs } from "../shared/railJourneyGrouping";
 import { nextBus } from "../services/bus/upcoming";
 import type { BusTimes } from "../schemas/times";
@@ -234,6 +234,63 @@ async function nextStay(userId: string): Promise<UpcomingEntry | null> {
 /** The widest a station's day can start before the instant it is read at. */
 const DAY_WINDOW_MS = 38 * 60 * 60 * 1000;
 
+const RAIL_CANDIDATE_PAGE = 50;
+
+/**
+ * The first ride that has not left. A timed train is a candidate only from
+ * now on, and the clockless ones from the widest day window; candidates are
+ * paged, because reading a fixed 20 rows from 38 h ago and filtering the
+ * departed ones afterwards let a busy day of trains hide every later ride.
+ */
+async function findNextRail(userId: string, now: Date) {
+  let cursor: string | undefined;
+  for (;;) {
+    const rides = await prisma.railJourney.findMany({
+      where: {
+        userId,
+        status: { not: "cancelled" },
+        OR: [
+          { departureTime: { gte: now } },
+          {
+            depPrecision: { in: [...CLOCKLESS_PRECISIONS] },
+            departureTime: { gte: new Date(now.getTime() - DAY_WINDOW_MS) },
+          },
+        ],
+      },
+      orderBy: [{ departureTime: "asc" }, { id: "asc" }],
+      take: RAIL_CANDIDATE_PAGE,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      select: {
+        id: true,
+        bookingId: true,
+        depStationName: true,
+        arrStationName: true,
+        trainCategory: true,
+        trainNumber: true,
+        operator: true,
+        departureTime: true,
+        depTimezone: true,
+        depPrecision: true,
+        tripId: true,
+        trip: { select: { name: true } },
+      },
+    });
+    const ride = rides.find((r) =>
+      endHasClock(r.depPrecision)
+        ? r.departureTime.getTime() >= now.getTime()
+        : rideEndsAt({
+            ...r,
+            arrivalTime: null,
+            arrTimezone: null,
+            arrPrecision: null,
+          }).getTime() > now.getTime()
+    );
+    if (ride) return ride;
+    if (rides.length < RAIL_CANDIDATE_PAGE) return null;
+    cursor = rides[rides.length - 1].id;
+  }
+}
+
 /**
  * The next train (spec 2026-09-25-rail-domain). The departure is a real
  * instant — the server read the ticket's clock in the station's zone — so the
@@ -246,42 +303,7 @@ const DAY_WINDOW_MS = 38 * 60 * 60 * 1000;
  * days and never shows the midnight as a departure time.
  */
 async function nextRail(userId: string): Promise<UpcomingEntry | null> {
-  const now = new Date();
-  const rides = await prisma.railJourney.findMany({
-    where: {
-      userId,
-      status: { not: "cancelled" },
-      departureTime: { gte: new Date(now.getTime() - DAY_WINDOW_MS) },
-    },
-    orderBy: [{ departureTime: "asc" }, { id: "asc" }],
-    // Candidates: the day filter below discards started ones, so the bound is
-    // wider than the one row returned.
-    take: 20,
-    select: {
-      id: true,
-      bookingId: true,
-      depStationName: true,
-      arrStationName: true,
-      trainCategory: true,
-      trainNumber: true,
-      operator: true,
-      departureTime: true,
-      depTimezone: true,
-      depPrecision: true,
-      tripId: true,
-      trip: { select: { name: true } },
-    },
-  });
-  const ride = rides.find((r) =>
-    endHasClock(r.depPrecision)
-      ? r.departureTime.getTime() >= now.getTime()
-      : rideEndsAt({
-          ...r,
-          arrivalTime: null,
-          arrTimezone: null,
-          arrPrecision: null,
-        }).getTime() > now.getTime()
-  );
+  const ride = await findNextRail(userId, new Date());
   if (!ride) return null;
   const legs = await remainingRideLegs(userId, ride);
   const trains = legs
