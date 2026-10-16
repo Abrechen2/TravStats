@@ -177,6 +177,52 @@ describe("owner side", () => {
     }
   });
 
+  it("uses server time for a 90-day lifetime and caps a next-week flight at arrival plus two hours", async () => {
+    const flight = await makeFlight(anna.id);
+    // Move the server clock back a week: the fixture is now next week's flight.
+    setClockForTests("2030-05-25T10:00:00.000Z");
+    // The previous UI used the browser clock. Five minutes ahead crosses the server cap.
+    const skewedExpiry = new Date(
+      Date.parse("2030-05-25T10:05:00.000Z") + 90 * 86400000
+    ).toISOString();
+    const skewed = await create(anna, {
+      kind: "flight",
+      targetId: flight.id,
+      fields: ["route"],
+      expiresAt: skewedExpiry,
+    });
+    expect(skewed.status).toBe(400);
+    expect(skewed.body.code).toBe("SHARE_LINK_EXPIRY_INVALID");
+    const res = await request(app)
+      .post("/api/v1/share-links")
+      .set("Cookie", anna.cookie)
+      .send({ kind: "flight", targetId: flight.id, fields: ["route"], expiresInDays: 90 });
+    expect(res.status).toBe(201);
+    expect(res.body.data.expiresAt).toBe(
+      new Date(Date.parse("2030-05-25T10:00:00.000Z") + 90 * 86400000).toISOString()
+    );
+    expect(res.body.data.effectiveExpiresAt).toBe("2030-06-01T22:00:00.000Z");
+    const row = await prisma.publicShareLink.findUniqueOrThrow({ where: { id: res.body.data.id } });
+    expect(row.expiresAt.toISOString()).toBe(res.body.data.expiresAt);
+  });
+
+  it("rejects missing, conflicting and out-of-range lifetimes", async () => {
+    const flight = await makeFlight(anna.id);
+    for (const expiry of [
+      {},
+      { expiresInDays: 0 },
+      { expiresInDays: 91 },
+      { expiresInDays: 1.5 },
+      { expiresInDays: 7, expiresAt: IN_A_WEEK },
+    ]) {
+      const res = await request(app)
+        .post("/api/v1/share-links")
+        .set("Cookie", anna.cookie)
+        .send({ kind: "flight", targetId: flight.id, fields: ["route"], ...expiry });
+      expect(res.status).toBe(400);
+    }
+  });
+
   it("refuses a flight that has already landed", async () => {
     const flight = await makeFlight(anna.id);
     setClockForTests("2030-06-01T23:00:00Z");

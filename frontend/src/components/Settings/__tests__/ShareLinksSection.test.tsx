@@ -64,23 +64,12 @@ describe("ShareLinksSection", () => {
     expect(addToast).toHaveBeenCalledWith("success", "sharing:links.section.revoked");
   });
 
-  it("lets an admin switch public links off and shows the server's answer", async () => {
-    admin.updateInstanceSettings.mockResolvedValue({} as never);
+  it("directs admins to instance administration without an instance switch here", async () => {
     renderSection(true);
-    const toggle = (await screen.findByLabelText(
-      "sharing:links.section.switch"
-    )) as HTMLInputElement;
-    expect(toggle.checked).toBe(true);
-    api.list.mockResolvedValue({ enabled: false, links: [] });
-    await userEvent.click(toggle);
-    await waitFor(() =>
-      expect(admin.updateInstanceSettings).toHaveBeenCalledWith({ shareLinksEnabled: false })
-    );
-    await waitFor(() =>
-      expect(
-        (screen.getByLabelText("sharing:links.section.switch") as HTMLInputElement).checked
-      ).toBe(false)
-    );
+    const link = await screen.findByRole("link", { name: "sharing:links.section.adminLink" });
+    expect(link.getAttribute("href")).toBe("/admin?section=instance");
+    expect(screen.queryByRole("switch")).toBeNull();
+    expect(admin.updateInstanceSettings).not.toHaveBeenCalled();
   });
 
   it("says when the links cannot be loaded", async () => {

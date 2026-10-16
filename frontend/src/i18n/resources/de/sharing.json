@@ -329,7 +329,7 @@
       "copied": "Link kopiert.",
       "copyFailed": "Kopieren ging nicht – markiere den Link und kopiere ihn von Hand.",
       "endsAt": "Endet am {{date}}",
-      "disabled": "Öffentliche Links sind auf dieser Instanz ausgeschaltet. Ein Administrator kann sie unter Einstellungen → Reisen einschalten.",
+      "disabled": "Öffentliche Links sind ausgeschaltet. Ein Administrator kann sie unter Administration → Instanz → Öffentliche Links freischalten.",
       "statusFailed": "Konnte nicht prüfen, ob öffentliche Links erlaubt sind.",
       "photosOmitted": {
         "lead": "Nicht im Link:",
@@ -404,7 +404,7 @@
       "switchSub": "Standard: aus. Ausschalten widerruft sofort alle bestehenden Links aller Nutzer.",
       "stateOn": "Öffentliche Links sind erlaubt",
       "stateOff": "Öffentliche Links sind ausgeschaltet",
-      "adminOnly": "Nur ein Administrator kann das ändern.",
+      "adminOnly": "Änderbar unter Administration → Instanz.",
       "empty": "Keine aktiven Links.",
       "kind": {
         "flight": "Flug",
@@ -417,7 +417,9 @@
       "revoke": "Widerrufen",
       "revoked": "Link widerrufen – er funktioniert nicht mehr.",
       "loadFailed": "Die Links konnten nicht geladen werden.",
-      "saveFailed": "Der Schalter konnte nicht gespeichert werden."
+      "saveFailed": "Der Schalter konnte nicht gespeichert werden.",
+      "adminLink": "Administration → Instanz",
+      "adminDescription": "Instanzweite Freigabe für öffentliche Links aller Nutzer."
     },
     "errors": {
       "disabled": "Öffentliche Links sind auf dieser Instanz ausgeschaltet.",

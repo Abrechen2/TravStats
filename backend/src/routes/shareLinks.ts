@@ -60,11 +60,11 @@ router.post(
   "/",
   shareLinkCreateLimiter,
   handle(async (req, res) => {
-    const { expiresAt, ...selection } = shareLinkCreateSchema.parse(req.body ?? {});
+    const { expiresAt, expiresInDays, ...selection } = shareLinkCreateSchema.parse(req.body ?? {});
     const created = await createShareLink(
       req.userId!,
       selection,
-      new Date(expiresAt),
+      expiresInDays ?? new Date(expiresAt!),
       await getPublicBaseUrl(req)
     );
     res.status(201).json({ success: true, data: created });

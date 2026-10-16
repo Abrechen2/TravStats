@@ -3,7 +3,6 @@ import type { JSX } from "react";
 import { Link } from "react-router-dom";
 
 import { useTranslation } from "../../hooks/useTranslation";
-import { adminApi } from "../../lib/api";
 import { shareLinksApi } from "../../lib/api/shareLinks";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { logger } from "../../lib/logger";
@@ -11,19 +10,16 @@ import { useToastStore } from "../../store/toastStore";
 import type { ShareLink, ShareLinkList } from "../../types/shareLinks";
 import { shareLinkErrorKey } from "../shareLinks/shareLinkCopy";
 import Button from "../ui/Button";
-import { Switch } from "../ui/Field";
 import { SettingRows } from "../ui/SettingRow";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 
 const NS = "sharing:links.section";
 
 /**
- * "Öffentliche Links" (forgejo#281): the instance switch — off by default,
- * admin only, and switching it off revokes every link — and the caller's own
+ * "Öffentliche Links" (forgejo#281): the caller's own
  * live links with their reach (views) and end, each revocable at once.
  *
- * The switch state comes from the server's answer (`GET /share-links`), and
- * after a toggle from the value the server CONFIRMED, never the one asked for.
+ * Instance configuration lives in Administration; admins get a direct link.
  */
 export default function ShareLinksSection({ isAdmin }: { isAdmin: boolean }): JSX.Element {
   const { t } = useTranslation(["sharing"]);
@@ -31,7 +27,6 @@ export default function ShareLinksSection({ isAdmin }: { isAdmin: boolean }): JS
   const addToast = useToastStore((state) => state.addToast);
   const [list, setList] = useState<ShareLinkList | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
-  const [saveFailed, setSaveFailed] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -47,20 +42,6 @@ export default function ShareLinksSection({ isAdmin }: { isAdmin: boolean }): JS
   useEffect(() => {
     void load();
   }, [load]);
-
-  const toggle = async (on: boolean): Promise<void> => {
-    setBusy(true);
-    setSaveFailed(false);
-    try {
-      await adminApi.updateInstanceSettings({ shareLinksEnabled: on });
-      await load();
-    } catch (error) {
-      logger.warn("Saving the share-link switch failed:", error);
-      setSaveFailed(true);
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const revoke = async (link: ShareLink): Promise<void> => {
     setBusy(true);
@@ -88,25 +69,14 @@ export default function ShareLinksSection({ isAdmin }: { isAdmin: boolean }): JS
     <SectionCard>
       <SectionTitle title={t(`${NS}.title`)} description={t(`${NS}.description`)} />
       <SettingRows>
-        {isAdmin && list ? (
-          <Switch
-            id="share-links-enabled"
-            checked={enabled}
-            disabled={busy}
-            onChange={(on) => void toggle(on)}
-            label={t(`${NS}.switch`)}
-            sub={t(`${NS}.switchSub`)}
-          />
-        ) : (
-          list && (
-            <p className="t-caption">
-              {enabled ? t(`${NS}.stateOn`) : t(`${NS}.stateOff`)} · {t(`${NS}.adminOnly`)}
-            </p>
-          )
-        )}
-        {saveFailed && (
-          <p role="alert" className="t-caption" style={{ color: "var(--ts-bad)" }}>
-            {t(`${NS}.saveFailed`)}
+        {list && (
+          <p className="t-caption">
+            {enabled ? t(`${NS}.stateOn`) : t(`${NS}.stateOff`)} ·{" "}
+            {isAdmin ? (
+              <Link to="/admin?section=instance">{t(`${NS}.adminLink`)}</Link>
+            ) : (
+              t(`${NS}.adminOnly`)
+            )}
           </p>
         )}
         {loadFailed && (

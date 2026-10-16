@@ -8,6 +8,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 - Full data export includes saved TravPlan content and proposals; daily quota counters are explicitly excluded.
 
+### Fixed
+
+- Public-link lifetimes are calculated from the server clock, preventing a fast
+  browser clock from rejecting “Until landing (+2 hours)” or “90 days”.
+  Explicit expiry timestamps remain supported for existing API clients.
+- Public-link permission is now under Administration → Instance. Personal
+  settings retain link management and point admins to the instance switch.
+
 ### Changed
 
 - Ferry edits and deletes accept an optional read version. Conflicting writes

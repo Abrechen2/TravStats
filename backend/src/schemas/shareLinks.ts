@@ -95,10 +95,24 @@ export const shareLinkCreateSchema = selectionBase
     expiresAt: z
       .string()
       .datetime({ offset: true })
+      .optional()
       .describe(
         `When the link stops working, at most ${SHARE_LINK_MAX_DAYS} days ahead. A flight ` +
           "link also ends two hours after the arrival, whichever comes first."
       ),
+    expiresInDays: z
+      .number()
+      .int()
+      .min(1)
+      .max(SHARE_LINK_MAX_DAYS)
+      .optional()
+      .describe(
+        "Lifetime in days measured by the server clock. Supply exactly one of expiresInDays or expiresAt. Flight links still end two hours after arrival if earlier."
+      ),
+  })
+  .refine((value) => (value.expiresAt !== undefined) !== (value.expiresInDays !== undefined), {
+    message: "Supply exactly one of expiresAt or expiresInDays",
+    path: ["expiresInDays"],
   })
   .superRefine(checkSelection)
   .transform(dedupe);

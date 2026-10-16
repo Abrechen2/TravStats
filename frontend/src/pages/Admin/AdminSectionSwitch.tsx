@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 import BackupManagement from "../../components/Admin/BackupManagement";
+import ShareLinksSettings from "../../components/Admin/ShareLinksSettings";
 import InstanceSettings from "../../components/Admin/InstanceSettings";
 import UsageStatsSettings from "../../components/Admin/UsageStatsSettings";
 import PushSettings from "../../components/Admin/PushSettings";
@@ -262,6 +263,7 @@ export default function AdminSectionSwitch(props: AdminSectionSwitchProps): JSX.
           >
             <InstanceSettings />
           </div>
+          <ShareLinksSettings />
           <div
             style={{
               background: "var(--ts-surface)",

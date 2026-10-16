@@ -329,7 +329,7 @@
       "copied": "Link copied.",
       "copyFailed": "Copying failed – select the link and copy it by hand.",
       "endsAt": "Ends on {{date}}",
-      "disabled": "Public links are switched off on this instance. An administrator can switch them on under Settings → Trips.",
+      "disabled": "Public links are disabled. An administrator can enable them under Administration → Instance → Public links.",
       "statusFailed": "Could not check whether public links are allowed.",
       "photosOmitted": {
         "lead": "Not in the link:",
@@ -404,7 +404,7 @@
       "switchSub": "Default: off. Switching off revokes every existing link of every user at once.",
       "stateOn": "Public links are allowed",
       "stateOff": "Public links are switched off",
-      "adminOnly": "Only an administrator can change this.",
+      "adminOnly": "Managed under Administration → Instance.",
       "empty": "No active links.",
       "kind": {
         "flight": "Flight",
@@ -417,7 +417,9 @@
       "revoke": "Revoke",
       "revoked": "Link revoked – it no longer works.",
       "loadFailed": "The links could not be loaded.",
-      "saveFailed": "The switch could not be saved."
+      "saveFailed": "The switch could not be saved.",
+      "adminLink": "Administration → Instance",
+      "adminDescription": "Instance-wide permission for public links for all users."
     },
     "errors": {
       "disabled": "Public links are switched off on this instance.",
