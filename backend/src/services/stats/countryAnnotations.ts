@@ -31,6 +31,7 @@ const DOMAIN_OF_KIND: Record<EvidenceKind, DomainKey | null> = {
   lodging: "lodging",
   rail: "rail",
   bus: "bus",
+  ferry: "ferry",
   roadtrip: "roadtrip",
   track: null,
 };

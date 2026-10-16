@@ -2,8 +2,8 @@
  * Country evidence for the passport and its dependent statistics (forgejo#299).
  * Ground presence includes flown endpoints, transit and curated road stations.
  * Visits require an actual destination, a confirmed place or a non-transit stay.
- * Owner rulings 2026-10-16: a port call is a visit; train and coach rides
- * count like flights, in one chain with them (`./journeyEvidence.ts`).
+ * Owner rulings 2026-10-16: a port call is a visit; train, coach and ferry
+ * rides count like flights, in one chain with them (`./journeyEvidence.ts`).
  * Raw location observations never prove either set. Planned and cancelled
  * travel is excluded; undated confirmed records remain undated.
  * Each country appears once, with its evidence and uncertainty retained.
@@ -43,6 +43,7 @@ import { localDay } from "../../shared/time/instant";
 import { roadtripEvidence, type PassportRoadtripStation } from "./roadtripEvidence";
 import { legsOfEnds, type RailEnd } from "./railEvidence";
 import type { BusEnd } from "./busEvidence";
+import type { FerryEnd } from "./ferryEvidence";
 import { countEvidencePerCountry } from "./evidenceCountry";
 import { lodgingStampsPerCountry, type LodgingStamp, type StampLodging } from "./lodgingStamp";
 
@@ -133,6 +134,8 @@ const EVIDENCE_RANK: Record<PassportEvidence, number> = {
   rail: 3,
   // A coach terminal (forgejo#265): beside the station, a step below it.
   bus: 2.5,
+  // A ferry port (owner ruling 2026-10-16 #3): beside the coach terminal.
+  ferry: 2.4,
   // Below the house, so a country already labelled by its stay keeps that
   // label; above the track, because a station is a record somebody typed and
   // can open, which a country-day is not.
@@ -145,17 +148,8 @@ const strongestKind = (kinds: readonly EvidenceKind[]): PassportEvidence =>
   [...kinds].sort((a, b) => EVIDENCE_RANK[b] - EVIDENCE_RANK[a])[0];
 
 /**
- * The tier `summary.countries` counts from when the caller names none.
- *
- * A connection does not count, everything else does. It stopped being THE
- * threshold on 2026-09-02 (spec §3.2): "does a connection count" is a personal
- * definition, so an admin now sets the instance default and any user may
- * override it — `services/countryThresholdResolver.ts` resolves the pair, and
- * `loadPassport` passes the answer in. This constant is what a caller with no
- * user in hand gets, which is what every unit test in this directory is.
- *
- * It is an alias for the shared default rather than a second copy of the word:
- * two places naming a default is how they start disagreeing about it.
+ * The legacy threshold default, kept only so old callers compile: since
+ * forgejo#299 the headline is always "Land besucht" and no threshold moves it.
  */
 export const PASSPORT_COUNTRY_THRESHOLD: CountryTier = DEFAULT_COUNTRY_TIER;
 
@@ -400,7 +394,9 @@ export function buildPassport(
    * owner's Germany dropped out of "Land besucht" (forgejo#299 lists it). It
    * never creates a row: a country needs a record to open.
    */
-  homeCountries: readonly string[] = []
+  homeCountries: readonly string[] = [],
+  /** Port ends of completed ferry crossings (`./ferryEvidence.ts`), while ferry is visible. */
+  ferryEnds: readonly FerryEnd[] = []
 ): Passport {
   flights = flights.filter((f) => !f.departureTime || f.departureTime <= now);
   placeVisits = placeVisits.filter((v) => !v.at || v.at <= now);
@@ -582,7 +578,12 @@ export function buildPassport(
 
   // Flights, trains and coaches as ONE chain (owner ruling 2026-10-16).
   const journeyInputs = journeyEvidence(
-    [...flightLegs(flights, countryOfAirport), ...legsOfEnds(railEnds), ...legsOfEnds(busEnds)],
+    [
+      ...flightLegs(flights, countryOfAirport),
+      ...legsOfEnds(railEnds),
+      ...legsOfEnds(busEnds),
+      ...legsOfEnds(ferryEnds),
+    ],
     homeCountrySet
   );
   const evidenceInputs: EvidenceInput[] = [
@@ -768,6 +769,7 @@ export function buildPassport(
         lodging: countries.filter((c) => c.evidence === "lodging").length,
         rail: countries.filter((c) => c.evidence === "rail").length,
         bus: countries.filter((c) => c.evidence === "bus").length,
+        ferry: countries.filter((c) => c.evidence === "ferry").length,
         roadtrip: countries.filter((c) => c.evidence === "roadtrip").length,
         track: countries.filter((c) => c.evidence === "track").length,
       },

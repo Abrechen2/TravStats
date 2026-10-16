@@ -26,7 +26,7 @@
     "slept": "Stayed overnight",
     "sleptExplained": "An actual lodging stay or confirmed overnight beyond transit locations. A calendar-day change alone is insufficient.",
     "visited": "Visited",
-    "visitedExplained": "A confirmed place visit, a port call, the country you live in, or a destination with an outbound and a return trip – by air, rail or bus, mixed too. Location points and connection duration are insufficient.",
+    "visitedExplained": "A confirmed place visit, a port call, the country you live in, or a destination with an outbound and a return trip – by air, rail, bus or ferry, mixed too. Location points and connection duration are insufficient.",
     "connection": "Flight endpoint / connection",
     "connectionExplained": "The flight proves ground contact. A visit outside the airport is not established. Confirmed place visits or lodging can provide that evidence.",
     "transited": "Ground presence",
@@ -40,7 +40,8 @@
     "roadtrip": "Roadtrip",
     "track": "Location history",
     "rail": "Train",
-    "bus": "Bus"
+    "bus": "Bus",
+    "ferry": "Ferry"
   },
   "value": {
     "dash": "—",

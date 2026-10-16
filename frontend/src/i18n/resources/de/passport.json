@@ -26,7 +26,7 @@
     "slept": "Übernachtet",
     "sleptExplained": "Ein tatsächlicher Unterkunftsaufenthalt oder eine bestätigte Übernachtung außerhalb reiner Transitorte. Ein Datumswechsel allein reicht nicht.",
     "visited": "Besucht",
-    "visitedExplained": "Ein bestätigter Ortsbesuch, ein Landgang, dein Wohnland oder ein Reiseziel mit Hin- und Rückreise – per Flug, Bahn oder Bus, auch gemischt. Standortpunkte und die Dauer eines Umstiegs reichen nicht.",
+    "visitedExplained": "Ein bestätigter Ortsbesuch, ein Landgang, dein Wohnland oder ein Reiseziel mit Hin- und Rückreise – per Flug, Bahn, Bus oder Fähre, auch gemischt. Standortpunkte und die Dauer eines Umstiegs reichen nicht.",
     "connection": "Flug-Endpunkt / Umstieg",
     "connectionExplained": "Der Flug belegt Bodenkontakt. Ein Besuch außerhalb des Flughafens ist noch nicht belegt. Bestätigte Ortsbesuche oder Unterkünfte können ihn ergänzen.",
     "transited": "Bodenkontakt",
@@ -40,7 +40,8 @@
     "roadtrip": "Roadtrip",
     "track": "Standortverlauf",
     "rail": "Bahn",
-    "bus": "Bus"
+    "bus": "Bus",
+    "ferry": "Fähre"
   },
   "value": {
     "dash": "—",
