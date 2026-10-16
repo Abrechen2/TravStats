@@ -12,7 +12,7 @@ import {
   consentRequestSchema,
   shareTripSchema,
 } from "../../../routes/sharing";
-import { CONSENT_STATUSES, SHARE_ENTITY_TYPES } from "../../../schemas/sharing";
+import { CONSENT_STATUSES, SHARE_ENTITY_TYPES, SHARE_NOTICE_KINDS } from "../../../schemas/sharing";
 import type { ShareEntity } from "../../sharing/shareTypes";
 
 const tags = ["Sharing"];
@@ -52,7 +52,7 @@ const counts = z.object({
 });
 const notice = z.object({
   id: z.string(),
-  kind: z.enum(["shared", "created", "updated", "deleted", "left"]),
+  kind: z.enum(SHARE_NOTICE_KINDS),
   entityType: z.enum(SHARE_ENTITY_TYPES as ["trip", ...ShareEntity[]]).nullable(),
   entityKey: z
     .string()
