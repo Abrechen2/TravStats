@@ -14,7 +14,8 @@
     "airports": "Flughäfen",
     "entries": "Einreisen",
     "continents": "Kontinente",
-    "groundCountries": "Am Boden gewesen"
+    "groundCountries": "Am Boden gewesen",
+    "unclearCountries": "Unklar"
   },
   "evidence": {
     "title": "Nachweis",
@@ -94,7 +95,14 @@
     "undatedExplained": "Mindestens ein Beleg trägt kein Datum. Dieses Land kann deshalb in keiner Jahresauswertung auftauchen.",
     "showRecords": "Belege zeigen",
     "hideRecords": "Belege ausblenden",
-    "visitUncertain": "Besuch außerhalb des Transitorts unbestätigt"
+    "visitUncertain": "Besuch unklar",
+    "unclearResolve": "Ein bestätigter Ort, eine Unterkunft oder der fehlende Flug klärt es.",
+    "unclearReason": {
+      "openChain": "Die erfasste Reisekette bricht hier ab (einfacher Flug, Gabelflug oder erster/letzter Flug).",
+      "noDestination": "Die Reise kehrt nirgends um – welches Land das Ziel war, lässt sich nicht entscheiden.",
+      "undated": "Der Flug hat kein Datum und lässt sich keiner Reisekette zuordnen.",
+      "stationOnly": "Ein Bahnhof oder Busbahnhof belegt nur Bodenkontakt."
+    }
   },
   "thresholdChoice": {
     "options": {

@@ -169,6 +169,10 @@ export default function CountryProvenance({ code }: { code: string }): JSX.Eleme
         <p className="mb-2">
           {t(detail.visited ? "passport:summary.countries" : "passport:summary.groundCountries")}
           {detail.visitUncertain && ` · ${t("passport:countries.visitUncertain")}`}
+          {detail.visitUncertain &&
+            (detail.visitUncertainReasons ?? []).map(
+              (reason) => ` · ${t(`passport:countries.unclearReason.${reason}`)}`
+            )}
         </p>
       )}
 

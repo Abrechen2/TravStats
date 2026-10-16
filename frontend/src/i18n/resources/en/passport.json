@@ -14,7 +14,8 @@
     "airports": "Airports",
     "entries": "Entries",
     "continents": "Continents",
-    "groundCountries": "Ground presence"
+    "groundCountries": "Ground presence",
+    "unclearCountries": "Unclear"
   },
   "evidence": {
     "title": "Evidence",
@@ -94,7 +95,14 @@
     "undatedExplained": "At least one record carries no date. This country therefore cannot appear in any year's figures.",
     "showRecords": "Show records",
     "hideRecords": "Hide records",
-    "visitUncertain": "Visit beyond the transit location unconfirmed"
+    "visitUncertain": "Visit unclear",
+    "unclearResolve": "A confirmed place, a stay or the missing flight settles it.",
+    "unclearReason": {
+      "openChain": "The recorded trip breaks off here (one-way, open-jaw, or the first/last flight).",
+      "noDestination": "The trip never turns around – which country was the destination cannot be decided.",
+      "undated": "The flight has no date and cannot be placed in a trip.",
+      "stationOnly": "A train or bus station proves ground contact only."
+    }
   },
   "thresholdChoice": {
     "options": {
