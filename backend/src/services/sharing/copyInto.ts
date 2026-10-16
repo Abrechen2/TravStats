@@ -17,6 +17,9 @@ import type { ShareEntity } from "./shareTypes";
  *    their next own edit cleared the key again). The trip it came from is
  *    returned, for the notice and its undo. Its private fields (their seat,
  *    their notes) stay as they are;
+ *    An own entry on a trip of ANOTHER share group is left alone — neither
+ *    moved (that group would silently lose it) nor copied (a duplicate):
+ *    `null`, and the caller records nothing (controller ruling 2026-10-16);
  * 2. otherwise the adapter creates a copy from the facts.
  *
  * Before the rework the share path joined own flights and propagation did
@@ -45,19 +48,23 @@ export async function copyInto(
   entity: ShareEntity,
   source: SharedRow,
   recipient: Recipient
-): Promise<CopyResult> {
+): Promise<CopyResult | null> {
   const adapter = ADAPTERS[entity];
   const own = adapter.ownMatch ? await adapter.ownMatch(c, source, recipient.userId) : null;
   if (own) {
+    const from =
+      own.tripId && own.tripId !== recipient.tripId
+        ? await c.trip.findUniqueOrThrow({
+            where: { id: own.tripId },
+            select: { id: true, name: true, shareGroupId: true },
+          })
+        : null;
+    if (from?.shareGroupId) return null;
     await keyedDelegate(c, entity).update({
       where: { id: own.id },
       data: { shareKey: source.shareKey, tripId: recipient.tripId },
     });
-    if (!own.tripId || own.tripId === recipient.tripId) return { id: own.id, joined: true };
-    const from = await c.trip.findUniqueOrThrow({
-      where: { id: own.tripId },
-      select: { id: true, name: true },
-    });
+    if (!from) return { id: own.id, joined: true };
     // The trip it left loses an entry, so its span and status are re-derived too.
     await restatusTrips([from.id, recipient.tripId], c);
     return { id: own.id, joined: true, movedFrom: { tripId: from.id, tripName: from.name } };
@@ -96,7 +103,8 @@ export async function copyMissing(
   const out: CopiedEntry[] = [];
   for (const source of sources) {
     if (!source.shareKey || have.has(source.shareKey)) continue;
-    out.push({ source, ...(await copyInto(c, entity, source, recipient)) });
+    const copy = await copyInto(c, entity, source, recipient);
+    if (copy) out.push({ source, ...copy });
   }
   return out;
 }

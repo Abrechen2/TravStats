@@ -65,6 +65,25 @@ describe("sharing — the recipient's own entry on another trip is moved in", ()
     return { ...pair, other, bens, annas };
   }
 
+  const crossingFor = (userId: string, tripId: string) =>
+    prisma.ferryJourney.create({
+      data: {
+        userId,
+        tripId,
+        operator: "Fjord Line",
+        depStationName: "Hirtshals",
+        depLat: 57.5927,
+        depLon: 9.9628,
+        depTimezone: "Europe/Copenhagen",
+        arrStationName: "Bergen",
+        arrLat: 60.3958,
+        arrLon: 5.3141,
+        arrTimezone: "Europe/Oslo",
+        departureTime: new Date("2026-07-01T18:00:00Z"),
+        status: "scheduled",
+      },
+    });
+
   const createdNotice = () =>
     prisma.shareNotice.findFirstOrThrow({
       where: { userId: ben.id, kind: "created", entityType: "flight" },
@@ -168,6 +187,52 @@ describe("sharing — the recipient's own entry on another trip is moved in", ()
     expect(await prisma.shareNotice.count({ where: { userId: carl.id } })).toBe(0);
   });
 
+  it("leaves an own flight on a trip of ANOTHER share group alone: no move, no copy, no notice", async () => {
+    const pair = await sharedPair(anna, ben);
+    const groupB = await prisma.tripShareGroup.create({ data: { createdById: ben.id } });
+    const bTrip = await prisma.trip.create({
+      data: { userId: ben.id, name: "Lissabon mit Carl", shareGroupId: groupB.id },
+    });
+    const bens = await tp576(ben.id, bTrip.id);
+    const annas = await tp576(anna.id, pair.full.trip.id);
+
+    await propagateWrite(prisma, anna.id, "flight", annas.id);
+
+    const untouched = await prisma.flight.findUniqueOrThrow({ where: { id: bens.id } });
+    expect(untouched.tripId).toBe(bTrip.id);
+    expect(untouched.shareKey).toBeNull();
+    expect(await prisma.flight.count({ where: { userId: ben.id, flightNumber: "TP576" } })).toBe(1);
+    expect(
+      await prisma.shareNotice.count({
+        where: { userId: ben.id, kind: "created", entityType: "flight" },
+      })
+    ).toBe(0);
+  });
+
+  it("leaves an own crossing on a trip of another share group in that group during the ferry backfill", async () => {
+    const annasTrip = await prisma.trip.create({ data: { userId: anna.id, name: "Fjorde" } });
+    const companion = await linkWithConsent(anna, ben);
+    await shareTrip(anna.id, annasTrip.id, companion.id);
+    const groupB = await prisma.tripShareGroup.create({ data: { createdById: ben.id } });
+    const bTrip = await prisma.trip.create({
+      data: { userId: ben.id, name: "Norwegen mit Carl", shareGroupId: groupB.id },
+    });
+    const bens = await crossingFor(ben.id, bTrip.id);
+    await crossingFor(anna.id, annasTrip.id);
+
+    const result = await backfillSharedFerries({ apply: true });
+
+    expect(result).toMatchObject({ joined: 0, moved: 0, copied: 0 });
+    const stayed = await prisma.ferryJourney.findUniqueOrThrow({ where: { id: bens.id } });
+    expect(stayed.tripId).toBe(bTrip.id);
+    expect(await prisma.ferryJourney.count({ where: { userId: ben.id } })).toBe(1);
+    expect(
+      await prisma.shareNotice.count({
+        where: { userId: ben.id, kind: "created", entityType: "ferry" },
+      })
+    ).toBe(0);
+  });
+
   it("keeps the key through Ben's next own edit", async () => {
     const { bens, annas } = await bensFlightJoinedFromOtherTrip();
     const key = (await prisma.flight.findUniqueOrThrow({ where: { id: annas.id } })).shareKey;
@@ -185,26 +250,8 @@ describe("sharing — the recipient's own entry on another trip is moved in", ()
     const companion = await linkWithConsent(anna, ben);
     await shareTrip(anna.id, annasTrip.id, companion.id);
     const bensOther = await prisma.trip.create({ data: { userId: ben.id, name: "Norwegen" } });
-    const crossing = (userId: string, tripId: string) =>
-      prisma.ferryJourney.create({
-        data: {
-          userId,
-          tripId,
-          operator: "Fjord Line",
-          depStationName: "Hirtshals",
-          depLat: 57.5927,
-          depLon: 9.9628,
-          depTimezone: "Europe/Copenhagen",
-          arrStationName: "Bergen",
-          arrLat: 60.3958,
-          arrLon: 5.3141,
-          arrTimezone: "Europe/Oslo",
-          departureTime: new Date("2026-07-01T18:00:00Z"),
-          status: "scheduled",
-        },
-      });
-    await crossing(anna.id, annasTrip.id);
-    const bens = await crossing(ben.id, bensOther.id);
+    await crossingFor(anna.id, annasTrip.id);
+    const bens = await crossingFor(ben.id, bensOther.id);
 
     const result = await backfillSharedFerries({ apply: false });
     expect(result).toMatchObject({ keyed: 1, joined: 0, moved: 1, copied: 0 });

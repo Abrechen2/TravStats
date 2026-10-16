@@ -174,6 +174,8 @@ async function createCopies(
       userId: member.userId,
       tripId: member.id,
     });
+    // Their own entry sits in another shared trip: left there, nothing to tell.
+    if (!copy) continue;
     await restatusTrips([member.id], c);
     await recordEntryNotice(c, {
       recipient: member,
