@@ -1,5 +1,6 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import ConsentDialog from "../ConsentDialog";
 import { comparisonApi } from "../../../lib/api/comparison";
@@ -126,5 +127,94 @@ describe("ConsentDialog", () => {
     expect(await screen.findByText("metric.flights")).toBeInTheDocument();
     expect(screen.getByText("—")).toBeInTheDocument();
     expect(screen.queryByText("0")).not.toBeInTheDocument();
+  });
+  it("cannot confirm a scope whose numbers have not arrived yet", async () => {
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    render(<ConsentDialog open person={person} onClose={() => {}} onConfirm={onConfirm} />);
+    await screen.findByText("metric.flights");
+    const share = screen.getByRole("button", { name: "consent.share" });
+    expect(share).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "group.time" }));
+    expect(share).toBeDisabled();
+    expect(screen.queryByText("12")).not.toBeInTheDocument();
+    fireEvent.click(share);
+    expect(onConfirm).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "consent.share" })).toBeEnabled()
+    );
+    expect(screen.getByText("12")).toBeInTheDocument();
+  });
+
+  it("offers no chip for a domain that is not enabled and never sends it", async () => {
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ConsentDialog
+        open
+        person={person}
+        onClose={() => {}}
+        onConfirm={onConfirm}
+        initialScope={{ groups: ["trips"], domains: ["flight", "cruise"], year: null }}
+      />
+    );
+    expect(screen.queryByRole("button", { name: "common:domain.cruise" })).not.toBeInTheDocument();
+    await screen.findByText("metric.flights");
+    fireEvent.click(screen.getByRole("button", { name: "consent.share" }));
+    await waitFor(() =>
+      expect(onConfirm).toHaveBeenCalledWith({ groups: ["trips"], domains: ["flight"], year: null })
+    );
+  });
+
+  it("lists an initial year that is outside the recent years", async () => {
+    render(
+      <ConsentDialog
+        open
+        person={person}
+        onClose={() => {}}
+        onConfirm={vi.fn()}
+        initialScope={{ groups: ["trips"], domains: ["flight"], year: 1999 }}
+      />
+    );
+    expect(screen.getByRole("combobox")).toHaveValue("1999");
+    await screen.findByText("metric.flights");
+  });
+
+  it("toggles a chip with Space and says so through aria-pressed", async () => {
+    const user = userEvent.setup();
+    render(<ConsentDialog open person={person} onClose={() => {}} onConfirm={vi.fn()} />);
+    const chip = screen.getByRole("button", { name: "group.time" });
+    expect(chip).toHaveAttribute("aria-pressed", "true");
+    chip.focus();
+    await user.keyboard(" ");
+    expect(chip).toHaveAttribute("aria-pressed", "false");
+    await screen.findByText("metric.flights");
+  });
+
+  it("discards a response that belongs to an older scope", async () => {
+    let releaseFirst: (s: LeaderboardSnapshot) => void = () => {};
+    vi.mocked(comparisonApi.preview)
+      .mockImplementationOnce(() => new Promise((resolve) => (releaseFirst = resolve)))
+      .mockResolvedValue({ ...snapshot, metrics: { flights: 99 } });
+    render(<ConsentDialog open person={person} onClose={() => {}} onConfirm={vi.fn()} />);
+    await waitFor(() => expect(comparisonApi.preview).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("button", { name: "group.time" }));
+    expect(await screen.findByText("99")).toBeInTheDocument();
+    await act(async () => releaseFirst(snapshot));
+    expect(screen.getByText("99")).toBeInTheDocument();
+    expect(screen.queryByText("12")).not.toBeInTheDocument();
+  });
+
+  it("starts from the initial scope again when it is reopened", async () => {
+    const { rerender } = render(
+      <ConsentDialog open person={person} onClose={() => {}} onConfirm={vi.fn()} />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "group.time" }));
+    await screen.findByText("metric.flights");
+    rerender(<ConsentDialog open={false} person={person} onClose={() => {}} onConfirm={vi.fn()} />);
+    rerender(<ConsentDialog open person={person} onClose={() => {}} onConfirm={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "group.time" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    await screen.findByText("metric.flights");
   });
 });

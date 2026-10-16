@@ -47,10 +47,25 @@ export default function ConsentDialog({
   const { enabled } = useEnabledDomains();
   const distanceUnit = useSettingsStore((s) => s.units.distanceUnit);
   const zone = useSettingsStore((s) => s.display.timezone);
-  const [scope, setScope] = useState<LeaderboardScope>(
-    () => initialScope ?? { groups: [...METRIC_GROUPS], domains: [...enabled], year: null }
+  // A domain without a chip can never be unticked, so it must never be sent.
+  const startScope = (): LeaderboardScope =>
+    initialScope
+      ? { ...initialScope, domains: initialScope.domains.filter((d) => enabled.includes(d)) }
+      : { groups: [...METRIC_GROUPS], domains: [...enabled], year: null };
+  const [scope, setScope] = useState<LeaderboardScope>(startScope);
+  const [wasOpen, setWasOpen] = useState(open);
+  // The component outlives a closed dialog; reopening starts the question afresh.
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setScope(startScope());
+  }
+  // The numbers carry the scope they answer: while they belong to an older one they are
+  // not what "Teilen" would share, so they are neither shown nor confirmable.
+  const [preview, setPreview] = useState<{ key: string; snapshot: LeaderboardSnapshot } | null>(
+    null
   );
-  const [preview, setPreview] = useState<LeaderboardSnapshot | null>(null);
+  const scopeKey = JSON.stringify(scope);
+  const current = preview?.key === scopeKey ? preview.snapshot : null;
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -61,6 +76,7 @@ export default function ConsentDialog({
   useEffect(() => {
     if (!open || !valid) {
       setPreview(null);
+      setPreviewError(null);
       return;
     }
     let alive = true;
@@ -68,7 +84,7 @@ export default function ConsentDialog({
     const timer = setTimeout(() => {
       comparisonApi.preview(scope).then(
         (snapshot) => {
-          if (alive) setPreview(snapshot);
+          if (alive) setPreview({ key: scopeKey, snapshot });
         },
         (failure: unknown) => {
           logger.debug("comparison preview failed", failure);
@@ -87,8 +103,7 @@ export default function ConsentDialog({
       alive = false;
       clearTimeout(timer);
     };
-    // `tr` is rebuilt every render and only formats the message.
-  }, [open, scope, valid]);
+  }, [open, scope, scopeKey, valid]);
 
   const confirm = async (): Promise<void> => {
     setBusy(true);
@@ -102,11 +117,16 @@ export default function ConsentDialog({
     }
   };
 
-  const shown = preview
+  const shown = current
     ? LEADERBOARD_METRICS.filter((m) =>
-        Object.prototype.hasOwnProperty.call(preview.metrics, m.key)
+        Object.prototype.hasOwnProperty.call(current.metrics, m.key)
       )
     : [];
+  const recent = recentYears(zone);
+  const years =
+    scope.year !== null && !recent.includes(scope.year)
+      ? [...recent, scope.year].sort((a, b) => b - a)
+      : recent;
   return (
     <Dialog
       open={open}
@@ -115,7 +135,7 @@ export default function ConsentDialog({
       title={tr("consent.title", { name: person.displayName })}
       dismissLabel={tr("common:buttons.cancel")}
       action={
-        <Button disabled={!valid || busy || !preview} onClick={() => void confirm()}>
+        <Button disabled={!valid || busy || !current} onClick={() => void confirm()}>
           {tr("consent.share")}
         </Button>
       }
@@ -165,7 +185,7 @@ export default function ConsentDialog({
             }
           >
             <option value="all">{tr("consent.allYears")}</option>
-            {recentYears(zone).map((y) => (
+            {years.map((y) => (
               <option key={y} value={y}>
                 {tr("consent.onlyYear", { year: y })}
               </option>
@@ -173,13 +193,13 @@ export default function ConsentDialog({
           </Select>
         </Field>
         {!valid && <p className="t-caption">{tr("consent.nothingChosen")}</p>}
-        {valid && preview && (
+        {valid && current && (
           <dl aria-label={tr("consent.preview")} className="grid grid-cols-2" style={gap("xs")}>
             {shown.map((m) => (
               <div key={m.key} className="contents">
                 <dt className="t-caption">{tr(`metric.${m.key}`)}</dt>
                 <dd>
-                  {formatMetricOrAbsent(preview.metrics[m.key], m.unit, {
+                  {formatMetricOrAbsent(current.metrics[m.key], m.unit, {
                     distanceUnit,
                     t: tr,
                     language: i18n.language,
