@@ -3,7 +3,7 @@ import { Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
 import { isPlaceCategory } from "../../shared/placeCategories";
-import { classifyVisit } from "../../shared/placeCounting";
+import { visitPromotesPlace } from "../../shared/placeCounting";
 import { resolveTimeField } from "../../shared/time/resolveInput";
 import type { TimeFieldInput } from "../../shared/time/timeInput";
 import { zoneOf } from "../../shared/time/zoneOf";
@@ -185,7 +185,7 @@ export async function acceptVisitFinding(
   const sameDay = found ? await visitOnSameDay(userId, found.id, time.visitedAt) : null;
   // A stop photographed in the past HAPPENED, so the place leaves the wishlist
   // — the rule `POST /places/:id/visits` applies, from the same predicate.
-  const happened = classifyVisit({ visitedAt: time.visitedAt }) === "visited";
+  const happened = visitPromotesPlace(time);
 
   const outcome = await prisma.$transaction(async (tx) => {
     // The claim comes first and is the only guard: without it two accepts in
