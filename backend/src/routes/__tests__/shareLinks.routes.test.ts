@@ -240,6 +240,7 @@ describe("owner side", () => {
         fields: ["totals"],
         tokenHash: `limit-test-${anna.id}-${i}`,
         expiresAt: new Date(IN_A_WEEK),
+        effectiveExpiresAt: new Date(IN_A_WEEK),
       })),
     });
     const trip = await makeTrip(anna.id);
@@ -410,6 +411,48 @@ describe("public side — one answer for every failure", () => {
 });
 
 describe("flight links", () => {
+  it("a landed flight's link leaves the active count, and the count and the list agree", async () => {
+    await prisma.publicShareLink.createMany({
+      data: Array.from({ length: SHARE_LINK_MAX_ACTIVE - 1 }, (_, i) => ({
+        userId: anna.id,
+        kind: "wrapped",
+        year: 2000 + i,
+        fields: ["totals"],
+        tokenHash: `landed-test-${anna.id}-${i}`,
+        expiresAt: new Date("2030-06-20T10:00:00Z"),
+        effectiveExpiresAt: new Date("2030-06-20T10:00:00Z"),
+      })),
+    });
+    const flight = await makeFlight(anna.id);
+    await tokenFor(anna, { kind: "flight", targetId: flight.id, fields: ["progress"] });
+
+    setClockForTests("2030-06-02T10:00:00Z");
+    const list = await request(app).get("/api/v1/share-links").set("Cookie", anna.cookie);
+    expect(list.body.data.links).toHaveLength(SHARE_LINK_MAX_ACTIVE - 1);
+    const trip = await makeTrip(anna.id);
+    expect((await create(anna, { kind: "trip", targetId: trip.id, fields: ["name"] })).status).toBe(
+      201
+    );
+  });
+
+  it("an ended flight link never comes back when the flight is moved later", async () => {
+    const flight = await makeFlight(anna.id);
+    const { token } = await tokenFor(anna, {
+      kind: "flight",
+      targetId: flight.id,
+      fields: ["progress"],
+    });
+    setClockForTests("2030-06-02T10:00:00Z");
+    await prisma.flight.update({
+      where: { id: flight.id },
+      data: {
+        departureTime: new Date("2030-06-05T12:00:00Z"),
+        arrivalTime: new Date("2030-06-05T20:00:00Z"),
+      },
+    });
+    expect((await view(token)).status).toBe(404);
+  });
+
   it("shows the phase and ETA from the schedule and ends two hours after landing", async () => {
     const flight = await makeFlight(anna.id);
     const { token } = await tokenFor(anna, {
