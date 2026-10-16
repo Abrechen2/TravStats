@@ -11,7 +11,7 @@ import { SHARE_ENTITIES, SHARE_TYPES, emptyCounts, type CopyCounts } from "./sha
 import { missingGroupConsent } from "./members";
 import { tripFacts } from "./facts";
 import { restatusTrips } from "../trip/restatusTrips";
-import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
+import type { SharePerson } from "./people";
 import { tripPeople, type TripPerson } from "./tripPeople";
 
 /**
@@ -172,21 +172,8 @@ export async function leaveGroup(userId: string, tripId: string): Promise<{ left
   });
 }
 
-export interface ShareCandidate {
-  companionId: string;
-  name: string;
-  user: SharePerson;
-  /** The linked account has accepted sharing from the caller. */
-  consenting: boolean;
-  /** The linked account already holds a copy of this trip. */
-  shared: boolean;
-}
-
 export interface TripSharingView {
   groupId: string | null;
-  /** The other members — never the caller, never their trip ids. */
-  members: SharePerson[];
-  candidates: ShareCandidate[];
   /** Companions and group members of the trip, each with their sharing state. */
   people: TripPerson[];
   /** Accounts that accepted the caller's consent request. */
@@ -198,44 +185,9 @@ export interface TripSharingView {
 /** Who holds this trip besides the caller, and whom the caller could share it with. */
 export async function tripSharingView(userId: string, tripId: string): Promise<TripSharingView> {
   const trip = await ownTrip(prisma, userId, tripId);
-  const [memberTrips, companions, consents] = await Promise.all([
-    trip.shareGroupId
-      ? prisma.trip.findMany({
-          where: { shareGroupId: trip.shareGroupId, NOT: { userId } },
-          select: { user: { select: PERSON_SELECT } },
-          orderBy: { createdAt: "asc" },
-        })
-      : Promise.resolve([]),
-    prisma.companion.findMany({
-      where: { userId, linkedUserId: { not: null } },
-      include: { linkedUser: { select: PERSON_SELECT } },
-      orderBy: { displayName: "asc" },
-    }),
-    prisma.shareConsent.findMany({
-      where: { requesterId: userId, status: "accepted" },
-      select: { targetId: true },
-    }),
+  const [people, bookingTotals] = await Promise.all([
+    tripPeople(userId, trip),
+    trip.shareGroupId ? groupBookingTotals(trip.shareGroupId, userId) : Promise.resolve([]),
   ]);
-  const members = memberTrips.map((t) => toPerson(t.user));
-  const memberIds = new Set(members.map((m) => m.id));
-  const consenting = new Set(consents.map((c) => c.targetId));
-  return {
-    groupId: trip.shareGroupId,
-    members,
-    ...(await tripPeople(userId, trip)),
-    bookingTotals: trip.shareGroupId ? await groupBookingTotals(trip.shareGroupId, userId) : [],
-    candidates: companions.flatMap((c) =>
-      c.linkedUser
-        ? [
-            {
-              companionId: c.id,
-              name: c.displayName,
-              user: toPerson(c.linkedUser),
-              consenting: consenting.has(c.linkedUser.id),
-              shared: memberIds.has(c.linkedUser.id),
-            },
-          ]
-        : []
-    ),
-  };
+  return { groupId: trip.shareGroupId, ...people, bookingTotals };
 }

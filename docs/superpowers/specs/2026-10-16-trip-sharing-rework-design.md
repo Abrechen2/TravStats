@@ -310,8 +310,8 @@ schemas/sharing.ts (Zod unions) ⇄ migration share_vocabulary_checks ⇄ shareV
                     | "alreadyMember" | null;
   }
   ```
-  `members` and `candidates` are served alongside until the last task removes them (only the
-  web reads them; the Companion does not call `/sharing` — checked 2026-10-16).
+  `members` and `candidates` were served alongside for one deploy and are removed (only the
+  web read them; the Companion does not call `/sharing` — checked 2026-10-16).
 - `POST /sharing/trips/:tripId/share` — `created` gains `ferryJourneys`; the counts object's
   keys are the registry's count keys.
 - `GET /sharing/notices` — `entityType` is the enum `trip | <SHARE_ENTITIES>`; `kind` the

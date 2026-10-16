@@ -34,8 +34,6 @@ describe("TripShareMenu", () => {
     demo.value = false;
     api.tripSharing.mockResolvedValue({
       groupId: null,
-      members: [],
-      candidates: [],
       bookingTotals: [],
       people: [],
       linkableUsers: [],

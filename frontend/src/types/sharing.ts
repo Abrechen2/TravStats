@@ -40,14 +40,6 @@ export interface LinkableCompanionList {
   linkableUsers: SharePerson[];
 }
 
-export interface ShareCandidate {
-  companionId: string;
-  name: string;
-  user: SharePerson;
-  consenting: boolean;
-  shared: boolean;
-}
-
 /** Another member's booking total for their trip of the group, read-only (decision 2). */
 export interface MemberBookingTotal {
   member: SharePerson;
@@ -85,8 +77,6 @@ export interface TripPerson {
 
 export interface TripSharing {
   groupId: string | null;
-  members: SharePerson[];
-  candidates: ShareCandidate[];
   people: TripPerson[];
   /** Accounts that accepted the caller's consent request. */
   linkableUsers: SharePerson[];

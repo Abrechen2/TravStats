@@ -29,8 +29,6 @@ vi.mock("@/lib/api/sharing", () => ({
   sharingApi: {
     tripSharing: vi.fn().mockResolvedValue({
       groupId: null,
-      members: [],
-      candidates: [],
       people: [],
       linkableUsers: [],
       bookingTotals: [],

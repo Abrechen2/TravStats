@@ -181,10 +181,9 @@ registry.registerPath({
   request: { params: tripParam },
   responses: {
     200: ok(
-      "The trip's people with their sharing state; members/candidates are deprecated",
+      "The trip's people with their sharing state",
       z.object({
         groupId: z.string().nullable(),
-        members: z.array(person),
         bookingTotals: z
           .array(
             z.object({
@@ -193,15 +192,6 @@ registry.registerPath({
             })
           )
           .describe("The other members' booking totals for their trip of the group, read-only"),
-        candidates: z.array(
-          z.object({
-            companionId: z.string(),
-            name: z.string(),
-            user: person,
-            consenting: z.boolean(),
-            shared: z.boolean(),
-          })
-        ),
         people: z
           .array(
             z.object({

@@ -42,8 +42,6 @@ const row = (over: Partial<TripPerson>): TripPerson => ({
 });
 const view: TripSharing = {
   groupId: "g1",
-  members: [],
-  candidates: [],
   bookingTotals: [],
   linkableUsers: [account("ben")],
   people: [
