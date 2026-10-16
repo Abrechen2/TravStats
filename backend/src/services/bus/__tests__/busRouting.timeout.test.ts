@@ -62,7 +62,16 @@ it("shares one actual road calculation across ten buses and a roadtrip", async (
   );
   const provider = createCustomOsrm(`https://${randomUUID()}.test`, fetchImpl);
   (resolveRouteProvider as jest.Mock).mockResolvedValue(provider);
-  const spend = jest.spyOn(budget, "takeProviderCall");
+  // Bus routing draws through `providerCallGate`; count the gate's real checks.
+  const realGate = budget.providerCallGate;
+  const spend = jest.fn();
+  const gate = jest.spyOn(budget, "providerCallGate").mockImplementation((userId) => {
+    const check = realGate(userId);
+    return () => {
+      spend();
+      return check();
+    };
+  });
   try {
     const buses = await Promise.all(
       Array.from({ length: 10 }, () => fetchBusLine("repeat-bus-test", ends))
@@ -78,6 +87,6 @@ it("shares one actual road calculation across ten buses and a roadtrip", async (
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     expect(spend).toHaveBeenCalledTimes(1);
   } finally {
-    spend.mockRestore();
+    gate.mockRestore();
   }
 });

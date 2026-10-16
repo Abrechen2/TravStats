@@ -6,6 +6,7 @@ import { ACCEPTED_LEG_SOURCES } from "../../../schemas/tour";
 import type { LegPair } from "../../../shared/tour/legPlan";
 import logger from "../../../utils/logger";
 import { LEG_MODES, type LegMode } from "../tourDistance";
+import { providerCallGate } from "./providerBudget";
 import { resolveRouteProvider } from "./resolveProvider";
 import { routeLegGeometry, type RoutedLeg } from "./routeLeg";
 import { isRoutableMode, type RouteProvider, type RoutableMode } from "./types";
@@ -67,6 +68,7 @@ export function withTimeout<T>(work: Promise<T>, ms: number): Promise<T | null> 
 }
 
 async function routeLegs(
+  userId: string,
   provider: RouteProvider,
   routeId: string,
   pairs: readonly LegPair[]
@@ -99,12 +101,16 @@ async function routeLegs(
       continue;
     }
     const routed = await withTimeout(
-      routeLegGeometry(provider, {
-        from: { lat: a.lat, lon: a.lon },
-        to: { lat: b.lat, lon: b.lon },
-        mode,
-        vehicle,
-      }),
+      routeLegGeometry(
+        provider,
+        {
+          from: { lat: a.lat, lon: a.lon },
+          to: { lat: b.lat, lon: b.lon },
+          mode,
+          vehicle,
+        },
+        providerCallGate(userId)
+      ),
       AUTO_ROUTE_LEG_TIMEOUT_MS
     );
     // A provider that failed, timed out or answered something untrustworthy
@@ -141,7 +147,7 @@ export async function autoRouteNewLegs(
   try {
     const provider = await resolveRouteProvider(userId);
     if (!provider) return 0;
-    const routedCount = await routeLegs(provider, routeId, pairs);
+    const routedCount = await routeLegs(userId, provider, routeId, pairs);
     logger.info({
       operation: "tour.route.auto",
       routeId,

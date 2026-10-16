@@ -5,7 +5,7 @@ import { readStoredLine } from "../rail/railGeometry";
 import { lineLengthKm, type LonLat } from "../rail/railGeometryMath";
 import { withTimeout } from "../tour/routing/autoRouteLegs";
 import { isSharedDemoUser } from "../../utils/sharedDemo";
-import { takeProviderCall } from "../tour/routing/providerBudget";
+import { providerCallGate } from "../tour/routing/providerBudget";
 import { resolveRouteProvider } from "../tour/routing/resolveProvider";
 import { routeLegGeometry } from "../tour/routing/routeLeg";
 import type { RouteFallbackReason } from "../tour/routing/types";
@@ -75,7 +75,7 @@ export async function fetchBusLine(userId: string, ends: BusEnds): Promise<BusLi
           to: { lat: ends.arrLat, lon: ends.arrLon },
           mode: "road",
         },
-        () => takeProviderCall(userId) === "ok"
+        providerCallGate(userId)
       ),
       BUS_ROUTE_TIMEOUT_MS
     );
