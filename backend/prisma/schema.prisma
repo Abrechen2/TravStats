@@ -1371,7 +1371,7 @@ model PendingFlightUpdate {
   id               String    @id @default(uuid())
   flightId         String    @map("flight_id")
   userId           String    @map("user_id")
-  status           String    @default("pending") // "pending" | "applied" | "rejected" | "expired" | "edited"
+  status           String    @default("pending") // "pending" | "applied" | "rejected" | "expired" | "edited" | "superseded" (a shared trip's propagated change brought every proposed field — services/sharing/pendingSupersede.ts)
   originalData     Json      @map("original_data")
   proposedData     Json      @map("proposed_data")
   editedData       Json?     @map("edited_data")

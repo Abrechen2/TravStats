@@ -289,7 +289,7 @@ export interface PendingUpdate {
   id: string;
   flightId: string;
   userId: string;
-  status: "pending" | "applied" | "rejected" | "expired" | "edited";
+  status: "pending" | "applied" | "rejected" | "expired" | "edited" | "superseded";
   originalData: FlightUpdateData;
   proposedData: FlightUpdateData;
   editedData?: FlightUpdateData;

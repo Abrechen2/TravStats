@@ -100,7 +100,7 @@ const PROVENANCE_FIELDS = new Set([
 ]);
 
 /** Compare a stored value with its snapshot form — dates arrive as strings. */
-function sameStoredValue(current: unknown, snapshot: unknown): boolean {
+export function sameStoredValue(current: unknown, snapshot: unknown): boolean {
   if (current instanceof Date) {
     if (snapshot === null || snapshot === undefined) return false;
     const asDate = new Date(String(snapshot));

@@ -7,6 +7,7 @@ import { copyInto } from "./copyInto";
 import { changedKeys, jsonSubset, sameFact } from "./factValues";
 import { restatusTrips } from "../trip/restatusTrips";
 import { DERIVE } from "./deriveCopy";
+import { supersedeSatisfied } from "./pendingSupersede";
 import { receivingMembers, type MemberTrip } from "./members";
 import { asPropagation, isPropagating } from "./propagationGuard";
 
@@ -237,7 +238,7 @@ async function updateCopies(
     // The trip's status caches its entries' dates; the route that made the
     // change re-derives only the writer's own trip.
     await restatusTrips([member.id], c);
-    await recordEntryNotice(c, {
+    const noticeId = await recordEntryNotice(c, {
       recipient: member,
       groupId,
       actorId,
@@ -250,6 +251,8 @@ async function updateCopies(
         facts: jsonSubset((applied ?? row).facts, keys),
       },
     });
+    // Flights are the one type with provider suggestions (PendingFlightUpdate).
+    if (adapter.entity === "flight") await supersedeSatisfied(c, copy.id, { noticeId, actorId });
   }
 }
 
