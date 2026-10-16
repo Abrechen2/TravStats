@@ -676,11 +676,9 @@ registerSectionPath({
     "its straight chord, same as an individual provider failure would, and " +
     "the response says so honestly via `routedCount` (legs the provider " +
     "routed), `fallbackCount` (legs left a straight chord, with the first " +
-    "cause in `fallbackReason`) and `skippedCount` (legs left alone: their " +
-    "mode is not routable, they are not a straight chord — drawn, track and " +
-    "routed lines are kept — or they were edited while the provider " +
-    "answered). This always answers 200: " +
-    "routing that did not produce a route is not a request error.",
+    "cause in `fallbackReason`) and `skippedCount` (legs left alone: ferry/rail, " +
+    "drawn/track/routed lines, or a leg edited while the provider answered). " +
+    "Always 200: routing that did not produce a route is not a request error.",
   tags: ["Tours"],
   request: { params: routeIdParams },
   responses: {
@@ -697,10 +695,7 @@ registerSectionPath({
               .int()
               .describe("Legs sent to the provider that stayed a straight chord"),
             fallbackReason,
-            skippedCount: z
-              .number()
-              .int()
-              .describe("Legs left alone — ferry/rail, or not a straight chord"),
+            skippedCount: z.number().int().describe("Legs left alone, not a straight road leg"),
           }),
         },
       },
