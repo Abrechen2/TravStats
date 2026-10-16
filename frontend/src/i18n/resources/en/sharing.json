@@ -129,6 +129,37 @@
     "undoUnavailable": "This notice cannot be undone (any more).",
     "copyNotFound": "Your copy of this entry no longer exists."
   },
+  "shareDialog": {
+    "title": "Share trip with {{name}}",
+    "titlePick": "Share trip",
+    "person": "With whom",
+    "copied": "{{name}} gets their own copy of this trip: flights, stays, cruises, train, bus and ferry rides, rentals and stops with their times, places and status. When one of you changes something later, it reaches everyone and can be undone in the inbox.",
+    "private": "Staying private: seat, cabin and room, your price, booking references, ratings, notes, photos, journal and documents.",
+    "final": "This cannot be taken back: {{name}} keeps the copy even if one of you leaves the shared trip.",
+    "confirm": "Share trip",
+    "done": "Trip shared with {{name}}.",
+    "nobody": "Right now you can't share this trip with anyone. Link travellers to their account — that works once they have accepted your request.",
+    "blockedTitle": "Not possible right now",
+    "blocked": {
+      "notLinked": "{{name}} is not linked to an account.",
+      "consentMissing": "{{name}} has not agreed to share with you yet. You have not sent a request.",
+      "consentPending": "Your request to {{name}} is still open.",
+      "groupConsentMissing": "{{name}} first has to connect with everyone who already shares this trip.",
+      "alreadyMember": "{{name}} is already part of this shared trip.",
+      "accountInactive": "{{name}}'s account is deactivated."
+    }
+  },
+  "linkDialog": {
+    "title": "Link {{name}} to an account",
+    "account": "Account",
+    "choose": "Choose an account",
+    "link": "Link",
+    "linked": "{{name}} is now linked to @{{username}}.",
+    "requestIntro": "Nobody has accepted your request yet. Send {{name}} a request by username; once they accept, you can link here.",
+    "username": "Username",
+    "request": "Send request",
+    "requested": "Request sent to @{{username}}."
+  },
   "entityTypes": {
     "trip": "the trip",
     "flight": "the flight",

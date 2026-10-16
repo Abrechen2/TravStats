@@ -129,6 +129,37 @@
     "undoUnavailable": "Diese Mitteilung lässt sich nicht (mehr) rückgängig machen.",
     "copyNotFound": "Deine Kopie dieses Eintrags gibt es nicht mehr."
   },
+  "shareDialog": {
+    "title": "Reise mit {{name}} teilen",
+    "titlePick": "Reise teilen",
+    "person": "Mit wem",
+    "copied": "{{name}} bekommt eine eigene Kopie dieser Reise: Flüge, Unterkünfte, Kreuzfahrten, Bahn-, Bus- und Fährfahrten, Mietwagen und Stopps mit Zeiten, Orten und Status. Ändert einer von euch später etwas daran, kommt es bei allen an und lässt sich im Posteingang rückgängig machen.",
+    "private": "Privat bleiben: Sitzplatz, Kabine und Zimmer, dein Preis, Buchungsnummern, Bewertungen, Notizen, Fotos, Tagebuch und Dokumente.",
+    "final": "Das lässt sich nicht zurücknehmen: {{name}} behält die Kopie, auch wenn einer von euch die geteilte Reise verlässt.",
+    "confirm": "Reise teilen",
+    "done": "Reise mit {{name}} geteilt.",
+    "nobody": "Gerade kannst du diese Reise mit niemandem teilen. Verknüpfe Reisende mit ihrem Konto — das geht, sobald die Person deiner Anfrage zugestimmt hat.",
+    "blockedTitle": "Gerade nicht möglich",
+    "blocked": {
+      "notLinked": "{{name}} ist mit keinem Konto verknüpft.",
+      "consentMissing": "{{name}} hat dem Teilen mit dir noch nicht zugestimmt. Du hast noch keine Anfrage gesendet.",
+      "consentPending": "Deine Anfrage an {{name}} ist noch offen.",
+      "groupConsentMissing": "{{name}} muss sich erst mit allen verbinden, die diese Reise schon teilen.",
+      "alreadyMember": "{{name}} ist schon Teil dieser geteilten Reise.",
+      "accountInactive": "Das Konto von {{name}} ist deaktiviert."
+    }
+  },
+  "linkDialog": {
+    "title": "{{name}} mit Konto verknüpfen",
+    "account": "Konto",
+    "choose": "Konto wählen",
+    "link": "Verknüpfen",
+    "linked": "{{name}} ist jetzt mit @{{username}} verknüpft.",
+    "requestIntro": "Noch hat niemand deiner Anfrage zugestimmt. Schick {{name}} eine Anfrage über den Benutzernamen; sobald sie zustimmt, kannst du hier verknüpfen.",
+    "username": "Benutzername",
+    "request": "Anfrage senden",
+    "requested": "Anfrage an @{{username}} gesendet."
+  },
   "entityTypes": {
     "trip": "die Reise",
     "flight": "den Flug",
