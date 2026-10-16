@@ -618,21 +618,22 @@ router.post(
         throw new AppError("One or more flights not found", 404);
       }
 
-      const before = await shareSnapshots(prisma, "flight", flightIds);
-      if (action === "add") {
-        await prisma.flight.updateMany({
-          where: { id: { in: flightIds }, userId },
-          data: { tripId: trip.id },
-        });
-      } else {
-        await prisma.flight.updateMany({
-          where: { id: { in: flightIds }, userId, tripId: trip.id },
-          data: { tripId: null },
-        });
-      }
-
-      // Into a shared trip: copied to the others; out of one: they are told.
-      await propagateWrites(prisma, userId, "flight", flightIds, before);
+      await prisma.$transaction(async (tx) => {
+        const before = await shareSnapshots(tx, "flight", flightIds);
+        if (action === "add") {
+          await tx.flight.updateMany({
+            where: { id: { in: flightIds }, userId },
+            data: { tripId: trip.id },
+          });
+        } else {
+          await tx.flight.updateMany({
+            where: { id: { in: flightIds }, userId, tripId: trip.id },
+            data: { tripId: null },
+          });
+        }
+        // Into a shared trip: copied to the others; out of one: they are told.
+        await propagateWrites(tx, userId, "flight", flightIds, before);
+      });
       await recomputeTripStatus(trip.id);
 
       res.json({
