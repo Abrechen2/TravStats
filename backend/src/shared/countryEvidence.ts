@@ -243,12 +243,12 @@ export function parseCountryTier(value: unknown): CountryTier | null {
  * curated kind that can produce `transited`: a station driven through records
  * the road crossing no flight, cruise or house ever could.
  *
- * `rail` is a station end of a completed train ride (2.7): the traveller stood
- * on the ground there. A change of trains grades `transited`, never
- * `connection` — see `services/stats/railEvidence.ts`.
- *
- * `bus` is a terminal end of a completed bus ride (forgejo#265), graded like
- * rail's — see `services/stats/busEvidence.ts`.
+ * `rail` is a station end of a completed train ride (2.7), `bus` a terminal
+ * end of a completed coach ride (forgejo#265). Since the owner ruling of
+ * 2026-10-16 both are graded like flights, in one chain with them
+ * (`services/stats/journeyEvidence.ts`): out and back proves a visit, a
+ * change station is `transited` (ground, never `connection`, which stays the
+ * airside change of planes), an open chain is unclear.
  */
 export type EvidenceKind =
   "flight" | "lodging" | "port" | "place" | "rail" | "bus" | "roadtrip" | "track";

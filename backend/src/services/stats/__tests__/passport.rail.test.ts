@@ -3,10 +3,10 @@
  * counted a ride's countries while the passport and the country drill-down did
  * not know them — the same account showed two country totals on two pages.
  *
- * The tier is structural, as for flights: an arrival and the next departure
- * from that country on another day is `slept`; on the same day it is a day trip
- * (`visited`) when the next ride goes back, a change of trains (`transited`)
- * when it goes on; an end with no partner is `visited`.
+ * Since the owner ruling of 2026-10-16 a ride counts like a flight, in one
+ * chain with flights and coaches (forgejo#299): see
+ * `passport.surfaceChains.test.ts` for the round trip, the change station,
+ * the open chain and the mixed flight-out/train-back case.
  */
 import { buildPassport } from "../passport";
 import { buildCountryDetail } from "../countryDetail";
@@ -29,58 +29,30 @@ const ride = (
   ...over,
 });
 
-const tierOf = (ends: ReturnType<typeof railEnds>, rideId: string, country: string) =>
-  ends.find((e) => e.rideId === rideId && e.country === country)?.tier;
-
-describe("railEnds — what a train ride proves", () => {
-  it("grades an end with no partner `visited`, and skips a station without a country", () => {
+/**
+ * Owner ruling 2026-10-16 (forgejo#299): what a ride PROVES is graded by the
+ * travel chain (`journeyEvidence.ts`, pinned in `passport.surfaceChains.test.ts`),
+ * not here. `railEnds` only names the station ends and hands each its ride as
+ * a chain leg — these pin that hand-over.
+ */
+describe("railEnds — the station ends of a ride, each carrying its leg", () => {
+  it("names both ends with their own day, and skips a station without a country", () => {
     const ends = railEnds([ride({ id: "a", arrCountry: null })]);
     expect(ends).toHaveLength(1);
-    expect(ends[0]).toMatchObject({ country: "DE", tier: "visited", days: ["2025-03-01"] });
+    expect(ends[0]).toMatchObject({ country: "DE", days: ["2025-03-01"] });
+    // The leg still knows the arrival is unplaced, so the chain cannot read a
+    // return out of a missing country.
+    expect(ends[0].leg).toMatchObject({
+      mode: "rail",
+      depCountry: "DE",
+      arrCountry: null,
+      depDay: "2025-03-01",
+      arrDay: "2025-03-01",
+    });
   });
 
-  it("grades a change of trains on the same day `transited`", () => {
-    const ends = railEnds([
-      ride({ id: "a" }),
-      ride({
-        id: "b",
-        depStationName: "Basel SBB",
-        depCountry: "CH",
-        depTimezone: "Europe/Zurich",
-        arrStationName: "Milano Centrale",
-        arrCountry: "IT",
-        arrTimezone: "Europe/Rome",
-        departureTime: new Date("2025-03-01T10:30:00Z"),
-        arrivalTime: new Date("2025-03-01T14:00:00Z"),
-      }),
-    ]);
-    expect(tierOf(ends, "a", "CH")).toBe("transited");
-    expect(tierOf(ends, "b", "CH")).toBe("transited");
-    expect(tierOf(ends, "b", "IT")).toBe("visited");
-  });
-
-  it("grades a same-day return `visited` and a night between two rides `slept`", () => {
-    const back = (id: string, day: string) =>
-      ride({
-        id,
-        depStationName: "Basel SBB",
-        depCountry: "CH",
-        depTimezone: "Europe/Zurich",
-        arrStationName: "Frankfurt (Main) Hbf",
-        arrCountry: "DE",
-        arrTimezone: "Europe/Berlin",
-        departureTime: new Date(`${day}T17:00:00Z`),
-        arrivalTime: new Date(`${day}T20:00:00Z`),
-      });
-    expect(tierOf(railEnds([ride({ id: "a" }), back("b", "2025-03-01")]), "a", "CH")).toBe(
-      "visited"
-    );
-    const overnight = railEnds([ride({ id: "a" }), back("b", "2025-03-03")]);
-    expect(tierOf(overnight, "a", "CH")).toBe("slept");
-    expect(overnight.find((e) => e.rideId === "a" && e.country === "CH")?.days).toEqual([
-      "2025-03-01",
-      "2025-03-03",
-    ]);
+  it("files a bus ride's ends as `bus` legs", () => {
+    expect(railEnds([ride({ id: "a" })], "bus")[0].leg.mode).toBe("bus");
   });
 
   it("reads the day on the station's clock, not in UTC", () => {

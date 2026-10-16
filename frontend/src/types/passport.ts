@@ -115,7 +115,7 @@ export type CountryGroundTime =
  * Why a ground-presence country's visit cannot be decided (forgejo#299) —
  * mirrors `PassportUnclearReason` in backend `services/stats/passport.ts`.
  */
-export type PassportUnclearReason = "openChain" | "noDestination" | "undated" | "stationOnly";
+export type PassportUnclearReason = "openChain" | "noDestination" | "undated";
 
 export interface PassportCountry {
   groundPresence?: boolean;

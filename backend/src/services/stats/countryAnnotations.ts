@@ -6,15 +6,15 @@
  */
 import { toCountryCode, type EvidenceInput, type EvidenceKind } from "../../shared/countryEvidence";
 import type { DomainKey } from "../../shared/domains";
-import type { VisitUnclearReason } from "./flightEvidence";
+import type { VisitUnclearReason } from "./journeyEvidence";
 
 /**
  * Why a ground-presence country may or may not have been visited — the
- * flight chain's own reasons, plus `stationOnly`: a train or bus station
- * proves ground contact, and nothing records whether the traveller went
- * further than the platform.
+ * travel chain's own reasons (`./journeyEvidence.ts`). Train and coach
+ * stations follow the same chain since the owner ruling of 2026-10-16, so the
+ * former blanket `stationOnly` reason is gone.
  */
-export type PassportUnclearReason = VisitUnclearReason | "stationOnly";
+export type PassportUnclearReason = VisitUnclearReason;
 
 /** One domain's share in a visited country; `VisitedCountrySource` minus the code. */
 export interface CountryVisitSource {
@@ -52,7 +52,6 @@ export function countryAnnotations(inputs: readonly AnnotatedInput[]) {
     const reasons = new Set<PassportUnclearReason>();
     for (const input of byCode.get(code) ?? []) {
       if (input.unclear) reasons.add(input.unclear);
-      if (input.kind === "rail" || input.kind === "bus") reasons.add("stationOnly");
     }
     return [...reasons].sort();
   };

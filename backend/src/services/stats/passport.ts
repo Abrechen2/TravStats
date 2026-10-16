@@ -2,6 +2,8 @@
  * Country evidence for the passport and its dependent statistics (forgejo#299).
  * Ground presence includes flown endpoints, transit and curated road stations.
  * Visits require an actual destination, a confirmed place or a non-transit stay.
+ * Owner rulings 2026-10-16: a port call is a visit; train and coach rides
+ * count like flights, in one chain with them (`./journeyEvidence.ts`).
  * Raw location observations never prove either set. Planned and cancelled
  * travel is excluded; undated confirmed records remain undated.
  * Each country appears once, with its evidence and uncertainty retained.
@@ -25,7 +27,8 @@ import {
   type EvidenceInput,
   type EvidenceKind,
 } from "../../shared/countryEvidence";
-import { FLOWN, flightDay, flightEvidence, isoDayOf, type PassportFlight } from "./flightEvidence";
+import { FLOWN, flightDay, flightLegs, isoDayOf, type PassportFlight } from "./flightEvidence";
+import { journeyEvidence } from "./journeyEvidence";
 import {
   countryAnnotations,
   type CountryVisitSource,
@@ -38,8 +41,8 @@ import {
 } from "./trackEvidence";
 import { localDay } from "../../shared/time/instant";
 import { roadtripEvidence, type PassportRoadtripStation } from "./roadtripEvidence";
-import { railEvidence, type RailEnd } from "./railEvidence";
-import { busEvidence, type BusEnd } from "./busEvidence";
+import { legsOfEnds, type RailEnd } from "./railEvidence";
+import type { BusEnd } from "./busEvidence";
 import { countEvidencePerCountry } from "./evidenceCountry";
 import { lodgingStampsPerCountry, type LodgingStamp, type StampLodging } from "./lodgingStamp";
 
@@ -379,7 +382,7 @@ export function buildPassport(
    * overview counted a roadtrip's countries while the passport did not.
    */
   roadtripStations: readonly PassportRoadtripStation[] = [],
-  /** Station ends of completed train rides, graded by `./railEvidence.ts`. */
+  /** Station ends of completed train rides (`./railEvidence.ts`), each with its ride as a leg. */
   railEnds: readonly RailEnd[] = [],
   /**
    * The user's profile zone: "this year" for `isNew` is THEIR year. Stamps are
@@ -577,9 +580,13 @@ export function buildPassport(
   const countryOfAirport = (iata: string | null): string | null =>
     iata ? isoCountryCode(airportCountries.get(iata.toUpperCase()) ?? null) : null;
 
-  const flightInputs = flightEvidence(flights, countryOfAirport, homeCountrySet);
+  // Flights, trains and coaches as ONE chain (owner ruling 2026-10-16).
+  const journeyInputs = journeyEvidence(
+    [...flightLegs(flights, countryOfAirport), ...legsOfEnds(railEnds), ...legsOfEnds(busEnds)],
+    homeCountrySet
+  );
   const evidenceInputs: EvidenceInput[] = [
-    ...flightInputs,
+    ...journeyInputs,
     ...portCalls.map((call): EvidenceInput => {
       const from = isoDayOf(call.at);
       const to = isoDayOf(call.until);
@@ -607,8 +614,6 @@ export function buildPassport(
     ...lodgingInputs,
     // Curated roadtrip stations attest ground travel; raw location points do not.
     ...roadtripEvidence(roadtripStations),
-    ...railEvidence(railEnds),
-    ...busEvidence(busEnds),
   ];
   const evidence = foldCountryEvidence(evidenceInputs);
   const annotations = countryAnnotations(evidenceInputs);

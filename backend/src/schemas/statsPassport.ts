@@ -26,7 +26,7 @@ export const evidenceKindSchema = z.enum([
 ]);
 export const countryTierSchema = z.enum(["slept", "visited", "transited", "connection"]);
 
-const visitUnclearReasonSchema = z.enum(["openChain", "noDestination", "undated", "stationOnly"]);
+const visitUnclearReasonSchema = z.enum(["openChain", "noDestination", "undated"]);
 
 export const passportCountrySchema = z.object({
   groundPresence: z.boolean().describe('"Am Boden gewesen" — true on every row'),

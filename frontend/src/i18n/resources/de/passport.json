@@ -26,11 +26,11 @@
     "slept": "Übernachtet",
     "sleptExplained": "Ein tatsächlicher Unterkunftsaufenthalt oder eine bestätigte Übernachtung außerhalb reiner Transitorte. Ein Datumswechsel allein reicht nicht.",
     "visited": "Besucht",
-    "visitedExplained": "Ein bestätigter Ortsbesuch oder ein nachvollziehbares Hin-/Rückflugziel. Standortpunkte und die Dauer eines Umstiegs reichen nicht.",
+    "visitedExplained": "Ein bestätigter Ortsbesuch, ein Landgang, dein Wohnland oder ein Reiseziel mit Hin- und Rückreise – per Flug, Bahn oder Bus, auch gemischt. Standortpunkte und die Dauer eines Umstiegs reichen nicht.",
     "connection": "Flug-Endpunkt / Umstieg",
     "connectionExplained": "Der Flug belegt Bodenkontakt. Ein Besuch außerhalb des Flughafens ist noch nicht belegt. Bestätigte Ortsbesuche oder Unterkünfte können ihn ergänzen.",
     "transited": "Bodenkontakt",
-    "transitedExplained": "Ein belegter Zwischenstopp oder eine Durchfahrt, etwa an Bahnhof, Hafen oder Raststätte. Zählt als Bodenkontakt; ein tatsächlicher Besuch braucht einen weiteren Beleg."
+    "transitedExplained": "Ein belegter Zwischenstopp oder eine Durchfahrt, etwa ein Umsteigebahnhof oder eine Raststätte. Zählt als Bodenkontakt; ein tatsächlicher Besuch braucht einen weiteren Beleg."
   },
   "kinds": {
     "flight": "Flug",
@@ -98,10 +98,9 @@
     "visitUncertain": "Besuch unklar",
     "unclearResolve": "Ein bestätigter Ort, eine Unterkunft oder der fehlende Flug klärt es.",
     "unclearReason": {
-      "openChain": "Die erfasste Reisekette bricht hier ab (einfacher Flug, Gabelflug oder erster/letzter Flug).",
+      "openChain": "Die erfasste Reisekette bricht hier ab (einfache Fahrt oder einfacher Flug, Gabelflug, erste oder letzte Reise).",
       "noDestination": "Die Reise kehrt nirgends um – welches Land das Ziel war, lässt sich nicht entscheiden.",
-      "undated": "Der Flug hat kein Datum und lässt sich keiner Reisekette zuordnen.",
-      "stationOnly": "Ein Bahnhof oder Busbahnhof belegt nur Bodenkontakt."
+      "undated": "Die Reise hat kein Datum und lässt sich keiner Reisekette zuordnen."
     }
   },
   "thresholdChoice": {

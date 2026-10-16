@@ -105,17 +105,18 @@ describe("bus in the cross-domain figures and the passport", () => {
       .query({ domains, period: "year", year: 2025 })
       .set("Cookie", cookie);
 
-  it("counts each completed coach ride once beside the flight — no second day, no visit from stations", async () => {
+  it("counts each completed coach ride once beside the flight, and the coach round trip as a visit", async () => {
     await updateInstanceSettings({ betaFeaturesEnabled: true });
     const events = await metric("crossDomainEventCount");
     expect(events.status).toBe(200);
     expect(events.body.measure.value).toBe(3);
     // 10 May (flight + coach) and 12 May — the cancelled ride's day is no day.
     expect((await metric("crossDomainActiveDayCount")).body.measure.value).toBe(2);
-    // "Länder besucht" (forgejo#299): the one-way flight leaves DE and CZ open
-    // chain ends, and a coach station proves ground contact only — so no
-    // visited country, where the touched-country count said 3. Never HU.
-    expect((await metric("crossDomainCountryCount")).body.measure.value).toBe(0);
+    // "Länder besucht" (forgejo#299, owner ruling 2026-10-16: a coach counts
+    // like a flight): Prague -> Vienna and back proves AT visited; CZ is the
+    // change point of the flight-in/coach-out chain and DE an open end, so
+    // both are ground only. 1, where the touched-country count said 3. Never HU.
+    expect((await metric("crossDomainCountryCount")).body.measure.value).toBe(1);
     const busEntry = events.body.entries.find((e: { domain: string }) => e.domain === "bus");
     expect(busEntry.href).toMatch(/^\/bus\//);
   });

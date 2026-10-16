@@ -26,11 +26,11 @@
     "slept": "Stayed overnight",
     "sleptExplained": "An actual lodging stay or confirmed overnight beyond transit locations. A calendar-day change alone is insufficient.",
     "visited": "Visited",
-    "visitedExplained": "A confirmed place visit or identifiable return-flight destination. Location points and connection duration are insufficient.",
+    "visitedExplained": "A confirmed place visit, a port call, the country you live in, or a destination with an outbound and a return trip – by air, rail or bus, mixed too. Location points and connection duration are insufficient.",
     "connection": "Flight endpoint / connection",
     "connectionExplained": "The flight proves ground contact. A visit outside the airport is not established. Confirmed place visits or lodging can provide that evidence.",
     "transited": "Ground presence",
-    "transitedExplained": "A recorded stop or ground transit, such as a station, port or rest area. Counts as ground presence; an actual visit requires further evidence."
+    "transitedExplained": "A recorded stop or ground transit, such as a change station or a rest area. Counts as ground presence; an actual visit requires further evidence."
   },
   "kinds": {
     "flight": "Flight",
@@ -98,10 +98,9 @@
     "visitUncertain": "Visit unclear",
     "unclearResolve": "A confirmed place, a stay or the missing flight settles it.",
     "unclearReason": {
-      "openChain": "The recorded trip breaks off here (one-way, open-jaw, or the first/last flight).",
+      "openChain": "The recorded trip breaks off here (a one-way flight or ride, an open jaw, or the first or last trip).",
       "noDestination": "The trip never turns around – which country was the destination cannot be decided.",
-      "undated": "The flight has no date and cannot be placed in a trip.",
-      "stationOnly": "A train or bus station proves ground contact only."
+      "undated": "The trip has no date and cannot be placed in a chain."
     }
   },
   "thresholdChoice": {

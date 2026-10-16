@@ -45,7 +45,7 @@
         "exclusions": "Geplantes und Storniertes zählt nicht. Mietwagen und Tagestouren zählen hier nicht. Ein Roadtrip und die mit ihm verknüpften Aufenthalte sind verschiedene Einträge und zählen je einmal; ihre Nächte und Tage werden hier nicht addiert."
       },
       "countries": {
-        "unit": "Ein Land, das du besucht hast – wie im Reisepass: Übernachtung, Orts- oder Arbeitsbesuch, Landgang, Hin- und Rückflug ans Ziel oder dein Wohnland. Umstiege, Durchfahrten und unklare Flugketten zählen nicht. Ein Land, das mehrere Bereiche belegen, zählt einmal.",
+        "unit": "Ein Land, das du besucht hast – wie im Reisepass: Übernachtung, Orts- oder Arbeitsbesuch, Landgang, Hin- und Rückreise ans Ziel (Flug, Bahn oder Bus, auch gemischt) oder dein Wohnland. Umstiege, Durchfahrten und unklare Reiseketten zählen nicht. Ein Land, das mehrere Bereiche belegen, zählt einmal.",
         "time": "Im gewählten Jahr zählen Besuche mit Datum in diesem Jahr, sonst alle Jahre. Ein Besuch ohne Datum zählt nur über alle Jahre.",
         "source": "Die Besuche, die die Einträge der eingeschalteten Bereiche belegen.",
         "coverage": "Lässt sich der Reisepass nicht laden, steht hier ein Strich statt einer Zahl. Im laufenden Jahr gibt es keinen Vergleich gleicher Zeiträume, weil Besuche je Jahr und nicht je Tag vorliegen. Ein Tipp auf die Zahl zeigt, welcher Eintrag welchen Besuch belegt.",
