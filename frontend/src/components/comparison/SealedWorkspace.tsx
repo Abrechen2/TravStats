@@ -23,7 +23,6 @@ import type { DeviceKeys } from "../../lib/comparison/crypto";
 import DevicePanel from "./DevicePanel";
 import KeyVerification from "./KeyVerification";
 import FriendManager from "./FriendManager";
-import PeerManager from "./PeerManager";
 import SealedGroups from "./SealedGroups";
 import GrantEditor, { initialScope } from "./GrantEditor";
 import TravelComparison, { type TravelPerson } from "./TravelComparison";
@@ -183,14 +182,7 @@ export default function SealedWorkspace() {
         actions={<Button onClick={() => setTab("friends")}>{t("connect")}</Button>}
       />
       <nav className="flex flex-wrap gap-2 mb-6" aria-label={t("views")}>
-        {[
-          "leaderboard",
-          "friends",
-          "circles",
-          "sharingOverview",
-          "devices",
-          ...(user.isAdmin ? ["peers"] : []),
-        ].map((key) => (
+        {["leaderboard", "friends", "circles", "sharingOverview", "devices"].map((key) => (
           <Button
             key={key}
             disabled={busy}
@@ -233,7 +225,6 @@ export default function SealedWorkspace() {
         />
       )}
       {tab === "sharingOverview" && <SharingOverview links={links} />}
-      {tab === "peers" && user.isAdmin && <PeerManager />}
       {tab === "circles" && (
         <SealedGroups
           links={links}
