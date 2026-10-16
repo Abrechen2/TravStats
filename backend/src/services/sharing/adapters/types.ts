@@ -66,12 +66,17 @@ export interface EntityAdapter {
     recipientId: string,
     recipientTripId: string
   ): Promise<string>;
-  /** Write `values[key]` for every key onto `copy` (the recipient's row). */
+  /**
+   * Write `values[key]` for every key onto `copy` (the recipient's row).
+   * `previous` is what the source held before the change, when known — a
+   * pseudo-fact made of several columns writes only the columns that moved.
+   */
   apply(
     c: DbTransaction,
     copy: SharedRow,
     values: FactRecord,
-    keys: readonly string[]
+    keys: readonly string[],
+    previous?: FactRecord
   ): Promise<void>;
   remove(c: DbTransaction, id: string): Promise<void>;
 }

@@ -116,6 +116,7 @@
     "consentNotFound": "Diese Anfrage gibt es nicht mehr.",
     "notPending": "Diese Anfrage wurde bereits beantwortet.",
     "consentRequired": "Diese Person hat dem Teilen mit dir nicht zugestimmt.",
+    "groupConsentRequired": "Nicht alle, die diese Reise schon teilen, haben dem Teilen mit dieser Person zugestimmt. Sie muss sich erst mit jedem von ihnen verbinden.",
     "companionNotFound": "Diesen Eintrag unter Mitreisende gibt es nicht mehr.",
     "alreadyLinked": "Ein anderer Mitreisender ist bereits mit diesem Konto verknüpft.",
     "notLinked": "Diese Person ist mit keinem Konto verknüpft.",

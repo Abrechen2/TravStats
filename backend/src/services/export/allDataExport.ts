@@ -132,6 +132,7 @@ export const USER_EXPORT_SELECT = {
       year: true,
       fields: true,
       expiresAt: true,
+      effectiveExpiresAt: true,
       viewCount: true,
       lastViewedAt: true,
       createdAt: true,

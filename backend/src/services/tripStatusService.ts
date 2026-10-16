@@ -100,11 +100,16 @@ export async function fillTripDatesFromSegments(tripId: string): Promise<void> {
   });
 }
 
+/**
+ * `client` lets a caller inside a transaction (sharing propagation, ride
+ * create with receipts) read the rows it has just written instead of the
+ * committed state.
+ */
 export async function recomputeTripStatus(
   tripId: string,
-  db: Pick<DbTransaction, "trip"> = prisma
+  client: Pick<DbTransaction, "trip"> = prisma
 ): Promise<void> {
-  const trip = await db.trip.findUnique({
+  const trip = await client.trip.findUnique({
     where: { id: tripId },
     select: {
       userId: true,
@@ -149,5 +154,5 @@ export async function recomputeTripStatus(
   const derived = deriveTripStatus(bounds);
   if (derived == null || derived === trip.status) return;
 
-  await db.trip.update({ where: { id: tripId }, data: { status: derived } });
+  await client.trip.update({ where: { id: tripId }, data: { status: derived } });
 }

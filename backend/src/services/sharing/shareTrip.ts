@@ -17,6 +17,7 @@ import {
 } from "./copyEntries";
 import { groupBookingTotals, type MemberBookingTotal } from "./bookingTotals";
 import { detachTrip } from "./detach";
+import { acceptedWith } from "./members";
 import { tripFacts } from "./facts";
 import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
 
@@ -69,6 +70,32 @@ async function recipientTrip(
   return { id: created.id, created: true };
 }
 
+/**
+ * Owner decision 2026-10-16: joining a group hands the newcomer writes into
+ * every member's copy, so the sharer's consent alone does not admit them. Each
+ * other current member must have an accepted consent with the recipient.
+ */
+async function requireGroupConsent(
+  tx: DbTransaction,
+  groupId: string,
+  sharerId: string,
+  recipientId: string
+): Promise<void> {
+  const memberTrips = await tx.trip.findMany({
+    where: { shareGroupId: groupId, userId: { notIn: [sharerId, recipientId] } },
+    select: { userId: true },
+  });
+  const others = [...new Set(memberTrips.map((t) => t.userId))];
+  const consenting = await acceptedWith(tx, recipientId, others);
+  if (others.some((id) => !consenting.has(id))) {
+    throw new AppError(
+      "Not every member of this trip has agreed to sharing with this account",
+      403,
+      "SHARE_GROUP_CONSENT_REQUIRED"
+    );
+  }
+}
+
 export async function shareTrip(
   userId: string,
   tripId: string,
@@ -91,6 +118,9 @@ export async function shareTrip(
       // withdrawn after the link was made.
       if (!(await hasAcceptedConsent(tx, userId, recipientId))) throw consentRequired();
 
+      if (trip.shareGroupId) {
+        await requireGroupConsent(tx, trip.shareGroupId, userId, recipientId);
+      }
       let groupId = trip.shareGroupId;
       if (!groupId) {
         const group = await tx.tripShareGroup.create({ data: { createdById: userId } });

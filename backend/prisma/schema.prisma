@@ -349,7 +349,14 @@ model PublicShareLink {
   /// The photos the owner saw in the preview, in order; the public proxy is keyed by index into this.
   photoIds     String[]  @default([]) @map("photo_ids")
   tokenHash    String    @unique @map("token_hash")
+  /// The owner's chosen end, as they set it.
   expiresAt    DateTime  @map("expires_at")
+  /// When the link really ends: the owner's end, capped at a flight's
+  /// landing-plus-grace when the link was made, and only ever LOWERED after
+  /// that (a flight moved earlier). Stored, because a value recomputed from the
+  /// flight's current times brought an ended link back when the flight was
+  /// moved later, and kept it in the active count while hiding it from the list.
+  effectiveExpiresAt DateTime @map("effective_expires_at")
   viewCount    Int       @default(0) @map("view_count")
   lastViewedAt DateTime? @map("last_viewed_at")
   createdAt    DateTime  @default(now()) @map("created_at")
