@@ -8,7 +8,8 @@
  * at. They are about to lose data they cannot see.
  *
  * A row the file mentioned but FAILED on is in `seen` and therefore safe: a
- * refused row is not permission to delete the record it named.
+ * refused row is not permission to delete the record it named. A refused row
+ * WITHOUT an id names no record we can tell, so then nothing is pruned.
  *
  * Cruise stops and lodging stays are deliberately NOT pruned: they go with
  * their parent (the cascade), and a stays sheet that is merely shorter than
@@ -22,7 +23,7 @@ import {
   collectLodgingPhotoFilenames,
   removeLodgingPhotoFiles,
 } from "../lodging/deleteLodgingPhotoFiles";
-import type { Ctx } from "./context";
+import { UNIDENTIFIED_REFUSAL, type Ctx } from "./context";
 
 export type PrunableModel =
   | "place"
@@ -40,6 +41,13 @@ export async function pruneMissing(
   ctx: Ctx
 ): Promise<number> {
   if (ctx.mode !== "replace") return 0;
+  if (seen.has(UNIDENTIFIED_REFUSAL)) {
+    logger.warn(
+      { operation: "xlsx_import_replace_held", model, userId: ctx.userId },
+      "Spreadsheet import in replace mode pruned nothing: a refused row carried no id"
+    );
+    return 0;
+  }
 
   const where = { userId: ctx.userId, id: { notIn: [...seen] } };
 

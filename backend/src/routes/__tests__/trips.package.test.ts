@@ -320,6 +320,46 @@ describe("POST /trips/package/{preview,commit}", () => {
     expect(flight.depIata).toBe("NBO");
   });
 
+  // A code the catalogue does not hold was proposed "create" and then failed
+  // the WHOLE package with a 422 at commit. The leg waits for the reviewer
+  // instead, named in the review, and a corrected code brings it in.
+  it("skips a leg whose airport code the catalogue lacks, until the reviewer corrects it", async () => {
+    const reading = {
+      bookingReference: "UNK-1",
+      issuedOn: "2025-12-07",
+      flights: [
+        {
+          flightNumber: "KQ104",
+          date: "2026-06-29",
+          depIata: "ZZQ",
+          arrIata: "MBA",
+          depTime: "08:00",
+          arrTime: "09:00",
+        },
+      ],
+    };
+    const first = await preview({ reading }).expect(200);
+    expect(first.body.data.proposal.flights[0]).toMatchObject({
+      action: "skip",
+      reason: "unresolvedAirport",
+      departure: { iata: "ZZQ", status: "unknown" },
+    });
+    expect(first.body.data.proposal.warnings).toContainEqual({
+      code: "airportUnknown",
+      subject: "ZZQ",
+    });
+
+    const unfixed = await commit({ reading }).expect(201);
+    expect(unfixed.body.data.flights[0]).toMatchObject({ action: "skip" });
+
+    const fixed = await commit({ reading, choices: { airports: { ZZQ: "NBO" } } }).expect(201);
+    expect(fixed.body.data.flights[0].action).toBe("create");
+    const flight = await prisma.flight.findUniqueOrThrow({
+      where: { id: fixed.body.data.flights[0].id },
+    });
+    expect(flight.depIata).toBe("NBO");
+  });
+
   it("attaches a hand-typed flight of the same number and day instead of doubling it", async () => {
     const typed = await prisma.flight.create({
       data: {

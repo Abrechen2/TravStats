@@ -67,7 +67,9 @@ interface AirportPickerProps {
 function AirportPicker({ end, onPick }: AirportPickerProps): JSX.Element | null {
   const { t } = useTranslation(["import"]);
   const [code, setCode] = useState("");
-  const city = end.city;
+  // A code the catalogue lacks is corrected under the code itself when no
+  // city was named — without this field the leg stayed skipped for good.
+  const city = end.city ?? (end.status === "unknown" ? end.iata : null);
   if (!city || (end.status !== "ambiguous" && end.status !== "unknown")) return null;
   if (end.candidates && end.candidates.length > 0) {
     return (

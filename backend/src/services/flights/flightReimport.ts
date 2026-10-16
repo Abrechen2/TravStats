@@ -46,6 +46,13 @@ export async function findReimportedFlight(
     return { id: existing.id };
   }
   if (!columns.onlineCheckInOpensAt) return { id: existing.id };
-  await prisma.flight.update({ where: { id: existing.id }, data: columns });
-  return { id: existing.id, filledDeadlines: ["onlineCheckInOpensAt"] };
+  // Only while still empty: read and written apart, an opening stored in
+  // between was overwritten by a fill meant for an empty field.
+  const { count } = await prisma.flight.updateMany({
+    where: { id: existing.id, onlineCheckInOpensAt: null },
+    data: columns,
+  });
+  return count > 0
+    ? { id: existing.id, filledDeadlines: ["onlineCheckInOpensAt"] }
+    : { id: existing.id };
 }

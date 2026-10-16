@@ -18,6 +18,7 @@ describe("GET /api/v1/places/:id/visit-date-suggestions — date-only arrivals",
   let cookie: string;
   let frankfurtPlace: string;
   let aucklandPlace: string;
+  let honoluluPlace: string;
 
   const suggest = (id: string) =>
     request(app).get(`/api/v1/places/${id}/visit-date-suggestions`).set("Cookie", cookie);
@@ -40,6 +41,12 @@ describe("GET /api/v1/places/:id/visit-date-suggestions — date-only arrivals",
     aucklandPlace = (
       await prisma.place.create({
         data: { userId, name: "Sky Tower", lat: -36.8485, lon: 174.7622 },
+      })
+    ).id;
+
+    honoluluPlace = (
+      await prisma.place.create({
+        data: { userId, name: "Waikiki", lat: 21.2793, lon: -157.8292 },
       })
     ).id;
 
@@ -72,6 +79,24 @@ describe("GET /api/v1/places/:id/visit-date-suggestions — date-only arrivals",
         arrival("FRA", 50.0379, 8.5622, "Europe/Berlin", "2025-05-10T00:00"),
         // The form's noon in Auckland's summer: 23:00Z on 14 January.
         arrival("AKL", -37.0082, 174.785, "Pacific/Auckland", "2025-01-15T12:00"),
+        // No arrival time: only the departure day, a noon in Auckland (23:00Z
+        // on 14 January). Read in Honolulu's zone it was the 14th.
+        {
+          userId,
+          depIata: "AKL",
+          depLat: -37.0082,
+          depLon: 174.785,
+          depTimezone: "Pacific/Auckland",
+          arrIata: "HNL",
+          arrLat: 21.3187,
+          arrLon: -157.9225,
+          arrTimezone: "Pacific/Honolulu",
+          departureTime: toUtcDate("2025-01-15T12:00", "Pacific/Auckland") as Date,
+          arrivalTime: null,
+          depTimeSemantics: "DATE_ONLY",
+          arrTimeSemantics: "DATE_ONLY",
+          status: "historical",
+        },
       ],
     });
   });
@@ -83,6 +108,7 @@ describe("GET /api/v1/places/:id/visit-date-suggestions — date-only arrivals",
   it.each([
     ["Frankfurt, cruise import midnight", () => frankfurtPlace, "2025-05-10"],
     ["Auckland, form noon in summer", () => aucklandPlace, "2025-01-15"],
+    ["Honolulu, only the departure day known", () => honoluluPlace, "2025-01-15"],
   ])("offers the recorded day (%s)", async (_name, place, day) => {
     const res = await suggest(place());
     expect(res.status).toBe(200);

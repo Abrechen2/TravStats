@@ -34,6 +34,16 @@ describe("withCruiseDayNumbers", () => {
     expect(days([stop(1), stop(8), stop(4)])).toEqual([1, 8, 9]);
   });
 
+  // Two calls on one day (a tender stop and the port) were split across two
+  // days by any edit, even a note on another stop.
+  it("keeps two calls on one day on that day", () => {
+    expect(days([stop(1), stop(3), stop(3), stop(8)])).toEqual([1, 3, 3, 8]);
+  });
+
+  it("still pushes a stop added behind a day to the next day", () => {
+    expect(days([stop(1), stop(3), stop(3, null), stop(8)])).toEqual([1, 3, 4, 8]);
+  });
+
   it("remembers which stop was added, across a second edit", () => {
     // Added at the end first (day 9 behind day 8), then moved up between 1 and 8.
     const afterAdd = withCruiseDayNumbers([stop(1), stop(8), stop(1, null)]);

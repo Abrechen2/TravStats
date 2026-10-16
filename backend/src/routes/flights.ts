@@ -180,11 +180,9 @@ router.post(
         if (existing) {
           // Re-reading a forwarded confirmation is ordinary. 409 says what
           // happened; a 500 from the unique index would say the import broke.
-          res.status(409).json({
-            success: false,
-            error: "already_imported",
-            data: existing,
-          });
+          // The kept confirmation is filed on the flight it already made.
+          await linkDocuments(userId, documentIds, { type: "flight", id: existing.id });
+          res.status(409).json({ success: false, error: "already_imported", data: existing });
           return;
         }
       }

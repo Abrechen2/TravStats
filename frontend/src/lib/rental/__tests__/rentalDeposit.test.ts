@@ -38,6 +38,14 @@ describe("rentalDeposit (forgejo#238)", () => {
       "open",
       null,
     ],
+    [
+      // Abstention: without the size of the deposit nothing can be said to be
+      // settled — 0 outstanding claimed a full refund nobody recorded.
+      "a returned amount against a deposit of unknown size",
+      { ...none, depositReturnedOn: "2026-07-10", depositReturnedAmount: 250 },
+      "returned",
+      null,
+    ],
   ] as const)("%s", (_label, fields, state, outstanding) => {
     expect(rentalDeposit(fields)).toEqual({ state, outstanding });
   });

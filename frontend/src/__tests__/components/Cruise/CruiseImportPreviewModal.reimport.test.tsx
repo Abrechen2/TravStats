@@ -129,13 +129,13 @@ describe("CruiseImportPreviewModal — a booking read again", () => {
       lon: 5,
       timezone: "Europe/Oslo",
     } as Airport;
-    const withFlight = (ref: string): ParsedCruiseEntry =>
+    const withFlight = (ref: string, flightNumber = "LH123"): ParsedCruiseEntry =>
       ({
         ...entry,
         input: { ...entry.input, bookingReference: ref },
         flights: [
           {
-            flightNumber: "LH123",
+            flightNumber,
             airline: "Lufthansa",
             date: "2026-10-05",
             departureAirport: fra,
@@ -206,7 +206,7 @@ describe("CruiseImportPreviewModal — a booking read again", () => {
       const onSaved = vi.fn();
       render(
         <CruiseImportPreviewModal
-          entries={[withFlight("ABC123"), withFlight("NEW999")]}
+          entries={[withFlight("ABC123"), withFlight("NEW999", "LH456")]}
           onCancel={vi.fn()}
           onSaved={onSaved}
         />
@@ -221,6 +221,29 @@ describe("CruiseImportPreviewModal — a booking read again", () => {
       expect(tripsApi.delete).not.toHaveBeenCalled();
       expect(tripsApi.assignFlights).toHaveBeenCalledWith("trip-new", {
         flightIds: ["f1"],
+        action: "add",
+      });
+    });
+
+    // A new booking's flights were created with force:true without asking
+    // the logbook, so a flight typed in before the mail arrived was doubled.
+    it("files a flight the logbook already holds with the new trip instead of doubling it", async () => {
+      vi.mocked(cruiseApi.create).mockResolvedValue({ id: "c-new" } as Cruise);
+      const onSaved = vi.fn();
+      render(
+        <CruiseImportPreviewModal
+          entries={[withFlight("NEW999")]}
+          onCancel={vi.fn()}
+          onSaved={onSaved}
+        />
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "cruise:import.save" }));
+
+      await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+      expect(flightsApi.create).not.toHaveBeenCalled();
+      expect(tripsApi.assignFlights).toHaveBeenCalledWith("trip-new", {
+        flightIds: ["f-old"],
         action: "add",
       });
     });

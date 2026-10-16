@@ -7,6 +7,7 @@ import { findNearestAirport, type AirportData } from "./airportLookup";
 import { currentPrimaryAirport } from "../utils/homeAirport";
 import { loadHomePeriods } from "./home/homeStore";
 import { expandPortSearchTerms } from "./portExonyms";
+import { importDayNumbers } from "./cruise/importDayNumbers";
 
 // In-memory cache for ship + port candidate lists. Both tables are populated
 // from a static CSV at boot and mutated only via /ports POST and /ships POST
@@ -258,7 +259,11 @@ export async function resolveCruiseEntities(parsed: ParsedCruise): Promise<Resol
     : null;
 
   const withEndpoints = keepUnmatchedEndpoints(parsed, departurePort, arrivalPort);
-  const stops = withEndpoints.map((stop, index) => mapStop(stop, index, ports, unmatched));
+  const days = importDayNumbers(
+    withEndpoints.map((stop) => stop.date),
+    parsed.startDate
+  );
+  const stops = withEndpoints.map((stop, index) => mapStop(stop, days[index], ports, unmatched));
 
   const input: CruiseInput = {
     shipId: ship.id ?? undefined,
@@ -305,7 +310,7 @@ function keepUnmatchedEndpoints(
       (s) => !s.isAtSea && Boolean(s.portName) && nameScore(name, s.portName as string) >= 60
     );
   const endpoint = (name: string, date: string | undefined): ParsedCruiseStop => ({
-    dayNumber: 0, // re-sequenced by position in mapStop
+    dayNumber: 0, // re-numbered by importDayNumbers
     isAtSea: false,
     portName: name,
     date,
@@ -325,14 +330,14 @@ function keepUnmatchedEndpoints(
 
 function mapStop(
   stop: ParsedCruiseStop,
-  index: number,
+  dayNumber: number,
   ports: PortCandidate[],
   unmatched: { dayNumber: number; portName: string }[]
 ): NonNullable<CruiseInput["stops"]>[number] {
   if (stop.isAtSea) {
     return {
       portId: null,
-      dayNumber: index + 1,
+      dayNumber,
       date: stop.date,
       isAtSea: true,
       arrivalTime: stop.arrivalTime,
@@ -346,7 +351,7 @@ function mapStop(
     ports
   );
   if (!match && stop.portName) {
-    unmatched.push({ dayNumber: index + 1, portName: stop.portName });
+    unmatched.push({ dayNumber, portName: stop.portName });
   }
 
   // Unmatched named ports become a first-class unresolved stop: the name is
@@ -355,7 +360,7 @@ function mapStop(
   const hasName = Boolean(stop.portName);
   return {
     portId: match?.id ?? null,
-    dayNumber: index + 1,
+    dayNumber,
     date: stop.date,
     // A non-sea stop with neither a matched port nor a name has nothing to
     // preserve — degrade it to a sea day so it stays Zod-valid (the unresolved
@@ -392,6 +397,9 @@ export interface HydratedParsedCruise extends Omit<ResolvedCruise, "flights"> {
   departurePort: Port | null;
   arrivalPort: Port | null;
   stopPorts: Record<number, Port>;
+  /** The same ports keyed by id: since stops are numbered by date, one day
+   *  can hold two calls, and the by-day map then shows only one of them. */
+  stopPortsById: Record<number, Port>;
   flights: HydratedFlight[];
 }
 
@@ -443,10 +451,14 @@ export async function hydrateResolvedCruises(
   return Promise.all(
     resolved.map(async (r): Promise<HydratedParsedCruise> => {
       const stopPorts: Record<number, Port> = {};
+      const stopPortsById: Record<number, Port> = {};
       for (const s of r.input.stops ?? []) {
         if (s.portId != null) {
           const port = portMap.get(s.portId);
-          if (port) stopPorts[s.dayNumber] = port;
+          if (port) {
+            stopPorts[s.dayNumber] = port;
+            stopPortsById[port.id] = port;
+          }
         }
       }
 
@@ -460,7 +472,7 @@ export async function hydrateResolvedCruises(
         ? await hydrateFlights(r, stopPorts, departurePort, arrivalPort, homeAirport)
         : [];
 
-      return { ...r, ship, departurePort, arrivalPort, stopPorts, flights };
+      return { ...r, ship, departurePort, arrivalPort, stopPorts, stopPortsById, flights };
     })
   );
 }

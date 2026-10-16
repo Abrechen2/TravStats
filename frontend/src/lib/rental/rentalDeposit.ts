@@ -42,7 +42,9 @@ export function rentalDeposit(d: RentalDepositFields): RentalDepositReading {
     if (d.depositAmount !== null && d.depositReturnedAmount < d.depositAmount) {
       return { state: "partial", outstanding: round2(d.depositAmount - d.depositReturnedAmount) };
     }
-    return { state: "returned", outstanding: 0 };
+    // Without the deposit's size, what is still held cannot be said (null,
+    // not 0 — a zero claimed a full refund nobody recorded).
+    return { state: "returned", outstanding: d.depositAmount === null ? null : 0 };
   }
   if (d.depositReturnedOn !== null) return { state: "returnedAmountUnknown", outstanding: null };
   return { state: "open", outstanding: d.depositAmount };

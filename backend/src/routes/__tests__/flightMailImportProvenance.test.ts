@@ -98,6 +98,57 @@ describe("flight import from a booking mail — provenance", () => {
     expect(await prisma.flight.count()).toBe(1);
   });
 
+  // The 409 answered before the documents were filed, so the confirmation
+  // kept on the second read expired unfiled.
+  it("files the re-read confirmation on the flight it already made", async () => {
+    await request(app).post("/api/v1/flights").set("Cookie", cookie).send(flight()).expect(201);
+    const kept = await prisma.document.create({
+      data: {
+        userId,
+        storedName: "lh400.pdf",
+        mimetype: "application/pdf",
+        sizeBytes: 10,
+        sha256: `lh400-${Date.now()}`,
+        format: "pdf",
+      },
+    });
+    const again = await request(app)
+      .post("/api/v1/flights")
+      .set("Cookie", cookie)
+      .send(flight({ documentIds: [kept.id] }))
+      .expect(409);
+    const filed = await prisma.document.findUniqueOrThrow({ where: { id: kept.id } });
+    expect(filed.flightId).toBe(again.body.data.id);
+  });
+
+  // Read and written apart, a check-in opening stored in between was
+  // overwritten by the fill meant only for an empty field.
+  it("fills the check-in opening only while it is still empty", async () => {
+    await request(app).post("/api/v1/flights").set("Cookie", cookie).send(flight()).expect(201);
+    const stored = await prisma.flight.findFirstOrThrow();
+    const opensAt = new Date("2026-09-13T08:00:00.000Z");
+    await prisma.flight.update({
+      where: { id: stored.id },
+      data: { onlineCheckInOpensAt: opensAt, onlineCheckInZone: "Europe/Berlin" },
+    });
+    // The lookup still sees the field empty, as it did before the write landed.
+    const spy = jest
+      .spyOn(prisma.flight, "findFirst")
+      .mockResolvedValueOnce({ ...stored, onlineCheckInOpensAt: null } as never);
+    try {
+      const again = await request(app)
+        .post("/api/v1/flights")
+        .set("Cookie", cookie)
+        .send(flight({ onlineCheckInOpensAt: { local: "2026-09-12T10:00" } }))
+        .expect(409);
+      expect(again.body.data).not.toHaveProperty("filledDeadlines");
+    } finally {
+      spy.mockRestore();
+    }
+    const after = await prisma.flight.findUniqueOrThrow({ where: { id: stored.id } });
+    expect(after.onlineCheckInOpensAt?.toISOString()).toBe(opensAt.toISOString());
+  });
+
   it("answers the same confirmation read twice with 409, not a second flight", async () => {
     const batchId = await makeBatch();
     await request(app)

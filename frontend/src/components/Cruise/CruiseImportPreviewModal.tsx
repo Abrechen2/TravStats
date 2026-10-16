@@ -32,6 +32,7 @@ import { PortPicker } from "./PortPicker";
 import { CruiseStopsEditor } from "./CruiseStopsEditor";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 import AirportAutocomplete from "../AirportAutocomplete";
+import { stopPortOf } from "./cruiseImportEntry";
 import type { EntryData } from "./cruiseImportEntry";
 import { storeCruiseImport } from "./cruiseImportSave";
 import type { CruiseImportOutcome } from "./cruiseImportSave";
@@ -322,7 +323,7 @@ function CruiseImportEntryEditor({
   const [stops, setStops] = useState<CruiseStopInput[]>(() =>
     (input.stops ?? []).map((s) => ({
       ...s,
-      port: entry.stopPorts?.[s.dayNumber] ?? s.port ?? null,
+      port: stopPortOf(entry, s),
     }))
   );
   const [showStops, setShowStops] = useState(entry.unmatchedPorts.length > 0);
