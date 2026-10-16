@@ -19,6 +19,15 @@ describe("formatMetricValue", () => {
       'comparison:unit.nights:{"count":3,"value":"3"}'
     );
   });
+  it("hands the plural rule a whole number, so 1.4 days is not 'days'", () => {
+    const ctx = { distanceUnit: "kilometers" as const, t, language: "en" };
+    expect(formatMetricValue(1.4, "days", ctx)).toBe(
+      'comparison:unit.days:{"count":1,"value":"1"}'
+    );
+    expect(formatMetricValue(0.6, "nights", ctx)).toBe(
+      'comparison:unit.nights:{"count":1,"value":"1"}'
+    );
+  });
 });
 
 describe("formatMetricOrAbsent", () => {

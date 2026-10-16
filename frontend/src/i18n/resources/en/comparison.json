@@ -90,7 +90,7 @@
     "title": "People",
     "name": "Name",
     "server": "Server",
-    "sees": "Sees of yours",
+    "sees": "Can see your numbers",
     "shares": "Shares with you",
     "thisServer": "this server",
     "sharing": "yes",
@@ -106,7 +106,7 @@
   "add": {
     "title": "Add person",
     "username": "Username on this server",
-    "ask": "Ask",
+    "ask": "Send request",
     "inviteTitle": "Person on another server",
     "createInvite": "Create invitation code",
     "inviteHint": "Pass this code on. It is valid for 72 hours and only once.",

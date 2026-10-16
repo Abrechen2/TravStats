@@ -22,9 +22,9 @@ export function formatMetricValue(value: number, unit: MetricUnit, ctx: FormatCo
     case "minutes":
       return formatDuration(value);
     case "days":
-      return ctx.t("comparison:unit.days", { count: value, value: whole });
+      return ctx.t("comparison:unit.days", { count: Math.round(value), value: whole });
     case "nights":
-      return ctx.t("comparison:unit.nights", { count: value, value: whole });
+      return ctx.t("comparison:unit.nights", { count: Math.round(value), value: whole });
     case "count":
       return whole;
   }
