@@ -62,14 +62,18 @@ export async function acceptedWith(
   return new Set(rows.map((r) => (r.requesterId === actorId ? r.targetId : r.requesterId)));
 }
 
-/** The other members' trips in `groupId` that may receive `actorId`'s changes. */
+/**
+ * The other members' trips in `groupId` that may receive `actorId`'s changes.
+ * A deactivated account receives nothing — no copy, no update, no notice —
+ * while it is switched off; copy, update and removal notice all read this list.
+ */
 export async function receivingMembers(
   c: Pick<DbTransaction, "trip" | "shareConsent">,
   groupId: string,
   actorId: string
 ): Promise<MemberTrip[]> {
   const trips = await c.trip.findMany({
-    where: { shareGroupId: groupId, NOT: { userId: actorId } },
+    where: { shareGroupId: groupId, NOT: { userId: actorId }, user: { isActive: true } },
     select: { id: true, userId: true },
     orderBy: { createdAt: "asc" },
   });
