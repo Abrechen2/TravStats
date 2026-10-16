@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import TripShareMenu, { placeMenu } from "../TripShareMenu";
@@ -123,6 +123,48 @@ describe("TripShareMenu", () => {
     await userEvent.click(screen.getByRole("button", { name: "sharing:menu.button" }));
     act(() => screen.getByRole("button", { name: "elsewhere" }).focus());
     await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+  });
+
+  it("hands focus back to the trigger when Tab closes the menu", async () => {
+    render(<TripShareMenu tripId="t1" />);
+    const trigger = screen.getByRole("button", { name: "sharing:menu.button" });
+    await userEvent.click(trigger);
+    const first = screen.getByRole("menuitem", { name: "sharing:menu.companions" });
+    expect(document.activeElement).toBe(first);
+    fireEvent.keyDown(first, { key: "Tab" });
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it("closes when the trigger scrolls fully out of the viewport", async () => {
+    render(<TripShareMenu tripId="t1" />);
+    const trigger = screen.getByRole("button", { name: "sharing:menu.button" });
+    const rectAt = (top: number) => ({
+      top,
+      bottom: top + 40,
+      left: 4,
+      right: 90,
+      width: 86,
+      height: 40,
+      x: 4,
+      y: top,
+      toJSON: () => ({}),
+    });
+    const spy = vi.spyOn(trigger, "getBoundingClientRect").mockReturnValue(rectAt(100));
+    await userEvent.click(trigger);
+    expect(screen.queryByRole("menu")).not.toBeNull();
+    // Still partly visible: the menu follows the trigger and stays open.
+    spy.mockReturnValue(rectAt(-20));
+    act(() => {
+      window.dispatchEvent(new Event("scroll"));
+    });
+    expect(screen.queryByRole("menu")).not.toBeNull();
+    // Fully above the viewport: nothing left to anchor to.
+    spy.mockReturnValue(rectAt(-80));
+    act(() => {
+      window.dispatchEvent(new Event("scroll"));
+    });
+    expect(screen.queryByRole("menu")).toBeNull();
   });
 
   it("renders the panel in a portal, outside the clipping container, and inside the viewport", async () => {

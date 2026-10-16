@@ -92,6 +92,20 @@ export default function TripShareMenu({ tripId }: { tripId: string }): JSX.Eleme
     const reposition = (): void => {
       const trigger = rootRef.current?.querySelector("button")?.getBoundingClientRect();
       if (!trigger) return;
+      // A trigger scrolled fully out of sight leaves the panel nothing to hang
+      // from: close rather than float it over unrelated content. A rect with no
+      // size is a trigger without layout (not rendered), not one scrolled away.
+      const hasLayout = trigger.width > 0 || trigger.height > 0;
+      if (
+        hasLayout &&
+        (trigger.bottom <= 0 ||
+          trigger.top >= window.innerHeight ||
+          trigger.right <= 0 ||
+          trigger.left >= window.innerWidth)
+      ) {
+        setOpen(false);
+        return;
+      }
       setPlacement(
         placeMenu(trigger, panelRef.current?.offsetHeight ?? 0, {
           width: window.innerWidth,
@@ -162,8 +176,10 @@ export default function TripShareMenu({ tripId }: { tripId: string }): JSX.Eleme
     }
     if (e.key === "Tab") {
       // The portaled panel sits at the end of the document, so Tab would leave
-      // the page rather than the menu's neighbourhood: close and let it go.
+      // the page rather than the menu's neighbourhood: close, and hand focus
+      // back to the trigger so the browser's Tab continues from there.
       setOpen(false);
+      rootRef.current?.querySelector("button")?.focus();
       return;
     }
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
