@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { AppError } from "../../middleware/errorHandler";
-import { collectionSchemas, stateSchema } from "./schema";
+import { collectionSchemas } from "./schema";
+import { parseState } from "./upgrade";
 import { bookingDuration } from "./temporal";
 import { transferFingerprint } from "./rules";
 import type { PlanState, PlanOperation, PlanItem, PlanBooking } from "./types";
@@ -39,6 +40,7 @@ export function applyOperation(
         note: idea.note,
         booked: false,
         bookingId: null,
+        stationId: null,
         execution: "unconfirmed",
         source: null,
       };
@@ -123,6 +125,7 @@ export function applyOperation(
           note: "",
           booked: true,
           bookingId: booking.id,
+          stationId: null,
           execution: "unconfirmed",
           source: null,
         };
@@ -184,7 +187,7 @@ export function applyOperation(
       );
     }
   } else refuse("Operation must be resolved by the transaction");
-  state = stateSchema.parse(state);
+  state = parseState(state);
   for (const key of Object.keys(collectionSchemas) as (keyof typeof collectionSchemas)[])
     if (new Set(state[key].map((i) => i.id)).size !== state[key].length)
       refuse("Duplicate plan identifiers");
@@ -217,5 +220,5 @@ export function applyProposal(
     item.day = c.day;
     item.time = c.time;
   }
-  return stateSchema.parse(next);
+  return parseState(next);
 }

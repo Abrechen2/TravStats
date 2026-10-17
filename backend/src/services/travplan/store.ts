@@ -3,7 +3,8 @@ import { randomUUID, createHash } from "node:crypto";
 import { prisma } from "../../db";
 import type { Prisma, TravelPlan } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
-import { emptyState, stateSchema, createPlanSchema, proposalContentSchema } from "./schema";
+import { emptyState, createPlanSchema, proposalContentSchema } from "./schema";
+import { parseState } from "./upgrade";
 import { applyOperation, applyProposal } from "./operations";
 import { mirrorEmptyTrip } from "./metadata";
 import { adoptExisting } from "./existing";
@@ -34,7 +35,7 @@ export function view(
   name: string,
   lastMutationId?: string
 ): PlanView {
-  const state = stateSchema.parse(row.state);
+  const state = parseState(row.state);
   return {
     id: row.id,
     tripId: row.tripId,
@@ -98,8 +99,8 @@ export async function createPlan(userId: string, input: unknown): Promise<PlanVi
     include: { trip: { select: { name: true } } },
   });
   if (prior) {
-    if (stateSchema.parse(prior.state).creationHash) {
-      if (stateSchema.parse(prior.state).creationHash !== hash(body))
+    if (parseState(prior.state).creationHash) {
+      if (parseState(prior.state).creationHash !== hash(body))
         throw new AppError("Creation key has different content", 409, "PLAN_IDEMPOTENCY_CONFLICT");
       return view(prior, prior.trip.name);
     }
@@ -113,7 +114,7 @@ export async function createPlan(userId: string, input: unknown): Promise<PlanVi
       (body.tripId && prior.tripId !== body.tripId) ||
       (original?.name ?? prior.trip.name) !== body.name ||
       hash({ ...emptyState(), ...body.settings }) !==
-        hash({ ...stateSchema.parse(original?.state ?? prior.state), items: [], bookings: [] })
+        hash({ ...parseState(original?.state ?? prior.state), items: [], bookings: [] })
     )
       throw new AppError("Creation key has different content", 409, "PLAN_IDEMPOTENCY_CONFLICT");
     return view(prior, prior.trip.name);
@@ -169,7 +170,7 @@ export async function createPlan(userId: string, input: unknown): Promise<PlanVi
             destinationLabel: true,
           },
         });
-      let state: PlanState = stateSchema.parse({
+      let state: PlanState = parseState({
         ...emptyState(),
         ...(body.tripId
           ? {
@@ -194,7 +195,7 @@ export async function createPlan(userId: string, input: unknown): Promise<PlanVi
       where: { createRef: body.clientRef, trip: { userId } },
       include: { trip: { select: { name: true } } },
     });
-    if (retry && stateSchema.parse(retry.state).creationHash === hash(body))
+    if (retry && parseState(retry.state).creationHash === hash(body))
       return view(retry, retry.trip.name);
     if ((error as { code?: string }).code === "P2002") {
       if (body.tripId) {
@@ -229,7 +230,7 @@ export async function writePlan(
   const previous = await replay();
   if (previous) return previous;
   const prepared = new Map<string, PreparedExecution>();
-  const initial = stateSchema.parse(owned.state);
+  const initial = parseState(owned.state);
   if (owned.revision !== body.baseRevision)
     throw new AppError("Plan has changed", 409, "PLAN_REVISION_CONFLICT");
   if (body.operation.type === "execution" && body.operation.execution === "confirmed")
@@ -242,7 +243,7 @@ export async function writePlan(
       where: { id: body.operation.mutationId, planId: owned.id, revision: owned.revision },
     });
     if (target) {
-      const before = stateSchema.parse((target.before as unknown as { state: unknown }).state);
+      const before = parseState((target.before as unknown as { state: unknown }).state);
       for (const item of before.items)
         if (
           item.execution === "confirmed" &&
@@ -270,7 +271,7 @@ export async function writePlan(
       });
       if (reservation.count !== 1)
         throw new AppError("Plan changed during this edit", 409, "PLAN_REVISION_CONFLICT");
-      const before = stateSchema.parse(row.state);
+      const before = parseState(row.state);
       let name = row.trip.name,
         next: PlanState;
       if (body.operation.type === "undo") {
@@ -280,7 +281,7 @@ export async function writePlan(
         if (!change)
           throw new AppError("Only the latest change can be undone", 409, "PLAN_UNDO_STALE");
         const saved = change.before as unknown as { state: PlanState; name: string };
-        next = stateSchema.parse(saved.state);
+        next = parseState(saved.state);
         name = saved.name;
       } else if (body.operation.type === "proposal") {
         await assertAnchorsCurrent(tx, userId, tripId, before);
@@ -299,7 +300,7 @@ export async function writePlan(
         for (const idea of content.ideas)
           if (!next.ideas.some((i) => i.title.toLowerCase() === idea.title.toLowerCase()))
             next.ideas.push({ id: randomUUID(), ...idea, priority: "optional", itemId: null });
-        next = stateSchema.parse(next);
+        next = parseState(next);
         const priorProblems = new Set(
           checkPlan(before)
             .filter((f) => f.code === "overlap")

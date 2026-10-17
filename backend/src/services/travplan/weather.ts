@@ -12,7 +12,8 @@ import {
   view,
   assertEnabled,
 } from "./store";
-import { forecastSchema, stateSchema } from "./schema";
+import { forecastSchema } from "./schema";
+import { parseState } from "./upgrade";
 import type { PlanView } from "./types";
 const nullableNumbers = z.array(z.number().finite().nullable()).max(16);
 const responseSchema = z.object({
@@ -32,7 +33,7 @@ export async function refreshForecast(
 ): Promise<PlanView> {
   await assertEnabled();
   const row = await ownedPlan(userId, tripId),
-    state = stateSchema.parse(row.state),
+    state = parseState(row.state),
     payloadHash = hash({ type: "forecast", ...request });
   const receipt = await prisma.travelPlanMutation.findUnique({
     where: { planId_clientRef: { planId: row.id, clientRef: request.clientRef } },

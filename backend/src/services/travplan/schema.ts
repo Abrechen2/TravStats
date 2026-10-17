@@ -51,6 +51,7 @@ export const itemSchema = z
     note: text(1000),
     booked: z.boolean(),
     bookingId: id.nullable(),
+    stationId: id.nullable().optional().default(null),
     execution: z.enum(["unconfirmed", "confirmed", "skipped", "cancelled"]),
     source: z
       .object({
@@ -103,6 +104,9 @@ export const bookingSchema = z
     documentIds: z.array(id).max(10),
     source: text(200),
     details: z.record(z.string(), z.unknown()),
+    placeholder: z.boolean().optional().default(false),
+    estimate: z.object({ amount: money, currency }).strict().nullable().optional().default(null),
+    stageId: id.nullable().optional().default(null),
   })
   .strict()
   .refine((v) => v.amount === null || v.paid <= v.amount, { message: "Paid amount exceeds total" })
@@ -172,6 +176,103 @@ export const forecastSchema = z.object({
     )
     .max(16),
 });
+export const placeSchema = z
+  .object({
+    name: text(200).min(1),
+    lat: z.number().min(-90).max(90),
+    lon: z.number().min(-180).max(180),
+    country: text(100).nullable(),
+    zone,
+    ref: z
+      .object({ kind: z.enum(["port", "geo", "place"]), id: text(100).min(1) })
+      .strict()
+      .nullable(),
+  })
+  .strict();
+export const nightCandidateSchema = z
+  .object({
+    id,
+    title: text(200).min(1),
+    place: placeSchema.nullable(),
+    url: z.string().url().max(500).nullable(),
+    note: text(1000),
+  })
+  .strict();
+export const nightSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("booked"), bookingId: id }).strict(),
+  z.object({ kind: z.literal("idea"), candidates: z.array(nightCandidateSchema).max(10) }).strict(),
+  z.object({ kind: z.literal("pitch") }).strict(),
+  z.object({ kind: z.literal("spontaneous") }).strict(),
+  z.object({ kind: z.literal("onboard") }).strict(),
+]);
+export const stationSchema = z
+  .object({
+    id,
+    title: text(200).min(1),
+    place: placeSchema,
+    nights: z.number().int().min(0).max(60),
+    pinnedDay: day,
+    night: nightSchema,
+    note: text(1000),
+  })
+  .strict();
+export const stageSchema = z
+  .object({
+    id,
+    fromStationId: id,
+    toStationId: id,
+    mode: z.enum(["drive", "ferry", "rail", "flight", "other"]),
+    departDay: day,
+    departTime: time,
+    durationMinutes: z.number().int().min(0).max(14400).nullable(),
+    distanceKm: z.number().finite().min(0).max(40000).nullable(),
+    metricsSource: z.enum(["routed", "straight", "user", "booking"]).nullable(),
+    fallbackReason: text(200).nullable(),
+    bookingId: id.nullable(),
+    overnight: z.boolean(),
+    note: text(1000),
+  })
+  .strict();
+export const variantSchema = z
+  .object({
+    id,
+    name: text(60).min(1),
+    stations: z.array(stationSchema).max(60),
+    stages: z.array(stageSchema).max(80),
+  })
+  .strict();
+export const vehicleSchema = z
+  .object({
+    kind: z.enum(["motorhome", "campervan", "caravan", "car", "motorcycle", "bicycle", "other"]),
+    lengthM: z.number().finite().min(0).max(30).nullable(),
+    consumptionPer100: z.number().finite().min(0).max(100).nullable(),
+    fuelPrice: money.nullable(),
+    fuelCurrency: currency.nullable(),
+  })
+  .strict();
+export const stationWeatherSchema = z
+  .object({
+    stationId: id,
+    kind: z.enum(["forecast", "climate"]),
+    source: text(300),
+    fetchedAt: z.string().datetime(),
+    window: text(100).nullable(),
+    days: z
+      .array(
+        z
+          .object({
+            day: daySchema,
+            min: z.number().nullable(),
+            max: z.number().nullable(),
+            rainProbability: z.number().min(0).max(100).nullable(),
+            precipitationMm: z.number().min(0).nullable(),
+          })
+          .strict()
+      )
+      .max(366),
+  })
+  .strict();
+const MAX_STATE_BYTES = 1024 * 1024;
 export const settingsSchema = z
   .object({
     destination: text(200),
@@ -195,7 +296,8 @@ export const settingsSchema = z
   .strict();
 export const stateSchema = settingsSchema
   .extend({
-    version: z.literal(1),
+    version: z.literal(2),
+    shape: z.enum(["stay", "route"]),
     creationHash: z
       .string()
       .regex(/^[a-f0-9]{64}$/)
@@ -213,6 +315,14 @@ export const stateSchema = settingsSchema
     costs: z.array(costSchema).max(200),
     decisions: z.array(decisionSchema).max(500),
     forecast: forecastSchema.nullable(),
+    stations: z.array(stationSchema).max(60),
+    stages: z.array(stageSchema).max(80),
+    variants: z.array(variantSchema).max(3),
+    activeVariantName: text(60).min(1),
+    vehicle: vehicleSchema.nullable(),
+    roadtripId: id.nullable(),
+    stationLinks: z.array(z.object({ stationId: id, tripStopId: id }).strict()).max(60),
+    stationWeather: z.array(stationWeatherSchema).max(60),
   })
   .refine((v) => !v.startDay || !v.endDay || v.startDay <= v.endDay, {
     message: "End precedes start",
@@ -220,7 +330,47 @@ export const stateSchema = settingsSchema
   .refine(
     (v) => !v.startDay || !v.endDay || Date.parse(v.endDay) - Date.parse(v.startDay) <= 366 * 864e5,
     { message: "Plan exceeds one year" }
-  );
+  )
+  .superRefine((v, ctx) => {
+    const issue = (path: (string | number)[], message: string) =>
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path, message });
+    const bookingIds = new Set(v.bookings.map((b) => b.id));
+    const checkRoute = (
+      where: (string | number)[],
+      stations: typeof v.stations,
+      stages: typeof v.stages
+    ) => {
+      const stationIds = new Set(stations.map((s) => s.id));
+      if (stationIds.size !== stations.length) issue(where, "Duplicate station id");
+      stations.forEach((s, i) => {
+        if (s.night.kind === "booked" && !bookingIds.has(s.night.bookingId))
+          issue([...where, "stations", i, "night", "bookingId"], "Unknown booking");
+      });
+      stages.forEach((g, i) => {
+        if (!stationIds.has(g.fromStationId))
+          issue([...where, "stages", i, "fromStationId"], "Unknown station");
+        if (!stationIds.has(g.toStationId))
+          issue([...where, "stages", i, "toStationId"], "Unknown station");
+        if (g.bookingId && !bookingIds.has(g.bookingId))
+          issue([...where, "stages", i, "bookingId"], "Unknown booking");
+      });
+    };
+    checkRoute([], v.stations, v.stages);
+    v.variants.forEach((variant, i) =>
+      checkRoute(["variants", i], variant.stations, variant.stages)
+    );
+    const stationIds = new Set(v.stations.map((s) => s.id));
+    v.items.forEach((item, i) => {
+      if (item.stationId && !stationIds.has(item.stationId))
+        issue(["items", i, "stationId"], "Unknown station");
+    });
+    v.stationLinks.forEach((link, i) => {
+      if (!stationIds.has(link.stationId))
+        issue(["stationLinks", i, "stationId"], "Unknown station");
+    });
+    if (Buffer.byteLength(JSON.stringify(v)) > MAX_STATE_BYTES)
+      issue([], "Plan state exceeds 1 MiB");
+  });
 export const collectionSchemas = {
   items: itemSchema,
   ideas: ideaSchema,
@@ -229,6 +379,8 @@ export const collectionSchemas = {
   packing: packingSchema,
   tasks: taskSchema,
   costs: costSchema,
+  stations: stationSchema,
+  stages: stageSchema,
 };
 const operationSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("refresh_existing") }).strict(),
@@ -243,14 +395,34 @@ const operationSchema = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("upsert"),
-      collection: z.enum(["items", "ideas", "bookings", "transfers", "packing", "tasks", "costs"]),
+      collection: z.enum([
+        "items",
+        "ideas",
+        "bookings",
+        "transfers",
+        "packing",
+        "tasks",
+        "costs",
+        "stations",
+        "stages",
+      ]),
       value: z.record(z.string(), z.unknown()),
     })
     .strict(),
   z
     .object({
       type: z.literal("remove"),
-      collection: z.enum(["items", "ideas", "bookings", "transfers", "packing", "tasks", "costs"]),
+      collection: z.enum([
+        "items",
+        "ideas",
+        "bookings",
+        "transfers",
+        "packing",
+        "tasks",
+        "costs",
+        "stations",
+        "stages",
+      ]),
       id,
     })
     .strict(),
@@ -295,7 +467,8 @@ export const proposalContentSchema = z
   .refine((p) => p.changes.length > 0 || p.ideas.length > 0);
 export function emptyState(): PlanState {
   return {
-    version: 1,
+    version: 2,
+    shape: "stay",
     creationHash: null,
     destination: "",
     startDay: null,
@@ -322,5 +495,13 @@ export function emptyState(): PlanState {
     costs: [],
     decisions: [],
     forecast: null,
+    stations: [],
+    stages: [],
+    variants: [],
+    activeVariantName: "A",
+    vehicle: null,
+    roadtripId: null,
+    stationLinks: [],
+    stationWeather: [],
   };
 }
