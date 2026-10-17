@@ -403,8 +403,12 @@ export default function FlightDetailPage(): JSX.Element {
           )}
           {flight.tripId && <TripPhotoWindowStrip entry="flights" id={flight.id} />}
 
-          {/* The phone's own recording (forgejo#193); renders nothing without one. */}
-          <FlightTrackSection flightId={flight.id} />
+          {/* The recording — the phone's (forgejo#193) or an uploaded file (forgejo#312). */}
+          <FlightTrackSection
+            flightId={flight.id}
+            departure={{ lat: flight.depLat, lon: flight.depLon }}
+            arrival={{ lat: flight.arrLat, lon: flight.arrLon }}
+          />
 
           <DetailSection
             title={t("flights:form.aircraft")}

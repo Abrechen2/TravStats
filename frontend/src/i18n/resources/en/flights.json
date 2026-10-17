@@ -487,7 +487,32 @@
     "caption": "Recorded by the phone · {{distance}} · {{points}} points",
     "gaps_one": "One stretch without GPS reception is not drawn.",
     "gaps_other": "{{count}} stretches without GPS reception are not drawn.",
-    "loadError": "The recording of this flight could not be loaded."
+    "loadError": "The recording of this flight could not be loaded.",
+    "captionFile": "From a {{format}} file · {{distance}} · {{points}} points",
+    "versusGreatCircle": "Recorded {{flown}} · great circle {{greatCircle}} ({{difference}} %)",
+    "uploadIntro": "Upload a recording of this flight — from a GPS logger or as an export from FlightAware or Flightradar24. The map then draws the flight along the recording instead of the great circle.",
+    "upload": "Upload file",
+    "replace": "Replace",
+    "remove": "Remove recording",
+    "working": "Processing …",
+    "formats": "GPX, KML, TCX or FIT, up to 15 MB",
+    "uploaded": "Recording saved.",
+    "removed": "Recording removed.",
+    "replaceConfirmTitle": "Replace the recording?",
+    "replaceConfirmMessage": "The stored recording is replaced by the new file. A recording made by the phone cannot be restored.",
+    "removeConfirmTitle": "Remove the recording?",
+    "removeConfirmMessage": "The flight is drawn on the great circle again. A recording made by the phone cannot be restored.",
+    "errors": {
+      "fileMissing": "No file was sent.",
+      "fileTooLarge": "The file is too large — 15 MB at most.",
+      "fileUnreadable": "The file cannot be read as GPX, KML, TCX or FIT with at least two positions.",
+      "noTimestamps": "The file has no timestamps, and the flight has no schedule to place it in.",
+      "outsideFlight": "The recording was not made around the time of this flight.",
+      "alreadyRecorded": "This flight already has a stored recording.",
+      "uploadFailed": "The recording could not be saved.",
+      "removeFailed": "The recording could not be removed."
+    },
+    "linesLoadError": "The recorded flight tracks could not be loaded — the map shows the flights on the great circle."
   },
   "planActual": {
     "departure": "Departure",

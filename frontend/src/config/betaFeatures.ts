@@ -182,6 +182,22 @@ export const BETA_FEATURES = Object.freeze({
       "The owner has added at least one real cruise recording (a Dawarich pull or a GPX export), checked the per-leg verdicts and the map against what was sailed, and accepts the feature for release.",
     reason: "beta",
   }),
+
+  /**
+   * A recorded flight track uploaded as a file (forgejo#312): GPX, KML, TCX or
+   * FIT on the flight page, and the map drawing a recorded flight along its
+   * recording instead of the great circle. Gated at two places: the upload,
+   * replace and delete controls (and the flown-vs-great-circle line) of
+   * `FlightTrackSection`, and the fetch of the recorded lines in
+   * `useRecordedFlightPaths` — closed, the map draws every flight as before.
+   * A recording the Companion sent stays visible on the flight page either way.
+   */
+  flightTrackUpload: Object.freeze({
+    why: "Built on 2026-10-17 without a browser acceptance. The KML reader was written against the documented FlightAware and Flightradar24 export shapes, not against files exported from either service, and the map rule — a route keeps its arc while any flight on it has no recording — has not been looked at on a real logbook.",
+    returnsWhen:
+      "The owner has uploaded at least one real FlightAware or Flightradar24 export and one GPX logger file, checked the line on the flight page and on the globe and flat map, and accepts the feature for release.",
+    reason: "beta",
+  }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 
 export type BetaFeatureKey = keyof typeof BETA_FEATURES;

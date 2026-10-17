@@ -18,6 +18,7 @@ export type MapMode = "routes" | "heatmap" | "trips" | "globe";
 import { useTranslation } from "../hooks/useTranslation";
 import { useThemeStore } from "../store/themeStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { useRecordedFlightPaths } from "../hooks/useRecordedFlightPaths";
 import { cruiseApi } from "../lib/api";
 import SpecialFlightsLegend from "./specialFlights/SpecialFlightsLegend";
 import type { SpecialType } from "./specialFlights/specialTypeMeta";
@@ -166,6 +167,8 @@ export default function MapContainer3D({
   // isEnabled() helper (the sanctioned gating API) so the boolean still stays
   // stable in the effect dep array below (see the beta.28 ref-stability fix).
   const cruiseEnabled = isEnabled("cruise");
+  // Recorded flights drawn along their recording (forgejo#312), in both engines.
+  const drawnFlights = useRecordedFlightPaths(flights);
   const [internalCruises, setInternalCruises] = useState<Cruise[]>([]);
 
   // Fetch cruises as supplemental map overlay. User hides by disabling
@@ -284,7 +287,7 @@ export default function MapContainer3D({
           >
             <GlobeView
               key={syncKey}
-              flights={flights}
+              flights={drawnFlights}
               // `showInternalCruises={false}` means the caller draws its own
               // cruise lines (the journey view draws exactly one trip's). The
               // flat map has always honoured it; the globe was handed the
@@ -316,7 +319,7 @@ export default function MapContainer3D({
         ) : (
           <DeckGLMap
             key={syncKey}
-            flights={flights}
+            flights={drawnFlights}
             flightList={flightList}
             cruises={cruises}
             onFlightClick={onFlightClick}

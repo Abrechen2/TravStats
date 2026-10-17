@@ -1,14 +1,18 @@
 import type { TimeValue } from "../shared/time";
 
+/** `companion` from the phone (forgejo#193); the file format for an upload (forgejo#312). */
+export type FlightTrackSource = "companion" | "gpx" | "kml" | "tcx" | "fit";
+
 /**
- * The phone's recording of a flight, as `GET /flights/:id/track` serves it
- * (forgejo#193). Kept apart from `Flight.actualRoute`, which is the
- * provider's line and is overwritten by every lookup.
+ * A recording of a flight, as `GET /flights/:id/track` serves it — the
+ * phone's (forgejo#193) or an uploaded file (forgejo#312). Kept apart from
+ * `Flight.actualRoute`, which is the provider's line and is overwritten by
+ * every lookup.
  */
 export interface FlightTrack {
   id: string;
   flightId: string;
-  source: "companion";
+  source: FlightTrackSource;
   uploadId: string;
   deviceId: string | null;
   times: { startedAt: TimeValue; endedAt: TimeValue };
@@ -24,4 +28,16 @@ export interface FlightTrack {
   elevations: Array<[number, number]> | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** What a write answers: the recording without its line. */
+export type FlightTrackMeta = Omit<FlightTrack, "geometry" | "segmentStarts" | "elevations">;
+
+/** One recorded line for the map, as `GET /flights/track-lines` serves it. */
+export interface FlightTrackLine {
+  flightId: string;
+  /** `[lon, lat]`, simplified. */
+  geometry: Array<[number, number]>;
+  /** Index into `geometry` where each recorded stretch starts. */
+  segmentStarts: number[];
 }

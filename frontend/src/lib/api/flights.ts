@@ -7,7 +7,7 @@ import type {
   GeoJSONFeatureCollection,
   UserAchievement,
 } from "../../types";
-import type { FlightTrack } from "../../types/flightTrack";
+import type { FlightTrack, FlightTrackLine, FlightTrackMeta } from "../../types/flightTrack";
 
 import { API_TIMEOUTS } from "../../config/constants";
 import { api } from "./client";
@@ -177,6 +177,35 @@ export const flightsApi = {
   getTrack: async (id: string): Promise<FlightTrack | null> => {
     const { data } = await api.get<{ track: FlightTrack | null }>(`/flights/${id}/track`);
     return data.track;
+  },
+
+  /**
+   * Upload a recording as a file — GPX, KML, TCX or FIT (forgejo#312). Field
+   * `file`, as on every track upload; `replace` must be said out loud, the
+   * server never displaces a stored recording on its own.
+   */
+  uploadTrackFile: async (id: string, file: File, replace: boolean): Promise<FlightTrackMeta> => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("replace", String(replace));
+    const { data } = await api.post<{ track: FlightTrackMeta; replayed: boolean }>(
+      `/flights/${id}/track/file`,
+      form,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+    return data.track;
+  },
+
+  /** Remove the flight's recording; 0 when there was none. */
+  deleteTrack: async (id: string): Promise<number> => {
+    const { data } = await api.delete<{ deleted: number }>(`/flights/${id}/track`);
+    return data.deleted;
+  },
+
+  /** Every recorded flight line of the user, for the map (forgejo#312). */
+  getTrackLines: async (): Promise<FlightTrackLine[]> => {
+    const { data } = await api.get<{ lines: FlightTrackLine[] }>("/flights/track-lines");
+    return data.lines;
   },
 
   create: async (

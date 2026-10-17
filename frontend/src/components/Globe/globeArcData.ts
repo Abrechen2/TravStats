@@ -14,6 +14,7 @@
 // flown, on the same screen.
 
 import type { GeoJSONFeature } from "../../types";
+import { addRecording, emptyRecordings, type RouteRecordings } from "../layers/recordedFlightPaths";
 import type { ArcDatum } from "./globeLayerTypes";
 import { isCountableFlight } from "../../shared/flightCounting";
 import {
@@ -71,6 +72,8 @@ export function buildGlobeArcData(
     // tooltip's two-part label.
     flownCount: number;
     scheduledCount: number;
+    // Recorded flights (forgejo#312) — the same rule as routesLayer.ts.
+    recordings: RouteRecordings;
   }
   const routes = new Map<string, RouteAcc>();
   for (const flight of flights) {
@@ -109,6 +112,7 @@ export function buildGlobeArcData(
       if (!isScheduled) existing.hasPastFlown = true;
       if (isScheduled) existing.scheduledCount += 1;
       if (isFlown) existing.flownCount += 1;
+      existing.recordings = addRecording(existing.recordings, flight);
     } else {
       routes.set(key, {
         count: 1,
@@ -122,6 +126,7 @@ export function buildGlobeArcData(
         hasPastFlown: !isScheduled,
         flownCount: isFlown ? 1 : 0,
         scheduledCount: isScheduled ? 1 : 0,
+        recordings: addRecording(emptyRecordings(), flight),
       });
     }
   }
@@ -142,6 +147,32 @@ export function buildGlobeArcData(
     // (historical-only, mixed, regular past-only) collapses to "past" —
     // mirrors routesLayer.ts's pureScheduled collapsing rule exactly.
     const status: ArcDatum["status"] = r.hasUpcoming && !r.hasPastFlown ? "scheduled" : "past";
+    // A recorded flight runs along its recording, on the surface — where the
+    // aircraft actually was — in the route's own colour and tier.
+    const shared = {
+      count: r.count,
+      departure: r.departure,
+      arrival: r.arrival,
+      color: getHeatmapColor(r.count, thresholds),
+      quartile,
+      weak: r.weak,
+      status,
+      flownCount: r.flownCount,
+      scheduledCount: r.scheduledCount,
+    };
+    for (const { flightId, paths } of r.recordings.recorded) {
+      for (const path of paths) {
+        arcs.push({
+          ...shared,
+          from: path[0],
+          to: path[path.length - 1],
+          waypoints: path.map(([lon, lat]): [number, number, number] => [lon, lat, 0]),
+          flightIds: [flightId],
+        });
+      }
+    }
+    // The great circle stays only while a flight on the route has nothing else.
+    if (r.recordings.unrecordedCount === 0) continue;
     if (distanceKm >= ANTIPODAL_DISTANCE_KM) {
       antipodals.push({
         from: r.from,
