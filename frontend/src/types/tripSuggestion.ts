@@ -46,8 +46,11 @@ export type TripSuggestionHome = "history" | "estimated" | "missing";
 export interface TripSuggestionList {
   suggestions: TripSuggestion[];
   total: number;
-  home: TripSuggestionHome;
+  /** null while the account has trip suggestions switched off (forgejo#306). */
+  home: TripSuggestionHome | null;
   truncated: boolean;
+  /** The account switched trip suggestions off: nothing was computed (forgejo#306). */
+  disabled?: boolean;
 }
 
 export interface TripSuggestionEdits {

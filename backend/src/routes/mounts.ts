@@ -143,6 +143,8 @@ import noteRoutes from "./notes";
 import sharingRoutes from "./sharing";
 import shareLinkRoutes from "./shareLinks";
 import publicShareLinkRoutes from "./publicShareLinks";
+import calendarFeedRoutes from "./calendarFeed";
+import calendarFeedPublicRoutes from "./calendarFeedPublic";
 import tagRoutes from "./tags";
 import openapiRoutes from "./openapi";
 import importRoutes from "./import";
@@ -170,6 +172,10 @@ export interface ApiMount {
 }
 
 export const apiMounts: ApiMount[] = [
+  // The calendar subscription (forgejo#310) is asked with no session at all —
+  // a calendar app sends a plain GET. FIRST, so no router mounted at `/api/v1`
+  // with a router-wide `authenticate` can ever answer it with a 401.
+  { id: "calendarFeedPublic", base: "/api/v1/calendar", router: calendarFeedPublicRoutes },
   { id: "map-config", base: "/api/v1/map-config", router: mapConfigRoutes },
   { id: "encrypted-share", base: "/api/v1/encrypted-share", router: encryptedShareRoutes },
   { id: "comparison", base: "/api/v1/comparison", router: comparisonRoutes },
@@ -475,6 +481,8 @@ export const apiMounts: ApiMount[] = [
   // and the unauthenticated side a link's page asks with its token.
   { id: "shareLinks", base: "/api/v1/share-links", router: shareLinkRoutes },
   { id: "publicShareLinks", base: "/api/v1/public/share-links", router: publicShareLinkRoutes },
+  // The owner's side of the calendar subscription (forgejo#310).
+  { id: "calendarFeed", base: "/api/v1/calendar-feed", router: calendarFeedRoutes },
   { id: "tags", base: "/api/v1/tags", router: tagRoutes },
   { id: "import", base: "/api/v1/import", router: importRoutes },
   { id: "pairing", base: "/api/v1/pairing", router: pairingRoutes },

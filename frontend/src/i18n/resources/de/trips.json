@@ -667,6 +667,7 @@
   "dawarichStays": {
     "title": "Dawarich-Aufenthalte",
     "description": "Aus deinen eigenen Dawarich-Positionsdaten werden alle sechs Stunden mögliche Aufenthalte der letzten sieben Tage erkannt. Es entstehen nur Vorschläge: Ein Besuch wird erst nach deiner Bestätigung eingetragen. Dies aktiviert weder den Immich-Scan noch die Ländererkennung.",
+    "suggestionsPaused": "Pausiert: Aufenthalts-Vorschläge sind in den Einstellungen unter „Reisen“ ausgeschaltet. Deine Einwilligung und bisherigen Entscheidungen bleiben erhalten.",
     "placesPaused": "Pausiert: Der Bereich Orte ist ausgeschaltet. Aktiviere Orte in den Einstellungen, um neue Aufenthalte zu erkennen. Deine Einwilligung und bisherigen Vorschläge bleiben erhalten.",
     "disabled": "Automatische Erkennung ist ausgeschaltet. Vorhandene Vorschläge bleiben prüfbar.",
     "nextScan": "Nächste automatische Auswertung",
@@ -780,6 +781,86 @@
         "themePark": "Freizeitparkbesuch",
         "museum": "Museumsbesuch – gesamtes Gelände",
         "unknown": "Zusammengehöriges Gelände"
+      }
+    },
+    "identity": {
+      "mapLabel": "Karte des Aufenthaltsorts",
+      "loading": "Ort wird ermittelt …",
+      "retry": "Erneut versuchen",
+      "error": {
+        "rateLimited": "Zu viele Ortsabfragen in kurzer Zeit. Bitte warte einen Moment.",
+        "disabled": "Aufenthalts-Vorschläge sind ausgeschaltet; der Ort wird nicht ermittelt.",
+        "unavailable": "Der Ort konnte gerade nicht ermittelt werden. Die Koordinaten bleiben gültig."
+      },
+      "probable": "Wahrscheinlich",
+      "noProbable": "Für diese Stelle ließ sich kein Ortsname finden.",
+      "source": {
+        "nearbyPlace": "Ort in der Nähe",
+        "address": "Adresse am Aufenthaltsort",
+        "photos": "aus deinen Immich-Fotos"
+      },
+      "photoSupported": "durch deine Fotos bestätigt",
+      "geocoder": {
+        "empty": "Für diese Stelle ist keine Adresse bekannt.",
+        "degraded": "Die Adresssuche ist gerade nicht erreichbar oder überlastet – die Adresse fehlt deshalb, nicht weil es keine gibt."
+      },
+      "candidates": "Orte in der Nähe",
+      "candidatesState": {
+        "empty": "Keine benannten Orte im Umkreis von 250 m.",
+        "degraded": "Die Ortssuche ist gerade nicht erreichbar oder überlastet – Orte in der Nähe fehlen deshalb."
+      },
+      "distance": "{{meters}} m entfernt",
+      "photoCount_one": "{{count}} Foto hier",
+      "photoCount_other": "{{count}} Fotos hier",
+      "useName": "Name übernehmen",
+      "photos": {
+        "count_one": "{{count}} Immich-Foto während des Aufenthalts",
+        "count_other": "{{count}} Immich-Fotos während des Aufenthalts",
+        "cities": "laut Immich in {{cities}}",
+        "none": "Keine Immich-Fotos aus dieser Zeit an diesem Ort.",
+        "truncated": "Immich hat nicht alle Fotos des Zeitraums geliefert",
+        "failed": {
+          "unreachable": "Immich ist nicht erreichbar – ausgewertet ohne Fotos.",
+          "auth": "Immich hat den API-Schlüssel abgelehnt – ausgewertet ohne Fotos. Prüfe die Immich-Verbindung in den Einstellungen.",
+          "notFound": "Immich kennt die Fotosuche nicht – ausgewertet ohne Fotos.",
+          "protocol": "Immich hat unerwartet geantwortet – ausgewertet ohne Fotos. Ist die Immich-Version aktuell?",
+          "invalidUrl": "Die Immich-Adresse ist ungültig – ausgewertet ohne Fotos. Prüfe sie in den Einstellungen."
+        }
+      },
+      "placeType": {
+        "label": "Ortstyp (KI)",
+        "loading": "Ortstyp wird bestimmt …",
+        "viaCloud": "bestimmt über {{host}}",
+        "refused": {
+          "disabled_by_admin": "Ortstyp nicht bestimmt: Die KI ist von der Administration ausgeschaltet.",
+          "shared_demo": "Ortstyp nicht bestimmt: Im gemeinsamen Demo-Konto steht keine KI zur Verfügung.",
+          "cloud_not_consented": "Ortstyp nicht bestimmt: Es ist nur ein Cloud-Anbieter eingerichtet, dem die Administration noch nicht zugestimmt hat.",
+          "provider_incomplete": "Ortstyp nicht bestimmt: Es ist keine KI vollständig eingerichtet."
+        },
+        "failed": {
+          "timeout": "Ortstyp nicht bestimmt: Die KI hat nicht rechtzeitig geantwortet.",
+          "unavailable": "Ortstyp nicht bestimmt: Die KI ist nicht erreichbar.",
+          "unusable": "Ortstyp nicht bestimmt: Die Antwort der KI war unbrauchbar."
+        },
+        "types": {
+          "restaurant": "Restaurant",
+          "cafe": "Café",
+          "bar": "Bar oder Kneipe",
+          "accommodation": "Unterkunft",
+          "shop": "Geschäft",
+          "museum": "Museum",
+          "attraction": "Sehenswürdigkeit",
+          "park": "Park",
+          "nature": "Natur",
+          "beach": "Strand",
+          "religious": "Religiöser Ort",
+          "transport": "Verkehrsknoten",
+          "venue": "Veranstaltungsort",
+          "sport": "Sportstätte",
+          "residential": "Wohngegend",
+          "workplace": "Arbeitsort",
+          "other": "Sonstiger Ort"
+        }
       }
     }
   }

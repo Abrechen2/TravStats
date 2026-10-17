@@ -23,6 +23,13 @@ import {
 import { isValidZone } from "../../shared/time/zonedParts";
 import { homeSettingsView } from "../../services/home/homeStore";
 import { canonicalProfilePictureUrl } from "../../services/files/privateFileUrls";
+import {
+  staySuggestionsSettingsSchema,
+  suggestionSwitchesUpdate,
+  suggestionSwitchesView,
+  tripSuggestionsSettingsSchema,
+  type SuggestionSwitchColumns,
+} from "../../services/settings/suggestionSwitches";
 
 const router = Router();
 
@@ -194,6 +201,9 @@ const settingsSchema = z
     // Silent trip auto-creation during flight import (column-backed, default
     // true). The explicit "detect trips" button is not gated by this.
     autoCreateTrips: z.boolean().optional(),
+    // Inbox suggestion switches (forgejo#306), column-backed like the one above.
+    tripSuggestions: tripSuggestionsSettingsSchema.optional(),
+    staySuggestions: staySuggestionsSettingsSchema.optional(),
     /**
      * Which evidence tier the country headline counts from, for THIS user
      * (spec §3.2). `.nullable()` because null is a value and not an absence:
@@ -248,7 +258,7 @@ function buildSettingsResponse(
   },
   /** Home, read through the one home module (`services/home/homeStore.ts`). */
   home: Awaited<ReturnType<typeof homeSettingsView>>,
-  record: {
+  record: SuggestionSwitchColumns & {
     data: Prisma.JsonValue;
     autoUpdateEnabled: boolean;
     autoUpdateRequireApproval: boolean;
@@ -303,6 +313,7 @@ function buildSettingsResponse(
     availableDomains: [...AVAILABLE_DOMAINS],
     baseCurrency: record.baseCurrency,
     autoCreateTrips: record.autoCreateTrips ?? true,
+    ...suggestionSwitchesView(record),
     // `parseCountryTier`, not a cast: the column is TEXT, so an unreadable
     // value reads as "no override" and the account follows the instance —
     // which is the same thing it was doing before anybody typed the bad value.
@@ -466,10 +477,13 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       enabledDomains,
       baseCurrency,
       autoCreateTrips,
+      tripSuggestions,
+      staySuggestions,
       countryThreshold,
       homeCountry,
       ...rest
     } = payload;
+    const switches = suggestionSwitchesUpdate(tripSuggestions, staySuggestions);
     const {
       betaFeaturesEnabled,
       openDataEnabled,
@@ -522,6 +536,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
 
     const updateData: UserSettingsUpdateData = {
       data: merged as Prisma.InputJsonValue,
+      ...switches,
     };
 
     // Handle auto-update settings
@@ -636,6 +651,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
         enabledDomains: enabledDomains ?? ["flight"],
         baseCurrency: baseCurrency ?? "EUR",
         autoCreateTrips: autoCreateTrips ?? true,
+        ...switches,
         // null on a fresh row means "follow the instance", which is what an
         // account that has never opened the setting should do.
         countryThreshold: countryThreshold ?? null,

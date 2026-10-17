@@ -54,6 +54,20 @@ vi.mock("@/lib/api/tokens", async (importOriginal) => {
     apiTokensApi: { ...actual.apiTokensApi, list: vi.fn().mockResolvedValue([]) },
   };
 });
+// The calendar subscription card (forgejo#310) sits in the trips section, on
+// the same general page, and loads its state on mount.
+vi.mock("@/lib/api/calendarFeed", () => ({
+  calendarFeedApi: {
+    status: vi.fn().mockResolvedValue({
+      enabled: true,
+      active: false,
+      createdAt: null,
+      lastUsedAt: null,
+    }),
+    issue: vi.fn(),
+    revoke: vi.fn(),
+  },
+}));
 vi.mock("@/lib/api/notifications", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/notifications")>();
   return {

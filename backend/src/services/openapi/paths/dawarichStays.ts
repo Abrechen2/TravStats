@@ -40,7 +40,7 @@ registry.registerPath({
   tags,
   summary: "Own location-history suggestions and retained decisions",
   description:
-    "Conservative stationary clusters; not proof of GPS measurement or overnight accommodation. Original evidence and corrected times remain separate. Up to 200 most recent rows per status. `covered` lists findings resolved because a recorded place visit or lodging stay already holds them (within 250 m, a visit clock within 2 h or on the same local day); `evidence.coveredBy` names that record. Reading `pending` resolves newly covered findings first.",
+    "Conservative stationary clusters; not proof of GPS measurement or overnight accommodation. Original evidence and corrected times remain separate. Up to 200 most recent rows per status. `covered` lists findings resolved because a recorded place visit or lodging stay already holds them (within 250 m, a visit clock within 2 h or on the same local day); `evidence.coveredBy` names that record. Reading `pending` resolves newly covered findings first. With the account's `staySuggestions.enabled` setting off, `pending` answers an empty list, nothing is resolved, and accept/reject/scan are refused with `STAY_SUGGESTIONS_DISABLED` (409); stored rows are kept.",
   request: {
     query: z.object({ status: z.enum(["pending", "accepted", "rejected", "covered"]).optional() }),
   },
@@ -59,7 +59,12 @@ registry.registerPath({
           times: scanTimes,
           connected: z.boolean(),
           placesEnabled: z.boolean(),
-          pausedReason: z.enum(["disabled", "placesDisabled", "connectionMissing"]).nullable(),
+          pausedReason: z
+            .enum(["suggestionsDisabled", "disabled", "placesDisabled", "connectionMissing"])
+            .nullable()
+            .describe(
+              "`suggestionsDisabled`: the account switched stay suggestions off (forgejo#306)"
+            ),
           nextScanAt: z.string().datetime().nullable(),
           result: z.string().nullable(),
         })

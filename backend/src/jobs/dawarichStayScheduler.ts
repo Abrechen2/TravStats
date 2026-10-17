@@ -6,8 +6,10 @@ import logger from "../utils/logger";
 import { AppError } from "../middleware/errorHandler";
 let task: ScheduledTask | null = null;
 export async function runDawarichStaySweep(): Promise<void> {
+  // An account with stay suggestions switched off (forgejo#306) is not even
+  // attempted: reserveScan would refuse it anyway, but as a warning every six hours.
   const accounts = await prisma.dawarichStayScan.findMany({
-    where: { enabled: true },
+    where: { enabled: true, user: { settings: { is: { staySuggestionsEnabled: true } } } },
     select: { userId: true },
   });
   for (const { userId } of accounts) {

@@ -210,4 +210,6 @@ export const NON_TRAVEL_RELATIONS = [
   "dawarichStayScan",
   "dawarichSweepState",
   "passwordResetRequest",
+  // The calendar subscription's token hash (forgejo#310): a credential.
+  "calendarFeed",
 ] as const;

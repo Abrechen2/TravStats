@@ -153,6 +153,7 @@ model User {
   notes     Note[]
 
   passwordResetRequest PasswordResetRequest?
+  calendarFeed         CalendarFeed?
 
   @@map("users")
 }
@@ -331,6 +332,26 @@ model PairingCode {
 
   @@index([userId])
   @@map("pairing_codes")
+}
+
+/// A personal calendar subscription (forgejo#310): `GET /api/v1/calendar/<token>.ics`
+/// answers the user's upcoming entries to any calendar app that holds the URL.
+/// One per user — regenerating replaces the row, revoking deletes it, and the
+/// old URL answers 404 from then on. Only the SHA-256 of the token is stored,
+/// as for share links and pairing codes: the URL is shown once, when it is made.
+/// Deleted with the user and on every backup restore (a dump taken before a
+/// revoke must not bring the revoked URL back).
+model CalendarFeed {
+  id         String    @id @default(uuid())
+  userId     String    @unique @map("user_id")
+  tokenHash  String    @unique @map("token_hash")
+  /// When a calendar app last read the feed — so the owner can tell a URL in use from a forgotten one.
+  lastUsedAt DateTime? @map("last_used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("calendar_feeds")
 }
 
 /// A public, read-only share link (forgejo#281, owner decision D7; design
@@ -849,6 +870,21 @@ model UserSettings {
   // explicit "detect trips" endpoint is NOT gated by this — pressing that
   // button is already the user asking for trips.
   autoCreateTrips Boolean @default(true) @map("auto_create_trips")
+
+  // Inbox suggestion switches (forgejo#306). Off stops the work, not just the
+  // display: no trip engine run, no Dawarich stay scan. Stored decisions
+  // (TripSuggestionDecision, rejected stays) survive a switch-off, so switching
+  // back on resumes where the user left. Flat columns like `autoCreateTrips`;
+  // the API nests them as `tripSuggestions.enabled` / `staySuggestions.*`.
+  tripSuggestionsEnabled                Boolean @default(true) @map("trip_suggestions_enabled")
+  staySuggestionsEnabled                Boolean @default(true) @map("stay_suggestions_enabled")
+  /// Immich photos as evidence for which place a stay was at. Read by the stay
+  /// place identification of forgejo#305; it only ever applies where the
+  /// account has an Immich connection.
+  staySuggestionsImmichEvidence         Boolean @default(true) @map("stay_suggestions_immich_evidence")
+  /// An LLM classifies a stay's place (forgejo#305). Off by default; a cloud
+  /// provider additionally needs the instance's own consent for that slot.
+  staySuggestionsLlmPlaceClassification Boolean @default(false) @map("stay_suggestions_llm_place_classification")
 
   // Auto-update settings
   autoUpdateEnabled           Boolean   @default(false) @map("auto_update_enabled")

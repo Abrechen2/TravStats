@@ -41,6 +41,7 @@ const KEYWORDS: Record<keyof typeof BETA_FEATURES, [RegExp, RegExp]> = {
   cruiseTracks: [/Kreuzfahrt-Spuren/, /cruise tracks/i],
   flightTrackUpload: [/Flugspuren/, /flight tracks/i],
   travPlan: [/TravPlan/, /TravPlan/],
+  calendarFeed: [/Kalender-Abo/, /calendar subscription/i],
 };
 const keys = Object.keys(KEYWORDS) as (keyof typeof BETA_FEATURES)[];
 
