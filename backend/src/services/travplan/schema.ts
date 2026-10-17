@@ -444,6 +444,13 @@ const operationSchema = z.discriminatedUnion("type", [
       place: placeSchema.optional(),
     })
     .strict(),
+  z
+    .object({
+      type: z.literal("replace_placeholder"),
+      placeholderId: id,
+      value: z.record(z.string(), z.unknown()),
+    })
+    .strict(),
   z.object({ type: z.literal("decision"), value: decisionSchema }).strict(),
   z
     .object({

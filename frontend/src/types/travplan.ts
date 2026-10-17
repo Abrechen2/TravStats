@@ -330,6 +330,7 @@ export type PlanOperation =
   | { type: "route_settings"; shape?: PlanState["shape"]; vehicle?: PlanVehicle | null }
   | { type: "move_station"; id: string; toIndex: number }
   | { type: "station_night"; stationId: string; night: PlanNight; place?: PlanPlace }
+  | { type: "replace_placeholder"; placeholderId: string; value: Record<string, unknown> }
   | { type: "decision"; value: PlanDecision }
   | {
       type: "assign_idea";
@@ -342,6 +343,18 @@ export type PlanOperation =
   | { type: "execution"; id: string; execution: PlanItem["execution"] }
   | { type: "undo"; mutationId: string }
   | { type: "proposal"; proposalId: string };
+export interface PlaceholderMatch {
+  bookingId: string;
+  score: number;
+  variant: "active" | "inactive";
+  reasons: ("kind" | "endpoints" | "day" | "nights")[];
+  differences: {
+    field: string;
+    plan: string | null;
+    booking: string | null;
+    change: "changed" | "new";
+  }[];
+}
 export interface PlanWrite {
   clientRef: string;
   baseRevision: number;

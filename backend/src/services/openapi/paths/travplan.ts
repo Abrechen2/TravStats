@@ -5,6 +5,7 @@ import {
   writeSchema,
   stateSchema,
   proposalContentSchema,
+  bookingSchema,
 } from "../../travplan/schema";
 import { errorContent } from "./shared";
 const uuid = z.string().uuid(),
@@ -152,6 +153,30 @@ register(
   "Revision-checked, idempotent mutations. Fixed anchors are protected. Handover confirms no execution.",
   result,
   writeSchema
+);
+register(
+  "post",
+  "/trips/{tripId}/plan/placeholder-matches",
+  "Which open placeholders an imported booking could replace: same kind, endpoints within 30 km, departure day within one day, lodging overlapping the station nights. Read-only.",
+  z.object({
+    matches: z.array(
+      z.object({
+        bookingId: uuid,
+        score: z.number(),
+        variant: z.enum(["active", "inactive"]),
+        reasons: z.array(z.enum(["kind", "endpoints", "day", "nights"])),
+        differences: z.array(
+          z.object({
+            field: z.string(),
+            plan: z.string().nullable(),
+            booking: z.string().nullable(),
+            change: z.enum(["changed", "new"]),
+          })
+        ),
+      })
+    ),
+  }),
+  z.object({ booking: bookingSchema })
 );
 register(
   "get",

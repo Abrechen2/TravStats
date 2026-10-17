@@ -26,8 +26,10 @@ import { refreshForecast } from "../services/travplan/weather";
 import { packingSuggestions } from "../services/travplan/rules";
 import { recheckAchievementsAfterWrite } from "../middleware/recheckAchievementsAfterWrite";
 import { planningImportPolicy } from "./travplan/importPolicy";
+import routeEndpoints from "./travplan/routeEndpoints";
 const router = Router();
 router.use(planningImportPolicy);
+router.use(routeEndpoints);
 const uuid = z.string().uuid();
 const writeGuard = [authenticate, requireWriteScope, rejectDemo];
 function route(fn: (req: AuthRequest, res: Response) => Promise<void>) {

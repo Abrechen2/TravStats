@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { AppError } from "../../middleware/errorHandler";
-import { collectionSchemas } from "./schema";
+import { bookingSchema, collectionSchemas } from "./schema";
+import { replacePlaceholder } from "./placeholders";
 import { parseState } from "./upgrade";
 import { bookingDuration } from "./temporal";
 import { transferFingerprint } from "./rules";
@@ -60,6 +61,11 @@ export function applyOperation(
     item.execution = operation.execution;
     if (item.source?.kind.startsWith("linkedActual:") && operation.execution !== "confirmed")
       item.source = null;
+  } else if (operation.type === "replace_placeholder") {
+    const value = bookingSchema.parse(operation.value);
+    if (value.actualBookingId) refuse("Actual booking links cannot be edited here");
+    // Members are not part of this plan yet, so there is no actor to name.
+    state = replacePlaceholder(state, operation.placeholderId, value, null);
   } else if (operation.type === "decision") {
     state.decisions = state.decisions
       .filter((d) => d.id !== operation.value.id)

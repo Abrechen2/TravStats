@@ -1,5 +1,5 @@
 import { instantMinute } from "./temporal";
-import type { PlanBudget, PlanFinding, PlanState, PlanTransfer } from "./types";
+import type { PlanBooking, PlanBudget, PlanFinding, PlanState, PlanTransfer } from "./types";
 export function transferFingerprint(state: PlanState, fromId: string, toId: string): string {
   const from = state.items.find((i) => i.id === fromId),
     to = state.items.find((i) => i.id === toId),
@@ -29,7 +29,18 @@ export function deriveBudget(state: PlanState): PlanBudget {
     groups.add(key);
     return true;
   });
-  for (const row of [...bookings.map((b) => ({ ...b, kind: "booked" })), ...state.costs]) {
+  // C2: a placeholder only counts while its stage is on the active route;
+  // a variant's stages are inactive and so are their estimates.
+  const activeStages = new Set(state.stages.map((g) => g.id));
+  const counted = (b: PlanBooking) => !b.placeholder || !b.stageId || activeStages.has(b.stageId);
+  const placeholders = bookings.filter((b) => b.placeholder && counted(b));
+  for (const b of placeholders) {
+    if (!b.estimate) unknown++;
+    else if (b.estimate.currency !== state.currency) other.add(b.estimate.currency);
+    else estimates += Math.round(b.estimate.amount * 100);
+  }
+  const real = bookings.filter((b) => !b.placeholder);
+  for (const row of [...real.map((b) => ({ ...b, kind: "booked" })), ...state.costs]) {
     if (row.currency !== state.currency) {
       other.add(row.currency);
       if (row.kind === "booked") unknownCommitted = true;
