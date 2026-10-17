@@ -67,6 +67,7 @@ import "./tripSuggestions";
 import "./sharing";
 import "./comparison";
 import "./shareLinks";
+import "./calendarFeed";
 import "./catalog";
 import "./misc";
 import "./countryFlags";

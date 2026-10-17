@@ -413,6 +413,11 @@ export type ApiErrorCode =
   | "SHARE_LINK_LIMIT"
   /** An expiry in the past or beyond the maximum (400). */
   | "SHARE_LINK_EXPIRY_INVALID"
+  /** Calendar feed (forgejo#310): every public failure — malformed, unknown,
+   *  revoked, beta switch off — is this one 404, as for share links. */
+  | "CALENDAR_FEED_NOT_FOUND"
+  /** No calendar URL is issued while the instance's beta switch is off (409). */
+  | "CALENDAR_FEED_DISABLED"
   /** Undo refused: the copy changed since the notice; `extra.fields` names
    *  the facts that differ (409). */
   | "SHARE_UNDO_STALE"

@@ -5,6 +5,7 @@ import logger from "../../utils/logger";
 import { reconcileInterruptedBackups } from "./reconcileBackups";
 import { resetSyncHistory } from "../sync/state";
 import { deleteAllShareLinks } from "../shareLinks/deleteAll";
+import { deleteAllCalendarFeeds } from "../calendarFeed/deleteAll";
 
 /**
  * The columns of `admin_settings` that describe THIS MACHINE rather than the
@@ -189,7 +190,8 @@ async function keepThisInstancesBackupRows(before: BackupRow[]): Promise<void> {
  *   changes it never had (forgejo#141) — a new epoch sends every client to a
  *   full read;
  * - no public links: a dump taken before a revoke would bring the revoked
- *   link back to life (forgejo#281, T14);
+ *   link back to life (forgejo#281, T14), and no calendar feed URLs, for the
+ *   same reason (forgejo#310);
  * - no backup row left `running`: the archive carries the row of the very
  *   backup being dumped, still `running`, and left alone it is a permanent
  *   lock — further backups and restores answer 409 and the scheduler skips.
@@ -208,6 +210,7 @@ function settlingSteps(
     ["instance_identity", () => restoreInstanceIdentity(identityBefore)],
     ["sync_history", () => resetSyncHistory(reason)],
     ["share_links", () => deleteAllShareLinks(reason)],
+    ["calendar_feeds", () => deleteAllCalendarFeeds(reason)],
   ];
   if (!backupsBefore) return steps;
   return [
