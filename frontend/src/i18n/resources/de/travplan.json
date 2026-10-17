@@ -161,7 +161,14 @@
     "hotelDates": "Für eine Unterkunft fehlen vollständige Aufenthaltsdaten.",
     "nightGap": "{{count}} Nächte sind noch ungeklärt: {{days}}.",
     "budgetOver": "Die bekannten Kosten liegen {{amount}} {{currency}} über dem Budget.",
-    "unknownCosts": "{{count}} Preise fehlen; weitere Währungen: {{currencies}}."
+    "unknownCosts": "{{count}} Preise fehlen; weitere Währungen: {{currencies}}.",
+    "stageUndecided": "Wie geht es von {{from}} nach {{to}}? Für {{mode}} fehlt noch eine Buchung oder ein Platzhalter.",
+    "placeholderDue": "„{{title}}“ ist noch ein Platzhalter – Abfahrt in {{days}} Tagen.",
+    "nightUndecided": "Für {{station}} ist noch kein Platz gemerkt.",
+    "scheduleConflict": "Die Route kommt erst am {{requiredDay}} an, „{{anchor}}“ ist für {{plannedDay}} gebucht.",
+    "longDrive": "{{from}} → {{to}} sind etwa {{hours}} Stunden Fahrt.",
+    "ferryConnection": "Zwischen Ankunft und Fähre „{{ferry}}“ liegen nur {{minutes}} Minuten.",
+    "dayTripOutside": "„{{title}}“ liegt außerhalb der Tage in {{station}}."
   },
   "conscious": "Bewusst offen lassen",
   "dismiss": "Brauche ich nicht",

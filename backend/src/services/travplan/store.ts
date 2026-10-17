@@ -11,6 +11,8 @@ import { adoptExisting } from "./existing";
 import { linkActual } from "./linkActual";
 import { checkPlan, deriveBudget } from "./rules";
 import { scheduleRoute } from "./routeSchedule";
+import { todayIn } from "../../shared/time/clock";
+import { isValidZone } from "../../shared/time/zonedParts";
 import { prepareExecution, synchronizeExecution, type PreparedExecution } from "./execution";
 import type { PlanState, PlanView, PlanWrite, PlanSummary } from "./types";
 export function canonical(value: unknown): string {
@@ -31,6 +33,14 @@ export function hash(value: unknown): string {
 }
 export const asJson = (value: unknown): Prisma.InputJsonValue =>
   JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+/**
+ * "Today" for the date-driven route findings. The plan's own zone is the
+ * cheap, deterministic choice here (`view` has no user at hand); a plan
+ * without a valid zone falls back to UTC.
+ */
+function planToday(state: PlanState): string {
+  return todayIn(isValidZone(state.timezone) ? state.timezone : "UTC");
+}
 export function view(
   row: Omit<TravelPlan, "state"> & { state: unknown },
   name: string,
@@ -43,7 +53,7 @@ export function view(
     name,
     revision: row.revision,
     state,
-    findings: checkPlan(state),
+    findings: checkPlan(state, planToday(state)),
     budget: deriveBudget(state),
     ...(state.shape === "route" ? { schedule: scheduleRoute(state) } : {}),
     ...(lastMutationId ? { lastMutationId } : {}),
@@ -304,11 +314,15 @@ export async function writePlan(
             next.ideas.push({ id: randomUUID(), ...idea, priority: "optional", itemId: null });
         next = parseState(next);
         const priorProblems = new Set(
-          checkPlan(before)
+          checkPlan(before, planToday(before))
             .filter((f) => f.code === "overlap")
             .map((f) => f.id)
         );
-        if (checkPlan(next).some((f) => f.code === "overlap" && !priorProblems.has(f.id)))
+        if (
+          checkPlan(next, planToday(next)).some(
+            (f) => f.code === "overlap" && !priorProblems.has(f.id)
+          )
+        )
           throw new AppError(
             "Proposal creates conflicting appointments",
             409,

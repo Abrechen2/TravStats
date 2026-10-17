@@ -1,4 +1,5 @@
 import { instantMinute } from "./temporal";
+import { isSuppressed, routeCoveredNights, routeFindings } from "./routeRules";
 import type { PlanBooking, PlanBudget, PlanFinding, PlanState, PlanTransfer } from "./types";
 export function transferFingerprint(state: PlanState, fromId: string, toId: string): string {
   const from = state.items.find((i) => i.id === fromId),
@@ -81,7 +82,7 @@ export function localMinute(day: string | null, time: string | null): number | n
     Date.parse(day + "T00:00:00Z") / 60000 + Number(time.slice(0, 2)) * 60 + Number(time.slice(3))
   );
 }
-export function checkPlan(state: PlanState): PlanFinding[] {
+export function checkPlan(state: PlanState, today: string): PlanFinding[] {
   const findings: PlanFinding[] = [];
   function add(
     id: string,
@@ -91,9 +92,8 @@ export function checkPlan(state: PlanState): PlanFinding[] {
     facts: unknown,
     severity: PlanFinding["severity"] = "info"
   ) {
-    const fingerprint = JSON.stringify(facts),
-      decision = state.decisions.find((d) => d.id === id);
-    if (decision?.choice === "conscious" || decision?.fingerprint === fingerprint) return;
+    const fingerprint = JSON.stringify(facts);
+    if (isSuppressed(state, id, fingerprint)) return;
     findings.push({ id, code, section, params, fingerprint, severity });
   }
   const active = state.items.filter(
@@ -244,11 +244,21 @@ export function checkPlan(state: PlanState): PlanFinding[] {
       {},
       hotels.map((h) => [h.id, h.day, h.endDay])
     );
-  else if (state.startDay && state.endDay && state.bookings.length) {
+  else if (
+    state.startDay &&
+    state.endDay &&
+    (state.bookings.length || (state.shape === "route" && state.stations.length))
+  ) {
+    // A route plan also covers a night with a station night or an overnight stage.
+    const routeNights = state.shape === "route" ? routeCoveredNights(state) : new Set<string>();
     let missing: string[] = [];
     for (let d = Date.parse(state.startDay); d < Date.parse(state.endDay); d += 864e5) {
       const day = new Date(d).toISOString().slice(0, 10);
-      if (!state.openNights.includes(day) && !hotels.some((h) => h.day! <= day && h.endDay! > day))
+      if (
+        !state.openNights.includes(day) &&
+        !routeNights.has(day) &&
+        !hotels.some((h) => h.day! <= day && h.endDay! > day)
+      )
         missing.push(day);
     }
     if (missing.length)
@@ -278,6 +288,7 @@ export function checkPlan(state: PlanState): PlanFinding[] {
       { count: budget.unknown, currencies: budget.otherCurrencies.join(", ") },
       [budget.unknown, budget.otherCurrencies]
     );
+  if (state.shape === "route") findings.push(...routeFindings(state, today));
   return findings.sort(
     (a, b) => (a.severity === "attention" ? 0 : 1) - (b.severity === "attention" ? 0 : 1)
   );

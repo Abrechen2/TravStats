@@ -81,11 +81,13 @@ describe("Travel planning invariants", () => {
         fingerprint: transferFingerprint(s, flight.id, hotel.id),
       },
     ];
-    expect(checkPlan(s).some((f) => f.code === "transferOpen" || f.code === "transferReview")).toBe(
-      false
-    );
+    expect(
+      checkPlan(s, "2026-11-01").some(
+        (f) => f.code === "transferOpen" || f.code === "transferReview"
+      )
+    ).toBe(false);
     s.bookings[0].arrivalTime = "18:00";
-    expect(checkPlan(s).some((f) => f.code === "transferReview")).toBe(true);
+    expect(checkPlan(s, "2026-11-01").some((f) => f.code === "transferReview")).toBe(true);
     expect(s.transfers[0].note).toBe("Arrival hall");
   });
   it("does not reopen an intentionally open transfer", () => {
@@ -104,9 +106,11 @@ describe("Travel planning invariants", () => {
       },
     ];
     s.bookings[0].arrivalTime = "22:00";
-    expect(checkPlan(s).some((f) => f.code === "transferOpen" || f.code === "transferReview")).toBe(
-      false
-    );
+    expect(
+      checkPlan(s, "2026-11-01").some(
+        (f) => f.code === "transferOpen" || f.code === "transferReview"
+      )
+    ).toBe(false);
   });
   it("protects a booked anchor from ordinary edits and AI proposals", () => {
     const s = booking(emptyState(), "flight", "A");
@@ -184,7 +188,7 @@ describe("Travel planning invariants", () => {
         fingerprint: null,
       },
     ];
-    expect(checkPlan(s).some((f) => f.code === "arrivalBuffer")).toBe(false);
+    expect(checkPlan(s, "2026-11-01").some((f) => f.code === "arrivalBuffer")).toBe(false);
   });
   it("keeps separate legs sharing one PNR", () => {
     let s = booking(emptyState(), "flight", "SAME");
@@ -242,7 +246,7 @@ describe("Travel planning invariants", () => {
       },
       2
     );
-    expect(checkPlan(s).some((f) => f.code === "overlap")).toBe(true);
+    expect(checkPlan(s, "2026-11-01").some((f) => f.code === "overlap")).toBe(true);
   });
   it("keeps an excluded booking’s record and price without using it as accommodation", () => {
     let s = booking(emptyState(), "hotel", "A");
@@ -251,7 +255,7 @@ describe("Travel planning invariants", () => {
     s = applyOperation(s, { type: "execution", id: s.items[0].id, execution: "cancelled" }, 2);
     expect(s.bookings).toHaveLength(1);
     expect(deriveBudget(s).booked).toBe(840);
-    expect(checkPlan(s).some((f) => f.code === "nightGap")).toBe(true);
+    expect(checkPlan(s, "2026-11-01").some((f) => f.code === "nightGap")).toBe(true);
   });
   it("keeps an unknown committed remainder unknown and includes a known deposit as a cost floor", () => {
     let s = booking(emptyState(), "hotel", "A");
@@ -265,5 +269,36 @@ describe("Travel planning invariants", () => {
       remaining: null,
       unknown: 1,
     });
+  });
+});
+
+describe("nightGap on a route plan", () => {
+  const base = {
+    ...emptyState(),
+    shape: "route" as const,
+    startDay: "2027-05-08",
+    endDay: "2027-05-12",
+  };
+  const st = (title: string, nights: number, night: PlanState["stations"][number]["night"]) => ({
+    id: randomUUID(),
+    title,
+    place: { name: title, lat: 0, lon: 0, country: null, zone: null, ref: null },
+    nights,
+    pinnedDay: null,
+    night,
+    note: "",
+  });
+  it("nightGap counts station nights on a route plan", () => {
+    const covered = {
+      ...base,
+      stations: [st("A", 2, { kind: "spontaneous" }), st("B", 2, { kind: "pitch" })],
+    };
+    expect(checkPlan(covered, "2027-05-01").some((f) => f.code === "nightGap")).toBe(false);
+    const gap = {
+      ...base,
+      stations: [st("A", 2, { kind: "spontaneous" }), st("B", 1, { kind: "pitch" })],
+    };
+    const finding = checkPlan(gap, "2027-05-01").find((f) => f.code === "nightGap");
+    expect(finding?.params).toMatchObject({ count: 1, days: "2027-05-11" });
   });
 });

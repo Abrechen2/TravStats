@@ -161,7 +161,14 @@
     "hotelDates": "A lodging booking has incomplete stay dates.",
     "nightGap": "{{count}} nights are still unclear: {{days}}.",
     "budgetOver": "Known costs exceed the budget by {{amount}} {{currency}}.",
-    "unknownCosts": "{{count}} prices are unknown; additional currencies: {{currencies}}."
+    "unknownCosts": "{{count}} prices are unknown; additional currencies: {{currencies}}.",
+    "stageUndecided": "How do you get from {{from}} to {{to}}? {{mode}} still needs a booking or a placeholder.",
+    "placeholderDue": "“{{title}}” is still a placeholder – departure in {{days}} days.",
+    "nightUndecided": "No place has been saved for {{station}} yet.",
+    "scheduleConflict": "The route only arrives on {{requiredDay}}, but “{{anchor}}” is booked for {{plannedDay}}.",
+    "longDrive": "{{from}} → {{to}} is about {{hours}} hours of driving.",
+    "ferryConnection": "Only {{minutes}} minutes lie between your arrival and the ferry “{{ferry}}”.",
+    "dayTripOutside": "“{{title}}” falls outside the days in {{station}}."
   },
   "conscious": "Keep intentionally open",
   "dismiss": "Not needed",
