@@ -4,6 +4,7 @@ import { collectionSchemas } from "./schema";
 import { parseState } from "./upgrade";
 import { bookingDuration } from "./temporal";
 import { transferFingerprint } from "./rules";
+import { applyRouteOperation } from "./routeOperations";
 import type { PlanState, PlanOperation, PlanItem, PlanBooking } from "./types";
 function refuse(message: string): never {
   throw new AppError(message, 409, "PLAN_PROTECTED");
@@ -14,7 +15,9 @@ export function applyOperation(
   revision: number
 ): PlanState {
   let state: PlanState = structuredClone(input);
-  if (operation.type === "settings") {
+  const routed = applyRouteOperation(state, operation);
+  if (routed) state = routed;
+  else if (operation.type === "settings") {
     Object.assign(state, operation.values);
     if (
       state.latitude !== input.latitude ||

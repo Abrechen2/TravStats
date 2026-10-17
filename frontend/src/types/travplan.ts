@@ -327,6 +327,9 @@ export type PlanOperation =
     }
   | { type: "upsert"; collection: PlanCollection; value: Record<string, unknown> }
   | { type: "remove"; collection: PlanCollection; id: string }
+  | { type: "route_settings"; shape?: PlanState["shape"]; vehicle?: PlanVehicle | null }
+  | { type: "move_station"; id: string; toIndex: number }
+  | { type: "station_night"; stationId: string; night: PlanNight; place?: PlanPlace }
   | { type: "decision"; value: PlanDecision }
   | {
       type: "assign_idea";

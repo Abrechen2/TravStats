@@ -426,6 +426,24 @@ const operationSchema = z.discriminatedUnion("type", [
       id,
     })
     .strict(),
+  z
+    .object({
+      type: z.literal("route_settings"),
+      shape: z.enum(["stay", "route"]).optional(),
+      vehicle: vehicleSchema.nullable().optional(),
+    })
+    .strict(),
+  z
+    .object({ type: z.literal("move_station"), id, toIndex: z.number().int().min(0).max(59) })
+    .strict(),
+  z
+    .object({
+      type: z.literal("station_night"),
+      stationId: id,
+      night: nightSchema,
+      place: placeSchema.optional(),
+    })
+    .strict(),
   z.object({ type: z.literal("decision"), value: decisionSchema }).strict(),
   z
     .object({
