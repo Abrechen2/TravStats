@@ -782,6 +782,86 @@
         "museum": "Museum visit — whole venue",
         "unknown": "Whole venue"
       }
+    },
+    "identity": {
+      "mapLabel": "Map of the stay location",
+      "loading": "Identifying the place …",
+      "retry": "Try again",
+      "error": {
+        "rateLimited": "Too many place lookups in a short time. Please wait a moment.",
+        "disabled": "Stay suggestions are switched off; the place is not looked up.",
+        "unavailable": "The place could not be identified right now. The coordinates remain valid."
+      },
+      "probable": "Probably",
+      "noProbable": "No place name could be found for this spot.",
+      "source": {
+        "nearbyPlace": "place nearby",
+        "address": "address at the stay location",
+        "photos": "from your Immich photos"
+      },
+      "photoSupported": "confirmed by your photos",
+      "geocoder": {
+        "empty": "No address is known for this spot.",
+        "degraded": "The address lookup is unreachable or overloaded right now – the address is missing for that reason, not because there is none."
+      },
+      "candidates": "Places nearby",
+      "candidatesState": {
+        "empty": "No named places within 250 m.",
+        "degraded": "The place search is unreachable or overloaded right now – nearby places are missing for that reason."
+      },
+      "distance": "{{meters}} m away",
+      "photoCount_one": "{{count}} photo here",
+      "photoCount_other": "{{count}} photos here",
+      "useName": "Use name",
+      "photos": {
+        "count_one": "{{count}} Immich photo during the stay",
+        "count_other": "{{count}} Immich photos during the stay",
+        "cities": "in {{cities}} according to Immich",
+        "none": "No Immich photos from this time at this place.",
+        "truncated": "Immich did not return every photo of the period",
+        "failed": {
+          "unreachable": "Immich is unreachable – evaluated without photos.",
+          "auth": "Immich rejected the API key – evaluated without photos. Check the Immich connection in the settings.",
+          "notFound": "Immich does not know the photo search – evaluated without photos.",
+          "protocol": "Immich answered unexpectedly – evaluated without photos. Is the Immich version current?",
+          "invalidUrl": "The Immich address is invalid – evaluated without photos. Check it in the settings."
+        }
+      },
+      "placeType": {
+        "label": "Place type (AI)",
+        "loading": "Determining the place type …",
+        "viaCloud": "determined via {{host}}",
+        "refused": {
+          "disabled_by_admin": "Place type not determined: the AI is switched off by the administrator.",
+          "shared_demo": "Place type not determined: no AI is available to the shared demo account.",
+          "cloud_not_consented": "Place type not determined: only a cloud provider is set up, and the administrator has not consented to it yet.",
+          "provider_incomplete": "Place type not determined: no AI is fully set up."
+        },
+        "failed": {
+          "timeout": "Place type not determined: the AI did not answer in time.",
+          "unavailable": "Place type not determined: the AI is unreachable.",
+          "unusable": "Place type not determined: the answer of the AI was unusable."
+        },
+        "types": {
+          "restaurant": "Restaurant",
+          "cafe": "Café",
+          "bar": "Bar or pub",
+          "accommodation": "Accommodation",
+          "shop": "Shop",
+          "museum": "Museum",
+          "attraction": "Sight",
+          "park": "Park",
+          "nature": "Nature",
+          "beach": "Beach",
+          "religious": "Religious site",
+          "transport": "Transport hub",
+          "venue": "Event venue",
+          "sport": "Sports ground",
+          "residential": "Residential area",
+          "workplace": "Workplace",
+          "other": "Other place"
+        }
+      }
     }
   }
 }

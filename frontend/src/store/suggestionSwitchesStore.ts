@@ -20,25 +20,38 @@ import { persistSetting } from "./persistSetting";
 interface SuggestionSwitchesState {
   trips: boolean;
   stays: boolean;
+  /** Immich photos as evidence for a stay's place (forgejo#305); server default on. */
+  stayImmichEvidence: boolean;
+  /** A model classifies a stay's kind of place (forgejo#305); server default off. */
+  stayLlmPlaceClassification: boolean;
   /** What `GET /settings` said; anything that is not a boolean keeps the default. */
   noteRemote: (remote: unknown) => void;
   setTrips: (enabled: boolean) => void;
   setStays: (enabled: boolean) => void;
+  setStayImmichEvidence: (enabled: boolean) => void;
+  setStayLlmPlaceClassification: (enabled: boolean) => void;
 }
 
-const enabledIn = (group: unknown): boolean | undefined => {
-  const value = (group as { enabled?: unknown } | null | undefined)?.enabled;
+const booleanIn = (group: unknown, key: string): boolean | undefined => {
+  const value = (group as Record<string, unknown> | null | undefined)?.[key];
   return typeof value === "boolean" ? value : undefined;
 };
+const enabledIn = (group: unknown): boolean | undefined => booleanIn(group, "enabled");
 
 export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, get) => ({
   trips: true,
   stays: true,
+  stayImmichEvidence: true,
+  stayLlmPlaceClassification: false,
   noteRemote: (remote) => {
     const body = remote as { tripSuggestions?: unknown; staySuggestions?: unknown } | null;
+    const stay = body?.staySuggestions;
     set({
       trips: enabledIn(body?.tripSuggestions) ?? get().trips,
-      stays: enabledIn(body?.staySuggestions) ?? get().stays,
+      stays: enabledIn(stay) ?? get().stays,
+      stayImmichEvidence: booleanIn(stay, "immichEvidence") ?? get().stayImmichEvidence,
+      stayLlmPlaceClassification:
+        booleanIn(stay, "llmPlaceClassification") ?? get().stayLlmPlaceClassification,
     });
   },
   setTrips: (enabled) => {
@@ -57,6 +70,24 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
       { staySuggestions: { enabled } },
       () => set({ stays: prev }),
       "stay suggestions switch"
+    );
+  },
+  setStayImmichEvidence: (immichEvidence) => {
+    const prev = get().stayImmichEvidence;
+    set({ stayImmichEvidence: immichEvidence });
+    persistSetting(
+      { staySuggestions: { immichEvidence } },
+      () => set({ stayImmichEvidence: prev }),
+      "stay Immich evidence switch"
+    );
+  },
+  setStayLlmPlaceClassification: (llmPlaceClassification) => {
+    const prev = get().stayLlmPlaceClassification;
+    set({ stayLlmPlaceClassification: llmPlaceClassification });
+    persistSetting(
+      { staySuggestions: { llmPlaceClassification } },
+      () => set({ stayLlmPlaceClassification: prev }),
+      "stay place classification switch"
     );
   },
 }));

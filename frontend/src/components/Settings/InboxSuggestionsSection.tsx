@@ -11,10 +11,10 @@ import { useSuggestionSwitchesStore } from "../../store/suggestionSwitchesStore"
  * from home becomes, and where the user was on one.
  *
  * Each switch persists at once through its store, which the navigation badge
- * and the inbox read too — a flip shows there without a reload. The two
- * further stay switches (Immich evidence, LLM place classification) exist in
- * the API but are not drawn here until forgejo#305 gives them something to do:
- * a switch that changes nothing is a control that lies.
+ * and the inbox read too — a flip shows there without a reload. The two stay
+ * refinements (forgejo#305) — Immich photos as evidence and the model's place
+ * type — only act while stay suggestions are on, so they are drawn disabled
+ * otherwise rather than as switches that seem to do something.
  */
 export default function InboxSuggestionsSection(): JSX.Element {
   const { t } = useTranslation(["settings"]);
@@ -22,6 +22,10 @@ export default function InboxSuggestionsSection(): JSX.Element {
   const stays = useSuggestionSwitchesStore((s) => s.stays);
   const setTrips = useSuggestionSwitchesStore((s) => s.setTrips);
   const setStays = useSuggestionSwitchesStore((s) => s.setStays);
+  const immichEvidence = useSuggestionSwitchesStore((s) => s.stayImmichEvidence);
+  const placeClassification = useSuggestionSwitchesStore((s) => s.stayLlmPlaceClassification);
+  const setImmichEvidence = useSuggestionSwitchesStore((s) => s.setStayImmichEvidence);
+  const setPlaceClassification = useSuggestionSwitchesStore((s) => s.setStayLlmPlaceClassification);
   const key = "settings:inboxSuggestions";
 
   return (
@@ -41,6 +45,22 @@ export default function InboxSuggestionsSection(): JSX.Element {
           onChange={setStays}
           label={t(`${key}.stays.label`)}
           sub={t(`${key}.stays.description`)}
+        />
+        <Switch
+          id="inbox-suggestions-stays-immich"
+          checked={immichEvidence}
+          disabled={!stays}
+          onChange={setImmichEvidence}
+          label={t(`${key}.immichEvidence.label`)}
+          sub={t(`${key}.immichEvidence.description`)}
+        />
+        <Switch
+          id="inbox-suggestions-stays-llm"
+          checked={placeClassification}
+          disabled={!stays}
+          onChange={setPlaceClassification}
+          label={t(`${key}.llmPlaceClassification.label`)}
+          sub={t(`${key}.llmPlaceClassification.description`)}
         />
       </SettingRows>
     </SectionCard>

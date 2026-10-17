@@ -799,6 +799,14 @@
     "stays": {
       "label": "Stay suggestions from Dawarich",
       "description": "Detects where you stayed from your Dawarich location history. When off, Dawarich is no longer queried."
+    },
+    "immichEvidence": {
+      "label": "Immich photos as a hint to the place",
+      "description": "Uses your Immich photos from the same time and area for stay suggestions: how many, and where Immich places them. Only with an Immich connection; when off, Immich is not queried for this."
+    },
+    "llmPlaceClassification": {
+      "label": "Determine the place type with AI",
+      "description": "Lets the AI estimate what kind of place it was (e.g. café, museum) from the names of the places nearby. Only those names are sent, no coordinates. A local AI (Ollama) first; a cloud provider only if the administrator has consented to it."
     }
   },
   "homeCountry": {

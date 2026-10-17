@@ -10,7 +10,12 @@ import { useSuggestionSwitchesStore } from "../../../store/suggestionSwitchesSto
 describe("InboxSuggestionsSection", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    useSuggestionSwitchesStore.setState({ trips: true, stays: false });
+    useSuggestionSwitchesStore.setState({
+      trips: true,
+      stays: false,
+      stayImmichEvidence: true,
+      stayLlmPlaceClassification: false,
+    });
   });
 
   it("shows each switch as the store holds it", () => {
@@ -31,5 +36,49 @@ describe("InboxSuggestionsSection", () => {
     );
     expect(useSuggestionSwitchesStore.getState().trips).toBe(false);
     expect(update).toHaveBeenCalledWith({ tripSuggestions: { enabled: false } });
+  });
+
+  describe("stay refinements (forgejo#305)", () => {
+    const immich = () =>
+      screen.getByRole("switch", { name: /settings:inboxSuggestions\.immichEvidence\.label/ });
+    const llm = () =>
+      screen.getByRole("switch", {
+        name: /settings:inboxSuggestions\.llmPlaceClassification\.label/,
+      });
+
+    it("are disabled while stay suggestions are off", () => {
+      render(<InboxSuggestionsSection />);
+      expect(immich()).toBeDisabled();
+      expect(llm()).toBeDisabled();
+    });
+
+    it("save their own key and leave the other switches alone", async () => {
+      useSuggestionSwitchesStore.setState({ stays: true });
+      const update = vi.spyOn(settingsApi, "update").mockResolvedValue({} as UserSettings);
+      render(<InboxSuggestionsSection />);
+      expect(immich()).toBeChecked();
+      expect(llm()).not.toBeChecked();
+
+      await userEvent.click(llm());
+      expect(update).toHaveBeenCalledWith({ staySuggestions: { llmPlaceClassification: true } });
+      await userEvent.click(immich());
+      expect(update).toHaveBeenCalledWith({ staySuggestions: { immichEvidence: false } });
+      expect(useSuggestionSwitchesStore.getState()).toMatchObject({
+        stays: true,
+        stayImmichEvidence: false,
+        stayLlmPlaceClassification: true,
+      });
+    });
+
+    it("reads both from the settings response", () => {
+      useSuggestionSwitchesStore.getState().noteRemote({
+        staySuggestions: { enabled: true, immichEvidence: false, llmPlaceClassification: true },
+      });
+      expect(useSuggestionSwitchesStore.getState()).toMatchObject({
+        stays: true,
+        stayImmichEvidence: false,
+        stayLlmPlaceClassification: true,
+      });
+    });
   });
 });

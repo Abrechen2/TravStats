@@ -1,5 +1,6 @@
 import type { TimeValue } from "../../shared/time/wire";
 import { api } from "./client";
+import { API_TIMEOUTS } from "../../config/constants";
 import { waitForJob } from "./jobs";
 export interface StayScanState {
   enabled: boolean;
@@ -97,6 +98,76 @@ export interface StayReviewInput {
   startAt: { local: string };
   endAt: { local: string };
 }
+/** Where a stay's identity source stands; `degraded` = the lookup failed, not "nothing here". */
+export type StaySourceState = "ok" | "empty" | "degraded";
+export type StayPhotoState =
+  "off" | "notConfigured" | "ok" | "unreachable" | "auth" | "notFound" | "protocol" | "invalidUrl";
+export interface StayCandidate {
+  name: string;
+  type: string | null;
+  address: string | null;
+  city: string | null;
+  lat: number;
+  lon: number;
+  distanceM: number;
+  /** Photos of the stay taken at this place; null without photo evidence. */
+  photoCount: number | null;
+}
+/** `GET /dawarich-stays/:id/identity` (forgejo#305). */
+export interface StayIdentity {
+  lat: number;
+  lon: number;
+  probable: {
+    name: string;
+    source: "nearbyPlace" | "address" | "photos";
+    photoSupported: boolean;
+  } | null;
+  address: { address: string | null; city: string | null; country: string | null } | null;
+  geocoder: StaySourceState;
+  candidates: StayCandidate[];
+  candidatesState: StaySourceState;
+  photos: {
+    state: StayPhotoState;
+    count: number;
+    cities: { name: string; count: number }[];
+    truncated: boolean;
+  };
+  placeTypeAvailable: boolean;
+}
+export const STAY_PLACE_TYPES = [
+  "restaurant",
+  "cafe",
+  "bar",
+  "accommodation",
+  "shop",
+  "museum",
+  "attraction",
+  "park",
+  "nature",
+  "beach",
+  "religious",
+  "transport",
+  "venue",
+  "sport",
+  "residential",
+  "workplace",
+  "other",
+] as const;
+export type StayPlaceType = (typeof STAY_PLACE_TYPES)[number];
+/** `GET /dawarich-stays/:id/place-type`: every way it can end is its own state. */
+export type StayPlaceTypeResult =
+  | { state: "off" }
+  | { state: "noCandidates" }
+  | {
+      state: "refused";
+      refusal: "disabled_by_admin" | "shared_demo" | "cloud_not_consented" | "provider_incomplete";
+    }
+  | { state: "failed"; failure: "timeout" | "unavailable" | "unusable" }
+  | {
+      state: "ok";
+      type: StayPlaceType;
+      provider: { kind: string; isCloud: boolean; host: string | null };
+    };
 const base = "/dawarich-stays";
 export const dawarichStaysApi = {
   state: async (): Promise<StayScanState> => (await api.get(`${base}/settings`)).data.data,
@@ -119,6 +190,11 @@ export const dawarichStaysApi = {
   accept: async (id: string, input: StayReviewInput): Promise<void> => {
     await api.post(`${base}/${id}/accept`, input);
   },
+  identity: async (id: string): Promise<StayIdentity> =>
+    (await api.get(`${base}/${id}/identity`, { timeout: API_TIMEOUTS.STAY_IDENTITY })).data.data,
+  placeType: async (id: string): Promise<StayPlaceTypeResult> =>
+    (await api.get(`${base}/${id}/place-type`, { timeout: API_TIMEOUTS.STAY_PLACE_TYPE })).data
+      .data,
   reject: async (id: string): Promise<void> => {
     await api.post(`${base}/${id}/reject`, {});
   },
