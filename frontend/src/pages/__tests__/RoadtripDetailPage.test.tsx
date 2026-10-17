@@ -165,4 +165,51 @@ describe("RoadtripDetailPage", () => {
     renderAt("/roadtrips/rt?station=heute");
     expect(await screen.findByTestId("editor")).toHaveTextContent("today");
   });
+
+  // forgejo#307: the head reads like every other domain's detail head.
+  describe("header matches the other detail pages", () => {
+    it("sits in the same list-width shell as rail, ferry, bus and rentals", async () => {
+      renderAt("/roadtrips/rt");
+      const title = await screen.findByText("Fjorde 2026");
+      expect(title.closest("main")).toHaveStyle({ maxWidth: "var(--ts-width-list)" });
+    });
+
+    it("draws the phase with the shared status pill, underway as in progress", async () => {
+      renderAt("/roadtrips/rt");
+      const pill = await screen.findByText("roadtrips:phase.underway:8");
+      expect(pill).toHaveClass("ts-status-pill");
+      expect(pill).toHaveStyle({ color: "var(--ts-status-flown)" });
+    });
+
+    it("draws a planned roadtrip with the shared scheduled pill", async () => {
+      vi.setSystemTime(new Date("2026-09-01T12:00:00.000Z"));
+      renderAt("/roadtrips/rt");
+      const pill = await screen.findByText("roadtrips:phase.planned");
+      expect(pill).toHaveClass("ts-status-pill");
+      expect(pill).toHaveStyle({ color: "var(--ts-status-scheduled)" });
+    });
+
+    it("offers “edit legs” as the shared button, which opens the section", async () => {
+      render(
+        <MemoryRouter initialEntries={["/roadtrips/rt"]}>
+          <Routes>
+            <Route path="/roadtrips/:id" element={<RoadtripDetailPage />} />
+            <Route path="/tours/:id" element={<div data-testid="tour-page" />} />
+          </Routes>
+        </MemoryRouter>
+      );
+      const legs = await screen.findByRole("button", { name: "roadtrips:editLegs" });
+      expect(legs).toHaveClass("ts-button");
+      fireEvent.click(legs);
+      expect(await screen.findByTestId("tour-page")).toBeInTheDocument();
+    });
+
+    it("draws “edit” as the same secondary button as the other detail pages", async () => {
+      renderAt("/roadtrips/rt");
+      const legs = await screen.findByRole("button", { name: "roadtrips:editLegs" });
+      const edit = screen.getByRole("button", { name: "roadtrips:detail.edit" });
+      expect(edit).toHaveAttribute("data-variant", "secondary");
+      expect(legs).toHaveAttribute("data-variant", "secondary");
+    });
+  });
 });
