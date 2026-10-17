@@ -15,6 +15,8 @@ export interface StageMetrics {
   durationMinutes: number | null;
   metricsSource: PlanStage["metricsSource"];
   fallbackReason: string | null;
+  /** The mode the answer is for; the write refuses it if the stage changed mode. */
+  mode: PlanStage["mode"];
   /** The endpoints the answer is about; the write refuses it if they moved since. */
   fromCoord: StageCoord;
   toCoord: StageCoord;
@@ -50,17 +52,27 @@ export async function routeStage(
     metricsSource: stage.metricsSource,
   };
 
-  if (stage.mode === "ferry")
+  if (stage.mode === "ferry") {
+    // A figure the user typed or a booking carries is better than a chord; only
+    // an empty or earlier straight-line distance is (re)derived.
+    if (
+      stage.distanceKm !== null &&
+      stage.metricsSource !== "straight" &&
+      stage.metricsSource !== null
+    )
+      return { ...stored, mode: stage.mode, fallbackReason: null, fromCoord, toCoord };
     return {
       ...stored,
+      mode: stage.mode,
       distanceKm: roundKm(haversineKm(fromCoord, toCoord)),
       metricsSource: "straight",
       fallbackReason: null,
       fromCoord,
       toCoord,
     };
+  }
   if (stage.mode !== "drive")
-    return { ...stored, fallbackReason: "unroutable_mode", fromCoord, toCoord };
+    return { ...stored, fallbackReason: "unroutable_mode", mode: stage.mode, fromCoord, toCoord };
 
   const provider = await resolveRouteProvider(userId);
   const leg = await routeLegGeometry(
@@ -71,19 +83,23 @@ export async function routeStage(
   if (leg.source === "routed")
     return {
       distanceKm: roundKm(leg.distanceKm),
-      durationMinutes: leg.drivingMinutes === null ? null : Math.round(leg.drivingMinutes),
+      durationMinutes:
+        leg.drivingMinutes === null ? stage.durationMinutes : Math.round(leg.drivingMinutes),
       metricsSource: "routed",
       fallbackReason: null,
+      mode: stage.mode,
       fromCoord,
       toCoord,
     };
   const fallbackReason = leg.fallbackReason ?? "provider_error";
-  if (stage.distanceKm !== null) return { ...stored, fallbackReason, fromCoord, toCoord };
+  if (stage.distanceKm !== null)
+    return { ...stored, fallbackReason, mode: stage.mode, fromCoord, toCoord };
   return {
     distanceKm: roundKm(leg.distanceKm),
     durationMinutes: stage.durationMinutes,
     metricsSource: "straight",
     fallbackReason,
+    mode: stage.mode,
     fromCoord,
     toCoord,
   };

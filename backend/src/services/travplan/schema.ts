@@ -440,6 +440,7 @@ const operationSchema = z.discriminatedUnion("type", [
     .object({
       type: z.literal("stage_metrics"),
       stageId: id,
+      mode: z.enum(["drive", "ferry", "rail", "flight", "other"]),
       distanceKm: z.number().min(0).max(100000).nullable(),
       durationMinutes: z.number().int().min(0).max(100000).nullable(),
       metricsSource: z.enum(["routed", "straight", "user", "booking"]).nullable(),

@@ -352,6 +352,7 @@ export type PlanOperation =
   | {
       type: "stage_metrics";
       stageId: string;
+      mode: PlanStage["mode"];
       distanceKm: number | null;
       durationMinutes: number | null;
       metricsSource: PlanStage["metricsSource"];

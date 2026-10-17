@@ -135,7 +135,7 @@ function stageMetrics(
   const to = state.stations.find((s) => s.id === stage!.toStationId);
   const same = (a: { lat: number; lon: number } | undefined, b: { lat: number; lon: number }) =>
     !!a && a.lat === b.lat && a.lon === b.lon;
-  if (!same(from?.place, op.fromCoord) || !same(to?.place, op.toCoord))
+  if (stage.mode !== op.mode || !same(from?.place, op.fromCoord) || !same(to?.place, op.toCoord))
     throw new AppError("The stage changed while it was being routed", 409, "PLAN_STAGE_CHANGED");
   return {
     ...state,

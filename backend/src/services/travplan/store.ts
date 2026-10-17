@@ -226,6 +226,22 @@ export async function createPlan(userId: string, input: unknown): Promise<PlanVi
     throw error;
   }
 }
+/**
+ * The stored result of an earlier write with this clientRef, or null. Lets a
+ * caller that does expensive work before `writePlan` answer a retry without
+ * redoing it (and without the redone work changing the payload hash).
+ */
+export async function findReceipt(
+  userId: string,
+  tripId: string,
+  clientRef: string
+): Promise<PlanView | null> {
+  const owned = await ownedPlan(userId, tripId);
+  const receipt = await prisma.travelPlanMutation.findUnique({
+    where: { planId_clientRef: { planId: owned.id, clientRef } },
+  });
+  return receipt ? (receipt.result as unknown as PlanView) : null;
+}
 export async function writePlan(
   userId: string,
   tripId: string,

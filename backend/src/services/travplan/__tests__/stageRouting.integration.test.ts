@@ -187,7 +187,7 @@ describe("stage routing", () => {
   });
 
   it("a ferry gets the great-circle distance and is not routed", async () => {
-    const p = await routePlan({ mode: "ferry" });
+    const p = await routePlan({ mode: "ferry", metricsSource: null });
     const stage = p.stage((await p.route()).body);
     expect(mockResolve).not.toHaveBeenCalled();
     expect(stage).toMatchObject({ metricsSource: "straight", durationMinutes: 90 });
@@ -213,6 +213,7 @@ describe("stage routing", () => {
       operation: {
         type: "stage_metrics",
         stageId: p.stageId,
+        mode: "drive",
         distanceKm: 10,
         durationMinutes: 10,
         metricsSource: "routed",
@@ -223,6 +224,60 @@ describe("stage routing", () => {
     });
     expect(r.status).toBe(409);
     expect(r.body.code).toBe("PLAN_STAGE_CHANGED");
+  });
+
+  it("a stage that changed mode meanwhile is refused with PLAN_STAGE_CHANGED", async () => {
+    const p = await routePlan();
+    const r = await post("/trips/" + p.created.tripId + "/plan/mutations", {
+      clientRef: randomUUID(),
+      baseRevision: p.revision(),
+      operation: {
+        type: "stage_metrics",
+        stageId: p.stageId,
+        mode: "ferry",
+        distanceKm: 10,
+        durationMinutes: 10,
+        metricsSource: "straight",
+        fallbackReason: null,
+        fromCoord: A,
+        toCoord: B,
+      },
+    });
+    expect(r.status).toBe(409);
+    expect(r.body.code).toBe("PLAN_STAGE_CHANGED");
+  });
+
+  it("a routed answer without a drive time keeps the stored duration", async () => {
+    mockResolve.mockResolvedValue(providerAnswering({ ...road(), drivingMinutes: null }));
+    const p = await routePlan();
+    expect(p.stage((await p.route()).body)).toMatchObject({
+      distanceKm: 71.3,
+      durationMinutes: 90,
+      metricsSource: "routed",
+    });
+  });
+
+  it("a ferry keeps a distance the user typed", async () => {
+    const p = await routePlan({ mode: "ferry" });
+    expect(p.stage((await p.route()).body)).toMatchObject({
+      distanceKm: 80,
+      metricsSource: "user",
+    });
+  });
+
+  it("a retry with the same clientRef replays the first result without routing again", async () => {
+    mockResolve.mockResolvedValue(providerAnswering(road()));
+    const p = await routePlan();
+    const clientRef = randomUUID();
+    const url = "/trips/" + p.created.tripId + "/plan/stages/" + p.stageId + "/route";
+    const first = await post(url, { clientRef, baseRevision: p.revision() });
+    expect(first.status).toBe(200);
+    mockResolve.mockClear();
+    mockResolve.mockResolvedValue(null);
+    const second = await post(url, { clientRef, baseRevision: p.revision() });
+    expect(second.status).toBe(200);
+    expect(second.body).toEqual(first.body);
+    expect(mockResolve).not.toHaveBeenCalled();
   });
 
   it("answers an unknown stage with 404", async () => {
