@@ -10,6 +10,7 @@ import { mirrorEmptyTrip } from "./metadata";
 import { adoptExisting } from "./existing";
 import { linkActual } from "./linkActual";
 import { checkPlan, deriveBudget } from "./rules";
+import { scheduleRoute } from "./routeSchedule";
 import { prepareExecution, synchronizeExecution, type PreparedExecution } from "./execution";
 import type { PlanState, PlanView, PlanWrite, PlanSummary } from "./types";
 export function canonical(value: unknown): string {
@@ -44,6 +45,7 @@ export function view(
     state,
     findings: checkPlan(state),
     budget: deriveBudget(state),
+    ...(state.shape === "route" ? { schedule: scheduleRoute(state) } : {}),
     ...(lastMutationId ? { lastMutationId } : {}),
   };
 }

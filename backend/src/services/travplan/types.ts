@@ -279,6 +279,12 @@ export interface PlanProposal {
     changes: { id: string; day: string | null; time: string | null; reason: string }[];
   };
 }
+export interface RouteSchedule {
+  stations: { stationId: string; arriveDay: string | null; departDay: string | null }[];
+  stages: { stageId: string; departDay: string | null; arriveDay: string | null }[];
+  lastDay: string | null;
+  conflicts: { kind: "anchor_shift"; anchorId: string; plannedDay: string; requiredDay: string }[];
+}
 export interface PlanView {
   id: string;
   tripId: string;
@@ -287,6 +293,7 @@ export interface PlanView {
   state: PlanState;
   findings: PlanFinding[];
   budget: PlanBudget;
+  schedule?: RouteSchedule;
   lastMutationId?: string;
 }
 export type PlanCollection =
