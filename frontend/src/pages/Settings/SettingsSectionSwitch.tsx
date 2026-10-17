@@ -25,6 +25,7 @@ import DevicesSection from "../../components/Settings/DevicesSection";
 import AboutSection from "../../components/Settings/AboutSection";
 import ImportSection from "../../components/Settings/ImportSection";
 import TripsSection from "../../components/Settings/TripsSection";
+import InboxSuggestionsSection from "../../components/Settings/InboxSuggestionsSection";
 import SharingSection from "../../components/Settings/SharingSection";
 import ShareLinksSection from "../../components/Settings/ShareLinksSection";
 import FeaturesSection from "../../components/Settings/FeaturesSection";
@@ -121,6 +122,8 @@ export default function SettingsSectionSwitch({
       return (
         <div className="space-y-4">
           <TripsSection />
+          {/* Which suggestions the inbox offers at all (forgejo#306). */}
+          <InboxSuggestionsSection />
           {/* Shared trips (design 2026-10-09): consent and companion links. */}
           <SharingSection />
           {/* Public share links (forgejo#281): own links and a pointer to administration. */}

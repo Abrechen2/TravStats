@@ -6,6 +6,7 @@ import { DOMAIN_KEYS, type DomainKey } from "../shared/domains";
 import { COUNTRY_TIERS, type CountryTier } from "../types/passport";
 import { useAuthStore } from "./authStore";
 import { displayForSave, useProfileZoneStore } from "./profileZoneStore";
+import { useSuggestionSwitchesStore } from "./suggestionSwitchesStore";
 import { deviceZone } from "../shared/time";
 import { persistSetting } from "./persistSetting";
 import type { WeightUnit } from "../lib/baggageAllowance";
@@ -545,6 +546,7 @@ export const useSettingsStore = create<SettingsState>()(
           const remote = await settingsApi.get();
           if (remote) {
             useProfileZoneStore.getState().noteRemote(remote);
+            useSuggestionSwitchesStore.getState().noteRemote(remote); // forgejo#306
             set((state) => {
               // Extract autoUpdate and historicalEnrichment to exclude them from store
               const remoteRecord = remote as Record<string, unknown>;
@@ -630,8 +632,7 @@ export const useSettingsStore = create<SettingsState>()(
               if (typeof remote.baseCurrency === "string" && remote.baseCurrency.length > 0) {
                 newState.baseCurrency = remote.baseCurrency;
               }
-              // autoCreateTrips is a plain top-level field too. Missing field
-              // (older backend) keeps the default `true` = today's behaviour.
+              // Plain top-level field too; missing (older backend) keeps `true`.
               if (typeof remote.autoCreateTrips === "boolean") {
                 newState.autoCreateTrips = remote.autoCreateTrips;
               }

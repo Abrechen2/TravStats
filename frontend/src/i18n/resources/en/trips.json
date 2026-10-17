@@ -667,6 +667,7 @@
   "dawarichStays": {
     "title": "Dawarich stays",
     "description": "Every six hours, your own Dawarich location history is checked for possible stays in the last seven days. These are suggestions only: a visit is recorded after your confirmation. This does not enable Immich scanning or country detection.",
+    "suggestionsPaused": "Paused: stay suggestions are switched off in settings under “Trips”. Your consent and earlier decisions are retained.",
     "placesPaused": "Paused: Places is switched off. Enable Places in settings to detect new stays. Your consent and existing suggestions are retained.",
     "disabled": "Automatic detection is switched off. Existing suggestions remain available for review.",
     "nextScan": "Next automatic scan",

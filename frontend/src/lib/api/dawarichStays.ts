@@ -21,7 +21,7 @@ export interface StayScanState {
     staleMapData: boolean;
   } | null;
   placesEnabled?: boolean;
-  pausedReason?: "disabled" | "placesDisabled" | "connectionMissing" | null;
+  pausedReason?: "suggestionsDisabled" | "disabled" | "placesDisabled" | "connectionMissing" | null;
   nextScanAt?: string | null;
   result: string | null;
   error: string | null;

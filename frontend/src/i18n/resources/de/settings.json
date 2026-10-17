@@ -789,6 +789,18 @@
       "description": "Flüge mit derselben Buchungsnummer werden beim Import automatisch zu einer Reise mit Buchung gruppiert. Ausgeschaltet bleibt die Buchungsnummer erhalten – über „Reisen erkennen“ lässt sich die Gruppierung später jederzeit nachholen."
     }
   },
+  "inboxSuggestions": {
+    "title": "Vorschläge im Posteingang",
+    "description": "Welche Vorschläge TravStats dir im Posteingang macht. Ausgeschaltet wird nichts mehr berechnet oder abgefragt; deine bisherigen Entscheidungen bleiben erhalten und gelten wieder, sobald du einschaltest.",
+    "trips": {
+      "label": "Reise-Vorschläge",
+      "description": "Schlägt neue Reisen vor und ordnet Einträge vorhandenen Reisen zu."
+    },
+    "stays": {
+      "label": "Aufenthalts-Vorschläge aus Dawarich",
+      "description": "Erkennt aus deinem Dawarich-Standortverlauf, wo du dich aufgehalten hast. Ausgeschaltet wird Dawarich nicht mehr abgefragt."
+    }
+  },
   "homeCountry": {
     "label": "Heimatland",
     "description": "Bestimmt, welche Buchungsvorlagen zuerst geprüft werden. Vorlagen anderer Länder bleiben aktiv.",

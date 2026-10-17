@@ -146,6 +146,18 @@ export interface UserSettings {
   baseCurrency?: string;
   /** Silent trip auto-creation during flight import (default true). */
   autoCreateTrips?: boolean;
+  /** Inbox trip suggestions on/off (forgejo#306, default on). Off, nothing is computed. */
+  tripSuggestions?: { enabled?: boolean };
+  /**
+   * Inbox Dawarich stay suggestions (forgejo#306). `enabled` (default on) gates
+   * the scan itself; `immichEvidence` and `llmPlaceClassification` are read by
+   * the stay place identification of forgejo#305.
+   */
+  staySuggestions?: {
+    enabled?: boolean;
+    immichEvidence?: boolean;
+    llmPlaceClassification?: boolean;
+  };
   /**
    * Which evidence tier the country headline counts from, for this user, or
    * `null` when they follow the instance default. Writable through

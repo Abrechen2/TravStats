@@ -667,6 +667,7 @@
   "dawarichStays": {
     "title": "Dawarich-Aufenthalte",
     "description": "Aus deinen eigenen Dawarich-Positionsdaten werden alle sechs Stunden mögliche Aufenthalte der letzten sieben Tage erkannt. Es entstehen nur Vorschläge: Ein Besuch wird erst nach deiner Bestätigung eingetragen. Dies aktiviert weder den Immich-Scan noch die Ländererkennung.",
+    "suggestionsPaused": "Pausiert: Aufenthalts-Vorschläge sind in den Einstellungen unter „Reisen“ ausgeschaltet. Deine Einwilligung und bisherigen Entscheidungen bleiben erhalten.",
     "placesPaused": "Pausiert: Der Bereich Orte ist ausgeschaltet. Aktiviere Orte in den Einstellungen, um neue Aufenthalte zu erkennen. Deine Einwilligung und bisherigen Vorschläge bleiben erhalten.",
     "disabled": "Automatische Erkennung ist ausgeschaltet. Vorhandene Vorschläge bleiben prüfbar.",
     "nextScan": "Nächste automatische Auswertung",

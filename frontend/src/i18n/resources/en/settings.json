@@ -789,6 +789,18 @@
       "description": "Flights sharing a booking reference are grouped into a trip with a booking during import. When off, the booking reference is kept – you can still group them later via “Detect trips”."
     }
   },
+  "inboxSuggestions": {
+    "title": "Inbox suggestions",
+    "description": "Which suggestions TravStats makes in your inbox. When off, nothing is computed or requested any more; your earlier decisions are kept and apply again once you switch it back on.",
+    "trips": {
+      "label": "Trip suggestions",
+      "description": "Proposes new trips and assigns entries to existing trips."
+    },
+    "stays": {
+      "label": "Stay suggestions from Dawarich",
+      "description": "Detects where you stayed from your Dawarich location history. When off, Dawarich is no longer queried."
+    }
+  },
   "homeCountry": {
     "label": "Home country",
     "description": "Decides which booking templates are tried first. Templates for other countries stay active.",
