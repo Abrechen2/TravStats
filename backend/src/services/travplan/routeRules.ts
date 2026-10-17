@@ -71,7 +71,7 @@ export function routeFindings(state: PlanState, today: string): PlanFinding[] {
     add(
       "placeholderDue:" + booking.id,
       "placeholderDue",
-      { title: booking.title, days },
+      { title: booking.title, days, count: days },
       [booking.id, departDay, urgent],
       urgent ? "attention" : "info"
     );
@@ -154,14 +154,14 @@ export function routeFindings(state: PlanState, today: string): PlanFinding[] {
   for (const item of state.items) {
     if (item.kind !== "activity" || !item.stationId || !item.day) continue;
     if (item.execution === "cancelled" || item.execution === "skipped") continue;
-    const index = state.stations.findIndex((s) => s.id === item.stationId);
-    const window = index >= 0 ? schedule.stations[index] : undefined;
+    const owner = station(item.stationId);
+    const window = schedule.stations.find((s) => s.stationId === item.stationId);
     if (!window?.arriveDay || !window.departDay) continue;
     if (item.day >= window.arriveDay && item.day <= window.departDay) continue;
     add(
       "dayTripOutside:" + item.id,
       "dayTripOutside",
-      { title: item.title, station: state.stations[index].title },
+      { title: item.title, station: owner?.title ?? "" },
       [item.id, item.day, window.arriveDay, window.departDay],
       "attention"
     );

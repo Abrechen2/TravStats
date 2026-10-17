@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { emptyState, bookingSchema } from "../schema";
 import { routeFindings } from "../routeRules";
+import { checkPlan } from "../rules";
 import type { PlanBooking, PlanPlace, PlanStage, PlanState, PlanStation } from "../types";
 
 const uid = () => randomUUID();
@@ -117,6 +118,23 @@ describe("route findings", () => {
     expect(one(state, "placeholderDue", "2027-05-05")?.severity).toBe("attention");
     expect(one(state, "placeholderDue", "2027-04-01")).toBeUndefined();
     expect(one(state, "placeholderDue", "2027-05-10")).toBeUndefined();
+  });
+
+  it("placeholderDue: boundaries at 21 (info), 22 (none) and 7 (attention) days", () => {
+    const a = station("Genoa", { nights: 1 }),
+      b = station("Palermo");
+    const ph = placeholder();
+    const state = route([a, b], [stage(a, b, { mode: "ferry", bookingId: ph.id })], {
+      bookings: [ph],
+    });
+    // the ferry leaves on 2027-05-09
+    expect(one(state, "placeholderDue", "2027-04-18")).toMatchObject({
+      severity: "info",
+      params: { days: 21, count: 21 },
+    });
+    expect(one(state, "placeholderDue", "2027-04-17")).toBeUndefined();
+    expect(one(state, "placeholderDue", "2027-05-02")?.severity).toBe("attention");
+    expect(one(state, "placeholderDue", "2027-05-01")?.severity).toBe("info"); // 8 days
   });
 
   it("placeholderDue: a booked ferry is not a placeholder", () => {
@@ -239,5 +257,17 @@ describe("route findings", () => {
     expect(codes(decide("conscious", "stale"))).not.toContain("stageUndecided");
     expect(codes(decide("dismissed"))).not.toContain("stageUndecided");
     expect(codes(decide("dismissed", "stale"))).toContain("stageUndecided");
+  });
+});
+
+describe("checkPlan wiring", () => {
+  it("route findings appear for shape route and not for stay", () => {
+    const a = station("Genoa"),
+      b = station("Palermo");
+    const state = route([a, b], [stage(a, b, { mode: "ferry" })]);
+    expect(checkPlan(state, TODAY).map((f) => f.code)).toContain("stageUndecided");
+    expect(checkPlan({ ...state, shape: "stay" }, TODAY).map((f) => f.code)).not.toContain(
+      "stageUndecided"
+    );
   });
 });

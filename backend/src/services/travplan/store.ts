@@ -36,7 +36,8 @@ export const asJson = (value: unknown): Prisma.InputJsonValue =>
 /**
  * "Today" for the date-driven route findings. The plan's own zone is the
  * cheap, deterministic choice here (`view` has no user at hand); a plan
- * without a valid zone falls back to UTC.
+ * without a valid zone falls back to UTC. The trip's own zone is the right day
+ * here: it is the calendar the traveller lives in while planning and travelling.
  */
 function planToday(state: PlanState): string {
   return todayIn(isValidZone(state.timezone) ? state.timezone : "UTC");
