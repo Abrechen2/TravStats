@@ -818,6 +818,26 @@
       "disabled": "Das Kalender-Abo ist auf dieser Instanz ausgeschaltet."
     }
   },
+  "inboxSuggestions": {
+    "title": "Vorschläge im Posteingang",
+    "description": "Welche Vorschläge TravStats dir im Posteingang macht. Ausgeschaltet wird nichts mehr berechnet oder abgefragt; deine bisherigen Entscheidungen bleiben erhalten und gelten wieder, sobald du einschaltest.",
+    "trips": {
+      "label": "Reise-Vorschläge",
+      "description": "Schlägt neue Reisen vor und ordnet Einträge vorhandenen Reisen zu."
+    },
+    "stays": {
+      "label": "Aufenthalts-Vorschläge aus Dawarich",
+      "description": "Erkennt aus deinem Dawarich-Standortverlauf, wo du dich aufgehalten hast. Ausgeschaltet wird Dawarich nicht mehr abgefragt."
+    },
+    "immichEvidence": {
+      "label": "Immich-Fotos als Hinweis auf den Ort",
+      "description": "Zieht für Aufenthalts-Vorschläge deine Immich-Fotos aus derselben Zeit und Umgebung heran: Anzahl und Ort laut Immich. Nur mit eingerichteter Immich-Verbindung; ausgeschaltet wird Immich dafür nicht abgefragt."
+    },
+    "llmPlaceClassification": {
+      "label": "Ortstyp per KI bestimmen",
+      "description": "Lässt die KI aus den Namen der Orte in der Nähe schätzen, was für ein Ort es war (z. B. Café, Museum). Gesendet werden nur diese Namen, keine Koordinaten. Zuerst eine lokale KI (Ollama); ein Cloud-Anbieter nur, wenn die Administration ihm zugestimmt hat."
+    }
+  },
   "homeCountry": {
     "label": "Heimatland",
     "description": "Bestimmt, welche Buchungsvorlagen zuerst geprüft werden. Vorlagen anderer Länder bleiben aktiv.",

@@ -13,12 +13,16 @@ import { stayReviewSchema } from "../schemas/dawarichStays";
 import { withStayTimes, withScanTimes } from "../services/dawarich/stays/times";
 import { publicMarketCoverage } from "../services/dawarich/stays/publicCoverage";
 import { startJob } from "../services/jobs/jobRegistry";
+import { stayIdentityFor } from "../services/dawarich/stays/identity";
+import { stayPlaceTypeFor } from "../services/dawarich/stays/placeType";
 
 import {
   placesEnabled,
   requirePlacesEnabled,
+  requireStaySuggestionsEnabled,
   nextStayScanAt,
 } from "../services/dawarich/stays/availability";
+import { staySuggestionsEnabled } from "../services/settings/suggestionSwitches";
 
 const router = Router();
 router.use(authenticate, requireWriteScope);
@@ -29,6 +33,20 @@ const user = (req: AuthRequest) => {
 const scanLimiter = rateLimit({
   windowMs: 60 * 60_000,
   max: patAwareMax(6),
+  keyGenerator: userOrIpKey,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+/**
+ * The per-card place identification (forgejo#305) reaches two public geocoders,
+ * Immich and possibly a model. The geocoders throttle themselves for the whole
+ * process; this caps what one account can ask for in the first place. A card
+ * asks once when it comes into view, so 60 a minute is a fast scroll through
+ * the inbox, not a script.
+ */
+const identityLimiter = rateLimit({
+  windowMs: 60_000,
+  max: patAwareMax(60),
   keyGenerator: userOrIpKey,
   standardHeaders: true,
   legacyHeaders: false,
@@ -48,13 +66,17 @@ router.get("/settings", async (req: AuthRequest, res, next) => {
         throw error;
     }
     const places = await placesEnabled(userId);
-    const pausedReason = !state?.enabled
-      ? "disabled"
-      : !places
-        ? "placesDisabled"
-        : !connected
-          ? "connectionMissing"
-          : null;
+    // The account-wide inbox switch (forgejo#306) outranks the scan's own consent.
+    const suggestions = await staySuggestionsEnabled(userId);
+    const pausedReason = !suggestions
+      ? "suggestionsDisabled"
+      : !state?.enabled
+        ? "disabled"
+        : !places
+          ? "placesDisabled"
+          : !connected
+            ? "connectionMissing"
+            : null;
     res.json({
       success: true,
       data: {
@@ -147,6 +169,13 @@ router.get("/", async (req: AuthRequest, res, next) => {
         status: z.enum(["pending", "accepted", "rejected", "covered"]).default("pending"),
       })
       .parse(req.query);
+    // Switched off (forgejo#306): no pending suggestions are offered, and none
+    // is resolved either. The rows stay, and come back when it is switched on.
+    // Answered rows remain readable — they are history, not suggestions.
+    if (status === "pending" && !(await staySuggestionsEnabled(userId))) {
+      res.json({ success: true, data: [] });
+      return;
+    }
     // A visit logged after the last scan (live, on the phone) covers its
     // finding from that moment; the inbox must not offer it until the next scan.
     if (status === "pending") await resolveCoveredStays(userId);
@@ -205,9 +234,33 @@ router.get("/choices", async (req: AuthRequest, res, next) => {
     next(e);
   }
 });
+router.get("/:id/identity", identityLimiter, async (req: AuthRequest, res, next) => {
+  try {
+    const userId = user(req);
+    const id = z.string().uuid().parse(req.params.id);
+    // Off means no geocoder, Immich or model request on the stay's behalf.
+    await requireStaySuggestionsEnabled(userId);
+    res.json({ success: true, data: await stayIdentityFor(userId, id) });
+  } catch (e) {
+    next(e);
+  }
+});
+router.get("/:id/place-type", identityLimiter, async (req: AuthRequest, res, next) => {
+  try {
+    const userId = user(req);
+    const id = z.string().uuid().parse(req.params.id);
+    await requireStaySuggestionsEnabled(userId);
+    res.json({ success: true, data: await stayPlaceTypeFor(userId, id) });
+  } catch (e) {
+    next(e);
+  }
+});
 router.post("/:id/accept", rejectDemo, async (req: AuthRequest, res, next) => {
   try {
     const id = z.string().uuid().parse(req.params.id);
+    // Accepting completes an address from the geocoder — an outbound call the
+    // switched-off feature must not make.
+    await requireStaySuggestionsEnabled(user(req));
     const row = await acceptStay(user(req), id, stayReviewSchema.parse(req.body));
     res.json({ success: true, data: withStayTimes(row) });
   } catch (e) {
@@ -219,6 +272,7 @@ router.post("/:id/reject", rejectDemo, async (req: AuthRequest, res, next) => {
     z.object({})
       .strict()
       .parse(req.body ?? {});
+    await requireStaySuggestionsEnabled(user(req));
     await rejectStay(user(req), z.string().uuid().parse(req.params.id));
     res.json({ success: true });
   } catch (e) {

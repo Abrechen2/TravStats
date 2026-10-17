@@ -57,6 +57,8 @@ export type ApiErrorCode =
   | "DAWARICH_OWN_CONNECTION_REQUIRED"
   | "DAWARICH_SCAN_UNAVAILABLE"
   | "DAWARICH_PLACES_DISABLED"
+  /** The account switched stay suggestions off (forgejo#306): no scan, no review. */
+  | "STAY_SUGGESTIONS_DISABLED"
   | "DAWARICH_STAY_SCAN_FAILED"
   | "DAWARICH_ALREADY_RESOLVED"
   | "DAWARICH_INVALID_INTERVAL"
@@ -183,6 +185,8 @@ export type ApiErrorCode =
   /** An accepted trip suggestion named members it does not hold, none at all,
    *  or an end before its start. */
   | "TRIP_SUGGESTION_SELECTION_INVALID"
+  /** The account switched trip suggestions off (forgejo#306): nothing to answer. */
+  | "TRIP_SUGGESTIONS_DISABLED"
   /** Package import (plan 2026-10-09 P3): the document holds no package
    *  reading — it was parsed as something else, or not at all. */
   | "PACKAGE_READING_MISSING"

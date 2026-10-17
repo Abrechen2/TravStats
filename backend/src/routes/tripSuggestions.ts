@@ -10,6 +10,7 @@ import {
   staleError,
 } from "../services/tripSuggestions/accept";
 import { computeTripSuggestions } from "../services/tripSuggestions/engine";
+import { tripSuggestionsEnabled } from "../services/settings/suggestionSwitches";
 
 /**
  * `/api/v1/trip-suggestions` — the "Reise-Vorschläge" tab of the Posteingang.
@@ -23,6 +24,11 @@ import { computeTripSuggestions } from "../services/tripSuggestions/engine";
  * — the id is a digest of the member set, so a proposal that changed since it
  * was shown is refused with `TRIP_SUGGESTION_STALE` instead of being applied to
  * entries the user never saw. Enveloped, like the photo-journey inbox beside it.
+ *
+ * The account's `tripSuggestions.enabled` switch (forgejo#306) gates every
+ * route here BEFORE the engine runs: off, the list and the badge answer empty
+ * and an answer is refused, and the stored decisions wait untouched for the
+ * switch to come back on.
  */
 const router = Router();
 router.use(authenticate);
@@ -48,6 +54,8 @@ const idSchema = z.string().min(1).max(200);
 async function findProposal(userId: string, rawId: unknown) {
   const id = idSchema.safeParse(rawId);
   if (!id.success) throw new AppError("Invalid suggestion id", 400, "VALIDATION_FAILED");
+  if (!(await tripSuggestionsEnabled(userId)))
+    throw new AppError("Trip suggestions are switched off", 409, "TRIP_SUGGESTIONS_DISABLED");
   const { suggestions } = await computeTripSuggestions(userId);
   const proposal = suggestions.find((s) => s.id === id.data);
   if (!proposal) throw staleError();
@@ -59,6 +67,13 @@ router.get(
   statsLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      if (!(await tripSuggestionsEnabled(req.userId!))) {
+        res.json({
+          success: true,
+          data: { suggestions: [], total: 0, home: null, truncated: false, disabled: true },
+        });
+        return;
+      }
       const result = await computeTripSuggestions(req.userId!);
       res.json({
         success: true,
@@ -67,6 +82,7 @@ router.get(
           total: result.suggestions.length,
           home: result.home,
           truncated: result.truncated,
+          disabled: false,
         },
       });
     } catch (err) {
@@ -78,6 +94,10 @@ router.get(
 /** The inbox badge's number. Unlimited: the navigation polls it, and a cached answer is a dozen aggregates. */
 router.get("/count", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    if (!(await tripSuggestionsEnabled(req.userId!))) {
+      res.json({ success: true, data: { count: 0 } });
+      return;
+    }
     const { suggestions } = await computeTripSuggestions(req.userId!);
     res.json({ success: true, data: { count: suggestions.length } });
   } catch (err) {
