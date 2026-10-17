@@ -189,6 +189,10 @@
           "encryptedShare": {
             "name": "Verschlüsselt teilen",
             "what": "Vollständige Reisedaten auf dem Gerät verschlüsselt an geprüfte Freunde übertragen – noch ohne unabhängige Sicherheitsprüfung."
+          },
+          "calendarFeed": {
+            "name": "Kalender-Abo",
+            "what": "Ein geheimer Link unter Einstellungen → Reisen, den jede Kalender-App abonnieren kann: kommende Flüge, Aufenthalte, Fahrten, Kreuzfahrten und Reisen des eigenen Kontos. Mit ausgeschaltetem Schalter wird kein Link ausgegeben und keiner beantwortet."
           }
         }
       },

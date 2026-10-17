@@ -189,6 +189,10 @@
           "encryptedShare": {
             "name": "Encrypted sharing",
             "what": "Send full travel records, encrypted on your device, to verified friends — not yet independently reviewed."
+          },
+          "calendarFeed": {
+            "name": "Calendar subscription",
+            "what": "A secret link under Settings → Trips that any calendar app can subscribe to: the account's upcoming flights, stays, rides, cruises and trips. With the switch off, no link is issued and none is answered."
           }
         }
       },

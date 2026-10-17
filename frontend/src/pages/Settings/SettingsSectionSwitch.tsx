@@ -27,6 +27,8 @@ import ImportSection from "../../components/Settings/ImportSection";
 import TripsSection from "../../components/Settings/TripsSection";
 import SharingSection from "../../components/Settings/SharingSection";
 import ShareLinksSection from "../../components/Settings/ShareLinksSection";
+import CalendarFeedSection from "../../components/Settings/CalendarFeedSection";
+import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import FeaturesSection from "../../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../../components/Settings/CruisePreferencesSection";
 import LoyaltySection from "../../components/Settings/LoyaltySection";
@@ -57,6 +59,7 @@ export default function SettingsSectionSwitch({
 }: SettingsSectionSwitchProps): JSX.Element | null {
   const isAdmin = page.user?.isAdmin ?? false;
   const toursVisible = useToursVisible();
+  const { isFeatureVisible } = useBetaFeatures();
 
   switch (section) {
     case "profile":
@@ -125,6 +128,8 @@ export default function SettingsSectionSwitch({
           <SharingSection />
           {/* Public share links (forgejo#281): own links and a pointer to administration. */}
           <ShareLinksSection isAdmin={isAdmin} />
+          {/* The calendar subscription (forgejo#310), behind its beta key. */}
+          {isFeatureVisible("calendarFeed") && <CalendarFeedSection />}
         </div>
       );
     case "notifications":

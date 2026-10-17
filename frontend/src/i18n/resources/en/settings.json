@@ -789,6 +789,35 @@
       "description": "Flights sharing a booking reference are grouped into a trip with a booking during import. When off, the booking reference is kept – you can still group them later via “Detect trips”."
     }
   },
+  "calendarFeed": {
+    "title": "Calendar subscription",
+    "description": "A secret link any calendar app can subscribe to – Apple Calendar, Google Calendar, Outlook, Thunderbird. It holds your upcoming trips and entries plus those of the last 30 days, and updates itself.",
+    "stateNone": "No calendar link",
+    "stateActive": "Calendar link active",
+    "noneHint": "Create a link and add it to your calendar app as a subscription.",
+    "createdAt": "Created on {{date}}",
+    "lastUsed": "last read on {{date}}",
+    "neverUsed": "never read yet",
+    "create": "Create link",
+    "regenerate": "Create a new link",
+    "revoke": "Revoke",
+    "confirmRegenerate": "The current link stops working – every subscription to it stalls until you add the new one. Create a new link?",
+    "confirmRevoke": "The link stops working, and calendar apps can no longer read your trips. Revoke it?",
+    "urlLabel": "Your calendar link",
+    "shownOnce": "The link is shown only now. Anyone who has it sees your trips – do not share it. If you lose it, create a new one.",
+    "copy": "Copy link",
+    "copied": "Copied.",
+    "copyFailed": "Copying did not work – select the link in the field and copy it by hand.",
+    "openInCalendar": "Open in calendar app",
+    "unavailable": "The calendar subscription is not available on this instance.",
+    "loadFailed": "The calendar subscription's state could not be loaded.",
+    "retry": "Try again",
+    "errors": {
+      "issue": "The calendar link could not be created.",
+      "revoke": "The calendar link could not be revoked.",
+      "disabled": "The calendar subscription is switched off on this instance."
+    }
+  },
   "homeCountry": {
     "label": "Home country",
     "description": "Decides which booking templates are tried first. Templates for other countries stay active.",
