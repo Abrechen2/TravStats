@@ -1,0 +1,4 @@
+date,origin,destination,departure_time,arrival_time,arrival_date,seat,aircraft_side,ticket_class,purpose,duration,distance,airplane,airline,tail_number,flight_number,notes
+2023-08-01,EDDF,KJFK,10:05,12:50,,window,left,business,business,525,6200,Boeing 747-8,DLH,D-ABYA,LH400,Synthetic first line\nsecond line
+2023-08-20,EDDM,VHHH,21:45,15:30,2023-08-21,aisle,,economy+,leisure,,,Airbus A350-900,ZZQ,,ZZ7,
+2023-08-21,EGLL,EDDF,,,,,,,,,,,,,,

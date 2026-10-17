@@ -29,11 +29,24 @@ import { lodgingImportLimiter } from "../middleware/rateLimit";
 import { buildPreviewRows, MAX_PREVIEW_ROWS } from "../services/importPreview";
 import { parseFr24 } from "../services/parsers/fr24";
 import { parseGenericCsv } from "../services/parsers/genericCsv";
+import {
+  DETECTABLE_FORMATS,
+  parseTrackerExport,
+  type TrackerParseResult,
+} from "../services/parsers/trackers";
+import type { ParseResult } from "../services/parsers/csvImportTypes";
+import { TRACKER_FORMATS } from "../services/parsers/trackers/formats";
+import { getAirlineCatalog } from "../services/airlineCatalogCache";
 import logger from "../utils/logger";
 
 const router = Router();
 
 const MAX_CSV_BYTES = 2_000_000; // 2 MiB — same defensive ceiling as MAX_PREVIEW_ROWS
+// A tracker export is wordier per flight than a CSV row: an AirTrail flight
+// carries both airports as full objects (~1.5 KB), so a thousand flights —
+// the preview's own ceiling — already approach 2 MB. 5 MB stays well under
+// the 10 MB JSON body limit.
+const MAX_TRACKER_BYTES = 5_000_000;
 
 // ---------------------------------------------------------------------------
 // Zod schema for the incoming preview request body
@@ -54,7 +67,10 @@ const previewRowInputSchema = z.object({
   seatClass: z.enum(["economy", "premium_economy", "business", "first"]).optional(),
   category: z.enum(["business", "vacation", "private", "training", "ferry", "other"]).optional(),
   notes: z.string().optional(),
-  source: z.enum(["fr24", "generic_csv"]),
+  arrDate: z.string().optional(),
+  bookingReference: z.string().max(20).optional(),
+  datePrecision: z.enum(["year", "month"]).optional(),
+  source: z.enum(["fr24", "generic_csv", ...TRACKER_FORMATS]),
   sourceRowIndex: z.number().int().nonnegative(),
 });
 
@@ -128,7 +144,11 @@ router.post(
 //
 // Body: { source: "fr24", csv: string }
 //   or: { source: "generic_csv", csv: string, mapping: GenericMapping }
-// Returns: { success: true, rows, parserErrors }
+//   or: { source: "tracker", content: string, format?: DetectableFormat }
+//       — another flight tracker's export (forgejo#311); the format is
+//       recognised from the file unless named.
+// Returns: { success: true, rows, parserErrors }, plus `format` (null when
+// unrecognised) and, for an unrecognised file, `expected` for "tracker".
 // ---------------------------------------------------------------------------
 
 const genericMappingSchema = z
@@ -157,6 +177,11 @@ const parseRequestSchema = z.discriminatedUnion("source", [
     csv: z.string().min(1).max(MAX_CSV_BYTES),
     mapping: genericMappingSchema,
   }),
+  z.object({
+    source: z.literal("tracker"),
+    content: z.string().min(1).max(MAX_TRACKER_BYTES),
+    format: z.enum(DETECTABLE_FORMATS).optional(),
+  }),
 ]);
 
 router.post(
@@ -179,10 +204,18 @@ router.post(
         });
       }
 
-      const result =
-        parsed.data.source === "fr24"
-          ? parseFr24(parsed.data.csv)
-          : parseGenericCsv(parsed.data.csv, parsed.data.mapping);
+      const body = parsed.data;
+      if (body.source === "tracker") {
+        // The tracker parsers name an airline from its code synchronously;
+        // a cold catalogue would answer from the small curated fallback.
+        await getAirlineCatalog();
+      }
+      const result: ParseResult & Partial<Pick<TrackerParseResult, "format" | "expected">> =
+        body.source === "fr24"
+          ? parseFr24(body.csv)
+          : body.source === "generic_csv"
+            ? parseGenericCsv(body.csv, body.mapping)
+            : parseTrackerExport(body.content, body.format);
 
       if (result.rows.length > MAX_PREVIEW_ROWS) {
         return res.status(413).json({
@@ -195,6 +228,7 @@ router.post(
         success: true,
         rows: result.rows,
         parserErrors: result.parserErrors,
+        ...(body.source === "tracker" ? { format: result.format, expected: result.expected } : {}),
       });
     } catch (err) {
       logger.error({

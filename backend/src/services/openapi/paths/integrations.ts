@@ -211,6 +211,14 @@ registry.registerPath({
   method: "post",
   path: "/import/parse",
   summary: "Read a spreadsheet without writing anything",
+  description:
+    "Pure read, nothing is stored. `source: fr24` and `generic_csv` take a CSV; " +
+    "`source: tracker` takes another flight tracker's export as `content` (OpenFlights " +
+    "CSV, AirTrail JSON, Jetlog CSV, Flighty CSV, an App in the Air text export or an FR24 " +
+    "CSV) and recognises the format from the file unless `format` names it. The answer " +
+    "then carries `format`; a file nothing recognises answers `format: null`, a " +
+    "`parserErrors` entry with code `unknownFormat`, and `expected`: what each format is " +
+    "recognised by.",
   tags: importTag,
   responses: { 200: { description: "Parsed" }, 400: badInput },
 });

@@ -1,0 +1,4 @@
+﻿Date,From,To,Flight_Number,Airline,Distance,Duration,Seat,Seat_Type,Class,Reason,Plane,Registration,Trip,Note,From_OID,To_OID,Airline_OID,Plane_OID
+2023-05-04 07:15:00,FRA,LHR,LH900,Lufthansa,406,01:40:00,12A,W,Y,L,Airbus A320,D-AIZA,,"Synthetic, row one",340,507,3320,1
+2023-05-11,EGLL,EDDF,LH901,Lufthansa,406,01:35:00,,,C,B,Airbus A321,,,"",507,340,3320,2
+2019,JFK,LAX,,Unknown,2475,,,,,,,,,"",3797,3484,-1,
