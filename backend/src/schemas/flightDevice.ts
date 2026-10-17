@@ -110,3 +110,22 @@ export const observedTimesSchema = z
   });
 
 export type ObservedTimes = z.infer<typeof observedTimesSchema>;
+
+/**
+ * Where a stored flight recording came from (forgejo#193, #312): the
+ * Companion's JSON upload, or a file a person uploaded on the flight page.
+ */
+export const FLIGHT_TRACK_SOURCES = ["companion", "gpx", "kml", "tcx", "fit"] as const;
+export type FlightTrackSource = (typeof FLIGHT_TRACK_SOURCES)[number];
+
+/**
+ * The text fields beside a track FILE (multipart, forgejo#312). `replace` is
+ * the form-field spelling of the JSON upload's `replace: true`; anything but
+ * the two words is refused rather than read as "no".
+ */
+export const flightTrackFileFieldsSchema = z.object({
+  replace: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((value) => value === "true"),
+});

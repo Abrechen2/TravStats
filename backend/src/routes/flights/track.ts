@@ -8,10 +8,22 @@ import { AppError } from "../../middleware/errorHandler";
 import { flightDeviceDataLimiter } from "../../middleware/rateLimit";
 import {
   FLIGHT_TRACK_MAX_BODY_BYTES,
+  flightTrackFileFieldsSchema,
   flightTrackUploadSchema,
-  type FlightTrackUpload,
+  type FlightTrackSource,
 } from "../../schemas/flightDevice";
-import { flightTrackColumns } from "../../services/flightDevice/flightTrackIngest";
+import {
+  flightTrackColumns,
+  flightTrackColumnsFromParsed,
+  type FlightTrackColumns,
+} from "../../services/flightDevice/flightTrackIngest";
+import {
+  fileUploadId,
+  placeUntimedTrack,
+  readFlightTrackFile,
+  withoutEmptyElevations,
+} from "../../services/flightDevice/flightTrackFile";
+import { handleGpxUpload } from "../trips/tourTracks";
 import { overlapsSchedule, scheduledInstants } from "../../services/flightDevice/flightWindow";
 import { trackTimes, type TrackZoneColumns } from "../../services/flightDevice/trackTimes";
 import logger from "../../utils/logger";
@@ -91,6 +103,12 @@ function isUniqueViolation(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }
 
+interface TrackOrigin {
+  source: FlightTrackSource;
+  uploadId: string;
+  deviceId: string | null;
+}
+
 /**
  * Writes the recording (create, or replace when asked). Answers `replayed`
  * when a concurrent delivery of the SAME upload won the race — the loser
@@ -98,15 +116,11 @@ function isUniqueViolation(error: unknown): boolean {
  */
 async function writeTrack(
   flight: OwnedFlight,
-  body: FlightTrackUpload,
-  existing: TrackMeta | null,
-  deviceId: string | null
+  columns: FlightTrackColumns,
+  origin: TrackOrigin,
+  existing: TrackMeta | null
 ): Promise<{ track: TrackMeta; replayed: boolean }> {
-  const columns = flightTrackColumns(body.points);
-  if (!columns) {
-    throw new AppError("Too few distinct points to draw a line", 400, "VALIDATION_FAILED");
-  }
-  const data = { ...columns, source: "companion", uploadId: body.uploadId, deviceId };
+  const data = { ...columns, ...origin };
   try {
     const track = existing
       ? await prisma.flightTrack.update({
@@ -125,7 +139,7 @@ async function writeTrack(
       where: { flightId: flight.id },
       select: TRACK_META_SELECT,
     });
-    if (!winner || winner.uploadId !== body.uploadId) throw alreadyRecorded();
+    if (!winner || winner.uploadId !== origin.uploadId) throw alreadyRecorded();
     return { track: winner, replayed: true };
   }
 }
@@ -189,16 +203,112 @@ router.post(
         );
       }
 
+      const columns = flightTrackColumns(body.points);
+      if (!columns) {
+        throw new AppError("Too few distinct points to draw a line", 400, "VALIDATION_FAILED");
+      }
       const { track, replayed } = await writeTrack(
         flight,
-        body,
-        existing,
-        req.apiToken?.deviceId ?? null
+        columns,
+        { source: "companion", uploadId: body.uploadId, deviceId: req.apiToken?.deviceId ?? null },
+        existing
       );
       logger.info({
         operation: existing ? "flight.track.replace" : "flight.track.create",
         flightId: flight.id,
         trackId: track.id,
+        pointCount: track.pointCount,
+        replayed,
+      });
+      res.status(replayed ? 200 : 201).json({ track: await present(track, flight), replayed });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * POST /flights/:id/track/file — multipart, one recording under `file`
+ * (forgejo#312): GPX, KML, TCX or FIT, up to 15 MB, told apart by its bytes.
+ * Optional field `replace=true`. Stored in the same one-per-flight row the
+ * Companion writes, under the same rules:
+ *
+ *   - the same bytes again → 200 with the stored row, `replayed: true`
+ *   - another recording stored → 409 TRACK_ALREADY_RECORDED unless replace
+ *   - a span nowhere near the schedule → 422 TRACK_OUTSIDE_FLIGHT
+ *
+ * A file without times is placed in the flight's schedule; with no schedule
+ * either, it is refused (400 TRACK_NO_TIMESTAMPS). Only the parsed line is
+ * kept — the file itself is never written to disk (see `handleGpxUpload`).
+ * `rejectDemo` sits above the upload, as on every track upload.
+ */
+router.post(
+  "/:id/track/file",
+  rejectDemo,
+  handleGpxUpload,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const flight = await loadOwnedFlight(req.params.id, req.userId!);
+      if (!req.file) throw new AppError("No track file uploaded", 400, "TRACK_FILE_MISSING");
+      const fields = flightTrackFileFieldsSchema.safeParse(req.body ?? {});
+      if (!fields.success) throw new AppError(fields.error.message, 400, "VALIDATION_FAILED");
+
+      const file = await readFlightTrackFile(req.file.buffer, req.file.originalname);
+      if (!file) {
+        throw new AppError(
+          "The file could not be read as GPX, KML, TCX or FIT with at least two positions",
+          400,
+          "TRACK_FILE_UNREADABLE"
+        );
+      }
+
+      const uploadId = fileUploadId(req.file.buffer);
+      const existing = await prisma.flightTrack.findUnique({
+        where: { flightId: flight.id },
+        select: TRACK_META_SELECT,
+      });
+      if (existing?.uploadId === uploadId) {
+        res.json({ track: await present(existing, flight), replayed: true });
+        return;
+      }
+      if (existing && !fields.data.replace) throw alreadyRecorded();
+
+      const scheduled = await scheduledInstants(flight);
+      const placed = placeUntimedTrack(withoutEmptyElevations(file.track), scheduled);
+      if (!placed) {
+        throw new AppError(
+          "This recording has no times and the flight has no schedule to place it in",
+          400,
+          "TRACK_NO_TIMESTAMPS"
+        );
+      }
+      if (!overlapsSchedule(placed.startedAt.getTime(), placed.endedAt.getTime(), scheduled)) {
+        throw new AppError(
+          "The recording does not overlap this flight's schedule",
+          422,
+          "TRACK_OUTSIDE_FLIGHT"
+        );
+      }
+      const columns = flightTrackColumnsFromParsed(placed);
+      if (!columns) {
+        throw new AppError(
+          "The file has fewer than two usable positions",
+          400,
+          "TRACK_FILE_UNREADABLE"
+        );
+      }
+
+      const { track, replayed } = await writeTrack(
+        flight,
+        columns,
+        { source: file.format, uploadId, deviceId: null },
+        existing
+      );
+      logger.info({
+        operation: existing ? "flight.track.file.replace" : "flight.track.file.create",
+        flightId: flight.id,
+        trackId: track.id,
+        format: file.format,
         pointCount: track.pointCount,
         replayed,
       });
