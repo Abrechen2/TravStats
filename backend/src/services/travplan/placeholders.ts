@@ -10,7 +10,7 @@ const LODGING_KINDS = new Set(["hotel"]);
 
 type Point = { lat: number; lon: number };
 
-function refuse(message: string): never {
+export function refuse(message: string): never {
   throw new AppError(message, 409, "PLAN_PROTECTED");
 }
 
@@ -29,6 +29,7 @@ export function replacePlaceholder(
   const placeholder = state.bookings.find((b) => b.id === placeholderId);
   if (!placeholder) throw new AppError("Plan entry not found", 404, "PLAN_ITEM_NOT_FOUND");
   if (!placeholder.placeholder) refuse("This booking is not a placeholder");
+  if (value.kind !== placeholder.kind) refuse("A booking cannot change its kind");
   const replaced = {
     estimate: placeholder.estimate,
     replacedAt: new Date().toISOString(),
@@ -164,8 +165,10 @@ function differences(
     ["time", placeholder.time, candidate.time],
     [
       "amount",
-      placeholder.estimate ? String(placeholder.estimate.amount) : null,
-      candidate.amount === null ? null : String(candidate.amount),
+      placeholder.estimate
+        ? `${placeholder.estimate.amount} ${placeholder.estimate.currency}`
+        : null,
+      candidate.amount === null ? null : `${candidate.amount} ${candidate.currency}`,
     ],
   ];
   return pairs
@@ -203,7 +206,7 @@ export function matchPlaceholders(candidate: PlanBooking, state: PlanState): Pla
       reasons.push("nights");
       score += 30;
     } else {
-      const offset = dayOffset(placeholder.day, candidate.day);
+      const offset = dayOffset(placeholder.day ?? alloc.stage?.departDay ?? null, candidate.day);
       if (offset === null || offset > MATCH_DAY_TOLERANCE) continue;
       reasons.push("day");
       score += offset === 0 ? 40 : 25;

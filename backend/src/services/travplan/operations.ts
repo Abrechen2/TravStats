@@ -1,15 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { AppError } from "../../middleware/errorHandler";
 import { bookingSchema, collectionSchemas } from "./schema";
-import { replacePlaceholder } from "./placeholders";
+import { refuse, replacePlaceholder } from "./placeholders";
 import { parseState } from "./upgrade";
 import { bookingDuration } from "./temporal";
 import { transferFingerprint } from "./rules";
 import { applyRouteOperation, assertNightsHold } from "./routeOperations";
 import type { PlanState, PlanOperation, PlanItem, PlanBooking } from "./types";
-function refuse(message: string): never {
-  throw new AppError(message, 409, "PLAN_PROTECTED");
-}
 export function applyOperation(
   input: PlanState,
   operation: PlanOperation,

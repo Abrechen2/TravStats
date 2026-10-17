@@ -102,6 +102,78 @@ describe("placeholders", () => {
     expect(next.stages[0].bookingId).toBe(ph.id);
   });
 
+  it("updates the linked anchor item and keeps a booked night resolving", () => {
+    const { state, ph, b } = planWithPlaceholder();
+    state.items = [
+      {
+        id: uid(),
+        title: "Ferry to Genoa",
+        kind: "ferry",
+        day: "2027-05-19",
+        time: null,
+        duration: null,
+        timezone: null,
+        place: "Genoa",
+        note: "",
+        booked: true,
+        bookingId: ph.id,
+        stationId: null,
+        execution: "unconfirmed",
+        source: null,
+      },
+    ];
+    state.stations = state.stations.map((s) =>
+      s.id === b.id ? { ...s, night: { kind: "booked", bookingId: ph.id } } : s
+    );
+    const real = booking({ day: "2027-05-20", time: "21:00", title: "Grimaldi 20 May" });
+    const next = replacePlaceholder(state, ph.id, real, null);
+    expect(next.items[0]).toMatchObject({
+      title: "Grimaldi 20 May",
+      day: "2027-05-20",
+      time: "21:00",
+    });
+    const night = next.stations.find((s) => s.id === b.id)!.night;
+    expect(night).toEqual({ kind: "booked", bookingId: ph.id });
+    expect(next.bookings.some((x) => x.id === ph.id)).toBe(true);
+  });
+
+  it("refuses a replacement of another kind", () => {
+    const { state, ph } = planWithPlaceholder();
+    expect(() => replacePlaceholder(state, ph.id, booking({ kind: "rail" }), null)).toThrow(
+      /change its kind/
+    );
+  });
+
+  it("refuses an unknown placeholder id and a linked actual booking over the operation", () => {
+    const { state, ph } = planWithPlaceholder();
+    const op = (id: string, value: Record<string, unknown>) =>
+      applyOperation(state, { type: "replace_placeholder", placeholderId: id, value }, 1);
+    expect(() => op(uid(), booking())).toThrow(
+      expect.objectContaining({ code: "PLAN_ITEM_NOT_FOUND" })
+    );
+    expect(() => op(ph.id, { ...booking(), actualBookingId: uid() })).toThrow(
+      expect.objectContaining({ code: "PLAN_PROTECTED" })
+    );
+  });
+
+  it("matches on the stage departure day when the placeholder has no day", () => {
+    const { state } = planWithPlaceholder();
+    state.bookings[0] = { ...state.bookings[0], day: null };
+    expect(matchPlaceholders(booking({ day: "2027-05-20" }), state)).toHaveLength(1);
+    expect(matchPlaceholders(booking({ day: "2027-05-25" }), state)).toEqual([]);
+  });
+
+  it("treats a currency change with the same amount as changed", () => {
+    const { state } = planWithPlaceholder();
+    const [m] = matchPlaceholders(booking({ amount: 520, currency: "USD" }), state);
+    expect(m.differences).toContainEqual({
+      field: "amount",
+      plan: "520 EUR",
+      booking: "520 USD",
+      change: "changed",
+    });
+  });
+
   it("records who replaced it only when a label is given", () => {
     const { state, ph } = planWithPlaceholder();
     const next = replacePlaceholder(state, ph.id, booking(), "Alex");
@@ -214,7 +286,7 @@ describe("placeholders", () => {
     expect(m.differences).toEqual(
       expect.arrayContaining([
         { field: "provider", plan: null, booking: "Grimaldi", change: "new" },
-        { field: "amount", plan: "520", booking: "548", change: "changed" },
+        { field: "amount", plan: "520 EUR", booking: "548 EUR", change: "changed" },
       ])
     );
   });

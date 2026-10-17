@@ -723,6 +723,7 @@ describe("placeholders over HTTP", () => {
     const p = await create(),
       ph = placeholder(),
       a = await write(p, { type: "upsert", collection: "bookings", value: ph });
+    expect(a.status).toBe(200);
     const candidate = {
       ...ph,
       id: randomUUID(),
@@ -737,6 +738,5 @@ describe("placeholders over HTTP", () => {
     expect(ok.body.matches[0].bookingId).toBe(ph.id);
     expect((await post(url, { booking: candidate }, other)).status).toBe(404);
     expect((await post(url, { booking: { nonsense: true } })).status).toBe(400);
-    expect(a.status).toBe(200);
   });
 });
