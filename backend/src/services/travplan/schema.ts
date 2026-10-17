@@ -437,6 +437,12 @@ const operationSchema = z.discriminatedUnion("type", [
     .object({ type: z.literal("move_station"), id, toIndex: z.number().int().min(0).max(59) })
     .strict(),
   z
+    .object({ type: z.literal("create_variant"), name: text(60).min(1), copyActive: z.boolean() })
+    .strict(),
+  z.object({ type: z.literal("activate_variant"), variantId: id }).strict(),
+  z.object({ type: z.literal("remove_variant"), variantId: id }).strict(),
+  z.object({ type: z.literal("rename_variant"), variantId: id, name: text(60).min(1) }).strict(),
+  z
     .object({
       type: z.literal("station_night"),
       stationId: id,

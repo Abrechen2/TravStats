@@ -11,6 +11,7 @@ import { adoptExisting } from "./existing";
 import { linkActual } from "./linkActual";
 import { checkPlan, deriveBudget } from "./rules";
 import { scheduleRoute } from "./routeSchedule";
+import { compareVariants } from "./variants";
 import { todayIn } from "../../shared/time/clock";
 import { isValidZone } from "../../shared/time/zonedParts";
 import { prepareExecution, synchronizeExecution, type PreparedExecution } from "./execution";
@@ -56,7 +57,9 @@ export function view(
     state,
     findings: checkPlan(state, planToday(state)),
     budget: deriveBudget(state),
-    ...(state.shape === "route" ? { schedule: scheduleRoute(state) } : {}),
+    ...(state.shape === "route"
+      ? { schedule: scheduleRoute(state), variants: compareVariants(state) }
+      : {}),
     ...(lastMutationId ? { lastMutationId } : {}),
   };
 }

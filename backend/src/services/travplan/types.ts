@@ -285,6 +285,18 @@ export interface RouteSchedule {
   lastDay: string | null;
   conflicts: { kind: "anchor_shift"; anchorId: string; plannedDay: string; requiredDay: string }[];
 }
+export interface VariantComparison {
+  /** `null` for the active route, which has no variant id. */
+  id: string | null;
+  name: string;
+  active: boolean;
+  driveKm: number | null;
+  driveDays: number;
+  destinationNights: number;
+  stageCosts: { amount: number; currency: string } | null;
+  fuel: { amount: number; currency: string } | null;
+  unknownCosts: number;
+}
 export interface PlanView {
   id: string;
   tripId: string;
@@ -294,6 +306,7 @@ export interface PlanView {
   findings: PlanFinding[];
   budget: PlanBudget;
   schedule?: RouteSchedule;
+  variants?: VariantComparison[];
   lastMutationId?: string;
 }
 export type PlanCollection =
@@ -336,6 +349,10 @@ export type PlanOperation =
   | { type: "remove"; collection: PlanCollection; id: string }
   | { type: "route_settings"; shape?: PlanState["shape"]; vehicle?: PlanVehicle | null }
   | { type: "move_station"; id: string; toIndex: number }
+  | { type: "create_variant"; name: string; copyActive: boolean }
+  | { type: "activate_variant"; variantId: string }
+  | { type: "remove_variant"; variantId: string }
+  | { type: "rename_variant"; variantId: string; name: string }
   | { type: "station_night"; stationId: string; night: PlanNight; place?: PlanPlace }
   | { type: "replace_placeholder"; placeholderId: string; value: Record<string, unknown> }
   | { type: "decision"; value: PlanDecision }

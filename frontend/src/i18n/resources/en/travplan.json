@@ -137,7 +137,8 @@
     "PLAN_DOCUMENT_NOT_FOUND": "A linked document does not belong to this trip (any more). Remove it from the booking and save again.",
     "PLAN_WEATHER_INVALID": "The weather provider returned unusable data. The saved forecast is preserved; try again later.",
     "PLAN_INVALID_NIGHT": "This kind of night does not fit how you arrive.",
-    "PLAN_SHAPE_IN_USE": "The plan has stations; remove them before it becomes a single-destination plan again."
+    "PLAN_SHAPE_IN_USE": "The plan has stations; remove them before it becomes a single-destination plan again.",
+    "PLAN_VARIANT_LIMIT": "More than three variants are not possible."
   },
   "enabled": "Enable TravPlan on this server",
   "config": "TravPlan settings",

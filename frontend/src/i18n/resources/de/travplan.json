@@ -137,7 +137,8 @@
     "PLAN_DOCUMENT_NOT_FOUND": "Ein verknüpftes Dokument gehört nicht (mehr) zu dieser Reise. Entferne es aus der Buchung und speichere erneut.",
     "PLAN_WEATHER_INVALID": "Die Wetterquelle hat unbrauchbare Daten geliefert. Die gespeicherte Vorhersage bleibt erhalten; versuche es später erneut.",
     "PLAN_INVALID_NIGHT": "Diese Übernachtungsart passt nicht zur Anreise.",
-    "PLAN_SHAPE_IN_USE": "Der Plan hat Stationen; entferne sie, bevor er wieder ein Ziel-Plan wird."
+    "PLAN_SHAPE_IN_USE": "Der Plan hat Stationen; entferne sie, bevor er wieder ein Ziel-Plan wird.",
+    "PLAN_VARIANT_LIMIT": "Mehr als drei Varianten sind nicht möglich."
   },
   "enabled": "TravPlan auf diesem Server aktivieren",
   "config": "TravPlan-Einstellungen",

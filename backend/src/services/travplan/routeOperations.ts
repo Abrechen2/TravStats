@@ -1,5 +1,6 @@
 import { AppError } from "../../middleware/errorHandler";
 import { collectionSchemas } from "./schema";
+import { applyVariantOperation, isVariantOperation } from "./variants";
 import type { PlanOperation, PlanState, PlanStation } from "./types";
 
 const ROUTE_COLLECTIONS = new Set(["stations", "stages"]);
@@ -127,6 +128,7 @@ function routeSettings(
 export function applyRouteOperation(state: PlanState, op: PlanOperation): PlanState | null {
   let next: PlanState;
   if (op.type === "route_settings") next = routeSettings(state, op);
+  else if (isVariantOperation(op)) next = applyVariantOperation(state, op);
   else if (op.type === "move_station") next = moveStation(state, op.id, op.toIndex);
   else if (op.type === "station_night") next = setNight(state, op);
   else if (op.type === "upsert" && ROUTE_COLLECTIONS.has(op.collection)) {
