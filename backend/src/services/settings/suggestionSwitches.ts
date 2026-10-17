@@ -25,15 +25,15 @@ export const staySuggestionsSettingsSchema = z
   .object({
     enabled: z.boolean(),
     /**
-     * Immich photos as evidence for which place a stay was at. Consumed by the
-     * stay place identification of forgejo#305; until that lands nothing reads
-     * it. It only ever applies where the account has an Immich connection.
+     * Immich photos as evidence for which place a stay was at, read by the
+     * stay place identification of forgejo#305 (`dawarich/stays/identity.ts`).
+     * It only ever applies where the account has an Immich connection.
      */
     immichEvidence: z.boolean(),
     /**
-     * An LLM classifies a stay's place (forgejo#305). Off by default; a cloud
-     * provider additionally needs the instance's own consent for that slot —
-     * this switch never stands in for it.
+     * An LLM classifies a stay's place (forgejo#305, `dawarich/stays/placeType.ts`).
+     * Off by default; a cloud provider additionally needs the instance's own
+     * consent for that slot — this switch never stands in for it.
      */
     llmPlaceClassification: z.boolean(),
   })
