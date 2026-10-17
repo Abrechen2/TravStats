@@ -1,4 +1,5 @@
 import type { Flight } from "../types";
+import { TRACKER_FORMATS } from "./importers/types";
 
 export type SourceInfoLine = { icon: string; label: string; detail?: string };
 type TFunction = (key: string, options?: Record<string, unknown>) => string;
@@ -12,6 +13,8 @@ const SOURCE_ICONS: Record<string, string> = {
   imported_fr24: "📊",
   imported_generic_csv: "📥",
   imported_roundtrip: "↻",
+  // Other flight trackers' exports (forgejo#311).
+  ...Object.fromEntries(TRACKER_FORMATS.map((f) => [`imported_${f}`, "📲"])),
 };
 
 /**

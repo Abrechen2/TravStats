@@ -1,4 +1,4 @@
-import type { ParseResult, ParserError } from "../../lib/importers/types";
+import type { DetectableFormat, ParseResult, ParserError } from "../../lib/importers/types";
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -18,7 +18,23 @@ export function parserErrorLine(error: ParserError, t: Translate): string {
     ? t(`settings:import.parserErrors.${error.code}`, { value: error.value ?? "" })
     : t("settings:import.parserErrors.unknown");
   if (error.rowIndex < 0) return reason;
-  return t("settings:import.parserErrors.row", { line: error.rowIndex + 2, reason });
+  // A parser that knows the file's own line (App in the Air) or entry (an
+  // AirTrail JSON list) says so; the header-based count fits CSVs only.
+  if (error.entry !== undefined) {
+    return t("settings:import.parserErrors.entry", { entry: error.entry, reason });
+  }
+  return t("settings:import.parserErrors.row", { line: error.line ?? error.rowIndex + 2, reason });
+}
+
+/** What each format is recognised by, as the server sends it with `unknownFormat`. */
+export type ExpectedColumns = Partial<Record<DetectableFormat, string[]>>;
+
+/** One line per format: its name in the reader's language, then the columns as the file spells them. */
+function expectedLines(expected: ExpectedColumns, t: Translate): string[] {
+  return (Object.entries(expected) as Array<[DetectableFormat, string[]]>).map(
+    ([format, columns]) =>
+      `• ${t(`settings:import.tile.tracker.formats.${format}`)}: ${columns.join(", ")}`
+  );
 }
 
 function listed(errors: ParserError[], t: Translate): string[] {
@@ -44,10 +60,19 @@ export interface ParseOutcome {
  * column mapping) still stops everything, since no row can be trusted then;
  * a problem with a ROW skips that row and says so.
  */
-export function describeParseResult(parsed: ParseResult, t: Translate): ParseOutcome {
+export function describeParseResult(
+  parsed: ParseResult,
+  t: Translate,
+  context: { expected?: ExpectedColumns } = {}
+): ParseOutcome {
   const fileErrors = parsed.parserErrors.filter((e) => e.rowIndex < 0);
-  if (fileErrors.length > 0)
-    return { fatal: listed(fileErrors, t).join("\n"), skippedNotice: null };
+  if (fileErrors.length > 0) {
+    // An unknown file says what WOULD have been recognised, so the user can
+    // tell a wrong export from a wrong app.
+    const unknown = fileErrors.some((e) => e.code === "unknownFormat");
+    const extra = unknown && context.expected ? expectedLines(context.expected, t) : [];
+    return { fatal: [...listed(fileErrors, t), ...extra].join("\n"), skippedNotice: null };
+  }
   const rowErrors = parsed.parserErrors;
   if (parsed.rows.length === 0) {
     return {

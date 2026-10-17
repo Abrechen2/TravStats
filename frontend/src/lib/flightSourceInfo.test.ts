@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { getFlightSourceInfo } from "./flightSourceInfo";
 import type { Flight } from "../types";
+import { TRACKER_FORMATS } from "./importers/types";
 
 describe("getFlightSourceInfo", () => {
   const t = (key: string, opts?: Record<string, unknown>) =>
@@ -17,6 +18,15 @@ describe("getFlightSourceInfo", () => {
     expect(lines[0].label).toBe("flights:dataSource.email_import");
     expect(lines[0].icon).toBe("📧");
   });
+
+  it.each(TRACKER_FORMATS)(
+    "names the tracker a flight was imported from (%s, forgejo#311)",
+    (format) => {
+      const lines = getFlightSourceInfo({ ...base, dataSource: `imported_${format}` }, t);
+      expect(lines).toHaveLength(1);
+      expect(lines[0].label).toBe(`flights:dataSource.imported_${format}`);
+    }
+  );
 
   it("combines live_update + auto_update into one line", () => {
     const lines = getFlightSourceInfo(

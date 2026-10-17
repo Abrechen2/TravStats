@@ -2,6 +2,11 @@ import { api } from "../../lib/api/client";
 import { logger } from "../../lib/logger";
 import { createImportBatch } from "../../lib/api/importBatches";
 import type { PreviewRowEnriched } from "../../lib/api/import";
+import type { TrackerFormat } from "../../lib/importers/types";
+
+/** Where a committed row came from — one value per import route. */
+export type ImportDataSource =
+  "imported_fr24" | "imported_generic_csv" | `imported_${TrackerFormat}`;
 
 const CHUNK_SIZE = 20;
 
@@ -31,7 +36,7 @@ export interface CommitResult {
  */
 export async function commitPreviewRows(
   rows: PreviewRowEnriched[],
-  dataSource: "imported_fr24" | "imported_generic_csv",
+  dataSource: ImportDataSource,
   fileName?: string | null
 ): Promise<CommitResult> {
   const failures: CommitChunkFailure[] = [];
@@ -57,8 +62,15 @@ export async function commitPreviewRows(
       aircraftRegistration: r.registration,
       departure: { iata: r.fromIata, name: "", lat: r.depLat, lon: r.depLon },
       arrival: { iata: r.toIata, name: "", lat: r.arrLat, lon: r.arrLon },
-      departureLocal: `${r.date}T${r.depTimeLocal ?? "00:00:00"}`,
-      arrivalLocal: r.arrivalLocalCorrected,
+      // What the preview decided, not a rebuild of it: a day-only row is a
+      // historical entry at a placeholder clock, and an unknown arrival is
+      // absent — "" or a midnight guess is what the batch used to refuse.
+      departureLocal: r.departureLocal ?? `${r.date}T${r.depTimeLocal ?? "00:00:00"}`,
+      arrivalLocal: r.arrivalLocalCorrected || null,
+      depTimeSemantics: r.timeSemantics,
+      arrTimeSemantics: r.timeSemantics,
+      ...(r.datePrecision ? { datePrecision: r.datePrecision } : {}),
+      bookingReference: r.bookingReference,
       depTimezone: r.depTimezone,
       arrTimezone: r.arrTimezone,
       seatNumber: r.seatNumber,

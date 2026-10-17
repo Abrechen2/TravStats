@@ -1,5 +1,5 @@
 import { api } from "./client";
-import type { PreviewRowInput } from "../importers/types";
+import type { DetectableFormat, ParserError, PreviewRowInput } from "../importers/types";
 
 export type PreviewFlag =
   "duration_mismatch" | "unresolvable_airport" | "malformed_datetime" | "missing_required";
@@ -28,7 +28,12 @@ export interface PreviewRowEnriched extends PreviewRowInput {
    */
   depUtc: string;
   arrUtc: string;
+  /** The departure wall clock to store — the row's time, or a date-only placeholder. */
+  departureLocal?: string;
+  /** Empty when nothing in the file says when the flight arrived. */
   arrivalLocalCorrected: string;
+  /** Set for a row without a departure time: how much of the clock is real. */
+  timeSemantics?: "DATE_ONLY" | "UNKNOWN";
   depTimezone: string;
   arrTimezone: string;
   depLat: number | null;
@@ -36,7 +41,7 @@ export interface PreviewRowEnriched extends PreviewRowInput {
   arrLat: number | null;
   arrLon: number | null;
   flightNumberNormalised?: string;
-  statusDefault: "flown" | "scheduled";
+  statusDefault: "flown" | "scheduled" | "historical";
   flags: PreviewFlag[];
   dedupeHint: "exact_match" | "same_day_same_route" | "none";
 }
@@ -48,5 +53,24 @@ export interface PreviewResponse {
 
 export async function postImportPreview(rows: PreviewRowInput[]): Promise<PreviewResponse> {
   const r = await api.post<PreviewResponse>("/import/preview", { rows });
+  return r.data;
+}
+
+export interface TrackerParseResponse {
+  rows: PreviewRowInput[];
+  parserErrors: ParserError[];
+  /** The format the server read the file as; null when nothing recognised it. */
+  format: DetectableFormat | null;
+  /** What each format is recognised by — present when `format` is null. */
+  expected?: Partial<Record<DetectableFormat, string[]>>;
+}
+
+/**
+ * Hands another flight tracker's export to the server, which recognises the
+ * format and reads it (forgejo#311). The parsers live there alone — five
+ * formats mirrored in two trees would be five chances to drift.
+ */
+export async function parseTrackerExport(content: string): Promise<TrackerParseResponse> {
+  const r = await api.post<TrackerParseResponse>("/import/parse", { source: "tracker", content });
   return r.data;
 }

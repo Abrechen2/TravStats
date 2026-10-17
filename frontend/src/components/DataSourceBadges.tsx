@@ -1,6 +1,7 @@
 import { useTranslation } from "../hooks/useTranslation";
 import { Flight } from "../types";
 import Toggletip from "./ui/Toggletip";
+import { TRACKER_FORMATS } from "../lib/importers/types";
 
 interface DataSourceBadgesProps {
   flight: Flight;
@@ -156,6 +157,13 @@ function getDataSourceConfig(
       label: t("flights:dataSource.imported_roundtrip"),
       color: NEUTRAL_BADGE,
     },
+    // Other flight trackers' exports (forgejo#311).
+    ...Object.fromEntries(
+      TRACKER_FORMATS.map((f) => [
+        `imported_${f}`,
+        { icon: "📲", label: t(`flights:dataSource.imported_${f}`), color: NEUTRAL_BADGE },
+      ])
+    ),
   };
 
   return configs[source] || null;
@@ -165,6 +173,9 @@ const IMPORT_SOURCE_TOOLTIP_KEYS: Record<string, string> = {
   imported_fr24: "flights:dataSource.imported_fr24_tooltip",
   imported_generic_csv: "flights:dataSource.imported_generic_csv_tooltip",
   imported_roundtrip: "flights:dataSource.imported_roundtrip_tooltip",
+  ...Object.fromEntries(
+    TRACKER_FORMATS.map((f) => [`imported_${f}`, `flights:dataSource.imported_${f}_tooltip`])
+  ),
 };
 
 function getDataSourceTooltip(
