@@ -346,9 +346,9 @@ export default function RoadtripDetailPage(): JSX.Element {
   ) : (
     <div className="flex flex-wrap" style={{ gap: 8 }}>
       <Button onClick={() => navigate(`/tours/${id}`)}>{t("roadtrips:editLegs")}</Button>
+      {/* Secondary and without an icon, like "Bearbeiten" on rail, ferry, bus
+          and rentals: a primary button is taller and stood out (forgejo#307). */}
       <Button
-        variant="primary"
-        icon={<Icon name="pencil" size={16} />}
         // With an undecided draft, the reader decides first (review I1).
         onClick={() => (storedDraft ? setAskDraftFirst(true) : setEditing(true))}
       >

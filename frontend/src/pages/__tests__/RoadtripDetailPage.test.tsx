@@ -203,5 +203,13 @@ describe("RoadtripDetailPage", () => {
       fireEvent.click(legs);
       expect(await screen.findByTestId("tour-page")).toBeInTheDocument();
     });
+
+    it("draws “edit” as the same secondary button as the other detail pages", async () => {
+      renderAt("/roadtrips/rt");
+      const legs = await screen.findByRole("button", { name: "roadtrips:editLegs" });
+      const edit = screen.getByRole("button", { name: "roadtrips:detail.edit" });
+      expect(edit).toHaveAttribute("data-variant", "secondary");
+      expect(legs).toHaveAttribute("data-variant", "secondary");
+    });
   });
 });
