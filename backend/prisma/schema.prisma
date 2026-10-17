@@ -2569,6 +2569,8 @@ model CruiseTrack {
 /// forgejo#193). A table of its own and never `Flight.actualRoute`: a provider
 /// lookup overwrites that column, and a recording is the one line no provider
 /// can supply again (owner decision D5, 2026-10-01).
+/// A GPX/KML/TCX/FIT file uploaded on the flight page lands in the same row,
+/// under the same rules (forgejo#312).
 ///
 /// ONE per flight — a second recording of the same flight replaces this one
 /// only when the client asks for it explicitly. The columns are `CruiseTrack`'s
@@ -2577,10 +2579,13 @@ model CruiseTrack {
 model FlightTrack {
   id            String   @id @default(uuid())
   flightId      String   @unique @map("flight_id")
-  /// companion
+  /// companion | gpx | kml | tcx | fit — the phone, or a file uploaded on the
+  /// flight page (forgejo#312, `FLIGHT_TRACK_SOURCES`)
   source        String
   /// The client's id for this upload. A retry from the phone's outbox sends
   /// the same id and is answered with the stored row instead of a second one.
+  /// A file is stored under `file:` + its SHA-256, so the same bytes twice are
+  /// that same replay.
   uploadId      String   @map("upload_id")
   /// The paired device that sent it (`ApiToken.deviceId`); null from a browser.
   deviceId      String?  @map("device_id")
