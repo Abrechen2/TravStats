@@ -121,6 +121,39 @@ function routeSettings(
 }
 
 /**
+ * Stores routed metrics only if both endpoints are where they were when the
+ * router was asked; a stage moved meanwhile would otherwise get another
+ * route's kilometres.
+ */
+function stageMetrics(
+  state: PlanState,
+  op: Extract<PlanOperation, { type: "stage_metrics" }>
+): PlanState {
+  const stage = state.stages.find((g) => g.id === op.stageId);
+  if (!stage) notFound();
+  const from = state.stations.find((s) => s.id === stage!.fromStationId);
+  const to = state.stations.find((s) => s.id === stage!.toStationId);
+  const same = (a: { lat: number; lon: number } | undefined, b: { lat: number; lon: number }) =>
+    !!a && a.lat === b.lat && a.lon === b.lon;
+  if (!same(from?.place, op.fromCoord) || !same(to?.place, op.toCoord))
+    throw new AppError("The stage changed while it was being routed", 409, "PLAN_STAGE_CHANGED");
+  return {
+    ...state,
+    stages: state.stages.map((g) =>
+      g.id === op.stageId
+        ? {
+            ...g,
+            distanceKm: op.distanceKm,
+            durationMinutes: op.durationMinutes,
+            metricsSource: op.metricsSource,
+            fallbackReason: op.fallbackReason,
+          }
+        : g
+    ),
+  };
+}
+
+/**
  * Applies the station / stage / night operations on a clone-safe copy of the
  * state. Returns `null` when `op` is not a route operation so the caller can
  * carry on with the other kinds. The caller re-parses the result.
@@ -129,6 +162,7 @@ export function applyRouteOperation(state: PlanState, op: PlanOperation): PlanSt
   let next: PlanState;
   if (op.type === "route_settings") next = routeSettings(state, op);
   else if (isVariantOperation(op)) next = applyVariantOperation(state, op);
+  else if (op.type === "stage_metrics") next = stageMetrics(state, op);
   else if (op.type === "move_station") next = moveStation(state, op.id, op.toIndex);
   else if (op.type === "station_night") next = setNight(state, op);
   else if (op.type === "upsert" && ROUTE_COLLECTIONS.has(op.collection)) {

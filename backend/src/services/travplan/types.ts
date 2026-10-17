@@ -349,6 +349,16 @@ export type PlanOperation =
   | { type: "remove"; collection: PlanCollection; id: string }
   | { type: "route_settings"; shape?: PlanState["shape"]; vehicle?: PlanVehicle | null }
   | { type: "move_station"; id: string; toIndex: number }
+  | {
+      type: "stage_metrics";
+      stageId: string;
+      distanceKm: number | null;
+      durationMinutes: number | null;
+      metricsSource: PlanStage["metricsSource"];
+      fallbackReason: string | null;
+      fromCoord: { lat: number; lon: number };
+      toCoord: { lat: number; lon: number };
+    }
   | { type: "create_variant"; name: string; copyActive: boolean }
   | { type: "activate_variant"; variantId: string }
   | { type: "remove_variant"; variantId: string }

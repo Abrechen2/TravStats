@@ -437,6 +437,22 @@ const operationSchema = z.discriminatedUnion("type", [
     .object({ type: z.literal("move_station"), id, toIndex: z.number().int().min(0).max(59) })
     .strict(),
   z
+    .object({
+      type: z.literal("stage_metrics"),
+      stageId: id,
+      distanceKm: z.number().min(0).max(100000).nullable(),
+      durationMinutes: z.number().int().min(0).max(100000).nullable(),
+      metricsSource: z.enum(["routed", "straight", "user", "booking"]).nullable(),
+      fallbackReason: text(60).nullable(),
+      fromCoord: z
+        .object({ lat: z.number().min(-90).max(90), lon: z.number().min(-180).max(180) })
+        .strict(),
+      toCoord: z
+        .object({ lat: z.number().min(-90).max(90), lon: z.number().min(-180).max(180) })
+        .strict(),
+    })
+    .strict(),
+  z
     .object({ type: z.literal("create_variant"), name: text(60).min(1), copyActive: z.boolean() })
     .strict(),
   z.object({ type: z.literal("activate_variant"), variantId: id }).strict(),
