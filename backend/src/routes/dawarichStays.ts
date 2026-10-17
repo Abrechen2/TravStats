@@ -13,6 +13,8 @@ import { stayReviewSchema } from "../schemas/dawarichStays";
 import { withStayTimes, withScanTimes } from "../services/dawarich/stays/times";
 import { publicMarketCoverage } from "../services/dawarich/stays/publicCoverage";
 import { startJob } from "../services/jobs/jobRegistry";
+import { stayIdentityFor } from "../services/dawarich/stays/identity";
+import { stayPlaceTypeFor } from "../services/dawarich/stays/placeType";
 
 import {
   placesEnabled,
@@ -31,6 +33,20 @@ const user = (req: AuthRequest) => {
 const scanLimiter = rateLimit({
   windowMs: 60 * 60_000,
   max: patAwareMax(6),
+  keyGenerator: userOrIpKey,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+/**
+ * The per-card place identification (forgejo#305) reaches two public geocoders,
+ * Immich and possibly a model. The geocoders throttle themselves for the whole
+ * process; this caps what one account can ask for in the first place. A card
+ * asks once when it comes into view, so 60 a minute is a fast scroll through
+ * the inbox, not a script.
+ */
+const identityLimiter = rateLimit({
+  windowMs: 60_000,
+  max: patAwareMax(60),
   keyGenerator: userOrIpKey,
   standardHeaders: true,
   legacyHeaders: false,
@@ -214,6 +230,27 @@ router.get("/choices", async (req: AuthRequest, res, next) => {
         },
       },
     });
+  } catch (e) {
+    next(e);
+  }
+});
+router.get("/:id/identity", identityLimiter, async (req: AuthRequest, res, next) => {
+  try {
+    const userId = user(req);
+    const id = z.string().uuid().parse(req.params.id);
+    // Off means no geocoder, Immich or model request on the stay's behalf.
+    await requireStaySuggestionsEnabled(userId);
+    res.json({ success: true, data: await stayIdentityFor(userId, id) });
+  } catch (e) {
+    next(e);
+  }
+});
+router.get("/:id/place-type", identityLimiter, async (req: AuthRequest, res, next) => {
+  try {
+    const userId = user(req);
+    const id = z.string().uuid().parse(req.params.id);
+    await requireStaySuggestionsEnabled(userId);
+    res.json({ success: true, data: await stayPlaceTypeFor(userId, id) });
   } catch (e) {
     next(e);
   }

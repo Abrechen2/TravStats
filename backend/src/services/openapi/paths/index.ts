@@ -81,6 +81,7 @@ import "./timeMigration";
 import "./sync";
 
 import "./dawarichStays";
+import "./dawarichStayIdentity";
 
 import "./travplan";
 

@@ -88,6 +88,10 @@ function asNumberOrNull(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function nonEmpty(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 function asString(value: unknown, fallback: string): string {
   return typeof value === "string" ? value : fallback;
 }
@@ -155,6 +159,8 @@ function mapAsset(raw: unknown): ImmichAsset | null {
   // it instead — the caller already filters out `null`.
   if (raw.type !== "IMAGE" && raw.type !== "VIDEO") return null;
   const exif = isRecord(raw.exifInfo) ? raw.exifInfo : undefined;
+  const city = exif?.city;
+  const country = exif?.country;
 
   return {
     id: raw.id,
@@ -165,6 +171,9 @@ function mapAsset(raw: unknown): ImmichAsset | null {
     sizeBytes: asNumberOrNull(exif?.fileSizeInByte),
     lat: asNumberOrNull(exif?.latitude),
     lon: asNumberOrNull(exif?.longitude),
+    // Only when Immich named one — absent, not "", so a missing hint stays missing.
+    ...(nonEmpty(city) ? { city } : {}),
+    ...(nonEmpty(country) ? { country } : {}),
   };
 }
 
