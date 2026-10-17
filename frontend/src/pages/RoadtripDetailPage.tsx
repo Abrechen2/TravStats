@@ -6,7 +6,7 @@ import AppShell from "../components/ui/AppShell";
 import Button from "../components/ui/Button";
 import DetailHeader from "../components/ui/DetailHeader";
 import EmptyState from "../components/ui/EmptyState";
-import Pill from "../components/ui/Pill";
+import { statusPillProps } from "../components/table/statusPillStyle";
 import { Icon } from "../components/ui/Icon";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import TripMap, { type TripMapContent } from "../components/Trips/TripMap";
@@ -252,7 +252,7 @@ export default function RoadtripDetailPage(): JSX.Element {
 
   if (loadError) {
     return (
-      <AppShell width="table">
+      <AppShell width="list">
         <EmptyState
           kind="degraded"
           title={t("roadtrips:detailLoadError")}
@@ -267,7 +267,7 @@ export default function RoadtripDetailPage(): JSX.Element {
   }
   if (!detail) {
     return (
-      <AppShell width="table">
+      <AppShell width="list">
         <div
           aria-busy="true"
           aria-label={t("common:loading.default")}
@@ -316,15 +316,18 @@ export default function RoadtripDetailPage(): JSX.Element {
             : ""
         }`;
 
+  // The phase speaks the shared status vocabulary (underway = in_progress,
+  // planned = scheduled), so it wears the same pill as every other detail head
+  // instead of colours of its own (forgejo#307).
   const status =
     phase === "underway" && day !== null ? (
-      <Pill color="var(--ts-good)">
+      <span {...statusPillProps("in_progress")}>
         {total !== null
           ? t("roadtrips:phase.underway", { day, total })
           : t("roadtrips:phase.underwayOpen", { day })}
-      </Pill>
+      </span>
     ) : phase === "planned" ? (
-      <Pill color="var(--ts-info)">{t("roadtrips:phase.planned")}</Pill>
+      <span {...statusPillProps("scheduled")}>{t("roadtrips:phase.planned")}</span>
     ) : undefined;
 
   const actions = editing ? (
@@ -342,24 +345,10 @@ export default function RoadtripDetailPage(): JSX.Element {
     </div>
   ) : (
     <div className="flex flex-wrap" style={{ gap: 8 }}>
-      <Link
-        to={`/tours/${id}`}
-        className="flex items-center"
-        style={{
-          minHeight: "var(--ts-size-touch-min)",
-          padding: "0 14px",
-          borderRadius: "var(--ts-radius-button)",
-          border: "1px solid var(--ts-border-button)",
-          color: "var(--ts-text)",
-          textDecoration: "none",
-          fontSize: 14,
-        }}
-      >
-        {t("roadtrips:editLegs")}
-      </Link>
+      <Button onClick={() => navigate(`/tours/${id}`)}>{t("roadtrips:editLegs")}</Button>
+      {/* Secondary and without an icon, like "Bearbeiten" on rail, ferry, bus
+          and rentals: a primary button is taller and stood out (forgejo#307). */}
       <Button
-        variant="primary"
-        icon={<Icon name="pencil" size={16} />}
         // With an undecided draft, the reader decides first (review I1).
         onClick={() => (storedDraft ? setAskDraftFirst(true) : setEditing(true))}
       >
@@ -368,8 +357,11 @@ export default function RoadtripDetailPage(): JSX.Element {
     </div>
   );
 
+  // `list`, like rail, ferry, bus and rentals: the page holds no column table
+  // that needs `table`, and the stations-beside-map grid already has to work
+  // at 1024px, narrower than `list` ever makes it (forgejo#307).
   return (
-    <AppShell width="table">
+    <AppShell width="list">
       <DetailHeader
         backTo="/roadtrips"
         backLabel={t("roadtrips:pageTitle")}
