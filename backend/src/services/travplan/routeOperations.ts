@@ -18,19 +18,45 @@ function notFound(): never {
  * a hotel booking. Checked on the whole state after every route edit, because
  * changing a stage can invalidate a night nobody touched.
  */
-function assertNightsHold(state: PlanState): void {
+export function assertNightsHold(state: PlanState): void {
   for (const station of state.stations) {
     const night = station.night;
     if (night.kind === "booked") {
       const booking = state.bookings.find((b) => b.id === night.bookingId);
       if (!booking || booking.kind !== "hotel")
-        invalidNight("A booked night needs a lodging booking");
+        invalidNight(`Station "${station.title}": a booked night needs a lodging booking`);
     } else if (night.kind === "onboard") {
-      const arriving = state.stages.filter((g) => g.toStationId === station.id);
-      if (!arriving.some((g) => g.overnight && g.mode === "ferry"))
-        invalidNight("An onboard night needs an overnight ferry arriving at the station");
+      if (!hasOvernightFerryArriving(state, station.id))
+        invalidNight(
+          `Station "${station.title}": an onboard night needs an overnight ferry arriving`
+        );
     }
   }
+}
+
+const hasOvernightFerryArriving = (state: PlanState, stationId: string) =>
+  state.stages.some((g) => g.toStationId === stationId && g.overnight && g.mode === "ferry");
+
+/**
+ * Removing or changing the overnight ferry an "onboard" night depends on turns
+ * that night into "spontaneous" in the same operation, the way removing an item
+ * clears its ideas' link. Refusing would make the stage or station undeletable.
+ */
+function cascadeOnboard(state: PlanState): PlanState {
+  if (
+    !state.stations.some(
+      (s) => s.night.kind === "onboard" && !hasOvernightFerryArriving(state, s.id)
+    )
+  )
+    return state;
+  return {
+    ...state,
+    stations: state.stations.map((s): PlanStation =>
+      s.night.kind === "onboard" && !hasOvernightFerryArriving(state, s.id)
+        ? { ...s, night: { kind: "spontaneous" } }
+        : s
+    ),
+  };
 }
 
 function removeStation(state: PlanState, id: string): PlanState {
@@ -103,12 +129,14 @@ export function applyRouteOperation(state: PlanState, op: PlanOperation): PlanSt
   if (op.type === "route_settings") next = routeSettings(state, op);
   else if (op.type === "move_station") next = moveStation(state, op.id, op.toIndex);
   else if (op.type === "station_night") next = setNight(state, op);
-  else if (op.type === "upsert" && ROUTE_COLLECTIONS.has(op.collection))
+  else if (op.type === "upsert" && ROUTE_COLLECTIONS.has(op.collection)) {
     next = upsertRouteEntry(state, op.collection as "stations" | "stages", op.value);
-  else if (op.type === "remove" && op.collection === "stations") next = removeStation(state, op.id);
+    if (op.collection === "stages") next = cascadeOnboard(next);
+  } else if (op.type === "remove" && op.collection === "stations")
+    next = cascadeOnboard(removeStation(state, op.id));
   else if (op.type === "remove" && op.collection === "stages") {
     if (!state.stages.some((g) => g.id === op.id)) notFound();
-    next = { ...state, stages: state.stages.filter((g) => g.id !== op.id) };
+    next = cascadeOnboard({ ...state, stages: state.stages.filter((g) => g.id !== op.id) });
   } else return null;
   assertNightsHold(next);
   return next;

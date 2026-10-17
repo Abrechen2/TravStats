@@ -4,7 +4,7 @@ import { collectionSchemas } from "./schema";
 import { parseState } from "./upgrade";
 import { bookingDuration } from "./temporal";
 import { transferFingerprint } from "./rules";
-import { applyRouteOperation } from "./routeOperations";
+import { applyRouteOperation, assertNightsHold } from "./routeOperations";
 import type { PlanState, PlanOperation, PlanItem, PlanBooking } from "./types";
 function refuse(message: string): never {
   throw new AppError(message, 409, "PLAN_PROTECTED");
@@ -191,6 +191,8 @@ export function applyOperation(
     }
   } else refuse("Operation must be resolved by the transaction");
   state = parseState(state);
+  // Safety net for every op: a booking edit must not strand a "booked" night.
+  assertNightsHold(state);
   for (const key of Object.keys(collectionSchemas) as (keyof typeof collectionSchemas)[])
     if (new Set(state[key].map((i) => i.id)).size !== state[key].length)
       refuse("Duplicate plan identifiers");

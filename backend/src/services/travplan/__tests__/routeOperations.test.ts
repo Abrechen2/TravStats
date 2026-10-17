@@ -199,4 +199,97 @@ describe("route operations", () => {
     expect(next.stations.map((s) => s.title)).toEqual(["A2", "B", "C"]);
     expect(b.id).toBe(next.stations[1].id);
   });
+
+  describe("onboard cascade", () => {
+    const ferryRoute = () => {
+      const { state, a, b } = withRoute();
+      const s = structuredClone(state);
+      s.stages[0] = { ...s.stages[0], mode: "ferry", overnight: true };
+      s.stations[1] = { ...s.stations[1], night: { kind: "onboard" } };
+      return { s, a, b, ferry: s.stages[0] };
+    };
+    it("removing the arriving ferry stage turns the onboard night spontaneous", () => {
+      const { s, ferry } = ferryRoute();
+      const next = apply(s, { type: "remove", collection: "stages", id: ferry.id });
+      expect(next.stations[1].night).toEqual({ kind: "spontaneous" });
+    });
+    it("removing the departure station does the same", () => {
+      const { s, a } = ferryRoute();
+      const next = apply(s, { type: "remove", collection: "stations", id: a.id });
+      expect(next.stations.map((x) => x.title)).toEqual(["B", "C"]);
+      expect(next.stations[0].night).toEqual({ kind: "spontaneous" });
+    });
+    it("changing the stage to a day ferry does the same", () => {
+      const { s, ferry } = ferryRoute();
+      const next = apply(s, {
+        type: "upsert",
+        collection: "stages",
+        value: { ...ferry, overnight: false },
+      });
+      expect(next.stations[1].night).toEqual({ kind: "spontaneous" });
+    });
+  });
+
+  it("stage upsert adds a stage and edits one in place", () => {
+    const { state, a, c } = withRoute();
+    const extra = stage(a.id, c.id, { note: "shortcut" });
+    const added = apply(state, { type: "upsert", collection: "stages", value: extra });
+    expect(added.stages).toHaveLength(3);
+    const edited = apply(added, {
+      type: "upsert",
+      collection: "stages",
+      value: { ...state.stages[0], distanceKm: 120 },
+    });
+    expect(edited.stages[0].distanceKm).toBe(120);
+    expect(edited.stages).toHaveLength(3);
+  });
+
+  it("unknown ids answer 404 PLAN_ITEM_NOT_FOUND", () => {
+    const { state } = withRoute();
+    for (const op of [
+      { type: "remove", collection: "stations", id: uid() },
+      { type: "remove", collection: "stages", id: uid() },
+      { type: "move_station", id: uid(), toIndex: 0 },
+      { type: "station_night", stationId: uid(), night: { kind: "pitch" } },
+    ] as PlanOperation[])
+      expect(codeOf(() => apply(state, op))).toBe("PLAN_ITEM_NOT_FOUND");
+  });
+
+  it("a hotel booking behind a booked night cannot be removed or changed to another kind", () => {
+    // Today's bookings rules (PLAN_PROTECTED) already close every path that could
+    // strand a booked night: no remove, no kind change; refresh/undo keep kinds.
+    const { state, a } = withRoute();
+    const hotel = {
+      id: uid(),
+      kind: "hotel",
+      title: "Stay",
+      reference: null,
+      provider: "",
+      day: "2027-06-01",
+      endDay: "2027-06-02",
+      time: null,
+      timezone: null,
+      amount: null,
+      paid: 0,
+      currency: "EUR",
+      place: "A",
+      documentIds: [],
+      source: "manual",
+      details: {},
+    };
+    let s = apply(state, { type: "upsert", collection: "bookings", value: hotel });
+    s = apply(s, {
+      type: "station_night",
+      stationId: a.id,
+      night: { kind: "booked", bookingId: hotel.id },
+    });
+    expect(codeOf(() => apply(s, { type: "remove", collection: "bookings", id: hotel.id }))).toBe(
+      "PLAN_PROTECTED"
+    );
+    expect(
+      codeOf(() =>
+        apply(s, { type: "upsert", collection: "bookings", value: { ...hotel, kind: "rail" } })
+      )
+    ).toBe("PLAN_PROTECTED");
+  });
 });
