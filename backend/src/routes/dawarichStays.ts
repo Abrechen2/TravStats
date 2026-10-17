@@ -17,8 +17,10 @@ import { startJob } from "../services/jobs/jobRegistry";
 import {
   placesEnabled,
   requirePlacesEnabled,
+  requireStaySuggestionsEnabled,
   nextStayScanAt,
 } from "../services/dawarich/stays/availability";
+import { staySuggestionsEnabled } from "../services/settings/suggestionSwitches";
 
 const router = Router();
 router.use(authenticate, requireWriteScope);
@@ -48,13 +50,17 @@ router.get("/settings", async (req: AuthRequest, res, next) => {
         throw error;
     }
     const places = await placesEnabled(userId);
-    const pausedReason = !state?.enabled
-      ? "disabled"
-      : !places
-        ? "placesDisabled"
-        : !connected
-          ? "connectionMissing"
-          : null;
+    // The account-wide inbox switch (forgejo#306) outranks the scan's own consent.
+    const suggestions = await staySuggestionsEnabled(userId);
+    const pausedReason = !suggestions
+      ? "suggestionsDisabled"
+      : !state?.enabled
+        ? "disabled"
+        : !places
+          ? "placesDisabled"
+          : !connected
+            ? "connectionMissing"
+            : null;
     res.json({
       success: true,
       data: {
@@ -147,6 +153,13 @@ router.get("/", async (req: AuthRequest, res, next) => {
         status: z.enum(["pending", "accepted", "rejected", "covered"]).default("pending"),
       })
       .parse(req.query);
+    // Switched off (forgejo#306): no pending suggestions are offered, and none
+    // is resolved either. The rows stay, and come back when it is switched on.
+    // Answered rows remain readable — they are history, not suggestions.
+    if (status === "pending" && !(await staySuggestionsEnabled(userId))) {
+      res.json({ success: true, data: [] });
+      return;
+    }
     // A visit logged after the last scan (live, on the phone) covers its
     // finding from that moment; the inbox must not offer it until the next scan.
     if (status === "pending") await resolveCoveredStays(userId);
@@ -208,6 +221,9 @@ router.get("/choices", async (req: AuthRequest, res, next) => {
 router.post("/:id/accept", rejectDemo, async (req: AuthRequest, res, next) => {
   try {
     const id = z.string().uuid().parse(req.params.id);
+    // Accepting completes an address from the geocoder — an outbound call the
+    // switched-off feature must not make.
+    await requireStaySuggestionsEnabled(user(req));
     const row = await acceptStay(user(req), id, stayReviewSchema.parse(req.body));
     res.json({ success: true, data: withStayTimes(row) });
   } catch (e) {
@@ -219,6 +235,7 @@ router.post("/:id/reject", rejectDemo, async (req: AuthRequest, res, next) => {
     z.object({})
       .strict()
       .parse(req.body ?? {});
+    await requireStaySuggestionsEnabled(user(req));
     await rejectStay(user(req), z.string().uuid().parse(req.params.id));
     res.json({ success: true });
   } catch (e) {

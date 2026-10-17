@@ -22,7 +22,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   stopDawarichStayScheduler();
 });
-it("continues after one unavailable account and asks only for explicitly enabled scans", async () => {
+it("continues after one unavailable account and asks only for enabled scans of accounts with stay suggestions on", async () => {
   (prisma.dawarichStayScan.findMany as jest.Mock).mockResolvedValue([
     { userId: "offline" },
     { userId: "ready" },
@@ -30,7 +30,8 @@ it("continues after one unavailable account and asks only for explicitly enabled
   jest.mocked(reserveScan).mockRejectedValueOnce(new Error("offline")).mockResolvedValueOnce();
   await runDawarichStaySweep();
   expect(prisma.dawarichStayScan.findMany).toHaveBeenCalledWith({
-    where: { enabled: true },
+    // forgejo#306: an account with stay suggestions switched off is not attempted.
+    where: { enabled: true, user: { settings: { is: { staySuggestionsEnabled: true } } } },
     select: { userId: true },
   });
   expect(scanStays).toHaveBeenCalledTimes(1);

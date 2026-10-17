@@ -850,6 +850,21 @@ model UserSettings {
   // button is already the user asking for trips.
   autoCreateTrips Boolean @default(true) @map("auto_create_trips")
 
+  // Inbox suggestion switches (forgejo#306). Off stops the work, not just the
+  // display: no trip engine run, no Dawarich stay scan. Stored decisions
+  // (TripSuggestionDecision, rejected stays) survive a switch-off, so switching
+  // back on resumes where the user left. Flat columns like `autoCreateTrips`;
+  // the API nests them as `tripSuggestions.enabled` / `staySuggestions.*`.
+  tripSuggestionsEnabled                Boolean @default(true) @map("trip_suggestions_enabled")
+  staySuggestionsEnabled                Boolean @default(true) @map("stay_suggestions_enabled")
+  /// Immich photos as evidence for which place a stay was at. Read by the stay
+  /// place identification of forgejo#305; it only ever applies where the
+  /// account has an Immich connection.
+  staySuggestionsImmichEvidence         Boolean @default(true) @map("stay_suggestions_immich_evidence")
+  /// An LLM classifies a stay's place (forgejo#305). Off by default; a cloud
+  /// provider additionally needs the instance's own consent for that slot.
+  staySuggestionsLlmPlaceClassification Boolean @default(false) @map("stay_suggestions_llm_place_classification")
+
   // Auto-update settings
   autoUpdateEnabled           Boolean   @default(false) @map("auto_update_enabled")
   /// Opt-in: scan the user's Immich for photo journeys every night (forgejo#94).

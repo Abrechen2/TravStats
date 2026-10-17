@@ -17,7 +17,11 @@ import {
 import { contains } from "../marketVisits/geometry";
 import type { CatalogStore } from "../marketVisits/catalog";
 import { Prisma } from "../../../prisma";
-import { placesEnabledWhere, requirePlacesEnabled } from "./availability";
+import {
+  requirePlacesEnabled,
+  requireStaySuggestionsEnabled,
+  stayScanAllowedWhere,
+} from "./availability";
 import { publicMarketCoverage } from "./publicCoverage";
 import { tripForStay } from "./tripMatch";
 import { loadSuppression, suppressionReason } from "./suppression";
@@ -40,12 +44,13 @@ export async function ownConnection(userId: string) {
 
 /** A database lease also excludes another server process, not just another click. */
 export async function reserveScan(userId: string, now = new Date()): Promise<void> {
+  await requireStaySuggestionsEnabled(userId);
   await requirePlacesEnabled(userId);
   const acquired = await prisma.dawarichStayScan.updateMany({
     where: {
       userId,
       enabled: true,
-      ...placesEnabledWhere,
+      ...stayScanAllowedWhere,
       OR: [{ leaseUntil: null }, { leaseUntil: { lt: now } }],
     },
     data: {
@@ -108,6 +113,7 @@ export async function scanStays(
     if (!state.startedAt || !state.leaseUntil)
       throw new AppError("Scan reservation required", 409, "DAWARICH_SCAN_UNAVAILABLE");
     reservation = { startedAt: state.startedAt, leaseUntil: state.leaseUntil };
+    await requireStaySuggestionsEnabled(userId);
     await requirePlacesEnabled(userId);
     const client = options.client ?? createDawarichClient(await ownConnection(userId));
     const result = await readStayWindow(
@@ -116,7 +122,7 @@ export async function scanStays(
       now,
       async () =>
         !!(await prisma.dawarichStayScan.findFirst({
-          where: { userId, ...reservation!, enabled: true, ...placesEnabledWhere },
+          where: { userId, ...reservation!, enabled: true, ...stayScanAllowedWhere },
           select: { userId: true },
         }))
     );
@@ -175,7 +181,7 @@ export async function scanStays(
                 enabled: true,
                 ...(state.marketEnabled ? { marketEnabled: true } : {}),
                 ...(state.venueEnabled ? { venueEnabled: true } : {}),
-                ...placesEnabledWhere,
+                ...stayScanAllowedWhere,
               },
               select: { userId: true },
             })),
@@ -194,7 +200,7 @@ export async function scanStays(
     for (const c of candidates) {
       // A late upstream response belongs to this reservation, never its successor.
       const current = await prisma.dawarichStayScan.findFirst({
-        where: { userId, ...reservation, enabled: true, ...placesEnabledWhere },
+        where: { userId, ...reservation, enabled: true, ...stayScanAllowedWhere },
         select: { userId: true },
       });
       if (!current) break;
@@ -386,7 +392,7 @@ export async function scanStays(
         // Lock the scan row with the consent/reservation predicate. Revocation
         // or takeover cannot slip between this check and the finding insert.
         const owned = await tx.dawarichStayScan.updateMany({
-          where: { userId, ...reservation!, enabled: true, ...placesEnabledWhere },
+          where: { userId, ...reservation!, enabled: true, ...stayScanAllowedWhere },
           data: { result: "running" },
         });
         if (!owned.count) return { count: 0, extended: 0 };
@@ -424,7 +430,7 @@ export async function scanStays(
     const newest = points.reduce((max, p) => Math.max(max, p.timestampMs), -Infinity);
     const dataThrough = Number.isFinite(newest) ? new Date(newest) : null;
     await prisma.dawarichStayScan.updateMany({
-      where: { userId, ...reservation, enabled: true, ...placesEnabledWhere },
+      where: { userId, ...reservation, enabled: true, ...stayScanAllowedWhere },
       data: {
         finishedAt: new Date(),
         leaseUntil: null,
