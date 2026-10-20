@@ -60,6 +60,7 @@ import { DOMAIN_COLORS_KEY, useDomainColorStore } from "../../store/domainColorS
 import { useFlightColorStore } from "../../store/flightColorStore";
 import { useLodgingColorStore } from "../../store/lodgingColorStore";
 import { useOverlayAppearanceStore } from "../../store/overlayAppearanceStore";
+import { loadLabelsMode, useMapLabelsModeStore } from "../../store/mapLabelsModeStore";
 import { usePlaceColorStore } from "../../store/placeColorStore";
 import { useStatsCompareStore } from "../../store/statsCompareStore";
 import { useThemeStore } from "../../store/themeStore";
@@ -177,6 +178,7 @@ const mapAppearance: WebPrefSectionDef = {
     useLodgingColorStore.setState({ config: loadLodgingColorConfig() });
     usePlaceColorStore.setState({ config: loadPlaceColorConfig() });
     useOverlayAppearanceStore.setState({ appearance: loadOverlayAppearance() });
+    useMapLabelsModeStore.setState({ mode: loadLabelsMode() });
     // The maps copied it into component state at mount — they remount on this.
     bump("mapAppearance");
   },

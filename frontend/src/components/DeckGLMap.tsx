@@ -14,7 +14,6 @@ import { useTranslation } from "../hooks/useTranslation";
 import { applyMapOverlays } from "./Globe/mapOverlays";
 import { FlatMapControlPanel } from "./map/FlatMapControlPanel";
 import { type AppearanceDomain } from "./map/controlPanelKit";
-import type { LabelsMode } from "./map/labelPriority";
 import { loadFlightRouteShape, loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
 import type { FlightRouteShape } from "../lib/flightRouteShape";
 import { useFlightColorStore } from "../store/flightColorStore";
@@ -22,6 +21,7 @@ import { resolveFlightTipColor } from "../lib/flightColor";
 import { useLodgingColorStore } from "../store/lodgingColorStore";
 import { usePlaceColorStore } from "../store/placeColorStore";
 import { useMapCameraStore } from "../store/mapCameraStore";
+import { useMapLabelsModeStore } from "../store/mapLabelsModeStore";
 import { FLAT_BASEMAPS, type FlatStyleId } from "./map/basemapStyles";
 import { useResilientStyle } from "./map/basemapFallback";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
@@ -117,8 +117,8 @@ interface DeckGLMapProps {
    * Lodging places (hotels/campsites) to render as pins + name labels.
    * Built into a ScatterplotLayer + TextLayer HERE (not by the caller, via
    * `buildLodgingPins`) — unlike the marker-size value above, the pin layer
-   * itself needs `zoom` and `labelsMode`, both of which are private state
-   * that only exists inside this component (mirrors exactly how
+   * itself needs `zoom`, which is private state that only exists inside
+   * this component (mirrors exactly how
    * `createCruisePortsLayer` is built here rather than by MapContainer3D).
    * Undefined/empty means "no lodging layer at all".
    */
@@ -133,8 +133,8 @@ interface DeckGLMapProps {
   onLodgingClick?: (lodgingId: string) => void;
   /**
    * Places to render as pins + name labels. Built HERE rather than by the
-   * caller for the same reason `lodgingsOverride` is: the layer needs `zoom`
-   * and `labelsMode`, which are private to this component.
+   * caller for the same reason `lodgingsOverride` is: the layer needs `zoom`,
+   * which is private to this component.
    *
    * Until 2026-08-28 both PoiTab and AllTab called `buildPlacePins` themselves
    * and passed it into `extraLayers`, which is why places were the one domain
@@ -273,9 +273,7 @@ export function DeckGLMap({
   const [showPlaceLabels, setShowPlaceLabels] = useState<boolean>(
     () => loadMapAppearance().showPlaceLabels ?? true
   );
-  const [labelsMode, setLabelsMode] = useState<LabelsMode>(
-    () => loadMapAppearance().labelsMode ?? "important"
-  );
+  const { mode: labelsMode, setMode: setLabelsMode } = useMapLabelsModeStore();
   // Absent means "as each list says" — see the field's note in mapAppearance.
   const [placeLabelSource, setPlaceLabelSource] = useState<PlaceLabelSource>(
     () => loadMapAppearance().placeLabelSource ?? "list"
@@ -293,7 +291,6 @@ export function DeckGLMap({
       cruiseArrowScale,
       showTerrain,
       showPlaceLabels,
-      labelsMode,
       placeLabelSource,
     });
   }, [
@@ -308,7 +305,6 @@ export function DeckGLMap({
     cruiseArrowScale,
     showTerrain,
     showPlaceLabels,
-    labelsMode,
     placeLabelSource,
   ]);
   // Apply the style-level overlays (relief hillshade + basemap place

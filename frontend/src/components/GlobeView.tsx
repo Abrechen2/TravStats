@@ -22,13 +22,13 @@ import {
 } from "./Globe/buildGlobeLayers";
 import { type AppearanceDomain } from "./map/controlPanelKit";
 import { useResilientStyle } from "./map/basemapFallback";
-import type { LabelsMode } from "./map/labelPriority";
 import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
 import { loadGlobeChrome, saveGlobeChrome } from "./map/globeChrome";
 import { useFlightColorStore } from "../store/flightColorStore";
 import { useLodgingColorStore } from "../store/lodgingColorStore";
 import { usePlaceColorStore } from "../store/placeColorStore";
 import { useMapCameraStore } from "../store/mapCameraStore";
+import { useMapLabelsModeStore } from "../store/mapLabelsModeStore";
 
 // Base marker radius (px) a size preset scales. off → 0 (hidden).
 const GLOBE_MARKER_BASE_PX = 5;
@@ -280,9 +280,7 @@ export default function GlobeView({
   }, [autoRotate, showNight]);
   // Marker-label reveal: off / key markers only (greedy screen-space
   // collision, the default) / all (ignore overlap). Persisted.
-  const [labelsMode, setLabelsMode] = useState<LabelsMode>(
-    () => loadMapAppearance().labelsMode ?? "important"
-  );
+  const { mode: labelsMode, setMode: setLabelsMode } = useMapLabelsModeStore();
   // Map-appearance customisation (the panel's "Anpassung" section) plus
   // the style-level overlays, all persisted to localStorage so a user's
   // look survives reloads.
@@ -355,7 +353,6 @@ export default function GlobeView({
       cruiseMarkerSize,
       showTerrain,
       showPlaceLabels,
-      labelsMode,
       placeLabelSource,
     });
   }, [
@@ -368,7 +365,6 @@ export default function GlobeView({
     cruiseMarkerSize,
     showTerrain,
     showPlaceLabels,
-    labelsMode,
     placeLabelSource,
   ]);
 

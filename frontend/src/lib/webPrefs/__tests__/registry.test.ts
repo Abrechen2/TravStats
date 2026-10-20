@@ -99,6 +99,17 @@ describe("web prefs registry", () => {
       expect(useWebPrefsEpochStore.getState().epochs.mapAppearance).toBe(1);
     });
 
+    it("hands a server's label mode to the store the station labels read (forgejo#320)", async () => {
+      // The rail/bus/ferry labels are built outside the map, from this store;
+      // a remote apply that only bumped the maps' epoch would leave them on
+      // the old mode until a reload.
+      const { section } = await fresh();
+      const { useMapLabelsModeStore } = await import("../../../store/mapLabelsModeStore");
+      expect(useMapLabelsModeStore.getState().mode).toBe("important");
+      section("mapAppearance").apply({ labelsMode: "off" });
+      expect(useMapLabelsModeStore.getState().mode).toBe("off");
+    });
+
     it("reads what a map writes on mount as a default, and a real choice as not", async () => {
       const { section } = await fresh();
       const mapAppearance = section("mapAppearance");
