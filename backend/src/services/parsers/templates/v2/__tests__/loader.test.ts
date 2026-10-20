@@ -241,6 +241,41 @@ describe("V2TemplateStore.sync", () => {
     expect(store.getActive()).toHaveLength(1);
   });
 
+  it("discards a sync of the previous repository that finishes after the new one's", async () => {
+    const OTHER = "https://other.example.test/main";
+    const a = validTemplate();
+    const b = validTemplate({ id: "lodging:otherchain" });
+    let releaseA: () => void = () => undefined;
+    const aIndexHeld = new Promise<void>((resolve) => {
+      releaseA = resolve;
+    });
+    const routes: Routes = {
+      ...routesFor(a),
+      [`${OTHER}/index.json`]: indexFor(b),
+      [`${OTHER}/lodging/otherchain.json`]: b,
+    };
+    const answer = fakeFetch(routes);
+    // Repository A's index answers only when the test says so.
+    const fetchJson: FetchJson = async (url) => {
+      if (url === `${BASE}/index.json`) await aIndexHeld;
+      return answer(url);
+    };
+    const cache = createMemoryTemplateCache([]);
+    const store = new V2TemplateStore({ fetchJson, baseUrl: BASE, appVersion: "2.7.0", cache });
+
+    const scheduledA = store.sync(); // a scheduled run, waiting on A
+    store.setBaseUrl(OTHER); // the admin switches to B …
+    await store.sync(); // … and B's sync completes first
+    expect(store.getActive().map((t) => t.id)).toEqual(["lodging:otherchain"]);
+
+    releaseA();
+    await scheduledA;
+
+    expect(store.getActive().map((t) => t.id)).toEqual(["lodging:otherchain"]);
+    expect([...cache.entries.keys()]).toEqual(["lodging:otherchain"]);
+    expect(store.getStatus().templates.map((t) => t.id)).toEqual(["lodging:otherchain"]);
+  });
+
   it("deactivates and uncaches a template the index no longer names", async () => {
     const t = validTemplate();
     const { store, cache } = makeStore({ [`${BASE}/index.json`]: indexFor() }, { cached: [t] });

@@ -32,6 +32,14 @@ describe("v2 transforms added in P4b", () => {
     expect(applyTransforms("2026-03-14T08:05 25:00", "laterClock")).toBeNull();
   });
 
+  it("laterClock does not guess the day of an arrival clock just before the departure's", () => {
+    // Same day one zone west (Lille 09:30 → London 09:00) or 23½ hours later.
+    expect(applyTransforms("2026-03-14T09:30 09:00", "laterClock")).toBeNull();
+    expect(applyTransforms("2026-03-14T10:00 07:01", "laterClock")).toBeNull();
+    // Three hours or more earlier: no ride's zone step explains it.
+    expect(applyTransforms("2026-03-14T10:00 07:00", "laterClock")).toBe("2026-03-15T07:00");
+  });
+
   it.each([
     ["€ 1.234,50", 1234.5, "EUR"],
     ["NOK 3.380", 3380, "NOK"],

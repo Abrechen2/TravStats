@@ -394,10 +394,12 @@ export type ApiErrorCode =
   /** Exporting a workshop template for the community (forgejo#309,
    *  `parserTemplates.ts`): it holds a value of the user's own document where
    *  it cannot be blanked (422, `extra.kinds`), it is not active yet (409), or
-   *  its kind is stored in a format the repository does not take (422). */
+   *  its kind is stored in a format the repository does not take (422), or
+   *  the sample whose marks the scan needs was deleted (422). */
   | "TEMPLATE_EXPORT_PERSONAL_DATA"
   | "TEMPLATE_EXPORT_NOT_ACTIVE"
   | "TEMPLATE_EXPORT_UNSUPPORTED"
+  | "TEMPLATE_EXPORT_SOURCE_MISSING"
   /** The admin log area (`routes/admin/logging.ts`): a name that fails the
    *  traversal guard (400), a file that is not there (404), a file that could
    *  not be read or decompressed (500). */
