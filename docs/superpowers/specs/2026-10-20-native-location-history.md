@@ -90,8 +90,17 @@ the dashboard, not on a separate „Standortverlauf" app screen.
 `altitude_m`, `speed_mps`, `course`, `source` (companion | owntracks | overland |
 gpx | google_timeline | dawarich_import | …), `device_id`, `import_id`,
 `motion` (stationary | walking | running | cycling | automotive | unknown, as the
-phone reports it), `flags` (anomaly, in_flight), unique on `(user_id, t, lat, lon)`
-rounded to 1e-6°, index `(user_id, t)`. Plain columns; PostGIS is not needed for
+phone reports it), `flags` (anomaly, in_flight), index `(user_id, t)`.
+
+**No position exists twice** (owner, 2026-10-20: „Doppelung soll nicht
+gehen"). Each observation carries a stable id from its origin (the phone's
+fix id, an import's row key), so a retry or a re-import is recognised exactly.
+Two origins describing the same moment — a Companion fix and the same day from
+a Google Timeline import, say — are merged on ingest when they lie within a
+few seconds and inside each other's accuracy: one point is kept (the more
+accurate), and the other origin is recorded as a second *membership* of that
+point, not as a second row. Deleting one import therefore removes only points
+no other origin still vouches for. Plain columns; PostGIS is not needed for
 v1. A precise trip at ~1 point / 10–30 s is ~3–8 k points per travel day; a
 travelling user-year stays in the low millions — fine for Postgres with the
 `(user_id, t)` index; monthly partitions are a later optimisation, not a v1 need.
@@ -136,11 +145,18 @@ Standortverlauf). Every derivation reads positions through one interface,
 - **dawarich** — today's `dawarichClient` pull, unchanged behaviour.
 
 `country_days.source` gets the value `internal`; the stay findings move from
-`DawarichStay` to a source-neutral table (or gain a `source` column). Switching
-from Dawarich to internal offers the full import (§3.2 point 2); switching back
-leaves the stored points in place. With Dawarich chosen, the Companion can still
-send to TravStats (positions are never lost) — but derivations read Dawarich.
-Open: whether the Companion should instead send to Dawarich in that mode (§7).
+`DawarichStay` to a source-neutral table (or gain a `source` column).
+
+**Exactly one source holds the positions, never both** (owner, 2026-10-20).
+- *Intern*: everything lives in `location_points`; Dawarich is not read.
+- *Dawarich*: everything lives in Dawarich. The Companion still uploads to
+  TravStats (one pairing, one endpoint, nothing lost), and TravStats **relays**
+  each batch to the user's Dawarich and keeps it only until Dawarich has
+  accepted it — no lasting copy. Derivations read Dawarich alone.
+- *Switching* Dawarich → intern runs the full import (§3.2 point 2) and then
+  stops reading Dawarich. Intern → Dawarich sends the stored points to
+  Dawarich, then deletes them here after a confirmation. Either way the
+  positions end up in one place.
 
 What only internal can do: device id and motion per point, precise trip
 recordings tied to the Companion's consent, „Zuletzt gesehen" without a second
@@ -187,14 +203,16 @@ Per user, never shared, never federated, never in a public link, never in a
 `.travstats` file or a comparison (as forgejo#316). Kept until the user deletes
 (owner principle), with delete-by-range, export and backup.
 
-**Privacy zones** (home, work, any place the user adds) have two modes:
-„nicht aufzeichnen" — the point is dropped **on the device** and never leaves
-it (owner, 2026-10-20: „daheim ist es aus und in der Arbeit auch
-deaktiviert") — and „speichern, nie zeigen" — kept for countries and times,
-never drawn, exported, suggested or sent to a geocoder. The Companion and the
-Shortcut template apply the zones before sending; the server applies them
-again on ingest for sources that cannot (OwnTracks, Overland, file imports).
-A change to a zone is synced to the phone with the other location settings.
+**Privacy zones mean no tracking at all** (owner, 2026-10-20: „Privatzonen
+bedeuten gar kein Tracking"; earlier the same day: „daheim ist es aus und in
+der Arbeit auch deaktiviert"). There is one mode, not two: a position inside a
+zone is never recorded. The Companion and the Shortcut template drop it on the
+phone, so it never leaves the device; the server drops it again on ingest for
+sources that cannot filter (OwnTracks, Overland), and file imports skip it.
+A new or enlarged zone also deletes the points already stored inside it,
+after a confirmation that names the count. Nothing derives from a zone —
+„Zuletzt gesehen" shows the last position before it. A change to a zone is
+synced to the phone with the other location settings.
 
 ## 4. Phases — server and Companion together
 
@@ -286,16 +304,11 @@ view and switches to Experte. Prototype: claude.ai artifact
 Family live-location sharing, a live map of others, Poster/Video studio, MCP.
 
 ## 7. Still open for the owner
-1. With Dawarich as source: does the Companion send to TravStats (positions are
-   never lost, recommended) or to Dawarich? („Alltag" defaults to off — settled.)
-2. **Source routing** (Codex 1, both reviews): proposed — storage is always
-   internal for what reaches TravStats; with „Dawarich" selected the
-   derivations read Dawarich **plus** the internal points (deduplicated by
-   time), so a Companion recording is never stranded.
-3. **What „speichern, nie zeigen" may feed** (Codex 2): proposed — country days
-   and home periods only; never place suggestions, maps, heatmap, „Zuletzt
-   gesehen", exports or anything shareable; included in the user's own backup.
-4. Reverse geocoding for cities: which provider and daily budget?
+Settled on 2026-10-20: „Alltag" defaults to off; one source at a time with
+the Companion relayed to Dawarich (§3.3); no duplicates (§3.1); privacy zones
+record nothing (§3.6).
+
+1. Reverse geocoding for cities: which provider and daily budget?
 
 ## 8. Cold review by Codex (2026-10-20) — to resolve before P1
 
@@ -303,13 +316,15 @@ Ranked by severity; each becomes a decision or a design paragraph above.
 
 1. **Source switch can strand recordings** — with Dawarich chosen, Companion
    points are stored internally but never derived from. Separate *storage*,
-   *origin* and *derivation source*, or derive from both.
+   *origin* and *derivation source*, or derive from both. **→ Answered (§3.3):
+   one source at a time, the Companion relayed to Dawarich.**
 2. **`LocationSource` needs a completeness contract** — cursor/streaming,
    ordering, coverage, truncation and upstream failure; the Dawarich client
    caps at 50 000 points per call and the stay window at 250 000.
 3. **Dedup key conflates identity with coincidence** — give observations a
    stable id, keep origin/import membership; deleting one import must not
-   remove another source's evidence.
+   remove another source's evidence. **→ Answered (§3.1): stable ids,
+   merge on ingest, memberships.**
 4. **Upload idempotency** — persist `(user, uploadId, payloadHash, result)`
    atomically, reject a reused id with other content, per-point
    acknowledgement, retryable vs permanent errors.
@@ -317,7 +332,8 @@ Ranked by severity; each becomes a decision or a design paragraph above.
    cannot resurrect deleted points; derived caches invalidated.
 6. **Privacy zones** — „nicht speichern" vs „speichern, nie zeigen", and their
    effect on exports, heatmap, „Zuletzt gesehen", suggestions and geocoder
-   calls; derived PlaceVisits can leak through ordinary sharing.
+   calls; derived PlaceVisits can leak through ordinary sharing. **→ Answered
+   (§3.6): one mode, nothing is recorded inside a zone.**
 7. **Re-running derivations is a subsystem** — algorithm/config version,
    input revision, bounded windows, atomic replacement; user decisions stored
    apart from regenerated candidates.
