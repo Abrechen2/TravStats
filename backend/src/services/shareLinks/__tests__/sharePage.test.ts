@@ -6,6 +6,7 @@ import request from "supertest";
 import { shareLinkApp } from "../../../routes/__tests__/shareLinkFixtures";
 import { SHARE_PAGE_CSP } from "../../../routes/sharePage";
 import { SHARE_PAGE_FORMAT_JS, SHARE_PAGE_HTML, SHARE_PAGE_JS } from "../sharePageAssets";
+import { SHARE_PAGE_ITINERARY_COPY, SHARE_PAGE_ITINERARY_JS } from "../sharePageItinerary";
 
 /**
  * The page a public share link opens (forgejo#281, design §2 T2/T3/T10–T12,
@@ -119,5 +120,106 @@ describe("share page date formatting", () => {
     expect(SHARE_PAGE_JS).toContain(SHARE_PAGE_FORMAT_JS);
     expect(SHARE_PAGE_JS).not.toMatch(/toLocaleString\(de/);
     expect(SHARE_PAGE_JS).toContain("fmt.day(t.dates.start.date)");
+  });
+});
+
+/**
+ * The itinerary on the public page (forgejo#302): each entry's times on its
+ * place's clock with that zone written beside them, and the current entry
+ * named in words — not by colour alone.
+ */
+describe("share page itinerary", () => {
+  type Entry = { title: string; lines: string[]; now: string | null };
+  const T = {
+    ...SHARE_PAGE_ITINERARY_COPY.en,
+    dep: "Departure",
+    arr: "Arrival",
+    scheduled: "Scheduled",
+    inFlight: "In the air",
+    landed: "Landed",
+    cancelled: "Cancelled",
+  };
+  const entriesOf = (itinerary: unknown, tz = "Pacific/Kiritimati"): Entry[] => {
+    const context: { result?: Entry[] } = {};
+    const previous = process.env.TZ;
+    process.env.TZ = tz;
+    try {
+      vm.runInNewContext(
+        `${SHARE_PAGE_FORMAT_JS}; ${SHARE_PAGE_ITINERARY_JS}; result = itineraryEntries(` +
+          `${JSON.stringify(itinerary)}, shareFormat("en-GB"), ${JSON.stringify(T)});`,
+        context
+      );
+    } finally {
+      process.env.TZ = previous;
+    }
+    return context.result!;
+  };
+  const tv = (local: string, zone: string | null, offset: string, precision = "minute") => ({
+    utc: "2030-06-01T12:00:00.000Z",
+    zone,
+    offset,
+    local,
+    precision,
+    zoneSource: zone ? "stored" : null,
+  });
+  const itinerary = {
+    items: [
+      {
+        kind: "flight",
+        airline: "Lufthansa",
+        flightNumber: "LH400",
+        from: { code: "FRA", name: "Frankfurt" },
+        to: { code: "JFK", name: "New York JFK" },
+        departure: tv("2030-06-01T14:00:00", "Europe/Berlin", "+02:00"),
+        arrival: tv("2030-06-01T16:00:00", "America/New_York", "-04:00"),
+        phase: "inFlight",
+      },
+      {
+        kind: "stay",
+        name: "Hotel Hudson View",
+        address: "356 W 58th St",
+        city: "New York",
+        country: "US",
+        checkIn: { date: "2030-06-01", zone: "America/New_York", precision: "day" },
+        checkOut: { date: "2030-06-04", zone: "America/New_York", precision: "day" },
+        checkInAt: null,
+        checkOutAt: null,
+      },
+    ],
+    now: { index: 0, state: "inProgress" },
+  };
+
+  it("writes each time on its place's clock with the zone beside it, whatever the visitor's zone", () => {
+    for (const zone of ["Pacific/Kiritimati", "America/St_Johns"]) {
+      const [flight, stay] = entriesOf(itinerary, zone);
+      expect(flight.title).toBe("Flight Lufthansa LH400");
+      expect(flight.lines).toContain("FRA → JFK (Frankfurt → New York JFK)");
+      expect(flight.lines.join("\n")).toMatch(
+        /Departure 1 Jun 2030,? 14:00 \(Europe\/Berlin, UTC\+02:00\)/
+      );
+      expect(flight.lines.join("\n")).toMatch(
+        /Arrival 1 Jun 2030,? 16:00 \(America\/New York, UTC-04:00\)/
+      );
+      expect(flight.lines).toContain("In the air");
+      expect(stay.title).toBe("Stay Hotel Hudson View");
+      expect(stay.lines).toEqual([
+        "356 W 58th St, New York, US",
+        "Check-in 1 June 2030",
+        "Check-out 4 June 2030",
+      ]);
+    }
+  });
+
+  it("names the current entry in words, and only that one", () => {
+    const entries = entriesOf(itinerary);
+    expect(entries.map((e) => e.now)).toEqual(["Now", null]);
+    const next = entriesOf({ ...itinerary, now: { index: 1, state: "next" } });
+    expect(next.map((e) => e.now)).toEqual([null, "Next"]);
+  });
+
+  it("is what the page script renders, through textContent only", () => {
+    expect(SHARE_PAGE_JS).toContain(SHARE_PAGE_ITINERARY_JS);
+    expect(SHARE_PAGE_JS).toContain("renderItinerary(t.itinerary)");
+    expect(SHARE_PAGE_ITINERARY_JS).not.toMatch(/innerHTML|outerHTML|insertAdjacentHTML/);
   });
 });

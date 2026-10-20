@@ -22,6 +22,7 @@ export const SHARE_LINK_FIELDS = {
     "companions",
     "photos",
     "notes",
+    "itinerary",
   ],
   wrapped: ["owner", "totals", "topAirline", "topRoute"],
 } as const satisfies Record<ShareLinkKind, readonly string[]>;
@@ -71,13 +72,83 @@ export interface FlightShareView {
   route?: { from: Airport; to: Airport };
   schedule?: { departure: TimeValue | null; arrival: TimeValue | null };
   progress?: {
-    phase: "scheduled" | "inFlight" | "landed" | "cancelled" | "unknown";
+    phase: FlightPhase;
     fraction: number | null;
     eta: TimeValue | null;
     basis: "schedule" | "reported";
   };
   aircraft?: string | null;
   lastPosition?: { lat: number; lon: number; recordedAt: string } | null;
+}
+
+type FlightPhase = "scheduled" | "inFlight" | "landed" | "cancelled" | "unknown";
+
+/** A ride's ends and times — rail, bus and ferry share it (`service`: train, line or vessel). */
+interface ItineraryRide {
+  operator: string | null;
+  service: string | null;
+  from: string;
+  to: string;
+  departure: TimeValue | null;
+  arrival: TimeValue | null;
+}
+
+/**
+ * One entry of a trip's itinerary (forgejo#302), on its place's clock. There
+ * is no member for a booking reference, seat, room or cabin number, price,
+ * note, companion or id: the server has none to send.
+ */
+export type ItineraryItem =
+  | {
+      kind: "flight";
+      airline: string | null;
+      flightNumber: string | null;
+      from: Airport;
+      to: Airport;
+      departure: TimeValue | null;
+      arrival: TimeValue | null;
+      phase: FlightPhase;
+    }
+  | {
+      kind: "stay";
+      name: string;
+      address: string | null;
+      city: string | null;
+      country: string | null;
+      checkIn: LocalDateValue | null;
+      checkOut: LocalDateValue | null;
+      checkInAt: TimeValue | null;
+      checkOutAt: TimeValue | null;
+    }
+  | {
+      kind: "cruise";
+      ship: string | null;
+      cruiseLine: string | null;
+      start: LocalDateValue | null;
+      end: LocalDateValue | null;
+      ports: Array<{
+        dayNumber: number;
+        name: string | null;
+        atSea: boolean;
+        day: LocalDateValue | null;
+        arrival: TimeValue | null;
+        departure: TimeValue | null;
+      }>;
+    }
+  | ({ kind: "rail" | "bus" | "ferry" } & ItineraryRide)
+  | {
+      kind: "rental";
+      provider: string;
+      pickup: { station: string; at: TimeValue | null };
+      return: { station: string; at: TimeValue | null };
+    }
+  | { kind: "visit"; name: string; city: string | null; at: TimeValue | null }
+  | { kind: "stop"; name: string; start: TimeValue | null; end: TimeValue | null };
+
+export interface ItineraryShareView {
+  items: ItineraryItem[];
+  /** The entry in progress by the plan, else the next one; null when nothing is ahead. */
+  now: { index: number; state: "inProgress" | "next" } | null;
 }
 
 export interface TripShareView {
@@ -107,6 +178,7 @@ export interface TripShareView {
     items: Array<{ body: string; placeName: string | null; at: TimeValue; day: LocalDateValue }>;
     truncated: boolean;
   };
+  itinerary?: ItineraryShareView;
 }
 
 export interface WrappedShareView {

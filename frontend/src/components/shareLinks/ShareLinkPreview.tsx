@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import type { ShareView } from "../../types/shareLinks";
+import ShareLinkItineraryPreview from "./ShareLinkItineraryPreview";
 
 const NS = "sharing:links";
 
@@ -128,14 +129,18 @@ export default function ShareLinkPreview({ view }: { view: ShareView }): JSX.Ele
     }
   }
 
+  const itinerary = view.kind === "trip" ? view.trip.itinerary : undefined;
   return (
-    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm" data-testid="share-preview">
-      {rows.map(([key, value], i) => (
-        <div key={`${key}-${i}`} className="contents">
-          <dt style={{ color: "var(--ts-muted)" }}>{key}</dt>
-          <dd style={{ color: "var(--ts-text)" }}>{value}</dd>
-        </div>
-      ))}
-    </dl>
+    <>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm" data-testid="share-preview">
+        {rows.map(([key, value], i) => (
+          <div key={`${key}-${i}`} className="contents">
+            <dt style={{ color: "var(--ts-muted)" }}>{key}</dt>
+            <dd style={{ color: "var(--ts-text)" }}>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      {itinerary && <ShareLinkItineraryPreview itinerary={itinerary} />}
+    </>
   );
 }

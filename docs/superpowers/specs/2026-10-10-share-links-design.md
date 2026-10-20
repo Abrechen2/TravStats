@@ -54,6 +54,7 @@ not chosen is absent from the JSON — not null, not empty — so the response c
 | trip | `companions` | companion display names |
 | trip | `photos` | up to 12 photos (count + per-photo index), bytes through the photo proxy |
 | trip | `notes` | the owner's standalone notes marked `shareable` whose day falls in the trip (forgejo#146, `2026-10-10-note-visibility.md`): text, place name, moment — at most 50, re-read on every request; a private note is never listed |
+| trip | `itinerary` | every entry of the trip in time order, on each place's clock (forgejo#302) — see §1.2 |
 | wrapped | `totals` | flights, km, earth factor, new countries, cruises, rail rides/km |
 | wrapped | `topAirline` | name and code of the year's most-flown carrier |
 | wrapped | `topRoute` | the year's most-flown pair |
@@ -64,6 +65,40 @@ journal text, documents, photo captions, photo coordinates,
 EXIF, co-passenger names parsed from mails, aircraft registration, internal ids (user, flight,
 trip, photo), the username, other accounts. These are not fields — there is no way to ask
 for them.
+
+### 1.2 The trip itinerary (forgejo#302, 20 October 2026)
+
+Owner wish: "so that family knows where one is when, and has the flight number and hotel
+name". The `itinerary` field of a trip link lists every non-cancelled entry of the trip
+(`services/shareLinks/itineraryView.ts`, schema `schemas/shareLinkItinerary.ts`):
+
+| entry | carries |
+|---|---|
+| flight | airline, flight number, departure/arrival airport (code, name), scheduled times, phase by the clock |
+| stay | lodging name, address, city, country as stored, check-in/-out day and time where known |
+| cruise | ship, cruise line, first/last day, each port call (day number, port or sea day, day, times) |
+| rail / bus / ferry | operator, train/line/vessel, stations, times |
+| rental | provider, pick-up and return station with time |
+| place visit / timeline stop | name (a visit also the city), moment at its stored precision |
+
+Times are each domain's own `times` (ADR 0002): the place's clock and zone, never an invented
+midnight. A timeline stop that wraps another entry or a stay, and a route correction, are not
+listed (they would repeat an entry or name no place).
+
+`now` names the entry in progress by the plan — of several, the one that began last — else the
+next one; computed with the server clock at request time from real instants. A value known only
+to its day covers that local day; one known only to its month covers no span.
+
+**Never** in an entry: booking reference/PNR, seat, room or cabin number, price, documents,
+notes, companions, ids — the strict view schema has no member for them, and
+`shareLinks.routes.test.ts` serialises a fully populated itinerary and searches it for each.
+
+**Lifetime.** A link with `itinerary` ends by itself 24 hours after the end of the trip's last
+local day (`itineraryAutoExpiry`; a last day with no zone is read at UTC−12), and at most
+90 days as every link. The end is lowered when the trip's end moves earlier, never raised.
+A trip without a last day keeps the owner's expiry only. Creating an itinerary link for a trip
+already past that end is refused with `409 SHARE_LINK_TRIP_ENDED`. The public page re-reads the
+link every five minutes while an itinerary is shown, so the `now` marker moves.
 
 ## 2. Threat model
 

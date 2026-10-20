@@ -9,6 +9,7 @@ export function shareLinkErrorKey(err: unknown, fallbackKey: string): string {
   return saveErrorKey(err, fallbackKey, {
     SHARE_LINKS_DISABLED: "sharing:links.errors.disabled",
     SHARE_LINK_FLIGHT_LANDED: "sharing:links.errors.landed",
+    SHARE_LINK_TRIP_ENDED: "sharing:links.errors.tripEnded",
     SHARE_LINK_LIMIT: "sharing:links.errors.limit",
     SHARE_LINK_EXPIRY_INVALID: "sharing:links.errors.expiry",
     SHARE_LINK_NOT_FOUND: "sharing:links.errors.notFound",

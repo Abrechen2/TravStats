@@ -21,7 +21,9 @@ import {
   shareTokenHash,
   shareTokenMatches,
 } from "./token";
+import { itineraryAutoExpiry } from "./itineraryNow";
 import { buildTripView, loadOwnedTrip } from "./tripView";
+import { withTripTimes } from "../trips/timesDto";
 import { buildWrappedView } from "./wrappedView";
 
 /**
@@ -90,7 +92,7 @@ async function buildView(
     const set = new Set(fields) as Set<ShareLinkField<"trip">>;
     built = {
       view: { kind: "trip", trip: await buildTripView(userId, trip, set, owner, photoIds) },
-      autoExpiry: null,
+      autoExpiry: set.has("itinerary") ? tripAutoExpiry(trip) : null,
     };
   } else if (target.kind === "wrapped" && target.year !== null) {
     const set = new Set(fields) as Set<ShareLinkField<"wrapped">>;
@@ -103,6 +105,11 @@ async function buildView(
 }
 
 const earlier = (a: Date, b: Date | null): Date => (b && b < a ? b : a);
+
+/** An itinerary link ends by itself a day after the trip's last local day (forgejo#302). */
+function tripAutoExpiry(trip: Parameters<typeof withTripTimes>[0]): Date | null {
+  return itineraryAutoExpiry(withTripTimes(trip).times.end);
+}
 
 /**
  * The photos a new trip link would carry — only for a trip of the caller's
@@ -168,7 +175,9 @@ export async function createShareLink(
   const built = await buildView(userId, target, selection.fields, photoIds);
   if (!built) throw notFound();
   if (built.autoExpiry && built.autoExpiry <= at) {
-    throw new AppError("This flight has already landed", 409, "SHARE_LINK_FLIGHT_LANDED");
+    throw target.kind === "trip"
+      ? new AppError("This trip has already ended", 409, "SHARE_LINK_TRIP_ENDED")
+      : new AppError("This flight has already landed", 409, "SHARE_LINK_FLIGHT_LANDED");
   }
   // The same settled set the list shows: a link the owner cannot see must not
   // hold one of their slots.
@@ -212,16 +221,28 @@ type LinkRow = Awaited<ReturnType<typeof prisma.publicShareLink.findMany>>[numbe
 const targetIdOf = (row: Pick<LinkRow, "flightId" | "tripId" | "year">): string =>
   row.flightId ?? row.tripId ?? String(row.year);
 
+/** The end a link's target sets by itself today: a flight's landing, an itinerary's trip end. */
+async function targetAutoExpiry(row: LinkRow): Promise<Date | null> {
+  if (row.flightId) {
+    const loaded = await loadOwnedFlightTimes(row.userId, row.flightId);
+    return loaded ? flightAutoExpiry(loaded.times) : null;
+  }
+  if (row.tripId && row.fields.includes("itinerary")) {
+    const trip = await loadOwnedTrip(row.userId, row.tripId);
+    return trip ? tripAutoExpiry(trip) : null;
+  }
+  return null;
+}
+
 /**
  * A link's end as of now: the stored end, LOWERED (and stored) when its
- * flight now lands earlier. Never raised — recomputing the end from the
- * flight's current times brought an ended link back to life when the flight
- * was later moved to another day.
+ * flight now lands earlier or its itinerary's trip now ends earlier. Never
+ * raised — recomputing the end from the flight's current times brought an
+ * ended link back to life when the flight was later moved to another day.
  */
 async function settledExpiry(row: LinkRow): Promise<Date> {
-  if (!row.flightId) return row.effectiveExpiresAt;
-  const loaded = await loadOwnedFlightTimes(row.userId, row.flightId);
-  const effective = earlier(row.effectiveExpiresAt, loaded ? flightAutoExpiry(loaded.times) : null);
+  if (!row.flightId && !row.fields.includes("itinerary")) return row.effectiveExpiresAt;
+  const effective = earlier(row.effectiveExpiresAt, await targetAutoExpiry(row));
   if (effective < row.effectiveExpiresAt) {
     await prisma.publicShareLink.update({
       where: { id: row.id },
