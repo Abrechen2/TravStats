@@ -104,6 +104,13 @@ export class V2TemplateStore {
   private indexState: V2Status["index"] = "unknown";
   /** When the last sync ran — shown so a failure has a date (forgejo#309). */
   private ranAt: string | null = null;
+  /**
+   * Bumped by every repository change. A sync reads the repository of its
+   * own generation throughout and writes nothing — cache, status, active
+   * set — once a newer generation exists: a scheduled run of the old
+   * repository that answers late must not replace the new one's result.
+   */
+  private generation = 0;
   private readonly runners: RunnerRegistry;
 
   constructor(private deps: V2LoaderDeps) {
@@ -117,6 +124,11 @@ export class V2TemplateStore {
    */
   setBaseUrl(baseUrl: string): void {
     this.deps = { ...this.deps, baseUrl };
+    this.generation += 1;
+  }
+
+  private superseded(generation: number): boolean {
+    return generation !== this.generation;
   }
 
   getActive(): TemplateEnvelope[] {
@@ -189,19 +201,21 @@ export class V2TemplateStore {
    * path alone, exactly as before v2 existed. Never rejects.
    */
   async sync(): Promise<boolean> {
+    const generation = this.generation;
     try {
-      return await this.syncIndex();
+      return await this.syncIndex(generation, this.deps.baseUrl);
     } finally {
-      this.ranAt = new Date().toISOString();
+      if (!this.superseded(generation)) this.ranAt = new Date().toISOString();
     }
   }
 
-  private async syncIndex(): Promise<boolean> {
+  private async syncIndex(generation: number, baseUrl: string): Promise<boolean> {
     let rawEntries: unknown[];
     try {
       const index = templateIndexSchema.safeParse(
-        await this.deps.fetchJson(`${this.deps.baseUrl}/index.json`)
+        await this.deps.fetchJson(`${baseUrl}/index.json`)
       );
+      if (this.superseded(generation)) return this.discarded(baseUrl);
       if (!index.success) {
         this.indexState = "unavailable";
         logger.warn("v2 template index is not a version-2 index — using the v1 path only");
@@ -209,6 +223,7 @@ export class V2TemplateStore {
       }
       rawEntries = index.data.templates;
     } catch (err) {
+      if (this.superseded(generation)) return this.discarded(baseUrl);
       this.indexState = "unavailable";
       logger.info(
         { err: errorMessage(err) },
@@ -221,10 +236,11 @@ export class V2TemplateStore {
     const nextStatus: V2TemplateStatusEntry[] = [];
     const seen = new Set<string>();
     for (const [i, rawEntry] of rawEntries.entries()) {
-      const outcome = await this.syncEntry(rawEntry, i, seen);
+      const outcome = await this.syncEntry(rawEntry, i, seen, generation, baseUrl);
       nextStatus.push(outcome.status);
       if (outcome.active) nextActive.set(outcome.active.template.id, outcome.active);
     }
+    if (this.superseded(generation)) return this.discarded(baseUrl);
 
     for (const id of this.active.keys()) {
       if (seen.has(id)) continue;
@@ -243,7 +259,19 @@ export class V2TemplateStore {
     return true;
   }
 
-  private async syncEntry(rawEntry: unknown, i: number, seen: Set<string>): Promise<EntryOutcome> {
+  /** A sync whose repository was replaced while it ran: its result is dropped whole. */
+  private discarded(baseUrl: string): false {
+    logger.info({ baseUrl }, "v2 template sync of a replaced repository discarded");
+    return false;
+  }
+
+  private async syncEntry(
+    rawEntry: unknown,
+    i: number,
+    seen: Set<string>,
+    generation: number,
+    baseUrl: string
+  ): Promise<EntryOutcome> {
     const parsed = templateIndexEntrySchema.safeParse(rawEntry);
     if (!parsed.success) {
       const detail = `index entry: ${parsed.error.issues.map((x) => `${x.path.join(".")}: ${x.message}`).join("; ")}`;
@@ -264,7 +292,7 @@ export class V2TemplateStore {
 
     let raw: unknown;
     try {
-      raw = await this.deps.fetchJson(`${this.deps.baseUrl}/${entry.path}`);
+      raw = await this.deps.fetchJson(`${baseUrl}/${entry.path}`);
     } catch (err) {
       return this.keepOrReject(current, entry, "fetch_failed", errorMessage(err));
     }
@@ -272,7 +300,9 @@ export class V2TemplateStore {
     const verdict = this.evaluate(raw, entry);
     if (!verdict.ok) return this.keepOrReject(current, entry, verdict.reason, verdict.detail);
 
-    this.safeCache(() => this.deps.cache.write(verdict.template), entry.id);
+    if (!this.superseded(generation)) {
+      this.safeCache(() => this.deps.cache.write(verdict.template), entry.id);
+    }
     const active: ActiveTemplate = { template: verdict.template, source: "remote" };
     return { status: activeStatus(active), active };
   }
