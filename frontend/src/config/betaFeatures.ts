@@ -224,7 +224,7 @@ export const BETA_FEATURES = Object.freeze({
    * long after anybody looks at the page that hid it.
    */
   federatedTripSharing: Object.freeze({
-    why: "Built in phases from 2026-10-20 (spec §12). No trip crosses between servers until the copy, propagation and lifecycle phases (F-S4c to F-S4e) are built, and nothing has run between two real servers yet.",
+    why: "Built in phases from 2026-10-20 (spec §12). A trip can be offered and copied to another server (F-S4c), but later changes do not follow it yet and nobody can leave or revoke across servers until propagation and lifecycle (F-S4d, F-S4e) are built; nothing has run between two real servers yet.",
     returnsWhen:
       "Phases F-S4c to F-S4e are built, the owner has shared a trip between two real servers on the RC (both directions, an edit on each side, a revoke), and accepts it for release (spec O10).",
     issue: "forgejo#301",

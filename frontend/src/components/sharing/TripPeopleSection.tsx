@@ -14,6 +14,7 @@ import { Button, Pill } from "../ui";
 import DetailSection from "../ui/DetailSection";
 import PeopleList, { type PersonRow } from "../ui/PeopleList";
 import LinkAccountDialog from "./LinkAccountDialog";
+import RemoteTripPeople from "./RemoteTripPeople";
 import ShareTripDialog from "./ShareTripDialog";
 import { nameKey } from "./addTraveller";
 import { shareBlockKey, sharingErrorKey } from "./sharingCopy";
@@ -109,7 +110,9 @@ export default function TripPeopleSection({
   const failure = loadFailed && alertLine(t("sharing:trip.errors.loadFailed"));
   // Hidden only when there is nobody AND nothing to say — a failed load on a
   // trip without names still says it failed.
-  if (companionNames.length === 0 && (view?.people.length ?? 0) === 0 && !loadFailed) return null;
+  // People on other servers (F-S4c) still have their place when nobody local is listed.
+  if (companionNames.length === 0 && (view?.people.length ?? 0) === 0 && !loadFailed)
+    return isSharedDemo ? null : <RemoteTripPeople tripId={tripId} standalone />;
   if (isSharedDemo || !view) {
     return (
       <DetailSection title={t("trips:detail.companions")}>
@@ -179,6 +182,7 @@ export default function TripPeopleSection({
         <div className="flex flex-col" style={{ gap: "var(--ts-space-lg)" }}>
           {failure}
           <PeopleList rows={rows} />
+          <RemoteTripPeople tripId={tripId} />
           {view.bookingTotals.length > 0 && (
             <div data-testid="share-booking-totals" className="text-sm">
               <p className="t-label-mono">{t("sharing:trip.bookingTotals")}</p>

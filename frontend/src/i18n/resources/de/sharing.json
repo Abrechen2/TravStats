@@ -566,7 +566,79 @@
       "notAdmitted": "Der Server {{origin}} ist auf deinem Server nicht als vertrauenswürdig hinterlegt. Bitte deinen Admin, ihn hinzuzufügen.",
       "outdated": "Der Server {{origin}} ist zu alt für geteilte Reisen.",
       "peerDisabled": "Auf {{origin}} ist Teilen über Server ausgeschaltet, oder der Server kennt es noch nicht.",
-      "unreachable": "Der Server {{origin}} antwortet nicht. Versuch es später noch einmal."
+      "unreachable": "Der Server {{origin}} antwortet nicht. Versuch es später noch einmal.",
+      "consentMissing": "Mit dieser Person auf {{origin}} besteht keine Zustimmung zum Teilen (mehr). Verbindet euch erneut mit einem Code.",
+      "notHome": "Diese Reise kommt von {{origin}} und kann nur dort weiter geteilt werden.",
+      "alreadyMember": "Diese Person hat die Reise schon.",
+      "tripTooLarge": "Die Reise hat mehr als 500 Einträge und kann nicht an einen anderen Server angeboten werden.",
+      "personNotFound": "Diese Verbindung gibt es nicht mehr.",
+      "offerNotFound": "Dieses Angebot gibt es nicht mehr – es wurde schon beantwortet.",
+      "refused": "Der Server {{origin}} hat die Nachricht abgelehnt. Prüft, ob ihr dort noch verbunden seid.",
+      "tripNotFound": "Diese Reise gibt es nicht mehr."
+    },
+    "trip": {
+      "title": "Reisende auf anderen Servern",
+      "row": "{{name}} (@{{username}}) auf {{origin}}",
+      "fromServer": "Diese Reise kommt von {{origin}}. Weitere Personen lädt man dort ein.",
+      "since": "seit {{date}}",
+      "offer": "Reise anbieten",
+      "offered": "Angeboten. {{name}} entscheidet auf {{origin}}, ob die Reise übernommen wird.",
+      "createCode": "Code für diese Reise erstellen",
+      "codeHint": "Für jemanden, mit dem du noch nicht verbunden bist: Wer den Code auf dem eigenen Server einlöst, bekommt diese Reise angeboten.",
+      "state": {
+        "invited": "Angeboten",
+        "active": "Hat die Reise",
+        "declined": "Abgelehnt",
+        "unreachable": "Nicht erreichbar",
+        "suspended": "Gesperrt",
+        "left": "Ausgetreten",
+        "revoked": "Zustimmung entzogen"
+      },
+      "reason": {
+        "entries-undelivered": "Die Einträge sind bei {{name}} noch nicht angekommen – {{origin}} hat nicht geantwortet.",
+        "entries-refused": "{{origin}} hat die Einträge für {{name}} abgelehnt.",
+        "entries-too-large": "Ein Eintrag war zu groß für die Übertragung und fehlt bei {{name}}.",
+        "restore": "Nach einer Wiederherstellung ausgesetzt – bitte neu bestätigen.",
+        "other": "Bei der Übertragung zu {{origin}} ist etwas schiefgegangen."
+      },
+      "errors": {
+        "loadFailed": "Die Reisenden auf anderen Servern konnten nicht geladen werden.",
+        "offerFailed": "Die Reise konnte nicht angeboten werden."
+      }
+    },
+    "offers": {
+      "title": "Angebotene Reisen",
+      "row": "„{{trip}}“ von {{name}} ({{origin}})",
+      "roster": "dabei: {{names}}",
+      "empty": "noch ohne Einträge",
+      "count": {
+        "flights_one": "{{count}} Flug",
+        "flights_other": "{{count}} Flüge",
+        "lodgingStays_one": "{{count}} Unterkunft",
+        "lodgingStays_other": "{{count}} Unterkünfte",
+        "cruises_one": "{{count}} Kreuzfahrt",
+        "cruises_other": "{{count}} Kreuzfahrten",
+        "railJourneys_one": "{{count}} Bahnfahrt",
+        "railJourneys_other": "{{count}} Bahnfahrten",
+        "busJourneys_one": "{{count}} Busfahrt",
+        "busJourneys_other": "{{count}} Busfahrten",
+        "ferryJourneys_one": "{{count}} Fährfahrt",
+        "ferryJourneys_other": "{{count}} Fährfahrten",
+        "rentals_one": "{{count}} Mietwagen",
+        "rentals_other": "{{count}} Mietwagen",
+        "stops_one": "{{count}} Station",
+        "stops_other": "{{count}} Stationen"
+      },
+      "accept": "Übernehmen",
+      "decline": "Ablehnen",
+      "accepted": "„{{trip}}“ ist jetzt deine Reise. Die Einträge kommen gleich an.",
+      "open": "Reise öffnen",
+      "declined": "Abgelehnt. Von dieser Reise wurde nichts übernommen.",
+      "errors": {
+        "loadFailed": "Die angebotenen Reisen konnten nicht geladen werden.",
+        "acceptFailed": "Die Reise konnte nicht übernommen werden.",
+        "declineFailed": "Das Angebot konnte nicht abgelehnt werden."
+      }
     }
   }
 }

@@ -566,7 +566,79 @@
       "notAdmitted": "The server {{origin}} is not added as trusted on your server. Ask your admin to add it.",
       "outdated": "The server {{origin}} is too old for shared trips.",
       "peerDisabled": "Sharing across servers is switched off on {{origin}}, or that server does not have it yet.",
-      "unreachable": "The server {{origin}} does not answer. Try again later."
+      "unreachable": "The server {{origin}} does not answer. Try again later.",
+      "consentMissing": "There is no (longer an) agreement to share with this person on {{origin}}. Connect again with a code.",
+      "notHome": "This trip comes from {{origin}} and can only be shared further from there.",
+      "alreadyMember": "This person already has the trip.",
+      "tripTooLarge": "The trip has more than 500 entries and cannot be offered to another server.",
+      "personNotFound": "That connection no longer exists.",
+      "offerNotFound": "That offer no longer exists – it has already been answered.",
+      "refused": "The server {{origin}} refused the message. Check that you are still connected there.",
+      "tripNotFound": "That trip no longer exists."
+    },
+    "trip": {
+      "title": "Travellers on other servers",
+      "row": "{{name}} (@{{username}}) on {{origin}}",
+      "fromServer": "This trip comes from {{origin}}. Further people are invited from there.",
+      "since": "since {{date}}",
+      "offer": "Offer trip",
+      "offered": "Offered. {{name}} decides on {{origin}} whether to take the trip.",
+      "createCode": "Create a code for this trip",
+      "codeHint": "For someone you are not connected with yet: whoever redeems the code on their own server is offered this trip.",
+      "state": {
+        "invited": "Offered",
+        "active": "Has the trip",
+        "declined": "Declined",
+        "unreachable": "Unreachable",
+        "suspended": "Suspended",
+        "left": "Left",
+        "revoked": "Consent withdrawn"
+      },
+      "reason": {
+        "entries-undelivered": "The entries have not reached {{name}} yet – {{origin}} did not answer.",
+        "entries-refused": "{{origin}} refused the entries for {{name}}.",
+        "entries-too-large": "One entry was too large to send and is missing for {{name}}.",
+        "restore": "Suspended after a restore – please confirm again.",
+        "other": "Something went wrong sending to {{origin}}."
+      },
+      "errors": {
+        "loadFailed": "The travellers on other servers could not be loaded.",
+        "offerFailed": "The trip could not be offered."
+      }
+    },
+    "offers": {
+      "title": "Offered trips",
+      "row": "“{{trip}}” from {{name}} ({{origin}})",
+      "roster": "with {{names}}",
+      "empty": "no entries yet",
+      "count": {
+        "flights_one": "{{count}} flight",
+        "flights_other": "{{count}} flights",
+        "lodgingStays_one": "{{count}} stay",
+        "lodgingStays_other": "{{count}} stays",
+        "cruises_one": "{{count}} cruise",
+        "cruises_other": "{{count}} cruises",
+        "railJourneys_one": "{{count}} train ride",
+        "railJourneys_other": "{{count}} train rides",
+        "busJourneys_one": "{{count}} bus ride",
+        "busJourneys_other": "{{count}} bus rides",
+        "ferryJourneys_one": "{{count}} ferry crossing",
+        "ferryJourneys_other": "{{count}} ferry crossings",
+        "rentals_one": "{{count}} rental",
+        "rentals_other": "{{count}} rentals",
+        "stops_one": "{{count}} stop",
+        "stops_other": "{{count}} stops"
+      },
+      "accept": "Accept",
+      "decline": "Decline",
+      "accepted": "“{{trip}}” is now your trip. Its entries are on their way.",
+      "open": "Open trip",
+      "declined": "Declined. Nothing of this trip was copied.",
+      "errors": {
+        "loadFailed": "The offered trips could not be loaded.",
+        "acceptFailed": "The trip could not be accepted.",
+        "declineFailed": "The offer could not be declined."
+      }
     }
   }
 }

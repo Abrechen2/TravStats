@@ -11,6 +11,7 @@ import type {
   RemotePerson,
   RemoteSharingStatus,
 } from "../../types/sharingRemote";
+import ReceivedRemoteOffers from "../sharing/ReceivedRemoteOffers";
 import { remoteSharingError, type RemoteSharingError } from "../sharing/remoteSharingCopy";
 import Button from "../ui/Button";
 import { Field, Input } from "../ui/Field";
@@ -26,7 +27,7 @@ interface Lists {
 /**
  * "Mitreisende auf anderen Servern" (spec 2026-10-20, phase F-S4b): issue a code for someone on
  * another TravStats server and see it once, redeem a code from someone there, and list the people
- * one is paired with and their server. Drawn only while the server says the feature is on (the
+ * one is paired with and their server; and (F-S4c) answer the trips they offered. Drawn only while the server says the feature is on (the
  * beta key is asked by the caller) — off draws nothing rather than a button that always fails.
  * Every refusal is its own sentence, naming the other server where it matters.
  */
@@ -116,6 +117,8 @@ export default function RemoteSharingSection(): JSX.Element | null {
   return (
     <SectionCard>
       <SectionTitle title={t(`${NS}.title`)} description={t(`${NS}.description`)} />
+
+      <ReceivedRemoteOffers />
 
       <div className="mb-6">
         <h3 className="t-label-mono mb-2">{t(`${NS}.invites.title`)}</h3>

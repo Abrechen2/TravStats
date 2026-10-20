@@ -19,6 +19,14 @@ const CODES: Readonly<Record<string, string>> = {
   SHARE_REMOTE_PEER_OUTDATED: "sharing:remote.errors.outdated",
   SHARE_REMOTE_PEER_DISABLED: "sharing:remote.errors.peerDisabled",
   SHARE_REMOTE_UNREACHABLE: "sharing:remote.errors.unreachable",
+  SHARE_REMOTE_CONSENT_MISSING: "sharing:remote.errors.consentMissing",
+  SHARE_REMOTE_NOT_HOME: "sharing:remote.errors.notHome",
+  SHARE_REMOTE_ALREADY_MEMBER: "sharing:remote.errors.alreadyMember",
+  SHARE_REMOTE_TRIP_TOO_LARGE: "sharing:remote.errors.tripTooLarge",
+  SHARE_REMOTE_PERSON_NOT_FOUND: "sharing:remote.errors.personNotFound",
+  SHARE_REMOTE_OFFER_NOT_FOUND: "sharing:remote.errors.offerNotFound",
+  SHARE_REMOTE_REFUSED: "sharing:remote.errors.refused",
+  TRIP_NOT_FOUND: "sharing:remote.errors.tripNotFound",
 };
 
 export interface RemoteSharingError {

@@ -25,6 +25,9 @@ vi.mock("../../../lib/api/sharingRemote", () => ({
     revokeInvite: vi.fn(),
     claim: vi.fn(),
     listPeople: vi.fn(),
+    listOffers: vi.fn(),
+    acceptOffer: vi.fn(),
+    declineOffer: vi.fn(),
   },
 }));
 
@@ -55,6 +58,7 @@ describe("RemoteSharingSection", () => {
     api.status.mockResolvedValue({ available: true, reason: null, origin: "https://me.example" });
     api.listInvites.mockResolvedValue([]);
     api.listPeople.mockResolvedValue([]);
+    api.listOffers.mockResolvedValue([]);
   });
 
   it("draws nothing while the server has the feature off", async () => {
@@ -77,10 +81,16 @@ describe("RemoteSharingSection", () => {
       code: CODE,
       createdAt: "2026-10-20T10:00:00.000Z",
       expiresAt: "2026-10-23T10:00:00.000Z",
+      tripId: null,
     });
     render(<RemoteSharingSection />);
     api.listInvites.mockResolvedValue([
-      { id: "i1", createdAt: "2026-10-20T10:00:00.000Z", expiresAt: "2026-10-23T10:00:00.000Z" },
+      {
+        id: "i1",
+        createdAt: "2026-10-20T10:00:00.000Z",
+        expiresAt: "2026-10-23T10:00:00.000Z",
+        tripId: null,
+      },
     ]);
     await userEvent.click(
       await screen.findByRole("button", { name: "sharing:remote.invites.create" })
