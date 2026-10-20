@@ -39,6 +39,15 @@ export interface FerryListQuery {
 }
 
 export const ferryApi = {
+  async route(id: string) {
+    return (
+      await api.post<Envelope<{ outcome: "routed" | "straight" | "unchanged" }>>(
+        `/ferry/${encodeURIComponent(id)}/route`,
+        {},
+        { timeout: 60000 }
+      )
+    ).data.data;
+  },
   async liveAvailability() {
     return (await api.get<Envelope<{ configured: boolean }>>("/ferry/live-availability")).data.data;
   },

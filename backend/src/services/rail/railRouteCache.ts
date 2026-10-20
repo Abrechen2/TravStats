@@ -12,7 +12,7 @@ export function railRouteCacheKey(
   profile: string,
   points: readonly LonLat[]
 ): string {
-  return routeKey([2, baseUrl.replace(/\/+$/, ""), profile, points]);
+  return routeKey([3, baseUrl.replace(/\/+$/, ""), profile, points]);
 }
 
 /** Successful track geometry has no age limit. Hot-cache eviction keeps its disk copy. */

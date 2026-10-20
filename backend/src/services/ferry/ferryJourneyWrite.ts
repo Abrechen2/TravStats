@@ -5,6 +5,8 @@ import { deriveBusStatus as deriveFerryStatus } from "../../shared/statusDerivat
 import { rideEndsAt } from "../../shared/railClock";
 import { zoneOf } from "../../shared/time/zoneOf";
 import { assertArrivalNotBefore, resolveDistance, resolveEnd } from "../rides/rideEnds";
+import { readSeaGeometry, sameFerryEnds } from "./ferryGeometry";
+import { polylineLengthKm } from "../../shared/geo/haversine";
 
 export interface FerryJourneyState {
   depStationName: string;
@@ -25,6 +27,8 @@ export interface FerryJourneyState {
   arrPrecision?: string | null;
   distanceKm: number | null;
   distanceSource: string | null;
+  geometry?: unknown;
+  geometrySource?: string;
   status: string;
   delayMinutes?: number | null;
 }
@@ -73,7 +77,7 @@ export function mergeFerryJourney(
   existing: FerryJourneyState | null,
   input: UpdateFerryJourneyInput,
   now: Date = new Date()
-): FerryJourneyState {
+): Omit<FerryJourneyState, "geometry" | "geometrySource"> {
   const dep = input.departureStation
     ? terminalColumns("dep", input.departureStation)
     : existing && pickTerminal(existing, "dep");
@@ -131,7 +135,16 @@ export function mergeFerryJourney(
     );
   }
 
-  const { distanceKm, distanceSource } = resolveDistance(existing, input, { ...dep, ...arr });
+  let { distanceKm, distanceSource } = resolveDistance(existing, input, { ...dep, ...arr });
+  const seaLine =
+    existing?.geometrySource === "sea_route" && sameFerryEnds(existing, { ...dep, ...arr })
+      ? readSeaGeometry(existing.geometry)
+      : null;
+  if (seaLine && distanceSource !== "user") {
+    distanceKm =
+      Math.round(polylineLengthKm(seaLine.map(([lon, lat]) => ({ lat, lon }))) * 10) / 10;
+    distanceSource = "sea_route";
+  }
   const depPrecision = departure.precision;
   const arrPrecision = arrival?.precision ?? null;
   const status = deriveFerryStatus({

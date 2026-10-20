@@ -176,7 +176,8 @@
       "busKmStraight": "Straight line",
       "ferryRides": "Fähre rides",
       "ferryKmMeasured": "Ticket distance",
-      "ferryKmStraight": "Straight line"
+      "ferryKmStraight": "Straight line",
+      "ferryKmSeaRoute": "Sea route (estimate)"
     },
     "topItems": {
       "airlines": "Top airlines",

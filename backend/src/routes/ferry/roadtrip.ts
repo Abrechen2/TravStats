@@ -5,6 +5,7 @@ import { authenticate, requireWriteScope, type AuthRequest } from "../../middlew
 import { AppError } from "../../middleware/errorHandler";
 import { z } from "../../schemas/zod";
 import { recomputeTripStatus } from "../../services/tripStatusService";
+import { syncFerryLeg } from "../../services/ferry/ferryRouting";
 
 const router = Router();
 router.use(authenticate, requireWriteScope);
@@ -69,6 +70,9 @@ router.put("/:id/roadtrip-leg", async (req: AuthRequest, res: Response, next: Ne
           distanceKm: ferry.distanceKm ?? leg.distanceKm,
         },
       });
+      if (ferry.geometrySource === "sea_route") {
+        await syncFerryLeg(tx, { ...ferry, roadtripLegId: leg.id, tripId: leg.route.tripId });
+      }
       return { tripId: leg.route.tripId };
     });
     if (result.tripId) await recomputeTripStatus(result.tripId);

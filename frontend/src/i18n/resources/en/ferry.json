@@ -13,7 +13,8 @@
   },
   "distanceSource": {
     "great_circle": "Straight line",
-    "user": "per ticket"
+    "user": "per ticket",
+    "sea_route": "Sea route (estimate)"
   },
   "title": "Ferries",
   "add": "Add crossing",
@@ -161,5 +162,14 @@
     "observed": "Source timestamp: {{time}}",
     "ageUnknown": "The source provides no complete observation timestamp. The age of this position is unknown.",
     "map": "View on OpenStreetMap"
+  },
+  "routing": {
+    "button": "Calculate sea route",
+    "busy": "Calculating sea route …",
+    "hint": "Calculates a schematic sea route between the ports.",
+    "estimated": "Estimated sea route — not a recorded ship track.",
+    "noRoute": "No sea route found. The existing route is unchanged.",
+    "failed": "The sea route could not be saved. Please try again.",
+    "distance": "Sea route (estimate)"
   }
 }

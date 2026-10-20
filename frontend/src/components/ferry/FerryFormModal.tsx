@@ -137,6 +137,7 @@ export function FerryFormModal({
     };
     for (const key of TEXT) input[key] = fields[key].trim() || null;
     for (const key of NUMBERS) input[key] = fields[key] === "" ? null : Number(fields[key]);
+    if (journey && fields.distanceKm === opened.distanceKm) delete input.distanceKm;
     for (const key of ["departureFold", "arrivalFold"]) if (fields[key]) input[key] = fields[key];
     if (journey && JSON.stringify(dep) === JSON.stringify(port(journey, "dep")))
       delete input.departureStation;

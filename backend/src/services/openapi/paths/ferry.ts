@@ -32,6 +32,23 @@ const errors = {
   422: timeRefused,
 };
 registry.registerPath({
+  method: "post",
+  path: "/ferry/{id}/route",
+  tags: ["Ferry"],
+  summary: "Calculate a schematic sea route for a straight crossing",
+  description:
+    "Stores geometrySource=sea_route and distanceSource=sea_route (unless a user distance is present). This is an estimate, not a recorded ship track. The linked ferry leg is updated atomically; manual lines are preserved. Failed routing leaves the crossing unchanged.",
+  request: { params },
+  responses: {
+    200: {
+      description: "Routing outcome",
+      content: json(envelope(z.object({ outcome: z.enum(["routed", "straight", "unchanged"]) }))),
+    },
+    429: { description: "Too many routing requests", content: errorContent },
+    ...errors,
+  },
+});
+registry.registerPath({
   method: "get",
   path: "/ferry",
   tags: ["Ferry"],
