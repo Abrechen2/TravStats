@@ -80,6 +80,21 @@ describe("rail: line width and station size reach the layers", () => {
     );
   });
 
+  it("names the stations in the rail colour and follows the label switch (forgejo#320)", () => {
+    const layers = buildRailMapLayers([RIDE], "#112233", false, "t");
+    expect(propsOf(byId(layers, "-station-labels")!).color).toEqual([17, 34, 51]);
+    expect(propsOf(byId(layers, "-station-labels")!).labelsMode).toBe("important");
+    const off = buildRailMapLayers([RIDE], "#112233", false, "t", {
+      lineWidth: 1,
+      stationSize: 1,
+      labelsMode: "off",
+    });
+    expect(byId(off, "-station-labels")).toBeUndefined();
+    expect(
+      byId(buildRailMapLayers([RIDE], "#112233", true, "t"), "-station-labels")
+    ).toBeUndefined();
+  });
+
   it("draws no station layer at size 0", () => {
     const layers = buildRailMapLayers([RIDE], "#112233", false, "t", {
       lineWidth: 1,

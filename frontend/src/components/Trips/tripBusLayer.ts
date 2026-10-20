@@ -3,6 +3,7 @@ import { PathLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import type { TripBusJourney } from "../../types/bus";
 import { hexToRgb } from "../../lib/domainColor";
+import { buildStationLabelLayers } from "../layers/stationLabelsLayer";
 
 export interface BusPathDatum {
   id: string;
@@ -68,10 +69,16 @@ export function busPathPoints(rides: readonly TripBusJourney[]): [number, number
   return busPaths(rides).flatMap((d) => d.path);
 }
 
+/**
+ * The rides' lines and their terminals' names (forgejo#320). The names follow
+ * the "important" reveal the trip map gives its hotels — this map has no label
+ * switch of its own — and are thinned by zoom like every other label.
+ */
 export function buildBusLayers(rides: readonly TripBusJourney[], colorHex: string): Layer[] {
   const data = busPaths(rides);
   if (data.length === 0) return [];
-  const [r, g, b] = hexToRgb(colorHex);
+  const color = hexToRgb(colorHex);
+  const [r, g, b] = color;
   return [
     new PathLayer<BusPathDatum>({
       id: "trip-bus-rides",
@@ -84,5 +91,6 @@ export function buildBusLayers(rides: readonly TripBusJourney[], colorHex: strin
       jointRounded: true,
       pickable: false,
     }),
+    ...buildStationLabelLayers(rides, { color, labelsMode: "important", idPrefix: "trip-bus" }),
   ];
 }
