@@ -97,18 +97,51 @@ async function senderOf(
   ]);
   if (consenting.size === 0) throw rejectWith("consent");
   await takeSeq(tx, group.id, origin, message.seq);
-  // A home relaying a third server's change names that server; the pairing is not that person.
-  const relayed = !!message.actor.origin && message.actor.origin !== origin;
   return {
     groupId: group.id,
     recipient: trip,
     origin,
-    author: {
-      kind: "remote",
-      pairingId: relayed ? null : pairing.id,
-      displayName: message.actor.displayName,
-      origin: message.actor.origin ?? origin,
-    },
+    author: await authorOf(tx, origin, message, { ...group, pairing }),
+  };
+}
+
+/**
+ * Who a received change is by. The sending server's claim (`actor`) is believed only where it
+ * can be checked at all: from the group's home (the hub relays for its spokes, F5), and only for
+ * an origin this server knows as one of the group's remote members. Everything else — a spoke
+ * naming someone else, a home naming a server that is not in the group — is attributed to the
+ * sending pairing, under its own name: a peer cannot put words in another person's mouth here.
+ */
+async function authorOf(
+  tx: DbTransaction,
+  origin: string,
+  message: PropagationMessage,
+  group: {
+    id: string;
+    homeOrigin: string | null;
+    pairing: { id: string; displayName: string; origin: string };
+  }
+): Promise<Sender["author"]> {
+  const own = {
+    kind: "remote" as const,
+    pairingId: group.pairing.id,
+    displayName: group.pairing.displayName,
+    origin: group.pairing.origin,
+  };
+  if (group.homeOrigin !== origin) return own;
+  const claimed = message.actor.origin ?? origin;
+  const members = await tx.tripShareRemoteMember.findMany({
+    where: { groupId: group.id },
+    select: { remote: { select: { origin: true } } },
+  });
+  if (!members.some((m) => m.remote.origin === claimed)) return own;
+  const self = claimed === origin && message.actor.displayName === group.pairing.displayName;
+  return {
+    kind: "remote",
+    pairingId: self ? group.pairing.id : null,
+    displayName: message.actor.displayName,
+    origin: claimed,
+    ...(claimed !== origin ? { via: origin } : {}),
   };
 }
 

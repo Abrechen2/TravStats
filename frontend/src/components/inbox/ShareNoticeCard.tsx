@@ -68,7 +68,9 @@ export default function ShareNoticeCard({
   const name = notice.actor
     ? notice.actor.displayName
     : notice.remoteActor
-      ? t(`${NS}.remoteName`, { ...notice.remoteActor })
+      ? t(`${NS}.${notice.remoteActor.via ? "remoteNameVia" : "remoteName"}`, {
+          ...notice.remoteActor,
+        })
       : t(`${NS}.someone`);
   const text = t(`${NS}.${textKey}`, {
     name,

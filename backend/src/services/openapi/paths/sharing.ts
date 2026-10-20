@@ -69,7 +69,11 @@ const notice = z.object({
     ),
   actor: person.nullable(),
   remoteActor: z
-    .object({ displayName: z.string(), origin: z.string() })
+    .object({
+      displayName: z.string(),
+      origin: z.string(),
+      via: z.string().optional().describe("The server that relayed it, when not the author's own"),
+    })
     .nullable()
     .describe("A person on another server who made the change; null for a change made here"),
   changes: z

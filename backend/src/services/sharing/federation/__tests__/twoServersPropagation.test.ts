@@ -414,3 +414,80 @@ describe("a queued message is a reference to a permission that must still hold",
     expect(await gateOf(b, benFlight.id)).toBe("A1");
   });
 });
+
+describe("who a received change is by: a claim is believed only where it can be checked", () => {
+  const ELSEWHERE = "https://c.two-servers.test";
+
+  /** Rewrite the author the next queued message claims, as a lying server would. */
+  async function claim(s: Server, actor: Record<string, unknown>) {
+    const row = await s.prisma.tripShareOutbox.findFirstOrThrow({
+      where: { kind: "fact-update", parkedAt: null },
+      orderBy: { position: "desc" },
+    });
+    await s.prisma.tripShareOutbox.update({
+      where: { id: row.id },
+      data: { payload: { ...(row.payload as object), actor } },
+    });
+  }
+
+  it("a spoke naming someone on another server is attributed to its own pairing", async () => {
+    const { anna, ben, benFlight } = await sharedFlight();
+    await setGate(b, ben, benFlight.id, "S1");
+    await claim(b, { displayName: "Mallory", origin: ELSEWHERE });
+    await b.outbox.runDeliveries();
+    const [onA] = await noticesOf(a, anna, "updated");
+    expect(onA.remoteActor).toEqual({ displayName: "Ben", origin: B });
+  });
+
+  it("the home relaying a change by one of its members keeps that member's name", async () => {
+    const { anna, ben, groupId, flight } = await sharedFlight();
+    const dora = await harnessUser(a, "Dora");
+    await a.prisma.shareConsent.create({
+      data: { requesterId: anna, targetId: dora, status: "accepted" },
+    });
+    const doraTrip = await a.prisma.trip.create({
+      data: { userId: dora, name: "Lissabon", shareGroupId: groupId },
+    });
+    // Dora's copy of the shared flight: same key, same facts that matter here.
+    const keyed = await a.prisma.flight.findUniqueOrThrow({ where: { id: flight.id } });
+    const doras = await a.prisma.flight.create({
+      data: {
+        userId: dora,
+        tripId: doraTrip.id,
+        shareKey: keyed.shareKey,
+        flightNumber: keyed.flightNumber,
+        depIata: keyed.depIata,
+        arrIata: keyed.arrIata,
+        depLat: keyed.depLat,
+        depLon: keyed.depLon,
+        arrLat: keyed.arrLat,
+        arrLon: keyed.arrLon,
+        gate: keyed.gate,
+      },
+    });
+    await setGate(a, dora, doras.id, "D9");
+    await a.outbox.runDeliveries();
+    const [onB] = await noticesOf(b, ben, "updated");
+    expect(onB.remoteActor).toEqual({ displayName: "Dora", origin: A });
+  });
+
+  it("the home naming a server that is not in the group is attributed to the home's pairing", async () => {
+    const { anna, ben, flight } = await sharedFlight();
+    await setGate(a, anna, flight.id, "H1");
+    await claim(a, { displayName: "Mallory", origin: ELSEWHERE });
+    await a.outbox.runDeliveries();
+    const [onB] = await noticesOf(b, ben, "updated");
+    expect(onB.remoteActor).toEqual({ displayName: "Anna", origin: A });
+  });
+
+  it("refuses an author origin that is not in canonical form", async () => {
+    const { anna, flight, trip, benFlight } = await sharedFlight();
+    await setGate(a, anna, flight.id, "N1");
+    await claim(a, { displayName: "Anna", origin: `${B.toUpperCase()}/` });
+    expect(await a.outbox.runDeliveries()).toMatchObject({ parked: 1, sent: 0 });
+    expect(await memberOn(a, anna, trip.id)).toMatchObject({
+      delivery: { state: "rejected", reason: "schema", field: "actor.origin" },
+    });
+    expect(await gateOf(b, benFlight.id)).toBe("A1");
+  });
+});

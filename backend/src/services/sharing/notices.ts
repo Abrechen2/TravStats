@@ -39,9 +39,15 @@ export interface ShareNoticeView {
 export interface RemoteActorView {
   displayName: string;
   origin: string;
+  /** The server that relayed the change here, when it is not the author's own (the home). */
+  via?: string;
 }
 
-const remoteActorSchema = z.object({ displayName: z.string(), origin: z.string() });
+const remoteActorSchema = z.object({
+  displayName: z.string(),
+  origin: z.string(),
+  via: z.string().optional(),
+});
 
 /** The name a notice kept of a remote author, else the pairing it came through. */
 function remoteActorOf(

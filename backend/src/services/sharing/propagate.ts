@@ -151,7 +151,11 @@ export function authorColumns(author: ChangeAuthor | undefined, actorId?: string
   if (!author || author.kind === "user") return { actorId: author?.id ?? actorId ?? null };
   return {
     remoteActorId: author.pairingId,
-    remoteAuthor: { displayName: author.displayName, origin: author.origin },
+    remoteAuthor: {
+      displayName: author.displayName,
+      origin: author.origin,
+      ...(author.via ? { via: author.via } : {}),
+    },
   };
 }
 

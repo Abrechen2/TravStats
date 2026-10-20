@@ -16,6 +16,7 @@
  * no private half on this wire at all (owner decision O1, 2026-10-20).
  */
 import { z } from "./zod";
+import { origin as peerOrigin } from "../services/federation/envelope";
 import { SHARE_ENTITIES, SHARE_TYPES } from "../services/sharing/shareTypes";
 import {
   ENTRY_SHAPES,
@@ -108,12 +109,16 @@ export const entriesSchema = z.strictObject({
 });
 
 /**
- * Who made a change (F-S4d), as the server it was made on names them. `origin` is absent when the
- * change was made on the sending server itself; a home relaying a spoke's change names the spoke.
+ * Who made a change (F-S4d), as the sending server CLAIMS it. `origin` is absent when the change
+ * was made on the sending server itself; a home relaying a spoke's change names the spoke. The
+ * receiver honours the claim only from the group's home and only for an origin it knows as a
+ * member of the group (`inbound.ts` `authorOf`); otherwise the author is the sending pairing.
  */
 export const changeActorSchema = z.strictObject({
   displayName,
-  origin: z.string().max(300).optional(),
+  // The canonical form only (`https://host`, no path, port or trailing slash): a claim is
+  // compared with stored origins byte for byte, so a variant spelling is refused, not matched.
+  origin: peerOrigin.refine((v) => v !== "local", "not a server origin").optional(),
 });
 
 /**

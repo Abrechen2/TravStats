@@ -151,6 +151,8 @@ export interface ShareNoticeAfter {
 export interface RemoteActor {
   displayName: string;
   origin: string;
+  /** The server that relayed the change, when it is not the author's own (the trip's home). */
+  via?: string;
 }
 
 export interface ShareNotice {

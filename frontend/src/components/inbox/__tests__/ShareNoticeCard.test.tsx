@@ -153,6 +153,16 @@ describe("ShareNoticeCard", () => {
     expect(screen.queryByText(/Anna/)).toBeNull();
   });
 
+  it("says through which server a relayed change came", () => {
+    renderCard(
+      notice({
+        actor: null,
+        remoteActor: { displayName: "Cleo", origin: "c.example", via: "home.example" },
+      })
+    );
+    expect(screen.getByText(/sharing:inbox\.notices\.remoteNameVia ·/)).toBeTruthy();
+  });
+
   it("shows a conflict as both values, with the two answers instead of undo", async () => {
     const onResolve = vi.fn();
     render(

@@ -29,7 +29,14 @@ import { toWireEntries, wireFactsOf, wireKeyOf } from "./wire/encode";
 /** Who a change is by: an account here, or a person on another server (named as theirs names them). */
 export type ChangeAuthor =
   | { kind: "user"; id: string }
-  | { kind: "remote"; pairingId: string | null; displayName: string; origin: string };
+  | {
+      kind: "remote";
+      pairingId: string | null;
+      displayName: string;
+      origin: string;
+      /** The server that relayed it here, when that is not the author's own (the home, F5). */
+      via?: string;
+    };
 
 /** Where a change goes from here, and whose notices name whom. */
 export interface Spread {

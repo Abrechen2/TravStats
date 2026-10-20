@@ -44,7 +44,8 @@
       "mineValue": "Deins: {{value}}",
       "theirsValue": "{{name}}: {{value}}",
       "resolved": "Entschieden.",
-      "remoteName": "{{name}} ({{origin}})"
+      "remoteName": "{{name}} ({{origin}})",
+      "remoteNameVia": "{{name}} ({{origin}}) über {{via}}"
     },
     "empty": {
       "title": "Nichts Neues",
