@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { templateApi } from "../lib/api";
-import type { TemplateStatusEntry } from "../lib/api";
+import type { TemplateStatusEntry, TemplateStatusResult, V2TemplateStatus } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
+import TemplateSyncNotice from "./TemplateSyncNotice";
 
 export default function TemplateStatusView(): JSX.Element {
   const { t } = useTranslation(["parser"]);
@@ -13,17 +14,27 @@ export default function TemplateStatusView(): JSX.Element {
   const isAdmin = useAuthStore((s) => s.user?.isAdmin === true);
   const [templates, setTemplates] = useState<TemplateStatusEntry[]>([]);
   const [githubRepo, setGithubRepo] = useState("");
+  const [v2, setV2] = useState<V2TemplateStatus | null>(null);
+  /** A request that failed, said on the page — never only logged (forgejo#309). */
+  const [failure, setFailure] = useState<"loadFailed" | "syncFailed" | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+
+  const apply = (data: TemplateStatusResult): void => {
+    setTemplates(data.templates);
+    setGithubRepo(data.githubRepo);
+    setV2(data.v2 ?? null);
+    setFailure(null);
+  };
 
   const loadStatus = (): void => {
     void templateApi
       .getStatus()
-      .then((data) => {
-        setTemplates(data.templates);
-        setGithubRepo(data.githubRepo);
+      .then(apply)
+      .catch((err: unknown) => {
+        logger.error("Failed to load template status", err);
+        setFailure("loadFailed");
       })
-      .catch((err: unknown) => logger.error("Failed to load template status", err))
       .finally(() => setLoading(false));
   };
 
@@ -33,11 +44,11 @@ export default function TemplateStatusView(): JSX.Element {
     setSyncing(true);
     void templateApi
       .sync()
-      .then((data) => {
-        setTemplates(data.templates);
-        setGithubRepo(data.githubRepo);
+      .then(apply)
+      .catch((err: unknown) => {
+        logger.error("Template sync failed", err);
+        setFailure("syncFailed");
       })
-      .catch((err: unknown) => logger.error("Template sync failed", err))
       .finally(() => setSyncing(false));
   };
 
@@ -77,6 +88,12 @@ export default function TemplateStatusView(): JSX.Element {
           )}
         </div>
       </div>
+      {failure && (
+        <p role="alert" className="text-sm" style={{ color: "var(--warning)" }}>
+          {t(`parser:communityTemplates.status.${failure}`)}
+        </p>
+      )}
+      {v2 && <TemplateSyncNotice v2={v2} />}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {templates.map((tpl) => (
           <div

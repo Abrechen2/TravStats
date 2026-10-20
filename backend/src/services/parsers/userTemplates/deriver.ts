@@ -9,6 +9,10 @@ import { deriveLodgingTemplate } from "./lodgingDeriver";
 import { deriveCruiseTemplate } from "./cruiseDeriver";
 import { derivePlaceTemplate } from "./placeDeriver";
 import { derivePackageTemplate } from "./packageDeriver";
+import { deriveRailTemplate } from "./railDeriver";
+import { deriveRentalTemplate } from "./rentalDeriver";
+import type { TemplateEnvelope } from "../templates/v2/envelope";
+import type { WorkshopDerivationInput } from "./v2Derivation";
 import { senderAddressIn, senderDomainOf, subjectIn } from "./sampleHeaders";
 
 // Character classes and length quantifiers per field
@@ -186,6 +190,19 @@ function deriveFlightPatterns(sample: SampleAnnotations): TemplatePatterns {
   return patterns;
 }
 
+type V2Derivation = { ok: true; template: TemplateEnvelope } | { ok: false; refusal: string };
+
+/** The domains whose workshop templates are v2 envelopes, each with its deriver. */
+const V2_DERIVERS: Partial<
+  Record<TemplateDomain, (input: WorkshopDerivationInput) => V2Derivation>
+> = {
+  cruise: deriveCruiseTemplate,
+  place: derivePlaceTemplate,
+  package: derivePackageTemplate,
+  rail: deriveRailTemplate,
+  rental: deriveRentalTemplate,
+};
+
 function derivedName(issuer: string): string {
   return `${issuer} (abgeleitet am ${new Date().toLocaleDateString("de-DE", { timeZone: "UTC" })})`;
 }
@@ -206,9 +223,10 @@ function derivedName(issuer: string): string {
  *    nothing about extraction. It is `pending` now until a preview has run it
  *    against its own sample and a held-out one (`routes/parserTemplates.ts`).
  *
- * Cruise, place and package (forgejo#124) are written as v2 template envelopes, the
- * shape the bundled templates have, and run by the same consumers
- * (`cruiseDeriver.ts`, `placeDeriver.ts`, `packageDeriver.ts`). Each abstains with a reason
+ * Cruise, place, package (forgejo#124), rail and rental (forgejo#309) are written as v2
+ * template envelopes, the shape the bundled templates have, and run by the
+ * same consumers (`cruiseDeriver.ts`, `placeDeriver.ts`, `packageDeriver.ts`,
+ * `railDeriver.ts`, `rentalDeriver.ts`). Each abstains with a reason
  * the page shows when the marks are not enough — a template that matches a
  * document and extracts nothing is worse than none, because its result is a
  * proposal a human accepts by habit (plan §7). A domain whose spec says
@@ -242,7 +260,8 @@ export async function deriveTemplateFromAnnotation(
     let patterns: Prisma.InputJsonValue;
     let name: string;
 
-    if (domain === "cruise" || domain === "place" || domain === "package") {
+    const deriveV2 = V2_DERIVERS[domain];
+    if (deriveV2) {
       const input = {
         trainingDataId,
         subject: sample.subject,
@@ -250,12 +269,7 @@ export async function deriveTemplateFromAnnotation(
         selections: sample.selections,
         ...(fingerprint.senderDomains[0] ? { senderDomain: fingerprint.senderDomains[0] } : {}),
       };
-      const derived =
-        domain === "cruise"
-          ? deriveCruiseTemplate(input)
-          : domain === "package"
-            ? derivePackageTemplate(input)
-            : derivePlaceTemplate(input);
+      const derived = deriveV2(input);
       if (!derived.ok) {
         logger.info(
           { trainingDataId, domain, refusal: derived.refusal },

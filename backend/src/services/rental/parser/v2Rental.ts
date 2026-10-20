@@ -10,6 +10,10 @@
  *
  * - `kind` (a constant the template sets) says which document it reads;
  * - a currency is only stated beside an amount;
+ * - an end is either one `…Local` value or a `…Date` with an optional
+ *   `…Time` printed apart (a workshop template marks them separately,
+ *   forgejo#309); without a clock the end stays a bare day, never a guessed
+ *   hour;
  * - inclusions are the codes the template names (comma-separated per item),
  *   in first-seen order, and only codes the schema knows;
  * - a final invoice's vehicle row counts only when its own arithmetic holds
@@ -41,14 +45,27 @@ const common = {
   confirmationNumber: text,
 };
 
+const day = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .nullish();
+const clock = z
+  .string()
+  .regex(/^\d{2}:\d{2}$/)
+  .nullish();
+
 const confirmationSchema = z.object({
   ...common,
   kind: z.literal("confirmation"),
   confirmationNumber: z.string().min(1),
   pickupStation: z.string().min(1),
-  pickupLocal: z.string().regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/),
+  pickupLocal: localTime,
+  pickupDate: day,
+  pickupTime: clock,
   returnStation: z.string().min(1),
-  returnLocal: z.string().regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/),
+  returnLocal: localTime,
+  returnDate: day,
+  returnTime: clock,
   vehicleClass: text,
   vehicleExample: text,
   acrissCode: text,
@@ -71,6 +88,21 @@ const confirmationSchema = z.object({
   /** Booking deadlines as the confirmation states them (forgejo#285). */
   ...parsedDeadlineValuesShape,
 });
+
+/**
+ * An end's wall clock: the one value a template read, else its day and — when
+ * printed — its clock. Null when the template read neither, which declines
+ * the document: a rental without both ends is no rental.
+ */
+function endLocal(
+  local: string | null | undefined,
+  date: string | null | undefined,
+  time: string | null | undefined
+): string | null {
+  if (local) return local;
+  if (!date) return null;
+  return time ? `${date}T${time}` : date;
+}
 
 const vehicleRow = z.object({
   odometerOut: z.number().int().nonnegative().nullish(),
@@ -125,7 +157,8 @@ function inclusionsOf(items: Array<{ code?: string | null }> | undefined): Inclu
 
 function toConfirmation(
   v: z.infer<typeof confirmationSchema>,
-  name: string
+  name: string,
+  ends: { pickup: string; return: string }
 ): ParsedRentalConfirmation {
   const price = nn(v.price);
   const words = (v.airportWords ?? []).map((w) => w.word).filter((w): w is string => !!w);
@@ -134,8 +167,8 @@ function toConfirmation(
     source: name,
     provider: v.provider,
     confirmationNumber: v.confirmationNumber,
-    pickup: { stationName: v.pickupStation, local: v.pickupLocal },
-    return: { stationName: v.returnStation, local: v.returnLocal },
+    pickup: { stationName: v.pickupStation, local: ends.pickup },
+    return: { stationName: v.returnStation, local: ends.return },
     vehicleClass: nn(v.vehicleClass),
     vehicleExample: nn(v.vehicleExample),
     acrissCode: nn(v.acrissCode),
@@ -214,9 +247,18 @@ export function applyV2RentalTemplate(
     return null;
   }
   const name = rentalTemplateName(template);
-  return parsed.data.kind === "invoice"
-    ? toInvoice(parsed.data, name)
-    : toConfirmation(parsed.data, name);
+  if (parsed.data.kind === "invoice") return toInvoice(parsed.data, name);
+  const v = parsed.data;
+  const pickup = endLocal(v.pickupLocal, v.pickupDate, v.pickupTime);
+  const dropoff = endLocal(v.returnLocal, v.returnDate, v.returnTime);
+  if (!pickup || !dropoff) {
+    logger.warn(
+      { template: template.id, version: template.version },
+      "v2 rental template read no pickup or no return time — declined"
+    );
+    return null;
+  }
+  return toConfirmation(v, name, { pickup, return: dropoff });
 }
 
 /** The first template of `kind` that reads the document, in the order given. */

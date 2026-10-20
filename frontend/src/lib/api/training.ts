@@ -4,9 +4,12 @@ import { api } from "./client";
 import type { TrainingAnnotationResult, TrainingDataEntry, TrainingUploadResult } from "./types";
 import type { WorkshopDomain } from "../../shared/annotationLabels";
 
+/** A mail, a boarding pass image, or a screenshot the server reads by OCR (forgejo#309). */
+export type TrainingUploadType = "email" | "boarding_pass" | "screenshot";
+
 // Training API
 export const trainingApi = {
-  upload: async (file: File, type: "email" | "boarding_pass"): Promise<TrainingUploadResult> => {
+  upload: async (file: File, type: TrainingUploadType): Promise<TrainingUploadResult> => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("type", type);

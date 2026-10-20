@@ -45,6 +45,15 @@ export const v2StatusSchema = z.object({
     .describe(
       "Whether the v2 index.json was read in the last sync. `unknown` = no sync yet; `unavailable` = the v1 airline path alone is in use"
     ),
+  ranAt: z
+    .string()
+    .datetime()
+    .nullable()
+    .describe(
+      "When the last sync ran (its end, a UTC instant — the scheduled job's own clock), whatever it found; null before the first. " +
+        "With `index: unavailable` it is when the template index could not be read, and the " +
+        "templates listed are the last good set, still in use"
+    ),
   templates: z.array(v2TemplateStatusEntrySchema),
 });
 export type V2Status = z.infer<typeof v2StatusSchema>;

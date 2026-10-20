@@ -192,7 +192,7 @@ export interface UserSettings {
 
 export interface TrainingDataEntry {
   id: string;
-  type: "email" | "boarding_pass";
+  type: "email" | "boarding_pass" | "screenshot";
   /**
    * Which KIND of document this sample is, classified on upload and
    * correctable by the user — forgejo#124 phase 6. `type` beside it is the
@@ -501,10 +501,39 @@ export interface TemplateStatusEntry {
   source: "builtin" | "cached";
 }
 
+/** Why a repository template is not in use — `services/parsers/templates/v2/status.ts`. */
+export type V2RejectionReason = "fetch_failed" | "invalid" | "tests_failed" | "needs_newer_app";
+
+export interface V2TemplateStatusEntry {
+  /** `<domain>:<slug>`, or `index[N]` for an unreadable index line. */
+  id: string;
+  domain: string;
+  version: string | null;
+  state: "active" | "rejected";
+  source: "remote" | "cached" | "snapshot";
+  reason?: V2RejectionReason;
+  /** Operator diagnostics; the server sends it to admins only. */
+  detail?: string;
+}
+
+/**
+ * The template repository's last sync (forgejo#309). A failed sync keeps the
+ * last good set in use; this is what lets the page SAY it failed, and when.
+ */
+export interface V2TemplateStatus {
+  /** `unavailable`: the index could not be read in the last sync. */
+  index: "unknown" | "available" | "unavailable";
+  /** When the last sync ran (UTC instant); null before the first. */
+  ranAt: string | null;
+  templates: V2TemplateStatusEntry[];
+}
+
 export interface TemplateStatusResult {
   templates: TemplateStatusEntry[];
   total: number;
   githubRepo: string;
+  /** Absent from a server older than the v2 template engine. */
+  v2?: V2TemplateStatus;
 }
 
 export interface UserTemplateItem {

@@ -100,4 +100,35 @@ describe("the workshop's per-domain label sets (frontend mirror)", () => {
     expect(isLabelOfDomain("package", "stayCheckOut")).toBe(true);
     expect(isLabelOfDomain("flight", "stayCheckOut")).toBe(false);
   });
+
+  it("offers the rail booking fields and one leg row (forgejo#309)", () => {
+    expect(isWorkshopDomain("rail")).toBe(true);
+    expect(labelGroupsForDomain("rail")).toEqual(["booking", "money", "railLeg"]);
+    expect(labelOfDomain("rail", "departureTime")).toEqual({
+      id: "departureTime",
+      group: "railLeg",
+      kind: "time",
+    });
+    expect(isLabelOfDomain("rail", "depStation")).toBe(true);
+    expect(isLabelOfDomain("rail", "train")).toBe(true);
+    expect(isLabelOfDomain("flight", "depStation")).toBe(false);
+  });
+
+  it("offers each rental end's station, day and clock (forgejo#309)", () => {
+    expect(isWorkshopDomain("rental")).toBe(true);
+    expect(labelGroupsForDomain("rental")).toEqual([
+      "booking",
+      "rentalPickup",
+      "rentalReturn",
+      "vehicle",
+      "money",
+    ]);
+    expect(labelOfDomain("rental", "pickupTime")).toEqual({
+      id: "pickupTime",
+      group: "rentalPickup",
+      kind: "time",
+    });
+    expect(isLabelOfDomain("rental", "returnStation")).toBe(true);
+    expect(isLabelOfDomain("rail", "returnStation")).toBe(false);
+  });
 });

@@ -192,8 +192,16 @@ export function anchorsFor(input: AnchorInput): string[] {
   return [...new Set(anchors)];
 }
 
+const ISSUER_KIND = {
+  cruise: "cruise-line",
+  package: "tour-operator",
+  place: "other",
+  rail: "rail",
+  rental: "other",
+} as const;
+
 export interface EnvelopeInput {
-  domain: "cruise" | "place" | "package";
+  domain: "cruise" | "place" | "package" | "rail" | "rental";
   trainingDataId: string;
   issuerName: string;
   senderDomain?: string;
@@ -216,12 +224,7 @@ export function buildWorkshopEnvelope(input: EnvelopeInput): TemplateEnvelope | 
     version: "1.0.0",
     issuer: {
       name: input.issuerName,
-      kind:
-        input.domain === "cruise"
-          ? "cruise-line"
-          : input.domain === "package"
-            ? "tour-operator"
-            : "other",
+      kind: ISSUER_KIND[input.domain],
       ...(input.senderDomain ? { keys: { senderDomains: [input.senderDomain] } } : {}),
     },
     markets: [],

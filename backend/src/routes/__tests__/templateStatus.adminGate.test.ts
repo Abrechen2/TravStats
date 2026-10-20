@@ -86,16 +86,21 @@ describe("template-status — the refresh is an admin action (forgejo#67)", () =
 
     expect(res.status).toBe(200);
     expect(Object.keys(res.body).sort()).toEqual(["githubRepo", "templates", "total", "v2"]);
-    expect(res.body.v2).toEqual({
+    expect(Object.keys(res.body.v2).sort()).toEqual(["index", "ranAt", "templates"]);
+    expect(res.body.v2).toMatchObject({
       index: expect.stringMatching(/^(unknown|available|unavailable)$/),
       templates: expect.any(Array),
     });
+    // Null before the first sync, an ISO instant after it.
+    const ranAt: unknown = res.body.v2.ranAt;
+    expect(ranAt === null || typeof ranAt === "string").toBe(true);
   });
 
   it("shows a v2 rejection detail to an admin only", async () => {
     // The detail is raw diagnostics that can name the template source URL.
     const v2 = jest.spyOn(templateRegistry, "getV2Status").mockReturnValue({
       index: "available",
+      ranAt: "2026-10-20T08:00:00.000Z",
       templates: [
         {
           id: "lodging:x",

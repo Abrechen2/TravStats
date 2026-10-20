@@ -104,6 +104,10 @@ export type ApiErrorCode =
    *  the text being saved. The two used to be allowed to disagree, which
    *  corrupted every derivation built on it in silence. */
   | "ANNOTATION_TEXT_MISMATCH"
+  /** A workshop screenshot that is no image the OCR can read (forgejo#309). */
+  | "TRAINING_IMAGE_UNREADABLE"
+  /** A workshop screenshot the OCR read almost no text from — no sample is kept. */
+  | "TRAINING_IMAGE_NO_TEXT"
   /** The requested username is reserved by the system — see
    *  `schemas/auth.ts` `RESERVED_USERNAMES`. The register form turns this
    *  into its own sentence, in the reader's language. */

@@ -9,12 +9,18 @@
   },
   "annotate": {
     "title": "Datei annotieren",
-    "description": "Lade eine E-Mail oder einen Boarding Pass hoch und markiere die Felder. TravStats leitet automatisch ein Regex-Template ab.",
+    "description": "Lade eine E-Mail, einen Boarding Pass oder einen Screenshot hoch und markiere die Felder. TravStats leitet daraus ein Template ab.",
     "emailButton": "E-Mail hochladen",
     "emailFormats": ".eml, .msg, .txt",
     "boardingPassButton": "Boarding Pass hochladen",
     "boardingPassFormats": ".png, .jpg, .jpeg",
-    "uploadError": "Datei konnte nicht hochgeladen werden."
+    "uploadError": "Datei konnte nicht hochgeladen werden.",
+    "screenshotButton": "Screenshot hochladen",
+    "screenshotFormats": ".png, .jpg, .webp — Text wird per Texterkennung gelesen",
+    "uploadErrors": {
+      "TRAINING_IMAGE_UNREADABLE": "Diese Datei ließ sich nicht als Bild lesen. Ein PNG-, JPEG- oder WebP-Screenshot funktioniert in der Regel.",
+      "TRAINING_IMAGE_NO_TEXT": "Auf diesem Screenshot wurde fast kein Text erkannt, deshalb wurde nichts gespeichert. Ein schärferer Screenshot des ganzen Bildschirms hilft meistens."
+    }
   },
   "myTemplates": {
     "empty": "Noch keine eigenen Templates",
@@ -44,7 +50,22 @@
       "syncing": "Aktualisiere …",
       "addTemplate": "Template hinzufügen →",
       "loaded": "{{count}} Templates geladen · tägliches Auto-Update aus GitHub",
-      "adminOnly": "Aktualisieren kann nur ein Admin. Der tägliche Auto-Update läuft trotzdem."
+      "adminOnly": "Aktualisieren kann nur ein Admin. Der tägliche Auto-Update läuft trotzdem.",
+      "loadFailed": "Der Stand der Templates konnte nicht geladen werden.",
+      "syncFailed": "Die Aktualisierung ist fehlgeschlagen. Es gelten weiter die zuletzt geladenen Templates."
+    },
+    "sync": {
+      "indexUnreachable": "Das Template-Verzeichnis war beim letzten Abgleich ({{date}}) nicht erreichbar. Es gelten weiter die zuletzt geladenen Templates ({{count}}).",
+      "indexUnreachableNoDate": "Das Template-Verzeichnis war beim letzten Abgleich nicht erreichbar. Es gelten weiter die zuletzt geladenen Templates ({{count}}).",
+      "rejectedTitle": "Beim letzten Abgleich ({{date}}) konnten {{count}} Templates nicht geladen werden:",
+      "rejectedTitleNoDate": "Beim letzten Abgleich konnten {{count}} Templates nicht geladen werden:",
+      "refusedUpdate": "{{id}}: eine neuere Fassung wurde abgelehnt, weiter in Gebrauch ist v{{version}}.",
+      "reasons": {
+        "fetch_failed": "nicht abrufbar",
+        "invalid": "fehlerhaft",
+        "tests_failed": "eigene Tests nicht bestanden",
+        "needs_newer_app": "braucht eine neuere TravStats-Version"
+      }
     }
   },
   "domains": {
@@ -52,7 +73,9 @@
     "lodging": "Unterkunft",
     "cruise": "Kreuzfahrt",
     "place": "Ort",
-    "package": "Pauschalreise"
+    "package": "Pauschalreise",
+    "rail": "Bahnfahrt",
+    "rental": "Mietwagen"
   },
   "labelGroups": {
     "flight": "Flug",
@@ -69,7 +92,11 @@
     "itinerary": "Reiseverlauf",
     "packageTrip": "Reise",
     "flightRow": "Flugzeile",
-    "stayRow": "Hotelzeile"
+    "stayRow": "Hotelzeile",
+    "railLeg": "Fahrtabschnitt",
+    "rentalPickup": "Abholung",
+    "rentalReturn": "Rückgabe",
+    "vehicle": "Fahrzeug"
   },
   "labels": {
     "flight": {
@@ -153,6 +180,34 @@
       "stayCity": "Hotelort",
       "stayCheckIn": "Anreise",
       "stayCheckOut": "Abreise"
+    },
+    "rail": {
+      "bookingReference": "Auftragsnummer",
+      "operator": "Bahngesellschaft",
+      "travelClass": "Klasse",
+      "tariff": "Tarif",
+      "price": "Gesamtpreis",
+      "currency": "Währung",
+      "depStation": "Abfahrtsbahnhof",
+      "arrStation": "Ankunftsbahnhof",
+      "departureDate": "Reisetag",
+      "departureTime": "Abfahrtszeit",
+      "arrivalDate": "Ankunftstag",
+      "arrivalTime": "Ankunftszeit",
+      "train": "Zug"
+    },
+    "rental": {
+      "provider": "Vermieter",
+      "confirmationNumber": "Reservierungsnummer",
+      "pickupStation": "Abholstation",
+      "pickupDate": "Abholdatum",
+      "pickupTime": "Abholzeit",
+      "returnStation": "Rückgabestation",
+      "returnDate": "Rückgabedatum",
+      "returnTime": "Rückgabezeit",
+      "vehicleClass": "Fahrzeugklasse",
+      "price": "Gesamtpreis",
+      "currency": "Währung"
     }
   },
   "workshop": {
@@ -167,7 +222,9 @@
     "domainHints": {
       "cruise": "Markiere die Kopfdaten (Schiff, Buchungsnummer, Preis …) und dazu EINE Zeile des Reiseverlaufs: ihr Datum und ihren Hafen. Aus dieser Zeile liest das Template die ganze Hafenliste.",
       "place": "Markiere mindestens den Namen des Ortes, dazu nach Wunsch Adresse, Kategorie und Besuchsdatum. Gelesene Orte landen in der Import-Vorschau unter Einstellungen → Import.",
-      "package": "Markiere Buchungsnummer und Ausstellungsdatum, nach Wunsch Reisename, Daten und Preis — dazu EINE Flugzeile (Flugnummer, Datum, Abflug und Ziel) und/oder EINE Hotelzeile (Hotel, An- und Abreise). Aus jeder markierten Zeile wird die Regel für alle Zeilen dieser Art."
+      "package": "Markiere Buchungsnummer und Ausstellungsdatum, nach Wunsch Reisename, Daten und Preis — dazu EINE Flugzeile (Flugnummer, Datum, Abflug und Ziel) und/oder EINE Hotelzeile (Hotel, An- und Abreise). Aus jeder markierten Zeile wird die Regel für alle Zeilen dieser Art.",
+      "rail": "Markiere nach Wunsch Auftragsnummer, Klasse und Preis — dazu EINEN Fahrtabschnitt: Abfahrtsbahnhof, Abfahrtszeit, Ankunftsbahnhof, nach Wunsch Ankunftszeit und Zug. Den Reisetag markierst du dort, wo er steht: in der Zeile oder in der Überschrift darüber.",
+      "rental": "Markiere den Vermieter, die Reservierungsnummer und für Abholung und Rückgabe jeweils Station und Datum — die Uhrzeit, wenn sie dasteht. Ohne Uhrzeit bleibt das Ende ein Tag, es wird keine Zeit erfunden."
     }
   },
   "derivation": {
@@ -187,7 +244,14 @@
       "packageFlightRowIncomplete": "Die Flugzeile ist unvollständig: markiere Flugnummer, Flugdatum, Abflug (Code oder Ort) und Ziel (Code oder Ort).",
       "packageStayRowIncomplete": "Die Hotelzeile ist unvollständig: markiere Hotel, Anreise und Abreise.",
       "packageRowTooFarApart": "Die Werte einer Zeile müssen in derselben oder in zwei aufeinanderfolgenden Zeilen stehen (Leerzeilen dazwischen sind in Ordnung).",
-      "packageRowNotUnderstood": "Aus der markierten Zeile lässt sich keine Regel bilden, die ihre eigenen Werte wieder liest. Markiere die Werte genau."
+      "packageRowNotUnderstood": "Aus der markierten Zeile lässt sich keine Regel bilden, die ihre eigenen Werte wieder liest. Markiere die Werte genau.",
+      "railNeedsLegRow": "Für eine Bahnfahrt fehlt ein markierter Fahrtabschnitt: markiere in EINER Zeile Abfahrtsbahnhof, Abfahrtszeit und Ankunftsbahnhof (nach Wunsch Ankunftszeit und Zug). Aus dieser Zeile liest das Template alle Abschnitte.",
+      "railNeedsDate": "Der Reisetag fehlt: markiere das Datum — in der Zeile des Abschnitts oder in der Überschrift darüber (z. B. „Hinfahrt am 14.11.2027“). Ohne Tag wäre jede Abfahrtszeit geraten.",
+      "railRowTooFarApart": "Die Werte eines Fahrtabschnitts müssen in derselben oder in zwei aufeinanderfolgenden Zeilen stehen (Leerzeilen dazwischen sind in Ordnung).",
+      "railRowNotUnderstood": "Aus dem markierten Fahrtabschnitt lässt sich keine Regel bilden, die seine eigenen Werte wieder liest. Markiere die Bahnhofsnamen und Zeiten genau.",
+      "rentalNeedsProvider": "Der Vermieter fehlt: markiere, wie der Vermieter heißt. Er steht als Absender in jedem Vorschlag dieses Templates.",
+      "rentalNeedsBookingFields": "Für eine Anmietung fehlen Pflichtangaben: markiere Reservierungsnummer, Abholstation, Abholdatum, Rückgabestation und Rückgabedatum (die Uhrzeiten nach Wunsch).",
+      "rentalEndsAmbiguous": "Abholung und Rückgabe sind in dieser Mail gleich beschriftet (z. B. zweimal „Station:“), deshalb würde das Template für beide Enden denselben Wert lesen. Solche Layouts kann die Werkstatt noch nicht lernen."
     }
   },
   "preview": {

@@ -20,6 +20,7 @@ import { llmProbe, llmProviderLabel, type LlmTarget } from "../../llm/llmProvide
 import { conclusiveOtherDomain, scoreDocument } from "../../parsing/documentDomain";
 import type { ParsedRailBooking, ParsedRailLeg, RailAttachment } from "./types";
 import { recordReachability } from "../../llm/reachableTarget";
+import { loadActiveWorkshopTemplates } from "../../parsers/userTemplates/v2UserTemplates";
 
 /**
  * Template first, the model only for what no template reads — the order and
@@ -245,7 +246,15 @@ export async function parseRailBookingText(
   userId?: string
 ): Promise<RailParseResult> {
   const order = await getParserOrder();
-  const templates = await readRailTemplates(text, attachments);
+  // The repository's readers first, then the caller's own workshop templates
+  // (forgejo#309) — the cruise and lodging precedence: a template measured
+  // against a corpus keeps the first look, a personal one takes what those
+  // decline. Only this user's, only `rail`, only `active`.
+  const workshop = userId === undefined ? [] : await loadActiveWorkshopTemplates(userId, "rail");
+  const templates = await readRailTemplates(text, attachments, [
+    ...templateRegistry.getActiveV2({ domain: "rail" }),
+    ...workshop,
+  ]);
   const llmQuery = userId !== undefined ? { userId } : {};
   const noItinerary = {
     fallbackCode: "noItinerary" as const,
