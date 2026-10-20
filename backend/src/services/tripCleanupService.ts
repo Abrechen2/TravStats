@@ -79,6 +79,8 @@ export const EMPTY_TRIP_COUNTS = {
   documents: true,
   // A trip-wide expense (forgejo#140) is money a dissolve would delete.
   expenses: true,
+  // A Companion recording CASCADES with its trip: every point would be gone.
+  recordingBatches: true,
 } as const;
 
 /** The same rule as a Prisma `where` fragment, so a DELETE re-checks it in the
@@ -98,6 +100,7 @@ export const EMPTY_TRIP_WHERE = {
   immichAlbums: { none: {} },
   documents: { none: {} },
   expenses: { none: {} },
+  recordingBatches: { none: {} },
   notes: null,
   description: null,
   summary: null,
