@@ -497,7 +497,32 @@
     "caption": "Vom Telefon aufgezeichnet · {{distance}} · {{points}} Punkte",
     "gaps_one": "Eine Lücke ohne GPS-Empfang ist nicht eingezeichnet.",
     "gaps_other": "{{count}} Lücken ohne GPS-Empfang sind nicht eingezeichnet.",
-    "loadError": "Die Aufzeichnung dieses Flugs konnte nicht geladen werden."
+    "loadError": "Die Aufzeichnung dieses Flugs konnte nicht geladen werden.",
+    "captionFile": "Aus einer {{format}}-Datei · {{distance}} · {{points}} Punkte",
+    "versusGreatCircle": "Aufgezeichnet {{flown}} · Großkreis {{greatCircle}} ({{difference}} %)",
+    "uploadIntro": "Eine Aufzeichnung dieses Flugs hochladen – aus einem GPS-Logger oder als Export von FlightAware oder Flightradar24. Die Karte zeichnet den Flug dann entlang der Aufzeichnung statt auf dem Großkreis.",
+    "upload": "Datei hochladen",
+    "replace": "Ersetzen",
+    "remove": "Aufzeichnung entfernen",
+    "working": "Wird verarbeitet …",
+    "formats": "GPX, KML, TCX oder FIT, bis 15 MB",
+    "uploaded": "Aufzeichnung gespeichert.",
+    "removed": "Aufzeichnung entfernt.",
+    "replaceConfirmTitle": "Aufzeichnung ersetzen?",
+    "replaceConfirmMessage": "Die vorhandene Aufzeichnung wird durch die neue Datei ersetzt. Eine Aufzeichnung vom Telefon lässt sich nicht wiederherstellen.",
+    "removeConfirmTitle": "Aufzeichnung entfernen?",
+    "removeConfirmMessage": "Der Flug wird danach wieder auf dem Großkreis gezeichnet. Eine Aufzeichnung vom Telefon lässt sich nicht wiederherstellen.",
+    "errors": {
+      "fileMissing": "Es wurde keine Datei mitgeschickt.",
+      "fileTooLarge": "Die Datei ist zu groß – höchstens 15 MB.",
+      "fileUnreadable": "Die Datei lässt sich nicht als GPX, KML, TCX oder FIT mit mindestens zwei Positionen lesen.",
+      "noTimestamps": "Die Datei hat keine Zeitstempel, und der Flug hat keinen Flugplan, in den sie sich einordnen ließe.",
+      "outsideFlight": "Die Aufzeichnung liegt zeitlich nicht bei diesem Flug.",
+      "alreadyRecorded": "Für diesen Flug ist schon eine Aufzeichnung gespeichert.",
+      "uploadFailed": "Die Aufzeichnung konnte nicht gespeichert werden.",
+      "removeFailed": "Die Aufzeichnung konnte nicht entfernt werden."
+    },
+    "linesLoadError": "Die aufgezeichneten Flugspuren konnten nicht geladen werden – die Karte zeigt die Flüge auf dem Großkreis."
   },
   "planActual": {
     "departure": "Abflug",

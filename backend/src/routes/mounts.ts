@@ -26,6 +26,7 @@ import passkeyRoutes from "./auth/passkeys";
 import flightRoutes from "./flights";
 import flightEntrySuggestionRoutes from "./flights/entrySuggestions";
 import flightTrackRoutes from "./flights/track";
+import flightTrackLineRoutes from "./flights/trackLines";
 import flightObservedTimesRoutes from "./flights/observedTimes";
 import flightBookingRoutes from "./flights/booking";
 import flightBulkEditRoutes from "./flights/bulkEdit";
@@ -223,6 +224,8 @@ export const apiMounts: ApiMount[] = [
   // Trip, tags and companions over a selection (forgejo#217) — before
   // `flights` too, for the same reason.
   { id: "flights.bulkEdit", base: "/api/v1/flights", router: flightBulkEditRoutes },
+  // Recorded lines for the map (forgejo#312) — before `flights`, same reason.
+  { id: "flights.trackLines", base: "/api/v1/flights", router: flightTrackLineRoutes },
   { id: "flights", base: "/api/v1/flights", router: flightRoutes },
   // What a paired phone sends about a flight (forgejo#193/#194) — satellites
   // at the same prefix, the `cruises.tracks` pattern: flights.ts is frozen.

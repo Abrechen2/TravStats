@@ -5,6 +5,7 @@ import { errorContent } from "./shared";
 import { timeValueSchema } from "../../../shared/time/wire";
 import {
   FLIGHT_TRACK_MAX_POINTS,
+  FLIGHT_TRACK_SOURCES,
   flightTrackUploadSchema,
   observedTimesSchema,
 } from "../../../schemas/flightDevice";
@@ -21,8 +22,14 @@ const flightParams = z.object({ id: z.string().uuid() });
 const trackMeta = z.object({
   id: z.string().uuid(),
   flightId: z.string().uuid(),
-  source: z.literal("companion"),
-  uploadId: z.string().describe("The client's id for the upload; a retry sends the same one"),
+  source: z
+    .enum(FLIGHT_TRACK_SOURCES)
+    .describe("`companion` from the phone; the file format for an uploaded file (forgejo#312)"),
+  uploadId: z
+    .string()
+    .describe(
+      "The client's id for the upload; a retry sends the same one. For a file, `file:` + its SHA-256"
+    ),
   deviceId: z.string().nullable().describe("The paired device that sent it; null from a browser"),
   times: z
     .object({ startedAt: timeValueSchema, endedAt: timeValueSchema })
@@ -111,6 +118,71 @@ registry.registerPath({
     413: { description: "Body too large (TRACK_BODY_TOO_LARGE)", content: errorContent },
     422: { description: "Nowhere near the flight (TRACK_OUTSIDE_FLIGHT)", content: errorContent },
     429: { description: "Rate limited", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/flights/{id}/track/file",
+  summary: "Upload a recorded flight track as a file (GPX, KML, TCX, FIT)",
+  description:
+    "multipart/form-data, one file under 'file' (up to 15 MB), its format decided by its bytes; " +
+    "optional field 'replace' ('true' | 'false'). Stored in the same one-per-flight recording " +
+    "the phone writes, `source` = the format. The same bytes again answer 200 with " +
+    "`replayed: true`. A file without times is placed in the flight's schedule; without a " +
+    "schedule it is refused (400 TRACK_NO_TIMESTAMPS). Altitude is kept when the file has it. " +
+    "Only the parsed line is stored, never the file.",
+  tags: ["Flights"],
+  request: { params: flightParams },
+  responses: {
+    200: {
+      description: "These bytes were already stored",
+      content: { "application/json": { schema: writeAnswer } },
+    },
+    201: { description: "Stored", content: { "application/json": { schema: writeAnswer } } },
+    400: {
+      description:
+        "TRACK_FILE_MISSING, TRACK_FILE_TOO_LARGE, TRACK_FILE_UNREADABLE, TRACK_NO_TIMESTAMPS " +
+        "or VALIDATION_FAILED (the replace field)",
+      content: errorContent,
+    },
+    403: { description: "Read-only token, or the shared demo account", content: errorContent },
+    404: { description: "Flight not found — `code: FLIGHT_NOT_FOUND`", content: errorContent },
+    409: {
+      description: "Another recording is stored (TRACK_ALREADY_RECORDED)",
+      content: errorContent,
+    },
+    422: { description: "Nowhere near the flight (TRACK_OUTSIDE_FLIGHT)", content: errorContent },
+    429: { description: "Rate limited", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/flights/track-lines",
+  summary: "Every recorded flight line of the caller, for the map",
+  description:
+    "One entry per flight that has a recording: the simplified line and where each recorded " +
+    "stretch starts. A flight without a recording is absent, not an empty line.",
+  tags: ["Flights"],
+  responses: {
+    200: {
+      description: "The lines",
+      content: {
+        "application/json": {
+          schema: z.object({
+            lines: z.array(
+              z.object({
+                flightId: z.string().uuid(),
+                geometry: z.array(z.tuple([z.number(), z.number()])),
+                segmentStarts: z.array(z.number().int()),
+              })
+            ),
+          }),
+        },
+      },
+    },
+    401: { description: "Not logged in", content: errorContent },
   },
 });
 

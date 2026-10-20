@@ -228,8 +228,11 @@ export type ApiErrorCode =
   | "PHOTO_CONVERSION_UNAVAILABLE"
   /** Tour track upload: the file is over the size limit. */
   | "TRACK_FILE_TOO_LARGE"
-  /** Tour track upload: not readable as GPX, TCX or FIT. */
+  /** Tour track upload: not readable as GPX, TCX or FIT (a flight's file
+   *  upload also takes KML, forgejo#312). */
   | "TRACK_FILE_UNREADABLE"
+  /** Flight track file upload (forgejo#312): the multipart request carried no file. */
+  | "TRACK_FILE_MISSING"
   /** Tour track upload: a recording without timestamps cannot be placed in time. */
   | "TRACK_NO_TIMESTAMPS"
   /** Tour track upload: this recording is already on the tour. */

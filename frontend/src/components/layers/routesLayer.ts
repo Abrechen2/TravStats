@@ -18,6 +18,14 @@ import { isCountableFlight } from "../../shared/flightCounting";
 import { canonicalRoutePair } from "../../shared/routePair";
 import { buildFlatRoutes, createFlatRoutesLayer } from "./flatRoutesLayer";
 import { markerDotRadiusProps, resolveAirportDotColor } from "./markerDotStyle";
+import {
+  addRecording,
+  createRecordedRoutesLayer,
+  emptyRecordings,
+  recordedRouteData,
+  type RecordedRouteDatum,
+  type RouteRecordings,
+} from "./recordedFlightPaths";
 
 function routeKey(a: string, b: string): string {
   return canonicalRoutePair(a, b).join("-");
@@ -88,6 +96,9 @@ interface RouteRecord {
   // True when every flight on this canonical pair is `status: 'historical'`.
   // Used to fade the arc to the dim grey treatment.
   allHistorical: boolean;
+  // Which flights on the route carry a recorded track (forgejo#312) — drawn
+  // along it, and the arc dropped once every flight on the route has one.
+  recordings: RouteRecordings;
 }
 
 function aggregateAllRoutes(flights: GeoJSONFeature[]): Map<string, RouteRecord> {
@@ -112,6 +123,7 @@ function aggregateAllRoutes(flights: GeoJSONFeature[]): Map<string, RouteRecord>
       if (isScheduled) existing.hasUpcoming = true;
       if (!isScheduled) existing.hasPastFlown = true;
       if (!isHistorical) existing.allHistorical = false;
+      existing.recordings = addRecording(existing.recordings, f);
     } else {
       records.set(key, {
         key,
@@ -126,6 +138,7 @@ function aggregateAllRoutes(flights: GeoJSONFeature[]): Map<string, RouteRecord>
         hasUpcoming: isScheduled,
         hasPastFlown: !isScheduled,
         allHistorical: isHistorical,
+        recordings: addRecording(emptyRecordings(), f),
       });
     }
   }
@@ -142,10 +155,11 @@ function buildArcs(
    * so whatever the user picked is what gets rendered, in every view.
    */
   colorConfig: FlightColorConfig
-): ArcDatum[] {
+): { arcs: ArcDatum[]; recorded: RecordedRouteDatum[] } {
   const counts = [...records.values()].map((r) => r.count);
   const { q25, q50, q75 } = calcQuantiles(counts.length > 0 ? counts : [0]);
   const arcs: ArcDatum[] = [];
+  const recorded: RecordedRouteDatum[] = [];
 
   for (const r of records.values()) {
     if (r.count < minRouteCount) continue;
@@ -175,7 +189,7 @@ function buildArcs(
     // sourceColor === targetColor: arc is uniform colour at the data layer.
     // Mixed-route planned tips are added by UpcomingArcLayer's fragment shader.
     const argb = [...color, alpha] as [number, number, number, number];
-    arcs.push({
+    const arc: ArcDatum = {
       sourcePosition: r.depCoord,
       targetPosition: r.arrCoord,
       count: r.count,
@@ -201,9 +215,13 @@ function buildArcs(
         city: r.arrAirport.city,
         country: r.arrAirport.country,
       },
-    });
+    };
+    // A recorded flight is drawn along its recording, in this route's colour;
+    // the arc stays while any flight on the route has nothing but the arc.
+    recorded.push(...recordedRouteData(arc, r.recordings));
+    if (r.recordings.unrecordedCount > 0) arcs.push(arc);
   }
-  return arcs;
+  return { arcs, recorded };
 }
 
 function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
@@ -272,6 +290,8 @@ function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
 export interface RouteData {
   arcs: ArcDatum[];
   points: PointDatum[];
+  /** Recorded flights' stretches (forgejo#312); absent or empty draws none. */
+  recorded?: RecordedRouteDatum[];
 }
 
 export function buildRouteData(
@@ -284,7 +304,7 @@ export function buildRouteData(
   // drives width; the user's `colorConfig` drives colour (see flightColor.ts).
   const records = aggregateAllRoutes(flights);
   return {
-    arcs: buildArcs(records, minRouteCount, colorConfig),
+    ...buildArcs(records, minRouteCount, colorConfig),
     points: buildAirportPoints(flights),
   };
 }
@@ -337,7 +357,7 @@ export function createRoutesLayers(
    */
   colorConfig: FlightColorConfig = DEFAULT_FLIGHT_COLOR_CONFIG
 ): Layer[] {
-  const { arcs, points } = routeData;
+  const { arcs, points, recorded = [] } = routeData;
   const {
     markerColor,
     markerSizeScale = 1,
@@ -504,6 +524,22 @@ export function createRoutesLayers(
           }),
         ];
 
+  // Recorded flights (forgejo#312), on the surface in either shape. Only when
+  // there are any, so a logbook without recordings keeps its layer stack.
+  const recordedLayers: Layer[] =
+    recorded.length > 0
+      ? [
+          createRecordedRoutesLayer(recorded, {
+            widthPx: routeWidthPx,
+            widthScale: arcWidthScale,
+            selectedIds,
+            highlightColor: HIGHLIGHT_COLOR,
+            dimAlpha: DIM_ALPHA,
+            onFlightClick,
+          }),
+        ]
+      : [];
+
   // Inner ring — close to the airport dot
   const ringInnerLayer = new ScatterplotLayer<PointDatum>({
     id: "routes-ring-inner",
@@ -601,5 +637,5 @@ export function createRoutesLayers(
 
   // Render order: routes first (arcs or the flat path), then the airport
   // visuals on top of them.
-  return [...routeLayers, ringInnerLayer, ringOuterLayer, dotLayer, labelLayer];
+  return [...routeLayers, ...recordedLayers, ringInnerLayer, ringOuterLayer, dotLayer, labelLayer];
 }

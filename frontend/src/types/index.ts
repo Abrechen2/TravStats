@@ -567,6 +567,8 @@ export interface GeoJSONFeature {
     co2Kg?: number;
     seatClass?: string;
     durationMinutes?: number;
+    /** Recorded stretches (forgejo#312), merged in by `useRecordedFlightPaths`; absent = great circle. */
+    recordedPaths?: Array<Array<[number, number]>>;
   };
   geometry: {
     type: "LineString";

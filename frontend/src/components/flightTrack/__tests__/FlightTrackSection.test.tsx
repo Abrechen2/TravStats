@@ -4,12 +4,26 @@
  * as such — never passed off as "no recording".
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { FlightTrack } from "../../../types/flightTrack";
 
 const getTrackMock = vi.fn();
+const uploadMock = vi.fn();
+const deleteMock = vi.fn();
 vi.mock("../../../lib/api", () => ({
-  flightsApi: { getTrack: (...args: unknown[]) => getTrackMock(...args) },
+  flightsApi: {
+    getTrack: (...args: unknown[]) => getTrackMock(...args),
+    uploadTrackFile: (...args: unknown[]) => uploadMock(...args),
+    deleteTrack: (...args: unknown[]) => deleteMock(...args),
+  },
+}));
+// The upload is behind the `flightTrackUpload` beta key (forgejo#312).
+let betaOn = false;
+vi.mock("../../../hooks/useBetaFeatures", () => ({
+  useBetaFeatures: () => ({
+    betaFeaturesEnabled: betaOn,
+    isFeatureVisible: (key: string) => betaOn && key === "flightTrackUpload",
+  }),
 }));
 // The global mock returns bare keys; this one shows what was interpolated, so
 // the numbers the caption is built from can be asserted.
@@ -26,6 +40,9 @@ vi.mock("../FlightTrackMap", () => ({
 }));
 
 import FlightTrackSection from "../FlightTrackSection";
+
+const MUC = { lat: 48.3538, lon: 11.7861 };
+const ICN = { lat: 37.4602, lon: 126.4407 };
 
 const at = (utc: string, zone: string) => ({
   utc,
@@ -66,6 +83,9 @@ describe("FlightTrackSection", () => {
   // from beforeEach as the test's teardown, which would call the mock again.
   beforeEach(() => {
     getTrackMock.mockReset();
+    uploadMock.mockReset();
+    deleteMock.mockReset();
+    betaOn = false;
   });
 
   it("draws nothing for a flight without a recording", async () => {
@@ -101,5 +121,86 @@ describe("FlightTrackSection", () => {
     render(<FlightTrackSection flightId="f1" />);
     expect(await screen.findByText("flights:track.loadError")).toBeInTheDocument();
     expect(screen.queryByTestId("flight-track-map-stub")).not.toBeInTheDocument();
+  });
+
+  it("draws no upload and no comparison while the beta key is closed", async () => {
+    getTrackMock.mockResolvedValue(makeTrack());
+    render(<FlightTrackSection flightId="f1" departure={MUC} arrival={ICN} />);
+    await screen.findByTestId("flight-track-map-stub");
+    expect(screen.queryByTestId("flight-track-file")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("flight-track-comparison")).not.toBeInTheDocument();
+  });
+
+  describe("with the flightTrackUpload beta key (forgejo#312)", () => {
+    beforeEach(() => {
+      betaOn = true;
+    });
+
+    const pick = (name: string) => {
+      const file = new File(["<kml/>"], name, { type: "application/xml" });
+      fireEvent.change(screen.getByTestId("flight-track-file"), { target: { files: [file] } });
+      return file;
+    };
+
+    it("offers the upload on a flight without a recording, then shows what was stored", async () => {
+      getTrackMock.mockResolvedValueOnce(null).mockResolvedValueOnce(makeTrack({ source: "kml" }));
+      uploadMock.mockResolvedValue({});
+      render(<FlightTrackSection flightId="f1" />);
+      await screen.findByText("flights:track.uploadIntro");
+      const file = pick("export.kml");
+      await waitFor(() => expect(uploadMock).toHaveBeenCalledWith("f1", file, false));
+      expect(await screen.findByTestId("flight-track-map-stub")).toBeInTheDocument();
+      expect(screen.getByTestId("flight-track-caption").textContent).toContain(
+        'flights:track.captionFile {"distance"'
+      );
+      expect(screen.getByTestId("flight-track-caption").textContent).toContain('"format":"KML"');
+    });
+
+    it("says why a file was refused, in the reader's language", async () => {
+      getTrackMock.mockResolvedValue(null);
+      uploadMock.mockRejectedValue({
+        response: { status: 400, data: { code: "TRACK_FILE_UNREADABLE", error: "English prose" } },
+      });
+      render(<FlightTrackSection flightId="f1" />);
+      await screen.findByText("flights:track.uploadIntro");
+      pick("broken.gpx");
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "flights:track.errors.fileUnreadable"
+      );
+      expect(screen.queryByText("English prose")).not.toBeInTheDocument();
+    });
+
+    it("asks before a file replaces a stored recording, and sends replace only then", async () => {
+      getTrackMock.mockResolvedValue(makeTrack());
+      uploadMock.mockResolvedValue({});
+      render(<FlightTrackSection flightId="f1" />);
+      await screen.findByTestId("flight-track-map-stub");
+      const file = pick("new.gpx");
+      expect(uploadMock).not.toHaveBeenCalled();
+      fireEvent.click(await screen.findByRole("button", { name: "flights:track.replace" }));
+      await waitFor(() => expect(uploadMock).toHaveBeenCalledWith("f1", file, true));
+    });
+
+    it("removes the recording after asking", async () => {
+      getTrackMock.mockResolvedValueOnce(makeTrack()).mockResolvedValueOnce(null);
+      deleteMock.mockResolvedValue(1);
+      render(<FlightTrackSection flightId="f1" />);
+      fireEvent.click(await screen.findByRole("button", { name: "flights:track.remove" }));
+      expect(deleteMock).not.toHaveBeenCalled();
+      const buttons = await screen.findAllByRole("button", { name: "flights:track.remove" });
+      fireEvent.click(buttons[buttons.length - 1]);
+      await waitFor(() => expect(deleteMock).toHaveBeenCalledWith("f1"));
+      expect(await screen.findByText("flights:track.uploadIntro")).toBeInTheDocument();
+    });
+
+    it("sets the measured distance against the great circle", async () => {
+      getTrackMock.mockResolvedValue(makeTrack({ distanceKm: 9100 }));
+      render(<FlightTrackSection flightId="f1" departure={MUC} arrival={ICN} />);
+      const line = await screen.findByTestId("flight-track-comparison");
+      // MUC-ICN is ~8,500 km on the great circle: 9,100 km is +7 %.
+      expect(line.textContent).toContain('"flown":"9,100 ');
+      expect(line.textContent).toMatch(/"greatCircle":"8,5\d\d /);
+      expect(line.textContent).toContain('"difference":"+7"');
+    });
   });
 });

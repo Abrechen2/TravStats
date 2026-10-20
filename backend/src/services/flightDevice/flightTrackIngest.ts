@@ -36,8 +36,17 @@ export function pointsToParsedTrack(points: readonly FlightTrackPoint[]): Parsed
  * distinct positions after validation).
  */
 export function flightTrackColumns(points: readonly FlightTrackPoint[]) {
-  const parsed = splitAtLongSteps(pointsToParsedTrack(points), FLIGHT_TRACK_GAP_KM);
-  const ingested = ingestTrack(parsed);
+  return flightTrackColumnsFromParsed(pointsToParsedTrack(points));
+}
+
+/**
+ * The same columns from any parsed recording — the phone's points or a file
+ * (forgejo#312), so both sources go through ONE pipeline: holes marked first,
+ * then measured on the raw points, then simplified. Null without a time window
+ * or without two positions.
+ */
+export function flightTrackColumnsFromParsed(parsed: ParsedTrack) {
+  const ingested = ingestTrack(splitAtLongSteps(parsed, FLIGHT_TRACK_GAP_KM));
   if (!ingested) return null;
   const {
     startedAt,
@@ -60,3 +69,5 @@ export function flightTrackColumns(points: readonly FlightTrackPoint[]) {
     elevations,
   };
 }
+
+export type FlightTrackColumns = NonNullable<ReturnType<typeof flightTrackColumnsFromParsed>>;
