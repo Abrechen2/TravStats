@@ -1,6 +1,7 @@
 import {
   DEFAULT_PAGE,
   MOVED_TO_ADMIN,
+  REMOVED_PAGES,
   SETTINGS_PAGES,
   canonicalSection,
   findPage,
@@ -50,7 +51,12 @@ export interface SettingsLinkInput {
 /** The canonical address for a personal settings link. */
 export function resolveSettingsLink(input: SettingsLinkInput): string {
   const { isAdmin, isReachable } = input;
-  const raw = input.section ? canonicalSection(input.section) : null;
+  // A removed page named without a section stands for the section that took
+  // its content — as the page itself or, pre-2.7, as `?tab=`.
+  const removedPage = input.page ?? input.tab;
+  const fromRemoved = removedPage ? lookup(REMOVED_PAGES, removedPage) : undefined;
+  const section = input.section ?? fromRemoved ?? null;
+  const raw = section ? canonicalSection(section) : null;
   const reachable = (p: SettingsPageDef | undefined): SettingsPageDef | undefined =>
     p && isReachable(p) ? p : undefined;
   const named = reachable(findPage(input.page));

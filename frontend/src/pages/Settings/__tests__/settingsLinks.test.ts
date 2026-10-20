@@ -113,14 +113,31 @@ describe("old personal settings links", () => {
     ["general", "/settings/account"],
     ["flight", "/settings/flight"],
     ["cruise", "/settings/cruise"],
-    ["lodging", "/settings/account"],
+    ["lodging", "/settings/account?section=lodgingPreferences"],
   ])("lands a bare ?tab=%s on %s", (tab, target) => {
     expect(settings({ tab })).toBe(target);
   });
 
+  /** Pages that no longer exist, and the section that took their content. */
+  const REMOVED_PAGES: Record<string, { admin: string; user: string }> = {
+    // Its one section, the geocoder, moved to Administration › Instanz.
+    lodging: {
+      admin: "/admin/instance?section=geocoder",
+      user: "/settings/account?section=lodgingPreferences",
+    },
+  };
+
   it.each(OLD_GROUPS.map((g) => [g]))("keeps /settings/%s working as a page", (group) => {
-    const target = settings({ page: group });
-    expect(target).toBe(group === "lodging" ? "/settings/account" : `/settings/${group}`);
+    const removed = REMOVED_PAGES[group];
+    expect(settings({ page: group })).toBe(removed ? removed.user : `/settings/${group}`);
+    expect(settings({ page: group, isAdmin: true })).toBe(
+      removed ? removed.admin : `/settings/${group}`
+    );
+  });
+
+  it("covers every page the old tables had that today's has not", () => {
+    const today = new Set(SETTINGS_PAGES.map((p) => p.id as string));
+    expect(OLD_GROUPS.filter((g) => !today.has(g))).toEqual(Object.keys(REMOVED_PAGES));
   });
 
   it("answers every section of today's table with its own page", () => {

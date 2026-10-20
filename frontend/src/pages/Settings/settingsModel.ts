@@ -192,6 +192,15 @@ export const MOVED_TO_ADMIN: Readonly<Record<string, { page: string; section: st
   lodgingPreferences: { page: "instance", section: "geocoder" },
 };
 
+/**
+ * Pages that no longer exist, and the section that took their content: a
+ * bookmark of the page alone still lands on what it showed. "Unterkünfte"
+ * held only the geocoder, which moved to Administration › Instanz.
+ */
+export const REMOVED_PAGES: Readonly<Record<string, string>> = {
+  lodging: "lodgingPreferences",
+};
+
 /** The section an old id now answers to, or the id itself. */
 export function canonicalSection(raw: string): string {
   return lookup(SECTION_ALIASES, raw) ?? raw;
