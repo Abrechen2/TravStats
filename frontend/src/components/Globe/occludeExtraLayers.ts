@@ -11,16 +11,23 @@
 // `DECKGL_FILTER_COLOR`, which every core layer supports, and its own header
 // names PathLayer, ColumnLayer and IconLayer.
 
-import type { Layer } from "@deck.gl/core";
+import type { Layer, PickingInfo } from "@deck.gl/core";
 import type {
   EarthOcclusionExtension,
   EarthOcclusionExtensionProps,
 } from "./EarthOcclusionExtension";
 
+/**
+ * `onHover` is the globe's tooltip for the caller's layers: they arrive built
+ * for both maps and carry no hover of their own, so before forgejo#323 a rail
+ * line, a ferry or a tour answered a hover on the flat map and nothing on the
+ * globe. It is given only to a layer without its own `onHover`.
+ */
 export function occludeExtraLayers(
   layers: readonly Layer[],
   ext: EarthOcclusionExtension,
-  props: EarthOcclusionExtensionProps
+  props: EarthOcclusionExtensionProps,
+  onHover?: (info: PickingInfo) => void
 ): readonly Layer[] {
   if (layers.length === 0) return layers;
   return layers.map((layer) => {
@@ -31,9 +38,15 @@ export function occludeExtraLayers(
     const existing = (layer.props.extensions ?? []) as unknown[];
     // Already occluding: cloning it in anyway would compile the same
     // injection twice for no change on screen.
-    if (existing.includes(ext)) return layer;
+    const hover = onHover && layer.props.pickable && !layer.props.onHover ? { onHover } : {};
+    if (existing.includes(ext)) {
+      return Object.keys(hover).length > 0
+        ? layer.clone(hover as Parameters<Layer["clone"]>[0])
+        : layer;
+    }
     return layer.clone({
       ...props,
+      ...hover,
       extensions: [...existing, ext],
     } as Parameters<Layer["clone"]>[0]);
   });

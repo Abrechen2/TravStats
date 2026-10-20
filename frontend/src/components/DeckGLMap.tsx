@@ -341,21 +341,21 @@ export function DeckGLMap({
       map.off("style.load", reapply);
     };
   }, [mapLoaded]);
-  // Zoom is read from MapGL viewState on every move so layers can hide
-  // labels / decimate symbols at low zoom. Updated via the move handler
-  // to avoid an extra render path.
+  // Zoom from the move handler, so layers can hide labels at low zoom.
   const [zoom, setZoom] = useState<number>(initialViewState.zoom ?? 2);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [playing, setPlaying] = useState<boolean>(false);
   const deckClickedRef = useRef(false);
+  // A layer the tabs hand in (forgejo#323) cannot set the guard itself.
+  const markDeckClick = useCallback((info: PickingInfo): void => {
+    if (info.object) deckClickedRef.current = true;
+  }, []);
 
   // Real sea-route geometry per cruise, fetched lazily after mount; the arcs
   // layer draws a straight chord until an entry lands here.
   const cruiseGeometry = useCruiseGeometry(cruises);
 
-  // Per-field selectors. Bare `useFlightSelectionStore()` would re-render
-  // the map on every field change in the store; with selectors we only
-  // re-render when the specific field this component reads changes.
+  // Per-field selectors, so only a change to a field read here re-renders.
   const selectedIds = useFlightSelectionStore((s) => s.selectedIds);
   const selectedFlights = useFlightSelectionStore((s) => s.selectedFlights);
   const clearSelection = useFlightSelectionStore((s) => s.clearSelection);
@@ -736,8 +736,7 @@ export function DeckGLMap({
     handlePlaceClick,
   ]);
 
-  // No 3D modes remain — lighting effect is unused but kept as empty array for
-  // the DeckGLOverlay API.
+  // No 3D modes remain — an empty effect list for the DeckGLOverlay API.
   const effects: LightingEffect[] = [];
 
   // deck.gl's own `getTooltip` is no longer wired: it can only be styled
@@ -834,6 +833,7 @@ export function DeckGLMap({
             layers={[...layers, ...pulseLayers, ...planeLayers]}
             effects={effects}
             onHover={handleDeckHover}
+            onClick={markDeckClick}
           />
         )}
         {!webgl2Available && visMode === "routes" && (

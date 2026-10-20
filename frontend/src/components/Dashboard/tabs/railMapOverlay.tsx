@@ -12,8 +12,11 @@ import {
 import { buildStationLabelLayers, type StationLabelGroup } from "../../layers/stationLabelsLayer";
 import type { LabelsMode } from "../../map/labelPriority";
 import { hexToRgb } from "../../../lib/domainColor";
+import { journeyFromRail } from "../../map/cards/journeys/journeyNormalize";
+import { withJourneyCards } from "../../map/cards/journeys/journeyLayerCards";
 import { legendRow, type LegendRowFn } from "./allTabLegendRows";
 import { useDashboardRail } from "../../../hooks/useDashboardRail";
+import type { RailJourney } from "../../../types/rail";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import { useDashboardFilterStore } from "../../../store/dashboardFilterStore";
 import { useOverlayAppearance } from "../../../store/overlayAppearanceStore";
@@ -46,7 +49,7 @@ const DEFAULT_RAIL_STYLE: RailMapStyle = { lineWidth: 1, stationSize: 1, labelsM
  * colour, so a filtered-out domain names no station.
  */
 export function buildRailMapLayers(
-  journeys: readonly RailPathSource[],
+  journeys: readonly (RailPathSource & Partial<RailJourney>)[],
   colorHex: string,
   onGlobe: boolean,
   idPrefix = "dashboard-rail",
@@ -65,7 +68,8 @@ export function buildRailMapLayers(
     idPrefix,
     onGlobe,
   });
-  return [...lines, ...labels];
+  // Every line and station answers a hover and a click (forgejo#323).
+  return [...withJourneyCards(lines, journeys.map(journeyFromRail), color), ...labels];
 }
 
 /** The rail style the user set in the map panel, memoised for a layer `useMemo`. */

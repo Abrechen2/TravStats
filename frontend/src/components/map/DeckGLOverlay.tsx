@@ -33,9 +33,22 @@ interface DeckOverlayProps {
    */
   getTooltip?: ReturnType<typeof createMarkerTooltip>;
   onHover: (info: PickingInfo) => void;
+  /**
+   * Any click deck.gl picked an object for, after the layer's own `onClick`.
+   * The flat map uses it to tell its background-click handler that a layer
+   * handled the click — the layers handed in by the tabs (forgejo#323) cannot
+   * reach the map's guard themselves.
+   */
+  onClick?: (info: PickingInfo) => void;
 }
 
-export function DeckGLOverlay({ layers, effects, getTooltip, onHover }: DeckOverlayProps): null {
+export function DeckGLOverlay({
+  layers,
+  effects,
+  getTooltip,
+  onHover,
+  onClick,
+}: DeckOverlayProps): null {
   const { current: map } = useMap();
   // Issue #247: the pointer must say what is clickable. deck.gl's own
   // `getCursor` cannot do it here — MapboxOverlay mounts the deck canvas with
@@ -53,12 +66,20 @@ export function DeckGLOverlay({ layers, effects, getTooltip, onHover }: DeckOver
         pickingRadius: 5,
         getTooltip,
         onHover: hoverWithCursor,
+        onClick,
       }),
     { position: "top-left" }
   );
   // Push getTooltip on every render too so language switches propagate
   // — MapboxOverlay caches the constructor's getTooltip otherwise. `onHover`
   // rides along for the same reason.
-  overlay.setProps({ layers, effects, pickingRadius: 5, getTooltip, onHover: hoverWithCursor });
+  overlay.setProps({
+    layers,
+    effects,
+    pickingRadius: 5,
+    getTooltip,
+    onHover: hoverWithCursor,
+    onClick,
+  });
   return null;
 }

@@ -499,7 +499,7 @@ export function AllTab(): JSX.Element {
   // "journey" a few lines up.
   // Rail, bus, ferry and rentals beside the tours, each behind its own gates and filter row.
   const transport = useTransportOverlays(showTours, domainFilter.isVisible, visMode === "globe", t);
-  const tourDeck = useTourDeckLayers(tourPathData, visMode === "globe");
+  const tourDeck = useTourDeckLayers(tourPathData, visMode === "globe", dashboardTours.tours);
   const tourLayers = useMemo<Layer[]>(
     () => [...tourDeck, ...transport.layers],
     [tourDeck, transport.layers]

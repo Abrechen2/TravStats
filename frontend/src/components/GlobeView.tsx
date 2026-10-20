@@ -1123,11 +1123,10 @@ export default function GlobeView({
         showNight,
       }),
       // Appended, never merged into buildGlobeLayers itself -- these are the
-      // caller's own layers (e.g. dashboard-wide tour paths), not part of
-      // what this component knows how to build. They DO get the occlusion
-      // extension every globe-built layer carries, or a tour on the far side
-      // of the sphere draws straight through it.
-      ...occludeExtraLayers(extraLayers, occlusionExt, occlusionProps),
+      // caller's own layers (e.g. dashboard-wide tour paths). They DO get the
+      // occlusion extension every globe-built layer carries, or a tour on the
+      // far side of the sphere draws through it — and the shared tooltip.
+      ...occludeExtraLayers(extraLayers, occlusionExt, occlusionProps, onPinHover),
     ],
     [
       arcsData,

@@ -49,6 +49,7 @@ import {
   TripBody,
   type BodyCommonProps,
 } from "./cardBodies";
+import { JourneyBody, JourneyHeading, isJourneyPinned } from "./journeys/journeyBodies";
 
 interface PinnedCardProps {
   pinned: MapPinned;
@@ -96,6 +97,8 @@ export function PinnedCard({
     "places",
     "specialFlights",
     "cruise",
+    "rail",
+    "trips",
   ]);
   const locale = i18n.language || "de";
 
@@ -183,6 +186,7 @@ export function PinnedCard({
       {pinned.kind === "place" && (
         <PlaceBody data={pinned.data} locale={locale} t={t} onPlaceOpen={onPlaceOpen} />
       )}
+      {isJourneyPinned(pinned) && <JourneyBody pinned={pinned} locale={locale} t={t} />}
     </div>
   );
 }
@@ -190,6 +194,7 @@ export function PinnedCard({
 // ─── Heading (Tier 1) ─────────────────────────────────────────────
 
 function Heading({ pinned, t }: { pinned: MapPinned; t: TFn }): JSX.Element {
+  if (isJourneyPinned(pinned)) return <JourneyHeading pinned={pinned} t={t} />;
   switch (pinned.kind) {
     case "arc":
       return (

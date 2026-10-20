@@ -5,6 +5,27 @@ import { toPortLabel } from "../map/portLabel";
 import { declutterByDistance, pickLabelled, type LabelsMode } from "../map/labelPriority";
 import { markerDotRadiusProps } from "./markerDotStyle";
 import { isCountableCruise } from "../../shared/cruiseCounting";
+import { useMapCardSelectionStore } from "../../store/mapCardSelectionStore";
+
+/**
+ * A port click opens the port card the globe already had (forgejo#323: on the
+ * flat map a port answered a hover and nothing else). Keyed by NAME, which is
+ * what `getPortStats` matches a stop on when the datum carries no UN/LOCODE.
+ */
+function selectPort(d: PortDatum): void {
+  useMapCardSelectionStore.getState().select({
+    kind: "port",
+    data: {
+      iata: d.name,
+      name: d.name,
+      city: d.city,
+      country: d.country,
+      size: d.visits,
+      lastVisit: d.lastVisit,
+    },
+    anchorLngLat: [d.position[0], d.position[1]],
+  });
+}
 
 interface PortDatum {
   position: [number, number];
@@ -193,6 +214,9 @@ export function createCruisePortsLayer(
     getLineWidth: 1,
     stroked: true,
     pickable: true,
+    onClick: ({ object }: { object?: PortDatum }) => {
+      if (object) selectPort(object);
+    },
   });
 
   // Priority label reveal: the most-visited ports keep their label even

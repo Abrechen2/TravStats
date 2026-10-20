@@ -97,7 +97,7 @@ export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Eleme
   const lodgingHex = colorOf("lodging");
   const roadtripHex = colorOf("roadtrip");
   // Widths and the station size come from the map panel (forgejo#198).
-  const tourDeck = useTourDeckLayers(tourPathData, visMode === "globe");
+  const tourDeck = useTourDeckLayers(tourPathData, visMode === "globe", dashboardTours.tours);
   const { roadtripStationSize } = useOverlayAppearance();
   const tourLayers = useMemo<Layer[]>(() => {
     const altitude = visMode === "globe" ? TOUR_PATH_GLOBE_ALTITUDE_M : 0;

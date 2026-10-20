@@ -30,6 +30,8 @@ export const TOUR_RGB: [number, number, number] = [
 
 export interface TourPathDatum {
   legId: string;
+  /** The tour or roadtrip the leg belongs to — what its map card describes (forgejo#323). */
+  routeId: string;
   memberIds?: string[];
   count?: number;
   path: Array<[number, number]>;
@@ -61,6 +63,7 @@ export function buildTourPaths(
       if (path.length < 2) continue;
       out.push({
         legId: f.properties.legId,
+        routeId: g.routeId,
         path,
         color: g.rgb ?? TOUR_RGB,
         isPlaceholder: f.properties.source === "straight",

@@ -1,9 +1,17 @@
 import { groupMapData, pathIdentity } from "../layers/routeAggregation";
-import { PathLayer } from "@deck.gl/layers";
+import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
+import {
+  STATION_DOT_OUTLINE_PX,
+  STATION_DOT_OUTLINE_RGBA,
+  STATION_DOT_RADIUS_PX,
+} from "../layers/markerDotStyle";
 import type { Layer } from "@deck.gl/core";
 import type { TripBusJourney } from "../../types/bus";
 import { hexToRgb } from "../../lib/domainColor";
 import { buildStationLabelLayers } from "../layers/stationLabelsLayer";
+import { endKey } from "../map/cards/journeys/journeyStats";
+import { journeyFromBus } from "../map/cards/journeys/journeyNormalize";
+import { withJourneyCards } from "../map/cards/journeys/journeyLayerCards";
 
 export interface BusPathDatum {
   id: string;
@@ -60,6 +68,27 @@ export function busPaths(rides: readonly TerminalRideLine[]): BusPathDatum[] {
   );
 }
 
+export interface TerminalDatum {
+  position: [number, number];
+}
+
+/** One dot per terminal place (to ~100 m, `endKey`), cancelled rides left out. */
+export function terminalPoints(rides: readonly TerminalRideLine[]): TerminalDatum[] {
+  const byKey = new Map<string, TerminalDatum>();
+  for (const ride of rides) {
+    if (ride.status === "cancelled") continue;
+    for (const [lon, lat] of [
+      [ride.depLon, ride.depLat],
+      [ride.arrLon, ride.arrLat],
+    ] as const) {
+      if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue;
+      const key = endKey({ lat, lon });
+      if (!byKey.has(key)) byKey.set(key, { position: [lon, lat] });
+    }
+  }
+  return [...byKey.values()];
+}
+
 /**
  * `colorHex` is the bus colour from the domain colour store — never a constant
  * here, or a user's own bus colour would show everywhere but the trip map.
@@ -79,7 +108,7 @@ export function buildBusLayers(rides: readonly TripBusJourney[], colorHex: strin
   if (data.length === 0) return [];
   const color = hexToRgb(colorHex);
   const [r, g, b] = color;
-  return [
+  const lines: Layer[] = [
     new PathLayer<BusPathDatum>({
       id: "trip-bus-rides",
       data,
@@ -89,8 +118,25 @@ export function buildBusLayers(rides: readonly TripBusJourney[], colorHex: strin
       widthUnits: "pixels",
       capRounded: true,
       jointRounded: true,
-      pickable: false,
+      pickable: true,
     }),
+    new ScatterplotLayer<TerminalDatum>({
+      id: "trip-bus-terminals",
+      data: terminalPoints(rides),
+      getPosition: (d) => d.position,
+      getFillColor: [r, g, b, 255],
+      getLineColor: STATION_DOT_OUTLINE_RGBA,
+      lineWidthUnits: "pixels",
+      getLineWidth: STATION_DOT_OUTLINE_PX,
+      stroked: true,
+      radiusUnits: "pixels",
+      getRadius: STATION_DOT_RADIUS_PX,
+      pickable: true,
+    }),
+  ];
+  // The rides and their terminals answer a hover and a click (forgejo#323).
+  return [
+    ...withJourneyCards(lines, rides.map(journeyFromBus), color),
     ...buildStationLabelLayers([{ rides, color }], {
       labelsMode: "important",
       idPrefix: "trip-bus",

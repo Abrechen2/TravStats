@@ -176,6 +176,7 @@ describe("rental: width, marker size and the line switch reach layer and legend"
 describe("tours and roadtrips: each kind follows its own width slider", () => {
   const datum = (isRoadtrip: boolean, isPlaceholder = false): TourPathDatum => ({
     legId: "l",
+    routeId: "r",
     path: [
       [8, 58],
       [5, 60],
