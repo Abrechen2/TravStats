@@ -9,12 +9,18 @@
   },
   "annotate": {
     "title": "Datei annotieren",
-    "description": "Lade eine E-Mail oder einen Boarding Pass hoch und markiere die Felder. TravStats leitet automatisch ein Regex-Template ab.",
+    "description": "Lade eine E-Mail, einen Boarding Pass oder einen Screenshot hoch und markiere die Felder. TravStats leitet daraus ein Template ab.",
     "emailButton": "E-Mail hochladen",
     "emailFormats": ".eml, .msg, .txt",
     "boardingPassButton": "Boarding Pass hochladen",
     "boardingPassFormats": ".png, .jpg, .jpeg",
-    "uploadError": "Datei konnte nicht hochgeladen werden."
+    "uploadError": "Datei konnte nicht hochgeladen werden.",
+    "screenshotButton": "Screenshot hochladen",
+    "screenshotFormats": ".png, .jpg, .webp — Text wird per Texterkennung gelesen",
+    "uploadErrors": {
+      "TRAINING_IMAGE_UNREADABLE": "Diese Datei ließ sich nicht als Bild lesen. Ein PNG-, JPEG- oder WebP-Screenshot funktioniert in der Regel.",
+      "TRAINING_IMAGE_NO_TEXT": "Auf diesem Screenshot wurde fast kein Text erkannt, deshalb wurde nichts gespeichert. Ein schärferer Screenshot des ganzen Bildschirms hilft meistens."
+    }
   },
   "myTemplates": {
     "empty": "Noch keine eigenen Templates",

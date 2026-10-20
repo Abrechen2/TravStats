@@ -12,7 +12,7 @@ import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { rejectDemo } from "../middleware/demoGuard";
-import { uploadReceiptLimiter } from "../middleware/rateLimit";
+import { boardingPassParseLimiter, uploadReceiptLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
 import { UnsupportedUploadTypeError } from "../middleware/upload";
 import { prisma } from "../db";
@@ -21,6 +21,7 @@ import { deriveTemplateFromAnnotation } from "../services/parsers/userTemplates/
 import { extractEmailFromFile, type ExtractedEmail } from "../services/emailExtractor";
 import { senderAddressIn, subjectIn } from "../services/parsers/userTemplates/sampleHeaders";
 import { scoreDocument } from "../services/parsing/documentDomain";
+import { isScreenshotFile, readScreenshotText } from "../services/training/screenshotText";
 import {
   WORKSHOP_DOMAINS,
   isLabelOfDomain,
@@ -242,10 +243,62 @@ function misalignedMark(annotations: Record<string, unknown>): string | null {
   return null;
 }
 
+/** The upload kinds: a mail, a boarding pass image, a screenshot read by OCR (forgejo#309). */
+const UPLOAD_TYPES = ["email", "boarding_pass", "screenshot"] as const;
+type UploadType = (typeof UPLOAD_TYPES)[number];
+
+const isUploadType = (value: unknown): value is UploadType =>
+  typeof value === "string" && (UPLOAD_TYPES as readonly string[]).includes(value);
+
 function classifyUpload(type: string, fullText: string): WorkshopDomain {
-  if (type !== "email" || fullText.length === 0) return "flight";
+  if (type === "boarding_pass" || fullText.length === 0) return "flight";
   const detected = scoreDocument(fullText).domain;
   return isWorkshopDomain(detected) ? detected : "flight";
+}
+
+/**
+ * A screenshot spends a Tesseract worker, so it draws on the OCR bucket
+ * `/parse-image` uses as well as the upload one — OCR work per user is what
+ * needs limiting, whichever route asks for it. The type is only known after
+ * multer has read the form; a refused request's file is removed again.
+ */
+function screenshotOcrLimiter(req: AuthRequest, res: Response, next: NextFunction): void {
+  if (req.body?.type !== "screenshot") {
+    next();
+    return;
+  }
+  const filePath = req.file?.path;
+  res.on("finish", () => {
+    if (res.statusCode === 429 && filePath) fs.rmSync(filePath, { force: true });
+  });
+  void boardingPassParseLimiter(req, res, next);
+}
+
+/** Write the sample row and answer what the upload response carries. */
+async function createSample(
+  userId: string,
+  type: UploadType,
+  originalFile: string,
+  annotations: Record<string, unknown>,
+  identity: SampleIdentity
+): Promise<{ id: string; type: string; status: string; domain: string }> {
+  const fullText = typeof annotations.fullText === "string" ? annotations.fullText : "";
+  const record = await prisma.trainingData.create({
+    data: {
+      userId,
+      type,
+      domain: classifyUpload(type, fullText),
+      ...identity,
+      originalFile,
+      annotations: annotations as Parameters<
+        typeof prisma.trainingData.create
+      >[0]["data"]["annotations"],
+      extractedData: [],
+      status: "pending",
+      tags: [],
+    },
+  });
+  return { id: record.id, type: record.type, status: record.status, domain: record.domain };
 }
 
 // POST /api/v1/training/upload
@@ -263,17 +316,41 @@ router.post(
   rejectDemo,
   uploadReceiptLimiter,
   trainingUpload.single("file"),
+  screenshotOcrLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const userId = req.userId!;
-      const type = req.body.type as string;
+      const type: unknown = req.body.type;
 
       if (!req.file) {
         throw new AppError("No file uploaded", 400);
       }
-      if (type !== "email" && type !== "boarding_pass") {
+      if (!isUploadType(type)) {
         fs.unlinkSync(req.file.path);
-        throw new AppError('type must be "email" or "boarding_pass"', 400);
+        throw new AppError('type must be "email", "boarding_pass" or "screenshot"', 400);
+      }
+      if (type === "screenshot") {
+        // OCR text or a coded refusal — never an empty sample. A refused
+        // screenshot leaves nothing behind on the data volume.
+        const filePath = req.file.path;
+        let fullText: string;
+        try {
+          if (!isScreenshotFile(req.file.originalname)) {
+            throw new AppError(
+              "A screenshot must be a PNG, JPEG or WebP image",
+              400,
+              "TRAINING_IMAGE_UNREADABLE"
+            );
+          }
+          fullText = await readScreenshotText(fs.readFileSync(filePath));
+        } catch (err) {
+          fs.rmSync(filePath, { force: true });
+          throw err;
+        }
+        const record = await createSample(userId, type, filePath, { fullText }, {});
+        logger.info({ operation: "training_upload", id: record.id, type });
+        res.json(record);
+        return;
       }
 
       // Pre-populate annotations with file content so annotation components can render it
@@ -302,33 +379,9 @@ router.post(
         );
       }
 
-      const fullTextForDomain =
-        typeof initialAnnotations.fullText === "string" ? initialAnnotations.fullText : "";
-      const domain = classifyUpload(type, fullTextForDomain);
-
-      const record = await prisma.trainingData.create({
-        data: {
-          userId,
-          type,
-          domain,
-          ...identity,
-          originalFile: req.file.path,
-          annotations: initialAnnotations as Parameters<
-            typeof prisma.trainingData.create
-          >[0]["data"]["annotations"],
-          extractedData: [],
-          status: "pending",
-          tags: [],
-        },
-      });
-
+      const record = await createSample(userId, type, req.file.path, initialAnnotations, identity);
       logger.info({ operation: "training_upload", id: record.id, type });
-      res.json({
-        id: record.id,
-        type: record.type,
-        status: record.status,
-        domain: record.domain,
-      });
+      res.json(record);
     } catch (error) {
       next(error);
     }

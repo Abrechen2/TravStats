@@ -1,5 +1,8 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { trainingApi } from "../lib/api";
+import type { TrainingUploadType } from "../lib/api/training";
+import { apiErrorMachineCode } from "../lib/apiError";
+import UploadTile from "../components/Parser/UploadTile";
 import { logger } from "../lib/logger";
 import { useAuthStore } from "../store/authStore";
 import AppShell from "../components/ui/AppShell";
@@ -14,7 +17,12 @@ import type { WorkshopDomain } from "../shared/annotationLabels";
 import type { TemplateDerivation } from "../lib/api/types";
 import { useToastStore } from "../store/toastStore";
 import { useTranslation } from "../hooks/useTranslation";
-import { Icon } from "../components/ui/Icon";
+
+/** The codes a refused screenshot answers with (forgejo#309), each worded in DE/EN. */
+const SCREENSHOT_UPLOAD_ERRORS: ReadonlySet<string> = new Set([
+  "TRAINING_IMAGE_UNREADABLE",
+  "TRAINING_IMAGE_NO_TEXT",
+]);
 
 type Tab = "annotate" | "my-templates" | "community" | "parse-logs";
 
@@ -32,10 +40,7 @@ export default function ParserPage(): JSX.Element {
   /** The domain the annotation is FOR — the classifier's answer until the
    *  user corrects it (forgejo#124 phase 6). */
   const [domain, setDomain] = useState<WorkshopDomain>("flight");
-  const emailFileInputRef = useRef<HTMLInputElement>(null);
-  const boardingPassFileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileUpload = async (file: File, type: "email" | "boarding_pass"): Promise<void> => {
+  const handleFileUpload = async (file: File, type: TrainingUploadType): Promise<void> => {
     try {
       const result = await trainingApi.upload(file, type);
       // A boarding pass is a flight by construction; only mail is classified,
@@ -45,7 +50,15 @@ export default function ParserPage(): JSX.Element {
       setDomain(detected);
     } catch (error) {
       logger.error({ err: error }, "ParserPage: upload failed");
-      addToast("error", t("parser:annotate.uploadError"));
+      // A screenshot the OCR could not read says so in the reader's language;
+      // the server's English sentence never reaches the screen.
+      const code = apiErrorMachineCode(error);
+      addToast(
+        "error",
+        code && SCREENSHOT_UPLOAD_ERRORS.has(code)
+          ? t(`parser:annotate.uploadErrors.${code}`)
+          : t("parser:annotate.uploadError")
+      );
     }
   };
 
@@ -157,59 +170,28 @@ export default function ParserPage(): JSX.Element {
                   {t("parser:annotate.title")}
                 </h2>
                 <p className="t-caption mb-5">{t("parser:annotate.description")}</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <input
-                      ref={emailFileInputRef}
-                      type="file"
-                      accept=".eml,.msg,.txt"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) void handleFileUpload(file, "email");
-                      }}
-                    />
-                    <button
-                      onClick={() => emailFileInputRef.current?.click()}
-                      className="flex w-full flex-col items-center gap-2 rounded-[var(--ts-radius-card)] border border-dashed border-[var(--ts-border)] p-6 text-center transition-colors hover:border-[var(--ts-accent)]"
-                    >
-                      <span style={{ color: "var(--ts-accent)" }}>
-                        <Icon name="mail" size={24} />
-                      </span>
-                      <div style={{ fontWeight: 700, color: "var(--ts-text-bright)" }}>
-                        {t("parser:annotate.emailButton")}
-                      </div>
-                      <div className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
-                        {t("parser:annotate.emailFormats")}
-                      </div>
-                    </button>
-                  </div>
-                  <div>
-                    <input
-                      ref={boardingPassFileInputRef}
-                      type="file"
-                      accept=".png,.jpg,.jpeg,.webp"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) void handleFileUpload(file, "boarding_pass");
-                      }}
-                    />
-                    <button
-                      onClick={() => boardingPassFileInputRef.current?.click()}
-                      className="flex w-full flex-col items-center gap-2 rounded-[var(--ts-radius-card)] border border-dashed border-[var(--ts-border)] p-6 text-center transition-colors hover:border-[var(--ts-accent)]"
-                    >
-                      <span style={{ color: "var(--ts-accent)" }}>
-                        <Icon name="image" size={24} />
-                      </span>
-                      <div style={{ fontWeight: 700, color: "var(--ts-text-bright)" }}>
-                        {t("parser:annotate.boardingPassButton")}
-                      </div>
-                      <div className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
-                        {t("parser:annotate.boardingPassFormats")}
-                      </div>
-                    </button>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <UploadTile
+                    accept=".eml,.msg,.txt"
+                    icon="mail"
+                    title={t("parser:annotate.emailButton")}
+                    formats={t("parser:annotate.emailFormats")}
+                    onFile={(file) => void handleFileUpload(file, "email")}
+                  />
+                  <UploadTile
+                    accept=".png,.jpg,.jpeg,.webp"
+                    icon="image"
+                    title={t("parser:annotate.boardingPassButton")}
+                    formats={t("parser:annotate.boardingPassFormats")}
+                    onFile={(file) => void handleFileUpload(file, "boarding_pass")}
+                  />
+                  <UploadTile
+                    accept="image/png,image/jpeg,image/webp"
+                    icon="image"
+                    title={t("parser:annotate.screenshotButton")}
+                    formats={t("parser:annotate.screenshotFormats")}
+                    onFile={(file) => void handleFileUpload(file, "screenshot")}
+                  />
                 </div>
               </div>
             ) : (
@@ -219,7 +201,7 @@ export default function ParserPage(): JSX.Element {
                     ← {t("common:buttons.cancel")}
                   </button>
                 </div>
-                {uploadedFile.type === "email" ? (
+                {uploadedFile.type !== "boarding_pass" ? (
                   <div className="space-y-4">
                     <DomainPicker
                       value={domain}

@@ -25,15 +25,24 @@ registry.registerPath({
   method: "post",
   path: "/training/upload",
   summary: "Upload a document to improve parsing",
+  description:
+    "Multipart: `file` and `type` (`email`, `boarding_pass`, or `screenshot`). A screenshot " +
+    "(PNG, JPEG, WebP) is read by OCR and its text becomes the sample to mark; an image that " +
+    "is not readable answers `TRAINING_IMAGE_UNREADABLE`, one with almost no text " +
+    "`TRAINING_IMAGE_NO_TEXT` — no sample is kept in either case.",
   tags: parseTag,
-  responses: { 201: { description: "Uploaded" }, 400: badInput },
+  responses: {
+    201: { description: "Uploaded" },
+    400: badInput,
+    422: { description: "A screenshot the OCR read no usable text from", content: errorContent },
+  },
 });
 
 /** One row of the training list — the sample without its annotation blob. */
 const trainingSample = z.object({
   id: uuid,
   type: z
-    .enum(["email", "boarding_pass"])
+    .enum(["email", "boarding_pass", "screenshot"])
     .describe("The MEDIUM the sample is. `domain` beside it says what it is ABOUT."),
   // WORKSHOP_DOMAINS, not PARSER_SUPPORTED_DOMAINS: the workshop also
   // annotates PLACES, which no parse endpoint accepts, so the narrower list

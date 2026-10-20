@@ -9,12 +9,18 @@
   },
   "annotate": {
     "title": "Annotate file",
-    "description": "Upload an email or boarding pass and mark the fields. TravStats automatically derives a regex template.",
+    "description": "Upload an email, a boarding pass or a screenshot and mark the fields. TravStats derives a template from it.",
     "emailButton": "Upload email",
     "emailFormats": ".eml, .msg, .txt",
     "boardingPassButton": "Upload boarding pass",
     "boardingPassFormats": ".png, .jpg, .jpeg",
-    "uploadError": "Could not upload file."
+    "uploadError": "Could not upload file.",
+    "screenshotButton": "Upload screenshot",
+    "screenshotFormats": ".png, .jpg, .webp — text is read by OCR",
+    "uploadErrors": {
+      "TRAINING_IMAGE_UNREADABLE": "This file could not be read as an image. A PNG, JPEG or WebP screenshot usually works.",
+      "TRAINING_IMAGE_NO_TEXT": "Almost no text was recognised on this screenshot, so nothing was saved. A sharper screenshot of the whole screen usually helps."
+    }
   },
   "myTemplates": {
     "empty": "No custom templates yet",

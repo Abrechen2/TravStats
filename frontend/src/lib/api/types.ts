@@ -192,7 +192,7 @@ export interface UserSettings {
 
 export interface TrainingDataEntry {
   id: string;
-  type: "email" | "boarding_pass";
+  type: "email" | "boarding_pass" | "screenshot";
   /**
    * Which KIND of document this sample is, classified on upload and
    * correctable by the user — forgejo#124 phase 6. `type` beside it is the
