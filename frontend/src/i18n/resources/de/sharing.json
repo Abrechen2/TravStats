@@ -411,7 +411,8 @@
         "unreadable_other": "{{count}} Fotos, die fehlen oder sich nicht lesen lassen",
         "overLimit_one": "{{count}} Foto über der Grenze von 12",
         "overLimit_other": "{{count}} Fotos über der Grenze von 12"
-      }
+      },
+      "itineraryHint": "Zeigt alle Einträge der Reise mit Ortszeiten – Flugnummern, Unterkünfte mit Adresse, Bahn, Bus, Fähre, Mietwagen, Kreuzfahrt-Häfen – und was gerade läuft. Nie Buchungsnummern, Sitz-, Zimmer- oder Kabinennummern, Preise, Dokumente, Notizen oder Mitreisende. Der Link endet spätestens 24 Stunden nach dem letzten Reisetag."
     },
     "fields": {
       "flight": {
@@ -433,7 +434,8 @@
         "costs": "Kosten",
         "companions": "Mitreisende",
         "photos": "Fotos (bis zu 12, ohne Ortsdaten)",
-        "notes": "Notizen (nur die als teilbar markierten, ohne Fotos und Koordinaten)"
+        "notes": "Notizen (nur die als teilbar markierten, ohne Fotos und Koordinaten)",
+        "itinerary": "Reiseplan (wer wann wo ist)"
       },
       "wrapped": {
         "owner": "Dein Vorname",
@@ -467,7 +469,26 @@
       "noNotes": "Keine teilbare Notiz an diesen Tagen",
       "moreNotes": "weitere nicht gezeigt",
       "notes_one": "{{count}} teilbare Notiz",
-      "notes_other": "{{count}} teilbare Notizen"
+      "notes_other": "{{count}} teilbare Notizen",
+      "itinerary": {
+        "title": "Reiseplan",
+        "empty": "Noch keine Einträge.",
+        "inProgress": "Jetzt",
+        "next": "Als Nächstes",
+        "atSea": "Seetag",
+        "day": "Tag {{n}}",
+        "kind": {
+          "flight": "Flug",
+          "stay": "Unterkunft",
+          "cruise": "Kreuzfahrt",
+          "rail": "Zug",
+          "bus": "Bus",
+          "ferry": "Fähre",
+          "rental": "Mietwagen",
+          "visit": "Besuch",
+          "stop": "Station"
+        }
+      }
     },
     "section": {
       "title": "Öffentliche Links",
@@ -500,7 +521,8 @@
       "expiry": "Das Ablaufdatum liegt nicht zwischen jetzt und 90 Tagen.",
       "notFound": "Das gibt es nicht (mehr).",
       "createFailed": "Der Link konnte nicht erstellt werden.",
-      "revokeFailed": "Der Link konnte nicht widerrufen werden."
+      "revokeFailed": "Der Link konnte nicht widerrufen werden.",
+      "tripEnded": "Diese Reise ist schon vorbei – für einen Reiseplan gibt es keinen Link mehr. Ohne Reiseplan geht es weiterhin."
     }
   }
 }

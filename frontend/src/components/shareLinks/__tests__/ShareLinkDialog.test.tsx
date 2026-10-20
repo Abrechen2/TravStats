@@ -174,4 +174,98 @@ describe("ShareLinkDialog", () => {
         .disabled
     ).toBe(true);
   });
+  it("offers the itinerary with what it shows and never shows, and previews the current entry in words (forgejo#302)", async () => {
+    const tv = (utc: string, local: string, zone: string, offset: string) => ({
+      utc,
+      zone,
+      offset,
+      local,
+      precision: "minute" as const,
+      zoneSource: "stored" as const,
+    });
+    api.preview.mockResolvedValue({
+      view: {
+        kind: "trip",
+        trip: {
+          itinerary: {
+            items: [
+              {
+                kind: "flight",
+                airline: "Lufthansa",
+                flightNumber: "LH400",
+                from: { code: "FRA", name: "Frankfurt" },
+                to: { code: "JFK", name: "New York JFK" },
+                departure: tv(
+                  "2030-06-01T12:00:00.000Z",
+                  "2030-06-01T14:00:00",
+                  "Europe/Berlin",
+                  "+02:00"
+                ),
+                arrival: tv(
+                  "2030-06-01T20:00:00.000Z",
+                  "2030-06-01T16:00:00",
+                  "America/New_York",
+                  "-04:00"
+                ),
+                phase: "inFlight",
+              },
+              {
+                kind: "stay",
+                name: "Hotel Hudson View",
+                address: "356 W 58th St",
+                city: "New York",
+                country: "US",
+                checkIn: { date: "2030-06-01", zone: "America/New_York", precision: "day" },
+                checkOut: { date: "2030-06-04", zone: "America/New_York", precision: "day" },
+                checkInAt: null,
+                checkOutAt: null,
+              },
+            ],
+            now: { index: 0, state: "inProgress" },
+          },
+        },
+      },
+      photosOmitted: null,
+    });
+    renderDialog("trip");
+    const box = await screen.findByRole("checkbox", {
+      name: "sharing:links.fields.trip.itinerary",
+    });
+    expect((box as HTMLInputElement).checked).toBe(false);
+    expect(box.getAttribute("aria-describedby")).toBe("share-link-itinerary-hint");
+    expect(screen.getByText("sharing:links.dialog.itineraryHint")).toBeTruthy();
+    await userEvent.click(box);
+    await waitFor(() =>
+      expect(api.preview).toHaveBeenLastCalledWith(
+        expect.objectContaining({ fields: expect.arrayContaining(["itinerary"]) })
+      )
+    );
+    const list = await screen.findByTestId("share-itinerary");
+    const entries = list.querySelectorAll("li");
+    expect(entries).toHaveLength(2);
+    expect(entries[0].getAttribute("aria-current")).toBe("step");
+    expect(entries[0].textContent).toContain("sharing:links.view.itinerary.inProgress");
+    expect(entries[0].textContent).toContain("LH400");
+    // On the place's clock, with its zone written out.
+    expect(entries[0].textContent).toContain("14:00 (Europe/Berlin · UTC+02:00)");
+    expect(entries[0].textContent).toContain("16:00 (America/New_York · UTC-04:00)");
+    expect(entries[1].getAttribute("aria-current")).toBeNull();
+    expect(entries[1].textContent).toContain("Hotel Hudson View");
+    expect(entries[1].textContent).toContain("356 W 58th St, New York, US");
+  });
+
+  it("says that the trip is over when an itinerary link is refused for it", async () => {
+    api.preview.mockResolvedValue({
+      view: { kind: "trip", trip: { name: "NY" } },
+      photosOmitted: null,
+    });
+    api.create.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 409, data: { code: "SHARE_LINK_TRIP_ENDED" } },
+    });
+    renderDialog("trip");
+    await screen.findByTestId("share-preview");
+    await userEvent.click(screen.getByRole("button", { name: "sharing:links.dialog.create" }));
+    expect(await screen.findByText("sharing:links.errors.tripEnded")).toBeTruthy();
+  });
 });
