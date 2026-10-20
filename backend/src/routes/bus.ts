@@ -42,6 +42,7 @@ import { fileReceipts, takeDocumentIds } from "../services/documents/documentSer
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
 import logger from "../utils/logger";
+import ticketRoutes from "./bus/tickets";
 import { railListSummary } from "../shared/listSummary";
 
 /**
@@ -150,6 +151,7 @@ function plainColumns(input: UpdateBusJourneyInput) {
 const router = Router();
 router.use(authenticate);
 router.use(requireWriteScope);
+router.use(ticketRoutes);
 
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

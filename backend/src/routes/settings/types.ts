@@ -101,6 +101,7 @@ export interface SettingsResponse extends SettingsDataJson {
   /** Inbox suggestion switches (forgejo#306), column-backed, nested here. */
   tripSuggestions: SuggestionSwitchesView["tripSuggestions"];
   staySuggestions: SuggestionSwitchesView["staySuggestions"];
+  tripRecording: SuggestionSwitchesView["tripRecording"];
   /**
    * READ-ONLY mirror of the instance-level beta gate (AdminSettings row).
    * It is NOT part of the user's own settings and deliberately absent from
@@ -177,6 +178,7 @@ export interface UserSettingsUpdateData {
   staySuggestionsEnabled?: boolean;
   staySuggestionsImmichEvidence?: boolean;
   staySuggestionsLlmPlaceClassification?: boolean;
+  tripRecordingEnabled?: boolean;
   /** `null` clears the override and returns the user to the instance default. */
   countryThreshold?: CountryTier | null;
   /** `null` clears the home country. */

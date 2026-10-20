@@ -2,7 +2,7 @@ import { prisma } from "../../../db";
 import { workshopEnvelopeSchema, type TemplateEnvelope } from "../templates/v2/envelope";
 
 /** The workshop domains whose user templates are stored as v2 envelopes. */
-export type V2WorkshopDomain = "cruise" | "place" | "package" | "rail" | "rental";
+export type V2WorkshopDomain = "cruise" | "place" | "package" | "rail" | "rental" | "bus" | "ferry";
 
 /**
  * A workshop template's envelope, read back out of `ParserTemplate.patterns`

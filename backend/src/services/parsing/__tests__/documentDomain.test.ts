@@ -8,8 +8,19 @@
  * "Hotel" — which is exactly the classifier we must not have.
  */
 
-import { scoreDocument, type DomainScore } from "../documentDomain";
+import {
+  DETECTABLE_DOMAINS,
+  EXPLICIT_ONLY_TARGETS,
+  scoreDocument,
+  type DomainScore,
+} from "../documentDomain";
 import { PARSER_SUPPORTED_DOMAINS, type ParserSupportedDomain } from "../../../shared/domains";
+import { deriveFerryTemplate } from "../../parsers/userTemplates/rideDeriver";
+import {
+  FERRY_SELECTIONS,
+  FERRY_SOURCE,
+  FERRY_SUBJECT,
+} from "../../parsers/userTemplates/__tests__/rideSamples";
 import {
   CRUISE_MAIL,
   DB_CONFIRMATION_SINGLE,
@@ -341,9 +352,9 @@ describe("scoreDocument — the candidate list is a usable offer to switch", () 
   it.each(documents)("%s: lists every supported domain exactly once", (_label, text) => {
     const result = scoreDocument(text);
 
-    expect(result.candidates).toHaveLength(PARSER_SUPPORTED_DOMAINS.length);
+    expect(result.candidates).toHaveLength(DETECTABLE_DOMAINS.length);
     expect(new Set(result.candidates.map((entry) => entry.domain))).toEqual(
-      new Set(PARSER_SUPPORTED_DOMAINS)
+      new Set(DETECTABLE_DOMAINS)
     );
   });
 
@@ -444,5 +455,24 @@ describe("scoreDocument — rail", () => {
     const detection = scoreDocument("Treffpunkt: vor dem Bahnhof, dann mit dem Zug weiter.");
     expect(candidate(detection.candidates, "rail").score).toBe(0);
     expect(detection.domain).toBe("flight");
+  });
+});
+
+describe("scoreDocument — bus and ferry are read only when asked for (forgejo#309)", () => {
+  it("never scores an explicit-only target, even when one of its templates matches", () => {
+    const derived = deriveFerryTemplate({
+      trainingDataId: "td-detect",
+      subject: FERRY_SUBJECT,
+      fullText: FERRY_SOURCE,
+      selections: FERRY_SELECTIONS,
+    });
+    if (!derived.ok) throw new Error(derived.refusal);
+    const result = scoreDocument(`${FERRY_SUBJECT}\n\n${FERRY_SOURCE}`, [derived.template]);
+
+    for (const domain of EXPLICIT_ONLY_TARGETS) {
+      expect(PARSER_SUPPORTED_DOMAINS).toContain(domain);
+      expect(result.domain).not.toBe(domain);
+      expect(result.candidates.map((c) => c.domain)).not.toContain(domain);
+    }
   });
 });

@@ -15,6 +15,7 @@ import type {
 } from "../services/parsers/userTemplates/types";
 import { senderAddressIn, subjectIn } from "../services/parsers/userTemplates/sampleHeaders";
 import { isWorkshopDomain } from "../shared/annotationLabels";
+import { exportTemplateForCommunity } from "../services/parsers/userTemplates/communityExportService";
 import logger from "../utils/logger";
 
 // No rate limiter: all four handlers are single indexed statements against the
@@ -42,6 +43,48 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       orderBy: { updatedAt: "desc" },
     });
     res.json({ templates });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/v1/parser-templates/:id/community-export (forgejo#309) — the
+ * template as a file for the template repository, personal data removed or
+ * the export refused. Nothing is sent anywhere: the client downloads the file
+ * and opens GitHub's "new file" page (`githubUrl`) for the user to propose it.
+ */
+router.get("/:id/community-export", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const outcome = await exportTemplateForCommunity(req.userId!, req.params.id);
+    if (outcome.ok) {
+      const { ok: _ok, ...file } = outcome;
+      res.json(file);
+      return;
+    }
+    if (outcome.refusal === "notFound") throw new AppError("Template not found", 404);
+    if (outcome.refusal === "notActive") {
+      throw new AppError(
+        "Only an active template can be shared",
+        409,
+        "TEMPLATE_EXPORT_NOT_ACTIVE"
+      );
+    }
+    if (outcome.refusal === "containsPersonalData") {
+      const kinds = [...new Set(outcome.found.map((f) => f.kind))].join(",");
+      throw new AppError(
+        "The template holds values of your own document",
+        422,
+        "TEMPLATE_EXPORT_PERSONAL_DATA",
+        undefined,
+        { kinds }
+      );
+    }
+    throw new AppError(
+      "This kind of template cannot be shared",
+      422,
+      "TEMPLATE_EXPORT_UNSUPPORTED"
+    );
   } catch (error) {
     next(error);
   }

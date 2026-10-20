@@ -158,6 +158,8 @@ export interface UserSettings {
     immichEvidence?: boolean;
     llmPlaceClassification?: boolean;
   };
+  /** Whether the server stores the app's trip positions (forgejo#316). */
+  tripRecording?: { enabled?: boolean };
   /**
    * Which evidence tier the country headline counts from, for this user, or
    * `null` when they follow the instance default. Writable through

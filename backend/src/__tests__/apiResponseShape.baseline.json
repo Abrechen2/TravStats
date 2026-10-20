@@ -19,6 +19,7 @@
     "admin/smtp.ts",
     "admin/strava.ts",
     "admin/system.ts",
+    "admin/templateRepo.ts",
     "admin/timeMigration.ts",
     "admin/usageStats.ts",
     "admin/users.ts",
@@ -132,6 +133,7 @@
     "trips/tripCountries.ts",
     "trips/tripExpenses.ts",
     "trips/tripPhotos.ts",
+    "trips/tripRecording.ts",
     "trips/tripStops.ts",
     "version.ts"
   ],
@@ -142,6 +144,7 @@
     "bus.ts",
     "bus/entrySuggestions.ts",
     "bus/stats.ts",
+    "bus/tickets.ts",
     "calendarFeed.ts",
     "comparison.ts",
     "cruises.ts",

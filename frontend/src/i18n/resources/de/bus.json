@@ -360,5 +360,35 @@
       "auth": "Der Routing-Dienst hat den Schlüssel abgelehnt.",
       "untrustworthy": "Die Antwort des Routing-Dienstes passte nicht zu den Terminals und wurde verworfen."
     }
+  },
+  "import": {
+    "title": "Busticket einlesen",
+    "hint": "Liest ein Text-PDF, eine E-Mail (.eml) oder eingefügten Tickettext mit einer Bus-Vorlage — einer, die du in der Vorlagen-Werkstatt (Parser → Annotieren) angelernt hast, oder einer aus dem Vorlagen-Repository. Prüfe die Werte, bevor du sie übernimmst.",
+    "file": "Ticketdatei (PDF oder EML)",
+    "text": "Tickettext",
+    "reading": "Wird gelesen …",
+    "read": "Vorschau erstellen",
+    "retained": "Die Datei liegt bei deinen nicht zugeordneten Dokumenten.",
+    "error": "Das Ticket konnte nicht gelesen werden. Du kannst die Fahrt trotzdem von Hand eintragen.",
+    "noText": "Kein lesbarer Text gefunden. Bei einem gescannten Ticket füge den Text ein oder trage die Fahrt von Hand ein.",
+    "noTemplate": "Noch keine Bus-Vorlage kennt dieses Ticket. Lerne mit diesem Ticket eine in der Vorlagen-Werkstatt an (Parser → Annotieren) oder trage die Fahrt von Hand ein.",
+    "nothingRead": "Eine Bus-Vorlage hat das Ticket erkannt, aber keine vollständige Fahrt darin gelesen. Prüfe die Vorlage in der Werkstatt oder trage die Fahrt von Hand ein.",
+    "readByWorkshop": "Mit deiner eigenen Werkstatt-Vorlage gelesen.",
+    "readByRepository": "Mit einer Vorlage aus dem Vorlagen-Repository gelesen.",
+    "ride": "Fahrt wählen",
+    "oneRide": "Pro Import wird eine Fahrt angelegt.",
+    "apply": "Auswahl ins Formular übernehmen",
+    "checkStops": "Werte übernommen. Bestätige beide Haltestellen auf der Karte oder über die Suche und prüfe alle Angaben.",
+    "field": {
+      "departureStop": "Abfahrtshaltestelle",
+      "arrivalStop": "Ankunftshaltestelle",
+      "departureLocal": "Abfahrt",
+      "arrivalLocal": "Ankunft",
+      "operator": "Unternehmen",
+      "lineName": "Linie",
+      "bookingReference": "Buchungsnummer",
+      "price": "Preis",
+      "currency": "Währung"
+    }
   }
 }

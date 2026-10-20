@@ -74,3 +74,26 @@ export function overlapsSchedule(
   if (!from || !to) return true;
   return endMs >= from.getTime() - WINDOW_MS && startMs <= to.getTime() + WINDOW_MS;
 }
+
+/**
+ * How long before the scheduled departure and after the scheduled arrival the
+ * Companion's flight recorder is armed (companion `adrs/0010`): 30 minutes on
+ * either side. Inside that window the flight recording owns the phone's fixes,
+ * so a trip recording leaves them out instead of storing them twice.
+ */
+export const RECORDER_ARM_MARGIN_MS = 30 * 60_000;
+
+/**
+ * The flight recorder's armed window as `[fromMs, toMs]`, or null for a
+ * flight with no schedule at all — no window can be stated for it, and a
+ * guessed one would drop a trip's fixes for nothing.
+ */
+export function recorderWindow(scheduled: {
+  departure: Date | null;
+  arrival: Date | null;
+}): [number, number] | null {
+  const from = scheduled.departure ?? scheduled.arrival;
+  const to = scheduled.arrival ?? scheduled.departure;
+  if (!from || !to) return null;
+  return [from.getTime() - RECORDER_ARM_MARGIN_MS, to.getTime() + RECORDER_ARM_MARGIN_MS];
+}

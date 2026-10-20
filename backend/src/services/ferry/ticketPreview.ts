@@ -3,6 +3,8 @@ import { llmRefusalFor } from "../llm/llmGate";
 import { describeLlmTarget, llmGenerateChain } from "../llm/llmProvider";
 import { llmParseTimeoutMs } from "../http/llmTimeout";
 import logger from "../../utils/logger";
+import { readRideTicket } from "../rides/readRideTicket";
+import type { ParsedRideTicket } from "../rides/v2RideTicket";
 
 /** A preview only: copied evidence accompanies every proposed value. Never geocode a ticket silently. */
 export const TICKET_FIELDS = [
@@ -186,7 +188,46 @@ export function verifiedModelTickets(raw: unknown, text: string): TicketProposal
     })
     .filter((row) => Object.keys(row).length > 0);
 }
+/**
+ * A ferry template's reading as the preview's proposals (forgejo#309): one
+ * per crossing, each value its own evidence — a template reads what the
+ * document prints, so there is no model claim to check it against.
+ */
+export function templateCrossings(ticket: ParsedRideTicket): TicketProposal[] {
+  const shared: TicketProposal = {};
+  const put = (target: TicketProposal, field: TicketField, value: string | number | null) => {
+    if (value === null || value === "") return;
+    target[field] = { value: String(value), evidence: String(value) };
+  };
+  put(shared, "operator", ticket.operator);
+  put(shared, "bookingReference", ticket.bookingReference);
+  put(shared, "price", ticket.price);
+  put(shared, "currency", ticket.currency);
+  return ticket.rides.map((ride) => {
+    const row: TicketProposal = {};
+    put(row, "departurePort", ride.depName);
+    put(row, "arrivalPort", ride.arrName);
+    put(row, "departureLocal", ride.departureLocal);
+    put(row, "arrivalLocal", ride.arrivalLocal);
+    put(row, "vesselName", ride.carrier);
+    return { ...row, ...shared };
+  });
+}
+
 export async function previewFerryText(text: string, userId: string) {
+  // A ferry template — the repository's or one the user derived in the
+  // workshop — reads the ticket whole; the labels and the model are for what
+  // no template knows.
+  const reading = await readRideTicket("ferry", text, userId);
+  if (reading.ticket) {
+    return {
+      crossings: templateCrossings(reading.ticket),
+      parser: "template",
+      reason: null,
+      provider: null,
+      template: { id: reading.ticket.templateId, source: reading.ticket.source },
+    };
+  }
   const deterministic = labelledTicket(text);
   const complete =
     deterministic.departurePort && deterministic.arrivalPort && deterministic.departureLocal;

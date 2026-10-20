@@ -1080,5 +1080,10 @@
     "strava": "If Strava does not answer, importing activities stops with a message. Tours already taken over stay.",
     "openData": "If one of these services does not answer, the view concerned says so; weather already saved stays, and the next time it is opened it is asked again.",
     "photoJourneyScan": "If Immich does not answer at night, the scan skips this account until the next night and says why here; existing suggestions stay. If the place-name service does not answer, findings stay unnamed instead of being dropped."
+  },
+  "tripRecording": {
+    "title": "Trip recording",
+    "label": "Store positions from the app",
+    "description": "The positions the TravStats app records during a trip are stored on this server and shown on the trip map. Switched off, the server accepts no new ones; what is stored stays until you delete it."
   }
 }

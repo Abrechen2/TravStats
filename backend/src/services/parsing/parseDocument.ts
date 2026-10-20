@@ -62,6 +62,8 @@ import type { MailAttachment } from "../parsers/pdfAttachmentFlights";
 import type { TemplateEnvelope } from "../parsers/templates/v2/envelope";
 import { loadActiveWorkshopTemplates } from "../parsers/userTemplates/v2UserTemplates";
 import { readPlaceText, type PlaceDocumentReading } from "../places/placeDocumentImport";
+import { readRideTicket, type RideTicketFallbackCode } from "../rides/readRideTicket";
+import type { ParsedRideTicket, RideTicketDomain } from "../rides/v2RideTicket";
 import {
   detectPackageAttachment,
   hasPackageTemplates,
@@ -212,8 +214,32 @@ type PlaceBody = {
   domainMismatch?: DomainMismatch;
 };
 
+/**
+ * A coach or ferry ticket (forgejo#309): at most one reading per document,
+ * by `bus` / `ferry` templates only — the repository's, then the user's own
+ * workshop templates. Template or decline; `parserUsed` is "template" or "none".
+ */
+type RideTicketBodyOf<D extends RideTicketDomain> = {
+  domain: D;
+  tickets: ParsedRideTicket[];
+  parserUsed: "template" | "none";
+  ollamaAvailable: boolean;
+  fallbackCode?: RideTicketFallbackCode;
+  fallbackReason?: string;
+  domainMismatch?: DomainMismatch;
+};
+// One member per domain, so `body.domain === "bus"` narrows the union.
+type RideTicketBody = RideTicketBodyOf<"bus"> | RideTicketBodyOf<"ferry">;
+
 type DomainBody =
-  FlightBody | CruiseBody | LodgingBody | RailBody | RentalBody | PackageBody | PlaceBody;
+  | FlightBody
+  | CruiseBody
+  | LodgingBody
+  | RailBody
+  | RentalBody
+  | PackageBody
+  | PlaceBody
+  | RideTicketBody;
 
 /**
  * The domain-shaped payload, plus one field every domain shares:
@@ -529,6 +555,25 @@ async function parseAs(
           }
         : {}),
     };
+  }
+
+  if (domain === "bus" || domain === "ferry") {
+    const reading = await readRideTicket(domain, combined, input.userId);
+    const body = {
+      tickets: reading.ticket ? [reading.ticket] : [],
+      parserUsed: reading.ticket ? ("template" as const) : ("none" as const),
+      ollamaAvailable: await isLlmAvailable(
+        input.userId !== undefined ? { userId: input.userId } : {}
+      ),
+      ...(reading.fallbackCode !== undefined
+        ? {
+            fallbackCode: reading.fallbackCode,
+            // English, for the log; the client words it from the code.
+            fallbackReason: `No ${domain} template read the document (${reading.fallbackCode})`,
+          }
+        : {}),
+    };
+    return domain === "bus" ? { ...body, domain } : { ...body, domain };
   }
 
   if (domain === "rental") {

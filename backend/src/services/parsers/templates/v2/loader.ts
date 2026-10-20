@@ -106,8 +106,17 @@ export class V2TemplateStore {
   private ranAt: string | null = null;
   private readonly runners: RunnerRegistry;
 
-  constructor(private readonly deps: V2LoaderDeps) {
+  constructor(private deps: V2LoaderDeps) {
     this.runners = deps.runners ?? defaultRunners;
+  }
+
+  /**
+   * Read the next sync from another repository (forgejo#309: the admin's
+   * setting). Nothing active changes here: until a sync of the new index
+   * succeeds, the last good set keeps serving.
+   */
+  setBaseUrl(baseUrl: string): void {
+    this.deps = { ...this.deps, baseUrl };
   }
 
   getActive(): TemplateEnvelope[] {

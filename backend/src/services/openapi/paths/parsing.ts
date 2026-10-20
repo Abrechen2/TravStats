@@ -9,6 +9,12 @@ import { parseEmailBodySchema } from "../../../schemas/parseEmail";
 import { parseRetentionFields } from "../../../schemas/document";
 import { errorContent, flightCreateInput, flightResponse } from "./shared";
 import { PARSER_SUPPORTED_DOMAINS } from "../../../shared/domains";
+import { DETECTABLE_DOMAINS, type DetectableDomain } from "../../parsing/documentDomain";
+
+/** What `auto` may answer with — bus and ferry are read only when asked for. */
+const detectableDomain = z.enum(
+  DETECTABLE_DOMAINS as unknown as [DetectableDomain, ...DetectableDomain[]]
+);
 
 const parsedFlightSchema = registry.register(
   "ParsedFlight",
@@ -35,11 +41,11 @@ const domainDetectionSchema = registry.register(
   "DomainDetection",
   z
     .object({
-      domain: z.enum(PARSER_SUPPORTED_DOMAINS),
+      domain: detectableDomain,
       confidence: z.number().min(0).max(1),
       candidates: z.array(
         z.object({
-          domain: z.enum(PARSER_SUPPORTED_DOMAINS),
+          domain: detectableDomain,
           score: z.number(),
           confidence: z.number(),
           matched: z.array(z.string()).describe('Signal ids that fired, e.g. "checkin-checkout"'),

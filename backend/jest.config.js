@@ -6,6 +6,13 @@ module.exports = {
   // those wipes step on each other's test data. Run serially — the suite is
   // small enough that the throughput hit is acceptable.
   maxWorkers: 1,
+  // 15 s, not Jest's 5 s default. The first test of a file pays for cold
+  // loads (the app import, the time-zone dataset on the first zone lookup):
+  // measured 2026-10-20, ferry.test's "filters by the year" takes 1.05 s
+  // locally against ~0.1 s for its neighbours, and on the GitHub runner that
+  // cold start crossed 5 s, so 20+ first tests across six shards timed out
+  // while nothing hung. A real hang still fails, three times later.
+  testTimeout: 15_000,
   // One worker across ~200 suites accumulates enough heap to hit Node's ~4 GB
   // default and die with "Ineffective mark-compacts near heap limit". Measured
   // 2026-08-30: the full run crashed at 4030 MB after ~420s — and it did so

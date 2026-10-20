@@ -1080,5 +1080,10 @@
     "strava": "Antwortet Strava nicht, bricht der Import von Aktivitäten mit einer Meldung ab. Bereits übernommene Touren bleiben.",
     "openData": "Antwortet einer dieser Dienste nicht, sagt die betroffene Ansicht das; schon gespeichertes Wetter bleibt stehen, und beim nächsten Öffnen wird erneut gefragt.",
     "photoJourneyScan": "Ist Immich nachts nicht erreichbar, überspringt die Suche dieses Konto bis zur nächsten Nacht und nennt hier den Grund; vorhandene Vorschläge bleiben. Antwortet der Ortsdienst nicht, bleiben Funde unbenannt, statt verworfen zu werden."
+  },
+  "tripRecording": {
+    "title": "Reise-Aufzeichnung",
+    "label": "Positionen aus der App speichern",
+    "description": "Die Positionen, die die TravStats-App während einer Reise aufzeichnet, werden auf diesem Server gespeichert und auf der Reisekarte gezeigt. Ausgeschaltet nimmt der Server keine neuen an; Gespeichertes bleibt, bis du es löschst."
   }
 }

@@ -1143,5 +1143,36 @@
     "stop": "End now",
     "loadFailed": "The import mode could not be loaded.",
     "saveFailed": "The import mode could not be saved. Please try again."
+  },
+  "templateRepo": {
+    "title": "Template repository",
+    "description": "Where the parser templates are synced from. Point it at your own copy of the template repository — a fork, or a self-hosted mirror — to use templates the official one does not have. The sync then reads every template from that URL; templates only the old repository named are withdrawn.",
+    "url": "Repository URL (raw files)",
+    "urlHint": "The raw-file root, which holds index.json. https, or plain http to a host on your own network only. Empty = the server's setting, or the official repository ({{defaultUrl}}).",
+    "readsFrom": {
+      "admin": "The sync reads from {{url}} (set here).",
+      "env": "The sync reads from {{url}} (the server's TEMPLATE_REPO_BASE_URL).",
+      "default": "The sync reads from the official repository {{url}}."
+    },
+    "test": "Test",
+    "save": "Save and sync now",
+    "reset": "Back to the default",
+    "working": "Working …",
+    "result": {
+      "ok_one": "The index was read: {{count}} template.",
+      "ok_other": "The index was read: {{count}} templates.",
+      "invalidUrl": "That is not a usable URL.",
+      "httpsRequired": "Plain http is allowed only to a host on your own network. Use https.",
+      "credentialsInUrl": "The URL must not contain a user name or password — it is stored and shown in plain text.",
+      "unreachable": "The repository could not be reached, or it has no index.json at that address.",
+      "notAnIndex": "There is a file at that address, but it is not a version-2 template index."
+    },
+    "synced_one": "Saved and synced: {{count}} template is active.",
+    "synced_other": "Saved and synced: {{count}} templates are active.",
+    "syncFailed_one": "Saved, but the index at the new URL could not be read. The last good set ({{count}} template) is still in use.",
+    "syncFailed_other": "Saved, but the index at the new URL could not be read. The last good set ({{count}} templates) is still in use.",
+    "loadFailed": "The template repository setting could not be loaded.",
+    "testFailed": "The test could not be run. Please try again.",
+    "saveFailed": "The template repository could not be saved."
   }
 }

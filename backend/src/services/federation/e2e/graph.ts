@@ -219,4 +219,7 @@ export const NON_TRAVEL_RELATIONS = [
   // with the passport snapshot, which is built through `loadPassport`; the
   // free-text note behind each verdict is private and does not travel.
   "countryOverrides",
+  // The positions the Companion recorded during a trip (forgejo#316): private
+  // to their owner, never part of a comparison or a federation publication.
+  "tripRecordingBatches",
 ] as const;

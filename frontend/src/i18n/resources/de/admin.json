@@ -1143,5 +1143,36 @@
     "stop": "Jetzt beenden",
     "loadFailed": "Der Import-Modus konnte nicht geladen werden.",
     "saveFailed": "Der Import-Modus konnte nicht gespeichert werden. Bitte erneut versuchen."
+  },
+  "templateRepo": {
+    "title": "Vorlagen-Repository",
+    "description": "Von wo die Parser-Vorlagen synchronisiert werden. Trage deine eigene Kopie des Vorlagen-Repositorys ein — einen Fork oder einen selbst gehosteten Spiegel —, um Vorlagen zu nutzen, die das offizielle nicht hat. Die Synchronisierung liest dann jede Vorlage von dieser URL; Vorlagen, die nur das alte Repository nannte, werden zurückgezogen.",
+    "url": "Repository-URL (Rohdateien)",
+    "urlHint": "Das Verzeichnis der Rohdateien, in dem index.json liegt. https, oder unverschlüsseltes http nur zu einem Rechner in deinem eigenen Netz. Leer = die Einstellung des Servers oder das offizielle Repository ({{defaultUrl}}).",
+    "readsFrom": {
+      "admin": "Die Synchronisierung liest von {{url}} (hier eingestellt).",
+      "env": "Die Synchronisierung liest von {{url}} (TEMPLATE_REPO_BASE_URL des Servers).",
+      "default": "Die Synchronisierung liest vom offiziellen Repository {{url}}."
+    },
+    "test": "Testen",
+    "save": "Speichern und jetzt synchronisieren",
+    "reset": "Zurück zum Standard",
+    "working": "Läuft …",
+    "result": {
+      "ok_one": "Der Index wurde gelesen: {{count}} Vorlage.",
+      "ok_other": "Der Index wurde gelesen: {{count}} Vorlagen.",
+      "invalidUrl": "Das ist keine verwendbare URL.",
+      "httpsRequired": "Unverschlüsseltes http ist nur zu einem Rechner in deinem eigenen Netz erlaubt. Bitte https verwenden.",
+      "credentialsInUrl": "Die URL darf keinen Benutzernamen und kein Passwort enthalten — sie wird im Klartext gespeichert und angezeigt.",
+      "unreachable": "Das Repository war nicht erreichbar, oder unter dieser Adresse liegt keine index.json.",
+      "notAnIndex": "Unter dieser Adresse liegt eine Datei, aber kein Vorlagen-Index der Version 2."
+    },
+    "synced_one": "Gespeichert und synchronisiert: {{count}} Vorlage ist aktiv.",
+    "synced_other": "Gespeichert und synchronisiert: {{count}} Vorlagen sind aktiv.",
+    "syncFailed_one": "Gespeichert, aber der Index unter der neuen URL konnte nicht gelesen werden. Der letzte gültige Stand ({{count}} Vorlage) bleibt in Gebrauch.",
+    "syncFailed_other": "Gespeichert, aber der Index unter der neuen URL konnte nicht gelesen werden. Der letzte gültige Stand ({{count}} Vorlagen) bleibt in Gebrauch.",
+    "loadFailed": "Die Einstellung zum Vorlagen-Repository konnte nicht geladen werden.",
+    "testFailed": "Der Test konnte nicht ausgeführt werden. Bitte erneut versuchen.",
+    "saveFailed": "Das Vorlagen-Repository konnte nicht gespeichert werden."
   }
 }

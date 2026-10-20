@@ -17,6 +17,17 @@ interface Envelope<T> {
   data: T;
 }
 
+/** One ride a bus template read: field → the value and the text it was read from. */
+export type BusTicketProposal = Record<string, { value: string; evidence: string }>;
+
+export interface BusTicketPreview {
+  rides: BusTicketProposal[];
+  parser: "template" | null;
+  /** Why nothing was read: no text, no template claims the ticket, or one claimed it and read no ride. */
+  reason: "noText" | "noTemplate" | "nothingRead" | null;
+  template: { id: string; source: "workshop" | "repository" } | null;
+}
+
 export interface SavedBusRide {
   ride: BusJourney;
   /** Null from a server that predates road routing. */
@@ -93,6 +104,17 @@ export const busApi = {
   async updateReported(id: string, input: Partial<BusJourneyInput>): Promise<SavedBusRide> {
     const res = await api.patch<WriteEnvelope>(`/bus/${encodeURIComponent(id)}`, input);
     return { ride: res.data.data, geometry: res.data.meta?.geometry ?? null };
+  },
+
+  /**
+   * Read a coach ticket with the bus templates — the repository's, then the
+   * user's own workshop templates (forgejo#309). Proposals only; nothing is saved.
+   */
+  async ticketPreview(input: { text: string } | { documentId: string }): Promise<BusTicketPreview> {
+    const res = await api.post<Envelope<BusTicketPreview>>("/bus/ticket-preview", input, {
+      timeout: 120000,
+    });
+    return res.data.data;
   },
 
   /** Can this instance route along roads at all? Without a provider every ride stays a straight line. */

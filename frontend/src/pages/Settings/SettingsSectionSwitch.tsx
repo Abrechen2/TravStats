@@ -26,6 +26,7 @@ import AboutSection from "../../components/Settings/AboutSection";
 import ImportSection from "../../components/Settings/ImportSection";
 import TripsSection from "../../components/Settings/TripsSection";
 import InboxSuggestionsSection from "../../components/Settings/InboxSuggestionsSection";
+import TripRecordingSection from "../../components/Settings/TripRecordingSection";
 import SharingSection from "../../components/Settings/SharingSection";
 import RemoteSharingSection from "../../components/Settings/RemoteSharingSection";
 import ShareLinksSection from "../../components/Settings/ShareLinksSection";
@@ -128,6 +129,8 @@ export default function SettingsSectionSwitch({
           <TripsSection />
           {/* Which suggestions the inbox offers at all (forgejo#306). */}
           <InboxSuggestionsSection />
+          {/* Whether the app's trip positions are stored here (forgejo#316). */}
+          <TripRecordingSection />
           {/* Shared trips (design 2026-10-09): consent and companion links. */}
           <SharingSection />
           {/* People on other servers (forgejo#301), behind its beta key and the server's switch. */}

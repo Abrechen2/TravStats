@@ -15,6 +15,7 @@ import { registry } from "../registry";
 import { errorContent, photoConversionUnavailable, photoUnreadable, timeRefused } from "./shared";
 import { captureFieldsSchema } from "../../photos/captureFields";
 import { PARSER_SUPPORTED_DOMAINS } from "../../../shared/domains";
+import { WORKSHOP_DOMAINS } from "../../../shared/annotationLabels";
 import { parseRetentionFields } from "../../../schemas/document";
 import { diagnosticBundleSchema } from "../../diagnostics/bundleSchema";
 import { v2StatusSchema } from "../../parsers/templates/v2/status";
@@ -673,7 +674,7 @@ registry.registerPath({
         "application/json": {
           schema: z.object({
             templateId: z.string().uuid(),
-            domain: z.enum(["flight", "lodging", "cruise", "place"]),
+            domain: z.enum(WORKSHOP_DOMAINS),
             own: previewSide.nullable().describe("The sample the template was derived from"),
             heldOut: previewSide
               .nullable()

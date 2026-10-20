@@ -198,10 +198,12 @@ const ISSUER_KIND = {
   place: "other",
   rail: "rail",
   rental: "other",
+  bus: "bus-operator",
+  ferry: "ferry-line",
 } as const;
 
 export interface EnvelopeInput {
-  domain: "cruise" | "place" | "package" | "rail" | "rental";
+  domain: "cruise" | "place" | "package" | "rail" | "rental" | "bus" | "ferry";
   trainingDataId: string;
   issuerName: string;
   senderDomain?: string;

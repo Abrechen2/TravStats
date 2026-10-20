@@ -17,6 +17,10 @@ import { prisma } from "../../db";
  * Stored as flat columns on `UserSettings` (like `autoCreateTrips`); the API
  * nests them as `tripSuggestions.enabled` and `staySuggestions.*`, the shape
  * `autoUpdate` and `historicalEnrichment` already use.
+ *
+ * `tripRecording.enabled` (forgejo#316) rides along in the same plumbing: not
+ * an inbox switch, but the same kind of thing — off stops the work (an upload
+ * is refused, nothing stored) and keeps what is already there.
  */
 
 export const tripSuggestionsSettingsSchema = z.object({ enabled: z.boolean() }).partial().strict();
@@ -40,6 +44,8 @@ export const staySuggestionsSettingsSchema = z
   .partial()
   .strict();
 
+export { tripRecordingSettingsSchema } from "../../schemas/tripRecording";
+type TripRecordingPatch = { enabled?: boolean };
 type TripSuggestionsPatch = z.infer<typeof tripSuggestionsSettingsSchema>;
 type StaySuggestionsPatch = z.infer<typeof staySuggestionsSettingsSchema>;
 
@@ -49,6 +55,7 @@ export const SUGGESTION_SWITCH_SELECT = {
   staySuggestionsEnabled: true,
   staySuggestionsImmichEvidence: true,
   staySuggestionsLlmPlaceClassification: true,
+  tripRecordingEnabled: true,
 } as const;
 
 export interface SuggestionSwitchColumns {
@@ -56,6 +63,7 @@ export interface SuggestionSwitchColumns {
   staySuggestionsEnabled: boolean;
   staySuggestionsImmichEvidence: boolean;
   staySuggestionsLlmPlaceClassification: boolean;
+  tripRecordingEnabled: boolean;
 }
 
 /** The column defaults — what an account without a settings row is answered with. */
@@ -64,11 +72,14 @@ export const SUGGESTION_SWITCH_DEFAULTS: SuggestionSwitchColumns = {
   staySuggestionsEnabled: true,
   staySuggestionsImmichEvidence: true,
   staySuggestionsLlmPlaceClassification: false,
+  tripRecordingEnabled: true,
 };
 
 export interface SuggestionSwitchesView {
   tripSuggestions: { enabled: boolean };
   staySuggestions: { enabled: boolean; immichEvidence: boolean; llmPlaceClassification: boolean };
+  /** Whether the server stores the Companion's trip positions (forgejo#316). */
+  tripRecording: { enabled: boolean };
 }
 
 export function suggestionSwitchesView(record: SuggestionSwitchColumns): SuggestionSwitchesView {
@@ -79,15 +90,18 @@ export function suggestionSwitchesView(record: SuggestionSwitchColumns): Suggest
       immichEvidence: record.staySuggestionsImmichEvidence,
       llmPlaceClassification: record.staySuggestionsLlmPlaceClassification,
     },
+    tripRecording: { enabled: record.tripRecordingEnabled },
   };
 }
 
 /** Only the keys a PUT named; an absent key leaves its column alone. */
 export function suggestionSwitchesUpdate(
   trip: TripSuggestionsPatch | undefined,
-  stay: StaySuggestionsPatch | undefined
+  stay: StaySuggestionsPatch | undefined,
+  recording?: TripRecordingPatch
 ): Partial<SuggestionSwitchColumns> {
   return {
+    ...(recording?.enabled !== undefined ? { tripRecordingEnabled: recording.enabled } : {}),
     ...(trip?.enabled !== undefined ? { tripSuggestionsEnabled: trip.enabled } : {}),
     ...(stay?.enabled !== undefined ? { staySuggestionsEnabled: stay.enabled } : {}),
     ...(stay?.immichEvidence !== undefined
@@ -113,4 +127,8 @@ export async function tripSuggestionsEnabled(userId: string): Promise<boolean> {
 
 export async function staySuggestionsEnabled(userId: string): Promise<boolean> {
   return (await readSuggestionSwitches(userId)).staySuggestionsEnabled;
+}
+
+export async function tripRecordingEnabled(userId: string): Promise<boolean> {
+  return (await readSuggestionSwitches(userId)).tripRecordingEnabled;
 }

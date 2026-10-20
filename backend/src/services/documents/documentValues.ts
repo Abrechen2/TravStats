@@ -193,6 +193,17 @@ export function valuesOf(body: ParsedDocumentBody, input: LegHints): ExtractedVa
   // A place document (forgejo#124) carries no booking values an entry's cost
   // block could take: a ticket's price is not a place's.
   if (body.domain === "place") return EMPTY;
+  // A coach or ferry ticket (forgejo#309): its total and reference, once.
+  if (body.domain === "bus" || body.domain === "ferry") {
+    const ticket = body.tickets.length === 1 ? body.tickets[0] : null;
+    if (!ticket) return EMPTY;
+    return {
+      ...EMPTY,
+      price: amount(ticket.price),
+      currency: currency(ticket.currency),
+      bookingReference: text(ticket.bookingReference),
+    };
+  }
   if (body.candidates.length !== 1) return EMPTY;
   const stay = body.candidates[0].stay;
   if (!stay) return EMPTY;
