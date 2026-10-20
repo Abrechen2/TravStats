@@ -338,6 +338,20 @@ describe("nightGap on a route plan", () => {
     expect(codes).toContain("durationMissing");
     expect(codes).not.toContain("nightGap");
   });
+  it("an unknown stretch hides only its own nights; a gap after the next anchor is still found", () => {
+    const a = st("A", 1, { kind: "spontaneous" }),
+      b = st("B", 1, { kind: "pitch" }),
+      c = { ...st("C", 1, { kind: "pitch" }), pinnedDay: "2027-05-12" };
+    const state = {
+      ...base,
+      endDay: "2027-05-15",
+      stations: [a, b, c],
+      stages: [{ ...stage(a.id, b.id), durationMinutes: null }, stage(b.id, c.id)],
+    };
+    // A: 8th. A→B unknown, so 9th–11th are unknown. C (pinned): 12th. 13th–14th: a known gap.
+    const gap = checkPlan(state, "2027-05-01").find((f) => f.code === "nightGap");
+    expect(gap?.params).toMatchObject({ count: 2, days: "2027-05-13, 2027-05-14" });
+  });
   it("an idea night with no candidate still covers its nights (nightUndecided speaks, not nightGap)", () => {
     const state = connected([
       st("A", 2, { kind: "idea", candidates: [] }),

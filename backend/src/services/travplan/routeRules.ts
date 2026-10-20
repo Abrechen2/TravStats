@@ -192,7 +192,7 @@ export function routeFindings(state: PlanState, today: string): PlanFinding[] {
 }
 
 /**
- * Nights a route covers: every night spent at a station (any night state —
+ * Nights a route covers, or cannot know about: every night spent at a station (any night state —
  * undecided is `nightUndecided`'s business, not a gap) and every overnight
  * stage. A night is named after the evening it starts.
  */
@@ -208,5 +208,19 @@ export function routeCoveredNights(state: PlanState): Set<string> {
     const days = schedule.stages.find((g) => g.stageId === stage.id);
     if (stage.overnight) nightsBetween(days?.departDay ?? null, days?.arriveDay ?? null);
   }
+  // From the last known departure before an unknown arrival (missing stage or
+  // duration) to the next known arrival, nobody knows where the nights go:
+  // stageMissing / durationMissing speak there, not nightGap. Outside such a
+  // stretch a gap is still a gap.
+  let unknownFrom: string | null = null;
+  schedule.stations.forEach((s, i) => {
+    if (!s.arriveDay) {
+      unknownFrom ??= schedule.stations[i - 1]?.departDay ?? null;
+      return;
+    }
+    nightsBetween(unknownFrom, s.arriveDay);
+    unknownFrom = null;
+  });
+  nightsBetween(unknownFrom, state.endDay);
   return covered;
 }
