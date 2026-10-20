@@ -1,4 +1,4 @@
-import { useMemo, type JSX } from "react";
+import { useMemo, useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useToursVisible } from "../../hooks/useToursVisible";
@@ -7,11 +7,15 @@ import TripMap from "./TripMap";
 import type { TripMapContent } from "./tripMapContent";
 import type { TripBusJourney } from "../../types/bus";
 import { buildBusLayers, busPathPoints } from "./tripBusLayer";
+import { useTripRecording } from "../../hooks/useTripRecording";
+import { buildRecordingLayers, recordingPoints } from "./recording/recordingLayers";
+import TripRecordingPanel from "./recording/TripRecordingPanel";
 
 /**
  * The trip detail page's "Karte" tab: the trip, and — while tours are visible
- * — the lines of its tours. Split from `TripDetailPage`, which is over the
- * file-size limit and may not grow.
+ * — the lines of its tours, and the positions the Companion recorded during
+ * it (forgejo#316). Split from `TripDetailPage`, which is over the file-size
+ * limit and may not grow.
  */
 export default function TripMapWithTours({
   trip,
@@ -28,6 +32,17 @@ export default function TripMapWithTours({
     [trip.busJourneys, busColor]
   );
   const busPoints = useMemo(() => busPathPoints(trip.busJourneys ?? []), [trip.busJourneys]);
+  const [recordingDay, setRecordingDay] = useState<string | null>(null);
+  const recording = useTripRecording(trip.id, recordingDay);
+  const segments = recording.view?.segments;
+  const extraLayers = useMemo(
+    () => [...busLayers, ...buildRecordingLayers(segments ?? [])],
+    [busLayers, segments]
+  );
+  const extraPoints = useMemo(
+    () => [...busPoints, ...recordingPoints(segments ?? [])],
+    [busPoints, segments]
+  );
   return (
     <>
       {failed && (
@@ -35,11 +50,19 @@ export default function TripMapWithTours({
           {t("trips:tours.map.loadError")}
         </p>
       )}
+      <TripRecordingPanel
+        tripId={trip.id}
+        view={recording.view}
+        failed={recording.failed}
+        day={recordingDay}
+        onDayChange={setRecordingDay}
+        onDeleted={recording.reload}
+      />
       <TripMap
         trip={trip}
         tourGeometries={geometries}
-        extraLayers={busLayers}
-        extraPoints={busPoints}
+        extraLayers={extraLayers}
+        extraPoints={extraPoints}
       />
     </>
   );

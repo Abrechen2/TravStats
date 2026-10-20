@@ -863,5 +863,22 @@
         }
       }
     }
+  },
+  "recording": {
+    "title": "Aufzeichnung",
+    "dayFilter": "Tag der Aufzeichnung",
+    "allDays": "Alle Tage",
+    "points_one": "{{count}} Punkt",
+    "points_other": "{{count}} Punkte",
+    "span": "{{first}} – {{last}}",
+    "devices_one": "{{count}} Gerät",
+    "devices_other": "{{count}} Geräte",
+    "downloadGpx": "Als GPX herunterladen",
+    "delete": "Aufzeichnung löschen",
+    "deleteConfirmTitle": "Aufzeichnung löschen?",
+    "deleteConfirmMessage": "Alle Positionen, die die App während dieser Reise aufgezeichnet hat, werden von diesem Server gelöscht. Das lässt sich nicht rückgängig machen.",
+    "loadError": "Die Aufzeichnung dieser Reise konnte nicht geladen werden.",
+    "downloadError": "Die GPX-Datei konnte nicht heruntergeladen werden.",
+    "deleteError": "Die Aufzeichnung konnte nicht gelöscht werden."
   }
 }

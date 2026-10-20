@@ -83,6 +83,7 @@ import tourPointRoutes from "./trips/tourPoints";
 import tourKindRoutes from "./trips/tourKind";
 import roadtripRoutes from "./roadtrips";
 import tripExpenseRoutes from "./trips/tripExpenses";
+import tripRecordingRoutes from "./trips/tripRecording";
 import stravaRoutes from "./integrations/strava";
 import openDataRoutes from "./openData";
 import immichTripRoutes from "./immich/tripAlbums";
@@ -320,6 +321,8 @@ export const apiMounts: ApiMount[] = [
   // meets these routes in exactly the order it did when they lived in trips.ts.
   { id: "tripStops", base: "/api/v1", router: tripStopRoutes },
   { id: "tripPhotos", base: "/api/v1", router: tripPhotoRoutes },
+  // The Companion's trip recording (forgejo#316): private, never shared.
+  { id: "tripRecording", base: "/api/v1", router: tripRecordingRoutes },
   // Tour route sections — same-prefix satellite router, same pattern as
   // cruises.routeOverride above — split out of trips.ts once that file
   // crossed the 800-line max. Mounted right after `trips` so `/trips/:id`

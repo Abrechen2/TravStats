@@ -283,6 +283,14 @@ export type ApiErrorCode =
   /** Flight recording: its time span is nowhere near the flight's schedule —
    *  a recording filed under the wrong flight (422). */
   | "TRACK_OUTSIDE_FLIGHT"
+  /** Trip recording (forgejo#316): the account switch is off — nothing stored (409). */
+  | "TRIP_RECORDING_DISABLED"
+  /** Trip recording: a point with a coordinate outside lat ±90 / lon ±180 (400). */
+  | "RECORDING_INVALID_POINT"
+  /** Trip recording: the trip has no first or last day to bound the points by (422). */
+  | "TRIP_RECORDING_NO_SPAN"
+  /** Trip recording: this uploadId is already stored under another trip (409). */
+  | "RECORDING_UPLOAD_ID_REUSED"
   /** Observed takeoff/landing (forgejo#194): a time in the future (400). */
   | "OBSERVED_TIME_IN_FUTURE"
   /** Observed takeoff/landing: more than 12 h from the schedule (422). */

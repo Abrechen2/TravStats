@@ -24,6 +24,7 @@ import "./tourTracks";
 import "./tourIndex";
 import "./roadtrips";
 import "./tripExpenses";
+import "./tripRecording";
 import "./strava";
 import "./openData";
 import "./companions";

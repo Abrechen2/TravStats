@@ -75,6 +75,9 @@ export const USER_EXPORT_SELECT = {
   },
   // The user's own verdicts on passport countries, with their notes (forgejo#308).
   countryOverrides: true,
+  // The positions the Companion recorded during trips (forgejo#316), raw, per
+  // upload: the server is the record, and the phone may be gone.
+  tripRecordingBatches: true,
   // Tours and roadtrips from the user's side, not the trip's: one with no
   // trip is reachable from nowhere else, stations and recordings with it. A
   // trip-borrowed station appears under both — twice is honest, missing is not.

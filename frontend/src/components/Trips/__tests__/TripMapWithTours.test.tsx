@@ -28,6 +28,15 @@ vi.mock("../../../lib/api/tours", () => ({
   toursApi: { list: vi.fn(), tracks: { list: vi.fn(), get: vi.fn() } },
 }));
 vi.mock("../../../lib/api/tourIndex", () => ({ tourIndexApi: { geometryBatch: vi.fn() } }));
+// The trip recording (forgejo#316) has its own suite; here there is none.
+vi.mock("../../../lib/api/tripRecording", () => ({
+  tripRecordingApi: {
+    get: vi.fn(async () => ({
+      summary: { pointCount: 0, firstAt: null, lastAt: null, devices: [], days: [] },
+      segments: [],
+    })),
+  },
+}));
 vi.mock("../../../hooks/useToursVisible", () => ({ useToursVisible: vi.fn(() => true) }));
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
