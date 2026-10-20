@@ -189,6 +189,29 @@ Notes on specific fields:
   gain.
 - **`flight_api_providers`** — which providers are *configured*. Never the keys.
 
+### 5a. Additions in 2.7 (forgejo#315)
+
+The fields above described what is switched on, not what is used, and only
+for flights and cruises. Four optional fields close that, all as buckets:
+
+| Field | Values | Source |
+|---|---|---|
+| `domain_buckets` | per domain: `0 \| 1-10 \| 11-50 \| 51-250 \| 250+` | instance-wide entry counts: Flight, Cruise, LodgingStay, PlaceVisit, TripRoute (kind `roadtrip`), RailJourney, RentalBooking, BusJourney, FerryJourney |
+| `passport_countries_bucket` | `0 \| 1-5 \| 6-20 \| 21-50 \| 50+` | the largest `summary.visitedCountries` of any account (the first 50 accounts on a large instance) |
+| `trip_suggestions` | `{accepted, dismissed}`, each a count bucket | `TripSuggestionDecision` by status |
+| `companion_pairings_bucket` | `0 \| 1 \| 2-5 \| 6+` | `ApiToken` rows with a `deviceId` and no `revokedAt` |
+
+Whether manual passport visits are used waits for forgejo#308, which adds them.
+
+**Receiver contract.** Each field is optional in `travstats-stats`, so an older
+instance stays valid. The bucket vocabularies there (`COUNT_BUCKETS`,
+`COUNTRY_BUCKETS`, `PAIRING_BUCKETS`) must match `usageStats/buckets.ts`,
+because the receiver refuses any other value. `enabled_domains` is filtered
+to the known domains on the receiving side instead of being validated as an
+enum. The enum used to list four domains while instances sent nine, and every
+2.7 instance with a newer domain switched on was answered 400 and counted as
+absent. The payload stays best effort, so nothing on the client noticed.
+
 ## 6. Client
 
 New module `backend/src/services/usageStats.ts`:

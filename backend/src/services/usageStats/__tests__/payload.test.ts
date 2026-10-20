@@ -11,6 +11,14 @@ jest.mock("../../../db", () => ({
 }));
 
 jest.mock("../../../utils/version", () => ({ appVersion: "2.4.0" }));
+jest.mock("../usageV2", () => ({
+  buildUsageV2: jest.fn(async () => ({
+    domain_buckets: { flight: "51-250", rail: "1-10" },
+    passport_countries_bucket: "6-20",
+    trip_suggestions: { accepted: "1-10", dismissed: "0" },
+    companion_pairings_bucket: "1",
+  })),
+}));
 
 import { buildUsagePayload } from "../payload";
 import { prisma } from "../../../db";
@@ -167,6 +175,17 @@ describe("buildUsagePayload", () => {
       { enabledDomains: ["flight"], historicalEnrichmentEnabled: false, data: "not-an-object" },
     ]);
     await expect(buildUsagePayload()).resolves.toBeDefined();
+  });
+
+  it("carries the forgejo#315 usage fields beside the original ones", async () => {
+    const payload = await buildUsagePayload();
+    expect(payload).toMatchObject({
+      domain_buckets: { flight: "51-250", rail: "1-10" },
+      passport_countries_bucket: "6-20",
+      trip_suggestions: { accepted: "1-10", dismissed: "0" },
+      companion_pairings_bucket: "1",
+      flights_bucket: "50-250",
+    });
   });
 
   it("contains NO personally identifying data", async () => {

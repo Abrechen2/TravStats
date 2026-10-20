@@ -1,4 +1,12 @@
-import { bucketUsers, bucketFlights, bucketCruises, roundKm } from "../buckets";
+import {
+  bucketUsers,
+  bucketFlights,
+  bucketCruises,
+  roundKm,
+  bucketCount,
+  bucketCountries,
+  bucketPairings,
+} from "../buckets";
 
 describe("bucketUsers", () => {
   it.each([
@@ -51,5 +59,45 @@ describe("roundKm", () => {
   });
   it("never returns a fractional value", () => {
     expect(Number.isInteger(roundKm(1234.567))).toBe(true);
+  });
+});
+
+// forgejo#315 — must stay in step with COUNT_BUCKETS / COUNTRY_BUCKETS /
+// PAIRING_BUCKETS in travstats-stats/src/schema.ts, which refuses any other value.
+describe("bucketCount", () => {
+  it.each([
+    [0, "0"],
+    [1, "1-10"],
+    [10, "1-10"],
+    [11, "11-50"],
+    [50, "11-50"],
+    [51, "51-250"],
+    [250, "51-250"],
+    [251, "250+"],
+  ])("maps %i to %s", (n, expected) => {
+    expect(bucketCount(n)).toBe(expected);
+  });
+});
+
+describe("bucketCountries", () => {
+  it.each([
+    [0, "0"],
+    [5, "1-5"],
+    [6, "6-20"],
+    [21, "21-50"],
+    [51, "50+"],
+  ])("maps %i to %s", (n, expected) => {
+    expect(bucketCountries(n)).toBe(expected);
+  });
+});
+
+describe("bucketPairings", () => {
+  it.each([
+    [0, "0"],
+    [1, "1"],
+    [2, "2-5"],
+    [6, "6+"],
+  ])("maps %i to %s", (n, expected) => {
+    expect(bucketPairings(n)).toBe(expected);
   });
 });

@@ -1,7 +1,7 @@
 {
   "consent": {
     "title": "Anonymous usage statistics",
-    "body": "Help us understand how TravStats is used. We send anonymous metrics only — version, enabled domains, coarse size ranges. Never your flights, ports, names, IP address, or API keys.",
+    "body": "Help us understand how TravStats is used. We send anonymous metrics only — version, enabled areas and how much each is used, always as coarse ranges. Never your flights, ports, names, IP address, or API keys.",
     "accept": "Yes, send anonymous data",
     "decline": "No, thanks",
     "whatIsSent": "What exactly is sent?",

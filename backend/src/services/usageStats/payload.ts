@@ -11,8 +11,9 @@ import {
   type UsersBucket,
 } from "./buckets";
 import { getOrCreateInstallId } from "./consent";
+import { buildUsageV2, type UsageV2 } from "./usageV2";
 
-export interface UsagePayload {
+export interface UsagePayload extends UsageV2 {
   install_id: string;
   version: string;
   arch: string;
@@ -82,6 +83,7 @@ export async function buildUsagePayload(): Promise<UsagePayload> {
     achievementRows,
     trackedFlight,
     allUserSettings,
+    usageV2,
   ] = await Promise.all([
     getOrCreateInstallId(),
     prisma.adminSettings.findFirst({ orderBy: { id: "asc" } }),
@@ -96,6 +98,7 @@ export async function buildUsagePayload(): Promise<UsagePayload> {
     prisma.userSettings.findMany({
       select: { enabledDomains: true, historicalEnrichmentEnabled: true, data: true },
     }),
+    buildUsageV2(),
   ]);
 
   const providerColumns: ReadonlyArray<readonly [string, unknown]> = [
@@ -140,5 +143,6 @@ export async function buildUsagePayload(): Promise<UsagePayload> {
       .map(([name]) => name),
     locale: majorityLocale(languages),
     reported_at: new Date().toISOString(),
+    ...usageV2,
   };
 }
