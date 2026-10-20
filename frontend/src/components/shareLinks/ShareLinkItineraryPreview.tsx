@@ -18,7 +18,7 @@ function when(format: DisplayFormatter, value: TimeValue | null): string | null 
 }
 
 const day = (format: DisplayFormatter, value: LocalDateValue | null): string | null =>
-  value ? format.localDate(value.date) : null;
+  value ? format.localDateValue(value) : null;
 
 const join = (parts: Array<string | null | undefined>, sep = " · "): string =>
   parts.filter(Boolean).join(sep);
