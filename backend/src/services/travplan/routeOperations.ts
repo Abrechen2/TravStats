@@ -1,6 +1,6 @@
 import { AppError } from "../../middleware/errorHandler";
 import { collectionSchemas } from "./schema";
-import { applyVariantOperation, isVariantOperation } from "./variants";
+import { applyVariantOperation, isVariantOperation, pruneStationScoped } from "./variants";
 import type { PlanOperation, PlanStage, PlanState, PlanStation } from "./types";
 
 const ROUTE_COLLECTIONS = new Set(["stations", "stages"]);
@@ -62,15 +62,14 @@ function cascadeOnboard(state: PlanState): PlanState {
 
 function removeStation(state: PlanState, id: string): PlanState {
   if (!state.stations.some((s) => s.id === id)) notFound();
-  return {
+  // Links and weather go only if no variant still holds the same station.
+  return pruneStationScoped({
     ...state,
     stations: state.stations.filter((s) => s.id !== id),
     stages: state.stages.filter((g) => g.fromStationId !== id && g.toStationId !== id),
     // The day trips stay as ideas-tray entries; only the anchor goes.
     items: state.items.map((i) => (i.stationId === id ? { ...i, stationId: null } : i)),
-    stationLinks: state.stationLinks.filter((l) => l.stationId !== id),
-    stationWeather: state.stationWeather.filter((w) => w.stationId !== id),
-  };
+  });
 }
 
 /**

@@ -145,18 +145,35 @@ describe("Plan variants", () => {
     expect(switched.items[0].stationId).toBe(a.id);
   });
 
-  it("drops station links to stations that left the active route", () => {
+  it("keeps station links and weather through a variant round trip", () => {
     const { a, b, g1 } = route();
+    const link = { stationId: a.id, tripStopId: uid() };
+    const weather = {
+      stationId: a.id,
+      kind: "forecast" as const,
+      source: "open-meteo",
+      fetchedAt: "2027-05-01T08:00:00.000Z",
+      window: null,
+      days: [],
+    };
     const base: PlanState = {
       ...emptyState(),
       shape: "route",
       stations: [a, b],
       stages: [g1],
-      stationLinks: [{ stationId: a.id, tripStopId: uid() }],
+      stationLinks: [link],
+      stationWeather: [weather],
     };
     const withB = apply(base, { type: "create_variant", name: "B", copyActive: false });
     const switched = apply(withB, { type: "activate_variant", variantId: withB.variants[0].id });
-    expect(switched.stationLinks).toEqual([]);
+    const back = apply(switched, { type: "activate_variant", variantId: switched.variants[0].id });
+    expect(back.stations.map((s) => s.id)).toEqual([a.id, b.id]);
+    expect(back.stationLinks).toEqual([link]);
+    expect(back.stationWeather).toEqual([weather]);
+    // Once no route holds the station any more, its links and weather go.
+    const dropped = apply(switched, { type: "remove_variant", variantId: switched.variants[0].id });
+    expect(dropped.stationLinks).toEqual([]);
+    expect(dropped.stationWeather).toEqual([]);
   });
 
   it("fuel estimate is null when any drive distance is unknown", () => {
