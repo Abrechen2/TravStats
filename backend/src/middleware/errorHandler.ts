@@ -215,6 +215,9 @@ export type ApiErrorCode =
   | "TRIP_FILE_UNSAFE_PATH"
   /** A trip, booking or flight id the request named is not the caller's. */
   | "TRIP_NOT_FOUND"
+  /** Trip recording (forgejo#316): the trip was merged away; `extra.mergedIntoTripId`
+   *  names the caller's trip that now holds it (404). */
+  | "TRIP_MERGED"
   | "BOOKING_NOT_FOUND"
   | "FLIGHT_NOT_FOUND"
   /** A stay or cruise a booking was asked to cover is not the caller's (#356). */

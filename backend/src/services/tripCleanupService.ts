@@ -371,6 +371,17 @@ export async function mergeTrips(
       });
     }
 
+    // The Companion may still hold a source id and upload to it; leave a
+    // forwarding address (TRIP_MERGED), and re-point any older one that led to
+    // a source, so a chain of merges always names the trip that exists.
+    await tx.mergedTripRedirect.updateMany({
+      where: { userId, mergedIntoTripId: { in: sourceIds } },
+      data: { mergedIntoTripId: targetId },
+    });
+    await tx.mergedTripRedirect.createMany({
+      data: sourceIds.map((sourceTripId) => ({ sourceTripId, userId, mergedIntoTripId: targetId })),
+      skipDuplicates: true,
+    });
     await tx.trip.deleteMany({ where: { id: { in: sourceIds }, userId } });
     for (const [entity, ids] of moved) {
       await propagateWrites(tx, userId, entity, ids);
