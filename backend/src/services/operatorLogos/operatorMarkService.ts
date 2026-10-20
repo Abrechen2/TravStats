@@ -61,12 +61,42 @@ const OUTAGE_TTL_MS = 60 * 60 * 1000;
 /** Bounded background work: at most this many refreshes waiting at once. */
 const MAX_PENDING_REFRESHES = 8;
 
+/** The miss memory is an LRU with a cap, swept of expired entries now and then. */
+export const MAX_REMEMBERED_MISSES = 2_000;
+const SWEEP_EVERY_MS = 10 * 60 * 1000;
+
 const misses = new Map<string, { until: number; reason: OperatorMarkMiss }>();
 const inFlight = new Map<string, Promise<OperatorMark | null>>();
+let lastSweepAt = 0;
 
 export function __resetOperatorMarkCachesForTests(): void {
   misses.clear();
   inFlight.clear();
+  lastSweepAt = 0;
+}
+
+/** Test seam: how many misses are remembered right now. */
+export function __rememberedMissCount(): number {
+  return misses.size;
+}
+
+function sweepExpiredMisses(now: number): void {
+  if (now - lastSweepAt < SWEEP_EVERY_MS) return;
+  lastSweepAt = now;
+  for (const [key, miss] of misses) if (miss.until <= now) misses.delete(key);
+}
+
+/** Remember a miss, most recent last; past the cap the oldest one goes. */
+export function rememberMiss(key: string, reason: OperatorMarkMiss, ttlMs: number): void {
+  const now = Date.now();
+  sweepExpiredMisses(now);
+  misses.delete(key);
+  misses.set(key, { until: now + ttlMs, reason });
+  while (misses.size > MAX_REMEMBERED_MISSES) {
+    const oldest = misses.keys().next().value;
+    if (oldest === undefined) break;
+    misses.delete(oldest);
+  }
 }
 
 export function operatorMarkCacheDir(): string {
@@ -163,10 +193,7 @@ function fetchFromWikidata(key: string, name: string): Promise<OperatorMark | nu
           found.reason === "rateLimited" ||
           found.reason === "timeout" ||
           found.reason === "unavailable";
-        misses.set(key, {
-          until: Date.now() + (outage ? OUTAGE_TTL_MS : MISS_TTL_MS),
-          reason: found.reason,
-        });
+        rememberMiss(key, found.reason, outage ? OUTAGE_TTL_MS : MISS_TTL_MS);
         // Each failure has its own reason in the log; the name is the user's own
         // text, so only its key is logged.
         logger.info({
