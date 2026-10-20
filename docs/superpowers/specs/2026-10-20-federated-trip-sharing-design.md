@@ -362,6 +362,16 @@ Migrations are created with `prisma migrate dev --create-only`; the CHECKs are h
 
 ## 13. Owner decisions
 
+**Decided 2026-10-20.** O1 by the owner, verbatim answer „ja und umsetzen" to the recommendation
+below, with this wording: *private fields never travel; the facts of a shared trip travel
+Ed25519-signed over TLS to the co-traveller's chosen server.* This narrows the 2026-10-16 ruling
+("full records never travel unencrypted"): that ruling guards full records including the private
+half, and that half still never travels here; complete records keep going only through
+`/encrypted-share`. O2–O10 follow the recommendations below as **working assumptions** for the
+build on `dev/federated-trip-sharing`; any of them can be overturned by the owner, and the
+affected phase changes then.
+
+
 | # | Question | Recommendation |
 |---|---|---|
 | O1 | The 2026-10-16 ruling says "Full records never travel unencrypted." Trip facts ARE records, and E2E cannot apply: the receiving server must read them to keep the trip in the account (G1). May facts of an accepted shared trip travel Ed25519-signed over TLS, not E2E, as leaderboard totals do? | **Yes**, for the fact lists only; private fields still never travel at all. Without this ruling F-S4 cannot be built. |
