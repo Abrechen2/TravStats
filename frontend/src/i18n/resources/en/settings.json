@@ -1019,7 +1019,7 @@
       "backup": "Backup, export, restore, download, Excel, spreadsheet, JSON, data",
       "import": "Import, CSV, Flightradar24, logbook, upload",
       "notifications": "Notification, email, SMTP, mail server, reminder",
-      "externalServices": "API key, AirLabs, Aviationstack, AeroDataBox, OpenSky, OpenAI, Claude, AI, Immich, photos, Dawarich, location history, routing, satnav, road route, OpenRouteService, GraphHopper, OSRM, Strava",
+      "externalServices": "AirLabs, Aviationstack, AeroDataBox, OpenSky, OpenAI, Claude, AI, Immich, photos, Dawarich, location history, routing, satnav, road route, OpenRouteService, GraphHopper, OSRM, Strava",
       "homeAirport": "home, residence, home airport, airport, move",
       "defaults": "Default, preset, booking class, seat, airline, carrier",
       "features": "Features, parser, boarding pass, email parser, boarding pass scan",
@@ -1041,7 +1041,7 @@
       "suggestions": "Immich evidence, photos as evidence, place type, AI classification",
       "autoupdate": "Check interval, interval, approval, expiry, only during flight",
       "backup": "Instance backup, last backup",
-      "externalServices": "own key, own API key, API key, quota, GraphHopper key, OpenRouteService key"
+      "externalServices": "own key, own API key, API key, quota, AirLabs key, Aviationstack key, AeroDataBox key, AeroAPI key, OpenSky credentials, GraphHopper key, OpenRouteService key"
     }
   },
   "railProviders": {

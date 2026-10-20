@@ -75,3 +75,47 @@ describe("settings search", () => {
     expect(foldForSearch(" Größe ")).toBe("grosse");
   });
 });
+
+describe("settings search — expert rows (forgejo#321)", () => {
+  const services: SettingsSearchCandidate = {
+    section: "externalServices",
+    label: "Meine externen Dienste",
+    groupLabel: "Dienste",
+    href: "/settings/services?section=externalServices",
+    keywords: ["AirLabs", "Immich"],
+    expertKeywords: ["eigener API-Schlüssel", "AirLabs-Schlüssel"],
+  };
+
+  it("classifies a hit as expert when it reaches a hidden row, whatever else matched", () => {
+    // "airlabs" is both a provider (shown at standard) and a key form (expert).
+    const [hit] = searchSettings("airlabs", [services]);
+    expect(hit.expertOnly).toBe(true);
+  });
+
+  it("stays standard when only the standard words match", () => {
+    const [hit] = searchSettings("immich", [services]);
+    expect(hit.expertOnly).toBe(false);
+  });
+});
+
+describe("settings search — the shipped keyword lists", () => {
+  // An ordinary keyword must not repeat an expert one: with the same word in
+  // both, a reader at the standard level could not tell the hit apart.
+  it.each([
+    ["de", "settings"],
+    ["en", "settings"],
+    ["de", "admin"],
+    ["en", "admin"],
+  ])("keeps the %s %s ordinary and expert words apart", async (lang, ns) => {
+    const { default: copy } = await import(`../../i18n/resources/${lang}/${ns}.json`);
+    const { keywords, expertKeywords } = copy.search as {
+      keywords: Record<string, string>;
+      expertKeywords: Record<string, string>;
+    };
+    for (const [section, expert] of Object.entries(expertKeywords)) {
+      const ordinary = new Set(splitKeywords(keywords[section] ?? "").map(foldForSearch));
+      const shared = splitKeywords(expert).filter((k) => ordinary.has(foldForSearch(k)));
+      expect(shared, `${lang} ${section}`).toEqual([]);
+    }
+  });
+});

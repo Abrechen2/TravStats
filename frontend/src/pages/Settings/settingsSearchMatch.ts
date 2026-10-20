@@ -72,17 +72,22 @@ export function searchSettings(
       });
       continue;
     }
+    // A word that reaches a row only the expert level draws makes the hit an
+    // expert one, even when an ordinary word matched too: "AirLabs" is a
+    // provider row at standard and a key form at expert, and the reader typing
+    // it may well want the key.
     const keyword = matchKeyword(needle, candidate.keywords);
-    const expertKeyword = keyword ? null : matchKeyword(needle, candidate.expertKeywords ?? []);
-    const found = keyword ?? expertKeyword;
+    const expertKeyword = matchKeyword(needle, candidate.expertKeywords ?? []);
+    const found = expertKeyword ?? keyword;
     if (found) {
+      const starts = Boolean(keyword?.starts || expertKeyword?.starts);
       ranked.push({
         hit: {
           ...candidate,
           matchedKeyword: found.raw,
           expertOnly: sectionExpert || expertKeyword !== null,
         },
-        rank: found.starts ? 2 : 3,
+        rank: starts ? 2 : 3,
       });
     }
   }

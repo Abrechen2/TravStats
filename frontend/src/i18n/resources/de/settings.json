@@ -1019,7 +1019,7 @@
       "backup": "Backup, Sicherung, Export, Exportieren, Wiederherstellen, Download, Excel, Tabelle, JSON, Daten",
       "import": "Import, Importieren, CSV, Flightradar24, Logbuch, Hochladen",
       "notifications": "Benachrichtigung, E-Mail, SMTP, Mailserver, Erinnerung",
-      "externalServices": "API-Schlüssel, AirLabs, Aviationstack, AeroDataBox, OpenSky, OpenAI, Claude, KI, Immich, Fotos, Dawarich, Standortverlauf, Routing, Navi, Straßenroute, OpenRouteService, GraphHopper, OSRM, Strava",
+      "externalServices": "AirLabs, Aviationstack, AeroDataBox, OpenSky, OpenAI, Claude, KI, Immich, Fotos, Dawarich, Standortverlauf, Routing, Navi, Straßenroute, OpenRouteService, GraphHopper, OSRM, Strava",
       "homeAirport": "Zuhause, Wohnort, Heimatflughafen, Flughafen, Umzug",
       "defaults": "Standard, Vorgabe, Buchungsklasse, Sitzplatz, Fluggesellschaft, Airline",
       "features": "Funktionen, Parser, Bordkarte, E-Mail-Parser, Bordkarten-Scan",
@@ -1041,7 +1041,7 @@
       "suggestions": "Immich-Belege, Fotos als Beleg, Ortstyp, KI-Klassifizierung",
       "autoupdate": "Abfrageintervall, Intervall, Freigabe, Ablauf, nur während des Flugs",
       "backup": "Instanz-Backup, letzte Sicherung",
-      "externalServices": "eigener Schlüssel, eigener API-Schlüssel, API-Schlüssel, Kontingent, Quote, GraphHopper-Schlüssel, OpenRouteService-Schlüssel"
+      "externalServices": "eigener Schlüssel, eigener API-Schlüssel, API-Schlüssel, Kontingent, Quote, AirLabs-Schlüssel, Aviationstack-Schlüssel, AeroDataBox-Schlüssel, AeroAPI-Schlüssel, OpenSky-Zugang, GraphHopper-Schlüssel, OpenRouteService-Schlüssel"
     }
   },
   "railProviders": {

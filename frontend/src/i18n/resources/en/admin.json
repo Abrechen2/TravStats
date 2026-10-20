@@ -1194,7 +1194,7 @@
   },
   "search": {
     "keywords": {
-      "instance": "Instance name, name, address, public address, URL, home network, LAN, passkey, rpId, origins, registration, maximum accounts, beta, beta features, sign-in background",
+      "instance": "Instance name, name, address, public address, URL, home network, registration, maximum accounts, beta, beta features, sign-in background",
       "shareLinks": "Public links, share, sharing",
       "importMode": "Import mode, import",
       "usageStats": "Usage statistics, statistics, telemetry, anonymous",
@@ -1205,7 +1205,7 @@
       "users": "Users, accounts, lock account, reset two-factor, password",
       "invitations": "Invitation, invite, invitation link, registration",
       "externalServices": "API keys, global keys, AirLabs, Aviationstack, AeroDataBox, OpenSky, Logostream, Google Places, Immich, routing, OpenRouteService, rail, open data",
-      "parsers": "Parser, AI, LLM, Ollama, OpenAI, Claude, read bookings, model",
+      "parsers": "Parser, AI, LLM, Ollama, OpenAI, Claude, read bookings",
       "templateRepo": "Templates, template repository, repository",
       "smtp": "Email, SMTP, mail server, delivery",
       "backups": "Backup, restore, schedule",
