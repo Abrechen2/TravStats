@@ -35,6 +35,9 @@ const mark = registry.register(
   z
     .object({
       available: z.boolean(),
+      pending: z
+        .boolean()
+        .describe("A lookup is still running or was deferred; ask again on a later view"),
       source: z.enum(["catalogue", "wikidata"]).nullable(),
       credit: credit.nullable().describe("Null for a catalogue logo (the company's own icon)"),
     })
@@ -47,6 +50,7 @@ registry.registerPath({
   tags: ["Operators"],
   summary: "Whether an operator has a logo, and whom to credit for it",
   description:
+    "Only a name the catalogues or the caller's own journeys record is looked up. " +
     "Catalogued rail operators and rental companies first, then Wikidata (only while the " +
     "admin switch `operatorLogosOpenDataEnabled` is on). Never a stand-in: `available: false` " +
     "means the client draws a monogram.",

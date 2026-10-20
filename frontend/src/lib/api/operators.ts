@@ -14,6 +14,8 @@ export interface OperatorMarkCredit {
 
 export interface OperatorMark {
   available: boolean;
+  /** The server's lookup is still running or was deferred: ask again on a later view. */
+  pending?: boolean;
   source: "catalogue" | "wikidata" | null;
   credit: OperatorMarkCredit | null;
 }
@@ -41,7 +43,11 @@ export function getOperatorMark(domain: OperatorMarkDomain, name: string): Promi
     .get<{ success: true; data: OperatorMark }>("/operators/mark", {
       params: { domain, name: name.trim() },
     })
-    .then(({ data }) => data.data)
+    .then(({ data }) => {
+      // A pending answer is not remembered, so the next card asks again.
+      if (data.data.pending) cache.delete(key);
+      return data.data;
+    })
     .catch((err: unknown) => {
       logger.warn("operator mark lookup failed", err);
       cache.delete(key);

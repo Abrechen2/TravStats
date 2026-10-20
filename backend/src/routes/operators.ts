@@ -5,8 +5,10 @@ import { airlineLogoLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
 import {
   OPERATOR_DOMAINS,
-  resolveOperatorMark,
+  answerOperatorMark,
+  type OperatorMarkAnswer,
 } from "../services/operatorLogos/operatorMarkService";
+import { isKnownOperatorName } from "../services/operatorLogos/operatorOwnership";
 
 /**
  * Operator marks for the map cards (forgejo#323): the logo of a rail
@@ -32,20 +34,35 @@ function parse(query: unknown): z.infer<typeof querySchema> {
   return parsed.data;
 }
 
+/**
+ * Only a name the catalogues or the user's OWN journeys record is looked up
+ * (review of forgejo#323) — an arbitrary string costs no Wikimedia request.
+ * The lookup counts against the user's cold-lookup window and waits only so
+ * long; past that the answer is `pending` and the monogram stands for now.
+ */
+async function answerFor(req: AuthRequest): Promise<OperatorMarkAnswer> {
+  const { domain, name } = parse(req.query);
+  const userId = req.userId;
+  if (!userId || !(await isKnownOperatorName(userId, domain, name))) {
+    return { mark: null, pending: false };
+  }
+  return answerOperatorMark(domain, name, { userId });
+}
+
 /** GET /operators/mark?domain=ferry&name=Stena%20Line — whether a logo exists, and its credit. */
 router.get(
   "/mark",
   airlineLogoLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { domain, name } = parse(req.query);
-      const mark = await resolveOperatorMark(domain, name);
-      // `private`: an /api answer is never for a shared cache (CLAUDE.md).
-      res.setHeader("Cache-Control", "private, max-age=3600").json({
+      const { mark, pending } = await answerFor(req);
+      // `private`: an /api answer is never for a shared cache (CLAUDE.md). A
+      // pending answer is not cached at all — the next view should ask again.
+      res.setHeader("Cache-Control", pending ? "private, no-store" : "private, max-age=3600").json({
         success: true,
         data: mark
-          ? { available: true, source: mark.source, credit: mark.credit }
-          : { available: false, source: null, credit: null },
+          ? { available: true, pending: false, source: mark.source, credit: mark.credit }
+          : { available: false, pending, source: null, credit: null },
       });
     } catch (error) {
       next(error);
@@ -63,12 +80,11 @@ router.get(
   airlineLogoLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { domain, name } = parse(req.query);
-      const mark = await resolveOperatorMark(domain, name);
+      const { mark, pending } = await answerFor(req);
       if (!mark) {
         res
           .status(404)
-          .setHeader("Cache-Control", "private, max-age=3600")
+          .setHeader("Cache-Control", pending ? "private, no-store" : "private, max-age=3600")
           .json({ success: false, error: "No logo available" });
         return;
       }

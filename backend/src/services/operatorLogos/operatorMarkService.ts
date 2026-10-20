@@ -60,18 +60,31 @@ const MISS_TTL_MS = 24 * 60 * 60 * 1000;
 const OUTAGE_TTL_MS = 60 * 60 * 1000;
 /** Bounded background work: at most this many refreshes waiting at once. */
 const MAX_PENDING_REFRESHES = 8;
-
+/**
+ * Bounded COLD work too (review of forgejo#323): a first lookup is up to two
+ * serial Wikimedia searches, so at most this many run at once instance-wide,
+ * each user may start this many per window, and a request waits at most
+ * COLD_WAIT_MS — past that it answers "pending" (the card draws the monogram)
+ * while the lookup finishes into the cache for the next page view.
+ */
+export const MAX_COLD_IN_FLIGHT = 4;
+export const PER_USER_COLD_LIMIT = 30;
+const PER_USER_WINDOW_MS = 15 * 60 * 1000;
+const COLD_WAIT_MS = 3_000;
 /** The miss memory is an LRU with a cap, swept of expired entries now and then. */
 export const MAX_REMEMBERED_MISSES = 2_000;
 const SWEEP_EVERY_MS = 10 * 60 * 1000;
+const MAX_TRACKED_USERS = 1_000;
 
 const misses = new Map<string, { until: number; reason: OperatorMarkMiss }>();
 const inFlight = new Map<string, Promise<OperatorMark | null>>();
+const coldByUser = new Map<string, { since: number; count: number }>();
 let lastSweepAt = 0;
 
 export function __resetOperatorMarkCachesForTests(): void {
   misses.clear();
   inFlight.clear();
+  coldByUser.clear();
   lastSweepAt = 0;
 }
 
@@ -97,6 +110,26 @@ export function rememberMiss(key: string, reason: OperatorMarkMiss, ttlMs: numbe
     if (oldest === undefined) break;
     misses.delete(oldest);
   }
+}
+
+/** Whether `userId` may start another cold lookup now; counts it if so. */
+function admitUser(userId: string | undefined): boolean {
+  if (!userId) return true;
+  const now = Date.now();
+  const entry = coldByUser.get(userId);
+  if (!entry || now - entry.since > PER_USER_WINDOW_MS) {
+    coldByUser.delete(userId);
+    coldByUser.set(userId, { since: now, count: 1 });
+    while (coldByUser.size > MAX_TRACKED_USERS) {
+      const oldest = coldByUser.keys().next().value;
+      if (oldest === undefined) break;
+      coldByUser.delete(oldest);
+    }
+    return true;
+  }
+  if (entry.count >= PER_USER_COLD_LIMIT) return false;
+  entry.count += 1;
+  return true;
 }
 
 export function operatorMarkCacheDir(): string {
@@ -230,7 +263,36 @@ async function catalogueMark(domain: OperatorDomain, name: string): Promise<Oper
   return logo ? { image: logo, source: "catalogue", credit: null } : null;
 }
 
-async function wikidataMark(name: string): Promise<OperatorMark | null> {
+export interface OperatorMarkAnswer {
+  mark: OperatorMark | null;
+  /** True when a lookup is running (or was not admitted yet): ask again later. */
+  pending: boolean;
+}
+
+export interface OperatorMarkContext {
+  /** Who asked — counted against the per-user cold-lookup limit. */
+  userId?: string;
+  /** How long a request waits for a cold lookup. */
+  waitMs?: number;
+}
+
+async function waitFor(
+  task: Promise<OperatorMark | null>,
+  waitMs: number
+): Promise<OperatorMarkAnswer> {
+  let timer: NodeJS.Timeout | undefined;
+  const late = new Promise<"late">((resolve) => {
+    timer = setTimeout(() => resolve("late"), waitMs);
+  });
+  try {
+    const result = await Promise.race([task, late]);
+    return result === "late" ? { mark: null, pending: true } : { mark: result, pending: false };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function wikidataMark(name: string, ctx: OperatorMarkContext): Promise<OperatorMarkAnswer> {
   const key = operatorMarkKey(name);
   const cached = await readCache(key);
   if (cached) {
@@ -241,27 +303,47 @@ async function wikidataMark(name: string): Promise<OperatorMark | null> {
         if (!fresh) await touchFailedRefresh(key, cached.meta);
       });
     }
-    return cached.mark;
+    return { mark: cached.mark, pending: false };
   }
   const miss = misses.get(key);
-  if (miss && miss.until > Date.now()) return null;
+  if (miss && miss.until > Date.now()) return { mark: null, pending: false };
   misses.delete(key);
-  return fetchFromWikidata(key, name);
+  const waitMs = ctx.waitMs ?? COLD_WAIT_MS;
+  const running = inFlight.get(key);
+  if (running) return waitFor(running, waitMs);
+  // Admission: a full instance-wide queue or a user over their window answers
+  // "pending" without starting anything.
+  if (inFlight.size >= MAX_COLD_IN_FLIGHT || !admitUser(ctx.userId)) {
+    logger.info({ operation: "operator_logo_lookup", key, outcome: "deferred" });
+    return { mark: null, pending: true };
+  }
+  return waitFor(fetchFromWikidata(key, name), waitMs);
 }
 
 /**
- * The operator's mark, or null — then the card draws the monogram. Asks the
+ * The operator's mark, or none — then the card draws the monogram. Asks the
  * catalogue first (rail, rental), then Wikidata while the admin switch is on.
+ * `pending` says a lookup is still running or was deferred.
  */
+export async function answerOperatorMark(
+  domain: OperatorDomain,
+  name: string,
+  ctx: OperatorMarkContext = {}
+): Promise<OperatorMarkAnswer> {
+  const trimmed = name.trim();
+  if (trimmed === "") return { mark: null, pending: false };
+  const fromCatalogue = await catalogueMark(domain, trimmed);
+  if (fromCatalogue) return { mark: fromCatalogue, pending: false };
+  const { operatorLogosOpenDataEnabled } = await getInstanceSettings();
+  if (!operatorLogosOpenDataEnabled) return { mark: null, pending: false };
+  return wikidataMark(trimmed, ctx);
+}
+
+/** The mark alone — for callers that do not care whether a lookup is still running. */
 export async function resolveOperatorMark(
   domain: OperatorDomain,
-  name: string
+  name: string,
+  ctx: OperatorMarkContext = {}
 ): Promise<OperatorMark | null> {
-  const trimmed = name.trim();
-  if (trimmed === "") return null;
-  const fromCatalogue = await catalogueMark(domain, trimmed);
-  if (fromCatalogue) return fromCatalogue;
-  const { operatorLogosOpenDataEnabled } = await getInstanceSettings();
-  if (!operatorLogosOpenDataEnabled) return null;
-  return wikidataMark(trimmed);
+  return (await answerOperatorMark(domain, name, ctx)).mark;
 }

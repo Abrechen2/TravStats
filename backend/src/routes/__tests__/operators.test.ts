@@ -3,7 +3,12 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
-import { resolveOperatorMark } from "../../services/operatorLogos/operatorMarkService";
+import {
+  answerOperatorMark,
+  type OperatorMark,
+  type OperatorMarkAnswer,
+} from "../../services/operatorLogos/operatorMarkService";
+import { isKnownOperatorName } from "../../services/operatorLogos/operatorOwnership";
 
 /**
  * forgejo#323: the operator-mark endpoints. The resolver is mocked — its
@@ -14,9 +19,22 @@ import { resolveOperatorMark } from "../../services/operatorLogos/operatorMarkSe
  */
 jest.mock("../../services/operatorLogos/operatorMarkService", () => ({
   ...jest.requireActual("../../services/operatorLogos/operatorMarkService"),
-  resolveOperatorMark: jest.fn(),
+  answerOperatorMark: jest.fn(),
 }));
-const resolve = resolveOperatorMark as jest.MockedFunction<typeof resolveOperatorMark>;
+jest.mock("../../services/operatorLogos/operatorOwnership", () => ({
+  isKnownOperatorName: jest.fn(),
+}));
+const answer = answerOperatorMark as jest.MockedFunction<typeof answerOperatorMark>;
+const known = isKnownOperatorName as jest.MockedFunction<typeof isKnownOperatorName>;
+/** The old single-value mock, as an answer. */
+const resolve = {
+  mockResolvedValue: (mark: Parameters<typeof wrap>[0]) => answer.mockResolvedValue(wrap(mark)),
+  mockResolvedValueOnce: (mark: Parameters<typeof wrap>[0]) =>
+    answer.mockResolvedValueOnce(wrap(mark)),
+};
+function wrap(mark: OperatorMark | null): OperatorMarkAnswer {
+  return { mark, pending: false };
+}
 
 const USERNAME = "operators-route-test";
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
@@ -46,7 +64,11 @@ describe("/api/v1/operators", () => {
     await prisma.$disconnect();
   });
 
-  beforeEach(() => resolve.mockReset());
+  beforeEach(() => {
+    answer.mockReset();
+    known.mockReset();
+    known.mockResolvedValue(true);
+  });
 
   it("requires a session", async () => {
     const res = await request(app).get("/api/v1/operators/mark?domain=ferry&name=Stena%20Line");
@@ -65,10 +87,12 @@ describe("/api/v1/operators", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       success: true,
-      data: { available: true, source: "wikidata", credit: CREDIT },
+      data: { available: true, pending: false, source: "wikidata", credit: CREDIT },
     });
     expect(res.headers["cache-control"]).toMatch(/^private/);
-    expect(resolve).toHaveBeenCalledWith("ferry", "Stena Line");
+    expect(answer).toHaveBeenCalledWith("ferry", "Stena Line", {
+      userId: expect.any(String),
+    });
   });
 
   it("says plainly when there is no logo", async () => {
@@ -76,7 +100,7 @@ describe("/api/v1/operators", () => {
     const res = await request(app)
       .get("/api/v1/operators/mark?domain=bus&name=Busreisen%20M%C3%BCller")
       .set("Cookie", cookie);
-    expect(res.body.data).toEqual({ available: false, source: null, credit: null });
+    expect(res.body.data).toEqual({ available: false, pending: false, source: null, credit: null });
   });
 
   it("serves the bytes inert and private, and 404s without a stand-in image", async () => {
@@ -108,6 +132,24 @@ describe("/api/v1/operators", () => {
       .get("/api/v1/operators/logo?domain=spaceship&name=X")
       .set("Cookie", cookie);
     expect(res.status).toBe(400);
-    expect(resolve).not.toHaveBeenCalled();
+    expect(answer).not.toHaveBeenCalled();
+  });
+
+  it("looks up no name that neither a catalogue nor the user's own journeys record", async () => {
+    known.mockResolvedValue(false);
+    const res = await request(app)
+      .get("/api/v1/operators/mark?domain=ferry&name=anything%20at%20all")
+      .set("Cookie", cookie);
+    expect(res.body.data.available).toBe(false);
+    expect(answer).not.toHaveBeenCalled();
+  });
+
+  it("answers a still-running lookup as pending, uncached", async () => {
+    answer.mockResolvedValue({ mark: null, pending: true });
+    const res = await request(app)
+      .get("/api/v1/operators/mark?domain=ferry&name=Stena%20Line")
+      .set("Cookie", cookie);
+    expect(res.body.data).toMatchObject({ available: false, pending: true });
+    expect(res.headers["cache-control"]).toBe("private, no-store");
   });
 });
