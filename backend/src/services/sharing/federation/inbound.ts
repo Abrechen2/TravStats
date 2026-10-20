@@ -46,6 +46,7 @@ import type {
   TripShareAck,
 } from "../../../schemas/tripSharePeer";
 import { recordConflict, settleConflicts } from "./conflicts";
+import { heldIdentity, namedReference, nameToWrite, sentIdentity } from "./refIdentity";
 import type { ChangeAuthor, Spread } from "./outbound";
 import { rejectWith, serveOnce, takeSeq } from "./streams";
 import { fromWireEntries, fromWireFacts, localKeyOf, receivedStatus } from "./wire/decode";
@@ -160,15 +161,13 @@ async function ownCopy(tx: DbTransaction, s: Sender, entity: ShareEntity, shareK
 }
 
 /** The changes' values on one side, parsed by their codecs and resolved against this catalogue. */
-function sideOf(tx: DbTransaction, message: FactUpdateMessage, side: "before" | "after") {
+/** The changes' values on one side, parsed by their codecs (`wire`) and resolved here (`local`). */
+async function sideOf(tx: DbTransaction, message: FactUpdateMessage, side: "before" | "after") {
   const shape = ENTRY_SHAPES[message.entity];
-  return fromWireFacts(
-    tx,
-    message.entity,
-    Object.fromEntries(
-      message.changes.map((ch) => [ch.field, shape[ch.field].wire.parse(ch[side])])
-    )
+  const wire: Record<string, unknown> = Object.fromEntries(
+    message.changes.map((ch) => [ch.field, shape[ch.field].wire.parse(ch[side])])
   );
+  return { wire, local: await fromWireFacts(tx, message.entity, wire) };
 }
 
 async function applyFactUpdate(
@@ -190,17 +189,40 @@ async function applyFactUpdate(
   );
   const [copy] = await adapter.load(tx, [found.id]);
   if (!copy) return [];
-  const [before, after] = await Promise.all([
+  const [sent, wanted] = await Promise.all([
     sideOf(tx, message, "before"),
     sideOf(tx, message, "after"),
   ]);
+  const before = sent.local;
+  const after = wanted.local;
   const apply: string[] = [];
   const settled: string[] = [];
   const conflicts: { field: string; key: string }[] = [];
   const values = { ...after };
+  const changed = new Set(message.changes.map((ch) => localKeyOf(entity, ch.field)));
   for (const { field } of message.changes) {
     const key = localKeyOf(entity, field);
-    if (key === "status") {
+    const named = namedReference(entity, key);
+    if (named) {
+      // Compared by what it names, not by an id two misses share (F-S4d review).
+      const held = heldIdentity(copy.facts, named);
+      if (held === sentIdentity(after[key], wanted.wire[field])) settled.push(key);
+      else if (held === sentIdentity(before[key], sent.wire[field])) {
+        apply.push(key);
+        const name = nameToWrite(
+          named,
+          copy.facts,
+          after[key],
+          sent.wire[field],
+          wanted.wire[field]
+        );
+        // The sender's own change to the name fact, if any, is its own fact and wins.
+        if (name.write && !changed.has(named.name)) {
+          values[named.name] = name.value;
+          apply.push(named.name);
+        }
+      } else conflicts.push({ field, key });
+    } else if (key === "status") {
       // Advisory (rework D4): only whether it is a state no clock can produce crosses; this
       // server derives the rest, so there is nothing to compare.
       values.status = receivedStatus(entity, after.status);

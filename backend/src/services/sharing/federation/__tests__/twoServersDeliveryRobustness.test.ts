@@ -137,3 +137,49 @@ describe("a local edit between the receiver's check and its write (review 2)", (
     void ben;
   });
 });
+
+describe("catalogue references this server cannot resolve (review 3)", () => {
+  const ships: number[] = [];
+  afterAll(async () => {
+    await a.prisma.cruise.deleteMany({ where: { shipId: { in: ships } } });
+    await a.prisma.ship.deleteMany({ where: { id: { in: ships } } });
+  });
+
+  it("a change from one unknown ship to another is written as the new ship's name", async () => {
+    const anna = await harnessUser(a, "Anna");
+    const ben = await harnessUser(b, "Ben");
+    const remote = await pair(anna, ben);
+    const tag = Date.now().toString().slice(-5);
+    const [x, y] = await Promise.all(
+      ["X", "Y"].map((n, i) =>
+        a.prisma.ship.create({
+          data: { name: `MS ${n}${tag}`, imo: `8${i}${tag}`, cruiseLine: "Teste" },
+        })
+      )
+    );
+    ships.push(x.id, y.id);
+    const trip = await a.prisma.trip.create({ data: { userId: anna, name: "Seereise" } });
+    const cruise = await a.prisma.cruise.create({
+      data: { userId: anna, tripId: trip.id, shipId: x.id },
+    });
+    await a.offers.offerTrip(anna, trip.id, remote.id);
+    const [offer] = await b.offerInbox.listReceivedOffers(ben);
+    const { tripId } = await b.offerInbox.acceptOffer(ben, offer.id);
+    await a.outbox.runDeliveries();
+    const copy = await b.prisma.cruise.findFirstOrThrow({ where: { tripId } });
+    expect(copy).toMatchObject({ shipId: null, shipNameOverride: x.name });
+
+    await a.prisma.$transaction(async (tx) => {
+      const before = await a.propagate.shareSnapshot(tx, "cruise", cruise.id);
+      await tx.cruise.update({ where: { id: cruise.id }, data: { shipId: y.id } });
+      await a.propagate.propagateWrite(tx, anna, "cruise", cruise.id, before);
+    });
+    await a.outbox.runDeliveries();
+    expect(await b.prisma.cruise.findUniqueOrThrow({ where: { id: copy.id } })).toMatchObject({
+      shipId: null,
+      shipNameOverride: y.name,
+    });
+    const [updated] = (await b.notices.listNotices(ben)).filter((n) => n.kind === "updated");
+    expect(updated).toBeDefined();
+  });
+});
