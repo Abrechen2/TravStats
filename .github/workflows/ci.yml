@@ -40,9 +40,21 @@ on:
     # third way a gate can silently stop being a gate.
   pull_request:
   workflow_dispatch:
+    inputs:
+      odd_zones:
+        description: "Also run both suites under the two odd host zones (otherwise nightly only)"
+        type: boolean
+        default: true
+  # Nightly: the odd-zone runs (frontend-tests-tz, backend-tests-tz) live here
+  # since 2026-10-16. Scheduled runs use the default branch, i.e. main.
+  schedule:
+    - cron: "17 2 * * *"
 
+# The nightly run gets its own group: in the shared group, a push to main
+# would cancel the odd-zone run half-way, or the schedule would cancel a
+# push's run, and either would read as "nothing to report".
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'schedule' && 'nightly' || 'run' }}
   cancel-in-progress: true
 
 permissions:
@@ -177,9 +189,20 @@ jobs:
   # implemented" noise from the globe components. That is stderr output,
   # not a failure — do not "fix" it by making the job tolerate errors.
   # ---------------------------------------------------------------------
+  #
+  # Sharded since 2026-10-16: in one job the suite took 17 minutes. Each shard
+  # runs a fixed slice of the files (`--shard=k/n`) with coverage and writes a
+  # blob report; `frontend-coverage` merges the blobs, which re-reports every
+  # test result AND merges the coverage the way one run would have measured
+  # it, then applies the ratchet. A shard is the old job on a slice of the
+  # files, so nothing about isolation changes.
   frontend-tests:
-    name: Frontend tests (Vitest)
+    name: Frontend tests (Vitest ${{ matrix.shard }}/${{ strategy.job-total }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v7
 
@@ -192,16 +215,73 @@ jobs:
       - name: Install dependencies
         run: cd frontend && npm ci
 
-      # Coverage rides along with the same run (forgejo#62). `reportOnFailure`
-      # so a red run still publishes its figure; the step is red either way.
+      # Coverage rides along with the same run (forgejo#62).
       - name: Vitest
         run: >-
-          cd frontend && npx vitest --run --coverage
-          --coverage.reporter=json-summary --coverage.reporter=text-summary
+          cd frontend && npx vitest --run
+          --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+          --reporter=dot --reporter=blob
+          --outputFile.blob=.vitest-reports/blob-${{ matrix.shard }}.json
+          --coverage --coverage.reporter=json-summary --coverage.reportOnFailure
+
+      # Uploaded after a red run too, so the merge below reports the failure
+      # and the figure rather than a missing shard.
+      - name: Keep this shard's report
+        if: success() || failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-blob-${{ matrix.shard }}
+          path: frontend/.vitest-reports/blob-${{ matrix.shard }}.json
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 3
+
+  frontend-coverage:
+    name: Frontend coverage ratchet
+    runs-on: ubuntu-latest
+    needs: frontend-tests
+    # Runs whether the shards passed or failed, so the figure is never
+    # missing. A shard that died before writing its report fails the count
+    # check loudly instead of silently lowering the number.
+    if: ${{ !cancelled() }}
+    env:
+      SHARDS: "4"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: cd frontend && npm ci
+
+      - name: Collect the shards' reports
+        uses: actions/download-artifact@v8
+        with:
+          pattern: frontend-blob-*
+          path: frontend/.vitest-reports
+          merge-multiple: true
+
+      - name: Every shard reported
+        run: |
+          found=$(ls frontend/.vitest-reports/blob-*.json 2>/dev/null | wc -l)
+          echo "blob reports: ${found} of ${SHARDS}"
+          test "${found}" -eq "${SHARDS}"
+
+      # Re-reports every shard's results (red if any test failed) and merges
+      # their coverage; `include` in vitest.config.ts still puts every source
+      # file in the denominator, tested or not.
+      - name: Merge results and coverage
+        run: >-
+          cd frontend && npx vitest --merge-reports=.vitest-reports --reporter=dot
+          --coverage --coverage.reporter=json-summary --coverage.reporter=text-summary
           --coverage.reportOnFailure
 
       # Not below scripts/coverage-baseline.json, and the figure goes to the
-      # job summary. Runs after a red Vitest too, so the number is never
+      # job summary. Runs after a red merge too, so the number is never
       # missing from a failed run — but it cannot turn that run green.
       - name: Coverage ratchet
         if: success() || failure()
@@ -222,9 +302,17 @@ jobs:
   # is the verdict, and it fails on a report that ran nothing, so a crashed
   # run cannot pass. No coverage here: the coverage ratchet stays with the
   # UTC job above.
+  #
+  # NIGHTLY since 2026-10-16 (owner decision: every push's CI under ten
+  # minutes). It runs on the schedule above and on a manual dispatch, not on
+  # push or pull request — a push-time run would put eight more jobs beside
+  # the sharded UTC ones, past the twenty a public repository runs at once.
+  # So a new host-zone dependency now turns red the night after it lands,
+  # not on the push itself. The ratchet and its baseline are unchanged.
   # ---------------------------------------------------------------------
   frontend-tests-tz:
     name: Frontend tests (Vitest, TZ=${{ matrix.tz }})
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.odd_zones) }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -348,13 +436,19 @@ jobs:
   # Coverage is merged in `backend-coverage` below, from the hit counts,
   # not from the shards' percentages. Each shard reports every source file
   # (`collectCoverageFrom`), so on its own each would read far too low.
+  #
+  # 2026-10-16: four shards had grown to 18-21 minutes each. Now more shards,
+  # and four Jest workers per shard (the runner has four cores). Parallel
+  # workers are safe because jest.globalSetup.ts gives every worker its own
+  # copy of the migrated, seeded database (CREATE DATABASE ... TEMPLATE, see
+  # jest.workerDatabase.ts) — the isolation a serial run had, per worker.
   backend-tests:
-    name: Backend tests (Jest ${{ matrix.shard }}/4)
+    name: Backend tests (Jest ${{ matrix.shard }}/${{ strategy.job-total }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6]
 
     services:
       postgres:
@@ -420,8 +514,10 @@ jobs:
       - name: Jest
         id: jest
         run: >-
-          cd backend && npx jest --ci --forceExit --shard=${{ matrix.shard }}/4
+          cd backend && npx jest --ci --forceExit
+          --shard=${{ matrix.shard }}/${{ strategy.job-total }} --maxWorkers=4
           --coverage --coverageReporters=json
+          --setupFilesAfterEnv ./jest.afterEnv.ts ./jest.netprobe.ts
 
       # Uploaded after a red run too: the coverage job merges what exists and
       # the ratchet then reports the number, as it did before sharding.
@@ -442,6 +538,8 @@ jobs:
     # missing. A shard that died before writing its report fails the merge
     # step loudly instead of silently lowering the number.
     if: ${{ !cancelled() }}
+    env:
+      SHARDS: "6"
     steps:
       - uses: actions/checkout@v7
 
@@ -459,6 +557,14 @@ jobs:
         with:
           pattern: backend-coverage-*
           path: backend/coverage-shards
+
+      # merge-coverage.cjs fails on NO report; this fails on a missing one,
+      # which would otherwise only lower the figure.
+      - name: Every shard reported
+        run: |
+          found=$(find backend/coverage-shards -name coverage-final.json | wc -l)
+          echo "coverage reports: ${found} of ${SHARDS}"
+          test "${found}" -eq "${SHARDS}"
 
       - name: Merge coverage
         run: cd backend && node scripts/merge-coverage.cjs coverage-shards coverage
@@ -483,9 +589,13 @@ jobs:
   # recorded, not obeyed; the ratchet is the verdict and fails on a missing or
   # empty report. No coverage and no artifact: the coverage merge below reads
   # only `backend-coverage-*` from the UTC shards and is untouched by this job.
+  #
+  # NIGHTLY since 2026-10-16, with frontend-tests-tz and for the same reason
+  # (see there). Four workers per shard, like the UTC job.
   # ---------------------------------------------------------------------
   backend-tests-tz:
     name: Backend tests (Jest ${{ matrix.shard }}/4, TZ=${{ matrix.tz }})
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.odd_zones) }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -541,7 +651,7 @@ jobs:
         run: |
           cd backend
           code=0
-          npx jest --ci --forceExit --shard=${{ matrix.shard }}/4 --json --outputFile=tz-report.json || code=$?
+          npx jest --ci --forceExit --shard=${{ matrix.shard }}/4 --maxWorkers=4 --json --outputFile=tz-report.json || code=$?
           echo "jest exited ${code}; the odd-zone ratchet below is the verdict"
 
       - name: Odd-zone ratchet
