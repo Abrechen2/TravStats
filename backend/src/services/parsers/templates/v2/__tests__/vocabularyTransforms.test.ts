@@ -40,6 +40,15 @@ describe("v2 transforms added in P4b", () => {
     expect(applyTransforms("2026-03-14T10:00 07:00", "laterClock")).toBe("2026-03-15T07:00");
   });
 
+  it("laterClock does not guess the day of an arrival clock almost a day after the departure's", () => {
+    // Paris 00:10 → London 23:50 can be 40 minutes on the PREVIOUS calendar
+    // day, or a ride of 23 hours 40 on the same one.
+    expect(applyTransforms("2026-03-14T00:10 23:50", "laterClock")).toBeNull();
+    expect(applyTransforms("2026-03-14T00:10 21:11", "laterClock")).toBeNull();
+    // 21 hours later or less: no zone step makes it the day before.
+    expect(applyTransforms("2026-03-14T00:10 21:10", "laterClock")).toBe("2026-03-14T21:10");
+  });
+
   it.each([
     ["€ 1.234,50", 1234.5, "EUR"],
     ["NOK 3.380", 3380, "NOK"],

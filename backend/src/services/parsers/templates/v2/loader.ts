@@ -57,6 +57,8 @@ type Verdict =
 interface EntryOutcome {
   readonly status: V2TemplateStatusEntry;
   readonly active?: ActiveTemplate;
+  /** A fetched template to cache — written only once the whole sync is known current. */
+  readonly toCache?: TemplateEnvelope;
 }
 
 const MAX_DETAIL_ITEMS = 5;
@@ -234,13 +236,22 @@ export class V2TemplateStore {
 
     const nextActive = new Map<string, ActiveTemplate>();
     const nextStatus: V2TemplateStatusEntry[] = [];
+    const toCache: TemplateEnvelope[] = [];
     const seen = new Set<string>();
     for (const [i, rawEntry] of rawEntries.entries()) {
-      const outcome = await this.syncEntry(rawEntry, i, seen, generation, baseUrl);
+      const outcome = await this.syncEntry(rawEntry, i, seen, baseUrl);
       nextStatus.push(outcome.status);
       if (outcome.active) nextActive.set(outcome.active.template.id, outcome.active);
+      if (outcome.toCache) toCache.push(outcome.toCache);
     }
+    // Nothing reaches the disk before this check: a sync that stalls after
+    // its first template and is superseded meanwhile must leave no file
+    // behind that a restart would activate.
     if (this.superseded(generation)) return this.discarded(baseUrl);
+    for (const template of toCache) {
+      this.safeCache(() => this.deps.cache.write(template), template.id);
+    }
+    this.purgeCacheExcept(seen);
 
     for (const id of this.active.keys()) {
       if (seen.has(id)) continue;
@@ -265,11 +276,31 @@ export class V2TemplateStore {
     return false;
   }
 
+  /**
+   * The cache holds this repository's index and nothing else: a file another
+   * repository left (a sync that was superseded, a repository the admin
+   * replaced) would otherwise come back active on the next restart.
+   */
+  private purgeCacheExcept(seen: ReadonlySet<string>): void {
+    let cached: unknown[];
+    try {
+      cached = this.deps.cache.list();
+    } catch (err) {
+      logger.warn({ err }, "v2 template cache could not be read — nothing purged");
+      return;
+    }
+    cached.forEach((raw, i) => {
+      const { id } = describeRaw(raw, `cache[${i}]`);
+      if (seen.has(id) || id === `cache[${i}]`) return;
+      this.safeCache(() => this.deps.cache.remove(id), id);
+      logger.info({ id }, "v2 template cached from another index — removed from the cache");
+    });
+  }
+
   private async syncEntry(
     rawEntry: unknown,
     i: number,
     seen: Set<string>,
-    generation: number,
     baseUrl: string
   ): Promise<EntryOutcome> {
     const parsed = templateIndexEntrySchema.safeParse(rawEntry);
@@ -300,11 +331,8 @@ export class V2TemplateStore {
     const verdict = this.evaluate(raw, entry);
     if (!verdict.ok) return this.keepOrReject(current, entry, verdict.reason, verdict.detail);
 
-    if (!this.superseded(generation)) {
-      this.safeCache(() => this.deps.cache.write(verdict.template), entry.id);
-    }
     const active: ActiveTemplate = { template: verdict.template, source: "remote" };
-    return { status: activeStatus(active), active };
+    return { status: activeStatus(active), active, toCache: verdict.template };
   }
 
   private keepOrReject(

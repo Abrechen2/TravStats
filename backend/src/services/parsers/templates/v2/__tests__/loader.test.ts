@@ -276,6 +276,63 @@ describe("V2TemplateStore.sync", () => {
     expect(store.getStatus().templates.map((t) => t.id)).toEqual(["lodging:otherchain"]);
   });
 
+  it("leaves nothing of the previous repository in the cache when its sync stalls mid-way", async () => {
+    const OTHER = "https://other.example.test/main";
+    const a1 = validTemplate();
+    const a2 = validTemplate({ id: "lodging:secondchain" });
+    const b = validTemplate({ id: "lodging:otherchain" });
+    let releaseA2: () => void = () => undefined;
+    const a2Held = new Promise<void>((resolve) => {
+      releaseA2 = resolve;
+    });
+    const answer = fakeFetch({
+      ...routesFor(a1, a2),
+      [`${OTHER}/index.json`]: indexFor(b),
+      [`${OTHER}/lodging/otherchain.json`]: b,
+    });
+    let a2Asked: () => void = () => undefined;
+    const a2Requested = new Promise<void>((resolve) => {
+      a2Asked = resolve;
+    });
+    // A's first template answers; its second only when the test says so.
+    const fetchJson: FetchJson = async (url) => {
+      if (url === `${BASE}/lodging/secondchain.json`) {
+        a2Asked();
+        await a2Held;
+      }
+      return answer(url);
+    };
+    const cache = createMemoryTemplateCache([]);
+    const store = new V2TemplateStore({ fetchJson, baseUrl: BASE, appVersion: "2.7.0", cache });
+
+    const scheduledA = store.sync();
+    await a2Requested; // A has read (and once cached) its first template
+    store.setBaseUrl(OTHER);
+    await store.sync();
+    releaseA2();
+    await scheduledA;
+
+    expect([...cache.entries.keys()]).toEqual(["lodging:otherchain"]);
+    // A restart reads the cache: only B's template comes back.
+    const restarted = new V2TemplateStore({
+      fetchJson: answer,
+      baseUrl: OTHER,
+      appVersion: "2.7.0",
+      cache,
+    });
+    restarted.loadFromCache();
+    expect(restarted.getActive().map((t) => t.id)).toEqual(["lodging:otherchain"]);
+  });
+
+  it("drops cached templates of another repository once the new one syncs", async () => {
+    const stale = validTemplate({ id: "lodging:fromelsewhere" });
+    const t = validTemplate();
+    const { store, cache } = makeStore(routesFor(t), { cached: [stale] });
+    // Not loaded as active (a restart that failed to read it, say): still purged.
+    await store.sync();
+    expect([...cache.entries.keys()]).toEqual(["lodging:examplechain"]);
+  });
+
   it("deactivates and uncaches a template the index no longer names", async () => {
     const t = validTemplate();
     const { store, cache } = makeStore({ [`${BASE}/index.json`]: indexFor() }, { cached: [t] });
