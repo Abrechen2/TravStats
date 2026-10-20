@@ -116,6 +116,10 @@ Further paths into the same store:
 4. OwnTracks / Overland HTTP endpoints with a per-user token, translating into
    the same call — for users without the Companion (and Home Assistant via the
    OwnTracks format).
+5. **Apple Shortcuts without the Companion** — a downloadable Shortcut template
+   that posts one point to `POST /location/points` with a per-user ingest key,
+   checking the privacy zones (Wi-Fi name, distance) before it sends. The owner
+   runs exactly this against Dawarich today (2026-10-20).
 
 ### 3.3 Source choice: internal or Dawarich
 A per-user setting **„Standortquelle: Intern / Dawarich"** (Settings →
@@ -157,8 +161,10 @@ server, and positions that are part of the TravStats backup.
   eine Verbindung?" question. Mode detection runs only on precise segments
   (trip recordings, imports with dense points); coarse everyday points yield
   stays and countries, not modes.
-- **Flights** — points at the departure airport + airborne speed or a gap
-  matching the block time → confirms „flown" and actual times.
+- **Flights** — points at the departure airport and at the destination around
+  the block times are **evidence offered for review**, never an automatic
+  „flown" (Codex review point 9); ADR 0010's flight recorder stays the only
+  source of observed actual times.
 - **Cities** — reverse-geocoded stays ≥ 60 min, through the instance geocoder
   budget.
 
@@ -173,8 +179,16 @@ server, and positions that are part of the TravStats backup.
 ### 3.6 Privacy and retention
 Per user, never shared, never federated, never in a public link, never in a
 `.travstats` file or a comparison (as forgejo#316). Kept until the user deletes
-(owner principle), with delete-by-range, export and backup. Privacy zones
-(home, work): points inside are kept but never drawn and never shown to others.
+(owner principle), with delete-by-range, export and backup.
+
+**Privacy zones** (home, work, any place the user adds) have two modes:
+„nicht aufzeichnen" — the point is dropped **on the device** and never leaves
+it (owner, 2026-10-20: „daheim ist es aus und in der Arbeit auch
+deaktiviert") — and „speichern, nie zeigen" — kept for countries and times,
+never drawn, exported, suggested or sent to a geocoder. The Companion and the
+Shortcut template apply the zones before sending; the server applies them
+again on ingest for sources that cannot (OwnTracks, Overland, file imports).
+A change to a zone is synced to the phone with the other location settings.
 
 ## 4. Phases
 - **P1** `location_points` + `POST /location/points` + forgejo#316 folded in +
@@ -229,7 +243,29 @@ App Review sees an always-on purpose — the mode is off by default, explained o
 the location screen, with the iOS indicator; if Apple objects, „Alltag" goes
 and „Reise genau" stays.
 
-### 5.1 Settings levels (forgejo#318)
+### 5.1 Shortcuts in the Companion (owner, 2026-10-20)
+„Die Kurzbefehle müssen dann beim Companion auch geben." The Companion
+exposes its location functions as Apple Shortcuts actions (App Intents), so a
+user builds their own automations (time of day, arriving, Wi-Fi, CarPlay,
+focus) without URLs or keys:
+
+| Action | Does |
+|---|---|
+| Standort jetzt senden | one point, source `shortcut`, through the outbox, zones applied |
+| Aufzeichnung pausieren / fortsetzen | optional duration; „Pause wins" as everywhere |
+| Aufzeichnungsart setzen | Aus / Alltag / Reise genau |
+| Ort jetzt speichern | today's „Ort jetzt" as an action, with an optional name |
+| Bin ich in einer Privatzone? | returns yes/no for the user's own conditions |
+| Laufende Reise | returns the current trip's name and day, or nothing |
+
+Native constraint: an intent can run while the app is not running, so it must
+work without the JS runtime — Swift (`AppIntents`, iOS 16+) in a local Expo
+module beside `travstats-barcode`, reading the zones and the device token
+from the App Group / Keychain and writing into the same outbox the recorder
+uses. Android gets the same actions as App Shortcuts / broadcast intents
+(Tasker, Home Assistant) later. Tracked as companion#75.
+
+### 5.2 Settings levels (forgejo#318)
 Settings → Standortverlauf follows the Standard / Experte levels: source,
 modes, preset, suggestions on/off, privacy zones, imports and export are
 Standard; the detailed recording values, the detection thresholds, „Orte als
