@@ -20,8 +20,9 @@ import { findStays, type StayFix } from "./stayDetection";
  *     the phone was. A long run of coarse fixes with no better one near is
  *     kept: it is the only record of that stretch.
  *  2. **Frozen fixes and teleports** (timed segments only). A fix that repeats
- *     an earlier position to the last digit after the phone had moved away is
- *     a stale cached position, not a return. A fix the previous kept fix
+ *     an earlier position to the last digit, at a speed the mode cannot
+ *     reach from the fix before nor on to the fix after, is a stale cached
+ *     position, not a return. A fix the previous kept fix
  *     could not reach at the mode's top speed is a teleport when the
  *     recording comes back within `MAX_SPIKE_FIXES` to a fix the spike could
  *     not have reached either — the out-and-back spike. Without that return it is kept: a real jump, or the start of a
@@ -143,25 +144,34 @@ function dropCoarse(
   );
 }
 
-/** Pass 2a: a repeat of an earlier position after the phone had moved away from it. */
+/**
+ * Pass 2a: a stale cached position. A phone that loses its fix may hand back
+ * an earlier position to the last digit; that is frozen only when it is also
+ * IMPOSSIBLE — the previous kept fix could not have reached it, nor it the
+ * next fix. An exact repeat alone proves nothing: a ride retracing its own
+ * rounded points, or a cable car back at its terminal, returns to the same
+ * coordinate at a speed the mode allows (review of forgejo#319).
+ */
 function dropFrozen(
   fixes: readonly JitterFix[],
   indices: readonly number[],
   profile: JitterProfile
 ): number[] {
   const kept: number[] = [];
-  for (const i of indices) {
+  indices.forEach((i, k) => {
     const fix = fixes[i];
     const previous = kept[kept.length - 1];
-    const movedAway =
-      previous !== undefined && distanceM(fixes[previous], fix) > uncertaintyM(fix, profile);
-    const repeatsEarlier =
-      movedAway &&
+    const next = indices[k + 1];
+    const frozen =
+      previous !== undefined &&
+      next !== undefined &&
       kept
-        .slice(-FROZEN_LOOKBACK_FIXES, -1)
-        .some((j) => fixes[j].lon === fix.lon && fixes[j].lat === fix.lat);
-    if (!repeatsEarlier) kept.push(i);
-  }
+        .slice(-FROZEN_LOOKBACK_FIXES - 1, -1)
+        .some((j) => fixes[j].lon === fix.lon && fixes[j].lat === fix.lat) &&
+      !reachable(fixes[previous], fix, profile) &&
+      !reachable(fix, fixes[next], profile);
+    if (!frozen) kept.push(i);
+  });
   return kept;
 }
 

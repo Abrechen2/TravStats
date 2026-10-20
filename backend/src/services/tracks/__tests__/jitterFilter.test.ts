@@ -142,12 +142,8 @@ describe("jitter filter — teleports and frozen fixes", () => {
     expect(filterJitter(asFixes(jump), [0], JITTER_PROFILES.road).dropped).toBe(0);
   });
 
-  it("drops a stale repeat of an earlier position after the phone moved on", () => {
-    const walk = moving(BASE, T0, 0, 5, 300, 5);
-    const frozen = [...walk];
-    frozen[40] = { ...frozen[40], lat: frozen[35].lat, lon: frozen[35].lon };
-    expect(filterJitter(asFixes(frozen), [0], JITTER_PROFILES.foot).dropped).toBe(1);
-  });
+  // A stale repeated fix is dropped only when it is also impossible — see
+  // jitterFilter.frozen.test.ts (an exact repeat a walk can reach is a return).
 
   it("keeps identical repeated fixes while the time advances — a phone standing still briefly", () => {
     const walk = moving(BASE, T0, 0, 5, 300, 5);
