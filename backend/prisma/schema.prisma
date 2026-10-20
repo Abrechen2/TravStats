@@ -1029,6 +1029,12 @@ model Invitation {
 model AdminSettings {
   id Int @id @default(autoincrement())
 
+  /// The template repository's raw-file root, set by the admin (forgejo#309).
+  /// Wins over the `TEMPLATE_REPO_BASE_URL` env var; null = env, then the
+  /// official repository. https, or plain http to a local/LAN host only
+  /// (`llm/llmEndpoint.ts` — the one endpoint rule).
+  templateRepoBaseUrl String? @map("template_repo_base_url")
+
   // Global API keys (encrypted at application level)
   globalOpenaiApiKey String? @map("global_openai_api_key")
   globalClaudeApiKey String? @map("global_claude_api_key")

@@ -19,6 +19,7 @@
     "admin/smtp.ts",
     "admin/strava.ts",
     "admin/system.ts",
+    "admin/templateRepo.ts",
     "admin/timeMigration.ts",
     "admin/usageStats.ts",
     "admin/users.ts",

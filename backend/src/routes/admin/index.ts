@@ -19,6 +19,7 @@ import timeMigrationRouter from "./timeMigration";
 import pushAdminRouter from "./push";
 import federationAdminRouter from "./federation";
 import importModeRouter from "./importMode";
+import templateRepoRouter from "./templateRepo";
 
 const router = Router();
 
@@ -61,5 +62,6 @@ router.use("/", timeMigrationRouter);
 router.use("/push", pushAdminRouter);
 router.use("/federation", federationAdminRouter);
 router.use("/", importModeRouter);
+router.use("/", templateRepoRouter);
 
 export default router;

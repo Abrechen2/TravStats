@@ -6,7 +6,8 @@ import { appVersion as runningAppVersion } from "../../../utils/version";
 import { fetchJson as httpsFetchJson } from "./fetchJson";
 import { createFsTemplateCache } from "./v2/cache";
 import { V2TemplateStore, type FetchJson } from "./v2/loader";
-import { resolveTemplateRepoBaseUrl } from "./v2/source";
+import { effectiveTemplateRepo, type TemplateRepoOrigin } from "./v2/source";
+import { prisma } from "../../../db";
 import { createDirSnapshot, DEFAULT_SNAPSHOT_DIR } from "./v2/snapshot";
 import type { V2Status } from "./v2/status";
 import type { TemplateDomain, TemplateEnvelope } from "./v2/envelope";
@@ -51,14 +52,20 @@ export class TemplateRegistry {
   private templates: Map<string, AirlineTemplate> = new Map();
   private templateSources: Map<string, "builtin" | "cached"> = new Map();
   private readonly fetchJson: FetchJson;
-  private readonly v1Base: string;
+  private v1Base: string;
+  private repository: { url: string; origin: TemplateRepoOrigin };
+  /** A test or script that names its own repository is never redirected by the admin setting. */
+  private readonly fixedRepository: boolean;
   private readonly cacheDir: string;
   private readonly v2: V2TemplateStore;
   private v2LocalLoaded = false;
 
   constructor(options: TemplateRegistryOptions = {}) {
-    const baseUrl =
-      options.baseUrl ?? resolveTemplateRepoBaseUrl(process.env.TEMPLATE_REPO_BASE_URL);
+    this.fixedRepository = options.baseUrl !== undefined;
+    this.repository = options.baseUrl
+      ? { url: options.baseUrl, origin: "env" }
+      : effectiveTemplateRepo(null, process.env.TEMPLATE_REPO_BASE_URL);
+    const baseUrl = this.repository.url;
     this.fetchJson = options.fetchJson ?? httpsFetchJson;
     this.v1Base = `${baseUrl}/templates`;
     this.cacheDir = options.cacheDir ?? DEFAULT_CACHE_DIR;
@@ -72,6 +79,7 @@ export class TemplateRegistry {
   }
 
   async initialize(): Promise<void> {
+    await this.loadAdminRepository();
     await this.loadCachedTemplates();
     this.loadLocalV2();
     this.scheduleSync();
@@ -96,6 +104,42 @@ export class TemplateRegistry {
         logger.debug({ file, err }, "Skipped malformed cache file");
       }
     }
+  }
+
+  /**
+   * The admin's repository URL wins over the env var (forgejo#309). Read once
+   * at boot; a later change arrives through `useRepository`. A database that
+   * cannot be read leaves the env/default repository in place, logged.
+   */
+  private async loadAdminRepository(): Promise<void> {
+    if (this.fixedRepository) return;
+    try {
+      const row = await prisma.adminSettings.findFirst({
+        orderBy: { id: "asc" },
+        select: { templateRepoBaseUrl: true },
+      });
+      this.useRepository(row?.templateRepoBaseUrl ?? null);
+    } catch (err) {
+      logger.warn({ err }, "Template repository setting unreadable — using the env/default one");
+    }
+  }
+
+  /**
+   * Point every later sync at the repository the admin set (null: the env
+   * var, then the official one). Nothing is fetched here and nothing active
+   * changes — the caller syncs, and a failing new repository leaves the last
+   * good set serving, exactly as a failing sync always has.
+   */
+  useRepository(adminUrl: string | null): { url: string; origin: TemplateRepoOrigin } {
+    this.repository = effectiveTemplateRepo(adminUrl, process.env.TEMPLATE_REPO_BASE_URL);
+    this.v1Base = `${this.repository.url}/templates`;
+    this.v2.setBaseUrl(this.repository.url);
+    return this.repository;
+  }
+
+  /** The repository the next sync reads, and which source named it. */
+  getRepository(): { url: string; origin: TemplateRepoOrigin } {
+    return this.repository;
   }
 
   getTemplate(iata: string): AirlineTemplate | null {
