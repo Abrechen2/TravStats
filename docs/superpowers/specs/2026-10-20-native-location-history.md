@@ -229,6 +229,37 @@ Order follows Codex's review (§8): the riskiest unknown, the phone, first.
 | **P3** show | trip day timeline, „Erkundet", „Zuletzt gesehen", year in review (km and countries), areas; Shortcut template for users without the Companion | remaining Shortcuts actions (§5.1), recording state on the trip screen |
 | **P4** connect | journey and trip suggestions, flight evidence for review, cities, km by mode and new cities in the stats, OwnTracks/Overland ingest, Google Timeline and further formats | Android shortcuts / broadcast intents, native visit monitoring if P0 shows it is needed |
 
+### 4.1 P0 — the probe (built 2026-10-20)
+
+Companion branch `spike/location-probe` (Forgejo): a throwaway recorder
+behind the developer tools (seven taps on the version → developer mode →
+„Aufzeichnungstest (P0)"). Its own task registered at the app entry, one file
+per batch / process start / start-stop, nothing uploaded, „Standort
+pausieren" wins, wiped on unpair. Three rates — Genau 20 m / 10 s,
+Ausgewogen 100 m / 1 min, Akku sparen 500 m / 5 min — and „pause while
+still". The screen shows fixes per hour, interval median / p90, delivery
+delay, accuracy, share ≤ 20 m, battery per hour unplugged, process starts (in
+the background = the OS woke a killed app), and every gap over 5 minutes with
+whether a restart ended it; the raw log exports as JSON.
+
+**Test day:** start „Genau", live a normal day, swipe the app away once,
+restart the phone once, export in the evening — on the iPhone and on the
+Android test phone. A second day with „pause while still" on.
+
+**Expected before measuring (to be confirmed or refuted):**
+- *Swipe-away on iOS stops standard location updates*, and iOS relaunches an
+  app only for significant-change, region or visit events — not for the
+  `startLocationUpdatesAsync` stream. If the probe shows a gap that only ends
+  when the app is opened, the recorder needs a significant-change or geofence
+  companion that wakes it and restarts the stream (native module, §5).
+- *After a reboot* neither platform restarts the stream by itself; Android
+  needs a boot receiver for the foreground service.
+- *„Pause while still" on iOS* may resume late after walking off.
+
+**Decides:** whether „Reise genau" ships on `expo-location` alone or needs the
+native wake-up module in P1, and the default rate (battery per hour against
+interval).
+
 ## 5. Companion (needs an ADR in the Companion repo; supersedes ADR 0013 points 3, 4, 7)
 
 Three recording modes under „Standort", each visible and pausable („Pause wins"
