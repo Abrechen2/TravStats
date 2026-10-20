@@ -5,6 +5,7 @@ import type { TemplateEnvelope } from "../../parsers/templates/v2/envelope";
 import { currencyOf, parseAmount } from "./textLines";
 import { readWithV2RentalTemplates } from "./v2Rental";
 import type { ParsedRentalCancellation, ParsedRentalDocument } from "./types";
+import { loadActiveWorkshopTemplates } from "../../parsers/userTemplates/v2UserTemplates";
 
 /**
  * Template, else (from package R3) the model, else decline — no generic regex
@@ -155,12 +156,22 @@ export async function parseRentalBookingText(
     attachments?: readonly RentalAttachment[];
     /** The active v2 rental templates; defaults to the registry's. */
     templates?: readonly TemplateEnvelope[];
+    /**
+     * Who is asking: their ACTIVE workshop rental templates (forgejo#309) are
+     * tried after the repository's — the precedence cruise and lodging use.
+     */
+    userId?: string;
   } = {}
 ): Promise<RentalParseResult> {
   const combined = options.subject ? `${options.subject}\n\n${text}` : text;
   const pdfs = await pdfTexts(options.attachments ?? []);
   const withPdfs = [combined, ...pdfs].join("\n\n");
-  const templates = options.templates ?? templateRegistry.getActiveV2({ domain: "rental" });
+  const workshop =
+    options.userId === undefined ? [] : await loadActiveWorkshopTemplates(options.userId, "rental");
+  const templates = [
+    ...(options.templates ?? templateRegistry.getActiveV2({ domain: "rental" })),
+    ...workshop,
+  ];
   const mail = {
     ...(options.from ? { from: options.from } : {}),
     ...(options.subject ? { subject: options.subject } : {}),

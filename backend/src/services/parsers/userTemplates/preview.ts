@@ -11,6 +11,7 @@ import type { PackageFlight, PackageStay } from "../../trip/package/contract";
 import { parseWorkshopEnvelope } from "./v2UserTemplates";
 import { applyV2RailTemplate } from "../../rail/parser/v2Rail";
 import type { ParsedRailLeg } from "../../rail/parser/types";
+import { applyV2RentalTemplate } from "../../rental/parser/v2Rental";
 
 /**
  * Run a derived template against one document and say what it would read.
@@ -145,6 +146,28 @@ export function previewTemplate(
       fields: [
         ...fieldsOf(booking as unknown as Record<string, unknown>, ["legs", "source"]),
         { name: "legs", value: describeLegs(booking.legs) },
+      ],
+      confidence: null,
+    };
+  }
+
+  if (domain === "rental") {
+    // The rental consumer, on the parts of the mail the parse hands it.
+    const envelope = parseWorkshopEnvelope(template.patterns, "rental");
+    const read = envelope
+      ? applyV2RentalTemplate(envelope, {
+          text: body,
+          ...(subject ? { subject } : {}),
+          ...(fromAddress ? { from: fromAddress } : {}),
+        })
+      : null;
+    if (!read || read.kind !== "confirmation") return EMPTY;
+    return {
+      matched: true,
+      fields: [
+        ...fieldsOf(read as unknown as Record<string, unknown>, ["source", "kind"]),
+        { name: "pickup", value: `${read.pickup.local} ${read.pickup.stationName}` },
+        { name: "return", value: `${read.return.local} ${read.return.stationName}` },
       ],
       confidence: null,
     };

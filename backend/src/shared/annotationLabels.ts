@@ -31,6 +31,9 @@
  *              booking fields once, and ONE marked leg row (stations, times,
  *              train), which the deriver turns into the repeat that reads
  *              every leg like it (forgejo#309).
+ *  - rental  — `ParsedRentalConfirmation` in `services/rental/parser/types.ts`:
+ *              each end's station, day and clock, the provider and the
+ *              vehicle class (forgejo#309).
  *
  * ## Every domain derives (forgejo#124)
  *
@@ -52,6 +55,7 @@ export const WORKSHOP_DOMAINS = [
   "place",
   "package",
   "rail",
+  "rental",
 ] as const;
 export type WorkshopDomain = (typeof WORKSHOP_DOMAINS)[number];
 
@@ -198,6 +202,21 @@ const railLabels: readonly AnnotationLabel[] = [
   { id: "train", group: "railLeg", kind: "text" },
 ];
 
+/** A rental confirmation (forgejo#309): one value per label, no list. */
+const rentalLabels: readonly AnnotationLabel[] = [
+  { id: "provider", group: "booking", kind: "text" },
+  { id: "confirmationNumber", group: "booking", kind: "reference" },
+  { id: "pickupStation", group: "rentalPickup", kind: "text" },
+  { id: "pickupDate", group: "rentalPickup", kind: "date" },
+  { id: "pickupTime", group: "rentalPickup", kind: "time" },
+  { id: "returnStation", group: "rentalReturn", kind: "text" },
+  { id: "returnDate", group: "rentalReturn", kind: "date" },
+  { id: "returnTime", group: "rentalReturn", kind: "time" },
+  { id: "vehicleClass", group: "vehicle", kind: "text" },
+  { id: "price", group: "money", kind: "money" },
+  { id: "currency", group: "money", kind: "currency" },
+];
+
 export const WORKSHOP_DOMAIN_SPECS: Readonly<Record<WorkshopDomain, WorkshopDomainSpec>> =
   Object.freeze({
     flight: { domain: "flight", labels: flightLabels, derivable: true },
@@ -206,6 +225,7 @@ export const WORKSHOP_DOMAIN_SPECS: Readonly<Record<WorkshopDomain, WorkshopDoma
     place: { domain: "place", labels: placeLabels, derivable: true },
     package: { domain: "package", labels: packageLabels, derivable: true },
     rail: { domain: "rail", labels: railLabels, derivable: true },
+    rental: { domain: "rental", labels: rentalLabels, derivable: true },
   });
 
 export function isWorkshopDomain(value: string): value is WorkshopDomain {

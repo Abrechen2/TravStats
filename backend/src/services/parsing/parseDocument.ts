@@ -539,6 +539,7 @@ async function parseAs(
       subject: input.subject,
       from: input.from ?? null,
       attachments: input.attachments ?? [],
+      ...(input.userId !== undefined ? { userId: input.userId } : {}),
     });
     const candidate = result.document
       ? await toRentalCandidate(

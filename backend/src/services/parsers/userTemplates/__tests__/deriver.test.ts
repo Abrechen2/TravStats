@@ -23,6 +23,7 @@ import {
   PLACE_SOURCE,
 } from "./workshopSamples";
 import { RAIL_SELECTIONS, RAIL_SOURCE, RAIL_SUBJECT } from "./railSamples";
+import { RENTAL_SELECTIONS, RENTAL_SOURCE, RENTAL_SUBJECT } from "./rentalSamples";
 
 describe("derivePatternFromSelection", () => {
   it("extracts context-anchored regex for a PNR field", () => {
@@ -148,5 +149,25 @@ describe("deriveTemplateFromAnnotation", () => {
     expect(data).toMatchObject({ domain: "rail", status: "pending", sourceId: "td4" });
     expect(parseWorkshopEnvelope(data.patterns, "rail")?.id).toBe("rail:user-td4");
     expect(parseWorkshopEnvelope(data.patterns, "cruise")).toBeNull();
+  });
+
+  it("writes a rental annotation as a PENDING rental template holding a v2 envelope (forgejo#309)", async () => {
+    (prisma.trainingData.findUnique as jest.Mock).mockResolvedValueOnce({
+      id: "td5",
+      domain: "rental",
+      subject: RENTAL_SUBJECT,
+      senderAddress: null,
+      annotations: { fullText: RENTAL_SOURCE, textSelections: RENTAL_SELECTIONS },
+    });
+    (prisma.parserTemplate.findFirst as jest.Mock).mockResolvedValueOnce(null);
+    (prisma.parserTemplate.create as jest.Mock).mockResolvedValueOnce({ id: "tpl-rental" });
+
+    const result = await deriveTemplateFromAnnotation("td5", "user1");
+
+    expect(result).toEqual({ status: "derived", templateId: "tpl-rental", domain: "rental" });
+    const data = (prisma.parserTemplate.create as jest.Mock).mock.lastCall?.[0].data;
+    expect(data).toMatchObject({ domain: "rental", status: "pending", sourceId: "td5" });
+    expect(parseWorkshopEnvelope(data.patterns, "rental")?.id).toBe("rental:user-td5");
+    expect(parseWorkshopEnvelope(data.patterns, "rail")).toBeNull();
   });
 });

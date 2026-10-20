@@ -53,7 +53,8 @@
     "cruise": "Kreuzfahrt",
     "place": "Ort",
     "package": "Pauschalreise",
-    "rail": "Bahnfahrt"
+    "rail": "Bahnfahrt",
+    "rental": "Mietwagen"
   },
   "labelGroups": {
     "flight": "Flug",
@@ -71,7 +72,10 @@
     "packageTrip": "Reise",
     "flightRow": "Flugzeile",
     "stayRow": "Hotelzeile",
-    "railLeg": "Fahrtabschnitt"
+    "railLeg": "Fahrtabschnitt",
+    "rentalPickup": "Abholung",
+    "rentalReturn": "Rückgabe",
+    "vehicle": "Fahrzeug"
   },
   "labels": {
     "flight": {
@@ -170,6 +174,19 @@
       "arrivalDate": "Ankunftstag",
       "arrivalTime": "Ankunftszeit",
       "train": "Zug"
+    },
+    "rental": {
+      "provider": "Vermieter",
+      "confirmationNumber": "Reservierungsnummer",
+      "pickupStation": "Abholstation",
+      "pickupDate": "Abholdatum",
+      "pickupTime": "Abholzeit",
+      "returnStation": "Rückgabestation",
+      "returnDate": "Rückgabedatum",
+      "returnTime": "Rückgabezeit",
+      "vehicleClass": "Fahrzeugklasse",
+      "price": "Gesamtpreis",
+      "currency": "Währung"
     }
   },
   "workshop": {
@@ -185,7 +202,8 @@
       "cruise": "Markiere die Kopfdaten (Schiff, Buchungsnummer, Preis …) und dazu EINE Zeile des Reiseverlaufs: ihr Datum und ihren Hafen. Aus dieser Zeile liest das Template die ganze Hafenliste.",
       "place": "Markiere mindestens den Namen des Ortes, dazu nach Wunsch Adresse, Kategorie und Besuchsdatum. Gelesene Orte landen in der Import-Vorschau unter Einstellungen → Import.",
       "package": "Markiere Buchungsnummer und Ausstellungsdatum, nach Wunsch Reisename, Daten und Preis — dazu EINE Flugzeile (Flugnummer, Datum, Abflug und Ziel) und/oder EINE Hotelzeile (Hotel, An- und Abreise). Aus jeder markierten Zeile wird die Regel für alle Zeilen dieser Art.",
-      "rail": "Markiere nach Wunsch Auftragsnummer, Klasse und Preis — dazu EINEN Fahrtabschnitt: Abfahrtsbahnhof, Abfahrtszeit, Ankunftsbahnhof, nach Wunsch Ankunftszeit und Zug. Den Reisetag markierst du dort, wo er steht: in der Zeile oder in der Überschrift darüber."
+      "rail": "Markiere nach Wunsch Auftragsnummer, Klasse und Preis — dazu EINEN Fahrtabschnitt: Abfahrtsbahnhof, Abfahrtszeit, Ankunftsbahnhof, nach Wunsch Ankunftszeit und Zug. Den Reisetag markierst du dort, wo er steht: in der Zeile oder in der Überschrift darüber.",
+      "rental": "Markiere den Vermieter, die Reservierungsnummer und für Abholung und Rückgabe jeweils Station und Datum — die Uhrzeit, wenn sie dasteht. Ohne Uhrzeit bleibt das Ende ein Tag, es wird keine Zeit erfunden."
     }
   },
   "derivation": {
@@ -209,7 +227,10 @@
       "railNeedsLegRow": "Für eine Bahnfahrt fehlt ein markierter Fahrtabschnitt: markiere in EINER Zeile Abfahrtsbahnhof, Abfahrtszeit und Ankunftsbahnhof (nach Wunsch Ankunftszeit und Zug). Aus dieser Zeile liest das Template alle Abschnitte.",
       "railNeedsDate": "Der Reisetag fehlt: markiere das Datum — in der Zeile des Abschnitts oder in der Überschrift darüber (z. B. „Hinfahrt am 14.11.2027“). Ohne Tag wäre jede Abfahrtszeit geraten.",
       "railRowTooFarApart": "Die Werte eines Fahrtabschnitts müssen in derselben oder in zwei aufeinanderfolgenden Zeilen stehen (Leerzeilen dazwischen sind in Ordnung).",
-      "railRowNotUnderstood": "Aus dem markierten Fahrtabschnitt lässt sich keine Regel bilden, die seine eigenen Werte wieder liest. Markiere die Bahnhofsnamen und Zeiten genau."
+      "railRowNotUnderstood": "Aus dem markierten Fahrtabschnitt lässt sich keine Regel bilden, die seine eigenen Werte wieder liest. Markiere die Bahnhofsnamen und Zeiten genau.",
+      "rentalNeedsProvider": "Der Vermieter fehlt: markiere, wie der Vermieter heißt. Er steht als Absender in jedem Vorschlag dieses Templates.",
+      "rentalNeedsBookingFields": "Für eine Anmietung fehlen Pflichtangaben: markiere Reservierungsnummer, Abholstation, Abholdatum, Rückgabestation und Rückgabedatum (die Uhrzeiten nach Wunsch).",
+      "rentalEndsAmbiguous": "Abholung und Rückgabe sind in dieser Mail gleich beschriftet (z. B. zweimal „Station:“), deshalb würde das Template für beide Enden denselben Wert lesen. Solche Layouts kann die Werkstatt noch nicht lernen."
     }
   },
   "preview": {

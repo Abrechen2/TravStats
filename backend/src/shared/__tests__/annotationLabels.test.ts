@@ -116,4 +116,22 @@ describe("the workshop's per-domain label sets", () => {
     expect(isLabelOfDomain("rail", "train")).toBe(true);
     expect(isLabelOfDomain("flight", "depStation")).toBe(false);
   });
+
+  it("offers each rental end's station, day and clock (forgejo#309)", () => {
+    expect(isWorkshopDomain("rental")).toBe(true);
+    expect(labelGroupsForDomain("rental")).toEqual([
+      "booking",
+      "rentalPickup",
+      "rentalReturn",
+      "vehicle",
+      "money",
+    ]);
+    expect(labelOfDomain("rental", "pickupTime")).toEqual({
+      id: "pickupTime",
+      group: "rentalPickup",
+      kind: "time",
+    });
+    expect(isLabelOfDomain("rental", "returnStation")).toBe(true);
+    expect(isLabelOfDomain("rail", "returnStation")).toBe(false);
+  });
 });

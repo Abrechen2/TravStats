@@ -10,6 +10,7 @@ import { deriveCruiseTemplate } from "./cruiseDeriver";
 import { derivePlaceTemplate } from "./placeDeriver";
 import { derivePackageTemplate } from "./packageDeriver";
 import { deriveRailTemplate } from "./railDeriver";
+import { deriveRentalTemplate } from "./rentalDeriver";
 import type { TemplateEnvelope } from "../templates/v2/envelope";
 import type { WorkshopDerivationInput } from "./v2Derivation";
 import { senderAddressIn, senderDomainOf, subjectIn } from "./sampleHeaders";
@@ -199,6 +200,7 @@ const V2_DERIVERS: Partial<
   place: derivePlaceTemplate,
   package: derivePackageTemplate,
   rail: deriveRailTemplate,
+  rental: deriveRentalTemplate,
 };
 
 function derivedName(issuer: string): string {
@@ -221,10 +223,10 @@ function derivedName(issuer: string): string {
  *    nothing about extraction. It is `pending` now until a preview has run it
  *    against its own sample and a held-out one (`routes/parserTemplates.ts`).
  *
- * Cruise, place, package (forgejo#124) and rail (forgejo#309) are written as v2
+ * Cruise, place, package (forgejo#124), rail and rental (forgejo#309) are written as v2
  * template envelopes, the shape the bundled templates have, and run by the
  * same consumers (`cruiseDeriver.ts`, `placeDeriver.ts`, `packageDeriver.ts`,
- * `railDeriver.ts`). Each abstains with a reason
+ * `railDeriver.ts`, `rentalDeriver.ts`). Each abstains with a reason
  * the page shows when the marks are not enough — a template that matches a
  * document and extracts nothing is worse than none, because its result is a
  * proposal a human accepts by habit (plan §7). A domain whose spec says
