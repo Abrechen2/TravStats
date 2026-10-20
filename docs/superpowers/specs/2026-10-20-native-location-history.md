@@ -256,6 +256,27 @@ Android test phone. A second day with „pause while still" on.
   needs a boot receiver for the foreground service.
 - *„Pause while still" on iOS* may resume late after walking off.
 
+**Measured — Android, Xiaomi Mi 11 Ultra (MIUI), 20.10.2026 18:22–18:38,
+APK `2b41cf2d`, driven over adb:**
+- Screen off for 10 min: the foreground service kept running and kept a
+  10 s high-accuracy request; no gap over 5 min; median accuracy 11 m, 85 % of
+  fixes ≤ 20 m. A phone lying still yields few fixes (distance filter 20 m):
+  20 in 11 min.
+- **Swipe-away from recents does not kill it on MIUI** — same process id
+  afterwards, recording continued.
+- **A process death ends recording for good.** After `am crash` the process
+  stayed gone, the service record showed `app=null`, `restartCount=0`, no
+  restart scheduled. **Opening the app again did not resume it either**: the
+  process came back, the location request did not, while the foreground
+  notification „Aufzeichnungstest läuft" was still on screen. Nothing told
+  the user it had stopped.
+- Consequence for P1 regardless of iOS: the recorder needs a **watchdog** —
+  on every app start, on a periodic background task (`expo-background-task`
+  is already in the app) and on boot, compare „should be recording" with
+  „last fix is recent" and restart the stream when they disagree; and the
+  status the app shows must come from the last fix, not from „was started".
+  A stale „läuft" is the silent-success failure class of CLAUDE.md.
+
 **Decides:** whether „Reise genau" ships on `expo-location` alone or needs the
 native wake-up module in P1, and the default rate (battery per hour against
 interval).
