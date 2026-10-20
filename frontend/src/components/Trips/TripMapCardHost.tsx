@@ -9,6 +9,9 @@ import { PinnedCard } from "../map/cards/PinnedCard";
 import { PinnedCardBoundary } from "../map/cards/PinnedCardBoundary";
 import type { MapPinned } from "../map/cards/pinnedTypes";
 import { useMapCardSelectionStore } from "../../store/mapCardSelectionStore";
+import { useEnabledDomains } from "../../hooks/useEnabledDomains";
+import { useToursVisible } from "../../hooks/useToursVisible";
+import { layerCardAllowed } from "../map/cards/useMapSelectionCards";
 
 const NO_FLIGHTS: never[] = [];
 
@@ -25,7 +28,13 @@ export function TripMapCardHost({
   // Only what was clicked on THIS map: a selection older than the mount
   // belongs to some other map (see `mapCardSelectionStore`).
   const [mountSeq] = useState(() => useMapCardSelectionStore.getState().seq);
-  const pinned: MapPinned | null = selected && seq > mountSeq ? selected : null;
+  const { isEnabled } = useEnabledDomains();
+  const toursVisible = useToursVisible();
+  // A domain the user switched off shows no card here either, open or new.
+  const pinned: MapPinned | null =
+    selected && seq > mountSeq && layerCardAllowed(selected, isEnabled, toursVisible)
+      ? selected
+      : null;
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
 
   const project = useCallback((): void => {

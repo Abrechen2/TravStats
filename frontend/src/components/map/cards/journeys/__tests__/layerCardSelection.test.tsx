@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, renderHook } from "@testing-library/react";
+import { act, render, renderHook, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { TripMapCardHost } from "../../../../Trips/TripMapCardHost";
 import type { Layer, PickingInfo } from "@deck.gl/core";
 import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { useMapCardSelectionStore } from "../../../../../store/mapCardSelectionStore";
@@ -118,10 +120,59 @@ describe("domain gating", () => {
     expect(setPinned).not.toHaveBeenCalledWith(expect.objectContaining({ kind: "journeyRoute" }));
   });
 
+  it("closes an open card when its domain is switched off", () => {
+    let current: MapPinned | null = null;
+    const setPinned = vi.fn((next: unknown) => {
+      current =
+        typeof next === "function"
+          ? (next as (p: MapPinned | null) => MapPinned | null)(current)
+          : (next as MapPinned | null);
+    });
+    const { rerender } = renderHook(() =>
+      useMapSelectionCards({ flights: [], flightColor: [0, 0, 0], focus: vi.fn(), setPinned })
+    );
+    act(() => useMapCardSelectionStore.getState().select(railRoute()));
+    expect(current).toMatchObject({ kind: "journeyRoute" });
+    enabled.keys = [];
+    rerender();
+    expect(current).toBeNull();
+  });
+
   it("ignores a selection made before the map mounted", () => {
     useMapCardSelectionStore.getState().select(railRoute());
     const { setPinned } = mountHook();
     expect(setPinned).not.toHaveBeenCalledWith(expect.objectContaining({ kind: "journeyRoute" }));
+  });
+});
+
+describe("the trip map's card host", () => {
+  const host = (): void => {
+    render(
+      <MemoryRouter>
+        <TripMapCardHost
+          mapRef={
+            {
+              current: {
+                getMap: () => ({ project: () => ({ x: 1, y: 1 }), on: vi.fn(), off: vi.fn() }),
+              },
+            } as never
+          }
+          mapLoaded
+        />
+      </MemoryRouter>
+    );
+    act(() => useMapCardSelectionStore.getState().select(railRoute()));
+  };
+
+  it("shows the card of an enabled domain", () => {
+    host();
+    expect(screen.getByTestId("trip-map-card")).toBeInTheDocument();
+  });
+
+  it("shows no card of a domain the user switched off", () => {
+    enabled.keys = [];
+    host();
+    expect(screen.queryByTestId("trip-map-card")).toBeNull();
   });
 });
 

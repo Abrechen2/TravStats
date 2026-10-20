@@ -227,6 +227,16 @@ export function useMapSelectionCards({
     setPinned(layerPinned);
   }, [layerPinned, layerSeq, mountSeq, isEnabled, toursVisible, setPinned, clearOnEmpty]);
 
+  // A domain switched off while its card is open takes the card (and its
+  // links into the hidden domain) with it — not only the next one.
+  useEffect(() => {
+    setPinned((prev) =>
+      prev && LAYER_KINDS.includes(prev.kind) && !layerCardAllowed(prev, isEnabled, toursVisible)
+        ? null
+        : prev
+    );
+  }, [isEnabled, toursVisible, setPinned]);
+
   const cardFlights = useMemo(
     () => withSelectedFlights(flights, selectedFlights),
     [flights, selectedFlights]
