@@ -76,6 +76,7 @@ import "./xlsxImport";
 import "./settingsRouting";
 import "./documents";
 import "./notes";
+import "./passportOverrides";
 import "./jobs";
 import "./placeImportResolve";
 import "./timeMigration";

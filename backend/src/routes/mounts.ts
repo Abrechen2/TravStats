@@ -142,6 +142,7 @@ import companionRoutes from "./companions";
 import noteRoutes from "./notes";
 import sharingRoutes from "./sharing";
 import shareLinkRoutes from "./shareLinks";
+import passportOverrideRoutes from "./passportOverrides";
 import publicShareLinkRoutes from "./publicShareLinks";
 import calendarFeedRoutes from "./calendarFeed";
 import calendarFeedPublicRoutes from "./calendarFeedPublic";
@@ -269,6 +270,8 @@ export const apiMounts: ApiMount[] = [
     router: statsDomainRecordsRoutes,
   },
   { id: "stats", base: "/api/v1/stats", router: statsRoutes },
+  // The user's own verdicts on passport countries (forgejo#308).
+  { id: "passportOverrides", base: "/api/v1/passport/overrides", router: passportOverrideRoutes },
   { id: "airports", base: "/api/v1/airports", router: airportRoutes },
   { id: "airlineLogos", base: "/api/v1/airline-logos", router: airlineLogoRoutes },
   { id: "countryFlags", base: "/api/v1/country-flags", router: countryFlagRoutes },
