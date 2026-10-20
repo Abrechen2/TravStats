@@ -119,6 +119,8 @@ async function replayOf(userId: string, tripId: string, uploadId: string) {
 
 const isUniqueViolation = (error: unknown): boolean =>
   error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+const isForeignKeyViolation = (error: unknown): boolean =>
+  error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003";
 
 /**
  * POST /trips/:id/recording — `{ uploadId, points: [{ t, lat, lon, accuracy? }] }`.
@@ -194,6 +196,12 @@ router.post(
           select: BATCH_ANSWER_SELECT,
         });
       } catch (error) {
+        // The trip went while the points were on their way (merged or deleted;
+        // a merge holds the trip's row, so the insert waits and then meets the
+        // missing key): the trip is gone, which is what the phone is told.
+        if (isForeignKeyViolation(error)) {
+          throw new AppError("Trip not found", 404, "TRIP_NOT_FOUND");
+        }
         // A concurrent delivery of the same upload won the race: answer what it stored.
         if (!isUniqueViolation(error)) throw error;
         const winner = await replayOf(userId, trip.id, body.uploadId);
