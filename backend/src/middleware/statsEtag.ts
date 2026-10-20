@@ -27,7 +27,9 @@ import type { AuthRequest } from "./auth";
  *    tab. A recording is never edited in place, so its `created_at` plus the
  *    count is its whole history. Bus rides and rentals joined on 2026-10-09
  *    (forgejo#263/#265): the year in review, the travel account and the
- *    domain records read them;
+ *    domain records read them. The user's passport corrections
+ *    (`country_overrides`, forgejo#308) joined on 2026-10-20, found in the
+ *    browser: a saved correction answered 304 with the old passport;
  *  - the user's settings (base currency, home airport, timezone) and
  *    birthdate, and the instance settings;
  *  - the build and the process start, so a deploy or a catalogue re-seed on
@@ -62,6 +64,7 @@ function fingerprintQuery(userId: string): Prisma.Sql {
     UNION ALL SELECT 'place_visits', count(*), max(updated_at) FROM place_visits WHERE user_id = ${userId}
     UNION ALL SELECT 'place_visit_photos', count(*), max(ph.created_at) FROM place_visit_photos ph JOIN place_visits v ON v.id = ph.place_visit_id WHERE v.user_id = ${userId}
     UNION ALL SELECT 'country_days', count(*), max(updated_at) FROM country_days WHERE user_id = ${userId}
+    UNION ALL SELECT 'country_overrides', count(*), max(updated_at) FROM country_overrides WHERE user_id = ${userId}
     UNION ALL SELECT 'rail_journeys', count(*), max(updated_at) FROM rail_journeys WHERE user_id = ${userId}
     UNION ALL SELECT 'bus_journeys', count(*), max(updated_at) FROM bus_journeys WHERE user_id = ${userId}
     UNION ALL SELECT 'ferry_journeys', count(*), max(updated_at) FROM ferry_journeys WHERE user_id = ${userId}
