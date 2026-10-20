@@ -583,3 +583,105 @@ server leaves no member and no group behind. The two-server harness moved to
   and each received change get their notices, naming „Ben (origin)".
 - A person on a spoke who shares the received trip on locally is a local member there whom the
   home does not reach: the roster and `add-request` (F-S4e) decide that, nothing here does.
+
+### As built — F-S4d (2026-10-20, `dev/federated-trip-sharing`)
+
+Built as §12's row lists it: outbox and scheduler, `fact-update` / `entry-create` /
+`entry-removed`, the precondition with `conflict` notices on both sides, undo across servers, the
+delivery state on the trip page, a notice when a trip arrives. What the build decided, and where it
+deviates:
+
+**Outbox.**
+- `TripShareOutbox { id = messageId, position (serial), groupId, memberId, peerOrigin, kind,
+  payload, label, attempts, nextAttemptAt, failingSince, lastError, parkedAt, parkedReason }`,
+  written in the transaction of the local write (`federation/outbound.ts`, called from
+  `propagate.ts`); `outbox.test.ts` holds "a row iff the write committed". CHECKs: kind
+  (`OUTBOX_KINDS`, in `shareVocabulary.test.ts`), attempts ≥ 0.
+- **One row per remote member, not per server** (deviation from §5). A message names one pairing
+  (`from` / `to`), and the receiver copies into that person's trip only (F-S4c's rule); two
+  people on one server share the server's stream, so they still arrive in order.
+- The seq is taken at SEND time from `TripSharePeerStream.lastSentSeq` (through F-S4c's
+  `sendOnStream`, which now returns the ack), not at queue time: a parked message must not leave a
+  hole the receiver would answer `gap` forever. The row id is the message id on every attempt, so
+  a lost ack is answered from the receiver's inbound table.
+- `jobs/tripShareDeliveryScheduler.ts`: a pass every 30 s and one second after a queue (debounced
+  nudge, `deliveryKick.ts`); passes are serial in-process. Off locally → the rows wait.
+- Before each send the member must still be queueable (active, unreachable, or suspended as `off`
+  / `peer-blocked`) and the consent accepted; otherwise the row is deleted (`dropped`).
+- Outcomes: ack → row deleted, members of that stream back to `active`; transport failure →
+  backoff 1 min, 5 min, 30 min, 2 h, 12 h, then daily, the stream waits behind its head; 14 days
+  after the first failure → `unreachable` (`stateSince` = first failure); 404 → `suspended`/`off`;
+  a disabled pin here → `suspended`/`peer-blocked`; both recover on the next delivered message
+  (deviation: §7 says nothing is sent while suspended — this keeps retrying at backoff, the only
+  way to notice the switch is back on; F-S4e's re-pin may want a stop). `schema` / `not-member` /
+  `consent` → parked with the reason (and field), not retried, kept 30 days for the trip page.
+- F-S4c's direct entries send is gone: `serveOfferAnswer` queues the entries in its own
+  transaction (`queueEntries`). `settleDeliveries()` is now a delivery pass.
+- A restore deletes every outbox row.
+
+**Messages.**
+- `fact-update { from, to, actor, entity, shareKey, changes: [{ field, before, after }] }`, each
+  value in its field's wire form, checked against `ENTRY_SHAPES[entity][field]` by the schema
+  (≤ 100 changes, 256 KB). A geometry that would not fit is dropped from the change (logged).
+- `entry-create { …, entry }` (one wire entry, 256 KB); `entry-removed { …, entity, shareKey,
+  reason }` (notice only, 8 KB). `PROPAGATION_TRANSPORT` has a 256 KB reply: the ack can carry
+  `conflicts: [{ field, held }]`.
+- **Precondition.** The receiver decodes `before` and `after` against ITS catalogue
+  (`fromWireFacts`, the same resolver that made the copy), so a reference is compared by its
+  natural key and the two servers' ids never meet. Per fact: copy = after → settled (open
+  conflict notices on it close); copy = before → written; otherwise a conflict. `status` is
+  advisory and skips the precondition: only whether it is a clock-free state crosses, then
+  `DERIVE`. Facts written also close open conflicts on them (the other side decided).
+- **Conflict**: nothing written for those facts; a `conflict` notice for the receiver (mine /
+  theirs) and the held values in the ack → the sender's person gets one too (one open notice per
+  entry and facts, never two). `POST /sharing/notices/:id/resolve { choice: theirs | mine }`:
+  theirs writes the other value and propagates (the other side already holds it and settles);
+  mine re-sends the own value with the other one as `before`. A copy that moved since →
+  `SHARE_REMOTE_CONFLICT_STALE` naming the fields.
+- **Undo across servers** needed nothing new: an undo is a write, so it travels as a
+  `fact-update` whose `before` is the notice's `after`; undo of undo works the same way.
+
+**Hub relay and authorship.**
+- A received change is applied under the propagation guard, then spread explicitly
+  (`spreadUpdate` / `spreadCreate` / `spreadRemoval`, extracted from `propagate.ts`): to local
+  members through the recipient's consents (LWW locally, as ever), and to remote members through
+  the pairings of the recipient and of every local member it reached — never to the origin it
+  came from. With two test servers the "on to another spoke" leg is exercised only as "nothing
+  goes back".
+- Notices carry `remoteActorId` (FK SetNull, CHECK `share_notices_actor_check`: at most one
+  actor) and the name in `after.remoteActor`; the inbox shows „Ben (origin)".
+- **Security fix (coordinator review):** the wire `actor` is a CLAIM. It is honoured only from
+  the group's home and only for an origin known here as a remote member of the group; otherwise
+  the author is the sending pairing under its own name. A relayed author carries `via`. The actor
+  origin must be canonical (`envelope.ts` `origin`, `local` refused) or the message is `schema`.
+  Consequence today: a spoke knows only the home's origin, so a third server's author is shown as
+  the home's pairing until F-S4e's roster tells the spoke who the members are.
+- A `shared` notice is written when a person accepts an offered trip (it arrives then), naming
+  the offering member and server.
+
+**UI.** The trip page shows each remote member's delivery as its own sentence (delivered, on the
+way, retrying since, unreachable since, refused with entry and reason, off there, blocked here,
+entry too large). Conflict card with both values. The buttons read „Den anderen Wert übernehmen" /
+„Meinen Wert behalten": the spec's „Ihre übernehmen" fails the informal-address guard.
+
+**§7 rows covered by tests** (`twoServersPropagation.test.ts`): unreachable (backoff timing, 14
+days, recovery), blocked by admin, switched off there (and back), schema rejection parked (and the
+next message still goes), gap resumed silently, conflict on both sides; version unsupported is
+F-S4b's `claim.test.ts`; revoked/left is F-S4e. Also order across retries, a dropped message after
+a withdrawn consent, rollback, natural-key references.
+
+**What F-S4e needs from this.**
+- `leave` / `revoke`: on the sending side delete the member's outbox rows and stop (today a
+  non-queueable member's rows are only dropped at the next send); on the receiving side detach and
+  refuse (`not-member` is already answered for a member not `active`/`unreachable`/`off`).
+- `roster`: the spoke's list of members with origins — `authorOf` (inbound.ts) must read relayed
+  authors' origins from it; today only the home's origin is known on a spoke. Also the consent
+  gate "a newcomer's writes reach a member only after that member's consent" is NOT applied to
+  relays yet: the home relays through its members' pairings without asking the receiving person.
+- `add-request`: nothing here; offers stay home-only.
+- Peer suspend / re-pin: decide whether a `peer-blocked` / re-pinned stream stops retrying (O9:
+  suspend per group until the user re-confirms) — today it retries and recovers on success.
+- Restore safety: outbox rows deleted and members suspended (`restore`); a re-confirmation path
+  must flip `restore` members back and should re-queue a full `entries` resync, because changes
+  made while suspended were never queued.
+- Parked messages are kept 30 days and shown; there is no "dismiss" yet.
