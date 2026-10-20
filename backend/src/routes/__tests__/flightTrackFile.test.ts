@@ -167,9 +167,11 @@ describe("Flight track file upload — POST /flights/:id/track/file", () => {
     });
     const res = await upload(flightId, toGpx(rec.fixes), "gate.gpx");
     expect(res.status).toBe(201);
-    expect(res.body.track.jitterDropped).toBeGreaterThanOrEqual(Math.floor(rec.standing * 0.95));
+    expect(res.body.track.jitterDropped).toBeGreaterThanOrEqual(Math.floor(rec.standing * 0.9));
     const stored = await prisma.flightTrack.findUniqueOrThrow({ where: { flightId } });
-    expect(Math.abs(stored.distanceKm - rec.trueKm) / rec.trueKm).toBeLessThan(0.02);
+    // Within 3 %: a file carries no accuracy, so the cloud's outermost
+    // scatter (±150 m against a 100 m floor) may stand at the stay's edges.
+    expect(Math.abs(stored.distanceKm - rec.trueKm) / rec.trueKm).toBeLessThan(0.03);
   });
 
   it("refuses an untimed line on a flight with no schedule to place it in", async () => {

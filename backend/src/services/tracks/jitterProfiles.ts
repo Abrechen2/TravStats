@@ -19,16 +19,20 @@
  *   accuracy better than it can really hold indoors. It is the radius a stay
  *   is gathered in, and the slack a speed check allows on each end.
  * - `minStayMs` — how long fixes must stay in one place before they are a
- *   stay and collapse to one place, and the shortest window a stay is judged
- *   over (`stayDetection.ts`). This is the guard for slow movement: over a
+ *   stay, and the shortest window a stay is judged over (`stayDetection.ts`).
+ * - `minMoveKmh` — the slowest real movement the mode must keep. Over a
  *   window W the two half-windows of a phone moving at v lie v · W / 2 apart,
- *   so nothing faster than 2 · radius / W is ever called a stay. Per mode:
- *   flight 2·100 m / 180 s = 4 km/h (a plane taxiing at 15 km/h, or crawling
- *   to the holding point at 5, is kept); ground 2·30 m / 120 s = 1.8 km/h (a
- *   car in a jam at 5 km/h is kept); foot and bike 2·20 m / 120 s = 1.2 km/h
- *   (a hike uphill at 2 km/h is kept); ship 2·50 m / 180 s = 2 km/h (a ship
- *   manoeuvring in port at 3 kn is kept). Pacing to and fro inside the radius
- *   — a deck walk on a moored ship — goes nowhere at map scale and is a stay.
+ *   so the stay test's displacement threshold is capped at
+ *   minMove · W / 2 whatever accuracy the phone reports, and a whole stay may
+ *   drift no faster than minMove end to end. Before that cap the threshold
+ *   grew with the reported accuracy: a walk at 4 km/h reported at 100 m, a
+ *   taxi at 3 km/h and a ship at 5 km/h reported at 200 m each collapsed to
+ *   one point (review of forgejo#319). Per mode: flight 2.5 km/h over 5 min
+ *   (104 m — a plane crawling to the holding point at 3 km/h is kept); ship
+ *   2 km/h over 3 min (50 m); road and rail 1.5 km/h over 2 min (25 m — a car
+ *   in a jam at 5 km/h is kept); foot and bike 1 km/h over 2 min (17 m — a
+ *   hike uphill at 2 km/h is kept). Pacing to and fro inside the radius — a
+ *   deck walk on a moored ship — goes nowhere at map scale and is a stay.
  * - `maxAccuracyM` — the reported accuracy above which a fix is a coarse
  *   network position rather than a satellite one. A phone's satellite or
  *   Wi-Fi fixes report well under 100 m; a cell-tower fix reports 500 m to a
@@ -42,6 +46,7 @@ export interface JitterProfile {
   maxSpeedKmh: number;
   floorRadiusM: number;
   minStayMs: number;
+  minMoveKmh: number;
   maxAccuracyM: number;
 }
 
@@ -50,33 +55,48 @@ const COARSE_FIX_M = 300;
 
 export const JITTER_PROFILES: Readonly<Record<JitterMode, JitterProfile>> = {
   // A phone in a cabin at the gate wanders tens to hundreds of metres
-  // (forgejo#319) — hence the widest floor of all modes, affordable because
-  // an aircraft on the ground is never slower than a walk for three minutes
-  // without standing still.
+  // (forgejo#319) — hence the widest floor of all modes, and the longest
+  // window, so the scatter averages out under the capped threshold.
   flight: {
     maxSpeedKmh: 1300,
     floorRadiusM: 100,
-    minStayMs: 3 * MINUTE_MS,
+    minStayMs: 5 * MINUTE_MS,
+    minMoveKmh: 2.5,
     maxAccuracyM: COARSE_FIX_M,
   },
-  ship: { maxSpeedKmh: 90, floorRadiusM: 50, minStayMs: 3 * MINUTE_MS, maxAccuracyM: COARSE_FIX_M },
+  ship: {
+    maxSpeedKmh: 90,
+    floorRadiusM: 50,
+    minStayMs: 3 * MINUTE_MS,
+    minMoveKmh: 2,
+    maxAccuracyM: COARSE_FIX_M,
+  },
   road: {
     maxSpeedKmh: 250,
     floorRadiusM: 30,
     minStayMs: 2 * MINUTE_MS,
+    minMoveKmh: 1.5,
     maxAccuracyM: COARSE_FIX_M,
   },
   rail: {
     maxSpeedKmh: 400,
     floorRadiusM: 30,
     minStayMs: 2 * MINUTE_MS,
+    minMoveKmh: 1.5,
     maxAccuracyM: COARSE_FIX_M,
   },
-  foot: { maxSpeedKmh: 50, floorRadiusM: 20, minStayMs: 2 * MINUTE_MS, maxAccuracyM: COARSE_FIX_M },
+  foot: {
+    maxSpeedKmh: 50,
+    floorRadiusM: 20,
+    minStayMs: 2 * MINUTE_MS,
+    minMoveKmh: 1,
+    maxAccuracyM: COARSE_FIX_M,
+  },
   bike: {
     maxSpeedKmh: 100,
     floorRadiusM: 20,
     minStayMs: 2 * MINUTE_MS,
+    minMoveKmh: 1,
     maxAccuracyM: COARSE_FIX_M,
   },
   // A whole trip recorded in the background: walks, cars, trains and ferries
@@ -86,6 +106,7 @@ export const JITTER_PROFILES: Readonly<Record<JitterMode, JitterProfile>> = {
     maxSpeedKmh: 400,
     floorRadiusM: 30,
     minStayMs: 2 * MINUTE_MS,
+    minMoveKmh: 1.5,
     maxAccuracyM: COARSE_FIX_M,
   },
 };

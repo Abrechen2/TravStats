@@ -12,9 +12,10 @@ import type { JitterProfile } from "./jitterProfiles";
  * earlier half and the centre of the later half lie on top of each other when
  * the phone stands — the scatter averages out — and lie v · window / 2 apart
  * when it moves at v. A fix is stationary when that displacement stays inside
- * the stay radius (the fixes' own accuracy, never below the profile's floor).
- * So nothing moving faster than 2 · radius / window is ever called a stay;
- * `jitterProfiles.ts` lists that speed per mode.
+ * the fixes' own accuracy (never below the profile's floor), capped at what
+ * the mode's slowest real movement covers in half a window — so nothing
+ * moving faster than `minMoveKmh` is ever called a stay, whatever accuracy
+ * the phone reports. A whole stay is bounded too (`staysPut`).
  *
  * Stationary fixes in a row are a stay; two stays at the same place with a
  * short burst of scatter between them are one; and a stay reaches back and
@@ -110,7 +111,18 @@ interface Verdict {
   radiusM: number;
 }
 
-function verdicts(fixes: readonly StayFix[], windowMs: number): Verdict[] {
+/**
+ * The displacement a window may show and still be standing: the fixes' own
+ * accuracy, but never more than the mode's slowest real movement covers in
+ * half a window. Uncapped, a phone reporting 100 m let a walk at 4 km/h pass
+ * as standing (review of forgejo#319).
+ */
+function thresholdM(meanUncertaintyM: number, windowMs: number, profile: JitterProfile): number {
+  const guardM = (profile.minMoveKmh / 3.6) * (windowMs / 2000);
+  return Math.min(meanUncertaintyM, guardM);
+}
+
+function verdicts(fixes: readonly StayFix[], windowMs: number, profile: JitterProfile): Verdict[] {
   const sums = prefixSums(fixes);
   const tStart = fixes[0].t;
   const tEnd = fixes[fixes.length - 1].t;
@@ -128,7 +140,7 @@ function verdicts(fixes: readonly StayFix[], windowMs: number): Verdict[] {
     const b = lowerBound(fixes, hi + 1);
     const self: Verdict = { stationary: false, centre: fix, radiusM: fix.uncertaintyM };
     if (m - a < 1 || b - m < 1 || b - a < 3) return self;
-    const radiusM = sums.meanUncertainty(a, b);
+    const radiusM = thresholdM(sums.meanUncertainty(a, b), windowMs, profile);
     const displacement = distanceM(sums.centre(a, m), sums.centre(m, b));
     return { stationary: displacement <= radiusM, centre: sums.centre(a, b), radiusM };
   });
@@ -214,17 +226,39 @@ function extend(
   return { ...draft, start, end };
 }
 
+/**
+ * Whether a stay as a whole stood still: its window centres never stray
+ * further than a coarse fix could (`maxAccuracyM`), and from its first to its
+ * last it drifts no faster than the mode's slowest real movement. Without
+ * these bounds a slow movement whose every window looked still — or two stays
+ * merged across a creeping drift — became one point however far it went.
+ */
+function staysPut(
+  fixes: readonly StayFix[],
+  all: readonly Verdict[],
+  draft: Draft,
+  profile: JitterProfile
+): boolean {
+  for (let k = draft.start; k < draft.end; k++) {
+    if (distanceM(all[k].centre, draft.centre) > profile.maxAccuracyM) return false;
+  }
+  const spanS = (fixes[draft.end - 1].t - fixes[draft.start].t) / 1000;
+  const drift = distanceM(all[draft.start].centre, all[draft.end - 1].centre);
+  return drift <= Math.max(draft.radiusM, (profile.minMoveKmh / 3.6) * spanS);
+}
+
 /** The stays of a time-ordered, fully timed run of fixes, in order and disjoint. */
 export function findStays(fixes: readonly StayFix[], profile: JitterProfile): Stay[] {
   if (fixes.length < 2) return [];
   const windowMs = stayWindowMs(fixes, profile);
-  const all = verdicts(fixes, windowMs);
+  const all = verdicts(fixes, windowMs, profile);
   const drafts = mergeRuns(fixes, all, stationaryRuns(all), windowMs);
 
   const stays: Stay[] = [];
   drafts.forEach((draft, k) => {
     const floor = stays.length > 0 ? stays[stays.length - 1].end : 0;
     const ceiling = drafts[k + 1]?.start ?? fixes.length;
+    if (!staysPut(fixes, all, draft, profile)) return;
     const grown = extend(fixes, draft, Math.max(floor, 0), ceiling, windowMs);
     const lasted = fixes[grown.end - 1].t - fixes[grown.start].t;
     if (grown.end - grown.start >= 2 && lasted >= profile.minStayMs) {
