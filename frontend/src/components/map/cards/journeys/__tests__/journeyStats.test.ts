@@ -74,11 +74,11 @@ describe("journey route stats", () => {
     expect(stats.unknownCount).toBe(1);
   });
 
-  it("reads a stored 0 km as unknown, not as a zero-length ride", () => {
+  it("keeps a recorded 0 km as measured, as the rail statistics do (null is unknown)", () => {
     expect(sumJourneyDistance([rail({ distanceKm: 0 })])).toEqual({
       knownKm: 0,
-      measuredCount: 0,
-      unknownCount: 1,
+      measuredCount: 1,
+      unknownCount: 0,
     });
   });
 
@@ -176,6 +176,33 @@ describe("each domain's counting rule decides travelled vs planned", () => {
       departureTime: "2024-05-01T09:00:00Z",
       facts: { vehicleClass: "Compact", rentalDays: 3 },
     });
+  });
+
+  const rentalRow = (over: Record<string, unknown>) =>
+    journeyFromRental({
+      id: "odo",
+      status: "completed",
+      provider: "Sixt",
+      pickupStationName: "A",
+      returnStationName: "A",
+      pickupLat: 1,
+      pickupLon: 1,
+      returnLat: 1,
+      returnLon: 1,
+      distanceKm: null,
+      distanceSource: null,
+      odometerOutKm: null,
+      odometerInKm: null,
+      ...over,
+    } as unknown as Parameters<typeof journeyFromRental>[0]);
+
+  it("rental: driven km come from the shared resolver — odometer 10,000 → 10,300 is 300 km", () => {
+    expect(rentalRow({ odometerOutKm: 10_000, odometerInKm: 10_300 }).distanceKm).toBe(300);
+  });
+
+  it("rental: an explicitly recorded 0 km stays a known 0, not unknown", () => {
+    expect(rentalRow({ distanceKm: 0, distanceSource: "user" }).distanceKm).toBe(0);
+    expect(rentalRow({}).distanceKm).toBeNull();
   });
 
   it("trip flight: flown counts, scheduled is planned, distance is the great circle", () => {

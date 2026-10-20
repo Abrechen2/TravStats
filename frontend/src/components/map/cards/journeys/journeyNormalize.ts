@@ -9,7 +9,7 @@
 import { isCountableRail } from "../../../../shared/railCounting";
 import { isCountableBus } from "../../../../shared/busCounting";
 import { isCountableFerry } from "../../../../shared/ferryCounting";
-import { isCountableRental, rentalDays } from "../../../../shared/rentalCounting";
+import { isCountableRental, rentalDays, rentalDrivenKm } from "../../../../shared/rentalCounting";
 import { isCountableFlight } from "../../../../shared/flightCounting";
 import { calculateDistance } from "../../../../lib/geo";
 import type { RailJourney } from "../../../../types/rail";
@@ -33,9 +33,12 @@ export function durationMinutes(
   return Number.isFinite(minutes) && minutes > 0 ? Math.round(minutes) : null;
 }
 
-/** A recorded distance, or null. A stored 0 is a missing measurement, not a 0 km ride. */
+/**
+ * A recorded distance, or null. A recorded 0 is a KNOWN 0, as every domain's
+ * statistics read it (`measured = distanceKm !== null`); only null is unknown.
+ */
 function knownKm(km: number | null | undefined): number | null {
-  return typeof km === "number" && Number.isFinite(km) && km > 0 ? km : null;
+  return typeof km === "number" && Number.isFinite(km) && km >= 0 ? km : null;
 }
 
 /**
@@ -197,7 +200,15 @@ export function journeyFromRental(r: Partial2<RentalBooking, RentalCore>): MapJo
     },
     {
       departureTime: pickup,
-      distanceKm: knownKm(r.distanceKm),
+      // The one driven-km rule the rental pages and statistics read: a stored
+      // figure, else the two odometer readings (forgejo#206).
+      distanceKm:
+        rentalDrivenKm({
+          distanceKm: r.distanceKm ?? null,
+          distanceSource: r.distanceSource ?? null,
+          odometerOutKm: r.odometerOutKm ?? null,
+          odometerInKm: r.odometerInKm ?? null,
+        })?.km ?? null,
       operator: r.operatedBy ?? r.provider ?? null,
       travelled: isCountableRental(r),
       facts: {
