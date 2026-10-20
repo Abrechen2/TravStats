@@ -127,6 +127,10 @@ async function fetchRailLine(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         profile: RAIL_ROUTING_PROFILE,
+        // Stations can be underground or on bridges. GraphHopper's road-oriented
+        // defaults otherwise snap Munich Airport to the tunnel portal, 750 m away.
+        // Keep the RAIL-only model and the 500 m snap validation below.
+        snap_preventions: [],
         points,
         points_encoded: false,
         instructions: false,

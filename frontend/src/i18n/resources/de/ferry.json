@@ -13,7 +13,8 @@
   },
   "distanceSource": {
     "great_circle": "Luftlinie",
-    "user": "laut Ticket"
+    "user": "laut Ticket",
+    "sea_route": "Seeweg (Schätzung)"
   },
   "title": "Fähren",
   "add": "Überfahrt hinzufügen",
@@ -209,5 +210,14 @@
         "exclusions": "Geplante, laufende und stornierte Überfahrten zählen nicht."
       }
     }
+  },
+  "routing": {
+    "button": "Seeweg berechnen",
+    "busy": "Seeweg wird berechnet …",
+    "hint": "Berechnet einen schematischen Seeweg zwischen den Häfen.",
+    "estimated": "Schematisch berechneter Seeweg – kein aufgezeichneter Schiffstrack.",
+    "noRoute": "Kein Seeweg gefunden. Die bisherige Strecke bleibt erhalten.",
+    "failed": "Seeweg konnte nicht gespeichert werden. Bitte erneut versuchen.",
+    "distance": "Seeweg (Schätzung)"
   }
 }

@@ -2,6 +2,7 @@
 import { Router, Response, NextFunction } from "express";
 import liveRoutes from "./ferry/live";
 import ticketRoutes from "./ferry/tickets";
+import routingRoutes from "./ferry/routing";
 import type { z } from "zod";
 
 import { prisma } from "../db";
@@ -18,6 +19,8 @@ import {
   type UpdateFerryJourneyInput,
 } from "../schemas/ferry";
 import { mergeFerryJourney } from "../services/ferry/ferryJourneyWrite";
+import { sameFerryEnds } from "../services/ferry/ferryGeometry";
+import { syncFerryLeg } from "../services/ferry/ferryRouting";
 import { withFerryTimes } from "../services/ferry/timesDto";
 import { restatusTrips } from "../services/trip/restatusTrips";
 import {
@@ -167,6 +170,7 @@ router.use(authenticate);
 router.use(requireWriteScope);
 router.use(ticketRoutes);
 router.use(liveRoutes);
+router.use(routingRoutes);
 
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -318,6 +322,16 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     await assertReferencesOwned(userId, { tripId: input.tripId, bookingId: input.bookingId });
 
     const state = mergeFerryJourney(existing, input);
+    const terminalsMoved = !sameFerryEnds(existing, state);
+    // Every write claims the version it was computed from. A client without a
+    // precondition claims the row it was merged against: otherwise a sea route
+    // committed in between would be overwritten with a stale chord distance.
+    const claimVersion = baseVersion ?? existing.updatedAt.toISOString();
+    // A stale client is answered by the version claim (409 with the current
+    // record), not by a guard computed from a row it never saw.
+    const staleClaim = new Date(claimVersion).getTime() !== existing.updatedAt.getTime();
+    if (terminalsMoved && existing.roadtripLegId && !staleClaim)
+      throw new AppError("Unlink the roadtrip leg before changing terminals", 409);
     const resolved =
       input.companions !== undefined
         ? await resolveCompanions(userId, input.companions)
@@ -345,13 +359,11 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
         async (tx) => {
           const before = await shareSnapshot(tx, "ferry", existing.id);
           // Claim the read version atomically inside the same transaction as the edit.
-          if (baseVersion !== null) {
-            const claimed = await tx.ferryJourney.updateMany({
-              where: { id: existing.id, userId, updatedAt: new Date(baseVersion) },
-              data: { updatedAt: new Date(Math.max(Date.now(), existing.updatedAt.getTime() + 1)) },
-            });
-            if (claimed.count !== 1) throw new FerryVersionMoved();
-          }
+          const claimed = await tx.ferryJourney.updateMany({
+            where: { id: existing.id, userId, updatedAt: new Date(claimVersion) },
+            data: { updatedAt: new Date(Math.max(Date.now(), existing.updatedAt.getTime() + 1)) },
+          });
+          if (claimed.count !== 1) throw new FerryVersionMoved();
           if (resolved !== undefined) {
             await tx.ferryJourneyCompanion.deleteMany({ where: { ferryJourneyId: existing.id } });
             if (resolved.length > 0) {
@@ -369,11 +381,14 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
             data: {
               ...plainColumns(input),
               ...state,
+              ...(terminalsMoved && { geometry: Prisma.DbNull, geometrySource: "straight" }),
               updatedAt: new Date(Math.max(Date.now(), existing.updatedAt.getTime() + 1)),
               ...fxColumns,
               ...(resolved !== undefined && { companions: resolved.map((c) => c.displayName) }),
             },
           });
+          if (existing.geometrySource === "sea_route" && !terminalsMoved)
+            await syncFerryLeg(tx, existing);
           await propagateWrite(tx, userId, "ferry", existing.id, before);
           return tx.ferryJourney.findUniqueOrThrow({
             where: { id: existing.id },
@@ -383,8 +398,8 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
         { timeout: SHARE_TX_TIMEOUT_MS }
       );
     } catch (err) {
-      if (!(err instanceof FerryVersionMoved) || baseVersion === null) throw err;
-      await answerMovedVersion(res, userId, existing.id, baseVersion);
+      if (!(err instanceof FerryVersionMoved)) throw err;
+      await answerMovedVersion(res, userId, existing.id, claimVersion);
       return;
     }
 

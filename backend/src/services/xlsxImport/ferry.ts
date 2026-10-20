@@ -12,6 +12,7 @@
 import { prisma } from "../../db";
 import { Prisma, type FerryJourney } from "../../prisma";
 import { FERRY_STATUSES } from "../../schemas/ferry";
+import { sameFerryEnds } from "../ferry/ferryGeometry";
 import { mergeFerryJourney } from "../ferry/ferryJourneyWrite";
 import { linkRowsFor, resolveCompanions } from "../companionService";
 import type { TerminalRideInput } from "../rides/terminalRideWrite";
@@ -52,8 +53,8 @@ function derivedColumns(
   input: TerminalRideInput
 ): Prisma.FerryJourneyUncheckedUpdateInput {
   const state = mergeFerryJourney(stored, input);
-  const moved = input.departureStation !== undefined || input.arrivalStation !== undefined;
-  if (!stored || !moved) return state;
+  // Moved means moved coordinates, as for PATCH: a renamed port keeps its line.
+  if (!stored || sameFerryEnds(stored, state)) return state;
   return { ...state, geometry: Prisma.DbNull, geometrySource: "straight" };
 }
 

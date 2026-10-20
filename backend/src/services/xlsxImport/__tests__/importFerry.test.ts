@@ -74,6 +74,27 @@ describe("ferry crossings in the workbook", () => {
     expect([after.cabinType, after.vehicleType]).toEqual(["Außenkabine", "Pkw"]);
   });
 
+  it("keeps a sea route when a re-import only renames a port", async () => {
+    const crossing = await prisma.ferryJourney.findFirstOrThrow({ where: { userId } });
+    const line = [
+      [10.1394, 54.3233],
+      [11.0, 56.0],
+      [11.9746, 57.7089],
+    ];
+    await prisma.ferryJourney.update({
+      where: { id: crossing.id },
+      data: { geometry: line, geometrySource: "sea_route", distanceSource: "sea_route" },
+    });
+    const [result] = await run([
+      { ...kielGoteborg, id: crossing.id, depStationName: "Kiel Schwedenkai" },
+    ]);
+    expect(result.updated).toBe(1);
+    const after = await prisma.ferryJourney.findUniqueOrThrow({ where: { id: crossing.id } });
+    expect(after.depStationName).toBe("Kiel Schwedenkai");
+    expect(after).toMatchObject({ geometrySource: "sea_route", distanceSource: "sea_route" });
+    expect(after.geometry).toEqual(line);
+  });
+
   it("refuses a port without coordinates and a new row without a departure, and writes nothing", async () => {
     const before = await prisma.ferryJourney.count({ where: { userId } });
     const [result] = await run([

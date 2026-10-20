@@ -136,6 +136,21 @@ describe("FerryPage", () => {
     expect(screen.getByText("Häfen")).toHaveTextContent("4 Häfen");
     expect(screen.getByTestId("ferry-row-r2")).toHaveTextContent("laut Ticket");
   });
+  it("labels calculated sea distances as estimates", async () => {
+    list.mockResolvedValue(
+      page({
+        ...rideFixture(),
+        distanceSource: "sea_route",
+        geometrySource: "sea_route",
+        distanceKm: 201.4,
+      })
+    );
+    renderPage();
+    const row = await screen.findByTestId("ferry-row-r1");
+    expect(row).toHaveTextContent("Seeweg (Schätzung)");
+    expect(row).not.toHaveTextContent("laut Ticket");
+    expect(row).not.toHaveTextContent("Luftlinie");
+  });
   it("filters on the server and separates edit actions from opening a row", async () => {
     list.mockResolvedValue(page(rideFixture(), second));
     renderPage();

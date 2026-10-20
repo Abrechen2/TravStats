@@ -32,11 +32,13 @@ type FerryRide = Pick<
 interface Km {
   straight: number;
   measured: number;
+  seaRoute: number;
 }
 
 function addKm(km: Km, ride: FerryRide): void {
   if (ride.distanceKm === null) return;
   if (ride.distanceSource === "great_circle") km.straight += ride.distanceKm;
+  else if (ride.distanceSource === "sea_route") km.seaRoute += ride.distanceKm;
   else km.measured += ride.distanceKm;
 }
 
@@ -46,6 +48,15 @@ function addKm(km: Km, ride: FerryRide): void {
  */
 function kmKpis(km: Km): DomainKpi[] {
   return [
+    ...(km.seaRoute > 0
+      ? [
+          {
+            labelKey: "overviewCard.kpi.ferryKmSeaRoute",
+            value: Math.round(km.seaRoute),
+            unit: "km" as const,
+          },
+        ]
+      : []),
     ...(km.measured > 0
       ? [
           {
@@ -73,7 +84,7 @@ export function adaptFerry(input: FerryAdapterInput): DomainStats {
 
   const countries = new Set<string>();
   const operators = new Map<string, number>();
-  const km: Km = { straight: 0, measured: 0 };
+  const km: Km = { straight: 0, measured: 0, seaRoute: 0 };
   const yearlyEvents: Record<number, number> = {};
   const yearlyActiveDays: Record<number, number> = {};
   const monthlyActiveDays: Record<string, number> = {};
@@ -111,7 +122,7 @@ export function adaptFerry(input: FerryAdapterInput): DomainStats {
     addKm(km, ride);
     const y = bucket(perYear, year, () => ({
       rides: 0,
-      km: { straight: 0, measured: 0 },
+      km: { straight: 0, measured: 0, seaRoute: 0 },
       operators: new Map<string, number>(),
     }));
     y.rides += 1;
@@ -143,7 +154,7 @@ export function adaptFerry(input: FerryAdapterInput): DomainStats {
     domain: "ferry",
     hasData: true,
     totalEvents: rides.length,
-    totalDistanceKm: km.straight + km.measured,
+    totalDistanceKm: km.straight + km.measured + km.seaRoute,
     totalDurationHours: hours,
     countries: [...countries],
     countriesByYear: Object.fromEntries(

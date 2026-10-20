@@ -41,6 +41,7 @@ it("requests only railway tracks from the first attempt", async () => {
   expect(JSON.parse(request.body)).toMatchObject({
     points,
     profile: "all_tracks",
+    snap_preventions: [],
     details: ["railway_class"],
     "ch.disable": true,
     custom_model: { priority: [{ if: "railway_class != RAIL", multiply_by: "0" }] },

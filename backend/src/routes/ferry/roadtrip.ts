@@ -6,6 +6,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { z } from "../../schemas/zod";
 import { propagateWrite, shareSnapshot } from "../../services/sharing/propagate";
 import { recomputeTripStatus } from "../../services/tripStatusService";
+import { syncFerryLeg } from "../../services/ferry/ferryRouting";
 import logger from "../../utils/logger";
 
 const router = Router();
@@ -69,7 +70,7 @@ function snapshotOf(leg: LegRouting): Prisma.InputJsonValue {
 
 /**
  * Give an unlinked leg back its routing. Only while the leg still holds what
- * linking wrote (a straight ferry leg): an edit made after linking is the
+ * linking or a sea route wrote (a straight or routed ferry leg): an edit made after linking is the
  * user's newer word and is kept. A link made before the snapshot existed has
  * nothing to restore and leaves the leg as it is.
  */
@@ -82,7 +83,9 @@ async function restoreLeg(tx: Tx, legId: string, stored: unknown): Promise<void>
   }
   const before = parsed.data;
   await tx.tripRouteLeg.updateMany({
-    where: { id: legId, mode: "ferry", source: "straight" },
+    // "routed" is what a computed sea route writes (syncFerryLeg); a drawn or
+    // recorded line is the user's own and is kept.
+    where: { id: legId, mode: "ferry", source: { in: ["straight", "routed"] } },
     data: {
       mode: before.mode,
       source: before.source,
@@ -157,6 +160,9 @@ router.put("/:id/roadtrip-leg", async (req: AuthRequest, res: Response, next: Ne
           distanceKm: ferry.distanceKm ?? leg.distanceKm,
         },
       });
+      if (ferry.geometrySource === "sea_route") {
+        await syncFerryLeg(tx, { ...ferry, roadtripLegId: leg.id, tripId: leg.route.tripId });
+      }
       // Linking files the crossing on the roadtrip's trip — a move into a
       // shared trip copies it. The leg itself is no fact: a link on a crossing
       // already filed there propagates nothing.

@@ -55,6 +55,21 @@ beforeEach(() => {
   mocks.save.mockReset();
 });
 describe("Ferry editor", () => {
+  it("does not send an unchanged sea estimate back as a typed distance", async () => {
+    const routed = {
+      ...ride,
+      distanceKm: 201.4,
+      distanceSource: "sea_route" as const,
+      geometrySource: "sea_route" as const,
+    };
+    mocks.save.mockResolvedValue(routed);
+    render(<FerryFormModal journey={routed} onClose={vi.fn()} onSaved={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText("ferry:notes"), { target: { value: "Changed note" } });
+    fireEvent.click(screen.getByRole("button", { name: "ferry:save" }));
+    await waitFor(() => expect(mocks.save).toHaveBeenCalled());
+    // null = "no typed distance": the server keeps the stored sea-route length.
+    expect(mocks.save.mock.calls[0][1].distanceKm).toBeNull();
+  });
   it("saves vehicle and cabin details while leaving unchanged clocks and ports untouched", async () => {
     mocks.save.mockResolvedValue(ride);
     const onSaved = vi.fn();
