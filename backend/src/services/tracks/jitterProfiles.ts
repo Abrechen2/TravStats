@@ -19,7 +19,7 @@
  *   accuracy better than it can really hold indoors. It is the radius a stay
  *   is gathered in, and the slack a speed check allows on each end.
  * - `minStayMs` — how long fixes must stay in one place before they are a
- *   stay and collapse to one point, and the shortest window a stay is judged
+ *   stay and collapse to one place, and the shortest window a stay is judged
  *   over (`stayDetection.ts`). This is the guard for slow movement: over a
  *   window W the two half-windows of a phone moving at v lie v · W / 2 apart,
  *   so nothing faster than 2 · radius / W is ever called a stay. Per mode:

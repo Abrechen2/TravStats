@@ -29,8 +29,8 @@ import { findStays, type StayFix } from "./stayDetection";
  *     stretch after a hole, is not ours to delete.
  *  3. **Stays** (timed segments only, `stayDetection.ts`). Fixes that stay
  *     within their own accuracy radius (never less than the profile's floor)
- *     of one place for at least `minStayMs` collapse into ONE point at the
- *     middle of the cloud, at the time the stay began. Judged over a window,
+ *     of one place for at least `minStayMs` collapse to the middle of the
+ *     cloud, kept twice: when the stay began and when it ended. Judged over a window,
  *     not fix by fix, so a cloud wider than the radius is still one stay.
  *
  * What is never touched: a segment without times for every fix (a drawn
@@ -51,9 +51,9 @@ export interface JitterFix {
 }
 
 export interface JitterResult {
-  /** The kept fixes, a stay as its single representative. */
+  /** The kept fixes, a stay as two: its middle at arrival and at departure. */
   fixes: JitterFix[];
-  /** For each kept fix, the input indices it stands for (one, or a stay's all). */
+  /** For each kept fix, the input indices it stands for (a stay's arrival: all of them). */
   sources: number[][];
   /** Where each recording segment starts in `fixes`; always begins at 0. */
   segmentStarts: number[];
@@ -268,17 +268,33 @@ function isFullyTimed(fixes: readonly JitterFix[], indices: readonly number[]): 
   });
 }
 
-function representative(fixes: readonly JitterFix[], group: Group): JitterFix {
-  if (group.members.length === 1) return fixes[group.members[0]];
+/**
+ * The fixes that stand for a group: itself for a single fix; for a stay, the
+ * middle of the cloud TWICE — when the stay began and when it ended. One
+ * point at the arrival time left the hours of the stop between it and the
+ * next fix, and the trip recording's gap rule (> 2 h) cut its line there
+ * although the phone had recorded all along (review of forgejo#319).
+ */
+function representatives(
+  fixes: readonly JitterFix[],
+  group: Group
+): Array<{ fix: JitterFix; sources: number[] }> {
+  const first = group.members[0];
+  if (group.members.length === 1) return [{ fix: fixes[first], sources: [first] }];
+  const lastMember = group.members[group.members.length - 1];
   const accuracies = group.members
     .map((i) => fixes[i].accuracyM)
     .filter((a): a is number => a !== null);
-  return {
+  const at = (t: number | null): JitterFix => ({
     lon: group.lon,
     lat: group.lat,
-    t: fixes[group.members[0]].t,
+    t,
     accuracyM: accuracies.length > 0 ? median(accuracies) : null,
-  };
+  });
+  return [
+    { fix: at(fixes[first].t), sources: group.members },
+    { fix: at(fixes[lastMember].t), sources: [lastMember] },
+  ];
 }
 
 function median(values: number[]): number {
@@ -316,8 +332,10 @@ export function filterJitter(
     }
     starts.push(out.length);
     for (const group of groups) {
-      out.push(representative(fixes, group));
-      sources.push(group.members);
+      for (const { fix, sources: from } of representatives(fixes, group)) {
+        out.push(fix);
+        sources.push(from);
+      }
     }
   }
 

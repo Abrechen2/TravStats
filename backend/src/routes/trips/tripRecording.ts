@@ -253,7 +253,7 @@ router.get("/trips/:id/recording", async (req: AuthRequest, res: Response, next:
         devices: [...new Set(batches.flatMap((b) => (b.deviceId ? [b.deviceId] : [])))].sort(),
         days: recordingDays(all, zone).map((date) => ({ date, zone, precision: "day" as const })),
       },
-      segments: displaySegments(rawSegments(clean.devices)),
+      segments: displaySegments(clean.segments),
     });
   } catch (err) {
     next(err);

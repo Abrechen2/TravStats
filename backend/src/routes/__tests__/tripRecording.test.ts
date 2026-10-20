@@ -291,10 +291,11 @@ describe("Trip recording — /trips/:id/recording", () => {
 
     const res = await request(app).get(`/api/v1/trips/${tripId}/recording`).set("Cookie", cookie);
     expect(res.body.summary.pointCount).toBe(fixes.length);
-    // The cloud collapses; a fix at its very edge may stand on its own.
-    expect(res.body.summary.jitterDropped).toBeGreaterThanOrEqual(cafe.length - 2);
+    // The cloud collapses to its arrival and departure; a fix at its very
+    // edge may stand on its own.
+    expect(res.body.summary.jitterDropped).toBeGreaterThanOrEqual(cafe.length - 3);
     expect(res.body.segments).toHaveLength(1);
-    expect(res.body.segments[0].length).toBeLessThanOrEqual(2 + walk.length);
+    expect(res.body.segments[0].length).toBeLessThanOrEqual(3 + walk.length);
 
     const stored = await prisma.tripRecordingBatch.findFirstOrThrow({ where: { tripId } });
     expect(stored.pointCount).toBe(fixes.length);

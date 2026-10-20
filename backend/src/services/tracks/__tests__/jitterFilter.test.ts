@@ -63,7 +63,7 @@ describe("jitter filter — a still phone at the gate (forgejo#319)", () => {
   const flight = [...gate, ...taxi, ...climb];
   const trueKm = 2 + 50;
 
-  it("collapses the gate cloud to one point, so the drawn line has no zigzag there", () => {
+  it("collapses the gate cloud to one place, so the drawn line has no zigzag there", () => {
     const filtered = filterParsedTrack(parsed(flight), "flight");
     const ingested = ingestTrack(filtered)!;
     const nearGate = ingested.geometry.filter(
@@ -96,7 +96,7 @@ describe("jitter filter — a still phone at the gate (forgejo#319)", () => {
       north = north * 0.98 + rnd() * 25;
       return { t: T0 + i * 10_000, ...offset(BASE, east, north), accuracy: null };
     });
-    expect(filterJitter(asFixes(drift), [0], JITTER_PROFILES.flight).fixes).toHaveLength(1);
+    expect(filterJitter(asFixes(drift), [0], JITTER_PROFILES.flight).fixes).toHaveLength(2);
   });
 
   it("collapses a cloud the phone reports accuracy for, inside that accuracy", () => {
@@ -106,8 +106,8 @@ describe("jitter filter — a still phone at the gate (forgejo#319)", () => {
     // The first steps away still lie inside the reported 90 m of the cloud's
     // centre — itself known only to tens of metres — and join the stay; the
     // walk beyond is kept fix by fix.
-    expect(result.dropped).toBeGreaterThanOrEqual(cafe.length - 1);
-    expect(result.dropped).toBeLessThanOrEqual(cafe.length - 1 + Math.ceil((2 * 90) / 18.75));
+    expect(result.dropped).toBeGreaterThanOrEqual(cafe.length - 2);
+    expect(result.dropped).toBeLessThanOrEqual(cafe.length - 2 + Math.ceil((2 * 90) / 18.75));
     const line = result.fixes.map((f): [number, number] => [f.lon, f.lat]);
     expect(sharpTurns(line)).toBe(0);
   });
@@ -220,7 +220,7 @@ describe("jitter filter — real slow movement is kept", () => {
       const along = ((Math.floor(s / 36) % 2 === 0 ? s % 36 : 36 - (s % 36)) * 4) / 3.6;
       return { t: T0 + s * 1000, ...offset(BASE, 0, along), accuracy: 5 };
     });
-    expect(filterJitter(asFixes(fixes), [0], JITTER_PROFILES.ship).fixes).toHaveLength(1);
+    expect(filterJitter(asFixes(fixes), [0], JITTER_PROFILES.ship).fixes).toHaveLength(2);
   });
 });
 

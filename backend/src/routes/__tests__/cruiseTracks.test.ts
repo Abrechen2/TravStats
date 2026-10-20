@@ -201,12 +201,12 @@ describe("Cruise recorded tracks", () => {
 
     const track = await prisma.cruiseTrack.findFirstOrThrow({ where: { cruiseId } });
     expect(track.pointCount).toBe(moored.length + voyage.length);
-    expect(track.jitterDropped).toBe(moored.length + 1);
+    expect(track.jitterDropped).toBe(moored.length);
     expect(track.distanceKm).toBeCloseTo(2 * KM_PER_DEG, -1);
     const overview = await request(app)
       .get(`/api/v1/cruises/${cruiseId}/tracks`)
       .set("Cookie", cookie);
-    expect(overview.body.data.tracks[0].jitterDropped).toBe(moored.length + 1);
+    expect(overview.body.data.tracks[0].jitterDropped).toBe(moored.length);
   });
 
   it("bridges a hole at sea, counts its chord and lowers the confidence", async () => {

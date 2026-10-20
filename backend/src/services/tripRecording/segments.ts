@@ -129,23 +129,27 @@ export function recordingDays(points: readonly StoredPoint[], zone: string): str
 }
 
 /**
- * Each device's points with GPS jitter removed (forgejo#319) — for the MAP
+ * Each device's stretches with GPS jitter removed (forgejo#319) — for the MAP
  * only. A phone left on a café table for an hour reports a cloud of positions
  * a hundred metres across, and drawn in time order that cloud is a zigzag.
  * The stored batches and the GPX keep every raw point; this is a reading of
  * them, recomputed on every request, so there is nothing stored to correct.
  *
- * Filtered as one stream per device, cut only where the clock stops for
- * longer than `RECORDING_GAP_MS`: a teleport spike far enough out to look like
- * a 50 km gap must be seen as a spike first, not split off as its own
- * stretch. A stay comes back as one synthetic point at its accuracy-weighted
- * centre; nothing stores it.
+ * The two halves of the gap rule are applied on either side of the filter:
+ * the clock half (> `RECORDING_GAP_MS` without a fix) on the RAW points, where
+ * it means the phone recorded nothing — a stay collapsed to its arrival and
+ * departure must not read as hours without a fix (review of forgejo#319); the
+ * distance half (> `RECORDING_GAP_KM`) on the FILTERED points, so a teleport
+ * spike far enough out to look like a 50 km gap is seen as a spike first. A
+ * stay comes back as two synthetic points at the middle of its cloud; nothing
+ * stores them.
  */
-export function withoutJitter<D extends { points: StoredPoint[] }>(
-  devices: readonly D[]
-): { devices: D[]; dropped: number } {
+export function withoutJitter(devices: ReadonlyArray<{ points: StoredPoint[] }>): {
+  segments: StoredPoint[][];
+  dropped: number;
+} {
   let dropped = 0;
-  const clean = devices.map((device) => {
+  const segments = devices.flatMap((device) => {
     const fixes: JitterFix[] = device.points.map(([t, lat, lon, accuracyM]) => ({
       lon,
       lat,
@@ -157,10 +161,31 @@ export function withoutJitter<D extends { points: StoredPoint[] }>(
     );
     const result = filterJitter(fixes, starts, JITTER_PROFILES.mixed);
     dropped += result.dropped;
-    return {
-      ...device,
-      points: result.fixes.map((f): StoredPoint => [f.t ?? 0, f.lat, f.lon, f.accuracyM]),
-    };
+    const points = result.fixes.map((f): StoredPoint => [f.t ?? 0, f.lat, f.lon, f.accuracyM]);
+    const bounds = [...result.segmentStarts, points.length];
+    return bounds
+      .slice(0, -1)
+      .flatMap((start, k) => splitAtDistance(points.slice(start, bounds[k + 1])));
   });
-  return { devices: clean, dropped };
+  return { segments, dropped };
+}
+
+/** The distance half of the gap rule alone. */
+function splitAtDistance(points: readonly StoredPoint[]): StoredPoint[][] {
+  const out: StoredPoint[][] = [];
+  let current: StoredPoint[] = [];
+  for (const point of points) {
+    const last = current[current.length - 1];
+    if (
+      last &&
+      haversineKm({ lat: last[1], lon: last[2] }, { lat: point[1], lon: point[2] }) >
+        RECORDING_GAP_KM
+    ) {
+      out.push(current);
+      current = [];
+    }
+    current.push(point);
+  }
+  if (current.length > 0) out.push(current);
+  return out;
 }
