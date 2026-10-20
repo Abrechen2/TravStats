@@ -330,7 +330,8 @@
       "rail": "Operator",
       "bus": "Coach company",
       "ferry": "Ferry line",
-      "rental": "Rental company"
+      "rental": "Rental company",
+      "cruise": "Cruise line"
     },
     "distance": "Distance",
     "distanceUnknown_one": "{{count}} journey without distance",

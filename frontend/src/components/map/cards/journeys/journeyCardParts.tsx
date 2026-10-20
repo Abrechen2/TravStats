@@ -14,12 +14,12 @@ import { DOMAINS } from "../../../../shared/domains";
 import { tokens } from "../../../../theme/tokens";
 import { Icon } from "../../../ui/Icon";
 import type { IconName } from "../../../ui/icons/lucide";
-import { OperatorTile, rentalProviderLogoUrl } from "../../../table/OperatorTile";
+import { OperatorTile } from "../../../table/OperatorTile";
 import { LABEL_STYLE, formatDate, type TFn } from "../cardChrome";
 import type { Rgb } from "../../../../lib/domainColor";
 import type { JourneyDomain, JourneyEnd, MapJourney } from "./journeyTypes";
 import { rgbCss } from "./journeyIdentity";
-import { operatorLogoUrl } from "./operatorLogo";
+import { useOperatorLogo } from "./operatorLogo";
 
 /** The domain's icon on a tint of its colour — the journey card's flag. */
 export function DomainBadge({
@@ -72,27 +72,59 @@ export function JourneyEndLine({ end, locale }: { end: JourneyEnd; locale: strin
   );
 }
 
-/** The operator's mark and name, as one metadata row. */
+/**
+ * The operator's mark and name, as one metadata row. A logo from Commons is
+ * credited right under it — licence and author, linked to the file page —
+ * because a free licence is a licence, not a gift.
+ */
 export function OperatorRow({
   domain,
   name,
   color,
   t,
 }: {
-  domain: JourneyDomain;
+  /** A journey domain, or a cruise — whose card names its line the same way. */
+  domain: JourneyDomain | "cruise";
   name: string;
   color: Rgb;
   t: TFn;
 }): JSX.Element {
-  const logo = domain === "rental" ? rentalProviderLogoUrl(name) : operatorLogoUrl(domain, name);
+  const logo = useOperatorLogo(domain, name);
+  const credit = logo?.credit ?? null;
   return (
-    <div className="flex items-center justify-between gap-3">
-      <span style={LABEL_STYLE}>{t(`map:journey.operator.${domain}`)}</span>
-      <span className="flex items-center gap-2 text-right text-[11px]">
-        <span>{name}</span>
-        <OperatorTile name={name} domain={domain} logoUrl={logo} size={28} colour={rgbCss(color)} />
-      </span>
-    </div>
+    <>
+      <div className="flex items-center justify-between gap-3">
+        <span style={LABEL_STYLE}>{t(`map:journey.operator.${domain}`)}</span>
+        <span className="flex items-center gap-2 text-right text-[11px]">
+          <span>{name}</span>
+          {domain !== "flight" && (
+            <OperatorTile
+              name={name}
+              domain={domain}
+              logoUrl={logo?.url ?? null}
+              size={28}
+              colour={rgbCss(color)}
+            />
+          )}
+        </span>
+      </div>
+      {credit && (
+        <a
+          href={credit.sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid="operator-logo-credit"
+          className="block text-right text-[9.5px] underline-offset-2 hover:underline"
+          style={{ color: tokens.color.faint }}
+        >
+          {t("map:journey.attribution", {
+            source: [credit.licence, credit.artist, "Wikimedia Commons"]
+              .filter(Boolean)
+              .join(" · "),
+          })}
+        </a>
+      )}
+    </>
   );
 }
 

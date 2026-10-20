@@ -23,6 +23,8 @@ import {
 import type { GeoJSONFeature } from "../../../types";
 import type { Cruise } from "../../../types/cruise";
 import { tokens } from "../../../theme/tokens";
+import { hexToRgb } from "../../../lib/domainColor";
+import { useDomainColors } from "../../../hooks/useDomainColors";
 import type { CruiseCardDatum, MapPinned, MarkerCardDatum, RouteCardDatum } from "./pinnedTypes";
 import { getAirportStats, getArcStats, getCruiseStats, getPortStats } from "./cardStats";
 import {
@@ -50,6 +52,7 @@ import {
   type BodyCommonProps,
 } from "./cardBodies";
 import { JourneyBody, JourneyHeading, isJourneyPinned } from "./journeys/journeyBodies";
+import { OperatorRow } from "./journeys/journeyCardParts";
 
 interface PinnedCardProps {
   pinned: MapPinned;
@@ -521,6 +524,8 @@ function CruiseBody({
 } & BodyCommonProps): JSX.Element {
   const stats = getCruiseStats(cruises, data.cruiseId, locale);
   const cruise = cruises.find((c) => c.id === data.cruiseId);
+  // The line's mark in the user's cruise colour, from the colour store.
+  const { colorOf } = useDomainColors();
   if (!stats) {
     return <div className="text-[11px] opacity-85">{t("map:visMode.tripRoutes")}</div>;
   }
@@ -532,10 +537,18 @@ function CruiseBody({
 
   return (
     <>
-      {stats.line && <SubHeading>{stats.line}</SubHeading>}
       {cruise && <CruiseFlags cruise={cruise} />}
       <Hero color={tokens.domainColor.cruise}>{dateRange}</Hero>
       <Grid>
+        {/* The line with its mark — a logo where one is known (forgejo#323). */}
+        {stats.line && (
+          <OperatorRow
+            domain="cruise"
+            name={stats.line}
+            color={hexToRgb(colorOf("cruise"))}
+            t={t}
+          />
+        )}
         {stats.status && (
           <Row label={t("map:globe.pinned.status")} value={t(`cruise:status.${stats.status}`)} />
         )}

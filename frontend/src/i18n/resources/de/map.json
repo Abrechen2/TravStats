@@ -330,7 +330,8 @@
       "rail": "Betreiber",
       "bus": "Busunternehmen",
       "ferry": "Reederei",
-      "rental": "Vermieter"
+      "rental": "Vermieter",
+      "cruise": "Reederei"
     },
     "distance": "Strecke",
     "distanceUnknown_one": "{{count}} Fahrt ohne Strecke",

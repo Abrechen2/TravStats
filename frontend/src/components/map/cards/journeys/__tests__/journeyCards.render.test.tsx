@@ -49,6 +49,13 @@ vi.mock("../../../../../hooks/useTranslation", () => ({
     ready: true,
   }),
 }));
+const marks = vi.hoisted(() => ({
+  get: vi.fn<(domain: string, name: string) => Promise<unknown>>(),
+}));
+vi.mock("../../../../../lib/api/operators", async (orig) => ({
+  ...(await orig<typeof import("../../../../../lib/api/operators")>()),
+  getOperatorMark: (domain: string, name: string) => marks.get(domain, name),
+}));
 vi.mock("react-router-dom", async (orig) => ({
   ...(await orig<typeof import("react-router-dom")>()),
   useNavigate: () => navigate,
@@ -106,6 +113,7 @@ function show(pinned: MapPinned): void {
 beforeEach(() => {
   lang.current = "de";
   navigate.mockReset();
+  marks.get.mockResolvedValue({ available: false, source: null, credit: null });
 });
 
 describe("journey route card", () => {
@@ -151,7 +159,33 @@ describe("journey route card", () => {
 });
 
 describe("operator mark with a logo source", () => {
-  it("shows the rental company's logo, and the monogram once the image fails", () => {
+  it("shows a Commons logo with its credit, served by our own endpoint", async () => {
+    marks.get.mockResolvedValue({
+      available: true,
+      source: "wikidata",
+      credit: {
+        qid: "Q1",
+        file: "Color Line logo.svg",
+        licence: "Public domain",
+        licenceUrl: null,
+        artist: "Color Line",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Color_Line_logo.svg",
+        colour: null,
+      },
+    });
+    show(ferryRoute());
+    const logo = await screen.findByTestId("operator-logo");
+    expect(logo.getAttribute("src")).toBe("/api/v1/operators/logo?domain=ferry&name=Color%20Line");
+    const credit = screen.getByTestId("operator-logo-credit");
+    expect(credit).toHaveTextContent("Logo: Public domain · Color Line · Wikimedia Commons");
+    expect(credit).toHaveAttribute(
+      "href",
+      "https://commons.wikimedia.org/wiki/File:Color_Line_logo.svg"
+    );
+  });
+
+  it("shows the rental company's logo, and the monogram once the image fails", async () => {
+    marks.get.mockResolvedValue({ available: true, source: "catalogue", credit: null });
     const rental = journeyFromRental({
       id: "c1",
       status: "completed",
@@ -168,8 +202,10 @@ describe("operator mark with a logo source", () => {
       data: { domain: "rental", stop: rental.dep, journeys: [rental], color: [217, 140, 179] },
       anchorLngLat: [-8, 37],
     });
-    const logo = screen.getByTestId("operator-logo");
-    expect(logo.getAttribute("src")).toContain("/rentals/providers/logo?name=Sixt");
+    const logo = await screen.findByTestId("operator-logo");
+    expect(logo.getAttribute("src")).toContain("/operators/logo?domain=rental&name=Sixt");
+    // The company's own icon needs no credit line.
+    expect(screen.queryByTestId("operator-logo-credit")).toBeNull();
     fireEvent.error(logo);
     expect(screen.queryByTestId("operator-logo")).toBeNull();
     expect(screen.getByTestId("operator-tile")).toHaveTextContent("SI");

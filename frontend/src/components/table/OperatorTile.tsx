@@ -5,7 +5,7 @@ import { Icon } from "../ui/Icon";
 /** The airline tile's size, so the logbooks' leading marks line up. */
 const TILE_PX = 44;
 
-type TileDomain = "rail" | "rental" | "bus" | "ferry" | "flight";
+type TileDomain = "rail" | "rental" | "bus" | "ferry" | "flight" | "cruise";
 
 const DOMAIN: Record<
   TileDomain,
@@ -16,6 +16,7 @@ const DOMAIN: Record<
   ferry: { colour: "var(--ts-domain-ferry)", icon: "ship" },
   bus: { colour: "var(--ts-domain-bus)", icon: "bus" },
   flight: { colour: "var(--ts-domain-flight)", icon: "plane" },
+  cruise: { colour: "var(--ts-domain-cruise)", icon: "ship" },
 };
 
 interface Props {
