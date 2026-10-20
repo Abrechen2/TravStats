@@ -52,9 +52,9 @@ match/decline from `markers`/`anchors` and ignores `expected`), `loader.ts`
   `invalid`.
 - `/template-status` gains a `v2` field (`index`, `templates[]` with `state`, `reason`,
   `detail`); the v1 fields are unchanged.
-- **Source URL is still an environment variable, not yet an admin setting:**
-  `TEMPLATE_REPO_BASE_URL` (repository raw root, https only, default the public repo).
-  Moving it into `admin_settings` with a settings UI field is the open remainder of P1.
+- **Source URL** — `TEMPLATE_REPO_BASE_URL` (repository raw root, https only, default
+  the public repo); since 2026-10-20 an admin setting wins over it (see the forgejo#309
+  bus/ferry/share slice at the end).
 - The repository's `rail/db.json` draft does not validate yet: its test case has no
   `expect` and no must-decline case. `testCases[].input` accepts the draft's
   `{ subject, text, from? }` object as well as a plain string.
@@ -228,7 +228,8 @@ booking / reservation / orderFacts), `rental/parser/v2Rental.ts` (`kind`), and
   engine orders candidates home-market first. No filtering.
 
 ## Out of scope here
-- Sharing user templates (spec package 4).
+- Sharing user templates (spec package 4) — built 2026-10-20 for v2 workshop templates,
+  see the last as-built note.
 - Attachment routing for flight/lodging mails (spec package 2) — needed for mails, not for
   uploaded PDFs; scheduled after P3.
 
@@ -261,3 +262,68 @@ issuer layout stays a template.
 
 Still open: bus and ferry user templates; the community share flow for user
 templates (spec package 4); the admin-set template repository URL.
+
+## As built — bus and ferry templates, repository URL setting, community export (forgejo#309, 2026-10-20)
+
+Branch `feat/templates-bus-ferry-share-309`. Generic readers only; every
+issuer layout stays a template.
+
+- **Bus and ferry user templates.** `bus` and `ferry` are template domains
+  (`TEMPLATE_DOMAINS`, issuer kinds `bus-operator` / `ferry-line`), workshop
+  domains (one ride row: terminals, times, day, and the line or vessel) and
+  parse targets (`PARSER_SUPPORTED_DOMAINS`). `userTemplates/rideDeriver.ts` is
+  the rail derivation with terminals for stations; the heading-day rule moved to
+  `rowDerivation.ts` and rail shares it. A carrier marked on the row is read per
+  ride, one marked anywhere else once for the ticket. One generic consumer,
+  `rides/v2RideTicket.ts`, runs every bus/ferry template; `rides/readRideTicket.ts`
+  tries the repository's first (home market first), then the user's active
+  workshop ones, and declines with `noTemplate` / `nothingRead`.
+  - Where it is read: the ferry ticket preview asks the templates first
+    (`parser: "template"`, then labels, then the model); `POST /bus/ticket-preview`
+    (template or decline, no model) feeds "Busticket einlesen" in the new-ride
+    form; `/parse-*` accept `domain: bus|ferry` (body `tickets[]`), and
+    `extract-values` reads a ticket's total and reference.
+  - `auto` never answers with bus or ferry (`documentDomain.ts`,
+    `EXPLICIT_ONLY_TARGETS`, not even among the candidates): the clients that
+    send `auto` (trip planner import, Companion) know no such answer shape.
+    Detection is unchanged for every existing domain.
+  - The frontend has no mirror of `PARSER_SUPPORTED_DOMAINS`; its parse panel
+    list (`PARSEABLE_IMPORT_DOMAINS`) is untouched because bus and ferry import
+    through their own forms. `annotationLabels.ts` changed on both sides.
+- **Template repository URL as an admin setting.** `admin_settings.template_repo_base_url`
+  (migration `20261020151817_admin_template_repo_base_url`) wins over the env var
+  (`v2/source.ts` `effectiveTemplateRepo`), edited in Administration → Parser
+  (`TemplateRepoSettings`). Rule: the model URLs' one endpoint rule
+  (`llm/llmEndpoint.ts`) — https, or plain http to a local/LAN host only, no
+  credentials in the URL; `fetchJson` enforces the same before sending. Decided
+  conservatively: the env var stays https-only. `GET/PUT /admin/template-repo`,
+  `POST /admin/template-repo/test` (codes `ok` + count, `invalidUrl`,
+  `httpsRequired`, `credentialsInUrl`, `unreachable`, `notAnIndex`). Saving points
+  the registry at the URL and re-syncs at once; a new index that cannot be read
+  leaves the last good set serving and the answer says so. A stored value that
+  no longer passes the check is ignored, not fetched. Own limiter
+  (`middleware/templateRepoLimiter.ts`, 20/h).
+- **Community export.** `GET /parser-templates/:id/community-export`
+  (`userTemplates/communityExport.ts`, pure; `communityExportService.ts` loads)
+  turns an ACTIVE v2 workshop template into the repository envelope: id slugged
+  from the issuer (a deriver's placeholder name gives way to the first anchor),
+  today as version, the running app as `minAppVersion`, no `source` constant,
+  `testCases: []`. It is scanned for the user's marked values (bar issuer names
+  and vocabulary), their names and addresses, the sample's sender, e-mail
+  addresses and long numbers: removable hits (markers, anchors, sender domains)
+  are removed and reported, a hit in the extraction or the issuer name refuses
+  (422 `TEMPLATE_EXPORT_PERSONAL_DATA`, `kinds`). The panel in "Meine Templates"
+  downloads the file and opens
+  `github.com/Abrechen2/travstats-templates/new/main/<domain>?filename=<slug>.json`;
+  nothing is posted from the server.
+
+Still open, and why:
+- **Flight and lodging workshop templates cannot be shared** (422
+  `TEMPLATE_EXPORT_UNSUPPORTED`): the workshop stores them in the older rule
+  formats (`TemplatePatterns`, `LodgingFieldRules`), not as v2 envelopes, and
+  converting those is a deriver change of its own.
+- **An exported file carries no test cases** — the only proving document is the
+  user's own. The repository's validator requires an invented match and decline
+  case, so the owner adds them when reviewing (the UI says so).
+- No other item of forgejo#309's list remains open.
+
