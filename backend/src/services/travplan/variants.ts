@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { AppError } from "../../middleware/errorHandler";
+import { routeLegs } from "./routeSchedule";
 import type {
   PlanBooking,
   PlanOperation,
@@ -145,17 +146,21 @@ function compareRoute(
   stations: PlanState["stations"],
   stages: PlanStage[]
 ): VariantComparison {
+  // A leg no stage covers makes the drive total a partial sum; it is unknown.
+  const legs = routeLegs(stations, stages);
+  const complete = legs.every((g) => g !== null);
+  const legStages = legs.filter((g): g is PlanStage => g !== null);
   return {
     id,
     name,
     active: id === null,
-    driveKm: driveKm(stages),
-    driveDays: stages.filter((g) => g.mode === "drive").length,
+    driveKm: complete ? driveKm(stages) : null,
+    driveDays: legStages.filter((g) => g.mode === "drive").length,
     destinationNights: stations
       .filter((s) => s.night.kind !== "onboard")
       .reduce((sum, s) => sum + s.nights, 0),
     ...stageCosts(state, stages),
-    fuel: fuelEstimate(stages, state.vehicle),
+    fuel: complete ? fuelEstimate(stages, state.vehicle) : null,
   };
 }
 

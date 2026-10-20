@@ -254,6 +254,22 @@ describe("Plan variants", () => {
       expect(other.fuel).toEqual({ amount: 192.5, currency: "EUR" });
     });
 
+    it("a route with a leg no stage covers has no drive total and no fuel", () => {
+      const { a, b, c, g1, g2 } = route();
+      const reordered: PlanState = {
+        ...emptyState(),
+        shape: "route",
+        stations: [a, c, b],
+        stages: [g1, g2],
+        vehicle,
+      };
+      expect(compareVariants(reordered)[0]).toMatchObject({
+        driveKm: null,
+        driveDays: 0,
+        fuel: null,
+      });
+    });
+
     it("reports driveKm null when a drive distance is unknown and 0 with no drives", () => {
       const { a, b, g1 } = route();
       const unknown = stage(a.id, b.id, { distanceKm: null });
@@ -264,7 +280,8 @@ describe("Plan variants", () => {
         stages: [unknown, g1],
       };
       expect(compareVariants(state)[0].driveKm).toBeNull();
-      expect(compareVariants({ ...state, stages: [] })[0].driveKm).toBe(0);
+      const ferryOnly = [stage(a.id, b.id, { mode: "ferry" })];
+      expect(compareVariants({ ...state, stages: ferryOnly })[0].driveKm).toBe(0);
     });
   });
 });

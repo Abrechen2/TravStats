@@ -48,25 +48,45 @@ function arrivalDay({ departDay, stage, anchor, from, to }: StageTiming): string
 }
 
 /**
+ * The stage joining each pair of consecutive stations, or `null` where none
+ * does — after a reorder or a removed station the old stages no longer
+ * connect the new neighbours.
+ */
+export function routeLegs(stations: PlanStation[], stages: PlanStage[]): (PlanStage | null)[] {
+  return stations.slice(1).map((next, i) => {
+    const from = stations[i];
+    return stages.find((g) => g.fromStationId === from.id && g.toStationId === next.id) ?? null;
+  });
+}
+
+/**
  * Lays the active route out on the calendar. Booked stages and pinned stations
  * are anchors: their day is never moved. A route that reaches an anchor late
  * is reported as a conflict; reaching it early is a gap, not a finding.
+ *
+ * A leg without a stage is `unresolved`: how long it takes is unknown, so the
+ * days after it stay unknown until the next anchor rather than pretending the
+ * next station is reached the same day.
  */
 export function scheduleRoute(state: PlanState): RouteSchedule {
   const { stations, stages, startDay } = state;
+  const legs = routeLegs(stations, stages);
   const result: RouteSchedule = {
     stations: stations.map((s) => ({ stationId: s.id, arriveDay: null, departDay: null })),
     stages: stages.map((g) => ({ stageId: g.id, departDay: null, arriveDay: null })),
     lastDay: null,
     conflicts: [],
+    unresolved: legs.flatMap((leg, i) =>
+      leg ? [] : [{ fromStationId: stations[i].id, toStationId: stations[i + 1].id }]
+    ),
   };
   if (!startDay) return result;
 
   const bookings = new Map(state.bookings.map((b) => [b.id, b]));
-  let arrive = startDay;
+  let arrive: string | null = startDay;
   stations.forEach((station, i) => {
     if (station.pinnedDay && station.pinnedDay !== arrive) {
-      if (daysBetween(station.pinnedDay, arrive) > 0) {
+      if (arrive && daysBetween(station.pinnedDay, arrive) > 0) {
         result.conflicts.push({
           kind: "anchor_shift",
           anchorId: station.id,
@@ -76,18 +96,15 @@ export function scheduleRoute(state: PlanState): RouteSchedule {
       }
       arrive = station.pinnedDay;
     }
-    const depart = addDays(arrive, station.nights);
+    const depart = arrive && addDays(arrive, station.nights);
     result.stations[i] = { stationId: station.id, arriveDay: arrive, departDay: depart };
     result.lastDay = depart;
 
     const next = stations[i + 1];
     if (!next) return;
-    const stageIndex = stages.findIndex(
-      (g) => g.fromStationId === station.id && g.toStationId === next.id
-    );
-    const stage = stageIndex >= 0 ? stages[stageIndex] : null;
+    const stage = legs[i];
     if (!stage) {
-      arrive = depart;
+      arrive = null;
       return;
     }
     const booking = stage.bookingId ? bookings.get(stage.bookingId) : undefined;
@@ -97,7 +114,7 @@ export function scheduleRoute(state: PlanState): RouteSchedule {
     const required = anchorDay ? depart : (stage.departDay ?? depart);
     let departDay = required;
     if (anchorDay) {
-      if (daysBetween(anchorDay, required) > 0) {
+      if (required && daysBetween(anchorDay, required) > 0) {
         result.conflicts.push({
           kind: "anchor_shift",
           anchorId: stage.id,
@@ -107,14 +124,16 @@ export function scheduleRoute(state: PlanState): RouteSchedule {
       }
       departDay = anchorDay;
     }
-    arrive = arrivalDay({
-      departDay,
-      stage,
-      anchor: anchorDay ? booking : undefined,
-      from: station,
-      to: next,
-    });
-    result.stages[stageIndex] = { stageId: stage.id, departDay, arriveDay: arrive };
+    arrive = departDay
+      ? arrivalDay({
+          departDay,
+          stage,
+          anchor: anchorDay ? booking : undefined,
+          from: station,
+          to: next,
+        })
+      : null;
+    result.stages[stages.indexOf(stage)] = { stageId: stage.id, departDay, arriveDay: arrive };
   });
   return result;
 }

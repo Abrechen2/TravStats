@@ -161,13 +161,9 @@ describe("route findings", () => {
   });
 
   it("spontaneous and pitch nights never produce a finding", () => {
-    const state = route(
-      [
-        station("C", { nights: 2, night: { kind: "spontaneous" } }),
-        station("D", { nights: 2, night: { kind: "pitch" } }),
-      ],
-      []
-    );
+    const c = station("C", { nights: 2, night: { kind: "spontaneous" } }),
+      d = station("D", { nights: 2, night: { kind: "pitch" } });
+    const state = route([c, d], [stage(c, d)]);
     expect(routeFindings(state, TODAY)).toEqual([]);
   });
 
@@ -243,6 +239,20 @@ describe("route findings", () => {
     });
     const found = routeFindings(state, TODAY).filter((f) => f.code === "dayTripOutside");
     expect(found.map((f) => f.params)).toEqual([{ title: "Etna", station: "Cefalu" }]);
+  });
+
+  it("stageMissing: a leg between two stations without a stage, e.g. after a reorder", () => {
+    const a = station("A"),
+      b = station("B"),
+      c = station("C");
+    const state = route([a, c, b], [stage(a, b), stage(b, c)]);
+    const found = routeFindings(state, TODAY).filter((f) => f.code === "stageMissing");
+    expect(found.map((f) => f.params)).toEqual([
+      { from: "A", to: "C" },
+      { from: "C", to: "B" },
+    ]);
+    expect(found[0].severity).toBe("attention");
+    expect(codes(route([a, b, c], [stage(a, b), stage(b, c)]))).not.toContain("stageMissing");
   });
 
   it("decisions: conscious hides a finding, a dismissal only until its facts change", () => {
