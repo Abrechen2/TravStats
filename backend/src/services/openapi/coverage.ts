@@ -47,6 +47,10 @@ export const UNDOCUMENTED_MOUNTS: ReadonlyMap<string, string> = new Map([
     "comparison-peer",
     "Server-to-server protocol between admin-pinned peers (Ed25519-signed envelopes); no user token reaches it",
   ],
+  [
+    "trip-share-peer",
+    "Server-to-server trip-sharing protocol between admin-pinned peers (Ed25519-signed envelopes, purpose trip-share/1); no user token reaches it",
+  ],
   ["admin", "Admin console API — admin-scope only, free to change between minor versions"],
   ["setup", "First-boot wizard — unauthenticated, single-use, not an integration surface"],
   ["openapi", "The spec and Swagger UI themselves"],

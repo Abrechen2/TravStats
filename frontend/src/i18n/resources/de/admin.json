@@ -197,6 +197,10 @@
           "calendarFeed": {
             "name": "Kalender-Abo",
             "what": "Ein geheimer Link unter Einstellungen → Reisen, den jede Kalender-App abonnieren kann: kommende Flüge, Aufenthalte, Fahrten, Kreuzfahrten und Reisen des eigenen Kontos. Mit ausgeschaltetem Schalter wird kein Link ausgegeben und keiner beantwortet."
+          },
+          "federatedTripSharing": {
+            "name": "Reisen über Server teilen",
+            "what": "Mitreisende auf anderen TravStats-Servern per Einladungscode verbinden, unter Einstellungen → Reisen; dazu kommt ein eigener Schalter unter Server-Verbindungen. Noch geht keine Reise über die Leitung. Mit ausgeschaltetem Schalter antwortet dieser Server anderen Servern dafür gar nicht."
           }
         }
       },
@@ -1103,6 +1107,8 @@
     "originHint": "https, ohne Port und Pfad – so, wie andere Server ihn erreichen.",
     "generateKey": "Schlüssel erzeugen",
     "rotateWarning": "Ein neuer Schlüssel ersetzt den alten. Verbundene Server müssen ihn neu hinterlegen.",
+    "tripSharing": "Reisen mit anderen Servern teilen",
+    "tripSharingSub": "Leute auf vertrauten Servern können Reisen mit Konten auf diesem Server teilen. Die Fakten einer geteilten Reise gehen signiert über TLS zum Server des Mitreisenden; private Angaben nie. Wirkt nur mit einem Schlüssel und eingeschalteten Beta-Funktionen.",
     "fingerprint": "Fingerabdruck – gib ihn dem Admin des anderen Servers auf einem zweiten Weg (z. B. am Telefon):",
     "peers": "Vertraute Server",
     "verifiedAt": "geprüft am {{date}}",

@@ -213,6 +213,23 @@ export const BETA_FEATURES = Object.freeze({
       "The owner has subscribed to the feed on the RC from at least Apple Calendar and Google Calendar, checked that flights, stays and rides land on the right days and hours, and accepts it for release.",
     reason: "beta",
   }),
+
+  /**
+   * Trip sharing across servers (forgejo#301, spec
+   * docs/superpowers/specs/2026-10-20-federated-trip-sharing-design.md). Gated in two places:
+   * the admin's switch in Admin → Instanz (`FederationSettings`) and the "people on other
+   * servers" part of Settings → Reisen teilen (`RemoteSharingSection`). Like `calendarFeed` the
+   * SERVER asks too: `/trip-share-peer` answers 404 and `/sharing/remote/*` refuses with
+   * `SHARE_REMOTE_DISABLED` while the beta switch is off, because a peer would keep sending
+   * long after anybody looks at the page that hid it.
+   */
+  federatedTripSharing: Object.freeze({
+    why: "Built in phases from 2026-10-20 (spec §12). No trip crosses between servers until the copy, propagation and lifecycle phases (F-S4c to F-S4e) are built, and nothing has run between two real servers yet.",
+    returnsWhen:
+      "Phases F-S4c to F-S4e are built, the owner has shared a trip between two real servers on the RC (both directions, an edit on each side, a revoke), and accepts it for release (spec O10).",
+    issue: "forgejo#301",
+    reason: "beta",
+  }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 
 export type BetaFeatureKey = keyof typeof BETA_FEATURES;

@@ -1273,6 +1273,9 @@ model AdminSettings {
   federationOrigin     String? @map("federation_origin")
   /// Ed25519 private key, PKCS#8 PEM, encrypted at application level like the push secret.
   federationPrivateKey String? @map("federation_private_key")
+  /// Trip sharing across servers (spec 2026-10-20 F8), default off. Effective only while the
+  /// identity above loads and the beta switch is on (`services/sharing/federation/availability.ts`).
+  tripFederationEnabled Boolean @default(false) @map("trip_federation_enabled")
 
   /// The instance's STARTING POINT for "a country counts as visited from …" —
   /// one of `COUNTRY_TIERS` (shared/countryEvidence.ts). Spec §3.2: a fresh

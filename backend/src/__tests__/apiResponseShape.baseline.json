@@ -113,6 +113,7 @@
     "travplan.ts",
     "travplan/importPolicy.ts",
     "travplan/routeEndpoints.ts",
+    "tripSharePeer.ts",
     "trips.ts",
     "trips/entrySuggestions.ts",
     "trips/photoDto.ts",

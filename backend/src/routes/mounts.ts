@@ -2,6 +2,7 @@ import mapConfigRoutes from "./mapConfig";
 import encryptedShareRoutes from "./encryptedShare";
 import comparisonRoutes from "./comparison";
 import comparisonPeerRoutes from "./comparisonPeer";
+import tripSharePeerRoutes from "./tripSharePeer";
 /**
  * The API mount table — the single source of truth for what is served
  * under /api/v1 and in which order.
@@ -181,6 +182,8 @@ export const apiMounts: ApiMount[] = [
   { id: "encrypted-share", base: "/api/v1/encrypted-share", router: encryptedShareRoutes },
   { id: "comparison", base: "/api/v1/comparison", router: comparisonRoutes },
   { id: "comparison-peer", base: "/api/v1/comparison-peer", router: comparisonPeerRoutes },
+  // Trip sharing across servers (spec 2026-10-20): signed server-to-server messages, 404 when off.
+  { id: "trip-share-peer", base: "/api/v1/trip-share-peer", router: tripSharePeerRoutes },
   { id: "travplan", base: "/api/v1", router: travplanRoutes },
   // OpenAPI spec + Swagger UI mounted FIRST so /api/v1/docs and
   // /api/v1/openapi.json don't fall through into authenticated routers.

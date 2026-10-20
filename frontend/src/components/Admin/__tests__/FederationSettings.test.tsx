@@ -25,6 +25,7 @@ const base: FederationState = {
   origin: "https://me.example",
   publicKey: null,
   fingerprint: null,
+  tripSharingEnabled: false,
   peers: [],
 };
 

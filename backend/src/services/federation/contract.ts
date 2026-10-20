@@ -1,4 +1,7 @@
 import { e2eRequest } from "./e2e/wire";
+import { origin } from "./envelope";
+// The envelope is protocol-neutral and lives in `envelope.ts`; re-exported for the comparison side.
+export { origin, signedEnvelope, type Envelope } from "./envelope";
 import { z } from "zod";
 import { AVAILABLE_DOMAINS } from "../../shared/domains";
 import {
@@ -9,18 +12,6 @@ import {
 
 export const id = z.string().uuid();
 export const label = z.string().trim().min(1).max(80);
-export const origin = z
-  .string()
-  .max(250)
-  .refine((v) => {
-    if (v === "local") return true;
-    try {
-      const u = new URL(v);
-      return u.protocol === "https:" && u.origin === v && !u.username && !u.password && !u.port;
-    } catch {
-      return false;
-    }
-  });
 export const scopeSchema = z
   .strictObject({
     statistics: z.boolean(),
@@ -80,15 +71,6 @@ export const packetBody = z.discriminatedUnion("action", [
   lbStateRequestSchema,
 ]);
 export type PeerBody = z.infer<typeof packetBody>;
-export const signedEnvelope = z.strictObject({
-  origin,
-  destination: origin,
-  nonce: z.string().regex(/^[a-f0-9]{64}$/),
-  time: z.number().int(),
-  body: z.string().max(8_000_000),
-  signature: z.string().max(100),
-});
-export type Envelope = z.infer<typeof signedEnvelope>;
 export const claimInput = z.strictObject({
   origin,
   code: z.string().regex(/^[a-f0-9]{64}$/),
