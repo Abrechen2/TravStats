@@ -1119,5 +1119,19 @@
       "generic": "Das hat nicht geklappt. Prüfe die Angaben und versuch es noch einmal.",
       "refresh": "Erledigt, aber die Liste konnte nicht neu geladen werden. Lade die Seite neu."
     }
+  },
+  "importMode": {
+    "title": "Import-Modus",
+    "description": "Hebt die Mengenbremse für Uploads und Importe auf, damit ein Erst-Import mit allen Belegen nicht stundenlang blockiert. Gilt 24 Stunden und endet von selbst. Demo-Schutz und Token-Rechte bleiben bestehen.",
+    "off": "Aus — die normalen Limits gelten.",
+    "activeAll": "Aktiv für alle Konten bis {{until}}.",
+    "activeFor": "Aktiv für {{account}} bis {{until}}.",
+    "unknownAccount": "ein gelöschtes Konto",
+    "account": "Für welches Konto?",
+    "allAccounts": "Alle Konten",
+    "start": "Für {{hours}} Stunden einschalten",
+    "stop": "Jetzt beenden",
+    "loadFailed": "Der Import-Modus konnte nicht geladen werden.",
+    "saveFailed": "Der Import-Modus konnte nicht gespeichert werden. Bitte erneut versuchen."
   }
 }

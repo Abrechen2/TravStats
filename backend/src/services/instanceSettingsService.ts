@@ -111,7 +111,7 @@ export interface WebDAVSettings {
  *  The read comes first and answers on its own in every case but a genuinely
  *  fresh instance: this runs on ordinary requests, and taking a lock to learn
  *  that a row has existed for months would be a transaction per page load. */
-async function ensureAdminSettings() {
+export async function ensureAdminSettings() {
   const existing = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
   if (existing) return existing;
   await ensureAdminSettingsRow();

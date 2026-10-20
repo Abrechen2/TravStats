@@ -1,6 +1,7 @@
 import type { JSX } from "react";
 import BackupManagement from "../../components/Admin/BackupManagement";
 import ShareLinksSettings from "../../components/Admin/ShareLinksSettings";
+import ImportModeSettings from "../../components/Admin/ImportModeSettings";
 import FederationSettings from "../../components/Admin/FederationSettings";
 import InstanceSettings from "../../components/Admin/InstanceSettings";
 import UsageStatsSettings from "../../components/Admin/UsageStatsSettings";
@@ -265,6 +266,7 @@ export default function AdminSectionSwitch(props: AdminSectionSwitchProps): JSX.
             <InstanceSettings />
           </div>
           <ShareLinksSettings />
+          <ImportModeSettings />
           <FederationSettings />
           <div
             style={{

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { RATE_LIMITS } from "../config/constants";
 import type { ApiErrorCode } from "./errorHandler";
+import { importLimit } from "./importModeLimit";
 
 export { skipGlobalRateLimit } from "./globalRateLimitSkip";
 
@@ -234,7 +235,7 @@ export const fxPreviewLimiter = rateLimit({
  * which on a LAN deployment behind a reverse proxy is one bucket for the
  * whole household.
  */
-export const lodgingImportLimiter = rateLimit({
+export const lodgingImportLimiter = importLimit({
   windowMs: 15 * 60 * 1000,
   max: patAwareMax(60),
   standardHeaders: true,
@@ -246,7 +247,7 @@ export const lodgingImportLimiter = rateLimit({
 /** Per-user limits for the ZIP routes (`/track-archive`, the `.travstats` trip file): 30 per
  *  15 min covers trying, previewing and applying several times over. One bucket each. */
 const archiveLimiter = (what: string) =>
-  rateLimit({
+  importLimit({
     windowMs: 15 * 60 * 1000,
     max: patAwareMax(30),
     standardHeaders: true,
@@ -258,7 +259,7 @@ export const trackArchiveLimiter = archiveLimiter("recording archive");
 export const tripFileLimiter = archiveLimiter("trip file");
 
 /** Flight creation, per user (`FLIGHT_CREATION_MAX` an hour); every request counts. */
-export const flightCreationLimiter = rateLimit({
+export const flightCreationLimiter = importLimit({
   windowMs: RATE_LIMITS.FLIGHT_CREATION_WINDOW_MS,
   max: patAwareMax(RATE_LIMITS.FLIGHT_CREATION_MAX),
   message: "Too many flights created, please try again later",
@@ -286,7 +287,7 @@ export const flightDeviceDataLimiter = rateLimit({
  * reasoning that a ride is entered one form at a time, which the ticket import
  * made untrue, since every leg of every ticket is one request here.
  */
-export const railCreationLimiter = rateLimit({
+export const railCreationLimiter = importLimit({
   windowMs: RATE_LIMITS.FLIGHT_CREATION_WINDOW_MS,
   max: patAwareMax(RATE_LIMITS.RAIL_CREATION_MAX),
   message: "Too many train journeys saved, please try again later",
@@ -296,7 +297,7 @@ export const railCreationLimiter = rateLimit({
 });
 
 /** Bus ride creation: rail's budget, its own bucket and message (rail's reasons). */
-export const busCreationLimiter = rateLimit({
+export const busCreationLimiter = importLimit({
   windowMs: RATE_LIMITS.FLIGHT_CREATION_WINDOW_MS,
   max: patAwareMax(RATE_LIMITS.BUS_CREATION_MAX),
   message: "Too many bus rides saved, please try again later",
@@ -306,7 +307,7 @@ export const busCreationLimiter = rateLimit({
 });
 
 /** Rental creation: rail's budget, its own bucket and message (rail's reasons). */
-export const rentalCreationLimiter = rateLimit({
+export const rentalCreationLimiter = importLimit({
   windowMs: RATE_LIMITS.FLIGHT_CREATION_WINDOW_MS,
   max: patAwareMax(RATE_LIMITS.FLIGHT_CREATION_MAX),
   message: "Too many rentals saved, please try again later",
@@ -493,7 +494,7 @@ export const backupRestoreLimiter = rateLimit({
  * expensive endpoint in the app. Nothing here suggests that was a decision, and
  * `/parse-image` made it matter for hotel and cruise users too.
  */
-export const boardingPassParseLimiter = rateLimit({
+export const boardingPassParseLimiter = importLimit({
   windowMs: RATE_LIMITS.BOARDING_PASS_PARSE_WINDOW_MS,
   max: RATE_LIMITS.BOARDING_PASS_PARSE_MAX,
   message: "Too many boarding pass parse requests, please try again later",
@@ -506,7 +507,7 @@ export const boardingPassParseLimiter = rateLimit({
  * Rate limiter for email parsing (triggers expensive LLM operations)
  * Allows 10 parses per 15 minutes per IP
  */
-export const emailParseLimiter = rateLimit({
+export const emailParseLimiter = importLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10,
   message: { error: "Too many parse requests, please try again later" },
@@ -575,7 +576,7 @@ export const adminReseedLimiter = rateLimit({
  * user"; the key generator that makes it true arrived on 2026-09-04
  * (forgejo#68).
  */
-export const pdfParseLimiter = rateLimit({
+export const pdfParseLimiter = importLimit({
   windowMs: RATE_LIMITS.PDF_PARSE_WINDOW_MS,
   max: RATE_LIMITS.PDF_PARSE_MAX,
   message: "Too many PDF parse requests, please try again later",
@@ -590,7 +591,7 @@ export const pdfParseLimiter = rateLimit({
  * has a bucket of its own: sharing this one let a few edit rounds lock imports out.
  */
 const batchLimiter = (message: string) =>
-  rateLimit({
+  importLimit({
     windowMs: 60 * 60 * 1000,
     max: patAwareMax(50),
     message,
@@ -617,7 +618,7 @@ export const bulkEditLimiter = batchLimiter("Too many bulk edits, please try aga
  * Mount it BEFORE the multer middleware on each route, or a 429'd request
  * still writes its bytes to disk first, which defeats the point.
  */
-export const uploadReceiptLimiter = rateLimit({
+export const uploadReceiptLimiter = importLimit({
   windowMs: RATE_LIMITS.UPLOAD_RECEIPT_WINDOW_MS,
   max: RATE_LIMITS.UPLOAD_RECEIPT_MAX,
   message: "Too many file uploads, please try again later",
@@ -639,7 +640,7 @@ export const uploadReceiptLimiter = rateLimit({
  *
  * Mount it BEFORE multer: a rejected request must not be read into memory first.
  */
-export const documentUploadLimiter = rateLimit({
+export const documentUploadLimiter = importLimit({
   windowMs: RATE_LIMITS.DOCUMENT_UPLOAD_WINDOW_MS,
   max: RATE_LIMITS.DOCUMENT_UPLOAD_MAX,
   message: "Too many document uploads, please try again later",
@@ -759,7 +760,7 @@ export const immichProxyLimiter = rateLimit({
  * user has no reason to run them concurrently. 20 per 15 minutes is far more
  * than the handful of deliberate clicks either is worth.
  */
-export const immichImportLimiter = rateLimit({
+export const immichImportLimiter = importLimit({
   windowMs: RATE_LIMITS.IMMICH_IMPORT_WINDOW_MS,
   max: patAwareMax(RATE_LIMITS.IMMICH_IMPORT_MAX),
   standardHeaders: true,

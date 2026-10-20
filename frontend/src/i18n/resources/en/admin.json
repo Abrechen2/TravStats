@@ -1119,5 +1119,19 @@
       "generic": "That did not work. Check the details and try again.",
       "refresh": "Done, but the list could not be reloaded. Reload the page."
     }
+  },
+  "importMode": {
+    "title": "Import mode",
+    "description": "Lifts the quantity limits on uploads and imports, so a first import with all its documents is not blocked for hours. Lasts 24 hours and ends by itself. Demo protection and token permissions stay in place.",
+    "off": "Off — the normal limits apply.",
+    "activeAll": "On for every account until {{until}}.",
+    "activeFor": "On for {{account}} until {{until}}.",
+    "unknownAccount": "a deleted account",
+    "account": "Which account?",
+    "allAccounts": "All accounts",
+    "start": "Switch on for {{hours}} hours",
+    "stop": "End now",
+    "loadFailed": "The import mode could not be loaded.",
+    "saveFailed": "The import mode could not be saved. Please try again."
   }
 }
