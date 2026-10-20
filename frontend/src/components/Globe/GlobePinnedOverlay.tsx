@@ -14,6 +14,7 @@ import { LODGING_COLOR } from "../../lib/lodgingColor";
 import { PLACE_COLOR } from "../../lib/placeColor";
 import { PinnedCard } from "../map/cards/PinnedCard";
 import { PinnedCardBoundary } from "../map/cards/PinnedCardBoundary";
+import { FloatingCard } from "../map/cards/FloatingCard";
 import type { MapPinned } from "../map/cards/pinnedTypes";
 import type { PinnedScreenPos } from "./usePinnedAnchor";
 
@@ -95,14 +96,7 @@ export function GlobePinnedOverlay({
           by clicking, so nothing may cover it. It won that position by being
           mounted last while all three were z-30 — true, and not declared
           anywhere until now. */}
-      <div
-        className="absolute z-50 pointer-events-auto"
-        style={{
-          left: screen.x,
-          top: screen.y,
-          transform: "translate(-50%, calc(-100% - 14px))",
-        }}
-      >
+      <FloatingCard anchor={screen} zIndex={50}>
         <PinnedCardBoundary>
           <PinnedCard
             pinned={pinned}
@@ -118,7 +112,7 @@ export function GlobePinnedOverlay({
             onPlaceOpen={onPlaceOpen}
           />
         </PinnedCardBoundary>
-      </div>
+      </FloatingCard>
     </>
   );
 }

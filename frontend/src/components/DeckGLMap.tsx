@@ -4,6 +4,7 @@ import { DeckGLOverlay, webgl2Available } from "./map/DeckGLOverlay";
 import { createMarkerTooltip } from "./map/markerTooltip";
 import { PinnedCard } from "./map/cards/PinnedCard";
 import { PinnedCardBoundary } from "./map/cards/PinnedCardBoundary";
+import { FloatingCard } from "./map/cards/FloatingCard";
 import { HoverTooltip, type HoverTooltipApi } from "./map/cards/HoverTooltip";
 import type { MapPinned } from "./map/cards/pinnedTypes";
 import { pinnedFromAirport } from "./map/cards/buildFlatPinned";
@@ -937,14 +938,7 @@ export function DeckGLMap({
           reprojects on every move, the way the globe's does; the five cards
           it replaced each had their own anchoring scheme. */}
       {pinned && pinnedPos && (
-        <div
-          className="absolute z-30 pointer-events-auto"
-          style={{
-            left: pinnedPos.x,
-            top: pinnedPos.y,
-            transform: "translate(-50%, calc(-100% - 14px))",
-          }}
-        >
+        <FloatingCard anchor={pinnedPos}>
           <PinnedCardBoundary>
             <PinnedCard
               pinned={pinned}
@@ -977,7 +971,7 @@ export function DeckGLMap({
               }}
             />
           </PinnedCardBoundary>
-        </div>
+        </FloatingCard>
       )}
 
       {/* Hover tooltip — the globe's leaf component, fed imperatively. The

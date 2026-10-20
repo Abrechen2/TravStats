@@ -1,6 +1,15 @@
-import { forwardRef, useImperativeHandle, useState } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { tokens } from "../../../theme/tokens";
 import type { HoverTooltipState } from "./pinnedTypes";
+import { placeTooltip } from "./placeFloating";
+import { FLOATING_CARD_Z, sideListInsets } from "./FloatingCard";
 
 export interface HoverTooltipApi {
   show: (state: HoverTooltipState) => void;
@@ -22,12 +31,54 @@ export interface HoverTooltipApi {
 // style object and never matched the card it sat beside.
 export const HoverTooltip = forwardRef<HoverTooltipApi>(function HoverTooltip(_, ref) {
   const [state, setState] = useState<HoverTooltipState | null>(null);
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  // Placed after it is drawn: right of and below the pointer, flipped and
+  // clamped to stay inside the map (forgejo#323 browser look — it was clipped
+  // at the right edge). Written straight to the node, as the show/hide are,
+  // so a 60–120 Hz hover still renders once per move and not twice.
+  useLayoutEffect(() => {
+    const el = boxRef.current;
+    const container = el?.offsetParent as HTMLElement | null | undefined;
+    if (!el || !state || !container || container.clientWidth === 0) return;
+    const box = placeTooltip(
+      { x: state.x, y: state.y },
+      { width: el.offsetWidth, height: el.offsetHeight },
+      { width: container.clientWidth, height: container.clientHeight },
+      sideListInsets(container)
+    );
+    el.style.left = `${box.left}px`;
+    el.style.top = `${box.top}px`;
+  }, [state]);
+
+  // A click opens a card for what the pointer is on; the tooltip for that same
+  // object would sit on top of the card (forgejo#323 browser look). So a press
+  // hides it and keeps it hidden until the pointer reaches something else.
+  const shownRef = useRef<string | null>(null);
+  const suppressedRef = useRef<string | null>(null);
+  useEffect(() => {
+    const onPress = (): void => {
+      if (shownRef.current === null) return;
+      suppressedRef.current = shownRef.current;
+      shownRef.current = null;
+      setState(null);
+    };
+    document.addEventListener("pointerdown", onPress, true);
+    return () => document.removeEventListener("pointerdown", onPress, true);
+  }, []);
 
   useImperativeHandle(
     ref,
     () => ({
-      show: (next) => setState(next),
-      hide: () => setState(null),
+      show: (next) => {
+        if (next.html === suppressedRef.current) return;
+        suppressedRef.current = null;
+        shownRef.current = next.html;
+        setState(next);
+      },
+      hide: () => {
+        shownRef.current = null;
+        setState(null);
+      },
     }),
     []
   );
@@ -35,11 +86,14 @@ export const HoverTooltip = forwardRef<HoverTooltipApi>(function HoverTooltip(_,
   if (!state) return null;
   return (
     <div
-      className="pointer-events-none absolute z-30 rounded-sm px-3 py-2 text-xs"
+      ref={boxRef}
+      className="pointer-events-none absolute rounded-sm px-3 py-2 text-xs"
       style={{
         left: state.x + 12,
         top: state.y + 12,
         maxWidth: "280px",
+        // Above the map's floating panels, like the pinned card (FloatingCard).
+        zIndex: FLOATING_CARD_Z,
         // Own dark glass rather than a theme surface, for the same reason the
         // card has one: it floats over live map imagery.
         background: "rgba(13, 17, 23, 0.92)",

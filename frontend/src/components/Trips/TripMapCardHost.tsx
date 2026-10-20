@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState, type JSX, type RefObject } from "reac
 import type { MapRef } from "react-map-gl/maplibre";
 import { PinnedCard } from "../map/cards/PinnedCard";
 import { PinnedCardBoundary } from "../map/cards/PinnedCardBoundary";
+import { FloatingCard } from "../map/cards/FloatingCard";
 import type { MapPinned } from "../map/cards/pinnedTypes";
 import { useMapCardSelectionStore } from "../../store/mapCardSelectionStore";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
@@ -59,14 +60,10 @@ export function TripMapCardHost({
 
   if (!pinned || !pos) return null;
   return (
-    <div
-      className="absolute z-30 pointer-events-auto"
-      data-testid="trip-map-card"
-      style={{ left: pos.x, top: pos.y, transform: "translate(-50%, calc(-100% - 14px))" }}
-    >
+    <FloatingCard anchor={pos} testId="trip-map-card">
       <PinnedCardBoundary>
         <PinnedCard pinned={pinned} flights={NO_FLIGHTS} cruises={NO_FLIGHTS} onClose={clear} />
       </PinnedCardBoundary>
-    </div>
+    </FloatingCard>
   );
 }
