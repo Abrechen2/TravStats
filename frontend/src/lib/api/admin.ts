@@ -68,6 +68,15 @@ export interface PasskeyStatus {
   reason: string | null;
 }
 
+/** Import mode (forgejo#304); `until` null = off. */
+export interface ImportModeState {
+  until: string | null;
+  /** The one account covered; null = every account. */
+  userId: string | null;
+  /** How long one switch-on lasts. */
+  hours: number;
+}
+
 export interface InstanceSettingsResponse {
   settings: InstanceSettings;
   passkeyStatus: PasskeyStatus;
@@ -673,6 +682,19 @@ export const adminApi = {
       `/admin/users/${userId}/reset-password`,
       { mode, password, mustChangePassword }
     );
+    return data;
+  },
+
+  /** Import mode (forgejo#304): upload and import limits lifted until `until`. */
+  getImportMode: async (): Promise<ImportModeState> => {
+    const { data } = await api.get<ImportModeState>("/admin/import-mode");
+    return data;
+  },
+
+  setImportMode: async (
+    body: { enabled: true; userId: string | null } | { enabled: false }
+  ): Promise<ImportModeState> => {
+    const { data } = await api.put<ImportModeState>("/admin/import-mode", body);
     return data;
   },
 

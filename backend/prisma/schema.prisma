@@ -1318,6 +1318,15 @@ model AdminSettings {
   usageStatsConsent   String  @default("unset") @map("usage_stats_consent")
   usageStatsInstallId String? @map("usage_stats_install_id")
 
+  // === IMPORT MODE (forgejo#304) ===
+  // Lifts the upload and import rate limits until this instant, so a first
+  // import of a travel history with its originals is not throttled for hours.
+  // Time-boxed on purpose: it can never be left open by forgetting it.
+  importModeUntil  DateTime? @map("import_mode_until")
+  // The one account it applies to; null = every account (never the shared demo).
+  // No foreign key: a deleted account simply matches nobody until the end.
+  importModeUserId String?   @map("import_mode_user_id")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
