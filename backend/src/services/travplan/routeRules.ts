@@ -1,5 +1,5 @@
 import { daysBetween, fromDbDate, toDbDate } from "../../shared/time/localDate";
-import { scheduleRoute } from "./routeSchedule";
+import { arrivalUndetermined, routeLegs, scheduleRoute } from "./routeSchedule";
 import type { PlanFinding, PlanStage, PlanState, PlanStation } from "./types";
 
 const SECTION = "route";
@@ -91,6 +91,17 @@ export function routeFindings(state: PlanState, today: string): PlanFinding[] {
       [leg.fromStationId, leg.toStationId],
       "attention"
     );
+
+  // A stage whose arrival nothing determines leaves the days after it unknown.
+  for (const stage of routeLegs(state.stations, state.stages))
+    if (stage && arrivalUndetermined(stage, state.bookings))
+      add(
+        "durationMissing:" + stage.id,
+        "durationMissing",
+        { from: title(stage.fromStationId), to: title(stage.toStationId) },
+        [stage.id, stage.mode],
+        "attention"
+      );
 
   for (const conflict of schedule.conflicts) {
     const stage = state.stages.find((g) => g.id === conflict.anchorId);

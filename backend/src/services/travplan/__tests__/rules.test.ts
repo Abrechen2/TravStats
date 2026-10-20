@@ -296,7 +296,8 @@ describe("nightGap on a route plan", () => {
     mode: overnight ? ("ferry" as const) : ("drive" as const),
     departDay: null,
     departTime: null,
-    durationMinutes: null,
+    // A known duration, so the days after a stage are known (owner, 2026-10-20).
+    durationMinutes: 60,
     distanceKm: null,
     metricsSource: null,
     fallbackReason: null,
@@ -323,6 +324,18 @@ describe("nightGap on a route plan", () => {
     };
     const codes = checkPlan(state, "2027-05-01").map((f) => f.code);
     expect(codes).toContain("stageMissing");
+    expect(codes).not.toContain("nightGap");
+  });
+  it("a stage without a duration leaves the nights unknown: durationMissing speaks, not nightGap", () => {
+    const a = st("A", 2, { kind: "spontaneous" }),
+      b = st("B", 1, { kind: "pitch" });
+    const state = {
+      ...base,
+      stations: [a, b],
+      stages: [{ ...stage(a.id, b.id), durationMinutes: null }],
+    };
+    const codes = checkPlan(state, "2027-05-01").map((f) => f.code);
+    expect(codes).toContain("durationMissing");
     expect(codes).not.toContain("nightGap");
   });
   it("an idea night with no candidate still covers its nights (nightUndecided speaks, not nightGap)", () => {

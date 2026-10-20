@@ -265,8 +265,10 @@ describe("Plan variants", () => {
         driveDays: 1,
         destinationNights: 2,
         stageCosts: null,
-        // the overnight ferry has no price; the USD amount is skipped, not summed
-        unknownCosts: 2,
+        // the overnight ferry has no price; the B→C ferry (and its USD amount)
+        // joins no consecutive stations of this variant, so it is reported, not counted
+        unknownCosts: 1,
+        obsoleteStageIds: [ferry.id],
       });
       expect(other.fuel).toEqual({ amount: 192.5, currency: "EUR" });
     });
@@ -284,6 +286,34 @@ describe("Plan variants", () => {
         driveKm: null,
         driveDays: 0,
         fuel: null,
+      });
+    });
+
+    it("after a reorder, totals count only the stages of the new order; old ones are reported", () => {
+      const { a, b, c, g1, g2 } = route();
+      // Was A→B→C; B moved behind C, then the user added A→C and C→B.
+      const ac = stage(a.id, c.id, { distanceKm: 500 }),
+        cb = stage(c.id, b.id, { distanceKm: 600 });
+      const oldFerry = stage(b.id, c.id, { mode: "ferry", distanceKm: null });
+      const state: PlanState = {
+        ...emptyState(),
+        shape: "route",
+        currency: "EUR",
+        stations: [a, c, b],
+        stages: [g1, g2, oldFerry, ac, cb],
+        bookings: [
+          booking({ stageId: g2.id, amount: 60 }),
+          booking({ stageId: cb.id, amount: 25 }),
+        ],
+        vehicle,
+      };
+      expect(compareVariants(state)[0]).toMatchObject({
+        driveKm: 1100,
+        driveDays: 2,
+        stageCosts: { amount: 25, currency: "EUR" },
+        unknownCosts: 0,
+        fuel: { amount: 211.75, currency: "EUR" },
+        obsoleteStageIds: [g1.id, g2.id, oldFerry.id],
       });
     });
 
