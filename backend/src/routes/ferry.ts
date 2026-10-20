@@ -323,7 +323,14 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
 
     const state = mergeFerryJourney(existing, input);
     const terminalsMoved = !sameFerryEnds(existing, state);
-    if (terminalsMoved && existing.roadtripLegId)
+    // Every write claims the version it was computed from. A client without a
+    // precondition claims the row it was merged against: otherwise a sea route
+    // committed in between would be overwritten with a stale chord distance.
+    const claimVersion = baseVersion ?? existing.updatedAt.toISOString();
+    // A stale client is answered by the version claim (409 with the current
+    // record), not by a guard computed from a row it never saw.
+    const staleClaim = new Date(claimVersion).getTime() !== existing.updatedAt.getTime();
+    if (terminalsMoved && existing.roadtripLegId && !staleClaim)
       throw new AppError("Unlink the roadtrip leg before changing terminals", 409);
     const resolved =
       input.companions !== undefined
@@ -352,13 +359,11 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
         async (tx) => {
           const before = await shareSnapshot(tx, "ferry", existing.id);
           // Claim the read version atomically inside the same transaction as the edit.
-          if (baseVersion !== null) {
-            const claimed = await tx.ferryJourney.updateMany({
-              where: { id: existing.id, userId, updatedAt: new Date(baseVersion) },
-              data: { updatedAt: new Date(Math.max(Date.now(), existing.updatedAt.getTime() + 1)) },
-            });
-            if (claimed.count !== 1) throw new FerryVersionMoved();
-          }
+          const claimed = await tx.ferryJourney.updateMany({
+            where: { id: existing.id, userId, updatedAt: new Date(claimVersion) },
+            data: { updatedAt: new Date(Math.max(Date.now(), existing.updatedAt.getTime() + 1)) },
+          });
+          if (claimed.count !== 1) throw new FerryVersionMoved();
           if (resolved !== undefined) {
             await tx.ferryJourneyCompanion.deleteMany({ where: { ferryJourneyId: existing.id } });
             if (resolved.length > 0) {
@@ -393,8 +398,8 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
         { timeout: SHARE_TX_TIMEOUT_MS }
       );
     } catch (err) {
-      if (!(err instanceof FerryVersionMoved) || baseVersion === null) throw err;
-      await answerMovedVersion(res, userId, existing.id, baseVersion);
+      if (!(err instanceof FerryVersionMoved)) throw err;
+      await answerMovedVersion(res, userId, existing.id, claimVersion);
       return;
     }
 

@@ -237,3 +237,55 @@ it("invalidates an unlinked sea line when a terminal moves", async () => {
     distanceSource: "great_circle",
   });
 });
+it("gives an unlinked leg its road routing back after a sea route replaced it", async () => {
+  const id = await create();
+  const leg = await link(id);
+  await post(id);
+  const unlink = await request(app)
+    .put(`/api/v1/ferry/${id}/roadtrip-leg`)
+    .set("Cookie", cookie)
+    .send({ legId: null });
+  expect(unlink.status).toBe(200);
+  expect(await prisma.tripRouteLeg.findUnique({ where: { id: leg.id } })).toMatchObject({
+    mode: "road",
+    source: "straight",
+    distanceKm: 197.3,
+  });
+});
+it("answers a stale terminal edit on a linked crossing with the version conflict", async () => {
+  const id = await create();
+  await link(id);
+  const stale = (await prisma.ferryJourney.findUniqueOrThrow({ where: { id } })).updatedAt;
+  await request(app)
+    .patch(`/api/v1/ferry/${id}`)
+    .set("Cookie", cookie)
+    .send({ notes: "Newer edit" })
+    .expect(200);
+  const res = await request(app)
+    .patch(`/api/v1/ferry/${id}`)
+    .set("Cookie", cookie)
+    .send({ arrivalStation: { ...arr, lat: 43 }, baseVersion: stale.toISOString() });
+  expect(res.status).toBe(409);
+  expect(res.body.code).toBe("VERSION_CONFLICT");
+});
+it("does not write a stale chord over a sea route committed during an edit without a version", async () => {
+  const id = await create();
+  const real = prisma.$transaction.bind(prisma);
+  const spy = jest
+    .spyOn(prisma, "$transaction")
+    .mockImplementationOnce(((fn: unknown, opts: unknown) =>
+      post(id).then(() =>
+        (real as (f: unknown, o: unknown) => Promise<unknown>)(fn, opts)
+      )) as typeof prisma.$transaction);
+  const edit = await request(app)
+    .patch(`/api/v1/ferry/${id}`)
+    .set("Cookie", cookie)
+    .send({ notes: "Racing note" });
+  spy.mockRestore();
+  expect(edit.status).toBe(409);
+  expect(await prisma.ferryJourney.findUnique({ where: { id } })).toMatchObject({
+    geometrySource: "sea_route",
+    distanceSource: "sea_route",
+    distanceKm: 201.4,
+  });
+});

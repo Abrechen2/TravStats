@@ -70,7 +70,7 @@ function snapshotOf(leg: LegRouting): Prisma.InputJsonValue {
 
 /**
  * Give an unlinked leg back its routing. Only while the leg still holds what
- * linking wrote (a straight ferry leg): an edit made after linking is the
+ * linking or a sea route wrote (a straight or routed ferry leg): an edit made after linking is the
  * user's newer word and is kept. A link made before the snapshot existed has
  * nothing to restore and leaves the leg as it is.
  */
@@ -83,7 +83,9 @@ async function restoreLeg(tx: Tx, legId: string, stored: unknown): Promise<void>
   }
   const before = parsed.data;
   await tx.tripRouteLeg.updateMany({
-    where: { id: legId, mode: "ferry", source: "straight" },
+    // "routed" is what a computed sea route writes (syncFerryLeg); a drawn or
+    // recorded line is the user's own and is kept.
+    where: { id: legId, mode: "ferry", source: { in: ["straight", "routed"] } },
     data: {
       mode: before.mode,
       source: before.source,

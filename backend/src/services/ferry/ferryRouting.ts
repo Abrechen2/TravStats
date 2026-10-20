@@ -1,6 +1,7 @@
 import { prisma, type DbTransaction } from "../../db";
 import { Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
+import logger from "../../utils/logger";
 import { haversineKm, polylineLengthKm } from "../../shared/geo/haversine";
 import { propagateWrite, shareSnapshot, SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
 import { computeFerryGeometry, readSeaGeometry, type FerryEnds } from "./ferryGeometry";
@@ -81,8 +82,37 @@ export async function routeFerryJourney(userId: string, id: string) {
         geometrySource: "sea_route",
       });
       await propagateWrite(tx, userId, "ferry", id, before);
+      if (existing.shareKey) await syncCopiesLegs(tx, existing.shareKey, id);
     },
     { timeout: SHARE_TX_TIMEOUT_MS }
   );
   return { outcome: "routed" as const };
+}
+
+/**
+ * Propagation hands the sea line to every copy, but a member may have linked
+ * their copy to a roadtrip leg of their own. That leg follows too — best
+ * effort: a member's leg that no longer fits their copy is their private
+ * routing and must not block the sharer's write, so it is left as it is.
+ */
+async function syncCopiesLegs(tx: DbTransaction, shareKey: string, ownId: string): Promise<void> {
+  const copies = await tx.ferryJourney.findMany({
+    where: {
+      shareKey,
+      id: { not: ownId },
+      roadtripLegId: { not: null },
+      geometrySource: "sea_route",
+    },
+  });
+  for (const copy of copies) {
+    try {
+      await syncFerryLeg(tx, copy);
+    } catch (error) {
+      if (!(error instanceof AppError)) throw error;
+      logger.warn(
+        { operation: "ferry.route.copyLeg", ferryJourneyId: copy.id, code: error.code },
+        "a shared copy's linked leg was left unchanged"
+      );
+    }
+  }
 }

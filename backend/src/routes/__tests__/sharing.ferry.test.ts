@@ -192,6 +192,66 @@ describe("trip sharing — ferry crossings", () => {
     expect(copy.geometry).toEqual(line);
   });
 
+  it("routes the roadtrip leg Ben linked to his copy as well", async () => {
+    const annas = await crossing(anna.id, { tripId });
+    const companion = await linkWithConsent(anna, ben);
+    await shareTrip(anna.id, tripId, companion.id);
+    const [copy] = await bens();
+    const route = await prisma.tripRoute.create({
+      data: {
+        userId: ben.id,
+        tripId: copy.tripId!,
+        name: "Bens roadtrip",
+        kind: "roadtrip",
+        mode: "road",
+      },
+    });
+    const stop = (title: string, lat: number, lon: number, orderIdx: number) =>
+      prisma.tripStop.create({
+        data: { tripId: copy.tripId!, routeId: route.id, title, lat, lon, orderIdx },
+      });
+    const from = await stop("Kiel", 54.3167, 10.1394, 0);
+    const to = await stop("Göteborg", 57.6995, 11.9364, 1);
+    const leg = await prisma.tripRouteLeg.create({
+      data: {
+        routeId: route.id,
+        fromStopId: from.id,
+        toStopId: to.id,
+        mode: "road",
+        source: "straight",
+        distanceKm: 420,
+      },
+    });
+    await request(app)
+      .put(`/api/v1/ferry/${copy.id}/roadtrip-leg`)
+      .set("Cookie", ben.cookie)
+      .send({ legId: leg.id })
+      .expect(200);
+    const line: Array<[number, number]> = [
+      [10.1394, 54.3167],
+      [10.9, 55.4],
+      [11.6, 57.2],
+      [11.9364, 57.6995],
+    ];
+    jest.mocked(computeSchematicRoute).mockResolvedValueOnce({
+      waypoints: line,
+      protectedPrefixCount: 0,
+      protectedSuffixCount: 0,
+      routed: true,
+      method: "maritime_graph",
+    });
+    await request(app)
+      .post(`/api/v1/ferry/${annas.id}/route`)
+      .set("Cookie", anna.cookie)
+      .send({})
+      .expect(200);
+    expect(await prisma.tripRouteLeg.findUnique({ where: { id: leg.id } })).toMatchObject({
+      mode: "ferry",
+      source: "routed",
+      waypoints: line,
+    });
+  });
+
   it("clears the crossing's key when Ben leaves", async () => {
     await crossing(anna.id, { tripId });
     const companion = await linkWithConsent(anna, ben);
