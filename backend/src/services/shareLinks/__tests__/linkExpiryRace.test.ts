@@ -9,11 +9,12 @@ import { now } from "../../../shared/time/clock";
  * to let the slower one write its later end over the earlier one already
  * stored — an end raised after all, which is the one thing the rule forbids.
  */
-const gate: { open: () => void; wait: Promise<void> } = (() => {
+const newGate = (): { open: () => void; wait: Promise<void> } => {
   let open = () => {};
   const wait = new Promise<void>((resolve) => (open = resolve));
   return { open: () => open(), wait };
-})();
+};
+let gate = newGate();
 let loads = 0;
 
 jest.mock("../tripView", () => {
@@ -45,6 +46,10 @@ describe("itinerary link expiry — two settlements in reverse order", () => {
   let userId: string;
 
   beforeEach(async () => {
+    gate = newGate();
+    loads = 0;
+    autoExpiry.mockReset();
+    await prisma.user.deleteMany({ where: { username: USERNAME } });
     const user = await prisma.user.create({ data: { username: USERNAME, passwordHash: "x" } });
     userId = user.id;
   });
@@ -84,6 +89,35 @@ describe("itinerary link expiry — two settlements in reverse order", () => {
     expect(fast[0].effectiveExpiresAt).toBe(lower.toISOString());
     const row = await prisma.publicShareLink.findUniqueOrThrow({ where: { id: link.id } });
     expect(row.effectiveExpiresAt.toISOString()).toBe(lower.toISOString());
+    expect(slowResult[0].effectiveExpiresAt).toBe(lower.toISOString());
+  });
+
+  it("answers the stored end when the slower settlement finds nothing to lower", async () => {
+    // A read the end before B lowered it; A's trip was then extended, so A
+    // computes no earlier end and must not answer the end it read.
+    const at = now().getTime();
+    const trip = await prisma.trip.create({ data: { userId, name: "Race extended" } });
+    const stored = new Date(at + 30 * DAY);
+    await prisma.publicShareLink.create({
+      data: {
+        userId,
+        kind: "trip",
+        tripId: trip.id,
+        fields: ["itinerary"],
+        tokenHash: `race-ext-${trip.id}`,
+        expiresAt: stored,
+        effectiveExpiresAt: stored,
+      },
+    });
+    const lower = new Date(at + 5 * DAY);
+    autoExpiry.mockReturnValueOnce(lower).mockReturnValueOnce(new Date(at + 60 * DAY));
+
+    const slow = listShareLinks(userId);
+    while (loads < 1) await new Promise((r) => setImmediate(r));
+    await listShareLinks(userId);
+    gate.open();
+    const slowResult = await slow;
+
     expect(slowResult[0].effectiveExpiresAt).toBe(lower.toISOString());
   });
 });
