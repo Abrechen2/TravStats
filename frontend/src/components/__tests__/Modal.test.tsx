@@ -125,6 +125,15 @@ describe("Modal", () => {
     expect(screen.getByText("Draußen")).not.toHaveFocus();
   });
 
+  it("names its × in the UI's language when the caller names nothing", () => {
+    open();
+    // Was a literal English "Close" — read out on German dialogs.
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /^(Schließen|common:buttons\.close)$/ })
+    ).toBeInTheDocument();
+  });
+
   it("renders nothing at all when closed", () => {
     render(
       <Modal open={false} onClose={vi.fn()} title="Wirklich?">

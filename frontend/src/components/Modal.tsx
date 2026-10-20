@@ -113,9 +113,14 @@ export default function Modal({
   discardLabel,
   maxWidth = 560,
   showClose = true,
-  closeLabel = "Close",
+  closeLabel,
   testId,
 }: ModalProps): JSX.Element | null {
+  // The × speaks the UI's language when a caller names nothing. The default was
+  // a literal English "Close", which three German dialogs read out (found in
+  // the browser on the forgejo#308 dialog).
+  const { t } = useTranslation(["common"]);
+  const closeName = closeLabel ?? t("common:buttons.close");
   const panelRef = useRef<HTMLDivElement>(null);
   const titleIdRef = useRef<string>("");
   if (titleIdRef.current === "") {
@@ -174,7 +179,7 @@ export default function Modal({
               type="button"
               onClick={requestClose}
               disabled={busy}
-              aria-label={closeLabel}
+              aria-label={closeName}
               className="-mr-1 inline-flex shrink-0 items-center justify-center rounded-sm p-1 disabled:opacity-50"
               style={{
                 color: "var(--text-muted)",
