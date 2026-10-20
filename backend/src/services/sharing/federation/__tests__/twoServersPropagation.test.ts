@@ -426,7 +426,7 @@ describe("who a received change is by: a claim is believed only where it can be 
     });
     await s.prisma.tripShareOutbox.update({
       where: { id: row.id },
-      data: { payload: { ...(row.payload as object), actor } },
+      data: { payload: { ...(row.payload as object), actor } as never },
     });
   }
 
