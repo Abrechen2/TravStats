@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import type { JSX, KeyboardEvent, ReactNode } from "react";
 
 export interface SegmentedOption<T extends string> {
@@ -36,6 +37,9 @@ export function Segmented<T extends string>({
   disabled = false,
 }: SegmentedProps<T>): JSX.Element {
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
+  // A finger gets the 44 px target, a mouse the compact pill: an iPad is wide
+  // and finger-operated at once, so the width cannot decide this.
+  const coarse = useCoarsePointer();
 
   const move = (event: KeyboardEvent<HTMLButtonElement>, index: number): void => {
     const step =
@@ -79,7 +83,8 @@ export function Segmented<T extends string>({
             style={{
               display: "inline-flex",
               alignItems: "center",
-              height: 36,
+              height: coarse ? undefined : 36,
+              minHeight: coarse ? "var(--ts-size-touch-min)" : undefined,
               padding: "0 var(--ts-space-lg)",
               borderRadius: "var(--ts-radius-pill)",
               background: checked ? "var(--ts-accent)" : "transparent",
