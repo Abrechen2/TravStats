@@ -52,6 +52,8 @@ import type { Lodging } from "../../types/lodging";
 import { resolveLodgingColor, type LodgingColorConfig } from "../../lib/lodgingColor";
 
 /** Which projection the trip map is currently drawing in. */
+import type { TripStopCardDatum } from "../map/cards/journeys/journeyTypes";
+
 export type TripProjection = "mercator" | "globe";
 
 export interface TripFlightArc {
@@ -88,6 +90,8 @@ export interface TripPointDatum {
    */
   name?: string;
   city?: string | null;
+  /** A trip stop's own card (forgejo#323); absent on airports and lodgings. */
+  card?: TripStopCardDatum;
   country?: string | null;
   stayCount?: number;
   nights?: number;

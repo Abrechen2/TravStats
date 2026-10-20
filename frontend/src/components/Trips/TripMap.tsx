@@ -41,6 +41,10 @@ import {
   useTripMapColorConfig,
 } from "./tripMapColors";
 import { tripBoundsPoints, type LngLat } from "./tripMapBounds";
+import { journeyFromTripFlight } from "../map/cards/journeys/journeyNormalize";
+import type { MapJourney } from "../map/cards/journeys/journeyTypes";
+import { decorateTripMapLayers } from "./tripMapCards";
+import { TripMapCardHost } from "./TripMapCardHost";
 
 const INITIAL_VIEW: MapViewState = {
   longitude: 10,
@@ -268,6 +272,13 @@ export default function TripMap({
         color: rgb,
         radiusMeters: 60000,
         kind: "stop",
+        card: {
+          title: s.title,
+          domain: s.domain,
+          startDate: s.startDate ?? null,
+          endDate: s.endDate ?? null,
+          color: rgb,
+        },
       });
     }
     return out;
@@ -530,7 +541,17 @@ export default function TripMap({
     colorConfig.lodging,
   ]);
 
-  const baseLayers = projection === "globe" ? globeLayers : mercatorLayers;
+  // Flights as journeys, so an arc and an airport open the shared card (forgejo#323).
+  const flightJourneys = useMemo(
+    () =>
+      (trip.flights ?? []).map(journeyFromTripFlight).filter((j): j is MapJourney => j !== null),
+    [trip.flights]
+  );
+  const baseLayers = useMemo(
+    () =>
+      decorateTripMapLayers(projection === "globe" ? globeLayers : mercatorLayers, flightJourneys),
+    [projection, globeLayers, mercatorLayers, flightJourneys]
+  );
   const layers = extraLayers ? [...baseLayers, ...extraLayers] : baseLayers;
 
   /** Every name on the globe, in the shape the HTML overlay reads. A deck.gl
@@ -708,6 +729,7 @@ export default function TripMap({
         )}
         <SharedMapOverlays />
       </MapGL>
+      <TripMapCardHost mapRef={mapRef} mapLoaded={mapLoaded} />
       {/* Names on the globe. deck.gl 9's billboard TextLayer renders nothing
           under globe projection, so the flat map's `trip-stop-labels` and the
           lodging pins' own labels are simply absent there — this HTML overlay

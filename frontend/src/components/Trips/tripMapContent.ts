@@ -7,7 +7,10 @@ import type { Trip, TripStop } from "../../types";
  * trip-shaped object with invented ids around them.
  */
 export type TripMapContent = Pick<Trip, "flights" | "cruises" | "lodgingStays"> & {
-  stops?: ReadonlyArray<Pick<TripStop, "title" | "lat" | "lon" | "domain">>;
+  stops?: ReadonlyArray<
+    Pick<TripStop, "title" | "lat" | "lon" | "domain"> &
+      Partial<Pick<TripStop, "startDate" | "endDate">>
+  >;
   /**
    * The sentence for an empty map, in the words of whatever is being drawn. A
    * tour and a roadtrip page said "Diese Reise … Flüge / Kreuzfahrten" (D9).
