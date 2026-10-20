@@ -25,16 +25,16 @@ interface StageTiming {
 }
 
 /**
- * The day a stage arrives. A booking that states its arrival is the truth:
- * a night ferry booked 23:00 → 07:00 lands the next day even with no duration
- * on the stage. Otherwise the departure plus the duration, read on the
+ * The day a stage arrives. A booking that states its arrival is the truth,
+ * in either direction: a night ferry booked 23:00 → 07:00 lands the next day
+ * even with no duration on the stage, and a flight east across the date line
+ * lands on an earlier calendar day than it left. Otherwise the departure plus the duration, read on the
  * destination's clock when both ends have a known zone, so a late crossing
  * into a zone ahead lands on the day it is there. An unknown time or duration
  * still counts as 0 (plan Task 4, rule 2).
  */
 function arrivalDay({ departDay, stage, anchor, from, to }: StageTiming): string {
-  if (anchor?.arrivalDay && daysBetween(departDay, anchor.arrivalDay) >= 0)
-    return anchor.arrivalDay;
+  if (anchor?.arrivalDay) return anchor.arrivalDay;
   if (stage.overnight) return addDays(departDay, 1);
   const time = anchor?.time ? anchor.time : stage.departTime;
   const duration = stage.durationMinutes ?? 0;

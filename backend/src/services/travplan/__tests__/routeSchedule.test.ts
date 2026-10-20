@@ -196,6 +196,24 @@ describe("scheduleRoute", () => {
     expect(s.stations[1]).toMatchObject({ arriveDay: "2027-05-09", departDay: "2027-05-10" });
   });
 
+  it("a booked arrival on an earlier calendar day than the departure is taken as booked", () => {
+    const tokyo = station("Tokyo"),
+      honolulu = station("Honolulu", { nights: 2 });
+    // East across the date line: leaves Tokyo May 8 21:00, lands in Honolulu
+    // on May 7 local time.
+    const real = booking({
+      kind: "flight",
+      day: "2027-05-08",
+      time: "21:00",
+      arrivalDay: "2027-05-07",
+      arrivalTime: "09:00",
+    });
+    const g = stage(tokyo, honolulu, { mode: "flight", bookingId: real.id });
+    const s = scheduleRoute(route([tokyo, honolulu], [g], { bookings: [real] }));
+    expect(s.stages[0]).toMatchObject({ departDay: "2027-05-08", arriveDay: "2027-05-07" });
+    expect(s.stations[1]).toMatchObject({ arriveDay: "2027-05-07", departDay: "2027-05-09" });
+  });
+
   it("a timed stage across zones lands on the destination's calendar day", () => {
     const a = station("Lisbon", { place: { ...place("Lisbon"), zone: "Europe/Lisbon" } }),
       b = station("Badajoz", { place: { ...place("Badajoz"), zone: "Europe/Madrid" } });
