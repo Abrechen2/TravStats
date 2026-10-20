@@ -167,6 +167,7 @@
     "stageUndecided": "Wie geht es von {{from}} nach {{to}}? Für {{mode}} fehlt noch eine Buchung oder ein Platzhalter.",
     "placeholderDue_one": "„{{title}}“ ist noch ein Platzhalter – Abfahrt morgen.",
     "placeholderDue_other": "„{{title}}“ ist noch ein Platzhalter – Abfahrt in {{count}} Tagen.",
+    "stageMissing": "Zwischen {{from}} und {{to}} fehlt eine Etappe – die Tage danach sind noch offen.",
     "nightUndecided": "Für {{station}} ist noch kein Platz gemerkt.",
     "scheduleConflict": "Die Route kommt erst am {{requiredDay}} an, „{{anchor}}“ ist für {{plannedDay}} gebucht.",
     "longDrive": "{{from}} → {{to}} sind etwa {{hours}} Stunden Fahrt.",

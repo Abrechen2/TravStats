@@ -81,6 +81,17 @@ export function routeFindings(state: PlanState, today: string): PlanFinding[] {
     if (s.nights > 0 && s.night.kind === "idea" && s.night.candidates.length === 0)
       add("nightUndecided:" + s.id, "nightUndecided", { station: s.title }, [s.id, s.nights]);
 
+  // A leg without a stage leaves every day after it unknown; say so instead
+  // of letting the route look complete.
+  for (const leg of schedule.unresolved)
+    add(
+      `stageMissing:${leg.fromStationId}:${leg.toStationId}`,
+      "stageMissing",
+      { from: title(leg.fromStationId), to: title(leg.toStationId) },
+      [leg.fromStationId, leg.toStationId],
+      "attention"
+    );
+
   for (const conflict of schedule.conflicts) {
     const stage = state.stages.find((g) => g.id === conflict.anchorId);
     add(

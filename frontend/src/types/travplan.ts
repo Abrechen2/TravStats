@@ -284,6 +284,8 @@ export interface RouteSchedule {
   stages: { stageId: string; departDay: string | null; arriveDay: string | null }[];
   lastDay: string | null;
   conflicts: { kind: "anchor_shift"; anchorId: string; plannedDay: string; requiredDay: string }[];
+  /** Consecutive stations no stage connects; the days after one stay unknown. */
+  unresolved: { fromStationId: string; toStationId: string }[];
 }
 export interface VariantComparison {
   /** `null` for the active route, which has no variant id. */
