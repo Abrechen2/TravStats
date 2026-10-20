@@ -386,6 +386,18 @@ export type ApiErrorCode =
    *  network (`llm/llmEndpoint.ts`). */
   | "LLM_BASE_URL_INVALID"
   | "LLM_BASE_URL_HTTPS_REQUIRED"
+  /** The admin's template repository URL (forgejo#309, `routes/admin/templateRepo.ts`):
+   *  malformed / not http(s) / carrying credentials, or plain http to a host
+   *  outside the local network — the `llm/llmEndpoint.ts` rule. */
+  | "TEMPLATE_REPO_URL_INVALID"
+  | "TEMPLATE_REPO_URL_HTTPS_REQUIRED"
+  /** Exporting a workshop template for the community (forgejo#309,
+   *  `parserTemplates.ts`): it holds a value of the user's own document where
+   *  it cannot be blanked (422, `extra.kinds`), it is not active yet (409), or
+   *  its kind is stored in a format the repository does not take (422). */
+  | "TEMPLATE_EXPORT_PERSONAL_DATA"
+  | "TEMPLATE_EXPORT_NOT_ACTIVE"
+  | "TEMPLATE_EXPORT_UNSUPPORTED"
   /** The admin log area (`routes/admin/logging.ts`): a name that fails the
    *  traversal guard (400), a file that is not there (404), a file that could
    *  not be read or decompressed (500). */

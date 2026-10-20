@@ -31,7 +31,8 @@ import {
   type BusJourney,
   type BusRideKind,
 } from "../../types/bus";
-import { BusStationField, type BusStationDraft } from "./BusStationField";
+import { BusStationField, EMPTY_TERMINAL, type BusStationDraft } from "./BusStationField";
+import { BusTicketImport } from "./BusTicketImport";
 import { BusNoRoutingNote } from "./BusNoRoutingNote";
 import { BusTerminalChips } from "./BusTerminalChips";
 import { BusTimeField } from "./BusTimeField";
@@ -124,6 +125,27 @@ export function BusFormModal({
   // Unknown (null) says nothing: only a measured "no provider" is worth a sentence.
   const routing = useBusRouting();
   const failure = useFormFailure(JSON.stringify(draft));
+  // A ticket read into the form (forgejo#309): the reading blocks the save
+  // while it runs, and once applied the terminals still need their position.
+  const [importBusy, setImportBusy] = useState(false);
+  const [imported, setImported] = useState(false);
+
+  const applyTicket = (values: Record<string, string>): void => {
+    const { departureStop, arrivalStop, departureLocal, arrivalLocal, ...rest } = values;
+    setDraft((prev) => ({
+      ...prev,
+      ...(rest.operator ? { operator: rest.operator } : {}),
+      ...(rest.lineName ? { lineName: rest.lineName } : {}),
+      ...(rest.bookingReference ? { bookingReference: rest.bookingReference } : {}),
+      ...(rest.price ? { price: rest.price } : {}),
+      ...(rest.currency ? { currency: rest.currency } : {}),
+      ...(departureStop ? { departure: { ...EMPTY_TERMINAL, name: departureStop } } : {}),
+      ...(arrivalStop ? { arrival: { ...EMPTY_TERMINAL, name: arrivalStop } } : {}),
+      ...(departureLocal ? { departureLocal, departureDayOnly: false, departureFold: null } : {}),
+      ...(arrivalLocal ? { arrivalLocal, arrivalDayOnly: false, arrivalFold: null } : {}),
+    }));
+    setImported(true);
+  };
 
   const set = <K extends keyof BusFormDraft>(key: K, value: BusFormDraft[K]): void =>
     setDraft((prev) => ({ ...prev, [key]: value }));
@@ -250,7 +272,7 @@ export function BusFormModal({
     }
   };
 
-  const blocked = saving.saving || saving.saved !== null || !ready;
+  const blocked = saving.saving || saving.saved !== null || !ready || importBusy;
 
   return (
     <Modal
@@ -305,6 +327,28 @@ export function BusFormModal({
       }
     >
       <div data-testid="bus-form" ref={failure.rootRef}>
+        {!journey && !imported && (
+          <BusTicketImport
+            current={{
+              operator: draft.operator,
+              lineName: draft.lineName,
+              bookingReference: draft.bookingReference,
+              price: draft.price,
+              currency: draft.currency,
+              departureStop: draft.departure.name,
+              arrivalStop: draft.arrival.name,
+              departureLocal: draft.departureLocal,
+              arrivalLocal: draft.arrivalLocal,
+            }}
+            onApply={applyTicket}
+            onBusyChange={setImportBusy}
+          />
+        )}
+        {imported && (
+          <p role="status" className="t-caption mb-3" data-testid="bus-ticket-applied">
+            {t("bus:import.checkStops")}
+          </p>
+        )}
         <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div>
             <LabelledInput

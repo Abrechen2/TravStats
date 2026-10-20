@@ -34,6 +34,11 @@
  *  - rental  — `ParsedRentalConfirmation` in `services/rental/parser/types.ts`:
  *              each end's station, day and clock, the provider and the
  *              vehicle class (forgejo#309).
+ *  - bus     — `ParsedRideTicket` in `services/rides/v2RideTicket.ts`: the
+ *              booking fields once and ONE marked ride row (stops, times,
+ *              line), read like a rail leg (forgejo#309).
+ *  - ferry   — the same reading for a crossing: ports, times and the
+ *              vessel (forgejo#309).
  *
  * ## Every domain derives (forgejo#124)
  *
@@ -56,6 +61,8 @@ export const WORKSHOP_DOMAINS = [
   "package",
   "rail",
   "rental",
+  "bus",
+  "ferry",
 ] as const;
 export type WorkshopDomain = (typeof WORKSHOP_DOMAINS)[number];
 
@@ -217,6 +224,41 @@ const rentalLabels: readonly AnnotationLabel[] = [
   { id: "currency", group: "money", kind: "currency" },
 ];
 
+/**
+ * A coach ticket (forgejo#309): the booking fields once, ONE ride row value by
+ * value — the rail reading with stops for stations. The day sits on the row or
+ * on a heading above the rides; `line` is read per ride when it is marked on
+ * the row, and once for the ticket when it is marked anywhere else.
+ */
+const busLabels: readonly AnnotationLabel[] = [
+  { id: "bookingReference", group: "booking", kind: "reference" },
+  { id: "operator", group: "booking", kind: "text" },
+  { id: "price", group: "money", kind: "money" },
+  { id: "currency", group: "money", kind: "currency" },
+  { id: "depStop", group: "busRide", kind: "text" },
+  { id: "arrStop", group: "busRide", kind: "text" },
+  { id: "departureDate", group: "busRide", kind: "date" },
+  { id: "departureTime", group: "busRide", kind: "time" },
+  { id: "arrivalDate", group: "busRide", kind: "date" },
+  { id: "arrivalTime", group: "busRide", kind: "time" },
+  { id: "line", group: "busRide", kind: "text" },
+];
+
+/** A ferry ticket (forgejo#309): the bus reading with ports and the vessel. */
+const ferryLabels: readonly AnnotationLabel[] = [
+  { id: "bookingReference", group: "booking", kind: "reference" },
+  { id: "operator", group: "booking", kind: "text" },
+  { id: "price", group: "money", kind: "money" },
+  { id: "currency", group: "money", kind: "currency" },
+  { id: "depPort", group: "ferryCrossing", kind: "text" },
+  { id: "arrPort", group: "ferryCrossing", kind: "text" },
+  { id: "departureDate", group: "ferryCrossing", kind: "date" },
+  { id: "departureTime", group: "ferryCrossing", kind: "time" },
+  { id: "arrivalDate", group: "ferryCrossing", kind: "date" },
+  { id: "arrivalTime", group: "ferryCrossing", kind: "time" },
+  { id: "vessel", group: "ferryCrossing", kind: "text" },
+];
+
 export const WORKSHOP_DOMAIN_SPECS: Readonly<Record<WorkshopDomain, WorkshopDomainSpec>> =
   Object.freeze({
     flight: { domain: "flight", labels: flightLabels, derivable: true },
@@ -226,6 +268,8 @@ export const WORKSHOP_DOMAIN_SPECS: Readonly<Record<WorkshopDomain, WorkshopDoma
     package: { domain: "package", labels: packageLabels, derivable: true },
     rail: { domain: "rail", labels: railLabels, derivable: true },
     rental: { domain: "rental", labels: rentalLabels, derivable: true },
+    bus: { domain: "bus", labels: busLabels, derivable: true },
+    ferry: { domain: "ferry", labels: ferryLabels, derivable: true },
   });
 
 export function isWorkshopDomain(value: string): value is WorkshopDomain {

@@ -135,7 +135,7 @@
   },
   "import": {
     "title": "Read ferry ticket",
-    "hint": "Read a text PDF, email (.eml) or pasted ticket text. Unfamiliar layouts use the configured AI parser. Review suggestions before applying them.",
+    "hint": "Read a text PDF, email (.eml) or pasted ticket text. A ferry template — your own from the template workshop, or one from the template repository — is asked first; unfamiliar layouts use the configured AI parser. Review suggestions before applying them.",
     "file": "Ticket file (PDF or EML)",
     "text": "Ticket text",
     "reading": "Reading …",
@@ -150,7 +150,9 @@
     "oneCrossing": "One crossing is created per import. The original is attached only to that crossing.",
     "review": "Check values and supporting text. Fields you already filled are not preselected.",
     "apply": "Apply selection to form",
-    "checkPorts": "Values applied. Confirm both ports on the map or through port search and review all details."
+    "checkPorts": "Values applied. Confirm both ports on the map or through port search and review all details.",
+    "readByWorkshop": "Read with your own workshop template.",
+    "readByRepository": "Read with a template from the template repository."
   },
   "live": {
     "title": "Current vessel position",

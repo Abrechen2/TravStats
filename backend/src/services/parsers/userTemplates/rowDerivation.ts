@@ -170,3 +170,26 @@ export function buildRowRepeat(
   }
   return { ok: true, repeat };
 }
+
+/** Where the line holding offset `at` starts. */
+export function lineStartOf(fullText: string, at: number): number {
+  return fullText.lastIndexOf("\n", at - 1) + 1;
+}
+
+/**
+ * A day marked on a heading line above the rows ("Hinfahrt am 14.11.2027"),
+ * as the `lastBefore` field that dates every row by the heading in force above
+ * it — so a return section's heading dates the return rows (rail, bus, ferry).
+ */
+export function headingDayRule(fullText: string, mark: RowMark): ItemFieldRule {
+  const start = lineStartOf(fullText, mark.start);
+  const prefix = fullText.slice(start, mark.start).replace(/^[ \t]+/, "");
+  const value = fullText.slice(mark.start, mark.end);
+  return {
+    lastBefore: {
+      pattern: `^[ \\t]*${generaliseGap(prefix)}(${datePattern(value)})`,
+      flags: "imu",
+    },
+    transform: "date",
+  };
+}

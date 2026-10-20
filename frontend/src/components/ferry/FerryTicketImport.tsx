@@ -10,6 +10,8 @@ export interface FerryTicketPreview {
   parser: string | null;
   reason: string | null;
   provider: { kind: string; host: string | null; model: string; isCloud: boolean } | null;
+  /** The ferry template that read the ticket, when one did (forgejo#309). */
+  template?: { id: string; source: "workshop" | "repository" };
 }
 const fieldLabel = (key: string) =>
   key === "departurePort" ? "departure" : key === "arrivalPort" ? "arrival" : key;
@@ -120,6 +122,15 @@ export function FerryTicketImport({
                 {t("ferry:import.provider", {
                   name: preview.provider.isCloud ? preview.provider.host : preview.provider.kind,
                 })}
+              </p>
+            )}
+            {preview.template && (
+              <p className="t-caption">
+                {t(
+                  preview.template.source === "workshop"
+                    ? "ferry:import.readByWorkshop"
+                    : "ferry:import.readByRepository"
+                )}
               </p>
             )}
             {preview.reason && preview.crossings.length > 0 && (

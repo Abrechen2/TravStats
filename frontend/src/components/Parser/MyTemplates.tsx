@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { parserTemplatesApi, type UserTemplateItem } from "../../lib/api";
 import type { TemplatePreviewResult } from "../../lib/api/types";
 import TemplatePreviewPanel from "./TemplatePreviewPanel";
+import CommunityExportPanel, { SHAREABLE_DOMAINS } from "./CommunityExportPanel";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
@@ -20,6 +21,8 @@ export default function MyTemplates(): JSX.Element {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   /** The preview of each template the user has run, by template id. */
   const [previews, setPreviews] = useState<Record<string, TemplatePreviewResult>>({});
+  /** The template whose community export is open (forgejo#309). */
+  const [sharing, setSharing] = useState<string | null>(null);
   const addToast = useToastStore((state) => state.addToast);
 
   useEffect(() => {
@@ -208,6 +211,17 @@ export default function MyTemplates(): JSX.Element {
                   {t("parser:myTemplates.disable")}
                 </button>
               )}
+              {tmpl.status === "active" && SHAREABLE_DOMAINS.has(tmpl.domain ?? "flight") && (
+                <button
+                  data-testid={`share-${tmpl.id}`}
+                  onClick={() => setSharing((open) => (open === tmpl.id ? null : tmpl.id))}
+                  aria-expanded={sharing === tmpl.id}
+                  className="text-xs px-3 py-1.5 rounded-lg transition-colors"
+                  style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
+                >
+                  {t("parser:communityExport.action")}
+                </button>
+              )}
               <button
                 data-testid={`delete-${tmpl.id}`}
                 onClick={() => handleDelete(tmpl.id)}
@@ -220,6 +234,9 @@ export default function MyTemplates(): JSX.Element {
             </div>
           </div>
           {previews[tmpl.id] && <TemplatePreviewPanel preview={previews[tmpl.id]} />}
+          {sharing === tmpl.id && (
+            <CommunityExportPanel templateId={tmpl.id} domain={tmpl.domain ?? "flight"} />
+          )}
         </div>
       ))}
       {confirmDialog}
