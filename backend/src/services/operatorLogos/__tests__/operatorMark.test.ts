@@ -217,6 +217,45 @@ describe("resolveOperatorMark from Wikidata (forgejo#323)", () => {
     expect(logger.info).toHaveBeenCalledWith(expect.objectContaining({ reason: "badImage" }));
   });
 
+  /** A body that never ends unless cancelled; records whether it was. */
+  function endless(contentType: string): { response: Response; cancelled: () => boolean } {
+    let cancelled = false;
+    let sent = 0;
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        sent += 1;
+        if (sent > 10_000) {
+          controller.close();
+          return;
+        }
+        controller.enqueue(new Uint8Array(64 * 1024));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    return {
+      response: new Response(stream, { status: 200, headers: { "content-type": contentType } }),
+      cancelled: () => cancelled,
+    };
+  }
+
+  it("stops reading an oversized image and cancels its stream", async () => {
+    const big = endless("image/png");
+    use((url) => (url.includes("upload.wikimedia.org") ? big.response : happy()(url)));
+    expect(await resolveOperatorMark("ferry", "Stena Line")).toBeNull();
+    expect(big.cancelled()).toBe(true);
+    expect(logger.info).toHaveBeenCalledWith(expect.objectContaining({ reason: "tooLarge" }));
+  });
+
+  it("stops reading an oversized JSON answer and cancels its stream", async () => {
+    const big = endless("application/json");
+    use((url) => (url.includes("wbsearchentities") ? big.response : happy()(url)));
+    expect(await resolveOperatorMark("ferry", "Stena Line")).toBeNull();
+    expect(big.cancelled()).toBe(true);
+    expect(logger.info).toHaveBeenCalledWith(expect.objectContaining({ reason: "tooLarge" }));
+  });
+
   it("asks nobody while the admin switch is off", async () => {
     settings.operatorLogosOpenDataEnabled = false;
     use(happy());

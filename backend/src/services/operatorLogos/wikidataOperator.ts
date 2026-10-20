@@ -51,7 +51,6 @@ const WIKIDATA_API = "https://www.wikidata.org/w/api.php";
 const COMMONS_API = "https://commons.wikimedia.org/w/api.php";
 /** Commons renders the thumbnail at its nearest step; ~128 px is a card tile at 2×. */
 const THUMB_WIDTH = 128;
-const MAX_BYTES = 512 * 1024;
 const RASTER_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 
 /**
@@ -213,7 +212,7 @@ export async function lookupOperatorMark(name: string): Promise<OperatorMarkLook
     const image = await getBytes(found.info.thumbUrl);
     if (!image.ok) return image;
     const { body, contentType } = image.value;
-    if (!RASTER_TYPES.has(contentType) || body.length === 0 || body.length > MAX_BYTES) {
+    if (!RASTER_TYPES.has(contentType) || body.length === 0) {
       return { ok: false, reason: "badImage" };
     }
     return {

@@ -14,7 +14,7 @@
  */
 import { OPEN_DATA_USER_AGENT } from "../openData/http";
 
-export type WikimediaFailure = "rateLimited" | "timeout" | "unavailable" | "notFound";
+export type WikimediaFailure = "rateLimited" | "timeout" | "unavailable" | "notFound" | "tooLarge";
 
 export type WikimediaResult<T> = { ok: true; value: T } | { ok: false; reason: WikimediaFailure };
 
@@ -24,6 +24,10 @@ const MIN_GAP_MS = 250;
 /** When a 429 carries no Retry-After, wait this long. */
 const DEFAULT_BACKOFF_MS = 60_000;
 const MAX_BACKOFF_MS = 15 * 60_000;
+/** A search or entity answer is a few KiB; anything near this is not one. */
+export const MAX_JSON_BYTES = 2 * 1024 * 1024;
+/** A 128 px logo thumbnail is a few KiB. */
+export const MAX_IMAGE_BYTES = 512 * 1024;
 
 let queue: Promise<unknown> = Promise.resolve();
 let nextSlotAt = 0;
@@ -83,12 +87,47 @@ async function request(url: string, accept: string): Promise<WikimediaResult<Res
   });
 }
 
+/**
+ * The body, read with a running byte count: past `limit` the stream is
+ * cancelled — which aborts the download — and the answer is `tooLarge`.
+ * Buffering first and measuring after would let one hostile or broken
+ * answer take as much memory as it likes.
+ */
+export async function readCapped(res: Response, limit: number): Promise<WikimediaResult<Buffer>> {
+  const declared = Number(res.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > limit) {
+    await res.body?.cancel().catch(() => undefined);
+    return { ok: false, reason: "tooLarge" };
+  }
+  if (!res.body) return { ok: true, value: Buffer.alloc(0) };
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > limit) {
+        await reader.cancel().catch(() => undefined);
+        return { ok: false, reason: "tooLarge" };
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return { ok: false, reason: "unavailable" };
+  }
+  return { ok: true, value: Buffer.concat(chunks) };
+}
+
 /** GET a MediaWiki API URL as JSON. `maxlag` errors count as rate limiting. */
 export async function getJson(url: string): Promise<WikimediaResult<unknown>> {
   const res = await request(url, "application/json");
   if (!res.ok) return res;
+  const raw = await readCapped(res.value, MAX_JSON_BYTES);
+  if (!raw.ok) return raw;
   try {
-    const body = (await res.value.json()) as { error?: { code?: string } };
+    const body = JSON.parse(raw.value.toString("utf-8")) as { error?: { code?: string } };
     if (body?.error?.code === "maxlag") {
       pausedUntil = Date.now() + backoffOf(res.value.headers.get("retry-after"));
       return { ok: false, reason: "rateLimited" };
@@ -99,17 +138,13 @@ export async function getJson(url: string): Promise<WikimediaResult<unknown>> {
   }
 }
 
-/** GET image bytes. The caller checks the type and the size. */
+/** GET image bytes, capped at `MAX_IMAGE_BYTES`. The caller checks the type. */
 export async function getBytes(
   url: string
 ): Promise<WikimediaResult<{ body: Buffer; contentType: string }>> {
   const res = await request(url, "image/png,image/jpeg,image/webp,image/gif");
   if (!res.ok) return res;
-  try {
-    const contentType = (res.value.headers.get("content-type") ?? "").split(";")[0].trim();
-    const body = Buffer.from(await res.value.arrayBuffer());
-    return { ok: true, value: { body, contentType } };
-  } catch {
-    return { ok: false, reason: "unavailable" };
-  }
+  const contentType = (res.value.headers.get("content-type") ?? "").split(";")[0].trim();
+  const body = await readCapped(res.value, MAX_IMAGE_BYTES);
+  return body.ok ? { ok: true, value: { body: body.value, contentType } } : body;
 }
