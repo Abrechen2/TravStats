@@ -320,6 +320,22 @@ frontend/src/
   i18n/              # react-i18next translations (de/en)
 ```
 
+## The server is the record — the Companion is only a companion
+
+Owner, 2026-10-20, verbatim: „denke daran das der Server immer alles wissen muss
+die App ist nur ein Companion".
+
+Everything a client collects or derives — the Companion first of all — reaches
+this server. A client holds a cache, never the only copy; the server is what
+the web shows, what backups carry and what survives a lost phone. A feature
+whose data lives on a device only contradicts this rule and needs the owner's
+explicit answer. The server side of a Companion feature is part of the feature,
+not a follow-up.
+
+First case: the Companion's trip recording was designed device-only
+(`adrs/0013` point 4 in the Companion repo) and is being reversed —
+companion#73 (upload) and forgejo#316 (receive, store, show, export).
+
 ## Language Policy
 
 - **Code, comments, commits, CHANGELOG, README, ADRs, runbooks — always
