@@ -142,6 +142,7 @@ import importBatchRoutes from "./importBatches";
 import companionRoutes from "./companions";
 import noteRoutes from "./notes";
 import sharingRoutes from "./sharing";
+import sharingRemoteRoutes from "./sharingRemote";
 import shareLinkRoutes from "./shareLinks";
 import passportOverrideRoutes from "./passportOverrides";
 import publicShareLinkRoutes from "./publicShareLinks";
@@ -482,6 +483,9 @@ export const apiMounts: ApiMount[] = [
   // Standalone notes (forgejo#137).
   { id: "notes", base: "/api/v1/notes", router: noteRoutes },
   // Shared trips (design 2026-10-09): consent, companion link, share, leave.
+  // People on other servers (spec 2026-10-20 F-S4b). BEFORE `/sharing`, whose router would
+  // otherwise authenticate the request first and then fall through to this one.
+  { id: "sharingRemote", base: "/api/v1/sharing/remote", router: sharingRemoteRoutes },
   { id: "sharing", base: "/api/v1/sharing", router: sharingRoutes },
   // Public share links (forgejo#281): the owner's list/preview/create/revoke,
   // and the unauthenticated side a link's page asks with its token.

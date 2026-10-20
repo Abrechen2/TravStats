@@ -176,6 +176,25 @@ describe("cross-purpose refusal", () => {
   });
 });
 
+it("refuses a non-ping message from an admitted but unverified peer and keeps no nonce", async () => {
+  const packet = signed(
+    JSON.stringify({
+      kind: "invite-claim",
+      messageId: randomUUID(),
+      sentAt: new Date().toISOString(),
+      code: "a".repeat(64),
+      channel: randomUUID(),
+      username: "ben",
+      displayName: "Ben",
+    }),
+    "trip-share/1"
+  );
+  const res = await request(app).post("/api/v1/trip-share-peer").send(packet);
+  expect(res.status).toBe(403);
+  refusedAs("unverified-peer", "trip_share_peer_refused");
+  expect(await nonceRow(packet)).toBeNull();
+});
+
 it("refuses an oversized packet before checking its signature", async () => {
   const res = await request(app)
     .post("/api/v1/trip-share-peer")

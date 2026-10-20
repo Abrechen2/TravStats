@@ -1,4 +1,5 @@
 import { suspendComparisonAfterRestore } from "../federation/restore";
+import { suspendTripFederationAfterRestore } from "../sharing/federation/restore";
 import { prisma } from "../../db";
 import { Prisma } from "../../prisma";
 import logger from "../../utils/logger";
@@ -207,6 +208,7 @@ function settlingSteps(
   const reason = `restore of backup ${backupId}`;
   const steps: Array<[string, () => Promise<unknown>]> = [
     ["suspend_comparison", () => suspendComparisonAfterRestore()],
+    ["suspend_trip_federation", () => suspendTripFederationAfterRestore()],
     ["instance_identity", () => restoreInstanceIdentity(identityBefore)],
     ["sync_history", () => resetSyncHistory(reason)],
     ["share_links", () => deleteAllShareLinks(reason)],

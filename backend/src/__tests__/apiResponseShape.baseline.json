@@ -209,6 +209,7 @@
     "settings/profilePicture.ts",
     "shareLinks.ts",
     "sharing.ts",
+    "sharingRemote.ts",
     "ships.ts",
     "sync.ts",
     "tripPhotoWindows.ts",

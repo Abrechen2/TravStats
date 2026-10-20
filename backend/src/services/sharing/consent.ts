@@ -25,6 +25,17 @@ export interface ConsentView {
 
 const notFound = () => new AppError("Consent not found", 404, "SHARE_CONSENT_NOT_FOUND");
 
+/**
+ * The pairs this file handles: both sides on this server. A pair with a person on another server
+ * (spec 2026-10-20 F3) is listed and answered under `/sharing/remote`, never here — so every row
+ * read below has both users, and `localPerson` only states it to the compiler.
+ */
+const LOCAL_PAIR = { requesterId: { not: null }, targetId: { not: null } } as const;
+function localPerson<T>(person: T | null): T {
+  if (!person) throw notFound();
+  return person;
+}
+
 function view(
   row: {
     id: string;
@@ -82,19 +93,19 @@ export async function listConsents(
 ): Promise<{ incoming: ConsentView[]; outgoing: ConsentView[] }> {
   const [incoming, outgoing] = await Promise.all([
     prisma.shareConsent.findMany({
-      where: { targetId: userId },
+      where: { ...LOCAL_PAIR, targetId: userId },
       include: { requester: { select: PERSON_SELECT } },
       orderBy: { createdAt: "desc" },
     }),
     prisma.shareConsent.findMany({
-      where: { requesterId: userId },
+      where: { ...LOCAL_PAIR, requesterId: userId },
       include: { target: { select: PERSON_SELECT } },
       orderBy: { createdAt: "desc" },
     }),
   ]);
   return {
-    incoming: incoming.map((row) => view(row, row.requester)),
-    outgoing: outgoing.map((row) => view(row, row.target)),
+    incoming: incoming.map((row) => view(row, localPerson(row.requester))),
+    outgoing: outgoing.map((row) => view(row, localPerson(row.target))),
   };
 }
 
@@ -105,10 +116,11 @@ export async function decideConsent(
   decision: "accepted" | "declined"
 ): Promise<ConsentView> {
   const row = await prisma.shareConsent.findFirst({
-    where: { id: consentId, targetId: userId },
+    where: { ...LOCAL_PAIR, id: consentId, targetId: userId },
     include: { requester: { select: PERSON_SELECT } },
   });
   if (!row) throw notFound();
+  const requester = localPerson(row.requester);
   if (row.status !== "pending") {
     throw new AppError("Consent is not pending", 409, "SHARE_CONSENT_NOT_PENDING", undefined, {
       status: row.status,
@@ -118,7 +130,7 @@ export async function decideConsent(
     where: { id: row.id },
     data: { status: decision, decidedAt: new Date() },
   });
-  return view(updated, row.requester);
+  return view(updated, requester);
 }
 
 /**
@@ -129,10 +141,12 @@ export async function decideConsent(
  */
 export async function withdrawConsent(userId: string, consentId: string): Promise<ConsentView> {
   const row = await prisma.shareConsent.findFirst({
-    where: { id: consentId, OR: [{ requesterId: userId }, { targetId: userId }] },
+    where: { ...LOCAL_PAIR, id: consentId, OR: [{ requesterId: userId }, { targetId: userId }] },
     include: { requester: { select: PERSON_SELECT }, target: { select: PERSON_SELECT } },
   });
   if (!row) throw notFound();
+  const requesterId = localPerson(row.requesterId);
+  const targetId = localPerson(row.targetId);
   const updated =
     row.status === "withdrawn"
       ? row
@@ -143,10 +157,10 @@ export async function withdrawConsent(userId: string, consentId: string): Promis
           });
           // S2: the target stops receiving the requester's changes — their
           // copies become independent trips (`detach.ts`).
-          await detachAfterWithdrawal(tx, row.requesterId, row.targetId);
+          await detachAfterWithdrawal(tx, requesterId, targetId);
           return done;
         });
-  return view(updated, row.requesterId === userId ? row.target : row.requester);
+  return view(updated, localPerson(requesterId === userId ? row.target : row.requester));
 }
 
 /** Has `targetId` accepted that `requesterId` shares into their account? */

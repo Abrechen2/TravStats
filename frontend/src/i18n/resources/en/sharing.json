@@ -524,5 +524,49 @@
       "revokeFailed": "The link could not be revoked.",
       "tripEnded": "This trip is already over – an itinerary link is no longer possible. A link without the itinerary still works."
     }
+  },
+  "remote": {
+    "title": "Companions on other servers",
+    "description": "Share trips with people whose account is on another TravStats server. You connect with an invitation code; your server's admin must have added their server as trusted first.",
+    "invites": {
+      "title": "Invitation code",
+      "hint": "Create a code and pass it on another way (a message, a call). The person redeems it on their own server. Each code works once, for 72 hours.",
+      "create": "Create code",
+      "codeLabel": "Your invitation code",
+      "codeHint": "Shown only now – copy it right away. Valid until {{date}}.",
+      "open": "Open code, valid until {{date}}",
+      "revoke": "Withdraw",
+      "revoked": "Code withdrawn. It can no longer be redeemed."
+    },
+    "claim": {
+      "label": "Code from someone on another server",
+      "placeholder": "https://travstats.example.org#trip:…",
+      "submit": "Redeem",
+      "done": "Connected with {{name}} ({{origin}})."
+    },
+    "people": {
+      "title": "Connected people",
+      "none": "Nobody on another server yet.",
+      "row": "{{name}} (@{{username}}) on {{origin}}"
+    },
+    "errors": {
+      "loadFailed": "The people on other servers could not be loaded.",
+      "createFailed": "The code could not be created.",
+      "revokeFailed": "The code could not be withdrawn.",
+      "claimFailed": "The code could not be redeemed.",
+      "disabled": "Sharing across servers is switched off on this server.",
+      "inviteInvalid": "That is not a valid invitation code, or it was withdrawn. Check that it was copied completely.",
+      "wrongTag": "That is a leaderboard (Compare) code, not a trip-sharing code. Ask for a code from “Share trips”.",
+      "used": "This code has already been redeemed. Ask for a new one.",
+      "expired": "This code has expired. Ask for a new one.",
+      "ownServer": "This code is from this server. Here you connect by requesting a username.",
+      "limit": "You already have 20 open codes. Withdraw one or wait until one is redeemed.",
+      "inviteNotFound": "That open code no longer exists.",
+      "duplicate": "You are already connected with this person.",
+      "notAdmitted": "The server {{origin}} is not added as trusted on your server. Ask your admin to add it.",
+      "outdated": "The server {{origin}} is too old for shared trips.",
+      "peerDisabled": "Sharing across servers is switched off on {{origin}}, or that server does not have it yet.",
+      "unreachable": "The server {{origin}} does not answer. Try again later."
+    }
   }
 }

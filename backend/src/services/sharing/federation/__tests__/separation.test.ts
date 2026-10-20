@@ -33,7 +33,9 @@ const COMPARISON = ["services/comparison", "routes/comparisonPeer.ts", "schemas/
 const TRIP_SHARE = [
   "services/sharing/federation",
   "schemas/tripSharePeer.ts",
+  "schemas/sharingRemote.ts",
   "routes/tripSharePeer.ts",
+  "routes/sharingRemote.ts",
 ];
 
 /** Every module a file imports, resolved to a path under `src/` (relative imports only). */

@@ -54,6 +54,18 @@ vi.mock("@/lib/api/tokens", async (importOriginal) => {
     apiTokensApi: { ...actual.apiTokensApi, list: vi.fn().mockResolvedValue([]) },
   };
 });
+// People on other servers (forgejo#301) sit in the trips section too and ask the
+// server whether the feature is on.
+vi.mock("@/lib/api/sharingRemote", () => ({
+  sharingRemoteApi: {
+    status: vi.fn().mockResolvedValue({ available: false, reason: "switch-off", origin: null }),
+    listInvites: vi.fn(),
+    createInvite: vi.fn(),
+    revokeInvite: vi.fn(),
+    claim: vi.fn(),
+    listPeople: vi.fn(),
+  },
+}));
 // The calendar subscription card (forgejo#310) sits in the trips section, on
 // the same general page, and loads its state on mount.
 vi.mock("@/lib/api/calendarFeed", () => ({

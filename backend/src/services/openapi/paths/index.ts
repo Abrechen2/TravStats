@@ -27,6 +27,7 @@ import "./tripExpenses";
 import "./strava";
 import "./openData";
 import "./companions";
+import "./sharingRemote";
 import "./airports";
 import "./stats";
 import "./statsPage";

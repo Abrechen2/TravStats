@@ -202,6 +202,9 @@ export const NON_TRAVEL_RELATIONS = [
   "linkedAsCompanion",
   "shareConsentsAsked",
   "shareConsentsGiven",
+  // Federated trip sharing (spec 2026-10-20 F-S4b): pairings and single-use codes.
+  "remoteShareAccounts",
+  "tripShareInvites",
   "shareGroupsCreated",
   "shareNotices",
   "shareNoticesActed",

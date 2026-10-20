@@ -20,6 +20,7 @@ import {
 } from "../services/federation/security";
 import { TRIP_SHARE_ACCEPTS } from "../services/federation/envelope";
 import { tripFederationAvailability } from "../services/sharing/federation/availability";
+import { serveInviteClaim } from "../services/sharing/federation/invites";
 import { TRIP_SHARE_PURPOSE, TRIP_SHARE_VERSIONS, tripSharePacket } from "../schemas/tripSharePeer";
 import logger from "../utils/logger";
 
@@ -56,7 +57,10 @@ router.post("/", async (req, res) => {
     // A replayed ping is harmless; anything else needs a verified peer BEFORE a nonce row is kept.
     if (body.kind !== "ping" && !peer.verifiedAt) throw refused("unverified-peer");
     if (peer.verifiedAt) await consumeNonce(message);
-    const data = { tripShare: [...TRIP_SHARE_VERSIONS] };
+    const data =
+      body.kind === "ping"
+        ? { tripShare: [...TRIP_SHARE_VERSIONS] }
+        : await serveInviteClaim(message.origin, body);
     res.setHeader("Cache-Control", "no-store");
     res.json(envelope(data, message.origin, local, message.nonce, TRIP_SHARE_PURPOSE));
   } catch (error) {

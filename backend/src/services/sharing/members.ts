@@ -18,48 +18,128 @@ export interface MemberTrip {
   userId: string;
 }
 
+/**
+ * One side of a consent pair: an account on this server, or a person on another server
+ * (`RemoteShareAccount`, spec 2026-10-20 F3). Both kinds live in one table, so this file stays
+ * the one home of "who agreed with whom" — a second consent table would be a second rule.
+ */
+export type Party = { kind: "user"; id: string } | { kind: "remote"; id: string };
+
+/** A party as a set key: ids of the two tables could otherwise meet in one `Set`. */
+export const partyKey = (p: Party): string => `${p.kind}:${p.id}`;
+
+type ConsentClient = Pick<DbTransaction, "shareConsent">;
+interface PairRow {
+  requesterId: string | null;
+  targetId: string | null;
+  remoteRequesterId: string | null;
+  remoteTargetId: string | null;
+  status: string;
+}
+const PAIR_SELECT = {
+  requesterId: true,
+  targetId: true,
+  remoteRequesterId: true,
+  remoteTargetId: true,
+  status: true,
+} as const;
+
+const ids = (others: readonly Party[], kind: Party["kind"]) =>
+  others.filter((o) => o.kind === kind).map((o) => o.id);
+
+/**
+ * Every row pairing `actor` with one of `others`, in either direction. A remote actor pairs only
+ * with local users: two people on other servers never hold a consent here (CHECK
+ * share_consents_party_check), so such a pair is not even asked for.
+ */
+async function pairRows(c: ConsentClient, actor: Party, others: readonly Party[], status?: string) {
+  const users = ids(others, "user");
+  const remotes = actor.kind === "user" ? ids(others, "remote") : [];
+  if (users.length + remotes.length === 0) return [];
+  const mine =
+    actor.kind === "user"
+      ? { as: { requesterId: actor.id }, to: { targetId: actor.id } }
+      : { as: { remoteRequesterId: actor.id }, to: { remoteTargetId: actor.id } };
+  const OR = [
+    ...(users.length
+      ? [
+          { ...mine.as, targetId: { in: users } },
+          { ...mine.to, requesterId: { in: users } },
+        ]
+      : []),
+    ...(remotes.length
+      ? [
+          { ...mine.as, remoteTargetId: { in: remotes } },
+          { ...mine.to, remoteRequesterId: { in: remotes } },
+        ]
+      : []),
+  ];
+  return c.shareConsent.findMany({
+    where: { ...(status ? { status } : {}), OR },
+    select: PAIR_SELECT,
+  });
+}
+
+/** The side of `row` that is not `actor`. */
+function otherSide(row: PairRow, actor: Party): string {
+  const requester: Party = row.requesterId
+    ? { kind: "user", id: row.requesterId }
+    : { kind: "remote", id: row.remoteRequesterId ?? "" };
+  const target: Party = row.targetId
+    ? { kind: "user", id: row.targetId }
+    : { kind: "remote", id: row.remoteTargetId ?? "" };
+  return partyKey(partyKey(requester) === partyKey(actor) ? target : requester);
+}
+
+/** Party keys among `others` with an accepted consent with `actor`, in either direction. */
+export async function acceptedParties(
+  c: ConsentClient,
+  actor: Party,
+  others: readonly Party[]
+): Promise<Set<string>> {
+  const rows = await pairRows(c, actor, others, "accepted");
+  return new Set(rows.map((r) => otherSide(r, actor)));
+}
+
+/** Party keys among `others` with a withdrawn consent towards `actor` and no accepted one. */
+export async function withdrawnParties(
+  c: ConsentClient,
+  actor: Party,
+  others: readonly Party[]
+): Promise<Set<string>> {
+  const rows = await pairRows(c, actor, others);
+  const accepted = new Set(
+    rows.filter((r) => r.status === "accepted").map((r) => otherSide(r, actor))
+  );
+  return new Set(
+    rows
+      .filter((r) => r.status === "withdrawn")
+      .map((r) => otherSide(r, actor))
+      .filter((key) => !accepted.has(key))
+  );
+}
+
+const asUsers = (userIds: readonly string[]): Party[] =>
+  userIds.map((id) => ({ kind: "user", id }));
+const userIdsOf = (keys: Set<string>): Set<string> =>
+  new Set([...keys].filter((k) => k.startsWith("user:")).map((k) => k.slice("user:".length)));
+
 /** Users among `userIds` with a withdrawn consent towards `actorId` and no accepted one. */
 export async function withdrawnTowards(
-  c: Pick<DbTransaction, "shareConsent">,
+  c: ConsentClient,
   actorId: string,
   userIds: readonly string[]
 ): Promise<Set<string>> {
-  if (userIds.length === 0) return new Set();
-  const rows = await c.shareConsent.findMany({
-    where: {
-      OR: [
-        { requesterId: actorId, targetId: { in: [...userIds] } },
-        { targetId: actorId, requesterId: { in: [...userIds] } },
-      ],
-    },
-    select: { requesterId: true, targetId: true, status: true },
-  });
-  const other = (r: { requesterId: string; targetId: string }) =>
-    r.requesterId === actorId ? r.targetId : r.requesterId;
-  const accepted = new Set(rows.filter((r) => r.status === "accepted").map(other));
-  return new Set(
-    rows.filter((r) => r.status === "withdrawn" && !accepted.has(other(r))).map(other)
-  );
+  return userIdsOf(await withdrawnParties(c, { kind: "user", id: actorId }, asUsers(userIds)));
 }
 
 /** Users among `userIds` with an accepted consent with `actorId`, in either direction. */
 export async function acceptedWith(
-  c: Pick<DbTransaction, "shareConsent">,
+  c: ConsentClient,
   actorId: string,
   userIds: readonly string[]
 ): Promise<Set<string>> {
-  if (userIds.length === 0) return new Set();
-  const rows = await c.shareConsent.findMany({
-    where: {
-      status: "accepted",
-      OR: [
-        { requesterId: actorId, targetId: { in: [...userIds] } },
-        { targetId: actorId, requesterId: { in: [...userIds] } },
-      ],
-    },
-    select: { requesterId: true, targetId: true },
-  });
-  return new Set(rows.map((r) => (r.requesterId === actorId ? r.targetId : r.requesterId)));
+  return userIdsOf(await acceptedParties(c, { kind: "user", id: actorId }, asUsers(userIds)));
 }
 
 /**

@@ -196,6 +196,9 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   leaderboardConsentsViewed: "other accounts' leaderboard permissions naming this user",
   leaderboardRemotes: "friendships with accounts on other servers, bound to server keys",
   leaderboardInvites: "single-use credentials",
+  remoteShareAccounts:
+    "trip-sharing pairings with people on other servers, bound to server keys; re-made by a new invitation",
+  tripShareInvites: "single-use credentials",
   leaderboardBoards: "private leaderboard groups of consented people",
   comparisonLinks: "private recipient permissions, not portable travel records",
   comparisonInvites: "single-use credentials",

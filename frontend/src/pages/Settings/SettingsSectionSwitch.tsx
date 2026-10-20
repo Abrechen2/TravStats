@@ -27,6 +27,7 @@ import ImportSection from "../../components/Settings/ImportSection";
 import TripsSection from "../../components/Settings/TripsSection";
 import InboxSuggestionsSection from "../../components/Settings/InboxSuggestionsSection";
 import SharingSection from "../../components/Settings/SharingSection";
+import RemoteSharingSection from "../../components/Settings/RemoteSharingSection";
 import ShareLinksSection from "../../components/Settings/ShareLinksSection";
 import CalendarFeedSection from "../../components/Settings/CalendarFeedSection";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
@@ -129,6 +130,8 @@ export default function SettingsSectionSwitch({
           <InboxSuggestionsSection />
           {/* Shared trips (design 2026-10-09): consent and companion links. */}
           <SharingSection />
+          {/* People on other servers (forgejo#301), behind its beta key and the server's switch. */}
+          {isFeatureVisible("federatedTripSharing") && <RemoteSharingSection />}
           {/* Public share links (forgejo#281): own links and a pointer to administration. */}
           <ShareLinksSection isAdmin={isAdmin} />
           {/* The calendar subscription (forgejo#310), behind its beta key. */}

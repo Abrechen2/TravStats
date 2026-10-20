@@ -138,6 +138,10 @@ model User {
   linkedAsCompanion      Companion[]              @relation("CompanionLinkedUser")
   shareConsentsAsked     ShareConsent[]           @relation("ShareConsentRequester")
   shareConsentsGiven     ShareConsent[]           @relation("ShareConsentTarget")
+  /// Federated trip sharing (spec 2026-10-20, F-S4b): this account's pairings with people on
+  /// other servers, and the invitation codes it issued.
+  remoteShareAccounts    RemoteShareAccount[]
+  tripShareInvites       TripShareInvite[]
   shareGroupsCreated     TripShareGroup[]
   shareNotices           ShareNotice[]            @relation("ShareNoticeRecipient")
   shareNoticesActed      ShareNotice[]            @relation("ShareNoticeActor")
@@ -4517,21 +4521,73 @@ model SyncState {
 /// `requesterId` to push trips into the target's account. Asked by the
 /// requester, answered by the target; either side may withdraw. One row per
 /// ordered pair — a new request after a decline or withdrawal reopens it.
+/// Each side of the pair is exactly one of a local user or a `RemoteShareAccount`, and at least
+/// one side is local (spec 2026-10-20 F3) — CHECK share_consents_party_check.
 model ShareConsent {
-  id          String    @id @default(uuid())
-  requesterId String    @map("requester_id")
-  targetId    String    @map("target_id")
+  id                String    @id @default(uuid())
+  requesterId       String?   @map("requester_id")
+  targetId          String?   @map("target_id")
+  remoteRequesterId String?   @map("remote_requester_id")
+  remoteTargetId    String?   @map("remote_target_id")
   /// pending | accepted | declined | withdrawn — CHECK share_consents_status_check, schemas/sharing.ts
-  status      String    @default("pending")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  decidedAt   DateTime? @map("decided_at")
+  status            String    @default("pending")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  decidedAt         DateTime? @map("decided_at")
 
-  requester User @relation("ShareConsentRequester", fields: [requesterId], references: [id], onDelete: Cascade)
-  target    User @relation("ShareConsentTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  requester       User?               @relation("ShareConsentRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  target          User?               @relation("ShareConsentTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  remoteRequester RemoteShareAccount? @relation("ShareConsentRemoteRequester", fields: [remoteRequesterId], references: [id], onDelete: Cascade)
+  remoteTarget    RemoteShareAccount? @relation("ShareConsentRemoteTarget", fields: [remoteTargetId], references: [id], onDelete: Cascade)
 
   @@unique([requesterId, targetId])
+  @@unique([requesterId, remoteTargetId])
+  @@unique([remoteRequesterId, targetId])
   @@index([targetId, status])
+  @@index([remoteTargetId])
   @@map("share_consents")
+}
+
+/// A person on another TravStats server, as one pairing with a local account (spec 2026-10-20
+/// F2). Deliberately NOT a `users` row and NOT a `LeaderboardRemote`: a leaderboard friendship is
+/// not trip consent. Neither channel is an id of the other server: both are random handshake
+/// entropy, so a remote id can never resolve to a local user or trip.
+model RemoteShareAccount {
+  id           String   @id @default(uuid())
+  /// The local side of the pairing.
+  userId       String   @map("user_id")
+  origin       String
+  /// How the other server names its user in this pairing (minted there).
+  channel      String
+  /// How this server names `userId` towards that server (minted here).
+  localChannel String   @map("local_channel")
+  username     String
+  displayName  String   @map("display_name")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  consentsRequested ShareConsent[] @relation("ShareConsentRemoteRequester")
+  consentsTargeted  ShareConsent[] @relation("ShareConsentRemoteTarget")
+
+  @@unique([origin, channel])
+  @@unique([origin, localChannel])
+  @@index([userId])
+  @@map("remote_share_accounts")
+}
+
+/// A single-use invitation to share trips across servers (spec 2026-10-20 F1), bound to the user
+/// who issued it. Only the SHA-256 of the secret is stored; the code is shown once.
+model TripShareInvite {
+  id        String    @id @default(uuid())
+  hash      String    @unique
+  userId    String    @map("user_id")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("trip_share_invites")
 }
 
 /// Joins every member's own copy of one shared trip (decision 1). Holds no

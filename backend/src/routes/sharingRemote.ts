@@ -1,0 +1,110 @@
+import { Router, type NextFunction, type Response } from "express";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
+import type { Request } from "express";
+
+import { authenticate, requireWriteScope, type AuthRequest } from "../middleware/auth";
+import { rejectDemoWrites } from "../middleware/demoGuard";
+import { tripFederationAvailability } from "../services/sharing/federation/availability";
+import { claimTripInvite } from "../services/sharing/federation/claim";
+import {
+  createTripInvite,
+  listTripInvites,
+  revokeTripInvite,
+} from "../services/sharing/federation/invites";
+import { listRemotePeople } from "../services/sharing/federation/remotePeople";
+import { remoteClaimBodySchema, remoteInviteIdSchema } from "../schemas/sharingRemote";
+
+/**
+ * `/api/v1/sharing/remote` — people on other TravStats servers (spec 2026-10-20, phase F-S4b):
+ * issue, list and revoke an invitation code, redeem one from another server, list the people
+ * one is paired with. Enveloped like `/sharing` (ADR 0001). Everything but `/status` refuses with
+ * `SHARE_REMOTE_DISABLED` (404) while the feature is off; `/status` says whether it is on, so a
+ * screen can draw nothing instead of a button that always fails.
+ */
+const router = Router();
+router.use(authenticate);
+router.use(requireWriteScope);
+router.use(rejectDemoWrites);
+
+/**
+ * Codes issued and redeemed, per user: 30 an hour. A claim makes this server contact another
+ * one; an unbounded endpoint would let one account drive that traffic. The key masks addresses
+ * through `ipKeyGenerator`, as express-rate-limit 8 demands.
+ */
+const remoteInviteLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many invitation requests, please try again later", code: "RATE_LIMITED" },
+  keyGenerator: (req: Request): string => {
+    const userId = (req as { userId?: string }).userId;
+    if (userId) return `share-remote:${userId}`;
+    return `share-remote-ip:${req.ip ? ipKeyGenerator(req.ip) : "unknown"}`;
+  },
+});
+
+type Handler = (req: AuthRequest, res: Response) => Promise<void>;
+const handle =
+  (fn: Handler) =>
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      await fn(req, res);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+router.get(
+  "/status",
+  handle(async (_req, res) => {
+    const state = await tripFederationAvailability();
+    res.json({
+      success: true,
+      data: state.available
+        ? { available: true, reason: null, origin: state.identity.origin }
+        : { available: false, reason: state.reason, origin: null },
+    });
+  })
+);
+
+router.get(
+  "/invites",
+  handle(async (req, res) => {
+    res.json({ success: true, data: await listTripInvites(req.userId!) });
+  })
+);
+
+router.post(
+  "/invites",
+  remoteInviteLimiter,
+  handle(async (req, res) => {
+    res.status(201).json({ success: true, data: await createTripInvite(req.userId!) });
+  })
+);
+
+router.delete(
+  "/invites/:id",
+  handle(async (req, res) => {
+    await revokeTripInvite(req.userId!, remoteInviteIdSchema.parse(req.params.id));
+    res.json({ success: true, data: { revoked: true } });
+  })
+);
+
+router.post(
+  "/claim",
+  remoteInviteLimiter,
+  handle(async (req, res) => {
+    const { code } = remoteClaimBodySchema.parse(req.body ?? {});
+    res.status(201).json({ success: true, data: await claimTripInvite(req.userId!, code) });
+  })
+);
+
+router.get(
+  "/people",
+  handle(async (req, res) => {
+    res.json({ success: true, data: await listRemotePeople(req.userId!) });
+  })
+);
+
+export default router;

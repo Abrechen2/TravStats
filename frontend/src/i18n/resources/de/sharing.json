@@ -524,5 +524,49 @@
       "revokeFailed": "Der Link konnte nicht widerrufen werden.",
       "tripEnded": "Diese Reise ist schon vorbei – für einen Reiseplan gibt es keinen Link mehr. Ohne Reiseplan geht es weiterhin."
     }
+  },
+  "remote": {
+    "title": "Mitreisende auf anderen Servern",
+    "description": "Teile Reisen mit Menschen, deren Konto auf einem anderen TravStats-Server liegt. Die Verbindung entsteht über einen Einladungscode; den Server der anderen Person muss der Admin deines Servers vorher als vertrauenswürdig hinterlegt haben.",
+    "invites": {
+      "title": "Einladungscode",
+      "hint": "Erstelle einen Code und gib ihn auf einem zweiten Weg weiter (Nachricht, Telefon). Die Person löst ihn auf ihrem eigenen Server ein. Jeder Code gilt einmal und 72 Stunden.",
+      "create": "Code erstellen",
+      "codeLabel": "Dein Einladungscode",
+      "codeHint": "Nur jetzt sichtbar – kopiere ihn gleich. Gültig bis {{date}}.",
+      "open": "Offener Code, gültig bis {{date}}",
+      "revoke": "Zurückziehen",
+      "revoked": "Code zurückgezogen. Er lässt sich nicht mehr einlösen."
+    },
+    "claim": {
+      "label": "Code von jemandem auf einem anderen Server",
+      "placeholder": "https://travstats.example.org#trip:…",
+      "submit": "Einlösen",
+      "done": "Verbunden mit {{name}} ({{origin}})."
+    },
+    "people": {
+      "title": "Verbundene Personen",
+      "none": "Noch niemand auf einem anderen Server.",
+      "row": "{{name}} (@{{username}}) auf {{origin}}"
+    },
+    "errors": {
+      "loadFailed": "Die Personen auf anderen Servern konnten nicht geladen werden.",
+      "createFailed": "Der Code konnte nicht erstellt werden.",
+      "revokeFailed": "Der Code konnte nicht zurückgezogen werden.",
+      "claimFailed": "Der Code konnte nicht eingelöst werden.",
+      "disabled": "Teilen über Server ist auf diesem Server ausgeschaltet.",
+      "inviteInvalid": "Das ist kein gültiger Einladungscode, oder er wurde zurückgezogen. Prüfe, ob er vollständig kopiert ist.",
+      "wrongTag": "Das ist ein Code für die Bestenliste (Vergleichen), kein Code zum Reisen teilen. Bitte um einen Code aus „Reisen teilen“.",
+      "used": "Dieser Code wurde schon eingelöst. Bitte um einen neuen.",
+      "expired": "Dieser Code ist abgelaufen. Bitte um einen neuen.",
+      "ownServer": "Dieser Code stammt von diesem Server. Hier verbindest du dich mit einer Anfrage per Benutzername.",
+      "limit": "Du hast schon 20 offene Codes. Zieh einen zurück oder warte, bis einer eingelöst ist.",
+      "inviteNotFound": "Diesen offenen Code gibt es nicht mehr.",
+      "duplicate": "Mit dieser Person bist du schon verbunden.",
+      "notAdmitted": "Der Server {{origin}} ist auf deinem Server nicht als vertrauenswürdig hinterlegt. Bitte deinen Admin, ihn hinzuzufügen.",
+      "outdated": "Der Server {{origin}} ist zu alt für geteilte Reisen.",
+      "peerDisabled": "Auf {{origin}} ist Teilen über Server ausgeschaltet, oder der Server kennt es noch nicht.",
+      "unreachable": "Der Server {{origin}} antwortet nicht. Versuch es später noch einmal."
+    }
   }
 }
