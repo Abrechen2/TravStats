@@ -46,7 +46,7 @@ const dawarichCalls = () =>
 function countingClient(): DawarichClient & { calls: number } {
   const c = {
     calls: 0,
-    checkHealth: async () => ({ reachable: true, version: null }),
+    checkHealth: async () => ({ reachable: true as const, version: null }),
     getPoints: async () => {
       c.calls++;
       return { points, truncated: false };
