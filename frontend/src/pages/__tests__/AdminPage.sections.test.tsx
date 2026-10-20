@@ -43,6 +43,21 @@ vi.mock("../../components/NavigationBar", () => ({
 // is no IntersectionObserver, so those sections' real content deliberately
 // never mounts (see LazySection's doc comment) — nothing beyond these four
 // endpoints needs mocking for this file's assertions.
+// The parsers section's template repository card (forgejo#309) reads its own
+// setting on mount.
+vi.mock("@/lib/api/templateRepo", () => ({
+  templateRepoApi: {
+    get: vi.fn().mockResolvedValue({
+      url: null,
+      effectiveUrl: "https://raw.githubusercontent.com/Abrechen2/travstats-templates/main",
+      origin: "default",
+      defaultUrl: "https://raw.githubusercontent.com/Abrechen2/travstats-templates/main",
+    }),
+    save: vi.fn(),
+    test: vi.fn(),
+  },
+}));
+
 vi.mock("@/lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api")>();
   return {

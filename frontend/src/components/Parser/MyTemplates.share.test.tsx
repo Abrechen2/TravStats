@@ -7,14 +7,16 @@ import MyTemplates from "./MyTemplates";
  * "Export for the community" — a pending one has proven nothing yet, and a
  * flight or stay template is stored in a format the repository does not take.
  */
-const row = (id: string, domain: string, status: string) => ({
-  id,
-  name: id,
-  domain,
-  status,
-  createdAt: "2026-10-20T10:00:00.000Z",
-  updatedAt: "2026-10-20T10:00:00.000Z",
-});
+const { row } = vi.hoisted(() => ({
+  row: (id: string, domain: string, status: string) => ({
+    id,
+    name: id,
+    domain,
+    status,
+    createdAt: "2026-10-20T10:00:00.000Z",
+    updatedAt: "2026-10-20T10:00:00.000Z",
+  }),
+}));
 
 vi.mock("../../lib/api", () => ({
   parserTemplatesApi: {
