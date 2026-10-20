@@ -300,5 +300,28 @@
     "cannotActivate": "Das Template liest nicht einmal sein eigenes Beispiel. Aktivieren würde nichts bringen.",
     "requiredFirst": "Erst die Vorschau laufen lassen — ein Template wird nicht aktiviert, bevor es einmal gelesen hat.",
     "failed": "Vorschau konnte nicht ausgeführt werden."
+  },
+  "communityExport": {
+    "action": "Für die Community exportieren",
+    "explain": "Lädt diese Vorlage als Datei für das öffentliche Vorlagen-Repository herunter, ohne dein Dokument und ohne die Werte, die du darin markiert hast; auf GitHub schlägst du sie vor, und der Owner des Repositorys prüft jeden Beitrag, bevor er bei anderen ankommt.",
+    "download": "Datei herunterladen",
+    "working": "Wird vorbereitet …",
+    "downloaded": "{{filename}} wurde heruntergeladen. Öffne die Seite für eine neue Datei auf GitHub und füge den Inhalt dort ein oder lade die Datei hoch.",
+    "removed_one": "{{count}} Zeile mit deinen eigenen Daten wurde entfernt.",
+    "removed_other": "{{count}} Zeilen mit deinen eigenen Daten wurden entfernt.",
+    "testCases": "Die Datei enthält kein Testdokument — deines bleibt hier. Der Owner ergänzt bei der Prüfung ein erfundenes.",
+    "openGithub": "Auf GitHub öffnen",
+    "failed": "Die Datei konnte nicht vorbereitet werden. Bitte erneut versuchen.",
+    "found": "Gefunden: {{what}}.",
+    "refused": {
+      "TEMPLATE_EXPORT_PERSONAL_DATA": "Diese Vorlage liest mit Werten aus deinem eigenen Dokument und kann so nicht geteilt werden. Leite sie aus einem anderen Dokument desselben Absenders neu ab, in dem deine Angaben nicht neben einem markierten Wert stehen.",
+      "TEMPLATE_EXPORT_NOT_ACTIVE": "Nur eine aktive Vorlage kann geteilt werden: Führe zuerst die Vorschau aus und aktiviere sie.",
+      "TEMPLATE_EXPORT_UNSUPPORTED": "Flug- und Unterkunftsvorlagen liegen in einem älteren Format vor, das das Repository noch nicht annimmt."
+    },
+    "kind": {
+      "identity": "dein Name oder deine Adresse",
+      "email": "eine E-Mail-Adresse",
+      "number": "eine lange Nummer"
+    }
   }
 }

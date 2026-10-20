@@ -33,6 +33,16 @@ export const templateApi = {
   },
 };
 
+/** `GET /parser-templates/:id/community-export`: the repository file and where to propose it. */
+export interface CommunityExportFile {
+  template: Record<string, unknown>;
+  filename: string;
+  domain: string;
+  githubUrl: string;
+  /** What was taken out because it held personal data. */
+  removed: { kind: string; path: string }[];
+}
+
 export const parserTemplatesApi = {
   list: async (): Promise<UserTemplateItem[]> => {
     const res = await api.get<{ templates: UserTemplateItem[] }>("/parser-templates");
@@ -51,6 +61,15 @@ export const parserTemplatesApi = {
    */
   preview: async (id: string): Promise<TemplatePreviewResult> => {
     const res = await api.post<TemplatePreviewResult>(`/parser-templates/${id}/preview`);
+    return res.data;
+  },
+  /**
+   * The template as a file for the community template repository
+   * (forgejo#309) — personal data removed, or refused with a code. Nothing is
+   * sent anywhere; the caller downloads the file and opens `githubUrl`.
+   */
+  communityExport: async (id: string): Promise<CommunityExportFile> => {
+    const res = await api.get<CommunityExportFile>(`/parser-templates/${id}/community-export`);
     return res.data;
   },
   setStatus: async (id: string, status: "active" | "disabled" | "pending"): Promise<void> => {

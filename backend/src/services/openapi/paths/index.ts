@@ -12,6 +12,7 @@
  */
 
 import "./shared";
+import "./parserTemplateExport";
 
 import "./flights";
 import "./trips";

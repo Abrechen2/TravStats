@@ -300,5 +300,28 @@
     "cannotActivate": "The template does not even read its own sample. Activating it would achieve nothing.",
     "requiredFirst": "Run the preview first — a template is not activated before it has read something once.",
     "failed": "Could not run the preview."
+  },
+  "communityExport": {
+    "action": "Export for the community",
+    "explain": "Downloads this template as a file for the public template repository, without your document and without the values you marked in it; on GitHub you propose it, and the repository owner reviews every contribution before it reaches anyone.",
+    "download": "Download file",
+    "working": "Preparing …",
+    "downloaded": "{{filename}} was downloaded. Open GitHub's new-file page and paste or upload its content there.",
+    "removed_one": "{{count}} line that held your own data was taken out.",
+    "removed_other": "{{count}} lines that held your own data were taken out.",
+    "testCases": "The file carries no test document — yours stays here. The owner adds an invented one when reviewing.",
+    "openGithub": "Open on GitHub",
+    "failed": "The file could not be prepared. Please try again.",
+    "found": "Found: {{what}}.",
+    "refused": {
+      "TEMPLATE_EXPORT_PERSONAL_DATA": "This template reads with values from your own document, so it cannot be shared as it is. Derive it again from another document of the same sender, where your details do not sit beside a marked value.",
+      "TEMPLATE_EXPORT_NOT_ACTIVE": "Only an active template can be shared: run its preview and activate it first.",
+      "TEMPLATE_EXPORT_UNSUPPORTED": "Flight and stay templates are stored in an older format the repository does not take yet."
+    },
+    "kind": {
+      "identity": "your name or address",
+      "email": "an e-mail address",
+      "number": "a long number"
+    }
   }
 }
