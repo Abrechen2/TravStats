@@ -50,21 +50,35 @@ export function fileUploadId(buffer: Buffer): string {
 export type PlacedTrack = ParsedTrack & { startedAt: Date; endedAt: Date };
 
 /**
+ * The clock semantics that are a placeholder, not a time: noon on a known day
+ * (DATE_ONLY) or the 1st of a month or year (UNKNOWN). They locate a flight
+ * on the calendar, never at a minute.
+ */
+const PLACEHOLDER_SEMANTICS = new Set(["DATE_ONLY", "UNKNOWN"]);
+
+/**
  * A recording without times (a drawn route, a bare KML LineString) placed in
  * the flight's own schedule: it starts at the departure and ends at the
  * arrival. The geometry is the passenger's; only the window is borrowed.
  * Null when there is no schedule to borrow — the file cannot be placed, and
- * the caller says so instead of inventing a date.
+ * the caller says so instead of inventing a date. A placeholder clock is no
+ * schedule: borrowing it would give the track a start and end to the minute
+ * that nobody ever recorded.
  */
 export function placeUntimedTrack(
   track: ParsedTrack,
-  scheduled: { departure: Date | null; arrival: Date | null }
+  scheduled: { departure: Date | null; arrival: Date | null },
+  semantics: { departure?: string | null; arrival?: string | null } = {}
 ): PlacedTrack | null {
   if (track.startedAt !== null && track.endedAt !== null) {
     return { ...track, startedAt: track.startedAt, endedAt: track.endedAt };
   }
-  const startedAt = scheduled.departure ?? scheduled.arrival;
-  const endedAt = scheduled.arrival ?? scheduled.departure;
+  const real = (at: Date | null, kind: string | null | undefined) =>
+    kind && PLACEHOLDER_SEMANTICS.has(kind) ? null : at;
+  const departure = real(scheduled.departure, semantics.departure);
+  const arrival = real(scheduled.arrival, semantics.arrival);
+  const startedAt = departure ?? arrival;
+  const endedAt = arrival ?? departure;
   if (!startedAt || !endedAt) return null;
   return { ...track, startedAt, endedAt };
 }

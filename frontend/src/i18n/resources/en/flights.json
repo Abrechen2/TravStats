@@ -516,7 +516,7 @@
       "fileMissing": "No file was sent.",
       "fileTooLarge": "The file is too large — 15 MB at most.",
       "fileUnreadable": "The file cannot be read as GPX, KML, TCX or FIT with at least two positions.",
-      "noTimestamps": "The file has no timestamps, and the flight has no schedule to place it in.",
+      "noTimestamps": "The file has no timestamps, and the flight has no departure or arrival time to place it in.",
       "outsideFlight": "The recording was not made around the time of this flight.",
       "alreadyRecorded": "This flight already has a stored recording.",
       "uploadFailed": "The recording could not be saved.",
