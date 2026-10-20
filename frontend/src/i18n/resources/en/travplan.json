@@ -168,6 +168,7 @@
     "placeholderDue_one": "“{{title}}” is still a placeholder – departing tomorrow.",
     "placeholderDue_other": "“{{title}}” is still a placeholder – departure in {{count}} days.",
     "stageMissing": "There is no stage between {{from}} and {{to}} – the days after it are still unknown.",
+    "durationMissing": "How long does {{from}} → {{to}} take? Without a duration the days after it are still unknown.",
     "nightUndecided": "No place has been saved for {{station}} yet.",
     "scheduleConflict": "The route only arrives on {{requiredDay}}, but “{{anchor}}” is booked for {{plannedDay}}.",
     "longDrive": "{{from}} → {{to}} is about {{hours}} hours of driving.",

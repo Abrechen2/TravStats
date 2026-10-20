@@ -29,7 +29,8 @@ const stage = (a: PlanStation, b: PlanStation, extra: Partial<PlanStage> = {}): 
   mode: "drive",
   departDay: null,
   departTime: null,
-  durationMinutes: null,
+  // A known duration, so the days after a stage are known (owner, 2026-10-20).
+  durationMinutes: 60,
   distanceKm: null,
   metricsSource: null,
   fallbackReason: null,
@@ -248,6 +249,36 @@ describe("scheduleRoute", () => {
     expect(s.stations[1]).toMatchObject({ arriveDay: "2027-05-12", departDay: "2027-05-14" });
     expect(s.lastDay).toBe("2027-05-14");
     expect(s.conflicts).toEqual([]);
+  });
+
+  it("a stage without a duration leaves its arrival and the days after it unknown", () => {
+    const a = station("A", { nights: 1 }),
+      b = station("B", { nights: 1 }),
+      c = station("C", { nights: 1, pinnedDay: "2027-05-15" });
+    const s = scheduleRoute(
+      route(
+        [a, b, c],
+        [stage(a, b, { durationMinutes: null }), stage(b, c, { durationMinutes: 60 })]
+      )
+    );
+    expect(s.stages[0]).toMatchObject({ departDay: "2027-05-09", arriveDay: null });
+    expect(s.stations[1]).toMatchObject({ arriveDay: null, departDay: null });
+    // The next anchor makes the days known again.
+    expect(s.stations[2]).toMatchObject({ arriveDay: "2027-05-15", departDay: "2027-05-16" });
+    expect(s.conflicts).toEqual([]);
+  });
+
+  it("a booked stage with a departure but neither arrival nor duration arrives on an unknown day", () => {
+    const a = station("A"),
+      b = station("B");
+    const real = booking({ day: "2027-05-08", time: "23:00" });
+    const s = scheduleRoute(
+      route([a, b], [stage(a, b, { mode: "ferry", bookingId: real.id, durationMinutes: null })], {
+        bookings: [real],
+      })
+    );
+    expect(s.stages[0]).toMatchObject({ departDay: "2027-05-08", arriveDay: null });
+    expect(s.lastDay).toBeNull();
   });
 
   it("no start day gives null days", () => {

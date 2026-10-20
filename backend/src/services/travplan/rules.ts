@@ -1,6 +1,6 @@
 import { instantMinute } from "./temporal";
 import { isSuppressed, routeCoveredNights, routeFindings } from "./routeRules";
-import { routeLegs } from "./routeSchedule";
+import { scheduleRoute } from "./routeSchedule";
 import type { PlanBooking, PlanBudget, PlanFinding, PlanState, PlanTransfer } from "./types";
 export function transferFingerprint(state: PlanState, fromId: string, toId: string): string {
   const from = state.items.find((i) => i.id === fromId),
@@ -249,9 +249,10 @@ export function checkPlan(state: PlanState, today: string): PlanFinding[] {
     state.startDay &&
     state.endDay &&
     (state.bookings.length || (state.shape === "route" && state.stations.length)) &&
-    // A leg without a stage leaves the nights after it unknown: stageMissing
-    // speaks, a gap there is not known to exist.
-    !(state.shape === "route" && routeLegs(state.stations, state.stages).includes(null))
+    // A leg without a stage, or a stage without a duration, leaves the nights
+    // after it unknown: stageMissing / durationMissing speak, a gap there is
+    // not known to exist.
+    !(state.shape === "route" && scheduleRoute(state).stations.some((x) => !x.arriveDay))
   ) {
     // A route plan also covers a night with a station night or an overnight stage.
     const routeNights = state.shape === "route" ? routeCoveredNights(state) : new Set<string>();
