@@ -327,18 +327,20 @@ Ranked by severity; each becomes a decision or a design paragraph above.
    merge on ingest, memberships.**
 4. **Upload idempotency** — persist `(user, uploadId, payloadHash, result)`
    atomically, reject a reused id with other content, per-point
-   acknowledgement, retryable vs permanent errors.
+   acknowledgement, retryable vs permanent errors. **→ Answered (§10.2).**
 5. **Deletion semantics** — tombstones so an offline phone or a re-import
-   cannot resurrect deleted points; derived caches invalidated.
+   cannot resurrect deleted points; derived caches invalidated. **→ Answered
+   (§10.3).**
 6. **Privacy zones** — „nicht speichern" vs „speichern, nie zeigen", and their
    effect on exports, heatmap, „Zuletzt gesehen", suggestions and geocoder
    calls; derived PlaceVisits can leak through ordinary sharing. **→ Answered
    (§3.6): one mode, nothing is recorded inside a zone.**
 7. **Re-running derivations is a subsystem** — algorithm/config version,
    input revision, bounded windows, atomic replacement; user decisions stored
-   apart from regenerated candidates.
+   apart from regenerated candidates. **→ Answered (§10.4).**
 8. **Raw points immutable, inferred flags versioned** — `in_flight` and
-   anomaly depend on editable flights and thresholds.
+   anomaly depend on editable flights and thresholds. **→ Answered (§10.4
+   point 2).**
 9. **Never confirm a flight from a gap** — airport presence plus silence is
    evidence for review, not „flown" (the mockup already says so).
 10. **Scale** — ~300 MB per heavy user-year before indexes; bounded reads,
@@ -409,3 +411,148 @@ Phone → server → logbook, with the seams in today's code:
 completeness, receipts, tombstones), durable queue, ingest, restore tests →
 one trip-map slice end to end → Dawarich import + GPX → P2 adapters and
 server inbox → P3 views → P4 inference and the statistics that need it.
+
+## 10. The four P1 rules — modelled on Dawarich
+
+Owner, 2026-10-20: „checke genau, wie Dawarich alles macht, dort klappte es
+über die gesamte Südkorea-Reise perfekt." Read from Dawarich 1.16.0
+(`2dc26c40`); every Dawarich fact below cites its file. Where Dawarich has
+**no** mechanism, the rule says so and says why TravStats needs one anyway —
+always because of an owner decision above, never for its own sake.
+
+### 10.1 Rule 1 — what makes a position the same position
+
+**Dawarich:** unique on `(user_id, timestamp, lonlat)` — `timestamp` integer
+Unix seconds, `lonlat` the exact PostGIS double, no rounding
+(`db/schema.rb:513,523,540`). The batch is deduplicated in memory with the
+same key first (`Point.dedup_key`, `app/models/point.rb:80-85`), otherwise
+one bad pair loses the whole 1000-row slice. Device (`tracker_id`) is a plain
+column, not part of the key (`schema.rb:526`). No near-duplicate merging.
+
+**TravStats:**
+1. **Same key as Dawarich** — `UNIQUE (user_id, t_s, lon, lat)`, `t_s`
+   integer seconds, coordinates as sent (double), deduplicated in the batch
+   before the insert with the identical key. Proven on the Korea trip; no
+   reason to differ.
+2. **Plus the origin's own id**: `origin` (`companion:<deviceId>`,
+   `import:<importId>`, `owntracks:<tid>` …) and `origin_ref` (the phone's
+   fix id, the import's row number). `UNIQUE (user_id, origin, origin_ref)`
+   makes a retry recognisable even if a client re-serialises a coordinate.
+3. **Across origins, merge instead of duplicating** (owner: „Doppelung soll
+   nicht gehen" — Dawarich has nothing here, it keeps both rows). A point from
+   another origin within ±5 s and within `max(accuracy_a, accuracy_b, 25 m)`
+   of a stored one becomes a row in `location_point_origins` for that point;
+   the more accurate one supplies the coordinates. **Within one device nothing
+   is ever merged** — each fix is its own point.
+4. **The Companion stops thinning on the device.** Today it folds every fix
+   within 75 m into one point with a duration and stops at 6000 points per
+   trip (`app/src/lib/trip-track/points.ts`, `MERGE_RADIUS_M`,
+   `MAX_TRIP_POINTS`). That suits questions asked on the phone, not a record:
+   from P1 the raw fixes are kept until the server confirms them, and the
+   folding moves to the server's derivations.
+
+### 10.2 Rule 2 — how an upload is acknowledged
+
+**Dawarich:** every live endpoint stores **synchronously** through
+`Points::Intake` (`app/services/points/intake.rb`), slices of 1000, then
+answers: the native endpoint echoes the stored rows (200), Overland answers
+`201 {result:'ok'}` even when every point was dropped
+(`overland/batches_controller.rb:10`), invalid points are dropped
+**silently**. No batch cap. 5xx or 422 means „send the whole batch again",
+and that is safe because the write is an upsert. Slices commit separately, so
+a 500 can follow a half-stored batch. Derived work runs afterwards, in jobs.
+
+**TravStats:**
+1. **Synchronous and idempotent, as in Dawarich** — the request is stored
+   before it is answered; a repeat is harmless.
+2. **One transaction per request**, ≤ 5000 points and a body limit, so a
+   failure never leaves half a batch.
+3. **Every point gets an outcome, nothing is dropped silently** (house rule
+   „a failure reaches the user as itself"): `stored`, `duplicate`,
+   `merged`, or `dropped` with a reason — `privacy_zone`, `deleted_range`,
+   `no_position`, `no_time`, `null_island`, `invalid`. All of these are
+   final: the phone removes every point that got an outcome. Only a non-2xx
+   answer means „keep and retry"; 429 carries `Retry-After`.
+4. **`uploadId` + payload hash** are kept for 30 days: the same id with the
+   same content answers the stored outcome, the same id with other content is
+   a 409.
+5. **Source „Dawarich"**: TravStats forwards the batch to the user's Dawarich
+   and answers only after Dawarich has stored it; if Dawarich is unreachable
+   the answer is 503 and the phone keeps the points. Nothing stays here.
+
+### 10.3 Rule 3 — what deleting means
+
+**Dawarich:** every delete is a hard delete (`points/destroyer.rb:13`);
+deleting an import removes only the points carrying that `import_id`
+(`imports/destroy.rb:61,102-127`). **No tombstones**: a re-upload or
+re-import of the same key brings a deleted point back. No delete by date range.
+After a delete, stats and tracks are recomputed, **visits are not**.
+
+**TravStats:**
+1. **Hard delete of the rows, as in Dawarich**, plus a **deleted range** row
+   `(user_id, from, to, created_at)` for every delete by time span. Ingest and
+   import drop points inside a deleted range (`dropped: deleted_range`), so a
+   phone that was offline or an import run again cannot bring them back.
+   Ranges are listed under Experte („Gelöschte Zeiträume") and can be lifted
+   there, which allows a deliberate re-import.
+2. **Privacy zones** work the same way in space: a point inside one is
+   dropped on ingest and import, and creating a zone deletes what is inside
+   (§3.6).
+3. **Deleting an import** removes the points that no other origin vouches for
+   (§10.1 point 3); points another origin also holds stay and lose only that
+   membership.
+4. **After any delete the affected days are re-derived**, suggestions
+   included — unlike Dawarich, whose visits keep pointing at nothing.
+   Decisions the user already made stay (§10.4 point 3).
+5. Account deletion cascades through every location table and import file.
+
+### 10.4 Rule 4 — how findings are recomputed
+
+**Dawarich:**
+- New points: a debounced job (first trigger + 45 s, 2-min sliding TTL)
+  rebuilds tracks from the **last 6 h** of untracked points
+  (`tracks/realtime_debouncer.rb`, `incremental_generator.rb:25`); visits
+  after 5 min, also the last 6 h (`visits/realtime_debouncer.rb`).
+- Late points older than 6 h: their day ranges are queued and rebuilt a
+  minute later (`tracks/backfill_scheduler.rb`); a nightly or 12-hourly job
+  is the safety net (`config/schedule.yml`).
+- One lock per user (`tracks/per_user_lock.rb`), work in day chunks with 6 h
+  overlap (`tracks/time_chunker.rb`).
+- **User decisions are anchors**: only machine-made visits (`suggested`,
+  not imported, no note) are ever regenerated; confirmed, declined, deleted
+  and annotated ones are fixed, and new machine stays are cut around them.
+  The machine rows of a window are replaced in one transaction under
+  `pg_advisory_xact_lock(user_id)`, and nothing is written if the result is
+  identical (`visits/detection/persister.rb:5-118`).
+- Anomalies are **flagged, never deleted** (`points/anomaly_filter.rb`):
+  speed above `max(1000 km/h, 3 × median)` per device, runs of ≤ 5 points,
+  same-second jumps > 1 km, accuracy > 10 km, null island, cell-tower
+  sentinels, frozen fixes; flagged points are left out of tracks, visits and
+  stats.
+- Changing route or visit settings recomputes **nothing** by itself; the user
+  starts a recalculation.
+
+**TravStats:** the same machinery, with two differences.
+1. **Copy:** debounced incremental derivation over the last 6 h, day-range
+   backfill for late points, nightly safety net, one lock per user, day
+   chunks with overlap, transactional replace of machine findings under an
+   advisory lock, skip-if-identical, and the anomaly filter with Dawarich's
+   thresholds — computed per device.
+2. **Differs — flags are versioned:** anomaly and in-flight marks live in
+   `location_point_flags (point_id, kind, version)`, not on the point, so a
+   new filter version or an edited flight replaces them instead of leaving
+   stale marks on raw data (Codex review point 8).
+3. **Same anchors as Dawarich:** a finding the user saved, dismissed or edited
+   is never regenerated; machine findings are cut around it. Dismissed stays
+   dismissed after any re-evaluation (the inbox promise).
+4. **Differs — a settings change re-evaluates by itself:** „Übernehmen und
+   neu auswerten" (§5) starts a job; every finding carries the
+   `config_version` it was made with, the job replaces only machine findings
+   of an older version, window by window, and the settings page shows its
+   progress.
+5. **Defaults:** tracks as Dawarich (`minutes_between_routes` 30,
+   `meters_between_routes` 500, `users/safe_settings.rb:17,21`); stay
+   suggestions keep TravStats' place-level 150 m / 20 min (forgejo#294) —
+   Dawarich's 100 m / 3 points / 5 min suit its own visit list, not the
+   logbook's „Orte". Countries and cities skip runs above 500 km/h, as in
+   Dawarich (`countries_and_cities.rb:7-10`).
