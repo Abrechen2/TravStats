@@ -689,6 +689,20 @@
         "title": "Aus beliebigem Logbuch (CSV)",
         "description": "Lade eine flache Flug-CSV — nach dem Upload öffnet sich ein Mapping-Wizard, mit dem du jede Spalte einem TravStats-Feld zuordnest.",
         "uploadLabel": "CSV-Datei auswählen"
+      },
+      "tracker": {
+        "title": "Aus einer anderen Flug-App",
+        "description": "Export aus OpenFlights, AirTrail, Jetlog, Flighty, App in the Air (oder Flightradar24) hochladen. Das Format wird an der Datei erkannt; Flughäfen, Zeitzonen und Dubletten werden wie beim FR24-Import behandelt.",
+        "uploadLabel": "Export-Datei wählen",
+        "detected": "Erkannt als {{format}}.",
+        "formats": {
+          "openflights": "OpenFlights (CSV)",
+          "airtrail": "AirTrail (JSON)",
+          "jetlog": "Jetlog (CSV)",
+          "flighty": "Flighty (CSV)",
+          "app_in_the_air": "App in the Air (TXT)",
+          "fr24": "Flightradar24 (CSV)"
+        }
       }
     },
     "preview": {
@@ -768,7 +782,7 @@
       "invalidDate": "Datum „{{value}}“ ist kein gültiges Datum",
       "invalidTime": "Uhrzeit „{{value}}“ ist ungültig (erwartet: HH:MM:SS)",
       "missingIata": "kein Flughafencode (IATA) bei Von/Nach",
-      "missingHeader": "Die Datei hat keine Spalte „{{value}}“. Ist es ein Flightradar24-Export?",
+      "missingHeader": "Die Datei hat keine Spalte „{{value}}“. Passt die Datei zu dieser Importquelle?",
       "unmappedField": "Das Pflichtfeld „{{value}}“ ist keiner Spalte zugeordnet.",
       "missingColumn": "Die zugeordnete Spalte „{{value}}“ fehlt in der Datei.",
       "unknown": "Die Zeile konnte nicht gelesen werden",
@@ -778,7 +792,14 @@
       "skipped_one": "{{count}} Zeile wurde übersprungen, weil sie nicht lesbar ist. Die übrigen kannst du prüfen und importieren.",
       "skipped_other": "{{count}} Zeilen wurden übersprungen, weil sie nicht lesbar sind. Die übrigen kannst du prüfen und importieren.",
       "previewFailed": "Die Vorschau konnte nicht erstellt werden. Bitte versuche es erneut.",
-      "commitPartial": "{{committed}} von {{total}} Flügen importiert. Ein Teil konnte nicht gespeichert werden — bitte die Datei noch einmal importieren; bereits Importiertes wird dabei erkannt."
+      "commitPartial": "{{committed}} von {{total}} Flügen importiert. Ein Teil konnte nicht gespeichert werden — bitte die Datei noch einmal importieren; bereits Importiertes wird dabei erkannt.",
+      "unknownFormat": "Dieses Dateiformat wurde nicht erkannt. Erwartet wird der Export einer dieser Apps — erkennbar an diesen Spalten bzw. Inhalten:",
+      "invalidJson": "Die Datei ist kein gültiges JSON — ist der AirTrail-Export vollständig heruntergeladen?",
+      "cancelled": "als storniert markiert, nicht importiert",
+      "notOwnFlight": "Flug einer anderen Person (in App in the Air nicht als deiner markiert), nicht importiert",
+      "malformedEntry": "konnte nicht gelesen werden",
+      "entry": "Eintrag {{entry}}: {{reason}}",
+      "tooLarge": "Die Datei ist zu groß ({{size}} MB, höchstens {{max}} MB). Bitte in kleineren Teilen exportieren."
     }
   },
   "trips": {

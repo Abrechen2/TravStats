@@ -40,6 +40,17 @@ export function parseCsv(content: string): Record<string, string>[] {
   return records;
 }
 
+/**
+ * The header row alone — trimmed, BOM stripped — or [] for an empty file.
+ * `parseCsv` cannot answer this for a file that has a header and no data
+ * row, and format detection must still recognise such a file (forgejo#311).
+ */
+export function parseCsvHeader(content: string): string[] {
+  const text = content.startsWith(BOM) ? content.slice(1) : content;
+  const header = tokenize(text).find((row) => row.some((c) => c !== ""));
+  return header ? header.map((h) => h.trim()) : [];
+}
+
 function tokenize(text: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];

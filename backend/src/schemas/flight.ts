@@ -5,6 +5,7 @@ import { chronologyProblem, departsInFuture } from "../shared/flightChronology";
 import { wallClockExists } from "../shared/wallClockExistence";
 import { partialForUpdate } from "./partialUpdate";
 import { onlineCheckInInputShape } from "./deadlines";
+import { TRACKER_DATA_SOURCES } from "../services/parsers/trackers/formats";
 
 export const airportSchema = z.object({
   icao: z.string().nullable().optional(),
@@ -294,6 +295,8 @@ const baseFlightSchema = z.object({
       "imported_fr24",
       "imported_generic_csv",
       "imported_roundtrip",
+      // Other flight trackers' exports (forgejo#311), one value per app.
+      ...TRACKER_DATA_SOURCES,
     ])
     .optional(),
   // Boarding pass / email import fields

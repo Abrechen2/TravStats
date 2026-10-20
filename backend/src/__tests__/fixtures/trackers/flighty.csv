@@ -1,0 +1,5 @@
+Date,Airline,Flight,From,To,Dep Terminal,Dep Gate,Arr Terminal,Arr Gate,Canceled,Diverted To,Gate Departure (Scheduled),Gate Departure (Actual),Take off (Scheduled),Take off (Actual),Landing (Scheduled),Landing (Actual),Gate Arrival (Scheduled),Gate Arrival (Actual),Aircraft Type Name,Tail Number,PNR,Seat,Seat Type,Cabin Class,Flight Reason,Notes,Flight Flighty ID,Airline Flighty ID,Departure Airport Flighty ID,Arrival Airport Flighty ID,Diverted To Airport Flighty ID,Aircraft Type Flighty ID
+2024-03-02,DLH,400,FRA,JFK,1,A20,,,false,,2024-03-02T10:00,2024-03-02T10:12,,,,,2024-03-02T12:45,2024-03-02T12:58,Boeing 747-8,D-ABYA,SYN123,81K,WINDOW,PREMIUM_ECONOMY,LEISURE,Synthetic note,f-1,a-1,d-1,r-1,,t-1
+2024-03-05,XQZ,77,MUC,HKG,,,,,false,,2024-03-05T21:50,,,,,,2024-03-06T16:05,,,,,,,ECONOMY,BUSINESS,,f-2,a-2,d-2,r-2,,t-2
+2024-03-07,DLH,402,FRA,JFK,,,,,true,,2024-03-07T10:00,,,,,,2024-03-07T12:45,,,,,,,,,,f-3,a-3,d-3,r-3,,t-3
+2024-03-09,DLH,941,FRA,LHR,,,,,false,MUC,2024-03-09T08:00,2024-03-09T08:05,,,,,2024-03-09T08:45,2024-03-09T09:30,,,,,,,,,f-4,a-4,d-4,r-4,d-9,t-4

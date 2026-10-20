@@ -597,7 +597,7 @@ model Flight {
   routeSource          String?   @map("route_source") // 'live_tracking', 'historical_aggregation', 'estimated'
   hasLiveTracking      Boolean   @default(false) @map("has_live_tracking")
   // Data source tracking
-  dataSource           String?   @map("data_source") // 'manual', 'email_import', 'boarding_pass_scan', 'historical_enrichment', 'live_update', 'api_lookup', 'bulk_import', 'imported_fr24', 'imported_generic_csv', 'imported_roundtrip'
+  dataSource           String?   @map("data_source") // 'manual', 'email_import', 'boarding_pass_scan', 'historical_enrichment', 'live_update', 'api_lookup', 'bulk_import', 'imported_fr24', 'imported_generic_csv', 'imported_roundtrip', 'imported_<tracker>' (openflights, airtrail, jetlog, flighty, app_in_the_air)
   // Time-storage semantics for departureTime / arrivalTime.
   // 'UTC' = canonical real UTC instant (current writes always use this).
   // 'LEGACY_FAKE_UTC' = wall-clock encoded as fake-UTC; needs depTz/arrTz to

@@ -13,6 +13,9 @@ vi.mock("../../import/Fr24ImportTile", () => ({
 vi.mock("../../import/GenericCsvImportTile", () => ({
   GenericCsvImportTile: () => <div data-testid="tile-csv" />,
 }));
+vi.mock("../../import/TrackerImportTile", () => ({
+  TrackerImportTile: () => <div data-testid="tile-tracker" />,
+}));
 // Keeps the `onImported` callback reachable from a test: the hub is the only
 // place that can tell the log a fresh import landed.
 vi.mock("../../import/LodgingCsvImportTile", () => ({
@@ -57,10 +60,12 @@ describe("ImportSection — central import hub", () => {
     useSettingsStore.setState({ enabledDomains: ["flight", "cruise"] });
   });
 
-  it("renders the flight group with exactly the two live tiles", () => {
+  it("renders the flight group with its three live tiles", () => {
     render(<ImportSection />);
     expect(screen.getByText("common:domain.flight")).toBeTruthy();
     expect(screen.getByTestId("tile-fr24")).toBeTruthy();
+    // forgejo#311: other trackers' exports, ungated — the route works end to end.
+    expect(screen.getByTestId("tile-tracker")).toBeTruthy();
     expect(screen.getByTestId("tile-csv")).toBeTruthy();
   });
 

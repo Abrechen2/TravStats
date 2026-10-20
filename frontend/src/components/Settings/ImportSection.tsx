@@ -7,6 +7,7 @@ import { SectionCard, SectionTitle } from "./SettingsShared";
 import { SettingRows } from "../ui/SettingRow";
 import { Fr24ImportTile } from "../import/Fr24ImportTile";
 import { GenericCsvImportTile } from "../import/GenericCsvImportTile";
+import { TrackerImportTile } from "../import/TrackerImportTile";
 import { LodgingCsvImportTile } from "../import/LodgingCsvImportTile";
 import { MapsExportImportTile } from "../import/MapsExportImportTile";
 import { PlaceCsvImportTile } from "../import/PlaceCsvImportTile";
@@ -48,7 +49,14 @@ export default function ImportSection(): JSX.Element {
   /** List importers per domain. A domain may legitimately have none yet. */
   const listImporters = useMemo<Partial<Record<DomainKey, JSX.Element[]>>>(
     () => ({
-      flight: [<Fr24ImportTile key="fr24" />, <GenericCsvImportTile key="csv" />],
+      // forgejo#311: other trackers' exports, between the one named app and
+      // the hand-mapped CSV. Not beta-gated: like FR24 it runs end to end
+      // through the same preview, duplicate check and undoable batch.
+      flight: [
+        <Fr24ImportTile key="fr24" />,
+        <TrackerImportTile key="tracker" />,
+        <GenericCsvImportTile key="csv" />,
+      ],
       lodging: [
         // The Maps export first: it is the one file that brings an identity
         // with it, and the generic path would reduce it to a name.

@@ -419,7 +419,17 @@
     "imported_generic_csv": "CSV",
     "imported_generic_csv_tooltip": "Per benutzerdefinierter CSV-Spalten-Zuordnung importiert",
     "imported_roundtrip": "Reimport",
-    "imported_roundtrip_tooltip": "Aus einem TravStats Excel-/CSV-/JSON-Export reimportiert"
+    "imported_roundtrip_tooltip": "Aus einem TravStats Excel-/CSV-/JSON-Export reimportiert",
+    "imported_openflights": "OpenFlights",
+    "imported_openflights_tooltip": "Aus einem OpenFlights-Export importiert",
+    "imported_airtrail": "AirTrail",
+    "imported_airtrail_tooltip": "Aus einem AirTrail-Export importiert",
+    "imported_jetlog": "Jetlog",
+    "imported_jetlog_tooltip": "Aus einem Jetlog-Export importiert",
+    "imported_flighty": "Flighty",
+    "imported_flighty_tooltip": "Aus einem Flighty-Export importiert",
+    "imported_app_in_the_air": "App in the Air",
+    "imported_app_in_the_air_tooltip": "Aus einem App-in-the-Air-Export importiert"
   },
   "enrichmentCount": "{{count}}x angereichert",
   "confidence": "Vertrauen",

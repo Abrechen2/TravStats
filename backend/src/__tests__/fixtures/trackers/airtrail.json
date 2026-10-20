@@ -1,0 +1,111 @@
+{
+  "users": [{ "id": "user-synthetic-1", "username": "synthetic", "displayName": "Synthetic User" }],
+  "flights": [
+    {
+      "date": "2024-06-01",
+      "datePrecision": "day",
+      "from": {
+        "type": "large_airport",
+        "name": "Frankfurt am Main Airport",
+        "municipality": "Frankfurt",
+        "lat": 50.03,
+        "lon": 8.56,
+        "continent": "EU",
+        "country": "DE",
+        "icao": "EDDF",
+        "iata": "FRA",
+        "tz": "Europe/Berlin",
+        "custom": false
+      },
+      "to": {
+        "type": "large_airport",
+        "name": "Hong Kong International Airport",
+        "municipality": "Hong Kong",
+        "lat": 22.3,
+        "lon": 113.9,
+        "continent": "AS",
+        "country": "HK",
+        "icao": "VHHH",
+        "iata": "HKG",
+        "tz": "Asia/Hong_Kong",
+        "custom": false
+      },
+      "departure": "2024-06-01T19:30:00.000+00:00",
+      "arrival": "2024-06-02T07:10:00.000+00:00",
+      "departureScheduled": null,
+      "arrivalScheduled": null,
+      "duration": 42000,
+      "airline": { "name": "Lufthansa", "icao": "DLH", "iata": "LH" },
+      "aircraft": { "name": "Airbus A350-900", "icao": "A359" },
+      "aircraftReg": "D-AIXA",
+      "flightNumber": "LH796",
+      "note": "Synthetic AirTrail flight",
+      "departureTerminal": null,
+      "departureGate": null,
+      "arrivalTerminal": null,
+      "arrivalGate": null,
+      "passengers": [
+        {
+          "userId": "user-synthetic-1",
+          "guestName": null,
+          "seat": "window",
+          "seatNumber": "31A",
+          "seatClass": "economy+",
+          "flightReason": "leisure"
+        }
+      ]
+    },
+    {
+      "date": "2024-07-01",
+      "datePrecision": "day",
+      "from": { "code": "LIRF" },
+      "to": {
+        "type": "medium_airport",
+        "name": "Custom strip",
+        "municipality": null,
+        "lat": 1,
+        "lon": 1,
+        "continent": "EU",
+        "country": "IT",
+        "icao": "LIMC",
+        "iata": null,
+        "tz": "Europe/Rome",
+        "custom": true
+      },
+      "departure": null,
+      "arrival": null,
+      "duration": null,
+      "airline": null,
+      "aircraft": null,
+      "aircraftReg": null,
+      "flightNumber": null,
+      "note": null,
+      "passengers": [
+        {
+          "userId": "user-synthetic-1",
+          "guestName": null,
+          "seat": null,
+          "seatNumber": null,
+          "seatClass": "business",
+          "flightReason": "business"
+        }
+      ]
+    },
+    {
+      "date": "2019-01-01",
+      "datePrecision": "year",
+      "from": { "code": "EDDF" },
+      "to": { "code": "EGLL" },
+      "departure": null,
+      "arrival": null,
+      "duration": null,
+      "airline": null,
+      "aircraft": null,
+      "aircraftReg": null,
+      "flightNumber": null,
+      "note": null,
+      "passengers": []
+    },
+    { "date": "not-a-date", "from": null }
+  ]
+}
