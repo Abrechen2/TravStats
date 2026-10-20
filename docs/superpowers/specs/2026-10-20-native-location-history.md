@@ -1,7 +1,9 @@
 # Native location history — everything Dawarich does, and more, inside TravStats
 
 Status: **direction set by the owner, details open** (2026-10-20). Branch
-`dev/location-history`.
+`dev/location-history`. **The plan for the whole feature — server and
+Companion.** The Companion repository gets one ADR that points here and
+replaces ADR 0013 points 3, 4 and 7; the work itself is planned in this file.
 
 ## 0. Owner direction (2026-10-20)
 
@@ -190,18 +192,20 @@ Shortcut template apply the zones before sending; the server applies them
 again on ingest for sources that cannot (OwnTracks, Overland, file imports).
 A change to a zone is synced to the phone with the other location settings.
 
-## 4. Phases
-- **P1** `location_points` + `POST /location/points` + forgejo#316 folded in +
-  Settings → Standortverlauf (source switch, point count, delete, export) +
-  Dawarich full import + Google Timeline / GPX imports + anomaly flags.
-- **P2** `LocationSource` interface; country days and stays on it (internal
-  and Dawarich side by side).
-- **P3** views: trip day timeline, „Erkundet", „Zuletzt gesehen", year in
-  review, areas.
-- **P4** journey and trip suggestions from segments, flight confirmation,
-  cities; OwnTracks/Overland ingest; remaining file formats.
+## 4. Phases — server and Companion together
 
-Companion work runs in parallel from P1 (§5).
+This document is the plan for the whole feature, server and Companion alike
+(owner, 2026-10-20: „nicht als Issue, sondern als Gesamtplan für das
+Feature"). Work is tracked here and on the Leitstand, not as separate issues.
+Order follows Codex's review (§8): the riskiest unknown, the phone, first.
+
+| Phase | Server | Companion |
+|---|---|---|
+| **P0** proof | decide source routing and the open owner questions (§7) | spike: precise trip recording in the background on iOS and Android — survives kill, reboot, permission change; measured battery per hour |
+| **P1** record and keep | `location_points`, `POST /location/points` with receipts and idempotency, delete with tombstones, privacy zones, backup/restore, forgejo#316 folded in, Settings → Standortverlauf (Standard/Experte), Dawarich full import, GPX import | outbox upload to the new endpoint, „Reise genau" with its settings, privacy zones applied on the device, settings synced from the server |
+| **P2** derive | `LocationSource` (internal + Dawarich), country days and stays on it, inbox cards that confirm an entry (§3.4), re-evaluation as a job | „Alltag" mode, the server's inbox in the app, Shortcuts actions „Standort jetzt senden" and „Aufzeichnung pausieren / fortsetzen" |
+| **P3** show | trip day timeline, „Erkundet", „Zuletzt gesehen", year in review, areas; Shortcut template for users without the Companion | remaining Shortcuts actions (§5.1), recording state on the trip screen |
+| **P4** connect | journey and trip suggestions, flight evidence for review, cities, OwnTracks/Overland ingest, Google Timeline and further formats | Android shortcuts / broadcast intents, native visit monitoring if P0 shows it is needed |
 
 ## 5. Companion (needs an ADR in the Companion repo; supersedes ADR 0013 points 3, 4, 7)
 
@@ -263,7 +267,7 @@ work without the JS runtime — Swift (`AppIntents`, iOS 16+) in a local Expo
 module beside `travstats-barcode`, reading the zones and the device token
 from the App Group / Keychain and writing into the same outbox the recorder
 uses. Android gets the same actions as App Shortcuts / broadcast intents
-(Tasker, Home Assistant) later. Tracked as companion#75.
+(Tasker, Home Assistant) later (P4).
 
 ### 5.2 Settings levels (forgejo#318)
 Settings → Standortverlauf follows the Standard / Experte levels: source,
