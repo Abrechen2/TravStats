@@ -1,6 +1,7 @@
 import { Prisma } from "../../prisma";
 
 import type { CountryTier } from "../../shared/countryEvidence";
+import type { SettingsLevel } from "../../shared/settingsLevel";
 import type { HomePeriod } from "../../utils/homeAirport";
 import type { SuggestionSwitchesView } from "../../services/settings/suggestionSwitches";
 
@@ -158,6 +159,8 @@ export interface SettingsResponse extends SettingsDataJson {
    * templates home market first; never filters them (plan 2026-10-09 P5).
    */
   homeCountry: string | null;
+  /** How much of the settings page this account sees (forgejo#321). */
+  settingsLevel: SettingsLevel;
 }
 
 export interface UserSettingsUpdateData {
@@ -183,6 +186,7 @@ export interface UserSettingsUpdateData {
   countryThreshold?: CountryTier | null;
   /** `null` clears the home country. */
   homeCountry?: string | null;
+  settingsLevel?: SettingsLevel;
 }
 
 export interface ParserSettingsUpdateData {
