@@ -28,6 +28,7 @@
       "undoMove": "Move back to “{{from}}”",
       "deleteCopy": "Delete mine too",
       "undone": "Undone on your copy.",
+      "copyGone": "Your copy is deleted.",
       "kinds": {
         "shared": "Shared",
         "created": "Added",

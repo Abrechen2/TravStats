@@ -61,7 +61,11 @@ const notice = z.object({
   after: z.unknown().nullable(),
   createdAt: instant,
   readAt: instant.nullable(),
-  undoneAt: instant.nullable().describe("When the caller undid this change (S2)"),
+  undoneAt: instant
+    .nullable()
+    .describe(
+      "When the caller undid this change (S2); on a `deleted` notice, when the caller's own copy was found deleted — clients stop offering delete-copy"
+    ),
   actor: person.nullable(),
   changes: z
     .array(

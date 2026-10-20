@@ -23,7 +23,7 @@ export interface ShareNoticeView {
   after: Prisma.JsonValue | null;
   createdAt: string;
   readAt: string | null;
-  /** When the recipient undid the change (S2); null otherwise. */
+  /** When the recipient undid the change (S2) — or, on a `deleted` notice, deleted their own copy; null otherwise. */
   undoneAt: string | null;
   actor: SharePerson | null;
   /** For `updated`: every changed fact, old and new, ready to display. */

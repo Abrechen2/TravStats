@@ -28,6 +28,7 @@
       "undoMove": "Zurück nach „{{from}}“",
       "deleteCopy": "Bei mir auch löschen",
       "undone": "Bei dir rückgängig gemacht.",
+      "copyGone": "Deine Kopie ist gelöscht.",
       "kinds": {
         "shared": "Geteilt",
         "created": "Hinzugefügt",
