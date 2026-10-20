@@ -231,3 +231,33 @@ booking / reservation / orderFacts), `rental/parser/v2Rental.ts` (`kind`), and
 - Sharing user templates (spec package 4).
 - Attachment routing for flight/lodging mails (spec package 2) — needed for mails, not for
   uploaded PDFs; scheduled after P3.
+
+## As built — workshop for rail and rental, screenshots, visible sync failure (forgejo#309, 2026-10-20)
+
+Branch `feat/workshop-rail-rental-ocr-309`. Generic readers only; every
+issuer layout stays a template.
+
+- **Rail user templates.** `rail` is a workshop domain (booking fields + one
+  leg row: stations, times, train, day). `userTemplates/railDeriver.ts` writes a
+  v2 rail envelope: the marked row becomes the leg repeat (`rowDerivation.ts`),
+  a day marked on a heading becomes a `lastBefore` field (a return heading dates
+  its own legs), an arrival without its own day goes through `laterClock`;
+  `source: "workshop"`. `railBookingParser.ts` tries the caller's ACTIVE
+  workshop templates after the repository's (the cruise/lodging precedence).
+- **Rental user templates.** `rental` is a workshop domain (provider,
+  reservation number, each end's station/day/clock, vehicle class, price).
+  `userTemplates/rentalDeriver.ts`; the generic consumer `v2Rental.ts` now also
+  reads an end as `…Date` + optional `…Time` (no clock → a bare day). The
+  deriver refuses when its template reads its own sample wrong
+  (`rentalEndsAmbiguous`: pickup and return labelled alike). The parser takes
+  `userId` and tries the user's active rental templates after the repository's.
+- **Screenshots.** `POST /training/upload` accepts `type=screenshot`
+  (PNG/JPEG/WebP): the same validator and Tesseract step as `/parse-image`, the
+  OCR text stored as `fullText`, the OCR rate bucket shared.
+  `TRAINING_IMAGE_UNREADABLE` / `TRAINING_IMAGE_NO_TEXT` keep no row and no file.
+- **Sync failure visible.** The v2 status carries `ranAt`; `TemplateStatusView`
+  (`TemplateSyncNotice`) says when the index was unreachable or a template
+  failed, with the date, and that the last good set is still in use.
+
+Still open: bus and ferry user templates; the community share flow for user
+templates (spec package 4); the admin-set template repository URL.
