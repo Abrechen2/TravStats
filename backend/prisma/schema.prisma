@@ -1273,6 +1273,13 @@ model AdminSettings {
   /// up (2026-09-24).
   openDataEnabled Boolean @default(false) @map("open_data_enabled")
 
+  /// May operator marks (ferry lines, cruise lines, rail operators, coach and
+  /// rental companies) be looked up on Wikidata and Wikimedia Commons, server
+  /// side (forgejo#323). ON by default, unlike `openDataEnabled`: the request
+  /// carries only a company name the user wrote, never a place or a date, and
+  /// both sources are keyless. Off: the cards draw monograms.
+  operatorLogosOpenDataEnabled Boolean @default(true) @map("operator_logos_open_data_enabled")
+
   /// Whether users may create public share links (forgejo#281, D7). OFF by
   /// default: a link hands a person's travel data to anyone holding the URL.
   /// Switching it off deletes every existing link.

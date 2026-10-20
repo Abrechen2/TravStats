@@ -178,6 +178,7 @@
     "lodgingMemberships.ts",
     "loyaltyMemberships.ts",
     "notes.ts",
+    "operators.ts",
     "passportOverrides.ts",
     "photoJourneys.ts",
     "placeImport.ts",

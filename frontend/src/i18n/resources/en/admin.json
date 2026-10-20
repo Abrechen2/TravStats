@@ -1168,5 +1168,13 @@
     "loadFailed": "The template repository setting could not be loaded.",
     "testFailed": "The test could not be run. Please try again.",
     "saveFailed": "The template repository could not be saved."
+  },
+  "operatorLogos": {
+    "title": "Open data for operator logos",
+    "description": "Logos of rail operators, coach companies, ferry lines and rental companies on the map cards come from Wikidata and Wikimedia Commons – freely licensed files only, with their authors credited. The server asks, never the browser, and sends only the company's name. Switched off, the cards show monograms.",
+    "switch": "Load operator logos from open data",
+    "switchSub": "Applies to the whole instance. No account, no key.",
+    "loadFailed": "The setting could not be loaded.",
+    "saveFailed": "The setting could not be saved."
   }
 }

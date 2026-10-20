@@ -89,6 +89,8 @@ const instancePatchSchema = z.object({
   countryThreshold: z.enum(COUNTRY_TIERS).optional(),
   /** May the instance call open data services for its users (off by default). */
   openDataEnabled: z.boolean().optional(),
+  /** May operator logos come from Wikidata / Commons (on by default, forgejo#323). */
+  operatorLogosOpenDataEnabled: z.boolean().optional(),
   /** May users create public share links (off by default; off deletes every link). */
   shareLinksEnabled: z.boolean().optional(),
   /** May the rail lookup ask Transitous / db-rest (both on by default). */
@@ -163,6 +165,9 @@ router.put("/instance-settings", async (req: AuthRequest, res: Response, next: N
       }),
       ...(patch.openDataEnabled !== undefined && {
         openDataEnabled: patch.openDataEnabled,
+      }),
+      ...(patch.operatorLogosOpenDataEnabled !== undefined && {
+        operatorLogosOpenDataEnabled: patch.operatorLogosOpenDataEnabled,
       }),
       ...(patch.shareLinksEnabled !== undefined && {
         shareLinksEnabled: patch.shareLinksEnabled,

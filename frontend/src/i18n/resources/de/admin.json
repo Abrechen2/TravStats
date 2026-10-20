@@ -1168,5 +1168,13 @@
     "loadFailed": "Die Einstellung zum Vorlagen-Repository konnte nicht geladen werden.",
     "testFailed": "Der Test konnte nicht ausgeführt werden. Bitte erneut versuchen.",
     "saveFailed": "Das Vorlagen-Repository konnte nicht gespeichert werden."
+  },
+  "operatorLogos": {
+    "title": "Offene Daten für Betreiber-Logos",
+    "description": "Logos von Bahnbetreibern, Busunternehmen, Reedereien und Vermietern auf den Kartenkarten kommen aus Wikidata und Wikimedia Commons – nur frei lizenzierte Dateien, mit Nennung der Urheber. Der Server fragt dort nach, nie der Browser, und schickt nur den Namen des Unternehmens. Ausgeschaltet zeigen die Karten Monogramme.",
+    "switch": "Betreiber-Logos aus offenen Daten laden",
+    "switchSub": "Gilt für die ganze Instanz. Kein Konto, kein Schlüssel.",
+    "loadFailed": "Die Einstellung konnte nicht geladen werden.",
+    "saveFailed": "Die Einstellung konnte nicht gespeichert werden."
   }
 }
