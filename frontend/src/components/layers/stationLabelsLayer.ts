@@ -251,6 +251,13 @@ export interface StationLabelsLayerProps {
   /** Every domain's stations together, each carrying its domain colour. */
   data: readonly StationLabelDatum[];
   labelsMode: LabelsMode;
+  /**
+   * On the globe the layer draws nothing itself — deck.gl 9's billboard text
+   * does not render under MapLibre's globe projection — and only CARRIES the
+   * stations to `GlobeView`, which hands them to the HTML label overlay
+   * (`stationLabelPoints` in `Globe/globePinLabels.ts`).
+   */
+  onGlobe?: boolean;
 }
 
 interface StationLabelsState {
@@ -270,17 +277,20 @@ export class StationLabelsLayer extends CompositeLayer<StationLabelsLayerProps> 
 
   shouldUpdateState({ changeFlags }: UpdateParameters<this>): boolean {
     if (changeFlags.propsOrDataChanged) return true;
+    if (this.props.onGlobe) return false;
     return Boolean(changeFlags.viewportChanged) && this.viewportZoom() !== this.state.zoom;
   }
 
   updateState(): void {
     const zoom = this.viewportZoom();
-    const { data, labelsMode } = this.props;
-    this.setState({ zoom, labels: selectStationLabels(data, labelsMode, zoom) });
+    const { data, labelsMode, onGlobe } = this.props;
+    const labels = onGlobe ? [] : selectStationLabels(data, labelsMode, zoom);
+    this.setState({ zoom, labels });
   }
 
   renderLayers(): Layer[] {
-    const { labelsMode } = this.props;
+    const { labelsMode, onGlobe } = this.props;
+    if (onGlobe) return [];
     return [
       new TextLayer<StationLabelDatum>(
         this.getSubLayerProps({
@@ -323,7 +333,7 @@ export interface StationLabelGroup {
 export interface StationLabelOptions {
   labelsMode: LabelsMode;
   idPrefix: string;
-  /** Labels are a flat-map layer; on the globe the HTML label overlay owns names. */
+  /** On the globe the layer only carries the stations to the HTML label overlay. */
   onGlobe?: boolean;
 }
 
@@ -336,8 +346,8 @@ export function buildStationLabelLayers(
   groups: readonly StationLabelGroup[],
   { labelsMode, idPrefix, onGlobe = false }: StationLabelOptions
 ): Layer[] {
-  if (onGlobe || labelsMode === "off") return [];
+  if (labelsMode === "off") return [];
   const data = groups.flatMap((g) => buildStationLabels(g.rides, g.color));
   if (data.length === 0) return [];
-  return [new StationLabelsLayer({ id: `${idPrefix}-station-labels`, data, labelsMode })];
+  return [new StationLabelsLayer({ id: `${idPrefix}-station-labels`, data, labelsMode, onGlobe })];
 }

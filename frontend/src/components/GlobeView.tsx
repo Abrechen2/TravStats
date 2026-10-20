@@ -48,7 +48,7 @@ import { GlobePinnedOverlay } from "./Globe/GlobePinnedOverlay";
 import { applyMapOverlays } from "./Globe/mapOverlays";
 import { buildAirportPoints, buildPortPoints } from "./Globe/globePointData";
 import { buildGlobeArcData } from "./Globe/globeArcData";
-import { lodgingLabelPoints, placeLabelPoints } from "./Globe/globePinLabels";
+import { lodgingLabelPoints, placeLabelPoints, stationLabelPoints } from "./Globe/globePinLabels";
 import { createMarkerTooltip } from "./map/markerTooltip";
 import { GlobeControlPanel, type StyleId, type LiteMode } from "./Globe/GlobeControlPanel";
 import type { ArcDatum, CruisePathDatum, PointDatum } from "./Globe/globeLayerTypes";
@@ -1060,11 +1060,10 @@ export default function GlobeView({
     [markerTooltip]
   );
 
-  // Pin labels for the HTML overlay. deck.gl billboard text does not render
-  // under the globe projection at all (see GlobeLabelsOverlay), so this is the
-  // only route a hotel or place name has onto the sphere.
+  // Pin + station labels: the HTML overlay is their only route onto the globe (GlobeLabelsOverlay).
   const pinLabels = useMemo(
     () => [
+      ...stationLabelPoints(extraLayers),
       ...lodgingLabelPoints(lodgings, lodgingColorConfig),
       ...placeLabelPoints(
         places,
@@ -1082,6 +1081,7 @@ export default function GlobeView({
       placeListColors,
       placeListLabels,
       placeLabelSource,
+      extraLayers,
     ]
   );
 

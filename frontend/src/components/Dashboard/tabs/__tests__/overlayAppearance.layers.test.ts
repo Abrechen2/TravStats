@@ -94,9 +94,10 @@ describe("rail: line width and station size reach the layers", () => {
       labelsMode: "off",
     });
     expect(byId(off, "-station-labels")).toBeUndefined();
-    expect(
-      byId(buildRailMapLayers([RIDE], "#112233", true, "t"), "-station-labels")
-    ).toBeUndefined();
+    // On the globe the layer still comes along — it carries the names to the
+    // HTML label overlay — but draws nothing itself.
+    const globe = byId(buildRailMapLayers([RIDE], "#112233", true, "t"), "-station-labels");
+    expect(propsOf(globe!).onGlobe).toBe(true);
   });
 
   it("draws no station layer at size 0", () => {

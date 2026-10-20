@@ -69,7 +69,8 @@ describe("RailTab", () => {
       "href",
       "/rail/j1"
     );
-    expect(extraLayers.current.length).toBe(2);
+    // Paths, station dots, and the station names the globe's label overlay reads.
+    expect(extraLayers.current.length).toBe(3);
   });
 
   // Silent-fix sweep 2026-09-27: a BRouter line (the demo account's routed
@@ -106,9 +107,12 @@ describe("RailTab", () => {
     renderTab();
     await screen.findByTestId("rail-legend");
     expect(extraLayers.domains).toEqual(["rail"]);
-    // Station size 0 drops the station layer; the path layer remains.
+    // Station size 0 drops the station dots; the path layer and the names remain.
     const layers = extraLayers.current as Array<{ id: string; props: Record<string, unknown> }>;
-    expect(layers.map((l) => l.id)).toEqual(["dashboard-rail-paths"]);
+    expect(layers.map((l) => l.id)).toEqual([
+      "dashboard-rail-paths",
+      "dashboard-rail-station-labels",
+    ]);
     const getWidth = layers[0].props.getWidth as (d: { traced: boolean }) => number;
     expect(getWidth({ traced: true })).toBe(7);
   });

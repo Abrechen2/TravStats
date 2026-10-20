@@ -301,11 +301,10 @@ describe("buildStationLabelLayers", () => {
     expect(layer.id).toBe("all-rail-station-labels");
   });
 
-  it("builds nothing without rides, with labels off, or on the globe", () => {
+  it("builds nothing without rides or with labels off", () => {
     const opts = { idPrefix: "x" };
     const one = [{ rides: [ride()], color: RGB }];
     expect(buildStationLabelLayers([], { ...opts, labelsMode: "all" })).toEqual([]);
     expect(buildStationLabelLayers(one, { ...opts, labelsMode: "off" })).toEqual([]);
-    expect(buildStationLabelLayers(one, { ...opts, labelsMode: "all", onGlobe: true })).toEqual([]);
   });
 });
