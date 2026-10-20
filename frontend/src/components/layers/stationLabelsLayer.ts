@@ -59,55 +59,144 @@ export function toStationLabel(name: string): string {
   return toPortLabel(name, MAX_STATION_LABEL_LEN);
 }
 
-/**
- * The name-and-place key of a station, or null for one that cannot be labelled:
- * no name, or no coordinates (rows are external data, whatever their type says).
- */
-function coordKey(name: unknown, lon: number, lat: number): string | null {
-  if (typeof name !== "string" || name.trim().length === 0) return null;
-  if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
-  return `${name.trim().toLocaleLowerCase()}@${lon.toFixed(4)},${lat.toFixed(4)}`;
+/** Stations closer than this are one place, whatever their spelling. */
+export const SAME_STATION_M = 100;
+/** Grid cell of the place index, in degrees — about the merge distance. */
+const CELL_DEG = 0.001;
+
+interface Pending {
+  key: string;
+  position: [number, number];
+  count: number;
+  /** Spelling → how many rides used it; the most used one names the label. */
+  spellings: Map<string, number>;
+  hasId: boolean;
+}
+
+const cellOf = (lon: number, lat: number): [number, number] => [
+  Math.floor(lon / CELL_DEG),
+  Math.floor(lat / CELL_DEG),
+];
+
+/** Equirectangular metres — exact enough at 100 m, and cheap. */
+function metresBetween(a: [number, number], lon: number, lat: number): number {
+  const kx = 111_320 * Math.cos((lat * Math.PI) / 180);
+  return Math.hypot((a[0] - lon) * kx, (a[1] - lat) * 110_574);
+}
+
+function usable(name: unknown, lon: number, lat: number): name is string {
+  return (
+    typeof name === "string" &&
+    name.trim().length > 0 &&
+    Number.isFinite(lon) &&
+    Number.isFinite(lat)
+  );
+}
+
+function mostUsed(spellings: Map<string, number>): string {
+  let best = "";
+  let bestCount = -1;
+  for (const [spelling, count] of spellings) {
+    if (count > bestCount) {
+      best = spelling;
+      bestCount = count;
+    }
+  }
+  return best;
 }
 
 /**
  * Each station once, with how often it was used. A catalogue id names a
- * station even where two rides stored slightly different coordinates; without
- * one (bus, ferry, a hand-entered stop) the name and the coordinates do. Both
- * keys point at one entry, so a ride with an id and one without still meet.
+ * station even where two rides stored slightly different coordinates. Without
+ * one (bus, ferry, a hand-entered stop) the PLACE does: every row within
+ * `SAME_STATION_M` of a station is that station, however it was spelled —
+ * "München Hbf" and "Muenchen Hbf" on one platform used to split their count
+ * and print two names on top of each other. The label shows the spelling the
+ * rides used most. A row without an id joins the nearest station, with or
+ * without one; two DIFFERENT catalogue ids stay two stations even when they
+ * share a place ("Berlin Hbf" and "Berlin Hbf (tief)").
+ *
+ * The place index is a grid, so this stays linear in the number of rides.
  *
  * A cancelled ride never ran and draws no line, so it names no station either —
  * the reading every route builder takes of it.
  */
 export function buildStationLabels(rides: readonly StationLabelSource[]): StationLabelDatum[] {
-  const byKey = new Map<string, StationLabelDatum>();
-  const out: StationLabelDatum[] = [];
-  const touch = (name: string, lon: number, lat: number, id: number | null | undefined) => {
-    const nameKey = coordKey(name, lon, lat);
-    if (nameKey === null) return;
-    const idKey = id === null || id === undefined ? null : `id:${id}`;
-    const existing = (idKey ? byKey.get(idKey) : undefined) ?? byKey.get(nameKey);
-    const entry = existing ?? {
-      key: idKey ?? nameKey,
-      name: name.trim(),
-      shortLabel: toStationLabel(name),
-      position: [lon, lat] as [number, number],
+  const byId = new Map<string, Pending>();
+  const grid = new Map<string, Pending[]>();
+  const out: Pending[] = [];
+  const nearest = (lon: number, lat: number): Pending | undefined => {
+    const [cx, cy] = cellOf(lon, lat);
+    let best: Pending | undefined;
+    let bestM = SAME_STATION_M;
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        for (const p of grid.get(`${cx + dx}:${cy + dy}`) ?? []) {
+          const m = metresBetween(p.position, lon, lat);
+          if (m <= bestM) {
+            best = p;
+            bestM = m;
+          }
+        }
+      }
+    }
+    return best;
+  };
+  const idKeyOf = (id: number | null | undefined) =>
+    id === null || id === undefined ? null : `id:${id}`;
+  /** The station a row belongs to, if it is already known. An id never joins
+   *  a place already claimed by another id. */
+  const resolve = (lon: number, lat: number, idKey: string | null): Pending | undefined => {
+    const near = nearest(lon, lat);
+    return idKey ? (byId.get(idKey) ?? (near && !near.hasId ? near : undefined)) : near;
+  };
+  const touch = (name: unknown, lon: number, lat: number, id: number | null | undefined) => {
+    if (!usable(name, lon, lat)) return null;
+    const idKey = idKeyOf(id);
+    const existing = resolve(lon, lat, idKey);
+    const entry: Pending = existing ?? {
+      key: idKey ?? `@${lon.toFixed(4)},${lat.toFixed(4)}`,
+      position: [lon, lat],
       count: 0,
+      spellings: new Map(),
+      hasId: false,
     };
-    if (!existing) out.push(entry);
+    if (!existing) {
+      out.push(entry);
+      const [cx, cy] = cellOf(lon, lat);
+      const cell = `${cx}:${cy}`;
+      grid.set(cell, [...(grid.get(cell) ?? []), entry]);
+    }
+    if (idKey && !entry.hasId) {
+      entry.hasId = true;
+      entry.key = idKey;
+      byId.set(idKey, entry);
+    }
     entry.count += 1;
-    if (idKey) byKey.set(idKey, entry);
-    byKey.set(nameKey, entry);
+    const spelling = name.trim();
+    entry.spellings.set(spelling, (entry.spellings.get(spelling) ?? 0) + 1);
+    return entry;
   };
   for (const ride of rides) {
     if (ride.status === "cancelled") continue;
-    touch(ride.depStationName, ride.depLon, ride.depLat, ride.depStationId);
+    const dep = touch(ride.depStationName, ride.depLon, ride.depLat, ride.depStationId);
     // A round trip on one station counts once per ride, not twice.
-    const depKey = coordKey(ride.depStationName, ride.depLon, ride.depLat);
     const sameStation =
-      depKey !== null && depKey === coordKey(ride.arrStationName, ride.arrLon, ride.arrLat);
+      dep !== null &&
+      usable(ride.arrStationName, ride.arrLon, ride.arrLat) &&
+      resolve(ride.arrLon, ride.arrLat, idKeyOf(ride.arrStationId)) === dep;
     if (!sameStation) touch(ride.arrStationName, ride.arrLon, ride.arrLat, ride.arrStationId);
   }
-  return out;
+  return out.map((p) => {
+    const name = mostUsed(p.spellings);
+    return {
+      key: p.key,
+      name,
+      shortLabel: toStationLabel(name),
+      position: p.position,
+      count: p.count,
+    };
+  });
 }
 
 /** The labels shown at one zoom — the airport labels' pick, verbatim. */

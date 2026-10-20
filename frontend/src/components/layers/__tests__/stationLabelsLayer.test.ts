@@ -71,6 +71,27 @@ describe("buildStationLabels", () => {
     expect(labels.filter((l) => l.name === "Hauptbahnhof")).toHaveLength(2);
   });
 
+  it("joins two spellings of one place and shows the more used one (Codex review)", () => {
+    const at = { depLat: 48.1402, depLon: 11.5583 };
+    const labels = buildStationLabels([
+      ride({ ...at, depStationName: "Muenchen Hbf" }),
+      ride({ ...at, depStationName: "München Hbf" }),
+      ride({ depStationName: "München Hbf", depLat: 48.1404, depLon: 11.5586 }),
+    ]);
+    const munich = labels.filter((l) => l.name !== "Hamburg Hbf");
+    expect(munich).toHaveLength(1);
+    expect(munich[0].count).toBe(3);
+    expect(munich[0].name).toBe("München Hbf");
+  });
+
+  it("keeps a second catalogue station at the same place apart from the first", () => {
+    const labels = buildStationLabels([
+      ride({ depStationId: 1, depStationName: "Berlin Hbf" }),
+      ride({ depStationId: 2, depStationName: "Berlin Hbf (tief)" }),
+    ]);
+    expect(labels.filter((l) => l.name.startsWith("Berlin"))).toHaveLength(2);
+  });
+
   it("leaves out cancelled rides, nameless stations and missing coordinates", () => {
     const labels = buildStationLabels([
       ride({ status: "cancelled" }),
