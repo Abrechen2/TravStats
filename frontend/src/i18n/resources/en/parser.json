@@ -50,7 +50,22 @@
       "syncing": "Refreshing …",
       "addTemplate": "Add a template →",
       "loaded": "{{count}} templates loaded · daily auto-update from GitHub",
-      "adminOnly": "Only an admin can refresh. The daily auto-update still runs."
+      "adminOnly": "Only an admin can refresh. The daily auto-update still runs.",
+      "loadFailed": "The template status could not be loaded.",
+      "syncFailed": "The refresh failed. The templates loaded last are still in use."
+    },
+    "sync": {
+      "indexUnreachable": "The template index was unreachable at the last sync ({{date}}). The templates loaded last are still in use ({{count}}).",
+      "indexUnreachableNoDate": "The template index was unreachable at the last sync. The templates loaded last are still in use ({{count}}).",
+      "rejectedTitle": "At the last sync ({{date}}), {{count}} templates could not be loaded:",
+      "rejectedTitleNoDate": "At the last sync, {{count}} templates could not be loaded:",
+      "refusedUpdate": "{{id}}: a newer version was refused; v{{version}} is still in use.",
+      "reasons": {
+        "fetch_failed": "could not be fetched",
+        "invalid": "invalid",
+        "tests_failed": "failed its own tests",
+        "needs_newer_app": "needs a newer TravStats version"
+      }
     }
   },
   "domains": {

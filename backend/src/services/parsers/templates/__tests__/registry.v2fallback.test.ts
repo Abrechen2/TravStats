@@ -83,7 +83,11 @@ describe("TemplateRegistry — v2 beside the v1 airline path", () => {
       "https://raw.githubusercontent.com/Abrechen2/travstats-templates/main/templates/XX.json",
     ]);
     expect(fs.existsSync(path.join(tmp, "cache", "XX.json"))).toBe(true);
-    expect(registry.getV2Status()).toEqual({ index: "unavailable", templates: [] });
+    expect(registry.getV2Status()).toEqual({
+      index: "unavailable",
+      ranAt: expect.any(String),
+      templates: [],
+    });
     expect(registry.getActiveV2()).toEqual([]);
   });
 

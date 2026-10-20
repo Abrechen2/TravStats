@@ -102,6 +102,8 @@ export class V2TemplateStore {
   private active: ReadonlyMap<string, ActiveTemplate> = new Map();
   private status: readonly V2TemplateStatusEntry[] = [];
   private indexState: V2Status["index"] = "unknown";
+  /** When the last sync ran — shown so a failure has a date (forgejo#309). */
+  private ranAt: string | null = null;
   private readonly runners: RunnerRegistry;
 
   constructor(private readonly deps: V2LoaderDeps) {
@@ -113,7 +115,7 @@ export class V2TemplateStore {
   }
 
   getStatus(): V2Status {
-    return { index: this.indexState, templates: [...this.status] };
+    return { index: this.indexState, ranAt: this.ranAt, templates: [...this.status] };
   }
 
   /**
@@ -178,6 +180,14 @@ export class V2TemplateStore {
    * path alone, exactly as before v2 existed. Never rejects.
    */
   async sync(): Promise<boolean> {
+    try {
+      return await this.syncIndex();
+    } finally {
+      this.ranAt = new Date().toISOString();
+    }
+  }
+
+  private async syncIndex(): Promise<boolean> {
     let rawEntries: unknown[];
     try {
       const index = templateIndexSchema.safeParse(

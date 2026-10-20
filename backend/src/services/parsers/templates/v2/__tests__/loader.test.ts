@@ -97,6 +97,7 @@ describe("V2TemplateStore.sync", () => {
     expect(store.getActive().map((x) => x.id)).toEqual(["lodging:examplechain"]);
     expect(store.getStatus()).toEqual({
       index: "available",
+      ranAt: expect.any(String),
       templates: [
         {
           id: "lodging:examplechain",
@@ -261,6 +262,11 @@ describe("V2TemplateStore.sync", () => {
 
     expect(store.getStatus().index).toBe("unavailable");
     expect(store.getActive()).toHaveLength(1);
+    // The last good set stays listed, and the failure carries its date.
+    expect(store.getStatus().templates).toEqual([
+      expect.objectContaining({ id: t.id, state: "active", source: "cached" }),
+    ]);
+    expect(Date.parse(store.getStatus().ranAt ?? "")).not.toBeNaN();
   });
 
   it("treats a v1-shaped index as no v2 index", async () => {
