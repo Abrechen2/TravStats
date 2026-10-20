@@ -85,7 +85,36 @@ export function countryTierChoicesFor(
  * inventing a word for it.
  */
 export type PassportEvidenceKind =
-  "flight" | "lodging" | "port" | "place" | "rail" | "bus" | "ferry" | "roadtrip" | "track";
+  | "flight"
+  | "lodging"
+  | "port"
+  | "place"
+  | "rail"
+  | "bus"
+  | "ferry"
+  | "roadtrip"
+  | "track"
+  /** The user's own word (forgejo#308) — a country only an override puts here. */
+  | "manual";
+
+/**
+ * The user's verdict on a passport country (forgejo#308) — mirrors
+ * `CountryOverrideView` in backend `services/stats/countryOverrides.ts`.
+ * `visited`: counts as a visit. `ground`: on the ground, not a visit.
+ * `excluded`: out of every set and total.
+ */
+export type CountryOverrideVerdict = "visited" | "ground" | "excluded";
+export interface CountryOverrideView {
+  verdict: CountryOverrideVerdict;
+  note: string;
+  /** `YYYY-MM-DD`, a day the user remembers; null when none was given. */
+  day: string | null;
+}
+export interface ExcludedCountry {
+  code: string;
+  note: string;
+  day: string | null;
+}
 
 /**
  * How long the traveller was on the ground in a country — spec §3.4b, mirrored
@@ -178,6 +207,8 @@ export interface PassportCountry {
   places?: number;
   /** The lodging stamp (forgejo#93). Null when no house proves the country. */
   lodging?: PassportLodgingStamp | null;
+  /** The user's verdict (forgejo#308). Absent on an older server, null when none. */
+  override?: CountryOverrideView | null;
 }
 
 /**
@@ -242,10 +273,11 @@ export interface Passport {
     firstStampYear: number | null;
     newThisYear: number;
     /** Countries per strongest evidence KIND. Sums to `countriesTotal`. */
-    /** `bus` is absent from a server older than forgejo#265. */
-    byEvidence: Record<Exclude<PassportEvidenceKind, "bus" | "ferry">, number> & {
+    /** `bus` is absent from a server older than forgejo#265, `manual` older than forgejo#308. */
+    byEvidence: Record<Exclude<PassportEvidenceKind, "bus" | "ferry" | "manual">, number> & {
       bus?: number;
       ferry?: number;
+      manual?: number;
     };
     /** Countries per evidence STRENGTH. Also sums to `countriesTotal`. */
     byTier: Record<CountryTier, number>;
@@ -261,6 +293,8 @@ export interface Passport {
     firstDate: string;
     lastDate: string;
   }>;
+  /** Countries the user excluded (forgejo#308); absent on older servers. */
+  excludedCountries?: ExcludedCountry[];
   continents: PassportContinentQuota[];
   groups: PassportContinentGroup[];
   stamps: PassportStamp[];
@@ -358,6 +392,7 @@ export interface CountryDetail {
   visited?: boolean;
   visitUncertain?: boolean;
   visitUncertainReasons?: PassportUnclearReason[];
+  override?: CountryOverrideView | null;
   code: string;
   continent: Continent | null;
   evidence: PassportEvidenceKind;

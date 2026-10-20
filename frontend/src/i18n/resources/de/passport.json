@@ -41,7 +41,8 @@
     "track": "Standortverlauf",
     "rail": "Bahn",
     "bus": "Bus",
-    "ferry": "Fähre"
+    "ferry": "Fähre",
+    "manual": "Von Hand"
   },
   "value": {
     "dash": "—",
@@ -114,5 +115,48 @@
     "explanation": "Diese Dawarich-Standorte belegen keinen Bodenkontakt. Sie können von Überflügen oder ungenauen Positionen stammen und erhöhen weder Länderzahlen noch Aufenthaltstage. Ein bestätigter Ortsbesuch oder Reiseeintrag wird unabhängig davon gezählt.",
     "observation": "Dawarich · Standorttage: {{days}} · Punkte: {{points}}"
   },
-  "countingRule": "Bodenkontakt umfasst Umstiege und Durchfahrten. Besuche brauchen einen belegten Aufenthalt außerhalb reiner Transitorte oder eine nachvollziehbare Hin-/Rückflugkette. Nächte und Standortpunkte allein beweisen keinen Besuch."
+  "countingRule": "Bodenkontakt umfasst Umstiege und Durchfahrten. Besuche brauchen einen belegten Aufenthalt außerhalb reiner Transitorte oder eine nachvollziehbare Hin-/Rückflugkette. Nächte und Standortpunkte allein beweisen keinen Besuch.",
+  "overrides": {
+    "add": "Land von Hand eintragen",
+    "addTitle": "Land von Hand eintragen",
+    "editTitle": "Land korrigieren",
+    "correct": "Korrigieren",
+    "country": "Land",
+    "countryPlaceholder": "Land auswählen …",
+    "verdictLegend": "Wie soll das Land zählen?",
+    "verdict": {
+      "visited": "Besucht",
+      "visitedHint": "Zählt als besuchtes Land — auch ohne Beleg in deinen Einträgen.",
+      "ground": "Nur am Boden",
+      "groundHint": "Bodenkontakt, aber kein Besuch — etwa ein Umstieg oder eine Durchfahrt.",
+      "excluded": "Nicht zählen",
+      "excludedHint": "Das Land fällt aus allen Zahlen heraus. Du kannst das jederzeit rückgängig machen."
+    },
+    "note": "Notiz",
+    "noteHint": "Warum? Die Notiz erscheint bei den Belegen des Landes.",
+    "noteRequired": "Bitte schreib kurz dazu, warum.",
+    "countryRequired": "Bitte wähle ein Land aus.",
+    "day": "Tag (optional)",
+    "dayHint": "Ein Tag, an den du dich erinnerst. Leer lassen, wenn du ihn nicht weißt.",
+    "save": "Speichern",
+    "saving": "Speichert …",
+    "delete": "Korrektur löschen",
+    "deleting": "Löscht …",
+    "cancel": "Abbrechen",
+    "labelManual": "Von Hand",
+    "labelCorrected": "Korrigiert",
+    "provenanceNote": "Deine Notiz: {{note}}",
+    "provenanceDay": "Tag: {{day}}",
+    "loadError": "Die Länderliste für die Korrektur konnte nicht geladen werden. Bitte versuch es später noch einmal.",
+    "saveError": "Die Korrektur konnte nicht gespeichert werden. Bitte versuch es noch einmal.",
+    "deleteError": "Die Korrektur konnte nicht gelöscht werden. Bitte versuch es noch einmal.",
+    "unknownCountry": "Dieses Land kennt der Server nicht. Bitte wähle ein anderes aus.",
+    "notFound": "Für dieses Land gibt es keine Korrektur mehr — die Ansicht wird neu geladen.",
+    "demoForbidden": "Das Demo-Konto kann keine Korrekturen speichern.",
+    "reloadError": "Gespeichert, aber der Pass konnte nicht neu geladen werden. Lade die Seite neu, um die neuen Zahlen zu sehen.",
+    "excludedTitle": "Nicht gezählte Länder",
+    "excludedExplanation": "Diese Länder hast du aus dem Pass genommen. Bis du sie wieder zählst, fehlen diese Länder in allen Zahlen.",
+    "restore": "Wieder zählen",
+    "restoreError": "Das Land konnte nicht wieder aufgenommen werden. Bitte versuch es noch einmal."
+  }
 }
