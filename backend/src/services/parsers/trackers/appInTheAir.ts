@@ -63,6 +63,12 @@ function cabinOf(raw: string | undefined): PreviewRowInput["seatClass"] {
   return undefined;
 }
 
+/** A `dep_utc`/`arr_utc` field (UTC without a designator) as an ISO instant. */
+function utcInstant(raw: string | undefined): string | undefined {
+  const ms = Date.parse(`${raw ?? ""}Z`);
+  return Number.isNaN(ms) ? undefined : new Date(ms).toISOString();
+}
+
 function secondsBetween(
   fromUtc: string | undefined,
   toUtc: string | undefined
@@ -100,6 +106,9 @@ function readFlight(
     depTimeLocal: dep.time,
     arrDate: arr?.date,
     arrTimeLocal: arr?.time,
+    // The UTC clocks say which 02:30 of an autumn night the local ones mean.
+    depInstant: utcInstant(fields[F.depUtc]),
+    arrInstant: arr ? utcInstant(fields[F.arrUtc]) : undefined,
     durationSeconds: secondsBetween(fields[F.depUtc], fields[F.arrUtc]),
     fromIata,
     toIata,
