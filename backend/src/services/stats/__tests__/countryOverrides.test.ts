@@ -122,6 +122,23 @@ describe("forgejo#308: country overrides", () => {
     expectRecounted(p);
   });
 
+  it("visited with an earlier day moves the first visit back, so the country is not new", () => {
+    const thisYearsTrip = [
+      flight("MUC", "DOH", "2026-01-01"),
+      flight("DOH", "HAN", "2026-01-02"),
+      flight("HAN", "DOH", "2026-01-20"),
+      flight("DOH", "MUC", "2026-01-21"),
+    ];
+    const base = automatic(thisYearsTrip);
+    expect(row(base, "VN")).toMatchObject({ firstVisitedYear: 2026, isNew: true });
+
+    const p = applyCountryOverrides(base, [override("VN", "visited", "2019-05-04")], THIS_YEAR);
+
+    expect(row(p, "VN")).toMatchObject({ firstYear: 2019, firstVisitedYear: 2019, isNew: false });
+    expect(p.summary.newThisYear).toBe(base.summary.newThisYear - 1);
+    expectRecounted(p);
+  });
+
   it("a manual row without a day is undated and never new", () => {
     const p = applyCountryOverrides(automatic(OPEN_JAW), [override("pt", "visited")], THIS_YEAR);
     expect(row(p, "PT")).toMatchObject({

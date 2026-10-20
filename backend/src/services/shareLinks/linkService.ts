@@ -243,13 +243,19 @@ async function targetAutoExpiry(row: LinkRow): Promise<Date | null> {
 async function settledExpiry(row: LinkRow): Promise<Date> {
   if (!row.flightId && !row.fields.includes("itinerary")) return row.effectiveExpiresAt;
   const effective = earlier(row.effectiveExpiresAt, await targetAutoExpiry(row));
-  if (effective < row.effectiveExpiresAt) {
-    await prisma.publicShareLink.update({
-      where: { id: row.id },
-      data: { effectiveExpiresAt: effective },
-    });
-  }
-  return effective;
+  if (effective >= row.effectiveExpiresAt) return effective;
+  // Lowered in the database, not from the row read above: a settlement that
+  // finished in between may already have stored an even earlier end, and an
+  // unconditional write would raise it again. The answer is what is stored.
+  await prisma.publicShareLink.updateMany({
+    where: { id: row.id, effectiveExpiresAt: { gt: effective } },
+    data: { effectiveExpiresAt: effective },
+  });
+  const persisted = await prisma.publicShareLink.findUnique({
+    where: { id: row.id },
+    select: { effectiveExpiresAt: true },
+  });
+  return persisted?.effectiveExpiresAt ?? effective;
 }
 
 /**
