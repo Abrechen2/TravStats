@@ -297,6 +297,10 @@ export async function mergeTrips(
     // Trip-wide expenses CASCADE with their trip too (forgejo#140). A
     // section's expense needs nothing: it rides on the section moved above.
     await tx.tripExpense.updateMany(move);
+    // Companion recordings CASCADE with their trip (forgejo#316). Owner and
+    // uploadId stay as they are, so the (userId, uploadId) key cannot collide;
+    // they are private and deliberately absent from the propagation below.
+    await tx.tripRecordingBatch.updateMany(move);
     // Albums BEFORE photos: an album left on a source trip is cascade-deleted
     // with it, and takes the photos this merge just moved with it (AUD-029).
     const duplicateAlbums = await mergeImmichAlbums(tx, sourceIds, targetId);
