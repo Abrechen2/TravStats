@@ -411,7 +411,8 @@
         "unreadable_other": "{{count}} photos that are missing or cannot be read",
         "overLimit_one": "{{count}} photo beyond the limit of 12",
         "overLimit_other": "{{count}} photos beyond the limit of 12"
-      }
+      },
+      "itineraryHint": "Shows every entry of the trip on local time – flight numbers, stays with their address, train, bus, ferry, rental car, cruise ports – and what is happening now. Never booking numbers, seat, room or cabin numbers, prices, documents, notes or companions. The link ends at the latest 24 hours after the trip's last day."
     },
     "fields": {
       "flight": {
@@ -433,7 +434,8 @@
         "costs": "Costs",
         "companions": "Companions",
         "photos": "Photos (up to 12, without location data)",
-        "notes": "Notes (only those marked shareable, without photos or coordinates)"
+        "notes": "Notes (only those marked shareable, without photos or coordinates)",
+        "itinerary": "Itinerary (who is where, when)"
       },
       "wrapped": {
         "owner": "Your first name",
@@ -467,7 +469,26 @@
       "noNotes": "No shareable note on these days",
       "moreNotes": "more not shown",
       "notes_one": "{{count}} shareable note",
-      "notes_other": "{{count}} shareable notes"
+      "notes_other": "{{count}} shareable notes",
+      "itinerary": {
+        "title": "Itinerary",
+        "empty": "No entries yet.",
+        "inProgress": "Now",
+        "next": "Next",
+        "atSea": "At sea",
+        "day": "Day {{n}}",
+        "kind": {
+          "flight": "Flight",
+          "stay": "Stay",
+          "cruise": "Cruise",
+          "rail": "Train",
+          "bus": "Bus",
+          "ferry": "Ferry",
+          "rental": "Rental car",
+          "visit": "Visit",
+          "stop": "Stop"
+        }
+      }
     },
     "section": {
       "title": "Public links",
@@ -500,7 +521,8 @@
       "expiry": "The expiry does not lie between now and 90 days ahead.",
       "notFound": "This does not exist (any more).",
       "createFailed": "The link could not be created.",
-      "revokeFailed": "The link could not be revoked."
+      "revokeFailed": "The link could not be revoked.",
+      "tripEnded": "This trip is already over – an itinerary link is no longer possible. A link without the itinerary still works."
     }
   }
 }

@@ -195,14 +195,24 @@ export default function ShareLinkDialog({
             <fieldset className="flex flex-col gap-1.5">
               <legend className="mb-1 font-semibold">{t(`${NS}.dialog.fieldsTitle`)}</legend>
               {SHARE_LINK_FIELDS[kind].map((field) => (
-                <label key={field} className="inline-flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={fields.includes(field)}
-                    onChange={(e) => toggle(field, e.target.checked)}
-                  />
-                  {t(`${NS}.fields.${kind}.${field}`)}
-                </label>
+                <div key={field} className="flex flex-col">
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={fields.includes(field)}
+                      onChange={(e) => toggle(field, e.target.checked)}
+                      aria-describedby={
+                        field === "itinerary" ? "share-link-itinerary-hint" : undefined
+                      }
+                    />
+                    {t(`${NS}.fields.${kind}.${field}`)}
+                  </label>
+                  {field === "itinerary" && (
+                    <p id="share-link-itinerary-hint" className="t-caption ml-6">
+                      {t(`${NS}.dialog.itineraryHint`)}
+                    </p>
+                  )}
+                </div>
               ))}
             </fieldset>
             <Field label={t(`${NS}.dialog.expiry`)} htmlFor="share-link-expiry">
