@@ -138,7 +138,15 @@ server, and positions that are part of the TravStats backup.
 
 ### 3.4 Derivations — all as suggestions with provenance (existing rule)
 - **Country days** — `countryDays/reduce.ts` unchanged, reading the source;
-  still „unconfirmed", never proof alone (forgejo#299).
+  still „unconfirmed", never proof alone (forgejo#299). **Confirming a country
+  means confirming an entry, not the country** (owner, 2026-10-20: „was
+  bestätige ich da, müsste ich nicht einen Ort angeben"). The inbox card
+  proposes the place where the points cluster that day („Hakata-Hafen,
+  Fukuoka, 2 h 45 min") and a matching unlogged journey if one fits; the
+  answers are: save that place (the country becomes „Besucht" with the place
+  as evidence), choose another place, „nur durchgereist" (counts as „Am Boden
+  gewesen", evidenced by the points), or „nicht dort gewesen" (never proposed
+  again for that day, points stay). There is no bare „Land bestätigen".
 - **Stays → place visits / lodging nights** — the forgejo#294 detector on the
   source; no 30-day look-back any more; suppression and coverage as today.
 - **Trips** — away-from-home periods (home periods exist) → trip suggestions;
@@ -221,6 +229,15 @@ App Review sees an always-on purpose — the mode is off by default, explained o
 the location screen, with the iOS indicator; if Apple objects, „Alltag" goes
 and „Reise genau" stays.
 
+### 5.1 Settings levels (forgejo#318)
+Settings → Standortverlauf follows the Standard / Experte levels: source,
+modes, preset, suggestions on/off, privacy zones, imports and export are
+Standard; the detailed recording values, the detection thresholds, „Orte als
+Fläche erkennen" (default on), the Dawarich full import and the
+OwnTracks/Overland key are Experte. Search finds expert settings in either
+view and switches to Experte. Prototype: claude.ai artifact
+„Einstellungsstufen Prototyp".
+
 ## 6. Explicitly NOT copied
 Family live-location sharing, a live map of others, Poster/Video studio, MCP.
 
@@ -229,3 +246,47 @@ Family live-location sharing, a live map of others, Poster/Video studio, MCP.
    never lost, recommended) or to Dawarich?
 2. Default of the „Alltag" mode for new users: off (recommended) or on?
 3. Reverse geocoding for cities: which provider and daily budget?
+
+## 8. Cold review by Codex (2026-10-20) — to resolve before P1
+
+Ranked by severity; each becomes a decision or a design paragraph above.
+
+1. **Source switch can strand recordings** — with Dawarich chosen, Companion
+   points are stored internally but never derived from. Separate *storage*,
+   *origin* and *derivation source*, or derive from both.
+2. **`LocationSource` needs a completeness contract** — cursor/streaming,
+   ordering, coverage, truncation and upstream failure; the Dawarich client
+   caps at 50 000 points per call and the stay window at 250 000.
+3. **Dedup key conflates identity with coincidence** — give observations a
+   stable id, keep origin/import membership; deleting one import must not
+   remove another source's evidence.
+4. **Upload idempotency** — persist `(user, uploadId, payloadHash, result)`
+   atomically, reject a reused id with other content, per-point
+   acknowledgement, retryable vs permanent errors.
+5. **Deletion semantics** — tombstones so an offline phone or a re-import
+   cannot resurrect deleted points; derived caches invalidated.
+6. **Privacy zones** — „nicht speichern" vs „speichern, nie zeigen", and their
+   effect on exports, heatmap, „Zuletzt gesehen", suggestions and geocoder
+   calls; derived PlaceVisits can leak through ordinary sharing.
+7. **Re-running derivations is a subsystem** — algorithm/config version,
+   input revision, bounded windows, atomic replacement; user decisions stored
+   apart from regenerated candidates.
+8. **Raw points immutable, inferred flags versioned** — `in_flight` and
+   anomaly depend on editable flights and thresholds.
+9. **Never confirm a flight from a gap** — airport presence plus silence is
+   evidence for review, not „flown" (the mockup already says so).
+10. **Scale** — ~300 MB per heavy user-year before indexes; bounded reads,
+    streamed exports, downsampled map tiles, resumable restore; #316's
+    read-all-batches query must not survive.
+11. **Phone** — Expo exposes no significant-change API and no `CLVisit`;
+    `timeInterval` is Android-only; restart after kill/reboot and Android 12+/14+
+    foreground-service rules are the hardest risk. Prototype the lifecycle and
+    battery first, one recording coordinator, a durable outbox.
+12. **Parity is overstated** — missing: raw-point search/management, import
+    inspection and rollback, Immich/PhotoPrism geotag enrichment,
+    Traccar/GPSLogger.
+
+**Reordered phases (Codex):** prove phone lifecycle + battery and settle
+source routing first; then point store, ingest receipts, deletion, streamed
+backup/restore and the #316 map; then Dawarich migration + one simple file
+importer; defer Semantic Timeline, mode inference, flight evidence, cities.
