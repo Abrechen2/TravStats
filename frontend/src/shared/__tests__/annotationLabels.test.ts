@@ -131,4 +131,19 @@ describe("the workshop's per-domain label sets (frontend mirror)", () => {
     expect(isLabelOfDomain("rental", "returnStation")).toBe(true);
     expect(isLabelOfDomain("rail", "returnStation")).toBe(false);
   });
+  it("offers one bus ride row and one ferry crossing row (forgejo#309)", () => {
+    expect(isWorkshopDomain("bus")).toBe(true);
+    expect(isWorkshopDomain("ferry")).toBe(true);
+    expect(labelGroupsForDomain("bus")).toEqual(["booking", "money", "busRide"]);
+    expect(labelGroupsForDomain("ferry")).toEqual(["booking", "money", "ferryCrossing"]);
+    expect(labelOfDomain("bus", "depStop")).toEqual({
+      id: "depStop",
+      group: "busRide",
+      kind: "text",
+    });
+    expect(isLabelOfDomain("bus", "line")).toBe(true);
+    expect(isLabelOfDomain("ferry", "vessel")).toBe(true);
+    expect(isLabelOfDomain("ferry", "depStop")).toBe(false);
+    expect(isLabelOfDomain("rail", "depPort")).toBe(false);
+  });
 });

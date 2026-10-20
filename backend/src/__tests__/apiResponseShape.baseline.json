@@ -141,6 +141,7 @@
     "bus.ts",
     "bus/entrySuggestions.ts",
     "bus/stats.ts",
+    "bus/tickets.ts",
     "calendarFeed.ts",
     "comparison.ts",
     "cruises.ts",

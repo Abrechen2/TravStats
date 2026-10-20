@@ -69,7 +69,23 @@ interface Signal {
  * German first and English beside it, because the sample corpus this was built
  * against is German and the product's primary locale is too.
  */
-const SIGNALS: Record<ParserSupportedDomain, readonly Signal[]> = {
+/**
+ * The parse targets `auto` never answers with (forgejo#309): a coach or ferry
+ * ticket is read only when the caller asks for it. Clients that send `auto`
+ * (the trip planner's import, the Companion) know no bus or ferry answer
+ * shape, so detection scores them not at all — neither as the leader nor
+ * among the candidates.
+ */
+export const EXPLICIT_ONLY_TARGETS = ["bus", "ferry"] as const;
+type ExplicitOnlyTarget = (typeof EXPLICIT_ONLY_TARGETS)[number];
+export type DetectableDomain = Exclude<ParserSupportedDomain, ExplicitOnlyTarget>;
+
+/** Every parse target detection scores, in the canonical tie-break order. */
+export const DETECTABLE_DOMAINS: readonly DetectableDomain[] = PARSER_SUPPORTED_DOMAINS.filter(
+  (d): d is DetectableDomain => !(EXPLICIT_ONLY_TARGETS as readonly string[]).includes(d)
+);
+
+const SIGNALS: Record<DetectableDomain, readonly Signal[]> = {
   flight: [
     // A flight number next to a route is the shape nothing else has. The
     // boundary and the airline-prefix rule matter: "ab 380 EUR" must not match,
@@ -255,7 +271,7 @@ const SIGNALS: Record<ParserSupportedDomain, readonly Signal[]> = {
 /** The parse targets recognised by their templates alone, and nothing else. */
 const TEMPLATE_ONLY_TARGETS = ["package", "place"] as const;
 type TemplateOnlyTarget = (typeof TEMPLATE_ONLY_TARGETS)[number];
-const isTemplateOnly = (d: ParserSupportedDomain): d is TemplateOnlyTarget =>
+const isTemplateOnly = (d: DetectableDomain): d is TemplateOnlyTarget =>
   (TEMPLATE_ONLY_TARGETS as readonly string[]).includes(d);
 
 /**
@@ -332,7 +348,7 @@ export function scoreDocument(
 ): DomainDetection {
   const haystack = text.slice(0, SCAN_LIMIT);
 
-  const scored = PARSER_SUPPORTED_DOMAINS.map((domain) => {
+  const scored = DETECTABLE_DOMAINS.map((domain) => {
     const matched: string[] = [];
     let score = 0;
     for (const signal of SIGNALS[domain]) {
@@ -371,7 +387,7 @@ export function scoreDocument(
   }));
 
   return {
-    domain: leader.score > 0 ? leader.domain : PARSER_SUPPORTED_DOMAINS[0],
+    domain: leader.score > 0 ? leader.domain : DETECTABLE_DOMAINS[0],
     confidence: withConfidence.find((e) => e.domain === leader.domain)?.confidence ?? 0,
     // Ties fall back to the same order the leader was picked in, NOT to
     // alphabetical — otherwise a tie makes `candidates[0]` disagree with

@@ -340,3 +340,55 @@ registry.registerPath({
     404: { description: "Not found", content: errorContent },
   },
 });
+
+const ticketProposal = z.record(z.string(), z.object({ value: z.string(), evidence: z.string() }));
+
+registry.registerPath({
+  method: "post",
+  path: "/bus/ticket-preview",
+  summary: "Preview coach ticket values without creating a ride",
+  description:
+    "Reads an uploaded document (`documentId`) or pasted text with the `bus` templates — the " +
+    "template repository's, then the caller's own ACTIVE workshop templates (forgejo#309). " +
+    "Template or decline: there is no model path. One proposal per ride, keyed by " +
+    "`departureStop`, `arrivalStop`, `departureLocal`, `arrivalLocal` (the stop's own wall " +
+    "clock), `operator`, `lineName`, `bookingReference`, `price`, `currency`. `reason` says why " +
+    "nothing was read: `noText`, `noTemplate` (no template claims the ticket) or `nothingRead` " +
+    "(one claimed it but read no complete ride). Nothing is saved.",
+  tags: ["Bus"],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.union([
+            z.object({ documentId: z.string().uuid() }),
+            z.object({ text: z.string().min(1).max(60000) }),
+          ]),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Template proposals for user review",
+      content: {
+        "application/json": {
+          schema: envelope(
+            z.object({
+              rides: z.array(ticketProposal),
+              parser: z.literal("template").nullable(),
+              reason: z.enum(["noText", "noTemplate", "nothingRead"]).nullable(),
+              template: z
+                .object({ id: z.string(), source: z.enum(["workshop", "repository"]) })
+                .nullable(),
+            })
+          ),
+        },
+      },
+    },
+    400: { description: "Validation failed", content: errorContent },
+    403: { description: "The shared demo account may not import", content: errorContent },
+    415: { description: "Document format not supported", content: errorContent },
+    429: { description: "Rate limited", content: errorContent },
+  },
+});

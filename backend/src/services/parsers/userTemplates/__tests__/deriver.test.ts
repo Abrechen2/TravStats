@@ -24,6 +24,14 @@ import {
 } from "./workshopSamples";
 import { RAIL_SELECTIONS, RAIL_SOURCE, RAIL_SUBJECT } from "./railSamples";
 import { RENTAL_SELECTIONS, RENTAL_SOURCE, RENTAL_SUBJECT } from "./rentalSamples";
+import {
+  BUS_SELECTIONS,
+  BUS_SOURCE,
+  BUS_SUBJECT,
+  FERRY_SELECTIONS,
+  FERRY_SOURCE,
+  FERRY_SUBJECT,
+} from "./rideSamples";
 
 describe("derivePatternFromSelection", () => {
   it("extracts context-anchored regex for a PNR field", () => {
@@ -170,4 +178,30 @@ describe("deriveTemplateFromAnnotation", () => {
     expect(parseWorkshopEnvelope(data.patterns, "rental")?.id).toBe("rental:user-td5");
     expect(parseWorkshopEnvelope(data.patterns, "rail")).toBeNull();
   });
+
+  it.each([
+    ["bus", "td6", BUS_SUBJECT, BUS_SOURCE, BUS_SELECTIONS],
+    ["ferry", "td7", FERRY_SUBJECT, FERRY_SOURCE, FERRY_SELECTIONS],
+  ] as const)(
+    "writes a %s annotation as a PENDING template holding a v2 envelope (forgejo#309)",
+    async (domain, id, subject, fullText, selections) => {
+      (prisma.trainingData.findUnique as jest.Mock).mockResolvedValueOnce({
+        id,
+        domain,
+        subject,
+        senderAddress: null,
+        annotations: { fullText, textSelections: selections },
+      });
+      (prisma.parserTemplate.findFirst as jest.Mock).mockResolvedValueOnce(null);
+      (prisma.parserTemplate.create as jest.Mock).mockResolvedValueOnce({ id: `tpl-${domain}` });
+
+      const result = await deriveTemplateFromAnnotation(id, "user1");
+
+      expect(result).toEqual({ status: "derived", templateId: `tpl-${domain}`, domain });
+      const data = (prisma.parserTemplate.create as jest.Mock).mock.lastCall?.[0].data;
+      expect(data).toMatchObject({ domain, status: "pending", sourceId: id });
+      expect(parseWorkshopEnvelope(data.patterns, domain)?.id).toBe(`${domain}:user-${id}`);
+      expect(parseWorkshopEnvelope(data.patterns, domain === "bus" ? "ferry" : "bus")).toBeNull();
+    }
+  );
 });

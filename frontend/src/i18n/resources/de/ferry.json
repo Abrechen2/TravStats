@@ -135,7 +135,7 @@
   },
   "import": {
     "title": "Fährticket einlesen",
-    "hint": "PDF mit Text, E-Mail (.eml) oder kopierten Tickettext einlesen. Unbekannte Layouts nutzen die konfigurierte KI-Verarbeitung. Du prüfst die Vorschläge vor der Übernahme.",
+    "hint": "PDF mit Text, E-Mail (.eml) oder kopierten Tickettext einlesen. Zuerst wird eine Fähren-Vorlage gefragt — deine eigene aus der Vorlagen-Werkstatt oder eine aus dem Vorlagen-Repository; unbekannte Layouts nutzen die konfigurierte KI-Verarbeitung. Du prüfst die Vorschläge vor der Übernahme.",
     "file": "Ticketdatei (PDF oder EML)",
     "text": "Tickettext",
     "reading": "Wird gelesen …",
@@ -150,7 +150,9 @@
     "oneCrossing": "Pro Import wird eine Überfahrt angelegt. Das Original wird nur dieser Überfahrt zugeordnet.",
     "review": "Prüfe Werte und Textbelege. Bereits ausgefüllte Felder sind nicht vorausgewählt.",
     "apply": "Auswahl ins Formular übernehmen",
-    "checkPorts": "Werte übernommen. Bitte beide Häfen auf der Karte oder über die Hafensuche bestätigen und alle Angaben prüfen."
+    "checkPorts": "Werte übernommen. Bitte beide Häfen auf der Karte oder über die Hafensuche bestätigen und alle Angaben prüfen.",
+    "readByWorkshop": "Mit deiner eigenen Werkstatt-Vorlage gelesen.",
+    "readByRepository": "Mit einer Vorlage aus dem Vorlagen-Repository gelesen."
   },
   "live": {
     "title": "Aktueller Schiffsstandort",

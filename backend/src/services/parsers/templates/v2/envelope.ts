@@ -28,6 +28,10 @@ export const TEMPLATE_DOMAINS = [
   // No repository template reads a place yet; the workshop derives the first
   // ones into the user's own rows (forgejo#124).
   "place",
+  // Coach and ferry tickets (forgejo#309): the workshop derives them first;
+  // a repository file of either domain is read by `rides/v2RideTicket.ts`.
+  "bus",
+  "ferry",
 ] as const;
 export type TemplateDomain = (typeof TEMPLATE_DOMAINS)[number];
 
@@ -38,6 +42,8 @@ export const ISSUER_KINDS = [
   "rail",
   "cruise-line",
   "tour-operator",
+  "bus-operator",
+  "ferry-line",
   "other",
 ] as const;
 

@@ -75,7 +75,9 @@
     "place": "Ort",
     "package": "Pauschalreise",
     "rail": "Bahnfahrt",
-    "rental": "Mietwagen"
+    "rental": "Mietwagen",
+    "bus": "Fernbusfahrt",
+    "ferry": "Fährüberfahrt"
   },
   "labelGroups": {
     "flight": "Flug",
@@ -96,7 +98,9 @@
     "railLeg": "Fahrtabschnitt",
     "rentalPickup": "Abholung",
     "rentalReturn": "Rückgabe",
-    "vehicle": "Fahrzeug"
+    "vehicle": "Fahrzeug",
+    "busRide": "Fahrt",
+    "ferryCrossing": "Überfahrt"
   },
   "labels": {
     "flight": {
@@ -208,6 +212,32 @@
       "vehicleClass": "Fahrzeugklasse",
       "price": "Gesamtpreis",
       "currency": "Währung"
+    },
+    "bus": {
+      "bookingReference": "Buchungsnummer",
+      "operator": "Busunternehmen",
+      "price": "Gesamtpreis",
+      "currency": "Währung",
+      "depStop": "Abfahrtshaltestelle",
+      "arrStop": "Ankunftshaltestelle",
+      "departureDate": "Reisetag",
+      "departureTime": "Abfahrtszeit",
+      "arrivalDate": "Ankunftstag",
+      "arrivalTime": "Ankunftszeit",
+      "line": "Linie"
+    },
+    "ferry": {
+      "bookingReference": "Buchungsnummer",
+      "operator": "Reederei",
+      "price": "Gesamtpreis",
+      "currency": "Währung",
+      "depPort": "Abfahrtshafen",
+      "arrPort": "Ankunftshafen",
+      "departureDate": "Tag der Überfahrt",
+      "departureTime": "Abfahrtszeit",
+      "arrivalDate": "Ankunftstag",
+      "arrivalTime": "Ankunftszeit",
+      "vessel": "Schiff"
     }
   },
   "workshop": {
@@ -224,7 +254,9 @@
       "place": "Markiere mindestens den Namen des Ortes, dazu nach Wunsch Adresse, Kategorie und Besuchsdatum. Gelesene Orte landen in der Import-Vorschau unter Einstellungen → Import.",
       "package": "Markiere Buchungsnummer und Ausstellungsdatum, nach Wunsch Reisename, Daten und Preis — dazu EINE Flugzeile (Flugnummer, Datum, Abflug und Ziel) und/oder EINE Hotelzeile (Hotel, An- und Abreise). Aus jeder markierten Zeile wird die Regel für alle Zeilen dieser Art.",
       "rail": "Markiere nach Wunsch Auftragsnummer, Klasse und Preis — dazu EINEN Fahrtabschnitt: Abfahrtsbahnhof, Abfahrtszeit, Ankunftsbahnhof, nach Wunsch Ankunftszeit und Zug. Den Reisetag markierst du dort, wo er steht: in der Zeile oder in der Überschrift darüber.",
-      "rental": "Markiere den Vermieter, die Reservierungsnummer und für Abholung und Rückgabe jeweils Station und Datum — die Uhrzeit, wenn sie dasteht. Ohne Uhrzeit bleibt das Ende ein Tag, es wird keine Zeit erfunden."
+      "rental": "Markiere den Vermieter, die Reservierungsnummer und für Abholung und Rückgabe jeweils Station und Datum — die Uhrzeit, wenn sie dasteht. Ohne Uhrzeit bleibt das Ende ein Tag, es wird keine Zeit erfunden.",
+      "bus": "Markiere nach Wunsch Buchungsnummer und Preis — dazu EINE Fahrt: Abfahrtshaltestelle, Abfahrtszeit, Ankunftshaltestelle und optional Ankunftszeit und Linie. Den Reisetag markierst du dort, wo er steht: in der Zeile oder in der Überschrift darüber.",
+      "ferry": "Markiere nach Wunsch Buchungsnummer und Preis — dazu EINE Überfahrt: Abfahrtshafen, Abfahrtszeit, Ankunftshafen und optional Ankunftszeit. Den Tag in der Zeile oder in der Überschrift darüber; das Schiff in der Zeile oder einmal dort, wo das Ticket es nennt."
     }
   },
   "derivation": {
@@ -251,7 +283,11 @@
       "railRowNotUnderstood": "Aus dem markierten Fahrtabschnitt lässt sich keine Regel bilden, die seine eigenen Werte wieder liest. Markiere die Bahnhofsnamen und Zeiten genau.",
       "rentalNeedsProvider": "Der Vermieter fehlt: markiere, wie der Vermieter heißt. Er steht als Absender in jedem Vorschlag dieses Templates.",
       "rentalNeedsBookingFields": "Für eine Anmietung fehlen Pflichtangaben: markiere Reservierungsnummer, Abholstation, Abholdatum, Rückgabestation und Rückgabedatum (die Uhrzeiten nach Wunsch).",
-      "rentalEndsAmbiguous": "Abholung und Rückgabe sind in dieser Mail gleich beschriftet (z. B. zweimal „Station:“), deshalb würde das Template für beide Enden denselben Wert lesen. Solche Layouts kann die Werkstatt noch nicht lernen."
+      "rentalEndsAmbiguous": "Abholung und Rückgabe sind in dieser Mail gleich beschriftet (z. B. zweimal „Station:“), deshalb würde das Template für beide Enden denselben Wert lesen. Solche Layouts kann die Werkstatt noch nicht lernen.",
+      "rideNeedsRow": "Es braucht eine markierte Fahrt: Markiere Abfahrtshaltestelle oder -hafen, Abfahrtszeit und Ankunftshaltestelle oder -hafen in EINER Zeile. Die Vorlage liest jede Fahrt nach dieser Zeile.",
+      "rideNeedsDate": "Der Reisetag fehlt: Markiere das Datum — in der Zeile oder in der Überschrift darüber. Ohne Tag wäre jede Abfahrtszeit geraten.",
+      "rideRowTooFarApart": "Die Werte einer Fahrt müssen in derselben Zeile oder in zwei aufeinanderfolgenden Zeilen stehen (Leerzeilen dazwischen sind in Ordnung).",
+      "rideRowNotUnderstood": "Aus der markierten Fahrt lässt sich keine Regel bauen, die ihre eigenen Werte zurückliest. Markiere Namen und Zeiten genau."
     }
   },
   "preview": {

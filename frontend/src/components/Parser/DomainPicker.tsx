@@ -27,6 +27,8 @@ const DOMAINS_WITH_HINTS: ReadonlySet<WorkshopDomain> = new Set([
   "package",
   "rail",
   "rental",
+  "bus",
+  "ferry",
 ]);
 
 interface DomainPickerProps {

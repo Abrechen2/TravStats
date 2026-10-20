@@ -183,6 +183,11 @@ export const PARSER_SUPPORTED_DOMAINS = [
   "rental",
   "package",
   "place",
+  // Coach and ferry tickets (forgejo#309): read by `bus` / `ferry` templates
+  // only, and only when asked for — `auto` never answers with either
+  // (`documentDomain.ts`, EXPLICIT_ONLY_TARGETS).
+  "bus",
+  "ferry",
 ] as const satisfies readonly (
   DomainKey | typeof PACKAGE_PARSE_TARGET | typeof PLACE_PARSE_TARGET
 )[];

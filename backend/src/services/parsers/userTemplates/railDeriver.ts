@@ -6,8 +6,8 @@ import { applyV2RailTemplate } from "../../rail/parser/v2Rail";
 import type { AnnotationSelection } from "./annotations";
 import {
   buildRowRepeat,
-  datePattern,
-  generaliseGap,
+  headingDayRule,
+  lineStartOf,
   rowMarks,
   type RowMark,
   type RowValueShape,
@@ -84,24 +84,6 @@ const ISSUER_FIELDS = new Set(["operator"]);
  */
 const TRAIN_CATEGORY = { pattern: "^\\s*([A-Za-zÄÖÜäöü]{1,6})", flags: "" };
 const TRAIN_NUMBER = { pattern: "(\\d{1,6})", flags: "" };
-
-function lineStartOf(fullText: string, at: number): number {
-  return fullText.lastIndexOf("\n", at - 1) + 1;
-}
-
-/** The marked day on a heading line, as the pattern that finds every such heading. */
-function headingDayRule(fullText: string, mark: RowMark): ItemFieldRule {
-  const start = lineStartOf(fullText, mark.start);
-  const prefix = fullText.slice(start, mark.start).replace(/^[ \t]+/, "");
-  const value = fullText.slice(mark.start, mark.end);
-  return {
-    lastBefore: {
-      pattern: `^[ \\t]*${generaliseGap(prefix)}(${datePattern(value)})`,
-      flags: "imu",
-    },
-    transform: "date",
-  };
-}
 
 function rowItemField(mark: RowMark): ItemFieldRule {
   switch (mark.field) {

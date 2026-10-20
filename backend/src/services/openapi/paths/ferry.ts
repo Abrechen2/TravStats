@@ -196,9 +196,16 @@ registry.registerPath({
             crossings: z.array(
               z.record(z.string(), z.object({ value: z.string(), evidence: z.string() }))
             ),
-            parser: z.string().nullable(),
+            parser: z
+              .string()
+              .nullable()
+              .describe('"template", "labels" or "llm"; a ferry template is asked first'),
             reason: z.string().nullable(),
             provider: z.unknown().nullable(),
+            template: z
+              .object({ id: z.string(), source: z.enum(["workshop", "repository"]) })
+              .optional()
+              .describe("The ferry template that read the ticket, when one did (forgejo#309)"),
           })
         )
       ),

@@ -1,19 +1,13 @@
 import { Router, type Response, type NextFunction } from "express";
-import { z } from "zod";
 import { authenticate, requireWriteScope, type AuthRequest } from "../../middleware/auth";
 import { rejectDemo } from "../../middleware/demoGuard";
 import { lodgingImportLimiter } from "../../middleware/rateLimit";
 import { AppError } from "../../middleware/errorHandler";
-import { readDocumentForParse } from "../../services/documents/parseRetention";
-import { extractTextFromPdf } from "../../services/pdfParser";
-import { extractEmailFromFile } from "../../services/emailExtractor";
 import { hasUsableText } from "../../services/parsing/usableText";
 import { previewFerryText } from "../../services/ferry/ticketPreview";
-import logger from "../../utils/logger";
-export const ferryTicketRequest = z.union([
-  z.object({ documentId: z.string().uuid() }).strict(),
-  z.object({ text: z.string().trim().min(1).max(60000) }).strict(),
-]);
+import { readTicketText, ticketPreviewRequest } from "../../services/rides/ticketText";
+
+export const ferryTicketRequest = ticketPreviewRequest;
 const router = Router();
 router.post(
   "/ticket-preview",
@@ -25,32 +19,7 @@ router.post(
     try {
       const parsed = ferryTicketRequest.safeParse(req.body);
       if (!parsed.success) throw new AppError("Invalid ticket input", 400);
-      let text: string;
-      if ("documentId" in parsed.data) {
-        const { document, buffer } = await readDocumentForParse(
-          req.userId!,
-          parsed.data.documentId,
-          ["pdf", "eml", "emailText"]
-        );
-        if (document.format === "pdf") {
-          try {
-            text = await extractTextFromPdf(buffer);
-          } catch (error) {
-            // Still answered as "no text", but the broken file is named in the log.
-            logger.warn(
-              {
-                operation: "ferry.ticketPreview.pdf",
-                documentId: parsed.data.documentId,
-                error: error instanceof Error ? error.message : String(error),
-              },
-              "Ferry ticket PDF could not be read"
-            );
-            text = "";
-          }
-        } else if (document.format === "eml")
-          text = extractEmailFromFile(buffer, "ticket.eml").text;
-        else text = buffer.toString("utf8");
-      } else text = parsed.data.text;
+      const text = await readTicketText(req.userId!, parsed.data, "ferry.ticketPreview.pdf");
       if (!hasUsableText(text)) {
         res.json({
           success: true,

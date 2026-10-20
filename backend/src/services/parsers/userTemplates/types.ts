@@ -7,7 +7,7 @@
  * ask for one must name it — see `findMatchingTemplate`.
  */
 export type TemplateDomain =
-  "flight" | "lodging" | "cruise" | "place" | "package" | "rail" | "rental";
+  "flight" | "lodging" | "cruise" | "place" | "package" | "rail" | "rental" | "bus" | "ferry";
 
 export interface TemplateFingerprint {
   senderDomains: string[]; // e.g. ["noti.swiss.com", "lufthansa.com"]
