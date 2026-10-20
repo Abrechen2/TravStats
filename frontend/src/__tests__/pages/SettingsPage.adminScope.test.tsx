@@ -1,5 +1,10 @@
 vi.mock("../../components/Settings/DawarichStayScanCard", () => ({ default: () => null }));
 import { describe, it, expect, beforeEach, vi } from "vitest";
+// The version line under the settings menu asks the server (forgejo#321).
+vi.mock("@/lib/api/version", () => ({
+  versionApi: { get: vi.fn().mockResolvedValue({ version: "2.7.0", buildVersion: "2.7.0" }) },
+}));
+
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import SettingsPage, { SettingsLegacyRedirect } from "../../pages/SettingsPage";

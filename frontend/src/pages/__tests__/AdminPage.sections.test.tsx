@@ -1,4 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+// The version line under the settings menu asks the server (forgejo#321).
+vi.mock("@/lib/api/version", () => ({
+  versionApi: { get: vi.fn().mockResolvedValue({ version: "2.7.0", buildVersion: "2.7.0" }) },
+}));
+
 import { render, within, waitFor, act, cleanup } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import AdminPage from "../AdminPage";
