@@ -249,6 +249,7 @@ const shutdown = (signal: string) => async (): Promise<void> => {
   (await import("./jobs/airlineLogoRefreshScheduler")).stopAirlineLogoRefreshScheduler();
   (await import("./jobs/statusSweepScheduler")).stopStatusSweepScheduler();
   (await import("./jobs/placeAddressBackfillScheduler")).stopPlaceAddressBackfillScheduler();
+  (await import("./jobs/trackJitterRemeasureScheduler")).stopTrackJitterRemeasureScheduler();
   (await import("./jobs/stayFxBackfillScheduler")).stopStayFxBackfillScheduler();
   (await import("./jobs/dataQualitySweepScheduler")).stopDataQualitySweepScheduler();
   (await import("./jobs/dawarichCountryDaySweepScheduler")).stopDawarichCountryDaySweepScheduler();
@@ -689,6 +690,14 @@ if (process.env.NODE_ENV !== "test") {
           (
             await import("./jobs/placeAddressBackfillScheduler")
           ).startPlaceAddressBackfillScheduler(),
+      ],
+      // Once per boot: recordings stored before the jitter filter (forgejo#319).
+      [
+        "track_jitter_remeasure",
+        async () =>
+          (
+            await import("./jobs/trackJitterRemeasureScheduler")
+          ).startTrackJitterRemeasureScheduler(),
       ],
       [
         "stay_fx_backfill",
