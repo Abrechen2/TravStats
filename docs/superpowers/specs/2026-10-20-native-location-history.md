@@ -52,7 +52,11 @@ on the spot:
 - In progress, **not merged**: `feat/trip-recording-316` (forgejo#316) stores the
   Companion's trip recording as one JSON blob per upload in `TripRecordingBatch`,
   bound to a trip, dropping points outside the trip's days and inside flights.
-  The Companion side (companion#73) has no code yet.
+  On the Companion, the **device-only trip recorder of ADR 0013 is built and
+  running** (`app/src/lib/trip-track/`: `syncTripRecorder`,
+  `handleTripLocations`, per-trip AsyncStorage in `store.ts`, deleted 30 days
+  after the trip). Only its upload (companion#73) is missing. This plan
+  therefore migrates working behaviour; it does not start from nothing.
 
 ## 2. Dawarich feature map (v1.16, commit 2dc26c4) → TravStats
 
@@ -60,12 +64,12 @@ on the spot:
 |---|---|---|---|
 | Points store, dedup on user+time+position | `location_points` (§3.1) | Dawarich holds them; pulled on demand | P1 |
 | Own apps, OwnTracks, Overland, Traccar, Home Assistant ingest | Companion + OwnTracks/Overland HTTP ingest; HA via OwnTracks format | Dawarich's own | P1 / P4 |
-| Imports: Google Takeout (Records, Semantic, phone Timeline), GPX, KML, GeoJSON, CSV, FIT, TCX, Polarsteps, photo geodata | all of these, as resumable jobs | Dawarich's own | P1 (Google, GPX/FIT/TCX, Dawarich) / P4 (rest) |
+| Imports: Google Takeout (Records, Semantic, phone Timeline), GPX, KML, GeoJSON, CSV, FIT, TCX, Polarsteps, photo geodata | all of these, as resumable jobs | Dawarich's own | P1 (Dawarich, GPX) / P4 (rest) |
 | Visits (100 m / 5 min / 3 pts, suggested → confirmed) | stay detector on the store → inbox → Place + PlaceVisit (exists for Dawarich, forgejo#294) | as today | P2 |
 | User-drawn areas | Places with a radius / polygon (Places exist) | same | P3 |
 | Tracks + transport-mode detection | segments by speed/mode, matched against logged flights, rail, bus, ferry, rental, roadtrip | same, on pulled points | P4 |
 | Trips (time range, distance, countries, photos) | away-from-home periods → trip suggestions; existing trips get a recording layer and a day timeline | same | P3 / P4 |
-| Stats per month (distance, countries, cities) | year-in-review and stats: km on the ground by mode, new cities, countries | same | P3 |
+| Stats per month (distance, countries, cities) | year-in-review and stats: km on the ground, countries (P3); by mode and new cities once P4 derives them | same | P3 / P4 |
 | Days in country | `country_days` (exists), second source `internal` | as today | P2 |
 | Fog of war / heatmap (H3) | dashboard mode „Erkundet" (H3 or tile aggregation, never raw dots at world zoom) | same | P3 |
 | Live map (own position) | „Zuletzt gesehen" on the dashboard (own only) | Dawarich's last point | P3 |
@@ -74,7 +78,7 @@ on the spot:
 | Family location sharing, Poster/Video studio, MCP | **not copied** — not logbook features; revisit on request | — | — |
 
 **What TravStats adds that Dawarich cannot**: positions confirm the logbook —
-a flight is confirmed „flown" with actual times, a stay fills lodging nights, a
+a flight gets evidence for review, a stay can fill lodging nights, a
 roadtrip gets its driven line, a missing journey becomes a question, a passport
 country gets its evidence. The data stays on the trip, the day, the passport and
 the dashboard, not on a separate „Standortverlauf" app screen.
@@ -202,10 +206,10 @@ Order follows Codex's review (§8): the riskiest unknown, the phone, first.
 | Phase | Server | Companion |
 |---|---|---|
 | **P0** proof | decide source routing and the open owner questions (§7) | spike: precise trip recording in the background on iOS and Android — survives kill, reboot, permission change; measured battery per hour |
-| **P1** record and keep | `location_points`, `POST /location/points` with receipts and idempotency, delete with tombstones, privacy zones, backup/restore, forgejo#316 folded in, Settings → Standortverlauf (Standard/Experte), Dawarich full import, GPX import | outbox upload to the new endpoint, „Reise genau" with its settings, privacy zones applied on the device, settings synced from the server |
-| **P2** derive | `LocationSource` (internal + Dawarich), country days and stays on it, inbox cards that confirm an entry (§3.4), re-evaluation as a job | „Alltag" mode, the server's inbox in the app, Shortcuts actions „Standort jetzt senden" and „Aufzeichnung pausieren / fortsetzen" |
-| **P3** show | trip day timeline, „Erkundet", „Zuletzt gesehen", year in review, areas; Shortcut template for users without the Companion | remaining Shortcuts actions (§5.1), recording state on the trip screen |
-| **P4** connect | journey and trip suggestions, flight evidence for review, cities, OwnTracks/Overland ingest, Google Timeline and further formats | Android shortcuts / broadcast intents, native visit monitoring if P0 shows it is needed |
+| **P1** record and keep | `LocationSource` contract with a minimal internal adapter (the #316 map reads through it from day one), `location_points`, `POST /location/points` with receipts and idempotency, delete with tombstones, privacy zones, backup/restore, forgejo#316 folded in, Settings → Standortverlauf (Standard/Experte), Dawarich full import, GPX import | one recording coordinator replacing `syncTripRecorder` (trip / flight / pause precedence), a durable location queue replacing the per-trip AsyncStorage store (kept until acknowledged, existing recordings migrated), uploader on the flight-track upload pattern, „Reise genau" settings, privacy zones on the device, settings synced from the server |
+| **P2** derive | Dawarich adapter for `LocationSource`, country days and stays on it, inbox cards that confirm an entry (§3.4), re-evaluation as a job | „Alltag" mode, the server's inbox in the app (retiring the local `useTripStayQuestions`), the native shared queue/keychain bridge, then the Shortcuts actions „Standort jetzt senden" and „Aufzeichnung pausieren / fortsetzen" |
+| **P3** show | trip day timeline, „Erkundet", „Zuletzt gesehen", year in review (km and countries), areas; Shortcut template for users without the Companion | remaining Shortcuts actions (§5.1), recording state on the trip screen |
+| **P4** connect | journey and trip suggestions, flight evidence for review, cities, km by mode and new cities in the stats, OwnTracks/Overland ingest, Google Timeline and further formats | Android shortcuts / broadcast intents, native visit monitoring if P0 shows it is needed |
 
 ## 5. Companion (needs an ADR in the Companion repo; supersedes ADR 0013 points 3, 4, 7)
 
@@ -283,9 +287,15 @@ Family live-location sharing, a live map of others, Poster/Video studio, MCP.
 
 ## 7. Still open for the owner
 1. With Dawarich as source: does the Companion send to TravStats (positions are
-   never lost, recommended) or to Dawarich?
-2. Default of the „Alltag" mode for new users: off (recommended) or on?
-3. Reverse geocoding for cities: which provider and daily budget?
+   never lost, recommended) or to Dawarich? („Alltag" defaults to off — settled.)
+2. **Source routing** (Codex 1, both reviews): proposed — storage is always
+   internal for what reaches TravStats; with „Dawarich" selected the
+   derivations read Dawarich **plus** the internal points (deduplicated by
+   time), so a Companion recording is never stranded.
+3. **What „speichern, nie zeigen" may feed** (Codex 2): proposed — country days
+   and home periods only; never place suggestions, maps, heatmap, „Zuletzt
+   gesehen", exports or anything shareable; included in the user's own backup.
+4. Reverse geocoding for cities: which provider and daily budget?
 
 ## 8. Cold review by Codex (2026-10-20) — to resolve before P1
 
@@ -330,3 +340,56 @@ Ranked by severity; each becomes a decision or a design paragraph above.
 source routing first; then point store, ingest receipts, deletion, streamed
 backup/restore and the #316 map; then Dawarich migration + one simple file
 importer; defer Semantic Timeline, mode inference, flight evidence, cities.
+
+## 9. Integration — one position end to end (second Codex review, 2026-10-20)
+
+Phone → server → logbook, with the seams in today's code:
+
+1. **Record** — `TripTrackSync` → `syncTripRecorder` → `TRIP_TRACK_TASK` →
+   `handleTripLocations` → `recordTripFixes` becomes one coordinator (Alltag /
+   trip / flight / pause), applying zones and giving each fix a stable id.
+   ADR 0010's flight recorder stays its own path. Tasks register in
+   `app/index.ts`, before any screen.
+2. **Keep** — `trip-track/store.ts` (per-trip JSON, swallowed write errors,
+   expiry) gives way to a durable queue: nothing expires before the server
+   acknowledges it; unpair guards stay.
+3. **Send** — modelled on `uploadFlightTracksOnce` / `runTrackUploadTask`, not
+   on the barcode `outbox.ts`; auth through the paired-device PAT
+   (`claimDevice` → `setPat` → `authHeaders`).
+4. **Ingest** — new route under `authenticate` + `requireWriteScope`, demo
+   guard, rate and body limits; Zod; zones; tombstones; atomic receipt with
+   payload hash; per-point outcome. Bare response shape (ADR 0001), OpenAPI
+   path + response schema, ratchet baselines.
+5. **Source** — a location-source resolver above `dawarichResolver.ts`;
+   keep the distinction between `getDawarichConnection` (user → admin → ENV,
+   interactive) and `buildUserDawarichConnection` (no fallback, unattended).
+   „Dawarich configured" is not „Dawarich selected". Schedulers'
+   `eligibleAccounts()` stop requiring Dawarich credentials.
+6. **Derive** — `sweepUserCountryDays` (keep its incomplete-window and
+   reducer-version guards; `COUNTRY_DAY_SOURCES` gains `internal`, sweep state
+   becomes per source); `stays/scan.ts` `scanStays` with its whole input path
+   incl. `collectMarketFindings`, without the 30-day limit; `stays/review.ts`
+   `acceptStay` / `rejectStay` generalised beyond `DawarichStay` and
+   `dataSource: "dawarich"`; `trackEvidence.unconfirmedTrackCountries` and
+   `passportLoader` carry the row source; „nur durchgereist" is a stored review
+   decision. `tripSuggestions/engine.ts` gets reviewed location inputs, its
+   `dataStamp()` and `invalidateTripSuggestions()` follow them. Tour and cruise
+   track pulls (`tour/tracks/*`, `routes/cruises/tracks.ts`) move onto the
+   source too.
+7. **Show** — web `InboxWorkspace` / `useInboxData` / `VisitSuggestionCard`,
+   passport `UnconfirmedCountries`, #316's `TripMapWithTours` /
+   `TripRecordingPanel`; new read APIs (bounded, downsampled) for timeline,
+   heatmap, latest. Companion: `inbox-feed` / `server/api/inbox-sources`.
+8. **Around it** — backup: `pg_dump` already carries new tables; restore
+   tests and `restoreAftermath` must settle jobs and caches. Account export
+   (`export/allDataExport.ts`) streams. Account deletion: cascading FKs, import
+   files in `collectAccountFiles`. Sharing: points stay outside
+   `SHARE_TYPES`, with regression tests for share, federation, public link,
+   comparison. Migrations: points + indexes, origin/import membership,
+   receipts, tombstones, jobs, zones, settings, versioned derivation and
+   review state; existing stay/scan rows marked as Dawarich.
+
+**Build order:** P0 phone spike + decisions (§7) → P1 contracts (identity,
+completeness, receipts, tombstones), durable queue, ingest, restore tests →
+one trip-map slice end to end → Dawarich import + GPX → P2 adapters and
+server inbox → P3 views → P4 inference and the statistics that need it.
