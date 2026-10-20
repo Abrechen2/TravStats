@@ -224,6 +224,27 @@ describe("statistics ETag", () => {
     expect((await get(afterCreate.headers.etag)).status).toBe(200);
   });
 
+  // forgejo#308: the passport applies the user's corrections. Without the
+  // table in the fingerprint a saved correction answered 304, and the browser
+  // showed the passport from before it until the hour turned.
+  it("sees a new, an EDITED and a deleted country override", async () => {
+    const before = (await get()).headers.etag;
+    await prisma.countryOverride.create({
+      data: { userId, countryCode: "BE", verdict: "visited", note: "Work trip" },
+    });
+    const added = await get(before);
+    expect(added.status).toBe(200);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await prisma.countryOverride.update({
+      where: { userId_countryCode: { userId, countryCode: "BE" } },
+      data: { verdict: "excluded" },
+    });
+    const edited = await get(added.headers.etag);
+    expect(edited.status).toBe(200);
+    await prisma.countryOverride.deleteMany({ where: { userId } });
+    expect((await get(edited.headers.etag)).status).toBe(200);
+  });
+
   it("does not move when ANOTHER user writes", async () => {
     const before = (await get()).headers.etag;
     await prisma.flight.create({
