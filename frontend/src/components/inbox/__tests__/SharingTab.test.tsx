@@ -53,6 +53,7 @@ const notice: ShareNotice = {
   readAt: null,
   undoneAt: null,
   actor: { id: "u-anna", username: "anna", displayName: "Anna" },
+  remoteActor: null,
   changes: [],
 };
 

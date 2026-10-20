@@ -33,6 +33,21 @@ export interface RemotePerson {
 export type RemoteMemberState =
   "invited" | "active" | "declined" | "unreachable" | "suspended" | "left" | "revoked";
 
+/**
+ * Where the changes made here stand on their way to one remote member (F-S4d). Mirrors
+ * `delivery` in `backend/src/schemas/sharingRemote.ts`.
+ */
+export interface RemoteDelivery {
+  state: "delivered" | "pending" | "retrying" | "unreachable" | "rejected";
+  /** `retrying`/`unreachable`: failing since; `rejected`: when it was refused. */
+  stateSince: string | null;
+  /** `retrying`: the failure kind; `rejected`: `schema`, `not-member` or `consent`. */
+  reason: string | null;
+  field: string | null;
+  /** `rejected`: the entry the refused change was about. */
+  label: string | null;
+}
+
 /** A person on another server as a member of one trip (F-S4c). */
 export interface RemoteMember {
   id: string;
@@ -41,9 +56,10 @@ export interface RemoteMember {
   username: string;
   origin: string;
   state: RemoteMemberState;
-  /** What last went wrong (`entries-undelivered`, `entries-refused`, …); null when fine. */
+  /** Why the state is what it is (`off`, `peer-blocked`, `restore`, …); null when fine. */
   stateReason: string | null;
   stateSince: string;
+  delivery: RemoteDelivery;
 }
 
 export interface OfferablePerson {

@@ -22,6 +22,7 @@ const notice = (over: Partial<ShareNotice>): ShareNotice => ({
   readAt: null,
   undoneAt: null,
   actor: { id: "u-anna", username: "anna", displayName: "Anna" },
+  remoteActor: null,
   changes: [
     { field: "gate", before: { kind: "text", value: "A1" }, after: { kind: "text", value: "B12" } },
     { field: "terminal", before: { kind: "empty" }, after: { kind: "text", value: "2" } },
@@ -144,6 +145,49 @@ describe("ShareNoticeCard", () => {
     renderCard(notice({ undoneAt: "2026-10-16T09:00:00.000Z" }));
     expect(screen.queryByRole("button", { name: "sharing:inbox.notices.undo" })).toBeNull();
     expect(screen.getByText("sharing:inbox.notices.undone")).toBeTruthy();
+  });
+
+  it("names a person on another server with their server (F-S4d)", () => {
+    renderCard(notice({ actor: null, remoteActor: { displayName: "Ben", origin: "far.example" } }));
+    expect(screen.getByText(/sharing:inbox\.notices\.remoteName ·/)).toBeTruthy();
+    expect(screen.queryByText(/Anna/)).toBeNull();
+  });
+
+  it("shows a conflict as both values, with the two answers instead of undo", async () => {
+    const onResolve = vi.fn();
+    render(
+      <MemoryRouter>
+        <ShareNoticeCard
+          notice={notice({
+            kind: "conflict",
+            actor: null,
+            remoteActor: { displayName: "Ben", origin: "far.example" },
+            changes: notice({}).changes.slice(0, 1),
+          })}
+          busy={false}
+          error={null}
+          onRead={vi.fn()}
+          onUndo={vi.fn()}
+          onDeleteCopy={vi.fn()}
+          onResolve={onResolve}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByText("sharing:inbox.notices.kinds.conflict")).toBeTruthy();
+    expect(screen.getByText("sharing:inbox.notices.conflict")).toBeTruthy();
+    expect(screen.getAllByTestId("share-conflict")).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "sharing:inbox.notices.undo" })).toBeNull();
+    const theirs = screen.getByRole("button", { name: "sharing:inbox.notices.takeTheirs" });
+    expect(theirs.getAttribute("data-variant")).toBe("primary");
+    await userEvent.click(theirs);
+    await userEvent.click(screen.getByRole("button", { name: "sharing:inbox.notices.keepMine" }));
+    expect(onResolve.mock.calls).toEqual([["theirs"], ["mine"]]);
+  });
+
+  it("offers no answer to a conflict already decided, and says so", () => {
+    renderCard(notice({ kind: "conflict", undoneAt: "2026-10-16T09:00:00.000Z" }));
+    expect(screen.queryByRole("button", { name: "sharing:inbox.notices.takeTheirs" })).toBeNull();
+    expect(screen.getByText("sharing:inbox.notices.resolved")).toBeTruthy();
   });
 
   it("shows a refused action on the card as an alert", () => {

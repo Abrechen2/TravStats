@@ -5,7 +5,7 @@ import { AxiosError } from "axios";
 
 import RemoteTripPeople from "../RemoteTripPeople";
 import { sharingRemoteApi } from "../../../lib/api/sharingRemote";
-import type { TripRemoteSharing } from "../../../types/sharingRemote";
+import type { RemoteMember, TripRemoteSharing } from "../../../types/sharingRemote";
 
 /**
  * The trip's people on other servers (spec 2026-10-20 §7, F-S4c): each with server and state and
@@ -44,8 +44,9 @@ const view = (over: Partial<TripRemoteSharing> = {}): TripRemoteSharing => ({
       username: "ben",
       origin: FAR,
       state: "active",
-      stateReason: "entries-undelivered",
+      stateReason: null,
       stateSince: "2026-10-20T10:00:00.000Z",
+      delivery: { state: "delivered", stateSince: null, reason: null, field: null, label: null },
     },
   ],
   offerable: [{ remoteId: "r2", displayName: "Cleo", username: "cleo", origin: FAR }],
@@ -87,13 +88,92 @@ describe("RemoteTripPeople", () => {
     expect(api.tripSharing).not.toHaveBeenCalled();
   });
 
-  it("lists each member with their server and state, and says what did not arrive", async () => {
+  it("lists each member with their server and state, and that everything arrived", async () => {
     render(<RemoteTripPeople tripId="t1" />);
     expect(
       await screen.findByText(/sharing:remote.trip.row .*"Ben".*far.example.org/)
     ).toBeInTheDocument();
     expect(screen.getByText("sharing:remote.trip.state.active")).toBeInTheDocument();
-    expect(screen.getByText(/sharing:remote.trip.reason.entries-undelivered/)).toBeInTheDocument();
+    expect(screen.getByTestId("remote-member-status")).toHaveTextContent(
+      /sharing:remote.trip.delivery.delivered .*"Ben"/
+    );
+  });
+
+  /** One member as the server reports them, everything else as in `view()`. */
+  const member = (over: Partial<RemoteMember>): TripRemoteSharing =>
+    view({ members: [{ ...view().members[0], ...over }] });
+  const since = "2026-10-12T08:00:00.000Z";
+
+  it.each<[string, Partial<RemoteMember>, RegExp]>([
+    [
+      "on the way",
+      { delivery: { state: "pending", stateSince: null, reason: null, field: null, label: null } },
+      /sharing:remote.trip.delivery.pending .*"Ben"/,
+    ],
+    [
+      "retried since when, naming the server that does not answer",
+      {
+        delivery: {
+          state: "retrying",
+          stateSince: since,
+          reason: "unreachable",
+          field: null,
+          label: null,
+        },
+      },
+      /sharing:remote.trip.delivery.retrying .*"Ben".*far.example.org.*"date":"[^"]+"/,
+    ],
+    [
+      "unreachable since when",
+      {
+        state: "unreachable",
+        stateReason: "unreachable",
+        delivery: {
+          state: "unreachable",
+          stateSince: since,
+          reason: null,
+          field: null,
+          label: null,
+        },
+      },
+      /sharing:remote.trip.delivery.unreachable .*"Ben".*"date":"[^"]+"/,
+    ],
+    [
+      "a refused change, the entry and why",
+      {
+        delivery: {
+          state: "rejected",
+          stateSince: since,
+          reason: "schema",
+          field: "changes.0.field",
+          label: "TP571 FRA → LIS",
+        },
+      },
+      /sharing:remote.trip.delivery.rejected .*"entry":"TP571 FRA → LIS".*delivery.why.schema/,
+    ],
+    [
+      "switched off on that server",
+      { state: "suspended", stateReason: "off" },
+      /sharing:remote.trip.reason.off .*"Ben"/,
+    ],
+    [
+      "blocked by this server's admin",
+      { state: "suspended", stateReason: "peer-blocked" },
+      /sharing:remote.trip.reason.peer-blocked .*"Ben"/,
+    ],
+  ])("says when changes are %s, in its own sentence", async (_case, over, sentence) => {
+    api.tripSharing.mockResolvedValue(member(over));
+    render(<RemoteTripPeople tripId="t1" />);
+    expect(await screen.findByTestId("remote-member-status")).toHaveTextContent(sentence);
+  });
+
+  it("names an entry too large to send beside the delivery line", async () => {
+    api.tripSharing.mockResolvedValue(member({ stateReason: "entries-too-large" }));
+    render(<RemoteTripPeople tripId="t1" />);
+    await screen.findByText(/sharing:remote.trip.delivery.delivered/);
+    expect(screen.getAllByTestId("remote-member-status")[1]).toHaveTextContent(
+      /sharing:remote.trip.reason.entries-too-large/
+    );
   });
 
   it("offers the trip to a paired person, and says who decides where", async () => {

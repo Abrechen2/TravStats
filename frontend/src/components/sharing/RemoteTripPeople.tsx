@@ -30,16 +30,23 @@ const STATE_COLOR: Readonly<Record<RemoteMemberState, string>> = {
 };
 /** The reasons the server names; anything else reads as the generic one. */
 const KNOWN_REASONS = new Set([
-  "entries-undelivered",
-  "entries-refused",
   "entries-too-large",
   "restore",
+  "off",
+  "peer-blocked",
+  "unreachable",
 ]);
+/** Why the other server refused a change, as it answered; anything else reads as "refused". */
+const KNOWN_REFUSALS = new Set(["schema", "not-member", "consent"]);
+/** States whose member receives changes, so where those changes stand is the line to show. */
+const RECEIVING = new Set<RemoteMemberState>(["active", "unreachable"]);
 
 /**
- * The trip's people on other servers (spec 2026-10-20 §7, phase F-S4c), inside "Reisende": each
- * with their server and state — invited, on the trip, declined — and what last went wrong, so a
- * member who silently holds nothing cannot happen. The caller's paired people can be offered the
+ * The trip's people on other servers (spec 2026-10-20 §7, phases F-S4c/F-S4d), inside "Reisende":
+ * each with their server and state — invited, on the trip, declined — and, for someone on the
+ * trip, where the changes made here stand on their way to them: arrived, on the way, retried
+ * since when, unreachable since when, or refused and why. Each its own sentence, so a member who
+ * silently holds nothing cannot happen. The caller's paired people can be offered the
  * trip from here, or anyone with a code for this trip. Drawn only behind the beta key and while
  * the server has the feature on; a trip that came from another server names it and offers nobody.
  */
@@ -120,6 +127,32 @@ export default function RemoteTripPeople({
         })
       : null;
 
+  const deliveryLine = (m: RemoteMember): string => {
+    const d = m.delivery;
+    if (d.state === "rejected")
+      return t(`${NS}.delivery.rejected`, {
+        name: m.displayName,
+        entry: d.label ?? t(`${NS}.delivery.unknownEntry`),
+        why: t(
+          `${NS}.delivery.why.${d.reason && KNOWN_REFUSALS.has(d.reason) ? d.reason : "other"}`
+        ),
+      });
+    return t(`${NS}.delivery.${d.state}`, {
+      name: m.displayName,
+      origin: m.origin,
+      date: d.stateSince ? fmt.date(d.stateSince) : "",
+    });
+  };
+
+  /** The member's own sentence: a suspension's reason, else where the changes stand. */
+  const statusLines = (m: RemoteMember): string[] => {
+    if (RECEIVING.has(m.state)) {
+      const loss = m.stateReason === "entries-too-large" ? reasonLine(m) : null;
+      return [deliveryLine(m), ...(loss ? [loss] : [])];
+    }
+    return [reasonLine(m) ?? t(`${NS}.since`, { date: fmt.dateTime(m.stateSince) })];
+  };
+
   const body = (
     <div className="flex flex-col text-sm" style={{ gap: "var(--ts-space-md)" }}>
       {!standalone && <h3 className="t-label-mono">{t(`${NS}.title`)}</h3>}
@@ -141,9 +174,11 @@ export default function RemoteTripPeople({
                 </span>
                 <Pill color={STATE_COLOR[m.state]}>{t(`${NS}.state.${m.state}`)}</Pill>
               </span>
-              <span className="t-caption">
-                {reasonLine(m) ?? t(`${NS}.since`, { date: fmt.dateTime(m.stateSince) })}
-              </span>
+              {statusLines(m).map((line) => (
+                <span key={line} className="t-caption" data-testid="remote-member-status">
+                  {line}
+                </span>
+              ))}
             </li>
           ))}
         </ul>

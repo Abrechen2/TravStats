@@ -93,6 +93,11 @@ export const sharingApi = {
     await api.post(`/sharing/notices/${enc(id)}/undo`);
   },
 
+  /** Answer a conflict with another server: take their value, or keep one's own (F-S4d). */
+  resolveConflict: async (id: string, choice: "mine" | "theirs"): Promise<void> => {
+    await api.post(`/sharing/notices/${enc(id)}/resolve`, { choice });
+  },
+
   /** After another member deleted an entry: delete the reader's own copy too. */
   deleteOwnCopy: async (id: string): Promise<void> => {
     await api.post(`/sharing/notices/${enc(id)}/delete-copy`);

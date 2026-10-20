@@ -34,9 +34,17 @@
         "created": "Hinzugefügt",
         "updated": "Geändert",
         "deleted": "Gelöscht",
-        "left": "Verlassen"
+        "left": "Verlassen",
+        "conflict": "Gleichzeitig geändert"
       },
-      "details": "Details"
+      "details": "Details",
+      "conflict": "{{name}} hat {{type}} „{{entry}}“ zur selben Zeit anders geändert. Nichts wurde überschrieben – welcher Wert soll gelten?",
+      "takeTheirs": "Den anderen Wert übernehmen",
+      "keepMine": "Meinen Wert behalten",
+      "mineValue": "Deins: {{value}}",
+      "theirsValue": "{{name}}: {{value}}",
+      "resolved": "Entschieden.",
+      "remoteName": "{{name}} ({{origin}})"
     },
     "empty": {
       "title": "Nichts Neues",
@@ -46,7 +54,8 @@
       "accepted": "Zugestimmt — {{name}} kann jetzt Reisen mit dir teilen.",
       "declined": "Abgelehnt.",
       "undone": "Rückgängig gemacht — die anderen sehen es als deine Änderung.",
-      "copyDeleted": "Deine Kopie ist gelöscht."
+      "copyDeleted": "Deine Kopie ist gelöscht.",
+      "resolved": "Entschieden – die anderen bekommen den Wert als deine Änderung."
     },
     "errors": {
       "loadFailed": "Geteilte Reisen konnten nicht geladen werden.",
@@ -55,7 +64,8 @@
       "answerFailed": "Die Antwort konnte nicht gespeichert werden.",
       "markReadFailed": "Die Mitteilung konnte nicht als gelesen markiert werden.",
       "undoFailed": "Die Änderung konnte nicht rückgängig gemacht werden.",
-      "deleteCopyFailed": "Deine Kopie konnte nicht gelöscht werden."
+      "deleteCopyFailed": "Deine Kopie konnte nicht gelöscht werden.",
+      "resolveFailed": "Der Konflikt konnte nicht entschieden werden."
     }
   },
   "settings": {
@@ -152,7 +162,9 @@
     "undoStale": "Rückgängig geht nicht mehr: deine Kopie wurde seitdem geändert.",
     "undoStaleFields": "Rückgängig geht nicht mehr: seitdem geändert wurde {{fields}}.",
     "undoUnavailable": "Diese Mitteilung lässt sich nicht (mehr) rückgängig machen.",
-    "copyNotFound": "Deine Kopie dieses Eintrags gibt es nicht mehr."
+    "copyNotFound": "Deine Kopie dieses Eintrags gibt es nicht mehr.",
+    "conflictStale": "Dein Eintrag hat sich seit diesem Konflikt geändert.",
+    "conflictStaleFields": "Seit diesem Konflikt geändert: {{fields}}. Prüfe den Eintrag und entscheide neu."
   },
   "shareDialog": {
     "title": "Reise mit {{name}} teilen",
@@ -595,15 +607,30 @@
         "revoked": "Zustimmung entzogen"
       },
       "reason": {
-        "entries-undelivered": "Die Einträge sind bei {{name}} noch nicht angekommen – {{origin}} hat nicht geantwortet.",
-        "entries-refused": "{{origin}} hat die Einträge für {{name}} abgelehnt.",
         "entries-too-large": "Ein Eintrag war zu groß für die Übertragung und fehlt bei {{name}}.",
         "restore": "Nach einer Wiederherstellung ausgesetzt – bitte neu bestätigen.",
+        "off": "Teilen über Server ist bei {{name}} ausgeschaltet.",
+        "peer-blocked": "Der Server von {{name}} ist von deiner Instanz gesperrt.",
+        "unreachable": "Der Server von {{name}} ist nicht erreichbar.",
         "other": "Bei der Übertragung zu {{origin}} ist etwas schiefgegangen."
       },
       "errors": {
         "loadFailed": "Die Reisenden auf anderen Servern konnten nicht geladen werden.",
         "offerFailed": "Die Reise konnte nicht angeboten werden."
+      },
+      "delivery": {
+        "delivered": "Alle Änderungen sind bei {{name}} angekommen.",
+        "pending": "Änderungen sind auf dem Weg zu {{name}}.",
+        "retrying": "Änderungen kommen bei {{name}} gerade nicht an – {{origin}} antwortet seit {{date}} nicht. Es wird weiter versucht.",
+        "unreachable": "Änderungen kommen bei {{name}} nicht an – der Server ist seit {{date}} nicht erreichbar.",
+        "rejected": "Der Server von {{name}} konnte eine Änderung an „{{entry}}“ nicht annehmen ({{why}}).",
+        "unknownEntry": "einem Eintrag",
+        "why": {
+          "schema": "Format nicht unterstützt",
+          "not-member": "dort keine Mitgliedschaft mehr",
+          "consent": "dort keine Zustimmung mehr",
+          "other": "abgelehnt"
+        }
       }
     },
     "offers": {

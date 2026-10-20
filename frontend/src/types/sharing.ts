@@ -100,7 +100,8 @@ export interface ShareResult {
   created: ShareCounts;
 }
 
-export type ShareNoticeKind = "shared" | "created" | "updated" | "deleted" | "left";
+/** `conflict`: a change from another server met a copy that had moved since (F-S4d). */
+export type ShareNoticeKind = "shared" | "created" | "updated" | "deleted" | "left" | "conflict";
 
 /** The entry types a notice may name (S2); `trip` for shared/left. */
 export type ShareEntityType =
@@ -146,6 +147,12 @@ export interface ShareNoticeAfter {
   via?: "share";
 }
 
+/** A person on another server, as their server names them: shown as „Ben (andere.instanz.tld)". */
+export interface RemoteActor {
+  displayName: string;
+  origin: string;
+}
+
 export interface ShareNotice {
   id: string;
   kind: ShareNoticeKind;
@@ -158,6 +165,8 @@ export interface ShareNotice {
   /** When the reader undid this change. */
   undoneAt: string | null;
   actor: SharePerson | null;
-  /** `updated`: every changed fact, old and new. */
+  /** The person on another server who made the change; null for a change made here. */
+  remoteActor: RemoteActor | null;
+  /** `updated`: every changed fact, old and new; `conflict`: the reader's value, then theirs. */
   changes: ShareNoticeChange[];
 }

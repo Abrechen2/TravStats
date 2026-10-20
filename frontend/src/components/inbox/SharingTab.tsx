@@ -119,6 +119,33 @@ export default function SharingTab({
     }
   };
 
+  /**
+   * Answer a conflict with another server. A refusal stays on the notice in its
+   * own words — an answer against a copy that moved since names the facts.
+   */
+  const resolve = async (notice: ShareNotice, choice: "mine" | "theirs"): Promise<void> => {
+    setBusy(notice.id);
+    setRowErrors(({ [notice.id]: _gone, ...rest }) => rest);
+    try {
+      await sharingApi.resolveConflict(notice.id, choice);
+      addToast("success", t(`${NS}.messages.resolved`));
+      await load();
+    } catch (error) {
+      logger.error("Failed to resolve share conflict:", error);
+      const fields = staleUndoFields(error, "SHARE_REMOTE_CONFLICT_STALE").map((f) =>
+        shareFieldLabel(f, t)
+      );
+      const message =
+        fields.length > 0
+          ? t("sharing:errors.conflictStaleFields", { fields: fields.join(", ") })
+          : t(sharingErrorKey(error, `${NS}.errors.resolveFailed`));
+      setRowErrors((prev) => ({ ...prev, [notice.id]: message }));
+      addToast("error", message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
   if (loadFailed) {
     return (
       <EmptyState
@@ -191,6 +218,7 @@ export default function SharingTab({
               onRead={() => void markRead(notice)}
               onUndo={() => void act(notice, "undo")}
               onDeleteCopy={() => void act(notice, "deleteCopy")}
+              onResolve={(choice) => void resolve(notice, choice)}
             />
           ))}
         </section>

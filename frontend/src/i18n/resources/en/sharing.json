@@ -34,9 +34,17 @@
         "created": "Added",
         "updated": "Changed",
         "deleted": "Deleted",
-        "left": "Left"
+        "left": "Left",
+        "conflict": "Changed at the same time"
       },
-      "details": "Details"
+      "details": "Details",
+      "conflict": "{{name}} changed {{type}} “{{entry}}” differently at the same time. Nothing was overwritten – which value should stand?",
+      "takeTheirs": "Take their value",
+      "keepMine": "Keep my value",
+      "mineValue": "Yours: {{value}}",
+      "theirsValue": "{{name}}: {{value}}",
+      "resolved": "Decided.",
+      "remoteName": "{{name}} ({{origin}})"
     },
     "empty": {
       "title": "Nothing new",
@@ -46,7 +54,8 @@
       "accepted": "Agreed — {{name}} can now share trips with you.",
       "declined": "Declined.",
       "undone": "Undone — the others see it as your change.",
-      "copyDeleted": "Your copy has been deleted."
+      "copyDeleted": "Your copy has been deleted.",
+      "resolved": "Decided – the others get the value as your change."
     },
     "errors": {
       "loadFailed": "Shared trips could not be loaded.",
@@ -55,7 +64,8 @@
       "answerFailed": "Your answer could not be saved.",
       "markReadFailed": "The notice could not be marked as read.",
       "undoFailed": "The change could not be undone.",
-      "deleteCopyFailed": "Your copy could not be deleted."
+      "deleteCopyFailed": "Your copy could not be deleted.",
+      "resolveFailed": "The conflict could not be decided."
     }
   },
   "settings": {
@@ -152,7 +162,9 @@
     "undoStale": "Cannot undo any more: your copy has changed since.",
     "undoStaleFields": "Cannot undo any more: changed since: {{fields}}.",
     "undoUnavailable": "This notice cannot be undone (any more).",
-    "copyNotFound": "Your copy of this entry no longer exists."
+    "copyNotFound": "Your copy of this entry no longer exists.",
+    "conflictStale": "Your entry has changed since this conflict.",
+    "conflictStaleFields": "Changed since this conflict: {{fields}}. Check the entry and decide again."
   },
   "shareDialog": {
     "title": "Share trip with {{name}}",
@@ -595,15 +607,30 @@
         "revoked": "Consent withdrawn"
       },
       "reason": {
-        "entries-undelivered": "The entries have not reached {{name}} yet – {{origin}} did not answer.",
-        "entries-refused": "{{origin}} refused the entries for {{name}}.",
         "entries-too-large": "One entry was too large to send and is missing for {{name}}.",
         "restore": "Suspended after a restore – please confirm again.",
+        "off": "Sharing across servers is switched off for {{name}}.",
+        "peer-blocked": "{{name}}'s server is blocked by your instance.",
+        "unreachable": "{{name}}'s server is unreachable.",
         "other": "Something went wrong sending to {{origin}}."
       },
       "errors": {
         "loadFailed": "The travellers on other servers could not be loaded.",
         "offerFailed": "The trip could not be offered."
+      },
+      "delivery": {
+        "delivered": "All changes have reached {{name}}.",
+        "pending": "Changes are on their way to {{name}}.",
+        "retrying": "Changes are not reaching {{name}} right now – {{origin}} has not answered since {{date}}. Retrying.",
+        "unreachable": "Changes are not reaching {{name}} – their server has been unreachable since {{date}}.",
+        "rejected": "{{name}}'s server could not accept a change to “{{entry}}” ({{why}}).",
+        "unknownEntry": "an entry",
+        "why": {
+          "schema": "format not supported",
+          "not-member": "no longer a member there",
+          "consent": "no consent there any more",
+          "other": "refused"
+        }
       }
     },
     "offers": {
