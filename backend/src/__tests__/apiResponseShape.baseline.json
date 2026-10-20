@@ -1,5 +1,5 @@
 {
-  "_comment": "Ratchet for docs/adr/0001-api-response-shape.md. A router is in exactly one family. `bare` routers answer with the resource itself and may carry `success: true` only as many times as `frozenEnvelopes` says (an entry may only shrink). `enveloped` routers answer `{success, data}` and must keep at least one. A new router file must be added here \u2014 that is the decision the ADR asks for.",
+  "_comment": "Ratchet for docs/adr/0001-api-response-shape.md. A router is in exactly one family. `bare` routers answer with the resource itself and may carry `success: true` only as many times as `frozenEnvelopes` says (an entry may only shrink). `enveloped` routers answer `{success, data}` and must keep at least one. A new router file must be added here — that is the decision the ADR asks for.",
   "bare": [
     "achievements.ts",
     "admin/apiKeys.ts",
@@ -7,6 +7,7 @@
     "admin/dawarich.ts",
     "admin/federation.ts",
     "admin/immich.ts",
+    "admin/importMode.ts",
     "admin/index.ts",
     "admin/instanceSettings.ts",
     "admin/invitations.ts",
@@ -156,6 +157,7 @@
     "ferry.ts",
     "ferry/live.ts",
     "ferry/roadtrip.ts",
+    "ferry/routing.ts",
     "ferry/tickets.ts",
     "geo.ts",
     "importBatches.ts",
