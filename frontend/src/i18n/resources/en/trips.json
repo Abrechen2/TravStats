@@ -863,5 +863,22 @@
         }
       }
     }
+  },
+  "recording": {
+    "title": "Recording",
+    "dayFilter": "Day of the recording",
+    "allDays": "All days",
+    "points_one": "{{count}} point",
+    "points_other": "{{count}} points",
+    "span": "{{first}} – {{last}}",
+    "devices_one": "{{count}} device",
+    "devices_other": "{{count}} devices",
+    "downloadGpx": "Download as GPX",
+    "delete": "Delete recording",
+    "deleteConfirmTitle": "Delete the recording?",
+    "deleteConfirmMessage": "Every position the app recorded during this trip is deleted from this server. This cannot be undone.",
+    "loadError": "This trip's recording could not be loaded.",
+    "downloadError": "The GPX file could not be downloaded.",
+    "deleteError": "The recording could not be deleted."
   }
 }

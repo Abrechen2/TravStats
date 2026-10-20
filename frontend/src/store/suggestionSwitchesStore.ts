@@ -16,6 +16,10 @@ import { persistSetting } from "./persistSetting";
  * answers a switched-off kind empty without computing it.
  *
  * Not persisted: the server holds the truth, re-learned per session.
+ *
+ * `tripRecording` (forgejo#316) rides along for the same reason the inbox
+ * switches live here: it is an account switch `GET /settings` answers, and
+ * `settingsStore` has no room for it.
  */
 interface SuggestionSwitchesState {
   trips: boolean;
@@ -24,12 +28,15 @@ interface SuggestionSwitchesState {
   stayImmichEvidence: boolean;
   /** A model classifies a stay's kind of place (forgejo#305); server default off. */
   stayLlmPlaceClassification: boolean;
+  /** Whether the server stores the app's trip positions (forgejo#316); server default on. */
+  tripRecording: boolean;
   /** What `GET /settings` said; anything that is not a boolean keeps the default. */
   noteRemote: (remote: unknown) => void;
   setTrips: (enabled: boolean) => void;
   setStays: (enabled: boolean) => void;
   setStayImmichEvidence: (enabled: boolean) => void;
   setStayLlmPlaceClassification: (enabled: boolean) => void;
+  setTripRecording: (enabled: boolean) => void;
 }
 
 const booleanIn = (group: unknown, key: string): boolean | undefined => {
@@ -43,8 +50,13 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
   stays: true,
   stayImmichEvidence: true,
   stayLlmPlaceClassification: false,
+  tripRecording: true,
   noteRemote: (remote) => {
-    const body = remote as { tripSuggestions?: unknown; staySuggestions?: unknown } | null;
+    const body = remote as {
+      tripSuggestions?: unknown;
+      staySuggestions?: unknown;
+      tripRecording?: unknown;
+    } | null;
     const stay = body?.staySuggestions;
     set({
       trips: enabledIn(body?.tripSuggestions) ?? get().trips,
@@ -52,6 +64,7 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
       stayImmichEvidence: booleanIn(stay, "immichEvidence") ?? get().stayImmichEvidence,
       stayLlmPlaceClassification:
         booleanIn(stay, "llmPlaceClassification") ?? get().stayLlmPlaceClassification,
+      tripRecording: enabledIn(body?.tripRecording) ?? get().tripRecording,
     });
   },
   setTrips: (enabled) => {
@@ -88,6 +101,15 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
       { staySuggestions: { llmPlaceClassification } },
       () => set({ stayLlmPlaceClassification: prev }),
       "stay place classification switch"
+    );
+  },
+  setTripRecording: (enabled) => {
+    const prev = get().tripRecording;
+    set({ tripRecording: enabled });
+    persistSetting(
+      { tripRecording: { enabled } },
+      () => set({ tripRecording: prev }),
+      "trip recording switch"
     );
   },
 }));
