@@ -7,6 +7,12 @@
  *
  * Off is absent (G5): while the beta switch, the admin's trip-sharing switch or the identity is
  * missing, every request answers the app's plain 404, before any limiter or parser looks at it.
+ *
+ * Budgets (spec §4): nothing above the largest kind's budget (`entries`, 1 MB) is read at all;
+ * after the signature, each kind is held to its own (`BODY_BUDGET`, control messages 8 KB). A
+ * group message (`offer`, `offer-answer`, `entries`) whose header parses but whose body does not
+ * is answered `ack { rejected: "schema", field }` under signature, so the sender learns which
+ * field; anything less is the uniform 403.
  */
 import { Router } from "express";
 import { ZodError } from "zod";
@@ -21,12 +27,43 @@ import {
 import { TRIP_SHARE_ACCEPTS } from "../services/federation/envelope";
 import { tripFederationAvailability } from "../services/sharing/federation/availability";
 import { serveInviteClaim } from "../services/sharing/federation/invites";
-import { TRIP_SHARE_PURPOSE, TRIP_SHARE_VERSIONS, tripSharePacket } from "../schemas/tripSharePeer";
+import { serveEntries } from "../services/sharing/federation/entries";
+import { serveOfferAnswer } from "../services/sharing/federation/offers";
+import { serveOffer } from "../services/sharing/federation/offerInbox";
+import { BODY_BUDGET, MAX_BODY } from "../services/sharing/federation/transport";
+import {
+  TRIP_SHARE_PURPOSE,
+  TRIP_SHARE_VERSIONS,
+  groupHeaderSchema,
+  tripSharePacket,
+  type TripSharePacket,
+} from "../schemas/tripSharePeer";
 import logger from "../utils/logger";
 
 const router = Router();
-/** Control messages only (ping, invite pair); group messages get their own budget in F-S4c. */
-const MAX_PACKET_BODY = 8_192;
+
+/** What a parsed, authenticated message is answered with. */
+function serve(origin: string, local: string, body: TripSharePacket): Promise<unknown> {
+  switch (body.kind) {
+    case "ping":
+      return Promise.resolve({ tripShare: [...TRIP_SHARE_VERSIONS] });
+    case "invite-claim":
+      return serveInviteClaim(origin, body, local);
+    case "offer":
+      return serveOffer(origin, body);
+    case "offer-answer":
+      return serveOfferAnswer(origin, body);
+    case "entries":
+      return serveEntries(origin, body);
+  }
+}
+
+/** A group message that failed its schema: which field, if its header can be read at all. */
+function schemaRejection(raw: unknown, error: ZodError) {
+  if (!groupHeaderSchema.safeParse(raw).success) return null;
+  const field = error.issues[0]?.path.join(".").slice(0, 200);
+  return { kind: "ack" as const, rejected: "schema" as const, ...(field ? { field } : {}) };
+}
 
 router.use((_req, res, next) => {
   tripFederationAvailability().then(
@@ -49,18 +86,23 @@ router.post("/", async (req, res) => {
       typeof raw !== "object" ||
       !("body" in raw) ||
       typeof raw.body !== "string" ||
-      raw.body.length > MAX_PACKET_BODY
+      raw.body.length > MAX_BODY
     )
       throw refused("packet-too-large");
     const { message, peer, local } = await authenticatePeer(raw, TRIP_SHARE_ACCEPTS);
-    const body = tripSharePacket.parse(JSON.parse(message.body));
+    const parsedJson: unknown = JSON.parse(message.body);
+    const kind = (parsedJson as { kind?: unknown } | null)?.kind;
+    const budget = BODY_BUDGET[kind as keyof typeof BODY_BUDGET] ?? BODY_BUDGET.ping;
+    if (message.body.length > budget) throw refused("packet-too-large");
+    const parsed = tripSharePacket.safeParse(parsedJson);
+    const rejection = parsed.success ? null : schemaRejection(parsedJson, parsed.error);
+    if (!parsed.success && !rejection) throw parsed.error;
     // A replayed ping is harmless; anything else needs a verified peer BEFORE a nonce row is kept.
-    if (body.kind !== "ping" && !peer.verifiedAt) throw refused("unverified-peer");
+    if (kind !== "ping" && !peer.verifiedAt) throw refused("unverified-peer");
     if (peer.verifiedAt) await consumeNonce(message);
-    const data =
-      body.kind === "ping"
-        ? { tripShare: [...TRIP_SHARE_VERSIONS] }
-        : await serveInviteClaim(message.origin, body);
+    const data = parsed.success
+      ? await serve(message.origin, local.origin, parsed.data)
+      : rejection;
     res.setHeader("Cache-Control", "no-store");
     res.json(envelope(data, message.origin, local, message.nonce, TRIP_SHARE_PURPOSE));
   } catch (error) {

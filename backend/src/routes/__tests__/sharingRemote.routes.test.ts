@@ -73,6 +73,7 @@ it("issues, lists and revokes a code, enveloped, never listing the code again", 
         id: created.body.data.id,
         createdAt: expect.any(String),
         expiresAt: created.body.data.expiresAt,
+        tripId: null,
       },
     ],
   });

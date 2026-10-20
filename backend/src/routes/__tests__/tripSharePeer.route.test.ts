@@ -1,6 +1,8 @@
 /**
  * The trip-share peer route (spec 2026-10-20, phase F-S4a): off is absent, it reads only envelope
  * version 2 with purpose `trip-share/1`, and the comparison route refuses that purpose in turn.
+ * F-S4c: each kind is held to its own body budget, and a group message that fails its schema is
+ * answered under signature with the field, not with a shrug.
  */
 import express from "express";
 import request from "supertest";
@@ -18,6 +20,9 @@ import {
   type EnvelopePurpose,
 } from "../../services/federation/envelope";
 import { setTripFlags } from "../../services/sharing/federation/__tests__/instanceFlags";
+import { BODY_BUDGET, MAX_BODY } from "../../services/sharing/federation/transport";
+import { ENTRY_SHAPES } from "../../services/sharing/federation/wire/shapes";
+import { MAX_ENTRIES_PER_MESSAGE } from "../../schemas/tripSharePeer";
 import tripSharePeer from "../tripSharePeer";
 import comparisonPeer from "../comparisonPeer";
 
@@ -28,7 +33,7 @@ const local = generateKeyPairSync("ed25519");
 const localPublic = local.publicKey.export({ type: "spki", format: "pem" }).toString();
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "trip-peer-route-"));
 const app = express();
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "4mb" }));
 app.use("/api/v1/trip-share-peer", tripSharePeer);
 app.use("/api/v1/comparison-peer", comparisonPeer);
 
@@ -195,10 +200,95 @@ it("refuses a non-ping message from an admitted but unverified peer and keeps no
   expect(await nonceRow(packet)).toBeNull();
 });
 
-it("refuses an oversized packet before checking its signature", async () => {
+it("refuses a packet above the largest budget before checking its signature", async () => {
+  const packet = signed(
+    JSON.stringify({ kind: "entries", pad: "x".repeat(MAX_BODY) }),
+    "trip-share/1"
+  );
   const res = await request(app)
     .post("/api/v1/trip-share-peer")
-    .send(signed(JSON.stringify({ kind: "ping", pad: "x".repeat(9_000) }), "trip-share/1"));
+    .send({ ...packet, signature: "not-a-signature" });
   expect(res.status).toBe(403);
   refusedAs("packet-too-large", "trip_share_peer_refused");
+});
+
+it.each([
+  ["a ping", "ping", BODY_BUDGET.ping],
+  ["an offer answer", "offer-answer", BODY_BUDGET["offer-answer"]],
+  ["an offer", "offer", BODY_BUDGET.offer],
+])("holds %s to its own budget", async (_name, kind, budget) => {
+  const res = await request(app)
+    .post("/api/v1/trip-share-peer")
+    .send(signed(JSON.stringify({ kind, pad: "x".repeat(budget) }), "trip-share/1"));
+  expect(res.status).toBe(403);
+  refusedAs("packet-too-large", "trip_share_peer_refused");
+});
+
+describe("group messages from a verified peer", () => {
+  const header = (kind: string) => ({
+    kind,
+    messageId: randomUUID(),
+    sentAt: new Date().toISOString(),
+    groupRef: randomUUID(),
+    seq: 1,
+  });
+  const answerOf = async (body: object) => {
+    const res = await request(app)
+      .post("/api/v1/trip-share-peer")
+      .send(signed(JSON.stringify(body), "trip-share/1"));
+    expect(res.status).toBe(200);
+    return JSON.parse(
+      verifyEnvelope(res.body, localPublic, REMOTE, Date.now(), TRIP_SHARE_ACCEPTS).body
+    );
+  };
+  beforeAll(async () => {
+    await prisma.comparisonPeer.update({
+      where: { origin: REMOTE },
+      data: { verifiedAt: new Date() },
+    });
+  });
+  afterAll(async () => {
+    await prisma.comparisonPeer.update({ where: { origin: REMOTE }, data: { verifiedAt: null } });
+  });
+
+  const validStop = () => ({
+    entity: "stop",
+    shareKey: randomUUID(),
+    facts: {
+      ...Object.fromEntries(Object.keys(ENTRY_SHAPES.stop).map((k) => [k, null])),
+      orderIdx: 0,
+      title: "x",
+    },
+  });
+
+  it("answers entries for a group it does not hold as not-member, under signature", async () => {
+    expect(
+      await answerOf({ ...header("entries"), from: randomUUID(), entries: [validStop()] })
+    ).toEqual({ kind: "ack", rejected: "not-member" });
+  });
+
+  it("answers a group message that fails its schema with the field", async () => {
+    const stop = {
+      entity: "stop",
+      shareKey: randomUUID(),
+      facts: { title: "x", seatNumber: "12A" },
+    };
+    expect(
+      await answerOf({ ...header("entries"), from: randomUUID(), entries: [stop] })
+    ).toMatchObject({
+      kind: "ack",
+      rejected: "schema",
+      field: expect.stringMatching(/^entries\.0/),
+    });
+  });
+
+  it(`refuses more than ${MAX_ENTRIES_PER_MESSAGE} entries in one message`, async () => {
+    expect(
+      await answerOf({
+        ...header("entries"),
+        from: randomUUID(),
+        entries: Array.from({ length: MAX_ENTRIES_PER_MESSAGE + 1 }, validStop),
+      })
+    ).toMatchObject({ kind: "ack", rejected: "schema", field: "entries" });
+  });
 });

@@ -12,12 +12,26 @@ import {
   revokeTripInvite,
 } from "../services/sharing/federation/invites";
 import { listRemotePeople } from "../services/sharing/federation/remotePeople";
-import { remoteClaimBodySchema, remoteInviteIdSchema } from "../schemas/sharingRemote";
+import { offerTrip } from "../services/sharing/federation/offers";
+import {
+  acceptOffer,
+  declineOffer,
+  listReceivedOffers,
+} from "../services/sharing/federation/offerInbox";
+import { tripRemoteSharing } from "../services/sharing/federation/tripRemoteSharing";
+import {
+  remoteClaimBodySchema,
+  remoteInviteIdSchema,
+  remoteOfferBodySchema,
+  remoteOfferIdSchema,
+  remoteTripIdSchema,
+} from "../schemas/sharingRemote";
 
 /**
- * `/api/v1/sharing/remote` — people on other TravStats servers (spec 2026-10-20, phase F-S4b):
- * issue, list and revoke an invitation code, redeem one from another server, list the people
- * one is paired with. Enveloped like `/sharing` (ADR 0001). Everything but `/status` refuses with
+ * `/api/v1/sharing/remote` — people on other TravStats servers (spec 2026-10-20, phases F-S4b and
+ * F-S4c): issue, list and revoke an invitation code, redeem one from another server, list the
+ * people one is paired with; a trip's people on other servers, offering it to one of them or by a
+ * trip page's code; the offers one received, and the answer to each. Enveloped like `/sharing` (ADR 0001). Everything but `/status` refuses with
  * `SHARE_REMOTE_DISABLED` (404) while the feature is off; `/status` says whether it is on, so a
  * screen can draw nothing instead of a button that always fails.
  */
@@ -104,6 +118,59 @@ router.get(
   "/people",
   handle(async (req, res) => {
     res.json({ success: true, data: await listRemotePeople(req.userId!) });
+  })
+);
+
+router.get(
+  "/trips/:tripId",
+  handle(async (req, res) => {
+    const tripId = remoteTripIdSchema.parse(req.params.tripId);
+    res.json({ success: true, data: await tripRemoteSharing(req.userId!, tripId) });
+  })
+);
+
+// Each of these makes this server contact another one, so they share the invitation limit.
+router.post(
+  "/trips/:tripId/offers",
+  remoteInviteLimiter,
+  handle(async (req, res) => {
+    const tripId = remoteTripIdSchema.parse(req.params.tripId);
+    const { remoteId } = remoteOfferBodySchema.parse(req.body ?? {});
+    res.status(201).json({ success: true, data: await offerTrip(req.userId!, tripId, remoteId) });
+  })
+);
+
+router.post(
+  "/trips/:tripId/invites",
+  remoteInviteLimiter,
+  handle(async (req, res) => {
+    const tripId = remoteTripIdSchema.parse(req.params.tripId);
+    res.status(201).json({ success: true, data: await createTripInvite(req.userId!, tripId) });
+  })
+);
+
+router.get(
+  "/offers",
+  handle(async (req, res) => {
+    res.json({ success: true, data: await listReceivedOffers(req.userId!) });
+  })
+);
+
+router.post(
+  "/offers/:id/accept",
+  remoteInviteLimiter,
+  handle(async (req, res) => {
+    const id = remoteOfferIdSchema.parse(req.params.id);
+    res.json({ success: true, data: await acceptOffer(req.userId!, id) });
+  })
+);
+
+router.post(
+  "/offers/:id/decline",
+  remoteInviteLimiter,
+  handle(async (req, res) => {
+    await declineOffer(req.userId!, remoteOfferIdSchema.parse(req.params.id));
+    res.json({ success: true, data: { declined: true } });
   })
 );
 

@@ -2,6 +2,7 @@ import { afterAll, describe, expect, it } from "@jest/globals";
 
 import { prisma } from "../../../db";
 import { CONSENT_STATUSES, SHARE_ENTITY_TYPES, SHARE_NOTICE_KINDS } from "../../../schemas/sharing";
+import { REMOTE_MEMBER_STATES } from "../../../schemas/sharingRemote";
 
 /**
  * The sharing vocabularies live twice — as Zod unions in code and as CHECK
@@ -13,6 +14,7 @@ const CHECKS = {
   share_consents_status_check: CONSENT_STATUSES,
   share_notices_kind_check: SHARE_NOTICE_KINDS,
   share_notices_entity_type_check: SHARE_ENTITY_TYPES,
+  trip_share_remote_members_state_check: REMOTE_MEMBER_STATES,
 } as const;
 
 afterAll(async () => {

@@ -80,7 +80,12 @@ describe("issuing", () => {
     expect(JSON.stringify(row)).not.toContain(secretOf(created.code));
     expect(row.expiresAt.getTime() - row.createdAt.getTime()).toBeCloseTo(INVITE_TTL_MS, -4);
     expect(await listTripInvites(anna.id)).toEqual([
-      { id: created.id, createdAt: created.createdAt, expiresAt: created.expiresAt },
+      {
+        id: created.id,
+        createdAt: created.createdAt,
+        expiresAt: created.expiresAt,
+        tripId: null,
+      },
     ]);
   });
 

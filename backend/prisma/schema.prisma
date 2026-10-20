@@ -1854,6 +1854,7 @@ model Trip {
   photoJourneys    PhotoJourney[]
   dawarichStays    DawarichStay[]
   publicShareLinks PublicShareLink[]
+  tripShareInvites TripShareInvite[]
 
   documents Document[]
   travelPlan TravelPlan?
@@ -4564,9 +4565,10 @@ model RemoteShareAccount {
   displayName  String   @map("display_name")
   createdAt    DateTime @default(now()) @map("created_at")
 
-  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  consentsRequested ShareConsent[] @relation("ShareConsentRemoteRequester")
-  consentsTargeted  ShareConsent[] @relation("ShareConsentRemoteTarget")
+  user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  consentsRequested ShareConsent[]          @relation("ShareConsentRemoteRequester")
+  consentsTargeted  ShareConsent[]          @relation("ShareConsentRemoteTarget")
+  memberships       TripShareRemoteMember[]
 
   @@unique([origin, channel])
   @@unique([origin, localChannel])
@@ -4582,29 +4584,97 @@ model TripShareInvite {
   userId    String    @map("user_id")
   expiresAt DateTime  @map("expires_at")
   usedAt    DateTime? @map("used_at")
+  /// Set for an invitation made on a trip page (F-S4c): claiming it also offers that trip.
+  tripId    String?   @map("trip_id")
   createdAt DateTime  @default(now()) @map("created_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip Trip? @relation(fields: [tripId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([tripId])
   @@map("trip_share_invites")
 }
 
 /// Joins every member's own copy of one shared trip (decision 1). Holds no
 /// facts itself; the trips and their entries' `shareKey`s do.
 model TripShareGroup {
-  id          String   @id @default(uuid())
+  id           String   @id @default(uuid())
   /// Who started it. SetNull: the creator's account going away must not
   /// dissolve the other members' group.
-  createdById String?  @map("created_by_id")
-  createdAt   DateTime @default(now()) @map("created_at")
+  createdById  String?  @map("created_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  /// The group's id on the wire (spec 2026-10-20 F3): random, the same on every server holding
+  /// the group. Set once the group is offered to someone on another server.
+  federatedRef String?  @map("federated_ref")
+  /// The group's home server (F5); null while this server is home. An incoming message is
+  /// resolved to a group by (sending origin, federatedRef), never by the ref alone.
+  homeOrigin   String?  @map("home_origin")
 
-  createdBy User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
-  trips     Trip[]
-  notices   ShareNotice[]
+  createdBy     User?                   @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  trips         Trip[]
+  notices       ShareNotice[]
+  remoteMembers TripShareRemoteMember[]
+  streams       TripSharePeerStream[]
 
+  @@unique([federatedRef], map: "trip_share_groups_home_ref_key", where: raw("home_origin IS NULL"))
+  @@unique([homeOrigin, federatedRef])
   @@index([createdById])
   @@map("trip_share_groups")
+}
+
+/// A person on another server as a member of a share group (spec 2026-10-20 F3, F-S4c), through
+/// the local user's pairing with them (`remote.userId` is the local side). On the home server it
+/// is someone a trip was offered to; on their server it is the home member who offered it, and
+/// `offer` holds what was offered until the person answers.
+model TripShareRemoteMember {
+  id          String   @id @default(uuid())
+  groupId     String   @map("group_id")
+  remoteId    String   @map("remote_id")
+  /// invited | active | declined | unreachable | suspended | left | revoked — CHECK
+  /// trip_share_remote_members_state_check, schemas/sharingRemote.ts
+  state       String   @default("invited")
+  /// Why the state is what it is, or what last went wrong (`entries-undelivered`); null when fine.
+  stateReason String?  @map("state_reason")
+  stateSince  DateTime @default(now()) @map("state_since")
+  /// Receiving side only: the offer as it arrived (trip facts, roster, counts); null once answered.
+  offer       Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  group  TripShareGroup     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  remote RemoteShareAccount @relation(fields: [remoteId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, remoteId])
+  @@index([remoteId])
+  @@map("trip_share_remote_members")
+}
+
+/// One ordered message stream of a group with one peer server (spec §4 "seq per (sender origin,
+/// groupRef)"): what this server last sent there and last accepted from there.
+model TripSharePeerStream {
+  groupId         String @map("group_id")
+  peerOrigin      String @map("peer_origin")
+  lastSentSeq     Int    @default(0) @map("last_sent_seq")
+  lastReceivedSeq Int    @default(0) @map("last_received_seq")
+
+  group TripShareGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, peerOrigin])
+  @@map("trip_share_peer_streams")
+}
+
+/// Messages accepted from peers (spec §4 idempotency): a repeat of a message id answers the
+/// reply it got the first time. Pruned after 30 days.
+model TripShareInbound {
+  peerOrigin String   @map("peer_origin")
+  messageId  String   @map("message_id")
+  groupRef   String?  @map("group_ref")
+  reply      Json
+  receivedAt DateTime @default(now()) @map("received_at")
+
+  @@id([peerOrigin, messageId])
+  @@index([receivedAt])
+  @@map("trip_share_inbound")
 }
 
 /// The fourth inbox source (beside pending updates, data-quality flags and

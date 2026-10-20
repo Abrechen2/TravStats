@@ -189,3 +189,47 @@ export async function missingGroupConsent(
   const consenting = await acceptedWith(c, recipientId, others);
   return others.filter((id) => !consenting.has(id));
 }
+
+/** A person on another server who receives a member's changes, through that member's pairing. */
+export interface RemoteMemberRef {
+  /** The `TripShareRemoteMember` row. */
+  id: string;
+  remoteId: string;
+  origin: string;
+  /** How that server names the person in this pairing. */
+  channel: string;
+  /** How this server names the member towards that server. */
+  localChannel: string;
+}
+
+/**
+ * The remote counterpart of `receivingMembers` (spec 2026-10-20 §5): the group's people on other
+ * servers who may receive `actorId`'s changes — active members, reached through `actorId`'s own
+ * pairing with them, with an accepted consent in either direction (`acceptedParties`, the same
+ * rule as for local members). A pairing belongs to one local user, so a local member who never
+ * paired with that person reaches them only through the home member who did (F5 relays that in
+ * F-S4d), never by borrowing someone else's consent.
+ */
+export async function receivingRemotes(
+  c: Pick<DbTransaction, "tripShareRemoteMember" | "shareConsent">,
+  groupId: string,
+  actorId: string
+): Promise<RemoteMemberRef[]> {
+  const rows = await c.tripShareRemoteMember.findMany({
+    where: { groupId, state: "active", remote: { userId: actorId } },
+    select: {
+      id: true,
+      remoteId: true,
+      remote: { select: { origin: true, channel: true, localChannel: true } },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+  const consenting = await acceptedParties(
+    c,
+    { kind: "user", id: actorId },
+    rows.map((r) => ({ kind: "remote", id: r.remoteId }))
+  );
+  return rows
+    .filter((r) => consenting.has(partyKey({ kind: "remote", id: r.remoteId })))
+    .map((r) => ({ id: r.id, remoteId: r.remoteId, ...r.remote }));
+}

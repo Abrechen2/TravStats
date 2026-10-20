@@ -462,6 +462,14 @@ export type ApiErrorCode =
   | "SHARE_REMOTE_PEER_OUTDATED"
   | "SHARE_REMOTE_PEER_DISABLED"
   | "SHARE_REMOTE_UNREACHABLE"
+  /** Offering a trip across servers (F-S4c); `_REFUSED` carries the other side's `extra.reason`. */
+  | "SHARE_REMOTE_CONSENT_MISSING"
+  | "SHARE_REMOTE_NOT_HOME"
+  | "SHARE_REMOTE_ALREADY_MEMBER"
+  | "SHARE_REMOTE_TRIP_TOO_LARGE"
+  | "SHARE_REMOTE_PERSON_NOT_FOUND"
+  | "SHARE_REMOTE_OFFER_NOT_FOUND"
+  | "SHARE_REMOTE_REFUSED"
   /** Comparison (leaderboard) — rework 2026-10-16. The beta switch is off. */
   | "COMPARISON_DISABLED"
   /** A personal access token: the comparison is a browser-session feature. */

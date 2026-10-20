@@ -12,80 +12,23 @@
  * server answered, never around the call.
  */
 import { randomUUID } from "crypto";
-import { ZodError } from "zod";
 import { prisma } from "../../../db";
 import { Prisma } from "../../../prisma";
-import { PeerRefusal } from "../../federation/refusal";
 import { PERSON_SELECT, toPerson } from "../people";
 import {
-  TRIP_SHARE_VERSIONS,
   inviteClaimReplySchema,
-  tripPingReplySchema,
   type InviteClaimReply,
   type InviteRefusal,
+  type TripOffer,
 } from "../../../schemas/tripSharePeer";
+import logger from "../../../utils/logger";
+import { serveOffer } from "./offerInbox";
 import { requireTripFederation } from "./access";
 import { remoteShareError, type RemoteShareErrorCode } from "./errors";
 import { parseTripInviteCode } from "./inviteCode";
 import { readRemotePerson, type RemotePersonView } from "./remotePeople";
 import { messageHeader, tripShareExchange } from "./transport";
-
-const kindOf = (error: unknown): string =>
-  error instanceof PeerRefusal
-    ? error.kind
-    : error instanceof ZodError || error instanceof SyntaxError
-      ? "malformed"
-      : "unreachable";
-
-const unreachable = (userId: string, origin: string, kind: string) =>
-  remoteShareError(
-    "SHARE_REMOTE_UNREACHABLE",
-    502,
-    "That server does not answer",
-    { userId, origin, kind },
-    { origin }
-  );
-
-/** Admitted by this server's admin (pinned, enabled) AND verified by a ping that reached it. */
-async function requireAdmitted(userId: string, origin: string): Promise<void> {
-  const peer = await prisma.comparisonPeer.findUnique({ where: { origin } });
-  if (!peer?.enabled || !peer.verifiedAt)
-    throw remoteShareError(
-      "SHARE_REMOTE_PEER_NOT_ADMITTED",
-      403,
-      "The admin has not admitted that server",
-      { userId, origin },
-      { origin }
-    );
-}
-
-/** The other server serves trip sharing version 1 and has it switched on. */
-async function requireTripSharePeer(userId: string, origin: string): Promise<void> {
-  let versions: number[];
-  try {
-    const reply = await tripShareExchange(origin, { kind: "ping", ...messageHeader() });
-    versions = tripPingReplySchema.parse(reply).tripShare;
-  } catch (error) {
-    // 404: off there, or a server from before trip sharing — the route is absent either way.
-    if (error instanceof PeerRefusal && error.kind === "remote-absent")
-      throw remoteShareError(
-        "SHARE_REMOTE_PEER_DISABLED",
-        409,
-        "That server does not share trips across servers",
-        { userId, origin },
-        { origin }
-      );
-    throw unreachable(userId, origin, kindOf(error));
-  }
-  if (!versions.some((v) => (TRIP_SHARE_VERSIONS as readonly number[]).includes(v)))
-    throw remoteShareError(
-      "SHARE_REMOTE_PEER_OUTDATED",
-      409,
-      "That server needs an update",
-      { userId, origin },
-      { origin }
-    );
-}
+import { kindOf, requireAdmitted, requireTripSharePeer, unreachable } from "./peerCheck";
 
 const REFUSAL_CODES: Record<InviteRefusal, RemoteShareErrorCode> = {
   unknown: "SHARE_REMOTE_INVITE_INVALID",
@@ -130,6 +73,28 @@ async function recordPairing(
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")
       throw unreachable(userId, origin, "channel-reused");
     throw error;
+  }
+}
+
+/**
+ * A trip page's invitation brings its offer in the reply (F-S4c). It is recorded like an offer
+ * that arrived on its own — the pairing it is addressed to exists by now — and waits for the
+ * person's answer. If it cannot be recorded, the pairing still stands and the issuer can offer
+ * the trip again from the trip page; the claim itself has succeeded either way.
+ */
+async function takeOfferWithClaim(userId: string, origin: string, offer: TripOffer): Promise<void> {
+  try {
+    const ack = await serveOffer(origin, offer);
+    if ("rejected" in ack)
+      logger.warn(
+        { operation: "trip_share_claim_offer_rejected", userId, origin, kind: ack.rejected },
+        "The offer that came with the invitation was not recorded"
+      );
+  } catch (err) {
+    logger.error(
+      { operation: "trip_share_claim_offer_failed", userId, origin, err },
+      "The offer that came with the invitation was not recorded"
+    );
   }
 }
 
@@ -178,5 +143,6 @@ export async function claimTripInvite(userId: string, code: string): Promise<Rem
       { userId, origin: parsed.origin, kind: reply.reason }
     );
   const remoteId = await recordPairing(userId, parsed.origin, localChannel, reply);
+  if (reply.offer) await takeOfferWithClaim(userId, parsed.origin, reply.offer);
   return readRemotePerson(userId, remoteId);
 }

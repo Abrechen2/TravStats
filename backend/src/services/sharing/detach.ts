@@ -24,8 +24,11 @@ export async function detachTrip(
   });
   if (others.length === 0) {
     // Nobody left to join: notices that named the group keep their text;
-    // their group link goes null.
-    await tx.tripShareGroup.delete({ where: { id: groupId } });
+    // their group link goes null. A group with people on other servers stays: its member rows
+    // are the tombstones a later message is refused against (spec 2026-10-20 §4, "Replay"),
+    // and telling those servers is F-S4e's `leave`.
+    if ((await tx.tripShareRemoteMember.count({ where: { groupId } })) === 0)
+      await tx.tripShareGroup.delete({ where: { id: groupId } });
     return;
   }
   await tx.shareNotice.createMany({
