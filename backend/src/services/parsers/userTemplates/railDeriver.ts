@@ -38,7 +38,8 @@ import {
  *
  * Times stay what the document prints: `YYYY-MM-DDTHH:mm` on each station's
  * own clock. An arrival without its own day is the departure's day, or the
- * next one when its clock reads earlier (`laterClock`).
+ * next one when its clock reads earlier by more than a zone step; one just
+ * earlier has no knowable day and is left unread (`laterClock`).
  *
  * It abstains rather than write a template that reads nothing: without a
  * complete leg row, without a day, or when the built template does not read

@@ -63,9 +63,22 @@ function nextDay(day: string): string {
 }
 
 /**
+ * The largest zone step a ride printed with clock-only arrivals is taken to
+ * cross. An arrival clock reading earlier than the departure's by less than
+ * this is ambiguous: Lille 09:30 (Paris) → London 09:00 (London) is the same
+ * day, a coach leaving at 09:30 and arriving at 09:00 is a ride of 23½ hours.
+ */
+const MAX_ZONE_STEP_MINUTES = 180;
+
+const minutesOf = (hhmm: string): number => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3));
+
+/**
  * "2026-12-20T22:30 00:05" → "2026-12-21T00:05": an arrival printed as a
  * clock only, on the departure's day — or the next one when it reads earlier
- * than the departure.
+ * than the departure by more than any zone step could explain. Without the
+ * stops' zones an arrival just before the departure's clock (less than
+ * `MAX_ZONE_STEP_MINUTES` earlier) has no knowable day, so it is not read
+ * (null) rather than put on a guessed one.
  */
 export function laterClock(input: TransformValue): string | null {
   const text = asText(input);
@@ -75,7 +88,9 @@ export function laterClock(input: TransformValue): string | null {
       : /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})\s+(\d{1,2}:\d{2})$/.exec(text.trim());
   const arrival = m ? clock(m[3]) : null;
   if (!m || arrival === null) return null;
-  return `${arrival < m[2] ? nextDay(m[1]) : m[1]}T${arrival}`;
+  if (arrival >= m[2]) return `${m[1]}T${arrival}`;
+  if (minutesOf(m[2]) - minutesOf(arrival) < MAX_ZONE_STEP_MINUTES) return null;
+  return `${nextDay(m[1])}T${arrival}`;
 }
 
 /**
