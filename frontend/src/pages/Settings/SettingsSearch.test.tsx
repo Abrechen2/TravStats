@@ -138,7 +138,13 @@ describe("SettingsSearch", () => {
     fireEvent.change(box(), { target: { value: "abfrage" } });
     const hit = screen.getByRole("link", { name: /Automatische Updates/ });
     expect(hit).toHaveTextContent("Abfrageintervall · Ansicht „Experte“");
+    // The link names the hidden row, so the page shows it (forgejo#321 review).
+    expect(hit).toHaveAttribute("href", "/settings/flight?section=autoupdate&expert=1");
     expect(screen.getByRole("button", { name: /wechseln/ })).toBeInTheDocument();
+    fireEvent.keyDown(box(), { key: "Enter" });
+    expect(screen.getByTestId("where")).toHaveTextContent(
+      "/settings/flight?section=autoupdate&expert=1"
+    );
   });
 
   it("offers no switch to an account already on the expert level", () => {

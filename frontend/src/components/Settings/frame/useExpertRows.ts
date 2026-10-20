@@ -16,6 +16,14 @@ export type HiddenRowsReporter = (key: string, hidden: number) => void;
 export const HiddenRowsContext = createContext<HiddenRowsReporter | null>(null);
 
 /**
+ * A link or search hit named this section's expert rows (`&expert=1`): they
+ * show at the standard level too, with a note, the way a named expert section
+ * does — landing on a section with the named setting still hidden would send
+ * the reader looking for something the page withholds (forgejo#321 review).
+ */
+export const RevealExpertRowsContext = createContext(false);
+
+/**
  * Whether expert rows are drawn, and — when they are not — tells the
  * enclosing section how many were left out. `hiddenAtStandard` is the number
  * of settings the component would draw at the expert level that it skips now.
@@ -24,7 +32,8 @@ export const HiddenRowsContext = createContext<HiddenRowsReporter | null>(null);
  * the answer is still right.
  */
 export function useExpertRows(hiddenAtStandard: number): boolean {
-  const expert = useEffectiveSettingsLevel() === "expert";
+  const revealed = useContext(RevealExpertRowsContext);
+  const expert = useEffectiveSettingsLevel() === "expert" || revealed;
   const report = useContext(HiddenRowsContext);
   const key = useId();
   const hidden = expert ? 0 : hiddenAtStandard;

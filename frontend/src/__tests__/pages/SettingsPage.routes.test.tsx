@@ -362,6 +362,24 @@ describe("SettingsPage — the standard level (forgejo#321)", () => {
     expect(screen.getByText("settings:level.deepLinkedExpert")).toBeTruthy();
   });
 
+  it("shows an expert row a link names, and only then", async () => {
+    const { unmount } = render(
+      <MemoryRouter initialEntries={["/settings/data?section=backup&expert=1"]}>
+        <Routes>
+          <Route path="/settings/:group" element={<SettingsPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await findNamed("region", SECTION_LABEL_KEY.backup);
+    expect(screen.getByText("settings:backup.lastInstanceBackup")).toBeTruthy();
+    expect(screen.getByText("settings:level.revealedRows")).toBeTruthy();
+    unmount();
+
+    renderAt("/settings/data?section=backup");
+    await findNamed("region", SECTION_LABEL_KEY.backup);
+    expect(screen.queryByText("settings:backup.lastInstanceBackup")).toBeNull();
+  });
+
   it("puts the level switch at the top of the page", async () => {
     renderAt("/settings/account");
     await findNamed("region", SECTION_LABEL_KEY.profile);

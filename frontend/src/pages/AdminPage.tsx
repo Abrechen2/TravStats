@@ -551,6 +551,7 @@ export default function AdminPage(): JSX.Element {
                 label={labelOf(id)}
                 frame={ADMIN_SECTION_FRAME[id]}
                 deepLinkedExpert={visible.deepLinkedExpert === id && !isExpertPage}
+                revealExpertRows={namedSection === id && searchParams.get("expert") === "1"}
               >
                 {/* A lazily-fetching section (see LAZY_ADMIN_SECTIONS) mounts its
                     body only once it has been near the viewport. */}

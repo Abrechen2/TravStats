@@ -82,6 +82,17 @@ export function DeepLinkedExpertNote({
   );
 }
 
+/**
+ * Said above a section whose expert rows a link named: they show although the
+ * level would hide them. Only while the level is standard — at expert there is
+ * nothing to explain.
+ */
+export function RevealedRowsNote(): JSX.Element | null {
+  const level = useSettingsLevelStore((s) => s.level);
+  if (level !== "standard") return null;
+  return <DeepLinkedExpertNote messageKey="settings:level.revealedRows" />;
+}
+
 /** Said at the top of a page that belongs to the expert view as a whole. */
 export function ExpertPageNotice(): JSX.Element {
   return <DeepLinkedExpertNote messageKey="settings:level.expertPage" />;

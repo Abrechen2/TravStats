@@ -67,6 +67,17 @@ describe("SectionFrame and expert rows (forgejo#321)", () => {
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("Benutzer");
   });
 
+  it("shows the expert rows a link or search hit named, with a note, at the standard level", () => {
+    render(
+      <SectionFrame anchorId="settings-x" label="X" revealExpertRows>
+        <TwoExpertRows />
+      </SectionFrame>
+    );
+    expect(screen.getByText("rows-shown")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("settings:level.revealedRows");
+    expect(document.querySelector('[data-expert-note="settings"]')).toBeNull();
+  });
+
   it("notes a section shown only because a link named it", () => {
     render(
       <SectionFrame anchorId="settings-x" label="X" deepLinkedExpert>

@@ -209,6 +209,7 @@ export default function SettingsPage(): JSX.Element {
           anchorId={`settings-${id}`}
           label={labelOf(id)}
           deepLinkedExpert={visible.deepLinkedExpert === id}
+          revealExpertRows={named === id && searchParams.get("expert") === "1"}
         >
           <SettingsSectionSwitch section={id} page={page} />
         </SectionFrame>

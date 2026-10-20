@@ -1,7 +1,7 @@
 import { useCallback, useState, type JSX, type ReactNode } from "react";
 import { HeadingAboveContext, SectionCard, SectionTitle } from "../SettingsShared";
-import { DeepLinkedExpertNote, ExpertNote } from "./ExpertNote";
-import { HiddenRowsContext } from "./useExpertRows";
+import { DeepLinkedExpertNote, ExpertNote, RevealedRowsNote } from "./ExpertNote";
+import { HiddenRowsContext, RevealExpertRowsContext } from "./useExpertRows";
 
 interface SectionFrameProps {
   /** The DOM id anchors and `?section=` links target, e.g. `settings-units`. */
@@ -22,6 +22,8 @@ interface SectionFrameProps {
    * out: "Benutzer" under "Benutzer" says nothing twice.
    */
   headingAbove?: string | null;
+  /** A link named this section's expert rows: show them, and say why. */
+  revealExpertRows?: boolean;
   children: ReactNode;
 }
 
@@ -42,6 +44,7 @@ export function SectionFrame({
   frame = "own",
   deepLinkedExpert = false,
   headingAbove = null,
+  revealExpertRows = false,
   children,
 }: SectionFrameProps): JSX.Element {
   const [hiddenByKey, setHiddenByKey] = useState<Record<string, number>>({});
@@ -61,18 +64,21 @@ export function SectionFrame({
       }}
     >
       {deepLinkedExpert && <DeepLinkedExpertNote />}
-      <HiddenRowsContext.Provider value={report}>
-        <HeadingAboveContext.Provider value={headingAbove}>
-          {frame === "card" ? (
-            <SectionCard>
-              <SectionTitle title={label} />
-              {children}
-            </SectionCard>
-          ) : (
-            children
-          )}
-        </HeadingAboveContext.Provider>
-      </HiddenRowsContext.Provider>
+      {revealExpertRows && !deepLinkedExpert && <RevealedRowsNote />}
+      <RevealExpertRowsContext.Provider value={revealExpertRows}>
+        <HiddenRowsContext.Provider value={report}>
+          <HeadingAboveContext.Provider value={headingAbove}>
+            {frame === "card" ? (
+              <SectionCard>
+                <SectionTitle title={label} />
+                {children}
+              </SectionCard>
+            ) : (
+              children
+            )}
+          </HeadingAboveContext.Provider>
+        </HiddenRowsContext.Provider>
+      </RevealExpertRowsContext.Provider>
       <ExpertNote count={hidden} />
     </section>
   );

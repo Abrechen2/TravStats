@@ -1118,7 +1118,8 @@
     "morePages_other": "{{count}} more pages in the Expert view",
     "showExpert": "Show Expert view",
     "deepLinkedExpert": "This section belongs to the Expert view. It is shown because the link names it.",
-    "expertPage": "This page belongs to the Expert view."
+    "expertPage": "This page belongs to the Expert view.",
+    "revealedRows": "Expert setting: shown here because the link or the search names it."
   },
   "sectionChips": "Sections on this page",
   "pagePicker": "Page",

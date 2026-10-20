@@ -37,8 +37,9 @@ interface Props {
 
 const MAX_HITS = 8;
 
-function hrefOf(path: string, section: string): string {
-  return `${path}?section=${section}`;
+/** `&expert=1` names the section's hidden rows, so the page shows them. */
+function hrefOf(path: string, section: string, expertRows: boolean): string {
+  return `${path}?section=${section}${expertRows ? "&expert=1" : ""}`;
 }
 
 /**
@@ -67,7 +68,7 @@ export function SettingsSearch({ scopes }: Props): JSX.Element {
           section: section.id,
           label: t(section.labelKey),
           groupLabel: scope.label,
-          href: hrefOf(scope.path, section.id),
+          href: hrefOf(scope.path, section.id, false),
           keywords: splitKeywords(t(section.keywordsKey, { defaultValue: "" })),
           expertKeywords: section.expertKeywordsKey
             ? splitKeywords(t(section.expertKeywordsKey, { defaultValue: "" }))
@@ -78,8 +79,15 @@ export function SettingsSearch({ scopes }: Props): JSX.Element {
     [scopes, t]
   );
 
+  // A hit on an expert row of a standard section links with `&expert=1`; a
+  // whole expert section is shown by being named already.
   const hits = useMemo(
-    () => searchSettings(query, candidates).slice(0, MAX_HITS),
+    () =>
+      searchSettings(query, candidates)
+        .slice(0, MAX_HITS)
+        .map((hit) =>
+          hit.expertOnly && !hit.expert ? { ...hit, href: `${hit.href}&expert=1` } : hit
+        ),
     [query, candidates]
   );
   const searching = query.trim().length >= 2;

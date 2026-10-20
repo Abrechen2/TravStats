@@ -1118,7 +1118,8 @@
     "morePages_other": "{{count}} weitere Seiten in der Ansicht „Experte“",
     "showExpert": "Experte anzeigen",
     "deepLinkedExpert": "Dieser Abschnitt gehört zur Ansicht „Experte“. Er wird gezeigt, weil der Link ihn nennt.",
-    "expertPage": "Diese Seite gehört zur Ansicht „Experte“."
+    "expertPage": "Diese Seite gehört zur Ansicht „Experte“.",
+    "revealedRows": "Experten-Einstellung: hier gezeigt, weil der Link oder die Suche sie nennt."
   },
   "sectionChips": "Abschnitte auf dieser Seite",
   "pagePicker": "Seite",
