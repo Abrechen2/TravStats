@@ -2,6 +2,7 @@
 import { Router, Response, NextFunction } from "express";
 import liveRoutes from "./ferry/live";
 import ticketRoutes from "./ferry/tickets";
+import routingRoutes from "./ferry/routing";
 import type { z } from "zod";
 
 import { prisma } from "../db";
@@ -18,6 +19,8 @@ import {
   type UpdateFerryJourneyInput,
 } from "../schemas/ferry";
 import { mergeFerryJourney } from "../services/ferry/ferryJourneyWrite";
+import { sameFerryEnds } from "../services/ferry/ferryGeometry";
+import { syncFerryLeg } from "../services/ferry/ferryRouting";
 import { withFerryTimes } from "../services/ferry/timesDto";
 import { restatusTrips } from "../services/trip/restatusTrips";
 import {
@@ -167,6 +170,7 @@ router.use(authenticate);
 router.use(requireWriteScope);
 router.use(ticketRoutes);
 router.use(liveRoutes);
+router.use(routingRoutes);
 
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -318,6 +322,9 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     await assertReferencesOwned(userId, { tripId: input.tripId, bookingId: input.bookingId });
 
     const state = mergeFerryJourney(existing, input);
+    const terminalsMoved = !sameFerryEnds(existing, state);
+    if (terminalsMoved && existing.roadtripLegId)
+      throw new AppError("Unlink the roadtrip leg before changing terminals", 409);
     const resolved =
       input.companions !== undefined
         ? await resolveCompanions(userId, input.companions)
@@ -369,11 +376,14 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
             data: {
               ...plainColumns(input),
               ...state,
+              ...(terminalsMoved && { geometry: Prisma.DbNull, geometrySource: "straight" }),
               updatedAt: new Date(Math.max(Date.now(), existing.updatedAt.getTime() + 1)),
               ...fxColumns,
               ...(resolved !== undefined && { companions: resolved.map((c) => c.displayName) }),
             },
           });
+          if (existing.geometrySource === "sea_route" && !terminalsMoved)
+            await syncFerryLeg(tx, existing);
           await propagateWrite(tx, userId, "ferry", existing.id, before);
           return tx.ferryJourney.findUniqueOrThrow({
             where: { id: existing.id },

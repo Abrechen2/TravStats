@@ -176,7 +176,8 @@
       "busKmStraight": "Luftlinie",
       "ferryRides": "Überfahrten",
       "ferryKmMeasured": "Strecke laut Ticket",
-      "ferryKmStraight": "Luftlinie"
+      "ferryKmStraight": "Luftlinie",
+      "ferryKmSeaRoute": "Seeweg (Schätzung)"
     },
     "topItems": {
       "airlines": "Top-Airlines",

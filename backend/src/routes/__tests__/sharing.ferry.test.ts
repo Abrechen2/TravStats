@@ -1,8 +1,9 @@
-import { afterAll, beforeEach, describe, expect, it } from "@jest/globals";
+import { afterAll, beforeEach, describe, expect, it, jest } from "@jest/globals";
 import request from "supertest";
 
 import app from "../../index";
 import { prisma } from "../../db";
+import { computeSchematicRoute } from "../../services/schematicRouter";
 import { detachTrip } from "../../services/sharing/detach";
 import { shareTrip } from "../../services/sharing/shareTrip";
 import {
@@ -11,6 +12,11 @@ import {
   wipeShareTestAccounts,
   type TestAccount,
 } from "./sharingFixtures";
+
+jest.mock("../../services/schematicRouter", () => ({
+  ...jest.requireActual<object>("../../services/schematicRouter"),
+  computeSchematicRoute: jest.fn(),
+}));
 
 /**
  * Ferry crossings in a shared trip (spec 2026-10-16, G2). Rail's and bus's
@@ -156,6 +162,34 @@ describe("trip sharing — ferry crossings", () => {
         where: { userId: ben.id, kind: "deleted", entityType: "ferry" },
       })
     ).toBe(1);
+  });
+
+  it("hands a computed sea route on to Ben's copy", async () => {
+    const annas = await crossing(anna.id, { tripId });
+    const companion = await linkWithConsent(anna, ben);
+    await shareTrip(anna.id, tripId, companion.id);
+    const line: Array<[number, number]> = [
+      [10.1394, 54.3167],
+      [10.9, 55.4],
+      [11.6, 57.2],
+      [11.9364, 57.6995],
+    ];
+    jest.mocked(computeSchematicRoute).mockResolvedValueOnce({
+      waypoints: line,
+      protectedPrefixCount: 0,
+      protectedSuffixCount: 0,
+      routed: true,
+      method: "maritime_graph",
+    });
+    const res = await request(app)
+      .post(`/api/v1/ferry/${annas.id}/route`)
+      .set("Cookie", anna.cookie)
+      .send({});
+    expect(res.status).toBe(200);
+    expect(res.body.data.outcome).toBe("routed");
+    const [copy] = await bens();
+    expect(copy.geometrySource).toBe("sea_route");
+    expect(copy.geometry).toEqual(line);
   });
 
   it("clears the crossing's key when Ben leaves", async () => {

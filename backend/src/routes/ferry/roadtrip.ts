@@ -6,6 +6,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { z } from "../../schemas/zod";
 import { propagateWrite, shareSnapshot } from "../../services/sharing/propagate";
 import { recomputeTripStatus } from "../../services/tripStatusService";
+import { syncFerryLeg } from "../../services/ferry/ferryRouting";
 import logger from "../../utils/logger";
 
 const router = Router();
@@ -157,6 +158,9 @@ router.put("/:id/roadtrip-leg", async (req: AuthRequest, res: Response, next: Ne
           distanceKm: ferry.distanceKm ?? leg.distanceKm,
         },
       });
+      if (ferry.geometrySource === "sea_route") {
+        await syncFerryLeg(tx, { ...ferry, roadtripLegId: leg.id, tripId: leg.route.tripId });
+      }
       // Linking files the crossing on the roadtrip's trip — a move into a
       // shared trip copies it. The leg itself is no fact: a link on a crossing
       // already filed there propagates nothing.

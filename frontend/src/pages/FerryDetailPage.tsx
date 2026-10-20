@@ -36,6 +36,8 @@ export default function FerryDetailPage() {
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [routing, setRouting] = useState(false);
+  const [routeMessage, setRouteMessage] = useState<string | null>(null);
   const documentCount = useDocumentCount(
     deleting && ride ? { type: "ferryJourney", id: ride.id } : null
   );
@@ -69,6 +71,22 @@ export default function FerryDetailPage() {
       setBusy(false);
     }
   };
+  const route = async () => {
+    if (!ride || routing) return;
+    setRouting(true);
+    setRouteMessage(null);
+    try {
+      const result = await ferryApi.route(ride.id);
+      setRide(await ferryApi.get(ride.id));
+      setRouteMessage(
+        t(result.outcome === "straight" ? "ferry:routing.noRoute" : "ferry:routing.estimated")
+      );
+    } catch {
+      setRouteMessage(t("ferry:routing.failed"));
+    } finally {
+      setRouting(false);
+    }
+  };
   if (!ride)
     return (
       <AppShell width="list">
@@ -93,7 +111,11 @@ export default function FerryDetailPage() {
     duration = dep ? railDurationMinutes(dep, arr) : null;
   const locale = dateLocaleForLanguage(i18n.language);
   const distanceLabel = t(
-    ride.distanceSource === "user" ? "ferry:distanceKm" : "ferry:straightDistance"
+    ride.distanceSource === "sea_route"
+      ? "ferry:routing.distance"
+      : ride.distanceSource === "user"
+        ? "ferry:distanceKm"
+        : "ferry:straightDistance"
   );
   const kpis = [
     ...(duration === null
@@ -140,6 +162,23 @@ export default function FerryDetailPage() {
         <p role="alert" className="mb-4 text-sm text-(--danger)">
           {t("ferry:error")}
         </p>
+      )}
+      {(ride.geometrySource === "straight" ||
+        ride.geometrySource === "sea_route" ||
+        routeMessage) && (
+        <div className="mb-4 space-y-2">
+          {ride.geometrySource === "straight" && (
+            <Button onClick={() => void route()} disabled={routing}>
+              {t(routing ? "ferry:routing.busy" : "ferry:routing.button")}
+            </Button>
+          )}
+          <p role="status" className="text-sm text-(--text-muted)">
+            {routeMessage ??
+              (ride.geometrySource === "sea_route"
+                ? t("ferry:routing.estimated")
+                : t("ferry:routing.hint"))}
+          </p>
+        </div>
       )}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
         <div className="flex flex-col gap-6 md:col-span-3">
