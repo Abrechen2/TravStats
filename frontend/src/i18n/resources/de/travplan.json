@@ -135,7 +135,11 @@
     "PLAN_ITEM_NOT_FOUND": "Dieser Eintrag existiert nicht mehr – vermutlich wurde er inzwischen gelöscht. Lade die Seite neu, um den aktuellen Stand zu sehen.",
     "PLAN_PROPOSAL_NOT_FOUND": "Diesen Vorschlag gibt es nicht mehr. Erstelle bei Bedarf einen neuen.",
     "PLAN_DOCUMENT_NOT_FOUND": "Ein verknüpftes Dokument gehört nicht (mehr) zu dieser Reise. Entferne es aus der Buchung und speichere erneut.",
-    "PLAN_WEATHER_INVALID": "Die Wetterquelle hat unbrauchbare Daten geliefert. Die gespeicherte Vorhersage bleibt erhalten; versuche es später erneut."
+    "PLAN_WEATHER_INVALID": "Die Wetterquelle hat unbrauchbare Daten geliefert. Die gespeicherte Vorhersage bleibt erhalten; versuche es später erneut.",
+    "PLAN_INVALID_NIGHT": "Diese Übernachtungsart passt nicht zur Anreise.",
+    "PLAN_SHAPE_IN_USE": "Der Plan hat Stationen; entferne sie, bevor er wieder ein Ziel-Plan wird.",
+    "PLAN_STAGE_CHANGED": "Die Etappe wurde inzwischen geändert. Bitte die Strecke neu berechnen.",
+    "PLAN_VARIANT_LIMIT": "Mehr als drei Varianten sind nicht möglich."
   },
   "enabled": "TravPlan auf diesem Server aktivieren",
   "config": "TravPlan-Einstellungen",
@@ -159,7 +163,15 @@
     "hotelDates": "Für eine Unterkunft fehlen vollständige Aufenthaltsdaten.",
     "nightGap": "{{count}} Nächte sind noch ungeklärt: {{days}}.",
     "budgetOver": "Die bekannten Kosten liegen {{amount}} {{currency}} über dem Budget.",
-    "unknownCosts": "{{count}} Preise fehlen; weitere Währungen: {{currencies}}."
+    "unknownCosts": "{{count}} Preise fehlen; weitere Währungen: {{currencies}}.",
+    "stageUndecided": "Wie geht es von {{from}} nach {{to}}? Für {{mode}} fehlt noch eine Buchung oder ein Platzhalter.",
+    "placeholderDue_one": "„{{title}}“ ist noch ein Platzhalter – Abfahrt morgen.",
+    "placeholderDue_other": "„{{title}}“ ist noch ein Platzhalter – Abfahrt in {{count}} Tagen.",
+    "nightUndecided": "Für {{station}} ist noch kein Platz gemerkt.",
+    "scheduleConflict": "Die Route kommt erst am {{requiredDay}} an, „{{anchor}}“ ist für {{plannedDay}} gebucht.",
+    "longDrive": "{{from}} → {{to}} sind etwa {{hours}} Stunden Fahrt.",
+    "ferryConnection": "Zwischen Ankunft und Fähre „{{ferry}}“ liegen nur {{minutes}} Minuten.",
+    "dayTripOutside": "„{{title}}“ liegt außerhalb der Tage in {{station}}."
   },
   "conscious": "Bewusst offen lassen",
   "dismiss": "Brauche ich nicht",

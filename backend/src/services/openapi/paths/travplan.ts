@@ -5,6 +5,7 @@ import {
   writeSchema,
   stateSchema,
   proposalContentSchema,
+  bookingSchema,
 } from "../../travplan/schema";
 import { errorContent } from "./shared";
 const uuid = z.string().uuid(),
@@ -71,7 +72,13 @@ function register(
     security: [{ BearerAuth: [] }],
     request: {
       ...(path.includes("{tripId}")
-        ? { params: path.includes("{proposalId}") ? params.extend({ proposalId: uuid }) : params }
+        ? {
+            params: path.includes("{proposalId}")
+              ? params.extend({ proposalId: uuid })
+              : path.includes("{stageId}")
+                ? params.extend({ stageId: uuid })
+                : params,
+          }
         : {}),
       ...(body ? { body: { content: json(body) } } : {}),
     },
@@ -152,6 +159,37 @@ register(
   "Revision-checked, idempotent mutations. Fixed anchors are protected. Handover confirms no execution.",
   result,
   writeSchema
+);
+register(
+  "post",
+  "/trips/{tripId}/plan/placeholder-matches",
+  "Which open placeholders an imported booking could replace: same kind, endpoints within 30 km, departure day within one day, lodging overlapping the station nights. Read-only.",
+  z.object({
+    matches: z.array(
+      z.object({
+        bookingId: uuid,
+        score: z.number(),
+        variant: z.enum(["active", "inactive"]),
+        reasons: z.array(z.enum(["kind", "endpoints", "day", "nights"])),
+        differences: z.array(
+          z.object({
+            field: z.string(),
+            plan: z.string().nullable(),
+            booking: z.string().nullable(),
+            change: z.enum(["changed", "new"]),
+          })
+        ),
+      })
+    ),
+  }),
+  z.object({ booking: bookingSchema })
+);
+register(
+  "post",
+  "/trips/{tripId}/plan/stages/{stageId}/route",
+  "Routes one drive stage through the instance router and stores kilometres and drive time (idempotent, revision-checked). A failed router keeps stored figures and records fallbackReason; a stage whose stations moved meanwhile answers PLAN_STAGE_CHANGED. Ferry stages get the great-circle distance; other modes are not routed.",
+  result,
+  z.object({ clientRef: uuid, baseRevision: z.number().int().min(1) })
 );
 register(
   "get",

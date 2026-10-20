@@ -135,7 +135,11 @@
     "PLAN_ITEM_NOT_FOUND": "This entry no longer exists – it was probably deleted in the meantime. Reload the page to see the current version.",
     "PLAN_PROPOSAL_NOT_FOUND": "This proposal no longer exists. Generate a new one if you need it.",
     "PLAN_DOCUMENT_NOT_FOUND": "A linked document does not belong to this trip (any more). Remove it from the booking and save again.",
-    "PLAN_WEATHER_INVALID": "The weather provider returned unusable data. The saved forecast is preserved; try again later."
+    "PLAN_WEATHER_INVALID": "The weather provider returned unusable data. The saved forecast is preserved; try again later.",
+    "PLAN_INVALID_NIGHT": "This kind of night does not fit how you arrive.",
+    "PLAN_SHAPE_IN_USE": "The plan has stations; remove them before it becomes a single-destination plan again.",
+    "PLAN_STAGE_CHANGED": "The stage changed in the meantime. Please calculate the route again.",
+    "PLAN_VARIANT_LIMIT": "More than three variants are not possible."
   },
   "enabled": "Enable TravPlan on this server",
   "config": "TravPlan settings",
@@ -159,7 +163,15 @@
     "hotelDates": "A lodging booking has incomplete stay dates.",
     "nightGap": "{{count}} nights are still unclear: {{days}}.",
     "budgetOver": "Known costs exceed the budget by {{amount}} {{currency}}.",
-    "unknownCosts": "{{count}} prices are unknown; additional currencies: {{currencies}}."
+    "unknownCosts": "{{count}} prices are unknown; additional currencies: {{currencies}}.",
+    "stageUndecided": "How do you get from {{from}} to {{to}}? {{mode}} still needs a booking or a placeholder.",
+    "placeholderDue_one": "“{{title}}” is still a placeholder – departing tomorrow.",
+    "placeholderDue_other": "“{{title}}” is still a placeholder – departure in {{count}} days.",
+    "nightUndecided": "No place has been saved for {{station}} yet.",
+    "scheduleConflict": "The route only arrives on {{requiredDay}}, but “{{anchor}}” is booked for {{plannedDay}}.",
+    "longDrive": "{{from}} → {{to}} is about {{hours}} hours of driving.",
+    "ferryConnection": "Only {{minutes}} minutes lie between your arrival and the ferry “{{ferry}}”.",
+    "dayTripOutside": "“{{title}}” falls outside the days in {{station}}."
   },
   "conscious": "Keep intentionally open",
   "dismiss": "Not needed",

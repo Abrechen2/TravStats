@@ -70,6 +70,8 @@ export const editors: Record<PlanCollection, Field[]> = {
     field("paid", "number"),
     field("currency"),
   ],
+  stations: [],
+  stages: [],
 };
 export function newEntry(
   key: PlanCollection,
@@ -93,6 +95,7 @@ export function newEntry(
         note: "",
         booked: false,
         bookingId: null,
+        stationId: null,
         execution: "unconfirmed",
         source: null,
       } satisfies PlanItem;
@@ -144,6 +147,10 @@ export function newEntry(
       return { ...common, title: "", due: null, done: false };
     case "costs":
       return { ...common, title: "", amount: null, currency, paid: 0, kind: "estimate" };
+    case "stations":
+    case "stages":
+      // Route editing lands with the route UI; the stay editor never creates these.
+      return common;
   }
 }
 export const settingFields: Field[] = [

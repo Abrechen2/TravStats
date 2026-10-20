@@ -3,12 +3,17 @@ import { randomUUID, createHash } from "node:crypto";
 import { prisma } from "../../db";
 import type { Prisma, TravelPlan } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
-import { emptyState, stateSchema, createPlanSchema, proposalContentSchema } from "./schema";
+import { emptyState, createPlanSchema, proposalContentSchema } from "./schema";
+import { parseState } from "./upgrade";
 import { applyOperation, applyProposal } from "./operations";
 import { mirrorEmptyTrip } from "./metadata";
 import { adoptExisting } from "./existing";
 import { linkActual } from "./linkActual";
 import { checkPlan, deriveBudget } from "./rules";
+import { scheduleRoute } from "./routeSchedule";
+import { compareVariants } from "./variants";
+import { todayIn } from "../../shared/time/clock";
+import { isValidZone } from "../../shared/time/zonedParts";
 import { prepareExecution, synchronizeExecution, type PreparedExecution } from "./execution";
 import type { PlanState, PlanView, PlanWrite, PlanSummary } from "./types";
 export function canonical(value: unknown): string {
@@ -29,20 +34,32 @@ export function hash(value: unknown): string {
 }
 export const asJson = (value: unknown): Prisma.InputJsonValue =>
   JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+/**
+ * "Today" for the date-driven route findings. The plan's own zone is the
+ * cheap, deterministic choice here (`view` has no user at hand); a plan
+ * without a valid zone falls back to UTC. The trip's own zone is the right day
+ * here: it is the calendar the traveller lives in while planning and travelling.
+ */
+function planToday(state: PlanState): string {
+  return todayIn(isValidZone(state.timezone) ? state.timezone : "UTC");
+}
 export function view(
   row: Omit<TravelPlan, "state"> & { state: unknown },
   name: string,
   lastMutationId?: string
 ): PlanView {
-  const state = stateSchema.parse(row.state);
+  const state = parseState(row.state);
   return {
     id: row.id,
     tripId: row.tripId,
     name,
     revision: row.revision,
     state,
-    findings: checkPlan(state),
+    findings: checkPlan(state, planToday(state)),
     budget: deriveBudget(state),
+    ...(state.shape === "route"
+      ? { schedule: scheduleRoute(state), variants: compareVariants(state) }
+      : {}),
     ...(lastMutationId ? { lastMutationId } : {}),
   };
 }
@@ -98,8 +115,8 @@ export async function createPlan(userId: string, input: unknown): Promise<PlanVi
     include: { trip: { select: { name: true } } },
   });
   if (prior) {
-    if (stateSchema.parse(prior.state).creationHash) {
-      if (stateSchema.parse(prior.state).creationHash !== hash(body))
+    if (parseState(prior.state).creationHash) {
+      if (parseState(prior.state).creationHash !== hash(body))
         throw new AppError("Creation key has different content", 409, "PLAN_IDEMPOTENCY_CONFLICT");
       return view(prior, prior.trip.name);
     }
@@ -113,7 +130,7 @@ export async function createPlan(userId: string, input: unknown): Promise<PlanVi
       (body.tripId && prior.tripId !== body.tripId) ||
       (original?.name ?? prior.trip.name) !== body.name ||
       hash({ ...emptyState(), ...body.settings }) !==
-        hash({ ...stateSchema.parse(original?.state ?? prior.state), items: [], bookings: [] })
+        hash({ ...parseState(original?.state ?? prior.state), items: [], bookings: [] })
     )
       throw new AppError("Creation key has different content", 409, "PLAN_IDEMPOTENCY_CONFLICT");
     return view(prior, prior.trip.name);
@@ -169,7 +186,7 @@ export async function createPlan(userId: string, input: unknown): Promise<PlanVi
             destinationLabel: true,
           },
         });
-      let state: PlanState = stateSchema.parse({
+      let state: PlanState = parseState({
         ...emptyState(),
         ...(body.tripId
           ? {
@@ -194,7 +211,7 @@ export async function createPlan(userId: string, input: unknown): Promise<PlanVi
       where: { createRef: body.clientRef, trip: { userId } },
       include: { trip: { select: { name: true } } },
     });
-    if (retry && stateSchema.parse(retry.state).creationHash === hash(body))
+    if (retry && parseState(retry.state).creationHash === hash(body))
       return view(retry, retry.trip.name);
     if ((error as { code?: string }).code === "P2002") {
       if (body.tripId) {
@@ -208,6 +225,22 @@ export async function createPlan(userId: string, input: unknown): Promise<PlanVi
     }
     throw error;
   }
+}
+/**
+ * The stored result of an earlier write with this clientRef, or null. Lets a
+ * caller that does expensive work before `writePlan` answer a retry without
+ * redoing it (and without the redone work changing the payload hash).
+ */
+export async function findReceipt(
+  userId: string,
+  tripId: string,
+  clientRef: string
+): Promise<PlanView | null> {
+  const owned = await ownedPlan(userId, tripId);
+  const receipt = await prisma.travelPlanMutation.findUnique({
+    where: { planId_clientRef: { planId: owned.id, clientRef } },
+  });
+  return receipt ? (receipt.result as unknown as PlanView) : null;
 }
 export async function writePlan(
   userId: string,
@@ -229,7 +262,7 @@ export async function writePlan(
   const previous = await replay();
   if (previous) return previous;
   const prepared = new Map<string, PreparedExecution>();
-  const initial = stateSchema.parse(owned.state);
+  const initial = parseState(owned.state);
   if (owned.revision !== body.baseRevision)
     throw new AppError("Plan has changed", 409, "PLAN_REVISION_CONFLICT");
   if (body.operation.type === "execution" && body.operation.execution === "confirmed")
@@ -242,7 +275,7 @@ export async function writePlan(
       where: { id: body.operation.mutationId, planId: owned.id, revision: owned.revision },
     });
     if (target) {
-      const before = stateSchema.parse((target.before as unknown as { state: unknown }).state);
+      const before = parseState((target.before as unknown as { state: unknown }).state);
       for (const item of before.items)
         if (
           item.execution === "confirmed" &&
@@ -270,7 +303,7 @@ export async function writePlan(
       });
       if (reservation.count !== 1)
         throw new AppError("Plan changed during this edit", 409, "PLAN_REVISION_CONFLICT");
-      const before = stateSchema.parse(row.state);
+      const before = parseState(row.state);
       let name = row.trip.name,
         next: PlanState;
       if (body.operation.type === "undo") {
@@ -280,7 +313,7 @@ export async function writePlan(
         if (!change)
           throw new AppError("Only the latest change can be undone", 409, "PLAN_UNDO_STALE");
         const saved = change.before as unknown as { state: PlanState; name: string };
-        next = stateSchema.parse(saved.state);
+        next = parseState(saved.state);
         name = saved.name;
       } else if (body.operation.type === "proposal") {
         await assertAnchorsCurrent(tx, userId, tripId, before);
@@ -299,13 +332,17 @@ export async function writePlan(
         for (const idea of content.ideas)
           if (!next.ideas.some((i) => i.title.toLowerCase() === idea.title.toLowerCase()))
             next.ideas.push({ id: randomUUID(), ...idea, priority: "optional", itemId: null });
-        next = stateSchema.parse(next);
+        next = parseState(next);
         const priorProblems = new Set(
-          checkPlan(before)
+          checkPlan(before, planToday(before))
             .filter((f) => f.code === "overlap")
             .map((f) => f.id)
         );
-        if (checkPlan(next).some((f) => f.code === "overlap" && !priorProblems.has(f.id)))
+        if (
+          checkPlan(next, planToday(next)).some(
+            (f) => f.code === "overlap" && !priorProblems.has(f.id)
+          )
+        )
           throw new AppError(
             "Proposal creates conflicting appointments",
             409,

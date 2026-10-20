@@ -3,6 +3,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
+import * as geo from "../../services/geo/nominatim";
 
 const USERS = ["placetest", "placeother"];
 
@@ -42,6 +43,19 @@ describe("Places API", () => {
   afterAll(async () => {
     await cleanup();
     await prisma.$disconnect();
+  });
+
+  // Creating a place completes its address from the coordinates, which is a
+  // network call to the geocoder (Nominatim). Nothing here stubbed it, so every
+  // POST below waited on the real service from the CI runner and timed out at
+  // 5 s on a slow answer (2026-10-16). No test in this file reads the completed
+  // address; "the geocoder found nothing" is a path the route already handles.
+  beforeEach(() => {
+    jest.spyOn(geo, "completeAddressFromCoordinates").mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   beforeEach(async () => {

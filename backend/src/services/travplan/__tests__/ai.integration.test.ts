@@ -142,6 +142,7 @@ it("invalidates planning help when a source booking changed outside the plan", a
         note: "",
         booked: true,
         bookingId: null,
+        stationId: null,
         execution: "unconfirmed" as const,
         source: { kind: "existing:flight", id: flight.id, version: flight.updatedAt.toISOString() },
       },
