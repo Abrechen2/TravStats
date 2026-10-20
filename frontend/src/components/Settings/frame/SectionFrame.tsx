@@ -1,5 +1,5 @@
 import { useCallback, useState, type JSX, type ReactNode } from "react";
-import { SectionCard, SectionTitle } from "../SettingsShared";
+import { HeadingAboveContext, SectionCard, SectionTitle } from "../SettingsShared";
 import { DeepLinkedExpertNote, ExpertNote } from "./ExpertNote";
 import { HiddenRowsContext } from "./useExpertRows";
 
@@ -16,6 +16,12 @@ interface SectionFrameProps {
   frame?: "own" | "card";
   /** The section is expert-only and on the page only because a link named it. */
   deepLinkedExpert?: boolean;
+  /**
+   * The heading drawn right above this section — the page title, for the
+   * first section of a page. A section heading with the same words is left
+   * out: "Benutzer" under "Benutzer" says nothing twice.
+   */
+  headingAbove?: string | null;
   children: ReactNode;
 }
 
@@ -35,6 +41,7 @@ export function SectionFrame({
   label,
   frame = "own",
   deepLinkedExpert = false,
+  headingAbove = null,
   children,
 }: SectionFrameProps): JSX.Element {
   const [hiddenByKey, setHiddenByKey] = useState<Record<string, number>>({});
@@ -55,14 +62,16 @@ export function SectionFrame({
     >
       {deepLinkedExpert && <DeepLinkedExpertNote />}
       <HiddenRowsContext.Provider value={report}>
-        {frame === "card" ? (
-          <SectionCard>
-            <SectionTitle title={label} />
-            {children}
-          </SectionCard>
-        ) : (
-          children
-        )}
+        <HeadingAboveContext.Provider value={headingAbove}>
+          {frame === "card" ? (
+            <SectionCard>
+              <SectionTitle title={label} />
+              {children}
+            </SectionCard>
+          ) : (
+            children
+          )}
+        </HeadingAboveContext.Provider>
       </HiddenRowsContext.Provider>
       <ExpertNote count={hidden} />
     </section>

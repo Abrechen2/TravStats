@@ -13,6 +13,8 @@ import {
 } from "../Admin/__tests__/resizeObserverStub";
 import { findNamed, getNamed } from "../../__tests__/helpers/namedElement";
 import { useSettingsLevelStore } from "../../store/settingsLevelStore";
+import { repeatedHeadings } from "../../__tests__/helpers/repeatedHeadings";
+import { ADMIN_PAGES } from "../Admin/adminSections";
 
 /**
  * Round 4 ("one page, anchor jumps" — tester feedback): the admin page used to
@@ -229,6 +231,23 @@ describe("AdminPage — the standard level (forgejo#321)", () => {
       "settings:level.expertPage"
     );
   });
+});
+
+describe("AdminPage — no heading repeats the one above it (forgejo#321)", () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  // "Benutzer" under "Benutzer": a page with one section of its own name.
+  it.each(ADMIN_PAGES.filter((p) => !p.domain).map((p) => [p.id]))(
+    "holds on /admin/%s",
+    async (page) => {
+      const { unmount } = renderAdmin(`/admin/${page}`);
+      await waitFor(() => expect(document.querySelector("h1")).not.toBeNull());
+      expect(repeatedHeadings(document.body)).toEqual([]);
+      unmount();
+    }
+  );
 });
 
 /**

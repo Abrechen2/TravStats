@@ -202,9 +202,10 @@ export default function SettingsPage(): JSX.Element {
         ) : null
       }
     >
-      {visible.shown.map((id) => (
+      {visible.shown.map((id, index) => (
         <SectionFrame
           key={id}
+          headingAbove={index === 0 ? title : null}
           anchorId={`settings-${id}`}
           label={labelOf(id)}
           deepLinkedExpert={visible.deepLinkedExpert === id}

@@ -143,6 +143,10 @@ vi.mock("../../components/Settings/PersonalRoutingKeysSection", () => ({
 vi.mock("../../components/Settings/LoyaltySection", () => ({
   default: () => <div data-testid="loyalty-section-stub" />,
 }));
+// Reads the home periods on mount; these cases are about the page's frame.
+vi.mock("../../components/Settings/HomeAirportSection", () => ({
+  default: () => <div data-testid="home-airport-stub" />,
+}));
 vi.mock("../../components/NavigationBar", () => ({
   default: () => <div data-testid="nav-bar-stub" />,
 }));
@@ -171,11 +175,17 @@ vi.mock("../../components/Settings/useSettingsPage", () => ({
     closePasswordModal: vi.fn(),
     lastBackup: null,
     backupStatus: null,
-    autoUpdateSettings: null,
+    autoUpdateSettings: {
+      enabled: false,
+      requireApproval: true,
+      checkInterval: 15,
+      onlyDuringFlight: true,
+      expiryHours: 24,
+    },
     setAutoUpdateSettings: vi.fn(),
     loadingAutoUpdateSettings: false,
     saveAutoUpdateSettings: vi.fn(),
-    historicalEnrichmentSettings: null,
+    historicalEnrichmentSettings: { enabled: false, minConfidence: 60, maxPerDay: 50 },
     setHistoricalEnrichmentSettings: vi.fn(),
     loadingHistoricalEnrichmentSettings: false,
     saveHistoricalEnrichmentSettings: vi.fn(),

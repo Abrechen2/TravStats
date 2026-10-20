@@ -67,7 +67,7 @@ function stravaState(status: StravaStatus | null): ServiceState | null {
  * is used, under Standortverlauf; this page points there.
  */
 export default function ServicesSection({ page }: { page: PageState }): JSX.Element {
-  const { t } = useTranslation(["settings", "openData"]);
+  const { t } = useTranslation(["settings", "openData", "immich", "roadtrips"]);
   const isAdmin = page.user?.isAdmin ?? false;
   const toursVisible = useToursVisible();
   const { isEnabled } = useEnabledDomains();
@@ -86,7 +86,7 @@ export default function ServicesSection({ page }: { page: PageState }): JSX.Elem
     items: [
       {
         id: "immich",
-        name: "Immich",
+        name: t("immich:title"),
         what: t("settings:services.what.immich"),
         state: immichState(immich),
         body: (
@@ -112,7 +112,7 @@ export default function ServicesSection({ page }: { page: PageState }): JSX.Elem
         ? [
             {
               id: "strava",
-              name: "Strava",
+              name: t("roadtrips:strava.title"),
               what: t("settings:services.what.strava"),
               state: stravaState(strava),
               body: <StravaConnectionCard isAdmin={isAdmin} onStatus={setStrava} />,

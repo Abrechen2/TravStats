@@ -186,7 +186,7 @@ export default function GlobalApiKeysManager({
         ...CROSS_KEYS.map(keyItem),
         {
           id: "immich",
-          name: "Immich",
+          name: t("immich:title"),
           what: t("settings:services.what.immich"),
           state: null,
           body: <ImmichGlobalSettings />,

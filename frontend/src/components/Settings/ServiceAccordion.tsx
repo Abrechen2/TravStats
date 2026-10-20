@@ -4,6 +4,7 @@ import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import Pill from "../ui/Pill";
 import { token } from "../ui/tokens";
 import { Icon } from "../ui/Icon";
+import { HeadingAboveContext } from "./SettingsShared";
 
 /**
  * Who provides a service for this account (forgejo#321):
@@ -169,9 +170,9 @@ function AccordionGroup({
             <li key={item.id} data-service={item.id} className="flex flex-col" style={{ gap: 8 }}>
               <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
                 <span className="flex min-w-0 flex-1 flex-col" style={{ gap: 2 }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ts-text-bright)" }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--ts-text-bright)" }}>
                     {item.name}
-                  </span>
+                  </h3>
                   {item.what && <span className="t-caption">{item.what}</span>}
                 </span>
                 {item.state && <ServiceBadge state={item.state} />}
@@ -181,7 +182,11 @@ function AccordionGroup({
                   {t("settings:services.ownOverrides")}
                 </p>
               )}
-              {item.body}
+              {/* The row names the service; a card titled the same leaves its
+                  heading out. */}
+              <HeadingAboveContext.Provider value={item.name}>
+                {item.body}
+              </HeadingAboveContext.Provider>
             </li>
           ))}
         </ul>

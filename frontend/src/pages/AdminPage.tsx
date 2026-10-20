@@ -541,12 +541,13 @@ export default function AdminPage(): JSX.Element {
         notice={isExpertPage ? <ExpertPageNotice /> : null}
       >
         <div ref={mainRef} className="flex min-w-0 flex-col" style={{ gap: "var(--ts-space-xl)" }}>
-          {visible.shown.map((id) => {
+          {visible.shown.map((id, index) => {
             const body = <AdminSectionSwitch section={id} {...switchProps} />;
             return (
               <SectionFrame
                 key={id}
                 anchorId={`admin-${id}`}
+                headingAbove={index === 0 ? pageTitle : null}
                 label={labelOf(id)}
                 frame={ADMIN_SECTION_FRAME[id]}
                 deepLinkedExpert={visible.deepLinkedExpert === id && !isExpertPage}

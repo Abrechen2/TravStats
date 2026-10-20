@@ -117,7 +117,7 @@ export default function ImmichConnectionCard({
   return (
     <SectionCard>
       <SectionTitle
-        title={t("title")}
+        title={t("immich:title")}
         description={t("subtitle")}
         whenUnreachable={t("settings:unreachable.immich")}
         badge={status?.isShared ? <Pill color={token("accent")}>{t("shared")}</Pill> : undefined}

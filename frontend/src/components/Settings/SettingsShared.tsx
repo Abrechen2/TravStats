@@ -1,4 +1,4 @@
-import React from "react";
+import React, { createContext, useContext } from "react";
 
 import HelpIcon from "../Help/HelpIcon";
 
@@ -53,6 +53,14 @@ export function SectionCard({ children }: SectionCardProps): JSX.Element {
 // ---------------------------------------------------------------------------
 // SectionTitle
 // ---------------------------------------------------------------------------
+
+/**
+ * The heading already drawn directly above this card — the page title of a
+ * single-section page, an accordion row's name. A `SectionTitle` with the same
+ * words leaves its heading out, so a reader never meets "Immich" over "Immich"
+ * (forgejo#321). Its description, badge and aside still show.
+ */
+export const HeadingAboveContext = createContext<string | null>(null);
 interface SectionTitleProps {
   title: string;
   description?: string;
@@ -94,10 +102,12 @@ export function SectionTitle({
   aside,
   whenUnreachable,
 }: SectionTitleProps): JSX.Element {
+  const above = useContext(HeadingAboveContext);
+  const repeated = above !== null && above === title;
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
       <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
-        <h2 className="t-label-mono">{title}</h2>
+        {repeated ? null : <h2 className="t-label-mono">{title}</h2>}
         {badge}
         {aside ? (
           <span className="t-caption" style={{ marginLeft: "auto" }}>
