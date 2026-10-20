@@ -71,3 +71,15 @@ it("falls back to the labelled facts when no template reads the ticket", async (
   expect(result.parser).toBe("labels");
   expect(result.crossings[0]).toMatchObject({ departurePort: { value: "Bari" } });
 });
+
+it("proposes no per-crossing price from a ticket total that covers several crossings", async () => {
+  // FERRY_SOURCE: an outward and a return crossing, 86,00 EUR in total.
+  mockLoad.mockResolvedValue([ferryTemplate()]);
+  const result = await previewFerryText(`${FERRY_SUBJECT}\n${FERRY_SOURCE}`, "user-1");
+  expect(result.crossings).toHaveLength(2);
+  for (const crossing of result.crossings) {
+    expect(crossing.price).toBeUndefined();
+    expect(crossing.currency).toBeUndefined();
+    expect(crossing.bookingReference).toEqual({ value: "IPS884213", evidence: "IPS884213" });
+  }
+});
