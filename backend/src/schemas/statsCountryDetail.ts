@@ -1,4 +1,5 @@
 import { z } from "./zod";
+import { countryOverrideViewSchema } from "./countryOverride";
 
 /**
  * The shape of `GET /stats/countries/{code}` — one country, and what proves
@@ -167,6 +168,10 @@ export const countryDetailSchema = z.object({
   visited: z.boolean().optional(),
   visitUncertain: z.boolean().optional(),
   visitUncertainReasons: z.array(z.enum(["openChain", "noDestination", "undated"])).optional(),
+  override: countryOverrideViewSchema
+    .nullable()
+    .optional()
+    .openapi({ description: "The user's verdict on this country (forgejo#308); null when none" }),
   code: z.string().openapi({
     description: "ISO-3166 alpha-2. Never a flag: flags are political and age.",
   }),

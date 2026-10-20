@@ -34,6 +34,8 @@ const DOMAIN_OF_KIND: Record<EvidenceKind, DomainKey | null> = {
   ferry: "ferry",
   roadtrip: "roadtrip",
   track: null,
+  // The user's own word (forgejo#308) names no domain either.
+  manual: null,
 };
 
 type AnnotatedInput = EvidenceInput & { unclear?: VisitUnclearReason };

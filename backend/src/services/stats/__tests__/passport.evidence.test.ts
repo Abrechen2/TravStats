@@ -46,6 +46,7 @@ describe("the passport counts evidence", () => {
       ferry: 0,
       roadtrip: 0,
       track: 0,
+      manual: 0,
     });
   });
 
@@ -69,6 +70,7 @@ describe("the passport counts evidence", () => {
       ferry: 0,
       roadtrip: 0,
       track: 0,
+      manual: 0,
     });
     const italy = passport.countries.find((c) => c.code === "IT");
     expect(italy?.evidence).toBe("port");
@@ -99,6 +101,7 @@ describe("the passport counts evidence", () => {
       ferry: 0,
       roadtrip: 0,
       track: 0,
+      manual: 0,
     });
     // Lower-cased in the source, upper-cased in the answer: the code is the
     // join key and two spellings of it must not become two countries.

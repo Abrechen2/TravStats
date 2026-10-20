@@ -37,6 +37,8 @@ import { loadBusEnds } from "./busEvidence";
 import { loadFerryEnds } from "./ferryEvidence";
 import { loadVisibleDomains } from "../domainVisibility";
 import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "./departureClock";
+import { applyCountryOverrides } from "./countryOverrides";
+import { listCountryOverrides } from "./countryOverrideStore";
 import { departureDayOf } from "../../utils/stats/departureClock";
 
 /** Every argument `buildCountryDetail` takes after the country code, in its order. */
@@ -55,9 +57,16 @@ export async function loadCountryDetail(
   const detail = buildCountryDetail(code, ...inputs);
   if (!detail) return null;
   const [flights, airports, home, ports, places, lodgings, , , stations, rail, bus, ferry] = inputs;
-  const homeCountries = await loadHomeCountries(userId, new Date().toISOString().slice(0, 10));
-  // Reuse the same fold and loaded records. No second database scan or local rule.
-  const passport = buildPassport(
+  const today = new Date().toISOString().slice(0, 10);
+  const [homeCountries, overrides] = await Promise.all([
+    loadHomeCountries(userId, today),
+    listCountryOverrides(userId),
+  ]);
+  // Reuse the same fold and loaded records. No second database scan or local
+  // rule — and the user's overrides (forgejo#308) through the same function
+  // `loadPassport` applies them with, so a row and its page agree. The year
+  // only decides `isNew`, which this page does not read.
+  const automatic = buildPassport(
     flights,
     airports,
     [...(home ?? [])],
@@ -74,13 +83,19 @@ export async function loadCountryDetail(
     homeCountries,
     ferry
   );
+  const passport = applyCountryOverrides(automatic, overrides, Number(today.slice(0, 4)));
   const row = passport.countries.find((country) => country.code === detail.code);
+  const excluded = passport.excludedCountries.find((country) => country.code === detail.code);
   return {
     ...detail,
     groundPresence: row?.groundPresence ?? false,
     visited: row?.visited ?? false,
-    visitUncertain: row?.visitUncertain ?? true,
+    // An excluded country is decided, not unclear: the user took it out.
+    visitUncertain: row?.visitUncertain ?? excluded === undefined,
     visitUncertainReasons: row?.visitUncertainReasons ?? [],
+    override:
+      row?.override ??
+      (excluded ? { verdict: "excluded" as const, note: excluded.note, day: excluded.day } : null),
   };
 }
 
