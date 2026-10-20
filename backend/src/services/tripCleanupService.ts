@@ -266,6 +266,12 @@ export async function mergeTrips(
   let mergedDuplicates = { albums: 0, photos: 0 };
 
   await prisma.$transaction(async (tx) => {
+    // Lock the source trips first. A Companion upload inserting a recording
+    // into one of them needs its row (FK check) and so waits until the merge
+    // commits — then finds the trip gone and is refused. Without the lock an
+    // upload landing between the move below and the delete was stored, then
+    // cascade-deleted, while both sides reported success (forgejo#316).
+    await tx.$queryRaw`SELECT id FROM trips WHERE id = ANY(${sourceIds}::text[]) FOR UPDATE`;
     // A shared source trip leaves its group before it goes (its members keep
     // their copies and are told); what lands on a shared target is copied.
     for (const source of sources) await detachTrip(tx, userId, source);
