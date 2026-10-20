@@ -145,14 +145,22 @@ function serially<T>(key: string, task: () => Promise<T>): Promise<T> {
 
 /**
  * Send one group message to `origin`, numbered on the stream. `build` makes the message for a
- * seq. Resolves with the acknowledgement (its `received` is the seq); throws `StreamRejected` for
- * a refusal, or the transport's error.
+ * seq. Resolves with the acknowledgement; throws `StreamRejected` for a refusal, or the
+ * transport's error.
+ *
+ * `onAck` runs in the SAME transaction that moves `lastSentSeq` (F-S4d review): the outbox
+ * deletes its row there, so "the peer has it" and "it is no longer queued" commit together or
+ * not at all. If they do not — a crash, a failing notice — the retry carries the same message id
+ * and the peer answers from its memory with the seq it took the first time. An ack for an
+ * EARLIER seq is therefore that repeat, not a malformed answer: the stream does not move again,
+ * and `onAck` completes what was left undone.
  */
 export function sendOnStream(
   groupId: string,
   origin: string,
   build: (seq: number) => GroupMessage,
-  transport: PeerTransport
+  transport: PeerTransport,
+  onAck?: (tx: DbTransaction, ack: Received) => Promise<void>
 ): Promise<Received> {
   return serially(`${groupId}|${origin}`, async () => {
     const stream = await prisma.tripSharePeerStream.upsert({
@@ -164,10 +172,15 @@ export function sendOnStream(
     for (let attempt = 0; ; attempt++) {
       const ack = ackSchema.parse(await exchange(origin, build(seq), transport));
       if ("received" in ack) {
-        if (ack.received !== seq) throw refused("malformed");
-        await prisma.tripSharePeerStream.update({
-          where: { groupId_peerOrigin: { groupId, peerOrigin: origin } },
-          data: { lastSentSeq: seq },
+        // A later seq than asked for is not an answer to this message.
+        if (ack.received > seq) throw refused("malformed");
+        await prisma.$transaction(async (tx) => {
+          if (ack.received === seq)
+            await tx.tripSharePeerStream.update({
+              where: { groupId_peerOrigin: { groupId, peerOrigin: origin } },
+              data: { lastSentSeq: seq },
+            });
+          await onAck?.(tx, ack);
         });
         return ack;
       }

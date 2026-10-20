@@ -124,22 +124,21 @@ async function conflictHere(tx: DbTransaction, row: Row, conflicts: readonly Ack
   });
 }
 
-async function delivered(row: Row, ack: Received, now: Date): Promise<void> {
-  await prisma.$transaction(async (tx) => {
-    await tx.tripShareOutbox.delete({ where: { id: row.id } });
-    await tx.tripShareRemoteMember.updateMany({
-      where: {
-        ...streamMembers(row.groupId, row.peerOrigin),
-        OR: [
-          { state: "unreachable" },
-          { state: "suspended", stateReason: { in: ["off", "peer-blocked"] } },
-        ],
-      },
-      data: { state: "active", stateReason: null, stateSince: now },
-    });
-    if (row.kind === "fact-update" && ack.conflicts?.length)
-      await conflictHere(tx, row, ack.conflicts);
+/** Inside the transaction that moves the stream (`sendOnStream`'s `onAck`). */
+async function delivered(tx: DbTransaction, row: Row, ack: Received, now: Date): Promise<void> {
+  await tx.tripShareOutbox.delete({ where: { id: row.id } });
+  await tx.tripShareRemoteMember.updateMany({
+    where: {
+      ...streamMembers(row.groupId, row.peerOrigin),
+      OR: [
+        { state: "unreachable" },
+        { state: "suspended", stateReason: { in: ["off", "peer-blocked"] } },
+      ],
+    },
+    data: { state: "active", stateReason: null, stateSince: now },
   });
+  if (row.kind === "fact-update" && ack.conflicts?.length)
+    await conflictHere(tx, row, ack.conflicts);
 }
 
 async function park(row: Row, error: StreamRejected, now: Date): Promise<void> {
@@ -215,9 +214,14 @@ async function deliverStream(
       continue;
     }
     const transport = row.kind === "entries" ? ENTRIES_TRANSPORT : PROPAGATION_TRANSPORT;
-    let ack: Received;
     try {
-      ack = await sendOnStream(groupId, peerOrigin, (seq) => messageOf(row, seq), transport);
+      await sendOnStream(
+        groupId,
+        peerOrigin,
+        (seq) => messageOf(row, seq),
+        transport,
+        (tx, ack) => delivered(tx, row, ack, now)
+      );
     } catch (error) {
       if (error instanceof StreamRejected && error.ack.rejected !== "gap") {
         await park(row, error, now);
@@ -228,7 +232,6 @@ async function deliverStream(
       run.failed++;
       return;
     }
-    await delivered(row, ack, now);
     run.sent++;
   }
 }
