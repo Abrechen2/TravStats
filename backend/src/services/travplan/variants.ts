@@ -157,21 +157,25 @@ function compareRoute(
   stations: PlanState["stations"],
   stages: PlanStage[]
 ): VariantComparison {
-  // A leg no stage covers makes the drive total a partial sum; it is unknown.
+  // Only stages joining consecutive stations of the current order are the
+  // route. Others are left over from a reorder: reported, never summed. A leg
+  // no stage covers makes the drive total a partial sum, so it is unknown.
   const legs = routeLegs(stations, stages);
   const complete = legs.every((g) => g !== null);
   const legStages = legs.filter((g): g is PlanStage => g !== null);
+  const onRoute = new Set(legStages.map((g) => g.id));
   return {
     id,
     name,
     active: id === null,
-    driveKm: complete ? driveKm(stages) : null,
+    driveKm: complete ? driveKm(legStages) : null,
     driveDays: legStages.filter((g) => g.mode === "drive").length,
     destinationNights: stations
       .filter((s) => s.night.kind !== "onboard")
       .reduce((sum, s) => sum + s.nights, 0),
-    ...stageCosts(state, stages),
-    fuel: complete ? fuelEstimate(stages, state.vehicle) : null,
+    ...stageCosts(state, legStages),
+    fuel: complete ? fuelEstimate(legStages, state.vehicle) : null,
+    obsoleteStageIds: stages.filter((g) => !onRoute.has(g.id)).map((g) => g.id),
   };
 }
 

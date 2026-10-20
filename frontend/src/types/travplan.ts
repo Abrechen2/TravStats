@@ -298,6 +298,8 @@ export interface VariantComparison {
   stageCosts: { amount: number; currency: string } | null;
   fuel: { amount: number; currency: string } | null;
   unknownCosts: number;
+  /** Stages that join no consecutive stations (left over from a reorder); never summed. */
+  obsoleteStageIds: string[];
 }
 export interface PlanView {
   id: string;
