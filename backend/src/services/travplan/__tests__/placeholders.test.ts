@@ -148,7 +148,7 @@ describe("placeholders", () => {
     const { state, ph } = planWithPlaceholder();
     const op = (id: string, value: Record<string, unknown>) =>
       applyOperation(state, { type: "replace_placeholder", placeholderId: id, value }, 1);
-    expect(() => op(uid(), booking())).toThrow(
+    expect(() => op(uid(), { ...booking() })).toThrow(
       expect.objectContaining({ code: "PLAN_ITEM_NOT_FOUND" })
     );
     expect(() => op(ph.id, { ...booking(), actualBookingId: uid() })).toThrow(
@@ -191,7 +191,7 @@ describe("placeholders", () => {
     expect(deriveBudget(state)).toMatchObject({ estimates: 520, booked: 0, paid: 0 });
     const next = applyOperation(
       state,
-      { type: "replace_placeholder", placeholderId: ph.id, value: booking({ amount: 548 }) },
+      { type: "replace_placeholder", placeholderId: ph.id, value: { ...booking({ amount: 548 }) } },
       1
     );
     expect(deriveBudget(next)).toMatchObject({ estimates: 0, booked: 548, total: 548 });

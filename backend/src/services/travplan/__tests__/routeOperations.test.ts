@@ -233,7 +233,7 @@ describe("route operations", () => {
   it("stage upsert adds a stage and edits one in place", () => {
     const { state, a, c } = withRoute();
     const extra = stage(a.id, c.id, { note: "shortcut" });
-    const added = apply(state, { type: "upsert", collection: "stages", value: extra });
+    const added = apply(state, { type: "upsert", collection: "stages", value: { ...extra } });
     expect(added.stages).toHaveLength(3);
     const edited = apply(added, {
       type: "upsert",

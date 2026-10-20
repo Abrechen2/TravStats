@@ -172,6 +172,7 @@ describe("Travel planning invariants", () => {
       note: "",
       booked: false,
       bookingId: null,
+      stationId: null,
       execution: "unconfirmed",
       source: null,
     });
