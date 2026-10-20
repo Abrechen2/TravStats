@@ -9,7 +9,7 @@ import {
   type RailPathSource,
   type RailPathSourceKind,
 } from "../../layers/railPathsLayer";
-import { buildStationLabelLayers } from "../../layers/stationLabelsLayer";
+import { buildStationLabelLayers, type StationLabelGroup } from "../../layers/stationLabelsLayer";
 import type { LabelsMode } from "../../map/labelPriority";
 import { hexToRgb } from "../../../lib/domainColor";
 import { legendRow, type LegendRowFn } from "./allTabLegendRows";
@@ -60,8 +60,7 @@ export function buildRailMapLayers(
     widthScale: style.lineWidth,
     stationSize: style.stationSize,
   });
-  const labels = buildStationLabelLayers(journeys, {
-    color,
+  const labels = buildStationLabelLayers([{ rides: journeys, color }], {
     labelsMode: style.labelsMode ?? "important",
     idPrefix,
     onGlobe,
@@ -124,6 +123,8 @@ export function buildRailLegendRows(
 export interface RailOverlay {
   layers: Layer[];
   legendRows: JSX.Element[];
+  /** The drawn journeys and their colour, for the map's ONE station-label pass. */
+  stations: StationLabelGroup;
 }
 
 /**
@@ -139,11 +140,14 @@ export function useRailOverlay(show: boolean, onGlobe: boolean, t: Translate): R
   const color = colorOf("rail");
   const style = useRailMapStyle();
   const drawn = show ? journeys : EMPTY;
+  // The station names are left to the map's single pass across all three
+  // ground domains (`useTransportOverlays`), so they are not drawn here.
   const layers = useMemo(
-    () => buildRailMapLayers(drawn, color, onGlobe, "all-rail", style),
+    () => buildRailMapLayers(drawn, color, onGlobe, "all-rail", { ...style, labelsMode: "off" }),
     [drawn, color, onGlobe, style]
   );
-  return { layers, legendRows: buildRailLegendRows(drawn, color, t, legendRow) };
+  const stations = useMemo(() => ({ rides: drawn, color: hexToRgb(color) }), [drawn, color]);
+  return { layers, legendRows: buildRailLegendRows(drawn, color, t, legendRow), stations };
 }
 
 const EMPTY: readonly RailPathSource[] = [];

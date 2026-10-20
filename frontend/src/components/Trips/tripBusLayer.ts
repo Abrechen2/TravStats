@@ -91,6 +91,9 @@ export function buildBusLayers(rides: readonly TripBusJourney[], colorHex: strin
       jointRounded: true,
       pickable: false,
     }),
-    ...buildStationLabelLayers(rides, { color, labelsMode: "important", idPrefix: "trip-bus" }),
+    ...buildStationLabelLayers([{ rides, color }], {
+      labelsMode: "important",
+      idPrefix: "trip-bus",
+    }),
   ];
 }

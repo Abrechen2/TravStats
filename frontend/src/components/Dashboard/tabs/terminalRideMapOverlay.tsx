@@ -4,14 +4,17 @@ import { PathLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import { busPaths, type BusPathDatum, type TerminalRideLine } from "../../Trips/tripBusLayer";
 import { RAIL_PATH_GLOBE_ALTITUDE_M } from "../../layers/railPathsLayer";
-import { buildStationLabelLayers, type StationLabelSource } from "../../layers/stationLabelsLayer";
+import {
+  buildStationLabelLayers,
+  type StationLabelGroup,
+  type StationLabelSource,
+} from "../../layers/stationLabelsLayer";
 import type { LabelsMode } from "../../map/labelPriority";
 import { hexToRgb } from "../../../lib/domainColor";
 import { legendRow, type LegendRowFn } from "./allTabLegendRows";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import { useDashboardFilterStore } from "../../../store/dashboardFilterStore";
 import { useDomainVisible } from "../../../hooks/useDomainVisible";
-import { useMapLabelsModeStore } from "../../../store/mapLabelsModeStore";
 import { logger } from "../../../lib/logger";
 
 type Translate = (key: string) => string;
@@ -63,7 +66,7 @@ export function buildTerminalRideMapLayers(
       pickable: false,
       updateTriggers: { getColor: colorHex, getPath: altitude },
     }),
-    ...buildStationLabelLayers(rides, { color, labelsMode, idPrefix, onGlobe }),
+    ...buildStationLabelLayers([{ rides, color }], { labelsMode, idPrefix, onGlobe }),
   ];
 }
 
@@ -143,6 +146,8 @@ export function useDashboardRides<R extends TerminalRideLine>(
 export interface TerminalRideOverlay {
   layers: Layer[];
   legendRows: JSX.Element[];
+  /** The drawn rides and their colour, for the map's ONE station-label pass. */
+  stations: StationLabelGroup;
 }
 
 export interface TerminalRideOverlaySpec<R extends TerminalRideLine & StationLabelSource> {
@@ -169,15 +174,18 @@ export function useTerminalRideOverlay<R extends TerminalRideLine & StationLabel
   const rides = useDashboardRides(show, year, spec.load, spec.domain);
   const { colorOf } = useDomainColors();
   const color = colorOf(spec.domain);
-  const labelsMode = useMapLabelsModeStore((s) => s.mode);
   const drawn = show ? rides : EMPTY;
+  // The station names are left to the map's single pass across all three
+  // ground domains (`useTransportOverlays`), so they are not drawn here.
   const layers = useMemo(
-    () => buildTerminalRideMapLayers(drawn, color, onGlobe, spec.idPrefix, labelsMode),
-    [drawn, color, onGlobe, spec.idPrefix, labelsMode]
+    () => buildTerminalRideMapLayers(drawn, color, onGlobe, spec.idPrefix, "off"),
+    [drawn, color, onGlobe, spec.idPrefix]
   );
+  const stations = useMemo(() => ({ rides: drawn, color: hexToRgb(color) }), [drawn, color]);
   return {
     layers,
     legendRows: buildTerminalRideLegendRows(drawn, color, t, legendRow, spec.legend),
+    stations,
   };
 }
 

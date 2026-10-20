@@ -83,13 +83,11 @@ describe("bus rides on the trip (forgejo#180)", () => {
     const layers = buildBusLayers([ride(), ride({ id: "r2", status: "cancelled" })], "#102030");
     const labels = layers.find((l) => l.id === "trip-bus-station-labels");
     const props = labels?.props as unknown as {
-      data: { name: string; count: number }[];
-      color: number[];
+      data: { name: string; count: number; color: number[] }[];
     };
-    expect(props.color).toEqual([16, 32, 48]);
-    expect(props.data.map((d) => [d.name, d.count])).toEqual([
-      ["Seoul", 1],
-      ["Sokcho", 1],
+    expect(props.data.map((d) => [d.name, d.count, d.color])).toEqual([
+      ["Seoul", 1, [16, 32, 48]],
+      ["Sokcho", 1, [16, 32, 48]],
     ]);
   });
 

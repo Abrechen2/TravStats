@@ -1,6 +1,12 @@
 import { CompositeLayer, type Layer, type UpdateParameters } from "@deck.gl/core";
 import { TextLayer } from "@deck.gl/layers";
-import { declutterByDistance, pickLabelled, type LabelsMode } from "../map/labelPriority";
+import {
+  declutterByBoxes,
+  estimateLabelBox,
+  pickLabelled,
+  type LabelBoxSize,
+  type LabelsMode,
+} from "../map/labelPriority";
 import { toPortLabel } from "../map/portLabel";
 import type { Rgb } from "../../lib/domainColor";
 
@@ -46,6 +52,10 @@ export interface StationLabelDatum {
   position: [number, number];
   /** How many drawn rides start or end here — the label-priority weight. */
   count: number;
+  /** The domain colour, resolved by the caller from the domain colour store. */
+  color: Rgb;
+  /** The pill's estimated screen box — what the collision pass compares. */
+  box: LabelBoxSize;
 }
 
 /**
@@ -54,6 +64,9 @@ export interface StationLabelDatum {
  * hotel label's wider budget.
  */
 const MAX_STATION_LABEL_LEN = 20;
+/** The pill's font size and padding — read by the layer AND the box estimate. */
+const LABEL_FONT_PX = 11;
+const LABEL_PADDING_PX: [number, number] = [4, 2];
 
 export function toStationLabel(name: string): string {
   return toPortLabel(name, MAX_STATION_LABEL_LEN);
@@ -121,7 +134,10 @@ function mostUsed(spellings: Map<string, number>): string {
  * A cancelled ride never ran and draws no line, so it names no station either —
  * the reading every route builder takes of it.
  */
-export function buildStationLabels(rides: readonly StationLabelSource[]): StationLabelDatum[] {
+export function buildStationLabels(
+  rides: readonly StationLabelSource[],
+  color: Rgb
+): StationLabelDatum[] {
   const byId = new Map<string, Pending>();
   const grid = new Map<string, Pending[]>();
   const out: Pending[] = [];
@@ -189,17 +205,28 @@ export function buildStationLabels(rides: readonly StationLabelSource[]): Statio
   }
   return out.map((p) => {
     const name = mostUsed(p.spellings);
+    const shortLabel = toStationLabel(name);
     return {
       key: p.key,
       name,
-      shortLabel: toStationLabel(name),
+      shortLabel,
       position: p.position,
       count: p.count,
+      color,
+      box: estimateLabelBox(shortLabel, LABEL_FONT_PX, LABEL_PADDING_PX),
     };
   });
 }
 
-/** The labels shown at one zoom — the airport labels' pick, verbatim. */
+/**
+ * The labels shown at one zoom: the airport labels' zoom budget, then a
+ * collision pass on the labels' estimated boxes. The 42 px centre gap the
+ * airport codes use is right for three letters and wrong for a 20-character
+ * station name, which is over 100 px wide (Codex review). The callers hand in
+ * every domain's stations at once, so a train station and a bus terminal at
+ * the same interchange compete in ONE pass instead of being printed over each
+ * other by two.
+ */
 export function selectStationLabels(
   stations: readonly StationLabelDatum[],
   mode: LabelsMode,
@@ -207,10 +234,11 @@ export function selectStationLabels(
 ): StationLabelDatum[] {
   const budgeted = pickLabelled(stations, (s) => s.count, mode, zoom);
   if (mode === "all") return budgeted;
-  return declutterByDistance(
+  return declutterByBoxes(
     budgeted,
     (s) => s.count,
     (s) => s.position,
+    (s) => s.box,
     zoom
   );
 }
@@ -220,9 +248,8 @@ export const snapLabelZoom = (zoom: number): number => Math.round(zoom);
 
 export interface StationLabelsLayerProps {
   id: string;
+  /** Every domain's stations together, each carrying its domain colour. */
   data: readonly StationLabelDatum[];
-  /** The domain colour, resolved by the caller from the domain colour store. */
-  color: Rgb;
   labelsMode: LabelsMode;
 }
 
@@ -253,7 +280,7 @@ export class StationLabelsLayer extends CompositeLayer<StationLabelsLayerProps> 
   }
 
   renderLayers(): Layer[] {
-    const { color, labelsMode } = this.props;
+    const { labelsMode } = this.props;
     return [
       new TextLayer<StationLabelDatum>(
         this.getSubLayerProps({
@@ -264,13 +291,13 @@ export class StationLabelsLayer extends CompositeLayer<StationLabelsLayerProps> 
           // The port and hotel labels' look: light text on the dark pill, the
           // border in the domain's own colour so a name says whose it is.
           getColor: [241, 245, 249, 235],
-          getSize: 11,
+          getSize: LABEL_FONT_PX,
           fontFamily: "Inter, sans-serif",
           fontWeight: 700,
           background: true,
-          backgroundPadding: [4, 2],
+          backgroundPadding: LABEL_PADDING_PX,
           getBackgroundColor: [13, 17, 23, 200],
-          getBorderColor: [...color, 200],
+          getBorderColor: (d: StationLabelDatum) => [...d.color, 200],
           getBorderWidth: 1,
           getPixelOffset: [0, -14],
           sizeUnits: "pixels",
@@ -281,15 +308,19 @@ export class StationLabelsLayer extends CompositeLayer<StationLabelsLayerProps> 
           // drops the rest from the font atlas (#185) — do not remove "auto".
           characterSet: "auto",
           visible: labelsMode !== "off",
-          updateTriggers: { getBorderColor: color },
         })
       ),
     ];
   }
 }
 
-export interface StationLabelOptions {
+/** One domain's drawn rides and the colour its lines are drawn in. */
+export interface StationLabelGroup {
+  rides: readonly StationLabelSource[];
   color: Rgb;
+}
+
+export interface StationLabelOptions {
   labelsMode: LabelsMode;
   idPrefix: string;
   /** Labels are a flat-map layer; on the globe the HTML label overlay owns names. */
@@ -297,16 +328,16 @@ export interface StationLabelOptions {
 }
 
 /**
- * The label layer for one domain's drawn rides, or nothing. Built from the
- * SAME rows the caller drew its lines from, so a domain the filter switched
- * off (no rows) names no station either.
+ * ONE label layer for every domain handed in, or nothing. Built from the SAME
+ * rows the callers drew their lines from, so a domain the filter switched off
+ * (no rows) names no station either; one layer, so one collision pass.
  */
 export function buildStationLabelLayers(
-  rides: readonly StationLabelSource[],
-  { color, labelsMode, idPrefix, onGlobe = false }: StationLabelOptions
+  groups: readonly StationLabelGroup[],
+  { labelsMode, idPrefix, onGlobe = false }: StationLabelOptions
 ): Layer[] {
   if (onGlobe || labelsMode === "off") return [];
-  const data = buildStationLabels(rides);
+  const data = groups.flatMap((g) => buildStationLabels(g.rides, g.color));
   if (data.length === 0) return [];
-  return [new StationLabelsLayer({ id: `${idPrefix}-station-labels`, data, color, labelsMode })];
+  return [new StationLabelsLayer({ id: `${idPrefix}-station-labels`, data, labelsMode })];
 }

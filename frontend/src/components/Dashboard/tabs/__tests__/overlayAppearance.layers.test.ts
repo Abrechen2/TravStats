@@ -82,7 +82,11 @@ describe("rail: line width and station size reach the layers", () => {
 
   it("names the stations in the rail colour and follows the label switch (forgejo#320)", () => {
     const layers = buildRailMapLayers([RIDE], "#112233", false, "t");
-    expect(propsOf(byId(layers, "-station-labels")!).color).toEqual([17, 34, 51]);
+    const data = propsOf(byId(layers, "-station-labels")!).data as { color: number[] }[];
+    expect(data.map((d) => d.color)).toEqual([
+      [17, 34, 51],
+      [17, 34, 51],
+    ]);
     expect(propsOf(byId(layers, "-station-labels")!).labelsMode).toBe("important");
     const off = buildRailMapLayers([RIDE], "#112233", false, "t", {
       lineWidth: 1,

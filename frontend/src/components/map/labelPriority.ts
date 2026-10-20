@@ -102,3 +102,100 @@ export function declutterByDistance<T>(
   }
   return accepted;
 }
+
+/** A label's estimated box on screen, in CSS pixels. */
+export interface LabelBoxSize {
+  width: number;
+  height: number;
+}
+
+/**
+ * The box a TextLayer pill of `text` occupies: glyph advance from the font
+ * size (Inter bold averages about 0.62 em), plus the pill's padding and
+ * border. An estimate — the atlas is not measured — erring wide, because a
+ * label dropped for a few pixels costs less than two printed over each other.
+ */
+export function estimateLabelBox(
+  text: string,
+  fontSizePx: number,
+  padding: readonly [number, number]
+): LabelBoxSize {
+  return {
+    width: text.length * fontSizePx * 0.62 + padding[0] * 2 + 2,
+    height: fontSizePx * 1.2 + padding[1] * 2 + 2,
+  };
+}
+
+/** MapLibre's world is 512 px wide at zoom 0. */
+const WORLD_PX_AT_Z0 = 512;
+const MAX_MERCATOR_LAT = 85.051129;
+
+/** Web Mercator world pixel of a `[lon, lat]` at `zoom`. */
+export function projectToWorldPx(lon: number, lat: number, zoom: number): [number, number] {
+  const size = WORLD_PX_AT_Z0 * Math.pow(2, zoom);
+  const phi = (Math.max(-MAX_MERCATOR_LAT, Math.min(MAX_MERCATOR_LAT, lat)) * Math.PI) / 180;
+  const x = ((lon + 180) / 360) * size;
+  const y = (0.5 - Math.log(Math.tan(Math.PI / 4 + phi / 2)) / (2 * Math.PI)) * size;
+  return [x, y];
+}
+
+const GRID_CELL_PX = 128;
+
+/**
+ * Like `declutterByDistance`, but on the labels' BOXES: a centre gap says
+ * nothing about two 20-character names, which are 140 px wide and collide
+ * with their centres 80 px apart. Highest weight places first; a label whose
+ * box (plus `gapPx` on every side) touches one already placed is dropped.
+ * Every box is anchored centred above its point by the same offset, so the
+ * offset cancels and is left out.
+ *
+ * Placed boxes live in a uniform grid, so each candidate only tests the boxes
+ * in the cells it covers — linear in the number of labels, not quadratic.
+ */
+export function declutterByBoxes<T>(
+  items: readonly T[],
+  weightOf: (item: T) => number,
+  positionOf: (item: T) => readonly [number, number],
+  sizeOf: (item: T) => LabelBoxSize,
+  zoom: number,
+  gapPx = 4
+): T[] {
+  type Box = { x0: number; y0: number; x1: number; y1: number };
+  const grid = new Map<string, Box[]>();
+  const sorted = [...items].sort((a, b) => weightOf(b) - weightOf(a));
+  const accepted: T[] = [];
+  for (const item of sorted) {
+    const [lon, lat] = positionOf(item);
+    const [x, y] = projectToWorldPx(lon, lat, zoom);
+    const { width, height } = sizeOf(item);
+    const box: Box = {
+      x0: x - width / 2 - gapPx,
+      x1: x + width / 2 + gapPx,
+      y0: y - height - gapPx,
+      y1: y + gapPx,
+    };
+    const cx0 = Math.floor(box.x0 / GRID_CELL_PX);
+    const cx1 = Math.floor(box.x1 / GRID_CELL_PX);
+    const cy0 = Math.floor(box.y0 / GRID_CELL_PX);
+    const cy1 = Math.floor(box.y1 / GRID_CELL_PX);
+    let hit = false;
+    for (let cx = cx0; cx <= cx1 && !hit; cx++) {
+      for (let cy = cy0; cy <= cy1 && !hit; cy++) {
+        hit = (grid.get(`${cx}:${cy}`) ?? []).some(
+          (q) => box.x0 < q.x1 && box.x1 > q.x0 && box.y0 < q.y1 && box.y1 > q.y0
+        );
+      }
+    }
+    if (hit) continue;
+    accepted.push(item);
+    for (let cx = cx0; cx <= cx1; cx++) {
+      for (let cy = cy0; cy <= cy1; cy++) {
+        const key = `${cx}:${cy}`;
+        const cell = grid.get(key);
+        if (cell) cell.push(box);
+        else grid.set(key, [box]);
+      }
+    }
+  }
+  return accepted;
+}

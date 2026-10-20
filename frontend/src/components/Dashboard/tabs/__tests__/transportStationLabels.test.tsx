@@ -41,10 +41,18 @@ vi.mock("../rentalMapOverlay", () => ({ useRentalOverlay: () => NO_RENTALS }));
 const t = (key: string): string => key;
 const labelIds = (layers: readonly Layer[]) =>
   layers.filter((l) => l.id.endsWith("-station-labels")).map((l) => l.id);
-const borderOf = (layers: readonly Layer[], id: string) =>
-  (layers.find((l) => l.id === id)?.props as unknown as { color: number[] }).color;
+type LabelData = { name: string; color: number[] }[];
+const dataOf = (layers: readonly Layer[]): LabelData =>
+  (layers.find((l) => l.id === ONE)?.props as unknown as { data?: LabelData })?.data ?? [];
+const coloursOf = (layers: readonly Layer[]) =>
+  [...new Set(dataOf(layers).map((d) => d.color.join(",")))].sort();
 
-const ALL = ["all-rail-station-labels", "all-bus-station-labels", "all-ferry-station-labels"];
+/**
+ * ONE label layer for all three domains, so one collision pass decides between
+ * a train station and a bus terminal at the same interchange (Codex review).
+ */
+const ONE = "all-transport-station-labels";
+const ALL = [ONE];
 
 describe("station labels on the 'Alle' map (forgejo#320)", () => {
   beforeEach(() => {
@@ -61,19 +69,17 @@ describe("station labels on the 'Alle' map (forgejo#320)", () => {
 
   it("names the stations of every shown domain, in the store's colour", async () => {
     const { result } = renderHook(() => useTransportOverlays(true, () => true, false, t));
-    await waitFor(() => expect(labelIds(result.current.layers)).toEqual(ALL));
-    expect(borderOf(result.current.layers, "all-rail-station-labels")).toEqual([1, 2, 3]);
-    expect(borderOf(result.current.layers, "all-bus-station-labels")).toEqual([10, 11, 12]);
-    expect(borderOf(result.current.layers, "all-ferry-station-labels")).toEqual([200, 100, 30]);
+    await waitFor(() => expect(coloursOf(result.current.layers)).toHaveLength(3));
+    expect(labelIds(result.current.layers)).toEqual(ALL);
+    expect(coloursOf(result.current.layers)).toEqual(["1,2,3", "10,11,12", "200,100,30"]);
   });
 
   it("names no station of a domain the filter switched off", async () => {
     const { result } = renderHook(() =>
       useTransportOverlays(true, (key) => key !== "rail" && key !== "ferry", false, t)
     );
-    await waitFor(() =>
-      expect(labelIds(result.current.layers)).toEqual(["all-bus-station-labels"])
-    );
+    await waitFor(() => expect(labelIds(result.current.layers)).toEqual(ALL));
+    expect(coloursOf(result.current.layers)).toEqual(["10,11,12"]);
   });
 
   it("follows the map's label switch", async () => {
