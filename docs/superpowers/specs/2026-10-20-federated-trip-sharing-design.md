@@ -685,3 +685,12 @@ a withdrawn consent, rollback, natural-key references.
   must flip `restore` members back and should re-queue a full `entries` resync, because changes
   made while suspended were never queued.
 - Parked messages are kept 30 days and shown; there is no "dismiss" yet.
+
+**Review fixes (cold review of F-S4d, same day).** The stream's seq advance and the outbox's
+bookkeeping commit in one transaction (`sendOnStream`'s `onAck`), and an ack for an earlier seq
+is the peer's remembered answer to the same message id, not a malformed one. The receiver locks
+the copy's row (`FOR UPDATE` on its registry table) from the precondition to the write. A
+reference that leaves a name on the copy — only the cruise's ship, `shipNameOverride` — is
+compared by what it names, not by an id two catalogue misses share (`refIdentity.ts`). Sizes are
+UTF-8 bytes as the envelope carries them (`wireBytes`), and a message that can never fit is
+parked as `too-large` instead of retried. Tests: `twoServersDeliveryRobustness.test.ts`.
