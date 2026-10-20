@@ -13,7 +13,9 @@ import {
   addTripPhoto,
   makeAccount,
   makeFlight,
+  makeItineraryTrip,
   makeTrip,
+  NEVER_ON_ITINERARY,
   NEVER_PUBLIC,
   shareLinkApp,
   wipeShareLinkAccounts,
@@ -802,5 +804,212 @@ describe("trip photos", () => {
     await prisma.tripPhoto.update({ where: { id: first.id }, data: { tripId: other.id } });
     expect((await view(token)).body.data.view.trip.photos).toEqual({ count: 1 });
     expect((await photo(token, 1)).status).toBe(404);
+  });
+});
+
+describe("trip itinerary (forgejo#302)", () => {
+  const itineraryOf = async (token: string) =>
+    (await view(token).expect(200)).body.data.view.trip.itinerary;
+
+  it("lists every entry in time order, on each place's clock", async () => {
+    const { trip } = await makeItineraryTrip(anna.id);
+    const { token } = await tokenFor(anna, {
+      kind: "trip",
+      targetId: trip.id,
+      fields: ["itinerary"],
+    });
+    const itinerary = await itineraryOf(token);
+    expect(itinerary.items.map((i: { kind: string }) => i.kind)).toEqual([
+      "flight",
+      "stay",
+      "visit",
+      "stop",
+      "rail",
+      "bus",
+      "ferry",
+      "rental",
+      "cruise",
+    ]);
+    const [flight, stay, visit, stop, rail, , , rental, cruise] = itinerary.items;
+    expect(flight).toMatchObject({
+      airline: "Lufthansa",
+      flightNumber: "LH400",
+      from: { code: "FRA", name: "Frankfurt" },
+      to: { code: "JFK", name: "New York JFK" },
+      // 12:00Z is 14:00 in Frankfurt (CEST), 20:00Z is 16:00 in New York (EDT).
+      departure: { zone: "Europe/Berlin", local: "2030-06-01T14:00:00", precision: "minute" },
+      arrival: { zone: "America/New_York", local: "2030-06-01T16:00:00" },
+      phase: "scheduled",
+    });
+    expect(stay).toMatchObject({
+      name: "Hotel Hudson View",
+      address: "356 W 58th St",
+      city: "New York",
+      checkIn: { date: "2030-06-01", zone: "America/New_York" },
+      checkOut: { date: "2030-06-04" },
+      checkInAt: { local: "2030-06-01T18:00:00", zone: "America/New_York" },
+    });
+    expect(visit).toMatchObject({
+      name: "Statue of Liberty",
+      at: { local: "2030-06-02T10:00:00" },
+    });
+    // A stop known to the day keeps its day — no invented midnight clock.
+    expect(stop).toMatchObject({ name: "Central Park picnic", start: { precision: "day" } });
+    expect(rail).toMatchObject({
+      operator: "Amtrak",
+      service: "Acela 2151",
+      from: "New York Penn Station",
+      to: "Washington Union Station",
+      departure: { local: "2030-06-04T12:00:00" },
+    });
+    expect(rental).toMatchObject({
+      provider: "Hertz",
+      pickup: { station: "Hertz Manhattan West", at: { local: "2030-06-06T11:00:00" } },
+      return: { station: "Hertz JFK Airport" },
+    });
+    expect(cruise).toMatchObject({
+      ship: "Harbor Queen",
+      start: { date: "2030-06-07" },
+      ports: [
+        { dayNumber: 1, name: "Pier 83", atSea: false, day: { date: "2030-06-07" } },
+        { dayNumber: 2, name: null, atSea: true },
+      ],
+    });
+  });
+
+  it("never carries a booking reference, seat, room or cabin number, price, note, companion or id", async () => {
+    const { trip, ids } = await makeItineraryTrip(anna.id);
+    const { token } = await tokenFor(anna, {
+      kind: "trip",
+      targetId: trip.id,
+      fields: [...SHARE_LINK_FIELDS.trip],
+    });
+    const res = await view(token).expect(200);
+    const body = JSON.stringify(res.body);
+    expect(body).toContain("Hotel Hudson View");
+    for (const secret of [...NEVER_ON_ITINERARY, ...NEVER_PUBLIC]) {
+      expect(body).not.toContain(secret);
+    }
+    for (const id of [anna.id, ...ids]) expect(body).not.toContain(id);
+    // No member to fill them into, either (the trip's own `notes` field is elsewhere).
+    const itinerary = JSON.stringify(res.body.data.view.trip.itinerary);
+    for (const key of ["bookingReference", "seat", "roomNumber", "cabinNumber", "price", "notes"]) {
+      expect(itinerary).not.toContain(`"${key}"`);
+    }
+  });
+
+  it("leaves cancelled entries out", async () => {
+    const { trip } = await makeItineraryTrip(anna.id);
+    const { token } = await tokenFor(anna, {
+      kind: "trip",
+      targetId: trip.id,
+      fields: ["itinerary"],
+    });
+    const body = JSON.stringify(await itineraryOf(token));
+    expect(body).not.toContain("LH999-CANCELLED");
+    expect(body).not.toContain("Cancelled Motel");
+  });
+
+  it("marks the entry in progress by the plan, else the next one", async () => {
+    const { trip } = await makeItineraryTrip(anna.id);
+    const { token } = await tokenFor(anna, {
+      kind: "trip",
+      targetId: trip.id,
+      fields: ["itinerary"],
+      expiresAt: "2030-06-09T00:00:00Z",
+    });
+    // 10:00Z on 1 June: before the flight.
+    expect((await itineraryOf(token)).now).toEqual({ index: 0, state: "next" });
+    setClockForTests("2030-06-01T16:00:00Z");
+    const inFlight = await itineraryOf(token);
+    expect(inFlight.now).toEqual({ index: 0, state: "inProgress" });
+    expect(inFlight.items[0].phase).toBe("inFlight");
+    // 2 June, afternoon: at the hotel (the visit that morning was a moment, not a span).
+    setClockForTests("2030-06-02T19:00:00Z");
+    expect((await itineraryOf(token)).now).toEqual({ index: 1, state: "inProgress" });
+    // 4 June, 15:30Z: checked out, train not yet gone — the train is next.
+    setClockForTests("2030-06-04T15:30:00Z");
+    expect((await itineraryOf(token)).now).toEqual({ index: 4, state: "next" });
+  });
+
+  it("shows a change to the trip on the next load", async () => {
+    const { trip } = await makeItineraryTrip(anna.id);
+    const { token } = await tokenFor(anna, {
+      kind: "trip",
+      targetId: trip.id,
+      fields: ["itinerary"],
+    });
+    expect((await itineraryOf(token)).items).toHaveLength(9);
+    await prisma.railJourney.updateMany({
+      where: { tripId: trip.id },
+      data: { status: "cancelled" },
+    });
+    const after = await itineraryOf(token);
+    expect(after.items).toHaveLength(8);
+    expect(after.items.some((i: { kind: string }) => i.kind === "rail")).toBe(false);
+  });
+
+  it("ends by itself a day after the trip's last local day", async () => {
+    const { trip } = await makeItineraryTrip(anna.id);
+    const res = await request(app)
+      .post("/api/v1/share-links")
+      .set("Cookie", anna.cookie)
+      .send({ kind: "trip", targetId: trip.id, fields: ["itinerary"], expiresInDays: 90 })
+      .expect(201);
+    // Last day 8 June in New York ends at 9 June 04:00Z; plus 24 hours.
+    expect(res.body.data.effectiveExpiresAt).toBe("2030-06-10T04:00:00.000Z");
+    expect((await view(res.body.data.token).expect(200)).body.data.expiresAt).toBe(
+      "2030-06-10T04:00:00.000Z"
+    );
+    setClockForTests("2030-06-10T04:00:01Z");
+    expect((await view(res.body.data.token)).status).toBe(404);
+  });
+
+  it("ends earlier when the trip's end moves earlier, and never comes back", async () => {
+    const { trip } = await makeItineraryTrip(anna.id);
+    const { token } = await tokenFor(anna, {
+      kind: "trip",
+      targetId: trip.id,
+      fields: ["itinerary"],
+    });
+    await prisma.trip.update({
+      where: { id: trip.id },
+      data: { endDay: new Date("2030-06-02T00:00:00Z") },
+    });
+    setClockForTests("2030-06-04T05:00:00Z");
+    expect((await view(token)).status).toBe(404);
+    await prisma.trip.update({
+      where: { id: trip.id },
+      data: { endDay: new Date("2030-06-30T00:00:00Z") },
+    });
+    expect((await view(token)).status).toBe(404);
+  });
+
+  it("refuses an itinerary for a trip that has ended — a link without one still works", async () => {
+    const { trip } = await makeItineraryTrip(anna.id);
+    setClockForTests("2030-06-11T00:00:00Z");
+    const refused = await create(anna, {
+      kind: "trip",
+      targetId: trip.id,
+      fields: ["name", "itinerary"],
+      expiresAt: "2030-06-20T00:00:00Z",
+    });
+    expect(refused.status).toBe(409);
+    expect(refused.body.code).toBe("SHARE_LINK_TRIP_ENDED");
+    const plain = await create(anna, {
+      kind: "trip",
+      targetId: trip.id,
+      fields: ["name"],
+      expiresAt: "2030-06-20T00:00:00Z",
+    });
+    expect(plain.status).toBe(201);
+  });
+
+  it("a trip with no last day keeps the owner's own expiry", async () => {
+    const { trip } = await makeItineraryTrip(anna.id);
+    await prisma.trip.update({ where: { id: trip.id }, data: { endDay: null, endDate: null } });
+    const res = await create(anna, { kind: "trip", targetId: trip.id, fields: ["itinerary"] });
+    expect(res.status).toBe(201);
+    expect(res.body.data.effectiveExpiresAt).toBe(IN_A_WEEK);
   });
 });

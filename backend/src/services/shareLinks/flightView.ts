@@ -81,7 +81,7 @@ const exact = (value: TimeValue | null): TimeValue | null =>
   value && value.precision === "minute" ? value : null;
 
 /** Departure and arrival behind the phase: a provider's report wins over the schedule. */
-function phaseTimes(times: FlightTimes): {
+export function phaseTimes(times: FlightTimes): {
   departure: TimeValue | null;
   arrival: TimeValue | null;
   basis: "schedule" | "reported";

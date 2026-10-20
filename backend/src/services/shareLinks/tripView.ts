@@ -19,6 +19,7 @@ import { tripPageCost } from "../trip/tripCostSuperlative";
 import { withTripTimes } from "../trips/timesDto";
 import { toNoteDto } from "../notes/noteService";
 import { notesInSpan, tripDaySpan } from "../notes/tripNotes";
+import { buildItinerary } from "./itineraryView";
 import { shareablePhotoIds } from "./photoProxy";
 
 /**
@@ -223,5 +224,6 @@ export async function buildTripView(
     view.photos = { count: Math.min(live.length, SHARE_LINK_MAX_PHOTOS) };
   }
   if (fields.has("notes")) view.notes = await notesOf(userId, trip);
+  if (fields.has("itinerary")) view.itinerary = await buildItinerary(trip.id);
   return view;
 }

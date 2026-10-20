@@ -157,6 +157,281 @@ export async function makeTrip(ownerId: string) {
   return trip;
 }
 
+/** Values on itinerary entries that must never reach a public view (forgejo#302). */
+export const NEVER_ON_ITINERARY = [
+  "STAY-BOOKING-REF-77",
+  "ROOM-1408",
+  "PRIVATE stay note",
+  "CABIN-8123",
+  "CRUISE-BOOKING-REF-55",
+  "PRIVATE cruise note",
+  "RAIL-SEAT-42D",
+  "RAIL-PNR-Q7W8E9",
+  "PRIVATE rail note",
+  "BUS-SEAT-17",
+  "BUS-BOOKING-REF-31",
+  "FERRY-TICKET-REF-66",
+  "FERRY-PLATE-B-XY-123",
+  "RENTAL-CONF-90210",
+  "RENTAL-PLATE-NY-4455",
+  "PRIVATE rental note",
+  "PRIVATE visit note",
+  "PRIVATE stop note",
+  "Coraline Copassenger",
+  // Prices: no amount of any entry may travel.
+  "1234.5",
+  "4321.75",
+  "88.4",
+  "543.21",
+];
+
+/**
+ * A trip with one entry of every kind the itinerary lists, each carrying the
+ * private values of `NEVER_ON_ITINERARY`, plus a cancelled flight and a
+ * cancelled stay that must not be listed. The trip runs 1–8 June 2030 (New York).
+ */
+export async function makeItineraryTrip(ownerId: string) {
+  const trip = await makeTrip(ownerId);
+  const flight = await makeFlight(ownerId, trip.id);
+  const cancelledFlight = await prisma.flight.create({
+    data: {
+      userId: ownerId,
+      tripId: trip.id,
+      airline: "Lufthansa",
+      flightNumber: "LH999-CANCELLED",
+      depIata: "FRA",
+      depLat: 50.0379,
+      depLon: 8.5622,
+      arrIata: "JFK",
+      arrLat: 40.6413,
+      arrLon: -73.7781,
+      departureTime: new Date("2030-06-01T08:00:00Z"),
+      arrivalTime: new Date("2030-06-01T16:00:00Z"),
+      depTimeSemantics: "UTC",
+      arrTimeSemantics: "UTC",
+      status: "cancelled",
+    },
+  });
+  const lodging = await prisma.lodging.create({
+    data: {
+      userId: ownerId,
+      name: "Hotel Hudson View",
+      address: "356 W 58th St",
+      city: "New York",
+      country: "US",
+      notes: "PRIVATE stay note",
+    },
+  });
+  const stay = await prisma.lodgingStay.create({
+    data: {
+      lodgingId: lodging.id,
+      userId: ownerId,
+      tripId: trip.id,
+      checkIn: new Date("2030-06-01T00:00:00Z"),
+      checkOut: new Date("2030-06-04T00:00:00Z"),
+      checkInDate: new Date("2030-06-01T00:00:00Z"),
+      checkOutDate: new Date("2030-06-04T00:00:00Z"),
+      checkInAt: new Date("2030-06-01T22:00:00Z"),
+      checkOutAt: new Date("2030-06-04T15:00:00Z"),
+      stayZone: "America/New_York",
+      status: "scheduled",
+      roomNumber: "ROOM-1408",
+      bookingReference: "STAY-BOOKING-REF-77",
+      totalPrice: 1234.5,
+      pricePerNight: 411.5,
+      notes: "PRIVATE stay note",
+      companions: ["Coraline Copassenger"],
+    },
+  });
+  const cancelledLodging = await prisma.lodging.create({
+    data: { userId: ownerId, name: "Cancelled Motel" },
+  });
+  await prisma.lodgingStay.create({
+    data: {
+      lodgingId: cancelledLodging.id,
+      userId: ownerId,
+      tripId: trip.id,
+      checkInDate: new Date("2030-06-02T00:00:00Z"),
+      checkOutDate: new Date("2030-06-03T00:00:00Z"),
+      stayZone: "America/New_York",
+      status: "cancelled",
+    },
+  });
+  const rail = await prisma.railJourney.create({
+    data: {
+      userId: ownerId,
+      tripId: trip.id,
+      operator: "Amtrak",
+      trainCategory: "Acela",
+      trainNumber: "2151",
+      depStationName: "New York Penn Station",
+      depLat: 40.7506,
+      depLon: -73.9935,
+      depTimezone: "America/New_York",
+      arrStationName: "Washington Union Station",
+      arrLat: 38.8973,
+      arrLon: -77.0063,
+      arrTimezone: "America/New_York",
+      departureTime: new Date("2030-06-04T16:00:00Z"),
+      arrivalTime: new Date("2030-06-04T19:30:00Z"),
+      seat: "RAIL-SEAT-42D",
+      bookingReference: "RAIL-PNR-Q7W8E9",
+      price: 4321.75,
+      notes: "PRIVATE rail note",
+      companions: ["Coraline Copassenger"],
+    },
+  });
+  const bus = await prisma.busJourney.create({
+    data: {
+      userId: ownerId,
+      tripId: trip.id,
+      operator: "Greyhound",
+      lineName: "GL 1234",
+      depStationName: "Washington Union Station",
+      depLat: 38.8973,
+      depLon: -77.0063,
+      depTimezone: "America/New_York",
+      arrStationName: "Port Authority Bus Terminal",
+      arrLat: 40.757,
+      arrLon: -73.9903,
+      arrTimezone: "America/New_York",
+      departureTime: new Date("2030-06-05T13:00:00Z"),
+      arrivalTime: new Date("2030-06-05T17:30:00Z"),
+      seat: "BUS-SEAT-17",
+      bookingReference: "BUS-BOOKING-REF-31",
+      price: 88.4,
+    },
+  });
+  const ferry = await prisma.ferryJourney.create({
+    data: {
+      userId: ownerId,
+      tripId: trip.id,
+      operator: "NYC Ferry",
+      vesselName: "Hornblower Hybrid",
+      depStationName: "Whitehall Terminal",
+      depLat: 40.7013,
+      depLon: -74.0131,
+      depTimezone: "America/New_York",
+      arrStationName: "St. George Terminal",
+      arrLat: 40.6437,
+      arrLon: -74.0736,
+      arrTimezone: "America/New_York",
+      departureTime: new Date("2030-06-06T13:00:00Z"),
+      arrivalTime: new Date("2030-06-06T13:25:00Z"),
+      ticketReference: "FERRY-TICKET-REF-66",
+      vehicleRegistration: "FERRY-PLATE-B-XY-123",
+      price: 543.21,
+    },
+  });
+  const rental = await prisma.rentalBooking.create({
+    data: {
+      userId: ownerId,
+      tripId: trip.id,
+      provider: "Hertz",
+      confirmationNumber: "RENTAL-CONF-90210",
+      licensePlate: "RENTAL-PLATE-NY-4455",
+      pickupStationName: "Hertz Manhattan West",
+      pickupLat: 40.77,
+      pickupLon: -73.99,
+      pickupTimezone: "America/New_York",
+      returnStationName: "Hertz JFK Airport",
+      returnLat: 40.6413,
+      returnLon: -73.7781,
+      returnTimezone: "America/New_York",
+      pickupTime: new Date("2030-06-06T15:00:00Z"),
+      returnTime: new Date("2030-06-07T14:00:00Z"),
+      price: 1234.5,
+      notes: "PRIVATE rental note",
+    },
+  });
+  const cruise = await prisma.cruise.create({
+    data: {
+      userId: ownerId,
+      tripId: trip.id,
+      shipNameOverride: "Harbor Queen",
+      cruiseLine: "Circle Line",
+      startDay: new Date("2030-06-07T00:00:00Z"),
+      endDay: new Date("2030-06-08T00:00:00Z"),
+      startZone: "America/New_York",
+      endZone: "America/New_York",
+      cabinNumber: "CABIN-8123",
+      bookingReference: "CRUISE-BOOKING-REF-55",
+      price: 4321.75,
+      notes: "PRIVATE cruise note",
+      companions: ["Coraline Copassenger"],
+      stops: {
+        create: [
+          {
+            dayNumber: 1,
+            unresolvedPortName: "Pier 83",
+            stopDate: new Date("2030-06-07T00:00:00Z"),
+            stopZone: "America/New_York",
+            departureUtc: new Date("2030-06-07T22:00:00Z"),
+            timePrecision: "minute",
+          },
+          {
+            dayNumber: 2,
+            isAtSea: true,
+            stopDate: new Date("2030-06-08T00:00:00Z"),
+            stopZone: "America/New_York",
+          },
+        ],
+      },
+    },
+  });
+  const place = await prisma.place.create({
+    data: {
+      userId: ownerId,
+      name: "Statue of Liberty",
+      city: "New York",
+      lat: 40.6892,
+      lon: -74.0445,
+      notes: "PRIVATE visit note",
+    },
+  });
+  const visit = await prisma.placeVisit.create({
+    data: {
+      placeId: place.id,
+      userId: ownerId,
+      tripId: trip.id,
+      visitedAtUtc: new Date("2030-06-02T14:00:00Z"),
+      visitedZone: "America/New_York",
+      visitedPrecision: "minute",
+      notes: "PRIVATE visit note",
+    },
+  });
+  const stop = await prisma.tripStop.create({
+    data: {
+      tripId: trip.id,
+      title: "Central Park picnic",
+      startUtc: new Date("2030-06-03T04:00:00Z"),
+      stopZone: "America/New_York",
+      precision: "day",
+      lat: 40.7829,
+      lon: -73.9654,
+      notes: "PRIVATE stop note",
+    },
+  });
+  return {
+    trip,
+    ids: [
+      trip.id,
+      flight.id,
+      cancelledFlight.id,
+      lodging.id,
+      stay.id,
+      rail.id,
+      bus.id,
+      ferry.id,
+      rental.id,
+      cruise.id,
+      place.id,
+      visit.id,
+      stop.id,
+    ],
+  };
+}
+
 /** A JPEG with an Exif block (orientation 6 plus a planted GPS marker) and a comment. */
 export function jpegWithExif(): Buffer {
   const tiff = Buffer.alloc(8 + 2 + 12 + 4);

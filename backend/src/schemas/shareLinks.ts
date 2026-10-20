@@ -1,5 +1,8 @@
 import { z } from "./zod";
 import { localDateValueSchema, timeValueSchema } from "../shared/time/wire";
+import { FLIGHT_PHASES, itineraryViewSchema } from "./shareLinkItinerary";
+
+export { FLIGHT_PHASES };
 
 /**
  * Public share links (forgejo#281, design
@@ -30,6 +33,7 @@ export const SHARE_LINK_FIELDS = {
     "companions",
     "photos",
     "notes",
+    "itinerary",
   ],
   wrapped: ["owner", "totals", "topAirline", "topRoute"],
 } as const satisfies Record<ShareLinkKind, readonly string[]>;
@@ -47,6 +51,8 @@ export const SHARE_LINK_MAX_DAYS = 90;
 export const SHARE_LINK_MAX_ACTIVE = 50;
 /** How long a flight link outlives the arrival. */
 export const SHARE_LINK_FLIGHT_GRACE_MS = 2 * 3_600_000;
+/** How long an itinerary link outlives the end of the trip's last local day (forgejo#302). */
+export const SHARE_LINK_ITINERARY_GRACE_MS = 24 * 3_600_000;
 
 const targetIdSchema = z.string().trim().min(1).max(100);
 
@@ -98,7 +104,8 @@ export const shareLinkCreateSchema = selectionBase
       .optional()
       .describe(
         `When the link stops working, at most ${SHARE_LINK_MAX_DAYS} days ahead. A flight ` +
-          "link also ends two hours after the arrival, whichever comes first."
+          "link also ends two hours after the arrival, and a trip link with `itinerary` 24 " +
+          "hours after the end of the trip's last day, whichever comes first."
       ),
     expiresInDays: z
       .number()
@@ -107,7 +114,7 @@ export const shareLinkCreateSchema = selectionBase
       .max(SHARE_LINK_MAX_DAYS)
       .optional()
       .describe(
-        "Lifetime in days measured by the server clock. Supply exactly one of expiresInDays or expiresAt. Flight links still end two hours after arrival if earlier."
+        "Lifetime in days measured by the server clock. Supply exactly one of expiresInDays or expiresAt. Flight links still end two hours after arrival, itinerary links 24 hours after the trip's last day, if earlier."
       ),
   })
   .refine((value) => (value.expiresAt !== undefined) !== (value.expiresInDays !== undefined), {
@@ -137,8 +144,6 @@ const airportView = z.strictObject({
   code: z.string().nullable().describe("IATA, else ICAO"),
   name: z.string().nullable(),
 });
-
-export const FLIGHT_PHASES = ["scheduled", "inFlight", "landed", "cancelled", "unknown"] as const;
 
 const flightView = z.strictObject({
   owner: z.string().nullable().optional(),
@@ -235,6 +240,7 @@ const tripView = z.strictObject({
         "re-read on every request, so a note made private disappears at once. A private note " +
         "is never listed; no position, photo or id travels."
     ),
+  itinerary: itineraryViewSchema.optional(),
 });
 
 const wrappedView = z.strictObject({
@@ -288,7 +294,10 @@ export const ownerShareLinkSchema = z
     effectiveExpiresAt: z
       .string()
       .datetime()
-      .describe("When it really ends — earlier for a flight that lands first"),
+      .describe(
+        "When it really ends — earlier for a flight that lands first, or a trip itinerary " +
+          "whose trip ends first"
+      ),
     createdAt: z.string().datetime(),
     viewCount: z.number().int(),
     lastViewedAt: z.string().datetime().nullable(),
