@@ -4,7 +4,7 @@ import type { DawarichClient, DawarichPoint } from "../../dawarich/dawarichClien
 import { DawarichError } from "../../dawarich/errors";
 import { ingestTrack } from "../../tour/tracks/ingestTrack";
 import { toParsedTrack } from "../../tour/tracks/pullDawarichTrack";
-import { remeasureStoredTracks } from "../jitterRemeasure";
+import { remeasureStoredTracks, type DawarichSource } from "../jitterRemeasure";
 import { runTrackJitterRemeasure } from "../../../jobs/trackJitterRemeasureScheduler";
 import { standThenMove, type SyntheticFix } from "./jitterFixtures";
 
@@ -55,10 +55,14 @@ function oldColumns(fixes: readonly SyntheticFix[]) {
   };
 }
 
-function fakeClient(points: DawarichPoint[] | Error): DawarichClient {
-  return {
+/** Pulls answered by every fake Dawarich, for the tests that count retries. */
+const pulls = { count: 0 };
+
+function fakeClient(points: DawarichPoint[] | Error): DawarichSource {
+  const client: DawarichClient = {
     checkHealth: async () => ({ ok: true }) as never,
     getPoints: async (window) => {
+      pulls.count += 1;
       if (points instanceof Error) throw points;
       return {
         points: points.filter(
@@ -69,6 +73,7 @@ function fakeClient(points: DawarichPoint[] | Error): DawarichClient {
       };
     },
   };
+  return { client, sourceUrl: "https://dawarich.test" };
 }
 
 describe("re-measuring recordings stored before the jitter filter", () => {
@@ -77,7 +82,7 @@ describe("re-measuring recordings stored before the jitter filter", () => {
   let routeId: string;
   let cruiseId: string;
   let portIds: number[] = [];
-  const clients = new Map<string, DawarichClient | null>();
+  const clients = new Map<string, DawarichSource | null>();
   const clientFor = async (id: string) => clients.get(id) ?? null;
 
   beforeAll(async () => {
@@ -217,5 +222,76 @@ describe("re-measuring recordings stored before the jitter filter", () => {
     const again = new Set<string>();
     await remeasureStoredTracks({ limit: 500, attempted: again, clientFor });
     for (const row of rows) expect(again.has(row.id)).toBe(false);
+  });
+
+  // Review findings 4 and 5 (forgejo#319).
+
+  it("refuses a source whose points differ although their number matches", async () => {
+    const row = await tourTrack();
+    // Same count and span, every position moved 200 m: an edited history or
+    // another person's Dawarich behind the same account.
+    const moved = rec.fixes.map((f) => ({ ...f, lat: f.lat + 0.0018 }));
+    clients.set(userId, fakeClient(dawarichPoints(moved)));
+
+    const report = await remeasureStoredTracks({ limit: 50, attempted: new Set(), clientFor });
+
+    expect(report.skipped.sourceChanged).toBeGreaterThanOrEqual(1);
+    const after = await prisma.tripRouteTrack.findUniqueOrThrow({ where: { id: row.id } });
+    expect(after.jitterDropped).toBeNull();
+    expect(after.geometry).toEqual(row.geometry);
+    const record = await prisma.trackJitterRemeasure.findUniqueOrThrow({
+      where: { routeTrackId: row.id },
+    });
+    expect(record).toMatchObject({ outcome: "sourceChanged", nextAttemptAt: null });
+  });
+
+  it("keeps the replaced measurement so a re-measure can be undone", async () => {
+    const row = await tourTrack();
+    await remeasureStoredTracks({ limit: 50, attempted: new Set(), clientFor });
+    const record = await prisma.trackJitterRemeasure.findUniqueOrThrow({
+      where: { routeTrackId: row.id },
+    });
+    expect(record.outcome).toBe("remeasured");
+    expect(record.previous).toMatchObject({
+      distanceKm: row.distanceKm,
+      pointCount: row.pointCount,
+      geometry: row.geometry,
+      sourceUrl: "https://dawarich.test",
+    });
+  });
+
+  it("never tries a final skip again, in any later run", async () => {
+    const row = await tourTrack();
+    clients.set(userId, fakeClient(dawarichPoints(rec.fixes.slice(1))));
+    await runTrackJitterRemeasure(0, { clientFor });
+    const before = pulls.count;
+    await runTrackJitterRemeasure(0, { clientFor });
+    expect(pulls.count).toBe(before);
+    const record = await prisma.trackJitterRemeasure.findUniqueOrThrow({
+      where: { routeTrackId: row.id },
+    });
+    expect(record.attempts).toBe(1);
+  });
+
+  it("backs off an unreachable Dawarich across runs instead of retrying at once", async () => {
+    const row = await tourTrack();
+    clients.set(userId, fakeClient(new DawarichError("unreachable", "down")));
+    await runTrackJitterRemeasure(0, { clientFor });
+    const record = await prisma.trackJitterRemeasure.findUniqueOrThrow({
+      where: { routeTrackId: row.id },
+    });
+    expect(record.outcome).toBe("unavailable");
+    expect(record.nextAttemptAt!.getTime()).toBeGreaterThan(Date.now());
+    const before = pulls.count;
+    await runTrackJitterRemeasure(0, { clientFor });
+    expect(pulls.count).toBe(before);
+  });
+
+  it("stops a user's backlog after three failures of their connection in a row", async () => {
+    await Promise.all(Array.from({ length: 6 }, () => tourTrack()));
+    clients.set(userId, fakeClient(new DawarichError("unreachable", "down")));
+    const before = pulls.count;
+    await runTrackJitterRemeasure(0, { clientFor });
+    expect(pulls.count - before).toBe(3);
   });
 });

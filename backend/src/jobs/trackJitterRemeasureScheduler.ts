@@ -8,8 +8,9 @@
  * once the backlog is done, and a new recording is filtered on its way in.
  *
  * Resumable by construction: a re-measured row has a number, so a restart
- * halfway through takes up the rows still NULL. A row that cannot be
- * re-measured (no Dawarich, its points changed) is tried once per boot.
+ * halfway through takes up the rows still NULL. Every attempt is recorded per
+ * track with its outcome and the earliest next try, so a boot does not retry
+ * a final skip and backs off a failing Dawarich (see `jitterRemeasure.ts`).
  */
 
 import logger from "../utils/logger";
@@ -36,7 +37,12 @@ export async function runTrackJitterRemeasure(
   batchPauseMs = BATCH_PAUSE_MS,
   options: Pick<Parameters<typeof remeasureStoredTracks>[0], "clientFor"> = {}
 ): Promise<RemeasureReport> {
+  // One run's memory: rows tried, and users whose Dawarich keeps failing.
+  // What lasts beyond the run — each track's outcome and when it may be
+  // tried again — is stored per track (`track_jitter_remeasures`).
   const attempted = new Set<string>();
+  const trippedUsers = new Set<string>();
+  const failuresInARow = new Map<string, number>();
   const total: RemeasureReport = {
     remeasured: 0,
     skipped: { notConfigured: 0, sourceChanged: 0, unavailable: 0 },
@@ -44,7 +50,13 @@ export async function runTrackJitterRemeasure(
   };
   for (;;) {
     if (stopped) break;
-    const batch = await remeasureStoredTracks({ limit: REMEASURE_BATCH, attempted, ...options });
+    const batch = await remeasureStoredTracks({
+      limit: REMEASURE_BATCH,
+      attempted,
+      trippedUsers,
+      failuresInARow,
+      ...options,
+    });
     if (batch.examined === 0) break;
     total.remeasured += batch.remeasured;
     total.examined += batch.examined;
