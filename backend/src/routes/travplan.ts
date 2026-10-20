@@ -18,15 +18,18 @@ import {
   readPlan,
   writePlan,
 } from "../services/travplan/store";
-import { writeSchema, proposalContentSchema, stateSchema } from "../services/travplan/schema";
+import { writeSchema, proposalContentSchema } from "../services/travplan/schema";
+import { parseState } from "../services/travplan/upgrade";
 import { generateProposal } from "../services/travplan/ai";
 import { findLocations } from "../services/travplan/locations";
 import { refreshForecast } from "../services/travplan/weather";
 import { packingSuggestions } from "../services/travplan/rules";
 import { recheckAchievementsAfterWrite } from "../middleware/recheckAchievementsAfterWrite";
 import { planningImportPolicy } from "./travplan/importPolicy";
+import routeEndpoints from "./travplan/routeEndpoints";
 const router = Router();
 router.use(planningImportPolicy);
+router.use(routeEndpoints);
 const uuid = z.string().uuid();
 const writeGuard = [authenticate, requireWriteScope, rejectDemo];
 function route(fn: (req: AuthRequest, res: Response) => Promise<void>) {
@@ -178,7 +181,7 @@ router.get(
   authenticate,
   route(async (req, res) => {
     const plan = await ownedPlan(req.userId!, tripId(req));
-    res.json({ suggestions: packingSuggestions(stateSchema.parse(plan.state)) });
+    res.json({ suggestions: packingSuggestions(parseState(plan.state)) });
   })
 );
 router.get(

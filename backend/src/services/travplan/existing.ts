@@ -2,7 +2,8 @@
 import { bookingDuration } from "./temporal";
 import { randomUUID } from "node:crypto";
 import type { PlanTransaction } from "./execution";
-import { bookingSchema, stateSchema } from "./schema";
+import { bookingSchema } from "./schema";
+import { parseState } from "./upgrade";
 import type { PlanState, PlanKind, PlanBooking } from "./types";
 type Row = Record<string, unknown>;
 const str = (v: unknown): string => (typeof v === "string" ? v : "");
@@ -184,6 +185,7 @@ export async function adoptExisting(
           note: "",
           booked: true,
           bookingId: draft.id,
+          stationId: null,
           execution: completed
             ? "confirmed"
             : str(r.status) === "cancelled"
@@ -201,5 +203,5 @@ export async function adoptExisting(
   project("ferry", trip.ferryJourneys);
   project("cruise", trip.cruises);
   project("rental", trip.rentalBookings);
-  return stateSchema.parse(state);
+  return parseState(state);
 }

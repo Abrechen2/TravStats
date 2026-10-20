@@ -1,5 +1,5 @@
 /**
- * Travel planning contract v1. No planned record is travel evidence.
+ * Travel planning contract v2. No planned record is travel evidence.
  *
  * Mirrored byte for byte at `frontend/src/types/travplan.ts` (and back):
  * change both together. The frontend used to import this file across the
@@ -29,6 +29,7 @@ export interface PlanItem {
   note: string;
   booked: boolean;
   bookingId: string | null;
+  stationId: string | null;
   execution: "unconfirmed" | "confirmed" | "skipped" | "cancelled";
   source: {
     kind: string;
@@ -75,6 +76,9 @@ export interface PlanBooking {
   documentIds: string[];
   source: string;
   details: Record<string, unknown>;
+  placeholder: boolean;
+  estimate: { amount: number; currency: string } | null;
+  stageId: string | null;
 }
 export interface PlanTransfer {
   id: string;
@@ -131,8 +135,82 @@ export interface PlanForecast {
     wind: number | null;
   }[];
 }
+export interface PlanPlace {
+  name: string;
+  lat: number;
+  lon: number;
+  country: string | null;
+  zone: string | null;
+  ref: { kind: "port" | "geo" | "place"; id: string } | null;
+}
+export interface PlanNightCandidate {
+  id: string;
+  title: string;
+  place: PlanPlace | null;
+  url: string | null;
+  note: string;
+}
+export type PlanNight =
+  | { kind: "booked"; bookingId: string }
+  | { kind: "idea"; candidates: PlanNightCandidate[] }
+  | { kind: "pitch" }
+  | { kind: "spontaneous" }
+  | { kind: "onboard" };
+/** Array order is route order. */
+export interface PlanStation {
+  id: string;
+  title: string;
+  place: PlanPlace;
+  nights: number;
+  pinnedDay: string | null;
+  night: PlanNight;
+  note: string;
+}
+export interface PlanStage {
+  id: string;
+  fromStationId: string;
+  toStationId: string;
+  mode: "drive" | "ferry" | "rail" | "flight" | "other";
+  departDay: string | null;
+  departTime: string | null;
+  durationMinutes: number | null;
+  distanceKm: number | null;
+  metricsSource: "routed" | "straight" | "user" | "booking" | null;
+  fallbackReason: string | null;
+  bookingId: string | null;
+  overnight: boolean;
+  note: string;
+}
+export interface PlanVariant {
+  id: string;
+  name: string;
+  stations: PlanStation[];
+  stages: PlanStage[];
+}
+export interface PlanVehicle {
+  kind: "motorhome" | "campervan" | "caravan" | "car" | "motorcycle" | "bicycle" | "other";
+  lengthM: number | null;
+  consumptionPer100: number | null;
+  fuelPrice: number | null;
+  fuelCurrency: string | null;
+}
+export interface PlanStationWeather {
+  stationId: string;
+  kind: "forecast" | "climate";
+  source: string;
+  fetchedAt: string;
+  window: string | null;
+  days: {
+    day: string;
+    min: number | null;
+    max: number | null;
+    rainProbability: number | null;
+    precipitationMm: number | null;
+  }[];
+}
 export interface PlanState {
-  version: 1;
+  version: 2;
+  shape: "stay" | "route";
   creationHash?: string | null;
   destination: string;
   startDay: string | null;
@@ -159,6 +237,14 @@ export interface PlanState {
   costs: PlanCost[];
   decisions: PlanDecision[];
   forecast: PlanForecast | null;
+  stations: PlanStation[];
+  stages: PlanStage[];
+  variants: PlanVariant[];
+  activeVariantName: string;
+  vehicle: PlanVehicle | null;
+  roadtripId: string | null;
+  stationLinks: { stationId: string; tripStopId: string }[];
+  stationWeather: PlanStationWeather[];
 }
 export interface PlanFinding {
   id: string;
@@ -193,6 +279,24 @@ export interface PlanProposal {
     changes: { id: string; day: string | null; time: string | null; reason: string }[];
   };
 }
+export interface RouteSchedule {
+  stations: { stationId: string; arriveDay: string | null; departDay: string | null }[];
+  stages: { stageId: string; departDay: string | null; arriveDay: string | null }[];
+  lastDay: string | null;
+  conflicts: { kind: "anchor_shift"; anchorId: string; plannedDay: string; requiredDay: string }[];
+}
+export interface VariantComparison {
+  /** `null` for the active route, which has no variant id. */
+  id: string | null;
+  name: string;
+  active: boolean;
+  driveKm: number | null;
+  driveDays: number;
+  destinationNights: number;
+  stageCosts: { amount: number; currency: string } | null;
+  fuel: { amount: number; currency: string } | null;
+  unknownCosts: number;
+}
 export interface PlanView {
   id: string;
   tripId: string;
@@ -201,10 +305,20 @@ export interface PlanView {
   state: PlanState;
   findings: PlanFinding[];
   budget: PlanBudget;
+  schedule?: RouteSchedule;
+  variants?: VariantComparison[];
   lastMutationId?: string;
 }
 export type PlanCollection =
-  "items" | "ideas" | "bookings" | "transfers" | "packing" | "tasks" | "costs";
+  | "items"
+  | "ideas"
+  | "bookings"
+  | "transfers"
+  | "packing"
+  | "tasks"
+  | "costs"
+  | "stations"
+  | "stages";
 export type PlanOperation =
   | { type: "refresh_existing" }
   | { type: "link_actual"; id: string; sourceId: string }
@@ -233,6 +347,25 @@ export type PlanOperation =
     }
   | { type: "upsert"; collection: PlanCollection; value: Record<string, unknown> }
   | { type: "remove"; collection: PlanCollection; id: string }
+  | { type: "route_settings"; shape?: PlanState["shape"]; vehicle?: PlanVehicle | null }
+  | { type: "move_station"; id: string; toIndex: number }
+  | {
+      type: "stage_metrics";
+      stageId: string;
+      mode: PlanStage["mode"];
+      distanceKm: number | null;
+      durationMinutes: number | null;
+      metricsSource: PlanStage["metricsSource"];
+      fallbackReason: string | null;
+      fromCoord: { lat: number; lon: number };
+      toCoord: { lat: number; lon: number };
+    }
+  | { type: "create_variant"; name: string; copyActive: boolean }
+  | { type: "activate_variant"; variantId: string }
+  | { type: "remove_variant"; variantId: string }
+  | { type: "rename_variant"; variantId: string; name: string }
+  | { type: "station_night"; stationId: string; night: PlanNight; place?: PlanPlace }
+  | { type: "replace_placeholder"; placeholderId: string; value: Record<string, unknown> }
   | { type: "decision"; value: PlanDecision }
   | {
       type: "assign_idea";
@@ -245,6 +378,18 @@ export type PlanOperation =
   | { type: "execution"; id: string; execution: PlanItem["execution"] }
   | { type: "undo"; mutationId: string }
   | { type: "proposal"; proposalId: string };
+export interface PlaceholderMatch {
+  bookingId: string;
+  score: number;
+  variant: "active" | "inactive";
+  reasons: ("kind" | "endpoints" | "day" | "nights")[];
+  differences: {
+    field: string;
+    plan: string | null;
+    booking: string | null;
+    change: "changed" | "new";
+  }[];
+}
 export interface PlanWrite {
   clientRef: string;
   baseRevision: number;

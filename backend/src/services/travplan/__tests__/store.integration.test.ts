@@ -677,3 +677,66 @@ it.each(["flight", "hotel"] as const)(
     expect(notices.map((n) => n.kind).sort()).toEqual(["created", "deleted"]);
   }
 );
+
+describe("placeholders over HTTP", () => {
+  const placeholder = () =>
+    bookingSchema.parse({
+      id: randomUUID(),
+      kind: "ferry",
+      title: "Ferry to Genoa",
+      reference: null,
+      provider: "",
+      day: "2027-05-19",
+      endDay: null,
+      time: null,
+      timezone: null,
+      amount: null,
+      paid: 0,
+      currency: "EUR",
+      place: "Genoa",
+      originPlace: "Palermo",
+      documentIds: [],
+      source: "manual",
+      details: {},
+      placeholder: true,
+      estimate: { amount: 520, currency: "EUR" },
+    });
+  it("replace_placeholder is undoable and restores the placeholder", async () => {
+    const p = await create(),
+      ph = placeholder(),
+      a = await write(p, { type: "upsert", collection: "bookings", value: ph });
+    expect(a.status).toBe(200);
+    const real = { ...ph, placeholder: false, estimate: null, amount: 548, provider: "Grimaldi" };
+    const b = await write(a.body, {
+      type: "replace_placeholder",
+      placeholderId: ph.id,
+      value: { ...real, id: randomUUID() },
+    });
+    expect(b.status).toBe(200);
+    expect(b.body.state.bookings[0]).toMatchObject({ id: ph.id, placeholder: false, amount: 548 });
+    const c = await write(b.body, { type: "undo", mutationId: b.body.lastMutationId });
+    expect(c.status).toBe(200);
+    expect(c.body.state.bookings[0].placeholder).toBe(true);
+    expect(c.body.state.bookings[0].estimate.amount).toBe(520);
+  });
+  it("answers placeholder matches for the owner only", async () => {
+    const p = await create(),
+      ph = placeholder(),
+      a = await write(p, { type: "upsert", collection: "bookings", value: ph });
+    expect(a.status).toBe(200);
+    const candidate = {
+      ...ph,
+      id: randomUUID(),
+      placeholder: false,
+      estimate: null,
+      day: "2027-05-20",
+    };
+    const url = "/trips/" + p.tripId + "/plan/placeholder-matches";
+    const ok = await post(url, { booking: candidate });
+    expect(ok.status).toBe(200);
+    expect(ok.body.matches).toHaveLength(1);
+    expect(ok.body.matches[0].bookingId).toBe(ph.id);
+    expect((await post(url, { booking: candidate }, other)).status).toBe(404);
+    expect((await post(url, { booking: { nonsense: true } })).status).toBe(400);
+  });
+});

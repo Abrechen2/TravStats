@@ -4,7 +4,8 @@ import { AppError } from "../../middleware/errorHandler";
 import { assertLlmEnabled } from "../llm/llmGate";
 import { resolveLlmChain, llmGenerate, describeLlmTarget } from "../llm/llmProvider";
 import { asJson, assertEnabled, configuration, hash, ownedPlan, reserveUsage } from "./store";
-import { proposalContentSchema, stateSchema } from "./schema";
+import { proposalContentSchema } from "./schema";
+import { parseState } from "./upgrade";
 import { deriveBudget } from "./rules";
 import { applyProposal } from "./operations";
 import type { PlanProposal } from "./types";
@@ -16,7 +17,7 @@ export async function generateProposal(
   await assertEnabled();
   await assertLlmEnabled();
   const plan = await ownedPlan(userId, tripId),
-    state = stateSchema.parse(plan.state);
+    state = parseState(plan.state);
   if (!state.ai.enabled)
     throw new AppError("AI planning has not been enabled for this trip", 403, "PLAN_AI_CONSENT");
   await assertAnchorsCurrent(prisma, userId, tripId, state);
@@ -35,7 +36,7 @@ export async function generateProposal(
   const current = await ownedPlan(userId, tripId);
   if (current.revision !== plan.revision)
     throw new AppError("Plan changed before the request", 409, "PLAN_REVISION_CONFLICT");
-  const currentState = stateSchema.parse(current.state);
+  const currentState = parseState(current.state);
   if (!currentState.ai.enabled || currentState.ai.policy !== state.ai.policy)
     throw new AppError("AI consent changed", 403, "PLAN_AI_CONSENT");
   const system =
