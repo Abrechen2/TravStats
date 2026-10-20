@@ -156,6 +156,7 @@ model User {
   calendarFeed         CalendarFeed?
   countryOverrides     CountryOverride[]
   tripRecordingBatches TripRecordingBatch[]
+  mergedTripRedirects  MergedTripRedirect[]
 
   @@map("users")
 }
@@ -1859,6 +1860,7 @@ model Trip {
   dawarichStays    DawarichStay[]
   publicShareLinks PublicShareLink[]
   recordingBatches TripRecordingBatch[]
+  mergedFrom       MergedTripRedirect[]
 
   documents Document[]
   travelPlan TravelPlan?
@@ -2725,6 +2727,26 @@ model TripRecordingBatch {
   @@unique([userId, uploadId])
   @@index([tripId, startedAt])
   @@map("trip_recording_batches")
+}
+
+/// A trip that was merged into another and no longer exists (forgejo#316):
+/// the Companion may still hold its id and upload to it. The recording route
+/// answers such an id with `TRIP_MERGED` and the surviving trip, so the phone
+/// can follow instead of losing the points. Owner-scoped: only the user who
+/// merged learns where it went. A later merge of the survivor re-points the
+/// row; deleting the survivor deletes the row, and the id is simply gone.
+model MergedTripRedirect {
+  /// The merged-away trip's id. No foreign key: that trip row is deleted.
+  sourceTripId     String   @id @map("source_trip_id")
+  userId           String   @map("user_id")
+  mergedIntoTripId String   @map("merged_into_trip_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mergedInto Trip @relation(fields: [mergedIntoTripId], references: [id], onDelete: Cascade)
+
+  @@index([mergedIntoTripId])
+  @@map("merged_trip_redirects")
 }
 
 model CruiseStop {
