@@ -18,6 +18,7 @@ import {
 import { inboxCount, listNotices, markNoticeRead } from "../services/sharing/notices";
 import { leaveGroup, shareTrip, tripSharingView } from "../services/sharing/shareTrip";
 import { deleteOwnCopy, undoNotice } from "../services/sharing/undo";
+import { resolveConflict } from "../services/sharing/federation/conflicts";
 
 /**
  * `/api/v1/sharing` — shared trips, phases S1 and S2 (design
@@ -41,6 +42,8 @@ export const consentRequestSchema = z
   .strict();
 export const companionLinkSchema = z.object({ userId: idSchema }).strict();
 export const shareTripSchema = z.object({ companionId: idSchema }).strict();
+/** F-S4d: a conflict is answered with the other side's value or one's own. */
+export const resolveConflictSchema = z.object({ choice: z.enum(["mine", "theirs"]) }).strict();
 
 type Handler = (req: AuthRequest, res: Response) => Promise<void>;
 const handle =
@@ -163,6 +166,15 @@ router.post(
   handle(async (req, res) => {
     const id = idSchema.parse(req.params.id);
     res.json({ success: true, data: await undoNotice(req.userId!, id) });
+  })
+);
+
+router.post(
+  "/notices/:id/resolve",
+  handle(async (req, res) => {
+    const id = idSchema.parse(req.params.id);
+    const { choice } = resolveConflictSchema.parse(req.body ?? {});
+    res.json({ success: true, data: await resolveConflict(req.userId!, id, choice) });
   })
 );
 

@@ -10,6 +10,13 @@ import { DERIVE } from "./deriveCopy";
 import { supersedeSatisfied } from "./pendingSupersede";
 import { receivingMembers, type MemberTrip } from "./members";
 import { asPropagation, isPropagating } from "./propagationGuard";
+import {
+  queueEntryCreate,
+  queueEntryRemoved,
+  queueFactUpdate,
+  type ChangeAuthor,
+  type Spread,
+} from "./federation/outbound";
 
 /**
  * Propagation (design 2026-10-09, decision 3, phase S2): after a member's
@@ -49,6 +56,13 @@ import { asPropagation, isPropagating } from "./propagationGuard";
  * Runs inside the caller's transaction when given one, else in its own. A
  * failure throws: a write path that is transactional rolls back with it, so
  * the member never sees "saved" for a change the others did not get.
+ *
+ * People on other servers (spec 2026-10-20, phase F-S4d) get the same three
+ * kinds of change as messages in the outbox (`federation/outbound.ts`),
+ * written in the same transaction — through the writer's pairings and those of
+ * every member here the change reached. A change that arrives from another
+ * server spreads here through the same functions (`spreadUpdate`, …), naming
+ * that person, and never goes back to the server it came from.
  */
 
 export type ShareClient = Db | DbTransaction;
@@ -122,25 +136,38 @@ export async function shareSnapshot(
 export interface NoticeInput {
   recipient: MemberTrip;
   groupId: string;
-  actorId: string;
-  kind: "created" | "updated" | "deleted";
+  /** Who made the change: an account here, or (`author`) a person on another server. */
+  actorId?: string | null;
+  author?: ChangeAuthor;
+  kind: "created" | "updated" | "deleted" | "conflict";
   entity: ShareEntity;
   shareKey: string;
   before?: Prisma.InputJsonObject;
   after: Prisma.InputJsonObject;
 }
 
+/** The notice columns naming who made a change; a remote author is also kept by name. */
+export function authorColumns(author: ChangeAuthor | undefined, actorId?: string | null) {
+  if (!author || author.kind === "user") return { actorId: author?.id ?? actorId ?? null };
+  return {
+    remoteActorId: author.pairingId,
+    remoteAuthor: { displayName: author.displayName, origin: author.origin },
+  };
+}
+
 export async function recordEntryNotice(c: DbTransaction, n: NoticeInput): Promise<string> {
+  const { remoteAuthor, ...actor } = authorColumns(n.author, n.actorId);
   const row = await c.shareNotice.create({
     data: {
       userId: n.recipient.userId,
       groupId: n.groupId,
-      actorId: n.actorId,
+      ...actor,
       kind: n.kind,
       entityType: n.entity,
       entityKey: n.shareKey,
       ...(n.before ? { before: n.before } : {}),
-      after: n.after,
+      // The name travels with the notice: a relayed change names someone no pairing here knows.
+      after: remoteAuthor ? { ...n.after, remoteActor: remoteAuthor } : n.after,
     },
     select: { id: true },
   });
@@ -159,6 +186,21 @@ export const noticeMeta = (row: SharedRow, recipient: MemberTrip, copyId: string
 const copyOf = (copies: SharedRow[], member: MemberTrip) =>
   copies.find((c) => c.userId === member.userId && c.tripId === member.id);
 
+/** A change made here by `actorId`: their consents decide, their name is on the notices. */
+const byUser = (actorId: string, groupId: string): Spread => ({
+  groupId,
+  author: { kind: "user", id: actorId },
+  via: [actorId],
+  fromOrigin: null,
+});
+
+/** The notice columns of a spread's author. */
+const authorOf = (spread: Spread) =>
+  spread.author.kind === "user" ? { actorId: spread.author.id } : { author: spread.author };
+
+/** Whose consents decide who receives here: the first of `via` (the writer, or the person reached). */
+const deciderOf = (spread: Spread) => spread.via[0];
+
 async function createCopies(
   c: DbTransaction,
   adapter: EntityAdapter,
@@ -168,25 +210,43 @@ async function createCopies(
 ): Promise<void> {
   const key = randomUUID();
   await adapter.setKey(c, row.id, key);
-  const source = { ...row, shareKey: key };
-  for (const member of await receivingMembers(c, groupId, actorId)) {
+  await spreadCreate(c, adapter, byUser(actorId, groupId), { ...row, shareKey: key });
+}
+
+/** A keyed entry is new in the group's trip: a copy for every receiving member, here and away. */
+export async function spreadCreate(
+  c: DbTransaction,
+  adapter: EntityAdapter,
+  spread: Spread,
+  source: SharedRow
+): Promise<void> {
+  const key = source.shareKey as string;
+  const reached: string[] = [];
+  for (const member of await receivingMembers(c, spread.groupId, deciderOf(spread))) {
     const copy = await copyInto(c, adapter.entity, source, {
       userId: member.userId,
       tripId: member.id,
     });
     // Their own entry sits in another shared trip: left there, nothing to tell.
     if (!copy) continue;
+    reached.push(member.userId);
     await restatusTrips([member.id], c);
     await recordEntryNotice(c, {
       recipient: member,
-      groupId,
-      actorId,
+      groupId: spread.groupId,
+      ...authorOf(spread),
       kind: "created",
       entity: adapter.entity,
       shareKey: key,
       after: { ...noticeMeta(source, member, copy.id), ...joinedMeta(copy) },
     });
   }
+  await queueEntryCreate(
+    c,
+    { ...spread, via: [...spread.via, ...reached] },
+    adapter.entity,
+    source
+  );
 }
 
 async function noticeRemoval(
@@ -197,21 +257,41 @@ async function noticeRemoval(
   groupId: string,
   reason: "deleted" | "movedOut"
 ): Promise<void> {
+  await spreadRemoval(c, adapter, byUser(actorId, groupId), row, reason);
+}
+
+/** An entry was deleted or moved out: everyone holding a copy is told, here and away. */
+export async function spreadRemoval(
+  c: DbTransaction,
+  adapter: EntityAdapter,
+  spread: Spread,
+  row: SharedRow,
+  reason: "deleted" | "movedOut"
+): Promise<void> {
   const key = row.shareKey as string;
-  const copies = await adapter.copiesOf(c, key, groupId);
-  for (const member of await receivingMembers(c, groupId, actorId)) {
+  const copies = await adapter.copiesOf(c, key, spread.groupId);
+  const reached: string[] = [];
+  for (const member of await receivingMembers(c, spread.groupId, deciderOf(spread))) {
     const copy = copyOf(copies, member);
     if (!copy) continue;
+    reached.push(member.userId);
     await recordEntryNotice(c, {
       recipient: member,
-      groupId,
-      actorId,
+      groupId: spread.groupId,
+      ...authorOf(spread),
       kind: "deleted",
       entity: adapter.entity,
       shareKey: key,
       after: { ...noticeMeta(row, member, copy.id), reason },
     });
   }
+  await queueEntryRemoved(
+    c,
+    { ...spread, via: [...spread.via, ...reached] },
+    adapter.entity,
+    row,
+    reason
+  );
 }
 
 async function updateCopies(
@@ -222,15 +302,34 @@ async function updateCopies(
   before: ShareSnapshot,
   groupId: string
 ): Promise<void> {
-  const changed = changedKeys(before.facts, row.facts, adapter.fields);
+  await spreadUpdate(c, adapter, byUser(actorId, groupId), row, before.facts);
+}
+
+/**
+ * The facts of a keyed entry changed (`before` → `row`): every receiving member's copy that
+ * differs takes them, here (last writer wins, as ever locally) and — as a `fact-update` with the
+ * values held before — on other servers.
+ */
+export async function spreadUpdate(
+  c: DbTransaction,
+  adapter: EntityAdapter,
+  spread: Spread,
+  row: SharedRow,
+  before: SharedRow["facts"]
+): Promise<void> {
+  const changed = changedKeys(before, row.facts, adapter.fields);
   if (changed.length === 0) return;
+  const { groupId } = spread;
   const copies = await adapter.copiesOf(c, row.shareKey as string, groupId);
-  for (const member of await receivingMembers(c, groupId, actorId)) {
+  const reached: string[] = [];
+  for (const member of await receivingMembers(c, groupId, deciderOf(spread))) {
     const copy = copyOf(copies, member);
     if (!copy) continue;
+    // Reached even when its copy already agrees: its pairings carry the change on all the same.
+    reached.push(member.userId);
     const keys = changed.filter((k) => !sameFact(copy.facts[k], row.facts[k]));
     if (keys.length === 0) continue;
-    await adapter.apply(c, copy, row.facts, keys, before.facts);
+    await adapter.apply(c, copy, row.facts, keys, before);
     await DERIVE[adapter.entity](c, copy.id, member.userId);
     // What the copy holds NOW, not what the sharer sent: a house written field
     // by field, a cruise that kept a member's own call, a status re-derived
@@ -243,7 +342,7 @@ async function updateCopies(
     const noticeId = await recordEntryNotice(c, {
       recipient: member,
       groupId,
-      actorId,
+      ...authorOf(spread),
       kind: "updated",
       entity: adapter.entity,
       shareKey: row.shareKey as string,
@@ -254,9 +353,22 @@ async function updateCopies(
       },
     });
     // Flights are the one type with provider suggestions (PendingFlightUpdate).
-    if (adapter.entity === "flight") await supersedeSatisfied(c, copy.id, { noticeId, actorId });
+    if (adapter.entity === "flight")
+      await supersedeSatisfied(c, copy.id, { noticeId, actorId: supersedeActor(spread) });
   }
+  await queueFactUpdate(
+    c,
+    { ...spread, via: [...spread.via, ...reached] },
+    adapter.entity,
+    row,
+    before,
+    changed
+  );
 }
+
+/** What a superseded provider suggestion records as its cause. */
+const supersedeActor = (spread: Spread) =>
+  spread.author.kind === "user" ? spread.author.id : `remote:${spread.author.origin}`;
 
 /**
  * The group a keyed entry's copies sit in, when the caller had no snapshot.

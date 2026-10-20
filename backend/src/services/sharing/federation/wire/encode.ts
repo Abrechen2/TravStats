@@ -17,6 +17,7 @@ import type { EntryRef } from "../../adapters/stop";
 import type { PortRef, ShipRef } from "../../../trip/exchange/publicHalf";
 import { encodeShape } from "./codec";
 import {
+  CATALOGUE_REFS,
   ENTRY_SHAPES,
   type AirportRef,
   type EntryWireRef,
@@ -176,4 +177,26 @@ export async function toWireEntries(
     shareKey: row.shareKey,
     facts: encodeShape(ENTRY_SHAPES[entity], withRefs(entity, row.facts, cat)),
   }));
+}
+
+/** The wire key a local fact travels under: a catalogue id becomes its reference (`shipId` → `ship`). */
+export function wireKeyOf(entity: ShareEntity, localKey: string): string {
+  const refs = CATALOGUE_REFS[entity] as Readonly<Record<string, string>>;
+  return Object.hasOwn(refs, localKey) ? refs[localKey] : localKey;
+}
+
+/**
+ * Several full fact records of one entity in wire form, catalogue read once — what a
+ * `fact-update` picks its before and after values from.
+ */
+export async function wireFactsOf(
+  c: DbTransaction,
+  entity: ShareEntity,
+  records: readonly Facts[]
+): Promise<Facts[]> {
+  const cat = await loadCatalogue(
+    c,
+    records.map((facts) => ({ facts }) as SharedRow)
+  );
+  return records.map((facts) => encodeShape(ENTRY_SHAPES[entity], withRefs(entity, facts, cat)));
 }

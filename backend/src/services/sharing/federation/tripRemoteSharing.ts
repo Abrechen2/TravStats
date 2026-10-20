@@ -8,7 +8,7 @@ import { prisma } from "../../../db";
 import { acceptedParties, partyKey } from "../members";
 import { requireTripFederation } from "./access";
 import { ownTripFor } from "./offerBuild";
-import { MEMBER_INCLUDE, remoteMemberView, type RemoteMemberView } from "./remoteMemberView";
+import { MEMBER_INCLUDE, remoteMemberViews, type RemoteMemberView } from "./remoteMemberView";
 
 export interface OfferablePerson {
   remoteId: string;
@@ -43,7 +43,7 @@ export async function tripRemoteSharing(
         orderBy: { createdAt: "asc" },
       })
     : [];
-  const members = rows.map(remoteMemberView);
+  const members = await remoteMemberViews(rows);
   if (group?.homeOrigin) return { homeOrigin: group.homeOrigin, members, offerable: [] };
   const pairings = await prisma.remoteShareAccount.findMany({
     where: { userId },

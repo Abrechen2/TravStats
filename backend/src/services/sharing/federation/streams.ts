@@ -10,8 +10,9 @@
  *
  * Sending: one message at a time per (group, peer) in this process, numbered from the stream's
  * `lastSentSeq`, which moves only once the peer acknowledged. A `gap` answer is followed once by
- * a resend at the seq the peer expects. F-S4d replaces the direct send with an outbox; this keeps
- * the numbering it will inherit.
+ * a resend at the seq the peer expects. Since F-S4d every propagation message and the entries of
+ * an accepted trip leave through the outbox (`outbox.ts`), which sends through here; the offer and
+ * its answer, a person's own click, still send directly — both share this numbering and lock.
  */
 import { Prisma } from "../../../prisma";
 import { prisma, type DbTransaction } from "../../../db";
@@ -29,6 +30,9 @@ const SERVE_TX_TIMEOUT_MS = 60_000;
 const INBOUND_KEEP_MS = 30 * 86_400_000;
 
 type Rejected = Extract<TripShareAck, { rejected: AckRejection }>;
+export type Received = Extract<TripShareAck, { received: number }>;
+/** What applying a message may add to its answer (the facts a `fact-update` could not write). */
+type AckExtra = Omit<Received, "kind" | "received">;
 
 /** A group message this server will not apply, with the ack that says why. */
 export class GroupRejection extends Error {
@@ -74,27 +78,29 @@ const stored = async (origin: string, messageId: string): Promise<TripShareAck |
 /**
  * Serve one group message: answer a repeat from the inbound table, otherwise run `apply` (which
  * must call `takeSeq` before it writes) and remember the answer. `after` runs once the writes
- * are committed — where a reply must be followed by sending (F-S4c: entries after an accept).
+ * are committed (a delivery kick); `ack` adds to the answer, and is remembered with it.
  */
 export async function serveOnce(
   origin: string,
   message: GroupMessage,
-  apply: (tx: DbTransaction) => Promise<{ after?: () => void } | void>
+  apply: (tx: DbTransaction) => Promise<{ after?: () => void; ack?: AckExtra } | void>
 ): Promise<TripShareAck> {
   const repeat = await stored(origin, message.messageId);
   if (repeat) return repeat;
-  const ack: TripShareAck = { kind: "ack", received: message.seq };
+  let ack: TripShareAck = { kind: "ack", received: message.seq };
   let after: (() => void) | undefined;
   try {
     await prisma.$transaction(
       async (tx) => {
-        after = (await apply(tx))?.after;
+        const result = await apply(tx);
+        after = result?.after;
+        if (result?.ack) ack = { ...result.ack, kind: "ack", received: message.seq };
         await tx.tripShareInbound.create({
           data: {
             peerOrigin: origin,
             messageId: message.messageId,
             groupRef: message.groupRef,
-            reply: ack,
+            reply: ack as Prisma.InputJsonValue,
           },
         });
         await tx.tripShareInbound.deleteMany({
@@ -139,15 +145,15 @@ function serially<T>(key: string, task: () => Promise<T>): Promise<T> {
 
 /**
  * Send one group message to `origin`, numbered on the stream. `build` makes the message for a
- * seq, with a fresh message id each time it is called. Resolves with the seq that was
- * acknowledged; throws `StreamRejected` for a refusal, or the transport's error.
+ * seq. Resolves with the acknowledgement (its `received` is the seq); throws `StreamRejected` for
+ * a refusal, or the transport's error.
  */
 export function sendOnStream(
   groupId: string,
   origin: string,
   build: (seq: number) => GroupMessage,
   transport: PeerTransport
-): Promise<number> {
+): Promise<Received> {
   return serially(`${groupId}|${origin}`, async () => {
     const stream = await prisma.tripSharePeerStream.upsert({
       where: { groupId_peerOrigin: { groupId, peerOrigin: origin } },
@@ -163,7 +169,7 @@ export function sendOnStream(
           where: { groupId_peerOrigin: { groupId, peerOrigin: origin } },
           data: { lastSentSeq: seq },
         });
-        return seq;
+        return ack;
       }
       if (ack.rejected === "gap" && ack.expected !== undefined && attempt === 0) {
         seq = ack.expected;

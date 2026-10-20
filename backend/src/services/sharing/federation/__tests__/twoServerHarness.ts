@@ -1,6 +1,7 @@
 /**
  * Test helper (not a suite): two TravStats servers in one process (spec 2026-10-20, phases
- * F-S4a–F-S4c), shared by `twoServers.test.ts` and `twoServersCopy.test.ts`. Server A on the
+ * F-S4a–F-S4d), shared by `twoServers.test.ts`, `twoServersCopy.test.ts` and
+ * `twoServersPropagation.test.ts`. Server A on the
  * run's database, server B on a second one (`peerDatabase.ts`), each with its own identity in
  * its own admin settings and its own pins. B runs its own module graph (`jest.isolateModules`)
  * so its identity cache, settings and routes are its own, with ONE exception: the generated
@@ -32,6 +33,12 @@ import * as offersModule from "../offers";
 import * as offerInboxModule from "../offerInbox";
 import * as entriesModule from "../entries";
 import * as tripRemoteSharingModule from "../tripRemoteSharing";
+import * as outboxModule from "../outbox";
+import * as inboundModule from "../inbound";
+import * as conflictsModule from "../conflicts";
+import * as propagateModule from "../../propagate";
+import * as undoModule from "../../undo";
+import * as noticesModule from "../../notices";
 import * as securityModule from "../../../federation/security";
 import * as transportModule from "../transport";
 import { resetIdentityCache } from "../../../federation/identity";
@@ -51,6 +58,12 @@ export interface Server {
   offerInbox: typeof offerInboxModule;
   entries: typeof entriesModule;
   tripRemoteSharing: typeof tripRemoteSharingModule;
+  outbox: typeof outboxModule;
+  inbound: typeof inboundModule;
+  conflicts: typeof conflictsModule;
+  propagate: typeof propagateModule;
+  undo: typeof undoModule;
+  notices: typeof noticesModule;
   security: typeof securityModule;
   transport: typeof transportModule;
   resetIdentity: () => void;
@@ -75,6 +88,12 @@ const serverA = (): Server => ({
   offerInbox: offerInboxModule,
   entries: entriesModule,
   tripRemoteSharing: tripRemoteSharingModule,
+  outbox: outboxModule,
+  inbound: inboundModule,
+  conflicts: conflictsModule,
+  propagate: propagateModule,
+  undo: undoModule,
+  notices: noticesModule,
   security: securityModule,
   transport: transportModule,
   resetIdentity: resetIdentityCache,
@@ -101,6 +120,12 @@ function serverB(databaseUrl: string): Server {
         offerInbox: require("../offerInbox"),
         entries: require("../entries"),
         tripRemoteSharing: require("../tripRemoteSharing"),
+        outbox: require("../outbox"),
+        inbound: require("../inbound"),
+        conflicts: require("../conflicts"),
+        propagate: require("../../propagate"),
+        undo: require("../../undo"),
+        notices: require("../../notices"),
         security: require("../../../federation/security"),
         transport: require("../transport"),
         resetIdentity: require("../../../federation/identity").resetIdentityCache,
@@ -144,6 +169,13 @@ const ports: Record<string, number> = {};
 let certificate: Buffer;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "two-servers-"));
 const users: Record<string, string[]> = { [A]: [], [B]: [] };
+const offline = new Set<string>();
+
+/** Take a server off the network (its socket refuses connections) or put it back. */
+export function setOffline(origin: string, down: boolean): void {
+  if (down) offline.add(new URL(origin).hostname);
+  else offline.delete(new URL(origin).hostname);
+}
 
 async function settingsRow(s: Server): Promise<number> {
   const row = await s.prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
@@ -254,7 +286,8 @@ export function useTwoServers(): void {
       actual(
         {
           ...options,
-          port: ports[String(options.hostname)],
+          // Port 1 on loopback refuses the connection: a server that is down.
+          port: offline.has(String(options.hostname)) ? 1 : ports[String(options.hostname)],
           ca: certificate,
           lookup: ((_h: string, _o: object, cb: (e: null, a: string, f: number) => void) =>
             cb(null, "127.0.0.1", 4)) as never,
@@ -269,7 +302,10 @@ export function useTwoServers(): void {
     await setSwitch(a, true);
     await setSwitch(b, true);
   });
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => {
+    offline.clear();
+    jest.restoreAllMocks();
+  });
 
   afterAll(async () => {
     for (const server of listening)

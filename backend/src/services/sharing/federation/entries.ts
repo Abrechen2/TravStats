@@ -13,11 +13,13 @@
  * already hold is skipped (a repeat copies nothing twice), and each copy's status is derived on
  * this server's clock.
  *
- * F-S4c sends directly; a failure is recorded on the member (`stateReason`) and shown on the
- * trip page. F-S4d replaces the direct send with the outbox and its retries.
+ * Since F-S4d the entries leave through the outbox: they are queued in the same transaction that
+ * makes the person a member (`serveOfferAnswer`), and the delivery scheduler sends them in order,
+ * retrying while the other server does not answer (`outbox.ts`). A single entry too large for
+ * any message is a stated loss, recorded on the member (`entries-too-large`).
  */
-import { prisma } from "../../../db";
-import logger from "../../../utils/logger";
+import { prisma, type DbTransaction } from "../../../db";
+import type { Prisma } from "../../../prisma";
 import { ADAPTERS } from "../adapters";
 import { copyInto } from "../copyInto";
 import { assignShareKeys, heldKeys, keyedIdsOnTrip } from "../keyOps";
@@ -29,29 +31,23 @@ import {
   type EntriesMessage,
   type TripShareAck,
 } from "../../../schemas/tripSharePeer";
+import { kickDelivery } from "./deliveryKick";
+import { runDeliveries } from "./outbox";
 import { fromWireEntries } from "./wire/decode";
 import { toWireEntries } from "./wire/encode";
 import type { WireEntry } from "./wire/shapes";
-import { StreamRejected, rejectWith, sendOnStream, serveOnce, takeSeq } from "./streams";
-import { BODY_BUDGET, ENTRIES_TRANSPORT, messageHeader } from "./transport";
+import { rejectWith, serveOnce, takeSeq } from "./streams";
+import { BODY_BUDGET } from "./transport";
 
 /** Room left in a message for its header and the envelope's quoting of the body. */
 const ENTRIES_BYTES = BODY_BUDGET.entries - 8_192;
 
-const inFlight = new Set<Promise<void>>();
-
-/** Keep a background delivery observable: its failures are logged and recorded, never thrown. */
-export function trackDelivery(delivery: Promise<void>): void {
-  const settled = delivery.catch((err: unknown) =>
-    logger.error({ operation: "trip_share_delivery_failed", err }, "Trip-share delivery failed")
-  );
-  inFlight.add(settled);
-  void settled.finally(() => inFlight.delete(settled));
-}
-
-/** Resolves once every delivery started so far has settled (tests, and a graceful shutdown). */
+/**
+ * Deliver everything due now (tests, and a graceful shutdown). Before F-S4d this awaited the
+ * direct background sends; the outbox made those a delivery pass.
+ */
 export async function settleDeliveries(): Promise<void> {
-  while (inFlight.size > 0) await Promise.all([...inFlight]);
+  await runDeliveries();
 }
 
 /** Wire entries into messages: at most fifty each, and within the body budget. */
@@ -76,80 +72,68 @@ export function chunkEntries(entries: readonly WireEntry[]): WireEntry[][] {
   return chunks;
 }
 
-async function recordDelivery(memberId: string, stateReason: string | null): Promise<void> {
-  await prisma.tripShareRemoteMember.update({ where: { id: memberId }, data: { stateReason } });
-}
-
 /** Every keyed entry of the member's trip, in registry order, on the wire. */
-async function wireEntriesOf(userId: string, tripId: string): Promise<WireEntry[]> {
-  return prisma.$transaction(
-    async (tx) => {
-      await assignShareKeys(tx, userId, tripId);
-      const out: WireEntry[] = [];
-      for (const entity of SHARE_ENTITIES) {
-        const rows = await ADAPTERS[entity].load(
-          tx,
-          await keyedIdsOnTrip(tx, entity, userId, tripId)
-        );
-        out.push(
-          ...(await toWireEntries(
-            tx,
-            entity,
-            rows.filter((r) => !r.excluded)
-          ))
-        );
-      }
-      return out;
-    },
-    { timeout: 60_000 }
-  );
+async function wireEntriesOf(tx: DbTransaction, userId: string, tripId: string) {
+  await assignShareKeys(tx, userId, tripId);
+  const out: WireEntry[] = [];
+  for (const entity of SHARE_ENTITIES) {
+    const rows = await ADAPTERS[entity].load(tx, await keyedIdsOnTrip(tx, entity, userId, tripId));
+    out.push(
+      ...(await toWireEntries(
+        tx,
+        entity,
+        rows.filter((r) => !r.excluded)
+      ))
+    );
+  }
+  return out;
 }
 
-/** Send the offering member's entries to the person behind remote member `memberId`. */
-export async function deliverEntries(memberId: string): Promise<void> {
-  const member = await prisma.tripShareRemoteMember.findUnique({
+/**
+ * Queue the offering member's entries for the person behind remote member `memberId`, inside the
+ * caller's transaction. Asks again whether the person still receives (`receivingRemotes`). A
+ * repeat queues everything again; the receiver keeps only what it lacks (`heldKeys`).
+ */
+export async function queueEntries(tx: DbTransaction, memberId: string): Promise<number> {
+  const member = await tx.tripShareRemoteMember.findUnique({
     where: { id: memberId },
     include: { remote: true, group: true },
   });
-  if (!member?.group.federatedRef || member.state !== "active") return;
+  if (!member?.group.federatedRef || member.state !== "active") return 0;
   const { remote, group } = member;
-  const receiving = await receivingRemotes(prisma, group.id, remote.userId);
-  if (!receiving.some((r) => r.id === member.id)) return;
-  const trip = await prisma.trip.findFirst({
+  const receiving = await receivingRemotes(tx, group.id, remote.userId);
+  if (!receiving.some((r) => r.id === member.id)) return 0;
+  const trip = await tx.trip.findFirst({
     where: { shareGroupId: group.id, userId: remote.userId },
     orderBy: { createdAt: "asc" },
     select: { id: true },
   });
-  if (!trip) return;
-  const entries = await wireEntriesOf(remote.userId, trip.id);
+  if (!trip) return 0;
+  const entries = await wireEntriesOf(tx, remote.userId, trip.id);
   const oversize = entries.filter((e) => JSON.stringify(e).length > ENTRIES_BYTES);
-  try {
-    for (const chunk of chunkEntries(entries.filter((e) => !oversize.includes(e)))) {
-      await sendOnStream(
-        group.id,
-        remote.origin,
-        (seq) => ({
-          kind: "entries",
-          ...messageHeader(),
-          groupRef: group.federatedRef as string,
-          seq,
-          from: remote.localChannel,
-          entries: chunk,
-        }),
-        ENTRIES_TRANSPORT
-      );
-    }
-  } catch (error) {
-    const reason = error instanceof StreamRejected ? "entries-refused" : "entries-undelivered";
-    logger.warn(
-      { operation: "trip_share_entries_failed", memberId, origin: remote.origin, kind: reason },
-      "Entries did not reach the other server"
-    );
-    await recordDelivery(member.id, reason);
-    return;
-  }
+  const chunks = chunkEntries(entries.filter((e) => !oversize.includes(e)));
+  for (const chunk of chunks)
+    await tx.tripShareOutbox.create({
+      data: {
+        groupId: group.id,
+        memberId: member.id,
+        peerOrigin: remote.origin,
+        kind: "entries",
+        payload: { from: remote.localChannel, entries: chunk } as unknown as Prisma.InputJsonValue,
+      },
+    });
   // An entry too large for any message is a stated loss, not a silent one.
-  await recordDelivery(member.id, oversize.length > 0 ? "entries-too-large" : null);
+  await tx.tripShareRemoteMember.update({
+    where: { id: member.id },
+    data: { stateReason: oversize.length > 0 ? "entries-too-large" : null },
+  });
+  kickDelivery();
+  return chunks.length;
+}
+
+/** Queue the entries again for remote member `memberId` (its own transaction). */
+export async function deliverEntries(memberId: string): Promise<void> {
+  await prisma.$transaction((tx) => queueEntries(tx, memberId), { timeout: 60_000 });
 }
 
 /**

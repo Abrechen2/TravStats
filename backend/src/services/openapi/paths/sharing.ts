@@ -10,6 +10,7 @@ import { errorContent } from "./shared";
 import {
   companionLinkSchema,
   consentRequestSchema,
+  resolveConflictSchema,
   shareTripSchema,
 } from "../../../routes/sharing";
 import { CONSENT_STATUSES, SHARE_ENTITY_TYPES, SHARE_NOTICE_KINDS } from "../../../schemas/sharing";
@@ -67,6 +68,10 @@ const notice = z.object({
       "When the caller undid this change (S2); on a `deleted` notice, when the caller's own copy was found deleted — clients stop offering delete-copy"
     ),
   actor: person.nullable(),
+  remoteActor: z
+    .object({ displayName: z.string(), origin: z.string() })
+    .nullable()
+    .describe("A person on another server who made the change; null for a change made here"),
   changes: z
     .array(
       z.object({
@@ -75,7 +80,9 @@ const notice = z.object({
         after: z.unknown(),
       })
     )
-    .describe("For `updated`: every changed fact, old and new value"),
+    .describe(
+      "For `updated`: every changed fact, old and new value; for `conflict`: the caller's value, then the other side's"
+    ),
 });
 
 const idParam = z.object({ id: z.string() });
@@ -306,6 +313,27 @@ registry.registerPath({
     404: err("`SHARE_NOTICE_NOT_FOUND`"),
     409: err(
       "`SHARE_UNDO_STALE` (the copy changed since; `fields` names what), " +
+        "`SHARE_UNDO_UNAVAILABLE` or `SHARE_COPY_NOT_FOUND`"
+    ),
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/sharing/notices/{id}/resolve",
+  summary: "Answer a conflict with another server: take their value, or keep one's own",
+  description:
+    "A change from another server met a copy that had moved since, so nothing was written on " +
+    "either side (spec 2026-10-20 F6). `theirs` writes the other value onto the caller's copy; " +
+    "`mine` sends the caller's value again with the other one as its precondition. Either is an " +
+    "ordinary change that propagates. Refused when the copy moved since the notice.",
+  tags,
+  request: { params: idParam, body: json(resolveConflictSchema) },
+  responses: {
+    200: ok("Answered", z.object({ resolved: z.literal(true), entryId: z.string() })),
+    404: err("`SHARE_NOTICE_NOT_FOUND`"),
+    409: err(
+      "`SHARE_REMOTE_CONFLICT_STALE` (the copy changed since; `fields` names what), " +
         "`SHARE_UNDO_UNAVAILABLE` or `SHARE_COPY_NOT_FOUND`"
     ),
   },

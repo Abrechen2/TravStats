@@ -194,9 +194,21 @@ describe("receivingRemotes — who on other servers receives a member's changes"
     await member(anna, "active", "withdrawn");
     await member(carl, "active");
     expect((await receivingRemotes(prisma, group.id, anna)).map((r) => r.id)).toEqual([ben.id]);
+    await prisma.tripShareOutbox.create({
+      data: {
+        groupId: group.id,
+        memberId: ben.id,
+        peerOrigin: PEER,
+        kind: "entry-removed",
+        payload: {},
+      },
+    });
 
     await suspendTripFederationAfterRestore();
     expect(await receivingRemotes(prisma, group.id, anna)).toEqual([]);
+    expect(await receivingRemotes(prisma, group.id, anna, { queueable: true })).toEqual([]);
+    // A restored clone sends nothing the server it was copied from had queued (F-S4d).
+    expect(await prisma.tripShareOutbox.count({ where: { groupId: group.id } })).toBe(0);
     expect(
       await prisma.tripShareRemoteMember.findUniqueOrThrow({ where: { id: ben.id } })
     ).toMatchObject({ state: "suspended", stateReason: "restore" });

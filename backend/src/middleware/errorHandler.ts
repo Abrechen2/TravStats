@@ -1,3 +1,4 @@
+import type { RemoteShareApiErrorCode } from "./remoteShareErrorCodes";
 import { Request, Response, NextFunction } from "express";
 import { MulterError } from "multer";
 import { ZodError } from "zod";
@@ -467,29 +468,8 @@ export type ApiErrorCode =
   | "SHARE_UNDO_UNAVAILABLE"
   /** The caller's own copy of the entry is gone (deleted or moved away) (409). */
   | "SHARE_COPY_NOT_FOUND"
-  /** Trip sharing across servers (spec 2026-10-20 §7) — `services/sharing/federation/`. */
-  | "SHARE_REMOTE_DISABLED"
-  | "SHARE_REMOTE_INVITE_INVALID"
-  | "SHARE_REMOTE_INVITE_WRONG_TAG"
-  | "SHARE_REMOTE_INVITE_USED"
-  | "SHARE_REMOTE_INVITE_EXPIRED"
-  | "SHARE_REMOTE_INVITE_OWN_SERVER"
-  | "SHARE_REMOTE_INVITE_LIMIT"
-  | "SHARE_REMOTE_INVITE_NOT_FOUND"
-  | "SHARE_REMOTE_DUPLICATE"
-  /** `extra.origin` names the server the admin has not admitted. */
-  | "SHARE_REMOTE_PEER_NOT_ADMITTED"
-  | "SHARE_REMOTE_PEER_OUTDATED"
-  | "SHARE_REMOTE_PEER_DISABLED"
-  | "SHARE_REMOTE_UNREACHABLE"
-  /** Offering a trip across servers (F-S4c); `_REFUSED` carries the other side's `extra.reason`. */
-  | "SHARE_REMOTE_CONSENT_MISSING"
-  | "SHARE_REMOTE_NOT_HOME"
-  | "SHARE_REMOTE_ALREADY_MEMBER"
-  | "SHARE_REMOTE_TRIP_TOO_LARGE"
-  | "SHARE_REMOTE_PERSON_NOT_FOUND"
-  | "SHARE_REMOTE_OFFER_NOT_FOUND"
-  | "SHARE_REMOTE_REFUSED"
+  /** Trip sharing across servers (spec 2026-10-20 §7) — listed in `remoteShareErrorCodes.ts`. */
+  | RemoteShareApiErrorCode
   /** Comparison (leaderboard) — rework 2026-10-16. The beta switch is off. */
   | "COMPARISON_DISABLED"
   /** A personal access token: the comparison is a browser-session feature. */

@@ -3,6 +3,7 @@ import { afterAll, describe, expect, it } from "@jest/globals";
 import { prisma } from "../../../db";
 import { CONSENT_STATUSES, SHARE_ENTITY_TYPES, SHARE_NOTICE_KINDS } from "../../../schemas/sharing";
 import { REMOTE_MEMBER_STATES } from "../../../schemas/sharingRemote";
+import { OUTBOX_KINDS } from "../../../schemas/tripSharePeer";
 
 /**
  * The sharing vocabularies live twice — as Zod unions in code and as CHECK
@@ -15,6 +16,7 @@ const CHECKS = {
   share_notices_kind_check: SHARE_NOTICE_KINDS,
   share_notices_entity_type_check: SHARE_ENTITY_TYPES,
   trip_share_remote_members_state_check: REMOTE_MEMBER_STATES,
+  trip_share_outbox_kind_check: OUTBOX_KINDS,
 } as const;
 
 afterAll(async () => {
@@ -69,6 +71,36 @@ describe("sharing vocabularies — code and database agree", () => {
       ).resolves.toBeTruthy();
     } finally {
       await prisma.user.deleteMany({ where: { id: { in: [a.id, b.id] } } });
+    }
+  });
+
+  it("names at most one actor on a notice: an account here or a person elsewhere (F-S4d)", async () => {
+    const user = await prisma.user.create({
+      data: { username: "share-test-actor", passwordHash: "x" },
+    });
+    try {
+      const remote = await prisma.remoteShareAccount.create({
+        data: {
+          userId: user.id,
+          origin: "https://actor.vocab.test",
+          channel: "c-actor",
+          localChannel: "l-actor",
+          username: "far",
+          displayName: "Far",
+        },
+      });
+      await expect(
+        prisma.shareNotice.create({
+          data: { userId: user.id, kind: "conflict", actorId: user.id, remoteActorId: remote.id },
+        })
+      ).rejects.toThrow(/share_notices_actor_check/);
+      await expect(
+        prisma.shareNotice.create({
+          data: { userId: user.id, kind: "conflict", remoteActorId: remote.id },
+        })
+      ).resolves.toBeTruthy();
+    } finally {
+      await prisma.user.delete({ where: { id: user.id } });
     }
   });
 

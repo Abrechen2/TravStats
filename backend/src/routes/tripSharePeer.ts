@@ -10,7 +10,8 @@
  *
  * Budgets (spec §4): nothing above the largest kind's budget (`entries`, 1 MB) is read at all;
  * after the signature, each kind is held to its own (`BODY_BUDGET`, control messages 8 KB). A
- * group message (`offer`, `offer-answer`, `entries`) whose header parses but whose body does not
+ * group message (`GROUP_KINDS`: offer, answer, entries, and F-S4d's propagation) whose header
+ * parses but whose body does not
  * is answered `ack { rejected: "schema", field }` under signature, so the sender learns which
  * field; anything less is the uniform 403.
  */
@@ -30,6 +31,7 @@ import { serveInviteClaim } from "../services/sharing/federation/invites";
 import { serveEntries } from "../services/sharing/federation/entries";
 import { serveOfferAnswer } from "../services/sharing/federation/offers";
 import { serveOffer } from "../services/sharing/federation/offerInbox";
+import { servePropagation } from "../services/sharing/federation/inbound";
 import { BODY_BUDGET, MAX_BODY } from "../services/sharing/federation/transport";
 import {
   TRIP_SHARE_PURPOSE,
@@ -55,6 +57,10 @@ function serve(origin: string, local: string, body: TripSharePacket): Promise<un
       return serveOfferAnswer(origin, body);
     case "entries":
       return serveEntries(origin, body);
+    case "fact-update":
+    case "entry-create":
+    case "entry-removed":
+      return servePropagation(origin, body);
   }
 }
 

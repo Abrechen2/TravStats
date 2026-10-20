@@ -11,7 +11,8 @@ import { TRIP_SHARE_PURPOSE, type TripSharePacket } from "../../../schemas/tripS
 /**
  * Body budgets per message kind (spec §4), checked by the peer route on the signed body string
  * after the signature: control messages 8 KB (today's `MAX_PACKET_BODY`), an offer 32 KB (the
- * trip's facts and a roster), `entries` 1 MB. The route refuses anything above the largest
+ * trip's facts and a roster), `entries` 1 MB, `fact-update` and `entry-create` 256 KB (one entry,
+ * a line on the map included). The route refuses anything above the largest
  * before it reads the signature at all.
  */
 export const BODY_BUDGET = {
@@ -20,6 +21,9 @@ export const BODY_BUDGET = {
   "offer-answer": 8_192,
   offer: 32_768,
   entries: 1_048_576,
+  "fact-update": 262_144,
+  "entry-create": 262_144,
+  "entry-removed": 8_192,
 } as const satisfies Readonly<Record<TripSharePacket["kind"], number>>;
 export const MAX_BODY = Math.max(...Object.values(BODY_BUDGET));
 
@@ -49,6 +53,15 @@ export const OFFER_TRANSPORT: PeerTransport = transport(
 export const ENTRIES_TRANSPORT: PeerTransport = transport(
   BODY_BUDGET.entries + ENVELOPE_OVERHEAD,
   16_384
+);
+
+/**
+ * A propagation message (F-S4d): one entry or one entry's changed facts. The reply can carry the
+ * values a conflict met (`ack.conflicts`), so it gets the request's budget.
+ */
+export const PROPAGATION_TRANSPORT: PeerTransport = transport(
+  BODY_BUDGET["fact-update"] + ENVELOPE_OVERHEAD,
+  BODY_BUDGET["fact-update"] + ENVELOPE_OVERHEAD
 );
 
 /** The header every message carries. */

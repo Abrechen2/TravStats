@@ -4,8 +4,9 @@
  * shared crypto only. Nothing here imports the comparison contract, and
  * `services/sharing/federation/__tests__/separation.test.ts` fails if anything ever does.
  *
- * Phases built: F-S4a (`ping`), F-S4b (`invite-claim` / `invite-claim-reply`) and F-S4c (`offer`,
- * `offer-answer`, `entries`, each answered by an `ack`). Messages are strict objects
+ * Phases built: F-S4a (`ping`), F-S4b (`invite-claim` / `invite-claim-reply`), F-S4c (`offer`,
+ * `offer-answer`, `entries`) and F-S4d (`fact-update`, `entry-create`, `entry-removed`), each group
+ * message answered by an `ack`. Messages are strict objects
  * discriminated on `kind`; every one carries a `messageId` and a `sentAt` instant (ADR 0002: a `Z`
  * instant, never an offset-less datetime). A group message also carries `groupRef` (the group's
  * `federatedRef`) and `seq`, one sequence per (sending origin, group): the receiver accepts only
@@ -16,7 +17,11 @@
  */
 import { z } from "./zod";
 import { SHARE_ENTITIES, SHARE_TYPES } from "../services/sharing/shareTypes";
-import { wireEntrySchema, wireTripSchema } from "../services/sharing/federation/wire/shapes";
+import {
+  ENTRY_SHAPES,
+  wireEntrySchema,
+  wireTripSchema,
+} from "../services/sharing/federation/wire/shapes";
 
 /** The envelope purpose this protocol signs and accepts (envelope version 2). */
 export const TRIP_SHARE_PURPOSE = "trip-share/1" as const;
@@ -102,17 +107,111 @@ export const entriesSchema = z.strictObject({
   entries: z.array(wireEntrySchema).min(1).max(MAX_ENTRIES_PER_MESSAGE),
 });
 
+/**
+ * Who made a change (F-S4d), as the server it was made on names them. `origin` is absent when the
+ * change was made on the sending server itself; a home relaying a spoke's change names the spoke.
+ */
+export const changeActorSchema = z.strictObject({
+  displayName,
+  origin: z.string().max(300).optional(),
+});
+
+/**
+ * The propagation messages (F-S4d) are between two pairings: `from` is the channel the receiving
+ * server minted for the sending side's member, `to` the one minted for its own person — the same
+ * two names as `offer`.
+ */
+const pairingHeader = { ...groupHeader, from: uuid, to: uuid, actor: changeActorSchema };
+const entity = z.enum(SHARE_ENTITIES);
+
+/** Most facts one `fact-update` may change. */
+export const MAX_CHANGES_PER_UPDATE = 100;
+
+/**
+ * One fact of one entry changed (F6): per fact the value the sender held BEFORE and the one it
+ * holds now, each in the field's wire form (`ENTRY_SHAPES[entity][field]`). The receiver writes
+ * a fact only where its copy still holds `before`; a reference is compared by its natural key
+ * (UN/LOCODE, IMO, …), never by either server's catalogue id.
+ */
+export const factUpdateSchema = z
+  .strictObject({
+    kind: z.literal("fact-update"),
+    ...pairingHeader,
+    entity,
+    shareKey: uuid,
+    changes: z
+      .array(z.strictObject({ field: z.string().max(80), before: z.json(), after: z.json() }))
+      .min(1)
+      .max(MAX_CHANGES_PER_UPDATE),
+  })
+  .superRefine((message, ctx) => {
+    const shape = ENTRY_SHAPES[message.entity];
+    message.changes.forEach((change, i) => {
+      const codec = Object.hasOwn(shape, change.field) ? shape[change.field] : undefined;
+      if (!codec) {
+        ctx.addIssue({ code: "custom", path: ["changes", i, "field"], message: "unknown fact" });
+        return;
+      }
+      for (const side of ["before", "after"] as const) {
+        if (!codec.wire.safeParse(change[side]).success)
+          ctx.addIssue({ code: "custom", path: ["changes", i, side], message: "not this fact" });
+      }
+    });
+  });
+
+/** One entry added to the shared trip (or moved into it), exactly as in `entries`. */
+export const entryCreateSchema = z.strictObject({
+  kind: z.literal("entry-create"),
+  ...pairingHeader,
+  entry: wireEntrySchema,
+});
+
+/** An entry was deleted or moved out of the trip: a notice only, a copy is never removed. */
+export const entryRemovedSchema = z.strictObject({
+  kind: z.literal("entry-removed"),
+  ...pairingHeader,
+  entity,
+  shareKey: uuid,
+  reason: z.enum(["deleted", "movedOut"]),
+});
+
 export const tripSharePacket = z.discriminatedUnion("kind", [
   tripPingSchema,
   inviteClaimSchema,
   offerSchema,
   offerAnswerSchema,
   entriesSchema,
+  factUpdateSchema,
+  entryCreateSchema,
+  entryRemovedSchema,
 ]);
+
+/** The group messages; a header of one of these is answered `schema` when the body fails. */
+export const GROUP_KINDS = [
+  "offer",
+  "offer-answer",
+  "entries",
+  "fact-update",
+  "entry-create",
+  "entry-removed",
+] as const;
+
+/**
+ * The group messages that leave through the outbox (F-S4d); the offer and its answer, a
+ * person's own click, are sent directly. Also the CHECK `trip_share_outbox_kind_check`;
+ * `shareVocabulary.test.ts` holds the two together.
+ */
+export const OUTBOX_KINDS = [
+  "entries",
+  "fact-update",
+  "entry-create",
+  "entry-removed",
+] as const satisfies readonly (typeof GROUP_KINDS)[number][];
+export type OutboxKind = (typeof OUTBOX_KINDS)[number];
 
 /** Read when a group message fails its schema, to answer `ack rejected: schema` instead of 403. */
 export const groupHeaderSchema = z.object({
-  kind: z.enum(["offer", "offer-answer", "entries"]),
+  kind: z.enum(GROUP_KINDS),
   messageId: uuid,
   groupRef: uuid,
   seq,
@@ -125,8 +224,18 @@ export const groupHeaderSchema = z.object({
  */
 export const ACK_REJECTIONS = ["gap", "not-member", "consent", "schema"] as const;
 export type AckRejection = (typeof ACK_REJECTIONS)[number];
+/**
+ * A `fact-update` answered with the facts that were NOT written because the receiver's copy had
+ * moved since (F6): per fact, the value it holds, in wire form — so the sender's person sees both
+ * values too, and nothing was swapped on either side.
+ */
+export const ackConflictSchema = z.strictObject({ field: z.string().max(80), held: z.json() });
 export const ackSchema = z.union([
-  z.strictObject({ kind: z.literal("ack"), received: seq }),
+  z.strictObject({
+    kind: z.literal("ack"),
+    received: seq,
+    conflicts: z.array(ackConflictSchema).max(MAX_CHANGES_PER_UPDATE).optional(),
+  }),
   z.strictObject({
     kind: z.literal("ack"),
     rejected: z.enum(ACK_REJECTIONS),
@@ -180,4 +289,10 @@ export type InviteClaimReply = z.infer<typeof inviteClaimReplySchema>;
 export type TripOffer = z.infer<typeof offerSchema>;
 export type OfferAnswer = z.infer<typeof offerAnswerSchema>;
 export type EntriesMessage = z.infer<typeof entriesSchema>;
-export type GroupMessage = TripOffer | OfferAnswer | EntriesMessage;
+export type FactUpdateMessage = z.infer<typeof factUpdateSchema>;
+export type EntryCreateMessage = z.infer<typeof entryCreateSchema>;
+export type EntryRemovedMessage = z.infer<typeof entryRemovedSchema>;
+export type ChangeActor = z.infer<typeof changeActorSchema>;
+export type AckConflict = z.infer<typeof ackConflictSchema>;
+export type PropagationMessage = FactUpdateMessage | EntryCreateMessage | EntryRemovedMessage;
+export type GroupMessage = TripOffer | OfferAnswer | EntriesMessage | PropagationMessage;

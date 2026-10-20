@@ -202,21 +202,36 @@ export interface RemoteMemberRef {
   localChannel: string;
 }
 
+const ACTIVE = { state: "active" } as const;
+/**
+ * A member whose server does not answer, or has the feature switched off there, or whose pin
+ * this server's admin disabled, still gets their messages queued (F-S4d): they leave once the
+ * server answers again, in order. A membership suspended by a restore, or one that ended, does not.
+ */
+export const QUEUEABLE = {
+  OR: [
+    { state: { in: ["active", "unreachable"] } },
+    { state: "suspended", stateReason: { in: ["off", "peer-blocked"] } },
+  ],
+};
+
 /**
  * The remote counterpart of `receivingMembers` (spec 2026-10-20 §5): the group's people on other
  * servers who may receive `actorId`'s changes — active members, reached through `actorId`'s own
  * pairing with them, with an accepted consent in either direction (`acceptedParties`, the same
  * rule as for local members). A pairing belongs to one local user, so a local member who never
- * paired with that person reaches them only through the home member who did (F5 relays that in
- * F-S4d), never by borrowing someone else's consent.
+ * paired with that person reaches them only through the home member who did (F5: a change that
+ * reached that member here is relayed through their pairing), never by borrowing someone else's
+ * consent. With `queueable`, members whose delivery is only held up count too (`QUEUEABLE`).
  */
 export async function receivingRemotes(
   c: Pick<DbTransaction, "tripShareRemoteMember" | "shareConsent">,
   groupId: string,
-  actorId: string
+  actorId: string,
+  options: { queueable?: boolean } = {}
 ): Promise<RemoteMemberRef[]> {
   const rows = await c.tripShareRemoteMember.findMany({
-    where: { groupId, state: "active", remote: { userId: actorId } },
+    where: { groupId, remote: { userId: actorId }, ...(options.queueable ? QUEUEABLE : ACTIVE) },
     select: {
       id: true,
       remoteId: true,

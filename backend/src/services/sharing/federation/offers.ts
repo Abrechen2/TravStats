@@ -1,7 +1,7 @@
 /**
  * The home side of offering a trip to a person on another server (spec 2026-10-20 §4, §5,
- * phase F-S4c): offer it from the trip page, take the person's answer, and on a yes send the
- * entries (`entries.ts`).
+ * phase F-S4c): offer it from the trip page, take the person's answer, and on a yes queue the
+ * entries (`entries.ts`, delivered by the outbox since F-S4d).
  *
  * The person decides on their own server (`offer-answer`): an offer creates nothing in their
  * account, and a declined or unanswered one never will. No network call runs inside a database
@@ -13,7 +13,8 @@ import { AppError } from "../../../middleware/errorHandler";
 import { acceptedParties } from "../members";
 import type { OfferAnswer, TripShareAck } from "../../../schemas/tripSharePeer";
 import { requireTripFederation } from "./access";
-import { deliverEntries, trackDelivery } from "./entries";
+import { kickDelivery } from "./deliveryKick";
+import { queueEntries } from "./entries";
 import { remoteShareError } from "./errors";
 import {
   buildOfferBody,
@@ -135,8 +136,8 @@ export async function offerTrip(
 
 /**
  * The person's answer arrives from their server. Accept turns the member active and, once the
- * write is committed, sends the entries; a repeated accept (an answer whose reply was lost)
- * sends them again — the receiver keeps only what it lacks. Decline copies nothing, ever.
+ * write commits, its entries are in the outbox; a repeated accept (an answer whose reply was lost)
+ * queues them again — the receiver keeps only what it lacks. Decline copies nothing, ever.
  */
 export function serveOfferAnswer(origin: string, message: OfferAnswer): Promise<TripShareAck> {
   return serveOnce(origin, message, async (tx) => {
@@ -171,6 +172,8 @@ export function serveOfferAnswer(origin: string, message: OfferAnswer): Promise<
         where: { id: member.id },
         data: { state: "active", stateReason: null, stateSince: now },
       });
-    return { after: () => trackDelivery(deliverEntries(member.id)) };
+    // The entries leave with this write: queued in its transaction, sent once it commits.
+    await queueEntries(tx, member.id);
+    return { after: kickDelivery };
   });
 }

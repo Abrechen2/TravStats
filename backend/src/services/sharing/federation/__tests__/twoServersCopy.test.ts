@@ -349,9 +349,15 @@ describe("a trip offered across two servers", () => {
     expect(received).toHaveBeenCalled();
     for (const secret of PRIVATE) expect(wire).not.toContain(secret);
 
-    // A sees Ben as an active member of the trip.
+    // A sees Ben as an active member of the trip, with nothing waiting for him.
     const onA = await a.tripRemoteSharing.tripRemoteSharing(anna, trip.id);
-    expect(onA.members).toEqual([expect.objectContaining({ state: "active", stateReason: null })]);
+    expect(onA.members).toEqual([
+      expect.objectContaining({
+        state: "active",
+        stateReason: null,
+        delivery: expect.objectContaining({ state: "delivered" }),
+      }),
+    ]);
     const onB = await b.tripRemoteSharing.tripRemoteSharing(ben, tripId);
     expect(onB).toMatchObject({
       homeOrigin: a.origin,
@@ -365,6 +371,7 @@ describe("a trip offered across two servers", () => {
       (await b.prisma.cruiseStop.count({ where: { cruise: { userId: ben } } }));
     const before = await count();
     await a.entries.deliverEntries(onA.members[0].id);
+    expect(await a.outbox.runDeliveries()).toMatchObject({ sent: 1, failed: 0, parked: 0 });
     expect(await count()).toBe(before);
   });
 

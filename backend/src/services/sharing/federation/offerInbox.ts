@@ -205,13 +205,29 @@ export async function acceptOffer(userId: string, id: string): Promise<{ tripId:
     const trip = await tx.trip.create({
       // The status is the receiver's to derive (rework D4); `restatusTrips` does once filled.
       data: { ...tripFacts(facts), status: "planned", userId, shareGroupId: row.groupId },
-      select: { id: true },
+      select: { id: true, name: true },
     });
     await tx.tripShareRemoteMember.update({
       where: { id: row.id },
       data: { state: "active", stateReason: null, stateSince: new Date(), offer: Prisma.DbNull },
     });
     await restatusTrips([trip.id], tx);
+    // The trip arrived (F-S4d): told like a local share, naming who it came from and where.
+    await tx.shareNotice.create({
+      data: {
+        userId,
+        groupId: row.groupId,
+        remoteActorId: row.remoteId,
+        kind: "shared",
+        entityType: "trip",
+        entityKey: trip.id,
+        after: {
+          tripName: trip.name,
+          tripCreated: true,
+          remoteActor: { displayName: row.remote.displayName, origin: row.remote.origin },
+        },
+      },
+    });
     return trip.id;
   });
   try {
@@ -222,6 +238,7 @@ export async function acceptOffer(userId: string, id: string): Promise<{ tripId:
       await tx.$queryRaw`SELECT 1 FROM trip_share_peer_streams
         WHERE group_id = ${row.groupId} AND peer_origin = ${row.remote.origin} FOR UPDATE`;
       if (await holdsEntries(tx, tripId)) return false;
+      await tx.shareNotice.deleteMany({ where: { userId, entityType: "trip", entityKey: tripId } });
       await tx.trip.delete({ where: { id: tripId } });
       await tx.tripShareRemoteMember.update({
         where: { id: row.id },

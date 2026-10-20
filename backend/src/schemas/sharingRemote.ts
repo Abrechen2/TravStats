@@ -69,8 +69,24 @@ export const remoteMemberSchema = z.strictObject({
   stateReason: z
     .string()
     .nullable()
-    .describe("What last went wrong (`entries-undelivered`, `entries-refused`, …); null when fine"),
+    .describe(
+      "Why the state is what it is (`off`, `peer-blocked`, `unreachable`, `restore`, `entries-too-large`); null when fine"
+    ),
   stateSince: instant,
+  delivery: z
+    .strictObject({
+      state: z.enum(["delivered", "pending", "retrying", "unreachable", "rejected"]),
+      stateSince: instant
+        .nullable()
+        .describe("`retrying`/`unreachable`: failing since; `rejected`: when it was refused"),
+      reason: z
+        .string()
+        .nullable()
+        .describe("`retrying`: the failure kind; `rejected`: `schema`, `not-member` or `consent`"),
+      field: z.string().nullable().describe("`rejected` for `schema`: what did not parse"),
+      label: z.string().nullable().describe("`rejected`: the entry the message was about"),
+    })
+    .describe("Where the changes made here stand on their way to this person (F-S4d)"),
 });
 export const offerablePersonSchema = z.strictObject({
   remoteId: z.string().uuid(),

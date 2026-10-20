@@ -4615,6 +4615,8 @@ model RemoteShareAccount {
   consentsRequested ShareConsent[]          @relation("ShareConsentRemoteRequester")
   consentsTargeted  ShareConsent[]          @relation("ShareConsentRemoteTarget")
   memberships       TripShareRemoteMember[]
+  /// Notices about a change this person made on their server (F-S4d).
+  noticesActed      ShareNotice[]           @relation("ShareNoticeRemoteActor")
 
   @@unique([origin, channel])
   @@unique([origin, localChannel])
@@ -4662,6 +4664,7 @@ model TripShareGroup {
   notices       ShareNotice[]
   remoteMembers TripShareRemoteMember[]
   streams       TripSharePeerStream[]
+  outbox        TripShareOutbox[]
 
   @@unique([federatedRef], map: "trip_share_groups_home_ref_key", where: raw("home_origin IS NULL"))
   @@unique([homeOrigin, federatedRef])
@@ -4689,6 +4692,7 @@ model TripShareRemoteMember {
 
   group  TripShareGroup     @relation(fields: [groupId], references: [id], onDelete: Cascade)
   remote RemoteShareAccount @relation(fields: [remoteId], references: [id], onDelete: Cascade)
+  outbox TripShareOutbox[]
 
   @@unique([groupId, remoteId])
   @@index([remoteId])
@@ -4726,31 +4730,77 @@ model TripShareInbound {
 /// The fourth inbox source (beside pending updates, data-quality flags and
 /// trip suggestions): what another member did to a shared trip. S1 writes
 /// `shared` and `left`; S2 adds created/updated/deleted with before/after.
-model ShareNotice {
-  id         String    @id @default(uuid())
-  /// The recipient.
-  userId     String    @map("user_id")
-  groupId    String?   @map("group_id")
-  actorId    String?   @map("actor_id")
-  /// shared | created | updated | deleted | left — CHECK share_notices_kind_check, schemas/sharing.ts
-  kind       String
-  /// trip | flight | lodgingStay | cruise | rail | bus | ferry | rental | stop — services/sharing/shareTypes.ts; CHECK share_notices_entity_type_check
-  entityType String?   @map("entity_type")
-  /// The entry's shareKey; for `trip` the RECIPIENT's own trip id.
-  entityKey  String?   @map("entity_key")
-  before     Json?
-  after      Json?
-  createdAt  DateTime  @default(now()) @map("created_at")
-  readAt     DateTime? @map("read_at")
-  undoneAt   DateTime? @map("undone_at")
+/// Messages waiting for a person on another server (spec 2026-10-20 F7, phase F-S4d). Written in
+/// the same transaction as the local write they describe, so a write and its message commit
+/// together; `jobs/tripShareDeliveryScheduler.ts` sends them per (group, peer) strictly in
+/// `position` order, numbered on `TripSharePeerStream` at send time.
+model TripShareOutbox {
+  /// The message id on the wire: the same on every retry, so the receiver answers a repeat from
+  /// its inbound table instead of applying it twice.
+  id            String    @id @default(uuid())
+  /// Send order within (group, peer).
+  position      Int       @unique @default(autoincrement())
+  groupId       String    @map("group_id")
+  /// The person this message is for (one pairing); their server fans out to its own members.
+  memberId      String    @map("member_id")
+  peerOrigin    String    @map("peer_origin")
+  /// entries | fact-update | entry-create | entry-removed — CHECK trip_share_outbox_kind_check
+  kind          String
+  /// The message without its header (id, seq, time are added when it is sent).
+  payload       Json
+  /// What the message is about ("TP571 FRA → LIS"), for the sentence a rejection reads as.
+  label         String?
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime  @default(now()) @map("next_attempt_at")
+  /// Since when delivery of this message has failed; null until the first failure.
+  failingSince  DateTime? @map("failing_since")
+  /// The transport failure kind of the last attempt (`unreachable`, `remote-absent`, …).
+  lastError     String?   @map("last_error")
+  /// Set when the peer refused the message for good; it is kept, not retried.
+  parkedAt      DateTime? @map("parked_at")
+  /// `schema:<field>`, `not-member`, `consent` — what the peer answered.
+  parkedReason  String?   @map("parked_reason")
+  createdAt     DateTime  @default(now()) @map("created_at")
 
-  user  User            @relation("ShareNoticeRecipient", fields: [userId], references: [id], onDelete: Cascade)
-  actor User?           @relation("ShareNoticeActor", fields: [actorId], references: [id], onDelete: SetNull)
-  group TripShareGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  group  TripShareGroup        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  member TripShareRemoteMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, peerOrigin, position])
+  @@index([memberId])
+  @@index([nextAttemptAt])
+  @@map("trip_share_outbox")
+}
+
+model ShareNotice {
+  id            String    @id @default(uuid())
+  /// The recipient.
+  userId        String    @map("user_id")
+  groupId       String?   @map("group_id")
+  actorId       String?   @map("actor_id")
+  /// A person on another server who made the change (F-S4d); at most one of the two actors is
+  /// set (CHECK share_notices_actor_check). The pairing it came through, so SetNull.
+  remoteActorId String?   @map("remote_actor_id")
+  /// shared | created | updated | deleted | left | conflict — CHECK share_notices_kind_check, schemas/sharing.ts
+  kind          String
+  /// trip | flight | lodgingStay | cruise | rail | bus | ferry | rental | stop — services/sharing/shareTypes.ts; CHECK share_notices_entity_type_check
+  entityType    String?   @map("entity_type")
+  /// The entry's shareKey; for `trip` the RECIPIENT's own trip id.
+  entityKey     String?   @map("entity_key")
+  before        Json?
+  after         Json?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  readAt        DateTime? @map("read_at")
+  undoneAt      DateTime? @map("undone_at")
+
+  user        User                @relation("ShareNoticeRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor       User?               @relation("ShareNoticeActor", fields: [actorId], references: [id], onDelete: SetNull)
+  remoteActor RemoteShareAccount? @relation("ShareNoticeRemoteActor", fields: [remoteActorId], references: [id], onDelete: SetNull)
+  group       TripShareGroup?     @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
   @@index([userId, readAt])
   @@index([groupId])
   @@index([actorId])
+  @@index([remoteActorId])
   @@map("share_notices")
 }
 

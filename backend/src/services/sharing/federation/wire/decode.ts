@@ -137,10 +137,8 @@ function without(f: Facts, keys: readonly string[]): Facts {
   return Object.fromEntries(Object.entries(f).filter(([k]) => !keys.includes(k)));
 }
 
-function cruiseFacts(f: Facts, r: Resolver): Facts {
-  const ship = f.ship as ShipRef | null;
-  const shipId = r.ship(ship);
-  const stops = (f.stops as Facts[]).map((s) => {
+function stopsOf(stops: Facts[], r: Resolver): Facts[] {
+  return stops.map((s) => {
     const port = s.port as PortRef | null;
     const isAtSea = s.isAtSea === true;
     const portId = isAtSea ? null : r.port(port);
@@ -157,24 +155,16 @@ function cruiseFacts(f: Facts, r: Resolver): Facts {
       unresolvedPortName: unresolved,
     };
   });
-  const legs = (f.legs as Facts[]).flatMap((l) => {
+}
+
+function legsOf(legs: Facts[], r: Resolver): Facts[] {
+  return legs.flatMap((l) => {
     const fromPortId = r.port(l.fromPort as PortRef);
     const toPortId = r.port(l.toPort as PortRef);
     return fromPortId !== null && toPortId !== null
       ? [{ ...without(l, ["fromPort", "toPort"]), fromPortId, toPortId }]
       : [];
   });
-  return {
-    ...without(f, ["ship", "departurePort", "arrivalPort"]),
-    shipId,
-    // A ship this catalogue does not hold keeps its name, as a `.travstats` import does.
-    shipNameOverride: f.shipNameOverride ?? (shipId === null ? (ship?.name ?? null) : null),
-    cruiseLine: f.cruiseLine ?? ship?.cruiseLine ?? null,
-    departurePortId: r.port(f.departurePort as PortRef | null),
-    arrivalPortId: r.port(f.arrivalPort as PortRef | null),
-    stops,
-    legs,
-  };
 }
 
 function localRef(ref: unknown): EntryRef | null {
@@ -182,34 +172,82 @@ function localRef(ref: unknown): EntryRef | null {
   return r ? { table: SHARE_TYPES[r.entity].delegate, key: r.shareKey } : null;
 }
 
-function localFacts(entity: ShareEntity, f: Facts, r: Resolver): Facts {
-  switch (entity) {
-    case "cruise":
-      return cruiseFacts(f, r);
-    case "rail":
-      return {
-        ...without(f, ["depStation", "arrStation"]),
-        depStationId: r.station(f.depStation as StationRef | null),
-        arrStationId: r.station(f.arrStation as StationRef | null),
-      };
-    case "rental":
-      return {
-        ...without(f, ["pickupAirport", "returnAirport"]),
-        pickupAirportId: r.airport(f.pickupAirport as AirportRef | null),
-        returnAirportId: r.airport(f.returnAirport as AirportRef | null),
-      };
-    case "lodgingStay": {
-      const house = f.lodging as Facts;
-      return {
-        ...f,
-        lodging: { ...without(house, ["chain"]), catalogueChainId: r.chain(house.chain as string) },
-      };
-    }
-    case "stop":
-      return { ...f, sourceRef: localRef(f.sourceRef), lodgingStayRef: localRef(f.lodgingStayRef) };
-    default:
-      return f;
+/** How each wire key that is not a plain fact becomes this server's value, per entity. */
+const DECODERS: Readonly<
+  Record<ShareEntity, Readonly<Record<string, [string, (v: unknown, r: Resolver) => unknown]>>>
+> = {
+  flight: {},
+  lodgingStay: {
+    lodging: [
+      "lodging",
+      (v, r) => {
+        const house = v as Facts;
+        return { ...without(house, ["chain"]), catalogueChainId: r.chain(house.chain as string) };
+      },
+    ],
+  },
+  cruise: {
+    ship: ["shipId", (v, r) => r.ship(v as ShipRef | null)],
+    departurePort: ["departurePortId", (v, r) => r.port(v as PortRef | null)],
+    arrivalPort: ["arrivalPortId", (v, r) => r.port(v as PortRef | null)],
+    stops: ["stops", (v, r) => stopsOf(v as Facts[], r)],
+    legs: ["legs", (v, r) => legsOf(v as Facts[], r)],
+  },
+  rail: {
+    depStation: ["depStationId", (v, r) => r.station(v as StationRef | null)],
+    arrStation: ["arrStationId", (v, r) => r.station(v as StationRef | null)],
+  },
+  bus: {},
+  ferry: {},
+  rental: {
+    pickupAirport: ["pickupAirportId", (v, r) => r.airport(v as AirportRef | null)],
+    returnAirport: ["returnAirportId", (v, r) => r.airport(v as AirportRef | null)],
+  },
+  stop: {
+    sourceRef: ["sourceRef", (v) => localRef(v)],
+    lodgingStayRef: ["lodgingStayRef", (v) => localRef(v)],
+  },
+};
+
+/** The local fact a wire key stands for (`ship` → `shipId`); a plain fact is its own name. */
+export const localKeyOf = (entity: ShareEntity, wireKey: string): string =>
+  DECODERS[entity][wireKey]?.[0] ?? wireKey;
+
+/** Exactly the wire keys present, as this server's facts. */
+function decodeFields(entity: ShareEntity, f: Facts, r: Resolver): Facts {
+  const out: Facts = {};
+  for (const [key, value] of Object.entries(f)) {
+    const decoder = DECODERS[entity][key];
+    if (decoder) out[decoder[0]] = decoder[1](value, r);
+    else out[key] = value;
   }
+  return out;
+}
+
+function localFacts(entity: ShareEntity, f: Facts, r: Resolver): Facts {
+  const facts = decodeFields(entity, f, r);
+  if (entity !== "cruise") return facts;
+  const ship = f.ship as ShipRef | null;
+  return {
+    ...facts,
+    // A ship this catalogue does not hold keeps its name, as a `.travstats` import does.
+    shipNameOverride: f.shipNameOverride ?? (facts.shipId === null ? (ship?.name ?? null) : null),
+    cruiseLine: f.cruiseLine ?? ship?.cruiseLine ?? null,
+  };
+}
+
+/**
+ * Some facts of one entry (a `fact-update`'s before or after values), parsed, as this server's
+ * values under their local names — references resolved against this catalogue by their natural
+ * keys, exactly as the copy they are compared with was made.
+ */
+export async function fromWireFacts(
+  c: DbTransaction,
+  entity: ShareEntity,
+  facts: Facts
+): Promise<Facts> {
+  const r = await resolver(c, [{ entity, shareKey: "", facts }]);
+  return decodeFields(entity, facts, r);
 }
 
 /** Parsed wire entries as rows of this server, in the order given. */
