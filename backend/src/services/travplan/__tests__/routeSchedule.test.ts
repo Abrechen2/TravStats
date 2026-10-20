@@ -181,6 +181,30 @@ describe("scheduleRoute", () => {
     ]);
   });
 
+  it("a booked stage arrives when its booking says, not on its departure day", () => {
+    const a = station("A"),
+      b = station("B", { nights: 1 });
+    const real = booking({
+      day: "2027-05-08",
+      time: "23:00",
+      arrivalDay: "2027-05-09",
+      arrivalTime: "07:00",
+    });
+    const g = stage(a, b, { mode: "ferry", bookingId: real.id });
+    const s = scheduleRoute(route([a, b], [g], { bookings: [real] }));
+    expect(s.stages[0]).toMatchObject({ departDay: "2027-05-08", arriveDay: "2027-05-09" });
+    expect(s.stations[1]).toMatchObject({ arriveDay: "2027-05-09", departDay: "2027-05-10" });
+  });
+
+  it("a timed stage across zones lands on the destination's calendar day", () => {
+    const a = station("Lisbon", { place: { ...place("Lisbon"), zone: "Europe/Lisbon" } }),
+      b = station("Badajoz", { place: { ...place("Badajoz"), zone: "Europe/Madrid" } });
+    // 22:30 in Lisbon plus an hour is 23:30 there, but already 00:30 in Spain.
+    const g = stage(a, b, { departTime: "22:30", durationMinutes: 60 });
+    const s = scheduleRoute(route([a, b], [g]));
+    expect(s.stations[1].arriveDay).toBe("2027-05-09");
+  });
+
   it("no start day gives null days", () => {
     const { ro, ge, pa, ce, stages } = sicily();
     const s = scheduleRoute(route([ro, ge, pa, ce], stages, { startDay: null }));

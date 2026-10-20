@@ -1,5 +1,6 @@
+import { localDay, machineInstant } from "../../shared/time/instant";
 import { daysBetween, fromDbDate, toDbDate } from "../../shared/time/localDate";
-import type { PlanState, RouteSchedule } from "./types";
+import type { PlanBooking, PlanStage, PlanState, PlanStation, RouteSchedule } from "./types";
 
 const MINUTES_PER_DAY = 1440;
 const MS_PER_DAY = 86_400_000;
@@ -12,6 +13,38 @@ function addDays(day: string, count: number): string {
 function minuteOfDay(time: string | null): number {
   const match = time ? /^(\d{2}):(\d{2})/.exec(time) : null;
   return match ? Number(match[1]) * 60 + Number(match[2]) : 0;
+}
+
+interface StageTiming {
+  departDay: string;
+  stage: PlanStage;
+  /** The real (non-placeholder) booking that anchors the stage, if any. */
+  anchor: PlanBooking | undefined;
+  from: PlanStation;
+  to: PlanStation | undefined;
+}
+
+/**
+ * The day a stage arrives. A booking that states its arrival is the truth:
+ * a night ferry booked 23:00 → 07:00 lands the next day even with no duration
+ * on the stage. Otherwise the departure plus the duration, read on the
+ * destination's clock when both ends have a known zone, so a late crossing
+ * into a zone ahead lands on the day it is there. An unknown time or duration
+ * still counts as 0 (plan Task 4, rule 2).
+ */
+function arrivalDay({ departDay, stage, anchor, from, to }: StageTiming): string {
+  if (anchor?.arrivalDay && daysBetween(departDay, anchor.arrivalDay) >= 0)
+    return anchor.arrivalDay;
+  if (stage.overnight) return addDays(departDay, 1);
+  const time = anchor?.time ? anchor.time : stage.departTime;
+  const duration = stage.durationMinutes ?? 0;
+  const fromZone = (anchor?.time && anchor.timezone) || from.place.zone;
+  const toZone = (anchor?.time && anchor.arrivalTimezone) || to?.place.zone;
+  if (time && stage.durationMinutes !== null && fromZone && toZone && fromZone !== toZone) {
+    const start = machineInstant(`${departDay}T${time.slice(0, 5)}`, fromZone);
+    if (start) return localDay(new Date(start.getTime() + duration * 60_000), toZone);
+  }
+  return addDays(departDay, Math.floor((minuteOfDay(time) + duration) / MINUTES_PER_DAY));
 }
 
 /**
@@ -74,11 +107,13 @@ export function scheduleRoute(state: PlanState): RouteSchedule {
       }
       departDay = anchorDay;
     }
-    const time = anchorDay && booking?.time ? booking.time : stage.departTime;
-    const travelDays = stage.overnight
-      ? 1
-      : Math.floor((minuteOfDay(time) + (stage.durationMinutes ?? 0)) / MINUTES_PER_DAY);
-    arrive = addDays(departDay, travelDays);
+    arrive = arrivalDay({
+      departDay,
+      stage,
+      anchor: anchorDay ? booking : undefined,
+      from: station,
+      to: next,
+    });
     result.stages[stageIndex] = { stageId: stage.id, departDay, arriveDay: arrive };
   });
   return result;
