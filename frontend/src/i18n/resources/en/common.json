@@ -404,5 +404,12 @@
       "zoneRequired": "With a time, please name the time zone.",
       "checkInNeedsBoth": "Day and time go together."
     }
+  },
+  "trackJitter": {
+    "dropped_one": "{{count}} fix left out of the line and distance as GPS jitter",
+    "dropped_other": "{{count}} fixes left out of the line and distance as GPS jitter",
+    "droppedLine_one": "{{count}} fix not drawn as GPS jitter — every one stays stored and in the GPX",
+    "droppedLine_other": "{{count}} fixes not drawn as GPS jitter — every one stays stored and in the GPX",
+    "unchecked": "Not checked for GPS jitter — stored before the check, or recorded without times"
   }
 }

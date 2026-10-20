@@ -11,6 +11,11 @@ import type { LocalDateValue, TimeValue } from "../../shared/time/wire";
 export interface TripRecordingView {
   summary: {
     pointCount: number;
+    /**
+     * Of the points shown, how many the line leaves out as GPS jitter
+     * (forgejo#319). The stored points and the GPX keep every one.
+     */
+    jitterDropped: number;
     /** First and last point shown, on the trip's clock. */
     firstAt: TimeValue | null;
     lastAt: TimeValue | null;

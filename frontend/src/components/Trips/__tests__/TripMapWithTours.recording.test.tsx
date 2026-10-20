@@ -53,7 +53,7 @@ const time = (utc: string, local: string) => ({
 });
 
 const EMPTY: TripRecordingView = {
-  summary: { pointCount: 0, firstAt: null, lastAt: null, devices: [], days: [] },
+  summary: { pointCount: 0, jitterDropped: 0, firstAt: null, lastAt: null, devices: [], days: [] },
   segments: [],
 };
 
@@ -61,6 +61,7 @@ const EMPTY: TripRecordingView = {
 const RECORDED: TripRecordingView = {
   summary: {
     pointCount: 6,
+    jitterDropped: 2,
     firstAt: time("2026-04-30T15:30:00.000Z", "2026-05-01T00:30:00"),
     lastAt: time("2026-05-02T06:05:00.000Z", "2026-05-02T15:05:00"),
     devices: ["phone-1"],
@@ -105,6 +106,10 @@ describe("TripMapWithTours — the trip recording (forgejo#316)", () => {
     const summary = screen.getByTestId("trip-recording-summary").textContent ?? "";
     expect(summary).toContain('trips:recording.points {"count":6}');
     expect(summary).toContain('trips:recording.devices {"count":1}');
+    // The line leaves the jitter out and says so (forgejo#319).
+    expect(screen.getByTestId("track-jitter-note").textContent).toContain(
+      "common:trackJitter.droppedLine"
+    );
     // The first point on the trip's clock: 1 May, 00:30 in Tokyo — not 30 April.
     expect(summary).toMatch(/01\.05\.2026.*00:30/);
   });

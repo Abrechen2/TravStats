@@ -17,6 +17,7 @@ function makeTrack(overrides: Partial<TourTrackMeta> = {}): TourTrackMeta {
     startedAt: "2026-06-01T08:00:00.000Z",
     endedAt: "2026-06-01T16:00:00.000Z",
     pointCount: 1200,
+    jitterDropped: 0,
     distanceKm: 340.4,
     truncated: false,
     ascentM: null,
@@ -203,5 +204,10 @@ describe("TourTrackList", () => {
   it("draws no download control where no page can take the file", () => {
     renderList({ tracks: [makeTrack()] });
     expect(screen.queryByText("roadtrips:trackArchive.downloadOne")).not.toBeInTheDocument();
+  });
+
+  it("says under a track how many fixes were left out as GPS jitter (forgejo#319)", () => {
+    renderList({ tracks: [makeTrack({ jitterDropped: 37 })] });
+    expect(screen.getByTestId("track-jitter-note")).toHaveTextContent("common:trackJitter.dropped");
   });
 });

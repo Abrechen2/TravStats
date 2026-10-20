@@ -21,6 +21,7 @@ function track(id: string, over: Partial<TourTrackMeta>): TourTrackMeta {
     startedAt: "2026-07-16T08:00:00Z",
     endedAt: "2026-07-16T12:00:00Z",
     pointCount: 900,
+    jitterDropped: 0,
     distanceKm: 8,
     truncated: false,
     ascentM: 500,

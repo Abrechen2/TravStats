@@ -18,6 +18,12 @@ export interface FlightTrack {
   times: { startedAt: TimeValue; endedAt: TimeValue };
   /** Points of the raw recording, before simplification. */
   pointCount: number;
+  /**
+   * Fixes left out as GPS jitter before the line was drawn and measured
+   * (forgejo#319); null when not checked — stored before the filter, or a
+   * recording without times.
+   */
+  jitterDropped: number | null;
   /** Measured on the raw points; stretches without a fix excluded. */
   distanceKm: number;
   /** `[lon, lat]`, simplified. */

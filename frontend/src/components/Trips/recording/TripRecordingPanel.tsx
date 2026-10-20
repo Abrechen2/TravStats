@@ -1,6 +1,7 @@
 import { useState, type JSX } from "react";
 import ConfirmModal from "../../Training/ConfirmModal";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { JitterNote } from "../../tracks/JitterNote";
 import { tripRecordingApi, type TripRecordingView } from "../../../lib/api/tripRecording";
 import { DELETE_BUTTON_CLASS } from "../../../lib/deleteConfirm";
 import { downloadBlob } from "../../../lib/export";
@@ -134,6 +135,7 @@ export default function TripRecordingPanel({
           .filter(Boolean)
           .join(" · ")}
       </p>
+      <JitterNote jitterDropped={summary.jitterDropped} variant="line" />
       {error && (
         <p role="alert" className="text-sm text-(--danger)">
           {error}

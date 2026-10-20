@@ -10,6 +10,12 @@ export interface CruiseTrackMeta {
   startedAt: string;
   endedAt: string;
   pointCount: number;
+  /**
+   * Fixes left out as GPS jitter before the line was drawn and measured
+   * (forgejo#319); null when not checked — stored before the filter, or a
+   * recording without times.
+   */
+  jitterDropped: number | null;
   distanceKm: number;
   truncated: boolean;
   externalRef: string | null;

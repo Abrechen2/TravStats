@@ -65,6 +65,7 @@ function makeTrack(over: Partial<FlightTrack> = {}): FlightTrack {
       endedAt: at("2026-10-03T19:00:00Z", "Asia/Seoul"),
     },
     pointCount: 12345,
+    jitterDropped: 0,
     distanceKm: 8567.4,
     geometry: [
       [11.78, 48.35],
