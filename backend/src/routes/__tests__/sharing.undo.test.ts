@@ -93,8 +93,29 @@ describe("sharing — undo, consent, move, booking total", () => {
     expect(notice.kind).toBe("deleted");
     await post(ben, `/sharing/notices/${notice.id}/delete-copy`).expect(200);
     expect(await prisma.flight.count({ where: { userId: ben.id } })).toBe(0);
+    // forgejo#314: the notice says its copy is gone, so no client offers the action again.
+    const listed = await request(app)
+      .get("/api/v1/sharing/notices")
+      .set("Cookie", ben.cookie)
+      .expect(200);
+    const view = listed.body.data.notices.find((n: { id: string }) => n.id === notice.id);
+    expect(view.undoneAt).not.toBeNull();
     const again = await post(ben, `/sharing/notices/${notice.id}/delete-copy`).expect(409);
     expect(again.body.code).toBe("SHARE_COPY_NOT_FOUND");
+  });
+
+  it("a delete notice whose copy is already gone is marked when 'delete mine too' finds nothing (forgejo#314)", async () => {
+    await request(app)
+      .delete(`/api/v1/flights/${pair.full.flight.id}`)
+      .set("Cookie", anna.cookie)
+      .expect(204);
+    const notice = await latest(ben);
+    await prisma.flight.deleteMany({ where: { userId: ben.id } });
+    const res = await post(ben, `/sharing/notices/${notice.id}/delete-copy`).expect(409);
+    expect(res.body.code).toBe("SHARE_COPY_NOT_FOUND");
+    expect(
+      (await prisma.shareNotice.findUniqueOrThrow({ where: { id: notice.id } })).undoneAt
+    ).not.toBeNull();
   });
 
   it("a withdrawn consent detaches the copy: no further changes reach it", async () => {

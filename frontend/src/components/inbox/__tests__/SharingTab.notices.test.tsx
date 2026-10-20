@@ -182,4 +182,14 @@ describe("SharingTab — change notices (S2)", () => {
       expect(addToast).toHaveBeenCalledWith("success", "sharing:inbox.messages.copyDeleted")
     );
   });
+
+  it("stops offering the delete once the own copy is gone (forgejo#314)", async () => {
+    api.listNotices.mockResolvedValue([{ ...deleted, undoneAt: "2026-10-20T10:00:00Z" }]);
+    renderTab();
+    const [del] = await screen.findAllByTestId("share-notice");
+    expect(
+      within(del).queryByRole("button", { name: "sharing:inbox.notices.deleteCopy" })
+    ).toBeNull();
+    expect(within(del).getByText("sharing:inbox.notices.copyGone")).toBeInTheDocument();
+  });
 });

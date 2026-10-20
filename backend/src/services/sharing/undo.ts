@@ -181,6 +181,11 @@ async function undoMoveIn(
  * After another member deleted (or moved out) an entry: delete the caller's
  * own copy as well. The delete propagates as one — the members still holding
  * a copy are told.
+ *
+ * On a `deleted` notice `undoneAt` means "your copy is gone" (forgejo#314):
+ * without it every client kept offering the action, and a second press only
+ * met 409 `SHARE_COPY_NOT_FOUND`. A copy that vanished some other way is
+ * marked the same on the press that finds it missing.
  */
 export async function deleteOwnCopy(userId: string, noticeId: string): Promise<{ deleted: true }> {
   const notice = await ownNotice(userId, noticeId);
@@ -188,18 +193,27 @@ export async function deleteOwnCopy(userId: string, noticeId: string): Promise<{
     throw new AppError("Only after a delete", 409, "SHARE_UNDO_UNAVAILABLE");
   }
   const entity = entityOf(notice.entityType);
-  return prisma.$transaction(
-    async (tx) => {
-      const own = await ownCopy(tx, entity, notice, userId);
-      const snapshot = await shareSnapshot(tx, entity, own.id);
-      await ADAPTERS[entity].remove(tx, own.id);
-      await tx.shareNotice.update({
-        where: { id: notice.id },
-        data: { readAt: notice.readAt ?? new Date() },
-      });
-      await propagateDelete(tx, userId, snapshot);
-      return { deleted: true as const };
-    },
-    { timeout: SHARE_TX_TIMEOUT_MS }
-  );
+  const done = () => ({ undoneAt: new Date(), readAt: notice.readAt ?? new Date() });
+  try {
+    return await prisma.$transaction(
+      async (tx) => {
+        const own = await ownCopy(tx, entity, notice, userId);
+        const snapshot = await shareSnapshot(tx, entity, own.id);
+        await ADAPTERS[entity].remove(tx, own.id);
+        await tx.shareNotice.update({ where: { id: notice.id }, data: done() });
+        await propagateDelete(tx, userId, snapshot);
+        return { deleted: true as const };
+      },
+      { timeout: SHARE_TX_TIMEOUT_MS }
+    );
+  } catch (error) {
+    if (
+      error instanceof AppError &&
+      error.code === "SHARE_COPY_NOT_FOUND" &&
+      notice.undoneAt === null
+    ) {
+      await prisma.shareNotice.update({ where: { id: notice.id }, data: done() });
+    }
+    throw error;
+  }
 }

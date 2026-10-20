@@ -89,7 +89,11 @@ export default function ShareNoticeCard({
               {notice.actor?.displayName ?? t(`${NS}.someone`)} · {formatDateTime(notice.createdAt)}
             </span>
           </div>
-          {notice.undoneAt && <span className="t-caption">{t(`${NS}.undone`)}</span>}
+          {notice.undoneAt && (
+            <span className="t-caption">
+              {t(`${NS}.${notice.kind === "deleted" ? "copyGone" : "undone"}`)}
+            </span>
+          )}
         </div>
         {after.label && (
           <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--ts-text-bright)" }}>
@@ -131,7 +135,7 @@ export default function ShareNoticeCard({
               {movedIn ? t(`${NS}.undoMove`, { from: after.movedFrom?.tripName }) : t(`${NS}.undo`)}
             </Button>
           )}
-          {notice.kind === "deleted" && (
+          {notice.kind === "deleted" && notice.undoneAt === null && (
             <Button variant="danger" disabled={busy} onClick={onDeleteCopy}>
               {t(`${NS}.deleteCopy`)}
             </Button>
