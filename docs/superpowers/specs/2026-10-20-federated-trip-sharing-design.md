@@ -16,7 +16,8 @@ Builds on, and does not reopen:
   restore isolation, egress rules. §8 of that document is the baseline the deltas in §9 below
   are measured against.
 
-Nothing here is built. Every "today" below was read on `main` at `5aacc4ca4`.
+Every "today" below was read on `main` at `5aacc4ca4`, before anything was built; phases F-S4a and
+F-S4b are built since, see §14.
 
 ## 1. What exists, and what is missing
 
@@ -390,3 +391,78 @@ proposals for review, not measurements; whether a spoke member may propose (not 
 shares in F-S4e or only in a later phase; and how the leaderboard should label totals that
 include federated copies (they are the user's own rows by decision 1, so they count — no
 separation rule is touched, since nothing crosses through the comparison wire).
+
+## 14. As built — F-S4a / F-S4b (2026-10-20, `dev/federated-trip-sharing`)
+
+Both phases are built as §12 lists them. What the build decided where the spec left room, and
+where it deviates:
+
+**Transport (F-S4a).**
+- The envelope moved to `services/federation/envelope.ts` (protocol-neutral: it imports no
+  body schema); `contract.ts` re-exports `origin` / `signedEnvelope` for the comparison side.
+  Version 2 is `{ v: 2, purpose, origin, destination, nonce, time, body, signature }`; the signed
+  bytes are built field by field (`signingBytes`), version 1's byte-for-byte as before. Vectors:
+  `services/federation/__tests__/envelope.vectors.json` (RFC 8032 test-1 key).
+- **The comparison protocol still SENDS version 1** in this release. A server one release behind
+  refuses an envelope with unknown fields (strict schema), and the cross-purpose guard does not
+  need it: the trip route refuses every version-1 envelope. The comparison route reads v1 and v2
+  `comparison/1` and answers in the version it was asked in. Next release: comparison sends v2;
+  the release after drops v1.
+- `exchange(origin, body, transport)` takes a `PeerTransport` (`path`, `maxRequest`, `maxReply`,
+  `sendPurpose`, `accepts`, `beforeVerification`); `COMPARISON_TRANSPORT` is today's values.
+  Its failures are now named kinds (`remote-absent` for a 404, `remote-refused`, `unreachable`,
+  `private-address`, `unknown-peer`, `unverified-peer`, `packet-too-large`), which is how a
+  claim tells "switched off there" from "does not answer". `PeerRefusal` says "Peer request
+  refused"; the one comparison assertion on the old text was updated.
+- The server-side gate is three conditions (`availability.ts`): the beta switch (like
+  `calendarFeed`, because a peer keeps sending after the page is hidden), the admin's
+  `tripFederationEnabled`, and an identity that loads. Off → the route's plain 404 before any
+  limiter or parser. The admin switch is `PUT /admin/federation/trip-sharing`, its own endpoint
+  so it works while `FEDERATION_*` env vars hold the identity.
+- Trip messages discriminate on `kind`, comparison packets on `action`; both have a `ping`, so
+  "disjoint action literals" is enforced as: the trip schema has no `action` key at all, and no
+  packet of one protocol parses as the other (`separation.test.ts`).
+- Peer route budget: 8 KB body (control messages only), 600 requests/min per sending address.
+
+**People (F-S4b).**
+- **`RemoteShareAccount` is a pairing**, not a free-standing person: it carries `userId` (the
+  local side, cascade) and `localChannel` beside `channel`. Each server mints the channel for
+  its own user (`invite-claim.channel` / `invite-claim-reply.channel`); A's `channel` is B's
+  `localChannel` and vice versa. A second local user pairing with the same remote person gets a
+  second row. This lets a later message name "Anna in this pairing" without any account id.
+- Claiming IS both yeses: the home stores `requester = issuer → remoteTarget = claimant`,
+  the claimant's server `remoteRequester = issuer → target = claimant`, both `accepted`.
+  `share_consents_party_check` also forbids a remote↔remote row: such a consent is not this
+  server's to hold. Local endpoints (`/sharing/consents`, companion links, trip people) read
+  local pairs only; withdrawing a remote consent arrives with F-S4e's `revoke`.
+- `members.ts` is generalised to `Party = user | remote` (`acceptedParties`,
+  `withdrawnParties`); `acceptedWith` / `withdrawnTowards` keep their signatures and answers.
+- The claim reply names why a code was not redeemed (`unknown | used | expired | duplicate`):
+  the secret is 256 bits, so this tells the holder nothing about other codes, and §7 wants each
+  failure as itself. A duplicate pairing is refused before the code is spent. A withdrawn code
+  reads as `unknown`.
+- Error codes beyond §7's list: `SHARE_REMOTE_INVITE_WRONG_TAG`, `_USED`, `_EXPIRED`,
+  `_OWN_SERVER`, `_LIMIT` (20 open), `_NOT_FOUND`, `SHARE_REMOTE_DUPLICATE`,
+  `SHARE_REMOTE_PEER_DISABLED` (a 404 there: off, or too old to have the route — the two are
+  indistinguishable from outside). `SHARE_REMOTE_PEER_NOT_ADMITTED` and the peer codes carry the
+  origin beside `code`, so the screen names the server.
+- F-S4b invitations are person-level (Einstellungen → Reisen teilen); `federatedRef` is always
+  `null` in the reply. An invitation from a trip page belongs to F-S4c.
+- `GET /sharing/remote/status` answers while off (so the section draws nothing instead of a
+  failing button); every other `/sharing/remote/*` endpoint refuses with
+  `SHARE_REMOTE_DISABLED` (404). Issue and claim share a 30/h per-user limit.
+- `suspendTripFederationAfterRestore()` exists now (open invitations consumed, remote consents
+  back to `pending`) and runs in the restore aftermath; F-S4c–e add members and outbox to it.
+- The 2.7.0 announcement's beta item names the feature (the `whatsNew` guard requires every
+  beta key there).
+
+**Tests.** Two servers run in one process (`twoServers.test.ts`): B gets its own module graph
+and database (`peerDatabase.ts`, `<db>b_test` from `template_postgis`), but shares the generated
+Prisma client — loading it twice breaks its WebAssembly query compiler. They talk over real TLS
+through the production `exchange()`; only the socket and the DNS answer are redirected.
+
+**What F-S4c builds on.** `tripSharePacket` gains `offer` / `offer-answer` / `entries` with
+`groupRef` + `seq` in the header and a per-kind body budget (the route's 8 KB and the
+transport's 16 KB request are control-message sizes); `receivingRemotes()` calls
+`acceptedParties` with remote parties; `TripShareGroup.federatedRef/homeOrigin` and
+`TripShareRemoteMember` hang off the pairing rows; a trip-page invitation fills `federatedRef`.
