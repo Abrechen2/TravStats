@@ -16,8 +16,8 @@ Builds on, and does not reopen:
   restore isolation, egress rules. §8 of that document is the baseline the deltas in §9 below
   are measured against.
 
-Every "today" below was read on `main` at `5aacc4ca4`, before anything was built; phases F-S4a and
-F-S4b are built since, see §14.
+Every "today" below was read on `main` at `5aacc4ca4`, before anything was built; phases F-S4a,
+F-S4b and F-S4c are built since, see §14.
 
 ## 1. What exists, and what is missing
 
@@ -466,3 +466,120 @@ through the production `exchange()`; only the socket and the DNS answer are redi
 transport's 16 KB request are control-message sizes); `receivingRemotes()` calls
 `acceptedParties` with remote parties; `TripShareGroup.federatedRef/homeOrigin` and
 `TripShareRemoteMember` hang off the pairing rows; a trip-page invitation fills `federatedRef`.
+
+### As built — F-S4c (2026-10-20, `dev/federated-trip-sharing`)
+
+Built as §12's row lists it: `offer` / `offer-answer` / `entries`, natural-key resolution,
+`copyInto` from wire rows, `TripShareRemoteMember`, the trip page's people on other servers. What
+the build decided where the spec left room, and where it deviates:
+
+**Wire.**
+- An entry is `{ entity, shareKey, facts }` (`services/sharing/federation/wire/shapes.ts`). The
+  references stand inline in `facts` where the catalogue id stood (`ship`, `departurePort`,
+  `depStation`, `pickupAirport`, a stop's `port`, a leg's `fromPort`/`toPort`, a house's `chain`,
+  a timeline stop's `sourceRef`/`lodgingStayRef` as `{ entity, shareKey }`); there is no separate
+  `refs` key and no `zones` — the zones are facts already, and the receiver's adapter reads them
+  off its own copy. Each shape is typed `Record<field, Codec>` against its fact list, so a new fact
+  is a compile error until it is given a wire form; `wireShapes.test.ts` holds the same inventory
+  at run time against `ADAPTERS[e].fields`, and every shape is a strict object, so a key outside it
+  is refused on arrival.
+- The shared public half (`services/trip/exchange/publicHalf.ts`) is the port and ship references
+  and the position and zone validators; `format.ts` now reads them from there. Station and airport
+  references are wire-only: the file's station carries its own name, code and zone, the wire's
+  only the keys to match (`sourceId`, `uic`; `icao`, `iata`) beside name and position, because the
+  rest are rail and rental facts already.
+- Time: instants `Z` only (an offset or a missing designator is refused), days `YYYY-MM-DD`, read
+  back as the stored `@db.Date`. A line over 5 000 points travels as `null`.
+- Status: only a state no clock can produce survives (`FLIGHT_PASSTHROUGH` …: cancelled,
+  historical, duplicated); anything else starts as `scheduled` and `copyInto`'s `DERIVE` decides.
+- Catalogue misses: an unmatched cruise departure/arrival port is a null id (the cruise has no
+  name column for it), an unmatched ship keeps its name as `shipNameOverride`, a leg into a port
+  the receiver lacks is left out; stations fall back from source id to UIC, airports from ICAO to
+  IATA, an open airport before a closed one. A sender's user-added catalogue row goes with its
+  natural key nulled.
+
+**Messages and order.**
+- `seq` lives on `TripSharePeerStream (groupId, peerOrigin, lastSentSeq, lastReceivedSeq)`, not on
+  the member row: §4 numbers per (sending origin, group), and two people on one peer share one
+  stream. The receiver takes the stream's next seq inside the message's own transaction
+  (`streams.ts` `takeSeq`), so a message applies wholly or not at all; a gap answers
+  `{ rejected: "gap", expected }` and writes nothing. A sender advances `lastSentSeq` only on the
+  ack and resends once at `expected`.
+- `TripShareInbound` is keyed `(peerOrigin, messageId)` — a peer cannot make this server read
+  another peer's id as a repeat — and keeps acks only: a rejection is not remembered, because what
+  it would be answered can change once a gap is filled. Pruned at 30 days on every insert.
+- Answers are `ack { received }` or `ack { rejected: gap | not-member | consent | schema,
+  expected?, field? }`, under signature. A group message whose header parses but whose body does
+  not is answered `schema` with the first failing path; anything less is the uniform 403.
+- Budgets: nothing over 1 MB is read at all; after the signature each kind has its own
+  (`transport.ts` `BODY_BUDGET`: control 8 KB, **offer 32 KB** — the trip's facts and roster can
+  outgrow 8 KB — entries 1 MB and ≤ 50 entries). Three transports carry them (control with a 64 KB
+  reply, offer, entries). More than 500 entries refuses the offer (`SHARE_REMOTE_TRIP_TOO_LARGE`);
+  a single entry too large for any message is skipped and recorded as `entries-too-large`.
+
+**Offer and answer.**
+- `offer` names the offering member's pairing channel (`from`) and the person's (`to`); the
+  receiver resolves it to a pairing by `(origin, channel, localChannel)` and refuses one whose
+  consent is not accepted. Offering again re-asks an invited or declined person (and heals an
+  offer lost on the way); an active one is `SHARE_REMOTE_ALREADY_MEMBER`.
+- The offer is kept in wire form on the receiving member row (`offer`) until answered. State
+  vocabulary gained **`declined`** (CHECK + `REMOTE_MEMBER_STATES`), so a refusal does not read as
+  a member who left.
+- **Accept creates the person's trip before the answer leaves**, so entries the home sends right
+  after its ack always find it. If the answer does not arrive, the trip is taken back unless an
+  entry already reached it (which proves the home had the answer); the undo takes the stream row
+  lock `serveEntries` takes first, so the two never interleave. Decline is told first and recorded
+  only once the home has it.
+- **A trip page's invitation carries its offer inside `invite-claim-reply`** (`offer`, beside
+  `federatedRef`): the claimant's server records the pairing and then the offer, so no offer can
+  reach a server before the pairing it is addressed to exists. A trip that can no longer be offered
+  leaves the pairing standing without one.
+- Only the home offers (`SHARE_REMOTE_NOT_HOME` on a trip that came from elsewhere, naming it).
+- The receiver copies into the trip of the person paired through `from` — per pairing, not to
+  every member on that server. `receivingRemotes()` reaches people only through the actor's own
+  pairing, with an accepted consent (`acceptedParties`).
+- New codes: `SHARE_REMOTE_CONSENT_MISSING`, `_NOT_HOME`, `_ALREADY_MEMBER`, `_TRIP_TOO_LARGE`,
+  `_PERSON_NOT_FOUND`, `_OFFER_NOT_FOUND`, `_REFUSED` (`extra.reason` = the peer's rejection).
+
+**Delivery (the part F-S4d replaces).** No outbox yet: once an accept is committed, the home sends
+the entries directly in the background (`entries.ts` `deliverEntries`, tracked by `trackDelivery`;
+tests and a shutdown can `settleDeliveries()`). A failure is recorded on the member as
+`stateReason` (`entries-undelivered`, `entries-refused`, `entries-too-large`) and shown on the trip
+page; a repeated accept, or calling `deliverEntries` again, resends everything and the receiver
+keeps only what it lacks (`heldKeys`).
+
+**Elsewhere.** A restore suspends every invited/active/unreachable membership (`stateReason:
+restore`). `detachTrip` no longer deletes a group that has remote members — the rows are the
+tombstones a later message is refused against — and a leave is not yet told to the other server
+(F-S4e). No `ShareNotice` is written when a trip arrives: the person accepted it on the spot, and
+`remoteActorId` arrives with F-S4d. The user endpoints that contact another server share the
+30/h limit of the invitation endpoints. Booking totals are not sent (O6).
+
+**Tests.** `wireShapes` (inventory per entity and nested, a private column on a real row never on
+the wire, offsets refused, geometry cap, status), `wireResolve` (each catalogue hit and miss),
+`streams` (repeat, gap, chunking), the route's budgets and `schema`/`not-member` acks, `offers`
+(each refusal, the trip-page invitation's offer, `receivingRemotes`, restore), and
+`twoServersCopy` — over real TLS a trip with a flight, a stay, a rail ride and a cruise with five
+port calls is offered, accepted and lands on B as the recipient's own trip with A's instants and
+zones, B's catalogue ids and statuses, unmatched and user-added ports unresolved, and none of seven
+private values in any message B received; decline copies nothing; an offer to a switched-off
+server leaves no member and no group behind. The two-server harness moved to
+`twoServerHarness.ts`.
+
+**What F-S4d needs from this.**
+- Replace `sendOnStream`'s direct send and `trackDelivery` with `TripShareOutbox`, keeping the
+  stream numbering (advance on ack; one seq space per group and peer) and the `takeSeq`-first
+  order on the receiving side that the accept undo relies on. `deliverEntries`' `stateReason`
+  values become the retry/backoff states of §7 (`unreachable` after 14 days).
+- `fact-update`, `entry-create`, `entry-removed` join `tripSharePacket` and `BODY_BUDGET` (256 KB);
+  `entry-create` reuses `wireEntrySchema` → `fromWireEntries` → `copyInto`; `fact-update` encodes
+  `before`/`after` with the same codecs (`ENTRY_SHAPES[e][field]`), and the precondition compares
+  decoded values — for a reference, its natural key, never the two servers' ids.
+- `propagateWrite(s)` calls `receivingRemotes(groupId, actorId)` and writes one outbox row per peer
+  origin inside the write's transaction; the home relays incoming changes to its other spokes.
+  Incoming changes find copies by `(origin, groupRef)` → group, then `copiesOf(shareKey, groupId)`,
+  inside `propagationGuard`.
+- `ShareNotice.remoteActorId` (and the `conflict` kind, CHECK migration) — then the arriving trip
+  and each received change get their notices, naming „Ben (origin)".
+- A person on a spoke who shares the received trip on locally is a local member there whom the
+  home does not reach: the roster and `add-request` (F-S4e) decide that, nothing here does.
