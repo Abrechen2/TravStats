@@ -154,6 +154,7 @@ model User {
 
   passwordResetRequest PasswordResetRequest?
   calendarFeed         CalendarFeed?
+  countryOverrides     CountryOverride[]
 
   @@map("users")
 }
@@ -352,6 +353,30 @@ model CalendarFeed {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("calendar_feeds")
+}
+
+/// The user's own verdict on one country of the passport (forgejo#308): a
+/// visit the records do not show, a visit they show wrongly, or a country they
+/// should not count at all. One per user and country; applied after the
+/// automatic fold in `services/stats/countryOverrides.ts`, so every figure
+/// built on the passport sees it. `verdict` is `visited | ground | excluded`
+/// (Zod-enforced in `schemas/countryOverride.ts`), `note` says why, and `day` is
+/// a day the user remembers — never invented, so it stays null when not given.
+model CountryOverride {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  /// ISO 3166-1 alpha-2, upper case.
+  countryCode String    @map("country_code")
+  verdict     String
+  note        String
+  day         DateTime? @db.Date
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, countryCode])
+  @@map("country_overrides")
 }
 
 /// A public, read-only share link (forgejo#281, owner decision D7; design

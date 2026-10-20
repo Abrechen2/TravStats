@@ -212,4 +212,8 @@ export const NON_TRAVEL_RELATIONS = [
   "passwordResetRequest",
   // The calendar subscription's token hash (forgejo#310): a credential.
   "calendarFeed",
+  // The user's verdicts on passport countries (forgejo#308). Their effect leaves
+  // with the passport snapshot, which is built through `loadPassport`; the
+  // free-text note behind each verdict is private and does not travel.
+  "countryOverrides",
 ] as const;
