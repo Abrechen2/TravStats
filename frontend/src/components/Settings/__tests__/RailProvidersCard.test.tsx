@@ -1,5 +1,5 @@
-import { describe, expect, it, beforeEach, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
+import { act, cleanup, render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" }, ready: true }),
@@ -24,6 +24,8 @@ vi.mock("../../../lib/api", () => ({
 }));
 
 import RailProvidersCard from "../RailProvidersCard";
+import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
+import { HiddenRowsContext } from "../frame/useExpertRows";
 
 const settings = (over: Record<string, boolean | string | null> = {}) => ({
   settings: { railTransitousEnabled: true, railDbRestEnabled: true, ...over },
@@ -141,6 +143,35 @@ describe("RailProvidersCard", () => {
       fireEvent.click(screen.getByRole("button", { name: "settings:railRouting.testButton" }));
       expect(await screen.findByRole("status")).toHaveTextContent("settings:railRouting.test.ok");
       expect(testRailRouting).toHaveBeenCalledWith("http://orr.lan");
+    });
+  });
+
+  // forgejo#321: the provider switches are the standard decision; the routing
+  // engine's address is plumbing and waits for the expert view.
+  describe("at the standard level", () => {
+    afterEach(() => {
+      cleanup();
+      act(() => useSettingsLevelStore.setState({ level: null }));
+    });
+
+    it("keeps the provider switches, hides the routing address and counts it", async () => {
+      useSettingsLevelStore.setState({ level: "standard" });
+      getInstanceSettings.mockResolvedValue(settings({ railRoutingUrl: "http://orr.lan" }));
+      const spy = vi.fn();
+      render(
+        <HiddenRowsContext.Provider value={spy}>
+          <RailProvidersCard isAdmin />
+        </HiddenRowsContext.Provider>
+      );
+
+      expect(
+        await screen.findByRole("switch", { name: "settings:railProviders.transitous" })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("switch", { name: "settings:railProviders.dbRest" })
+      ).toBeInTheDocument();
+      expect(screen.queryByLabelText("settings:railRouting.label")).toBeNull();
+      expect(spy).toHaveBeenCalledWith(expect.any(String), 1);
     });
   });
 });

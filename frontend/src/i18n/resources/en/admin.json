@@ -1168,5 +1168,61 @@
     "loadFailed": "The template repository setting could not be loaded.",
     "testFailed": "The test could not be run. Please try again.",
     "saveFailed": "The template repository could not be saved."
+  },
+  "pages": {
+    "instance": "Instance",
+    "users": "Users",
+    "invitations": "Invitations",
+    "externalServices": "External services",
+    "parsers": "Import & parser",
+    "smtp": "Email delivery",
+    "backups": "Backups",
+    "timeModel": "Time model",
+    "logging": "Logging",
+    "system": "System information",
+    "airlinesMasterData": "Airlines",
+    "aircraftMasterData": "Aircraft",
+    "airportsMasterData": "Airports",
+    "shipsMasterData": "Ships",
+    "portsMasterData": "Ports"
+  },
+  "menu": {
+    "manage": "Administration",
+    "operations": "Services & operations",
+    "masterFlight": "Master data · Flight",
+    "masterCruise": "Master data · Cruise"
+  },
+  "search": {
+    "keywords": {
+      "instance": "Instance name, name, address, public address, URL, home network, LAN, passkey, rpId, origins, registration, maximum accounts, beta, beta features, sign-in background",
+      "shareLinks": "Public links, share, sharing",
+      "importMode": "Import mode, import",
+      "usageStats": "Usage statistics, statistics, telemetry, anonymous",
+      "about": "Version, licence, data sources, attribution, about, imprint, documentation",
+      "geocoder": "Geocoder, address, coordinates, Nominatim, Photon, place search",
+      "federation": "Server connections, federation, other instance, server",
+      "push": "Push, notifications, relay, push relay",
+      "users": "Users, accounts, lock account, reset two-factor, password",
+      "invitations": "Invitation, invite, invitation link, registration",
+      "externalServices": "API keys, global keys, AirLabs, Aviationstack, AeroDataBox, OpenSky, Logostream, Google Places, Immich, routing, OpenRouteService, rail, open data",
+      "parsers": "Parser, AI, LLM, Ollama, OpenAI, Claude, read bookings, model",
+      "templateRepo": "Templates, template repository, repository",
+      "smtp": "Email, SMTP, mail server, delivery",
+      "backups": "Backup, restore, schedule",
+      "webdav": "WebDAV, sync, Nextcloud",
+      "timeModel": "Time model, time zone, local time",
+      "logging": "Log, logging, debug, diagnostics",
+      "system": "System, system information, version, export, statistics",
+      "airlinesMasterData": "Airlines, master data, logo",
+      "aircraftMasterData": "Aircraft, aircraft types, master data",
+      "airportsMasterData": "Airports, master data, IATA",
+      "shipsMasterData": "Ships, master data, IMO",
+      "portsMasterData": "Ports, master data, UN/LOCODE"
+    },
+    "expertKeywords": {
+      "instance": "Home network address, LAN, passkey, rpId, origins, beta switch",
+      "parsers": "Ollama URL, pull model, model, quota, exchange-rate source",
+      "externalServices": "allow own keys, permissions"
+    }
   }
 }

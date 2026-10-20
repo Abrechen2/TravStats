@@ -102,19 +102,8 @@ export default function AirportsSection(): JSX.Element {
   };
 
   return (
-    <section
-      data-testid="admin-airports-section"
-      className="rounded-lg p-5"
-      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-    >
-      <header className="mb-4">
-        <h3 className="text-lg font-semibold text-(--text-primary)">
-          🛬 {t("admin:airlineAircraftMasterData.airport.title")}
-        </h3>
-        <p className="text-sm text-(--text-muted) mt-1">
-          {t("admin:airlineAircraftMasterData.airport.description")}
-        </p>
-      </header>
+    <div data-testid="admin-airports-section">
+      <p className="t-caption mb-4">{t("admin:airlineAircraftMasterData.airport.description")}</p>
 
       {/* Add form */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-4">
@@ -248,6 +237,6 @@ export default function AirportsSection(): JSX.Element {
       {airports.length >= 10 && (
         <p className="mt-2 text-xs text-(--text-muted)">{t("admin:masterData.refineSearch")}</p>
       )}
-    </section>
+    </div>
   );
 }

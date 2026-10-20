@@ -12,21 +12,21 @@ const candidates: SettingsSearchCandidate[] = [
     section: "security",
     label: "Sicherheit",
     groupLabel: "Konto",
-    route: "account",
+    href: "/settings/account",
     keywords: ["Passwort", "Passkey", "Zwei-Faktor", "2FA"],
   },
   {
     section: "units",
     label: "Einheiten & Formate",
     groupLabel: "Darstellung",
-    route: "account",
+    href: "/settings/account",
     keywords: ["Kilometer", "Meilen", "Währung", "Datumsformat"],
   },
   {
     section: "externalServices",
     label: "Meine externen Dienste",
     groupLabel: "Dienste",
-    route: "account",
+    href: "/settings/account",
     keywords: ["Immich", "Dawarich", "Routing", "Straßenroute"],
   },
 ];
@@ -55,7 +55,7 @@ describe("settings search", () => {
         section: "about",
         label: "Routing-Hilfe",
         groupLabel: "Daten",
-        route: "account",
+        href: "/settings/account",
         keywords: [],
       },
     ];

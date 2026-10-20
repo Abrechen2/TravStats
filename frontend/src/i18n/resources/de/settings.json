@@ -995,7 +995,8 @@
     "trips": "Reisen",
     "loyalty": "Bonusprogramme",
     "data": "Daten",
-    "services": "Dienste"
+    "services": "Dienste",
+    "location": "Standortverlauf"
   },
   "deepLink": {
     "adminOnlySection": "Der in der Adresse genannte Abschnitt ist der Administration dieser Instanz vorbehalten und wird dir deshalb nicht angezeigt. Die übrigen Einstellungen auf dieser Seite gehören dir."
@@ -1012,15 +1013,12 @@
       "devices": "Handy, Smartphone, App, Companion, Koppeln, Kopplungscode, QR-Code, Gerät",
       "display": "Sprache, Deutsch, Englisch, Design, Dunkel, Hell, Theme, Darstellung",
       "units": "Kilometer, Meilen, Einheit, Währung, Basiswährung, Datumsformat, Uhrzeit, 24 Stunden, Zeitzone",
-      "domainColors": "Farbe, Farben, Kartenfarbe, Linienfarbe",
-      "modules": "Bereiche, Module, Flüge, Kreuzfahrten, Unterkünfte, Orte, Roadtrips, ein- und ausschalten",
       "countryCounting": "Länder, Land zählen, Umstieg, Transit, Länderzählung",
       "trips": "Reise, Reisen, automatisch, Buchungsnummer, Gruppieren, Reise anlegen, Reisen erkennen",
       "loyalty": "Bonusprogramm, Mitgliedschaft, Mitgliedsnummer, Status, Hotelprogramm, Vielflieger, Meilen, Miles & More, Reederei, Punkte, Treueprogramm",
       "backup": "Backup, Sicherung, Export, Exportieren, Wiederherstellen, Download, Excel, Tabelle, JSON, Daten",
       "import": "Import, Importieren, CSV, Flightradar24, Logbuch, Hochladen",
       "notifications": "Benachrichtigung, E-Mail, SMTP, Mailserver, Erinnerung",
-      "about": "Version, Lizenz, Datenquellen, Attribution, Über, Impressum",
       "externalServices": "API-Schlüssel, AirLabs, Aviationstack, AeroDataBox, OpenSky, OpenAI, Claude, KI, Immich, Fotos, Dawarich, Standortverlauf, Routing, Navi, Straßenroute, OpenRouteService, GraphHopper, OSRM, Strava",
       "homeAirport": "Zuhause, Wohnort, Heimatflughafen, Flughafen, Umzug",
       "defaults": "Standard, Vorgabe, Buchungsklasse, Sitzplatz, Fluggesellschaft, Airline",
@@ -1028,7 +1026,22 @@
       "enrichment": "Anreicherung, Flugdaten nachtragen, Verspätung, historische Daten, Flugzeug",
       "autoupdate": "Automatische Updates, Flugstatus, Aktualisierung, Gate, Abflugzeit",
       "cruisePreferences": "Kreuzfahrt, Reederei, Schiff, Kabine",
-      "lodgingPreferences": "Geocoder, Adresse, Koordinaten, Nominatim, Hotelketten, Unterkunft"
+      "domains": "Bereiche, Module, Flüge, Kreuzfahrten, Unterkünfte, Orte, Roadtrips, Bahn, Bus, Fähre, Mietwagen, ein- und ausschalten, Farbe, Farben, Kartenfarbe, Linienfarbe",
+      "suggestions": "Vorschläge, Posteingang, Reisevorschläge, Aufenthalte vorschlagen",
+      "sharing": "Teilen, Mitreisende, Einwilligung, geteilte Reise, Begleiter",
+      "shareLinks": "Öffentlicher Link, Freigabe, teilen, Link",
+      "calendarFeed": "Kalender, iCal, ICS, Abo, Kalenderabo",
+      "dawarich": "Dawarich, Standortverlauf, Standortquelle, Positionen, Verbindung",
+      "tripRecording": "Aufzeichnung, Positionen, App, Track, Reise aufzeichnen",
+      "stayScan": "Aufenthalte, Aufenthalt erkennen, Radius, Mindestdauer, Märkte, Orte als Fläche, neu auswerten"
+    },
+    "expertOnly": "Ansicht „Experte“",
+    "switchAndOpen": "Zu „Experte“ wechseln und öffnen",
+    "expertKeywords": {
+      "suggestions": "Immich-Belege, Fotos als Beleg, Ortstyp, KI-Klassifizierung",
+      "autoupdate": "Abfrageintervall, Intervall, Freigabe, Ablauf, nur während des Flugs",
+      "backup": "Instanz-Backup, letzte Sicherung",
+      "externalServices": "eigener Schlüssel, eigener API-Schlüssel, API-Schlüssel, Kontingent, Quote, GraphHopper-Schlüssel, OpenRouteService-Schlüssel"
     }
   },
   "railProviders": {
@@ -1085,5 +1098,58 @@
     "title": "Reise-Aufzeichnung",
     "label": "Positionen aus der App speichern",
     "description": "Die Positionen, die die TravStats-App während einer Reise aufzeichnet, werden auf diesem Server gespeichert und auf der Reisekarte gezeigt. Ausgeschaltet nimmt der Server keine neuen an; Gespeichertes bleibt, bis du es löschst."
+  },
+  "menu": {
+    "domains": "Bereiche",
+    "version": "TravStats {{version}}"
+  },
+  "domains": {
+    "title": "Bereiche & Farben",
+    "description": "Ein Bereich, eine Zeile: einschalten und seine Farbe gleich daneben. Ausgeschaltete Bereiche bleiben hier sichtbar, damit du sie einschalten kannst.",
+    "color": "Farbe"
+  },
+  "level": {
+    "label": "Ansicht",
+    "standard": "Standard",
+    "expert": "Experte",
+    "moreSettings_one": "1 weitere Einstellung in der Ansicht „Experte“",
+    "moreSettings_other": "{{count}} weitere Einstellungen in der Ansicht „Experte“",
+    "morePages_one": "1 weitere Seite in der Ansicht „Experte“",
+    "morePages_other": "{{count}} weitere Seiten in der Ansicht „Experte“",
+    "showExpert": "Experte anzeigen",
+    "deepLinkedExpert": "Dieser Abschnitt gehört zur Ansicht „Experte“. Er wird gezeigt, weil der Link ihn nennt.",
+    "expertPage": "Diese Seite gehört zur Ansicht „Experte“."
+  },
+  "sectionChips": "Abschnitte auf dieser Seite",
+  "pagePicker": "Seite",
+  "services": {
+    "description": "Was dein Konto mit anderen Diensten verbindet, nach Bereichen geordnet — und was der Admin schon für alle eingerichtet hat.",
+    "summary": "{{shared}} für alle aktiv · {{own}} eigener",
+    "badge": {
+      "admin": "Vom Admin für alle",
+      "own": "Eigener Schlüssel",
+      "none": "Nicht eingerichtet"
+    },
+    "ownOverrides": "Dein eigener Schlüssel wird statt dem der Instanz genutzt.",
+    "groups": {
+      "cross": "Bereichsübergreifend",
+      "routing": "Straßenrouting"
+    },
+    "dawarichPointer": "Eingerichtet unter Standortverlauf →",
+    "what": {
+      "immich": "Fotos zu Reisen und Orten",
+      "dawarich": "Standortverlauf, Länder und Aufenthalte",
+      "strava": "Touren aus Aktivitäten",
+      "openData": "Wetter, Wikipedia und OpenStreetMap",
+      "airlabs": "Flugstatus und Live-Position",
+      "aviationstack": "Flugsuche nach Nummer",
+      "aerodatabox": "Historische Flugdaten",
+      "aeroapi": "Flugstatus und historische Flüge",
+      "opensky": "Flugspuren",
+      "openrouteservice": "Straßenrouten statt Luftlinie",
+      "graphhopper": "Straßenrouten statt Luftlinie",
+      "logostream": "Airline-Logos in hoher Auflösung",
+      "googlePlaces": "Ortssuche und Ortsdetails"
+    }
   }
 }

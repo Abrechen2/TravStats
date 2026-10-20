@@ -4,7 +4,9 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import SettingsPage, { SettingsLegacyRedirect } from "../../pages/SettingsPage";
 import { useSettingsStore } from "../../store/settingsStore";
-import { SETTINGS_GROUPS, groupOfSection } from "../../pages/Settings/settingsModel";
+import { useSettingsLevelStore } from "../../store/settingsLevelStore";
+import { SETTINGS_PAGES } from "../../pages/Settings/settingsModel";
+import { pageOfSection } from "../../pages/Settings/surface";
 import { SECTION_LABEL_KEY } from "../../pages/Settings/sectionLabels";
 import { findNamed, queryNamed } from "../helpers/namedElement";
 
@@ -209,7 +211,7 @@ const sectionShown = (id: keyof typeof SECTION_LABEL_KEY): boolean =>
  * Every case here fails against the pre-2.7 page, which had no `/settings/:group`
  * route at all.
  */
-describe("SettingsPage — one route per group", () => {
+describe("SettingsPage — one page per menu entry", () => {
   beforeEach(() => {
     useSettingsStore.setState({
       betaFeaturesEnabled: false,
@@ -217,26 +219,42 @@ describe("SettingsPage — one route per group", () => {
     });
   });
 
-  // Round 4 (design export, 2026-09-15) made the four general groups anchors on
-  // one page: the settings routes are account, flight, cruise and lodging.
-  it("draws every general group on the account route, with the domain ones kept apart", async () => {
+  // forgejo#321: one page per menu entry. Round 4 had drawn the general
+  // groups as anchors on ONE account page; a menu entry is a page again.
+  it("draws only the account page's own sections on the account route", async () => {
     renderAt("/settings/account");
     await findNamed("region", SECTION_LABEL_KEY.profile);
 
-    // Konto, Darstellung, Daten and Dienste share one page now.
     expect(sectionShown("profile")).toBe(true);
-    expect(sectionShown("units")).toBe(true);
-    expect(sectionShown("backup")).toBe(true);
-    expect(sectionShown("externalServices")).toBe(true);
-    // A domain group is still its own route.
+    expect(sectionShown("notifications")).toBe(true);
+    // Darstellung, Daten and Dienste are pages of their own now.
+    expect(sectionShown("units")).toBe(false);
+    expect(sectionShown("backup")).toBe(false);
+    expect(sectionShown("externalServices")).toBe(false);
     expect(sectionShown("homeAirport")).toBe(false);
   });
 
-  it("lands a pre-round-4 group route on its anchor on the account page", async () => {
-    // /settings/data was a page of its own; a bookmark to it still arrives.
+  it("draws /settings/data as a page of its own", async () => {
     renderAt("/settings/data");
     expect(await findNamed("region", SECTION_LABEL_KEY.backup)).toBeTruthy();
-    expect(sectionShown("profile")).toBe(true);
+    expect(sectionShown("import")).toBe(true);
+    expect(sectionShown("profile")).toBe(false);
+  });
+
+  it("titles the page with its menu label, word for word", async () => {
+    renderAt("/settings/display");
+    await findNamed("region", SECTION_LABEL_KEY.units);
+    // By selector, not by role: the page holds hundreds of currency options,
+    // and a role query weighs every one (see SettingsPage.adminScope.test).
+    expect(document.querySelector("h1")).toHaveTextContent("settings:groups.display");
+    const active = document.querySelector('[data-settings-menu] a[aria-current="page"]');
+    expect(active).toHaveTextContent("settings:groups.display");
+  });
+
+  it("lands a round-4 anchor on the account page on the page that holds it now", async () => {
+    renderAt("/settings/account?section=units");
+    expect(await findNamed("region", SECTION_LABEL_KEY.units)).toBeTruthy();
+    expect(sectionShown("profile")).toBe(false);
   });
 
   it("keeps a domain group's own sections on its own route", async () => {
@@ -310,25 +328,63 @@ describe("SettingsPage — one route per group", () => {
   });
 });
 
-describe("the settings group table", () => {
+describe("SettingsPage — the standard level (forgejo#321)", () => {
+  beforeEach(() => {
+    useSettingsStore.setState({
+      betaFeaturesEnabled: false,
+      enabledDomains: ["flight", "cruise", "lodging"],
+    });
+    useSettingsLevelStore.setState({ level: "standard" });
+  });
+
+  it("leaves the expert section off the page and says one more setting exists", async () => {
+    renderAt("/settings/account");
+    await findNamed("region", SECTION_LABEL_KEY.profile);
+    expect(sectionShown("apitokens")).toBe(false);
+    expect(document.querySelector('[data-expert-note="settings"]')).toHaveTextContent(
+      "settings:level.moreSettings"
+    );
+  });
+
+  it("shows an expert section a link names, with the note above it", async () => {
+    renderAt("/settings?section=apitokens");
+    expect(await findNamed("region", SECTION_LABEL_KEY.apitokens)).toBeTruthy();
+    expect(screen.getByText("settings:level.deepLinkedExpert")).toBeTruthy();
+  });
+
+  it("puts the level switch at the top of the page", async () => {
+    renderAt("/settings/account");
+    await findNamed("region", SECTION_LABEL_KEY.profile);
+    expect(screen.getByRole("radiogroup", { name: "settings:level.label" })).toBeTruthy();
+  });
+
+  it("keeps the version in view for every account, under the menu", async () => {
+    renderAt("/settings/account");
+    await findNamed("region", SECTION_LABEL_KEY.profile);
+    expect(screen.getAllByTestId("settings-version")[0]).toHaveTextContent("settings:menu.version");
+  });
+});
+
+describe("the settings page table", () => {
   it("gives every section exactly one home", () => {
     const seen = new Map<string, string>();
-    for (const group of SETTINGS_GROUPS) {
-      for (const section of group.sections) {
-        expect(seen.has(section), `${section} is in two groups`).toBe(false);
-        seen.set(section, group.id);
+    for (const page of SETTINGS_PAGES) {
+      for (const section of page.sections) {
+        expect(seen.has(section.id), `${section.id} is on two pages`).toBe(false);
+        seen.set(section.id, page.id);
       }
     }
     // And the lookup agrees with the table it is built from.
-    for (const [section, groupId] of seen) {
-      expect(groupOfSection(section)?.id).toBe(groupId);
+    for (const [section, pageId] of seen) {
+      expect(pageOfSection(SETTINGS_PAGES, section)?.id).toBe(pageId);
     }
   });
 
-  it("labels every section, so no index entry renders a raw id", () => {
-    for (const group of SETTINGS_GROUPS) {
-      for (const section of group.sections) {
-        expect(SECTION_LABEL_KEY[section], `${section} has no label key`).toBeTruthy();
+  it("labels every section, so no chip or heading renders a raw id", () => {
+    for (const page of SETTINGS_PAGES) {
+      for (const section of page.sections) {
+        expect(SECTION_LABEL_KEY[section.id], `${section.id} has no label key`).toBeTruthy();
+        expect(section.labelKey).toBe(SECTION_LABEL_KEY[section.id]);
       }
     }
   });

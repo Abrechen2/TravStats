@@ -7,6 +7,7 @@ import { COUNTRY_TIERS, type CountryTier } from "../types/passport";
 import { useAuthStore } from "./authStore";
 import { displayForSave, useProfileZoneStore } from "./profileZoneStore";
 import { useSuggestionSwitchesStore } from "./suggestionSwitchesStore";
+import { useSettingsLevelStore } from "./settingsLevelStore";
 import { deviceZone } from "../shared/time";
 import { persistSetting } from "./persistSetting";
 import type { WeightUnit } from "../lib/baggageAllowance";
@@ -33,10 +34,8 @@ type FlightCategory = "" | "business" | "private" | "vacation";
 type SeatClass = "" | "economy" | "premium_economy" | "business" | "first";
 
 type FlightReminder = "off" | "24h" | "48h";
-
 type DateFormat = "DD.MM.YYYY" | "MM/DD/YYYY" | "YYYY-MM-DD";
 type TimeFormat = "24h" | "12h";
-
 type FlightStatusDefault = "scheduled" | "flown";
 
 type SettingsUpdater<T> = (updates: Partial<T>) => void;
@@ -547,6 +546,7 @@ export const useSettingsStore = create<SettingsState>()(
           if (remote) {
             useProfileZoneStore.getState().noteRemote(remote);
             useSuggestionSwitchesStore.getState().noteRemote(remote); // forgejo#306
+            useSettingsLevelStore.getState().noteRemote(remote); // forgejo#321
             set((state) => {
               // Extract autoUpdate and historicalEnrichment to exclude them from store
               const remoteRecord = remote as Record<string, unknown>;

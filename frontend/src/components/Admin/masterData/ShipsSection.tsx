@@ -78,18 +78,8 @@ export default function ShipsSection(): JSX.Element {
   };
 
   return (
-    <section
-      className="rounded-lg p-5"
-      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-    >
-      <header className="mb-4">
-        <h3 className="text-lg font-semibold text-(--text-primary)">
-          🚢 {t("admin:cruiseMasterData.ship.title")}
-        </h3>
-        <p className="text-sm text-(--text-muted) mt-1">
-          {t("admin:cruiseMasterData.ship.description")}
-        </p>
-      </header>
+    <div data-testid="admin-ships-section">
+      <p className="t-caption mb-4">{t("admin:cruiseMasterData.ship.description")}</p>
 
       {/* Add form */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-4">
@@ -182,6 +172,6 @@ export default function ShipsSection(): JSX.Element {
           {t("admin:masterData.showingOf", { shown: ships.length, total })}
         </p>
       )}
-    </section>
+    </div>
   );
 }

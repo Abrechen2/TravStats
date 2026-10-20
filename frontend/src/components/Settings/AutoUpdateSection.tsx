@@ -3,6 +3,7 @@ import { SectionCard, SectionTitle } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
 import { Switch } from "../ui/Field";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
+import { useExpertRows } from "./frame/useExpertRows";
 
 interface AutoUpdateSettings {
   enabled: boolean;
@@ -27,6 +28,11 @@ export default function AutoUpdateSection({
   onSave,
 }: AutoUpdateSectionProps): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
+  // The switch is the standard setting (live updates on or off); how they run
+  // — approval, flight window, polling interval, expiry — is tuning, shown at
+  // the expert level (forgejo#321). The four rows exist only while it is on.
+  const expert = useExpertRows(settings.enabled ? 4 : 0);
+  const tuning = settings.enabled && expert;
 
   const numberField = (
     id: string,
@@ -71,7 +77,7 @@ export default function AutoUpdateSection({
           onChange={(on) => onSave({ ...settings, enabled: on })}
           label={t("settings:autoUpdate.enabled")}
         />
-        {settings.enabled && (
+        {tuning && (
           <Switch
             id="autoupdate-require-approval"
             checked={settings.requireApproval}
@@ -79,7 +85,7 @@ export default function AutoUpdateSection({
             label={t("settings:autoUpdate.requireApproval")}
           />
         )}
-        {settings.enabled && (
+        {tuning && (
           <Switch
             id="autoupdate-only-during-flight"
             checked={settings.onlyDuringFlight}
@@ -87,7 +93,7 @@ export default function AutoUpdateSection({
             label={t("settings:autoUpdate.onlyDuringFlight")}
           />
         )}
-        {settings.enabled && (
+        {tuning && (
           <SettingRow
             title={t("settings:autoUpdate.checkInterval")}
             sub={t("settings:autoUpdate.checkIntervalDescription")}
@@ -95,7 +101,7 @@ export default function AutoUpdateSection({
             control={numberField("autoupdate-check-interval", "checkInterval", 5, 1440)}
           />
         )}
-        {settings.enabled && (
+        {tuning && (
           <SettingRow
             title={t("settings:autoUpdate.expiryHours")}
             sub={t("settings:autoUpdate.expiryHoursDescription")}

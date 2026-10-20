@@ -54,13 +54,8 @@ const loyaltyApi = vi.hoisted(() => ({
 vi.mock("../../../lib/api/loyalty", () => loyaltyApi);
 
 import SettingsSectionSwitch from "../SettingsSectionSwitch";
-import {
-  GENERAL_GROUP_IDS,
-  SETTINGS_GROUPS,
-  gateOfSection,
-  groupOfSection,
-  movedSection,
-} from "../settingsModel";
+import { SETTINGS_MENU, SETTINGS_PAGES, canonicalSection } from "../settingsModel";
+import { pageOfSection } from "../surface";
 
 type Page = Parameters<typeof SettingsSectionSwitch>[0]["page"];
 const page = { user: { username: "owner", isAdmin: false } } as unknown as Page;
@@ -94,14 +89,15 @@ describe("Einstellungen → Bonusprogramme", () => {
   });
 
   it("is one general section, never gated, and the old per-domain ids lead to it", () => {
-    expect(groupOfSection("loyalty")?.id).toBe("loyalty");
-    expect(GENERAL_GROUP_IDS).toContain("loyalty");
-    expect(gateOfSection("loyalty")).toBeUndefined();
+    const page = pageOfSection(SETTINGS_PAGES, "loyalty");
+    expect(page?.id).toBe("loyalty");
+    expect(SETTINGS_MENU.find((g) => g.id === "general")?.pages).toContain("loyalty");
+    expect(page?.sections.find((s) => s.id === "loyalty")?.gate).toBeUndefined();
     for (const old of ["lodgingMemberships", "flightMemberships", "cruiseMemberships"]) {
-      expect(movedSection(old)).toBe("loyalty");
-      expect(groupOfSection(old)).toBeUndefined();
+      expect(canonicalSection(old)).toBe("loyalty");
+      expect(pageOfSection(SETTINGS_PAGES, old)).toBeUndefined();
     }
-    const everySection = SETTINGS_GROUPS.flatMap((g) => g.sections as readonly string[]);
+    const everySection = SETTINGS_PAGES.flatMap((p) => p.sections.map((s) => s.id as string));
     expect(everySection.filter((s) => /Memberships$/.test(s))).toEqual([]);
   });
 });

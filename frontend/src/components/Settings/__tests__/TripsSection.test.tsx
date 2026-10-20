@@ -18,28 +18,24 @@ vi.unmock("../../../store/settingsStore");
 
 import TripsSection from "../TripsSection";
 import { useSettingsStore } from "../../../store/settingsStore";
-import {
-  GENERAL_CONTENT_ORDER,
-  groupOfSection,
-  isGeneralGroup,
-} from "../../../pages/Settings/settingsModel";
+import { SETTINGS_MENU, SETTINGS_PAGES } from "../../../pages/Settings/settingsModel";
+import { pageOfSection } from "../../../pages/Settings/surface";
 
 /**
  * Owner 2026-08-23: trips get their own settings section, and the
  * automatic-trip switch moves there from the import hub. Trips are no domain,
- * so the section sits among the always-visible general groups.
+ * so the section sits among the always-visible general pages.
  */
 describe("TripsSection", () => {
   beforeEach(() => {
     useSettingsStore.setState({ autoCreateTrips: true });
   });
 
-  it("lives in its own general group, drawn on the Allgemein page", () => {
-    const group = groupOfSection("trips");
-    expect(group?.id).toBe("trips");
-    expect(group?.domain).toBeUndefined();
-    expect(isGeneralGroup("trips")).toBe(true);
-    expect(GENERAL_CONTENT_ORDER).toContain("trips");
+  it("lives on its own general page, in the menu's ungated first block", () => {
+    const page = pageOfSection(SETTINGS_PAGES, "trips");
+    expect(page?.id).toBe("trips");
+    expect(page?.domain).toBeUndefined();
+    expect(SETTINGS_MENU.find((g) => g.id === "general")?.pages).toContain("trips");
   });
 
   it("renders the automatic-trip switch checked when the setting is on", () => {

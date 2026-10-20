@@ -172,6 +172,11 @@ export interface UserSettings {
    */
   homeCountry?: string | null;
   /**
+   * How much of the settings surface this account sees (forgejo#321):
+   * "standard" hides tuning and plumbing, "expert" shows everything.
+   */
+  settingsLevel?: "standard" | "expert";
+  /**
    * The instance default for the same setting — READ-ONLY, like
    * `betaFeaturesEnabled` below. Served so the UI can NAME what applies while
    * the user has not chosen; PUT /settings ignores it.

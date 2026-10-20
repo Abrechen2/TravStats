@@ -82,9 +82,8 @@ describe("flight master-data sections", () => {
     render(<AirlinesSection />);
     await screen.findByText("Lufthansa");
 
-    const airlineSection = screen
-      .getByRole("heading", { name: /Airlines/ })
-      .closest("section") as HTMLElement;
+    // The section frame draws the heading now; the body carries the anchor.
+    const airlineSection = screen.getByTestId("admin-airlines-section");
     expect(within(airlineSection).getByPlaceholderText("Name")).toBeInTheDocument();
     expect(within(airlineSection).getByPlaceholderText("IATA")).toBeInTheDocument();
     expect(within(airlineSection).getByPlaceholderText("ICAO")).toBeInTheDocument();
@@ -116,9 +115,7 @@ describe("flight master-data sections", () => {
     });
     render(<AirportsSection />);
 
-    const section = (await screen.findByRole("heading", { name: /Flughäfen/ })).closest(
-      "section"
-    ) as HTMLElement;
+    const section = await screen.findByTestId("admin-airports-section");
 
     // Search needs ≥2 chars, then lists the hit with the user-added badge.
     await user.type(
@@ -152,9 +149,7 @@ describe("flight master-data sections", () => {
     airportSearch.mockResolvedValue([]);
     render(<AirportsSection />);
 
-    const section = (await screen.findByRole("heading", { name: /Flughäfen/ })).closest(
-      "section"
-    ) as HTMLElement;
+    const section = await screen.findByTestId("admin-airports-section");
     await user.type(within(section).getByPlaceholderText("Name"), "Testfeld");
     await user.type(within(section).getByPlaceholderText("Breite"), "abc");
     await user.type(within(section).getByPlaceholderText("Länge"), "11.2");
@@ -182,9 +177,7 @@ describe("flight master-data sections", () => {
   it("renders the aircraft section with its own add form", async () => {
     render(<AircraftSection />);
 
-    const section = (await screen.findByRole("heading", { name: /Flugzeugtypen/ })).closest(
-      "section"
-    ) as HTMLElement;
+    const section = await screen.findByTestId("admin-aircraft-section");
     await waitFor(() => expect(within(section).getByText("Keine Treffer.")).toBeInTheDocument());
   });
 });

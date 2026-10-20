@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type JSX, type ReactNode } from "react";
+import { useEffect, useRef, useState, type JSX, type ReactNode, type RefObject } from "react";
 
 interface LazySectionProps {
   /** The DOM id the index anchors and `?section=` deep links target. */
@@ -50,7 +50,52 @@ const PLACEHOLDER_HEIGHT_PX = 240;
  * task report.
  */
 export function LazySection({ id, ariaLabel, onVisible, children }: LazySectionProps): JSX.Element {
-  const containerRef = useRef<HTMLElement>(null);
+  const { ref, visible } = useRevealOnce<HTMLElement>(onVisible);
+  return (
+    <section
+      ref={ref}
+      id={id}
+      aria-label={ariaLabel}
+      style={{
+        scrollMarginTop: SCROLL_MARGIN_TOP,
+        // Only reserved before mount — real content decides its own height
+        // once it is there, rather than being floored at the placeholder.
+        ...(visible ? {} : { minHeight: PLACEHOLDER_HEIGHT_PX }),
+      }}
+    >
+      {visible ? children : null}
+    </section>
+  );
+}
+
+/**
+ * The same deferral for a body inside a section frame (forgejo#321): the frame
+ * owns the landmark and heading, so the heading shows at once and only the
+ * card's content waits for the viewport.
+ */
+export function LazyBody({
+  id,
+  onVisible,
+  children,
+}: {
+  /** `<section anchor>-body`, so a test can drive this body's observer. */
+  id?: string;
+  onVisible?: () => void;
+  children: ReactNode;
+}): JSX.Element {
+  const { ref, visible } = useRevealOnce<HTMLDivElement>(onVisible);
+  return (
+    <div id={id} ref={ref} style={visible ? undefined : { minHeight: PLACEHOLDER_HEIGHT_PX }}>
+      {visible ? children : null}
+    </div>
+  );
+}
+
+/** Reports the first time `ref`'s element comes near the viewport, once. */
+function useRevealOnce<T extends Element>(
+  onVisible?: () => void
+): { ref: RefObject<T | null>; visible: boolean } {
+  const ref = useRef<T>(null);
   const [visible, setVisible] = useState(false);
   const onVisibleRef = useRef(onVisible);
   onVisibleRef.current = onVisible;
@@ -58,7 +103,7 @@ export function LazySection({ id, ariaLabel, onVisible, children }: LazySectionP
 
   useEffect(() => {
     if (typeof IntersectionObserver === "undefined") return;
-    const el = containerRef.current;
+    const el = ref.current;
     if (!el) return;
     const observer = new IntersectionObserver(
       (entries) => {
@@ -83,39 +128,5 @@ export function LazySection({ id, ariaLabel, onVisible, children }: LazySectionP
     }
   }, [visible]);
 
-  return (
-    <section
-      ref={containerRef}
-      id={id}
-      aria-label={ariaLabel}
-      style={{
-        scrollMarginTop: SCROLL_MARGIN_TOP,
-        // Only reserved before mount — real content decides its own height
-        // once it is there, rather than being floored at the placeholder.
-        ...(visible ? {} : { minHeight: PLACEHOLDER_HEIGHT_PX }),
-      }}
-    >
-      {visible ? children : null}
-    </section>
-  );
-}
-
-interface AdminSectionProps {
-  id: string;
-  ariaLabel: string;
-  children: ReactNode;
-}
-
-/**
- * The plain (non-lazy) counterpart of `LazySection`, for a section whose
- * data AdminPage already loads unconditionally today (system, users,
- * invitations, parsers all come from one `loadData()` Promise.all) — there
- * is nothing to defer, so it is just a landmark with the same scroll target.
- */
-export function AdminSection({ id, ariaLabel, children }: AdminSectionProps): JSX.Element {
-  return (
-    <section id={id} aria-label={ariaLabel} style={{ scrollMarginTop: SCROLL_MARGIN_TOP }}>
-      {children}
-    </section>
-  );
+  return { ref, visible };
 }

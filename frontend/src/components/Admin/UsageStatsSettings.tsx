@@ -42,15 +42,8 @@ export default function UsageStatsSettings(): JSX.Element {
   }
 
   return (
-    <section className="flex flex-col gap-4 p-6">
-      <div>
-        <h3 className="font-medium" style={{ color: "var(--text-primary)" }}>
-          {t("usageStats:admin.title")}
-        </h3>
-        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-          {t("usageStats:admin.description")}
-        </p>
-      </div>
+    <div className="flex flex-col gap-4">
+      <p className="t-caption">{t("usageStats:admin.description")}</p>
 
       {!status.endpointConfigured && (
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>
@@ -86,6 +79,6 @@ export default function UsageStatsSettings(): JSX.Element {
           </span>
         </div>
       )}
-    </section>
+    </div>
   );
 }

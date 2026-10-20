@@ -1,5 +1,3 @@
-import OpenDataCard from "../../components/Settings/OpenDataCard";
-import { useToursVisible } from "../../hooks/useToursVisible";
 import type { SettingsSectionId } from "./settingsModel";
 import type { useSettingsPage } from "../../components/Settings/useSettingsPage";
 
@@ -7,8 +5,6 @@ import ProfileSection from "../../components/Settings/ProfileSection";
 import HomeCountryCard from "../../components/Settings/HomeCountryCard";
 import HomeAirportSection from "../../components/Settings/HomeAirportSection";
 import DisplaySection from "../../components/Settings/DisplaySection";
-import DomainColorSection from "../../components/Settings/DomainColorSection";
-import ModuleSection from "../../components/Settings/ModuleSection";
 import UnitsSection from "../../components/Settings/UnitsSection";
 import CountryCountingCard from "../../components/Settings/CountryCountingCard";
 import DefaultsSection from "../../components/Settings/DefaultsSection";
@@ -18,11 +14,9 @@ import SpreadsheetSection from "../../components/Settings/SpreadsheetSection";
 import TrackArchiveSection from "../../components/Settings/TrackArchiveSection";
 import AutoUpdateSection from "../../components/Settings/AutoUpdateSection";
 import EnrichmentSection from "../../components/Settings/EnrichmentSection";
-import ApiKeysSection from "../../components/Settings/ApiKeysSection";
 import ApiTokensSection from "../../components/Settings/ApiTokensSection";
 import SecuritySection from "../../components/Settings/SecuritySection";
 import DevicesSection from "../../components/Settings/DevicesSection";
-import AboutSection from "../../components/Settings/AboutSection";
 import ImportSection from "../../components/Settings/ImportSection";
 import TripsSection from "../../components/Settings/TripsSection";
 import InboxSuggestionsSection from "../../components/Settings/InboxSuggestionsSection";
@@ -30,18 +24,13 @@ import TripRecordingSection from "../../components/Settings/TripRecordingSection
 import SharingSection from "../../components/Settings/SharingSection";
 import ShareLinksSection from "../../components/Settings/ShareLinksSection";
 import CalendarFeedSection from "../../components/Settings/CalendarFeedSection";
-import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import FeaturesSection from "../../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../../components/Settings/CruisePreferencesSection";
 import LoyaltySection from "../../components/Settings/LoyaltySection";
-import GeocoderSettingsCard from "../../components/Settings/GeocoderSettingsCard";
-import PersonalRoutingKeysSection from "../../components/Settings/PersonalRoutingKeysSection";
-import ImmichConnectionCard from "../../components/Settings/ImmichConnectionCard";
-import PhotoJourneyNightlyScanCard from "../../components/Settings/PhotoJourneyNightlyScanCard";
+import ModuleSection from "../../components/Settings/ModuleSection";
+import ServicesSection from "../../components/Settings/ServicesSection";
 import DawarichStayScanCard from "../../components/Settings/DawarichStayScanCard";
 import DawarichConnectionCard from "../../components/Settings/DawarichConnectionCard";
-import RailProvidersCard from "../../components/Settings/RailProvidersCard";
-import StravaConnectionCard from "../../components/Settings/StravaConnectionCard";
 
 type SettingsPageState = ReturnType<typeof useSettingsPage>;
 
@@ -60,8 +49,6 @@ export default function SettingsSectionSwitch({
   page,
 }: SettingsSectionSwitchProps): JSX.Element | null {
   const isAdmin = page.user?.isAdmin ?? false;
-  const toursVisible = useToursVisible();
-  const { isFeatureVisible } = useBetaFeatures();
 
   switch (section) {
     case "profile":
@@ -85,6 +72,8 @@ export default function SettingsSectionSwitch({
       return <ApiTokensSection />;
     case "devices":
       return <DevicesSection />;
+    case "notifications":
+      return <NotificationsSection />;
     case "display":
       return <DisplaySection display={page.display} onSetDisplay={page.setDisplay} />;
     case "units":
@@ -96,12 +85,10 @@ export default function SettingsSectionSwitch({
           onSetBaseCurrency={page.setBaseCurrency}
         />
       );
-    case "domainColors":
-      // Its own entry now. It used to be nested inside "Anzeige", where the one
-      // control that repaints every map and legend was three scrolls below the
-      // language picker.
-      return <DomainColorSection />;
-    case "modules":
+    case "domains":
+      // The module switch and the domain colour, one row per domain
+      // (forgejo#321): they were two sections that listed the same domains
+      // twice, a screen apart.
       return <ModuleSection />;
     case "countryCounting":
       return <CountryCountingCard />;
@@ -123,62 +110,28 @@ export default function SettingsSectionSwitch({
     case "import":
       return <ImportSection />;
     case "trips":
-      return (
-        <div className="space-y-4">
-          <TripsSection />
-          {/* Which suggestions the inbox offers at all (forgejo#306). */}
-          <InboxSuggestionsSection />
-          {/* Whether the app's trip positions are stored here (forgejo#316). */}
-          <TripRecordingSection />
-          {/* Shared trips (design 2026-10-09): consent and companion links. */}
-          <SharingSection />
-          {/* Public share links (forgejo#281): own links and a pointer to administration. */}
-          <ShareLinksSection isAdmin={isAdmin} />
-          {/* The calendar subscription (forgejo#310), behind its beta key. */}
-          {isFeatureVisible("calendarFeed") && <CalendarFeedSection />}
-        </div>
-      );
-    case "notifications":
-      return <NotificationsSection />;
-    case "about":
-      return <AboutSection />;
+      return <TripsSection />;
+    case "suggestions":
+      // Which suggestions the inbox offers at all (forgejo#306).
+      return <InboxSuggestionsSection />;
+    case "sharing":
+      // Shared trips (design 2026-10-09): consent and companion links.
+      return <SharingSection />;
+    case "shareLinks":
+      // Public share links (forgejo#281): own links and a pointer to administration.
+      return <ShareLinksSection isAdmin={isAdmin} />;
+    case "calendarFeed":
+      // The calendar subscription (forgejo#310), behind its beta key.
+      return <CalendarFeedSection />;
+    case "dawarich":
+      return <DawarichConnectionCard />;
+    case "tripRecording":
+      // Whether the app's trip positions are stored here (forgejo#316).
+      return <TripRecordingSection />;
+    case "stayScan":
+      return <DawarichStayScanCard />;
     case "externalServices":
-      return (
-        <div className="space-y-4">
-          <ApiKeysSection
-            apiKeysStatus={page.apiKeysStatus}
-            apiKeys={page.apiKeys}
-            loadingApiKeys={page.loadingApiKeys}
-            onSetApiKeys={page.setApiKeys}
-            onSave={page.saveApiKeys}
-          />
-          {/* Admin-only. It was also behind the tours gate until 2026-09-18,
-              because tours were its only consumer and an instance with beta
-              off would have offered routing for a feature hidden everywhere
-              else. Tours shipped, so the gate went with them. */}
-          {/* Routing serves tours and roadtrips only, and both went back
-              behind the roadtrips beta key on 2026-09-24 — a routing card for
-              a feature hidden everywhere else would offer nothing. */}
-          {/* The account's OWN routing keys. The instance's provider and key
-              are Administration → Externe Dienste since 2026-09-26. */}
-          {toursVisible && <PersonalRoutingKeysSection />}
-          {/* Admin-only, and only where the rail domain is offered (beta). */}
-          <RailProvidersCard isAdmin={isAdmin} />
-          <ImmichConnectionCard />
-          {/* The nightly photo scan reads that library (forgejo#94). */}
-          <PhotoJourneyNightlyScanCard />
-          {/* It had a key of its OWN rather than riding on `tourRoutes`, because
-              tours stopped being the only consumer the moment cruise legs were
-              scoped onto the same connection. Both keys left the registry on
-              2026-09-18. */}
-          <DawarichConnectionCard />
-          <DawarichStayScanCard />
-          {/* Strava (2.7): day tours from Strava activities. */}
-          {toursVisible && <StravaConnectionCard isAdmin={isAdmin} />}
-          {/* Open data (2.7): Open-Meteo, Wikipedia, OpenStreetMap — off by default. */}
-          <OpenDataCard isAdmin={isAdmin} />
-        </div>
-      );
+      return <ServicesSection page={page} />;
     case "homeAirport":
       return <HomeAirportSection />;
     case "defaults":
@@ -205,9 +158,6 @@ export default function SettingsSectionSwitch({
       );
     case "cruisePreferences":
       return <CruisePreferencesSection cruise={page.cruise} onSetCruise={page.setCruise} />;
-    case "lodgingPreferences":
-      /* Admin-only; the card itself renders null for non-admins. */
-      return <GeocoderSettingsCard isAdmin={isAdmin} />;
     case "loyalty":
       return <LoyaltySection />;
     default:

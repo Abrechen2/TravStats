@@ -141,12 +141,7 @@ export default function ImmichGlobalSettings(): JSX.Element {
 
   if (loadError) {
     return (
-      <section className="flex flex-col gap-3 p-6">
-        <div>
-          <h3 className="font-medium" style={{ color: "var(--text-primary)" }}>
-            {t("admin.title")}
-          </h3>
-        </div>
+      <div className="flex flex-col gap-3">
         <p className="text-sm text-rose-400">{t("admin.loadFailed")}</p>
         <button
           type="button"
@@ -156,20 +151,13 @@ export default function ImmichGlobalSettings(): JSX.Element {
         >
           {t("errors.retry")}
         </button>
-      </section>
+      </div>
     );
   }
 
   return (
-    <section className="flex flex-col gap-4 p-6">
-      <div>
-        <h3 className="font-medium" style={{ color: "var(--text-primary)" }}>
-          {t("admin.title")}
-        </h3>
-        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-          {t("admin.subtitle")}
-        </p>
-      </div>
+    <div className="flex flex-col gap-4">
+      <p className="t-caption">{t("admin.subtitle")}</p>
 
       <label className="flex flex-col gap-1 text-sm" htmlFor="immich-admin-base-url">
         <span style={{ color: "var(--text-primary)" }}>{t("admin.baseUrl")}</span>
@@ -229,6 +217,6 @@ export default function ImmichGlobalSettings(): JSX.Element {
             : t(failureKey(testResult.kind))}
         </p>
       )}
-    </section>
+    </div>
   );
 }

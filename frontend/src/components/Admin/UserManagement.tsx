@@ -78,14 +78,8 @@ export default function UserManagement({
           below. Without it that span's box hung off the table's right edge,
           outside the scroller's clip, and widened the WHOLE document to
           621px on a 360px phone. */}
-      <div
-        className="relative overflow-x-auto lg:overflow-visible"
-        style={{
-          background: "var(--ts-surface)",
-          border: "1px solid var(--ts-border)",
-          borderRadius: "var(--ts-radius-card)",
-        }}
-      >
+      {/* No box of its own: the section frame's card is the table's box. */}
+      <div className="relative overflow-x-auto lg:overflow-visible">
         <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr

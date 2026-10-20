@@ -142,15 +142,12 @@ export default function WebDAVSettings(): JSX.Element {
       : null;
 
   if (!loaded) {
-    return <div className="p-6 text-sm text-muted">{t("common:loading.default")}</div>;
+    return <div className="text-sm text-muted">{t("common:loading.default")}</div>;
   }
 
   return (
-    <form onSubmit={handleSave} className="max-w-2xl space-y-6 p-6">
-      <div>
-        <h3 className="text-lg font-semibold text-(--text-primary)">{t("admin:webdav.title")}</h3>
-        <p className="mt-1 text-sm text-(--text-muted)">{t("admin:webdav.subtitle")}</p>
-      </div>
+    <form onSubmit={handleSave} className="max-w-2xl space-y-6">
+      <p className="t-caption">{t("admin:webdav.subtitle")}</p>
 
       <label className="flex items-start gap-3 text-sm text-(--text-primary)">
         <input

@@ -5,6 +5,7 @@ import { useToastStore } from "../../store/toastStore";
 import BetaFeatureList from "./BetaFeatureList";
 import { LoginBackgroundsCard } from "./LoginBackgroundsCard";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useExpertRows } from "../Settings/frame/useExpertRows";
 import { logger } from "../../lib/logger";
 import type { PasskeyStatus } from "../../lib/api/admin";
 import { DEFAULT_COUNTRY_TIER, type CountryTier } from "../../types/passport";
@@ -58,10 +59,17 @@ function parseOrigins(text: string): string[] {
     .filter((line) => line.length > 0);
 }
 
+/** lanUrl, webauthnRpId, webauthnOrigins, betaFeaturesEnabled. */
+const EXPERT_ONLY_SETTINGS = 4;
+
 export default function InstanceSettings(): JSX.Element {
   const { t } = useTranslation(["admin", "common", "passport"]);
   const addToast = useToastStore((s) => s.addToast);
   const syncBetaFeaturesEnabled = useSettingsStore((s) => s.syncBetaFeaturesEnabled);
+  // LAN address, the passkey pair (rpId + origins) and the beta switch are
+  // plumbing a first setup never needs. Hidden rows stay in `form`, so a save
+  // at the standard level sends them back unchanged instead of blanking them.
+  const expert = useExpertRows(EXPERT_ONLY_SETTINGS);
 
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -160,18 +168,13 @@ export default function InstanceSettings(): JSX.Element {
   };
 
   if (!loaded) {
-    return <div className="p-6 text-sm text-muted">{t("common:loading.default")}</div>;
+    return <div className="text-sm text-muted">{t("common:loading.default")}</div>;
   }
 
   return (
     <>
-      <form onSubmit={handleSave} className="max-w-2xl space-y-6 p-6">
-        <div>
-          <h2 className="text-xl font-semibold text-(--text-primary)">
-            {t("admin:instance.title")}
-          </h2>
-          <p className="mt-1 text-sm text-(--text-muted)">{t("admin:instance.subtitle")}</p>
-        </div>
+      <form onSubmit={handleSave} className="max-w-2xl space-y-6">
+        <p className="t-caption">{t("admin:instance.subtitle")}</p>
 
         <div>
           <label className="mb-1 block text-sm font-medium text-(--text-primary)">
@@ -221,87 +224,91 @@ export default function InstanceSettings(): JSX.Element {
           </p>
         </div>
 
-        <div>
-          <label className="mb-1 block text-sm font-medium text-(--text-primary)">
-            {t("admin:instance.fields.lanUrl.label")}
-          </label>
-          <input
-            type="url"
-            maxLength={500}
-            value={form.lanUrl ?? ""}
-            onChange={(e) => setForm({ ...form, lanUrl: e.target.value })}
-            placeholder="http://192.168.1.10:3010"
-            className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
-          />
-          <p className="mt-1 text-xs text-(--text-muted)">
-            {t("admin:instance.fields.lanUrl.help")}
-          </p>
-        </div>
+        {expert && (
+          <div>
+            <label className="mb-1 block text-sm font-medium text-(--text-primary)">
+              {t("admin:instance.fields.lanUrl.label")}
+            </label>
+            <input
+              type="url"
+              maxLength={500}
+              value={form.lanUrl ?? ""}
+              onChange={(e) => setForm({ ...form, lanUrl: e.target.value })}
+              placeholder="http://192.168.1.10:3010"
+              className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
+            />
+            <p className="mt-1 text-xs text-(--text-muted)">
+              {t("admin:instance.fields.lanUrl.help")}
+            </p>
+          </div>
+        )}
 
         {/* Passkeys. Separated by a rule because these two fields are not "more
           URLs" — a credential is bound to the rpId forever, so changing it
           later invalidates every passkey already registered. */}
-        <div className="border-t border-(--border) pt-6">
-          <h3 className="text-base font-semibold text-(--text-primary)">
-            {t("admin:instance.passkeys.title")}
-          </h3>
-          <p className="mt-1 text-sm text-(--text-muted)">
-            {t("admin:instance.passkeys.subtitle")}
-          </p>
-
-          {passkeyStatus && (
-            <p
-              className="mt-3 text-sm"
-              role="status"
-              style={{ color: passkeyStatus.usable ? "var(--success)" : "var(--text-muted)" }}
-            >
-              {passkeyStatus.usable
-                ? t("admin:instance.passkeys.statusUsable")
-                : t(`admin:instance.passkeys.status.${passkeyStatus.reason ?? "notConfigured"}`)}
+        {expert && (
+          <div
+            style={{ borderTop: "1px solid var(--ts-border)", paddingTop: "var(--ts-space-lg)" }}
+          >
+            <h3 className="t-label-mono">{t("admin:instance.passkeys.title")}</h3>
+            <p className="mt-1 text-sm text-(--text-muted)">
+              {t("admin:instance.passkeys.subtitle")}
             </p>
-          )}
 
-          <div className="mt-4">
-            <label
-              htmlFor="webauthn-rp-id"
-              className="mb-1 block text-sm font-medium text-(--text-primary)"
-            >
-              {t("admin:instance.passkeys.rpId.label")}
-            </label>
-            <input
-              id="webauthn-rp-id"
-              type="text"
-              maxLength={253}
-              value={form.webauthnRpId ?? ""}
-              onChange={(e) => setForm({ ...form, webauthnRpId: e.target.value })}
-              placeholder="travstats.example.com"
-              className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
-            />
-            <p className="mt-1 text-xs text-(--text-muted)">
-              {t("admin:instance.passkeys.rpId.help")}
-            </p>
+            {passkeyStatus && (
+              <p
+                className="mt-3 text-sm"
+                role="status"
+                style={{ color: passkeyStatus.usable ? "var(--success)" : "var(--text-muted)" }}
+              >
+                {passkeyStatus.usable
+                  ? t("admin:instance.passkeys.statusUsable")
+                  : t(`admin:instance.passkeys.status.${passkeyStatus.reason ?? "notConfigured"}`)}
+              </p>
+            )}
+
+            <div className="mt-4">
+              <label
+                htmlFor="webauthn-rp-id"
+                className="mb-1 block text-sm font-medium text-(--text-primary)"
+              >
+                {t("admin:instance.passkeys.rpId.label")}
+              </label>
+              <input
+                id="webauthn-rp-id"
+                type="text"
+                maxLength={253}
+                value={form.webauthnRpId ?? ""}
+                onChange={(e) => setForm({ ...form, webauthnRpId: e.target.value })}
+                placeholder="travstats.example.com"
+                className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
+              />
+              <p className="mt-1 text-xs text-(--text-muted)">
+                {t("admin:instance.passkeys.rpId.help")}
+              </p>
+            </div>
+
+            <div className="mt-4">
+              <label
+                htmlFor="webauthn-origins"
+                className="mb-1 block text-sm font-medium text-(--text-primary)"
+              >
+                {t("admin:instance.passkeys.origins.label")}
+              </label>
+              <textarea
+                id="webauthn-origins"
+                rows={3}
+                value={form.webauthnOrigins}
+                onChange={(e) => setForm({ ...form, webauthnOrigins: e.target.value })}
+                placeholder={"https://travstats.example.com\nhttps://www.travstats.example.com"}
+                className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm font-mono"
+              />
+              <p className="mt-1 text-xs text-(--text-muted)">
+                {t("admin:instance.passkeys.origins.help")}
+              </p>
+            </div>
           </div>
-
-          <div className="mt-4">
-            <label
-              htmlFor="webauthn-origins"
-              className="mb-1 block text-sm font-medium text-(--text-primary)"
-            >
-              {t("admin:instance.passkeys.origins.label")}
-            </label>
-            <textarea
-              id="webauthn-origins"
-              rows={3}
-              value={form.webauthnOrigins}
-              onChange={(e) => setForm({ ...form, webauthnOrigins: e.target.value })}
-              placeholder={"https://travstats.example.com\nhttps://www.travstats.example.com"}
-              className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm font-mono"
-            />
-            <p className="mt-1 text-xs text-(--text-muted)">
-              {t("admin:instance.passkeys.origins.help")}
-            </p>
-          </div>
-        </div>
+        )}
 
         <div>
           <label className="mb-1 block text-sm font-medium text-(--text-primary)">
@@ -342,25 +349,27 @@ export default function InstanceSettings(): JSX.Element {
           </span>
         </label>
 
-        <p className="text-sm text-(--text-muted)">{t("passport:countingRule")}</p>
+        {expert && <p className="text-sm text-(--text-muted)">{t("passport:countingRule")}</p>}
 
-        <label className="flex items-start gap-3 text-sm text-(--text-primary)">
-          <input
-            type="checkbox"
-            checked={form.betaFeaturesEnabled}
-            onChange={(e) => setForm({ ...form, betaFeaturesEnabled: e.target.checked })}
-            className="mt-1 h-4 w-4 rounded-sm border-(--border)"
-          />
-          <span>
-            <span className="font-medium">{t("admin:instance.fields.betaFeatures.label")}</span>
-            <span className="block text-xs text-(--text-muted)">
-              {t("admin:instance.fields.betaFeatures.help")}
-            </span>
-            {/* Derived from the registry, so it cannot drift from what the
+        {expert && (
+          <label className="flex items-start gap-3 text-sm text-(--text-primary)">
+            <input
+              type="checkbox"
+              checked={form.betaFeaturesEnabled}
+              onChange={(e) => setForm({ ...form, betaFeaturesEnabled: e.target.checked })}
+              className="mt-1 h-4 w-4 rounded-sm border-(--border)"
+            />
+            <span>
+              <span className="font-medium">{t("admin:instance.fields.betaFeatures.label")}</span>
+              <span className="block text-xs text-(--text-muted)">
+                {t("admin:instance.fields.betaFeatures.help")}
+              </span>
+              {/* Derived from the registry, so it cannot drift from what the
               switch actually gates — see BetaFeatureList.tsx. */}
-            <BetaFeatureList />
-          </span>
-        </label>
+              <BetaFeatureList />
+            </span>
+          </label>
+        )}
 
         <div className="pt-2">
           <button
@@ -376,7 +385,7 @@ export default function InstanceSettings(): JSX.Element {
       {/* OUTSIDE the form, deliberately: uploading a picture takes effect the
           moment it succeeds, so it must not sit under a Save button that has
           nothing to do with it. */}
-      <div className="max-w-2xl px-6 pb-6">
+      <div className="max-w-2xl">
         <LoginBackgroundsCard />
       </div>
     </>

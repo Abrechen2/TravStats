@@ -1168,5 +1168,61 @@
     "loadFailed": "Die Einstellung zum Vorlagen-Repository konnte nicht geladen werden.",
     "testFailed": "Der Test konnte nicht ausgeführt werden. Bitte erneut versuchen.",
     "saveFailed": "Das Vorlagen-Repository konnte nicht gespeichert werden."
+  },
+  "pages": {
+    "instance": "Instanz",
+    "users": "Benutzer",
+    "invitations": "Einladungen",
+    "externalServices": "Externe Dienste",
+    "parsers": "Import & Parser",
+    "smtp": "E-Mail-Versand",
+    "backups": "Sicherungen",
+    "timeModel": "Zeitmodell",
+    "logging": "Protokollierung",
+    "system": "Systeminformationen",
+    "airlinesMasterData": "Fluggesellschaften",
+    "aircraftMasterData": "Flugzeuge",
+    "airportsMasterData": "Flughäfen",
+    "shipsMasterData": "Schiffe",
+    "portsMasterData": "Häfen"
+  },
+  "menu": {
+    "manage": "Verwaltung",
+    "operations": "Dienste & Betrieb",
+    "masterFlight": "Stammdaten · Flug",
+    "masterCruise": "Stammdaten · Kreuzfahrt"
+  },
+  "search": {
+    "keywords": {
+      "instance": "Instanzname, Name, Adresse, öffentliche Adresse, URL, Heimnetz, LAN, Passkey, rpId, Origins, Registrierung, Höchstzahl Konten, Beta, Beta-Funktionen, Anmeldehintergrund",
+      "shareLinks": "Öffentliche Links, Freigabe, teilen",
+      "importMode": "Import-Modus, Import",
+      "usageStats": "Nutzungsstatistik, Statistik, Telemetrie, anonym",
+      "about": "Version, Lizenz, Datenquellen, Attribution, Über, Impressum, Dokumentation",
+      "geocoder": "Geocoder, Adresse, Koordinaten, Nominatim, Photon, Ortssuche",
+      "federation": "Serververbindungen, Föderation, andere Instanz, Server",
+      "push": "Push, Benachrichtigungen, Relay, Push-Relay",
+      "users": "Benutzer, Konten, Konto sperren, Zwei-Faktor zurücksetzen, Passwort",
+      "invitations": "Einladung, einladen, Einladungslink, Registrierung",
+      "externalServices": "API-Schlüssel, globale Schlüssel, AirLabs, Aviationstack, AeroDataBox, OpenSky, Logostream, Google Places, Immich, Routing, OpenRouteService, Bahn, Offene Daten",
+      "parsers": "Parser, KI, LLM, Ollama, OpenAI, Claude, Buchungen lesen, Modell",
+      "templateRepo": "Vorlagen, Vorlagen-Repository, Templates, Repository",
+      "smtp": "E-Mail, SMTP, Mailserver, Versand",
+      "backups": "Backup, Sicherung, Wiederherstellen, Zeitplan",
+      "webdav": "WebDAV, Abgleich, Sync, Nextcloud",
+      "timeModel": "Zeitmodell, Zeitzone, Ortszeit",
+      "logging": "Protokoll, Log, Logging, Debug, Diagnose",
+      "system": "System, Systeminformationen, Version, Export, Statistik",
+      "airlinesMasterData": "Fluggesellschaften, Airlines, Stammdaten, Logo",
+      "aircraftMasterData": "Flugzeuge, Flugzeugtypen, Stammdaten",
+      "airportsMasterData": "Flughäfen, Airports, Stammdaten, IATA",
+      "shipsMasterData": "Schiffe, Stammdaten, IMO",
+      "portsMasterData": "Häfen, Stammdaten, UN/LOCODE"
+    },
+    "expertKeywords": {
+      "instance": "Heimnetz-Adresse, LAN, Passkey, rpId, Origins, Beta-Schalter",
+      "parsers": "Ollama-URL, Modell laden, Modell, Kontingent, Wechselkurs-Quelle",
+      "externalServices": "eigene Schlüssel erlauben, Berechtigungen"
+    }
   }
 }
