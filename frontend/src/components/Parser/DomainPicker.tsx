@@ -20,6 +20,14 @@ import {
  * afterwards would be telling them once the work is done.
  */
 
+/** The domains whose marking needs a word of explanation before it starts. */
+const DOMAINS_WITH_HINTS: ReadonlySet<WorkshopDomain> = new Set([
+  "cruise",
+  "place",
+  "package",
+  "rail",
+]);
+
 interface DomainPickerProps {
   value: WorkshopDomain;
   /** What the classifier said, so the UI can mark a manual override. */
@@ -73,7 +81,7 @@ export default function DomainPicker({
           {t(`parser:derivation.cannot.${spec.reason}`)}
         </p>
       )}
-      {spec.derivable && (value === "cruise" || value === "place" || value === "package") && (
+      {spec.derivable && DOMAINS_WITH_HINTS.has(value) && (
         // What to mark, said before the marking: a cruise is read from one
         // itinerary row, a package from one flight and one hotel row, which no
         // other domain asks for (forgejo#124).

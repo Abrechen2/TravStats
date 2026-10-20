@@ -27,6 +27,10 @@
  *              the per-line pattern of a v2 `stops` repeat.
  *  - place   — `PlaceImportCandidate` in `schemas/placeImport.ts`.
  *  - package — the package contract, `services/trip/package/contract.ts`.
+ *  - rail    — `ParsedRailBooking` in `services/rail/parser/types.ts`: the
+ *              booking fields once, and ONE marked leg row (stations, times,
+ *              train), which the deriver turns into the repeat that reads
+ *              every leg like it (forgejo#309).
  *
  * ## Every domain derives (forgejo#124)
  *
@@ -41,7 +45,14 @@
  * nothing ("a matching template is not an extracting template").
  */
 
-export const WORKSHOP_DOMAINS = ["flight", "lodging", "cruise", "place", "package"] as const;
+export const WORKSHOP_DOMAINS = [
+  "flight",
+  "lodging",
+  "cruise",
+  "place",
+  "package",
+  "rail",
+] as const;
 export type WorkshopDomain = (typeof WORKSHOP_DOMAINS)[number];
 
 /** Which shape the value has, which is what decides how it is read back. */
@@ -164,6 +175,29 @@ const packageLabels: readonly AnnotationLabel[] = [
   { id: "stayCheckOut", group: "stayRow", kind: "date" },
 ];
 
+/**
+ * A rail booking (forgejo#309): the booking fields are marked once, ONE leg
+ * row value by value. The leg's day may sit on the row or on a heading line
+ * above the legs ("Hinfahrt am 14.11.2027") — the deriver reads it from
+ * whichever the user marked. `arrivalDate` is optional: without it an arrival
+ * earlier than the departure is the next day.
+ */
+const railLabels: readonly AnnotationLabel[] = [
+  { id: "bookingReference", group: "booking", kind: "reference" },
+  { id: "operator", group: "booking", kind: "text" },
+  { id: "travelClass", group: "booking", kind: "text" },
+  { id: "tariff", group: "booking", kind: "text" },
+  { id: "price", group: "money", kind: "money" },
+  { id: "currency", group: "money", kind: "currency" },
+  { id: "depStation", group: "railLeg", kind: "text" },
+  { id: "arrStation", group: "railLeg", kind: "text" },
+  { id: "departureDate", group: "railLeg", kind: "date" },
+  { id: "departureTime", group: "railLeg", kind: "time" },
+  { id: "arrivalDate", group: "railLeg", kind: "date" },
+  { id: "arrivalTime", group: "railLeg", kind: "time" },
+  { id: "train", group: "railLeg", kind: "text" },
+];
+
 export const WORKSHOP_DOMAIN_SPECS: Readonly<Record<WorkshopDomain, WorkshopDomainSpec>> =
   Object.freeze({
     flight: { domain: "flight", labels: flightLabels, derivable: true },
@@ -171,6 +205,7 @@ export const WORKSHOP_DOMAIN_SPECS: Readonly<Record<WorkshopDomain, WorkshopDoma
     cruise: { domain: "cruise", labels: cruiseLabels, derivable: true },
     place: { domain: "place", labels: placeLabels, derivable: true },
     package: { domain: "package", labels: packageLabels, derivable: true },
+    rail: { domain: "rail", labels: railLabels, derivable: true },
   });
 
 export function isWorkshopDomain(value: string): value is WorkshopDomain {

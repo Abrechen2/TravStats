@@ -22,6 +22,7 @@ import {
   PLACE_SELECTIONS,
   PLACE_SOURCE,
 } from "./workshopSamples";
+import { RAIL_SELECTIONS, RAIL_SOURCE, RAIL_SUBJECT } from "./railSamples";
 
 describe("derivePatternFromSelection", () => {
   it("extracts context-anchored regex for a PNR field", () => {
@@ -127,5 +128,25 @@ describe("deriveTemplateFromAnnotation", () => {
     expect(parseWorkshopEnvelope(data.patterns, "cruise")?.id).toBe("cruise:user-td3");
     // The same row can never pass for a place template.
     expect(parseWorkshopEnvelope(data.patterns, "place")).toBeNull();
+  });
+
+  it("writes a rail annotation as a PENDING rail template holding a v2 envelope (forgejo#309)", async () => {
+    (prisma.trainingData.findUnique as jest.Mock).mockResolvedValueOnce({
+      id: "td4",
+      domain: "rail",
+      subject: RAIL_SUBJECT,
+      senderAddress: null,
+      annotations: { fullText: RAIL_SOURCE, textSelections: RAIL_SELECTIONS },
+    });
+    (prisma.parserTemplate.findFirst as jest.Mock).mockResolvedValueOnce(null);
+    (prisma.parserTemplate.create as jest.Mock).mockResolvedValueOnce({ id: "tpl-rail" });
+
+    const result = await deriveTemplateFromAnnotation("td4", "user1");
+
+    expect(result).toEqual({ status: "derived", templateId: "tpl-rail", domain: "rail" });
+    const data = (prisma.parserTemplate.create as jest.Mock).mock.lastCall?.[0].data;
+    expect(data).toMatchObject({ domain: "rail", status: "pending", sourceId: "td4" });
+    expect(parseWorkshopEnvelope(data.patterns, "rail")?.id).toBe("rail:user-td4");
+    expect(parseWorkshopEnvelope(data.patterns, "cruise")).toBeNull();
   });
 });

@@ -52,7 +52,8 @@
     "lodging": "Unterkunft",
     "cruise": "Kreuzfahrt",
     "place": "Ort",
-    "package": "Pauschalreise"
+    "package": "Pauschalreise",
+    "rail": "Bahnfahrt"
   },
   "labelGroups": {
     "flight": "Flug",
@@ -69,7 +70,8 @@
     "itinerary": "Reiseverlauf",
     "packageTrip": "Reise",
     "flightRow": "Flugzeile",
-    "stayRow": "Hotelzeile"
+    "stayRow": "Hotelzeile",
+    "railLeg": "Fahrtabschnitt"
   },
   "labels": {
     "flight": {
@@ -153,6 +155,21 @@
       "stayCity": "Hotelort",
       "stayCheckIn": "Anreise",
       "stayCheckOut": "Abreise"
+    },
+    "rail": {
+      "bookingReference": "Auftragsnummer",
+      "operator": "Bahngesellschaft",
+      "travelClass": "Klasse",
+      "tariff": "Tarif",
+      "price": "Gesamtpreis",
+      "currency": "Währung",
+      "depStation": "Abfahrtsbahnhof",
+      "arrStation": "Ankunftsbahnhof",
+      "departureDate": "Reisetag",
+      "departureTime": "Abfahrtszeit",
+      "arrivalDate": "Ankunftstag",
+      "arrivalTime": "Ankunftszeit",
+      "train": "Zug"
     }
   },
   "workshop": {
@@ -167,7 +184,8 @@
     "domainHints": {
       "cruise": "Markiere die Kopfdaten (Schiff, Buchungsnummer, Preis …) und dazu EINE Zeile des Reiseverlaufs: ihr Datum und ihren Hafen. Aus dieser Zeile liest das Template die ganze Hafenliste.",
       "place": "Markiere mindestens den Namen des Ortes, dazu nach Wunsch Adresse, Kategorie und Besuchsdatum. Gelesene Orte landen in der Import-Vorschau unter Einstellungen → Import.",
-      "package": "Markiere Buchungsnummer und Ausstellungsdatum, nach Wunsch Reisename, Daten und Preis — dazu EINE Flugzeile (Flugnummer, Datum, Abflug und Ziel) und/oder EINE Hotelzeile (Hotel, An- und Abreise). Aus jeder markierten Zeile wird die Regel für alle Zeilen dieser Art."
+      "package": "Markiere Buchungsnummer und Ausstellungsdatum, nach Wunsch Reisename, Daten und Preis — dazu EINE Flugzeile (Flugnummer, Datum, Abflug und Ziel) und/oder EINE Hotelzeile (Hotel, An- und Abreise). Aus jeder markierten Zeile wird die Regel für alle Zeilen dieser Art.",
+      "rail": "Markiere nach Wunsch Auftragsnummer, Klasse und Preis — dazu EINEN Fahrtabschnitt: Abfahrtsbahnhof, Abfahrtszeit, Ankunftsbahnhof, nach Wunsch Ankunftszeit und Zug. Den Reisetag markierst du dort, wo er steht: in der Zeile oder in der Überschrift darüber."
     }
   },
   "derivation": {
@@ -187,7 +205,11 @@
       "packageFlightRowIncomplete": "Die Flugzeile ist unvollständig: markiere Flugnummer, Flugdatum, Abflug (Code oder Ort) und Ziel (Code oder Ort).",
       "packageStayRowIncomplete": "Die Hotelzeile ist unvollständig: markiere Hotel, Anreise und Abreise.",
       "packageRowTooFarApart": "Die Werte einer Zeile müssen in derselben oder in zwei aufeinanderfolgenden Zeilen stehen (Leerzeilen dazwischen sind in Ordnung).",
-      "packageRowNotUnderstood": "Aus der markierten Zeile lässt sich keine Regel bilden, die ihre eigenen Werte wieder liest. Markiere die Werte genau."
+      "packageRowNotUnderstood": "Aus der markierten Zeile lässt sich keine Regel bilden, die ihre eigenen Werte wieder liest. Markiere die Werte genau.",
+      "railNeedsLegRow": "Für eine Bahnfahrt fehlt ein markierter Fahrtabschnitt: markiere in EINER Zeile Abfahrtsbahnhof, Abfahrtszeit und Ankunftsbahnhof (nach Wunsch Ankunftszeit und Zug). Aus dieser Zeile liest das Template alle Abschnitte.",
+      "railNeedsDate": "Der Reisetag fehlt: markiere das Datum — in der Zeile des Abschnitts oder in der Überschrift darüber (z. B. „Hinfahrt am 14.11.2027“). Ohne Tag wäre jede Abfahrtszeit geraten.",
+      "railRowTooFarApart": "Die Werte eines Fahrtabschnitts müssen in derselben oder in zwei aufeinanderfolgenden Zeilen stehen (Leerzeilen dazwischen sind in Ordnung).",
+      "railRowNotUnderstood": "Aus dem markierten Fahrtabschnitt lässt sich keine Regel bilden, die seine eigenen Werte wieder liest. Markiere die Bahnhofsnamen und Zeiten genau."
     }
   },
   "preview": {

@@ -9,6 +9,8 @@ import { applyV2PlaceTemplate } from "../../places/v2Place";
 import { parsePackageText } from "../../trip/package/parsePackage";
 import type { PackageFlight, PackageStay } from "../../trip/package/contract";
 import { parseWorkshopEnvelope } from "./v2UserTemplates";
+import { applyV2RailTemplate } from "../../rail/parser/v2Rail";
+import type { ParsedRailLeg } from "../../rail/parser/types";
 
 /**
  * Run a derived template against one document and say what it would read.
@@ -133,6 +135,21 @@ export function previewTemplate(
     };
   }
 
+  if (domain === "rail") {
+    // The rail consumer the parse runs (`v2Rail.ts`), on the same text.
+    const envelope = parseWorkshopEnvelope(template.patterns, "rail");
+    const booking = envelope ? applyV2RailTemplate(envelope, documentText) : null;
+    if (!booking) return EMPTY;
+    return {
+      matched: true,
+      fields: [
+        ...fieldsOf(booking as unknown as Record<string, unknown>, ["legs", "source"]),
+        { name: "legs", value: describeLegs(booking.legs) },
+      ],
+      confidence: null,
+    };
+  }
+
   const envelope = parseWorkshopEnvelope(template.patterns, "place");
   const candidate = envelope ? applyV2PlaceTemplate(envelope, documentText) : null;
   if (!candidate) return EMPTY;
@@ -151,6 +168,22 @@ function describeFlights(flights: readonly PackageFlight[]): string {
     .map(
       (f) =>
         `${f.date} ${f.flightNumber} ${f.depIata ?? f.depCity ?? "?"}→${f.arrIata ?? f.arrCity ?? "?"}`
+    )
+    .join(" · ");
+}
+
+/** Rail legs as one line: departure time, stations, arrival, train. Values only. */
+function describeLegs(legs: readonly ParsedRailLeg[]): string {
+  return legs
+    .map((leg) =>
+      [
+        leg.departureLocal,
+        `${leg.depStationName}→${leg.arrStationName}`,
+        leg.arrivalLocal ?? "?",
+        [leg.trainCategory, leg.trainNumber].filter(Boolean).join(" "),
+      ]
+        .filter((part) => part !== "")
+        .join(" ")
     )
     .join(" · ");
 }

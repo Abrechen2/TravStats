@@ -20,6 +20,8 @@ export type RailParseSource =
   /** A bahn.de share link (forgejo#204) — a timetable connection, not a purchase. */
   | "db-share-link"
   | "ics"
+  /** One of the user's own workshop templates (forgejo#309). */
+  | "workshop"
   | "ollama";
 
 export interface ParsedRailLeg {
