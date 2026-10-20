@@ -14,6 +14,7 @@ export function ingestedTrackColumns(ingested: IngestedTrack): {
   segmentStarts: Prisma.InputJsonValue;
   cumulativeKm: Prisma.InputJsonValue;
   pointCount: number;
+  jitterDropped: number | null;
   distanceKm: number;
   elevations: Prisma.InputJsonValue | typeof Prisma.JsonNull;
   ascentM: number | null;
@@ -30,6 +31,7 @@ export function ingestedTrackColumns(ingested: IngestedTrack): {
     segmentStarts: ingested.segmentStarts as unknown as Prisma.InputJsonValue,
     cumulativeKm: ingested.cumulativeKm as unknown as Prisma.InputJsonValue,
     pointCount: ingested.pointCount,
+    jitterDropped: ingested.jitterDropped,
     distanceKm: ingested.distanceKm,
     // The column holds the PROFILE, `[km, metres]` pairs (see schema.prisma).
     elevations:

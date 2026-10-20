@@ -24,6 +24,8 @@ import { DawarichError } from "../../services/dawarich/errors";
 import { resolveRouteFromRequest } from "./tourRoutes";
 import logger from "../../utils/logger";
 import { prefillTourDateFromTrack } from "../../services/tour/tourDay";
+import { filterParsedTrack } from "../../services/tracks/recordingJitter";
+import { jitterModeOfRoute } from "../../services/tracks/tourJitterMode";
 
 /**
  * Recorded tracks for a tour route section (Phase 3b, task 4) — split out
@@ -107,6 +109,8 @@ export interface TrackMetaRow {
   startedAt: Date;
   endedAt: Date;
   pointCount: number;
+  /** See `TripRouteTrack.jitterDropped` in schema.prisma (forgejo#319). */
+  jitterDropped: number | null;
   distanceKm: number;
   /** See `TripRouteTrack.truncated`'s doc comment in schema.prisma. Always
    *  `false` for `source: "gpx"`. */
@@ -141,6 +145,7 @@ const TRACK_META_SELECT = {
   startedAt: true,
   endedAt: true,
   pointCount: true,
+  jitterDropped: true,
   distanceKm: true,
   truncated: true,
   ascentM: true,
@@ -159,6 +164,7 @@ function toTrackMetaDto(track: TrackMetaRow): Record<string, unknown> {
     startedAt: track.startedAt,
     endedAt: track.endedAt,
     pointCount: track.pointCount,
+    jitterDropped: track.jitterDropped,
     distanceKm: track.distanceKm,
     truncated: track.truncated,
     ascentM: track.ascentM,
@@ -252,7 +258,9 @@ router.post(
         );
       }
 
-      const ingested = ingestTrack(file.track);
+      // Jitter out before anything is measured (forgejo#319).
+      const mode = await jitterModeOfRoute(routeId);
+      const ingested = ingestTrack(filterParsedTrack(file.track, mode));
       if (!ingested) {
         throw new AppError(
           "This recording has no timestamps, so it cannot be placed in time",
@@ -395,14 +403,16 @@ router.post(
       }
 
       const client = createDawarichClient(connection);
+      const mode = await jitterModeOfRoute(routeId);
 
       let ingested;
       let truncated: boolean;
       try {
-        ({ ingested, truncated } = await pullDawarichWindow(client, {
-          startAt: window.startAt,
-          endAt: window.endAt,
-        }));
+        ({ ingested, truncated } = await pullDawarichWindow(
+          client,
+          { startAt: window.startAt, endAt: window.endAt },
+          (parsed) => filterParsedTrack(parsed, mode)
+        ));
       } catch (error) {
         if (error instanceof DawarichError) {
           res.status(409).json({ error: error.kind, message: error.message });

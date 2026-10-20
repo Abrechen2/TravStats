@@ -52,8 +52,14 @@ export interface IngestedTrack {
    * A step ACROSS a segment boundary adds nothing: the gap was not travelled.
    */
   cumulativeKm: number[];
-  /** Point count of the RAW track (before simplification). */
+  /** Point count of the RAW track (before the jitter filter and simplification). */
   pointCount: number;
+  /**
+   * Fixes the jitter filter removed (`services/tracks/recordingJitter.ts`),
+   * or `null` when the track was not checked — no times to tell standing from
+   * moving, or a writer that does not filter. Never a guessed 0.
+   */
+  jitterDropped: number | null;
   /** Distance in kilometres, measured on the RAW track (before simplification). */
   distanceKm: number;
   startedAt: Date;
@@ -126,7 +132,7 @@ export function ingestTrack(
   // Measure on the raw points BEFORE simplification — see module docstring —
   // and per segment, so the un-recorded gap between two of them is not counted
   // as distance travelled.
-  const pointCount = parsed.points.length;
+  const pointCount = parsed.rawPointCount ?? parsed.points.length;
   const rawCumulative = cumulativeRawKm(parsed.points, bounds);
   const distanceKm = rawCumulative[rawCumulative.length - 1] ?? 0;
 
@@ -137,7 +143,9 @@ export function ingestTrack(
   const segmentStarts: number[] = [];
   const cumulativeKm: number[] = [];
   const rawElevations =
-    parsed.elevations && parsed.elevations.length === pointCount ? parsed.elevations : null;
+    parsed.elevations && parsed.elevations.length === parsed.points.length
+      ? parsed.elevations
+      : null;
   const perSegmentCap = Math.max(2, Math.floor(maxPoints / bounds.length));
 
   for (const [start, end] of bounds) {
@@ -160,6 +168,7 @@ export function ingestTrack(
     segmentStarts,
     cumulativeKm,
     pointCount,
+    jitterDropped: parsed.jitterDropped ?? null,
     distanceKm,
     startedAt: parsed.startedAt,
     endedAt: parsed.endedAt,

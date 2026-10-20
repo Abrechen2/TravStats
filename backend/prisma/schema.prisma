@@ -2285,6 +2285,12 @@ model TripRouteTrack {
   /// those fall back to measuring the simplified line, as they always did.
   cumulativeKm  Json?    @map("cumulative_km")
   pointCount    Int      @map("point_count")
+  /// Fixes the jitter filter removed before this line was drawn and measured
+  /// (forgejo#319: a still phone's cloud of positions at a gate, a teleport
+  /// spike, a stale repeated fix). NULL = not checked — written before the
+  /// filter existed, or a recording without times, where standing and moving
+  /// cannot be told apart. Never a guessed 0.
+  jitterDropped Int?     @map("jitter_dropped")
   distanceKm    Float    @map("distance_km")
   /// True when a Dawarich pull hit `MAX_PAGES` (dawarichClient.ts) and the
   /// stored points are therefore a PARTIAL window, not the full requested
@@ -2633,6 +2639,12 @@ model CruiseTrack {
   /// segment boundary adds nothing (see `ingestTrack`).
   cumulativeKm  Json     @map("cumulative_km")
   pointCount    Int      @map("point_count")
+  /// Fixes the jitter filter removed before this line was drawn and measured
+  /// (forgejo#319: a still phone's cloud of positions at a gate, a teleport
+  /// spike, a stale repeated fix). NULL = not checked — written before the
+  /// filter existed, or a recording without times, where standing and moving
+  /// cannot be told apart. Never a guessed 0.
+  jitterDropped Int?     @map("jitter_dropped")
   distanceKm    Float    @map("distance_km")
   /// A Dawarich pull that hit its page cap — see `TripRouteTrack.truncated`.
   truncated     Boolean  @default(false)
@@ -2684,6 +2696,12 @@ model FlightTrack {
   /// `[km, metres]` altitude profile from the raw points; null without altitudes.
   elevations    Json?
   pointCount    Int      @map("point_count")
+  /// Fixes the jitter filter removed before this line was drawn and measured
+  /// (forgejo#319: a still phone's cloud of positions at a gate, a teleport
+  /// spike, a stale repeated fix). NULL = not checked — written before the
+  /// filter existed, or a recording without times, where standing and moving
+  /// cannot be told apart. Never a guessed 0.
+  jitterDropped Int?     @map("jitter_dropped")
   distanceKm    Float    @map("distance_km")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")

@@ -44,6 +44,20 @@ export interface ParsedTrack {
   elevations?: Array<number | null>;
   /** Epoch milliseconds per point, aligned with `points`; `null` where absent. */
   times?: Array<number | null>;
+  /**
+   * The phone's reported horizontal accuracy in metres per point, aligned
+   * with `points`; `null` where absent. Only a phone source carries it (a
+   * Dawarich pull, the flight recorder); the jitter filter reads it.
+   */
+  accuracies?: Array<number | null>;
+  /**
+   * Set by the jitter filter (`services/tracks/recordingJitter.ts`): how many
+   * fixes of the recording it removed, or `null` when it could not check
+   * (no times). Absent on a track that never went through it.
+   */
+  jitterDropped?: number | null;
+  /** Set by the jitter filter: how many fixes the recording had before it. */
+  rawPointCount?: number;
 }
 
 const parser = new XMLParser({
