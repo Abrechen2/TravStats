@@ -39,6 +39,7 @@ import * as conflictsModule from "../conflicts";
 import * as propagateModule from "../../propagate";
 import * as undoModule from "../../undo";
 import * as noticesModule from "../../notices";
+import * as adaptersModule from "../../adapters";
 import * as securityModule from "../../../federation/security";
 import * as transportModule from "../transport";
 import { resetIdentityCache } from "../../../federation/identity";
@@ -64,6 +65,7 @@ export interface Server {
   propagate: typeof propagateModule;
   undo: typeof undoModule;
   notices: typeof noticesModule;
+  adapters: typeof adaptersModule;
   security: typeof securityModule;
   transport: typeof transportModule;
   resetIdentity: () => void;
@@ -94,6 +96,7 @@ const serverA = (): Server => ({
   propagate: propagateModule,
   undo: undoModule,
   notices: noticesModule,
+  adapters: adaptersModule,
   security: securityModule,
   transport: transportModule,
   resetIdentity: resetIdentityCache,
@@ -126,6 +129,7 @@ function serverB(databaseUrl: string): Server {
         propagate: require("../../propagate"),
         undo: require("../../undo"),
         notices: require("../../notices"),
+        adapters: require("../../adapters"),
         security: require("../../../federation/security"),
         transport: require("../transport"),
         resetIdentity: require("../../../federation/identity").resetIdentityCache,

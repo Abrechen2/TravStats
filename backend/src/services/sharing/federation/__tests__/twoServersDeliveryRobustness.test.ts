@@ -4,6 +4,8 @@
  * its write, catalogue references neither server can resolve, and a message too large on the
  * wire though small in characters. Each over real TLS between the harness's two servers.
  */
+import { Client } from "pg";
+import { peerDatabaseUrl } from "./peerDatabase";
 import { servers, user as harnessUser, useTwoServers, B, type Server } from "./twoServerHarness";
 
 useTwoServers();
@@ -102,5 +104,36 @@ describe("an acknowledged message whose row survived (review 1)", () => {
     expect(await a.prisma.tripShareOutbox.count({ where: { groupId } })).toBe(0);
     const notices = await a.notices.listNotices(anna);
     expect(notices.filter((n) => n.kind === "conflict")).toHaveLength(1);
+  });
+});
+
+describe("a local edit between the receiver's check and its write (review 2)", () => {
+  it("is not overwritten: the check and the write hold the row", async () => {
+    const { anna, ben, flight, benFlight } = await sharedFlight();
+    await editFlight(a, anna, flight.id, { gate: "B2" });
+    const adapter = b.adapters.ADAPTERS.flight;
+    const apply = adapter.apply.bind(adapter);
+    // A connection of its own: B's pool would otherwise queue the edit behind the transaction.
+    const url = new URL(peerDatabaseUrl());
+    url.search = "";
+    const ownConnection = new Client({ connectionString: url.toString() });
+    await ownConnection.connect();
+    let local: Promise<unknown> = Promise.resolve();
+    // Ben saves gate C3 at the moment the incoming change has been checked against A1.
+    const spy = jest.spyOn(adapter, "apply").mockImplementationOnce(async (...args) => {
+      local = ownConnection.query("UPDATE flights SET gate = 'C3' WHERE id = $1", [benFlight.id]);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      return apply(...args);
+    });
+    try {
+      await a.outbox.runDeliveries();
+      await local;
+    } finally {
+      await ownConnection.end();
+    }
+    expect(spy).toHaveBeenCalled();
+    // Ben's own save is the last word on his copy; it was not silently replaced by B2.
+    expect((await flightOn(b, benFlight.id)).gate).toBe("C3");
+    void ben;
   });
 });

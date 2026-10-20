@@ -21,6 +21,7 @@
  */
 import type { DbTransaction } from "../../../db";
 import { ADAPTERS, type ShareEntity } from "../adapters";
+import { SHARE_TYPES } from "../shareTypes";
 import { copyInto, joinedMeta } from "../copyInto";
 import { DERIVE } from "../deriveCopy";
 import { jsonSubset, sameFact } from "../factValues";
@@ -178,7 +179,16 @@ async function applyFactUpdate(
   const { entity, shareKey } = message;
   const adapter = ADAPTERS[entity];
   // Their copy is gone (deleted, or moved out): nothing to write, nobody to tell.
-  const copy = await ownCopy(tx, s, entity, shareKey);
+  const found = await ownCopy(tx, s, entity, shareKey);
+  if (!found) return [];
+  // The row is held from the check to the write: a local save committed in between would
+  // otherwise be overwritten without a conflict (F-S4d review). Read again under the lock, so
+  // a save that committed before it is what `before` is compared with.
+  await tx.$queryRawUnsafe(
+    `SELECT 1 FROM "${SHARE_TYPES[entity].table}" WHERE id = $1 FOR UPDATE`,
+    found.id
+  );
+  const [copy] = await adapter.load(tx, [found.id]);
   if (!copy) return [];
   const [before, after] = await Promise.all([
     sideOf(tx, message, "before"),
