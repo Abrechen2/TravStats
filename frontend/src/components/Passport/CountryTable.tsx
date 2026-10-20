@@ -45,9 +45,11 @@ const VIEW_LABEL: Record<CountryView, string> = {
 export default function CountryTable({
   countries,
   locale,
+  onCorrect,
 }: {
   countries: PassportCountry[];
   locale: string;
+  onCorrect?: (row: PassportCountry) => void;
 }): JSX.Element {
   const { t } = useTranslation(["passport"]);
   const [view, setView] = useState<CountryView>("ground");
@@ -110,7 +112,12 @@ export default function CountryTable({
           </thead>
           <tbody>
             {visible.map((row) => (
-              <CountryRow key={row.code} row={row} countryLabel={countryName(row.code, locale)} />
+              <CountryRow
+                key={row.code}
+                row={row}
+                countryLabel={countryName(row.code, locale)}
+                onCorrect={onCorrect}
+              />
             ))}
           </tbody>
         </table>

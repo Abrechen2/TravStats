@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 import { countryDetailSchema } from "../../../schemas/statsCountryDetail";
+import { excludedCountrySchema } from "../../../schemas/countryOverride";
 import {
   continentSchema,
   countryTierSchema,
@@ -261,6 +262,9 @@ const passportResponse = registry.register(
         .describe(
           "Location observations; never included in country counts, visit years or presence days"
         ),
+      excludedCountries: z
+        .array(excludedCountrySchema)
+        .describe("Countries the user excluded (forgejo#308): out of every set and total"),
       continents: z.array(
         z.object({ continent: continentSchema, visited: z.number(), total: z.number() })
       ),

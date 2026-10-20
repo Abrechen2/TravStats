@@ -40,6 +40,8 @@ import { loadRailEnds } from "./railEvidenceLoader";
 import { loadBusEnds } from "./busEvidence";
 import { loadFerryEnds } from "./ferryEvidence";
 import { loadVisibleDomains } from "../domainVisibility";
+import { applyCountryOverrides } from "./countryOverrides";
+import { listCountryOverrides } from "./countryOverrideStore";
 
 /**
  * The airport codes a passport-shaped flight row touches, deduplicated.
@@ -262,7 +264,7 @@ export async function loadPassport(
    * "Deutschland" and "Germany" are one country and only the code knows that.
    */
   // prettier-ignore
-  const [airportCountries, portCalls, placeVisits, lodgings, homeIatas, countryDays, threshold, roadtripStations, railEnds, busEnds, homeCountries, ferryEnds] = await Promise.all([
+  const [airportCountries, portCalls, placeVisits, lodgings, homeIatas, countryDays, threshold, roadtripStations, railEnds, busEnds, homeCountries, ferryEnds, overrides] = await Promise.all([
     loadAirportCountries(passportAirportCodes(flights)),
     prisma.cruiseStop.findMany({
       where: {
@@ -360,9 +362,12 @@ export async function loadPassport(
     readBus ? loadBusEnds(userId) : [],
     loadHomeCountries(userId, now.toISOString().slice(0, 10)),
     readFerry ? loadFerryEnds(userId) : [],
+    // The user's own verdicts (forgejo#308), applied below to the finished
+    // fold — here, so no consumer of the passport can read it without them.
+    listCountryOverrides(userId),
   ]);
 
-  return buildPassport(
+  const automatic = buildPassport(
     passportFlights,
     airportCountries,
     homeIatas,
@@ -419,5 +424,10 @@ export async function loadPassport(
     busEnds,
     homeCountries,
     ferryEnds
+  );
+  return applyCountryOverrides(
+    automatic,
+    overrides,
+    Number(localDay(now, profile.zone).slice(0, 4))
   );
 }

@@ -50,9 +50,12 @@ const period = (from: number | null, to: number | null): string | null => {
 export default function CountryRow({
   row,
   countryLabel,
+  onCorrect,
 }: {
   row: PassportCountry;
   countryLabel: string;
+  /** Open the correction dialog for this country (forgejo#308). */
+  onCorrect?: (row: PassportCountry) => void;
 }): JSX.Element {
   const { t } = useTranslation(["passport"]);
   const [open, setOpen] = useState(false);
@@ -93,6 +96,22 @@ export default function CountryRow({
         <td className="px-3 py-2.5" data-wide>
           <div className="flex flex-wrap items-center gap-1.5">
             <TierBadge tier={row.tier} />
+            {/* The user's own word, said in words — not a colour (forgejo#308).
+                A row no record shows is "Von Hand"; a row the records show and
+                the user corrected is "Korrigiert". */}
+            {row.override && (
+              <span
+                className="text-[10px] uppercase tracking-wide rounded border px-1.5 py-0.5"
+                style={{ borderColor: "var(--border)" }}
+                data-testid="override-label"
+              >
+                {t(
+                  row.evidence === "manual"
+                    ? "passport:overrides.labelManual"
+                    : "passport:overrides.labelCorrected"
+                )}
+              </span>
+            )}
             {row.visitUncertain && (
               <Toggletip
                 content={t("passport:countries.unclearResolve")}
@@ -143,6 +162,16 @@ export default function CountryRow({
             >
               {t(open ? "passport:countries.hideRecords" : "passport:countries.showRecords")}
             </button>
+            {onCorrect && (
+              <button
+                type="button"
+                onClick={(): void => onCorrect(row)}
+                className="text-xs font-semibold underline print:hidden"
+                style={{ color: "var(--accent)", minHeight: 32, padding: "6px 0" }}
+              >
+                {t("passport:overrides.correct")}
+              </button>
+            )}
           </div>
         </td>
 
@@ -226,7 +255,7 @@ export default function CountryRow({
       {open && (
         <tr className="border-t" style={{ borderColor: "var(--border)" }}>
           <td colSpan={7} className="px-6 py-3" style={{ background: "var(--bg-base)" }} data-wide>
-            <CountryProvenance code={row.code} />
+            <CountryProvenance code={row.code} override={row.override ?? null} />
           </td>
         </tr>
       )}

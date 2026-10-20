@@ -4,6 +4,7 @@
  */
 import { z } from "./zod";
 import { DOMAIN_KEYS } from "../shared/domains";
+import { countryOverrideViewSchema } from "./countryOverride";
 
 export const continentSchema = z.enum([
   "Africa",
@@ -24,6 +25,7 @@ export const evidenceKindSchema = z.enum([
   "ferry",
   "roadtrip",
   "track",
+  "manual",
 ]);
 export const countryTierSchema = z.enum(["slept", "visited", "transited", "connection"]);
 
@@ -93,4 +95,7 @@ export const passportCountrySchema = z.object({
     })
     .nullable()
     .describe("The lodging stamp. Null when no house proves this country"),
+  override: countryOverrideViewSchema
+    .nullable()
+    .describe("The user's verdict on this country (forgejo#308); null when there is none"),
 });

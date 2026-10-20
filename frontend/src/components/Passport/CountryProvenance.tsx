@@ -5,7 +5,11 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { statsApi } from "../../lib/api";
 import { classifyLoadFailure, type LoadFailure } from "../../lib/api/loadFailure";
 import { logger } from "../../lib/logger";
-import type { CountryDetail, CountryTimelineEntry } from "../../types/passport";
+import type {
+  CountryDetail,
+  CountryOverrideView,
+  CountryTimelineEntry,
+} from "../../types/passport";
 import { formatDate } from "../../lib/displayFormat";
 
 /**
@@ -117,7 +121,18 @@ const labelFor = (
   }
 };
 
-export default function CountryProvenance({ code }: { code: string }): JSX.Element {
+export default function CountryProvenance({
+  code,
+  override = null,
+}: {
+  code: string;
+  /**
+   * The user's verdict on this country (forgejo#308), from the passport row.
+   * Shown first and in words, so the origin of the count stays traceable when
+   * it is the user's word rather than a record.
+   */
+  override?: CountryOverrideView | null;
+}): JSX.Element {
   const { t, i18n } = useTranslation(["passport", "common"]);
   const locale = i18n.language === "de" ? "de-DE" : "en-GB";
 
@@ -167,6 +182,18 @@ export default function CountryProvenance({ code }: { code: string }): JSX.Eleme
       <p className="mb-2" style={{ color: "var(--text-muted)" }}>
         {t("passport:provenance.intro")}
       </p>
+
+      {override && (
+        <p className="mb-2" data-testid="provenance-override">
+          <span className="font-semibold">
+            {t(`passport:overrides.verdict.${override.verdict}`)}
+          </span>
+          {" · "}
+          {t("passport:overrides.provenanceNote", { note: override.note })}
+          {override.day &&
+            ` · ${t("passport:overrides.provenanceDay", { day: formatDate(override.day) })}`}
+        </p>
+      )}
 
       {!loading && detail?.visited !== undefined && (
         <p className="mb-2">

@@ -1,7 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import AppShell from "../components/ui/AppShell";
 
 import UnconfirmedCountries from "../components/Passport/UnconfirmedCountries";
+import ExcludedCountries from "../components/Passport/ExcludedCountries";
+import CountryOverrideDialog, {
+  type CountryOverrideTarget,
+} from "../components/Passport/CountryOverrideDialog";
 import CountryTable from "../components/Passport/CountryTable";
 import EvidenceSummary from "../components/Passport/EvidenceSummary";
 import { countryName } from "../components/Passport/countryName";
@@ -12,7 +16,7 @@ import { useDismissedNotice } from "../hooks/useDismissedNotice";
 import { useAuthStore } from "../store/authStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { logger } from "../lib/logger";
-import type { Passport, PassportContinentGroup } from "../types/passport";
+import type { Passport, PassportContinentGroup, PassportCountry } from "../types/passport";
 
 /**
  * The passport.
@@ -56,6 +60,22 @@ export default function PassportPage(): JSX.Element {
   const [passport, setPassport] = useState<Passport | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<LoadFailure | null>(null);
+  // The correction dialog (forgejo#308): closed, adding (null target) or correcting.
+  const [dialog, setDialog] = useState<{ target: CountryOverrideTarget | null } | null>(null);
+
+  /**
+   * Reload after an override write. It THROWS on failure rather than setting
+   * the page's own failure state: the write did happen, so the page keeps
+   * what it shows and the dialog says the reload failed.
+   */
+  const reloadPassport = useCallback(async (): Promise<void> => {
+    setPassport(await statsApi.getPassport());
+  }, []);
+  const correct = useCallback(
+    (row: PassportCountry) =>
+      setDialog({ target: { code: row.code, override: row.override ?? null } }),
+    []
+  );
 
   // The page left the beta gate on 2026-09-05 (its own condition, "or 2.7.0
   // opens", had come true). The one remaining precondition is the flights
@@ -122,16 +142,28 @@ export default function PassportPage(): JSX.Element {
         {/* T3 (2026-09-17 tester feedback): the "Zurück zu Statistiken" link
             duplicated the header's own navigation and led nowhere else in the
             app — removed rather than kept as a second way back. */}
-        {passport && passport.summary.countriesTotal > 0 && (
-          <div className="flex justify-end mb-4 print:hidden">
+        {passport && (
+          <div className="flex flex-wrap justify-end gap-2 mb-4 print:hidden">
+            {/* forgejo#308: offered on an empty passport too — a visit no
+                record shows is exactly what a manual entry is for. */}
             <button
               type="button"
-              onClick={(): void => window.print()}
+              onClick={(): void => setDialog({ target: null })}
               className="text-sm px-3 py-1.5 rounded-lg border"
               style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
             >
-              {t("passport:print")}
+              {t("passport:overrides.add")}
             </button>
+            {passport.summary.countriesTotal > 0 && (
+              <button
+                type="button"
+                onClick={(): void => window.print()}
+                className="text-sm px-3 py-1.5 rounded-lg border"
+                style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
+              >
+                {t("passport:print")}
+              </button>
+            )}
           </div>
         )}
 
@@ -403,9 +435,18 @@ export default function PassportPage(): JSX.Element {
                   {/* ── the full table, which is what a desktop adds ──────
                       Every country with any evidence, including the ones the
                       headline does not count: those are greyed, never dropped. */}
-                  <CountryTable countries={passport.countries} locale={locale} />
+                  <CountryTable
+                    countries={passport.countries}
+                    locale={locale}
+                    onCorrect={correct}
+                  />
                 </>
               )}
+              <ExcludedCountries
+                countries={passport.excludedCountries ?? []}
+                locale={locale}
+                onChanged={reloadPassport}
+              />
               <UnconfirmedCountries
                 countries={passport.unconfirmedCountries ?? []}
                 locale={locale}
@@ -414,6 +455,13 @@ export default function PassportPage(): JSX.Element {
           </>
         )}
       </div>
+      <CountryOverrideDialog
+        open={dialog !== null}
+        target={dialog?.target ?? null}
+        locale={locale}
+        onClose={(): void => setDialog(null)}
+        onChanged={reloadPassport}
+      />
     </AppShell>
   );
 }

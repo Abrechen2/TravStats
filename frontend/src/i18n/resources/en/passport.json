@@ -41,7 +41,8 @@
     "track": "Location history",
     "rail": "Train",
     "bus": "Bus",
-    "ferry": "Ferry"
+    "ferry": "Ferry",
+    "manual": "Manual"
   },
   "value": {
     "dash": "—",
@@ -114,5 +115,48 @@
     "explanation": "These Dawarich locations do not prove ground presence. They may come from overflights or inaccurate positions and do not add to country counts or days present. Confirmed place visits and travel records are counted independently.",
     "observation": "Dawarich · Location days: {{days}} · Points: {{points}}"
   },
-  "countingRule": "Ground presence includes connections and transit. Visits require a recorded stay beyond transit locations or an identifiable return flight chain. Nights and location points alone do not prove a visit."
+  "countingRule": "Ground presence includes connections and transit. Visits require a recorded stay beyond transit locations or an identifiable return flight chain. Nights and location points alone do not prove a visit.",
+  "overrides": {
+    "add": "Add a country manually",
+    "addTitle": "Add a country manually",
+    "editTitle": "Correct country",
+    "correct": "Correct",
+    "country": "Country",
+    "countryPlaceholder": "Choose a country …",
+    "verdictLegend": "How should this country count?",
+    "verdict": {
+      "visited": "Visited",
+      "visitedHint": "Counts as a visited country — even without a record in your entries.",
+      "ground": "Ground only",
+      "groundHint": "Ground presence, but not a visit — a change of trains or a drive through, say.",
+      "excluded": "Do not count",
+      "excludedHint": "The country leaves every figure. You can undo this at any time."
+    },
+    "note": "Note",
+    "noteHint": "Why? The note is shown with the country's records.",
+    "noteRequired": "Please add a short note saying why.",
+    "countryRequired": "Please choose a country.",
+    "day": "Day (optional)",
+    "dayHint": "A day you remember. Leave it empty if you do not know it.",
+    "save": "Save",
+    "saving": "Saving …",
+    "delete": "Delete correction",
+    "deleting": "Deleting …",
+    "cancel": "Cancel",
+    "labelManual": "Manual",
+    "labelCorrected": "Corrected",
+    "provenanceNote": "Your note: {{note}}",
+    "provenanceDay": "Day: {{day}}",
+    "loadError": "The country list for corrections could not be loaded. Please try again later.",
+    "saveError": "The correction could not be saved. Please try again.",
+    "deleteError": "The correction could not be deleted. Please try again.",
+    "unknownCountry": "The server does not know this country. Please choose another one.",
+    "notFound": "There is no correction for this country any more — the view is reloading.",
+    "demoForbidden": "The demo account cannot save corrections.",
+    "reloadError": "Saved, but the passport could not be reloaded. Reload the page to see the new figures.",
+    "excludedTitle": "Countries not counted",
+    "excludedExplanation": "You took these countries out of the passport. They are missing from every figure until you count them again.",
+    "restore": "Count again",
+    "restoreError": "The country could not be counted again. Please try again."
+  }
 }

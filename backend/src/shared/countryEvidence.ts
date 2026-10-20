@@ -250,9 +250,23 @@ export function parseCountryTier(value: unknown): CountryTier | null {
  * change station is `transited` (ground, never `connection`, which stays the
  * airside change of planes), an open chain is unclear. `ferry` is a port end
  * of a completed crossing, graded the same way (owner ruling 2026-10-16 #3).
+ *
+ * `manual` is the user's own word (forgejo#308): a passport override that says
+ * the country was visited or only touched. It never enters the fold — it is
+ * applied after it (`services/stats/countryOverrides.ts`) — and it ranks below
+ * every record, so a country with real evidence keeps its real label.
  */
 export type EvidenceKind =
-  "flight" | "lodging" | "port" | "place" | "rail" | "bus" | "ferry" | "roadtrip" | "track";
+  | "flight"
+  | "lodging"
+  | "port"
+  | "place"
+  | "rail"
+  | "bus"
+  | "ferry"
+  | "roadtrip"
+  | "track"
+  | "manual";
 
 /**
  * How long the traveller was on the ground in a country — spec §3.4b.

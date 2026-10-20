@@ -15,7 +15,7 @@ import {
   isoCountryCode,
   type Continent,
 } from "../../utils/continents";
-import { CONTINENT_GROUPS, continentTotals } from "../../shared/passportContinents";
+import { CONTINENT_GROUPS } from "../../shared/passportContinents";
 import {
   DEFAULT_COUNTRY_TIER,
   countCountries,
@@ -46,6 +46,8 @@ import type { BusEnd } from "./busEvidence";
 import type { FerryEnd } from "./ferryEvidence";
 import { countEvidencePerCountry } from "./evidenceCountry";
 import { lodgingStampsPerCountry, type LodgingStamp, type StampLodging } from "./lodgingStamp";
+import { compareCountryRows, summarizePassport } from "./passportSummary";
+import type { CountryOverrideView, ExcludedCountry } from "./countryOverrides";
 
 /**
  * Re-exported so every caller and every test keeps importing the passport's
@@ -141,6 +143,9 @@ const EVIDENCE_RANK: Record<PassportEvidence, number> = {
   // can open, which a country-day is not.
   roadtrip: 2,
   track: 1,
+  // The user's own word (forgejo#308): the bottom rung, so a row that has any
+  // record keeps that record's label and only a manual-only row wears it.
+  manual: 0,
 };
 
 /** The strongest kind among several. `kinds` is never empty by construction. */
@@ -243,6 +248,8 @@ export interface PassportCountry {
    * `lodging` either. See `./lodgingStamp.ts` for what a zero means.
    */
   lodging: LodgingStamp | null;
+  /** The user's verdict on this country (forgejo#308); null when there is none. */
+  override: CountryOverrideView | null;
 }
 
 export interface PassportStamp {
@@ -305,6 +312,8 @@ export interface Passport {
   countries: PassportCountry[];
   /** Raw location history, excluded from all country and presence figures. */
   unconfirmedCountries: UnconfirmedTrackCountry[];
+  /** Countries the user excluded (forgejo#308): out of every set and total, listed to be undone. */
+  excludedCountries: ExcludedCountry[];
   continents: Array<{ continent: Continent; visited: number; total: number }>;
   /**
    * How the rows are drawn. Presentation only: summary.continentsVisited counts
@@ -721,15 +730,9 @@ export function buildPassport(
       portCalls: evidenceCounts.get(code)?.portCalls ?? 0,
       places: evidenceCounts.get(code)?.places ?? 0,
       lodging: lodgingStamps.get(code) ?? null,
+      override: null,
     }))
-    .sort((a, b) => b.entries - a.entries || a.code.localeCompare(b.code));
-
-  const totals = continentTotals();
-  const visitedPerContinent = new Map<Continent, number>();
-  for (const row of countries) {
-    if (!row.continent || !row.counted) continue;
-    visitedPerContinent.set(row.continent, (visitedPerContinent.get(row.continent) ?? 0) + 1);
-  }
+    .sort(compareCountryRows);
 
   const stamps: PassportStamp[] = [...firstSeen.entries()]
     .map(([iata, seen]) => ({ iata, country: seen.country, date: seen.date }))
@@ -739,56 +742,16 @@ export function buildPassport(
         a.iata.localeCompare(b.iata)
     );
 
-  const firstYears = countries.map((c) => c.firstYear).filter((y): y is number => y !== null);
-
+  // Flights and airports are untouched by the evidence rules: a house proves a
+  // country, it does not add an airport or an entry. `firstSeen` holds one
+  // stamp per airport, so the stamps ARE the airport count.
+  const { summary, continents } = summarizePassport(countries, stamps.length);
   return {
-    summary: {
-      // Counted from the ROWS, not from the folded list beside them, so the
-      // number and the list it belongs to can never answer differently.
-      countries: countries.filter((c) => c.counted).length,
-      groundCountries: countries.length,
-      visitedCountries: countries.filter((c) => c.counted).length,
-      unclearCountries: countries.filter((c) => c.visitUncertain).length,
-      countriesTotal: countries.length,
-      legacyCountries: countries.filter((c) => c.airports.length > 0).length,
-      // The RESOLVED value, so a client never has to guess which rule produced
-      // the number it is showing.
-      countryThreshold: "visited",
-      // Flights and airports, untouched by any of the above: a house proves a
-      // country, it does not add an airport or an entry.
-      airports: firstSeen.size,
-      entries: countries.reduce((sum, c) => sum + c.entries, 0),
-      continentsVisited: visitedPerContinent.size,
-      continentsTotal: Object.keys(totals).length,
-      firstStampYear: firstYears.length > 0 ? Math.min(...firstYears) : null,
-      newThisYear: countries.filter((c) => c.isNew).length,
-      byEvidence: {
-        flight: countries.filter((c) => c.evidence === "flight").length,
-        port: countries.filter((c) => c.evidence === "port").length,
-        place: countries.filter((c) => c.evidence === "place").length,
-        lodging: countries.filter((c) => c.evidence === "lodging").length,
-        rail: countries.filter((c) => c.evidence === "rail").length,
-        bus: countries.filter((c) => c.evidence === "bus").length,
-        ferry: countries.filter((c) => c.evidence === "ferry").length,
-        roadtrip: countries.filter((c) => c.evidence === "roadtrip").length,
-        track: countries.filter((c) => c.evidence === "track").length,
-      },
-      byTier: {
-        slept: countries.filter((c) => c.tier === "slept").length,
-        visited: countries.filter((c) => c.tier === "visited").length,
-        transited: countries.filter((c) => c.tier === "transited").length,
-        connection: countries.filter((c) => c.tier === "connection").length,
-      },
-    },
+    summary,
     countries,
     unconfirmedCountries: unconfirmedTrackCountries(trackDays, now),
-    continents: (Object.keys(totals) as Continent[])
-      .map((continent) => ({
-        continent,
-        visited: visitedPerContinent.get(continent) ?? 0,
-        total: totals[continent],
-      }))
-      .sort((a, b) => b.visited - a.visited || a.continent.localeCompare(b.continent)),
+    excludedCountries: [],
+    continents,
     groups: CONTINENT_GROUPS,
     stamps,
   };

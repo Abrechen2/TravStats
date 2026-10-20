@@ -635,6 +635,19 @@ export function isoCountryCode(country: string | null | undefined): string | nul
 }
 
 /**
+ * Is this an ISO alpha-2 code of a country this catalogue knows? The upper-case
+ * code only — a name or a placeholder (`ZZ`, `XZ`) is not one.
+ */
+export function isKnownCountryCode(code: string): boolean {
+  return code in BY_ISO || code in TRANSCONTINENTAL;
+}
+
+/** Every country code `isKnownCountryCode` accepts, sorted. */
+export function knownCountryCodes(): string[] {
+  return [...new Set([...Object.keys(BY_ISO), ...Object.keys(TRANSCONTINENTAL)])].sort();
+}
+
+/**
  * Resolve an ISO alpha-2 code or an English country name to a continent.
  *
  * Returns null for a transcontinental country (the caller must use the coordinates) and
