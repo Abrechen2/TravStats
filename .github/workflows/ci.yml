@@ -437,11 +437,15 @@ jobs:
   # not from the shards' percentages. Each shard reports every source file
   # (`collectCoverageFrom`), so on its own each would read far too low.
   #
-  # 2026-10-16: four shards had grown to 18-21 minutes each. Now more shards,
-  # and four Jest workers per shard (the runner has four cores). Parallel
-  # workers are safe because jest.globalSetup.ts gives every worker its own
-  # copy of the migrated, seeded database (CREATE DATABASE ... TEMPLATE, see
-  # jest.workerDatabase.ts) — the isolation a serial run had, per worker.
+  # 2026-10-16: four shards had grown to 18-21 minutes each. Now more shards.
+  # Four Jest workers per shard were tried as well: jest.globalSetup.ts gives
+  # every worker its own copy of the migrated, seeded database (CREATE DATABASE
+  # ... TEMPLATE, see jest.workerDatabase.ts), so the isolation holds. But the
+  # first run on main (2026-10-20, 38baa787e and 5aacc4ca4) put three of six
+  # shards red with 20+ "Exceeded timeout of 5000 ms" on the FIRST test of a
+  # file — four workers compiling and booting the app at once on the runner's
+  # cores. Back to one worker per shard, which was green, until a parallel run
+  # is measured green (and with a timeout chosen for it, not the default).
   backend-tests:
     name: Backend tests (Jest ${{ matrix.shard }}/${{ strategy.job-total }})
     runs-on: ubuntu-latest
@@ -515,7 +519,7 @@ jobs:
         id: jest
         run: >-
           cd backend && npx jest --ci --forceExit
-          --shard=${{ matrix.shard }}/${{ strategy.job-total }} --maxWorkers=4
+          --shard=${{ matrix.shard }}/${{ strategy.job-total }} --maxWorkers=1
           --coverage --coverageReporters=json
           --setupFilesAfterEnv ./jest.afterEnv.ts ./jest.netprobe.ts
 
@@ -651,7 +655,7 @@ jobs:
         run: |
           cd backend
           code=0
-          npx jest --ci --forceExit --shard=${{ matrix.shard }}/4 --maxWorkers=4 --json --outputFile=tz-report.json || code=$?
+          npx jest --ci --forceExit --shard=${{ matrix.shard }}/4 --maxWorkers=1 --json --outputFile=tz-report.json || code=$?
           echo "jest exited ${code}; the odd-zone ratchet below is the verdict"
 
       - name: Odd-zone ratchet
