@@ -155,6 +155,7 @@ model User {
   passwordResetRequest PasswordResetRequest?
   calendarFeed         CalendarFeed?
   countryOverrides     CountryOverride[]
+  tripRecordingBatches TripRecordingBatch[]
 
   @@map("users")
 }
@@ -910,6 +911,10 @@ model UserSettings {
   /// An LLM classifies a stay's place (forgejo#305). Off by default; a cloud
   /// provider additionally needs the instance's own consent for that slot.
   staySuggestionsLlmPlaceClassification Boolean @default(false) @map("stay_suggestions_llm_place_classification")
+  /// Whether the server stores the positions the Companion records during a
+  /// trip (forgejo#316). Off: an upload is refused with 409
+  /// TRIP_RECORDING_DISABLED and nothing is stored; what is stored stays.
+  tripRecordingEnabled                  Boolean @default(true) @map("trip_recording_enabled")
 
   // Auto-update settings
   autoUpdateEnabled           Boolean   @default(false) @map("auto_update_enabled")
@@ -1847,6 +1852,7 @@ model Trip {
   photoJourneys    PhotoJourney[]
   dawarichStays    DawarichStay[]
   publicShareLinks PublicShareLink[]
+  recordingBatches TripRecordingBatch[]
 
   documents Document[]
   travelPlan TravelPlan?
@@ -2679,6 +2685,40 @@ model FlightTrack {
   flight Flight @relation(fields: [flightId], references: [id], onDelete: Cascade)
 
   @@map("flight_tracks")
+}
+
+/// One upload of the positions the Companion recorded during a trip
+/// (forgejo#316): coarse fixes, every few minutes. Raw points, kept like the
+/// rest of the logbook until the user deletes them. Private to its owner —
+/// never copied into a shared trip, a `.travstats` file, a public link, a
+/// comparison or a federation publication.
+model TripRecordingBatch {
+  id                 String   @id @default(uuid())
+  userId             String   @map("user_id")
+  tripId             String   @map("trip_id")
+  /// The paired device that sent it (`ApiToken.deviceId`); null from a browser.
+  deviceId           String?  @map("device_id")
+  /// The client's id for this upload. A retry sends the same id and is
+  /// answered with this row instead of a second one.
+  uploadId           String   @map("upload_id")
+  startedAt          DateTime @map("started_at")
+  endedAt            DateTime @map("ended_at")
+  /// `[tMs, lat, lon, accuracyM | null]`, sorted by time.
+  points             Json
+  pointCount         Int      @map("point_count")
+  /// Points of the upload that lay outside the trip's days, not stored.
+  skippedOutsideTrip Int      @default(0) @map("skipped_outside_trip")
+  /// Points inside a flight's recorder window, not stored (the flight
+  /// recording has them).
+  skippedInFlight    Int      @default(0) @map("skipped_in_flight")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, uploadId])
+  @@index([tripId, startedAt])
+  @@map("trip_recording_batches")
 }
 
 model CruiseStop {

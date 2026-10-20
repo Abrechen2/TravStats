@@ -27,6 +27,7 @@ import {
   staySuggestionsSettingsSchema,
   suggestionSwitchesUpdate,
   suggestionSwitchesView,
+  tripRecordingSettingsSchema,
   tripSuggestionsSettingsSchema,
   type SuggestionSwitchColumns,
 } from "../../services/settings/suggestionSwitches";
@@ -204,6 +205,8 @@ const settingsSchema = z
     // Inbox suggestion switches (forgejo#306), column-backed like the one above.
     tripSuggestions: tripSuggestionsSettingsSchema.optional(),
     staySuggestions: staySuggestionsSettingsSchema.optional(),
+    // Whether the Companion's trip positions are stored (forgejo#316).
+    tripRecording: tripRecordingSettingsSchema.optional(),
     /**
      * Which evidence tier the country headline counts from, for THIS user
      * (spec §3.2). `.nullable()` because null is a value and not an absence:
@@ -479,11 +482,12 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       autoCreateTrips,
       tripSuggestions,
       staySuggestions,
+      tripRecording,
       countryThreshold,
       homeCountry,
       ...rest
     } = payload;
-    const switches = suggestionSwitchesUpdate(tripSuggestions, staySuggestions);
+    const switches = suggestionSwitchesUpdate(tripSuggestions, staySuggestions, tripRecording);
     const {
       betaFeaturesEnabled,
       openDataEnabled,
