@@ -117,23 +117,30 @@ function dropCoarse(
   indices: readonly number[],
   profile: JitterProfile
 ): number[] {
-  const isBetter = (j: number) => fixes[j].accuracyM !== null && !isCoarse(fixes[j], profile);
-  // Whether the walk from `k` in `step` direction meets a better fix while it
-  // is still close: within the window in time, or (untimed) within a few fixes.
-  const better = (k: number, step: 1 | -1): boolean => {
+  const n = indices.length;
+  const isBetter = (k: number) =>
+    fixes[indices[k]].accuracyM !== null && !isCoarse(fixes[indices[k]], profile);
+  // The nearest better fix on each side, found in one sweep each way: O(n)
+  // whatever the timestamps. Walking outward from every coarse fix instead
+  // cost n² when many fixes share a timestamp (review of forgejo#319).
+  const before = new Int32Array(n).fill(-1);
+  const after = new Int32Array(n).fill(-1);
+  for (let k = 1; k < n; k++) before[k] = isBetter(k - 1) ? k - 1 : before[k - 1];
+  for (let k = n - 2; k >= 0; k--) after[k] = isBetter(k + 1) ? k + 1 : after[k + 1];
+  // Close: within the window in time, or (untimed) within a few fixes. The
+  // nearest better fix by position is the nearest in time as well, because a
+  // segment is judged in its own order.
+  const close = (k: number, m: number) => {
+    if (m < 0) return false;
     const t = fixes[indices[k]].t;
-    for (let m = k + step; m >= 0 && m < indices.length; m += step) {
-      const tm = fixes[indices[m]].t;
-      const close =
-        t === null || tm === null
-          ? Math.abs(m - k) <= MAX_SPIKE_FIXES
-          : Math.abs(tm - t) <= COARSE_NEIGHBOUR_MS;
-      if (!close) return false;
-      if (isBetter(indices[m])) return true;
-    }
-    return false;
+    const tm = fixes[indices[m]].t;
+    return t === null || tm === null
+      ? Math.abs(m - k) <= MAX_SPIKE_FIXES
+      : Math.abs(tm - t) <= COARSE_NEIGHBOUR_MS;
   };
-  return indices.filter((i, k) => !isCoarse(fixes[i], profile) || !(better(k, -1) || better(k, 1)));
+  return indices.filter(
+    (i, k) => !isCoarse(fixes[i], profile) || !(close(k, before[k]) || close(k, after[k]))
+  );
 }
 
 /** Pass 2a: a repeat of an earlier position after the phone had moved away from it. */
