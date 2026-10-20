@@ -25,6 +25,8 @@ export interface CruiseTrackMetaDto {
   startedAt: Date;
   endedAt: Date;
   pointCount: number;
+  /** Fixes removed as GPS jitter; null when not checked (forgejo#319). */
+  jitterDropped: number | null;
   distanceKm: number;
   truncated: boolean;
   externalRef: string | null;
@@ -111,6 +113,7 @@ export async function loadCruiseTrackOverview(
           name: true,
           endedAt: true,
           pointCount: true,
+          jitterDropped: true,
           distanceKm: true,
           truncated: true,
           externalRef: true,
@@ -161,6 +164,7 @@ export async function loadCruiseTrackOverview(
     startedAt: t.startedAt,
     endedAt: t.endedAt,
     pointCount: t.pointCount,
+    jitterDropped: t.jitterDropped,
     distanceKm: t.distanceKm,
     truncated: t.truncated,
     externalRef: t.externalRef,

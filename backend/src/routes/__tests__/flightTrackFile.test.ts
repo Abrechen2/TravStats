@@ -5,6 +5,7 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { FILE_LIMITS } from "../../config/constants";
+import { standThenMove, toGpx } from "../../services/tracks/__tests__/jitterFixtures";
 
 /**
  * A recorded flight track uploaded as a FILE (forgejo#312): GPX or KML from a
@@ -149,6 +150,26 @@ describe("Flight track file upload — POST /flights/:id/track/file", () => {
     expect(stored.endedAt.toISOString()).toBe("2026-10-03T19:00:00.000Z");
     // No altitude in the file — none invented.
     expect(stored.elevations).toBeNull();
+    // No times either: standing and moving cannot be told apart, so the
+    // jitter filter reports "not checked", never a found-nothing 0.
+    expect(stored.jitterDropped).toBeNull();
+  });
+
+  it("filters a GPX's gate jitter like the phone's own recording (forgejo#319)", async () => {
+    const rec = standThenMove({
+      at: { lat: 48.354, lon: 11.786 },
+      startMs: DEPARTURE - 20 * 60_000,
+      standMinutes: 20,
+      wanderM: 150,
+      kmh: 250,
+      moveSeconds: 900,
+      stepS: 10,
+    });
+    const res = await upload(flightId, toGpx(rec.fixes), "gate.gpx");
+    expect(res.status).toBe(201);
+    expect(res.body.track.jitterDropped).toBeGreaterThanOrEqual(Math.floor(rec.standing * 0.95));
+    const stored = await prisma.flightTrack.findUniqueOrThrow({ where: { flightId } });
+    expect(Math.abs(stored.distanceKm - rec.trueKm) / rec.trueKm).toBeLessThan(0.02);
   });
 
   it("refuses an untimed line on a flight with no schedule to place it in", async () => {

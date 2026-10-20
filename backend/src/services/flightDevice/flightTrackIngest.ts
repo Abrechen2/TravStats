@@ -1,6 +1,7 @@
 import { ingestTrack } from "../tour/tracks/ingestTrack";
 import { ingestedTrackColumns } from "../tour/tracks/trackRow";
 import { splitAtLongSteps } from "../trackCoverage/splitAtLongSteps";
+import { filterParsedTrack } from "../tracks/recordingJitter";
 import type { ParsedTrack } from "../tour/tracks/parseGpx";
 import type { FlightTrackPoint } from "../../schemas/flightDevice";
 
@@ -17,6 +18,7 @@ export const FLIGHT_TRACK_GAP_KM = 50;
 /** The phone's points as the shared track pipeline reads them. */
 export function pointsToParsedTrack(points: readonly FlightTrackPoint[]): ParsedTrack {
   const hasAltitude = points.some((p) => p.alt !== undefined);
+  const hasAccuracy = points.some((p) => p.accuracy !== undefined);
   return {
     points: points.map((p): [number, number] => [p.lon, p.lat]),
     segmentStarts: [0],
@@ -25,6 +27,7 @@ export function pointsToParsedTrack(points: readonly FlightTrackPoint[]): Parsed
     name: null,
     elevations: hasAltitude ? points.map((p) => p.alt ?? null) : undefined,
     times: points.map((p) => p.t),
+    accuracies: hasAccuracy ? points.map((p) => p.accuracy ?? null) : undefined,
   };
 }
 
@@ -41,12 +44,14 @@ export function flightTrackColumns(points: readonly FlightTrackPoint[]) {
 
 /**
  * The same columns from any parsed recording — the phone's points or a file
- * (forgejo#312), so both sources go through ONE pipeline: holes marked first,
- * then measured on the raw points, then simplified. Null without a time window
- * or without two positions.
+ * (forgejo#312), so both sources go through ONE pipeline: jitter out first
+ * (forgejo#319 — the zigzag a still phone draws at the gate), then holes
+ * marked, then measured, then simplified. Null without a time window or
+ * without two positions.
  */
 export function flightTrackColumnsFromParsed(parsed: ParsedTrack) {
-  const ingested = ingestTrack(splitAtLongSteps(parsed, FLIGHT_TRACK_GAP_KM));
+  const filtered = filterParsedTrack(parsed, "flight");
+  const ingested = ingestTrack(splitAtLongSteps(filtered, FLIGHT_TRACK_GAP_KM));
   if (!ingested) return null;
   const {
     startedAt,
@@ -55,6 +60,7 @@ export function flightTrackColumnsFromParsed(parsed: ParsedTrack) {
     segmentStarts,
     cumulativeKm,
     pointCount,
+    jitterDropped,
     distanceKm,
     elevations,
   } = ingestedTrackColumns(ingested);
@@ -65,6 +71,7 @@ export function flightTrackColumnsFromParsed(parsed: ParsedTrack) {
     segmentStarts,
     cumulativeKm,
     pointCount,
+    jitterDropped,
     distanceKm,
     elevations,
   };

@@ -187,6 +187,28 @@ describe("Cruise recorded tracks", () => {
     expect(overview.body.data.legs[0].geometrySource).not.toBe("track");
   });
 
+  it("drops a teleport spike and a moored ship's cloud before measuring (forgejo#319)", async () => {
+    // An hour moored at the first port — six fixes scattering ±0.0005° (~50 m)
+    // — then the voyage, with one fix teleported 0.5° (~32 km) east and back.
+    const moored = [0.0004, -0.0005, 0.0003, -0.0002, 0.0005, -0.0004].map((d, i) => ({
+      lat: 54 + d,
+      lon: 4.5 - d * (i % 2 === 0 ? 1 : -1),
+    }));
+    const voyage = meridian(54, 56);
+    voyage[10] = { ...voyage[10], lon: 5.0 };
+    const res = await upload(gpx([...moored, ...voyage]));
+    expect(res.status).toBe(201);
+
+    const track = await prisma.cruiseTrack.findFirstOrThrow({ where: { cruiseId } });
+    expect(track.pointCount).toBe(moored.length + voyage.length);
+    expect(track.jitterDropped).toBe(moored.length + 1);
+    expect(track.distanceKm).toBeCloseTo(2 * KM_PER_DEG, -1);
+    const overview = await request(app)
+      .get(`/api/v1/cruises/${cruiseId}/tracks`)
+      .set("Cookie", cookie);
+    expect(overview.body.data.tracks[0].jitterDropped).toBe(moored.length + 1);
+  });
+
   it("bridges a hole at sea, counts its chord and lowers the confidence", async () => {
     // 0.3° (33 km) of silence halfway between the first two ports.
     const points = [...meridian(54, 55), ...meridian(55.3, 56)];

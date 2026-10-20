@@ -2,6 +2,8 @@ import type { Prisma } from "../../prisma";
 import { haversineKm } from "../../shared/geo/haversine";
 import { localDay } from "../../shared/time/instant";
 import { simplifyDegrees } from "../schematicRouter";
+import { filterJitter, type JitterFix } from "../tracks/jitterFilter";
+import { JITTER_PROFILES } from "../tracks/jitterProfiles";
 
 /**
  * A trip recording read back (forgejo#316): the stored batches as one line per
@@ -124,4 +126,41 @@ export function displaySegments(
 /** The distinct days the points fall on, on the trip's clock, in order. */
 export function recordingDays(points: readonly StoredPoint[], zone: string): string[] {
   return [...new Set(points.map((p) => localDay(new Date(p[0]), zone)))].sort();
+}
+
+/**
+ * Each device's points with GPS jitter removed (forgejo#319) — for the MAP
+ * only. A phone left on a café table for an hour reports a cloud of positions
+ * a hundred metres across, and drawn in time order that cloud is a zigzag.
+ * The stored batches and the GPX keep every raw point; this is a reading of
+ * them, recomputed on every request, so there is nothing stored to correct.
+ *
+ * Filtered as one stream per device, cut only where the clock stops for
+ * longer than `RECORDING_GAP_MS`: a teleport spike far enough out to look like
+ * a 50 km gap must be seen as a spike first, not split off as its own
+ * stretch. A stay comes back as one synthetic point at its accuracy-weighted
+ * centre; nothing stores it.
+ */
+export function withoutJitter<D extends { points: StoredPoint[] }>(
+  devices: readonly D[]
+): { devices: D[]; dropped: number } {
+  let dropped = 0;
+  const clean = devices.map((device) => {
+    const fixes: JitterFix[] = device.points.map(([t, lat, lon, accuracyM]) => ({
+      lon,
+      lat,
+      t,
+      accuracyM,
+    }));
+    const starts = device.points.flatMap((p, i) =>
+      i > 0 && p[0] - device.points[i - 1][0] > RECORDING_GAP_MS ? [i] : []
+    );
+    const result = filterJitter(fixes, starts, JITTER_PROFILES.mixed);
+    dropped += result.dropped;
+    return {
+      ...device,
+      points: result.fixes.map((f): StoredPoint => [f.t ?? 0, f.lat, f.lon, f.accuracyM]),
+    };
+  });
+  return { devices: clean, dropped };
 }

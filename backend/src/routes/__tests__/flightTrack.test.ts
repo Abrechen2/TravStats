@@ -6,6 +6,8 @@ import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { generateApiToken } from "../../utils/apiTokens";
 import { FLIGHT_TRACK_MAX_BODY_BYTES, FLIGHT_TRACK_MAX_POINTS } from "../../schemas/flightDevice";
+import { haversineKm } from "../../shared/geo/haversine";
+import { standThenMove } from "../../services/tracks/__tests__/jitterFixtures";
 
 /**
  * The phone's recording of a flight (forgejo#193): stored in its own table,
@@ -115,6 +117,38 @@ describe("Flight recordings — /flights/:id/track", () => {
     // Never the provider column, which a lookup overwrites (D5).
     const flight = await prisma.flight.findUniqueOrThrow({ where: { id: flightId } });
     expect(flight.actualRoute).toBeNull();
+  });
+
+  it("draws no zigzag where the plane stood and measures only the path flown (forgejo#319)", async () => {
+    // Half an hour at the gate, the phone scattering ±150 m, then off at 300 km/h.
+    const gate = { lat: 48.354, lon: 11.786 };
+    const rec = standThenMove({
+      at: gate,
+      startMs: DEPARTURE - 30 * 60_000,
+      standMinutes: 30,
+      wanderM: 150,
+      kmh: 300,
+      moveSeconds: 1200,
+      stepS: 10,
+    });
+    const post = await request(app)
+      .post(`/api/v1/flights/${flightId}/track`)
+      .set("Cookie", cookie)
+      .send({
+        uploadId: "gate-jitter",
+        points: rec.fixes.map((f) => ({ t: f.t, lat: f.lat, lon: f.lon, accuracy: 65 })),
+      });
+    expect(post.status).toBe(201);
+    expect(post.body.track.pointCount).toBe(rec.fixes.length);
+    expect(post.body.track.jitterDropped).toBeGreaterThanOrEqual(Math.floor(rec.standing * 0.95));
+
+    const get = await request(app).get(`/api/v1/flights/${flightId}/track`).set("Cookie", cookie);
+    const atGate = (get.body.track.geometry as Array<[number, number]>).filter(
+      ([lon, lat]) => haversineKm({ lat, lon }, gate) < 0.3
+    );
+    expect(atGate.length).toBeLessThanOrEqual(3);
+    expect(Math.abs(get.body.track.distanceKm - rec.trueKm) / rec.trueKm).toBeLessThan(0.02);
+    expect(get.body.track.jitterDropped).toBe(post.body.track.jitterDropped);
   });
 
   it("keeps a stretch without a fix as a hole, out of the distance", async () => {

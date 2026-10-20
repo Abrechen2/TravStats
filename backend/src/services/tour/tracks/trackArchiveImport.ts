@@ -4,6 +4,7 @@ import { prisma } from "../../../db";
 import { Prisma } from "../../../prisma";
 import { parseTrackFile } from "./parseTrackFile";
 import { ingestTrack } from "./ingestTrack";
+import { filterParsedTrack } from "../../tracks/recordingJitter";
 import { ingestedTrackColumns } from "./trackRow";
 import { readArchiveBlock, restoredTrackColumns, type ArchiveBlock } from "./gpxArchive";
 import { prefillTourDateFromTrack } from "../tourDay";
@@ -115,7 +116,9 @@ export async function importTrackArchive(
       columns = restoredTrackColumns(parsedFile.track, block);
       externalRef = block.track.externalRef ?? `travstats:${block.track.id}`;
     } else {
-      const ingested = ingestTrack(parsedFile.track);
+      // A foreign file lands in a new tour on foot (below), so it is
+      // filtered as one (forgejo#319).
+      const ingested = ingestTrack(filterParsedTrack(parsedFile.track, "foot"));
       if (!ingested) {
         out.push({
           file: file.name,

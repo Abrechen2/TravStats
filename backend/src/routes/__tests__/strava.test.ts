@@ -226,6 +226,8 @@ describe("Strava integration", () => {
       externalRef: "strava:111",
       ascentM: 334,
     });
+    // Timed streams go through the jitter filter as a hike (forgejo#319).
+    expect(route.tracks[0].jitterDropped).not.toBeNull();
 
     const again = await request(app)
       .post(`/api/v1/tours/${route.id}/tracks/strava`)

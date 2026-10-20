@@ -7,6 +7,7 @@ import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { encryptApiKey } from "../../utils/encryption";
 import logger from "../../utils/logger";
+import { moving, offset, standing } from "../../services/tracks/__tests__/jitterFixtures";
 
 /**
  * Task 7 (Phase 3b tour tracks): pull a Dawarich time window into a track.
@@ -170,7 +171,12 @@ describe("Tour tracks — pull a Dawarich window", () => {
     const res = await pull();
 
     expect(res.status).toBe(201);
-    expect(res.body.track).toMatchObject({ routeId, source: "dawarich", pointCount: 3 });
+    expect(res.body.track).toMatchObject({
+      routeId,
+      source: "dawarich",
+      pointCount: 3,
+      jitterDropped: 0,
+    });
     expect(res.body.track.distanceKm).toBeGreaterThan(0);
 
     // The default window came from the section's own dated stops (Bergen
@@ -222,6 +228,36 @@ describe("Tour tracks — pull a Dawarich window", () => {
     expect(geometry[geometry.length - 1]).toEqual([5.34, 60.41]); // newest point (T_NEW)
     expect(res.body.track.startedAt).toBe(T_OLD.toISOString());
     expect(res.body.track.endedAt).toBe(T_NEW.toISOString());
+  });
+
+  it("reads Dawarich's times and accuracy to filter jitter before measuring (forgejo#319)", async () => {
+    await seedUserConnection();
+    const at = { lat: 60.39, lon: 5.32 };
+    const start = Date.parse("2026-06-01T08:00:00Z");
+    // 30 min parked, scattering ±40 m at a reported 25 m, then 10 min at 60 km/h
+    // with one cell-tower fix 1.5 km off in the middle of the drive.
+    const parked = standing(at, start, 30, 30, 40, 25);
+    const drive = moving(at, parked[parked.length - 1].t, 90, 60, 600, 30, 8);
+    drive[10] = { ...drive[10], ...offset(drive[10], 0, 1500), accuracy: 2000 };
+    const fixes = [...parked, ...drive];
+    const raw = fixes
+      .map((f, i) => ({ ...rawPoint(i + 1, f.lat, f.lon, new Date(f.t)), accuracy: f.accuracy }))
+      .reverse();
+    (global.fetch as jest.Mock<typeof fetch>).mockResolvedValueOnce(fakeOkResponse(raw));
+
+    const res = await pull({
+      startedAt: "2026-06-01T07:00:00Z",
+      endedAt: "2026-06-01T10:00:00Z",
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body.track.pointCount).toBe(fixes.length);
+    // The parked cloud collapsed (its outermost scatter may stand alone) and
+    // the cell-tower fix is gone from the line.
+    expect(res.body.track.jitterDropped).toBeGreaterThanOrEqual(parked.length - 3);
+    const north = (res.body.track.geometry as Array<[number, number]>).map(([, lat]) => lat);
+    expect(Math.max(...north)).toBeLessThan(at.lat + 0.005);
+    expect(res.body.track.distanceKm).toBeCloseTo(10, 0);
   });
 
   it("accepts an explicit override that replaces the derived window", async () => {

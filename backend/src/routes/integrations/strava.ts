@@ -24,6 +24,8 @@ import {
 import { StravaError, stravaErrorStatus } from "../../services/strava/stravaErrors";
 import { activityFromSportType } from "../../services/strava/sportType";
 import { ingestTrack } from "../../services/tour/tracks/ingestTrack";
+import { filterParsedTrack } from "../../services/tracks/recordingJitter";
+import { jitterModeOfRoute } from "../../services/tracks/tourJitterMode";
 import { ingestedTrackColumns, isDuplicateExternalRef } from "../../services/tour/tracks/trackRow";
 import { resolveRoute } from "../trips/tourRoutes";
 import { resolveTrip } from "../trips/resolveTrip";
@@ -213,7 +215,8 @@ type FetchedActivity = Awaited<ReturnType<typeof fetchActivityTrack>>;
 
 /** Stores one fetched Strava activity as a track of `routeId`; 409 when it is already there. */
 async function importInto(routeId: string, activityId: string, fetched: FetchedActivity) {
-  const ingested = ingestTrack(fetched.track);
+  const mode = await jitterModeOfRoute(routeId);
+  const ingested = ingestTrack(filterParsedTrack(fetched.track, mode));
   if (!ingested) {
     throw new StravaError("protocol", "This activity cannot be placed in time");
   }

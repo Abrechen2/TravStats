@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
-import { errorContent } from "./shared";
+import { errorContent, jitterDroppedField } from "./shared";
 import { localDateValueSchema, timeValueSchema } from "../../../shared/time/wire";
 import {
   TRIP_RECORDING_MAX_POINTS,
@@ -80,6 +80,11 @@ registry.registerPath({
 const recordingView = z.object({
   summary: z.object({
     pointCount: z.number().int().describe("Points shown (of `day` when filtered)"),
+    jitterDropped: jitterDroppedField.describe(
+      "Of the points shown, how many the map line leaves out as GPS jitter (a still phone's " +
+        "cloud collapsed to one point, a teleport spike, a stale fix — forgejo#319). The stored " +
+        "points and the GPX keep every one. Always a number here: every stored point has a time"
+    ),
     firstAt: timeValueSchema.nullable().describe("First point shown, on the trip's clock"),
     lastAt: timeValueSchema.nullable().describe("Last point shown, on the trip's clock"),
     devices: z.array(z.string()).describe("The paired devices that sent points"),
@@ -90,8 +95,8 @@ const recordingView = z.object({
   segments: z
     .array(z.array(z.tuple([z.number(), z.number()])))
     .describe(
-      "[lon, lat] lines per device, cut where two fixes are > 2 h or > 50 km apart (a gap is " +
-        "never joined), simplified for display"
+      "[lon, lat] lines per device, jitter removed, cut where two fixes are > 2 h or > 50 km " +
+        "apart (a gap is never joined), simplified for display"
     ),
 });
 

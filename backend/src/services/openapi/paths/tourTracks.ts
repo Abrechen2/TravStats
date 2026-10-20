@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
-import { errorContent } from "./shared";
+import { errorContent, jitterDroppedField } from "./shared";
 import { pullDawarichTrackSchema, TRACK_SOURCES } from "../../../schemas/tour";
 import { registerSectionPath, routeIdParams } from "./tours";
 import { trackVerdict } from "./cruiseTracks";
@@ -49,9 +49,12 @@ const tourRouteTrackMeta = registry.register(
         .number()
         .int()
         .describe("Point count of the RAW recording, before simplification"),
+      jitterDropped: jitterDroppedField,
       distanceKm: z
         .number()
-        .describe("Distance measured on the RAW recording, before simplification"),
+        .describe(
+          "Distance measured on the recording after the jitter filter, before simplification"
+        ),
       truncated: z
         .boolean()
         .describe(
@@ -91,6 +94,7 @@ const tourRouteTrackMeta = registry.register(
         startedAt: "2026-06-01T08:00:00.000Z",
         endedAt: "2026-06-01T08:10:00.000Z",
         pointCount: 3,
+        jitterDropped: 0,
         distanceKm: 1.7,
         truncated: false,
         ascentM: 334,

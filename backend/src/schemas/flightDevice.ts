@@ -40,6 +40,12 @@ export const flightTrackPointSchema = z.object({
   alt: z.number().min(-1_000).max(30_000).optional(),
   /** Metres per second, ground speed. Validated, not stored. */
   speed: z.number().min(0).max(1_000).optional(),
+  /**
+   * The fix's horizontal accuracy in metres, as the phone reports it. Read by
+   * the jitter filter (forgejo#319) to tell a coarse network fix from a
+   * satellite one and to size a stay; not stored.
+   */
+  accuracy: z.number().min(0).max(100_000).optional(),
 });
 
 export type FlightTrackPoint = z.infer<typeof flightTrackPointSchema>;
