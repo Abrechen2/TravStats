@@ -630,6 +630,7 @@
           "schema": "format not supported",
           "not-member": "no longer a member there",
           "consent": "no consent there any more",
+          "too-large": "too large to send",
           "other": "refused"
         }
       }

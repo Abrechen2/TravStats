@@ -183,3 +183,20 @@ describe("catalogue references this server cannot resolve (review 3)", () => {
     expect(updated).toBeDefined();
   });
 });
+
+describe("a message small in characters and too large in bytes (review 4)", () => {
+  it("is parked as too large, said on the trip page, and the stream goes on", async () => {
+    const { anna, flight, benFlight, trip } = await sharedFlight();
+    // 90 000 characters, 270 000 bytes in UTF-8: under the budget by length, over it on the wire.
+    await editFlight(a, anna, flight.id, { specialData: { note: "漢".repeat(90_000) } });
+    await editFlight(a, anna, flight.id, { terminal: "T1" });
+    expect(await a.outbox.runDeliveries()).toMatchObject({ parked: 1, sent: 1, failed: 0 });
+    expect((await flightOn(b, benFlight.id)).terminal).toBe("T1");
+    const view = await a.tripRemoteSharing.tripRemoteSharing(anna, trip.id);
+    expect(view.members[0].delivery).toMatchObject({
+      state: "rejected",
+      reason: "too-large",
+      label: "TP571 FRA → LIS",
+    });
+  });
+});

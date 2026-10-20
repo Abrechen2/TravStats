@@ -82,7 +82,9 @@ export const remoteMemberSchema = z.strictObject({
       reason: z
         .string()
         .nullable()
-        .describe("`retrying`: the failure kind; `rejected`: `schema`, `not-member` or `consent`"),
+        .describe(
+          "`retrying`: the failure kind; `rejected`: `schema`, `not-member`, `consent` or `too-large`"
+        ),
       field: z.string().nullable().describe("`rejected` for `schema`: what did not parse"),
       label: z.string().nullable().describe("`rejected`: the entry the message was about"),
     })

@@ -37,7 +37,7 @@ import { fromWireEntries } from "./wire/decode";
 import { toWireEntries } from "./wire/encode";
 import type { WireEntry } from "./wire/shapes";
 import { rejectWith, serveOnce, takeSeq } from "./streams";
-import { BODY_BUDGET } from "./transport";
+import { BODY_BUDGET, wireBytes } from "./transport";
 
 /** Room left in a message for its header and the envelope's quoting of the body. */
 const ENTRIES_BYTES = BODY_BUDGET.entries - 8_192;
@@ -50,13 +50,13 @@ export async function settleDeliveries(): Promise<void> {
   await runDeliveries();
 }
 
-/** Wire entries into messages: at most fifty each, and within the body budget. */
+/** Wire entries into messages: at most fifty each, and within the body budget in wire bytes. */
 export function chunkEntries(entries: readonly WireEntry[]): WireEntry[][] {
   const chunks: WireEntry[][] = [];
   let current: WireEntry[] = [];
   let bytes = 0;
   for (const entry of entries) {
-    const size = JSON.stringify(entry).length;
+    const size = wireBytes(entry);
     if (
       current.length > 0 &&
       (current.length >= MAX_ENTRIES_PER_MESSAGE || bytes + size > ENTRIES_BYTES)
@@ -110,7 +110,7 @@ export async function queueEntries(tx: DbTransaction, memberId: string): Promise
   });
   if (!trip) return 0;
   const entries = await wireEntriesOf(tx, remote.userId, trip.id);
-  const oversize = entries.filter((e) => JSON.stringify(e).length > ENTRIES_BYTES);
+  const oversize = entries.filter((e) => wireBytes(e) > ENTRIES_BYTES);
   const chunks = chunkEntries(entries.filter((e) => !oversize.includes(e)));
   for (const chunk of chunks)
     await tx.tripShareOutbox.create({

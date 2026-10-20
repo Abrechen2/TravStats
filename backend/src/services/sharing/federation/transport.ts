@@ -69,3 +69,11 @@ export const messageHeader = () => ({ messageId: randomUUID(), sentAt: new Date(
 
 export const tripShareExchange = (origin: string, body: TripSharePacket): Promise<unknown> =>
   exchange(origin, body, TRIP_SHARE_TRANSPORT);
+
+/**
+ * What a message costs on the wire, in UTF-8 bytes (F-S4d review): the body is serialised, then
+ * quoted once more inside the signed envelope, and the transport and the receiving route count
+ * bytes — a character count passes a CJK-heavy value that the wire refuses.
+ */
+export const wireBytes = (value: unknown): number =>
+  Buffer.byteLength(JSON.stringify(JSON.stringify(value)), "utf8");

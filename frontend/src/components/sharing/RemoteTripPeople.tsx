@@ -36,8 +36,8 @@ const KNOWN_REASONS = new Set([
   "peer-blocked",
   "unreachable",
 ]);
-/** Why the other server refused a change, as it answered; anything else reads as "refused". */
-const KNOWN_REFUSALS = new Set(["schema", "not-member", "consent"]);
+/** Why a change was not delivered: the other server's answer, or too large to send at all. */
+const KNOWN_REFUSALS = new Set(["schema", "not-member", "consent", "too-large"]);
 /** States whose member receives changes, so where those changes stand is the line to show. */
 const RECEIVING = new Set<RemoteMemberState>(["active", "unreachable"]);
 

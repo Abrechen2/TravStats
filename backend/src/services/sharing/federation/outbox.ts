@@ -19,8 +19,9 @@
  *   of the stream waiting behind it (order is kept); 14 days after the first failure the member
  *   is `unreachable`. A 404 means the feature is off there (`suspended`, `off`); a pin this
  *   server's admin disabled is `suspended`, `peer-blocked`. The queue is kept in every case.
- * - **refused** (`schema`, `not-member`, `consent`) — the row is parked with the reason, not
- *   retried, and the stream moves on; parked rows are kept 30 days for the trip page to name.
+ * - **refused** (`schema`, `not-member`, `consent`), or larger in UTF-8 bytes than its transport
+ *   carries (`too-large`) — the row is parked with the reason, not retried, and the stream moves
+ *   on; parked rows are kept 30 days for the trip page to name.
  */
 import { prisma, type DbTransaction } from "../../../db";
 import type { Prisma } from "../../../prisma";
@@ -32,6 +33,7 @@ import type { AckConflict, GroupMessage } from "../../../schemas/tripSharePeer";
 import { tripFederationAvailability } from "./availability";
 import { recordConflict } from "./conflicts";
 import { kindOf } from "./peerCheck";
+import { PeerRefusal } from "../../federation/refusal";
 import { StreamRejected, sendOnStream, type Received } from "./streams";
 import { ENTRIES_TRANSPORT, PROPAGATION_TRANSPORT } from "./transport";
 import { fromWireFacts, localKeyOf } from "./wire/decode";
@@ -141,19 +143,18 @@ async function delivered(tx: DbTransaction, row: Row, ack: Received, now: Date):
     await conflictHere(tx, row, ack.conflicts);
 }
 
-async function park(row: Row, error: StreamRejected, now: Date): Promise<void> {
+/**
+ * Kept, not retried: the peer refused it for good (`schema`, `not-member`, `consent`), or it is
+ * larger than any message may be (`too-large` — retrying would block the stream forever).
+ */
+async function park(row: Row, reason: string, field: string | null, now: Date): Promise<void> {
   logger.warn(
-    {
-      operation: "trip_share_message_parked",
-      kind: row.kind,
-      origin: row.peerOrigin,
-      rejected: error.ack.rejected,
-    },
-    "The other server refused a trip-share message; it is kept, not retried"
+    { operation: "trip_share_message_parked", kind: row.kind, origin: row.peerOrigin, reason },
+    "A trip-share message cannot be delivered; it is kept, not retried"
   );
   await prisma.tripShareOutbox.update({
     where: { id: row.id },
-    data: { parkedAt: now, parkedReason: error.ack.rejected, lastError: error.ack.field ?? null },
+    data: { parkedAt: now, parkedReason: reason, lastError: field },
   });
 }
 
@@ -224,7 +225,13 @@ async function deliverStream(
       );
     } catch (error) {
       if (error instanceof StreamRejected && error.ack.rejected !== "gap") {
-        await park(row, error, now);
+        await park(row, error.ack.rejected, error.ack.field ?? null, now);
+        run.parked++;
+        continue;
+      }
+      // Too large in bytes for its transport: the same bytes would be refused on every retry.
+      if (error instanceof PeerRefusal && error.kind === "packet-too-large") {
+        await park(row, "too-large", null, now);
         run.parked++;
         continue;
       }

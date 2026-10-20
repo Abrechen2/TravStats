@@ -23,7 +23,7 @@ import type { SharedRow } from "../adapters";
 import type { ShareEntity } from "../shareTypes";
 import type { ChangeActor, OutboxKind } from "../../../schemas/tripSharePeer";
 import { kickDelivery } from "./deliveryKick";
-import { BODY_BUDGET } from "./transport";
+import { BODY_BUDGET, wireBytes } from "./transport";
 import { toWireEntries, wireFactsOf, wireKeyOf } from "./wire/encode";
 
 /** Who a change is by: an account here, or a person on another server (named as theirs names them). */
@@ -107,7 +107,7 @@ async function queue(
   return to.length;
 }
 
-const tooLarge = (value: unknown) => JSON.stringify(value).length > ROOM;
+const tooLarge = (value: unknown) => wireBytes(value) > ROOM;
 
 /**
  * A keyed entry's facts changed here (`keys`, local fact names): each change travels with the
@@ -132,13 +132,13 @@ export async function queueFactUpdate(
     // A line too long for one message travels without it — a stated loss (spec §4), logged.
     if (tooLarge(changes)) changes = changes.filter((ch) => !GEOMETRY_FACTS.has(ch.field));
     if (changes.length === 0) return null;
-    if (tooLarge(changes)) {
+    // Still too large: queued all the same, so the delivery parks it as `too-large` and the trip
+    // page names the entry — a change dropped here would vanish without a word.
+    if (tooLarge(changes))
       logger.warn(
         { operation: "trip_share_update_too_large", entity, groupId: spread.groupId },
-        "A change is too large for any message and is not sent to other servers"
+        "A change is too large for any message; it will be parked, not sent"
       );
-      return null;
-    }
     return { entity, shareKey, changes };
   });
 }
@@ -154,13 +154,11 @@ export async function queueEntryCreate(
   await queue(c, spread, "entry-create", row.label, async () => {
     const [entry] = await toWireEntries(c, entity, [row]);
     if (!entry) return null;
-    if (tooLarge(entry)) {
+    if (tooLarge(entry))
       logger.warn(
         { operation: "trip_share_entry_too_large", entity, groupId: spread.groupId },
-        "An entry is too large for any message and is not sent to other servers"
+        "An entry is too large for any message; it will be parked, not sent"
       );
-      return null;
-    }
     return { entry };
   });
 }

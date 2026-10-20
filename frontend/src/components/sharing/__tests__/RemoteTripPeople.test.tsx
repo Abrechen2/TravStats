@@ -152,6 +152,19 @@ describe("RemoteTripPeople", () => {
       /sharing:remote.trip.delivery.rejected .*"entry":"TP571 FRA → LIS".*delivery.why.schema/,
     ],
     [
+      "too large to send, naming the entry",
+      {
+        delivery: {
+          state: "rejected",
+          stateSince: since,
+          reason: "too-large",
+          field: null,
+          label: "TP571 FRA → LIS",
+        },
+      },
+      /sharing:remote.trip.delivery.rejected .*"entry":"TP571 FRA → LIS".*delivery.why.too-large/,
+    ],
+    [
       "switched off on that server",
       { state: "suspended", stateReason: "off" },
       /sharing:remote.trip.reason.off .*"Ben"/,

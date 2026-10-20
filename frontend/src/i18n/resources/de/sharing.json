@@ -630,6 +630,7 @@
           "schema": "Format nicht unterstützt",
           "not-member": "dort keine Mitgliedschaft mehr",
           "consent": "dort keine Zustimmung mehr",
+          "too-large": "zu groß für die Übertragung",
           "other": "abgelehnt"
         }
       }

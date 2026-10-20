@@ -13,8 +13,8 @@ import { remoteMemberStateSchema, type RemoteMemberState } from "../../../schema
  * - `pending` — messages wait for the next delivery pass;
  * - `retrying` — their server has not answered since `stateSince` (`reason`: the failure kind);
  * - `unreachable` — not since `stateSince`, for 14 days or more;
- * - `rejected` — their server refused a message for good (`reason`: `schema`, `not-member`,
- *   `consent`; `field` what did not parse; `label` the entry it was about); it is kept, not sent.
+ * - `rejected` — refused for good, or too large to send (`reason`: `schema`, `not-member`,
+ *   `consent`, `too-large`; `field` what did not parse; `label` the entry it was about); it is kept, not sent.
  */
 export interface DeliveryView {
   state: "delivered" | "pending" | "retrying" | "unreachable" | "rejected";
