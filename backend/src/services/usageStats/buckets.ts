@@ -46,3 +46,39 @@ const ARCH_MAP: Record<string, string> = {
 export function detectArch(): string {
   return ARCH_MAP[process.arch] ?? process.arch;
 }
+
+/**
+ * Entries per domain (forgejo#315). Zero is its own bucket, as for cruises:
+ * "switched on, never used" is the signal. Must match `COUNT_BUCKETS` in the
+ * receiver (`travstats-stats/src/schema.ts`), which refuses any other value.
+ */
+export type CountBucket = "0" | "1-10" | "11-50" | "51-250" | "250+";
+
+export function bucketCount(n: number): CountBucket {
+  if (n <= 0) return "0";
+  if (n <= 10) return "1-10";
+  if (n <= 50) return "11-50";
+  if (n <= 250) return "51-250";
+  return "250+";
+}
+
+/** The passport's country count. Receiver: `COUNTRY_BUCKETS`. */
+export type CountriesBucket = "0" | "1-5" | "6-20" | "21-50" | "50+";
+
+export function bucketCountries(n: number): CountriesBucket {
+  if (n <= 0) return "0";
+  if (n <= 5) return "1-5";
+  if (n <= 20) return "6-20";
+  if (n <= 50) return "21-50";
+  return "50+";
+}
+
+/** Paired Companion devices. Receiver: `PAIRING_BUCKETS`. */
+export type PairingsBucket = "0" | "1" | "2-5" | "6+";
+
+export function bucketPairings(n: number): PairingsBucket {
+  if (n <= 0) return "0";
+  if (n === 1) return "1";
+  if (n <= 5) return "2-5";
+  return "6+";
+}

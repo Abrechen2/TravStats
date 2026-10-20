@@ -1,7 +1,7 @@
 {
   "consent": {
     "title": "Anonyme Nutzungsstatistik",
-    "body": "Hilf uns zu verstehen, wie TravStats genutzt wird. Wir senden ausschließlich anonyme Kennzahlen — Version, aktivierte Domains, grobe Größenordnungen. Niemals deine Flüge, Häfen, Namen, IP-Adresse oder API-Schlüssel.",
+    "body": "Hilf uns zu verstehen, wie TravStats genutzt wird. Wir senden ausschließlich anonyme Kennzahlen — Version, aktivierte Bereiche und wie viel darin genutzt wird, immer nur als grobe Größenordnung. Niemals deine Flüge, Häfen, Namen, IP-Adresse oder API-Schlüssel.",
     "accept": "Ja, anonyme Daten senden",
     "decline": "Nein, danke",
     "whatIsSent": "Was genau wird gesendet?",
