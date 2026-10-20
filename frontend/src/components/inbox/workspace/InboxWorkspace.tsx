@@ -20,6 +20,7 @@ import {
   type InboxView,
 } from "./model";
 import { useInboxData } from "./useInboxData";
+import { useSuggestionSwitchesStore } from "../../../store/suggestionSwitchesStore";
 import InboxCard from "./InboxCard";
 import InboxHistory, { HISTORY_SOURCES, type HistorySource } from "./InboxHistory";
 import SourcePanel from "./SourcePanel";
@@ -58,12 +59,24 @@ export default function InboxWorkspace({
 }) {
   const { t, i18n } = useTranslation(["dataQuality", "common"]);
   const format = useDisplayFormat();
-  const data = useInboxData(photosVisible, active);
+  // The account's suggestion switches (forgejo#306): an off kind has no tab and is not loaded.
+  const tripsVisible = useSuggestionSwitchesStore((s) => s.trips);
+  const staysVisible = useSuggestionSwitchesStore((s) => s.stays);
+  const visibility = useMemo(
+    () => ({ photos: photosVisible, trips: tripsVisible, stays: staysVisible }),
+    [photosVisible, tripsVisible, staysVisible]
+  );
+  const data = useInboxData(visibility, active);
   const [params, setParams] = useSearchParams();
   const requestedView = params.get("view");
   const view: InboxView =
     requestedView === "list" || requestedView === "journey" ? requestedView : "cards";
-  const sources = INBOX_SOURCES.filter((s) => s !== "photos" || photosVisible);
+  const sources = INBOX_SOURCES.filter(
+    (s) =>
+      (s !== "photos" || photosVisible) &&
+      (s !== "trips" || tripsVisible) &&
+      (s !== "dawarich" || staysVisible)
+  );
   const requestedSource = params.get("tab");
   const source: InboxSource | "all" = sources.find((s) => s === requestedSource) ?? "all";
   const [query, setQuery] = useState("");

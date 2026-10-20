@@ -12,7 +12,9 @@ import { acceptBodySchema } from "../../../routes/tripSuggestions";
 
 const badInput = { description: "Invalid input", content: errorContent };
 const stale = {
-  description: "`TRIP_SUGGESTION_STALE`: the suggestion changed or does not exist — reload",
+  description:
+    "`TRIP_SUGGESTION_STALE`: the suggestion changed or does not exist — reload. " +
+    "`TRIP_SUGGESTIONS_DISABLED`: the account has trip suggestions switched off",
   content: errorContent,
 };
 const tags = ["Trips"];
@@ -74,7 +76,10 @@ registry.registerPath({
     "visit then becomes `place_visit`. Answered proposals stay gone until their member set changes " +
     "by more than half. Rail and roadtrip entries appear only while the instance shows them. " +
     "`home` says how home was known: `history`, `estimated` (most-visited flown airport) or " +
-    "`missing` (only flight-detected journeys can then be proposed).",
+    "`missing` (only flight-detected journeys can then be proposed). With the account's " +
+    "`tripSuggestions.enabled` setting off, nothing is computed: the list is empty with " +
+    "`disabled: true`, `/count` answers 0, and accept/dismiss are refused with " +
+    "`TRIP_SUGGESTIONS_DISABLED` (409). Stored answers are kept for when it is switched back on.",
   tags,
   responses: {
     200: {
@@ -86,8 +91,17 @@ registry.registerPath({
             data: z.object({
               suggestions: z.array(suggestion),
               total: z.number().int(),
-              home: z.enum(["history", "estimated", "missing"]),
+              home: z
+                .enum(["history", "estimated", "missing"])
+                .nullable()
+                .describe("null while the account has trip suggestions switched off"),
               truncated: z.boolean(),
+              disabled: z
+                .boolean()
+                .describe(
+                  "The account switched trip suggestions off (forgejo#306): the engine did not " +
+                    "run and the list is empty, not measured empty"
+                ),
             }),
           }),
         },

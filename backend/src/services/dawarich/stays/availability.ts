@@ -1,11 +1,24 @@
 import { prisma } from "../../../db";
 import { AppError } from "../../../middleware/errorHandler";
+import { staySuggestionsEnabled } from "../../settings/suggestionSwitches";
 
-// Domains control visibility elsewhere; automatic background collection must
-// additionally respect a user's decision not to use the Places domain.
-export const placesEnabledWhere = {
-  user: { settings: { is: { enabledDomains: { has: "poi" } } } },
+/**
+ * What every step of a stay scan re-checks. Domains control visibility
+ * elsewhere; automatic background collection must additionally respect a
+ * user's decision not to use the Places domain — and the account's
+ * `staySuggestions.enabled` switch (forgejo#306). The switch sits in the same
+ * predicate as the reservation, so switching it off mid-scan stops the scan at
+ * its next write exactly as withdrawing the scan consent does.
+ */
+export const stayScanAllowedWhere = {
+  user: { settings: { is: { enabledDomains: { has: "poi" }, staySuggestionsEnabled: true } } },
 };
+
+/** Refused before anything is reserved or fetched: off means no Dawarich request. */
+export async function requireStaySuggestionsEnabled(userId: string): Promise<void> {
+  if (!(await staySuggestionsEnabled(userId)))
+    throw new AppError("Stay suggestions are switched off", 409, "STAY_SUGGESTIONS_DISABLED");
+}
 
 export async function placesEnabled(userId: string): Promise<boolean> {
   const settings = await prisma.userSettings.findUnique({

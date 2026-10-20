@@ -49,6 +49,8 @@ export default function DawarichStayScanCard({
   };
   const coverageScope = state?.marketResult?.scope === "venues" ? "venues" : "markets";
   const placesPaused = state?.placesEnabled === false;
+  // The account switched stay suggestions off (forgejo#306): no scan runs.
+  const suggestionsPaused = state?.pausedReason === "suggestionsDisabled";
   const stale =
     !!state?.dataThrough && Date.now() - Date.parse(state.dataThrough) > 24 * 60 * 60_000;
   const text = (key: string) => t(`trips:dawarichStays.${key}`);
@@ -128,6 +130,7 @@ export default function DawarichStayScanCard({
         </div>
       )}
       {state && !state.connected && <p>{text("ownConnection")}</p>}
+      {suggestionsPaused && <p className="my-3">{text("suggestionsPaused")}</p>}
       {placesPaused && <p className="my-3">{text("placesPaused")}</p>}
       {state && !state.enabled && <p className="my-3">{text("disabled")}</p>}
       {state?.nextScanAt && (
@@ -157,6 +160,7 @@ export default function DawarichStayScanCard({
             demo ||
             busy ||
             placesPaused ||
+            suggestionsPaused ||
             !state?.enabled ||
             !state.connected ||
             state.result === "running"

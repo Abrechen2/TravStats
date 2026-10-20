@@ -44,6 +44,13 @@ export interface ImmichAsset {
   sizeBytes: number | null;
   lat: number | null;
   lon: number | null;
+  /**
+   * Immich's own reverse-geocoded place of the photo (`exifInfo.city` /
+   * `exifInfo.country`), present only where Immich has one. A hint, not a
+   * fact: Immich geocodes to the nearest settlement it knows.
+   */
+  city?: string;
+  country?: string;
 }
 
 /**

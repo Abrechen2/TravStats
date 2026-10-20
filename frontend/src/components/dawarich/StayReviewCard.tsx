@@ -5,6 +5,7 @@ import { toLocal } from "../../shared/time/zone";
 import { useTranslation } from "../../hooks/useTranslation";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import { Card } from "../ui/Card";
+import StayIdentityPanel from "./StayIdentityPanel";
 
 export default function StayReviewCard({
   row,
@@ -18,6 +19,12 @@ export default function StayReviewCard({
   const { t } = useTranslation("trips");
   const text = (key: string) => t(`trips:dawarichStays.${key}`);
   const [name, setName] = useState(row.name ?? "");
+  // Set once the user types or picks; a late identity answer never overwrites them.
+  const [nameTouched, setNameTouched] = useState(false);
+  const pickName = (picked: string) => {
+    setNameTouched(true);
+    setName(picked);
+  };
   const [placeId, setPlaceId] = useState(row.placeId ?? "");
   const [tripId, setTripId] = useState(row.tripId ?? "");
   const [lat, setLat] = useState(String(row.lat));
@@ -89,6 +96,20 @@ export default function StayReviewCard({
         })}{" "}
         · {row.sourceLat.toFixed(5)}, {row.sourceLon.toFixed(5)}
       </p>
+      <StayIdentityPanel
+        stayId={row.id}
+        lat={row.lat}
+        lon={row.lon}
+        onPickName={row.status === "pending" && !placeId && !busy ? pickName : undefined}
+        onIdentity={(identity) => {
+          // Prefill an empty, untouched name with a specific place — an address
+          // or a nearby place, never just the photos' city. It sits in the field,
+          // visible and editable, until the user accepts.
+          const probable = identity.probable;
+          if (row.status !== "pending" || nameTouched || placeId || name) return;
+          if (probable && probable.source !== "photos") setName(probable.name);
+        }}
+      />
       <ul className="list-disc pl-5 my-3">
         {row.evidence.uncertainties.map((reason) => (
           <li key={reason}>{text(`uncertainty.${reason}`)}</li>
@@ -175,7 +196,7 @@ export default function StayReviewCard({
               maxLength={200}
               value={name}
               disabled={busy || !!placeId}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => pickName(e.target.value)}
             />
           </label>
           <div className="grid grid-cols-2 gap-3">

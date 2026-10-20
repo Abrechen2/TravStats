@@ -4,6 +4,7 @@ import { useAuthStore } from "../store/authStore";
 import { pendingUpdatesApi } from "../lib/api";
 import { dataQualityFlagsApi } from "../lib/api/dataQualityFlags";
 import { tripSuggestionsApi } from "../lib/api/tripSuggestions";
+import { useSuggestionSwitchesStore } from "../store/suggestionSwitchesStore";
 import { sharingApi } from "../lib/api/sharing";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
@@ -65,6 +66,9 @@ export default function NavigationBar(): JSX.Element {
   const [tripSuggestionCount, setTripSuggestionCount] = useState(0);
   const [sharingCount, setSharingCount] = useState(0);
   const [diagnosticModalOpen, setDiagnosticModalOpen] = useState(false);
+  // Switched off (forgejo#306), the kind is not counted at all. A dependency of
+  // the effect below, so a flip re-counts at once instead of at the next poll.
+  const tripSuggestionsOn = useSuggestionSwitchesStore((s) => s.trips);
 
   useEffect(() => {
     if (user) {
@@ -84,7 +88,7 @@ export default function NavigationBar(): JSX.Element {
           logger.warn("Failed to load data-quality flag count");
         }
         try {
-          setTripSuggestionCount(await tripSuggestionsApi.count());
+          setTripSuggestionCount(tripSuggestionsOn ? await tripSuggestionsApi.count() : 0);
         } catch {
           logger.warn("Failed to load trip suggestion count");
         }
@@ -98,7 +102,7 @@ export default function NavigationBar(): JSX.Element {
       const interval = setInterval(loadInboxCounts, 30000);
       return () => clearInterval(interval);
     }
-  }, [user]);
+  }, [user, tripSuggestionsOn]);
 
   const handleLogout = async (): Promise<void> => {
     await logout();

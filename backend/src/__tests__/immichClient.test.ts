@@ -197,6 +197,27 @@ describe("listAlbumAssets", () => {
     expect(p3).toMatchObject({ sizeBytes: null, lat: null, lon: null });
   });
 
+  it("carries Immich's own city and country as hints, and leaves an absent one absent", async () => {
+    mockedAxios.post.mockResolvedValueOnce({
+      data: {
+        assets: {
+          items: [
+            {
+              ...asset("p1"),
+              exifInfo: { latitude: 38.71, longitude: -9.14, city: "Lisboa", country: "Portugal" },
+            },
+            { ...asset("p2"), exifInfo: { latitude: 38.71, longitude: -9.14, city: " " } },
+          ],
+          nextPage: null,
+        },
+      },
+    });
+    const [p1, p2] = await createImmichClient(CONN).listAlbumAssets("album-1");
+    expect(p1).toMatchObject({ city: "Lisboa", country: "Portugal" });
+    expect(p2).not.toHaveProperty("city");
+    expect(p2).not.toHaveProperty("country");
+  });
+
   it("stops after MAX_PAGES to avoid an unbounded loop on a misbehaving server", async () => {
     mockedAxios.post.mockResolvedValue({
       data: { assets: { items: [asset("x")], nextPage: "99" } },

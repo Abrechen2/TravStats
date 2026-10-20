@@ -2,6 +2,7 @@ import { Prisma } from "../../prisma";
 
 import type { CountryTier } from "../../shared/countryEvidence";
 import type { HomePeriod } from "../../utils/homeAirport";
+import type { SuggestionSwitchesView } from "../../services/settings/suggestionSwitches";
 
 // ---- Interfaces for settings data stored as JSON ----
 
@@ -97,6 +98,9 @@ export interface SettingsResponse extends SettingsDataJson {
   baseCurrency: string;
   /** Silent trip auto-creation during flight import (column-backed). */
   autoCreateTrips: boolean;
+  /** Inbox suggestion switches (forgejo#306), column-backed, nested here. */
+  tripSuggestions: SuggestionSwitchesView["tripSuggestions"];
+  staySuggestions: SuggestionSwitchesView["staySuggestions"];
   /**
    * READ-ONLY mirror of the instance-level beta gate (AdminSettings row).
    * It is NOT part of the user's own settings and deliberately absent from
@@ -169,6 +173,10 @@ export interface UserSettingsUpdateData {
   enabledDomains?: string[];
   baseCurrency?: string;
   autoCreateTrips?: boolean;
+  tripSuggestionsEnabled?: boolean;
+  staySuggestionsEnabled?: boolean;
+  staySuggestionsImmichEvidence?: boolean;
+  staySuggestionsLlmPlaceClassification?: boolean;
   /** `null` clears the override and returns the user to the instance default. */
   countryThreshold?: CountryTier | null;
   /** `null` clears the home country. */

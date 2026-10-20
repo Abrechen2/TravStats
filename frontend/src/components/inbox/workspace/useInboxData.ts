@@ -9,8 +9,26 @@ import type { Trip } from "../../../types";
 import type { TripSuggestionList } from "../../../types/tripSuggestion";
 import type { InboxRecord, InboxSource } from "./model";
 
+/**
+ * Which kinds the inbox shows at all. A hidden kind is not asked for: photos
+ * behind their gate, trip and stay suggestions behind the account's switches
+ * (forgejo#306) — the server would answer those empty anyway, but a request
+ * the page does not need is still a request.
+ */
+export interface InboxVisibility {
+  photos: boolean;
+  trips: boolean;
+  stays: boolean;
+}
+
+const hiddenSource = (source: InboxSource, visible: InboxVisibility): boolean =>
+  (source === "photos" && !visible.photos) ||
+  (source === "trips" && !visible.trips) ||
+  (source === "dawarich" && !visible.stays);
+
 /** A failed source is named, never reported as an empty inbox. Latest load wins. */
-export function useInboxData(photosVisible: boolean, active = true) {
+export function useInboxData(visible: InboxVisibility, active = true) {
+  const { photos: photosVisible, trips: tripsVisible, stays: staysVisible } = visible;
   const [records, setRecords] = useState<InboxRecord[]>([]);
   const [stayChoices, setStayChoices] = useState<StayChoices>({ places: [], trips: [] });
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -25,16 +43,18 @@ export function useInboxData(photosVisible: boolean, active = true) {
     setLoading(true);
     const requests = [
       dataQualityFlagsApi.getAll({ status: "open" }),
-      tripSuggestionsApi.list(),
+      tripsVisible ? tripSuggestionsApi.list() : Promise.resolve(null),
       // Edited proposals are still awaiting application.
       pendingUpdatesApi.getAll({ status: "pending" }),
       pendingUpdatesApi.getAll({ status: "edited" }),
       photosVisible ? photoJourneysApi.list("pending") : Promise.resolve([]),
       tripsApi.getAll(),
-      dawarichStaysApi.list("pending").then(async (rows) => ({
-        rows,
-        choices: rows.length ? await dawarichStaysApi.choices() : { places: [], trips: [] },
-      })),
+      staysVisible
+        ? dawarichStaysApi.list("pending").then(async (rows) => ({
+            rows,
+            choices: rows.length ? await dawarichStaysApi.choices() : { places: [], trips: [] },
+          }))
+        : Promise.resolve({ rows: [], choices: { places: [], trips: [] } }),
     ] as const;
     const [flags, suggestions, updates, edited, photos, tripList, stays] =
       await Promise.allSettled(requests);
@@ -51,7 +71,7 @@ export function useInboxData(photosVisible: boolean, active = true) {
     };
     append(flags, "review", (value) => value.flags.map((data) => ({ source: "review", data })));
     append(suggestions, "trips", (value) =>
-      value.suggestions.map((data) => ({ source: "trips", data }))
+      (value?.suggestions ?? []).map((data) => ({ source: "trips", data }))
     );
     append(updates, "updates", (value) =>
       value.updates.map((data) => ({ source: "updates", data }))
@@ -65,10 +85,11 @@ export function useInboxData(photosVisible: boolean, active = true) {
     if (tripList.status === "fulfilled") setTrips(tripList.value);
     else errors.push("tripContext");
     setProposalInfo(suggestions.status === "fulfilled" ? suggestions.value : null);
+    const shown = { photos: photosVisible, trips: tripsVisible, stays: staysVisible };
     // Keep last known rows for a failing source, visibly disabled by the caller.
     setRecords((previous) => {
       const kept = previous.filter(
-        (row) => errors.includes(row.source) && (photosVisible || row.source !== "photos")
+        (row) => errors.includes(row.source) && !hiddenSource(row.source, shown)
       );
       return [
         ...new Map([...kept, ...rows].map((row) => [`${row.source}:${row.data.id}`, row])).values(),
@@ -77,7 +98,7 @@ export function useInboxData(photosVisible: boolean, active = true) {
     setFailed([...new Set(errors)]);
     setLoading(false);
     setLoaded(true);
-  }, [photosVisible]);
+  }, [photosVisible, tripsVisible, staysVisible]);
 
   useEffect(() => {
     if (active) void reload();

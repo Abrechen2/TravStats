@@ -182,6 +182,21 @@ export const BETA_FEATURES = Object.freeze({
       "The owner has added at least one real cruise recording (a Dawarich pull or a GPX export), checked the per-leg verdicts and the map against what was sailed, and accepts the feature for release.",
     reason: "beta",
   }),
+
+  /**
+   * The calendar subscription (forgejo#310): a secret `.ics` URL per user that
+   * calendar apps poll. Gated in the "Reisen" settings section
+   * (`SettingsSectionSwitch`), and on the SERVER as well — unlike most entries
+   * here, `/api/v1/calendar/<token>.ics` answers 404 and no URL is issued while
+   * the switch is off, because a subscription keeps polling long after anybody
+   * looks at the page that hid it.
+   */
+  calendarFeed: Object.freeze({
+    why: "Built on 2026-10-17 and tested against generated calendars only. Nobody has subscribed to a feed from Apple Calendar, Google Calendar or Outlook yet, and those clients differ in how they read all-day events, folding and refresh intervals; Google in particular polls on its own schedule from many addresses, which the per-feed rate limit has not met.",
+    returnsWhen:
+      "The owner has subscribed to the feed on the RC from at least Apple Calendar and Google Calendar, checked that flights, stays and rides land on the right days and hours, and accepts it for release.",
+    reason: "beta",
+  }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 
 export type BetaFeatureKey = keyof typeof BETA_FEATURES;
