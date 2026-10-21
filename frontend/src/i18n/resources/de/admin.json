@@ -1165,6 +1165,7 @@
       "httpsRequired": "Unverschlüsseltes http ist nur zu einem Rechner in deinem eigenen Netz erlaubt. Bitte https verwenden.",
       "credentialsInUrl": "Die URL darf keinen Benutzernamen und kein Passwort enthalten — sie wird im Klartext gespeichert und angezeigt.",
       "unreachable": "Das Repository war nicht erreichbar, oder unter dieser Adresse liegt keine index.json.",
+      "tooLarge": "Unter dieser Adresse antwortet ein Server, aber die index.json ist größer als 2 MB – das ist kein Vorlagen-Index.",
       "notAnIndex": "Unter dieser Adresse liegt eine Datei, aber kein Vorlagen-Index der Version 2."
     },
     "synced_one": "Gespeichert und synchronisiert: {{count}} Vorlage ist aktiv.",

@@ -6,7 +6,7 @@ import { templateRepoLimiter } from "../../middleware/templateRepoLimiter";
 import { prisma } from "../../db";
 import { ensureAdminSettingsRow } from "../../services/adminSettingsRow";
 import { templateRegistry } from "../../services/parsers/templates/registry";
-import { fetchJson } from "../../services/parsers/templates/fetchJson";
+import { FetchJsonError, fetchJson } from "../../services/parsers/templates/fetchJson";
 import { templateIndexSchema } from "../../services/parsers/templates/v2/envelope";
 import {
   checkTemplateRepoUrl,
@@ -32,7 +32,13 @@ const router = Router();
 
 /** The test's verdict, as a code the admin UI words in DE/EN. */
 export type TemplateRepoTestResult =
-  "ok" | "invalidUrl" | "httpsRequired" | "credentialsInUrl" | "unreachable" | "notAnIndex";
+  | "ok"
+  | "invalidUrl"
+  | "httpsRequired"
+  | "credentialsInUrl"
+  | "unreachable"
+  | "tooLarge"
+  | "notAnIndex";
 
 const PROBLEM_RESULT: Record<TemplateRepoUrlProblem, TemplateRepoTestResult> = {
   invalid_url: "invalidUrl",
@@ -140,7 +146,10 @@ router.post(
           { err: err instanceof Error ? err.message : String(err) },
           "Template repository test: index unreachable"
         );
-        res.json({ result: "unreachable", templates: null });
+        // A body over the fetcher's cap is a server answering, not a dead
+        // one: say so, rather than send the admin checking the network.
+        const tooLarge = err instanceof FetchJsonError && err.reason === "too_large";
+        res.json({ result: tooLarge ? "tooLarge" : "unreachable", templates: null });
         return;
       }
       const read = templateIndexSchema.safeParse(index);
