@@ -21,6 +21,8 @@ export interface SearchableSection {
   /** `<ns>:search.expertKeywords.<id>` — words for rows only the expert level shows. */
   expertKeywordsKey?: string;
   expert: boolean;
+  /** Rows sit in collapsed groups; a hit names the row with `&match=`. */
+  foldsRows?: boolean;
 }
 
 /** One page of settings, with the sections this account can see on it. */
@@ -74,6 +76,7 @@ export function SettingsSearch({ scopes }: Props): JSX.Element {
             ? splitKeywords(t(section.expertKeywordsKey, { defaultValue: "" }))
             : [],
           expert: section.expert,
+          foldsRows: section.foldsRows,
         }))
       ),
     [scopes, t]
@@ -85,9 +88,16 @@ export function SettingsSearch({ scopes }: Props): JSX.Element {
     () =>
       searchSettings(query, candidates)
         .slice(0, MAX_HITS)
-        .map((hit) =>
-          hit.expertOnly && !hit.expert ? { ...hit, href: `${hit.href}&expert=1` } : hit
-        ),
+        .map((hit) => {
+          const expertRows = hit.expertOnly && !hit.expert ? "&expert=1" : "";
+          // The matched word names the row inside the section, so a section
+          // that folds its rows (the services accordion) can open the right one.
+          const match =
+            hit.foldsRows && hit.matchedKeyword
+              ? `&match=${encodeURIComponent(hit.matchedKeyword)}`
+              : "";
+          return { ...hit, href: `${hit.href}${match}${expertRows}` };
+        }),
     [query, candidates]
   );
   const searching = query.trim().length >= 2;

@@ -26,6 +26,11 @@ export interface SettingsSearchCandidate {
   expertKeywords?: readonly string[];
   /** The whole section is expert-only. */
   expert?: boolean;
+  /**
+   * The section folds its rows away (the services accordion): a keyword hit
+   * passes the matched word on (`&match=`) so the section opens that row.
+   */
+  foldsRows?: boolean;
 }
 
 export interface SettingsSearchHit extends SettingsSearchCandidate {

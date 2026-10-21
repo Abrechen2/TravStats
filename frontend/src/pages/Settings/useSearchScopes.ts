@@ -21,6 +21,12 @@ const WITH_EXPERT_ROWS: ReadonlySet<string> = new Set([
   "admin:externalServices",
 ]);
 
+/** Sections that fold their rows into collapsed groups (the services accordion). */
+const FOLDS_ROWS: ReadonlySet<string> = new Set([
+  "settings:externalServices",
+  "admin:externalServices",
+]);
+
 /**
  * What the settings search looks through: every page this account can reach,
  * personal and — for an admin — administration, with every section that may
@@ -52,6 +58,7 @@ export function useSearchScopes(isAdmin: boolean): SettingsSearchScope[] {
                 ? `${ns}:search.expertKeywords.${s.id}`
                 : undefined,
               expert: s.level === "expert",
+              foldsRows: FOLDS_ROWS.has(`${ns}:${s.id}`),
             })),
         }));
     return [
