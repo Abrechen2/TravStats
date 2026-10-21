@@ -23,6 +23,7 @@ import { useLodgingColorStore } from "../store/lodgingColorStore";
 import { usePlaceColorStore } from "../store/placeColorStore";
 import { useMapCameraStore } from "../store/mapCameraStore";
 import { useMapLabelsModeStore } from "../store/mapLabelsModeStore";
+import { withLabelObstacles } from "./map/labelObstacles";
 import { FLAT_BASEMAPS, type FlatStyleId } from "./map/basemapStyles";
 import { useResilientStyle } from "./map/basemapFallback";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
@@ -688,13 +689,17 @@ export function DeckGLMap({
         labelSource: placeLabelSource,
       }) ?? [];
 
+    // Station names (rail/bus/ferry, built by the tabs) place around the
+    // labels this map already shows — one collision pass, not two that never
+    // meet (forgejo#320).
+    const ownLayers = [...base, ...cruisePortsAbove, ...lodgingLayers, ...placeLayers];
     return [
       ...cruisePathsBelow,
       ...base,
       ...cruisePortsAbove,
       ...lodgingLayers,
       ...placeLayers,
-      ...(extraLayers ?? []),
+      ...withLabelObstacles(extraLayers ?? [], ownLayers),
     ];
   }, [
     visMode,

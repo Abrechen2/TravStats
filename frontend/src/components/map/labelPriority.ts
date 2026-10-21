@@ -142,12 +142,55 @@ export function projectToWorldPx(lon: number, lat: number, zoom: number): [numbe
 const GRID_CELL_PX = 128;
 
 /**
+ * A label already on the map, as another layer's collision pass needs it:
+ * where it is anchored, its box, and how far its pill is lifted off the point
+ * (`getPixelOffset[1]`). The airport, port, hotel and place labels each lift
+ * by a different amount, so the offset no longer cancels once they meet.
+ */
+export interface PlacedLabel {
+  position: readonly [number, number];
+  width: number;
+  height: number;
+  offsetY: number;
+}
+
+export interface BoxDeclutterOptions {
+  /** Space kept free on every side of a box, in px. */
+  gapPx?: number;
+  /** How far these items' pills are lifted off their point, in px (negative = up). */
+  offsetY?: number;
+  /** Labels already placed by other layers; an item touching one is dropped. */
+  obstacles?: readonly PlacedLabel[];
+}
+
+type Box = { x0: number; y0: number; x1: number; y1: number };
+
+/** The screen box of a pill centred `offsetY` px off its point — deck.gl's
+ *  default text anchor and baseline are both centred. */
+function boxAt(
+  position: readonly [number, number],
+  width: number,
+  height: number,
+  offsetY: number,
+  zoom: number,
+  gapPx: number
+): Box {
+  const [x, y] = projectToWorldPx(position[0], position[1], zoom);
+  const cy = y + offsetY;
+  return {
+    x0: x - width / 2 - gapPx,
+    x1: x + width / 2 + gapPx,
+    y0: cy - height / 2 - gapPx,
+    y1: cy + height / 2 + gapPx,
+  };
+}
+
+/**
  * Like `declutterByDistance`, but on the labels' BOXES: a centre gap says
  * nothing about two 20-character names, which are 140 px wide and collide
  * with their centres 80 px apart. Highest weight places first; a label whose
- * box (plus `gapPx` on every side) touches one already placed is dropped.
- * Every box is anchored centred above its point by the same offset, so the
- * offset cancels and is left out.
+ * box (plus `gapPx` on every side) touches one already placed — or one of the
+ * `obstacles` another layer already shows — is dropped.
  *
  * Placed boxes live in a uniform grid, so each candidate only tests the boxes
  * in the cells it covers — linear in the number of labels, not quadratic.
@@ -158,44 +201,49 @@ export function declutterByBoxes<T>(
   positionOf: (item: T) => readonly [number, number],
   sizeOf: (item: T) => LabelBoxSize,
   zoom: number,
-  gapPx = 4
+  { gapPx = 4, offsetY = 0, obstacles = [] }: BoxDeclutterOptions = {}
 ): T[] {
-  type Box = { x0: number; y0: number; x1: number; y1: number };
   const grid = new Map<string, Box[]>();
+  const cellsOf = (box: Box): string[] => {
+    const keys: string[] = [];
+    for (
+      let cx = Math.floor(box.x0 / GRID_CELL_PX);
+      cx <= Math.floor(box.x1 / GRID_CELL_PX);
+      cx++
+    ) {
+      for (
+        let cy = Math.floor(box.y0 / GRID_CELL_PX);
+        cy <= Math.floor(box.y1 / GRID_CELL_PX);
+        cy++
+      ) {
+        keys.push(`${cx}:${cy}`);
+      }
+    }
+    return keys;
+  };
+  const place = (box: Box) => {
+    for (const key of cellsOf(box)) {
+      const cell = grid.get(key);
+      if (cell) cell.push(box);
+      else grid.set(key, [box]);
+    }
+  };
+  // Obstacles carry no gap of their own: the candidate's gap already keeps
+  // the two apart.
+  for (const o of obstacles) place(boxAt(o.position, o.width, o.height, o.offsetY, zoom, 0));
   const sorted = [...items].sort((a, b) => weightOf(b) - weightOf(a));
   const accepted: T[] = [];
   for (const item of sorted) {
-    const [lon, lat] = positionOf(item);
-    const [x, y] = projectToWorldPx(lon, lat, zoom);
     const { width, height } = sizeOf(item);
-    const box: Box = {
-      x0: x - width / 2 - gapPx,
-      x1: x + width / 2 + gapPx,
-      y0: y - height - gapPx,
-      y1: y + gapPx,
-    };
-    const cx0 = Math.floor(box.x0 / GRID_CELL_PX);
-    const cx1 = Math.floor(box.x1 / GRID_CELL_PX);
-    const cy0 = Math.floor(box.y0 / GRID_CELL_PX);
-    const cy1 = Math.floor(box.y1 / GRID_CELL_PX);
-    let hit = false;
-    for (let cx = cx0; cx <= cx1 && !hit; cx++) {
-      for (let cy = cy0; cy <= cy1 && !hit; cy++) {
-        hit = (grid.get(`${cx}:${cy}`) ?? []).some(
-          (q) => box.x0 < q.x1 && box.x1 > q.x0 && box.y0 < q.y1 && box.y1 > q.y0
-        );
-      }
-    }
+    const box = boxAt(positionOf(item), width, height, offsetY, zoom, gapPx);
+    const hit = cellsOf(box).some((key) =>
+      (grid.get(key) ?? []).some(
+        (q) => box.x0 < q.x1 && box.x1 > q.x0 && box.y0 < q.y1 && box.y1 > q.y0
+      )
+    );
     if (hit) continue;
     accepted.push(item);
-    for (let cx = cx0; cx <= cx1; cx++) {
-      for (let cy = cy0; cy <= cy1; cy++) {
-        const key = `${cx}:${cy}`;
-        const cell = grid.get(key);
-        if (cell) cell.push(box);
-        else grid.set(key, [box]);
-      }
-    }
+    place(box);
   }
   return accepted;
 }

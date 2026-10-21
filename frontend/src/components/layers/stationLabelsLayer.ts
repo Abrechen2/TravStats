@@ -6,6 +6,7 @@ import {
   pickLabelled,
   type LabelBoxSize,
   type LabelsMode,
+  type PlacedLabel,
 } from "../map/labelPriority";
 import { toPortLabel } from "../map/portLabel";
 import type { Rgb } from "../../lib/domainColor";
@@ -67,6 +68,9 @@ const MAX_STATION_LABEL_LEN = 20;
 /** The pill's font size and padding — read by the layer AND the box estimate. */
 const LABEL_FONT_PX = 11;
 const LABEL_PADDING_PX: [number, number] = [4, 2];
+/** How far the pill sits above its station — the collision pass needs it to
+ *  compare against labels lifted by a different amount. */
+const LABEL_OFFSET_Y_PX = -14;
 
 export function toStationLabel(name: string): string {
   return toPortLabel(name, MAX_STATION_LABEL_LEN);
@@ -226,11 +230,16 @@ export function buildStationLabels(
  * every domain's stations at once, so a train station and a bus terminal at
  * the same interchange compete in ONE pass instead of being printed over each
  * other by two.
+ *
+ * `obstacles` are the labels the map already shows — airport codes, ports,
+ * hotels, places (`map/labelObstacles.ts`). They place first and a station
+ * name fits around them, so the overview map prints no name over another.
  */
 export function selectStationLabels(
   stations: readonly StationLabelDatum[],
   mode: LabelsMode,
-  zoom: number
+  zoom: number,
+  obstacles: readonly PlacedLabel[] = []
 ): StationLabelDatum[] {
   const budgeted = pickLabelled(stations, (s) => s.count, mode, zoom);
   if (mode === "all") return budgeted;
@@ -239,7 +248,8 @@ export function selectStationLabels(
     (s) => s.count,
     (s) => s.position,
     (s) => s.box,
-    zoom
+    zoom,
+    { offsetY: LABEL_OFFSET_Y_PX, obstacles }
   );
 }
 
@@ -258,6 +268,8 @@ export interface StationLabelsLayerProps {
    * (`stationLabelPoints` in `Globe/globePinLabels.ts`).
    */
   onGlobe?: boolean;
+  /** Labels other layers already show; set by `DeckGLMap` (`withLabelObstacles`). */
+  obstacles?: readonly PlacedLabel[];
 }
 
 interface StationLabelsState {
@@ -283,8 +295,8 @@ export class StationLabelsLayer extends CompositeLayer<StationLabelsLayerProps> 
 
   updateState(): void {
     const zoom = this.viewportZoom();
-    const { data, labelsMode, onGlobe } = this.props;
-    const labels = onGlobe ? [] : selectStationLabels(data, labelsMode, zoom);
+    const { data, labelsMode, onGlobe, obstacles } = this.props;
+    const labels = onGlobe ? [] : selectStationLabels(data, labelsMode, zoom, obstacles);
     this.setState({ zoom, labels });
   }
 
@@ -309,7 +321,7 @@ export class StationLabelsLayer extends CompositeLayer<StationLabelsLayerProps> 
           getBackgroundColor: [13, 17, 23, 200],
           getBorderColor: (d: StationLabelDatum) => [...d.color, 200],
           getBorderWidth: 1,
-          getPixelOffset: [0, -14],
+          getPixelOffset: [0, LABEL_OFFSET_Y_PX],
           sizeUnits: "pixels",
           billboard: true,
           pickable: false,
