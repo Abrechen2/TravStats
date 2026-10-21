@@ -66,8 +66,10 @@ export function requireReceiving<T extends { state: string; stateReason: string 
 ): T {
   if (!member) throw rejectWith("not-member");
   if (isHeld(member)) throw rejectWith("suspended");
-  const live =
-    RECEIVING.has(member.state) || (member.state === "suspended" && member.stateReason === "off");
-  if (!live) throw rejectWith("not-member");
+  if (!isReceiving(member)) throw rejectWith("not-member");
   return member;
 }
+
+/** Takes ordinary messages: active, unreachable, or switched off there (recovers by itself). */
+export const isReceiving = (m: { state: string; stateReason: string | null }): boolean =>
+  RECEIVING.has(m.state) || (m.state === "suspended" && m.stateReason === "off");

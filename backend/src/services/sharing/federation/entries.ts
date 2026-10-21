@@ -36,7 +36,7 @@ import { runDeliveries } from "./outbox";
 import { fromWireEntries } from "./wire/decode";
 import { toWireEntries } from "./wire/encode";
 import type { WireEntry } from "./wire/shapes";
-import { isHeld } from "./peerMember";
+import { isHeld, isReceiving } from "./peerMember";
 import { rejectWith, serveOnce, takeSeq } from "./streams";
 import { BODY_BUDGET, wireBytes } from "./transport";
 
@@ -149,10 +149,14 @@ export function serveEntries(origin: string, message: EntriesMessage): Promise<T
     });
     if (!group) throw rejectWith("not-member");
     await takeSeq(tx, group.id, origin, message.seq);
-    const members = await tx.tripShareRemoteMember.findMany({
-      where: { groupId: group.id, state: "active", remote: { origin, channel: message.from } },
-      select: { remote: { select: { userId: true } } },
-    });
+    // Every membership that takes messages — also one shown unreachable or switched off there,
+    // which recovers by itself (F-S4e review): refused, its entries would be parked for good.
+    const members = (
+      await tx.tripShareRemoteMember.findMany({
+        where: { groupId: group.id, remote: { origin, channel: message.from } },
+        select: { state: true, stateReason: true, remote: { select: { userId: true } } },
+      })
+    ).filter(isReceiving);
     const recipients = (
       await Promise.all(
         members.map(async (m) => {
