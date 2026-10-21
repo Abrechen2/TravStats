@@ -83,15 +83,22 @@ export function pointsByDevice(
 ): Array<{ deviceId: string | null; points: StoredPoint[] }> {
   const byDevice = new Map<string | null, StoredPoint[]>();
   const dayOf = localDayReader(zone);
+  // Appended in place, not copied per batch: a recording arrives in many
+  // small batches, and copying the growing list for each one is quadratic.
   for (const batch of batches) {
-    const list = byDevice.get(batch.deviceId) ?? [];
-    const kept = storedPoints(batch.points).filter((p) => day === undefined || dayOf(p[0]) === day);
-    byDevice.set(batch.deviceId, [...list, ...kept]);
+    let list = byDevice.get(batch.deviceId);
+    if (!list) {
+      list = [];
+      byDevice.set(batch.deviceId, list);
+    }
+    for (const p of storedPoints(batch.points)) {
+      if (day === undefined || dayOf(p[0]) === day) list.push(p);
+    }
   }
   return [...byDevice.entries()]
     .map(([deviceId, points]) => ({
       deviceId,
-      points: [...points].sort((a, b) => a[0] - b[0]),
+      points: points.sort((a, b) => a[0] - b[0]),
     }))
     .filter((d) => d.points.length > 0)
     .sort((a, b) =>
