@@ -67,7 +67,7 @@ export interface GlobeLabelsOverlayProps {
    */
   extras?: readonly GlobeExtraLabel[];
   /** off = no labels · important = greedy collision (busiest win) · all =
-   *  every front-facing label, overlap allowed. */
+   *  every front-facing label that fits, moved beside its dot if need be. */
   mode: LabelsMode;
 }
 
@@ -75,6 +75,33 @@ export interface GlobeLabelsOverlayProps {
 // marker colour (PORT_DOT_COLOR / AIRPORT_DOT_COLOR) without shouting.
 const AIRPORT_TEXT = "rgba(255,255,255,0.94)";
 const PORT_TEXT = "rgba(125,211,252,0.96)";
+
+// The spots "all" tries for a pill that would touch another, as a shift of
+// its anchor: its usual spot above the dot, under the dot, right and left of
+// it, then one and two rungs further above and below. Numbers, not arrays —
+// this runs for every label on every frame the camera moves.
+const SPREAD_SPOTS = 8;
+/** Pill height plus the padding both neighbours keep (LABEL_H + 2 × PAD_Y). */
+const SPREAD_RUNG = 22;
+/** Under the dot: the pill's top 13 px below it instead of its bottom 13 px above. */
+const SPREAD_BELOW = 42;
+/** Beside the dot: the pill's middle level with it. */
+const SPREAD_LEVEL = 21;
+const SPREAD_SIDE_GAP = 8;
+
+function spreadDx(k: number, w: number): number {
+  if (k === 2) return w / 2 + SPREAD_SIDE_GAP;
+  if (k === 3) return -(w / 2 + SPREAD_SIDE_GAP);
+  return 0;
+}
+
+function spreadDy(k: number): number {
+  if (k <= 0) return 0;
+  if (k === 1) return SPREAD_BELOW;
+  if (k <= 3) return SPREAD_LEVEL;
+  const rung = Math.floor((k - 4) / 2) + 1;
+  return (k - 4) % 2 === 0 ? -rung * SPREAD_RUNG : SPREAD_BELOW + rung * SPREAD_RUNG;
+}
 
 export function GlobeLabelsOverlay({
   mapRef,
@@ -174,15 +201,18 @@ export function GlobeLabelsOverlay({
       // raw projected point below.
       const PAD_X = 4;
       const PAD_Y = 3;
-      const overlaps = (b: PlacedBox): boolean => {
+      const overlaps = (x: number, y: number, w: number, h: number): boolean => {
         for (let j = 0; j < placed.length; j++) {
           const q = placed[j];
-          if (b.x < q.x + q.w && b.x + b.w > q.x && b.y < q.y + q.h && b.y + b.h > q.y) {
+          if (x < q.x + q.w && x + w > q.x && y < q.y + q.h && y + h > q.y) {
             return true;
           }
         }
         return false;
       };
+      const blocked = (b: PlacedBox, dx: number, dy: number): boolean =>
+        overlaps(b.x + dx, b.y + dy, b.w, b.h) ||
+        hitsMapChrome(chrome, b.x + dx, b.y + dy, b.w, b.h);
 
       for (let i = 0; i < points.length; i++) {
         const node = nodeRefs.current[i];
@@ -209,20 +239,35 @@ export function GlobeLabelsOverlay({
           w: w + PAD_X * 2,
           h: LABEL_H + PAD_Y * 2,
         };
-        // "all" mode shows every front-facing label; "important" culls
-        // overlaps so the busiest (pre-sorted) markers keep their labels.
-        // Neither prints over a map control (beta.22 UAT).
-        if (
-          (mode !== "all" && overlaps(box)) ||
-          hitsMapChrome(chrome, box.x, box.y, box.w, box.h)
-        ) {
+        // "important" culls overlaps so the busiest (pre-sorted) markers
+        // keep their labels; "all" moves a label that would touch another to
+        // a free spot beside its dot instead, and hides it until the next
+        // zoom only where none is free (beta.22 UAT). Neither prints over a
+        // map control.
+        let spot = 0;
+        if (blocked(box, 0, 0)) {
+          spot = -1;
+          if (mode === "all") {
+            for (let k = 1; k < SPREAD_SPOTS; k++) {
+              if (!blocked(box, spreadDx(k, w), spreadDy(k))) {
+                spot = k;
+                break;
+              }
+            }
+          }
+        }
+        if (spot < 0) {
           if (node.style.display !== "none") node.style.display = "none";
           continue;
         }
+        const dx = spreadDx(spot, w);
+        const dy = spreadDy(spot);
+        box.x += dx;
+        box.y += dy;
         placed.push(box);
         if (node.style.display === "none") node.style.display = "";
-        // Anchor the pill centred just above the marker dot.
-        node.style.transform = `translate(-50%, -100%) translate(${p.x}px, ${p.y - 13}px)`;
+        // Anchor the pill centred just above the marker dot (or on its spot).
+        node.style.transform = `translate(-50%, -100%) translate(${p.x + dx}px, ${p.y - 13 + dy}px)`;
       }
     };
 

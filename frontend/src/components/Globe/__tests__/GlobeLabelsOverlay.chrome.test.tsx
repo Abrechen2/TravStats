@@ -78,11 +78,19 @@ function renderWithControl(mode: LabelsMode) {
 }
 
 describe("GlobeLabelsOverlay keeps its labels off the map's controls", () => {
-  for (const mode of ["important", "all"] as const) {
-    it(`hides a label that would print over a control ("${mode}")`, () => {
-      renderWithControl(mode);
-      expect(screen.getByText("Vigelandsparken").style.display).toBe("none");
-      expect(screen.getByText("Bryggen").style.display).toBe("");
-    });
-  }
+  it('hides a label that would print over a control ("important")', () => {
+    renderWithControl("important");
+    expect(screen.getByText("Vigelandsparken").style.display).toBe("none");
+    expect(screen.getByText("Bryggen").style.display).toBe("");
+  });
+
+  it('moves it clear of the control instead ("all")', () => {
+    renderWithControl("all");
+    const pill = screen.getByText("Vigelandsparken");
+    // Shown, and anchored under its dot (y 100), below the control's 100 px edge.
+    expect(pill.style.display).toBe("");
+    const y = Number(/translate\([-\d.]+px, ([-\d.]+)px\)$/.exec(pill.style.transform)?.[1]);
+    expect(y - 16).toBeGreaterThanOrEqual(100);
+    expect(screen.getByText("Bryggen").style.display).toBe("");
+  });
 });
