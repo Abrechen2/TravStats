@@ -19,7 +19,10 @@ export interface TripRecordingView {
     /** First and last point shown, on the trip's clock. */
     firstAt: TimeValue | null;
     lastAt: TimeValue | null;
+    /** The paired devices that sent points. */
     devices: string[];
+    /** Points were uploaded without a paired device (the web); absent from an older server. */
+    uploadedWithoutDevice?: boolean;
     /** Every recorded day on the trip's clock, whatever `day` filtered to. */
     days: LocalDateValue[];
   };

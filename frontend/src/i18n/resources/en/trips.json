@@ -876,6 +876,7 @@
     "span": "{{first}} – {{last}}",
     "devices_one": "{{count}} device",
     "devices_other": "{{count}} devices",
+    "uploadedWithoutDevice": "Uploaded without a paired device (e.g. from the web)",
     "downloadGpx": "Download as GPX",
     "delete": "Delete recording",
     "deleteConfirmTitle": "Delete the recording?",

@@ -278,6 +278,8 @@ router.get("/trips/:id/recording", async (req: AuthRequest, res: Response, next:
         firstAt: first ? serializeTime(new Date(first[0]), zone) : null,
         lastAt: last ? serializeTime(new Date(last[0]), zone) : null,
         devices: [...new Set(batches.flatMap((b) => (b.deviceId ? [b.deviceId] : [])))].sort(),
+        // An upload without a paired device (the web) is named, not counted as zero devices.
+        uploadedWithoutDevice: batches.some((b) => !b.deviceId),
         days: recordingDays(all, zone).map((date) => ({ date, zone, precision: "day" as const })),
       },
       segments: displaySegments(clean.segments),

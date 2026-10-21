@@ -1,6 +1,7 @@
 import { useState, type JSX } from "react";
 import ConfirmModal from "../../Training/ConfirmModal";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { JitterNote } from "../../tracks/JitterNote";
 import { tripRecordingApi, type TripRecordingView } from "../../../lib/api/tripRecording";
 import { DELETE_BUTTON_CLASS } from "../../../lib/deleteConfirm";
@@ -46,6 +47,10 @@ export default function TripRecordingPanel({
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Touch sizing follows the pointer, not the width: an iPad is wide and
+  // finger-operated, and the delete sat as a 30 px target beside the download.
+  const coarse = useCoarsePointer();
+  const touch = coarse ? { minHeight: "var(--ts-size-touch-min)" } : undefined;
 
   if (failed) {
     return (
@@ -106,6 +111,7 @@ export default function TripRecordingPanel({
           value={day ?? ""}
           onChange={(e) => onDayChange(e.target.value || null)}
           className="rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm"
+          style={touch}
         >
           <option value="">{t("trips:recording.allDays")}</option>
           {summary.days.map((d) => (
@@ -114,12 +120,19 @@ export default function TripRecordingPanel({
             </option>
           ))}
         </select>
-        <button type="button" className={CONTROL} disabled={busy} onClick={() => void download()}>
+        <button
+          type="button"
+          className={CONTROL}
+          style={touch}
+          disabled={busy}
+          onClick={() => void download()}
+        >
           {t("trips:recording.downloadGpx")}
         </button>
         <button
           type="button"
           className={CONTROL}
+          style={touch}
           disabled={busy}
           onClick={() => setConfirming(true)}
         >
@@ -130,7 +143,11 @@ export default function TripRecordingPanel({
         {[
           t("trips:recording.points", { count: summary.pointCount }),
           span,
-          t("trips:recording.devices", { count: summary.devices.length }),
+          // Paired devices are counted; an upload without one is named, never "0 devices".
+          summary.devices.length > 0
+            ? t("trips:recording.devices", { count: summary.devices.length })
+            : null,
+          summary.uploadedWithoutDevice ? t("trips:recording.uploadedWithoutDevice") : null,
         ]
           .filter(Boolean)
           .join(" · ")}
