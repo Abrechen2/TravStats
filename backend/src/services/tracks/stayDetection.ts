@@ -82,18 +82,55 @@ function lowerBound(fixes: readonly StayFix[], t: number): number {
   return lo;
 }
 
+/**
+ * Above this speed held in one direction, a window is movement even when its
+ * two halves share a centre. A lap that comes round within half a window — a
+ * velodrome, a running track, a kart circuit — puts both half-window centres
+ * on the middle of the circle, and the displacement test alone collapsed ten
+ * minutes of riding into one point (final review of forgejo#319). A lap
+ * outside the stay radius that closes within half a window is at least
+ * 2π · 20 m per minute, 7.5 km/h; a still phone's scatter never holds a
+ * heading, so it never comes near.
+ */
+export const PERSISTENT_MOVE_KMH = 5;
+
+const M_PER_DEG = 111_320;
+
 interface Sums {
   centre: (a: number, b: number) => Point;
   meanUncertainty: (a: number, b: number) => number;
+  /** Metres a window's fixes travelled while holding their heading, per second of the window. */
+  persistentSpeedMps: (a: number, b: number) => number;
 }
 
-/** Prefix sums so any range's weighted centre and mean uncertainty cost O(1). */
+/**
+ * How far the step into fix `k + 1` carried on in the direction of the step
+ * into fix `k`: its length projected onto that heading. Positive when the
+ * recording keeps going, negative when it turns back — and a still phone's
+ * scatter turns back as often as not, so over a window it sums to nothing
+ * while a lap sums to its length.
+ */
+function carriedOnM(fixes: readonly StayFix[], k: number): number {
+  const a = fixes[k - 1];
+  const b = fixes[k];
+  const c = fixes[k + 1];
+  const cosLat = Math.cos((b.lat * Math.PI) / 180);
+  const x1 = (b.lon - a.lon) * cosLat;
+  const y1 = b.lat - a.lat;
+  const x2 = (c.lon - b.lon) * cosLat;
+  const y2 = c.lat - b.lat;
+  const length = Math.hypot(x1, y1);
+  return length === 0 ? 0 : ((x1 * x2 + y1 * y2) / length) * M_PER_DEG;
+}
+
+/** Prefix sums so any range's weighted centre, mean uncertainty and persistent speed cost O(1). */
 function* prefixSums(fixes: readonly StayFix[]): Paced<Sums> {
   const n = fixes.length;
   const w = new Float64Array(n + 1);
   const lon = new Float64Array(n + 1);
   const lat = new Float64Array(n + 1);
   const unc = new Float64Array(n + 1);
+  const carried = new Float64Array(n + 1);
   for (let k = 0; k < n; k++) {
     const f = fixes[k];
     const weight = 1 / f.uncertaintyM ** 2;
@@ -101,6 +138,7 @@ function* prefixSums(fixes: readonly StayFix[]): Paced<Sums> {
     lon[k + 1] = lon[k] + f.lon * weight;
     lat[k + 1] = lat[k] + f.lat * weight;
     unc[k + 1] = unc[k] + f.uncertaintyM;
+    carried[k + 1] = carried[k] + (k > 0 && k < n - 1 ? carriedOnM(fixes, k) : 0);
     if (isCheckpoint(k)) yield;
   }
   return {
@@ -109,6 +147,11 @@ function* prefixSums(fixes: readonly StayFix[]): Paced<Sums> {
       lat: (lat[b] - lat[a]) / (w[b] - w[a]),
     }),
     meanUncertainty: (a: number, b: number) => (unc[b] - unc[a]) / (b - a),
+    // Fixes a+1 … b-2 each have both their steps inside [a, b).
+    persistentSpeedMps: (a: number, b: number) => {
+      const seconds = (fixes[b - 1].t - fixes[a].t) / 1000;
+      return b - a < 3 || seconds <= 0 ? 0 : (carried[b - 1] - carried[a + 1]) / seconds;
+    },
   };
 }
 
@@ -170,7 +213,9 @@ function verdictOf(
   if (m - a < 1 || b - m < 1 || b - a < 3) return self;
   const radiusM = thresholdM(sums.meanUncertainty(a, b), windowMs, profile);
   const displacement = distanceM(sums.centre(a, m), sums.centre(m, b));
-  return { stationary: displacement <= radiusM, centre: sums.centre(a, b), radiusM };
+  const stationary =
+    displacement <= radiusM && sums.persistentSpeedMps(a, b) * 3.6 < PERSISTENT_MOVE_KMH;
+  return { stationary, centre: sums.centre(a, b), radiusM };
 }
 
 /** Runs of stationary fixes, `[start, end)`. */
