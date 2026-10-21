@@ -39,8 +39,19 @@ export interface JourneyFacts {
   vehicleClass?: string | null;
   /** Rental days, from `shared/rentalCounting.ts`. */
   rentalDays?: number | null;
-  /** Scheduled duration in minutes, when both ends are dated. */
+  /** Scheduled duration in minutes, only when both ends are known to the minute. */
   durationMin?: number | null;
+  /**
+   * The recorded arrival delay in minutes — only on a ride with both clocks
+   * and an arrival, the rule the rail statistics keep. Null = not recorded.
+   */
+  delayMinutes?: number | null;
+  /**
+   * What a rental cost, in its own currency (`rentalCost`: final, else
+   * booked). Null when unknown and for a cancellation fee, which is never a
+   * rental-day cost.
+   */
+  cost?: { amount: number; currency: string } | null;
 }
 
 export interface MapJourney {

@@ -369,6 +369,21 @@
       "trip": "Trip"
     },
     "operatorMark": "Logo of {{name}}",
-    "attribution": "Logo: {{source}}"
+    "attribution": "Logo: {{source}}",
+    "first": "First",
+    "avgDuration": "Avg. duration",
+    "fastest": "Fastest",
+    "slowest": "Slowest",
+    "avgDelay": "Avg. delay",
+    "delayValue": "{{minutes}} min",
+    "onTime": "on time",
+    "sampleRides_one": "{{count}} journey",
+    "sampleRides_other": "{{count}} journeys",
+    "sampleRentals_one": "{{count}} rental",
+    "sampleRentals_other": "{{count}} rentals",
+    "avgRentalDays": "Avg. rental days",
+    "kmPerDay": "km per day",
+    "costPerDay": "Cost per day",
+    "costPerKm": "Cost per km"
   }
 }

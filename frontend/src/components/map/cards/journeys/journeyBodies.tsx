@@ -36,6 +36,8 @@ import {
 } from "./journeyStats";
 import { tallyLabel } from "./journeyHoverHtml";
 import { routeDistanceSourceKeys } from "./journeyProvenance";
+import { getJourneyRouteFigures } from "./journeyRouteFigures";
+import { RouteFigureRows } from "./journeyRouteRows";
 import { journeyIconName, rgbCss, tourIconName } from "./journeyIdentity";
 import {
   DomainBadge,
@@ -44,6 +46,7 @@ import {
   OperatorRow,
   journeyDay,
   journeyFactText,
+  journeySpanDay,
   journeyPath,
 } from "./journeyCardParts";
 
@@ -183,17 +186,18 @@ function LatestRows({
       {j.departure && (
         <Row
           label={t(latest.upcoming ? "map:journey.next" : "map:journey.last")}
-          value={journeyDay(j)}
+          value={journeySpanDay(j)}
         />
       )}
       {facts.length > 0 && (
         <Row label={t(`map:journey.fact.${FACT_LABEL[j.domain]}`)} value={facts.join(" · ")} />
       )}
       {j.facts.seat && <Row label={t("map:journey.fact.seat")} value={j.facts.seat} />}
-      {j.facts.rentalDays != null && (
+      {/* What happened is in the route figures; a journey still ahead shows its own. */}
+      {latest.upcoming && j.facts.rentalDays != null && (
         <Row label={t("map:journey.fact.rentalDays")} value={String(j.facts.rentalDays)} />
       )}
-      {j.facts.durationMin != null && (
+      {latest.upcoming && j.facts.durationMin != null && (
         <Row
           label={t("map:journey.fact.duration")}
           value={formatDuration(j.facts.durationMin, t)}
@@ -235,6 +239,7 @@ export function JourneyRouteBody({
   t,
 }: { data: JourneyRouteCardDatum } & BodyProps): JSX.Element {
   const stats = getJourneyRouteStats(data.journeys);
+  const figures = getJourneyRouteFigures(data.journeys);
   return (
     <>
       <div className="mb-2.5 space-y-1.5">
@@ -244,6 +249,13 @@ export function JourneyRouteBody({
       <Hero color={rgbCss(data.color)}>{heroText(stats, data, t)}</Hero>
       <Grid>
         <DistanceRow stats={stats} t={t} locale={locale} />
+        <RouteFigureRows
+          figures={figures}
+          journeys={data.journeys}
+          domain={data.domain}
+          language={locale}
+          t={t}
+        />
         <LatestRows latest={stats.latest} t={t} locale={locale} />
         {stats.topOperator && (
           <OperatorRow domain={data.domain} name={stats.topOperator} color={data.color} t={t} />

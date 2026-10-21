@@ -9,7 +9,7 @@
 import { isCountableRail } from "../../../../shared/railCounting";
 import { isCountableBus } from "../../../../shared/busCounting";
 import { isCountableFerry } from "../../../../shared/ferryCounting";
-import { isCountableRental, rentalDays, rentalDrivenKm } from "../../../../shared/rentalCounting";
+import { isCountableRental, rentalCost, rentalDays, rentalDrivenKm } from "../../../../shared/rentalCounting";
 import { isCountableFlight } from "../../../../shared/flightCounting";
 import { calculateDistance } from "../../../../lib/geo";
 import { flightArrival, flightDeparture } from "../../../../lib/entityTimes";
@@ -110,6 +110,19 @@ function timedDeparture(j: { times?: { departure?: TimeValue | null } }): TimeVa
   return j.times?.departure ?? null;
 }
 
+/**
+ * A recorded delay that measures something: both ends clocked and an
+ * arrival to be late against (`railStats.delayBuckets`), else null.
+ */
+function clockedDelay(j: {
+  delayMinutes?: number | null;
+  times?: { departure?: TimeValue | null; arrival?: TimeValue | null };
+}): number | null {
+  const delay = j.delayMinutes;
+  if (typeof delay !== "number" || !Number.isFinite(delay)) return null;
+  return timedMinutes(timedDeparture(j), stationArrival(j)) === null ? null : delay;
+}
+
 function journey(
   domain: JourneyDomain,
   base: { id: string; status: string },
@@ -152,6 +165,7 @@ export function journeyFromRail(
       travelClass: j.travelClass ?? null,
       seat: [j.coach, j.seat].filter(Boolean).join(" / ") || null,
       durationMin: timedMinutes(timedDeparture(j), stationArrival(j)),
+      delayMinutes: clockedDelay(j),
     },
   });
 }
@@ -171,6 +185,7 @@ export function journeyFromBus(
       lineName: j.lineName ?? null,
       seat: j.seat ?? null,
       durationMin: timedMinutes(timedDeparture(j), stationArrival(j)),
+      delayMinutes: clockedDelay(j),
     },
   });
 }
@@ -191,8 +206,29 @@ export function journeyFromFerry(
       cabinType: j.cabinType ?? null,
       seat: j.seat ?? null,
       durationMin: timedMinutes(timedDeparture(j), stationArrival(j)),
+      delayMinutes: clockedDelay(j),
     },
   });
+}
+
+/** A rental's cost in its own currency; a cancellation fee is not a rental's cost. */
+function costOf(r: {
+  status: string;
+  price?: number | null;
+  currency?: string | null;
+  finalAmount?: number | null;
+  finalCurrency?: string | null;
+}): { amount: number; currency: string } | null {
+  const cost = rentalCost({
+    status: r.status,
+    price: r.price ?? null,
+    currency: r.currency ?? null,
+    finalAmount: r.finalAmount ?? null,
+    finalCurrency: r.finalCurrency ?? null,
+  });
+  return cost && cost.source !== "cancellationFee"
+    ? { amount: cost.amount, currency: cost.currency }
+    : null;
 }
 
 type RentalCore =
@@ -261,6 +297,7 @@ export function journeyFromRental(r: Partial2<RentalBooking, RentalCore>): MapJo
       facts: {
         vehicleClass: r.vehicleExample ?? r.vehicleClass ?? null,
         rentalDays: days,
+        cost: costOf(r),
       },
     }
   );
