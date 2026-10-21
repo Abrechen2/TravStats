@@ -842,6 +842,7 @@
     "userCorrections": "User Corrections"
   },
   "globalApiKeys": {
+    "undecryptable": "A key is stored but this instance cannot decrypt it (it was encrypted with a different key). It therefore serves nobody — please enter it again.",
     "title": "Global API Keys",
     "description": "These keys apply to every user and act as a fallback for anyone who has not stored their own. A user's own key always takes precedence.",
     "parserApis": "Parser APIs",

@@ -2,7 +2,7 @@ import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../db";
-import { encryptApiKey } from "../../utils/encryption";
+import { decryptApiKey, encryptApiKey } from "../../utils/encryption";
 import {
   testAirlabsKey,
   testAviationstackKey,
@@ -151,8 +151,10 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     // Booleans, never the columns: `a || b` over stored values answers with the
     // stored (encrypted) credential itself, and this response goes to every user.
     const hasUserOpensky = !!(settings?.openskyClientId || settings?.openskyUsername);
+    // A global credential counts only if it decrypts (see hasApiKeyAccess).
     const hasGlobalOpensky = !!(
-      adminSettings?.globalOpenskyClientId || adminSettings?.globalOpenskyUsername
+      decryptApiKey(adminSettings?.globalOpenskyClientId) ||
+      decryptApiKey(adminSettings?.globalOpenskyUsername)
     );
     const openskyShared = hasGlobalOpensky && !hasUserOpensky;
 
@@ -313,7 +315,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     });
 
     const adminSettingsAfter = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
-    const hasGlobalOpensky = !!adminSettingsAfter?.globalOpenskyClientId;
+    const hasGlobalOpensky = !!decryptApiKey(adminSettingsAfter?.globalOpenskyClientId);
 
     res.json({
       message: "API keys updated successfully",

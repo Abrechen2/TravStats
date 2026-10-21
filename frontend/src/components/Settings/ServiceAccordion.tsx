@@ -22,6 +22,8 @@ export interface ServiceItem {
   /** One line on what the service is for. */
   what?: string;
   state: ServiceState | null;
+  /** Why the service is not available although something is stored. */
+  notice?: string;
   /** The service's own card — its connection form, test button, quota. */
   body?: ReactNode;
 }
@@ -177,6 +179,11 @@ function AccordionGroup({
                 </span>
                 {item.state && <ServiceBadge state={item.state} />}
               </div>
+              {item.notice && (
+                <p className="t-caption" role="status" style={{ color: token("warn") }}>
+                  {item.notice}
+                </p>
+              )}
               {item.state === "adminOwn" && (
                 <p className="t-caption" data-own-overrides="">
                   {t("settings:services.ownOverrides")}
