@@ -254,10 +254,24 @@ export async function reconfirmTrip(userId: string, tripId: string): Promise<num
     );
   for (const origin of new Set(held.map((m) => m.remote.origin)))
     await requireAdmitted(userId, origin);
-  await prisma.$transaction(
+  const confirmed = await prisma.$transaction(
     async (tx) => {
       const now = new Date();
-      for (const m of held) {
+      // Read again under the rows' locks (F-S4e review): a leave or a revoke that ended one of
+      // them since the first read wins, and nothing ended is brought back.
+      const ids = held.map((m) => m.id);
+      await tx.$queryRaw`SELECT 1 FROM trip_share_remote_members
+        WHERE id = ANY(${ids}::text[]) ORDER BY id FOR UPDATE`;
+      const attached = await tx.trip.count({
+        where: { id: trip.id, userId, shareGroupId: trip.shareGroupId },
+      });
+      const still = attached
+        ? await tx.tripShareRemoteMember.findMany({
+            where: { id: { in: ids }, state: "suspended", stateReason: { in: [...HELD_REASONS] } },
+            include: { remote: true, group: true },
+          })
+        : [];
+      for (const m of still) {
         await tx.shareConsent.updateMany({
           where: {
             status: "pending",
@@ -294,13 +308,21 @@ export async function reconfirmTrip(userId: string, tripId: string): Promise<num
         if (m.stateReason === "restore" && !m.group.homeOrigin) await queueEntries(tx, m.id);
       }
       // A restored home may name a roster older than the spokes': they get its own again.
-      const restored = held.some((m) => m.stateReason === "restore");
+      const restored = still.some((m) => m.stateReason === "restore");
       if (restored && !held[0].group.homeOrigin) await queueRoster(tx, held[0].groupId);
+      return still.length;
     },
     { timeout: 60_000 }
   );
+  if (confirmed === 0)
+    throw remoteShareError(
+      "SHARE_REMOTE_NOTHING_TO_CONFIRM",
+      409,
+      "Nothing on this trip waits for a confirmation",
+      { userId }
+    );
   kickDelivery();
-  return held.length;
+  return confirmed;
 }
 
 /**

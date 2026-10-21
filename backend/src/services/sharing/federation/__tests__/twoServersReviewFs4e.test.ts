@@ -81,3 +81,22 @@ describe("two roster changes at once (review 7)", () => {
     expect(names).toContain("Dora");
   });
 });
+
+describe("confirming again while the trip is left (review 4)", () => {
+  it("does not bring back a membership that ended meanwhile", async () => {
+    const { anna, trip } = await sharedFlight(a, b);
+    await a.lifecycle.holdPeerMemberships(B, "repinned");
+    // Anna leaves the trip while her confirmation is under way (between its read and its write).
+    const peers = a.prisma.comparisonPeer;
+    const findPeer = peers.findUnique.bind(peers);
+    jest.spyOn(peers, "findUnique").mockImplementationOnce((async (args: never) => {
+      await a.shareTrip.leaveGroup(anna, trip.id);
+      return findPeer(args);
+    }) as never);
+    await a.lifecycle.reconfirmTrip(anna, trip.id).catch(() => undefined);
+    const member = await a.prisma.tripShareRemoteMember.findFirstOrThrow({
+      where: { remote: { userId: anna, origin: B } },
+    });
+    expect(member.state).toBe("left");
+  });
+});
