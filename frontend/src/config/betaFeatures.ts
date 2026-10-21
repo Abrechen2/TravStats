@@ -224,9 +224,9 @@ export const BETA_FEATURES = Object.freeze({
    * long after anybody looks at the page that hid it.
    */
   federatedTripSharing: Object.freeze({
-    why: "Built in phases from 2026-10-20 (spec §12). A trip can be offered and copied to another server (F-S4c), but later changes do not follow it yet and nobody can leave or revoke across servers until propagation and lifecycle (F-S4d, F-S4e) are built; nothing has run between two real servers yet.",
+    why: "All five phases of the spec are built (F-S4a to F-S4e, spec §12): a trip is offered and copied to another server, kept in step both ways with conflicts shown, and can be left, revoked, paused after a restore or a new peer key and confirmed again, with a roster that asks before a newcomer's changes arrive. All of it has run only between in-process test servers; nothing has crossed between two real servers, and O2 to O10 are still working assumptions.",
     returnsWhen:
-      "Phases F-S4c to F-S4e are built, the owner has shared a trip between two real servers on the RC (both directions, an edit on each side, a revoke), and accepts it for release (spec O10).",
+      "The owner has shared a trip between two real servers on the RC (both directions, an edit on each side, a leave or a revoke, a restore or re-pin confirmed again) and accepts it for release (spec O10).",
     issue: "forgejo#301",
     reason: "beta",
   }),

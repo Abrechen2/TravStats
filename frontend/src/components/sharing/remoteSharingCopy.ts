@@ -26,6 +26,10 @@ const CODES: Readonly<Record<string, string>> = {
   SHARE_REMOTE_PERSON_NOT_FOUND: "sharing:remote.errors.personNotFound",
   SHARE_REMOTE_OFFER_NOT_FOUND: "sharing:remote.errors.offerNotFound",
   SHARE_REMOTE_REFUSED: "sharing:remote.errors.refused",
+  SHARE_REMOTE_NOTHING_TO_CONFIRM: "sharing:remote.errors.nothingToConfirm",
+  SHARE_REMOTE_NOT_MEMBER: "sharing:remote.errors.notMember",
+  SHARE_REMOTE_IS_HOME: "sharing:remote.errors.isHome",
+  SHARE_REMOTE_ROSTER_NOT_FOUND: "sharing:remote.errors.rosterNotFound",
   TRIP_NOT_FOUND: "sharing:remote.errors.tripNotFound",
 };
 

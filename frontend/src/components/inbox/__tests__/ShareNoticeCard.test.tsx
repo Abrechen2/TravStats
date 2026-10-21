@@ -163,6 +163,44 @@ describe("ShareNoticeCard", () => {
     expect(screen.getByText(/sharing:inbox\.notices\.remoteNameVia ·/)).toBeTruthy();
   });
 
+  it("shows a request from another server to add someone, with its note and no undo (F-S4e)", () => {
+    renderCard(
+      notice({
+        kind: "add-request",
+        entityType: "trip",
+        entityKey: "t1",
+        actor: null,
+        remoteActor: { displayName: "Ben", origin: "far.example" },
+        after: {
+          tripName: "Lissabon",
+          person: { displayName: "Bea", origin: "https://far.example" },
+          note: "Sie fährt mit.",
+        },
+        changes: [],
+      })
+    );
+    expect(screen.getByText("sharing:inbox.notices.kinds.add-request")).toBeTruthy();
+    expect(screen.getByText(/sharing:inbox\.notices\.addRequestFrom/)).toBeTruthy();
+    expect(screen.getByTestId("share-add-request-note").textContent).toBe("Sie fährt mit.");
+    expect(screen.queryByRole("button", { name: "sharing:inbox.notices.undo" })).toBeNull();
+    expect(screen.getByRole("link", { name: "sharing:inbox.notices.open" })).toBeTruthy();
+  });
+
+  it("says when someone withdrew the consent, not just left (F-S4e)", () => {
+    renderCard(
+      notice({
+        kind: "left",
+        entityType: "trip",
+        entityKey: "t1",
+        actor: null,
+        remoteActor: { displayName: "Ben", origin: "far.example" },
+        after: { tripName: "Lissabon", revoked: true },
+        changes: [],
+      })
+    );
+    expect(screen.getByText(/sharing:inbox\.notices\.leftRevoked/)).toBeTruthy();
+  });
+
   it("shows a conflict as both values, with the two answers instead of undo", async () => {
     const onResolve = vi.fn();
     render(

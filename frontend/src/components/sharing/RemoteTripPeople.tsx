@@ -7,14 +7,18 @@ import { sharingRemoteApi } from "../../lib/api/sharingRemote";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { logger } from "../../lib/logger";
 import type {
+  AddRequestBody,
   CreatedRemoteInvite,
   RemoteMember,
   RemoteMemberState,
+  RosterPerson,
   TripRemoteSharing,
 } from "../../types/sharingRemote";
 import { Button, Pill } from "../ui";
 import DetailSection from "../ui/DetailSection";
 import { Field, Input } from "../ui/Field";
+import RemoteAddRequest from "./RemoteAddRequest";
+import RemoteTripRoster from "./RemoteTripRoster";
 import { remoteSharingError, type RemoteSharingError } from "./remoteSharingCopy";
 
 const NS = "sharing:remote.trip";
@@ -32,8 +36,10 @@ const STATE_COLOR: Readonly<Record<RemoteMemberState, string>> = {
 const KNOWN_REASONS = new Set([
   "entries-too-large",
   "restore",
+  "restore-invited",
   "off",
   "peer-blocked",
+  "repinned",
   "unreachable",
 ]);
 /** Why a change was not delivered: the other server's answer, or too large to send at all. */
@@ -42,6 +48,8 @@ const KNOWN_REFUSALS = new Set(["schema", "not-member", "consent", "too-large"])
 const SERVER_ERRORS: Readonly<Record<string, string>> = {
   "local-error": "retryingLocal",
   "remote-error": "retryingRemote",
+  // Their server holds the membership until its person there confirms it again (F-S4e).
+  "suspended-there": "retryingHeld",
 };
 /** States whose member receives changes, so where those changes stand is the line to show. */
 const RECEIVING = new Set<RemoteMemberState>(["active", "unreachable"]);
@@ -54,6 +62,11 @@ const RECEIVING = new Set<RemoteMemberState>(["active", "unreachable"]);
  * silently holds nothing cannot happen. The caller's paired people can be offered the
  * trip from here, or anyone with a code for this trip. Drawn only behind the beta key and while
  * the server has the feature on; a trip that came from another server names it and offers nobody.
+ *
+ * Since F-S4e: who else is on the trip on other servers, with a yes or no to each newcomer
+ * (`RemoteTripRoster`); a confirmation for memberships held after a restore, a blocked server or
+ * a new key; dismissing a refused change; and, on a trip from elsewhere, asking its home to add
+ * someone (`RemoteAddRequest`).
  */
 export default function RemoteTripPeople({
   tripId,
@@ -124,6 +137,32 @@ export default function RemoteTripPeople({
       setCreated(await sharingRemoteApi.createTripInvite(tripId));
     }, "sharing:remote.errors.createFailed");
 
+  const decide = (person: RosterPerson, decision: "accepted" | "declined"): void =>
+    void run(async () => {
+      await sharingRemoteApi.decideRosterPerson(tripId, person.ref, decision);
+    }, `${NS}.errors.rosterFailed`);
+
+  const reconfirm = (): void =>
+    void run(async () => {
+      await sharingRemoteApi.reconfirm(tripId);
+      setNotice(t(`${NS}.reconfirmed`));
+    }, `${NS}.errors.reconfirmFailed`);
+
+  const dismiss = (m: RemoteMember): void =>
+    void run(async () => {
+      await sharingRemoteApi.dismissParked(tripId, m.id);
+    }, `${NS}.errors.dismissFailed`);
+
+  const requestAddition = async (body: AddRequestBody): Promise<boolean> => {
+    let ok = false;
+    await run(async () => {
+      const done = await sharingRemoteApi.requestAddition(tripId, body);
+      setNotice(t(`${NS}.addRequest.sent`, { name: body.displayName, origin: done.origin }));
+      ok = true;
+    }, `${NS}.errors.addRequestFailed`);
+    return ok;
+  };
+
   const reasonLine = (m: RemoteMember): string | null =>
     m.stateReason
       ? t(`${NS}.reason.${KNOWN_REASONS.has(m.stateReason) ? m.stateReason : "other"}`, {
@@ -189,9 +228,35 @@ export default function RemoteTripPeople({
                   {line}
                 </span>
               ))}
+              {m.delivery.state === "rejected" && (
+                <span>
+                  <Button disabled={busy} onClick={() => dismiss(m)}>
+                    {t(`${NS}.dismiss`)}
+                  </Button>
+                </span>
+              )}
             </li>
           ))}
         </ul>
+      )}
+      {current?.reconfirmable && (
+        <div className="flex flex-col gap-1" data-testid="remote-reconfirm">
+          <p className="t-caption">{t(`${NS}.reconfirmHint`)}</p>
+          <div>
+            <Button variant="primary" disabled={busy} onClick={reconfirm}>
+              {t(`${NS}.reconfirm`)}
+            </Button>
+          </div>
+        </div>
+      )}
+      {current && <RemoteTripRoster roster={current.roster} busy={busy} onDecide={decide} />}
+      {current?.homeOrigin && current.members.some((m) => RECEIVING.has(m.state)) && (
+        <RemoteAddRequest
+          tripId={tripId}
+          homeOrigin={current.homeOrigin}
+          busy={busy}
+          onSubmit={requestAddition}
+        />
       )}
       {current && !current.homeOrigin && (
         <>

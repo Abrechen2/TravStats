@@ -1,5 +1,6 @@
 import { api } from "./client";
 import type {
+  AddRequestBody,
   CreatedRemoteInvite,
   ReceivedOffer,
   RemoteInvite,
@@ -60,4 +61,41 @@ export const sharingRemoteApi = {
   declineOffer: async (id: string): Promise<void> => {
     await api.post(`${BASE}/offers/${encodeURIComponent(id)}/decline`);
   },
+  // The lifecycle (F-S4e).
+  withdrawPerson: async (id: string): Promise<RemotePerson> =>
+    (await api.post<Envelope<RemotePerson>>(`${BASE}/people/${encodeURIComponent(id)}/withdraw`))
+      .data.data,
+  decideRosterPerson: async (
+    tripId: string,
+    ref: string,
+    decision: "accepted" | "declined"
+  ): Promise<TripRemoteSharing> =>
+    (
+      await api.post<Envelope<TripRemoteSharing>>(
+        `${BASE}/trips/${encodeURIComponent(tripId)}/roster/${encodeURIComponent(ref)}`,
+        { decision }
+      )
+    ).data.data,
+  reconfirm: async (tripId: string): Promise<TripRemoteSharing> =>
+    (
+      await api.post<Envelope<TripRemoteSharing>>(
+        `${BASE}/trips/${encodeURIComponent(tripId)}/reconfirm`
+      )
+    ).data.data,
+  dismissParked: async (tripId: string, memberId: string): Promise<TripRemoteSharing> =>
+    (
+      await api.delete<Envelope<TripRemoteSharing>>(
+        `${BASE}/trips/${encodeURIComponent(tripId)}/members/${encodeURIComponent(memberId)}/parked`
+      )
+    ).data.data,
+  requestAddition: async (
+    tripId: string,
+    body: AddRequestBody
+  ): Promise<{ requested: true; origin: string }> =>
+    (
+      await api.post<Envelope<{ requested: true; origin: string }>>(
+        `${BASE}/trips/${encodeURIComponent(tripId)}/add-requests`,
+        body
+      )
+    ).data.data,
 };

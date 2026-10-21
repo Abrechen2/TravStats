@@ -19,6 +19,7 @@ const KIND_COLOR: Record<ShareNotice["kind"], string> = {
   deleted: "var(--ts-warn)",
   left: "var(--ts-muted)",
   conflict: "var(--ts-warn)",
+  "add-request": "var(--ts-info)",
 };
 
 /**
@@ -32,7 +33,9 @@ const KIND_COLOR: Record<ShareNotice["kind"], string> = {
  * Across servers (spec 2026-10-20, F-S4d) the author can be a person on another
  * server, named with it — „Ben (andere.instanz.tld)" — and a `conflict` notice
  * (changed at the same time, nothing overwritten) shows the reader's value and
- * theirs with the two answers „Ihre übernehmen" / „Meine behalten".
+ * theirs with the two answers „Ihre übernehmen" / „Meine behalten". Since F-S4e a member there
+ * can ask the reader to offer the trip to someone (`add-request`) — the reader decides on the
+ * trip page — and a `left` notice says when the consent was withdrawn, not just the trip left.
  */
 export default function ShareNoticeCard({
   notice,
@@ -64,7 +67,13 @@ export default function ShareNoticeCard({
           : "joinedMoved"
         : notice.kind === "created" && after.joined
           ? "joined"
-          : notice.kind;
+          : notice.kind === "left" && after.revoked
+            ? "leftRevoked"
+            : notice.kind === "add-request"
+              ? after.person?.origin
+                ? "addRequestFrom"
+                : "addRequest"
+              : notice.kind;
   const name = notice.actor
     ? notice.actor.displayName
     : notice.remoteActor
@@ -78,6 +87,8 @@ export default function ShareNoticeCard({
     entry: after.label || t(`${NS}.unknownEntry`),
     type: t(`sharing:entityTypes.${notice.entityType ?? "trip"}`),
     from: after.movedFrom?.tripName ?? t(`${NS}.unknownTrip`),
+    person: after.person?.displayName ?? "",
+    personOrigin: after.person?.origin ?? "",
   });
   const unread = notice.readAt === null;
   const tripLink = notice.entityType === "trip" ? notice.entityKey : (after.tripId ?? null);
@@ -121,6 +132,20 @@ export default function ShareNoticeCard({
         <p className="text-sm" style={{ fontWeight: unread ? 600 : 400 }}>
           {text}
         </p>
+        {notice.kind === "add-request" && (
+          <>
+            {after.note && (
+              <blockquote
+                className="text-sm"
+                style={{ fontStyle: "italic" }}
+                data-testid="share-add-request-note"
+              >
+                {after.note}
+              </blockquote>
+            )}
+            <p className="t-caption">{t(`${NS}.addRequestHint`)}</p>
+          </>
+        )}
         {conflict && changes.length > 0 && (
           <ul className="flex flex-col text-sm" style={{ gap: 4 }}>
             {changes.map((c) => (

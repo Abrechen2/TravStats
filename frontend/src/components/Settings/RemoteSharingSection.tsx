@@ -42,6 +42,8 @@ export default function RemoteSharingSection(): JSX.Element | null {
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<RemoteSharingError | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  /** The person whose consent is about to be withdrawn: a second click confirms. */
+  const [confirming, setConfirming] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -91,6 +93,13 @@ export default function RemoteSharingSection(): JSX.Element | null {
       if (created?.id === invite.id) setCreated(null);
       setNotice(t(`${NS}.invites.revoked`));
     }, `${NS}.errors.revokeFailed`);
+
+  const withdraw = (person: RemotePerson): void =>
+    void run(async () => {
+      await sharingRemoteApi.withdrawPerson(person.id);
+      setConfirming(null);
+      setNotice(t(`${NS}.people.withdrawn`, { name: person.displayName, origin: person.origin }));
+    }, `${NS}.errors.withdrawFailed`);
 
   const claim = (event: FormEvent): void => {
     event.preventDefault();
@@ -192,16 +201,40 @@ export default function RemoteSharingSection(): JSX.Element | null {
           ) : (
             <ul className="flex flex-col gap-2 text-sm">
               {lists.people.map((person) => (
-                <li key={person.id}>
-                  {t(`${NS}.people.row`, {
-                    name: person.displayName,
-                    username: person.username,
-                    origin: person.origin,
-                  })}{" "}
-                  ·{" "}
-                  <span className="t-caption">
-                    {t(`sharing:settings.consents.status.${person.consent}`)}
+                <li key={person.id} className="flex flex-col gap-1">
+                  <span>
+                    {t(`${NS}.people.row`, {
+                      name: person.displayName,
+                      username: person.username,
+                      origin: person.origin,
+                    })}{" "}
+                    ·{" "}
+                    <span className="t-caption">
+                      {t(`sharing:settings.consents.status.${person.consent}`)}
+                    </span>
                   </span>
+                  {person.consent === "accepted" &&
+                    (confirming === person.id ? (
+                      <span className="flex flex-col gap-1">
+                        <span className="t-caption">
+                          {t(`${NS}.people.withdrawConfirm`, { name: person.displayName })}
+                        </span>
+                        <span className="flex flex-wrap gap-2">
+                          <Button variant="danger" disabled={busy} onClick={() => withdraw(person)}>
+                            {t(`${NS}.people.withdrawYes`)}
+                          </Button>
+                          <Button disabled={busy} onClick={() => setConfirming(null)}>
+                            {t(`${NS}.people.withdrawNo`)}
+                          </Button>
+                        </span>
+                      </span>
+                    ) : (
+                      <span>
+                        <Button disabled={busy} onClick={() => setConfirming(person.id)}>
+                          {t(`${NS}.people.withdraw`)}
+                        </Button>
+                      </span>
+                    ))}
                 </li>
               ))}
             </ul>

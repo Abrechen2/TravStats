@@ -69,11 +69,34 @@ export interface OfferablePerson {
   origin: string;
 }
 
+/**
+ * A person on another server on the trip, and whether their changes reach the reader (F-S4e).
+ * `paired`/`accepted`: they do; `pending`/`declined`: they do not; `you`/`here`: the reader, or
+ * someone on this server — nothing to answer. Mirrors `rosterPersonSchema`.
+ */
+export interface RosterPerson {
+  ref: string;
+  displayName: string;
+  origin: string;
+  relation: "you" | "paired" | "here" | "pending" | "accepted" | "declined";
+}
+
 export interface TripRemoteSharing {
   /** The server this trip came from; null when this server is its home. */
   homeOrigin: string | null;
   members: RemoteMember[];
+  /** Everyone on the trip on other servers (F-S4e). */
+  roster: RosterPerson[];
+  /** A membership of the reader's waits for their confirmation (restore, block, new key). */
+  reconfirmable: boolean;
   offerable: OfferablePerson[];
+}
+
+/** Asking the trip's home to offer it to someone (F-S4e). */
+export interface AddRequestBody {
+  displayName: string;
+  origin?: string;
+  note?: string;
 }
 
 /** Entries per type an offer holds — the `countKey`s of the backend's share registry. */
@@ -93,7 +116,7 @@ export interface ReceivedOffer {
   id: string;
   from: { displayName: string; username: string; origin: string };
   trip: { name: string; startDay: string | null; endDay: string | null };
-  roster: { displayName: string; origin: string }[];
+  roster: { ref: string; displayName: string; origin: string }[];
   counts: OfferCounts;
   offeredAt: string;
 }

@@ -25,6 +25,8 @@ export function sharingErrorKey(err: unknown, fallbackKey: string): string {
     SHARE_UNDO_UNAVAILABLE: "sharing:errors.undoUnavailable",
     SHARE_COPY_NOT_FOUND: "sharing:errors.copyNotFound",
     SHARE_REMOTE_CONFLICT_STALE: "sharing:errors.conflictStale",
+    // A trip that came from another server is shared on from its home (F-S4e).
+    SHARE_REMOTE_NOT_HOME: "sharing:errors.notHomeLocal",
   });
 }
 

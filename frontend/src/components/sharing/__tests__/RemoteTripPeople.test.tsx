@@ -29,6 +29,10 @@ vi.mock("../../../lib/api/sharingRemote", () => ({
     tripSharing: vi.fn(),
     offerTrip: vi.fn(),
     createTripInvite: vi.fn(),
+    decideRosterPerson: vi.fn(),
+    reconfirm: vi.fn(),
+    dismissParked: vi.fn(),
+    requestAddition: vi.fn(),
   },
 }));
 
@@ -49,6 +53,8 @@ const view = (over: Partial<TripRemoteSharing> = {}): TripRemoteSharing => ({
       delivery: { state: "delivered", stateSince: null, reason: null, field: null, label: null },
     },
   ],
+  roster: [],
+  reconfirmable: false,
   offerable: [{ remoteId: "r2", displayName: "Cleo", username: "cleo", origin: FAR }],
   ...over,
 });
@@ -191,6 +197,24 @@ describe("RemoteTripPeople", () => {
       /sharing:remote.trip.delivery.rejected .*"entry":"TP571 FRA → LIS".*delivery.why.too-large/,
     ],
     [
+      "held on their server until the person there confirms again",
+      {
+        delivery: {
+          state: "retrying",
+          stateSince: since,
+          reason: "suspended-there",
+          field: null,
+          label: null,
+        },
+      },
+      /sharing:remote.trip.delivery.retryingHeld .*"Ben".*far.example.org/,
+    ],
+    [
+      "held after the other server's key changed",
+      { state: "suspended", stateReason: "repinned" },
+      /sharing:remote.trip.reason.repinned .*"Ben"/,
+    ],
+    [
       "switched off on that server",
       { state: "suspended", stateReason: "off" },
       /sharing:remote.trip.reason.off .*"Ben"/,
@@ -239,13 +263,104 @@ describe("RemoteTripPeople", () => {
     expect(alert).not.toHaveTextContent("English prose");
   });
 
-  it("a trip from another server names it and offers nobody", async () => {
+  it("a trip from another server names it, offers nobody, and asks its home instead", async () => {
     api.tripSharing.mockResolvedValue(view({ homeOrigin: FAR, offerable: [] }));
+    api.requestAddition.mockResolvedValue({ requested: true, origin: FAR });
     render(<RemoteTripPeople tripId="t1" />);
     expect(
       await screen.findByText(/sharing:remote.trip.fromServer .*far.example.org/)
     ).toBeInTheDocument();
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("button", { name: "sharing:remote.trip.offer" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "sharing:remote.trip.createCode" })).toBeNull();
+    const send = screen.getByRole("button", { name: "sharing:remote.trip.addRequest.submit" });
+    expect(send).toBeDisabled();
+    await userEvent.type(screen.getByLabelText("sharing:remote.trip.addRequest.name"), "Bea");
+    await userEvent.type(screen.getByLabelText("sharing:remote.trip.addRequest.note"), "Hi");
+    await userEvent.click(send);
+    expect(api.requestAddition).toHaveBeenCalledWith("t1", { displayName: "Bea", note: "Hi" });
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      /sharing:remote.trip.addRequest.sent .*"Bea".*far.example.org/
+    );
+  });
+
+  it("a refused request names its reason in its own sentence", async () => {
+    api.tripSharing.mockResolvedValue(view({ homeOrigin: FAR, offerable: [] }));
+    api.requestAddition.mockRejectedValue(refusal("SHARE_REMOTE_NOT_MEMBER"));
+    render(<RemoteTripPeople tripId="t1" />);
+    await userEvent.type(
+      await screen.findByLabelText("sharing:remote.trip.addRequest.name"),
+      "Bea"
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "sharing:remote.trip.addRequest.submit" })
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("sharing:remote.errors.notMember");
+  });
+
+  it("asks about a newcomer on the roster and sends the answer", async () => {
+    const cleo = {
+      ref: "11111111-2222-4333-8444-555555555555",
+      displayName: "Cleo",
+      origin: "https://c.example.org",
+      relation: "pending" as const,
+    };
+    api.tripSharing.mockResolvedValue(
+      view({
+        roster: [
+          {
+            ref: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+            displayName: "Ben",
+            origin: FAR,
+            relation: "paired",
+          },
+          cleo,
+        ],
+      })
+    );
+    api.decideRosterPerson.mockResolvedValue(view());
+    render(<RemoteTripPeople tripId="t1" />);
+    const statuses = await screen.findAllByTestId("remote-roster-status");
+    expect(statuses[1]).toHaveTextContent(/roster.sentence.pending .*"Cleo"/);
+    await userEvent.click(
+      screen.getByRole("button", { name: "sharing:remote.trip.roster.accept" })
+    );
+    expect(api.decideRosterPerson).toHaveBeenCalledWith("t1", cleo.ref, "accepted");
+  });
+
+  it("offers to confirm held memberships again", async () => {
+    api.tripSharing.mockResolvedValue(
+      view({
+        reconfirmable: true,
+        members: [{ ...view().members[0], state: "suspended", stateReason: "restore" }],
+      })
+    );
+    api.reconfirm.mockResolvedValue(view());
+    render(<RemoteTripPeople tripId="t1" />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "sharing:remote.trip.reconfirm" })
+    );
+    expect(api.reconfirm).toHaveBeenCalledWith("t1");
+    expect(await screen.findByRole("status")).toHaveTextContent("sharing:remote.trip.reconfirmed");
+  });
+
+  it("dismisses a refused change", async () => {
+    api.tripSharing.mockResolvedValue(
+      member({
+        delivery: {
+          state: "rejected",
+          stateSince: since,
+          reason: "schema",
+          field: "x",
+          label: "TP571",
+        },
+      })
+    );
+    api.dismissParked.mockResolvedValue(view());
+    render(<RemoteTripPeople tripId="t1" />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "sharing:remote.trip.dismiss" })
+    );
+    expect(api.dismissParked).toHaveBeenCalledWith("t1", "m1");
   });
 
   it("says so when the trip's people on other servers cannot be loaded", async () => {

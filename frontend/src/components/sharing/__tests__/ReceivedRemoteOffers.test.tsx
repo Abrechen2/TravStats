@@ -29,7 +29,7 @@ const OFFER: ReceivedOffer = {
   id: "o1",
   from: { displayName: "Anna", username: "anna", origin: FAR },
   trip: { name: "Portugal 2030", startDay: "2030-06-01", endDay: "2030-06-10" },
-  roster: [{ displayName: "Anna", origin: FAR }],
+  roster: [{ ref: "0f0e0d0c-0b0a-4908-8706-050403020100", displayName: "Anna", origin: FAR }],
   counts: {
     flights: 2,
     lodgingStays: 1,

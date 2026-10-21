@@ -28,6 +28,7 @@ vi.mock("../../../lib/api/sharingRemote", () => ({
     listOffers: vi.fn(),
     acceptOffer: vi.fn(),
     declineOffer: vi.fn(),
+    withdrawPerson: vi.fn(),
   },
 }));
 
@@ -146,5 +147,31 @@ describe("RemoteSharingSection", () => {
     await claimWith(` ${CODE} `);
     expect(api.claim).toHaveBeenCalledWith(CODE);
     expect(await screen.findByRole("status")).toHaveTextContent(OTHER);
+  });
+
+  it("withdraws a person's consent only on a second click, and says it was done (F-S4e)", async () => {
+    const person = {
+      id: "p1",
+      origin: OTHER,
+      username: "ben",
+      displayName: "Ben",
+      consent: "accepted" as const,
+      createdAt: "2026-10-20T10:00:00.000Z",
+    };
+    api.listPeople.mockResolvedValue([person]);
+    api.withdrawPerson.mockResolvedValue({ ...person, consent: "withdrawn" });
+    render(<RemoteSharingSection />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "sharing:remote.people.withdraw" })
+    );
+    expect(api.withdrawPerson).not.toHaveBeenCalled();
+    expect(screen.getByText(/sharing:remote.people.withdrawConfirm/)).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: "sharing:remote.people.withdrawYes" })
+    );
+    expect(api.withdrawPerson).toHaveBeenCalledWith("p1");
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      /sharing:remote.people.withdrawn .*"Ben".*far.example.org/
+    );
   });
 });

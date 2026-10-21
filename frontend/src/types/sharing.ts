@@ -100,8 +100,12 @@ export interface ShareResult {
   created: ShareCounts;
 }
 
-/** `conflict`: a change from another server met a copy that had moved since (F-S4d). */
-export type ShareNoticeKind = "shared" | "created" | "updated" | "deleted" | "left" | "conflict";
+/**
+ * `conflict`: a change from another server met a copy that had moved since (F-S4d).
+ * `add-request`: a member on another server asks the reader to offer the trip to someone (F-S4e).
+ */
+export type ShareNoticeKind =
+  "shared" | "created" | "updated" | "deleted" | "left" | "conflict" | "add-request";
 
 /** The entry types a notice may name (S2); `trip` for shared/left. */
 export type ShareEntityType =
@@ -145,6 +149,11 @@ export interface ShareNoticeAfter {
   movedFrom?: { tripId: string; tripName: string };
   /** `created`, moved: "share" when sharing the trip moved it, absent for a later addition. */
   via?: "share";
+  /** `left` across servers: the consent was withdrawn, not just the trip left (F-S4e). */
+  revoked?: boolean;
+  /** `add-request`: whom the member on the other server asks the reader to add, and why. */
+  person?: { displayName: string; origin?: string };
+  note?: string;
 }
 
 /** A person on another server, as their server names them: shown as „Ben (andere.instanz.tld)". */
