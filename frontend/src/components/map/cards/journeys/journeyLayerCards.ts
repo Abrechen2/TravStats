@@ -13,8 +13,37 @@ import type { Layer, PickingInfo } from "@deck.gl/core";
 import type { Rgb } from "../../../../lib/domainColor";
 import { useMapCardSelectionStore } from "../../../../store/mapCardSelectionStore";
 import type { MapPinned } from "../pinnedTypes";
+import type { TimeValue } from "../../../../shared/time";
 import type { JourneyDomain, JourneyEnd, MapJourney } from "./journeyTypes";
-import { endKey, indexStops, journeyRouteKey, tallyJourneys } from "./journeyStats";
+import {
+  endKey,
+  indexStops,
+  journeyRouteKey,
+  modeOf,
+  sumJourneyDistance,
+  tallyJourneys,
+} from "./journeyStats";
+import { routeDistanceSourceKeys } from "./journeyProvenance";
+import { getJourneyRouteFigures } from "./journeyRouteFigures";
+import { getJourneyStopFigures, type StopDestination } from "./journeyStopFigures";
+import { routeSubject, type JourneySubject } from "./journeySubject";
+
+/**
+ * A route's profile at a glance (owner, 2026-10-21) — every field null when
+ * it cannot be derived, and then left out of the tooltip.
+ */
+export interface JourneyRouteProfile {
+  /** Σ km of the travelled journeys that recorded one; null when none did. */
+  distanceKm: number | null;
+  /** i18n keys of what that distance measures. */
+  distanceSourceKeys: string[];
+  avgDurationMin: number | null;
+  /** The last journey that happened, on its places' clocks. */
+  last: { departure: TimeValue | null; arrival: TimeValue | null } | null;
+  operator: string | null;
+  /** What the picture shows — a ship, a car model, a train category. */
+  subject: JourneySubject | null;
+}
 
 /** What a line's hover tooltip prints — precomputed, because hover runs at 60–120 Hz. */
 export interface JourneyRouteHover {
@@ -24,6 +53,8 @@ export interface JourneyRouteHover {
   travelled: number;
   planned: number;
   color: Rgb;
+  /** Absent on a datum decorated before profiles existed. */
+  profile?: JourneyRouteProfile;
 }
 
 /** What a station's hover tooltip prints. */
@@ -33,6 +64,25 @@ export interface JourneyStopHover {
   travelled: number;
   planned: number;
   color: Rgb;
+  departures?: number;
+  destinations?: StopDestination[];
+  lastVisit?: TimeValue | null;
+}
+
+/** The profile of one route's journeys. */
+export function journeyRouteProfile(journeys: readonly MapJourney[]): JourneyRouteProfile {
+  const distance = sumJourneyDistance(journeys);
+  const figures = getJourneyRouteFigures(journeys);
+  return {
+    distanceKm: distance.measuredCount > 0 ? distance.knownKm : null,
+    distanceSourceKeys: routeDistanceSourceKeys(journeys),
+    avgDurationMin: figures.duration?.averageMin ?? null,
+    last: figures.last
+      ? { departure: figures.last.departure, arrival: figures.last.arrival }
+      : null,
+    operator: modeOf(journeys.map((j) => j.operator)),
+    subject: routeSubject(journeys),
+  };
 }
 
 /** Lines: rail `-paths`, bus/ferry `-paths`, rental `-links`, the trip map's `-rides`. */
@@ -126,16 +176,25 @@ function decorateRoute(
     }
     return undefined;
   };
+  // One profile per route, however many segments draw it.
+  const profiles = new Map<string, JourneyRouteProfile>();
   const data = ((layer.props.data as LineDatum[] | undefined) ?? []).map((d) => {
     const seed = seedOf(d);
     if (!seed) return d;
-    const tally = tallyJourneys(routes.get(journeyRouteKey(seed)) ?? [seed]);
+    const key = journeyRouteKey(seed);
+    const onRoute = routes.get(key) ?? [seed];
+    let profile = profiles.get(key);
+    if (!profile) {
+      profile = journeyRouteProfile(onRoute);
+      profiles.set(key, profile);
+    }
     const journeyRoute: JourneyRouteHover = {
       domain: seed.domain,
       dep: seed.dep,
       arr: seed.arr,
-      ...tally,
+      ...tallyJourneys(onRoute),
       color,
+      profile,
     };
     return { ...d, journeyRoute };
   });
@@ -158,11 +217,15 @@ function decorateStop(layer: Layer, stops: ReadonlyMap<string, MapJourney[]>, co
   const data = ((layer.props.data as PointDatum[] | undefined) ?? []).map((d) => {
     const pinned = journeyStopPinned(stops, d.position, color);
     if (!pinned || pinned.kind !== "journeyStop") return d;
+    const figures = getJourneyStopFigures(pinned.data.journeys, endKey(pinned.data.stop));
     const journeyStop: JourneyStopHover = {
       domain: pinned.data.domain,
       stop: pinned.data.stop,
       ...tallyJourneys(pinned.data.journeys),
       color,
+      departures: figures.departures,
+      destinations: figures.destinations,
+      lastVisit: figures.lastVisit,
     };
     return { ...d, journeyStop };
   });

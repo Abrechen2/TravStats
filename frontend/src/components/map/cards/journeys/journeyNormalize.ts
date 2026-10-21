@@ -9,7 +9,12 @@
 import { isCountableRail } from "../../../../shared/railCounting";
 import { isCountableBus } from "../../../../shared/busCounting";
 import { isCountableFerry } from "../../../../shared/ferryCounting";
-import { isCountableRental, rentalCost, rentalDays, rentalDrivenKm } from "../../../../shared/rentalCounting";
+import {
+  isCountableRental,
+  rentalCost,
+  rentalDays,
+  rentalDrivenKm,
+} from "../../../../shared/rentalCounting";
 import { isCountableFlight } from "../../../../shared/flightCounting";
 import { calculateDistance } from "../../../../lib/geo";
 import { flightArrival, flightDeparture } from "../../../../lib/entityTimes";
@@ -162,6 +167,7 @@ export function journeyFromRail(
     travelled: isCountableRail(j),
     facts: {
       trainNumber: train || null,
+      trainCategory: j.trainCategory ?? null,
       travelClass: j.travelClass ?? null,
       seat: [j.coach, j.seat].filter(Boolean).join(" / ") || null,
       durationMin: timedMinutes(timedDeparture(j), stationArrival(j)),
@@ -296,6 +302,7 @@ export function journeyFromRental(r: Partial2<RentalBooking, RentalCore>): MapJo
       travelled: isCountableRental(r),
       facts: {
         vehicleClass: r.vehicleExample ?? r.vehicleClass ?? null,
+        vehicleModel: r.vehicleExample ?? null,
         rentalDays: days,
         cost: costOf(r),
       },

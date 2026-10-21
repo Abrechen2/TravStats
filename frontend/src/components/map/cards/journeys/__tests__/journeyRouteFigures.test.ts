@@ -172,7 +172,12 @@ describe("rental figures", () => {
   it("derives length, km/day, cost/day and cost/km from the rentals that carry them", () => {
     const f = getJourneyRouteFigures([
       rental("a", { distanceKm: 400, distanceSource: "invoice", price: 200, currency: "EUR" }),
-      rental("b", { distanceKm: 200, distanceSource: "invoice", finalAmount: 120, finalCurrency: "EUR" }),
+      rental("b", {
+        distanceKm: 200,
+        distanceSource: "invoice",
+        finalAmount: 120,
+        finalCurrency: "EUR",
+      }),
     ]);
     expect(f.rental?.averageDays).toBe(4);
     expect(f.rental?.kmPerDay).toBe(75);

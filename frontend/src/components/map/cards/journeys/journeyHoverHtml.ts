@@ -6,9 +6,11 @@
 
 import { escapeHtml } from "../../../../lib/escapeHtml";
 import { flagImgHtml } from "../../../../lib/countryFlag";
-import { formatDate as formatUserDate } from "../../../../lib/displayFormat";
+import { formatDate as formatUserDate, formatTimeValueShown } from "../../../../lib/displayFormat";
+import { formatNumber } from "../../../../lib/units";
 import type { Rgb } from "../../../../lib/domainColor";
-import type { JourneyRouteHover, JourneyStopHover } from "./journeyLayerCards";
+import { dayOf, type TimeValue } from "../../../../shared/time";
+import type { JourneyRouteHover, JourneyRouteProfile, JourneyStopHover } from "./journeyLayerCards";
 import type { JourneyDomain, JourneyEnd, TourCardDatum, TripStopCardDatum } from "./journeyTypes";
 import { domainBadgeHtml, journeyIconName, rgbCss, tourIconName } from "./journeyIdentity";
 
@@ -62,20 +64,86 @@ function tallyLine(
     : "";
 }
 
+/** "12.04.2024" or "10.08.2024 → 11.08.2024" — the journey's day(s) on its places' clocks. */
+function spanDay(departure: TimeValue | null, arrival: TimeValue | null): string {
+  if (!departure) return "";
+  const from = formatTimeValueShown(departure, { dateOnly: true });
+  if (!arrival || dayOf(arrival) === dayOf(departure)) return from;
+  if (Date.parse(arrival.utc) < Date.parse(departure.utc)) return from;
+  return `${from} → ${formatTimeValueShown(arrival, { dateOnly: true })}`;
+}
+
+function factsLine(parts: string[]): string {
+  return parts.length
+    ? `<div data-testid="hover-profile" style="opacity:0.8;font-size:10.5px;margin-top:3px;">${escapeHtml(parts.join(" · "))}</div>`
+    : "";
+}
+
+const attr = (name: string, value: string | number): string =>
+  ` data-${name}="${escapeHtml(String(value))}"`;
+
+/**
+ * The slots `hoverEnrichment.ts` fills once the tooltip is drawn — the
+ * operator's logo and a picture of the ship, car or train. Empty elements
+ * until then, and for good on a miss: the tooltip never waits for them.
+ */
+function operatorSlot(domain: JourneyDomain, name: string | null): string {
+  if (!name || domain === "flight") return "";
+  return `<span data-hover-operator${attr("domain", domain)}${attr("name", name)} style="margin-left:auto;display:inline-flex"></span>`;
+}
+
+function subjectSlot(p: JourneyRouteProfile | undefined, t: TFn): string {
+  if (!p?.subject) return "";
+  return `<div data-hover-subject${attr("kind", p.subject.kind)}${attr("name", p.subject.name)}${attr("credit", t("map:journey.picture"))}></div>`;
+}
+
 export function journeyRouteHoverHtml(d: JourneyRouteHover, opts: JourneyHoverOptions): string {
   const { t, flagHeight = 16 } = opts;
-  const head = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;opacity:0.85;font-size:10.5px;text-transform:uppercase;letter-spacing:0.04em;">${domainBadgeHtml(journeyIconName(d.domain), d.color)}<span>${escapeHtml(t(`map:journey.domain.${d.domain}`))}</span></div>`;
+  const p = d.profile;
+  const head = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;opacity:0.85;font-size:10.5px;text-transform:uppercase;letter-spacing:0.04em;">${domainBadgeHtml(journeyIconName(d.domain), d.color)}<span>${escapeHtml(t(`map:journey.domain.${d.domain}`))}</span>${operatorSlot(d.domain, p?.operator ?? null)}</div>`;
+  const facts: string[] = [];
+  if (p?.distanceKm != null) {
+    const source = p.distanceSourceKeys.map((k) => t(k)).join(", ");
+    facts.push(`${formatNumber(Math.round(p.distanceKm))} km${source ? ` (${source})` : ""}`);
+  }
+  if (p?.avgDurationMin != null) {
+    facts.push(
+      `Ø ${t("map:globe.pinned.durationHours", {
+        h: Math.floor(p.avgDurationMin / 60),
+        m: p.avgDurationMin % 60,
+      })}`
+    );
+  }
+  const last = p?.last ? spanDay(p.last.departure, p.last.arrival) : "";
+  if (last) facts.push(`${t("map:journey.last")} ${last}`);
   return stripe(
     d.color,
-    `${head}${endLine(d.dep, flagHeight)}${endLine(d.arr, flagHeight)}${tallyLine(d, t)}`
+    `${head}${endLine(d.dep, flagHeight)}${endLine(d.arr, flagHeight)}${tallyLine(d, t)}${factsLine(facts)}${subjectSlot(p, t)}`
   );
+}
+
+function stopSlot(d: JourneyStopHover, t: TFn): string {
+  return `<div data-hover-stop${attr("domain", d.domain)}${attr("name", d.stop.name)}${attr("lat", d.stop.lat)}${attr("lon", d.stop.lon)}${attr("credit", t("openData:wikipedia.license"))}${attr("unavailable", t("map:journey.wikiUnavailable"))}></div>`;
 }
 
 export function journeyStopHoverHtml(d: JourneyStopHover, opts: JourneyHoverOptions): string {
   const { t, flagHeight = 16 } = opts;
   const head = `<div style="display:flex;align-items:center;gap:7px;">${domainBadgeHtml(journeyIconName(d.domain), d.color)}${endLine(d.stop, flagHeight)}</div>`;
   const kind = `<div style="opacity:0.62;font-size:10.5px;margin-top:2px;">${escapeHtml(t(`map:journey.stop.${d.domain}`))}</div>`;
-  return stripe(d.color, `${head}${kind}${tallyLine(d, t)}`);
+  const facts: string[] = [];
+  if (d.departures) facts.push(t(`map:journey.departures.${d.domain}`, { count: d.departures }));
+  if (d.destinations?.length) {
+    facts.push(
+      `→ ${d.destinations.map((x) => `${x.name}${x.count > 1 ? ` ${x.count}×` : ""}`).join(", ")}`
+    );
+  }
+  const lastLine = d.lastVisit
+    ? factsLine([`${t("map:journey.lastHere")} ${spanDay(d.lastVisit, null)}`])
+    : "";
+  return stripe(
+    d.color,
+    `${head}${kind}${tallyLine(d, t)}${factsLine(facts)}${lastLine}${stopSlot(d, t)}`
+  );
 }
 
 export function tourHoverHtml(d: TourCardDatum, opts: JourneyHoverOptions): string {

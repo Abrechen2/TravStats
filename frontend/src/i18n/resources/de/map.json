@@ -384,6 +384,26 @@
     "avgRentalDays": "Ø Miettage",
     "kmPerDay": "km pro Tag",
     "costPerDay": "Kosten pro Tag",
-    "costPerKm": "Kosten pro km"
+    "costPerKm": "Kosten pro km",
+    "wikiUnavailable": "Wikipedia ist gerade nicht erreichbar.",
+    "lastHere": "Zuletzt hier",
+    "destinations": "Ziele von hier",
+    "departuresLabel": "Abfahrten von hier",
+    "pickupsLabel": "Abholungen hier",
+    "returnsLabel": "Rückgaben hier",
+    "arrivalsLabel": "Ankünfte hier",
+    "departures": {
+      "rail_one": "{{count}} Abfahrt",
+      "rail_other": "{{count}} Abfahrten",
+      "bus_one": "{{count}} Abfahrt",
+      "bus_other": "{{count}} Abfahrten",
+      "ferry_one": "{{count}} Abfahrt",
+      "ferry_other": "{{count}} Abfahrten",
+      "rental_one": "{{count}} Abholung",
+      "rental_other": "{{count}} Abholungen",
+      "flight_one": "{{count}} Abflug",
+      "flight_other": "{{count}} Abflüge"
+    },
+    "picture": "Bild"
   }
 }

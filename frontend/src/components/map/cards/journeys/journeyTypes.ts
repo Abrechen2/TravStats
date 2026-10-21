@@ -37,6 +37,10 @@ export interface JourneyFacts {
   vesselName?: string | null;
   cabinType?: string | null;
   vehicleClass?: string | null;
+  /** The train category alone ("ICE") — what a train picture is looked up by. */
+  trainCategory?: string | null;
+  /** The rental's example car ("VW Golf oder ähnlich"), never its class — a picture's subject. */
+  vehicleModel?: string | null;
   /** Rental days, from `shared/rentalCounting.ts`. */
   rentalDays?: number | null;
   /** Scheduled duration in minutes, only when both ends are known to the minute. */
