@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persistSetting } from "./persistSetting";
+import { serializedSetting } from "./serializedSetting";
 
 /**
  * The account's inbox suggestion switches (forgejo#306): whether the
@@ -67,49 +67,34 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
       tripRecording: enabledIn(body?.tripRecording) ?? get().tripRecording,
     });
   },
-  setTrips: (enabled) => {
-    const prev = get().trips;
-    set({ trips: enabled });
-    persistSetting(
-      { tripSuggestions: { enabled } },
-      () => set({ trips: prev }),
-      "trip suggestions switch"
-    );
-  },
-  setStays: (enabled) => {
-    const prev = get().stays;
-    set({ stays: enabled });
-    persistSetting(
-      { staySuggestions: { enabled } },
-      () => set({ stays: prev }),
-      "stay suggestions switch"
-    );
-  },
-  setStayImmichEvidence: (immichEvidence) => {
-    const prev = get().stayImmichEvidence;
-    set({ stayImmichEvidence: immichEvidence });
-    persistSetting(
-      { staySuggestions: { immichEvidence } },
-      () => set({ stayImmichEvidence: prev }),
-      "stay Immich evidence switch"
-    );
-  },
-  setStayLlmPlaceClassification: (llmPlaceClassification) => {
-    const prev = get().stayLlmPlaceClassification;
-    set({ stayLlmPlaceClassification: llmPlaceClassification });
-    persistSetting(
-      { staySuggestions: { llmPlaceClassification } },
-      () => set({ stayLlmPlaceClassification: prev }),
-      "stay place classification switch"
-    );
-  },
-  setTripRecording: (enabled) => {
-    const prev = get().tripRecording;
-    set({ tripRecording: enabled });
-    persistSetting(
-      { tripRecording: { enabled } },
-      () => set({ tripRecording: prev }),
-      "trip recording switch"
-    );
-  },
+  setTrips: serializedSetting({
+    payload: (enabled: boolean) => ({ tripSuggestions: { enabled } }),
+    current: () => get().trips,
+    apply: (trips) => set({ trips }),
+    what: "trip suggestions switch",
+  }),
+  setStays: serializedSetting({
+    payload: (enabled: boolean) => ({ staySuggestions: { enabled } }),
+    current: () => get().stays,
+    apply: (stays) => set({ stays }),
+    what: "stay suggestions switch",
+  }),
+  setStayImmichEvidence: serializedSetting({
+    payload: (immichEvidence: boolean) => ({ staySuggestions: { immichEvidence } }),
+    current: () => get().stayImmichEvidence,
+    apply: (stayImmichEvidence) => set({ stayImmichEvidence }),
+    what: "stay Immich evidence switch",
+  }),
+  setStayLlmPlaceClassification: serializedSetting({
+    payload: (llmPlaceClassification: boolean) => ({ staySuggestions: { llmPlaceClassification } }),
+    current: () => get().stayLlmPlaceClassification,
+    apply: (stayLlmPlaceClassification) => set({ stayLlmPlaceClassification }),
+    what: "stay place classification switch",
+  }),
+  setTripRecording: serializedSetting({
+    payload: (enabled: boolean) => ({ tripRecording: { enabled } }),
+    current: () => get().tripRecording,
+    apply: (tripRecording) => set({ tripRecording }),
+    what: "trip recording switch",
+  }),
 }));

@@ -262,7 +262,10 @@ router.get("/trips/:id/recording", async (req: AuthRequest, res: Response, next:
     const trip = await loadOwnedTrip(req.params.id, userId);
     const { day } = tripRecordingQuerySchema.parse(req.query);
     const { batches, zone, devices } = await loadDevices(userId, trip, day);
-    const all = pointsByDevice(batches, zone).flatMap((d) => d.points);
+    // Unfiltered, `devices` already holds every point; gather again only for a day's view.
+    const all = (day === undefined ? devices : pointsByDevice(batches, zone)).flatMap(
+      (d) => d.points
+    );
     const shown = devices.flatMap((d) => d.points).sort((a, b) => a[0] - b[0]);
     const first = shown[0];
     const last = shown[shown.length - 1];

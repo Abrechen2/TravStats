@@ -15,6 +15,7 @@
 
 import type { GeoJSONFeature } from "../../types";
 import { addRecording, emptyRecordings, type RouteRecordings } from "../layers/recordedFlightPaths";
+import { flightTrackPaths } from "../flightTrack/flightTrackPaths";
 import type { ArcDatum } from "./globeLayerTypes";
 import { isCountableFlight } from "../../shared/flightCounting";
 import {
@@ -166,7 +167,11 @@ export function buildGlobeArcData(
           ...shared,
           from: path[0],
           to: path[path.length - 1],
-          waypoints: path.map(([lon, lat]): [number, number, number] => [lon, lat, 0]),
+          // Unwrapped across the antimeridian: the globe's PathLayer does not
+          // wrap, so a raw 179 → -179 step would circle the planet.
+          waypoints: (flightTrackPaths(path, [])[0] ?? path).map(
+            ([lon, lat]): [number, number, number] => [lon, lat, 0]
+          ),
           flightIds: [flightId],
         });
       }

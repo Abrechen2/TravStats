@@ -130,4 +130,22 @@ describe("the globe", () => {
     // Same route, same colour bucket: the recording does not change the route's tier.
     expect(new Set(arcsData.map((d) => d.quartile)).size).toBe(1);
   });
+
+  it("unwraps a recording across the antimeridian so the globe does not draw it around the planet", () => {
+    // The globe's PathLayer runs with wrapLongitude: false, so a raw 179 → -179
+    // step would be a stroke 358° the other way round.
+    const crossing: Array<[number, number]> = [
+      [178.5, 50],
+      [179.5, 50.2],
+      [-179.5, 50.4],
+      [-178.5, 50.6],
+    ];
+    const flight = withRecordedPaths(
+      [feat("p")],
+      [{ flightId: "p", geometry: crossing, segmentStarts: [0] }]
+    )[0];
+    const { arcsData } = buildGlobeArcData([flight], 1, false, 1);
+    const lons = arcsData[0].waypoints.map((w) => w[0]);
+    expect(lons).toEqual([178.5, 179.5, 180.5, 181.5]);
+  });
 });

@@ -4,7 +4,10 @@ import { fromDbDate, toDbDate } from "../../shared/time/localDate";
 import { profileZoneOf } from "../../shared/time/profileZone";
 import { tripDaySpan } from "../notes/tripNotes";
 import type { TripTimeColumns } from "../trips/timesDto";
-import { recorderWindow, scheduledInstants } from "../flightDevice/flightWindow";
+import type { TimeValue } from "../../shared/time/wire";
+import { getAirportTimezone } from "../../utils/timezone";
+import { flightTimes } from "../flights/timesDto";
+import { recorderWindow } from "../flightDevice/flightWindow";
 
 /**
  * Where a trip recording may lie (forgejo#316): inside the trip's days, and
@@ -78,7 +81,21 @@ export async function tripSpanInstants(
   };
 }
 
-/** The recorder windows of the trip's flights; a cancelled flight armed nothing. */
+/**
+ * A scheduled end as a real instant, or null when it is a placeholder: a
+ * date-only flight stores noon (`DATE_ONLY`), a year-only one midnight on the
+ * 1st (`UNKNOWN`). Those locate the flight on the calendar, never at a minute,
+ * and a window armed around them would drop real ground points as "in flight".
+ */
+const minuteInstant = (value: TimeValue | null): Date | null =>
+  value && value.precision === "minute" ? new Date(value.utc) : null;
+
+/**
+ * The recorder windows of the trip's flights; a cancelled flight armed
+ * nothing, and neither does one without a real clock on either end. The
+ * clocks are read through `flightTimes()`, the project's one reader of a
+ * flight's times (ADR 0002).
+ */
 export async function tripFlightWindows(
   userId: string,
   tripId: string
@@ -90,6 +107,16 @@ export async function tripFlightWindows(
       arrivalTime: true,
       depTimeSemantics: true,
       arrTimeSemantics: true,
+      depTimezone: true,
+      arrTimezone: true,
+      depPrecision: true,
+      arrPrecision: true,
+      actualDeparture: true,
+      actualArrival: true,
+      runwayDepartureTime: true,
+      runwayArrivalTime: true,
+      onlineCheckInOpensAt: true,
+      onlineCheckInZone: true,
       depIata: true,
       depIcao: true,
       arrIata: true,
@@ -97,7 +124,17 @@ export async function tripFlightWindows(
     },
   });
   const windows = await Promise.all(
-    flights.map(async (f) => recorderWindow(await scheduledInstants(f)))
+    flights.map(async (f) => {
+      const [dep, arr] = await Promise.all([
+        getAirportTimezone(f.depIata ?? f.depIcao),
+        getAirportTimezone(f.arrIata ?? f.arrIcao),
+      ]);
+      const times = flightTimes(f, { dep, arr });
+      return recorderWindow({
+        departure: minuteInstant(times.departure),
+        arrival: minuteInstant(times.arrival),
+      });
+    })
   );
   return windows.filter((w): w is [number, number] => w !== null);
 }
