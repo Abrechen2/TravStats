@@ -56,6 +56,7 @@ export function DeepLinkedExpertNote({
 }): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const setLevel = useSettingsLevelStore((s) => s.setLevel);
+  const coarse = useCoarsePointer();
   return (
     <p
       role="status"
@@ -74,7 +75,11 @@ export function DeepLinkedExpertNote({
         type="button"
         onClick={() => setLevel("expert")}
         className="underline"
-        style={{ color: "var(--ts-accent)", fontWeight: 600 }}
+        style={{
+          color: "var(--ts-accent)",
+          fontWeight: 600,
+          minHeight: coarse ? "var(--ts-size-touch-min)" : undefined,
+        }}
       >
         {t("settings:level.showExpert")}
       </button>

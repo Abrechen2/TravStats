@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
@@ -6,6 +6,7 @@ const persisted = vi.hoisted(() => vi.fn());
 vi.mock("../../../../store/persistSetting", () => ({ persistSetting: persisted }));
 
 import { SectionFrame } from "../SectionFrame";
+import { DeepLinkedExpertNote, ExpertPageNotice } from "../ExpertNote";
 import { SettingsMenuColumn } from "../SettingsMenu";
 import { SettingsLevelSwitch } from "../SettingsLevelSwitch";
 import { useExpertRows } from "../useExpertRows";
@@ -145,5 +146,40 @@ describe("the level switch", () => {
       expect.any(Function),
       expect.any(String)
     );
+  });
+});
+
+describe("ExpertNote — touch size follows the pointer (forgejo#321, iPad look)", () => {
+  const pointer = (coarse: boolean): void => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: coarse && query === "(pointer: coarse)",
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+  };
+  const original = window.matchMedia;
+  afterEach(() => {
+    window.matchMedia = original;
+    useSettingsLevelStore.setState({ level: null });
+  });
+
+  it("gives the deep-link and expert-page notes' switch a 44 px target under a finger", () => {
+    pointer(true);
+    render(
+      <>
+        <DeepLinkedExpertNote />
+        <ExpertPageNotice />
+      </>
+    );
+    const buttons = screen.getAllByRole("button", { name: /level\.showExpert|Experten/i });
+    expect(buttons).toHaveLength(2);
+    for (const b of buttons) expect(b.style.minHeight).toBe("var(--ts-size-touch-min)");
+  });
+
+  it("keeps the notes' switch compact under a mouse", () => {
+    pointer(false);
+    render(<DeepLinkedExpertNote />);
+    expect(screen.getByRole("button").style.minHeight).toBe("");
   });
 });
