@@ -194,25 +194,9 @@ function boxAt(
   };
 }
 
-/**
- * Like `declutterByDistance`, but on the labels' BOXES: a centre gap says
- * nothing about two 20-character names, which are 140 px wide and collide
- * with their centres 80 px apart. Highest weight places first; a label whose
- * box (plus `gapPx` on every side) touches one already placed — or one of the
- * `obstacles` another layer already shows — is dropped.
- *
- * Placed boxes live in a uniform grid, so each candidate only tests the boxes
- * in the cells it covers — linear in the number of labels, not quadratic.
- */
-export function declutterByBoxes<T>(
-  items: readonly T[],
-  weightOf: (item: T) => number,
-  positionOf: (item: T) => readonly [number, number],
-  sizeOf: (item: T) => LabelBoxSize,
-  zoom: number,
-  { gapPx = 4, offsetY = 0, obstacles = [], project }: BoxDeclutterOptions = {}
-): T[] {
-  const toPx: LabelProjector = project ?? ((p) => projectToWorldPx(p[0], p[1], zoom));
+/** Placed boxes in a uniform grid, so a candidate only tests the boxes in
+ *  the cells it covers — linear in the number of labels, not quadratic. */
+function boxGrid() {
   const grid = new Map<string, Box[]>();
   const cellsOf = (box: Box): string[] => {
     const keys: string[] = [];
@@ -231,29 +215,166 @@ export function declutterByBoxes<T>(
     }
     return keys;
   };
-  const place = (box: Box) => {
-    for (const key of cellsOf(box)) {
-      const cell = grid.get(key);
-      if (cell) cell.push(box);
-      else grid.set(key, [box]);
-    }
+  return {
+    place(box: Box) {
+      for (const key of cellsOf(box)) {
+        const cell = grid.get(key);
+        if (cell) cell.push(box);
+        else grid.set(key, [box]);
+      }
+    },
+    hits(box: Box): boolean {
+      return cellsOf(box).some((key) =>
+        (grid.get(key) ?? []).some(
+          (q) => box.x0 < q.x1 && box.x1 > q.x0 && box.y0 < q.y1 && box.y1 > q.y0
+        )
+      );
+    },
   };
+}
+
+/**
+ * Like `declutterByDistance`, but on the labels' BOXES: a centre gap says
+ * nothing about two 20-character names, which are 140 px wide and collide
+ * with their centres 80 px apart. Highest weight places first; a label whose
+ * box (plus `gapPx` on every side) touches one already placed — or one of the
+ * `obstacles` another layer already shows — is dropped.
+ */
+export function declutterByBoxes<T>(
+  items: readonly T[],
+  weightOf: (item: T) => number,
+  positionOf: (item: T) => readonly [number, number],
+  sizeOf: (item: T) => LabelBoxSize,
+  zoom: number,
+  { gapPx = 4, offsetY = 0, obstacles = [], project }: BoxDeclutterOptions = {}
+): T[] {
+  const toPx: LabelProjector = project ?? ((p) => projectToWorldPx(p[0], p[1], zoom));
+  const grid = boxGrid();
   // Obstacles carry no gap of their own: the candidate's gap already keeps
   // the two apart.
-  for (const o of obstacles) place(boxAt(o.position, o.width, o.height, o.offsetY, toPx, 0));
+  for (const o of obstacles) grid.place(boxAt(o.position, o.width, o.height, o.offsetY, toPx, 0));
   const sorted = [...items].sort((a, b) => weightOf(b) - weightOf(a));
   const accepted: T[] = [];
   for (const item of sorted) {
     const { width, height } = sizeOf(item);
     const box = boxAt(positionOf(item), width, height, offsetY, toPx, gapPx);
-    const hit = cellsOf(box).some((key) =>
-      (grid.get(key) ?? []).some(
-        (q) => box.x0 < q.x1 && box.x1 > q.x0 && box.y0 < q.y1 && box.y1 > q.y0
-      )
-    );
-    if (hit) continue;
+    if (grid.hits(box)) continue;
     accepted.push(item);
-    place(box);
+    grid.place(box);
   }
   return accepted;
+}
+
+export interface SpreadOptions extends BoxDeclutterOptions {
+  /**
+   * The pick stands for a range of zooms; `project` measures its bottom, and
+   * this is how much larger the map is at its top (2 for a whole zoom step).
+   */
+  bucketScale?: number;
+}
+
+/** Where a label sits once `spreadByBoxes` has moved it off its usual spot. */
+export interface SpreadLabel<T> {
+  item: T;
+  /** Pixels added to the label's usual offset; `[0, 0]` where it was free. */
+  shift: readonly [number, number];
+}
+
+const NO_SHIFT: readonly [number, number] = [0, 0];
+/** Free space between a moved pill and its own dot, in px. */
+const SIDE_GAP_PX = 6;
+/** How many pill heights a label may climb above, or sink below, its dot. */
+const SPREAD_RUNGS = 2;
+
+/**
+ * The `k`-th spot `spreadByBoxes` tries for a pill of `width` × `height`
+ * lifted `offsetY` px off its dot, as a shift from that usual spot: the
+ * usual spot, under the dot, right and left of it, then rung by rung further
+ * above and below — a rung is one pill plus the gap both neighbours keep.
+ * `null` once the spots are used up.
+ */
+function spreadShift(
+  k: number,
+  width: number,
+  height: number,
+  offsetY: number,
+  gapPx: number
+): readonly [number, number] | null {
+  const below = -2 * offsetY;
+  const level = -offsetY;
+  const side = width / 2 + SIDE_GAP_PX;
+  if (k === 0) return NO_SHIFT;
+  if (k === 1) return [0, below];
+  if (k === 2) return [side, level];
+  if (k === 3) return [-side, level];
+  const rung = Math.floor((k - 4) / 2) + 1;
+  if (rung > SPREAD_RUNGS) return null;
+  const step = rung * (height + 2 * gapPx);
+  return (k - 4) % 2 === 0 ? [0, -step] : [0, below + step];
+}
+
+/**
+ * As many labels as fit without one printed over another: the labels'
+ * answer to "show all of them" (beta.22 UAT — "all" used to skip the
+ * collision pass, and "Kiel Hbf" and "Kiel Norwegenkai", 500 m apart, were one
+ * smudge at every zoom). Highest weight places first on its usual spot; a
+ * label that would touch one already placed, or an obstacle, moves to the
+ * first free spot of `spreadShift` instead of disappearing. Only where a
+ * cluster is so dense that none of those spots near its dot is free does a
+ * label stay hidden until the map zooms in — a name printed over another, or
+ * parked far from the dot it names, tells nobody anything.
+ */
+export function spreadByBoxes<T>(
+  items: readonly T[],
+  weightOf: (item: T) => number,
+  positionOf: (item: T) => readonly [number, number],
+  sizeOf: (item: T) => LabelBoxSize,
+  zoom: number,
+  { gapPx = 4, offsetY = 0, obstacles = [], project, bucketScale = 1 }: SpreadOptions = {}
+): SpreadLabel<T>[] {
+  const toPx: LabelProjector = project ?? ((p) => projectToWorldPx(p[0], p[1], zoom));
+  // A moved pill no longer keeps its distance to its neighbours as the map
+  // zooms — one under its dot can meet one lifted above the next dot — so a
+  // spot must be free at both ends of the zoom the pick stands for.
+  const ends: { grid: ReturnType<typeof boxGrid>; toPx: LabelProjector }[] = [
+    { grid: boxGrid(), toPx },
+  ];
+  if (bucketScale !== 1) {
+    ends.push({
+      grid: boxGrid(),
+      toPx: (p) => {
+        const [x, y] = toPx(p);
+        return [x * bucketScale, y * bucketScale];
+      },
+    });
+  }
+  for (const end of ends) {
+    for (const o of obstacles) {
+      end.grid.place(boxAt(o.position, o.width, o.height, o.offsetY, end.toPx, 0));
+    }
+  }
+  const shifted = (box: Box, shift: readonly [number, number]): Box => ({
+    x0: box.x0 + shift[0],
+    x1: box.x1 + shift[0],
+    y0: box.y0 + shift[1],
+    y1: box.y1 + shift[1],
+  });
+  const sorted = [...items].sort((a, b) => weightOf(b) - weightOf(a));
+  const placed: SpreadLabel<T>[] = [];
+  sorted.forEach((item) => {
+    const { width, height } = sizeOf(item);
+    const usual = ends.map((end) =>
+      boxAt(positionOf(item), width, height, offsetY, end.toPx, gapPx)
+    );
+    for (let k = 0; ; k++) {
+      const shift = spreadShift(k, width, height, offsetY, gapPx);
+      if (!shift) return;
+      if (ends.every((end, i) => !end.grid.hits(shifted(usual[i], shift)))) {
+        ends.forEach((end, i) => end.grid.place(shifted(usual[i], shift)));
+        placed.push({ item, shift });
+        return;
+      }
+    }
+  });
+  return placed;
 }
