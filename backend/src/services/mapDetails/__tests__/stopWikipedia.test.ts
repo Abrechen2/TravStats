@@ -74,6 +74,19 @@ describe("first sentences", () => {
     );
   });
 
+  it("does not split inside a sentence at an abbreviation before a number", () => {
+    // Wikipedia's real opening of "Hamburg Hauptbahnhof", 2026-10-21: the old
+    // splitter skipped the second sentence and kept its last fragment, " lt.".
+    const extract =
+      "Der Hamburger Hauptbahnhof ist einer der wichtigsten Eisenbahnknoten Deutschlands. " +
+      "Mit täglich ca. 550.000 Reisenden lt. Deutscher Bahn ist er der meistfrequentierte. " +
+      "Ein dritter Satz.";
+    expect(firstSentences(extract)).toBe(
+      "Der Hamburger Hauptbahnhof ist einer der wichtigsten Eisenbahnknoten Deutschlands. " +
+        "Mit täglich ca. 550.000 Reisenden lt. Deutscher Bahn ist er der meistfrequentierte."
+    );
+  });
+
   it("caps a run-on extract", () => {
     expect(firstSentences("a".repeat(1000)).length).toBeLessThanOrEqual(360);
   });

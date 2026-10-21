@@ -152,11 +152,27 @@ export function matchStopTitle(
   return best?.title ?? null;
 }
 
+/**
+ * A period after a short word ("ca.", "lt.", "St.", "bzw.") abbreviates; it
+ * does not end the sentence, even before a capital ("lt. Deutscher Bahn").
+ */
+const ABBREVIATION = /(?:^|[\s(])[\p{L}]{1,3}$/u;
+
 /** The first two sentences, at most MAX_EXTRACT_CHARS — "1–2 sentences" (owner). */
 export function firstSentences(extract: string, count = 2): string {
   const text = extract.replace(/\s+/g, " ").trim();
-  const parts = text.match(/[^.!?]+[.!?]+(?=\s+[A-ZÄÖÜÀ-Ý]|\s*$)|[^.!?]+$/g) ?? [text];
-  const joined = parts.slice(0, count).join("").trim();
+  const boundary = /[.!?]+(?=\s+[\p{Lu}])/gu;
+  let end = text.length;
+  let found = 0;
+  for (let m = boundary.exec(text); m !== null; m = boundary.exec(text)) {
+    if (ABBREVIATION.test(text.slice(0, m.index))) continue;
+    found += 1;
+    if (found === count) {
+      end = m.index + m[0].length;
+      break;
+    }
+  }
+  const joined = text.slice(0, end).trim();
   return joined.length > MAX_EXTRACT_CHARS
     ? `${joined.slice(0, MAX_EXTRACT_CHARS - 1).trimEnd()}…`
     : joined;
