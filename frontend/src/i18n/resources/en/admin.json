@@ -1165,6 +1165,7 @@
       "httpsRequired": "Plain http is allowed only to a host on your own network. Use https.",
       "credentialsInUrl": "The URL must not contain a user name or password — it is stored and shown in plain text.",
       "unreachable": "The repository could not be reached, or it has no index.json at that address.",
+      "tooLarge": "A server answers at that address, but its index.json is larger than 2 MB — that is not a template index.",
       "notAnIndex": "There is a file at that address, but it is not a version-2 template index."
     },
     "synced_one": "Saved and synced: {{count}} template is active.",

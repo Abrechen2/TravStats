@@ -5,14 +5,17 @@
  * "test" answers a stable code. Nothing here reaches the network: the fetcher
  * and the sync are stubbed.
  */
-jest.mock("../../services/parsers/templates/fetchJson", () => ({ fetchJson: jest.fn() }));
+jest.mock("../../services/parsers/templates/fetchJson", () => ({
+  ...jest.requireActual("../../services/parsers/templates/fetchJson"),
+  fetchJson: jest.fn(),
+}));
 
 import request from "supertest";
 import { app } from "../../index";
 import { prisma } from "../../db";
 import { generateToken } from "../../utils/jwt";
 import { templateRegistry } from "../../services/parsers/templates/registry";
-import { fetchJson } from "../../services/parsers/templates/fetchJson";
+import { FetchJsonError, fetchJson } from "../../services/parsers/templates/fetchJson";
 import { DEFAULT_TEMPLATE_REPO_BASE_URL } from "../../services/parsers/templates/v2/source";
 
 const mockFetch = fetchJson as jest.Mock;
@@ -117,6 +120,15 @@ describe("/api/v1/admin/template-repo", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual(expected);
     expect(mockFetch).toHaveBeenCalledWith(`${MIRROR}/index.json`);
+  });
+
+  it("tests a repository whose index is over the size cap as tooLarge, not unreachable", async () => {
+    mockFetch.mockRejectedValue(new FetchJsonError("too_large", "Response exceeds 2097152 bytes"));
+    const res = await request(app)
+      .post("/api/v1/admin/template-repo/test")
+      .set("Cookie", admin)
+      .send({ url: MIRROR });
+    expect(res.body).toEqual({ result: "tooLarge", templates: null });
   });
 
   it("tests an unreachable repository and a refused URL without fetching the latter", async () => {

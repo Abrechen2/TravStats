@@ -52,7 +52,7 @@ function makeStore(
   opts: { appVersion?: string; runners?: RunnerRegistry; cached?: unknown[] } = {}
 ) {
   const fetchJson = fakeFetch(routes);
-  const cache = createMemoryTemplateCache(opts.cached ?? []);
+  const cache = createMemoryTemplateCache(opts.cached ?? [], BASE);
   const store = new V2TemplateStore({
     fetchJson,
     baseUrl: BASE,
@@ -322,6 +322,85 @@ describe("V2TemplateStore.sync", () => {
     });
     restarted.loadFromCache();
     expect(restarted.getActive().map((t) => t.id)).toEqual(["lodging:otherchain"]);
+  });
+
+  it("replaces a template of the previous repository with the new one's at the same id and version", async () => {
+    const OTHER = "https://other.example.test/main";
+    const fromA = validTemplate();
+    const fromB = validTemplate({
+      issuer: {
+        name: "Mirror Hotels",
+        kind: "hotel-chain",
+        keys: { senderDomains: ["mirror.example"] },
+      },
+    });
+    const answer = fakeFetch({
+      ...routesFor(fromA),
+      [`${OTHER}/index.json`]: indexFor(fromB),
+      [`${OTHER}/lodging/examplechain.json`]: fromB,
+    });
+    const cache = createMemoryTemplateCache([]);
+    const store = new V2TemplateStore({
+      fetchJson: answer,
+      baseUrl: BASE,
+      appVersion: "2.7.0",
+      cache,
+    });
+    await store.sync();
+    expect(store.getActive()[0].issuer.name).toBe("Example Hotels");
+
+    store.setBaseUrl(OTHER);
+    await store.sync();
+
+    expect(store.getActive().map((t) => t.issuer.name)).toEqual(["Mirror Hotels"]);
+    expect(answer.calls).toContain(`${OTHER}/lodging/examplechain.json`);
+    // … and across a restart: the cache holds B's file, marked as B's.
+    const restarted = new V2TemplateStore({
+      fetchJson: answer,
+      baseUrl: OTHER,
+      appVersion: "2.7.0",
+      cache,
+    });
+    restarted.loadFromCache();
+    expect(restarted.getActive().map((t) => t.issuer.name)).toEqual(["Mirror Hotels"]);
+  });
+
+  it("keeps the previous repository's template as a reported fallback when the new one's cannot be read", async () => {
+    const OTHER = "https://other.example.test/main";
+    const fromA = validTemplate();
+    const answer = fakeFetch({
+      ...routesFor(fromA),
+      [`${OTHER}/index.json`]: indexFor(fromA),
+      // B's file is missing: a 404
+    });
+    const cache = createMemoryTemplateCache([]);
+    const store = new V2TemplateStore({
+      fetchJson: answer,
+      baseUrl: BASE,
+      appVersion: "2.7.0",
+      cache,
+    });
+    await store.sync();
+
+    store.setBaseUrl(OTHER);
+    await store.sync();
+
+    expect(store.getActive().map((t) => t.issuer.name)).toEqual(["Example Hotels"]);
+    const [entry] = store.getStatus().templates;
+    expect(entry.state).toBe("active");
+    expect(entry.detail).toContain("previous template repository");
+    expect(entry.detail).toContain("fetch_failed");
+    // A restart does not mistake A's cached file for B's: the next sync asks B again.
+    const restarted = new V2TemplateStore({
+      fetchJson: answer,
+      baseUrl: OTHER,
+      appVersion: "2.7.0",
+      cache,
+    });
+    restarted.loadFromCache();
+    answer.calls.length = 0;
+    await restarted.sync();
+    expect(answer.calls).toContain(`${OTHER}/lodging/examplechain.json`);
   });
 
   it("drops cached templates of another repository once the new one syncs", async () => {

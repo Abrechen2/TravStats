@@ -20,7 +20,13 @@ export interface TemplateRepoSaved extends TemplateRepoState {
 }
 
 export type TemplateRepoTestResult =
-  "ok" | "invalidUrl" | "httpsRequired" | "credentialsInUrl" | "unreachable" | "notAnIndex";
+  | "ok"
+  | "invalidUrl"
+  | "httpsRequired"
+  | "credentialsInUrl"
+  | "unreachable"
+  | "tooLarge"
+  | "notAnIndex";
 
 export const templateRepoApi = {
   async get(): Promise<TemplateRepoState> {
