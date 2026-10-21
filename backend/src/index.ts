@@ -250,6 +250,7 @@ const shutdown = (signal: string) => async (): Promise<void> => {
   (await import("./jobs/statusSweepScheduler")).stopStatusSweepScheduler();
   (await import("./jobs/placeAddressBackfillScheduler")).stopPlaceAddressBackfillScheduler();
   (await import("./jobs/trackJitterRemeasureScheduler")).stopTrackJitterRemeasureScheduler();
+  (await import("./jobs/ferryRouteBackfillScheduler")).stopFerryRouteBackfillScheduler();
   (await import("./jobs/stayFxBackfillScheduler")).stopStayFxBackfillScheduler();
   (await import("./jobs/dataQualitySweepScheduler")).stopDataQualitySweepScheduler();
   (await import("./jobs/dawarichCountryDaySweepScheduler")).stopDawarichCountryDaySweepScheduler();
@@ -646,29 +647,15 @@ if (process.env.NODE_ENV !== "test") {
       });
     }
 
-    // Start flight update scheduler
-    try {
-      const { startFlightUpdateScheduler } = await import("./jobs/flightUpdateScheduler");
-      // Sweep every 5 minutes — nextApiCheckAt on each flight controls actual timing
-      startFlightUpdateScheduler(5);
-      logger.info({
-        operation: "server_start_flight_update_scheduler",
-        message: "Flight update scheduler started",
-      });
-    } catch (error) {
-      logger.warn({
-        operation: "server_start_flight_update_scheduler_error",
-        message: "Failed to start flight update scheduler",
-        error: {
-          message: error instanceof Error ? error.message : "Unknown error",
-        },
-      });
-    }
-
     // The cron jobs. Each starts on its own: one that fails to start is logged
     // and stops neither the others nor the server. Their UTC slots, and why,
     // are in each module's header (the table is in dataQualitySweepScheduler.ts).
     const jobs: Array<[name: string, start: () => Promise<void>]> = [
+      // Every 5 minutes; each flight's nextApiCheckAt decides the actual timing.
+      [
+        "flight_update",
+        async () => (await import("./jobs/flightUpdateScheduler")).startFlightUpdateScheduler(5),
+      ],
       [
         "historical_enrichment",
         async () =>
@@ -699,6 +686,12 @@ if (process.env.NODE_ENV !== "test") {
           (
             await import("./jobs/trackJitterRemeasureScheduler")
           ).startTrackJitterRemeasureScheduler(),
+      ],
+      // Once per boot: crossings still stored as a straight line (owner, 2026-10-21).
+      [
+        "ferry_route_backfill",
+        async () =>
+          (await import("./jobs/ferryRouteBackfillScheduler")).startFerryRouteBackfillScheduler(),
       ],
       [
         "stay_fx_backfill",

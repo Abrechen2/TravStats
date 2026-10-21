@@ -5089,6 +5089,7 @@ model FerryJourney {
   importBatch    ImportBatch?            @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
   companionLinks FerryJourneyCompanion[]
   documents      Document[]
+  routeBackfill  FerryRouteBackfill?
 
   @@unique([userId, externalRef])
   @@unique([userId, shareKey])
@@ -5098,6 +5099,25 @@ model FerryJourney {
   @@index([bookingId])
   @@index([importBatchId])
   @@map("ferry_journeys")
+}
+
+/// The one-shot sea-route backfill's bookkeeping (owner, 2026-10-21): one row
+/// per crossing it tried, so a boot does not route the same chord again, and a
+/// crossing the router cannot route is not retried on every boot.
+model FerryRouteBackfill {
+  ferryJourneyId String       @id @map("ferry_journey_id")
+  /// routed | straight | failed
+  outcome        String
+  attempts       Int          @default(1)
+  attemptedAt    DateTime     @map("attempted_at")
+  /// When the backfill may try again; NULL = never (a final outcome).
+  nextAttemptAt  DateTime?    @map("next_attempt_at")
+  /// Why a failed attempt failed, as logged; NULL otherwise.
+  reason         String?
+  ferryJourney   FerryJourney @relation(fields: [ferryJourneyId], references: [id], onDelete: Cascade)
+
+  @@index([nextAttemptAt])
+  @@map("ferry_route_backfills")
 }
 
 model FerryJourneyCompanion {

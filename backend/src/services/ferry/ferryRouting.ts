@@ -21,8 +21,9 @@ interface LinkedCrossing extends FerryEnds {
  * the pier, and a leg whose stops are not the crossing's ports keeps the chord
  * it was given instead of refusing the link. An edit that leaves the terminals
  * unchanged reads it the same way, or a crossing linked off its piers could
- * never be edited again. Routing keeps the refusal — there a mismatch means a
- * stop moved under a linked leg.
+ * never be edited again, and the boot backfill, which moves no terminal either,
+ * reads it so too. The route button keeps the refusal — there a mismatch means
+ * a stop moved under a linked leg.
  */
 export async function syncFerryLeg(
   tx: DbTransaction,
@@ -68,7 +69,16 @@ export async function syncFerryLeg(
   if (written.count !== 1) throw new AppError("Sea leg changed elsewhere", 409, "VERSION_CONFLICT");
 }
 
-export async function routeFerryJourney(userId: string, id: string) {
+/**
+ * `onMismatch` is passed to the linked leg's sync. The button keeps the
+ * refusal; the boot backfill (`ferryRouteBackfill.ts`) moves no terminal, so
+ * it reads a leg linked off the piers as the PATCH does and keeps it.
+ */
+export async function routeFerryJourney(
+  userId: string,
+  id: string,
+  { onMismatch = "refuse" }: { onMismatch?: "refuse" | "keep" } = {}
+) {
   const existing = await prisma.ferryJourney.findFirst({ where: { id, userId } });
   if (!existing) throw new AppError("Ferry ride not found", 404);
   if (existing.geometrySource !== "straight") return { outcome: "unchanged" as const };
@@ -91,11 +101,11 @@ export async function routeFerryJourney(userId: string, id: string) {
       });
       if (saved.count !== 1)
         throw new AppError("Crossing changed elsewhere", 409, "VERSION_CONFLICT");
-      await syncFerryLeg(tx, {
-        ...existing,
-        geometry: result.geometry,
-        geometrySource: "sea_route",
-      });
+      await syncFerryLeg(
+        tx,
+        { ...existing, geometry: result.geometry, geometrySource: "sea_route" },
+        { onMismatch }
+      );
       await propagateWrite(tx, userId, "ferry", id, before);
       if (existing.shareKey) await syncCopiesLegs(tx, existing.shareKey, id);
     },
