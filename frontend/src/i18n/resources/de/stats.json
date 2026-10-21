@@ -34,7 +34,9 @@
       "rental_one": "{{count}} Mietwagen",
       "rental_other": "{{count}} Mietwagen",
       "bus_one": "{{count}} Busfahrt",
-      "bus_other": "{{count}} Busfahrten"
+      "bus_other": "{{count}} Busfahrten",
+      "ferry_one": "{{count}} Fährüberfahrt",
+      "ferry_other": "{{count}} Fährüberfahrten"
     },
     "help": {
       "experiences": {
