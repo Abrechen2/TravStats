@@ -124,7 +124,10 @@ describe("cross-purpose over the wire", () => {
   const ping = () => ({ kind: "ping" as const, ...b.transport.messageHeader() });
 
   it("trip-share messages reach A's trip route and read its versions", async () => {
-    await expect(b.transport.tripShareExchange(A, ping())).resolves.toEqual({ tripShare: [1] });
+    await expect(b.transport.tripShareExchange(A, ping())).resolves.toEqual({
+      tripShare: [1],
+      features: ["resync", "entries-up", "nudge"],
+    });
   });
 
   it("A's trip route refuses a comparison-signed packet", async () => {

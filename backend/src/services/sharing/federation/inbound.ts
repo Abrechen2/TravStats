@@ -41,7 +41,6 @@ import {
 import { restatusTrips } from "../../trip/restatusTrips";
 import type {
   AckConflict,
-  EntryCreateMessage,
   EntryRemovedMessage,
   FactUpdateMessage,
   PropagationMessage,
@@ -54,6 +53,7 @@ import { lockCopy } from "./rowLock";
 import { addressed, requireReceiving } from "./peerMember";
 import { mayReach } from "./roster";
 import { rejectWith, serveOnce, takeSeq } from "./streams";
+import { recordWithheld } from "./withheld";
 import { fromWireEntries, fromWireFacts, localKeyOf, receivedStatus } from "./wire/decode";
 import { wireFactsOf } from "./wire/encode";
 import { ENTRY_SHAPES, type WireEntry } from "./wire/shapes";
@@ -135,7 +135,7 @@ async function authorOf(
 }
 
 /** A sender whose author is known and may reach the recipient's copy. */
-type Admitted = Sender & { author: RemoteAuthor };
+export type Admitted = Sender & { author: RemoteAuthor };
 
 const onward = (s: Admitted): Spread => ({
   groupId: s.groupId,
@@ -261,8 +261,9 @@ async function applyFactUpdate(
   }));
 }
 
-async function applyEntryCreate(tx: DbTransaction, s: Admitted, message: EntryCreateMessage) {
-  const [{ entity, row }] = await fromWireEntries(tx, [message.entry as WireEntry]);
+/** One entry new to the recipient's trip (also an `entries-up` entry the home never knew, Q5). */
+export async function applyEntryCreate(tx: DbTransaction, s: Admitted, entry: WireEntry) {
+  const [{ entity, row }] = await fromWireEntries(tx, [entry]);
   const key = row.shareKey as string;
   const held = await heldKeys(tx, entity, s.recipient.userId, s.recipient.id, [key]);
   if (held.has(key)) return;
@@ -300,6 +301,35 @@ async function applyEntryRemoved(tx: DbTransaction, s: Admitted, message: EntryR
   await spreadRemoval(tx, ADAPTERS[message.entity], onward(s), copy, message.reason);
 }
 
+/**
+ * A fact change withheld from the recipient (no yes to its author yet): which facts, by whom, and
+ * what the copy held then — so a resync after a yes can tell this difference from an own edit.
+ */
+async function rememberWithheld(
+  tx: DbTransaction,
+  s: Sender,
+  ref: string,
+  message: FactUpdateMessage
+): Promise<void> {
+  const found = (await ADAPTERS[message.entity].copiesOf(tx, message.shareKey, s.groupId)).find(
+    (r) => r.userId === s.recipient.userId && r.tripId === s.recipient.id
+  );
+  if (!found) return;
+  const keys = message.changes.flatMap(({ field }) => {
+    const key = localKeyOf(message.entity, field);
+    const named = namedReference(message.entity, key);
+    return named ? [key, named.name] : [key];
+  });
+  await recordWithheld(tx, {
+    groupId: s.groupId,
+    userId: s.recipient.userId,
+    shareKey: message.shareKey,
+    ref,
+    keys,
+    held: found.facts,
+  });
+}
+
 /** Serve one propagation message from `origin`. */
 export function servePropagation(
   origin: string,
@@ -311,6 +341,9 @@ export function servePropagation(
     // taken is not refused: the home did nothing wrong, and the stream goes on.
     const { author } = sender;
     if (!author || !(await mayReach(tx, sender.groupId, sender.recipient.userId, author))) {
+      // Remembered, so a resync after the person's yes can write exactly this (Q4).
+      if (author?.ref && message.kind === "fact-update")
+        await rememberWithheld(tx, sender, author.ref, message);
       logger.info(
         { operation: "trip_share_change_withheld", kind: message.kind, origin },
         "A change by someone the recipient has not said yes to was not applied"
@@ -325,7 +358,7 @@ export function servePropagation(
           return conflicts.length > 0 ? { ack: { conflicts } } : undefined;
         }
         case "entry-create":
-          await applyEntryCreate(tx, s, message);
+          await applyEntryCreate(tx, s, message.entry as WireEntry);
           return undefined;
         case "entry-removed":
           await applyEntryRemoved(tx, s, message);

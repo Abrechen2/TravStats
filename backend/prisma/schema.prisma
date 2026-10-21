@@ -143,6 +143,7 @@ model User {
   remoteShareAccounts       RemoteShareAccount[]
   tripShareInvites          TripShareInvite[]
   tripShareRosterConsents   TripShareRosterConsent[]
+  tripShareWithheld         TripShareWithheld[]
   shareGroupsCreated        TripShareGroup[]
   shareNotices              ShareNotice[]            @relation("ShareNoticeRecipient")
   shareNoticesActed         ShareNotice[]            @relation("ShareNoticeActor")
@@ -4753,6 +4754,7 @@ model TripShareGroup {
   rosterEntries TripShareRosterEntry[]
   rosterConsent TripShareRosterConsent[]
   entryAuthors  TripShareEntryAuthor[]
+  withheld      TripShareWithheld[]
 
   @@unique([federatedRef], map: "trip_share_groups_home_ref_key", where: raw("home_origin IS NULL"))
   @@unique([homeOrigin, federatedRef])
@@ -4831,6 +4833,28 @@ model TripShareRosterConsent {
   @@map("trip_share_roster_consents")
 }
 
+/// A change a spoke did not apply because its person had not said yes to the author yet (spec
+/// 2026-10-20, Q4 catch-up): per entry (`entry_key`, not a `share_key` column — no shareable
+/// type) and fact, the author's roster ref and the value the copy held when the change was
+/// withheld. A resync writes the home's value only where the copy still holds `held` and the
+/// person has said yes to `ref` since; any other difference becomes a conflict notice.
+model TripShareWithheld {
+  groupId   String   @map("group_id")
+  userId    String   @map("user_id")
+  shareKey  String   @map("entry_key")
+  field     String
+  ref       String
+  held      Json
+  createdAt DateTime @default(now()) @map("created_at")
+
+  group TripShareGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, userId, shareKey, field, ref])
+  @@index([userId])
+  @@map("trip_share_withheld")
+}
+
 /// The home's record of who brought each entry into a group shared across servers (F-S4e review),
 /// by the entry's share key (`entry_key`: not a `share_key` column — this table is no shareable type).
 /// a resend of the trip after a restore names each entry's author by roster ref, so a spoke copies
@@ -4890,7 +4914,7 @@ model TripShareOutbox {
   /// The person this message is for (one pairing); their server fans out to its own members.
   memberId      String    @map("member_id")
   peerOrigin    String    @map("peer_origin")
-  /// entries | fact-update | entry-create | entry-removed — CHECK trip_share_outbox_kind_check
+  /// `OUTBOX_KINDS` (schemas/tripSharePeer.ts) — CHECK trip_share_outbox_kind_check
   kind          String
   /// The message without its header (id, seq, time are added when it is sent).
   payload       Json

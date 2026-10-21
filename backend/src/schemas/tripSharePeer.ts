@@ -5,8 +5,9 @@
  * `services/sharing/federation/__tests__/separation.test.ts` fails if anything ever does.
  *
  * Phases built: F-S4a (`ping`), F-S4b (`invite-claim` / `invite-claim-reply`), F-S4c (`offer`,
- * `offer-answer`, `entries`) and F-S4d (`fact-update`, `entry-create`, `entry-removed`), each group
- * message answered by an `ack`. Messages are strict objects
+ * `offer-answer`, `entries`), F-S4d (`fact-update`, `entry-create`, `entry-removed`), F-S4e
+ * (`roster`, `leave`, `revoke`, `add-request`) and the catch-up of 2026-10-21 (`resync`,
+ * `entries-up`, `nudge`, named in the ping's `features`), each group message answered by an `ack`. Messages are strict objects
  * discriminated on `kind`; every one carries a `messageId` and a `sentAt` instant (ADR 0002: a `Z`
  * instant, never an offset-less datetime). A group message also carries `groupRef` (the group's
  * `federatedRef`) and `seq`, one sequence per (sending origin, group): the receiver accepts only
@@ -28,6 +29,13 @@ import {
 export const TRIP_SHARE_PURPOSE = "trip-share/1" as const;
 /** Trip-share protocol versions this server serves; the ping answers with them. */
 export const TRIP_SHARE_VERSIONS = [1] as const;
+/**
+ * Messages added to version 1 after rc.18, named in the ping answer (Q4–Q6, 2026-10-21). A peer
+ * from before them answers an unknown kind with the uniform 403, so a sender asks first
+ * (`peerFeatures.ts`) and does not send what the other side does not name.
+ */
+export const TRIP_SHARE_FEATURES = ["resync", "entries-up", "nudge"] as const;
+export type TripShareFeature = (typeof TRIP_SHARE_FEATURES)[number];
 
 const uuid = z.string().uuid();
 /** A UTC instant with `Z`; an offset-less or offset datetime is refused (ADR 0002 D3). */
@@ -121,7 +129,53 @@ export const entriesSchema = z.strictObject({
   from: uuid,
   entries: z.array(wireEntrySchema).min(1).max(MAX_ENTRIES_PER_MESSAGE),
   authors: z.array(z.strictObject({ shareKey: uuid, ref: uuid })).max(MAX_ENTRIES_PER_MESSAGE),
+  /**
+   * The answer to a `resync` (Q4): the home's current state. The spoke then also compares the
+   * entries it holds (`resyncApply.ts`) instead of keeping only the ones it lacks. Sent only to a
+   * server that asked, so never to one that would refuse the field.
+   */
+  resync: z.literal(true).optional(),
 });
+
+/**
+ * A spoke asks the home for the trip's current state (Q4, Q5): after its person said yes to
+ * someone on the roster, or confirmed the trip again after a restore. `accepted` are the roster
+ * refs the person said yes to; the home sends only entries brought in by them, by the home member
+ * of the pairing or by the person themselves. The spoke gates every entry again on arrival.
+ */
+export const resyncSchema = z.strictObject({
+  kind: z.literal("resync"),
+  ...groupHeader,
+  from: uuid,
+  to: uuid,
+  accepted: z.array(uuid).max(MAX_ROSTER),
+});
+
+/**
+ * A restored spoke sends up the entries its own person brought into the trip (Q5). The home takes
+ * each like an `entry-create` from that pairing, and only if it never knew it.
+ */
+export const entriesUpSchema = z.strictObject({
+  kind: z.literal("entries-up"),
+  ...groupHeader,
+  from: uuid,
+  to: uuid,
+  entries: z.array(wireEntrySchema).min(1).max(MAX_ENTRIES_PER_MESSAGE),
+});
+
+/**
+ * "Deliver now" (Q6): the sender's person just confirmed a membership again; the receiver retries
+ * its waiting messages for that pairing at once instead of at the backoff. A control message (no
+ * group, no seq): it changes no state the sender could rely on, and is rate-limited per server.
+ */
+export const nudgeSchema = z.strictObject({
+  kind: z.literal("nudge"),
+  ...header,
+  from: uuid,
+  to: uuid,
+});
+/** Whether the nudge was honoured (false: unknown pairing, or too soon after the last one). */
+export const nudgeReplySchema = z.strictObject({ nudged: z.boolean() });
 
 /**
  * Who made a change (F-S4d), as the sending server CLAIMS it. `origin` is absent when the change
@@ -265,6 +319,9 @@ export const tripSharePacket = z.discriminatedUnion("kind", [
   leaveSchema,
   revokeSchema,
   addRequestSchema,
+  resyncSchema,
+  entriesUpSchema,
+  nudgeSchema,
 ]);
 
 /** The group messages; a header of one of these is answered `schema` when the body fails. */
@@ -279,6 +336,8 @@ export const GROUP_KINDS = [
   "leave",
   "revoke",
   "add-request",
+  "resync",
+  "entries-up",
 ] as const;
 
 /**
@@ -296,6 +355,10 @@ export const OUTBOX_KINDS = [
   "roster",
   "leave",
   "revoke",
+  // Q4/Q5 (2026-10-21): a spoke's request for the current state, and its own entries after a
+  // restore — retried while the home does not answer, parked when it does not know them.
+  "resync",
+  "entries-up",
 ] as const satisfies readonly (typeof GROUP_KINDS)[number][];
 export type OutboxKind = (typeof OUTBOX_KINDS)[number];
 
@@ -307,13 +370,30 @@ export const groupHeaderSchema = z.object({
   seq,
 });
 
+/** Every kind this server knows; anything else is a newer peer's message. */
+const KNOWN_KINDS = new Set<string>(tripSharePacket.options.map((o) => o.shape.kind.value));
+
+/** The header of a group message whose kind this server does not know at all. */
+export const unknownGroupKindSchema = z.object({
+  kind: z
+    .string()
+    .min(1)
+    .max(40)
+    .refine((k) => !KNOWN_KINDS.has(k)),
+  messageId: uuid,
+  groupRef: uuid,
+  seq,
+});
+
 /**
  * The answer to a group message. `gap` names the seq the receiver expects next; `not-member`
  * means no group, member or pairing here matches; `consent` that the person's consent with the
  * sender is not accepted here; `schema` names the first field that did not parse; `error` that
  * the receiver failed to apply it for a reason of its own (its database, its code) — nothing was
  * written, and the sender retries it; `suspended` that the membership is held here (a restore,
- * a re-pinned key, a blocked server) until its person confirms it again — retried, not parked.
+ * a re-pinned key, a blocked server) until its person confirms it again — retried, not parked;
+ * `unsupported` that this server does not know the message's kind (a newer peer's message) —
+ * parked, never read as delivered.
  */
 export const ACK_REJECTIONS = [
   "gap",
@@ -322,6 +402,7 @@ export const ACK_REJECTIONS = [
   "schema",
   "error",
   "suspended",
+  "unsupported",
 ] as const;
 export type AckRejection = (typeof ACK_REJECTIONS)[number];
 /**
@@ -349,6 +430,8 @@ export type TripSharePacket = z.infer<typeof tripSharePacket>;
 /** Not strict: a newer server may say more, and only `tripShare` is read. */
 export const tripPingReplySchema = z.object({
   tripShare: z.array(z.number().int().positive()).max(8),
+  /** Messages added after rc.18 (`TRIP_SHARE_FEATURES`); absent on a server from before them. */
+  features: z.array(z.string().max(40)).max(32).optional(),
 });
 
 /**
@@ -400,6 +483,15 @@ export type RosterEntry = z.infer<typeof rosterEntrySchema>;
 export type LeaveMessage = z.infer<typeof leaveSchema>;
 export type RevokeMessage = z.infer<typeof revokeSchema>;
 export type AddRequestMessage = z.infer<typeof addRequestSchema>;
+export type ResyncMessage = z.infer<typeof resyncSchema>;
+export type EntriesUpMessage = z.infer<typeof entriesUpSchema>;
+export type NudgeMessage = z.infer<typeof nudgeSchema>;
 export type LifecycleMessage = RosterMessage | LeaveMessage | RevokeMessage | AddRequestMessage;
 export type GroupMessage =
-  TripOffer | OfferAnswer | EntriesMessage | PropagationMessage | LifecycleMessage;
+  | TripOffer
+  | OfferAnswer
+  | EntriesMessage
+  | PropagationMessage
+  | LifecycleMessage
+  | ResyncMessage
+  | EntriesUpMessage;

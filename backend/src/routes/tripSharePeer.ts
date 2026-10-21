@@ -36,12 +36,17 @@ import { servePropagation } from "../services/sharing/federation/inbound";
 import { serveRoster } from "../services/sharing/federation/roster";
 import { serveLeave, serveRevoke } from "../services/sharing/federation/lifecycle";
 import { serveAddRequest } from "../services/sharing/federation/addRequest";
+import { serveResync } from "../services/sharing/federation/resync";
+import { serveEntriesUp } from "../services/sharing/federation/entriesUp";
+import { serveNudge } from "../services/sharing/federation/nudge";
+import { servedFeatures } from "../services/sharing/federation/peerFeatures";
 import { BODY_BUDGET, MAX_BODY } from "../services/sharing/federation/transport";
 import {
   GROUP_KINDS,
   TRIP_SHARE_PURPOSE,
   TRIP_SHARE_VERSIONS,
   groupHeaderSchema,
+  unknownGroupKindSchema,
   tripSharePacket,
   type TripSharePacket,
 } from "../schemas/tripSharePeer";
@@ -53,7 +58,10 @@ const router = Router();
 function serve(origin: string, local: string, body: TripSharePacket): Promise<unknown> {
   switch (body.kind) {
     case "ping":
-      return Promise.resolve({ tripShare: [...TRIP_SHARE_VERSIONS] });
+      return Promise.resolve({
+        tripShare: [...TRIP_SHARE_VERSIONS],
+        features: servedFeatures(),
+      });
     case "invite-claim":
       return serveInviteClaim(origin, body, local);
     case "offer":
@@ -74,6 +82,12 @@ function serve(origin: string, local: string, body: TripSharePacket): Promise<un
       return serveRevoke(origin, body);
     case "add-request":
       return serveAddRequest(origin, body);
+    case "resync":
+      return serveResync(origin, body);
+    case "entries-up":
+      return serveEntriesUp(origin, body);
+    case "nudge":
+      return serveNudge(origin, body);
   }
 }
 
@@ -99,8 +113,14 @@ async function serveOrFail(origin: string, local: string, body: TripSharePacket)
   }
 }
 
-/** A group message that failed its schema: which field, if its header can be read at all. */
+/**
+ * A group message that failed its schema: which field, if its header can be read at all. A group
+ * message of a kind this server does not know (a newer peer's) is answered `unsupported`, so its
+ * sender parks it instead of reading a refusal (catch-up of 2026-10-21).
+ */
 function schemaRejection(raw: unknown, error: ZodError) {
+  if (unknownGroupKindSchema.safeParse(raw).success)
+    return { kind: "ack" as const, rejected: "unsupported" as const };
   if (!groupHeaderSchema.safeParse(raw).success) return null;
   const field = error.issues[0]?.path.join(".").slice(0, 200);
   return { kind: "ack" as const, rejected: "schema" as const, ...(field ? { field } : {}) };

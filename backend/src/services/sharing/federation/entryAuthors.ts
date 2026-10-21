@@ -9,14 +9,17 @@
  * - when an entry from another server first spreads at the home (`spreadCreate`, its author's
  *   roster ref).
  * Before a group is shared across servers, a local author is stored as `local:<account id>` and
- * read as their roster ref once the group has one. An entry without a record has no author the
+ * read as their roster ref once the group has one. A spoke records its own people only, always as
+ * `local:<account id>` (Q5: what a restored spoke sends up). An entry without a record has no author the
  * home can vouch for, and is sent named by nobody — the spoke copies it for nobody.
  */
 import type { DbTransaction } from "../../../db";
 import type { ChangeAuthor } from "./outbound";
 import { userRef } from "./rosterRef";
 
-const LOCAL = "local:";
+/** A local author, stored by account id until the group has a roster ref for them. */
+export const LOCAL_AUTHOR = "local:";
+const LOCAL = LOCAL_AUTHOR;
 
 /** Record who brought `shareKey` into `groupId`; the first record stays. */
 export async function recordEntryAuthor(
@@ -29,8 +32,18 @@ export async function recordEntryAuthor(
     where: { id: groupId },
     select: { federatedRef: true, homeOrigin: true },
   });
-  // A spoke's group: its home keeps the record, and a spoke never resends entries.
-  if (!group || group.homeOrigin) return;
+  if (!group) return;
+  // A spoke's group: the home keeps the record of everyone. A spoke records only its own people,
+  // so that after a restore it can send up exactly what they brought in (`entriesUp.ts`, Q5).
+  if (group.homeOrigin) {
+    if (author.kind !== "user") return;
+    await c.tripShareEntryAuthor.upsert({
+      where: { groupId_shareKey: { groupId, shareKey } },
+      create: { groupId, shareKey, authorRef: `${LOCAL}${author.id}` },
+      update: {},
+    });
+    return;
+  }
   const ref =
     author.kind === "user"
       ? group.federatedRef

@@ -176,6 +176,9 @@ export default function RemoteTripPeople({
 
   const deliveryLine = (m: RemoteMember): string => {
     const d = m.delivery;
+    // A catch-up the other server does not know yet (it needs an update): not a refused change.
+    if (d.state === "rejected" && d.reason === "unsupported")
+      return t(`${NS}.delivery.unsupported`, { name: m.displayName, origin: m.origin });
     if (d.state === "rejected")
       return t(`${NS}.delivery.rejected`, {
         name: m.displayName,

@@ -29,6 +29,11 @@ export const BODY_BUDGET = {
   leave: 8_192,
   revoke: 8_192,
   "add-request": 8_192,
+  // The catch-up (2026-10-21): a request naming up to a hundred refs, a spoke's own entries as
+  // `entries` carries them, and a nudge.
+  resync: 8_192,
+  "entries-up": 1_048_576,
+  nudge: 8_192,
 } as const satisfies Readonly<Record<TripSharePacket["kind"], number>>;
 export const MAX_BODY = Math.max(...Object.values(BODY_BUDGET));
 

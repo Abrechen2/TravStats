@@ -17,7 +17,9 @@
  * - **Confirm again** — the person resumes the trip's held memberships: the consent of the
  *   pairing is accepted again, the membership is active, and after a restore the home queues the
  *   trip's entries once more, because changes made while the membership was held were never
- *   queued (the receiver keeps only the entries it lacks).
+ *   queued (the receiver keeps only the entries it lacks); a restored spoke sends up its person's
+ *   own entries and asks the home for the current state (Q5). Either way the other server is
+ *   nudged to deliver what it kept for these pairings now (Q6).
  *
  * The end of a membership is told only where a message could still go: a membership held by a
  * restore or a blocked or re-pinned server is ended here without a word, and that server learns
@@ -34,6 +36,9 @@ import { requireAdmitted } from "./peerCheck";
 import { HELD_REASONS, addressed, isHeld } from "./peerMember";
 import { readRemotePerson, type RemotePersonView } from "./remotePeople";
 import { queueRoster } from "./roster";
+import { queueResync } from "./resync";
+import { queueEntriesUp } from "./entriesUp";
+import { nudgePeers } from "./nudge";
 import { rejectWith, serveOnce, takeSeq } from "./streams";
 import { detachTrip } from "../detach";
 import type { LeaveMessage, RevokeMessage, TripShareAck } from "../../../schemas/tripSharePeer";
@@ -326,15 +331,19 @@ export async function reconfirmTrip(userId: string, tripId: string): Promise<num
           data: { state, stateReason: null, stateSince: now },
         });
         if (m.stateReason === "restore" && !m.group.homeOrigin) await queueEntries(tx, m.id);
+        // A restored spoke (Q5): what its person brought in goes up, then it asks for the state.
+        if (m.stateReason === "restore" && m.group.homeOrigin) await queueEntriesUp(tx, m.id);
       }
+      if (still.some((m) => m.stateReason === "restore" && m.group.homeOrigin))
+        await queueResync(tx, userId, held[0].groupId);
       // A restored home may name a roster older than the spokes': they get its own again.
       const restored = still.some((m) => m.stateReason === "restore");
       if (restored && !held[0].group.homeOrigin) await queueRoster(tx, held[0].groupId);
-      return still.length;
+      return still;
     },
     { timeout: 60_000 }
   );
-  if (confirmed === 0)
+  if (confirmed.length === 0)
     throw remoteShareError(
       "SHARE_REMOTE_NOTHING_TO_CONFIRM",
       409,
@@ -342,7 +351,10 @@ export async function reconfirmTrip(userId: string, tripId: string): Promise<num
       { userId }
     );
   kickDelivery();
-  return confirmed;
+  // Q6: what the other server holds for these pairings went to its backoff while they were held
+  // here; it is asked to deliver now instead of up to a day later.
+  nudgePeers(confirmed.map((m) => m.remote));
+  return confirmed.length;
 }
 
 /**

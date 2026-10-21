@@ -138,7 +138,10 @@ describe("ping", () => {
     expect(res.status).toBe(200);
     const reply = verifyEnvelope(res.body, localPublic, REMOTE, Date.now(), TRIP_SHARE_ACCEPTS);
     expect(reply.nonce).toBe(packet.nonce);
-    expect(JSON.parse(reply.body)).toEqual({ tripShare: [1] });
+    expect(JSON.parse(reply.body)).toEqual({
+      tripShare: [1],
+      features: ["resync", "entries-up", "nudge"],
+    });
   });
 });
 
