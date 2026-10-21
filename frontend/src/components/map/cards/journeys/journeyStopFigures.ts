@@ -44,10 +44,13 @@ export function getJourneyStopFigures(
       const entry = destinations.get(key) ?? { name: j.arr.name, count: 0 };
       destinations.set(key, { ...entry, count: entry.count + 1 });
     }
-    // Arriving here, the visit is the arrival's day; leaving, the departure's.
-    const here = endsHere && !startsHere ? (j.arrival ?? j.departure) : j.departure;
-    if (here && (!lastVisit || Date.parse(here.utc) > Date.parse(lastVisit.utc))) {
-      lastVisit = here;
+    // Leaving, the visit is the departure; arriving (or bringing a rental
+    // back), the arrival — the later of the two that are known. An arrival
+    // without a time is not dated by its departure: abstain instead.
+    for (const here of [startsHere ? j.departure : null, endsHere ? j.arrival : null]) {
+      if (here && (!lastVisit || Date.parse(here.utc) > Date.parse(lastVisit.utc))) {
+        lastVisit = here;
+      }
     }
   }
   return {

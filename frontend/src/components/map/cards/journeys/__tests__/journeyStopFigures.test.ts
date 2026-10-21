@@ -72,3 +72,37 @@ describe("station figures", () => {
     expect(none).toEqual({ departures: 0, arrivals: 0, destinations: [], lastVisit: null });
   });
 });
+
+describe("last visit at a branch a rental went back to", () => {
+  it("is the return, not the pick-up, when the car came back here", async () => {
+    const { journeyFromRental } = await import("../journeyNormalize");
+    const round = journeyFromRental({
+      id: "c",
+      status: "completed",
+      provider: "Sixt",
+      pickupStationName: "Faro",
+      returnStationName: "Faro",
+      pickupLat: 37,
+      pickupLon: -8,
+      returnLat: 37,
+      returnLon: -8,
+      times: {
+        pickup: tv("2024-10-01T10:00:00", "2024-10-01T09:00:00Z"),
+        return: tv("2024-10-08T10:00:00", "2024-10-08T09:00:00Z"),
+        actualPickup: null,
+        actualReturn: null,
+      },
+    } as Parameters<typeof journeyFromRental>[0]);
+    const f = getJourneyStopFigures([round], endKey({ lat: 37, lon: -8 }));
+    expect(f.lastVisit?.utc).toBe("2024-10-08T09:00:00Z");
+  });
+
+  it("does not date an arrival by its departure when the arrival is unknown", () => {
+    const f = getJourneyStopFigures(
+      [ride("x", BERLIN, HAMBURG, "2024-06-01T08:00:00Z", null)],
+      endKey(HAMBURG)
+    );
+    expect(f.arrivals).toBe(1);
+    expect(f.lastVisit).toBeNull();
+  });
+});
