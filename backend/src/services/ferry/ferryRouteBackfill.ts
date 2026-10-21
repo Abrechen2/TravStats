@@ -22,7 +22,8 @@ import { routeFerryJourney } from "./ferryRouting";
  * - **A concurrent edit wins.** The write claims the version it was computed
  *   from, so a crossing edited meanwhile is a conflict, not an overwrite.
  * - **The line is a shared fact.** It propagates to every copy, as the button
- *   does; a copy routed that way is no longer a candidate.
+ *   does; a copy routed that way is no longer a candidate. A deactivated
+ *   account is skipped: it acts for nobody, and its copy may be stale.
  * - **A linked roadtrip leg** follows the crossing when its stops are the
  *   crossing's piers. A leg linked off the piers (its stops are towns) keeps
  *   its line, as on a PATCH (a3f47d427): the backfill moves no terminal, so a
@@ -104,6 +105,9 @@ export async function backfillFerrySeaRoutes(options: BackfillOptions): Promise<
       ...(options.userId !== undefined && { userId: options.userId }),
       geometrySource: "straight",
       geometry: { equals: Prisma.DbNull },
+      // A deactivated account receives no propagation, so its shared copy may
+      // be a stale chord; routing it would push its facts onto active members.
+      user: { isActive: true },
       id: { notIn: [...options.attempted] },
       OR: [{ routeBackfill: null }, { routeBackfill: { nextAttemptAt: { lte: now } } }],
     },

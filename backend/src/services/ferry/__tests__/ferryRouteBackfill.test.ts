@@ -208,6 +208,21 @@ describe("ferry sea-route backfill", () => {
     expect(nextAttemptAfterFailure(MAX_ATTEMPTS, now)).toBeNull();
   });
 
+  it("leaves a deactivated account's crossings alone", async () => {
+    // Propagation skips a deactivated account, so its shared copy can be a
+    // stale chord; routing it would push that copy's facts onto the active
+    // members' copies, over their own line or typed distance (Codex review).
+    const ferry = await crossing();
+    await prisma.user.update({ where: { id: userId }, data: { isActive: false } });
+    try {
+      expect(await run()).toMatchObject({ examined: 0 });
+      expect(computeSchematicRoute).not.toHaveBeenCalled();
+      expect(await stored(ferry.id)).toMatchObject({ geometrySource: "straight", geometry: null });
+    } finally {
+      await prisma.user.update({ where: { id: userId }, data: { isActive: true } });
+    }
+  });
+
   it("stops at the per-run cap and continues on the next run", async () => {
     for (let i = 0; i < 5; i++) await crossing({ depStationName: `Harbour ${i}` });
     expect(await run({ maxPerRun: 3, batch: 2 })).toMatchObject({ routed: 3, examined: 3 });
