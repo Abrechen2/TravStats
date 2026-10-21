@@ -1,6 +1,7 @@
 import { AppError } from "../../middleware/errorHandler";
 import { haversineKm } from "../../shared/geo/haversine";
 import { daysBetween } from "../../shared/time/localDate";
+import { bookingDuration } from "./temporal";
 import type { PlaceholderMatch, PlanBooking, PlanStage, PlanState, PlanStation } from "./types";
 
 /** Spec §5.2: two ports closer than this are the same endpoint. */
@@ -53,6 +54,8 @@ export function replacePlaceholder(
             ...i,
             title: merged.title,
             kind: merged.kind,
+            // As on an ordinary booking update: without it the overlap checks skip the item.
+            duration: bookingDuration(merged),
             day: merged.day,
             time: merged.time,
             timezone: merged.timezone,

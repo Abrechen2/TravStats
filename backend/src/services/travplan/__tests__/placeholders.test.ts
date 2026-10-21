@@ -137,6 +137,38 @@ describe("placeholders", () => {
     expect(next.bookings.some((x) => x.id === ph.id)).toBe(true);
   });
 
+  it("gives the linked item the confirmed booking's duration, so overlap checks see it", () => {
+    const { state, ph } = planWithPlaceholder();
+    state.items = [
+      {
+        id: uid(),
+        title: "Ferry to Genoa",
+        kind: "ferry",
+        day: "2027-05-19",
+        time: null,
+        duration: null,
+        timezone: null,
+        place: "Genoa",
+        note: "",
+        booked: true,
+        bookingId: ph.id,
+        stationId: null,
+        execution: "unconfirmed",
+        source: null,
+      },
+    ];
+    const real = booking({
+      day: "2027-05-19",
+      time: "10:00",
+      timezone: "Europe/Rome",
+      arrivalDay: "2027-05-19",
+      arrivalTime: "20:00",
+      arrivalTimezone: "Europe/Rome",
+    });
+    const next = replacePlaceholder(state, ph.id, real, null);
+    expect(next.items[0].duration).toBe(600);
+  });
+
   it("refuses a replacement of another kind", () => {
     const { state, ph } = planWithPlaceholder();
     expect(() => replacePlaceholder(state, ph.id, booking({ kind: "rail" }), null)).toThrow(
