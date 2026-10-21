@@ -121,7 +121,9 @@ export default function RemoteSharingSection(): JSX.Element | null {
       const person = await sharingRemoteApi.claim(pasted);
       setCode("");
       setOffersVersion((v) => v + 1);
-      setNotice(t(`${NS}.claim.done`, { name: person.displayName, origin: person.origin }));
+      // A retry of a code this account redeemed already: connected, not an error.
+      const key = person.alreadyConnected ? "already" : "done";
+      setNotice(t(`${NS}.claim.${key}`, { name: person.displayName, origin: person.origin }));
     }, `${NS}.errors.claimFailed`);
   };
 

@@ -48,6 +48,10 @@ import * as noticesModule from "../../notices";
 import * as adaptersModule from "../../adapters";
 import * as securityModule from "../../../federation/security";
 import * as transportModule from "../transport";
+import * as resyncModule from "../resync";
+import * as entriesUpModule from "../entriesUp";
+import * as nudgeModule from "../nudge";
+import * as peerFeaturesModule from "../peerFeatures";
 import { resetIdentityCache } from "../../../federation/identity";
 import { encryptApiKey } from "../../../../utils/encryption";
 import { preparePeerDatabase } from "./peerDatabase";
@@ -82,6 +86,10 @@ export interface Server {
   adapters: typeof adaptersModule;
   security: typeof securityModule;
   transport: typeof transportModule;
+  resync: typeof resyncModule;
+  entriesUp: typeof entriesUpModule;
+  nudge: typeof nudgeModule;
+  peerFeatures: typeof peerFeaturesModule;
   resetIdentity: () => void;
   encrypt: (value: string) => string | null;
   app: express.Express;
@@ -119,6 +127,10 @@ const serverA = (): Server => ({
   adapters: adaptersModule,
   security: securityModule,
   transport: transportModule,
+  resync: resyncModule,
+  entriesUp: entriesUpModule,
+  nudge: nudgeModule,
+  peerFeatures: peerFeaturesModule,
   resetIdentity: resetIdentityCache,
   encrypt: encryptApiKey,
   app: peerApp(tripSharePeerRouter, comparisonPeerRouter),
@@ -157,6 +169,10 @@ function isolatedServer(origin: string, databaseUrl: string): Server {
         adapters: require("../../adapters"),
         security: require("../../../federation/security"),
         transport: require("../transport"),
+        resync: require("../resync"),
+        entriesUp: require("../entriesUp"),
+        nudge: require("../nudge"),
+        peerFeatures: require("../peerFeatures"),
         resetIdentity: require("../../../federation/identity").resetIdentityCache,
         encrypt: require("../../../../utils/encryption").encryptApiKey,
         app: peerApp(
@@ -347,7 +363,15 @@ function useServers(count: 2 | 3): void {
     for (const [on, other] of admitted()) await pin(on, other);
     for (const s of all) await setSwitch(s, true);
   });
-  afterEach(() => {
+  afterEach(async () => {
+    // Each test starts with servers that have asked nothing and been nudged by nobody, and no
+    // nudge of this test still on its way into the next.
+    // Every server's nudges first: one still on its way would set another server's memory again.
+    for (const s of all) await s.nudge.settleNudges();
+    for (const s of all) {
+      s.peerFeatures.forgetPeerFeatures();
+      s.nudge.forgetNudges();
+    }
     offline.clear();
     jest.restoreAllMocks();
   });

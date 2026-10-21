@@ -197,6 +197,19 @@ describe("RemoteTripPeople", () => {
       /sharing:remote.trip.delivery.rejected .*"entry":"TP571 FRA → LIS".*delivery.why.too-large/,
     ],
     [
+      "a catch-up the other server does not know yet, as its own sentence, not a refusal",
+      {
+        delivery: {
+          state: "rejected",
+          stateSince: since,
+          reason: "unsupported",
+          field: null,
+          label: null,
+        },
+      },
+      /sharing:remote.trip.delivery.unsupported /,
+    ],
+    [
       "held on their server until the person there confirms again",
       {
         delivery: {

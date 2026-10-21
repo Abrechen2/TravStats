@@ -149,6 +149,22 @@ describe("RemoteSharingSection", () => {
     expect(await screen.findByRole("status")).toHaveTextContent(OTHER);
   });
 
+  it("says a code redeemed before is already connected, not an error", async () => {
+    api.claim.mockResolvedValue({
+      id: "p1",
+      origin: OTHER,
+      username: "anna",
+      displayName: "Anna",
+      consent: "accepted",
+      createdAt: "2026-10-20T10:00:00.000Z",
+      alreadyConnected: true,
+    });
+    render(<RemoteSharingSection />);
+    await claimWith(CODE);
+    expect(await screen.findByRole("status")).toHaveTextContent("sharing:remote.claim.already");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("withdraws a person's consent only on a second click, and says it was done (F-S4e)", async () => {
     const person = {
       id: "p1",

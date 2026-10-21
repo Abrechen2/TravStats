@@ -40,12 +40,14 @@ import type { WireEntry } from "./wire/shapes";
 import { isHeld, isReceiving } from "./peerMember";
 import { mayReach } from "./roster";
 import { entryAuthorRefs } from "./entryAuthors";
+import { userRef } from "./rosterRef";
 import logger from "../../../utils/logger";
 import { rejectWith, serveOnce, takeSeq } from "./streams";
+import { applyResync, type ResyncRecipient } from "./resyncApply";
 import { BODY_BUDGET, wireBytes } from "./transport";
 
 /** Room left in a message for its header and the envelope's quoting of the body. */
-const ENTRIES_BYTES = BODY_BUDGET.entries - 8_192;
+export const ENTRIES_BYTES = BODY_BUDGET.entries - 8_192;
 
 /**
  * Deliver everything due now (tests, and a graceful shutdown). Before F-S4d this awaited the
@@ -77,9 +79,17 @@ export function chunkEntries(entries: readonly WireEntry[]): WireEntry[][] {
   return chunks;
 }
 
-/** Every keyed entry of the member's trip, in registry order, on the wire. */
-async function wireEntriesOf(tx: DbTransaction, userId: string, tripId: string) {
-  await assignShareKeys(tx, userId, tripId);
+/**
+ * Every keyed entry of the member's trip, in registry order, on the wire. At the home an entry
+ * without a key gets one first (a first share); `assign: false` sends only what is keyed already.
+ */
+export async function wireEntriesOf(
+  tx: DbTransaction,
+  userId: string,
+  tripId: string,
+  options: { assign?: boolean } = {}
+) {
+  if (options.assign !== false) await assignShareKeys(tx, userId, tripId);
   const out: WireEntry[] = [];
   for (const entity of SHARE_ENTITIES) {
     const rows = await ADAPTERS[entity].load(tx, await keyedIdsOnTrip(tx, entity, userId, tripId));
@@ -98,15 +108,30 @@ async function wireEntriesOf(tx: DbTransaction, userId: string, tripId: string) 
  * Queue the offering member's entries for the person behind remote member `memberId`, inside the
  * caller's transaction. Asks again whether the person still receives (`receivingRemotes`). A
  * repeat queues everything again; the receiver keeps only what it lacks (`heldKeys`).
+ *
+ * `resync` (Q4/Q5, an answer to the spoke's `resync`): only entries brought in by the home member
+ * of the pairing, the person themselves or someone in `accepted` are sent — nobody else's leave
+ * the home — marked as the current state, which the spoke compares with what it holds. Not queued
+ * again while an earlier answer for the member still waits in the outbox.
  */
-export async function queueEntries(tx: DbTransaction, memberId: string): Promise<number> {
+export async function queueEntries(
+  tx: DbTransaction,
+  memberId: string,
+  options: { resync?: { accepted: readonly string[] } } = {}
+): Promise<number> {
   const member = await tx.tripShareRemoteMember.findUnique({
     where: { id: memberId },
     include: { remote: true, group: true },
   });
-  if (!member?.group.federatedRef || member.state !== "active") return 0;
+  const { resync } = options;
+  // A resync comes from a member who takes messages, also one shown unreachable or switched off
+  // here (review 3): it is answered like the message it is, not swallowed.
+  if (!member?.group.federatedRef) return 0;
+  if (resync ? !isReceiving(member) : member.state !== "active") return 0;
   const { remote, group } = member;
-  const receiving = await receivingRemotes(tx, group.id, remote.userId);
+  const receiving = await receivingRemotes(tx, group.id, remote.userId, {
+    queueable: !!resync,
+  });
   if (!receiving.some((r) => r.id === member.id)) return 0;
   const trip = await tx.trip.findFirst({
     where: { shareGroupId: group.id, userId: remote.userId },
@@ -114,10 +139,14 @@ export async function queueEntries(tx: DbTransaction, memberId: string): Promise
     select: { id: true },
   });
   if (!trip) return 0;
-  const entries = await wireEntriesOf(tx, remote.userId, trip.id);
+  // An answer still waiting is replaced, not kept beside this one: the newer request may name a
+  // newer yes (review 2), and one full answer per member stays the bound.
+  if (resync) await dropWaitingResync(tx, member.id);
+  const all = await wireEntriesOf(tx, remote.userId, trip.id);
+  const authors = await entryAuthors(tx, member, all);
+  const entries = resync ? sentOnResync(all, authors, member, remote.userId, resync) : all;
   const oversize = entries.filter((e) => wireBytes(e) > ENTRIES_BYTES);
   const chunks = chunkEntries(entries.filter((e) => !oversize.includes(e)));
-  const authors = await entryAuthors(tx, member, entries);
   for (const chunk of chunks) {
     const named = chunk.flatMap((e) => {
       const ref = authors.get(e.shareKey);
@@ -133,6 +162,7 @@ export async function queueEntries(tx: DbTransaction, memberId: string): Promise
           from: remote.localChannel,
           entries: chunk,
           authors: named,
+          ...(resync ? { resync: true } : {}),
         } as unknown as Prisma.InputJsonValue,
       },
     });
@@ -140,16 +170,50 @@ export async function queueEntries(tx: DbTransaction, memberId: string): Promise
   // An entry too large for any message is a stated loss, not a silent one. So is an entry with
   // no recorded author (keyed before authors were recorded, spec F-S4e owner question 7): the
   // spoke copies it for nobody, and the sender must not read that as a clean delivery.
-  const unattributed = entries.some((e) => !authors.has(e.shareKey));
-  await tx.tripShareRemoteMember.update({
-    where: { id: member.id },
-    data: {
-      stateReason:
-        oversize.length > 0 ? "entries-too-large" : unattributed ? "entries-unattributed" : null,
-    },
-  });
+  // A resync sends a chosen part: what it leaves out is not a loss of the delivery, so the reason
+  // a full delivery recorded stays — only a part too large for any message is named.
+  const unattributed = all.some((e) => !authors.has(e.shareKey));
+  if (!resync || oversize.length > 0)
+    await tx.tripShareRemoteMember.update({
+      where: { id: member.id },
+      data: {
+        stateReason:
+          oversize.length > 0 ? "entries-too-large" : unattributed ? "entries-unattributed" : null,
+      },
+    });
   kickDelivery();
   return chunks.length;
+}
+
+/** The unsent answers to an earlier resync of this member; a newer answer replaces them. */
+async function dropWaitingResync(tx: DbTransaction, memberId: string): Promise<void> {
+  await tx.tripShareOutbox.deleteMany({
+    where: {
+      memberId,
+      kind: "entries",
+      parkedAt: null,
+      payload: { path: ["resync"], equals: true },
+    },
+  });
+}
+
+/** On a resync: only entries by the pairing's home member, the person, or someone they agreed to. */
+function sentOnResync(
+  entries: readonly WireEntry[],
+  authors: ReadonlyMap<string, string>,
+  member: { rosterRef: string; group: { federatedRef: string | null } },
+  homeUserId: string,
+  resync: { accepted: readonly string[] }
+): WireEntry[] {
+  const allowed = new Set([
+    userRef(member.group.federatedRef as string, homeUserId),
+    member.rosterRef,
+    ...resync.accepted,
+  ]);
+  return entries.filter((e) => {
+    const ref = authors.get(e.shareKey);
+    return !!ref && allowed.has(ref);
+  });
 }
 
 /**
@@ -157,7 +221,7 @@ export async function queueEntries(tx: DbTransaction, memberId: string): Promise
  * record says (`entryAuthors.ts`), also for someone no longer on the trip — the spoke decides by
  * its person's answer to them. An entry without a record is named by nobody and copied for nobody.
  */
-async function entryAuthors(
+export async function entryAuthors(
   tx: DbTransaction,
   member: { groupId: string; group: { federatedRef: string | null } },
   entries: readonly WireEntry[]
@@ -204,7 +268,7 @@ export function serveEntries(origin: string, message: EntriesMessage): Promise<T
           stateReason: true,
           rosterRef: true,
           localRef: true,
-          remote: { select: { userId: true } },
+          remote: { select: { id: true, userId: true, displayName: true, origin: true } },
         },
       })
     ).filter(isReceiving);
@@ -222,14 +286,16 @@ export function serveEntries(origin: string, message: EntriesMessage): Promise<T
                 tripId: trip.id,
                 pairingRef: m.rosterRef,
                 ownRef: m.localRef,
+                pairing: {
+                  id: m.remote.id,
+                  displayName: m.remote.displayName,
+                  origin: m.remote.origin,
+                },
               }
             : null;
         })
       )
-    ).filter(
-      (r): r is { userId: string; tripId: string; pairingRef: string; ownRef: string | null } =>
-        r !== null
-    );
+    ).filter((r): r is ResyncRecipient => r !== null);
     if (recipients.length === 0) {
       // Held here until its person confirms again (F-S4e): kept there and sent again, not lost.
       const held = await tx.tripShareRemoteMember.findMany({
@@ -258,6 +324,11 @@ export function serveEntries(origin: string, message: EntriesMessage): Promise<T
           { operation: "trip_share_entries_withheld", count: rows.length - allowed.size, origin },
           "Entries by someone the recipient has not said yes to were not copied"
         );
+      if (message.resync) {
+        const chosen = rows.filter((r) => allowed.has(r.row.shareKey as string));
+        await applyResync(tx, { groupId: group.id, origin, recipient, rows: chosen, authorOf });
+        continue;
+      }
       for (const entity of SHARE_ENTITIES) {
         const ofType = rows.filter(
           (r) => r.entity === entity && allowed.has(r.row.shareKey as string)

@@ -8,23 +8,8 @@
  * - Consent on relays: Cleo, the newcomer, reaches Ben's copy only after Ben said yes to her;
  *   Ben, already on the trip when Cleo took it, reaches hers at once (her yes was the offer).
  */
-import {
-  A,
-  B,
-  C,
-  servers,
-  user as harnessUser,
-  useThreeServers,
-  type Server,
-} from "./twoServerHarness";
-import {
-  addFlight,
-  editFlight,
-  gateOf,
-  noticesOf,
-  offerAndAccept,
-  pairAcross,
-} from "./sharedTripFixtures";
+import { A, B, C, servers, useThreeServers, type Server } from "./twoServerHarness";
+import { addFlight, editFlight, gateOf, noticesOf, threeServerTrip } from "./sharedTripFixtures";
 
 useThreeServers();
 let a: Server;
@@ -34,32 +19,7 @@ beforeAll(() => {
   ({ a, b, c } = servers);
 });
 
-/** Anna's trip shared with Ben, then with Cleo; every message delivered. */
-async function threeOnATrip() {
-  const anna = await harnessUser(a, "Anna");
-  const ben = await harnessUser(b, "Ben");
-  const cleo = await harnessUser(c, "Cleo");
-  const toBen = await pairAcross(a, anna, b, ben);
-  const toCleo = await pairAcross(a, anna, c, cleo);
-  const trip = await a.prisma.trip.create({ data: { userId: anna, name: "Lissabon" } });
-  const flight = await addFlight(a, anna, trip.id);
-  const benTrip = await offerAndAccept(a, anna, trip.id, toBen.id, b, ben);
-  const cleoTrip = await offerAndAccept(a, anna, trip.id, toCleo.id, c, cleo);
-  await a.outbox.runDeliveries();
-  const flightOn = (s: Server, tripId: string) =>
-    s.prisma.flight.findFirstOrThrow({ where: { tripId } });
-  return {
-    anna,
-    ben,
-    cleo,
-    trip,
-    flight,
-    benTrip,
-    cleoTrip,
-    benFlight: await flightOn(b, benTrip),
-    cleoFlight: await flightOn(c, cleoTrip),
-  };
-}
+const threeOnATrip = () => threeServerTrip(a, b, c);
 
 const rosterOf = async (s: Server, userId: string, tripId: string) =>
   (await s.tripRemoteSharing.tripRemoteSharing(userId, tripId)).roster;
@@ -98,8 +58,8 @@ describe("three servers, one home", () => {
 
     const cleoOnB = (await rosterOf(b, ben, benTrip)).find((p) => p.displayName === "Cleo");
     await b.roster.decideRosterPerson(ben, benTrip, cleoOnB!.ref, "accepted");
-    // What he missed is not replayed: her next change meets his older value — both are shown,
-    // nothing is overwritten.
+    // His yes queued a resync on B (Q4), which is not delivered here: until it is, her next
+    // change meets his older value — both are shown, nothing is overwritten.
     await editFlight(c, cleo, cleoFlight.id, { gate: "C2" });
     await c.outbox.runDeliveries();
     await a.outbox.runDeliveries();

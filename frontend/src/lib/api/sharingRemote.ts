@@ -2,6 +2,7 @@ import { API_TIMEOUTS } from "../../config/constants";
 import { api } from "./client";
 import type {
   AddRequestBody,
+  ClaimedPerson,
   CreatedRemoteInvite,
   ReceivedOffer,
   RemoteInvite,
@@ -34,8 +35,8 @@ export const sharingRemoteApi = {
   revokeInvite: async (id: string): Promise<void> => {
     await api.delete(`${BASE}/invites/${encodeURIComponent(id)}`);
   },
-  claim: async (code: string): Promise<RemotePerson> =>
-    (await api.post<Envelope<RemotePerson>>(`${BASE}/claim`, { code }, ACROSS)).data.data,
+  claim: async (code: string): Promise<ClaimedPerson> =>
+    (await api.post<Envelope<ClaimedPerson>>(`${BASE}/claim`, { code }, ACROSS)).data.data,
   listPeople: async (): Promise<RemotePerson[]> =>
     (await api.get<Envelope<RemotePerson[]>>(`${BASE}/people`)).data.data,
   tripSharing: async (tripId: string): Promise<TripRemoteSharing> =>

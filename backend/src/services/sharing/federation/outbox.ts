@@ -25,9 +25,11 @@
  * - **held** — a membership suspended here until its person confirms it again (restore, a
  *   blocked server, a re-pinned key; O9): the stream waits, nothing is sent or counted; a peer
  *   that holds ours answers `suspended`, and the message is retried as `suspended-there`;
- * - **refused** (`schema`, `not-member`, `consent`), or larger in UTF-8 bytes than its transport
- *   carries (`too-large`) — the row is parked with the reason, not retried, and the stream moves
- *   on; parked rows are kept 30 days for the trip page to name.
+ * - **refused** (`schema`, `not-member`, `consent`, `unsupported`), or larger in UTF-8 bytes than
+ *   its transport carries (`too-large`) — the row is parked with the reason, not retried, and the
+ *   stream moves on; parked rows are kept 30 days for the trip page to name. A `resync` or
+ *   `entries-up` towards a server whose ping does not name it is parked as `unsupported` before it
+ *   is sent (catch-up of 2026-10-21).
  */
 import { prisma, type DbTransaction } from "../../../db";
 import type { Prisma } from "../../../prisma";
@@ -35,11 +37,12 @@ import logger from "../../../utils/logger";
 import { ADAPTERS } from "../adapters";
 import { acceptedParties, QUEUEABLE } from "../members";
 import { SHARE_ENTITIES, type ShareEntity } from "../shareTypes";
-import type { AckConflict, GroupMessage } from "../../../schemas/tripSharePeer";
+import type { AckConflict, GroupMessage, TripShareFeature } from "../../../schemas/tripSharePeer";
 import { tripFederationAvailability } from "./availability";
 import { recordConflict } from "./conflicts";
 import { LOCAL_ERROR, kindOf } from "./peerCheck";
 import { isHeld } from "./peerMember";
+import { peerSupports } from "./peerFeatures";
 import { PeerRefusal } from "../../federation/refusal";
 import { NotReady, StreamRejected, sendOnStream, type Received } from "./streams";
 import { ENTRIES_TRANSPORT, PROPAGATION_TRANSPORT } from "./transport";
@@ -68,6 +71,14 @@ const RETRIED_THERE: Partial<Record<string, string>> = {
  * same backoff, but never turned into `unreachable` — the other server did answer (F-S4d leftover).
  */
 const NOT_THE_NETWORK = new Set([LOCAL_ERROR, REMOTE_ERROR, SUSPENDED_THERE]);
+
+/** Kinds that carry up to fifty entries, on the entries transport. */
+const BULK_KINDS = new Set(["entries", "entries-up"]);
+/** Kinds a peer must name in its ping before they are sent to it. */
+const FEATURE_OF: Partial<Record<string, TripShareFeature>> = {
+  resync: "resync",
+  "entries-up": "entries-up",
+};
 
 export const backoffAfter = (attempts: number): number =>
   BACKOFF_MS[Math.min(Math.max(attempts, 1), BACKOFF_MS.length) - 1];
@@ -250,7 +261,25 @@ async function deliverStream(
       run.dropped++;
       continue;
     }
-    const transport = row.kind === "entries" ? ENTRIES_TRANSPORT : PROPAGATION_TRANSPORT;
+    const transport = BULK_KINDS.has(row.kind) ? ENTRIES_TRANSPORT : PROPAGATION_TRANSPORT;
+    // A message added after rc.18 goes only to a server that names it (catch-up of 2026-10-21):
+    // an older one would answer the uniform 403. Not named → parked, shown as "needs an update".
+    const feature = FEATURE_OF[row.kind];
+    if (feature) {
+      let supported: boolean;
+      try {
+        supported = await peerSupports(peerOrigin, feature);
+      } catch (error) {
+        await failed(row, kindOf(error), now);
+        run.failed++;
+        return;
+      }
+      if (!supported) {
+        await park(row, "unsupported", null, now);
+        run.parked++;
+        continue;
+      }
+    }
     try {
       await sendOnStream(
         groupId,

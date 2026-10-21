@@ -88,3 +88,33 @@ export const membersOn = async (s: Server, userId: string, tripId: string) =>
 
 export const noticesOf = (s: Server, userId: string, kind?: string) =>
   s.notices.listNotices(userId).then((all) => all.filter((n) => !kind || n.kind === kind));
+
+/**
+ * Anna's trip on `a` (the home) with one flight, shared with Ben on `b`, then with Cleo on `c`;
+ * every message delivered (F-S4e, three servers).
+ */
+export async function threeServerTrip(a: Server, b: Server, c: Server) {
+  const anna = await harnessUser(a, "Anna");
+  const ben = await harnessUser(b, "Ben");
+  const cleo = await harnessUser(c, "Cleo");
+  const toBen = await pairAcross(a, anna, b, ben);
+  const toCleo = await pairAcross(a, anna, c, cleo);
+  const trip = await a.prisma.trip.create({ data: { userId: anna, name: "Lissabon" } });
+  const flight = await addFlight(a, anna, trip.id);
+  const benTrip = await offerAndAccept(a, anna, trip.id, toBen.id, b, ben);
+  const cleoTrip = await offerAndAccept(a, anna, trip.id, toCleo.id, c, cleo);
+  await a.outbox.runDeliveries();
+  const flightOn = (s: Server, tripId: string) =>
+    s.prisma.flight.findFirstOrThrow({ where: { tripId } });
+  return {
+    anna,
+    ben,
+    cleo,
+    trip,
+    flight,
+    benTrip,
+    cleoTrip,
+    benFlight: await flightOn(b, benTrip),
+    cleoFlight: await flightOn(c, cleoTrip),
+  };
+}

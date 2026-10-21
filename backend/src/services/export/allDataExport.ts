@@ -206,6 +206,8 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   tripShareInvites: "single-use credentials",
   tripShareRosterConsents:
     "answers to people on other servers on a shared trip, bound to that group; asked again on the next share",
+  tripShareWithheld:
+    "changes a shared trip's home sent that were held back pending a consent, bound to that group; caught up by the next resync",
   leaderboardBoards: "private leaderboard groups of consented people",
   comparisonLinks: "private recipient permissions, not portable travel records",
   comparisonInvites: "single-use credentials",

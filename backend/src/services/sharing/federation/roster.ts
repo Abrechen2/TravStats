@@ -15,7 +15,8 @@
  *   (`TripShareRosterConsent`). Accepting an offer says yes to the roster the offer showed;
  *   anyone who joins later is asked. The rule holds on every server that holds a member's copy —
  *   at the home for its own members, on a spoke for its people — so it holds for relays too.
- *   Changes a member did not take while not asked are not replayed after a yes (as locally).
+ *   On a spoke, a yes asks the home for the current state (`resync.ts`, Q4 of 2026-10-21): what
+ *   was withheld arrives then, and a difference the spoke cannot attribute is a conflict notice.
  */
 import { prisma, type DbTransaction } from "../../../db";
 import { AppError } from "../../../middleware/errorHandler";
@@ -35,6 +36,7 @@ import { kickDelivery } from "./deliveryKick";
 import { remoteShareError } from "./errors";
 import { addressed, requireReceiving } from "./peerMember";
 import { userRef } from "./rosterRef";
+import { queueResync } from "./resync";
 
 export { userRef };
 import { serveOnce, takeSeq } from "./streams";
@@ -277,7 +279,8 @@ export async function rosterView(
 
 /**
  * The caller says yes or no to a person on the roster of their trip. A yes lets that person's
- * changes reach the caller's copy from now on; it does not replay what came before.
+ * changes reach the caller's copy from now on, and on a spoke asks the home for the current state,
+ * so what that person changed before arrives too (Q4).
  */
 export async function decideRosterPerson(
   userId: string,
@@ -297,10 +300,15 @@ export async function decideRosterPerson(
     throw remoteShareError("SHARE_REMOTE_ROSTER_NOT_FOUND", 404, "No such person on this trip", {
       userId,
     });
-  await prisma.tripShareRosterConsent.upsert({
-    where: { groupId_userId_ref: { groupId: group.id, userId, ref } },
-    create: { groupId: group.id, userId, ref, status: decision },
-    update: { status: decision, decidedAt: new Date() },
+  await prisma.$transaction(async (tx) => {
+    await tx.tripShareRosterConsent.upsert({
+      where: { groupId_userId_ref: { groupId: group.id, userId, ref } },
+      create: { groupId: group.id, userId, ref, status: decision },
+      update: { status: decision, decidedAt: new Date() },
+    });
+    // On a spoke a yes asks the home for the current state (Q4): what this person changed before
+    // the yes was withheld here, and arrives now.
+    if (decision === "accepted" && group.homeOrigin) await queueResync(tx, userId, group.id);
   });
   return rosterView(userId, group, identity.origin);
 }

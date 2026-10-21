@@ -561,7 +561,8 @@
       "label": "Code von jemandem auf einem anderen Server",
       "placeholder": "https://travstats.example.org#trip:…",
       "submit": "Einlösen",
-      "done": "Verbunden mit {{name}} ({{origin}})."
+      "done": "Verbunden mit {{name}} ({{origin}}).",
+      "already": "Ist schon verbunden: {{name}} ({{origin}})."
     },
     "people": {
       "title": "Verbundene Personen",
@@ -660,7 +661,8 @@
           "too-large": "zu groß für die Übertragung",
           "other": "abgelehnt"
         },
-        "retryingHeld": "Änderungen kommen bei {{name}} gerade nicht an – auf {{origin}} wartet die Reise seit {{date}} auf eine neue Bestätigung von {{name}}. Es wird weiter versucht."
+        "retryingHeld": "Änderungen kommen bei {{name}} gerade nicht an – auf {{origin}} wartet die Reise seit {{date}} auf eine neue Bestätigung von {{name}}. Es wird weiter versucht.",
+        "unsupported": "{{origin}} braucht ein Update, um verpasste Änderungen nachzuholen. Neue Änderungen gehen weiter an {{name}}."
       },
       "dismiss": "Ausblenden",
       "reconfirm": "Neu bestätigen",
@@ -668,7 +670,7 @@
       "reconfirmed": "Neu bestätigt. Änderungen gehen wieder hin und her.",
       "roster": {
         "title": "Ebenfalls auf der Reise",
-        "hint": "Änderungen von neu Hinzugekommenen kommen bei dir erst an, wenn du zustimmst. Was vorher geändert wurde, wird nicht nachgeholt.",
+        "hint": "Änderungen von neu Hinzugekommenen kommen bei dir erst an, wenn du zustimmst. Danach wird nachgeholt, was sie vorher geändert haben; wo deine Kopie davon abweicht, entscheidest du.",
         "row": "{{name}} auf {{origin}}",
         "relation": {
           "you": "Du",
