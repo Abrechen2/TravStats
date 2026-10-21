@@ -63,6 +63,11 @@ function gateKeysInSource(): { key: string; file: string }[] {
         found.push({ key: entry[1], file });
       }
     }
+    // A gate declared on a settings section (forgejo#321):
+    // `section("devices", "standard", { gate: "devicePairing" })`.
+    for (const entry of contents.matchAll(/\bsection\([^)]*?\bgate:\s*["'`]([^"'`]+)["'`]/g)) {
+      found.push({ key: entry[1], file });
+    }
   }
   // The domain switches are data too, read from the map itself rather than
   // scanned: `useEnabledDomains` applies every entry of it.

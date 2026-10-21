@@ -71,11 +71,7 @@ export default function PushSettings(): JSX.Element {
       : null;
 
   return (
-    <section className="flex flex-col gap-4 p-6">
-      <h3 className="font-medium" style={{ color: "var(--text-primary)" }}>
-        {t("pushRelay:title")}
-      </h3>
-
+    <div className="flex flex-col gap-4">
       <label className="flex items-start gap-3 text-sm" style={{ color: "var(--text-primary)" }}>
         <input
           type="checkbox"
@@ -169,6 +165,6 @@ export default function PushSettings(): JSX.Element {
           </button>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

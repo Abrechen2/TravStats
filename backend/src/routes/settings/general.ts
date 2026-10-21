@@ -21,6 +21,7 @@ import {
   saveProfileZone,
 } from "../../services/settings/profileZoneSettings";
 import { isValidZone } from "../../shared/time/zonedParts";
+import { parseSettingsLevel, settingsLevelSchema } from "../../shared/settingsLevel";
 import { homeSettingsView } from "../../services/home/homeStore";
 import { canonicalProfilePictureUrl } from "../../services/files/privateFileUrls";
 import {
@@ -224,6 +225,9 @@ const settingsSchema = z
      * `null` clears it; omitting the key leaves it alone.
      */
     homeCountry: homeCountryField.nullable().optional(),
+    // Standard or expert settings page (forgejo#321), column-backed. A plain
+    // preference, so the demo account may change it like the theme.
+    settingsLevel: settingsLevelSchema.optional(),
   })
   .partial();
 
@@ -277,6 +281,7 @@ function buildSettingsResponse(
     autoCreateTrips: boolean;
     countryThreshold: string | null;
     homeCountry: string | null;
+    settingsLevel: string;
   }
 ): SettingsResponse {
   const baseData = (
@@ -322,6 +327,7 @@ function buildSettingsResponse(
     // which is the same thing it was doing before anybody typed the bad value.
     countryThreshold: parseCountryTier(record.countryThreshold),
     homeCountry: record.homeCountry ?? null,
+    settingsLevel: parseSettingsLevel(record.settingsLevel),
     // Listed after the `...baseData` spread so a stale key that somehow made
     // it into the settings JSON can never shadow the authoritative value.
     betaFeaturesEnabled: extra.betaFeaturesEnabled,
@@ -485,6 +491,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       tripRecording,
       countryThreshold,
       homeCountry,
+      settingsLevel,
       ...rest
     } = payload;
     const switches = suggestionSwitchesUpdate(tripSuggestions, staySuggestions, tripRecording);
@@ -634,6 +641,9 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     if (homeCountry !== undefined) {
       updateData.homeCountry = homeCountry;
     }
+    if (settingsLevel !== undefined) {
+      updateData.settingsLevel = settingsLevel;
+    }
 
     const saved = await prisma.userSettings.upsert({
       where: { userId },
@@ -660,6 +670,8 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
         // account that has never opened the setting should do.
         countryThreshold: countryThreshold ?? null,
         homeCountry: homeCountry ?? null,
+        // Absent = the column default, `standard`: a fresh account starts simple.
+        ...(settingsLevel !== undefined && { settingsLevel }),
       },
     });
 

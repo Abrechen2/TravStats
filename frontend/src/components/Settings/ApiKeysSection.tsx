@@ -33,6 +33,11 @@ interface ApiKeysSectionProps {
   loadingApiKeys: boolean;
   onSetApiKeys: (keys: ApiKeysFormState) => void;
   onSave: () => void;
+  /**
+   * Rows and save bar only, for the flight group of the services accordion
+   * (forgejo#321), which draws the heading and the frame itself.
+   */
+  bare?: boolean;
 }
 
 export default function ApiKeysSection({
@@ -41,6 +46,7 @@ export default function ApiKeysSection({
   loadingApiKeys,
   onSetApiKeys,
   onSave,
+  bare = false,
 }: ApiKeysSectionProps): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const isDemo = useIsDemoAccount();
@@ -64,18 +70,8 @@ export default function ApiKeysSection({
   const quotaFor = (provider: keyof ApiKeyQuotasResponse): ProviderQuota | undefined =>
     quotas?.[provider];
 
-  return (
-    <SectionCard>
-      {/* The heading is the index entry's own key, not a second string.
-          `sectionLabels.ts` states the rule -- "a section's heading and its
-          index entry are the same words on purpose: an index that renames what
-          it points at is an index you have to read twice" -- and this section
-          was the one breaking it: the nav said "Meine externen Dienste" and the
-          heading said "API-SCHLUESSEL" (beta audit 2026-09-19, unlisted 3). */}
-      <SectionTitle
-        title={t(SECTION_LABEL_KEY.externalServices)}
-        description={t("settings:apiKeys.description")}
-      />
+  const rows = (
+    <>
       <SettingRows>
         <ApiKeyCard
           layout="row"
@@ -174,6 +170,23 @@ export default function ApiKeysSection({
           </button>
         )}
       </div>
+    </>
+  );
+  if (bare) return <div className="space-y-4">{rows}</div>;
+
+  return (
+    <SectionCard>
+      {/* The heading is the index entry's own key, not a second string.
+          `sectionLabels.ts` states the rule -- "a section's heading and its
+          index entry are the same words on purpose: an index that renames what
+          it points at is an index you have to read twice" -- and this section
+          was the one breaking it: the nav said "Meine externen Dienste" and the
+          heading said "API-SCHLUESSEL" (beta audit 2026-09-19, unlisted 3). */}
+      <SectionTitle
+        title={t(SECTION_LABEL_KEY.externalServices)}
+        description={t("settings:apiKeys.description")}
+      />
+      {rows}
     </SectionCard>
   );
 }

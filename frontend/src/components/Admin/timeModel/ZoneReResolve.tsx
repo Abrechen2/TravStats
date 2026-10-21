@@ -36,11 +36,11 @@ type Phase =
   | { name: "applying"; dryRun: ReResolveDryRun; progress: Progress }
   | { name: "applied"; result: ReResolveApply };
 
-const PANEL = {
-  background: "var(--ts-surface)",
-  border: "1px solid var(--ts-border)",
-  borderRadius: "var(--ts-radius-card)",
-} as const;
+/**
+ * A part of the "Zeitmodell" section, whose frame already draws the card
+ * (forgejo#321): a hairline between the parts instead of a card per part.
+ */
+const PART = { borderColor: "var(--ts-border)" } as const;
 
 const progressOf = (job: JobView<unknown>): Progress => job.progress ?? null;
 
@@ -95,12 +95,10 @@ export default function ZoneReResolve(): JSX.Element {
   const busy = phase.name === "dryRunning" || phase.name === "applying";
 
   return (
-    <div className="flex flex-col gap-4 p-6" style={PANEL}>
+    <div className="flex flex-col gap-4 not-first:border-t not-first:pt-6" style={PART}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--ts-text-bright)" }}>
-            {t("admin:timeModel.reResolve.title")}
-          </h3>
+          <h3 className="t-label-mono">{t("admin:timeModel.reResolve.title")}</h3>
           <p className="t-caption mt-1">{t("admin:timeModel.reResolve.description")}</p>
         </div>
         <Button onClick={() => void runDryRun()} disabled={busy}>

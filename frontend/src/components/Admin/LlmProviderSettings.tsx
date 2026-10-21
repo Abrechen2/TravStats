@@ -6,6 +6,7 @@ import type { CloudProviderKind, LlmProviderTestResult } from "../../lib/api/adm
 import { CLOUD_PROVIDER_KINDS } from "../../lib/api/admin";
 import { logger } from "../../lib/logger";
 import type { ParserSettingsData } from "./ParserSettings";
+import { AdminSubBlock } from "./AdminSubBlock";
 
 interface LlmProviderSettingsProps {
   parserSettings: ParserSettingsData;
@@ -153,10 +154,7 @@ export default function LlmProviderSettings({
   };
 
   return (
-    <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6" data-testid="llm-provider-settings">
-      <h3 className="text-lg font-semibold text-(--text-primary) mb-2">
-        {t("admin:parserSettings.provider.title")}
-      </h3>
+    <AdminSubBlock title={t("admin:parserSettings.provider.title")} testId="llm-provider-settings">
       <p className="text-sm text-(--text-muted) mb-4">
         {t("admin:parserSettings.provider.description")}
       </p>
@@ -182,7 +180,7 @@ export default function LlmProviderSettings({
           />
         ))}
       </div>
-    </div>
+    </AdminSubBlock>
   );
 }
 

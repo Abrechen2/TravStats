@@ -5,6 +5,7 @@ import Pill from "../ui/Pill";
 import { token } from "../ui/tokens";
 import { profileWallClock } from "../../lib/profileInstant";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
+import { useExpertRows } from "./frame/useExpertRows";
 
 interface LastBackup {
   completedAt: string | null;
@@ -36,6 +37,9 @@ export default function BackupSection({
   children,
 }: BackupSectionProps): JSX.Element {
   const { t } = useTranslation(["settings"]);
+  // Getting the data out is standard; the instance backup's last run is a
+  // detail for whoever operates the server (forgejo#321).
+  const expert = useExpertRows(1);
 
   const sizeMb = lastBackup ? (parseInt(lastBackup.size, 10) / 1024 / 1024).toFixed(2) : null;
 
@@ -46,32 +50,34 @@ export default function BackupSection({
         description={t("settings:backup.description")}
       />
       <SettingRows>
-        <SettingRow
-          title={t("settings:backup.lastInstanceBackup")}
-          sub={
-            backupStatus?.running ? (
-              t("settings:backup.status.running")
-            ) : lastBackup ? (
-              <span style={{ fontFamily: "var(--ts-font-mono)" }}>
-                {lastBackup.completedAt ? isoMinute(lastBackup.completedAt) : "—"} ·{" "}
-                {t("settings:backup.status.size", { size: sizeMb })}
-              </span>
-            ) : (
-              t("settings:backup.status.noBackup")
-            )
-          }
-          control={
-            backupStatus?.running ? (
-              <Pill color={token("accent")}>{t("settings:backup.status.runningShort")}</Pill>
-            ) : lastBackup ? (
-              <Pill color={token("good")}>OK</Pill>
-            ) : (
-              <Pill color={token("muted")} dashed>
-                {t("settings:backup.status.noneShort")}
-              </Pill>
-            )
-          }
-        />
+        {expert && (
+          <SettingRow
+            title={t("settings:backup.lastInstanceBackup")}
+            sub={
+              backupStatus?.running ? (
+                t("settings:backup.status.running")
+              ) : lastBackup ? (
+                <span style={{ fontFamily: "var(--ts-font-mono)" }}>
+                  {lastBackup.completedAt ? isoMinute(lastBackup.completedAt) : "—"} ·{" "}
+                  {t("settings:backup.status.size", { size: sizeMb })}
+                </span>
+              ) : (
+                t("settings:backup.status.noBackup")
+              )
+            }
+            control={
+              backupStatus?.running ? (
+                <Pill color={token("accent")}>{t("settings:backup.status.runningShort")}</Pill>
+              ) : lastBackup ? (
+                <Pill color={token("good")}>OK</Pill>
+              ) : (
+                <Pill color={token("muted")} dashed>
+                  {t("settings:backup.status.noneShort")}
+                </Pill>
+              )
+            }
+          />
+        )}
         {children}
       </SettingRows>
       <p className="t-caption">

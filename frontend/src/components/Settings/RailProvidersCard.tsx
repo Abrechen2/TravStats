@@ -9,6 +9,7 @@ import { logger } from "../../lib/logger";
 import { Switch } from "../ui/Field";
 import { SettingRows } from "../ui/SettingRow";
 import { useDomainOffered } from "../../hooks/useDomainVisible";
+import { useExpertRows } from "./frame/useExpertRows";
 
 type Switches = { railTransitousEnabled: boolean; railDbRestEnabled: boolean };
 
@@ -29,6 +30,10 @@ export default function RailProvidersCard({ isAdmin }: { isAdmin: boolean }): JS
   const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
+  // Which services may be asked is a standard decision; where a self-hosted
+  // routing engine lives is plumbing. Nothing is hidden when the card is not
+  // drawn at all.
+  const expert = useExpertRows(isAdmin && offered ? 1 : 0);
 
   useEffect(() => {
     if (!isAdmin || !offered) return;
@@ -103,7 +108,7 @@ export default function RailProvidersCard({ isAdmin }: { isAdmin: boolean }): JS
               label={t("settings:railProviders.dbRest")}
               sub={t("settings:railProviders.dbRestHint")}
             />
-            <RailRoutingUrlSetting savedUrl={routingUrl} onSaved={setRoutingUrl} />
+            {expert && <RailRoutingUrlSetting savedUrl={routingUrl} onSaved={setRoutingUrl} />}
           </>
         )}
         {saveFailed && (

@@ -1,232 +1,210 @@
-import type { DomainKey } from "../../shared/domains";
-import type { BetaFeatureKey } from "../../config/betaFeatures";
+import { SECTION_LABEL_KEY } from "./sectionLabels";
+import { lookup, type MenuGroupDef, type PageDef, type SectionDef } from "./surface";
+import type { SettingsLevel } from "../../store/settingsLevelStore";
 
 /**
- * Settings, as routes.
+ * Personal settings, as pages (forgejo#321).
  *
- * Until 2.7.0 the whole surface was one route with `?tab=` and `?section=`
- * query parameters, and the page kept four effects in sync to stop them
- * fighting each other. The owner settled it on 2026-09-05 (decision 11):
- * one route per group. A group is a destination now, so the browser owns the
- * state, the back button works, and a link is a link.
+ * One route per menu entry, `/settings/<page>`, and the page's sections as
+ * anchors on it (`?section=<id>`). Until 2.7.x the general groups were anchors
+ * on ONE long "Allgemein" page, so a menu entry was a scroll position and the
+ * menu highlight followed the scroll; testers lost their place on it, and found
+ * headings there that the menu never named. A page per entry ends both.
  *
- * The four general groups follow the round-3 export (Konto · Darstellung ·
- * Daten · Dienste); the three domain groups are the domain tabs that already
- * existed. Both live in the same union because both are, in the end, "which
- * page of settings am I on".
+ * Each section carries its level. Standard is what a person needs to set
+ * TravStats up and use it; expert is tuning, plumbing and operations — the
+ * classification the owner decided on 2026-10-20 (forgejo#321, first comment).
  */
-export type SettingsGroupId =
+export type SettingsPageId =
   | "account"
   | "display"
   | "trips"
+  | "location"
   | "loyalty"
-  | "data"
-  | "services"
   | "flight"
   | "cruise"
-  | "lodging";
+  | "data"
+  | "services";
 
-/** Every section that can render. Ids are stable — old links carry them. */
+/** Every section that can render. Ids are stable — links carry them. */
 export type SettingsSectionId =
   | "profile"
   | "security"
-  | "apitokens"
   | "devices"
+  | "notifications"
+  | "apitokens"
   | "display"
   | "units"
-  | "domainColors"
-  | "modules"
+  | "domains"
   | "countryCounting"
   | "trips"
+  | "suggestions"
+  | "sharing"
+  | "shareLinks"
+  | "calendarFeed"
+  | "dawarich"
+  | "tripRecording"
+  | "stayScan"
   | "loyalty"
+  | "homeAirport"
+  | "autoupdate"
+  | "features"
+  | "defaults"
+  | "enrichment"
+  | "cruisePreferences"
   | "backup"
   | "import"
-  | "notifications"
-  | "about"
-  | "externalServices"
-  | "homeAirport"
-  | "defaults"
-  | "features"
-  | "enrichment"
-  | "autoupdate"
-  | "cruisePreferences"
-  | "lodgingPreferences";
+  | "externalServices";
 
-export interface SettingsGroup {
-  id: SettingsGroupId;
-  /** i18n key for the group's own name, e.g. "settings:groups.account". */
-  labelKey: string;
-  /**
-   * Set on the three domain groups. The group disappears when the domain is
-   * off — the domain gate is the same one every other surface consults.
-   */
-  domain?: DomainKey;
-  sections: SettingsSectionId[];
-  /**
-   * Beta keys that hide a section from view. The section still renders when a
-   * URL names it directly (see `SettingsPage`): pairing a phone has no other
-   * entry point while the gate is closed, and removing the escape hatch would
-   * strand every claim code.
-   */
-  gatedSections?: Partial<Record<SettingsSectionId, BetaFeatureKey>>;
-}
+export type SettingsSectionDef = SectionDef<SettingsSectionId>;
+export type SettingsPageDef = PageDef<SettingsPageId, SettingsSectionId>;
 
-export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
+const section = (
+  id: SettingsSectionId,
+  level: SettingsLevel = "standard",
+  extra: Partial<SettingsSectionDef> = {}
+): SettingsSectionDef => ({ id, labelKey: SECTION_LABEL_KEY[id], level, ...extra });
+
+export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
   {
     id: "account",
     labelKey: "settings:groups.account",
-    // Index order of the round-4 export: profile, security, devices, tokens.
-    sections: ["profile", "security", "devices", "apitokens"],
-    gatedSections: { devices: "devicePairing" },
+    icon: "user",
+    sections: [
+      section("profile"),
+      section("security"),
+      // Behind its beta key; `?section=devices` still shows it, because a
+      // pairing code has no other place to be minted while the key is closed.
+      section("devices", "standard", { gate: "devicePairing", gateYieldsToLink: true }),
+      section("notifications"),
+      section("apitokens", "expert"),
+    ],
   },
   {
     id: "display",
     labelKey: "settings:groups.display",
-    sections: ["display", "units", "domainColors", "modules", "countryCounting"],
+    icon: "languages",
+    sections: [
+      section("display"),
+      section("units"),
+      section("domains"),
+      section("countryCounting", "expert"),
+    ],
   },
   {
-    // Trips are no domain, so this group has no `domain` and never hides
-    // (owner, 2026-08-23: its own "Reisen" section).
+    // Trips are no domain, so this page never hides (owner, 2026-08-23).
     id: "trips",
     labelKey: "settings:groups.trips",
-    sections: ["trips"],
+    icon: "route",
+    sections: [
+      section("trips"),
+      section("suggestions"),
+      section("sharing"),
+      section("shareLinks"),
+      section("calendarFeed", "standard", { gate: "calendarFeed" }),
+    ],
   },
   {
-    // Every domain's programmes in one section (owner, 2026-09-26). A general
-    // group, not a domain one: a card is the same thing in every domain, and
-    // the tester asked for ONE central place. Domain blocks inside it follow
-    // the module switches.
+    // What exists today: the Dawarich source, the app's trip recording and the
+    // stay scan. The native location history is a branch of its own.
+    id: "location",
+    labelKey: "settings:groups.location",
+    icon: "map-pin",
+    sections: [section("dawarich"), section("tripRecording"), section("stayScan", "expert")],
+  },
+  {
+    // Every domain's programmes in one place (owner, 2026-09-26).
     id: "loyalty",
     labelKey: "settings:groups.loyalty",
-    sections: ["loyalty"],
-  },
-  {
-    id: "data",
-    labelKey: "settings:groups.data",
-    sections: ["backup", "import", "notifications", "about"],
-  },
-  {
-    id: "services",
-    labelKey: "settings:groups.services",
-    sections: ["externalServices"],
+    icon: "credit-card",
+    sections: [section("loyalty")],
   },
   {
     id: "flight",
     labelKey: "settings:tabs.flight",
+    icon: "plane",
     domain: "flight",
-    sections: ["homeAirport", "defaults", "features", "enrichment", "autoupdate"],
+    sections: [
+      section("homeAirport"),
+      section("autoupdate"),
+      section("features"),
+      section("defaults", "expert"),
+      section("enrichment", "expert"),
+    ],
   },
   {
     id: "cruise",
     labelKey: "settings:tabs.cruise",
+    icon: "ship",
     domain: "cruise",
-    sections: ["cruisePreferences"],
+    sections: [section("cruisePreferences")],
   },
   {
-    id: "lodging",
-    labelKey: "settings:tabs.lodging",
-    domain: "lodging",
-    sections: ["lodgingPreferences"],
+    id: "data",
+    labelKey: "settings:groups.data",
+    icon: "database",
+    sections: [section("backup"), section("import")],
   },
-] as const;
-
-/** The general groups behind the "Allgemein" tab, in index order. */
-export const GENERAL_GROUP_IDS: readonly SettingsGroupId[] = [
-  "account",
-  "display",
-  "trips",
-  "loyalty",
-  "data",
-  "services",
+  {
+    id: "services",
+    labelKey: "settings:groups.services",
+    icon: "globe",
+    sections: [section("externalServices")],
+  },
 ];
 
-export const DEFAULT_GROUP: SettingsGroupId = "account";
+/** The menu, in the order the owner set: the account first, the domains, then data. */
+export const SETTINGS_MENU: readonly MenuGroupDef<SettingsPageId>[] = [
+  { id: "general", labelKey: null, pages: ["account", "display", "trips", "location", "loyalty"] },
+  { id: "domains", labelKey: "settings:menu.domains", pages: ["flight", "cruise"] },
+  { id: "data", labelKey: null, pages: ["data", "services"] },
+];
 
-/**
- * The page behind the "Allgemein" tab, and the order its sections are drawn in.
- *
- * Round 4 settled four settings ROUTES — account, flight, cruise, lodging —
- * with the general groups (Konto · Darstellung · Daten · Dienste) as anchors
- * on ONE page rather than four pages (design export, decision 2 of
- * 2026-09-15). The index originally listed sections by kind (each group's own
- * `sections` order) while the page read a second, hand-written "everyday
- * first" order that interleaved sections across groups differently — a
- * tester (2026-09-17) watched the left-menu highlight jump to an unrelated
- * entry while scrolling, because the section that scrolled into view was
- * never the neighbour of the one the menu had just highlighted. Fixed by
- * deriving this order from the same `sections` arrays the menu already uses,
- * so the two structurally cannot diverge again — no more hand-copying.
- */
-export const GENERAL_ROUTE: SettingsGroupId = "account";
+export const DEFAULT_PAGE: SettingsPageId = "account";
 
-export const GENERAL_CONTENT_ORDER: readonly SettingsSectionId[] = SETTINGS_GROUPS.filter((g) =>
-  (GENERAL_GROUP_IDS as readonly string[]).includes(g.id)
-).flatMap((g) => g.sections);
-
-/** The general groups that are anchors on the account page, not routes. */
-export function isGeneralGroup(id: SettingsGroupId): boolean {
-  return (GENERAL_GROUP_IDS as readonly string[]).includes(id);
+export function findPage(id: string | undefined): SettingsPageDef | undefined {
+  return SETTINGS_PAGES.find((p) => p.id === id);
 }
 
 /**
- * Sections only an admin may see, because they configure the INSTANCE rather
- * than the account — `lodgingPreferences` holds the shared chain catalogue.
- *
- * Kept here beside the group table rather than as a condition inside the page,
- * so the page can also ASK the question. A deep link naming one of these used
- * to land on a surface that simply did not contain it, with nothing said
- * (forgejo#88 finding 11); answering that needs the rule to be readable, not
- * just applied.
- *
- * Unlike a beta gate, this is NOT overridable by naming the section in a URL.
- * A gate hides something unfinished from everyone; this is a permission.
+ * Section ids that were renamed or folded into another section. Links carry
+ * every one of them: `apiKeys`/`apikeys` predate `externalServices` (#182), the
+ * per-domain loyalty sections became one (2026-09-26), and "Bereiche" and
+ * "Farben" became one row per domain (forgejo#321).
  */
-export const ADMIN_ONLY_SECTIONS: readonly SettingsSectionId[] = ["lodgingPreferences"];
-
-export function isAdminOnlySection(section: string): boolean {
-  return (ADMIN_ONLY_SECTIONS as readonly string[]).includes(section);
-}
-
-/** The beta key hiding a section, whichever group declares it. */
-export function gateOfSection(section: SettingsSectionId): BetaFeatureKey | undefined {
-  for (const group of SETTINGS_GROUPS) {
-    const gate = group.gatedSections?.[section];
-    if (gate) return gate;
-  }
-  return undefined;
-}
-
-export function findGroup(id: string | undefined): SettingsGroup | undefined {
-  return SETTINGS_GROUPS.find((g) => g.id === id);
-}
-
-/**
- * Section ids that moved into another one. Every domain group carried its own
- * "Bonusprogramme" section until 2026-09-26; the three are one general section
- * now, and links naming the old ids (`/settings/lodging?section=
- * lodgingMemberships`, a changelog, the chain page of 2.6) land on it.
- */
-export const MOVED_SECTIONS: Readonly<Record<string, SettingsSectionId>> = {
+export const SECTION_ALIASES: Readonly<Record<string, SettingsSectionId>> = {
+  apiKeys: "externalServices",
+  apikeys: "externalServices",
   lodgingMemberships: "loyalty",
   flightMemberships: "loyalty",
   cruiseMemberships: "loyalty",
+  domainColors: "domains",
+  modules: "domains",
 };
 
-/** The section an old id now lives in, or null when it never moved. */
-export function movedSection(section: string): SettingsSectionId | null {
-  return Object.prototype.hasOwnProperty.call(MOVED_SECTIONS, section)
-    ? MOVED_SECTIONS[section]
-    : null;
+/**
+ * Sections that left personal settings for Administration › Instanz: "Über
+ * TravStats" (tester, 2026-10-20) and the geocoder, which configures the
+ * instance and was never an account's to change.
+ */
+export const MOVED_TO_ADMIN: Readonly<Record<string, { page: string; section: string }>> = {
+  about: { page: "instance", section: "about" },
+  lodgingPreferences: { page: "instance", section: "geocoder" },
+};
+
+/**
+ * Pages that no longer exist, and the section that took their content: a
+ * bookmark of the page alone still lands on what it showed. "Unterkünfte"
+ * held only the geocoder, which moved to Administration › Instanz.
+ */
+export const REMOVED_PAGES: Readonly<Record<string, string>> = {
+  lodging: "lodgingPreferences",
+};
+
+/** The section an old id now answers to, or the id itself. */
+export function canonicalSection(raw: string): string {
+  return lookup(SECTION_ALIASES, raw) ?? raw;
 }
 
 /** Where Einstellungen → Bonusprogramme lives — the target of every loyalty link. */
-export const LOYALTY_SETTINGS_PATH = "/settings/account?section=loyalty";
-
-/**
- * Which group holds a section. Built from the table above rather than written
- * out twice, so a section moved between groups cannot leave a stale mapping
- * behind — the failure mode of the old alias list.
- */
-export function groupOfSection(section: string): SettingsGroup | undefined {
-  return SETTINGS_GROUPS.find((g) => (g.sections as readonly string[]).includes(section));
-}
+export const LOYALTY_SETTINGS_PATH = "/settings/loyalty";

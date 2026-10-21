@@ -139,10 +139,6 @@ export default function SmtpManager(): JSX.Element {
 
   return (
     <div className="space-y-4">
-      <h3 className="font-semibold text-base" style={{ color: "var(--text-primary)" }}>
-        {t("settings:notifications.smtpTitle")}
-      </h3>
-
       {/* Enable toggle */}
       <label className="flex items-center gap-3">
         <input

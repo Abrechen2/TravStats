@@ -1,7 +1,12 @@
 vi.mock("../../components/Settings/DawarichStayScanCard", () => ({ default: () => null }));
 import { describe, it, expect, beforeEach, vi } from "vitest";
+// The version line under the settings menu asks the server (forgejo#321).
+vi.mock("@/lib/api/version", () => ({
+  versionApi: { get: vi.fn().mockResolvedValue({ version: "2.7.0", buildVersion: "2.7.0" }) },
+}));
+
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import SettingsPage, { SettingsLegacyRedirect } from "../../pages/SettingsPage";
 import { useSettingsStore } from "../../store/settingsStore";
 import { findNamed, queryNamed } from "../helpers/namedElement";
@@ -205,10 +210,16 @@ const renderAt = (initialEntry: string): void => {
         <Route path="/settings" element={<SettingsLegacyRedirect />} />
         <Route path="/settings/:group" element={<SettingsPage />} />
         <Route path="/admin" element={<div data-testid="admin-page" />} />
+        <Route path="/admin/:page" element={<AdminWhere />} />
       </Routes>
     </MemoryRouter>
   );
 };
+
+function AdminWhere(): JSX.Element {
+  const location = useLocation();
+  return <div data-testid="admin-page">{location.pathname + location.search}</div>;
+}
 
 /** `t` echoes the key, so a nav entry or a section for the old one reads this. */
 const ADMIN_LABEL = "settings:admin.title";
@@ -310,7 +321,9 @@ describe("SettingsPage — the settings/admin boundary", () => {
     expect(screen.queryByText("settings:tabs.lodging", { selector: "a, a *" })).toBeNull();
   });
 
-  it("says nothing of the sort to an admin, who can see the section", async () => {
+  // forgejo#321: the geocoder configures the instance and moved to
+  // Administration › Instanz, so an admin's old link follows it there.
+  it("sends an admin on to the geocoder in Administration › Instanz", async () => {
     isAdmin = true;
     useSettingsStore.setState({
       betaFeaturesEnabled: false,
@@ -318,7 +331,9 @@ describe("SettingsPage — the settings/admin boundary", () => {
     });
     renderAt(LODGING_DEEP_LINK);
 
-    expect(await findNamed("region", "settings:lodgingPreferences.geocoder.title")).toBeTruthy();
+    expect(await screen.findByTestId("admin-page")).toHaveTextContent(
+      "/admin/instance?section=geocoder"
+    );
     expect(screen.queryByText(ADMIN_ONLY_HINT)).toBeNull();
   });
 

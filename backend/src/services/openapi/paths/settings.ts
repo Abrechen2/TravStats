@@ -28,6 +28,7 @@ import {
   nearbyHomeAirportsResponseSchema,
 } from "../../../schemas/home";
 import { putWebPrefsSchema, webPrefsResponseSchema } from "../../../schemas/webPrefs";
+import { settingsLevelSchema } from "../../../shared/settingsLevel";
 
 const settingsTag = ["Settings"];
 const badInput = { description: "Invalid input", content: errorContent };
@@ -50,6 +51,30 @@ const providerStatus = registry.register(
     .openapi("ApiKeyStatus")
 );
 
+const settingsLevelField = settingsLevelSchema.describe(
+  "How much of the settings page this account sees (forgejo#321). New accounts start at " +
+    "`standard`; accounts that existed before the field were set to `expert`. It hides " +
+    "controls, never values."
+);
+
+/**
+ * Loose on purpose: only the fields listed here are typed so far, and the rest
+ * of the payload is real but undeclared. A closed object would tell a
+ * generated client that every other key is absent.
+ */
+const settingsResponseSchema = z
+  .object({ settingsLevel: settingsLevelField })
+  .passthrough()
+  .describe("The user's settings. Only the listed fields are typed in this spec so far.");
+const settingsOk = (description: string) => ({
+  description,
+  content: { "application/json": { schema: settingsResponseSchema } },
+});
+const settingsUpdateBodySchema = z
+  .object({ settingsLevel: settingsLevelField.optional() })
+  .passthrough()
+  .describe("Every block is optional; an omitted key leaves the stored value alone.");
+
 registry.registerPath({
   method: "get",
   path: "/settings",
@@ -61,7 +86,7 @@ registry.registerPath({
     "`openDataEnabled` and `shareLinksEnabled` (public share links, forgejo#281 — offer " +
     "'share as link' only while it is on).",
   tags: settingsTag,
-  responses: { 200: { description: "Settings" } },
+  responses: { 200: settingsOk("Settings") },
 });
 
 registry.registerPath({
@@ -73,9 +98,11 @@ registry.registerPath({
     "everywhere and deletes nothing — the data is waiting if it is switched " +
     "back on. `homeCountry` (ISO 3166-1 alpha-2, upper-case, or null to " +
     "clear) decides which booking templates are tried first; templates for " +
-    "other countries stay active.",
+    "other countries stay active. `settingsLevel` is `standard` or `expert`; any other " +
+    "value is a 400.",
   tags: settingsTag,
-  responses: { 422: timeRefused, 200: { description: "Saved" }, 400: badInput },
+  request: { body: { content: { "application/json": { schema: settingsUpdateBodySchema } } } },
+  responses: { 422: timeRefused, 200: settingsOk("Saved"), 400: badInput },
 });
 
 registry.registerPath({

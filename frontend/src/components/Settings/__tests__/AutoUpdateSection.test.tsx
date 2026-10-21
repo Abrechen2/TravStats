@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
@@ -50,5 +50,35 @@ describe("AutoUpdateSection", () => {
 
     fireEvent.blur(field);
     expect(onSave).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("AutoUpdateSection — touch size follows the pointer (forgejo#321, iPad look)", () => {
+  const original = window.matchMedia;
+  const pointer = (coarse: boolean): void => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: coarse && query === "(pointer: coarse)",
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+  };
+  afterEach(() => {
+    window.matchMedia = original;
+  });
+
+  it("gives the pending-updates link a 44 px target under a finger", () => {
+    pointer(true);
+    renderSection();
+    const link = screen.getByRole("link", { name: /settings:autoUpdate.viewPending/ });
+    expect(link.style.minHeight).toBe("var(--ts-size-touch-min)");
+    expect(link.style.display).toBe("inline-flex");
+  });
+
+  it("stays an inline text link under a mouse", () => {
+    pointer(false);
+    renderSection();
+    const link = screen.getByRole("link", { name: /settings:autoUpdate.viewPending/ });
+    expect(link.style.minHeight).toBe("");
   });
 });

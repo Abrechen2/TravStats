@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, within, waitFor, act } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+// The version line under the settings menu asks the server (forgejo#321).
+vi.mock("@/lib/api/version", () => ({
+  versionApi: { get: vi.fn().mockResolvedValue({ version: "2.7.0", buildVersion: "2.7.0" }) },
+}));
+
+import { render, within, waitFor, act, cleanup } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import AdminPage from "../AdminPage";
 import { DEEP_LINK_ALIGN_BUDGET_MS } from "../Admin/useDeepLinkScroll";
 import {
@@ -12,20 +17,17 @@ import {
   type FakeResizeObserverHandle,
 } from "../Admin/__tests__/resizeObserverStub";
 import { findNamed, getNamed } from "../../__tests__/helpers/namedElement";
+import { useSettingsLevelStore } from "../../store/settingsLevelStore";
+import { repeatedHeadings } from "../../__tests__/helpers/repeatedHeadings";
+import { ADMIN_PAGES } from "../Admin/adminSections";
 
 /**
- * Round 4 ("one page, anchor jumps" — tester feedback, forgejo#…): the admin
- * page used to hold every section's data but mount only the ONE picked by
- * `activeSection` state, swapping the whole `<main>` out on every click —
- * unlike the settings page, whose index is a set of `<a href="#settings-…">`
- * jumps into one long page. This file pins the same shape for admin: every
- * section of the active tab renders at once, and the index draws anchors
- * instead of buttons that used to pick which single section was mounted.
- *
- * Deliberate-break protocol: put back the pre-round-4
- * `{activeSection === "system" && <SystemInfoTab .../>}` style conditional
- * around each section in AdminPage.tsx and the first test below fails
- * (only "admin:tabs.system" is in the document).
+ * Round 4 ("one page, anchor jumps" — tester feedback): the admin page used to
+ * hold every section's data but mount only the ONE picked by `activeSection`
+ * state, swapping the whole `<main>` out on every click. Since forgejo#321 a
+ * menu entry is a page and a page's sections are anchors on it, drawn as
+ * chips: every section of the page renders at once, and the chips are anchors
+ * rather than buttons that pick which single section is mounted.
  */
 
 // AppShell always renders NavigationBar, which asks for the running version
@@ -95,94 +97,172 @@ vi.mock("@/lib/api", async (importOriginal) => {
   };
 });
 
-const renderAdmin = (entry = "/admin") =>
+const renderAdmin = (entry = "/admin/instance") =>
   render(
     <MemoryRouter initialEntries={[entry]}>
-      <AdminPage />
+      <Routes>
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/admin/:page" element={<AdminPage />} />
+      </Routes>
     </MemoryRouter>
   );
 
-describe("AdminPage — one page, anchor jumps", () => {
+/** The instance page's first section; awaiting it means the page has rendered. */
+const INSTANCE = "admin:instance.title";
+
+describe("AdminPage — one page per menu entry, its sections as anchors", () => {
   beforeEach(() => {
     // jsdom has no scrollIntoView at all; SettingsPage guards for its
     // absence at runtime, but pinning the deep-link behaviour needs a spy.
     Element.prototype.scrollIntoView = vi.fn();
   });
 
-  it("renders several sections of the active tab at once, not only one picked section", async () => {
+  it("renders every section of the page at once, not only one picked section", async () => {
     renderAdmin();
 
-    // Today only the active section rendered; asserting on FOUR distinct
-    // sections at once (not just two) is what the pre-round-4 page cannot
-    // pass no matter which single section happened to be active.
-    expect(await findNamed("region", "admin:tabs.system")).toBeInTheDocument();
-    expect(getNamed("region", "admin:tabs.users")).toBeInTheDocument();
-    expect(getNamed("region", "admin:tabs.invitations")).toBeInTheDocument();
-    expect(getNamed("region", "admin:tabs.parsers")).toBeInTheDocument();
+    // Four distinct sections of Instanz at once: a page that mounted one
+    // picked section cannot pass this whichever one it picked.
+    expect(await findNamed("region", INSTANCE)).toBeInTheDocument();
+    expect(getNamed("region", "sharing:links.section.title")).toBeInTheDocument();
+    expect(getNamed("region", "admin:importMode.title")).toBeInTheDocument();
+    expect(getNamed("region", "settings:about.title")).toBeInTheDocument();
   });
 
   // Acceptance 2026-09-26: the page nested its own <main> inside AppShell's —
   // two main landmarks, which a screen reader announces as two pages.
   it("has exactly one main landmark", async () => {
     const { container } = renderAdmin();
-    await findNamed("region", "admin:tabs.system");
+    await findNamed("region", INSTANCE);
     expect(container.querySelectorAll("main")).toHaveLength(1);
   });
 
   it("gives every section landmark its admin-<id> anchor id, lazy sections included", async () => {
     renderAdmin();
-    await findNamed("region", "admin:tabs.system");
+    await findNamed("region", INSTANCE);
 
     for (const id of [
-      "system",
       "instance",
-      "users",
-      "invitations",
-      "externalServices",
-      "parsers",
-      "logging",
-      "backups",
-      "timeModel",
-      "smtp",
+      "shareLinks",
+      "importMode",
+      "usageStats",
+      "about",
+      "geocoder",
+      "federation",
+      "push",
     ]) {
       expect(document.getElementById(`admin-${id}`)).not.toBeNull();
     }
   });
 
-  it("draws the section index as anchors into the page, not buttons that swap sections", async () => {
+  it("draws the page's sections as anchor chips, and the menu as links to pages", async () => {
     renderAdmin();
-    await findNamed("region", "admin:tabs.system");
+    await findNamed("region", INSTANCE);
 
-    const sectionNav = getNamed("navigation", "admin:sectionPicker");
-    const links = within(sectionNav).getAllByRole("link");
-    expect(links.length).toBeGreaterThanOrEqual(9); // the general tab's own sections
-    expect(links.some((link) => link.getAttribute("href") === "#admin-system")).toBe(true);
-    expect(links.some((link) => link.getAttribute("href") === "#admin-logging")).toBe(true);
-
+    const chips = getNamed("navigation", "settings:sectionChips");
+    const anchors = within(chips).getAllByRole("link");
+    expect(anchors.map((a) => a.getAttribute("href"))).toContain("#admin-push");
+    expect(anchors.map((a) => a.getAttribute("href"))).toContain("#admin-instance");
     // The old column picked a section with a button; none should remain here.
-    expect(within(sectionNav).queryAllByRole("button")).toHaveLength(0);
+    expect(within(chips).queryAllByRole("button")).toHaveLength(0);
+
+    const menu = document.querySelector("[data-settings-menu] nav") as HTMLElement;
+    const pages = within(menu)
+      .getAllByRole("link")
+      .map((a) => a.getAttribute("href"));
+    expect(pages).toContain("/admin/users");
+    expect(pages).toContain("/admin/logging");
+    expect(within(menu).queryAllByRole("button")).toHaveLength(0);
   });
 
   it("scrolls a ?section= deep link into view once the page has rendered", async () => {
     const scrollSpy = vi.fn();
     Element.prototype.scrollIntoView = scrollSpy;
 
-    renderAdmin("/admin?section=logging");
-    await findNamed("region", "admin:tabs.system");
+    renderAdmin("/admin/instance?section=push");
+    await findNamed("region", INSTANCE);
 
     await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
-    expect(scrollSpy.mock.instances[0]).toBe(document.getElementById("admin-logging"));
+    expect(scrollSpy.mock.instances[0]).toBe(document.getElementById("admin-push"));
   });
 
   it("does not scroll anywhere without a ?section= param", async () => {
     const scrollSpy = vi.fn();
     Element.prototype.scrollIntoView = scrollSpy;
 
-    renderAdmin("/admin");
-    await findNamed("region", "admin:tabs.system");
+    renderAdmin("/admin/instance");
+    await findNamed("region", INSTANCE);
 
     expect(scrollSpy).not.toHaveBeenCalled();
   });
+
+  it("lands a pre-page ?section= link on the page of that name", async () => {
+    renderAdmin("/admin?tab=general&section=users");
+    expect(await findNamed("region", "admin:pages.users")).toBeInTheDocument();
+    expect(document.querySelector("h1")).toHaveTextContent("admin:pages.users");
+  });
+});
+
+describe("AdminPage — the standard level (forgejo#321)", () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    useSettingsLevelStore.setState({ level: "standard" });
+  });
+  // Unmount first: a level change under a mounted page re-renders it outside act.
+  afterEach(() => {
+    cleanup();
+    useSettingsLevelStore.setState({ level: null });
+  });
+
+  it("keeps the expert pages out of the menu and says how many there are", async () => {
+    renderAdmin("/admin/instance");
+    await findNamed("region", INSTANCE);
+    const menu = document.querySelector("[data-settings-menu] nav") as HTMLElement;
+    const pages = within(menu)
+      .getAllByRole("link")
+      .map((a) => a.getAttribute("href"));
+    expect(pages).toContain("/admin/externalServices");
+    expect(pages).not.toContain("/admin/logging");
+    expect(pages).not.toContain("/admin/system");
+    expect(document.querySelector('[data-expert-note="pages"]')).toHaveTextContent(
+      "settings:level.morePages"
+    );
+  });
+
+  it("shows the expert rows a search hit on a page's first section named (codex final review)", async () => {
+    // The search links an expert row of the instance section as
+    // `/admin/instance?section=instance&expert=1`. The section is the page's
+    // first, which the canonical address leaves out — that must not drop the
+    // request to show the rows with it.
+    renderAdmin("/admin/instance?section=instance&expert=1");
+    const instance = await findNamed("region", INSTANCE);
+    await waitFor(() => expect(instance).toHaveTextContent("settings:level.revealedRows"));
+  });
+
+  it("opens an expert page a link names, with its sections and a note, not an empty page", async () => {
+    renderAdmin("/admin/logging");
+    expect(await findNamed("region", "admin:pages.logging")).toBeInTheDocument();
+    expect(document.querySelector("h1")).toHaveTextContent("admin:pages.logging");
+    expect(document.querySelector('[role="status"]')).toHaveTextContent(
+      "settings:level.expertPage"
+    );
+  });
+});
+
+describe("AdminPage — no heading repeats the one above it (forgejo#321)", () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  // "Benutzer" under "Benutzer": a page with one section of its own name.
+  it.each(ADMIN_PAGES.filter((p) => !p.domain).map((p) => [p.id]))(
+    "holds on /admin/%s",
+    async (page) => {
+      const { unmount } = renderAdmin(`/admin/${page}`);
+      await waitFor(() => expect(document.querySelector("h1")).not.toBeNull());
+      expect(repeatedHeadings(document.body)).toEqual([]);
+      unmount();
+    }
+  );
 });
 
 /**
@@ -192,11 +272,11 @@ describe("AdminPage — one page, anchor jumps", () => {
  * means none of them could ever have caught a broken reveal. This block
  * installs the controllable stub from `intersectionObserverStub.ts` to drive
  * an actual intersection and observe what happens on the other side of it,
- * for exactly the "logging" section (general tab, `LAZY_ADMIN_SECTIONS`):
- * its body renders nothing until `loggingConfig` arrives from
- * `adminApi.getLoggingConfig()`, which `AdminPage`'s `sectionOnVisible.logging`
- * fires from `LazySection`'s `onVisible` — the same wiring finding C1 fixed
- * the placeholder height and deep-link re-scroll around.
+ * for exactly the "logging" section (`LAZY_ADMIN_SECTIONS`): its body renders
+ * nothing until `loggingConfig` arrives from `adminApi.getLoggingConfig()`,
+ * which `AdminPage`'s `sectionOnVisible.logging` fires from `LazyBody`'s
+ * `onVisible` — the same wiring finding C1 fixed the placeholder height and
+ * deep-link re-scroll around.
  */
 describe("AdminPage — lazy section reveal (Wave C finding C3)", () => {
   let io: FakeIntersectionObserverHandle;
@@ -211,34 +291,29 @@ describe("AdminPage — lazy section reveal (Wave C finding C3)", () => {
   });
 
   it("mounts the logging section's body and fetches its data on first intersection, but not again on a second", async () => {
-    renderAdmin();
-    await findNamed("region", "admin:tabs.system");
+    renderAdmin("/admin/logging");
+    await findNamed("region", "admin:pages.logging");
 
-    const sectionEl = document.getElementById("admin-logging");
-    expect(sectionEl?.childElementCount).toBe(0);
+    const bodyEl = document.getElementById("admin-logging-body");
+    expect(bodyEl?.childElementCount).toBe(0);
 
-    // LazySection creates its IntersectionObserver from a passive effect,
-    // which commits asynchronously relative to the DOM — a sibling
-    // region (like "system", awaited above) can already be in the
-    // document before THIS section's effect has run. Normally that gap
-    // is sub-millisecond and invisible; under CPU contention (reproduced
-    // locally by saturating every core) it widened enough to read
-    // `observerFor` as undefined. Waiting for the observer itself,
-    // rather than a proxy for it, is what actually closes the race.
-    await waitFor(() => expect(io.observerFor("admin-logging")).toBeDefined());
-    const observer = io.observerFor("admin-logging");
+    // LazyBody creates its IntersectionObserver from a passive effect, which
+    // commits asynchronously relative to the DOM. Waiting for the observer
+    // itself, rather than a proxy for it, is what closes that race.
+    await waitFor(() => expect(io.observerFor("admin-logging-body")).toBeDefined());
+    const observer = io.observerFor("admin-logging-body");
 
     act(() => {
       observer?.trigger(true);
     });
-    await waitFor(() => expect(sectionEl?.childElementCount).toBeGreaterThan(0));
+    await waitFor(() => expect(bodyEl?.childElementCount).toBeGreaterThan(0));
 
     const { adminApi } = await import("@/lib/api");
     expect(adminApi.getLoggingConfig).toHaveBeenCalledTimes(1);
 
-    // A second intersection report for the same section (a real browser
-    // would not deliver one post-disconnect, but the point here is
-    // LazySection's OWN `notifiedRef` guard, not that detail — see the stub).
+    // A second intersection report for the same body (a real browser would
+    // not deliver one post-disconnect, but the point here is the reveal's OWN
+    // `notifiedRef` guard, not that detail — see the stub).
     act(() => {
       observer?.trigger(true);
     });
@@ -250,27 +325,22 @@ describe("AdminPage — lazy section reveal (Wave C finding C3)", () => {
  * Wave C finding C1, follow-up round (2026-09-18): a browser measurement of
  * the first fix showed it did not actually work. `/admin?section=logging` at
  * 1440x900 landed the "logging" section at `top = 3196` with `scrollY =
- * 2786` — nowhere near the ~72px anchor offset. The first fix keyed the
- * corrective re-scroll on the DEEP-LINK TARGET's own `LazySection` mounting,
- * but the sections that actually grow past their 240px placeholder are the
- * ones ABOVE the target (they mount as the page scrolls past them and are
- * far taller once real content lands) — that growth pushes the target
- * further down, below the fold, where it never intersects and therefore
- * never mounts, so the "wait for target mount" correction never fired at
- * all.
+ * 2786` — nowhere near the ~72px anchor offset. The sections that grow past
+ * their 240px placeholder are the ones ABOVE the target, and their growth
+ * pushes the target below the fold, where it never intersects.
  *
- * The fix now reacts to the PAGE's layout changing (a `ResizeObserver` on
- * the sections column) rather than to one section's mount. jsdom does no
- * layout, so `getBoundingClientRect()` cannot be used to pin actual pixel
- * convergence here — the fake `ResizeObserver` below only proves the
- * MECHANISM: a resize re-issues the scroll, repeated resizes keep doing so
- * within the time budget, a real scroll (wheel/touch/key) input cancels it,
- * and the time budget itself is a hard stop. See the report for what only a
- * browser can confirm.
+ * The fix reacts to the PAGE's layout changing (a `ResizeObserver` on the
+ * sections column) rather than to one section's mount. Since forgejo#321 a
+ * page holds fewer sections, but Instanz still stacks eight lazy ones above
+ * "push". jsdom does no layout, so the fake `ResizeObserver` below only
+ * proves the MECHANISM: a resize re-issues the scroll, repeated resizes keep
+ * doing so within the time budget, a real scroll (wheel/touch/key) input
+ * cancels it, and the time budget itself is a hard stop.
  */
 describe("AdminPage — deep-link scroll aligner (Wave C finding C1, follow-up)", () => {
   let resizeIO: FakeResizeObserverHandle;
   let scrollSpy: ReturnType<typeof vi.fn>;
+  const DEEP_LINK = "/admin/instance?section=push";
 
   beforeEach(() => {
     scrollSpy = vi.fn();
@@ -284,19 +354,19 @@ describe("AdminPage — deep-link scroll aligner (Wave C finding C1, follow-up)"
   });
 
   it("re-aligns the deep-linked section when ANY section's height changes, not only its own", async () => {
-    renderAdmin("/admin?section=logging");
-    await findNamed("region", "admin:tabs.system");
+    renderAdmin(DEEP_LINK);
+    await findNamed("region", INSTANCE);
 
     // The first scroll runs against placeholder heights, same as before.
     await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
 
-    // Simulates a section ABOVE "logging" growing past its placeholder —
+    // Simulates a section ABOVE "push" growing past its placeholder —
     // the exact case the browser measurement caught.
     act(() => {
       resizeIO.observers[0]?.trigger();
     });
     expect(scrollSpy).toHaveBeenCalledTimes(2);
-    expect(scrollSpy.mock.instances[1]).toBe(document.getElementById("admin-logging"));
+    expect(scrollSpy.mock.instances[1]).toBe(document.getElementById("admin-push"));
 
     // A second layout change within the budget realigns again.
     act(() => {
@@ -306,8 +376,8 @@ describe("AdminPage — deep-link scroll aligner (Wave C finding C1, follow-up)"
   });
 
   it("cancels re-aligning on real user scroll input", async () => {
-    renderAdmin("/admin?section=logging");
-    await findNamed("region", "admin:tabs.system");
+    renderAdmin(DEEP_LINK);
+    await findNamed("region", INSTANCE);
     await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
 
     act(() => {
@@ -322,8 +392,8 @@ describe("AdminPage — deep-link scroll aligner (Wave C finding C1, follow-up)"
   });
 
   it("does not cancel on an unrelated key (only scroll-intent keys do)", async () => {
-    renderAdmin("/admin?section=logging");
-    await findNamed("region", "admin:tabs.system");
+    renderAdmin(DEEP_LINK);
+    await findNamed("region", INSTANCE);
     await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
 
     act(() => {
@@ -340,8 +410,8 @@ describe("AdminPage — deep-link scroll aligner (Wave C finding C1, follow-up)"
   it("stops re-aligning once its time budget is spent", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
 
-    renderAdmin("/admin?section=logging");
-    await findNamed("region", "admin:tabs.system");
+    renderAdmin(DEEP_LINK);
+    await findNamed("region", INSTANCE);
     await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
 
     act(() => {

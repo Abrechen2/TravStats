@@ -7,13 +7,11 @@ import { MemoryRouter } from "react-router-dom";
  * "Routing-Anbieter" section, while the personal settings page carried the
  * instance's routing card. The provider and the instance key are instance
  * configuration; the key resolves user → instance → environment
- * (`apiKeyResolver.getApiKey`), so the instance half belongs here.
+ * (`apiKeyResolver.getApiKey`), so the instance half belongs here — since
+ * forgejo#321 in the "Straßenrouting" group of the services accordion.
  */
 const tours = vi.hoisted(() => ({ visible: true }));
 vi.mock("../../../hooks/useToursVisible", () => ({ useToursVisible: () => tours.visible }));
-vi.mock("../../../components/Admin/GlobalApiKeysManager", () => ({
-  default: () => <div data-testid="global-api-keys" />,
-}));
 vi.mock("../../../components/Admin/ImmichGlobalSettings", () => ({
   default: () => <div data-testid="immich-global" />,
 }));
@@ -60,8 +58,11 @@ describe("Administration → Externe Dienste — the routing provider", () => {
   it("holds the instance's provider choice and its masked key", async () => {
     tours.visible = true;
     renderSection();
-    expect(await screen.findByText("settings:routing.title")).toBeInTheDocument();
-    expect(screen.getByTestId("global-api-keys")).toBeInTheDocument();
+    // Once as the accordion row's name, once as the card's own heading.
+    expect((await screen.findAllByText("settings:routing.title")).length).toBeGreaterThan(0);
+    const group = document.querySelector('[data-service-group="routing"]');
+    expect(group).not.toBeNull();
+    expect(group).toHaveTextContent("settings:routing.title");
     expect(adminApi.getGlobalApiKeys).toHaveBeenCalled();
   });
 
@@ -69,6 +70,7 @@ describe("Administration → Externe Dienste — the routing provider", () => {
     tours.visible = false;
     renderSection();
     expect(screen.queryByText("settings:routing.title")).toBeNull();
+    expect(document.querySelector('[data-service-group="routing"]')).toBeNull();
     expect(adminApi.getGlobalApiKeys).not.toHaveBeenCalled();
   });
 });

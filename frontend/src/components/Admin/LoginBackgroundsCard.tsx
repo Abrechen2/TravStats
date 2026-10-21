@@ -89,10 +89,8 @@ export function LoginBackgroundsCard(): JSX.Element {
   };
 
   return (
-    <div className="border-t border-(--border) pt-6">
-      <h3 className="text-base font-semibold text-(--text-primary)">
-        {t("admin:loginBackgrounds.title")}
-      </h3>
+    <div className="pt-6" style={{ borderTop: "1px solid var(--ts-border)" }}>
+      <h3 className="t-label-mono">{t("admin:loginBackgrounds.title")}</h3>
       <p className="mt-1 text-sm text-(--text-muted)">{t("admin:loginBackgrounds.subtitle")}</p>
       <p className="mt-2 text-sm" style={{ color: "var(--warning)" }}>
         {t("admin:loginBackgrounds.publicWarning")}

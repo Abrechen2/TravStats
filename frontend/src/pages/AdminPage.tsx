@@ -1,29 +1,43 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
+import { Navigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { useToastStore } from "../store/toastStore";
 import { adminApi } from "../lib/api";
 import { logger } from "../lib/logger";
 import { apiErrorMachineCode } from "../lib/apiError";
 import AppShell from "../components/ui/AppShell";
-import PageHeader from "../components/ui/PageHeader";
-import AdminIndex from "../components/Admin/AdminIndex";
-import { useDomainTabs } from "../hooks/useDomainTabs";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useSectionInView } from "../hooks/useSectionInView";
-import { DOMAINS } from "../shared/domains";
+import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { useTranslation } from "../hooks/useTranslation";
+import { useEffectiveSettingsLevel } from "../store/settingsLevelStore";
 import { copyToClipboard } from "../lib/clipboard";
 import { useLoggingAdmin } from "./Admin/useLoggingAdmin";
 import { useConfirmDialog } from "../hooks/useConfirmDialog";
-import { normalizeSectionId } from "../lib/sectionAliases";
-import type { ActiveSection, TabId } from "./Admin/adminSections";
-import { TAB_FOR_SECTION, LAZY_ADMIN_SECTIONS } from "./Admin/adminSections";
+import {
+  ADMIN_MENU,
+  ADMIN_PAGES,
+  LAZY_ADMIN_SECTIONS,
+  findAdminPage,
+  type ActiveSection,
+  type AdminPageDef,
+} from "./Admin/adminSections";
 import AdminSectionSwitch, {
+  ADMIN_SECTION_FRAME,
   type AdminSectionSwitchProps,
   type InviteSuccessState,
 } from "./Admin/AdminSectionSwitch";
-import { LazySection, AdminSection } from "./Admin/LazySection";
+import { LazyBody } from "./Admin/LazySection";
 import { useDeepLinkScroll } from "./Admin/useDeepLinkScroll";
+import { resolveAdminLink } from "./Settings/settingsLinks";
+import { pageLevel, sectionsOf } from "./Settings/surface";
+import { SettingsLayout } from "../components/Settings/frame/SettingsLayout";
+import { SectionFrame } from "../components/Settings/frame/SectionFrame";
+import { ExpertNote, ExpertPageNotice } from "../components/Settings/frame/ExpertNote";
+import { VersionLine } from "../components/Settings/frame/VersionLine";
+import type { SettingsMenuGroup } from "../components/Settings/frame/SettingsMenu";
+import { SettingsSearch } from "./Settings/SettingsSearch";
+import { useSearchScopes } from "./Settings/useSearchScopes";
 
 import type { SystemInfoData, AdminUser } from "../components/Admin/SystemInfo";
 import type { Invitation } from "../components/Admin/InvitationManagement";
@@ -61,53 +75,40 @@ export default function AdminPage(): JSX.Element {
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [parserSettings, setParserSettings] = useState<ParserSettingsData | null>(null);
   const [loading, setLoading] = useState(true);
-  // Tab state + URL sync + drift guard live in the shared useDomainTabs
-  // hook. Filtered by enabledDomains, URL param "tab", activeTab resets
-  // to "general" if its domain gets disabled mid-session.
-  // The admin "Flug" tab was dropped once its only section (parser config)
-  // moved to "Allgemein" — an empty domain tab is worse UX than none. It's
-  // back now that airlineAircraftMasterData gives it a real section again.
-  const { tabs, activeTab, setActiveTab } = useDomainTabs<TabId>({
-    tabConfig: [
-      { id: "general", label: t("admin:tabs2.general") || "Allgemein" },
-      {
-        id: "flight",
-        label: t("admin:tabs2.flight") || "Flug",
-        icon: DOMAINS.flight.icon,
-        requiresDomain: "flight",
-      },
-      {
-        id: "cruise",
-        label: t("admin:tabs2.cruise") || "Kreuzfahrt",
-        icon: DOMAINS.cruise.icon,
-        requiresDomain: "cruise",
-      },
-    ],
-    defaultTab: "general",
-  });
-
-  // Reflect the current tab in the browser tab / history entry so users
-  // navigating via Ctrl+Tab or browser history can tell admin tabs apart.
-  const activeTabLabel = tabs.find((tab) => tab.id === activeTab)?.label ?? "";
-  useDocumentTitle(
-    activeTabLabel
-      ? `TravStats – ${t("admin:title", { defaultValue: "Admin" })} – ${activeTabLabel}`
-      : null
+  // One page per menu entry (forgejo#321). Every address goes through
+  // `resolveAdminLink` first — `/admin?tab=general&section=logging` and the
+  // other pre-page links redirect to the canonical `/admin/<page>`.
+  const params = useParams<{ page?: string }>();
+  const location = useLocation();
+  const { isEnabled } = useEnabledDomains();
+  const { isFeatureVisible } = useBetaFeatures();
+  const level = useEffectiveSettingsLevel();
+  const searchScopes = useSearchScopes(true);
+  const isReachable = useCallback(
+    (p: AdminPageDef) => !p.domain || isEnabled(p.domain),
+    [isEnabled]
   );
-
-  // Round 4 ("one page, anchor jumps", forgejo#… — tester feedback): every
-  // section of the active tab renders at once now, so there is no single
-  // "current section" state any more. `?section=` still names the one a
-  // deep link should scroll to on mount — kept apart from the current tab,
-  // like before, so a link into a DIFFERENT tab than the one in `?tab=`
-  // (or the default) still lands nowhere rather than on the wrong tab's
-  // section; that limitation predates this change.
-  const initialSectionParam = normalizeSectionId(searchParams.get("section"));
+  const namedSection = searchParams.get("section");
+  const canonical = resolveAdminLink({
+    page: params.page,
+    section: namedSection,
+    tab: searchParams.get("tab"),
+    user: searchParams.get("user"),
+    expert: searchParams.get("expert") === "1",
+    isReachable,
+  });
+  const target = new URL(canonical, "http://x");
+  const isCanonical =
+    target.pathname === location.pathname &&
+    target.searchParams.get("section") === namedSection &&
+    !searchParams.get("tab");
+  const current = findAdminPage(params.page);
+  const pageTitle = current ? t(current.labelKey) : "";
+  useDocumentTitle(
+    current ? `TravStats – ${t("admin:title", { defaultValue: "Admin" })} – ${pageTitle}` : null
+  );
   const deepLinkedSection: ActiveSection | null =
-    initialSectionParam !== null &&
-    TAB_FOR_SECTION[initialSectionParam as ActiveSection] === activeTab
-      ? (initialSectionParam as ActiveSection)
-      : null;
+    isCanonical && namedSection ? (namedSection as ActiveSection) : null;
 
   const [inviteLinkModalOpen, setInviteLinkModalOpen] = useState(false);
   const [inviteEmailModalOpen, setInviteEmailModalOpen] = useState(false);
@@ -379,53 +380,25 @@ export default function AdminPage(): JSX.Element {
 
   // ==================== Sections + Navigation ====================
 
-  interface AdminSectionMeta {
-    id: ActiveSection;
-    label: string;
-    badge?: number;
-  }
-
-  const allSections: AdminSectionMeta[] = [
-    { id: "system", label: t("admin:tabs.system") },
-    { id: "instance", label: t("admin:tabs.instance") },
-    { id: "users", label: t("admin:tabs.users"), badge: users.length },
-    { id: "invitations", label: t("admin:tabs.invitations") },
-    { id: "externalServices", label: t("admin:tabs.externalServices") },
-    { id: "parsers", label: t("admin:tabs.parsers") },
-    { id: "logging", label: t("admin:tabs.logging") },
-    { id: "backups", label: t("admin:tabs.backups") },
-    { id: "timeModel", label: t("admin:tabs.timeModel") },
-    { id: "smtp", label: t("admin:tabs.smtp") },
-    {
-      id: "shipsMasterData",
-      label: t("admin:cruiseMasterData.ship.menuLabel") || "Schiffe",
-    },
-    {
-      id: "portsMasterData",
-      label: t("admin:cruiseMasterData.port.menuLabel") || "Häfen",
-    },
-    {
-      id: "airlinesMasterData",
-      label: t("admin:airlineAircraftMasterData.airline.menuLabel") || "Airlines",
-    },
-    {
-      id: "aircraftMasterData",
-      label: t("admin:airlineAircraftMasterData.aircraft.menuLabel") || "Flugzeuge",
-    },
-    {
-      id: "airportsMasterData",
-      label: t("admin:airlineAircraftMasterData.airport.menuLabel") || "Flughäfen",
-    },
-  ];
-
-  const sections = allSections.filter((s) => TAB_FOR_SECTION[s.id] === activeTab);
-
-  // Which section is on screen, for the index to mark — the exact scroll-spy
-  // Settings uses (see useSectionInView), reused rather than duplicated.
-  const inView = useSectionInView(
-    sections.map((s) => s.id),
-    "admin"
+  const visible = useMemo(
+    () =>
+      current
+        ? sectionsOf(current, {
+            // An expert page opened at the standard level — by a link, the
+            // search or a bookmark — shows its sections, with a note above,
+            // rather than an empty page.
+            level: pageLevel(current) === "expert" ? "expert" : level,
+            isGateOpen: isFeatureVisible,
+            isAdmin: true,
+            deepLinked: namedSection,
+          })
+        : { shown: [] as ActiveSection[], hiddenExpert: 0, deepLinkedExpert: null },
+    [current, level, isFeatureVisible, namedSection]
   );
+
+  // Which section is on screen, for the chips to mark — the scroll-spy
+  // Settings uses (see useSectionInView), reused rather than duplicated.
+  const inView = useSectionInView(visible.shown, "admin");
 
   // Scrolls a `?section=` deep link into view and keeps correcting that
   // position while the page's lazy sections are still settling — see
@@ -434,39 +407,19 @@ export default function AdminPage(): JSX.Element {
   useDeepLinkScroll(mainRef, loading, deepLinkedSection);
 
   const jump = useCallback(
-    (id: ActiveSection): void => {
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          next.set("tab", activeTab);
-          next.set("section", id);
-          return next;
-        },
-        { replace: true }
-      );
+    (id: string): void => {
+      setSearchParams({ section: id }, { replace: true });
       const el = document.getElementById(`admin-${id}`);
       if (el && typeof el.scrollIntoView === "function") {
         el.scrollIntoView({ block: "start", behavior: "smooth" });
       }
     },
-    [activeTab, setSearchParams]
+    [setSearchParams]
   );
 
-  // Keeps `?tab=` current on reload; `?section=` is only ever written by an
-  // explicit `jump` (clicking an index entry), same division of labour as
-  // SettingsPage's route + `jump`.
-  useEffect(() => {
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.set("tab", activeTab);
-        return next;
-      },
-      { replace: true }
-    );
-  }, [activeTab, setSearchParams]);
-
   // ==================== Render ====================
+
+  if (!isCanonical || !current) return <Navigate to={canonical} replace />;
 
   if (loading) {
     return (
@@ -477,8 +430,6 @@ export default function AdminPage(): JSX.Element {
       </AppShell>
     );
   }
-
-  const currentLabel = sections.find((s) => s.id === inView)?.label ?? sections[0]?.label ?? "";
 
   const switchProps: Omit<AdminSectionSwitchProps, "section"> = {
     systemInfo,
@@ -550,92 +501,75 @@ export default function AdminPage(): JSX.Element {
     },
   };
 
+  const inMenu = (p: AdminPageDef): boolean =>
+    level === "expert" || pageLevel(p) === "standard" || p.id === current.id;
+  const reachable = ADMIN_PAGES.filter(isReachable);
+  const groups: SettingsMenuGroup[] = ADMIN_MENU.map((g) => ({
+    id: g.id,
+    label: g.labelKey ? t(g.labelKey) : null,
+    entries: reachable
+      .filter((p) => g.pages.includes(p.id) && inMenu(p))
+      .map((p) => ({
+        id: p.id,
+        label: t(p.labelKey),
+        to: `/admin/${p.id}`,
+        icon: p.icon,
+        badge: p.id === "users" ? users.length : undefined,
+      })),
+  })).filter((g) => g.entries.length > 0);
+  const hiddenPages = reachable.filter((p) => !inMenu(p)).length;
+  const labelOf = (id: ActiveSection): string =>
+    t(current.sections.find((s) => s.id === id)?.labelKey ?? id);
+  const isExpertPage = pageLevel(current) === "expert" && level === "standard";
+
   return (
-    <AppShell width="list">
-      <div
-        className="grid md:grid-cols-[240px_minmax(0,1fr)]"
-        style={{ gap: "var(--ts-space-xxl)" }}
+    <>
+      <SettingsLayout
+        navLabel={t("admin:title", { defaultValue: "Administration" })}
+        groups={groups}
+        activePage={current.id}
+        hiddenPages={hiddenPages}
+        search={<SettingsSearch scopes={searchScopes} />}
+        menuFooter={<VersionLine />}
+        title={pageTitle}
+        // The scope line is the counterpart of the one in user settings:
+        // everything here is instance-wide.
+        meta={t("admin:scopeHint")}
+        chips={visible.shown.map((id) => ({ id, label: labelOf(id) }))}
+        anchorPrefix="admin"
+        activeSection={inView}
+        onJump={jump}
+        notice={isExpertPage ? <ExpertPageNotice /> : null}
       >
-        <div className="hidden md:block">
-          <AdminIndex
-            tabs={tabs}
-            activeTab={activeTab}
-            onTab={(id) => setActiveTab(id as TabId)}
-            sections={sections}
-            activeSection={inView ?? ""}
-            onSection={(id) => jump(id as ActiveSection)}
-          />
-        </div>
-
         <div ref={mainRef} className="flex min-w-0 flex-col" style={{ gap: "var(--ts-space-xl)" }}>
-          {/* The scope line is the counterpart of the one in user settings:
-              everything here is instance-wide. */}
-          <PageHeader title={`${t("admin:title")} · ${currentLabel}`} meta={t("admin:scopeHint")} />
-
-          {/* Phone: the area tabs and a section picker in place of the column. */}
-          <div className="flex flex-col gap-3 md:hidden">
-            {tabs.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto scrollbar-none">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    aria-pressed={activeTab === tab.id}
-                    onClick={(): void => setActiveTab(tab.id)}
-                    className="shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold"
-                    style={{
-                      background: activeTab === tab.id ? "var(--ts-accent)" : "transparent",
-                      color:
-                        activeTab === tab.id ? "var(--ts-accent-text)" : "var(--ts-text-bright)",
-                      border: `1px solid ${activeTab === tab.id ? "var(--ts-accent)" : "var(--ts-border)"}`,
-                    }}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-            )}
-            <label htmlFor="admin-section-picker" className="sr-only">
-              {t("admin:sectionPicker", { defaultValue: "Bereich" })}
-            </label>
-            <select
-              id="admin-section-picker"
-              value={inView ?? sections[0]?.id ?? ""}
-              onChange={(e): void => jump(e.target.value as ActiveSection)}
-              className="input w-full"
-            >
-              {sections.map((section) => (
-                <option key={section.id} value={section.id}>
-                  {section.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Every section of the active tab renders at once now (tester
-              feedback: the admin page should read like the settings page,
-              with anchor jumps instead of a picker that swaps content out).
-              A lazily-fetching section (see LAZY_ADMIN_SECTIONS) only mounts
-              its real content once it has been near the viewport. */}
-          {sections.map((section) =>
-            LAZY_ADMIN_SECTIONS.has(section.id) ? (
-              <LazySection
-                key={section.id}
-                id={`admin-${section.id}`}
-                ariaLabel={section.label}
-                onVisible={sectionOnVisible[section.id]}
+          {visible.shown.map((id, index) => {
+            const body = <AdminSectionSwitch section={id} {...switchProps} />;
+            return (
+              <SectionFrame
+                key={id}
+                anchorId={`admin-${id}`}
+                headingAbove={index === 0 ? pageTitle : null}
+                label={labelOf(id)}
+                frame={ADMIN_SECTION_FRAME[id]}
+                deepLinkedExpert={visible.deepLinkedExpert === id && !isExpertPage}
+                revealExpertRows={namedSection === id && searchParams.get("expert") === "1"}
               >
-                <AdminSectionSwitch section={section.id} {...switchProps} />
-              </LazySection>
-            ) : (
-              <AdminSection key={section.id} id={`admin-${section.id}`} ariaLabel={section.label}>
-                <AdminSectionSwitch section={section.id} {...switchProps} />
-              </AdminSection>
-            )
-          )}
+                {/* A lazily-fetching section (see LAZY_ADMIN_SECTIONS) mounts its
+                    body only once it has been near the viewport. */}
+                {LAZY_ADMIN_SECTIONS.has(id) ? (
+                  <LazyBody id={`admin-${id}-body`} onVisible={sectionOnVisible[id]}>
+                    {body}
+                  </LazyBody>
+                ) : (
+                  body
+                )}
+              </SectionFrame>
+            );
+          })}
+          <ExpertNote count={visible.hiddenExpert} />
         </div>
-      </div>
+      </SettingsLayout>
       {confirmDialog}
-    </AppShell>
+    </>
   );
 }

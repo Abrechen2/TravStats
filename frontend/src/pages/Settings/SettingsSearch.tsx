@@ -3,20 +3,32 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { Input } from "../../components/ui/Field";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useCoarsePointer } from "../../hooks/useCoarsePointer";
+import { useEffectiveSettingsLevel, useSettingsLevelStore } from "../../store/settingsLevelStore";
 import {
   searchSettings,
   splitKeywords,
   type SettingsSearchCandidate,
   type SettingsSearchHit,
 } from "./settingsSearchMatch";
-import type { SettingsSectionId } from "./settingsModel";
-import { SECTION_LABEL_KEY } from "./sectionLabels";
+
+/** A section as the search sees it: where its words are, and its level. */
+export interface SearchableSection {
+  id: string;
+  labelKey: string;
+  /** `<ns>:search.keywords.<id>` — comma-separated, DE and EN. */
+  keywordsKey: string;
+  /** `<ns>:search.expertKeywords.<id>` — words for rows only the expert level shows. */
+  expertKeywordsKey?: string;
+  expert: boolean;
+}
 
 /** One page of settings, with the sections this account can see on it. */
 export interface SettingsSearchScope {
-  route: string;
+  /** The page's address: "/settings/account", "/admin/instance". */
+  path: string;
   label: string;
-  sections: readonly SettingsSectionId[];
+  sections: readonly SearchableSection[];
 }
 
 interface Props {
@@ -25,21 +37,27 @@ interface Props {
 
 const MAX_HITS = 8;
 
-function hrefOf(hit: SettingsSearchHit): string {
-  return `/settings/${hit.route}?section=${hit.section}`;
+/** `&expert=1` names the section's hidden rows, so the page shows them. */
+function hrefOf(path: string, section: string, expertRows: boolean): string {
+  return `${path}?section=${section}${expertRows ? "&expert=1" : ""}`;
 }
 
 /**
- * The search box above the settings index (owner request 2026-09-24).
+ * The search box above the settings menu (owner request 2026-09-24).
  *
- * It searches every page of settings, not only the one on screen: a person
- * looking for "Immich" on the flight page should not first have to guess that
- * it lives under Allgemein. A hit is a link to the section, and the page's own
- * deep-link handling scrolls it into view.
+ * It searches every page — personal settings and, for an admin, the
+ * administration — not only the one on screen, and it searches what the
+ * current level hides as well: a person looking for "Abfrageintervall" at the
+ * standard level must learn that it exists and where, not that it does not.
+ * Such a hit says it belongs to the expert view and offers the switch; its
+ * link alone already opens the section, which a named link always shows.
  */
 export function SettingsSearch({ scopes }: Props): JSX.Element {
-  const { t } = useTranslation(["settings"]);
+  const { t } = useTranslation(["settings", "admin"]);
   const navigate = useNavigate();
+  const level = useEffectiveSettingsLevel();
+  const setLevel = useSettingsLevelStore((s) => s.setLevel);
+  const coarse = useCoarsePointer();
   const [query, setQuery] = useState("");
   const listId = useId();
 
@@ -47,28 +65,44 @@ export function SettingsSearch({ scopes }: Props): JSX.Element {
     () =>
       scopes.flatMap((scope) =>
         scope.sections.map((section) => ({
-          section,
-          label: t(SECTION_LABEL_KEY[section]),
+          section: section.id,
+          label: t(section.labelKey),
           groupLabel: scope.label,
-          route: scope.route,
-          keywords: splitKeywords(t(`settings:search.keywords.${section}`, { defaultValue: "" })),
+          href: hrefOf(scope.path, section.id, false),
+          keywords: splitKeywords(t(section.keywordsKey, { defaultValue: "" })),
+          expertKeywords: section.expertKeywordsKey
+            ? splitKeywords(t(section.expertKeywordsKey, { defaultValue: "" }))
+            : [],
+          expert: section.expert,
         }))
       ),
     [scopes, t]
   );
 
+  // A hit on an expert row of a standard section links with `&expert=1`; a
+  // whole expert section is shown by being named already.
   const hits = useMemo(
-    () => searchSettings(query, candidates).slice(0, MAX_HITS),
+    () =>
+      searchSettings(query, candidates)
+        .slice(0, MAX_HITS)
+        .map((hit) =>
+          hit.expertOnly && !hit.expert ? { ...hit, href: `${hit.href}&expert=1` } : hit
+        ),
     [query, candidates]
   );
   const searching = query.trim().length >= 2;
+
+  const open = (hit: SettingsSearchHit, switchLevel: boolean): void => {
+    if (switchLevel) setLevel("expert");
+    navigate(hit.href);
+    setQuery("");
+  };
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
     if (event.key === "Escape") setQuery("");
     if (event.key === "Enter" && hits.length > 0) {
       event.preventDefault();
-      navigate(hrefOf(hits[0]));
-      setQuery("");
+      open(hits[0], false);
     }
   };
 
@@ -101,27 +135,49 @@ export function SettingsSearch({ scopes }: Props): JSX.Element {
             </p>
           ) : (
             <ul aria-label={t("settings:search.results")} className="flex flex-col">
-              {hits.map((hit) => (
-                <li key={`${hit.route}-${hit.section}`}>
-                  <Link
-                    to={hrefOf(hit)}
-                    onClick={() => setQuery("")}
-                    className="flex flex-col"
-                    style={{
-                      padding: "var(--ts-space-sm) var(--ts-space-md)",
-                      borderRadius: "var(--ts-radius-button)",
-                    }}
-                  >
-                    <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ts-text-bright)" }}>
-                      {hit.label}
-                    </span>
-                    <span className="t-caption" style={{ color: "var(--ts-muted)" }}>
-                      {hit.groupLabel}
-                      {hit.matchedKeyword ? ` · ${hit.matchedKeyword}` : ""}
-                    </span>
-                  </Link>
-                </li>
-              ))}
+              {hits.map((hit) => {
+                const offerSwitch = hit.expertOnly && level === "standard";
+                return (
+                  <li key={hit.href} className="flex flex-col">
+                    <Link
+                      to={hit.href}
+                      onClick={() => setQuery("")}
+                      className="flex flex-col"
+                      style={{
+                        padding: "var(--ts-space-sm) var(--ts-space-md)",
+                        borderRadius: "var(--ts-radius-button)",
+                        minHeight: coarse ? "var(--ts-size-touch-min)" : undefined,
+                      }}
+                    >
+                      <span
+                        style={{ fontSize: 14, fontWeight: 600, color: "var(--ts-text-bright)" }}
+                      >
+                        {hit.label}
+                      </span>
+                      <span className="t-caption" style={{ color: "var(--ts-muted)" }}>
+                        {hit.groupLabel}
+                        {hit.matchedKeyword ? ` · ${hit.matchedKeyword}` : ""}
+                        {hit.expertOnly ? ` · ${t("settings:search.expertOnly")}` : ""}
+                      </span>
+                    </Link>
+                    {offerSwitch && (
+                      <button
+                        type="button"
+                        onClick={() => open(hit, true)}
+                        className="t-caption self-start underline"
+                        style={{
+                          color: "var(--ts-accent)",
+                          fontWeight: 600,
+                          padding: "0 var(--ts-space-md) var(--ts-space-sm)",
+                          minHeight: coarse ? "var(--ts-size-touch-min)" : undefined,
+                        }}
+                      >
+                        {t("settings:search.switchAndOpen")}
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

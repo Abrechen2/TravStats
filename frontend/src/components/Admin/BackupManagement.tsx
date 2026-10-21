@@ -17,6 +17,7 @@ export { RestoreModal } from "./RestoreModal";
 import type { Backup } from "./backupTypes";
 import BackupDeleteModal from "./BackupDeleteModal";
 import Toggletip from "../ui/Toggletip";
+import { AdminSubBlock } from "./AdminSubBlock";
 
 export default function BackupManagement(): JSX.Element {
   const { t } = useTranslation(["admin", "common", "settings"]);
@@ -352,12 +353,9 @@ export default function BackupManagement(): JSX.Element {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-(--text-primary)">{t("admin:backup.title")}</h2>
-          <p className="text-sm text-(--text-muted) mt-1">{t("admin:backup.description")}</p>
-        </div>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="t-caption">{t("admin:backup.description")}</p>
         <button
           onClick={handleCreateBackup}
           disabled={creating || status?.running}
@@ -372,16 +370,9 @@ export default function BackupManagement(): JSX.Element {
       </div>
 
       {/* Backup Schedule Settings */}
-      <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-semibold text-(--text-primary)">
-              {t("admin:backup.schedule.title")}
-            </h3>
-            <p className="text-sm text-(--text-muted) mt-1">
-              {t("admin:backup.schedule.description")}
-            </p>
-          </div>
+      <AdminSubBlock
+        title={t("admin:backup.schedule.title")}
+        aside={
           <button
             onClick={handleSaveBackupSettings}
             disabled={savingSettings}
@@ -389,7 +380,9 @@ export default function BackupManagement(): JSX.Element {
           >
             {savingSettings ? t("common:buttons.saving") : t("common:buttons.save")}
           </button>
-        </div>
+        }
+      >
+        <p className="t-caption mb-4">{t("admin:backup.schedule.description")}</p>
         <div className="space-y-4">
           <label className="flex items-center gap-3">
             <input
@@ -464,7 +457,7 @@ export default function BackupManagement(): JSX.Element {
             onChange={(zone) => setBackupSettings({ ...backupSettings, backupZone: zone })}
           />
         </div>
-      </div>
+      </AdminSubBlock>
 
       {status?.running && status.currentBackup && (
         <div
@@ -478,154 +471,153 @@ export default function BackupManagement(): JSX.Element {
         </div>
       )}
 
-      <div className="bg-(--bg-surface) rounded-lg shadow-sm overflow-x-auto">
-        <table className="min-w-full divide-y" style={{ borderColor: "var(--color-border)" }}>
-          <thead className="bg-(--bg-base)">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
-                {t("admin:backup.table.date")}
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
-                {t("admin:backup.table.status")}
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
-                {t("admin:backup.table.size")}
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
-                {t("admin:backup.table.type")}
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
-                {t("admin:backup.table.cloud")}
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-(--text-muted) uppercase tracking-wider">
-                {t("common:labels.actions")}
-              </th>
-            </tr>
-          </thead>
-          <tbody
-            className="bg-(--bg-surface) divide-y"
-            style={{ borderColor: "var(--color-border)" }}
-          >
-            {backups.length === 0 ? (
+      <AdminSubBlock>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y" style={{ borderColor: "var(--color-border)" }}>
+            <thead className="bg-(--bg-base)">
               <tr>
-                <td colSpan={6} className="px-6 py-4 text-center text-(--text-muted)">
-                  {t("admin:backup.noBackups")}
-                </td>
+                <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
+                  {t("admin:backup.table.date")}
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
+                  {t("admin:backup.table.status")}
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
+                  {t("admin:backup.table.size")}
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
+                  {t("admin:backup.table.type")}
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-(--text-muted) uppercase tracking-wider">
+                  {t("admin:backup.table.cloud")}
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-(--text-muted) uppercase tracking-wider">
+                  {t("common:labels.actions")}
+                </th>
               </tr>
-            ) : (
-              backups.map((backup) => (
-                <tr key={backup.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-(--text-primary)">
-                    {formatDate(backup.completedAt || backup.startedAt)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm font-medium" style={getStatusStyle(backup.status)}>
-                      {getStatusText(backup.status)}
-                    </span>
-                    {backup.status === "failed" && (
-                      <p className="mt-1 max-w-xs whitespace-normal text-xs text-(--text-muted)">
-                        {t(backupRowFailureKey(backup.errorCode))}
-                      </p>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-(--text-muted)">
-                    {backup.status === "completed" ? formatSize(backup.size) : "-"}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-(--text-muted)">
-                    {backup.type === "full"
-                      ? t("admin:backup.type.full")
-                      : t("admin:backup.type.partial")}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-(--text-muted)">
-                    {backup.syncedToCloud ? (
-                      <Toggletip
-                        content={t("admin:backup.cloud.syncedAt", {
-                          date: formatDate(backup.cloudSyncAt),
-                        })}
-                        label={t("admin:backup.cloud.syncedAt", {
-                          date: formatDate(backup.cloudSyncAt),
-                        })}
-                        triggerStyle={{ color: "var(--success)" }}
-                      >
-                        ✓
-                      </Toggletip>
-                    ) : backup.cloudSyncError ? (
-                      // A failed upload says why. The plain "-" next to a green
-                      // connection test is what made this bug unfindable.
-                      <Toggletip
-                        content={backup.cloudSyncError}
-                        triggerStyle={{ color: "var(--danger)" }}
-                      >
-                        ⚠ {t("admin:backup.cloud.failed")}
-                      </Toggletip>
-                    ) : (
-                      <span className="text-(--text-muted)">-</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end gap-2">
-                      {backup.status === "completed" && backup.fileExists !== false && (
-                        <>
-                          <button
-                            onClick={() => handleDownload(backup)}
-                            className="hover:underline"
-                            style={{ color: "var(--accent)" }}
-                          >
-                            {t("admin:backup.actions.download")}
-                          </button>
-                          <button
-                            onClick={() => {
-                              setKeyMismatch(false);
-                              setRestoreModal(backup);
-                            }}
-                            className="hover:underline"
-                            style={{ color: "var(--warning)" }}
-                          >
-                            {t("admin:backup.actions.restore")}
-                          </button>
-                          {backup.cloudDeleteError && (
-                            <p role="alert" className="text-sm text-(--danger)">
-                              {t(
-                                backup.cloudDeleteError === "REMOTE_TARGET_UNKNOWN"
-                                  ? "admin:backup.remoteTargetUnknown"
-                                  : "admin:backup.remoteDeleteFailed"
-                              )}
-                            </p>
-                          )}
-                          {webdavEnabled &&
-                            (!backup.syncedToCloud ||
-                              !backup.cloudTarget ||
-                              backup.cloudDeleteError === "REMOTE_TARGET_UNKNOWN") && (
-                              <button
-                                onClick={() => handleSync(backup)}
-                                disabled={syncingId === backup.id}
-                                className="hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-                                style={{ color: "var(--accent)" }}
-                              >
-                                {syncingId === backup.id
-                                  ? t("admin:backup.actions.uploading")
-                                  : t("admin:backup.actions.upload")}
-                              </button>
-                            )}
-                        </>
-                      )}
-                      {backup.status !== "running" && (
-                        <button
-                          onClick={() => setDeleteModal(backup)}
-                          className="hover:underline"
-                          style={{ color: "var(--danger)" }}
-                        >
-                          {t("common:buttons.delete")}
-                        </button>
-                      )}
-                    </div>
+            </thead>
+            <tbody className="divide-y" style={{ borderColor: "var(--color-border)" }}>
+              {backups.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-4 text-center text-(--text-muted)">
+                    {t("admin:backup.noBackups")}
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : (
+                backups.map((backup) => (
+                  <tr key={backup.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-(--text-primary)">
+                      {formatDate(backup.completedAt || backup.startedAt)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm font-medium" style={getStatusStyle(backup.status)}>
+                        {getStatusText(backup.status)}
+                      </span>
+                      {backup.status === "failed" && (
+                        <p className="mt-1 max-w-xs whitespace-normal text-xs text-(--text-muted)">
+                          {t(backupRowFailureKey(backup.errorCode))}
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-(--text-muted)">
+                      {backup.status === "completed" ? formatSize(backup.size) : "-"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-(--text-muted)">
+                      {backup.type === "full"
+                        ? t("admin:backup.type.full")
+                        : t("admin:backup.type.partial")}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-(--text-muted)">
+                      {backup.syncedToCloud ? (
+                        <Toggletip
+                          content={t("admin:backup.cloud.syncedAt", {
+                            date: formatDate(backup.cloudSyncAt),
+                          })}
+                          label={t("admin:backup.cloud.syncedAt", {
+                            date: formatDate(backup.cloudSyncAt),
+                          })}
+                          triggerStyle={{ color: "var(--success)" }}
+                        >
+                          ✓
+                        </Toggletip>
+                      ) : backup.cloudSyncError ? (
+                        // A failed upload says why. The plain "-" next to a green
+                        // connection test is what made this bug unfindable.
+                        <Toggletip
+                          content={backup.cloudSyncError}
+                          triggerStyle={{ color: "var(--danger)" }}
+                        >
+                          ⚠ {t("admin:backup.cloud.failed")}
+                        </Toggletip>
+                      ) : (
+                        <span className="text-(--text-muted)">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex items-center justify-end gap-2">
+                        {backup.status === "completed" && backup.fileExists !== false && (
+                          <>
+                            <button
+                              onClick={() => handleDownload(backup)}
+                              className="hover:underline"
+                              style={{ color: "var(--accent)" }}
+                            >
+                              {t("admin:backup.actions.download")}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setKeyMismatch(false);
+                                setRestoreModal(backup);
+                              }}
+                              className="hover:underline"
+                              style={{ color: "var(--warning)" }}
+                            >
+                              {t("admin:backup.actions.restore")}
+                            </button>
+                            {backup.cloudDeleteError && (
+                              <p role="alert" className="text-sm text-(--danger)">
+                                {t(
+                                  backup.cloudDeleteError === "REMOTE_TARGET_UNKNOWN"
+                                    ? "admin:backup.remoteTargetUnknown"
+                                    : "admin:backup.remoteDeleteFailed"
+                                )}
+                              </p>
+                            )}
+                            {webdavEnabled &&
+                              (!backup.syncedToCloud ||
+                                !backup.cloudTarget ||
+                                backup.cloudDeleteError === "REMOTE_TARGET_UNKNOWN") && (
+                                <button
+                                  onClick={() => handleSync(backup)}
+                                  disabled={syncingId === backup.id}
+                                  className="hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                                  style={{ color: "var(--accent)" }}
+                                >
+                                  {syncingId === backup.id
+                                    ? t("admin:backup.actions.uploading")
+                                    : t("admin:backup.actions.upload")}
+                                </button>
+                              )}
+                          </>
+                        )}
+                        {backup.status !== "running" && (
+                          <button
+                            onClick={() => setDeleteModal(backup)}
+                            className="hover:underline"
+                            style={{ color: "var(--danger)" }}
+                          >
+                            {t("common:buttons.delete")}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </AdminSubBlock>
 
       {restoreModal && (
         <RestoreModal

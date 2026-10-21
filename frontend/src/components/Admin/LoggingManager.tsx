@@ -1,6 +1,7 @@
 import { useState } from "react";
 import HelpIcon from "../Help/HelpIcon";
 import LogViewer from "./LogViewer";
+import { AdminSubBlock } from "./AdminSubBlock";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { formatBytes } from "../../lib/fileSize";
@@ -60,14 +61,11 @@ export default function LoggingManager({
     loggingConfig.effectiveLogLevel === "debug" || loggingConfig.effectiveLogLevel === "trace";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header with Quick Actions */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-(--text-primary)">
-            {t("admin:logging.title")}
-          </h2>
-          <p className="text-sm text-(--text-muted) mt-1">{t("admin:logging.description")}</p>
+          <p className="t-caption">{t("admin:logging.description")}</p>
           <p className="text-sm mt-1" style={{ color: "var(--warning, #e0921f)" }}>
             {t("admin:logging.help.warning")}
           </p>
@@ -130,13 +128,13 @@ export default function LoggingManager({
       {/* Statistics */}
       {logStats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+          <div>
             <div className="text-(--text-muted) text-sm mb-1">
               {t("admin:logging.stats.totalFiles")}
             </div>
             <div className="text-2xl font-bold text-(--text-primary)">{logStats.fileCount}</div>
           </div>
-          <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+          <div>
             <div className="text-(--text-muted) text-sm mb-1">
               {t("admin:logging.stats.totalSize")}
             </div>
@@ -144,7 +142,7 @@ export default function LoggingManager({
               {formatBytes(logStats.totalSize, i18n.language)}
             </div>
           </div>
-          <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+          <div>
             <div className="text-(--text-muted) text-sm mb-1">
               {t("admin:logging.stats.oldestLog")}
             </div>
@@ -152,7 +150,7 @@ export default function LoggingManager({
               {statDate(logStats.oldestLogAt)}
             </div>
           </div>
-          <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+          <div>
             <div className="text-(--text-muted) text-sm mb-1">
               {t("admin:logging.stats.newestLog")}
             </div>
@@ -164,10 +162,7 @@ export default function LoggingManager({
       )}
 
       {/* Logging Configuration */}
-      <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-(--text-primary) mb-4">
-          {t("admin:logging.configSection")}
-        </h3>
+      <AdminSubBlock title={t("admin:logging.configSection")}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <div className="mb-2 flex items-center gap-1.5">
@@ -289,14 +284,12 @@ export default function LoggingManager({
             </div>
           </label>
         </div>
-      </div>
+      </AdminSubBlock>
 
       {/* Log Files */}
-      <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-(--text-primary)">
-            {t("admin:logging.files.title")}
-          </h3>
+      <AdminSubBlock
+        title={t("admin:logging.files.title")}
+        aside={
           <button
             onClick={onCleanup}
             className="text-sm text-white px-3 py-1.5 rounded-lg transition"
@@ -304,7 +297,8 @@ export default function LoggingManager({
           >
             {t("admin:logging.files.cleanup")}
           </button>
-        </div>
+        }
+      >
         {logFiles.length === 0 ? (
           <p className="text-(--text-muted) text-sm">{t("admin:logging.files.empty")}</p>
         ) : (
@@ -379,7 +373,7 @@ export default function LoggingManager({
             </table>
           </div>
         )}
-      </div>
+      </AdminSubBlock>
 
       <LogViewer files={logFiles} selectedFile={viewerFile} onSelectFile={setViewerFile} />
     </div>

@@ -187,6 +187,20 @@ function AppContent() {
     );
   }
 
+  // A non-admin used to be bounced to the dashboard without a word, so an admin
+  // link looked like a broken address (forgejo#88 finding 7); the UI now says
+  // what the API's 403 says.
+  const adminRoute = !isAuthenticated ? (
+    <Navigate to="/login" />
+  ) : user?.isAdmin ? (
+    <AdminPage />
+  ) : (
+    <>
+      <NavigationBar />
+      <AdminOnlyNotice />
+    </>
+  );
+
   return (
     <MotionConfig reducedMotion="user">
       <ErrorBoundary
@@ -694,15 +708,15 @@ function AppContent() {
                 path="/stats"
                 element={isAuthenticated ? <AdvancedStatsPage /> : <Navigate to="/login" />}
               />
-              {/* One route per settings group since 2.7.0 (owner decision 11).
-                  `/settings` itself is the legacy entry: every `?section=` and
-                  `?tab=` link ever written still resolves through it. */}
+              {/* One route per settings page (forgejo#321). `/settings` itself
+                  is the legacy entry: every `?section=` and `?tab=` link ever
+                  written still resolves through it. */}
               <Route
                 path="/settings"
                 element={isAuthenticated ? <SettingsLegacyRedirect /> : <Navigate to="/login" />}
               />
               <Route
-                path="/settings/:group"
+                path="/settings/:page"
                 element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" />}
               />
               {/* The design system's acceptance surface: every primitive in
@@ -711,26 +725,9 @@ function AppContent() {
                   page whose copy is untranslated on purpose has no business
                   being reachable on someone's instance. */}
               {import.meta.env.DEV && <Route path="/design" element={<DesignPage />} />}
-              <Route
-                path="/admin"
-                element={
-                  !isAuthenticated ? (
-                    <Navigate to="/login" />
-                  ) : user?.isAdmin ? (
-                    <AdminPage />
-                  ) : (
-                    // A signed-in reader who is not an admin used to be bounced
-                    // to the dashboard without a word, so an admin link from a
-                    // changelog or a forum post looked like a broken address
-                    // (forgejo#88 finding 7). The API's 403 is right; this is
-                    // the UI finally saying the same thing.
-                    <>
-                      <NavigationBar />
-                      <AdminOnlyNotice />
-                    </>
-                  )
-                }
-              />
+              {/* `/admin` is the legacy entry old links resolve through (forgejo#321). */}
+              <Route path="/admin" element={adminRoute} />
+              <Route path="/admin/:page" element={adminRoute} />
               <Route
                 path="/parser"
                 element={

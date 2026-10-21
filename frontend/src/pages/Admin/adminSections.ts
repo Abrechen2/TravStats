@@ -1,71 +1,227 @@
-export type ActiveSection =
-  | "users"
-  | "invitations"
-  | "system"
-  | "instance"
-  | "parsers"
-  | "logging"
-  | "backups"
-  | "timeModel"
-  | "externalServices"
-  | "smtp"
-  | "shipsMasterData"
-  | "portsMasterData"
-  | "airlinesMasterData"
-  | "aircraftMasterData"
-  | "airportsMasterData";
-
-export type TabId = "general" | "flight" | "cruise";
-
-// Which tab each admin section belongs to. Everything falls in "general"
-// unless it's inherently domain-specific. The parser config (Ollama URL /
-// model, OCR/regex defaults) is cross-domain — the cruise parser depends on
-// the same Ollama endpoint as flights — so it lives under "general", not
-// "flight" (where cruise-only users never found it; see issue #129).
-// Master data is one sub-section per catalogue — ships and ports under the
-// cruise tab, airlines / aircraft / airports under the flight tab. They used
-// to be two combined pages ("Schiffe & Häfen", "Airlines & Flugzeuge") that
-// stacked every catalogue on one screen; the lists are long enough that
-// finding anything meant scrolling past the one above it. Old deep links
-// still resolve — see sectionAliases.
-export const TAB_FOR_SECTION: Record<ActiveSection, TabId> = {
-  system: "general",
-  instance: "general",
-  users: "general",
-  invitations: "general",
-  externalServices: "general",
-  logging: "general",
-  backups: "general",
-  timeModel: "general",
-  smtp: "general",
-  parsers: "general",
-  shipsMasterData: "cruise",
-  portsMasterData: "cruise",
-  airlinesMasterData: "flight",
-  aircraftMasterData: "flight",
-  airportsMasterData: "flight",
-};
+import { normalizeSectionId } from "../../lib/sectionAliases";
+import { lookup, type MenuGroupDef, type PageDef, type SectionDef } from "../Settings/surface";
+import type { SettingsLevel } from "../../store/settingsLevelStore";
 
 /**
- * Sections whose body fetches its own data on mount (either the section
- * component itself, or an `onVisible` callback AdminPage wires up for it —
- * see AdminSectionSwitch / LazySection). Round 4 made every section of the
- * active tab render at once instead of only the picked one; without this
- * list, opening the admin page would fire ships/ports/airlines/aircraft/
- * airports/instance/backups/WebDAV/SMTP/logging/global-API-key/Immich
- * requests all at the same time, most of which the user never asked to see.
- * `LazySection` defers a listed section's real content until it has been
- * near the viewport at least once; unlisted sections (system, users,
- * invitations, parsers) already load unconditionally today via AdminPage's
- * own `loadData()`, so there is nothing to save by deferring them.
+ * Administration, as pages (forgejo#321) — the same shape as personal settings
+ * (`pages/Settings/settingsModel.ts`), one route per menu entry:
+ * `/admin/<page>?section=<id>`.
+ *
+ * Page ids are the section ids the admin page used before, so a link that
+ * named `?section=logging` names the page now; a page with several sections
+ * keeps its old id on the first of them.
  */
-export const LAZY_ADMIN_SECTIONS: ReadonlySet<ActiveSection> = new Set([
+export type AdminPageId =
+  | "instance"
+  | "users"
+  | "invitations"
+  | "externalServices"
+  | "parsers"
+  | "smtp"
+  | "backups"
+  | "timeModel"
+  | "logging"
+  | "system"
+  | "airlinesMasterData"
+  | "aircraftMasterData"
+  | "airportsMasterData"
+  | "shipsMasterData"
+  | "portsMasterData";
+
+export type AdminSectionId =
+  | "instance"
+  | "shareLinks"
+  | "importMode"
+  | "usageStats"
+  | "about"
+  | "geocoder"
+  | "federation"
+  | "push"
+  | "users"
+  | "invitations"
+  | "externalServices"
+  | "parsers"
+  | "templateRepo"
+  | "smtp"
+  | "backups"
+  | "webdav"
+  | "timeModel"
+  | "logging"
+  | "system"
+  | "airlinesMasterData"
+  | "aircraftMasterData"
+  | "airportsMasterData"
+  | "shipsMasterData"
+  | "portsMasterData";
+
+/** Kept for the section switch, which is about wiring, not navigation. */
+export type ActiveSection = AdminSectionId;
+
+export type AdminSectionDef = SectionDef<AdminSectionId>;
+export type AdminPageDef = PageDef<AdminPageId, AdminSectionId>;
+
+/** The heading of each section — its menu entry, chip and search title. */
+export const ADMIN_SECTION_LABEL_KEY: Record<AdminSectionId, string> = {
+  instance: "admin:instance.title",
+  shareLinks: "sharing:links.section.title",
+  importMode: "admin:importMode.title",
+  usageStats: "usageStats:admin.title",
+  about: "settings:about.title",
+  geocoder: "settings:lodgingPreferences.geocoder.title",
+  federation: "admin:federation.title",
+  push: "pushRelay:title",
+  users: "admin:pages.users",
+  invitations: "admin:pages.invitations",
+  externalServices: "admin:pages.externalServices",
+  parsers: "admin:parserSettings.title",
+  templateRepo: "admin:templateRepo.title",
+  smtp: "admin:pages.smtp",
+  backups: "admin:backup.title",
+  webdav: "admin:webdav.title",
+  timeModel: "admin:pages.timeModel",
+  logging: "admin:pages.logging",
+  system: "admin:pages.system",
+  airlinesMasterData: "admin:pages.airlinesMasterData",
+  aircraftMasterData: "admin:pages.aircraftMasterData",
+  airportsMasterData: "admin:pages.airportsMasterData",
+  shipsMasterData: "admin:pages.shipsMasterData",
+  portsMasterData: "admin:pages.portsMasterData",
+};
+
+const section = (id: AdminSectionId, level: SettingsLevel = "standard"): AdminSectionDef => ({
+  id,
+  labelKey: ADMIN_SECTION_LABEL_KEY[id],
+  level,
+});
+
+/** A page with one section of its own name. */
+const single = (
+  id: AdminPageId & AdminSectionId,
+  icon: AdminPageDef["icon"],
+  level: SettingsLevel = "standard",
+  extra: Partial<AdminPageDef> = {}
+): AdminPageDef => ({
+  id,
+  labelKey: `admin:pages.${id}`,
+  icon,
+  sections: [section(id, level)],
+  ...extra,
+});
+
+export const ADMIN_PAGES: readonly AdminPageDef[] = [
+  {
+    id: "instance",
+    labelKey: "admin:pages.instance",
+    icon: "settings",
+    sections: [
+      section("instance"),
+      section("shareLinks"),
+      section("importMode"),
+      section("usageStats"),
+      section("about"),
+      section("geocoder", "expert"),
+      section("federation", "expert"),
+      section("push", "expert"),
+    ],
+  },
+  single("users", "user"),
+  single("invitations", "mail"),
+  single("externalServices", "key-round"),
+  {
+    id: "parsers",
+    labelKey: "admin:pages.parsers",
+    icon: "sparkles",
+    sections: [section("parsers"), section("templateRepo", "expert")],
+  },
+  single("smtp", "mail"),
+  {
+    id: "backups",
+    labelKey: "admin:pages.backups",
+    icon: "database",
+    sections: [section("backups"), section("webdav")],
+  },
+  single("timeModel", "clock", "expert"),
+  single("logging", "list", "expert"),
+  single("system", "info", "expert"),
+  single("airlinesMasterData", "plane", "expert", { domain: "flight" }),
+  single("aircraftMasterData", "plane", "expert", { domain: "flight" }),
+  single("airportsMasterData", "map-pin", "expert", { domain: "flight" }),
+  single("shipsMasterData", "ship", "expert", { domain: "cruise" }),
+  single("portsMasterData", "anchor", "expert", { domain: "cruise" }),
+];
+
+/**
+ * The menu (owner, 2026-10-20): administration, services and operation, then
+ * master data per domain. There is no "Hotelketten" entry: the chain catalogue
+ * has no admin surface to move here, and a menu entry is no place to invent one.
+ */
+export const ADMIN_MENU: readonly MenuGroupDef<AdminPageId>[] = [
+  { id: "manage", labelKey: "admin:menu.manage", pages: ["instance", "users", "invitations"] },
+  {
+    id: "operations",
+    labelKey: "admin:menu.operations",
+    pages: ["externalServices", "parsers", "smtp", "backups", "timeModel", "logging", "system"],
+  },
+  {
+    id: "masterFlight",
+    labelKey: "admin:menu.masterFlight",
+    pages: ["airlinesMasterData", "aircraftMasterData", "airportsMasterData"],
+  },
+  {
+    id: "masterCruise",
+    labelKey: "admin:menu.masterCruise",
+    pages: ["shipsMasterData", "portsMasterData"],
+  },
+];
+
+export const DEFAULT_ADMIN_PAGE: AdminPageId = "instance";
+
+export function findAdminPage(id: string | undefined): AdminPageDef | undefined {
+  return ADMIN_PAGES.find((p) => p.id === id);
+}
+
+/**
+ * The old `?tab=` values: "general" was the default tab, the two domain tabs
+ * opened on their first catalogue. `externalServices` is a section, written
+ * as a tab by one hand-made link (the bus routing note) — read as the page.
+ */
+const OLD_TABS: Readonly<Record<string, AdminPageId>> = {
+  general: "instance",
+  flight: "airlinesMasterData",
+  cruise: "shipsMasterData",
+};
+
+/** An admin section id as links write it, aliases and all, made canonical. */
+export function canonicalAdminSection(raw: string | null): string | null {
+  return normalizeSectionId(raw);
+}
+
+export function adminPageOfTab(tab: string | null): AdminPageId | undefined {
+  if (!tab) return undefined;
+  return lookup(OLD_TABS, tab) ?? findAdminPage(canonicalAdminSection(tab) ?? undefined)?.id;
+}
+
+/**
+ * Sections whose body fetches its own data on mount. `LazySection` defers a
+ * listed section's real content until it has been near the viewport once —
+ * on a page with several of them (Instanz), only what the reader scrolls to
+ * asks the server.
+ */
+export const LAZY_ADMIN_SECTIONS: ReadonlySet<AdminSectionId> = new Set<AdminSectionId>([
   "instance",
+  "shareLinks",
+  "importMode",
+  "about",
+  "federation",
   "backups",
+  "webdav",
   "timeModel",
   "smtp",
   "externalServices",
   "logging",
+  "usageStats",
+  "push",
+  "geocoder",
   "shipsMasterData",
   "portsMasterData",
   "airlinesMasterData",

@@ -252,7 +252,7 @@ describe("LodgingChainDetailPage", () => {
     expect(within(row).getByText("common:buttons.edit")).toBeInTheDocument();
     expect(screen.getByTestId("chain-loyalty-settings-link")).toHaveAttribute(
       "href",
-      "/settings/account?section=loyalty"
+      "/settings/loyalty"
     );
   });
 

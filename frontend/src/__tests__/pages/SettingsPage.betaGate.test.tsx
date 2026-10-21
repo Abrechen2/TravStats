@@ -1,5 +1,10 @@
 vi.mock("../../components/Settings/DawarichStayScanCard", () => ({ default: () => null }));
 import { describe, it, expect, beforeEach, vi } from "vitest";
+// The version line under the settings menu asks the server (forgejo#321).
+vi.mock("@/lib/api/version", () => ({
+  versionApi: { get: vi.fn().mockResolvedValue({ version: "2.7.0", buildVersion: "2.7.0" }) },
+}));
+
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import SettingsPage, { SettingsLegacyRedirect } from "../../pages/SettingsPage";
@@ -213,7 +218,7 @@ const DEVICES_LABEL = "settings:devices.title";
  * every `?section=` link in these cases is a pre-2.7 URL and travels through
  * the legacy redirect, which is exactly the path a real bookmark takes.
  */
-const renderSettings = (initialEntry: string): void => {
+const renderSettings = (initialEntry: string): ReturnType<typeof render> =>
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
@@ -222,7 +227,6 @@ const renderSettings = (initialEntry: string): void => {
       </Routes>
     </MemoryRouter>
   );
-};
 
 /**
  * The gate now decides whether the section is on the page at all, not whether
@@ -307,13 +311,15 @@ describe("SettingsPage — beta gate: the Dawarich connection card", () => {
     ["OFF", false],
     ["unknown", null],
     ["ON", true],
-  ])("renders the Dawarich card on externalServices when the flag is %s", async (_label, flag) => {
+  ])("renders the Dawarich card when the flag is %s", async (_label, flag) => {
     useSettingsStore.setState({ betaFeaturesEnabled: flag });
-    renderSettings("/settings?section=externalServices");
-    await screen.findByTestId("immich-connection-card");
+    // Under Standortverlauf since forgejo#321, where it is used.
+    const { unmount } = renderSettings("/settings?section=dawarich");
+    expect(await screen.findByTestId("dawarich-connection-card")).toBeTruthy();
+    unmount();
 
-    expect(screen.getByTestId("dawarich-connection-card")).toBeTruthy();
-    expect(screen.getByTestId("immich-connection-card")).toBeTruthy();
+    renderSettings("/settings?section=externalServices");
+    expect(await screen.findByTestId("immich-connection-card")).toBeTruthy();
   });
 });
 

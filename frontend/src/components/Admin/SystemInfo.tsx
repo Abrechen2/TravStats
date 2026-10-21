@@ -2,6 +2,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import AirlineLogoRefreshButton from "./AirlineLogoRefreshButton";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import HelpIcon from "../Help/HelpIcon";
+import { AdminSubBlock } from "./AdminSubBlock";
 
 // ==================== SystemInfo Interfaces ====================
 
@@ -54,26 +55,26 @@ export default function SystemInfo({
   const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
 
   return (
-    <div className="space-y-6">
-      {/* Overview Cards */}
+    <div className="space-y-4">
+      {/* Overview figures: plain tiles, the section frame is their card */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+        <div>
           <div className="text-(--text-muted) text-sm mb-1">{t("admin:instanceLabel")}</div>
           <div className="text-2xl font-bold text-(--text-primary)">{systemInfo.instanceName}</div>
         </div>
-        <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+        <div>
           <div className="text-(--text-muted) text-sm mb-1">{t("admin:totalUsers")}</div>
           <div className="text-2xl font-bold text-(--text-primary)">
             {systemInfo.userCount} / {systemInfo.maxUsers}
           </div>
         </div>
-        <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+        <div>
           <div className="text-(--text-muted) text-sm mb-1">{t("admin:activeUsers")}</div>
           <div className="text-2xl font-bold text-(--text-primary)">
             {systemInfo.activeUserCount}
           </div>
         </div>
-        <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+        <div>
           <div className="text-(--text-muted) text-sm mb-1">{t("admin:totalFlights")}</div>
           <div className="text-2xl font-bold text-(--text-primary)">{systemInfo.flightCount}</div>
         </div>
@@ -122,10 +123,7 @@ export default function SystemInfo({
       )}
 
       {/* Configuration */}
-      <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-(--text-primary) mb-4">
-          {t("admin:systemInfo.configuration")}
-        </h2>
+      <AdminSubBlock title={t("admin:systemInfo.configuration")}>
         <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <dt className="text-sm text-(--text-muted)">{t("admin:systemInfo.registration")}</dt>
@@ -155,13 +153,10 @@ export default function SystemInfo({
             </dd>
           </div>
         </dl>
-      </div>
+      </AdminSubBlock>
 
       {/* Actions */}
-      <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-(--text-primary) mb-4">
-          {t("admin:systemInfo.dataManagement")}
-        </h2>
+      <AdminSubBlock title={t("admin:systemInfo.dataManagement")}>
         <button onClick={onExportData} className="btn-primary px-4 py-2">
           {t("admin:systemInfo.exportButton")}
         </button>
@@ -169,7 +164,7 @@ export default function SystemInfo({
           {t("admin:systemInfo.exportDescription")}
         </p>
         <AirlineLogoRefreshButton />
-      </div>
+      </AdminSubBlock>
       {confirmDialog}
     </div>
   );

@@ -48,3 +48,38 @@ describe("Segmented", () => {
     expect(screen.getByRole("radio", { name: "Kilometer" })).toBeTruthy();
   });
 });
+
+describe("Segmented — touch size follows the pointer (forgejo#321, iPad look)", () => {
+  const pointer = (coarse: boolean): void => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: coarse && query === "(pointer: coarse)",
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+  };
+  const draw = (): HTMLElement[] => {
+    render(
+      <Segmented
+        label="Ansicht"
+        value="a"
+        onChange={vi.fn()}
+        options={[
+          { value: "a", label: "Standard" },
+          { value: "b", label: "Experte" },
+        ]}
+      />
+    );
+    return screen.getAllByRole("radio");
+  };
+
+  it("gives a finger a 44 px target", () => {
+    pointer(true);
+    for (const pill of draw()) expect(pill.style.minHeight).toBe("var(--ts-size-touch-min)");
+  });
+
+  it("stays compact under a mouse", () => {
+    pointer(false);
+    for (const pill of draw()) expect(pill.style.height).toBe("36px");
+  });
+});

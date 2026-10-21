@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import type { JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
@@ -20,7 +20,14 @@ import { token } from "../ui/tokens";
  * Strava's terms are stated where the reader decides: their Strava data is
  * shown to them only, and never to the AI summary.
  */
-export default function StravaConnectionCard({ isAdmin }: { isAdmin: boolean }): JSX.Element {
+export default function StravaConnectionCard({
+  isAdmin,
+  onStatus,
+}: {
+  isAdmin: boolean;
+  /** Told what the server answered, for the services summary (forgejo#321). */
+  onStatus?: (status: StravaStatus) => void;
+}): JSX.Element {
   const { t } = useTranslation(["roadtrips"]);
   const isDemo = useIsDemoAccount();
   const [status, setStatus] = useState<StravaStatus | null>(null);
@@ -30,9 +37,13 @@ export default function StravaConnectionCard({ isAdmin }: { isAdmin: boolean }):
   const [clientSecret, setClientSecret] = useState("");
   const [adminSecretSet, setAdminSecretSet] = useState(false);
 
+  const onStatusRef = useRef(onStatus);
+  onStatusRef.current = onStatus;
   const load = useCallback(async (): Promise<void> => {
     try {
-      setStatus(await stravaApi.status());
+      const next = await stravaApi.status();
+      setStatus(next);
+      onStatusRef.current?.(next);
       if (isAdmin) {
         const admin = await stravaApi.admin.get();
         setClientId(admin.clientId ?? "");

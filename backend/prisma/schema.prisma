@@ -918,6 +918,12 @@ model UserSettings {
   /// TRIP_RECORDING_DISABLED and nothing is stored; what is stored stays.
   tripRecordingEnabled                  Boolean @default(true) @map("trip_recording_enabled")
 
+  /// How much of the settings page this account sees (forgejo#321):
+  /// `standard` | `expert`, see `shared/settingsLevel.ts`. New accounts start at
+  /// `standard`; migration 20261020170000 put every account that existed before
+  /// it on `expert`, so nobody lost a control they had already been using.
+  settingsLevel String @default("standard") @map("settings_level")
+
   // Auto-update settings
   autoUpdateEnabled           Boolean   @default(false) @map("auto_update_enabled")
   /// Opt-in: scan the user's Immich for photo journeys every night (forgejo#94).

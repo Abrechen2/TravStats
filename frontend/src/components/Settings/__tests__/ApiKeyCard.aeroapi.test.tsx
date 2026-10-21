@@ -25,6 +25,9 @@ vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
 }));
 vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => false }));
+// The services accordion (forgejo#321) also holds the shared Immich connection,
+// which loads its own settings — not the subject here.
+vi.mock("../../Admin/ImmichGlobalSettings", () => ({ default: () => null }));
 
 import ApiKeysSection from "../ApiKeysSection";
 import GlobalApiKeysManager, { type GlobalApiKeys } from "../../Admin/GlobalApiKeysManager";

@@ -4,16 +4,36 @@ import { DOMAIN_KEYS, DOMAINS, type DomainKey } from "../../shared/domains";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { switchableDomains } from "../../config/domainBetaGates";
 import { useSettingsStore } from "../../store/settingsStore";
+import { useDomainColorStore } from "../../store/domainColorStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDomainColors } from "../../hooks/useDomainColors";
+import { useCoarsePointer } from "../../hooks/useCoarsePointer";
+import { isBrandDefault, needsOutline } from "../../lib/domainColor";
 import { Switch } from "../ui/Field";
 import { SettingRows } from "../ui/SettingRow";
 
+/**
+ * "Bereiche & Farben": one row per domain — the switch that turns it on and
+ * its colour right beside it (forgejo#321).
+ *
+ * These were two sections, "Bereiche" and "Farben", listing the same domains
+ * twice a screen apart, and a tester looked for the colour of a domain under
+ * the domain. A switched-off domain keeps its row: it is where the reader turns
+ * it on, and its colour can be chosen before it is.
+ *
+ * The colour reaches everything that is not the map — statistics, the trip
+ * timeline, the activity sidebar, the import log (#270). The map keeps its own
+ * per-mode palettes on purpose ("switching modes back and forth never clobbers
+ * a colour the user picked for another mode"); the note under the rows says so.
+ */
 export default function ModuleSection(): JSX.Element {
   const { t } = useTranslation("common");
-  const { colorOf } = useDomainColors();
+  const { colors } = useDomainColors();
+  const setColor = useDomainColorStore((s) => s.setColor);
+  const resetToBrand = useDomainColorStore((s) => s.resetToBrand);
   const enabledDomains = useSettingsStore((s) => s.enabledDomains);
   const setEnabledDomains = useSettingsStore((s) => s.setEnabledDomains);
+  const coarse = useCoarsePointer();
 
   // Every domain, since 2026-09-05; a domain behind a beta switch by the
   // switch ALONE (never behind "already enabled" — this list is where the user
@@ -32,42 +52,68 @@ export default function ModuleSection(): JSX.Element {
 
   return (
     <SectionCard>
-      <SectionTitle title={t("settings.modules.title")} description={t("settings.modules.desc")} />
-      {/* One switch row per domain. The Switch is a label around its input, so
-          the whole row toggles — the finding UAT B9 asked for — without a
-          second click handler that could fire twice. */}
+      <SectionTitle
+        title={t("settings:domains.title")}
+        description={t("settings:domains.description")}
+      />
       <SettingRows>
         {visibleKeys.map((key) => {
           const d = DOMAINS[key];
+          const name = t(d.i18nKey);
+          const on = enabledDomains.includes(key);
           return (
-            <div key={key} className="ts-setting-row">
-              <Switch
-                id={`module-${key}`}
-                checked={enabledDomains.includes(key)}
-                disabled={!d.available}
-                onChange={() => toggle(key)}
-                label={t(d.i18nKey)}
-                sub={
-                  <span className="inline-flex items-center gap-2">
-                    <span
-                      aria-hidden="true"
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "var(--ts-radius-pill)",
-                        background: colorOf(d.key),
-                      }}
-                    />
-                    {d.available
+            <div key={key} className="ts-setting-row flex items-center" style={{ gap: 12 }}>
+              {/* The Switch is a label around its input, so the whole text
+                  toggles — the finding UAT B9 asked for — without a second
+                  click handler that could fire twice. */}
+              <div className="min-w-0 flex-1">
+                <Switch
+                  id={`module-${key}`}
+                  checked={on}
+                  disabled={!d.available}
+                  onChange={() => toggle(key)}
+                  label={name}
+                  sub={
+                    d.available
                       ? t(`settings.modules.sub.${key}`)
-                      : t("settings.modules.comingSoon")}
-                  </span>
-                }
+                      : t("settings.modules.comingSoon")
+                  }
+                />
+              </div>
+              <input
+                id={`domain-color-${key}`}
+                type="color"
+                aria-label={`${name} – ${t("settings:domains.color")}`}
+                value={colors[key]}
+                disabled={!d.available}
+                onChange={(e) => setColor(key, e.target.value)}
+                className="cursor-pointer rounded p-0"
+                style={{
+                  flexShrink: 0,
+                  width: coarse ? 52 : 44,
+                  height: coarse ? "var(--ts-size-touch-min)" : 32,
+                  border: "1px solid var(--ts-border-button)",
+                  background: "transparent",
+                  opacity: on ? 1 : 0.6,
+                }}
               />
             </div>
           );
         })}
       </SettingRows>
+
+      {/* A colour close to the app's own ground is a legitimate choice, and it
+          is also nearly invisible on a chart. Say so once; do not quietly
+          brighten what the user picked. */}
+      {visibleKeys.some((key) => needsOutline(colors[key])) && (
+        <p className="t-caption">{t("settings:domainColors.lowContrast")}</p>
+      )}
+      <p className="t-caption">{t("settings:domainColors.mapNote")}</p>
+      {!isBrandDefault(colors) && (
+        <button type="button" onClick={resetToBrand} className="btn-secondary self-start">
+          {t("settings:domainColors.reset")}
+        </button>
+      )}
     </SectionCard>
   );
 }

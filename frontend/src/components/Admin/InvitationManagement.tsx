@@ -61,15 +61,10 @@ export default function InvitationManagement({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
-        <div>
-          <h2 className="text-lg font-semibold text-(--text-primary)">
-            {t("admin:invitations.invitationLinks")}
-          </h2>
-          {/* Was the collapsed help box; the two facts an admin needs before
-              sending one — single use, seven days — now simply stand here. */}
-          <p className="text-sm text-(--text-muted) mt-1">{t("admin:invitations.description")}</p>
-        </div>
+      <div className="flex flex-wrap justify-between items-start gap-3">
+        {/* Was the collapsed help box; the two facts an admin needs before
+            sending one — single use, seven days — now simply stand here. */}
+        <p className="t-caption">{t("admin:invitations.description")}</p>
         <div className="flex flex-wrap gap-2">
           <button onClick={onCreateLink} className="btn-primary">
             {t("admin:invitations.actions.createLink")}
@@ -80,11 +75,7 @@ export default function InvitationManagement({
         </div>
       </div>
 
-      <div
-        className="flex gap-2 mb-4"
-        role="group"
-        aria-label={t("admin:invitations.filter.label")}
-      >
+      <div className="flex gap-2" role="group" aria-label={t("admin:invitations.filter.label")}>
         {(["all", "active", "used", "expired"] as StatusFilter[]).map((s) => (
           <button
             key={s}
@@ -104,7 +95,7 @@ export default function InvitationManagement({
       {/* `relative`: the scroller must be the containing block of anything
           absolutely positioned in the table, or it escapes the clip and
           widens the page on a phone (forgejo#182, the users table). */}
-      <div className="bg-(--bg-surface) relative overflow-x-auto rounded-lg shadow-sm">
+      <div className="relative overflow-x-auto">
         <table className="w-full min-w-[720px]">
           <thead className="bg-(--bg-base)">
             <tr>

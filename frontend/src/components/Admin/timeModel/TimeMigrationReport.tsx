@@ -38,11 +38,11 @@ import { TimeMigrationTables } from "./TimeMigrationTables";
  * screen exists to prevent.
  */
 
-const PANEL = {
-  background: "var(--ts-surface)",
-  border: "1px solid var(--ts-border)",
-  borderRadius: "var(--ts-radius-card)",
-} as const;
+/**
+ * A part of the "Zeitmodell" section, whose frame already draws the card
+ * (forgejo#321): a hairline between the parts instead of a card per part.
+ */
+const PART = { borderColor: "var(--ts-border)" } as const;
 
 /** The inbox, where the owner of an open row answers its question. */
 const INBOX_PATH = "/pending-updates";
@@ -81,12 +81,10 @@ export default function TimeMigrationReport({
   }, [fetchReport]);
 
   return (
-    <div className="flex flex-col gap-4 p-6" style={PANEL}>
+    <div className="flex flex-col gap-4 not-first:border-t not-first:pt-6" style={PART}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--ts-text-bright)" }}>
-            {t("admin:timeModel.report.title")}
-          </h3>
+          <h3 className="t-label-mono">{t("admin:timeModel.report.title")}</h3>
           <p className="t-caption mt-1">{t("admin:timeModel.report.description")}</p>
         </div>
         <Button onClick={() => void fetchReport()} disabled={load.state === "loading"}>

@@ -30,7 +30,8 @@ function mockLoad(overrides: Partial<typeof SETTINGS> = {}) {
 async function renderLoaded(overrides: Partial<typeof SETTINGS> = {}) {
   mockLoad(overrides);
   render(<WebDAVSettings />);
-  await waitFor(() => expect(screen.getByText("admin:webdav.title")).toBeInTheDocument());
+  // The subtitle stands for "loaded": the section frame draws the title now.
+  await waitFor(() => expect(screen.getByText("admin:webdav.subtitle")).toBeInTheDocument());
 }
 
 const testButton = () => screen.getByRole("button", { name: "admin:webdav.test" });

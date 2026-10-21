@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AdminSubBlock } from "./AdminSubBlock";
 import { adminApi } from "../../lib/api";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -120,10 +121,7 @@ export default function LogViewer({
     "px-3 py-2 bg-(--bg-surface) border border-border rounded-lg text-sm text-(--text-primary)";
 
   return (
-    <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6" data-testid="log-viewer">
-      <h3 className="text-lg font-semibold text-(--text-primary) mb-4">
-        {t("admin:logging.viewer.title")}
-      </h3>
+    <AdminSubBlock title={t("admin:logging.viewer.title")} testId="log-viewer">
       <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
         <label className="flex flex-col gap-1 text-xs text-(--text-muted) md:col-span-2">
           {t("admin:logging.viewer.file")}
@@ -269,6 +267,6 @@ export default function LogViewer({
           </table>
         </div>
       )}
-    </div>
+    </AdminSubBlock>
   );
 }
