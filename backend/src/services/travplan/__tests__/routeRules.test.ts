@@ -217,6 +217,49 @@ describe("route findings", () => {
     expect(codes(build("15:00"))).not.toContain("ferryConnection");
   });
 
+  it("ferryConnection: compares arrival and ferry as instants across zones", () => {
+    const zoned = (title: string, zone: string) =>
+      station(title, { place: { ...place(title), zone } });
+    const a = zoned("London", "Europe/London"),
+      b = zoned("Calais", "Europe/Paris"),
+      c = zoned("Dover", "Europe/London");
+    const ferry = booking({ day: "2027-05-08", time: "12:30", timezone: "Europe/Paris" });
+    const state = route(
+      [a, b, c],
+      [
+        stage(a, b, { departTime: "08:00", durationMinutes: 120 }),
+        stage(b, c, { mode: "ferry", bookingId: ferry.id }),
+      ],
+      { bookings: [ferry] }
+    );
+    // 08:00 London + 2 h is 11:00 in France; the 12:30 ferry leaves 90 minutes later.
+    expect(one(state, "ferryConnection")).toMatchObject({ params: { minutes: 90 } });
+  });
+
+  it("ferryConnection: an incoming booking's own arrival wins over departure plus duration", () => {
+    const a = station("Rosenheim"),
+      b = station("Genoa"),
+      c = station("Palermo");
+    const train = booking({
+      kind: "rail",
+      title: "Train",
+      day: "2027-05-08",
+      time: "08:00",
+      arrivalDay: "2027-05-08",
+      arrivalTime: "13:30",
+    });
+    const ferry = booking({ day: "2027-05-08", time: "14:00" });
+    const state = route(
+      [a, b, c],
+      [
+        stage(a, b, { mode: "rail", bookingId: train.id, durationMinutes: 60 }),
+        stage(b, c, { mode: "ferry", bookingId: ferry.id }),
+      ],
+      { bookings: [train, ferry] }
+    );
+    expect(one(state, "ferryConnection")).toMatchObject({ params: { minutes: 30 } });
+  });
+
   it("dayTripOutside: an activity dated outside the days in its station", () => {
     const a = station("Cefalu", { nights: 2 });
     const item = (day: string, title: string) => ({

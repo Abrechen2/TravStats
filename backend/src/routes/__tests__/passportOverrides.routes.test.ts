@@ -178,6 +178,23 @@ describe("passport overrides — the API", () => {
     await prisma.place.deleteMany({ where: { userId: owner.id } });
   });
 
+  it("opens the drill-down of a country only a manual verdict puts in the passport", async () => {
+    await put(owner, "PT", { verdict: "visited", note: "Lisbon weekend", day: "2019-05-04" });
+    const res = await request(app).get("/api/v1/stats/countries/PT").set("Cookie", owner.cookie);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      code: "PT",
+      evidence: "manual",
+      visited: true,
+      entries: 0,
+      timeline: [],
+      override: { verdict: "visited", note: "Lisbon weekend", day: "2019-05-04" },
+    });
+    // A country neither evidenced nor overridden stays a 404.
+    const none = await request(app).get("/api/v1/stats/countries/NO").set("Cookie", owner.cookie);
+    expect(none.status).toBe(404);
+  });
+
   it("never shows one user's override to another", async () => {
     const list = await request(app).get(BASE).set("Cookie", other.cookie);
     expect(list.body.data.overrides).toEqual([]);

@@ -21,7 +21,7 @@
 import { prisma } from "../../db";
 import { buildPassport } from "./passport";
 import { countableFlightWhere } from "../../shared/flightCounting";
-import { buildCountryDetail, type CountryDetail } from "./countryDetail";
+import { buildCountryDetail, manualCountryDetail, type CountryDetail } from "./countryDetail";
 import {
   loadAirportCountries,
   loadHomeCountries,
@@ -40,6 +40,7 @@ import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "./departureClock";
 import { applyCountryOverrides } from "./countryOverrides";
 import { listCountryOverrides } from "./countryOverrideStore";
 import { departureDayOf } from "../../utils/stats/departureClock";
+import { isoCountryCode } from "../../utils/continents";
 
 /** Every argument `buildCountryDetail` takes after the country code, in its order. */
 export type CountryDetailInputs =
@@ -47,21 +48,28 @@ export type CountryDetailInputs =
 
 /**
  * @param code the requested country, an ISO alpha-2 code or an English name
- * @returns null when nothing evidences it — the route's 404
+ * @returns null when nothing evidences it and no verdict of the user's puts it
+ *   in the passport — the route's 404
  */
 export async function loadCountryDetail(
   userId: string,
   code: string
 ): Promise<CountryDetail | null> {
+  const wanted = isoCountryCode(code);
+  if (!wanted) return null;
   const inputs = await loadCountryDetailInputs(userId);
-  const detail = buildCountryDetail(code, ...inputs);
-  if (!detail) return null;
+  const evidenced = buildCountryDetail(code, ...inputs);
+  // Read before deciding on a 404: a `visited` or `ground` verdict lists a
+  // country with no record behind it, and its row must open (forgejo#308).
+  const overrides = await listCountryOverrides(userId);
+  const manual = overrides.some(
+    (o) => o.verdict !== "excluded" && o.countryCode.toUpperCase() === wanted
+  );
+  if (!evidenced && !manual) return null;
+  const detail = evidenced ?? manualCountryDetail(wanted);
   const [flights, airports, home, ports, places, lodgings, , , stations, rail, bus, ferry] = inputs;
   const today = new Date().toISOString().slice(0, 10);
-  const [homeCountries, overrides] = await Promise.all([
-    loadHomeCountries(userId, today),
-    listCountryOverrides(userId),
-  ]);
+  const homeCountries = await loadHomeCountries(userId, today);
   // Reuse the same fold and loaded records. No second database scan or local
   // rule — and the user's overrides (forgejo#308) through the same function
   // `loadPassport` applies them with, so a row and its page agree. The year

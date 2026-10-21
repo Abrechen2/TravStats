@@ -224,6 +224,16 @@ describe("scheduleRoute", () => {
     expect(s.stations[1].arriveDay).toBe("2027-05-09");
   });
 
+  it("a timed stage within one zone across a DST change lands on the real arrival day", () => {
+    const zone = { ...place("Berlin"), zone: "Europe/Berlin" };
+    const a = station("Berlin", { place: zone }),
+      b = station("Munich", { place: { ...zone, name: "Munich" } });
+    // 00:30 on the night clocks spring forward, plus 23 h, is 00:30 the next day.
+    const g = stage(a, b, { departTime: "00:30", durationMinutes: 1380 });
+    const s = scheduleRoute(route([a, b], [g], { startDay: "2027-03-28" }));
+    expect(s.stations[1].arriveDay).toBe("2027-03-29");
+  });
+
   it("a reordered route leaves the days after a leg without a stage unknown", () => {
     const a = station("A", { nights: 1 }),
       b = station("B", { nights: 1 }),

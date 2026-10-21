@@ -30,7 +30,8 @@ interface StageTiming {
  * even with no duration on the stage, and a flight east across the date line
  * lands on an earlier calendar day than it left. Otherwise the departure plus the duration, read on the
  * destination's clock when both ends have a known zone, so a late crossing
- * into a zone ahead lands on the day it is there. An unknown time counts as
+ * into a zone ahead — or a clock change within one zone — lands on the day it
+ * is there. An unknown time counts as
  * midnight; an unknown duration leaves the arrival unknown (owner,
  * 2026-10-20 — it used to count as 0, which put every unrouted drive on the
  * day it left).
@@ -43,7 +44,9 @@ function arrivalDay({ departDay, stage, anchor, from, to }: StageTiming): string
   const duration = stage.durationMinutes;
   const fromZone = (anchor?.time && anchor.timezone) || from.place.zone;
   const toZone = (anchor?.time && anchor.arrivalTimezone) || to?.place.zone;
-  if (time && fromZone && toZone && fromZone !== toZone) {
+  // Through the instant even within one zone: a clock change on the way makes
+  // the local day differ from plain minute arithmetic.
+  if (time && fromZone && toZone) {
     const start = machineInstant(`${departDay}T${time.slice(0, 5)}`, fromZone);
     if (start) return localDay(new Date(start.getTime() + duration * 60_000), toZone);
   }
