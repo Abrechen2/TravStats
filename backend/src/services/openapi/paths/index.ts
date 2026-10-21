@@ -29,6 +29,7 @@ import "./tripRecording";
 import "./strava";
 import "./openData";
 import "./operators";
+import "./mapDetails";
 import "./companions";
 import "./sharingRemote";
 import "./airports";

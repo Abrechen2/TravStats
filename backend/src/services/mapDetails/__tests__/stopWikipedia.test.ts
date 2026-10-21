@@ -1,0 +1,122 @@
+import {
+  __clearStopWikipediaCache,
+  firstSentences,
+  matchStopTitle,
+  stopWikipediaSummary,
+} from "../stopWikipedia";
+import { OpenDataUnavailableError } from "../../openData/http";
+
+/**
+ * A station's Wikipedia opening (rich map details, 2026-10-21): found by
+ * place, confirmed by name and kind — an article next door that only shares
+ * the city's name is not the station — and an outage is said, not cached.
+ */
+
+jest.mock("../../../utils/logger", () => ({
+  __esModule: true,
+  default: { info: jest.fn(), warn: jest.fn(), debug: jest.fn(), error: jest.fn() },
+}));
+
+const json = (body: unknown, status = 200): Response =>
+  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+
+function summary(title: string, extract: string) {
+  return {
+    type: "standard",
+    title,
+    extract,
+    thumbnail: { source: "https://upload.wikimedia.org/x.jpg" },
+    content_urls: { desktop: { page: `https://de.wikipedia.org/wiki/${title}` } },
+  };
+}
+
+describe("matching a station to an article", () => {
+  it("takes the station article that carries the name and names a station", () => {
+    expect(
+      matchStopTitle("rail", "Hamburg Hbf", ["Hamburger Kunsthalle", "Hamburg Hauptbahnhof"])
+    ).toBe("Hamburg Hauptbahnhof");
+  });
+
+  it("refuses a neighbour that only shares the city's name", () => {
+    expect(matchStopTitle("rail", "Hamburg Hbf", ["Hamburg Museum", "Hamburger Kunsthalle"])).toBe(
+      null
+    );
+  });
+
+  it("refuses an article missing a distinctive word of the name", () => {
+    expect(matchStopTitle("rail", "Berlin Friedrichstraße", ["Berlin Hauptbahnhof"])).toBeNull();
+  });
+
+  it("reads 'Kiel' in 'Kieler Hafen' for a ferry port", () => {
+    expect(matchStopTitle("ferry", "Kiel", ["Kieler Hafen"])).toBe("Kieler Hafen");
+  });
+
+  it("abstains for a name of generic words only", () => {
+    expect(matchStopTitle("bus", "ZOB", ["Zentraler Omnibusbahnhof Hamburg"])).toBeNull();
+  });
+});
+
+describe("first sentences", () => {
+  it("keeps the first two sentences", () => {
+    expect(firstSentences("Eins ist hier. Zwei folgt. Drei bleibt weg.")).toBe(
+      "Eins ist hier. Zwei folgt."
+    );
+  });
+
+  it("caps a run-on extract", () => {
+    expect(firstSentences("a".repeat(1000)).length).toBeLessThanOrEqual(360);
+  });
+});
+
+describe("stopWikipediaSummary", () => {
+  const realFetch = global.fetch;
+  let fetchMock: jest.Mock;
+  beforeEach(() => __clearStopWikipediaCache());
+  afterAll(() => {
+    global.fetch = realFetch;
+  });
+  function use(route: (url: string) => Response): void {
+    fetchMock = jest.fn(async (input: string | URL) => route(String(input)));
+    global.fetch = fetchMock as unknown as typeof fetch;
+  }
+
+  it("returns the station's opening, two sentences", async () => {
+    use((url) => {
+      if (url.includes("geosearch"))
+        return json({ query: { geosearch: [{ title: "Hamburg Hauptbahnhof", dist: 40 }] } });
+      return json(summary("Hamburg Hauptbahnhof", "Eins. Zwei. Drei."));
+    });
+    const s = await stopWikipediaSummary("rail", "Hamburg Hbf", 53.553, 10.007, "de");
+    expect(s).toMatchObject({ title: "Hamburg Hauptbahnhof", extract: "Eins. Zwei.", lang: "de" });
+    // Asked by place, never by the name alone.
+    expect(String(fetchMock.mock.calls[0][0])).toContain("gscoord=53.55300%7C10.00700");
+  });
+
+  it("answers null and remembers it when no article is the station", async () => {
+    use(() => json({ query: { geosearch: [{ title: "Hamburg Museum" }] } }));
+    expect(await stopWikipediaSummary("rail", "Hamburg Hbf", 53.5, 10, "de")).toBeNull();
+    const calls = fetchMock.mock.calls.length;
+    expect(await stopWikipediaSummary("rail", "Hamburg Hbf", 53.5, 10, "de")).toBeNull();
+    expect(fetchMock.mock.calls.length).toBe(calls);
+  });
+
+  it("throws on an outage and does not cache it", async () => {
+    use(() => json({}, 503));
+    await expect(stopWikipediaSummary("rail", "Hamburg Hbf", 53.5, 10, "de")).rejects.toThrow(
+      OpenDataUnavailableError
+    );
+    use((url) =>
+      url.includes("geosearch")
+        ? json({ query: { geosearch: [{ title: "Hamburg Hauptbahnhof" }] } })
+        : json(summary("Hamburg Hauptbahnhof", "Eins."))
+    );
+    expect(await stopWikipediaSummary("rail", "Hamburg Hbf", 53.5, 10, "de")).not.toBeNull();
+  });
+
+  it("treats a malformed geosearch answer as an outage", async () => {
+    use(() => json({ query: { geosearch: "nope" } }));
+    await expect(stopWikipediaSummary("ferry", "Kiel", 54.3, 10.1, "en")).rejects.toThrow(
+      OpenDataUnavailableError
+    );
+  });
+});

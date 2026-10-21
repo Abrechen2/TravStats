@@ -1233,9 +1233,9 @@
     }
   },
   "operatorLogos": {
-    "title": "Offene Daten für Betreiber-Logos",
-    "description": "Logos von Bahnbetreibern, Busunternehmen, Reedereien und Vermietern auf den Kartenkarten kommen aus Wikidata und Wikimedia Commons – nur frei lizenzierte Dateien, mit Nennung der Urheber. Der Server fragt dort nach, nie der Browser, und schickt nur den Namen des Unternehmens. Ausgeschaltet zeigen die Karten Monogramme.",
-    "switch": "Betreiber-Logos aus offenen Daten laden",
+    "title": "Offene Daten für Logos und Bilder",
+    "description": "Logos von Bahnbetreibern, Busunternehmen, Reedereien und Vermietern sowie Bilder von Schiffen, Automodellen und Zuggattungen auf den Kartenkarten kommen aus Wikidata und Wikimedia Commons – nur frei lizenzierte Dateien, mit Nennung der Urheber. Der Server fragt dort nach, nie der Browser, und schickt nur den Namen des Unternehmens, des Schiffs, des Automodells oder der Zuggattung. Ausgeschaltet zeigen die Karten Monogramme und keine Bilder.",
+    "switch": "Logos und Bilder aus offenen Daten laden",
     "switchSub": "Gilt für die ganze Instanz. Kein Konto, kein Schlüssel.",
     "loadFailed": "Die Einstellung konnte nicht geladen werden.",
     "saveFailed": "Die Einstellung konnte nicht gespeichert werden."

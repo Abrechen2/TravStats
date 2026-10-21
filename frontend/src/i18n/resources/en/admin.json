@@ -1233,9 +1233,9 @@
     }
   },
   "operatorLogos": {
-    "title": "Open data for operator logos",
-    "description": "Logos of rail operators, coach companies, ferry lines and rental companies on the map cards come from Wikidata and Wikimedia Commons – freely licensed files only, with their authors credited. The server asks, never the browser, and sends only the company's name. Switched off, the cards show monograms.",
-    "switch": "Load operator logos from open data",
+    "title": "Open data for logos and pictures",
+    "description": "Logos of rail operators, coach companies, ferry lines and rental companies, and pictures of ships, car models and train categories on the map cards come from Wikidata and Wikimedia Commons – freely licensed files only, with their authors credited. The server asks, never the browser, and sends only the name of the company, ship, car model or train category. Switched off, the cards show monograms and no pictures.",
+    "switch": "Load logos and pictures from open data",
     "switchSub": "Applies to the whole instance. No account, no key.",
     "loadFailed": "The setting could not be loaded.",
     "saveFailed": "The setting could not be saved."
