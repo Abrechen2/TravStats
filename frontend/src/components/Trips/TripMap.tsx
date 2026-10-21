@@ -45,8 +45,7 @@ import { journeyFromTripFlight } from "../map/cards/journeys/journeyNormalize";
 import type { MapJourney } from "../map/cards/journeys/journeyTypes";
 import { decorateTripMapLayers } from "./tripMapCards";
 import { TripMapCardHost } from "./TripMapCardHost";
-import { withLabelObstacles } from "../map/labelObstacles";
-import { StationLabelsLayer } from "../layers/stationLabelsLayer";
+import { withStationLabels } from "../map/labelObstacles";
 import { stationLabelPoints } from "../Globe/globePinLabels";
 
 const INITIAL_VIEW: MapViewState = {
@@ -555,19 +554,9 @@ export default function TripMap({
       decorateTripMapLayers(projection === "globe" ? globeLayers : mercatorLayers, flightJourneys),
     [projection, globeLayers, mercatorLayers, flightJourneys]
   );
-  // Bus terminal names (in `extraLayers`) place around the stop and hotel
-  // labels — one collision pass (forgejo#320). On the globe their deck.gl text
-  // renders nothing, so the layer only carries them to the HTML overlay below.
-  const layers = extraLayers
-    ? [
-        ...baseLayers,
-        ...(projection === "globe"
-          ? extraLayers.map((l) =>
-              l instanceof StationLabelsLayer ? (l.clone({ onGlobe: true }) as Layer) : l
-            )
-          : withLabelObstacles([...extraLayers], baseLayers)),
-      ]
-    : baseLayers;
+  // Bus terminal names place around the stop and hotel labels; on the globe
+  // they reach the HTML overlay below instead (forgejo#320).
+  const layers = withStationLabels(baseLayers, extraLayers, projection === "globe");
   const globeStationLabels = useMemo(() => stationLabelPoints(extraLayers ?? []), [extraLayers]);
 
   /** Every name on the globe, in the shape the HTML overlay reads. A deck.gl

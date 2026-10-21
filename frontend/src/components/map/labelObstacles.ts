@@ -73,3 +73,23 @@ export function withLabelObstacles(extraLayers: Layer[], mapLayers: readonly Lay
 export function appendWithLabelObstacles(own: Layer[], extraLayers: Layer[]): Layer[] {
   return [...own, ...withLabelObstacles(extraLayers, own)];
 }
+
+/**
+ * A map's own layers, then its extra layers: station labels placed around
+ * the own labels on a flat map; on the globe, where deck.gl text renders
+ * nothing, only carrying their names to the HTML label overlay.
+ */
+export function withStationLabels(
+  own: Layer[],
+  extraLayers: readonly Layer[] | undefined,
+  onGlobe: boolean
+): Layer[] {
+  if (!extraLayers) return own;
+  if (!onGlobe) return appendWithLabelObstacles(own, [...extraLayers]);
+  return [
+    ...own,
+    ...extraLayers.map((l) =>
+      l instanceof StationLabelsLayer ? (l.clone({ onGlobe: true }) as Layer) : l
+    ),
+  ];
+}
