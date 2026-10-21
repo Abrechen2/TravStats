@@ -50,6 +50,9 @@ export const archiveBlockSchema = z.object({
     startedAt: z.string().datetime(),
     endedAt: z.string().datetime(),
     pointCount: z.number().int().min(0).max(10_000_000),
+    // Added with forgejo#319; a file written before it has none, read as
+    // "not checked" rather than as a filter that found nothing.
+    jitterDropped: z.number().int().min(0).max(10_000_000).nullable().optional(),
     distanceKm: nonNegative.max(100_000),
     truncated: z.boolean(),
     ascentM: nonNegative.nullable(),
@@ -72,6 +75,7 @@ export interface ExportableTrack {
   startedAt: Date;
   endedAt: Date;
   pointCount: number;
+  jitterDropped: number | null;
   distanceKm: number;
   truncated: boolean;
   ascentM: number | null;
@@ -140,6 +144,7 @@ export function trackToGpx(tour: ExportableTour, track: ExportableTrack): string
       startedAt: track.startedAt.toISOString(),
       endedAt: track.endedAt.toISOString(),
       pointCount: track.pointCount,
+      jitterDropped: track.jitterDropped,
       distanceKm: track.distanceKm,
       truncated: track.truncated,
       ascentM: track.ascentM,
@@ -233,6 +238,7 @@ export function restoredTrackColumns(parsed: ParsedTrack, block: ArchiveBlock) {
     cumulativeKm:
       cumulative === null ? Prisma.JsonNull : (cumulative as unknown as Prisma.InputJsonValue),
     pointCount: t.pointCount,
+    jitterDropped: t.jitterDropped ?? null,
     distanceKm: t.distanceKm,
     elevations:
       t.elevations === null ? Prisma.JsonNull : (t.elevations as unknown as Prisma.InputJsonValue),

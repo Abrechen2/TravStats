@@ -8,7 +8,7 @@
     "excluded": "userId receiptUrl dataSource parserTemplate parserConfidence shareKey"
   },
   "FlightTrack": {
-    "details": "id flightId source startedAt endedAt geometry segmentStarts cumulativeKm elevations pointCount distanceKm createdAt updatedAt",
+    "details": "id flightId source startedAt endedAt geometry segmentStarts cumulativeKm elevations pointCount jitterDropped distanceKm createdAt updatedAt",
     "costs": "",
     "personal": "",
     "photos": "",
@@ -48,7 +48,7 @@
     "excluded": ""
   },
   "CruiseTrack": {
-    "details": "id cruiseId source name startedAt endedAt geometry segmentStarts cumulativeKm pointCount distanceKm truncated externalRef createdAt",
+    "details": "id cruiseId source name startedAt endedAt geometry segmentStarts cumulativeKm pointCount jitterDropped distanceKm truncated externalRef createdAt",
     "costs": "",
     "personal": "",
     "photos": "",
@@ -120,7 +120,7 @@
     "excluded": ""
   },
   "TripRouteTrack": {
-    "details": "id routeId source name startedAt endedAt geometry segmentStarts cumulativeKm pointCount distanceKm truncated elevations ascentM descentM movingSeconds externalRef createdAt",
+    "details": "id routeId source name startedAt endedAt geometry segmentStarts cumulativeKm pointCount jitterDropped distanceKm truncated elevations ascentM descentM movingSeconds externalRef createdAt",
     "costs": "",
     "personal": "",
     "photos": "",

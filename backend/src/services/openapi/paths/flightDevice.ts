@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
-import { errorContent } from "./shared";
+import { errorContent, jitterDroppedField } from "./shared";
 import { timeValueSchema } from "../../../shared/time/wire";
 import {
   FLIGHT_TRACK_MAX_POINTS,
@@ -37,9 +37,12 @@ const trackMeta = z.object({
       "First and last fix — the start on the departure airport's clock, the end on the arrival's"
     ),
   pointCount: z.number().int().describe("Points of the RAW recording, before simplification"),
+  jitterDropped: jitterDroppedField,
   distanceKm: z
     .number()
-    .describe("Measured on the raw points; stretches without a fix (steps over 50 km) excluded"),
+    .describe(
+      "Measured on the filtered points; stretches without a fix (steps over 50 km) excluded"
+    ),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

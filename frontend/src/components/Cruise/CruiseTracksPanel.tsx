@@ -11,6 +11,7 @@ import { TRACK_ERROR_KEYS } from "../../lib/trackErrorKeys";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { useToastStore } from "../../store/toastStore";
 import type { CruiseLegTrack, CruiseTrackMeta } from "../../types/cruiseTracks";
+import { JitterNote } from "../tracks/JitterNote";
 
 interface Props {
   cruiseId: string;
@@ -204,6 +205,10 @@ export default function CruiseTracksPanel({ cruiseId, onChanged }: Props): JSX.E
                     {track.truncated && (
                       <span className="t-caption text-(--warning)">{t("tracks.truncated")}</span>
                     )}
+                    <JitterNote
+                      jitterDropped={track.jitterDropped}
+                      className="t-caption basis-full order-last"
+                    />
                     <button
                       type="button"
                       className="text-xs underline"

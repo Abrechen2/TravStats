@@ -12,14 +12,13 @@ import {
 } from "../../schemas/cruise";
 import { handleGpxUpload } from "../trips/tourTracks";
 import { parseTrackFile } from "../../services/tour/tracks/parseTrackFile";
-import { ingestTrack, type IngestedTrack } from "../../services/tour/tracks/ingestTrack";
-import { ingestedTrackColumns, isDuplicateExternalRef } from "../../services/tour/tracks/trackRow";
+import { ingestTrack } from "../../services/tour/tracks/ingestTrack";
+import { isDuplicateExternalRef } from "../../services/tour/tracks/trackRow";
 import {
   EmptyDawarichWindowError,
   pullDawarichWindow,
 } from "../../services/tour/tracks/pullDawarichTrack";
-import { splitAtLongSteps } from "../../services/trackCoverage/splitAtLongSteps";
-import { CRUISE_TRACK_GAP_KM } from "../../services/trackCoverage/legCoverage";
+import { cruiseTrackColumns, prepareCruiseTrack } from "../../services/cruise/prepareCruiseTrack";
 import { recomputeLegsForCruise } from "../../services/cruiseDistance/cruiseLegService";
 import {
   propagateWrite,
@@ -31,7 +30,6 @@ import { createDawarichClient } from "../../services/dawarich/dawarichClient";
 import { getDawarichConnection } from "../../services/dawarich/dawarichResolver";
 import { DawarichError } from "../../services/dawarich/errors";
 import logger from "../../utils/logger";
-import type { ParsedTrack } from "../../services/tour/tracks/parseGpx";
 
 /**
  * Recorded tracks of a cruise (2.7) — `GET`/`POST`/`DELETE
@@ -44,8 +42,9 @@ import type { ParsedTrack } from "../../services/tour/tracks/parseGpx";
  * the statistics never disagree with the line on the map, even for a moment.
  *
  * The pipeline is the tour one — `parseTrackFile` → `ingestTrack` →
- * `ingestedTrackColumns` — with one step added: `splitAtLongSteps` marks the
- * hours a phone at sea had no signal as holes before anything is measured.
+ * `ingestedTrackColumns` — with one step added: `prepareCruiseTrack` takes the
+ * jitter out and marks the hours a phone at sea had no signal as holes,
+ * before anything is measured.
  */
 
 const router = Router();
@@ -55,10 +54,6 @@ router.use(requireWriteScope);
 
 const trackSource = z.enum(CRUISE_TRACK_SOURCES);
 
-function markSeaHoles(parsed: ParsedTrack): ParsedTrack {
-  return splitAtLongSteps(parsed, CRUISE_TRACK_GAP_KM);
-}
-
 /** Owner check. A cruise of another user answers exactly like a missing one. */
 async function requireOwnedCruise(cruiseId: string, userId: string): Promise<void> {
   const owned = await prisma.cruise.findFirst({
@@ -66,16 +61,6 @@ async function requireOwnedCruise(cruiseId: string, userId: string): Promise<voi
     select: { id: true },
   });
   if (!owned) throw new AppError("Cruise not found", 404);
-}
-
-/**
- * The columns a cruise recording keeps. Climb and moving time are dropped on
- * purpose: at sea they measure a ship's swell and a ship's clock.
- */
-function cruiseTrackColumns(ingested: IngestedTrack) {
-  const { startedAt, endedAt, geometry, segmentStarts, cumulativeKm, pointCount, distanceKm } =
-    ingestedTrackColumns(ingested);
-  return { startedAt, endedAt, geometry, segmentStarts, cumulativeKm, pointCount, distanceKm };
 }
 
 async function storeTrack(
@@ -147,7 +132,7 @@ router.post(
           "TRACK_FILE_UNREADABLE"
         );
 
-      const ingested = ingestTrack(markSeaHoles(file.track));
+      const ingested = ingestTrack(prepareCruiseTrack(file.track));
       if (!ingested) {
         throw new AppError(
           "This recording has no timestamps, so it cannot be placed in time",
@@ -243,7 +228,7 @@ router.post("/:id/tracks/dawarich", async (req: AuthRequest, res: Response, next
       pulled = await pullDawarichWindow(
         createDawarichClient(connection),
         { startAt, endAt },
-        markSeaHoles
+        prepareCruiseTrack
       );
     } catch (error) {
       if (error instanceof DawarichError) {

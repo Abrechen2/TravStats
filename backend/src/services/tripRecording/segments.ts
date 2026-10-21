@@ -1,7 +1,9 @@
 import type { Prisma } from "../../prisma";
 import { haversineKm } from "../../shared/geo/haversine";
-import { localDay } from "../../shared/time/instant";
 import { simplifyDegrees } from "../schematicRouter";
+import { filterJitterYielding, type JitterFix } from "../tracks/jitterFilter";
+import { JITTER_PROFILES } from "../tracks/jitterProfiles";
+import { localDayReader } from "./localDays";
 
 /**
  * A trip recording read back (forgejo#316): the stored batches as one line per
@@ -80,11 +82,10 @@ export function pointsByDevice(
   day?: string
 ): Array<{ deviceId: string | null; points: StoredPoint[] }> {
   const byDevice = new Map<string | null, StoredPoint[]>();
+  const dayOf = localDayReader(zone);
   for (const batch of batches) {
     const list = byDevice.get(batch.deviceId) ?? [];
-    const kept = storedPoints(batch.points).filter(
-      (p) => day === undefined || localDay(new Date(p[0]), zone) === day
-    );
+    const kept = storedPoints(batch.points).filter((p) => day === undefined || dayOf(p[0]) === day);
     byDevice.set(batch.deviceId, [...list, ...kept]);
   }
   return [...byDevice.entries()]
@@ -123,5 +124,75 @@ export function displaySegments(
 
 /** The distinct days the points fall on, on the trip's clock, in order. */
 export function recordingDays(points: readonly StoredPoint[], zone: string): string[] {
-  return [...new Set(points.map((p) => localDay(new Date(p[0]), zone)))].sort();
+  const dayOf = localDayReader(zone);
+  return [...new Set(points.map((p) => dayOf(p[0])))].sort();
+}
+
+/**
+ * Each device's stretches with GPS jitter removed (forgejo#319) — for the MAP
+ * only. A phone left on a café table for an hour reports a cloud of positions
+ * a hundred metres across, and drawn in time order that cloud is a zigzag.
+ * The stored batches and the GPX keep every raw point; this is a reading of
+ * them, recomputed on every request, so there is nothing stored to correct.
+ *
+ * The two halves of the gap rule are applied on either side of the filter:
+ * the clock half (> `RECORDING_GAP_MS` without a fix) on the RAW points, where
+ * it means the phone recorded nothing — a stay collapsed to its arrival and
+ * departure must not read as hours without a fix (review of forgejo#319); the
+ * distance half (> `RECORDING_GAP_KM`) on the FILTERED points, so a teleport
+ * spike far enough out to look like a 50 km gap is seen as a spike first. A
+ * stay comes back as two synthetic points at the middle of its cloud; nothing
+ * stores them.
+ *
+ * A recording has no upper size and this runs on every read, so the filter
+ * hands the event loop back every few milliseconds (`pacing.ts`) instead of
+ * holding every other request for the length of the recording.
+ */
+export async function withoutJitter(devices: ReadonlyArray<{ points: StoredPoint[] }>): Promise<{
+  segments: StoredPoint[][];
+  dropped: number;
+}> {
+  let dropped = 0;
+  const segments: StoredPoint[][] = [];
+  for (const device of devices) {
+    const fixes: JitterFix[] = device.points.map(([t, lat, lon, accuracyM]) => ({
+      lon,
+      lat,
+      t,
+      accuracyM,
+    }));
+    const starts = device.points.flatMap((p, i) =>
+      i > 0 && p[0] - device.points[i - 1][0] > RECORDING_GAP_MS ? [i] : []
+    );
+    const result = await filterJitterYielding(fixes, starts, JITTER_PROFILES.mixed);
+    dropped += result.dropped;
+    const points = result.fixes.map((f): StoredPoint => [f.t ?? 0, f.lat, f.lon, f.accuracyM]);
+    const bounds = [...result.segmentStarts, points.length];
+    for (let k = 0; k + 1 < bounds.length; k++) {
+      for (const part of splitAtDistance(points.slice(bounds[k], bounds[k + 1]))) {
+        segments.push(part);
+      }
+    }
+  }
+  return { segments, dropped };
+}
+
+/** The distance half of the gap rule alone. */
+function splitAtDistance(points: readonly StoredPoint[]): StoredPoint[][] {
+  const out: StoredPoint[][] = [];
+  let current: StoredPoint[] = [];
+  for (const point of points) {
+    const last = current[current.length - 1];
+    if (
+      last &&
+      haversineKm({ lat: last[1], lon: last[2] }, { lat: point[1], lon: point[2] }) >
+        RECORDING_GAP_KM
+    ) {
+      out.push(current);
+      current = [];
+    }
+    current.push(point);
+  }
+  if (current.length > 0) out.push(current);
+  return out;
 }

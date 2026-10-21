@@ -19,6 +19,7 @@ function meta(id: string, day: number, distanceKm: number): TourTrackMeta {
     startedAt: `2026-07-1${day}T08:00:00Z`,
     endedAt: `2026-07-1${day}T15:00:00Z`,
     pointCount: 900,
+    jitterDropped: 0,
     distanceKm,
     truncated: false,
     ascentM: 150,

@@ -349,3 +349,18 @@ export const timeRefused = {
   description: "A time refused by the time model (ADR 0002)",
   content: timeErrorContent,
 };
+
+/**
+ * How many fixes the jitter filter removed from a recording (forgejo#319) —
+ * one description for the flight, tour, cruise and trip recordings.
+ */
+export const jitterDroppedField = z
+  .number()
+  .int()
+  .nullable()
+  .describe(
+    "Fixes removed as GPS jitter before the line was drawn and measured — a still phone's " +
+      "cloud of positions (collapsed to one point), a teleport spike, a stale repeated fix " +
+      "(forgejo#319). null when not checked: stored before the filter existed, or a " +
+      "recording without times, where standing and moving cannot be told apart"
+  );

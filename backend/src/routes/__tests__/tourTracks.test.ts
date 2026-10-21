@@ -5,6 +5,7 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { FILE_LIMITS } from "../../config/constants";
+import { standThenMove, toGpx } from "../../services/tracks/__tests__/jitterFixtures";
 
 /**
  * Task 4 (Phase 3b tour tracks): upload endpoint and track CRUD.
@@ -91,10 +92,40 @@ describe("Tour tracks — upload and CRUD", () => {
       source: "gpx",
       name: "Fjord Loop",
       pointCount: 3,
+      // Checked, and nothing to remove — a number, not "not checked".
+      jitterDropped: 0,
     });
     expect(res.body.track.startedAt).toBe("2026-06-01T08:00:00.000Z");
     expect(res.body.track.endedAt).toBe("2026-06-01T08:10:00.000Z");
     expect(res.body.track.distanceKm).toBeGreaterThan(0);
+  });
+
+  it("collapses a parked car's jitter and measures only the drive (forgejo#319)", async () => {
+    // 20 min parked at the trailhead, the phone scattering ±60 m, then 10 min at 60 km/h.
+    const rec = standThenMove({
+      at: { lat: 60.39, lon: 5.32 },
+      startMs: Date.parse("2026-06-02T08:00:00Z"),
+      standMinutes: 20,
+      wanderM: 60,
+      kmh: 60,
+      moveSeconds: 600,
+      stepS: 5,
+    });
+    const res = await request(app)
+      .post(`/api/v1/trips/${tripId}/routes/${routeId}/tracks`)
+      .set("Cookie", cookie)
+      .attach("file", toGpx(rec.fixes), "parked.gpx");
+    expect(res.status).toBe(201);
+    expect(res.body.track.pointCount).toBe(rec.fixes.length);
+    expect(res.body.track.jitterDropped).toBeGreaterThanOrEqual(Math.floor(rec.standing * 0.95));
+    expect(Math.abs(res.body.track.distanceKm - rec.trueKm) / rec.trueKm).toBeLessThan(0.02);
+
+    const list = await request(app)
+      .get(`/api/v1/trips/${tripId}/routes/${routeId}/tracks`)
+      .set("Cookie", cookie);
+    const listed = list.body.tracks.find((t: { id: string }) => t.id === res.body.track.id);
+    expect(listed.jitterDropped).toBe(res.body.track.jitterDropped);
+    await prisma.tripRouteTrack.delete({ where: { id: res.body.track.id } });
   });
 
   it("refuses a malformed GPX with 400 ('could not be read as GPX')", async () => {

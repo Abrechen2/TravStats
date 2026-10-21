@@ -152,11 +152,12 @@ model User {
   documents Document[]
   notes     Note[]
 
-  passwordResetRequest PasswordResetRequest?
-  calendarFeed         CalendarFeed?
-  countryOverrides     CountryOverride[]
-  tripRecordingBatches TripRecordingBatch[]
-  mergedTripRedirects  MergedTripRedirect[]
+  passwordResetRequest  PasswordResetRequest?
+  calendarFeed          CalendarFeed?
+  countryOverrides      CountryOverride[]
+  tripRecordingBatches  TripRecordingBatch[]
+  trackJitterRemeasures TrackJitterRemeasure[]
+  mergedTripRedirects   MergedTripRedirect[]
 
   @@map("users")
 }
@@ -2287,6 +2288,12 @@ model TripRouteTrack {
   /// those fall back to measuring the simplified line, as they always did.
   cumulativeKm  Json?    @map("cumulative_km")
   pointCount    Int      @map("point_count")
+  /// Fixes the jitter filter removed before this line was drawn and measured
+  /// (forgejo#319: a still phone's cloud of positions at a gate, a teleport
+  /// spike, a stale repeated fix). NULL = not checked — written before the
+  /// filter existed, or a recording without times, where standing and moving
+  /// cannot be told apart. Never a guessed 0.
+  jitterDropped Int?     @map("jitter_dropped")
   distanceKm    Float    @map("distance_km")
   /// True when a Dawarich pull hit `MAX_PAGES` (dawarichClient.ts) and the
   /// stored points are therefore a PARTIAL window, not the full requested
@@ -2313,7 +2320,8 @@ model TripRouteTrack {
   externalRef   String?  @map("external_ref")
   createdAt     DateTime @default(now()) @map("created_at")
 
-  route TripRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  route           TripRoute             @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  jitterRemeasure TrackJitterRemeasure?
 
   @@unique([routeId, externalRef])
   @@index([routeId])
@@ -2635,6 +2643,12 @@ model CruiseTrack {
   /// segment boundary adds nothing (see `ingestTrack`).
   cumulativeKm  Json     @map("cumulative_km")
   pointCount    Int      @map("point_count")
+  /// Fixes the jitter filter removed before this line was drawn and measured
+  /// (forgejo#319: a still phone's cloud of positions at a gate, a teleport
+  /// spike, a stale repeated fix). NULL = not checked — written before the
+  /// filter existed, or a recording without times, where standing and moving
+  /// cannot be told apart. Never a guessed 0.
+  jitterDropped Int?     @map("jitter_dropped")
   distanceKm    Float    @map("distance_km")
   /// A Dawarich pull that hit its page cap — see `TripRouteTrack.truncated`.
   truncated     Boolean  @default(false)
@@ -2642,11 +2656,40 @@ model CruiseTrack {
   externalRef   String?  @map("external_ref")
   createdAt     DateTime @default(now()) @map("created_at")
 
-  cruise Cruise @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
+  cruise          Cruise                @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
+  jitterRemeasure TrackJitterRemeasure?
 
   @@unique([cruiseId, externalRef])
   @@index([cruiseId])
   @@map("cruise_tracks")
+}
+
+/// The jitter re-measure job's record of one stored track (forgejo#319): what
+/// it tried, how it ended, when it may try again, and the measured columns a
+/// re-measure replaced — so a replacement can be undone. Exactly one of the
+/// two track ids is set; the row goes with its track.
+model TrackJitterRemeasure {
+  id            String    @id @default(uuid())
+  routeTrackId  String?   @unique @map("route_track_id")
+  cruiseTrackId String?   @unique @map("cruise_track_id")
+  userId        String    @map("user_id")
+  /// remeasured | sourceChanged | notConfigured | unavailable
+  outcome       String
+  attempts      Int       @default(1)
+  attemptedAt   DateTime  @map("attempted_at")
+  /// When the job may try again; NULL = never (a final outcome).
+  nextAttemptAt DateTime? @map("next_attempt_at")
+  /// The track's measured columns before a re-measure replaced them, and the
+  /// Dawarich base URL the points came from; NULL when nothing was replaced.
+  previous      Json?
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  routeTrack  TripRouteTrack? @relation(fields: [routeTrackId], references: [id], onDelete: Cascade)
+  cruiseTrack CruiseTrack?    @relation(fields: [cruiseTrackId], references: [id], onDelete: Cascade)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("track_jitter_remeasures")
 }
 
 /// A flight as the passenger's phone recorded it (Companion background GPS,
@@ -2686,6 +2729,12 @@ model FlightTrack {
   /// `[km, metres]` altitude profile from the raw points; null without altitudes.
   elevations    Json?
   pointCount    Int      @map("point_count")
+  /// Fixes the jitter filter removed before this line was drawn and measured
+  /// (forgejo#319: a still phone's cloud of positions at a gate, a teleport
+  /// spike, a stale repeated fix). NULL = not checked — written before the
+  /// filter existed, or a recording without times, where standing and moving
+  /// cannot be told apart. Never a guessed 0.
+  jitterDropped Int?     @map("jitter_dropped")
   distanceKm    Float    @map("distance_km")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")

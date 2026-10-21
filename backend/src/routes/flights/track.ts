@@ -52,6 +52,7 @@ const TRACK_META_SELECT = {
   startedAt: true,
   endedAt: true,
   pointCount: true,
+  jitterDropped: true,
   distanceKm: true,
   createdAt: true,
   updatedAt: true,

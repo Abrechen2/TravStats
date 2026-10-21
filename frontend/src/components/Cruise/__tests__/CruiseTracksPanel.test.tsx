@@ -53,6 +53,7 @@ const OVERVIEW: CruiseTrackOverview = {
       startedAt: "2026-06-02T08:00:00.000Z",
       endedAt: "2026-06-03T08:00:00.000Z",
       pointCount: 900,
+      jitterDropped: 0,
       distanceKm: 230,
       truncated: false,
       externalRef: null,

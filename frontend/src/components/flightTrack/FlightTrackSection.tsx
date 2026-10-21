@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import DetailSection from "../ui/DetailSection";
 import { FlightTrackMap } from "./FlightTrackMap";
 import FlightTrackControls from "./FlightTrackControls";
+import { JitterNote } from "../tracks/JitterNote";
 import { flownVsGreatCircle, type AirportPosition } from "./flownVsGreatCircle";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
@@ -111,6 +112,7 @@ export default function FlightTrackSection({
           })}
           {gaps > 0 && ` ${t("flights:track.gaps", { count: gaps })}`}
         </p>
+        <JitterNote jitterDropped={track.jitterDropped} />
         {comparison && (
           <p className="t-caption" data-testid="flight-track-comparison">
             {t("flights:track.versusGreatCircle", {

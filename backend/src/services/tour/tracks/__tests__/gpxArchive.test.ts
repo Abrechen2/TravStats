@@ -16,6 +16,7 @@ const TRACK = {
   startedAt: new Date("2026-09-20T07:00:00Z"),
   endedAt: new Date("2026-09-20T10:42:00Z"),
   pointCount: 4210,
+  jitterDropped: 37,
   distanceKm: 8.1,
   truncated: false,
   ascentM: 512,
@@ -58,6 +59,7 @@ describe("gpxArchive", () => {
     expect(restoredTrackColumns(parsed, block)).toMatchObject({
       source: "strava",
       pointCount: 4210,
+      jitterDropped: 37,
       distanceKm: 8.1,
       ascentM: 512,
       descentM: 498,
@@ -67,6 +69,16 @@ describe("gpxArchive", () => {
       geometry: TRACK.geometry,
       segmentStarts: [0, 2],
     });
+  });
+
+  it("reads a file written before the jitter filter (forgejo#319) as not checked, never as 0", () => {
+    const before = trackToGpx(TOUR, { ...TRACK, jitterDropped: null }).replace(
+      /"jitterDropped":null,?/,
+      ""
+    );
+    expect(before).not.toContain("jitterDropped");
+    const restored = restoredTrackColumns(parseGpx(before)!, readArchiveBlock(before)!);
+    expect(restored.jitterDropped).toBeNull();
   });
 
   it("drops a running-distance list that no longer lines up with an edited line", () => {

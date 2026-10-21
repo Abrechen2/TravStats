@@ -1,6 +1,7 @@
 import request from "supertest";
 
 import app from "../../index";
+import { moving, standing } from "../../services/tracks/__tests__/jitterFixtures";
 import { prisma } from "../../db";
 import { generateToken } from "../../utils/jwt";
 import { generateApiToken } from "../../utils/apiTokens";
@@ -258,6 +259,53 @@ describe("Trip recording — /trips/:id/recording", () => {
       .expect(403);
   });
 
+  it("leaves a café's jitter off the map line, keeps every raw point stored and in the GPX (forgejo#319)", async () => {
+    // An hour at a café table, a fix every five minutes scattering ±40 m at a
+    // reported 35 m, then a twenty-minute walk.
+    const cafe = standing(
+      { lat: 35.68, lon: 139.76 },
+      Date.parse("2026-05-03T00:00:00Z"),
+      65,
+      300,
+      40,
+      35
+    );
+    const walk = moving(
+      { lat: 35.68, lon: 139.76 },
+      cafe[cafe.length - 1].t,
+      90,
+      4.5,
+      1200,
+      300,
+      10
+    );
+    const fixes = [...cafe, ...walk];
+    await post({
+      uploadId: "cafe",
+      points: fixes.map((f) => ({
+        t: new Date(f.t).toISOString(),
+        lat: f.lat,
+        lon: f.lon,
+        accuracy: f.accuracy,
+      })),
+    }).expect(201);
+
+    const res = await request(app).get(`/api/v1/trips/${tripId}/recording`).set("Cookie", cookie);
+    expect(res.body.summary.pointCount).toBe(fixes.length);
+    // The cloud collapses to its arrival and departure; a fix at its very
+    // edge may stand on its own.
+    expect(res.body.summary.jitterDropped).toBeGreaterThanOrEqual(cafe.length - 3);
+    expect(res.body.segments).toHaveLength(1);
+    expect(res.body.segments[0].length).toBeLessThanOrEqual(3 + walk.length);
+
+    const stored = await prisma.tripRecordingBatch.findFirstOrThrow({ where: { tripId } });
+    expect(stored.pointCount).toBe(fixes.length);
+    const gpx = await request(app)
+      .get(`/api/v1/trips/${tripId}/recording/gpx`)
+      .set("Cookie", cookie);
+    expect(gpx.text.match(/<trkpt /g)).toHaveLength(fixes.length);
+  });
+
   describe("reading it back", () => {
     beforeEach(async () => {
       await post({
@@ -353,7 +401,14 @@ describe("Trip recording — /trips/:id/recording", () => {
       expect(await prisma.tripRecordingBatch.count({ where: { tripId } })).toBe(0);
       const res = await request(app).get(`/api/v1/trips/${tripId}/recording`).set("Cookie", cookie);
       expect(res.body).toEqual({
-        summary: { pointCount: 0, firstAt: null, lastAt: null, devices: [], days: [] },
+        summary: {
+          pointCount: 0,
+          jitterDropped: 0,
+          firstAt: null,
+          lastAt: null,
+          devices: [],
+          days: [],
+        },
         segments: [],
       });
     });

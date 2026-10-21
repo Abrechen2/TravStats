@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
-import { errorContent } from "./shared";
+import { errorContent, jitterDroppedField } from "./shared";
 import { CRUISE_TRACK_SOURCES, pullCruiseDawarichSchema } from "../../../schemas/cruise";
 import { LEG_COVERAGE_REASONS, LEG_COVERAGE_STATUSES } from "../../trackCoverage/legCoverage";
 
@@ -48,7 +48,10 @@ const cruiseTrackMeta = z.object({
   startedAt: z.string().datetime(),
   endedAt: z.string().datetime(),
   pointCount: z.number().int().describe("Points of the RAW recording, before simplification"),
-  distanceKm: z.number().describe("Recorded distance; holes where the signal was lost excluded"),
+  jitterDropped: jitterDroppedField,
+  distanceKm: z
+    .number()
+    .describe("Recorded distance, jitter removed; holes where the signal was lost excluded"),
   truncated: z.boolean().describe("A Dawarich pull cut short by the page cap"),
   externalRef: z.string().nullable(),
   createdAt: z.string().datetime(),

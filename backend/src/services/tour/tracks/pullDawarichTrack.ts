@@ -118,7 +118,7 @@ export class EmptyDawarichWindowError extends Error {
  * this is a plain shape conversion, never a second parse or a second sort.
  * `points` is guaranteed non-empty and ascending by the caller below.
  */
-function toParsedTrack(points: DawarichPoint[]): ParsedTrack {
+export function toParsedTrack(points: DawarichPoint[]): ParsedTrack {
   return {
     points: points.map((p): [number, number] => [p.longitude, p.latitude]),
     // One continuous stretch: Dawarich hands back a time-ordered window with
@@ -128,6 +128,10 @@ function toParsedTrack(points: DawarichPoint[]): ParsedTrack {
     startedAt: new Date(points[0].timestampMs),
     endedAt: new Date(points[points.length - 1].timestampMs),
     name: null,
+    // Times and the phone's accuracy are what the jitter filter reads to
+    // tell a stay's cloud and a teleport from movement (forgejo#319).
+    times: points.map((p) => p.timestampMs),
+    accuracies: points.map((p) => p.accuracy),
   };
 }
 
@@ -151,9 +155,10 @@ export interface PulledDawarichTrack {
 export async function pullDawarichWindow(
   client: DawarichClient,
   window: DawarichPointsWindow,
-  /** A step between parsing and ingestion. A cruise pull marks the hours a
-   *  phone at sea had no signal (`splitAtLongSteps`); a tour pull has none. */
-  prepare: (parsed: ParsedTrack) => ParsedTrack = (parsed) => parsed
+  /** A step between parsing and ingestion: the jitter filter for the
+   *  recording's mode (forgejo#319), and for a cruise the hours a phone at sea
+   *  had no signal (`splitAtLongSteps`). */
+  prepare: (parsed: ParsedTrack) => ParsedTrack
 ): Promise<PulledDawarichTrack> {
   const { points, truncated } = await client.getPoints(window);
   if (points.length === 0) {

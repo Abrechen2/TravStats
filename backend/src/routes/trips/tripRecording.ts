@@ -26,6 +26,7 @@ import {
   pointsByDevice,
   rawSegments,
   recordingDays,
+  withoutJitter,
   type StoredPoint,
 } from "../../services/tripRecording/segments";
 import { gpxFileName } from "../../services/tour/tracks/gpxArchive";
@@ -251,8 +252,8 @@ async function loadDevices(userId: string, trip: RecordingTrip, day: string | un
 }
 
 /**
- * GET /trips/:id/recording?day= — the summary and the line for the map, cut
- * at every gap. No recording is an answer (`pointCount: 0`, no segments).
+ * GET /trips/:id/recording?day= — the summary and the line for the map,
+ * jitter removed and cut at every gap. No recording is an answer (`pointCount: 0`, no segments).
  * `summary.days` lists every recorded day, whatever `day` filters to.
  */
 router.get("/trips/:id/recording", async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -265,15 +266,18 @@ router.get("/trips/:id/recording", async (req: AuthRequest, res: Response, next:
     const shown = devices.flatMap((d) => d.points).sort((a, b) => a[0] - b[0]);
     const first = shown[0];
     const last = shown[shown.length - 1];
+    // The line leaves the jitter out; the count says how much (forgejo#319).
+    const clean = await withoutJitter(devices);
     res.json({
       summary: {
         pointCount: shown.length,
+        jitterDropped: clean.dropped,
         firstAt: first ? serializeTime(new Date(first[0]), zone) : null,
         lastAt: last ? serializeTime(new Date(last[0]), zone) : null,
         devices: [...new Set(batches.flatMap((b) => (b.deviceId ? [b.deviceId] : [])))].sort(),
         days: recordingDays(all, zone).map((date) => ({ date, zone, precision: "day" as const })),
       },
-      segments: displaySegments(rawSegments(devices)),
+      segments: displaySegments(clean.segments),
     });
   } catch (err) {
     next(err);
