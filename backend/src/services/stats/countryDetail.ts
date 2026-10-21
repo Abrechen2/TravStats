@@ -536,3 +536,33 @@ export function buildCountryDetail(
     timelineTruncated: ordered.length > timelineLimit,
   };
 }
+
+/**
+ * The drill-down of a country only the user's own verdict puts in the
+ * passport (forgejo#308): no automatic evidence, so every count is zero and
+ * the timeline empty — the verdict itself is laid over it by the loader, as on
+ * any other country. Without it the passport listed a row whose page was a 404.
+ */
+export function manualCountryDetail(code: string): CountryDetail {
+  return {
+    code,
+    continent: continentForCountry(code),
+    evidence: "manual",
+    isHome: false,
+    entries: 0,
+    firstYear: null,
+    lastYear: null,
+    airports: [],
+    portCalls: 0,
+    places: 0,
+    lodgings: 0,
+    roadtripStations: 0,
+    railRides: 0,
+    busRides: 0,
+    ferryCrossings: 0,
+    trackDays: 0,
+    anchor: null,
+    timeline: [],
+    timelineTruncated: false,
+  };
+}

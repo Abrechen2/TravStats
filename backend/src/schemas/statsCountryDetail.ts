@@ -31,6 +31,8 @@ export const passportEvidenceSchema = z.enum([
   "ferry",
   "roadtrip",
   "track",
+  // A country only the user's own verdict lists (forgejo#308): no record, an empty page.
+  "manual",
 ]);
 
 export const countryAirportUseSchema = z.object({
