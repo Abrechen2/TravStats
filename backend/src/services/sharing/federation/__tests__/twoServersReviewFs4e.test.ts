@@ -4,7 +4,14 @@
  */
 import { Client } from "pg";
 import { A, B, servers, user as harnessUser, useTwoServers, type Server } from "./twoServerHarness";
-import { addFlight, membersOn, pairAcross, sharedFlight } from "./sharedTripFixtures";
+import {
+  addFlight,
+  editFlight,
+  gateOf,
+  membersOn,
+  pairAcross,
+  sharedFlight,
+} from "./sharedTripFixtures";
 
 useTwoServers();
 let a: Server;
@@ -120,5 +127,29 @@ describe("an offer still open when the spoke was restored (review 5)", () => {
         where: { targetId: ben, remoteRequester: { origin: A }, status: "accepted" },
       })
     ).toBe(1);
+  });
+});
+
+describe("a delivery waiting behind another message when the consent is withdrawn (review 3)", () => {
+  it("is not sent once the withdrawal committed", async () => {
+    const { ben, benTrip, benFlight, flight } = await sharedFlight(a, b);
+    await editFlight(b, ben, benFlight.id, { gate: "C3" });
+    const exchange = b.security.exchange.bind(b.security);
+    // Ben's own request to the home is slow on the wire; the delivery queues behind it.
+    jest.spyOn(b.security, "exchange").mockImplementationOnce((async (...args: never[]) => {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      return (exchange as (...a: never[]) => Promise<unknown>)(...args);
+    }) as never);
+    const request = b.addRequest.requestAddition(ben, benTrip, { displayName: "Bea" });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const pass = b.outbox.runDeliveries();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const pairing = await b.prisma.remoteShareAccount.findFirstOrThrow({
+      where: { userId: ben, origin: A },
+    });
+    await b.lifecycle.withdrawRemoteConsent(ben, pairing.id);
+    await request;
+    await pass;
+    expect(await gateOf(a, flight.id)).toBe("A1");
   });
 });

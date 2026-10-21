@@ -41,7 +41,7 @@ import { recordConflict } from "./conflicts";
 import { LOCAL_ERROR, kindOf } from "./peerCheck";
 import { isHeld } from "./peerMember";
 import { PeerRefusal } from "../../federation/refusal";
-import { StreamRejected, sendOnStream, type Received } from "./streams";
+import { NotReady, StreamRejected, sendOnStream, type Received } from "./streams";
 import { ENTRIES_TRANSPORT, PROPAGATION_TRANSPORT } from "./transport";
 import { fromWireFacts, localKeyOf } from "./wire/decode";
 import { ENTRY_SHAPES } from "./wire/shapes";
@@ -105,6 +105,12 @@ async function stillReceives(row: Row): Promise<boolean> {
   return consenting.size > 0;
 }
 
+/** Right before it leaves: the row is still there, not parked, not held, and still permitted. */
+async function stillSendable(id: string): Promise<boolean> {
+  const fresh = await prisma.tripShareOutbox.findUnique({ where: { id }, include: OUTBOX_INCLUDE });
+  return !!fresh && !fresh.parkedAt && !isHeld(fresh.member) && (await stillReceives(fresh));
+}
+
 function messageOf(row: Row, seq: number): GroupMessage {
   return {
     ...(row.payload as Record<string, unknown>),
@@ -153,7 +159,8 @@ async function conflictHere(tx: DbTransaction, row: Row, conflicts: readonly Ack
 
 /** Inside the transaction that moves the stream (`sendOnStream`'s `onAck`). */
 async function delivered(tx: DbTransaction, row: Row, ack: Received, now: Date): Promise<void> {
-  await tx.tripShareOutbox.delete({ where: { id: row.id } });
+  // deleteMany: a withdrawal may have deleted it while it was on the wire; the ack still counts.
+  await tx.tripShareOutbox.deleteMany({ where: { id: row.id } });
   await tx.tripShareRemoteMember.updateMany({
     where: {
       ...streamMembers(row.groupId, row.peerOrigin),
@@ -250,9 +257,12 @@ async function deliverStream(
         peerOrigin,
         (seq) => messageOf(row, seq),
         transport,
-        (tx, ack) => delivered(tx, row, ack, now)
+        (tx, ack) => delivered(tx, row, ack, now),
+        () => stillSendable(row.id)
       );
     } catch (error) {
+      // Its row or its permission went while it waited for its turn: read the stream again.
+      if (error instanceof NotReady) continue;
       // The other server failed to apply it for a reason of its own, or holds the membership
       // until its person confirms it again: retried, each named as itself.
       if (error instanceof StreamRejected && RETRIED_THERE[error.ack.rejected]) {

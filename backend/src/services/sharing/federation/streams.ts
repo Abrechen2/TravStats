@@ -122,6 +122,13 @@ export async function serveOnce(
   return ack;
 }
 
+/** The message may no longer be sent: its permission or its row went while it waited. */
+export class NotReady extends Error {
+  constructor() {
+    super("The message may no longer be sent");
+  }
+}
+
 /** The peer refused a group message, with its reason. */
 export class StreamRejected extends Error {
   constructor(readonly ack: Rejected) {
@@ -160,9 +167,13 @@ export function sendOnStream(
   origin: string,
   build: (seq: number) => GroupMessage,
   transport: PeerTransport,
-  onAck?: (tx: DbTransaction, ack: Received) => Promise<void>
+  onAck?: (tx: DbTransaction, ack: Received) => Promise<void>,
+  ready?: () => Promise<boolean>
 ): Promise<Received> {
   return serially(`${groupId}|${origin}`, async () => {
+    // Asked again once it is this message's turn (F-S4e review): a withdrawal or a hold that
+    // committed while it waited behind another message on the stream stops it before it leaves.
+    if (ready && !(await ready())) throw new NotReady();
     const stream = await prisma.tripSharePeerStream.upsert({
       where: { groupId_peerOrigin: { groupId, peerOrigin: origin } },
       create: { groupId, peerOrigin: origin },
