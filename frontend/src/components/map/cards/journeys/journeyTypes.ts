@@ -37,10 +37,25 @@ export interface JourneyFacts {
   vesselName?: string | null;
   cabinType?: string | null;
   vehicleClass?: string | null;
+  /** The train category alone ("ICE") — what a train picture is looked up by. */
+  trainCategory?: string | null;
+  /** The rental's example car ("VW Golf oder ähnlich"), never its class — a picture's subject. */
+  vehicleModel?: string | null;
   /** Rental days, from `shared/rentalCounting.ts`. */
   rentalDays?: number | null;
-  /** Scheduled duration in minutes, when both ends are dated. */
+  /** Scheduled duration in minutes, only when both ends are known to the minute. */
   durationMin?: number | null;
+  /**
+   * The recorded arrival delay in minutes — only on a ride with both clocks
+   * and an arrival, the rule the rail statistics keep. Null = not recorded.
+   */
+  delayMinutes?: number | null;
+  /**
+   * What a rental cost, in its own currency (`rentalCost`: final, else
+   * booked). Null when unknown and for a cancellation fee, which is never a
+   * rental-day cost.
+   */
+  cost?: { amount: number; currency: string } | null;
 }
 
 export interface MapJourney {
@@ -56,9 +71,20 @@ export interface MapJourney {
    * wrong day for a late departure: Berlin 00:30 on the 21st was the 20th.
    */
   departure: TimeValue | null;
+  /**
+   * The arrival (rental: the return) on ITS place's clock, or null. Shown when
+   * it falls on another local day than the departure — an overnight ferry.
+   */
+  arrival: TimeValue | null;
   status: string;
   /** Kilometres when known. NULL when not — never 0 for "unknown". */
   distanceKm: number | null;
+  /**
+   * What `distanceKm` measures, as the domain records it (`great_circle`,
+   * `sea_route`, `invoice`, `odometer`, …). Null when unrecorded or when there
+   * is no distance.
+   */
+  distanceSource: string | null;
   /** Rail operator, bus company, ferry line, rental company, airline. */
   operator: string | null;
   /** Happened, by the domain's own counting rule (`shared/*Counting.ts`). */

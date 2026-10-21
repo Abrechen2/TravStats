@@ -61,6 +61,12 @@ vi.mock("../../../../../lib/api/operators", async (orig) => ({
   ...(await orig<typeof import("../../../../../lib/api/operators")>()),
   getOperatorMark: (domain: string, name: string) => marks.get(domain, name),
 }));
+// The route card asks for a picture of the ship; these tests are about the rest.
+vi.mock("../../../../../lib/api/mapDetails", async (orig) => ({
+  ...(await orig<typeof import("../../../../../lib/api/mapDetails")>()),
+  getSubjectImage: () => Promise.resolve({ available: false, credit: null }),
+  getStopInfo: () => Promise.resolve({ state: "none" }),
+}));
 vi.mock("react-router-dom", async (orig) => ({
   ...(await orig<typeof import("react-router-dom")>()),
   useNavigate: () => navigate,
@@ -244,7 +250,9 @@ describe("station card", () => {
     expect(document.body.textContent).not.toContain("MISSING(");
     expect(screen.getByText(l === "de" ? "Bahnhof" : "Station")).toBeInTheDocument();
     expect(screen.getByTestId("journey-domain-badge")).toHaveAttribute("data-icon", "train-front");
-    expect(screen.getByText(/Praha hl\.n\. · 1×/)).toBeInTheDocument();
+    // Where the departures from here went (2026-10-21: "Ziele von hier").
+    expect(screen.getByText("Praha hl.n. 1×")).toBeInTheDocument();
+    expect(screen.getByText(l === "de" ? "Ziele von hier" : "Destinations from here")).toBeTruthy();
   });
 });
 

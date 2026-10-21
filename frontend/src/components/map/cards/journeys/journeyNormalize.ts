@@ -9,10 +9,16 @@
 import { isCountableRail } from "../../../../shared/railCounting";
 import { isCountableBus } from "../../../../shared/busCounting";
 import { isCountableFerry } from "../../../../shared/ferryCounting";
-import { isCountableRental, rentalDays, rentalDrivenKm } from "../../../../shared/rentalCounting";
+import {
+  isCountableRental,
+  rentalCost,
+  rentalDays,
+  rentalDrivenKm,
+} from "../../../../shared/rentalCounting";
 import { isCountableFlight } from "../../../../shared/flightCounting";
 import { calculateDistance } from "../../../../lib/geo";
-import { flightDeparture } from "../../../../lib/entityTimes";
+import { flightArrival, flightDeparture } from "../../../../lib/entityTimes";
+import { railDurationMinutes } from "../../../../lib/railTime";
 import { timeValueAtZone, type TimeValue } from "../../../../shared/time";
 import type { Flight } from "../../../../types";
 import type { RailJourney } from "../../../../types/rail";
@@ -26,14 +32,19 @@ function plannedOf(status: string, travelled: boolean): boolean {
   return !travelled && status !== "cancelled";
 }
 
-/** Whole minutes between two instants, or null when either is missing or nonsense. */
-export function durationMinutes(
-  from: string | null | undefined,
-  to: string | null | undefined
+/**
+ * Minutes between two clocked ends, or null. Only a value known to the minute
+ * measures anything: a ride logged date-only is stored at the starts of its
+ * days, and subtracting those invented "1 T 0 h" (the rule
+ * `railDurationMinutes` keeps on the detail pages).
+ */
+export function timedMinutes(
+  from: TimeValue | null | undefined,
+  to: TimeValue | null | undefined
 ): number | null {
   if (!from || !to) return null;
-  const minutes = (Date.parse(to) - Date.parse(from)) / 60_000;
-  return Number.isFinite(minutes) && minutes > 0 ? Math.round(minutes) : null;
+  const minutes = railDurationMinutes(from, to);
+  return minutes !== null && minutes > 0 ? minutes : null;
 }
 
 /**
@@ -90,6 +101,33 @@ function stationDeparture(j: {
   return j.times?.departure ?? timeValueAtZone(j.departureTime, j.depTimezone);
 }
 
+/**
+ * A terminal ride's arrival as the server sent it. No fallback to the legacy
+ * column: without the server's precision a date-only arrival would read as a
+ * clock at midnight.
+ */
+function stationArrival(j: { times?: { arrival?: TimeValue | null } }): TimeValue | null {
+  return j.times?.arrival ?? null;
+}
+
+/** A terminal ride's departure, only as the server sent it — for measuring, not showing. */
+function timedDeparture(j: { times?: { departure?: TimeValue | null } }): TimeValue | null {
+  return j.times?.departure ?? null;
+}
+
+/**
+ * A recorded delay that measures something: both ends clocked and an
+ * arrival to be late against (`railStats.delayBuckets`), else null.
+ */
+function clockedDelay(j: {
+  delayMinutes?: number | null;
+  times?: { departure?: TimeValue | null; arrival?: TimeValue | null };
+}): number | null {
+  const delay = j.delayMinutes;
+  if (typeof delay !== "number" || !Number.isFinite(delay)) return null;
+  return timedMinutes(timedDeparture(j), stationArrival(j)) === null ? null : delay;
+}
+
 function journey(
   domain: JourneyDomain,
   base: { id: string; status: string },
@@ -97,7 +135,9 @@ function journey(
   rest: {
     departureTime: string | null;
     departure: TimeValue | null;
+    arrival: TimeValue | null;
     distanceKm: number | null;
+    distanceSource: string | null;
     operator: string | null;
     travelled: boolean;
     facts: JourneyFacts;
@@ -120,14 +160,18 @@ export function journeyFromRail(
   return journey("rail", j, terminalEnds(j, { dep: j.depStationCode, arr: j.arrStationCode }), {
     departureTime: j.departureTime ?? null,
     departure: stationDeparture(j),
+    arrival: stationArrival(j),
     distanceKm: knownKm(j.distanceKm),
+    distanceSource: knownKm(j.distanceKm) === null ? null : (j.distanceSource ?? null),
     operator: j.operator ?? null,
     travelled: isCountableRail(j),
     facts: {
       trainNumber: train || null,
+      trainCategory: j.trainCategory ?? null,
       travelClass: j.travelClass ?? null,
       seat: [j.coach, j.seat].filter(Boolean).join(" / ") || null,
-      durationMin: durationMinutes(j.departureTime, j.arrivalTime),
+      durationMin: timedMinutes(timedDeparture(j), stationArrival(j)),
+      delayMinutes: clockedDelay(j),
     },
   });
 }
@@ -138,13 +182,16 @@ export function journeyFromBus(
   return journey("bus", j, terminalEnds(j), {
     departureTime: j.departureTime ?? null,
     departure: stationDeparture(j),
+    arrival: stationArrival(j),
     distanceKm: knownKm(j.distanceKm),
+    distanceSource: knownKm(j.distanceKm) === null ? null : (j.distanceSource ?? null),
     operator: j.operator ?? null,
     travelled: isCountableBus(j),
     facts: {
       lineName: j.lineName ?? null,
       seat: j.seat ?? null,
-      durationMin: durationMinutes(j.departureTime, j.arrivalTime),
+      durationMin: timedMinutes(timedDeparture(j), stationArrival(j)),
+      delayMinutes: clockedDelay(j),
     },
   });
 }
@@ -155,16 +202,39 @@ export function journeyFromFerry(
   return journey("ferry", j, terminalEnds(j), {
     departureTime: j.departureTime ?? null,
     departure: stationDeparture(j),
+    arrival: stationArrival(j),
     distanceKm: knownKm(j.distanceKm),
+    distanceSource: knownKm(j.distanceKm) === null ? null : (j.distanceSource ?? null),
     operator: j.operator ?? null,
     travelled: isCountableFerry(j),
     facts: {
       vesselName: j.vesselName ?? null,
       cabinType: j.cabinType ?? null,
       seat: j.seat ?? null,
-      durationMin: durationMinutes(j.departureTime, j.arrivalTime),
+      durationMin: timedMinutes(timedDeparture(j), stationArrival(j)),
+      delayMinutes: clockedDelay(j),
     },
   });
+}
+
+/** A rental's cost in its own currency; a cancellation fee is not a rental's cost. */
+function costOf(r: {
+  status: string;
+  price?: number | null;
+  currency?: string | null;
+  finalAmount?: number | null;
+  finalCurrency?: string | null;
+}): { amount: number; currency: string } | null {
+  const cost = rentalCost({
+    status: r.status,
+    price: r.price ?? null,
+    currency: r.currency ?? null,
+    finalAmount: r.finalAmount ?? null,
+    finalCurrency: r.finalCurrency ?? null,
+  });
+  return cost && cost.source !== "cancellationFee"
+    ? { amount: cost.amount, currency: cost.currency }
+    : null;
 }
 
 type RentalCore =
@@ -195,6 +265,12 @@ export function journeyFromRental(r: Partial2<RentalBooking, RentalCore>): MapJo
           returnTimezone: r.returnTimezone,
         })
       : null;
+  const driven = rentalDrivenKm({
+    distanceKm: r.distanceKm ?? null,
+    distanceSource: r.distanceSource ?? null,
+    odometerOutKm: r.odometerOutKm ?? null,
+    odometerInKm: r.odometerInKm ?? null,
+  });
   return journey(
     "rental",
     { id: r.id, status: r.status },
@@ -217,20 +293,18 @@ export function journeyFromRental(r: Partial2<RentalBooking, RentalCore>): MapJo
     {
       departureTime: pickup,
       departure: r.times?.pickup ?? null,
+      arrival: r.times?.return ?? null,
       // The one driven-km rule the rental pages and statistics read: a stored
       // figure, else the two odometer readings (forgejo#206).
-      distanceKm:
-        rentalDrivenKm({
-          distanceKm: r.distanceKm ?? null,
-          distanceSource: r.distanceSource ?? null,
-          odometerOutKm: r.odometerOutKm ?? null,
-          odometerInKm: r.odometerInKm ?? null,
-        })?.km ?? null,
+      distanceKm: driven?.km ?? null,
+      distanceSource: driven?.source ?? null,
       operator: r.operatedBy ?? r.provider ?? null,
       travelled: isCountableRental(r),
       facts: {
         vehicleClass: r.vehicleExample ?? r.vehicleClass ?? null,
+        vehicleModel: r.vehicleExample ?? null,
         rentalDays: days,
+        cost: costOf(r),
       },
     }
   );
@@ -250,6 +324,8 @@ export interface TripFlightRow {
   /** The departure airport's zone and how the time was recorded — the card shows ITS day. */
   depTimezone?: string | null;
   depTimeSemantics?: Flight["depTimeSemantics"];
+  arrTimezone?: string | null;
+  arrTimeSemantics?: Flight["arrTimeSemantics"];
   times?: Flight["times"];
   airline?: string | null;
   flightNumber?: string | null;
@@ -279,12 +355,14 @@ export function journeyFromTripFlight(f: TripFlightRow): MapJourney | null {
     {
       departureTime: f.departureTime ?? null,
       departure: flightDeparture(f),
+      arrival: flightArrival(f),
       distanceKm: knownKm(calculateDistance(depLat, depLon, arrLat, arrLon)),
+      distanceSource: null,
       operator: f.airline ?? null,
       travelled: isCountableFlight({ status: f.status }),
       facts: {
         trainNumber: f.flightNumber ?? null,
-        durationMin: durationMinutes(f.departureTime, f.arrivalTime),
+        durationMin: timedMinutes(flightDeparture(f), flightArrival(f)),
       },
     }
   );

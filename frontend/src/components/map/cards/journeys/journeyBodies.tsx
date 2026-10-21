@@ -35,14 +35,21 @@ import {
   type JourneyRouteStats,
 } from "./journeyStats";
 import { tallyLabel } from "./journeyHoverHtml";
+import { routeDistanceSourceKeys } from "./journeyProvenance";
+import { getJourneyRouteFigures } from "./journeyRouteFigures";
+import { RouteFigureRows } from "./journeyRouteRows";
+import { getJourneyStopFigures } from "./journeyStopFigures";
+import { StopWikipedia } from "./journeyStopInfo";
+import { routeSubject } from "./journeySubject";
+import { SubjectPicture } from "./journeySubjectPicture";
 import { journeyIconName, rgbCss, tourIconName } from "./journeyIdentity";
 import {
   DomainBadge,
   JourneyEndLine,
   JourneyList,
   OperatorRow,
-  journeyDay,
   journeyFactText,
+  journeySpanDay,
   journeyPath,
 } from "./journeyCardParts";
 
@@ -137,9 +144,21 @@ function DistanceRow({
     stats.measuredCount > 0 ? formatKm(stats.knownKm, locale) : t("map:journey.distanceNone");
   const unknown =
     stats.unknownCount > 0 ? t("map:journey.distanceUnknown", { count: stats.unknownCount }) : null;
+  // What the figure measures — "Luftlinie", "Seeweg (Schätzung)" — as the
+  // detail pages say it; a straight line must not read as the way travelled.
+  const sources = routeDistanceSourceKeys(stats.list).map((key) => t(key));
   return (
     <>
       <Row label={t("map:journey.distance")} value={known} />
+      {sources.length > 0 && stats.measuredCount > 0 && (
+        <div
+          data-testid="journey-distance-source"
+          className="text-right text-[10px]"
+          style={{ color: tokens.color.faint }}
+        >
+          {sources.join(" · ")}
+        </div>
+      )}
       {unknown && (
         <div className="text-right text-[10px]" style={{ color: tokens.color.faint }}>
           {unknown}
@@ -170,17 +189,18 @@ function LatestRows({
       {j.departure && (
         <Row
           label={t(latest.upcoming ? "map:journey.next" : "map:journey.last")}
-          value={journeyDay(j)}
+          value={journeySpanDay(j)}
         />
       )}
       {facts.length > 0 && (
         <Row label={t(`map:journey.fact.${FACT_LABEL[j.domain]}`)} value={facts.join(" · ")} />
       )}
       {j.facts.seat && <Row label={t("map:journey.fact.seat")} value={j.facts.seat} />}
-      {j.facts.rentalDays != null && (
+      {/* What happened is in the route figures; a journey still ahead shows its own. */}
+      {latest.upcoming && j.facts.rentalDays != null && (
         <Row label={t("map:journey.fact.rentalDays")} value={String(j.facts.rentalDays)} />
       )}
-      {j.facts.durationMin != null && (
+      {latest.upcoming && j.facts.durationMin != null && (
         <Row
           label={t("map:journey.fact.duration")}
           value={formatDuration(j.facts.durationMin, t)}
@@ -222,15 +242,24 @@ export function JourneyRouteBody({
   t,
 }: { data: JourneyRouteCardDatum } & BodyProps): JSX.Element {
   const stats = getJourneyRouteStats(data.journeys);
+  const figures = getJourneyRouteFigures(data.journeys);
   return (
     <>
       <div className="mb-2.5 space-y-1.5">
         <JourneyEndLine end={data.dep} locale={locale} />
         <JourneyEndLine end={data.arr} locale={locale} />
       </div>
+      <SubjectPicture subject={routeSubject(data.journeys)} t={t} />
       <Hero color={rgbCss(data.color)}>{heroText(stats, data, t)}</Hero>
       <Grid>
         <DistanceRow stats={stats} t={t} locale={locale} />
+        <RouteFigureRows
+          figures={figures}
+          journeys={data.journeys}
+          domain={data.domain}
+          language={locale}
+          t={t}
+        />
         <LatestRows latest={stats.latest} t={t} locale={locale} />
         {stats.topOperator && (
           <OperatorRow domain={data.domain} name={stats.topOperator} color={data.color} t={t} />
@@ -249,23 +278,55 @@ export function JourneyStopBody({
   locale,
   t,
 }: { data: JourneyStopCardDatum } & BodyProps): JSX.Element {
-  const stats = getJourneyStopStats(data.journeys, endKey(data.stop));
+  const key = endKey(data.stop);
+  const stats = getJourneyStopStats(data.journeys, key);
+  const here = getJourneyStopFigures(data.journeys, key);
+  const rental = data.domain === "rental";
+  // A branch's rentals are its "routes": their length, km and cost per day.
+  const rentalFigures = rental ? getJourneyRouteFigures(data.journeys) : null;
+  const lastHere = here.lastVisit
+    ? journeySpanDay({ departure: here.lastVisit, arrival: null })
+    : "";
   return (
     <>
       <SubHeading>{t(`map:journey.stop.${data.domain}`)}</SubHeading>
+      <StopWikipedia domain={data.domain} stop={data.stop} locale={locale} t={t} />
       <Hero color={rgbCss(data.color)}>{heroText(stats, data, t)}</Hero>
       <Grid>
         <DistanceRow stats={stats} t={t} locale={locale} />
-        {stats.topRoute && (
+        {here.departures > 0 && (
           <Row
-            label={t("map:journey.topRoute")}
-            value={`→ ${stats.topRoute.name} · ${stats.topRoute.count}×`}
+            label={t(rental ? "map:journey.pickupsLabel" : "map:journey.departuresLabel")}
+            value={String(here.departures)}
           />
         )}
-        {stats.latest?.journey.departure && (
+        {here.arrivals > 0 && (
           <Row
-            label={t(stats.latest.upcoming ? "map:journey.next" : "map:journey.last")}
-            value={journeyDay(stats.latest.journey)}
+            label={t(rental ? "map:journey.returnsLabel" : "map:journey.arrivalsLabel")}
+            value={String(here.arrivals)}
+          />
+        )}
+        {here.destinations.length > 0 && (
+          <Row
+            label={t("map:journey.destinations")}
+            value={here.destinations.map((d) => `${d.name} ${d.count}×`).join(" · ")}
+          />
+        )}
+        {lastHere ? (
+          <Row label={t("map:journey.lastHere")} value={lastHere} />
+        ) : (
+          stats.latest?.upcoming &&
+          stats.latest.journey.departure && (
+            <Row label={t("map:journey.next")} value={journeySpanDay(stats.latest.journey)} />
+          )
+        )}
+        {rentalFigures && (
+          <RouteFigureRows
+            figures={{ ...rentalFigures, first: null }}
+            journeys={data.journeys}
+            domain={data.domain}
+            language={locale}
+            t={t}
           />
         )}
         {stats.topOperator && (
@@ -273,6 +334,9 @@ export function JourneyStopBody({
         )}
       </Grid>
       <JourneyList journeys={stats.list} t={t} />
+      {/* A same-station rental has no line to click — its branch IS its card,
+          so it carries the way into the rental too. */}
+      <OpenAction latest={stats.latest} t={t} />
     </>
   );
 }

@@ -50,11 +50,11 @@ export type OperatorMarkLookup =
   | { ok: true; credit: OperatorMarkCredit; image: OperatorMarkImage }
   | { ok: false; reason: OperatorMarkMiss };
 
-const WIKIDATA_API = "https://www.wikidata.org/w/api.php";
+export const WIKIDATA_API = "https://www.wikidata.org/w/api.php";
 const COMMONS_API = "https://commons.wikimedia.org/w/api.php";
 /** Commons renders the thumbnail at its nearest step; ~128 px is a card tile at 2×. */
 const THUMB_WIDTH = 128;
-const RASTER_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+export const RASTER_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 
 /**
  * The free licences a logo may carry here. Matched on Commons' machine-readable
@@ -120,7 +120,7 @@ const commonsSchema = z.object({
 type Snak = z.infer<typeof snakSchema>;
 type Claims = Record<string, Snak[] | undefined>;
 
-function url(base: string, params: Record<string, string>): string {
+export function url(base: string, params: Record<string, string>): string {
   return `${base}?${new URLSearchParams({ format: "json", maxlag: "5", ...params }).toString()}`;
 }
 
@@ -221,7 +221,7 @@ export function plainText(html: unknown): string | null {
 }
 
 /** Item ids whose label or alias is exactly `name` (normalised as the catalogues do). */
-async function exactItems(
+export async function exactItems(
   name: string
 ): Promise<{ ok: true; ids: string[] } | { ok: false; reason: OperatorMarkMiss }> {
   const want = normalizeProviderName(name);
@@ -250,13 +250,14 @@ async function exactItems(
   return ids.length > 0 ? { ok: true, ids } : { ok: false, reason: "noItem" };
 }
 
-interface FileInfo {
+export interface FileInfo {
   thumbUrl: string;
   credit: Omit<OperatorMarkCredit, "qid" | "colour">;
 }
 
-async function commonsFile(
-  file: string
+export async function commonsFile(
+  file: string,
+  width: number = THUMB_WIDTH
 ): Promise<{ ok: true; info: FileInfo } | { ok: false; reason: OperatorMarkMiss }> {
   const res = await getJson(
     url(COMMONS_API, {
@@ -264,7 +265,7 @@ async function commonsFile(
       titles: `File:${file}`,
       prop: "imageinfo",
       iiprop: "url|mime|extmetadata",
-      iiurlwidth: String(THUMB_WIDTH),
+      iiurlwidth: String(width),
     })
   );
   if (!res.ok) return res;

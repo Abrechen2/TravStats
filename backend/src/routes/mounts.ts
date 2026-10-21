@@ -100,6 +100,7 @@ import cruisesRouter from "./cruises";
 import cruiseRouteOverrideRoutes from "./cruises/routeOverride";
 import railOperatorRouter from "./rail/operators";
 import operatorMarksRouter from "./operators";
+import mapDetailsRouter from "./mapDetails";
 import railRouter from "./rail";
 import railStationsRouter from "./rail/stations";
 import railEntrySuggestionsRouter from "./rail/entrySuggestions";
@@ -394,6 +395,8 @@ export const apiMounts: ApiMount[] = [
   { id: "rail.operators", base: "/api/v1/rail/operators", router: railOperatorRouter },
   // Operator logos for the map cards, every journey domain (forgejo#323).
   { id: "operators", base: "/api/v1/operators", router: operatorMarksRouter },
+  // Rich map details (2026-10-21): subject pictures and a station's Wikipedia opening.
+  { id: "mapDetails", base: "/api/v1/map-details", router: mapDetailsRouter },
   { id: "rail.stations", base: "/api/v1/rail/stations", router: railStationsRouter },
   { id: "rail.lookup", base: "/api/v1/rail/lookup", router: railLookupRouter },
   { id: "rail.shareLink", base: "/api/v1/rail/share-link", router: railShareLinkRouter },

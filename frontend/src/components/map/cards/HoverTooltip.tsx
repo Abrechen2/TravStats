@@ -1,5 +1,6 @@
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useLayoutEffect,
@@ -10,6 +11,7 @@ import { tokens } from "../../../theme/tokens";
 import type { HoverTooltipState } from "./pinnedTypes";
 import { placeTooltip } from "./placeFloating";
 import { FLOATING_CARD_Z, sideListInsets } from "./FloatingCard";
+import { enrichHoverBox } from "./hoverEnrichment";
 
 export interface HoverTooltipApi {
   show: (state: HoverTooltipState) => void;
@@ -36,19 +38,35 @@ export const HoverTooltip = forwardRef<HoverTooltipApi>(function HoverTooltip(_,
   // clamped to stay inside the map (forgejo#323 browser look — it was clipped
   // at the right edge). Written straight to the node, as the show/hide are,
   // so a 60–120 Hz hover still renders once per move and not twice.
-  useLayoutEffect(() => {
+  const pointRef = useRef<{ x: number; y: number } | null>(null);
+  const place = useCallback((): void => {
     const el = boxRef.current;
+    const at = pointRef.current;
     const container = el?.offsetParent as HTMLElement | null | undefined;
-    if (!el || !state || !container || container.clientWidth === 0) return;
+    if (!el || !at || !container || container.clientWidth === 0) return;
     const box = placeTooltip(
-      { x: state.x, y: state.y },
+      at,
       { width: el.offsetWidth, height: el.offsetHeight },
       { width: container.clientWidth, height: container.clientHeight },
       sideListInsets(container)
     );
     el.style.left = `${box.left}px`;
     el.style.top = `${box.top}px`;
-  }, [state]);
+  }, []);
+  useLayoutEffect(() => {
+    pointRef.current = state ? { x: state.x, y: state.y } : null;
+    place();
+  }, [state, place]);
+
+  // The logo, picture and station text fill in after the box is drawn
+  // (`hoverEnrichment.ts`) — once per new content, not per pointer move, and
+  // re-placed when they change its size.
+  const html = state?.html ?? null;
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el || html === null) return;
+    return enrichHoverBox(el, place);
+  }, [html, place]);
 
   // A click opens a card for what the pointer is on; the tooltip for that same
   // object would sit on top of the card (forgejo#323 browser look). So a press

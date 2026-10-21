@@ -17,6 +17,7 @@ import type { IconName } from "../../../ui/icons/lucide";
 import { OperatorTile } from "../../../table/OperatorTile";
 import { LABEL_STYLE, type TFn } from "../cardChrome";
 import { formatTimeValueShown } from "../../../../lib/displayFormat";
+import { dayOf } from "../../../../shared/time";
 import type { Rgb } from "../../../../lib/domainColor";
 import type { JourneyDomain, JourneyEnd, MapJourney } from "./journeyTypes";
 import { rgbCss } from "./journeyIdentity";
@@ -25,6 +26,19 @@ import { useOperatorLogo } from "./operatorLogo";
 /** The journey's day as its departure place saw it, in the user's date format; "" when undated. */
 export function journeyDay(j: MapJourney): string {
   return j.departure ? formatTimeValueShown(j.departure, { dateOnly: true }) : "";
+}
+
+/**
+ * The journey's day, and the arrival's too when it falls on another local day
+ * — an overnight ferry reads "10.08.2024 → 11.08.2024", each on its own
+ * place's clock (ADR 0002 D3). "" when undated.
+ */
+export function journeySpanDay(j: Pick<MapJourney, "departure" | "arrival">): string {
+  if (!j.departure) return "";
+  const from = formatTimeValueShown(j.departure, { dateOnly: true });
+  if (!j.arrival || dayOf(j.arrival) === dayOf(j.departure)) return from;
+  if (Date.parse(j.arrival.utc) < Date.parse(j.departure.utc)) return from;
+  return `${from} → ${formatTimeValueShown(j.arrival, { dateOnly: true })}`;
 }
 
 /** The domain's icon on a tint of its colour — the journey card's flag. */
@@ -203,7 +217,7 @@ export function JourneyList({
                   {t("map:journey.planned")}
                 </span>
               )}
-              <span className="ml-auto shrink-0 tabular-nums opacity-55">{journeyDay(j)}</span>
+              <span className="ml-auto shrink-0 tabular-nums opacity-55">{journeySpanDay(j)}</span>
             </button>
           </li>
         ))}

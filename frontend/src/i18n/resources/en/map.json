@@ -374,6 +374,41 @@
       "trip": "Trip"
     },
     "operatorMark": "Logo of {{name}}",
-    "attribution": "Logo: {{source}}"
+    "attribution": "Logo: {{source}}",
+    "first": "First",
+    "avgDuration": "Avg. duration",
+    "fastest": "Fastest",
+    "slowest": "Slowest",
+    "avgDelay": "Avg. delay",
+    "delayValue": "{{minutes}} min",
+    "onTime": "on time",
+    "sampleRides_one": "{{count}} journey",
+    "sampleRides_other": "{{count}} journeys",
+    "sampleRentals_one": "{{count}} rental",
+    "sampleRentals_other": "{{count}} rentals",
+    "avgRentalDays": "Avg. rental days",
+    "kmPerDay": "km per day",
+    "costPerDay": "Cost per day",
+    "costPerKm": "Cost per km",
+    "wikiUnavailable": "Wikipedia cannot be reached right now.",
+    "lastHere": "Last here",
+    "destinations": "Destinations from here",
+    "departuresLabel": "Departures from here",
+    "pickupsLabel": "Pick-ups here",
+    "returnsLabel": "Returns here",
+    "arrivalsLabel": "Arrivals here",
+    "departures": {
+      "rail_one": "{{count}} departure",
+      "rail_other": "{{count}} departures",
+      "bus_one": "{{count}} departure",
+      "bus_other": "{{count}} departures",
+      "ferry_one": "{{count}} departure",
+      "ferry_other": "{{count}} departures",
+      "rental_one": "{{count}} pick-up",
+      "rental_other": "{{count}} pick-ups",
+      "flight_one": "{{count}} departure",
+      "flight_other": "{{count}} departures"
+    },
+    "picture": "Picture"
   }
 }
