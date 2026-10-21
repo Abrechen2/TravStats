@@ -929,18 +929,21 @@ unreachable home is retried). The home answers by queueing the current state of 
 for that member — filtered to entries whose recorded author is the home member of the pairing, the
 person themselves, or someone in `accepted`: an entry by someone the person has not agreed to
 never leaves the home on a resync (normal delivery sends all and lets the spoke decide; a resync
-narrows it). The spoke still applies the entry-author gate exactly as for `entries`. A resync is
-not queued again while an earlier one for the same member is still in the outbox (a remote peer
-cannot make the home queue the trip over and over). On the spoke, per entry of a `resync: true`
+narrows it). The spoke still applies the entry-author gate exactly as for `entries`. An answer
+still waiting in the home's outbox is replaced by the newer one (it may name a newer yes), so a
+remote peer cannot make the home queue the trip more than once per member; on the spoke a request
+is not queued again while a waiting one already names every yes. A resync from a member the home
+shows `unreachable` or switched `off` is answered like any message that member may send. On the spoke, per entry of a `resync: true`
 message:
 - **missing** → copied (author gate), with a `created` notice naming the author from the roster;
 - **held, identical** (every fact but the advisory `status`) → nothing written; open conflict
   notices on those facts close;
 - **held, different** → never silently overwritten. The spoke records every change it withheld
   (`TripShareWithheld`: group, person, entry, fact, the author's ref, and the value the copy held
-  when it was withheld). A fact whose difference is exactly a withheld change by someone now
-  agreed to — the copy still holds the value recorded — is written, with an `updated` notice
-  naming that author. A fact withheld from someone still not agreed to stays as it is. Any other
+  when it was withheld — recorded only where the copy then still held the change's `before`, so
+  only a provable transition is kept, read under the copy's row lock). A fact whose difference is
+  exactly a withheld change by someone now agreed to — the copy still holds the value recorded —
+  is written, with an `updated` notice naming that author. A fact withheld from someone still not agreed to stays as it is. Any other
   difference (an own edit, a value lost by a restore, a joined own entry) becomes a `conflict`
   notice with both values; a second resync does not add a second one (`recordConflict`). An entry
   with a change of the spoke's own still in its outbox towards the home is left alone: that change
@@ -959,7 +962,8 @@ membership must receive and the consent hold, the seq is taken — and copies an
 **never knew it**: no copy held and no author record in the group. An entry the home knew and
 removed (deleted, moved out) is not brought back. A copied entry spreads on at the home as any
 received one (roster gate, relays). Nothing is overwritten at the home: an entry it holds is left
-as it is.
+as it is. An own entry too large for any message is not sent and the membership carries
+`entries-too-large`, which the trip page names.
 
 What remains (stated, not built): a fact the spoke's person changed on an entry the home already
 holds, while the restore held the membership, is not pushed — the spoke cannot tell its own
@@ -977,4 +981,32 @@ the rest are answered `{ nudged: false }` and change nothing. An unknown pairing
 
 **Not in scope, stated:** a home member's own yes to a remote newcomer still does not replay at
 the home (as locally, `receivingMembers`).
+
+**As built (same day, `feat/federation-resync`).** As designed above. Code: `resync.ts`
+(request, home answer, the spoke-message checks `fromSpoke`), `resyncApply.ts` (the spoke's
+comparison), `withheld.ts` (`TripShareWithheld`), `entriesUp.ts`, `nudge.ts`, `peerFeatures.ts`;
+`queueEntries` takes a `resync` option; `recordEntryAuthor` records a spoke's own people. The
+trip page says "`<origin>` needs an update to catch up" for a parked `unsupported`; the roster
+hint no longer says nothing is caught up. Tests: `threeServersCatchUp.test.ts` (withheld flight
+and gate arrive after the yes; a second resync is a no-op; one request and one answer at a time;
+nothing by a declined author leaves the home; the spoke gates a forged `accepted` again),
+`twoServersCatchUp.test.ts` (a restored spoke catches up both ways with a conflict for what it
+cannot attribute; a repeat changes nothing; a removed entry is not pushed back; only own entries
+go up; a confirmation's nudge delivers at once, without it the backoff holds; the nudge rate
+limit; an rc.18 peer gets a parked `unsupported` and no nudge; an unknown kind is answered
+`unsupported`).
+
+Also built with it (owner, item D): redeeming a code the other server answers "used" reports
+success — "Ist schon verbunden" / "Already connected", HTTP 200 with `alreadyConnected` — when
+this account redeemed exactly that code with that server before (the pairing keeps the code's
+SHA-256, `claimedCodeHash`). A different code, or another account, still reads as used; the
+issuer's one-time rule is unchanged. A reply lost before the claimant recorded the pairing still
+reads as used (nothing to find locally); a new code is the way out, as before.
+
+**Cold review (Codex, same day), four findings, each fixed with a test that failed first**
+(`… review` cases in the two catch-up suites): a withheld change recorded over an own edit would
+have let a resync overwrite that edit (now only a provable transition is recorded); a newer yes
+could be lost behind a waiting request or answer (requests compare their `accepted`, answers are
+replaced); a resync from a member shown unreachable was acknowledged but never answered; an own
+entry too large to push up vanished without a word (now `entries-too-large`).
 
