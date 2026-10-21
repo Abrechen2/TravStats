@@ -79,6 +79,10 @@ describe("keyState", () => {
     [{ hasKey: true, isShared: false }, "own"],
     [{ hasKey: false, isShared: true }, "admin"],
     [{ hasKey: false, isShared: false }, "none"],
+    [{ hasKey: false, isShared: false, hasAccess: false }, "none"],
+    // A key from the server's environment: working for everyone, but neither
+    // the account's own nor stored by the admin (codex final review).
+    [{ hasKey: false, isShared: false, hasAccess: true }, "admin"],
     [undefined, null],
   ])("reads %j as %s", (status, state) => {
     expect(keyState(status)).toBe(state);

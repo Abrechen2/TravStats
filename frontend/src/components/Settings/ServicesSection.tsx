@@ -23,6 +23,8 @@ type PageState = ReturnType<typeof useSettingsPage>;
 interface KeyStatus {
   hasKey: boolean;
   isShared: boolean;
+  /** Any key reaches this account — own, the admin's, or the server environment's. */
+  hasAccess?: boolean;
 }
 
 const FLIGHT_PROVIDERS = ["airlabs", "aviationstack", "aerodatabox", "aeroapi", "opensky"] as const;
@@ -37,11 +39,16 @@ const NAME: Record<string, string> = {
   graphhopper: "GraphHopper",
 };
 
-/** A key's provider as the header counts it: own beats the instance's. */
+/**
+ * A key's provider as the header counts it: own beats the instance's. A key
+ * from the server's environment is the instance's too — `isShared` is false
+ * for it, `hasAccess` true — and a working service must not read "Nicht
+ * eingerichtet".
+ */
 export function keyState(status: KeyStatus | undefined): ServiceState | null {
   if (!status) return null;
   if (status.hasKey) return status.isShared ? "adminOwn" : "own";
-  return status.isShared ? "admin" : "none";
+  return status.isShared || status.hasAccess === true ? "admin" : "none";
 }
 
 function immichState(status: ImmichConnectionStatus | null): ServiceState | null {
