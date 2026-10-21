@@ -273,6 +273,9 @@ export function declutterByBoxes<T>(
 export interface SpreadOptions<T = unknown> extends BoxDeclutterOptions {
   /** Each item's own lift, where items of several layers share one pass. */
   offsetYOf?: (item: T) => number;
+  /** Try the usual spot only: a label that would touch another is hidden,
+   *  never moved — "important"'s answer, in the same shared pass. */
+  hideOnly?: boolean;
   /**
    * The pick stands for a range of zooms; `project` measures its bottom, and
    * this is how much larger the map is at its top (2 for a whole zoom step).
@@ -344,6 +347,7 @@ export function spreadByBoxes<T>(
     project,
     bucketScale = 1,
     offsetYOf,
+    hideOnly = false,
   }: SpreadOptions<T> = {}
 ): SpreadLabel<T>[] {
   const toPx: LabelProjector = project ?? ((p) => projectToWorldPx(p[0], p[1], zoom));
@@ -381,7 +385,7 @@ export function spreadByBoxes<T>(
     const usual = ends.map((end) => boxAt(positionOf(item), width, height, lift, end.toPx, gapPx));
     for (let k = 0; ; k++) {
       const shift = spreadShift(k, width, height, lift, gapPx);
-      if (!shift) return;
+      if (!shift || (hideOnly && k > 0)) return;
       if (ends.every((end, i) => !end.grid.hits(shifted(usual[i], shift)))) {
         ends.forEach((end, i) => end.grid.place(shifted(usual[i], shift)));
         placed.push({ item, shift });

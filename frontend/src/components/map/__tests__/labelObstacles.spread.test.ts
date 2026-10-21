@@ -124,10 +124,29 @@ describe('the flat map\'s own labels in "all" (beta.22 UAT)', () => {
     const layers = appendWithLabelObstacles(own(), [], { labelsMode: "all", zoom: 12 });
     expect(drawnBoxes(layers, 12)).toHaveLength(10);
   });
+});
 
-  it('leaves "important" to each layer\'s own spacing, as before', () => {
-    const before = own();
-    const layers = appendWithLabelObstacles(before, [], { labelsMode: "important", zoom: 6 });
-    expect(layers).toEqual(before);
+/**
+ * The same, one mode down: in "Wichtige" each layer thinned its OWN labels,
+ * so a hotel and a place across the street ("Hotel Cochem", "Reichsburg
+ * Cochem") or an airport and a port still printed over each other. The shared
+ * pass now hides the lower-ranked one there, as it does for station names.
+ */
+describe('the flat map\'s own labels in "important" (beta.22 UAT)', () => {
+  for (const zoom of [4, 6, 8, 10, 12]) {
+    it(`prints no airport, port, hotel or place name over another at zoom ${zoom}`, () => {
+      const layers = appendWithLabelObstacles(own(), [], { labelsMode: "important", zoom });
+      expect(overlaps(drawnBoxes(layers, zoom - 0.5))).toEqual([]);
+      expect(overlaps(drawnBoxes(layers, zoom + 0.49))).toEqual([]);
+    });
+  }
+
+  it("hides the lower-ranked name rather than moving it", () => {
+    const layers = appendWithLabelObstacles(own(), [], { labelsMode: "important", zoom: 10 });
+    const boxes = drawnBoxes(layers, 10);
+    // Equal weight (one visit, one stay): either may win, but only one shows,
+    // and on its usual spot.
+    const cochem = boxes.filter((b) => /Cochem/.test(b.t));
+    expect(cochem).toHaveLength(1);
   });
 });

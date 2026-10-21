@@ -104,21 +104,26 @@ const weightOf = (layerId: string, d: unknown): number => {
 const ZOOM_BUCKET_HALF = 0.5;
 
 /**
- * The map's own labels in "all" — airport codes, cruise ports, hotels and
- * places — in ONE collision pass (beta.22 UAT). Each layer skips its own
- * spacing in "all", and no layer ever compared its names with another's, so
- * "HAM", a hotel and a place in Hamburg printed over each other. Here every
- * label places by weight; one that would touch another moves beside its dot
- * (`spreadByBoxes`), and only where no spot is free does it wait for the next
- * zoom step. Run at the map's snapped zoom, i.e. once per zoom step, never
- * per pan; measured at both ends of that step.
+ * The map's own labels — airport codes, cruise ports, hotels and places — in
+ * ONE collision pass (beta.22 UAT). Each layer spaces only its own names (and
+ * not at all in "all"), so "HAM", a hotel and a place in Hamburg, or "Hotel
+ * Cochem" and "Reichsburg Cochem", printed over each other. Here every label
+ * places by weight. In "all" one that would touch another moves beside its
+ * dot (`spreadByBoxes`) and waits for the next zoom step only where no spot
+ * is free; in "important" (`hideOnly`) it is hidden, as station names are.
+ * Run at the map's snapped zoom, i.e. once per zoom step, never per pan;
+ * measured at both ends of that step.
  */
-function spreadOwnLabels(layers: readonly Layer[], zoom: number): Layer[] {
+function shareOwnLabels(layers: readonly Layer[], zoom: number, hideOnly: boolean): Layer[] {
   type Entry = ShownLabel & { layer: number; weight: number };
   const entries: Entry[] = [];
+  const labelled = new Set<number>();
   layers.forEach((layer, i) => {
-    for (const label of shownLabels(layer) ?? []) {
-      entries.push({ ...label, layer: i, weight: weightOf(layer.id, label.datum) });
+    const labels = shownLabels(layer);
+    if (!labels) return;
+    labelled.add(i);
+    for (const label of labels) {
+      entries.push(Object.assign(label, { layer: i, weight: weightOf(layer.id, label.datum) }));
     }
   });
   if (entries.length === 0) return [...layers];
@@ -132,6 +137,7 @@ function spreadOwnLabels(layers: readonly Layer[], zoom: number): Layer[] {
       offsetYOf: (e) => e.offsetY,
       project: (p) => projectToWorldPx(p[0], p[1], zoom - ZOOM_BUCKET_HALF),
       bucketScale: 2 ** (2 * ZOOM_BUCKET_HALF),
+      hideOnly,
     }
   );
   const byLayer = new Map<number, { data: unknown[]; offsets: Map<unknown, [number, number]> }>();
@@ -145,7 +151,7 @@ function spreadOwnLabels(layers: readonly Layer[], zoom: number): Layer[] {
     kept.offsets.set(item.datum, [item.offset[0] + shift[0], item.offset[1] + shift[1]]);
   }
   return layers.map((layer, i) => {
-    if (!shownLabels(layer)) return layer;
+    if (!labelled.has(i)) return layer;
     const kept = byLayer.get(i) ?? { data: [], offsets: new Map() };
     return (layer as TextLayer<unknown>).clone({
       data: kept.data,
@@ -169,15 +175,18 @@ export function withLabelObstacles(extraLayers: Layer[], mapLayers: readonly Lay
 
 /**
  * The map's own layers, then its extra layers placed around their labels.
- * In "all", the own labels first share one spreading pass (`spreadOwnLabels`);
- * `zoom` is the map's snapped label zoom.
+ * The own labels first share one collision pass (`shareOwnLabels`); `zoom` is
+ * the map's snapped label zoom.
  */
 export function appendWithLabelObstacles(
   own: Layer[],
   extraLayers: Layer[],
   labels?: { labelsMode: LabelsMode; zoom: number }
 ): Layer[] {
-  const shown = labels?.labelsMode === "all" ? spreadOwnLabels(own, labels.zoom) : own;
+  const shown =
+    !labels || labels.labelsMode === "off"
+      ? own
+      : shareOwnLabels(own, labels.zoom, labels.labelsMode === "important");
   return [...shown, ...withLabelObstacles(extraLayers, shown)];
 }
 
