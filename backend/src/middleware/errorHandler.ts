@@ -473,8 +473,7 @@ export type ApiErrorCode =
   | "SHARE_UNDO_UNAVAILABLE"
   /** The caller's own copy of the entry is gone (deleted or moved away) (409). */
   | "SHARE_COPY_NOT_FOUND"
-  /** Trip sharing across servers (spec 2026-10-20 §7) — listed in `remoteShareErrorCodes.ts`. */
-  | RemoteShareApiErrorCode
+  | RemoteShareApiErrorCode // trip sharing across servers (spec 2026-10-20 §7)
   /** Comparison (leaderboard) — rework 2026-10-16. The beta switch is off. */
   | "COMPARISON_DISABLED"
   /** A personal access token: the comparison is a browser-session feature. */
