@@ -207,6 +207,8 @@ export const NON_TRAVEL_RELATIONS = [
   "tripShareInvites",
   // F-S4e: a member's yes or no to a person on another server on a shared trip.
   "tripShareRosterConsents",
+  // Catch-up (2026-10-21): changes held back from a person until their roster yes.
+  "tripShareWithheld",
   "shareGroupsCreated",
   "shareNotices",
   "shareNoticesActed",
