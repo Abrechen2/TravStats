@@ -153,3 +153,26 @@ describe("a delivery waiting behind another message when the consent is withdraw
     expect(await gateOf(a, flight.id)).toBe("A1");
   });
 });
+
+describe("a withdrawal while a received change is being applied (review 2)", () => {
+  it("waits for it: no change is written after the withdrawal committed", async () => {
+    const { anna, ben, remote, flight, benFlight } = await sharedFlight(a, b);
+    await editFlight(b, ben, benFlight.id, { gate: "C3" });
+    const adapter = a.adapters.ADAPTERS.flight;
+    const apply = adapter.apply.bind(adapter);
+    let withdrawal: Promise<unknown> = Promise.resolve();
+    let withdrawnBeforeWrite: boolean | null = null;
+    jest.spyOn(adapter, "apply").mockImplementationOnce(async (...args) => {
+      let done = false;
+      withdrawal = a.lifecycle.withdrawRemoteConsent(anna, remote.id).finally(() => (done = true));
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      withdrawnBeforeWrite = done;
+      return apply(...args);
+    });
+    await b.outbox.runDeliveries();
+    await withdrawal;
+    // The change checked against the membership as it stood; the withdrawal comes after it.
+    expect(withdrawnBeforeWrite).toBe(false);
+    expect(await gateOf(a, flight.id)).toBe("C3");
+  });
+});
