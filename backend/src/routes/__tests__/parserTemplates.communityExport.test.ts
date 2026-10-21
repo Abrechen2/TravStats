@@ -46,6 +46,8 @@ describe("GET /api/v1/parser-templates/:id/community-export", () => {
   let ferryId: string;
   let pendingId: string;
   let lodgingId: string;
+  let orphanSampleId: string;
+  let orphanId: string;
 
   beforeAll(async () => {
     ownerId = await create(`share-owner-${randomUUID()}`);
@@ -73,6 +75,32 @@ describe("GET /api/v1/parser-templates/:id/community-export", () => {
     ferryId = await template({ patterns, sourceId: sample.id });
     pendingId = await template({ patterns, status: "pending" });
     lodgingId = await template({ domain: "lodging" });
+
+    // A template whose subject anchor carries a marked booking reference: the
+    // scan only knows it is personal while the marked sample still exists.
+    const orphanSample = await prisma.trainingData.create({
+      data: {
+        userId: ownerId,
+        domain: "ferry",
+        type: "email",
+        subject: FERRY_SUBJECT,
+        originalFile: "synthetic-ferry.txt",
+        annotations: {
+          fullText: FERRY_SOURCE,
+          textSelections: [...FERRY_SELECTIONS, { label: "bookingReference", text: "ab12cd" }],
+        },
+        extractedData: {},
+      } as unknown as Prisma.TrainingDataUncheckedCreateInput,
+    });
+    orphanSampleId = orphanSample.id;
+    const withRef = {
+      ...derived.template,
+      match: {
+        ...derived.template.match,
+        anchors: [...derived.template.match.anchors, "Ihre Buchung ab12cd"],
+      },
+    } as unknown as Prisma.InputJsonValue;
+    orphanId = await template({ patterns: withRef, sourceId: orphanSample.id });
   });
 
   afterAll(async () => {
@@ -113,6 +141,18 @@ describe("GET /api/v1/parser-templates/:id/community-export", () => {
     const res = await get(lodgingId, owner);
     expect(res.status).toBe(422);
     expect(res.body.code).toBe("TEMPLATE_EXPORT_UNSUPPORTED");
+  });
+
+  it("refuses a template whose marked sample was deleted, instead of exporting unscanned values", async () => {
+    const before = await get(orphanId, owner);
+    expect(before.status).toBe(200);
+    expect(JSON.stringify(before.body.template)).not.toContain("ab12cd");
+
+    await prisma.trainingData.delete({ where: { id: orphanSampleId } });
+    const after = await get(orphanId, owner);
+    expect(JSON.stringify(after.body.template ?? {})).not.toContain("ab12cd");
+    expect(after.status).toBe(422);
+    expect(after.body.code).toBe("TEMPLATE_EXPORT_SOURCE_MISSING");
   });
 
   it("answers someone else's template as not found", async () => {

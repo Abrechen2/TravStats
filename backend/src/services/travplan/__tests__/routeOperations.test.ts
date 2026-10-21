@@ -244,6 +244,71 @@ describe("route operations", () => {
     expect(edited.stages).toHaveLength(3);
   });
 
+  describe("derived metrics follow their inputs", () => {
+    const routed = { distanceKm: 100, durationMinutes: 90, metricsSource: "routed" as const };
+    const cleared = { distanceKm: null, durationMinutes: null, metricsSource: null };
+    const routedRoute = () => {
+      const { state, a, b, c } = withRoute();
+      const stages = [stage(a.id, b.id, routed), stage(b.id, c.id, routed)];
+      return { state: { ...state, stages }, a, b, c };
+    };
+
+    it("moving a station drops the routed figures of the stages touching it", () => {
+      const { state, a, b } = routedRoute();
+      const moved = { ...b, place: { ...b.place, lat: b.place.lat + 9 } };
+      const next = apply(state, { type: "upsert", collection: "stations", value: moved });
+      expect(next.stages[0]).toMatchObject(cleared);
+      expect(next.stages[1]).toMatchObject(cleared);
+      // A station edit that leaves the coordinates alone keeps them.
+      const renamed = apply(state, {
+        type: "upsert",
+        collection: "stations",
+        value: { ...a, title: "A2" },
+      });
+      expect(renamed.stages[0]).toMatchObject(routed);
+    });
+
+    it("a new place through station_night does the same", () => {
+      const { state, c } = routedRoute();
+      const next = apply(state, {
+        type: "station_night",
+        stationId: c.id,
+        night: { kind: "pitch" },
+        place: { ...c.place, lon: c.place.lon + 12 },
+      });
+      expect(next.stages[0]).toMatchObject(routed);
+      expect(next.stages[1]).toMatchObject(cleared);
+    });
+
+    it("a stage given other endpoints or another mode drops its echoed figures", () => {
+      const { state, c } = routedRoute();
+      const rewired = apply(state, {
+        type: "upsert",
+        collection: "stages",
+        value: { ...state.stages[0], toStationId: c.id },
+      });
+      expect(rewired.stages[0]).toMatchObject(cleared);
+      const remoded = apply(state, {
+        type: "upsert",
+        collection: "stages",
+        value: { ...state.stages[0], mode: "rail" },
+      });
+      expect(remoded.stages[0]).toMatchObject(cleared);
+    });
+
+    it("figures the user typed survive a moved station", () => {
+      const { state, b } = routedRoute();
+      const typed = { distanceKm: 120, durationMinutes: 100, metricsSource: "user" as const };
+      const withTyped = { ...state, stages: [{ ...state.stages[0], ...typed }, state.stages[1]] };
+      const next = apply(withTyped, {
+        type: "upsert",
+        collection: "stations",
+        value: { ...b, place: { ...b.place, lat: b.place.lat + 9 } },
+      });
+      expect(next.stages[0]).toMatchObject(typed);
+    });
+  });
+
   it("unknown ids answer 404 PLAN_ITEM_NOT_FOUND", () => {
     const { state } = withRoute();
     for (const op of [

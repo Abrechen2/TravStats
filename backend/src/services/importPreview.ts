@@ -1,4 +1,4 @@
-import { toInstant } from "../shared/time/instant";
+import { toInstant, type Fold } from "../shared/time/instant";
 import { formatWallClockIn } from "../shared/zonedWallClock";
 import { prisma } from "../db";
 import { getCachedAirport } from "./airportCache";
@@ -12,8 +12,27 @@ import type { TrackerFormat } from "./parsers/trackers/formats";
  * refused, it lands where an unadjusted clock would put it. Throws on a
  * malformed reading, which the caller's try/catch turns into a flag.
  */
-function machineInstant(local: string, zone: string): Date {
-  return toInstant(local, zone, { origin: "machine" }).utc;
+function machineInstant(local: string, zone: string, fold: Fold = "earlier"): Date {
+  return toInstant(local, zone, { origin: "machine", fold }).utc;
+}
+
+/**
+ * Whether an instant is the SECOND time its zone showed that wall clock (the
+ * autumn hour). Stored as `fold: "later"` beside the wall clock; without it
+ * the clock reads back at the first occurrence, an hour early.
+ */
+function isLaterOccurrence(utc: Date, zone: string): boolean {
+  const local = formatWallClockIn(utc, zone);
+  if (local === null) return false;
+  const first = toInstant(local, zone, { origin: "machine" });
+  return first.ambiguous && first.utc.getTime() !== utc.getTime();
+}
+
+/** Which occurrence a row's wall clock means — the one its stated instant names, if any. */
+function foldFor(stated: string | undefined, zone: string): Fold {
+  if (!stated) return "earlier";
+  const ms = Date.parse(stated);
+  return !Number.isNaN(ms) && isLaterOccurrence(new Date(ms), zone) ? "later" : "earlier";
 }
 
 export type PreviewSource = "fr24" | "generic_csv" | TrackerFormat;
@@ -29,6 +48,14 @@ export interface PreviewRowInput {
    */
   arrDate?: string;
   durationSeconds?: number;
+  /**
+   * The instant the source itself states for an end (AirTrail stores
+   * instants, App in the Air writes UTC beside local), as ISO-8601 UTC. Read
+   * only to tell which occurrence of a repeated autumn hour the wall clock
+   * means; the wall clock stays the authority.
+   */
+  depInstant?: string;
+  arrInstant?: string;
   fromIata: string;
   toIata: string;
   flightNumber?: string;
@@ -62,6 +89,9 @@ export interface PreviewRowEnriched extends PreviewRowInput {
   departureLocal: string;
   /** Empty when nothing in the row says when the flight arrived. */
   arrivalLocalCorrected: string;
+  /** Set when a wall clock is the second of a repeated autumn hour (ADR 0002). */
+  departureFold?: "later";
+  arrivalFold?: "later";
   /** How much of the clock is real, for a row without a departure time (see `flightPayload.ts`). */
   timeSemantics?: "DATE_ONLY" | "UNKNOWN";
   depTimezone: string;
@@ -122,7 +152,11 @@ function arrivalInstant(
   if (row.arrDate && row.arrTimeLocal) {
     // The export knows the arrival's own day — nothing to guess. A duration
     // that disagrees is still said, as for FR24.
-    const arrUtc = machineInstant(`${row.arrDate}T${row.arrTimeLocal}`, arrTz);
+    const arrUtc = machineInstant(
+      `${row.arrDate}T${row.arrTimeLocal}`,
+      arrTz,
+      foldFor(row.arrInstant, arrTz)
+    );
     if (
       duration &&
       Math.abs(arrUtc.getTime() - (depUtc.getTime() + duration * 1000)) > DURATION_TOLERANCE_MS
@@ -236,7 +270,11 @@ export async function buildPreviewRows(
 
     if (!flags.includes("malformed_datetime") && !flags.includes("unresolvable_airport")) {
       try {
-        depUtc = machineInstant(departureLocal, depTz);
+        depUtc = machineInstant(
+          departureLocal,
+          depTz,
+          timeSemantics ? "earlier" : foldFor(row.depInstant, depTz)
+        );
         if (!isValidDate(depUtc)) throw new Error("invalid dep");
 
         if (timeSemantics) {
@@ -267,6 +305,17 @@ export async function buildPreviewRows(
     }
 
     const flightNumberNormalised = normalizeFlightNumber(row.flightNumber);
+    const departureFold =
+      !timeSemantics &&
+      isValidDate(depUtc) &&
+      depUtc !== SAFE_DATE &&
+      isLaterOccurrence(depUtc, depTz)
+        ? ("later" as const)
+        : undefined;
+    const arrivalFold =
+      !timeSemantics && arrivalLocalCorrected !== "" && isLaterOccurrence(arrUtc, arrTz)
+        ? ("later" as const)
+        : undefined;
 
     // A past flight whose arrival is unknown, or that has no clock at all, is
     // a historical entry — the one status the batch accepts without both
@@ -318,6 +367,8 @@ export async function buildPreviewRows(
       depUtc,
       arrUtc,
       arrivalLocalCorrected,
+      ...(departureFold ? { departureFold } : {}),
+      ...(arrivalFold ? { arrivalFold } : {}),
       depTimezone: depTz,
       arrTimezone: arrTz,
       depLat: dep?.lat ?? null,

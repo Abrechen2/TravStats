@@ -219,4 +219,7 @@ export const NON_TRAVEL_RELATIONS = [
   // The positions the Companion recorded during a trip (forgejo#316): private
   // to their owner, never part of a comparison or a federation publication.
   "tripRecordingBatches",
+  // Where a merged-away trip went (forgejo#316): server bookkeeping for the
+  // Companion's uploads, not travel data.
+  "mergedTripRedirects",
 ] as const;

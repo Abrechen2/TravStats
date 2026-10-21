@@ -316,7 +316,8 @@
     "refused": {
       "TEMPLATE_EXPORT_PERSONAL_DATA": "This template reads with values from your own document, so it cannot be shared as it is. Derive it again from another document of the same sender, where your details do not sit beside a marked value.",
       "TEMPLATE_EXPORT_NOT_ACTIVE": "Only an active template can be shared: run its preview and activate it first.",
-      "TEMPLATE_EXPORT_UNSUPPORTED": "Flight and stay templates are stored in an older format the repository does not take yet."
+      "TEMPLATE_EXPORT_UNSUPPORTED": "Flight and stay templates are stored in an older format the repository does not take yet.",
+      "TEMPLATE_EXPORT_SOURCE_MISSING": "The document this template was derived from has been deleted. Without its marks there is no way to check the template for your details, so it cannot be shared. Derive it again from a document of the same sender."
     },
     "kind": {
       "identity": "your name or address",

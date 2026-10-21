@@ -91,4 +91,28 @@ describe("commitPreviewRows — rows from a tracker export", () => {
     const [, payload] = post.mock.calls[0];
     expect(payload[0]).toMatchObject({ datePrecision: "year", depTimeSemantics: "UNKNOWN" });
   });
+  it("sends which occurrence of a repeated autumn hour the preview chose", async () => {
+    await commitPreviewRows(
+      [
+        {
+          ...base,
+          date: "2024-10-27",
+          fromIata: "BER",
+          toIata: "LHR",
+          departureLocal: "2024-10-27T02:30:00",
+          arrivalLocalCorrected: "2024-10-27T01:45:00",
+          departureFold: "later",
+          arrivalFold: "later",
+          timeSemantics: undefined,
+          statusDefault: "flown",
+        },
+        base,
+      ],
+      "imported_airtrail"
+    );
+    const [, payload] = post.mock.calls[0];
+    expect(payload[0]).toMatchObject({ departureFold: "later", arrivalFold: "later" });
+    expect(payload[1]).not.toHaveProperty("departureFold");
+    expect(payload[1]).not.toHaveProperty("arrivalFold");
+  });
 });

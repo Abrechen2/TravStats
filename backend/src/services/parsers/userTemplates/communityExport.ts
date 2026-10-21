@@ -285,6 +285,7 @@ export type CommunityExportOutcome =
   | (Extract<CommunityExport, { ok: true }> & { domain: ExportableDomain; githubUrl: string })
   | {
       ok: false;
-      refusal: CommunityExportRefusal | "notFound" | "notActive" | "domainNotExportable";
+      refusal:
+        CommunityExportRefusal | "notFound" | "notActive" | "domainNotExportable" | "sourceMissing";
       found: PersonalLiteral[];
     };
