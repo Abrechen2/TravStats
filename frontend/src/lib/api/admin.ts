@@ -513,6 +513,7 @@ export const adminApi = {
     routingProvider: RoutingProviderId | null;
     routingCustomUrl: string | null;
     allowUserFlightApiKeys: boolean;
+    undecryptableKeys?: string[];
   }> => {
     const { data } = await api.get<{
       globalAirlabsApiKey?: string;
@@ -529,6 +530,7 @@ export const adminApi = {
       routingProvider: RoutingProviderId | null;
       routingCustomUrl: string | null;
       allowUserFlightApiKeys: boolean;
+      undecryptableKeys?: string[];
     }>("/admin/api-keys");
     return data;
   },

@@ -110,6 +110,33 @@ async function resolveAdminGlobalKey(
 
 const router = Router();
 
+const STORED_KEY_COLUMNS = [
+  "globalAirlabsApiKey",
+  "globalAviationstackApiKey",
+  "globalAerodataboxApiKey",
+  "globalAeroapiApiKey",
+  "globalLogostreamApiKey",
+  "globalGooglePlacesApiKey",
+  "globalOpenskyClientId",
+  "globalOpenskyClientSecret",
+  "globalOpenskyUsername",
+  "globalOpenskyPassword",
+  "globalOpenrouteserviceApiKey",
+  "globalGraphhopperApiKey",
+] as const;
+
+/**
+ * Columns that hold a value this instance cannot decrypt (written under
+ * another encryption key). The masked echo cannot show them, so without this
+ * list the admin saw "nicht eingerichtet" with no reason (beta.22 UAT).
+ */
+function undecryptableKeys(settings: Record<string, unknown>): string[] {
+  return STORED_KEY_COLUMNS.filter((column) => {
+    const stored = settings[column];
+    return typeof stored === "string" && stored !== "" && decryptApiKey(stored) === null;
+  });
+}
+
 // Get global API keys
 router.get("/api-keys", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -132,6 +159,7 @@ router.get("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
         allowUserFlightApiKeys: true,
         routingProvider: null,
         routingCustomUrl: null,
+        undecryptableKeys: [],
       });
     }
 
@@ -151,6 +179,7 @@ router.get("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
       allowUserFlightApiKeys: adminSettings.allowUserFlightApiKeys ?? true,
       routingProvider: adminSettings.routingProvider ?? null,
       routingCustomUrl: adminSettings.routingCustomUrl ?? null,
+      undecryptableKeys: undecryptableKeys(adminSettings),
     });
   } catch (error) {
     logger.error({

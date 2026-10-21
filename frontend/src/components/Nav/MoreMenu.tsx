@@ -72,7 +72,7 @@ export default function MoreMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="relative flex items-center gap-1 rounded-md px-3 py-1.5 text-sm"
+        className="relative flex items-center gap-1 rounded-md px-3 py-1.5 text-sm pointer-coarse:min-h-(--ts-size-touch-min)"
         style={{
           fontWeight: active ? 700 : 500,
           color: active ? "var(--ts-text-bright)" : "var(--ts-muted)",

@@ -167,6 +167,12 @@
   /* ─── Buttons ──────────────────────────────────────────── */
   @apply px-4 py-2 rounded-lg font-medium transition-all duration-200
            focus:outline-hidden focus:ring-2 focus:ring-offset-2;
+  /* Touch sizing follows the pointer, as for `input`: the beta.22 iPad UAT
+     measured 36-38 px buttons ("Speichern", "Verbindung testen") on every
+     card built on btn-primary / btn-secondary. */
+  @media (pointer: coarse) {
+    min-height: var(--ts-size-touch-min);
+  }
 }
 
 @utility btn-primary {

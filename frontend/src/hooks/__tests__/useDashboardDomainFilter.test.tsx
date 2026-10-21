@@ -138,6 +138,32 @@ describe("useDashboardDomainFilter", () => {
     expect(bus?.beta).toBe(true);
   });
 
+  // beta.22 UAT: bus, ferry and rental showed no count while every other row did.
+  it("shows the loaded bus, ferry and rental counts", () => {
+    useDashboardCountsStore.setState({
+      counts: {
+        flight: 3,
+        cruise: 1,
+        poi: 0,
+        lodging: 2,
+        roadtrip: 0,
+        rail: 0,
+        bus: 5,
+        ferry: 2,
+        rental: 4,
+      },
+    });
+    useSettingsStore.setState({
+      enabledDomains: ["flight", "bus", "ferry", "rental"],
+      betaFeaturesEnabled: true,
+    });
+    const { result } = renderHook(() => useDashboardDomainFilter(0), {
+      wrapper: wrapper(["/dashboard"]),
+    });
+    const countOf = (key: string) => result.current.rows.find((r) => r.key === key)?.count;
+    expect([countOf("bus"), countOf("ferry"), countOf("rental")]).toEqual([5, 2, 4]);
+  });
+
   it("bus stays out while its beta gate is closed", () => {
     useSettingsStore.setState({ enabledDomains: ["flight", "bus"], betaFeaturesEnabled: false });
     const { result } = renderHook(() => useDashboardDomainFilter(0), {

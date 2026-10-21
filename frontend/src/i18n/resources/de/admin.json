@@ -842,6 +842,7 @@
     "userCorrections": "Benutzerkorrekturen"
   },
   "globalApiKeys": {
+    "undecryptable": "Ein Schlüssel ist gespeichert, kann auf dieser Instanz aber nicht entschlüsselt werden (er wurde mit einem anderen Schlüssel verschlüsselt). Er gilt deshalb für niemanden — bitte neu eintragen.",
     "title": "Globale API-Schlüssel",
     "description": "Diese Schlüssel gelten für alle Benutzer und dienen als Rückfall für alle, die keinen eigenen hinterlegt haben. Ein eigener Schlüssel hat immer Vorrang.",
     "parserApis": "Parser APIs",

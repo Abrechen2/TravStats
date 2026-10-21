@@ -1,10 +1,11 @@
-import { useId, useState, type JSX, type ReactNode } from "react";
+import { useEffect, useId, useState, type JSX, type ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import Pill from "../ui/Pill";
 import { token } from "../ui/tokens";
 import { Icon } from "../ui/Icon";
 import { HeadingAboveContext } from "./SettingsShared";
+import { foldForSearch } from "../../pages/Settings/settingsSearchMatch";
 
 /**
  * Who provides a service for this account (forgejo#321):
@@ -22,6 +23,8 @@ export interface ServiceItem {
   /** One line on what the service is for. */
   what?: string;
   state: ServiceState | null;
+  /** Why the service is not available although something is stored. */
+  notice?: string;
   /** The service's own card — its connection form, test button, quota. */
   body?: ReactNode;
 }
@@ -65,6 +68,28 @@ export function ServiceBadge({ state }: { state: ServiceState }): JSX.Element {
 }
 
 /**
+ * The service a deep link names: the settings search appends the keyword it
+ * matched (`&match=OpenRouteService-Schlüssel`). An item matches when its name
+ * is inside the keyword or the keyword inside its name. Read from the address
+ * bar, not the router, because the accordion is also drawn outside one.
+ */
+function namedItem(groups: readonly ServiceGroup[]): { groupId: string; itemId: string } | null {
+  if (typeof window === "undefined") return null;
+  const raw = new URLSearchParams(window.location.search).get("match");
+  const match = raw ? foldForSearch(raw) : "";
+  if (match.length < 3) return null;
+  for (const group of groups) {
+    for (const item of group.items) {
+      const name = foldForSearch(item.name);
+      if (name.length >= 3 && (match.includes(name) || name.includes(match))) {
+        return { groupId: group.id, itemId: item.id };
+      }
+    }
+  }
+  return null;
+}
+
+/**
  * External services as accordions, one per domain plus "Bereichsübergreifend"
  * (tester, Discord 2026-10-18: the same kind of service sat in a different
  * place on every domain's page, and nothing said which ones the admin had
@@ -82,7 +107,27 @@ export function ServiceAccordion({
   groups: readonly ServiceGroup[];
   initiallyOpen?: readonly string[];
 }): JSX.Element {
-  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set(initiallyOpen));
+  const named = namedItem(groups);
+  const namedGroup = named?.groupId ?? null;
+  const namedId = named?.itemId ?? null;
+  const [open, setOpen] = useState<ReadonlySet<string>>(
+    () => new Set(namedGroup ? [...initiallyOpen, namedGroup] : initiallyOpen)
+  );
+  // A link that names a service inside a collapsed group opens that group and
+  // brings the service into view (beta.22 UAT: the search hit landed on a
+  // closed "Straßenrouting"). The scroll waits a tick so it lands after the
+  // page's own scroll to the section.
+  useEffect(() => {
+    if (!namedGroup || !namedId) return;
+    setOpen((prev) => (prev.has(namedGroup) ? prev : new Set([...prev, namedGroup])));
+    const timer = setTimeout(() => {
+      const el = document.querySelector(`[data-service="${namedId}"]`);
+      if (el && typeof el.scrollIntoView === "function") {
+        el.scrollIntoView({ block: "center", behavior: "smooth" });
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [namedGroup, namedId]);
   const toggle = (id: string): void =>
     setOpen((prev) => {
       const next = new Set(prev);
@@ -177,6 +222,11 @@ function AccordionGroup({
                 </span>
                 {item.state && <ServiceBadge state={item.state} />}
               </div>
+              {item.notice && (
+                <p className="t-caption" role="status" style={{ color: token("warn") }}>
+                  {item.notice}
+                </p>
+              )}
               {item.state === "adminOwn" && (
                 <p className="t-caption" data-own-overrides="">
                   {t("settings:services.ownOverrides")}

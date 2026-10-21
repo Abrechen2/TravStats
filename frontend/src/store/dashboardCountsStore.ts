@@ -7,6 +7,10 @@ export interface DashboardCounts {
   lodging: number;
   roadtrip: number;
   rail: number;
+  /** `null` until loaded, or when the domain is off or its count failed: unknown, not 0. */
+  bus?: number | null;
+  ferry?: number | null;
+  rental?: number | null;
 }
 
 /**

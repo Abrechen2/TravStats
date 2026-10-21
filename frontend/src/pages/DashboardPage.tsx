@@ -21,6 +21,9 @@ import { LodgingTab } from "../components/Dashboard/tabs/LodgingTab";
 import { TourTab } from "../components/Dashboard/tabs/TourTab";
 import { RailTab } from "../components/Dashboard/tabs/RailTab";
 import { railApi } from "../lib/api/rail";
+import { busApi } from "../lib/api/bus";
+import { ferryApi } from "../lib/api/ferry";
+import { rentalApi } from "../lib/api/rental";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { roadtripsApi } from "../lib/api/roadtrips";
 import { useDomainVisible } from "../hooks/useDomainVisible";
@@ -34,6 +37,9 @@ export default function DashboardPage(): JSX.Element {
   const placesVisible = usePlacesVisible();
   const placesAccess = usePlacesAccess();
   const railVisible = useDomainVisible("rail");
+  const busVisible = useDomainVisible("bus");
+  const ferryVisible = useDomainVisible("ferry");
+  const rentalVisible = useDomainVisible("rental");
   // Three-state like places: `false` only once the instance has answered.
   const { betaFeaturesEnabled } = useBetaFeatures();
   const toursAccess = useToursAccess();
@@ -87,6 +93,25 @@ export default function DashboardPage(): JSX.Element {
         const railPromise = railVisible
           ? railApi.list({ limit: 1 }).then((page) => page.total)
           : Promise.resolve(0);
+        // Bus, ferry and rental counted the same way (beta.22 UAT: their filter
+        // rows had no number). A failed count is unknown — null, not 0 — and
+        // must not take the other domains' counts down with it.
+        const totalOf = (
+          visible: boolean,
+          domain: string,
+          load: () => Promise<{ total: number }>
+        ): Promise<number | null> =>
+          visible
+            ? load()
+                .then((page) => page.total)
+                .catch((err: unknown) => {
+                  logger.warn(`Failed to load the dashboard ${domain} count:`, err);
+                  return null;
+                })
+            : Promise.resolve(null);
+        const busPromise = totalOf(busVisible, "bus", () => busApi.list({ limit: 1 }));
+        const ferryPromise = totalOf(ferryVisible, "ferry", () => ferryApi.list({ limit: 1 }));
+        const rentalPromise = totalOf(rentalVisible, "rental", () => rentalApi.list({ limit: 1 }));
         const [
           flights,
           scheduledFlights,
@@ -95,6 +120,9 @@ export default function DashboardPage(): JSX.Element {
           placeCount,
           roadtripCount,
           railCount,
+          busCount,
+          ferryCount,
+          rentalCount,
         ] = await Promise.all([
           flightsPromise,
           scheduledFlightsPromise,
@@ -103,6 +131,9 @@ export default function DashboardPage(): JSX.Element {
           placesPromise,
           roadtripsPromise,
           railPromise,
+          busPromise,
+          ferryPromise,
+          rentalPromise,
         ]);
         if (cancelled) return;
         setCounts(
@@ -113,6 +144,9 @@ export default function DashboardPage(): JSX.Element {
             lodging: lodgingStats?.lodgingsCount ?? 0,
             roadtrip: roadtripCount,
             rail: railCount,
+            bus: busCount,
+            ferry: ferryCount,
+            rental: rentalCount,
           },
           {
             flight: scheduledFlights.total,
@@ -133,7 +167,15 @@ export default function DashboardPage(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [isEnabled, placesVisible, railVisible, refreshToken]);
+  }, [
+    isEnabled,
+    placesVisible,
+    railVisible,
+    busVisible,
+    ferryVisible,
+    rentalVisible,
+    refreshToken,
+  ]);
 
   // `/dashboard/poi` on a hidden instance used to render the SHELL with the
   // tab hidden from the strip — which still drew the shell's per-tab

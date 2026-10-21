@@ -315,28 +315,28 @@ export async function hasApiKeyAccess(
         let hasUserKey = false;
         switch (provider) {
           case "openai":
-            hasUserKey = !!userSettings.openaiApiKey;
+            hasUserKey = !!decryptApiKey(userSettings.openaiApiKey);
             break;
           case "claude":
-            hasUserKey = !!userSettings.claudeApiKey;
+            hasUserKey = !!decryptApiKey(userSettings.claudeApiKey);
             break;
           case "airlabs":
-            hasUserKey = !!userSettings.airlabsApiKey;
+            hasUserKey = !!decryptApiKey(userSettings.airlabsApiKey);
             break;
           case "aviationstack":
-            hasUserKey = !!userSettings.aviationstackApiKey;
+            hasUserKey = !!decryptApiKey(userSettings.aviationstackApiKey);
             break;
           case "aerodatabox":
-            hasUserKey = !!userSettings.aerodataboxApiKey;
+            hasUserKey = !!decryptApiKey(userSettings.aerodataboxApiKey);
             break;
           case "aeroapi":
-            hasUserKey = !!userSettings.aeroapiApiKey;
+            hasUserKey = !!decryptApiKey(userSettings.aeroapiApiKey);
             break;
           case "openrouteservice":
-            hasUserKey = !!userSettings.openrouteserviceApiKey;
+            hasUserKey = !!decryptApiKey(userSettings.openrouteserviceApiKey);
             break;
           case "graphhopper":
-            hasUserKey = !!userSettings.graphhopperApiKey;
+            hasUserKey = !!decryptApiKey(userSettings.graphhopperApiKey);
             break;
         }
 
@@ -346,35 +346,37 @@ export async function hasApiKeyAccess(
       }
     }
 
-    // Check global key
+    // Check global key. A key counts only if it decrypts: a stored ciphertext
+    // this instance cannot read serves nobody, and reporting it as "for
+    // everyone" contradicted the admin view, which cannot mask it either.
     const adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
     if (adminSettings) {
       let hasGlobalKey = false;
       try {
         switch (provider) {
           case "openai":
-            hasGlobalKey = !!adminSettings.globalOpenaiApiKey;
+            hasGlobalKey = !!decryptApiKey(adminSettings.globalOpenaiApiKey);
             break;
           case "claude":
-            hasGlobalKey = !!adminSettings.globalClaudeApiKey;
+            hasGlobalKey = !!decryptApiKey(adminSettings.globalClaudeApiKey);
             break;
           case "airlabs":
-            hasGlobalKey = !!adminSettings.globalAirlabsApiKey;
+            hasGlobalKey = !!decryptApiKey(adminSettings.globalAirlabsApiKey);
             break;
           case "aviationstack":
-            hasGlobalKey = !!adminSettings.globalAviationstackApiKey;
+            hasGlobalKey = !!decryptApiKey(adminSettings.globalAviationstackApiKey);
             break;
           case "aerodatabox":
-            hasGlobalKey = !!adminSettings.globalAerodataboxApiKey;
+            hasGlobalKey = !!decryptApiKey(adminSettings.globalAerodataboxApiKey);
             break;
           case "aeroapi":
-            hasGlobalKey = !!adminSettings.globalAeroapiApiKey;
+            hasGlobalKey = !!decryptApiKey(adminSettings.globalAeroapiApiKey);
             break;
           case "openrouteservice":
-            hasGlobalKey = !!adminSettings.globalOpenrouteserviceApiKey;
+            hasGlobalKey = !!decryptApiKey(adminSettings.globalOpenrouteserviceApiKey);
             break;
           case "graphhopper":
-            hasGlobalKey = !!adminSettings.globalGraphhopperApiKey;
+            hasGlobalKey = !!decryptApiKey(adminSettings.globalGraphhopperApiKey);
             break;
         }
       } catch (error: unknown) {

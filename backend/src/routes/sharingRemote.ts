@@ -6,6 +6,7 @@ import { authenticate, requireWriteScope, type AuthRequest } from "../middleware
 import { rejectDemoWrites } from "../middleware/demoGuard";
 import { tripFederationAvailability } from "../services/sharing/federation/availability";
 import { claimTripInvite } from "../services/sharing/federation/claim";
+import { requireTripFederation } from "../services/sharing/federation/access";
 import {
   createTripInvite,
   listTripInvites,
@@ -95,6 +96,21 @@ router.get(
     });
   })
 );
+
+/**
+ * Off means off before anything else is judged: the switch is asked ahead of
+ * every body and parameter, so a claim while the feature is off answers
+ * `SHARE_REMOTE_DISABLED` like every other endpoint, not "invalid code"
+ * (beta.22 UAT). Registered after `/status`, which answers while off.
+ */
+router.use(async (req: AuthRequest, _res: Response, next: NextFunction): Promise<void> => {
+  try {
+    await requireTripFederation(req.userId!);
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.get(
   "/invites",

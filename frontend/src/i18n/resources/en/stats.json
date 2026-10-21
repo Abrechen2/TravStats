@@ -34,7 +34,9 @@
       "rental_one": "{{count}} rental car",
       "rental_other": "{{count}} rental cars",
       "bus_one": "{{count}} bus ride",
-      "bus_other": "{{count}} bus rides"
+      "bus_other": "{{count}} bus rides",
+      "ferry_one": "{{count}} ferry crossing",
+      "ferry_other": "{{count}} ferry crossings"
     },
     "help": {
       "experiences": {

@@ -2,7 +2,7 @@ import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../db";
-import { encryptApiKey } from "../../utils/encryption";
+import { decryptApiKey, encryptApiKey } from "../../utils/encryption";
 import {
   testAirlabsKey,
   testAviationstackKey,
@@ -148,9 +148,14 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       });
     }
 
-    const hasUserOpensky = settings && (settings.openskyClientId || settings.openskyUsername);
-    const hasGlobalOpensky =
-      adminSettings && (adminSettings.globalOpenskyClientId || adminSettings.globalOpenskyUsername);
+    // Booleans, never the columns: `a || b` over stored values answers with the
+    // stored (encrypted) credential itself, and this response goes to every user.
+    const hasUserOpensky = !!(settings?.openskyClientId || settings?.openskyUsername);
+    // A global credential counts only if it decrypts (see hasApiKeyAccess).
+    const hasGlobalOpensky = !!(
+      decryptApiKey(adminSettings?.globalOpenskyClientId) ||
+      decryptApiKey(adminSettings?.globalOpenskyUsername)
+    );
     const openskyShared = hasGlobalOpensky && !hasUserOpensky;
 
     res.json({
@@ -185,7 +190,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
         hasAccess: graphhopperAccess.hasAccess,
       },
       opensky: {
-        hasKey: !!hasUserOpensky,
+        hasKey: hasUserOpensky,
         isShared: openskyShared,
         hasAccess:
           hasUserOpensky ||
@@ -310,7 +315,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     });
 
     const adminSettingsAfter = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
-    const hasGlobalOpensky = adminSettingsAfter && adminSettingsAfter.globalOpenskyClientId;
+    const hasGlobalOpensky = !!decryptApiKey(adminSettingsAfter?.globalOpenskyClientId);
 
     res.json({
       message: "API keys updated successfully",

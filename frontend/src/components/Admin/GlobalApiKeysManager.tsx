@@ -33,6 +33,8 @@ export interface GlobalApiKeys {
   globalOpenskyUsername?: string;
   globalOpenskyPassword?: string;
   allowUserFlightApiKeys: boolean;
+  /** Stored columns the server cannot decrypt (written under another key). */
+  undecryptableKeys?: string[];
 }
 
 export interface ParserApiKeySettings {
@@ -131,12 +133,17 @@ export default function GlobalApiKeysManager({
   const expert = useExpertRows(2);
   const keys = globalApiKeys;
   const loaded = keys !== null && parserSettings !== null;
+  // A stored key the server cannot decrypt serves nobody; it reads "nicht
+  // eingerichtet" like a missing one, but says why (beta.22 UAT).
+  const undecryptableNotice = (field: string): string | undefined =>
+    keys?.undecryptableKeys?.includes(field) ? t("admin:globalApiKeys.undecryptable") : undefined;
 
   const keyItem = (p: KeyProvider): ServiceItem => ({
     id: p.provider,
     name: p.name,
     what: t(`settings:services.what.${p.provider}`),
     state: keys ? (keys[p.field] ? "admin" : "none") : null,
+    notice: undecryptableNotice(p.field),
     body: keys ? (
       <ApiKeyCard
         provider={p.provider}
@@ -158,6 +165,9 @@ export default function GlobalApiKeysManager({
     name: "OpenSky",
     what: t("settings:services.what.opensky"),
     state: keys ? (keys.globalOpenskyClientId ? "admin" : "none") : null,
+    notice:
+      undecryptableNotice("globalOpenskyClientId") ??
+      undecryptableNotice("globalOpenskyClientSecret"),
     body: keys ? (
       <ApiKeyCard
         provider="opensky"
