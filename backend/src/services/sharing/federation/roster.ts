@@ -35,7 +35,32 @@ import { requireTripFederation } from "./access";
 import { kickDelivery } from "./deliveryKick";
 import { remoteShareError } from "./errors";
 import { addressed, requireReceiving } from "./peerMember";
+import type { ChangeAuthor } from "./outbound";
 import { serveOnce, takeSeq } from "./streams";
+
+/**
+ * Home: who brought an entry into the group (F-S4e review) — kept so a resend after a restore can
+ * name it, and a spoke copies only what its person said yes to. The first author stays.
+ */
+export async function recordEntryAuthor(
+  c: DbTransaction,
+  groupId: string,
+  shareKey: string,
+  author: ChangeAuthor
+): Promise<void> {
+  const group = await c.tripShareGroup.findUnique({
+    where: { id: groupId },
+    select: { federatedRef: true, homeOrigin: true },
+  });
+  if (!group?.federatedRef || group.homeOrigin) return;
+  const ref = author.kind === "user" ? userRef(group.federatedRef, author.id) : author.ref;
+  if (!ref) return;
+  await c.tripShareEntryAuthor.upsert({
+    where: { groupId_shareKey: { groupId, shareKey } },
+    create: { groupId, shareKey, authorRef: ref },
+    update: {},
+  });
+}
 
 /** Remote members who are on the trip (the roster's people on other servers). */
 export const ON_TRIP = ["active", "unreachable", "suspended"];

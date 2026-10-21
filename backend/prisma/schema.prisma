@@ -4690,6 +4690,7 @@ model TripShareGroup {
   outbox        TripShareOutbox[]
   rosterEntries TripShareRosterEntry[]
   rosterConsent TripShareRosterConsent[]
+  entryAuthors  TripShareEntryAuthor[]
 
   @@unique([federatedRef], map: "trip_share_groups_home_ref_key", where: raw("home_origin IS NULL"))
   @@unique([homeOrigin, federatedRef])
@@ -4766,6 +4767,22 @@ model TripShareRosterConsent {
   @@id([groupId, userId, ref])
   @@index([userId])
   @@map("trip_share_roster_consents")
+}
+
+/// The home's record of who brought each entry into a group shared across servers (F-S4e review),
+/// by the entry's share key (`entry_key`: not a `share_key` column — this table is no shareable type).
+/// a resend of the trip after a restore names each entry's author by roster ref, so a spoke copies
+/// only what its person said yes to. An entry without a row is the home member's own.
+model TripShareEntryAuthor {
+  groupId   String   @map("group_id")
+  shareKey  String   @map("entry_key")
+  authorRef String   @map("author_ref")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  group TripShareGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, shareKey])
+  @@map("trip_share_entry_authors")
 }
 
 model TripSharePeerStream {

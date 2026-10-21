@@ -159,4 +159,24 @@ describe("three servers, one home", () => {
     await a.outbox.runDeliveries();
     expect((await rosterOf(c, cleo, cleoTrip)).map((p) => p.displayName)).not.toContain("Ben");
   });
+
+  it("a resend after a restore brings Ben nothing by Cleo he said no to (review 1)", async () => {
+    const { anna, ben, cleo, trip, benTrip, cleoTrip } = await threeOnATrip();
+    const cleoOnB = (await rosterOf(b, ben, benTrip)).find((p) => p.displayName === "Cleo");
+    await b.roster.decideRosterPerson(ben, benTrip, cleoOnB!.ref, "declined");
+    // Cleo adds a flight: it reaches Anna, and is withheld from Ben.
+    const hers = await addFlight(c, cleo, cleoTrip);
+    await c.propagate.propagateWrite(c.prisma, cleo, "flight", hers.id);
+    await c.outbox.runDeliveries();
+    await a.outbox.runDeliveries();
+    expect(await a.prisma.flight.count({ where: { tripId: trip.id } })).toBe(2);
+    expect(await b.prisma.flight.count({ where: { tripId: benTrip } })).toBe(1);
+
+    await a.restore.suspendTripFederationAfterRestore();
+    await a.lifecycle.reconfirmTrip(anna, trip.id);
+    await a.outbox.runDeliveries();
+    expect(await b.prisma.flight.count({ where: { tripId: benTrip } })).toBe(1);
+    // Anna's own entries still go: a flight she added is resent and arrives.
+    expect(await c.prisma.flight.count({ where: { tripId: cleoTrip } })).toBe(2);
+  });
 });

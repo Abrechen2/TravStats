@@ -17,7 +17,7 @@ import {
   type ChangeAuthor,
   type Spread,
 } from "./federation/outbound";
-import { reachableBy } from "./federation/roster";
+import { reachableBy, recordEntryAuthor } from "./federation/roster";
 
 /**
  * Propagation (design 2026-10-09, decision 3, phase S2): after a member's
@@ -237,6 +237,8 @@ export async function spreadCreate(
   source: SharedRow
 ): Promise<void> {
   const key = source.shareKey as string;
+  // Who brought it in, for a resend across servers after a restore (F-S4e review).
+  await recordEntryAuthor(c, spread.groupId, key, spread.author);
   const reached: string[] = [];
   for (const member of await reachedHere(c, spread)) {
     const copy = await copyInto(c, adapter.entity, source, {

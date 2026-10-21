@@ -37,6 +37,7 @@ import { fromWireEntries } from "./wire/decode";
 import { toWireEntries } from "./wire/encode";
 import type { WireEntry } from "./wire/shapes";
 import { isHeld, isReceiving } from "./peerMember";
+import { mayReach, userRef } from "./roster";
 import { rejectWith, serveOnce, takeSeq } from "./streams";
 import { BODY_BUDGET, wireBytes } from "./transport";
 
@@ -95,7 +96,11 @@ async function wireEntriesOf(tx: DbTransaction, userId: string, tripId: string) 
  * caller's transaction. Asks again whether the person still receives (`receivingRemotes`). A
  * repeat queues everything again; the receiver keeps only what it lacks (`heldKeys`).
  */
-export async function queueEntries(tx: DbTransaction, memberId: string): Promise<number> {
+export async function queueEntries(
+  tx: DbTransaction,
+  memberId: string,
+  options: { resync?: boolean } = {}
+): Promise<number> {
   const member = await tx.tripShareRemoteMember.findUnique({
     where: { id: memberId },
     include: { remote: true, group: true },
@@ -113,16 +118,39 @@ export async function queueEntries(tx: DbTransaction, memberId: string): Promise
   const entries = await wireEntriesOf(tx, remote.userId, trip.id);
   const oversize = entries.filter((e) => wireBytes(e) > ENTRIES_BYTES);
   const chunks = chunkEntries(entries.filter((e) => !oversize.includes(e)));
-  for (const chunk of chunks)
+  // A resend after a restore names who brought each entry in, unless it was the member's own
+  // (F-S4e review): the spoke then copies only what its person said yes to.
+  const own = userRef(group.federatedRef as string, remote.userId);
+  const authors = options.resync
+    ? new Map(
+        (
+          await tx.tripShareEntryAuthor.findMany({
+            where: { groupId: group.id, authorRef: { not: own } },
+          })
+        ).map((a) => [a.shareKey, a.authorRef])
+      )
+    : null;
+  for (const chunk of chunks) {
+    const named = authors
+      ? chunk.flatMap((e) => {
+          const ref = authors.get(e.shareKey);
+          return ref ? [{ shareKey: e.shareKey, ref }] : [];
+        })
+      : [];
     await tx.tripShareOutbox.create({
       data: {
         groupId: group.id,
         memberId: member.id,
         peerOrigin: remote.origin,
         kind: "entries",
-        payload: { from: remote.localChannel, entries: chunk } as unknown as Prisma.InputJsonValue,
+        payload: {
+          from: remote.localChannel,
+          entries: chunk,
+          ...(authors ? { authors: named } : {}),
+        } as unknown as Prisma.InputJsonValue,
       },
     });
+  }
   // An entry too large for any message is a stated loss, not a silent one.
   await tx.tripShareRemoteMember.update({
     where: { id: member.id },
@@ -154,7 +182,12 @@ export function serveEntries(origin: string, message: EntriesMessage): Promise<T
     const members = (
       await tx.tripShareRemoteMember.findMany({
         where: { groupId: group.id, remote: { origin, channel: message.from } },
-        select: { state: true, stateReason: true, remote: { select: { userId: true } } },
+        select: {
+          state: true,
+          stateReason: true,
+          rosterRef: true,
+          remote: { select: { userId: true } },
+        },
       })
     ).filter(isReceiving);
     const recipients = (
@@ -165,10 +198,12 @@ export function serveEntries(origin: string, message: EntriesMessage): Promise<T
             orderBy: { createdAt: "asc" },
             select: { id: true },
           });
-          return trip ? { userId: m.remote.userId, tripId: trip.id } : null;
+          return trip
+            ? { userId: m.remote.userId, tripId: trip.id, pairingRef: m.rosterRef }
+            : null;
         })
       )
-    ).filter((r): r is { userId: string; tripId: string } => r !== null);
+    ).filter((r): r is { userId: string; tripId: string; pairingRef: string } => r !== null);
     if (recipients.length === 0) {
       // Held here until its person confirms again (F-S4e): kept there and sent again, not lost.
       const held = await tx.tripShareRemoteMember.findMany({
@@ -177,9 +212,23 @@ export function serveEntries(origin: string, message: EntriesMessage): Promise<T
       throw rejectWith(held.some(isHeld) ? "suspended" : "not-member");
     }
     const rows = await fromWireEntries(tx, message.entries as WireEntry[]);
+    const authorOf = new Map((message.authors ?? []).map((a) => [a.shareKey, a.ref]));
     for (const recipient of recipients) {
+      // An entry someone else brought in reaches the person only after their yes (F-S4e).
+      const allowed = new Set<string>();
+      for (const { row } of rows) {
+        const ref = authorOf.get(row.shareKey as string);
+        if (
+          !ref ||
+          ref === recipient.pairingRef ||
+          (await mayReach(tx, group.id, recipient.userId, { pairingId: null, ref }))
+        )
+          allowed.add(row.shareKey as string);
+      }
       for (const entity of SHARE_ENTITIES) {
-        const ofType = rows.filter((r) => r.entity === entity);
+        const ofType = rows.filter(
+          (r) => r.entity === entity && allowed.has(r.row.shareKey as string)
+        );
         if (ofType.length === 0) continue;
         const held = await heldKeys(
           tx,

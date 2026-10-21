@@ -110,12 +110,20 @@ export const offerAnswerSchema = z.strictObject({
   answer: z.enum(["accept", "decline"]),
 });
 
-/** Entries of the offering member's trip (`from`), at most fifty per message. */
+/**
+ * Entries of the offering member's trip (`from`), at most fifty per message. A resend after a
+ * restore (F-S4e) names, per entry someone else brought in, that person's roster ref
+ * (`authors`): the receiver copies it only for a person who said yes to them.
+ */
 export const entriesSchema = z.strictObject({
   kind: z.literal("entries"),
   ...groupHeader,
   from: uuid,
   entries: z.array(wireEntrySchema).min(1).max(MAX_ENTRIES_PER_MESSAGE),
+  authors: z
+    .array(z.strictObject({ shareKey: uuid, ref: uuid }))
+    .max(MAX_ENTRIES_PER_MESSAGE)
+    .optional(),
 });
 
 /**
