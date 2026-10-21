@@ -165,6 +165,24 @@ describe("review of the catch-up (Codex, 2026-10-21)", () => {
     expect(await b.prisma.flight.count({ where: { tripId: t.benTrip } })).toBe(1);
   });
 
+  it("answering a resync of a switched-off member keeps its hold reason (security review)", async () => {
+    const t = await sharedFlight(a, b);
+    await a.prisma.flight.update({
+      where: { id: t.flight.id },
+      data: { specialData: { note: "x".repeat(1_100_000) } },
+    });
+    await a.prisma.tripShareRemoteMember.updateMany({
+      where: { groupId: t.groupId },
+      data: { state: "suspended", stateReason: "off" },
+    });
+    const groupId = await groupOn(b, t.benTrip);
+    await b.prisma.$transaction((tx) => b.resync.queueResync(tx, t.ben, groupId));
+    await b.outbox.runDeliveries();
+    await a.outbox.runDeliveries();
+    const [held] = await a.prisma.tripShareRemoteMember.findMany({ where: { groupId: t.groupId } });
+    expect(held).toMatchObject({ state: "suspended", stateReason: "off" });
+  });
+
   it("an own entry too large to send up is named on the trip page (review 4)", async () => {
     const t = await sharedFlight(a, b);
     await b.restore.suspendTripFederationAfterRestore();

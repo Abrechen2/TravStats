@@ -172,8 +172,11 @@ export async function queueEntries(
   // spoke copies it for nobody, and the sender must not read that as a clean delivery.
   // A resync sends a chosen part: what it leaves out is not a loss of the delivery, so the reason
   // a full delivery recorded stays — only a part too large for any message is named.
+  // Only an active member's reason is a delivery note. A held member's reason is its hold
+  // ("off", "peer-blocked", …), which resume and isReceiving read: overwriting it would strand
+  // the membership. Its loss is named again by the full delivery once it is active.
   const unattributed = all.some((e) => !authors.has(e.shareKey));
-  if (!resync || oversize.length > 0)
+  if (member.state === "active" && (!resync || oversize.length > 0))
     await tx.tripShareRemoteMember.update({
       where: { id: member.id },
       data: {
