@@ -5,6 +5,7 @@ import { toPortLabel } from "../map/portLabel";
 import { declutterByDistance, pickLabelled, type LabelsMode } from "../map/labelPriority";
 import { markerDotRadiusProps } from "./markerDotStyle";
 import { isCountableCruise } from "../../shared/cruiseCounting";
+import { cruisePortCalls } from "../../lib/cruisePortCalls";
 import { useMapCardSelectionStore } from "../../store/mapCardSelectionStore";
 
 /**
@@ -165,20 +166,9 @@ export function createCruisePortsLayer(
       if (claimsVisit) recordVisit(port, date);
       else ensurePort(port);
     };
-    const firstPortCall = cruise.stops.find((s) => !s.isAtSea && s.port);
-    const lastPortCall = [...cruise.stops].reverse().find((s) => !s.isAtSea && s.port);
-    // Departure/arrival ports get markers too — skipped only when they
-    // duplicate the first/last port-call stop (counted there instead).
-    if (cruise.departurePort && cruise.departurePort.id !== firstPortCall?.port?.id) {
-      touch(cruise.departurePort, cruise.startDate ?? undefined);
-    }
-    for (const stop of cruise.stops) {
-      if (stop.isAtSea || !stop.port) continue;
-      touch(stop.port, stop.arrivalTime ?? stop.departureTime ?? undefined);
-    }
-    if (cruise.arrivalPort && cruise.arrivalPort.id !== lastPortCall?.port?.id) {
-      touch(cruise.arrivalPort, cruise.endDate ?? undefined);
-    }
+    // Departure/arrival ports get markers too — the same calls the port
+    // card counts (`cruisePortCalls`).
+    for (const call of cruisePortCalls(cruise)) touch(call.port, call.date);
   }
   const data = Array.from(byPort.values());
   if (data.length === 0) return null;
