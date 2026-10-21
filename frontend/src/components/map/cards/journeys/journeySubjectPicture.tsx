@@ -48,13 +48,15 @@ export function SubjectPicture({
         className="h-24 w-full rounded-sm object-cover"
         onError={() => setBroken(true)}
       />
-      <figcaption className="mt-0.5 flex items-baseline justify-between gap-2 text-[9.5px]">
-        <span style={{ color: tokens.color.muted }}>{name}</span>
+      <figcaption className="mt-0.5 text-[9.5px] leading-snug">
+        <span className="block" style={{ color: tokens.color.muted }}>
+          {name}
+        </span>
         <a
           href={credit.sourceUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="truncate underline-offset-2 hover:underline pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:leading-[44px]"
+          className="block underline-offset-2 hover:underline pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:leading-[44px]"
           style={{ color: tokens.color.faint }}
         >
           {`${t("map:journey.picture")}: ${[credit.licence, credit.artist, "Wikimedia Commons"]

@@ -7,7 +7,7 @@ import { formatAmount } from "../../../../lib/units";
 import { Row, formatDuration, type TFn } from "../cardChrome";
 import type { CurrencyFigure, JourneyRouteFigures } from "./journeyRouteFigures";
 import type { MapJourney } from "./journeyTypes";
-import { journeySpanDay } from "./journeyCardParts";
+import { journeyDay, journeySpanDay } from "./journeyCardParts";
 
 /** "−3 min", "+12 min", or "pünktlich" for an average that rounds to 0. */
 export function delayText(averageMin: number, t: TFn): string {
@@ -56,7 +56,8 @@ function DurationRows({
   if (!d) return null;
   const ranked = (minutes: number, id: string): string => {
     const j = byId.get(id);
-    const day = j ? journeySpanDay(j) : "";
+    // The day it left is enough to find it; the span would wrap the row.
+    const day = j ? journeyDay(j) : "";
     return [formatDuration(minutes, t), day].filter(Boolean).join(" · ");
   };
   return (

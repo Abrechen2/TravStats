@@ -101,11 +101,13 @@ export function journeyRouteHoverHtml(d: JourneyRouteHover, opts: JourneyHoverOp
   const { t, flagHeight = 16 } = opts;
   const p = d.profile;
   const head = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;opacity:0.85;font-size:10.5px;text-transform:uppercase;letter-spacing:0.04em;">${domainBadgeHtml(journeyIconName(d.domain), d.color)}<span>${escapeHtml(t(`map:journey.domain.${d.domain}`))}</span>${operatorSlot(d.domain, p?.operator ?? null)}</div>`;
-  const facts: string[] = [];
+  // One line for the route's length and what it measures, one for time.
+  const distance: string[] = [];
   if (p?.distanceKm != null) {
-    const source = p.distanceSourceKeys.map((k) => t(k)).join(", ");
-    facts.push(`${formatNumber(Math.round(p.distanceKm))} km${source ? ` (${source})` : ""}`);
+    distance.push(`${formatNumber(Math.round(p.distanceKm))} km`);
+    if (p.distanceSourceKey) distance.push(t(p.distanceSourceKey));
   }
+  const facts: string[] = [];
   if (p?.avgDurationMin != null) {
     facts.push(
       `Ø ${t("map:globe.pinned.durationHours", {
@@ -118,7 +120,7 @@ export function journeyRouteHoverHtml(d: JourneyRouteHover, opts: JourneyHoverOp
   if (last) facts.push(`${t("map:journey.last")} ${last}`);
   return stripe(
     d.color,
-    `${head}${endLine(d.dep, flagHeight)}${endLine(d.arr, flagHeight)}${tallyLine(d, t)}${factsLine(facts)}${subjectSlot(p, t)}`
+    `${head}${endLine(d.dep, flagHeight)}${endLine(d.arr, flagHeight)}${tallyLine(d, t)}${factsLine(distance)}${factsLine(facts)}${subjectSlot(p, t)}`
   );
 }
 

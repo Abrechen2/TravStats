@@ -19,11 +19,11 @@ import {
   endKey,
   indexStops,
   journeyRouteKey,
+  byNewest,
   modeOf,
-  sumJourneyDistance,
   tallyJourneys,
 } from "./journeyStats";
-import { routeDistanceSourceKeys } from "./journeyProvenance";
+import { distanceSourceKey } from "./journeyProvenance";
 import { getJourneyRouteFigures } from "./journeyRouteFigures";
 import { getJourneyStopFigures, type StopDestination } from "./journeyStopFigures";
 import { routeSubject, type JourneySubject } from "./journeySubject";
@@ -33,10 +33,14 @@ import { routeSubject, type JourneySubject } from "./journeySubject";
  * it cannot be derived, and then left out of the tooltip.
  */
 export interface JourneyRouteProfile {
-  /** Σ km of the travelled journeys that recorded one; null when none did. */
+  /**
+   * How long the route is — the latest travelled journey that recorded a
+   * distance (the card sums them; a hover names one trip's length). Null when
+   * none did.
+   */
   distanceKm: number | null;
-  /** i18n keys of what that distance measures. */
-  distanceSourceKeys: string[];
+  /** i18n key of what that distance measures, or null. */
+  distanceSourceKey: string | null;
   avgDurationMin: number | null;
   /** The last journey that happened, on its places' clocks. */
   last: { departure: TimeValue | null; arrival: TimeValue | null } | null;
@@ -71,11 +75,13 @@ export interface JourneyStopHover {
 
 /** The profile of one route's journeys. */
 export function journeyRouteProfile(journeys: readonly MapJourney[]): JourneyRouteProfile {
-  const distance = sumJourneyDistance(journeys);
   const figures = getJourneyRouteFigures(journeys);
+  const measured = byNewest(journeys).find((j) => j.travelled && j.distanceKm !== null);
   return {
-    distanceKm: distance.measuredCount > 0 ? distance.knownKm : null,
-    distanceSourceKeys: routeDistanceSourceKeys(journeys),
+    distanceKm: measured?.distanceKm ?? null,
+    distanceSourceKey: measured
+      ? distanceSourceKey(measured.domain, measured.distanceSource)
+      : null,
     avgDurationMin: figures.duration?.averageMin ?? null,
     last: figures.last
       ? { departure: figures.last.departure, arrival: figures.last.arrival }

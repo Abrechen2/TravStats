@@ -114,7 +114,10 @@ describe("route hover profile", () => {
   it.each(["de", "en"] as const)("prints the ferry's profile in %s, none missing", (l) => {
     const html = journeyRouteHoverHtml(hover([ferry]), { t: tFor(l) });
     expect(html).not.toContain("MISSING(");
-    expect(html).toContain(l === "de" ? "(Seeweg (Schätzung))" : "(Sea route (estimate))");
+    // One crossing's length and what it measures — not the sum of every crossing.
+    expect(html).toContain(
+      l === "de" ? "684 km · Seeweg (Schätzung)" : "684 km · Sea route (estimate)"
+    );
     expect(html).toContain("Ø 20 h 0 min");
     // The overnight crossing names both days.
     expect(html).toMatch(/→/);
