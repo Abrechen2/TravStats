@@ -27,7 +27,12 @@ const COUNT_ORDER: readonly (keyof OfferCounts)[] = [
  * Until then nothing of the trip is in the account, and the list says what the trip holds and
  * who is on it, so the answer is an informed one.
  */
-export default function ReceivedRemoteOffers(): JSX.Element | null {
+interface Props {
+  /** Changed by the caller when an offer may have arrived (a redeemed trip-page code). */
+  refresh?: number;
+}
+
+export default function ReceivedRemoteOffers({ refresh = 0 }: Props): JSX.Element | null {
   const { t } = useTranslation(["sharing"]);
   const [offers, setOffers] = useState<ReceivedOffer[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -48,7 +53,7 @@ export default function ReceivedRemoteOffers(): JSX.Element | null {
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, refresh]);
 
   const answer = async (offer: ReceivedOffer, accept: boolean): Promise<void> => {
     setBusy(true);

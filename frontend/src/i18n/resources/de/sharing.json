@@ -575,6 +575,8 @@
     },
     "errors": {
       "loadFailed": "Die Personen auf anderen Servern konnten nicht geladen werden.",
+      "listsFailed": "Die Codes und Personen konnten nicht geladen werden – was hier steht, ist vielleicht nicht aktuell.",
+      "retry": "Erneut versuchen",
       "createFailed": "Der Code konnte nicht erstellt werden.",
       "revokeFailed": "Der Code konnte nicht zurückgezogen werden.",
       "claimFailed": "Der Code konnte nicht eingelöst werden.",
@@ -625,6 +627,7 @@
       },
       "reason": {
         "entries-too-large": "Ein Eintrag war zu groß für die Übertragung und fehlt bei {{name}}.",
+        "entries-unattributed": "Einträge, die schon vorher auf dieser Instanz geteilt waren, fehlen bei {{name}}: Für sie ist nicht festgehalten, wer sie eingetragen hat.",
         "restore": "Nach einer Wiederherstellung ausgesetzt – bitte neu bestätigen.",
         "off": "Teilen über Server ist bei {{name}} ausgeschaltet.",
         "peer-blocked": "Der Server von {{name}} ist von deiner Instanz gesperrt.",

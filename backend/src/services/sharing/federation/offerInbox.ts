@@ -216,7 +216,27 @@ export async function acceptOffer(userId: string, id: string): Promise<{ tripId:
   const facts = wireTripSchema.parse(storedOfferSchema.parse(row.offer).trip) as Parameters<
     typeof tripFacts
   >[0];
-  const tripId = await prisma.$transaction(async (tx) => {
+  const accepted = await prisma.$transaction(async (tx) => {
+    // Held and read again (rc.19 review): two accepts at once each created a trip. The second
+    // finds the offer taken and answers with the trip the first created.
+    await tx.$queryRaw`SELECT 1 FROM trip_share_remote_members WHERE id = ${row.id} FOR UPDATE`;
+    if (!(await tx.tripShareRemoteMember.findFirst({ where: { id, ...OPEN(userId) } }))) {
+      const taken = await tx.tripShareRemoteMember.findFirst({
+        where: { id, state: "active", remote: { userId } },
+      });
+      const existing =
+        taken &&
+        (await tx.trip.findFirst({
+          where: { userId, shareGroupId: row.groupId },
+          orderBy: { createdAt: "asc" },
+          select: { id: true },
+        }));
+      if (!existing)
+        throw remoteShareError("SHARE_REMOTE_OFFER_NOT_FOUND", 404, "No such open offer", {
+          userId,
+        });
+      return { tripId: existing.id, created: false };
+    }
     const trip = await tx.trip.create({
       // The status is the receiver's to derive (rework D4); `restatusTrips` does once filled.
       data: { ...tripFacts(facts), status: "planned", userId, shareGroupId: row.groupId },
@@ -251,8 +271,11 @@ export async function acceptOffer(userId: string, id: string): Promise<{ tripId:
         },
       },
     });
-    return trip.id;
+    return { tripId: trip.id, created: true };
   });
+  const { tripId } = accepted;
+  // Taken by an accept at the same time: that one sends the answer.
+  if (!accepted.created) return { tripId };
   try {
     await answerTo(row, "accept");
   } catch (error) {

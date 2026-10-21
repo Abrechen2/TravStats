@@ -1,3 +1,4 @@
+import { API_TIMEOUTS } from "../../config/constants";
 import { api } from "./client";
 import type {
   AddRequestBody,
@@ -20,6 +21,8 @@ interface Envelope<T> {
   data: T;
 }
 const BASE = "/sharing/remote";
+/** For the calls that wait on another server (`API_TIMEOUTS.REMOTE_SHARING`). */
+const ACROSS = { timeout: API_TIMEOUTS.REMOTE_SHARING };
 
 export const sharingRemoteApi = {
   status: async (): Promise<RemoteSharingStatus> =>
@@ -32,7 +35,7 @@ export const sharingRemoteApi = {
     await api.delete(`${BASE}/invites/${encodeURIComponent(id)}`);
   },
   claim: async (code: string): Promise<RemotePerson> =>
-    (await api.post<Envelope<RemotePerson>>(`${BASE}/claim`, { code })).data.data,
+    (await api.post<Envelope<RemotePerson>>(`${BASE}/claim`, { code }, ACROSS)).data.data,
   listPeople: async (): Promise<RemotePerson[]> =>
     (await api.get<Envelope<RemotePerson[]>>(`${BASE}/people`)).data.data,
   tripSharing: async (tripId: string): Promise<TripRemoteSharing> =>
@@ -40,9 +43,11 @@ export const sharingRemoteApi = {
       .data,
   offerTrip: async (tripId: string, remoteId: string): Promise<RemoteMember> =>
     (
-      await api.post<Envelope<RemoteMember>>(`${BASE}/trips/${encodeURIComponent(tripId)}/offers`, {
-        remoteId,
-      })
+      await api.post<Envelope<RemoteMember>>(
+        `${BASE}/trips/${encodeURIComponent(tripId)}/offers`,
+        { remoteId },
+        ACROSS
+      )
     ).data.data,
   createTripInvite: async (tripId: string): Promise<CreatedRemoteInvite> =>
     (
@@ -55,11 +60,13 @@ export const sharingRemoteApi = {
   acceptOffer: async (id: string): Promise<{ tripId: string }> =>
     (
       await api.post<Envelope<{ tripId: string }>>(
-        `${BASE}/offers/${encodeURIComponent(id)}/accept`
+        `${BASE}/offers/${encodeURIComponent(id)}/accept`,
+        undefined,
+        ACROSS
       )
     ).data.data,
   declineOffer: async (id: string): Promise<void> => {
-    await api.post(`${BASE}/offers/${encodeURIComponent(id)}/decline`);
+    await api.post(`${BASE}/offers/${encodeURIComponent(id)}/decline`, undefined, ACROSS);
   },
   // The lifecycle (F-S4e).
   withdrawPerson: async (id: string): Promise<RemotePerson> =>
@@ -95,7 +102,8 @@ export const sharingRemoteApi = {
     (
       await api.post<Envelope<{ requested: true; origin: string }>>(
         `${BASE}/trips/${encodeURIComponent(tripId)}/add-requests`,
-        body
+        body,
+        ACROSS
       )
     ).data.data,
 };

@@ -37,6 +37,9 @@ export default function RemoteSharingSection(): JSX.Element | null {
   const [status, setStatus] = useState<RemoteSharingStatus | null>(null);
   const [lists, setLists] = useState<Lists | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [listsFailed, setListsFailed] = useState(false);
+  /** Bumped after a redeemed code: a trip page's invitation brings its trip offer with it. */
+  const [offersVersion, setOffersVersion] = useState(0);
   const [created, setCreated] = useState<CreatedRemoteInvite | null>(null);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -46,20 +49,29 @@ export default function RemoteSharingSection(): JSX.Element | null {
   const [confirming, setConfirming] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    let next: RemoteSharingStatus;
     try {
-      const next = await sharingRemoteApi.status();
+      next = await sharingRemoteApi.status();
       setStatus(next);
-      if (next.available) {
-        const [invites, people] = await Promise.all([
-          sharingRemoteApi.listInvites(),
-          sharingRemoteApi.listPeople(),
-        ]);
-        setLists({ invites, people });
-      }
       setLoadFailed(false);
     } catch (error) {
       logger.error("Failed to load cross-server sharing:", error);
       setLoadFailed(true);
+      return;
+    }
+    if (!next.available) return;
+    // Failing on its own: the server answered, so the section is drawn, and lists that could
+    // not be (re)loaded are said to be so instead of vanishing or standing there stale.
+    try {
+      const [invites, people] = await Promise.all([
+        sharingRemoteApi.listInvites(),
+        sharingRemoteApi.listPeople(),
+      ]);
+      setLists({ invites, people });
+      setListsFailed(false);
+    } catch (error) {
+      logger.error("Failed to load cross-server sharing lists:", error);
+      setListsFailed(true);
     }
   }, []);
 
@@ -108,6 +120,7 @@ export default function RemoteSharingSection(): JSX.Element | null {
     void run(async () => {
       const person = await sharingRemoteApi.claim(pasted);
       setCode("");
+      setOffersVersion((v) => v + 1);
       setNotice(t(`${NS}.claim.done`, { name: person.displayName, origin: person.origin }));
     }, `${NS}.errors.claimFailed`);
   };
@@ -127,7 +140,16 @@ export default function RemoteSharingSection(): JSX.Element | null {
     <SectionCard>
       <SectionTitle title={t(`${NS}.title`)} description={t(`${NS}.description`)} />
 
-      <ReceivedRemoteOffers />
+      <ReceivedRemoteOffers refresh={offersVersion} />
+
+      {listsFailed && (
+        <div role="alert" className="mb-4 flex flex-wrap items-center gap-2 text-sm">
+          <span style={{ color: "var(--ts-warn)" }}>{t(`${NS}.errors.listsFailed`)}</span>
+          <Button disabled={busy} onClick={() => void load()}>
+            {t(`${NS}.errors.retry`)}
+          </Button>
+        </div>
+      )}
 
       <div className="mb-6">
         <h3 className="t-label-mono mb-2">{t(`${NS}.invites.title`)}</h3>

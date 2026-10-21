@@ -575,6 +575,8 @@
     },
     "errors": {
       "loadFailed": "The people on other servers could not be loaded.",
+      "listsFailed": "The codes and people could not be loaded – what is shown here may not be current.",
+      "retry": "Try again",
       "createFailed": "The code could not be created.",
       "revokeFailed": "The code could not be withdrawn.",
       "claimFailed": "The code could not be redeemed.",
@@ -625,6 +627,7 @@
       },
       "reason": {
         "entries-too-large": "One entry was too large to send and is missing for {{name}}.",
+        "entries-unattributed": "Entries shared on this instance earlier are missing for {{name}}: who added them was not recorded.",
         "restore": "Suspended after a restore – please confirm again.",
         "off": "Sharing across servers is switched off for {{name}}.",
         "peer-blocked": "{{name}}'s server is blocked by your instance.",

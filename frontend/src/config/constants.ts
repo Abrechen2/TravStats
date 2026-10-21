@@ -39,6 +39,13 @@ export const API_TIMEOUTS = {
   STAY_IDENTITY: 30000,
   /** Server: the model gets 20 s, after the identity it reads its names from. */
   STAY_PLACE_TYPE: 50000,
+  /**
+   * A sharing call that reaches another server (rc.19 review): the server spends up to 10 s per
+   * exchange — a claim pings and redeems, an offer pings and sends on the stream (once more after
+   * a gap), keying up to 500 entries on the way. The default ten seconds reported a failure while
+   * the server succeeded, and the retry then read "already used".
+   */
+  REMOTE_SHARING: 60000,
 } as const;
 
 // ========== CRUISE SEA-ROUTE GEOMETRY ==========

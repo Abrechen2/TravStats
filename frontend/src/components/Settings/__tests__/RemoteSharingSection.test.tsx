@@ -174,4 +174,74 @@ describe("RemoteSharingSection", () => {
       /sharing:remote.people.withdrawn .*"Ben".*far.example.org/
     );
   });
+
+  it("says when the lists cannot be loaded although the server answered, and loads them again on retry", async () => {
+    api.listPeople.mockRejectedValueOnce(new Error("down"));
+    render(<RemoteSharingSection />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("sharing:remote.errors.listsFailed");
+    api.listPeople.mockResolvedValue([
+      {
+        id: "p1",
+        origin: OTHER,
+        username: "ben",
+        displayName: "Ben",
+        consent: "accepted",
+        createdAt: "2026-10-20T10:00:00.000Z",
+      },
+    ]);
+    await userEvent.click(screen.getByRole("button", { name: "sharing:remote.errors.retry" }));
+    expect(await screen.findByText(/sharing:remote.people.row .*"Ben"/)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("marks the lists as not current when refreshing them after an action fails", async () => {
+    api.createInvite.mockResolvedValue({
+      id: "i1",
+      code: CODE,
+      createdAt: "2026-10-20T10:00:00.000Z",
+      expiresAt: "2026-10-23T10:00:00.000Z",
+      tripId: null,
+    });
+    render(<RemoteSharingSection />);
+    await screen.findByText("sharing:remote.people.none");
+    api.listInvites.mockRejectedValueOnce(new Error("down"));
+    await userEvent.click(screen.getByRole("button", { name: "sharing:remote.invites.create" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("sharing:remote.errors.listsFailed");
+  });
+
+  it("lists the trip a trip page's invitation offered once its code is redeemed", async () => {
+    api.claim.mockResolvedValue({
+      id: "p1",
+      origin: OTHER,
+      username: "anna",
+      displayName: "Anna",
+      consent: "accepted",
+      createdAt: "2026-10-20T10:00:00.000Z",
+    });
+    render(<RemoteSharingSection />);
+    await waitFor(() => expect(api.listOffers).toHaveBeenCalled());
+    api.listOffers.mockResolvedValue([
+      {
+        id: "o1",
+        from: { displayName: "Anna", username: "anna", origin: OTHER },
+        trip: { name: "Portugal 2030", startDay: null, endDay: null },
+        roster: [],
+        counts: {
+          flights: 1,
+          lodgingStays: 0,
+          cruises: 0,
+          railJourneys: 0,
+          busJourneys: 0,
+          ferryJourneys: 0,
+          rentals: 0,
+          stops: 0,
+        },
+        offeredAt: "2026-10-20T10:00:00.000Z",
+      },
+    ]);
+    await claimWith(CODE);
+    expect(
+      await screen.findByText(/sharing:remote.offers.row .*Portugal 2030/)
+    ).toBeInTheDocument();
+  });
 });

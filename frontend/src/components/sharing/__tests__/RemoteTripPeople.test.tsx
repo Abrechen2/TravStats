@@ -230,14 +230,17 @@ describe("RemoteTripPeople", () => {
     expect(await screen.findByTestId("remote-member-status")).toHaveTextContent(sentence);
   });
 
-  it("names an entry too large to send beside the delivery line", async () => {
-    api.tripSharing.mockResolvedValue(member({ stateReason: "entries-too-large" }));
-    render(<RemoteTripPeople tripId="t1" />);
-    await screen.findByText(/sharing:remote.trip.delivery.delivered/);
-    expect(screen.getAllByTestId("remote-member-status")[1]).toHaveTextContent(
-      /sharing:remote.trip.reason.entries-too-large/
-    );
-  });
+  it.each(["entries-too-large", "entries-unattributed"])(
+    "names entries that did not travel (%s) beside the delivery line",
+    async (reason) => {
+      api.tripSharing.mockResolvedValue(member({ stateReason: reason }));
+      render(<RemoteTripPeople tripId="t1" />);
+      await screen.findByText(/sharing:remote.trip.delivery.delivered/);
+      expect(screen.getAllByTestId("remote-member-status")[1]).toHaveTextContent(
+        new RegExp(`sharing:remote.trip.reason.${reason}`)
+      );
+    }
+  );
 
   it("offers the trip to a paired person, and says who decides where", async () => {
     api.offerTrip.mockResolvedValue({
