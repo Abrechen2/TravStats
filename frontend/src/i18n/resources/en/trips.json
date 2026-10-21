@@ -155,7 +155,8 @@
       "tags": "Tags",
       "rail": "Rail",
       "rental": "Rental cars",
-      "bus": "Bus"
+      "bus": "Bus",
+      "ferry": "Ferry"
     },
     "tabs": {
       "overview": "Overview",
@@ -223,6 +224,8 @@
     "railCount_other": "{{count}} rides",
     "busCount_one": "{{count}} ride",
     "busCount_other": "{{count}} rides",
+    "ferryCount_one": "{{count}} crossing",
+    "ferryCount_other": "{{count}} crossings",
     "rentalCount_one": "{{count}} rental",
     "rentalCount_other": "{{count}} rentals"
   },

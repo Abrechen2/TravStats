@@ -31,7 +31,7 @@ const mockRoadtrips = vi.hoisted(() => vi.fn((): unknown[] => []));
 vi.mock("../../Roadtrips/useTripRoadtrips", () => ({ useTripRoadtrips: () => mockRoadtrips() }));
 
 // Rail and rental are beta areas; each test says whether they are on.
-const visible = vi.hoisted(() => ({ rail: true, rental: true, bus: true }));
+const visible = vi.hoisted(() => ({ rail: true, rental: true, bus: true, ferry: true }));
 vi.mock("../../../hooks/useDomainVisible", () => ({
   useDomainVisible: (key: string): boolean =>
     (
@@ -40,6 +40,7 @@ vi.mock("../../../hooks/useDomainVisible", () => ({
           rail: () => visible.rail,
           bus: () => visible.bus,
           rental: () => visible.rental,
+          ferry: () => visible.ferry,
         }) as Record<string, () => boolean>
       )[key] ?? (() => false)
     )(),
@@ -166,6 +167,39 @@ describe("TripOverview", () => {
       expect(screen.getByText("trips:detail.noLinks")).toBeInTheDocument();
     } finally {
       visible.bus = true;
+    }
+  });
+
+  // beta.22 UAT: the overview collected rail, bus and rentals but never the
+  // trip's ferry crossings, and a ferry-only trip said "nothing linked".
+  const ferryRide = {
+    id: "fe1",
+    operator: "Color Line",
+    vesselName: "Color Magic",
+    depStationName: "Kiel Norwegenkai",
+    arrStationName: "Oslo Hjortneskaia",
+    depTimezone: "Europe/Berlin",
+    arrTimezone: "Europe/Oslo",
+    departureTime: "2026-08-10T12:00:00.000Z",
+    arrivalTime: "2026-08-11T08:00:00.000Z",
+    status: "completed",
+  };
+
+  it("lists a linked ferry crossing and does not call a ferry-only trip empty", () => {
+    renderOverview(trip({ ferryJourneys: [ferryRide] } as Partial<Trip>));
+    expect(screen.getByText(/Kiel Norwegenkai/).closest("a")).toHaveAttribute("href", "/ferry/fe1");
+    expect(screen.getByText("trips:detail.ferryCount:1")).toBeInTheDocument();
+    expect(screen.queryByText("trips:detail.noLinks")).not.toBeInTheDocument();
+  });
+
+  it("keeps a ferry crossing of a hidden domain out", () => {
+    visible.ferry = false;
+    try {
+      renderOverview(trip({ ferryJourneys: [ferryRide] } as Partial<Trip>));
+      expect(screen.queryByText(/Kiel Norwegenkai/)).toBeNull();
+      expect(screen.getByText("trips:detail.noLinks")).toBeInTheDocument();
+    } finally {
+      visible.ferry = true;
     }
   });
 
