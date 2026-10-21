@@ -225,7 +225,9 @@ function fetchFromWikidata(key: string, name: string): Promise<OperatorMark | nu
         const outage =
           found.reason === "rateLimited" ||
           found.reason === "timeout" ||
-          found.reason === "unavailable";
+          found.reason === "unavailable" ||
+          // A wrong-shaped answer is Wikimedia misbehaving, not "no logo".
+          found.reason === "malformed";
         rememberMiss(key, found.reason, outage ? OUTAGE_TTL_MS : MISS_TTL_MS);
         // Each failure has its own reason in the log; the name is the user's own
         // text, so only its key is logged.
@@ -299,9 +301,20 @@ async function wikidataMark(name: string, ctx: OperatorMarkContext): Promise<Ope
     const stale = Date.now() - cached.meta.fetchedAt > MAX_AGE_MS;
     const backedOff = Date.now() - cached.meta.lastAttemptAt < RETRY_BACKOFF_MS;
     if (stale && !backedOff && inFlight.size < MAX_PENDING_REFRESHES) {
-      void fetchFromWikidata(key, name).then(async (fresh) => {
-        if (!fresh) await touchFailedRefresh(key, cached.meta);
-      });
+      // Nobody awaits this refresh, so it must never reject: a throw is a
+      // failed refresh like any other — the cached logo stays, backed off.
+      void fetchFromWikidata(key, name)
+        .catch((error: unknown) => {
+          logger.warn({
+            operation: "operator_logo_refresh_failed",
+            key,
+            message: error instanceof Error ? error.message : "unknown error",
+          });
+          return null;
+        })
+        .then(async (fresh) => {
+          if (!fresh) await touchFailedRefresh(key, cached.meta);
+        });
     }
     return { mark: cached.mark, pending: false };
   }

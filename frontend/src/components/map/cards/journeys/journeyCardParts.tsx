@@ -15,11 +15,17 @@ import { tokens } from "../../../../theme/tokens";
 import { Icon } from "../../../ui/Icon";
 import type { IconName } from "../../../ui/icons/lucide";
 import { OperatorTile } from "../../../table/OperatorTile";
-import { LABEL_STYLE, formatDate, type TFn } from "../cardChrome";
+import { LABEL_STYLE, type TFn } from "../cardChrome";
+import { formatTimeValueShown } from "../../../../lib/displayFormat";
 import type { Rgb } from "../../../../lib/domainColor";
 import type { JourneyDomain, JourneyEnd, MapJourney } from "./journeyTypes";
 import { rgbCss } from "./journeyIdentity";
 import { useOperatorLogo } from "./operatorLogo";
+
+/** The journey's day as its departure place saw it, in the user's date format; "" when undated. */
+export function journeyDay(j: MapJourney): string {
+  return j.departure ? formatTimeValueShown(j.departure, { dateOnly: true }) : "";
+}
 
 /** The domain's icon on a tint of its colour — the journey card's flag. */
 export function DomainBadge({
@@ -155,11 +161,9 @@ const COLLAPSED = 2;
  */
 export function JourneyList({
   journeys,
-  locale,
   t,
 }: {
   journeys: readonly MapJourney[];
-  locale: string;
   t: TFn;
 }): JSX.Element | null {
   const navigate = useNavigate();
@@ -199,9 +203,7 @@ export function JourneyList({
                   {t("map:journey.planned")}
                 </span>
               )}
-              <span className="ml-auto shrink-0 tabular-nums opacity-55">
-                {j.departureTime ? formatDate(j.departureTime, locale) : ""}
-              </span>
+              <span className="ml-auto shrink-0 tabular-nums opacity-55">{journeyDay(j)}</span>
             </button>
           </li>
         ))}

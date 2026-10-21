@@ -15,6 +15,7 @@ import {
 } from "./cards/journeys/journeyHoverHtml";
 import type { JourneyRouteHover, JourneyStopHover } from "./cards/journeys/journeyLayerCards";
 import type { TourCardDatum, TripStopCardDatum } from "./cards/journeys/journeyTypes";
+import { RECORDED_ROUTES_LAYER_ID } from "../layers/recordedFlightPaths";
 
 // A flat-map marker sits closer to its neighbours than a globe marker does, so
 // its tooltip wants a slightly smaller flag. That is the ONLY thing this file
@@ -54,6 +55,10 @@ const ARC_LAYER_IDS = new Set<string>([
   // carries the same departure/arrival/count/sourceColor fields, so the route
   // card is identical whichever shape the user picked.
   "routes-path",
+  // A recorded flight's stretches (forgejo#312): the datum is the route's arc
+  // datum spread over each stretch, so the card is the route's. On a route
+  // whose every flight was recorded this is the ONLY line left to hover.
+  RECORDED_ROUTES_LAYER_ID,
 ]);
 // The trip map's cruise legs carry the line name as `label` (TripMapGlobeLayers).
 const CRUISE_PATH_LAYER_IDS = new Set<string>(["cruise-arcs", "trip-cruise-paths"]);

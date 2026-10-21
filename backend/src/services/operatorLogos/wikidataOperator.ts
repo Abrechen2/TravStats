@@ -17,10 +17,13 @@
  *
  * Every miss says why, for the log; the caller turns any miss into "no logo".
  */
+import { z } from "zod";
 import { getBytes, getJson, type WikimediaFailure } from "./wikimedia";
 import { normalizeProviderName } from "../rentalProviders/providerCatalog";
 
-export type OperatorMarkMiss = WikimediaFailure | "noItem" | "noLogo" | "licence" | "badImage";
+/** `malformed`: Wikimedia answered 200 with JSON of a shape this reader does not know. */
+export type OperatorMarkMiss =
+  WikimediaFailure | "noItem" | "noLogo" | "licence" | "badImage" | "malformed";
 
 export interface OperatorMarkCredit {
   /** The Wikidata item the logo was read from, e.g. "Q833903". */
@@ -61,10 +64,60 @@ const RASTER_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gi
  */
 const FREE_LICENCE = /^(pd|cc0|cc-by-[\d.]+|cc-by-sa-[\d.]+)(-|$)/i;
 
-interface Snak {
-  rank?: string;
-  mainsnak?: { datavalue?: { value?: unknown } };
-}
+/*
+ * The remote answers, validated before they are read: a 200 with JSON of
+ * another shape (`null`, `{"search":[null]}`) used to throw a TypeError out of
+ * the lookup — and out of a background refresh with nobody to catch it.
+ * Only the fields read here are declared; everything else is ignored.
+ */
+const snakSchema = z.object({
+  rank: z.string().optional(),
+  mainsnak: z
+    .object({ datavalue: z.object({ value: z.unknown() }).partial().optional() })
+    .optional(),
+});
+const claimsSchema = z.record(z.string(), z.array(snakSchema).optional());
+const searchSchema = z.object({
+  search: z
+    .array(
+      z.object({
+        id: z.unknown(),
+        match: z.object({ text: z.string().optional() }).optional(),
+      })
+    )
+    .optional(),
+});
+const entitiesSchema = z.object({
+  entities: z
+    .record(z.string(), z.object({ claims: claimsSchema.optional() }).nullable())
+    .optional(),
+});
+const commonsSchema = z.object({
+  query: z
+    .object({
+      pages: z
+        .record(
+          z.string(),
+          z.object({
+            imageinfo: z
+              .array(
+                z.object({
+                  thumburl: z.string().optional(),
+                  descriptionurl: z.string().optional(),
+                  extmetadata: z
+                    .record(z.string(), z.object({ value: z.unknown() }).partial().optional())
+                    .optional(),
+                })
+              )
+              .optional(),
+          })
+        )
+        .optional(),
+    })
+    .optional(),
+});
+
+type Snak = z.infer<typeof snakSchema>;
 type Claims = Record<string, Snak[] | undefined>;
 
 function url(base: string, params: Record<string, string>): string {
@@ -185,8 +238,9 @@ async function exactItems(
       })
     );
     if (!res.ok) return res;
-    const hits =
-      (res.value as { search?: { id?: string; match?: { text?: string } }[] }).search ?? [];
+    const parsed = searchSchema.safeParse(res.value);
+    if (!parsed.success) return { ok: false, reason: "malformed" };
+    const hits = parsed.data.search ?? [];
     for (const hit of hits) {
       if (typeof hit.id !== "string" || ids.includes(hit.id)) continue;
       if (normalizeProviderName(hit.match?.text ?? "") === want) ids.push(hit.id);
@@ -214,16 +268,9 @@ async function commonsFile(
     })
   );
   if (!res.ok) return res;
-  const pages = (res.value as { query?: { pages?: Record<string, unknown> } }).query?.pages ?? {};
-  const page = Object.values(pages)[0] as
-    | {
-        imageinfo?: {
-          thumburl?: string;
-          descriptionurl?: string;
-          extmetadata?: Record<string, { value?: unknown } | undefined>;
-        }[];
-      }
-    | undefined;
+  const parsed = commonsSchema.safeParse(res.value);
+  if (!parsed.success) return { ok: false, reason: "malformed" };
+  const page = Object.values(parsed.data.query?.pages ?? {})[0];
   const info = page?.imageinfo?.[0];
   if (!info?.thumburl || !info.descriptionurl) return { ok: false, reason: "noLogo" };
   const meta = info.extmetadata ?? {};
@@ -262,8 +309,9 @@ export async function lookupOperatorMark(name: string): Promise<OperatorMarkLook
     url(WIKIDATA_API, { action: "wbgetentities", ids: items.ids.join("|"), props: "claims" })
   );
   if (!entities.ok) return entities;
-  const byId =
-    (entities.value as { entities?: Record<string, { claims?: Claims }> }).entities ?? {};
+  const parsedEntities = entitiesSchema.safeParse(entities.value);
+  if (!parsedEntities.success) return { ok: false, reason: "malformed" };
+  const byId = parsedEntities.data.entities ?? {};
 
   let lastMiss: OperatorMarkMiss = "noLogo";
   for (const qid of items.ids) {

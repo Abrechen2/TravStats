@@ -12,6 +12,9 @@ import { isCountableFerry } from "../../../../shared/ferryCounting";
 import { isCountableRental, rentalDays, rentalDrivenKm } from "../../../../shared/rentalCounting";
 import { isCountableFlight } from "../../../../shared/flightCounting";
 import { calculateDistance } from "../../../../lib/geo";
+import { flightDeparture } from "../../../../lib/entityTimes";
+import { timeValueAtZone, type TimeValue } from "../../../../shared/time";
+import type { Flight } from "../../../../types";
 import type { RailJourney } from "../../../../types/rail";
 import type { BusJourney } from "../../../../types/bus";
 import type { FerryJourney } from "../../../../types/ferry";
@@ -78,12 +81,22 @@ function terminalEnds(
   };
 }
 
+/** A terminal ride's departure on its station's clock: the server's `times`, else the zone column. */
+function stationDeparture(j: {
+  departureTime?: string | null;
+  depTimezone?: string | null;
+  times?: { departure?: TimeValue | null };
+}): TimeValue | null {
+  return j.times?.departure ?? timeValueAtZone(j.departureTime, j.depTimezone);
+}
+
 function journey(
   domain: JourneyDomain,
   base: { id: string; status: string },
   ends: { dep: JourneyEnd; arr: JourneyEnd },
   rest: {
     departureTime: string | null;
+    departure: TimeValue | null;
     distanceKm: number | null;
     operator: string | null;
     travelled: boolean;
@@ -106,6 +119,7 @@ export function journeyFromRail(
   const train = [j.trainCategory, j.trainNumber].filter(Boolean).join(" ");
   return journey("rail", j, terminalEnds(j, { dep: j.depStationCode, arr: j.arrStationCode }), {
     departureTime: j.departureTime ?? null,
+    departure: stationDeparture(j),
     distanceKm: knownKm(j.distanceKm),
     operator: j.operator ?? null,
     travelled: isCountableRail(j),
@@ -123,6 +137,7 @@ export function journeyFromBus(
 ): MapJourney {
   return journey("bus", j, terminalEnds(j), {
     departureTime: j.departureTime ?? null,
+    departure: stationDeparture(j),
     distanceKm: knownKm(j.distanceKm),
     operator: j.operator ?? null,
     travelled: isCountableBus(j),
@@ -139,6 +154,7 @@ export function journeyFromFerry(
 ): MapJourney {
   return journey("ferry", j, terminalEnds(j), {
     departureTime: j.departureTime ?? null,
+    departure: stationDeparture(j),
     distanceKm: knownKm(j.distanceKm),
     operator: j.operator ?? null,
     travelled: isCountableFerry(j),
@@ -200,6 +216,7 @@ export function journeyFromRental(r: Partial2<RentalBooking, RentalCore>): MapJo
     },
     {
       departureTime: pickup,
+      departure: r.times?.pickup ?? null,
       // The one driven-km rule the rental pages and statistics read: a stored
       // figure, else the two odometer readings (forgejo#206).
       distanceKm:
@@ -230,6 +247,10 @@ export interface TripFlightRow {
   arrLon?: number | null;
   departureTime?: string | null;
   arrivalTime?: string | null;
+  /** The departure airport's zone and how the time was recorded — the card shows ITS day. */
+  depTimezone?: string | null;
+  depTimeSemantics?: Flight["depTimeSemantics"];
+  times?: Flight["times"];
   airline?: string | null;
   flightNumber?: string | null;
   status: string;
@@ -257,6 +278,7 @@ export function journeyFromTripFlight(f: TripFlightRow): MapJourney | null {
     { dep: end(f.depIata, depLat, depLon), arr: end(f.arrIata, arrLat, arrLon) },
     {
       departureTime: f.departureTime ?? null,
+      departure: flightDeparture(f),
       distanceKm: knownKm(calculateDistance(depLat, depLon, arrLat, arrLon)),
       operator: f.airline ?? null,
       travelled: isCountableFlight({ status: f.status }),

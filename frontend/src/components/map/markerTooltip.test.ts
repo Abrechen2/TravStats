@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import type { PickingInfo } from "@deck.gl/core";
 import { createMarkerTooltip } from "./markerTooltip";
+import { RECORDED_ROUTES_LAYER_ID, recordedRouteData } from "../layers/recordedFlightPaths";
+import type { ArcDatum } from "../layers/layerTypes";
 
 const t = (key: string, opts?: Record<string, unknown>): string => {
   if (key === "map:globe.flight") return (opts?.count as number) === 1 ? "Flug" : "Flüge";
@@ -179,6 +181,39 @@ describe("createMarkerTooltip — routes", () => {
     );
     expect(result).not.toBeNull();
     expect(result!.html).toContain("3× geflogen");
+  });
+  it("answers on a fully recorded route, which draws only its recorded stretches", () => {
+    // With every flight on a route recorded, the arc layers drop the route and
+    // only `routes-recorded` is left to hover (forgejo#312).
+    const arc = {
+      departure: { iata: "MUC", name: "Munich Airport", country: "DE" },
+      arrival: { iata: "JFK", name: "New York", country: "US" },
+      count: 1,
+      flightIds: ["f1"],
+      sourceColor: [240, 169, 71, 220],
+      sourcePosition: [11.78, 48.35],
+      targetPosition: [-73.78, 40.64],
+    } as unknown as ArcDatum;
+    const [stretch] = recordedRouteData(arc, {
+      recorded: [
+        {
+          flightId: "f1",
+          paths: [
+            [
+              [11.78, 48.35],
+              [-30, 52],
+              [-73.78, 40.64],
+            ],
+          ],
+        },
+      ],
+      unrecordedCount: 0,
+    });
+    const result = getTooltip(makeInfo(RECORDED_ROUTES_LAYER_ID, stretch));
+    expect(result).not.toBeNull();
+    expect(result!.html).toContain("MUC");
+    expect(result!.html).toContain("JFK");
+    expect(result!.html).toContain("1× geflogen");
   });
 });
 

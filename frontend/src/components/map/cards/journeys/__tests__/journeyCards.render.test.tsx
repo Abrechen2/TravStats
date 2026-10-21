@@ -11,7 +11,12 @@ import deCommon from "../../../../../i18n/resources/de/common.json";
 import enCommon from "../../../../../i18n/resources/en/common.json";
 import { PinnedCard } from "../../PinnedCard";
 import type { MapPinned } from "../../pinnedTypes";
-import { journeyFromFerry, journeyFromRail, journeyFromRental } from "../journeyNormalize";
+import {
+  journeyFromFerry,
+  journeyFromRail,
+  journeyFromRental,
+  journeyFromTripFlight,
+} from "../journeyNormalize";
 import { tourCardDatum } from "../tourLayerCards";
 import type { TourSummary } from "../../../../../lib/api/tourIndex";
 
@@ -266,5 +271,81 @@ describe("tour card", () => {
     expect(screen.getByText("812 m")).toBeInTheDocument();
     fireEvent.click(screen.getByText(l === "de" ? "Tour öffnen" : "Open tour"));
     expect(navigate).toHaveBeenCalledWith("/tours/t1");
+  });
+});
+
+describe("a journey's date is the day at its departure, not the reader's", () => {
+  // 00:30 in Berlin on 21 October is 22:30 UTC on the 20th; a reader on the
+  // default (UTC) profile zone used to see the 20th on every journey card.
+  const AT = "2026-10-20T22:30:00Z";
+  function stopCard(j: ReturnType<typeof journeyFromFerry>): void {
+    show({
+      kind: "journeyStop",
+      data: { domain: j.domain, stop: j.dep, journeys: [j], color: [86, 134, 184] },
+      anchorLngLat: [j.dep.lon, j.dep.lat],
+    });
+  }
+
+  it("a crossing reads the terminal's day", () => {
+    stopCard(
+      journeyFromFerry({
+        ...FERRY_BASE,
+        id: "late",
+        depTimezone: "Europe/Berlin",
+        departureTime: AT,
+        arrivalTime: "2026-10-21T08:00:00Z",
+      })
+    );
+    expect(document.body.textContent).toContain("21.10.2026");
+    expect(document.body.textContent).not.toContain("20.10.2026");
+  });
+
+  it("a trip's flight reads the airport's day", () => {
+    const j = journeyFromTripFlight({
+      id: "fl",
+      status: "completed",
+      depIata: "BER",
+      arrIata: "LIS",
+      depLat: 52.36,
+      depLon: 13.5,
+      arrLat: 38.77,
+      arrLon: -9.13,
+      departureTime: AT,
+      depTimezone: "Europe/Berlin",
+    });
+    if (!j) throw new Error("flight with coordinates must normalise");
+    stopCard(j);
+    expect(document.body.textContent).toContain("21.10.2026");
+    expect(document.body.textContent).not.toContain("20.10.2026");
+  });
+
+  it("a rental reads the pick-up station's day", () => {
+    stopCard(
+      journeyFromRental({
+        id: "car",
+        status: "completed",
+        provider: "Sixt",
+        pickupStationName: "Berlin",
+        returnStationName: "Berlin",
+        pickupLat: 52.5,
+        pickupLon: 13.4,
+        returnLat: 52.5,
+        returnLon: 13.4,
+        times: {
+          pickup: {
+            utc: AT,
+            zone: "Europe/Berlin",
+            offset: "+02:00",
+            local: "2026-10-21T00:30:00",
+            precision: "minute",
+          },
+          return: null,
+          actualPickup: null,
+          actualReturn: null,
+        },
+      })
+    );
+    expect(document.body.textContent).toContain("21.10.2026");
+    expect(document.body.textContent).not.toContain("20.10.2026");
   });
 });
