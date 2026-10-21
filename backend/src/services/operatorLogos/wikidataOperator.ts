@@ -85,10 +85,19 @@ export function bestStringClaim(claims: Claims | undefined, property: string): s
   return null;
 }
 
-/** HTML from Commons' `Artist` field, as plain text. */
+/**
+ * An element Commons renders hidden (`style="display: none"`), with its
+ * content. Its templates print a machine-readable copy that way — "Unknown
+ * author" came out twice on the card.
+ */
+const HIDDEN_ELEMENT =
+  /<(\w+)\b[^>]*\bstyle\s*=\s*["'][^"']*display\s*:\s*none[^"']*["'][^>]*>[\s\S]*?<\/\1\s*>/gi;
+
+/** HTML from Commons' `Artist` field, as plain text — what a reader sees. */
 export function plainText(html: unknown): string | null {
   if (typeof html !== "string") return null;
   const text = html
+    .replace(HIDDEN_ELEMENT, " ")
     .replace(/<[^>]*>/g, " ")
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')

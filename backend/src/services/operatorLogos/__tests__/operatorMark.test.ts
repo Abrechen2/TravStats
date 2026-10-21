@@ -298,4 +298,17 @@ describe("wikidata helpers", () => {
     expect(plainText('<span><a href="//x">Jane &amp; Co</a></span>')).toBe("Jane & Co");
     expect(plainText("")).toBeNull();
   });
+
+  it("leaves out the text Commons hides, so an author is credited once", () => {
+    // Commons' own Artist value for File:Flixbus_201x_logo.svg (2026-10-21):
+    // the card read "Unknown author Unknown author".
+    expect(plainText('Unknown author<span style="display: none;">Unknown author</span>')).toBe(
+      "Unknown author"
+    );
+    expect(
+      plainText(
+        '<span style="DISPLAY:none">x</span><a href="//y">Jane</a><div style="color:red">!</div>'
+      )
+    ).toBe("Jane !");
+  });
 });
