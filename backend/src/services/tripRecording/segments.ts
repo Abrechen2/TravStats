@@ -1,9 +1,9 @@
 import type { Prisma } from "../../prisma";
 import { haversineKm } from "../../shared/geo/haversine";
-import { localDay } from "../../shared/time/instant";
 import { simplifyDegrees } from "../schematicRouter";
 import { filterJitterYielding, type JitterFix } from "../tracks/jitterFilter";
 import { JITTER_PROFILES } from "../tracks/jitterProfiles";
+import { localDayReader } from "./localDays";
 
 /**
  * A trip recording read back (forgejo#316): the stored batches as one line per
@@ -82,11 +82,10 @@ export function pointsByDevice(
   day?: string
 ): Array<{ deviceId: string | null; points: StoredPoint[] }> {
   const byDevice = new Map<string | null, StoredPoint[]>();
+  const dayOf = localDayReader(zone);
   for (const batch of batches) {
     const list = byDevice.get(batch.deviceId) ?? [];
-    const kept = storedPoints(batch.points).filter(
-      (p) => day === undefined || localDay(new Date(p[0]), zone) === day
-    );
+    const kept = storedPoints(batch.points).filter((p) => day === undefined || dayOf(p[0]) === day);
     byDevice.set(batch.deviceId, [...list, ...kept]);
   }
   return [...byDevice.entries()]
@@ -125,7 +124,8 @@ export function displaySegments(
 
 /** The distinct days the points fall on, on the trip's clock, in order. */
 export function recordingDays(points: readonly StoredPoint[], zone: string): string[] {
-  return [...new Set(points.map((p) => localDay(new Date(p[0]), zone)))].sort();
+  const dayOf = localDayReader(zone);
+  return [...new Set(points.map((p) => dayOf(p[0])))].sort();
 }
 
 /**
