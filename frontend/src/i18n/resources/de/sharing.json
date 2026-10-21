@@ -625,6 +625,7 @@
       },
       "reason": {
         "entries-too-large": "Ein Eintrag war zu groß für die Übertragung und fehlt bei {{name}}.",
+        "entries-unattributed": "Einträge, die schon vorher auf dieser Instanz geteilt waren, fehlen bei {{name}}: Für sie ist nicht festgehalten, wer sie eingetragen hat.",
         "restore": "Nach einer Wiederherstellung ausgesetzt – bitte neu bestätigen.",
         "off": "Teilen über Server ist bei {{name}} ausgeschaltet.",
         "peer-blocked": "Der Server von {{name}} ist von deiner Instanz gesperrt.",

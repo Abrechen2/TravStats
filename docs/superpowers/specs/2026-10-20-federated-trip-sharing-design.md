@@ -889,5 +889,7 @@ its fix too and stays as a guard — the order there is by reasoning, not a repr
    the offer, or joined after it without the person's yes), or one keyed before authors were
    recorded at all, is not copied. Correct for consent, a loss for the copy; the alternative —
    treating the accepted offer as a yes to everything it contained — would need the offer to list
-   those authors so the person sees them.
+   those authors so the person sees them. An entry with no recorded author is a loss the home
+   knows of: the member carries `entries-unattributed` and the trip page says so (rc.19 review).
+   No author is inferred for it — a keyed row on the owner's trip may be a copy of someone else's.
 

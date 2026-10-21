@@ -79,7 +79,7 @@ export const remoteMemberSchema = z.strictObject({
     .string()
     .nullable()
     .describe(
-      "Why the state is what it is (`off`, `peer-blocked`, `unreachable`, `restore`, `entries-too-large`); null when fine"
+      "Why the state is what it is (`off`, `peer-blocked`, `unreachable`, `restore`, `entries-too-large`, `entries-unattributed`); null when fine"
     ),
   stateSince: instant,
   delivery: z

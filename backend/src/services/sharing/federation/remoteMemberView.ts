@@ -34,7 +34,7 @@ export interface RemoteMemberView {
   username: string;
   origin: string;
   state: RemoteMemberState;
-  /** `restore`, `off`, `peer-blocked`, `entries-too-large`, … — null when nothing is wrong. */
+  /** `restore`, `off`, `peer-blocked`, `entries-too-large`, `entries-unattributed`, … — null when nothing is wrong. */
   stateReason: string | null;
   stateSince: string;
   delivery: DeliveryView;

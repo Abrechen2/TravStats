@@ -16,7 +16,8 @@
  * Since F-S4d the entries leave through the outbox: they are queued in the same transaction that
  * makes the person a member (`serveOfferAnswer`), and the delivery scheduler sends them in order,
  * retrying while the other server does not answer (`outbox.ts`). A single entry too large for
- * any message is a stated loss, recorded on the member (`entries-too-large`).
+ * any message is a stated loss, recorded on the member (`entries-too-large`), and so is an entry
+ * no author was recorded for (`entries-unattributed`).
  */
 import { prisma, type DbTransaction } from "../../../db";
 import type { Prisma } from "../../../prisma";
@@ -136,10 +137,16 @@ export async function queueEntries(tx: DbTransaction, memberId: string): Promise
       },
     });
   }
-  // An entry too large for any message is a stated loss, not a silent one.
+  // An entry too large for any message is a stated loss, not a silent one. So is an entry with
+  // no recorded author (keyed before authors were recorded, spec F-S4e owner question 7): the
+  // spoke copies it for nobody, and the sender must not read that as a clean delivery.
+  const unattributed = entries.some((e) => !authors.has(e.shareKey));
   await tx.tripShareRemoteMember.update({
     where: { id: member.id },
-    data: { stateReason: oversize.length > 0 ? "entries-too-large" : null },
+    data: {
+      stateReason:
+        oversize.length > 0 ? "entries-too-large" : unattributed ? "entries-unattributed" : null,
+    },
   });
   kickDelivery();
   return chunks.length;

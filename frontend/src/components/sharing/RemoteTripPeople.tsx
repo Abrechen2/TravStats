@@ -35,6 +35,7 @@ const STATE_COLOR: Readonly<Record<RemoteMemberState, string>> = {
 /** The reasons the server names; anything else reads as the generic one. */
 const KNOWN_REASONS = new Set([
   "entries-too-large",
+  "entries-unattributed",
   "restore",
   "restore-invited",
   "off",
@@ -42,6 +43,8 @@ const KNOWN_REASONS = new Set([
   "repinned",
   "unreachable",
 ]);
+/** Entries that did not travel to someone on the trip, said beside where their changes stand. */
+const LOSS_REASONS = new Set(["entries-too-large", "entries-unattributed"]);
 /** Why a change was not delivered: the other server's answer, or too large to send at all. */
 const KNOWN_REFUSALS = new Set(["schema", "not-member", "consent", "too-large"]);
 /** A retry caused by an error on this server or on theirs, each with its own sentence. */
@@ -196,7 +199,7 @@ export default function RemoteTripPeople({
   /** The member's own sentence: a suspension's reason, else where the changes stand. */
   const statusLines = (m: RemoteMember): string[] => {
     if (RECEIVING.has(m.state)) {
-      const loss = m.stateReason === "entries-too-large" ? reasonLine(m) : null;
+      const loss = m.stateReason && LOSS_REASONS.has(m.stateReason) ? reasonLine(m) : null;
       return [deliveryLine(m), ...(loss ? [loss] : [])];
     }
     return [reasonLine(m) ?? t(`${NS}.since`, { date: fmt.dateTime(m.stateSince) })];
