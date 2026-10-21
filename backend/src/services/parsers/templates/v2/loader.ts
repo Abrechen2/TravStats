@@ -48,6 +48,12 @@ type Source = "remote" | "cached" | "snapshot";
 interface ActiveTemplate {
   readonly template: TemplateEnvelope;
   readonly source: Source;
+  /**
+   * The repository base URL it was fetched from; null for the bundled
+   * snapshot and for a cache file that did not record it. Only a template
+   * fetched from the repository being synced may skip its re-fetch.
+   */
+  readonly repository: string | null;
 }
 
 type Verdict =
@@ -59,6 +65,15 @@ interface EntryOutcome {
   readonly active?: ActiveTemplate;
   /** A fetched template to cache — written only once the whole sync is known current. */
   readonly toCache?: TemplateEnvelope;
+}
+
+interface ConsideredFile {
+  readonly raw: unknown;
+  readonly source: Source;
+  readonly repository: string | null;
+  readonly fallbackId: string;
+  readonly entry?: TemplateIndexEntry;
+  readonly readError?: string;
 }
 
 const MAX_DETAIL_ITEMS = 5;
@@ -150,13 +165,14 @@ export class V2TemplateStore {
   loadFromCache(): void {
     const nextActive = new Map<string, ActiveTemplate>();
     const nextStatus = new Map<string, V2TemplateStatusEntry>();
-    const consider = (
-      raw: unknown,
-      source: Source,
-      fallbackId: string,
-      entry?: TemplateIndexEntry,
-      readError?: string
-    ): void => {
+    const consider = ({
+      raw,
+      source,
+      repository,
+      fallbackId,
+      entry,
+      readError,
+    }: ConsideredFile): void => {
       const verdict: Verdict = readError
         ? { ok: false, reason: "invalid", detail: readError }
         : this.evaluate(raw, entry);
@@ -175,20 +191,34 @@ export class V2TemplateStore {
           existing.source === "snapshot" && source === "cached" ? order <= 0 : order < 0;
         if (!replaces) return;
       }
-      const active: ActiveTemplate = { template, source };
+      const active: ActiveTemplate = { template, source, repository };
       nextActive.set(template.id, active);
       nextStatus.set(template.id, activeStatus(active));
     };
 
     try {
       for (const item of this.deps.snapshot?.list() ?? []) {
-        consider(item.raw, "snapshot", item.label, item.entry, item.error);
+        consider({
+          raw: item.raw,
+          source: "snapshot",
+          repository: null,
+          fallbackId: item.label,
+          entry: item.entry,
+          readError: item.error,
+        });
       }
     } catch (err) {
       logger.warn({ err }, "bundled v2 template snapshot could not be read — starting without it");
     }
     try {
-      this.deps.cache.list().forEach((raw, i) => consider(raw, "cached", `cache[${i}]`));
+      this.deps.cache.list().forEach((file, i) =>
+        consider({
+          raw: file.raw,
+          source: "cached",
+          repository: file.repository,
+          fallbackId: `cache[${i}]`,
+        })
+      );
     } catch (err) {
       logger.warn({ err }, "v2 template cache could not be read — starting without it");
     }
@@ -249,7 +279,7 @@ export class V2TemplateStore {
     // behind that a restart would activate.
     if (this.superseded(generation)) return this.discarded(baseUrl);
     for (const template of toCache) {
-      this.safeCache(() => this.deps.cache.write(template), template.id);
+      this.safeCache(() => this.deps.cache.write(template, baseUrl), template.id);
     }
     this.purgeCacheExcept(seen);
 
@@ -284,7 +314,7 @@ export class V2TemplateStore {
   private purgeCacheExcept(seen: ReadonlySet<string>): void {
     let cached: unknown[];
     try {
-      cached = this.deps.cache.list();
+      cached = this.deps.cache.list().map((file) => file.raw);
     } catch (err) {
       logger.warn({ err }, "v2 template cache could not be read — nothing purged");
       return;
@@ -317,7 +347,11 @@ export class V2TemplateStore {
     seen.add(entry.id);
 
     const current = this.active.get(entry.id);
-    if (current && compareVersions(current.template.version, entry.version) >= 0) {
+    if (
+      current &&
+      current.repository === baseUrl &&
+      compareVersions(current.template.version, entry.version) >= 0
+    ) {
       return { status: activeStatus(current), active: current };
     }
 
@@ -325,24 +359,42 @@ export class V2TemplateStore {
     try {
       raw = await this.deps.fetchJson(`${baseUrl}/${entry.path}`);
     } catch (err) {
-      return this.keepOrReject(current, entry, "fetch_failed", errorMessage(err));
+      return this.keepOrReject(current, entry, baseUrl, "fetch_failed", errorMessage(err));
     }
 
     const verdict = this.evaluate(raw, entry);
-    if (!verdict.ok) return this.keepOrReject(current, entry, verdict.reason, verdict.detail);
+    if (!verdict.ok) {
+      return this.keepOrReject(current, entry, baseUrl, verdict.reason, verdict.detail);
+    }
 
-    const active: ActiveTemplate = { template: verdict.template, source: "remote" };
+    const active: ActiveTemplate = {
+      template: verdict.template,
+      source: "remote",
+      repository: baseUrl,
+    };
     return { status: activeStatus(active), active, toCache: verdict.template };
   }
 
+  /**
+   * A refused file never downgrades what is active. When the active copy
+   * came from elsewhere (the previous repository, the snapshot, an unmarked
+   * cache file), it keeps serving as a fallback the status names as such.
+   */
   private keepOrReject(
     current: ActiveTemplate | undefined,
     entry: TemplateIndexEntry,
+    baseUrl: string,
     reason: V2RejectionReason,
     detail: string
   ): EntryOutcome {
     if (!current) return { status: rejectedStatus(entry, "remote", reason, detail) };
-    const note = `version ${entry.version} refused (${reason}: ${detail}); still serving ${current.template.version}`;
+    const origin =
+      current.repository === baseUrl
+        ? ""
+        : current.repository === null
+          ? " (bundled or cached copy of unrecorded origin)"
+          : " from the previous template repository";
+    const note = `version ${entry.version} refused (${reason}: ${detail}); still serving ${current.template.version}${origin}`;
     return { status: activeStatus(current, note), active: current };
   }
 
