@@ -208,4 +208,40 @@ describe("RemoteSharingSection", () => {
     await userEvent.click(screen.getByRole("button", { name: "sharing:remote.invites.create" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("sharing:remote.errors.listsFailed");
   });
+
+  it("lists the trip a trip page's invitation offered once its code is redeemed", async () => {
+    api.claim.mockResolvedValue({
+      id: "p1",
+      origin: OTHER,
+      username: "anna",
+      displayName: "Anna",
+      consent: "accepted",
+      createdAt: "2026-10-20T10:00:00.000Z",
+    });
+    render(<RemoteSharingSection />);
+    await waitFor(() => expect(api.listOffers).toHaveBeenCalled());
+    api.listOffers.mockResolvedValue([
+      {
+        id: "o1",
+        from: { displayName: "Anna", username: "anna", origin: OTHER },
+        trip: { name: "Portugal 2030", startDay: null, endDay: null },
+        roster: [],
+        counts: {
+          flights: 1,
+          lodgingStays: 0,
+          cruises: 0,
+          railJourneys: 0,
+          busJourneys: 0,
+          ferryJourneys: 0,
+          rentals: 0,
+          stops: 0,
+        },
+        offeredAt: "2026-10-20T10:00:00.000Z",
+      },
+    ]);
+    await claimWith(CODE);
+    expect(
+      await screen.findByText(/sharing:remote.offers.row .*Portugal 2030/)
+    ).toBeInTheDocument();
+  });
 });

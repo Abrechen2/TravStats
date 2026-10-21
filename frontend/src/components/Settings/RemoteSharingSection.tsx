@@ -38,6 +38,8 @@ export default function RemoteSharingSection(): JSX.Element | null {
   const [lists, setLists] = useState<Lists | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [listsFailed, setListsFailed] = useState(false);
+  /** Bumped after a redeemed code: a trip page's invitation brings its trip offer with it. */
+  const [offersVersion, setOffersVersion] = useState(0);
   const [created, setCreated] = useState<CreatedRemoteInvite | null>(null);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -118,6 +120,7 @@ export default function RemoteSharingSection(): JSX.Element | null {
     void run(async () => {
       const person = await sharingRemoteApi.claim(pasted);
       setCode("");
+      setOffersVersion((v) => v + 1);
       setNotice(t(`${NS}.claim.done`, { name: person.displayName, origin: person.origin }));
     }, `${NS}.errors.claimFailed`);
   };
@@ -137,7 +140,7 @@ export default function RemoteSharingSection(): JSX.Element | null {
     <SectionCard>
       <SectionTitle title={t(`${NS}.title`)} description={t(`${NS}.description`)} />
 
-      <ReceivedRemoteOffers />
+      <ReceivedRemoteOffers refresh={offersVersion} />
 
       {listsFailed && (
         <div role="alert" className="mb-4 flex flex-wrap items-center gap-2 text-sm">
