@@ -142,12 +142,10 @@ export function useDashboardDomainFilter(tourCount: number | null): DashboardDom
       tour: tourCount,
       roadtrip: counts.roadtrip,
       rail: counts.rail,
-      // Nor bus rides: unknown, not 0.
-      bus: null,
-      // Nor ferry crossings.
-      ferry: null,
-      // The dashboard counts carry no rentals; the row says "unknown", not 0.
-      rental: null,
+      // Unknown (not loaded, or the count failed) stays null, not 0.
+      bus: counts.bus ?? null,
+      ferry: counts.ferry ?? null,
+      rental: counts.rental ?? null,
     };
     return FILTER_DOMAIN_ORDER.filter((key) => available[key]).map((key) => ({
       key,

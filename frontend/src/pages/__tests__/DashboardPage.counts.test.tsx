@@ -39,6 +39,16 @@ vi.mock("../../lib/api/lodging", () => ({
 vi.mock("../../lib/api/places", () => ({
   placesApi: { count: vi.fn().mockResolvedValue(0) },
 }));
+// beta.22 UAT: the domain filter showed no count for bus, ferry and rental.
+vi.mock("../../lib/api/bus", () => ({
+  busApi: { list: vi.fn().mockResolvedValue({ journeys: [], total: 5, summary: {} }) },
+}));
+vi.mock("../../lib/api/ferry", () => ({
+  ferryApi: { list: vi.fn().mockResolvedValue({ journeys: [], total: 2, summary: {} }) },
+}));
+vi.mock("../../lib/api/rental", () => ({
+  rentalApi: { list: vi.fn().mockResolvedValue({ rentals: [], total: 3, summary: {} }) },
+}));
 // DashboardLayout (the wrapper DashboardPage always renders) fetches this
 // on mount -- unmocked, it fires a real, always-failing XHR in jsdom.
 vi.mock("../../lib/api/upcoming", () => ({
@@ -162,6 +172,23 @@ describe("DashboardPage: domain counts survive a tab change", () => {
     // Drain the refetch that the remounted DashboardPage kicked off, so no
     // state update lands after this test has already returned.
     await waitFor(() => expect(flightCount()).toBe(flightsTotal));
+  });
+
+  // beta.22 UAT: the domain filter showed counts for every domain but bus,
+  // ferry and rental. They come from the same counts load as rail.
+  it("loads the bus, ferry and rental counts for an account with those domains on", async () => {
+    useSettingsStore.setState({
+      enabledDomains: ["flight", "bus", "ferry", "rental"],
+      betaFeaturesEnabled: true,
+    });
+    renderDashboard();
+    await waitFor(() =>
+      expect(useDashboardCountsStore.getState().counts).toMatchObject({
+        bus: 5,
+        ferry: 2,
+        rental: 3,
+      })
+    );
   });
 
   // forgejo#88 acceptance, 2026-10-10: a 1.5-era migration notice ("Der
