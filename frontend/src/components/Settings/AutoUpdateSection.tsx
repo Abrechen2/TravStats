@@ -4,6 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { Switch } from "../ui/Field";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
 import { useExpertRows } from "./frame/useExpertRows";
+import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 
 interface AutoUpdateSettings {
   enabled: boolean;
@@ -28,6 +29,7 @@ export default function AutoUpdateSection({
   onSave,
 }: AutoUpdateSectionProps): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
+  const coarse = useCoarsePointer();
   // The switch is the standard setting (live updates on or off); how they run
   // — approval, flight window, polling interval, expiry — is tuning, shown at
   // the expert level (forgejo#321). The four rows exist only while it is on.
@@ -64,7 +66,21 @@ export default function AutoUpdateSection({
         title={t("settings:autoUpdate.title")}
         description={t("settings:autoUpdate.description")}
         aside={
-          <Link to="/pending-updates" className="font-medium" style={{ color: "var(--accent)" }}>
+          <Link
+            to="/pending-updates"
+            className="font-medium"
+            style={{
+              color: "var(--accent)",
+              // Under a finger the text link becomes a 44 px target (forgejo#321).
+              ...(coarse
+                ? {
+                    display: "inline-flex",
+                    alignItems: "center",
+                    minHeight: "var(--ts-size-touch-min)",
+                  }
+                : {}),
+            }}
+          >
             {t("settings:autoUpdate.viewPending")} →
           </Link>
         }

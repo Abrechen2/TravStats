@@ -3,6 +3,7 @@ import { FieldLabel, SectionCard, SectionTitle } from "./SettingsShared";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
 import HomePeriodEditor, { type HomeEditorMode } from "./HomePeriodEditor";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { settingsApi, type HomePeriod } from "../../lib/api";
 import { apiErrorCode } from "../../lib/apiError";
 import { formatLocalDate } from "../../lib/displayFormat";
@@ -56,6 +57,7 @@ function AirportList({ period }: { period: HomePeriod }): JSX.Element {
 
 export default function HomeAirportSection(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
+  const coarse = useCoarsePointer();
   const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
   const addToast = useToastStore((s) => s.addToast);
 
@@ -163,21 +165,35 @@ export default function HomeAirportSection(): JSX.Element {
     setEditing({ mode, index });
   };
 
+  // Touch sizing follows the pointer, not the width (forgejo#321): on an iPad
+  // the 40 px buttons sat under the 44 px a finger needs.
+  const touch = coarse ? { minHeight: "var(--ts-size-touch-min)" } : undefined;
+
   const rowControls = (index: number, period: HomePeriod): JSX.Element => (
     <div className="flex flex-wrap gap-2">
       {!period.residenceConfirmed ? (
-        <button type="button" className="btn-primary" onClick={() => open("confirm", index)}>
+        <button
+          type="button"
+          className="btn-primary"
+          style={touch}
+          onClick={() => open("confirm", index)}
+        >
           {t("settings:homeAirport.confirm")}
         </button>
       ) : (
-        <button type="button" className="btn-secondary" onClick={() => open("edit", index)}>
+        <button
+          type="button"
+          className="btn-secondary"
+          style={touch}
+          onClick={() => open("edit", index)}
+        >
           {t("settings:homeAirport.edit")}
         </button>
       )}
       <button
         type="button"
         className="btn-secondary"
-        style={{ color: "var(--ts-bad)" }}
+        style={{ ...touch, color: "var(--ts-bad)" }}
         onClick={() => void handleDelete(index)}
         disabled={saving}
       >
@@ -227,6 +243,7 @@ export default function HomeAirportSection(): JSX.Element {
               <button
                 type="button"
                 className="btn-primary"
+                style={touch}
                 onClick={() => open("confirm", firstUnconfirmed)}
               >
                 {t("settings:homeAirport.confirm")}

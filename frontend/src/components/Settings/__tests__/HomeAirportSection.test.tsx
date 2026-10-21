@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
@@ -167,5 +167,41 @@ describe("HomeAirportSection", () => {
       await screen.findByText("Dein Zuhause konnte nicht geladen werden.")
     ).toBeInTheDocument();
     expect(queryNamed("button", "Zuhause festlegen")).toBeNull();
+  });
+});
+
+describe("HomeAirportSection — touch size follows the pointer (forgejo#321, iPad look)", () => {
+  const original = window.matchMedia;
+  const pointer = (coarse: boolean): void => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: coarse && query === "(pointer: coarse)",
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+  };
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getHomeAirports.mockResolvedValue({ history: [], periods: [MIGRATED] });
+    nearbyHomeAirports.mockResolvedValue(NEARBY);
+  });
+  afterEach(() => {
+    window.matchMedia = original;
+  });
+
+  it("gives Bestätigen and Löschen a 44 px target under a finger", async () => {
+    pointer(true);
+    render(<HomeAirportSection />);
+    await screen.findByText("Bitte bestätige deinen Wohnort");
+    const buttons = [...allNamed("button", "Bestätigen"), ...allNamed("button", "Löschen")];
+    expect(buttons.length).toBeGreaterThanOrEqual(3);
+    for (const b of buttons) expect(b.style.minHeight).toBe("var(--ts-size-touch-min)");
+  });
+
+  it("stays compact under a mouse", async () => {
+    pointer(false);
+    render(<HomeAirportSection />);
+    await screen.findByText("Bitte bestätige deinen Wohnort");
+    for (const b of allNamed("button", "Bestätigen")) expect(b.style.minHeight).toBe("");
   });
 });
