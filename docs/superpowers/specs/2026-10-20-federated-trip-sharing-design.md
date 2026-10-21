@@ -16,8 +16,8 @@ Builds on, and does not reopen:
   restore isolation, egress rules. §8 of that document is the baseline the deltas in §9 below
   are measured against.
 
-Every "today" below was read on `main` at `5aacc4ca4`, before anything was built; phases F-S4a,
-F-S4b and F-S4c are built since, see §14.
+Every "today" below was read on `main` at `5aacc4ca4`, before anything was built; phases F-S4a
+to F-S4e are built since, see §14.
 
 ## 1. What exists, and what is missing
 
@@ -694,3 +694,153 @@ reference that leaves a name on the copy — only the cruise's ship, `shipNameOv
 compared by what it names, not by an id two catalogue misses share (`refIdentity.ts`). Sizes are
 UTF-8 bytes as the envelope carries them (`wireBytes`), and a message that can never fit is
 parked as `too-large` instead of retried. Tests: `twoServersDeliveryRobustness.test.ts`.
+
+**F-S4d leftovers, fixed with F-S4e (2026-10-21).** The receiver's lock now covers the rows a
+change lands on, not only the entry's own: a cruise's `cruise_stops` and `cruise_legs`, a stay's
+`lodgings` row (`rowLock.ts` `lockCopy`, parent first; `twoServersChildRowLock.test.ts`). And an
+error of one of the two servers is no longer read as a silent peer: `kindOf` names anything that
+is not a `PeerRefusal` or a malformed answer `local-error` (`exchange()` turns a failed DNS lookup
+into `unreachable` first), and the peer route answers a group message it failed to apply with a
+signed `ack { rejected: "error" }`, retried by the sender as `remote-error`. Both are retried at
+the usual backoff but never turn a member `unreachable`, and the trip page says which server erred
+(`twoServersLocalErrors.test.ts`). A local error in a person's own claim or offer is passed on as
+itself (a 500), not as `SHARE_REMOTE_UNREACHABLE`.
+
+### As built — F-S4e (2026-10-21, `dev/federated-trip-sharing`)
+
+Built as §12's row lists it: `leave`, `revoke`, `roster`, `add-request`, peer suspend and re-pin,
+the restore path with its confirmation, plus dismissing a refused message. What the build decided
+where the spec left room, and where it deviates:
+
+**Wire.** Four group messages join `tripSharePacket`, each with `groupRef`/`seq` and the pairing's
+`from`/`to`: `roster { self, you, members[≤100] }` (32 KB), `leave`, `revoke` (8 KB each) and
+`add-request { person: { displayName, origin? }, note? }` (8 KB). `roster`, `leave` and `revoke`
+leave through the outbox (`OUTBOX_KINDS`, CHECK widened); `add-request` is a person's click and is
+sent directly, like `offer-answer`. A roster entry is `{ ref, displayName, origin }`; the offer
+carries the same roster plus `self`/`you`. `changeActor` gains an optional `ref`. The ack gains
+`suspended` — retried by the sender like `error`, never parked.
+
+**Roster (`roster.ts`).**
+- A person is named by a `ref` per group: random for a person on another server
+  (`TripShareRemoteMember.rosterRef`), a SHA-256 of `federatedRef` and the account id, shaped as a
+  UUID, for a member of the home's own server. Neither is an account id of either server.
+- The home sends the roster to every spoke member whose messages queue, whenever someone joins
+  (an accepted offer, a local share into a federated home group) or leaves (leave, revoke, a local
+  member leaving), and once after a restore is confirmed. A spoke keeps it in
+  `TripShareRosterEntry` (`present` false for someone no longer named, so an old notice keeps a
+  name) and stores this pairing's own two refs (`rosterRef` = the home person, `localRef` = its
+  own person). No version number: one stream per (group, peer) orders them, so the latest one
+  received is true — a version would have broken after a restored home counts from an older
+  number.
+- **Authorship.** From a spoke the author is always the sending pairing (as in F-S4d). From the
+  home, `actor.ref` names the author: the pairing itself if it is that pairing's ref, else the
+  roster entry — name and origin read from the roster, never from the message. A ref the spoke
+  does not know names nobody and the change is **not applied** (taken in order, acknowledged —
+  the home did nothing a spoke can call wrong). A message without a ref is the home pairing's own
+  word, as before; a home that leaves refs out could equally lie about the name, which the threat
+  model already concedes (§9, "impersonate one of its own users").
+- **Consent on relays (`mayReach`).** A change by a person on another server reaches a member's
+  copy only through the member's own pairing with that person or after the member's yes on the
+  roster (`TripShareRosterConsent`, `accepted | declined`, no row = not asked). The rule holds on
+  every server that holds a copy: on a spoke for its person (in `servePropagation`), at the home
+  for its own members (in the spreads of `propagate.ts`, `reachedHere`). Accepting an offer says
+  yes to everyone the offer's roster named; anyone who joins later is `pending` on the trip page
+  with "Zustimmen" / "Ablehnen". **What a member missed before the yes is not replayed** (as
+  locally, `receivingMembers`): the newcomer's next change to the same fact meets the older value
+  and becomes a conflict notice, not a silent overwrite.
+- The trip page shows the roster for the reader (`tripRemoteSharing.roster`: `you`, `paired`,
+  `here` for someone on the same server, `pending`, `accepted`, `declined`).
+
+**Leave and revoke (`lifecycle.ts`).**
+- `detachTrip` (leaving, deleting the trip, merging it away) calls `departLocally`: every
+  membership through the leaving member's pairings ends `left`, its queued messages are deleted,
+  and a `leave` row is queued — sent although the member no longer receives anything else
+  (`stillReceives` lets `leave`/`revoke` through for a member in exactly that end state). The
+  receiver ends its row, gives every member of the group there a `left` notice naming the person
+  and server, and — at the home — sends the new roster. The copies stay (decision 5).
+- `POST /sharing/remote/people/:id/withdraw` withdraws the consent of a pairing: every membership
+  of it ends `revoked` in one transaction, its queue is deleted, and a `revoke` is queued per
+  shared group. On the spoke's side the person's copy leaves its group (`detachTrip`) unless
+  another of their pairings still carries it; at the home the others get the roster. The receiver
+  of `revoke` does the same for the whole pairing (consent `withdrawn`, every membership
+  `revoked`, the spoke detaches) and a `left` notice says `revoked`. Afterwards nothing queues for
+  the pairing on either side, and a message sent anyway is refused (`not-member` / `consent`) —
+  `twoServersLifecycle.test.ts` sends one on the old stream after each direction's revoke.
+- A pairing with no shared trip has no group to carry a `revoke`: the other server learns of it
+  from the refusal of its next offer or message. The pairing row stays (tombstone); a new code
+  pairs the two again.
+- The end of a membership is told only where a message could still go: one held by a restore, a
+  blocked server or a new key is ended without a word, and that server learns it from the refusal
+  of its next message.
+
+**Held: suspend, re-pin, restore (O9).**
+- Admin → Instanz: suspending a peer holds every membership through it as `peer-blocked`;
+  pinning a different key holds them as `repinned` (`holdPeerMemberships`, called from
+  `routes/admin/federation.ts`). Re-pinning the same key changes nothing. A send that meets an
+  unknown or unverified pin holds the stream the same way (F-S4d's `peer-blocked`, which no longer
+  recovers by itself).
+- **Held means the stream stops**: the outbox does not send a held member's rows, counts no
+  attempt, and keeps them (`repinned`, `peer-blocked` still queue); a message that arrives for a
+  held membership is answered `suspended`, which its sender keeps and retries at the usual backoff
+  (shown as "waiting for a confirmation there"). Deviation from F-S4d: only `off` and
+  `unreachable` recover on their own now.
+- A restore holds as `restore` (and an offer still open as `restore-invited`), deletes the outbox
+  and puts remote consents back to `pending`, as before.
+- `POST /sharing/remote/trips/:tripId/reconfirm` confirms the caller's held memberships of one
+  trip: the server must be admitted and verified again (`SHARE_REMOTE_PEER_NOT_ADMITTED`
+  otherwise), the pairing's consent goes from `pending` back to `accepted` (a withdrawn or
+  declined one is `SHARE_REMOTE_CONSENT_MISSING`), the membership is `active` again (`invited` for
+  `restore-invited`), and after a restore the home queues the trip's entries once more and its
+  roster. The receiver keeps only the entries it lacks (`heldKeys`): an entry's facts that changed
+  while held are not refreshed by the resend — the next change to them travels as usual, and a
+  difference shows as a conflict. The trip page draws "Neu bestätigen" while anything of the
+  caller's waits (`reconfirmable`).
+- Deviation from §8 "re-confirms per group": a pairing whose consent a restore put back to
+  `pending` but which shares no trip has no group to confirm; withdrawing it and pairing again
+  with a new code is the way out.
+
+**Add-request (`addRequest.ts`).** A spoke member asks from the trip page with a name, optionally
+the person's server and a note (`POST …/trips/:tripId/add-requests`, the invitation limiter,
+30/h). The home member of that pairing gets an inbox notice of the new kind `add-request` (CHECK
+widened) linking to the trip, where they offer it to a paired person or make a code for the trip.
+Nothing is offered by the request; the spoke learns nothing of the home's pairings. At the home
+the endpoint answers `SHARE_REMOTE_IS_HOME`.
+
+**Dismiss.** `DELETE …/trips/:tripId/members/:memberId/parked` deletes the parked messages towards
+one member the caller's page shows; they are not sent again.
+
+**Codes** beyond §7: `SHARE_REMOTE_NOTHING_TO_CONFIRM`, `SHARE_REMOTE_NOT_MEMBER`,
+`SHARE_REMOTE_IS_HOME`, `SHARE_REMOTE_ROSTER_NOT_FOUND`; each has DE/EN copy.
+
+**Tests.** `twoServersLifecycle.test.ts` (leave both ways; revoke both ways with a forged message
+afterwards; re-pin holds, `suspended` answered and retried, confirmation resumes both ways; a
+restored clone sends nothing and its confirmation resends the entries; confirmation needs an
+admitted server; dismiss; add-request; local onward share refused; the home-side roster gate),
+`threeServersRoster.test.ts` (A home, B and C admitted by A only: each spoke learns the roster;
+Cleo's change reaches Ben only after his yes, and what he missed comes back as a conflict, not a
+silent write; Ben's reaches Cleo at once, named by the roster with `via`; B and C never exchange
+a message; an unknown ref is not applied; a leave updates the other spoke's roster), the admin
+hooks in `routes/admin/__tests__/federation.test.ts`, the vocabulary CHECKs. The harness runs a
+third server (`useThreeServers`, database `<db>c_test`).
+
+**Open owner questions (decided here the safer way, to be confirmed).**
+1. **A received trip cannot be shared on locally on the spoke** (`shareTrip` answers
+   `SHARE_REMOTE_NOT_HOME`): a member added there would receive the others' changes and send
+   their own up under the spoke member's name, without anyone at the home agreeing. The way is the
+   `add-request`. The F-S4d note left this to "roster and add-request"; refusing is the narrower
+   reading.
+2. **A remote newcomer needs the yes of the home's own members too** (Dora on A, who shared
+   Anna's trip locally before Ben joined), not only of the spokes — the local rule that a newcomer
+   needs every member's consent (`missingGroupConsent`), applied to remote newcomers at join time
+   by asking instead of refusing.
+3. **Blocking a peer holds its memberships until each person confirms again**, like a re-pin
+   (O9 names only the re-pin); unblocking alone does not resume them.
+4. Changes withheld before a roster yes are not replayed (above). A replay on yes would need a
+   resync request from spoke to home, a message §4 does not have.
+5. A spoke that was restored resumes on confirmation but sends nothing it missed: the spoke has no
+   message to push its entries to the home (`entries` is home → spoke only). Only a restored home
+   resends.
+6. A held membership on the other side is retried at the outbox backoff (up to a day): after that
+   person confirms, their server can take up to a day to receive what was queued here. A nudge
+   message would close that gap; it is not in §4.
+
