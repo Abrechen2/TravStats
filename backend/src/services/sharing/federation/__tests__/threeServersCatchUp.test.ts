@@ -126,6 +126,45 @@ describe("a roster yes catches up (Q4)", () => {
   });
 });
 
+describe("review of the catch-up (Codex, 2026-10-21)", () => {
+  it("an own edit the withheld change met is never overwritten after the yes (review 1)", async () => {
+    const t = await threeServerTrip(a, b, c);
+    // Ben's own edit is queued on B before Cleo's change reaches him.
+    await editFlight(b, t.ben, t.benFlight.id, { gate: "B9" });
+    await editFlight(c, t.cleo, t.cleoFlight.id, { gate: "C1" });
+    await c.outbox.runDeliveries();
+    await a.outbox.runDeliveries();
+    // His edit meets hers at A: a conflict there, and through the answer on B.
+    await b.outbox.runDeliveries();
+    expect(await gateOf(b, t.benFlight.id)).toBe("B9");
+    const cleoRef = (await rosterOf(b, t.ben, t.benTrip)).find(
+      (p) => p.displayName === "Cleo"
+    )!.ref;
+    await b.roster.decideRosterPerson(t.ben, t.benTrip, cleoRef, "accepted");
+    await roundTrip();
+    expect(await gateOf(b, t.benFlight.id)).toBe("B9");
+    expect(await noticesOf(b, t.ben, "conflict")).toHaveLength(1);
+  });
+
+  it("a request queued before the yes still carries it (review 2, spoke)", async () => {
+    const t = await cleoActsBeforeBensYes();
+    await b.prisma.$transaction((tx) => b.resync.queueResync(tx, t.ben, t.groupOnB));
+    await b.roster.decideRosterPerson(t.ben, t.benTrip, t.cleoRef, "accepted");
+    await roundTrip();
+    expect(await b.prisma.flight.count({ where: { tripId: t.benTrip } })).toBe(2);
+  });
+
+  it("an answer waiting at the home is replaced by one for the newer request (review 2, home)", async () => {
+    const t = await cleoActsBeforeBensYes();
+    await b.prisma.$transaction((tx) => b.resync.queueResync(tx, t.ben, t.groupOnB));
+    await b.outbox.runDeliveries();
+    await b.roster.decideRosterPerson(t.ben, t.benTrip, t.cleoRef, "accepted");
+    await roundTrip();
+    expect(await b.prisma.flight.count({ where: { tripId: t.benTrip } })).toBe(2);
+    expect(await a.prisma.tripShareOutbox.count({ where: { peerOrigin: b.origin } })).toBe(0);
+  });
+});
+
 /** An outbox row for a resync naming `accepted` refs, as a forged request would. */
 async function resyncRowClaiming(ben: string, groupId: string, accepted: string[]) {
   const member = await b.prisma.tripShareRemoteMember.findFirstOrThrow({

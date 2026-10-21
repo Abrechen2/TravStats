@@ -78,10 +78,17 @@ export async function queueResync(
   ).map((c) => c.ref);
   let queued = 0;
   for (const m of members) {
-    const waiting = await tx.tripShareOutbox.count({
+    // A waiting request that already names every yes answers this one too; one from before a
+    // newer yes does not, so a fresh one follows it (review 2).
+    const waiting = await tx.tripShareOutbox.findMany({
       where: { memberId: m.id, kind: "resync", parkedAt: null },
+      select: { payload: true },
     });
-    if (waiting > 0) continue;
+    const covers = waiting.some((w) => {
+      const named = new Set((w.payload as { accepted?: string[] }).accepted ?? []);
+      return accepted.every((ref) => named.has(ref));
+    });
+    if (covers) continue;
     await tx.tripShareOutbox.create({
       data: {
         groupId,

@@ -150,6 +150,37 @@ describe("a restored spoke catches up both ways (Q5)", () => {
   });
 });
 
+describe("review of the catch-up (Codex, 2026-10-21)", () => {
+  it("a resync from a member the home shows unreachable is answered, not swallowed (review 3)", async () => {
+    const t = await sharedFlight(a, b);
+    await b.prisma.flight.delete({ where: { id: t.benFlight.id } });
+    await a.prisma.tripShareRemoteMember.updateMany({
+      where: { groupId: t.groupId },
+      data: { state: "unreachable", stateReason: "unreachable" },
+    });
+    const groupId = await groupOn(b, t.benTrip);
+    await b.prisma.$transaction((tx) => b.resync.queueResync(tx, t.ben, groupId));
+    await b.outbox.runDeliveries();
+    await a.outbox.runDeliveries();
+    expect(await b.prisma.flight.count({ where: { tripId: t.benTrip } })).toBe(1);
+  });
+
+  it("an own entry too large to send up is named on the trip page (review 4)", async () => {
+    const t = await sharedFlight(a, b);
+    await b.restore.suspendTripFederationAfterRestore();
+    const his = await addFlight(b, t.ben, t.benTrip);
+    await b.prisma.flight.update({
+      where: { id: his.id },
+      data: { specialData: { note: "x".repeat(1_100_000) } },
+    });
+    await b.propagate.propagateWrite(b.prisma, t.ben, "flight", his.id);
+    await b.lifecycle.reconfirmTrip(t.ben, t.benTrip);
+    expect((await membersOn(b, t.ben, t.benTrip))[0]).toMatchObject({
+      stateReason: "entries-too-large",
+    });
+  });
+});
+
 describe("a confirmation nudges the other server (Q6)", () => {
   /** B holds the trip (a re-pinned key there): Anna's change is answered `suspended`. */
   async function heldOnB() {

@@ -60,6 +60,12 @@ export async function queueEntriesUp(tx: DbTransaction, memberId: string): Promi
       { operation: "trip_share_entries_up_too_large", count: entries.length - fits.length },
       "An own entry is too large for any message and is not sent up"
     );
+  // A stated loss, as for the entries the home sends (review 4): the trip page names it.
+  if (fits.length < entries.length)
+    await tx.tripShareRemoteMember.update({
+      where: { id: member.id },
+      data: { stateReason: "entries-too-large" },
+    });
   const chunks = chunkEntries(fits);
   for (const chunk of chunks)
     await tx.tripShareOutbox.create({

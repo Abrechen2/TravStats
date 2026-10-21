@@ -311,22 +311,36 @@ async function rememberWithheld(
   ref: string,
   message: FactUpdateMessage
 ): Promise<void> {
-  const found = (await ADAPTERS[message.entity].copiesOf(tx, message.shareKey, s.groupId)).find(
+  const { entity } = message;
+  const found = (await ADAPTERS[entity].copiesOf(tx, message.shareKey, s.groupId)).find(
     (r) => r.userId === s.recipient.userId && r.tripId === s.recipient.id
   );
   if (!found) return;
+  // Read under the lock a received change takes, so the value kept is the one compared.
+  await lockCopy(tx, entity, found.id);
+  const [copy] = await ADAPTERS[entity].load(tx, [found.id]);
+  if (!copy) return;
+  const sent = await sideOf(tx, message, "before");
+  // Only a provable transition is kept (review 1): the copy still held the change's `before`.
+  // Had it moved (an own edit), the change would have been a conflict, and so is the difference
+  // a later resync finds.
   const keys = message.changes.flatMap(({ field }) => {
-    const key = localKeyOf(message.entity, field);
-    const named = namedReference(message.entity, key);
+    const key = localKeyOf(entity, field);
+    const named = namedReference(entity, key);
+    const met = named
+      ? heldIdentity(copy.facts, named) === sentIdentity(sent.local[key], sent.wire[field])
+      : sameFact(copy.facts[key], sent.local[key]);
+    if (!met) return [];
     return named ? [key, named.name] : [key];
   });
+  if (keys.length === 0) return;
   await recordWithheld(tx, {
     groupId: s.groupId,
     userId: s.recipient.userId,
     shareKey: message.shareKey,
     ref,
     keys,
-    held: found.facts,
+    held: copy.facts,
   });
 }
 

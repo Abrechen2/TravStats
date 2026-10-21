@@ -123,9 +123,15 @@ export async function queueEntries(
     where: { id: memberId },
     include: { remote: true, group: true },
   });
-  if (!member?.group.federatedRef || member.state !== "active") return 0;
+  const { resync } = options;
+  // A resync comes from a member who takes messages, also one shown unreachable or switched off
+  // here (review 3): it is answered like the message it is, not swallowed.
+  if (!member?.group.federatedRef) return 0;
+  if (resync ? !isReceiving(member) : member.state !== "active") return 0;
   const { remote, group } = member;
-  const receiving = await receivingRemotes(tx, group.id, remote.userId);
+  const receiving = await receivingRemotes(tx, group.id, remote.userId, {
+    queueable: !!resync,
+  });
   if (!receiving.some((r) => r.id === member.id)) return 0;
   const trip = await tx.trip.findFirst({
     where: { shareGroupId: group.id, userId: remote.userId },
@@ -133,8 +139,9 @@ export async function queueEntries(
     select: { id: true },
   });
   if (!trip) return 0;
-  const { resync } = options;
-  if (resync && (await resyncWaiting(tx, member.id))) return 0;
+  // An answer still waiting is replaced, not kept beside this one: the newer request may name a
+  // newer yes (review 2), and one full answer per member stays the bound.
+  if (resync) await dropWaitingResync(tx, member.id);
   const all = await wireEntriesOf(tx, remote.userId, trip.id);
   const authors = await entryAuthors(tx, member, all);
   const entries = resync ? sentOnResync(all, authors, member, remote.userId, resync) : all;
@@ -178,9 +185,9 @@ export async function queueEntries(
   return chunks.length;
 }
 
-/** An answer to an earlier resync still waits for this member: a repeat would only queue it twice. */
-async function resyncWaiting(tx: DbTransaction, memberId: string): Promise<boolean> {
-  const waiting = await tx.tripShareOutbox.count({
+/** The unsent answers to an earlier resync of this member; a newer answer replaces them. */
+async function dropWaitingResync(tx: DbTransaction, memberId: string): Promise<void> {
+  await tx.tripShareOutbox.deleteMany({
     where: {
       memberId,
       kind: "entries",
@@ -188,7 +195,6 @@ async function resyncWaiting(tx: DbTransaction, memberId: string): Promise<boole
       payload: { path: ["resync"], equals: true },
     },
   });
-  return waiting > 0;
 }
 
 /** On a resync: only entries by the pairing's home member, the person, or someone they agreed to. */
