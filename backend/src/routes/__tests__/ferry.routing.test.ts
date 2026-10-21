@@ -235,6 +235,29 @@ it("rolls back the crossing when the linked sea leg has incompatible terminals",
     geometrySource: "straight",
   });
 });
+it("edits a crossing whose linked leg stops are towns, not its piers, and keeps that leg", async () => {
+  // Linking accepts a leg whose stops are >1 km from the terminals
+  // (onMismatch: "keep"); a later notes-only edit must not refuse it.
+  const id = await create();
+  expect((await post(id)).body.data.outcome).toBe("routed");
+  const leg = await link(id);
+  await prisma.tripStop.update({ where: { id: leg.fromStopId }, data: { lat: dep.lat + 0.1 } });
+  const kept = await prisma.tripRouteLeg.findUniqueOrThrow({ where: { id: leg.id } });
+  const edit = await request(app)
+    .patch(`/api/v1/ferry/${id}`)
+    .set("Cookie", cookie)
+    .send({ notes: "Price and notes only" });
+  expect(edit.status).toBe(200);
+  expect(edit.body.data).toMatchObject({
+    notes: "Price and notes only",
+    geometrySource: "sea_route",
+  });
+  expect(await prisma.tripRouteLeg.findUnique({ where: { id: leg.id } })).toMatchObject({
+    source: kept.source,
+    distanceKm: kept.distanceKm,
+    updatedAt: kept.updatedAt,
+  });
+});
 it("invalidates an unlinked sea line when a terminal moves", async () => {
   const id = await create();
   await post(id);

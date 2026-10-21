@@ -19,8 +19,10 @@ interface LinkedCrossing extends FerryEnds {
  *
  * `onMismatch: "keep"` is the link's reading: a roadtrip stop is a town, rarely
  * the pier, and a leg whose stops are not the crossing's ports keeps the chord
- * it was given instead of refusing the link. Every other caller keeps the
- * refusal — there a mismatch means the terminals moved under a linked leg.
+ * it was given instead of refusing the link. An edit that leaves the terminals
+ * unchanged reads it the same way, or a crossing linked off its piers could
+ * never be edited again. Routing keeps the refusal — there a mismatch means a
+ * stop moved under a linked leg.
  */
 export async function syncFerryLeg(
   tx: DbTransaction,
