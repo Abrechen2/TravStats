@@ -54,6 +54,11 @@ vi.mock("../../../../../lib/api/operators", async (orig) => ({
   ...(await orig<typeof import("../../../../../lib/api/operators")>()),
   getOperatorMark: () => Promise.resolve({ available: false, source: null, credit: null }),
 }));
+vi.mock("../../../../../lib/api/mapDetails", async (orig) => ({
+  ...(await orig<typeof import("../../../../../lib/api/mapDetails")>()),
+  getSubjectImage: () => Promise.resolve({ available: false, credit: null }),
+  getStopInfo: () => Promise.resolve({ state: "none" }),
+}));
 vi.mock("react-router-dom", async (orig) => ({
   ...(await orig<typeof import("react-router-dom")>()),
   useNavigate: () => navigate,
