@@ -62,3 +62,24 @@ describe("two first offers of an unshared trip at once", () => {
     expect(await membersOn(a, anna, trip.id)).toHaveLength(2);
   });
 });
+
+describe("accepting the same offer twice at once", () => {
+  it("creates one trip, and both answers name it", async () => {
+    const anna = await harnessUser(a, "Anna");
+    const ben = await harnessUser(b, "Ben");
+    const remote = await pairAcross(a, anna, b, ben);
+    const trip = await a.prisma.trip.create({ data: { userId: anna, name: "Lissabon" } });
+    await addFlight(a, anna, trip.id);
+    await a.offers.offerTrip(anna, trip.id, remote.id);
+    const [offer] = await b.offerInbox.listReceivedOffers(ben);
+
+    const answers = await Promise.all([
+      b.offerInbox.acceptOffer(ben, offer.id),
+      b.offerInbox.acceptOffer(ben, offer.id),
+    ]);
+
+    const trips = await b.prisma.trip.findMany({ where: { userId: ben } });
+    expect(trips).toHaveLength(1);
+    expect(answers.map((x) => x.tripId)).toEqual([trips[0].id, trips[0].id]);
+  });
+});
