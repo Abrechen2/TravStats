@@ -282,6 +282,54 @@ describe("resolveOperatorMark from Wikidata (forgejo#323)", () => {
     expect(after.fetchedAt).toBe(old);
     expect(after.lastAttemptAt).toBeGreaterThan(old);
   });
+
+  it("a wrong-shaped Wikidata answer is a typed miss, not a thrown error", async () => {
+    for (const body of [null, { search: [null] }, { search: "nope" }]) {
+      __resetOperatorMarkCachesForTests();
+      jest.clearAllMocks();
+      use((url) => (url.includes("wbsearchentities") ? json(body) : happy()(url)));
+      await expect(resolveOperatorMark("ferry", "Stena Line")).resolves.toBeNull();
+      expect(logger.info).toHaveBeenCalledWith(expect.objectContaining({ reason: "malformed" }));
+    }
+    for (const route of [
+      (url: string) => (url.includes("wbgetentities") ? json(null) : happy()(url)),
+      (url: string) => (url.includes("commons.wikimedia.org") ? json(null) : happy()(url)),
+      (url: string) =>
+        url.includes("wbgetentities") ? json({ entities: { Q833903: null } }) : happy()(url),
+    ]) {
+      __resetOperatorMarkCachesForTests();
+      use(route);
+      await expect(resolveOperatorMark("ferry", "Stena Line")).resolves.toBeNull();
+    }
+  });
+
+  it("a stale entry whose refresh gets a wrong-shaped answer stays served, backed off", async () => {
+    use(happy());
+    await resolveOperatorMark("ferry", "Stena Line");
+    const key = operatorMarkKey("Stena Line");
+    const metaFile = `${operatorMarkCacheDir()}/${key}.meta.json`;
+    const meta = JSON.parse(await fs.readFile(metaFile, "utf-8")) as Record<string, number>;
+    const old = Date.now() - 40 * 24 * 60 * 60 * 1000;
+    await fs.writeFile(metaFile, JSON.stringify({ ...meta, fetchedAt: old, lastAttemptAt: old }));
+    __resetOperatorMarkCachesForTests();
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => unhandled.push(reason);
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      use((url) => (url.includes("wbsearchentities") ? json({ search: [null] }) : happy()(url)));
+      expect((await resolveOperatorMark("ferry", "Stena Line"))?.credit?.qid).toBe("Q833903");
+      let after: Record<string, number> = { ...meta, lastAttemptAt: old };
+      for (let i = 0; i < 40 && !(after.lastAttemptAt > old); i++) {
+        await new Promise((r) => setTimeout(r, 50));
+        after = JSON.parse(await fs.readFile(metaFile, "utf-8")) as Record<string, number>;
+      }
+      expect(after.fetchedAt).toBe(old);
+      expect(after.lastAttemptAt).toBeGreaterThan(old);
+      expect(unhandled).toEqual([]);
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+    }
+  });
 });
 
 describe("wikidata helpers", () => {
