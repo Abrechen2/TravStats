@@ -176,3 +176,103 @@ describe("a withdrawal while a received change is being applied (review 2)", () 
     expect(await gateOf(a, flight.id)).toBe("C3");
   });
 });
+
+describe("the locks of the review fixes, against each other (review round 2)", () => {
+  const isDeadlock = (e: unknown) => /deadlock|40P01|P2034/i.test(String(e));
+
+  it("entries hold the membership while they are copied: a hold waits for them", async () => {
+    const { anna, ben, trip, benTrip } = await sharedFlight(a, b);
+    await addFlight(a, anna, trip.id);
+    const onA = await a.prisma.tripShareRemoteMember.findFirstOrThrow({
+      where: { remote: { userId: anna, origin: B } },
+    });
+    await a.entries.deliverEntries(onA.id);
+    const adapter = b.adapters.ADAPTERS.flight;
+    const createCopy = adapter.createCopy.bind(adapter);
+    let hold: Promise<unknown> = Promise.resolve();
+    let heldBeforeCopy: boolean | null = null;
+    jest.spyOn(adapter, "createCopy").mockImplementationOnce(async (...args) => {
+      let done = false;
+      hold = b.lifecycle.holdPeerMemberships(A, "repinned").finally(() => (done = true));
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      heldBeforeCopy = done;
+      return createCopy(...args);
+    });
+    await a.outbox.runDeliveries();
+    await hold;
+    expect(heldBeforeCopy).toBe(false);
+    expect(await b.prisma.flight.count({ where: { tripId: benTrip } })).toBe(2);
+    void ben;
+  });
+
+  it("a roster can be queued while a received message holds a membership", async () => {
+    const { anna, ben, groupId, flight, benFlight } = await sharedFlight(a, b);
+    await editFlight(b, ben, benFlight.id, { gate: "C3" });
+    const adapter = a.adapters.ADAPTERS.flight;
+    const apply = adapter.apply.bind(adapter);
+    let rosterBeforeApply: boolean | null = null;
+    jest.spyOn(adapter, "apply").mockImplementationOnce(async (...args) => {
+      let done = false;
+      const queued = a.prisma
+        .$transaction((tx) => a.roster.queueRoster(tx, groupId))
+        .finally(() => (done = true));
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      rosterBeforeApply = done;
+      await apply(...args);
+      await queued;
+    });
+    await b.outbox.runDeliveries();
+    expect(rosterBeforeApply).toBe(true);
+    expect(await gateOf(a, flight.id)).toBe("C3");
+    void anna;
+  });
+
+  it("a leave while a received change waits for its turn does not deadlock with it", async () => {
+    const { anna, ben, trip, benFlight } = await sharedFlight(a, b);
+    await editFlight(b, ben, benFlight.id, { gate: "C3" });
+    const takeSeq = a.streams.takeSeq.bind(a.streams);
+    let leave: Promise<unknown> = Promise.resolve();
+    jest.spyOn(a.streams, "takeSeq").mockImplementationOnce(async (...args) => {
+      leave = a.shareTrip.leaveGroup(anna, trip.id);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      return takeSeq(...args);
+    });
+    const run = await b.outbox.runDeliveries();
+    await expect(leave).resolves.toEqual({ left: true });
+    expect(run.failed).toBe(0);
+  });
+
+  it("confirming again and withdrawing at once do not deadlock", async () => {
+    const { anna, remote, trip } = await sharedFlight(a, b);
+    await a.restore.suspendTripFederationAfterRestore();
+    const member = await a.prisma.tripShareRemoteMember.findFirstOrThrow({
+      where: { remoteId: remote.id },
+    });
+    const other = await ownConnectionToA();
+    try {
+      // The withdrawal's order: the consent first, then the membership.
+      await other.query("BEGIN");
+      await other.query(
+        "UPDATE share_consents SET status = 'withdrawn' WHERE remote_target_id = $1 OR remote_requester_id = $1",
+        [remote.id]
+      );
+      const confirming = a.lifecycle.reconfirmTrip(anna, trip.id).catch((e: unknown) => e);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      let failure: unknown = null;
+      try {
+        await other.query("UPDATE trip_share_remote_members SET state = 'revoked' WHERE id = $1", [
+          member.id,
+        ]);
+        await other.query("COMMIT");
+      } catch (e) {
+        failure = e;
+        await other.query("ROLLBACK");
+      }
+      const result = await confirming;
+      expect(isDeadlock(failure)).toBe(false);
+      expect(isDeadlock(result)).toBe(false);
+    } finally {
+      await other.end();
+    }
+  });
+});

@@ -92,7 +92,12 @@ export async function departLocally(
     include: { remote: true },
   });
   for (const m of members) await endMembership(tx, m, "left", tellable(m));
-  if (!group.homeOrigin) await queueRoster(tx, groupId);
+}
+
+/** At the home, after a member's trip left the group: the others learn the new roster. */
+export async function rosterAfterDeparture(tx: DbTransaction, groupId: string): Promise<void> {
+  const group = await tx.tripShareGroup.findUnique({ where: { id: groupId } });
+  if (group?.federatedRef && !group.homeOrigin) await queueRoster(tx, groupId);
 }
 
 /** Tell every member here on the trip that the person behind `remoteId` is gone. */
@@ -281,8 +286,12 @@ export async function reconfirmTrip(userId: string, tripId: string): Promise<num
       // Read again under the rows' locks (F-S4e review): a leave or a revoke that ended one of
       // them since the first read wins, and nothing ended is brought back.
       const ids = held.map((m) => m.id);
+      // The consents first, then the memberships — the order a withdrawal takes them in, so the
+      // two wait for each other instead of deadlocking (F-S4e review, round 2).
+      for (const remoteId of new Set(held.map((m) => m.remoteId)))
+        await reacceptAfterRestore(tx, userId, remoteId);
       await tx.$queryRaw`SELECT 1 FROM trip_share_remote_members
-        WHERE id = ANY(${ids}::text[]) ORDER BY id FOR UPDATE`;
+        WHERE id = ANY(${ids}::text[]) ORDER BY id FOR NO KEY UPDATE`;
       const attached = await tx.trip.count({
         where: { id: trip.id, userId, shareGroupId: trip.shareGroupId },
       });
@@ -293,7 +302,6 @@ export async function reconfirmTrip(userId: string, tripId: string): Promise<num
           })
         : [];
       for (const m of still) {
-        await reacceptAfterRestore(tx, userId, m.remoteId);
         const accepted = await tx.shareConsent.count({
           where: {
             status: "accepted",

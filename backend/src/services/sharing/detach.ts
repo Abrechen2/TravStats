@@ -1,6 +1,6 @@
 import type { DbTransaction } from "../../db";
 import { clearTripKeys } from "./keyOps";
-import { departLocally } from "./federation/lifecycle";
+import { departLocally, rosterAfterDeparture } from "./federation/lifecycle";
 
 /**
  * Taking one member's trip out of its share group. The trip and every entry
@@ -16,10 +16,13 @@ export async function detachTrip(
 ): Promise<void> {
   const groupId = trip.shareGroupId;
   if (!groupId) return;
+  // Memberships across servers through this member's pairings end too, and are told (F-S4e) —
+  // before the entries are touched: a received change takes the membership, then the entry, and
+  // the same order here keeps the two from deadlocking (F-S4e review, round 2).
+  await departLocally(tx, userId, groupId);
   await clearTripKeys(tx, userId, trip.id);
   await tx.trip.update({ where: { id: trip.id }, data: { shareGroupId: null } });
-  // Memberships across servers through this member's pairings end too, and are told (F-S4e).
-  await departLocally(tx, userId, groupId);
+  await rosterAfterDeparture(tx, groupId);
 
   const others = await tx.trip.findMany({
     where: { shareGroupId: groupId },

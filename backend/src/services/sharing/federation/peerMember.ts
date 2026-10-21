@@ -53,8 +53,10 @@ export async function addressed(
   if (!pairing) throw rejectWith("not-member");
   // The membership is held from here to the message's commit (F-S4e review): a withdrawal, a
   // leave or a hold committed meanwhile waits for it, or — committed first — is what is read.
+  // NO KEY UPDATE, not UPDATE: an outbox row naming the member (a roster, a change) only takes a
+  // key-share lock on it, and must not wait for — or deadlock with — a message being applied.
   await tx.$queryRaw`SELECT 1 FROM trip_share_remote_members
-    WHERE group_id = ${group.id} AND remote_id = ${pairing.id} FOR UPDATE`;
+    WHERE group_id = ${group.id} AND remote_id = ${pairing.id} FOR NO KEY UPDATE`;
   const member = await tx.tripShareRemoteMember.findUnique({
     where: { groupId_remoteId: { groupId: group.id, remoteId: pairing.id } },
   });

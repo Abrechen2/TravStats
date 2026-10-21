@@ -222,6 +222,12 @@ export function serveEntries(origin: string, message: EntriesMessage): Promise<T
     });
     if (!group) throw rejectWith("not-member");
     await takeSeq(tx, group.id, origin, message.seq);
+    // The memberships are held to the commit, as for every other message (`addressed`): a hold or
+    // an end committed meanwhile waits for these copies, or is what is read.
+    await tx.$queryRaw`SELECT 1 FROM trip_share_remote_members m
+      JOIN remote_share_accounts r ON r.id = m.remote_id
+      WHERE m.group_id = ${group.id} AND r.origin = ${origin} AND r.channel = ${message.from}
+      ORDER BY m.id FOR NO KEY UPDATE OF m`;
     // Every membership that takes messages — also one shown unreachable or switched off there,
     // which recovers by itself (F-S4e review): refused, its entries would be parked for good.
     const members = (

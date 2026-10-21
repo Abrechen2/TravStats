@@ -116,7 +116,7 @@ export async function queueRoster(tx: DbTransaction, groupId: string): Promise<n
   // One roster at a time per group (F-S4e review): the snapshot is taken under the group's row
   // lock, so a roster change committed meanwhile is in it, and an older snapshot can never be
   // queued after a newer one.
-  await tx.$queryRaw`SELECT 1 FROM trip_share_groups WHERE id = ${groupId} FOR UPDATE`;
+  await tx.$queryRaw`SELECT 1 FROM trip_share_groups WHERE id = ${groupId} FOR NO KEY UPDATE`;
   const group = await tx.tripShareGroup.findUnique({ where: { id: groupId } });
   if (!group?.federatedRef || group.homeOrigin) return 0;
   const identity = await loadIdentity().catch(() => null);
