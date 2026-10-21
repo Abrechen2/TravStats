@@ -56,6 +56,11 @@ export interface MapJourney {
    * wrong day for a late departure: Berlin 00:30 on the 21st was the 20th.
    */
   departure: TimeValue | null;
+  /**
+   * The arrival (rental: the return) on ITS place's clock, or null. Shown when
+   * it falls on another local day than the departure — an overnight ferry.
+   */
+  arrival: TimeValue | null;
   status: string;
   /** Kilometres when known. NULL when not — never 0 for "unknown". */
   distanceKm: number | null;
