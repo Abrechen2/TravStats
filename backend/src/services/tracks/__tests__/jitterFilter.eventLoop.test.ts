@@ -64,4 +64,20 @@ describe("the filter does not hold the event loop for a long recording", () => {
     // Slices are 10 ms; 100 leaves room for a slow runner's garbage collection.
     expect(stallMs).toBeLessThan(100);
   }, 120_000);
+
+  it("does not stall on one very long stay either", async () => {
+    // Eleven days at one place, a fix a second: every step that works on a
+    // whole stay at once (a median over its accuracies or its centres) must
+    // stay inside a slice too (final review of forgejo#319).
+    const still: JitterFix[] = Array.from({ length: 1_000_000 }, (_, i) => ({
+      ...BASE,
+      t: T0 + i * 1000,
+      accuracyM: 5 + ((i * 7919) % 290),
+    }));
+    const { result, stallMs } = await longestStall(() =>
+      filterJitterYielding(still, [0], JITTER_PROFILES.mixed)
+    );
+    expect(result.fixes).toHaveLength(2);
+    expect(stallMs).toBeLessThan(100);
+  }, 120_000);
 });

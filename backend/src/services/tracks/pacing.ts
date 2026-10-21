@@ -50,3 +50,61 @@ export async function runPacedYielding<T>(work: Paced<T>, sliceMs = DEFAULT_SLIC
   }
   return step.value;
 }
+
+/**
+ * The median of `values`, by selection rather than a sort, with checkpoints:
+ * a stay of a million fixes has a million accuracies, and sorting them held
+ * the loop for half a second (final review of forgejo#319). Reorders
+ * `values`. The mean of the two middle values when their number is even.
+ */
+export function* medianPaced(values: Float64Array): Paced<number> {
+  const n = values.length;
+  if (n === 0) return NaN;
+  const mid = n >> 1;
+  const upper = yield* selectPaced(values, mid);
+  if (n % 2 === 1) return upper;
+  // Everything left of `mid` is now <= the upper middle; the lower middle is their largest.
+  let lower = -Infinity;
+  for (let k = 0; k < mid; k++) {
+    if (values[k] > lower) lower = values[k];
+    if (isCheckpoint(k)) yield;
+  }
+  return (lower + upper) / 2;
+}
+
+/** Hoare's selection: puts the `k`-th smallest at `k`, smaller left, larger right. */
+function* selectPaced(values: Float64Array, k: number): Paced<number> {
+  let lo = 0;
+  let hi = values.length - 1;
+  let steps = 0;
+  while (lo < hi) {
+    // Median of three, so sorted and reversed input stay linear.
+    const m = (lo + hi) >> 1;
+    if (values[m] < values[lo]) swap(values, m, lo);
+    if (values[hi] < values[lo]) swap(values, hi, lo);
+    if (values[hi] < values[m]) swap(values, hi, m);
+    const pivot = values[m];
+    let i = lo;
+    let j = hi;
+    while (i <= j) {
+      while (values[i] < pivot) i++;
+      while (values[j] > pivot) j--;
+      if (i <= j) {
+        swap(values, i, j);
+        i++;
+        j--;
+      }
+      if (isCheckpoint(steps++)) yield;
+    }
+    if (k <= j) hi = j;
+    else if (k >= i) lo = i;
+    else break;
+  }
+  return values[k];
+}
+
+function swap(values: Float64Array, a: number, b: number): void {
+  const t = values[a];
+  values[a] = values[b];
+  values[b] = t;
+}

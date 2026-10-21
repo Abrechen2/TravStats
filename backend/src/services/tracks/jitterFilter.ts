@@ -1,6 +1,6 @@
 import { haversineKm } from "../../shared/geo/haversine";
 import type { JitterProfile } from "./jitterProfiles";
-import { isCheckpoint, runPaced, runPacedYielding, type Paced } from "./pacing";
+import { isCheckpoint, medianPaced, runPaced, runPacedYielding, type Paced } from "./pacing";
 import { findStaysPaced, type StayFix } from "./stayDetection";
 
 /**
@@ -302,32 +302,26 @@ function* isFullyTimed(fixes: readonly JitterFix[], indices: readonly number[]):
  * next fix, and the trip recording's gap rule (> 2 h) cut its line there
  * although the phone had recorded all along (review of forgejo#319).
  */
-function representatives(
+function* representatives(
   fixes: readonly JitterFix[],
   group: Group
-): Array<{ fix: JitterFix; sources: number[] }> {
+): Paced<Array<{ fix: JitterFix; sources: number[] }>> {
   const first = group.members[0];
   if (group.members.length === 1) return [{ fix: fixes[first], sources: [first] }];
   const lastMember = group.members[group.members.length - 1];
-  const accuracies = group.members
-    .map((i) => fixes[i].accuracyM)
-    .filter((a): a is number => a !== null);
-  const at = (t: number | null): JitterFix => ({
-    lon: group.lon,
-    lat: group.lat,
-    t,
-    accuracyM: accuracies.length > 0 ? median(accuracies) : null,
-  });
+  const accuracies = new Float64Array(group.members.length);
+  let count = 0;
+  for (let k = 0; k < group.members.length; k++) {
+    const accuracy = fixes[group.members[k]].accuracyM;
+    if (accuracy !== null) accuracies[count++] = accuracy;
+    if (isCheckpoint(k)) yield;
+  }
+  const accuracyM = count > 0 ? yield* medianPaced(accuracies.subarray(0, count)) : null;
+  const at = (t: number | null): JitterFix => ({ lon: group.lon, lat: group.lat, t, accuracyM });
   return [
     { fix: at(fixes[first].t), sources: group.members },
     { fix: at(fixes[lastMember].t), sources: [lastMember] },
   ];
-}
-
-function median(values: number[]): number {
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
 /**
@@ -380,7 +374,7 @@ function* filterJitterPaced(
     }
     starts.push(out.length);
     for (let g = 0; g < groups.length; g++) {
-      for (const { fix, sources: from } of representatives(fixes, groups[g])) {
+      for (const { fix, sources: from } of yield* representatives(fixes, groups[g])) {
         out.push(fix);
         sources.push(from);
       }

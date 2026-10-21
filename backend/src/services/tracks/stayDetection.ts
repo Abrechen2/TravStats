@@ -1,6 +1,6 @@
 import { haversineKm } from "../../shared/geo/haversine";
 import type { JitterProfile } from "./jitterProfiles";
-import { isCheckpoint, runPaced, type Paced } from "./pacing";
+import { isCheckpoint, medianPaced, runPaced, type Paced } from "./pacing";
 
 /**
  * Where a recording stood still (forgejo#319, pass 3 of `jitterFilter.ts`).
@@ -54,19 +54,20 @@ function distanceM(a: Point, b: Point): number {
   return haversineKm({ lat: a.lat, lon: a.lon }, { lat: b.lat, lon: b.lon }) * 1000;
 }
 
-function median(values: number[]): number {
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-}
-
 /** The window: the profile's minimum stay, or `STAY_WINDOW_STEPS` sampling steps. */
 export function stayWindowMs(fixes: readonly StayFix[], profile: JitterProfile): number {
-  const steps = fixes
-    .slice(1)
-    .map((f, k) => f.t - fixes[k].t)
-    .filter((dt) => dt > 0);
-  const typical = steps.length > 0 ? median(steps) : 0;
+  return runPaced(stayWindowMsPaced(fixes, profile));
+}
+
+function* stayWindowMsPaced(fixes: readonly StayFix[], profile: JitterProfile): Paced<number> {
+  const steps = new Float64Array(Math.max(0, fixes.length - 1));
+  let count = 0;
+  for (let k = 1; k < fixes.length; k++) {
+    const dt = fixes[k].t - fixes[k - 1].t;
+    if (dt > 0) steps[count++] = dt;
+    if (isCheckpoint(k)) yield;
+  }
+  const typical = count > 0 ? yield* medianPaced(steps.subarray(0, count)) : 0;
   return Math.max(profile.minStayMs, STAY_WINDOW_STEPS * typical);
 }
 
@@ -241,16 +242,21 @@ interface Draft {
   radiusM: number;
 }
 
-function draftOf(all: readonly Verdict[], start: number, end: number): Draft {
-  const inRun = all.slice(start, end);
+function* draftOf(all: readonly Verdict[], start: number, end: number): Paced<Draft> {
+  const lon = new Float64Array(end - start);
+  const lat = new Float64Array(end - start);
+  const radius = new Float64Array(end - start);
+  for (let k = start; k < end; k++) {
+    lon[k - start] = all[k].centre.lon;
+    lat[k - start] = all[k].centre.lat;
+    radius[k - start] = all[k].radiusM;
+    if (isCheckpoint(k)) yield;
+  }
   return {
     start,
     end,
-    centre: {
-      lon: median(inRun.map((v) => v.centre.lon)),
-      lat: median(inRun.map((v) => v.centre.lat)),
-    },
-    radiusM: median(inRun.map((v) => v.radiusM)),
+    centre: { lon: yield* medianPaced(lon), lat: yield* medianPaced(lat) },
+    radiusM: yield* medianPaced(radius),
   };
 }
 
@@ -265,7 +271,7 @@ function* mergeRuns(
   for (const [start, end] of runs) {
     yield;
     const previous = merged[merged.length - 1];
-    const next = draftOf(all, start, end);
+    const next = yield* draftOf(all, start, end);
     const close =
       previous !== undefined &&
       fixes[start].t - fixes[previous.end - 1].t <= windowMs &&
@@ -329,8 +335,7 @@ export function findStays(fixes: readonly StayFix[], profile: JitterProfile): St
 /** `findStays` with checkpoints (`pacing.ts`). */
 export function* findStaysPaced(fixes: readonly StayFix[], profile: JitterProfile): Paced<Stay[]> {
   if (fixes.length < 2) return [];
-  const windowMs = stayWindowMs(fixes, profile);
-  yield;
+  const windowMs = yield* stayWindowMsPaced(fixes, profile);
   const all = yield* verdicts(fixes, windowMs, profile);
   const drafts = yield* mergeRuns(fixes, all, stationaryRuns(all), windowMs);
 
