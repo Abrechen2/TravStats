@@ -148,9 +148,12 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       });
     }
 
-    const hasUserOpensky = settings && (settings.openskyClientId || settings.openskyUsername);
-    const hasGlobalOpensky =
-      adminSettings && (adminSettings.globalOpenskyClientId || adminSettings.globalOpenskyUsername);
+    // Booleans, never the columns: `a || b` over stored values answers with the
+    // stored (encrypted) credential itself, and this response goes to every user.
+    const hasUserOpensky = !!(settings?.openskyClientId || settings?.openskyUsername);
+    const hasGlobalOpensky = !!(
+      adminSettings?.globalOpenskyClientId || adminSettings?.globalOpenskyUsername
+    );
     const openskyShared = hasGlobalOpensky && !hasUserOpensky;
 
     res.json({
@@ -185,7 +188,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
         hasAccess: graphhopperAccess.hasAccess,
       },
       opensky: {
-        hasKey: !!hasUserOpensky,
+        hasKey: hasUserOpensky,
         isShared: openskyShared,
         hasAccess:
           hasUserOpensky ||
@@ -310,7 +313,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     });
 
     const adminSettingsAfter = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
-    const hasGlobalOpensky = adminSettingsAfter && adminSettingsAfter.globalOpenskyClientId;
+    const hasGlobalOpensky = !!adminSettingsAfter?.globalOpenskyClientId;
 
     res.json({
       message: "API keys updated successfully",
