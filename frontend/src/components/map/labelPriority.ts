@@ -201,38 +201,42 @@ function boxAt(
 /** Placed boxes in a uniform grid, so a candidate only tests the boxes in
  *  the cells it covers — linear in the number of labels, not quadratic. */
 function boxGrid() {
-  const grid = new Map<string, Box[]>();
-  const cellsOf = (box: Box): string[] => {
-    const keys: string[] = [];
-    for (
-      let cx = Math.floor(box.x0 / GRID_CELL_PX);
-      cx <= Math.floor(box.x1 / GRID_CELL_PX);
-      cx++
-    ) {
-      for (
-        let cy = Math.floor(box.y0 / GRID_CELL_PX);
-        cy <= Math.floor(box.y1 / GRID_CELL_PX);
-        cy++
-      ) {
-        keys.push(`${cx}:${cy}`);
-      }
-    }
-    return keys;
-  };
+  const grid = new Map<number, Box[]>();
+  // A numeric cell key: no string per cell per test. Offset so a cell left
+  // of or above the origin (a viewport projection can give one) stays apart.
+  // Two far cells that share a key only cost a few extra box tests — every
+  // hit is decided on the real coordinates.
+  const BIAS = 1 << 20;
+  const key = (cx: number, cy: number) => (cx + BIAS) * 2 * BIAS + (cy + BIAS);
+  const cell = (v: number) => Math.floor(v / GRID_CELL_PX);
   return {
     place(box: Box) {
-      for (const key of cellsOf(box)) {
-        const cell = grid.get(key);
-        if (cell) cell.push(box);
-        else grid.set(key, [box]);
+      for (let cx = cell(box.x0); cx <= cell(box.x1); cx++) {
+        for (let cy = cell(box.y0); cy <= cell(box.y1); cy++) {
+          const k = key(cx, cy);
+          const boxes = grid.get(k);
+          if (boxes) boxes.push(box);
+          else grid.set(k, [box]);
+        }
       }
     },
-    hits(box: Box): boolean {
-      return cellsOf(box).some((key) =>
-        (grid.get(key) ?? []).some(
-          (q) => box.x0 < q.x1 && box.x1 > q.x0 && box.y0 < q.y1 && box.y1 > q.y0
-        )
-      );
+    /** Whether `box`, moved by `dx`, `dy`, touches a placed box. */
+    hits(box: Box, dx = 0, dy = 0): boolean {
+      const x0 = box.x0 + dx;
+      const x1 = box.x1 + dx;
+      const y0 = box.y0 + dy;
+      const y1 = box.y1 + dy;
+      for (let cx = cell(x0); cx <= cell(x1); cx++) {
+        for (let cy = cell(y0); cy <= cell(y1); cy++) {
+          const boxes = grid.get(key(cx, cy));
+          if (!boxes) continue;
+          for (let i = 0; i < boxes.length; i++) {
+            const q = boxes[i];
+            if (x0 < q.x1 && x1 > q.x0 && y0 < q.y1 && y1 > q.y0) return true;
+          }
+        }
+      }
+      return false;
     },
   };
 }
@@ -386,7 +390,7 @@ export function spreadByBoxes<T>(
     for (let k = 0; ; k++) {
       const shift = spreadShift(k, width, height, lift, gapPx);
       if (!shift || (hideOnly && k > 0)) return;
-      if (ends.every((end, i) => !end.grid.hits(shifted(usual[i], shift)))) {
+      if (ends.every((end, i) => !end.grid.hits(usual[i], shift[0], shift[1]))) {
         ends.forEach((end, i) => end.grid.place(shifted(usual[i], shift)));
         placed.push({ item, shift });
         return;
