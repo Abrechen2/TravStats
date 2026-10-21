@@ -37,7 +37,7 @@ import { fromWireEntries } from "./wire/decode";
 import { toWireEntries } from "./wire/encode";
 import type { WireEntry } from "./wire/shapes";
 import { isHeld, isReceiving } from "./peerMember";
-import { ON_TRIP, mayReach, userRef } from "./roster";
+import { mayReach } from "./roster";
 import { entryAuthorRefs } from "./entryAuthors";
 import logger from "../../../utils/logger";
 import { rejectWith, serveOnce, takeSeq } from "./streams";
@@ -98,11 +98,7 @@ async function wireEntriesOf(tx: DbTransaction, userId: string, tripId: string) 
  * caller's transaction. Asks again whether the person still receives (`receivingRemotes`). A
  * repeat queues everything again; the receiver keeps only what it lacks (`heldKeys`).
  */
-export async function queueEntries(
-  tx: DbTransaction,
-  memberId: string,
-  options: { resync?: boolean } = {}
-): Promise<number> {
+export async function queueEntries(tx: DbTransaction, memberId: string): Promise<number> {
   const member = await tx.tripShareRemoteMember.findUnique({
     where: { id: memberId },
     include: { remote: true, group: true },
@@ -120,7 +116,7 @@ export async function queueEntries(
   const entries = await wireEntriesOf(tx, remote.userId, trip.id);
   const oversize = entries.filter((e) => wireBytes(e) > ENTRIES_BYTES);
   const chunks = chunkEntries(entries.filter((e) => !oversize.includes(e)));
-  const authors = await entryAuthors(tx, member, entries, options.resync === true);
+  const authors = await entryAuthors(tx, member, entries);
   for (const chunk of chunks) {
     const named = chunk.flatMap((e) => {
       const ref = authors.get(e.shareKey);
@@ -150,44 +146,20 @@ export async function queueEntries(
 }
 
 /**
- * Who brought each entry in, by roster ref, for the spoke's gate (F-S4e review) — every entry the
- * home can vouch for is named, and the spoke copies an entry without a name for nobody.
- *
- * - The first delivery after an accept is the trip as offered: an entry by someone no longer on
- *   the trip is named as the offering member's — accepting the offer was the yes to its contents.
- *   An entry without a record (`entryAuthors.ts`) is named by nobody.
- * - A resend after a restore names only what the record says: an entry without a record is named
- *   by nobody and copied for nobody.
+ * Who brought each entry in, by roster ref, for the spoke's gate (F-S4e review): exactly what the
+ * record says (`entryAuthors.ts`), also for someone no longer on the trip — the spoke decides by
+ * its person's answer to them. An entry without a record is named by nobody and copied for nobody.
  */
 async function entryAuthors(
   tx: DbTransaction,
-  member: { groupId: string; group: { federatedRef: string | null }; remote: { userId: string } },
-  entries: readonly WireEntry[],
-  resync: boolean
+  member: { groupId: string; group: { federatedRef: string | null } },
+  entries: readonly WireEntry[]
 ): Promise<Map<string, string>> {
-  const ownRef = userRef(member.group.federatedRef as string, member.remote.userId);
   const recorded = await entryAuthorRefs(tx, member.groupId, member.group.federatedRef as string);
-  if (resync) return recorded;
-  const onTrip = new Set([
-    ownRef,
-    ...(
-      await tx.tripShareRemoteMember.findMany({
-        where: { groupId: member.groupId, state: { in: ON_TRIP } },
-        select: { rosterRef: true },
-      })
-    ).map((m) => m.rosterRef),
-    ...(
-      await tx.trip.findMany({
-        where: { shareGroupId: member.groupId },
-        select: { userId: true },
-      })
-    ).map((t) => userRef(member.group.federatedRef as string, t.userId)),
-  ]);
-  // Nothing is inferred (F-S4e review): an entry without a record stays named by nobody.
   return new Map(
     entries.flatMap((e) => {
       const ref = recorded.get(e.shareKey);
-      return ref ? [[e.shareKey, onTrip.has(ref) ? ref : ownRef] as const] : [];
+      return ref ? [[e.shareKey, ref] as const] : [];
     })
   );
 }

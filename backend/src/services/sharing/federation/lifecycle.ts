@@ -325,8 +325,7 @@ export async function reconfirmTrip(userId: string, tripId: string): Promise<num
           where: { id: m.id },
           data: { state, stateReason: null, stateSince: now },
         });
-        if (m.stateReason === "restore" && !m.group.homeOrigin)
-          await queueEntries(tx, m.id, { resync: true });
+        if (m.stateReason === "restore" && !m.group.homeOrigin) await queueEntries(tx, m.id);
       }
       // A restored home may name a roster older than the spokes': they get its own again.
       const restored = still.some((m) => m.stateReason === "restore");
