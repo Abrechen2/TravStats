@@ -86,6 +86,18 @@ describe("deriveRailTemplate", () => {
     ]);
   });
 
+  it("leaves an arrival clock just before the departure's unread: a zone step, not the next day", () => {
+    // Lille 09:30 (Paris) → London 09:00 (London) on one day, or a ride of
+    // 23½ hours: a clock-only arrival cannot tell, so it is not guessed.
+    const westward = RAIL_SOURCE.replace(
+      "Augsburg Hbf  08:12  →  München Hbf  08:48",
+      "Augsburg Hbf  09:30  →  München Hbf  09:00"
+    );
+    const leg = read(westward)?.legs[0];
+    expect(leg?.departureLocal).toBe("2027-11-14T09:30");
+    expect(leg?.arrivalLocal).toBeNull();
+  });
+
   it("declines another operator's ticket", () => {
     expect(read(RAIL_FOREIGN, "Ihre Ticketbestätigung – Schienenfern Express")).toBeNull();
   });

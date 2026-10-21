@@ -32,6 +32,9 @@ export interface PreviewRowEnriched extends PreviewRowInput {
   departureLocal?: string;
   /** Empty when nothing in the file says when the flight arrived. */
   arrivalLocalCorrected: string;
+  /** Set when a wall clock is the second of a repeated autumn hour (ADR 0002). */
+  departureFold?: "later";
+  arrivalFold?: "later";
   /** Set for a row without a departure time: how much of the clock is real. */
   timeSemantics?: "DATE_ONLY" | "UNKNOWN";
   depTimezone: string;

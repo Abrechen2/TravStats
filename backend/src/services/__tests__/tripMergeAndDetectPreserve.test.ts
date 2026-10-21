@@ -114,6 +114,30 @@ describe("a trip keeps its contents", () => {
       expect(kept?.tripId).toBe(target.id);
     });
 
+    it("carries the source trip's recording across instead of letting it cascade away", async () => {
+      const target = await prisma.trip.create({ data: { userId, name: "Target" } });
+      const source = await prisma.trip.create({ data: { userId, name: "Source" } });
+      const batch = await prisma.tripRecordingBatch.create({
+        data: {
+          userId,
+          tripId: source.id,
+          deviceId: "merge-phone",
+          uploadId: `merge-upload-${source.id}`,
+          startedAt: new Date("2026-05-02T10:00:00Z"),
+          endedAt: new Date("2026-05-02T10:05:00Z"),
+          points: [[Date.parse("2026-05-02T10:00:00Z"), 38.7, -9.1, 20]],
+          pointCount: 1,
+        },
+      });
+
+      await mergeTrips(userId, { tripIds: [target.id, source.id], targetId: target.id });
+
+      const kept = await prisma.tripRecordingBatch.findUnique({ where: { id: batch.id } });
+      expect(kept?.tripId).toBe(target.id);
+      expect(kept?.userId).toBe(userId);
+      expect(kept?.uploadId).toBe(batch.uploadId);
+    });
+
     it("folds a duplicate album into the target's own and keeps both sides' photos", async () => {
       const target = await prisma.trip.create({ data: { userId, name: "Target" } });
       const source = await prisma.trip.create({ data: { userId, name: "Source" } });

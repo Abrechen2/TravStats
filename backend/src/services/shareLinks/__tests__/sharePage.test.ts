@@ -116,6 +116,14 @@ describe("share page date formatting", () => {
     expect(en.instant("2026-10-17T20:47:36.000Z")).toMatch(/Oct 2026/);
   });
 
+  it("cuts a month- or year-precision value to what is known — no invented day", () => {
+    const de = formatIn("de-DE");
+    const en = formatIn("en-GB");
+    expect(en.clock({ local: "2030-06-01T00:00:00", precision: "month" })).toBe("June 2030");
+    expect(de.clock({ local: "2030-06-01T00:00:00", precision: "month" })).toBe("Juni 2030");
+    expect(en.clock({ local: "2030-01-01T00:00:00", precision: "year" })).toBe("2030");
+  });
+
   it("is what the page script uses — no ISO date reaches the visitor", () => {
     expect(SHARE_PAGE_JS).toContain(SHARE_PAGE_FORMAT_JS);
     expect(SHARE_PAGE_JS).not.toMatch(/toLocaleString\(de/);
@@ -208,6 +216,27 @@ describe("share page itinerary", () => {
         "Check-out 4 June 2030",
       ]);
     }
+  });
+
+  it("writes a stay known only to the month or the year without a day", () => {
+    const stay = itinerary.items[1];
+    const [month, year] = entriesOf({
+      items: [
+        {
+          ...stay,
+          checkIn: { date: "2030-06-01", zone: null, precision: "month" },
+          checkOut: { date: "2030-06-01", zone: null, precision: "month" },
+        },
+        {
+          ...stay,
+          checkIn: { date: "2030-01-01", zone: null, precision: "year" },
+          checkOut: { date: "2030-01-01", zone: null, precision: "year" },
+        },
+      ],
+      now: null,
+    });
+    expect(month.lines.slice(1)).toEqual(["Check-in June 2030", "Check-out June 2030"]);
+    expect(year.lines.slice(1)).toEqual(["Check-in 2030", "Check-out 2030"]);
   });
 
   it("names the current entry in words, and only that one", () => {

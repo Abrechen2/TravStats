@@ -63,9 +63,28 @@ function nextDay(day: string): string {
 }
 
 /**
+ * The largest UTC-offset step a ride printed with clock-only arrivals is taken
+ * to cross: three hours, the widest step at a land border with a scheduled
+ * crossing (China UTC+8 to Pakistan UTC+5 at the Khunjerab Pass, by coach);
+ * every rail, coach and ferry border in the markets served steps one or two.
+ * Without the stops' zones, an arrival clock within this step of the
+ * departure's — either way round a day — has two readings:
+ * - less than the step EARLIER (Lille 09:30 Paris → London 09:00): the same
+ *   day one zone west, or a ride of 23½ hours on the next;
+ * - more than a day less the step LATER (Paris 00:10 → London 23:50): 40
+ *   minutes on the previous calendar day, or 23 h 40 on the same one.
+ */
+const MAX_ZONE_STEP_MINUTES = 180;
+const DAY_MINUTES = 24 * 60;
+
+const minutesOf = (hhmm: string): number => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3));
+
+/**
  * "2026-12-20T22:30 00:05" → "2026-12-21T00:05": an arrival printed as a
  * clock only, on the departure's day — or the next one when it reads earlier
- * than the departure.
+ * by more than any zone step could explain. The two ambiguous bands named at
+ * `MAX_ZONE_STEP_MINUTES` have no knowable day, so the arrival is not read
+ * (null) rather than put on a guessed one.
  */
 export function laterClock(input: TransformValue): string | null {
   const text = asText(input);
@@ -75,7 +94,10 @@ export function laterClock(input: TransformValue): string | null {
       : /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})\s+(\d{1,2}:\d{2})$/.exec(text.trim());
   const arrival = m ? clock(m[3]) : null;
   if (!m || arrival === null) return null;
-  return `${arrival < m[2] ? nextDay(m[1]) : m[1]}T${arrival}`;
+  const later = minutesOf(arrival) - minutesOf(m[2]);
+  if (later >= 0) return later > DAY_MINUTES - MAX_ZONE_STEP_MINUTES ? null : `${m[1]}T${arrival}`;
+  if (-later < MAX_ZONE_STEP_MINUTES) return null;
+  return `${nextDay(m[1])}T${arrival}`;
 }
 
 /**

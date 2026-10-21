@@ -21,6 +21,7 @@ const KNOWN_REFUSALS = new Set([
   "TEMPLATE_EXPORT_PERSONAL_DATA",
   "TEMPLATE_EXPORT_NOT_ACTIVE",
   "TEMPLATE_EXPORT_UNSUPPORTED",
+  "TEMPLATE_EXPORT_SOURCE_MISSING",
 ]);
 
 /** The refusal's copy key: the server's code, or the generic failure. */

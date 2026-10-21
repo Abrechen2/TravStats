@@ -63,4 +63,18 @@ describe("CommunityExportPanel", () => {
     expect(mocks.download).not.toHaveBeenCalled();
     expect(screen.queryByRole("link")).toBeNull();
   });
+
+  it("words the deleted-sample refusal by its own code, not the generic failure", async () => {
+    mocks.exportFn.mockRejectedValue({
+      response: { status: 422, data: { code: "TEMPLATE_EXPORT_SOURCE_MISSING" } },
+    });
+    render(<CommunityExportPanel templateId="t9" domain="ferry" />);
+    fireEvent.click(screen.getByRole("button", { name: "parser:communityExport.download" }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      "parser:communityExport.refused.TEMPLATE_EXPORT_SOURCE_MISSING"
+    );
+    expect(mocks.download).not.toHaveBeenCalled();
+  });
 });

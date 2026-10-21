@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { displayParts, type TimeValue } from "../shared/time";
+import { displayParts, type LocalDateValue, type TimeValue } from "../shared/time";
 import { useSettingsStore, type DisplaySettings } from "../store/settingsStore";
 import { todayZoneNow } from "../hooks/useTodayZone";
 
@@ -191,6 +191,29 @@ export function formatTimeValueWith(
   return parts.time && !dateOnly ? `${day} ${formatLocalClockWith(prefs, parts.time)}` : day;
 }
 
+/**
+ * A `LocalDateValue` cut to its precision. A day follows the user's format; a
+ * value known only to the month or the year is written as such, in the UI
+ * language ("Juni 2030", "2030") — its stored day is a placeholder, and
+ * printing it would name a day nobody knows.
+ */
+export function formatLocalDateValueWith(
+  prefs: DisplayFormatPrefs,
+  value: LocalDateValue,
+  options: Omit<FormatOptions, "timeZone"> = {}
+): string {
+  if (value.precision !== "month" && value.precision !== "year") {
+    return formatLocalDateWith(prefs, value.date, options);
+  }
+  const m = /^(\d{4})-(\d{2})/.exec(value.date);
+  if (!m) return value.date;
+  const parts: Intl.DateTimeFormatOptions =
+    value.precision === "month" ? { month: "long", year: "numeric" } : { year: "numeric" };
+  return new Intl.DateTimeFormat(options.language ?? "en", { ...parts, timeZone: "UTC" }).format(
+    Date.UTC(Number(m[1]), Number(m[2]) - 1, 1)
+  );
+}
+
 /** The preference as the store holds it right now — for code that cannot use a hook. */
 export function currentDisplayFormat(): DisplayFormatPrefs {
   const display = useSettingsStore.getState?.().display;
@@ -213,6 +236,8 @@ export interface DisplayFormatter {
   dateTime: (input: DateInput, options?: FormatOptions) => string;
   /** A place's day (`YYYY-MM-DD…`), never moved by the reader's zone. */
   localDate: (local: string, options?: Omit<FormatOptions, "timeZone">) => string;
+  /** A place's day as a `LocalDateValue`, cut to its precision. */
+  localDateValue: (value: LocalDateValue) => string;
   /** A place's clock (`HH:mm` / `…THH:mm`). */
   localClock: (local: string) => string;
   /** A `TimeValue` as the place saw it, cut to its precision. */
@@ -239,6 +264,8 @@ export function useDisplayFormat(): DisplayFormatter {
       dateTime: (input, options) => formatDateTimeWith(prefs, input, withLanguage(options)),
       localDate: (local, options) =>
         formatLocalDateWith(prefs, local, withLanguage(options) as Omit<FormatOptions, "timeZone">),
+      localDateValue: (value) =>
+        formatLocalDateValueWith(prefs, value, { language: language === "de" ? "de" : "en" }),
       localClock: (local) => formatLocalClockWith(prefs, local),
       timeValue: (value, options) =>
         formatTimeValueWith(prefs, value, {

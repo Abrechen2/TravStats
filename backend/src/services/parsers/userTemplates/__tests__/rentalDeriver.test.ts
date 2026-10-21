@@ -108,6 +108,37 @@ describe("deriveRentalTemplate", () => {
     ).toEqual({ ok: false, refusal: "rentalEndsAmbiguous" });
   });
 
+  it("abstains when the two clocks are labelled alike — the return would read the pickup's clock", () => {
+    const text = [
+      "Mietwagenfern GmbH",
+      "Reservierungsnummer: MF-111333",
+      "Abholstation: Musterfurt Flughafen",
+      "Abholdatum: 14.11.2027",
+      "Zeit: 10:30",
+      "Rückgabestation: Musterfurt Hauptbahnhof",
+      "Rückgabedatum: 21.11.2027",
+      "Zeit: 09:00",
+    ].join("\n");
+    const at = (value: string, label: string) => select(text, value, label);
+    expect(
+      deriveRentalTemplate({
+        trainingDataId: "td-rental-clocks",
+        subject: RENTAL_SUBJECT,
+        fullText: text,
+        selections: [
+          at("Mietwagenfern GmbH", "provider"),
+          at("MF-111333", "confirmationNumber"),
+          at("Musterfurt Flughafen", "pickupStation"),
+          at("14.11.2027", "pickupDate"),
+          at("10:30", "pickupTime"),
+          at("Musterfurt Hauptbahnhof", "returnStation"),
+          at("21.11.2027", "returnDate"),
+          at("09:00", "returnTime"),
+        ],
+      })
+    ).toEqual({ ok: false, refusal: "rentalEndsAmbiguous" });
+  });
+
   it("previews through the same consumer", () => {
     const template: UserTemplate = {
       id: "t-rental",

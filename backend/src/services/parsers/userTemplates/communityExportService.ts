@@ -54,16 +54,22 @@ export async function exportTemplateForCommunity(
       select: { username: true, firstName: true, lastName: true, notificationEmail: true },
     }),
   ]);
+  // The scan only knows which values are personal from the sample's marks.
+  // Without the sample a marked booking reference in an anchor would travel
+  // unrecognised, so the export is refused rather than run blind. (Keeping
+  // the marks on the template instead would copy the very values that must
+  // not travel into a second place, and would not cover stored templates.)
+  if (!sample) return { ok: false, refusal: "sourceMissing", found: [] };
   const result = buildCommunityExport({
     envelope,
     personal: {
-      marked: markedValues(sample?.annotations),
+      marked: markedValues(sample.annotations),
       identity: [
         user?.username,
         user?.firstName,
         user?.lastName,
         user?.notificationEmail,
-        sample?.senderAddress,
+        sample.senderAddress,
       ],
     },
     appVersion,

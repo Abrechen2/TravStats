@@ -29,7 +29,8 @@ const stage = (a: PlanStation, b: PlanStation, extra: Partial<PlanStage> = {}): 
   mode: "drive",
   departDay: null,
   departTime: null,
-  durationMinutes: null,
+  // A known duration, so the days after a stage are known (owner, 2026-10-20).
+  durationMinutes: 60,
   distanceKm: null,
   metricsSource: null,
   fallbackReason: null,
@@ -181,6 +182,105 @@ describe("scheduleRoute", () => {
     ]);
   });
 
+  it("a booked stage arrives when its booking says, not on its departure day", () => {
+    const a = station("A"),
+      b = station("B", { nights: 1 });
+    const real = booking({
+      day: "2027-05-08",
+      time: "23:00",
+      arrivalDay: "2027-05-09",
+      arrivalTime: "07:00",
+    });
+    const g = stage(a, b, { mode: "ferry", bookingId: real.id });
+    const s = scheduleRoute(route([a, b], [g], { bookings: [real] }));
+    expect(s.stages[0]).toMatchObject({ departDay: "2027-05-08", arriveDay: "2027-05-09" });
+    expect(s.stations[1]).toMatchObject({ arriveDay: "2027-05-09", departDay: "2027-05-10" });
+  });
+
+  it("a booked arrival on an earlier calendar day than the departure is taken as booked", () => {
+    const tokyo = station("Tokyo"),
+      honolulu = station("Honolulu", { nights: 2 });
+    // East across the date line: leaves Tokyo May 8 21:00, lands in Honolulu
+    // on May 7 local time.
+    const real = booking({
+      kind: "flight",
+      day: "2027-05-08",
+      time: "21:00",
+      arrivalDay: "2027-05-07",
+      arrivalTime: "09:00",
+    });
+    const g = stage(tokyo, honolulu, { mode: "flight", bookingId: real.id });
+    const s = scheduleRoute(route([tokyo, honolulu], [g], { bookings: [real] }));
+    expect(s.stages[0]).toMatchObject({ departDay: "2027-05-08", arriveDay: "2027-05-07" });
+    expect(s.stations[1]).toMatchObject({ arriveDay: "2027-05-07", departDay: "2027-05-09" });
+  });
+
+  it("a timed stage across zones lands on the destination's calendar day", () => {
+    const a = station("Lisbon", { place: { ...place("Lisbon"), zone: "Europe/Lisbon" } }),
+      b = station("Badajoz", { place: { ...place("Badajoz"), zone: "Europe/Madrid" } });
+    // 22:30 in Lisbon plus an hour is 23:30 there, but already 00:30 in Spain.
+    const g = stage(a, b, { departTime: "22:30", durationMinutes: 60 });
+    const s = scheduleRoute(route([a, b], [g]));
+    expect(s.stations[1].arriveDay).toBe("2027-05-09");
+  });
+
+  it("a reordered route leaves the days after a leg without a stage unknown", () => {
+    const a = station("A", { nights: 1 }),
+      b = station("B", { nights: 1 }),
+      c = station("C", { nights: 1 });
+    const stages = [stage(a, b), stage(b, c)];
+    // B moved behind C: neither A→C nor C→B has a stage.
+    const s = scheduleRoute(route([a, c, b], stages));
+    expect(s.stations[0]).toMatchObject({ arriveDay: "2027-05-08", departDay: "2027-05-09" });
+    expect(s.stations[1]).toMatchObject({ arriveDay: null, departDay: null });
+    expect(s.stations[2]).toMatchObject({ arriveDay: null, departDay: null });
+    expect(s.stages.every((g) => g.departDay === null && g.arriveDay === null)).toBe(true);
+    expect(s.lastDay).toBeNull();
+    expect(s.unresolved).toEqual([
+      { fromStationId: a.id, toStationId: c.id },
+      { fromStationId: c.id, toStationId: b.id },
+    ]);
+  });
+
+  it("a pinned station after a missing leg anchors the days again", () => {
+    const a = station("A"),
+      b = station("B", { pinnedDay: "2027-05-12", nights: 2 });
+    const s = scheduleRoute(route([a, b], []));
+    expect(s.stations[1]).toMatchObject({ arriveDay: "2027-05-12", departDay: "2027-05-14" });
+    expect(s.lastDay).toBe("2027-05-14");
+    expect(s.conflicts).toEqual([]);
+  });
+
+  it("a stage without a duration leaves its arrival and the days after it unknown", () => {
+    const a = station("A", { nights: 1 }),
+      b = station("B", { nights: 1 }),
+      c = station("C", { nights: 1, pinnedDay: "2027-05-15" });
+    const s = scheduleRoute(
+      route(
+        [a, b, c],
+        [stage(a, b, { durationMinutes: null }), stage(b, c, { durationMinutes: 60 })]
+      )
+    );
+    expect(s.stages[0]).toMatchObject({ departDay: "2027-05-09", arriveDay: null });
+    expect(s.stations[1]).toMatchObject({ arriveDay: null, departDay: null });
+    // The next anchor makes the days known again.
+    expect(s.stations[2]).toMatchObject({ arriveDay: "2027-05-15", departDay: "2027-05-16" });
+    expect(s.conflicts).toEqual([]);
+  });
+
+  it("a booked stage with a departure but neither arrival nor duration arrives on an unknown day", () => {
+    const a = station("A"),
+      b = station("B");
+    const real = booking({ day: "2027-05-08", time: "23:00" });
+    const s = scheduleRoute(
+      route([a, b], [stage(a, b, { mode: "ferry", bookingId: real.id, durationMinutes: null })], {
+        bookings: [real],
+      })
+    );
+    expect(s.stages[0]).toMatchObject({ departDay: "2027-05-08", arriveDay: null });
+    expect(s.lastDay).toBeNull();
+  });
+
   it("no start day gives null days", () => {
     const { ro, ge, pa, ce, stages } = sicily();
     const s = scheduleRoute(route([ro, ge, pa, ce], stages, { startDay: null }));
@@ -188,5 +288,6 @@ describe("scheduleRoute", () => {
     expect(s.stages.every((x) => x.departDay === null && x.arriveDay === null)).toBe(true);
     expect(s.lastDay).toBeNull();
     expect(s.conflicts).toEqual([]);
+    expect(s.unresolved).toEqual([]);
   });
 });
