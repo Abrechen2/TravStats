@@ -22,8 +22,10 @@ import TripsSection from "../../components/Settings/TripsSection";
 import InboxSuggestionsSection from "../../components/Settings/InboxSuggestionsSection";
 import TripRecordingSection from "../../components/Settings/TripRecordingSection";
 import SharingSection from "../../components/Settings/SharingSection";
+import RemoteSharingSection from "../../components/Settings/RemoteSharingSection";
 import ShareLinksSection from "../../components/Settings/ShareLinksSection";
 import CalendarFeedSection from "../../components/Settings/CalendarFeedSection";
+import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import FeaturesSection from "../../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../../components/Settings/CruisePreferencesSection";
 import LoyaltySection from "../../components/Settings/LoyaltySection";
@@ -49,6 +51,7 @@ export default function SettingsSectionSwitch({
   page,
 }: SettingsSectionSwitchProps): JSX.Element | null {
   const isAdmin = page.user?.isAdmin ?? false;
+  const { isFeatureVisible } = useBetaFeatures();
 
   switch (section) {
     case "profile":
@@ -115,8 +118,15 @@ export default function SettingsSectionSwitch({
       // Which suggestions the inbox offers at all (forgejo#306).
       return <InboxSuggestionsSection />;
     case "sharing":
-      // Shared trips (design 2026-10-09): consent and companion links.
-      return <SharingSection />;
+      // Shared trips (design 2026-10-09): consent and companion links, then
+      // people on other servers (forgejo#301), behind its beta key and the
+      // server's switch.
+      return (
+        <div className="space-y-4">
+          <SharingSection />
+          {isFeatureVisible("federatedTripSharing") && <RemoteSharingSection />}
+        </div>
+      );
     case "shareLinks":
       // Public share links (forgejo#281): own links and a pointer to administration.
       return <ShareLinksSection isAdmin={isAdmin} />;

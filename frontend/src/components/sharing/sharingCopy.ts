@@ -24,17 +24,24 @@ export function sharingErrorKey(err: unknown, fallbackKey: string): string {
     SHARE_UNDO_STALE: "sharing:errors.undoStale",
     SHARE_UNDO_UNAVAILABLE: "sharing:errors.undoUnavailable",
     SHARE_COPY_NOT_FOUND: "sharing:errors.copyNotFound",
+    SHARE_REMOTE_CONFLICT_STALE: "sharing:errors.conflictStale",
+    // A trip that came from another server is shared on from its home (F-S4e).
+    SHARE_REMOTE_NOT_HOME: "sharing:errors.notHomeLocal",
   });
 }
 
 /**
- * The facts a refused undo names (`SHARE_UNDO_STALE` carries them in
- * `fields`, comma-separated) — so the message can say WHAT changed since.
+ * The facts a refused undo or conflict answer names (`SHARE_UNDO_STALE`,
+ * `SHARE_REMOTE_CONFLICT_STALE` carry them in `fields`, comma-separated) — so
+ * the message can say WHAT changed since.
  */
-export function staleUndoFields(err: unknown): string[] {
+export function staleUndoFields(
+  err: unknown,
+  code: "SHARE_UNDO_STALE" | "SHARE_REMOTE_CONFLICT_STALE" = "SHARE_UNDO_STALE"
+): string[] {
   const data = (err as { response?: { data?: { code?: string; fields?: unknown } } } | null)
     ?.response?.data;
-  if (data?.code !== "SHARE_UNDO_STALE" || typeof data.fields !== "string") return [];
+  if (data?.code !== code || typeof data.fields !== "string") return [];
   return data.fields.split(",").filter(Boolean);
 }
 

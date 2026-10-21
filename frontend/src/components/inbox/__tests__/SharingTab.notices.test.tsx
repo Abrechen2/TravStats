@@ -37,6 +37,7 @@ vi.mock("../../../lib/api/sharing", () => ({
     markNoticeRead: vi.fn(),
     undoNotice: vi.fn(),
     deleteOwnCopy: vi.fn(),
+    resolveConflict: vi.fn(),
   },
 }));
 
@@ -64,6 +65,7 @@ const updated: ShareNotice = {
   readAt: null,
   undoneAt: null,
   actor: anna,
+  remoteActor: null,
   changes: [
     { field: "gate", before: { kind: "empty" }, after: { kind: "text", value: "B12" } },
     {
@@ -98,6 +100,7 @@ const deleted: ShareNotice = {
   kind: "deleted",
   after: { label: "Hotel Avenida Palace", tripId: "trip-1", entryId: "s-1", reason: "deleted" },
   entityType: "lodgingStay",
+  remoteActor: null,
   changes: [],
 };
 
@@ -154,6 +157,42 @@ describe("SharingTab — change notices (S2)", () => {
     expect(alert.textContent).toContain("sharing:errors.undoStaleFields");
     expect(alert.textContent).toContain("sharing:fields.gate");
     expect(alert.textContent).toContain("sharing:fields.terminal");
+  });
+
+  it("answers a conflict with another server, and shows a moved copy as itself (F-S4d)", async () => {
+    const conflict: ShareNotice = {
+      ...updated,
+      id: "n-conflict",
+      kind: "conflict",
+      actor: null,
+      remoteActor: { displayName: "Ben", origin: "far.example" },
+    };
+    api.listNotices.mockResolvedValue([conflict]);
+    api.resolveConflict.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: {
+        status: 409,
+        data: { code: "SHARE_REMOTE_CONFLICT_STALE", fields: "gate" },
+      },
+    });
+    renderTab();
+    const [row] = await screen.findAllByTestId("share-notice");
+    const theirs = within(row).getByRole("button", { name: "sharing:inbox.notices.takeTheirs" });
+    await userEvent.click(theirs);
+    expect(api.resolveConflict).toHaveBeenCalledWith("n-conflict", "theirs");
+    const alert = await within(row).findByRole("alert");
+    expect(alert.textContent).toContain("sharing:errors.conflictStaleFields");
+    expect(alert.textContent).toContain("sharing:fields.gate");
+    expect(addToast).not.toHaveBeenCalledWith("success", expect.anything());
+
+    api.resolveConflict.mockResolvedValueOnce(undefined);
+    await userEvent.click(
+      within(row).getByRole("button", { name: "sharing:inbox.notices.keepMine" })
+    );
+    expect(api.resolveConflict).toHaveBeenLastCalledWith("n-conflict", "mine");
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith("success", "sharing:inbox.messages.resolved")
+    );
   });
 
   it("shows any other refusal by its code, not as success", async () => {

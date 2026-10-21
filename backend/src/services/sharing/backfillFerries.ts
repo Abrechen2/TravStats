@@ -57,7 +57,7 @@ export async function backfillSharedFerries(opts: { apply: boolean }): Promise<B
             orderBy: { createdAt: "asc" },
           });
           for (const source of trips) {
-            counted.keyed += await assignKeysFor(tx, "ferry", source.userId, source.id);
+            counted.keyed += (await assignKeysFor(tx, "ferry", source.userId, source.id)).length;
             for (const member of await receivingMembers(tx, group.id, source.userId)) {
               const copied = await copyMissing(
                 tx,

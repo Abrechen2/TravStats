@@ -20,11 +20,13 @@ import {
 } from "../../services/federation/identity";
 import { exchange, hash, PeerRefusal } from "../../services/federation/security";
 import { comparisonError } from "../../services/comparison/errors";
+import { holdPeerMemberships } from "../../services/sharing/federation/lifecycle";
 import {
   federationSettingsSchema,
   peerOriginSchema,
   peerPinSchema,
   pingReplySchema,
+  tripSharingSwitchSchema,
   type FederationState,
 } from "../../schemas/federationAdmin";
 
@@ -47,7 +49,7 @@ async function state(): Promise<FederationState> {
   const id = await ensureAdminSettingsRow();
   const row = await prisma.adminSettings.findUniqueOrThrow({
     where: { id },
-    select: { federationEnabled: true, federationOrigin: true },
+    select: { federationEnabled: true, federationOrigin: true, tripFederationEnabled: true },
   });
   const local = await currentIdentity();
   const peers = await prisma.comparisonPeer.findMany({ orderBy: { origin: "asc" } });
@@ -57,6 +59,7 @@ async function state(): Promise<FederationState> {
     origin: local?.origin ?? row.federationOrigin,
     publicKey: local?.publicKey ?? null,
     fingerprint: local?.fingerprint ?? null,
+    tripSharingEnabled: row.tripFederationEnabled,
     peers: peers.map((p) => ({
       origin: p.origin,
       fingerprint: hash(p.publicKey),
@@ -116,6 +119,26 @@ router.put(
       data: { federationEnabled: body.enabled, federationOrigin: body.origin },
     });
     resetIdentityCache();
+    res.json(await state());
+  })
+);
+
+/**
+ * Trip sharing across servers on or off (spec 2026-10-20 F8). Its own endpoint, not a field of
+ * `PUT /`: it is settable while FEDERATION_* env vars hold the identity, which `PUT /` refuses.
+ */
+router.put(
+  "/trip-sharing",
+  handle(async (req, res) => {
+    const { enabled } = tripSharingSwitchSchema.parse(req.body);
+    await prisma.adminSettings.update({
+      where: { id: await ensureAdminSettingsRow() },
+      data: { tripFederationEnabled: enabled },
+    });
+    logger.info(
+      { operation: "trip_federation_switched", enabled, userId: req.userId },
+      "Trip sharing across servers switched"
+    );
     res.json(await state());
   })
 );
@@ -190,6 +213,10 @@ router.post(
       create: { origin: body.origin, publicKey: pem, enabled: body.enabled },
       update: { publicKey: pem, enabled: body.enabled, verifiedAt: null, leaderboardVersions: [] },
     });
+    // Trips shared across servers through it pause until each person confirms them again
+    // (spec 2026-10-20 O9): a new key is a new party until someone says otherwise.
+    if (previous && previous.publicKey !== pem) await holdPeerMemberships(body.origin, "repinned");
+    else if (previous && !body.enabled) await holdPeerMemberships(body.origin, "peer-blocked");
     res.json(await state());
   })
 );
@@ -230,6 +257,7 @@ router.post(
       where: { origin },
       data: { enabled: false, verifiedAt: null },
     });
+    await holdPeerMemberships(origin, "peer-blocked");
     res.json({ suspended: true });
   })
 );

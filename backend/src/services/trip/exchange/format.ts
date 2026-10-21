@@ -20,7 +20,7 @@
  * this one than the file needs to.
  */
 import { z } from "zod";
-import { isValidZone } from "../../../shared/time/zonedParts";
+import { lat, lon, portRef, requiredZone, shipRef, zone, type PortRef } from "./publicHalf";
 
 export const TRIP_FILE_FORMAT = "travstats-trip";
 /**
@@ -67,11 +67,6 @@ const day = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)
   .nullable();
-/** A zone is stored and later computed with — one this runtime cannot read is refused here. */
-const requiredZone = z.string().max(64).refine(isValidZone, "unknown time zone");
-const zone = requiredZone.nullable();
-const lat = z.number().min(-90).max(90);
-const lon = z.number().min(-180).max(180);
 const money = z.number().finite().nullable();
 const currency = optStr(10);
 const key = z.string().regex(/^[a-z]{1,3}\d{1,5}$/);
@@ -243,16 +238,6 @@ const staySchema = z
   })
   .strict();
 
-const portRef = z
-  .object({
-    unlocode: optStr(200),
-    name: str(200),
-    country: optStr(200),
-    lat,
-    lon,
-  })
-  .strict();
-
 const cruiseStopSchema = z
   .object({
     dayNumber: z.number().int().min(0).max(400),
@@ -288,10 +273,7 @@ const cruiseSchema = z
     bookingKey: key.nullable(),
     externalRef: optStr(200),
     bookingReference: optStr(200),
-    ship: z
-      .object({ name: str(200), imo: optStr(200), cruiseLine: str(200) })
-      .strict()
-      .nullable(),
+    ship: shipRef.nullable(),
     shipNameOverride: optStr(200),
     cruiseLine: optStr(200),
     routeName: optStr(300),
@@ -680,4 +662,4 @@ export type TripFileRental = TripFile["rentals"][number];
 export type TripFilePlace = TripFile["places"][number];
 export type TripFileVisit = TripFile["visits"][number];
 export type TripFileStop = TripFile["stops"][number];
-export type TripFilePortRef = z.infer<typeof portRef>;
+export type TripFilePortRef = PortRef;

@@ -18,6 +18,8 @@ const KIND_COLOR: Record<ShareNotice["kind"], string> = {
   updated: "var(--ts-info)",
   deleted: "var(--ts-warn)",
   left: "var(--ts-muted)",
+  conflict: "var(--ts-warn)",
+  "add-request": "var(--ts-info)",
 };
 
 /**
@@ -27,6 +29,13 @@ const KIND_COLOR: Record<ShareNotice["kind"], string> = {
  * pill, actor and time, the entry, three changes inline and the rest behind
  * Details — and undo is the primary action while it is still possible. Values
  * arrive formatted on the place's clock and are shown as given.
+ *
+ * Across servers (spec 2026-10-20, F-S4d) the author can be a person on another
+ * server, named with it — „Ben (andere.instanz.tld)" — and a `conflict` notice
+ * (changed at the same time, nothing overwritten) shows the reader's value and
+ * theirs with the two answers „Ihre übernehmen" / „Meine behalten". Since F-S4e a member there
+ * can ask the reader to offer the trip to someone (`add-request`) — the reader decides on the
+ * trip page — and a `left` notice says when the consent was withdrawn, not just the trip left.
  */
 export default function ShareNoticeCard({
   notice,
@@ -35,6 +44,7 @@ export default function ShareNoticeCard({
   onRead,
   onUndo,
   onDeleteCopy,
+  onResolve,
 }: {
   notice: ShareNotice;
   busy: boolean;
@@ -42,6 +52,7 @@ export default function ShareNoticeCard({
   onRead: () => void;
   onUndo: () => void;
   onDeleteCopy: () => void;
+  onResolve?: (choice: "mine" | "theirs") => void;
 }): JSX.Element {
   const { t, i18n } = useTranslation(["sharing"]);
   const [details, setDetails] = useState(false);
@@ -56,18 +67,34 @@ export default function ShareNoticeCard({
           : "joinedMoved"
         : notice.kind === "created" && after.joined
           ? "joined"
-          : notice.kind;
+          : notice.kind === "left" && after.revoked
+            ? "leftRevoked"
+            : notice.kind === "add-request"
+              ? after.person?.origin
+                ? "addRequestFrom"
+                : "addRequest"
+              : notice.kind;
+  const name = notice.actor
+    ? notice.actor.displayName
+    : notice.remoteActor
+      ? t(`${NS}.${notice.remoteActor.via ? "remoteNameVia" : "remoteName"}`, {
+          ...notice.remoteActor,
+        })
+      : t(`${NS}.someone`);
   const text = t(`${NS}.${textKey}`, {
-    name: notice.actor?.displayName ?? t(`${NS}.someone`),
+    name,
     trip: after.tripName ?? t(`${NS}.unknownTrip`),
     entry: after.label || t(`${NS}.unknownEntry`),
     type: t(`sharing:entityTypes.${notice.entityType ?? "trip"}`),
     from: after.movedFrom?.tripName ?? t(`${NS}.unknownTrip`),
+    person: after.person?.displayName ?? "",
+    personOrigin: after.person?.origin ?? "",
   });
   const unread = notice.readAt === null;
   const tripLink = notice.entityType === "trip" ? notice.entityKey : (after.tripId ?? null);
   // A join that moved the reader's own entry in can be undone too: it goes back.
   const movedIn = notice.kind === "created" && !!after.movedFrom;
+  const conflict = notice.kind === "conflict";
   const canUndo = (notice.kind === "updated" || movedIn) && notice.undoneAt === null;
   const changes: ChangeEntry[] = notice.changes.map((c) => ({
     field: c.field,
@@ -86,12 +113,14 @@ export default function ShareNoticeCard({
           <div className="flex items-center" style={{ gap: 8 }}>
             <Pill color={KIND_COLOR[notice.kind]}>{t(`${NS}.kinds.${notice.kind}`)}</Pill>
             <span className="t-caption">
-              {notice.actor?.displayName ?? t(`${NS}.someone`)} · {formatDateTime(notice.createdAt)}
+              {name} · {formatDateTime(notice.createdAt)}
             </span>
           </div>
           {notice.undoneAt && (
             <span className="t-caption">
-              {t(`${NS}.${notice.kind === "deleted" ? "copyGone" : "undone"}`)}
+              {t(
+                `${NS}.${notice.kind === "deleted" ? "copyGone" : notice.kind === "conflict" ? "resolved" : "undone"}`
+              )}
             </span>
           )}
         </div>
@@ -103,7 +132,33 @@ export default function ShareNoticeCard({
         <p className="text-sm" style={{ fontWeight: unread ? 600 : 400 }}>
           {text}
         </p>
-        {changes.length > 0 && (
+        {notice.kind === "add-request" && (
+          <>
+            {after.note && (
+              <blockquote
+                className="text-sm"
+                style={{ fontStyle: "italic" }}
+                data-testid="share-add-request-note"
+              >
+                {after.note}
+              </blockquote>
+            )}
+            <p className="t-caption">{t(`${NS}.addRequestHint`)}</p>
+          </>
+        )}
+        {conflict && changes.length > 0 && (
+          <ul className="flex flex-col text-sm" style={{ gap: 4 }}>
+            {changes.map((c) => (
+              <li key={c.field} data-testid="share-conflict">
+                <span className="t-caption">{shareFieldLabel(c.field, t)}: </span>
+                <span>{t(`${NS}.mineValue`, { value: c.oldValue })}</span>
+                {" · "}
+                <span>{t(`${NS}.theirsValue`, { name, value: c.newValue })}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {!conflict && changes.length > 0 && (
           <ul className="flex flex-col text-sm" style={{ gap: 4 }}>
             {changes.slice(0, INLINE).map((c) => (
               <li key={c.field} data-testid="share-change">
@@ -115,7 +170,7 @@ export default function ShareNoticeCard({
             ))}
           </ul>
         )}
-        {details && (
+        {details && !conflict && (
           <ChangeDiffView
             original={{}}
             proposed={{}}
@@ -130,6 +185,16 @@ export default function ShareNoticeCard({
           </p>
         )}
         <div className="flex flex-wrap items-center" style={{ gap: 8 }}>
+          {conflict && notice.undoneAt === null && onResolve && (
+            <>
+              <Button variant="primary" disabled={busy} onClick={() => onResolve("theirs")}>
+                {t(`${NS}.takeTheirs`)}
+              </Button>
+              <Button disabled={busy} onClick={() => onResolve("mine")}>
+                {t(`${NS}.keepMine`)}
+              </Button>
+            </>
+          )}
           {canUndo && (
             <Button variant="primary" disabled={busy} onClick={onUndo}>
               {movedIn ? t(`${NS}.undoMove`, { from: after.movedFrom?.tripName }) : t(`${NS}.undo`)}
@@ -140,7 +205,7 @@ export default function ShareNoticeCard({
               {t(`${NS}.deleteCopy`)}
             </Button>
           )}
-          {changes.length > INLINE && (
+          {!conflict && changes.length > INLINE && (
             <Button aria-expanded={details} onClick={() => setDetails((d) => !d)}>
               {t(`${NS}.details`)}
             </Button>

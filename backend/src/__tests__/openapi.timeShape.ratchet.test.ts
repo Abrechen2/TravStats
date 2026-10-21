@@ -68,6 +68,10 @@ const BOOKKEEPING_INSTANTS = new Set([
   // Leaderboard snapshots (comparison rework 2026-10-16): when a server computed a set of
   // totals — its own clock, possibly another server's, and no traveller's place.
   "asOf",
+  // Trip sharing across servers (F-S4c): when a remote member's state last changed, and when an
+  // offer was sent — server bookkeeping, at no traveller's place.
+  "stateSince",
+  "offeredAt",
 ]);
 
 const doc = buildOpenApiDocument() as unknown as { paths: Json; components: { schemas: Json } };

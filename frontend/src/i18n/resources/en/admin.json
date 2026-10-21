@@ -197,6 +197,10 @@
           "calendarFeed": {
             "name": "Calendar subscription",
             "what": "A secret link under Settings → Trips that any calendar app can subscribe to: the account's upcoming flights, stays, rides, cruises and trips. With the switch off, no link is issued and none is answered."
+          },
+          "federatedTripSharing": {
+            "name": "Trip sharing across servers",
+            "what": "Connect with companions on other TravStats servers by invitation code, under Settings → Trips; it has its own switch under server connections as well. No trip crosses yet. With the switch off, this server does not answer other servers for it at all."
           }
         }
       },
@@ -1103,6 +1107,8 @@
     "originHint": "https, no port or path — the way other servers reach it.",
     "generateKey": "Generate key",
     "rotateWarning": "A new key replaces the old one. Connected servers have to pin it again.",
+    "tripSharing": "Share trips with other servers",
+    "tripSharingSub": "People on trusted servers can share trips with accounts on this server. The facts of a shared trip travel signed over TLS to the companion's server; private fields never do. Takes effect only with a key and beta features switched on.",
     "fingerprint": "Fingerprint — give it to the other server's admin through a second channel (e.g. a phone call):",
     "peers": "Trusted servers",
     "verifiedAt": "verified on {{date}}",

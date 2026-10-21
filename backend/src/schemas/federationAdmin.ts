@@ -23,6 +23,9 @@ export const peerPinSchema = z.strictObject({
 
 export const peerOriginSchema = z.strictObject({ origin: httpsOriginSchema });
 
+/** Trip sharing across servers (spec 2026-10-20 F8): the admin's own switch, default off. */
+export const tripSharingSwitchSchema = z.strictObject({ enabled: z.boolean() });
+
 /** `leaderboard` is absent on servers that predate the leaderboard protocol (spec §10). */
 export const pingReplySchema = z.object({
   ready: z.literal(true),
@@ -35,6 +38,8 @@ export interface FederationState {
   origin: string | null;
   publicKey: string | null;
   fingerprint: string | null;
+  /** The admin's trip-sharing switch; effective only with an identity and the beta switch on. */
+  tripSharingEnabled: boolean;
   peers: Array<{
     origin: string;
     fingerprint: string;

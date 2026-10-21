@@ -73,7 +73,9 @@ router.post("/", async (req, res) => {
         }
       }
     } else throw refused(); // Legacy plaintext travel reads are deliberately disabled.
-    const signed = envelope(data, message.origin, local, message.nonce);
+    // Answer in the envelope version asked in: a version-2 sender reads its own purpose back.
+    const purpose = "v" in message ? message.purpose : undefined;
+    const signed = envelope(data, message.origin, local, message.nonce, purpose);
     if (Buffer.byteLength(JSON.stringify(signed)) > 10_000_000) throw refused();
     res.setHeader("Cache-Control", "no-store");
     res.json(signed);

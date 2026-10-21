@@ -34,9 +34,23 @@
         "created": "Hinzugefügt",
         "updated": "Geändert",
         "deleted": "Gelöscht",
-        "left": "Verlassen"
+        "left": "Verlassen",
+        "conflict": "Gleichzeitig geändert",
+        "add-request": "Anfrage"
       },
-      "details": "Details"
+      "details": "Details",
+      "conflict": "{{name}} hat {{type}} „{{entry}}“ zur selben Zeit anders geändert. Nichts wurde überschrieben – welcher Wert soll gelten?",
+      "takeTheirs": "Den anderen Wert übernehmen",
+      "keepMine": "Meinen Wert behalten",
+      "mineValue": "Deins: {{value}}",
+      "theirsValue": "{{name}}: {{value}}",
+      "resolved": "Entschieden.",
+      "remoteName": "{{name}} ({{origin}})",
+      "remoteNameVia": "{{name}} ({{origin}}) über {{via}}",
+      "leftRevoked": "{{name}} hat die Zustimmung zum Teilen entzogen. „{{trip}}“ wird nicht mehr abgeglichen; deine Reise bleibt dir.",
+      "addRequest": "{{name}} bittet dich, „{{trip}}“ auch mit {{person}} zu teilen.",
+      "addRequestFrom": "{{name}} bittet dich, „{{trip}}“ auch mit {{person}} ({{personOrigin}}) zu teilen.",
+      "addRequestHint": "Auf der Reiseseite kannst du sie einer verbundenen Person anbieten oder einen Code für diese Reise erstellen und weitergeben."
     },
     "empty": {
       "title": "Nichts Neues",
@@ -46,7 +60,8 @@
       "accepted": "Zugestimmt — {{name}} kann jetzt Reisen mit dir teilen.",
       "declined": "Abgelehnt.",
       "undone": "Rückgängig gemacht — die anderen sehen es als deine Änderung.",
-      "copyDeleted": "Deine Kopie ist gelöscht."
+      "copyDeleted": "Deine Kopie ist gelöscht.",
+      "resolved": "Entschieden – die anderen bekommen den Wert als deine Änderung."
     },
     "errors": {
       "loadFailed": "Geteilte Reisen konnten nicht geladen werden.",
@@ -55,7 +70,8 @@
       "answerFailed": "Die Antwort konnte nicht gespeichert werden.",
       "markReadFailed": "Die Mitteilung konnte nicht als gelesen markiert werden.",
       "undoFailed": "Die Änderung konnte nicht rückgängig gemacht werden.",
-      "deleteCopyFailed": "Deine Kopie konnte nicht gelöscht werden."
+      "deleteCopyFailed": "Deine Kopie konnte nicht gelöscht werden.",
+      "resolveFailed": "Der Konflikt konnte nicht entschieden werden."
     }
   },
   "settings": {
@@ -152,7 +168,10 @@
     "undoStale": "Rückgängig geht nicht mehr: deine Kopie wurde seitdem geändert.",
     "undoStaleFields": "Rückgängig geht nicht mehr: seitdem geändert wurde {{fields}}.",
     "undoUnavailable": "Diese Mitteilung lässt sich nicht (mehr) rückgängig machen.",
-    "copyNotFound": "Deine Kopie dieses Eintrags gibt es nicht mehr."
+    "copyNotFound": "Deine Kopie dieses Eintrags gibt es nicht mehr.",
+    "conflictStale": "Dein Eintrag hat sich seit diesem Konflikt geändert.",
+    "conflictStaleFields": "Seit diesem Konflikt geändert: {{fields}}. Prüfe den Eintrag und entscheide neu.",
+    "notHomeLocal": "Diese Reise kommt von einem anderen Server. Weitere Personen lädt man dort ein – bitte die Person, mit der du sie teilst, auf der Reiseseite darum."
   },
   "shareDialog": {
     "title": "Reise mit {{name}} teilen",
@@ -523,6 +542,195 @@
       "createFailed": "Der Link konnte nicht erstellt werden.",
       "revokeFailed": "Der Link konnte nicht widerrufen werden.",
       "tripEnded": "Diese Reise ist schon vorbei – für einen Reiseplan gibt es keinen Link mehr. Ohne Reiseplan geht es weiterhin."
+    }
+  },
+  "remote": {
+    "title": "Mitreisende auf anderen Servern",
+    "description": "Teile Reisen mit Menschen, deren Konto auf einem anderen TravStats-Server liegt. Die Verbindung entsteht über einen Einladungscode; den Server der anderen Person muss der Admin deines Servers vorher als vertrauenswürdig hinterlegt haben.",
+    "invites": {
+      "title": "Einladungscode",
+      "hint": "Erstelle einen Code und gib ihn auf einem zweiten Weg weiter (Nachricht, Telefon). Die Person löst ihn auf ihrem eigenen Server ein. Jeder Code gilt einmal und 72 Stunden.",
+      "create": "Code erstellen",
+      "codeLabel": "Dein Einladungscode",
+      "codeHint": "Nur jetzt sichtbar – kopiere ihn gleich. Gültig bis {{date}}.",
+      "open": "Offener Code, gültig bis {{date}}",
+      "revoke": "Zurückziehen",
+      "revoked": "Code zurückgezogen. Er lässt sich nicht mehr einlösen."
+    },
+    "claim": {
+      "label": "Code von jemandem auf einem anderen Server",
+      "placeholder": "https://travstats.example.org#trip:…",
+      "submit": "Einlösen",
+      "done": "Verbunden mit {{name}} ({{origin}})."
+    },
+    "people": {
+      "title": "Verbundene Personen",
+      "none": "Noch niemand auf einem anderen Server.",
+      "row": "{{name}} (@{{username}}) auf {{origin}}",
+      "withdraw": "Zustimmung entziehen",
+      "withdrawConfirm": "Danach kommt nichts mehr von {{name}} bei dir an und nichts mehr von dir bei {{name}}. Gemeinsame Reisen bleiben bei beiden als eigene Reisen. Wirklich entziehen?",
+      "withdrawYes": "Ja, entziehen",
+      "withdrawNo": "Abbrechen",
+      "withdrawn": "Zustimmung für {{name}} ({{origin}}) entzogen. Der Server dort wird informiert."
+    },
+    "errors": {
+      "loadFailed": "Die Personen auf anderen Servern konnten nicht geladen werden.",
+      "createFailed": "Der Code konnte nicht erstellt werden.",
+      "revokeFailed": "Der Code konnte nicht zurückgezogen werden.",
+      "claimFailed": "Der Code konnte nicht eingelöst werden.",
+      "disabled": "Teilen über Server ist auf diesem Server ausgeschaltet.",
+      "inviteInvalid": "Das ist kein gültiger Einladungscode, oder er wurde zurückgezogen. Prüfe, ob er vollständig kopiert ist.",
+      "wrongTag": "Das ist ein Code für die Bestenliste (Vergleichen), kein Code zum Reisen teilen. Bitte um einen Code aus „Reisen teilen“.",
+      "used": "Dieser Code wurde schon eingelöst. Bitte um einen neuen.",
+      "expired": "Dieser Code ist abgelaufen. Bitte um einen neuen.",
+      "ownServer": "Dieser Code stammt von diesem Server. Hier verbindest du dich mit einer Anfrage per Benutzername.",
+      "limit": "Du hast schon 20 offene Codes. Zieh einen zurück oder warte, bis einer eingelöst ist.",
+      "inviteNotFound": "Diesen offenen Code gibt es nicht mehr.",
+      "duplicate": "Mit dieser Person bist du schon verbunden.",
+      "notAdmitted": "Der Server {{origin}} ist auf deinem Server nicht als vertrauenswürdig hinterlegt. Bitte deinen Admin, ihn hinzuzufügen.",
+      "outdated": "Der Server {{origin}} ist zu alt für geteilte Reisen.",
+      "peerDisabled": "Auf {{origin}} ist Teilen über Server ausgeschaltet, oder der Server kennt es noch nicht.",
+      "unreachable": "Der Server {{origin}} antwortet nicht. Versuch es später noch einmal.",
+      "consentMissing": "Mit dieser Person auf {{origin}} besteht keine Zustimmung zum Teilen (mehr). Verbindet euch erneut mit einem Code.",
+      "notHome": "Diese Reise kommt von {{origin}} und kann nur dort weiter geteilt werden.",
+      "alreadyMember": "Diese Person hat die Reise schon.",
+      "tripTooLarge": "Die Reise hat mehr als 500 Einträge und kann nicht an einen anderen Server angeboten werden.",
+      "personNotFound": "Diese Verbindung gibt es nicht mehr.",
+      "offerNotFound": "Dieses Angebot gibt es nicht mehr – es wurde schon beantwortet.",
+      "refused": "Der Server {{origin}} hat die Nachricht abgelehnt. Prüft, ob ihr dort noch verbunden seid.",
+      "tripNotFound": "Diese Reise gibt es nicht mehr.",
+      "nothingToConfirm": "Auf dieser Reise wartet nichts auf eine Bestätigung.",
+      "notMember": "Du teilst diese Reise mit niemandem auf einem anderen Server (mehr).",
+      "isHome": "Diese Reise ist auf deinem Server zu Hause – biete sie hier direkt an.",
+      "rosterNotFound": "Diese Person ist nicht (mehr) auf der Reise.",
+      "withdrawFailed": "Die Zustimmung konnte nicht entzogen werden."
+    },
+    "trip": {
+      "title": "Reisende auf anderen Servern",
+      "row": "{{name}} (@{{username}}) auf {{origin}}",
+      "fromServer": "Diese Reise kommt von {{origin}}. Weitere Personen lädt man dort ein.",
+      "since": "seit {{date}}",
+      "offer": "Reise anbieten",
+      "offered": "Angeboten. {{name}} entscheidet auf {{origin}}, ob die Reise übernommen wird.",
+      "createCode": "Code für diese Reise erstellen",
+      "codeHint": "Für jemanden, mit dem du noch nicht verbunden bist: Wer den Code auf dem eigenen Server einlöst, bekommt diese Reise angeboten.",
+      "state": {
+        "invited": "Angeboten",
+        "active": "Hat die Reise",
+        "declined": "Abgelehnt",
+        "unreachable": "Nicht erreichbar",
+        "suspended": "Gesperrt",
+        "left": "Ausgetreten",
+        "revoked": "Zustimmung entzogen"
+      },
+      "reason": {
+        "entries-too-large": "Ein Eintrag war zu groß für die Übertragung und fehlt bei {{name}}.",
+        "restore": "Nach einer Wiederherstellung ausgesetzt – bitte neu bestätigen.",
+        "off": "Teilen über Server ist bei {{name}} ausgeschaltet.",
+        "peer-blocked": "Der Server von {{name}} ist von deiner Instanz gesperrt.",
+        "unreachable": "Der Server von {{name}} ist nicht erreichbar.",
+        "other": "Bei der Übertragung zu {{origin}} ist etwas schiefgegangen.",
+        "restore-invited": "Nach einer Wiederherstellung ausgesetzt – das Angebot gilt wieder, sobald du neu bestätigst.",
+        "repinned": "Der Server von {{name}} hat einen neuen Schlüssel – bitte neu bestätigen, dann geht es weiter."
+      },
+      "errors": {
+        "loadFailed": "Die Reisenden auf anderen Servern konnten nicht geladen werden.",
+        "offerFailed": "Die Reise konnte nicht angeboten werden.",
+        "rosterFailed": "Deine Antwort konnte nicht gespeichert werden.",
+        "reconfirmFailed": "Die Reise konnte nicht neu bestätigt werden.",
+        "dismissFailed": "Die Meldung konnte nicht ausgeblendet werden.",
+        "addRequestFailed": "Die Anfrage konnte nicht gesendet werden."
+      },
+      "delivery": {
+        "delivered": "Alle Änderungen sind bei {{name}} angekommen.",
+        "pending": "Änderungen sind auf dem Weg zu {{name}}.",
+        "retrying": "Änderungen kommen bei {{name}} gerade nicht an – {{origin}} antwortet seit {{date}} nicht. Es wird weiter versucht.",
+        "retryingLocal": "Änderungen kommen bei {{name}} gerade nicht an – auf deinem Server ist seit {{date}} ein Fehler aufgetreten. Es wird weiter versucht; wenn das so bleibt, frag deinen Admin.",
+        "retryingRemote": "Änderungen kommen bei {{name}} gerade nicht an – {{origin}} meldet seit {{date}} einen Fehler beim Übernehmen. Es wird weiter versucht.",
+        "unreachable": "Änderungen kommen bei {{name}} nicht an – der Server ist seit {{date}} nicht erreichbar.",
+        "rejected": "Der Server von {{name}} konnte eine Änderung an „{{entry}}“ nicht annehmen ({{why}}).",
+        "unknownEntry": "einem Eintrag",
+        "why": {
+          "schema": "Format nicht unterstützt",
+          "not-member": "dort keine Mitgliedschaft mehr",
+          "consent": "dort keine Zustimmung mehr",
+          "too-large": "zu groß für die Übertragung",
+          "other": "abgelehnt"
+        },
+        "retryingHeld": "Änderungen kommen bei {{name}} gerade nicht an – auf {{origin}} wartet die Reise seit {{date}} auf eine neue Bestätigung von {{name}}. Es wird weiter versucht."
+      },
+      "dismiss": "Ausblenden",
+      "reconfirm": "Neu bestätigen",
+      "reconfirmHint": "Die Verbindung zu dieser Reise ist ausgesetzt (nach einer Wiederherstellung, einer Sperre oder einem neuen Schlüssel des anderen Servers). Bis du neu bestätigst, wird nichts gesendet oder übernommen.",
+      "reconfirmed": "Neu bestätigt. Änderungen gehen wieder hin und her.",
+      "roster": {
+        "title": "Ebenfalls auf der Reise",
+        "hint": "Änderungen von neu Hinzugekommenen kommen bei dir erst an, wenn du zustimmst. Was vorher geändert wurde, wird nicht nachgeholt.",
+        "row": "{{name}} auf {{origin}}",
+        "relation": {
+          "you": "Du",
+          "here": "Auf deinem Server",
+          "paired": "Verbunden",
+          "accepted": "Zugestimmt",
+          "pending": "Neu",
+          "declined": "Abgelehnt"
+        },
+        "sentence": {
+          "you": "Das bist du.",
+          "here": "Auf deinem Server – das regelt das Teilen hier.",
+          "paired": "Verbunden: Änderungen von {{name}} kommen bei dir an.",
+          "accepted": "Du hast zugestimmt: Änderungen von {{name}} kommen bei dir an.",
+          "pending": "Neu auf der Reise: Änderungen von {{name}} kommen bei dir erst an, wenn du zustimmst.",
+          "declined": "Abgelehnt: Änderungen von {{name}} kommen bei dir nicht an."
+        },
+        "accept": "Zustimmen",
+        "decline": "Ablehnen",
+        "stop": "Nicht mehr übernehmen"
+      },
+      "addRequest": {
+        "title": "Jemanden hinzufügen lassen",
+        "hint": "Diese Reise ist auf {{origin}} zu Hause und wird nur dort weiter geteilt. Bitte die Person, mit der du sie teilst, jemanden hinzuzufügen.",
+        "name": "Name",
+        "origin": "Server (optional)",
+        "originHint": "Die Adresse des TravStats-Servers der Person, falls du sie kennst.",
+        "note": "Nachricht (optional)",
+        "submit": "Anfrage senden",
+        "sent": "Anfrage gesendet: {{origin}} entscheidet, ob {{name}} die Reise angeboten bekommt."
+      }
+    },
+    "offers": {
+      "title": "Angebotene Reisen",
+      "row": "„{{trip}}“ von {{name}} ({{origin}})",
+      "roster": "dabei: {{names}}",
+      "empty": "noch ohne Einträge",
+      "count": {
+        "flights_one": "{{count}} Flug",
+        "flights_other": "{{count}} Flüge",
+        "lodgingStays_one": "{{count}} Unterkunft",
+        "lodgingStays_other": "{{count}} Unterkünfte",
+        "cruises_one": "{{count}} Kreuzfahrt",
+        "cruises_other": "{{count}} Kreuzfahrten",
+        "railJourneys_one": "{{count}} Bahnfahrt",
+        "railJourneys_other": "{{count}} Bahnfahrten",
+        "busJourneys_one": "{{count}} Busfahrt",
+        "busJourneys_other": "{{count}} Busfahrten",
+        "ferryJourneys_one": "{{count}} Fährfahrt",
+        "ferryJourneys_other": "{{count}} Fährfahrten",
+        "rentals_one": "{{count}} Mietwagen",
+        "rentals_other": "{{count}} Mietwagen",
+        "stops_one": "{{count}} Station",
+        "stops_other": "{{count}} Stationen"
+      },
+      "accept": "Übernehmen",
+      "decline": "Ablehnen",
+      "accepted": "„{{trip}}“ ist jetzt deine Reise. Die Einträge kommen gleich an.",
+      "open": "Reise öffnen",
+      "declined": "Abgelehnt. Von dieser Reise wurde nichts übernommen.",
+      "errors": {
+        "loadFailed": "Die angebotenen Reisen konnten nicht geladen werden.",
+        "acceptFailed": "Die Reise konnte nicht übernommen werden.",
+        "declineFailed": "Das Angebot konnte nicht abgelehnt werden."
+      }
     }
   }
 }

@@ -28,126 +28,131 @@ datasource db {
 }
 
 model User {
-  comparisonDevices ComparisonDevice[]
-  comparisonPublications ComparisonPublication[]
-  comparisonLinks ComparisonLink[]
-  comparisonAudits ComparisonAudit[]
-  comparisonInvites ComparisonInvite[]
-  comparisonCircles ComparisonCircle[]
-  leaderboardConsentsOwned  LeaderboardConsent[] @relation("LeaderboardConsentOwner")
-  leaderboardConsentsViewed LeaderboardConsent[] @relation("LeaderboardConsentViewer")
+  comparisonDevices         ComparisonDevice[]
+  comparisonPublications    ComparisonPublication[]
+  comparisonLinks           ComparisonLink[]
+  comparisonAudits          ComparisonAudit[]
+  comparisonInvites         ComparisonInvite[]
+  comparisonCircles         ComparisonCircle[]
+  leaderboardConsentsOwned  LeaderboardConsent[]     @relation("LeaderboardConsentOwner")
+  leaderboardConsentsViewed LeaderboardConsent[]     @relation("LeaderboardConsentViewer")
   leaderboardRemotes        LeaderboardRemote[]
   leaderboardInvites        LeaderboardInvite[]
   leaderboardBoards         LeaderboardBoard[]
-  id                     String                   @id @default(uuid())
-  devicePushes           DevicePush[]
-  clientWriteRefs        ClientWriteRef[]
-  travelPlanUsage        TravelPlanUsage[]
-  username               String                   @unique
-  passwordHash           String                   @map("password_hash")
+  id                        String                   @id @default(uuid())
+  devicePushes              DevicePush[]
+  clientWriteRefs           ClientWriteRef[]
+  travelPlanUsage           TravelPlanUsage[]
+  username                  String                   @unique
+  passwordHash              String                   @map("password_hash")
   // Real name, shown wherever the person is addressed rather than identified
   // (#241). Columns on User rather than keys in the UserSettings JSON blob
   // where profilePicture lives: the header renders the name on every page from
   // the /auth/me payload, and reading it out of settings would make the header
   // wait for a second fetch and flash the username first. Both optional — a
   // logbook does not need your name.
-  firstName              String?                  @map("first_name")
-  lastName               String?                  @map("last_name")
-  isAdmin                Boolean                  @default(false) @map("is_admin")
-  isActive               Boolean                  @default(true) @map("is_active")
-  invitedBy              String?                  @map("invited_by")
-  createdAt              DateTime                 @default(now()) @map("created_at")
+  firstName                 String?                  @map("first_name")
+  lastName                  String?                  @map("last_name")
+  isAdmin                   Boolean                  @default(false) @map("is_admin")
+  isActive                  Boolean                  @default(true) @map("is_active")
+  invitedBy                 String?                  @map("invited_by")
+  createdAt                 DateTime                 @default(now()) @map("created_at")
   // Email notification preferences
-  notificationEmail      String?                  @map("notification_email")
-  notifyBefore24h        Boolean                  @default(false) @map("notify_before_24h")
-  notifyBefore2h         Boolean                  @default(false) @map("notify_before_2h")
+  notificationEmail         String?                  @map("notification_email")
+  notifyBefore24h           Boolean                  @default(false) @map("notify_before_24h")
+  notifyBefore2h            Boolean                  @default(false) @map("notify_before_2h")
   // Birthday for the BIRTHDAY_FLIGHT achievement. Only month+day are used;
   // the full DateTime lets us round-trip a year if the user enters one.
-  birthdate              DateTime?                @map("birthdate")
+  birthdate                 DateTime?                @map("birthdate")
   /// ADR 0002 phase 2 (dual-write): the birthday as a floating calendar day —
   /// no zone, it means the same day everywhere. `birthdate` keeps its old
   /// meaning (UTC midnight) until phase 6 drops it.
-  birthDay               DateTime?                @map("birth_day") @db.Date
+  birthDay                  DateTime?                @map("birth_day") @db.Date
   /// day | unknown — how much of `birthDay` the user actually gave.
-  birthPrecision         String?                  @map("birth_precision")
-  resetToken             String?                  @unique @map("reset_token")
-  resetTokenExpiry       DateTime?                @map("reset_token_expiry")
-  mustChangePassword     Boolean                  @default(false) @map("must_change_password")
-  changeToken            String?                  @unique @map("change_token")
-  changeTokenExpiry      DateTime?                @map("change_token_expiry")
+  birthPrecision            String?                  @map("birth_precision")
+  resetToken                String?                  @unique @map("reset_token")
+  resetTokenExpiry          DateTime?                @map("reset_token_expiry")
+  mustChangePassword        Boolean                  @default(false) @map("must_change_password")
+  changeToken               String?                  @unique @map("change_token")
+  changeTokenExpiry         DateTime?                @map("change_token_expiry")
   // Bumped by every password change and reset. A session carries the epoch it
   // was minted under, and `authenticate` refuses anything older — see
   // middleware/auth.ts. A counter rather than a timestamp because `iat` has
   // second resolution, which would leave a one-second window open.
-  sessionEpoch           Int                      @default(0) @map("session_epoch")
+  sessionEpoch              Int                      @default(0) @map("session_epoch")
   // Two-factor (TOTP). Opt-in per user — null everywhere means "not using it",
   // which is the state every account starts in and most stay in.
   // `twoFactorSecret` is ENCRYPTED at rest via utils/encryption.ts; the pending
   // one holds a secret that has been shown as a QR code but not yet confirmed
   // by a first correct code, so an abandoned setup never locks anyone out.
-  twoFactorSecret        String?                  @map("two_factor_secret")
-  twoFactorPendingSecret String?                  @map("two_factor_pending_secret")
-  twoFactorEnabledAt     DateTime?                @map("two_factor_enabled_at")
+  twoFactorSecret           String?                  @map("two_factor_secret")
+  twoFactorPendingSecret    String?                  @map("two_factor_pending_secret")
+  twoFactorEnabledAt        DateTime?                @map("two_factor_enabled_at")
   // Short-lived login challenge, hashed like changeToken above: the password
   // was right, the second factor is still outstanding.
-  twoFactorToken         String?                  @unique @map("two_factor_token")
-  twoFactorTokenExpiry   DateTime?                @map("two_factor_token_expiry")
-  twoFactorRecoveryCodes TwoFactorRecoveryCode[]
-  webauthnCredentials    WebAuthnCredential[]
+  twoFactorToken            String?                  @unique @map("two_factor_token")
+  twoFactorTokenExpiry      DateTime?                @map("two_factor_token_expiry")
+  twoFactorRecoveryCodes    TwoFactorRecoveryCode[]
+  webauthnCredentials       WebAuthnCredential[]
   // True for users seeded by `seedDemoUser` (e.g. local dev `admin:admin123`).
   // Used to gate quota-burning admin actions like bulk historical refresh so
   // the dev demo can't drain a real RapidAPI key by accident.
-  isDemo                 Boolean                  @default(false) @map("is_demo")
-  flights                Flight[]
-  receiptUploads         ReceiptUpload[]
-  userAchievements       UserAchievement[]
-  settings               UserSettings?
-  analyticsEvents        AnalyticsEvent[]
-  createdInvitations     Invitation[]             @relation("CreatedInvitations")
-  usedInvitations        Invitation[]             @relation("UsedInvitations")
-  trainingData           TrainingData[]
-  parserTemplates        ParserTemplate[]
-  pendingFlightUpdates   PendingFlightUpdate[]
-  pendingUpdateStats     PendingUpdateStatistics?
-  parseLogs              ParseTrainingLog[]
-  trips                  Trip[]
-  tourRoutes             TripRoute[]
-  tripExpenses           TripExpense[]
-  bookings               Booking[]
-  cruises                Cruise[]
-  railJourneys           RailJourney[]
-  busJourneys            BusJourney[]
-  ferryJourneys            FerryJourney[]
-  rentalBookings         RentalBooking[]
-  apiTokens              ApiToken[]
-  pairingCodes           PairingCode[]
-  publicShareLinks       PublicShareLink[]
-  lodgings               Lodging[]
-  lodgingStays           LodgingStay[]
-  loyaltyMemberships     LoyaltyMembership[]
-  lodgingChains          LodgingChain[]
-  places                 Place[]
-  placeExternalRefs      PlaceExternalRef[]
-  placeVisits            PlaceVisit[]
-  visitPhotoRefusals     VisitPhotoRefusal[]
-  placeLists             PlaceList[]
-  importBatches          ImportBatch[]
-  companions             Companion[]
+  isDemo                    Boolean                  @default(false) @map("is_demo")
+  flights                   Flight[]
+  receiptUploads            ReceiptUpload[]
+  userAchievements          UserAchievement[]
+  settings                  UserSettings?
+  analyticsEvents           AnalyticsEvent[]
+  createdInvitations        Invitation[]             @relation("CreatedInvitations")
+  usedInvitations           Invitation[]             @relation("UsedInvitations")
+  trainingData              TrainingData[]
+  parserTemplates           ParserTemplate[]
+  pendingFlightUpdates      PendingFlightUpdate[]
+  pendingUpdateStats        PendingUpdateStatistics?
+  parseLogs                 ParseTrainingLog[]
+  trips                     Trip[]
+  tourRoutes                TripRoute[]
+  tripExpenses              TripExpense[]
+  bookings                  Booking[]
+  cruises                   Cruise[]
+  railJourneys              RailJourney[]
+  busJourneys               BusJourney[]
+  ferryJourneys             FerryJourney[]
+  rentalBookings            RentalBooking[]
+  apiTokens                 ApiToken[]
+  pairingCodes              PairingCode[]
+  publicShareLinks          PublicShareLink[]
+  lodgings                  Lodging[]
+  lodgingStays              LodgingStay[]
+  loyaltyMemberships        LoyaltyMembership[]
+  lodgingChains             LodgingChain[]
+  places                    Place[]
+  placeExternalRefs         PlaceExternalRef[]
+  placeVisits               PlaceVisit[]
+  visitPhotoRefusals        VisitPhotoRefusal[]
+  placeLists                PlaceList[]
+  importBatches             ImportBatch[]
+  companions                Companion[]
   /// Trip sharing (design 2026-10-09): companions of OTHER users linked to
   /// this account, consents asked and given, groups started, notices.
-  linkedAsCompanion      Companion[]              @relation("CompanionLinkedUser")
-  shareConsentsAsked     ShareConsent[]           @relation("ShareConsentRequester")
-  shareConsentsGiven     ShareConsent[]           @relation("ShareConsentTarget")
-  shareGroupsCreated     TripShareGroup[]
-  shareNotices           ShareNotice[]            @relation("ShareNoticeRecipient")
-  shareNoticesActed      ShareNotice[]            @relation("ShareNoticeActor")
-  photoJourneys          PhotoJourney[]
-  tripSuggestionAnswers  TripSuggestionDecision[]
-  dataQualityFlags       DataQualityFlag[]
-  countryDays            CountryDay[]
-  dawarichStayScan       DawarichStayScan?
-  dawarichStays          DawarichStay[]
-  dawarichSweepState     DawarichSweepState?
+  linkedAsCompanion         Companion[]              @relation("CompanionLinkedUser")
+  shareConsentsAsked        ShareConsent[]           @relation("ShareConsentRequester")
+  shareConsentsGiven        ShareConsent[]           @relation("ShareConsentTarget")
+  /// Federated trip sharing (spec 2026-10-20, F-S4b): this account's pairings with people on
+  /// other servers, and the invitation codes it issued.
+  remoteShareAccounts       RemoteShareAccount[]
+  tripShareInvites          TripShareInvite[]
+  tripShareRosterConsents   TripShareRosterConsent[]
+  shareGroupsCreated        TripShareGroup[]
+  shareNotices              ShareNotice[]            @relation("ShareNoticeRecipient")
+  shareNoticesActed         ShareNotice[]            @relation("ShareNoticeActor")
+  photoJourneys             PhotoJourney[]
+  tripSuggestionAnswers     TripSuggestionDecision[]
+  dataQualityFlags          DataQualityFlag[]
+  countryDays               CountryDay[]
+  dawarichStayScan          DawarichStayScan?
+  dawarichStays             DawarichStay[]
+  dawarichSweepState        DawarichSweepState?
 
   documents Document[]
   notes     Note[]
@@ -390,29 +395,29 @@ model CountryOverride {
 /// (trip) or `year` (wrapped). Deleted with the user, with the flight or trip,
 /// when the instance switch goes off, and on every backup restore.
 model PublicShareLink {
-  id           String    @id @default(uuid())
-  userId       String    @map("user_id")
+  id                 String    @id @default(uuid())
+  userId             String    @map("user_id")
   /// flight | trip | wrapped
-  kind         String
-  flightId     String?   @map("flight_id")
-  tripId       String?   @map("trip_id")
-  year         Int?
+  kind               String
+  flightId           String?   @map("flight_id")
+  tripId             String?   @map("trip_id")
+  year               Int?
   /// The owner's selection from the kind's allow-list (`services/shareLinks/fields.ts`).
-  fields       String[]
+  fields             String[]
   /// The photos the owner saw in the preview, in order; the public proxy is keyed by index into this.
-  photoIds     String[]  @default([]) @map("photo_ids")
-  tokenHash    String    @unique @map("token_hash")
+  photoIds           String[]  @default([]) @map("photo_ids")
+  tokenHash          String    @unique @map("token_hash")
   /// The owner's chosen end, as they set it.
-  expiresAt    DateTime  @map("expires_at")
+  expiresAt          DateTime  @map("expires_at")
   /// When the link really ends: the owner's end, capped at a flight's
   /// landing-plus-grace when the link was made, and only ever LOWERED after
   /// that (a flight moved earlier). Stored, because a value recomputed from the
   /// flight's current times brought an ended link back when the flight was
   /// moved later, and kept it in the active count while hiding it from the list.
-  effectiveExpiresAt DateTime @map("effective_expires_at")
-  viewCount    Int       @default(0) @map("view_count")
-  lastViewedAt DateTime? @map("last_viewed_at")
-  createdAt    DateTime  @default(now()) @map("created_at")
+  effectiveExpiresAt DateTime  @map("effective_expires_at")
+  viewCount          Int       @default(0) @map("view_count")
+  lastViewedAt       DateTime? @map("last_viewed_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
 
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   flight Flight? @relation(fields: [flightId], references: [id], onDelete: Cascade)
@@ -1214,19 +1219,19 @@ model AdminSettings {
   llmGoogleOptIn  Boolean @default(false) @map("llm_google_opt_in")
 
   // Backup schedule configuration (overrides AUTO_BACKUP_ENABLED / BACKUP_INTERVAL env vars)
-  backupEnabled       Boolean   @default(false) @map("backup_enabled")
-  backupInterval      String    @default("weekly") @map("backup_interval")
-  backupRetentionDays Int       @default(30) @map("backup_retention_days")
-  backupCloudRetention Boolean @default(false) @map("backup_cloud_retention")
+  backupEnabled        Boolean   @default(false) @map("backup_enabled")
+  backupInterval       String    @default("weekly") @map("backup_interval")
+  backupRetentionDays  Int       @default(30) @map("backup_retention_days")
+  backupCloudRetention Boolean   @default(false) @map("backup_cloud_retention")
   /// IANA zone the backup cron expression is read in (owner decision
   /// 2026-09-26). Null = the host zone the process booted with, which is what
   /// every instance ran in before the setting existed — so an upgrade keeps
   /// its backup hour.
-  backupZone          String?   @map("backup_zone")
+  backupZone           String?   @map("backup_zone")
   /// ADR 0002 phase 3b: when the time-model backfill finished on this
   /// instance. Null = it has not run (or did not finish), and the next boot
   /// runs it; set = never again. Not a lock: the backfill is idempotent.
-  timeModelBackfillAt DateTime? @map("time_model_backfill_at")
+  timeModelBackfillAt  DateTime? @map("time_model_backfill_at")
 
   // Instance configuration — supersedes INSTANCE_NAME / MAX_USERS /
   // ALLOW_REGISTRATION / FRONTEND_URL ENV variables. ENV is read as fallback
@@ -1291,14 +1296,17 @@ model AdminSettings {
   /// Whether users may create public share links (forgejo#281, D7). OFF by
   /// default: a link hands a person's travel data to anyone holding the URL.
   /// Switching it off deletes every existing link.
-  shareLinksEnabled Boolean @default(false) @map("share_links_enabled")
+  shareLinksEnabled     Boolean @default(false) @map("share_links_enabled")
   /// Server-to-server connections (comparison rework 2026-10-16). Until then the identity came
   /// only from FEDERATION_* env vars; those still win when FEDERATION_ENABLED=1 (identity.ts).
-  federationEnabled    Boolean @default(false) @map("federation_enabled")
+  federationEnabled     Boolean @default(false) @map("federation_enabled")
   /// This server's public https origin, as peers address it.
-  federationOrigin     String? @map("federation_origin")
+  federationOrigin      String? @map("federation_origin")
   /// Ed25519 private key, PKCS#8 PEM, encrypted at application level like the push secret.
-  federationPrivateKey String? @map("federation_private_key")
+  federationPrivateKey  String? @map("federation_private_key")
+  /// Trip sharing across servers (spec 2026-10-20 F8), default off. Effective only while the
+  /// identity above loads and the beta switch is on (`services/sharing/federation/availability.ts`).
+  tripFederationEnabled Boolean @default(false) @map("trip_federation_enabled")
 
   /// The instance's STARTING POINT for "a country counts as visited from …" —
   /// one of `COUNTRY_TIERS` (shared/countryEvidence.ts). Spec §3.2: a fresh
@@ -1443,30 +1451,30 @@ model AirportSeedingStatus {
 }
 
 model Backup {
-  id              String    @id @default(uuid())
-  type            String    @default("full") // "full" | "partial"
-  status          String    @default("pending") // "pending" | "running" | "completed" | "failed"
-  backupPath      String    @map("backup_path") // Path to backup archive
-  dbBackupPath    String?   @map("db_backup_path") // Path to database dump
-  filesBackupPath String?   @map("files_backup_path") // Path to files archive
-  size            BigInt    @default(0) // Size in bytes
-  retentionDays   Int       @default(30) @map("retention_days")
-  startedAt       DateTime? @map("started_at")
-  completedAt     DateTime? @map("completed_at")
-  errorMessage    String?   @map("error_message")
+  id               String    @id @default(uuid())
+  type             String    @default("full") // "full" | "partial"
+  status           String    @default("pending") // "pending" | "running" | "completed" | "failed"
+  backupPath       String    @map("backup_path") // Path to backup archive
+  dbBackupPath     String?   @map("db_backup_path") // Path to database dump
+  filesBackupPath  String?   @map("files_backup_path") // Path to files archive
+  size             BigInt    @default(0) // Size in bytes
+  retentionDays    Int       @default(30) @map("retention_days")
+  startedAt        DateTime? @map("started_at")
+  completedAt      DateTime? @map("completed_at")
+  errorMessage     String?   @map("error_message")
   /// Why a failed backup failed, as a stable code the admin page words
   /// (services/backup/backupFailure.ts). The message is English for the log;
   /// the row showed no reason at all once the transient toast was gone (D12).
-  errorCode       String?   @map("error_code")
-  metadata        Json? // JSON: userCount, flightCount, etc.
-  syncedToCloud   Boolean   @default(false) @map("synced_to_cloud")
-  cloudSyncAt     DateTime? @map("cloud_sync_at")
-  cloudTarget     String? @map("cloud_target") // Hash of endpoint, account and directory at upload
-  cloudPath       String? @map("cloud_path") // Exact object uploaded, never a directory
-  cloudDeleteError String? @map("cloud_delete_error")
-  cloudSyncError  String?   @map("cloud_sync_error") // Why the last upload attempt failed; null once one succeeds
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  errorCode        String?   @map("error_code")
+  metadata         Json? // JSON: userCount, flightCount, etc.
+  syncedToCloud    Boolean   @default(false) @map("synced_to_cloud")
+  cloudSyncAt      DateTime? @map("cloud_sync_at")
+  cloudTarget      String?   @map("cloud_target") // Hash of endpoint, account and directory at upload
+  cloudPath        String?   @map("cloud_path") // Exact object uploaded, never a directory
+  cloudDeleteError String?   @map("cloud_delete_error")
+  cloudSyncError   String?   @map("cloud_sync_error") // Why the last upload attempt failed; null once one succeeds
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
   @@index([status])
   @@index([type])
@@ -1852,14 +1860,14 @@ model Trip {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  shareGroup       TripShareGroup?    @relation(fields: [shareGroupId], references: [id], onDelete: SetNull)
+  user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shareGroup       TripShareGroup?      @relation(fields: [shareGroupId], references: [id], onDelete: SetNull)
   flights          Flight[]
   bookings         Booking[]
   cruises          Cruise[]
   railJourneys     RailJourney[]
   busJourneys      BusJourney[]
-  ferryJourneys      FerryJourney[]
+  ferryJourneys    FerryJourney[]
   rentalBookings   RentalBooking[]
   stops            TripStop[]
   routes           TripRoute[]
@@ -1873,10 +1881,11 @@ model Trip {
   photoJourneys    PhotoJourney[]
   dawarichStays    DawarichStay[]
   publicShareLinks PublicShareLink[]
+  tripShareInvites TripShareInvite[]
   recordingBatches TripRecordingBatch[]
   mergedFrom       MergedTripRedirect[]
 
-  documents Document[]
+  documents  Document[]
   travelPlan TravelPlan?
 
   @@index([userId])
@@ -1968,53 +1977,53 @@ model ImmichImportJob {
 }
 
 model TripStop {
-  countryVisitKind String @default("visit") @map("country_visit_kind")
-  id            String    @id @default(uuid())
+  countryVisitKind String    @default("visit") @map("country_visit_kind")
+  id               String    @id @default(uuid())
   /// The trip this stop sits on, or NULL for a stop that exists only as a
   /// vertex of a standalone tour. A stop always has one or the other —
   /// `trip_stops_trip_or_route` in the migration refuses a row with
   /// neither, because such a row would belong to nobody.
-  tripId        String?   @map("trip_id")
-  orderIdx      Int       @default(0) @map("order_idx")
+  tripId           String?   @map("trip_id")
+  orderIdx         Int       @default(0) @map("order_idx")
   // Free-form DomainKey-style label so the timeline picks the right
   // colour ("poi", "hotel", "train", "hike", …). Null means "generic".
-  domain        String?
+  domain           String?
   // Optional id of an existing flight/cruise/etc. that this stop wraps.
-  sourceId      String?   @map("source_id")
-  title         String
-  description   String?
-  startDate     DateTime? @map("start_date")
-  endDate       DateTime? @map("end_date")
-  lat           Float?
-  lon           Float?
+  sourceId         String?   @map("source_id")
+  title            String
+  description      String?
+  startDate        DateTime? @map("start_date")
+  endDate          DateTime? @map("end_date")
+  lat              Float?
+  lon              Float?
   /// ADR 0002 phase 2 dual-write: `startDate`/`endDate` keep their old
   /// meaning (the stop's wall clock stored as if it were UTC); these hold the
   /// real instants, the zone of the stop (its coordinates or the entry it
   /// wraps) and the precision. Null zone + precision `unknown` = no place to
   /// read a clock at.
-  startUtc      DateTime? @map("start_utc")
-  endUtc        DateTime? @map("end_utc")
-  stopZone      String?   @map("stop_zone")
-  precision     String?
-  notes         String?
+  startUtc         DateTime? @map("start_utc")
+  endUtc           DateTime? @map("end_utc")
+  stopZone         String?   @map("stop_zone")
+  precision        String?
+  notes            String?
   /// Route membership. NULL means what every stop is today: a timeline
   /// point that produces no kilometres. Set means it is a vertex of that
   /// route section. Nothing derives this — see the migration note.
-  routeId       String?   @map("route_id")
+  routeId          String?   @map("route_id")
   /// Position WITHIN the route, 0-based and contiguous. Written only by
   /// PUT /trips/:id/routes/:routeId/stops, never by a client.
-  routeOrderIdx Int?      @map("route_order_idx")
+  routeOrderIdx    Int?      @map("route_order_idx")
   /// Roadtrip station: the stay slept in here. SetNull — deleting the stay
   /// keeps the station, which then reads as a free night (`overnight` stays
   /// true), because the night still happened. The stay never points back:
   /// the stay owns the night (design 2026-09-24 §2).
-  lodgingStayId String?   @map("lodging_stay_id")
+  lodgingStayId    String?   @map("lodging_stay_id")
   /// Roadtrip station: a night was spent here. With `lodgingStayId` it is a
   /// "stay" station; without it a "free" one (a pitch with no accommodation
   /// record); false is a pass-through. Derived, never stored as an enum — a
   /// stored enum plus the SetNull above would need a CHECK that the cascade
   /// itself then violates (the trap migration 20260921195505 met).
-  overnight     Boolean   @default(false)
+  overnight        Boolean   @default(false)
   /// A route correction ("Streckenkorrektur", tester 2026-09-26): a point
   /// with no name of its own that exists only to bend the route between its
   /// neighbours. Legs run through it like through any vertex, so distances
@@ -2022,21 +2031,21 @@ model TripStop {
   /// count, countries, nights, days away, achievements, the phone's list, the
   /// dashboard markers) leaves it out. Never overnight and never a stay —
   /// `trip_stops_via_point_passes` holds that in the database.
-  viaPoint      Boolean   @default(false) @map("via_point")
+  viaPoint         Boolean   @default(false) @map("via_point")
   /// Roadtrip pass-through: the user's own place (POI) it passed, as a stay
   /// station names its stay (tester 2026-09-26). SetNull — deleting the
   /// place leaves the pass-through standing. Only on a pass-through:
   /// `trip_stops_place_on_pass` holds that in the database.
-  placeId       String?   @map("place_id")
+  placeId          String?   @map("place_id")
   /// Trip sharing: the same key on every member's copy of this stop. A stop
   /// has no user column, so the key is unique per TRIP — which is per user,
   /// since a trip has exactly one owner.
-  shareKey      String?   @map("share_key")
+  shareKey         String?   @map("share_key")
   /// The import that wrote this stop (Takeout "trip stop" rows), so undoing
   /// the import takes it back. Null for every stop typed or planned by hand.
-  importBatchId String?   @map("import_batch_id")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  importBatchId    String?   @map("import_batch_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
   trip            Trip?          @relation(fields: [tripId], references: [id], onDelete: Cascade)
   /// Cascade, and the delete handler does the other half.
@@ -2168,10 +2177,10 @@ model TripRoute {
 /// neighbours' stored geometry untouched.
 model TripRouteLeg {
   ferryJourney FerryJourney?
-  id         String @id @default(uuid())
-  routeId    String @map("route_id")
-  fromStopId String @map("from_stop_id")
-  toStopId   String @map("to_stop_id")
+  id           String        @id @default(uuid())
+  routeId      String        @map("route_id")
+  fromStopId   String        @map("from_stop_id")
+  toStopId     String        @map("to_stop_id")
 
   distanceKm Float  @map("distance_km")
   /// straight | drawn (phase 1). routed | track arrive in phase 3.
@@ -2439,14 +2448,14 @@ model Booking {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trip         Trip?         @relation(fields: [tripId], references: [id], onDelete: SetNull)
-  flights      Flight[]
-  cruises      Cruise[]
-  railJourneys RailJourney[]
-  busJourneys  BusJourney[]
-  ferryJourneys  FerryJourney[]
-  lodgingStays LodgingStay[]
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip          Trip?          @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  flights       Flight[]
+  cruises       Cruise[]
+  railJourneys  RailJourney[]
+  busJourneys   BusJourney[]
+  ferryJourneys FerryJourney[]
+  lodgingStays  LodgingStay[]
 
   @@index([userId])
   @@index([userId, createdAt])
@@ -3669,16 +3678,16 @@ model ImportBatch {
   fileName  String?  @map("file_name")
   createdAt DateTime @default(now()) @map("created_at")
 
-  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lodgings Lodging[]
-  stays    LodgingStay[]
-  flights  Flight[]
-  cruises  Cruise[]
-  rail     RailJourney[]
-  bus      BusJourney[]
-  ferry      FerryJourney[]
-  rentals  RentalBooking[]
-  places   Place[]
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lodgings  Lodging[]
+  stays     LodgingStay[]
+  flights   Flight[]
+  cruises   Cruise[]
+  rail      RailJourney[]
+  bus       BusJourney[]
+  ferry     FerryJourney[]
+  rentals   RentalBooking[]
+  places    Place[]
   tripStops TripStop[]
 
   @@index([userId])
@@ -3731,7 +3740,7 @@ model Companion {
   cruises      CruiseCompanion[]
   rail         RailJourneyCompanion[]
   bus          BusJourneyCompanion[]
-  ferry          FerryJourneyCompanion[]
+  ferry        FerryJourneyCompanion[]
   rentals      RentalBookingCompanion[]
   /// Expenses this companion paid (forgejo#150).
   expensesPaid TripExpense[]
@@ -4000,7 +4009,7 @@ model Document {
   railJourneyId   String? @map("rail_journey_id")
   rentalBookingId String? @map("rental_booking_id")
   busJourneyId    String? @map("bus_journey_id")
-  ferryJourneyId    String? @map("ferry_journey_id")
+  ferryJourneyId  String? @map("ferry_journey_id")
   /// An expense's receipt (forgejo#150).
   tripExpenseId   String? @map("trip_expense_id")
   /// What a rental's evidence shows (forgejo#239): pickup | return | damage |
@@ -4032,7 +4041,7 @@ model Document {
   railJourney   RailJourney?   @relation(fields: [railJourneyId], references: [id], onDelete: Cascade)
   rentalBooking RentalBooking? @relation(fields: [rentalBookingId], references: [id], onDelete: Cascade)
   busJourney    BusJourney?    @relation(fields: [busJourneyId], references: [id], onDelete: Cascade)
-  ferryJourney    FerryJourney?    @relation(fields: [ferryJourneyId], references: [id], onDelete: Cascade)
+  ferryJourney  FerryJourney?  @relation(fields: [ferryJourneyId], references: [id], onDelete: Cascade)
   tripExpense   TripExpense?   @relation(fields: [tripExpenseId], references: [id], onDelete: Cascade)
 
   @@index([userId, sha256])
@@ -4644,68 +4653,300 @@ model SyncState {
 /// `requesterId` to push trips into the target's account. Asked by the
 /// requester, answered by the target; either side may withdraw. One row per
 /// ordered pair — a new request after a decline or withdrawal reopens it.
+/// Each side of the pair is exactly one of a local user or a `RemoteShareAccount`, and at least
+/// one side is local (spec 2026-10-20 F3) — CHECK share_consents_party_check.
 model ShareConsent {
-  id          String    @id @default(uuid())
-  requesterId String    @map("requester_id")
-  targetId    String    @map("target_id")
+  id                String    @id @default(uuid())
+  requesterId       String?   @map("requester_id")
+  targetId          String?   @map("target_id")
+  remoteRequesterId String?   @map("remote_requester_id")
+  remoteTargetId    String?   @map("remote_target_id")
   /// pending | accepted | declined | withdrawn — CHECK share_consents_status_check, schemas/sharing.ts
-  status      String    @default("pending")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  decidedAt   DateTime? @map("decided_at")
+  status            String    @default("pending")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  decidedAt         DateTime? @map("decided_at")
 
-  requester User @relation("ShareConsentRequester", fields: [requesterId], references: [id], onDelete: Cascade)
-  target    User @relation("ShareConsentTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  requester       User?               @relation("ShareConsentRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  target          User?               @relation("ShareConsentTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  remoteRequester RemoteShareAccount? @relation("ShareConsentRemoteRequester", fields: [remoteRequesterId], references: [id], onDelete: Cascade)
+  remoteTarget    RemoteShareAccount? @relation("ShareConsentRemoteTarget", fields: [remoteTargetId], references: [id], onDelete: Cascade)
 
   @@unique([requesterId, targetId])
+  @@unique([requesterId, remoteTargetId])
+  @@unique([remoteRequesterId, targetId])
   @@index([targetId, status])
+  @@index([remoteTargetId])
   @@map("share_consents")
+}
+
+/// A person on another TravStats server, as one pairing with a local account (spec 2026-10-20
+/// F2). Deliberately NOT a `users` row and NOT a `LeaderboardRemote`: a leaderboard friendship is
+/// not trip consent. Neither channel is an id of the other server: both are random handshake
+/// entropy, so a remote id can never resolve to a local user or trip.
+model RemoteShareAccount {
+  id           String   @id @default(uuid())
+  /// The local side of the pairing.
+  userId       String   @map("user_id")
+  origin       String
+  /// How the other server names its user in this pairing (minted there).
+  channel      String
+  /// How this server names `userId` towards that server (minted here).
+  localChannel String   @map("local_channel")
+  username     String
+  displayName  String   @map("display_name")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  consentsRequested ShareConsent[]          @relation("ShareConsentRemoteRequester")
+  consentsTargeted  ShareConsent[]          @relation("ShareConsentRemoteTarget")
+  memberships       TripShareRemoteMember[]
+  /// Notices about a change this person made on their server (F-S4d).
+  noticesActed      ShareNotice[]           @relation("ShareNoticeRemoteActor")
+
+  @@unique([origin, channel])
+  @@unique([origin, localChannel])
+  @@index([userId])
+  @@map("remote_share_accounts")
+}
+
+/// A single-use invitation to share trips across servers (spec 2026-10-20 F1), bound to the user
+/// who issued it. Only the SHA-256 of the secret is stored; the code is shown once.
+model TripShareInvite {
+  id        String    @id @default(uuid())
+  hash      String    @unique
+  userId    String    @map("user_id")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  /// Set for an invitation made on a trip page (F-S4c): claiming it also offers that trip.
+  tripId    String?   @map("trip_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip Trip? @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tripId])
+  @@map("trip_share_invites")
 }
 
 /// Joins every member's own copy of one shared trip (decision 1). Holds no
 /// facts itself; the trips and their entries' `shareKey`s do.
 model TripShareGroup {
-  id          String   @id @default(uuid())
+  id           String   @id @default(uuid())
   /// Who started it. SetNull: the creator's account going away must not
   /// dissolve the other members' group.
-  createdById String?  @map("created_by_id")
-  createdAt   DateTime @default(now()) @map("created_at")
+  createdById  String?  @map("created_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  /// The group's id on the wire (spec 2026-10-20 F3): random, the same on every server holding
+  /// the group. Set once the group is offered to someone on another server.
+  federatedRef String?  @map("federated_ref")
+  /// The group's home server (F5); null while this server is home. An incoming message is
+  /// resolved to a group by (sending origin, federatedRef), never by the ref alone.
+  homeOrigin   String?  @map("home_origin")
 
-  createdBy User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
-  trips     Trip[]
-  notices   ShareNotice[]
+  createdBy     User?                    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  trips         Trip[]
+  notices       ShareNotice[]
+  remoteMembers TripShareRemoteMember[]
+  streams       TripSharePeerStream[]
+  outbox        TripShareOutbox[]
+  rosterEntries TripShareRosterEntry[]
+  rosterConsent TripShareRosterConsent[]
+  entryAuthors  TripShareEntryAuthor[]
 
+  @@unique([federatedRef], map: "trip_share_groups_home_ref_key", where: raw("home_origin IS NULL"))
+  @@unique([homeOrigin, federatedRef])
   @@index([createdById])
   @@map("trip_share_groups")
+}
+
+/// A person on another server as a member of a share group (spec 2026-10-20 F3, F-S4c), through
+/// the local user's pairing with them (`remote.userId` is the local side). On the home server it
+/// is someone a trip was offered to; on their server it is the home member who offered it, and
+/// `offer` holds what was offered until the person answers.
+model TripShareRemoteMember {
+  id          String   @id @default(uuid())
+  groupId     String   @map("group_id")
+  remoteId    String   @map("remote_id")
+  /// invited | active | declined | unreachable | suspended | left | revoked — CHECK
+  /// trip_share_remote_members_state_check, schemas/sharingRemote.ts
+  state       String   @default("invited")
+  /// Why the state is what it is, or what last went wrong (`entries-undelivered`); null when fine.
+  stateReason String?  @map("state_reason")
+  stateSince  DateTime @default(now()) @map("state_since")
+  /// Receiving side only: the offer as it arrived (trip facts, roster, counts); null once answered.
+  offer       Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  /// The remote person's id in the group's roster (F-S4e): minted here at the home, as the home
+  /// named them on a spoke. Random — never an account id of either server.
+  rosterRef   String   @default(uuid()) @map("roster_ref")
+  /// Spoke only: how the home names this pairing's LOCAL person in its roster; null at the home.
+  localRef    String?  @map("local_ref")
+
+  group  TripShareGroup     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  remote RemoteShareAccount @relation(fields: [remoteId], references: [id], onDelete: Cascade)
+  outbox TripShareOutbox[]
+
+  @@unique([groupId, remoteId])
+  @@index([remoteId])
+  @@map("trip_share_remote_members")
+}
+
+/// One ordered message stream of a group with one peer server (spec §4 "seq per (sender origin,
+/// groupRef)"): what this server last sent there and last accepted from there.
+/// A spoke's copy of its group's roster (spec 2026-10-20 §4 `roster`, F-S4e): who is on the trip
+/// across all servers, as the home names them. Kept after someone leaves (`present` false), so a
+/// change they made earlier still has a name.
+model TripShareRosterEntry {
+  groupId     String   @map("group_id")
+  ref         String
+  displayName String   @map("display_name")
+  origin      String
+  present     Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  group TripShareGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, ref])
+  @@map("trip_share_roster_entries")
+}
+
+/// A member's yes (or no) to a person on another server who is on the trip with them but is not
+/// their own pairing (F-S4e): that person's changes reach the member's copy only after a yes. On
+/// every server that holds a member's copy. accepted | declined — CHECK
+/// trip_share_roster_consents_status_check; no row means not asked yet.
+model TripShareRosterConsent {
+  groupId   String   @map("group_id")
+  userId    String   @map("user_id")
+  ref       String
+  status    String
+  decidedAt DateTime @default(now()) @map("decided_at")
+
+  group TripShareGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, userId, ref])
+  @@index([userId])
+  @@map("trip_share_roster_consents")
+}
+
+/// The home's record of who brought each entry into a group shared across servers (F-S4e review),
+/// by the entry's share key (`entry_key`: not a `share_key` column — this table is no shareable type).
+/// a resend of the trip after a restore names each entry's author by roster ref, so a spoke copies
+/// only what its person said yes to. An entry without a row is the home member's own.
+model TripShareEntryAuthor {
+  groupId   String   @map("group_id")
+  shareKey  String   @map("entry_key")
+  authorRef String   @map("author_ref")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  group TripShareGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, shareKey])
+  @@map("trip_share_entry_authors")
+}
+
+model TripSharePeerStream {
+  groupId         String @map("group_id")
+  peerOrigin      String @map("peer_origin")
+  lastSentSeq     Int    @default(0) @map("last_sent_seq")
+  lastReceivedSeq Int    @default(0) @map("last_received_seq")
+
+  group TripShareGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, peerOrigin])
+  @@map("trip_share_peer_streams")
+}
+
+/// Messages accepted from peers (spec §4 idempotency): a repeat of a message id answers the
+/// reply it got the first time. Pruned after 30 days.
+model TripShareInbound {
+  peerOrigin String   @map("peer_origin")
+  messageId  String   @map("message_id")
+  groupRef   String?  @map("group_ref")
+  reply      Json
+  receivedAt DateTime @default(now()) @map("received_at")
+
+  @@id([peerOrigin, messageId])
+  @@index([receivedAt])
+  @@map("trip_share_inbound")
 }
 
 /// The fourth inbox source (beside pending updates, data-quality flags and
 /// trip suggestions): what another member did to a shared trip. S1 writes
 /// `shared` and `left`; S2 adds created/updated/deleted with before/after.
-model ShareNotice {
-  id         String    @id @default(uuid())
-  /// The recipient.
-  userId     String    @map("user_id")
-  groupId    String?   @map("group_id")
-  actorId    String?   @map("actor_id")
-  /// shared | created | updated | deleted | left — CHECK share_notices_kind_check, schemas/sharing.ts
-  kind       String
-  /// trip | flight | lodgingStay | cruise | rail | bus | ferry | rental | stop — services/sharing/shareTypes.ts; CHECK share_notices_entity_type_check
-  entityType String?   @map("entity_type")
-  /// The entry's shareKey; for `trip` the RECIPIENT's own trip id.
-  entityKey  String?   @map("entity_key")
-  before     Json?
-  after      Json?
-  createdAt  DateTime  @default(now()) @map("created_at")
-  readAt     DateTime? @map("read_at")
-  undoneAt   DateTime? @map("undone_at")
+/// Messages waiting for a person on another server (spec 2026-10-20 F7, phase F-S4d). Written in
+/// the same transaction as the local write they describe, so a write and its message commit
+/// together; `jobs/tripShareDeliveryScheduler.ts` sends them per (group, peer) strictly in
+/// `position` order, numbered on `TripSharePeerStream` at send time.
+model TripShareOutbox {
+  /// The message id on the wire: the same on every retry, so the receiver answers a repeat from
+  /// its inbound table instead of applying it twice.
+  id            String    @id @default(uuid())
+  /// Send order within (group, peer).
+  position      Int       @unique @default(autoincrement())
+  groupId       String    @map("group_id")
+  /// The person this message is for (one pairing); their server fans out to its own members.
+  memberId      String    @map("member_id")
+  peerOrigin    String    @map("peer_origin")
+  /// entries | fact-update | entry-create | entry-removed — CHECK trip_share_outbox_kind_check
+  kind          String
+  /// The message without its header (id, seq, time are added when it is sent).
+  payload       Json
+  /// What the message is about ("TP571 FRA → LIS"), for the sentence a rejection reads as.
+  label         String?
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime  @default(now()) @map("next_attempt_at")
+  /// Since when delivery of this message has failed; null until the first failure.
+  failingSince  DateTime? @map("failing_since")
+  /// The transport failure kind of the last attempt (`unreachable`, `remote-absent`, …).
+  lastError     String?   @map("last_error")
+  /// Set when the peer refused the message for good; it is kept, not retried.
+  parkedAt      DateTime? @map("parked_at")
+  /// `schema:<field>`, `not-member`, `consent` — what the peer answered.
+  parkedReason  String?   @map("parked_reason")
+  createdAt     DateTime  @default(now()) @map("created_at")
 
-  user  User            @relation("ShareNoticeRecipient", fields: [userId], references: [id], onDelete: Cascade)
-  actor User?           @relation("ShareNoticeActor", fields: [actorId], references: [id], onDelete: SetNull)
-  group TripShareGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  group  TripShareGroup        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  member TripShareRemoteMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, peerOrigin, position])
+  @@index([memberId])
+  @@index([nextAttemptAt])
+  @@map("trip_share_outbox")
+}
+
+model ShareNotice {
+  id            String    @id @default(uuid())
+  /// The recipient.
+  userId        String    @map("user_id")
+  groupId       String?   @map("group_id")
+  actorId       String?   @map("actor_id")
+  /// A person on another server who made the change (F-S4d); at most one of the two actors is
+  /// set (CHECK share_notices_actor_check). The pairing it came through, so SetNull.
+  remoteActorId String?   @map("remote_actor_id")
+  /// shared | created | updated | deleted | left | conflict — CHECK share_notices_kind_check, schemas/sharing.ts
+  kind          String
+  /// trip | flight | lodgingStay | cruise | rail | bus | ferry | rental | stop — services/sharing/shareTypes.ts; CHECK share_notices_entity_type_check
+  entityType    String?   @map("entity_type")
+  /// The entry's shareKey; for `trip` the RECIPIENT's own trip id.
+  entityKey     String?   @map("entity_key")
+  before        Json?
+  after         Json?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  readAt        DateTime? @map("read_at")
+  undoneAt      DateTime? @map("undone_at")
+
+  user        User                @relation("ShareNoticeRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor       User?               @relation("ShareNoticeActor", fields: [actorId], references: [id], onDelete: SetNull)
+  remoteActor RemoteShareAccount? @relation("ShareNoticeRemoteActor", fields: [remoteActorId], references: [id], onDelete: SetNull)
+  group       TripShareGroup?     @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
   @@index([userId, readAt])
   @@index([groupId])
   @@index([actorId])
+  @@index([remoteActorId])
   @@map("share_notices")
 }
 
@@ -4764,30 +5005,29 @@ model Note {
   @@map("notes")
 }
 
-
 model FerryJourney {
-  roadtripLegId String? @unique @map("roadtrip_leg_id")
-  roadtripLeg TripRouteLeg? @relation(fields: [roadtripLegId], references: [id], onDelete: SetNull)
+  roadtripLegId     String?       @unique @map("roadtrip_leg_id")
+  roadtripLeg       TripRouteLeg? @relation(fields: [roadtripLegId], references: [id], onDelete: SetNull)
   /// The linked leg's routing as it was before linking (mode, source,
   /// confidence, waypoints, drivingMinutes, distanceKm). Linking makes the leg
   /// a straight ferry leg; unlinking or relinking restores it from here.
-  roadtripLegBefore Json? @map("roadtrip_leg_before")
-  id     String @id @default(uuid())
-  userId String @map("user_id")
+  roadtripLegBefore Json?         @map("roadtrip_leg_before")
+  id                String        @id @default(uuid())
+  userId            String        @map("user_id")
 
-  operator String?
-  vesselName String? @map("vessel_name")
+  operator            String?
+  vesselName          String? @map("vessel_name")
   /// The MMSI the live position reads (9 digits). Bound on the first answered
   /// lookup so a crossing is not a free AIS proxy for any vessel.
-  vesselMmsi String? @map("vessel_mmsi")
-  vehicleType String? @map("vehicle_type")
+  vesselMmsi          String? @map("vessel_mmsi")
+  vehicleType         String? @map("vehicle_type")
   vehicleRegistration String? @map("vehicle_registration")
-  vehicleLengthM Float? @map("vehicle_length_m")
-  vehicleWidthM Float? @map("vehicle_width_m")
-  vehicleHeightM Float? @map("vehicle_height_m")
-  passengerCount Int? @map("passenger_count")
-  cabinType String? @map("cabin_type")
-  ticketReference String? @map("ticket_reference")
+  vehicleLengthM      Float?  @map("vehicle_length_m")
+  vehicleWidthM       Float?  @map("vehicle_width_m")
+  vehicleHeightM      Float?  @map("vehicle_height_m")
+  passengerCount      Int?    @map("passenger_count")
+  cabinType           String? @map("cabin_type")
+  ticketReference     String? @map("ticket_reference")
 
   depStationName String  @map("dep_station_name")
   depAddress     String? @map("dep_address")
@@ -4843,10 +5083,10 @@ model FerryJourney {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trip           Trip?                 @relation(fields: [tripId], references: [id], onDelete: SetNull)
-  booking        Booking?              @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  importBatch    ImportBatch?          @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip           Trip?                   @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  booking        Booking?                @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  importBatch    ImportBatch?            @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
   companionLinks FerryJourneyCompanion[]
   documents      Document[]
 
@@ -4862,11 +5102,11 @@ model FerryJourney {
 
 model FerryJourneyCompanion {
   ferryJourneyId String @map("ferry_journey_id")
-  companionId  String @map("companion_id")
-  position     Int
+  companionId    String @map("companion_id")
+  position       Int
 
   ferryJourney FerryJourney @relation(fields: [ferryJourneyId], references: [id], onDelete: Cascade)
-  companion  Companion  @relation(fields: [companionId], references: [id], onDelete: Cascade)
+  companion    Companion    @relation(fields: [companionId], references: [id], onDelete: Cascade)
 
   @@id([ferryJourneyId, companionId])
   @@index([companionId])
@@ -4875,53 +5115,55 @@ model FerryJourneyCompanion {
 
 /// Explicitly opted-in location-history suggestions, separate from Immich and country days.
 model DawarichStayScan {
-  marketEnabled Boolean @default(false) @map("market_enabled")
-  venueEnabled Boolean @default(false) @map("venue_enabled")
-  marketResult Json? @map("market_result")
-  userId String @id @map("user_id")
-  enabled Boolean @default(false)
-  startedAt DateTime? @map("started_at")
-  finishedAt DateTime? @map("finished_at")
-  leaseUntil DateTime? @map("lease_until")
-  result String?
-  error String?
-  dataThrough DateTime? @map("data_through")
-  windowStart DateTime? @map("window_start")
-  windowEnd DateTime? @map("window_end")
-  pointCount Int @default(0) @map("point_count")
-  createdCount Int @default(0) @map("created_count")
-  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  marketEnabled Boolean   @default(false) @map("market_enabled")
+  venueEnabled  Boolean   @default(false) @map("venue_enabled")
+  marketResult  Json?     @map("market_result")
+  userId        String    @id @map("user_id")
+  enabled       Boolean   @default(false)
+  startedAt     DateTime? @map("started_at")
+  finishedAt    DateTime? @map("finished_at")
+  leaseUntil    DateTime? @map("lease_until")
+  result        String?
+  error         String?
+  dataThrough   DateTime? @map("data_through")
+  windowStart   DateTime? @map("window_start")
+  windowEnd     DateTime? @map("window_end")
+  pointCount    Int       @default(0) @map("point_count")
+  createdCount  Int       @default(0) @map("created_count")
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("dawarich_stay_scans")
 }
 
 model DawarichStay {
-  id String @id @default(uuid())
-  userId String @map("user_id")
-  fingerprint String
-  sourceStartAt DateTime @map("source_start_at")
-  sourceEndAt DateTime @map("source_end_at")
-  sourceLat Float @map("source_lat")
-  sourceLon Float @map("source_lon")
-  status String @default("pending")
-  startAt DateTime @map("start_at")
-  endAt DateTime @map("end_at")
-  lat Float
-  lon Float
-  zone String
-  pointCount Int @map("point_count")
-  evidence Json
-  placeId String? @map("place_id")
-  tripId String? @map("trip_id")
-  name String?
-  visitId String? @map("visit_id")
-  detectedAt DateTime @default(now()) @map("detected_at")
-  resolvedAt DateTime? @map("resolved_at")
-  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
-  visit PlaceVisit? @relation(fields:[visitId], references:[id], onDelete:SetNull)
+  id            String      @id @default(uuid())
+  userId        String      @map("user_id")
+  fingerprint   String
+  sourceStartAt DateTime    @map("source_start_at")
+  sourceEndAt   DateTime    @map("source_end_at")
+  sourceLat     Float       @map("source_lat")
+  sourceLon     Float       @map("source_lon")
+  status        String      @default("pending")
+  startAt       DateTime    @map("start_at")
+  endAt         DateTime    @map("end_at")
+  lat           Float
+  lon           Float
+  zone          String
+  pointCount    Int         @map("point_count")
+  evidence      Json
+  placeId       String?     @map("place_id")
+  tripId        String?     @map("trip_id")
+  name          String?
+  visitId       String?     @map("visit_id")
+  detectedAt    DateTime    @default(now()) @map("detected_at")
+  resolvedAt    DateTime?   @map("resolved_at")
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  visit         PlaceVisit? @relation(fields: [visitId], references: [id], onDelete: SetNull)
   /// A finding outlives the place or trip it named: it keeps its evidence and
   /// loses only the link (a merge repoints it first, `placeMerge.ts`).
-  place Place? @relation(fields:[placeId], references:[id], onDelete:SetNull)
-  trip Trip? @relation(fields:[tripId], references:[id], onDelete:SetNull)
+  place         Place?      @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  trip          Trip?       @relation(fields: [tripId], references: [id], onDelete: SetNull)
+
   @@unique([userId, fingerprint])
   @@index([userId, status, startAt])
   @@index([visitId])
@@ -4930,149 +5172,166 @@ model DawarichStay {
   @@map("dawarich_stays")
 }
 
-
 /// Public OSM geometry cache. Contains no user ids, timestamps or location tracks.
 model MarketCatalogTile {
-  key String @id
-  payload Json
+  key       String   @id
+  payload   Json
   fetchedAt DateTime @map("fetched_at")
+
   @@index([fetchedAt])
   @@map("market_catalog_tiles")
 }
 
 /// Cross-process budget/lease for public catalog queries across all accounts.
 model MarketCatalogState {
-  id String @id
-  day DateTime @db.Date
-  requests Int @default(0)
-  bytes Int @default(0)
-  leaseUntil DateTime? @map("lease_until")
+  id           String    @id
+  day          DateTime  @db.Date
+  requests     Int       @default(0)
+  bytes        Int       @default(0)
+  leaseUntil   DateTime? @map("lease_until")
   backoffUntil DateTime? @map("backoff_until")
+
   @@map("market_catalog_state")
 }
 
 model ComparisonPeer {
-  origin String @id
-  publicKey String @map("public_key")
-  enabled Boolean @default(true)
-  verifiedAt DateTime? @map("verified_at")
+  origin              String    @id
+  publicKey           String    @map("public_key")
+  enabled             Boolean   @default(true)
+  verifiedAt          DateTime? @map("verified_at")
   /// Leaderboard snapshot versions the peer advertised in its last ping; [] = predates them.
-  leaderboardVersions Int[] @default([]) @map("leaderboard_versions")
+  leaderboardVersions Int[]     @default([]) @map("leaderboard_versions")
+
   @@map("comparison_peers")
 }
+
 model ComparisonInvite {
-  hash String @id
-  userId String @map("user_id")
-  expiresAt DateTime @map("expires_at")
-  usedAt DateTime? @map("used_at")
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hash      String    @id
+  userId    String    @map("user_id")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@map("comparison_invites")
 }
+
 model ComparisonLink {
-  id String @id @default(uuid())
-  channel String
-  userId String @map("user_id")
-  origin String
-  label String
-  confirmed Boolean @default(false)
-  remoteConfirmed Boolean @default(false) @map("remote_confirmed")
-  revoked Boolean @default(false)
-  createdAt DateTime @default(now()) @map("created_at")
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  grants ComparisonGrant[]
-  publications ComparisonPublication[]
+  id              String                  @id @default(uuid())
+  channel         String
+  userId          String                  @map("user_id")
+  origin          String
+  label           String
+  confirmed       Boolean                 @default(false)
+  remoteConfirmed Boolean                 @default(false) @map("remote_confirmed")
+  revoked         Boolean                 @default(false)
+  createdAt       DateTime                @default(now()) @map("created_at")
+  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grants          ComparisonGrant[]
+  publications    ComparisonPublication[]
+
   @@unique([userId, channel])
   @@index([channel, origin])
   @@map("comparison_links")
 }
+
 model ComparisonGrant {
-  id String @id @default(uuid())
-  linkId String @map("link_id")
-  audience String @default("")
-  scope Json
-  revision Int @default(1)
-  active Boolean @default(true)
-  expiresAt DateTime? @map("expires_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  link ComparisonLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  id        String         @id @default(uuid())
+  linkId    String         @map("link_id")
+  audience  String         @default("")
+  scope     Json
+  revision  Int            @default(1)
+  active    Boolean        @default(true)
+  expiresAt DateTime?      @map("expires_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+  link      ComparisonLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+
   @@unique([linkId, audience])
   @@map("comparison_grants")
 }
+
 model ComparisonAudit {
-  id String @id @default(uuid())
-  ownerId String @map("owner_id")
-  channel String
-  audience String
-  revision Int
+  id        String   @id @default(uuid())
+  ownerId   String   @map("owner_id")
+  channel   String
+  audience  String
+  revision  Int
   operation String
   createdAt DateTime @default(now()) @map("created_at")
-  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
   @@index([ownerId, createdAt])
   @@map("comparison_audit")
 }
+
 model ComparisonNonce {
-  id String @id
+  id        String   @id
   expiresAt DateTime @map("expires_at")
+
   @@index([expiresAt])
   @@map("comparison_nonces")
 }
 
-
 /// Shared comparison audience hosted by one explicitly trusted instance.
 model ComparisonCircle {
-  id String @id @default(uuid())
-  userId String @map("user_id")
-  name String
-  version Int @default(1)
+  id      String @id @default(uuid())
+  userId  String @map("user_id")
+  name    String
+  version Int    @default(1)
   members Json
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@map("comparison_circles")
 }
 
 /// Public device identity only. Private keys live in browser storage, never on the server.
 model ComparisonDevice {
- id String @id
- userId String @map("user_id")
- name String
- encryption String
- signing String
- fingerprint String @unique
- revoked Boolean @default(false)
- createdAt DateTime @default(now()) @map("created_at")
- user User @relation(fields: [userId], references: [id], onDelete: Cascade)
- @@index([userId])
- @@map("comparison_devices")
+  id          String   @id
+  userId      String   @map("user_id")
+  name        String
+  encryption  String
+  signing     String
+  fingerprint String   @unique
+  revoked     Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("comparison_devices")
 }
+
 model ComparisonPublication {
- id String @id
- userId String @map("user_id")
- linkId String @map("link_id")
- audience String
- revision Int
- sender String
- context Json
- manifest Json?
- ready Boolean @default(false)
- bytes Int @default(0)
- expiresAt DateTime @map("expires_at")
- createdAt DateTime @default(now()) @map("created_at")
- user User @relation(fields: [userId], references: [id], onDelete: Cascade)
- link ComparisonLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
- chunks ComparisonChunk[]
- @@index([userId, audience, ready])
- @@index([linkId])
- @@map("comparison_publications")
+  id        String            @id
+  userId    String            @map("user_id")
+  linkId    String            @map("link_id")
+  audience  String
+  revision  Int
+  sender    String
+  context   Json
+  manifest  Json?
+  ready     Boolean           @default(false)
+  bytes     Int               @default(0)
+  expiresAt DateTime          @map("expires_at")
+  createdAt DateTime          @default(now()) @map("created_at")
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  link      ComparisonLink    @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  chunks    ComparisonChunk[]
+
+  @@index([userId, audience, ready])
+  @@index([linkId])
+  @@map("comparison_publications")
 }
+
 model ComparisonChunk {
- publicationId String @map("publication_id")
- part Int
- bytes String
- digest String
- publication ComparisonPublication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
- @@id([publicationId, part])
- @@map("comparison_chunks")
+  publicationId String                @map("publication_id")
+  part          Int
+  bytes         String
+  digest        String
+  publication   ComparisonPublication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+
+  @@id([publicationId, part])
+  @@map("comparison_chunks")
 }
 
 /// One direction: the owner's totals may be seen by ONE viewer — a local account or a remote
@@ -5081,19 +5340,20 @@ model ComparisonChunk {
 /// pending + decidedAt set = the owner's held-back offer, invisible to every reader until the
 /// other side accepts (services/comparison/consents.ts).
 model LeaderboardConsent {
-  id        String    @id @default(uuid())
-  ownerId   String    @map("owner_id")
-  viewerId  String?   @map("viewer_id")
-  remoteId  String?   @map("remote_id")
-  status    String    @default("pending")
+  id           String                   @id @default(uuid())
+  ownerId      String                   @map("owner_id")
+  viewerId     String?                  @map("viewer_id")
+  remoteId     String?                  @map("remote_id")
+  status       String                   @default("pending")
   /// LeaderboardScope (schemas/comparison.ts); set on accepted rows and on offers.
-  scope     Json?
-  createdAt DateTime  @default(now()) @map("created_at")
-  decidedAt DateTime? @map("decided_at")
-  owner   User   @relation("LeaderboardConsentOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  viewer  User?  @relation("LeaderboardConsentViewer", fields: [viewerId], references: [id], onDelete: Cascade)
-  remote  LeaderboardRemote? @relation(fields: [remoteId], references: [id], onDelete: Cascade)
+  scope        Json?
+  createdAt    DateTime                 @default(now()) @map("created_at")
+  decidedAt    DateTime?                @map("decided_at")
+  owner        User                     @relation("LeaderboardConsentOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  viewer       User?                    @relation("LeaderboardConsentViewer", fields: [viewerId], references: [id], onDelete: Cascade)
+  remote       LeaderboardRemote?       @relation(fields: [remoteId], references: [id], onDelete: Cascade)
   boardMembers LeaderboardBoardMember[]
+
   @@unique([ownerId, viewerId])
   @@unique([ownerId, remoteId])
   @@index([viewerId, status])
@@ -5103,16 +5363,17 @@ model LeaderboardConsent {
 /// A person on another instance, as one local user knows them. Both servers hold one row
 /// with the same random channel.
 model LeaderboardRemote {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
-  origin      String
-  channel     String
-  username    String
-  displayName String   @map("display_name")
-  createdAt   DateTime @default(now()) @map("created_at")
-  user     User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  consents LeaderboardConsent[]
+  id           String                   @id @default(uuid())
+  userId       String                   @map("user_id")
+  origin       String
+  channel      String
+  username     String
+  displayName  String                   @map("display_name")
+  createdAt    DateTime                 @default(now()) @map("created_at")
+  user         User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  consents     LeaderboardConsent[]
   boardMembers LeaderboardBoardMember[]
+
   @@unique([origin, channel])
   @@index([userId])
   @@map("leaderboard_remotes")
@@ -5123,18 +5384,20 @@ model LeaderboardInvite {
   userId    String    @map("user_id")
   expiresAt DateTime  @map("expires_at")
   usedAt    DateTime? @map("used_at")
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@map("leaderboard_invites")
 }
 
 model LeaderboardBoard {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
+  id        String                   @id @default(uuid())
+  userId    String                   @map("user_id")
   name      String
-  createdAt DateTime @default(now()) @map("created_at")
-  user    User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  members LeaderboardBoardMember[]
+  createdAt DateTime                 @default(now()) @map("created_at")
+  user      User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  members   LeaderboardBoardMember[]
+
   @@index([userId])
   @@map("leaderboard_boards")
 }
@@ -5142,13 +5405,14 @@ model LeaderboardBoard {
 /// A board member is a person the board owner can SEE: a local consent where the owner is the
 /// viewer, or one of the owner's remote friends.
 model LeaderboardBoardMember {
-  id        String  @id @default(uuid())
-  boardId   String  @map("board_id")
-  consentId String? @map("consent_id")
-  remoteId  String? @map("remote_id")
-  board   LeaderboardBoard    @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  consent LeaderboardConsent? @relation(fields: [consentId], references: [id], onDelete: Cascade)
-  remote  LeaderboardRemote?  @relation(fields: [remoteId], references: [id], onDelete: Cascade)
+  id        String              @id @default(uuid())
+  boardId   String              @map("board_id")
+  consentId String?             @map("consent_id")
+  remoteId  String?             @map("remote_id")
+  board     LeaderboardBoard    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  consent   LeaderboardConsent? @relation(fields: [consentId], references: [id], onDelete: Cascade)
+  remote    LeaderboardRemote?  @relation(fields: [remoteId], references: [id], onDelete: Cascade)
+
   @@unique([boardId, consentId])
   @@unique([boardId, remoteId])
   @@map("leaderboard_board_members")
@@ -5156,67 +5420,72 @@ model LeaderboardBoardMember {
 
 // Plans are separate from travel evidence. Dates never promote an intention.
 model TravelPlan {
-  id String @id @default(uuid())
-  createRef String @unique @map("create_ref")
-  tripId String @unique @map("trip_id")
-  revision Int @default(1)
-  state Json
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  id        String               @id @default(uuid())
+  createRef String               @unique @map("create_ref")
+  tripId    String               @unique @map("trip_id")
+  revision  Int                  @default(1)
+  state     Json
+  createdAt DateTime             @default(now()) @map("created_at")
+  updatedAt DateTime             @updatedAt @map("updated_at")
+  trip      Trip                 @relation(fields: [tripId], references: [id], onDelete: Cascade)
   mutations TravelPlanMutation[]
   proposals TravelPlanProposal[]
+
   @@map("travel_plans")
 }
 
 model TravelPlanMutation {
-  id String @id @default(uuid())
-  planId String @map("plan_id")
-  clientRef String @map("client_ref")
-  payloadHash String @map("payload_hash")
-  baseRevision Int @map("base_revision")
-  revision Int
-  before Json
-  result Json
-  createdAt DateTime @default(now()) @map("created_at")
-  plan TravelPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  id           String     @id @default(uuid())
+  planId       String     @map("plan_id")
+  clientRef    String     @map("client_ref")
+  payloadHash  String     @map("payload_hash")
+  baseRevision Int        @map("base_revision")
+  revision     Int
+  before       Json
+  result       Json
+  createdAt    DateTime   @default(now()) @map("created_at")
+  plan         TravelPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
   @@unique([planId, clientRef])
   @@index([planId, createdAt])
   @@map("travel_plan_mutations")
 }
 
 model TravelPlanProposal {
-  id String @id @default(uuid())
-  planId String @map("plan_id")
-  baseRevision Int @map("base_revision")
-  inputHash String @map("input_hash")
-  status String @default("pending")
-  provider String
-  model String
-  content Json
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  plan TravelPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  id           String     @id @default(uuid())
+  planId       String     @map("plan_id")
+  baseRevision Int        @map("base_revision")
+  inputHash    String     @map("input_hash")
+  status       String     @default("pending")
+  provider     String
+  model        String
+  content      Json
+  expiresAt    DateTime   @map("expires_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  plan         TravelPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
   @@index([planId, createdAt])
   @@map("travel_plan_proposals")
 }
 
 model TravelPlanConfig {
-  id String @id @default("default")
-  enabled Boolean @default(false)
-  aiDailyLimit Int @default(10) @map("ai_daily_limit")
-  weatherDailyLimit Int @default(20) @map("weather_daily_limit")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id                String   @id @default("default")
+  enabled           Boolean  @default(false)
+  aiDailyLimit      Int      @default(10) @map("ai_daily_limit")
+  weatherDailyLimit Int      @default(20) @map("weather_daily_limit")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
   @@map("travel_plan_config")
 }
 
 model TravelPlanUsage {
-  id String @id @default(uuid())
-  userId String @map("user_id")
-  day DateTime @db.Date
-  kind String
-  count Int @default(0)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String   @id @default(uuid())
+  userId String   @map("user_id")
+  day    DateTime @db.Date
+  kind   String
+  count  Int      @default(0)
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, day, kind])
   @@map("travel_plan_usage")
 }

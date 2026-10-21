@@ -7,6 +7,7 @@ import {
   type ShareEntityType,
   type ShareNoticeKind,
 } from "../../schemas/sharing";
+import { z } from "../../schemas/zod";
 import { noticeChanges, type NoticeChange } from "./noticeChanges";
 import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
 
@@ -26,8 +27,39 @@ export interface ShareNoticeView {
   /** When the recipient undid the change (S2) — or, on a `deleted` notice, deleted their own copy; null otherwise. */
   undoneAt: string | null;
   actor: SharePerson | null;
-  /** For `updated`: every changed fact, old and new, ready to display. */
+  /**
+   * A person on another server who made the change (F-S4d), as their server names them — shown
+   * as „Ben (andere.instanz.tld)". Null for a change made here.
+   */
+  remoteActor: RemoteActorView | null;
+  /** For `updated`: every changed fact, old and new; for `conflict`: mine, then theirs. */
   changes: NoticeChange[];
+}
+
+export interface RemoteActorView {
+  displayName: string;
+  origin: string;
+  /** The server that relayed the change here, when it is not the author's own (the home). */
+  via?: string;
+}
+
+const remoteActorSchema = z.object({
+  displayName: z.string(),
+  origin: z.string(),
+  via: z.string().optional(),
+});
+
+/** The name a notice kept of a remote author, else the pairing it came through. */
+function remoteActorOf(
+  after: Prisma.JsonValue | null,
+  pairing: { displayName: string; origin: string } | null
+): RemoteActorView | null {
+  const kept =
+    after && typeof after === "object" && !Array.isArray(after)
+      ? remoteActorSchema.safeParse(after.remoteActor)
+      : null;
+  if (kept?.success) return kept.data;
+  return pairing ? { displayName: pairing.displayName, origin: pairing.origin } : null;
 }
 
 /** Up to this many notices per list answer; the inbox shows the newest. */
@@ -36,7 +68,10 @@ const NOTICE_CAP = 200;
 export async function listNotices(userId: string): Promise<ShareNoticeView[]> {
   const rows = await prisma.shareNotice.findMany({
     where: { userId },
-    include: { actor: { select: PERSON_SELECT } },
+    include: {
+      actor: { select: PERSON_SELECT },
+      remoteActor: { select: { displayName: true, origin: true } },
+    },
     orderBy: { createdAt: "desc" },
     take: NOTICE_CAP,
   });
@@ -54,7 +89,9 @@ export async function listNotices(userId: string): Promise<ShareNoticeView[]> {
     readAt: row.readAt?.toISOString() ?? null,
     undoneAt: row.undoneAt?.toISOString() ?? null,
     actor: row.actor ? toPerson(row.actor) : null,
-    changes: row.kind === "updated" ? noticeChanges(row.before, row.after) : [],
+    remoteActor: row.actor ? null : remoteActorOf(row.after, row.remoteActor),
+    changes:
+      row.kind === "updated" || row.kind === "conflict" ? noticeChanges(row.before, row.after) : [],
   }));
 }
 

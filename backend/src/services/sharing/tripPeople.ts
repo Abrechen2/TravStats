@@ -53,7 +53,8 @@ export async function tripPeople(
         })
       : Promise.resolve([]),
     prisma.shareConsent.findMany({
-      where: { requesterId: userId },
+      // Local pairs only: remote people join a trip through F-S4c's offer, not this list.
+      where: { requesterId: userId, targetId: { not: null } },
       include: { target: { select: { ...PERSON_SELECT, isActive: true } } },
       orderBy: { decidedAt: "desc" },
     }),
@@ -122,8 +123,8 @@ export async function tripPeople(
   }
   return {
     people,
-    linkableUsers: outgoing
-      .filter((c) => c.status === "accepted" && c.target.isActive)
-      .map((c) => toPerson(c.target)),
+    linkableUsers: outgoing.flatMap((c) =>
+      c.status === "accepted" && c.target?.isActive ? [toPerson(c.target)] : []
+    ),
   };
 }

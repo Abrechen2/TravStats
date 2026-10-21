@@ -16,6 +16,8 @@ export interface FederationState {
   origin: string | null;
   publicKey: string | null;
   fingerprint: string | null;
+  /** The admin's switch for trip sharing across servers (default off). */
+  tripSharingEnabled: boolean;
   peers: FederationPeer[];
 }
 
@@ -25,6 +27,8 @@ export const federationAdminApi = {
   get: async (): Promise<FederationState> => (await api.get<FederationState>(BASE)).data,
   update: async (body: { enabled: boolean; origin: string }): Promise<FederationState> =>
     (await api.put<FederationState>(BASE, body)).data,
+  setTripSharing: async (enabled: boolean): Promise<FederationState> =>
+    (await api.put<FederationState>(`${BASE}/trip-sharing`, { enabled })).data,
   generateKey: async (): Promise<FederationState> =>
     (await api.post<FederationState>(`${BASE}/key`)).data,
   pinPeer: async (body: {

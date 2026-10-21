@@ -1,6 +1,6 @@
 import express from "express";
 import request from "supertest";
-import { generateKeyPairSync } from "crypto";
+import crypto, { generateKeyPairSync } from "crypto";
 import { prisma } from "../../../db";
 import { errorHandler } from "../../../middleware/errorHandler";
 import { ensureAdminSettingsRow } from "../../../services/adminSettingsRow";
@@ -146,4 +146,69 @@ it("never returns the private key", async () => {
   const res = await request(app).post("/api/v1/admin/federation/key").send({});
   expect(JSON.stringify(res.body)).not.toMatch(/PRIVATE KEY/);
   expect(Object.keys(res.body)).not.toContain("privateKey");
+});
+
+describe("trips shared through a peer pause when the admin blocks it or pins a new key (O9)", () => {
+  const pemOf = () =>
+    generateKeyPairSync("ed25519").publicKey.export({ type: "spki", format: "pem" }).toString();
+  const pinPeer = (pem: string, enabled = true) =>
+    request(app)
+      .post("/api/v1/admin/federation/peers")
+      .send({ origin: PEER, publicKey: pem, fingerprint: hash(pem), enabled });
+
+  async function sharedWithPeer() {
+    const user = await prisma.user.create({
+      data: { username: `fed-hold-${Date.now()}`, passwordHash: "x" },
+    });
+    const group = await prisma.tripShareGroup.create({
+      data: { createdById: user.id, federatedRef: crypto.randomUUID() },
+    });
+    const remote = await prisma.remoteShareAccount.create({
+      data: {
+        userId: user.id,
+        origin: PEER,
+        channel: crypto.randomUUID(),
+        localChannel: crypto.randomUUID(),
+        username: "far",
+        displayName: "Far",
+      },
+    });
+    const member = await prisma.tripShareRemoteMember.create({
+      data: { groupId: group.id, remoteId: remote.id, state: "active" },
+    });
+    return { user, member };
+  }
+  const stateOf = (id: string) =>
+    prisma.tripShareRemoteMember.findUniqueOrThrow({
+      where: { id },
+      select: { state: true, stateReason: true },
+    });
+
+  it("a new key suspends the memberships as re-pinned; the same key again changes nothing", async () => {
+    const pem = pemOf();
+    await pinPeer(pem);
+    const { user, member } = await sharedWithPeer();
+    try {
+      expect((await pinPeer(pem)).status).toBe(200);
+      expect(await stateOf(member.id)).toEqual({ state: "active", stateReason: null });
+      expect((await pinPeer(pemOf())).status).toBe(200);
+      expect(await stateOf(member.id)).toEqual({ state: "suspended", stateReason: "repinned" });
+    } finally {
+      await prisma.user.delete({ where: { id: user.id } });
+    }
+  });
+
+  it("suspending the peer holds them as blocked", async () => {
+    await pinPeer(pemOf());
+    const { user, member } = await sharedWithPeer();
+    try {
+      const res = await request(app)
+        .post("/api/v1/admin/federation/peers/suspend")
+        .send({ origin: PEER });
+      expect(res.status).toBe(200);
+      expect(await stateOf(member.id)).toEqual({ state: "suspended", stateReason: "peer-blocked" });
+    } finally {
+      await prisma.user.delete({ where: { id: user.id } });
+    }
+  });
 });

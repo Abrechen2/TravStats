@@ -28,7 +28,7 @@ describe("comparison error vocabulary", () => {
     expect(error).toMatchObject({
       statusCode: 403,
       kind: "replay",
-      message: "Comparison request refused",
+      message: "Peer request refused",
     });
     expect(refused().kind).toBe("refused");
   });

@@ -34,9 +34,23 @@
         "created": "Added",
         "updated": "Changed",
         "deleted": "Deleted",
-        "left": "Left"
+        "left": "Left",
+        "conflict": "Changed at the same time",
+        "add-request": "Request"
       },
-      "details": "Details"
+      "details": "Details",
+      "conflict": "{{name}} changed {{type}} “{{entry}}” differently at the same time. Nothing was overwritten – which value should stand?",
+      "takeTheirs": "Take their value",
+      "keepMine": "Keep my value",
+      "mineValue": "Yours: {{value}}",
+      "theirsValue": "{{name}}: {{value}}",
+      "resolved": "Decided.",
+      "remoteName": "{{name}} ({{origin}})",
+      "remoteNameVia": "{{name}} ({{origin}}) via {{via}}",
+      "leftRevoked": "{{name}} withdrew the consent to share. “{{trip}}” is no longer kept in step; your trip stays yours.",
+      "addRequest": "{{name}} asks you to share “{{trip}}” with {{person}} too.",
+      "addRequestFrom": "{{name}} asks you to share “{{trip}}” with {{person}} ({{personOrigin}}) too.",
+      "addRequestHint": "On the trip page you can offer it to a connected person, or create a code for this trip and pass it on."
     },
     "empty": {
       "title": "Nothing new",
@@ -46,7 +60,8 @@
       "accepted": "Agreed — {{name}} can now share trips with you.",
       "declined": "Declined.",
       "undone": "Undone — the others see it as your change.",
-      "copyDeleted": "Your copy has been deleted."
+      "copyDeleted": "Your copy has been deleted.",
+      "resolved": "Decided – the others get the value as your change."
     },
     "errors": {
       "loadFailed": "Shared trips could not be loaded.",
@@ -55,7 +70,8 @@
       "answerFailed": "Your answer could not be saved.",
       "markReadFailed": "The notice could not be marked as read.",
       "undoFailed": "The change could not be undone.",
-      "deleteCopyFailed": "Your copy could not be deleted."
+      "deleteCopyFailed": "Your copy could not be deleted.",
+      "resolveFailed": "The conflict could not be decided."
     }
   },
   "settings": {
@@ -152,7 +168,10 @@
     "undoStale": "Cannot undo any more: your copy has changed since.",
     "undoStaleFields": "Cannot undo any more: changed since: {{fields}}.",
     "undoUnavailable": "This notice cannot be undone (any more).",
-    "copyNotFound": "Your copy of this entry no longer exists."
+    "copyNotFound": "Your copy of this entry no longer exists.",
+    "conflictStale": "Your entry has changed since this conflict.",
+    "conflictStaleFields": "Changed since this conflict: {{fields}}. Check the entry and decide again.",
+    "notHomeLocal": "This trip comes from another server. Further people are invited from there – ask the person you share it with, on the trip page."
   },
   "shareDialog": {
     "title": "Share trip with {{name}}",
@@ -523,6 +542,195 @@
       "createFailed": "The link could not be created.",
       "revokeFailed": "The link could not be revoked.",
       "tripEnded": "This trip is already over – an itinerary link is no longer possible. A link without the itinerary still works."
+    }
+  },
+  "remote": {
+    "title": "Companions on other servers",
+    "description": "Share trips with people whose account is on another TravStats server. You connect with an invitation code; your server's admin must have added their server as trusted first.",
+    "invites": {
+      "title": "Invitation code",
+      "hint": "Create a code and pass it on another way (a message, a call). The person redeems it on their own server. Each code works once, for 72 hours.",
+      "create": "Create code",
+      "codeLabel": "Your invitation code",
+      "codeHint": "Shown only now – copy it right away. Valid until {{date}}.",
+      "open": "Open code, valid until {{date}}",
+      "revoke": "Withdraw",
+      "revoked": "Code withdrawn. It can no longer be redeemed."
+    },
+    "claim": {
+      "label": "Code from someone on another server",
+      "placeholder": "https://travstats.example.org#trip:…",
+      "submit": "Redeem",
+      "done": "Connected with {{name}} ({{origin}})."
+    },
+    "people": {
+      "title": "Connected people",
+      "none": "Nobody on another server yet.",
+      "row": "{{name}} (@{{username}}) on {{origin}}",
+      "withdraw": "Withdraw consent",
+      "withdrawConfirm": "Afterwards nothing from {{name}} reaches you and nothing from you reaches {{name}}. Shared trips stay with both of you as your own trips. Withdraw?",
+      "withdrawYes": "Yes, withdraw",
+      "withdrawNo": "Cancel",
+      "withdrawn": "Consent for {{name}} ({{origin}}) withdrawn. Their server is told."
+    },
+    "errors": {
+      "loadFailed": "The people on other servers could not be loaded.",
+      "createFailed": "The code could not be created.",
+      "revokeFailed": "The code could not be withdrawn.",
+      "claimFailed": "The code could not be redeemed.",
+      "disabled": "Sharing across servers is switched off on this server.",
+      "inviteInvalid": "That is not a valid invitation code, or it was withdrawn. Check that it was copied completely.",
+      "wrongTag": "That is a leaderboard (Compare) code, not a trip-sharing code. Ask for a code from “Share trips”.",
+      "used": "This code has already been redeemed. Ask for a new one.",
+      "expired": "This code has expired. Ask for a new one.",
+      "ownServer": "This code is from this server. Here you connect by requesting a username.",
+      "limit": "You already have 20 open codes. Withdraw one or wait until one is redeemed.",
+      "inviteNotFound": "That open code no longer exists.",
+      "duplicate": "You are already connected with this person.",
+      "notAdmitted": "The server {{origin}} is not added as trusted on your server. Ask your admin to add it.",
+      "outdated": "The server {{origin}} is too old for shared trips.",
+      "peerDisabled": "Sharing across servers is switched off on {{origin}}, or that server does not have it yet.",
+      "unreachable": "The server {{origin}} does not answer. Try again later.",
+      "consentMissing": "There is no (longer an) agreement to share with this person on {{origin}}. Connect again with a code.",
+      "notHome": "This trip comes from {{origin}} and can only be shared further from there.",
+      "alreadyMember": "This person already has the trip.",
+      "tripTooLarge": "The trip has more than 500 entries and cannot be offered to another server.",
+      "personNotFound": "That connection no longer exists.",
+      "offerNotFound": "That offer no longer exists – it has already been answered.",
+      "refused": "The server {{origin}} refused the message. Check that you are still connected there.",
+      "tripNotFound": "That trip no longer exists.",
+      "nothingToConfirm": "Nothing on this trip is waiting for a confirmation.",
+      "notMember": "You do not (or no longer) share this trip with anyone on another server.",
+      "isHome": "This trip's home is your server – offer it directly from here.",
+      "rosterNotFound": "That person is not (or no longer) on the trip.",
+      "withdrawFailed": "The consent could not be withdrawn."
+    },
+    "trip": {
+      "title": "Travellers on other servers",
+      "row": "{{name}} (@{{username}}) on {{origin}}",
+      "fromServer": "This trip comes from {{origin}}. Further people are invited from there.",
+      "since": "since {{date}}",
+      "offer": "Offer trip",
+      "offered": "Offered. {{name}} decides on {{origin}} whether to take the trip.",
+      "createCode": "Create a code for this trip",
+      "codeHint": "For someone you are not connected with yet: whoever redeems the code on their own server is offered this trip.",
+      "state": {
+        "invited": "Offered",
+        "active": "Has the trip",
+        "declined": "Declined",
+        "unreachable": "Unreachable",
+        "suspended": "Suspended",
+        "left": "Left",
+        "revoked": "Consent withdrawn"
+      },
+      "reason": {
+        "entries-too-large": "One entry was too large to send and is missing for {{name}}.",
+        "restore": "Suspended after a restore – please confirm again.",
+        "off": "Sharing across servers is switched off for {{name}}.",
+        "peer-blocked": "{{name}}'s server is blocked by your instance.",
+        "unreachable": "{{name}}'s server is unreachable.",
+        "other": "Something went wrong sending to {{origin}}.",
+        "restore-invited": "Suspended after a restore – the offer stands again once you confirm.",
+        "repinned": "{{name}}'s server has a new key – please confirm again to continue."
+      },
+      "errors": {
+        "loadFailed": "The travellers on other servers could not be loaded.",
+        "offerFailed": "The trip could not be offered.",
+        "rosterFailed": "Your answer could not be saved.",
+        "reconfirmFailed": "The trip could not be confirmed again.",
+        "dismissFailed": "The message could not be dismissed.",
+        "addRequestFailed": "The request could not be sent."
+      },
+      "delivery": {
+        "delivered": "All changes have reached {{name}}.",
+        "pending": "Changes are on their way to {{name}}.",
+        "retrying": "Changes are not reaching {{name}} right now – {{origin}} has not answered since {{date}}. Retrying.",
+        "retryingLocal": "Changes are not reaching {{name}} right now – an error on your server since {{date}}. Retrying; if it stays like this, ask your admin.",
+        "retryingRemote": "Changes are not reaching {{name}} right now – {{origin}} has reported an error taking them over since {{date}}. Retrying.",
+        "unreachable": "Changes are not reaching {{name}} – their server has been unreachable since {{date}}.",
+        "rejected": "{{name}}'s server could not accept a change to “{{entry}}” ({{why}}).",
+        "unknownEntry": "an entry",
+        "why": {
+          "schema": "format not supported",
+          "not-member": "no longer a member there",
+          "consent": "no consent there any more",
+          "too-large": "too large to send",
+          "other": "refused"
+        },
+        "retryingHeld": "Changes are not reaching {{name}} right now – on {{origin}} the trip has been waiting for {{name}} to confirm it again since {{date}}. Retrying."
+      },
+      "dismiss": "Dismiss",
+      "reconfirm": "Confirm again",
+      "reconfirmHint": "The connection for this trip is suspended (after a restore, a block or a new key of the other server). Until you confirm again, nothing is sent or taken over.",
+      "reconfirmed": "Confirmed again. Changes flow both ways again.",
+      "roster": {
+        "title": "Also on the trip",
+        "hint": "Changes by people who joined later reach you only once you agree. Earlier changes are not caught up.",
+        "row": "{{name}} on {{origin}}",
+        "relation": {
+          "you": "You",
+          "here": "On your server",
+          "paired": "Connected",
+          "accepted": "Agreed",
+          "pending": "New",
+          "declined": "Declined"
+        },
+        "sentence": {
+          "you": "That is you.",
+          "here": "On your server – sharing here decides that.",
+          "paired": "You are connected: changes by {{name}} reach you.",
+          "accepted": "You agreed: changes by {{name}} reach you.",
+          "pending": "New on the trip: changes by {{name}} reach you only once you agree.",
+          "declined": "Declined: changes by {{name}} do not reach you."
+        },
+        "accept": "Agree",
+        "decline": "Decline",
+        "stop": "Stop taking them"
+      },
+      "addRequest": {
+        "title": "Have someone added",
+        "hint": "This trip's home is {{origin}}, and it is shared further only from there. Ask the person you share it with to add someone.",
+        "name": "Name",
+        "origin": "Server (optional)",
+        "originHint": "The address of the person's TravStats server, if you know it.",
+        "note": "Message (optional)",
+        "submit": "Send request",
+        "sent": "Request sent: {{origin}} decides whether {{name}} is offered the trip."
+      }
+    },
+    "offers": {
+      "title": "Offered trips",
+      "row": "“{{trip}}” from {{name}} ({{origin}})",
+      "roster": "with {{names}}",
+      "empty": "no entries yet",
+      "count": {
+        "flights_one": "{{count}} flight",
+        "flights_other": "{{count}} flights",
+        "lodgingStays_one": "{{count}} stay",
+        "lodgingStays_other": "{{count}} stays",
+        "cruises_one": "{{count}} cruise",
+        "cruises_other": "{{count}} cruises",
+        "railJourneys_one": "{{count}} train ride",
+        "railJourneys_other": "{{count}} train rides",
+        "busJourneys_one": "{{count}} bus ride",
+        "busJourneys_other": "{{count}} bus rides",
+        "ferryJourneys_one": "{{count}} ferry crossing",
+        "ferryJourneys_other": "{{count}} ferry crossings",
+        "rentals_one": "{{count}} rental",
+        "rentals_other": "{{count}} rentals",
+        "stops_one": "{{count}} stop",
+        "stops_other": "{{count}} stops"
+      },
+      "accept": "Accept",
+      "decline": "Decline",
+      "accepted": "“{{trip}}” is now your trip. Its entries are on their way.",
+      "open": "Open trip",
+      "declined": "Declined. Nothing of this trip was copied.",
+      "errors": {
+        "loadFailed": "The offered trips could not be loaded.",
+        "acceptFailed": "The trip could not be accepted.",
+        "declineFailed": "The offer could not be declined."
+      }
     }
   }
 }

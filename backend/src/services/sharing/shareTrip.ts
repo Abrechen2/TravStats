@@ -20,6 +20,8 @@ import { tripFacts } from "./facts";
 import { restatusTrips } from "../trip/restatusTrips";
 import type { SharePerson } from "./people";
 import { tripPeople, type TripPerson } from "./tripPeople";
+import { requireHome } from "./federation/offerBuild";
+import { queueRoster } from "./federation/roster";
 
 /**
  * Sharing one trip with a linked, consenting companion (design 2026-10-09,
@@ -152,6 +154,10 @@ export async function shareTrip(
       if (!(await hasAcceptedConsent(tx, userId, recipientId))) throw consentRequired();
 
       if (trip.shareGroupId) {
+        // A trip that came from another server is shared on from its home (F5, F-S4e): a
+        // member added here would receive and send changes nobody there agreed to. Ask the home
+        // instead (`add-request`).
+        await requireHome(tx, userId, trip.shareGroupId);
         await requireGroupConsent(tx, trip.shareGroupId, userId, recipientId);
       }
       let groupId = trip.shareGroupId;
@@ -183,6 +189,8 @@ export async function shareTrip(
         );
       }
       await restatusTrips([target.id], tx);
+      // Someone joined a trip that is also shared across servers: they learn it (F-S4e roster).
+      if (target.created) await queueRoster(tx, groupId);
 
       const anything = target.created || Object.values(created).some((n) => n > 0);
       if (anything) {

@@ -96,7 +96,10 @@ function display(
   return { kind: "other" };
 }
 
-/** The changes of one `updated` notice, in a stable order; empty for any other kind. */
+/**
+ * The changes of one `updated` notice, in a stable order — or of a `conflict` notice, where
+ * `before` is the reader's own value and `after` the other side's.
+ */
 export function noticeChanges(
   before: Prisma.JsonValue | null,
   after: Prisma.JsonValue | null

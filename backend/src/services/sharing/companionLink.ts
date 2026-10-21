@@ -29,7 +29,8 @@ export async function listLinkableCompanions(userId: string): Promise<{
       orderBy: { displayName: "asc" },
     }),
     prisma.shareConsent.findMany({
-      where: { requesterId: userId, status: "accepted" },
+      // A person on another server is never a linkable account here (spec 2026-10-20 F2).
+      where: { requesterId: userId, targetId: { not: null }, status: "accepted" },
       include: { target: { select: PERSON_SELECT } },
       orderBy: { decidedAt: "desc" },
     }),
@@ -40,7 +41,7 @@ export async function listLinkableCompanions(userId: string): Promise<{
       name: c.displayName,
       linkedUser: c.linkedUser ? toPerson(c.linkedUser) : null,
     })),
-    linkableUsers: consents.map((c) => toPerson(c.target)),
+    linkableUsers: consents.flatMap((c) => (c.target ? [toPerson(c.target)] : [])),
   };
 }
 

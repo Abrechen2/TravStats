@@ -13,7 +13,20 @@ export const CONSENT_STATUSES = ["pending", "accepted", "declined", "withdrawn"]
 export const consentStatusSchema = z.enum(CONSENT_STATUSES);
 export type ConsentStatus = z.infer<typeof consentStatusSchema>;
 
-export const SHARE_NOTICE_KINDS = ["shared", "created", "updated", "deleted", "left"] as const;
+/**
+ * `conflict` (spec 2026-10-20 F6, phase F-S4d): a change from another server met a copy that had
+ * moved since — nothing was overwritten, and the person chooses between the two values.
+ */
+export const SHARE_NOTICE_KINDS = [
+  "shared",
+  "created",
+  "updated",
+  "deleted",
+  "left",
+  "conflict",
+  // F-S4e: a member on another server asks the home to offer the trip to someone else (F5).
+  "add-request",
+] as const;
 export const shareNoticeKindSchema = z.enum(SHARE_NOTICE_KINDS);
 export type ShareNoticeKind = z.infer<typeof shareNoticeKindSchema>;
 

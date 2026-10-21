@@ -258,6 +258,7 @@ const shutdown = (signal: string) => async (): Promise<void> => {
   (await import("./jobs/dawarichStayScheduler")).stopDawarichStayScheduler();
   (await import("./jobs/logRetentionScheduler")).stopLogRetentionScheduler();
   (await import("./jobs/syncRetentionScheduler")).stopSyncRetentionScheduler();
+  (await import("./jobs/tripShareDeliveryScheduler")).stopTripShareDeliveryScheduler();
   await prisma.$disconnect();
   process.exit(0);
 };
@@ -739,6 +740,12 @@ if (process.env.NODE_ENV !== "test") {
       [
         "sync_retention",
         async () => (await import("./jobs/syncRetentionScheduler")).startSyncRetentionScheduler(),
+      ],
+      // Trip sharing across servers: the outbox, every 30 s and when nudged (forgejo#301).
+      [
+        "trip_share_delivery",
+        async () =>
+          (await import("./jobs/tripShareDeliveryScheduler")).startTripShareDeliveryScheduler(),
       ],
       [
         "reminder",

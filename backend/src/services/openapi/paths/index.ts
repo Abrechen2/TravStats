@@ -30,6 +30,7 @@ import "./strava";
 import "./openData";
 import "./operators";
 import "./companions";
+import "./sharingRemote";
 import "./airports";
 import "./stats";
 import "./statsPage";

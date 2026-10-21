@@ -7,6 +7,7 @@ import {
 } from "../../lib/api/federationAdmin";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDisplayFormat } from "../../lib/displayFormat";
+import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { logger } from "../../lib/logger";
 import { Button, Field, Input, TextArea, Switch, ListRow, SectionLabel } from "../ui";
 import { SectionCard, SectionTitle } from "../Settings/SettingsShared";
@@ -18,6 +19,7 @@ const EMPTY_PEER = { origin: "", publicKey: "", fingerprint: "" };
 export default function FederationSettings(): JSX.Element {
   const { t } = useTranslation(["admin"]);
   const fmt = useDisplayFormat();
+  const { isFeatureVisible } = useBetaFeatures();
   const [state, setState] = useState<FederationState | null>(null);
   const [origin, setOrigin] = useState("");
   const [peer, setPeer] = useState(EMPTY_PEER);
@@ -120,6 +122,17 @@ export default function FederationSettings(): JSX.Element {
             <pre className="t-caption whitespace-pre-wrap break-all">{state.publicKey}</pre>
           )}
         </div>
+      )}
+      {state?.fingerprint && isFeatureVisible("federatedTripSharing") && (
+        // Trip sharing across servers (forgejo#301): settable under env-held identity too.
+        <Switch
+          id="federation-trip-sharing"
+          checked={state.tripSharingEnabled}
+          disabled={busy}
+          onChange={(on) => void run(() => federationAdminApi.setTripSharing(on))}
+          label={t(`${NS}.tripSharing`)}
+          sub={t(`${NS}.tripSharingSub`)}
+        />
       )}
       {state?.fingerprint && (
         <>

@@ -1,5 +1,6 @@
 import type { DbTransaction } from "../../db";
 import { clearTripKeys } from "./keyOps";
+import { departLocally, rosterAfterDeparture } from "./federation/lifecycle";
 
 /**
  * Taking one member's trip out of its share group. The trip and every entry
@@ -15,8 +16,13 @@ export async function detachTrip(
 ): Promise<void> {
   const groupId = trip.shareGroupId;
   if (!groupId) return;
+  // Memberships across servers through this member's pairings end too, and are told (F-S4e) —
+  // before the entries are touched: a received change takes the membership, then the entry, and
+  // the same order here keeps the two from deadlocking (F-S4e review, round 2).
+  await departLocally(tx, userId, groupId);
   await clearTripKeys(tx, userId, trip.id);
   await tx.trip.update({ where: { id: trip.id }, data: { shareGroupId: null } });
+  await rosterAfterDeparture(tx, groupId);
 
   const others = await tx.trip.findMany({
     where: { shareGroupId: groupId },
@@ -24,8 +30,11 @@ export async function detachTrip(
   });
   if (others.length === 0) {
     // Nobody left to join: notices that named the group keep their text;
-    // their group link goes null.
-    await tx.tripShareGroup.delete({ where: { id: groupId } });
+    // their group link goes null. A group with people on other servers stays: its member rows
+    // are the tombstones a later message is refused against (spec 2026-10-20 §4, "Replay");
+    // those servers were told above (`leave`).
+    if ((await tx.tripShareRemoteMember.count({ where: { groupId } })) === 0)
+      await tx.tripShareGroup.delete({ where: { id: groupId } });
     return;
   }
   await tx.shareNotice.createMany({
