@@ -64,6 +64,12 @@ export interface MapJourney {
   status: string;
   /** Kilometres when known. NULL when not — never 0 for "unknown". */
   distanceKm: number | null;
+  /**
+   * What `distanceKm` measures, as the domain records it (`great_circle`,
+   * `sea_route`, `invoice`, `odometer`, …). Null when unrecorded or when there
+   * is no distance.
+   */
+  distanceSource: string | null;
   /** Rail operator, bus company, ferry line, rental company, airline. */
   operator: string | null;
   /** Happened, by the domain's own counting rule (`shared/*Counting.ts`). */

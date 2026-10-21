@@ -35,6 +35,7 @@ import {
   type JourneyRouteStats,
 } from "./journeyStats";
 import { tallyLabel } from "./journeyHoverHtml";
+import { routeDistanceSourceKeys } from "./journeyProvenance";
 import { journeyIconName, rgbCss, tourIconName } from "./journeyIdentity";
 import {
   DomainBadge,
@@ -137,9 +138,21 @@ function DistanceRow({
     stats.measuredCount > 0 ? formatKm(stats.knownKm, locale) : t("map:journey.distanceNone");
   const unknown =
     stats.unknownCount > 0 ? t("map:journey.distanceUnknown", { count: stats.unknownCount }) : null;
+  // What the figure measures — "Luftlinie", "Seeweg (Schätzung)" — as the
+  // detail pages say it; a straight line must not read as the way travelled.
+  const sources = routeDistanceSourceKeys(stats.list).map((key) => t(key));
   return (
     <>
       <Row label={t("map:journey.distance")} value={known} />
+      {sources.length > 0 && stats.measuredCount > 0 && (
+        <div
+          data-testid="journey-distance-source"
+          className="text-right text-[10px]"
+          style={{ color: tokens.color.faint }}
+        >
+          {sources.join(" · ")}
+        </div>
+      )}
       {unknown && (
         <div className="text-right text-[10px]" style={{ color: tokens.color.faint }}>
           {unknown}

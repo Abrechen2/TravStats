@@ -119,6 +119,7 @@ function journey(
     departure: TimeValue | null;
     arrival: TimeValue | null;
     distanceKm: number | null;
+    distanceSource: string | null;
     operator: string | null;
     travelled: boolean;
     facts: JourneyFacts;
@@ -143,6 +144,7 @@ export function journeyFromRail(
     departure: stationDeparture(j),
     arrival: stationArrival(j),
     distanceKm: knownKm(j.distanceKm),
+    distanceSource: knownKm(j.distanceKm) === null ? null : (j.distanceSource ?? null),
     operator: j.operator ?? null,
     travelled: isCountableRail(j),
     facts: {
@@ -162,6 +164,7 @@ export function journeyFromBus(
     departure: stationDeparture(j),
     arrival: stationArrival(j),
     distanceKm: knownKm(j.distanceKm),
+    distanceSource: knownKm(j.distanceKm) === null ? null : (j.distanceSource ?? null),
     operator: j.operator ?? null,
     travelled: isCountableBus(j),
     facts: {
@@ -180,6 +183,7 @@ export function journeyFromFerry(
     departure: stationDeparture(j),
     arrival: stationArrival(j),
     distanceKm: knownKm(j.distanceKm),
+    distanceSource: knownKm(j.distanceKm) === null ? null : (j.distanceSource ?? null),
     operator: j.operator ?? null,
     travelled: isCountableFerry(j),
     facts: {
@@ -219,6 +223,12 @@ export function journeyFromRental(r: Partial2<RentalBooking, RentalCore>): MapJo
           returnTimezone: r.returnTimezone,
         })
       : null;
+  const driven = rentalDrivenKm({
+    distanceKm: r.distanceKm ?? null,
+    distanceSource: r.distanceSource ?? null,
+    odometerOutKm: r.odometerOutKm ?? null,
+    odometerInKm: r.odometerInKm ?? null,
+  });
   return journey(
     "rental",
     { id: r.id, status: r.status },
@@ -244,13 +254,8 @@ export function journeyFromRental(r: Partial2<RentalBooking, RentalCore>): MapJo
       arrival: r.times?.return ?? null,
       // The one driven-km rule the rental pages and statistics read: a stored
       // figure, else the two odometer readings (forgejo#206).
-      distanceKm:
-        rentalDrivenKm({
-          distanceKm: r.distanceKm ?? null,
-          distanceSource: r.distanceSource ?? null,
-          odometerOutKm: r.odometerOutKm ?? null,
-          odometerInKm: r.odometerInKm ?? null,
-        })?.km ?? null,
+      distanceKm: driven?.km ?? null,
+      distanceSource: driven?.source ?? null,
       operator: r.operatedBy ?? r.provider ?? null,
       travelled: isCountableRental(r),
       facts: {
@@ -308,6 +313,7 @@ export function journeyFromTripFlight(f: TripFlightRow): MapJourney | null {
       departure: flightDeparture(f),
       arrival: flightArrival(f),
       distanceKm: knownKm(calculateDistance(depLat, depLon, arrLat, arrLon)),
+      distanceSource: null,
       operator: f.airline ?? null,
       travelled: isCountableFlight({ status: f.status }),
       facts: {
