@@ -85,17 +85,20 @@ export function labelObstaclesOf(layers: readonly Layer[]): PlacedLabel[] {
 /**
  * How much each of the map's own label layers weighs a label — the same count
  * its own budget spends first (airport flights, port visits, hotel stays,
- * place visits). A layer not named here weighs every label 0.
+ * place visits). A trip's stops carry no count; they are the trip itself, so
+ * they outrank its hotels. A layer not named here weighs every label 0.
  */
-const LABEL_WEIGHT: Record<string, string> = {
+const LABEL_WEIGHT: Record<string, string | number> = {
   "routes-labels": "count",
   "cruise-ports-labels": "visits",
   "lodging-pins-labels": "stayCount",
   "place-pins-labels": "visitCount",
+  "trip-stop-labels": 1_000_000,
 };
 
 const weightOf = (layerId: string, d: unknown): number => {
   const field = LABEL_WEIGHT[layerId];
+  if (typeof field === "number") return field;
   const v = field && d && typeof d === "object" ? (d as Record<string, unknown>)[field] : 0;
   return typeof v === "number" && Number.isFinite(v) ? v : 0;
 };
@@ -160,6 +163,11 @@ function shareOwnLabels(layers: readonly Layer[], zoom: number, hideOnly: boolea
   });
 }
 
+/** A map's own text layers through the shared pass for `labelsMode` (none when off). */
+export function shareMapLabels(layers: Layer[], labelsMode: LabelsMode, zoom: number): Layer[] {
+  return labelsMode === "off" ? layers : shareOwnLabels(layers, zoom, labelsMode === "important");
+}
+
 /**
  * `extraLayers` with every station label layer told about `mapLayers`'
  * labels. Any other layer is passed through untouched, and without a station
@@ -183,10 +191,7 @@ export function appendWithLabelObstacles(
   extraLayers: Layer[],
   labels?: { labelsMode: LabelsMode; zoom: number }
 ): Layer[] {
-  const shown =
-    !labels || labels.labelsMode === "off"
-      ? own
-      : shareOwnLabels(own, labels.zoom, labels.labelsMode === "important");
+  const shown = labels ? shareMapLabels(own, labels.labelsMode, labels.zoom) : own;
   return [...shown, ...withLabelObstacles(extraLayers, shown)];
 }
 
