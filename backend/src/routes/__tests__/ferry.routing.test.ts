@@ -27,7 +27,17 @@ const routed = () => ({
 });
 const post = (id: string, as = cookie) =>
   request(app).post(`/api/v1/ferry/${id}/route`).set("Cookie", as).send({});
+/** A crossing that is still the straight line: since forgejo#323 a new crossing
+ *  is routed on save, and this suite is about routing one that was not — the
+ *  router found no way then, or failed. */
 async function create(extra: Record<string, unknown> = {}) {
+  jest.mocked(computeSchematicRoute).mockResolvedValueOnce({
+    waypoints: [line[0], line[line.length - 1]],
+    protectedPrefixCount: 0,
+    protectedSuffixCount: 0,
+    routed: false,
+    method: "straight" as const,
+  });
   const r = await request(app)
     .post("/api/v1/ferry")
     .set("Cookie", cookie)
@@ -39,6 +49,8 @@ async function create(extra: Record<string, unknown> = {}) {
       ...extra,
     });
   expect(r.status).toBe(201);
+  // Count only the routing the test itself asks for.
+  jest.mocked(computeSchematicRoute).mockClear();
   return r.body.data.id as string;
 }
 async function link(id: string) {

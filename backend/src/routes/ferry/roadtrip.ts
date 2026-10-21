@@ -161,7 +161,11 @@ router.put("/:id/roadtrip-leg", async (req: AuthRequest, res: Response, next: Ne
         },
       });
       if (ferry.geometrySource === "sea_route") {
-        await syncFerryLeg(tx, { ...ferry, roadtripLegId: leg.id, tripId: leg.route.tripId });
+        await syncFerryLeg(
+          tx,
+          { ...ferry, roadtripLegId: leg.id, tripId: leg.route.tripId },
+          { onMismatch: "keep" }
+        );
       }
       // Linking files the crossing on the roadtrip's trip — a move into a
       // shared trip copies it. The leg itself is no fact: a link on a crossing

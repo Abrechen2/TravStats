@@ -1,4 +1,18 @@
 jest.mock("../../services/ferry/ticketPreview", () => ({ previewFerryText: jest.fn() }));
+// These rides' terminals are synthetic and their assertions are about the
+// chord. Since forgejo#323 a new crossing is routed on save; here the router
+// finds no sea way, which is one of its real answers. Routing on save has its
+// own suite, ferry.autoRoute.test.ts.
+jest.mock("../../services/schematicRouter", () => ({
+  ...jest.requireActual("../../services/schematicRouter"),
+  computeSchematicRoute: jest.fn(async () => ({
+    waypoints: [],
+    protectedPrefixCount: 0,
+    protectedSuffixCount: 0,
+    routed: false,
+    method: "straight",
+  })),
+}));
 jest.mock("../../services/ferry/aisStream", () => ({
   aisConfigured: () => false,
   lookupVessel: jest.fn(),
