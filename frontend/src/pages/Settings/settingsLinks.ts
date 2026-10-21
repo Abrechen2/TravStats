@@ -95,6 +95,12 @@ export interface AdminLinkInput {
   tab: string | null;
   /** `?user=` — the account a link into user management meant; carried along. */
   user: string | null;
+  /**
+   * `?expert=1` — the link asks for the section's expert rows (a search hit on
+   * one). Carried along, and it keeps even a page's first section named, since
+   * the rows are revealed for the section the address names.
+   */
+  expert?: boolean;
   isReachable: (page: AdminPageDef) => boolean;
 }
 
@@ -109,7 +115,10 @@ export function resolveAdminLink(input: AdminLinkInput): string {
 
   const page = home ?? named ?? fromTab ?? findAdminPage(DEFAULT_ADMIN_PAGE)!;
   // The section a page's first card answers to is the page itself: naming it
-  // adds nothing, and a bare page address is the canonical one.
-  const keepSection = home !== undefined && section !== page.id ? section : null;
-  return `/admin/${page.id}${query({ section: keepSection, user: input.user })}`;
+  // adds nothing, and a bare page address is the canonical one — unless the
+  // link asks for that section's expert rows, which need it named.
+  const keepSection =
+    home !== undefined && (section !== page.id || input.expert === true) ? section : null;
+  const expert = keepSection !== null && input.expert === true ? "1" : null;
+  return `/admin/${page.id}${query({ section: keepSection, expert, user: input.user })}`;
 }

@@ -218,6 +218,16 @@ describe("old admin links", () => {
     expect(admin({ tab: "general", section: "users", user: "u-1" })).toBe("/admin/users?user=u-1");
   });
 
+  it("keeps a page's first section, and the expert request, when a link asks for its expert rows", () => {
+    expect(admin({ page: "instance", section: "instance", expert: true })).toBe(
+      "/admin/instance?section=instance&expert=1"
+    );
+    expect(admin({ section: "parsers", expert: true })).toBe(
+      "/admin/parsers?section=parsers&expert=1"
+    );
+    expect(admin({ page: "instance", section: "instance" })).toBe("/admin/instance");
+  });
+
   it("keeps a section that is not the page's first one", () => {
     expect(admin({ page: "instance", section: "push" })).toBe("/admin/instance?section=push");
     expect(admin({ section: "geocoder" })).toBe("/admin/instance?section=geocoder");

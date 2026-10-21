@@ -228,6 +228,16 @@ describe("AdminPage — the standard level (forgejo#321)", () => {
     );
   });
 
+  it("shows the expert rows a search hit on a page's first section named (codex final review)", async () => {
+    // The search links an expert row of the instance section as
+    // `/admin/instance?section=instance&expert=1`. The section is the page's
+    // first, which the canonical address leaves out — that must not drop the
+    // request to show the rows with it.
+    renderAdmin("/admin/instance?section=instance&expert=1");
+    const instance = await findNamed("region", INSTANCE);
+    await waitFor(() => expect(instance).toHaveTextContent("settings:level.revealedRows"));
+  });
+
   it("opens an expert page a link names, with its sections and a note, not an empty page", async () => {
     renderAdmin("/admin/logging");
     expect(await findNamed("region", "admin:pages.logging")).toBeInTheDocument();
