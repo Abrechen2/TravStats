@@ -561,7 +561,8 @@
       "label": "Code von jemandem auf einem anderen Server",
       "placeholder": "https://travstats.example.org#trip:…",
       "submit": "Einlösen",
-      "done": "Verbunden mit {{name}} ({{origin}})."
+      "done": "Verbunden mit {{name}} ({{origin}}).",
+      "already": "Ist schon verbunden: {{name}} ({{origin}})."
     },
     "people": {
       "title": "Verbundene Personen",

@@ -124,7 +124,9 @@ router.post(
   remoteInviteLimiter,
   handle(async (req, res) => {
     const { code } = remoteClaimBodySchema.parse(req.body ?? {});
-    res.status(201).json({ success: true, data: await claimTripInvite(req.userId!, code) });
+    const person = await claimTripInvite(req.userId!, code);
+    // A retry of a code this account redeemed already: the pairing existed, nothing was created.
+    res.status(person.alreadyConnected ? 200 : 201).json({ success: true, data: person });
   })
 );
 

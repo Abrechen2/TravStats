@@ -4685,17 +4685,21 @@ model ShareConsent {
 /// not trip consent. Neither channel is an id of the other server: both are random handshake
 /// entropy, so a remote id can never resolve to a local user or trip.
 model RemoteShareAccount {
-  id           String   @id @default(uuid())
+  id              String   @id @default(uuid())
   /// The local side of the pairing.
-  userId       String   @map("user_id")
-  origin       String
+  userId          String   @map("user_id")
+  origin          String
   /// How the other server names its user in this pairing (minted there).
-  channel      String
+  channel         String
   /// How this server names `userId` towards that server (minted here).
-  localChannel String   @map("local_channel")
-  username     String
-  displayName  String   @map("display_name")
-  createdAt    DateTime @default(now()) @map("created_at")
+  localChannel    String   @map("local_channel")
+  username        String
+  displayName     String   @map("display_name")
+  /// SHA-256 of the invitation secret this side redeemed to make the pairing (null when the other
+  /// side redeemed ours, or before 2026-10-21): a retry of the same code that the issuer answers
+  /// "used" is recognised as already connected instead of failing.
+  claimedCodeHash String?  @map("claimed_code_hash")
+  createdAt       DateTime @default(now()) @map("created_at")
 
   user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   consentsRequested ShareConsent[]          @relation("ShareConsentRemoteRequester")

@@ -29,6 +29,11 @@ export interface RemotePerson {
   createdAt: string;
 }
 
+/** Redeeming a code: the person, and `alreadyConnected` when this account redeemed it before. */
+export interface ClaimedPerson extends RemotePerson {
+  alreadyConnected?: true;
+}
+
 /** Mirrors `REMOTE_MEMBER_STATES` in `backend/src/schemas/sharingRemote.ts`. */
 export type RemoteMemberState =
   "invited" | "active" | "declined" | "unreachable" | "suspended" | "left" | "revoked";

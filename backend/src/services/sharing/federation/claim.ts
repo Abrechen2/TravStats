@@ -23,6 +23,7 @@ import {
 } from "../../../schemas/tripSharePeer";
 import logger from "../../../utils/logger";
 import { serveOffer } from "./offerInbox";
+import { hash } from "../../federation/refusal";
 import { requireTripFederation } from "./access";
 import { remoteShareError, type RemoteShareErrorCode } from "./errors";
 import { parseTripInviteCode } from "./inviteCode";
@@ -49,7 +50,8 @@ async function recordPairing(
   userId: string,
   origin: string,
   localChannel: string,
-  answer: Accepted
+  answer: Accepted,
+  claimedCodeHash: string
 ): Promise<string> {
   try {
     return await prisma.$transaction(async (tx) => {
@@ -61,6 +63,7 @@ async function recordPairing(
           localChannel,
           username: answer.username,
           displayName: answer.displayName,
+          claimedCodeHash,
         },
       });
       // The claimant's yes: the issuer may share trips into this account.
@@ -104,7 +107,28 @@ async function takeOfferWithClaim(userId: string, origin: string, offer: TripOff
   }
 }
 
-export async function claimTripInvite(userId: string, code: string): Promise<RemotePersonView> {
+/**
+ * The issuer answered "used": if this account redeemed exactly this code with that server before
+ * (a double click, a retry after the reply was shown late), the pairing it made is the answer —
+ * the person is connected already. Only the issuer's one-time rule decided anything; nothing about
+ * it changes here.
+ */
+async function alreadyRedeemedHere(
+  userId: string,
+  origin: string,
+  secret: string
+): Promise<string | null> {
+  const pairing = await prisma.remoteShareAccount.findFirst({
+    where: { userId, origin, claimedCodeHash: hash(secret) },
+    select: { id: true },
+  });
+  return pairing?.id ?? null;
+}
+
+/** A claim's result: the person, and whether the pairing existed before this claim. */
+export type ClaimResult = RemotePersonView & { alreadyConnected?: true };
+
+export async function claimTripInvite(userId: string, code: string): Promise<ClaimResult> {
   const parsed = parseTripInviteCode(code);
   if (!parsed.ok)
     throw parsed.reason === "leaderboardCode"
@@ -143,6 +167,11 @@ export async function claimTripInvite(userId: string, code: string): Promise<Rem
     const kind = kindOf(error);
     throw kind === LOCAL_ERROR ? error : unreachable(userId, parsed.origin, kind);
   }
+  if (!reply.accepted && reply.reason === "used") {
+    const existing = await alreadyRedeemedHere(userId, parsed.origin, parsed.secret);
+    if (existing)
+      return { ...(await readRemotePerson(userId, existing)), alreadyConnected: true as const };
+  }
   if (!reply.accepted)
     throw remoteShareError(
       REFUSAL_CODES[reply.reason],
@@ -150,7 +179,13 @@ export async function claimTripInvite(userId: string, code: string): Promise<Rem
       "The invitation was not redeemed",
       { userId, origin: parsed.origin, kind: reply.reason }
     );
-  const remoteId = await recordPairing(userId, parsed.origin, localChannel, reply);
+  const remoteId = await recordPairing(
+    userId,
+    parsed.origin,
+    localChannel,
+    reply,
+    hash(parsed.secret)
+  );
   if (reply.offer) await takeOfferWithClaim(userId, parsed.origin, reply.offer);
   return readRemotePerson(userId, remoteId);
 }

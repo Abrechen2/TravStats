@@ -561,7 +561,8 @@
       "label": "Code from someone on another server",
       "placeholder": "https://travstats.example.org#trip:…",
       "submit": "Redeem",
-      "done": "Connected with {{name}} ({{origin}})."
+      "done": "Connected with {{name}} ({{origin}}).",
+      "already": "Already connected: {{name}} ({{origin}})."
     },
     "people": {
       "title": "Connected people",

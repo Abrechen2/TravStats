@@ -39,6 +39,14 @@ export const remotePersonSchema = z.strictObject({
 });
 
 /**
+ * The answer to redeeming a code: the person, and `alreadyConnected` when the code was redeemed by
+ * this account before and the pairing already existed (a retry the issuer answered "used").
+ */
+export const remoteClaimResultSchema = remotePersonSchema.extend({
+  alreadyConnected: z.literal(true).optional(),
+});
+
+/**
  * A remote member's state (spec 2026-10-20 F3; `declined` added in F-S4c, so an offer the person
  * turned down reads as such instead of as a member who left). Also the CHECK
  * `trip_share_remote_members_state_check`; `shareVocabulary.test.ts` holds the two together.

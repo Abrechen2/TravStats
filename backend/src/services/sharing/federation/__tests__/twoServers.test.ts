@@ -66,6 +66,20 @@ describe("invite claimed across two servers", () => {
     );
   });
 
+  it("a retry of the same code by the account that redeemed it reads as already connected", async () => {
+    const anna = await user(a, "Anna");
+    const ben = await user(b, "Ben");
+    const { code } = await a.invites.createTripInvite(anna);
+    const first = await b.claim.claimTripInvite(ben, code);
+    await expect(b.claim.claimTripInvite(ben, code)).resolves.toMatchObject({
+      id: first.id,
+      alreadyConnected: true,
+    });
+    // A's one-time rule is untouched: still one pairing on each side.
+    expect(await a.prisma.remoteShareAccount.count({ where: { userId: anna } })).toBe(1);
+    expect(await b.prisma.remoteShareAccount.count({ where: { userId: ben } })).toBe(1);
+  });
+
   it("reports an expired code as expired", async () => {
     const anna = await user(a, "Anna");
     const { id, code } = await a.invites.createTripInvite(anna);

@@ -183,6 +183,50 @@ it.each([
   expect(await prisma.remoteShareAccount.count({ where: { userId: ben } })).toBe(0);
 });
 
+describe("a code redeemed here before, answered `used` (a retry)", () => {
+  const used = { kind: "invite-claim-reply", accepted: false, reason: "used" };
+
+  it("is reported as already connected, with the pairing it made", async () => {
+    exchange.mockResolvedValueOnce(pong).mockResolvedValueOnce(accepted());
+    const first = await claimTripInvite(ben, code());
+    exchange.mockResolvedValueOnce(pong).mockResolvedValueOnce(used);
+    await expect(claimTripInvite(ben, code())).resolves.toMatchObject({
+      id: first.id,
+      origin: PEER,
+      alreadyConnected: true,
+    });
+    expect(await prisma.remoteShareAccount.count({ where: { userId: ben } })).toBe(1);
+  });
+
+  it("stays `used` for a different code, even with that server paired", async () => {
+    exchange.mockResolvedValueOnce(pong).mockResolvedValueOnce(accepted());
+    await claimTripInvite(ben, code());
+    exchange.mockResolvedValueOnce(pong).mockResolvedValueOnce(used);
+    await expect(claimTripInvite(ben, `${PEER}#trip:${"ef".repeat(32)}`)).rejects.toMatchObject({
+      code: "SHARE_REMOTE_INVITE_USED",
+    });
+  });
+
+  it("stays `used` for another account that redeemed nothing", async () => {
+    exchange.mockResolvedValueOnce(pong).mockResolvedValueOnce(accepted());
+    await claimTripInvite(ben, code());
+    const cara = (
+      await prisma.user.create({
+        data: {
+          username: `claim-${randomUUID().slice(0, 8)}`,
+          passwordHash: "test-only",
+          firstName: "Cara",
+        },
+      })
+    ).id;
+    users.push(cara);
+    exchange.mockResolvedValueOnce(pong).mockResolvedValueOnce(used);
+    await expect(claimTripInvite(cara, code())).rejects.toMatchObject({
+      code: "SHARE_REMOTE_INVITE_USED",
+    });
+  });
+});
+
 it("stores nothing from a reply that does not parse", async () => {
   exchange.mockResolvedValueOnce(pong).mockResolvedValueOnce({ ...accepted(), userId: "victim" });
   await expect(claimTripInvite(ben, code())).rejects.toMatchObject({

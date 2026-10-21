@@ -15,6 +15,7 @@ import {
   createdRemoteInviteSchema,
   receivedOfferSchema,
   remoteClaimBodySchema,
+  remoteClaimResultSchema,
   remoteInviteSchema,
   remoteMemberSchema,
   remoteOfferBodySchema,
@@ -89,7 +90,11 @@ registry.registerPath({
   tags,
   request: { body: { content: { "application/json": { schema: remoteClaimBodySchema } } } },
   responses: {
-    201: ok("The person, now paired with the caller", remotePersonSchema),
+    200: ok(
+      "This account redeemed this code before and the pairing exists: `alreadyConnected` is true; nothing was created",
+      remoteClaimResultSchema
+    ),
+    201: ok("The person, now paired with the caller", remoteClaimResultSchema),
     400: err(
       "`SHARE_REMOTE_INVITE_INVALID` (not a code, or unknown or withdrawn there), `SHARE_REMOTE_INVITE_WRONG_TAG` (a leaderboard code), `SHARE_REMOTE_INVITE_USED`, `SHARE_REMOTE_INVITE_EXPIRED`, `SHARE_REMOTE_INVITE_OWN_SERVER`"
     ),
