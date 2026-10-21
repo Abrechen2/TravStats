@@ -37,7 +37,8 @@ import { fromWireEntries } from "./wire/decode";
 import { toWireEntries } from "./wire/encode";
 import type { WireEntry } from "./wire/shapes";
 import { isHeld, isReceiving } from "./peerMember";
-import { mayReach, userRef } from "./roster";
+import { ON_TRIP, mayReach, userRef } from "./roster";
+import logger from "../../../utils/logger";
 import { rejectWith, serveOnce, takeSeq } from "./streams";
 import { BODY_BUDGET, wireBytes } from "./transport";
 
@@ -118,25 +119,12 @@ export async function queueEntries(
   const entries = await wireEntriesOf(tx, remote.userId, trip.id);
   const oversize = entries.filter((e) => wireBytes(e) > ENTRIES_BYTES);
   const chunks = chunkEntries(entries.filter((e) => !oversize.includes(e)));
-  // A resend after a restore names who brought each entry in, unless it was the member's own
-  // (F-S4e review): the spoke then copies only what its person said yes to.
-  const own = userRef(group.federatedRef as string, remote.userId);
-  const authors = options.resync
-    ? new Map(
-        (
-          await tx.tripShareEntryAuthor.findMany({
-            where: { groupId: group.id, authorRef: { not: own } },
-          })
-        ).map((a) => [a.shareKey, a.authorRef])
-      )
-    : null;
+  const authors = await entryAuthors(tx, member, entries, options.resync === true);
   for (const chunk of chunks) {
-    const named = authors
-      ? chunk.flatMap((e) => {
-          const ref = authors.get(e.shareKey);
-          return ref ? [{ shareKey: e.shareKey, ref }] : [];
-        })
-      : [];
+    const named = chunk.flatMap((e) => {
+      const ref = authors.get(e.shareKey);
+      return ref ? [{ shareKey: e.shareKey, ref }] : [];
+    });
     await tx.tripShareOutbox.create({
       data: {
         groupId: group.id,
@@ -146,7 +134,7 @@ export async function queueEntries(
         payload: {
           from: remote.localChannel,
           entries: chunk,
-          ...(authors ? { authors: named } : {}),
+          authors: named,
         } as unknown as Prisma.InputJsonValue,
       },
     });
@@ -158,6 +146,63 @@ export async function queueEntries(
   });
   kickDelivery();
   return chunks.length;
+}
+
+/**
+ * Who brought each entry in, by roster ref, for the spoke's gate (F-S4e review) — every entry the
+ * home can vouch for is named, and the spoke copies an entry without a name for nobody.
+ *
+ * - The first delivery after an accept is the trip as offered: an entry with no record yet is the
+ *   offering member's own (it was in their trip; the record starts here), and one by someone no
+ *   longer on the trip is theirs too — accepting the offer was the yes to its contents.
+ * - A resend after a restore names only what the record says: an entry without a record is named
+ *   by nobody and copied for nobody.
+ */
+async function entryAuthors(
+  tx: DbTransaction,
+  member: { groupId: string; group: { federatedRef: string | null }; remote: { userId: string } },
+  entries: readonly WireEntry[],
+  resync: boolean
+): Promise<Map<string, string>> {
+  const ownRef = userRef(member.group.federatedRef as string, member.remote.userId);
+  const recorded = new Map(
+    (await tx.tripShareEntryAuthor.findMany({ where: { groupId: member.groupId } })).map((a) => [
+      a.shareKey,
+      a.authorRef,
+    ])
+  );
+  if (resync) return recorded;
+  const onTrip = new Set([
+    ownRef,
+    ...(
+      await tx.tripShareRemoteMember.findMany({
+        where: { groupId: member.groupId, state: { in: ON_TRIP } },
+        select: { rosterRef: true },
+      })
+    ).map((m) => m.rosterRef),
+    ...(
+      await tx.trip.findMany({
+        where: { shareGroupId: member.groupId },
+        select: { userId: true },
+      })
+    ).map((t) => userRef(member.group.federatedRef as string, t.userId)),
+  ]);
+  const missing = entries.filter((e) => !recorded.has(e.shareKey));
+  if (missing.length > 0)
+    await tx.tripShareEntryAuthor.createMany({
+      data: missing.map((e) => ({
+        groupId: member.groupId,
+        shareKey: e.shareKey,
+        authorRef: ownRef,
+      })),
+      skipDuplicates: true,
+    });
+  return new Map(
+    entries.map((e) => {
+      const ref = recorded.get(e.shareKey);
+      return [e.shareKey, ref && onTrip.has(ref) ? ref : ownRef];
+    })
+  );
 }
 
 /** Queue the entries again for remote member `memberId` (its own transaction). */
@@ -186,6 +231,7 @@ export function serveEntries(origin: string, message: EntriesMessage): Promise<T
           state: true,
           stateReason: true,
           rosterRef: true,
+          localRef: true,
           remote: { select: { userId: true } },
         },
       })
@@ -199,11 +245,19 @@ export function serveEntries(origin: string, message: EntriesMessage): Promise<T
             select: { id: true },
           });
           return trip
-            ? { userId: m.remote.userId, tripId: trip.id, pairingRef: m.rosterRef }
+            ? {
+                userId: m.remote.userId,
+                tripId: trip.id,
+                pairingRef: m.rosterRef,
+                ownRef: m.localRef,
+              }
             : null;
         })
       )
-    ).filter((r): r is { userId: string; tripId: string; pairingRef: string } => r !== null);
+    ).filter(
+      (r): r is { userId: string; tripId: string; pairingRef: string; ownRef: string | null } =>
+        r !== null
+    );
     if (recipients.length === 0) {
       // Held here until its person confirms again (F-S4e): kept there and sent again, not lost.
       const held = await tx.tripShareRemoteMember.findMany({
@@ -212,19 +266,26 @@ export function serveEntries(origin: string, message: EntriesMessage): Promise<T
       throw rejectWith(held.some(isHeld) ? "suspended" : "not-member");
     }
     const rows = await fromWireEntries(tx, message.entries as WireEntry[]);
-    const authorOf = new Map((message.authors ?? []).map((a) => [a.shareKey, a.ref]));
+    const authorOf = new Map(message.authors.map((a) => [a.shareKey, a.ref]));
     for (const recipient of recipients) {
-      // An entry someone else brought in reaches the person only after their yes (F-S4e).
+      // Fails closed (F-S4e review): an entry is copied only when the home names who brought it
+      // in, and that is the home member of this pairing, the person here themselves, or someone
+      // they said yes to. An entry named by nobody is copied for nobody.
       const allowed = new Set<string>();
       for (const { row } of rows) {
         const ref = authorOf.get(row.shareKey as string);
-        if (
-          !ref ||
-          ref === recipient.pairingRef ||
-          (await mayReach(tx, group.id, recipient.userId, { pairingId: null, ref }))
-        )
-          allowed.add(row.shareKey as string);
+        const ok =
+          !!ref &&
+          (ref === recipient.pairingRef ||
+            ref === recipient.ownRef ||
+            (await mayReach(tx, group.id, recipient.userId, { pairingId: null, ref })));
+        if (ok) allowed.add(row.shareKey as string);
       }
+      if (allowed.size < rows.length)
+        logger.info(
+          { operation: "trip_share_entries_withheld", count: rows.length - allowed.size, origin },
+          "Entries by someone the recipient has not said yes to were not copied"
+        );
       for (const entity of SHARE_ENTITIES) {
         const ofType = rows.filter(
           (r) => r.entity === entity && allowed.has(r.row.shareKey as string)

@@ -111,19 +111,16 @@ export const offerAnswerSchema = z.strictObject({
 });
 
 /**
- * Entries of the offering member's trip (`from`), at most fifty per message. A resend after a
- * restore (F-S4e) names, per entry someone else brought in, that person's roster ref
- * (`authors`): the receiver copies it only for a person who said yes to them.
+ * Entries of the offering member's trip (`from`), at most fifty per message, each named with the
+ * roster ref of who brought it into the group (`authors`, F-S4e): the receiver copies an entry
+ * only for a person paired with or agreeing to its author, and one named by nobody not at all.
  */
 export const entriesSchema = z.strictObject({
   kind: z.literal("entries"),
   ...groupHeader,
   from: uuid,
   entries: z.array(wireEntrySchema).min(1).max(MAX_ENTRIES_PER_MESSAGE),
-  authors: z
-    .array(z.strictObject({ shareKey: uuid, ref: uuid }))
-    .max(MAX_ENTRIES_PER_MESSAGE)
-    .optional(),
+  authors: z.array(z.strictObject({ shareKey: uuid, ref: uuid })).max(MAX_ENTRIES_PER_MESSAGE),
 });
 
 /**

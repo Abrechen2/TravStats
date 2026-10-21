@@ -263,7 +263,12 @@ describe("group messages from a verified peer", () => {
 
   it("answers entries for a group it does not hold as not-member, under signature", async () => {
     expect(
-      await answerOf({ ...header("entries"), from: randomUUID(), entries: [validStop()] })
+      await answerOf({
+        ...header("entries"),
+        from: randomUUID(),
+        entries: [validStop()],
+        authors: [],
+      })
     ).toEqual({ kind: "ack", rejected: "not-member" });
   });
 

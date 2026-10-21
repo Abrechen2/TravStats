@@ -179,4 +179,26 @@ describe("three servers, one home", () => {
     // Anna's own entries still go: a flight she added is resent and arrives.
     expect(await c.prisma.flight.count({ where: { tripId: cleoTrip } })).toBe(2);
   });
+
+  it("a resent entry whose author the home has no record of reaches nobody who did not agree", async () => {
+    const { anna, ben, cleo, trip, benTrip, cleoTrip } = await threeOnATrip();
+    // Ben has not answered Cleo (pending). Cleo adds a flight; it reaches Anna only.
+    const hers = await addFlight(c, cleo, cleoTrip);
+    await c.propagate.propagateWrite(c.prisma, cleo, "flight", hers.id);
+    await c.outbox.runDeliveries();
+    await a.outbox.runDeliveries();
+    expect(await b.prisma.flight.count({ where: { tripId: benTrip } })).toBe(1);
+    // The home lost the record of who brought it in (as for an entry from before the record).
+    const groupId = (await a.prisma.trip.findUniqueOrThrow({ where: { id: trip.id } }))
+      .shareGroupId as string;
+    const key = (await c.prisma.flight.findUniqueOrThrow({ where: { id: hers.id } })).shareKey;
+    await a.prisma.tripShareEntryAuthor.deleteMany({ where: { groupId, shareKey: key! } });
+
+    await a.restore.suspendTripFederationAfterRestore();
+    await a.lifecycle.reconfirmTrip(anna, trip.id);
+    await a.outbox.runDeliveries();
+    // Fails closed: no named author, not the home member's own, so not copied.
+    expect(await b.prisma.flight.count({ where: { tripId: benTrip } })).toBe(1);
+    void ben;
+  });
 });
