@@ -4,7 +4,7 @@
  */
 import { Client } from "pg";
 import { A, B, servers, user as harnessUser, useTwoServers, type Server } from "./twoServerHarness";
-import { addFlight, membersOn, sharedFlight } from "./sharedTripFixtures";
+import { addFlight, membersOn, pairAcross, sharedFlight } from "./sharedTripFixtures";
 
 useTwoServers();
 let a: Server;
@@ -98,5 +98,27 @@ describe("confirming again while the trip is left (review 4)", () => {
       where: { remote: { userId: anna, origin: B } },
     });
     expect(member.state).toBe("left");
+  });
+});
+
+describe("an offer still open when the spoke was restored (review 5)", () => {
+  it("is listed again, and taking it confirms the pairing and brings the trip", async () => {
+    const anna = await harnessUser(a, "Anna");
+    const ben = await harnessUser(b, "Ben");
+    const remote = await pairAcross(a, anna, b, ben);
+    const trip = await a.prisma.trip.create({ data: { userId: anna, name: "Lissabon" } });
+    await addFlight(a, anna, trip.id);
+    await a.offers.offerTrip(anna, trip.id, remote.id);
+    await b.restore.suspendTripFederationAfterRestore();
+    const [offer] = await b.offerInbox.listReceivedOffers(ben);
+    expect(offer).toMatchObject({ from: { displayName: "Anna", origin: A } });
+    const { tripId } = await b.offerInbox.acceptOffer(ben, offer.id);
+    await a.outbox.runDeliveries();
+    expect(await b.prisma.flight.count({ where: { tripId } })).toBe(1);
+    expect(
+      await b.prisma.shareConsent.count({
+        where: { targetId: ben, remoteRequester: { origin: A }, status: "accepted" },
+      })
+    ).toBe(1);
   });
 });

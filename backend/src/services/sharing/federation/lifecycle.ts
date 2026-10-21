@@ -227,6 +227,27 @@ export async function holdPeerMemberships(
 }
 
 /**
+ * A restore put the consent with a person on another server back to a question (§8); the
+ * person's own confirmation answers it again. A withdrawn or declined consent stays as it is.
+ */
+export async function reacceptAfterRestore(
+  c: Pick<DbTransaction, "shareConsent">,
+  userId: string,
+  remoteId: string
+): Promise<void> {
+  await c.shareConsent.updateMany({
+    where: {
+      status: "pending",
+      OR: [
+        { requesterId: userId, remoteTargetId: remoteId },
+        { remoteRequesterId: remoteId, targetId: userId },
+      ],
+    },
+    data: { status: "accepted", decidedAt: new Date() },
+  });
+}
+
+/**
  * The caller confirms their held memberships of one trip again (after a restore, a block or a
  * re-pin). The server must be admitted and verified again first; the pairing's consent is
  * accepted again; after a restore the home queues the trip's entries once more.
@@ -272,16 +293,7 @@ export async function reconfirmTrip(userId: string, tripId: string): Promise<num
           })
         : [];
       for (const m of still) {
-        await tx.shareConsent.updateMany({
-          where: {
-            status: "pending",
-            OR: [
-              { requesterId: userId, remoteTargetId: m.remoteId },
-              { remoteRequesterId: m.remoteId, targetId: userId },
-            ],
-          },
-          data: { status: "accepted", decidedAt: now },
-        });
+        await reacceptAfterRestore(tx, userId, m.remoteId);
         const accepted = await tx.shareConsent.count({
           where: {
             status: "accepted",

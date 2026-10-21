@@ -31,6 +31,8 @@ import { TRIP_SHARE_TRANSPORT, messageHeader } from "./transport";
 import { TRIP_SHAPE, wireTripSchema } from "./wire/shapes";
 import { encodeShape } from "./wire/codec";
 import { acceptOfferedRoster, storeRoster } from "./roster";
+import { reacceptAfterRestore } from "./lifecycle";
+import { requireAdmitted } from "./peerCheck";
 
 /** What is kept of an offer until it is answered: the wire form, read again on accept. */
 const storedOfferSchema = z.object({
@@ -98,8 +100,12 @@ export interface ReceivedOfferView {
   offeredAt: string;
 }
 
+/**
+ * An offer waiting for its person: invited — or held since a restore (`restore-invited`, F-S4e
+ * review): still listed, and taking it is the person's confirmation of the pairing.
+ */
 const OPEN = (userId: string) => ({
-  state: "invited",
+  OR: [{ state: "invited" }, { state: "suspended", stateReason: "restore-invited" }],
   offer: { not: Prisma.DbNull },
   remote: { userId },
   group: { homeOrigin: { not: null } },
@@ -190,6 +196,12 @@ async function holdsEntries(tx: DbTransaction, tripId: string): Promise<boolean>
 export async function acceptOffer(userId: string, id: string): Promise<{ tripId: string }> {
   await requireTripFederation(userId);
   const row = await openOffer(userId, id);
+  // Held since a restore: taking the trip confirms the pairing again, once its server is
+  // admitted again (the restore put the consent back to a question).
+  if (row.state === "suspended") {
+    await requireAdmitted(userId, row.remote.origin);
+    await reacceptAfterRestore(prisma, userId, row.remoteId);
+  }
   const consenting = await acceptedParties(prisma, { kind: "user", id: userId }, [
     { kind: "remote", id: row.remoteId },
   ]);
