@@ -31,6 +31,7 @@ import type { FlightSubmitOptions } from "../FlightForm/useFlightForm";
 import type { ImportDocument } from "../import/documentHandoff";
 import type { ParseDomain } from "../../lib/api/parse";
 import { isEntryDomainShown } from "../../config/domainBetaGates";
+import { MAP_CHROME } from "../map/mapChrome";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -276,7 +277,7 @@ export function DashboardLayout({
             z-35 matches the slot's own level, so it clears AllTab's key for
             the same reason. */}
         {tab !== "all" && (
-          <div style={{ position: "absolute", bottom: 16, right: 16, zIndex: 35 }}>
+          <div {...MAP_CHROME} style={{ position: "absolute", bottom: 16, right: 16, zIndex: 35 }}>
             <DomainFilterButton
               tourCount={null}
               open={domainFilterOpen}
@@ -284,7 +285,7 @@ export function DashboardLayout({
             />
           </div>
         )}
-        <div style={{ position: "absolute", top: 16, right: 16, zIndex: 30 }}>
+        <div {...MAP_CHROME} style={{ position: "absolute", top: 16, right: 16, zIndex: 30 }}>
           {tab === "all" ? (
             <AddDomainPicker enabled={addableDomains} onPick={startAdding} />
           ) : (

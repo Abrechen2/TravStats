@@ -19,6 +19,12 @@ import type { MapRef } from "react-map-gl/maplibre";
 import type { PointDatum } from "./globeLayerTypes";
 import type { GlobeExtraLabel } from "./globePinLabels";
 import type { LabelsMode } from "../map/labelPriority";
+import {
+  hitsMapChrome,
+  mapChromeElements,
+  measureMapChrome,
+  type ChromeBox,
+} from "../map/mapChrome";
 
 const DEG = Math.PI / 180;
 
@@ -108,10 +114,40 @@ export function GlobeLabelsOverlay({
   }, [airports, ports, extras, mode]);
 
   const nodeRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const frameRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const map = mapRef.current?.getMap();
-    if (!map || !mapReady || points.length === 0) return;
+    const frame = frameRef.current;
+    if (!map || !mapReady || points.length === 0 || !frame) return;
+
+    // The map's controls (histogram, panels, key, filter — `map/mapChrome.ts`)
+    // are measured when the camera starts to move, when the map resizes, and
+    // when a control changes size (the histogram widens on hover) — not on
+    // every frame, where reading layout would cost what the style writes
+    // below are careful to save.
+    let chrome: ChromeBox[] = [];
+    const resizes =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(() => {
+            measure();
+            update();
+          });
+    // Re-observed only when the set of controls changed: `observe` reports
+    // each element once on its own, and re-observing from inside that report
+    // would never settle.
+    let observed: Element[] = [];
+    const measure = (): void => {
+      const elements = mapChromeElements();
+      chrome = measureMapChrome(frame, elements);
+      if (!resizes) return;
+      if (elements.length === observed.length && elements.every((el, i) => el === observed[i]))
+        return;
+      resizes.disconnect();
+      for (const el of elements) resizes.observe(el);
+      observed = elements;
+    };
 
     const update = (): void => {
       const center = map.getCenter();
@@ -175,7 +211,11 @@ export function GlobeLabelsOverlay({
         };
         // "all" mode shows every front-facing label; "important" culls
         // overlaps so the busiest (pre-sorted) markers keep their labels.
-        if (mode !== "all" && overlaps(box)) {
+        // Neither prints over a map control (beta.22 UAT).
+        if (
+          (mode !== "all" && overlaps(box)) ||
+          hitsMapChrome(chrome, box.x, box.y, box.w, box.h)
+        ) {
           if (node.style.display !== "none") node.style.display = "none";
           continue;
         }
@@ -186,17 +226,23 @@ export function GlobeLabelsOverlay({
       }
     };
 
+    measure();
     update();
     map.on("render", update);
+    map.on("movestart", measure);
+    map.on("resize", measure);
     return () => {
       map.off("render", update);
+      map.off("movestart", measure);
+      map.off("resize", measure);
+      resizes?.disconnect();
     };
   }, [mapRef, mapReady, points, mode]);
 
   if (mode === "off" || points.length === 0) return null;
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
+    <div ref={frameRef} className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
       {points.map((pt, i) => (
         <div
           key={`${pt.kind}-${pt.text}-${i}`}

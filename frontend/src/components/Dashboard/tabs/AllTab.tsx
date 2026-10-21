@@ -67,6 +67,7 @@ import { useDomainColors } from "../../../hooks/useDomainColors";
 import { DomainFilterButton } from "./DomainFilterButton";
 import { DomainFilterEmptyOverlay } from "./DomainFilterEmptyOverlay";
 import { allTabAppearanceDomains, useAllTabDomainVisibility } from "./useAllTabDomainVisibility";
+import { MAP_CHROME } from "../../map/mapChrome";
 
 // Maps the dashboard-level AllMode to what MapContainer3D's visMode prop expects.
 // "journey" uses extraLayers with showInternalCruises=false so it has full
@@ -577,6 +578,7 @@ export function AllTab(): JSX.Element {
   // whole point.
   const legendTable = legendRows.length > 0 && (
     <div
+      {...MAP_CHROME}
       style={{
         position: "absolute",
         bottom: ATTRIBUTION_CLEARANCE,
@@ -669,6 +671,7 @@ export function AllTab(): JSX.Element {
   // cross-domain trips, or a hint when none exist.
   const journeySelector = (
     <div
+      {...MAP_CHROME}
       style={{
         position: "absolute",
         top: 12,
