@@ -1,13 +1,15 @@
 import { daysBetween, fromDbDate, toDbDate } from "../../shared/time/localDate";
 import { arrivalUndetermined, routeLegs, scheduleRoute } from "./routeSchedule";
-import type { PlanFinding, PlanStage, PlanState, PlanStation } from "./types";
+import { machineInstant } from "../../shared/time/instant";
+import type { PlanBooking, PlanFinding, PlanStage, PlanState, PlanStation } from "./types";
 
 const SECTION = "route";
-const MINUTES_PER_DAY = 1440;
 const MS_PER_DAY = 86_400_000;
 const PLACEHOLDER_INFO_DAYS = 21;
 const PLACEHOLDER_ATTENTION_DAYS = 7;
 const FERRY_MIN_CONNECTION_MINUTES = 120;
+/** The clock a plan without zones is read on — both ends of a comparison alike. */
+const FLOATING_ZONE = "UTC";
 /** Spec §5.4: a single driving day longer than this is worth a second look. */
 const LONG_DRIVE_MINUTES = { relaxed: 300, balanced: 420, busy: 540 } as const;
 /** Modes that need a booking (or at least a placeholder) to be a plan. */
@@ -26,6 +28,52 @@ function minuteOfDay(time: string | null): number | null {
 
 function addDays(day: string, count: number): string {
   return fromDbDate(new Date(toDbDate(day).getTime() + count * MS_PER_DAY));
+}
+
+/** A day and clock on a zone that may be unknown. */
+interface Clock {
+  day: string;
+  time: string;
+  zone: string | null;
+  /** Minutes to add to the clock — a travel duration not yet applied. */
+  plusMinutes: number;
+}
+
+function clockAt(day: string | null, time: string | null, zone: string | null): Clock | null {
+  return day && time && minuteOfDay(time) !== null ? { day, time, zone, plusMinutes: 0 } : null;
+}
+
+/**
+ * The instant of a clock. Without a zone it is read on a floating clock, which
+ * is only sound when the clock it is compared with has no zone either.
+ */
+function instantOf(clock: Clock): Date | null {
+  return machineInstant(`${clock.day}T${clock.time.slice(0, 5)}`, clock.zone ?? FLOATING_ZONE);
+}
+
+/**
+ * When the incoming stage reaches the ferry's port: its booking's own arrival
+ * when it states one, otherwise its departure plus its duration. Null when
+ * neither is known.
+ */
+function connectionArrival(
+  incoming: PlanStage,
+  booking: PlanBooking | undefined,
+  departDay: string | null,
+  origin: PlanStation | undefined,
+  port: PlanStation
+): Clock | null {
+  if (booking && !booking.placeholder && booking.arrivalDay && booking.arrivalTime)
+    return clockAt(
+      booking.arrivalDay,
+      booking.arrivalTime,
+      booking.arrivalTimezone || port.place.zone
+    );
+  if (incoming.durationMinutes === null) return null;
+  const time = booking?.time ?? incoming.departTime;
+  const zone = (booking?.time && booking.timezone) || origin?.place.zone || null;
+  const clock = clockAt(departDay, time, zone);
+  return clock && { ...clock, plusMinutes: incoming.durationMinutes };
 }
 
 /** Findings that only exist on a route plan; they pass through the same suppression as the rest. */
@@ -142,27 +190,31 @@ export function routeFindings(state: PlanState, today: string): PlanFinding[] {
     // Only a pass-through station has a same-day connection to miss.
     if (!from || from.nights > 0) continue;
     const incoming = state.stages.find((g) => g.toStationId === from.id);
-    const incomingDays = incoming && stageDays(incoming);
-    const ferryDay = stageDays(ferry)?.departDay;
-    const ferryTime = bookingOf(ferry)?.time ?? ferry.departTime;
-    const ferryMinute = minuteOfDay(ferryTime);
-    const incomingMinute = minuteOfDay(
-      incoming ? (bookingOf(incoming)?.time ?? incoming.departTime) : null
+    if (!incoming) continue;
+    const ferryBooking = bookingOf(ferry);
+    const ferryTime = ferryBooking?.time ?? ferry.departTime;
+    const arrival = connectionArrival(
+      incoming,
+      bookingOf(incoming),
+      stageDays(incoming)?.departDay ?? null,
+      station(incoming.fromStationId),
+      from
     );
-    if (
-      !incoming ||
-      incoming.durationMinutes === null ||
-      !incomingDays?.departDay ||
-      !ferryDay ||
-      ferryMinute === null ||
-      incomingMinute === null
-    )
-      continue;
-    const arrival =
-      daysBetween(ferryDay, incomingDays.departDay) * MINUTES_PER_DAY +
-      incomingMinute +
-      incoming.durationMinutes;
-    const minutes = ferryMinute - arrival;
+    const departure = clockAt(
+      stageDays(ferry)?.departDay ?? null,
+      ferryTime,
+      (ferryBooking?.time && ferryBooking.timezone) || from.place.zone
+    );
+    if (!arrival || !departure) continue;
+    const zones = [arrival.zone, departure.zone];
+    // One end on a known zone and the other on none: the gap is unknowable.
+    if (zones.some((z) => z) && !zones.every((z) => z)) continue;
+    const arrivalAt = instantOf(arrival);
+    const departureAt = instantOf(departure);
+    if (!arrivalAt || !departureAt) continue;
+    const minutes = Math.round(
+      (departureAt.getTime() - arrivalAt.getTime()) / 60_000 - arrival.plusMinutes
+    );
     if (minutes < FERRY_MIN_CONNECTION_MINUTES)
       add(
         "ferryConnection:" + ferry.id,
