@@ -299,6 +299,31 @@ describe("wikidata helpers", () => {
     expect(plainText("")).toBeNull();
   });
 
+  it("reads crafted Commons HTML in linear time (security review)", () => {
+    // Commons' Artist / licence fields are third-party HTML. Each of these
+    // made the old tag regexes backtrack polynomially.
+    const crafted = [
+      '<a style="display:none">x'.repeat(40_000), // hidden opener, no closer
+      '<a style="'.repeat(60_000), // attribute quote never closed
+      "<".repeat(300_000), // tags that never end
+      '<b style="display: none">'.repeat(20_000) + "</c>".repeat(20_000),
+      Array.from({ length: 20_000 }, (_, i) => `<t${i} style="display:none">`).join(""),
+    ];
+    for (const html of crafted) {
+      const started = performance.now();
+      plainText(html);
+      expect(performance.now() - started).toBeLessThan(150);
+    }
+  });
+
+  it("still reads nested and normal markup after the rewrite", () => {
+    expect(
+      plainText('<span style="display:none"><span>a</span>b</span>Jane<br/> &amp; <i>Co</i>')
+    ).toBe("Jane & Co");
+    expect(plainText('A<span style="display:none">x')).toBe("A x");
+    expect(plainText("Jane <unfinished")).toBe("Jane");
+  });
+
   it("leaves out the text Commons hides, so an author is credited once", () => {
     // Commons' own Artist value for File:Flixbus_201x_logo.svg (2026-10-21):
     // the card read "Unknown author Unknown author".

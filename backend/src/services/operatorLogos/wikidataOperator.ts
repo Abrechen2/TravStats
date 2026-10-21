@@ -86,19 +86,77 @@ export function bestStringClaim(claims: Claims | undefined, property: string): s
 }
 
 /**
- * An element Commons renders hidden (`style="display: none"`), with its
- * content. Its templates print a machine-readable copy that way — "Unknown
- * author" came out twice on the card.
+ * Commons' HTML fields are third-party text, so they are read by a single
+ * linear scan over a capped input — never by a backtracking regex: the tag
+ * patterns this replaced took seconds on a crafted value (security review).
  */
-const HIDDEN_ELEMENT =
-  /<(\w+)\b[^>]*\bstyle\s*=\s*["'][^"']*display\s*:\s*none[^"']*["'][^>]*>[\s\S]*?<\/\1\s*>/gi;
+const MAX_HTML_CHARS = 8_000;
+
+const tagName = (tag: string): string | null => {
+  const m = /^[a-z][a-z0-9-]*/i.exec(tag);
+  return m ? m[0].toLowerCase() : null;
+};
+
+/** Commons templates print a machine-readable copy inside a hidden element
+ *  ("Unknown author" came out twice on the card). */
+const isHidden = (tag: string): boolean =>
+  tag.toLowerCase().replace(/\s+/g, "").includes("display:none");
+
+/**
+ * Where the element named `name` that opened before `from` ends — just after
+ * its closing tag, nesting of the same name counted — or -1 when it never does.
+ */
+function elementEnd(src: string, from: number, name: string): number {
+  let depth = 1;
+  let i = from;
+  for (;;) {
+    const lt = src.indexOf("<", i);
+    if (lt === -1) return -1;
+    const gt = src.indexOf(">", lt + 1);
+    if (gt === -1) return -1;
+    const tag = src.slice(lt + 1, gt).trim();
+    i = gt + 1;
+    if (tag.startsWith("/")) {
+      if (tagName(tag.slice(1).trim()) === name && --depth === 0) return i;
+    } else if (tagName(tag) === name && !tag.endsWith("/")) {
+      depth += 1;
+    }
+  }
+}
+
+/** The text a reader sees: tags become spaces, hidden elements vanish with
+ *  their content, an unfinished tag ends the text. */
+function visibleText(html: string): string {
+  const src = html.slice(0, MAX_HTML_CHARS);
+  const parts: string[] = [];
+  // One failed search for a closing tag means malformed markup: from then on
+  // nothing more is hidden, so no second search can run to the end again.
+  let hiding = true;
+  let i = 0;
+  while (i < src.length) {
+    const lt = src.indexOf("<", i);
+    if (lt === -1) {
+      parts.push(src.slice(i));
+      break;
+    }
+    parts.push(src.slice(i, lt), " ");
+    const gt = src.indexOf(">", lt + 1);
+    if (gt === -1) break;
+    const tag = src.slice(lt + 1, gt);
+    i = gt + 1;
+    const name = tagName(tag);
+    if (!hiding || !name || tag.trimEnd().endsWith("/") || !isHidden(tag)) continue;
+    const end = elementEnd(src, i, name);
+    if (end === -1) hiding = false;
+    else i = end;
+  }
+  return parts.join("");
+}
 
 /** HTML from Commons' `Artist` field, as plain text — what a reader sees. */
 export function plainText(html: unknown): string | null {
   if (typeof html !== "string") return null;
-  const text = html
-    .replace(HIDDEN_ELEMENT, " ")
-    .replace(/<[^>]*>/g, " ")
+  const text = visibleText(html)
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
     .replace(/&#0?39;/g, "'")
@@ -169,7 +227,9 @@ async function commonsFile(
   const info = page?.imageinfo?.[0];
   if (!info?.thumburl || !info.descriptionurl) return { ok: false, reason: "noLogo" };
   const meta = info.extmetadata ?? {};
-  const licenceCode = typeof meta.License?.value === "string" ? meta.License.value : "";
+  // Capped like every Commons field; a real template name is a dozen characters.
+  const licenceCode =
+    typeof meta.License?.value === "string" ? meta.License.value.slice(0, 64) : "";
   const nonFree = String(meta.NonFree?.value ?? "").toLowerCase() === "true";
   if (nonFree || !FREE_LICENCE.test(licenceCode)) return { ok: false, reason: "licence" };
   const shortName = plainText(meta.LicenseShortName?.value) ?? licenceCode;
