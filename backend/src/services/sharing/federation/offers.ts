@@ -9,7 +9,6 @@
  * arrive, so the trip page never shows an offer the other server has not got.
  */
 import { prisma } from "../../../db";
-import { AppError } from "../../../middleware/errorHandler";
 import { acceptedParties } from "../members";
 import type { OfferAnswer, TripShareAck } from "../../../schemas/tripSharePeer";
 import { requireTripFederation } from "./access";
@@ -51,7 +50,7 @@ async function consentingPairing(userId: string, remoteId: string) {
 }
 
 /** What the other server's refusal of a message reads as, to the user who sent it. */
-export function refusedThere(userId: string, origin: string, error: unknown): AppError {
+export function refusedThere(userId: string, origin: string, error: unknown): unknown {
   if (error instanceof StreamRejected)
     return remoteShareError(
       "SHARE_REMOTE_REFUSED",

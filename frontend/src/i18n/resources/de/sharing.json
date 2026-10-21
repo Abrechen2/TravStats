@@ -623,6 +623,8 @@
         "delivered": "Alle Änderungen sind bei {{name}} angekommen.",
         "pending": "Änderungen sind auf dem Weg zu {{name}}.",
         "retrying": "Änderungen kommen bei {{name}} gerade nicht an – {{origin}} antwortet seit {{date}} nicht. Es wird weiter versucht.",
+        "retryingLocal": "Änderungen kommen bei {{name}} gerade nicht an – auf deinem Server ist seit {{date}} ein Fehler aufgetreten. Es wird weiter versucht; wenn das so bleibt, frag deinen Admin.",
+        "retryingRemote": "Änderungen kommen bei {{name}} gerade nicht an – {{origin}} meldet seit {{date}} einen Fehler beim Übernehmen. Es wird weiter versucht.",
         "unreachable": "Änderungen kommen bei {{name}} nicht an – der Server ist seit {{date}} nicht erreichbar.",
         "rejected": "Der Server von {{name}} konnte eine Änderung an „{{entry}}“ nicht annehmen ({{why}}).",
         "unknownEntry": "einem Eintrag",

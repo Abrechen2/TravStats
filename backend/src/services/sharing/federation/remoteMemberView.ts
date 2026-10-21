@@ -11,7 +11,9 @@ import { remoteMemberStateSchema, type RemoteMemberState } from "../../../schema
  * The outbox towards one member, as one state (F-S4d):
  * - `delivered` — nothing waits;
  * - `pending` — messages wait for the next delivery pass;
- * - `retrying` — their server has not answered since `stateSince` (`reason`: the failure kind);
+ * - `retrying` — not delivered since `stateSince` (`reason`: the failure kind — `local-error` is
+ *   this server's own, `remote-error` the other server's while applying it, anything else the way
+ *   between them);
  * - `unreachable` — not since `stateSince`, for 14 days or more;
  * - `rejected` — refused for good, or too large to send (`reason`: `schema`, `not-member`,
  *   `consent`, `too-large`; `field` what did not parse; `label` the entry it was about); it is kept, not sent.

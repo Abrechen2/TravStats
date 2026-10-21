@@ -111,7 +111,11 @@ export async function exchange(
   if (!peer.verifiedAt && !transport.beforeVerification(body)) throw refused("unverified-peer");
   const url = new URL(remoteOrigin);
   if (isIP(url.hostname)) throw refused();
-  const answers = await lookup(url.hostname, { all: true });
+  // A name that does not resolve is the network's failure, not this server's (F-S4d leftover):
+  // left raw, it would read as a local error to a caller that tells the two apart.
+  const answers = await lookup(url.hostname, { all: true }).catch(() => {
+    throw refused("unreachable");
+  });
   if (!answers.length || !answers.every((a) => publicAddress(a.address)))
     throw refused("private-address");
   const selected = answers[0];

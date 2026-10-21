@@ -28,7 +28,13 @@ import { remoteShareError, type RemoteShareErrorCode } from "./errors";
 import { parseTripInviteCode } from "./inviteCode";
 import { readRemotePerson, type RemotePersonView } from "./remotePeople";
 import { messageHeader, tripShareExchange } from "./transport";
-import { kindOf, requireAdmitted, requireTripSharePeer, unreachable } from "./peerCheck";
+import {
+  LOCAL_ERROR,
+  kindOf,
+  requireAdmitted,
+  requireTripSharePeer,
+  unreachable,
+} from "./peerCheck";
 
 const REFUSAL_CODES: Record<InviteRefusal, RemoteShareErrorCode> = {
   unknown: "SHARE_REMOTE_INVITE_INVALID",
@@ -133,7 +139,9 @@ export async function claimTripInvite(userId: string, code: string): Promise<Rem
       })
     );
   } catch (error) {
-    throw unreachable(userId, parsed.origin, kindOf(error));
+    // This server's own failure is its own (a 500), not the other server's silence.
+    const kind = kindOf(error);
+    throw kind === LOCAL_ERROR ? error : unreachable(userId, parsed.origin, kind);
   }
   if (!reply.accepted)
     throw remoteShareError(

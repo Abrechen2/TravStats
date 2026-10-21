@@ -34,6 +34,7 @@ import { serveOffer } from "../services/sharing/federation/offerInbox";
 import { servePropagation } from "../services/sharing/federation/inbound";
 import { BODY_BUDGET, MAX_BODY } from "../services/sharing/federation/transport";
 import {
+  GROUP_KINDS,
   TRIP_SHARE_PURPOSE,
   TRIP_SHARE_VERSIONS,
   groupHeaderSchema,
@@ -61,6 +62,28 @@ function serve(origin: string, local: string, body: TripSharePacket): Promise<un
     case "entry-create":
     case "entry-removed":
       return servePropagation(origin, body);
+  }
+}
+
+const GROUP = new Set<string>(GROUP_KINDS);
+
+/**
+ * Serve a message; a group message this server failed to apply — its own database or code, not
+ * the sender's message — is answered `ack { rejected: "error" }` under signature (F-S4d
+ * leftover). The sender retries it and shows it as this server's error, instead of reading a 403
+ * as a refusal and, fourteen days on, the server as unreachable. Nothing was written: the
+ * message's transaction rolled back, and a retry is applied as if it were the first.
+ */
+async function serveOrFail(origin: string, local: string, body: TripSharePacket) {
+  try {
+    return await serve(origin, local, body);
+  } catch (error) {
+    if (!GROUP.has(body.kind) || error instanceof PeerRefusal) throw error;
+    logger.error(
+      { operation: "trip_share_peer_apply_failed", kind: body.kind, err: error },
+      "A trip-share message could not be applied here; the sender is told to retry"
+    );
+    return { kind: "ack" as const, rejected: "error" as const };
   }
 }
 
@@ -107,7 +130,7 @@ router.post("/", async (req, res) => {
     if (kind !== "ping" && !peer.verifiedAt) throw refused("unverified-peer");
     if (peer.verifiedAt) await consumeNonce(message);
     const data = parsed.success
-      ? await serve(message.origin, local.origin, parsed.data)
+      ? await serveOrFail(message.origin, local.origin, parsed.data)
       : rejection;
     res.setHeader("Cache-Control", "no-store");
     res.json(envelope(data, message.origin, local, message.nonce, TRIP_SHARE_PURPOSE));

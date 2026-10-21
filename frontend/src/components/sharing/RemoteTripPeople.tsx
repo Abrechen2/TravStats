@@ -38,6 +38,11 @@ const KNOWN_REASONS = new Set([
 ]);
 /** Why a change was not delivered: the other server's answer, or too large to send at all. */
 const KNOWN_REFUSALS = new Set(["schema", "not-member", "consent", "too-large"]);
+/** A retry caused by an error on this server or on theirs, each with its own sentence. */
+const SERVER_ERRORS: Readonly<Record<string, string>> = {
+  "local-error": "retryingLocal",
+  "remote-error": "retryingRemote",
+};
 /** States whose member receives changes, so where those changes stand is the line to show. */
 const RECEIVING = new Set<RemoteMemberState>(["active", "unreachable"]);
 
@@ -137,7 +142,12 @@ export default function RemoteTripPeople({
           `${NS}.delivery.why.${d.reason && KNOWN_REFUSALS.has(d.reason) ? d.reason : "other"}`
         ),
       });
-    return t(`${NS}.delivery.${d.state}`, {
+    // A failure of one of the two servers themselves is not the other one's silence.
+    const variant =
+      d.state === "retrying" && d.reason && SERVER_ERRORS[d.reason]
+        ? SERVER_ERRORS[d.reason]
+        : d.state;
+    return t(`${NS}.delivery.${variant}`, {
       name: m.displayName,
       origin: m.origin,
       date: d.stateSince ? fmt.date(d.stateSince) : "",

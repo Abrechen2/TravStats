@@ -124,6 +124,32 @@ describe("RemoteTripPeople", () => {
       /sharing:remote.trip.delivery.retrying .*"Ben".*far.example.org.*"date":"[^"]+"/,
     ],
     [
+      "an error of this server, not the other one's silence",
+      {
+        delivery: {
+          state: "retrying",
+          stateSince: since,
+          reason: "local-error",
+          field: null,
+          label: null,
+        },
+      },
+      /sharing:remote.trip.delivery.retryingLocal .*"Ben"/,
+    ],
+    [
+      "an error the other server met applying it",
+      {
+        delivery: {
+          state: "retrying",
+          stateSince: since,
+          reason: "remote-error",
+          field: null,
+          label: null,
+        },
+      },
+      /sharing:remote.trip.delivery.retryingRemote .*"Ben".*far.example.org/,
+    ],
+    [
       "unreachable since when",
       {
         state: "unreachable",

@@ -623,6 +623,8 @@
         "delivered": "All changes have reached {{name}}.",
         "pending": "Changes are on their way to {{name}}.",
         "retrying": "Changes are not reaching {{name}} right now – {{origin}} has not answered since {{date}}. Retrying.",
+        "retryingLocal": "Changes are not reaching {{name}} right now – an error on your server since {{date}}. Retrying; if it stays like this, ask your admin.",
+        "retryingRemote": "Changes are not reaching {{name}} right now – {{origin}} has reported an error taking them over since {{date}}. Retrying.",
         "unreachable": "Changes are not reaching {{name}} – their server has been unreachable since {{date}}.",
         "rejected": "{{name}}'s server could not accept a change to “{{entry}}” ({{why}}).",
         "unknownEntry": "an entry",

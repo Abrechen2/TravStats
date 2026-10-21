@@ -15,6 +15,9 @@
  * Each outcome is the user's to see (§7), per remote member (`deliveryOf`):
  * - **acknowledged** — the row goes; a member shown unreachable or switched off is active again;
  *   facts the peer could not write (`ack.conflicts`) become a conflict notice here too (F6);
+ * - **an error of one of the two servers** — this one's code or database (`local-error`), or the
+ *   other's while applying it (`ack rejected: error` → `remote-error`): retried like a transport
+ *   failure, but never shown as `unreachable`, because the other server did answer;
  * - **transport failure** — retried after 1 min, 5 min, 30 min, 2 h, 12 h, then daily, the rest
  *   of the stream waiting behind it (order is kept); 14 days after the first failure the member
  *   is `unreachable`. A 404 means the feature is off there (`suspended`, `off`); a pin this
@@ -32,7 +35,7 @@ import { SHARE_ENTITIES, type ShareEntity } from "../shareTypes";
 import type { AckConflict, GroupMessage } from "../../../schemas/tripSharePeer";
 import { tripFederationAvailability } from "./availability";
 import { recordConflict } from "./conflicts";
-import { kindOf } from "./peerCheck";
+import { LOCAL_ERROR, kindOf } from "./peerCheck";
 import { PeerRefusal } from "../../federation/refusal";
 import { StreamRejected, sendOnStream, type Received } from "./streams";
 import { ENTRIES_TRANSPORT, PROPAGATION_TRANSPORT } from "./transport";
@@ -46,6 +49,14 @@ export const BACKOFF_MS = [MINUTE, 5 * MINUTE, 30 * MINUTE, 120 * MINUTE, 720 * 
 /** Spec §7: this long after the first failure, the member is shown as unreachable. */
 export const UNREACHABLE_AFTER_MS = 14 * DAY;
 const PARKED_KEEP_MS = 30 * DAY;
+
+/** The receiving server answered that it failed to apply the message (`ack rejected: error`). */
+export const REMOTE_ERROR = "remote-error";
+/**
+ * Failures of one of the two servers themselves, not of the way between them: retried with the
+ * same backoff, but never turned into `unreachable` — the other server did answer (F-S4d leftover).
+ */
+const NOT_THE_NETWORK = new Set([LOCAL_ERROR, REMOTE_ERROR]);
 
 export const backoffAfter = (attempts: number): number =>
   BACKOFF_MS[Math.min(Math.max(attempts, 1), BACKOFF_MS.length) - 1];
@@ -187,7 +198,10 @@ async function failed(row: Row, kind: string, now: Date): Promise<void> {
         where: { ...members, state: { in: ["active", "unreachable"] } },
         data: { state: "suspended", stateReason: blocked, stateSince: now },
       });
-    else if (now.getTime() - failingSince.getTime() >= UNREACHABLE_AFTER_MS)
+    else if (
+      !NOT_THE_NETWORK.has(kind) &&
+      now.getTime() - failingSince.getTime() >= UNREACHABLE_AFTER_MS
+    )
       await tx.tripShareRemoteMember.updateMany({
         where: { ...members, state: "active" },
         data: { state: "unreachable", stateReason: "unreachable", stateSince: failingSince },
@@ -224,6 +238,12 @@ async function deliverStream(
         (tx, ack) => delivered(tx, row, ack, now)
       );
     } catch (error) {
+      // The other server failed to apply it for a reason of its own: retried, named as such.
+      if (error instanceof StreamRejected && error.ack.rejected === "error") {
+        await failed(row, REMOTE_ERROR, now);
+        run.failed++;
+        return;
+      }
       if (error instanceof StreamRejected && error.ack.rejected !== "gap") {
         await park(row, error.ack.rejected, error.ack.field ?? null, now);
         run.parked++;
@@ -235,7 +255,13 @@ async function deliverStream(
         run.parked++;
         continue;
       }
-      await failed(row, error instanceof StreamRejected ? "gap" : kindOf(error), now);
+      const kind = error instanceof StreamRejected ? "gap" : kindOf(error);
+      if (kind === LOCAL_ERROR)
+        logger.error(
+          { operation: "trip_share_delivery_local_error", origin: peerOrigin, err: error },
+          "A trip-share message failed on this server; it is retried"
+        );
+      await failed(row, kind, now);
       run.failed++;
       return;
     }

@@ -11,12 +11,20 @@ import { TRIP_SHARE_VERSIONS, tripPingReplySchema } from "../../../schemas/tripS
 import { remoteShareError } from "./errors";
 import { messageHeader, tripShareExchange } from "./transport";
 
+/**
+ * What a failed exchange was. `exchange()` turns every network failure into a `PeerRefusal` (a
+ * name that does not resolve included), and an answer that does not parse is `malformed`; any
+ * other error was thrown by this server's own code or database — `local-error`, never read as
+ * "the other server does not answer" (F-S4d leftover).
+ */
 export const kindOf = (error: unknown): string =>
   error instanceof PeerRefusal
     ? error.kind
     : error instanceof ZodError || error instanceof SyntaxError
       ? "malformed"
-      : "unreachable";
+      : LOCAL_ERROR;
+
+export const LOCAL_ERROR = "local-error";
 
 export const unreachable = (userId: string, origin: string, kind: string) =>
   remoteShareError(
@@ -56,7 +64,7 @@ export async function requireTripSharePeer(userId: string, origin: string): Prom
         { userId, origin },
         { origin }
       );
-    throw unreachable(userId, origin, kindOf(error));
+    throw peerFailure(userId, origin, error);
   }
   if (!versions.some((v) => (TRIP_SHARE_VERSIONS as readonly number[]).includes(v)))
     throw remoteShareError(
@@ -68,8 +76,12 @@ export async function requireTripSharePeer(userId: string, origin: string): Prom
     );
 }
 
-/** A send that failed in transport: switched off there (404), or not answering usably. */
-export function peerFailure(userId: string, origin: string, error: unknown) {
+/**
+ * A send that failed: switched off there (404), or not answering usably. A failure of this
+ * server's own is passed on as itself (a 500 the log names), not dressed up as the other server's.
+ */
+export function peerFailure(userId: string, origin: string, error: unknown): unknown {
+  if (kindOf(error) === LOCAL_ERROR) return error;
   if (error instanceof PeerRefusal && error.kind === "remote-absent")
     return remoteShareError(
       "SHARE_REMOTE_PEER_DISABLED",

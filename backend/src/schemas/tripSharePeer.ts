@@ -225,9 +225,11 @@ export const groupHeaderSchema = z.object({
 /**
  * The answer to a group message. `gap` names the seq the receiver expects next; `not-member`
  * means no group, member or pairing here matches; `consent` that the person's consent with the
- * sender is not accepted here; `schema` names the first field that did not parse.
+ * sender is not accepted here; `schema` names the first field that did not parse; `error` that
+ * the receiver failed to apply it for a reason of its own (its database, its code) — nothing was
+ * written, and the sender retries it.
  */
-export const ACK_REJECTIONS = ["gap", "not-member", "consent", "schema"] as const;
+export const ACK_REJECTIONS = ["gap", "not-member", "consent", "schema", "error"] as const;
 export type AckRejection = (typeof ACK_REJECTIONS)[number];
 /**
  * A `fact-update` answered with the facts that were NOT written because the receiver's copy had
