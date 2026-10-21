@@ -102,3 +102,158 @@ export function declutterByDistance<T>(
   }
   return accepted;
 }
+
+/** A label's estimated box on screen, in CSS pixels. */
+export interface LabelBoxSize {
+  width: number;
+  height: number;
+}
+
+/**
+ * The box a TextLayer pill of `text` occupies: glyph advance from the font
+ * size (Inter bold averages about 0.62 em), plus the pill's padding and
+ * border. An estimate — the atlas is not measured — erring wide, because a
+ * label dropped for a few pixels costs less than two printed over each other.
+ */
+export function estimateLabelBox(
+  text: string,
+  fontSizePx: number,
+  padding: readonly [number, number]
+): LabelBoxSize {
+  return {
+    width: text.length * fontSizePx * 0.62 + padding[0] * 2 + 2,
+    height: fontSizePx * 1.2 + padding[1] * 2 + 2,
+  };
+}
+
+/** MapLibre's world is 512 px wide at zoom 0. */
+const WORLD_PX_AT_Z0 = 512;
+const MAX_MERCATOR_LAT = 85.051129;
+
+/** Web Mercator world pixel of a `[lon, lat]` at `zoom`. */
+export function projectToWorldPx(lon: number, lat: number, zoom: number): [number, number] {
+  const size = WORLD_PX_AT_Z0 * Math.pow(2, zoom);
+  const phi = (Math.max(-MAX_MERCATOR_LAT, Math.min(MAX_MERCATOR_LAT, lat)) * Math.PI) / 180;
+  const x = ((lon + 180) / 360) * size;
+  const y = (0.5 - Math.log(Math.tan(Math.PI / 4 + phi / 2)) / (2 * Math.PI)) * size;
+  return [x, y];
+}
+
+const GRID_CELL_PX = 128;
+
+/**
+ * A label already on the map, as another layer's collision pass needs it:
+ * where it is anchored, its box, and how far its pill is lifted off the point
+ * (`getPixelOffset[1]`). The airport, port, hotel and place labels each lift
+ * by a different amount, so the offset no longer cancels once they meet.
+ */
+export interface PlacedLabel {
+  position: readonly [number, number];
+  width: number;
+  height: number;
+  offsetY: number;
+}
+
+/** A `[lon, lat]` to screen-like pixels — the collision pass's geometry. */
+export type LabelProjector = (position: readonly [number, number]) => readonly [number, number];
+
+export interface BoxDeclutterOptions {
+  /**
+   * Where a point lands, in pixels. Defaults to north-up Web Mercator at
+   * `zoom`; a layer that knows its viewport passes the viewport's own
+   * projection, so a turned or tilted map is measured as it is drawn.
+   */
+  project?: LabelProjector;
+  /** Space kept free on every side of a box, in px. */
+  gapPx?: number;
+  /** How far these items' pills are lifted off their point, in px (negative = up). */
+  offsetY?: number;
+  /** Labels already placed by other layers; an item touching one is dropped. */
+  obstacles?: readonly PlacedLabel[];
+}
+
+type Box = { x0: number; y0: number; x1: number; y1: number };
+
+/** The screen box of a pill centred `offsetY` px off its point — deck.gl's
+ *  default text anchor and baseline are both centred. */
+function boxAt(
+  position: readonly [number, number],
+  width: number,
+  height: number,
+  offsetY: number,
+  project: LabelProjector,
+  gapPx: number
+): Box {
+  const [x, y] = project(position);
+  const cy = y + offsetY;
+  return {
+    x0: x - width / 2 - gapPx,
+    x1: x + width / 2 + gapPx,
+    y0: cy - height / 2 - gapPx,
+    y1: cy + height / 2 + gapPx,
+  };
+}
+
+/**
+ * Like `declutterByDistance`, but on the labels' BOXES: a centre gap says
+ * nothing about two 20-character names, which are 140 px wide and collide
+ * with their centres 80 px apart. Highest weight places first; a label whose
+ * box (plus `gapPx` on every side) touches one already placed — or one of the
+ * `obstacles` another layer already shows — is dropped.
+ *
+ * Placed boxes live in a uniform grid, so each candidate only tests the boxes
+ * in the cells it covers — linear in the number of labels, not quadratic.
+ */
+export function declutterByBoxes<T>(
+  items: readonly T[],
+  weightOf: (item: T) => number,
+  positionOf: (item: T) => readonly [number, number],
+  sizeOf: (item: T) => LabelBoxSize,
+  zoom: number,
+  { gapPx = 4, offsetY = 0, obstacles = [], project }: BoxDeclutterOptions = {}
+): T[] {
+  const toPx: LabelProjector = project ?? ((p) => projectToWorldPx(p[0], p[1], zoom));
+  const grid = new Map<string, Box[]>();
+  const cellsOf = (box: Box): string[] => {
+    const keys: string[] = [];
+    for (
+      let cx = Math.floor(box.x0 / GRID_CELL_PX);
+      cx <= Math.floor(box.x1 / GRID_CELL_PX);
+      cx++
+    ) {
+      for (
+        let cy = Math.floor(box.y0 / GRID_CELL_PX);
+        cy <= Math.floor(box.y1 / GRID_CELL_PX);
+        cy++
+      ) {
+        keys.push(`${cx}:${cy}`);
+      }
+    }
+    return keys;
+  };
+  const place = (box: Box) => {
+    for (const key of cellsOf(box)) {
+      const cell = grid.get(key);
+      if (cell) cell.push(box);
+      else grid.set(key, [box]);
+    }
+  };
+  // Obstacles carry no gap of their own: the candidate's gap already keeps
+  // the two apart.
+  for (const o of obstacles) place(boxAt(o.position, o.width, o.height, o.offsetY, toPx, 0));
+  const sorted = [...items].sort((a, b) => weightOf(b) - weightOf(a));
+  const accepted: T[] = [];
+  for (const item of sorted) {
+    const { width, height } = sizeOf(item);
+    const box = boxAt(positionOf(item), width, height, offsetY, toPx, gapPx);
+    const hit = cellsOf(box).some((key) =>
+      (grid.get(key) ?? []).some(
+        (q) => box.x0 < q.x1 && box.x1 > q.x0 && box.y0 < q.y1 && box.y1 > q.y0
+      )
+    );
+    if (hit) continue;
+    accepted.push(item);
+    place(box);
+  }
+  return accepted;
+}

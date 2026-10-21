@@ -299,5 +299,76 @@
   "styleFallback": {
     "notice": "Der Kartenanbieter ist gerade nicht erreichbar. Du siehst eine vereinfachte Ersatzkarte.",
     "unavailable": "Die Karte konnte nicht geladen werden. Lade die Seite später neu."
+  },
+  "journey": {
+    "domain": {
+      "flight": "Flug",
+      "rail": "Zugfahrt",
+      "bus": "Busfahrt",
+      "ferry": "Fähre",
+      "rental": "Mietwagen"
+    },
+    "times": {
+      "rail": "{{count}}× gefahren",
+      "bus": "{{count}}× gefahren",
+      "ferry": "{{count}}× übergesetzt",
+      "rental": "{{count}}× gemietet"
+    },
+    "stop": {
+      "flight": "Flughafen",
+      "rail": "Bahnhof",
+      "bus": "Busbahnhof",
+      "ferry": "Fährhafen",
+      "rental": "Mietwagenstation"
+    },
+    "tourKind": {
+      "tour": "Tagestour",
+      "roadtrip": "Roadtrip"
+    },
+    "operator": {
+      "flight": "Top Linie",
+      "rail": "Betreiber",
+      "bus": "Busunternehmen",
+      "ferry": "Reederei",
+      "rental": "Vermieter",
+      "cruise": "Reederei"
+    },
+    "distance": "Strecke",
+    "distanceUnknown_one": "{{count}} Fahrt ohne Strecke",
+    "distanceUnknown_other": "{{count}} Fahrten ohne Strecke",
+    "distanceNone": "unbekannt",
+    "last": "Zuletzt",
+    "next": "Als Nächstes",
+    "nothingYet": "Noch nicht unterwegs gewesen",
+    "topRoute": "Häufigste Verbindung",
+    "journeys": "Fahrten",
+    "listShow": "Liste (+{{count}})",
+    "listHide": "Weniger",
+    "planned": "geplant",
+    "cancelled": "storniert",
+    "open": "Öffnen",
+    "openLatest": "Letzte öffnen",
+    "openNext": "Nächste öffnen",
+    "openTour": "Tour öffnen",
+    "openRoadtrip": "Roadtrip öffnen",
+    "fact": {
+      "train": "Zug",
+      "flight": "Flug",
+      "travelClass": "Klasse",
+      "line": "Linie",
+      "seat": "Platz",
+      "vessel": "Schiff",
+      "cabin": "Kabine",
+      "vehicle": "Fahrzeug",
+      "rentalDays": "Miettage",
+      "duration": "Dauer",
+      "mode": "Fortbewegung",
+      "ascent": "Aufstieg",
+      "stops": "Stopps",
+      "when": "Wann",
+      "trip": "Reise"
+    },
+    "operatorMark": "Logo von {{name}}",
+    "attribution": "Logo: {{source}}"
   }
 }

@@ -80,6 +80,26 @@ describe("rail: line width and station size reach the layers", () => {
     );
   });
 
+  it("names the stations in the rail colour and follows the label switch (forgejo#320)", () => {
+    const layers = buildRailMapLayers([RIDE], "#112233", false, "t");
+    const data = propsOf(byId(layers, "-station-labels")!).data as { color: number[] }[];
+    expect(data.map((d) => d.color)).toEqual([
+      [17, 34, 51],
+      [17, 34, 51],
+    ]);
+    expect(propsOf(byId(layers, "-station-labels")!).labelsMode).toBe("important");
+    const off = buildRailMapLayers([RIDE], "#112233", false, "t", {
+      lineWidth: 1,
+      stationSize: 1,
+      labelsMode: "off",
+    });
+    expect(byId(off, "-station-labels")).toBeUndefined();
+    // On the globe the layer still comes along — it carries the names to the
+    // HTML label overlay — but draws nothing itself.
+    const globe = byId(buildRailMapLayers([RIDE], "#112233", true, "t"), "-station-labels");
+    expect(propsOf(globe!).onGlobe).toBe(true);
+  });
+
   it("draws no station layer at size 0", () => {
     const layers = buildRailMapLayers([RIDE], "#112233", false, "t", {
       lineWidth: 1,
@@ -156,6 +176,7 @@ describe("rental: width, marker size and the line switch reach layer and legend"
 describe("tours and roadtrips: each kind follows its own width slider", () => {
   const datum = (isRoadtrip: boolean, isPlaceholder = false): TourPathDatum => ({
     legId: "l",
+    routeId: "r",
     path: [
       [8, 58],
       [5, 60],

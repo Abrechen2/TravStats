@@ -28,6 +28,7 @@ import "./tripExpenses";
 import "./tripRecording";
 import "./strava";
 import "./openData";
+import "./operators";
 import "./companions";
 import "./airports";
 import "./stats";

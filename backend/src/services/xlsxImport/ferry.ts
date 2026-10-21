@@ -20,6 +20,7 @@ import * as cell from "./cells";
 import { type Ctx, definedOnly } from "./context";
 import { importTerminalRides, type TerminalRideSheet } from "./terminalRides";
 import type { DroppedValue, IncomingSheet, SheetOutcome } from "./types";
+import { routeCrossingIfStraight } from "../ferry/ferryRouting";
 
 /** The plain columns — no derivation, written as the sheet says. */
 function plainFields(raw: Record<string, string>, dropped: DroppedValue[]) {
@@ -94,6 +95,13 @@ async function writeCrossing(
   });
 }
 
+/** A new or moved crossing follows the sea, as one added by hand (forgejo#323);
+ *  a no-op for one that already has its line. A failure is named on the row. */
+async function routeCrossing(ctx: Ctx, id: string): Promise<string | null> {
+  const outcome = await routeCrossingIfStraight(ctx.userId, id, "xlsx_import.ferry.route");
+  return outcome === "failed" ? "sea_route_failed" : null;
+}
+
 const FERRY_SHEET: TerminalRideSheet<FerryJourney> = {
   prune: "ferryJourney",
   statuses: FERRY_STATUSES,
@@ -104,6 +112,7 @@ const FERRY_SHEET: TerminalRideSheet<FerryJourney> = {
     prisma.ferryJourney.findMany({ where, orderBy: { createdAt: "asc" } }),
   derivedColumns,
   write: writeCrossing,
+  afterWrite: routeCrossing,
 };
 
 export function importFerry(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutcome> {

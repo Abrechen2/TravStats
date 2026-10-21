@@ -1150,7 +1150,8 @@
       "openrouteservice": "Straßenrouten statt Luftlinie",
       "graphhopper": "Straßenrouten statt Luftlinie",
       "logostream": "Airline-Logos in hoher Auflösung",
-      "googlePlaces": "Ortssuche und Ortsdetails"
+      "googlePlaces": "Ortssuche und Ortsdetails",
+      "operatorLogos": "Logos von Bahn, Bus, Fähre und Mietwagen"
     }
   }
 }

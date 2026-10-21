@@ -347,7 +347,8 @@
       "trip_not_linked": "Reise im Konto nicht gefunden – ohne Reise übernommen",
       "port_not_found": "Hafen nicht im Katalog – bleibt leer",
       "chain_not_found": "Kette nicht im Katalog – ohne Kette übernommen",
-      "roadtrip_not_linked": "Roadtrip im Konto nicht gefunden – ohne Roadtrip übernommen"
+      "roadtrip_not_linked": "Roadtrip im Konto nicht gefunden – ohne Roadtrip übernommen",
+      "sea_route_failed": "Seeweg konnte nicht berechnet werden – als gerade Linie übernommen"
     },
     "outcomeUnknown": "Der Server meldet nicht mehr, wie der Import ausgegangen ist. Bitte deine Einträge prüfen, bevor du die Datei erneut importierst."
   }

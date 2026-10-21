@@ -12,6 +12,13 @@
 // Widening a field here is therefore not free: it has to stay something the
 // globe layer datum already carries.
 
+import type {
+  JourneyRouteCardDatum,
+  JourneyStopCardDatum,
+  TourCardDatum,
+  TripStopCardDatum,
+} from "./journeys/journeyTypes";
+
 /** One end of a route — whatever identity the renderer could resolve. */
 export interface CardEndpoint {
   iata?: string;
@@ -157,7 +164,12 @@ export type MapPinned =
   | { kind: "trip"; data: TripCardDatum; anchorLngLat: [number, number] }
   | { kind: "specialFlight"; data: SpecialFlightCardDatum; anchorLngLat: [number, number] }
   | { kind: "lodging"; data: LodgingCardDatum; anchorLngLat: [number, number] }
-  | { kind: "place"; data: PlaceCardDatum; anchorLngLat: [number, number] };
+  | { kind: "place"; data: PlaceCardDatum; anchorLngLat: [number, number] }
+  // forgejo#323: every other travel domain's line and its two ends.
+  | { kind: "journeyRoute"; data: JourneyRouteCardDatum; anchorLngLat: [number, number] }
+  | { kind: "journeyStop"; data: JourneyStopCardDatum; anchorLngLat: [number, number] }
+  | { kind: "tour"; data: TourCardDatum; anchorLngLat: [number, number] }
+  | { kind: "tripStop"; data: TripStopCardDatum; anchorLngLat: [number, number] };
 
 /**
  * What the hover tooltip draws: pre-rendered HTML plus the screen point it

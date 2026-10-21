@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { getAirportStats, getPortStats } from "./cardStats";
+import { createCruisePortsLayer } from "../../layers/cruisePortsLayer";
 import type { Cruise, Port } from "../../../types/cruise";
 import type { GeoJSONFeature } from "../../../types";
 
@@ -137,6 +138,42 @@ describe("getPortStats", () => {
 
     expect(stats.totalVisits).toBe(1);
     expect(stats.lastCallDate).toBe(arrival);
+  });
+});
+
+describe("getPortStats agrees with the port marker (forgejo#323, Codex review)", () => {
+  // Kiel is the cruise's departure port and not one of its stops: the marker
+  // counted a visit there, the card it opens said zero.
+  const KIEL = { ...PORT, id: 99, name: "Kiel", city: "Kiel", country: "DE", unlocode: "DEKEL" };
+
+  it("counts a departure port that is not a stop, as the marker does", () => {
+    const cruise = {
+      ...makeCruise("c1", "completed", [makeStop("2024-05-11T09:00:00.000Z", null)]),
+      departurePortId: KIEL.id,
+      departurePort: KIEL,
+      startDate: "2024-05-09",
+    } as Cruise;
+    const layers = createCruisePortsLayer([cruise], 8) ?? [];
+    const dots = layers.find((l) => l.id === "cruise-ports")?.props.data as Array<{
+      name: string;
+      visits: number;
+    }>;
+    expect(dots.find((d) => d.name === "Kiel")?.visits).toBe(1);
+
+    const stats = getPortStats([cruise], "Kiel");
+    expect(stats.totalVisits).toBe(1);
+    expect(stats.country).toBe("DE");
+    expect(stats.lastCallDate).toBe("2024-05-09");
+  });
+
+  it("does not count a departure port twice when it is also the first stop", () => {
+    const cruise = {
+      ...makeCruise("c1", "completed", [makeStop("2024-05-10T09:00:00.000Z", null)]),
+      departurePortId: PORT.id,
+      departurePort: PORT,
+      startDate: "2024-05-10",
+    } as Cruise;
+    expect(getPortStats([cruise], "Civitavecchia").totalVisits).toBe(1);
   });
 });
 

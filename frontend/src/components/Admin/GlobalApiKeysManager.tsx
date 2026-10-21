@@ -2,6 +2,7 @@ import type { JSX } from "react";
 import ApiKeyCard, { type ApiKeyCardProps } from "../Settings/ApiKeyCard";
 import ImmichGlobalSettings from "./ImmichGlobalSettings";
 import OpenDataCard from "../Settings/OpenDataCard";
+import OperatorLogosCard from "../Settings/OperatorLogosCard";
 import RailProvidersCard from "../Settings/RailProvidersCard";
 import { InstanceRoutingProviderCard } from "../Settings/RoutingProviderSection";
 import { SectionCard, SectionTitle } from "../Settings/SettingsShared";
@@ -197,6 +198,13 @@ export default function GlobalApiKeysManager({
           what: t("settings:services.what.openData"),
           state: openData === null ? null : openData ? "admin" : "none",
           body: <OpenDataCard isAdmin />,
+        },
+        {
+          id: "operatorLogos",
+          name: t("admin:operatorLogos.title"),
+          what: t("settings:services.what.operatorLogos"),
+          state: null,
+          body: <OperatorLogosCard />,
         },
       ],
     },

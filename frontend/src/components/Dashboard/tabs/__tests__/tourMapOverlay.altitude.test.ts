@@ -41,6 +41,7 @@ function pathAccessor(props: unknown): (d: TourPathDatum) => unknown {
 
 const SAMPLE: TourPathDatum = {
   legId: "leg-1",
+  routeId: "route-1",
   path: [
     [10.5, 60.1],
     [10.8, 60.3],

@@ -5,15 +5,19 @@ import { Icon } from "../ui/Icon";
 /** The airline tile's size, so the logbooks' leading marks line up. */
 const TILE_PX = 44;
 
-type TileDomain = "rail" | "rental" | "bus" | "ferry";
+type TileDomain = "rail" | "rental" | "bus" | "ferry" | "flight" | "cruise";
 
-const DOMAIN: Record<TileDomain, { colour: string; icon: "train-front" | "car" | "bus" | "ship" }> =
-  {
-    rail: { colour: "var(--ts-domain-rail)", icon: "train-front" },
-    rental: { colour: "var(--ts-domain-rental)", icon: "car" },
-    ferry: { colour: "var(--ts-domain-ferry)", icon: "ship" },
-    bus: { colour: "var(--ts-domain-bus)", icon: "bus" },
-  };
+const DOMAIN: Record<
+  TileDomain,
+  { colour: string; icon: "train-front" | "car" | "bus" | "ship" | "plane" }
+> = {
+  rail: { colour: "var(--ts-domain-rail)", icon: "train-front" },
+  rental: { colour: "var(--ts-domain-rental)", icon: "car" },
+  ferry: { colour: "var(--ts-domain-ferry)", icon: "ship" },
+  bus: { colour: "var(--ts-domain-bus)", icon: "bus" },
+  flight: { colour: "var(--ts-domain-flight)", icon: "plane" },
+  cruise: { colour: "var(--ts-domain-cruise)", icon: "ship" },
+};
 
 interface Props {
   /** The operator or provider as recorded; null when none is. */
@@ -26,6 +30,14 @@ interface Props {
    * a missing logo is shown as missing, never replaced by a wrong one.
    */
   logoUrl?: string | null;
+  /** Edge length in px. The logbook rows use the airline tile's 44; a map card 32. */
+  size?: number;
+  /**
+   * The domain colour as the colour store resolves it. The logbooks use the
+   * brand CSS variable; the map card passes the store's value, so a user who
+   * repainted rail sees the new colour on the line AND on its card.
+   */
+  colour?: string;
 }
 
 /** The logo URL of a rental provider, by the name the rental records. */
@@ -43,8 +55,15 @@ export function rentalProviderLogoUrl(provider: string | null): string | null {
  * letters themselves are hidden from it, since "D B" read aloud says less
  * than "DB Fernverkehr".
  */
-export function OperatorTile({ name, domain, logoUrl }: Props): JSX.Element {
-  const { colour, icon } = DOMAIN[domain];
+export function OperatorTile({
+  name,
+  domain,
+  logoUrl,
+  size = TILE_PX,
+  colour: colourOverride,
+}: Props): JSX.Element {
+  const { colour: brandColour, icon } = DOMAIN[domain];
+  const colour = colourOverride ?? brandColour;
   const letters = operatorMonogram(name);
   const [logoFailed, setLogoFailed] = useState(false);
   useEffect(() => setLogoFailed(false), [logoUrl]);
@@ -55,13 +74,13 @@ export function OperatorTile({ name, domain, logoUrl }: Props): JSX.Element {
       title={name ?? undefined}
       data-testid="operator-tile"
       style={{
-        width: TILE_PX,
-        height: TILE_PX,
+        width: size,
+        height: size,
         borderRadius: "var(--ts-radius-button)",
         background: showLogo ? "var(--ts-tile)" : letters ? colour : "var(--ts-tile)",
         color: letters ? "var(--ts-bg)" : colour,
         fontFamily: "var(--ts-font-mono)",
-        fontSize: 12,
+        fontSize: size < TILE_PX ? 11 : 12,
         fontWeight: 700,
       }}
     >
@@ -72,8 +91,8 @@ export function OperatorTile({ name, domain, logoUrl }: Props): JSX.Element {
             alt=""
             aria-hidden="true"
             data-testid="operator-logo"
-            width={TILE_PX}
-            height={TILE_PX}
+            width={size}
+            height={size}
             style={{ objectFit: "contain" }}
             onError={(): void => setLogoFailed(true)}
           />
@@ -85,7 +104,7 @@ export function OperatorTile({ name, domain, logoUrl }: Props): JSX.Element {
           <span className="sr-only">{name}</span>
         </>
       ) : (
-        <Icon name={icon} size={20} />
+        <Icon name={icon} size={size < TILE_PX ? 16 : 20} />
       )}
     </span>
   );

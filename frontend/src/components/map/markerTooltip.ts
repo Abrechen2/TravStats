@@ -7,6 +7,14 @@ import {
   cruiseHoverHtml,
   portHoverHtml,
 } from "./cards/hoverCardHtml";
+import {
+  journeyRouteHoverHtml,
+  journeyStopHoverHtml,
+  tourHoverHtml,
+  tripStopHoverHtml,
+} from "./cards/journeys/journeyHoverHtml";
+import type { JourneyRouteHover, JourneyStopHover } from "./cards/journeys/journeyLayerCards";
+import type { TourCardDatum, TripStopCardDatum } from "./cards/journeys/journeyTypes";
 
 // A flat-map marker sits closer to its neighbours than a globe marker does, so
 // its tooltip wants a slightly smaller flag. That is the ONLY thing this file
@@ -47,7 +55,8 @@ const ARC_LAYER_IDS = new Set<string>([
   // card is identical whichever shape the user picked.
   "routes-path",
 ]);
-const CRUISE_PATH_LAYER_IDS = new Set<string>(["cruise-arcs"]);
+// The trip map's cruise legs carry the line name as `label` (TripMapGlobeLayers).
+const CRUISE_PATH_LAYER_IDS = new Set<string>(["cruise-arcs", "trip-cruise-paths"]);
 const LODGING_LAYER_IDS = new Set<string>([
   // Flat-map lodging pins (lodgingPinsLayer.ts) — dot + name label.
   "lodging-pins",
@@ -125,6 +134,7 @@ interface ArcTooltipDatum {
 
 interface CruisePathTooltipDatum {
   readonly cruiseLine?: string | null;
+  readonly label?: string;
 }
 
 interface LodgingDatum {
@@ -199,9 +209,38 @@ function railOrRentalTooltip(layerId: string, object: unknown, t: TFn): string |
       t(RENTAL_ROLE_KEY[datum.role ?? ""] ?? "map:tooltip.rentalSame")
     );
   }
+  // A trip map's tour leg without a summary to card (it has only geometry).
+  if (layerId === "trip-tour-paths" && datum.label) {
+    return labelledHtml(datum.label, t("map:journey.tourKind.tour"));
+  }
   if (RENTAL_LINK_ID.test(layerId) && datum.label) {
     return labelledHtml(datum.label, t("map:tooltip.rentalLink"));
   }
+  return null;
+}
+
+/** A datum `withJourneyCards` / `withTourCards` / the trip map decorated (forgejo#323). */
+interface CardDecorated {
+  journeyRoute?: JourneyRouteHover;
+  journeyStop?: JourneyStopHover;
+  tourCard?: TourCardDatum;
+  tripStopCard?: TripStopCardDatum;
+}
+
+/**
+ * The journey tooltips are keyed on the DATUM, not the layer id: rail, bus,
+ * ferry, rental and tour layers are built with a prefix per surface, and the
+ * decoration is what says a line has a card — so no surface can carry a line
+ * that opens a card on click yet stays silent on hover.
+ */
+function decoratedTooltip(object: unknown, t: TFn): string | null {
+  const d = object as CardDecorated | null | undefined;
+  if (!d || typeof d !== "object") return null;
+  const opts = { t, flagHeight: FLAT_FLAG_PX };
+  if (d.journeyRoute) return journeyRouteHoverHtml(d.journeyRoute, opts);
+  if (d.journeyStop) return journeyStopHoverHtml(d.journeyStop, opts);
+  if (d.tourCard) return tourHoverHtml(d.tourCard, opts);
+  if (d.tripStopCard) return tripStopHoverHtml(d.tripStopCard);
   return null;
 }
 
@@ -222,6 +261,9 @@ export function createMarkerTooltip(
   return function getTooltip(info: PickingInfo) {
     const layerId = info.layer?.id;
     if (!layerId) return null;
+
+    const decorated = decoratedTooltip(info.object, t);
+    if (decorated) return { html: decorated, style: SURFACE_STYLE };
 
     if (AIRPORT_LAYER_IDS.has(layerId)) {
       const datum = info.object as AirportDatum | undefined | null;
@@ -251,7 +293,8 @@ export function createMarkerTooltip(
     if (CRUISE_PATH_LAYER_IDS.has(layerId)) {
       const datum = info.object as CruisePathTooltipDatum | undefined | null;
       if (!datum) return null;
-      return { html: cruiseHoverHtml(datum.cruiseLine ?? "Cruise"), style: SURFACE_STYLE };
+      const line = datum.cruiseLine ?? datum.label ?? "Cruise";
+      return { html: cruiseHoverHtml(line), style: SURFACE_STYLE };
     }
 
     if (LODGING_LAYER_IDS.has(layerId)) {

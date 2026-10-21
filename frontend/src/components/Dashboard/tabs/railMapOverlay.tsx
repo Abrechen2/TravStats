@@ -9,12 +9,18 @@ import {
   type RailPathSource,
   type RailPathSourceKind,
 } from "../../layers/railPathsLayer";
+import { buildStationLabelLayers, type StationLabelGroup } from "../../layers/stationLabelsLayer";
+import type { LabelsMode } from "../../map/labelPriority";
 import { hexToRgb } from "../../../lib/domainColor";
+import { journeyFromRail } from "../../map/cards/journeys/journeyNormalize";
+import { withJourneyCards } from "../../map/cards/journeys/journeyLayerCards";
 import { legendRow, type LegendRowFn } from "./allTabLegendRows";
 import { useDashboardRail } from "../../../hooks/useDashboardRail";
+import type { RailJourney } from "../../../types/rail";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import { useDashboardFilterStore } from "../../../store/dashboardFilterStore";
 import { useOverlayAppearance } from "../../../store/overlayAppearanceStore";
+import { useMapLabelsModeStore } from "../../../store/mapLabelsModeStore";
 
 type Translate = (key: string) => string;
 
@@ -22,9 +28,11 @@ type Translate = (key: string) => string;
 export interface RailMapStyle {
   lineWidth: number;
   stationSize: number;
+  /** The map's label reveal, which the station names follow (forgejo#320). Absent = "important". */
+  labelsMode?: LabelsMode;
 }
 
-const DEFAULT_RAIL_STYLE: RailMapStyle = { lineWidth: 1, stationSize: 1 };
+const DEFAULT_RAIL_STYLE: RailMapStyle = { lineWidth: 1, stationSize: 1, labelsMode: "important" };
 
 /**
  * The rail layer and its legend for the dashboard maps — the rail tab and the
@@ -35,30 +43,42 @@ const DEFAULT_RAIL_STYLE: RailMapStyle = { lineWidth: 1, stationSize: 1 };
  * repaints rail sees the new colour on the line and in the key together.
  *
  * `style` is the map panel's rail section (forgejo#198) — line width and
- * station size, read from `useOverlayAppearance` by every caller.
+ * station size, read from `useOverlayAppearance` by every caller — and the
+ * panel's label reveal, which the station names follow (forgejo#320). The
+ * names are built from the same journeys as the lines and painted in the same
+ * colour, so a filtered-out domain names no station.
  */
 export function buildRailMapLayers(
-  journeys: readonly RailPathSource[],
+  journeys: readonly (RailPathSource & Partial<RailJourney>)[],
   colorHex: string,
   onGlobe: boolean,
   idPrefix = "dashboard-rail",
   style: RailMapStyle = DEFAULT_RAIL_STYLE
 ): Layer[] {
-  return buildRailDeckLayers(buildRailPaths(journeys), buildRailStations(journeys), {
-    color: hexToRgb(colorHex),
+  const color = hexToRgb(colorHex);
+  const lines = buildRailDeckLayers(buildRailPaths(journeys), buildRailStations(journeys), {
+    color,
     altitudeM: onGlobe ? RAIL_PATH_GLOBE_ALTITUDE_M : 0,
     idPrefix,
     widthScale: style.lineWidth,
     stationSize: style.stationSize,
   });
+  const labels = buildStationLabelLayers([{ rides: journeys, color }], {
+    labelsMode: style.labelsMode ?? "important",
+    idPrefix,
+    onGlobe,
+  });
+  // Every line and station answers a hover and a click (forgejo#323).
+  return [...withJourneyCards(lines, journeys.map(journeyFromRail), color), ...labels];
 }
 
 /** The rail style the user set in the map panel, memoised for a layer `useMemo`. */
 export function useRailMapStyle(): RailMapStyle {
   const { railLineWidth, railStationSize } = useOverlayAppearance();
+  const labelsMode = useMapLabelsModeStore((s) => s.mode);
   return useMemo(
-    () => ({ lineWidth: railLineWidth, stationSize: railStationSize }),
-    [railLineWidth, railStationSize]
+    () => ({ lineWidth: railLineWidth, stationSize: railStationSize, labelsMode }),
+    [railLineWidth, railStationSize, labelsMode]
   );
 }
 
@@ -107,6 +127,8 @@ export function buildRailLegendRows(
 export interface RailOverlay {
   layers: Layer[];
   legendRows: JSX.Element[];
+  /** The drawn journeys and their colour, for the map's ONE station-label pass. */
+  stations: StationLabelGroup;
 }
 
 /**
@@ -122,11 +144,14 @@ export function useRailOverlay(show: boolean, onGlobe: boolean, t: Translate): R
   const color = colorOf("rail");
   const style = useRailMapStyle();
   const drawn = show ? journeys : EMPTY;
+  // The station names are left to the map's single pass across all three
+  // ground domains (`useTransportOverlays`), so they are not drawn here.
   const layers = useMemo(
-    () => buildRailMapLayers(drawn, color, onGlobe, "all-rail", style),
+    () => buildRailMapLayers(drawn, color, onGlobe, "all-rail", { ...style, labelsMode: "off" }),
     [drawn, color, onGlobe, style]
   );
-  return { layers, legendRows: buildRailLegendRows(drawn, color, t, legendRow) };
+  const stations = useMemo(() => ({ rides: drawn, color: hexToRgb(color) }), [drawn, color]);
+  return { layers, legendRows: buildRailLegendRows(drawn, color, t, legendRow), stations };
 }
 
 const EMPTY: readonly RailPathSource[] = [];

@@ -1150,7 +1150,8 @@
       "openrouteservice": "Road routes instead of straight lines",
       "graphhopper": "Road routes instead of straight lines",
       "logostream": "High-resolution airline logos",
-      "googlePlaces": "Place search and place details"
+      "googlePlaces": "Place search and place details",
+      "operatorLogos": "Logos for rail, bus, ferry and rental operators"
     }
   }
 }

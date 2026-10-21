@@ -79,6 +79,18 @@ describe("bus rides on the trip (forgejo#180)", () => {
     expect(getColor({ routed: false })).toEqual([16, 32, 48, 150]);
   });
 
+  it("names the terminals on the trip map in the bus colour (forgejo#320)", () => {
+    const layers = buildBusLayers([ride(), ride({ id: "r2", status: "cancelled" })], "#102030");
+    const labels = layers.find((l) => l.id === "trip-bus-station-labels");
+    const props = labels?.props as unknown as {
+      data: { name: string; count: number; color: number[] }[];
+    };
+    expect(props.data.map((d) => [d.name, d.count, d.color])).toEqual([
+      ["Seoul", 1, [16, 32, 48]],
+      ["Sokcho", 1, [16, 32, 48]],
+    ]);
+  });
+
   it("places a ride on the timeline at its departure, on the terminal's clock", () => {
     const trip = { id: "t", busJourneys: [ride()] } as unknown as Trip;
     const events = buildTimelineEvents(trip, []);

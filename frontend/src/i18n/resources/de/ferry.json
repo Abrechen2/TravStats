@@ -220,6 +220,7 @@
     "estimated": "Schematisch berechneter Seeweg – kein aufgezeichneter Schiffstrack.",
     "noRoute": "Kein Seeweg gefunden. Die bisherige Strecke bleibt erhalten.",
     "failed": "Seeweg konnte nicht gespeichert werden. Bitte erneut versuchen.",
-    "distance": "Seeweg (Schätzung)"
+    "distance": "Seeweg (Schätzung)",
+    "autoFailed": "Gespeichert – der Seeweg konnte nicht berechnet werden. Auf der Seite der Überfahrt erneut versuchen."
   }
 }

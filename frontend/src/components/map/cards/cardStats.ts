@@ -15,6 +15,7 @@ import { classifyStay } from "../../../shared/lodgingCounting";
 import { formatAmount } from "../../../lib/units";
 import { formatDate as formatUserDate } from "../../../lib/displayFormat";
 import type { LodgingCardStay } from "./pinnedTypes";
+import { cruisePortCalls } from "../../../lib/cruisePortCalls";
 
 export interface AirportCardStats {
   totalVisits: number;
@@ -162,23 +163,22 @@ export function getPortStats(cruises: Cruise[], portKey: string): PortCardStats 
   // both code-keyed and name-keyed markers resolve.
   // Only sailed cruises (flown/historical) contribute an actual port call —
   // a scheduled cruise is a future plan, not a visit yet.
-  const stops = cruises
-    .filter(isCountableCruise)
-    .flatMap((c) =>
-      c.stops
-        .filter(
-          (s) =>
-            s.port?.unlocode === portKey || s.port?.name === portKey || s.port?.city === portKey
-        )
-        .map((s) => ({ stop: s, cruise: c }))
-    );
+  // The marker's own port calls (`cruisePortCalls`), so an embarkation port
+  // that is not a stop counts here as it does on the map.
+  const calls = cruises.filter(isCountableCruise).flatMap((c) =>
+    cruisePortCalls(c)
+      .filter(
+        ({ port }) => port.unlocode === portKey || port.name === portKey || port.city === portKey
+      )
+      .map((call) => ({ ...call, cruise: c }))
+  );
 
-  const country = stops[0]?.stop.port?.country ?? null;
-  const region = stops[0]?.stop.port?.region ?? null;
+  const country = calls[0]?.port.country ?? null;
+  const region = calls[0]?.port.region ?? null;
 
   const ships = Array.from(
     new Set(
-      stops
+      calls
         .map(({ cruise }) => cruise.ship?.name ?? cruise.shipNameOverride ?? null)
         .filter((s): s is string => s !== null)
     )
@@ -187,8 +187,8 @@ export function getPortStats(cruises: Cruise[], portKey: string): PortCardStats 
   // Longest port-call: max(departureTime − arrivalTime) for stops with
   // both timestamps populated.
   let longestPortCallMinutes: number | null = null;
-  for (const { stop } of stops) {
-    if (!stop.arrivalTime || !stop.departureTime) continue;
+  for (const { stop } of calls) {
+    if (!stop?.arrivalTime || !stop.departureTime) continue;
     const minutes =
       (new Date(stop.departureTime).getTime() - new Date(stop.arrivalTime).getTime()) / 60000;
     if (minutes <= 0 || !Number.isFinite(minutes)) continue;
@@ -200,8 +200,8 @@ export function getPortStats(cruises: Cruise[], portKey: string): PortCardStats 
   return {
     country,
     region,
-    totalVisits: stops.length,
-    lastCallDate: maxDate(stops.map(({ stop }) => stop.arrivalTime)),
+    totalVisits: calls.length,
+    lastCallDate: maxDate(calls.map(({ date }) => date ?? null)),
     ships,
     longestPortCallMinutes,
   };

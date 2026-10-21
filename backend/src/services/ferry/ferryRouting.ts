@@ -14,8 +14,19 @@ interface LinkedCrossing extends FerryEnds {
   geometrySource: string;
 }
 
-/** Keep the sea leg and crossing atomic, without replacing a hand-drawn/recorded line. */
-export async function syncFerryLeg(tx: DbTransaction, ferry: LinkedCrossing): Promise<void> {
+/**
+ * Keep the sea leg and crossing atomic, without replacing a hand-drawn/recorded line.
+ *
+ * `onMismatch: "keep"` is the link's reading: a roadtrip stop is a town, rarely
+ * the pier, and a leg whose stops are not the crossing's ports keeps the chord
+ * it was given instead of refusing the link. Every other caller keeps the
+ * refusal — there a mismatch means the terminals moved under a linked leg.
+ */
+export async function syncFerryLeg(
+  tx: DbTransaction,
+  ferry: LinkedCrossing,
+  { onMismatch = "refuse" }: { onMismatch?: "refuse" | "keep" } = {}
+): Promise<void> {
   if (!ferry.roadtripLegId) return;
   const leg = await tx.tripRouteLeg.findFirst({
     where: { id: ferry.roadtripLegId, route: { userId: ferry.userId, tripId: ferry.tripId } },
@@ -31,8 +42,10 @@ export async function syncFerryLeg(tx: DbTransaction, ferry: LinkedCrossing): Pr
   if (
     !matches(leg.fromStop, ferry.depLat, ferry.depLon) ||
     !matches(leg.toStop, ferry.arrLat, ferry.arrLon)
-  )
+  ) {
+    if (onMismatch === "keep") return;
     throw new AppError("Unlink the roadtrip leg before changing terminals", 409);
+  }
   const line = ferry.geometrySource === "sea_route" ? readSeaGeometry(ferry.geometry) : null;
   const distanceKm = line
     ? polylineLengthKm(line.map(([lon, lat]) => ({ lat, lon })))
@@ -87,6 +100,38 @@ export async function routeFerryJourney(userId: string, id: string) {
     { timeout: SHARE_TX_TIMEOUT_MS }
   );
   return { outcome: "routed" as const };
+}
+
+export type CrossingRouteOutcome = "routed" | "straight" | "unchanged" | "failed";
+
+/**
+ * Route a crossing that is still a straight line, after it was saved
+ * (forgejo#323). A crossing added by hand, edited onto new terminals or
+ * written by a spreadsheet used to stay a chord — Kiel–Oslo across Denmark —
+ * until someone pressed the button on its detail page. Best effort on
+ * purpose: the crossing is already committed, so a router failure is logged
+ * and leaves the chord (drawn faint on the map, with the detail page's button
+ * to try again) rather than failing a save that succeeded. No sea route at
+ * all — a short hop over open water — is an answer, not a failure.
+ */
+export async function routeCrossingIfStraight(
+  userId: string,
+  id: string,
+  operation: string
+): Promise<CrossingRouteOutcome> {
+  try {
+    return (await routeFerryJourney(userId, id)).outcome;
+  } catch (error) {
+    logger.warn(
+      {
+        operation,
+        ferryJourneyId: id,
+        err: error instanceof Error ? error.message : String(error),
+      },
+      "sea route not computed; the crossing stays a straight line"
+    );
+    return "failed";
+  }
 }
 
 /**

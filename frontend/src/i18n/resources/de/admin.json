@@ -1204,7 +1204,7 @@
       "push": "Push, Benachrichtigungen, Relay, Push-Relay",
       "users": "Benutzer, Konten, Konto sperren, Zwei-Faktor zurücksetzen, Passwort",
       "invitations": "Einladung, einladen, Einladungslink, Registrierung",
-      "externalServices": "API-Schlüssel, globale Schlüssel, AirLabs, Aviationstack, AeroDataBox, OpenSky, Logostream, Google Places, Immich, Routing, OpenRouteService, Bahn, Offene Daten",
+      "externalServices": "API-Schlüssel, globale Schlüssel, AirLabs, Aviationstack, AeroDataBox, OpenSky, Logostream, Google Places, Immich, Routing, OpenRouteService, Bahn, Offene Daten, Betreiber-Logos, Wikidata, Wikimedia",
       "parsers": "Parser, KI, LLM, Ollama, OpenAI, Claude, Buchungen lesen",
       "templateRepo": "Vorlagen, Vorlagen-Repository, Templates, Repository",
       "smtp": "E-Mail, SMTP, Mailserver, Versand",
@@ -1224,5 +1224,13 @@
       "parsers": "Ollama-URL, Modell laden, Modell, Kontingent, Wechselkurs-Quelle",
       "externalServices": "eigene Schlüssel erlauben, Berechtigungen"
     }
+  },
+  "operatorLogos": {
+    "title": "Offene Daten für Betreiber-Logos",
+    "description": "Logos von Bahnbetreibern, Busunternehmen, Reedereien und Vermietern auf den Kartenkarten kommen aus Wikidata und Wikimedia Commons – nur frei lizenzierte Dateien, mit Nennung der Urheber. Der Server fragt dort nach, nie der Browser, und schickt nur den Namen des Unternehmens. Ausgeschaltet zeigen die Karten Monogramme.",
+    "switch": "Betreiber-Logos aus offenen Daten laden",
+    "switchSub": "Gilt für die ganze Instanz. Kein Konto, kein Schlüssel.",
+    "loadFailed": "Die Einstellung konnte nicht geladen werden.",
+    "saveFailed": "Die Einstellung konnte nicht gespeichert werden."
   }
 }

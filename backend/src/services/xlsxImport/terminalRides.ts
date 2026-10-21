@@ -93,6 +93,11 @@ export interface TerminalRideSheet<Row extends TerminalRideRow> {
     data: Record<string, unknown>,
     companionNames: string[] | undefined
   ): Promise<string>;
+  /**
+   * Work after the row is committed (a ferry's sea route). Returns a note code
+   * for the row when that work failed, so the preview says so; never throws.
+   */
+  afterWrite?(ctx: Ctx, id: string): Promise<string | null>;
 }
 
 /** A time cell as the terminal's wall clock `YYYY-MM-DDTHH:mm`, or null when unreadable. */
@@ -324,6 +329,7 @@ export async function importTerminalRides<Row extends TerminalRideRow>(
     }
 
     let id: string | null = target?.id ?? null;
+    let afterNote: string | null = null;
     if (!ctx.dryRun) {
       id = await spec.write(
         ctx,
@@ -331,12 +337,21 @@ export async function importTerminalRides<Row extends TerminalRideRow>(
         data,
         companionsChanged ? companionNames : undefined
       );
+      afterNote = spec.afterWrite ? await spec.afterWrite(ctx, id) : null;
       for (const t of [target?.tripId, data.tripId]) if (typeof t === "string") touchedTrips.add(t);
       seen.add(id);
       ctx.claimed.add(id);
       ctx.wrote = true;
     }
-    out.push({ row: rowNo, action: target ? "update" : "create", id, label, message, ...extra });
+    out.push({
+      row: rowNo,
+      action: target ? "update" : "create",
+      id,
+      label,
+      message,
+      ...extra,
+      ...(afterNote && { notes: [...(notes ?? []), afterNote] }),
+    });
   }
 
   for (const tripId of touchedTrips) await recomputeTripStatus(tripId);

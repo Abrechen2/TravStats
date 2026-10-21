@@ -15,6 +15,10 @@ vi.mock("../../../hooks/useToursVisible", () => ({ useToursVisible: () => tours.
 vi.mock("../../../components/Admin/ImmichGlobalSettings", () => ({
   default: () => <div data-testid="immich-global" />,
 }));
+// The operator-logo switch on the same page (forgejo#323) has its own test.
+vi.mock("../../../components/Settings/OperatorLogosCard", () => ({
+  default: () => <div data-testid="operator-logos" />,
+}));
 const adminApi = vi.hoisted(() => ({
   getGlobalApiKeys: vi.fn(),
   updateGlobalApiKeys: vi.fn(),

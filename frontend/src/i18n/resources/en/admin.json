@@ -1204,7 +1204,7 @@
       "push": "Push, notifications, relay, push relay",
       "users": "Users, accounts, lock account, reset two-factor, password",
       "invitations": "Invitation, invite, invitation link, registration",
-      "externalServices": "API keys, global keys, AirLabs, Aviationstack, AeroDataBox, OpenSky, Logostream, Google Places, Immich, routing, OpenRouteService, rail, open data",
+      "externalServices": "API keys, global keys, AirLabs, Aviationstack, AeroDataBox, OpenSky, Logostream, Google Places, Immich, routing, OpenRouteService, rail, open data, operator logos, Wikidata, Wikimedia",
       "parsers": "Parser, AI, LLM, Ollama, OpenAI, Claude, read bookings",
       "templateRepo": "Templates, template repository, repository",
       "smtp": "Email, SMTP, mail server, delivery",
@@ -1224,5 +1224,13 @@
       "parsers": "Ollama URL, pull model, model, quota, exchange-rate source",
       "externalServices": "allow own keys, permissions"
     }
+  },
+  "operatorLogos": {
+    "title": "Open data for operator logos",
+    "description": "Logos of rail operators, coach companies, ferry lines and rental companies on the map cards come from Wikidata and Wikimedia Commons – freely licensed files only, with their authors credited. The server asks, never the browser, and sends only the company's name. Switched off, the cards show monograms.",
+    "switch": "Load operator logos from open data",
+    "switchSub": "Applies to the whole instance. No account, no key.",
+    "loadFailed": "The setting could not be loaded.",
+    "saveFailed": "The setting could not be saved."
   }
 }

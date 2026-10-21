@@ -11,12 +11,16 @@
 // a property of the projection. What IS per-renderer stays a parameter: how to
 // move the camera, and whether an emptied selection clears the card.
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Flight, GeoJSONFeature } from "../../../types";
 import { useFlightSelectionStore } from "../../../store/flightSelectionStore";
 import { useCruiseSelectionStore } from "../../../store/cruiseSelectionStore";
 import { useLodgingSelectionStore } from "../../../store/lodgingSelectionStore";
 import { usePlaceSelectionStore } from "../../../store/placeSelectionStore";
+import { useMapCardSelectionStore } from "../../../store/mapCardSelectionStore";
+import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
+import { useToursVisible } from "../../../hooks/useToursVisible";
+import type { DomainKey } from "../../../shared/domains";
 import {
   pinnedFromCruise,
   pinnedFromFlightSelection,
@@ -74,6 +78,38 @@ export const GLOBE_FOCUS = { minZoom: 3.2, duration: 1200 } as const;
 
 /** The card kinds this hook owns — the ones an emptied selection may clear. */
 const FLIGHT_KINDS: ReadonlyArray<MapPinned["kind"]> = ["arc", "trip", "specialFlight"];
+
+/** The kinds a map LAYER opens through `mapCardSelectionStore` (forgejo#323). */
+const LAYER_KINDS: ReadonlyArray<MapPinned["kind"]> = [
+  "journeyRoute",
+  "journeyStop",
+  "tour",
+  "tripStop",
+  "port",
+];
+
+/**
+ * Whether a layer-opened card may show. A domain the user switched off (or
+ * one behind its beta switch) draws no layer — but a stale selection from
+ * before the switch must not open its card either.
+ */
+export function layerCardAllowed(
+  pinned: MapPinned,
+  isEnabled: (key: DomainKey) => boolean,
+  toursVisible: boolean
+): boolean {
+  switch (pinned.kind) {
+    case "journeyRoute":
+    case "journeyStop":
+      return isEnabled(pinned.data.domain);
+    case "tour":
+      return pinned.data.kind === "roadtrip" ? isEnabled("roadtrip") : toursVisible;
+    case "port":
+      return isEnabled("cruise");
+    default:
+      return true;
+  }
+}
 
 export interface MapSelectionCardsOptions {
   /** The /geo features the route card reads its stats from. */
@@ -163,12 +199,50 @@ export function useMapSelectionCards({
 
   const showDetails = useFlightSelectionStore((s) => s.showDetails);
 
+  const layerPinned = useMapCardSelectionStore((s) => s.pinned);
+  const layerSeq = useMapCardSelectionStore((s) => s.seq);
+  const [mountSeq] = useState(() => useMapCardSelectionStore.getState().seq);
+  const clearLayerCard = useMapCardSelectionStore((s) => s.clear);
+  const { isEnabled: isOn } = useEnabledDomains();
+  // A domain the dashboard filter withholds draws no layer, so it opens and
+  // keeps no card either — the same answer as a domain switched off.
+  const withheld = useMapCardSelectionStore((s) => s.withheld);
+  const isEnabled = useCallback(
+    (key: DomainKey) => isOn(key) && !withheld.includes(key),
+    [isOn, withheld]
+  );
+  const toursVisible = useToursVisible();
+
   const clearSelections = useCallback((): void => {
     clearFlights();
     clearCruise();
     clearLodging();
     clearPlace();
-  }, [clearFlights, clearCruise, clearLodging, clearPlace]);
+    clearLayerCard();
+  }, [clearFlights, clearCruise, clearLodging, clearPlace, clearLayerCard]);
+
+  // A card a rail / bus / ferry / rental / tour layer asked for. No camera
+  // move: the reader clicked the line where they are looking at it.
+  useEffect(() => {
+    if (layerPinned === null || layerSeq <= mountSeq) {
+      if (clearOnEmpty) {
+        setPinned((prev) => (prev && LAYER_KINDS.includes(prev.kind) ? null : prev));
+      }
+      return;
+    }
+    if (!layerCardAllowed(layerPinned, isEnabled, toursVisible)) return;
+    setPinned(layerPinned);
+  }, [layerPinned, layerSeq, mountSeq, isEnabled, toursVisible, setPinned, clearOnEmpty]);
+
+  // A domain switched off while its card is open takes the card (and its
+  // links into the hidden domain) with it — not only the next one.
+  useEffect(() => {
+    setPinned((prev) =>
+      prev && LAYER_KINDS.includes(prev.kind) && !layerCardAllowed(prev, isEnabled, toursVisible)
+        ? null
+        : prev
+    );
+  }, [isEnabled, toursVisible, setPinned]);
 
   const cardFlights = useMemo(
     () => withSelectedFlights(flights, selectedFlights),

@@ -20,7 +20,11 @@ import {
 } from "../schemas/ferry";
 import { mergeFerryJourney } from "../services/ferry/ferryJourneyWrite";
 import { sameFerryEnds } from "../services/ferry/ferryGeometry";
-import { syncFerryLeg } from "../services/ferry/ferryRouting";
+import {
+  routeCrossingIfStraight,
+  syncFerryLeg,
+  type CrossingRouteOutcome,
+} from "../services/ferry/ferryRouting";
 import { withFerryTimes } from "../services/ferry/timesDto";
 import { restatusTrips } from "../services/trip/restatusTrips";
 import {
@@ -238,16 +242,22 @@ router.post(
             where: { id, userId },
             include: FERRY_INCLUDE,
           });
-          return ride ? withFerryTimes(ride) : null;
+          // A replay routes nothing: the first request already did.
+          return ride ? { ride: withFerryTimes(ride), seaRoute: "unchanged" as const } : null;
         },
       });
-      await restatusTrips([result.tripId]);
-      res.status(created ? 201 : 200).json({ success: true, data: result });
+      await restatusTrips([result.ride.tripId]);
+      res
+        .status(created ? 201 : 200)
+        .json({ success: true, data: result.ride, meta: { seaRoute: result.seaRoute } });
     } catch (err) {
       next(err);
     }
   }
 );
+
+const readRide = (id: string) =>
+  prisma.ferryJourney.findUniqueOrThrow({ where: { id }, include: FERRY_INCLUDE });
 
 async function createFerryRide(userId: string, body: unknown, claim: ClaimClientRef) {
   refuseStrayFold(body);
@@ -303,7 +313,13 @@ async function createFerryRide(userId: string, body: unknown, claim: ClaimClient
   );
 
   logger.info({ operation: "ferry_journey_create", ferryJourneyId: ride.id, userId });
-  return withFerryTimes(ride);
+  // A crossing follows the sea from the start, not after a button (forgejo#323).
+  // `seaRoute` tells the client what that did — a failure is said, not hidden.
+  const seaRoute = await routeCrossingIfStraight(userId, ride.id, "ferry_journey_create.route");
+  return {
+    ride: withFerryTimes(seaRoute === "routed" ? await readRide(ride.id) : ride),
+    seaRoute,
+  };
 }
 
 router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -403,8 +419,13 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       return;
     }
 
+    // New terminals, new sea line — the edit dropped the old one (forgejo#323).
+    const seaRoute: CrossingRouteOutcome = terminalsMoved
+      ? await routeCrossingIfStraight(userId, existing.id, "ferry_journey_update.route")
+      : "unchanged";
+    if (seaRoute === "routed") ride = await readRide(existing.id);
     await restatusTrips([existing.tripId, ride.tripId]);
-    res.json({ success: true, data: withFerryTimes(ride) });
+    res.json({ success: true, data: withFerryTimes(ride), meta: { seaRoute } });
   } catch (err) {
     next(err);
   }

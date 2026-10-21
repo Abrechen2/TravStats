@@ -33,6 +33,7 @@ export const ADMIN_SETTINGS_ALLOWLIST: Readonly<Record<string, Rule>> = {
   allowRegistration: bool,
   betaFeaturesEnabled: bool,
   openDataEnabled: bool,
+  operatorLogosOpenDataEnabled: bool,
   shareLinksEnabled: bool,
   llmEnabled: bool,
   fxCdnFallbackEnabled: bool,

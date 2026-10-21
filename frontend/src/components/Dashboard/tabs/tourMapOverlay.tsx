@@ -6,6 +6,8 @@ import { rgbCss } from "../../../lib/flightColor";
 import { TOUR_RGB, type TourPathDatum } from "../../layers/tourPathsLayer";
 import { LEG_MODES, type LegMode } from "../../../types/tour";
 import { useOverlayAppearance } from "../../../store/overlayAppearanceStore";
+import type { TourSummary } from "../../../lib/api/tourIndex";
+import { withTourCards } from "../../map/cards/journeys/tourLayerCards";
 
 // Split out of AllTab.tsx purely to keep that file under its 800-line
 // ceiling — everything here is dashboard-wide-tour-specific (tour sections
@@ -212,18 +214,30 @@ export function buildTourDeckLayers(
  * The tour layer with the user's width sliders applied — the hook both the
  * "Alle" map and the tour/roadtrip tab call, so the two cannot read the store
  * differently. Lifted on the globe (`TOUR_PATH_GLOBE_ALTITUDE_M`).
+ *
+ * `tours` are the summaries the lines were fetched for; with them every leg
+ * opens its tour's map card (forgejo#323).
  */
-export function useTourDeckLayers(pathData: readonly TourPathDatum[], onGlobe: boolean): Layer[] {
+export function useTourDeckLayers(
+  pathData: readonly TourPathDatum[],
+  onGlobe: boolean,
+  tours: readonly TourSummary[] = NO_TOURS
+): Layer[] {
   const { tourLineWidth, roadtripLineWidth } = useOverlayAppearance();
   return useMemo(
     () =>
-      buildTourDeckLayers(pathData, onGlobe ? TOUR_PATH_GLOBE_ALTITUDE_M : 0, {
-        tour: tourLineWidth,
-        roadtrip: roadtripLineWidth,
-      }),
-    [pathData, onGlobe, tourLineWidth, roadtripLineWidth]
+      withTourCards(
+        buildTourDeckLayers(pathData, onGlobe ? TOUR_PATH_GLOBE_ALTITUDE_M : 0, {
+          tour: tourLineWidth,
+          roadtrip: roadtripLineWidth,
+        }),
+        tours
+      ),
+    [pathData, onGlobe, tourLineWidth, roadtripLineWidth, tours]
   );
 }
+
+const NO_TOURS: readonly TourSummary[] = [];
 
 export interface TourStatusOverlayProps {
   loading: boolean;

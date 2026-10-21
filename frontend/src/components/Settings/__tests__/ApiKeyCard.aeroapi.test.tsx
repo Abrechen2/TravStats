@@ -25,9 +25,11 @@ vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
 }));
 vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => false }));
-// The services accordion (forgejo#321) also holds the shared Immich connection,
-// which loads its own settings — not the subject here.
+// The services accordion (forgejo#321) also holds the shared Immich connection
+// and the operator-logo switch (forgejo#323), which load their own settings —
+// not the subject here.
 vi.mock("../../Admin/ImmichGlobalSettings", () => ({ default: () => null }));
+vi.mock("../OperatorLogosCard", () => ({ default: () => null }));
 
 import ApiKeysSection from "../ApiKeysSection";
 import GlobalApiKeysManager, { type GlobalApiKeys } from "../../Admin/GlobalApiKeysManager";

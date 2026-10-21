@@ -347,7 +347,8 @@
       "trip_not_linked": "trip not found in this account — imported without a trip",
       "port_not_found": "port not in the catalogue — left empty",
       "chain_not_found": "chain not in the catalogue — imported without a chain",
-      "roadtrip_not_linked": "Roadtrip not found in the account – applied without a roadtrip"
+      "roadtrip_not_linked": "Roadtrip not found in the account – applied without a roadtrip",
+      "sea_route_failed": "sea route could not be calculated — imported as a straight line"
     },
     "outcomeUnknown": "The server no longer reports how the import ended. Check your entries before importing the file again."
   }

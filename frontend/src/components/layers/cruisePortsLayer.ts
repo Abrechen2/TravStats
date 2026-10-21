@@ -5,6 +5,28 @@ import { toPortLabel } from "../map/portLabel";
 import { declutterByDistance, pickLabelled, type LabelsMode } from "../map/labelPriority";
 import { markerDotRadiusProps } from "./markerDotStyle";
 import { isCountableCruise } from "../../shared/cruiseCounting";
+import { cruisePortCalls } from "../../lib/cruisePortCalls";
+import { useMapCardSelectionStore } from "../../store/mapCardSelectionStore";
+
+/**
+ * A port click opens the port card the globe already had (forgejo#323: on the
+ * flat map a port answered a hover and nothing else). Keyed by NAME, which is
+ * what `getPortStats` matches a stop on when the datum carries no UN/LOCODE.
+ */
+function selectPort(d: PortDatum): void {
+  useMapCardSelectionStore.getState().select({
+    kind: "port",
+    data: {
+      iata: d.name,
+      name: d.name,
+      city: d.city,
+      country: d.country,
+      size: d.visits,
+      lastVisit: d.lastVisit,
+    },
+    anchorLngLat: [d.position[0], d.position[1]],
+  });
+}
 
 interface PortDatum {
   position: [number, number];
@@ -144,20 +166,9 @@ export function createCruisePortsLayer(
       if (claimsVisit) recordVisit(port, date);
       else ensurePort(port);
     };
-    const firstPortCall = cruise.stops.find((s) => !s.isAtSea && s.port);
-    const lastPortCall = [...cruise.stops].reverse().find((s) => !s.isAtSea && s.port);
-    // Departure/arrival ports get markers too — skipped only when they
-    // duplicate the first/last port-call stop (counted there instead).
-    if (cruise.departurePort && cruise.departurePort.id !== firstPortCall?.port?.id) {
-      touch(cruise.departurePort, cruise.startDate ?? undefined);
-    }
-    for (const stop of cruise.stops) {
-      if (stop.isAtSea || !stop.port) continue;
-      touch(stop.port, stop.arrivalTime ?? stop.departureTime ?? undefined);
-    }
-    if (cruise.arrivalPort && cruise.arrivalPort.id !== lastPortCall?.port?.id) {
-      touch(cruise.arrivalPort, cruise.endDate ?? undefined);
-    }
+    // Departure/arrival ports get markers too — the same calls the port
+    // card counts (`cruisePortCalls`).
+    for (const call of cruisePortCalls(cruise)) touch(call.port, call.date);
   }
   const data = Array.from(byPort.values());
   if (data.length === 0) return null;
@@ -193,6 +204,9 @@ export function createCruisePortsLayer(
     getLineWidth: 1,
     stroked: true,
     pickable: true,
+    onClick: ({ object }: { object?: PortDatum }) => {
+      if (object) selectPort(object);
+    },
   });
 
   // Priority label reveal: the most-visited ports keep their label even

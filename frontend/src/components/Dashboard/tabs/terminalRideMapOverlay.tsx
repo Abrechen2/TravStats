@@ -1,10 +1,29 @@
 import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
-import { PathLayer } from "@deck.gl/layers";
+import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
-import { busPaths, type BusPathDatum, type TerminalRideLine } from "../../Trips/tripBusLayer";
+import {
+  busPaths,
+  terminalPoints,
+  type BusPathDatum,
+  type TerminalDatum,
+  type TerminalRideLine,
+} from "../../Trips/tripBusLayer";
 import { RAIL_PATH_GLOBE_ALTITUDE_M } from "../../layers/railPathsLayer";
+import {
+  buildStationLabelLayers,
+  type StationLabelGroup,
+  type StationLabelSource,
+} from "../../layers/stationLabelsLayer";
+import type { LabelsMode } from "../../map/labelPriority";
 import { hexToRgb } from "../../../lib/domainColor";
+import {
+  STATION_DOT_OUTLINE_PX,
+  STATION_DOT_OUTLINE_RGBA,
+  STATION_DOT_RADIUS_PX,
+} from "../../layers/markerDotStyle";
+import { journeyFromBus, journeyFromFerry } from "../../map/cards/journeys/journeyNormalize";
+import { withJourneyCards } from "../../map/cards/journeys/journeyLayerCards";
 import { legendRow, type LegendRowFn } from "./allTabLegendRows";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import { useDashboardFilterStore } from "../../../store/dashboardFilterStore";
@@ -28,18 +47,29 @@ const CHORD_ALPHA = 170;
  * domain shows the new colour on the line and in the key together, and the key
  * never names a kind of line the map does not draw. Lifted on the globe like
  * rail, or it z-fights with the sphere.
+ *
+ * The terminals' names (forgejo#320) come from the same rides in the same
+ * colour, revealed by the map's `labelsMode` like the airport names.
+ *
+ * The terminals themselves are the plain station dot every line domain draws
+ * (rail's, a same-station rental's) — they used to have none, which left the
+ * endpoint card of forgejo#323 nothing to click. Lines and dots both answer a
+ * hover and a click through `withJourneyCards`.
  */
 export function buildTerminalRideMapLayers(
-  rides: readonly TerminalRideLine[],
+  rides: readonly (TerminalRideLine & StationLabelSource)[],
   colorHex: string,
   onGlobe: boolean,
-  idPrefix: string
+  idPrefix: string,
+  labelsMode: LabelsMode = "important",
+  domain: "bus" | "ferry" = "bus"
 ): Layer[] {
   const data = busPaths(rides);
   if (data.length === 0) return [];
-  const [r, g, b] = hexToRgb(colorHex);
+  const color = hexToRgb(colorHex);
+  const [r, g, b] = color;
   const altitude = onGlobe ? RAIL_PATH_GLOBE_ALTITUDE_M : 0;
-  return [
+  const lines: Layer[] = [
     new PathLayer<BusPathDatum>({
       id: `${idPrefix}-paths`,
       data,
@@ -52,9 +82,28 @@ export function buildTerminalRideMapLayers(
       widthUnits: "pixels",
       capRounded: true,
       jointRounded: true,
-      pickable: false,
+      pickable: true,
       updateTriggers: { getColor: colorHex, getPath: altitude },
     }),
+    new ScatterplotLayer<TerminalDatum>({
+      id: `${idPrefix}-terminals`,
+      data: terminalPoints(rides),
+      getPosition: (d) => (altitude === 0 ? d.position : [d.position[0], d.position[1], altitude]),
+      getFillColor: [r, g, b, 255],
+      getLineColor: STATION_DOT_OUTLINE_RGBA,
+      lineWidthUnits: "pixels",
+      getLineWidth: STATION_DOT_OUTLINE_PX,
+      stroked: true,
+      radiusUnits: "pixels",
+      getRadius: STATION_DOT_RADIUS_PX,
+      pickable: true,
+      updateTriggers: { getFillColor: colorHex, getPosition: altitude },
+    }),
+  ];
+  const journeys = rides.map(domain === "ferry" ? journeyFromFerry : journeyFromBus);
+  return [
+    ...withJourneyCards(lines, journeys, color),
+    ...buildStationLabelLayers([{ rides, color }], { labelsMode, idPrefix, onGlobe }),
   ];
 }
 
@@ -134,9 +183,11 @@ export function useDashboardRides<R extends TerminalRideLine>(
 export interface TerminalRideOverlay {
   layers: Layer[];
   legendRows: JSX.Element[];
+  /** The drawn rides and their colour, for the map's ONE station-label pass. */
+  stations: StationLabelGroup;
 }
 
-export interface TerminalRideOverlaySpec<R extends TerminalRideLine> {
+export interface TerminalRideOverlaySpec<R extends TerminalRideLine & StationLabelSource> {
   domain: "bus" | "ferry";
   idPrefix: string;
   legend: TerminalRideLegendKeys;
@@ -149,7 +200,7 @@ export interface TerminalRideOverlaySpec<R extends TerminalRideLine> {
  * switch AND the user's domain — is added here, so a hidden domain never
  * reaches the network.
  */
-export function useTerminalRideOverlay<R extends TerminalRideLine>(
+export function useTerminalRideOverlay<R extends TerminalRideLine & StationLabelSource>(
   spec: TerminalRideOverlaySpec<R>,
   wanted: boolean,
   onGlobe: boolean,
@@ -161,14 +212,18 @@ export function useTerminalRideOverlay<R extends TerminalRideLine>(
   const { colorOf } = useDomainColors();
   const color = colorOf(spec.domain);
   const drawn = show ? rides : EMPTY;
+  // The station names are left to the map's single pass across all three
+  // ground domains (`useTransportOverlays`), so they are not drawn here.
   const layers = useMemo(
-    () => buildTerminalRideMapLayers(drawn, color, onGlobe, spec.idPrefix),
-    [drawn, color, onGlobe, spec.idPrefix]
+    () => buildTerminalRideMapLayers(drawn, color, onGlobe, spec.idPrefix, "off", spec.domain),
+    [drawn, color, onGlobe, spec.idPrefix, spec.domain]
   );
+  const stations = useMemo(() => ({ rides: drawn, color: hexToRgb(color) }), [drawn, color]);
   return {
     layers,
     legendRows: buildTerminalRideLegendRows(drawn, color, t, legendRow, spec.legend),
+    stations,
   };
 }
 
-const EMPTY: readonly TerminalRideLine[] = [];
+const EMPTY: readonly (TerminalRideLine & StationLabelSource)[] = [];

@@ -24,6 +24,8 @@ export interface InstanceSettings {
   betaFeaturesEnabled: boolean;
   /** May the instance ask Open-Meteo, Wikipedia and OpenStreetMap for its users. */
   openDataEnabled: boolean;
+  /** May operator logos come from Wikidata / Commons, server side (forgejo#323). On by default. */
+  operatorLogosOpenDataEnabled: boolean;
   /** May users create public share links (forgejo#281). Off deletes every link. */
   shareLinksEnabled: boolean;
   frontendUrl: string | null;
@@ -88,6 +90,7 @@ export interface InstanceSettingsPatch {
   allowRegistration?: boolean;
   betaFeaturesEnabled?: boolean;
   openDataEnabled?: boolean;
+  operatorLogosOpenDataEnabled?: boolean;
   shareLinksEnabled?: boolean;
   frontendUrl?: string;
   publicUrl?: string;

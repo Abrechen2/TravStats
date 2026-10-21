@@ -32,11 +32,13 @@ import {
 } from "../../lib/placeLabel";
 import { toLodgingLabel } from "../layers/lodgingPinsLayer";
 import { toPlaceLabel } from "../layers/placePinsLayer";
+import { StationLabelsLayer } from "../layers/stationLabelsLayer";
+import type { Layer } from "@deck.gl/core";
 
 /** One DOM label pill the globe overlay projects and places. */
 export interface GlobeExtraLabel {
   /** Only used to key the DOM node — `${kind}-${id}` is stable across frames. */
-  kind: "lodging" | "place";
+  kind: "lodging" | "place" | "station";
   id: string;
   text: string;
   lng: number;
@@ -102,4 +104,29 @@ export function placeLabelPoints(
     });
   }
   return out;
+}
+
+/**
+ * The rail, bus and ferry station names (forgejo#320). The dashboard tabs build
+ * them as a `StationLabelsLayer` among the map's extra layers; on the globe
+ * that layer draws nothing and only carries its stations here, so the names
+ * come from the same rides — the same domain filter — the lines were drawn
+ * from, in each domain's colour, weighted by how often a station was used.
+ * The overlay's greedy cull then places them against the airport, port and
+ * pin labels in one pass.
+ */
+export function stationLabelPoints(layers: readonly Layer[]): GlobeExtraLabel[] {
+  return layers
+    .filter((layer): layer is StationLabelsLayer => layer instanceof StationLabelsLayer)
+    .flatMap((layer) =>
+      layer.props.data.map((d) => ({
+        kind: "station" as const,
+        id: `${layer.id}-${d.key}`,
+        text: d.shortLabel,
+        lng: d.position[0],
+        lat: d.position[1],
+        weight: d.count,
+        color: rgbCss(d.color),
+      }))
+    );
 }

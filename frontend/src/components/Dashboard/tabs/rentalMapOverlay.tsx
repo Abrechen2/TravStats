@@ -9,11 +9,14 @@ import {
   type RentalMapSource,
 } from "../../layers/rentalLayer";
 import { hexToRgb } from "../../../lib/domainColor";
+import { journeyFromRental } from "../../map/cards/journeys/journeyNormalize";
+import { withJourneyCards } from "../../map/cards/journeys/journeyLayerCards";
 import { legendRow, type LegendRowFn } from "./allTabLegendRows";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import { useDashboardFilterStore } from "../../../store/dashboardFilterStore";
 import { useOverlayAppearance } from "../../../store/overlayAppearanceStore";
 import { rentalApi } from "../../../lib/api/rental";
+import type { RentalBooking } from "../../../types/rental";
 import { logger } from "../../../lib/logger";
 
 type Translate = (key: string) => string;
@@ -38,20 +41,23 @@ const DEFAULT_RENTAL_STYLE: RentalMapStyle = { lineWidth: 1, markerSize: 1, show
  * take the SAME style, so a hidden link or hidden markers leave no key behind.
  */
 export function buildRentalMapLayers(
-  rentals: readonly RentalMapSource[],
+  rentals: readonly (RentalMapSource & Partial<RentalBooking>)[],
   colorHex: string,
   onGlobe: boolean,
   idPrefix = "dashboard-rental",
   style: RentalMapStyle = DEFAULT_RENTAL_STYLE
 ): Layer[] {
   const links = style.showLine ? buildRentalLinks(rentals) : [];
-  return buildRentalDeckLayers(buildRentalPoints(rentals), links, {
-    color: hexToRgb(colorHex),
+  const color = hexToRgb(colorHex);
+  const layers = buildRentalDeckLayers(buildRentalPoints(rentals), links, {
+    color,
     altitudeM: onGlobe ? RENTAL_GLOBE_ALTITUDE_M : 0,
     idPrefix,
     widthScale: style.lineWidth,
     markerSize: style.markerSize,
   });
+  // Each link and branch answers a hover and a click (forgejo#323).
+  return withJourneyCards(layers, rentals.map(journeyFromRental), color);
 }
 
 /** One key per kind of mark actually on the map — never a key for a mark the map does not draw. */
@@ -87,8 +93,8 @@ const PAGE = 500;
  * the user never reaches the network. A failed load is logged and drawn as
  * nothing; the logbook page is where it is said out loud.
  */
-export function useDashboardRentals(enabled: boolean, year: number | null): RentalMapSource[] {
-  const [rentals, setRentals] = useState<RentalMapSource[]>([]);
+export function useDashboardRentals(enabled: boolean, year: number | null): RentalBooking[] {
+  const [rentals, setRentals] = useState<RentalBooking[]>([]);
   useEffect(() => {
     if (!enabled) {
       setRentals([]);
@@ -97,7 +103,7 @@ export function useDashboardRentals(enabled: boolean, year: number | null): Rent
     let cancelled = false;
     void (async () => {
       try {
-        const all: RentalMapSource[] = [];
+        const all: RentalBooking[] = [];
         for (let offset = 0; !cancelled; offset += PAGE) {
           const page = await rentalApi.list({ limit: PAGE, offset, year: year ?? undefined });
           all.push(...page.rentals);
@@ -140,4 +146,4 @@ export function useRentalOverlay(show: boolean, onGlobe: boolean, t: Translate):
   return { layers, legendRows: buildRentalLegendRows(drawn, color, t, legendRow, style) };
 }
 
-const EMPTY: readonly RentalMapSource[] = [];
+const EMPTY: readonly RentalBooking[] = [];

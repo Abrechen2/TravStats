@@ -299,5 +299,76 @@
   "styleFallback": {
     "notice": "The map provider cannot be reached right now. You are seeing a simplified fallback map.",
     "unavailable": "The map could not be loaded. Reload the page later."
+  },
+  "journey": {
+    "domain": {
+      "flight": "Flight",
+      "rail": "Train ride",
+      "bus": "Coach ride",
+      "ferry": "Ferry",
+      "rental": "Rental car"
+    },
+    "times": {
+      "rail": "{{count}}× travelled",
+      "bus": "{{count}}× travelled",
+      "ferry": "{{count}}× crossed",
+      "rental": "{{count}}× rented"
+    },
+    "stop": {
+      "flight": "Airport",
+      "rail": "Station",
+      "bus": "Coach station",
+      "ferry": "Ferry port",
+      "rental": "Rental branch"
+    },
+    "tourKind": {
+      "tour": "Day tour",
+      "roadtrip": "Roadtrip"
+    },
+    "operator": {
+      "flight": "Top airline",
+      "rail": "Operator",
+      "bus": "Coach company",
+      "ferry": "Ferry line",
+      "rental": "Rental company",
+      "cruise": "Cruise line"
+    },
+    "distance": "Distance",
+    "distanceUnknown_one": "{{count}} journey without distance",
+    "distanceUnknown_other": "{{count}} journeys without distance",
+    "distanceNone": "unknown",
+    "last": "Last",
+    "next": "Next",
+    "nothingYet": "Not travelled yet",
+    "topRoute": "Most frequent connection",
+    "journeys": "Journeys",
+    "listShow": "List (+{{count}})",
+    "listHide": "Less",
+    "planned": "planned",
+    "cancelled": "cancelled",
+    "open": "Open",
+    "openLatest": "Open last",
+    "openNext": "Open next",
+    "openTour": "Open tour",
+    "openRoadtrip": "Open roadtrip",
+    "fact": {
+      "train": "Train",
+      "flight": "Flight",
+      "travelClass": "Class",
+      "line": "Line",
+      "seat": "Seat",
+      "vessel": "Vessel",
+      "cabin": "Cabin",
+      "vehicle": "Vehicle",
+      "rentalDays": "Rental days",
+      "duration": "Duration",
+      "mode": "Mode",
+      "ascent": "Ascent",
+      "stops": "Stops",
+      "when": "When",
+      "trip": "Trip"
+    },
+    "operatorMark": "Logo of {{name}}",
+    "attribution": "Logo: {{source}}"
   }
 }

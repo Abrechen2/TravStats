@@ -91,6 +91,12 @@ export interface InstanceSettings {
    */
   openDataEnabled: boolean;
   /**
+   * May operator marks be looked up on Wikidata / Wikimedia Commons, server
+   * side (forgejo#323). ON by default: only a company name leaves the
+   * instance, never a place or a date. Admin-settable only.
+   */
+  operatorLogosOpenDataEnabled: boolean;
+  /**
    * Whether users may create public share links (forgejo#281). OFF by default:
    * a link hands travel data to anyone holding the URL. Switching it off
    * deletes every link (`updateInstanceSettings`). Admin-settable only.
@@ -149,6 +155,7 @@ export async function getInstanceSettings(): Promise<InstanceSettings> {
     // headline filtering against a rank that does not exist.
     countryThreshold: parseCountryTier(row.countryThreshold) ?? DEFAULT_COUNTRY_TIER,
     openDataEnabled: row.openDataEnabled,
+    operatorLogosOpenDataEnabled: row.operatorLogosOpenDataEnabled,
     shareLinksEnabled: row.shareLinksEnabled,
     railTransitousEnabled: row.railTransitousEnabled,
     railDbRestEnabled: row.railDbRestEnabled,
@@ -211,6 +218,9 @@ export async function updateInstanceSettings(
       }),
       ...(patch.openDataEnabled !== undefined && {
         openDataEnabled: patch.openDataEnabled,
+      }),
+      ...(patch.operatorLogosOpenDataEnabled !== undefined && {
+        operatorLogosOpenDataEnabled: patch.operatorLogosOpenDataEnabled,
       }),
       ...(patch.shareLinksEnabled !== undefined && {
         shareLinksEnabled: patch.shareLinksEnabled,

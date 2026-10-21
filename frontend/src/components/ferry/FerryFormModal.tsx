@@ -6,6 +6,7 @@ import RequiredLegend from "../form/RequiredLegend";
 import Button from "../ui/Button";
 import { useTranslation } from "../../hooks/useTranslation";
 import { ferryApi } from "../../lib/api/ferry";
+import { useToastStore } from "../../store/toastStore";
 import { tripsApi } from "../../lib/api";
 import { railArrival, railDeparture } from "../../lib/entityTimes";
 import type { FerryJourney } from "../../types/ferry";
@@ -144,6 +145,7 @@ export function FerryFormModal({
     setFields((old) => ({ ...old, [key]: value }));
     setError(null);
   };
+  const addToast = useToastStore((s) => s.addToast);
   const save = async () => {
     if (savingRef.current || importBusy || !complete) return;
     if (fields.vesselMmsi.trim() !== "" && !/^\d{9}$/.test(fields.vesselMmsi.trim())) {
@@ -182,7 +184,10 @@ export function FerryFormModal({
     if (journey && fields.departureLocal === opened.departureLocal) delete input.departureLocal;
     if (journey && fields.arrivalLocal === opened.arrivalLocal) delete input.arrivalLocal;
     try {
-      const saved = await ferryApi.save(journey?.id ?? null, input);
+      const { ride: saved, seaRoute } = await ferryApi.saveReported(journey?.id ?? null, input);
+      // Saved either way; a sea line that did not come is said, not hidden.
+      // No sea way at all ("straight") is an answer, not a failure.
+      if (seaRoute === "failed") addToast("warning", t("ferry:routing.autoFailed"), 9000);
       onSaved(saved);
     } catch {
       setError(t("ferry:saveError"));
