@@ -2,8 +2,19 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FerryFormModal } from "../FerryFormModal";
 import type { FerryJourney } from "../../../types/ferry";
-const mocks = vi.hoisted(() => ({ save: vi.fn(), trips: vi.fn(), t: (s: string) => s }));
-vi.mock("../../../lib/api/ferry", () => ({ ferryApi: { save: mocks.save } }));
+import { useToastStore } from "../../../store/toastStore";
+const mocks = vi.hoisted(() => ({
+  save: vi.fn(),
+  trips: vi.fn(),
+  t: (s: string) => s,
+  seaRoute: "unchanged" as string,
+}));
+vi.mock("../../../lib/api/ferry", () => ({
+  ferryApi: {
+    saveReported: (...args: unknown[]) =>
+      Promise.resolve(mocks.save(...args)).then((ride) => ({ ride, seaRoute: mocks.seaRoute })),
+  },
+}));
 vi.mock("../../../lib/api", () => ({ tripsApi: { getAll: mocks.trips } }));
 vi.mock("../../../hooks/useTranslation", () => ({ useTranslation: () => ({ t: mocks.t }) }));
 vi.mock("../../Modal", () => ({
@@ -53,6 +64,8 @@ const ride = {
 beforeEach(() => {
   mocks.trips.mockResolvedValue([]);
   mocks.save.mockReset();
+  mocks.seaRoute = "unchanged";
+  useToastStore.setState({ toasts: [] });
 });
 describe("Ferry editor", () => {
   it("does not send an unchanged sea estimate back as a typed distance", async () => {
@@ -146,4 +159,27 @@ describe("Ferry editor", () => {
       expect(mocks.save).not.toHaveBeenCalled();
     }
   );
+  it("says so when the crossing was saved but its sea route failed (Codex review)", async () => {
+    mocks.save.mockResolvedValue(ride);
+    mocks.seaRoute = "failed";
+    const onSaved = vi.fn();
+    render(<FerryFormModal journey={ride} onClose={vi.fn()} onSaved={onSaved} />);
+    fireEvent.change(screen.getByLabelText("ferry:notes"), { target: { value: "x" } });
+    fireEvent.click(screen.getByRole("button", { name: "ferry:save" }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith(ride));
+    expect(useToastStore.getState().toasts.map((x) => [x.type, x.message])).toEqual([
+      ["warning", "ferry:routing.autoFailed"],
+    ]);
+  });
+
+  it("stays quiet when there was simply no sea way", async () => {
+    mocks.save.mockResolvedValue(ride);
+    mocks.seaRoute = "straight";
+    const onSaved = vi.fn();
+    render(<FerryFormModal journey={ride} onClose={vi.fn()} onSaved={onSaved} />);
+    fireEvent.change(screen.getByLabelText("ferry:notes"), { target: { value: "x" } });
+    fireEvent.click(screen.getByRole("button", { name: "ferry:save" }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(useToastStore.getState().toasts).toEqual([]);
+  });
 });

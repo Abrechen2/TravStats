@@ -14,6 +14,8 @@ export interface FerryRoadtripLeg {
   toStop: { title: string };
   route: { name: string; tripId: string | null };
 }
+/** What a save did to the crossing's sea line: `failed` = saved, but routing failed. */
+export type FerrySeaRouteOutcome = "routed" | "straight" | "unchanged" | "failed";
 export interface FerryListSummary {
   journeys: number;
   operators: number;
@@ -100,10 +102,18 @@ export const ferryApi = {
     return (await api.get<Envelope<FerryJourney>>(`/ferry/${encodeURIComponent(id)}`)).data.data;
   },
   async save(id: string | null, input: unknown) {
+    return (await ferryApi.saveReported(id, input)).ride;
+  },
+  /** A save, with what it did to the sea line (`meta.seaRoute`, forgejo#323). */
+  async saveReported(
+    id: string | null,
+    input: unknown
+  ): Promise<{ ride: FerryJourney; seaRoute: FerrySeaRouteOutcome | null }> {
+    type Saved = Envelope<FerryJourney> & { meta?: { seaRoute?: FerrySeaRouteOutcome } };
     const response = id
-      ? await api.patch<Envelope<FerryJourney>>(`/ferry/${encodeURIComponent(id)}`, input)
-      : await api.post<Envelope<FerryJourney>>("/ferry", input);
-    return response.data.data;
+      ? await api.patch<Saved>(`/ferry/${encodeURIComponent(id)}`, input)
+      : await api.post<Saved>("/ferry", input);
+    return { ride: response.data.data, seaRoute: response.data.meta?.seaRoute ?? null };
   },
   async remove(id: string) {
     await api.delete(`/ferry/${encodeURIComponent(id)}`);

@@ -86,22 +86,32 @@ registry.registerPath({
   request: { params },
   responses: { 200: { description: "Crossing", content: json(envelope(journey)) }, ...errors },
 });
+/** What a save did to the crossing's sea line (forgejo#323). */
+const saved = envelope(journey).extend({
+  meta: z.object({
+    seaRoute: z
+      .enum(["routed", "straight", "unchanged", "failed"])
+      .describe(
+        "routed: a sea line was computed; straight: no sea way found, the chord stays; unchanged: nothing to route; failed: the crossing is saved but routing failed — retry with POST /ferry/{id}/route"
+      ),
+  }),
+});
 registry.registerPath({
   method: "post",
   path: "/ferry",
   tags: ["Ferry"],
   summary: "Create a ferry crossing",
   description:
-    "Both ports include coordinates. Times are local wall clocks or calendar days; zones are resolved on the server. Distance without a ticket value is explicitly a straight-line estimate. Documents and companions use the same ownership rules as other journeys.",
+    "Both ports include coordinates. Times are local wall clocks or calendar days; zones are resolved on the server. After the save the crossing is routed over sea where a way exists; without one, and without a ticket value, its distance is explicitly a straight-line estimate. `meta.seaRoute` says which. Documents and companions use the same ownership rules as other journeys.",
   request: {
     body: {
       content: json(createFerryJourneySchema.and(documentIdsBodySchema).and(clientRefBodySchema)),
     },
   },
   responses: {
-    201: { description: "Created", content: json(envelope(journey)) },
+    201: { description: "Created", content: json(saved) },
     ...errors,
-    ...clientRefResponses(json(envelope(journey))),
+    ...clientRefResponses(json(saved)),
   },
 });
 registry.registerPath({
@@ -121,7 +131,7 @@ registry.registerPath({
       ),
     },
   },
-  responses: { 200: { description: "Updated", content: json(envelope(journey)) }, ...errors },
+  responses: { 200: { description: "Updated", content: json(saved) }, ...errors },
 });
 registry.registerPath({
   method: "delete",

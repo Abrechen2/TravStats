@@ -220,6 +220,7 @@
     "estimated": "Estimated sea route — not a recorded ship track.",
     "noRoute": "No sea route found. The existing route is unchanged.",
     "failed": "The sea route could not be saved. Please try again.",
-    "distance": "Sea route (estimate)"
+    "distance": "Sea route (estimate)",
+    "autoFailed": "Saved — the sea route could not be calculated. Try again on the crossing's page."
   }
 }

@@ -67,7 +67,7 @@ async function writeCrossing(
 ): Promise<string> {
   const companions =
     companionNames === undefined ? undefined : await resolveCompanions(ctx.userId, companionNames);
-  const id = await prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx) => {
     const payload = {
       ...data,
       ...(companions && { companions: companions.map((c) => c.displayName) }),
@@ -93,10 +93,13 @@ async function writeCrossing(
     }
     return id;
   });
-  // A new or moved crossing follows the sea, as one added by hand (forgejo#323).
-  // A no-op for one that already has its line.
-  await routeCrossingIfStraight(ctx.userId, id, "xlsx_import.ferry.route");
-  return id;
+}
+
+/** A new or moved crossing follows the sea, as one added by hand (forgejo#323);
+ *  a no-op for one that already has its line. A failure is named on the row. */
+async function routeCrossing(ctx: Ctx, id: string): Promise<string | null> {
+  const outcome = await routeCrossingIfStraight(ctx.userId, id, "xlsx_import.ferry.route");
+  return outcome === "failed" ? "sea_route_failed" : null;
 }
 
 const FERRY_SHEET: TerminalRideSheet<FerryJourney> = {
@@ -109,6 +112,7 @@ const FERRY_SHEET: TerminalRideSheet<FerryJourney> = {
     prisma.ferryJourney.findMany({ where, orderBy: { createdAt: "asc" } }),
   derivedColumns,
   write: writeCrossing,
+  afterWrite: routeCrossing,
 };
 
 export function importFerry(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutcome> {

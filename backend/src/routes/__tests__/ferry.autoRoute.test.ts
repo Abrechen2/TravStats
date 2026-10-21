@@ -60,6 +60,18 @@ const create = (extra: Record<string, unknown> = {}) =>
       ...extra,
     });
 
+const sheetRow = {
+  id: "",
+  depStationName: dep.name,
+  depLat: String(dep.lat),
+  depLon: String(dep.lon),
+  arrStationName: arr.name,
+  arrLat: String(arr.lat),
+  arrLon: String(arr.lon),
+  departureTime: "2025-10-09T08:00:00.000Z",
+  arrivalTime: "2025-10-09T16:00:00.000Z",
+};
+
 beforeAll(async () => {
   await prisma.user.deleteMany({ where: { username: "sea-autoroute-owner" } });
   const user = await prisma.user.create({
@@ -89,6 +101,7 @@ describe("a crossing follows the sea from the start (forgejo#323)", () => {
       distanceSource: "sea_route",
       distanceKm: 201.4,
     });
+    expect(res.body.meta).toEqual({ seaRoute: "routed" });
     expect(computeSchematicRoute).toHaveBeenCalledTimes(1);
   });
 
@@ -106,6 +119,8 @@ describe("a crossing follows the sea from the start (forgejo#323)", () => {
     const res = await create();
     expect(res.status).toBe(201);
     expect(res.body.data).toMatchObject({ geometrySource: "straight", geometry: null });
+    // No sea way is an answer, not a failure.
+    expect(res.body.meta).toEqual({ seaRoute: "straight" });
   });
 
   it("never loses a crossing to a router failure", async () => {
@@ -113,6 +128,8 @@ describe("a crossing follows the sea from the start (forgejo#323)", () => {
     const res = await create();
     expect(res.status).toBe(201);
     expect(res.body.data.geometrySource).toBe("straight");
+    // Saved, and the client is told the sea line did not come (Codex review).
+    expect(res.body.meta).toEqual({ seaRoute: "failed" });
     expect(await prisma.ferryJourney.count({ where: { userId } })).toBe(1);
   });
 
@@ -128,6 +145,7 @@ describe("a crossing follows the sea from the start (forgejo#323)", () => {
       .set("Cookie", cookie)
       .send({ notes: "Window seat" });
     expect(note.status).toBe(200);
+    expect(note.body.meta).toEqual({ seaRoute: "unchanged" });
     expect(computeSchematicRoute).not.toHaveBeenCalled();
 
     const edit = await request(app)
@@ -139,6 +157,7 @@ describe("a crossing follows the sea from the start (forgejo#323)", () => {
       geometrySource: "sea_route",
       geometry: [...line.slice(0, 3), [moved.lon, moved.lat]],
     });
+    expect(edit.body.meta).toEqual({ seaRoute: "routed" });
     expect(computeSchematicRoute).toHaveBeenCalledTimes(1);
   });
 
@@ -181,29 +200,25 @@ describe("a crossing follows the sea from the start (forgejo#323)", () => {
     await prisma.trip.delete({ where: { id: trip.id } });
   });
 
-  it("routes a crossing a spreadsheet creates", async () => {
-    const [outcome] = await importSheets(
-      [
-        {
-          key: "ferry",
-          rows: [
-            {
-              id: "",
-              depStationName: dep.name,
-              depLat: String(dep.lat),
-              depLon: String(dep.lon),
-              arrStationName: arr.name,
-              arrLat: String(arr.lat),
-              arrLon: String(arr.lon),
-              departureTime: "2025-10-09T08:00:00.000Z",
-              arrivalTime: "2025-10-09T16:00:00.000Z",
-            },
-          ],
-        },
-      ],
-      { userId, dryRun: false, mode: "merge" }
-    );
+  it("names a spreadsheet row whose sea route failed", async () => {
+    jest.mocked(computeSchematicRoute).mockRejectedValue(new Error("land mask missing"));
+    const [outcome] = await importSheets([{ key: "ferry", rows: [sheetRow] }], {
+      userId,
+      dryRun: false,
+      mode: "merge",
+    });
     expect(outcome.created).toBe(1);
+    expect(outcome.rows[0].notes).toContain("sea_route_failed");
+  });
+
+  it("routes a crossing a spreadsheet creates", async () => {
+    const [outcome] = await importSheets([{ key: "ferry", rows: [sheetRow] }], {
+      userId,
+      dryRun: false,
+      mode: "merge",
+    });
+    expect(outcome.created).toBe(1);
+    expect(outcome.rows[0].notes ?? []).not.toContain("sea_route_failed");
     expect(await prisma.ferryJourney.findFirstOrThrow({ where: { userId } })).toMatchObject({
       geometrySource: "sea_route",
       geometry: line,
