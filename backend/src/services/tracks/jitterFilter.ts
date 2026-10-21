@@ -1,6 +1,7 @@
 import { haversineKm } from "../../shared/geo/haversine";
 import type { JitterProfile } from "./jitterProfiles";
-import { findStays, type StayFix } from "./stayDetection";
+import { isCheckpoint, runPaced, runPacedYielding, type Paced } from "./pacing";
+import { findStaysPaced, type StayFix } from "./stayDetection";
 
 /**
  * GPS jitter out of a recording, before anything is drawn, simplified or
@@ -113,11 +114,11 @@ function segmentBounds(total: number, starts: readonly number[]): Array<[number,
 }
 
 /** Pass 1: coarse fixes with a better fix close by. Indices into `fixes`. */
-function dropCoarse(
+function* dropCoarse(
   fixes: readonly JitterFix[],
   indices: readonly number[],
   profile: JitterProfile
-): number[] {
+): Paced<number[]> {
   const n = indices.length;
   const isBetter = (k: number) =>
     fixes[indices[k]].accuracyM !== null && !isCoarse(fixes[indices[k]], profile);
@@ -126,8 +127,14 @@ function dropCoarse(
   // cost n² when many fixes share a timestamp (review of forgejo#319).
   const before = new Int32Array(n).fill(-1);
   const after = new Int32Array(n).fill(-1);
-  for (let k = 1; k < n; k++) before[k] = isBetter(k - 1) ? k - 1 : before[k - 1];
-  for (let k = n - 2; k >= 0; k--) after[k] = isBetter(k + 1) ? k + 1 : after[k + 1];
+  for (let k = 1; k < n; k++) {
+    before[k] = isBetter(k - 1) ? k - 1 : before[k - 1];
+    if (isCheckpoint(k)) yield;
+  }
+  for (let k = n - 2; k >= 0; k--) {
+    after[k] = isBetter(k + 1) ? k + 1 : after[k + 1];
+    if (isCheckpoint(k)) yield;
+  }
   // Close: within the window in time, or (untimed) within a few fixes. The
   // nearest better fix by position is the nearest in time as well, because a
   // segment is judged in its own order.
@@ -139,9 +146,13 @@ function dropCoarse(
       ? Math.abs(m - k) <= MAX_SPIKE_FIXES
       : Math.abs(tm - t) <= COARSE_NEIGHBOUR_MS;
   };
-  return indices.filter(
-    (i, k) => !isCoarse(fixes[i], profile) || !(close(k, before[k]) || close(k, after[k]))
-  );
+  const kept: number[] = [];
+  for (let k = 0; k < n; k++) {
+    const i = indices[k];
+    if (!isCoarse(fixes[i], profile) || !(close(k, before[k]) || close(k, after[k]))) kept.push(i);
+    if (isCheckpoint(k)) yield;
+  }
+  return kept;
 }
 
 /**
@@ -152,13 +163,14 @@ function dropCoarse(
  * rounded points, or a cable car back at its terminal, returns to the same
  * coordinate at a speed the mode allows (review of forgejo#319).
  */
-function dropFrozen(
+function* dropFrozen(
   fixes: readonly JitterFix[],
   indices: readonly number[],
   profile: JitterProfile
-): number[] {
+): Paced<number[]> {
   const kept: number[] = [];
-  indices.forEach((i, k) => {
+  for (let k = 0; k < indices.length; k++) {
+    const i = indices[k];
     const fix = fixes[i];
     const previous = kept[kept.length - 1];
     const next = indices[k + 1];
@@ -171,16 +183,17 @@ function dropFrozen(
       !reachable(fixes[previous], fix, profile) &&
       !reachable(fix, fixes[next], profile);
     if (!frozen) kept.push(i);
-  });
+    if (isCheckpoint(k)) yield;
+  }
   return kept;
 }
 
 /** Pass 2b: out-and-back spikes the mode cannot fly, drive or walk. */
-function dropSpikes(
+function* dropSpikes(
   fixes: readonly JitterFix[],
   indices: readonly number[],
   profile: JitterProfile
-): number[] {
+): Paced<number[]> {
   let list = [...indices];
   // The first fix itself can be the spike: nothing before it to come back to,
   // so it is judged by the two after it agreeing with each other instead.
@@ -194,7 +207,8 @@ function dropSpikes(
   }
   const kept: number[] = list.length > 0 ? [list[0]] : [];
   let k = 1;
-  while (k < list.length) {
+  for (let steps = 0; k < list.length; steps++) {
+    if (isCheckpoint(steps)) yield;
     const from = fixes[kept[kept.length - 1]];
     if (reachable(from, fixes[list[k]], profile)) {
       kept.push(list[k]);
@@ -229,25 +243,36 @@ interface Group {
 }
 
 /** Pass 3: stays collapsed (`stayDetection.ts`). Each group is one output fix. */
-function collapseStays(
+function* collapseStays(
   fixes: readonly JitterFix[],
   list: readonly number[],
   profile: JitterProfile
-): Group[] {
-  const timed: StayFix[] = list.map((i) => ({
-    lon: fixes[i].lon,
-    lat: fixes[i].lat,
-    t: fixes[i].t ?? 0,
-    uncertaintyM: uncertaintyM(fixes[i], profile),
-  }));
+): Paced<Group[]> {
+  const timed: StayFix[] = [];
+  for (let k = 0; k < list.length; k++) {
+    const i = list[k];
+    timed.push({
+      lon: fixes[i].lon,
+      lat: fixes[i].lat,
+      t: fixes[i].t ?? 0,
+      uncertaintyM: uncertaintyM(fixes[i], profile),
+    });
+    if (isCheckpoint(k)) yield;
+  }
   const groups: Group[] = [];
   let k = 0;
-  for (const stay of findStays(timed, profile)) {
-    for (; k < stay.start; k++) groups.push(single(fixes, list[k]));
+  for (const stay of yield* findStaysPaced(timed, profile)) {
+    for (; k < stay.start; k++) {
+      groups.push(single(fixes, list[k]));
+      if (isCheckpoint(k)) yield;
+    }
     groups.push({ members: list.slice(stay.start, stay.end), lon: stay.lon, lat: stay.lat });
     k = stay.end;
   }
-  for (; k < list.length; k++) groups.push(single(fixes, list[k]));
+  for (; k < list.length; k++) {
+    groups.push(single(fixes, list[k]));
+    if (isCheckpoint(k)) yield;
+  }
   return groups;
 }
 
@@ -259,13 +284,15 @@ function single(fixes: readonly JitterFix[], i: number): Group {
  * Every fix timed, in time order. A segment whose clock runs backwards is
  * not one a speed or a window can be read from; it is left alone.
  */
-function isFullyTimed(fixes: readonly JitterFix[], indices: readonly number[]): boolean {
-  return indices.every((i, k) => {
-    const t = fixes[i].t;
+function* isFullyTimed(fixes: readonly JitterFix[], indices: readonly number[]): Paced<boolean> {
+  for (let k = 0; k < indices.length; k++) {
+    const t = fixes[indices[k]].t;
     if (t === null || !Number.isFinite(t)) return false;
     const before = k > 0 ? fixes[indices[k - 1]].t : null;
-    return before === null || t >= before;
-  });
+    if (before !== null && t < before) return false;
+    if (isCheckpoint(k)) yield;
+  }
+  return true;
 }
 
 /**
@@ -306,13 +333,34 @@ function median(values: number[]): number {
 /**
  * The filter. `segmentStarts` are the recording's own breaks (a file's
  * `<trkseg>`s); nothing is compared across one. Every output segment keeps at
- * least one fix, so a segment never disappears.
+ * least one fix, so a segment never disappears. Runs straight through: for
+ * input a request has already bounded (`pacing.ts`).
  */
 export function filterJitter(
   fixes: readonly JitterFix[],
   segmentStarts: readonly number[],
   profile: JitterProfile
 ): JitterResult {
+  return runPaced(filterJitterPaced(fixes, segmentStarts, profile));
+}
+
+/**
+ * The same filter, handing the event loop back every few milliseconds — for
+ * a read whose input has no upper size (`pacing.ts`). Same result.
+ */
+export function filterJitterYielding(
+  fixes: readonly JitterFix[],
+  segmentStarts: readonly number[],
+  profile: JitterProfile
+): Promise<JitterResult> {
+  return runPacedYielding(filterJitterPaced(fixes, segmentStarts, profile));
+}
+
+function* filterJitterPaced(
+  fixes: readonly JitterFix[],
+  segmentStarts: readonly number[],
+  profile: JitterProfile
+): Paced<JitterResult> {
   const out: JitterFix[] = [];
   const sources: number[][] = [];
   const starts: number[] = [];
@@ -321,21 +369,22 @@ export function filterJitter(
   for (const [start, end] of segmentBounds(fixes.length, segmentStarts)) {
     const raw = Array.from({ length: end - start }, (_, k) => start + k);
     if (raw.some((i) => fixes[i].accuracyM !== null)) checked = true;
-    let kept = dropCoarse(fixes, raw, profile);
+    let kept = yield* dropCoarse(fixes, raw, profile);
     let groups: Group[];
-    if (isFullyTimed(fixes, kept)) {
+    if (yield* isFullyTimed(fixes, kept)) {
       checked = true;
-      kept = dropSpikes(fixes, dropFrozen(fixes, kept, profile), profile);
-      groups = collapseStays(fixes, kept, profile);
+      kept = yield* dropSpikes(fixes, yield* dropFrozen(fixes, kept, profile), profile);
+      groups = yield* collapseStays(fixes, kept, profile);
     } else {
       groups = kept.map((i) => single(fixes, i));
     }
     starts.push(out.length);
-    for (const group of groups) {
-      for (const { fix, sources: from } of representatives(fixes, group)) {
+    for (let g = 0; g < groups.length; g++) {
+      for (const { fix, sources: from } of representatives(fixes, groups[g])) {
         out.push(fix);
         sources.push(from);
       }
+      if (isCheckpoint(g)) yield;
     }
   }
 

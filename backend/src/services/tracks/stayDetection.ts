@@ -1,5 +1,6 @@
 import { haversineKm } from "../../shared/geo/haversine";
 import type { JitterProfile } from "./jitterProfiles";
+import { isCheckpoint, runPaced, type Paced } from "./pacing";
 
 /**
  * Where a recording stood still (forgejo#319, pass 3 of `jitterFilter.ts`).
@@ -81,20 +82,27 @@ function lowerBound(fixes: readonly StayFix[], t: number): number {
   return lo;
 }
 
+interface Sums {
+  centre: (a: number, b: number) => Point;
+  meanUncertainty: (a: number, b: number) => number;
+}
+
 /** Prefix sums so any range's weighted centre and mean uncertainty cost O(1). */
-function prefixSums(fixes: readonly StayFix[]) {
+function* prefixSums(fixes: readonly StayFix[]): Paced<Sums> {
   const n = fixes.length;
   const w = new Float64Array(n + 1);
   const lon = new Float64Array(n + 1);
   const lat = new Float64Array(n + 1);
   const unc = new Float64Array(n + 1);
-  fixes.forEach((f, k) => {
+  for (let k = 0; k < n; k++) {
+    const f = fixes[k];
     const weight = 1 / f.uncertaintyM ** 2;
     w[k + 1] = w[k] + weight;
     lon[k + 1] = lon[k] + f.lon * weight;
     lat[k + 1] = lat[k] + f.lat * weight;
     unc[k + 1] = unc[k] + f.uncertaintyM;
-  });
+    if (isCheckpoint(k)) yield;
+  }
   return {
     centre: (a: number, b: number): Point => ({
       lon: (lon[b] - lon[a]) / (w[b] - w[a]),
@@ -122,28 +130,47 @@ function thresholdM(meanUncertaintyM: number, windowMs: number, profile: JitterP
   return Math.min(meanUncertaintyM, guardM);
 }
 
-function verdicts(fixes: readonly StayFix[], windowMs: number, profile: JitterProfile): Verdict[] {
-  const sums = prefixSums(fixes);
+function* verdicts(
+  fixes: readonly StayFix[],
+  windowMs: number,
+  profile: JitterProfile
+): Paced<Verdict[]> {
+  const sums = yield* prefixSums(fixes);
   const tStart = fixes[0].t;
   const tEnd = fixes[fixes.length - 1].t;
-  return fixes.map((fix) => {
-    // Centred on the fix, slid inward at either end of the recording so a
-    // stay at the very start or end is judged on a full window.
-    let lo = Math.max(fix.t - windowMs / 2, tStart);
-    let hi = lo + windowMs;
-    if (hi > tEnd) {
-      hi = tEnd;
-      lo = Math.max(tStart, hi - windowMs);
-    }
-    const a = lowerBound(fixes, lo);
-    const m = lowerBound(fixes, (lo + hi) / 2);
-    const b = lowerBound(fixes, hi + 1);
-    const self: Verdict = { stationary: false, centre: fix, radiusM: fix.uncertaintyM };
-    if (m - a < 1 || b - m < 1 || b - a < 3) return self;
-    const radiusM = thresholdM(sums.meanUncertainty(a, b), windowMs, profile);
-    const displacement = distanceM(sums.centre(a, m), sums.centre(m, b));
-    return { stationary: displacement <= radiusM, centre: sums.centre(a, b), radiusM };
-  });
+  const all: Verdict[] = [];
+  for (let k = 0; k < fixes.length; k++) {
+    all.push(verdictOf(fixes, fixes[k], sums, tStart, tEnd, windowMs, profile));
+    if (isCheckpoint(k)) yield;
+  }
+  return all;
+}
+
+function verdictOf(
+  fixes: readonly StayFix[],
+  fix: StayFix,
+  sums: Sums,
+  tStart: number,
+  tEnd: number,
+  windowMs: number,
+  profile: JitterProfile
+): Verdict {
+  // Centred on the fix, slid inward at either end of the recording so a
+  // stay at the very start or end is judged on a full window.
+  let lo = Math.max(fix.t - windowMs / 2, tStart);
+  let hi = lo + windowMs;
+  if (hi > tEnd) {
+    hi = tEnd;
+    lo = Math.max(tStart, hi - windowMs);
+  }
+  const a = lowerBound(fixes, lo);
+  const m = lowerBound(fixes, (lo + hi) / 2);
+  const b = lowerBound(fixes, hi + 1);
+  const self: Verdict = { stationary: false, centre: fix, radiusM: fix.uncertaintyM };
+  if (m - a < 1 || b - m < 1 || b - a < 3) return self;
+  const radiusM = thresholdM(sums.meanUncertainty(a, b), windowMs, profile);
+  const displacement = distanceM(sums.centre(a, m), sums.centre(m, b));
+  return { stationary: displacement <= radiusM, centre: sums.centre(a, b), radiusM };
 }
 
 /** Runs of stationary fixes, `[start, end)`. */
@@ -183,14 +210,15 @@ function draftOf(all: readonly Verdict[], start: number, end: number): Draft {
 }
 
 /** Two runs at the same place with only a short burst between them are one stay. */
-function mergeRuns(
+function* mergeRuns(
   fixes: readonly StayFix[],
   all: readonly Verdict[],
   runs: ReadonlyArray<[number, number]>,
   windowMs: number
-): Draft[] {
+): Paced<Draft[]> {
   const merged: Draft[] = [];
   for (const [start, end] of runs) {
+    yield;
     const previous = merged[merged.length - 1];
     const next = draftOf(all, start, end);
     const close =
@@ -233,14 +261,15 @@ function extend(
  * these bounds a slow movement whose every window looked still — or two stays
  * merged across a creeping drift — became one point however far it went.
  */
-function staysPut(
+function* staysPut(
   fixes: readonly StayFix[],
   all: readonly Verdict[],
   draft: Draft,
   profile: JitterProfile
-): boolean {
+): Paced<boolean> {
   for (let k = draft.start; k < draft.end; k++) {
     if (distanceM(all[k].centre, draft.centre) > profile.maxAccuracyM) return false;
+    if (isCheckpoint(k)) yield;
   }
   const spanS = (fixes[draft.end - 1].t - fixes[draft.start].t) / 1000;
   const drift = distanceM(all[draft.start].centre, all[draft.end - 1].centre);
@@ -249,16 +278,24 @@ function staysPut(
 
 /** The stays of a time-ordered, fully timed run of fixes, in order and disjoint. */
 export function findStays(fixes: readonly StayFix[], profile: JitterProfile): Stay[] {
+  return runPaced(findStaysPaced(fixes, profile));
+}
+
+/** `findStays` with checkpoints (`pacing.ts`). */
+export function* findStaysPaced(fixes: readonly StayFix[], profile: JitterProfile): Paced<Stay[]> {
   if (fixes.length < 2) return [];
   const windowMs = stayWindowMs(fixes, profile);
-  const all = verdicts(fixes, windowMs, profile);
-  const drafts = mergeRuns(fixes, all, stationaryRuns(all), windowMs);
+  yield;
+  const all = yield* verdicts(fixes, windowMs, profile);
+  const drafts = yield* mergeRuns(fixes, all, stationaryRuns(all), windowMs);
 
   const stays: Stay[] = [];
-  drafts.forEach((draft, k) => {
+  for (let k = 0; k < drafts.length; k++) {
+    yield;
+    const draft = drafts[k];
     const floor = stays.length > 0 ? stays[stays.length - 1].end : 0;
     const ceiling = drafts[k + 1]?.start ?? fixes.length;
-    if (!staysPut(fixes, all, draft, profile)) return;
+    if (!(yield* staysPut(fixes, all, draft, profile))) continue;
     const grown = extend(fixes, draft, Math.max(floor, 0), ceiling, windowMs);
     const lasted = fixes[grown.end - 1].t - fixes[grown.start].t;
     if (grown.end - grown.start >= 2 && lasted >= profile.minStayMs) {
@@ -269,6 +306,6 @@ export function findStays(fixes: readonly StayFix[], profile: JitterProfile): St
         lat: grown.centre.lat,
       });
     }
-  });
+  }
   return stays;
 }

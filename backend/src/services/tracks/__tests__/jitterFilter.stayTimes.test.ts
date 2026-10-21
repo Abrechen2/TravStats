@@ -27,10 +27,10 @@ describe("a stay keeps both its arrival and its departure", () => {
     expect([leave.lon, leave.lat]).toEqual([arrive.lon, arrive.lat]);
   });
 
-  it("does not cut the trip recording's line after a three-hour stop", () => {
+  it("does not cut the trip recording's line after a three-hour stop", async () => {
     const points: StoredPoint[] = fixes.map((f) => [f.t, f.lat, f.lon, f.accuracy]);
     expect(splitAtGaps(points)).toHaveLength(1);
-    const clean = withoutJitter([{ points }]);
+    const clean = await withoutJitter([{ points }]);
     expect(clean.segments).toHaveLength(1);
   });
 });

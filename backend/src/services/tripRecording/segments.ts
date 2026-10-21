@@ -2,7 +2,7 @@ import type { Prisma } from "../../prisma";
 import { haversineKm } from "../../shared/geo/haversine";
 import { localDay } from "../../shared/time/instant";
 import { simplifyDegrees } from "../schematicRouter";
-import { filterJitter, type JitterFix } from "../tracks/jitterFilter";
+import { filterJitterYielding, type JitterFix } from "../tracks/jitterFilter";
 import { JITTER_PROFILES } from "../tracks/jitterProfiles";
 
 /**
@@ -143,13 +143,18 @@ export function recordingDays(points: readonly StoredPoint[], zone: string): str
  * spike far enough out to look like a 50 km gap is seen as a spike first. A
  * stay comes back as two synthetic points at the middle of its cloud; nothing
  * stores them.
+ *
+ * A recording has no upper size and this runs on every read, so the filter
+ * hands the event loop back every few milliseconds (`pacing.ts`) instead of
+ * holding every other request for the length of the recording.
  */
-export function withoutJitter(devices: ReadonlyArray<{ points: StoredPoint[] }>): {
+export async function withoutJitter(devices: ReadonlyArray<{ points: StoredPoint[] }>): Promise<{
   segments: StoredPoint[][];
   dropped: number;
-} {
+}> {
   let dropped = 0;
-  const segments = devices.flatMap((device) => {
+  const segments: StoredPoint[][] = [];
+  for (const device of devices) {
     const fixes: JitterFix[] = device.points.map(([t, lat, lon, accuracyM]) => ({
       lon,
       lat,
@@ -159,14 +164,16 @@ export function withoutJitter(devices: ReadonlyArray<{ points: StoredPoint[] }>)
     const starts = device.points.flatMap((p, i) =>
       i > 0 && p[0] - device.points[i - 1][0] > RECORDING_GAP_MS ? [i] : []
     );
-    const result = filterJitter(fixes, starts, JITTER_PROFILES.mixed);
+    const result = await filterJitterYielding(fixes, starts, JITTER_PROFILES.mixed);
     dropped += result.dropped;
     const points = result.fixes.map((f): StoredPoint => [f.t ?? 0, f.lat, f.lon, f.accuracyM]);
     const bounds = [...result.segmentStarts, points.length];
-    return bounds
-      .slice(0, -1)
-      .flatMap((start, k) => splitAtDistance(points.slice(start, bounds[k + 1])));
-  });
+    for (let k = 0; k + 1 < bounds.length; k++) {
+      for (const part of splitAtDistance(points.slice(bounds[k], bounds[k + 1]))) {
+        segments.push(part);
+      }
+    }
+  }
   return { segments, dropped };
 }
 

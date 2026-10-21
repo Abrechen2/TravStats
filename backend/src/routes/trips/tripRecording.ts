@@ -267,7 +267,7 @@ router.get("/trips/:id/recording", async (req: AuthRequest, res: Response, next:
     const first = shown[0];
     const last = shown[shown.length - 1];
     // The line leaves the jitter out; the count says how much (forgejo#319).
-    const clean = withoutJitter(devices);
+    const clean = await withoutJitter(devices);
     res.json({
       summary: {
         pointCount: shown.length,
