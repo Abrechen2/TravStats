@@ -88,13 +88,16 @@ describe("rail journeys and their trip", () => {
     expect(await statusOf(to.id)).toBe("planned");
   });
 
-  it("sends the trip page its rides, without the frozen line", async () => {
+  // The line was left out while nothing on the trip page drew it; the trip map
+  // draws rail since the beta.22 UAT, as it draws bus, so it rides along now
+  // (trips.mapTransport.test.ts).
+  it("sends the trip page its rides, with the stored line the trip map draws", async () => {
     const trip = await newTrip("page");
     await post({ departureLocal: wallClock(3), tripId: trip.id });
     const res = await request(app).get(`/api/v1/trips/${trip.id}`).set("Cookie", cookie);
     expect(res.status).toBe(200);
     expect(res.body.trip.railJourneys).toHaveLength(1);
     expect(res.body.trip.railJourneys[0].depStationName).toBe(FRANKFURT.name);
-    expect(res.body.trip.railJourneys[0]).not.toHaveProperty("geometry");
+    expect(res.body.trip.railJourneys[0]).toHaveProperty("geometry");
   });
 });

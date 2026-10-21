@@ -7,6 +7,7 @@ import { withStayTimes, type StayTimeColumns } from "../lodging/timesDto";
 import { withRailTimes, type RailTimeColumns } from "../rail/timesDto";
 import { withBusTimes } from "../bus/timesDto";
 import { rentalTimes, type RentalTimeColumns } from "../rental/timesDto";
+import { isOneWay } from "../rental/rentalWrite";
 import { withBookingTimes } from "../deadlines/bookingTimesDto";
 import { deadlineDayFields, type DeadlineColumns } from "../deadlines/bookingDeadlines";
 import {
@@ -35,7 +36,7 @@ export function withTripDetailTimes<
     ferryJourneys: RailTimeColumns[];
     busJourneys: RailTimeColumns[];
     bookings: DeadlineColumns[];
-    rentalBookings: RentalTimeColumns[];
+    rentalBookings: Array<RentalTimeColumns & Parameters<typeof isOneWay>[0]>;
   },
 >(trip: T): T {
   return {
@@ -53,6 +54,8 @@ export function withTripDetailTimes<
     rentalBookings: trip.rentalBookings.map((r) => ({
       ...r,
       ...deadlineDayFields(r),
+      // Derived, never stored — the trip map draws a one-way rental's link.
+      oneWay: isOneWay(r),
       times: rentalTimes(r),
     })),
   };
