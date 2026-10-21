@@ -59,7 +59,7 @@ function click(layer: Layer, object: unknown): void {
 beforeEach(() => {
   enabled.keys = ["rail"];
   enabled.tours = true;
-  useMapCardSelectionStore.setState({ pinned: null, seq: 0 });
+  useMapCardSelectionStore.setState({ pinned: null, seq: 0, withheld: [] });
 });
 
 describe("domain gating", () => {
@@ -135,6 +135,28 @@ describe("domain gating", () => {
     expect(current).toMatchObject({ kind: "journeyRoute" });
     enabled.keys = [];
     rerender();
+    expect(current).toBeNull();
+  });
+
+  it("closes an open card when the dashboard filter withholds its domain (Codex review)", () => {
+    // Rail on in settings, but unticked in the "Alle" map's domain filter:
+    // its layer is gone, so its card and links into it must go too.
+    let current: MapPinned | null = null;
+    const setPinned = vi.fn((next: unknown) => {
+      current =
+        typeof next === "function"
+          ? (next as (p: MapPinned | null) => MapPinned | null)(current)
+          : (next as MapPinned | null);
+    });
+    renderHook(() =>
+      useMapSelectionCards({ flights: [], flightColor: [0, 0, 0], focus: vi.fn(), setPinned })
+    );
+    act(() => useMapCardSelectionStore.getState().select(railRoute()));
+    expect(current).toMatchObject({ kind: "journeyRoute" });
+    act(() => useMapCardSelectionStore.getState().setWithheld(["rail"]));
+    expect(current).toBeNull();
+    // And a click that raced the filter opens nothing.
+    act(() => useMapCardSelectionStore.getState().select(railRoute()));
     expect(current).toBeNull();
   });
 

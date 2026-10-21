@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import type { JSX } from "react";
 import type { Layer } from "@deck.gl/core";
 import { useDomainVisible } from "../../../hooks/useDomainVisible";
@@ -8,6 +8,8 @@ import { useBusOverlay } from "./busMapOverlay";
 import { useFerryOverlay } from "./ferryMapOverlay";
 import { buildStationLabelLayers } from "../../layers/stationLabelsLayer";
 import { useMapLabelsModeStore } from "../../../store/mapLabelsModeStore";
+import { useMapCardSelectionStore } from "../../../store/mapCardSelectionStore";
+import type { DomainKey } from "../../../shared/domains";
 
 type Translate = (key: string) => string;
 
@@ -35,8 +37,28 @@ export function useTransportOverlays(
   const rentalOn = useDomainVisible("rental") && showTours && isFilterVisible("rental");
   const rental = useRentalOverlay(rentalOn, onGlobe, t);
   // Bus and ferry add their domain gate inside their hook.
-  const bus = useBusOverlay(showTours && isFilterVisible("bus"), onGlobe, t);
-  const ferry = useFerryOverlay(showTours && isFilterVisible("ferry"), onGlobe, t);
+  const busOn = showTours && isFilterVisible("bus");
+  const ferryOn = showTours && isFilterVisible("ferry");
+  const bus = useBusOverlay(busOn, onGlobe, t);
+  const ferry = useFerryOverlay(ferryOn, onGlobe, t);
+  // What this map does not draw opens and keeps no card (Codex review): the
+  // card hook knows the user's domains, only this tab knows the filter.
+  const withheld = (
+    [
+      ["rail", railOn],
+      ["bus", busOn],
+      ["ferry", ferryOn],
+      ["rental", rentalOn],
+    ] as const
+  )
+    .filter(([, on]) => !on)
+    .map(([key]) => key)
+    .join(",");
+  const setWithheld = useMapCardSelectionStore((s) => s.setWithheld);
+  useEffect(() => {
+    setWithheld(withheld ? (withheld.split(",") as DomainKey[]) : []);
+  }, [withheld, setWithheld]);
+  useEffect(() => () => setWithheld([]), [setWithheld]);
   // The station names of all three ground domains as ONE layer (forgejo#320):
   // one collision pass, so a train station and a bus terminal at the same
   // interchange are decided between, not printed over each other.

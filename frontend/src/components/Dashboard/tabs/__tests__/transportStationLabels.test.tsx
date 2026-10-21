@@ -4,6 +4,7 @@ import type { Layer } from "@deck.gl/core";
 import { useTransportOverlays } from "../allTabTransportOverlays";
 import { useDomainColorStore } from "../../../../store/domainColorStore";
 import { useMapLabelsModeStore } from "../../../../store/mapLabelsModeStore";
+import { useMapCardSelectionStore } from "../../../../store/mapCardSelectionStore";
 
 /**
  * forgejo#320 on the "Alle" map: the station names of rail, bus and ferry are
@@ -87,5 +88,22 @@ describe("station labels on the 'Alle' map (forgejo#320)", () => {
     await waitFor(() => expect(labelIds(result.current.layers)).toEqual(ALL));
     act(() => useMapLabelsModeStore.getState().setMode("off"));
     await waitFor(() => expect(labelIds(result.current.layers)).toEqual([]));
+  });
+});
+
+describe("the cards follow the filter too (forgejo#323, Codex review)", () => {
+  it("publishes the domains it does not draw, and takes them back on unmount", () => {
+    const { rerender, unmount } = renderHook(
+      ({ shown }: { shown: (key: string) => boolean }) =>
+        useTransportOverlays(true, shown, false, t),
+      { initialProps: { shown: (key: string) => key !== "rail" } }
+    );
+    expect(useMapCardSelectionStore.getState().withheld).toEqual(["rail"]);
+    rerender({ shown: () => true });
+    expect(useMapCardSelectionStore.getState().withheld).toEqual([]);
+    rerender({ shown: (key: string) => key !== "ferry" && key !== "rental" });
+    expect([...useMapCardSelectionStore.getState().withheld].sort()).toEqual(["ferry", "rental"]);
+    unmount();
+    expect(useMapCardSelectionStore.getState().withheld).toEqual([]);
   });
 });

@@ -203,7 +203,14 @@ export function useMapSelectionCards({
   const layerSeq = useMapCardSelectionStore((s) => s.seq);
   const [mountSeq] = useState(() => useMapCardSelectionStore.getState().seq);
   const clearLayerCard = useMapCardSelectionStore((s) => s.clear);
-  const { isEnabled } = useEnabledDomains();
+  const { isEnabled: isOn } = useEnabledDomains();
+  // A domain the dashboard filter withholds draws no layer, so it opens and
+  // keeps no card either — the same answer as a domain switched off.
+  const withheld = useMapCardSelectionStore((s) => s.withheld);
+  const isEnabled = useCallback(
+    (key: DomainKey) => isOn(key) && !withheld.includes(key),
+    [isOn, withheld]
+  );
   const toursVisible = useToursVisible();
 
   const clearSelections = useCallback((): void => {
