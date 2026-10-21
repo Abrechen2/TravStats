@@ -154,7 +154,16 @@ export interface PlacedLabel {
   offsetY: number;
 }
 
+/** A `[lon, lat]` to screen-like pixels — the collision pass's geometry. */
+export type LabelProjector = (position: readonly [number, number]) => readonly [number, number];
+
 export interface BoxDeclutterOptions {
+  /**
+   * Where a point lands, in pixels. Defaults to north-up Web Mercator at
+   * `zoom`; a layer that knows its viewport passes the viewport's own
+   * projection, so a turned or tilted map is measured as it is drawn.
+   */
+  project?: LabelProjector;
   /** Space kept free on every side of a box, in px. */
   gapPx?: number;
   /** How far these items' pills are lifted off their point, in px (negative = up). */
@@ -172,10 +181,10 @@ function boxAt(
   width: number,
   height: number,
   offsetY: number,
-  zoom: number,
+  project: LabelProjector,
   gapPx: number
 ): Box {
-  const [x, y] = projectToWorldPx(position[0], position[1], zoom);
+  const [x, y] = project(position);
   const cy = y + offsetY;
   return {
     x0: x - width / 2 - gapPx,
@@ -201,8 +210,9 @@ export function declutterByBoxes<T>(
   positionOf: (item: T) => readonly [number, number],
   sizeOf: (item: T) => LabelBoxSize,
   zoom: number,
-  { gapPx = 4, offsetY = 0, obstacles = [] }: BoxDeclutterOptions = {}
+  { gapPx = 4, offsetY = 0, obstacles = [], project }: BoxDeclutterOptions = {}
 ): T[] {
+  const toPx: LabelProjector = project ?? ((p) => projectToWorldPx(p[0], p[1], zoom));
   const grid = new Map<string, Box[]>();
   const cellsOf = (box: Box): string[] => {
     const keys: string[] = [];
@@ -230,12 +240,12 @@ export function declutterByBoxes<T>(
   };
   // Obstacles carry no gap of their own: the candidate's gap already keeps
   // the two apart.
-  for (const o of obstacles) place(boxAt(o.position, o.width, o.height, o.offsetY, zoom, 0));
+  for (const o of obstacles) place(boxAt(o.position, o.width, o.height, o.offsetY, toPx, 0));
   const sorted = [...items].sort((a, b) => weightOf(b) - weightOf(a));
   const accepted: T[] = [];
   for (const item of sorted) {
     const { width, height } = sizeOf(item);
-    const box = boxAt(positionOf(item), width, height, offsetY, zoom, gapPx);
+    const box = boxAt(positionOf(item), width, height, offsetY, toPx, gapPx);
     const hit = cellsOf(box).some((key) =>
       (grid.get(key) ?? []).some(
         (q) => box.x0 < q.x1 && box.x1 > q.x0 && box.y0 < q.y1 && box.y1 > q.y0

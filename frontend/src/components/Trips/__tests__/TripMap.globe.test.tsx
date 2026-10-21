@@ -35,8 +35,9 @@ interface CapturedOverlay {
   projectionCallsBefore: number;
 }
 
-const { captured, mapCalls } = vi.hoisted(() => ({
+const { captured, mapCalls, labelOverlays } = vi.hoisted(() => ({
   captured: [] as CapturedOverlay[],
+  labelOverlays: [] as Array<{ extras?: Array<{ kind: string; text: string }> }>,
   mapCalls: {
     setProjection: [] as unknown[],
     setSky: [] as unknown[],
@@ -128,7 +129,16 @@ vi.mock("../../../lib/api/cruise", () => ({
   cruiseApi: { getGeometryBatch: vi.fn(async () => new Map()) },
 }));
 
+vi.mock("../../Globe/GlobeLabelsOverlay", () => ({
+  GlobeLabelsOverlay: (props: { extras?: Array<{ kind: string; text: string }> }) => {
+    labelOverlays.push(props);
+    return null;
+  },
+}));
+
 import TripMap from "../TripMap";
+import { buildBusLayers } from "../tripBusLayer";
+import { StationLabelsLayer } from "../../layers/stationLabelsLayer";
 
 const trip = {
   id: "t1",
@@ -150,6 +160,7 @@ const trip = {
 
 beforeEach(() => {
   captured.length = 0;
+  labelOverlays.length = 0;
   mapCalls.styleListeners.clear();
   mapCalls.setProjection.length = 0;
   mapCalls.setSky.length = 0;
@@ -166,6 +177,44 @@ async function toggleToGlobe(): Promise<void> {
 }
 
 describe("TripMap: the globe toggle mounts the overlay the way the globe needs it", () => {
+  it("names the bus terminals on the globe through the HTML overlay (Codex review)", async () => {
+    // A deck.gl TextLayer draws nothing under globe projection: the trip's
+    // terminal names were on the flat map and gone on the globe.
+    const busLayers = buildBusLayers(
+      [
+        {
+          id: "b1",
+          status: "completed",
+          depStationName: "Praha ÚAN Florenc",
+          depLat: 50.0896,
+          depLon: 14.4398,
+          arrStationName: "München ZOB",
+          arrLat: 48.1424,
+          arrLon: 11.5496,
+          geometry: null,
+        },
+      ] as never,
+      "#ff8800"
+    );
+    render(<TripMap trip={trip} extraLayers={busLayers} />);
+    await waitFor(() => expect(captured.length).toBeGreaterThan(0));
+    await toggleToGlobe();
+    await waitFor(() => expect(labelOverlays.length).toBeGreaterThan(0));
+    const extras = labelOverlays[labelOverlays.length - 1].extras ?? [];
+    expect(
+      extras
+        .filter((e) => e.kind === "station")
+        .map((e) => e.text)
+        .sort()
+    ).toEqual(["München ZOB", "Praha ÚAN Florenc"]);
+    // The deck.gl layer only carries them there.
+    const layers = captured[captured.length - 1].overlay.props as { layers?: Layer[] };
+    const stations = (layers.layers ?? captured[captured.length - 1].props.layers).find(
+      (l) => l instanceof StationLabelsLayer
+    ) as StationLabelsLayer | undefined;
+    expect(stations?.props.onGlobe).toBe(true);
+  });
+
   it("interleaves with MapLibre's context in globe mode, and only there", async () => {
     render(<TripMap trip={trip} />);
     await waitFor(() => expect(captured.length).toBeGreaterThan(0));

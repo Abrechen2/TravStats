@@ -46,6 +46,8 @@ import type { MapJourney } from "../map/cards/journeys/journeyTypes";
 import { decorateTripMapLayers } from "./tripMapCards";
 import { TripMapCardHost } from "./TripMapCardHost";
 import { withLabelObstacles } from "../map/labelObstacles";
+import { StationLabelsLayer } from "../layers/stationLabelsLayer";
+import { stationLabelPoints } from "../Globe/globePinLabels";
 
 const INITIAL_VIEW: MapViewState = {
   longitude: 10,
@@ -554,10 +556,19 @@ export default function TripMap({
     [projection, globeLayers, mercatorLayers, flightJourneys]
   );
   // Bus terminal names (in `extraLayers`) place around the stop and hotel
-  // labels — one collision pass (forgejo#320).
+  // labels — one collision pass (forgejo#320). On the globe their deck.gl text
+  // renders nothing, so the layer only carries them to the HTML overlay below.
   const layers = extraLayers
-    ? [...baseLayers, ...withLabelObstacles([...extraLayers], baseLayers)]
+    ? [
+        ...baseLayers,
+        ...(projection === "globe"
+          ? extraLayers.map((l) =>
+              l instanceof StationLabelsLayer ? (l.clone({ onGlobe: true }) as Layer) : l
+            )
+          : withLabelObstacles([...extraLayers], baseLayers)),
+      ]
     : baseLayers;
+  const globeStationLabels = useMemo(() => stationLabelPoints(extraLayers ?? []), [extraLayers]);
 
   /** Every name on the globe, in the shape the HTML overlay reads. A deck.gl
    *  TextLayer draws nothing under globe projection, which is why the trip's
@@ -746,6 +757,7 @@ export default function TripMap({
           mapReady={mapLoaded}
           airports={globeAirportLabels}
           ports={globeLabelPoints}
+          extras={globeStationLabels}
           mode="important"
         />
       )}

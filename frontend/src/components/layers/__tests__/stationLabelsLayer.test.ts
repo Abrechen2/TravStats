@@ -11,6 +11,8 @@ import {
   type StationLabelSource,
 } from "../stationLabelsLayer";
 import { estimateLabelBox, labelBudget } from "../../map/labelPriority";
+import { WebMercatorViewport } from "@deck.gl/core";
+import { labelViewKey, stationLabelProjector } from "../stationLabelsLayer";
 
 const RGB: [number, number, number] = [1, 2, 3];
 
@@ -110,6 +112,21 @@ describe("buildStationLabels", () => {
     expect(munich).toHaveLength(1);
     expect(munich[0].count).toBe(3);
     expect(munich[0].name).toBe("München Hbf");
+  });
+
+  it("joins two points 81 m apart across a grid cell boundary (Codex review)", () => {
+    // At 52.5° N a 0.001° cell is 68 m wide, so 100 m spans two cells: a
+    // search of the neighbouring cells alone missed this pair.
+    const labels = buildStationLabels(
+      [
+        ride({ depStationName: "Berlin Hbf", depLat: 52.525, depLon: 13.3699 }),
+        ride({ depStationName: "Berlin Hbf", depLat: 52.525, depLon: 13.3711 }),
+      ],
+      RGB
+    );
+    const berlin = labels.filter((l) => l.name === "Berlin Hbf");
+    expect(berlin).toHaveLength(1);
+    expect(berlin[0].count).toBe(2);
   });
 
   it("keeps a second catalogue station at the same place apart from the first", () => {
@@ -235,9 +252,12 @@ type TextProps = {
 };
 
 /** Runs the layer's own update at a zoom without a WebGL context. */
+const viewAt = (zoom: number, longitude = 0) =>
+  new WebMercatorViewport({ width: 800, height: 600, longitude, latitude: 0, zoom });
+
 function render(layer: StationLabelsLayer, zoom: number): TextProps {
   Object.assign(layer, {
-    context: { viewport: { zoom } },
+    context: { viewport: viewAt(zoom) },
     state: {},
     setState(this: StationLabelsLayer, patch: object) {
       Object.assign(this.state, patch);
@@ -282,11 +302,12 @@ describe("StationLabelsLayer", () => {
     const flags = (viewportChanged: boolean) => ({
       changeFlags: { propsOrDataChanged: false, viewportChanged },
     });
-    const ask = (zoom: number, viewportChanged: boolean) => {
-      Object.assign(layer, { context: { viewport: { zoom } } });
+    const ask = (zoom: number, viewportChanged: boolean, longitude = 0) => {
+      Object.assign(layer, { context: { viewport: viewAt(zoom, longitude) } });
       return layer.shouldUpdateState(flags(viewportChanged) as never);
     };
     expect(ask(1.3, true)).toBe(false);
+    expect(ask(1, true, 40)).toBe(false);
     expect(ask(2.6, true)).toBe(true);
     expect(ask(2.6, false)).toBe(false);
   });
@@ -306,5 +327,59 @@ describe("buildStationLabelLayers", () => {
     const one = [{ rides: [ride()], color: RGB }];
     expect(buildStationLabelLayers([], { ...opts, labelsMode: "all" })).toEqual([]);
     expect(buildStationLabelLayers(one, { ...opts, labelsMode: "off" })).toEqual([]);
+  });
+});
+
+describe("the collision pass measures what the screen shows (Codex review)", () => {
+  const LONG = "A".repeat(20);
+  const long = (key: string, position: [number, number]) =>
+    datum({ key, position, count: key === "a" ? 2 : 1, shortLabel: LONG });
+
+  it("checks the whole zoom bucket: zoom 10.5 rounds to 11, where the pair was clear", () => {
+    // 0.0618° apart: 180 px at zoom 11, clear of two 146 px pills — but the
+    // map reads "11" from 10.5 on, where they are 127 px apart and overlap.
+    const a = long("a", [8, 50]);
+    const b = long("b", [8.0618, 50]);
+    expect(selectStationLabels([a, b], "important", 11).map((s) => s.key)).toEqual(["a"]);
+  });
+
+  it("collides two names the turned map puts side by side", () => {
+    // North-south neighbours: stacked on a north-up map, side by side once
+    // the map is turned by 90°.
+    const a = long("a", [8, 50]);
+    const b = long("b", [8, 50.02]);
+    const view = (bearing: number) =>
+      new WebMercatorViewport({
+        width: 800,
+        height: 600,
+        longitude: 8,
+        latitude: 50,
+        zoom: 10,
+        bearing,
+      });
+    const pick = (bearing: number) =>
+      selectStationLabels([a, b], "important", 10, [], stationLabelProjector(view(bearing))).map(
+        (s) => s.key
+      );
+    expect(pick(0)).toEqual(["a", "b"]);
+    expect(pick(90)).toEqual(["a"]);
+  });
+
+  it("picks again when the map turns or tilts, not on every pan", () => {
+    const at = (o: Record<string, number>) =>
+      labelViewKey(
+        new WebMercatorViewport({
+          width: 800,
+          height: 600,
+          longitude: 8,
+          latitude: 50,
+          zoom: 10,
+          ...o,
+        })
+      );
+    expect(at({ longitude: 9 })).toBe(at({}));
+    expect(at({ bearing: 45 })).not.toBe(at({}));
+    expect(at({ pitch: 40 })).not.toBe(at({}));
+    expect(at({ zoom: 11 })).not.toBe(at({}));
   });
 });
