@@ -14,7 +14,7 @@ import type { Rgb } from "../../../../lib/domainColor";
 import { useMapCardSelectionStore } from "../../../../store/mapCardSelectionStore";
 import type { MapPinned } from "../pinnedTypes";
 import type { JourneyDomain, JourneyEnd, MapJourney } from "./journeyTypes";
-import { endKey, journeyRouteKey, journeysAtStop, tallyJourneys } from "./journeyStats";
+import { endKey, indexStops, journeyRouteKey, tallyJourneys } from "./journeyStats";
 
 /** What a line's hover tooltip prints — precomputed, because hover runs at 60–120 Hz. */
 export interface JourneyRouteHover {
@@ -71,14 +71,20 @@ export function journeyRoutePinned(
   };
 }
 
-/** The pinned card for the station at `position`, or null when no journey touches it. */
+/**
+ * The pinned card for the station at `position`, or null when no journey
+ * touches it. Hand in `indexStops(journeys)` when asking for many stations.
+ */
 export function journeyStopPinned(
-  journeys: readonly MapJourney[],
+  journeys: readonly MapJourney[] | ReadonlyMap<string, MapJourney[]>,
   position: readonly number[],
   color: Rgb
 ): MapPinned | null {
   const key = endKey({ lon: position[0], lat: position[1] });
-  const touching = journeysAtStop(journeys, key);
+  const stops = Array.isArray(journeys)
+    ? indexStops(journeys as readonly MapJourney[])
+    : (journeys as ReadonlyMap<string, MapJourney[]>);
+  const touching = stops.get(key) ?? [];
   if (touching.length === 0) return null;
   const first = touching[0];
   const stop = endKey(first.dep) === key ? first.dep : first.arr;
@@ -148,9 +154,9 @@ function decorateRoute(
   } as Parameters<Layer["clone"]>[0]);
 }
 
-function decorateStop(layer: Layer, journeys: readonly MapJourney[], color: Rgb): Layer {
+function decorateStop(layer: Layer, stops: ReadonlyMap<string, MapJourney[]>, color: Rgb): Layer {
   const data = ((layer.props.data as PointDatum[] | undefined) ?? []).map((d) => {
-    const pinned = journeyStopPinned(journeys, d.position, color);
+    const pinned = journeyStopPinned(stops, d.position, color);
     if (!pinned || pinned.kind !== "journeyStop") return d;
     const journeyStop: JourneyStopHover = {
       domain: pinned.data.domain,
@@ -165,7 +171,7 @@ function decorateStop(layer: Layer, journeys: readonly MapJourney[], color: Rgb)
     pickable: true,
     onClick: (info: PickingInfo<PointDatum>) => {
       if (!info.object) return;
-      const pinned = journeyStopPinned(journeys, info.object.position, color);
+      const pinned = journeyStopPinned(stops, info.object.position, color);
       if (pinned) useMapCardSelectionStore.getState().select(pinned);
     },
   } as Parameters<Layer["clone"]>[0]);
@@ -183,10 +189,11 @@ export function withJourneyCards(
   if (journeys.length === 0) return [...layers];
   const byId = new Map(journeys.map((j) => [j.id, j]));
   const routes = groupRoutes(journeys);
+  const stops = indexStops(journeys);
   return layers.map((layer) => {
     if (typeof layer?.clone !== "function" || !Array.isArray(layer.props?.data)) return layer;
     if (ROUTE_LAYER.test(layer.id)) return decorateRoute(layer, byId, routes, color);
-    if (STOP_LAYER.test(layer.id)) return decorateStop(layer, journeys, color);
+    if (STOP_LAYER.test(layer.id)) return decorateStop(layer, stops, color);
     return layer;
   });
 }

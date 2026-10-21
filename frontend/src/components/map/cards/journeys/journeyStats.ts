@@ -42,6 +42,29 @@ export function journeysOnRoute(
 }
 
 /** Every journey starting or ending at the place `stopKey` names. */
+/**
+ * Every station's journeys at once, keyed by `endKey`, cancelled ones left
+ * out, each list in the journeys' own order — what `journeysAtStop` answers
+ * for one key, built in one pass. A map decorates every station dot; asking
+ * each dot to scan every journey was stations × journeys (Codex review).
+ */
+export function indexStops(all: readonly MapJourney[]): Map<string, MapJourney[]> {
+  const index = new Map<string, MapJourney[]>();
+  const add = (key: string, j: MapJourney) => {
+    const list = index.get(key);
+    if (list) list.push(j);
+    else index.set(key, [j]);
+  };
+  for (const j of all) {
+    if (j.status === "cancelled") continue;
+    const a = endKey(j.dep);
+    const b = endKey(j.arr);
+    add(a, j);
+    if (b !== a) add(b, j);
+  }
+  return index;
+}
+
 export function journeysAtStop(all: readonly MapJourney[], stopKey: string): MapJourney[] {
   return all.filter(
     (j) => j.status !== "cancelled" && (endKey(j.dep) === stopKey || endKey(j.arr) === stopKey)

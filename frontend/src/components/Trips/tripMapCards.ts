@@ -12,7 +12,7 @@
 
 import type { Layer, PickingInfo } from "@deck.gl/core";
 import { useMapCardSelectionStore } from "../../store/mapCardSelectionStore";
-import { tallyJourneys, journeyRouteKey } from "../map/cards/journeys/journeyStats";
+import { indexStops, tallyJourneys, journeyRouteKey } from "../map/cards/journeys/journeyStats";
 import {
   groupRoutes,
   journeyRoutePinned,
@@ -67,8 +67,10 @@ function decorateArcs(layer: Layer, flights: readonly MapJourney[]): Layer {
 }
 
 function decorateAirports(layer: Layer, flights: readonly MapJourney[]): Layer {
+  // Indexed once: each airport scanning every flight was airports × flights.
+  const stops = indexStops(flights);
   const data = (layer.props.data as PointDatum[]).map((d) => {
-    const pinned = journeyStopPinned(flights, d.position, d.color);
+    const pinned = journeyStopPinned(stops, d.position, d.color);
     if (!pinned || pinned.kind !== "journeyStop") return d;
     const journeyStop: JourneyStopHover = {
       domain: "flight",
@@ -82,7 +84,7 @@ function decorateAirports(layer: Layer, flights: readonly MapJourney[]): Layer {
     data,
     onClick: (info: PickingInfo<PointDatum>) => {
       if (!info.object) return;
-      const pinned = journeyStopPinned(flights, info.object.position, info.object.color);
+      const pinned = journeyStopPinned(stops, info.object.position, info.object.color);
       if (pinned) select().select(pinned);
     },
   } as Parameters<Layer["clone"]>[0]);
