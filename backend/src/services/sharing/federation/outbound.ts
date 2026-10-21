@@ -23,6 +23,7 @@ import type { SharedRow } from "../adapters";
 import type { ShareEntity } from "../shareTypes";
 import type { ChangeActor, OutboxKind } from "../../../schemas/tripSharePeer";
 import { kickDelivery } from "./deliveryKick";
+import { userRef } from "./roster";
 import { BODY_BUDGET, wireBytes } from "./transport";
 import { toWireEntries, wireFactsOf, wireKeyOf } from "./wire/encode";
 
@@ -36,6 +37,8 @@ export type ChangeAuthor =
       origin: string;
       /** The server that relayed it here, when that is not the author's own (the home, F5). */
       via?: string;
+      /** Their ref in the group's roster (F-S4e): what a member's yes is given to. */
+      ref?: string | null;
     };
 
 /** Where a change goes from here, and whose notices name whom. */
@@ -63,11 +66,28 @@ async function targets(c: DbTransaction, spread: Spread): Promise<RemoteMemberRe
   return [...seen.values()];
 }
 
-/** The author as the wire names them; a local author's origin is this server's, added on send. */
-async function wireActor(c: DbTransaction, author: ChangeAuthor): Promise<ChangeActor> {
-  if (author.kind === "remote") return { displayName: author.displayName, origin: author.origin };
+/**
+ * The author as the wire names them; a local author's origin is this server's, added on send. At
+ * the home every author carries their roster ref (F-S4e), which is what a spoke names them by and
+ * what its members said yes to; a spoke's own claims are not read by the home, so it sends none.
+ */
+async function wireActor(
+  c: DbTransaction,
+  author: ChangeAuthor,
+  group: { federatedRef: string | null; homeOrigin: string | null } | null
+): Promise<ChangeActor> {
+  const home = !!group?.federatedRef && !group.homeOrigin;
+  if (author.kind === "remote")
+    return {
+      displayName: author.displayName,
+      origin: author.origin,
+      ...(home && author.ref ? { ref: author.ref } : {}),
+    };
   const user = await c.user.findUnique({ where: { id: author.id }, select: PERSON_SELECT });
-  return { displayName: user ? toPerson(user).displayName : "?" };
+  return {
+    displayName: user ? toPerson(user).displayName : "?",
+    ...(home ? { ref: userRef(group.federatedRef as string, author.id) } : {}),
+  };
 }
 
 /**
@@ -85,7 +105,11 @@ async function queue(
   if (to.length === 0) return 0;
   const body = await make();
   if (!body) return 0;
-  const actor = await wireActor(c, spread.author);
+  const group = await c.tripShareGroup.findUnique({
+    where: { id: spread.groupId },
+    select: { federatedRef: true, homeOrigin: true },
+  });
+  const actor = await wireActor(c, spread.author, group);
   for (const member of to) {
     await c.tripShareOutbox.create({
       data: {

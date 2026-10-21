@@ -41,7 +41,7 @@ export interface RemoteMemberView {
 }
 
 export const MEMBER_INCLUDE = {
-  remote: { select: { id: true, displayName: true, username: true, origin: true } },
+  remote: { select: { id: true, userId: true, displayName: true, username: true, origin: true } },
 } as const;
 
 interface MemberRow {

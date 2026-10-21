@@ -27,4 +27,13 @@ export type RemoteShareApiErrorCode =
   | "SHARE_REMOTE_PERSON_NOT_FOUND"
   | "SHARE_REMOTE_OFFER_NOT_FOUND"
   | "SHARE_REMOTE_REFUSED"
-  | "SHARE_REMOTE_CONFLICT_STALE";
+  | "SHARE_REMOTE_CONFLICT_STALE"
+  /**
+   * The lifecycle (F-S4e): nothing of the caller's on that trip waits for a confirmation; the
+   * caller is not (or no longer) a member through any pairing; the trip's home is this server, so
+   * it is offered from here, not asked for; no such person on the trip's roster.
+   */
+  | "SHARE_REMOTE_NOTHING_TO_CONFIRM"
+  | "SHARE_REMOTE_NOT_MEMBER"
+  | "SHARE_REMOTE_IS_HOME"
+  | "SHARE_REMOTE_ROSTER_NOT_FOUND";

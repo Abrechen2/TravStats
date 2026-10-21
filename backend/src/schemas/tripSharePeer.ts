@@ -60,11 +60,18 @@ export const MAX_ENTRIES_PER_TRIP = 500;
 const seq = z.number().int().positive().max(2_147_483_647);
 const groupHeader = { ...header, groupRef: uuid, seq };
 
-/** Who is on the trip, as the home server names them (F5): needed for consent, nothing more. */
+/**
+ * Who is on the trip, as the home server names them (F5): needed for consent, nothing more. `ref`
+ * is the person's id in this group's roster, minted by the home (F-S4e) — random per group, never
+ * an account id — so a member can say yes to one person and a change can name its author.
+ */
 export const rosterEntrySchema = z.strictObject({
+  ref: uuid,
   displayName,
   origin: z.string().max(300),
 });
+/** Most people a roster names. */
+export const MAX_ROSTER = 100;
 /** How many entries of each type the trip holds — what the person is asked to accept. */
 export const offerCountsSchema = z.strictObject(
   Object.fromEntries(
@@ -85,8 +92,11 @@ export const offerSchema = z.strictObject({
   ...groupHeader,
   from: uuid,
   to: uuid,
+  /** The roster refs of the offering member (`from`) and of the person offered to (`to`). */
+  self: uuid,
+  you: uuid,
   trip: wireTripSchema,
-  roster: z.array(rosterEntrySchema).max(50),
+  roster: z.array(rosterEntrySchema).max(MAX_ROSTER),
   counts: offerCountsSchema,
 });
 
@@ -119,6 +129,12 @@ export const changeActorSchema = z.strictObject({
   // The canonical form only (`https://host`, no path, port or trailing slash): a claim is
   // compared with stored origins byte for byte, so a variant spelling is refused, not matched.
   origin: peerOrigin.refine((v) => v !== "local", "not a server origin").optional(),
+  /**
+   * The author's roster ref (F-S4e), set by the home: a spoke names a relayed author by its
+   * roster, never by the claimed name, and applies the change only for a member who said yes to
+   * that person. A ref the spoke does not know is not applied.
+   */
+  ref: uuid.optional(),
 });
 
 /**
@@ -180,6 +196,57 @@ export const entryRemovedSchema = z.strictObject({
   reason: z.enum(["deleted", "movedOut"]),
 });
 
+/**
+ * The roster (F-S4e), home → each spoke member, whenever someone joins or leaves: who is on the
+ * trip, with `self` (the home member of this pairing) and `you` (the person it is sent to). The
+ * stream's order makes the latest one true; a spoke keeps names of people who left.
+ */
+export const rosterSchema = z.strictObject({
+  kind: z.literal("roster"),
+  ...groupHeader,
+  from: uuid,
+  to: uuid,
+  self: uuid,
+  you: uuid,
+  members: z.array(rosterEntrySchema).max(MAX_ROSTER),
+});
+
+/** A member left the trip (F-S4e); their copy stays theirs (decision 5). Either direction. */
+export const leaveSchema = z.strictObject({
+  kind: z.literal("leave"),
+  ...groupHeader,
+  from: uuid,
+  to: uuid,
+});
+
+/**
+ * The consent of this pairing was withdrawn (F-S4e): the sender has stopped at once, the
+ * receiver stops too, and a copy on the spoke leaves its group. Sent once per group the pairing
+ * shares; it ends the pairing's consent as a whole.
+ */
+export const revokeSchema = z.strictObject({
+  kind: z.literal("revoke"),
+  ...groupHeader,
+  from: uuid,
+  to: uuid,
+});
+
+/**
+ * A spoke member asks the home to offer the trip to someone else (F5, F-S4e). A request only:
+ * offers stay with the home, whose member decides — by the person named here, nothing more.
+ */
+export const addRequestSchema = z.strictObject({
+  kind: z.literal("add-request"),
+  ...groupHeader,
+  from: uuid,
+  to: uuid,
+  person: z.strictObject({
+    displayName,
+    origin: peerOrigin.refine((v) => v !== "local", "not a server origin").optional(),
+  }),
+  note: z.string().trim().max(500).optional(),
+});
+
 export const tripSharePacket = z.discriminatedUnion("kind", [
   tripPingSchema,
   inviteClaimSchema,
@@ -189,6 +256,10 @@ export const tripSharePacket = z.discriminatedUnion("kind", [
   factUpdateSchema,
   entryCreateSchema,
   entryRemovedSchema,
+  rosterSchema,
+  leaveSchema,
+  revokeSchema,
+  addRequestSchema,
 ]);
 
 /** The group messages; a header of one of these is answered `schema` when the body fails. */
@@ -199,6 +270,10 @@ export const GROUP_KINDS = [
   "fact-update",
   "entry-create",
   "entry-removed",
+  "roster",
+  "leave",
+  "revoke",
+  "add-request",
 ] as const;
 
 /**
@@ -211,6 +286,11 @@ export const OUTBOX_KINDS = [
   "fact-update",
   "entry-create",
   "entry-removed",
+  // F-S4e: the roster, and the end of a membership — told even after the member stopped
+  // receiving anything else.
+  "roster",
+  "leave",
+  "revoke",
 ] as const satisfies readonly (typeof GROUP_KINDS)[number][];
 export type OutboxKind = (typeof OUTBOX_KINDS)[number];
 
@@ -227,9 +307,17 @@ export const groupHeaderSchema = z.object({
  * means no group, member or pairing here matches; `consent` that the person's consent with the
  * sender is not accepted here; `schema` names the first field that did not parse; `error` that
  * the receiver failed to apply it for a reason of its own (its database, its code) — nothing was
- * written, and the sender retries it.
+ * written, and the sender retries it; `suspended` that the membership is held here (a restore,
+ * a re-pinned key, a blocked server) until its person confirms it again — retried, not parked.
  */
-export const ACK_REJECTIONS = ["gap", "not-member", "consent", "schema", "error"] as const;
+export const ACK_REJECTIONS = [
+  "gap",
+  "not-member",
+  "consent",
+  "schema",
+  "error",
+  "suspended",
+] as const;
 export type AckRejection = (typeof ACK_REJECTIONS)[number];
 /**
  * A `fact-update` answered with the facts that were NOT written because the receiver's copy had
@@ -302,4 +390,11 @@ export type EntryRemovedMessage = z.infer<typeof entryRemovedSchema>;
 export type ChangeActor = z.infer<typeof changeActorSchema>;
 export type AckConflict = z.infer<typeof ackConflictSchema>;
 export type PropagationMessage = FactUpdateMessage | EntryCreateMessage | EntryRemovedMessage;
-export type GroupMessage = TripOffer | OfferAnswer | EntriesMessage | PropagationMessage;
+export type RosterMessage = z.infer<typeof rosterSchema>;
+export type RosterEntry = z.infer<typeof rosterEntrySchema>;
+export type LeaveMessage = z.infer<typeof leaveSchema>;
+export type RevokeMessage = z.infer<typeof revokeSchema>;
+export type AddRequestMessage = z.infer<typeof addRequestSchema>;
+export type LifecycleMessage = RosterMessage | LeaveMessage | RevokeMessage | AddRequestMessage;
+export type GroupMessage =
+  TripOffer | OfferAnswer | EntriesMessage | PropagationMessage | LifecycleMessage;

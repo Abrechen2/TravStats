@@ -30,6 +30,7 @@ import { rejectWith, sendOnStream, serveOnce, takeSeq } from "./streams";
 import { TRIP_SHARE_TRANSPORT, messageHeader } from "./transport";
 import { TRIP_SHAPE, wireTripSchema } from "./wire/shapes";
 import { encodeShape } from "./wire/codec";
+import { acceptOfferedRoster, storeRoster } from "./roster";
 
 /** What is kept of an offer until it is answered: the wire form, read again on accept. */
 const storedOfferSchema = z.object({
@@ -76,11 +77,13 @@ export async function applyOffer(
   });
   // Already accepted: the trip is theirs; a repeated offer changes nothing.
   if (existing?.state === "active") return;
-  await tx.tripShareRemoteMember.upsert({
+  const member = await tx.tripShareRemoteMember.upsert({
     where: { groupId_remoteId: { groupId: group.id, remoteId: remote.id } },
     create: { groupId: group.id, remoteId: remote.id, offer: stored },
     update: { state: "invited", stateReason: null, stateSince: new Date(), offer: stored },
   });
+  // Who is on the trip, by their refs (F-S4e): the names a relayed change is read by.
+  await storeRoster(tx, group.id, member.id, { ...offer, members: offer.roster });
 }
 
 export const serveOffer = (origin: string, offer: TripOffer): Promise<TripShareAck> =>
@@ -212,6 +215,14 @@ export async function acceptOffer(userId: string, id: string): Promise<{ tripId:
       data: { state: "active", stateReason: null, stateSince: new Date(), offer: Prisma.DbNull },
     });
     await restatusTrips([trip.id], tx);
+    // Taking the trip says yes to the people the offer showed on it (F-S4e); anyone who joins
+    // later is asked on the trip page before their changes reach this copy.
+    await acceptOfferedRoster(
+      tx,
+      row.groupId,
+      userId,
+      storedOfferSchema.parse(row.offer).roster.map((r) => r.ref)
+    );
     // The trip arrived (F-S4d): told like a local share, naming who it came from and where.
     await tx.shareNotice.create({
       data: {

@@ -148,7 +148,13 @@ describe("a change made on one server reaches the other, named and undoable", ()
     await a.prisma.shareConsent.create({
       data: { requesterId: anna, targetId: dora, status: "accepted" },
     });
-    await a.prisma.trip.create({ data: { userId: dora, name: "Lissabon", shareGroupId: groupId } });
+    const doraTrip = await a.prisma.trip.create({
+      data: { userId: dora, name: "Lissabon", shareGroupId: groupId },
+    });
+    // Ben joined after her: his changes reach her copy once she said yes to him (F-S4e).
+    const [benOnRoster] = (await a.tripRemoteSharing.tripRemoteSharing(dora, doraTrip.id)).roster;
+    expect(benOnRoster).toMatchObject({ displayName: "Ben", origin: B, relation: "pending" });
+    await a.roster.decideRosterPerson(dora, doraTrip.id, benOnRoster.ref, "accepted");
 
     const added = await b.prisma.flight.create({
       data: {
@@ -440,7 +446,7 @@ describe("who a received change is by: a claim is believed only where it can be 
   });
 
   it("the home relaying a change by one of its members keeps that member's name", async () => {
-    const { anna, ben, groupId, flight } = await sharedFlight();
+    const { anna, ben, groupId, flight, benTrip } = await sharedFlight();
     const dora = await harnessUser(a, "Dora");
     await a.prisma.shareConsent.create({
       data: { requesterId: anna, targetId: dora, status: "accepted" },
@@ -448,6 +454,14 @@ describe("who a received change is by: a claim is believed only where it can be 
     const doraTrip = await a.prisma.trip.create({
       data: { userId: dora, name: "Lissabon", shareGroupId: groupId },
     });
+    // As a local share does when someone joins: the roster tells B, and Ben says yes (F-S4e).
+    await a.prisma.$transaction((tx) => a.roster.queueRoster(tx, groupId));
+    await a.outbox.runDeliveries();
+    const doraOnB = (await b.tripRemoteSharing.tripRemoteSharing(ben, benTrip)).roster.find(
+      (p) => p.displayName === "Dora"
+    );
+    expect(doraOnB).toMatchObject({ origin: A, relation: "pending" });
+    await b.roster.decideRosterPerson(ben, benTrip, doraOnB!.ref, "accepted");
     // Dora's copy of the shared flight: same key, same facts that matter here.
     const keyed = await a.prisma.flight.findUniqueOrThrow({ where: { id: flight.id } });
     const doras = await a.prisma.flight.create({

@@ -17,6 +17,7 @@ import {
   type ChangeAuthor,
   type Spread,
 } from "./federation/outbound";
+import { reachableBy } from "./federation/roster";
 
 /**
  * Propagation (design 2026-10-09, decision 3, phase S2): after a member's
@@ -205,6 +206,17 @@ const authorOf = (spread: Spread) =>
 /** Whose consents decide who receives here: the first of `via` (the writer, or the person reached). */
 const deciderOf = (spread: Spread) => spread.via[0];
 
+/**
+ * The members here a spread reaches: those the decider's consents reach — and, for a change by a
+ * person on another server, only those who said yes to that person (F-S4e roster) or are paired
+ * with them. A newcomer's change reaches a member only after that member's consent.
+ */
+async function reachedHere(c: DbTransaction, spread: Spread): Promise<MemberTrip[]> {
+  const members = await receivingMembers(c, spread.groupId, deciderOf(spread));
+  if (spread.author.kind === "user") return members;
+  return reachableBy(c, spread.groupId, members, spread.author);
+}
+
 async function createCopies(
   c: DbTransaction,
   adapter: EntityAdapter,
@@ -226,7 +238,7 @@ export async function spreadCreate(
 ): Promise<void> {
   const key = source.shareKey as string;
   const reached: string[] = [];
-  for (const member of await receivingMembers(c, spread.groupId, deciderOf(spread))) {
+  for (const member of await reachedHere(c, spread)) {
     const copy = await copyInto(c, adapter.entity, source, {
       userId: member.userId,
       tripId: member.id,
@@ -275,7 +287,7 @@ export async function spreadRemoval(
   const key = row.shareKey as string;
   const copies = await adapter.copiesOf(c, key, spread.groupId);
   const reached: string[] = [];
-  for (const member of await receivingMembers(c, spread.groupId, deciderOf(spread))) {
+  for (const member of await reachedHere(c, spread)) {
     const copy = copyOf(copies, member);
     if (!copy) continue;
     reached.push(member.userId);
@@ -326,7 +338,7 @@ export async function spreadUpdate(
   const { groupId } = spread;
   const copies = await adapter.copiesOf(c, row.shareKey as string, groupId);
   const reached: string[] = [];
-  for (const member of await receivingMembers(c, groupId, deciderOf(spread))) {
+  for (const member of await reachedHere(c, spread)) {
     const copy = copyOf(copies, member);
     if (!copy) continue;
     // Reached even when its copy already agrees: its pairings carry the change on all the same.

@@ -20,7 +20,18 @@ import {
 } from "../services/sharing/federation/offerInbox";
 import { tripRemoteSharing } from "../services/sharing/federation/tripRemoteSharing";
 import {
+  dismissParked,
+  reconfirmTrip,
+  withdrawRemoteConsent,
+} from "../services/sharing/federation/lifecycle";
+import { decideRosterPerson } from "../services/sharing/federation/roster";
+import { requestAddition } from "../services/sharing/federation/addRequest";
+import {
+  addRequestBodySchema,
   remoteClaimBodySchema,
+  remoteMemberIdSchema,
+  rosterDecisionBodySchema,
+  rosterRefSchema,
   remoteInviteIdSchema,
   remoteOfferBodySchema,
   remoteOfferIdSchema,
@@ -31,7 +42,10 @@ import {
  * `/api/v1/sharing/remote` — people on other TravStats servers (spec 2026-10-20, phases F-S4b and
  * F-S4c): issue, list and revoke an invitation code, redeem one from another server, list the
  * people one is paired with; a trip's people on other servers, offering it to one of them or by a
- * trip page's code; the offers one received, and the answer to each. Enveloped like `/sharing` (ADR 0001). Everything but `/status` refuses with
+ * trip page's code; the offers one received, and the answer to each; and since F-S4e the end and
+ * pause of it all — withdrawing a person, answering a newcomer on a trip's roster, confirming held
+ * memberships again, dismissing refused messages, asking a trip's home to add someone. Enveloped
+ * like `/sharing` (ADR 0001). Everything but `/status` refuses with
  * `SHARE_REMOTE_DISABLED` (404) while the feature is off; `/status` says whether it is on, so a
  * screen can draw nothing instead of a button that always fails.
  */
@@ -171,6 +185,56 @@ router.post(
   handle(async (req, res) => {
     await declineOffer(req.userId!, remoteOfferIdSchema.parse(req.params.id));
     res.json({ success: true, data: { declined: true } });
+  })
+);
+
+// The lifecycle (F-S4e): withdraw a person's consent, answer a newcomer on a trip's roster,
+// confirm held memberships again, dismiss refused messages, ask the home to add someone.
+router.post(
+  "/people/:id/withdraw",
+  handle(async (req, res) => {
+    const id = remoteInviteIdSchema.parse(req.params.id);
+    res.json({ success: true, data: await withdrawRemoteConsent(req.userId!, id) });
+  })
+);
+
+router.post(
+  "/trips/:tripId/roster/:ref",
+  handle(async (req, res) => {
+    const tripId = remoteTripIdSchema.parse(req.params.tripId);
+    const ref = rosterRefSchema.parse(req.params.ref);
+    const { decision } = rosterDecisionBodySchema.parse(req.body ?? {});
+    await decideRosterPerson(req.userId!, tripId, ref, decision);
+    res.json({ success: true, data: await tripRemoteSharing(req.userId!, tripId) });
+  })
+);
+
+router.post(
+  "/trips/:tripId/reconfirm",
+  handle(async (req, res) => {
+    const tripId = remoteTripIdSchema.parse(req.params.tripId);
+    await reconfirmTrip(req.userId!, tripId);
+    res.json({ success: true, data: await tripRemoteSharing(req.userId!, tripId) });
+  })
+);
+
+router.delete(
+  "/trips/:tripId/members/:memberId/parked",
+  handle(async (req, res) => {
+    const tripId = remoteTripIdSchema.parse(req.params.tripId);
+    const memberId = remoteMemberIdSchema.parse(req.params.memberId);
+    await dismissParked(req.userId!, tripId, memberId);
+    res.json({ success: true, data: await tripRemoteSharing(req.userId!, tripId) });
+  })
+);
+
+router.post(
+  "/trips/:tripId/add-requests",
+  remoteInviteLimiter,
+  handle(async (req, res) => {
+    const tripId = remoteTripIdSchema.parse(req.params.tripId);
+    const body = addRequestBodySchema.parse(req.body ?? {});
+    res.status(201).json({ success: true, data: await requestAddition(req.userId!, tripId, body) });
   })
 );
 

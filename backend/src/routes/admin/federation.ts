@@ -20,6 +20,7 @@ import {
 } from "../../services/federation/identity";
 import { exchange, hash, PeerRefusal } from "../../services/federation/security";
 import { comparisonError } from "../../services/comparison/errors";
+import { holdPeerMemberships } from "../../services/sharing/federation/lifecycle";
 import {
   federationSettingsSchema,
   peerOriginSchema,
@@ -212,6 +213,10 @@ router.post(
       create: { origin: body.origin, publicKey: pem, enabled: body.enabled },
       update: { publicKey: pem, enabled: body.enabled, verifiedAt: null, leaderboardVersions: [] },
     });
+    // Trips shared across servers through it pause until each person confirms them again
+    // (spec 2026-10-20 O9): a new key is a new party until someone says otherwise.
+    if (previous && previous.publicKey !== pem) await holdPeerMemberships(body.origin, "repinned");
+    else if (previous && !body.enabled) await holdPeerMemberships(body.origin, "peer-blocked");
     res.json(await state());
   })
 );
@@ -252,6 +257,7 @@ router.post(
       where: { origin },
       data: { enabled: false, verifiedAt: null },
     });
+    await holdPeerMemberships(origin, "peer-blocked");
     res.json({ suspended: true });
   })
 );

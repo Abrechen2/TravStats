@@ -9,12 +9,12 @@ import type { DbTransaction } from "../../../db";
 import { AppError } from "../../../middleware/errorHandler";
 import { tripFacts } from "../facts";
 import { assignShareKeys, keyedIdsOnTrip } from "../keyOps";
-import { PERSON_SELECT, toPerson } from "../people";
 import { SHARE_ENTITIES, SHARE_TYPES, emptyCounts, type CopyCounts } from "../shareTypes";
 import { MAX_ENTRIES_PER_TRIP, type TripOffer } from "../../../schemas/tripSharePeer";
 import { encodeShape } from "./wire/codec";
 import { TRIP_SHAPE } from "./wire/shapes";
 import { remoteShareError } from "./errors";
+import { homeRoster, userRef } from "./roster";
 
 export interface FederatedGroup {
   id: string;
@@ -83,19 +83,22 @@ export async function undoNewGroup(
   await tx.tripShareGroup.delete({ where: { id: group.id } });
 }
 
-type OfferBody = Pick<TripOffer, "trip" | "roster" | "counts">;
+type OfferBody = Pick<TripOffer, "trip" | "roster" | "counts" | "self" | "you">;
 
 /**
  * The trip's facts, who is on it, and what it holds. Keys are assigned here (as a local share
  * does on first share), so the counts are of the entries that will travel. More than
- * `MAX_ENTRIES_PER_TRIP` is refused before anything is sent.
+ * `MAX_ENTRIES_PER_TRIP` is refused before anything is sent. The roster names everyone by their
+ * ref in this group (F-S4e), and `self` / `you` say which of them the two ends of this pairing
+ * are.
  */
 export async function buildOfferBody(
   tx: DbTransaction,
   localOrigin: string,
   userId: string,
   trip: Parameters<typeof tripFacts>[0] & { id: string },
-  groupId: string
+  group: { id: string; federatedRef: string },
+  member: { rosterRef: string }
 ): Promise<OfferBody> {
   await assignShareKeys(tx, userId, trip.id);
   const counts: CopyCounts = emptyCounts();
@@ -112,24 +115,11 @@ export async function buildOfferBody(
       `A trip of more than ${MAX_ENTRIES_PER_TRIP} entries cannot be offered to another server`,
       { userId }
     );
-  const [locals, remotes] = await Promise.all([
-    tx.trip.findMany({
-      where: { shareGroupId: groupId },
-      select: { user: { select: PERSON_SELECT } },
-      orderBy: { createdAt: "asc" },
-    }),
-    tx.tripShareRemoteMember.findMany({
-      where: { groupId, state: "active" },
-      select: { remote: { select: { displayName: true, origin: true } } },
-      orderBy: { createdAt: "asc" },
-    }),
-  ]);
   return {
     trip: encodeShape(TRIP_SHAPE, tripFacts(trip)),
-    roster: [
-      ...locals.map((t) => ({ displayName: toPerson(t.user).displayName, origin: localOrigin })),
-      ...remotes.map((r) => r.remote),
-    ].slice(0, 50),
+    roster: await homeRoster(tx, group, localOrigin),
+    self: userRef(group.federatedRef, userId),
+    you: member.rosterRef,
     counts,
   };
 }

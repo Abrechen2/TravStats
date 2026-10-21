@@ -1,5 +1,6 @@
 import type { DbTransaction } from "../../db";
 import { clearTripKeys } from "./keyOps";
+import { departLocally } from "./federation/lifecycle";
 
 /**
  * Taking one member's trip out of its share group. The trip and every entry
@@ -17,6 +18,8 @@ export async function detachTrip(
   if (!groupId) return;
   await clearTripKeys(tx, userId, trip.id);
   await tx.trip.update({ where: { id: trip.id }, data: { shareGroupId: null } });
+  // Memberships across servers through this member's pairings end too, and are told (F-S4e).
+  await departLocally(tx, userId, groupId);
 
   const others = await tx.trip.findMany({
     where: { shareGroupId: groupId },
@@ -25,8 +28,8 @@ export async function detachTrip(
   if (others.length === 0) {
     // Nobody left to join: notices that named the group keep their text;
     // their group link goes null. A group with people on other servers stays: its member rows
-    // are the tombstones a later message is refused against (spec 2026-10-20 §4, "Replay"),
-    // and telling those servers is F-S4e's `leave`.
+    // are the tombstones a later message is refused against (spec 2026-10-20 §4, "Replay");
+    // those servers were told above (`leave`).
     if ((await tx.tripShareRemoteMember.count({ where: { groupId } })) === 0)
       await tx.tripShareGroup.delete({ where: { id: groupId } });
     return;

@@ -4,6 +4,7 @@
  */
 import { z } from "./zod";
 import { CONSENT_STATUSES } from "./sharing";
+import { origin as peerOrigin } from "../services/federation/envelope";
 import { SHARE_ENTITIES, SHARE_TYPES } from "../services/sharing/shareTypes";
 
 const instant = z.iso.datetime();
@@ -54,6 +55,14 @@ export const REMOTE_MEMBER_STATES = [
 export const remoteMemberStateSchema = z.enum(REMOTE_MEMBER_STATES);
 export type RemoteMemberState = z.infer<typeof remoteMemberStateSchema>;
 
+/**
+ * A member's answer to a person on another server who is on the trip with them but is not their
+ * own pairing (F-S4e roster): no row = not asked yet. Also the CHECK
+ * `trip_share_roster_consents_status_check`; `shareVocabulary.test.ts` holds the two together.
+ */
+export const ROSTER_CONSENT_STATUSES = ["accepted", "declined"] as const;
+export type RosterConsentStatus = (typeof ROSTER_CONSENT_STATUSES)[number];
+
 /** F-S4c: offering a trip from its page, and answering an offer. */
 export const remoteTripIdSchema = z.string().uuid();
 export const remoteOfferIdSchema = z.string().uuid();
@@ -96,13 +105,50 @@ export const offerablePersonSchema = z.strictObject({
   username: z.string(),
   origin: z.string(),
 });
+export const rosterPersonSchema = z.strictObject({
+  ref: z.string().uuid().describe("The person's id in this trip's roster — never an account id"),
+  displayName: z.string(),
+  origin: z.string(),
+  relation: z
+    .enum(["you", "paired", "here", "pending", ...ROSTER_CONSENT_STATUSES])
+    .describe(
+      "`paired`/`accepted`: their changes reach the caller's copy; `pending`/`declined`: they do not; `you`/`here`: the caller, or someone on this server (no answer needed)"
+    ),
+});
 export const tripRemoteSharingSchema = z.strictObject({
   homeOrigin: z
     .string()
     .nullable()
     .describe("The server this trip came from; null when this server is its home"),
   members: z.array(remoteMemberSchema),
+  roster: z
+    .array(rosterPersonSchema)
+    .describe("Everyone on the trip on other servers, with whether their changes reach the caller"),
+  reconfirmable: z
+    .boolean()
+    .describe(
+      "A membership of the caller's waits for their confirmation (after a restore, a blocked server or a new key)"
+    ),
   offerable: z.array(offerablePersonSchema),
+});
+
+/** F-S4e: answering a person on the roster, asking the home to add someone, the ids in paths. */
+export const rosterRefSchema = z.string().uuid();
+export const remoteMemberIdSchema = z.string().uuid();
+export const rosterDecisionBodySchema = z.strictObject({
+  decision: z.enum(ROSTER_CONSENT_STATUSES),
+});
+export const addRequestBodySchema = z.strictObject({
+  displayName: z.string().trim().min(1).max(160),
+  origin: peerOrigin
+    .refine((v) => v !== "local", "not a server origin")
+    .optional()
+    .describe("The server of the person to add, when known (`https://host`)"),
+  note: z.string().trim().max(500).optional(),
+});
+export const addRequestedSchema = z.strictObject({
+  requested: z.literal(true),
+  origin: z.string().describe("The trip's home server, which was asked"),
 });
 const counts = z.strictObject(
   Object.fromEntries(SHARE_ENTITIES.map((e) => [SHARE_TYPES[e].countKey, z.number().int()]))

@@ -5,7 +5,9 @@
  * Each is resolved first to the group by (sending origin, `groupRef`) — a group whose home is
  * that server, or this server's own group with a member there — then to the pairing it names
  * (`from`, `to`), whose member must still receive and whose consent must still be accepted;
- * anything else is `not-member` / `consent` and writes nothing. The stream's seq is taken before
+ * anything else is `not-member` / `consent` (or `suspended`, for a membership held until its
+ * person confirms it again) and writes nothing. A change by someone the person here has not said
+ * yes to (F-S4e roster) is taken in order and not applied. The stream's seq is taken before
  * any write, so a message applies wholly or not at all (`streams.ts`).
  *
  * Applied inside the propagation guard (nothing echoes back through the ordinary propagate
@@ -20,6 +22,7 @@
  * - **entry-removed**: a notice only; the copy stays, as locally.
  */
 import type { DbTransaction } from "../../../db";
+import logger from "../../../utils/logger";
 import { ADAPTERS, type ShareEntity } from "../adapters";
 import { copyInto, joinedMeta } from "../copyInto";
 import { DERIVE } from "../deriveCopy";
@@ -48,19 +51,21 @@ import { recordConflict, settleConflicts } from "./conflicts";
 import { heldIdentity, namedReference, nameToWrite, sentIdentity } from "./refIdentity";
 import type { ChangeAuthor, Spread } from "./outbound";
 import { lockCopy } from "./rowLock";
+import { addressed, requireReceiving } from "./peerMember";
+import { mayReach } from "./roster";
 import { rejectWith, serveOnce, takeSeq } from "./streams";
 import { fromWireEntries, fromWireFacts, localKeyOf, receivedStatus } from "./wire/decode";
 import { wireFactsOf } from "./wire/encode";
 import { ENTRY_SHAPES, type WireEntry } from "./wire/shapes";
 
-/** A member here still takes messages while their delivery towards that server is held up. */
-const RECEIVING = new Set(["active", "unreachable"]);
+type RemoteAuthor = Extract<ChangeAuthor, { kind: "remote" }>;
 
 interface Sender {
   groupId: string;
   /** The person here the message is for, and their trip of the group. */
   recipient: MemberTrip;
-  author: Extract<ChangeAuthor, { kind: "remote" }>;
+  /** Who the change is by; null when the home names a roster ref this server does not know. */
+  author: RemoteAuthor | null;
   origin: string;
 }
 
@@ -69,25 +74,8 @@ async function senderOf(
   origin: string,
   message: PropagationMessage
 ): Promise<Sender> {
-  const group =
-    (await tx.tripShareGroup.findFirst({
-      where: { homeOrigin: origin, federatedRef: message.groupRef },
-    })) ??
-    (await tx.tripShareGroup.findFirst({
-      where: { homeOrigin: null, federatedRef: message.groupRef },
-    }));
-  if (!group) throw rejectWith("not-member");
-  const pairing = await tx.remoteShareAccount.findFirst({
-    where: { origin, channel: message.from, localChannel: message.to },
-  });
-  if (!pairing) throw rejectWith("not-member");
-  const member = await tx.tripShareRemoteMember.findUnique({
-    where: { groupId_remoteId: { groupId: group.id, remoteId: pairing.id } },
-  });
-  const live =
-    member &&
-    (RECEIVING.has(member.state) || (member.state === "suspended" && member.stateReason === "off"));
-  if (!live) throw rejectWith("not-member");
+  const { group, pairing, member } = await addressed(tx, origin, message);
+  const live = requireReceiving(member);
   const trip = await tx.trip.findFirst({
     where: { userId: pairing.userId, shareGroupId: group.id },
     orderBy: { createdAt: "asc" },
@@ -103,58 +91,60 @@ async function senderOf(
     groupId: group.id,
     recipient: trip,
     origin,
-    author: await authorOf(tx, origin, message, { ...group, pairing }),
+    author: await authorOf(tx, origin, message, group, pairing, live),
   };
 }
 
 /**
- * Who a received change is by. The sending server's claim (`actor`) is believed only where it
- * can be checked at all: from the group's home (the hub relays for its spokes, F5), and only for
- * an origin this server knows as one of the group's remote members. Everything else — a spoke
- * naming someone else, a home naming a server that is not in the group — is attributed to the
- * sending pairing, under its own name: a peer cannot put words in another person's mouth here.
+ * Who a received change is by. A spoke speaks for its own pairing only: whatever it claims, the
+ * author is the sending pairing under its own name. The group's home relays for everyone on the
+ * trip (F5) and names the author by their roster ref (F-S4e); the name is then read from the
+ * roster the home sent, never from the message. A ref this server does not know names nobody
+ * (`null` — the change is not applied); a message without a ref is the home pairing's own word.
  */
 async function authorOf(
   tx: DbTransaction,
   origin: string,
   message: PropagationMessage,
-  group: {
-    id: string;
-    homeOrigin: string | null;
-    pairing: { id: string; displayName: string; origin: string };
-  }
-): Promise<Sender["author"]> {
-  const own = {
-    kind: "remote" as const,
-    pairingId: group.pairing.id,
-    displayName: group.pairing.displayName,
-    origin: group.pairing.origin,
+  group: { id: string; homeOrigin: string | null },
+  pairing: { id: string; displayName: string; origin: string },
+  member: { rosterRef: string }
+): Promise<RemoteAuthor | null> {
+  const own: RemoteAuthor = {
+    kind: "remote",
+    pairingId: pairing.id,
+    displayName: pairing.displayName,
+    origin: pairing.origin,
+    ref: member.rosterRef,
   };
   if (group.homeOrigin !== origin) return own;
-  const claimed = message.actor.origin ?? origin;
-  const members = await tx.tripShareRemoteMember.findMany({
-    where: { groupId: group.id },
-    select: { remote: { select: { origin: true } } },
+  const ref = message.actor.ref;
+  if (!ref || ref === member.rosterRef) return own;
+  const entry = await tx.tripShareRosterEntry.findUnique({
+    where: { groupId_ref: { groupId: group.id, ref } },
   });
-  if (!members.some((m) => m.remote.origin === claimed)) return own;
-  const self = claimed === origin && message.actor.displayName === group.pairing.displayName;
+  if (!entry) return null;
   return {
     kind: "remote",
-    pairingId: self ? group.pairing.id : null,
-    displayName: message.actor.displayName,
-    origin: claimed,
-    ...(claimed !== origin ? { via: origin } : {}),
+    pairingId: null,
+    displayName: entry.displayName,
+    origin: entry.origin,
+    ref,
+    ...(entry.origin !== origin ? { via: origin } : {}),
   };
 }
 
-const onward = (s: Sender): Spread => ({
+/** A sender whose author is known and may reach the recipient's copy. */
+type Admitted = Sender & { author: RemoteAuthor };
+
+const onward = (s: Admitted): Spread => ({
   groupId: s.groupId,
   author: s.author,
   via: [s.recipient.userId],
   fromOrigin: s.origin,
 });
 
-async function ownCopy(tx: DbTransaction, s: Sender, entity: ShareEntity, shareKey: string) {
+async function ownCopy(tx: DbTransaction, s: Admitted, entity: ShareEntity, shareKey: string) {
   return (await ADAPTERS[entity].copiesOf(tx, shareKey, s.groupId)).find(
     (r) => r.userId === s.recipient.userId && r.tripId === s.recipient.id
   );
@@ -172,7 +162,7 @@ async function sideOf(tx: DbTransaction, message: FactUpdateMessage, side: "befo
 
 async function applyFactUpdate(
   tx: DbTransaction,
-  s: Sender,
+  s: Admitted,
   message: FactUpdateMessage
 ): Promise<AckConflict[]> {
   const { entity, shareKey } = message;
@@ -271,7 +261,7 @@ async function applyFactUpdate(
   }));
 }
 
-async function applyEntryCreate(tx: DbTransaction, s: Sender, message: EntryCreateMessage) {
+async function applyEntryCreate(tx: DbTransaction, s: Admitted, message: EntryCreateMessage) {
   const [{ entity, row }] = await fromWireEntries(tx, [message.entry as WireEntry]);
   const key = row.shareKey as string;
   const held = await heldKeys(tx, entity, s.recipient.userId, s.recipient.id, [key]);
@@ -295,7 +285,7 @@ async function applyEntryCreate(tx: DbTransaction, s: Sender, message: EntryCrea
   await spreadCreate(tx, ADAPTERS[entity], onward(s), loaded);
 }
 
-async function applyEntryRemoved(tx: DbTransaction, s: Sender, message: EntryRemovedMessage) {
+async function applyEntryRemoved(tx: DbTransaction, s: Admitted, message: EntryRemovedMessage) {
   const copy = await ownCopy(tx, s, message.entity, message.shareKey);
   if (!copy) return;
   await recordEntryNotice(tx, {
@@ -316,7 +306,18 @@ export function servePropagation(
   message: PropagationMessage
 ): Promise<TripShareAck> {
   return serveOnce(origin, message, async (tx) => {
-    const s = await senderOf(tx, origin, message);
+    const sender = await senderOf(tx, origin, message);
+    // A newcomer's change reaches the person here only after their yes (F-S4e roster). Not
+    // taken is not refused: the home did nothing wrong, and the stream goes on.
+    const { author } = sender;
+    if (!author || !(await mayReach(tx, sender.groupId, sender.recipient.userId, author))) {
+      logger.info(
+        { operation: "trip_share_change_withheld", kind: message.kind, origin },
+        "A change by someone the recipient has not said yes to was not applied"
+      );
+      return undefined;
+    }
+    const s: Admitted = { ...sender, author };
     return asPropagation(async () => {
       switch (message.kind) {
         case "fact-update": {

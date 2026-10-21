@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it } from "@jest/globals";
 
 import { prisma } from "../../../db";
 import { CONSENT_STATUSES, SHARE_ENTITY_TYPES, SHARE_NOTICE_KINDS } from "../../../schemas/sharing";
-import { REMOTE_MEMBER_STATES } from "../../../schemas/sharingRemote";
+import { REMOTE_MEMBER_STATES, ROSTER_CONSENT_STATUSES } from "../../../schemas/sharingRemote";
 import { OUTBOX_KINDS } from "../../../schemas/tripSharePeer";
 
 /**
@@ -17,6 +17,7 @@ const CHECKS = {
   share_notices_entity_type_check: SHARE_ENTITY_TYPES,
   trip_share_remote_members_state_check: REMOTE_MEMBER_STATES,
   trip_share_outbox_kind_check: OUTBOX_KINDS,
+  trip_share_roster_consents_status_check: ROSTER_CONSENT_STATUSES,
 } as const;
 
 afterAll(async () => {

@@ -7,7 +7,9 @@ import { prisma } from "../../../db";
  * accepted consent with a person on another server goes back to a question, so its owner
  * confirms it again. Every membership of a person on another server is suspended (F-S4c):
  * nothing is offered, answered or delivered from a clone until its owner re-confirms. Every
- * queued message is deleted (F-S4d): it was written by the server the dump came from.
+ * queued message is deleted (F-S4d): it was written by the server the dump came from. Each
+ * membership is resumed by its person, per trip (`lifecycle.ts` `reconfirmTrip`, F-S4e), which
+ * accepts the consent again and, at the home, sends the trip's entries once more.
  */
 export async function suspendTripFederationAfterRestore(): Promise<void> {
   const now = new Date();
@@ -20,8 +22,18 @@ export async function suspendTripFederationAfterRestore(): Promise<void> {
       },
       data: { status: "pending", decidedAt: null },
     }),
+    // An offer still open is held apart, so confirming it again re-opens it instead of taking it.
     prisma.tripShareRemoteMember.updateMany({
-      where: { state: { in: ["invited", "active", "unreachable"] } },
+      where: { state: "invited" },
+      data: { state: "suspended", stateReason: "restore-invited", stateSince: now },
+    }),
+    prisma.tripShareRemoteMember.updateMany({
+      where: {
+        OR: [
+          { state: { in: ["active", "unreachable"] } },
+          { state: "suspended", stateReason: { in: ["off", "peer-blocked", "repinned"] } },
+        ],
+      },
       data: { state: "suspended", stateReason: "restore", stateSince: now },
     }),
     prisma.tripShareOutbox.deleteMany({}),

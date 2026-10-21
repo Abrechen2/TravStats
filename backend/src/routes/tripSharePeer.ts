@@ -10,7 +10,8 @@
  *
  * Budgets (spec §4): nothing above the largest kind's budget (`entries`, 1 MB) is read at all;
  * after the signature, each kind is held to its own (`BODY_BUDGET`, control messages 8 KB). A
- * group message (`GROUP_KINDS`: offer, answer, entries, and F-S4d's propagation) whose header
+ * group message (`GROUP_KINDS`: offer, answer, entries, F-S4d's propagation and F-S4e's roster,
+ * leave, revoke and add-request) whose header
  * parses but whose body does not
  * is answered `ack { rejected: "schema", field }` under signature, so the sender learns which
  * field; anything less is the uniform 403.
@@ -32,6 +33,9 @@ import { serveEntries } from "../services/sharing/federation/entries";
 import { serveOfferAnswer } from "../services/sharing/federation/offers";
 import { serveOffer } from "../services/sharing/federation/offerInbox";
 import { servePropagation } from "../services/sharing/federation/inbound";
+import { serveRoster } from "../services/sharing/federation/roster";
+import { serveLeave, serveRevoke } from "../services/sharing/federation/lifecycle";
+import { serveAddRequest } from "../services/sharing/federation/addRequest";
 import { BODY_BUDGET, MAX_BODY } from "../services/sharing/federation/transport";
 import {
   GROUP_KINDS,
@@ -62,6 +66,14 @@ function serve(origin: string, local: string, body: TripSharePacket): Promise<un
     case "entry-create":
     case "entry-removed":
       return servePropagation(origin, body);
+    case "roster":
+      return serveRoster(origin, body);
+    case "leave":
+      return serveLeave(origin, body);
+    case "revoke":
+      return serveRevoke(origin, body);
+    case "add-request":
+      return serveAddRequest(origin, body);
   }
 }
 

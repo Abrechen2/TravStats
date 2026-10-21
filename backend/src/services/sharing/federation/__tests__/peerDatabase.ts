@@ -2,7 +2,8 @@
  * Test helper: a second, migrated database for a second in-process server (spec 2026-10-20,
  * two-instance tests). Not a suite (no `.test.ts` suffix).
  *
- * Named after the run's own database — `<db>` ending `_test` becomes `<db minus _test>b_test`,
+ * Named after the run's own database — `<db>` ending `_test` becomes `<db minus _test>b_test`
+ * (or `c_test` for a third server),
  * anything else `<db>_peer_test` — so it carries an expendable suffix (`jest.globalSetup.ts`)
  * and a parallel run's worker databases each get their own peer. It is created from
  * `template_postgis` (the PostGIS image's template, which CI's service image has too) rather
@@ -16,18 +17,18 @@ import { Client } from "pg";
 
 const quote = (name: string) => `"${name.replace(/"/g, '""')}"`;
 
-export function peerDatabaseUrl(base = process.env.DATABASE_URL ?? ""): string {
+export function peerDatabaseUrl(base = process.env.DATABASE_URL ?? "", letter = "b"): string {
   const url = new URL(base);
   const name = decodeURIComponent(url.pathname.replace(/^\//, ""));
   const peer = name.endsWith("_test")
-    ? `${name.slice(0, -"_test".length)}b_test`
-    : `${name}_peer_test`;
+    ? `${name.slice(0, -"_test".length)}${letter}_test`
+    : `${name}_peer${letter === "b" ? "" : letter}_test`;
   url.pathname = `/${encodeURIComponent(peer)}`;
   return url.toString();
 }
 
-export async function preparePeerDatabase(): Promise<string> {
-  const peerUrl = peerDatabaseUrl();
+export async function preparePeerDatabase(letter = "b"): Promise<string> {
+  const peerUrl = peerDatabaseUrl(undefined, letter);
   const parsed = new URL(peerUrl);
   const name = decodeURIComponent(parsed.pathname.replace(/^\//, ""));
   const maintenance = new URL(peerUrl);

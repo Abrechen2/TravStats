@@ -36,6 +36,7 @@ import { runDeliveries } from "./outbox";
 import { fromWireEntries } from "./wire/decode";
 import { toWireEntries } from "./wire/encode";
 import type { WireEntry } from "./wire/shapes";
+import { isHeld } from "./peerMember";
 import { rejectWith, serveOnce, takeSeq } from "./streams";
 import { BODY_BUDGET, wireBytes } from "./transport";
 
@@ -164,7 +165,13 @@ export function serveEntries(origin: string, message: EntriesMessage): Promise<T
         })
       )
     ).filter((r): r is { userId: string; tripId: string } => r !== null);
-    if (recipients.length === 0) throw rejectWith("not-member");
+    if (recipients.length === 0) {
+      // Held here until its person confirms again (F-S4e): kept there and sent again, not lost.
+      const held = await tx.tripShareRemoteMember.findMany({
+        where: { groupId: group.id, state: "suspended", remote: { origin, channel: message.from } },
+      });
+      throw rejectWith(held.some(isHeld) ? "suspended" : "not-member");
+    }
     const rows = await fromWireEntries(tx, message.entries as WireEntry[]);
     for (const recipient of recipients) {
       for (const entity of SHARE_ENTITIES) {

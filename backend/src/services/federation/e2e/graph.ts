@@ -205,6 +205,8 @@ export const NON_TRAVEL_RELATIONS = [
   // Federated trip sharing (spec 2026-10-20 F-S4b): pairings and single-use codes.
   "remoteShareAccounts",
   "tripShareInvites",
+  // F-S4e: a member's yes or no to a person on another server on a shared trip.
+  "tripShareRosterConsents",
   "shareGroupsCreated",
   "shareNotices",
   "shareNoticesActed",

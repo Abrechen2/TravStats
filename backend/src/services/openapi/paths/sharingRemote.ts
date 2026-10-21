@@ -1,5 +1,5 @@
 /**
- * Trip sharing across servers, phases F-S4b and F-S4c (`routes/sharingRemote.ts`, spec
+ * Trip sharing across servers, phases F-S4b to F-S4e (`routes/sharingRemote.ts`, spec
  * `docs/superpowers/specs/2026-10-20-federated-trip-sharing-design.md`). Enveloped. The
  * server-to-server route `/trip-share-peer` is out of the spec, like `/comparison-peer`.
  */
@@ -9,6 +9,9 @@ import { registry } from "../registry";
 import { errorContent } from "./shared";
 import {
   acceptedOfferSchema,
+  addRequestBodySchema,
+  addRequestedSchema,
+  rosterDecisionBodySchema,
   createdRemoteInviteSchema,
   receivedOfferSchema,
   remoteClaimBodySchema,
@@ -206,6 +209,98 @@ registry.registerPath({
     200: ok("Declined", z.object({ declined: z.literal(true) })),
     404: err("`SHARE_REMOTE_OFFER_NOT_FOUND`, or `SHARE_REMOTE_DISABLED`"),
     409: err("`SHARE_REMOTE_PEER_DISABLED`, `SHARE_REMOTE_REFUSED`"),
+    ...peerFailures,
+  },
+});
+
+// The lifecycle (phase F-S4e).
+const memberParams = z.object({ tripId: z.string().uuid(), memberId: z.string().uuid() });
+const rosterParams = z.object({ tripId: z.string().uuid(), ref: z.string().uuid() });
+
+registry.registerPath({
+  method: "post",
+  path: "/sharing/remote/people/{id}/withdraw",
+  summary: "Withdraw the consent with a person on another server",
+  description:
+    "Immediate on this server: nothing more is sent to or taken from that person, their queued messages are deleted, and every trip the two share ends for them (`revoked`). Their server is told for each such trip, and a copy on the receiving side leaves its group; the copies stay their owners' trips. Leaving a single trip is `POST /sharing/trips/{tripId}/leave`, which tells the other servers too.",
+  tags,
+  request: { params: offerParams },
+  responses: {
+    200: ok("The person, with the consent `withdrawn`", remotePersonSchema),
+    404: err("`SHARE_REMOTE_PERSON_NOT_FOUND`, or `SHARE_REMOTE_DISABLED`"),
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/sharing/remote/trips/{tripId}/roster/{ref}",
+  summary: "Say yes or no to a person on another server who is on the trip",
+  description:
+    "A person who joined the trip after the caller — anyone but the caller's own pairing — reaches the caller's copy only after a yes. A yes takes effect from now on; changes made before it are not replayed. Taking an offered trip says yes to everyone the offer named.",
+  tags,
+  request: {
+    params: rosterParams,
+    body: { content: { "application/json": { schema: rosterDecisionBodySchema } } },
+  },
+  responses: {
+    200: ok("The trip's people on other servers, with the answer", tripRemoteSharingSchema),
+    404: err(
+      "`TRIP_NOT_FOUND`, `SHARE_REMOTE_ROSTER_NOT_FOUND` (nobody to answer under that ref), or `SHARE_REMOTE_DISABLED`"
+    ),
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/sharing/remote/trips/{tripId}/reconfirm",
+  summary: "Confirm the caller's held memberships of a trip again",
+  description:
+    "After a restore, an admin blocking a server or pinning a new key for it, the caller's memberships through that server wait (nothing is sent or taken). Confirming accepts the consent with each person again and resumes them; after a restore the home sends the trip's entries once more. The server must be admitted and verified again first.",
+  tags,
+  request: { params: tripParams },
+  responses: {
+    200: ok("The trip's people on other servers, resumed", tripRemoteSharingSchema),
+    403: err("`SHARE_REMOTE_PEER_NOT_ADMITTED`: that server is not admitted (again) yet"),
+    404: err("`TRIP_NOT_FOUND`, or `SHARE_REMOTE_DISABLED`"),
+    409: err(
+      "`SHARE_REMOTE_NOTHING_TO_CONFIRM`, `SHARE_REMOTE_CONSENT_MISSING` (the consent was withdrawn or declined, not just held)"
+    ),
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/sharing/remote/trips/{tripId}/members/{memberId}/parked",
+  summary: "Dismiss the refused messages towards one member",
+  description:
+    "Messages the other server refused for good (or too large to send) are kept 30 days so the trip page can name them. Dismissing deletes them now; they are not sent again.",
+  tags,
+  request: { params: memberParams },
+  responses: {
+    200: ok("The trip's people on other servers", tripRemoteSharingSchema),
+    404: err(
+      "`TRIP_NOT_FOUND`, `SHARE_REMOTE_PERSON_NOT_FOUND` (no such member on the caller's page), or `SHARE_REMOTE_DISABLED`"
+    ),
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/sharing/remote/trips/{tripId}/add-requests",
+  summary: "Ask the trip's home server to offer it to someone else",
+  description:
+    "For a trip that came from another server: offers are made there only (F5). The request reaches the inbox of the person the caller is paired with on that server, who decides; nothing is offered by the request itself. Limited with the invitation endpoints, 30 an hour.",
+  tags,
+  request: {
+    params: tripParams,
+    body: { content: { "application/json": { schema: addRequestBodySchema } } },
+  },
+  responses: {
+    201: ok("Asked", addRequestedSchema),
+    404: err("`TRIP_NOT_FOUND`, or `SHARE_REMOTE_DISABLED`"),
+    409: err(
+      "`SHARE_REMOTE_IS_HOME` (offer it from here), `SHARE_REMOTE_NOT_MEMBER`, `SHARE_REMOTE_CONSENT_MISSING`, `SHARE_REMOTE_PEER_DISABLED`, `SHARE_REMOTE_REFUSED`"
+    ),
     ...peerFailures,
   },
 });

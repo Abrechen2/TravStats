@@ -24,6 +24,8 @@ export const SHARE_NOTICE_KINDS = [
   "deleted",
   "left",
   "conflict",
+  // F-S4e: a member on another server asks the home to offer the trip to someone else (F5).
+  "add-request",
 ] as const;
 export const shareNoticeKindSchema = z.enum(SHARE_NOTICE_KINDS);
 export type ShareNoticeKind = z.infer<typeof shareNoticeKindSchema>;

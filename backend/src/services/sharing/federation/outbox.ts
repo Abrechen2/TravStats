@@ -22,6 +22,9 @@
  *   of the stream waiting behind it (order is kept); 14 days after the first failure the member
  *   is `unreachable`. A 404 means the feature is off there (`suspended`, `off`); a pin this
  *   server's admin disabled is `suspended`, `peer-blocked`. The queue is kept in every case.
+ * - **held** — a membership suspended here until its person confirms it again (restore, a
+ *   blocked server, a re-pinned key; O9): the stream waits, nothing is sent or counted; a peer
+ *   that holds ours answers `suspended`, and the message is retried as `suspended-there`;
  * - **refused** (`schema`, `not-member`, `consent`), or larger in UTF-8 bytes than its transport
  *   carries (`too-large`) — the row is parked with the reason, not retried, and the stream moves
  *   on; parked rows are kept 30 days for the trip page to name.
@@ -36,6 +39,7 @@ import type { AckConflict, GroupMessage } from "../../../schemas/tripSharePeer";
 import { tripFederationAvailability } from "./availability";
 import { recordConflict } from "./conflicts";
 import { LOCAL_ERROR, kindOf } from "./peerCheck";
+import { isHeld } from "./peerMember";
 import { PeerRefusal } from "../../federation/refusal";
 import { StreamRejected, sendOnStream, type Received } from "./streams";
 import { ENTRIES_TRANSPORT, PROPAGATION_TRANSPORT } from "./transport";
@@ -52,11 +56,18 @@ const PARKED_KEEP_MS = 30 * DAY;
 
 /** The receiving server answered that it failed to apply the message (`ack rejected: error`). */
 export const REMOTE_ERROR = "remote-error";
+/** The receiving server holds the membership until its person confirms it (`suspended`, O9). */
+export const SUSPENDED_THERE = "suspended-there";
+/** Rejections that are retried, not parked: nothing is wrong with the message itself. */
+const RETRIED_THERE: Partial<Record<string, string>> = {
+  error: REMOTE_ERROR,
+  suspended: SUSPENDED_THERE,
+};
 /**
  * Failures of one of the two servers themselves, not of the way between them: retried with the
  * same backoff, but never turned into `unreachable` — the other server did answer (F-S4d leftover).
  */
-const NOT_THE_NETWORK = new Set([LOCAL_ERROR, REMOTE_ERROR]);
+const NOT_THE_NETWORK = new Set([LOCAL_ERROR, REMOTE_ERROR, SUSPENDED_THERE]);
 
 export const backoffAfter = (attempts: number): number =>
   BACKOFF_MS[Math.min(Math.max(attempts, 1), BACKOFF_MS.length) - 1];
@@ -81,6 +92,9 @@ const streamMembers = (groupId: string, peerOrigin: string) => ({
 });
 
 async function stillReceives(row: Row): Promise<boolean> {
+  // The end of a membership is told after it ended (F-S4e): no consent or state is left to ask.
+  if (row.kind === "leave") return row.member.state === "left";
+  if (row.kind === "revoke") return row.member.state === "revoked";
   const live = await prisma.tripShareRemoteMember.count({
     where: { id: row.memberId, ...QUEUEABLE },
   });
@@ -143,10 +157,8 @@ async function delivered(tx: DbTransaction, row: Row, ack: Received, now: Date):
   await tx.tripShareRemoteMember.updateMany({
     where: {
       ...streamMembers(row.groupId, row.peerOrigin),
-      OR: [
-        { state: "unreachable" },
-        { state: "suspended", stateReason: { in: ["off", "peer-blocked"] } },
-      ],
+      // A held membership (blocked, re-pinned, restored) resumes only on its person's word (O9).
+      OR: [{ state: "unreachable" }, { state: "suspended", stateReason: "off" }],
     },
     data: { state: "active", stateReason: null, stateSince: now },
   });
@@ -223,6 +235,9 @@ async function deliverStream(
       include: OUTBOX_INCLUDE,
     });
     if (!row || row.nextAttemptAt > now) return;
+    // Held here (a restore, a blocked server, a re-pinned key — O9): the stream waits for its
+    // person's confirmation, without an attempt; nothing is sent while it is held.
+    if (isHeld(row.member)) return;
     if (!row.group.federatedRef || !(await stillReceives(row))) {
       await prisma.tripShareOutbox.delete({ where: { id: row.id } });
       run.dropped++;
@@ -238,9 +253,10 @@ async function deliverStream(
         (tx, ack) => delivered(tx, row, ack, now)
       );
     } catch (error) {
-      // The other server failed to apply it for a reason of its own: retried, named as such.
-      if (error instanceof StreamRejected && error.ack.rejected === "error") {
-        await failed(row, REMOTE_ERROR, now);
+      // The other server failed to apply it for a reason of its own, or holds the membership
+      // until its person confirms it again: retried, each named as itself.
+      if (error instanceof StreamRejected && RETRIED_THERE[error.ack.rejected]) {
+        await failed(row, RETRIED_THERE[error.ack.rejected] as string, now);
         run.failed++;
         return;
       }

@@ -142,6 +142,7 @@ model User {
   /// other servers, and the invitation codes it issued.
   remoteShareAccounts       RemoteShareAccount[]
   tripShareInvites          TripShareInvite[]
+  tripShareRosterConsents   TripShareRosterConsent[]
   shareGroupsCreated        TripShareGroup[]
   shareNotices              ShareNotice[]            @relation("ShareNoticeRecipient")
   shareNoticesActed         ShareNotice[]            @relation("ShareNoticeActor")
@@ -4681,12 +4682,14 @@ model TripShareGroup {
   /// resolved to a group by (sending origin, federatedRef), never by the ref alone.
   homeOrigin   String?  @map("home_origin")
 
-  createdBy     User?                   @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy     User?                    @relation(fields: [createdById], references: [id], onDelete: SetNull)
   trips         Trip[]
   notices       ShareNotice[]
   remoteMembers TripShareRemoteMember[]
   streams       TripSharePeerStream[]
   outbox        TripShareOutbox[]
+  rosterEntries TripShareRosterEntry[]
+  rosterConsent TripShareRosterConsent[]
 
   @@unique([federatedRef], map: "trip_share_groups_home_ref_key", where: raw("home_origin IS NULL"))
   @@unique([homeOrigin, federatedRef])
@@ -4711,6 +4714,11 @@ model TripShareRemoteMember {
   /// Receiving side only: the offer as it arrived (trip facts, roster, counts); null once answered.
   offer       Json?
   createdAt   DateTime @default(now()) @map("created_at")
+  /// The remote person's id in the group's roster (F-S4e): minted here at the home, as the home
+  /// named them on a spoke. Random — never an account id of either server.
+  rosterRef   String   @default(uuid()) @map("roster_ref")
+  /// Spoke only: how the home names this pairing's LOCAL person in its roster; null at the home.
+  localRef    String?  @map("local_ref")
 
   group  TripShareGroup     @relation(fields: [groupId], references: [id], onDelete: Cascade)
   remote RemoteShareAccount @relation(fields: [remoteId], references: [id], onDelete: Cascade)
@@ -4723,6 +4731,43 @@ model TripShareRemoteMember {
 
 /// One ordered message stream of a group with one peer server (spec §4 "seq per (sender origin,
 /// groupRef)"): what this server last sent there and last accepted from there.
+/// A spoke's copy of its group's roster (spec 2026-10-20 §4 `roster`, F-S4e): who is on the trip
+/// across all servers, as the home names them. Kept after someone leaves (`present` false), so a
+/// change they made earlier still has a name.
+model TripShareRosterEntry {
+  groupId     String   @map("group_id")
+  ref         String
+  displayName String   @map("display_name")
+  origin      String
+  present     Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  group TripShareGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, ref])
+  @@map("trip_share_roster_entries")
+}
+
+/// A member's yes (or no) to a person on another server who is on the trip with them but is not
+/// their own pairing (F-S4e): that person's changes reach the member's copy only after a yes. On
+/// every server that holds a member's copy. accepted | declined — CHECK
+/// trip_share_roster_consents_status_check; no row means not asked yet.
+model TripShareRosterConsent {
+  groupId   String   @map("group_id")
+  userId    String   @map("user_id")
+  ref       String
+  status    String
+  decidedAt DateTime @default(now()) @map("decided_at")
+
+  group TripShareGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, userId, ref])
+  @@index([userId])
+  @@map("trip_share_roster_consents")
+}
+
 model TripSharePeerStream {
   groupId         String @map("group_id")
   peerOrigin      String @map("peer_origin")

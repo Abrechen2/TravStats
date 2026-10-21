@@ -205,13 +205,15 @@ export interface RemoteMemberRef {
 const ACTIVE = { state: "active" } as const;
 /**
  * A member whose server does not answer, or has the feature switched off there, or whose pin
- * this server's admin disabled, still gets their messages queued (F-S4d): they leave once the
- * server answers again, in order. A membership suspended by a restore, or one that ended, does not.
+ * this server's admin disabled or replaced, still gets their messages queued (F-S4d): they leave
+ * once the server answers again — after a block or a new key only once the member's person here
+ * confirmed the trip again (F-S4e, O9) — in order. A membership suspended by a restore, or one
+ * that ended, does not: what changed meanwhile is sent again as a whole on confirmation.
  */
 export const QUEUEABLE = {
   OR: [
     { state: { in: ["active", "unreachable"] } },
-    { state: "suspended", stateReason: { in: ["off", "peer-blocked"] } },
+    { state: "suspended", stateReason: { in: ["off", "peer-blocked", "repinned"] } },
   ],
 };
 

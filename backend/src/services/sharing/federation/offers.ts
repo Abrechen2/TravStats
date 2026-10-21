@@ -14,6 +14,8 @@ import type { OfferAnswer, TripShareAck } from "../../../schemas/tripSharePeer";
 import { requireTripFederation } from "./access";
 import { kickDelivery } from "./deliveryKick";
 import { queueEntries } from "./entries";
+import { queueRoster } from "./roster";
+import { isHeld } from "./peerMember";
 import { remoteShareError } from "./errors";
 import {
   buildOfferBody,
@@ -98,7 +100,7 @@ export async function offerTrip(
       create: { groupId: group.id, remoteId },
       update: { state: "invited", stateReason: null, stateSince: new Date() },
     });
-    const body = await buildOfferBody(tx, local.origin, userId, trip, group.id);
+    const body = await buildOfferBody(tx, local.origin, userId, trip, group, member);
     return { group, before, member, body };
   }, KEYING_TX);
 
@@ -152,6 +154,7 @@ export function serveOfferAnswer(origin: string, message: OfferAnswer): Promise<
       include: { remote: { select: { userId: true } } },
     });
     const answerable = message.answer === "accept" ? ["invited", "active"] : ["invited"];
+    if (member && isHeld(member)) throw rejectWith("suspended");
     if (!member || !answerable.includes(member.state)) throw rejectWith("not-member");
     await takeSeq(tx, group.id, origin, message.seq);
     const now = new Date();
@@ -173,6 +176,8 @@ export function serveOfferAnswer(origin: string, message: OfferAnswer): Promise<
       });
     // The entries leave with this write: queued in its transaction, sent once it commits.
     await queueEntries(tx, member.id);
+    // Someone joined: everyone else on other servers learns it (F-S4e roster).
+    if (member.state !== "active") await queueRoster(tx, group.id);
     return { after: kickDelivery };
   });
 }

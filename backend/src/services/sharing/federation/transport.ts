@@ -24,6 +24,11 @@ export const BODY_BUDGET = {
   "fact-update": 262_144,
   "entry-create": 262_144,
   "entry-removed": 8_192,
+  // F-S4e: a roster names up to a hundred people; the end of a membership and a request are short.
+  roster: 32_768,
+  leave: 8_192,
+  revoke: 8_192,
+  "add-request": 8_192,
 } as const satisfies Readonly<Record<TripSharePacket["kind"], number>>;
 export const MAX_BODY = Math.max(...Object.values(BODY_BUDGET));
 

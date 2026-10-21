@@ -145,8 +145,10 @@ async function offerWithClaim(
   if (!trip) return null;
   try {
     const group = await ensureFederatedGroup(tx, invite.userId, trip);
-    const body = await buildOfferBody(tx, local, invite.userId, trip, group.id);
-    await tx.tripShareRemoteMember.create({ data: { groupId: group.id, remoteId: remote.id } });
+    const member = await tx.tripShareRemoteMember.create({
+      data: { groupId: group.id, remoteId: remote.id },
+    });
+    const body = await buildOfferBody(tx, local, invite.userId, trip, group, member);
     return {
       kind: "offer",
       ...messageHeader(),
