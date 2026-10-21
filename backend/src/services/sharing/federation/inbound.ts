@@ -21,7 +21,6 @@
  */
 import type { DbTransaction } from "../../../db";
 import { ADAPTERS, type ShareEntity } from "../adapters";
-import { SHARE_TYPES } from "../shareTypes";
 import { copyInto, joinedMeta } from "../copyInto";
 import { DERIVE } from "../deriveCopy";
 import { jsonSubset, sameFact } from "../factValues";
@@ -48,6 +47,7 @@ import type {
 import { recordConflict, settleConflicts } from "./conflicts";
 import { heldIdentity, namedReference, nameToWrite, sentIdentity } from "./refIdentity";
 import type { ChangeAuthor, Spread } from "./outbound";
+import { lockCopy } from "./rowLock";
 import { rejectWith, serveOnce, takeSeq } from "./streams";
 import { fromWireEntries, fromWireFacts, localKeyOf, receivedStatus } from "./wire/decode";
 import { wireFactsOf } from "./wire/encode";
@@ -180,13 +180,11 @@ async function applyFactUpdate(
   // Their copy is gone (deleted, or moved out): nothing to write, nobody to tell.
   const found = await ownCopy(tx, s, entity, shareKey);
   if (!found) return [];
-  // The row is held from the check to the write: a local save committed in between would
-  // otherwise be overwritten without a conflict (F-S4d review). Read again under the lock, so
+  // The rows are held from the check to the write — the entry's own and those its facts live in
+  // (port calls, a house): a local save committed in between would otherwise be overwritten
+  // without a conflict (F-S4d review). Read again under the lock, so
   // a save that committed before it is what `before` is compared with.
-  await tx.$queryRawUnsafe(
-    `SELECT 1 FROM "${SHARE_TYPES[entity].table}" WHERE id = $1 FOR UPDATE`,
-    found.id
-  );
+  await lockCopy(tx, entity, found.id);
   const [copy] = await adapter.load(tx, [found.id]);
   if (!copy) return [];
   const [sent, wanted] = await Promise.all([
