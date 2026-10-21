@@ -166,4 +166,20 @@ describe("while the feature is off", () => {
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("SHARE_REMOTE_DISABLED");
   });
+  // beta.22 UAT: claiming a code while the feature is off answered
+  // SHARE_REMOTE_INVITE_INVALID (or a validation error) — the code was judged
+  // before the switch was asked. Off means off, whatever the body says.
+  it.each([
+    ["post", "/claim", { code: "not-a-code" }],
+    ["post", "/claim", { code: "" }],
+    ["delete", "/invites/not-a-uuid", undefined],
+  ] as const)(
+    "refuses %s %s with an invalid body as SHARE_REMOTE_DISABLED",
+    async (method, path, body) => {
+      const call = request(app)[method](`/api/v1/sharing/remote${path}`).set(as(anna));
+      const res = body ? await call.send(body) : await call;
+      expect(res.status).toBe(404);
+      expect(res.body.code).toBe("SHARE_REMOTE_DISABLED");
+    }
+  );
 });
