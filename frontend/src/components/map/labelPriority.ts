@@ -152,6 +152,8 @@ export interface PlacedLabel {
   width: number;
   height: number;
   offsetY: number;
+  /** A sideways shift, for a label `spreadByBoxes` moved beside its dot. */
+  offsetX?: number;
 }
 
 /** A `[lon, lat]` to screen-like pixels — the collision pass's geometry. */
@@ -182,9 +184,11 @@ function boxAt(
   height: number,
   offsetY: number,
   project: LabelProjector,
-  gapPx: number
+  gapPx: number,
+  offsetX = 0
 ): Box {
-  const [x, y] = project(position);
+  const [px, y] = project(position);
+  const x = px + offsetX;
   const cy = y + offsetY;
   return {
     x0: x - width / 2 - gapPx,
@@ -252,7 +256,8 @@ export function declutterByBoxes<T>(
   const grid = boxGrid();
   // Obstacles carry no gap of their own: the candidate's gap already keeps
   // the two apart.
-  for (const o of obstacles) grid.place(boxAt(o.position, o.width, o.height, o.offsetY, toPx, 0));
+  for (const o of obstacles)
+    grid.place(boxAt(o.position, o.width, o.height, o.offsetY, toPx, 0, o.offsetX));
   const sorted = [...items].sort((a, b) => weightOf(b) - weightOf(a));
   const accepted: T[] = [];
   for (const item of sorted) {
@@ -265,7 +270,9 @@ export function declutterByBoxes<T>(
   return accepted;
 }
 
-export interface SpreadOptions extends BoxDeclutterOptions {
+export interface SpreadOptions<T = unknown> extends BoxDeclutterOptions {
+  /** Each item's own lift, where items of several layers share one pass. */
+  offsetYOf?: (item: T) => number;
   /**
    * The pick stands for a range of zooms; `project` measures its bottom, and
    * this is how much larger the map is at its top (2 for a whole zoom step).
@@ -330,7 +337,14 @@ export function spreadByBoxes<T>(
   positionOf: (item: T) => readonly [number, number],
   sizeOf: (item: T) => LabelBoxSize,
   zoom: number,
-  { gapPx = 4, offsetY = 0, obstacles = [], project, bucketScale = 1 }: SpreadOptions = {}
+  {
+    gapPx = 4,
+    offsetY = 0,
+    obstacles = [],
+    project,
+    bucketScale = 1,
+    offsetYOf,
+  }: SpreadOptions<T> = {}
 ): SpreadLabel<T>[] {
   const toPx: LabelProjector = project ?? ((p) => projectToWorldPx(p[0], p[1], zoom));
   // A moved pill no longer keeps its distance to its neighbours as the map
@@ -350,7 +364,7 @@ export function spreadByBoxes<T>(
   }
   for (const end of ends) {
     for (const o of obstacles) {
-      end.grid.place(boxAt(o.position, o.width, o.height, o.offsetY, end.toPx, 0));
+      end.grid.place(boxAt(o.position, o.width, o.height, o.offsetY, end.toPx, 0, o.offsetX));
     }
   }
   const shifted = (box: Box, shift: readonly [number, number]): Box => ({
@@ -363,11 +377,10 @@ export function spreadByBoxes<T>(
   const placed: SpreadLabel<T>[] = [];
   sorted.forEach((item) => {
     const { width, height } = sizeOf(item);
-    const usual = ends.map((end) =>
-      boxAt(positionOf(item), width, height, offsetY, end.toPx, gapPx)
-    );
+    const lift = offsetYOf ? offsetYOf(item) : offsetY;
+    const usual = ends.map((end) => boxAt(positionOf(item), width, height, lift, end.toPx, gapPx));
     for (let k = 0; ; k++) {
-      const shift = spreadShift(k, width, height, offsetY, gapPx);
+      const shift = spreadShift(k, width, height, lift, gapPx);
       if (!shift) return;
       if (ends.every((end, i) => !end.grid.hits(shifted(usual[i], shift)))) {
         ends.forEach((end, i) => end.grid.place(shifted(usual[i], shift)));
