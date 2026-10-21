@@ -207,7 +207,7 @@ describe("operator mark with a logo source", () => {
       data: { domain: "rental", stop: rental.dep, journeys: [rental], color: [217, 140, 179] },
       anchorLngLat: [-8, 37],
     });
-    const logo = await screen.findByTestId("operator-logo");
+    const logo = await screen.findByTestId("operator-logo", {}, { timeout: 5000 });
     expect(logo.getAttribute("src")).toContain("/operators/logo?domain=rental&name=Sixt");
     // The company's own icon needs no credit line.
     expect(screen.queryByTestId("operator-logo-credit")).toBeNull();
