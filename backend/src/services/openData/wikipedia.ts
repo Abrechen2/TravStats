@@ -92,7 +92,10 @@ async function articleTitles(qid: string): Promise<Partial<Record<WikiLanguage, 
  * answer at all — the two used to be the same null, and a network blip was
  * then cached for a day as "this item has no article".
  */
-export async function summaryOf(lang: WikiLanguage, title: string): Promise<WikipediaSummary | null> {
+export async function summaryOf(
+  lang: WikiLanguage,
+  title: string
+): Promise<WikipediaSummary | null> {
   const path = encodeURIComponent(title.replace(/ /g, "_"));
   const outcome = await fetchOpenData(
     "wikipedia",
