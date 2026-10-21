@@ -72,13 +72,26 @@ export function* medianPaced(values: Float64Array): Paced<number> {
   return (lower + upper) / 2;
 }
 
-/** Hoare's selection: puts the `k`-th smallest at `k`, smaller left, larger right. */
+/**
+ * Hoare's selection: puts the `k`-th smallest at `k`, smaller left, larger
+ * right. Median of three keeps sorted and reversed input linear, but a
+ * crafted "median-of-3 killer" order shrinks the range by two per round and
+ * makes it quadratic — and the values are an upload's fixes. So, as in
+ * introselect: after `2 · log2(n)` rounds the remaining range is sorted
+ * instead, which bounds the whole selection at O(n log n) whatever the order.
+ */
 function* selectPaced(values: Float64Array, k: number): Paced<number> {
   let lo = 0;
   let hi = values.length - 1;
   let steps = 0;
-  while (lo < hi) {
-    // Median of three, so sorted and reversed input stay linear.
+  const maxRounds = 2 * Math.ceil(Math.log2(values.length + 1));
+  for (let round = 0; lo < hi; round++) {
+    if (round >= maxRounds) {
+      // A typed sort is numeric and in place: the range ends ordered, so
+      // everything left of `k` stays <= it, as the median's even case needs.
+      values.subarray(lo, hi + 1).sort();
+      break;
+    }
     const m = (lo + hi) >> 1;
     if (values[m] < values[lo]) swap(values, m, lo);
     if (values[hi] < values[lo]) swap(values, hi, lo);
