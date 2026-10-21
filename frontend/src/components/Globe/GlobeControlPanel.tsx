@@ -42,6 +42,7 @@ import { MapChromeSections } from "../map/MapChromeSections";
 import type { LabelsMode } from "../map/labelPriority";
 import { DEFAULT_AIRPORT_COLOR, DEFAULT_PORT_COLOR } from "./buildGlobeLayers";
 import HelpIcon from "../Help/HelpIcon";
+import { MAP_CHROME } from "../map/mapChrome";
 
 export type StyleId = "standard" | "light" | "dark" | "voyager" | "satellite" | "osm";
 export type LiteMode = "auto" | "on" | "off";
@@ -125,6 +126,7 @@ export function GlobeControlPanel({
 
   return (
     <div
+      {...MAP_CHROME}
       className="flex w-[232px] flex-col overflow-hidden rounded-xl text-xs"
       style={{
         background: PANEL_BG,

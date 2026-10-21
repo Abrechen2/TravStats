@@ -8,6 +8,7 @@
 import type { JSX } from "react";
 import { formatNumber } from "../../lib/units";
 import type { useTranslation } from "../../hooks/useTranslation";
+import { MAP_CHROME } from "../map/mapChrome";
 
 export interface GlobeLiveStats {
   flights: number;
@@ -55,6 +56,7 @@ export function GlobeStatsCard({ stats, t }: GlobeStatsCardProps): JSX.Element |
        moved into this column — the stats card's own heading was hidden and
        only its last two rows showed (browser check, 2026-09-28). */
     <div
+      {...MAP_CHROME}
       className="absolute right-4 z-30"
       style={{ top: "var(--ts-map-chrome-top, 4rem)", pointerEvents: "auto" }}
     >

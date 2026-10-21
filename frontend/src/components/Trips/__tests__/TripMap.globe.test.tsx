@@ -381,3 +381,31 @@ it("updates the sky when an inline satellite style has already finished loading"
   );
   expect(mapCalls.setProjection[mapCalls.setProjection.length - 1]).toEqual({ type: "globe" });
 });
+
+// beta.22 UAT: the trip map is the main map's labels in miniature — its stop
+// names and hotel names were spaced each within their own layer only, so a
+// stop and the hotel beside it ("Reichsburg Cochem", "Hotel Cochem") printed
+// over each other. It now runs the main map's shared pass in "important".
+it("shows one of two names a stop and a hotel would print over each other", async () => {
+  const cochem = {
+    id: "t2",
+    name: "Mosel",
+    flights: [],
+    stops: [{ id: "s1", title: "Reichsburg Cochem", domain: "poi", lat: 50.146, lon: 7.165 }],
+    lodgingStays: [
+      {
+        id: "st1",
+        checkIn: "2024-05-01",
+        checkOut: "2024-05-02",
+        lodging: { id: "l1", name: "Hotel Cochem", lat: 50.147, lon: 7.167 },
+      },
+    ],
+  } as unknown as Trip;
+  render(<TripMap trip={cochem} />);
+  await waitFor(() => expect(captured.length).toBeGreaterThan(0));
+  const last = captured[captured.length - 1];
+  const layers = (last.overlay.props as { layers?: Layer[] }).layers ?? last.props.layers;
+  const shown = (id: string) =>
+    ((layers.find((l) => l.id === id)?.props.data as unknown[] | undefined) ?? []).length;
+  expect(shown("lodging-pins-labels") + shown("trip-stop-labels")).toBe(1);
+});

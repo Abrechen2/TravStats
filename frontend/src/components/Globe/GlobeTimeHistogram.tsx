@@ -19,6 +19,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { useTranslation } from "../../hooks/useTranslation";
 import { useTimeSliderStore } from "../../store/timeSliderStore";
 import type { MonthBucket } from "./timeSliderUtils";
+import { MAP_CHROME } from "../map/mapChrome";
 
 const AMBER = "240,169,71";
 const CRUISE = "111,160,214";
@@ -254,6 +255,7 @@ export const GlobeTimeHistogram = ({
 
   return (
     <div
+      {...MAP_CHROME}
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
       className="flex items-stretch gap-3 rounded-xl border"

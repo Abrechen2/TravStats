@@ -1,6 +1,12 @@
 import type { Layer } from "@deck.gl/core";
 import { TextLayer } from "@deck.gl/layers";
-import { estimateLabelBox, type PlacedLabel } from "./labelPriority";
+import {
+  estimateLabelBox,
+  projectToWorldPx,
+  spreadByBoxes,
+  type LabelsMode,
+  type PlacedLabel,
+} from "./labelPriority";
 import { StationLabelsLayer } from "../layers/stationLabelsLayer";
 
 /**
@@ -34,26 +40,132 @@ interface TextLayerLike<D> {
   backgroundPadding?: readonly number[];
 }
 
+/** One label a text layer shows, read through the layer's own accessors. */
+interface ShownLabel extends PlacedLabel {
+  datum: unknown;
+  /** The layer's own pixel offset for this label. */
+  offset: readonly [number, number];
+}
+
+/** Every label one text layer shows, or `null` for any other layer. */
+function shownLabels(layer: Layer): ShownLabel[] | null {
+  if (!(layer instanceof TextLayer)) return null;
+  const props = layer.props as unknown as TextLayerLike<unknown>;
+  if (props.visible === false || !Array.isArray(props.data)) return null;
+  const padding: [number, number] = props.background
+    ? [props.backgroundPadding?.[0] ?? 0, props.backgroundPadding?.[1] ?? 0]
+    : [0, 0];
+  const out: ShownLabel[] = [];
+  for (const d of props.data as unknown[]) {
+    const position = read(props.getPosition, d, null as unknown as readonly [number, number]);
+    const text = read(props.getText, d, "");
+    if (!position || !text) continue;
+    const { width, height } = estimateLabelBox(String(text), read(props.getSize, d, 32), padding);
+    const offset = read(props.getPixelOffset, d, [0, 0] as readonly [number, number]);
+    out.push({ datum: d, position, width, height, offsetY: offset[1] ?? 0, offset });
+  }
+  return out;
+}
+
 /** Every label the given layers show, with its box. */
 export function labelObstaclesOf(layers: readonly Layer[]): PlacedLabel[] {
   const out: PlacedLabel[] = [];
   for (const layer of layers) {
-    if (!(layer instanceof TextLayer)) continue;
-    const props = layer.props as unknown as TextLayerLike<unknown>;
-    if (props.visible === false || !Array.isArray(props.data)) continue;
-    const padding: [number, number] = props.background
-      ? [props.backgroundPadding?.[0] ?? 0, props.backgroundPadding?.[1] ?? 0]
-      : [0, 0];
-    for (const d of props.data as unknown[]) {
-      const position = read(props.getPosition, d, null as unknown as readonly [number, number]);
-      const text = read(props.getText, d, "");
-      if (!position || !text) continue;
-      const { width, height } = estimateLabelBox(String(text), read(props.getSize, d, 32), padding);
-      const offset = read(props.getPixelOffset, d, [0, 0] as readonly [number, number]);
-      out.push({ position, width, height, offsetY: offset[1] ?? 0 });
+    for (const { position, width, height, offsetY, offset } of shownLabels(layer) ?? []) {
+      out.push(
+        offset[0]
+          ? { position, width, height, offsetY, offsetX: offset[0] }
+          : { position, width, height, offsetY }
+      );
     }
   }
   return out;
+}
+
+/**
+ * How much each of the map's own label layers weighs a label — the same count
+ * its own budget spends first (airport flights, port visits, hotel stays,
+ * place visits). A trip's stops carry no count; they are the trip itself, so
+ * they outrank its hotels. A layer not named here weighs every label 0.
+ */
+const LABEL_WEIGHT: Record<string, string | number> = {
+  "routes-labels": "count",
+  "cruise-ports-labels": "visits",
+  "lodging-pins-labels": "stayCount",
+  "place-pins-labels": "visitCount",
+  "trip-stop-labels": 1_000_000,
+};
+
+const weightOf = (layerId: string, d: unknown): number => {
+  const field = LABEL_WEIGHT[layerId];
+  if (typeof field === "number") return field;
+  const v = field && d && typeof d === "object" ? (d as Record<string, unknown>)[field] : 0;
+  return typeof v === "number" && Number.isFinite(v) ? v : 0;
+};
+
+/** `snapLabelZoom` rounds, so one snapped zoom covers half a step either side. */
+const ZOOM_BUCKET_HALF = 0.5;
+
+/**
+ * The map's own labels — airport codes, cruise ports, hotels and places — in
+ * ONE collision pass (beta.22 UAT). Each layer spaces only its own names (and
+ * not at all in "all"), so "HAM", a hotel and a place in Hamburg, or "Hotel
+ * Cochem" and "Reichsburg Cochem", printed over each other. Here every label
+ * places by weight. In "all" one that would touch another moves beside its
+ * dot (`spreadByBoxes`) and waits for the next zoom step only where no spot
+ * is free; in "important" (`hideOnly`) it is hidden, as station names are.
+ * Run at the map's snapped zoom, i.e. once per zoom step, never per pan;
+ * measured at both ends of that step.
+ */
+function shareOwnLabels(layers: readonly Layer[], zoom: number, hideOnly: boolean): Layer[] {
+  type Entry = ShownLabel & { layer: number; weight: number };
+  const entries: Entry[] = [];
+  const labelled = new Set<number>();
+  layers.forEach((layer, i) => {
+    const labels = shownLabels(layer);
+    if (!labels) return;
+    labelled.add(i);
+    for (const label of labels) {
+      entries.push(Object.assign(label, { layer: i, weight: weightOf(layer.id, label.datum) }));
+    }
+  });
+  if (entries.length === 0) return [...layers];
+  const placed = spreadByBoxes(
+    entries,
+    (e) => e.weight,
+    (e) => e.position,
+    (e) => e,
+    zoom,
+    {
+      offsetYOf: (e) => e.offsetY,
+      project: (p) => projectToWorldPx(p[0], p[1], zoom - ZOOM_BUCKET_HALF),
+      bucketScale: 2 ** (2 * ZOOM_BUCKET_HALF),
+      hideOnly,
+    }
+  );
+  const byLayer = new Map<number, { data: unknown[]; offsets: Map<unknown, [number, number]> }>();
+  for (const { item, shift } of placed) {
+    let kept = byLayer.get(item.layer);
+    if (!kept) {
+      kept = { data: [], offsets: new Map() };
+      byLayer.set(item.layer, kept);
+    }
+    kept.data.push(item.datum);
+    kept.offsets.set(item.datum, [item.offset[0] + shift[0], item.offset[1] + shift[1]]);
+  }
+  return layers.map((layer, i) => {
+    if (!labelled.has(i)) return layer;
+    const kept = byLayer.get(i) ?? { data: [], offsets: new Map() };
+    return (layer as TextLayer<unknown>).clone({
+      data: kept.data,
+      getPixelOffset: (d: unknown) => kept.offsets.get(d) ?? [0, 0],
+    }) as Layer;
+  });
+}
+
+/** A map's own text layers through the shared pass for `labelsMode` (none when off). */
+export function shareMapLabels(layers: Layer[], labelsMode: LabelsMode, zoom: number): Layer[] {
+  return labelsMode === "off" ? layers : shareOwnLabels(layers, zoom, labelsMode === "important");
 }
 
 /**
@@ -69,9 +181,18 @@ export function withLabelObstacles(extraLayers: Layer[], mapLayers: readonly Lay
   );
 }
 
-/** The map's own layers, then its extra layers placed around their labels. */
-export function appendWithLabelObstacles(own: Layer[], extraLayers: Layer[]): Layer[] {
-  return [...own, ...withLabelObstacles(extraLayers, own)];
+/**
+ * The map's own layers, then its extra layers placed around their labels.
+ * The own labels first share one collision pass (`shareOwnLabels`); `zoom` is
+ * the map's snapped label zoom.
+ */
+export function appendWithLabelObstacles(
+  own: Layer[],
+  extraLayers: Layer[],
+  labels?: { labelsMode: LabelsMode; zoom: number }
+): Layer[] {
+  const shown = labels ? shareMapLabels(own, labels.labelsMode, labels.zoom) : own;
+  return [...shown, ...withLabelObstacles(extraLayers, shown)];
 }
 
 /**

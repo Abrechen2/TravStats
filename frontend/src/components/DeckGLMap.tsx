@@ -689,10 +689,12 @@ export function DeckGLMap({
         labelSource: placeLabelSource,
       }) ?? [];
 
-    // Station names in `extraLayers` place around this map's own labels (forgejo#320).
+    // Station names in `extraLayers` place around this map's own labels
+    // (forgejo#320); in "all" the own labels first share one spreading pass.
     return appendWithLabelObstacles(
       [...cruisePathsBelow, ...base, ...cruisePortsAbove, ...lodgingLayers, ...placeLayers],
-      extraLayers ?? []
+      extraLayers ?? [],
+      { labelsMode, zoom: Math.round(zoom) }
     );
   }, [
     visMode,

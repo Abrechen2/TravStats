@@ -3,6 +3,7 @@ import { TextLayer } from "@deck.gl/layers";
 import {
   declutterByBoxes,
   estimateLabelBox,
+  spreadByBoxes,
   pickLabelled,
   projectToWorldPx,
   type LabelProjector,
@@ -23,8 +24,9 @@ import type { Rgb } from "../../lib/domainColor";
  * the SAME mechanism the airport, port and hotel labels use
  * (`map/labelPriority.ts`): the zoom budget is spent on the most-used stations
  * first, and the survivors are thinned by screen distance so a dense cluster
- * does not stack its names — skipped in "all", where the user asked for every
- * label.
+ * does not stack its names. In "all", where the user asked for every label,
+ * a name that would land on another moves beside its dot instead; only where
+ * no spot near the dot is free does it wait for the next zoom step.
  *
  * Unlike those layers this one is built OUTSIDE the map component (the
  * dashboard tabs and the trip map hand it in as an extra layer), where the
@@ -61,6 +63,9 @@ export interface StationLabelDatum {
   color: Rgb;
   /** The pill's estimated screen box — what the collision pass compares. */
   box: LabelBoxSize;
+  /** Set only in "all": how far the pill moved off its usual spot, in px,
+   *  so it does not print over a neighbour (`spreadByBoxes`). */
+  shift?: readonly [number, number];
 }
 
 /**
@@ -75,6 +80,7 @@ const LABEL_PADDING_PX: [number, number] = [4, 2];
 /** How far the pill sits above its station — the collision pass needs it to
  *  compare against labels lifted by a different amount. */
 const LABEL_OFFSET_Y_PX = -14;
+const USUAL_OFFSET: [number, number] = [0, LABEL_OFFSET_Y_PX];
 
 export function toStationLabel(name: string): string {
   return toPortLabel(name, MAX_STATION_LABEL_LEN);
@@ -251,6 +257,12 @@ export function buildStationLabels(
  * hotels, places (`map/labelObstacles.ts`). They place first and a station
  * name fits around them, so the overview map prints no name over another.
  *
+ * "all" thins nothing by budget: a name that would print over another moves
+ * to a free spot beside its dot (`spreadByBoxes`, beta.22 UAT), and waits for
+ * the next zoom step only where no such spot is free. It also drops a
+ * repeat — the same name at the same place from a second domain ("Kiel Hbf"
+ * for the train and the bus), which is one station, not two.
+ *
  * `zoom` is the snapped zoom, which stands for everything from half a step
  * below it; the pick holds for that whole bucket, so the geometry is measured
  * at its smallest scale — at the bucket's top two names 180 px apart are only
@@ -265,7 +277,16 @@ export function selectStationLabels(
   project: LabelProjector = (p) => projectToWorldPx(p[0], p[1], zoom - ZOOM_BUCKET_HALF)
 ): StationLabelDatum[] {
   const budgeted = pickLabelled(stations, (s) => s.count, mode, zoom);
-  if (mode === "all") return budgeted;
+  if (mode === "all") {
+    return spreadByBoxes(
+      withoutRepeats(budgeted),
+      (s) => s.count,
+      (s) => s.position,
+      (s) => s.box,
+      zoom,
+      { offsetY: LABEL_OFFSET_Y_PX, obstacles, project, bucketScale: 2 ** (2 * ZOOM_BUCKET_HALF) }
+    ).map(({ item, shift }) => (shift[0] === 0 && shift[1] === 0 ? item : { ...item, shift }));
+  }
   return declutterByBoxes(
     budgeted,
     (s) => s.count,
@@ -274,6 +295,24 @@ export function selectStationLabels(
     zoom,
     { offsetY: LABEL_OFFSET_Y_PX, obstacles, project }
   );
+}
+
+/** The stations minus a second domain's copy of one already named at the same
+ *  place — the busier copy stays. */
+function withoutRepeats(stations: readonly StationLabelDatum[]): StationLabelDatum[] {
+  const kept = new Map<string, StationLabelDatum[]>();
+  const out: StationLabelDatum[] = [];
+  for (const s of [...stations].sort((a, b) => b.count - a.count)) {
+    const same = kept.get(s.shortLabel);
+    if (
+      same?.some((k) => metresBetween(k.position, s.position[0], s.position[1]) <= SAME_STATION_M)
+    )
+      continue;
+    if (same) same.push(s);
+    else kept.set(s.shortLabel, [s]);
+    out.push(s);
+  }
+  return out;
 }
 
 /** `snapLabelZoom` rounds, so one snapped zoom covers half a step either side. */
@@ -379,7 +418,8 @@ export class StationLabelsLayer extends CompositeLayer<StationLabelsLayerProps> 
           getBackgroundColor: [13, 17, 23, 200],
           getBorderColor: (d: StationLabelDatum) => [...d.color, 200],
           getBorderWidth: 1,
-          getPixelOffset: [0, LABEL_OFFSET_Y_PX],
+          getPixelOffset: (d: StationLabelDatum) =>
+            d.shift ? [d.shift[0], LABEL_OFFSET_Y_PX + d.shift[1]] : USUAL_OFFSET,
           sizeUnits: "pixels",
           billboard: true,
           pickable: false,

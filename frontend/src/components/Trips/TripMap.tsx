@@ -45,7 +45,7 @@ import { journeyFromTripFlight } from "../map/cards/journeys/journeyNormalize";
 import type { MapJourney } from "../map/cards/journeys/journeyTypes";
 import { decorateTripMapLayers } from "./tripMapCards";
 import { TripMapCardHost } from "./TripMapCardHost";
-import { withStationLabels } from "../map/labelObstacles";
+import { shareMapLabels, withStationLabels } from "../map/labelObstacles";
 import { stationLabelPoints } from "../Globe/globePinLabels";
 
 const INITIAL_VIEW: MapViewState = {
@@ -531,7 +531,8 @@ export default function TripMap({
         colors: colorConfig.lodging,
       }) ?? [];
 
-    return [paths, arcs, airports, tourPaths, stops, ...lodgingPins, stopLabels];
+    const own = [paths, arcs, airports, tourPaths, stops, ...lodgingPins, stopLabels];
+    return shareMapLabels(own, "important", Math.round(zoom)); // one label pass, as on the main map
   }, [
     flightArcs,
     cruisePaths,
@@ -554,8 +555,7 @@ export default function TripMap({
       decorateTripMapLayers(projection === "globe" ? globeLayers : mercatorLayers, flightJourneys),
     [projection, globeLayers, mercatorLayers, flightJourneys]
   );
-  // Bus terminal names place around the stop and hotel labels; on the globe
-  // they reach the HTML overlay below instead (forgejo#320).
+  // Bus terminal names place around the stop/hotel labels; on the globe, the overlay (forgejo#320).
   const layers = withStationLabels(baseLayers, extraLayers, projection === "globe");
   const globeStationLabels = useMemo(() => stationLabelPoints(extraLayers ?? []), [extraLayers]);
 

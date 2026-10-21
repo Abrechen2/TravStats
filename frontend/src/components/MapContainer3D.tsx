@@ -22,6 +22,7 @@ import { useRecordedFlightPaths } from "../hooks/useRecordedFlightPaths";
 import { cruiseApi } from "../lib/api";
 import SpecialFlightsLegend from "./specialFlights/SpecialFlightsLegend";
 import type { SpecialType } from "./specialFlights/specialTypeMeta";
+import { MAP_CHROME } from "./map/mapChrome";
 
 // Globe mode renders on MapLibre's native globe projection (same engine
 // as the 2D map), with deck.gl as the data-layer overlay. Lazy-loaded so
@@ -407,7 +408,10 @@ export default function MapContainer3D({
           filter now clears the key but still yields to the two overlays that
           answer one moment and then go away. */}
       {filterSlot && (
-        <div className="absolute bottom-4 right-4 z-[35] flex flex-col items-end gap-2">
+        <div
+          {...MAP_CHROME}
+          className="absolute bottom-4 right-4 z-[35] flex flex-col items-end gap-2"
+        >
           {filterSlot}
         </div>
       )}

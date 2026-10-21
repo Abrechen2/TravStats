@@ -18,6 +18,7 @@ import {
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import { Icon } from "../../ui/Icon";
 import Toggletip from "../../ui/Toggletip";
+import { MAP_CHROME } from "../../map/mapChrome";
 
 interface UnifiedActivityPanelProps {
   flights?: GeoJSONFeature[];
@@ -127,6 +128,7 @@ export function UnifiedActivityPanel({
     // key (both 30) — at 20 the add button sat on this panel's close button,
     // and a real tap there opened the add menu (CT106 audit B02).
     <div
+      {...MAP_CHROME}
       className="ts-activity-panel"
       role="region"
       aria-label={title ?? t("dashboard:sidebar.activity")}

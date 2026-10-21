@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 import { Icon } from "../ui/Icon";
+import { MAP_CHROME } from "../map/mapChrome";
 
 /**
  * The button over the map that opens a tab's list sidebar.
@@ -22,6 +23,7 @@ export function SidebarToggle({
 }): JSX.Element {
   return (
     <button
+      {...MAP_CHROME}
       type="button"
       onClick={onToggle}
       aria-expanded={open}
