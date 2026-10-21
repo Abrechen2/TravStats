@@ -316,7 +316,8 @@
     "refused": {
       "TEMPLATE_EXPORT_PERSONAL_DATA": "Diese Vorlage liest mit Werten aus deinem eigenen Dokument und kann so nicht geteilt werden. Leite sie aus einem anderen Dokument desselben Absenders neu ab, in dem deine Angaben nicht neben einem markierten Wert stehen.",
       "TEMPLATE_EXPORT_NOT_ACTIVE": "Nur eine aktive Vorlage kann geteilt werden: Führe zuerst die Vorschau aus und aktiviere sie.",
-      "TEMPLATE_EXPORT_UNSUPPORTED": "Flug- und Unterkunftsvorlagen liegen in einem älteren Format vor, das das Repository noch nicht annimmt."
+      "TEMPLATE_EXPORT_UNSUPPORTED": "Flug- und Unterkunftsvorlagen liegen in einem älteren Format vor, das das Repository noch nicht annimmt.",
+      "TEMPLATE_EXPORT_SOURCE_MISSING": "Das Dokument, aus dem diese Vorlage abgeleitet wurde, ist gelöscht. Ohne seine Markierungen lässt sich nicht prüfen, ob die Vorlage deine Angaben enthält, daher kann sie nicht geteilt werden. Leite sie aus einem Dokument desselben Absenders neu ab."
     },
     "kind": {
       "identity": "dein Name oder deine Adresse",

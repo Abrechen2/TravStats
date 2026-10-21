@@ -41,10 +41,15 @@ async function shares(ownerId: string, scope: object, status = "accepted", ageMs
     },
   });
 }
+// Each remote gets its own creation instant: the board orders remotes by
+// (createdAt, id), and two rows made in the same millisecond fell back to their
+// random ids, so the expected order held only most of the time.
+let remoteSeq = 0;
 const remoteFor = async (userId: string, name: string) =>
   (
     await prisma.leaderboardRemote.create({
       data: {
+        createdAt: new Date(Date.UTC(2026, 0, 1) + ++remoteSeq * 1000),
         userId,
         origin: `https://${name}.lb-board.test`,
         channel: randomUUID(),

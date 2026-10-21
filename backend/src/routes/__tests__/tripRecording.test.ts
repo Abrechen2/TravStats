@@ -5,6 +5,7 @@ import { moving, standing } from "../../services/tracks/__tests__/jitterFixtures
 import { prisma } from "../../db";
 import { generateToken } from "../../utils/jwt";
 import { generateApiToken } from "../../utils/apiTokens";
+import { mergeTrips } from "../../services/tripCleanupService";
 
 /**
  * The Companion's trip recording on the server (forgejo#316): received,
@@ -416,5 +417,38 @@ describe("Trip recording — /trips/:id/recording", () => {
       await prisma.trip.delete({ where: { id: tripId } });
       expect(await prisma.tripRecordingBatch.count({ where: { tripId } })).toBe(0);
     });
+  });
+  it("tells the phone which trip a merged-away trip now lives in — and only its owner", async () => {
+    const survivor = await prisma.trip.create({
+      data: {
+        userId,
+        name: "Japan",
+        startDate: new Date("2026-04-28T00:00:00Z"),
+        endDate: new Date("2026-05-05T00:00:00Z"),
+      },
+    });
+    await mergeTrips(userId, { tripIds: [survivor.id, tripId], targetId: survivor.id });
+
+    const res = await post({ uploadId: "after-merge", points: [at("2026-05-01T03:00:00Z")] });
+    expect(res.status).toBe(404);
+    expect(res.body).toMatchObject({ code: "TRIP_MERGED", mergedIntoTripId: survivor.id });
+    expect(await prisma.tripRecordingBatch.count({ where: { uploadId: "after-merge" } })).toBe(0);
+
+    // Another account learns nothing about it: the usual not-found, no id.
+    const other = await post({ uploadId: "x", points: [at("2026-05-01T03:00:00Z")] }, otherCookie);
+    expect(other.status).toBe(404);
+    expect(other.body.code).toBe("TRIP_NOT_FOUND");
+    expect(other.body.mergedIntoTripId).toBeUndefined();
+  });
+
+  it("follows a chain of merges to the trip that exists now", async () => {
+    const middle = await prisma.trip.create({ data: { userId, name: "Middle" } });
+    const last = await prisma.trip.create({ data: { userId, name: "Last" } });
+    await mergeTrips(userId, { tripIds: [middle.id, tripId], targetId: middle.id });
+    await mergeTrips(userId, { tripIds: [last.id, middle.id], targetId: last.id });
+
+    const res = await post({ uploadId: "chain", points: [at("2026-05-01T03:00:00Z")] });
+    expect(res.status).toBe(404);
+    expect(res.body).toMatchObject({ code: "TRIP_MERGED", mergedIntoTripId: last.id });
   });
 });

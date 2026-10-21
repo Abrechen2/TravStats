@@ -193,6 +193,8 @@ export const USER_EXPORT_SELECT = {
 /** Every `User` list relation the export leaves out, and why. */
 export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   comparisonDevices: "public device identities, re-enrol after restore",
+  mergedTripRedirects:
+    "routing aid that tells an in-flight phone upload which trip a merged one went into; a restore re-keys trips, so the old ids lead nowhere",
   comparisonPublications: "recipient-bound ciphertext, never portable travel records",
   comparisonCircles: "private group audiences, re-established after restore",
   leaderboardConsentsOwned: "leaderboard permissions, re-given after restore",

@@ -58,8 +58,26 @@ async function loadOwnedTrip(tripId: string, userId: string): Promise<RecordingT
     where: { id: tripId, userId },
     select: TRIP_RECORDING_TRIP_SELECT,
   });
-  if (!trip) throw new AppError("Trip not found", 404, "TRIP_NOT_FOUND");
+  if (!trip) throw await tripGone(tripId, userId);
   return trip;
+}
+
+/**
+ * Why a trip id names no trip of this user. A trip merged away leaves a
+ * forwarding address, so a phone still holding its id can follow it instead of
+ * dropping the points: 404 `TRIP_MERGED` with `mergedIntoTripId`. Only the
+ * owner learns it; anything else is the plain `TRIP_NOT_FOUND`.
+ */
+async function tripGone(tripId: string, userId: string): Promise<AppError> {
+  const redirect = await prisma.mergedTripRedirect.findFirst({
+    where: { sourceTripId: tripId, userId },
+    select: { mergedIntoTripId: true },
+  });
+  return redirect
+    ? new AppError("Trip was merged into another", 404, "TRIP_MERGED", undefined, {
+        mergedIntoTripId: redirect.mergedIntoTripId,
+      })
+    : new AppError("Trip not found", 404, "TRIP_NOT_FOUND");
 }
 
 const BATCH_ANSWER_SELECT = {
@@ -120,6 +138,8 @@ async function replayOf(userId: string, tripId: string, uploadId: string) {
 
 const isUniqueViolation = (error: unknown): boolean =>
   error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+const isForeignKeyViolation = (error: unknown): boolean =>
+  error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003";
 
 /**
  * POST /trips/:id/recording — `{ uploadId, points: [{ t, lat, lon, accuracy? }] }`.
@@ -195,6 +215,10 @@ router.post(
           select: BATCH_ANSWER_SELECT,
         });
       } catch (error) {
+        // The trip went while the points were on their way (merged or deleted;
+        // a merge holds the trip's row, so the insert waits and then meets the
+        // missing key): the trip is gone, which is what the phone is told.
+        if (isForeignKeyViolation(error)) throw await tripGone(trip.id, userId);
         // A concurrent delivery of the same upload won the race: answer what it stored.
         if (!isUniqueViolation(error)) throw error;
         const winner = await replayOf(userId, trip.id, body.uploadId);

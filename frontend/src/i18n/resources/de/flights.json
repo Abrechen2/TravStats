@@ -516,7 +516,7 @@
       "fileMissing": "Es wurde keine Datei mitgeschickt.",
       "fileTooLarge": "Die Datei ist zu groß – höchstens 15 MB.",
       "fileUnreadable": "Die Datei lässt sich nicht als GPX, KML, TCX oder FIT mit mindestens zwei Positionen lesen.",
-      "noTimestamps": "Die Datei hat keine Zeitstempel, und der Flug hat keinen Flugplan, in den sie sich einordnen ließe.",
+      "noTimestamps": "Die Datei hat keine Zeitstempel, und der Flug hat keine Abflug- oder Ankunftszeit, in die sie sich einordnen ließe.",
       "outsideFlight": "Die Aufzeichnung liegt zeitlich nicht bei diesem Flug.",
       "alreadyRecorded": "Für diesen Flug ist schon eine Aufzeichnung gespeichert.",
       "uploadFailed": "Die Aufzeichnung konnte nicht gespeichert werden.",

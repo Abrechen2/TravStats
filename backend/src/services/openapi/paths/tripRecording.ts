@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
-import { errorContent, jitterDroppedField } from "./shared";
+import { errorContent, errorResponse, jitterDroppedField } from "./shared";
 import { localDateValueSchema, timeValueSchema } from "../../../shared/time/wire";
 import {
   TRIP_RECORDING_MAX_POINTS,
@@ -38,6 +38,14 @@ const uploadAnswer = z.object({
   replayed: z.boolean().describe("True when this uploadId was already stored; nothing was written"),
 });
 
+const tripMergedError = errorResponse.extend({
+  mergedIntoTripId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("With `code: TRIP_MERGED`: the trip that now holds the merged-away one"),
+});
+
 registry.registerPath({
   method: "post",
   path: "/trips/{id}/recording",
@@ -61,7 +69,13 @@ registry.registerPath({
       content: errorContent,
     },
     403: { description: "Read-only token, or the shared demo account", content: errorContent },
-    404: { description: "Trip not found — `code: TRIP_NOT_FOUND`", content: errorContent },
+    404: {
+      description:
+        "Trip not found — `code: TRIP_NOT_FOUND`; or `code: TRIP_MERGED` with " +
+        "`mergedIntoTripId`: the trip was merged into that one (only its owner is told) — " +
+        "resend the upload there",
+      content: { "application/json": { schema: tripMergedError } },
+    },
     409: {
       description:
         "TRIP_RECORDING_DISABLED (the account switch `tripRecording.enabled` is off; nothing " +

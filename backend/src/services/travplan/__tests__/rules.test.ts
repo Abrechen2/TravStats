@@ -289,45 +289,80 @@ describe("nightGap on a route plan", () => {
     night,
     note: "",
   });
+  const stage = (from: string, to: string, overnight = false) => ({
+    id: randomUUID(),
+    fromStationId: from,
+    toStationId: to,
+    mode: overnight ? ("ferry" as const) : ("drive" as const),
+    departDay: null,
+    departTime: null,
+    // A known duration, so the days after a stage are known (owner, 2026-10-20).
+    durationMinutes: 60,
+    distanceKm: null,
+    metricsSource: null,
+    fallbackReason: null,
+    bookingId: null,
+    overnight,
+    note: "",
+  });
+  const connected = (stations: ReturnType<typeof st>[]) => ({
+    ...base,
+    stations,
+    stages: stations.slice(1).map((s, i) => stage(stations[i].id, s.id)),
+  });
   it("nightGap counts station nights on a route plan", () => {
-    const covered = {
-      ...base,
-      stations: [st("A", 2, { kind: "spontaneous" }), st("B", 2, { kind: "pitch" })],
-    };
+    const covered = connected([st("A", 2, { kind: "spontaneous" }), st("B", 2, { kind: "pitch" })]);
     expect(checkPlan(covered, "2027-05-01").some((f) => f.code === "nightGap")).toBe(false);
-    const gap = {
-      ...base,
-      stations: [st("A", 2, { kind: "spontaneous" }), st("B", 1, { kind: "pitch" })],
-    };
+    const gap = connected([st("A", 2, { kind: "spontaneous" }), st("B", 1, { kind: "pitch" })]);
     const finding = checkPlan(gap, "2027-05-01").find((f) => f.code === "nightGap");
     expect(finding?.params).toMatchObject({ count: 1, days: "2027-05-11" });
   });
-  it("an idea night with no candidate still covers its nights (nightUndecided speaks, not nightGap)", () => {
+  it("a leg without a stage leaves the nights unknown: stageMissing speaks, not nightGap", () => {
     const state = {
       ...base,
-      stations: [st("A", 2, { kind: "idea", candidates: [] }), st("B", 2, { kind: "pitch" })],
+      stations: [st("A", 2, { kind: "spontaneous" }), st("B", 1, { kind: "pitch" })],
     };
+    const codes = checkPlan(state, "2027-05-01").map((f) => f.code);
+    expect(codes).toContain("stageMissing");
+    expect(codes).not.toContain("nightGap");
+  });
+  it("a stage without a duration leaves the nights unknown: durationMissing speaks, not nightGap", () => {
+    const a = st("A", 2, { kind: "spontaneous" }),
+      b = st("B", 1, { kind: "pitch" });
+    const state = {
+      ...base,
+      stations: [a, b],
+      stages: [{ ...stage(a.id, b.id), durationMinutes: null }],
+    };
+    const codes = checkPlan(state, "2027-05-01").map((f) => f.code);
+    expect(codes).toContain("durationMissing");
+    expect(codes).not.toContain("nightGap");
+  });
+  it("an unknown stretch hides only its own nights; a gap after the next anchor is still found", () => {
+    const a = st("A", 1, { kind: "spontaneous" }),
+      b = st("B", 1, { kind: "pitch" }),
+      c = { ...st("C", 1, { kind: "pitch" }), pinnedDay: "2027-05-12" };
+    const state = {
+      ...base,
+      endDay: "2027-05-15",
+      stations: [a, b, c],
+      stages: [{ ...stage(a.id, b.id), durationMinutes: null }, stage(b.id, c.id)],
+    };
+    // A: 8th. A→B unknown, so 9th–11th are unknown. C (pinned): 12th. 13th–14th: a known gap.
+    const gap = checkPlan(state, "2027-05-01").find((f) => f.code === "nightGap");
+    expect(gap?.params).toMatchObject({ count: 2, days: "2027-05-13, 2027-05-14" });
+  });
+  it("an idea night with no candidate still covers its nights (nightUndecided speaks, not nightGap)", () => {
+    const state = connected([
+      st("A", 2, { kind: "idea", candidates: [] }),
+      st("B", 2, { kind: "pitch" }),
+    ]);
     expect(checkPlan(state, "2027-05-01").some((f) => f.code === "nightGap")).toBe(false);
   });
   it("an overnight ferry stage covers the night between two zero-night stations", () => {
     const a = st("A", 2, { kind: "spontaneous" }),
       ferryFrom = st("Port", 0, { kind: "onboard" }),
       c = st("C", 0, { kind: "spontaneous" });
-    const stage = (from: string, to: string, overnight: boolean) => ({
-      id: randomUUID(),
-      fromStationId: from,
-      toStationId: to,
-      mode: overnight ? ("ferry" as const) : ("drive" as const),
-      departDay: null,
-      departTime: null,
-      durationMinutes: null,
-      distanceKm: null,
-      metricsSource: null,
-      fallbackReason: null,
-      bookingId: null,
-      overnight,
-      note: "",
-    });
     const mk = (overnight: boolean) => ({
       ...base,
       endDay: "2027-05-11",

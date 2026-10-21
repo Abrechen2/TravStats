@@ -1,7 +1,7 @@
 import { AppError } from "../../middleware/errorHandler";
 import { collectionSchemas } from "./schema";
-import { applyVariantOperation, isVariantOperation } from "./variants";
-import type { PlanOperation, PlanState, PlanStation } from "./types";
+import { applyVariantOperation, isVariantOperation, pruneStationScoped } from "./variants";
+import type { PlanOperation, PlanStage, PlanState, PlanStation } from "./types";
 
 const ROUTE_COLLECTIONS = new Set(["stations", "stages"]);
 
@@ -62,15 +62,58 @@ function cascadeOnboard(state: PlanState): PlanState {
 
 function removeStation(state: PlanState, id: string): PlanState {
   if (!state.stations.some((s) => s.id === id)) notFound();
-  return {
+  // Links and weather go only if no variant still holds the same station.
+  return pruneStationScoped({
     ...state,
     stations: state.stations.filter((s) => s.id !== id),
     stages: state.stages.filter((g) => g.fromStationId !== id && g.toStationId !== id),
     // The day trips stay as ideas-tray entries; only the anchor goes.
     items: state.items.map((i) => (i.stationId === id ? { ...i, stationId: null } : i)),
-    stationLinks: state.stationLinks.filter((l) => l.stationId !== id),
-    stationWeather: state.stationWeather.filter((w) => w.stationId !== id),
+  });
+}
+
+/**
+ * Drops the figures a router or a chord derived for a stage; typed and booked
+ * ones stay. A straight chord only ever derived the distance.
+ */
+function dropDerivedMetrics(g: PlanStage): PlanStage {
+  if (g.metricsSource !== "routed" && g.metricsSource !== "straight") return g;
+  return {
+    ...g,
+    distanceKm: null,
+    durationMinutes: g.metricsSource === "routed" ? null : g.durationMinutes,
+    metricsSource: null,
+    fallbackReason: null,
   };
+}
+
+/**
+ * A routed distance is only true for the endpoints and mode it was asked for:
+ * once a station moves, a stage is rewired or changes mode, its derived
+ * figures go, so neither the view nor a later failed re-route keeps another
+ * route's kilometres.
+ */
+function invalidateMetrics(before: PlanState, after: PlanState): PlanState {
+  const moved = new Set(
+    after.stations
+      .filter((s) => {
+        const old = before.stations.find((o) => o.id === s.id);
+        return old && (old.place.lat !== s.place.lat || old.place.lon !== s.place.lon);
+      })
+      .map((s) => s.id)
+  );
+  const changed = (g: PlanStage) => {
+    const old = before.stages.find((o) => o.id === g.id);
+    if (moved.has(g.fromStationId) || moved.has(g.toStationId)) return true;
+    return (
+      !!old &&
+      (old.fromStationId !== g.fromStationId ||
+        old.toStationId !== g.toStationId ||
+        old.mode !== g.mode)
+    );
+  };
+  if (!after.stages.some(changed)) return after;
+  return { ...after, stages: after.stages.map((g) => (changed(g) ? dropDerivedMetrics(g) : g)) };
 }
 
 function upsertRouteEntry(
@@ -164,9 +207,12 @@ export function applyRouteOperation(state: PlanState, op: PlanOperation): PlanSt
   else if (isVariantOperation(op)) next = applyVariantOperation(state, op);
   else if (op.type === "stage_metrics") next = stageMetrics(state, op);
   else if (op.type === "move_station") next = moveStation(state, op.id, op.toIndex);
-  else if (op.type === "station_night") next = setNight(state, op);
+  else if (op.type === "station_night") next = invalidateMetrics(state, setNight(state, op));
   else if (op.type === "upsert" && ROUTE_COLLECTIONS.has(op.collection)) {
-    next = upsertRouteEntry(state, op.collection as "stations" | "stages", op.value);
+    next = invalidateMetrics(
+      state,
+      upsertRouteEntry(state, op.collection as "stations" | "stages", op.value)
+    );
     if (op.collection === "stages") next = cascadeOnboard(next);
   } else if (op.type === "remove" && op.collection === "stations")
     next = cascadeOnboard(removeStation(state, op.id));

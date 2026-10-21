@@ -49,8 +49,27 @@ const REQUIRED = [
   "returnDate",
 ] as const;
 
-/** The marked values the template must read back from its own sample. */
-const READ_BACK = ["pickupStation", "pickupDate", "returnStation", "returnDate"] as const;
+/**
+ * The marked values the template must read back from its own sample. The
+ * clocks are checked when marked: two "Zeit:" lines would give both ends the
+ * same rule, and the return would read the pickup's clock.
+ */
+const READ_BACK = [
+  "pickupStation",
+  "pickupDate",
+  "pickupTime",
+  "returnStation",
+  "returnDate",
+  "returnTime",
+] as const;
+
+/** A marked value as the consumer writes it: a date or a clock normalised, the rest trimmed. */
+function expectedReading(name: (typeof READ_BACK)[number], marked: string | null): string | null {
+  if (!marked) return marked;
+  if (name.endsWith("Date")) return TRANSFORMS.date(marked);
+  if (name.endsWith("Time")) return TRANSFORMS.time(marked);
+  return marked;
+}
 
 function markedValue(input: WorkshopDerivationInput, label: string): string | null {
   return input.selections.find((s) => s.label === label)?.text.trim() || null;
@@ -114,17 +133,22 @@ export function deriveRentalTemplate(input: WorkshopDerivationInput): RentalDeri
   // Read its OWN sample through the consumer the rental parser uses …
   const own = applyV2RentalTemplate(template, { subject: input.subject, text: fullText });
   if (!own || own.kind !== "confirmation") return { ok: false, refusal: "templateReadsNothing" };
-  // … and read it RIGHT: each end's station and day are the ones marked.
-  const read: Record<(typeof READ_BACK)[number], string> = {
+  // … and read it RIGHT: each end's station, day and clock are the ones marked.
+  const read: Record<(typeof READ_BACK)[number], string | null> = {
     pickupStation: own.pickup.stationName,
     pickupDate: own.pickup.local.slice(0, 10),
+    pickupTime: own.pickup.local.slice(11, 16) || null,
     returnStation: own.return.stationName,
     returnDate: own.return.local.slice(0, 10),
+    returnTime: own.return.local.slice(11, 16) || null,
   };
   for (const name of READ_BACK) {
     const marked = markedValue(input, name);
-    const expected = name.endsWith("Date") && marked ? TRANSFORMS.date(marked) : marked;
-    if (read[name] !== expected) return { ok: false, refusal: "rentalEndsAmbiguous" };
+    // An unmarked clock is not checked: the consumer may still read one.
+    if (!marked && name.endsWith("Time")) continue;
+    if (read[name] !== expectedReading(name, marked)) {
+      return { ok: false, refusal: "rentalEndsAmbiguous" };
+    }
   }
   return { ok: true, template };
 }

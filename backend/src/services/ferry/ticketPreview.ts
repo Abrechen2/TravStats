@@ -191,7 +191,8 @@ export function verifiedModelTickets(raw: unknown, text: string): TicketProposal
 /**
  * A ferry template's reading as the preview's proposals (forgejo#309): one
  * per crossing, each value its own evidence — a template reads what the
- * document prints, so there is no model claim to check it against.
+ * document prints, so there is no model claim to check it against. The
+ * ticket's total is proposed only for a single-crossing ticket.
  */
 export function templateCrossings(ticket: ParsedRideTicket): TicketProposal[] {
   const shared: TicketProposal = {};
@@ -201,8 +202,13 @@ export function templateCrossings(ticket: ParsedRideTicket): TicketProposal[] {
   };
   put(shared, "operator", ticket.operator);
   put(shared, "bookingReference", ticket.bookingReference);
-  put(shared, "price", ticket.price);
-  put(shared, "currency", ticket.currency);
+  // The printed price is the ticket's total: it is a crossing's price only
+  // when the ticket holds one crossing. Copied to each of several, an import
+  // would count it once per crossing (a €200 return became €400).
+  if (ticket.rides.length === 1) {
+    put(shared, "price", ticket.price);
+    put(shared, "currency", ticket.currency);
+  }
   return ticket.rides.map((ride) => {
     const row: TicketProposal = {};
     put(row, "departurePort", ride.depName);

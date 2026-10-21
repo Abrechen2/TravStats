@@ -182,6 +182,47 @@ describe("Flight track file upload — POST /flights/:id/track/file", () => {
   });
 
   it.each([
+    [
+      "a day-only flight (noon placeholders)",
+      {
+        departureTime: new Date("2026-10-03T12:00:00Z"),
+        arrivalTime: new Date("2026-10-03T12:00:00Z"),
+        depTimeSemantics: "DATE_ONLY",
+        arrTimeSemantics: "DATE_ONLY",
+      },
+    ],
+    [
+      "a year-only flight (period placeholders)",
+      {
+        departureTime: new Date("2026-01-01T00:00:00Z"),
+        arrivalTime: new Date("2026-01-01T00:00:00Z"),
+        depTimeSemantics: "UNKNOWN",
+        arrTimeSemantics: "UNKNOWN",
+        depPrecision: "year",
+      },
+    ],
+  ])("refuses an untimed line on %s rather than invent its times", async (_label, clock) => {
+    const flight = await prisma.flight.create({
+      data: {
+        userId,
+        depIata: "MUC",
+        arrIata: "ICN",
+        depLat: 48.354,
+        depLon: 11.786,
+        arrLat: 37.469,
+        arrLon: 126.451,
+        flightNumber: "LH718",
+        status: "historical",
+        ...clock,
+      },
+    });
+    const res = await upload(flight.id, kmlLine(20), "route.kml");
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("TRACK_NO_TIMESTAMPS");
+    expect(await prisma.flightTrack.count({ where: { flightId: flight.id } })).toBe(0);
+  });
+
+  it.each([
     ["broken XML", Buffer.from("<gpx><trk><trkseg><trkpt lat="), "broken.gpx"],
     ["a KML with a single position", kmlLine(1), "one.kml"],
     ["a file that is no track at all", Buffer.from("%PDF-1.7 not a track"), "ticket.pdf"],

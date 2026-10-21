@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { AppError } from "../../middleware/errorHandler";
+import { routeLegs } from "./routeSchedule";
 import type {
   PlanBooking,
   PlanOperation,
@@ -31,8 +32,9 @@ function indexOfVariant(state: PlanState, variantId: string): number {
  * variant's slot under the active name. Items, bookings and placeholders are
  * shared (spec C2) and stay: an item whose station is not on the new route
  * keeps its day and loses only its anchor, so switching back loses nothing
- * the user did not already see; station links and weather belong to a station
- * and follow it out.
+ * the user did not already see. Station links and weather belong to a station,
+ * not to the active view: they stay while any route holds the station, so a
+ * round trip through another variant gives them back.
  */
 export function activateVariant(state: PlanState, variantId: string): PlanState {
   const at = indexOfVariant(state, variantId);
@@ -53,8 +55,18 @@ export function activateVariant(state: PlanState, variantId: string): PlanState 
     items: state.items.map((i) =>
       i.stationId && !stationIds.has(i.stationId) ? { ...i, stationId: null } : i
     ),
-    stationLinks: state.stationLinks.filter((l) => stationIds.has(l.stationId)),
-    stationWeather: state.stationWeather.filter((w) => stationIds.has(w.stationId)),
+  };
+}
+
+/** Drops station links and weather whose station is on no route any more. */
+export function pruneStationScoped(state: PlanState): PlanState {
+  const held = new Set(
+    [state.stations, ...state.variants.map((v) => v.stations)].flat().map((s) => s.id)
+  );
+  return {
+    ...state,
+    stationLinks: state.stationLinks.filter((l) => held.has(l.stationId)),
+    stationWeather: state.stationWeather.filter((w) => held.has(w.stationId)),
   };
 }
 
@@ -145,17 +157,25 @@ function compareRoute(
   stations: PlanState["stations"],
   stages: PlanStage[]
 ): VariantComparison {
+  // Only stages joining consecutive stations of the current order are the
+  // route. Others are left over from a reorder: reported, never summed. A leg
+  // no stage covers makes the drive total a partial sum, so it is unknown.
+  const legs = routeLegs(stations, stages);
+  const complete = legs.every((g) => g !== null);
+  const legStages = legs.filter((g): g is PlanStage => g !== null);
+  const onRoute = new Set(legStages.map((g) => g.id));
   return {
     id,
     name,
     active: id === null,
-    driveKm: driveKm(stages),
-    driveDays: stages.filter((g) => g.mode === "drive").length,
+    driveKm: complete ? driveKm(legStages) : null,
+    driveDays: legStages.filter((g) => g.mode === "drive").length,
     destinationNights: stations
       .filter((s) => s.night.kind !== "onboard")
       .reduce((sum, s) => sum + s.nights, 0),
-    ...stageCosts(state, stages),
-    fuel: fuelEstimate(stages, state.vehicle),
+    ...stageCosts(state, legStages),
+    fuel: complete ? fuelEstimate(legStages, state.vehicle) : null,
+    obsoleteStageIds: stages.filter((g) => !onRoute.has(g.id)).map((g) => g.id),
   };
 }
 
@@ -198,5 +218,5 @@ export function applyVariantOperation(state: PlanState, op: VariantOperation): P
       ...state,
       variants: state.variants.map((v, i) => (i === at ? { ...v, name: op.name } : v)),
     };
-  return { ...state, variants: state.variants.filter((_, i) => i !== at) };
+  return pruneStationScoped({ ...state, variants: state.variants.filter((_, i) => i !== at) });
 }

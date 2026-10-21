@@ -99,6 +99,16 @@ describe("deriveBusTemplate", () => {
     ]);
   });
 
+  it("leaves an arrival clock just before the departure's unread: a zone step, not the next day", () => {
+    const westward = BUS_SOURCE.replace(
+      "07:30  Probestadt ZOB  →  11:05",
+      "09:30  Probestadt ZOB  →  09:00"
+    );
+    const ride = applyV2RideTicketTemplate(busTemplate(), `${BUS_SUBJECT}\n${westward}`)?.rides[0];
+    expect(ride?.departureLocal).toBe("2028-03-02T09:30");
+    expect(ride?.arrivalLocal).toBeNull();
+  });
+
   it("declines another operator's ticket", () => {
     expect(read(BUS_FOREIGN, "Dein Ticket – Reisebus Fernweh")).toBeNull();
   });
@@ -187,6 +197,17 @@ describe("deriveFerryTemplate", () => {
         carrier: "MS Seebrise Probe",
       },
     ]);
+  });
+
+  it("leaves a crossing's arrival clock just before its departure's unread", () => {
+    const westward = FERRY_SOURCE.replace(
+      "Probehafen ab 08:45  –  Musterinsel an 10:15",
+      "Probehafen ab 08:45  –  Musterinsel an 08:15"
+    );
+    const crossing = applyV2RideTicketTemplate(ferryTemplate(), `${FERRY_SUBJECT}\n${westward}`)
+      ?.rides[0];
+    expect(crossing?.departureLocal).toBe("2028-07-18T08:45");
+    expect(crossing?.arrivalLocal).toBeNull();
   });
 
   it("declines another line's ticket", () => {

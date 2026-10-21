@@ -1,5 +1,5 @@
 import { daysBetween, fromDbDate, toDbDate } from "../../shared/time/localDate";
-import { scheduleRoute } from "./routeSchedule";
+import { arrivalUndetermined, routeLegs, scheduleRoute } from "./routeSchedule";
 import type { PlanFinding, PlanStage, PlanState, PlanStation } from "./types";
 
 const SECTION = "route";
@@ -80,6 +80,28 @@ export function routeFindings(state: PlanState, today: string): PlanFinding[] {
   for (const s of state.stations)
     if (s.nights > 0 && s.night.kind === "idea" && s.night.candidates.length === 0)
       add("nightUndecided:" + s.id, "nightUndecided", { station: s.title }, [s.id, s.nights]);
+
+  // A leg without a stage leaves every day after it unknown; say so instead
+  // of letting the route look complete.
+  for (const leg of schedule.unresolved)
+    add(
+      `stageMissing:${leg.fromStationId}:${leg.toStationId}`,
+      "stageMissing",
+      { from: title(leg.fromStationId), to: title(leg.toStationId) },
+      [leg.fromStationId, leg.toStationId],
+      "attention"
+    );
+
+  // A stage whose arrival nothing determines leaves the days after it unknown.
+  for (const stage of routeLegs(state.stations, state.stages))
+    if (stage && arrivalUndetermined(stage, state.bookings))
+      add(
+        "durationMissing:" + stage.id,
+        "durationMissing",
+        { from: title(stage.fromStationId), to: title(stage.toStationId) },
+        [stage.id, stage.mode],
+        "attention"
+      );
 
   for (const conflict of schedule.conflicts) {
     const stage = state.stages.find((g) => g.id === conflict.anchorId);
@@ -170,7 +192,7 @@ export function routeFindings(state: PlanState, today: string): PlanFinding[] {
 }
 
 /**
- * Nights a route covers: every night spent at a station (any night state —
+ * Nights a route covers, or cannot know about: every night spent at a station (any night state —
  * undecided is `nightUndecided`'s business, not a gap) and every overnight
  * stage. A night is named after the evening it starts.
  */
@@ -186,5 +208,19 @@ export function routeCoveredNights(state: PlanState): Set<string> {
     const days = schedule.stages.find((g) => g.stageId === stage.id);
     if (stage.overnight) nightsBetween(days?.departDay ?? null, days?.arriveDay ?? null);
   }
+  // From the last known departure before an unknown arrival (missing stage or
+  // duration) to the next known arrival, nobody knows where the nights go:
+  // stageMissing / durationMissing speak there, not nightGap. Outside such a
+  // stretch a gap is still a gap.
+  let unknownFrom: string | null = null;
+  schedule.stations.forEach((s, i) => {
+    if (!s.arriveDay) {
+      unknownFrom ??= schedule.stations[i - 1]?.departDay ?? null;
+      return;
+    }
+    nightsBetween(unknownFrom, s.arriveDay);
+    unknownFrom = null;
+  });
+  nightsBetween(unknownFrom, state.endDay);
   return covered;
 }

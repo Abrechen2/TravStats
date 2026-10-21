@@ -222,4 +222,7 @@ export const NON_TRAVEL_RELATIONS = [
   // The jitter re-measure job's bookkeeping (forgejo#319): outcomes, retry
   // times and the measurement a re-measure replaced. Server housekeeping.
   "trackJitterRemeasures",
+  // Where a merged-away trip went (forgejo#316): server bookkeeping for the
+  // Companion's uploads, not travel data.
+  "mergedTripRedirects",
 ] as const;

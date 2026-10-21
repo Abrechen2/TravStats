@@ -73,8 +73,13 @@ describe("POST /api/v1/bus/ticket-preview", () => {
       arrivalLocal: { value: "2028-04-13T02:10" },
       lineName: { value: "N 43" },
       bookingReference: { value: "FBP-309922" },
-      price: { value: "44.5" },
     });
+    // 44,50 EUR is the three rides' total, not the price of each.
+    expect(res.body.data.rides.map((r: { price?: unknown }) => r.price)).toEqual([
+      undefined,
+      undefined,
+      undefined,
+    ]);
   });
 
   it("declines another operator's ticket with noTemplate, not an empty success", async () => {
