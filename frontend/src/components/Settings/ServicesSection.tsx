@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { ServiceAccordion, type ServiceGroup, type ServiceState } from "./ServiceAccordion";
 import ApiKeysSection from "./ApiKeysSection";
-import PersonalRoutingKeysSection from "./PersonalRoutingKeysSection";
+import PersonalRoutingKeysSection, { type RoutingKeysStatus } from "./PersonalRoutingKeysSection";
 import ImmichConnectionCard from "./ImmichConnectionCard";
 import PhotoJourneyNightlyScanCard from "./PhotoJourneyNightlyScanCard";
 import StravaConnectionCard from "./StravaConnectionCard";
@@ -82,6 +82,9 @@ export default function ServicesSection({ page }: { page: PageState }): JSX.Elem
   const openData = useSettingsStore((s) => s.openDataEnabled);
   const [immich, setImmich] = useState<ImmichConnectionStatus | null>(null);
   const [strava, setStrava] = useState<StravaStatus | null>(null);
+  // The personal routing form saves through its own endpoint call, not the
+  // page's; what it last read wins over the page-load snapshot.
+  const [routing, setRouting] = useState<RoutingKeysStatus | null>(null);
   const flightOn = isEnabled("flight");
   const ownKeys = (flightOn ? FLIGHT_PROVIDERS.length : 0) + (toursVisible ? 2 : 0);
   const expert = useExpertRows(ownKeys);
@@ -169,11 +172,11 @@ export default function ServicesSection({ page }: { page: PageState }): JSX.Elem
       id: p,
       name: NAME[p],
       what: t(`settings:services.what.${p}`),
-      state: keyState(status?.[p]),
+      state: keyState(routing?.[p] ?? status?.[p]),
     })),
     footer: expert ? (
       <div style={{ marginTop: "var(--ts-space-lg)" }}>
-        <PersonalRoutingKeysSection />
+        <PersonalRoutingKeysSection onStatus={setRouting} />
       </div>
     ) : null,
   };

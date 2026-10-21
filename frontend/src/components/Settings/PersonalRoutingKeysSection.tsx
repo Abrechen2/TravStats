@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { JSX } from "react";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import ApiKeyCard from "./ApiKeyCard";
@@ -9,12 +9,11 @@ import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { settingsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 
-type RoutingKeyProvider = "openrouteservice" | "graphhopper";
+export type RoutingKeyProvider = "openrouteservice" | "graphhopper";
 type KeyStatus = { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+export type RoutingKeysStatus = Record<RoutingKeyProvider, KeyStatus>;
 type LoadState =
-  | { kind: "loading" }
-  | { kind: "error" }
-  | { kind: "ready"; status: Record<RoutingKeyProvider, KeyStatus> };
+  { kind: "loading" } | { kind: "error" } | { kind: "ready"; status: RoutingKeysStatus };
 
 const FIELD: Record<RoutingKeyProvider, "openrouteserviceApiKey" | "graphhopperApiKey"> = {
   openrouteservice: "openrouteserviceApiKey",
@@ -44,21 +43,32 @@ const PROVIDERS: readonly RoutingKeyProvider[] = ["openrouteservice", "graphhopp
  * string as "no key" — a routing key must not vanish because a flight key was
  * saved, nor the other way round.
  */
-export default function PersonalRoutingKeysSection(): JSX.Element {
+export default function PersonalRoutingKeysSection({
+  onStatus,
+}: {
+  /** Told what the server answered after each load and save, so the services
+   *  summary badges the key the reader just stored or removed (it holds its
+   *  own snapshot and would otherwise keep the one from page load). */
+  onStatus?: (status: RoutingKeysStatus) => void;
+} = {}): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
   const isDemo = useIsDemoAccount();
   const [load, setLoad] = useState<LoadState>({ kind: "loading" });
   const [drafts, setDrafts] = useState<Partial<Record<RoutingKeyProvider, string | null>>>({});
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const onStatusRef = useRef(onStatus);
+  onStatusRef.current = onStatus;
 
   const reload = useCallback(async (): Promise<void> => {
     try {
       const all = await settingsApi.getApiKeys();
-      setLoad({
-        kind: "ready",
-        status: { openrouteservice: all.openrouteservice, graphhopper: all.graphhopper },
-      });
+      const status: RoutingKeysStatus = {
+        openrouteservice: all.openrouteservice,
+        graphhopper: all.graphhopper,
+      };
+      setLoad({ kind: "ready", status });
+      onStatusRef.current?.(status);
     } catch (err: unknown) {
       logger.error("PersonalRoutingKeysSection: load failed", err);
       setLoad({ kind: "error" });
