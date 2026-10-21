@@ -823,6 +823,47 @@ a message; an unknown ref is not applied; a leave updates the other spoke's rost
 hooks in `routes/admin/__tests__/federation.test.ts`, the vocabulary CHECKs. The harness runs a
 third server (`useThreeServers`, database `<db>c_test`).
 
+**Review fixes (cold review of F-S4e, same day; one commit each, tests in
+`twoServersReviewFs4e.test.ts` and `threeServersRoster.test.ts`).**
+1. A restore's resend could copy an entry the spoke's person had declined on the roster (the
+   relay withheld it, the resend did not). The home now records who brought each entry into a
+   group (`TripShareEntryAuthor`, `entryAuthors.ts`) — only where it is provable: when a row gets
+   its key on its owner's own trip (`assignShareKeys`, a new or moved-in entry in `spreadCreate`;
+   a copy arrives keyed already) and when an entry from another server first spreads at the home;
+   before a group is federated, as `local:<account>`, read as the roster ref later. Every
+   `entries` message names each entry's recorded author (`authors`, required on the wire),
+   unchanged even if they left the trip; the spoke copies an entry only when its author is the
+   home member of the pairing, the recipient themselves, or someone they agreed to. **An entry
+   with no record is named by nobody and copied for nobody** — fail closed (security review of
+   the fixes: an earlier version inferred the offering member for unrecorded entries and renamed
+   departed authors to them; both are gone).
+2. A received message read its membership and consent unlocked, so a withdrawal committed between
+   the check and the write was overtaken. The member row is locked (`FOR UPDATE`) when a message is
+   resolved to it (`peerMember.ts` `addressed`): a concurrent end or hold waits for the message or
+   is what it reads.
+3. A delivery that passed its check and then waited for its turn on the stream (behind a person's
+   own request to the same server) still left after a withdrawal had returned. `sendOnStream` takes
+   a ready check that runs once the message holds the stream; the outbox asks there again.
+4. Confirming a trip again could resurrect a membership that a leave ended meanwhile. The held rows
+   are read again under their locks inside the write; only those still held, on a trip still in the
+   group, resume.
+5. A restored spoke's unanswered offer (`restore-invited`) disappeared from the list and had no way
+   back. It is listed again; accepting it checks the server's admission and answers the consent the
+   restore put back to a question.
+6. Entries for a membership the spoke showed as `unreachable` or `off` were refused `not-member`
+   and parked for good. They are taken for every membership that takes ordinary messages.
+7. Two roster changes at once could queue the older snapshot last. `queueRoster` takes its snapshot
+   under the group row's lock.
+
+**Second review round (same day).** The locks of the fixes were ordered against each other:
+the membership lock of a received message and the roster's group lock are `FOR NO KEY UPDATE`
+(an outbox row naming the member only takes a key-share lock), `serveEntries` locks its
+memberships like every other received message, `detachTrip` ends cross-server memberships before
+it touches the entries (the order a received change takes them in), and `reconfirmTrip` answers
+the consents before it locks the memberships (a withdrawal's order). Tests in
+`twoServersReviewFs4e.test.ts` ("review round 2"); the confirm-versus-withdraw case passed before
+its fix too and stays as a guard — the order there is by reasoning, not a reproduced deadlock.
+
 **Open owner questions (decided here the safer way, to be confirmed).**
 1. **A received trip cannot be shared on locally on the spoke** (`shareTrip` answers
    `SHARE_REMOTE_NOT_HOME`): a member added there would receive the others' changes and send
@@ -843,4 +884,10 @@ third server (`useThreeServers`, database `<db>c_test`).
 6. A held membership on the other side is retried at the outbox backoff (up to a day): after that
    person confirms, their server can take up to a day to receive what was queued here. A nudge
    message would close that gap; it is not in §4.
+7. **The entry-author gate also applies to the first delivery.** Accepting an offer says yes to
+   the people its roster named; an entry brought in by someone not on that roster (who left before
+   the offer, or joined after it without the person's yes), or one keyed before authors were
+   recorded at all, is not copied. Correct for consent, a loss for the copy; the alternative —
+   treating the accepted offer as a yes to everything it contained — would need the offer to list
+   those authors so the person sees them.
 
