@@ -62,6 +62,10 @@ describe("matching a station to an article", () => {
     expect(matchStopTitle("ferry", "Kiel", ["Kieler Hafen"])).toBe("Kieler Hafen");
   });
 
+  it("never takes the city's own article for its port", () => {
+    expect(matchStopTitle("ferry", "Kiel Hafen", ["Kiel"])).toBeNull();
+  });
+
   it("abstains for a name of generic words only", () => {
     expect(matchStopTitle("bus", "ZOB", ["Zentraler Omnibusbahnhof Hamburg"])).toBeNull();
   });
@@ -135,6 +139,13 @@ describe("stopWikipediaSummary", () => {
         : json(summary("Hamburg Hauptbahnhof", "Eins."))
     );
     expect(await stopWikipediaSummary("rail", "Hamburg Hbf", 53.5, 10, "de")).not.toBeNull();
+  });
+
+  it("treats a Wikipedia API error answered with 200 as an outage, not a miss", async () => {
+    use(() => json({ error: { code: "internal_api_error", info: "boom" } }));
+    await expect(stopWikipediaSummary("ferry", "Kiel", 54.3, 10.1, "en")).rejects.toThrow(
+      OpenDataUnavailableError
+    );
   });
 
   it("treats a malformed geosearch answer as an outage", async () => {

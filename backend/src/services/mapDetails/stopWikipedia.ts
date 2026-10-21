@@ -102,15 +102,15 @@ const KIND_WORDS: Record<StopDomain, RegExp> = {
   rental: /(airport|flughafen|aeroporto|aeropuerto|aéroport|bahnhof|hbf|station|gare)/i,
 };
 
+/*
+ * Required, not optional: Wikipedia answers "nothing near" as an empty list,
+ * and an API error as a 200 with an `error` object and no `query` — which,
+ * read leniently, was a miss cached for a day instead of an outage.
+ */
 const geoSchema = z.object({
-  query: z
-    .object({
-      geosearch: z
-        .array(z.object({ title: z.string(), dist: z.number().optional() }))
-        .max(50)
-        .optional(),
-    })
-    .optional(),
+  query: z.object({
+    geosearch: z.array(z.object({ title: z.string(), dist: z.number().optional() })).max(50),
+  }),
 });
 
 /** Lower-case words of a name, accents folded, generic words dropped. */
@@ -124,6 +124,16 @@ export function distinctiveWords(name: string): string[] {
 }
 
 const fold = (s: string): string => distinctiveWords(s).join(" ");
+
+/** Every word, generic ones kept — "Kiel Hafen" is not "Kiel". */
+const fullName = (s: string): string =>
+  s
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .split(/[^a-z0-9ß]+/)
+    .filter(Boolean)
+    .join(" ");
 
 /** The candidate title that is the stop, or null. Candidates nearest first. */
 export function matchStopTitle(
@@ -140,7 +150,7 @@ export function matchStopTitle(
     // "Kieler Hafen" counts, a shared city name next to another one does not.
     const covers = words.every((w) => titleWords.some((tw) => tw.startsWith(w)));
     if (!covers) continue;
-    if (fold(title) !== fold(name) && !KIND_WORDS[domain].test(title)) continue;
+    if (fullName(title) !== fullName(name) && !KIND_WORDS[domain].test(title)) continue;
     // An article ABOUT something at the station ("Messerangriff am Hamburger
     // Hauptbahnhof 2025", found 100 m from the station) carries words the
     // station's own article does not. The fewest extra words wins; more than
@@ -211,7 +221,7 @@ async function nearbyTitles(lang: WikiLanguage, lat: number, lon: number): Promi
   if (!outcome.ok) throw new OpenDataUnavailableError("wikipedia");
   const parsed = geoSchema.safeParse(outcome.body);
   if (!parsed.success) throw new OpenDataUnavailableError("wikipedia");
-  return (parsed.data.query?.geosearch ?? []).slice(0, GEOSEARCH_LIMIT).map((g) => g.title);
+  return parsed.data.query.geosearch.slice(0, GEOSEARCH_LIMIT).map((g) => g.title);
 }
 
 /** The summary of the article about the stop, or null when none is confidently it. */
