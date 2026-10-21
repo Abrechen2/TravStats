@@ -280,4 +280,16 @@ export interface TripRental {
   status: RentalStatus;
   /** Deadlines among them (forgejo#285); optional — an older server sends none. */
   times?: Partial<RentalTimes>;
+  /**
+   * What the trip map draws (beta.22 UAT): the two branches, the derived
+   * one-way flag. Optional — an older server sends none, and the map then
+   * draws no rental.
+   */
+  pickupLat?: number;
+  pickupLon?: number;
+  returnLat?: number;
+  returnLon?: number;
+  oneWay?: boolean;
+  /** The roadtrip that already draws this drive, if any. */
+  routeId?: string | null;
 }

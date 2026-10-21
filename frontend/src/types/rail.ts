@@ -115,7 +115,12 @@ export type TripRailJourney = Pick<
   | "price"
   | "currency"
   | "bookingId"
->;
+> &
+  // What the trip map draws (beta.22 UAT): the stations and the stored line.
+  // Optional — an older server sends none, and the map then draws no line.
+  Partial<
+    Pick<RailJourney, "depLat" | "depLon" | "arrLat" | "arrLon" | "geometry" | "geometrySource">
+  >;
 
 /** A leg of the same booking, as `GET /rail/:id` lists it. */
 export interface RailBookingLeg {

@@ -30,7 +30,7 @@ describe("complete map pagination", () => {
       })),
     }));
     const { result } = renderHook(() => useDashboardRentals(true, null));
-    await waitFor(() => expect(result.current).toHaveLength(5501));
+    await waitFor(() => expect(result.current.rentals).toHaveLength(5501));
     expect(mocks.rental).toHaveBeenCalledTimes(12);
   });
   it("does not fetch disabled domains", () => {

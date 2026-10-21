@@ -227,6 +227,52 @@ describe("Trip recording — /trips/:id/recording", () => {
     expect(res.body.code).toBe("TRIP_RECORDING_NO_SPAN");
   });
 
+  // beta.22 UAT: a recording uploaded from the web read "0 Geräte" — the
+  // summary listed paired devices only, and an upload without one vanished.
+  it("says that points came without a paired device, and only then", async () => {
+    await post({ uploadId: "up-web", points: [at("2026-05-01T03:00:00Z")] }).expect(201);
+    const web = await request(app).get(`/api/v1/trips/${tripId}/recording`).set("Cookie", cookie);
+    expect(web.body.summary.devices).toEqual([]);
+    expect(web.body.summary.uploadedWithoutDevice).toBe(true);
+
+    const token = await generateApiToken();
+    await prisma.apiToken.create({
+      data: {
+        userId,
+        label: "Companion",
+        lookupHash: token.lookupHash,
+        hash: token.hash,
+        scope: "write",
+        deviceId: "phone-2",
+        platform: "ios",
+      },
+    });
+    const phoneTrip = (
+      await prisma.trip.create({
+        data: {
+          userId,
+          name: "Phone only",
+          startDate: new Date("2026-05-01T00:00:00Z"),
+          endDate: new Date("2026-05-03T00:00:00Z"),
+          startDay: new Date("2026-05-01T00:00:00Z"),
+          endDay: new Date("2026-05-03T00:00:00Z"),
+          startZone: "Asia/Tokyo",
+          endZone: "Asia/Tokyo",
+        },
+      })
+    ).id;
+    await request(app)
+      .post(`/api/v1/trips/${phoneTrip}/recording`)
+      .set("Authorization", `Bearer ${token.plaintext}`)
+      .send({ uploadId: "up-phone-2", points: [at("2026-05-01T03:00:00Z")] })
+      .expect(201);
+    const phone = await request(app)
+      .get(`/api/v1/trips/${phoneTrip}/recording`)
+      .set("Cookie", cookie);
+    expect(phone.body.summary.devices).toEqual(["phone-2"]);
+    expect(phone.body.summary.uploadedWithoutDevice).toBe(false);
+  });
+
   it("records the paired device and refuses a read-only token", async () => {
     const token = await generateApiToken();
     await prisma.apiToken.create({
@@ -407,6 +453,7 @@ describe("Trip recording — /trips/:id/recording", () => {
           firstAt: null,
           lastAt: null,
           devices: [],
+          uploadedWithoutDevice: false,
           days: [],
         },
         segments: [],

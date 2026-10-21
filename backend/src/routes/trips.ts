@@ -301,7 +301,7 @@ router.get(
           // the trip timeline (frontend/src/pages/TripDetailPage.tsx), which
           // needs the lodging's name, so `lodging` is always included here.
           lodgingStays: { include: { lodging: true }, orderBy: { checkIn: "asc" } },
-          // Train rides for the timeline and logistics — without the frozen line.
+          // Train rides for the timeline, logistics and the map (stations + stored line).
           railJourneys: { select: TRIP_RAIL_SELECT, orderBy: { departureTime: "asc" } },
           // Bus rides for the timeline and the map, between the hotels (forgejo#180).
           busJourneys: { select: TRIP_BUS_SELECT, orderBy: { departureTime: "asc" } },

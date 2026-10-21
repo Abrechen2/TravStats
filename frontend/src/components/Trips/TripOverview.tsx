@@ -175,6 +175,7 @@ export default function TripOverview({
   const railJourneys = useDomainVisible("rail") ? (trip.railJourneys ?? []) : [];
   const busRides = useDomainVisible("bus") ? (trip.busJourneys ?? []) : [];
   const rentals = useDomainVisible("rental") ? (trip.rentalBookings ?? []) : [];
+  const ferryRides = useDomainVisible("ferry") ? (trip.ferryJourneys ?? []) : [];
 
   const days =
     trip.startDate && trip.endDate
@@ -227,6 +228,7 @@ export default function TripOverview({
       roadtrips.length +
       railJourneys.length +
       busRides.length +
+      ferryRides.length +
       rentals.length ===
     0;
   // The side column only when it has something to hold: an empty 1fr beside
@@ -384,6 +386,28 @@ export default function TripOverview({
                   icon="bus"
                   title={[
                     [r.operator, r.lineName].filter(Boolean).join(" "),
+                    `${r.depStationName} → ${r.arrStationName}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                  sub={railDay(r)}
+                />
+              ))}
+            </EntryList>
+          )}
+
+          {ferryRides.length > 0 && (
+            <EntryList
+              title={t("trips:detail.stats.ferry")}
+              count={t("trips:detail.ferryCount", { count: ferryRides.length })}
+            >
+              {ferryRides.map((r) => (
+                <EntryRow
+                  key={r.id}
+                  to={`/ferry/${r.id}`}
+                  icon="ship"
+                  title={[
+                    [r.operator, r.vesselName].filter(Boolean).join(" "),
                     `${r.depStationName} → ${r.arrStationName}`,
                   ]
                     .filter(Boolean)

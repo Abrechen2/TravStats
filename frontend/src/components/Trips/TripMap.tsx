@@ -17,7 +17,6 @@ import { buildLodgingPins } from "../layers/lodgingPinsLayer";
 import { buildTourPaths, type TourPathDatum } from "../layers/tourPathsLayer";
 import { stayNights } from "../../lib/lodgingDateDisplay";
 import { declutterByDistance, pickLabelled } from "../map/labelPriority";
-import { cruiseApi, type CruiseRouteFeatureCollection } from "../../lib/api/cruise";
 import { computeBbox } from "../../utils/mapAnimationHelpers";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -47,6 +46,8 @@ import { decorateTripMapLayers } from "./tripMapCards";
 import { TripMapCardHost } from "./TripMapCardHost";
 import { shareMapLabels, withStationLabels } from "../map/labelObstacles";
 import { stationLabelPoints } from "../Globe/globePinLabels";
+import { useTripCruiseGeometry } from "./useTripCruiseGeometry";
+import { MapLoadFailedNotice } from "../map/MapLoadFailedNotice";
 
 const INITIAL_VIEW: MapViewState = {
   longitude: 10,
@@ -119,28 +120,15 @@ export default function TripMap({
    * never thinned out. Same rule as everywhere else now.
    */
   const [zoom, setZoom] = useState(INITIAL_VIEW.zoom ?? 2);
-  const [cruiseGeometry, setCruiseGeometry] = useState<Map<string, CruiseRouteFeatureCollection>>(
-    () => new Map()
-  );
   const didFit = useRef(false);
 
   const cruiseIds = useMemo(() => (trip.cruises ?? []).map((c) => c.id), [trip.cruises]);
 
-  useEffect(() => {
-    if (cruiseIds.length === 0) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const batch = await cruiseApi.getGeometryBatch(cruiseIds);
-        if (!cancelled) setCruiseGeometry(batch);
-      } catch (err) {
-        logger.warn("TripMap: cruise geometry fetch failed", err);
-      }
-    })();
-    return (): void => {
-      cancelled = true;
-    };
-  }, [cruiseIds]);
+  const {
+    geometry: cruiseGeometry,
+    failed: cruiseGeometryFailed,
+    retry: retryCruiseGeometry,
+  } = useTripCruiseGeometry(cruiseIds);
 
   const flightArcs = useMemo<FlightArc[]>(() => {
     const out: FlightArc[] = [];
@@ -735,6 +723,12 @@ export default function TripMap({
         <SharedMapOverlays />
       </MapGL>
       <TripMapCardHost mapRef={mapRef} mapLoaded={mapLoaded} />
+      {cruiseGeometryFailed && (
+        <MapLoadFailedNotice
+          messageKey="map:loadFailed.cruiseRoutes"
+          onRetry={retryCruiseGeometry}
+        />
+      )}
       {/* Names on the globe. deck.gl 9's billboard TextLayer renders nothing
           under globe projection, so the flat map's `trip-stop-labels` and the
           lodging pins' own labels are simply absent there — this HTML overlay

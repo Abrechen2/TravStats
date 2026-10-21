@@ -781,6 +781,7 @@ export function AllTab(): JSX.Element {
       {activityToggle}
       {legendTable}
       {tourStatusOverlay}
+      {transport.status}
       {activityPanel}
       {editModal}
       <DomainFilterEmptyOverlay

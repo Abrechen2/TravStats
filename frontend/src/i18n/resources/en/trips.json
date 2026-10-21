@@ -155,7 +155,8 @@
       "tags": "Tags",
       "rail": "Rail",
       "rental": "Rental cars",
-      "bus": "Bus"
+      "bus": "Bus",
+      "ferry": "Ferry"
     },
     "tabs": {
       "overview": "Overview",
@@ -223,6 +224,8 @@
     "railCount_other": "{{count}} rides",
     "busCount_one": "{{count}} ride",
     "busCount_other": "{{count}} rides",
+    "ferryCount_one": "{{count}} crossing",
+    "ferryCount_other": "{{count}} crossings",
     "rentalCount_one": "{{count}} rental",
     "rentalCount_other": "{{count}} rentals"
   },
@@ -873,6 +876,7 @@
     "span": "{{first}} – {{last}}",
     "devices_one": "{{count}} device",
     "devices_other": "{{count}} devices",
+    "uploadedWithoutDevice": "Uploaded without a paired device (e.g. from the web)",
     "downloadGpx": "Download as GPX",
     "delete": "Delete recording",
     "deleteConfirmTitle": "Delete the recording?",

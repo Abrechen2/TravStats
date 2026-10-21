@@ -102,6 +102,9 @@ const recordingView = z.object({
     firstAt: timeValueSchema.nullable().describe("First point shown, on the trip's clock"),
     lastAt: timeValueSchema.nullable().describe("Last point shown, on the trip's clock"),
     devices: z.array(z.string()).describe("The paired devices that sent points"),
+    uploadedWithoutDevice: z
+      .boolean()
+      .describe("Whether points were uploaded without a paired device (e.g. from the web)"),
     days: z
       .array(localDateValueSchema)
       .describe("Every day with points on the trip's clock, whatever `day` filters to"),

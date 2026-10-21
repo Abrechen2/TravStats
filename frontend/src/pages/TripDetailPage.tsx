@@ -15,7 +15,7 @@ import { clockOf, type TimeValue } from "../shared/time";
 import { logger } from "../lib/logger";
 import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { formatAmount } from "../lib/units";
-import { assessStayPlausibility } from "../shared/stayPlausibility";
+import { implausibleStayIds } from "../lib/tripStayPlausibility";
 import { computeRailStates } from "../lib/timelineRail";
 import { buildTimelineEvents, type TimelineEvent } from "../lib/tripTimelineEvents";
 import { ExpandableEventCard } from "../components/Trip/ExpandableEventCard";
@@ -345,24 +345,9 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
     [trip, placeVisits, tripNotes.notes]
   );
 
-  // Cross-domain geo sanity (#6): a stay whose hotel sits far from every trip
-  // leg is almost certainly an import/typo error. Compute the set of such stay
-  // IDs once from this trip's flight arrivals and cruise ports; the timeline
-  // entry shows a soft hint. Hotel-only trips have no legs and never warn.
-  const implausibleStayIds = useMemo(() => {
-    // Flight arrivals: the trip's cruise shape carries no port coordinates, so
-    // a cruise-only trip has no legs and never warns.
-    const legs = (trip?.flights ?? []).map((f) => ({ lat: f.arrLat, lon: f.arrLon }));
-    const flagged = new Set<string>();
-    for (const s of trip?.lodgingStays ?? []) {
-      const { plausible } = assessStayPlausibility(
-        { lat: s.lodging.lat, lon: s.lodging.lon },
-        legs
-      );
-      if (!plausible) flagged.add(s.id);
-    }
-    return flagged;
-  }, [trip]);
+  // Cross-domain geo sanity (#6): a stay far from every place the trip reaches
+  // is likely an import/typo error; the timeline entry shows a soft hint.
+  const implausibleStays = useMemo(() => implausibleStayIds(trip), [trip]);
 
   const rentalBands = useRentalBands(events);
   // Past/upcoming is shown on the rail (line + dots), not by graying out
@@ -486,11 +471,7 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
                 <RentalBand segments={rentalBands[i]} />
                 <TransitCard ev={ev} />
                 {(ev.kind === "lodging-checkin" || ev.kind === "lodging-checkout") && (
-                  <LodgingCheckCard
-                    ev={ev}
-                    t={t}
-                    implausible={implausibleStayIds.has(ev.stay.id)}
-                  />
+                  <LodgingCheckCard ev={ev} t={t} implausible={implausibleStays.has(ev.stay.id)} />
                 )}
                 {ev.kind === "stop" && (
                   <StopCard

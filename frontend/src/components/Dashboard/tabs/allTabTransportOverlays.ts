@@ -17,6 +17,8 @@ export interface TransportOverlays {
   /** Rail, bus, ferry and rental lines, in drawing order. */
   layers: Layer[];
   legendRows: JSX.Element[];
+  /** What could not be loaded, said over the map (beta.22 UAT); null when all loaded. */
+  status: JSX.Element | null;
 }
 
 /**
@@ -81,5 +83,6 @@ export function useTransportOverlays(
   return {
     layers,
     legendRows: [...rail.legendRows, ...bus.legendRows, ...ferry.legendRows, ...rental.legendRows],
+    status: rental.status,
   };
 }

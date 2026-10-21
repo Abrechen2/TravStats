@@ -40,6 +40,14 @@ export const TRIP_RAIL_SELECT = {
   price: true,
   currency: true,
   bookingId: true,
+  // What the trip map draws (beta.22 UAT): the two stations and the stored
+  // line, read by the dashboard's own rail layer builder.
+  depLat: true,
+  depLon: true,
+  arrLat: true,
+  arrLon: true,
+  geometry: true,
+  geometrySource: true,
 } satisfies Prisma.RailJourneySelect;
 
 /**
@@ -106,6 +114,15 @@ export const TRIP_RENTAL_SELECT = {
   freeCancellationOn: true,
   freeCancellationZone: true,
   paymentDueOn: true,
+  // What the trip map draws (beta.22 UAT): the two branches, what the derived
+  // one-way flag is read from, and the roadtrip that already draws the drive.
+  pickupLat: true,
+  pickupLon: true,
+  returnLat: true,
+  returnLon: true,
+  pickupAirportId: true,
+  returnAirportId: true,
+  routeId: true,
 } satisfies Prisma.RentalBookingSelect;
 
 /** The trip page's rentals: pickup order, a cancelled one left out (it never happened). */

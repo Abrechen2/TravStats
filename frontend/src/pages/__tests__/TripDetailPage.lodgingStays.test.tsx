@@ -245,6 +245,114 @@ describe("TripDetailPage — linked lodging stays on the timeline", () => {
   });
 });
 
+// beta.22 UAT: "Weit von den Reisezielen entfernt" compared a hotel with the
+// trip's flight arrivals only — the Oslo hotel of a trip that flew to
+// Frankfurt and took the night ferry Kiel–Oslo was flagged as a likely typo.
+describe("TripDetailPage — the far-from-destinations hint", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const FLIGHT = {
+    id: "f1",
+    depIata: "ZRH",
+    arrIata: "FRA",
+    depLat: 47.46,
+    depLon: 8.55,
+    arrLat: 50.03,
+    arrLon: 8.57,
+    departureTime: "2024-05-12T08:00:00.000Z",
+    arrivalTime: "2024-05-12T09:00:00.000Z",
+    status: "flown",
+  } as unknown as NonNullable<Trip["flights"]>[number];
+
+  const FERRY = {
+    id: "fe1",
+    operator: "Color Line",
+    vesselName: null,
+    depStationName: "Kiel Norwegenkai",
+    arrStationName: "Oslo Hjortneskaia",
+    depLat: 54.33,
+    depLon: 10.14,
+    arrLat: 59.9,
+    arrLon: 10.72,
+    depTimezone: "Europe/Berlin",
+    arrTimezone: "Europe/Oslo",
+    departureTime: "2024-05-12T12:00:00.000Z",
+    arrivalTime: "2024-05-13T08:00:00.000Z",
+    status: "completed",
+    price: null,
+    currency: null,
+  } as unknown as NonNullable<Trip["ferryJourneys"]>[number];
+
+  const at = (lat: number, lon: number, name: string): typeof STAY => ({
+    ...STAY,
+    lodging: { ...STAY.lodging, name, lat, lon },
+  });
+
+  async function checkInText(trip: Trip): Promise<string> {
+    await renderTripDetail(trip);
+    await userEvent.click(screen.getByText("trips:detail.tabs.timeline"));
+    const checkIn = await findNamed("link", /trips:detail.timeline.lodgingCheckIn/);
+    return checkIn.textContent ?? "";
+  }
+
+  it("does not flag a hotel the trip reached by ferry", async () => {
+    const text = await checkInText(
+      makeTrip({
+        flights: [FLIGHT],
+        ferryJourneys: [FERRY],
+        lodgingStays: [at(59.91, 10.75, "Oslo")],
+      })
+    );
+    expect(text).not.toContain("trips:detail.timeline.lodgingFarFromTrip");
+  });
+
+  it("still flags a hotel far from every place the trip reached", async () => {
+    const text = await checkInText(
+      makeTrip({
+        flights: [FLIGHT],
+        ferryJourneys: [FERRY],
+        lodgingStays: [at(-33.87, 151.21, "Sydney")],
+      })
+    );
+    expect(text).toContain("trips:detail.timeline.lodgingFarFromTrip");
+  });
+
+  it("says nothing when a leg of the trip has no known place to compare with", async () => {
+    // A train ride from an older server carries no station coordinates: the
+    // hotel may well be at its end, so the evidence is too thin to warn.
+    const text = await checkInText(
+      makeTrip({
+        flights: [FLIGHT],
+        railJourneys: [
+          {
+            id: "j1",
+            operator: null,
+            trainCategory: "ICE",
+            trainNumber: "1",
+            depStationName: "Frankfurt Hbf",
+            arrStationName: "Somewhere",
+            depTimezone: "Europe/Berlin",
+            arrTimezone: "Europe/Berlin",
+            departureTime: "2024-05-12T10:00:00.000Z",
+            arrivalTime: "2024-05-12T14:00:00.000Z",
+            distanceKm: null,
+            distanceSource: null,
+            status: "completed",
+            delayMinutes: null,
+            price: null,
+            currency: null,
+            bookingId: null,
+          },
+        ],
+        lodgingStays: [at(-33.87, 151.21, "Sydney")],
+      })
+    );
+    expect(text).not.toContain("trips:detail.timeline.lodgingFarFromTrip");
+  });
+});
+
 // The trip summary loads its plan independently of the timeline feature under test.
 vi.mock("../../lib/api/travplan", () => ({
   travplanApi: { get: vi.fn().mockResolvedValue(null) },

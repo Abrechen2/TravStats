@@ -55,12 +55,18 @@ export function railDurationMinutes(
 
 /**
  * "15.01.2026, 08:00 – 12:10": the departure on its station's clock and the
- * arrival's clock beside it, for a list row, a card or a booking leg.
+ * arrival's clock beside it, for a list row, a card or a booking leg. An
+ * arrival on another calendar day (each on its own station's clock) carries
+ * its date — an overnight ferry read "10.08.2026, 14:00 → 10:00" for a
+ * crossing that docked on the 11th (beta.22 UAT).
  */
 export function formatRailSpan(journey: RailLike, locale: string, separator = " – "): string {
   const departure = railDeparture(journey);
   const arrival = railArrival(journey);
   if (!departure) return "";
   const from = formatStationTime(departure, locale);
-  return arrival ? `${from}${separator}${formatStationClock(arrival, locale)}` : from;
+  if (!arrival) return from;
+  const sameDay = arrival.local.slice(0, 10) === departure.local.slice(0, 10);
+  const to = sameDay ? formatStationClock(arrival, locale) : formatStationTime(arrival, locale);
+  return `${from}${separator}${to}`;
 }

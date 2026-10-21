@@ -103,4 +103,15 @@ describe("railTime", () => {
     } as Pick<RailJourney, "departureTime" | "arrivalTime" | "depTimezone" | "arrTimezone">;
     expect(formatRailSpan(journey, "de-DE")).toBe("01.07.2026, 10:01 – 13:47");
   });
+  // beta.22 UAT: an overnight ferry read "10.08.2026, 14:00 → 10:00" — the
+  // arrival on 11.08 shown as a clock alone, as if it docked before it left.
+  it("names the arrival's day when it falls on another calendar day than the departure", () => {
+    const journey = {
+      departureTime: "2026-08-10T12:00:00.000Z",
+      arrivalTime: "2026-08-11T08:00:00.000Z",
+      depTimezone: "Europe/Berlin",
+      arrTimezone: "Europe/Oslo",
+    } as Pick<RailJourney, "departureTime" | "arrivalTime" | "depTimezone" | "arrTimezone">;
+    expect(formatRailSpan(journey, "de-DE", " → ")).toBe("10.08.2026, 14:00 → 11.08.2026, 10:00");
+  });
 });
