@@ -1,4 +1,4 @@
-import { READERS } from "./readers";
+import { READERS, v2Readers } from "./readers";
 import { decodeCalendar, parseCalendarLegs } from "../icsCalendar";
 import { readRailTemplates } from "../railBookingParser";
 import { travelClassOf, trainTokenIn } from "../ticketText";
@@ -348,3 +348,30 @@ describe.each(READERS)(
     });
   }
 );
+
+describe("DB clock-only arrivals through the v2 files: no guessed day", () => {
+  it("connection info leaves an arrival just before or almost a day after the departure unread", () => {
+    const read = (dep: string, arr: string) =>
+      v2Readers.parseDbConnectionInfo(
+        DB_CONNECTION_INFO.replace("Kiel Hbf: 23:10 Uhr", `Kiel Hbf: ${dep} Uhr`).replace(
+          "Hamburg Hbf: 00:25 Uhr",
+          `Hamburg Hbf: ${arr} Uhr`
+        )
+      )?.legs[0];
+    expect(read("23:10", "22:50")?.arrivalLocal).toBeNull();
+    expect(read("00:10", "23:50")?.arrivalLocal).toBeNull();
+    expect(read("23:10", "00:25")?.arrivalLocal).toBe("2008-03-22T00:25");
+  });
+
+  it("postal order does the same", () => {
+    const read = (line: string) =>
+      v2Readers.parseDbPostalOrder(
+        DB_POSTAL_ORDER.replace("03.07.2015: Rostock Hbf 09:27 - Erfurt Hbf 14:05", line)
+      )?.legs[0];
+    expect(read("03.07.2015: Rostock Hbf 09:27 - Erfurt Hbf 09:10")?.arrivalLocal).toBeNull();
+    expect(read("03.07.2015: Rostock Hbf 00:10 - Erfurt Hbf 23:50")?.arrivalLocal).toBeNull();
+    expect(read("03.07.2015: Rostock Hbf 09:27 - Erfurt Hbf 14:05")?.arrivalLocal).toBe(
+      "2015-07-03T14:05"
+    );
+  });
+});

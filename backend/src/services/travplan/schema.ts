@@ -321,8 +321,9 @@ export const stateSchema = settingsSchema
     activeVariantName: text(60).min(1),
     vehicle: vehicleSchema.nullable(),
     roadtripId: id.nullable(),
-    stationLinks: z.array(z.object({ stationId: id, tripStopId: id }).strict()).max(60),
-    stationWeather: z.array(stationWeatherSchema).max(60),
+    // Kept for the stations of every route (active + up to 3 variants, 60 each).
+    stationLinks: z.array(z.object({ stationId: id, tripStopId: id }).strict()).max(240),
+    stationWeather: z.array(stationWeatherSchema).max(240),
   })
   .refine((v) => !v.startDay || !v.endDay || v.startDay <= v.endDay, {
     message: "End precedes start",
@@ -364,8 +365,12 @@ export const stateSchema = settingsSchema
       if (item.stationId && !stationIds.has(item.stationId))
         issue(["items", i, "stationId"], "Unknown station");
     });
+    const routeStationIds = new Set([
+      ...stationIds,
+      ...v.variants.flatMap((variant) => variant.stations.map((s) => s.id)),
+    ]);
     v.stationLinks.forEach((link, i) => {
-      if (!stationIds.has(link.stationId))
+      if (!routeStationIds.has(link.stationId))
         issue(["stationLinks", i, "stationId"], "Unknown station");
     });
     if (Buffer.byteLength(JSON.stringify(v)) > MAX_STATE_BYTES)

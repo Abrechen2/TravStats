@@ -36,7 +36,8 @@ import {
  *
  * Times stay what the ticket prints, on each terminal's own clock; an arrival
  * without its own day is the departure's day, or the next one when its clock
- * reads earlier (`laterClock`). It abstains rather than write a template that
+ * reads earlier by more than a zone step; one just earlier is left unread
+ * (`laterClock`). It abstains rather than write a template that
  * reads nothing: without a complete row, without a day, without a sender
  * anchor, or when the built template does not read its OWN sample.
  */

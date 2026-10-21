@@ -32,7 +32,11 @@ export interface BusTicketPreview {
   template: { id: string; source: "workshop" | "repository" } | null;
 }
 
-/** One proposal per ride; a template reads what the ticket prints, so each value is its own evidence. */
+/**
+ * One proposal per ride; a template reads what the ticket prints, so each
+ * value is its own evidence. The ticket's total is proposed only for a
+ * single-ride ticket.
+ */
 export function busTicketProposals(ticket: ParsedRideTicket): BusTicketProposal[] {
   const put = (target: BusTicketProposal, field: BusTicketField, value: string | number | null) => {
     if (value === null || value === "") return;
@@ -41,8 +45,13 @@ export function busTicketProposals(ticket: ParsedRideTicket): BusTicketProposal[
   const shared: BusTicketProposal = {};
   put(shared, "operator", ticket.operator);
   put(shared, "bookingReference", ticket.bookingReference);
-  put(shared, "price", ticket.price);
-  put(shared, "currency", ticket.currency);
+  // The printed price is the ticket's total: a ride's price only when the
+  // ticket holds one ride, never copied onto each of several (the ferry
+  // preview answers the same way).
+  if (ticket.rides.length === 1) {
+    put(shared, "price", ticket.price);
+    put(shared, "currency", ticket.currency);
+  }
   return ticket.rides.map((ride) => {
     const row: BusTicketProposal = {};
     put(row, "departureStop", ride.depName);

@@ -67,6 +67,9 @@ export async function commitPreviewRows(
       // absent — "" or a midnight guess is what the batch used to refuse.
       departureLocal: r.departureLocal ?? `${r.date}T${r.depTimeLocal ?? "00:00:00"}`,
       arrivalLocal: r.arrivalLocalCorrected || null,
+      // The second 02:30 of an autumn night reads back an hour early without it.
+      ...(r.departureFold ? { departureFold: r.departureFold } : {}),
+      ...(r.arrivalFold ? { arrivalFold: r.arrivalFold } : {}),
       depTimeSemantics: r.timeSemantics,
       arrTimeSemantics: r.timeSemantics,
       ...(r.datePrecision ? { datePrecision: r.datePrecision } : {}),
