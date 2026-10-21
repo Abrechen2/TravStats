@@ -381,3 +381,20 @@ it("updates the sky when an inline satellite style has already finished loading"
   );
   expect(mapCalls.setProjection[mapCalls.setProjection.length - 1]).toEqual({ type: "globe" });
 });
+
+// beta.22 UAT: a failed cruise-route request only logged, so the trip map
+// showed a cruise as if it had no route — absence and failure looked alike.
+describe("TripMap: a failed cruise-route load says so and can be retried", () => {
+  it("names the failure, retries on request, and clears the notice once loaded", async () => {
+    const { cruiseApi } = await import("../../../lib/api/cruise");
+    const before = vi.mocked(cruiseApi.getGeometryBatch).mock.calls.length;
+    vi.mocked(cruiseApi.getGeometryBatch).mockRejectedValueOnce(new Error("502"));
+    const cruiseTrip = { ...trip, cruises: [{ id: "c1", cruiseLine: "AIDA" }] } as unknown as Trip;
+    render(<TripMap trip={cruiseTrip} />);
+    const notice = await screen.findByRole("alert");
+    expect(notice).toHaveTextContent("map:loadFailed.cruiseRoutes");
+    await userEvent.click(screen.getByRole("button", { name: "map:loadFailed.retry" }));
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+    expect(vi.mocked(cruiseApi.getGeometryBatch).mock.calls.length - before).toBe(2);
+  });
+});

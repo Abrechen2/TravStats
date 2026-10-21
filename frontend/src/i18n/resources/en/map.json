@@ -1,4 +1,9 @@
 {
+  "loadFailed": {
+    "rentals": "The rental cars could not be loaded.",
+    "cruiseRoutes": "The cruise routes could not be loaded.",
+    "retry": "Try again"
+  },
   "loading3DGlobe": "Loading 3D globe...",
   "filters": {
     "title": "Filter",

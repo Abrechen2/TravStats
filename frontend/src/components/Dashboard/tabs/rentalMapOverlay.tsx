@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import type { Layer } from "@deck.gl/core";
 import {
@@ -18,6 +18,7 @@ import { useOverlayAppearance } from "../../../store/overlayAppearanceStore";
 import { rentalApi } from "../../../lib/api/rental";
 import type { RentalBooking } from "../../../types/rental";
 import { logger } from "../../../lib/logger";
+import { MapLoadFailedNotice } from "../../map/MapLoadFailedNotice";
 
 type Translate = (key: string) => string;
 
@@ -87,15 +88,25 @@ export function buildRentalLegendRows(
 /** The logbook's page bound; the map reads pages until it has them all. */
 const PAGE = 500;
 
+export interface DashboardRentals {
+  rentals: RentalBooking[];
+  /** The load failed — said on the map, never drawn as "no rentals" (beta.22 UAT). */
+  failed: boolean;
+  reload: () => void;
+}
+
 /**
  * Every rental the map draws, for one year or all. `enabled` gates the FETCH,
  * not just the drawing — a domain behind the beta switch or switched off by
- * the user never reaches the network. A failed load is logged and drawn as
- * nothing; the logbook page is where it is said out loud.
+ * the user never reaches the network. A failed load is logged AND reported as
+ * `failed`, with a `reload`, so the map can say it instead of looking empty.
  */
-export function useDashboardRentals(enabled: boolean, year: number | null): RentalBooking[] {
+export function useDashboardRentals(enabled: boolean, year: number | null): DashboardRentals {
   const [rentals, setRentals] = useState<RentalBooking[]>([]);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
+    setFailed(false);
     if (!enabled) {
       setRentals([]);
       return;
@@ -112,25 +123,31 @@ export function useDashboardRentals(enabled: boolean, year: number | null): Rent
         if (!cancelled) setRentals(all);
       } catch (err: unknown) {
         logger.error("useDashboardRentals: failed to load rentals", err);
-        if (!cancelled) setRentals([]);
+        if (!cancelled) {
+          setRentals([]);
+          setFailed(true);
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [enabled, year]);
-  return rentals;
+  }, [enabled, year, attempt]);
+  const reload = useCallback(() => setAttempt((n) => n + 1), []);
+  return { rentals, failed, reload };
 }
 
 export interface RentalOverlay {
   layers: Layer[];
   legendRows: JSX.Element[];
+  /** The notice over the map when the rentals could not be loaded; null otherwise. */
+  status: JSX.Element | null;
 }
 
 /** The rental layer of the "Alle" map as one hook, so that tab gains a line, not a block. */
 export function useRentalOverlay(show: boolean, onGlobe: boolean, t: Translate): RentalOverlay {
   const year = useDashboardFilterStore((s) => s.year);
-  const rentals = useDashboardRentals(show, year);
+  const { rentals, failed, reload } = useDashboardRentals(show, year);
   const { colorOf } = useDomainColors();
   const color = colorOf("rental");
   const { rentalLineWidth, rentalMarkerSize, rentalShowLine } = useOverlayAppearance();
@@ -143,7 +160,18 @@ export function useRentalOverlay(show: boolean, onGlobe: boolean, t: Translate):
     () => buildRentalMapLayers(drawn, color, onGlobe, "all-rental", style),
     [drawn, color, onGlobe, style]
   );
-  return { layers, legendRows: buildRentalLegendRows(drawn, color, t, legendRow, style) };
+  return {
+    layers,
+    legendRows: buildRentalLegendRows(drawn, color, t, legendRow, style),
+    status:
+      show && failed ? (
+        <MapLoadFailedNotice
+          key="rental-load-failed"
+          messageKey="map:loadFailed.rentals"
+          onRetry={reload}
+        />
+      ) : null,
+  };
 }
 
 const EMPTY: readonly RentalBooking[] = [];

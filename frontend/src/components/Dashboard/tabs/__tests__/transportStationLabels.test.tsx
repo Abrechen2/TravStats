@@ -36,7 +36,7 @@ vi.mock("../../../../lib/api/ferry", () => ({
   ferryApi: { listAll: vi.fn(async () => [{ id: "f1", ...STATIONS }]) },
 }));
 // Rentals name no station; their own fetch is out of this test's way.
-const NO_RENTALS = { layers: [], legendRows: [] };
+const NO_RENTALS = { layers: [], legendRows: [], status: null };
 vi.mock("../rentalMapOverlay", () => ({ useRentalOverlay: () => NO_RENTALS }));
 
 const t = (key: string): string => key;

@@ -1,4 +1,9 @@
 {
+  "loadFailed": {
+    "rentals": "Die Mietwagen konnten nicht geladen werden.",
+    "cruiseRoutes": "Die Kreuzfahrtrouten konnten nicht geladen werden.",
+    "retry": "Erneut versuchen"
+  },
   "loading3DGlobe": "3D-Globus wird geladen...",
   "filters": {
     "title": "Filter",
