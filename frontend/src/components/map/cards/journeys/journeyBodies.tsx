@@ -41,6 +41,7 @@ import {
   JourneyEndLine,
   JourneyList,
   OperatorRow,
+  journeyDay,
   journeyFactText,
   journeyPath,
 } from "./journeyCardParts";
@@ -160,17 +161,16 @@ const FACT_LABEL: Record<MapJourney["domain"], string> = {
 function LatestRows({
   latest,
   t,
-  locale,
 }: { latest: JourneyRouteStats["latest"] } & BodyProps): JSX.Element | null {
   if (!latest) return null;
   const j = latest.journey;
   const facts = journeyFactText(j, t);
   return (
     <>
-      {j.departureTime && (
+      {j.departure && (
         <Row
           label={t(latest.upcoming ? "map:journey.next" : "map:journey.last")}
-          value={formatDate(j.departureTime, locale)}
+          value={journeyDay(j)}
         />
       )}
       {facts.length > 0 && (
@@ -236,7 +236,7 @@ export function JourneyRouteBody({
           <OperatorRow domain={data.domain} name={stats.topOperator} color={data.color} t={t} />
         )}
       </Grid>
-      <JourneyList journeys={stats.list} locale={locale} t={t} />
+      <JourneyList journeys={stats.list} t={t} />
       <OpenAction latest={stats.latest} t={t} />
     </>
   );
@@ -262,17 +262,17 @@ export function JourneyStopBody({
             value={`→ ${stats.topRoute.name} · ${stats.topRoute.count}×`}
           />
         )}
-        {stats.latest?.journey.departureTime && (
+        {stats.latest?.journey.departure && (
           <Row
             label={t(stats.latest.upcoming ? "map:journey.next" : "map:journey.last")}
-            value={formatDate(stats.latest.journey.departureTime, locale)}
+            value={journeyDay(stats.latest.journey)}
           />
         )}
         {stats.topOperator && (
           <OperatorRow domain={data.domain} name={stats.topOperator} color={data.color} t={t} />
         )}
       </Grid>
-      <JourneyList journeys={stats.list} locale={locale} t={t} />
+      <JourneyList journeys={stats.list} t={t} />
     </>
   );
 }

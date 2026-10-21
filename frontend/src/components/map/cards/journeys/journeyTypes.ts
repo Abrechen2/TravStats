@@ -8,6 +8,7 @@
 // that would drift apart the way the flat map's five tooltips once did.
 
 import type { Rgb } from "../../../../lib/domainColor";
+import type { TimeValue } from "../../../../shared/time";
 
 /** The domains whose journeys run between two named places. */
 export type JourneyDomain = "flight" | "rail" | "bus" | "ferry" | "rental";
@@ -47,8 +48,14 @@ export interface MapJourney {
   domain: JourneyDomain;
   dep: JourneyEnd;
   arr: JourneyEnd;
-  /** ISO instant the journey started (departure / pick-up), or null. */
+  /** ISO instant the journey started (departure / pick-up), or null — for ORDER only. */
   departureTime: string | null;
+  /**
+   * The same moment on its place's clock, cut to its precision — what a card
+   * SHOWS (ADR 0002 D3). The instant read in the reader's zone named the
+   * wrong day for a late departure: Berlin 00:30 on the 21st was the 20th.
+   */
+  departure: TimeValue | null;
   status: string;
   /** Kilometres when known. NULL when not — never 0 for "unknown". */
   distanceKm: number | null;
