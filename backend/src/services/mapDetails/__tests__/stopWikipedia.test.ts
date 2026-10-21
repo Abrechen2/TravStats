@@ -37,6 +37,17 @@ describe("matching a station to an article", () => {
     ).toBe("Hamburg Hauptbahnhof");
   });
 
+  it("prefers the station's own article to one about an event there", () => {
+    // Wikipedia's real geosearch around Hamburg Hbf, 2026-10-21, in its order.
+    const near = [
+      "Steintorfriedhöfe",
+      "Messerangriff am Hamburger Hauptbahnhof 2025",
+      "Hamburg Hauptbahnhof",
+    ];
+    expect(matchStopTitle("rail", "Hamburg Hbf", near)).toBe("Hamburg Hauptbahnhof");
+    expect(matchStopTitle("rail", "Hamburg Hbf", near.slice(0, 2))).toBeNull();
+  });
+
   it("refuses a neighbour that only shares the city's name", () => {
     expect(matchStopTitle("rail", "Hamburg Hbf", ["Hamburg Museum", "Hamburger Kunsthalle"])).toBe(
       null

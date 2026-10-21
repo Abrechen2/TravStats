@@ -28,6 +28,8 @@ const GEOSEARCH_LIMIT = 10;
 const TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_ENTRIES = 1_000;
 const MAX_EXTRACT_CHARS = 360;
+/** Words a station article's title may carry beyond the station's own name ("Bahnhof X Süd"). */
+const MAX_EXTRA_WORDS = 1;
 
 /** Words that name the kind of place, not WHICH one — never a distinctive match. */
 const GENERIC = new Set([
@@ -131,15 +133,23 @@ export function matchStopTitle(
 ): string | null {
   const words = distinctiveWords(name);
   if (words.length === 0) return null;
+  let best: { title: string; extra: number } | null = null;
   for (const title of candidates) {
     const titleWords = distinctiveWords(title);
     // Every distinctive word of the stop's name is in the title — "Kiel" in
     // "Kieler Hafen" counts, a shared city name next to another one does not.
     const covers = words.every((w) => titleWords.some((tw) => tw.startsWith(w)));
     if (!covers) continue;
-    if (fold(title) === fold(name) || KIND_WORDS[domain].test(title)) return title;
+    if (fold(title) !== fold(name) && !KIND_WORDS[domain].test(title)) continue;
+    // An article ABOUT something at the station ("Messerangriff am Hamburger
+    // Hauptbahnhof 2025", found 100 m from the station) carries words the
+    // station's own article does not. The fewest extra words wins; more than
+    // MAX_EXTRA_WORDS is not the station.
+    const extra = titleWords.filter((tw) => !words.some((w) => tw.startsWith(w))).length;
+    if (extra > MAX_EXTRA_WORDS) continue;
+    if (!best || extra < best.extra) best = { title, extra };
   }
-  return null;
+  return best?.title ?? null;
 }
 
 /** The first two sentences, at most MAX_EXTRACT_CHARS — "1–2 sentences" (owner). */
