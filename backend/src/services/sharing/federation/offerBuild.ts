@@ -51,14 +51,25 @@ export async function requireHome(
     );
 }
 
-/** The trip's group with a wire ref, created and/or given a ref if it has none yet. */
+/**
+ * The trip's group with a wire ref, created and/or given a ref if it has none yet. The trip row
+ * is locked and read again here, and so is its group: two first offers at once (to two people,
+ * or an offer and a claim) otherwise each made a group and the trip kept only the last, leaving
+ * the first person's membership on a group the trip no longer belonged to.
+ */
 export async function ensureFederatedGroup(
   tx: DbTransaction,
   userId: string,
-  trip: { id: string; shareGroupId: string | null }
+  trip: { id: string }
 ): Promise<FederatedGroup> {
-  if (trip.shareGroupId) {
-    const group = await tx.tripShareGroup.findUniqueOrThrow({ where: { id: trip.shareGroupId } });
+  await tx.$queryRaw`SELECT 1 FROM trips WHERE id = ${trip.id} FOR UPDATE`;
+  const { shareGroupId } = await tx.trip.findUniqueOrThrow({
+    where: { id: trip.id },
+    select: { shareGroupId: true },
+  });
+  if (shareGroupId) {
+    await tx.$queryRaw`SELECT 1 FROM trip_share_groups WHERE id = ${shareGroupId} FOR UPDATE`;
+    const group = await tx.tripShareGroup.findUniqueOrThrow({ where: { id: shareGroupId } });
     if (group.federatedRef)
       return { id: group.id, federatedRef: group.federatedRef, created: false };
     const federatedRef = randomUUID();
@@ -72,13 +83,25 @@ export async function ensureFederatedGroup(
   return { id: group.id, federatedRef: group.federatedRef as string, created: true };
 }
 
-/** Undo `ensureFederatedGroup` for an offer that did not arrive: the trip is unshared again. */
+/**
+ * Undo `ensureFederatedGroup` for an offer that did not arrive: the trip is unshared again — but
+ * only while the trip is still in that group and nobody else joined it meanwhile (an offer made
+ * at the same time, which found this group, must keep it).
+ */
 export async function undoNewGroup(
   tx: DbTransaction,
   tripId: string,
   group: FederatedGroup
 ): Promise<void> {
   if (!group.created) return;
+  await tx.$queryRaw`SELECT 1 FROM trips WHERE id = ${tripId} FOR UPDATE`;
+  const trip = await tx.trip.findUnique({ where: { id: tripId }, select: { shareGroupId: true } });
+  if (trip?.shareGroupId !== group.id) return;
+  const remoteMembers = await tx.tripShareRemoteMember.count({ where: { groupId: group.id } });
+  const otherTrips = await tx.trip.count({
+    where: { shareGroupId: group.id, id: { not: tripId } },
+  });
+  if (remoteMembers > 0 || otherTrips > 0) return;
   await tx.trip.update({ where: { id: tripId }, data: { shareGroupId: null } });
   await tx.tripShareGroup.delete({ where: { id: group.id } });
 }

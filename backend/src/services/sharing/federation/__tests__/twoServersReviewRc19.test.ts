@@ -37,3 +37,28 @@ describe("a trip shared locally before authors were recorded, offered across ser
     expect(member.delivery.state).toBe("delivered");
   });
 });
+
+describe("two first offers of an unshared trip at once", () => {
+  it("land in one group: neither person's membership is left on a group the trip lost", async () => {
+    const anna = await harnessUser(a, "Anna");
+    const ben = await harnessUser(b, "Ben");
+    const cara = await harnessUser(b, "Cara");
+    const toBen = await pairAcross(a, anna, b, ben);
+    const toCara = await pairAcross(a, anna, b, cara);
+    const trip = await a.prisma.trip.create({ data: { userId: anna, name: "Lissabon" } });
+    await addFlight(a, anna, trip.id);
+
+    await Promise.all([
+      a.offers.offerTrip(anna, trip.id, toBen.id),
+      a.offers.offerTrip(anna, trip.id, toCara.id),
+    ]);
+
+    const { shareGroupId } = await a.prisma.trip.findUniqueOrThrow({ where: { id: trip.id } });
+    const members = await a.prisma.tripShareRemoteMember.findMany({
+      where: { remoteId: { in: [toBen.id, toCara.id] } },
+    });
+    expect(members.map((m) => m.groupId)).toEqual([shareGroupId, shareGroupId]);
+    expect(await a.prisma.tripShareGroup.count({ where: { createdById: anna } })).toBe(1);
+    expect(await membersOn(a, anna, trip.id)).toHaveLength(2);
+  });
+});
