@@ -135,6 +135,9 @@ function readFlight(flight: Flight, index: number): PreviewRowInput | ParserErro
     depTimeLocal: dep?.time,
     arrDate: arr?.date,
     arrTimeLocal: arr?.time,
+    // The instants themselves: they alone say which 02:30 of an autumn night was meant.
+    depInstant: dep ? present(flight.departure) : undefined,
+    arrInstant: arr ? present(flight.arrival) : undefined,
     durationSeconds:
       !precision && flight.duration && flight.duration > 0 ? flight.duration : undefined,
     fromIata,

@@ -24,7 +24,9 @@ registry.registerPath({
     "value you marked on the sample (bar the issuer's own names), your names and addresses, " +
     "e-mail addresses and long numbers: a hit in a marker, anchor or sender domain is removed and " +
     "listed in `removed`; a hit in the extraction rules or the issuer's name refuses the export " +
-    "(422 `TEMPLATE_EXPORT_PERSONAL_DATA`, `kinds` names what was found). Nothing is sent " +
+    "(422 `TEMPLATE_EXPORT_PERSONAL_DATA`, `kinds` names what was found). A template whose " +
+    "sample was deleted is refused (422 `TEMPLATE_EXPORT_SOURCE_MISSING`): without its marks the " +
+    "scan cannot tell which values are yours. Nothing is sent " +
     "anywhere: `githubUrl` is GitHub's new-file page in the domain's folder, where you paste or " +
     "upload the file and the repository owner reviews it.",
   tags: ["Parsers"],
@@ -47,7 +49,8 @@ registry.registerPath({
     404: { description: "Not your template", content: errorContent },
     409: { description: "TEMPLATE_EXPORT_NOT_ACTIVE", content: errorContent },
     422: {
-      description: "TEMPLATE_EXPORT_PERSONAL_DATA or TEMPLATE_EXPORT_UNSUPPORTED",
+      description:
+        "TEMPLATE_EXPORT_PERSONAL_DATA, TEMPLATE_EXPORT_SOURCE_MISSING or TEMPLATE_EXPORT_UNSUPPORTED",
       content: errorContent,
     },
   },

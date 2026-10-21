@@ -79,6 +79,8 @@ export const EMPTY_TRIP_COUNTS = {
   documents: true,
   // A trip-wide expense (forgejo#140) is money a dissolve would delete.
   expenses: true,
+  // A Companion recording CASCADES with its trip: every point would be gone.
+  recordingBatches: true,
 } as const;
 
 /** The same rule as a Prisma `where` fragment, so a DELETE re-checks it in the
@@ -98,6 +100,7 @@ export const EMPTY_TRIP_WHERE = {
   immichAlbums: { none: {} },
   documents: { none: {} },
   expenses: { none: {} },
+  recordingBatches: { none: {} },
   notes: null,
   description: null,
   summary: null,
@@ -263,6 +266,21 @@ export async function mergeTrips(
   let mergedDuplicates = { albums: 0, photos: 0 };
 
   await prisma.$transaction(async (tx) => {
+    // Lock every trip of the merge first, in one statement and in id order. A
+    // Companion upload inserting a recording into a source trip needs its row
+    // (FK check) and so waits until the merge commits — then finds the trip
+    // gone and is refused. Without the lock an upload landing between the move
+    // below and the delete was stored, then cascade-deleted, while both sides
+    // reported success (forgejo#316). Sources AND target, ordered: two opposite
+    // merges of one pair (A into B, B into A) that each locked only their own
+    // source deadlocked, and Postgres aborted one with a raw error.
+    const locked = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT id FROM trips WHERE id = ANY(${tripIds}::text[]) AND user_id = ${userId}
+      ORDER BY id FOR UPDATE`;
+    // The loser of such a race waited here and finds its partner gone.
+    if (locked.length !== tripIds.length) {
+      throw new AppError("One or more trips not found", 404, "TRIP_NOT_FOUND");
+    }
     // A shared source trip leaves its group before it goes (its members keep
     // their copies and are told); what lands on a shared target is copied.
     for (const source of sources) await detachTrip(tx, userId, source);
@@ -297,6 +315,10 @@ export async function mergeTrips(
     // Trip-wide expenses CASCADE with their trip too (forgejo#140). A
     // section's expense needs nothing: it rides on the section moved above.
     await tx.tripExpense.updateMany(move);
+    // Companion recordings CASCADE with their trip (forgejo#316). Owner and
+    // uploadId stay as they are, so the (userId, uploadId) key cannot collide;
+    // they are private and deliberately absent from the propagation below.
+    await tx.tripRecordingBatch.updateMany(move);
     // Albums BEFORE photos: an album left on a source trip is cascade-deleted
     // with it, and takes the photos this merge just moved with it (AUD-029).
     const duplicateAlbums = await mergeImmichAlbums(tx, sourceIds, targetId);
@@ -349,6 +371,17 @@ export async function mergeTrips(
       });
     }
 
+    // The Companion may still hold a source id and upload to it; leave a
+    // forwarding address (TRIP_MERGED), and re-point any older one that led to
+    // a source, so a chain of merges always names the trip that exists.
+    await tx.mergedTripRedirect.updateMany({
+      where: { userId, mergedIntoTripId: { in: sourceIds } },
+      data: { mergedIntoTripId: targetId },
+    });
+    await tx.mergedTripRedirect.createMany({
+      data: sourceIds.map((sourceTripId) => ({ sourceTripId, userId, mergedIntoTripId: targetId })),
+      skipDuplicates: true,
+    });
     await tx.trip.deleteMany({ where: { id: { in: sourceIds }, userId } });
     for (const [entity, ids] of moved) {
       await propagateWrites(tx, userId, entity, ids);

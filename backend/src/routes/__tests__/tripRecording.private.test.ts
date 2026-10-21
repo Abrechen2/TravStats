@@ -129,6 +129,9 @@ describe("trip recording — private to its owner", () => {
       "routes/trips/tripRecording.ts",
       "services/tripRecording/bounds.ts",
       "services/export/allDataExport.ts",
+      // Merge moves a source trip's recording to the target (same owner, never
+      // propagated); cleanup keeps a recorded trip from being dissolved.
+      "services/tripCleanupService.ts",
       // Classifies the User relation as never published (NON_TRAVEL_RELATIONS).
       "services/federation/e2e/graph.ts",
     ]);

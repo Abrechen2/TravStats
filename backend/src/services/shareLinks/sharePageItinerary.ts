@@ -16,7 +16,7 @@ export const SHARE_PAGE_ITINERARY_JS = `function itineraryEntries(it, fmt, T) {
     return " (" + (tv.zone ? tv.zone.replace(/_/g, " ") + ", UTC" + tv.offset : "UTC") + ")";
   }
   function when(tv) { return tv ? fmt.clock(tv) + zone(tv) : null; }
-  function day(d) { return d ? fmt.day(d.date) : null; }
+  function day(d) { return d ? fmt.day(d.date, d.precision) : null; }
   function span(a, b) { return [a, b].filter(Boolean).join(" – "); }
   function code(a) { return a.code || a.name || "?"; }
   function entry(item) {

@@ -146,6 +146,22 @@ describe("micro-trip candidates", () => {
         }),
     ],
     [
+      // forgejo#316: a recording CASCADES with its trip — every point gone.
+      "a recording",
+      (tripId) =>
+        prisma.tripRecordingBatch.create({
+          data: {
+            userId,
+            tripId,
+            uploadId: `tidy-rec-${tripId}`,
+            startedAt: new Date("2026-06-01T08:00:00Z"),
+            endedAt: new Date("2026-06-01T08:05:00Z"),
+            points: [[Date.parse("2026-06-01T08:00:00Z"), 1, 1, null]],
+            pointCount: 1,
+          },
+        }),
+    ],
+    [
       "a summary",
       (tripId) => prisma.trip.update({ where: { id: tripId }, data: { summary: "Written up" } }),
     ],

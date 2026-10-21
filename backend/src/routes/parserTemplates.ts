@@ -70,6 +70,13 @@ router.get("/:id/community-export", async (req: AuthRequest, res: Response, next
         "TEMPLATE_EXPORT_NOT_ACTIVE"
       );
     }
+    if (outcome.refusal === "sourceMissing") {
+      throw new AppError(
+        "The document this template was derived from is gone, so it cannot be checked for personal data",
+        422,
+        "TEMPLATE_EXPORT_SOURCE_MISSING"
+      );
+    }
     if (outcome.refusal === "containsPersonalData") {
       const kinds = [...new Set(outcome.found.map((f) => f.kind))].join(",");
       throw new AppError(

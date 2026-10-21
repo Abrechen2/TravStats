@@ -74,18 +74,25 @@ a{color:var(--accent)}
  * on 1 September in Auckland too (ADR 0002: display `local` as it is). An
  * instant that belongs to no place (the link's end, the time a position was
  * sent) is shown on the visitor's own clock, which is what "until when" means
- * to them.
+ * to them. A value known only to the month or the year is written as such: its
+ * stored day is a placeholder, and printing it would name a day nobody knows.
  */
 export const SHARE_PAGE_FORMAT_JS = `function shareFormat(locale) {
   var dayFmt = new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
   var clockFmt = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" });
   var instantFmt = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  var monthFmt = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone: "UTC" });
+  var yearFmt = new Intl.DateTimeFormat(locale, { year: "numeric", timeZone: "UTC" });
   function utcOf(local) { return new Date(local.slice(0, 19) + (local.length > 10 ? "" : "T00:00:00") + "Z"); }
+  function day(ymd, precision) {
+    var f = precision === "month" ? monthFmt : precision === "year" ? yearFmt : dayFmt;
+    return f.format(utcOf(ymd.slice(0, 10)));
+  }
   return {
-    day: function (ymd) { return dayFmt.format(utcOf(ymd.slice(0, 10))); },
+    day: day,
     clock: function (tv) {
       if (!tv) return null;
-      return tv.precision === "minute" ? clockFmt.format(utcOf(tv.local)) : dayFmt.format(utcOf(tv.local.slice(0, 10)));
+      return tv.precision === "minute" ? clockFmt.format(utcOf(tv.local)) : day(tv.local, tv.precision);
     },
     instant: function (iso) { return instantFmt.format(new Date(iso)); }
   };

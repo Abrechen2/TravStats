@@ -274,10 +274,13 @@ router.post(
       if (existing && !fields.data.replace) throw alreadyRecorded();
 
       const scheduled = await scheduledInstants(flight);
-      const placed = placeUntimedTrack(withoutEmptyElevations(file.track), scheduled);
+      const placed = placeUntimedTrack(withoutEmptyElevations(file.track), scheduled, {
+        departure: flight.depTimeSemantics,
+        arrival: flight.arrTimeSemantics,
+      });
       if (!placed) {
         throw new AppError(
-          "This recording has no times and the flight has no schedule to place it in",
+          "This recording has no times and the flight has no departure or arrival time to place it in",
           400,
           "TRACK_NO_TIMESTAMPS"
         );

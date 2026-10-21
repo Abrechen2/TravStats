@@ -65,6 +65,9 @@ const withManual = (kinds: readonly EvidenceKind[]): EvidenceKind[] =>
 
 const yearOf = (day: string | null): number | null => (day ? Number(day.slice(0, 4)) : null);
 
+const earliest = (a: number | null, b: number | null): number | null =>
+  a === null ? b : b === null ? a : Math.min(a, b);
+
 /** Widen a row's period by the user's day, if one was given. */
 function spanWith(
   row: Pick<PassportCountry, "firstYear" | "lastYear">,
@@ -131,7 +134,9 @@ function applyOne(
     override: view,
   };
   if (override.verdict === "visited") {
-    const firstVisitedYear = row.firstVisitedYear ?? yearOf(override.day);
+    // The earlier of the two: a remembered day before the first recorded visit
+    // moves the first visit back, and with it "new this year".
+    const firstVisitedYear = earliest(row.firstVisitedYear ?? null, yearOf(override.day));
     return {
       ...common,
       tier: TIER_RANK[row.tier] >= TIER_RANK.visited ? row.tier : "visited",
