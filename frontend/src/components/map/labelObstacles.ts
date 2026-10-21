@@ -68,3 +68,8 @@ export function withLabelObstacles(extraLayers: Layer[], mapLayers: readonly Lay
     l instanceof StationLabelsLayer ? (l.clone({ obstacles }) as Layer) : l
   );
 }
+
+/** The map's own layers, then its extra layers placed around their labels. */
+export function appendWithLabelObstacles(own: Layer[], extraLayers: Layer[]): Layer[] {
+  return [...own, ...withLabelObstacles(extraLayers, own)];
+}
