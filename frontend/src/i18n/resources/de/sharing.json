@@ -575,6 +575,8 @@
     },
     "errors": {
       "loadFailed": "Die Personen auf anderen Servern konnten nicht geladen werden.",
+      "listsFailed": "Die Codes und Personen konnten nicht geladen werden – was hier steht, ist vielleicht nicht aktuell.",
+      "retry": "Erneut versuchen",
       "createFailed": "Der Code konnte nicht erstellt werden.",
       "revokeFailed": "Der Code konnte nicht zurückgezogen werden.",
       "claimFailed": "Der Code konnte nicht eingelöst werden.",
