@@ -95,6 +95,14 @@ const cellOf = (lon: number, lat: number): [number, number] => [
   Math.floor(lat / CELL_DEG),
 ];
 
+/** How many cells east and west `SAME_STATION_M` reaches at this latitude —
+ *  capped, because a pole would need the whole row. One cell north-south is
+ *  110 m, so one row either side is always enough there. */
+function cellsWithin(lat: number): number {
+  const cellM = 111_320 * Math.cos((lat * Math.PI) / 180) * CELL_DEG;
+  return Math.min(50, Math.max(1, Math.ceil(SAME_STATION_M / Math.max(cellM, 1e-6))));
+}
+
 /** Equirectangular metres — exact enough at 100 m, and cheap. */
 function metresBetween(a: [number, number], lon: number, lat: number): number {
   const kx = 111_320 * Math.cos((lat * Math.PI) / 180);
@@ -149,7 +157,11 @@ export function buildStationLabels(
     const [cx, cy] = cellOf(lon, lat);
     let best: Pending | undefined;
     let bestM = SAME_STATION_M;
-    for (let dx = -1; dx <= 1; dx++) {
+    // A cell is CELL_DEG wide in degrees, so narrower in metres the further
+    // from the equator: 68 m at 52.5° N, where 100 m spans two cells. Search
+    // as many as the merge distance covers here (Codex review).
+    const rx = cellsWithin(lat);
+    for (let dx = -rx; dx <= rx; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
         for (const p of grid.get(`${cx + dx}:${cy + dy}`) ?? []) {
           const m = metresBetween(p.position, lon, lat);

@@ -112,6 +112,21 @@ describe("buildStationLabels", () => {
     expect(munich[0].name).toBe("München Hbf");
   });
 
+  it("joins two points 81 m apart across a grid cell boundary (Codex review)", () => {
+    // At 52.5° N a 0.001° cell is 68 m wide, so 100 m spans two cells: a
+    // search of the neighbouring cells alone missed this pair.
+    const labels = buildStationLabels(
+      [
+        ride({ depStationName: "Berlin Hbf", depLat: 52.525, depLon: 13.3699 }),
+        ride({ depStationName: "Berlin Hbf", depLat: 52.525, depLon: 13.3711 }),
+      ],
+      RGB
+    );
+    const berlin = labels.filter((l) => l.name === "Berlin Hbf");
+    expect(berlin).toHaveLength(1);
+    expect(berlin[0].count).toBe(2);
+  });
+
   it("keeps a second catalogue station at the same place apart from the first", () => {
     const labels = buildStationLabels(
       [
