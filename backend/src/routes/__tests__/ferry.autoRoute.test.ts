@@ -42,7 +42,7 @@ const unrouted = () => ({
   protectedPrefixCount: 0,
   protectedSuffixCount: 0,
   routed: false,
-  method: "straight" as const,
+  method: "direct" as const,
 });
 
 let userId: string;

@@ -268,7 +268,10 @@ describe("resolveOperatorMark from Wikidata (forgejo#323)", () => {
     await resolveOperatorMark("ferry", "Stena Line");
     const key = operatorMarkKey("Stena Line");
     const metaFile = `${operatorMarkCacheDir()}/${key}.meta.json`;
-    const meta = JSON.parse(await fs.readFile(metaFile, "utf-8")) as Record<string, number>;
+    const meta = JSON.parse(await fs.readFile(metaFile, "utf-8")) as {
+      fetchedAt: number;
+      lastAttemptAt: number;
+    };
     const old = Date.now() - 40 * 24 * 60 * 60 * 1000;
     await fs.writeFile(metaFile, JSON.stringify({ ...meta, fetchedAt: old, lastAttemptAt: old }));
     __resetOperatorMarkCachesForTests();
@@ -277,7 +280,10 @@ describe("resolveOperatorMark from Wikidata (forgejo#323)", () => {
     let after = { ...meta, lastAttemptAt: old };
     for (let i = 0; i < 40 && !(after.lastAttemptAt > old); i++) {
       await new Promise((r) => setTimeout(r, 50));
-      after = JSON.parse(await fs.readFile(metaFile, "utf-8")) as Record<string, number>;
+      after = JSON.parse(await fs.readFile(metaFile, "utf-8")) as {
+        fetchedAt: number;
+        lastAttemptAt: number;
+      };
     }
     expect(after.fetchedAt).toBe(old);
     expect(after.lastAttemptAt).toBeGreaterThan(old);
@@ -308,7 +314,10 @@ describe("resolveOperatorMark from Wikidata (forgejo#323)", () => {
     await resolveOperatorMark("ferry", "Stena Line");
     const key = operatorMarkKey("Stena Line");
     const metaFile = `${operatorMarkCacheDir()}/${key}.meta.json`;
-    const meta = JSON.parse(await fs.readFile(metaFile, "utf-8")) as Record<string, number>;
+    const meta = JSON.parse(await fs.readFile(metaFile, "utf-8")) as {
+      fetchedAt: number;
+      lastAttemptAt: number;
+    };
     const old = Date.now() - 40 * 24 * 60 * 60 * 1000;
     await fs.writeFile(metaFile, JSON.stringify({ ...meta, fetchedAt: old, lastAttemptAt: old }));
     __resetOperatorMarkCachesForTests();
@@ -318,10 +327,13 @@ describe("resolveOperatorMark from Wikidata (forgejo#323)", () => {
     try {
       use((url) => (url.includes("wbsearchentities") ? json({ search: [null] }) : happy()(url)));
       expect((await resolveOperatorMark("ferry", "Stena Line"))?.credit?.qid).toBe("Q833903");
-      let after: Record<string, number> = { ...meta, lastAttemptAt: old };
+      let after: { fetchedAt: number; lastAttemptAt: number } = { ...meta, lastAttemptAt: old };
       for (let i = 0; i < 40 && !(after.lastAttemptAt > old); i++) {
         await new Promise((r) => setTimeout(r, 50));
-        after = JSON.parse(await fs.readFile(metaFile, "utf-8")) as Record<string, number>;
+        after = JSON.parse(await fs.readFile(metaFile, "utf-8")) as {
+          fetchedAt: number;
+          lastAttemptAt: number;
+        };
       }
       expect(after.fetchedAt).toBe(old);
       expect(after.lastAttemptAt).toBeGreaterThan(old);

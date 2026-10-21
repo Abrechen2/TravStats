@@ -133,7 +133,6 @@ function isolatedServer(origin: string, databaseUrl: string): Server {
       jest.doMock("../../../../prisma", () => prismaModule);
       jest.doMock("../../../../prismaClient", () => prismaClientModule);
       jest.doMock("../../../../db", () => ({ ...dbModule, prisma }));
-      /* eslint-disable @typescript-eslint/no-require-imports */
       server = {
         origin,
         prisma: prisma as unknown as typeof dbModule.prisma,
@@ -165,7 +164,6 @@ function isolatedServer(origin: string, databaseUrl: string): Server {
           require("../../../../routes/comparisonPeer").default
         ),
       };
-      /* eslint-enable @typescript-eslint/no-require-imports */
     });
   } finally {
     // The mock factories outlive the isolated registry; nothing after this may read them.

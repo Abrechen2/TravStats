@@ -36,7 +36,7 @@ async function create(extra: Record<string, unknown> = {}) {
     protectedPrefixCount: 0,
     protectedSuffixCount: 0,
     routed: false,
-    method: "straight" as const,
+    method: "direct" as const,
   });
   const r = await request(app)
     .post("/api/v1/ferry")

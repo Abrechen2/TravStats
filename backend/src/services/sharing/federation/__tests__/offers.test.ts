@@ -122,7 +122,18 @@ describe("an offer that cannot be made is refused by name, before anything is se
     });
     const group = await prisma.tripShareGroup.create({ data: { federatedRef: randomUUID() } });
     await expect(
-      prisma.$transaction((tx) => buildOfferBody(tx, ME, anna, t, group.id), { timeout: 60_000 })
+      prisma.$transaction(
+        (tx) =>
+          buildOfferBody(
+            tx,
+            ME,
+            anna,
+            t,
+            { id: group.id, federatedRef: group.federatedRef! },
+            { rosterRef: randomUUID() }
+          ),
+        { timeout: 60_000 }
+      )
     ).rejects.toMatchObject({ code: "SHARE_REMOTE_TRIP_TOO_LARGE" });
     await prisma.tripShareGroup.delete({ where: { id: group.id } });
   });
