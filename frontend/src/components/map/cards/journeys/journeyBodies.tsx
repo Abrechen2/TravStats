@@ -298,6 +298,9 @@ export function JourneyStopBody({
         )}
       </Grid>
       <JourneyList journeys={stats.list} t={t} />
+      {/* A same-station rental has no line to click — its branch IS its card,
+          so it carries the way into the rental too. */}
+      <OpenAction latest={stats.latest} t={t} />
     </>
   );
 }

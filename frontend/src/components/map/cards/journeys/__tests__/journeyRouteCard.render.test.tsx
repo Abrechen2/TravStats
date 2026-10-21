@@ -228,3 +228,28 @@ describe("rental route card figures", () => {
     expect(navigate).toHaveBeenCalledWith("/rentals/a");
   });
 });
+
+describe("a rental that went back to its own branch", () => {
+  it("opens as the branch's card and still offers to open the latest rental", () => {
+    const round = journeyFromRental({
+      id: "r9",
+      status: "completed",
+      provider: "Sixt",
+      pickupStationName: "Faro Airport",
+      returnStationName: "Faro Airport",
+      pickupLat: 37.02,
+      pickupLon: -7.97,
+      returnLat: 37.02,
+      returnLon: -7.97,
+      pickupTimezone: "Europe/Lisbon",
+      returnTimezone: "Europe/Lisbon",
+    } as Parameters<typeof journeyFromRental>[0]);
+    show({
+      kind: "journeyStop",
+      data: { domain: "rental", stop: round.dep, journeys: [round], color: [217, 140, 179] },
+      anchorLngLat: [-7.97, 37.02],
+    });
+    screen.getByRole("button", { name: "Letzte öffnen" }).click();
+    expect(navigate).toHaveBeenCalledWith("/rentals/r9");
+  });
+});
