@@ -1,9 +1,11 @@
-import { CompositeLayer, type Layer, type UpdateParameters } from "@deck.gl/core";
+import { CompositeLayer, type Layer, type UpdateParameters, type Viewport } from "@deck.gl/core";
 import { TextLayer } from "@deck.gl/layers";
 import {
   declutterByBoxes,
   estimateLabelBox,
   pickLabelled,
+  projectToWorldPx,
+  type LabelProjector,
   type LabelBoxSize,
   type LabelsMode,
   type PlacedLabel,
@@ -28,7 +30,9 @@ import type { Rgb } from "../../lib/domainColor";
  * dashboard tabs and the trip map hand it in as an extra layer), where the
  * map's zoom does not exist. So it reads the zoom from its own viewport, snapped
  * to an integer exactly as `DeckGLMap` snaps the zoom it gives the airport
- * labels, and re-picks only when that integer changes — panning costs nothing.
+ * labels, and re-picks only when that integer, the map's turn or its tilt
+ * changes — panning costs nothing. The collision pass measures through the
+ * viewport's own projection (`stationLabelProjector`).
  */
 
 /** What a label needs from a ride — a train, bus or ferry row, or a trip's slim one. */
@@ -246,12 +250,19 @@ export function buildStationLabels(
  * `obstacles` are the labels the map already shows — airport codes, ports,
  * hotels, places (`map/labelObstacles.ts`). They place first and a station
  * name fits around them, so the overview map prints no name over another.
+ *
+ * `zoom` is the snapped zoom, which stands for everything from half a step
+ * below it; the pick holds for that whole bucket, so the geometry is measured
+ * at its smallest scale — at the bucket's top two names 180 px apart are only
+ * 127 px apart at its bottom (Codex review). `project`, when the layer has its
+ * viewport, measures a turned or tilted map as it is drawn.
  */
 export function selectStationLabels(
   stations: readonly StationLabelDatum[],
   mode: LabelsMode,
   zoom: number,
-  obstacles: readonly PlacedLabel[] = []
+  obstacles: readonly PlacedLabel[] = [],
+  project: LabelProjector = (p) => projectToWorldPx(p[0], p[1], zoom - ZOOM_BUCKET_HALF)
 ): StationLabelDatum[] {
   const budgeted = pickLabelled(stations, (s) => s.count, mode, zoom);
   if (mode === "all") return budgeted;
@@ -261,8 +272,36 @@ export function selectStationLabels(
     (s) => s.position,
     (s) => s.box,
     zoom,
-    { offsetY: LABEL_OFFSET_Y_PX, obstacles }
+    { offsetY: LABEL_OFFSET_Y_PX, obstacles, project }
   );
+}
+
+/** `snapLabelZoom` rounds, so one snapped zoom covers half a step either side. */
+const ZOOM_BUCKET_HALF = 0.5;
+
+/**
+ * The viewport's own projection — bearing and pitch included — scaled down to
+ * the bottom of the snapped zoom's bucket. Pills stay upright on screen while
+ * the map turns, so north-south neighbours stacked on a north-up map stand
+ * side by side on a turned one; a north-up Mercator pass never saw that.
+ */
+export function stationLabelProjector(viewport: Viewport): LabelProjector {
+  const scale = 2 ** (snapLabelZoom(viewport.zoom) - ZOOM_BUCKET_HALF - viewport.zoom);
+  return (p) => {
+    const [x, y] = viewport.project([p[0], p[1]]);
+    return [x * scale, y * scale];
+  };
+}
+
+/** What the pick depends on: the snapped zoom and the camera's turn and tilt
+ *  (in 5° steps) — not its position, so panning costs nothing. */
+export function labelViewKey(viewport: Viewport): string {
+  const v = viewport as Viewport & { bearing?: number; pitch?: number };
+  return [
+    snapLabelZoom(viewport.zoom),
+    Math.round((v.bearing ?? 0) / 5),
+    Math.round((v.pitch ?? 0) / 5),
+  ].join("|");
 }
 
 /** The integer zoom the pick is made at — `DeckGLMap`'s snap for its own labels. */
@@ -285,7 +324,7 @@ export interface StationLabelsLayerProps {
 }
 
 interface StationLabelsState {
-  zoom: number;
+  viewKey: string;
   labels: StationLabelDatum[];
   [key: string]: unknown;
 }
@@ -295,21 +334,28 @@ export class StationLabelsLayer extends CompositeLayer<StationLabelsLayerProps> 
 
   declare state: StationLabelsState;
 
-  private viewportZoom(): number {
-    return snapLabelZoom(this.context.viewport.zoom);
-  }
-
   shouldUpdateState({ changeFlags }: UpdateParameters<this>): boolean {
     if (changeFlags.propsOrDataChanged) return true;
     if (this.props.onGlobe) return false;
-    return Boolean(changeFlags.viewportChanged) && this.viewportZoom() !== this.state.zoom;
+    return (
+      Boolean(changeFlags.viewportChanged) &&
+      labelViewKey(this.context.viewport) !== this.state.viewKey
+    );
   }
 
   updateState(): void {
-    const zoom = this.viewportZoom();
+    const { viewport } = this.context;
     const { data, labelsMode, onGlobe, obstacles } = this.props;
-    const labels = onGlobe ? [] : selectStationLabels(data, labelsMode, zoom, obstacles);
-    this.setState({ zoom, labels });
+    const labels = onGlobe
+      ? []
+      : selectStationLabels(
+          data,
+          labelsMode,
+          snapLabelZoom(viewport.zoom),
+          obstacles,
+          stationLabelProjector(viewport)
+        );
+    this.setState({ viewKey: labelViewKey(viewport), labels });
   }
 
   renderLayers(): Layer[] {
