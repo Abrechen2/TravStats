@@ -17,7 +17,6 @@
  *   at the home for its own members, on a spoke for its people — so it holds for relays too.
  *   Changes a member did not take while not asked are not replayed after a yes (as locally).
  */
-import { createHash } from "crypto";
 import { prisma, type DbTransaction } from "../../../db";
 import { AppError } from "../../../middleware/errorHandler";
 import { loadIdentity } from "../../federation/identity";
@@ -35,42 +34,13 @@ import { requireTripFederation } from "./access";
 import { kickDelivery } from "./deliveryKick";
 import { remoteShareError } from "./errors";
 import { addressed, requireReceiving } from "./peerMember";
-import type { ChangeAuthor } from "./outbound";
-import { serveOnce, takeSeq } from "./streams";
+import { userRef } from "./rosterRef";
 
-/**
- * Home: who brought an entry into the group (F-S4e review) — kept so a resend after a restore can
- * name it, and a spoke copies only what its person said yes to. The first author stays.
- */
-export async function recordEntryAuthor(
-  c: DbTransaction,
-  groupId: string,
-  shareKey: string,
-  author: ChangeAuthor
-): Promise<void> {
-  const group = await c.tripShareGroup.findUnique({
-    where: { id: groupId },
-    select: { federatedRef: true, homeOrigin: true },
-  });
-  if (!group?.federatedRef || group.homeOrigin) return;
-  const ref = author.kind === "user" ? userRef(group.federatedRef, author.id) : author.ref;
-  if (!ref) return;
-  await c.tripShareEntryAuthor.upsert({
-    where: { groupId_shareKey: { groupId, shareKey } },
-    create: { groupId, shareKey, authorRef: ref },
-    update: {},
-  });
-}
+export { userRef };
+import { serveOnce, takeSeq } from "./streams";
 
 /** Remote members who are on the trip (the roster's people on other servers). */
 export const ON_TRIP = ["active", "unreachable", "suspended"];
-
-/** A member of the home's own server in this group's roster: uuid-shaped, never the account id. */
-export function userRef(federatedRef: string, userId: string): string {
-  const h = createHash("sha256").update(`travstats-roster|${federatedRef}|${userId}`).digest("hex");
-  const variant = ((parseInt(h[16], 16) & 0x3) | 0x8).toString(16);
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-${variant}${h.slice(17, 20)}-${h.slice(20, 32)}`;
-}
 
 /** Home: who is on the trip — this server's members first, then the people on other servers. */
 export async function homeRoster(

@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { recordEntryAuthor } from "./federation/entryAuthors";
 
 import type { DbTransaction } from "../../db";
 import { SHARE_ENTITIES, SHARE_TYPES, type ShareDelegate, type ShareEntity } from "./shareTypes";
@@ -87,7 +88,7 @@ export async function assignKeysFor(
   entity: ShareEntity,
   ownerId: string,
   tripId: string
-): Promise<number> {
+): Promise<string[]> {
   const delegate = keyedDelegate(c, entity);
   const rows = await delegate.findMany({
     where: {
@@ -97,10 +98,13 @@ export async function assignKeysFor(
     },
     select: { id: true, shareKey: true },
   });
+  const keys: string[] = [];
   for (const row of rows) {
-    await delegate.update({ where: { id: row.id }, data: { shareKey: randomUUID() } });
+    const shareKey = randomUUID();
+    await delegate.update({ where: { id: row.id }, data: { shareKey } });
+    keys.push(shareKey);
   }
-  return rows.length;
+  return keys;
 }
 
 /** Give every entry of the sharer's trip a key, if it has none yet (first share). */
@@ -109,7 +113,15 @@ export async function assignShareKeys(
   ownerId: string,
   tripId: string
 ): Promise<void> {
-  for (const entity of SHARE_ENTITIES) await assignKeysFor(c, entity, ownerId, tripId);
+  const keys: string[] = [];
+  for (const entity of SHARE_ENTITIES)
+    keys.push(...(await assignKeysFor(c, entity, ownerId, tripId)));
+  // Keyed here, on the owner's own trip: provably theirs (a copy arrives keyed). Recorded for a
+  // resend across servers (F-S4e review).
+  const trip = await c.trip.findUnique({ where: { id: tripId }, select: { shareGroupId: true } });
+  if (!trip?.shareGroupId) return;
+  for (const shareKey of keys)
+    await recordEntryAuthor(c, trip.shareGroupId, shareKey, { kind: "user", id: ownerId });
 }
 
 /** Detach: clear every key on the member's trip; the rows stay theirs. */

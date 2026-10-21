@@ -38,6 +38,7 @@ import { toWireEntries } from "./wire/encode";
 import type { WireEntry } from "./wire/shapes";
 import { isHeld, isReceiving } from "./peerMember";
 import { ON_TRIP, mayReach, userRef } from "./roster";
+import { entryAuthorRefs } from "./entryAuthors";
 import logger from "../../../utils/logger";
 import { rejectWith, serveOnce, takeSeq } from "./streams";
 import { BODY_BUDGET, wireBytes } from "./transport";
@@ -152,9 +153,9 @@ export async function queueEntries(
  * Who brought each entry in, by roster ref, for the spoke's gate (F-S4e review) — every entry the
  * home can vouch for is named, and the spoke copies an entry without a name for nobody.
  *
- * - The first delivery after an accept is the trip as offered: an entry with no record yet is the
- *   offering member's own (it was in their trip; the record starts here), and one by someone no
- *   longer on the trip is theirs too — accepting the offer was the yes to its contents.
+ * - The first delivery after an accept is the trip as offered: an entry by someone no longer on
+ *   the trip is named as the offering member's — accepting the offer was the yes to its contents.
+ *   An entry without a record (`entryAuthors.ts`) is named by nobody.
  * - A resend after a restore names only what the record says: an entry without a record is named
  *   by nobody and copied for nobody.
  */
@@ -165,12 +166,7 @@ async function entryAuthors(
   resync: boolean
 ): Promise<Map<string, string>> {
   const ownRef = userRef(member.group.federatedRef as string, member.remote.userId);
-  const recorded = new Map(
-    (await tx.tripShareEntryAuthor.findMany({ where: { groupId: member.groupId } })).map((a) => [
-      a.shareKey,
-      a.authorRef,
-    ])
-  );
+  const recorded = await entryAuthorRefs(tx, member.groupId, member.group.federatedRef as string);
   if (resync) return recorded;
   const onTrip = new Set([
     ownRef,
@@ -187,20 +183,11 @@ async function entryAuthors(
       })
     ).map((t) => userRef(member.group.federatedRef as string, t.userId)),
   ]);
-  const missing = entries.filter((e) => !recorded.has(e.shareKey));
-  if (missing.length > 0)
-    await tx.tripShareEntryAuthor.createMany({
-      data: missing.map((e) => ({
-        groupId: member.groupId,
-        shareKey: e.shareKey,
-        authorRef: ownRef,
-      })),
-      skipDuplicates: true,
-    });
+  // Nothing is inferred (F-S4e review): an entry without a record stays named by nobody.
   return new Map(
-    entries.map((e) => {
+    entries.flatMap((e) => {
       const ref = recorded.get(e.shareKey);
-      return [e.shareKey, ref && onTrip.has(ref) ? ref : ownRef];
+      return ref ? [[e.shareKey, onTrip.has(ref) ? ref : ownRef] as const] : [];
     })
   );
 }

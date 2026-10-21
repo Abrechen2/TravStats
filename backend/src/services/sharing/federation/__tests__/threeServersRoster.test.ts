@@ -201,4 +201,46 @@ describe("three servers, one home", () => {
     expect(await b.prisma.flight.count({ where: { tripId: benTrip } })).toBe(1);
     void ben;
   });
+
+  /** Cleo adds a flight on C while Ben has not said yes to her; it reaches Anna only. */
+  async function cleosFlightWithheldFromBen() {
+    const t = await threeOnATrip();
+    const hers = await addFlight(c, t.cleo, t.cleoTrip);
+    await c.propagate.propagateWrite(c.prisma, t.cleo, "flight", hers.id);
+    await c.outbox.runDeliveries();
+    await a.outbox.runDeliveries();
+    expect(await b.prisma.flight.count({ where: { tripId: t.benTrip } })).toBe(1);
+    const groupId = (await a.prisma.trip.findUniqueOrThrow({ where: { id: t.trip.id } }))
+      .shareGroupId as string;
+    const key = (await c.prisma.flight.findUniqueOrThrow({ where: { id: hers.id } }))
+      .shareKey as string;
+    const benMember = await a.prisma.tripShareRemoteMember.findFirstOrThrow({
+      where: { groupId, remote: { userId: t.anna, origin: B } },
+    });
+    return { ...t, groupId, key, benMember };
+  }
+
+  it("an entry of unknown author is not recorded as the home member's own on a resend", async () => {
+    const { benTrip, groupId, key, benMember } = await cleosFlightWithheldFromBen();
+    await a.prisma.tripShareEntryAuthor.deleteMany({ where: { groupId, shareKey: key } });
+    await a.entries.deliverEntries(benMember.id);
+    await a.outbox.runDeliveries();
+    expect(await b.prisma.flight.count({ where: { tripId: benTrip } })).toBe(1);
+    // Unknown stays unknown: nothing inferred is written down for later resends.
+    expect(await a.prisma.tripShareEntryAuthor.count({ where: { groupId, shareKey: key } })).toBe(
+      0
+    );
+  });
+
+  it("an entry by someone who left is still theirs on a resend, not the home member's", async () => {
+    const { cleo, cleoTrip, benTrip, groupId, key, benMember } = await cleosFlightWithheldFromBen();
+    await c.shareTrip.leaveGroup(cleo, cleoTrip);
+    await c.outbox.runDeliveries();
+    expect(await a.prisma.tripShareEntryAuthor.count({ where: { groupId, shareKey: key } })).toBe(
+      1
+    );
+    await a.entries.deliverEntries(benMember.id);
+    await a.outbox.runDeliveries();
+    expect(await b.prisma.flight.count({ where: { tripId: benTrip } })).toBe(1);
+  });
 });
