@@ -1,9 +1,9 @@
-import type { JSX } from "react";
+import { useState, type JSX } from "react";
 import ApiKeyCard, { type ApiKeyCardProps } from "../Settings/ApiKeyCard";
 import ImmichGlobalSettings from "./ImmichGlobalSettings";
 import OpenDataCard from "../Settings/OpenDataCard";
 import OperatorLogosCard from "../Settings/OperatorLogosCard";
-import RailProvidersCard from "../Settings/RailProvidersCard";
+import RailProvidersCard, { type RailProvidersStatus } from "../Settings/RailProvidersCard";
 import { InstanceRoutingProviderCard } from "../Settings/RoutingProviderSection";
 import { SectionCard, SectionTitle } from "../Settings/SettingsShared";
 import {
@@ -131,6 +131,9 @@ export default function GlobalApiKeysManager({
   const { colorOf } = useDomainColors();
   const openData = useSettingsStore((s) => s.openDataEnabled);
   const expert = useExpertRows(2);
+  // Keyless services have no key to count: one that is switched on is active
+  // for everyone (beta.23 UAT: "0 für alle aktiv" with both lookups on).
+  const [rail, setRail] = useState<RailProvidersStatus | null>(null);
   const keys = globalApiKeys;
   const loaded = keys !== null && parserSettings !== null;
   // A stored key the server cannot decrypt serves nobody; it reads "nicht
@@ -234,8 +237,12 @@ export default function GlobalApiKeysManager({
               {
                 id: "railProviders",
                 name: t("settings:railProviders.title"),
-                state: null,
-                body: <RailProvidersCard isAdmin />,
+                state: rail
+                  ? rail.railTransitousEnabled || rail.railDbRestEnabled
+                    ? ("admin" as const)
+                    : ("none" as const)
+                  : null,
+                body: <RailProvidersCard isAdmin onStatus={setRail} />,
               },
             ],
           },
