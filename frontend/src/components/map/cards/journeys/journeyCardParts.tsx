@@ -16,6 +16,7 @@ import { Icon } from "../../../ui/Icon";
 import type { IconName } from "../../../ui/icons/lucide";
 import { OperatorTile } from "../../../table/OperatorTile";
 import { LABEL_STYLE, type TFn } from "../cardChrome";
+import { bareTrainName } from "../../../../lib/rail/trainName";
 import { formatTimeValueShown } from "../../../../lib/displayFormat";
 import { dayOf } from "../../../../shared/time";
 import type { Rgb } from "../../../../lib/domainColor";
@@ -157,7 +158,11 @@ export function journeyPath(j: Pick<MapJourney, "domain" | "id">): string {
 export function journeyFactText(j: MapJourney, t: TFn): string[] {
   const f = j.facts;
   const out: string[] = [];
-  if (f.trainNumber) out.push(f.trainNumber);
+  if (f.trainNumber) {
+    // A rail train read by number alone ("57031") reads as a train: "Zug 57031".
+    const bare = j.domain === "rail" && !f.trainCategory;
+    out.push(bare ? bareTrainName(t)(f.trainNumber) : f.trainNumber);
+  }
   if (f.lineName) out.push(f.lineName);
   if (f.vesselName) out.push(f.vesselName);
   if (f.travelClass) out.push(t(`rail:class.${f.travelClass}`));

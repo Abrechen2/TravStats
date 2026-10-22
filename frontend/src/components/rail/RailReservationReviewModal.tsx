@@ -6,6 +6,7 @@ import { railApi } from "../../lib/api/rail";
 import { logger } from "../../lib/logger";
 import type { RailImportBooking } from "../../types/rail";
 import { saveErrorFrom } from "./railFormModel";
+import { bareTrainName, trainName } from "../../lib/rail/trainName";
 import { wallClockLabel } from "./railImportModel";
 import {
   applicableTarget,
@@ -134,7 +135,7 @@ function ReservationLegRow({
   const { leg } = row;
   const match = leg.reservation;
   const target = applicableTarget(match);
-  const train = [leg.trainCategory, leg.trainNumber].filter(Boolean).join(" ");
+  const train = trainName(leg.trainCategory, leg.trainNumber, bareTrainName(t));
   const seat = t("rail:import.reservation.seat", {
     coach: leg.coach ?? "—",
     seat: leg.seat ?? "—",
@@ -165,7 +166,8 @@ function ReservationLegRow({
           </span>
           {match && "target" in match && (
             <span data-testid={`rail-reservation-target-${index}`}>
-              {t("rail:import.reservation.forJourney")}: {targetLabel(match.target)}
+              {t("rail:import.reservation.forJourney")}:{" "}
+              {targetLabel(match.target, bareTrainName(t))}
             </span>
           )}
           {subSection && (
@@ -193,7 +195,7 @@ function ReservationLegRow({
           {match?.kind === "several" && (
             <ul className="t-caption list-disc pl-5">
               {match.targets.map((candidate) => (
-                <li key={candidate.id}>{targetLabel(candidate)}</li>
+                <li key={candidate.id}>{targetLabel(candidate, bareTrainName(t))}</li>
               ))}
             </ul>
           )}

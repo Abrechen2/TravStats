@@ -6,6 +6,7 @@ import { useLocale } from "../../hooks/useLocale";
 import { useTranslation } from "../../hooks/useTranslation";
 import { tripsApi } from "../../lib/api/trips";
 import { logger } from "../../lib/logger";
+import { bareTrainName } from "../../lib/rail/trainName";
 import {
   attachEntry,
   attachFailureReason,
@@ -73,19 +74,22 @@ export default function AddExistingEntryModal({ tripId, domains, onClose }: Prop
   const [outcomeUnknown, setOutcomeUnknown] = useState(false);
   const requested = useRef(new Set<DomainKey>());
 
-  const loadDomain = useCallback(async (key: DomainKey): Promise<void> => {
-    setLoads((prev) => ({ ...prev, [key]: { status: "loading" } }));
-    try {
-      const load = await loadAttachableEntries(key);
-      setLoads((prev) => ({ ...prev, [key]: { status: "ready", ...load } }));
-    } catch (error) {
-      logger.warn("Loading the attachable entries failed", error);
-      setLoads((prev) => ({
-        ...prev,
-        [key]: { status: "failed", reason: attachFailureReason(error) },
-      }));
-    }
-  }, []);
+  const loadDomain = useCallback(
+    async (key: DomainKey): Promise<void> => {
+      setLoads((prev) => ({ ...prev, [key]: { status: "loading" } }));
+      try {
+        const load = await loadAttachableEntries(key, bareTrainName(t));
+        setLoads((prev) => ({ ...prev, [key]: { status: "ready", ...load } }));
+      } catch (error) {
+        logger.warn("Loading the attachable entries failed", error);
+        setLoads((prev) => ({
+          ...prev,
+          [key]: { status: "failed", reason: attachFailureReason(error) },
+        }));
+      }
+    },
+    [t]
+  );
 
   useEffect(() => {
     if (requested.current.has(domain)) return;

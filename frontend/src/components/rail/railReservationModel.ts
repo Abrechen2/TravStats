@@ -6,6 +6,7 @@ import type {
   RailReservationTarget,
 } from "../../types/rail";
 import { wallClockLabel } from "./railImportModel";
+import { trainName, type BareTrainName } from "../../lib/rail/trainName";
 
 /**
  * The review of a seat reservation booked after the ticket (forgejo#203), as
@@ -51,8 +52,8 @@ export function reservationStatusKey(match: RailReservationMatch | undefined): s
 }
 
 /** "ICE 615 Musterstadt Hbf → Beispielburg Hbf, 19.04.2026 19:55" */
-export function targetLabel(target: RailReservationTarget): string {
-  const train = [target.trainCategory, target.trainNumber].filter(Boolean).join(" ");
+export function targetLabel(target: RailReservationTarget, bare: BareTrainName): string {
+  const train = trainName(target.trainCategory, target.trainNumber, bare);
   const when = wallClockLabel(target.departureLocal);
   return `${train ? `${train} ` : ""}${target.depStationName} → ${target.arrStationName}, ${when}`;
 }

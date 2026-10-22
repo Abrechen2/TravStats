@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { railApi, type RailLookupQuery } from "../../lib/api/rail";
 import { logger } from "../../lib/logger";
+import { bareTrainName, trainName } from "../../lib/rail/trainName";
 import { todayZoneNow } from "../../hooks/useTodayZone";
 import { todayIn } from "../../shared/time";
 import type {
@@ -200,7 +201,7 @@ export function RailLookupPanel({
         <div className="mt-2 space-y-2" role="status">
           <p className="text-sm">
             {t("rail:lookup.found", {
-              train: [match.trainCategory, match.trainNumber].filter(Boolean).join(" "),
+              train: trainName(match.trainCategory, match.trainNumber, bareTrainName(t)),
               operator: match.operator ?? "—",
               provider: t(`rail:lookup.provider.${match.provider}`),
             })}

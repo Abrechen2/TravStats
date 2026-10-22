@@ -7,6 +7,7 @@ import { flightsApi } from "../api/flights";
 import { listLodgings, updateStay } from "../api/lodging";
 import { listPlaces, updateVisit } from "../api/places";
 import { railApi } from "../api/rail";
+import { trainName, type BareTrainName } from "../rail/trainName";
 import { rentalApi } from "../api/rental";
 import { roadtripsApi } from "../api/roadtrips";
 import { toursApi } from "../api/tours";
@@ -159,7 +160,7 @@ async function loadVisits(): Promise<AttachableLoad> {
   };
 }
 
-async function loadRail(): Promise<AttachableLoad> {
+async function loadRail(bare: BareTrainName): Promise<AttachableLoad> {
   const journeys = await railApi.listAll();
   return {
     unlinkable: 0,
@@ -169,7 +170,10 @@ async function loadRail(): Promise<AttachableLoad> {
         domain: "rail" as const,
         id: j.id,
         title: `${j.depStationName} → ${j.arrStationName}`,
-        subtitle: joined([j.operator, joined([j.trainCategory, j.trainNumber], " ")], " · "),
+        subtitle: joined(
+          [j.operator, trainName(j.trainCategory, j.trainNumber, bare) || null],
+          " · "
+        ),
         day: departure ? dayOf(departure) : null,
         endDay: null,
         tripId: j.tripId,
@@ -250,7 +254,7 @@ async function loadFerry(): Promise<AttachableLoad> {
   };
 }
 
-const LOADERS: Record<DomainKey, () => Promise<AttachableLoad>> = {
+const LOADERS: Record<DomainKey, (bare: BareTrainName) => Promise<AttachableLoad>> = {
   flight: loadFlights,
   cruise: loadCruises,
   lodging: loadStays,
@@ -262,9 +266,15 @@ const LOADERS: Record<DomainKey, () => Promise<AttachableLoad>> = {
   ferry: loadFerry,
 };
 
-/** Every linkable entry of one domain, newest first, undated ones last. */
-export async function loadAttachableEntries(domain: DomainKey): Promise<AttachableLoad> {
-  const load = await LOADERS[domain]();
+/**
+ * Every linkable entry of one domain, newest first, undated ones last. `bare`
+ * labels a train known by its number alone ("Zug 57031").
+ */
+export async function loadAttachableEntries(
+  domain: DomainKey,
+  bare: BareTrainName
+): Promise<AttachableLoad> {
+  const load = await LOADERS[domain](bare);
   return {
     ...load,
     entries: [...load.entries].sort((a, b) => {

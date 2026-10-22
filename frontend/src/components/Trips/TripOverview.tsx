@@ -8,6 +8,7 @@ import type { Trip } from "../../types";
 import { tripCostTotals } from "../../lib/tripCost";
 import { formatDate } from "../../lib/displayFormat";
 import { railDeparture } from "../../lib/entityTimes";
+import { bareTrainName, trainName } from "../../lib/rail/trainName";
 import { formatCurrency } from "../../lib/units";
 import { statusPillStyle } from "../table/statusPillStyle";
 import { Icon, type IconName } from "../ui/Icon";
@@ -363,7 +364,7 @@ export default function TripOverview({
                   to={`/rail/${j.id}`}
                   icon="train-front"
                   title={[
-                    [j.trainCategory, j.trainNumber].filter(Boolean).join(" "),
+                    trainName(j.trainCategory, j.trainNumber, bareTrainName(t)),
                     `${j.depStationName} → ${j.arrStationName}`,
                   ]
                     .filter(Boolean)

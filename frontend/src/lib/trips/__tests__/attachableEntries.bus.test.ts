@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const listAll = vi.fn();
 const update = vi.fn();
+const railListAll = vi.fn();
+vi.mock("../../api/rail", () => ({
+  railApi: { listAll: (...a: unknown[]) => railListAll(...a) },
+}));
 vi.mock("../../api/bus", () => ({
   busApi: {
     listAll: (...a: unknown[]) => listAll(...a),
@@ -34,7 +38,7 @@ describe("bus in the add-existing picker", () => {
 
   it("maps a ride to an entry: terminals as title, operator and line as subtitle, the local day", async () => {
     listAll.mockResolvedValue([ride]);
-    const load = await loadAttachableEntries("bus");
+    const load = await loadAttachableEntries("bus", (n) => `Zug ${n}`);
     expect(load.unlinkable).toBe(0);
     expect(load.entries).toEqual([
       {
@@ -61,5 +65,27 @@ describe("bus in the add-existing picker", () => {
       tripId: null,
     });
     expect(update).toHaveBeenCalledWith("b-1", { tripId: "trip-9" });
+  });
+});
+
+describe("rail in the add-existing picker", () => {
+  // Browser test of the bahn.de bookmarklet on 2.7.0-beta.24: a train bahn.de
+  // names by number alone read as a bare "57031".
+  it("names a train known by its number alone as a train", async () => {
+    railListAll.mockResolvedValue([
+      {
+        id: "r-1",
+        operator: "DB Regio",
+        trainCategory: null,
+        trainNumber: "57031",
+        depStationName: "Augsburg Hbf",
+        arrStationName: "München Hbf",
+        departureTime: "2026-08-03T06:08:00.000Z",
+        depTimezone: "Europe/Berlin",
+        tripId: null,
+      },
+    ]);
+    const load = await loadAttachableEntries("rail", (n) => `Zug ${n}`);
+    expect(load.entries[0].subtitle).toBe("DB Regio · Zug 57031");
   });
 });

@@ -51,8 +51,14 @@ describe("rail reservation review rules (forgejo#203)", () => {
   });
 
   it("names the target journey by train, stations and printed clock", () => {
-    expect(targetLabel(target())).toBe(
+    expect(targetLabel(target(), (n) => `Zug ${n}`)).toBe(
       "ICE 615 Musterstadt Hbf → Beispielburg Hbf, 19.04.2026 19:55"
     );
+  });
+
+  it("names a target train known by its number alone as a train", () => {
+    expect(
+      targetLabel({ ...target(), trainCategory: null, trainNumber: "57031" }, (n) => `Zug ${n}`)
+    ).toBe("Zug 57031 Musterstadt Hbf → Beispielburg Hbf, 19.04.2026 19:55");
   });
 });

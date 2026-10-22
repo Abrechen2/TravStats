@@ -48,8 +48,12 @@ vi.mock("../../../hooks/useDomainVisible", () => ({
 
 import TripOverview from "../TripOverview";
 
-const t = ((key: string, opts?: { count?: number }) =>
-  opts?.count !== undefined ? `${key}:${opts.count}` : key) as never;
+const t = ((key: string, opts?: { count?: number; number?: string }) =>
+  opts?.count !== undefined
+    ? `${key}:${opts.count}`
+    : opts?.number !== undefined
+      ? `${key}:${opts.number}`
+      : key) as never;
 
 function trip(overrides: Partial<Trip>): Trip {
   return {
@@ -268,5 +272,36 @@ describe("TripOverview", () => {
     // The user's date format (DD.MM.YYYY in the test store), not the ISO day.
     expect(row?.textContent).toContain("12.07.2025");
     expect(row?.textContent).not.toContain("2025-07-12");
+  });
+
+  // Browser test of the bahn.de bookmarklet on 2.7.0-beta.24: a train bahn.de
+  // names by number alone read as a bare "57031".
+  it("names a train known by its number alone as a train", () => {
+    renderOverview(
+      trip({
+        railJourneys: [
+          {
+            id: "j2",
+            operator: null,
+            trainCategory: null,
+            trainNumber: "57031",
+            depStationName: "Augsburg Hbf",
+            arrStationName: "München Hbf",
+            depTimezone: "Europe/Berlin",
+            arrTimezone: "Europe/Berlin",
+            departureTime: "2026-07-01T06:08:00.000Z",
+            arrivalTime: "2026-07-01T06:54:00.000Z",
+            distanceKm: null,
+            distanceSource: null,
+            status: "completed",
+            delayMinutes: null,
+            price: null,
+            currency: null,
+            bookingId: null,
+          },
+        ],
+      } as Partial<Trip>)
+    );
+    expect(screen.getByText(/Augsburg Hbf/)).toHaveTextContent("rail:bareTrain:57031");
   });
 });
