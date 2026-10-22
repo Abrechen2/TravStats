@@ -136,6 +136,19 @@ describe("the „In TravStats übernehmen“ bookmarklet (forgejo#204)", () => {
     expect(fragmentOf(run.target)).toBe("#e=tooLarge");
   });
 
+  it("refuses a connection with more sections than TravStats reads, instead of cutting it", async () => {
+    const section = {
+      abfahrtsOrt: "A",
+      ankunftsOrt: "B",
+      abfahrtsZeitpunkt: "2026-11-03T08:08:00",
+      verkehrsmittel: { name: "RB 1" },
+    };
+    const run = await runOn(`https://www.bahn.de/buchung/start?vbid=${VBID}`, () =>
+      json({ verbindung: { verbindungsAbschnitte: Array.from({ length: 31 }, () => section) } })
+    );
+    expect(fragmentOf(run.target)).toBe("#e=tooLarge");
+  });
+
   it("keeps the origin and a translation inside their strings", () => {
     const source = bahnBookmarkletSource('https://a"b', 'Füg ein: "$&" $1 %20 #x');
     expect(source).toContain(JSON.stringify('https://a"b/rail/from-bahn'));

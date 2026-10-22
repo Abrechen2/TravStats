@@ -14,7 +14,8 @@
  *   ¶HKI¶T$A=1@O=Augsburg Hbf@L=8000013@a=128@$A=1@O=München Hbf@L=8000261@a=128@$202610200808$202610200854$RB 57031$$1$…§W$…§T$…¶KC¶…
  *
  * Sections are separated by `§`; within one, `$` separates the kind (`T` a
- * vehicle, `W`/`G@F` a walk or transfer), the two places (`@`-separated
+ * vehicle, `W`/`G@F` a walk or transfer — any other kind makes the string
+ * unreadable), the two places (`@`-separated
  * `key=value` pairs, `O` the name, `L` the station id), departure and arrival
  * as `YYYYMMDDHHmm` on the station's clock, and the vehicle's printed name.
  *
@@ -47,12 +48,28 @@ export interface ReconSection {
 const HAFAS_TIME = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$/;
 const MAX_NAME = 120;
 
+function daysInMonth(year: number, month: number): number {
+  if (month === 2) return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 29 : 28;
+  return [4, 6, 9, 11].includes(month) ? 30 : 31;
+}
+
+/** A real calendar minute or null — 30 February is refused, not rolled into March. */
 function hafasTime(value: string | undefined): string | null {
   const m = HAFAS_TIME.exec(value?.trim() ?? "");
   if (!m) return null;
   const [, y, mo, d, h, mi] = m;
-  if (Number(mo) > 12 || Number(d) > 31 || Number(h) > 23 || Number(mi) > 59) return null;
+  const month = Number(mo);
+  if (month < 1 || month > 12) return null;
+  if (Number(d) < 1 || Number(d) > daysInMonth(Number(y), month)) return null;
+  if (Number(h) > 23 || Number(mi) > 59) return null;
   return `${y}-${mo}-${d}T${h}:${mi}`;
+}
+
+/** `T` a vehicle; `W` and `G@F` a walk. Any other kind is not guessed at. */
+function kindOf(marker: string): ReconSection["kind"] | null {
+  if (marker === "T") return "vehicle";
+  if (marker === "W" || marker === "G@F") return "walk";
+  return null;
 }
 
 function place(value: string | undefined): ReconPlace | null {
@@ -70,14 +87,15 @@ function place(value: string | undefined): ReconPlace | null {
 
 function section(raw: string): ReconSection | null {
   const parts = raw.split("$");
-  const marker = parts[0]?.trim() ?? "";
+  const kind = kindOf(parts[0]?.trim() ?? "");
   const from = place(parts[1]);
   const to = place(parts[2]);
   const departureLocal = hafasTime(parts[3]);
   const arrivalLocal = hafasTime(parts[4]);
-  if (!marker || !from || !to || !departureLocal || !arrivalLocal) return null;
-  const kind = marker === "T" ? "vehicle" : "walk";
+  if (!kind || !from || !to || !departureLocal || !arrivalLocal) return null;
   const printed = (parts[5] ?? "").replace(/\s+/g, " ").trim();
+  // A vehicle without a printed name would be read as no train and silently dropped.
+  if (kind === "vehicle" && printed.length === 0) return null;
   return {
     kind,
     from,

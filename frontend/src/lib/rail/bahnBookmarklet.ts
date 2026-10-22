@@ -44,7 +44,8 @@ fetch("/web/api/angebote/verbindung/"+v,{headers:{Accept:"application/json"},cre
 .then(function(r){if(!r.ok)throw r.status;return r.json()})
 .then(function(j){
 var c=j.verbindung||(j.verbindungen||[])[0]||j,a=c.verbindungsAbschnitte;
-var d={v:1,answer:{hinfahrtRecon:j.hinfahrtRecon,klasse:j.klasse,verbindungsAbschnitte:Array.isArray(a)?a.slice(0,30).map(function(s){var m=s.verkehrsmittel||{};return{abfahrtsOrt:s.abfahrtsOrt,ankunftsOrt:s.ankunftsOrt,abfahrtsZeitpunkt:s.abfahrtsZeitpunkt,ankunftsZeitpunkt:s.ankunftsZeitpunkt,verkehrsmittel:{name:m.name,kurzText:m.kurzText,nummer:m.nummer,typ:m.typ}}}):undefined}};
+if(Array.isArray(a)&&a.length>30)return go("e=tooLarge");
+var d={v:1,answer:{hinfahrtRecon:j.hinfahrtRecon,klasse:j.klasse,verbindungsAbschnitte:Array.isArray(a)?a.map(function(s){var m=s.verkehrsmittel||{};return{abfahrtsOrt:s.abfahrtsOrt,ankunftsOrt:s.ankunftsOrt,abfahrtsZeitpunkt:s.abfahrtsZeitpunkt,ankunftsZeitpunkt:s.ankunftsZeitpunkt,verkehrsmittel:{name:m.name,kurzText:m.kurzText,nummer:m.nummer,typ:m.typ}}}):undefined}};
 var q=encodeURIComponent(JSON.stringify(d));
 go(q.length>__MAX__?"e=tooLarge":"d="+q)})
 .catch(function(s){go("e="+(s===403?"blocked":s===404||s===410?"expired":s===429?"rateLimited":typeof s==="number"?"providerError":s instanceof SyntaxError?"unreadable":"fetchFailed"))})

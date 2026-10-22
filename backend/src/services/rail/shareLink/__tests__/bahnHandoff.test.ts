@@ -62,8 +62,21 @@ describe("parseHinfahrtRecon", () => {
     expect(parseHinfahrtRecon("¶HKI¶" + "x".repeat(MAX_RECON_LENGTH))).toBeNull();
   });
 
-  it("refuses an impossible clock instead of rolling it over", () => {
+  it("refuses an impossible clock or calendar day instead of rolling it over", () => {
     expect(parseHinfahrtRecon(RECON.replace("202611030808", "202613030808"))).toBeNull();
+    expect(parseHinfahrtRecon(RECON.replace("202611030808", "202602300808"))).toBeNull();
+    expect(parseHinfahrtRecon(RECON.replace("202611030808", "202702290808"))).toBeNull();
+    expect(parseHinfahrtRecon(RECON.replace("202611030808", "202611000808"))).toBeNull();
+    // 2028 is a leap year: 29 February exists.
+    expect(parseHinfahrtRecon(RECON.replace("202611030808", "202802290808"))).not.toBeNull();
+  });
+
+  it("refuses a train it cannot name and a section kind it does not know, rather than dropping them", () => {
+    // Codex review: an unnamed vehicle became a walk, and the ride read "successfully" without it.
+    expect(parseHinfahrtRecon(RECON.replace("$RB 57099$", "$$"))).toBeNull();
+    expect(parseHinfahrtRecon(RECON.replace("§W$", "§X$"))).toBeNull();
+    // HAFAS writes a footpath as G@F as well as W.
+    expect(parseHinfahrtRecon(RECON.replace("§W$", "§G@F$"))?.[1].kind).toBe("walk");
   });
 });
 
