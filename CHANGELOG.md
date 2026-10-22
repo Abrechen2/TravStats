@@ -6,12 +6,31 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-**Before upgrading to 2.7.0-rc.21:** take a backup. No new migrations since rc.20. Coming from 2.7.0-rc.19: 4 migrations; from 2.7.0-rc.18: 25 migrations, and stored straight ferry crossings are re-routed once in the background.
+**Before upgrading to 2.7.0-rc.22:** take a backup. No new migrations since rc.20. Coming from 2.7.0-rc.19: 4 migrations; from 2.7.0-rc.18: 25 migrations, and stored straight ferry crossings are re-routed once in the background.
 
 - Full data export includes saved TravPlan content and proposals; daily quota counters are explicitly excluded.
 
 ### Added
 
+- **Ferry crossings have a route map, the trip's photos taken during the
+  crossing and a chapter in the year in review.** The map draws the stored sea route, or a faint
+  straight line between the ports where there is none.
+- **Bus rides have a route map and the trip's photos** taken during the ride.
+- **Ferry and bus departure reminders.** The existing 24-hour and 2-hour
+  reminder switches now also mail before a ferry crossing or a bus ride,
+  in the port's or terminal's local time — for a domain the account has
+  switched on (both are still behind the beta switch), and only for a
+  departure with a time of day.
+- **Lodging enrichment from OpenStreetMap shows what it found before it
+  writes:** the matched house with its OSM link and distance, and per field
+  what would be filled and what stays. Nothing changes until "Übernehmen";
+  if OpenStreetMap names a different house by then, nothing is written. The
+  match is stored on the lodging unless it already carries a reference.
+- **Flight track upload reads FlightAware and Flightradar24 KML exports, KMZ
+  and Flightradar24's CSV,** reads their altitudes in the right unit, and
+  says why a file gives no track (still behind the beta switch).
+- **Rentals appear on the statistics overview** as their own card and count
+  as an experience; they add no travel days and no countries.
 - **Rail is out of beta.** It shows whenever an account has the rail domain
   switched on, independent of the instance's beta switch.
 - **Deutsche Bahn share links.** A bookmarklet (Settings → Data → Import →
@@ -95,6 +114,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Changed
 
+- **Recorded flight paths are off on the dashboard by default.** The map
+  shows routes; a recording belongs to one flight. A new map option
+  "Aufgezeichnete Flugwege zeigen (wo vorhanden)" draws them as thin lines on
+  top of the routes, which stay visible even when every flight on a route was
+  recorded. On the flight page the recording is shown over the
+  dashed great circle.
 - Ferry crossings stored as a straight line are re-routed along the sea once,
   in the background, after the update.
 - An invitation code that is retried after it already connected reads as
@@ -118,6 +143,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Fixed
 
+- **A recorded flight is drawn whole.** Sparse fixes from a phone in the
+  cabin were dropped as single points, so LH719 Seoul-Munich showed only its
+  last third. Every fix is kept; recorded stretches are solid and the holes
+  between them dashed.
+- A recording with holes no longer sets its distance against the great
+  circle ("−60 %"), since it measures only its recorded stretches.
+- The start of a recorded flight is no longer hidden under the map
+  attribution on the flight page.
+- TravPlan is refused by the server while the beta switch is off; before, its
+  endpoints answered any signed-in client.
+- The import card promises AI reading only for the kinds of booking that
+  have it.
+- The empty tours view no longer covers the list button.
+- A large KML file is read in linear time instead of blocking the server for
+  seconds, and a very large one no longer crashes the reader.
+- Lodging enrichment never overwrites a value saved while OpenStreetMap was
+  being asked.
 - **A Deutsche Bahn share link no longer reads as a failed import.** Such a
   link carries no booking reference, price or seat, so the review dialog now
   says so in one line instead of flagging every empty field as "not found in
