@@ -96,6 +96,7 @@
     "settings/tokens.ts",
     "settings/types.ts",
     "settings/webPrefs.ts",
+    "settings/webdavSync.ts",
     "setup.ts",
     "sharePage.ts",
     "stats.ts",

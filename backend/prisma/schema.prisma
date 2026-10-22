@@ -102,6 +102,7 @@ model User {
   receiptUploads            ReceiptUpload[]
   userAchievements          UserAchievement[]
   settings                  UserSettings?
+  webdavSync                UserWebdavSync?
   analyticsEvents           AnalyticsEvent[]
   createdInvitations        Invitation[]             @relation("CreatedInvitations")
   usedInvitations           Invitation[]             @relation("UsedInvitations")
@@ -5536,4 +5537,43 @@ model TravelPlanUsage {
 
   @@unique([userId, day, kind])
   @@map("travel_plan_usage")
+}
+
+/// One account's WebDAV sync of its own data export (forgejo#321, Daten ›
+/// "Mit WebDAV abgleichen"). The instance backup's WebDAV target lives on
+/// `AdminSettings` and carries the whole database; this one carries ONE
+/// account's export to a share that account names, so it has its own row,
+/// its own credentials and its own last result.
+///
+/// The password is AES-GCM via `encryptApiKey()` and never leaves the server:
+/// the route answers `hasPassword` only. The target URL is user-supplied, so
+/// every connection goes through `services/webdavSync/targetPolicy.ts`.
+model UserWebdavSync {
+  userId            String    @id @map("user_id")
+  enabled           Boolean   @default(false)
+  url               String?
+  username          String?
+  passwordEncrypted String?   @map("password_encrypted")
+  /// Folder on the share the exports go into; always absolute, ends in "/".
+  remotePath        String    @default("/TravStats/") @map("remote_path")
+  /// "daily" | "weekly" — validated by the route's Zod schema.
+  schedule          String    @default("daily")
+  /// How many exports stay on the share; older ones of OURS are deleted.
+  keepVersions      Int       @default(5) @map("keep_versions")
+  /// Last time a run was attempted — what the scheduler's "due" reads, so a
+  /// failing target is retried on its schedule, not every hour.
+  lastAttemptAt     DateTime? @map("last_attempt_at")
+  lastSuccessAt     DateTime? @map("last_success_at")
+  /// "ok" | "failed"; null before the first run.
+  lastStatus        String?   @map("last_status")
+  /// Stable failure code (`services/webdavSync/errors.ts`); null after a success.
+  lastErrorCode     String?   @map("last_error_code")
+  lastFileName      String?   @map("last_file_name")
+  lastSizeBytes     Int?      @map("last_size_bytes")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_webdav_syncs")
 }

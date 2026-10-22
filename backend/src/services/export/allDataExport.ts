@@ -274,3 +274,23 @@ export async function loadUserAddedCatalogue(): Promise<{
     userAddedLodgingChains: lodgingChains,
   };
 }
+
+/**
+ * One account's share of the export above — what a per-account WebDAV sync
+ * uploads (forgejo#321). The same selection, so a table added to the export
+ * reaches the sync with it; photo and document bytes stay out, as they do in
+ * the admin export.
+ */
+export async function buildAccountExport(
+  userId: string,
+  instanceName: string
+): Promise<Record<string, unknown> | null> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: USER_EXPORT_SELECT });
+  if (!user) return null;
+  return {
+    format: "travstats-account-export/1",
+    exportedAt: new Date().toISOString(),
+    instanceName,
+    user,
+  };
+}

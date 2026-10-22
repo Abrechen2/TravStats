@@ -1038,7 +1038,7 @@
     "expertKeywords": {
       "suggestions": "Immich-Belege, Fotos als Beleg, Ortstyp, KI-Klassifizierung",
       "autoupdate": "Abfrageintervall, Intervall, Freigabe, Ablauf, nur während des Flugs",
-      "backup": "Instanz-Backup, letzte Sicherung",
+      "backup": "Instanz-Backup, letzte Sicherung, WebDAV, Nextcloud, Abgleich, Sync",
       "externalServices": "eigener Schlüssel, eigener API-Schlüssel, API-Schlüssel, Kontingent, Quote, AirLabs-Schlüssel, Aviationstack-Schlüssel, AeroDataBox-Schlüssel, AeroAPI-Schlüssel, OpenSky-Zugang, GraphHopper-Schlüssel, OpenRouteService-Schlüssel"
     }
   },
@@ -1195,5 +1195,60 @@
   "domainOff": {
     "message": "Dieser Bereich ist ausgeschaltet: {{domain}}. Seine Einstellungen erscheinen hier, sobald du ihn einschaltest.",
     "action": "Zu Bereiche & Farben"
+  },
+  "webdavSync": {
+    "title": "Mit WebDAV abgleichen",
+    "description": "Lädt deinen vollständigen Datenexport regelmäßig auf deinen eigenen WebDAV-Speicher, zum Beispiel Nextcloud.",
+    "whatIsUploaded": "Hochgeladen wird der vollständige Export deines Kontos als gepackte JSON-Datei — dieselben Daten wie der Admin-Export „Alle Daten“, ohne Zugangsdaten. Fotos und Dokumente selbst sind nicht enthalten.",
+    "setup": "Einrichten",
+    "hide": "Ausblenden",
+    "url": "WebDAV-Adresse",
+    "urlHint": "Nur öffentliche https-Adressen. Ein Speicher im Heimnetz ist nur für Administratoren erlaubt.",
+    "urlHintAdmin": "Als Administrator darfst du auch einen Speicher im Heimnetz angeben; übers Internet nur mit https.",
+    "username": "Benutzername",
+    "password": "Passwort",
+    "passwordStored": "Ein Passwort ist gespeichert. Es wird nie angezeigt.",
+    "passwordKeepPlaceholder": "Leer lassen, um das gespeicherte zu behalten",
+    "clearPassword": "Passwort entfernen",
+    "remotePath": "Ordner auf dem Speicher",
+    "schedule": "Zeitplan",
+    "schedules": {
+      "daily": "Täglich",
+      "weekly": "Wöchentlich"
+    },
+    "keepVersions": "Versionen behalten",
+    "save": "Speichern",
+    "saving": "Speichern …",
+    "runNow": "Jetzt abgleichen",
+    "running": "Gleicht ab …",
+    "runOk": "Abgleich erfolgreich.",
+    "runPartial": "Hochgeladen, aber alte Versionen ließen sich nicht löschen: {{reason}}",
+    "runLost": "Ob der Abgleich fertig wurde, ist unbekannt. Der letzte Stand oben wird neu geladen.",
+    "loadError": "Die WebDAV-Einstellungen konnten nicht geladen werden.",
+    "saveError": "Speichern fehlgeschlagen.",
+    "last": {
+      "never": "Noch nie abgeglichen.",
+      "ok": "Zuletzt abgeglichen: {{when}} · {{file}} ({{size}})",
+      "partial": "Hochgeladen am {{when}}, aber alte Versionen ließen sich nicht löschen: {{reason}}",
+      "failed": "Letzter Versuch am {{when}} fehlgeschlagen: {{reason}}"
+    },
+    "errors": {
+      "notConfigured": "Nicht eingerichtet: Adresse, Benutzername oder Passwort fehlen, oder der Abgleich ist aus.",
+      "invalidUrl": "Die Adresse ist keine gültige http(s)-Adresse (ohne Zugangsdaten und ohne ?-Teil).",
+      "httpsRequired": "Diese Adresse braucht https — sonst ginge das Passwort unverschlüsselt übers Netz.",
+      "blockedTarget": "Dieses Ziel liegt in einem lokalen oder privaten Netz und ist für dein Konto nicht erlaubt.",
+      "auth": "Der Speicher hat Benutzername oder Passwort abgelehnt.",
+      "unreachable": "Der Speicher ist nicht erreichbar (Name unbekannt oder keine Antwort).",
+      "timeout": "Der Speicher hat zu lange nicht geantwortet.",
+      "tls": "Dem Zertifikat des Speichers wird nicht vertraut.",
+      "quota": "Der Speicher ist voll, oder dein Kontingent ist erschöpft.",
+      "tooLarge": "Der Speicher lehnt eine Datei dieser Größe ab.",
+      "path": "Der Ordner ließ sich auf dem Speicher nicht finden oder anlegen.",
+      "server": "Der Speicher hat mit einem Serverfehler geantwortet.",
+      "protocol": "Der Speicher hat nicht wie ein WebDAV-Speicher geantwortet.",
+      "alreadyRunning": "Ein Abgleich läuft bereits.",
+      "invalidInput": "Eine Eingabe ist ungültig.",
+      "unknown": "Der Abgleich ist fehlgeschlagen."
+    }
   }
 }

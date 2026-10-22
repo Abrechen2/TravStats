@@ -26,6 +26,7 @@ export const jobSchema = z.object({
     "timeZones.reResolveApply",
     "placeImport.resolve",
     "bus.routeStraight",
+    "webdavSync.run",
   ]),
   status: z.enum(["running", "succeeded", "failed"]),
   startedAt: z.string().datetime(),

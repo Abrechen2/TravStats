@@ -21,6 +21,7 @@ import { randomUUID } from "crypto";
 
 import { AppError } from "../../middleware/errorHandler";
 import { ImmichError } from "../immich/types";
+import { WebdavSyncError } from "../webdavSync/errors";
 import logger from "../../utils/logger";
 
 export type JobKind =
@@ -34,7 +35,8 @@ export type JobKind =
   | "timeZones.reResolveDryRun"
   | "timeZones.reResolveApply"
   | "placeImport.resolve"
-  | "bus.routeStraight";
+  | "bus.routeStraight"
+  | "webdavSync.run";
 
 export type JobStatus = "running" | "succeeded" | "failed";
 
@@ -105,6 +107,8 @@ function prune(now: number): void {
  */
 export function jobErrorOf(err: unknown): JobError {
   if (err instanceof ImmichError) return { code: err.kind, status: 502 };
+  // The same for a WebDAV sync: `auth`, `quota`, `unreachable`, … (forgejo#321).
+  if (err instanceof WebdavSyncError) return { code: err.code, status: 502 };
   if (err instanceof AppError) {
     return {
       code: err.code ?? err.message.match(/^[a-z_]+$/)?.[0] ?? "JOB_FAILED",

@@ -12,6 +12,7 @@ import tokensRouter from "./tokens";
 import immichRouter from "./immich";
 import dawarichRouter from "./dawarich";
 import webPrefsRouter from "./webPrefs";
+import webdavSyncRouter from "./webdavSync";
 
 const router = Router();
 
@@ -51,6 +52,8 @@ router.use(
     // Every visitor of a public instance shares this account; one visitor's
     // colours and filters would become everyone's (forgejo#200).
     "/web-prefs",
+    // An outbound target with credentials, run unattended every night.
+    "/webdav-sync",
   ],
   rejectDemoWrites
 );
@@ -67,5 +70,6 @@ router.use("/tokens", tokensRouter);
 router.use("/immich", immichRouter);
 router.use("/dawarich", dawarichRouter);
 router.use("/web-prefs", webPrefsRouter);
+router.use("/webdav-sync", webdavSyncRouter);
 
 export default router;

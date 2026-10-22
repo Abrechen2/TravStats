@@ -32,6 +32,7 @@ export type SchedulerJob =
   | "placeAddressBackfill"
   | "statusSweep"
   | "syncRetention"
+  | "webdavSync"
   | "stayFxBackfill"
   | "usageStats"
   | "reminders"
