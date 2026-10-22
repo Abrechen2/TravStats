@@ -123,6 +123,27 @@ export const TRIP_RENTAL_SELECT = {
   pickupAirportId: true,
   returnAirportId: true,
   routeId: true,
+  // What the map's rental card prints, read by the dashboard's own normalizer
+  // (`journeyFromRental`, Codex review before 2.7.0-beta.23): the car (also the
+  // subject-picture lookup), driven km with their source, the cost, the
+  // branches' countries and airport codes, the counter's operator. The trip
+  // page is the owner's own data (`where: { userId }`); nothing more of the
+  // row — no confirmation numbers, plate or invoice lines.
+  operatedBy: true,
+  pickupCountry: true,
+  returnCountry: true,
+  pickupAirport: { select: { iata: true } },
+  returnAirport: { select: { iata: true } },
+  vehicleClass: true,
+  vehicleExample: true,
+  odometerOutKm: true,
+  odometerInKm: true,
+  distanceKm: true,
+  distanceSource: true,
+  price: true,
+  currency: true,
+  finalAmount: true,
+  finalCurrency: true,
 } satisfies Prisma.RentalBookingSelect;
 
 /** The trip page's rentals: pickup order, a cancelled one left out (it never happened). */

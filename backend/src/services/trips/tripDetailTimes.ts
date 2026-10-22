@@ -36,7 +36,13 @@ export function withTripDetailTimes<
     ferryJourneys: RailTimeColumns[];
     busJourneys: RailTimeColumns[];
     bookings: DeadlineColumns[];
-    rentalBookings: Array<RentalTimeColumns & Parameters<typeof isOneWay>[0]>;
+    rentalBookings: Array<
+      RentalTimeColumns &
+        Parameters<typeof isOneWay>[0] & {
+          pickupAirport?: { iata: string | null } | null;
+          returnAirport?: { iata: string | null } | null;
+        }
+    >;
   },
 >(trip: T): T {
   return {
@@ -51,8 +57,11 @@ export function withTripDetailTimes<
     ferryJourneys: trip.ferryJourneys.map(withRailTimes),
     bookings: trip.bookings.map(withBookingTimes),
     // Rentals carry their `times` too, deadlines included (forgejo#285).
-    rentalBookings: trip.rentalBookings.map((r) => ({
+    rentalBookings: trip.rentalBookings.map(({ pickupAirport, returnAirport, ...r }) => ({
       ...r,
+      // The branches' airport codes, as the rental DTO sends them — not the airport rows.
+      pickupIata: pickupAirport?.iata ?? null,
+      returnIata: returnAirport?.iata ?? null,
       ...deadlineDayFields(r),
       // Derived, never stored — the trip map draws a one-way rental's link.
       oneWay: isOneWay(r),
