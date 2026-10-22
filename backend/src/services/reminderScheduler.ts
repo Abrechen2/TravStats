@@ -5,16 +5,19 @@ import { schedulerZone } from "../shared/time/schedulerZone";
 import { checkFlightReminders } from "./reminders/flightReminders";
 import { checkCruiseReminders } from "./reminders/cruiseReminders";
 import { checkRailReminders } from "./reminders/railReminders";
+import { checkFerryReminders } from "./reminders/ferryReminders";
+import { checkBusReminders } from "./reminders/busReminders";
 import { checkLodgingCheckInReminders } from "./reminders/lodgingReminders";
 
 /**
  * Orchestrates the departure-reminder scheduler (2026-09-27 redesign: emails
  * got a shared branded shell and content, and extended from flight-only to
- * cruise, rail and lodging). Each domain owns its window-matching and dedup
- * logic in its own file under `./reminders/` — kept apart so no single file
- * grows past the 800-line ratchet, and so a domain's correctness fix (e.g.
- * the LEGACY_FAKE_UTC normalisation flights need and rail/cruise do not)
- * stays local to that domain.
+ * cruise, rail and lodging; ferry and bus followed rail on 2026-10-22). Each
+ * domain owns its window-matching and dedup logic in its own file under
+ * `./reminders/` — kept apart so no single file grows past the 800-line
+ * ratchet, and so a domain's correctness fix (e.g. the LEGACY_FAKE_UTC
+ * normalisation flights need and rail/cruise do not) stays local to that
+ * domain. Ferry and bus share one runner (`singleRideReminders.ts`).
  */
 
 let scheduledTask: ScheduledTask | null = null;
@@ -30,6 +33,8 @@ async function checkAndSendReminders(): Promise<void> {
     checkFlightReminders(now),
     checkCruiseReminders(now),
     checkRailReminders(now),
+    checkFerryReminders(now),
+    checkBusReminders(now),
     checkLodgingCheckInReminders(now),
   ]);
 }
@@ -59,7 +64,8 @@ export function startReminderScheduler(): void {
 
   logger.info({
     operation: "reminder_scheduler_started",
-    message: "Departure reminder scheduler started (flight/cruise/rail/lodging, every 15 min)",
+    message:
+      "Departure reminder scheduler started (flight/cruise/rail/ferry/bus/lodging, every 15 min)",
   });
 }
 

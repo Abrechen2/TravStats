@@ -3,19 +3,27 @@ import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
 const mockFindMany = jest.fn<() => Promise<FlightFixture[]>>();
-// The scheduler now runs all four domains in parallel each tick (2026-09-27
-// redesign); the other three resolve empty here so this file can stay
-// flight-only — cruise/rail/lodging get their own test files.
+// The scheduler runs every domain in parallel each tick (2026-09-27 redesign;
+// ferry and bus since 2026-10-22); the others resolve empty here so this file
+// can stay flight-only — each other domain has its own test file.
 const mockCruiseStopFindMany = jest.fn<() => Promise<never[]>>();
 const mockRailJourneyFindMany = jest.fn<() => Promise<never[]>>();
 const mockLodgingStayFindMany = jest.fn<() => Promise<never[]>>();
+const mockFerryJourneyFindMany = jest.fn<() => Promise<never[]>>();
+const mockBusJourneyFindMany = jest.fn<() => Promise<never[]>>();
 jest.mock("../db", () => ({
   prisma: {
     flight: { findMany: mockFindMany },
     cruiseStop: { findMany: mockCruiseStopFindMany },
     railJourney: { findMany: mockRailJourneyFindMany },
     lodgingStay: { findMany: mockLodgingStayFindMany },
+    ferryJourney: { findMany: mockFerryJourneyFindMany },
+    busJourney: { findMany: mockBusJourneyFindMany },
   },
+}));
+// Ferry and bus read the instance's beta switch before their query.
+jest.mock("../services/instanceSettingsService", () => ({
+  getInstanceSettings: jest.fn(async () => ({ betaFeaturesEnabled: true })),
 }));
 
 const mockSendFlightReminder =
@@ -33,6 +41,8 @@ jest.mock("../services/emailService", () => ({
   sendCruiseReminder: mockSendCruiseReminder,
   sendRailReminder: mockSendRailReminder,
   sendLodgingCheckInReminder: mockSendLodgingCheckInReminder,
+  sendFerryReminder: jest.fn(),
+  sendBusReminder: jest.fn(),
 }));
 
 // Scheduler short-circuits airportCache for canonical-UTC rows, but we still
@@ -131,6 +141,8 @@ describe("reminderScheduler", () => {
     mockCruiseStopFindMany.mockResolvedValue([]);
     mockRailJourneyFindMany.mockResolvedValue([]);
     mockLodgingStayFindMany.mockResolvedValue([]);
+    mockFerryJourneyFindMany.mockResolvedValue([]);
+    mockBusJourneyFindMany.mockResolvedValue([]);
   });
 
   describe("startReminderScheduler", () => {
