@@ -13,6 +13,7 @@ import {
   takeStashedBahnHandoff,
   type HandoffFailure,
 } from "../lib/rail/bahnHandoff";
+import { useAuthStore } from "../store/authStore";
 import { useToastStore } from "../store/toastStore";
 import type { RailImportBooking } from "../types/rail";
 
@@ -38,7 +39,8 @@ const SETUP_HINT: ReadonlySet<PageFailure> = new Set(["empty", "notBahn", "damag
  * stored until the user saves there. Every failure is named as itself.
  *
  * Gated like every rail page (`railHandoffRoutes.tsx`). Signed out, the
- * hand-over waits in session storage through the login.
+ * hand-over waits in session storage through the login — bound to this
+ * account once it is read here, so only this account gets it back.
  */
 export default function RailBahnHandoffPage(): JSX.Element {
   const { t } = useTranslation(["rail", "common"]);
@@ -51,7 +53,8 @@ export default function RailBahnHandoffPage(): JSX.Element {
     if (started.current) return;
     started.current = true;
     const now = Date.now();
-    const stashed = takeStashedBahnHandoff(now);
+    const account = useAuthStore.getState().user?.id ?? null;
+    const stashed = takeStashedBahnHandoff(now, account);
     const hash = window.location.hash || stashed || "";
     if (window.location.hash) navigate(BAHN_HANDOFF_PATH, { replace: true });
     const decoded = decodeBahnHandoff(hash);
@@ -61,11 +64,11 @@ export default function RailBahnHandoffPage(): JSX.Element {
     }
     // Kept until the server has answered: a session that expired on the way
     // sends the user to the login, and the hand-over must survive that.
-    stashBahnHandoff(hash, now);
+    stashBahnHandoff(hash, now, account);
     railApi
       .readBahnHandoff(decoded.answer)
       .then((outcome) => {
-        takeStashedBahnHandoff(now);
+        takeStashedBahnHandoff(now, account);
         if (outcome.outcome === "read") setState({ kind: "review", booking: outcome.booking });
         else {
           setState({
@@ -76,7 +79,7 @@ export default function RailBahnHandoffPage(): JSX.Element {
       })
       .catch((err: unknown) => {
         const status = statusOf(err);
-        if (status !== 401) takeStashedBahnHandoff(now);
+        if (status !== 401) takeStashedBahnHandoff(now, account);
         logger.error("RailBahnHandoffPage: the hand-over could not be read", err);
         setState({
           kind: "failed",

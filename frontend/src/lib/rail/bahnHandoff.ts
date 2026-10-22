@@ -90,10 +90,17 @@ export function decodeBahnHandoff(hash: string): DecodedHandoff {
 }
 
 /**
- * A hand-over that arrived while nobody was signed in waits in this tab's
- * session storage until the login is done — for ten minutes, then it is
- * dropped. Session storage, not local: it never outlives the tab, and the
- * page removes it as soon as it has read it.
+ * A hand-over that arrived while nobody was signed in — or whose session ran
+ * out while it was being read — waits in this tab's session storage until the
+ * login is done, for ten minutes, then it is dropped. Session storage, not
+ * local: it never outlives the tab, and the page removes it as soon as it has
+ * read it.
+ *
+ * Bound to an account when one is known (`owner`): a hand-over read for A goes
+ * back to A after a re-login and is discarded, unread, when anyone else signs
+ * in. One that arrived signed out has no owner to bind, and goes to whoever
+ * signs in first — the person who just clicked the bookmark in this tab, in
+ * every ordinary case. A deliberate logout drops it (`clearBahnHandoff`).
  */
 const STASH_KEY = "travstats.railBahnHandoff";
 const STASH_TTL_MS = 10 * 60 * 1000;
@@ -101,41 +108,56 @@ const STASH_TTL_MS = 10 * 60 * 1000;
 interface Stash {
   hash: string;
   at: number;
+  /** The account it was read for; null when it arrived signed out. */
+  owner: string | null;
 }
 
-export function stashBahnHandoff(hash: string, now: number): void {
+export function stashBahnHandoff(hash: string, now: number, owner: string | null = null): void {
   if (hash.replace(/^#/, "").length === 0) return;
   try {
-    sessionStorage.setItem(STASH_KEY, JSON.stringify({ hash, at: now } satisfies Stash));
+    sessionStorage.setItem(STASH_KEY, JSON.stringify({ hash, at: now, owner } satisfies Stash));
   } catch {
     // Storage blocked (private mode, policy): the hand-over then needs a second click.
   }
 }
 
-function readStash(now: number): Stash | null {
-  try {
-    const raw = sessionStorage.getItem(STASH_KEY);
-    if (!raw) return null;
-    const stash = JSON.parse(raw) as Partial<Stash>;
-    if (typeof stash.hash !== "string" || typeof stash.at !== "number") return null;
-    return now - stash.at <= STASH_TTL_MS && now >= stash.at ? (stash as Stash) : null;
-  } catch {
-    return null;
-  }
-}
-
-/** The stashed hand-over's fragment, removed as it is read. */
-export function takeStashedBahnHandoff(now: number): string | null {
-  const stash = readStash(now);
+/** Drops a waiting hand-over (a deliberate logout, or one that is not this account's). */
+export function clearBahnHandoff(): void {
   try {
     sessionStorage.removeItem(STASH_KEY);
   } catch {
     // Nothing to clean up if storage is blocked.
   }
+}
+
+/** The waiting hand-over for `account`; another account's is discarded on sight. */
+function readStash(now: number, account: string | null): Stash | null {
+  let stash: Partial<Stash>;
+  try {
+    const raw = sessionStorage.getItem(STASH_KEY);
+    if (!raw) return null;
+    stash = JSON.parse(raw) as Partial<Stash>;
+  } catch {
+    return null;
+  }
+  if (typeof stash.hash !== "string" || typeof stash.at !== "number") return null;
+  if (!(now - stash.at <= STASH_TTL_MS && now >= stash.at)) return null;
+  const owner = typeof stash.owner === "string" ? stash.owner : null;
+  if (owner !== null && owner !== account) {
+    clearBahnHandoff();
+    return null;
+  }
+  return { hash: stash.hash, at: stash.at, owner };
+}
+
+/** The stashed hand-over's fragment for `account`, removed as it is read. */
+export function takeStashedBahnHandoff(now: number, account: string | null = null): string | null {
+  const stash = readStash(now, account);
+  clearBahnHandoff();
   return stash?.hash ?? null;
 }
 
-/** Where to go after a login: the hand-over page while one is waiting, else nowhere special. */
-export function pendingBahnHandoffPath(now: number): string | null {
-  return readStash(now) ? BAHN_HANDOFF_PATH : null;
+/** Where to go after a login: the hand-over page while one waits for `account`, else nowhere special. */
+export function pendingBahnHandoffPath(now: number, account: string | null = null): string | null {
+  return readStash(now, account) ? BAHN_HANDOFF_PATH : null;
 }

@@ -19,17 +19,33 @@ export interface JourneyStopFigures {
   arrivals: number;
   /** Where the departures from here went, most frequent first, at most three. */
   destinations: StopDestination[];
-  /** The last time the user was HERE, on this place's clock; null when undated. */
+  /** The last time the user was HERE, on this place's clock; null when undated or unknown. */
   lastVisit: TimeValue | null;
+  /**
+   * Set (and `lastVisit` null) when the latest ride that ended here has no
+   * recorded arrival: the visit is on or after this day — the departure's day
+   * — but which day is unknown, so no older visit may pass for the last one.
+   */
+  lastVisitUnknownFrom: TimeValue | null;
 }
 
 const MAX_DESTINATIONS = 3;
 
 /** The value cut to its calendar day — shown without a time (ADR 0002 D3). */
-function dayOnly(value: TimeValue | null): TimeValue | null {
-  if (!value) return null;
+function dayOnly(value: TimeValue): TimeValue {
   return value.precision === "minute" ? { ...value, precision: "day" } : value;
 }
+
+/**
+ * A ride recorded by its date alone, by train or coach: the record says it
+ * happened on that day, so the day is the arrival's too (beta.23 UAT,
+ * München Hbf 01.07.2025). A timed departure, a ferry, a flight or a rental
+ * says no such thing — an overnight ride arrives the next day.
+ */
+const DATE_ONLY_DAY_RIDE: ReadonlySet<MapJourney["domain"]> = new Set(["rail", "bus"]);
+
+const later = (a: TimeValue | null, b: TimeValue | null): boolean =>
+  a !== null && (b === null || Date.parse(a.utc) > Date.parse(b.utc));
 
 export function getJourneyStopFigures(
   journeys: readonly MapJourney[],
@@ -39,6 +55,7 @@ export function getJourneyStopFigures(
   let arrivals = 0;
   const destinations = new Map<string, StopDestination>();
   let lastVisit: TimeValue | null = null;
+  let unknownFrom: TimeValue | null = null;
   for (const j of journeys) {
     if (!j.travelled) continue;
     const startsHere = endKey(j.dep) === stopKey;
@@ -52,22 +69,30 @@ export function getJourneyStopFigures(
     }
     // Leaving, the visit is the departure; arriving (or bringing a rental
     // back), the arrival — the later of the two that are known. An arrival
-    // never recorded is dated by the departure's DAY, never its clock (that
-    // is the other station's): skipped, a date-only ride that ended here
-    // later let an older visit pass for the last one (beta.23 UAT).
-    const arrived = endsHere ? (j.arrival ?? dayOnly(j.departure)) : null;
-    for (const here of [startsHere ? j.departure : null, arrived]) {
-      if (here && (!lastVisit || Date.parse(here.utc) > Date.parse(lastVisit.utc))) {
-        lastVisit = here;
+    // never recorded is not skipped (that let an older visit pass for the
+    // last one, beta.23 UAT): a date-only train or coach ride is dated by its
+    // day; any other is a visit on an unknown day from the departure's on.
+    let arrived = endsHere ? j.arrival : null;
+    if (endsHere && !arrived && j.departure) {
+      if (j.departure.precision === "day" && DATE_ONLY_DAY_RIDE.has(j.domain)) {
+        arrived = j.departure;
+      } else if (later(dayOnly(j.departure), unknownFrom)) {
+        unknownFrom = dayOnly(j.departure);
       }
     }
+    for (const here of [startsHere ? j.departure : null, arrived]) {
+      if (later(here, lastVisit)) lastVisit = here;
+    }
   }
+  // The unknown arrival stands unless a known visit came after its departure.
+  const unknown = unknownFrom !== null && !later(lastVisit, unknownFrom);
   return {
     departures,
     arrivals,
     destinations: [...destinations.values()]
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
       .slice(0, MAX_DESTINATIONS),
-    lastVisit,
+    lastVisit: unknown ? null : lastVisit,
+    lastVisitUnknownFrom: unknown ? unknownFrom : null,
   };
 }

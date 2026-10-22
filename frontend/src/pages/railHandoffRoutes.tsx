@@ -5,6 +5,7 @@ import { BetaFeatureRouteGuard } from "../components/BetaFeatureRouteGuard";
 import { DomainRouteGuard } from "../components/DomainRouteGuard";
 import { BAHN_HANDOFF_PATH } from "../lib/rail/bahnBookmarklet";
 import { pendingBahnHandoffPath, stashBahnHandoff } from "../lib/rail/bahnHandoff";
+import { useAuthStore } from "../store/authStore";
 
 const RailBahnHandoffPage = lazy(() => import("./RailBahnHandoffPage"));
 
@@ -25,7 +26,8 @@ function StashThenLogin(): JSX.Element {
  * happened (every login path lands here).
  */
 export function HomeRedirect(): JSX.Element {
-  return <Navigate to={pendingBahnHandoffPath(Date.now()) ?? "/dashboard"} replace />;
+  const account = useAuthStore((s) => s.user?.id ?? null);
+  return <Navigate to={pendingBahnHandoffPath(Date.now(), account) ?? "/dashboard"} replace />;
 }
 
 /**

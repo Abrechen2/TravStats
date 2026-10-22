@@ -286,7 +286,11 @@ export function JourneyStopBody({
   const rentalFigures = rental ? getJourneyRouteFigures(data.journeys) : null;
   const lastHere = here.lastVisit
     ? journeySpanDay({ departure: here.lastVisit, arrival: null })
-    : "";
+    : here.lastVisitUnknownFrom
+      ? t("map:journey.lastHereUnknownFrom", {
+          date: journeySpanDay({ departure: here.lastVisitUnknownFrom, arrival: null }),
+        })
+      : "";
   return (
     <>
       <SubHeading>{t(`map:journey.stop.${data.domain}`)}</SubHeading>

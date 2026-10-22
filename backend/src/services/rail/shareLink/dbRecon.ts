@@ -53,16 +53,24 @@ function daysInMonth(year: number, month: number): number {
   return [4, 6, 9, 11].includes(month) ? 30 : 31;
 }
 
-/** A real calendar minute or null — 30 February is refused, not rolled into March. */
+/**
+ * Whether the digits name a real calendar minute — 30 February and 29:99 are
+ * refused, not rolled over. Shared with the web-client sections, so both
+ * representations of a connection answer the same.
+ */
+export function isCalendarMinute(y: string, mo: string, d: string, h: string, mi: string): boolean {
+  const month = Number(mo);
+  if (month < 1 || month > 12) return false;
+  if (Number(d) < 1 || Number(d) > daysInMonth(Number(y), month)) return false;
+  return Number(h) <= 23 && Number(mi) <= 59;
+}
+
+/** A real calendar minute or null. */
 function hafasTime(value: string | undefined): string | null {
   const m = HAFAS_TIME.exec(value?.trim() ?? "");
   if (!m) return null;
   const [, y, mo, d, h, mi] = m;
-  const month = Number(mo);
-  if (month < 1 || month > 12) return null;
-  if (Number(d) < 1 || Number(d) > daysInMonth(Number(y), month)) return null;
-  if (Number(h) > 23 || Number(mi) > 59) return null;
-  return `${y}-${mo}-${d}T${h}:${mi}`;
+  return isCalendarMinute(y, mo, d, h, mi) ? `${y}-${mo}-${d}T${h}:${mi}` : null;
 }
 
 /** `T` a vehicle; `W` and `G@F` a walk. Any other kind is not guessed at. */

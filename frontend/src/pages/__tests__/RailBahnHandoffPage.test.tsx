@@ -34,6 +34,7 @@ vi.mock("../../store/toastStore", () => ({
 }));
 
 import RailBahnHandoffPage from "../RailBahnHandoffPage";
+import { useAuthStore } from "../../store/authStore";
 import { HomeRedirect } from "../railHandoffRoutes";
 import { stashBahnHandoff } from "../../lib/rail/bahnHandoff";
 import { booking, leg, station } from "../../components/rail/__tests__/railImportFixture";
@@ -152,6 +153,23 @@ describe("RailBahnHandoffPage (forgejo#204)", () => {
     arrive(HASH);
     await screen.findByRole("alert");
     expect(sessionStorage.length).toBe(1);
+  });
+
+  it("binds the kept hand-over to the account that started it", async () => {
+    useAuthStore.setState({ user: { id: "user-a", username: "a", isAdmin: false } });
+    readBahnHandoff.mockRejectedValueOnce(
+      Object.assign(new Error("401"), { response: { status: 401 } })
+    );
+    const first = arrive(HASH);
+    await screen.findByRole("alert");
+    first.unmount();
+
+    // Codex review before 2.7.0-rc.20: B signing in next was shown A's ride.
+    useAuthStore.setState({ user: { id: "user-b", username: "b", isAdmin: false } });
+    arrive("");
+    expect(await screen.findByRole("alert")).toHaveTextContent("rail:bahnHandoff.reason.empty");
+    expect(readBahnHandoff).toHaveBeenCalledTimes(1);
+    useAuthStore.setState({ user: null });
   });
 
   it("reads a hand-over that waited through the login", async () => {

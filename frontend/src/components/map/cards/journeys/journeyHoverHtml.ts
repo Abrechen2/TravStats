@@ -139,9 +139,12 @@ export function journeyStopHoverHtml(d: JourneyStopHover, opts: JourneyHoverOpti
       `→ ${d.destinations.map((x) => `${x.name}${x.count > 1 ? ` ${x.count}×` : ""}`).join(", ")}`
     );
   }
-  const lastLine = d.lastVisit
-    ? factsLine([`${t("map:journey.lastHere")} ${spanDay(d.lastVisit, null)}`])
-    : "";
+  const lastHere = d.lastVisit
+    ? spanDay(d.lastVisit, null)
+    : d.lastVisitUnknownFrom
+      ? t("map:journey.lastHereUnknownFrom", { date: spanDay(d.lastVisitUnknownFrom, null) })
+      : "";
+  const lastLine = lastHere ? factsLine([`${t("map:journey.lastHere")} ${lastHere}`]) : "";
   return stripe(
     d.color,
     `${head}${kind}${tallyLine(d, t)}${factsLine(facts)}${lastLine}${stopSlot(d, t)}`
