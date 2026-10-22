@@ -9,7 +9,7 @@ import type { EvidenceEntry } from "../../schemas/evidence";
 import type { DomainKey } from "../../shared/domains";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { busCountries, busDayKeys, busYear, countableBusWhere } from "../../shared/busCounting";
-import { busEvidenceEntry } from "./entryMappersRentalBus";
+import { busEvidenceEntry, ferryEvidenceEntry } from "./entryMappersRentalBus";
 import { isCountableCruiseStatus } from "../../shared/cruiseCounting";
 import { classifyLodging, classifyStay } from "../../shared/lodgingCounting";
 import { classifyPlace, classifyVisit } from "../../shared/placeCounting";
@@ -610,11 +610,7 @@ async function loadFerry(userId: string): Promise<CrossDomainPopulation> {
   const events: CrossDomainEventRow[] = [];
   const countryRows: CrossDomainCountryRow[] = [];
   for (const row of rows) {
-    const entry: EvidenceEntry = {
-      ...busEvidenceEntry(row, {}),
-      domain: "ferry",
-      href: `/ferry/${row.id}`,
-    };
+    const entry = ferryEvidenceEntry(row, {});
     const year = ferryYear(row);
     events.push({ domain: "ferry", entry, year, dayKeys: ferryDayKeys(row) });
     countryRows.push({ domain: "ferry", entry, countries: ferryCountries(row), years: [year] });

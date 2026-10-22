@@ -54,6 +54,16 @@ const wrappedChaptersSchema = z
         nights: z.number().int().describe("Nights on a night bus, by its clocks"),
       })
       .nullable(),
+    ferry: z
+      .object({
+        crossings: z.number().int().describe("Completed crossings, by the departure port's year"),
+        km: z
+          .number()
+          .nullable()
+          .describe("Their stored distances together; null when no crossing has one — never 0"),
+        unmeasured: z.number().int().describe("Crossings without a distance, outside `km`"),
+      })
+      .nullable(),
   })
   .openapi({
     description:

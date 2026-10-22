@@ -35,6 +35,7 @@ export const OVERVIEW_MEASURES: Record<string, MeasureSpec> = {
   wrappedTourCount: chapter("tours"),
   wrappedRentalCount: chapter("rentals"),
   wrappedBusRideCount: chapter("rides"),
+  wrappedFerryCrossingCount: chapter("crossings"),
   recordLongestCruise: record("days"),
   recordLongestStay: record("nights"),
   recordMostVisitedPlace: record("visits"),

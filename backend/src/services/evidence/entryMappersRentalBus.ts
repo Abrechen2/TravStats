@@ -69,3 +69,8 @@ export function busEvidenceEntry(row: BusEvidenceRow, fields: EntryFields): Evid
     fields
   );
 }
+
+/** A ferry crossing reads like a bus ride — operator · route, on the departure port's day. */
+export function ferryEvidenceEntry(row: BusEvidenceRow, fields: EntryFields): EvidenceEntry {
+  return { ...busEvidenceEntry(row, fields), domain: "ferry", href: `/ferry/${row.id}` };
+}

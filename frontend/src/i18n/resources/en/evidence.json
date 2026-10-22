@@ -438,6 +438,7 @@
   "evidence.metric.wrappedTourCount": "Day tours in the year in review",
   "evidence.metric.wrappedRentalCount": "Rentals in the year in review",
   "evidence.metric.wrappedBusRideCount": "Bus rides in the year in review",
+  "evidence.metric.wrappedFerryCrossingCount": "Ferry crossings in the year in review",
   "evidence.metric.recordLongestCruise": "Longest cruise",
   "evidence.metric.recordLongestStay": "Longest stay",
   "evidence.metric.recordMostVisitedPlace": "Most visited place",

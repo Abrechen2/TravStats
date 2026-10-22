@@ -78,4 +78,9 @@ export interface WrappedChapters {
   rentals: { rentals: number; days: number } | null;
   /** `km` null when no ride has a distance — unknown, never 0. */
   bus: { rides: number; km: number | null; unmeasured?: number; nights: number } | null;
+  /**
+   * Ferry crossings, `km` null when no crossing has a distance. Optional: a
+   * server older than the chapter answers without it, and nothing is drawn.
+   */
+  ferry?: { crossings: number; km: number | null; unmeasured: number } | null;
 }

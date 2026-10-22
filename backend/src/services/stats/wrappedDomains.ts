@@ -6,6 +6,7 @@ import { resolveStayTiming } from "../../shared/lodgingTiming";
 import { classifyVisit, visitYear } from "../../shared/placeCounting";
 import { countableRentalWhere, rentalDays, rentalYear } from "../../shared/rentalCounting";
 import { busYear, countableBusWhere } from "../../shared/busCounting";
+import { countableFerryWhere, ferryYear } from "../../shared/ferryCounting";
 import { nightBusNights } from "../../shared/busRideKinds";
 import { localDay } from "../../shared/time/instant";
 import { now as clockNow } from "../../shared/time/clock";
@@ -21,7 +22,11 @@ import {
   roadtripEvidenceEntry,
   stayEvidenceEntry,
 } from "../evidence/entryMappersDomains";
-import { busEvidenceEntry, rentalEvidenceEntry } from "../evidence/entryMappersRentalBus";
+import {
+  busEvidenceEntry,
+  ferryEvidenceEntry,
+  rentalEvidenceEntry,
+} from "../evidence/entryMappersRentalBus";
 
 /**
  * The non-flight rows the year in review reads — loaded here so the stats
@@ -45,7 +50,10 @@ import { busEvidenceEntry, rentalEvidenceEntry } from "../evidence/entryMappersR
  *    roadtrip domain toggle);
  *  - rentals: completed, under the pickup's year (`rentalCounting`);
  *  - bus: completed rides, the year they left (`busCounting`), with the nights
- *    a night bus ran through (`busRideKinds`).
+ *    a night bus ran through (`busRideKinds`);
+ *  - ferry: completed crossings, the year they left on the departure port's
+ *    calendar (`ferryCounting`). While ferry sits behind the beta switch, a
+ *    user without it has no ferry chapter at all.
  */
 export async function loadWrappedDomains(userId: string): Promise<{
   /** `null` = hidden for this user (switched off, or behind the beta switch). */
@@ -112,7 +120,7 @@ async function loadChapterRows(
   visible: VisibleDomains,
   now: Date
 ): Promise<WrappedChapterRows> {
-  const [stays, visits, roadtripRoutes, tourRoutes, rentals, bus] = await Promise.all([
+  const [stays, visits, roadtripRoutes, tourRoutes, rentals, bus, ferry] = await Promise.all([
     whenVisible(visible, "lodging", () =>
       prisma.lodgingStay.findMany({
         where: { userId },
@@ -192,6 +200,22 @@ async function loadChapterRows(
           arrTimezone: true,
           depPrecision: true,
           arrPrecision: true,
+          distanceKm: true,
+        },
+      })
+    ),
+    whenVisible(visible, "ferry", () =>
+      prisma.ferryJourney.findMany({
+        where: { userId, ...countableFerryWhere() },
+        select: {
+          id: true,
+          operator: true,
+          depStationName: true,
+          arrStationName: true,
+          departureTime: true,
+          arrivalTime: true,
+          depTimezone: true,
+          arrTimezone: true,
           distanceKm: true,
         },
       })
@@ -288,6 +312,14 @@ async function loadChapterRows(
             distanceKm: r.distanceKm,
             nights: nightBusNights(r).length,
             entry: busEvidenceEntry(r, {}),
+          })),
+    ferry:
+      ferry === null
+        ? null
+        : ferry.map((r) => ({
+            year: ferryYear(r),
+            distanceKm: r.distanceKm,
+            entry: ferryEvidenceEntry(r, {}),
           })),
   };
 }

@@ -438,6 +438,7 @@
   "evidence.metric.wrappedTourCount": "Tagestouren im Jahresrückblick",
   "evidence.metric.wrappedRentalCount": "Mieten im Jahresrückblick",
   "evidence.metric.wrappedBusRideCount": "Busfahrten im Jahresrückblick",
+  "evidence.metric.wrappedFerryCrossingCount": "Fährüberfahrten im Jahresrückblick",
   "evidence.metric.recordLongestCruise": "Längste Kreuzfahrt",
   "evidence.metric.recordLongestStay": "Längster Aufenthalt",
   "evidence.metric.recordMostVisitedPlace": "Meistbesuchter Ort",
