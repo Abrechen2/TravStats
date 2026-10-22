@@ -195,6 +195,47 @@ describe("resolveBahnHandoff with a section it cannot classify", () => {
   });
 });
 
+describe("resolveBahnHandoff with an impossible section time", () => {
+  // Codex review before 2.7.0-rc.20: section times were checked by prefix only,
+  // so 30 February, 29:99 and trailing text read as a ride.
+  const ride = (abfahrtsZeitpunkt: string) => ({
+    verbindungsAbschnitte: [
+      {
+        abfahrtsOrt: "Augsburg Hbf",
+        ankunftsOrt: "München Hbf",
+        abfahrtsZeitpunkt,
+        ankunftsZeitpunkt: "2026-11-03T08:54:00",
+        verkehrsmittel: { name: "RB 57099" },
+      },
+    ],
+  });
+
+  it.each([
+    "2026-02-30T08:08:00",
+    "2026-11-03T29:99:00",
+    "2026-11-03T08:08:61",
+    "2026-11-03T08:08junk",
+  ])("refuses %s, the same as the recon would", async (time) => {
+    expect(await resolveBahnHandoff(ride(time), undefined)).toMatchObject({
+      outcome: "failed",
+      reason: "unreadable",
+    });
+  });
+
+  it.each([
+    "2026-11-03T08:08",
+    "2026-11-03T08:08:00",
+    "2026-11-03T08:08:00.000",
+    "2026-11-03T08:08:00+01:00",
+    "2028-02-29T08:08:00",
+  ])("reads %s on the station's clock", async (time) => {
+    const outcome = await resolveBahnHandoff(ride(time), undefined);
+    expect(outcome.outcome === "read" && outcome.booking.legs[0].departureLocal).toBe(
+      `${time.slice(0, 10)}T08:08`
+    );
+  });
+});
+
 describe("fetchDbConnection with a recon-only answer", () => {
   const realFetch = global.fetch;
   afterEach(() => {

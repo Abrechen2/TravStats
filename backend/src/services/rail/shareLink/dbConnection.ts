@@ -3,7 +3,12 @@ import { z } from "zod";
 import logger from "../../../utils/logger";
 import { RAIL_LOOKUP_TIMEOUT_MS, railUserAgent } from "../lookup/railHttp";
 import type { ParsedRailBooking, ParsedRailLeg, RailTravelClassValue } from "../parser/types";
-import { MAX_RECON_LENGTH, parseHinfahrtRecon, type ReconSection } from "./dbRecon";
+import {
+  MAX_RECON_LENGTH,
+  isCalendarMinute,
+  parseHinfahrtRecon,
+  type ReconSection,
+} from "./dbRecon";
 
 /**
  * Fetching the connection behind a bahn.de share link (forgejo#204).
@@ -63,14 +68,25 @@ const transport = z
   })
   .passthrough();
 
-const DB_TIME = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::\d{2})?/;
+/**
+ * `YYYY-MM-DDTHH:mm[:ss[.fff]][Z|±hh:mm]`, the whole string, and a real
+ * calendar minute — the same rule the recon's times are held to.
+ */
+const DB_TIME =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::([0-5]\d)(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})?$/;
+
+const isDbTime = (value: string): boolean => {
+  const m = DB_TIME.exec(value);
+  return m !== null && isCalendarMinute(m[1], m[2], m[3], m[4], m[5]);
+};
+const dbTime = z.string().max(40).refine(isDbTime);
 
 const section = z
   .object({
     abfahrtsOrt: z.string().min(1).max(120),
     ankunftsOrt: z.string().min(1).max(120),
-    abfahrtsZeitpunkt: z.string().regex(DB_TIME),
-    ankunftsZeitpunkt: z.string().regex(DB_TIME).optional(),
+    abfahrtsZeitpunkt: dbTime,
+    ankunftsZeitpunkt: dbTime.optional(),
     verkehrsmittel: transport.optional(),
   })
   .passthrough();
@@ -141,7 +157,7 @@ export function travelClassFromAnswer(json: unknown): RailTravelClassValue | nul
 
 const wallClock = (value: string): string => {
   const m = DB_TIME.exec(value)!;
-  return `${m[1]}T${m[2]}`;
+  return `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}`;
 };
 
 /**
