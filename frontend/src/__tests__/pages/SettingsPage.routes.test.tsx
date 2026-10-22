@@ -319,10 +319,22 @@ describe("SettingsPage — one page per menu entry", () => {
     expect(await findNamed("region", SECTION_LABEL_KEY.cruisePreferences)).toBeTruthy();
   });
 
-  it("sends a domain group whose domain is switched off back to the default", async () => {
+  // forgejo#321 prototype: the page stays and says the domain is off, with
+  // the way to switch it on — a bookmark no longer lands on the account page.
+  it("says a switched-off domain's page is off and points to Bereiche & Farben", async () => {
     useSettingsStore.setState({ enabledDomains: ["flight"] });
-    renderAt("/settings/cruise");
-    expect(await findNamed("region", SECTION_LABEL_KEY.profile)).toBeTruthy();
+    renderAt("/settings/cruise?section=cruisePreferences");
+    const notice = await screen.findByText("settings:domainOff.message");
+    expect(notice.closest("[data-domain-off]")).toHaveAttribute("data-domain-off", "cruise");
+    expect(screen.getByRole("link", { name: "settings:domainOff.action" })).toHaveAttribute(
+      "href",
+      "/settings/display?section=domains"
+    );
+    expect(sectionShown("cruisePreferences")).toBe(false);
+    expect(sectionShown("profile")).toBe(false);
+    expect(document.querySelector("h1")).toHaveTextContent("settings:tabs.cruise");
+    // Off the menu, as the prototype draws it.
+    expect(document.querySelector('[data-settings-menu] a[href="/settings/cruise"]')).toBeNull();
   });
 
   it("sends an unknown group back to the default rather than rendering an empty frame", async () => {

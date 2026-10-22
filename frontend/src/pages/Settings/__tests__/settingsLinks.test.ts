@@ -150,10 +150,13 @@ describe("old personal settings links", () => {
     }
   });
 
-  it("sends a domain page whose domain is off to the default page", () => {
+  // forgejo#321 prototype: the page of a switched-off domain says so and
+  // offers the switch, rather than a bookmark landing on the account page.
+  it("keeps a domain page whose domain is off as an address, without its section", () => {
     const flightOff = (p: { domain?: string }): boolean => p.domain !== "flight";
-    expect(settings({ page: "flight", isReachable: flightOff })).toBe("/settings/account");
-    expect(settings({ section: "homeAirport", isReachable: flightOff })).toBe("/settings/account");
+    expect(settings({ page: "flight", isReachable: flightOff })).toBe("/settings/flight");
+    expect(settings({ section: "homeAirport", isReachable: flightOff })).toBe("/settings/flight");
+    expect(settings({ tab: "flight", isReachable: flightOff })).toBe("/settings/flight");
   });
 
   it("answers an unknown page or section with the default page, never an empty frame", () => {
@@ -243,9 +246,14 @@ describe("old admin links", () => {
     }
   });
 
-  it("sends master data of a switched-off domain to the default page", () => {
+  it("keeps master data of a switched-off domain as an address that says so", () => {
     const cruiseOff = (p: { domain?: string }): boolean => p.domain !== "cruise";
-    expect(admin({ page: "shipsMasterData", isReachable: cruiseOff })).toBe("/admin/instance");
-    expect(admin({ tab: "cruise", isReachable: cruiseOff })).toBe("/admin/instance");
+    expect(admin({ page: "shipsMasterData", isReachable: cruiseOff })).toBe(
+      "/admin/shipsMasterData"
+    );
+    expect(admin({ tab: "cruise", isReachable: cruiseOff })).toBe("/admin/shipsMasterData");
+    expect(admin({ section: "portsMasterData", isReachable: cruiseOff })).toBe(
+      "/admin/portsMasterData"
+    );
   });
 });

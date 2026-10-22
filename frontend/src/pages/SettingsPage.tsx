@@ -13,6 +13,7 @@ import { SettingsLayout } from "../components/Settings/frame/SettingsLayout";
 import { SectionFrame } from "../components/Settings/frame/SectionFrame";
 import { ExpertNote } from "../components/Settings/frame/ExpertNote";
 import { VersionLine } from "../components/Settings/frame/VersionLine";
+import { DomainOffNotice } from "../components/Settings/frame/DomainOffNotice";
 import type { SettingsMenuGroup } from "../components/Settings/frame/SettingsMenu";
 import SettingsSectionSwitch from "./Settings/SettingsSectionSwitch";
 import { SettingsSearch } from "./Settings/SettingsSearch";
@@ -92,12 +93,14 @@ export default function SettingsPage(): JSX.Element {
     !location.hash &&
     !searchParams.get("tab");
 
+  // The page of a switched-off domain says so instead of drawing its settings.
+  const domainOff = current?.domain && !isEnabled(current.domain) ? current.domain : null;
   const visible = useMemo(
     () =>
-      current
+      current && !domainOff
         ? sectionsOf(current, { level, isGateOpen: isFeatureVisible, isAdmin, deepLinked: named })
         : { shown: [], hiddenExpert: 0, deepLinkedExpert: null },
-    [current, level, isFeatureVisible, isAdmin, named]
+    [current, domainOff, level, isFeatureVisible, isAdmin, named]
   );
   const inView = useSectionInView(visible.shown, "settings");
   const title = current ? t(current.labelKey) : "";
@@ -195,7 +198,9 @@ export default function SettingsPage(): JSX.Element {
       activeSection={inView}
       onJump={jump}
       notice={
-        adminOnlyNotice ? (
+        domainOff ? (
+          <DomainOffNotice domain={domainOff} />
+        ) : adminOnlyNotice ? (
           <p
             role="status"
             className="t-caption"

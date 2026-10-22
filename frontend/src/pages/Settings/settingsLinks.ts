@@ -44,7 +44,7 @@ export interface SettingsLinkInput {
   /** The pre-2.7 `?tab=`. */
   tab: string | null;
   isAdmin: boolean;
-  /** A domain page exists only while its domain is on. */
+  /** False for a page whose domain is off: the page is shown, its sections are not. */
   isReachable: (page: SettingsPageDef) => boolean;
 }
 
@@ -57,9 +57,7 @@ export function resolveSettingsLink(input: SettingsLinkInput): string {
   const fromRemoved = removedPage ? lookup(REMOVED_PAGES, removedPage) : undefined;
   const section = input.section ?? fromRemoved ?? null;
   const raw = section ? canonicalSection(section) : null;
-  const reachable = (p: SettingsPageDef | undefined): SettingsPageDef | undefined =>
-    p && isReachable(p) ? p : undefined;
-  const named = reachable(findPage(input.page));
+  const named = findPage(input.page);
 
   // `?section=admin` opened a section whose only content was a link to /admin.
   if (raw === "admin") return isAdmin ? "/admin" : `/settings/${DEFAULT_PAGE}`;
@@ -73,17 +71,20 @@ export function resolveSettingsLink(input: SettingsLinkInput): string {
     return `/settings/${named?.id ?? DEFAULT_PAGE}${query({ section: raw })}`;
   }
 
+  // A page of a switched-off domain is still an address: it says the domain
+  // is off and where to switch it on (forgejo#321 prototype), instead of a
+  // bookmark landing somewhere it never pointed. Its sections are not drawn,
+  // so a section it names is dropped.
   const home = raw ? pageOfSection(SETTINGS_PAGES, raw) : undefined;
   if (raw && home) {
-    const target = reachable(home);
-    return target
-      ? `/settings/${target.id}${query({ section: raw })}`
-      : `/settings/${DEFAULT_PAGE}`;
+    return isReachable(home)
+      ? `/settings/${home.id}${query({ section: raw })}`
+      : `/settings/${home.id}`;
   }
 
   if (named) return `/settings/${named.id}`;
   if (!input.page && input.tab) {
-    const fromTab = reachable(findPage(input.tab));
+    const fromTab = findPage(input.tab);
     if (fromTab) return `/settings/${fromTab.id}`;
   }
   return `/settings/${DEFAULT_PAGE}`;
@@ -106,14 +107,14 @@ export interface AdminLinkInput {
 
 /** The canonical address for an admin link. */
 export function resolveAdminLink(input: AdminLinkInput): string {
-  const reachable = (p: AdminPageDef | undefined): AdminPageDef | undefined =>
-    p && input.isReachable(p) ? p : undefined;
   const section = canonicalAdminSection(input.section);
-  const home = section ? reachable(pageOfSection(ADMIN_PAGES, section)) : undefined;
-  const named = reachable(findAdminPage(input.page));
-  const fromTab = input.page ? undefined : reachable(findAdminPage(adminPageOfTab(input.tab)));
+  const home = section ? pageOfSection(ADMIN_PAGES, section) : undefined;
+  const named = findAdminPage(input.page);
+  const fromTab = input.page ? undefined : findAdminPage(adminPageOfTab(input.tab));
 
   const page = home ?? named ?? fromTab ?? findAdminPage(DEFAULT_ADMIN_PAGE)!;
+  // A switched-off domain's page says so; the catalogue itself is not drawn.
+  if (!input.isReachable(page)) return `/admin/${page.id}`;
   // The section a page's first card answers to is the page itself: naming it
   // adds nothing, and a bare page address is the canonical one — unless the
   // link asks for that section's expert rows, which need it named.

@@ -425,3 +425,21 @@ describe("AdminPage — deep-link scroll aligner (Wave C finding C1, follow-up)"
     expect(scrollSpy).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("AdminPage — master data of a switched-off domain (forgejo#321 prototype)", () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  // The suite's settings store enables no domain, so cruise is off here.
+  it("says the domain is off and points to Bereiche & Farben, instead of leaving the page", async () => {
+    renderAdmin("/admin/shipsMasterData");
+    const notice = await within(document.body).findByText("settings:domainOff.message");
+    expect(notice.closest("[data-domain-off]")).toHaveAttribute("data-domain-off", "cruise");
+    expect(document.querySelector("h1")).toHaveTextContent("admin:pages.shipsMasterData");
+    expect(
+      within(document.body).getByRole("link", { name: "settings:domainOff.action" })
+    ).toHaveAttribute("href", "/settings/display?section=domains");
+    expect(document.querySelector("#admin-shipsMasterData")).toBeNull();
+  });
+});

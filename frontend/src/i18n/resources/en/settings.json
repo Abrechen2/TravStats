@@ -1161,5 +1161,9 @@
       "settings": "Settings",
       "admin": "Administration"
     }
+  },
+  "domainOff": {
+    "message": "This domain is switched off: {{domain}}. Its settings appear here once you switch it on.",
+    "action": "Go to Domains & colours"
   }
 }

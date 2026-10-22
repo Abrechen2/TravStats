@@ -1161,5 +1161,9 @@
       "settings": "Einstellungen",
       "admin": "Administration"
     }
+  },
+  "domainOff": {
+    "message": "Dieser Bereich ist ausgeschaltet: {{domain}}. Seine Einstellungen erscheinen hier, sobald du ihn einschaltest.",
+    "action": "Zu Bereiche & Farben"
   }
 }
