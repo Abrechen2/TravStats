@@ -29,13 +29,13 @@ export default function TripMapWithTours({
   const toursVisible = useToursVisible();
   const { geometries, failed } = useTripTourGeometries(trip.id, toursVisible);
   const busColor = useDomainColors().colorOf("bus");
+  // The map's projection, so rail, ferry, rental and bus are built for the globe on it.
+  const [projection, setProjection] = useState<TripProjection>("mercator");
   const busLayers = useMemo(
-    () => buildBusLayers(trip.busJourneys ?? [], busColor),
-    [trip.busJourneys, busColor]
+    () => buildBusLayers(trip.busJourneys ?? [], busColor, projection === "globe"),
+    [trip.busJourneys, busColor, projection]
   );
   const busPoints = useMemo(() => busPathPoints(trip.busJourneys ?? []), [trip.busJourneys]);
-  // The map's projection, so rail, ferry and rental are built for the globe on it.
-  const [projection, setProjection] = useState<TripProjection>("mercator");
   const transport = useTripTransportLayers(trip, projection === "globe");
   const [recordingDay, setRecordingDay] = useState<string | null>(null);
   const recording = useTripRecording(trip.id, recordingDay);
