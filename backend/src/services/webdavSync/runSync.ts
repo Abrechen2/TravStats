@@ -67,7 +67,15 @@ const RUN_DEADLINE_MS = 15 * 60_000;
 /** Of that, how long the clean-up after a stored upload may take. */
 const RETENTION_BUDGET_MS = 2 * 60_000;
 
-const running = new Set<string>();
+/**
+ * How long, after the deadline, a run still waits for its result to be
+ * written before it returns anyway. The write itself carries on, guarded so
+ * it cannot overwrite a newer run's result (see `record`).
+ */
+const RECORD_GRACE_MS = 30_000;
+
+/** The account's lock, held by one run's token so a late run frees only its own. */
+const running = new Map<string, symbol>();
 
 /** `travstats-export-<tag>-20261022T051500Z.json.gz` — sortable by name within one owner. */
 export function exportFileName(at: Date, tag: string): string {
@@ -178,17 +186,35 @@ async function ensureFolder(
   }
 }
 
+/**
+ * Mark this run as the account's latest attempt — only if no newer one has
+ * claimed it — and answer whether it did. Every later write of the run is
+ * conditioned on still being that attempt.
+ */
+async function claim(userId: string, at: Date): Promise<boolean> {
+  const { count } = await prisma.userWebdavSync.updateMany({
+    where: { userId, OR: [{ lastAttemptAt: null }, { lastAttemptAt: { lt: at } }] },
+    data: { lastAttemptAt: at },
+  });
+  return count > 0;
+}
+
+/**
+ * Write the run's result, unless a newer run has claimed the row since: a
+ * run that timed out because the database hung must not land its result
+ * over the next run's when the database wakes (Codex review). Waits at most
+ * RECORD_GRACE_MS; past that the write carries on alone, still guarded.
+ */
 async function record(
   userId: string,
   result: WebdavRunResult,
   at: Date,
   history?: string[]
 ): Promise<void> {
-  await prisma.userWebdavSync.update({
-    where: { userId },
+  const write = prisma.userWebdavSync.updateMany({
+    where: { userId, lastAttemptAt: at },
     data: {
       ...(history ? { uploadedFiles: history } : {}),
-      lastAttemptAt: at,
       lastStatus: result.status,
       lastErrorCode: result.errorCode,
       ...(result.status === "failed"
@@ -196,6 +222,16 @@ async function record(
         : { lastSuccessAt: at, lastFileName: result.fileName, lastSizeBytes: result.sizeBytes }),
     },
   });
+  try {
+    await untilAborted(AbortSignal.timeout(RECORD_GRACE_MS), write);
+  } catch (error) {
+    logger.warn({
+      operation: "webdav_user_sync_record_failed",
+      userId,
+      status: result.status,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 interface StoredExport {
@@ -301,25 +337,38 @@ export async function runWebdavSync(
   options: { deadlineMs?: number } = {}
 ): Promise<WebdavRunResult> {
   if (running.has(userId)) throw new WebdavSyncError("alreadyRunning");
-  running.add(userId);
+  const token = Symbol(userId);
+  running.set(userId, token);
+  const release = (): void => {
+    if (running.get(userId) === token) running.delete(userId);
+  };
   const at = new Date();
   const deadline = new AbortController();
-  const timer = setTimeout(
-    () => deadline.abort(new WebdavSyncError("timeout", "run deadline reached")),
-    options.deadlineMs ?? RUN_DEADLINE_MS
-  );
+  // At the deadline the account is free again, whatever is still hanging —
+  // a share, or the database itself.
+  const timer = setTimeout(() => {
+    deadline.abort(new WebdavSyncError("timeout", "run deadline reached"));
+    release();
+  }, options.deadlineMs ?? RUN_DEADLINE_MS);
   timer.unref();
   try {
     let target: ResolvedTarget;
     try {
-      target = await resolveTarget(userId);
+      const claimed = await untilAborted(deadline.signal, claim(userId, at));
+      if (!claimed) {
+        // No row (nothing to sync) or a newer run already holds it.
+        const exists = await untilAborted(
+          deadline.signal,
+          prisma.userWebdavSync.count({ where: { userId } })
+        );
+        throw new WebdavSyncError(exists ? "alreadyRunning" : "notConfigured");
+      }
+      target = await untilAborted(deadline.signal, resolveTarget(userId));
     } catch (error) {
       const code = classifyWebdavError(error);
-      // Without a row there is nowhere to record; "not configured" is the answer.
-      const exists = await prisma.userWebdavSync.count({ where: { userId } });
-      if (exists) {
-        await record(userId, failed(code), at);
-      }
+      // A newer run's row is not this run's to write; without a row the
+      // guarded write simply matches nothing.
+      if (code !== "alreadyRunning") await record(userId, failed(code), at);
       throw new WebdavSyncError(code);
     }
     let stored: StoredExport;
@@ -348,7 +397,7 @@ export async function runWebdavSync(
     return result;
   } finally {
     clearTimeout(timer);
-    running.delete(userId);
+    release();
   }
 }
 

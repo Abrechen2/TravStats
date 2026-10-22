@@ -340,6 +340,64 @@ describe("runWebdavSync", () => {
     expect(row.uploadedFiles).toEqual([result.fileName]);
   });
 
+  it("frees the account at the deadline even when reading its settings hangs", async () => {
+    const userId = await makeUser();
+    const spy = jest
+      .spyOn(prisma.userWebdavSync, "findUnique")
+      .mockImplementation(() => new Promise(() => undefined) as never);
+    try {
+      const run = runWebdavSync as (id: string, o?: { deadlineMs?: number }) => Promise<unknown>;
+      const started = Date.now();
+      expect(await codeOf(run(userId, { deadlineMs: 300 }))).toBe("timeout");
+      expect(Date.now() - started).toBeLessThan(5000);
+      expect(isWebdavSyncRunning(userId)).toBe(false);
+    } finally {
+      spy.mockRestore();
+    }
+    const row = await prisma.userWebdavSync.findUniqueOrThrow({ where: { userId } });
+    expect(row.lastErrorCode).toBe("timeout");
+  });
+
+  it("lets no late write of a timed-out run overwrite the next run's result", async () => {
+    const userId = await makeUser();
+    statefulShare();
+    // While `slow` is on, every write to the sync row lands 800 ms late.
+    let slow = true;
+    const delayed: Array<Promise<unknown>> = [];
+    const wrap = <K extends "update" | "updateMany">(method: K) => {
+      const original = prisma.userWebdavSync[method].bind(prisma.userWebdavSync) as (
+        args: unknown
+      ) => Promise<unknown>;
+      return jest.spyOn(prisma.userWebdavSync, method).mockImplementation(((args: unknown) => {
+        if (!slow) return original(args);
+        const late = new Promise((resolve) => setTimeout(resolve, 800)).then(() => original(args));
+        delayed.push(late.catch(() => undefined));
+        return late;
+      }) as never);
+    };
+    const spies = [wrap("update"), wrap("updateMany")];
+    try {
+      const run = runWebdavSync as (id: string, o?: { deadlineMs?: number }) => Promise<unknown>;
+      const first = codeOf(run(userId, { deadlineMs: 300 }));
+      const started = Date.now();
+      while (isWebdavSyncRunning(userId) && Date.now() - started < 5000) {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      expect(isWebdavSyncRunning(userId)).toBe(false);
+      expect(Date.now() - started).toBeLessThan(700);
+      slow = false;
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      const second = await runWebdavSync(userId);
+      expect(second.status).toBe("ok");
+      expect(await first).toBe("timeout");
+      await Promise.all(delayed);
+      const row = await prisma.userWebdavSync.findUniqueOrThrow({ where: { userId } });
+      expect(row).toMatchObject({ lastStatus: "ok", lastFileName: second.fileName });
+    } finally {
+      for (const spy of spies) spy.mockRestore();
+    }
+  });
+
   it("records a refused password as `auth` and fails the run — never a success", async () => {
     const userId = await makeUser();
     share.createDirectory.mockRejectedValue(Object.assign(new Error("401"), { status: 401 }));
