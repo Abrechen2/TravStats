@@ -81,9 +81,8 @@ export interface ImportOutcome {
  * editing AND moving entries, and a moved hotel without its stays, or a
  * cruise without its itinerary, is not a moved entry.
  *
- * The rail sheet is read only where rail is visible (`useDomainVisible("rail")`:
- * the `railDomain` beta switch AND the user's domain) — the owner rule that keeps
- * rail behind its gate. Last, where the export writes it.
+ * The rail sheet is read only where rail is visible (`useDomainVisible("rail")`,
+ * the user's domain choice). Last, where the export writes it.
  */
 export function importableSpecs(
   t: T,

@@ -115,7 +115,7 @@ export const wrappedSchema = z.object({
     .openapi({
       description:
         "Completed train rides that left in this year, on their station's calendar. Null " +
-        "when the user does not see rail (switched off, or behind the beta switch).",
+        "when the user does not see rail (switched off).",
     }),
   railKm: z
     .number()

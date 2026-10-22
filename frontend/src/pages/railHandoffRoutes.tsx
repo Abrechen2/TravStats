@@ -1,7 +1,6 @@
 import { lazy } from "react";
 import type { JSX } from "react";
 import { Navigate, Route } from "react-router-dom";
-import { BetaFeatureRouteGuard } from "../components/BetaFeatureRouteGuard";
 import { DomainRouteGuard } from "../components/DomainRouteGuard";
 import { BAHN_HANDOFF_PATH } from "../lib/rail/bahnBookmarklet";
 import { pendingBahnHandoffPath, stashBahnHandoff } from "../lib/rail/bahnHandoff";
@@ -32,9 +31,8 @@ export function HomeRedirect(): JSX.Element {
 
 /**
  * The bookmarklet's landing route (forgejo#204), as a plain `<Route>` for
- * App's `<Routes>` — App.tsx stands at the 800-line limit. The same two gates
- * as every rail page, outer first: the `railDomain` beta switch, then the
- * user's own domain choice.
+ * App's `<Routes>` — App.tsx stands at the 800-line limit. The same gate as
+ * every rail page: the user's own domain choice.
  */
 export function railHandoffRoutes(isAuthenticated: boolean): JSX.Element {
   return (
@@ -43,11 +41,9 @@ export function railHandoffRoutes(isAuthenticated: boolean): JSX.Element {
       path={BAHN_HANDOFF_PATH}
       element={
         isAuthenticated ? (
-          <BetaFeatureRouteGuard feature="railDomain" redirectTo="/dashboard">
-            <DomainRouteGuard domain="rail">
-              <RailBahnHandoffPage />
-            </DomainRouteGuard>
-          </BetaFeatureRouteGuard>
+          <DomainRouteGuard domain="rail">
+            <RailBahnHandoffPage />
+          </DomainRouteGuard>
         ) : (
           <StashThenLogin />
         )

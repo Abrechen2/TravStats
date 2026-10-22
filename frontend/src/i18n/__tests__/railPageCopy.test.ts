@@ -10,13 +10,22 @@ import { RAIL_ACCEPTED_EMAIL_EXTENSIONS } from "../../components/import/adapters
  * note now points at that button, by the button's own label, so the two
  * cannot drift apart silently.
  */
-describe("the rail page's beta note", () => {
+describe("the rail page's import note", () => {
   it.each([
     ["de", deRail],
     ["en", enRail],
   ])("points at the import in %s instead of promising it", (_locale, rail) => {
-    expect(rail.betaNote).toContain(rail.add);
-    expect(rail.betaNote).not.toMatch(/folgt|comes next/);
+    expect(rail.importNote).toContain(rail.add);
+    expect(rail.importNote).not.toMatch(/folgt|comes next/);
+  });
+
+  // Rail left beta in 2.7.0-rc.20 (owner, 2026-10-22); the page must not say otherwise.
+  it.each([
+    ["de", deRail],
+    ["en", enRail],
+  ])("no longer calls rail beta in %s", (_locale, rail) => {
+    expect(rail.importNote).not.toMatch(/beta/i);
+    expect("betaNote" in rail).toBe(false);
   });
 });
 
@@ -32,13 +41,13 @@ const NAMED_FORMATS: ReadonlyArray<[RegExp, string]> = [
   [/Kalender|calendar|\.ics/i, ".ics"],
 ];
 
-describe("the rail page's beta note names only what the add dialog accepts", () => {
+describe("the rail page's import note names only what the add dialog accepts", () => {
   const accepted = [...RAIL_ACCEPTED_EMAIL_EXTENSIONS, ".pdf"];
   it.each([
     ["de", deRail],
     ["en", enRail],
   ])("in %s", (_locale, rail) => {
-    const promised = NAMED_FORMATS.filter(([re]) => re.test(rail.betaNote)).map(([, ext]) => ext);
+    const promised = NAMED_FORMATS.filter(([re]) => re.test(rail.importNote)).map(([, ext]) => ext);
     expect(promised.filter((ext) => !accepted.includes(ext))).toEqual([]);
   });
 });

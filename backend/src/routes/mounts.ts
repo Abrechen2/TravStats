@@ -389,7 +389,7 @@ export const apiMounts: ApiMount[] = [
   // Same-prefix satellite router, same pattern as authRoutes + passwordResetRoutes
   // above — split out of cruises.ts once that file crossed the 800-line max.
   { id: "cruises.routeOverride", base: "/api/v1/cruises", router: cruiseRouteOverrideRoutes },
-  // Train journeys (spec 2026-09-25-rail-domain). Behind the beta switch in the UI only.
+  // Train journeys (spec 2026-09-25-rail-domain). Out of beta since 2.7.0-rc.20.
   // The catalogue typeahead and the train lookup mount FIRST on the same
   // prefix: the journey router's '/:id' would otherwise answer them as a 404.
   { id: "rail.operators", base: "/api/v1/rail/operators", router: railOperatorRouter },

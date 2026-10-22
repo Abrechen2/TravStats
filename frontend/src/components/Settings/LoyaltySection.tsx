@@ -37,9 +37,9 @@ export default function LoyaltySection(): JSX.Element {
   const [loadError, setLoadError] = useState(false);
   const [cruiseLines, setCruiseLines] = useState<string[]>([]);
 
-  // Rail asks the rail rule — the user's switch AND the instance's beta gate —
-  // so a BahnBonus block never appears where the rail domain is hidden
-  // (forgejo#132 item 23). The others only need the user's switch.
+  // Rail asks `useDomainVisible` so a BahnBonus block never appears where the
+  // rail domain is hidden (forgejo#132 item 23). Out of beta since
+  // 2.7.0-rc.20, that is the user's switch alone, as for the others.
   const railVisible = useDomainVisible("rail");
   const domains = useMemo(
     () =>

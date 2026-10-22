@@ -24,7 +24,7 @@ interface Props {
  * stored with `rail` as its vehicle — from before rail became a domain — is
  * offered for conversion into rail journeys, one per leg.
  *
- * Shown only where rail is visible at all (beta switch AND the user's domain,
+ * Shown only where rail is visible at all (the user's domain,
  * `useDomainVisible("rail")`), and only for a roadtrip by rail. The dialog shows what
  * will be written before anything is; the roadtrip is deleted only when the
  * user ticks that box, and the box is offered only when every leg converts.

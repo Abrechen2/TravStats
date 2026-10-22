@@ -31,8 +31,8 @@ function extractRailParse(result: unknown): RailParse | null {
 /**
  * Plugs rail into `<DomainImportPanel>`: a DB (or any) ticket mail, .eml/.msg
  * with its attachments, or a PDF → the parsed legs → the review, where each
- * leg is confirmed before anything is written. Behind the `railDomain` beta
- * gate like the rest of rail — only a rail surface mounts it.
+ * leg is confirmed before anything is written. Behind the user's rail domain
+ * like the rest of rail — only a rail surface mounts it.
  */
 export function useRailImportAdapter(): DomainImportAdapter {
   const { t } = useTranslation(["rail", "import"]);

@@ -5,10 +5,9 @@ import { MemoryRouter } from "react-router-dom";
 import type { Achievement } from "../../types";
 
 /**
- * Rail badges (2.7) live behind the `railDomain` beta gate like every rail
- * surface. A user who switched rail on while the gate was open keeps `rail` in
- * their stored domains after the instance closes it; the page asks the real
- * `useEnabledDomains`, which drops it.
+ * Rail badges (2.7) follow the user's rail domain like every rail surface.
+ * Rail left beta in 2.7.0-rc.20 (owner, 2026-10-22), so the instance's beta
+ * switch no longer hides them; the page asks the real `useEnabledDomains`.
  */
 
 vi.mock("../../components/NavigationBar", () => ({
@@ -52,12 +51,6 @@ vi.mock("../../lib/api", () => ({
 vi.unmock("../../store/settingsStore");
 import { useSettingsStore } from "../../store/settingsStore";
 
-const railGate = {
-  set open(value: boolean) {
-    useSettingsStore.setState({ enabledDomains: ["flight", "rail"], betaFeaturesEnabled: value });
-  },
-};
-
 async function renderPage(): Promise<void> {
   const { default: AchievementsPage } = await import("../../pages/AchievementsPage");
   render(
@@ -68,13 +61,13 @@ async function renderPage(): Promise<void> {
   await screen.findByText("achievements:codes.FIRST_FLIGHT.name");
 }
 
-describe("AchievementsPage — rail badges follow the rail beta gate", () => {
+describe("AchievementsPage — rail badges follow the rail domain", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("hides rail badges and the rail pill with the gate closed", async () => {
-    railGate.open = false;
+  it("hides rail badges and the rail pill while the user has rail off", async () => {
+    useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
     await renderPage();
     expect(screen.queryByText("achievements:codes.RAIL_FIRST.name")).not.toBeInTheDocument();
     expect(
@@ -82,8 +75,8 @@ describe("AchievementsPage — rail badges follow the rail beta gate", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows them, with a rail pill, once rail is visible", async () => {
-    railGate.open = true;
+  it("shows them, with a rail pill, with the beta switch off", async () => {
+    useSettingsStore.setState({ enabledDomains: ["flight", "rail"], betaFeaturesEnabled: false });
     await renderPage();
     expect(screen.getByText("achievements:codes.RAIL_FIRST.name")).toBeInTheDocument();
     expect(

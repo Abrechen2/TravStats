@@ -34,8 +34,8 @@
         "body": "Die Companion-App koppelst du per QR-Code mit deinem Server. Gekoppelt meldet er Flugänderungen und Abflug-Erinnerungen als Push aufs Handy (ein Admin schaltet das Relay ein) und gleicht Einträge ab, ohne eine neuere Fassung still zu überschreiben. Kopplung, Push und Abgleich sind gebaut, wie die App selbst noch in Prüfung."
       },
       "beta": {
-        "title": "Roadtrips, Bahn, Mietwagen, Bus und mehr",
-        "body": "Roadtrips und Touren mit Reisekosten, Bahn, Mietwagen, Fernbus, Fähren, Kreuzfahrt-Spuren, Flugspuren, Hotel-Anreicherung, Freundesvergleiche, verschlüsseltes Teilen, Reisen über Server teilen und das Kalender-Abo sind noch in Prüfung. Ein Admin schaltet sie mit dem Beta-Schalter frei; das Demo-Konto tut das selbst. Alpha-Versuch: die Reiseplanung TravPlan, ebenso dahinter."
+        "title": "Roadtrips, Mietwagen, Bus und mehr",
+        "body": "Roadtrips und Touren mit Reisekosten, Mietwagen, Fernbus, Fähren, Kreuzfahrt-Spuren, Flugspuren, Hotel-Anreicherung, Freundesvergleiche, verschlüsseltes Teilen, Reisen über Server teilen und das Kalender-Abo sind noch in Prüfung. Ein Admin schaltet sie mit dem Beta-Schalter frei; das Demo-Konto tut das selbst. Alpha-Versuch: die Reiseplanung TravPlan, ebenso dahinter."
       }
     },
     "v260": {

@@ -22,6 +22,9 @@ vi.mock("../../../components/Admin/ImmichGlobalSettings", () => ({
 vi.mock("../../../components/Settings/OperatorLogosCard", () => ({
   default: () => <div data-testid="operator-logos" />,
 }));
+// The rail group is drawn on every instance since rail left beta (2.7.0-rc.20);
+// its card loads its own settings and has its own test (RailProvidersCard.test.tsx).
+vi.mock("../../../components/Settings/RailProvidersCard", () => ({ default: () => null }));
 const adminApi = vi.hoisted(() => ({
   getGlobalApiKeys: vi.fn(),
   updateGlobalApiKeys: vi.fn(),

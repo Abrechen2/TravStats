@@ -21,7 +21,7 @@ import { railListSummary } from "../../shared/listSummary";
  *
  * Mounted at /api/v1/rail/connections, ahead of the rail router, whose `/:id`
  * would otherwise take "connections" for a journey id. Enveloped, as the rest
- * of the rail family; answers whatever the beta switch says.
+ * of the rail family; answers whatever the user's domain switch says.
  *
  * Grouping happens here, not in the browser, because the list is paged: a
  * page of legs can end between two trains of one ride, and the client cannot

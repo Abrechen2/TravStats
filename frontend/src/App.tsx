@@ -322,15 +322,12 @@ function AppContent() {
                 path="/rail"
                 element={
                   isAuthenticated ? (
-                    // Two gates, outer first: the instance beta switch
-                    // (config/betaFeatures.ts → railDomain), then the user's
-                    // own domain choice. Both are three-state guards, so a cold
-                    // load waits instead of bouncing a bookmark.
-                    <BetaFeatureRouteGuard feature="railDomain" redirectTo="/dashboard">
-                      <DomainRouteGuard domain="rail">
-                        <RailPage />
-                      </DomainRouteGuard>
-                    </BetaFeatureRouteGuard>
+                    // Out of beta since 2.7.0-rc.20 (owner, 2026-10-22): the
+                    // user's own domain choice is the one gate, a three-state
+                    // guard, so a cold load waits instead of bouncing a bookmark.
+                    <DomainRouteGuard domain="rail">
+                      <RailPage />
+                    </DomainRouteGuard>
                   ) : (
                     <Navigate to="/login" />
                   )
@@ -340,12 +337,10 @@ function AppContent() {
                 path="/rail/connection/:id"
                 element={
                   isAuthenticated ? (
-                    // The same two gates as the logbook, in the same order.
-                    <BetaFeatureRouteGuard feature="railDomain" redirectTo="/dashboard">
-                      <DomainRouteGuard domain="rail">
-                        <RailConnectionPage />
-                      </DomainRouteGuard>
-                    </BetaFeatureRouteGuard>
+                    // The same gate as the logbook.
+                    <DomainRouteGuard domain="rail">
+                      <RailConnectionPage />
+                    </DomainRouteGuard>
                   ) : (
                     <Navigate to="/login" />
                   )
@@ -355,12 +350,10 @@ function AppContent() {
                 path="/rail/:id"
                 element={
                   isAuthenticated ? (
-                    // The same two gates as the logbook, in the same order.
-                    <BetaFeatureRouteGuard feature="railDomain" redirectTo="/dashboard">
-                      <DomainRouteGuard domain="rail">
-                        <RailDetailPage />
-                      </DomainRouteGuard>
-                    </BetaFeatureRouteGuard>
+                    // The same gate as the logbook.
+                    <DomainRouteGuard domain="rail">
+                      <RailDetailPage />
+                    </DomainRouteGuard>
                   ) : (
                     <Navigate to="/login" />
                   )
@@ -370,7 +363,7 @@ function AppContent() {
                 path="/rentals"
                 element={
                   isAuthenticated ? (
-                    // Rail's two gates, outer first: the instance beta switch
+                    // Two gates, outer first: the instance beta switch
                     // (rentalDomain), then the user's own domain choice.
                     <BetaFeatureRouteGuard feature="rentalDomain" redirectTo="/dashboard">
                       <DomainRouteGuard domain="rental">
@@ -386,7 +379,7 @@ function AppContent() {
                 path="/rentals/:id"
                 element={
                   isAuthenticated ? (
-                    // Rail's two gates, outer first: the instance beta switch
+                    // Two gates, outer first: the instance beta switch
                     // (rentalDomain), then the user's own domain choice.
                     <BetaFeatureRouteGuard feature="rentalDomain" redirectTo="/dashboard">
                       <DomainRouteGuard domain="rental">

@@ -358,7 +358,7 @@ export function DashboardLayout({
           hinzufügen" and the click went nowhere (#288). */}
       {/* A ticket mail or PDF first, typing it in as the footer route — the
           same chooser cruises and stays open with. Only offered while rail
-          is visible (beta switch + domain), as `addableDomains` says. */}
+          is visible (the user's domain), as `addableDomains` says. */}
       <DomainImportPanel
         open={addingDomain === "rail"}
         onClose={() => setAddingDomain(null)}

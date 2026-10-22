@@ -62,7 +62,7 @@ describe("useDashboardDomainFilter", () => {
     expect(tourRow?.beta).toBe(true);
   });
 
-  it("rail is the seventh row, last and beta-labelled, once its gate and the domain are on", () => {
+  it("rail is the seventh row, last and no longer beta-labelled, once the domain is on", () => {
     useSettingsStore.setState({
       enabledDomains: ["flight", "cruise", "lodging", "poi", "roadtrip", "rail"],
       betaFeaturesEnabled: true,
@@ -72,10 +72,11 @@ describe("useDashboardDomainFilter", () => {
     });
     const keys = result.current.rows.map((r) => r.key);
     expect(keys).toEqual(["flight", "cruise", "lodging", "poi", "tour", "roadtrip", "rail"]);
-    expect(result.current.rows.find((r) => r.key === "rail")?.beta).toBe(true);
+    expect(result.current.rows.find((r) => r.key === "rail")?.beta).toBe(false);
   });
 
-  it("rail stays out while its beta gate is closed, even when the domain is enabled", () => {
+  // Rail left beta in 2.7.0-rc.20 (owner, 2026-10-22): the domain alone decides.
+  it("lists rail with the beta switch off once the domain is enabled", () => {
     useSettingsStore.setState({
       enabledDomains: ["flight", "cruise", "lodging", "poi", "rail"],
       betaFeaturesEnabled: false,
@@ -83,7 +84,7 @@ describe("useDashboardDomainFilter", () => {
     const { result } = renderHook(() => useDashboardDomainFilter(0), {
       wrapper: wrapper(["/dashboard"]),
     });
-    expect(result.current.rows.map((r) => r.key)).not.toContain("rail");
+    expect(result.current.rows.map((r) => r.key)).toContain("rail");
   });
 
   it("a row with count 0 still appears, ticked", () => {

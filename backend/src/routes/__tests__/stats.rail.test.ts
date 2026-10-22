@@ -91,17 +91,20 @@ describe("stats — rail as evidence and as a year", () => {
   });
 
   // The year in review counts rail only where the reader SEES rail — their
-  // domain choice and the beta switch (forgejo#265); hidden, it adds no year.
+  // domain choice (forgejo#265); hidden, it adds no year. Rail left beta in
+  // 2.7.0-rc.20, so a closed beta switch does not hide it.
   it("tells a year of train rides; an onward chain that never turns around proves no visit", async () => {
     const betaBefore = (await getInstanceSettings()).betaFeaturesEnabled;
-    await prisma.userSettings.upsert({
-      where: { userId },
-      create: { userId, enabledDomains: ["flight", "rail"], data: {} },
-      update: { enabledDomains: ["flight", "rail"] },
-    });
+    const setDomains = (enabledDomains: string[]) =>
+      prisma.userSettings.upsert({
+        where: { userId },
+        create: { userId, enabledDomains, data: {} },
+        update: { enabledDomains },
+      });
     await updateInstanceSettings({ betaFeaturesEnabled: false });
+    await setDomains(["flight"]);
     const hidden = await request(app).get("/api/v1/stats/wrapped").set("Cookie", cookie);
-    await updateInstanceSettings({ betaFeaturesEnabled: true });
+    await setDomains(["flight", "rail"]);
     const res = await request(app).get("/api/v1/stats/wrapped").set("Cookie", cookie);
     await updateInstanceSettings({ betaFeaturesEnabled: betaBefore });
     expect(hidden.status).toBe(404);

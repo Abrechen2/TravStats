@@ -15,6 +15,9 @@ import {
  * rail badges — and the statistics overview counted "81 achievements". Both
  * read `GET /achievements`; the leaderboard sums the same rows. A badge of a
  * hidden domain is now neither listed, counted nor scored, in one place.
+ *
+ * Rail left beta in 2.7.0-rc.20 (owner, 2026-10-22), so here it is hidden by
+ * the user's own switch, and the closed beta switch no longer hides it.
  */
 describe("achievements of a hidden domain", () => {
   const username = "ach-hidden-domain";
@@ -74,6 +77,7 @@ describe("achievements of a hidden domain", () => {
 
   it("leaves a hidden domain's badges out of the list, the count and the points", async () => {
     await updateInstanceSettings({ betaFeaturesEnabled: false });
+    await prisma.userSettings.update({ where: { userId }, data: { enabledDomains: ["flight"] } });
     const { body } = await summary();
 
     expect(body.summary.totalPoints).toBe(flightPoints);
@@ -91,7 +95,12 @@ describe("achievements of a hidden domain", () => {
   });
 
   it("counts them again once the domain is visible — the badges were kept", async () => {
-    await updateInstanceSettings({ betaFeaturesEnabled: true });
+    // The beta switch stays closed: rail no longer needs it.
+    await updateInstanceSettings({ betaFeaturesEnabled: false });
+    await prisma.userSettings.update({
+      where: { userId },
+      data: { enabledDomains: ["flight", "rail"] },
+    });
     const { body } = await summary();
 
     expect(body.summary.totalPoints).toBe(flightPoints + railPoints);

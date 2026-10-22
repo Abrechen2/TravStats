@@ -31,8 +31,8 @@ import CountingHelp from "../counting/CountingHelp";
  * delays name the sample they were taken over, so "on time" never includes
  * "nobody wrote the delay down".
  *
- * Mounted only behind the `railDomain` beta gate — the page decides that
- * through `resolveStatsTab`; this component does not ask again.
+ * Mounted only while the user has rail on — the page decides that through
+ * `resolveStatsTab`; this component does not ask again.
  */
 export default function RailStatsSection({
   scope,

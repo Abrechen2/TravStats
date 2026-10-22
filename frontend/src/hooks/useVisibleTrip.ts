@@ -10,7 +10,7 @@ export function useVisibleTrip(trip: Trip | null) {
   const { isEnabled } = useEnabledDomains();
   const cruiseEnabled = isEnabled("cruise");
   const lodgingEnabled = isEnabled("lodging");
-  // Rail and rentals ask their own hooks: the beta switch AND the domain.
+  // Rail asks the domain alone; rental, bus and ferry the beta switch AND the domain.
   const railVisible = useDomainVisible("rail");
   const rentalVisible = useDomainVisible("rental");
   const busVisible = useDomainVisible("bus");

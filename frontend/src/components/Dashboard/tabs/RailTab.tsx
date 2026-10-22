@@ -32,8 +32,8 @@ const PANEL_STYLE = {
  * every tab opens on (owner ruling 2026-09-20).
  *
  * The colour is the domain colour store's (`useDomainColors`), for the line and
- * the key alike. The fetch is gated on `useDomainVisible("rail")` — beta switch AND the
- * user's domain — so a hidden rail never reaches the network from here, even
+ * the key alike. The fetch is gated on `useDomainVisible("rail")` — the user's
+ * domain choice — so a hidden rail never reaches the network from here, even
  * if a guard above were wrong.
  */
 export function RailTab(): JSX.Element {

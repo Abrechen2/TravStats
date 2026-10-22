@@ -51,7 +51,7 @@ export interface ExportInput {
   cruises?: readonly Cruise[];
   lodging?: readonly Lodging[];
   places?: readonly Place[];
-  /** Only passed when the rail domain is visible (beta gate + user). */
+  /** Only passed when the user has the rail domain on. */
   rail?: readonly RailJourney[];
   /** Only passed when the bus domain is visible (beta gate + user), forgejo#180. */
   bus?: readonly BusJourney[];

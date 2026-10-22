@@ -52,7 +52,7 @@ type Editing = { mode: "edit" } | { mode: "connection" } | null;
  * One train ride (spec 2026-09-25-rail-domain, phase 2b). Every time is on its
  * station's clock, a distance says what it measures, and an unrecorded delay
  * stays apart from an on-time arrival. The route is gated in App.tsx like the
- * logbook: the `railDomain` beta switch, then the user's domain choice.
+ * logbook, by the user's domain choice.
  */
 export default function RailDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();

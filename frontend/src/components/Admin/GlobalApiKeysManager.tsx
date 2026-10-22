@@ -17,7 +17,6 @@ import { Switch } from "../ui/Field";
 import { SettingRows } from "../ui/SettingRow";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useToursVisible } from "../../hooks/useToursVisible";
-import { useDomainOffered } from "../../hooks/useDomainVisible";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useEffectiveSettingsLevel, useSettingsLevelStore } from "../../store/settingsLevelStore";
@@ -133,7 +132,6 @@ export default function GlobalApiKeysManager({
 }: GlobalApiKeysManagerProps): JSX.Element {
   const { t } = useTranslation(["admin", "common", "settings", "openData"]);
   const toursVisible = useToursVisible();
-  const railOffered = useDomainOffered("rail");
   const { colorOf } = useDomainColors();
   const openData = useSettingsStore((s) => s.openDataEnabled);
   // Who may bring their own keys (2) and where the geocoder lives (2).
@@ -262,40 +260,36 @@ export default function GlobalApiKeysManager({
       color: colorOf("flight"),
       items: [...FLIGHT_KEYS.map(keyItem), opensky],
     },
-    ...(railOffered
-      ? [
-          {
-            id: "rail",
-            label: t("common:domain.rail"),
-            color: colorOf("rail"),
-            items: [
-              {
-                id: "transitous",
-                name: "Transitous",
-                what: t("settings:services.what.transitous"),
-                state: rail ? (rail.railTransitousEnabled ? "admin" : "none") : null,
-                onAction: toFooter("rail", false),
-              },
-              {
-                id: "dbRest",
-                name: "db-rest",
-                what: t("settings:services.what.dbRest"),
-                state: rail ? (rail.railDbRestEnabled ? "admin" : "none") : null,
-                onAction: toFooter("rail", false),
-              },
-              {
-                id: "openRailRouting",
-                name: "OpenRailRouting",
-                what: t("settings:services.what.openRailRouting"),
-                state: rail ? (rail.railRoutingUrl ? "admin" : "none") : null,
-                // Where a self-hosted router lives is expert plumbing.
-                onAction: toFooter("rail", true),
-              },
-            ] satisfies ServiceItem[],
-            footer: <RailProvidersCard isAdmin onStatus={setRail} />,
-          },
-        ]
-      : []),
+    {
+      id: "rail",
+      label: t("common:domain.rail"),
+      color: colorOf("rail"),
+      items: [
+        {
+          id: "transitous",
+          name: "Transitous",
+          what: t("settings:services.what.transitous"),
+          state: rail ? (rail.railTransitousEnabled ? "admin" : "none") : null,
+          onAction: toFooter("rail", false),
+        },
+        {
+          id: "dbRest",
+          name: "db-rest",
+          what: t("settings:services.what.dbRest"),
+          state: rail ? (rail.railDbRestEnabled ? "admin" : "none") : null,
+          onAction: toFooter("rail", false),
+        },
+        {
+          id: "openRailRouting",
+          name: "OpenRailRouting",
+          what: t("settings:services.what.openRailRouting"),
+          state: rail ? (rail.railRoutingUrl ? "admin" : "none") : null,
+          // Where a self-hosted router lives is expert plumbing.
+          onAction: toFooter("rail", true),
+        },
+      ] satisfies ServiceItem[],
+      footer: <RailProvidersCard isAdmin onStatus={setRail} />,
+    },
     // Routing serves tours and roadtrips only, both behind the roadtrips key.
     ...(toursVisible
       ? [

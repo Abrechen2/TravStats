@@ -6,7 +6,7 @@ import type { AchievementDefinition } from "../achievements";
  * (`shared/railCounting.ts`), and what a ride IS — night train, high-speed,
  * across a border, how many km — comes from `shared/railRideKinds.ts`.
  *
- * Hidden with the `railDomain` beta gate off, like every rail surface.
+ * Hidden while the user has rail off, like every rail surface.
  *
  * Tiers follow the roadtrip set's shape: a first-time bronze, a volume silver,
  * a long-haul gold, one platinum for the kilometre that takes years.

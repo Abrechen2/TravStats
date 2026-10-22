@@ -40,7 +40,7 @@ type BucketKey = (typeof BUCKETS)[number]["key"];
  */
 export default function TravelAccountSection(): JSX.Element | null {
   const { t } = useTranslation(["stats", "common"]);
-  // Rail sits behind the beta switch. The server already leaves a hidden
+  // Rail follows the user's domain choice. The server already leaves a hidden
   // domain's nights out (forgejo#274 review I2); the legend and the help line
   // must not name it either.
   const railVisible = useDomainVisible("rail");

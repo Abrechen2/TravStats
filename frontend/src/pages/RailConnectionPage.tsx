@@ -31,8 +31,7 @@ import { dateLocaleForLanguage } from "../lib/units";
  * link stays good when the first leg is deleted. It edits nothing — a train is
  * edited on its own page. The total distance names mixed sources and missing legs.
  *
- * Gated in App.tsx like the logbook: the `railDomain` beta switch, then the
- * user's domain choice.
+ * Gated in App.tsx like the logbook, by the user's domain choice.
  */
 export default function RailConnectionPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();

@@ -292,7 +292,7 @@ export default function RailPage(): JSX.Element {
           unknown={loading || loadFailed || summary === null}
         />
         <p className="mb-4 text-xs text-(--text-muted)">
-          {t("rail:subtitle")} {t("rail:betaNote")}
+          {t("rail:subtitle")} {t("rail:importNote")}
         </p>
         {membershipId !== null && (
           <div className="mb-3">

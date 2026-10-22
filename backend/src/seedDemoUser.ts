@@ -1617,7 +1617,7 @@ export async function seedDemoUser(options: SeedDemoOptions = {}) {
     console.log("🏨 Creating demo lodging...");
     await createDemoLodging(demoUser.id);
 
-    // Train rides (rail spec, phase 2b) — behind the railDomain beta gate.
+    // Train rides (rail spec, phase 2b).
     console.log("🚆 Creating demo train rides...");
     await createDemoRail(demoUser.id);
 

@@ -79,8 +79,8 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     routePrefix: "/roadtrips",
   },
   // Train journeys (spec 2026-09-25-rail-domain). Available, so shared code
-  // iterating AVAILABLE_DOMAINS sees it; the UI additionally hides it behind
-  // the `railDomain` beta gate. Lavender since round 29 (owner, 2026-09-26):
+  // iterating AVAILABLE_DOMAINS sees it; out of beta since 2.7.0-rc.20
+  // (owner, 2026-10-22). Lavender since round 29 (owner, 2026-09-26):
   // the brick red before it sat beside `bad` #e65a4f, so a rail row next to a
   // cancelled flight read the same and a late train had no colour left to say
   // so — see `domainColor.rail` in design/tokens.json.
