@@ -1,9 +1,10 @@
 import { prisma } from "../../db";
 import { findVisibleChainByName, visibleChainsWhere } from "../lodging/chainScope";
+import { osmRefToStore } from "../lodging/osmRef";
 import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
 import type { OpenDataFailure } from "./http";
-import { findOsmLodging, type NearbyLodging } from "./openStreetMap";
+import { findOsmLodging, type NearbyLodging, type OsmLodging } from "./openStreetMap";
 import { starsFromOsm, websiteFromOsm } from "./osmValues";
 import { isWikidataId } from "./wikipedia";
 
@@ -13,15 +14,148 @@ export { starsFromOsm, websiteFromOsm };
 /** The fields the enrichment may write — each only while it is still empty. */
 export type EnrichedField = "stars" | "website" | "wikidataId" | "chain";
 
+/** Why no house came back. `notFound` is OpenStreetMap's answer; a failure
+ *  (`timeout`, `rateLimited`, `unavailable`) means it could not be asked;
+ *  `matchChanged` means the house the user confirmed is no longer the match. */
+export type EnrichmentReason =
+  "noCoordinates" | "notFound" | "matchChanged" | OpenDataFailure | null;
+
+/** The OpenStreetMap object the enrichment matched — what the user checks. */
+export interface OsmMatch {
+  osmRef: string;
+  osmType: "node" | "way" | "relation";
+  osmId: number;
+  name: string;
+  /** Metres from the lodging's stored pin. */
+  distanceM: number;
+  url: string;
+}
+
+/** One field OpenStreetMap has a value for. `apply: false` is a value the
+ *  lodging already holds and keeps — shown, because a disagreement there is
+ *  how a wrong match gets noticed. */
+export interface FieldProposal {
+  field: EnrichedField;
+  current: string | number | null;
+  proposed: string | number;
+  apply: boolean;
+}
+
+export interface LodgingEnrichmentPreview {
+  found: boolean;
+  reason: EnrichmentReason;
+  match: OsmMatch | null;
+  fields: FieldProposal[];
+  /** Whether applying also records the match as the lodging's `externalRef`. */
+  storesReference: boolean;
+}
+
 export interface LodgingEnrichment {
   /** Whether OpenStreetMap has this house at all. */
   found: boolean;
-  /** Why nothing was found. `notFound` is OpenStreetMap's answer; a failure
-   *  (`timeout`, `rateLimited`, `unavailable`) means it could not be asked. */
-  reason: "noCoordinates" | "notFound" | OpenDataFailure | null;
+  reason: EnrichmentReason;
   osmRef: string | null;
   osmName: string | null;
   filled: EnrichedField[];
+  match: OsmMatch | null;
+  /** True when the match was written to `externalRef` (it was still empty). */
+  referenceStored: boolean;
+}
+
+const OSM_REF = /^osm:(node|way|relation)\/(\d+)$/;
+
+function toMatch(hit: OsmLodging): OsmMatch {
+  const [, type, id] = hit.osmRef.match(OSM_REF) ?? [];
+  const osmType = (type ?? "node") as OsmMatch["osmType"];
+  return {
+    osmRef: hit.osmRef,
+    osmType,
+    osmId: Number(id),
+    name: hit.name,
+    distanceM: hit.distanceM,
+    url: `https://www.openstreetmap.org/${osmType}/${id}`,
+  };
+}
+
+type LodgingRow = NonNullable<Awaited<ReturnType<typeof loadLodging>>>;
+
+function loadLodging(userId: string, lodgingId: string) {
+  return prisma.lodging.findFirst({
+    where: { id: lodgingId, userId },
+    include: { chain: { select: { id: true, name: true } } },
+  });
+}
+
+interface Proposal {
+  lodging: LodgingRow;
+  match: OsmMatch;
+  fields: FieldProposal[];
+  /** The chain to link when `chain` applies. */
+  chainId: number | null;
+  reference: string | undefined;
+}
+
+type Lookup = Proposal | { found: false; reason: Exclude<EnrichmentReason, null> };
+
+/**
+ * What the enrichment would do, without doing it: the matched house and, per
+ * field OpenStreetMap has a value for, the lodging's value beside it. Only an
+ * empty field is proposed; a filled one is listed as kept.
+ */
+async function propose(userId: string, lodgingId: string): Promise<Lookup> {
+  const lodging = await loadLodging(userId, lodgingId);
+  if (!lodging) throw new AppError("Lodging not found", 404);
+  if (lodging.lat === null || lodging.lon === null) {
+    return { found: false, reason: "noCoordinates" };
+  }
+  const hit = await findOsmLodging(lodging.lat, lodging.lon, lodging.name);
+  if (!hit) return { found: false, reason: "notFound" };
+  if ("failure" in hit) return { found: false, reason: hit.failure };
+
+  const { tags } = hit;
+  const stars = starsFromOsm(tags.stars);
+  const website = websiteFromOsm(tags.website ?? tags["contact:website"]);
+  const wikidataId = isWikidataId(tags.wikidata) ? tags.wikidata : null;
+  const brand = tags.brand?.trim();
+  const chain = brand ? await findVisibleChainByName(userId, brand) : null;
+
+  const fields: FieldProposal[] = [];
+  const offer = (field: EnrichedField, current: string | number | null, osm: string | number) => {
+    // A filled field that already says the same is not news.
+    if (current !== null && current === osm) return;
+    fields.push({ field, current, proposed: osm, apply: current === null });
+  };
+  if (stars !== null) offer("stars", lodging.stars, stars);
+  if (website !== null) offer("website", lodging.website, website);
+  if (wikidataId !== null) offer("wikidataId", lodging.wikidataId, wikidataId);
+  if (chain !== null && chain.id !== lodging.chainId) {
+    fields.push({
+      field: "chain",
+      current: lodging.chain?.name ?? null,
+      proposed: chain.name,
+      apply: lodging.chainId === null,
+    });
+  }
+  const reference = await osmRefToStore(userId, hit.osmRef, lodging);
+  return { lodging, match: toMatch(hit), fields, chainId: chain?.id ?? null, reference };
+}
+
+/** The preview: what applying would fill, and which house it comes from. Writes nothing. */
+export async function previewLodgingEnrichment(
+  userId: string,
+  lodgingId: string
+): Promise<LodgingEnrichmentPreview> {
+  const lookup = await propose(userId, lodgingId);
+  if (!("match" in lookup)) {
+    return { found: false, reason: lookup.reason, match: null, fields: [], storesReference: false };
+  }
+  return {
+    found: true,
+    reason: null,
+    match: lookup.match,
+    fields: lookup.fields,
+    storesReference: lookup.reference !== undefined,
+  };
 }
 
 /**
@@ -30,53 +164,61 @@ export interface LodgingEnrichment {
  * import brought, is theirs. A chain is only linked when the catalogue already
  * knows the brand — an unknown one is an offer elsewhere, never a silent
  * create (same rule as the import preview).
+ *
+ * `expectedOsmRef` is the house the user saw in the preview. Overpass is asked
+ * again here, and when it now names another house (or none), nothing is
+ * written: the user confirmed a house, not "whatever matches now".
+ *
+ * The match is recorded as the lodging's `externalRef` under the fill-empty
+ * rule of `osmRefToStore`, so a wrong match can still be found afterwards.
  */
 export async function enrichLodgingFromOsm(
   userId: string,
-  lodgingId: string
+  lodgingId: string,
+  expectedOsmRef?: string
 ): Promise<LodgingEnrichment> {
-  const lodging = await prisma.lodging.findFirst({ where: { id: lodgingId, userId } });
-  if (!lodging) throw new AppError("Lodging not found", 404);
-  if (lodging.lat === null || lodging.lon === null) {
-    return { found: false, reason: "noCoordinates", osmRef: null, osmName: null, filled: [] };
+  const lookup = await propose(userId, lodgingId);
+  const none = { osmRef: null, osmName: null, filled: [], match: null, referenceStored: false };
+  if (!("match" in lookup)) {
+    const reason = expectedOsmRef && lookup.reason === "notFound" ? "matchChanged" : lookup.reason;
+    return { found: false, reason, ...none };
+  }
+  const { lodging, match, fields, chainId, reference } = lookup;
+  if (expectedOsmRef && expectedOsmRef !== match.osmRef) {
+    return { found: false, reason: "matchChanged", ...none };
   }
 
-  const hit = await findOsmLodging(lodging.lat, lodging.lon, lodging.name);
-  if (!hit) return { found: false, reason: "notFound", osmRef: null, osmName: null, filled: [] };
-  if ("failure" in hit) {
-    return { found: false, reason: hit.failure, osmRef: null, osmName: null, filled: [] };
-  }
+  const applied = fields.filter((f) => f.apply);
+  const value = (field: EnrichedField) => applied.find((f) => f.field === field)?.proposed;
+  const stars = value("stars");
+  const website = value("website");
+  const wikidataId = value("wikidataId");
+  const linkChain = value("chain") !== undefined && chainId !== null;
+  const filled = applied.map((f) => f.field);
 
-  const { tags } = hit;
-  const stars = lodging.stars === null ? starsFromOsm(tags.stars) : null;
-  const website =
-    lodging.website === null ? websiteFromOsm(tags.website ?? tags["contact:website"]) : null;
-  const wikidataId =
-    lodging.wikidataId === null && isWikidataId(tags.wikidata) ? tags.wikidata : null;
-  const brand = tags.brand?.trim();
-  const chain =
-    lodging.chainId === null && brand ? await findVisibleChainByName(userId, brand) : null;
-
-  const filled: EnrichedField[] = [
-    ...(stars !== null ? (["stars"] as const) : []),
-    ...(website !== null ? (["website"] as const) : []),
-    ...(wikidataId !== null ? (["wikidataId"] as const) : []),
-    ...(chain !== null ? (["chain"] as const) : []),
-  ];
-  if (filled.length > 0) {
+  if (filled.length > 0 || reference !== undefined) {
     await prisma.lodging.update({
       where: { id: lodging.id },
       data: {
-        ...(stars !== null && { stars }),
-        ...(website !== null && { website }),
-        ...(wikidataId !== null && { wikidataId }),
-        ...(chain !== null && { chainId: chain.id }),
+        ...(typeof stars === "number" && { stars }),
+        ...(typeof website === "string" && { website }),
+        ...(typeof wikidataId === "string" && { wikidataId }),
+        ...(linkChain && { chainId }),
+        ...(reference !== undefined && { externalRef: reference }),
       },
     });
   }
   logger.info({ operation: "lodging_osm_enrichment", lodgingId, filled });
-  logger.debug({ operation: "lodging_osm_enrichment", lodgingId, osmRef: hit.osmRef });
-  return { found: true, reason: null, osmRef: hit.osmRef, osmName: hit.name, filled };
+  logger.debug({ operation: "lodging_osm_enrichment", lodgingId, osmRef: match.osmRef });
+  return {
+    found: true,
+    reason: null,
+    osmRef: match.osmRef,
+    osmName: match.name,
+    filled,
+    match,
+    referenceStored: reference !== undefined,
+  };
 }
 
 /** A catalogue chain as the lodging form's chain picker holds it. */

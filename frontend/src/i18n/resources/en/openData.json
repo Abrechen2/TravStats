@@ -70,8 +70,6 @@
   "lodging": {
     "enrich": "Complete from OpenStreetMap",
     "enriching": "Searching OpenStreetMap …",
-    "filled": "Added: {{fields}}",
-    "nothingNew": "Found as “{{name}}” — nothing new, every field was already filled.",
     "notFound": "OpenStreetMap knows no house of this name nearby.",
     "noCoordinates": "The lodging has no coordinates, so it cannot be searched.",
     "failed": "The OpenStreetMap search failed.",
@@ -99,6 +97,23 @@
       "timeout": "OpenStreetMap did not answer in time – whether it knows the house is still open. Please try again later.",
       "rateLimited": "OpenStreetMap is not taking more requests right now. Please try again later.",
       "unavailable": "OpenStreetMap cannot be reached right now – whether it knows the house is still open."
+    },
+    "disabled": "Open data is switched off on this instance – OpenStreetMap cannot be searched.",
+    "matchChanged": "OpenStreetMap now names a different house – nothing was changed. Please check again.",
+    "applied": "Completed from “{{name}}” ({{ref}}): {{fields}}",
+    "referenceOnly": "Recorded “{{name}}” ({{ref}}) as the lodging's OpenStreetMap entry – nothing else was new.",
+    "unchanged": "“{{name}}” ({{ref}}) brought nothing new – every field was already filled.",
+    "preview": {
+      "title": "Check the OpenStreetMap match",
+      "found": "Found: {{name}} · OSM {{type}} {{id}} · {{m}} m away",
+      "openMap": "View on openstreetmap.org",
+      "fieldsLabel": "What would be taken over",
+      "fill": "empty → {{proposed}}",
+      "keep": "{{current}} stays (OpenStreetMap: {{proposed}})",
+      "nothingNew": "Nothing new – every field is already filled.",
+      "storesReference": "Applying also records this entry on the lodging.",
+      "apply": "Apply",
+      "applying": "Applying …"
     }
   }
 }

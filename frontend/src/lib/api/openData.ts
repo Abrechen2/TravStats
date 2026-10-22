@@ -75,14 +75,49 @@ export interface EntryWeatherOutcome {
 
 export type EnrichedField = "stars" | "website" | "wikidataId" | "chain";
 
+/** Why no house came back. `timeout`, `rateLimited` and `unavailable` mean
+ *  OpenStreetMap could not be asked — NOT that it does not know the house.
+ *  `matchChanged`: the house confirmed in the preview is no longer the match. */
+export type LodgingEnrichmentReason =
+  "noCoordinates" | "notFound" | "matchChanged" | "timeout" | "rateLimited" | "unavailable" | null;
+
+/** The OpenStreetMap object the enrichment matched. */
+export interface OsmLodgingMatch {
+  osmRef: string;
+  osmType: "node" | "way" | "relation";
+  osmId: number;
+  name: string;
+  /** Metres from the lodging's stored pin. */
+  distanceM: number;
+  url: string;
+}
+
+/** A field OpenStreetMap has a value for; `apply: false` = the lodging keeps its own. */
+export interface EnrichmentFieldProposal {
+  field: EnrichedField;
+  current: string | number | null;
+  proposed: string | number;
+  apply: boolean;
+}
+
+/** `GET /lodging/:id/enrich` — what applying would do. Writes nothing. */
+export interface LodgingEnrichmentPreview {
+  found: boolean;
+  reason: LodgingEnrichmentReason;
+  match: OsmLodgingMatch | null;
+  fields: EnrichmentFieldProposal[];
+  storesReference: boolean;
+}
+
 export interface LodgingEnrichment {
   found: boolean;
-  /** `timeout`, `rateLimited` and `unavailable` mean OpenStreetMap could not be
-   *  asked — NOT that it does not know the house. */
-  reason: "noCoordinates" | "notFound" | "timeout" | "rateLimited" | "unavailable" | null;
+  reason: LodgingEnrichmentReason;
   osmRef: string | null;
   osmName: string | null;
   filled: EnrichedField[];
+  match: OsmLodgingMatch | null;
+  /** The match was recorded as the lodging's external reference. */
+  referenceStored: boolean;
 }
 
 /** A place to sleep near a point, from OpenStreetMap (`GET /nearby/lodging`). */
@@ -182,10 +217,20 @@ export const openDataApi = {
       })
     ).data.places,
 
-  enrichLodging: async (lodgingId: string): Promise<LodgingEnrichment> =>
+  previewLodgingEnrichment: async (lodgingId: string): Promise<LodgingEnrichmentPreview> =>
     (
-      await api.post(`/lodging/${lodgingId}/enrich`, undefined, {
+      await api.get(`/lodging/${lodgingId}/enrich`, {
         timeout: API_TIMEOUTS.OPEN_DATA_OVERPASS,
       })
+    ).data,
+
+  /** `expectedOsmRef`: the house the preview showed — nothing is written if it is no longer the match. */
+  enrichLodging: async (lodgingId: string, expectedOsmRef?: string): Promise<LodgingEnrichment> =>
+    (
+      await api.post(
+        `/lodging/${lodgingId}/enrich`,
+        expectedOsmRef ? { expectedOsmRef } : undefined,
+        { timeout: API_TIMEOUTS.OPEN_DATA_OVERPASS }
+      )
     ).data,
 };

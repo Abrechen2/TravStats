@@ -13,11 +13,16 @@ import {
   type OpenDataFailure,
 } from "../services/openData/http";
 import { fillTripJournalWeather, refreshJournalWeather } from "../services/openData/journalWeather";
-import { enrichLodgingFromOsm, withCatalogueChains } from "../services/openData/lodgingEnrichment";
+import {
+  enrichLodgingFromOsm,
+  previewLodgingEnrichment,
+  withCatalogueChains,
+} from "../services/openData/lodgingEnrichment";
 import { nearbyLodgings } from "../services/openData/openStreetMap";
 import { wikidataForPlace } from "../services/openData/placeWikidata";
 import { plannedElevationProfile } from "../services/openData/plannedProfile";
 import { WIKI_LANGUAGES, wikipediaSummary } from "../services/openData/wikipedia";
+import { OSM_REF_PATTERN } from "../schemas/lodging";
 import { startJob } from "../services/jobs/jobRegistry";
 import { buildRouteGeometry } from "./trips/tourLegs";
 import { resolveRoute } from "./trips/tourRoutes";
@@ -237,6 +242,40 @@ router.get(
   }
 );
 
+async function ownLodgingId(req: AuthRequest): Promise<string> {
+  const exists = await prisma.lodging.findFirst({
+    where: { id: req.params.id, userId: req.userId! },
+    select: { id: true },
+  });
+  if (!exists) throw new AppError("Lodging not found", 404);
+  return exists.id;
+}
+
+/**
+ * GET /lodging/:id/enrich — what the enrichment WOULD fill, and from which
+ * OpenStreetMap house, without writing (beta). The match is shown so a wrong
+ * house is caught before its stars land in the user's record.
+ */
+router.get(
+  "/lodging/:id/enrich",
+  authenticate,
+  openDataLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = await ownLodgingId(req);
+      await assertOpenDataEnabled();
+      res.json(await previewLodgingEnrichment(req.userId!, id));
+    } catch (error) {
+      if (!sendDisabled(error, res)) next(error);
+    }
+  }
+);
+
+const enrichBody = z.object({
+  /** The house the user confirmed in the preview; absent = take the match as is. */
+  expectedOsmRef: z.string().regex(OSM_REF_PATTERN).optional(),
+});
+
 /** POST /lodging/:id/enrich — fill the house's empty fields from OpenStreetMap (beta). */
 router.post(
   "/lodging/:id/enrich",
@@ -246,13 +285,11 @@ router.post(
   openDataLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const exists = await prisma.lodging.findFirst({
-        where: { id: req.params.id, userId: req.userId! },
-        select: { id: true },
-      });
-      if (!exists) throw new AppError("Lodging not found", 404);
+      const id = await ownLodgingId(req);
+      const parsed = enrichBody.safeParse(req.body ?? {});
+      if (!parsed.success) throw new AppError(parsed.error.message, 400);
       await assertOpenDataEnabled();
-      res.json(await enrichLodgingFromOsm(req.userId!, exists.id));
+      res.json(await enrichLodgingFromOsm(req.userId!, id, parsed.data.expectedOsmRef));
     } catch (error) {
       if (!sendDisabled(error, res)) next(error);
     }

@@ -240,15 +240,91 @@ registry.registerPath({
   },
 });
 
+const enrichmentReason = z
+  .enum(["noCoordinates", "notFound", "matchChanged", "timeout", "rateLimited", "unavailable"])
+  .nullable()
+  .openapi({
+    description:
+      "`notFound` is OpenStreetMap's answer. `timeout`, `rateLimited` and `unavailable` mean " +
+      "Overpass could not be asked — nothing is known either way. `matchChanged` (apply only): " +
+      "the house named in `expectedOsmRef` is no longer the match, so nothing was written.",
+  });
+const enrichedField = z.enum(["stars", "website", "wikidataId", "chain"]);
+const osmMatch = registry.register(
+  "OsmLodgingMatch",
+  z
+    .object({
+      osmRef: z.string().describe('"osm:way/123"'),
+      osmType: z.enum(["node", "way", "relation"]),
+      osmId: z.number().int(),
+      name: z.string(),
+      distanceM: z.number().int().describe("Metres from the lodging's stored pin"),
+      url: z.string().describe("The object on openstreetmap.org"),
+    })
+    .openapi("OsmLodgingMatch")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/lodging/{id}/enrich",
+  summary: "Preview the OpenStreetMap enrichment of a lodging (beta)",
+  description:
+    "Which house matched and what applying would do — writes nothing. `fields` lists every " +
+    "field OpenStreetMap has a value for that differs from the lodging's: `apply: true` is " +
+    "an empty field that would be filled, `apply: false` a value the lodging keeps.",
+  tags: ["Lodging", "Open data"],
+  request: { params: z.object({ id: uuid }) },
+  responses: {
+    200: {
+      description: "The match and the proposal",
+      content: {
+        "application/json": {
+          schema: z.object({
+            found: z.boolean(),
+            reason: enrichmentReason,
+            match: osmMatch.nullable(),
+            fields: z.array(
+              z.object({
+                field: enrichedField,
+                current: z.union([z.string(), z.number()]).nullable(),
+                proposed: z.union([z.string(), z.number()]),
+                apply: z.boolean(),
+              })
+            ),
+            storesReference: z
+              .boolean()
+              .describe("Applying records the match as the lodging's external reference"),
+          }),
+        },
+      },
+    },
+    404: notFound,
+    409: disabled,
+  },
+});
+
 registry.registerPath({
   method: "post",
   path: "/lodging/{id}/enrich",
   summary: "Fill a lodging's empty fields from OpenStreetMap (beta)",
   description:
     "Finds the house within 150 m of its pin whose name agrees, and writes stars, website, " +
-    "Wikidata item and a KNOWN chain — each only while still empty. Never overwrites.",
+    "Wikidata item and a KNOWN chain — each only while still empty. Never overwrites. The " +
+    "match is recorded as the lodging's external reference while it has none. With " +
+    "`expectedOsmRef` (the house the preview showed) nothing is written unless that is " +
+    "still the match.",
   tags: ["Lodging", "Open data"],
-  request: { params: z.object({ id: uuid }) },
+  request: {
+    params: z.object({ id: uuid }),
+    body: {
+      required: false,
+      content: {
+        "application/json": {
+          schema: z.object({ expectedOsmRef: z.string().optional() }),
+        },
+      },
+    },
+  },
   responses: {
     200: {
       description: "What was found and filled",
@@ -256,21 +332,17 @@ registry.registerPath({
         "application/json": {
           schema: z.object({
             found: z.boolean(),
-            reason: z
-              .enum(["noCoordinates", "notFound", "timeout", "rateLimited", "unavailable"])
-              .nullable()
-              .openapi({
-                description:
-                  "`notFound` is OpenStreetMap's answer. `timeout`, `rateLimited` and " +
-                  "`unavailable` mean Overpass could not be asked — nothing is known either way.",
-              }),
+            reason: enrichmentReason,
             osmRef: z.string().nullable(),
             osmName: z.string().nullable(),
-            filled: z.array(z.enum(["stars", "website", "wikidataId", "chain"])),
+            filled: z.array(enrichedField),
+            match: osmMatch.nullable(),
+            referenceStored: z.boolean(),
           }),
         },
       },
     },
+    400: { description: "Invalid body", content: errorContent },
     404: notFound,
     409: disabled,
   },
