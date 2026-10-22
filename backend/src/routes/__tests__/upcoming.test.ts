@@ -674,21 +674,18 @@ describe("GET /api/v1/upcoming", () => {
     });
 
     /**
-     * forgejo#132 item 18: the route used to leave the beta check to the
-     * client, so a client without that check — the Companion before it learnt
-     * it — showed the next train on an instance whose rail domain is off. The
-     * user switched rail on; the INSTANCE hides it, and the strip must agree.
+     * Rail left beta in 2.7.0-rc.20 (owner, 2026-10-22): the user's switch is
+     * its only gate, so the instance's beta switch must not hide the next train
+     * (it did, forgejo#132 item 18, while rail was beta).
      */
-    it("says nothing about rail while the instance's beta switch is off", async () => {
+    it("names the next train with the instance's beta switch off", async () => {
       await updateInstanceSettings({ betaFeaturesEnabled: false });
       try {
         await enableDomains(["flight", "rail"]);
         await prisma.railJourney.create({ data: ride(inDays(2)) });
         const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
         expect(res.status).toBe(200);
-        expect(res.body.data.entries.map((e: { domain: string }) => e.domain)).not.toContain(
-          "rail"
-        );
+        expect(res.body.data.entries.map((e: { domain: string }) => e.domain)).toContain("rail");
       } finally {
         await updateInstanceSettings({ betaFeaturesEnabled: true });
       }

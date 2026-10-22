@@ -3,10 +3,9 @@ import { deriveRailStatus } from "../shared/statusDerivation";
 import { greatCircleKm, wallClockToInstant } from "../services/rail/railJourneyWrite";
 
 /**
- * Demo train rides (spec 2026-09-25-rail-domain, phase 2b), so a beta instance
- * with the rail gate on shows a logbook, a map tab and statistics instead of
- * an empty domain. Rail stays behind its beta gate; on an instance with the
- * gate off these rows exist and nothing shows them.
+ * Demo train rides (spec 2026-09-25-rail-domain, phase 2b), so the demo
+ * account shows a rail logbook, a map tab and statistics instead of an empty
+ * domain.
  *
  * Times are the wall clocks on the tickets, converted on each station's own
  * clock exactly as the rail router does, and the status is derived the same
@@ -212,8 +211,8 @@ export async function createDemoRail(userId: string): Promise<void> {
   }
   const rides = demoRides().map((ride) => demoRideRow(userId, ride));
   await prisma.railJourney.createMany({ data: rides });
-  // The user half of the gate; the instance half (`railDomain`) stays the
-  // admin's beta switch, so this shows nothing on an instance with it off.
+  // Rail's only gate is the user's own domain choice (out of beta since
+  // 2.7.0-rc.20), so switch it on for the demo account.
   const settings = await prisma.userSettings.findUnique({ where: { userId } });
   const domains = new Set([...(settings?.enabledDomains ?? ["flight"]), "rail"]);
   await prisma.userSettings.upsert({

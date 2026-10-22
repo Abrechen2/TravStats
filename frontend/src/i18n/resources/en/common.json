@@ -202,7 +202,7 @@
     "roadtrip_desc": "Multi-day journeys by motorhome, car or bike: stations, nights, the road between.",
     "tour": "Tours",
     "rail": "Rail",
-    "rail_desc": "Train journeys like flights: stations, train number, class, seat, kilometres. (Beta)",
+    "rail_desc": "Train journeys like flights: stations, train number, class, seat, kilometres.",
     "rental": "Rental cars",
     "rental_desc": "Rental cars with station, period, car and the kilometres from the invoice. (Beta)",
     "bus": "Bus",
@@ -221,7 +221,7 @@
         "lodging": "Navigation, statistics, days away",
         "poi": "Places, visits and place lists",
         "roadtrip": "Stations, nights, map",
-        "rail": "Beta: a logbook for train journeys",
+        "rail": "A logbook for train journeys",
         "rental": "Beta: a logbook for rental cars",
         "bus": "Beta: logbook for bus rides",
         "ferry": "Crossings, vehicle and tickets"

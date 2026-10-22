@@ -111,7 +111,7 @@ type Pending = ParsedSheet[];
 export default function SpreadsheetSection(): JSX.Element {
   const { t, i18n } = useTranslation(["xlsx", "common"]);
   const { isEnabled } = useEnabledDomains();
-  // Rail is beta: behind the `railDomain` gate the export carries no rail sheet.
+  // Rail follows the user's domain choice: with rail off the export carries no rail sheet.
   const railVisible = useDomainVisible("rail");
   // Rentals likewise: behind `rentalDomain` and the user's domain (forgejo#267).
   const rentalVisible = useDomainVisible("rental");

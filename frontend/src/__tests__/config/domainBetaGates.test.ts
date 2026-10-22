@@ -6,7 +6,7 @@ describe("isEntryDomainShown — the server's upcoming entries under the beta ga
   // As `useEnabledDomains` answers with every beta switch closed.
   const isEnabled = (key: DomainKey) => ["flight", "lodging"].includes(key);
 
-  it.each(["rail", "rental", "bus", "ferry", "roadtrip"] as const)(
+  it.each(["rental", "bus", "ferry", "roadtrip"] as const)(
     "drops a %s entry while its domain is gated out",
     (domain) => {
       expect(isEntryDomainShown(domain, isEnabled)).toBe(false);
@@ -17,6 +17,8 @@ describe("isEntryDomainShown — the server's upcoming entries under the beta ga
     expect(isEntryDomainShown("trip", isEnabled)).toBe(true);
     expect(isEntryDomainShown("flight", isEnabled)).toBe(true);
     expect(isEntryDomainShown("cruise", isEnabled)).toBe(true);
+    // Rail left beta in 2.7.0-rc.20: the server's answer stands, as for cruises.
+    expect(isEntryDomainShown("rail", isEnabled)).toBe(true);
   });
 });
 
@@ -30,10 +32,10 @@ describe("switchableDomains — the settings and setup switch lists", () => {
 
   it("hides a gated domain the user never turned on while its switch is closed", () => {
     const keys = switchableDomains(DOMAIN_KEYS, ["flight"], closed);
-    for (const gated of ["rail", "rental", "bus", "ferry", "roadtrip"]) {
+    for (const gated of ["rental", "bus", "ferry", "roadtrip"]) {
       expect(keys).not.toContain(gated);
     }
-    expect(keys).toEqual(expect.arrayContaining(["flight", "cruise", "lodging", "poi"]));
+    expect(keys).toEqual(expect.arrayContaining(["flight", "cruise", "lodging", "poi", "rail"]));
   });
 
   it("keeps a gated domain the user has on, so it can be switched off — except roadtrips", () => {

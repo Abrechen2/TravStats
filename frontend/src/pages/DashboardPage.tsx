@@ -24,7 +24,6 @@ import { railApi } from "../lib/api/rail";
 import { busApi } from "../lib/api/bus";
 import { ferryApi } from "../lib/api/ferry";
 import { rentalApi } from "../lib/api/rental";
-import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { roadtripsApi } from "../lib/api/roadtrips";
 import { useDomainVisible } from "../hooks/useDomainVisible";
 
@@ -40,8 +39,6 @@ export default function DashboardPage(): JSX.Element {
   const busVisible = useDomainVisible("bus");
   const ferryVisible = useDomainVisible("ferry");
   const rentalVisible = useDomainVisible("rental");
-  // Three-state like places: `false` only once the instance has answered.
-  const { betaFeaturesEnabled } = useBetaFeatures();
   const toursAccess = useToursAccess();
   // Tours have no domain to be "enabled"/"disabled" — only the instance-level
   // beta flag gates them. `betaFeaturesEnabled` is `null` for one request on
@@ -190,11 +187,6 @@ export default function DashboardPage(): JSX.Element {
   }
   // Same for the tour and roadtrip tabs behind the roadtrips beta key.
   if ((tab === "tour" || tab === "roadtrip") && toursAccess === "denied") {
-    return <Navigate to="/dashboard" replace />;
-  }
-  // The same answer for rail while its beta switch is off (owner rule
-  // 2026-09-25); a switched-off DOMAIN is useDashboardRoute's to handle.
-  if (tab === "rail" && betaFeaturesEnabled === false) {
     return <Navigate to="/dashboard" replace />;
   }
   return (

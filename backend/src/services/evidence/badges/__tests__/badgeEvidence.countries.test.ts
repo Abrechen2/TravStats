@@ -43,6 +43,10 @@ describe("countries badge evidence reads the badge's own sources", () => {
 
   beforeEach(async () => {
     await updateInstanceSettings({ betaFeaturesEnabled: true });
+    await prisma.userSettings.update({
+      where: { userId },
+      data: { enabledDomains: ["flight", "lodging", "rail", "place"] },
+    });
     await prisma.railJourney.deleteMany({ where: { userId } });
     await prisma.lodging.deleteMany({ where: { userId } });
     await prisma.place.deleteMany({ where: { userId } });
@@ -53,7 +57,8 @@ describe("countries badge evidence reads the badge's own sources", () => {
     await prisma.user.deleteMany({ where: { id: userId } });
   });
 
-  it("lists no train ride while the rail domain is hidden", async () => {
+  // Rail left beta in 2.7.0-rc.20: the user's switch hides it, not the instance's.
+  it("lists no train ride while the user has the rail domain off", async () => {
     await houseIn("DE");
     await prisma.railJourney.create({
       data: {
@@ -74,6 +79,10 @@ describe("countries badge evidence reads the badge's own sources", () => {
       },
     });
     await updateInstanceSettings({ betaFeaturesEnabled: false });
+    await prisma.userSettings.update({
+      where: { userId },
+      data: { enabledDomains: ["flight", "lodging", "place"] },
+    });
 
     const res = await evidence();
 

@@ -46,8 +46,8 @@ export async function ensureDemoCatalogues(): Promise<void> {
 }
 
 /**
- * Switches the instance's beta features ON, so the demo shows rail,
- * roadtrips, tours and the rest right away (owner, 2026-09-26). It goes
+ * Switches the instance's beta features ON, so the demo shows roadtrips,
+ * tours and the rest right away (owner, 2026-09-26). It goes
  * through `updateInstanceSettings` — the same write the admin's switch makes —
  * and it is the instance's switch, not the account's: on a first install it is
  * on for the administrator too, which is the owner's intent (production runs

@@ -33,6 +33,9 @@ vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => fals
 // not the subject here.
 vi.mock("../../Admin/ImmichGlobalSettings", () => ({ default: () => null }));
 vi.mock("../OperatorLogosCard", () => ({ default: () => null }));
+// The rail group is drawn on every instance since rail left beta (2.7.0-rc.20);
+// its card loads its own settings and has its own test (RailProvidersCard.test.tsx).
+vi.mock("../RailProvidersCard", () => ({ default: () => null }));
 
 import ApiKeysSection from "../ApiKeysSection";
 import { MemoryRouter } from "react-router-dom";

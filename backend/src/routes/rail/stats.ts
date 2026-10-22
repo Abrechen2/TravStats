@@ -9,8 +9,8 @@ import { loadRailStats } from "../../services/rail/railStats";
  * The rail statistics (spec 2026-09-25-rail-domain, phase 2b). Enveloped, as
  * the rest of the rail family. Mounted at /api/v1/rail/stats, ahead of the
  * rail router, whose `/:id` would otherwise take "stats" for a journey id.
- * Like every rail endpoint it answers whatever the beta switch says; the
- * switch hides the statistics tab, it is not a boundary.
+ * Like every rail endpoint it answers whatever the user's domain switch says;
+ * the switch hides the statistics tab, it is not a boundary.
  */
 const router = Router();
 router.use(authenticate);

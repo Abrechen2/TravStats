@@ -13,6 +13,13 @@ describe("visibleDomainKeys", () => {
   it("keeps an ungated domain visible with the switch off", () => {
     expect(visibleDomainKeys(["flight", "cruise", "bus"], false)).toEqual(["flight", "cruise"]);
   });
+
+  // Rail left beta in 2.7.0-rc.20 (owner, 2026-10-22): like cruises, the
+  // user's domain choice alone decides.
+  it("shows rail with the beta switch off once the user has it on", () => {
+    expect(visibleDomainKeys(["flight", "rail"], false)).toEqual(["flight", "rail"]);
+    expect(BETA_GATED_DOMAINS.rail).toBeUndefined();
+  });
 });
 
 /**
@@ -34,7 +41,7 @@ describe("BETA_GATED_DOMAINS", () => {
 
   it("finds the domain gates in the registry (the scan itself works)", () => {
     expect(domainGateKeys).toEqual(
-      expect.arrayContaining(["railDomain", "rentalDomain", "busDomain", "roadtrips"])
+      expect.arrayContaining(["rentalDomain", "busDomain", "ferryDomain", "roadtrips"])
     );
   });
 

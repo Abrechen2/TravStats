@@ -80,8 +80,8 @@ function readScope(
 
 /**
  * The scope's domains, without a beta domain this user does not see
- * (forgejo#265: bus, rail, roadtrips, rentals behind the instance's beta
- * switch or the user's own toggle). The overview never fetches such a domain,
+ * (forgejo#265: bus, roadtrips, rentals, ferries behind the instance's beta
+ * switch or the user's own toggle; rail left beta in 2.7.0-rc.20). The overview never fetches such a domain,
  * so a panel opened by a link without chips — which means "every domain" —
  * must not name its rows either. The other domains follow the chips, as
  * before.

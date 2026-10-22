@@ -8,7 +8,6 @@ import { NextUpEntry } from "./NextUpEntry";
 import { Icon, type IconName } from "../ui/Icon";
 import { DASHBOARD_TABS } from "../../types/dashboard";
 import { DOMAINS, isValidDomain, type DomainKey } from "../../shared/domains";
-import { useDomainOffered } from "../../hooks/useDomainVisible";
 
 /** A domain with a dashboard tab of its own. */
 type TabDomain = Extract<DashboardTab, DomainKey>;
@@ -96,14 +95,11 @@ export function DomainTabStrip({
   // the enabled state in here would hide the tab instead and break that.
   //
   // "Touren" and "Roadtrips" went back behind the beta switch on 2026-09-24
-  // (owner), and rail sits behind its own `railDomain` switch (owner rule
-  // 2026-09-25) — hidden, not dimmed: dimming is for a domain the USER
-  // switched off and can turn back on, and a closed instance gate is neither.
+  // (owner) — hidden, not dimmed: dimming is for a domain the USER switched
+  // off and can turn back on, and a closed instance gate is neither.
   const toursVisible = useToursVisible();
-  const railOffered = useDomainOffered("rail");
   const visibleTabs = DASHBOARD_TABS.filter((tab) => {
     if (tab === "tour" || tab === "roadtrip") return toursVisible;
-    if (tab === "rail") return railOffered;
     return true;
   });
 

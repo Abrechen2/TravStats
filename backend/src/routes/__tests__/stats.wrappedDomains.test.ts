@@ -98,8 +98,9 @@ describe("wrapped and badges across domains", () => {
   });
 
   // forgejo#265: a hidden cruise or rail domain abstains — null, as a chapter
-  // does — instead of a zero the client must know to hide.
-  it("answers null for cruises the user switched off and rail behind the switch", async () => {
+  // does — instead of a zero the client must know to hide. Rail left beta in
+  // 2.7.0-rc.20, so only the user's own switch hides it.
+  it("answers null for cruises and rail the user switched off", async () => {
     await updateInstanceSettings({ betaFeaturesEnabled: true });
     const on = (await wrapped()).body;
     expect(on.cruises).toBeNull();
@@ -107,7 +108,7 @@ describe("wrapped and badges across domains", () => {
     await updateInstanceSettings({ betaFeaturesEnabled: false });
     await prisma.userSettings.update({
       where: { userId },
-      data: { enabledDomains: ["flight", "rental", "rail", "cruise"] },
+      data: { enabledDomains: ["flight", "rental", "cruise"] },
     });
     // Rentals hidden too, so give the story a flight to stand on.
     await prisma.flight.create({
@@ -127,6 +128,12 @@ describe("wrapped and badges across domains", () => {
     const off = (await wrapped()).body;
     expect(off.cruises).toBe(0);
     expect(off).toMatchObject({ railRides: null, railKm: null, railStraightLineKm: null });
+    // With rail switched on, the closed beta switch no longer hides it.
+    await prisma.userSettings.update({
+      where: { userId },
+      data: { enabledDomains: ["flight", "rental", "rail", "cruise"] },
+    });
+    expect((await wrapped()).body.railRides).toBe(0);
     await prisma.flight.deleteMany({ where: { userId } });
     await prisma.userSettings.update({
       where: { userId },
@@ -144,11 +151,19 @@ describe("wrapped and badges across domains", () => {
       (await request(app).get("/api/v1/achievements").set("Cookie", cookie)).body.achievements.map(
         (a: { code: string }) => a.code
       );
+    const setDomains = (enabledDomains: string[]) =>
+      prisma.userSettings.update({ where: { userId }, data: { enabledDomains } });
     await updateInstanceSettings({ betaFeaturesEnabled: false });
+    await setDomains(["flight", "rental"]);
     const off = await codes();
     expect(off).not.toContain("TRIP_ARRIVE_DISCOVER");
     expect(off).not.toContain("RENTAL_FIRST");
     expect(off).toContain("DOCUMENTED_TRIP_1");
+    // Rail is out of beta: the user's switch alone lists it, beta switch closed.
+    await setDomains(["flight", "rental", "rail"]);
+    const railOn = await codes();
+    expect(railOn).toContain("TRIP_ARRIVE_DISCOVER");
+    expect(railOn).not.toContain("RENTAL_FIRST");
     await updateInstanceSettings({ betaFeaturesEnabled: true });
     const on = await codes();
     expect(on).toContain("TRIP_ARRIVE_DISCOVER");

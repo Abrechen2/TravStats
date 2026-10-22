@@ -16,8 +16,8 @@ describe("frontend domain registry", () => {
     ]);
   });
   it("exposes AVAILABLE_DOMAINS only with available=true", () => {
-    // All five are available (rail since 2026-09-25, hidden in the UI by the
-    // `railDomain` beta gate) — `poi` joined when the Places domain replaced the
+    // All five are available (rail since 2026-09-25, out of beta since
+    // 2.7.0-rc.20) — `poi` joined when the Places domain replaced the
     // stub. The filter is still what AVAILABLE_DOMAINS means, so assert the
     // relationship rather than a frozen list: this test existed to catch a
     // descriptor and the derived list disagreeing, not to count domains.

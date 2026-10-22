@@ -7,11 +7,6 @@ vi.mock("../../../hooks/useTranslation", () => ({
 vi.mock("../../../lib/logger", () => ({
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
-let offered = true;
-vi.mock("../../../hooks/useDomainVisible", () => ({
-  useDomainOffered: (key: string): boolean =>
-    ((({ rail: () => offered }) as Record<string, () => boolean>)[key] ?? (() => false))(),
-}));
 const getInstanceSettings = vi.fn();
 const updateInstanceSettings = vi.fn();
 const testRailRouting = vi.fn();
@@ -34,7 +29,6 @@ const settings = (over: Record<string, boolean | string | null> = {}) => ({
 
 describe("RailProvidersCard", () => {
   beforeEach(() => {
-    offered = true;
     getInstanceSettings.mockReset();
     updateInstanceSettings.mockReset();
     testRailRouting.mockReset();
@@ -67,11 +61,8 @@ describe("RailProvidersCard", () => {
     expect(screen.queryByRole("switch")).toBeNull();
   });
 
-  it("is not there for a non-admin, nor where rail is not offered", () => {
-    const { container, rerender } = render(<RailProvidersCard isAdmin={false} />);
-    expect(container).toBeEmptyDOMElement();
-    offered = false;
-    rerender(<RailProvidersCard isAdmin />);
+  it("is not there for a non-admin", () => {
+    const { container } = render(<RailProvidersCard isAdmin={false} />);
     expect(container).toBeEmptyDOMElement();
     expect(getInstanceSettings).not.toHaveBeenCalled();
   });

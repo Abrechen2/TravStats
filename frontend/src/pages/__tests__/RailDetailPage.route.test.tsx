@@ -3,8 +3,9 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { makeRailJourney } from "../../components/rail/__tests__/railJourneyFixture";
 
 /**
- * `/rail/:id` sits behind the same two gates as the rail logbook (owner rule
- * 2026-09-25: the rail domain stays behind its beta switch). Rendered through
+ * `/rail/:id` sits behind the same gate as the rail logbook: the user's domain
+ * choice. Rail left beta in 2.7.0-rc.20 (owner, 2026-10-22), so the instance's
+ * beta switch must no longer send the reader away. Rendered through
  * the app's OWN router, because a component test would stay green with the
  * guard deleted from App.tsx — the mocks below are the WrappedPage route
  * test's, which answer App's four boot questions in the shortest way.
@@ -77,11 +78,11 @@ describe("the /rail/:id route", () => {
   beforeEach(() => {
     getJourney.mockReset();
     getJourney.mockResolvedValue({ ...makeRailJourney(), booking: null });
-    // The domain half is answered; the beta half comes from GET /settings.
+    // The domain half is answered; the beta flag comes from GET /settings.
     useSettingsStore.setState({ betaFeaturesEnabled: null, enabledDomainsLoaded: true });
   });
 
-  it("draws the journey where the rail beta switch is on", { timeout: 10000 }, async () => {
+  it("draws the journey with the beta switch on", { timeout: 10000 }, async () => {
     remoteBeta.value = true;
     window.history.pushState({}, "", "/rail/j1");
     render(<App />);
@@ -90,18 +91,13 @@ describe("the /rail/:id route", () => {
     });
   });
 
-  it(
-    "sends the reader away, without asking for the journey, where it is off",
-    { timeout: 10000 },
-    async () => {
-      remoteBeta.value = false;
-      window.history.pushState({}, "", "/rail/j1");
-      render(<App />);
-      await waitFor(() => expect(screen.getByTestId("dashboard-stub")).toBeTruthy(), {
-        timeout: 8000,
-      });
-      expect(getJourney).not.toHaveBeenCalled();
-      expect(screen.queryByText("Frankfurt → Fulda")).toBeNull();
-    }
-  );
+  it("draws the journey with the beta switch off", { timeout: 10000 }, async () => {
+    remoteBeta.value = false;
+    window.history.pushState({}, "", "/rail/j1");
+    render(<App />);
+    await waitFor(() => expect(screen.getByText("Frankfurt → Fulda")).toBeTruthy(), {
+      timeout: 8000,
+    });
+    expect(screen.queryByTestId("dashboard-stub")).toBeNull();
+  });
 });

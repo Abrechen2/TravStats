@@ -43,13 +43,13 @@ export interface DashboardDomainFilterResult {
 
 /**
  * The rows still carrying a beta label: `tour` and `roadtrip` behind the
- * `roadtrips` key, and `rail` behind its own `railDomain` key
- * (`config/betaFeatures.ts`). flight/cruise/lodging/poi carry no beta entry
- * at all. A row only reaches `rows` once its own gate is open, so this flag
- * is purely informational — "still labelled beta on this instance", not a
- * second gate.
+ * `roadtrips` key, and bus, ferry and rental behind their own keys
+ * (`config/betaFeatures.ts`). flight/cruise/lodging/poi/rail carry no beta
+ * entry at all — rail left beta in 2.7.0-rc.20. A row only reaches `rows` once
+ * its own gate is open, so this flag is purely informational — "still
+ * labelled beta on this instance", not a second gate.
  */
-const BETA_ROWS = new Set<FilterDomainKey>(["tour", "roadtrip", "rail", "bus", "ferry", "rental"]);
+const BETA_ROWS = new Set<FilterDomainKey>(["tour", "roadtrip", "bus", "ferry", "rental"]);
 
 /**
  * Rows with no single-domain dashboard view (yet): selected alone, they stay
@@ -128,8 +128,8 @@ export function useDashboardDomainFilter(tourCount: number | null): DashboardDom
       poi: isEnabled("poi"),
       tour: toursVisible,
       roadtrip: isEnabled("roadtrip"),
-      // A gated domain's beta switch is already applied by `isEnabled`.
       rail: isEnabled("rail"),
+      // A gated domain's beta switch is already applied by `isEnabled`.
       bus: isEnabled("bus"),
       ferry: isEnabled("ferry"),
       rental: isEnabled("rental"),

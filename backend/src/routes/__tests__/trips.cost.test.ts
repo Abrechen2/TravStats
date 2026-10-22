@@ -140,15 +140,16 @@ describe("GET /trips and /trips/:id — the trip's cost", () => {
     const trip = await prisma.trip.create({ data: { userId, name: "Paris", status: "completed" } });
     await ride(trip.id, 89);
 
+    // Rail left beta in 2.7.0-rc.20: the user's switch hides it, not the instance's.
     await updateInstanceSettings({ betaFeaturesEnabled: false });
-    await enableDomains(["flight", "rail"]);
+    await enableDomains(["flight"]);
     const hidden = await request(app)
       .get("/api/v1/trips?includeInsights=true")
       .set("Cookie", cookie);
     expect(hidden.body.trips[0].cost).toEqual({ spendByCurrency: {}, unpricedEntries: 0 });
     expect(hidden.body.mostExpensiveTrip).toBeNull();
 
-    await updateInstanceSettings({ betaFeaturesEnabled: true });
+    await enableDomains(["flight", "rail"]);
     const shown = await request(app)
       .get("/api/v1/trips?includeInsights=true")
       .set("Cookie", cookie);
@@ -162,8 +163,9 @@ describe("GET /trips and /trips/:id — the trip's cost", () => {
   /**
    * Review I1/I2 (controller ruling 2026-10-09): the trips page and the
    * statistics' travel account read ONE source set. With the beta switch off,
-   * the night train, the rental and the roadtrip's fuel are out of BOTH — the
-   * card, the stats row and the night account — and with it on, in both.
+   * the rental and the roadtrip's fuel are out of BOTH — the card and the stats
+   * row — and with it on, in both. The night train is in both either way: rail
+   * left beta in 2.7.0-rc.20.
    */
   it("prices a trip the same on /trips and /stats/travel-account, hidden domains out of both", async () => {
     const trip = await prisma.trip.create({ data: { userId, name: "Mixed", status: "completed" } });
@@ -215,7 +217,7 @@ describe("GET /trips and /trips/:id — the trip's cost", () => {
     };
 
     await updateInstanceSettings({ betaFeaturesEnabled: false });
-    expect(await surfaces()).toEqual({ card: { EUR: 5 }, stats: { EUR: 5 }, railNights: 0 });
+    expect(await surfaces()).toEqual({ card: { EUR: 94 }, stats: { EUR: 94 }, railNights: 1 });
 
     await updateInstanceSettings({ betaFeaturesEnabled: true });
     expect(await surfaces()).toEqual({ card: { EUR: 334 }, stats: { EUR: 334 }, railNights: 1 });

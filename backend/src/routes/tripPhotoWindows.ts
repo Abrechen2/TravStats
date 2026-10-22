@@ -59,7 +59,7 @@ router.get(
   statsLimiter,
   windowRoute(cruiseTripPhotos, "Cruise not found")
 );
-// Answers whatever the rail beta switch says, like every rail endpoint; the
+// Answers whatever the user's rail switch says, like every rail endpoint; the
 // switch hides the detail page that asks.
 router.get(
   "/rail/:id/trip-photos",

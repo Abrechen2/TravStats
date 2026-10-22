@@ -6,7 +6,7 @@ import { getInstanceSettings } from "./instanceSettingsService";
  * Which domains a user sees: the ones they switched on that the instance also
  * shows. The server applies this wherever a figure would otherwise put a
  * hidden domain on screen — a trip suggestion holding a ride, a country badge
- * earned only by train — because the UI's gate (`useRailVisible`,
+ * earned only by train — because the UI's gate (`useDomainVisible`,
  * `useToursVisible`) cannot hide a number the server has already folded in.
  */
 
@@ -16,7 +16,6 @@ import { getInstanceSettings } from "./instanceSettingsService";
  * as they do in the UI.
  */
 export const BETA_GATED_DOMAINS: Partial<Record<DomainKey, string>> = {
-  rail: "railDomain",
   roadtrip: "roadtrips",
   rental: "rentalDomain",
   bus: "busDomain",

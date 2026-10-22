@@ -25,7 +25,15 @@ describe("domain visibility", () => {
   });
 
   it("gates exactly the beta domains", () => {
-    expect([...GATED].sort()).toEqual(["bus", "ferry", "rail", "rental", "roadtrip"]);
+    expect([...GATED].sort()).toEqual(["bus", "ferry", "rental", "roadtrip"]);
+  });
+
+  // Rail left beta in 2.7.0-rc.20 (owner, 2026-10-22): like flights and cruises.
+  it.each([false, null])("shows rail while the beta flag is %s", (flag) => {
+    useSettingsStore.setState({ betaFeaturesEnabled: flag });
+    expect(renderHook(() => useDomainVisible("rail")).result.current).toBe(true);
+    expect(renderHook(() => useDomainOffered("rail")).result.current).toBe(true);
+    expect(renderHook(() => useEnabledDomains()).result.current.enabled).toContain("rail");
   });
 
   it.each(GATED)("%s is shown when the instance allows it and the user wants it", (key) => {

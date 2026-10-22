@@ -438,7 +438,7 @@ describe("DomainTabStrip: the next-up entry", () => {
     });
   });
 
-  // Owner rule 2026-09-25: the rail domain stays behind its beta switch.
+  // Rail left beta in 2.7.0-rc.20 (owner, 2026-10-22): the switch no longer hides it.
   describe("rail tab", () => {
     const renderStrip = (): void => {
       render(
@@ -460,7 +460,7 @@ describe("DomainTabStrip: the next-up entry", () => {
       );
     };
 
-    it("is drawn, with its count, on a beta instance", () => {
+    it("is drawn, with its count, with the beta switch on", () => {
       renderStrip();
       expect(screen.getByRole("tab", { name: /rail/i }).textContent).toContain("3");
     });
@@ -468,11 +468,10 @@ describe("DomainTabStrip: the next-up entry", () => {
     it.each([
       ["off", false],
       ["not yet known", null],
-    ])("is not drawn at all while the beta switch is %s", (_label, flag) => {
+    ])("is drawn while the beta switch is %s", (_label, flag) => {
       useSettingsStore.setState({ betaFeaturesEnabled: flag });
       renderStrip();
-      expect(screen.queryByRole("tab", { name: /rail/i })).toBeNull();
-      expect(screen.getByRole("tab", { name: /flights/i })).toBeTruthy();
+      expect(screen.getByRole("tab", { name: /rail/i }).textContent).toContain("3");
     });
   });
 });

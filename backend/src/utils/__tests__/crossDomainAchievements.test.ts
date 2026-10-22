@@ -140,8 +140,8 @@ describe("the fully documented trip", () => {
   });
 
   it("does not count a trip whose only movement is hidden, nor one without photos", () => {
-    const byTrain = trip({ ...documented, railJourneys: ride });
-    expect(foldCrossDomainAchievementStats([byTrain], BETA_OFF, NOW).tripsFullyDocumented).toBe(0);
+    const byCoach = trip({ ...documented, busJourneys: ride });
+    expect(foldCrossDomainAchievementStats([byCoach], BETA_OFF, NOW).tripsFullyDocumented).toBe(0);
     const noPhotos = trip({
       ...documented,
       flights: done,
@@ -151,6 +151,16 @@ describe("the fully documented trip", () => {
       0
     );
   });
+});
+
+// Rail left beta in 2.7.0-rc.20 (owner, 2026-10-22): it counts like flights.
+it("counts a train trip with the beta switch off", () => {
+  const byTrain = trip({
+    railJourneys: ride,
+    lodgingStays: stayed,
+    _count: { journalEntries: 1, photos: 1 },
+  });
+  expect(foldCrossDomainAchievementStats([byTrain], BETA_OFF, NOW).tripsFullyDocumented).toBe(1);
 });
 
 describe("the shared trip badges in the catalogue", () => {

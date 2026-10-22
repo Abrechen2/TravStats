@@ -15,7 +15,6 @@ import type { BetaFeatureKey } from "./betaFeatures";
 export const DOMAIN_BETA_GATES: Readonly<Partial<Record<DomainKey, BetaFeatureKey>>> =
   Object.freeze({
     roadtrip: "roadtrips",
-    rail: "railDomain",
     rental: "rentalDomain",
     bus: "busDomain",
     ferry: "ferryDomain",

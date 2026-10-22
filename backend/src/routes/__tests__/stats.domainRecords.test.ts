@@ -138,9 +138,10 @@ describe("travel records beyond flights", () => {
     });
   });
 
-  it("drops the train ride with the rail domain behind the beta switch", async () => {
+  // Rail left beta in 2.7.0-rc.20 (owner, 2026-10-22): the closed switch keeps it.
+  it("keeps the train ride with the instance's beta switch off", async () => {
     await updateInstanceSettings({ betaFeaturesEnabled: false });
-    expect((await records()).map((r: { domain: string }) => r.domain)).toEqual(["lodging"]);
+    expect((await records()).map((r: { domain: string }) => r.domain)).toContain("rail");
   });
 
   // Review I2: the longest roadtrip is the span its stations ATTEST — a planned

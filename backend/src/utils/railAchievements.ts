@@ -21,10 +21,10 @@ import { isDocumentedTransferJourney, railJourneysOf } from "../services/rail/ra
  * running and cancelled never). What kind of ride it was, and how many
  * kilometres it counts for, is `shared/railRideKinds.ts`. This file only folds.
  *
- * The badges are hidden with the `railDomain` beta gate off: the frontend's
+ * The badges are hidden while the user has rail off: the frontend's
  * `useEnabledDomains` drops `rail` then, and with it every `domain: "rail"`
  * badge. Measuring them regardless costs one query and keeps a badge's date
- * true the day the gate comes off.
+ * true the day the domain goes on.
  */
 
 export interface RailAchievementStats {

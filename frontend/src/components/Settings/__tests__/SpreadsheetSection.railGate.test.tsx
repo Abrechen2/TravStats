@@ -19,17 +19,17 @@ import { exportWorkbook } from "../../../lib/xlsx/exportAll";
 import { useSettingsStore } from "../../../store/settingsStore";
 
 /**
- * Rail stays behind the `railDomain` beta gate (owner rule 2026-09-25): with
- * the gate off the export neither asks for the rides nor writes a rail sheet.
+ * Rail left beta in 2.7.0-rc.20 (owner, 2026-10-22): the export follows the
+ * user's domain choice alone, whatever the instance's beta switch says.
  */
-describe("Excel export — rail beta gate", () => {
+describe("Excel export — rail follows the domain choice", () => {
   beforeEach(() => {
     vi.mocked(railApi.listAll).mockClear();
     vi.mocked(exportWorkbook).mockClear();
   });
 
-  it("leaves rail out while the gate is off", async () => {
-    useSettingsStore.setState({ enabledDomains: ["flight", "rail"], betaFeaturesEnabled: false });
+  it("leaves rail out while the user has the domain off", async () => {
+    useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
     render(<SpreadsheetSection />);
     fireEvent.click(screen.getAllByRole("button", { name: "xlsx:export.button" })[0]);
     await waitFor(() => expect(exportWorkbook).toHaveBeenCalled());
@@ -37,8 +37,8 @@ describe("Excel export — rail beta gate", () => {
     expect(vi.mocked(exportWorkbook).mock.calls[0][1].rail).toEqual([]);
   });
 
-  it("exports the rides once the gate is on", async () => {
-    useSettingsStore.setState({ enabledDomains: ["flight", "rail"], betaFeaturesEnabled: true });
+  it("exports the rides with the beta switch off", async () => {
+    useSettingsStore.setState({ enabledDomains: ["flight", "rail"], betaFeaturesEnabled: false });
     render(<SpreadsheetSection />);
     fireEvent.click(screen.getAllByRole("button", { name: "xlsx:export.button" })[0]);
     await waitFor(() => expect(exportWorkbook).toHaveBeenCalled());

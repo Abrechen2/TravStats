@@ -9,9 +9,9 @@ import { useSettingsStore } from "../../store/settingsStore";
 
 /**
  * The statistics strip and its deep link receive the enabled domains with every
- * beta switch already applied (`useEnabledDomains`), so rail, rental and bus
- * behind a closed switch have neither a tab nor a deep link — the leak rail's
- * tab once had. Asked through the real hook, so the gate cannot be dropped on
+ * beta switch already applied (`useEnabledDomains`), so rental and bus behind
+ * a closed switch have neither a tab nor a deep link — the leak rail's tab once
+ * had while it was beta. Rail left beta in 2.7.0-rc.20 and keeps its tab. Asked through the real hook, so the gate cannot be dropped on
  * the way between the two.
  */
 function enabledWith(flag: boolean | null) {
@@ -29,8 +29,8 @@ function enabledWith(flag: boolean | null) {
 describe("statistics tab access — the beta-gated domains", () => {
   beforeEach(() => useSettingsStore.setState({ betaFeaturesEnabled: null }));
 
-  it.each([false, null])("draws no rail, rental or bus tab while the switch is %s", (flag) => {
-    expect(visibleStatsTabs(enabledWith(flag), "denied")).toEqual(["flight"]);
+  it.each([false, null])("draws rail but no rental or bus tab while the switch is %s", (flag) => {
+    expect(visibleStatsTabs(enabledWith(flag), "denied")).toEqual(["flight", "rail"]);
   });
 
   it("draws them once the switch is open", () => {
@@ -42,7 +42,7 @@ describe("statistics tab access — the beta-gated domains", () => {
     ]);
   });
 
-  it.each(["rail", "rental", "bus"] as const)(
+  it.each(["rental", "bus"] as const)(
     "sends a deep link to %s to the overview while the switch is closed, and opens it once open",
     (tab) => {
       expect(resolveStatsTab(tab, enabledWith(false), "denied")).toBe("all");
@@ -50,7 +50,11 @@ describe("statistics tab access — the beta-gated domains", () => {
     }
   );
 
-  it("opens a gated tab only for a user who has the domain", () => {
+  it("opens a rail deep link with the switch closed", () => {
+    expect(resolveStatsTab("rail", enabledWith(false), "denied")).toBe("rail");
+  });
+
+  it("opens the rail tab only for a user who has the domain", () => {
     useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
     const enabled = renderHook(() => useEnabledDomains()).result.current.enabled;
     expect(resolveStatsTab("rail", enabled, "denied")).toBe("all");

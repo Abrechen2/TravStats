@@ -8,7 +8,6 @@ import { adminApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { Switch } from "../ui/Field";
 import { SettingRows } from "../ui/SettingRow";
-import { useDomainOffered } from "../../hooks/useDomainVisible";
 import { useExpertRows } from "./frame/useExpertRows";
 import { ExpertPill } from "../ui/ExpertPill";
 
@@ -21,9 +20,9 @@ export interface RailProvidersStatus extends Switches {
 
 /**
  * Which timetable services the rail train lookup may ask (spec
- * 2026-09-25-rail-domain, phase 2). Admin-only, and only where the rail
- * domain is offered at all: every lookup sends a train number, a station and
- * a day from this self-hosted instance to a volunteer-run third party.
+ * 2026-09-25-rail-domain, phase 2). Admin-only: every lookup sends a train
+ * number, a station and a day from this self-hosted instance to a
+ * volunteer-run third party.
  *
  * A failed load shows the failure and no switches — never switches in a
  * guessed position whose click would write that guess back.
@@ -36,7 +35,6 @@ export default function RailProvidersCard({
   onStatus?: (status: RailProvidersStatus) => void;
 }): JSX.Element | null {
   const { t } = useTranslation(["settings"]);
-  const offered = useDomainOffered("rail");
   const [switches, setSwitches] = useState<Switches | null>(null);
   const [routingUrl, setRoutingUrl] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -45,14 +43,14 @@ export default function RailProvidersCard({
   // Which services may be asked is a standard decision; where a self-hosted
   // routing engine lives is plumbing. Nothing is hidden when the card is not
   // drawn at all.
-  const expert = useExpertRows(isAdmin && offered ? 1 : 0);
+  const expert = useExpertRows(isAdmin ? 1 : 0);
 
   useEffect(() => {
     if (switches) onStatus?.({ ...switches, railRoutingUrl: routingUrl });
   }, [switches, routingUrl, onStatus]);
 
   useEffect(() => {
-    if (!isAdmin || !offered) return;
+    if (!isAdmin) return;
     let cancelled = false;
     adminApi
       .getInstanceSettings()
@@ -71,9 +69,9 @@ export default function RailProvidersCard({
     return () => {
       cancelled = true;
     };
-  }, [isAdmin, offered]);
+  }, [isAdmin]);
 
-  if (!isAdmin || !offered) return null;
+  if (!isAdmin) return null;
 
   const toggle = async (key: keyof Switches, on: boolean): Promise<void> => {
     setSaving(true);

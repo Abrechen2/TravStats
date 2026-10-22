@@ -4,13 +4,8 @@ import { renderHook, waitFor } from "@testing-library/react";
 vi.mock("../../../api/rail", () => ({
   railApi: { listAll: vi.fn(async () => []) },
 }));
-// The real gate: `useEnabledDomains` over the store's beta flag.
+// The real gate: `useEnabledDomains` over the store.
 vi.unmock("../../../../store/settingsStore");
-const gate = {
-  set offered(value: boolean) {
-    useSettingsStore.setState({ enabledDomains: ["rail"], betaFeaturesEnabled: value });
-  },
-};
 
 import { railApi } from "../../../api/rail";
 import { useDomainStats } from "../useDomainStats";
@@ -20,23 +15,22 @@ import type { Flight } from "../../../../types";
 const NO_FLIGHTS: Flight[] = [];
 
 /**
- * Rail stays behind the `railDomain` beta gate after phase 2 (owner rule,
- * 2026-09-25). With the gate off its rides are not even fetched, so no card,
- * chip or sum on the overview can carry them.
+ * Rail left beta in 2.7.0-rc.20 (owner, 2026-10-22): the user's domain choice
+ * alone decides whether its rides are fetched, not the instance's beta switch.
  */
-describe("useDomainStats — rail beta gate", () => {
+describe("useDomainStats — rail follows the domain choice", () => {
   beforeEach(() => vi.mocked(railApi.listAll).mockClear());
 
-  it("does not load rail while the gate is off", async () => {
-    gate.offered = false;
+  it("does not load rail while the user has the domain off", async () => {
+    useSettingsStore.setState({ enabledDomains: [], betaFeaturesEnabled: true });
     const { result } = renderHook(() => useDomainStats({ flights: NO_FLIGHTS }));
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(railApi.listAll).not.toHaveBeenCalled();
     expect(result.current.stats.rail).toBeUndefined();
   });
 
-  it("loads the completed rides once the gate is on", async () => {
-    gate.offered = true;
+  it("loads the completed rides with the beta switch off", async () => {
+    useSettingsStore.setState({ enabledDomains: ["rail"], betaFeaturesEnabled: false });
     const { result } = renderHook(() => useDomainStats({ flights: NO_FLIGHTS }));
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(railApi.listAll).toHaveBeenCalledWith(expect.objectContaining({ status: "completed" }));

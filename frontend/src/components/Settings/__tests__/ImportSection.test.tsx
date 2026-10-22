@@ -129,11 +129,11 @@ describe("ImportSection — central import hub", () => {
     }
   );
 
-  // forgejo#204: the bahn.de bookmarklet is set up here, behind rail's own gates —
-  // the user's domain choice and the `railDomain` beta switch.
+  // forgejo#204: the bahn.de bookmarklet is set up here, behind the user's rail
+  // domain alone — rail left beta in 2.7.0-rc.20, so the beta switch is moot.
   it.each([
     [["flight", "rail"], true, true],
-    [["flight", "rail"], false, false],
+    [["flight", "rail"], false, true],
     [["flight"], true, false],
   ])("offers the bahn.de bookmarklet for domains %j, beta %s: %s", (domains, flag, shown) => {
     useSettingsStore.setState({ enabledDomains: domains as never, betaFeaturesEnabled: flag });

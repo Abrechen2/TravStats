@@ -260,7 +260,8 @@ describe("/api/v1/trip-suggestions", () => {
     expect(await prisma.lodgingStay.count({ where: { userId, tripId: { not: null } } })).toBe(0);
   });
 
-  it("keeps rides out while the instance hides the rail domain", async () => {
+  // Rail left beta in 2.7.0-rc.20: the user's own switch hides it, not the instance's.
+  it("keeps rides out while the user has rail off, whatever the beta switch says", async () => {
     const ride = (dep: string, arr: string, from: typeof FLORENCE, to: typeof FLORENCE) =>
       prisma.railJourney.create({
         data: {
@@ -282,10 +283,17 @@ describe("/api/v1/trip-suggestions", () => {
     await ride("2025-05-03T05:00:00Z", "2025-05-03T12:00:00Z", MUNICH_HBF, FLORENCE);
 
     await updateInstanceSettings({ betaFeaturesEnabled: false });
+    await prisma.userSettings.update({
+      where: { userId },
+      data: { enabledDomains: ["flight", "cruise", "lodging", "poi", "roadtrip"] },
+    });
     const hidden = (await list()).suggestions.flatMap((s) => s.members.map((m) => m.domain));
     expect(hidden).not.toContain("rail");
 
-    await updateInstanceSettings({ betaFeaturesEnabled: true });
+    await prisma.userSettings.update({
+      where: { userId },
+      data: { enabledDomains: ["flight", "cruise", "lodging", "poi", "roadtrip", "rail"] },
+    });
     const shown = (await list()).suggestions.flatMap((s) => s.members.map((m) => m.domain));
     expect(shown).toContain("rail");
   });
