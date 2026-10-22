@@ -12,7 +12,7 @@ type Fn = jest.Mock<(...args: unknown[]) => Promise<unknown>>;
 const share = {
   createDirectory: jest.fn() as Fn,
   putFileContents: jest.fn() as Fn,
-  getDirectoryContents: jest.fn() as Fn,
+  customRequest: jest.fn() as Fn,
   deleteFile: jest.fn() as Fn,
 };
 jest.mock("webdav", () => ({ createClient: () => share }));
@@ -62,7 +62,14 @@ beforeEach(() => {
   clearJobs();
   share.createDirectory.mockResolvedValue(undefined);
   share.putFileContents.mockResolvedValue(true);
-  share.getDirectoryContents.mockResolvedValue([]);
+  // An empty folder: retention reads a PROPFIND answer naming only itself.
+  share.customRequest.mockImplementation(
+    async () =>
+      new globalThis.Response(
+        '<?xml version="1.0"?><d:multistatus xmlns:d="DAV:"><d:response><d:href>/TravStats/</d:href><d:propstat><d:prop><d:resourcetype><d:collection/></d:resourcetype></d:prop></d:propstat></d:response></d:multistatus>',
+        { status: 207 }
+      )
+  );
   share.deleteFile.mockResolvedValue(undefined);
 });
 

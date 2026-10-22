@@ -82,6 +82,51 @@ describe("LodgingChainsSection", () => {
     await waitFor(() => expect(get.mock.calls.length).toBeGreaterThanOrEqual(3));
   });
 
+  it("finds a merge target beyond the first page by asking the server", async () => {
+    // The catalogue holds more chains than one page; the one wanted is not on it.
+    get.mockImplementation((_url: string, config?: { params?: { search?: string } }) =>
+      Promise.resolve({
+        data:
+          config?.params?.search === "Ritz"
+            ? { items: [chain(450, "Ritz-Carlton")], total: 1 }
+            : { ...LIST, total: 450 },
+      })
+    );
+    post.mockResolvedValue({ data: { target: chain(450, "Ritz-Carlton", 4, 2), moved: {} } });
+    render(<LodgingChainsSection />);
+    const row = await screen.findByTestId("lodging-chain-1");
+    await userEvent.click(within(row).getByRole("button", { name: "admin:lodgingChains.merge" }));
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.type(
+      within(dialog).getByRole("searchbox", { name: "admin:lodgingChains.mergeSearch" }),
+      "Ritz"
+    );
+    expect(await within(dialog).findByRole("option", { name: "Ritz-Carlton" })).toBeInTheDocument();
+    expect(get).toHaveBeenCalledWith("/admin/lodging-chains", { params: { search: "Ritz" } });
+    await userEvent.selectOptions(within(dialog).getByRole("combobox"), "450");
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "admin:lodgingChains.mergeConfirm" })
+    );
+    expect(post).toHaveBeenCalledWith("/admin/lodging-chains/1/merge", { targetId: 450 });
+  });
+
+  it("says a failed target search in the dialog and keeps the search box", async () => {
+    render(<LodgingChainsSection />);
+    const row = await screen.findByTestId("lodging-chain-1");
+    await userEvent.click(within(row).getByRole("button", { name: "admin:lodgingChains.merge" }));
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() => expect(within(dialog).getByRole("combobox")).not.toBeDisabled());
+    get.mockRejectedValue(new Error("500"));
+    await userEvent.type(
+      within(dialog).getByRole("searchbox", { name: "admin:lodgingChains.mergeSearch" }),
+      "Ma"
+    );
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      "admin:lodgingChains.mergeSearchError"
+    );
+    expect(within(dialog).getByRole("searchbox")).toBeInTheDocument();
+  });
+
   it("shows a refused merge in the dialog, not as success", async () => {
     post.mockRejectedValue({ response: { status: 409, data: { error: "chainInUse" } } });
     render(<LodgingChainsSection />);

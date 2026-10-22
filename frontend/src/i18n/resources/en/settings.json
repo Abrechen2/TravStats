@@ -1271,6 +1271,7 @@
       "path": "The folder could not be found or created on the storage.",
       "server": "The storage answered with a server error.",
       "protocol": "The storage did not answer like a WebDAV storage.",
+      "cleanupIncomplete": "More old versions than one run clears; the rest follow on the next runs.",
       "alreadyRunning": "A sync is already running.",
       "invalidInput": "An input is invalid.",
       "unknown": "The sync failed."

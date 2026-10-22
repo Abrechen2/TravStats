@@ -232,4 +232,7 @@ export const NON_TRAVEL_RELATIONS = [
   // Where a merged-away trip went (forgejo#316): server bookkeeping for the
   // Companion's uploads, not travel data.
   "mergedTripRedirects",
+  // The account's WebDAV export target (forgejo#321): a URL, a username and an
+  // encrypted password. A credential, so it never travels.
+  "webdavSync",
 ] as const;
