@@ -1170,7 +1170,7 @@
       "admin": "runs for every account, nothing for you to do",
       "own": "your own key is used instead of the instance's",
       "adminSurface": "applies to every account on this instance",
-      "none": "not set up yet"
+      "none": "no account can use the service"
     },
     "action": {
       "useOwn": "Use my own key",

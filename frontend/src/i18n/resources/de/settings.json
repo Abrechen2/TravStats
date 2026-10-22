@@ -1170,7 +1170,7 @@
       "admin": "läuft für jedes Konto, ohne dass du etwas tun musst",
       "own": "dein eigener Schlüssel wird statt dem der Instanz genutzt",
       "adminSurface": "gilt für jedes Konto dieser Instanz",
-      "none": "noch nicht eingerichtet"
+      "none": "kein Konto kann den Dienst nutzen"
     },
     "action": {
       "useOwn": "Eigenen Schlüssel nutzen",
