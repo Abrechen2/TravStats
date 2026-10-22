@@ -14,6 +14,7 @@ import { useTranslation } from "./hooks/useTranslation";
 import LoadingFallback from "./components/LoadingFallback";
 import { DomainRouteGuard } from "./components/DomainRouteGuard";
 import { BetaFeatureRouteGuard } from "./components/BetaFeatureRouteGuard";
+import { HomeRedirect, railHandoffRoutes } from "./pages/railHandoffRoutes";
 import { useWhatsNew } from "./hooks/useWhatsNew";
 import { useTelemetryConsentStep } from "./hooks/useTelemetryConsentStep";
 import { useSessionValidation } from "./hooks/useSessionValidation";
@@ -268,7 +269,8 @@ function AppContent() {
               <Route path="/2fa" element={<TwoFactorChallengePage />} />
 
               {/* Protected routes */}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/" element={<HomeRedirect />} />
+              {railHandoffRoutes(isAuthenticated)}
               <Route
                 path="/dashboard"
                 element={isAuthenticated ? <DashboardPage /> : <Navigate to="/login" />}

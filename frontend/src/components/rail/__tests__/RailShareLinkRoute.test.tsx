@@ -1,5 +1,7 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render as rtlRender, screen, fireEvent, waitFor } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
@@ -27,6 +29,8 @@ const NO_FACTS = {
   departureLocal: null,
   travelClass: null,
 };
+
+const render = (ui: ReactElement) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>);
 
 function setup() {
   const context = { openReview: vi.fn(), openManual: vi.fn(), focusDocumentRoute: vi.fn() };
@@ -63,6 +67,14 @@ describe("RailShareLinkRoute (forgejo#204)", () => {
     const context = setup();
     expect(await screen.findByText("rail:shareLink.reason.blocked")).toBeInTheDocument();
     expect(screen.getByTestId("rail-share-link-facts")).toHaveTextContent("Köln Hbf → ?");
+    // The way past the block: the bookmarklet, with where to set it up.
+    expect(screen.getByTestId("rail-share-link-bookmarklet")).toHaveTextContent(
+      "rail:shareLink.bookmarkletHint"
+    );
+    expect(screen.getByRole("link", { name: "rail:shareLink.bookmarkletSetup" })).toHaveAttribute(
+      "href",
+      "/settings/data?section=import"
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "rail:shareLink.useDocument" }));
     expect(context.focusDocumentRoute).toHaveBeenCalled();
@@ -85,5 +97,7 @@ describe("RailShareLinkRoute (forgejo#204)", () => {
     setup();
     expect(await screen.findByText("rail:shareLink.reason.requestRateLimited")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "rail:shareLink.typeIt" })).toBeInTheDocument();
+    // Our own limit is no bahn.de refusal: the bookmarklet would not help.
+    expect(screen.queryByTestId("rail-share-link-bookmarklet")).not.toBeInTheDocument();
   });
 });

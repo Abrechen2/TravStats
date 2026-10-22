@@ -603,7 +603,9 @@
       "noConnectionInLink": "This is a search link, not a shared connection: it names stations and a time, but no train.",
       "requestRateLimited": "Too many lookups in a short time — wait a minute.",
       "requestFailed": "The link could not be sent to the server."
-    }
+    },
+    "bookmarkletHint": "The “Add to TravStats” bookmark still gets it: it fetches the connection on bahn.de itself.",
+    "bookmarkletSetup": "Set up the bookmark"
   },
   "routeRefresh": {
     "action": "Fetch line again",
@@ -615,5 +617,45 @@
     "denied": "Permission is missing or your session expired.",
     "missing": "This rail journey could not be found.",
     "network": "The server is unreachable or the request timed out. Please try again."
+  },
+  "bookmarklet": {
+    "title": "Take a connection over from bahn.de",
+    "description": "Deutsche Bahn does not let TravStats fetch shared connections itself. This bookmark fetches the connection on bahn.de, in your browser, and hands it to TravStats — you check each ride before anything is saved.",
+    "linkLabel": "Add to TravStats",
+    "dragHint": "Clicking it here does nothing — drag the link into your browser's bookmarks bar.",
+    "step1": "Drag “Add to TravStats” into the bookmarks bar.",
+    "step2": "Open Deutsche Bahn's share link (bahn.de/buchung/start?vbid=…) in the browser.",
+    "step3": "Click the bookmark there — TravStats opens with the connection to check.",
+    "touchHint": "On an iPad or a phone nothing can be dragged: bookmark any page, edit the bookmark and replace its address with the copied code. Then open the share link in Safari or Chrome and choose the bookmark.",
+    "copy": "Copy code",
+    "copied": "Copied.",
+    "copyFailed": "Copying did not work — select the code below and copy it by hand.",
+    "codeLabel": "The bookmark's code",
+    "privacy": "The bookmark only asks bahn.de for the connection and then opens this TravStats instance. The ride travels in the part of the address after “#”, which is never sent to a server.",
+    "prompt": "Paste Deutsche Bahn's share link (bahn.de/buchung/start?vbid=…):"
+  },
+  "bahnHandoff": {
+    "title": "Connection from bahn.de",
+    "reading": "Reading the connection …",
+    "review": "Check the rides and save what is right. Nothing is entered before that.",
+    "otherWays": "If it does not work, the ticket PDF, the booking mail or typing it in work too — under “Rail” → “Add”.",
+    "toRail": "To the rail overview",
+    "toSetup": "Set up the bookmark",
+    "reason": {
+      "empty": "No connection arrived here. This page is opened by the “Add to TravStats” bookmark on bahn.de — a connection already taken over cannot be opened a second time.",
+      "damaged": "The data handed over is damaged or did not come from the bookmark. Nothing was taken over.",
+      "tooLarge": "The connection is too large to hand over. Use the ticket PDF or the booking mail.",
+      "notBahn": "The bookmark was not clicked on bahn.de. Open Deutsche Bahn's share link first, then click the bookmark.",
+      "noVbid": "This bahn.de page holds no shared connection. Open the share link (bahn.de/buchung/start?vbid=…) and click the bookmark right there.",
+      "blocked": "bahn.de refused the request. Reload the bahn.de page and click the bookmark again.",
+      "expired": "bahn.de does not know this connection (any more). Shared links expire after a while.",
+      "rateLimited": "bahn.de counted too many requests just now. Try again in a few minutes.",
+      "providerError": "bahn.de answered with an error. Try again later.",
+      "fetchFailed": "bahn.de could not be reached from the browser. Check the connection and click the bookmark again.",
+      "unreadable": "bahn.de answered, but not with a connection TravStats can read.",
+      "noTrain": "The shared connection contains no train ride.",
+      "requestRateLimited": "Too many lookups in a short time — wait a minute and click the bookmark again.",
+      "requestFailed": "The connection could not be sent to the server."
+    }
   }
 }

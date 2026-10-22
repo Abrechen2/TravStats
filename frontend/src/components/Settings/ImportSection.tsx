@@ -12,6 +12,7 @@ import { LodgingCsvImportTile } from "../import/LodgingCsvImportTile";
 import { MapsExportImportTile } from "../import/MapsExportImportTile";
 import { PlaceCsvImportTile } from "../import/PlaceCsvImportTile";
 import { PlaceDocumentImportTile } from "../import/PlaceDocumentImportTile";
+import { RailBookmarkletTile } from "../import/RailBookmarkletTile";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { ImportLogSection } from "../import/ImportLogSection";
 import { useDomainColors } from "../../hooks/useDomainColors";
@@ -68,6 +69,9 @@ export default function ImportSection(): JSX.Element {
       // `poiDomain` gate named exactly this missing tile as its condition.
       // forgejo#124: a ticket or tour booking, read by the user's own place
       // templates from the parser workshop, into the same preview.
+      // forgejo#204: a connection shared from bahn.de, read on bahn.de itself
+      // by a bookmarklet — one connection, not a list, but set up once here.
+      rail: [<RailBookmarkletTile key="rail-db-bookmarklet" />],
       poi: [
         <PlaceCsvImportTile key="poi-csv" onImported={handleImported} />,
         <PlaceDocumentImportTile key="poi-document" onImported={handleImported} />,

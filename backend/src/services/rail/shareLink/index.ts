@@ -1,5 +1,12 @@
 import { toRailCandidate, type RailImportCandidate } from "../parser/railCandidates";
-import { bookingFromConnection, fetchDbConnection, type ShareLinkFailure } from "./dbConnection";
+import {
+  bookingFromConnection,
+  connectionFromAnswer,
+  fetchDbConnection,
+  travelClassFromAnswer,
+  type ShareLinkFailure,
+} from "./dbConnection";
+import type { ParsedRailBooking } from "../parser/types";
 import { NO_FACTS, parseShareLink, type ShareLinkFacts } from "./shareLinkUrl";
 
 /**
@@ -42,9 +49,45 @@ export async function resolveShareLink(
   }
   const fetched = await deps.fetchConnection(link.vbid);
   if (!fetched.ok) return { outcome: "failed", reason: fetched.reason, facts: link.facts };
-  const booking = bookingFromConnection(fetched.connection, link.facts.travelClass);
+  const booking = bookingFromConnection(
+    fetched.connection,
+    link.facts.travelClass ?? fetched.travelClass
+  );
   if (!booking) return { outcome: "failed", reason: "noTrain", facts: link.facts };
   return { outcome: "read", facts: link.facts, booking: await toRailCandidate(booking, userId) };
+}
+
+/** What a read booking itself says, as the facts a failure would have carried. */
+function factsOfBooking(booking: ParsedRailBooking): ShareLinkFacts {
+  const first = booking.legs[0];
+  const last = booking.legs[booking.legs.length - 1];
+  return {
+    departureStationName: first?.depStationName ?? null,
+    arrivalStationName: last?.arrStationName ?? null,
+    departureLocal: first?.departureLocal ?? null,
+    travelClass: booking.travelClass,
+  };
+}
+
+/**
+ * A connection the bookmarklet read on bahn.de and handed over (forgejo#204).
+ * The browser fetched it as an ordinary visitor of bahn.de; this side never
+ * trusts it: the answer goes through the same reader as a server fetch, and
+ * whatever it yields goes to the ordinary rail review, nothing stored.
+ */
+export async function resolveBahnHandoff(
+  answer: unknown,
+  userId: string | undefined
+): Promise<ShareLinkOutcome> {
+  const found = connectionFromAnswer(answer);
+  if (!found) return { outcome: "failed", reason: "unreadable", facts: NO_FACTS };
+  const booking = bookingFromConnection(found, travelClassFromAnswer(answer));
+  if (!booking) return { outcome: "failed", reason: "noTrain", facts: NO_FACTS };
+  return {
+    outcome: "read",
+    facts: factsOfBooking(booking),
+    booking: await toRailCandidate(booking, userId),
+  };
 }
 
 export { SHARE_LINK_FAILURES } from "./dbConnection";

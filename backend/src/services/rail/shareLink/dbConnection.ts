@@ -3,6 +3,7 @@ import { z } from "zod";
 import logger from "../../../utils/logger";
 import { RAIL_LOOKUP_TIMEOUT_MS, railUserAgent } from "../lookup/railHttp";
 import type { ParsedRailBooking, ParsedRailLeg, RailTravelClassValue } from "../parser/types";
+import { MAX_RECON_LENGTH, parseHinfahrtRecon, type ReconSection } from "./dbRecon";
 
 /**
  * Fetching the connection behind a bahn.de share link (forgejo#204).
@@ -17,9 +18,12 @@ import type { ParsedRailBooking, ParsedRailLeg, RailTravelClassValue } from "../
  * user is never told the link "could not be found" when it was refused.
  *
  * Bounded: one request, `RAIL_LOOKUP_TIMEOUT_MS`, a body cap, and a strict
- * shape. No valid answer has been observed yet; the shape below is the one
- * bahn.de's web client reads (`verbindungsAbschnitte`). Anything else is
- * `unreadable`, never a half-read ride.
+ * shape. Two shapes are read: the sections bahn.de's web client reads
+ * (`verbindungsAbschnitte`), and the `hinfahrtRecon` string a tester's real
+ * answer carried (2026-10-16, see `dbRecon.ts`). Anything else is
+ * `unreadable`, never a half-read ride. The bookmarklet hand-over reads its
+ * answer through the same `connectionFromAnswer`, so the server and the
+ * browser path cannot disagree about what a connection is.
  */
 
 export const DB_CONNECTION_URL = "https://www.bahn.de/web/api/angebote/verbindung/";
@@ -79,8 +83,55 @@ const answerSchema = z.union([
   z.object({ verbindungen: z.array(connection).min(1) }).passthrough(),
   connection,
 ]);
-type Connection = z.infer<typeof connection>;
+export type Connection = z.infer<typeof connection>;
 type Section = z.infer<typeof section>;
+
+const reconAnswer = z
+  .object({ hinfahrtRecon: z.string().min(1).max(MAX_RECON_LENGTH) })
+  .passthrough();
+
+/** A recon section in the shape of a web-client section, so one reader serves both. */
+function sectionFromRecon(s: ReconSection): Section {
+  return {
+    abfahrtsOrt: s.from.name,
+    ankunftsOrt: s.to.name,
+    abfahrtsZeitpunkt: `${s.departureLocal}:00`,
+    ankunftsZeitpunkt: `${s.arrivalLocal}:00`,
+    verkehrsmittel:
+      s.kind === "vehicle" && s.vehicleName
+        ? { name: s.vehicleName, kurzText: s.vehicleName.split(" ")[0].slice(0, 30) }
+        : { typ: "WALK" },
+  };
+}
+
+function pickConnection(data: z.infer<typeof answerSchema>): Connection {
+  if ("verbindung" in data) return data.verbindung as Connection;
+  if ("verbindungen" in data) return (data.verbindungen as Connection[])[0];
+  return data as Connection;
+}
+
+/**
+ * The connection in a bahn.de answer — the sections when it carries readable
+ * ones, else its `hinfahrtRecon` — or null when it carries neither.
+ */
+export function connectionFromAnswer(json: unknown): Connection | null {
+  const sections = answerSchema.safeParse(json);
+  if (sections.success) return pickConnection(sections.data);
+  const recon = reconAnswer.safeParse(json);
+  if (!recon.success) return null;
+  const parsed = parseHinfahrtRecon(recon.data.hinfahrtRecon);
+  if (!parsed) return null;
+  const built = connection.safeParse({ verbindungsAbschnitte: parsed.map(sectionFromRecon) });
+  return built.success ? built.data : null;
+}
+
+/** The class an answer states (`klasse: "KLASSE_1"`), null when it states none. */
+export function travelClassFromAnswer(json: unknown): RailTravelClassValue | null {
+  const klasse = (json as { klasse?: unknown } | null)?.klasse;
+  if (klasse === "KLASSE_1") return "first";
+  if (klasse === "KLASSE_2") return "second";
+  return null;
+}
 
 const wallClock = (value: string): string => {
   const m = DB_TIME.exec(value)!;
@@ -145,7 +196,8 @@ export function bookingFromConnection(
 }
 
 export type DbFetchResult =
-  { ok: true; connection: Connection } | { ok: false; reason: ShareLinkFailure };
+  | { ok: true; connection: Connection; travelClass: RailTravelClassValue | null }
+  | { ok: false; reason: ShareLinkFailure };
 
 function failureForStatus(status: number, body: string): ShareLinkFailure {
   if (status === 403 || /OPS_BLOCKED/.test(body)) return "blocked";
@@ -195,21 +247,16 @@ export async function fetchDbConnection(
     logger.warn({ operation: "rail_share_link", reason: "not_json" });
     return { ok: false, reason: "unreadable" };
   }
-  const parsed = answerSchema.safeParse(json);
-  if (!parsed.success) {
+  const found = connectionFromAnswer(json);
+  if (!found) {
     logger.warn({
       operation: "rail_share_link",
       reason: "unexpected_shape",
-      issues: parsed.error.issues.slice(0, 3).map((i) => `${i.path.join(".")}: ${i.message}`),
+      issues: (answerSchema.safeParse(json).error?.issues ?? [])
+        .slice(0, 3)
+        .map((i) => `${i.path.join(".")}: ${i.message}`),
     });
     return { ok: false, reason: "unreadable" };
   }
-  const data = parsed.data;
-  const found =
-    "verbindung" in data
-      ? (data.verbindung as Connection)
-      : "verbindungen" in data
-        ? (data.verbindungen as Connection[])[0]
-        : (data as Connection);
-  return { ok: true, connection: found };
+  return { ok: true, connection: found, travelClass: travelClassFromAnswer(json) };
 }
