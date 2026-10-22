@@ -162,6 +162,7 @@ describe("resolveShareLink", () => {
       fetchConnection: async () => ({
         ok: true,
         connection: { verbindungsAbschnitte: [connection.verbindungsAbschnitte[1]] },
+        travelClass: null,
       }),
     });
     expect(outcome).toMatchObject({ outcome: "failed", reason: "noTrain" });
@@ -169,7 +170,7 @@ describe("resolveShareLink", () => {
 
   it("returns a read connection as a booking for the rail review", async () => {
     const outcome = await resolveShareLink(SHARE, "u1", {
-      fetchConnection: async () => ({ ok: true, connection }),
+      fetchConnection: async () => ({ ok: true, connection, travelClass: null }),
     });
     expect(outcome.outcome).toBe("read");
     if (outcome.outcome === "read") expect(outcome.booking.legs).toHaveLength(2);

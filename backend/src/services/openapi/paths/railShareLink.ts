@@ -95,3 +95,41 @@ registry.registerPath({
     429: { description: "Too many lookups", content: errorContent },
   },
 });
+
+registry.registerPath({
+  method: "post",
+  path: "/rail/share-link/connection",
+  summary: "Read a rail journey the bookmarklet fetched on bahn.de",
+  description:
+    'The "In TravStats übernehmen" bookmarklet runs on bahn.de, where the user is an ' +
+    "ordinary visitor, fetches the connection behind the share link there and hands the " +
+    "answer over, trimmed to the sections and the `hinfahrtRecon`. No request to bahn.de is " +
+    "made here: the answer is read by the same reader as POST /rail/share-link and nothing " +
+    "is stored. An answer that is no readable connection is the outcome `unreadable`; one " +
+    "without a train `noTrain`.",
+  tags: ["Rail"],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            answer: z.object({
+              hinfahrtRecon: z.string().max(20_000).optional(),
+              klasse: z.string().max(40).optional(),
+              verbindungsAbschnitte: z.array(z.record(z.string(), z.unknown())).max(30).optional(),
+            }),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "The connection read, or why not",
+      content: { "application/json": { schema: envelope(outcome) } },
+    },
+    400: { description: "No answer in the body, or one past its bounds", content: errorContent },
+    401: { description: "Missing or invalid token", content: errorContent },
+    429: { description: "Too many lookups", content: errorContent },
+  },
+});

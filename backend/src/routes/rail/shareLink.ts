@@ -3,8 +3,8 @@ import { Router, Response, NextFunction } from "express";
 import { authenticate, AuthRequest } from "../../middleware/auth";
 import { railLookupLimiter } from "../../middleware/rateLimit";
 import { AppError } from "../../middleware/errorHandler";
-import { railShareLinkSchema } from "../../schemas/railShareLink";
-import { resolveShareLink } from "../../services/rail/shareLink";
+import { railBahnHandoffSchema, railShareLinkSchema } from "../../schemas/railShareLink";
+import { resolveBahnHandoff, resolveShareLink } from "../../services/rail/shareLink";
 
 /**
  * A rail journey from a pasted link (forgejo#204). Nothing is stored: a read
@@ -30,5 +30,27 @@ router.post("/", railLookupLimiter, async (req: AuthRequest, res: Response, next
     next(err);
   }
 });
+
+/**
+ * The connection the "In TravStats übernehmen" bookmarklet read on bahn.de
+ * itself, where the user is an ordinary visitor (forgejo#204). No request to
+ * bahn.de is made here: the answer is read by the same reader as a server
+ * fetch and goes to the same review. Same bucket as the link route — one
+ * click, one call.
+ */
+router.post(
+  "/connection",
+  railLookupLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const parsed = railBahnHandoffSchema.safeParse(req.body);
+      if (!parsed.success) throw new AppError(parsed.error.message, 400);
+      const data = await resolveBahnHandoff(parsed.data.answer, req.userId);
+      res.json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 export default router;
