@@ -112,7 +112,14 @@ export function FlightTrackMap({
     >
       <MapGL
         reuseMaps
-        initialViewState={{ bounds, fitBoundsOptions: { padding: 24 } }}
+        // The attribution sits over the bottom edge of this small map; framed
+        // with the plain 24 px, a north-bound flight began under it (CJU→GMP
+        // started at Jeju, hidden). The bottom inset clears it.
+        initialViewState={{
+          bounds,
+          fitBoundsOptions: { padding: { top: 24, right: 24, bottom: 48, left: 24 } },
+        }}
+        attributionControl={{ compact: true }}
         mapStyle={mapStyle}
         style={{ position: "absolute", inset: "0" }}
         onLoad={(): void => setMapLoaded(true)}
