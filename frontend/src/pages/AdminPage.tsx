@@ -44,6 +44,7 @@ import { DomainOffNotice } from "../components/Settings/frame/DomainOffNotice";
 import type { SettingsMenuGroup } from "../components/Settings/frame/SettingsMenu";
 import { SettingsSearch } from "./Settings/SettingsSearch";
 import { useSearchScopes } from "./Settings/useSearchScopes";
+import { useSearchHighlight } from "./Settings/useSearchHighlight";
 
 import type { SystemInfoData, AdminUser } from "../components/Admin/SystemInfo";
 import type { Invitation } from "../components/Admin/InvitationManagement";
@@ -415,6 +416,7 @@ export default function AdminPage(): JSX.Element {
   const inView = useSectionInView(visible.shown, "admin");
   // Every setting the standard level keeps off this page, for the note at its top.
   const [hiddenRows, reportHiddenRows] = useHiddenRowsCollector();
+  const highlighted = useSearchHighlight("admin");
   const hiddenSettings = visible.hiddenExpertSettings + hiddenRows;
 
   // Scrolls a `?section=` deep link into view and keeps correcting that
@@ -436,7 +438,10 @@ export default function AdminPage(): JSX.Element {
 
   // ==================== Render ====================
 
-  if (!isCanonical || !current) return <Navigate to={canonical} replace />;
+  // The state carries a search hit's highlight across the redirect.
+  if (!isCanonical || !current) {
+    return <Navigate to={canonical} replace state={location.state} />;
+  }
 
   if (loading) {
     return (
@@ -587,6 +592,7 @@ export default function AdminPage(): JSX.Element {
                   frame={ADMIN_SECTION_FRAME[id]}
                   deepLinkedExpert={visible.deepLinkedExpert === id && !isExpertPage}
                   revealExpertRows={namedSection === id && searchParams.get("expert") === "1"}
+                  highlighted={highlighted === id}
                 >
                   {/* A lazily-fetching section (see LAZY_ADMIN_SECTIONS) mounts its
                     body only once it has been near the viewport. */}

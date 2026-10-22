@@ -5,6 +5,7 @@ import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { SETTINGS_PAGES } from "./settingsModel";
 import { ADMIN_PAGES } from "../Admin/adminSections";
 import type { PageDef } from "./surface";
+import { SURFACE_LABEL_KEY } from "../../components/Settings/frame/SurfaceTabs";
 import type { SettingsSearchScope } from "./SettingsSearch";
 
 /**
@@ -48,6 +49,7 @@ export function useSearchScopes(isAdmin: boolean): SettingsSearchScope[] {
         .map((p) => ({
           path: `${base}/${p.id}`,
           label: t(p.labelKey),
+          surfaceLabel: t(SURFACE_LABEL_KEY[ns]),
           sections: p.sections
             .filter((s) => (!s.gate || isFeatureVisible(s.gate)) && (!s.adminOnly || isAdmin))
             .map((s) => ({

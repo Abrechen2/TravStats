@@ -1035,8 +1035,6 @@
       "tripRecording": "Recording, positions, app, track, record trip",
       "stayScan": "Stays, detect stays, radius, minimum duration, markets, places as areas, re-evaluate"
     },
-    "expertOnly": "Expert view",
-    "switchAndOpen": "Switch to Expert and open",
     "expertKeywords": {
       "suggestions": "Immich evidence, photos as evidence, place type, AI classification",
       "autoupdate": "Check interval, interval, approval, expiry, only during flight",

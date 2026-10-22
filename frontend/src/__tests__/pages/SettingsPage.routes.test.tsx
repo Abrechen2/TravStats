@@ -487,3 +487,32 @@ describe("SettingsPage — the frame of the prototype (forgejo#321)", () => {
     ).toBeNull();
   });
 });
+
+describe("SettingsPage — landing from a search hit (forgejo#321 prototype)", () => {
+  beforeEach(() => {
+    useSettingsStore.setState({
+      betaFeaturesEnabled: false,
+      enabledDomains: ["flight", "cruise", "lodging"],
+    });
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  it("marks and scrolls to the section the hit named, across the canonical redirect", async () => {
+    render(
+      <MemoryRouter
+        initialEntries={[
+          { pathname: "/settings", search: "?section=units", state: { highlight: "units" } },
+        ]}
+      >
+        <Routes>
+          <Route path="/settings" element={<SettingsLegacyRedirect />} />
+          <Route path="/settings/:group" element={<SettingsPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    const units = await findNamed("region", SECTION_LABEL_KEY.units);
+    expect(units).toHaveAttribute("data-highlighted", "true");
+    expect(queryNamed("region", SECTION_LABEL_KEY.display)).not.toHaveAttribute("data-highlighted");
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+  });
+});

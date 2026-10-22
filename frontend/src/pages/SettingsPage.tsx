@@ -22,6 +22,7 @@ import type { SettingsMenuGroup } from "../components/Settings/frame/SettingsMen
 import SettingsSectionSwitch from "./Settings/SettingsSectionSwitch";
 import { SettingsSearch } from "./Settings/SettingsSearch";
 import { useSearchScopes } from "./Settings/useSearchScopes";
+import { useSearchHighlight } from "./Settings/useSearchHighlight";
 import { resolveSettingsLink } from "./Settings/settingsLinks";
 import { pageLevel, sectionsOf } from "./Settings/surface";
 import {
@@ -110,6 +111,7 @@ export default function SettingsPage(): JSX.Element {
   // Every setting the standard level keeps off this page — whole expert
   // sections and the expert rows of standard ones — for the note at its top.
   const [hiddenRows, reportHiddenRows] = useHiddenRowsCollector();
+  const highlighted = useSearchHighlight("settings");
   const hiddenSettings = visible.hiddenExpertSettings + hiddenRows;
   const title = current ? t(current.labelKey) : "";
   useDocumentTitle(
@@ -140,7 +142,10 @@ export default function SettingsPage(): JSX.Element {
     [setSearchParams]
   );
 
-  if (!isCanonical || !current) return <Navigate to={canonical} replace />;
+  // The state carries a search hit's highlight across the redirect.
+  if (!isCanonical || !current) {
+    return <Navigate to={canonical} replace state={location.state} />;
+  }
 
   const reachablePages = SETTINGS_PAGES.filter(isReachable);
   const inMenu = (p: SettingsPageDef): boolean =>
@@ -237,6 +242,7 @@ export default function SettingsPage(): JSX.Element {
             expert={current.sections.find((s) => s.id === id)?.level === "expert"}
             deepLinkedExpert={visible.deepLinkedExpert === id}
             revealExpertRows={named === id && searchParams.get("expert") === "1"}
+            highlighted={highlighted === id}
           >
             <SettingsSectionSwitch section={id} page={page} />
           </SectionFrame>

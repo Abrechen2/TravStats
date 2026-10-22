@@ -1035,8 +1035,6 @@
       "tripRecording": "Aufzeichnung, Positionen, App, Track, Reise aufzeichnen",
       "stayScan": "Aufenthalte, Aufenthalt erkennen, Radius, Mindestdauer, Märkte, Orte als Fläche, neu auswerten"
     },
-    "expertOnly": "Ansicht „Experte“",
-    "switchAndOpen": "Zu „Experte“ wechseln und öffnen",
     "expertKeywords": {
       "suggestions": "Immich-Belege, Fotos als Beleg, Ortstyp, KI-Klassifizierung",
       "autoupdate": "Abfrageintervall, Intervall, Freigabe, Ablauf, nur während des Flugs",
