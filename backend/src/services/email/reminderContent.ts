@@ -22,7 +22,7 @@ import {
  * place's own clock by the domain's times DTO; nothing here reads a zone.
  */
 
-export type ReminderDomain = "flight" | "cruise" | "rail" | "lodging";
+export type ReminderDomain = "flight" | "cruise" | "rail" | "lodging" | "ferry" | "bus";
 
 /**
  * Colours are the domain registry's (`shared/domains.ts`, which a test ties to
@@ -34,11 +34,27 @@ export const REMINDER_DOMAIN_COLORS: Record<ReminderDomain, string> = {
   cruise: DOMAINS.cruise.color,
   rail: DOMAINS.rail.color,
   lodging: DOMAINS.lodging.color,
+  ferry: DOMAINS.ferry.color,
+  bus: DOMAINS.bus.color,
 };
 
 const DOMAIN_NAME: Record<ReminderLang, Record<ReminderDomain, string>> = {
-  de: { flight: "Flug", cruise: "Kreuzfahrt", rail: "Bahn", lodging: "Unterkunft" },
-  en: { flight: "Flight", cruise: "Cruise", rail: "Rail", lodging: "Stay" },
+  de: {
+    flight: "Flug",
+    cruise: "Kreuzfahrt",
+    rail: "Bahn",
+    lodging: "Unterkunft",
+    ferry: "Fähre",
+    bus: "Bus",
+  },
+  en: {
+    flight: "Flight",
+    cruise: "Cruise",
+    rail: "Rail",
+    lodging: "Stay",
+    ferry: "Ferry",
+    bus: "Bus",
+  },
 };
 
 const CTA_LABEL: Record<ReminderLang, string> = {
@@ -59,19 +75,19 @@ export interface ReminderLinks {
 type Maybe = string | number | null | undefined;
 
 /** A fact row, or nothing when the entry does not carry the value. */
-function fact(rows: MailFact[], label: string, value: Maybe, mono = false): void {
+export function fact(rows: MailFact[], label: string, value: Maybe, mono = false): void {
   if (value === null || value === undefined) return;
   const text = typeof value === "number" ? (value > 0 ? String(value) : "") : value.trim();
   if (!text) return;
   rows.push(mono ? { label, value: text, mono } : { label, value: text });
 }
 
-const present = (value: string | null | undefined): string | null => {
+export const present = (value: string | null | undefined): string | null => {
   const text = value?.trim();
   return text ? text : null;
 };
 
-const joined = (parts: Array<string | null | undefined>, separator: string): string | null =>
+export const joined = (parts: Array<string | null | undefined>, separator: string): string | null =>
   present(
     parts
       .map(present)
@@ -102,7 +118,7 @@ function footer(lang: ReminderLang, links: ReminderLinks): MailFooterPart[] {
     : ["You can turn this reminder off under ", { label: "Settings → Notifications", url }, "."];
 }
 
-function assemble(
+export function assemble(
   domain: ReminderDomain,
   lang: ReminderLang,
   links: ReminderLinks,
@@ -124,7 +140,7 @@ function assemble(
 }
 
 /** True when the value is shown on a place's own clock (so the "local time" note is honest). */
-const isZoned = (tv: TimeValue | null | undefined): boolean =>
+export const isZoned = (tv: TimeValue | null | undefined): boolean =>
   Boolean(tv && tv.zone !== null && tv.precision === "minute");
 
 // ─── Flight ─────────────────────────────────────────────────────────────────

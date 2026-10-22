@@ -22,6 +22,12 @@ import {
   type ReminderLinks,
 } from "./email/reminderContent";
 import {
+  busReminderContent,
+  ferryReminderContent,
+  type BusReminderData,
+  type FerryReminderData,
+} from "./email/ferryBusReminderContent";
+import {
   adminPasswordResetContent,
   invitationContent,
   passwordResetContent,
@@ -87,7 +93,7 @@ const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : "Unknown error";
 
 /**
- * The shared path of all four reminders: no address or no SMTP means no mail
+ * The shared path of every reminder: no address or no SMTP means no mail
  * (logged, not thrown); a transport failure is logged and rethrown so the
  * scheduler leaves the reminder unsent and retries on its next run.
  */
@@ -170,6 +176,29 @@ export async function sendRailReminder(
     user,
     { railJourneyId: legs[0]?.id, legCount: legs.length, hoursUntilDeparture },
     (lang, links) => railRideReminderContent(legs, hoursUntilDeparture, lang, links)
+  );
+}
+
+export async function sendFerryReminder(
+  crossing: FerryReminderData,
+  user: ReminderUser,
+  hoursUntilDeparture: number
+): Promise<void> {
+  await sendReminder(
+    "ferry",
+    user,
+    { ferryJourneyId: crossing.id, hoursUntilDeparture },
+    (lang, links) => ferryReminderContent(crossing, hoursUntilDeparture, lang, links)
+  );
+}
+
+export async function sendBusReminder(
+  ride: BusReminderData,
+  user: ReminderUser,
+  hoursUntilDeparture: number
+): Promise<void> {
+  await sendReminder("bus", user, { busJourneyId: ride.id, hoursUntilDeparture }, (lang, links) =>
+    busReminderContent(ride, hoursUntilDeparture, lang, links)
   );
 }
 

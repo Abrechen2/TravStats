@@ -675,6 +675,8 @@ describe("reminder colours", () => {
       cruise: DOMAINS.cruise.color,
       rail: DOMAINS.rail.color,
       lodging: DOMAINS.lodging.color,
+      ferry: DOMAINS.ferry.color,
+      bus: DOMAINS.bus.color,
     });
   });
 

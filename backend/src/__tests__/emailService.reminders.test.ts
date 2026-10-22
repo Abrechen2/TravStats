@@ -389,3 +389,67 @@ describe("sendLodgingCheckInReminder", () => {
     expect(html).not.toContain("2026-09-27");
   });
 });
+
+describe("sendFerryReminder", () => {
+  it("shows both ports' LOCAL time, not the raw UTC instant", async () => {
+    const { sendFerryReminder } = await import("../services/emailService");
+    await sendFerryReminder(
+      {
+        id: "ferry-1",
+        tripId: null,
+        operator: "Stena Line",
+        vesselName: "Stena Germanica",
+        fareClass: null,
+        cabinType: null,
+        seat: null,
+        vehicleType: null,
+        vehicleRegistration: null,
+        bookingReference: null,
+        ticketReference: null,
+        depStationName: "Kiel",
+        arrStationName: "Göteborg",
+        departure: tv("2026-09-27T18:45:00", "Europe/Berlin", "2026-09-27T16:45:00.000Z"),
+        arrival: tv("2026-09-28T09:15:00", "Europe/Stockholm", "2026-09-28T07:15:00.000Z"),
+      },
+      { notificationEmail: "user@example.com", settingsData: { display: { language: "en" } } },
+      24
+    );
+
+    expect(mockSendMail).toHaveBeenCalledTimes(1);
+    const { subject, html } = mockSendMail.mock.calls[0][0] as { subject: string; html: string };
+    expect(subject).toBe("Ferry reminder: your crossing to Göteborg in 24h");
+    expect(html).toContain("6:45 PM");
+    expect(html).not.toContain("4:45 PM");
+    expect(html).toContain("Stena Germanica");
+  });
+});
+
+describe("sendBusReminder", () => {
+  it("shows both terminals' LOCAL time, not the raw UTC instant", async () => {
+    const { sendBusReminder } = await import("../services/emailService");
+    await sendBusReminder(
+      {
+        id: "bus-1",
+        tripId: null,
+        operator: "FlixBus",
+        lineName: "N17",
+        fareClass: null,
+        seat: null,
+        bookingReference: null,
+        depStationName: "München ZOB",
+        arrStationName: "Praha ÚAN Florenc",
+        departure: tv("2026-09-27T08:00:00", "Europe/Berlin", "2026-09-27T06:00:00.000Z"),
+        arrival: tv("2026-09-27T13:30:00", "Europe/Prague", "2026-09-27T11:30:00.000Z"),
+      },
+      { notificationEmail: "user@example.com", settingsData: { display: { language: "de" } } },
+      2
+    );
+
+    expect(mockSendMail).toHaveBeenCalledTimes(1);
+    const { subject, html } = mockSendMail.mock.calls[0][0] as { subject: string; html: string };
+    expect(subject).toBe("Bus-Erinnerung: Deine Fahrt nach Praha ÚAN Florenc in 2h");
+    expect(html).toContain("08:00");
+    expect(html).not.toContain("06:00");
+    expect(html).toContain("FlixBus");
+  });
+});
