@@ -290,4 +290,28 @@ describe("stopWikipediaSummary", () => {
     expect(s?.thumbnailUrl).toBeNull();
     expect(s?.imageCredit).toBeNull();
   });
+
+  // Codex review: a local (non-Commons) file may be non-free; when its page
+  // cannot be read the licence is unknown, so the photo is not shown — and
+  // that answer is not remembered.
+  it("shows no local photo whose licence could not be read, and asks again next time", async () => {
+    const localThumb =
+      "https://upload.wikimedia.org/wikipedia/en/thumb/c/cd/ZOB_logo.png/320px-ZOB_logo.png";
+    let metadataUp = false;
+    use((url) => {
+      if (url.includes("geosearch")) return json(zobGeo);
+      if (url.includes("imageinfo"))
+        return metadataUp
+          ? json(imageinfo({ LicenseShortName: "CC BY-SA 3.0", License: "cc-by-sa-3.0" }))
+          : json({}, 503);
+      return json({ ...zobSummary, thumbnail: { source: localThumb } });
+    });
+    const first = await stopWikipediaSummary("bus", "Hamburg ZOB", 53.552, 10.013, "en");
+    expect(first?.thumbnailUrl).toBeNull();
+    expect(first?.imageCredit).toBeNull();
+    metadataUp = true;
+    const second = await stopWikipediaSummary("bus", "Hamburg ZOB", 53.552, 10.013, "en");
+    expect(second?.thumbnailUrl).toBe(localThumb);
+    expect(second?.imageCredit?.onCommons).toBe(false);
+  });
 });

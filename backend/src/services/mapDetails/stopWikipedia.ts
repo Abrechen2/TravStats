@@ -299,6 +299,10 @@ export async function stopWikipediaSummary(
       summary.thumbnailUrl,
       Math.min(OPEN_DATA_TIMEOUT_MS, deadline - Date.now())
     );
+    // A local file whose licence could not be read: the text, no photo, and
+    // not remembered — the next view asks again.
+    if (credit === "unverified")
+      return { ...summary, extract, thumbnailUrl: null, imageCredit: null };
     if (credit === "nonFree" || credit === null) {
       return remember(key, { ...summary, extract, thumbnailUrl: null, imageCredit: null });
     }

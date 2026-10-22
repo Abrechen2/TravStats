@@ -7,8 +7,10 @@
  *
  * Asked through the article's edition, which answers for a Commons file and a
  * local one alike. A non-free file (fair use on the English edition) is not
- * shown outside Wikipedia at all. When the file page cannot be read, the
- * credit is still the link to it — never a photo with no source.
+ * shown outside Wikipedia at all. When the file page cannot be read, a Commons
+ * file — free by Commons' own rule — is still credited with the link to it;
+ * a local file, whose licence is then unknown, is `"unverified"`: not shown,
+ * and asked again next time.
  */
 import { z } from "zod";
 import { fetchOpenData } from "../openData/http";
@@ -66,13 +68,14 @@ const capped = (value: unknown): string | null =>
 
 /**
  * The credit for a summary's thumbnail; `"nonFree"` when it must not be shown;
- * null when the URL names no file (nothing to credit or link).
+ * `"unverified"` when a local file's licence could not be read; null when the
+ * URL names no file (nothing to credit or link).
  */
 export async function stopImageCredit(
   lang: WikiLanguage,
   thumbnailUrl: string,
   timeoutMs: number
-): Promise<StopImageCredit | "nonFree" | null> {
+): Promise<StopImageCredit | "nonFree" | "unverified" | null> {
   const found = fileOfThumbnail(thumbnailUrl);
   if (!found) return null;
   const { file, onCommons } = found;
@@ -84,7 +87,9 @@ export async function stopImageCredit(
     sourceUrl: `https://${lang}.wikipedia.org/wiki/File:${encodeURIComponent(file.replace(/ /g, "_"))}`,
     onCommons,
   };
-  if (timeoutMs <= 0) return fallback;
+  // Without its file page only a Commons file is known to be free.
+  const unread = onCommons ? fallback : "unverified";
+  if (timeoutMs <= 0) return unread;
   const params = new URLSearchParams({
     action: "query",
     titles: `File:${file}`,
@@ -97,12 +102,12 @@ export async function stopImageCredit(
     `https://${lang}.wikipedia.org/w/api.php?${params.toString()}`,
     { timeoutMs }
   );
-  if (!outcome.ok) return fallback;
+  if (!outcome.ok) return unread;
   const parsed = imageinfoSchema.safeParse(outcome.body);
   const info = parsed.success
     ? Object.values(parsed.data.query.pages)[0]?.imageinfo?.[0]
     : undefined;
-  if (!info) return fallback;
+  if (!info) return unread;
   const meta = info.extmetadata ?? {};
   if (String(meta.NonFree?.value ?? "").toLowerCase() === "true") return "nonFree";
   return {
