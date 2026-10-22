@@ -179,7 +179,15 @@ router.delete("/users/:id", async (req: AuthRequest, res: Response, next: NextFu
 
     // Rows by cascade, then the account's uploaded files — every upload
     // directory, through the one step every account deletion uses (forgejo#287).
-    await deleteAccountWithFiles(id, () => prisma.user.delete({ where: { id } }));
+    // The sync change log has no foreign key (its own cascade writes
+    // tombstones into it), so it goes in the same transaction: a deleted
+    // account's log must not outlive it until the nightly prune (beta.23 UAT).
+    await deleteAccountWithFiles(id, () =>
+      prisma.$transaction([
+        prisma.user.delete({ where: { id } }),
+        prisma.syncChange.deleteMany({ where: { userId: id } }),
+      ])
+    );
 
     logger.info({
       operation: "admin_delete_user",
