@@ -12,7 +12,7 @@ import { timezoneOfLodging } from "../../utils/stayInstant";
  *    within 500 m of the house, days read in the house's zone;
  *  - a flight: its trip's photos taken between departure and arrival;
  *  - a cruise: its trip's photos taken from embarkation day to the last day;
- *  - a train ride: its trip's photos taken between departure and arrival.
+ *  - a train or bus ride: its trip's photos taken between departure and arrival.
  *
  * Each abstains rather than guesses: a lodging without coordinates, a flight
  * whose times are not real instants, or an entry on no trip shows nothing.
@@ -247,29 +247,29 @@ export async function cruiseTripPhotos(
   );
 }
 
+/** The columns a ride between two stations or terminals is windowed by. */
+const RIDE_WINDOW_SELECT = {
+  tripId: true,
+  departureTime: true,
+  arrivalTime: true,
+  depTimezone: true,
+  arrTimezone: true,
+  depPrecision: true,
+  arrPrecision: true,
+} as const;
+
+type RideWindowFacts = Prisma.RailJourneyGetPayload<{ select: typeof RIDE_WINDOW_SELECT }>;
+
 /**
- * Null when the ride is not the caller's. A ride's times are real instants
- * once both stations have a zone (the server derives it from where they
- * are); without one, or without an arrival, there is no window to trust —
- * the same abstention the flight makes.
+ * A ride's times are real instants once both ends have a zone (the server
+ * derives it from where they are); without one, or without an arrival, there
+ * is no window to trust — the same abstention the flight makes. A ride logged
+ * by its day only abstains too (`noClock`).
  */
-export async function railTripPhotos(
+function rideTripPhotos(
   userId: string,
-  railJourneyId: string
-): Promise<WindowResult | null> {
-  const ride = await prisma.railJourney.findFirst({
-    where: { id: railJourneyId, userId },
-    select: {
-      tripId: true,
-      departureTime: true,
-      arrivalTime: true,
-      depTimezone: true,
-      arrTimezone: true,
-      depPrecision: true,
-      arrPrecision: true,
-    },
-  });
-  if (!ride) return null;
+  ride: RideWindowFacts
+): Promise<WindowResult> | WindowResult {
   const { tripId, departureTime, arrivalTime } = ride;
   if (!tripId) return abstain("notOnTrip");
   if (!rideHasClocks(ride)) return abstain("noClock");
@@ -281,4 +281,31 @@ export async function railTripPhotos(
       AND ph.taken_at BETWEEN ${departureTime} AND ${arrivalTime}`,
     instantWindow(departureTime, arrivalTime)
   );
+}
+
+/** Null when the train ride is not the caller's. */
+export async function railTripPhotos(
+  userId: string,
+  railJourneyId: string
+): Promise<WindowResult | null> {
+  const ride = await prisma.railJourney.findFirst({
+    where: { id: railJourneyId, userId },
+    select: RIDE_WINDOW_SELECT,
+  });
+  return ride ? rideTripPhotos(userId, ride) : null;
+}
+
+/**
+ * Null when the bus ride is not the caller's. A coach between two terminals
+ * carries rail's columns and is read by rail's rule.
+ */
+export async function busTripPhotos(
+  userId: string,
+  busJourneyId: string
+): Promise<WindowResult | null> {
+  const ride = await prisma.busJourney.findFirst({
+    where: { id: busJourneyId, userId },
+    select: RIDE_WINDOW_SELECT,
+  });
+  return ride ? rideTripPhotos(userId, ride) : null;
 }

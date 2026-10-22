@@ -187,6 +187,47 @@ describe("trip photos by when and where", () => {
     expect((await request(app).get(url).set("Cookie", strangerCookie)).status).toBe(404);
   });
 
+  // Bus (bus spec §11): a ride between two terminals keeps rail's rule — the
+  // window between departure and arrival, nothing for a date-only ride or a
+  // terminal without a zone.
+  it("shows a bus ride its trip's photos between departure and arrival", async () => {
+    const ride = await prisma.busJourney.create({
+      data: {
+        userId,
+        tripId,
+        depStationName: "Frankfurt ZOB",
+        arrStationName: "Roma Tiburtina",
+        depLat: 50.105,
+        depLon: 8.664,
+        arrLat: 41.91,
+        arrLon: 12.53,
+        depTimezone: "Europe/Berlin",
+        arrTimezone: "Europe/Rome",
+        departureTime: new Date("2024-05-01T08:00:00Z"),
+        arrivalTime: new Date("2024-05-01T10:00:00Z"),
+        status: "completed",
+      },
+    });
+    const url = `/api/v1/bus/${ride.id}/trip-photos`;
+    const res = await request(app).get(url).set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(photoIds(res)).toEqual([ids.inFlight]);
+
+    await prisma.busJourney.update({ where: { id: ride.id }, data: { depPrecision: "day" } });
+    const clockless = await request(app).get(url).set("Cookie", cookie);
+    expect(photoIds(clockless)).toEqual([]);
+    expect(clockless.body.data.reason).toBe("noClock");
+
+    await prisma.busJourney.update({
+      where: { id: ride.id },
+      data: { depPrecision: "minute", arrTimezone: null },
+    });
+    const zoneless = await request(app).get(url).set("Cookie", cookie);
+    expect(zoneless.body.data.reason).toBe("notRealInstants");
+
+    expect((await request(app).get(url).set("Cookie", strangerCookie)).status).toBe(404);
+  });
+
   it("shows a cruise its trip's photos from its first to its last day", async () => {
     const cruise = await prisma.cruise.create({
       data: {

@@ -5,6 +5,7 @@ import { authenticate, type AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
 import { statsLimiter } from "../middleware/rateLimit";
 import {
+  busTripPhotos,
   cruiseTripPhotos,
   flightTripPhotos,
   lodgingTripPhotos,
@@ -13,7 +14,7 @@ import {
 } from "../services/photos/tripPhotoWindows";
 
 /**
- * Read-only trip photographs on a stay, a flight, a cruise and a train ride
+ * Read-only trip photographs on a stay, a flight, a cruise, a train and a bus ride
  * (package 9, item 4) — found by when and where they were taken, see the service.
  *
  * Mounted on `/api/v1`, so middleware is PER ROUTE: a `router.use` here would
@@ -66,6 +67,14 @@ router.get(
   authenticate,
   statsLimiter,
   windowRoute(railTripPhotos, "Rail journey not found")
+);
+// Bus is behind its beta switch on the web; the endpoint answers like every
+// other bus endpoint, and the switch hides the detail page that asks.
+router.get(
+  "/bus/:id/trip-photos",
+  authenticate,
+  statsLimiter,
+  windowRoute(busTripPhotos, "Bus journey not found")
 );
 
 export default router;
