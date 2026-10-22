@@ -103,6 +103,7 @@ export default function AdminPage(): JSX.Element {
     tab: searchParams.get("tab"),
     user: searchParams.get("user"),
     expert: searchParams.get("expert") === "1",
+    match: searchParams.get("match"),
     isReachable,
   });
   const target = new URL(canonical, "http://x");

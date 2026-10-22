@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 /**
@@ -32,6 +32,7 @@ vi.mock("../../Admin/ImmichGlobalSettings", () => ({ default: () => null }));
 vi.mock("../OperatorLogosCard", () => ({ default: () => null }));
 
 import ApiKeysSection from "../ApiKeysSection";
+import { MemoryRouter } from "react-router-dom";
 import GlobalApiKeysManager, { type GlobalApiKeys } from "../../Admin/GlobalApiKeysManager";
 
 const status = { hasKey: false, isShared: false, hasAccess: false };
@@ -117,16 +118,31 @@ describe("admin manager — AeroAPI card", () => {
   it("shows the masked global key and routes a change into globalAeroapiApiKey", async () => {
     const onChange = vi.fn();
     render(
-      <GlobalApiKeysManager
-        globalApiKeys={globalKeys}
-        parserSettings={{ allowUserApiKeys: true }}
-        saving={false}
-        onSave={() => {}}
-        onGlobalApiKeysChange={onChange}
-        onParserSettingsChange={() => {}}
-      />
+      <MemoryRouter>
+        <GlobalApiKeysManager
+          globalApiKeys={globalKeys}
+          parserSettings={{ allowUserApiKeys: true }}
+          saving={false}
+          onSave={() => {}}
+          onGlobalApiKeysChange={onChange}
+          onParserSettingsChange={() => {}}
+        />
+      </MemoryRouter>
     );
-    expect(screen.getByText("admin:globalApiKeys.aeroapi.label")).toBeInTheDocument();
+    // forgejo#321 prototype: one group open at a time, and a key's form opens
+    // with the row's action ("Bearbeiten" for a key that is set).
+    await userEvent.click(
+      within(document.querySelector('[data-service-group="flight"]') as HTMLElement).getAllByRole(
+        "button"
+      )[0]
+    );
+    await userEvent.click(
+      within(document.querySelector('[data-service="aeroapi"]') as HTMLElement).getByRole(
+        "button",
+        { name: "settings:services.action.edit" }
+      )
+    );
+    expect(screen.getByText("admin:globalApiKeys.aeroapi.label")).toBeVisible();
     const input = await screen.findByLabelText("admin:globalApiKeys.aeroapi.label");
     await userEvent.type(input, "Z");
     expect(onChange).toHaveBeenLastCalledWith({

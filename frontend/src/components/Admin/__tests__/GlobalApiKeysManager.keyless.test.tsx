@@ -28,18 +28,21 @@ vi.mock("../../../hooks/useDomainVisible", () => ({ useDomainOffered: () => true
 vi.mock("../ImmichGlobalSettings", () => ({ default: () => null }));
 vi.mock("../../Settings/OperatorLogosCard", () => ({ default: () => null }));
 
+import { MemoryRouter } from "react-router-dom";
 import GlobalApiKeysManager from "../GlobalApiKeysManager";
 
 const renderManager = () =>
   render(
-    <GlobalApiKeysManager
-      globalApiKeys={{ allowUserFlightApiKeys: true }}
-      parserSettings={{ allowUserApiKeys: true }}
-      saving={false}
-      onSave={() => {}}
-      onGlobalApiKeysChange={() => {}}
-      onParserSettingsChange={() => {}}
-    />
+    <MemoryRouter>
+      <GlobalApiKeysManager
+        globalApiKeys={{ allowUserFlightApiKeys: true }}
+        parserSettings={{ allowUserApiKeys: true }}
+        saving={false}
+        onSave={() => {}}
+        onGlobalApiKeysChange={() => {}}
+        onParserSettingsChange={() => {}}
+      />
+    </MemoryRouter>
   );
 
 const railSummary = (): string =>
@@ -51,7 +54,7 @@ describe("GlobalApiKeysManager — keyless services that are on", () => {
       settings: { railTransitousEnabled: true, railDbRestEnabled: true, railRoutingUrl: null },
     });
     renderManager();
-    await waitFor(() => expect(railSummary()).not.toMatch(/summary:0\//));
+    await waitFor(() => expect(railSummary()).toMatch(/summaryAdmin:2\//));
   });
 
   it("counts nothing while both lookups are off", async () => {
@@ -59,7 +62,11 @@ describe("GlobalApiKeysManager — keyless services that are on", () => {
       settings: { railTransitousEnabled: false, railDbRestEnabled: false, railRoutingUrl: null },
     });
     renderManager();
-    await waitFor(() => expect(adminApi.getInstanceSettings).toHaveBeenCalled());
-    expect(railSummary()).toMatch(/summary:0\//);
+    await waitFor(() =>
+      expect(document.querySelector('[data-service="transitous"]')).toHaveTextContent(
+        "settings:services.badge.none"
+      )
+    );
+    expect(railSummary()).toMatch(/summaryAdmin:0\//);
   });
 });

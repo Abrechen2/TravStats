@@ -189,11 +189,12 @@ export const SECTION_ALIASES: Readonly<Record<string, SettingsSectionId>> = {
 /**
  * Sections that left personal settings for Administration › Instanz: "Über
  * TravStats" (tester, 2026-10-20) and the geocoder, which configures the
- * instance and was never an account's to change.
+ * instance and was never an account's to change — since forgejo#321 in
+ * Externe Dienste › Karten & Ortssuche; the admin side resolves `geocoder`.
  */
 export const MOVED_TO_ADMIN: Readonly<Record<string, { page: string; section: string }>> = {
   about: { page: "instance", section: "about" },
-  lodgingPreferences: { page: "instance", section: "geocoder" },
+  lodgingPreferences: { page: "externalServices", section: "geocoder" },
 };
 
 /**

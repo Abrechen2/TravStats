@@ -48,9 +48,10 @@ describe("ServiceAccordion deep link", () => {
       "",
       "/settings/services?section=externalServices&match=OpenRouteService-Schl%C3%BCssel&expert=1"
     );
-    render(<ServiceAccordion groups={groups} initiallyOpen={["cross"]} />);
+    render(<ServiceAccordion groups={groups} initiallyOpen="cross" />);
     expect(panelOf("routing").hidden).toBe(false);
-    expect(panelOf("cross").hidden).toBe(false);
+    // One group at a time (forgejo#321 prototype): the named one wins.
+    expect(panelOf("cross").hidden).toBe(true);
     act(() => {
       vi.runAllTimers();
     });
@@ -59,7 +60,7 @@ describe("ServiceAccordion deep link", () => {
 
   it("leaves the groups as they are without a named service", () => {
     window.history.replaceState(null, "", "/settings/services?section=externalServices");
-    render(<ServiceAccordion groups={groups} initiallyOpen={["cross"]} />);
+    render(<ServiceAccordion groups={groups} initiallyOpen="cross" />);
     expect(panelOf("routing").hidden).toBe(true);
   });
 });

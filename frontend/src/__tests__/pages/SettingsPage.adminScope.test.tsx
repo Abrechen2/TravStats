@@ -322,8 +322,9 @@ describe("SettingsPage — the settings/admin boundary", () => {
   });
 
   // forgejo#321: the geocoder configures the instance and moved to
-  // Administration › Instanz, so an admin's old link follows it there.
-  it("sends an admin on to the geocoder in Administration › Instanz", async () => {
+  // Administration (Externe Dienste › Karten & Ortssuche since the prototype),
+  // so an admin's old link follows it there.
+  it("sends an admin on to the geocoder in Administration", async () => {
     isAdmin = true;
     useSettingsStore.setState({
       betaFeaturesEnabled: false,
@@ -332,7 +333,7 @@ describe("SettingsPage — the settings/admin boundary", () => {
     renderAt(LODGING_DEEP_LINK);
 
     expect(await screen.findByTestId("admin-page")).toHaveTextContent(
-      "/admin/instance?section=geocoder"
+      "/admin/externalServices?section=geocoder"
     );
     expect(screen.queryByText(ADMIN_ONLY_HINT)).toBeNull();
   });

@@ -1,4 +1,5 @@
 import { useState, type JSX } from "react";
+import { Link } from "react-router-dom";
 import ApiKeyCard, { type ApiKeyCardProps } from "../Settings/ApiKeyCard";
 import ImmichGlobalSettings from "./ImmichGlobalSettings";
 import OpenDataCard from "../Settings/OpenDataCard";
@@ -19,6 +20,9 @@ import { useToursVisible } from "../../hooks/useToursVisible";
 import { useDomainOffered } from "../../hooks/useDomainVisible";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useSettingsStore } from "../../store/settingsStore";
+import { useEffectiveSettingsLevel, useSettingsLevelStore } from "../../store/settingsLevelStore";
+import GeocoderSettingsCard from "../Settings/GeocoderSettingsCard";
+import { ExpertPill } from "../ui/ExpertPill";
 import { ADMIN_SECTION_LABEL_KEY } from "../../pages/Admin/adminSections";
 
 export interface GlobalApiKeys {
@@ -39,6 +43,8 @@ export interface GlobalApiKeys {
 
 export interface ParserApiKeySettings {
   allowUserApiKeys: boolean;
+  /** A language model is switched on and has somewhere to go (Import & Parser). */
+  llmConfigured?: boolean;
 }
 
 interface GlobalApiKeysManagerProps {
@@ -130,7 +136,20 @@ export default function GlobalApiKeysManager({
   const railOffered = useDomainOffered("rail");
   const { colorOf } = useDomainColors();
   const openData = useSettingsStore((s) => s.openDataEnabled);
-  const expert = useExpertRows(2);
+  // Who may bring their own keys (2) and where the geocoder lives (2).
+  const expert = useExpertRows(4);
+  const level = useEffectiveSettingsLevel();
+  const setLevel = useSettingsLevelStore((s) => s.setLevel);
+  /** A row whose settings sit under its group: bring them into view, at expert if they are. */
+  const toFooter = (groupId: string, needsExpert: boolean) => (): void => {
+    if (needsExpert && level === "standard") setLevel("expert");
+    setTimeout(() => {
+      const el = document.querySelector(`[data-service-footer="${groupId}"]`);
+      if (el && typeof el.scrollIntoView === "function") {
+        el.scrollIntoView({ block: "start", behavior: "smooth" });
+      }
+    }, 0);
+  };
   // Keyless services have no key to count: one that is switched on is active
   // for everyone (beta.23 UAT: "0 für alle aktiv" with both lookups on).
   const [rail, setRail] = useState<RailProvidersStatus | null>(null);
@@ -213,6 +232,24 @@ export default function GlobalApiKeysManager({
           body: <OpenDataCard isAdmin />,
         },
         {
+          // Set up on its own page; the row says whether it is.
+          id: "llmParser",
+          name: t("settings:services.names.llmParser"),
+          what: t("settings:services.what.llmParser"),
+          state:
+            parserSettings?.llmConfigured === undefined
+              ? null
+              : parserSettings.llmConfigured
+                ? "admin"
+                : "none",
+          inline: true,
+          body: (
+            <Link to="/admin/parsers" className="t-caption underline">
+              {t("settings:services.parserPointer")}
+            </Link>
+          ),
+        },
+        {
           id: "operatorLogos",
           name: t("admin:operatorLogos.title"),
           what: t("settings:services.what.operatorLogos"),
@@ -235,16 +272,29 @@ export default function GlobalApiKeysManager({
             color: colorOf("rail"),
             items: [
               {
-                id: "railProviders",
-                name: t("settings:railProviders.title"),
-                state: rail
-                  ? rail.railTransitousEnabled || rail.railDbRestEnabled
-                    ? ("admin" as const)
-                    : ("none" as const)
-                  : null,
-                body: <RailProvidersCard isAdmin onStatus={setRail} />,
+                id: "transitous",
+                name: "Transitous",
+                what: t("settings:services.what.transitous"),
+                state: rail ? (rail.railTransitousEnabled ? "admin" : "none") : null,
+                onAction: toFooter("rail", false),
               },
-            ],
+              {
+                id: "dbRest",
+                name: "db-rest",
+                what: t("settings:services.what.dbRest"),
+                state: rail ? (rail.railDbRestEnabled ? "admin" : "none") : null,
+                onAction: toFooter("rail", false),
+              },
+              {
+                id: "openRailRouting",
+                name: "OpenRailRouting",
+                what: t("settings:services.what.openRailRouting"),
+                state: rail ? (rail.railRoutingUrl ? "admin" : "none") : null,
+                // Where a self-hosted router lives is expert plumbing.
+                onAction: toFooter("rail", true),
+              },
+            ] satisfies ServiceItem[],
+            footer: <RailProvidersCard isAdmin onStatus={setRail} />,
           },
         ]
       : []),
@@ -266,6 +316,26 @@ export default function GlobalApiKeysManager({
           },
         ]
       : []),
+    {
+      // Moved here from Administration › Instanz (forgejo#321 prototype). The
+      // instance always resolves both — a stored address, the environment's or
+      // the public default — so both are in use; where they point is expert.
+      id: "maps",
+      label: t("settings:services.groups.maps"),
+      items: (["photon", "nominatim"] as const).map((id) => ({
+        id,
+        name: id === "photon" ? "Photon" : "Nominatim",
+        what: t(`settings:services.what.${id}`),
+        state: "admin" as const,
+        onAction: toFooter("maps", true),
+      })),
+      footer: expert ? (
+        <div className="flex flex-col" style={{ marginTop: "var(--ts-space-lg)", gap: 8 }}>
+          <ExpertPill />
+          <GeocoderSettingsCard isAdmin />
+        </div>
+      ) : null,
+    },
   ];
 
   return (
@@ -275,7 +345,7 @@ export default function GlobalApiKeysManager({
         description={t("admin:globalApiKeys.description")}
       />
       {!loaded && <p className="t-caption">{t("common:loading.default")}</p>}
-      <ServiceAccordion groups={groups} initiallyOpen={["cross", "flight"]} />
+      <ServiceAccordion groups={groups} initiallyOpen="cross" surface="admin" />
 
       {loaded && expert && (
         <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>

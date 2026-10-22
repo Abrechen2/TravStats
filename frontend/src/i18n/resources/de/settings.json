@@ -1019,7 +1019,7 @@
       "backup": "Backup, Sicherung, Export, Exportieren, Wiederherstellen, Download, Excel, Tabelle, JSON, Daten",
       "import": "Import, Importieren, CSV, Flightradar24, Logbuch, Hochladen",
       "notifications": "Benachrichtigung, E-Mail, SMTP, Mailserver, Erinnerung",
-      "externalServices": "AirLabs, Aviationstack, AeroDataBox, OpenSky, OpenAI, Claude, KI, Immich, Fotos, Dawarich, Standortverlauf, Routing, Navi, Straßenroute, OpenRouteService, GraphHopper, OSRM, Strava",
+      "externalServices": "AirLabs, Aviationstack, AeroDataBox, OpenSky, OpenAI, Claude, KI, Immich, Fotos, Dawarich, Standortverlauf, Routing, Navi, Straßenroute, OpenRouteService, GraphHopper, OSRM, Strava, KI-Parser, Bahn, Transitous, db-rest, OpenRailRouting, Karten, Ortssuche, Photon, Nominatim",
       "homeAirport": "Zuhause, Wohnort, Heimatflughafen, Flughafen, Umzug",
       "defaults": "Standard, Vorgabe, Buchungsklasse, Sitzplatz, Fluggesellschaft, Airline",
       "features": "Funktionen, Parser, Bordkarte, E-Mail-Parser, Bordkarten-Scan",
@@ -1131,12 +1131,14 @@
     "badge": {
       "admin": "Vom Admin für alle",
       "own": "Eigener Schlüssel",
-      "none": "Nicht eingerichtet"
+      "none": "Nicht eingerichtet",
+      "setUp": "Eingerichtet"
     },
     "ownOverrides": "Dein eigener Schlüssel wird statt dem der Instanz genutzt.",
     "groups": {
       "cross": "Bereichsübergreifend",
-      "routing": "Straßenrouting"
+      "routing": "Straßenrouting",
+      "maps": "Karten & Ortssuche"
     },
     "dawarichPointer": "Eingerichtet unter Standortverlauf →",
     "what": {
@@ -1153,8 +1155,34 @@
       "graphhopper": "Straßenrouten statt Luftlinie",
       "logostream": "Airline-Logos in hoher Auflösung",
       "googlePlaces": "Ortssuche und Ortsdetails",
-      "operatorLogos": "Logos von Bahn, Bus, Fähre und Mietwagen"
-    }
+      "operatorLogos": "Logos von Bahn, Bus, Fähre und Mietwagen",
+      "llmParser": "Buchungen aus E-Mails und PDFs lesen, mit OpenAI, Claude oder eigenem Ollama",
+      "transitous": "Züge nach Nummer und Bahnhof suchen",
+      "dbRest": "Züge der Deutschen Bahn nachschlagen",
+      "openRailRouting": "Bahnstrecken statt Luftlinie (eigener Dienst)",
+      "photon": "Ortssuche beim Tippen",
+      "nominatim": "Adressen in Koordinaten umwandeln"
+    },
+    "count_one": "1 Dienst",
+    "count_other": "{{count}} Dienste",
+    "summaryAdmin": "{{shared}} eingerichtet",
+    "legend": {
+      "admin": "läuft für jedes Konto, ohne dass du etwas tun musst",
+      "own": "dein eigener Schlüssel wird statt dem der Instanz genutzt",
+      "adminSurface": "gilt für jedes Konto dieser Instanz",
+      "none": "noch nicht eingerichtet"
+    },
+    "action": {
+      "useOwn": "Eigenen Schlüssel nutzen",
+      "edit": "Bearbeiten",
+      "setUp": "Einrichten"
+    },
+    "names": {
+      "llmParser": "KI-Parser"
+    },
+    "adminPointer": "In der Administration einrichten →",
+    "instanceOnly": "Stellt die Instanz für alle bereit; einrichten kann das nur der Admin.",
+    "parserPointer": "Eingerichtet unter Import & Parser →"
   },
   "frame": {
     "surfaces": "Bereiche der Einstellungen",

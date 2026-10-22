@@ -9,6 +9,7 @@ import {
 } from "./settingsModel";
 import {
   ADMIN_PAGES,
+  ADMIN_SECTION_REDIRECTS,
   DEFAULT_ADMIN_PAGE,
   adminPageOfTab,
   canonicalAdminSection,
@@ -102,11 +103,22 @@ export interface AdminLinkInput {
    * the rows are revealed for the section the address names.
    */
   expert?: boolean;
+  /** `?match=` — the service a search hit named inside a folding section; carried along. */
+  match?: string | null;
   isReachable: (page: AdminPageDef) => boolean;
 }
 
 /** The canonical address for an admin link. */
 export function resolveAdminLink(input: AdminLinkInput): string {
+  const redirect = input.section ? lookup(ADMIN_SECTION_REDIRECTS, input.section) : undefined;
+  if (redirect) {
+    return resolveAdminLink({
+      ...input,
+      section: redirect.section,
+      match: redirect.match,
+      expert: redirect.expert,
+    });
+  }
   const section = canonicalAdminSection(input.section);
   const home = section ? pageOfSection(ADMIN_PAGES, section) : undefined;
   const named = findAdminPage(input.page);
@@ -121,5 +133,6 @@ export function resolveAdminLink(input: AdminLinkInput): string {
   const keepSection =
     home !== undefined && (section !== page.id || input.expert === true) ? section : null;
   const expert = keepSection !== null && input.expert === true ? "1" : null;
-  return `/admin/${page.id}${query({ section: keepSection, expert, user: input.user })}`;
+  const match = keepSection !== null || page.id === "externalServices" ? input.match : null;
+  return `/admin/${page.id}${query({ section: keepSection, expert, match, user: input.user })}`;
 }

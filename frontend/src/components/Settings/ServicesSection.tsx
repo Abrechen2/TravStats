@@ -15,6 +15,8 @@ import { useToursVisible } from "../../hooks/useToursVisible";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useSettingsStore } from "../../store/settingsStore";
+import { useEffectiveSettingsLevel, useSettingsLevelStore } from "../../store/settingsLevelStore";
+import { ExpertPill } from "../ui/ExpertPill";
 import type { useSettingsPage } from "./useSettingsPage";
 import type { ImmichConnectionStatus } from "../../types/immich";
 import type { StravaStatus } from "../../lib/api/strava";
@@ -29,7 +31,14 @@ interface KeyStatus {
 
 const FLIGHT_PROVIDERS = ["airlabs", "aviationstack", "aerodatabox", "aeroapi", "opensky"] as const;
 const ROUTING_PROVIDERS = ["openrouteservice", "graphhopper"] as const;
+const RAIL_SERVICES = ["transitous", "dbRest", "openRailRouting"] as const;
+const GEOCODERS = ["photon", "nominatim"] as const;
 const NAME: Record<string, string> = {
+  transitous: "Transitous",
+  dbRest: "db-rest",
+  openRailRouting: "OpenRailRouting",
+  photon: "Photon",
+  nominatim: "Nominatim",
   airlabs: "AirLabs",
   aviationstack: "Aviationstack",
   aerodatabox: "AeroDataBox",
@@ -74,7 +83,7 @@ function stravaState(status: StravaStatus | null): ServiceState | null {
  * is used, under Standortverlauf; this page points there.
  */
 export default function ServicesSection({ page }: { page: PageState }): JSX.Element {
-  const { t } = useTranslation(["settings", "openData", "immich", "roadtrips"]);
+  const { t } = useTranslation(["settings", "openData", "immich", "roadtrips", "common"]);
   const isAdmin = page.user?.isAdmin ?? false;
   const toursVisible = useToursVisible();
   const { isEnabled } = useEnabledDomains();
@@ -86,6 +95,32 @@ export default function ServicesSection({ page }: { page: PageState }): JSX.Elem
   // page's; what it last read wins over the page-load snapshot.
   const [routing, setRouting] = useState<RoutingKeysStatus | null>(null);
   const flightOn = isEnabled("flight");
+  const railOn = isEnabled("rail");
+  const level = useEffectiveSettingsLevel();
+  const setLevel = useSettingsLevelStore((s) => s.setLevel);
+  /**
+   * "Eigenen Schlüssel nutzen" / "Bearbeiten" / "Einrichten" on a key row:
+   * the account's own key forms sit under the group and belong to the expert
+   * view, so the action switches there and brings the form into view.
+   */
+  const toOwnKeys = (groupId: string) => (): void => {
+    if (level === "standard") setLevel("expert");
+    setTimeout(() => {
+      const el = document.querySelector(`[data-service-footer="${groupId}"]`);
+      if (el && typeof el.scrollIntoView === "function") {
+        el.scrollIntoView({ block: "start", behavior: "smooth" });
+      }
+    }, 0);
+  };
+  /** A service the instance runs for everyone; set up in administration. */
+  const instancePointer = (adminPath: string): JSX.Element =>
+    isAdmin ? (
+      <Link to={adminPath} className="t-caption underline">
+        {t("settings:services.adminPointer")}
+      </Link>
+    ) : (
+      <p className="t-caption">{t("settings:services.instanceOnly")}</p>
+    );
   const ownKeys = (flightOn ? FLIGHT_PROVIDERS.length : 0) + (toursVisible ? 2 : 0);
   const expert = useExpertRows(ownKeys);
   const status = page.apiKeysStatus as Record<string, KeyStatus> | null;
@@ -118,6 +153,14 @@ export default function ServicesSection({ page }: { page: PageState }): JSX.Elem
           </Link>
         ),
       },
+      {
+        // Only the admin sets the model up; there is no personal key for it.
+        id: "llmParser",
+        name: t("settings:services.names.llmParser"),
+        what: t("settings:services.what.llmParser"),
+        state: null,
+        body: instancePointer("/admin/parsers"),
+      },
       ...(toursVisible
         ? [
             {
@@ -148,9 +191,11 @@ export default function ServicesSection({ page }: { page: PageState }): JSX.Elem
       name: NAME[p],
       what: t(`settings:services.what.${p}`),
       state: keyState(status?.[p]),
+      onAction: toOwnKeys("flight"),
     })),
     footer: expert ? (
-      <div style={{ marginTop: "var(--ts-space-lg)" }}>
+      <div className="flex flex-col" style={{ marginTop: "var(--ts-space-lg)", gap: 8 }}>
+        <ExpertPill />
         <ApiKeysSection
           bare
           apiKeysStatus={page.apiKeysStatus}
@@ -173,18 +218,48 @@ export default function ServicesSection({ page }: { page: PageState }): JSX.Elem
       name: NAME[p],
       what: t(`settings:services.what.${p}`),
       state: keyState(routing?.[p] ?? status?.[p]),
+      onAction: toOwnKeys("routing"),
     })),
     footer: expert ? (
-      <div style={{ marginTop: "var(--ts-space-lg)" }}>
+      <div className="flex flex-col" style={{ marginTop: "var(--ts-space-lg)", gap: 8 }}>
+        <ExpertPill />
         <PersonalRoutingKeysSection onStatus={setRouting} />
       </div>
     ) : null,
   };
 
+  // The instance's own services: the timetable lookups and the rail router
+  // (admin-only switches) and the geocoder (always resolved — a stored
+  // address, the environment's, or the public default). No account keys.
+  const railGroup: ServiceGroup = {
+    id: "rail",
+    label: t("common:domain.rail"),
+    color: colorOf("rail"),
+    items: RAIL_SERVICES.map((id) => ({
+      id,
+      name: NAME[id],
+      what: t(`settings:services.what.${id}`),
+      state: null,
+    })),
+    footer: instancePointer("/admin/externalServices?section=externalServices&match=Transitous"),
+  };
+  const mapsGroup: ServiceGroup = {
+    id: "maps",
+    label: t("settings:services.groups.maps"),
+    items: GEOCODERS.map((id) => ({
+      id,
+      name: NAME[id],
+      what: t(`settings:services.what.${id}`),
+      state: "admin" as const,
+    })),
+  };
+
   const groups = [
     crossGroup,
     ...(flightOn ? [flightGroup] : []),
+    ...(railOn ? [railGroup] : []),
     ...(toursVisible ? [routingGroup] : []),
+    mapsGroup,
   ];
 
   return (
@@ -193,7 +268,7 @@ export default function ServicesSection({ page }: { page: PageState }): JSX.Elem
         title={t(SECTION_LABEL_KEY.externalServices)}
         description={t("settings:services.description")}
       />
-      <ServiceAccordion groups={groups} initiallyOpen={["cross"]} />
+      <ServiceAccordion groups={groups} initiallyOpen="cross" surface="personal" />
     </SectionCard>
   );
 }

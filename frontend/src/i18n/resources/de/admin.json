@@ -1207,12 +1207,11 @@
       "importMode": "Import-Modus, Import",
       "usageStats": "Nutzungsstatistik, Statistik, Telemetrie, anonym",
       "about": "Version, Lizenz, Datenquellen, Attribution, Über, Impressum, Dokumentation",
-      "geocoder": "Geocoder, Adresse, Koordinaten, Nominatim, Photon, Ortssuche",
       "federation": "Serververbindungen, Föderation, andere Instanz, Server",
       "push": "Push, Benachrichtigungen, Relay, Push-Relay",
       "users": "Benutzer, Konten, Konto sperren, Zwei-Faktor zurücksetzen, Passwort",
       "invitations": "Einladung, einladen, Einladungslink, Registrierung",
-      "externalServices": "API-Schlüssel, globale Schlüssel, AirLabs, Aviationstack, AeroDataBox, OpenSky, Logostream, Google Places, Immich, Routing, OpenRouteService, Bahn, Offene Daten, Betreiber-Logos, Wikidata, Wikimedia",
+      "externalServices": "API-Schlüssel, globale Schlüssel, AirLabs, Aviationstack, AeroDataBox, OpenSky, Logostream, Google Places, Immich, Routing, OpenRouteService, Bahn, Offene Daten, Betreiber-Logos, Wikidata, Wikimedia, Geocoder, Adresse, Koordinaten, Nominatim, Photon, Ortssuche, KI-Parser, Transitous, db-rest, OpenRailRouting",
       "parsers": "Parser, KI, LLM, Ollama, OpenAI, Claude, Buchungen lesen",
       "templateRepo": "Vorlagen, Vorlagen-Repository, Templates, Repository",
       "smtp": "E-Mail, SMTP, Mailserver, Versand",
@@ -1230,7 +1229,7 @@
     "expertKeywords": {
       "instance": "Heimnetz-Adresse, LAN, Passkey, rpId, Origins, Beta-Schalter",
       "parsers": "Ollama-URL, Modell laden, Modell, Kontingent, Wechselkurs-Quelle",
-      "externalServices": "eigene Schlüssel erlauben, Berechtigungen"
+      "externalServices": "eigene Schlüssel erlauben, Berechtigungen, Photon-Adresse, Nominatim-Adresse, OpenRailRouting-Adresse"
     }
   },
   "operatorLogos": {

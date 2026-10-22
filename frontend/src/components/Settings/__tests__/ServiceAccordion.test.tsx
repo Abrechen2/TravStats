@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { ServiceAccordion, summarise, type ServiceGroup } from "../ServiceAccordion";
 import { keyState } from "../ServicesSection";
@@ -40,7 +40,7 @@ describe("ServiceAccordion", () => {
   });
 
   it("badges each service by who provides it, and none while it is unknown", () => {
-    render(<ServiceAccordion groups={groups} initiallyOpen={["flight"]} />);
+    render(<ServiceAccordion groups={groups} initiallyOpen="flight" />);
     const row = (id: string) => group("flight").querySelector(`[data-service="${id}"]`)!;
     expect(row("aviationstack")).toHaveTextContent("settings:services.badge.admin");
     expect(row("opensky")).toHaveTextContent("settings:services.badge.own");
@@ -50,7 +50,7 @@ describe("ServiceAccordion", () => {
   });
 
   it("says so when an own key overrides the instance's, and only then", () => {
-    render(<ServiceAccordion groups={groups} initiallyOpen={["flight"]} />);
+    render(<ServiceAccordion groups={groups} initiallyOpen="flight" />);
     const notes = group("flight").querySelectorAll("[data-own-overrides]");
     expect(notes).toHaveLength(1);
     expect(notes[0].closest("[data-service]")).toHaveAttribute("data-service", "airlabs");
@@ -58,13 +58,92 @@ describe("ServiceAccordion", () => {
 
   it("opens and closes a group, keeping its cards mounted while closed", () => {
     render(<ServiceAccordion groups={groups} />);
-    const header = within(group("flight")).getByRole("button");
+    const header = within(group("flight")).getAllByRole("button")[0];
     expect(header).toHaveAttribute("aria-expanded", "false");
     // Mounted but hidden: the cards load their own state and report it up.
     expect(screen.getByText("airlabs-card")).not.toBeVisible();
     fireEvent.click(header);
     expect(header).toHaveAttribute("aria-expanded", "true");
+    // The card folds behind its row's action until asked for.
+    expect(screen.getByText("airlabs-card")).not.toBeVisible();
+    fireEvent.click(
+      within(group("flight")).getByRole("button", { name: "settings:services.action.edit" })
+    );
     expect(screen.getByText("airlabs-card")).toBeVisible();
+  });
+
+  // forgejo#321 prototype: one group open at a time per surface.
+  it("keeps one group open at a time", () => {
+    render(<ServiceAccordion groups={groups} initiallyOpen="flight" />);
+    const header = (id: string) => within(group(id)).getAllByRole("button")[0];
+    expect(header("flight")).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(header("cross"));
+    expect(header("cross")).toHaveAttribute("aria-expanded", "true");
+    expect(header("flight")).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(header("cross"));
+    expect(header("cross")).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("says how many services a group holds, and what the badges mean, once", () => {
+    render(<ServiceAccordion groups={groups} />);
+    expect(group("flight").querySelector("[data-service-count]")).toHaveTextContent(
+      "settings:services.count"
+    );
+    expect(document.querySelectorAll("[data-service-legend]")).toHaveLength(1);
+    expect(document.querySelector('[data-service-legend="personal"]')).toHaveTextContent(
+      "settings:services.legend.admin"
+    );
+  });
+
+  it("names the same action for the same badge on every row", () => {
+    render(<ServiceAccordion groups={groups} initiallyOpen="flight" />);
+    const action = (id: string) =>
+      group("flight").querySelector(`[data-service="${id}"] [data-service-action]`);
+    // aviationstack/aerodatabox/opensky have no form here: no action without one.
+    expect(action("aviationstack")).toBeNull();
+    expect(action("airlabs")).toHaveTextContent("settings:services.action.edit");
+    expect(action("aeroapi")).toBeNull();
+  });
+
+  it("calls a row's own action when its settings live elsewhere", () => {
+    const onAction = vi.fn();
+    const withActions: ServiceGroup[] = [
+      {
+        id: "g",
+        label: "G",
+        items: [
+          { id: "a", name: "A", state: "admin", onAction },
+          { id: "o", name: "O", state: "own", onAction },
+          { id: "n", name: "N", state: "none", onAction },
+        ],
+      },
+    ];
+    render(<ServiceAccordion groups={withActions} initiallyOpen="g" />);
+    const label = (id: string) =>
+      document.querySelector(`[data-service="${id}"] [data-service-action]`)?.textContent;
+    expect(label("a")).toBe("settings:services.action.useOwn");
+    expect(label("o")).toBe("settings:services.action.edit");
+    expect(label("n")).toBe("settings:services.action.setUp");
+    fireEvent.click(screen.getByRole("button", { name: "settings:services.action.useOwn" }));
+    expect(onAction).toHaveBeenCalledTimes(1);
+  });
+
+  it("says 'Bearbeiten' for a key the admin set, on the admin surface", () => {
+    render(
+      <ServiceAccordion
+        surface="admin"
+        initiallyOpen="g"
+        groups={[
+          { id: "g", label: "G", items: [{ id: "a", name: "A", state: "admin", onAction() {} }] },
+        ]}
+      />
+    );
+    expect(document.querySelector("[data-service-action]")).toHaveTextContent(
+      "settings:services.action.edit"
+    );
+    expect(document.querySelector('[data-service="a"]')).toHaveTextContent(
+      "settings:services.badge.setUp"
+    );
   });
 
   it("draws no group for a domain without services", () => {

@@ -146,7 +146,6 @@ describe("AdminPage — one page per menu entry, its sections as anchors", () =>
       "importMode",
       "usageStats",
       "about",
-      "geocoder",
       "federation",
       "push",
     ]) {
