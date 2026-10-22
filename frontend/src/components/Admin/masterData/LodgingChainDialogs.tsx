@@ -1,5 +1,6 @@
 import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
 import { useToastStore } from "../../../store/toastStore";
 import Dialog from "../../ui/Dialog";
 import Button from "../../ui/Button";
@@ -156,16 +157,22 @@ function EditDialog({ chain, onClose, onDone }: DialogProps): JSX.Element {
 function MergeDialog({ chain, onClose, onDone }: DialogProps): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
   const { busy, error, run } = useRunner(onDone);
-  const [targets, setTargets] = useState<CatalogueChain[] | null>(null);
+  // The list endpoint answers one page (200), so the target is searched on
+  // the server: a chain past the first page must still be reachable.
+  const [query, setQuery] = useState("");
+  const search = useDebouncedValue(query);
+  const [found, setFound] = useState<{ items: CatalogueChain[]; total: number } | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
-  const [targetId, setTargetId] = useState("");
+  const [target, setTarget] = useState<CatalogueChain | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    setFound(null);
+    setLoadFailed(false);
     adminLodgingChainsApi
-      .list("")
+      .list(search)
       .then((list) => {
-        if (!cancelled) setTargets(list.items.filter((c) => c.id !== chain.id));
+        if (!cancelled) setFound(list);
       })
       .catch(() => {
         if (!cancelled) setLoadFailed(true);
@@ -173,9 +180,12 @@ function MergeDialog({ chain, onClose, onDone }: DialogProps): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [chain.id]);
+  }, [search]);
 
-  const target = targets?.find((c) => String(c.id) === targetId) ?? null;
+  const targets = found?.items.filter((c) => c.id !== chain.id) ?? null;
+  // The chosen target stays offered while another search runs.
+  const options =
+    target && !targets?.some((c) => c.id === target.id) ? [target, ...(targets ?? [])] : targets;
 
   return (
     <Dialog
@@ -200,27 +210,43 @@ function MergeDialog({ chain, onClose, onDone }: DialogProps): JSX.Element {
       }
     >
       <div className="flex flex-col" style={{ gap: 12 }}>
+        <Input
+          type="search"
+          aria-label={t("admin:lodgingChains.mergeSearch")}
+          placeholder={t("admin:lodgingChains.mergeSearch")}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <Field label={t("admin:lodgingChains.mergeTarget")} htmlFor="chain-merge-target">
+          <Select
+            id="chain-merge-target"
+            value={target ? String(target.id) : ""}
+            disabled={!options}
+            onChange={(e) =>
+              setTarget(options?.find((c) => String(c.id) === e.target.value) ?? null)
+            }
+          >
+            <option value="">{t("admin:lodgingChains.mergeChoose")}</option>
+            {(options ?? []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
         {loadFailed ? (
           <p role="alert" className="text-sm" style={{ color: token("bad") }}>
-            {t("admin:lodgingChains.loadError")}
+            {t("admin:lodgingChains.mergeSearchError")}
           </p>
-        ) : (
-          <Field label={t("admin:lodgingChains.mergeTarget")} htmlFor="chain-merge-target">
-            <Select
-              id="chain-merge-target"
-              value={targetId}
-              disabled={!targets}
-              onChange={(e) => setTargetId(e.target.value)}
-            >
-              <option value="">{t("admin:lodgingChains.mergeChoose")}</option>
-              {(targets ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        )}
+        ) : !found ? (
+          <p role="status" className="text-sm" style={{ color: token("muted") }}>
+            {t("admin:lodgingChains.mergeSearching")}
+          </p>
+        ) : found.total > found.items.length ? (
+          <p className="text-sm" style={{ color: token("muted") }}>
+            {t("admin:lodgingChains.mergeMore", { shown: found.items.length, total: found.total })}
+          </p>
+        ) : null}
         {target && (
           <p className="text-sm">
             {t("admin:lodgingChains.mergeExplain", {
