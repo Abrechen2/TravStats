@@ -72,6 +72,11 @@ export const cruiseStatsResponseSchema = z.object({
 
   totalPortCalls: z.number().int(),
   totalCruiseDays: z.number().int(),
+  /**
+   * The account's "Seetage zählen" (forgejo#321). False: `totalCruiseDays`
+   * leaves the sea days out, and a share of sea days in it means nothing.
+   */
+  seaDaysCounted: z.boolean(),
 
   hasBalconyCabin: z.boolean(),
   hasSuiteCabin: z.boolean(),

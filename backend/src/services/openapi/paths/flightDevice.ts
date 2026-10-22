@@ -99,7 +99,9 @@ registry.registerPath({
     "Idempotent per uploadId: a retry answers 200 with the stored recording. A recording " +
     "under another uploadId is refused (409 TRACK_ALREADY_RECORDED) unless `replace: true`. " +
     "The span must overlap the flight's schedule widened by 12 h (422 TRACK_OUTSIDE_FLIGHT). " +
-    "Kept apart from the provider route (`actualRoute`), which lookups overwrite.",
+    "Kept apart from the provider route (`actualRoute`), which lookups overwrite. " +
+    "Refused with 409 FLIGHT_TRACKING_DISABLED while the account's `liveTracking.enabled` " +
+    "(GET /settings) is off; nothing is stored then.",
   tags: ["Flights"],
   request: {
     params: flightParams,
@@ -115,7 +117,9 @@ registry.registerPath({
     403: { description: "Read-only token, or the shared demo account", content: errorContent },
     404: { description: "Flight not found — `code: FLIGHT_NOT_FOUND`", content: errorContent },
     409: {
-      description: "Another recording is stored (TRACK_ALREADY_RECORDED)",
+      description:
+        "Another recording is stored (TRACK_ALREADY_RECORDED), or the account's live " +
+        "tracking is off (FLIGHT_TRACKING_DISABLED)",
       content: errorContent,
     },
     413: { description: "Body too large (TRACK_BODY_TOO_LARGE)", content: errorContent },

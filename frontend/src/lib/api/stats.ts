@@ -259,6 +259,8 @@ export interface CruiseStatsResponse {
    *  between those two needs this denominator or it reads them as revisits. */
   resolvedPortCalls: number;
   totalCruiseDays: number;
+  /** The account's "Seetage zählen" (forgejo#321): false = `totalCruiseDays` leaves them out. */
+  seaDaysCounted?: boolean;
   // Cabin / deck
   hasBalconyCabin: boolean;
   hasSuiteCabin: boolean;

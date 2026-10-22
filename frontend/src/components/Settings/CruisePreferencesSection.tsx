@@ -4,6 +4,7 @@ import type { CruiseSettings } from "../../store/settingsStore";
 import { Switch } from "../ui/Field";
 import { Segmented } from "../ui/Segmented";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
+import { useSuggestionSwitchesStore } from "../../store/suggestionSwitchesStore";
 
 /** A radio value cannot be null; this stands for "no default cabin". */
 const NO_CABIN = "none";
@@ -33,6 +34,10 @@ export default function CruisePreferencesSection({
   onSetCruise,
 }: CruisePreferencesSectionProps): JSX.Element {
   const { t } = useTranslation(["settings", "cruise"]);
+  // A server setting (forgejo#321): the cruise statistics read it, so it
+  // saves at once rather than with the rest of this card.
+  const seaDaysCounted = useSuggestionSwitchesStore((s) => s.cruiseSeaDaysCounted);
+  const setSeaDaysCounted = useSuggestionSwitchesStore((s) => s.setCruiseSeaDaysCounted);
 
   return (
     <SectionCard>
@@ -83,6 +88,13 @@ export default function CruisePreferencesSection({
               }
             />
           }
+        />
+        <Switch
+          id="cruise-count-sea-days"
+          checked={seaDaysCounted}
+          onChange={setSeaDaysCounted}
+          label={t("settings:cruisePreferences.countSeaDays")}
+          sub={t("settings:cruisePreferences.countSeaDaysHint")}
         />
         <Switch
           id="cruise-show-arcs"

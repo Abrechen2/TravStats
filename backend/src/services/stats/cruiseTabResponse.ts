@@ -73,6 +73,8 @@ export function buildCruiseTabResponse(
     // Trip-shape derivations
     totalPortCalls: stats.totalPortCalls,
     totalCruiseDays: stats.totalCruiseDays,
+    // Every row carries the account's one answer; no rows, nothing left out.
+    seaDaysCounted: rows.every((row) => row.input.countSeaDays !== false),
     // Cabin / deck signals
     hasBalconyCabin: stats.hasBalconyCabin,
     hasSuiteCabin: stats.hasSuiteCabin,

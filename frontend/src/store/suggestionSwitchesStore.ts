@@ -19,7 +19,9 @@ import { serializedSetting } from "./serializedSetting";
  *
  * `tripRecording` (forgejo#316) rides along for the same reason the inbox
  * switches live here: it is an account switch `GET /settings` answers, and
- * `settingsStore` has no room for it.
+ * `settingsStore` has no room for it. So do the settings prototype rows of
+ * forgejo#321 — the new-trip colour, whether sea days count, live tracking —
+ * for the same two reasons.
  */
 interface SuggestionSwitchesState {
   trips: boolean;
@@ -30,6 +32,12 @@ interface SuggestionSwitchesState {
   stayLlmPlaceClassification: boolean;
   /** Whether the server stores the app's trip positions (forgejo#316); server default on. */
   tripRecording: boolean;
+  /** The colour of a new trip (forgejo#321); null = automatic, the server default. */
+  tripDefaultColor: string | null;
+  /** Whether sea days count in the cruise day total (forgejo#321); server default on. */
+  cruiseSeaDaysCounted: boolean;
+  /** Whether the server takes the app's flight recording (forgejo#321); server default on. */
+  liveTracking: boolean;
   /** What `GET /settings` said; anything that is not a boolean keeps the default. */
   noteRemote: (remote: unknown) => void;
   setTrips: (enabled: boolean) => void;
@@ -37,6 +45,9 @@ interface SuggestionSwitchesState {
   setStayImmichEvidence: (enabled: boolean) => void;
   setStayLlmPlaceClassification: (enabled: boolean) => void;
   setTripRecording: (enabled: boolean) => void;
+  setTripDefaultColor: (color: string | null) => void;
+  setCruiseSeaDaysCounted: (counted: boolean) => void;
+  setLiveTracking: (enabled: boolean) => void;
 }
 
 const booleanIn = (group: unknown, key: string): boolean | undefined => {
@@ -44,6 +55,12 @@ const booleanIn = (group: unknown, key: string): boolean | undefined => {
   return typeof value === "boolean" ? value : undefined;
 };
 const enabledIn = (group: unknown): boolean | undefined => booleanIn(group, "enabled");
+/** `tripDefaults.color`: a string, or null for automatic; anything else is no answer. */
+const colorIn = (group: unknown): string | null | undefined => {
+  if (group === null || typeof group !== "object" || !("color" in group)) return undefined;
+  const value = (group as { color: unknown }).color;
+  return typeof value === "string" || value === null ? value : undefined;
+};
 
 export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, get) => ({
   trips: true,
@@ -51,13 +68,22 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
   stayImmichEvidence: true,
   stayLlmPlaceClassification: false,
   tripRecording: true,
+  tripDefaultColor: null,
+  cruiseSeaDaysCounted: true,
+  liveTracking: true,
   noteRemote: (remote) => {
     const body = remote as {
       tripSuggestions?: unknown;
       staySuggestions?: unknown;
       tripRecording?: unknown;
+      tripDefaults?: unknown;
+      cruiseSeaDays?: unknown;
+      liveTracking?: unknown;
     } | null;
     const stay = body?.staySuggestions;
+    // `null` is an answer (automatic), not an absence: only `undefined` keeps
+    // the old value, or a previous account's colour would survive a login.
+    const color = colorIn(body?.tripDefaults);
     set({
       trips: enabledIn(body?.tripSuggestions) ?? get().trips,
       stays: enabledIn(stay) ?? get().stays,
@@ -65,6 +91,9 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
       stayLlmPlaceClassification:
         booleanIn(stay, "llmPlaceClassification") ?? get().stayLlmPlaceClassification,
       tripRecording: enabledIn(body?.tripRecording) ?? get().tripRecording,
+      tripDefaultColor: color === undefined ? get().tripDefaultColor : color,
+      cruiseSeaDaysCounted: booleanIn(body?.cruiseSeaDays, "counted") ?? get().cruiseSeaDaysCounted,
+      liveTracking: enabledIn(body?.liveTracking) ?? get().liveTracking,
     });
   },
   setTrips: serializedSetting({
@@ -96,5 +125,23 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
     current: () => get().tripRecording,
     apply: (tripRecording) => set({ tripRecording }),
     what: "trip recording switch",
+  }),
+  setTripDefaultColor: serializedSetting({
+    payload: (color: string | null) => ({ tripDefaults: { color } }),
+    current: () => get().tripDefaultColor,
+    apply: (tripDefaultColor) => set({ tripDefaultColor }),
+    what: "new trip colour",
+  }),
+  setCruiseSeaDaysCounted: serializedSetting({
+    payload: (counted: boolean) => ({ cruiseSeaDays: { counted } }),
+    current: () => get().cruiseSeaDaysCounted,
+    apply: (cruiseSeaDaysCounted) => set({ cruiseSeaDaysCounted }),
+    what: "sea days switch",
+  }),
+  setLiveTracking: serializedSetting({
+    payload: (enabled: boolean) => ({ liveTracking: { enabled } }),
+    current: () => get().liveTracking,
+    apply: (liveTracking) => set({ liveTracking }),
+    what: "live tracking switch",
   }),
 }));

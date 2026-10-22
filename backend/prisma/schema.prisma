@@ -924,6 +924,20 @@ model UserSettings {
   /// TRIP_RECORDING_DISABLED and nothing is stored; what is stored stays.
   tripRecordingEnabled                  Boolean @default(true) @map("trip_recording_enabled")
 
+  /// Account preferences from the settings prototype (forgejo#321), flat
+  /// columns like the switches above and nested by the API
+  /// (`services/settings/accountPrefs.ts`). The colour a new trip gets when
+  /// nothing names one — one of `TRIP_COLORS`; null = rotate through the
+  /// palette, the behaviour before the setting existed.
+  tripDefaultColor          String? @map("trip_default_color")
+  /// Whether sea days count as cruise days in the day total of the cruise
+  /// statistics. Off: the total counts only the days not spent at sea.
+  cruiseCountSeaDays        Boolean @default(true) @map("cruise_count_sea_days")
+  /// Whether the server takes the position the Companion records during a
+  /// flight (forgejo#193). Off: an upload is refused with 409
+  /// FLIGHT_TRACKING_DISABLED and nothing is stored; what is stored stays.
+  flightLiveTrackingEnabled Boolean @default(true) @map("flight_live_tracking_enabled")
+
   /// How much of the settings page this account sees (forgejo#321):
   /// `standard` | `expert`, see `shared/settingsLevel.ts`. New accounts start at
   /// `standard`; migration 20261020170000 put every account that existed before

@@ -4,7 +4,6 @@ import { AuthRequest } from "../middleware/auth";
 import { batchCreationLimiter } from "../middleware/rateLimit";
 import { createFlightSchema } from "../schemas/flight";
 import { withAirportTimezones } from "../services/flightTimezoneDefaults";
-import { TRIP_COLORS } from "../schemas/trip";
 import {
   MIN_BOOKED_TRIP_FLIGHTS,
   tripNameLanguageOf,
@@ -30,6 +29,7 @@ import { buildFlightCreateData } from "../services/flights/flightCreateData";
 import { enrichFlightsForClients } from "../services/flightAirportFacts";
 import { ownedTripIds } from "./flights/createLinks";
 import { propagateWrites } from "../services/sharing/propagate";
+import { newTripColor } from "../services/trip/newTripColor";
 
 const router = Router();
 
@@ -271,8 +271,7 @@ router.post(
         for (const [pnr, groupFlights] of pnrGroups.entries()) {
           if (groupFlights.length < MIN_BOOKED_TRIP_FLIGHTS) continue;
 
-          const count = await tx.trip.count({ where: { userId } });
-          const color = TRIP_COLORS[count % TRIP_COLORS.length];
+          const color = await newTripColor(userId, 0, tx);
 
           const sorted = [...groupFlights].sort(
             (a, b) => (a.departureTime?.getTime() ?? 0) - (b.departureTime?.getTime() ?? 0)

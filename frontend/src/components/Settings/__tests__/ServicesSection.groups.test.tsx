@@ -1,8 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { cleanup, fireEvent, render, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, waitFor, within } from "@testing-library/react";
 
 vi.mock("../../../lib/api", () => ({
-  settingsApi: { getApiKeys: vi.fn().mockResolvedValue({}), testApiKey: vi.fn() },
+  settingsApi: {
+    getApiKeys: vi.fn().mockResolvedValue({}),
+    testApiKey: vi.fn(),
+    getInstanceServices: vi
+      .fn()
+      .mockResolvedValue({ transitous: true, dbRest: false, openRailRouting: false }),
+  },
   adminApi: { testApiKey: vi.fn() },
 }));
 vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => false }));
@@ -73,7 +79,7 @@ describe("ServicesSection — the groups of the prototype", () => {
     }
   });
 
-  it("shows the rail services only while the rail domain is on", () => {
+  it("shows the rail services only while the rail domain is on", async () => {
     renderSection();
     expect(group("rail")).toBeNull();
     cleanup();
@@ -83,14 +89,25 @@ describe("ServicesSection — the groups of the prototype", () => {
       el.getAttribute("data-service")
     );
     expect(ids).toEqual(["transitous", "dbRest", "openRailRouting"]);
+    // The instance's answer arrives after the first render (forgejo#321).
+    await waitFor(() =>
+      expect(group("rail")!.querySelector('[data-service="transitous"]')).toHaveTextContent(
+        "settings:services.badge.admin"
+      )
+    );
   });
 
-  it("points an admin to administration for the instance's services", () => {
+  it("points an admin to administration for the instance's services", async () => {
     domains.on = ["flight", "rail"];
     renderSection(true);
     expect(group("rail")!.querySelector("a")).toHaveAttribute(
       "href",
       "/admin/externalServices?section=externalServices&match=Transitous"
+    );
+    await waitFor(() =>
+      expect(group("rail")!.querySelector('[data-service="dbRest"]')).toHaveTextContent(
+        "settings:services.badge.none"
+      )
     );
   });
 

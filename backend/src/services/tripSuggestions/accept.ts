@@ -1,7 +1,7 @@
 import { prisma, type DbTransaction } from "../../db";
 import { propagateWrites } from "../sharing/propagate";
 import { AppError } from "../../middleware/errorHandler";
-import { TRIP_COLORS } from "../../schemas/trip";
+import { newTripColor } from "../trip/newTripColor";
 import { statusFromOwnDates } from "../trips/ownDatesStatus";
 import { visitPromotesPlace } from "../../shared/placeCounting";
 import { recheckAchievements } from "../../utils/achievements";
@@ -147,13 +147,13 @@ async function acceptTrip(
 
   let tripId: string;
   if (proposal.kind === "new_trip") {
-    const tripCount = await tx.trip.count({ where: { userId } });
+    const color = await newTripColor(userId, 0, tx);
     const name = edits.name?.trim() || proposal.destination || startDay;
     const trip = await tx.trip.create({
       data: {
         userId,
         name,
-        color: TRIP_COLORS[tripCount % TRIP_COLORS.length],
+        color,
         startDate: dayDate(startDay),
         endDate: dayDate(endDay),
         ...typedTripDays({ startDate: dayDate(startDay), endDate: dayDate(endDay) }),

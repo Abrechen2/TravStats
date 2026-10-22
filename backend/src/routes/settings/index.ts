@@ -12,6 +12,7 @@ import tokensRouter from "./tokens";
 import immichRouter from "./immich";
 import dawarichRouter from "./dawarich";
 import webPrefsRouter from "./webPrefs";
+import instanceServicesRouter from "./instanceServices";
 
 const router = Router();
 
@@ -67,5 +68,6 @@ router.use("/tokens", tokensRouter);
 router.use("/immich", immichRouter);
 router.use("/dawarich", dawarichRouter);
 router.use("/web-prefs", webPrefsRouter);
+router.use("/instance-services", instanceServicesRouter);
 
 export default router;

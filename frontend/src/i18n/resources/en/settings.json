@@ -25,7 +25,9 @@
     "defaultCabin": "Default cabin category",
     "defaultCabinNone": "– no preset –",
     "showArcs": "Show cruise routes on the map",
-    "showArcsHint": "Bezier lines between departure and arrival ports in the dashboard map."
+    "showArcsHint": "Bezier lines between departure and arrival ports in the dashboard map.",
+    "countSeaDays": "Count sea days",
+    "countSeaDaysHint": "Sea days count towards the travel days in the cruise statistics. Off: the travel days leave them out; the number of sea days itself stays visible."
   },
   "lodgingPreferences": {
     "title": "Lodging preferences",
@@ -414,7 +416,11 @@
     "costTrackingDesc": "Show tax and fee fields on flight forms and enable business cost statistics. Price and currency are always available.",
     "trackAircraft": "Track tail numbers",
     "trackAircraftDesc": "Persist aircraft registration + Mode-S from flight lookups. Off = aggregates only, no audit trail of specific airframes.",
-    "description": "Show or hide features to fit the interface to how you work. A feature you switch off can be switched back on at any time — no data is lost."
+    "description": "Show or hide features to fit the interface to how you work. A feature you switch off can be switched back on at any time — no data is lost.",
+    "liveTracking": "Live tracking",
+    "liveTrackingDesc": "The TravStats app records your position during the flight and sends the flight path here. Off: the server no longer accepts a recording; stored flight paths stay.",
+    "seatStatistics": "Seat statistics",
+    "seatStatisticsDesc": "The seats section of the flight statistics. Off hides it; your seats stay stored."
   },
   "autoSave": {
     "idle": "Changes are saved automatically",
@@ -808,6 +814,23 @@
     "autoCreateTrips": {
       "label": "Create trips automatically",
       "description": "Flights sharing a booking reference are grouped into a trip with a booking during import. When off, the booking reference is kept – you can still group them later via “Detect trips”."
+    },
+    "defaultColor": {
+      "label": "Colour for new trips",
+      "description": "The colour every new trip starts with — imports and suggestions included. “Automatic” rotates through the palette as before.",
+      "automatic": "Automatic",
+      "colors": {
+        "818cf8": "Indigo",
+        "38bdf8": "Sky blue",
+        "34d399": "Emerald",
+        "fb923c": "Orange",
+        "f472b6": "Pink",
+        "a78bfa": "Violet",
+        "22d3ee": "Cyan",
+        "86efac": "Light green",
+        "fbbf24": "Amber",
+        "f87171": "Red"
+      }
     }
   },
   "calendarFeed": {
@@ -1014,7 +1037,7 @@
       "display": "Language, German, English, design, dark, light, theme, appearance",
       "units": "Kilometres, kilometers, miles, unit, currency, base currency, date format, time, 24 hours, time zone",
       "countryCounting": "Countries, count a country, layover, transit, country counting",
-      "trips": "trip, trips, automatic, booking reference, group, create trip, detect trips",
+      "trips": "trip, trips, automatic, booking reference, group, create trip, detect trips, trip colour, colour",
       "loyalty": "Loyalty programme, membership, membership number, status, tier, hotel programme, frequent flyer, miles, cruise line, points, rewards",
       "backup": "Backup, export, restore, download, Excel, spreadsheet, JSON, data",
       "import": "Import, CSV, Flightradar24, logbook, upload",
@@ -1022,10 +1045,10 @@
       "externalServices": "AirLabs, Aviationstack, AeroDataBox, OpenSky, OpenAI, Claude, AI, Immich, photos, Dawarich, location history, routing, satnav, road route, OpenRouteService, GraphHopper, OSRM, Strava, AI parser, rail, Transitous, db-rest, OpenRailRouting, maps, place search, Photon, Nominatim",
       "homeAirport": "home, residence, home airport, airport, move",
       "defaults": "Default, preset, booking class, seat, airline, carrier",
-      "features": "Features, parser, boarding pass, email parser, boarding pass scan",
+      "features": "Features, parser, boarding pass, email parser, boarding pass scan, live tracking, position, flight path",
       "enrichment": "Enrichment, fill in flight data, delay, historical data, aircraft",
       "autoupdate": "Automatic updates, flight status, refresh, gate, departure time",
-      "cruisePreferences": "Cruise, cruise line, ship, cabin",
+      "cruisePreferences": "Cruise, cruise line, ship, cabin, sea days, travel days",
       "domains": "Domains, modules, flights, cruises, lodging, places, roadtrips, rail, bus, ferry, rental car, switch on and off, colour, colours, map colour, line colour",
       "suggestions": "Suggestions, inbox, trip suggestions, suggest stays",
       "sharing": "Sharing, companions, consent, shared trip, travel companion",
@@ -1039,7 +1062,8 @@
       "suggestions": "Immich evidence, photos as evidence, place type, AI classification",
       "autoupdate": "Check interval, interval, approval, expiry, only during flight",
       "backup": "Instance backup, last backup",
-      "externalServices": "own key, own API key, API key, quota, AirLabs key, Aviationstack key, AeroDataBox key, AeroAPI key, OpenSky credentials, GraphHopper key, OpenRouteService key"
+      "externalServices": "own key, own API key, API key, quota, AirLabs key, Aviationstack key, AeroDataBox key, AeroAPI key, OpenSky credentials, GraphHopper key, OpenRouteService key",
+      "features": "seat statistics, seats, window seat, aisle seat"
     }
   },
   "railProviders": {
@@ -1182,7 +1206,8 @@
     },
     "adminPointer": "Set up in Administration →",
     "instanceOnly": "Provided by the instance for everyone; only the admin can set it up.",
-    "parserPointer": "Set up under Import & parser →"
+    "parserPointer": "Set up under Import & parser →",
+    "instanceStatusFailed": "Whether the instance runs these services could not be checked just now."
   },
   "frame": {
     "surfaces": "Settings areas",

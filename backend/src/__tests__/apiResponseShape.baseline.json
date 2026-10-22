@@ -90,6 +90,7 @@
     "settings/homeAirports.ts",
     "settings/immich.ts",
     "settings/index.ts",
+    "settings/instanceServices.ts",
     "settings/notifications.ts",
     "settings/parser.ts",
     "settings/profile.ts",

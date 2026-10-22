@@ -25,7 +25,9 @@
     "defaultCabin": "Standard-Kabinenkategorie",
     "defaultCabinNone": "– keine Vorauswahl –",
     "showArcs": "Kreuzfahrt-Routen auf der Karte anzeigen",
-    "showArcsHint": "Bezier-Linien zwischen Start- und Zielhafen im Dashboard-Map."
+    "showArcsHint": "Bezier-Linien zwischen Start- und Zielhafen im Dashboard-Map.",
+    "countSeaDays": "Seetage zählen",
+    "countSeaDaysHint": "Seetage zählen in der Kreuzfahrt-Statistik bei den Reisetagen mit. Aus: Die Reisetage zählen ohne Seetage; die Zahl der Seetage selbst bleibt sichtbar."
   },
   "lodgingPreferences": {
     "title": "Unterkunfts-Präferenzen",
@@ -414,7 +416,11 @@
     "costTrackingDesc": "Steuer- und Gebührenfelder in Flugformularen anzeigen und Business-Statistiken auswerten. Preis und Währung sind immer verfügbar.",
     "trackAircraft": "Heckkennungen erfassen",
     "trackAircraftDesc": "Speichert Tail-Nummer und Mode-S aus dem Flug-Lookup. Aus = Nur Aggregate, kein Audit-Trail einzelner Flugzeuge.",
-    "description": "Funktionen ein- und ausblenden, um die Oberfläche an deine Nutzung anzupassen. Abgeschaltete Funktionen lassen sich jederzeit wieder einschalten — es gehen keine Daten verloren."
+    "description": "Funktionen ein- und ausblenden, um die Oberfläche an deine Nutzung anzupassen. Abgeschaltete Funktionen lassen sich jederzeit wieder einschalten — es gehen keine Daten verloren.",
+    "liveTracking": "Live-Verfolgung",
+    "liveTrackingDesc": "Die TravStats-App zeichnet deine Position während des Flugs auf und schickt die Flugspur hierher. Aus: Der Server nimmt keine Aufzeichnung mehr an; gespeicherte Flugspuren bleiben.",
+    "seatStatistics": "Sitzplatz-Statistik",
+    "seatStatisticsDesc": "Der Abschnitt zu Sitzplätzen in der Flugstatistik. Aus blendet ihn aus; deine Sitzplätze bleiben gespeichert."
   },
   "autoSave": {
     "idle": "Änderungen werden automatisch gespeichert",
@@ -808,6 +814,23 @@
     "autoCreateTrips": {
       "label": "Reisen automatisch anlegen",
       "description": "Flüge mit derselben Buchungsnummer werden beim Import automatisch zu einer Reise mit Buchung gruppiert. Ausgeschaltet bleibt die Buchungsnummer erhalten – über „Reisen erkennen“ lässt sich die Gruppierung später jederzeit nachholen."
+    },
+    "defaultColor": {
+      "label": "Reisefarbe für neue Reisen",
+      "description": "Die Farbe, mit der jede neue Reise beginnt — auch aus Importen und Vorschlägen. „Automatisch“ wechselt wie bisher durch die Palette.",
+      "automatic": "Automatisch",
+      "colors": {
+        "818cf8": "Indigo",
+        "38bdf8": "Himmelblau",
+        "34d399": "Smaragd",
+        "fb923c": "Orange",
+        "f472b6": "Pink",
+        "a78bfa": "Violett",
+        "22d3ee": "Cyan",
+        "86efac": "Hellgrün",
+        "fbbf24": "Bernstein",
+        "f87171": "Rot"
+      }
     }
   },
   "calendarFeed": {
@@ -1014,7 +1037,7 @@
       "display": "Sprache, Deutsch, Englisch, Design, Dunkel, Hell, Theme, Darstellung",
       "units": "Kilometer, Meilen, Einheit, Währung, Basiswährung, Datumsformat, Uhrzeit, 24 Stunden, Zeitzone",
       "countryCounting": "Länder, Land zählen, Umstieg, Transit, Länderzählung",
-      "trips": "Reise, Reisen, automatisch, Buchungsnummer, Gruppieren, Reise anlegen, Reisen erkennen",
+      "trips": "Reise, Reisen, automatisch, Buchungsnummer, Gruppieren, Reise anlegen, Reisen erkennen, Reisefarbe, Farbe",
       "loyalty": "Bonusprogramm, Mitgliedschaft, Mitgliedsnummer, Status, Hotelprogramm, Vielflieger, Meilen, Miles & More, Reederei, Punkte, Treueprogramm",
       "backup": "Backup, Sicherung, Export, Exportieren, Wiederherstellen, Download, Excel, Tabelle, JSON, Daten",
       "import": "Import, Importieren, CSV, Flightradar24, Logbuch, Hochladen",
@@ -1022,10 +1045,10 @@
       "externalServices": "AirLabs, Aviationstack, AeroDataBox, OpenSky, OpenAI, Claude, KI, Immich, Fotos, Dawarich, Standortverlauf, Routing, Navi, Straßenroute, OpenRouteService, GraphHopper, OSRM, Strava, KI-Parser, Bahn, Transitous, db-rest, OpenRailRouting, Karten, Ortssuche, Photon, Nominatim",
       "homeAirport": "Zuhause, Wohnort, Heimatflughafen, Flughafen, Umzug",
       "defaults": "Standard, Vorgabe, Buchungsklasse, Sitzplatz, Fluggesellschaft, Airline",
-      "features": "Funktionen, Parser, Bordkarte, E-Mail-Parser, Bordkarten-Scan",
+      "features": "Funktionen, Parser, Bordkarte, E-Mail-Parser, Bordkarten-Scan, Live-Verfolgung, Live-Tracking, Position, Flugspur",
       "enrichment": "Anreicherung, Flugdaten nachtragen, Verspätung, historische Daten, Flugzeug",
       "autoupdate": "Automatische Updates, Flugstatus, Aktualisierung, Gate, Abflugzeit",
-      "cruisePreferences": "Kreuzfahrt, Reederei, Schiff, Kabine",
+      "cruisePreferences": "Kreuzfahrt, Reederei, Schiff, Kabine, Seetage, Reisetage",
       "domains": "Bereiche, Module, Flüge, Kreuzfahrten, Unterkünfte, Orte, Roadtrips, Bahn, Bus, Fähre, Mietwagen, ein- und ausschalten, Farbe, Farben, Kartenfarbe, Linienfarbe",
       "suggestions": "Vorschläge, Posteingang, Reisevorschläge, Aufenthalte vorschlagen",
       "sharing": "Teilen, Mitreisende, Einwilligung, geteilte Reise, Begleiter",
@@ -1039,7 +1062,8 @@
       "suggestions": "Immich-Belege, Fotos als Beleg, Ortstyp, KI-Klassifizierung",
       "autoupdate": "Abfrageintervall, Intervall, Freigabe, Ablauf, nur während des Flugs",
       "backup": "Instanz-Backup, letzte Sicherung",
-      "externalServices": "eigener Schlüssel, eigener API-Schlüssel, API-Schlüssel, Kontingent, Quote, AirLabs-Schlüssel, Aviationstack-Schlüssel, AeroDataBox-Schlüssel, AeroAPI-Schlüssel, OpenSky-Zugang, GraphHopper-Schlüssel, OpenRouteService-Schlüssel"
+      "externalServices": "eigener Schlüssel, eigener API-Schlüssel, API-Schlüssel, Kontingent, Quote, AirLabs-Schlüssel, Aviationstack-Schlüssel, AeroDataBox-Schlüssel, AeroAPI-Schlüssel, OpenSky-Zugang, GraphHopper-Schlüssel, OpenRouteService-Schlüssel",
+      "features": "Sitzplatz-Statistik, Sitzplätze, Fensterplatz, Gangplatz"
     }
   },
   "railProviders": {
@@ -1182,7 +1206,8 @@
     },
     "adminPointer": "In der Administration einrichten →",
     "instanceOnly": "Stellt die Instanz für alle bereit; einrichten kann das nur der Admin.",
-    "parserPointer": "Eingerichtet unter Import & Parser →"
+    "parserPointer": "Eingerichtet unter Import & Parser →",
+    "instanceStatusFailed": "Ob die Instanz diese Dienste betreibt, ließ sich gerade nicht abfragen."
   },
   "frame": {
     "surfaces": "Bereiche der Einstellungen",
