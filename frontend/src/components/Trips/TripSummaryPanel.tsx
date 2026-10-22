@@ -134,7 +134,7 @@ export function TripSummaryPanel({
 
     return (
       <div
-        className="rounded-xl p-4 flex items-center gap-3"
+        className="rounded-xl p-4 flex flex-wrap items-center gap-3"
         style={{
           background: "linear-gradient(135deg, rgba(240,169,71,0.06), rgba(74,166,176,0.04))",
           border: "1px dashed var(--color-border)",
@@ -143,7 +143,8 @@ export function TripSummaryPanel({
         <div className="text-2xl shrink-0" aria-hidden>
           ✨
         </div>
-        <div className="flex-1 min-w-0">
+        {/* Below 12rem of text the button wraps under it instead (beta.23 UAT, iPad). */}
+        <div className="flex-1 min-w-48">
           <div className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
             {t("trips:summary.title")}
           </div>
