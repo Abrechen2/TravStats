@@ -6,12 +6,41 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-**Before upgrading to 2.7.0-rc.19:** take a backup. 21 new migrations run on first start, and stored straight ferry crossings are re-routed once in the background.
+**Before upgrading to 2.7.0-rc.20:** take a backup. 4 new migrations run on first start. Coming from 2.7.0-rc.18: 25 migrations, and stored straight ferry crossings are re-routed once in the background.
 
 - Full data export includes saved TravPlan content and proposals; daily quota counters are explicitly excluded.
 
 ### Added
 
+- **Rail is out of beta.** It shows whenever an account has the rail domain
+  switched on, independent of the instance's beta switch.
+- **Deutsche Bahn share links.** A bookmarklet (Settings → Data → Import →
+  Rail) takes a connection shared from bahn.de or DB Navigator
+  (`bahn.de/buchung/start?vbid=…`) into the rail review dialog. bahn.de is
+  asked from the browser on bahn.de itself, and the connection reaches
+  TravStats in the address fragment rather than in a request to bahn.de's
+  or anyone else's server; no ride is saved before review.
+- **Settings closer to the agreed prototype**: tabs, breadcrumb, domain
+  colour dots, expert notes, search that switches to the expert level when a
+  hit lives there, one-open-at-a-time service accordions, larger switches for
+  touch, and a page for a switched-off domain that says how to switch it on.
+  Admin geocoder settings moved to External services → Maps & place search.
+- **New account settings**: a default colour for new trips (automatic colours
+  now rotate the same way however a trip is created), whether sea days count
+  as cruise days, a "Live-Verfolgung" switch for the Companion's in-flight
+  recording, and seat statistics on or off.
+- **WebDAV sync per account** (expert): the account's export goes to the
+  user's own WebDAV share (e.g. Nextcloud) daily, weekly or on "sync now",
+  gzipped, with a chosen number of kept versions; clean-up only ever deletes
+  exports this account uploaded. The last result is shown with its reason;
+  a run that uploaded but could not clean up says "partial". Ordinary
+  accounts may use public https servers only; administrators may also use a
+  share on their own network.
+- **Admin → Hotel chains** (expert): search, create, rename, edit loyalty
+  programme name and brand colour, merge (every link moves along), and delete
+  only when nothing hangs on the chain; a deleted chain does not come back
+  with the next seed.
+- Normal accounts can see whether keyless instance services are switched on.
 - **Map cards for every ground domain.** Rail, bus, ferry and rental routes
   open a card with their own statistics — first and last journey, average
   duration with fastest and slowest, average delay, total distance with what
@@ -89,6 +118,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Fixed
 
+- Bus lines are drawn on the globe.
+- A Wikimedia Commons photo on a map card carries its author and licence
+  where Commons provides them; a non-free local photo is not shown.
+- "Last here" handles date-only rides, and no longer names an older visit as
+  the latest when a newer arrival's date is unknown.
+- Close and toggle buttons on iPad map cards are 44 px; the AI trip-summary
+  offer wraps on narrow screens.
+- Deleting an account also deletes its pending sync changes.
 - **A global API key is no longer shown to every user.** The key-status
   answer carried stored values; it now carries only whether a key is set. A
   key the instance cannot decrypt no longer counts as "active for everyone".
