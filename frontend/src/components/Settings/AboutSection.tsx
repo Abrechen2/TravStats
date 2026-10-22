@@ -5,6 +5,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
 import Toggletip from "../ui/Toggletip";
+import { Abrechen2Credit } from "../Brand/Abrechen2Credit";
 
 const REPO_URL = "https://github.com/Abrechen2/TravStats";
 const DONATE_URL = "https://www.paypal.com/donate?hosted_button_id=GLXYTD3FV9Y78";
@@ -192,6 +193,9 @@ export default function AboutSection(): JSX.Element {
               </a>
             </li>
           </ul>
+        </div>
+        <div className="flex">
+          <Abrechen2Credit />
         </div>
       </SettingRows>
     </SectionCard>

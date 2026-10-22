@@ -7,7 +7,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
 import { todayZoneNow } from "../../hooks/useTodayZone";
 
-const PRIVACY_URL = "https://travstats.de/datenschutz";
+const PRIVACY_URL = "https://www.abrechen2.de/travstats/datenschutz/";
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleString(appLocale(), { timeZone: todayZoneNow() });

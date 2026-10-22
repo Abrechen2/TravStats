@@ -92,8 +92,8 @@
     },
     "v230": {
       "stats": {
-        "title": "Anonymous usage statistics",
-        "body": "TravStats can now optionally send anonymous usage data. It is off by default, and you can turn it back off at any time."
+        "title": "Minimal usage statistics",
+        "body": "TravStats can now optionally send minimal, pseudonymous usage data. It is off by default, and you can turn it back off at any time."
       },
       "whatsNew": {
         "title": "This dialog",

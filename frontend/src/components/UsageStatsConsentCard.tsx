@@ -3,6 +3,7 @@ import { usageStatsApi } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
 import { useToastStore } from "../store/toastStore";
+import UsageStatsLegalNote from "./UsageStatsLegalNote";
 
 const DOCS_URL = "https://travstats.de/docs/usage-statistics/";
 
@@ -16,7 +17,7 @@ interface UsageStatsConsentCardProps {
   /**
    * Off when the surrounding dialog already carries the same words as its
    * accessible name — `UsageStatsConsentDialog` since 2026-09-20. Two headings
-   * reading "Anonyme Nutzungsstatistik" one under the other is not a heading
+   * reading "Datensparsame Nutzungsstatistik" one under the other is not a heading
    * level, it is an echo.
    */
   showHeading?: boolean;
@@ -80,6 +81,7 @@ export default function UsageStatsConsentCard({
       >
         {t("usageStats:consent.whatIsSent")}
       </a>
+      <UsageStatsLegalNote />
 
       <div className="flex gap-3">
         <button

@@ -104,4 +104,12 @@ describe("UsageStatsConsentCard", () => {
     expect(mocks.setConsent).not.toHaveBeenCalled();
     expect(onDecided).toHaveBeenCalledWith("granted");
   });
+
+  it("links the privacy policy and names the controller next to the field list", () => {
+    render(<UsageStatsConsentCard />);
+    const link = screen.getByRole("link", { name: "usageStats:legal.privacyLink" });
+    expect(link).toHaveAttribute("href", "usageStats:legal.privacyUrl");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(screen.getByText("usageStats:legal.controller")).toBeInTheDocument();
+  });
 });
