@@ -1,7 +1,7 @@
 import type { TimeValue } from "../shared/time";
 
 /** `companion` from the phone (forgejo#193); the file format for an upload (forgejo#312). */
-export type FlightTrackSource = "companion" | "gpx" | "kml" | "tcx" | "fit";
+export type FlightTrackSource = "companion" | "gpx" | "kml" | "tcx" | "fit" | "csv";
 
 /**
  * A recording of a flight, as `GET /flights/:id/track` serves it — the

@@ -11,18 +11,29 @@ import { useToastStore } from "../../store/toastStore";
  * The flight track upload's refusals (backend `routes/flights/track.ts`,
  * forgejo#312), each with its own DE/EN sentence — never the server's prose.
  * Flight-specific rather than the tour's `TRACK_ERROR_KEYS`: those name the
- * tour and leave KML out of the formats.
+ * tour and leave the flight trackers' formats (KML, KMZ, Flightradar24's CSV)
+ * out. One sentence per reason a file gives no track, so an export of only
+ * the two airports is not reported as a broken file.
  */
 export const FLIGHT_TRACK_ERROR_KEYS: Readonly<Record<string, string>> = {
   TRACK_FILE_MISSING: "flights:track.errors.fileMissing",
   TRACK_FILE_TOO_LARGE: "flights:track.errors.fileTooLarge",
+  TRACK_FILE_UNSUPPORTED: "flights:track.errors.fileUnsupported",
   TRACK_FILE_UNREADABLE: "flights:track.errors.fileUnreadable",
+  TRACK_KML_INVALID: "flights:track.errors.kmlInvalid",
+  TRACK_KML_UNPAIRED: "flights:track.errors.kmlUnpaired",
+  TRACK_KML_NO_TRACK: "flights:track.errors.kmlNoTrack",
+  TRACK_KMZ_DAMAGED: "flights:track.errors.kmzDamaged",
+  TRACK_KMZ_NO_KML: "flights:track.errors.kmzNoKml",
+  TRACK_KMZ_TOO_LARGE: "flights:track.errors.kmzTooLarge",
+  TRACK_CSV_COLUMNS: "flights:track.errors.csvColumns",
+  TRACK_CSV_NO_POSITIONS: "flights:track.errors.csvNoPositions",
   TRACK_NO_TIMESTAMPS: "flights:track.errors.noTimestamps",
   TRACK_OUTSIDE_FLIGHT: "flights:track.errors.outsideFlight",
   TRACK_ALREADY_RECORDED: "flights:track.errors.alreadyRecorded",
 };
 
-const ACCEPTED_FILES = ".gpx,.kml,.tcx,.fit";
+const ACCEPTED_FILES = ".gpx,.kml,.kmz,.tcx,.fit,.csv";
 
 const CONTROL =
   "rounded-sm border border-(--color-border) px-3 py-1.5 text-xs hover:bg-(--bg-surface) disabled:opacity-40";
