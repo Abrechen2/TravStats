@@ -88,10 +88,15 @@ export const ADMIN_SECTION_LABEL_KEY: Record<AdminSectionId, string> = {
   portsMasterData: "admin:pages.portsMasterData",
 };
 
-const section = (id: AdminSectionId, level: SettingsLevel = "standard"): AdminSectionDef => ({
+const section = (
+  id: AdminSectionId,
+  level: SettingsLevel = "standard",
+  settings?: number
+): AdminSectionDef => ({
   id,
   labelKey: ADMIN_SECTION_LABEL_KEY[id],
   level,
+  ...(settings === undefined ? {} : { settings }),
 });
 
 /** A page with one section of its own name. */
@@ -119,9 +124,9 @@ export const ADMIN_PAGES: readonly AdminPageDef[] = [
       section("importMode"),
       section("usageStats"),
       section("about"),
-      section("geocoder", "expert"),
-      section("federation", "expert"),
-      section("push", "expert"),
+      section("geocoder", "expert", 2),
+      section("federation", "expert", 3),
+      section("push", "expert", 1),
     ],
   },
   single("users", "user"),
@@ -131,7 +136,7 @@ export const ADMIN_PAGES: readonly AdminPageDef[] = [
     id: "parsers",
     labelKey: "admin:pages.parsers",
     icon: "sparkles",
-    sections: [section("parsers"), section("templateRepo", "expert")],
+    sections: [section("parsers"), section("templateRepo", "expert", 1)],
   },
   single("smtp", "mail"),
   {

@@ -251,6 +251,7 @@ export default function ParserSettings({
           several "chosen" providers. */}
       {expert && (
         <AdminSubBlock
+          expert
           title={t("admin:parserSettings.ollama.title")}
           aside={
             ollamaTestState.status !== "idle" && (
@@ -424,7 +425,7 @@ export default function ParserSettings({
 
       {/* User API Key Permissions */}
       {expert && (
-        <AdminSubBlock title={t("admin:parserSettings.userPermissions.title")}>
+        <AdminSubBlock expert title={t("admin:parserSettings.userPermissions.title")}>
           <div className="flex items-center gap-3">
             <input
               type="checkbox"
@@ -446,7 +447,7 @@ export default function ParserSettings({
           the same kind of decision as the Ollama URL above, which is why it
           sits here rather than in a user's own settings. */}
       {expert && (
-        <AdminSubBlock title={t("admin:fxCdn.title")}>
+        <AdminSubBlock expert title={t("admin:fxCdn.title")}>
           <div className="flex items-center gap-3">
             <input
               type="checkbox"

@@ -1,7 +1,17 @@
-import { useCallback, useState, type JSX, type ReactNode } from "react";
-import { HeadingAboveContext, SectionCard, SectionTitle } from "../SettingsShared";
+import { useContext, useEffect, type JSX, type ReactNode } from "react";
+import {
+  ExpertSectionContext,
+  HeadingAboveContext,
+  SectionCard,
+  SectionTitle,
+} from "../SettingsShared";
 import { DeepLinkedExpertNote, ExpertNote, RevealedRowsNote } from "./ExpertNote";
-import { HiddenRowsContext, RevealExpertRowsContext } from "./useExpertRows";
+import {
+  HiddenRowsContext,
+  PageHiddenRowsContext,
+  RevealExpertRowsContext,
+  useHiddenRowsCollector,
+} from "./useExpertRows";
 
 interface SectionFrameProps {
   /** The DOM id anchors and `?section=` links target, e.g. `settings-units`. */
@@ -24,6 +34,10 @@ interface SectionFrameProps {
   headingAbove?: string | null;
   /** A link named this section's expert rows: show them, and say why. */
   revealExpertRows?: boolean;
+  /** The section is expert-only: its heading carries the blue "Experte" pill. */
+  expert?: boolean;
+  /** A search hit landed here: the section is marked for a moment. */
+  highlighted?: boolean;
   children: ReactNode;
 }
 
@@ -45,22 +59,33 @@ export function SectionFrame({
   deepLinkedExpert = false,
   headingAbove = null,
   revealExpertRows = false,
+  expert = false,
+  highlighted = false,
   children,
 }: SectionFrameProps): JSX.Element {
-  const [hiddenByKey, setHiddenByKey] = useState<Record<string, number>>({});
-  const report = useCallback((key: string, hidden: number) => {
-    setHiddenByKey((prev) => (prev[key] === hidden ? prev : { ...prev, [key]: hidden }));
-  }, []);
-  const hidden = Object.values(hiddenByKey).reduce((sum, n) => sum + n, 0);
+  const [hidden, report] = useHiddenRowsCollector();
+  // Passed up to the page, whose top note counts every hidden setting on it.
+  const reportToPage = useContext(PageHiddenRowsContext);
+  useEffect(() => {
+    if (!reportToPage) return;
+    reportToPage(anchorId, hidden);
+    return () => reportToPage(anchorId, 0);
+  }, [reportToPage, anchorId, hidden]);
 
   return (
     <section
       id={anchorId}
       aria-label={label}
+      data-highlighted={highlighted ? "true" : undefined}
       className="flex flex-col"
       style={{
         gap: "var(--ts-space-sm)",
         scrollMarginTop: "calc(var(--ts-size-web-header) + 16px)",
+        borderRadius: "var(--ts-radius-card)",
+        // The search's landing mark: an outline that fades, never a layout shift.
+        outline: highlighted ? "2px solid var(--ts-accent)" : "2px solid transparent",
+        outlineOffset: 6,
+        transition: "outline-color 600ms var(--ts-ease-standard)",
       }}
     >
       {deepLinkedExpert && <DeepLinkedExpertNote />}
@@ -68,14 +93,16 @@ export function SectionFrame({
       <RevealExpertRowsContext.Provider value={revealExpertRows}>
         <HiddenRowsContext.Provider value={report}>
           <HeadingAboveContext.Provider value={headingAbove}>
-            {frame === "card" ? (
-              <SectionCard>
-                <SectionTitle title={label} />
-                {children}
-              </SectionCard>
-            ) : (
-              children
-            )}
+            <ExpertSectionContext.Provider value={expert}>
+              {frame === "card" ? (
+                <SectionCard>
+                  <SectionTitle title={label} />
+                  {children}
+                </SectionCard>
+              ) : (
+                children
+              )}
+            </ExpertSectionContext.Provider>
           </HeadingAboveContext.Provider>
         </HiddenRowsContext.Provider>
       </RevealExpertRowsContext.Provider>

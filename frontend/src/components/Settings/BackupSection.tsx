@@ -52,6 +52,7 @@ export default function BackupSection({
       <SettingRows>
         {expert && (
           <SettingRow
+            expert
             title={t("settings:backup.lastInstanceBackup")}
             sub={
               backupStatus?.running ? (

@@ -34,8 +34,12 @@ import { resolveAdminLink } from "./Settings/settingsLinks";
 import { pageLevel, sectionsOf } from "./Settings/surface";
 import { SettingsLayout } from "../components/Settings/frame/SettingsLayout";
 import { SectionFrame } from "../components/Settings/frame/SectionFrame";
-import { ExpertNote, ExpertPageNotice } from "../components/Settings/frame/ExpertNote";
+import { ExpertPageNotice, PageExpertNote } from "../components/Settings/frame/ExpertNote";
 import { VersionLine } from "../components/Settings/frame/VersionLine";
+import {
+  PageHiddenRowsContext,
+  useHiddenRowsCollector,
+} from "../components/Settings/frame/useExpertRows";
 import { DomainOffNotice } from "../components/Settings/frame/DomainOffNotice";
 import type { SettingsMenuGroup } from "../components/Settings/frame/SettingsMenu";
 import { SettingsSearch } from "./Settings/SettingsSearch";
@@ -397,13 +401,21 @@ export default function AdminPage(): JSX.Element {
             isAdmin: true,
             deepLinked: namedSection,
           })
-        : { shown: [] as ActiveSection[], hiddenExpert: 0, deepLinkedExpert: null },
+        : {
+            shown: [] as ActiveSection[],
+            hiddenExpert: 0,
+            hiddenExpertSettings: 0,
+            deepLinkedExpert: null,
+          },
     [current, domainOff, level, isFeatureVisible, namedSection]
   );
 
   // Which section is on screen, for the chips to mark — the scroll-spy
   // Settings uses (see useSectionInView), reused rather than duplicated.
   const inView = useSectionInView(visible.shown, "admin");
+  // Every setting the standard level keeps off this page, for the note at its top.
+  const [hiddenRows, reportHiddenRows] = useHiddenRowsCollector();
+  const hiddenSettings = visible.hiddenExpertSettings + hiddenRows;
 
   // Scrolls a `?section=` deep link into view and keeps correcting that
   // position while the page's lazy sections are still settling — see
@@ -552,36 +564,44 @@ export default function AdminPage(): JSX.Element {
             <DomainOffNotice domain={domainOff} />
           ) : isExpertPage ? (
             <ExpertPageNotice />
-          ) : null
+          ) : (
+            <PageExpertNote count={hiddenSettings} />
+          )
         }
       >
-        <div ref={mainRef} className="flex min-w-0 flex-col" style={{ gap: "var(--ts-space-xl)" }}>
-          {visible.shown.map((id, index) => {
-            const body = <AdminSectionSwitch section={id} {...switchProps} />;
-            return (
-              <SectionFrame
-                key={id}
-                anchorId={`admin-${id}`}
-                headingAbove={index === 0 ? pageTitle : null}
-                label={labelOf(id)}
-                frame={ADMIN_SECTION_FRAME[id]}
-                deepLinkedExpert={visible.deepLinkedExpert === id && !isExpertPage}
-                revealExpertRows={namedSection === id && searchParams.get("expert") === "1"}
-              >
-                {/* A lazily-fetching section (see LAZY_ADMIN_SECTIONS) mounts its
+        <PageHiddenRowsContext.Provider value={reportHiddenRows}>
+          <div
+            ref={mainRef}
+            className="flex min-w-0 flex-col"
+            style={{ gap: "var(--ts-space-xl)" }}
+          >
+            {visible.shown.map((id, index) => {
+              const body = <AdminSectionSwitch section={id} {...switchProps} />;
+              return (
+                <SectionFrame
+                  key={id}
+                  anchorId={`admin-${id}`}
+                  headingAbove={index === 0 ? pageTitle : null}
+                  label={labelOf(id)}
+                  expert={current.sections.find((s) => s.id === id)?.level === "expert"}
+                  frame={ADMIN_SECTION_FRAME[id]}
+                  deepLinkedExpert={visible.deepLinkedExpert === id && !isExpertPage}
+                  revealExpertRows={namedSection === id && searchParams.get("expert") === "1"}
+                >
+                  {/* A lazily-fetching section (see LAZY_ADMIN_SECTIONS) mounts its
                     body only once it has been near the viewport. */}
-                {LAZY_ADMIN_SECTIONS.has(id) ? (
-                  <LazyBody id={`admin-${id}-body`} onVisible={sectionOnVisible[id]}>
-                    {body}
-                  </LazyBody>
-                ) : (
-                  body
-                )}
-              </SectionFrame>
-            );
-          })}
-          <ExpertNote count={visible.hiddenExpert} />
-        </div>
+                  {LAZY_ADMIN_SECTIONS.has(id) ? (
+                    <LazyBody id={`admin-${id}-body`} onVisible={sectionOnVisible[id]}>
+                      {body}
+                    </LazyBody>
+                  ) : (
+                    body
+                  )}
+                </SectionFrame>
+              );
+            })}
+          </div>
+        </PageHiddenRowsContext.Provider>
       </SettingsLayout>
       {confirmDialog}
     </>

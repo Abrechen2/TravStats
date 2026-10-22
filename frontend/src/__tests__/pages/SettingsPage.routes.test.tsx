@@ -368,9 +368,24 @@ describe("SettingsPage — the standard level (forgejo#321)", () => {
     renderAt("/settings/account");
     await findNamed("region", SECTION_LABEL_KEY.profile);
     expect(sectionShown("apitokens")).toBe(false);
-    expect(document.querySelector('[data-expert-note="settings"]')).toHaveTextContent(
-      "settings:level.moreSettings"
-    );
+    // At the top of the page, counting settings (forgejo#321 prototype).
+    const note = document.querySelector('[data-expert-note="page"]');
+    expect(note).toHaveTextContent("settings:level.pageMore");
+    expect(note).toHaveAttribute("data-count", "1");
+  });
+
+  it("counts the flight page's hidden expert settings, not its sections, at the top", async () => {
+    renderAt("/settings/flight");
+    await findNamed("region", SECTION_LABEL_KEY.features);
+    // Defaults (4) and enrichment (3) are expert sections; auto-update hides
+    // no row while it is off (the stub's state).
+    expect(document.querySelector('[data-expert-note="page"]')).toHaveAttribute("data-count", "7");
+  });
+
+  it("puts the blue pill on an expert section a link opened", async () => {
+    renderAt("/settings?section=apitokens");
+    const region = await findNamed("region", SECTION_LABEL_KEY.apitokens);
+    expect(region.querySelector("[data-expert-pill]")).not.toBeNull();
   });
 
   it("shows an expert section a link names, with the note above it", async () => {

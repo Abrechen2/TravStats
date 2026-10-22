@@ -11,8 +11,12 @@ import { useEffectiveSettingsLevel } from "../store/settingsLevelStore";
 import PasswordModal from "../components/Settings/PasswordModal";
 import { SettingsLayout } from "../components/Settings/frame/SettingsLayout";
 import { SectionFrame } from "../components/Settings/frame/SectionFrame";
-import { ExpertNote } from "../components/Settings/frame/ExpertNote";
+import { PageExpertNote } from "../components/Settings/frame/ExpertNote";
 import { VersionLine } from "../components/Settings/frame/VersionLine";
+import {
+  PageHiddenRowsContext,
+  useHiddenRowsCollector,
+} from "../components/Settings/frame/useExpertRows";
 import { DomainOffNotice } from "../components/Settings/frame/DomainOffNotice";
 import type { SettingsMenuGroup } from "../components/Settings/frame/SettingsMenu";
 import SettingsSectionSwitch from "./Settings/SettingsSectionSwitch";
@@ -99,10 +103,14 @@ export default function SettingsPage(): JSX.Element {
     () =>
       current && !domainOff
         ? sectionsOf(current, { level, isGateOpen: isFeatureVisible, isAdmin, deepLinked: named })
-        : { shown: [], hiddenExpert: 0, deepLinkedExpert: null },
+        : { shown: [], hiddenExpert: 0, hiddenExpertSettings: 0, deepLinkedExpert: null },
     [current, domainOff, level, isFeatureVisible, isAdmin, named]
   );
   const inView = useSectionInView(visible.shown, "settings");
+  // Every setting the standard level keeps off this page — whole expert
+  // sections and the expert rows of standard ones — for the note at its top.
+  const [hiddenRows, reportHiddenRows] = useHiddenRowsCollector();
+  const hiddenSettings = visible.hiddenExpertSettings + hiddenRows;
   const title = current ? t(current.labelKey) : "";
   useDocumentTitle(
     current
@@ -214,22 +222,26 @@ export default function SettingsPage(): JSX.Element {
           >
             {t("settings:deepLink.adminOnlySection")}
           </p>
-        ) : null
+        ) : (
+          <PageExpertNote count={hiddenSettings} />
+        )
       }
     >
-      {visible.shown.map((id, index) => (
-        <SectionFrame
-          key={id}
-          headingAbove={index === 0 ? title : null}
-          anchorId={`settings-${id}`}
-          label={labelOf(id)}
-          deepLinkedExpert={visible.deepLinkedExpert === id}
-          revealExpertRows={named === id && searchParams.get("expert") === "1"}
-        >
-          <SettingsSectionSwitch section={id} page={page} />
-        </SectionFrame>
-      ))}
-      <ExpertNote count={visible.hiddenExpert} />
+      <PageHiddenRowsContext.Provider value={reportHiddenRows}>
+        {visible.shown.map((id, index) => (
+          <SectionFrame
+            key={id}
+            headingAbove={index === 0 ? title : null}
+            anchorId={`settings-${id}`}
+            label={labelOf(id)}
+            expert={current.sections.find((s) => s.id === id)?.level === "expert"}
+            deepLinkedExpert={visible.deepLinkedExpert === id}
+            revealExpertRows={named === id && searchParams.get("expert") === "1"}
+          >
+            <SettingsSectionSwitch section={id} page={page} />
+          </SectionFrame>
+        ))}
+      </PageHiddenRowsContext.Provider>
 
       {page.showPasswordModal && (
         <PasswordModal

@@ -56,6 +56,7 @@ export default function InboxSuggestionsSection(): JSX.Element {
               checked={immichEvidence}
               disabled={!stays}
               onChange={setImmichEvidence}
+              expert
               label={t(`${key}.immichEvidence.label`)}
               sub={t(`${key}.immichEvidence.description`)}
             />
@@ -64,6 +65,7 @@ export default function InboxSuggestionsSection(): JSX.Element {
               checked={placeClassification}
               disabled={!stays}
               onChange={setPlaceClassification}
+              expert
               label={t(`${key}.llmPlaceClassification.label`)}
               sub={t(`${key}.llmPlaceClassification.description`)}
             />

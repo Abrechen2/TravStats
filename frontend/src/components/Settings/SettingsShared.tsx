@@ -1,6 +1,14 @@
 import React, { createContext, useContext } from "react";
 
 import HelpIcon from "../Help/HelpIcon";
+import { ExpertPill } from "../ui/ExpertPill";
+
+/**
+ * The section is expert-only and on screen — at the expert level, or because a
+ * link named it. Its heading carries the blue "Experte" pill (forgejo#321
+ * prototype). Set by `SectionFrame`.
+ */
+export const ExpertSectionContext = createContext(false);
 
 // ---------------------------------------------------------------------------
 // SectionCard
@@ -34,17 +42,21 @@ export function SectionCard({ children }: SectionCardProps): JSX.Element {
     <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
       {head}
       {body.length > 0 ? (
-        <div
-          className="space-y-4"
-          style={{
-            background: "var(--ts-surface)",
-            border: "1px solid var(--ts-border)",
-            borderRadius: "var(--ts-radius-card)",
-            padding: "var(--ts-space-xl)",
-          }}
-        >
-          {body}
-        </div>
+        // Cards nested in the body are parts of this section: only its own
+        // heading carries the section's "Experte" pill.
+        <ExpertSectionContext.Provider value={false}>
+          <div
+            className="space-y-4"
+            style={{
+              background: "var(--ts-surface)",
+              border: "1px solid var(--ts-border)",
+              borderRadius: "var(--ts-radius-card)",
+              padding: "var(--ts-space-xl)",
+            }}
+          >
+            {body}
+          </div>
+        </ExpertSectionContext.Provider>
       ) : null}
     </div>
   );
@@ -103,11 +115,13 @@ export function SectionTitle({
   whenUnreachable,
 }: SectionTitleProps): JSX.Element {
   const above = useContext(HeadingAboveContext);
+  const expertSection = useContext(ExpertSectionContext);
   const repeated = above !== null && above === title;
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
       <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
         {repeated ? null : <h2 className="t-label-mono">{title}</h2>}
+        {expertSection && <ExpertPill />}
         {badge}
         {aside ? (
           <span className="t-caption" style={{ marginLeft: "auto" }}>

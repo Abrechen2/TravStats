@@ -7,6 +7,7 @@ import type {
 import { cloneElement, isValidElement, useId } from "react";
 import { fieldErrorId } from "../form/fieldErrorProps";
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
+import { ExpertPill } from "./ExpertPill";
 
 const CONTROL_STYLE = {
   minHeight: "var(--ts-size-touch-min)",
@@ -152,6 +153,8 @@ interface SwitchProps {
   sub?: ReactNode;
   disabled?: boolean;
   id?: string;
+  /** Only the expert view draws this row: the blue "Experte" pill beside the label. */
+  expert?: boolean;
 }
 
 /**
@@ -161,14 +164,22 @@ interface SwitchProps {
  * switch takes effect the moment you touch it. Everything in settings is the
  * second kind, and the app draws the first.
  */
-export function Switch({ checked, onChange, label, sub, disabled, id }: SwitchProps): JSX.Element {
+export function Switch({
+  checked,
+  onChange,
+  label,
+  sub,
+  disabled,
+  id,
+  expert = false,
+}: SwitchProps): JSX.Element {
   // The label names the switch; the sub line describes it. Wrapped in one
   // <label>, both would be read as the name — "Unterkünfte Navigation,
   // Statistik, Reisetage" — so the two are tied to the input separately.
   const uid = useId();
   const labelId = `${uid}-label`;
   const subId = `${uid}-sub`;
-  // The pointer decides the size, not the width (forgejo#321): an iPad is wide
+  // The pointer decides the size, not the width (forgejo issue 321): an iPad is wide
   // and finger-operated at once, and a 42×24 track is a mouse's target.
   const coarse = useCoarsePointer();
   const track = coarse
@@ -186,8 +197,11 @@ export function Switch({ checked, onChange, label, sub, disabled, id }: SwitchPr
       }}
     >
       <span className="flex min-w-0 flex-col" style={{ gap: 2 }}>
-        <span id={labelId} style={{ fontSize: 14, fontWeight: 600, color: "var(--ts-text)" }}>
-          {label}
+        <span className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
+          <span id={labelId} style={{ fontSize: 14, fontWeight: 600, color: "var(--ts-text)" }}>
+            {label}
+          </span>
+          {expert && <ExpertPill />}
         </span>
         {sub ? (
           <span id={subId} className="t-caption">

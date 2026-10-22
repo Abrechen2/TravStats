@@ -1119,7 +1119,11 @@
     "showExpert": "Experte anzeigen",
     "deepLinkedExpert": "Dieser Abschnitt gehört zur Ansicht „Experte“. Er wird gezeigt, weil der Link ihn nennt.",
     "expertPage": "Diese Seite gehört zur Ansicht „Experte“.",
-    "revealedRows": "Experten-Einstellung: hier gezeigt, weil der Link oder die Suche sie nennt."
+    "revealedRows": "Experten-Einstellung: hier gezeigt, weil der Link oder die Suche sie nennt.",
+    "reveal": "Einblenden",
+    "showInExpert": "In Experte zeigen",
+    "pageMore_one": "1 weitere Einstellung auf dieser Seite ist nur in der Ansicht „Experte“ zu sehen.",
+    "pageMore_other": "{{count}} weitere Einstellungen auf dieser Seite sind nur in der Ansicht „Experte“ zu sehen."
   },
   "sectionChips": "Abschnitte auf dieser Seite",
   "pagePicker": "Seite",

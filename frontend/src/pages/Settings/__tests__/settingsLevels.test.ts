@@ -98,6 +98,13 @@ describe("level filtering", () => {
     expect(shownAt(instance, "standard").hiddenExpert).toBe(3);
   });
 
+  // forgejo#321 prototype: the note counts settings, not sections.
+  it("counts the settings the hidden expert sections hold", () => {
+    expect(shownAt(findPage("flight")!, "standard").hiddenExpertSettings).toBe(4 + 3);
+    expect(shownAt(instance, "standard").hiddenExpertSettings).toBe(2 + 3 + 1);
+    expect(shownAt(instance, "expert").hiddenExpertSettings).toBe(0);
+  });
+
   it("hides nothing at the expert level", () => {
     const expert = shownAt(account, "expert");
     expect(expert.shown).toEqual(account.sections.map((s) => s.id));

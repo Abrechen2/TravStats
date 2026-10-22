@@ -31,6 +31,12 @@ export interface SectionDef<S extends string = string> {
   gateYieldsToLink?: boolean;
   /** Only an admin sees it; unlike a gate, no URL lifts this. */
   adminOnly?: boolean;
+  /**
+   * How many settings the section holds, for the "n weitere Einstellungen"
+   * note when the standard level hides it whole (forgejo#321 prototype counts
+   * settings, not sections). Read off the section's component; 1 if absent.
+   */
+  settings?: number;
 }
 
 export interface PageDef<P extends string = string, S extends string = string> {
@@ -68,6 +74,8 @@ export interface PageSections<S extends string> {
   shown: S[];
   /** Expert sections the standard level keeps off this page. */
   hiddenExpert: number;
+  /** The settings those hidden expert sections hold. */
+  hiddenExpertSettings: number;
   /** A link named an expert section the level would hide; it is shown anyway. */
   deepLinkedExpert: S | null;
 }
@@ -87,6 +95,7 @@ export function sectionsOf<S extends string>(
 ): PageSections<S> {
   const shown: S[] = [];
   let hiddenExpert = 0;
+  let hiddenExpertSettings = 0;
   let deepLinkedExpert: S | null = null;
   for (const section of page.sections) {
     const named = input.deepLinked === section.id;
@@ -97,13 +106,14 @@ export function sectionsOf<S extends string>(
     if (section.level === "expert" && input.level === "standard") {
       if (!named) {
         hiddenExpert += 1;
+        hiddenExpertSettings += section.settings ?? 1;
         continue;
       }
       deepLinkedExpert = section.id;
     }
     shown.push(section.id);
   }
-  return { shown, hiddenExpert, deepLinkedExpert };
+  return { shown, hiddenExpert, hiddenExpertSettings, deepLinkedExpert };
 }
 
 /** The page holding a section, searched in table order. */

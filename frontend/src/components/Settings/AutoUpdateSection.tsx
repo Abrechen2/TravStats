@@ -95,6 +95,7 @@ export default function AutoUpdateSection({
         />
         {tuning && (
           <Switch
+            expert
             id="autoupdate-require-approval"
             checked={settings.requireApproval}
             onChange={(on) => onSave({ ...settings, requireApproval: on })}
@@ -103,6 +104,7 @@ export default function AutoUpdateSection({
         )}
         {tuning && (
           <Switch
+            expert
             id="autoupdate-only-during-flight"
             checked={settings.onlyDuringFlight}
             onChange={(on) => onSave({ ...settings, onlyDuringFlight: on })}
@@ -111,6 +113,7 @@ export default function AutoUpdateSection({
         )}
         {tuning && (
           <SettingRow
+            expert
             title={t("settings:autoUpdate.checkInterval")}
             sub={t("settings:autoUpdate.checkIntervalDescription")}
             htmlFor="autoupdate-check-interval"
@@ -119,6 +122,7 @@ export default function AutoUpdateSection({
         )}
         {tuning && (
           <SettingRow
+            expert
             title={t("settings:autoUpdate.expiryHours")}
             sub={t("settings:autoUpdate.expiryHoursDescription")}
             htmlFor="autoupdate-expiry-hours"

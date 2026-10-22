@@ -277,6 +277,7 @@ export default function GlobalApiKeysManager({
           <SettingRows>
             <Switch
               id="allow-user-parser-keys"
+              expert
               checked={parserSettings.allowUserApiKeys}
               onChange={(on) => onParserSettingsChange({ allowUserApiKeys: on })}
               label={t("admin:globalApiKeys.allowUserParserApiKeys")}
@@ -284,6 +285,7 @@ export default function GlobalApiKeysManager({
             />
             <Switch
               id="allow-user-flight-keys"
+              expert
               checked={keys.allowUserFlightApiKeys ?? true}
               onChange={(on) => onGlobalApiKeysChange({ ...keys, allowUserFlightApiKeys: on })}
               label={t("admin:globalApiKeys.allowUserFlightApiKeys")}

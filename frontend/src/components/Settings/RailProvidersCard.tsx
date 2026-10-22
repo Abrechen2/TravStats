@@ -10,6 +10,7 @@ import { Switch } from "../ui/Field";
 import { SettingRows } from "../ui/SettingRow";
 import { useDomainOffered } from "../../hooks/useDomainVisible";
 import { useExpertRows } from "./frame/useExpertRows";
+import { ExpertPill } from "../ui/ExpertPill";
 
 type Switches = { railTransitousEnabled: boolean; railDbRestEnabled: boolean };
 
@@ -108,7 +109,12 @@ export default function RailProvidersCard({ isAdmin }: { isAdmin: boolean }): JS
               label={t("settings:railProviders.dbRest")}
               sub={t("settings:railProviders.dbRestHint")}
             />
-            {expert && <RailRoutingUrlSetting savedUrl={routingUrl} onSaved={setRoutingUrl} />}
+            {expert && (
+              <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
+                <ExpertPill />
+                <RailRoutingUrlSetting savedUrl={routingUrl} onSaved={setRoutingUrl} />
+              </div>
+            )}
           </>
         )}
         {saveFailed && (

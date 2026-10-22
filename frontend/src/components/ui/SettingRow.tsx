@@ -1,4 +1,5 @@
 import type { JSX, ReactNode } from "react";
+import { ExpertPill } from "./ExpertPill";
 
 interface SettingRowProps {
   title: ReactNode;
@@ -8,6 +9,8 @@ interface SettingRowProps {
   control?: ReactNode;
   /** Ties the title to a form control that has an id. */
   htmlFor?: string;
+  /** Only the expert view draws this row: the blue "Experte" pill beside the title. */
+  expert?: boolean;
 }
 
 /**
@@ -17,7 +20,13 @@ interface SettingRowProps {
  * wraps under the text rather than squeezing it — a phone reads the title
  * first and then acts, which is the order the row is written in.
  */
-export function SettingRow({ title, sub, control, htmlFor }: SettingRowProps): JSX.Element {
+export function SettingRow({
+  title,
+  sub,
+  control,
+  htmlFor,
+  expert = false,
+}: SettingRowProps): JSX.Element {
   const Title = htmlFor ? "label" : "span";
   return (
     <div
@@ -25,12 +34,15 @@ export function SettingRow({ title, sub, control, htmlFor }: SettingRowProps): J
       style={{ gap: "var(--ts-space-md) var(--ts-space-lg)" }}
     >
       <span className="flex min-w-0 flex-col" style={{ gap: 2, flex: "1 1 220px" }}>
-        <Title
-          htmlFor={htmlFor}
-          style={{ fontSize: 14, fontWeight: 600, color: "var(--ts-text-bright)" }}
-        >
-          {title}
-        </Title>
+        <span className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
+          <Title
+            htmlFor={htmlFor}
+            style={{ fontSize: 14, fontWeight: 600, color: "var(--ts-text-bright)" }}
+          >
+            {title}
+          </Title>
+          {expert && <ExpertPill />}
+        </span>
         {sub ? <span className="t-caption">{sub}</span> : null}
       </span>
       {control ? (

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useId } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useState } from "react";
 import { useEffectiveSettingsLevel } from "../../../store/settingsLevelStore";
 
 /**
@@ -14,6 +14,24 @@ import { useEffectiveSettingsLevel } from "../../../store/settingsLevelStore";
 export type HiddenRowsReporter = (key: string, hidden: number) => void;
 
 export const HiddenRowsContext = createContext<HiddenRowsReporter | null>(null);
+
+/**
+ * The page's own collector: every `SectionFrame` passes up how many rows the
+ * standard level hides in it, so the note at the top of the page counts
+ * settings — the hidden rows of standard sections together with the settings
+ * of hidden expert sections (forgejo#321 prototype).
+ */
+export const PageHiddenRowsContext = createContext<HiddenRowsReporter | null>(null);
+
+/** A reporter and the sum of what was reported to it. */
+export function useHiddenRowsCollector(): [number, HiddenRowsReporter] {
+  const [byKey, setByKey] = useState<Record<string, number>>({});
+  const report = useCallback((key: string, hidden: number) => {
+    setByKey((prev) => (prev[key] === hidden ? prev : { ...prev, [key]: hidden }));
+  }, []);
+  const total = Object.values(byKey).reduce((sum, n) => sum + n, 0);
+  return [total, report];
+}
 
 /**
  * A link or search hit named this section's expert rows (`&expert=1`): they
