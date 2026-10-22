@@ -9,7 +9,8 @@ import type { EvidenceEntry } from "../../schemas/evidence";
 import type { DomainKey } from "../../shared/domains";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { busCountries, busDayKeys, busYear, countableBusWhere } from "../../shared/busCounting";
-import { busEvidenceEntry, ferryEvidenceEntry } from "./entryMappersRentalBus";
+import { busEvidenceEntry, ferryEvidenceEntry, rentalEvidenceEntry } from "./entryMappersRentalBus";
+import { countableRentalWhere, rentalYear } from "../../shared/rentalCounting";
 import { isCountableCruiseStatus } from "../../shared/cruiseCounting";
 import { classifyLodging, classifyStay } from "../../shared/lodgingCounting";
 import { classifyPlace, classifyVisit } from "../../shared/placeCounting";
@@ -544,14 +545,34 @@ async function loadRail(userId: string): Promise<CrossDomainPopulation> {
 }
 
 /**
- * Rentals add nothing to the cross-domain figures (rental spec §11 D3 a, owner
+ * A returned rental is one experience, filed under the year it was picked up
+ * on its station's calendar (`shared/rentalCounting.ts`, mirrored by the
+ * overview's `rentalStatsAdapter`) — that much it shares with every other
+ * domain. Its DAYS and COUNTRIES add nothing (rental spec §11 D3 a, owner
  * 2026-10-01): days travelling come from the trip, countries from the trip's
- * own entries, and rental days are a rental statistic only. An empty
- * population, not an omitted key, so a domain filter that names rental is
- * answered rather than refused.
+ * own entries, and rental days are a rental statistic only. Until 2026-10-22
+ * the events were left out too, which kept rentals off the overview's
+ * experience total although the decision was about days.
  */
-async function loadRental(_userId: string): Promise<CrossDomainPopulation> {
-  return { events: [], countryRows: [] };
+async function loadRental(userId: string): Promise<CrossDomainPopulation> {
+  const rows = await prisma.rentalBooking.findMany({
+    where: { userId, ...countableRentalWhere() },
+    select: {
+      id: true,
+      provider: true,
+      pickupStationName: true,
+      returnStationName: true,
+      pickupTime: true,
+      pickupTimezone: true,
+    },
+  });
+  const events: CrossDomainEventRow[] = rows.map((row) => ({
+    domain: "rental",
+    entry: rentalEvidenceEntry(row, {}),
+    year: rentalYear(row),
+    dayKeys: [],
+  }));
+  return { events, countryRows: [] };
 }
 
 /**

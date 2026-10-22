@@ -50,6 +50,7 @@ const EVIDENCE_DOMAIN_OF: Record<StatsDomain, EvidenceDomain> = {
   rail: "rail",
   bus: "bus",
   ferry: "ferry",
+  rental: "rental",
 };
 
 export default function CrossDomainKpis({
@@ -90,9 +91,7 @@ export default function CrossDomainKpis({
   const scope: EvidenceScopeParams = {
     period: selectedYear === null ? "allTime" : "year",
     ...(selectedYear === null ? {} : { year: selectedYear }),
-    domains: foldedDomains
-      .filter((domain): domain is StatsDomain => domain !== "rental")
-      .map((domain) => EVIDENCE_DOMAIN_OF[domain]),
+    domains: foldedDomains.map((domain) => EVIDENCE_DOMAIN_OF[domain]),
   };
 
   const cards: Array<{

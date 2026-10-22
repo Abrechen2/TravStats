@@ -376,7 +376,7 @@
         "time": "The stations' calendars decide: the pickup day at the pickup station, the return day at the return station – not your device, not UTC. A rental counts in the year of the pickup.",
         "source": "Car rental bookings with their pickup and return times.",
         "coverage": "Every completed rental carries both times and so counts in full; the line below the figure says how many rentals it is.",
-        "exclusions": "Only completed rentals count – those whose return is past; scheduled, in-progress and cancelled ones do not. Rental days are not added to travel days on top: the overview (experiences, active travel days, countries) and the travel account read no rentals, and the year in review shows rental days only in their own chapter."
+        "exclusions": "Only completed rentals count – those whose return is past; scheduled, in-progress and cancelled ones do not. Rental days are not added to travel days on top: on the overview a rental counts as one experience but adds no active travel day and no country; the travel account reads no rentals, and the year in review shows rental days only in their own chapter."
       },
       "km": {
         "unit": "One driven kilometre. The tile shows the sum over the rentals with known km.",

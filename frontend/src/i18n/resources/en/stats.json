@@ -40,11 +40,11 @@
     },
     "help": {
       "experiences": {
-        "unit": "An experience: a flight, a cruise, a stay, a place visit, a roadtrip, a train or bus ride – one per entry, added up over the domains switched on. The line below splits by domain.",
+        "unit": "An experience: a flight, a cruise, a stay, a place visit, a roadtrip, a train, bus or ferry ride, a rental – one per entry, added up over the domains switched on. The line below splits by domain.",
         "time": "In the selected year by each domain's time rule, as on its own tab (a cruise in the year it started); otherwise across all years.",
         "source": "The entries of the domains switched on in the bar that you see.",
         "coverage": "What each domain counts is counted. Tap the number to see the entries.",
-        "exclusions": "Scheduled and cancelled entries do not count. Rentals and day tours do not count here. A roadtrip and the stays linked to it are different entries and count once each; their nights and days are not added here."
+        "exclusions": "Scheduled and cancelled entries do not count, a rental only once it is returned. Day tours do not count here. A roadtrip and the stays linked to it are different entries and count once each; their nights and days are not added here."
       },
       "countries": {
         "unit": "A country you visited – as in the passport: a night, a place or work visit, a port call, an outbound and return trip to the destination (by air, rail, bus or ferry, mixed too), or the country you live in. Connections, drive-throughs, intermediate ports and unclear trip chains do not count. A country several domains prove counts once.",
@@ -174,6 +174,9 @@
       "railKmMeasured": "Track",
       "railKmStraight": "Straight line",
       "busRides": "Bus rides",
+      "rentals": "Rentals",
+      "rentalDays": "Rental days",
+      "rentalKm": "Kilometres",
       "busKmMeasured": "Distance (road or ticket)",
       "busKmStraight": "Straight line",
       "ferryRides": "Crossings",
@@ -189,6 +192,7 @@
       "vehicles": "Vehicles",
       "railOperators": "Top operators",
       "busOperators": "Top bus operators",
+      "rentalProviders": "Top providers",
       "ferryOperators": "Top ferry operators"
     },
     "badge": {

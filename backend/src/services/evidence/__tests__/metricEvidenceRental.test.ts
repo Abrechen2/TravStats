@@ -4,6 +4,8 @@ import { calculateRentalAchievementStats } from "../../../utils/rentalAchievemen
 import { rentalStatsFor } from "../../rental/rentalStats";
 import { resolveMetricEvidence } from "../metricEvidence";
 import { assertDistinctInvariant, assertSumInvariant } from "./invariants";
+import * as visibility from "../../domainVisibility";
+import { DOMAIN_KEYS } from "../../../shared/domains";
 
 /**
  * forgejo#262 — the rental measures list the rentals behind the tab's tiles
@@ -153,21 +155,32 @@ describe("rental evidence measures", () => {
   });
 
   // The rental tab's "So wird gezählt" says rental days are not added on top of
-  // travel days. This is what holds it: the cross-domain population has no
-  // rental member, so a rental adds no active day, no event and no country.
-  it("adds no rental day, event or country to the cross-domain figures", async () => {
-    const scope: EvidenceScope = {
-      period: { kind: "allTime" },
-      domains: ["rental"],
-    };
-    for (const key of [
-      "crossDomainActiveDayCount",
-      "crossDomainEventCount",
-      "crossDomainCountryCount",
-    ]) {
-      const res = await resolveMetricEvidence(userId, key, scope, PAGE);
-      expect(res?.measure.value).toBe(0);
-      expect(res?.entries).toEqual([]);
+  // travel days (rental spec §11 D3 a). This is what holds it: a returned
+  // rental is one experience on the overview — the tile counts it since
+  // 2026-10-22 — but adds no active day and no country.
+  it("adds a returned rental as an experience, never as a day or a country", async () => {
+    // Rental sits behind the instance's beta switch, a global row other suites
+    // flip; the reader here is one who sees it.
+    const seen = jest.spyOn(visibility, "loadVisibleDomains").mockResolvedValue([...DOMAIN_KEYS]);
+    try {
+      const scope: EvidenceScope = { period: { kind: "allTime" }, domains: ["rental"] };
+      const events = await resolveMetricEvidence(userId, "crossDomainEventCount", scope, PAGE);
+      // As many as the rental tab counts — the returned ones, never the cancelled.
+      expect(events?.measure.value).toBe((await rentalStatsFor(userId, null)).rentals);
+      expect(events?.entries.map((e) => e.href).every((h) => h?.startsWith("/rentals/"))).toBe(
+        true
+      );
+      const y2025: EvidenceScope = { period: { kind: "year", year: 2025 }, domains: ["rental"] };
+      expect(
+        (await resolveMetricEvidence(userId, "crossDomainEventCount", y2025, PAGE))?.measure.value
+      ).toBe((await rentalStatsFor(userId, 2025)).rentals);
+      for (const key of ["crossDomainActiveDayCount", "crossDomainCountryCount"]) {
+        const res = await resolveMetricEvidence(userId, key, scope, PAGE);
+        expect(res?.measure.value).toBe(0);
+        expect(res?.entries).toEqual([]);
+      }
+    } finally {
+      seen.mockRestore();
     }
   });
 });

@@ -57,11 +57,11 @@ export default function OverviewTab({
   // beta flag off for an account that had the domain on from beta days.
   const { enabled: enabledDomains } = useEnabledDomains();
   const placesAccess = usePlacesAccess();
-  // The beta switches are already applied to `enabledDomains`. Rental has a
-  // tab but no place in the cross-domain folds (rental spec §11 D3), so it is
-  // dropped here.
+  // The beta switches are already applied to `enabledDomains`. Rental takes
+  // part with its rentals as experiences, never with its days or countries
+  // (rental spec §11 D3 a — see `rentalStatsAdapter`).
   const enabled = useMemo(
-    () => visibleStatsTabs(enabledDomains, placesAccess).filter((key) => key !== "rental"),
+    () => visibleStatsTabs(enabledDomains, placesAccess),
     [enabledDomains, placesAccess]
   );
   const { selectedYear, compareYear, compareEnabled } = period;

@@ -2,15 +2,16 @@
 import type { DomainKey } from "../../../shared/domains";
 
 /**
- * Domains that have statistics — every domain since rail's phase 2b
- * (docs/superpowers/specs/2026-09-25-rail-domain.md). Kept as its own name so
- * a future domain that arrives before its figures can be excluded here again,
- * which is how rail sat out its first phase.
+ * Domains that have statistics — every domain since rental joined the
+ * overview on 2026-10-22. Kept as its own name so a future domain that arrives
+ * before its figures can be excluded here again, which is how rail sat out its
+ * first phase.
  */
-export type StatsDomain = Exclude<DomainKey, "rental">;
-// Rental sits out the cross-domain overview on purpose, not for want of
-// figures: rental days count in the rental statistics only (rental spec §11
-// D3 a, owner 2026-10-01) — days travelling come from the trip.
+export type StatsDomain = DomainKey;
+// Rental is in the overview with its EVENTS only: rental days count in the
+// rental statistics only (rental spec §11 D3 a, owner 2026-10-01) — days
+// travelling come from the trip — so `rentalStatsAdapter` hands over no
+// active day and no country.
 // Bus joined with its statistics (forgejo#263/#265, spec 2026-10-07 §6 D4).
 
 /**

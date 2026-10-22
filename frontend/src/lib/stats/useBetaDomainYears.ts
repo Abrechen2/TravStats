@@ -8,9 +8,9 @@ import { useDomainVisible } from "../../hooks/useDomainVisible";
 /**
  * The years rentals and bus rides hold (forgejo#265: a year picker must exist
  * for an account whose only data is rentals). The statistics page builds its
- * year list from the cross-domain adapters, which rental and bus deliberately
- * stay out of (rental spec §11 D3; the overview's `StatsDomain`), so without
- * this a rental-only account had a rental tab and no year to pick.
+ * year list from the cross-domain adapters, which rental and bus once stayed
+ * out of (both have joined since); without this a rental-only account had a
+ * rental tab and no year to pick, and it still guards a failed adapter.
  *
  * Asked only for a domain the reader sees — a hidden domain contributes no
  * year, exactly as the server's year in review does. A failed load contributes

@@ -7,7 +7,7 @@ import { adaptFerry } from "./ferryStatsAdapter";
 // domain's slot stays empty, the rest renders. Lodging is fed by
 // `/stats/lodging` + the raw lodging list; POI has no rollup endpoint at all
 // and derives everything from places, lists and the checklist catalog.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Flight } from "../../../types";
 import { statsApi } from "../../api";
 import { cruiseApi } from "../../api/cruise";
@@ -16,6 +16,7 @@ import { listPlaces } from "../../api/places";
 import { listCuratedChecklists, listPlaceLists } from "../../api/placeLists";
 import { railApi } from "../../api/rail";
 import { busApi } from "../../api/bus";
+import { rentalApi } from "../../api/rental";
 import { logger } from "../../logger";
 import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
 import type { DomainKey } from "../../../shared/domains";
@@ -27,6 +28,7 @@ import { roadtripsApi } from "../../api/roadtrips";
 import { adaptPoi } from "./poiStatsAdapter";
 import { adaptRail } from "./railStatsAdapter";
 import { adaptBus } from "./busStatsAdapter";
+import { adaptRental } from "./rentalStatsAdapter";
 import type { DomainStats, DomainStatsMap, StatsDomain } from "./types";
 import { toYearKeyed } from "./yearKeyed";
 
@@ -58,10 +60,7 @@ export function useDomainStats(input: {
   const { enabled: enabledDomains } = useEnabledDomains();
   // A domain behind a closed beta switch is not in `enabledDomains`, so it is
   // not fetched and can reach neither a card nor a sum on the overview.
-  const enabled = useMemo(
-    () => enabledDomains.filter((d): d is StatsDomain => d !== "rental"),
-    [enabledDomains]
-  );
+  const enabled: readonly StatsDomain[] = enabledDomains;
   const [stats, setStats] = useState<DomainStatsMap>({});
   const [errors, setErrors] = useState<Partial<Record<DomainKey, string>>>({});
   const [loading, setLoading] = useState(true);
@@ -136,5 +135,7 @@ async function loadDomain(domain: StatsDomain, flights: Flight[]): Promise<Domai
       return adaptFerry({ journeys: await ferryApi.listAll() });
     case "bus":
       return adaptBus({ journeys: await busApi.listAll({ status: "completed" }) });
+    case "rental":
+      return adaptRental({ rentals: await rentalApi.listAll({ status: "completed" }) });
   }
 }

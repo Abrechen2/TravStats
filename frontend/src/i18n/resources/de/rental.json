@@ -376,7 +376,7 @@
         "time": "Es gilt der Kalender der Stationen: der Abholtag am Ort der Abholstation, der Rückgabetag am Ort der Rückgabestation – nicht dein Gerät, nicht UTC. Eine Miete zählt im Jahr der Abholung.",
         "source": "Mietwagen-Buchungen mit Abhol- und Rückgabezeit.",
         "coverage": "Jede abgeschlossene Miete trägt beide Zeiten und zählt deshalb vollständig; die Zeile unter der Zahl nennt, wie viele Mieten es sind.",
-        "exclusions": "Gezählt werden nur abgeschlossene Mieten – solche, deren Rückgabe vorbei ist; geplante, laufende und stornierte zählen nicht. Miettage werden nicht zusätzlich zu Reisetagen addiert: Die Übersicht (Erlebnisse, aktive Reisetage, Länder) und das Reisekonto lesen keine Mieten, und der Jahresrückblick zeigt Miettage nur in ihrem eigenen Kapitel."
+        "exclusions": "Gezählt werden nur abgeschlossene Mieten – solche, deren Rückgabe vorbei ist; geplante, laufende und stornierte zählen nicht. Miettage werden nicht zusätzlich zu Reisetagen addiert: In der Übersicht zählt eine Miete als ein Erlebnis, trägt aber keine aktiven Reisetage und keine Länder bei; das Reisekonto liest keine Mieten, und der Jahresrückblick zeigt Miettage nur in ihrem eigenen Kapitel."
       },
       "km": {
         "unit": "Ein gefahrener Kilometer. Die Kachel zeigt die Summe über die Mieten mit bekannten Kilometern.",
