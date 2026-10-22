@@ -69,7 +69,13 @@ describe("station figures", () => {
 
   it("has nothing to say about a station nobody has left from yet", () => {
     const none = getJourneyStopFigures([all[4]], endKey(BERLIN));
-    expect(none).toEqual({ departures: 0, arrivals: 0, destinations: [], lastVisit: null });
+    expect(none).toEqual({
+      departures: 0,
+      arrivals: 0,
+      destinations: [],
+      lastVisit: null,
+      lastVisitUnknownFrom: null,
+    });
   });
 });
 
@@ -97,14 +103,58 @@ describe("last visit at a branch a rental went back to", () => {
     expect(f.lastVisit?.utc).toBe("2024-10-08T09:00:00Z");
   });
 
-  it("dates an unknown arrival by its departure's day, never its clock", () => {
+  // Codex review before 2.7.0-rc.20: a timed departure with no arrival was
+  // dated by the departure's day too — an overnight train that left at 22:00
+  // made the destination say "last here" on the wrong day.
+  it("does not date an unknown arrival after a timed departure — it says from when", () => {
     const f = getJourneyStopFigures(
-      [ride("x", BERLIN, HAMBURG, "2024-06-01T08:00:00Z", null)],
+      [
+        ride("old", BERLIN, HAMBURG, "2024-05-01T08:00:00Z", "2024-05-01T10:00:00Z"),
+        ride("night", BERLIN, HAMBURG, "2024-06-01T20:00:00Z", null),
+      ],
       endKey(HAMBURG)
     );
+    expect(f.arrivals).toBe(2);
+    // The older known visit is not passed off as the last one.
+    expect(f.lastVisit).toBeNull();
+    expect(f.lastVisitUnknownFrom?.local.slice(0, 10)).toBe("2024-06-01");
+    expect(f.lastVisitUnknownFrom?.precision).toBe("day");
+  });
+
+  it("keeps a known visit that came after the ride with the unknown arrival", () => {
+    const f = getJourneyStopFigures(
+      [
+        ride("night", BERLIN, HAMBURG, "2024-06-01T20:00:00Z", null),
+        ride("back", HAMBURG, BERLIN, "2024-06-05T08:00:00Z", "2024-06-05T10:00:00Z"),
+      ],
+      endKey(HAMBURG)
+    );
+    expect(f.lastVisit?.utc).toBe("2024-06-05T08:00:00Z");
+    expect(f.lastVisitUnknownFrom).toBeNull();
+  });
+
+  it("does not date a date-only ferry without an arrival by its departure day", async () => {
+    const { journeyFromFerry } = await import("../journeyNormalize");
+    const overnight = journeyFromFerry({
+      id: "f",
+      status: "completed",
+      depStationName: "Kiel",
+      arrStationName: "Oslo",
+      depLat: 54.32,
+      depLon: 10.14,
+      arrLat: 59.9,
+      arrLon: 10.75,
+      times: {
+        departure: { ...tv("2024-10-01T00:00:00", "2024-09-30T22:00:00Z"), precision: "day" },
+        arrival: null,
+        actualDeparture: null,
+        actualArrival: null,
+      },
+    } as unknown as Parameters<typeof journeyFromFerry>[0]);
+    const f = getJourneyStopFigures([overnight], endKey({ lat: 59.9, lon: 10.75 }));
     expect(f.arrivals).toBe(1);
-    expect(f.lastVisit?.local.slice(0, 10)).toBe("2024-06-01");
-    expect(f.lastVisit?.precision).toBe("day");
+    expect(f.lastVisit).toBeNull();
+    expect(f.lastVisitUnknownFrom?.local.slice(0, 10)).toBe("2024-10-01");
   });
 
   // beta.23 UAT before 2.7.0-rc.20: München Hbf said "Zuletzt hier 05.03.2024"

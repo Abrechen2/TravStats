@@ -71,6 +71,8 @@ export interface JourneyStopHover {
   departures?: number;
   destinations?: StopDestination[];
   lastVisit?: TimeValue | null;
+  /** The arrival of the latest ride here is unknown: on or after this day. */
+  lastVisitUnknownFrom?: TimeValue | null;
 }
 
 /** The profile of one route's journeys. */
@@ -232,6 +234,7 @@ function decorateStop(layer: Layer, stops: ReadonlyMap<string, MapJourney[]>, co
       departures: figures.departures,
       destinations: figures.destinations,
       lastVisit: figures.lastVisit,
+      lastVisitUnknownFrom: figures.lastVisitUnknownFrom,
     };
     return { ...d, journeyStop };
   });

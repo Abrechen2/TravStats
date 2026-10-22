@@ -83,21 +83,21 @@ vi.mock("react-router-dom", async (orig) => ({
   useNavigate: () => navigate,
 }));
 
+const CROSSINGS_INPUT = {
+  status: "completed",
+  operator: "Color Line",
+  vesselName: "Color Fantasy",
+  depStationName: "Kiel",
+  depLat: 54.316,
+  depLon: 10.135,
+  depCountry: "DE",
+  arrStationName: "Oslo",
+  arrLat: 59.905,
+  arrLon: 10.742,
+  arrCountry: "NO",
+};
 const CROSSINGS = [1, 2].map((n) =>
-  journeyFromFerry({
-    id: `f${n}`,
-    status: "completed",
-    operator: "Color Line",
-    vesselName: "Color Fantasy",
-    depStationName: "Kiel",
-    depLat: 54.316,
-    depLon: 10.135,
-    depCountry: "DE",
-    arrStationName: "Oslo",
-    arrLat: 59.905,
-    arrLon: 10.742,
-    arrCountry: "NO",
-  } as Parameters<typeof journeyFromFerry>[0])
+  journeyFromFerry({ ...CROSSINGS_INPUT, id: `f${n}` } as Parameters<typeof journeyFromFerry>[0])
 );
 
 function showStop(): void {
@@ -169,6 +169,55 @@ describe("station card", () => {
       await screen.findByText("Oslo 2×");
       await Promise.resolve();
       expect(screen.queryByTestId("stop-wikipedia")).toBeNull();
+    }
+  );
+
+  // Codex review before 2.7.0-rc.20: an overnight crossing with no recorded
+  // arrival made its port say "last here" on the departure's day.
+  it.each(["de", "en"] as const)(
+    "says the last visit is unknown after a crossing with no arrival, in %s",
+    async (l) => {
+      lang.current = l;
+      details.stop.mockResolvedValue({ state: "none" });
+      const night = journeyFromFerry({
+        ...(CROSSINGS_INPUT as object),
+        id: "night",
+        times: {
+          departure: {
+            utc: "2024-10-01T17:00:00Z",
+            zone: "Europe/Berlin",
+            offset: "+02:00",
+            local: "2024-10-01T19:00:00",
+            precision: "minute",
+          },
+          arrival: null,
+          actualDeparture: null,
+          actualArrival: null,
+        },
+      } as Parameters<typeof journeyFromFerry>[0]);
+      render(
+        <MemoryRouter>
+          <PinnedCard
+            pinned={{
+              kind: "journeyStop",
+              data: { domain: "ferry", stop: night.arr, journeys: [night], color: [86, 134, 184] },
+              anchorLngLat: [10.742, 59.905],
+            }}
+            flights={[]}
+            cruises={[]}
+            onClose={vi.fn()}
+          />
+        </MemoryRouter>
+      );
+      expect(document.body.textContent).not.toContain("MISSING(");
+      const row = (await screen.findByText(l === "de" ? "Zuletzt hier" : "Last here"))
+        .parentElement;
+      expect(row?.textContent).toMatch(
+        l === "de" ? /unbekannt \(ab .*2024/ : /unknown \(on or after .*2024/
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
     }
   );
 

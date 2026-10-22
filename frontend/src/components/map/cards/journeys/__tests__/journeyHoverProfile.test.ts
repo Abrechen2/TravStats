@@ -206,4 +206,25 @@ describe("station hover profile", () => {
       expect(html).toContain('data-hover-stop data-domain="ferry" data-name="Kiel"');
     }
   );
+
+  // Codex review before 2.7.0-rc.20: a ride with no recorded arrival dated
+  // the visit by its departure's day.
+  it.each(["de", "en"] as const)("says an unknown last visit is unknown in %s", (l) => {
+    const html = journeyStopHoverHtml(
+      {
+        domain: "ferry",
+        stop: ferry.arr,
+        travelled: 1,
+        planned: 0,
+        color: [86, 134, 184],
+        lastVisit: null,
+        lastVisitUnknownFrom: { ...tv("2024-08-10T12:00:00Z"), precision: "day" },
+      },
+      { t: tFor(l) }
+    );
+    expect(html).not.toContain("MISSING(");
+    expect(html).toContain(
+      l === "de" ? "Zuletzt hier unbekannt (ab " : "Last here unknown (on or after "
+    );
+  });
 });

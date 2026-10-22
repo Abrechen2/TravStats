@@ -392,6 +392,7 @@
     "costPerKm": "Cost per km",
     "wikiUnavailable": "Wikipedia cannot be reached right now.",
     "lastHere": "Last here",
+    "lastHereUnknownFrom": "unknown (on or after {{date}})",
     "destinations": "Destinations from here",
     "departuresLabel": "Departures from here",
     "pickupsLabel": "Pick-ups here",
