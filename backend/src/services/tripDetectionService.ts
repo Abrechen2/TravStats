@@ -43,7 +43,6 @@
 
 import { Prisma } from "../prisma";
 import { prisma } from "../db";
-import { TRIP_COLORS } from "../schemas/trip";
 import { calculateDistance } from "../utils/geo";
 import { type HomePeriod, homeAirportsAt } from "../utils/homeAirport";
 import { homePeriodsFromData } from "./home/homeStore";
@@ -57,6 +56,7 @@ import {
   tripNameMonth,
   type TripNameLanguage,
 } from "./trip/tripGrouping";
+import { tripColorSequence } from "./trip/newTripColor";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const PNR_MAX_SPAN_DAYS = 30;
@@ -613,11 +613,11 @@ async function commitProposals(
   const created = await prisma.$transaction(
     async (tx) => {
       const out: DetectionResult["created"] = [];
-      const tripCount = await tx.trip.count({ where: { userId } });
+      const colorOf = await tripColorSequence(userId, tx);
 
       for (let i = 0; i < proposals.length; i++) {
         const p = proposals[i];
-        const color = TRIP_COLORS[(tripCount + i) % TRIP_COLORS.length];
+        const color = colorOf(i);
         const trip = await tx.trip.create({
           data: { userId, name: p.suggestedName, color },
         });

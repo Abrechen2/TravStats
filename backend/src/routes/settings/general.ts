@@ -32,6 +32,17 @@ import {
   tripSuggestionsSettingsSchema,
   type SuggestionSwitchColumns,
 } from "../../services/settings/suggestionSwitches";
+import {
+  accountPrefsUpdate,
+  accountPrefsView,
+  cruiseSeaDaysSettingsSchema,
+  liveTrackingSettingsSchema,
+  tripDefaultsSettingsSchema,
+  type AccountPrefsColumns,
+} from "../../services/settings/accountPrefs";
+
+/** Every flat switch column the response nests (forgejo#306, #316, #321). */
+type AccountSwitchColumns = SuggestionSwitchColumns & AccountPrefsColumns;
 
 const router = Router();
 
@@ -208,6 +219,10 @@ const settingsSchema = z
     staySuggestions: staySuggestionsSettingsSchema.optional(),
     // Whether the Companion's trip positions are stored (forgejo#316).
     tripRecording: tripRecordingSettingsSchema.optional(),
+    // Settings prototype rows (forgejo#321), column-backed like the switches above.
+    tripDefaults: tripDefaultsSettingsSchema.optional(),
+    cruiseSeaDays: cruiseSeaDaysSettingsSchema.optional(),
+    liveTracking: liveTrackingSettingsSchema.optional(),
     /**
      * Which evidence tier the country headline counts from, for THIS user
      * (spec §3.2). `.nullable()` because null is a value and not an absence:
@@ -265,7 +280,7 @@ function buildSettingsResponse(
   },
   /** Home, read through the one home module (`services/home/homeStore.ts`). */
   home: Awaited<ReturnType<typeof homeSettingsView>>,
-  record: SuggestionSwitchColumns & {
+  record: AccountSwitchColumns & {
     data: Prisma.JsonValue;
     autoUpdateEnabled: boolean;
     autoUpdateRequireApproval: boolean;
@@ -322,6 +337,7 @@ function buildSettingsResponse(
     baseCurrency: record.baseCurrency,
     autoCreateTrips: record.autoCreateTrips ?? true,
     ...suggestionSwitchesView(record),
+    ...accountPrefsView(record),
     // `parseCountryTier`, not a cast: the column is TEXT, so an unreadable
     // value reads as "no override" and the account follows the instance —
     // which is the same thing it was doing before anybody typed the bad value.
@@ -489,12 +505,18 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       tripSuggestions,
       staySuggestions,
       tripRecording,
+      tripDefaults,
+      cruiseSeaDays,
+      liveTracking,
       countryThreshold,
       homeCountry,
       settingsLevel,
       ...rest
     } = payload;
-    const switches = suggestionSwitchesUpdate(tripSuggestions, staySuggestions, tripRecording);
+    const switches = {
+      ...suggestionSwitchesUpdate(tripSuggestions, staySuggestions, tripRecording),
+      ...accountPrefsUpdate(tripDefaults, cruiseSeaDays, liveTracking),
+    };
     const {
       betaFeaturesEnabled,
       openDataEnabled,

@@ -171,8 +171,7 @@ export type ApiErrorCode =
   /** An invoice's km beside a figure the user typed; the review shows both and asks. */
   | "RENTAL_INVOICE_KM_CONFLICT"
   | "RENTAL_INVOICE_FEE_UNKNOWN"
-  /** A parse needed the configured LLM and could not reach it — "try later",
-   *  not "broken". */
+  /** A parse needed the configured LLM and could not reach it — "try later", not "broken". */
   | "LLM_UNREACHABLE"
   /** A parse failed for any other reason; the cause is in the server log. */
   | "PARSE_FAILED"
@@ -287,6 +286,7 @@ export type ApiErrorCode =
   /** Flight recording: its time span is nowhere near the flight's schedule —
    *  a recording filed under the wrong flight (422). */
   | "TRACK_OUTSIDE_FLIGHT"
+  | "FLIGHT_TRACKING_DISABLED" // flight recording: live tracking off, nothing stored (409)
   /** Trip recording (forgejo#316): the account switch is off — nothing stored (409). */
   | "TRIP_RECORDING_DISABLED"
   /** Trip recording: a point with a coordinate outside lat ±90 / lon ±180 (400). */

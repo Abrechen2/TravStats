@@ -29,6 +29,12 @@ import {
 } from "../../../schemas/home";
 import { putWebPrefsSchema, webPrefsResponseSchema } from "../../../schemas/webPrefs";
 import { settingsLevelSchema } from "../../../shared/settingsLevel";
+import {
+  cruiseSeaDaysSettingsSchema,
+  liveTrackingSettingsSchema,
+  tripDefaultsSettingsSchema,
+} from "../../settings/accountPrefs";
+import { instanceServicesSchema } from "../../settings/instanceServices";
 
 const settingsTag = ["Settings"];
 const badInput = { description: "Invalid input", content: errorContent };
@@ -62,8 +68,31 @@ const settingsLevelField = settingsLevelSchema.describe(
  * of the payload is real but undeclared. A closed object would tell a
  * generated client that every other key is absent.
  */
+/** Settings prototype rows (forgejo#321). Each default is the behaviour before it existed. */
+const accountPrefsFields = {
+  tripDefaults: z
+    .object({ color: z.string().nullable() })
+    .describe(
+      "The colour a new trip gets when the request names none — one of the trip palette; " +
+        "null rotates through the palette."
+    ),
+  cruiseSeaDays: z
+    .object({ counted: z.boolean() })
+    .describe(
+      "Whether sea days count in the cruise day total (`totalCruiseDays` of GET " +
+        "/stats/cruise). Off: the total counts only the days not spent at sea."
+    ),
+  liveTracking: z
+    .object({ enabled: z.boolean() })
+    .describe(
+      "Whether the server takes the phone's recording of a flight (POST " +
+        "/flights/{id}/track). Off: refused with 409 FLIGHT_TRACKING_DISABLED. A client " +
+        "should not record while it is off."
+    ),
+};
+
 const settingsResponseSchema = z
-  .object({ settingsLevel: settingsLevelField })
+  .object({ settingsLevel: settingsLevelField, ...accountPrefsFields })
   .passthrough()
   .describe("The user's settings. Only the listed fields are typed in this spec so far.");
 const settingsOk = (description: string) => ({
@@ -71,7 +100,12 @@ const settingsOk = (description: string) => ({
   content: { "application/json": { schema: settingsResponseSchema } },
 });
 const settingsUpdateBodySchema = z
-  .object({ settingsLevel: settingsLevelField.optional() })
+  .object({
+    settingsLevel: settingsLevelField.optional(),
+    tripDefaults: tripDefaultsSettingsSchema.optional(),
+    cruiseSeaDays: cruiseSeaDaysSettingsSchema.optional(),
+    liveTracking: liveTrackingSettingsSchema.optional(),
+  })
   .passthrough()
   .describe("Every block is optional; an omitted key leaves the stored value alone.");
 
@@ -531,5 +565,23 @@ registry.registerPath({
       description: "A section or the account's total is over its byte cap (WEB_PREFS_TOO_LARGE)",
       content: errorContent,
     },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/settings/instance-services",
+  summary: "Which keyless instance services are on",
+  description:
+    "Whether the instance runs Transitous, db-rest and OpenRailRouting for every account — " +
+    "services only an admin switches (forgejo#321). Booleans only: no address or key of " +
+    "the instance leaves through here. Rate-limited like the other settings reads.",
+  tags: settingsTag,
+  responses: {
+    200: {
+      description: "The switches",
+      content: { "application/json": { schema: instanceServicesSchema } },
+    },
+    429: { description: "Rate limited", content: errorContent },
   },
 });

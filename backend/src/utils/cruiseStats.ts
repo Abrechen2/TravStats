@@ -55,6 +55,13 @@ export interface CruiseData {
    * affected cruise.
    */
   legDistancesKm?: number[];
+  /**
+   * The account's "Seetage zählen" (forgejo#321): false = this cruise's sea
+   * days are left out of `totalCruiseDays`. Absent counts them, the rule
+   * before the setting existed — every caller that does not ask an account
+   * (the leaderboard, federation, achievements) keeps it.
+   */
+  countSeaDays?: boolean;
 }
 
 export interface CruiseStats {
@@ -144,7 +151,8 @@ export interface CruiseStats {
    */
   resolvedPortCalls: number;
   /** Sum of (endDate − startDate + 1) days across cruises that have
-   * both timestamps. Cruises missing dates contribute zero. */
+   * both timestamps. Cruises missing dates contribute zero. A cruise with
+   * `countSeaDays: false` contributes its days minus its sea days. */
   totalCruiseDays: number;
   /** Per-region port-call count (e.g. {"mediterranean": 12,
    * "caribbean": 5}). Sorted bar-chart input on the frontend. */
@@ -253,6 +261,7 @@ export function calculateCruiseStats(
     let cruisePortCount = 0;
     let portCallIndex = 0;
     let currentSeaStreak = 0;
+    let cruiseSeaDays = 0;
     let prevPortPoint: { lat: number; lon: number } | null = null;
 
     for (const stop of effectiveStops) {
@@ -261,6 +270,7 @@ export function calculateCruiseStats(
         // `isSeaDay` is the one place that says so.
         if (!isSeaDay(cruise, stop)) continue;
         seaDays += 1;
+        cruiseSeaDays += 1;
         currentSeaStreak += 1;
         if (currentSeaStreak > seaDaysStreak) seaDaysStreak = currentSeaStreak;
       } else {
@@ -345,7 +355,11 @@ export function calculateCruiseStats(
       // missing either timestamp simply don't contribute.
       const dayMs = 24 * 60 * 60 * 1000;
       const days = Math.floor((cruise.endDate.getTime() - cruise.startDate.getTime()) / dayMs) + 1;
-      if (days > 0) totalCruiseDays += days;
+      // A sea day lies inside the span, so leaving it out cannot go below 0
+      // unless the itinerary holds more sea days than the dates allow; then
+      // the cruise contributes nothing rather than a negative day.
+      const counted = cruise.countSeaDays === false ? days - cruiseSeaDays : days;
+      if (counted > 0) totalCruiseDays += counted;
     }
   }
 

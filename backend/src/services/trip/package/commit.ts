@@ -27,6 +27,7 @@ import { AppError } from "../../../middleware/errorHandler";
 import { createFlightSchema } from "../../../schemas/flight";
 import { createStaySchema } from "../../../schemas/lodging";
 import { TRIP_COLORS } from "../../../schemas/trip";
+import { newTripColor } from "../newTripColor";
 import { deriveCruiseStatus } from "../../../shared/statusDerivation";
 import { dayAnchorNowFor } from "../../../shared/time/profileZone";
 import logger from "../../../utils/logger";
@@ -281,10 +282,7 @@ export async function commitPackageProposal(
   if (document?.action === "file") {
     await assertLinkable(userId, [document.id]);
   }
-  const color =
-    proposal.trip.action === "create"
-      ? TRIP_COLORS[(await prisma.trip.count({ where: { userId } })) % TRIP_COLORS.length]
-      : null;
+  const color = proposal.trip.action === "create" ? await newTripColor(userId) : null;
 
   const written = await prisma.$transaction(
     async (tx) => {

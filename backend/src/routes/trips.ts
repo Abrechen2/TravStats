@@ -5,12 +5,7 @@ import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth
 import { rejectDemo } from "../middleware/demoGuard";
 import { AppError } from "../middleware/errorHandler";
 import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
-import {
-  createTripSchema,
-  updateTripSchema,
-  assignFlightsSchema,
-  TRIP_COLORS,
-} from "../schemas/trip";
+import { createTripSchema, updateTripSchema, assignFlightsSchema } from "../schemas/trip";
 import { assertMergedTripDates } from "../services/trip/tripDateOrder";
 import logger from "../utils/logger";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
@@ -61,6 +56,7 @@ import {
   shareSnapshots,
   SHARE_TX_TIMEOUT_MS,
 } from "../services/sharing/propagate";
+import { newTripColor } from "../services/trip/newTripColor";
 
 // Re-exported for the Immich trip routers, which import it from here.
 export { resolveTrip };
@@ -365,11 +361,7 @@ router.post(
       if (await refusesCoverImage(userId, body.coverImageUrl, res)) return;
       const documentIds = await takeDocumentIds(userId, req.body);
 
-      let color = body.color;
-      if (!color) {
-        const count = await prisma.trip.count({ where: { userId } });
-        color = TRIP_COLORS[count % TRIP_COLORS.length];
-      }
+      const color = body.color ?? (await newTripColor(userId));
 
       // Resolve companion names to Companion entities up front (find-or-create
       // is idempotent via companionService, so it's safe to run outside the

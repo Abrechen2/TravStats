@@ -20,6 +20,7 @@ import path from "path";
 import { prisma, type DbTransaction } from "../../../db";
 import { getTripPhotoDir } from "../../../middleware/upload";
 import { TRIP_COLORS } from "../../../schemas/trip";
+import { newTripColor } from "../newTripColor";
 import logger from "../../../utils/logger";
 import { checkAndUpdateAchievements } from "../../../utils/achievements";
 import { createDocument, type EntryRef } from "../../documents/documentService";
@@ -191,10 +192,7 @@ export async function commitTripFile(
     userId,
     file.stays.map((s) => s.lodging)
   );
-  const color =
-    proposal.trip.action === "create"
-      ? TRIP_COLORS[(await prisma.trip.count({ where: { userId } })) % TRIP_COLORS.length]
-      : TRIP_COLORS[0];
+  const color = proposal.trip.action === "create" ? await newTripColor(userId) : TRIP_COLORS[0];
   const photos = await writePhotos(
     archive,
     await knownPhotoHashes(

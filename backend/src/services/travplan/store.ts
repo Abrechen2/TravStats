@@ -7,6 +7,7 @@ import { emptyState, createPlanSchema, proposalContentSchema } from "./schema";
 import { parseState } from "./upgrade";
 import { applyOperation, applyProposal } from "./operations";
 import { mirrorEmptyTrip } from "./metadata";
+import { chosenTripColor } from "../trip/newTripColor";
 import { adoptExisting } from "./existing";
 import { linkActual } from "./linkActual";
 import { checkPlan, deriveBudget } from "./rules";
@@ -157,11 +158,13 @@ export async function createPlan(userId: string, input: unknown): Promise<PlanVi
         const existing = await tx.travelPlan.findUnique({ where: { tripId: trip.id } });
         if (existing) return view(existing, trip.name);
       }
-      if (!trip)
+      if (!trip) {
+        const color = await chosenTripColor(userId, tx);
         trip = await tx.trip.create({
           data: {
             userId,
             name: body.name,
+            ...(color !== null && { color }),
             status: "planned",
             destinationLabel: body.settings.destination,
             startDate: body.settings.startDay
@@ -186,6 +189,7 @@ export async function createPlan(userId: string, input: unknown): Promise<PlanVi
             destinationLabel: true,
           },
         });
+      }
       let state: PlanState = parseState({
         ...emptyState(),
         ...(body.tripId

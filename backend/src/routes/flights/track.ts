@@ -26,6 +26,7 @@ import {
 import { handleGpxUpload } from "../trips/tourTracks";
 import { overlapsSchedule, scheduledInstants } from "../../services/flightDevice/flightWindow";
 import { trackTimes, type TrackZoneColumns } from "../../services/flightDevice/trackTimes";
+import { flightLiveTrackingEnabled } from "../../services/settings/accountPrefs";
 import logger from "../../utils/logger";
 
 /**
@@ -172,6 +173,7 @@ router.get("/:id/track", async (req: AuthRequest, res: Response, next: NextFunct
  *     unless `replace: true` — a shorter second recording must never silently
  *     displace a complete first one
  *   - otherwise → 201, stored
+ *   - the account's live tracking off → 409 FLIGHT_TRACKING_DISABLED, nothing stored
  */
 router.post(
   "/:id/track",
@@ -182,6 +184,15 @@ router.post(
         throw new AppError("The recording is too large", 413, "TRACK_BODY_TOO_LARGE");
       }
       const flight = await loadOwnedFlight(req.params.id, req.userId!);
+      // "Live-Verfolgung" off (forgejo#321): the phone's recording is not taken.
+      // A file the user uploads below is their own import and stays allowed.
+      if (!(await flightLiveTrackingEnabled(req.userId!))) {
+        throw new AppError(
+          "Live tracking is switched off for this account",
+          409,
+          "FLIGHT_TRACKING_DISABLED"
+        );
+      }
       const body = flightTrackUploadSchema.parse(req.body);
 
       const existing = await prisma.flightTrack.findUnique({

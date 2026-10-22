@@ -17,6 +17,7 @@ import { prisma } from "../../db";
 import { countableCruiseWhere } from "../../shared/cruiseCounting";
 import { startedIn } from "../../utils/stats/domainYear";
 import type { CruiseData } from "../../utils/cruiseStats";
+import { cruiseSeaDaysCounted } from "../settings/accountPrefs";
 
 /** One cruise: what the calculator reads, and what an evidence entry shows. */
 export interface CruiseStatsRow {
@@ -46,6 +47,8 @@ export interface CruiseStatsRow {
 
 export interface CruiseStatsData {
   rows: CruiseStatsRow[];
+  /** The account's "Seetage zählen" (forgejo#321), stamped on every row's input. */
+  countSeaDays: boolean;
   /** 1-12 month, for the birthday-at-sea flag. Undefined when none is set. */
   userBirthday?: { month: number; day: number };
 }
@@ -80,7 +83,7 @@ export async function loadCruiseStatsData(
   year: number | undefined,
   statuses: CruiseStatusScope = "sailed"
 ): Promise<CruiseStatsData> {
-  const [user, cruises] = await Promise.all([
+  const [user, cruises, countSeaDays] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { birthdate: true, birthDay: true } }),
     prisma.cruise.findMany({
       where: {
@@ -96,6 +99,7 @@ export async function loadCruiseStatsData(
         ship: { select: { name: true } },
       },
     }),
+    cruiseSeaDaysCounted(userId),
   ]);
 
   const rows: CruiseStatsRow[] = cruises.map((c) => ({
@@ -143,6 +147,7 @@ export async function loadCruiseStatsData(
       departurePort: c.departurePort,
       arrivalPort: c.arrivalPort,
       legDistancesKm: c.legs.map((l) => l.distanceKm),
+      countSeaDays,
     },
   }));
 
@@ -150,5 +155,5 @@ export async function loadCruiseStatsData(
   // birthday-at-sea flag — a floating date, read by `birthdayOf`.
   const userBirthday = birthdayOf(user);
 
-  return { rows, userBirthday };
+  return { rows, userBirthday, countSeaDays };
 }
