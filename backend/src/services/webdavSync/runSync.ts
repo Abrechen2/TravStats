@@ -1,9 +1,10 @@
+import { createHash } from "crypto";
 import path from "path";
 import { gzipSync } from "zlib";
 import { createClient } from "webdav";
 
 import { prisma } from "../../db";
-import { decryptApiKey } from "../../utils/encryption";
+import { decryptApiKey, encryptionKeyFingerprint } from "../../utils/encryption";
 import logger from "../../utils/logger";
 import { buildAccountExport } from "../export/allDataExport";
 import { getInstanceSettings } from "../instanceSettingsService";
@@ -13,7 +14,7 @@ import { guardedAgents, normalizeWebdavUrl, type TargetPolicy } from "./targetPo
 /**
  * One run of an account's WebDAV sync (forgejo#321): its full data export,
  * gzipped, uploaded as a new file; then all but the newest `keepVersions` of
- * OUR files in that folder deleted. Every run, scheduled or clicked, ends in
+ * THIS account's files in that folder deleted. Every run, scheduled or clicked, ends in
  * a recorded result on the row — the reason included — because a sync that
  * fails at 05:15 has nobody watching but the settings page.
  */
@@ -30,8 +31,26 @@ export interface WebdavRunResult {
   deleted: number;
 }
 
-/** Our file names, and nothing else in the folder: retention deletes only these. */
-export const EXPORT_FILE_PATTERN = /^travstats-export-\d{8}T\d{6}Z\.json\.gz$/;
+/**
+ * Which account on which instance wrote an export: twelve hex digits of a
+ * hash over the instance's encryption-key fingerprint and the user id. Two
+ * accounts, or the same account restored onto a second instance, that sync
+ * into one folder must never count — and so delete — each other's files
+ * (Codex review). Hashed so the name carries neither the id nor the user
+ * name in clear; stable for as long as the instance can read the stored
+ * password at all, since that needs the same key.
+ */
+export function exportOwnerTag(userId: string): string {
+  return createHash("sha256")
+    .update(`travstats-webdav-owner:${encryptionKeyFingerprint()}:${userId}`)
+    .digest("hex")
+    .slice(0, 12);
+}
+
+/** This owner's file names, and nothing else in the folder: retention deletes only these. */
+export function ownExportPattern(tag: string): RegExp {
+  return new RegExp(`^travstats-export-${tag}-\\d{8}T\\d{6}Z\\.json\\.gz$`);
+}
 
 /** How long one upload may take before it counts as a timeout. */
 const UPLOAD_TIMEOUT_MS = 5 * 60_000;
@@ -40,13 +59,13 @@ const REQUEST_TIMEOUT_MS = 60_000;
 
 const running = new Set<string>();
 
-/** `travstats-export-20261022T051500Z.json.gz` — sortable by name. */
-export function exportFileName(at: Date): string {
+/** `travstats-export-<tag>-20261022T051500Z.json.gz` — sortable by name within one owner. */
+export function exportFileName(at: Date, tag: string): string {
   const stamp = at
     .toISOString()
     .replace(/\.\d{3}Z$/, "Z")
     .replace(/[-:]/g, "");
-  return `travstats-export-${stamp}.json.gz`;
+  return `travstats-export-${tag}-${stamp}.json.gz`;
 }
 
 /** Whether a run of this account's sync is in progress in this process. */
@@ -102,8 +121,13 @@ async function ensureFolder(client: Client, remotePath: string): Promise<void> {
   }
 }
 
-/** Delete all but the newest `keep` of our exports; returns how many went. */
-async function pruneOldExports(client: Client, remotePath: string, keep: number): Promise<number> {
+/** Delete all but the newest `keep` of this owner's exports; returns how many went. */
+async function pruneOldExports(
+  client: Client,
+  remotePath: string,
+  pattern: RegExp,
+  keep: number
+): Promise<number> {
   const listing = (await client.getDirectoryContents(remotePath, {
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   } as never)) as unknown;
@@ -112,7 +136,7 @@ async function pruneOldExports(client: Client, remotePath: string, keep: number)
     basename?: string;
   }>;
   const ours = items
-    .filter((i) => i.type === "file" && EXPORT_FILE_PATTERN.test(i.basename ?? ""))
+    .filter((i) => i.type === "file" && pattern.test(i.basename ?? ""))
     .map((i) => i.basename as string)
     .sort()
     .reverse();
@@ -145,7 +169,8 @@ async function upload(userId: string, target: ResolvedTarget, at: Date): Promise
   const data = await buildAccountExport(userId, instanceName);
   if (!data) throw new WebdavSyncError("notConfigured");
   const body = gzipSync(Buffer.from(JSON.stringify(data), "utf8"));
-  const fileName = exportFileName(at);
+  const tag = exportOwnerTag(userId);
+  const fileName = exportFileName(at, tag);
 
   const client = createClient(target.url, {
     username: target.username,
@@ -166,7 +191,12 @@ async function upload(userId: string, target: ResolvedTarget, at: Date): Promise
   // The export is on the share; a failed clean-up must not turn that into a
   // failure, nor be swallowed — it is reported as "partial" with its cause.
   try {
-    const deleted = await pruneOldExports(client, target.remotePath, target.keepVersions);
+    const deleted = await pruneOldExports(
+      client,
+      target.remotePath,
+      ownExportPattern(tag),
+      target.keepVersions
+    );
     return { status: "ok", errorCode: null, fileName, sizeBytes: body.length, deleted };
   } catch (error) {
     const errorCode = classifyWebdavError(error);
