@@ -158,6 +158,43 @@ describe("resolveBahnHandoff", () => {
   });
 });
 
+describe("resolveBahnHandoff with a section it cannot classify", () => {
+  // Codex review before 2.7.0-rc.20: a section with no vehicle, or a vehicle
+  // type without a name, was dropped as "no train" and the ride read as
+  // complete — even when the recon beside it carried every leg.
+  const train = {
+    abfahrtsOrt: "Augsburg Hbf",
+    ankunftsOrt: "München Hbf",
+    abfahrtsZeitpunkt: "2026-11-03T08:08:00",
+    ankunftsZeitpunkt: "2026-11-03T08:54:00",
+    verkehrsmittel: { name: "RB 57099", typ: "REGIONALZUEGE" },
+  };
+  const second = {
+    abfahrtsOrt: "München Hbf (tief)",
+    ankunftsOrt: "München Flughafen Terminal",
+    abfahrtsZeitpunkt: "2026-11-03T09:42:00",
+    ankunftsZeitpunkt: "2026-11-03T10:28:00",
+  };
+
+  it.each([
+    ["no vehicle at all", second],
+    ["an empty vehicle (what the bookmarklet sends for none)", { ...second, verkehrsmittel: {} }],
+    ["a vehicle type without a name or number", { ...second, verkehrsmittel: { typ: "S" } }],
+  ])("refuses a ride with %s instead of reading it partially", async (_label, odd) => {
+    const outcome = await resolveBahnHandoff({ verbindungsAbschnitte: [train, odd] }, undefined);
+    expect(outcome).toMatchObject({ outcome: "failed", reason: "unreadable" });
+  });
+
+  it("falls back to the recon when the sections cannot all be classified", async () => {
+    const outcome = await resolveBahnHandoff(
+      { verbindungsAbschnitte: [train, second], hinfahrtRecon: RECON },
+      undefined
+    );
+    expect(outcome.outcome).toBe("read");
+    expect(outcome.outcome === "read" && outcome.booking.legs).toHaveLength(2);
+  });
+});
+
 describe("fetchDbConnection with a recon-only answer", () => {
   const realFetch = global.fetch;
   afterEach(() => {

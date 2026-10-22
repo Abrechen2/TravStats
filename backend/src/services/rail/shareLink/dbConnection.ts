@@ -20,8 +20,9 @@ import { MAX_RECON_LENGTH, parseHinfahrtRecon, type ReconSection } from "./dbRec
  * Bounded: one request, `RAIL_LOOKUP_TIMEOUT_MS`, a body cap, and a strict
  * shape. Two shapes are read: the sections bahn.de's web client reads
  * (`verbindungsAbschnitte`), and the `hinfahrtRecon` string a tester's real
- * answer carried (2026-10-16, see `dbRecon.ts`). Anything else is
- * `unreadable`, never a half-read ride. The bookmarklet hand-over reads its
+ * answer carried (2026-10-16, see `dbRecon.ts`). Sections are read only
+ * when every one is a named vehicle or a walk; otherwise the recon is tried.
+ * Anything else is `unreadable`, never a half-read ride. The bookmarklet hand-over reads its
  * answer through the same `connectionFromAnswer`, so the server and the
  * browser path cannot disagree about what a connection is.
  */
@@ -116,7 +117,12 @@ function pickConnection(data: z.infer<typeof answerSchema>): Connection {
  */
 export function connectionFromAnswer(json: unknown): Connection | null {
   const sections = answerSchema.safeParse(json);
-  if (sections.success) return pickConnection(sections.data);
+  if (sections.success) {
+    const picked = pickConnection(sections.data);
+    // A section that is neither a named vehicle nor a walk would be dropped as
+    // "no train" and the ride read as complete without it: try the recon instead.
+    if (picked.verbindungsAbschnitte.every((s) => kindOfSection(s) !== null)) return picked;
+  }
   const recon = reconAnswer.safeParse(json);
   if (!recon.success) return null;
   const parsed = parseHinfahrtRecon(recon.data.hinfahrtRecon);
@@ -138,13 +144,18 @@ const wallClock = (value: string): string => {
   return `${m[1]}T${m[2]}`;
 };
 
-/** A walk, a transfer or a section without a vehicle is no train ride. */
-function isTrain(s: Section): boolean {
+/**
+ * A section is a walk (its type says so) or a vehicle the answer names; anything
+ * else — no vehicle, or a vehicle type with nothing printed — is not guessed at.
+ */
+function kindOfSection(s: Section): "vehicle" | "walk" | null {
   const t = s.verkehrsmittel;
-  if (!t) return false;
-  if (t.typ && /walk|fuss|transfer/i.test(t.typ)) return false;
-  return Boolean(t.name || t.kurzText || t.nummer);
+  if (!t) return null;
+  if (t.typ && /walk|fuss|transfer/i.test(t.typ)) return "walk";
+  return t.name?.trim() || t.kurzText?.trim() || t.nummer?.trim() ? "vehicle" : null;
 }
+
+const isTrain = (s: Section): boolean => kindOfSection(s) === "vehicle";
 
 /** "ICE 578" → ICE / 578; a number only when printed — never invented. */
 function trainOf(s: Section): { category: string | null; number: string | null } {
