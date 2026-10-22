@@ -65,6 +65,27 @@ describe("parseShareLink", () => {
 });
 
 describe("bookingFromConnection", () => {
+  it("keeps a stated category beside a train named by number alone, and guesses none", () => {
+    const leg = (verkehrsmittel: Record<string, string>) => ({
+      verbindungsAbschnitte: [
+        {
+          abfahrtsOrt: "Augsburg Hbf",
+          ankunftsOrt: "München Hbf",
+          abfahrtsZeitpunkt: "2026-10-15T08:08:00",
+          ankunftsZeitpunkt: "2026-10-15T08:54:00",
+          verkehrsmittel,
+        },
+      ],
+    });
+    const train = (v: Record<string, string>) => {
+      const l = bookingFromConnection(leg(v), null)?.legs[0];
+      return [l?.trainCategory, l?.trainNumber];
+    };
+    expect(train({ name: "57031", kurzText: "RB" })).toEqual(["RB", "57031"]);
+    expect(train({ name: "57031" })).toEqual([null, "57031"]);
+    expect(train({ name: "57031", kurzText: "57031" })).toEqual([null, "57031"]);
+  });
+
   it("keeps the trains, drops the walk, and invents no reference or price", () => {
     const b = bookingFromConnection(connection, "first");
     expect(b).toMatchObject({

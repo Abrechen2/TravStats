@@ -8,6 +8,10 @@ describe("trainName", () => {
     expect(trainName(null, "57031", bare)).toBe("Zug 57031");
   });
 
+  it("names a row read before rc.21, which stored the number as the category", () => {
+    expect(trainName("57031", null, bare)).toBe("Zug 57031");
+  });
+
   it("leaves a train with a category as it is", () => {
     expect(trainName("S", "1", bare)).toBe("S 1");
     expect(trainName("ICE", "1234", bare)).toBe("ICE 1234");

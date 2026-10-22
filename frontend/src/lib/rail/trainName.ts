@@ -21,5 +21,7 @@ export function trainName(
   const c = category?.trim() ?? "";
   const n = number?.trim() ?? "";
   if (c === "" && n !== "") return bare(n);
+  // Rows read before rc.21 stored the bare number as the category.
+  if (n === "" && /^\d{1,6}$/.test(c)) return bare(c);
   return [c, n].filter(Boolean).join(" ");
 }

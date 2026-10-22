@@ -179,9 +179,13 @@ function trainOf(s: Section): { category: string | null; number: string | null }
   const named = /^([A-Za-zÄÖÜäöü]{1,8})\s*(\d{1,6})$/.exec((t.name ?? "").trim());
   if (named) return { category: named[1], number: named[2] };
   // bahn.de names some regional trains by number alone ("57031"): that is the
-  // number, not a category — and no category ("RB") is guessed for it.
+  // number, not a category. A category the answer states beside it ("RB") is
+  // kept; none is guessed when it states none.
   const bare = /^\d{1,6}$/.exec((t.name ?? "").trim());
-  if (bare) return { category: null, number: bare[0] };
+  if (bare) {
+    const kurz = t.kurzText?.trim() ?? "";
+    return { category: kurz && !/^\d+$/.test(kurz) ? kurz : null, number: bare[0] };
+  }
   return {
     category: t.kurzText?.trim() || null,
     number: t.nummer && /^\d{1,6}$/.test(t.nummer.trim()) ? t.nummer.trim() : null,
