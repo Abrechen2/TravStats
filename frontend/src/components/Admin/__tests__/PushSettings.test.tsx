@@ -45,7 +45,7 @@ describe("PushSettings", () => {
   it("links the privacy policy", async () => {
     render(<PushSettings />);
     const link = await screen.findByRole("link", { name: "pushRelay:privacyLink" });
-    expect(link).toHaveAttribute("href", "https://travstats.de/datenschutz");
+    expect(link).toHaveAttribute("href", "https://www.abrechen2.de/travstats/datenschutz/");
   });
 
   it("switching on sends pushEnabled: true and shows the answer", async () => {

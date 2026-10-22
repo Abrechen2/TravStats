@@ -38,8 +38,8 @@ describe("UsageStatsSettings i18n keys", () => {
   });
 
   it("links the locale's privacy policy and names the controller", () => {
-    expect(resolve(de, "legal.privacyUrl")).toBe("https://travstats.de/datenschutz/");
-    expect(resolve(en, "legal.privacyUrl")).toBe("https://travstats.de/en/privacy/");
+    expect(resolve(de, "legal.privacyUrl")).toBe("https://www.abrechen2.de/travstats/datenschutz/");
+    expect(resolve(en, "legal.privacyUrl")).toBe("https://www.abrechen2.de/en/travstats/privacy/");
     expect(resolve(de, "legal.controller")).toBe("Verantwortlich: Dennis Wittke");
     expect(resolve(en, "legal.controller")).toBe("Controller: Dennis Wittke");
   });
