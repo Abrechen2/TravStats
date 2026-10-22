@@ -49,11 +49,13 @@ export default function TripsSection(): JSX.Element {
           sub={t("settings:trips.defaultColor.description")}
           htmlFor="trips-default-color"
           control={
-            <>
+            // Swatch and select stay on one line; the swatch alone must not
+            // wrap above the select on a narrower row (iPad, forgejo#321).
+            <span className="flex items-center" style={{ gap: "var(--ts-space-sm)" }}>
               <span
                 aria-hidden
                 data-testid="trips-default-color-swatch"
-                className="inline-block rounded-full"
+                className="inline-block shrink-0 rounded-full"
                 style={{
                   width: 20,
                   height: 20,
@@ -73,7 +75,7 @@ export default function TripsSection(): JSX.Element {
                   </option>
                 ))}
               </Select>
-            </>
+            </span>
           }
         />
       </SettingRows>
