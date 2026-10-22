@@ -6,24 +6,38 @@ import type { Layer } from "@deck.gl/core";
 // and the recording — but no train ride, no ferry crossing and no rental car,
 // so a Kiel–Oslo ferry trip showed its hotel alone. The stand-in lists the
 // extra layers the map is handed, and what the camera is asked to frame.
+const projectionListener = vi.hoisted(() => ({
+  current: undefined as ((p: "mercator" | "globe") => void) | undefined,
+}));
 vi.mock("../TripMap", () => ({
   default: ({
     extraLayers = [],
     extraPoints = [],
+    onProjectionChange,
   }: {
     extraLayers?: readonly Layer[];
     extraPoints?: readonly unknown[];
-  }) => (
-    <ul data-testid="map" data-extra-points={extraPoints.length}>
-      {extraLayers.map((layer) => (
-        <li key={layer.id} data-testid={layer.id}>
-          {JSON.stringify(
-            ((layer.props.data as { path?: unknown }[] | undefined) ?? []).map((d) => d.path)
-          )}
-        </li>
-      ))}
-    </ul>
-  ),
+    onProjectionChange?: (p: "mercator" | "globe") => void;
+  }) => {
+    projectionListener.current = onProjectionChange;
+    return (
+      <ul data-testid="map" data-extra-points={extraPoints.length}>
+        {extraLayers.map((layer) => (
+          <li key={layer.id} data-testid={layer.id}>
+            {JSON.stringify(
+              // What the layer draws: its `getPath` (where a globe altitude is
+              // applied), else the datum's own path.
+              ((layer.props.data as { path?: unknown }[] | undefined) ?? []).map((d) =>
+                typeof (layer.props as { getPath?: unknown }).getPath === "function"
+                  ? (layer.props as unknown as { getPath: (x: unknown) => unknown }).getPath(d)
+                  : d.path
+              )
+            )}
+          </li>
+        ))}
+      </ul>
+    );
+  },
 }));
 vi.mock("../../../lib/api/tours", () => ({
   toursApi: { list: vi.fn(async () => []), tracks: { list: vi.fn(), get: vi.fn() } },
@@ -134,6 +148,25 @@ describe("TripMapWithTours — rail, ferry and rental on the trip map", () => {
     expect(screen.getByTestId("trip-ferry-paths").textContent).toBe(JSON.stringify([SEA_LANE]));
     // Rail chord (2) + sea lane (4) + rental ends (2): the camera frames all of them.
     expect(Number(screen.getByTestId("map").dataset.extraPoints)).toBeGreaterThanOrEqual(8);
+  });
+
+  // Codex review before 2.7.0-beta.23: the three were always built for the
+  // flat map, so on the trip map's globe they lay at altitude 0 — under the
+  // flights and cruises, cut by the surface — while the dashboard globe lifts them.
+  it("builds the globe variant of rail, ferry and rental once the map turns to the globe", async () => {
+    await renderMap();
+    const zOf = (id: string): unknown[] =>
+      (JSON.parse(screen.getByTestId(id).textContent ?? "[]") as number[][][])
+        .flat()
+        .map((p) => p[2]);
+    expect(zOf("trip-rail-paths").every((z) => z === undefined)).toBe(true);
+    expect(projectionListener.current).toBeTypeOf("function");
+    act(() => projectionListener.current?.("globe"));
+    for (const id of ["trip-rail-paths", "trip-ferry-paths", "trip-rental-links"]) {
+      const z = zOf(id);
+      expect(z.length).toBeGreaterThan(0);
+      expect(z.every((v) => typeof v === "number" && v > 0)).toBe(true);
+    }
   });
 
   it("draws and frames nothing of a hidden domain", async () => {

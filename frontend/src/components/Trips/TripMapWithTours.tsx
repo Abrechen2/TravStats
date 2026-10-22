@@ -11,6 +11,7 @@ import { useTripRecording } from "../../hooks/useTripRecording";
 import { buildRecordingLayers, recordingPoints } from "./recording/recordingLayers";
 import TripRecordingPanel from "./recording/TripRecordingPanel";
 import { useTripTransportLayers, type TripTransportContent } from "./tripTransportLayers";
+import type { TripProjection } from "./TripMapGlobeLayers";
 
 /**
  * The trip detail page's "Karte" tab: the trip, and — while tours are visible
@@ -33,7 +34,9 @@ export default function TripMapWithTours({
     [trip.busJourneys, busColor]
   );
   const busPoints = useMemo(() => busPathPoints(trip.busJourneys ?? []), [trip.busJourneys]);
-  const transport = useTripTransportLayers(trip);
+  // The map's projection, so rail, ferry and rental are built for the globe on it.
+  const [projection, setProjection] = useState<TripProjection>("mercator");
+  const transport = useTripTransportLayers(trip, projection === "globe");
   const [recordingDay, setRecordingDay] = useState<string | null>(null);
   const recording = useTripRecording(trip.id, recordingDay);
   const segments = recording.view?.segments;
@@ -65,6 +68,7 @@ export default function TripMapWithTours({
         tourGeometries={geometries}
         extraLayers={extraLayers}
         extraPoints={extraPoints}
+        onProjectionChange={setProjection}
       />
     </>
   );
