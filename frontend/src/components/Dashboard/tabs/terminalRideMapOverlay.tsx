@@ -65,12 +65,33 @@ export function buildTerminalRideMapLayers(
   labelsMode: LabelsMode = "important",
   domain: "bus" | "ferry" = "bus"
 ): Layer[] {
+  const lines = buildTerminalRideLines(rides, colorHex, onGlobe, idPrefix, true);
+  if (lines.length === 0) return [];
+  const color = hexToRgb(colorHex);
+  const journeys = rides.map(domain === "ferry" ? journeyFromFerry : journeyFromBus);
+  return [
+    ...withJourneyCards(lines, journeys, color),
+    ...buildStationLabelLayers([{ rides, color }], { labelsMode, idPrefix, onGlobe }),
+  ];
+}
+
+/**
+ * The lines and terminal dots alone — what the dashboard draws, without its
+ * cards and names. A ride's detail page draws its one ride with these, not
+ * pickable, so the two maps cannot draw the same ride two ways.
+ */
+export function buildTerminalRideLines(
+  rides: readonly TerminalRideLine[],
+  colorHex: string,
+  onGlobe: boolean,
+  idPrefix: string,
+  pickable: boolean
+): Layer[] {
   const data = busPaths(rides);
   if (data.length === 0) return [];
-  const color = hexToRgb(colorHex);
-  const [r, g, b] = color;
+  const [r, g, b] = hexToRgb(colorHex);
   const altitude = onGlobe ? RAIL_PATH_GLOBE_ALTITUDE_M : 0;
-  const lines: Layer[] = [
+  return [
     new PathLayer<BusPathDatum>({
       id: `${idPrefix}-paths`,
       data,
@@ -80,7 +101,7 @@ export function buildTerminalRideMapLayers(
       widthUnits: "pixels",
       capRounded: true,
       jointRounded: true,
-      pickable: true,
+      pickable,
       updateTriggers: { getColor: colorHex, getPath: altitude },
     }),
     new ScatterplotLayer<TerminalDatum>({
@@ -94,14 +115,9 @@ export function buildTerminalRideMapLayers(
       stroked: true,
       radiusUnits: "pixels",
       getRadius: STATION_DOT_RADIUS_PX,
-      pickable: true,
+      pickable,
       updateTriggers: { getFillColor: colorHex, getPosition: altitude },
     }),
-  ];
-  const journeys = rides.map(domain === "ferry" ? journeyFromFerry : journeyFromBus);
-  return [
-    ...withJourneyCards(lines, journeys, color),
-    ...buildStationLabelLayers([{ rides, color }], { labelsMode, idPrefix, onGlobe }),
   ];
 }
 

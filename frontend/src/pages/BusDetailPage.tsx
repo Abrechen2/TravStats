@@ -13,6 +13,8 @@ import ConfirmModal from "../components/Training/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
 import { BusFormModal } from "../components/bus/BusFormModal";
 import { BusNoRoutingNote } from "../components/bus/BusNoRoutingNote";
+import { BusRouteMap } from "../components/bus/BusRouteMap";
+import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import { useBusRouting } from "../hooks/useBusRouting";
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
@@ -35,8 +37,7 @@ import type { BusJourney } from "../types/bus";
  * One bus ride (spec 2026-10-07-bus-domain-design §11). Every time is on its
  * terminal's clock, a distance says what it measures, and an unrecorded delay
  * stays apart from an on-time arrival. Gated in App.tsx like the logbook: the
- * `busDomain` beta switch, then the user's domain choice. The route map and
- * the trip's photo strip are not drawn yet (B2).
+ * `busDomain` beta switch, then the user's domain choice.
  */
 export default function BusDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
@@ -266,10 +267,6 @@ export default function BusDetailPage(): JSX.Element {
               { label: t("bus:detail.seat"), value: ride.seat, mono: true },
               { label: t("bus:detail.bookingReference"), value: ride.bookingReference, mono: true },
               { label: t("bus:detail.delay"), value: delayText },
-              {
-                label: t("bus:detail.mapLine"),
-                value: t(`bus:routing.mapLine.${ride.geometrySource}`),
-              },
             ]}
           />
 
@@ -306,6 +303,12 @@ export default function BusDetailPage(): JSX.Element {
               </span>
             </DetailSection>
           )}
+          {/* The trip's photos taken on board, as a train ride shows them. */}
+          {ride.tripId && <TripPhotoWindowStrip entry="bus" id={ride.id} />}
+
+          <DetailSection title={t("bus:detail.route")}>
+            <BusRouteMap ride={ride} />
+          </DetailSection>
 
           {ride.companions.length > 0 && (
             <DetailSection title={t("bus:detail.companions")}>

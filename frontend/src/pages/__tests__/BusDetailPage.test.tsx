@@ -28,6 +28,16 @@ vi.mock("../../components/documents/DocumentsSection", () => ({
     <div data-testid="documents-stub">{`${entry.type}:${entry.id}`}</div>
   ),
 }));
+vi.mock("../../components/bus/BusRouteMap", () => ({
+  BusRouteMap: ({ ride }: { ride: { id: string } }) => (
+    <div data-testid="bus-map-stub">{ride.id}</div>
+  ),
+}));
+vi.mock("../../components/common/TripPhotoWindowStrip", () => ({
+  default: ({ entry, id }: { entry: string; id: string }) => (
+    <div data-testid="photo-window-stub">{`${entry}:${id}`}</div>
+  ),
+}));
 vi.mock("../../components/bus/BusFormModal", () => ({
   BusFormModal: ({
     journey,
@@ -204,6 +214,23 @@ describe("BusDetailPage", () => {
       );
       expect(screen.queryByRole("button", { name: "Über die Straße berechnen" })).toBeNull();
     });
+  });
+
+  it("draws the ride on a map under 'Strecke'", async () => {
+    await renderPage(rideFixture());
+    expect(await screen.findByTestId("bus-map-stub")).toHaveTextContent("r1");
+    expect(screen.getByText("Strecke")).toBeInTheDocument();
+  });
+
+  it("shows the trip's photos taken on board when the ride is on a trip", async () => {
+    await renderPage({ ...rideFixture(), tripId: "t1" });
+    expect(await screen.findByTestId("photo-window-stub")).toHaveTextContent("bus:r1");
+  });
+
+  it("asks for no photo window when the ride is on no trip", async () => {
+    await renderPage(rideFixture());
+    await screen.findByTestId("bus-map-stub");
+    expect(screen.queryByTestId("photo-window-stub")).toBeNull();
   });
 
   it("keeps an unrecorded delay apart from an on-time arrival", async () => {
