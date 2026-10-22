@@ -10,6 +10,12 @@ import { groupMapData, pathIdentity } from "../layers/routeAggregation";
 
 import { ColumnLayer, PathLayer, ScatterplotLayer, SolidPolygonLayer } from "@deck.gl/layers";
 import { PathStyleExtension, type PathStyleExtensionProps } from "@deck.gl/extensions";
+import {
+  RECORDED_GAP_ALPHA_SHARE,
+  RECORDED_GAP_DASH,
+  RECORDED_GAP_WIDTH_PX,
+  RECORDED_SOLID_WIDTH_PX,
+} from "../layers/recordedFlightPaths";
 import type { Layer, PickingInfo } from "@deck.gl/core";
 import {
   EarthOcclusionExtension,
@@ -329,14 +335,25 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       id: "globe-flight-arcs",
       data: arcsData,
       getPath: (d) => d.waypoints,
-      getColor: (d) =>
-        arcColor(d, activeQuartile === null || activeQuartile === d.quartile ? 235 : 35),
+      getColor: (d) => {
+        const alpha = activeQuartile === null || activeQuartile === d.quartile ? 235 : 35;
+        return arcColor(
+          d,
+          d.recorded === "gap" ? Math.round(alpha * RECORDED_GAP_ALPHA_SHARE) : alpha
+        );
+      },
       // Match the flat-map routes-layer formula so flight-arc thickness
       // is consistent across map ↔ globe transitions: sqrt(count) px,
       // 1 flight → 1 px, 16 flights → 4 px (cap), then the user width
       // multiplier. The earlier log2-based curve started at 2.5 px which
-      // read as too heavy on the globe.
-      getWidth: (d) => Math.min(Math.sqrt(d.count), 4) * arcWidthScale,
+      // read as too heavy on the globe. A recorded flight's line is ONE
+      // flight, so it takes the flat map's fixed recorded widths instead.
+      getWidth: (d) =>
+        (d.recorded === "gap"
+          ? RECORDED_GAP_WIDTH_PX
+          : d.recorded === "solid"
+            ? RECORDED_SOLID_WIDTH_PX
+            : Math.min(Math.sqrt(d.count), 4)) * arcWidthScale,
       updateTriggers: {
         getColor: [activeQuartile, flightColorConfig],
         getWidth: [arcWidthScale],
@@ -366,7 +383,12 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
         // in some camera states (regression observed on beta.15).
       },
       extensions: [new PathStyleExtension({ dash: true, highPrecisionDash: true }), occlusionExt],
-      getDashArray: (d: ArcDatum) => (d.weak ? [4, 3] : [0, 0]),
+      getDashArray: (d: ArcDatum) =>
+        d.recorded === "gap"
+          ? RECORDED_GAP_DASH
+          : d.recorded === undefined && d.weak
+            ? [4, 3]
+            : [0, 0],
       dashJustified: true,
       dashGapPickable: false,
       ...occlusionProps,

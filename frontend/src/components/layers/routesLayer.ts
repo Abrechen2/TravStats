@@ -96,8 +96,8 @@ interface RouteRecord {
   // True when every flight on this canonical pair is `status: 'historical'`.
   // Used to fade the arc to the dim grey treatment.
   allHistorical: boolean;
-  // Which flights on the route carry a recorded track (forgejo#312) — drawn
-  // along it, and the arc dropped once every flight on the route has one.
+  // Which flights on the route carry a recorded track (forgejo#312) — present
+  // only while the map option is on, and drawn beside the arc, never for it.
   recordings: RouteRecordings;
 }
 
@@ -216,10 +216,10 @@ function buildArcs(
         country: r.arrAirport.country,
       },
     };
-    // A recorded flight is drawn along its recording, in this route's colour;
-    // the arc stays while any flight on the route has nothing but the arc.
+    // The arc is the route and always stays; a recorded flight on it is drawn
+    // in addition, in this route's colour.
     recorded.push(...recordedRouteData(arc, r.recordings));
-    if (r.recordings.unrecordedCount > 0) arcs.push(arc);
+    arcs.push(arc);
   }
   return { arcs, recorded };
 }
@@ -290,7 +290,7 @@ function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
 export interface RouteData {
   arcs: ArcDatum[];
   points: PointDatum[];
-  /** Recorded flights' stretches (forgejo#312); absent or empty draws none. */
+  /** Recorded flights' lines (forgejo#312); absent or empty draws none. */
   recorded?: RecordedRouteDatum[];
 }
 
@@ -530,7 +530,6 @@ export function createRoutesLayers(
     recorded.length > 0
       ? [
           createRecordedRoutesLayer(recorded, {
-            widthPx: routeWidthPx,
             widthScale: arcWidthScale,
             selectedIds,
             highlightColor: HIGHLIGHT_COLOR,

@@ -62,6 +62,12 @@ export interface ArcDatum {
    */
   flownCount: number;
   scheduledCount: number;
+  /**
+   * Set on a recorded flight's line (forgejo#312), drawn only while the map
+   * option is on: a measured stretch, or a connector across a hole. Absent on
+   * a route arc.
+   */
+  recorded?: "solid" | "gap";
 }
 
 export interface PointDatum {

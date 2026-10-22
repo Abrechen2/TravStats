@@ -61,6 +61,10 @@ import { useFlightColorStore } from "../../store/flightColorStore";
 import { useLodgingColorStore } from "../../store/lodgingColorStore";
 import { useOverlayAppearanceStore } from "../../store/overlayAppearanceStore";
 import { loadLabelsMode, useMapLabelsModeStore } from "../../store/mapLabelsModeStore";
+import {
+  loadShowRecordedFlightPaths,
+  useRecordedFlightPathsStore,
+} from "../../store/recordedFlightPathsStore";
 import { usePlaceColorStore } from "../../store/placeColorStore";
 import { useStatsCompareStore } from "../../store/statsCompareStore";
 import { useThemeStore } from "../../store/themeStore";
@@ -122,6 +126,7 @@ const MAP_MOUNT_DEFAULTS: Record<string, unknown> = {
   showTerrain: false,
   showPlaceLabels: true,
   labelsMode: "important",
+  showRecordedFlightPaths: false,
   placeLabelSource: "list",
   lodgingMarkerSize: 1,
   placeMarkerSize: 1,
@@ -179,6 +184,7 @@ const mapAppearance: WebPrefSectionDef = {
     usePlaceColorStore.setState({ config: loadPlaceColorConfig() });
     useOverlayAppearanceStore.setState({ appearance: loadOverlayAppearance() });
     useMapLabelsModeStore.setState({ mode: loadLabelsMode() });
+    useRecordedFlightPathsStore.setState({ show: loadShowRecordedFlightPaths() });
     // The maps copied it into component state at mount — they remount on this.
     bump("mapAppearance");
   },

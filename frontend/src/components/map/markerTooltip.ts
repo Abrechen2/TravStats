@@ -55,9 +55,9 @@ const ARC_LAYER_IDS = new Set<string>([
   // carries the same departure/arrival/count/sourceColor fields, so the route
   // card is identical whichever shape the user picked.
   "routes-path",
-  // A recorded flight's stretches (forgejo#312): the datum is the route's arc
-  // datum spread over each stretch, so the card is the route's. On a route
-  // whose every flight was recorded this is the ONLY line left to hover.
+  // A recorded flight's lines (forgejo#312), drawn beside the arcs while the
+  // map option is on: the datum is the route's arc datum spread over each
+  // line, so the card is the route's.
   RECORDED_ROUTES_LAYER_ID,
 ]);
 // The trip map's cruise legs carry the line name as `label` (TripMapGlobeLayers).

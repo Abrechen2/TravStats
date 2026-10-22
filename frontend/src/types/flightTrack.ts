@@ -47,3 +47,16 @@ export interface FlightTrackLine {
   /** Index into `geometry` where each recorded stretch starts. */
   segmentStarts: number[];
 }
+
+/** A recording as it is drawn: what the receiver measured, and the holes between. */
+export interface FlightTrackPieces {
+  /** Stretches of two or more consecutive fixes — drawn solid. */
+  solid: Array<Array<[number, number]>>;
+  /**
+   * The connectors across each hole: the last fix of one stretch to the first
+   * of the next. Consecutive holes around one-fix stretches run on as one
+   * line, so that fix stays on the drawing. Drawn dashed and fainter: the line
+   * reads as one flight, yet nothing claims a fix the phone never had.
+   */
+  gaps: Array<Array<[number, number]>>;
+}

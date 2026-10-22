@@ -76,6 +76,8 @@
       "rentalStations": "Pick-up/return stations",
       "rentalShowLine": "Connecting line",
       "rentalShowLineHint": "Off: only the pick-up and return stations, no line between them.",
+      "recordedFlightPaths": "Show recorded flight paths (where available)",
+      "recordedFlightPathsHint": "In addition to the routes: each recorded flight as a thin line. Dashed where the recording has holes.",
       "off": "Off",
       "labelsImportant": "Key",
       "labelsAll": "All",

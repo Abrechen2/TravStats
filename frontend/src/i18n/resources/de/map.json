@@ -76,6 +76,8 @@
       "rentalStations": "Abhol-/Rückgabestationen",
       "rentalShowLine": "Verbindungslinie",
       "rentalShowLineHint": "Aus: nur die Abhol- und Rückgabestationen, ohne Linie dazwischen.",
+      "recordedFlightPaths": "Aufgezeichnete Flugwege zeigen (wo vorhanden)",
+      "recordedFlightPathsHint": "Zusätzlich zu den Routen: jeder aufgezeichnete Flug als dünne Linie. Gestrichelt, wo die Aufzeichnung Lücken hat.",
       "off": "Aus",
       "labelsImportant": "Wichtige",
       "labelsAll": "Alle",

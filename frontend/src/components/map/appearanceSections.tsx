@@ -40,6 +40,7 @@ import {
   type FlightColorMode,
   type FlightColorSlot,
 } from "../../lib/flightColor";
+import { RecordedFlightPathsToggle } from "./RecordedFlightPathsToggle";
 import { FLIGHT_ROUTE_SHAPES, type FlightRouteShape } from "../../lib/flightRouteShape";
 import {
   DEFAULT_LODGING_COLOR_CONFIG,
@@ -193,6 +194,9 @@ export function FlightAppearanceSection({
           onChange={(c) => onColorChange("solid", c)}
         />
       )}
+
+      {/* Recorded flights beside the arcs (forgejo#312) — off by default. */}
+      <RecordedFlightPathsToggle />
 
       {/* Route width slider */}
       <Slider

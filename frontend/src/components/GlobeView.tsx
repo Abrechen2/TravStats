@@ -895,7 +895,7 @@ export default function GlobeView({
     const cruiseCount = new Set(cruisePaths.map((c) => c.cruiseId)).size;
     return {
       flights: filteredFlights.length,
-      routes: arcsData.length + antipodalArcs.length,
+      routes: arcsData.filter((a) => !a.recorded).length + antipodalArcs.length,
       flightKm: Math.round(flightKm),
       cruises: cruiseCount,
       ports: portPoints.length,

@@ -15,7 +15,7 @@ export interface FlownVsGreatCircle {
 const MIN_GREAT_CIRCLE_KM = 1;
 
 /** `0,0` is how an unknown position is stored, never an airport (Gulf of Guinea). */
-function known(p: AirportPosition | null | undefined): p is AirportPosition {
+export function knownAirportPosition(p: AirportPosition | null | undefined): p is AirportPosition {
   return (
     p !== null &&
     p !== undefined &&
@@ -35,7 +35,7 @@ export function flownVsGreatCircle(
   departure: AirportPosition | null | undefined,
   arrival: AirportPosition | null | undefined
 ): FlownVsGreatCircle | null {
-  if (!known(departure) || !known(arrival)) return null;
+  if (!knownAirportPosition(departure) || !knownAirportPosition(arrival)) return null;
   const greatCircleKm = calculateDistance(departure.lat, departure.lon, arrival.lat, arrival.lon);
   if (greatCircleKm < MIN_GREAT_CIRCLE_KM) return null;
   return {

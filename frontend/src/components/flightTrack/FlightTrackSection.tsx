@@ -103,7 +103,12 @@ export default function FlightTrackSection({
   return (
     <DetailSection title={t("flights:track.title")}>
       <div className="flex flex-col gap-2">
-        <FlightTrackMap geometry={track.geometry} segmentStarts={track.segmentStarts} />
+        <FlightTrackMap
+          geometry={track.geometry}
+          segmentStarts={track.segmentStarts}
+          departure={departure}
+          arrival={arrival}
+        />
         <p className="t-caption" data-testid="flight-track-caption">
           {t(captionKey, {
             distance: km(track.distanceKm),

@@ -14,8 +14,12 @@
 // flown, on the same screen.
 
 import type { GeoJSONFeature } from "../../types";
-import { addRecording, emptyRecordings, type RouteRecordings } from "../layers/recordedFlightPaths";
-import { flightTrackPaths } from "../flightTrack/flightTrackPaths";
+import {
+  addRecording,
+  emptyRecordings,
+  recordedLines,
+  type RouteRecordings,
+} from "../layers/recordedFlightPaths";
 import type { ArcDatum } from "./globeLayerTypes";
 import { isCountableFlight } from "../../shared/flightCounting";
 import {
@@ -148,8 +152,9 @@ export function buildGlobeArcData(
     // (historical-only, mixed, regular past-only) collapses to "past" —
     // mirrors routesLayer.ts's pureScheduled collapsing rule exactly.
     const status: ArcDatum["status"] = r.hasUpcoming && !r.hasPastFlown ? "scheduled" : "past";
-    // A recorded flight runs along its recording, on the surface — where the
-    // aircraft actually was — in the route's own colour and tier.
+    // A recorded flight (only while the map option is on) runs along its
+    // recording, on the surface — where the aircraft actually was — in the
+    // route's colour, beside the arc and never instead of it.
     const shared = {
       count: r.count,
       departure: r.departure,
@@ -161,23 +166,19 @@ export function buildGlobeArcData(
       flownCount: r.flownCount,
       scheduledCount: r.scheduledCount,
     };
-    for (const { flightId, paths } of r.recordings.recorded) {
-      for (const path of paths) {
-        arcs.push({
-          ...shared,
-          from: path[0],
-          to: path[path.length - 1],
-          // Unwrapped across the antimeridian: the globe's PathLayer does not
-          // wrap, so a raw 179 → -179 step would circle the planet.
-          waypoints: (flightTrackPaths(path, [])[0] ?? path).map(
-            ([lon, lat]): [number, number, number] => [lon, lat, 0]
-          ),
-          flightIds: [flightId],
-        });
-      }
+    for (const { flightId, path, gap } of recordedLines(r.recordings)) {
+      arcs.push({
+        ...shared,
+        from: path[0],
+        to: path[path.length - 1],
+        // Already unwrapped across the antimeridian (`flightTrackPieces`):
+        // the globe's PathLayer does not wrap, so a raw 179 → -179 step
+        // would circle the planet.
+        waypoints: path.map(([lon, lat]): [number, number, number] => [lon, lat, 0]),
+        flightIds: [flightId],
+        recorded: gap ? "gap" : "solid",
+      });
     }
-    // The great circle stays only while a flight on the route has nothing else.
-    if (r.recordings.unrecordedCount === 0) continue;
     if (distanceKm >= ANTIPODAL_DISTANCE_KM) {
       antipodals.push({
         from: r.from,

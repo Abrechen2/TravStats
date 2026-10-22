@@ -182,9 +182,8 @@ describe("createMarkerTooltip — routes", () => {
     expect(result).not.toBeNull();
     expect(result!.html).toContain("3× geflogen");
   });
-  it("answers on a fully recorded route, which draws only its recorded stretches", () => {
-    // With every flight on a route recorded, the arc layers drop the route and
-    // only `routes-recorded` is left to hover (forgejo#312).
+  it("answers on a recorded flight's line with the route's card", () => {
+    // Recorded lines are drawn beside the arcs on `routes-recorded` (forgejo#312).
     const arc = {
       departure: { iata: "MUC", name: "Munich Airport", country: "DE" },
       arrival: { iata: "JFK", name: "New York", country: "US" },
@@ -198,16 +197,18 @@ describe("createMarkerTooltip — routes", () => {
       recorded: [
         {
           flightId: "f1",
-          paths: [
-            [
-              [11.78, 48.35],
-              [-30, 52],
-              [-73.78, 40.64],
+          track: {
+            solid: [
+              [
+                [11.78, 48.35],
+                [-30, 52],
+                [-73.78, 40.64],
+              ],
             ],
-          ],
+            gaps: [],
+          },
         },
       ],
-      unrecordedCount: 0,
     });
     const result = getTooltip(makeInfo(RECORDED_ROUTES_LAYER_ID, stretch));
     expect(result).not.toBeNull();

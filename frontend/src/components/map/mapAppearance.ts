@@ -147,6 +147,9 @@ export interface MapAppearance {
    */
   placeLabelSource?: PlaceLabelSource;
   labelsMode?: LabelsMode;
+  /** Draw recorded flight paths beside the route arcs (forgejo#312). Owned by
+   *  `store/recordedFlightPathsStore.ts`; absent = off. */
+  showRecordedFlightPaths?: boolean;
   // Chrome
   /** Whether the control panel is expanded (#194). One value for both maps —
    *  it is the same panel to the user. Absent = expanded (the default). */
