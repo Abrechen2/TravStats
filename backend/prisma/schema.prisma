@@ -5597,6 +5597,11 @@ model UserWebdavSync {
   lastErrorCode     String?   @map("last_error_code")
   lastFileName      String?   @map("last_file_name")
   lastSizeBytes     Int?      @map("last_size_bytes")
+  /// The exports this account itself uploaded successfully, newest first and
+  /// bounded (`services/webdavSync/retention.ts`). Retention deletes ONLY
+  /// names on this list: a folder listing can repeat, omit or invent entries,
+  /// and a cloned instance shares the owner tag, so neither may decide.
+  uploadedFiles     String[]  @default([]) @map("uploaded_files")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 

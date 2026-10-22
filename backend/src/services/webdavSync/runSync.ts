@@ -9,7 +9,7 @@ import logger from "../../utils/logger";
 import { buildAccountExport } from "../export/allDataExport";
 import { getInstanceSettings } from "../instanceSettingsService";
 import { classifyWebdavError, WebdavSyncError, type WebdavSyncErrorCode } from "./errors";
-import { pruneOwnExports } from "./retention";
+import { pruneOwnExports, recordUpload } from "./retention";
 import { guardedAgents, normalizeWebdavUrl, type TargetPolicy } from "./targetPolicy";
 
 /**
@@ -67,7 +67,15 @@ const RUN_DEADLINE_MS = 15 * 60_000;
 /** Of that, how long the clean-up after a stored upload may take. */
 const RETENTION_BUDGET_MS = 2 * 60_000;
 
-const running = new Set<string>();
+/**
+ * How long, after the deadline, a run still waits for its result to be
+ * written before it returns anyway. The write itself carries on, guarded so
+ * it cannot overwrite a newer run's result (see `record`).
+ */
+const RECORD_GRACE_MS = 30_000;
+
+/** The account's lock, held by one run's token so a late run frees only its own. */
+const running = new Map<string, symbol>();
 
 /** `travstats-export-<tag>-20261022T051500Z.json.gz` — sortable by name within one owner. */
 export function exportFileName(at: Date, tag: string): string {
@@ -121,6 +129,8 @@ interface ResolvedTarget {
   remotePath: string;
   keepVersions: number;
   policy: TargetPolicy;
+  /** The names this account recorded uploading, newest first. */
+  history: string[];
 }
 
 async function resolveTarget(userId: string): Promise<ResolvedTarget> {
@@ -142,6 +152,7 @@ async function resolveTarget(userId: string): Promise<ResolvedTarget> {
     remotePath: row.remotePath,
     keepVersions: row.keepVersions,
     policy,
+    history: row.uploadedFiles,
   };
 }
 
@@ -175,11 +186,35 @@ async function ensureFolder(
   }
 }
 
-async function record(userId: string, result: WebdavRunResult, at: Date): Promise<void> {
-  await prisma.userWebdavSync.update({
-    where: { userId },
+/**
+ * Mark this run as the account's latest attempt — only if no newer one has
+ * claimed it — and answer whether it did. Every later write of the run is
+ * conditioned on still being that attempt.
+ */
+async function claim(userId: string, at: Date): Promise<boolean> {
+  const { count } = await prisma.userWebdavSync.updateMany({
+    where: { userId, OR: [{ lastAttemptAt: null }, { lastAttemptAt: { lt: at } }] },
+    data: { lastAttemptAt: at },
+  });
+  return count > 0;
+}
+
+/**
+ * Write the run's result, unless a newer run has claimed the row since: a
+ * run that timed out because the database hung must not land its result
+ * over the next run's when the database wakes (Codex review). Waits at most
+ * RECORD_GRACE_MS; past that the write carries on alone, still guarded.
+ */
+async function record(
+  userId: string,
+  result: WebdavRunResult,
+  at: Date,
+  history?: string[]
+): Promise<void> {
+  const write = prisma.userWebdavSync.updateMany({
+    where: { userId, lastAttemptAt: at },
     data: {
-      lastAttemptAt: at,
+      ...(history ? { uploadedFiles: history } : {}),
       lastStatus: result.status,
       lastErrorCode: result.errorCode,
       ...(result.status === "failed"
@@ -187,6 +222,23 @@ async function record(userId: string, result: WebdavRunResult, at: Date): Promis
         : { lastSuccessAt: at, lastFileName: result.fileName, lastSizeBytes: result.sizeBytes }),
     },
   });
+  try {
+    await untilAborted(AbortSignal.timeout(RECORD_GRACE_MS), write);
+  } catch (error) {
+    logger.warn({
+      operation: "webdav_user_sync_record_failed",
+      userId,
+      status: result.status,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+interface StoredExport {
+  client: Client;
+  tag: string;
+  fileName: string;
+  sizeBytes: number;
 }
 
 async function upload(
@@ -194,7 +246,7 @@ async function upload(
   target: ResolvedTarget,
   at: Date,
   deadline: AbortSignal
-): Promise<WebdavRunResult> {
+): Promise<StoredExport> {
   const { instanceName } = await getInstanceSettings();
   const data = await buildAccountExport(userId, instanceName);
   if (!data) throw new WebdavSyncError("notConfigured");
@@ -217,34 +269,58 @@ async function upload(
   // `false` instead of throwing: nothing new is on the share, so this is no
   // success, and retention must not run on its strength (Codex review).
   if (stored !== true) throw new WebdavSyncError("protocol", "upload not accepted");
+  return { client, tag, fileName, sizeBytes: body.length };
+}
 
+/**
+ * The clean-up after a stored upload. Never throws: the export is on the
+ * share, so whatever happens here — the deadline included — is a "partial"
+ * with its cause, and the upload's name and size are kept (Codex review: a
+ * race around upload AND clean-up recorded a stored export as failed).
+ */
+async function cleanUp(
+  userId: string,
+  target: ResolvedTarget,
+  stored: StoredExport,
+  deadline: AbortSignal
+): Promise<{ result: WebdavRunResult; history: string[] }> {
+  const { client, tag, fileName, sizeBytes } = stored;
   // The export is on the share; a failed clean-up must not turn that into a
   // failure, nor be swallowed — it is reported as "partial" with its cause.
   // The clean-up gets a budget of its own inside the run's deadline; running
   // out of either is a "partial" with `timeout`, never a failure.
   const retention = AbortSignal.any([deadline, AbortSignal.timeout(RETENTION_BUDGET_MS)]);
+  // What is known to be on the share once the upload is in: the record plus it.
+  const progress = { history: recordUpload(target.history, fileName), deleted: 0 };
+  const uploaded = { fileName, sizeBytes };
   try {
-    const { deleted, complete } = await untilAborted(
+    const { deleted, history, complete } = await untilAborted(
       retention,
-      pruneOwnExports(client, target.remotePath, ownExportPattern(tag), target.keepVersions, () =>
-        requestSignal(retention, REQUEST_TIMEOUT_MS)
+      pruneOwnExports(
+        client,
+        target.remotePath,
+        progress.history,
+        target.keepVersions,
+        ownExportPattern(tag),
+        () => requestSignal(retention, REQUEST_TIMEOUT_MS),
+        progress
       )
     );
     if (!complete) {
       logger.warn({ operation: "webdav_user_sync_retention_bounded", userId, deleted });
       return {
-        status: "partial",
-        errorCode: "cleanupIncomplete",
-        fileName,
-        sizeBytes: body.length,
-        deleted,
+        result: { status: "partial", errorCode: "cleanupIncomplete", ...uploaded, deleted },
+        history,
       };
     }
-    return { status: "ok", errorCode: null, fileName, sizeBytes: body.length, deleted };
+    return { result: { status: "ok", errorCode: null, ...uploaded, deleted }, history };
   } catch (error) {
     const errorCode = classifyWebdavError(error);
     logger.warn({ operation: "webdav_user_sync_retention_failed", userId, code: errorCode });
-    return { status: "partial", errorCode, fileName, sizeBytes: body.length, deleted: 0 };
+    return {
+      result: { status: "partial", errorCode, ...uploaded, deleted: progress.deleted },
+      history: progress.history,
+    };
   }
 }
 
@@ -261,41 +337,43 @@ export async function runWebdavSync(
   options: { deadlineMs?: number } = {}
 ): Promise<WebdavRunResult> {
   if (running.has(userId)) throw new WebdavSyncError("alreadyRunning");
-  running.add(userId);
+  const token = Symbol(userId);
+  running.set(userId, token);
+  const release = (): void => {
+    if (running.get(userId) === token) running.delete(userId);
+  };
   const at = new Date();
   const deadline = new AbortController();
-  const timer = setTimeout(
-    () => deadline.abort(new WebdavSyncError("timeout", "run deadline reached")),
-    options.deadlineMs ?? RUN_DEADLINE_MS
-  );
+  // At the deadline the account is free again, whatever is still hanging —
+  // a share, or the database itself.
+  const timer = setTimeout(() => {
+    deadline.abort(new WebdavSyncError("timeout", "run deadline reached"));
+    release();
+  }, options.deadlineMs ?? RUN_DEADLINE_MS);
   timer.unref();
   try {
     let target: ResolvedTarget;
     try {
-      target = await resolveTarget(userId);
+      const claimed = await untilAborted(deadline.signal, claim(userId, at));
+      if (!claimed) {
+        // No row (nothing to sync) or a newer run already holds it.
+        const exists = await untilAborted(
+          deadline.signal,
+          prisma.userWebdavSync.count({ where: { userId } })
+        );
+        throw new WebdavSyncError(exists ? "alreadyRunning" : "notConfigured");
+      }
+      target = await untilAborted(deadline.signal, resolveTarget(userId));
     } catch (error) {
       const code = classifyWebdavError(error);
-      // Without a row there is nowhere to record; "not configured" is the answer.
-      const exists = await prisma.userWebdavSync.count({ where: { userId } });
-      if (exists) {
-        await record(userId, failed(code), at);
-      }
+      // A newer run's row is not this run's to write; without a row the
+      // guarded write simply matches nothing.
+      if (code !== "alreadyRunning") await record(userId, failed(code), at);
       throw new WebdavSyncError(code);
     }
+    let stored: StoredExport;
     try {
-      const result = await untilAborted(
-        deadline.signal,
-        upload(userId, target, at, deadline.signal)
-      );
-      await record(userId, result, at);
-      logger.info({
-        operation: "webdav_user_sync_done",
-        userId,
-        status: result.status,
-        sizeBytes: result.sizeBytes,
-        deleted: result.deleted,
-      });
-      return result;
+      stored = await untilAborted(deadline.signal, upload(userId, target, at, deadline.signal));
     } catch (error) {
       const code = classifyWebdavError(error);
       logger.warn({
@@ -307,9 +385,19 @@ export async function runWebdavSync(
       await record(userId, failed(code), at);
       throw new WebdavSyncError(code);
     }
+    const { result, history } = await cleanUp(userId, target, stored, deadline.signal);
+    await record(userId, result, at, history);
+    logger.info({
+      operation: "webdav_user_sync_done",
+      userId,
+      status: result.status,
+      sizeBytes: result.sizeBytes,
+      deleted: result.deleted,
+    });
+    return result;
   } finally {
     clearTimeout(timer);
-    running.delete(userId);
+    release();
   }
 }
 

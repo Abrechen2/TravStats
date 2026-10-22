@@ -19,7 +19,7 @@ jest.mock("webdav", () => ({ createClient: (...args: unknown[]) => createClient(
 
 import { prisma } from "../../../db";
 import { encryptApiKey } from "../../../utils/encryption";
-import { runWebdavSync, isWebdavSyncRunning } from "../runSync";
+import { runWebdavSync, isWebdavSyncRunning, exportOwnerTag } from "../runSync";
 import { WebdavSyncError } from "../errors";
 import { dueWebdavSyncs } from "../../../jobs/webdavSyncScheduler";
 
@@ -89,6 +89,11 @@ function statefulShare(initial: string[] = []): Set<string> {
   return files;
 }
 
+/** A name this account's own upload at `stamp` would have carried. */
+function ownName(userId: string, stamp: string): string {
+  return `travstats-export-${exportOwnerTag(userId)}-${stamp}.json.gz`;
+}
+
 /** `name` with its timestamp replaced: an older export of the same owner. */
 function olderSibling(name: string, stamp: string): string {
   return name.replace(/\d{8}T\d{6}Z/, stamp);
@@ -142,20 +147,32 @@ describe("runWebdavSync", () => {
     expect(row.lastSizeBytes).toBe(body.length);
   });
 
-  it("keeps the newest versions of its own exports and leaves every other file alone", async () => {
+  it("keeps the newest recorded exports, deletes the older recorded ones and nothing else", async () => {
     const userId = await makeUser();
-    const files = statefulShare(["holiday-photos.zip"]);
-    const first = (await runWebdavSync(userId)).fileName as string;
-    files.add(olderSibling(first, "20261001T051500Z"));
-    files.add(olderSibling(first, "20261002T051500Z"));
-    files.add(olderSibling(first, "20261003T051500Z"));
+    const recorded = ["20261003T051500Z", "20261002T051500Z", "20261001T051500Z"].map((stamp) =>
+      ownName(userId, stamp)
+    );
+    await prisma.userWebdavSync.update({ where: { userId }, data: { uploadedFiles: recorded } });
+    const files = statefulShare(["holiday-photos.zip", ...recorded]);
     const result = await runWebdavSync(userId);
-    // Newest two of its own kept (this run's upload and the 3 October one, or
-    // the first run's when the clock ticked); the rest of its own deleted.
-    expect(result.status).toBe("ok");
-    expect(files.has(olderSibling(first, "20261001T051500Z"))).toBe(false);
-    expect(files.has(olderSibling(first, "20261002T051500Z"))).toBe(false);
-    expect(files.has("holiday-photos.zip")).toBe(true);
+    // keepVersions 2: this run's upload and 3 October stay; 1 and 2 October go.
+    expect(result).toMatchObject({ status: "ok", deleted: 2 });
+    expect([...files].sort()).toEqual(
+      ["holiday-photos.zip", recorded[0], result.fileName as string].sort()
+    );
+    const row = await prisma.userWebdavSync.findUniqueOrThrow({ where: { userId } });
+    expect(row.uploadedFiles).toEqual([result.fileName, recorded[0]]);
+  });
+
+  it("drops a recorded export the share no longer has from the record without deleting it", async () => {
+    const userId = await makeUser();
+    const gone = ownName(userId, "20261001T051500Z");
+    await prisma.userWebdavSync.update({ where: { userId }, data: { uploadedFiles: [gone] } });
+    statefulShare();
+    const result = await runWebdavSync(userId);
+    expect(share.deleteFile).not.toHaveBeenCalled();
+    const row = await prisma.userWebdavSync.findUniqueOrThrow({ where: { userId } });
+    expect(row.uploadedFiles).toEqual([result.fileName]);
   });
 
   it("never deletes another account's exports in a folder both sync into", async () => {
@@ -177,36 +194,73 @@ describe("runWebdavSync", () => {
     expect(alicesName).not.toContain(alice);
   });
 
-  it("deletes at most a bounded number of old exports per run and calls the rest `partial`", async () => {
+  it("never deletes the newest export when the listing names it more than once", async () => {
+    const userId = await makeUser();
+    const files = statefulShare();
+    // A share (or a proxy) that repeats an entry: the one export there is
+    // listed three times.
+    share.customRequest.mockImplementation(async () => {
+      const [only] = [...files];
+      return new Response(multistatus([only, only, only]), { status: 207 });
+    });
+    const result = await runWebdavSync(userId);
+    expect(result.status).toBe("ok");
+    expect(share.deleteFile).not.toHaveBeenCalled();
+    expect(files.has(result.fileName as string)).toBe(true);
+  });
+
+  it("never deletes an export with its own tag that this account did not record uploading", async () => {
+    // A restored or cloned instance with the same database and key computes
+    // the same tag; what IT uploaded must survive this instance's clean-up.
     const userId = await makeUser();
     const files = statefulShare();
     const first = (await runWebdavSync(userId)).fileName as string;
-    for (let day = 1; day <= 60; day += 1) {
-      files.add(
-        olderSibling(
-          first,
-          `202608${String(day % 28 || 28).padStart(2, "0")}T${String(day).padStart(2, "0")}0000Z`
-        )
-      );
-    }
-    const before = files.size;
+    const clones = ["20271001T051500Z", "20271002T051500Z", "20271003T051500Z"].map((stamp) =>
+      olderSibling(first, stamp)
+    );
+    for (const name of clones) files.add(name);
+    jest.clearAllMocks();
+    await runWebdavSync(userId);
+    for (const name of clones) expect(files.has(name)).toBe(true);
+    expect(share.deleteFile.mock.calls.map((c) => String(c[0]))).toEqual(
+      expect.not.arrayContaining(clones.map((n) => `/TravStats/${n}`))
+    );
+  });
+
+  it("deletes at most a bounded number of old exports per run and calls the rest `partial`", async () => {
+    const userId = await makeUser();
+    const recorded = Array.from({ length: 60 }, (_, i) =>
+      ownName(
+        userId,
+        `202608${String((i % 28) + 1).padStart(2, "0")}T${String(i).padStart(2, "0")}0000Z`
+      )
+    )
+      .sort()
+      .reverse();
+    await prisma.userWebdavSync.update({ where: { userId }, data: { uploadedFiles: recorded } });
+    const files = statefulShare(recorded);
     const result = await runWebdavSync(userId);
-    expect(share.deleteFile.mock.calls.length).toBeLessThanOrEqual(20);
-    expect(result).toMatchObject({ status: "partial", errorCode: "cleanupIncomplete" });
-    expect(files.size).toBeGreaterThan(2);
-    expect(files.size).toBeLessThan(before + 1);
+    expect(share.deleteFile).toHaveBeenCalledTimes(20);
+    expect(result).toMatchObject({
+      status: "partial",
+      errorCode: "cleanupIncomplete",
+      deleted: 20,
+    });
+    // The oldest went first; the newest recorded one is still there.
+    expect(files.has(recorded[0])).toBe(true);
+    expect(files.has(recorded[59])).toBe(false);
+    const row = await prisma.userWebdavSync.findUniqueOrThrow({ where: { userId } });
+    expect(row.uploadedFiles).toHaveLength(41);
   });
 
   it("refuses an oversized listing instead of reading it all, and deletes nothing", async () => {
     const userId = await makeUser();
-    statefulShare();
-    const first = (await runWebdavSync(userId)).fileName as string;
-    jest.clearAllMocks();
-    // Five of its own old exports, then megabytes of padding: read whole, the
-    // listing would have three of them deleted.
-    const own = ["20261001", "20261002", "20261003", "20261004", "20261005"].map((day) =>
-      olderSibling(first, `${day}T051500Z`)
+    // Five recorded old exports, then megabytes of padding: read whole, the
+    // listing would have four of them deleted.
+    const own = ["20261005", "20261004", "20261003", "20261002", "20261001"].map((day) =>
+      ownName(userId, `${day}T051500Z`)
     );
+    await prisma.userWebdavSync.update({ where: { userId }, data: { uploadedFiles: own } });
     const padded = multistatus(own).replace(
       "</d:multistatus>",
       `${" ".repeat(3 * 1024 * 1024)}</d:multistatus>`
@@ -215,6 +269,31 @@ describe("runWebdavSync", () => {
     const result = await runWebdavSync(userId);
     expect(result).toMatchObject({ status: "partial", errorCode: "cleanupIncomplete" });
     expect(share.deleteFile).not.toHaveBeenCalled();
+    // Nothing could be confirmed, so nothing was forgotten either.
+    const row = await prisma.userWebdavSync.findUniqueOrThrow({ where: { userId } });
+    expect(row.uploadedFiles).toEqual([result.fileName, ...own]);
+  });
+
+  it("does not read an entry hidden in a comment or CDATA as a file", async () => {
+    const userId = await makeUser();
+    const old = ownName(userId, "20261001T051500Z");
+    await prisma.userWebdavSync.update({ where: { userId }, data: { uploadedFiles: [old] } });
+    // The share no longer has `old`; only a comment and a CDATA block name it.
+    const hidden = `<d:response><d:href>/TravStats/${old}</d:href></d:response>`;
+    share.customRequest.mockImplementation(
+      async () =>
+        new Response(
+          multistatus([]).replace(
+            "</d:multistatus>",
+            `<!-- ${hidden} --><x><![CDATA[${hidden}]]></x></d:multistatus>`
+          ),
+          { status: 207 }
+        )
+    );
+    const result = await runWebdavSync(userId);
+    expect(share.deleteFile).not.toHaveBeenCalled();
+    const row = await prisma.userWebdavSync.findUniqueOrThrow({ where: { userId } });
+    expect(row.uploadedFiles).toEqual([result.fileName]);
   });
 
   it("ends a run whose folder check hangs as a `timeout` failure and releases the account", async () => {
@@ -239,6 +318,84 @@ describe("runWebdavSync", () => {
     const row = await prisma.userWebdavSync.findUniqueOrThrow({ where: { userId } });
     expect(row.lastStatus).toBe("failed");
     expect(row.lastErrorCode).toBe("timeout");
+  });
+
+  it("keeps an upload that is in as a success when the deadline hits during the clean-up", async () => {
+    const userId = await makeUser();
+    // The upload is in; the listing never answers and ignores cancellation.
+    share.customRequest.mockImplementation(() => new Promise(() => undefined));
+    const run = runWebdavSync as (
+      id: string,
+      o?: { deadlineMs?: number }
+    ) => Promise<{ status: string; errorCode: string | null; fileName: string | null }>;
+    const result = await run(userId, { deadlineMs: 300 });
+    expect(result).toMatchObject({ status: "partial", errorCode: "timeout" });
+    expect(result.fileName).toMatch(/^travstats-export-/);
+    expect(isWebdavSyncRunning(userId)).toBe(false);
+    const row = await prisma.userWebdavSync.findUniqueOrThrow({ where: { userId } });
+    expect(row.lastStatus).toBe("partial");
+    expect(row.lastErrorCode).toBe("timeout");
+    expect(row.lastFileName).toBe(result.fileName);
+    expect(row.lastSuccessAt).not.toBeNull();
+    expect(row.uploadedFiles).toEqual([result.fileName]);
+  });
+
+  it("frees the account at the deadline even when reading its settings hangs", async () => {
+    const userId = await makeUser();
+    const spy = jest
+      .spyOn(prisma.userWebdavSync, "findUnique")
+      .mockImplementation(() => new Promise(() => undefined) as never);
+    try {
+      const run = runWebdavSync as (id: string, o?: { deadlineMs?: number }) => Promise<unknown>;
+      const started = Date.now();
+      expect(await codeOf(run(userId, { deadlineMs: 300 }))).toBe("timeout");
+      expect(Date.now() - started).toBeLessThan(5000);
+      expect(isWebdavSyncRunning(userId)).toBe(false);
+    } finally {
+      spy.mockRestore();
+    }
+    const row = await prisma.userWebdavSync.findUniqueOrThrow({ where: { userId } });
+    expect(row.lastErrorCode).toBe("timeout");
+  });
+
+  it("lets no late write of a timed-out run overwrite the next run's result", async () => {
+    const userId = await makeUser();
+    statefulShare();
+    // While `slow` is on, every write to the sync row lands 800 ms late.
+    let slow = true;
+    const delayed: Array<Promise<unknown>> = [];
+    const wrap = <K extends "update" | "updateMany">(method: K) => {
+      const original = prisma.userWebdavSync[method].bind(prisma.userWebdavSync) as (
+        args: unknown
+      ) => Promise<unknown>;
+      return jest.spyOn(prisma.userWebdavSync, method).mockImplementation(((args: unknown) => {
+        if (!slow) return original(args);
+        const late = new Promise((resolve) => setTimeout(resolve, 800)).then(() => original(args));
+        delayed.push(late.catch(() => undefined));
+        return late;
+      }) as never);
+    };
+    const spies = [wrap("update"), wrap("updateMany")];
+    try {
+      const run = runWebdavSync as (id: string, o?: { deadlineMs?: number }) => Promise<unknown>;
+      const first = codeOf(run(userId, { deadlineMs: 300 }));
+      const started = Date.now();
+      while (isWebdavSyncRunning(userId) && Date.now() - started < 5000) {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      expect(isWebdavSyncRunning(userId)).toBe(false);
+      expect(Date.now() - started).toBeLessThan(700);
+      slow = false;
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      const second = await runWebdavSync(userId);
+      expect(second.status).toBe("ok");
+      expect(await first).toBe("timeout");
+      await Promise.all(delayed);
+      const row = await prisma.userWebdavSync.findUniqueOrThrow({ where: { userId } });
+      expect(row).toMatchObject({ lastStatus: "ok", lastFileName: second.fileName });
+    } finally {
+      for (const spy of spies) spy.mockRestore();
+    }
   });
 
   it("records a refused password as `auth` and fails the run — never a success", async () => {
