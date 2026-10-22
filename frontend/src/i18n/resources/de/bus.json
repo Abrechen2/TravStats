@@ -146,8 +146,11 @@
     "delay": "Verspätung",
     "delayUnknown": "nicht erfasst",
     "facts": "Fahrt",
-    "mapLine": "Linie auf der Karte",
-    "routeTitle": "Straße berechnen"
+    "routeTitle": "Straße berechnen",
+    "route": "Strecke",
+    "lineRoad": "Linie: über das Straßennetz berechnet und gespeichert — der wahrscheinliche Weg, nicht aus dem Fahrplan.",
+    "lineManual": "Linie: von Hand gezeichnet.",
+    "lineStraight": "Linie: Luftlinie zwischen den Terminals — nicht der Weg des Busses."
   },
   "stats": {
     "loadError": "Die Bus-Statistik konnte nicht geladen werden.",
@@ -332,11 +335,6 @@
     "tooMany": "Zu viele Berechnungen in kurzer Zeit. Bitte warte etwas.",
     "savedStraight": "Gespeichert. Die Straße konnte nicht berechnet werden: {{reason}} Es bleibt bei der Luftlinie.",
     "savedKept": "Gespeichert. Die Straße konnte nicht neu berechnet werden: {{reason}} Die gespeicherte Straßenlinie bleibt.",
-    "mapLine": {
-      "road": "Straßenverlauf (einmal berechnet und gespeichert)",
-      "straight": "Gerade Verbindung zwischen den Terminals",
-      "manual": "Von Hand gezeichnet"
-    },
     "all": {
       "button": "Alle Luftlinien-Fahrten über die Straße berechnen",
       "busy": "Fahrten werden berechnet …",

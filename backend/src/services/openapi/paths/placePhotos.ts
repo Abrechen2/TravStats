@@ -249,7 +249,7 @@ const windowPhotos = {
               .describe(
                 "Why `window` is null: the entry is on no trip, the lodging has no position, " +
                   "the entry has no dates, its times are wall clocks rather than instants, " +
-                  "or (`noClock`) a train ride was logged with its day only"
+                  "or (`noClock`) a train or bus ride was logged with its day only"
               ),
           }),
         }),
@@ -304,6 +304,18 @@ registry.registerPath({
     "Photos of the ride's trip taken between departure and arrival. None when the ride is on " +
     "no trip, has no arrival, or a station has no time zone (its times are then wall clocks).",
   tags: ["Rail"],
+  request: { params: z.object({ id: uuid }) },
+  responses: windowPhotos,
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/bus/{id}/trip-photos",
+  summary: "Trip photos taken during this bus ride",
+  description:
+    "Photos of the ride's trip taken between departure and arrival. None when the ride is on " +
+    "no trip, has no arrival or no clock, or a terminal has no time zone.",
+  tags: ["Bus"],
   request: { params: z.object({ id: uuid }) },
   responses: windowPhotos,
 });

@@ -146,8 +146,11 @@
     "delay": "Delay",
     "delayUnknown": "not recorded",
     "facts": "Ride",
-    "mapLine": "Line on the map",
-    "routeTitle": "Road routing"
+    "routeTitle": "Road routing",
+    "route": "Route",
+    "lineRoad": "Line: routed over the road network and stored — the likely path, not from a timetable.",
+    "lineManual": "Line: drawn by hand.",
+    "lineStraight": "Line: straight line between the terminals — not the bus's path."
   },
   "stats": {
     "loadError": "The bus statistics could not be loaded.",
@@ -332,11 +335,6 @@
     "tooMany": "Too many routing requests in a short time. Please wait a moment.",
     "savedStraight": "Saved. The road could not be routed: {{reason}} It stays a straight line.",
     "savedKept": "Saved. The road could not be routed again: {{reason}} The stored road line stays.",
-    "mapLine": {
-      "road": "Road route (fetched once and stored)",
-      "straight": "Direct connection between the terminals",
-      "manual": "Drawn by hand"
-    },
     "all": {
       "button": "Route all straight-line rides along the road",
       "busy": "Routing rides …",
