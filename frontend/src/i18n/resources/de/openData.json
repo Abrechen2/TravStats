@@ -70,8 +70,6 @@
   "lodging": {
     "enrich": "Aus OpenStreetMap ergänzen",
     "enriching": "Suche in OpenStreetMap …",
-    "filled": "Ergänzt: {{fields}}",
-    "nothingNew": "Gefunden als „{{name}}“ – nichts Neues, alle Felder waren schon gefüllt.",
     "notFound": "OpenStreetMap kennt in der Nähe kein Haus mit diesem Namen.",
     "noCoordinates": "Die Unterkunft hat keine Koordinaten, darum lässt sie sich nicht suchen.",
     "failed": "Die Suche in OpenStreetMap ist fehlgeschlagen.",
@@ -99,6 +97,23 @@
       "timeout": "OpenStreetMap hat nicht rechtzeitig geantwortet – ob es das Haus kennt, ist offen. Bitte später erneut versuchen.",
       "rateLimited": "OpenStreetMap nimmt gerade keine weiteren Anfragen an. Bitte später erneut versuchen.",
       "unavailable": "OpenStreetMap ist gerade nicht erreichbar – ob es das Haus kennt, ist offen."
+    },
+    "disabled": "Offene Daten sind auf dieser Instanz ausgeschaltet – die Suche in OpenStreetMap ist nicht möglich.",
+    "matchChanged": "OpenStreetMap nennt inzwischen ein anderes Haus – es wurde nichts geändert. Bitte erneut prüfen.",
+    "applied": "Aus „{{name}}“ ({{ref}}) ergänzt: {{fields}}",
+    "referenceOnly": "„{{name}}“ ({{ref}}) als OpenStreetMap-Eintrag der Unterkunft vermerkt – sonst nichts Neues.",
+    "unchanged": "„{{name}}“ ({{ref}}) brachte nichts Neues – alle Felder waren schon gefüllt.",
+    "preview": {
+      "title": "Treffer in OpenStreetMap prüfen",
+      "found": "Gefunden: {{name}} · OSM {{type}} {{id}} · {{m}} m entfernt",
+      "openMap": "Auf openstreetmap.org ansehen",
+      "fieldsLabel": "Was übernommen würde",
+      "fill": "leer → {{proposed}}",
+      "keep": "{{current}} bleibt (OpenStreetMap: {{proposed}})",
+      "nothingNew": "Nichts Neues – alle Felder sind schon gefüllt.",
+      "storesReference": "Beim Übernehmen wird dieser Eintrag an der Unterkunft vermerkt.",
+      "apply": "Übernehmen",
+      "applying": "Wird übernommen …"
     }
   }
 }
