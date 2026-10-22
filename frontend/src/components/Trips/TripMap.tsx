@@ -32,6 +32,7 @@ import {
   type TripProjection,
 } from "./TripMapGlobeLayers";
 import { GLOBE_SKY, fitMaxZoom, flyToZoom } from "./tripMapProjection";
+import { useTripLayers } from "./tripMapExtraLayers";
 import {
   TRIP_MAP_CHROME,
   resolveTripCruiseColor,
@@ -44,7 +45,7 @@ import { journeyFromTripFlight } from "../map/cards/journeys/journeyNormalize";
 import type { MapJourney } from "../map/cards/journeys/journeyTypes";
 import { decorateTripMapLayers } from "./tripMapCards";
 import { TripMapCardHost } from "./TripMapCardHost";
-import { shareMapLabels, withStationLabels } from "../map/labelObstacles";
+import { shareMapLabels } from "../map/labelObstacles";
 import { stationLabelPoints } from "../Globe/globePinLabels";
 import { useTripCruiseGeometry } from "./useTripCruiseGeometry";
 import { MapLoadFailedNotice } from "../map/MapLoadFailedNotice";
@@ -82,6 +83,8 @@ interface TripMapProps {
    * only geo data is in those layers is not reported as empty.
    */
   extraPoints?: readonly LngLat[];
+  /** Told each projection switch, so the caller builds its layers' globe variant. */
+  onProjectionChange?: (projection: TripProjection) => void;
 }
 
 // Stable module-level default. `tourGeometries = []` inline in the props
@@ -98,6 +101,7 @@ export default function TripMap({
   tourGeometries = NO_TOUR_GEOMETRIES,
   extraLayers,
   extraPoints = NO_EXTRA_POINTS,
+  onProjectionChange,
 }: TripMapProps): JSX.Element {
   const mapStyle = useBasemapStyle();
   const globeSky = STYLE_OPTIONS.find((option) => option.url === mapStyle)?.sky ?? GLOBE_SKY;
@@ -543,8 +547,8 @@ export default function TripMap({
       decorateTripMapLayers(projection === "globe" ? globeLayers : mercatorLayers, flightJourneys),
     [projection, globeLayers, mercatorLayers, flightJourneys]
   );
-  // Bus terminal names place around the stop/hotel labels; on the globe, the overlay (forgejo#320).
-  const layers = withStationLabels(baseLayers, extraLayers, projection === "globe");
+  // Station labels, and the caller's layers occluded on the globe (tripMapExtraLayers.ts).
+  const layers = useTripLayers(baseLayers, extraLayers, projection, occlusionExt, occlusionProps);
   const globeStationLabels = useMemo(() => stationLabelPoints(extraLayers ?? []), [extraLayers]);
 
   /** Every name on the globe, in the shape the HTML overlay reads. A deck.gl
@@ -679,8 +683,9 @@ export default function TripMap({
       logger.warn("TripMap: setSky failed", err);
     }
     setProjection(next);
+    onProjectionChange?.(next);
     fitTrip(next, 600);
-  }, [projection, fitTrip, globeSky]);
+  }, [projection, fitTrip, globeSky, onProjectionChange]);
 
   const empty = bboxPoints.length === 0;
 

@@ -42,8 +42,14 @@ const rentalPlaced = (
  * colour, each behind its domain gate — and the points they cover, so the
  * camera frames them and a trip made only of them is not called empty. A ferry
  * follows its stored sea lane where one exists, else the chord (`busPaths`).
+ * `onGlobe` builds the globe variant — lifted to the dashboard globe's
+ * altitude, as the trip map's globe projection needs (Codex review before
+ * 2.7.0-beta.23); `TripMap` adds the earth occlusion to every caller layer.
  */
-export function useTripTransportLayers(trip: TripTransportContent): {
+export function useTripTransportLayers(
+  trip: TripTransportContent,
+  onGlobe = false
+): {
   layers: Layer[];
   points: LngLat[];
 } {
@@ -59,14 +65,14 @@ export function useTripTransportLayers(trip: TripTransportContent): {
     const ferry = ferryOn ? (trip.ferryJourneys ?? NONE) : NONE;
     const rental = rentalOn ? (trip.rentalBookings ?? NONE).filter(rentalPlaced) : NONE;
     const layers: Layer[] = [
-      ...(rail.length > 0 ? buildRailMapLayers(rail, railColor, false, "trip-rail") : []),
-      ...buildTerminalRideMapLayers(ferry, ferryColor, false, "trip-ferry", "important", "ferry"),
+      ...(rail.length > 0 ? buildRailMapLayers(rail, railColor, onGlobe, "trip-rail") : []),
+      ...buildTerminalRideMapLayers(ferry, ferryColor, onGlobe, "trip-ferry", "important", "ferry"),
       // A trip row's `times` may be partial; the card reads each end with `?.`.
       ...(rental.length > 0
         ? buildRentalMapLayers(
             rental as readonly (RentalMapSource & Partial<RentalBooking>)[],
             rentalColor,
-            false,
+            onGlobe,
             "trip-rental"
           )
         : []),
@@ -87,5 +93,6 @@ export function useTripTransportLayers(trip: TripTransportContent): {
     railColor,
     ferryColor,
     rentalColor,
+    onGlobe,
   ]);
 }

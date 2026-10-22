@@ -70,6 +70,44 @@ describe("GET /trips/:id — what the trip map draws of rail and rentals", () =>
         status: "completed",
       },
     });
+    // A second, returned rental with everything the dashboard's rental card
+    // prints (Codex review before 2.7.0-beta.23): car, km, cost, countries,
+    // the airport code and the counter's operator.
+    const osl = await prisma.airport.findFirst({ where: { iata: "OSL" }, select: { id: true } });
+    expect(osl).not.toBeNull();
+    await prisma.rentalBooking.create({
+      data: {
+        userId: u.id,
+        tripId,
+        provider: "Testcar",
+        operatedBy: "Counterco",
+        pickupStationName: "Oslo Lufthavn",
+        pickupAirportId: osl!.id,
+        pickupLat: 60.19,
+        pickupLon: 11.1,
+        pickupCountry: "NO",
+        pickupTimezone: "Europe/Oslo",
+        returnStationName: "Oslo Lufthavn",
+        returnAirportId: osl!.id,
+        returnLat: 60.19,
+        returnLon: 11.1,
+        returnCountry: "NO",
+        returnTimezone: "Europe/Oslo",
+        pickupTime: new Date("2027-08-16T09:00:00Z"),
+        returnTime: new Date("2027-08-18T09:00:00Z"),
+        vehicleClass: "Compact",
+        vehicleExample: "VW Golf",
+        odometerOutKm: 1000,
+        odometerInKm: 1420,
+        distanceKm: 420,
+        distanceSource: "invoice",
+        price: 199,
+        currency: "EUR",
+        finalAmount: 231.5,
+        finalCurrency: "EUR",
+        status: "completed",
+      },
+    });
   });
 
   afterAll(async () => {
@@ -97,5 +135,32 @@ describe("GET /trips/:id — what the trip map draws of rail and rentals", () =>
       oneWay: true,
       routeId: null,
     });
+  });
+
+  it("sends each rental what the dashboard's rental card prints of it", async () => {
+    const res = await request(app).get(`/api/v1/trips/${tripId}`).set("Cookie", cookie).expect(200);
+    const rental = res.body.trip.rentalBookings.find(
+      (r: { vehicleExample?: string }) => r.vehicleExample === "VW Golf"
+    );
+    expect(rental).toMatchObject({
+      operatedBy: "Counterco",
+      pickupIata: "OSL",
+      returnIata: "OSL",
+      pickupCountry: "NO",
+      returnCountry: "NO",
+      vehicleClass: "Compact",
+      vehicleExample: "VW Golf",
+      odometerOutKm: 1000,
+      odometerInKm: 1420,
+      distanceKm: 420,
+      distanceSource: "invoice",
+      price: 199,
+      currency: "EUR",
+      finalAmount: 231.5,
+      finalCurrency: "EUR",
+    });
+    // The airport relation is read for its code only, never sent whole.
+    expect(rental.pickupAirport).toBeUndefined();
+    expect(rental.returnAirport).toBeUndefined();
   });
 });

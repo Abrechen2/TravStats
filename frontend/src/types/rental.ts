@@ -292,4 +292,24 @@ export interface TripRental {
   oneWay?: boolean;
   /** The roadtrip that already draws this drive, if any. */
   routeId?: string | null;
+  /**
+   * What the map's rental card prints, read by the dashboard's own
+   * normalizer (`journeyFromRental`). Optional — an older server sends none,
+   * and the card then leaves those facts out.
+   */
+  operatedBy?: string | null;
+  pickupIata?: string | null;
+  returnIata?: string | null;
+  pickupCountry?: string | null;
+  returnCountry?: string | null;
+  vehicleClass?: string | null;
+  vehicleExample?: string | null;
+  odometerOutKm?: number | null;
+  odometerInKm?: number | null;
+  distanceKm?: number | null;
+  distanceSource?: RentalDistanceSource | null;
+  price?: number | null;
+  currency?: string | null;
+  finalAmount?: number | null;
+  finalCurrency?: string | null;
 }

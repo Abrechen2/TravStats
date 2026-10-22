@@ -139,6 +139,7 @@ vi.mock("../../Globe/GlobeLabelsOverlay", () => ({
 import TripMap from "../TripMap";
 import { buildBusLayers } from "../tripBusLayer";
 import { StationLabelsLayer } from "../../layers/stationLabelsLayer";
+import { EarthOcclusionExtension } from "../../Globe/EarthOcclusionExtension";
 
 const trip = {
   id: "t1",
@@ -213,6 +214,47 @@ describe("TripMap: the globe toggle mounts the overlay the way the globe needs i
       (l) => l instanceof StationLabelsLayer
     ) as StationLabelsLayer | undefined;
     expect(stations?.props.onGlobe).toBe(true);
+  });
+
+  // Codex review before 2.7.0-beta.23: the caller's layers (rail, ferry,
+  // rental, bus, the recording) went onto the globe raw, so a line on the far
+  // hemisphere drew through the planet — the trip map's own layers carry
+  // EarthOcclusionExtension, theirs did not. And the caller is told the
+  // projection, so it can build its globe variant.
+  it("occludes the caller's layers on the globe and tells the caller the projection", async () => {
+    const busLayers = buildBusLayers(
+      [
+        {
+          id: "b1",
+          status: "completed",
+          depStationName: "Praha",
+          depLat: 50.0896,
+          depLon: 14.4398,
+          arrStationName: "München",
+          arrLat: 48.1424,
+          arrLon: 11.5496,
+          geometry: null,
+        },
+      ] as never,
+      "#ff8800"
+    );
+    const onProjectionChange = vi.fn();
+    render(<TripMap trip={trip} extraLayers={busLayers} onProjectionChange={onProjectionChange} />);
+    await waitFor(() => expect(captured.length).toBeGreaterThan(0));
+    const occluded = (): boolean[] => {
+      const last = captured[captured.length - 1];
+      const layers = (last.overlay.props as { layers?: Layer[] }).layers ?? last.props.layers;
+      return busLayers.map((own) =>
+        ((layers.find((l) => l.id === own.id)?.props.extensions ?? []) as unknown[]).some(
+          (e) => e instanceof EarthOcclusionExtension
+        )
+      );
+    };
+    expect(occluded().some(Boolean)).toBe(false);
+    await toggleToGlobe();
+    await waitFor(() => expect(captured.length).toBeGreaterThan(1));
+    expect(onProjectionChange).toHaveBeenLastCalledWith("globe");
+    expect(occluded().every(Boolean)).toBe(true);
   });
 
   it("interleaves with MapLibre's context in globe mode, and only there", async () => {
