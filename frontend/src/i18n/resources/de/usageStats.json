@@ -1,16 +1,21 @@
 {
   "consent": {
-    "title": "Anonyme Nutzungsstatistik",
-    "body": "Hilf uns zu verstehen, wie TravStats genutzt wird. Wir senden ausschließlich anonyme Kennzahlen — Version, aktivierte Bereiche und wie viel darin genutzt wird, immer nur als grobe Größenordnung. Niemals deine Flüge, Häfen, Namen, IP-Adresse oder API-Schlüssel.",
-    "accept": "Ja, anonyme Daten senden",
+    "title": "Datensparsame Nutzungsstatistik",
+    "body": "Hilf uns zu verstehen, wie TravStats genutzt wird. Wir senden ausschließlich datensparsame Kennzahlen — Version, aktivierte Bereiche und wie viel darin genutzt wird, immer nur als grobe Größenordnung. Die Meldungen sind über eine zufällige Installations-ID verknüpft, also pseudonym. Niemals deine Flüge, Häfen, Namen oder API-Schlüssel. Deine IP-Adresse wird technisch bedingt übertragen, aber nicht gespeichert.",
+    "accept": "Ja, Daten senden",
     "decline": "Nein, danke",
     "whatIsSent": "Was genau wird gesendet?",
     "revokeHint": "Du kannst das jederzeit im Admin-Bereich wieder abschalten. Beim Abschalten werden die gespeicherten Daten dieser Installation gelöscht.",
     "saveFailed": "Deine Auswahl konnte nicht gespeichert werden. Bitte versuche es erneut."
   },
+  "legal": {
+    "privacyLink": "Datenschutzerklärung",
+    "privacyUrl": "https://travstats.de/datenschutz/",
+    "controller": "Verantwortlich: Dennis Wittke"
+  },
   "admin": {
-    "title": "Anonyme Nutzungsstatistik",
-    "description": "Sendet einmal täglich eine anonyme Kennzahlen-Meldung an stats.travstats.de. Standardmäßig aus.",
+    "title": "Datensparsame Nutzungsstatistik",
+    "description": "Sendet einmal täglich eine pseudonyme Kennzahlen-Meldung an stats.travstats.de. Standardmäßig aus.",
     "enabled": "Aktiviert",
     "disabled": "Deaktiviert",
     "installId": "Installations-ID",

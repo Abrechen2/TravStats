@@ -1,16 +1,21 @@
 {
   "consent": {
-    "title": "Anonymous usage statistics",
-    "body": "Help us understand how TravStats is used. We send anonymous metrics only — version, enabled areas and how much each is used, always as coarse ranges. Never your flights, ports, names, IP address, or API keys.",
-    "accept": "Yes, send anonymous data",
+    "title": "Minimal usage statistics",
+    "body": "Help us understand how TravStats is used. We send minimal metrics only — version, enabled areas and how much each is used, always as coarse ranges. Reports are linked by a random installation ID, so they are pseudonymous. Never your flights, ports, names, or API keys. Your IP address is transmitted for technical reasons but not stored.",
+    "accept": "Yes, send data",
     "decline": "No, thanks",
     "whatIsSent": "What exactly is sent?",
     "revokeHint": "You can turn this off again at any time in the admin area. Turning it off deletes this installation's stored data.",
     "saveFailed": "Your choice could not be saved. Please try again."
   },
+  "legal": {
+    "privacyLink": "Privacy policy",
+    "privacyUrl": "https://travstats.de/en/privacy/",
+    "controller": "Controller: Dennis Wittke"
+  },
   "admin": {
-    "title": "Anonymous usage statistics",
-    "description": "Sends one anonymous metrics report per day to stats.travstats.de. Off by default.",
+    "title": "Minimal usage statistics",
+    "description": "Sends one pseudonymous metrics report per day to stats.travstats.de. Off by default.",
     "enabled": "Enabled",
     "disabled": "Disabled",
     "installId": "Installation ID",
