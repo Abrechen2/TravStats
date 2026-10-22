@@ -13,6 +13,8 @@ export interface SettingsMenuEntry {
   icon: IconName;
   /** A count beside the entry, e.g. the number of accounts. */
   badge?: number;
+  /** A domain page's colour, as a dot — always from the domain colour store. */
+  color?: string;
 }
 
 export interface SettingsMenuGroup {
@@ -103,6 +105,19 @@ export function SettingsMenuColumn({
                 >
                   <Icon name={entry.icon} size={16} />
                   <span className="flex-1">{entry.label}</span>
+                  {entry.color && (
+                    <span
+                      aria-hidden="true"
+                      data-domain-dot=""
+                      style={{
+                        width: 8,
+                        height: 8,
+                        flexShrink: 0,
+                        borderRadius: "var(--ts-radius-pill)",
+                        background: entry.color,
+                      }}
+                    />
+                  )}
                   {entry.badge !== undefined && (
                     <span className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
                       {entry.badge}

@@ -5,6 +5,7 @@ import { useSettingsPage, type AutoSaveState } from "../components/Settings/useS
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { useDomainColors } from "../hooks/useDomainColors";
 import { useSectionInView } from "../hooks/useSectionInView";
 import { useEffectiveSettingsLevel } from "../store/settingsLevelStore";
 import PasswordModal from "../components/Settings/PasswordModal";
@@ -66,6 +67,7 @@ export default function SettingsPage(): JSX.Element {
   const page = useSettingsPage();
   const { isFeatureVisible } = useBetaFeatures();
   const { isEnabled } = useEnabledDomains();
+  const { colorOf } = useDomainColors();
   const level = useEffectiveSettingsLevel();
   const named = useNamedSection();
   const isAdmin = page.user?.isAdmin ?? false;
@@ -137,7 +139,13 @@ export default function SettingsPage(): JSX.Element {
     label: g.labelKey ? t(g.labelKey) : null,
     entries: reachablePages
       .filter((p) => g.pages.includes(p.id) && inMenu(p))
-      .map((p) => ({ id: p.id, label: t(p.labelKey), to: `/settings/${p.id}`, icon: p.icon })),
+      .map((p) => ({
+        id: p.id,
+        label: t(p.labelKey),
+        to: `/settings/${p.id}`,
+        icon: p.icon,
+        color: p.domain ? colorOf(p.domain) : undefined,
+      })),
   })).filter((g) => g.entries.length > 0);
   const hiddenPages = reachablePages.filter((p) => !inMenu(p)).length;
 
@@ -150,6 +158,8 @@ export default function SettingsPage(): JSX.Element {
 
   return (
     <SettingsLayout
+      surface="settings"
+      isAdmin={isAdmin}
       navLabel={t("settings:title", { defaultValue: "Einstellungen" })}
       groups={groups}
       activePage={current.id}

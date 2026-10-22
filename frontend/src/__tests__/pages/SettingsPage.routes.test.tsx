@@ -424,3 +424,39 @@ describe("the settings page table", () => {
     }
   });
 });
+
+describe("SettingsPage — the frame of the prototype (forgejo#321)", () => {
+  beforeEach(() => {
+    useSettingsStore.setState({
+      betaFeaturesEnabled: false,
+      enabledDomains: ["flight", "cruise", "lodging"],
+    });
+  });
+
+  it("names the surface in a tab and a breadcrumb, with no Administration tab for a non-admin", async () => {
+    renderAt("/settings/display");
+    await findNamed("region", SECTION_LABEL_KEY.units);
+    expect(screen.getByRole("navigation", { name: "settings:frame.breadcrumb" })).toHaveTextContent(
+      "settings:frame.surface.settings›settings:groups.display"
+    );
+    const tabs = screen.getByRole("navigation", { name: "settings:frame.surfaces" });
+    expect(tabs).toHaveTextContent("settings:frame.surface.settings");
+    expect(tabs).not.toHaveTextContent("settings:frame.surface.admin");
+  });
+
+  it("dots each domain page in the menu with the colour the account chose", async () => {
+    const { useDomainColorStore } = await import("../../store/domainColorStore");
+    useDomainColorStore.setState({
+      colors: { ...useDomainColorStore.getState().colors, flight: "#123456" },
+    });
+    renderAt("/settings/display");
+    await findNamed("region", SECTION_LABEL_KEY.units);
+    const flight = document.querySelector(
+      '[data-settings-menu] a[href="/settings/flight"] [data-domain-dot]'
+    ) as HTMLElement;
+    expect(flight.style.background).toBe("rgb(18, 52, 86)");
+    expect(
+      document.querySelector('[data-settings-menu] a[href="/settings/data"] [data-domain-dot]')
+    ).toBeNull();
+  });
+});

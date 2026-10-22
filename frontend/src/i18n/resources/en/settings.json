@@ -1153,5 +1153,13 @@
       "googlePlaces": "Place search and place details",
       "operatorLogos": "Logos for rail, bus, ferry and rental operators"
     }
+  },
+  "frame": {
+    "surfaces": "Settings areas",
+    "breadcrumb": "Breadcrumb",
+    "surface": {
+      "settings": "Settings",
+      "admin": "Administration"
+    }
   }
 }

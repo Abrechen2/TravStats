@@ -1153,5 +1153,13 @@
       "googlePlaces": "Ortssuche und Ortsdetails",
       "operatorLogos": "Logos von Bahn, Bus, Fähre und Mietwagen"
     }
+  },
+  "frame": {
+    "surfaces": "Bereiche der Einstellungen",
+    "breadcrumb": "Pfad",
+    "surface": {
+      "settings": "Einstellungen",
+      "admin": "Administration"
+    }
   }
 }

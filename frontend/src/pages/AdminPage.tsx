@@ -9,6 +9,7 @@ import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useSectionInView } from "../hooks/useSectionInView";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
+import { useDomainColors } from "../hooks/useDomainColors";
 import { useTranslation } from "../hooks/useTranslation";
 import { useEffectiveSettingsLevel } from "../store/settingsLevelStore";
 import { copyToClipboard } from "../lib/clipboard";
@@ -82,6 +83,7 @@ export default function AdminPage(): JSX.Element {
   const location = useLocation();
   const { isEnabled } = useEnabledDomains();
   const { isFeatureVisible } = useBetaFeatures();
+  const { colorOf } = useDomainColors();
   const level = useEffectiveSettingsLevel();
   const searchScopes = useSearchScopes(true);
   const isReachable = useCallback(
@@ -515,6 +517,7 @@ export default function AdminPage(): JSX.Element {
         to: `/admin/${p.id}`,
         icon: p.icon,
         badge: p.id === "users" ? users.length : undefined,
+        color: p.domain ? colorOf(p.domain) : undefined,
       })),
   })).filter((g) => g.entries.length > 0);
   const hiddenPages = reachable.filter((p) => !inMenu(p)).length;
@@ -525,6 +528,8 @@ export default function AdminPage(): JSX.Element {
   return (
     <>
       <SettingsLayout
+        surface="admin"
+        isAdmin
         navLabel={t("admin:title", { defaultValue: "Administration" })}
         groups={groups}
         activePage={current.id}

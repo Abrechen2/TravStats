@@ -5,8 +5,13 @@ import { SettingsMenuColumn, SettingsMenuCompact, type SettingsMenuGroup } from 
 import { SectionChips, type SectionChip } from "./SectionChips";
 import { SettingsLevelSwitch } from "./SettingsLevelSwitch";
 import { useStableScrollbar } from "./useStableScrollbar";
+import { SettingsBreadcrumb, SurfaceTabs, type SettingsSurface } from "./SurfaceTabs";
 
 interface Props {
+  /** Which half of settings this is — names the active tab and the breadcrumb. */
+  surface: SettingsSurface;
+  /** Draws the Administration tab. */
+  isAdmin: boolean;
   /** The menu's landmark name. */
   navLabel: string;
   groups: SettingsMenuGroup[];
@@ -34,6 +39,8 @@ interface Props {
  * so moving between a long page and a short one does not shift the layout.
  */
 export function SettingsLayout({
+  surface,
+  isAdmin,
   navLabel,
   groups,
   activePage,
@@ -53,6 +60,9 @@ export function SettingsLayout({
   const menu = { label: navLabel, groups, activeId: activePage, hiddenPages, search };
   return (
     <AppShell width="list">
+      <div style={{ marginBottom: "var(--ts-space-xl)" }}>
+        <SurfaceTabs surface={surface} isAdmin={isAdmin} />
+      </div>
       <div
         className="grid md:grid-cols-[240px_minmax(0,1fr)]"
         style={{ gap: "var(--ts-space-xxl)" }}
@@ -62,7 +72,10 @@ export function SettingsLayout({
         </div>
 
         <div className="flex min-w-0 flex-col" style={{ gap: "var(--ts-space-xl)" }}>
-          <PageHeader title={title} meta={meta} actions={<SettingsLevelSwitch />} />
+          <div className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
+            <SettingsBreadcrumb surface={surface} page={title} />
+            <PageHeader title={title} meta={meta} actions={<SettingsLevelSwitch />} />
+          </div>
           <div className="md:hidden">
             <SettingsMenuCompact {...menu} />
           </div>

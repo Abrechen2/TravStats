@@ -64,3 +64,19 @@ describe("ModuleSection — one row per domain, switch and colour", () => {
     ]);
   });
 });
+
+describe("ModuleSection — a switched-off domain (forgejo#321 prototype)", () => {
+  beforeEach(() => {
+    mockBeta.mockReturnValue(false);
+    useSettingsStore.setState({ enabledDomains: ["flight"] });
+  });
+
+  it("dims the whole row, not only the colour, and leaves it operable", () => {
+    render(<ModuleSection />);
+    const off = document.querySelector('[data-domain-row="cruise"]') as HTMLElement;
+    const on = document.querySelector('[data-domain-row="flight"]') as HTMLElement;
+    expect(off.style.opacity).toBe("0.5");
+    expect(on.style.opacity).toBe("1");
+    expect(within(off).getByRole("switch")).not.toBeDisabled();
+  });
+});

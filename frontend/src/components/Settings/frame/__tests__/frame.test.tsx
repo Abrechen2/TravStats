@@ -183,3 +183,79 @@ describe("ExpertNote — touch size follows the pointer (forgejo#321, iPad look)
     expect(screen.getByRole("button").style.minHeight).toBe("");
   });
 });
+
+describe("the surface tabs and breadcrumb (forgejo#321 prototype)", () => {
+  it("offers the Administration tab to an admin, marking the open surface", async () => {
+    const { SurfaceTabs } = await import("../SurfaceTabs");
+    render(
+      <MemoryRouter>
+        <SurfaceTabs surface="admin" isAdmin />
+      </MemoryRouter>
+    );
+    expect(screen.getByRole("link", { name: "settings:frame.surface.settings" })).toHaveAttribute(
+      "href",
+      "/settings"
+    );
+    expect(screen.getByRole("link", { name: "settings:frame.surface.admin" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+  });
+
+  it("gives an account without the permission no Administration tab", async () => {
+    const { SurfaceTabs } = await import("../SurfaceTabs");
+    render(
+      <MemoryRouter>
+        <SurfaceTabs surface="settings" isAdmin={false} />
+      </MemoryRouter>
+    );
+    expect(screen.queryByRole("link", { name: "settings:frame.surface.admin" })).toBeNull();
+    expect(screen.getByRole("link", { name: "settings:frame.surface.settings" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+  });
+
+  it("names the surface and the page above the title", async () => {
+    const { SettingsBreadcrumb } = await import("../SurfaceTabs");
+    render(
+      <MemoryRouter>
+        <SettingsBreadcrumb surface="admin" page="Instanz" />
+      </MemoryRouter>
+    );
+    const crumb = screen.getByRole("navigation", { name: "settings:frame.breadcrumb" });
+    expect(crumb).toHaveTextContent("settings:frame.surface.admin›Instanz");
+  });
+
+  it("draws a domain page's colour as a dot in the menu", () => {
+    render(
+      <MemoryRouter>
+        <SettingsMenuColumn
+          label="Einstellungen"
+          groups={[
+            {
+              id: "g",
+              label: null,
+              entries: [
+                {
+                  id: "flight",
+                  label: "Flug",
+                  to: "/settings/flight",
+                  icon: "plane",
+                  color: "#123456",
+                },
+                { id: "data", label: "Daten", to: "/settings/data", icon: "database" },
+              ],
+            },
+          ]}
+          activeId="flight"
+          hiddenPages={0}
+          search={null}
+        />
+      </MemoryRouter>
+    );
+    const dots = document.querySelectorAll("[data-domain-dot]");
+    expect(dots).toHaveLength(1);
+    expect((dots[0] as HTMLElement).style.background).toBe("rgb(18, 52, 86)");
+  });
+});

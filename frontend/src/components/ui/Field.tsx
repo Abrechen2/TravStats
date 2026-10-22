@@ -6,6 +6,7 @@ import type {
 } from "react";
 import { cloneElement, isValidElement, useId } from "react";
 import { fieldErrorId } from "../form/fieldErrorProps";
+import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 
 const CONTROL_STYLE = {
   minHeight: "var(--ts-size-touch-min)",
@@ -167,6 +168,12 @@ export function Switch({ checked, onChange, label, sub, disabled, id }: SwitchPr
   const uid = useId();
   const labelId = `${uid}-label`;
   const subId = `${uid}-sub`;
+  // The pointer decides the size, not the width (forgejo#321): an iPad is wide
+  // and finger-operated at once, and a 42×24 track is a mouse's target.
+  const coarse = useCoarsePointer();
+  const track = coarse
+    ? { w: 52, h: 32, knob: 26, off: 2, on: 22 }
+    : { w: 42, h: 24, knob: 18, off: 3, on: 21 };
   return (
     <label
       htmlFor={id}
@@ -189,11 +196,12 @@ export function Switch({ checked, onChange, label, sub, disabled, id }: SwitchPr
         ) : null}
       </span>
       <span
+        data-switch-track=""
         style={{
           position: "relative",
           flexShrink: 0,
-          width: 42,
-          height: 24,
+          width: track.w,
+          height: track.h,
           borderRadius: "var(--ts-radius-pill)",
           background: checked ? "var(--ts-accent)" : "var(--ts-surface2)",
           border: `1px solid ${checked ? "var(--ts-accent)" : "var(--ts-border-button)"}`,
@@ -221,10 +229,10 @@ export function Switch({ checked, onChange, label, sub, disabled, id }: SwitchPr
           aria-hidden="true"
           style={{
             position: "absolute",
-            top: 2,
-            left: checked ? 21 : 3,
-            width: 18,
-            height: 18,
+            top: (track.h - 2 - track.knob) / 2,
+            left: checked ? track.on : track.off,
+            width: track.knob,
+            height: track.knob,
             borderRadius: "var(--ts-radius-pill)",
             background: checked ? "var(--ts-bg)" : "var(--ts-muted)",
             transition: "left var(--ts-motion-fast) var(--ts-ease-standard)",
