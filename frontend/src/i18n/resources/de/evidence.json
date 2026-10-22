@@ -447,5 +447,15 @@
   "evidence.metric.recordLongestRental": "Längste Miete (Rekord)",
   "evidence.metric.recordLongestBusRide": "Längste Busfahrt (Rekord)",
   "evidence.metric.travelAccountTripDaysTotal": "Reisetage der Reisen mit Datum",
-  "evidence.badge.proof": "Belege für diese Auszeichnung"
+  "evidence.badge.proof": "Belege für diese Auszeichnung",
+  "evidence.ranking.companion.entries": "Gemeinsame Einträge mit {{name}}",
+  "evidence.ranking.companion.days": "Tage zusammen mit {{name}}",
+  "evidence.ranking.companion.countries": "Länder zusammen mit {{name}}",
+  "evidence.ranking.companion.trip": "Reisen mit {{name}}",
+  "evidence.ranking.companion.flight": "Flüge mit {{name}}",
+  "evidence.ranking.companion.cruise": "Kreuzfahrten mit {{name}}",
+  "evidence.ranking.companion.rail": "Zugfahrten mit {{name}}",
+  "evidence.ranking.companion.bus": "Busfahrten mit {{name}}",
+  "evidence.ranking.companion.ferry": "Fährüberfahrten mit {{name}}",
+  "evidence.ranking.companion.rental": "Mietwagen mit {{name}}"
 }

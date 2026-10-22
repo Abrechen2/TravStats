@@ -447,5 +447,15 @@
   "evidence.metric.recordLongestRental": "Longest rental (record)",
   "evidence.metric.recordLongestBusRide": "Longest bus ride (record)",
   "evidence.metric.travelAccountTripDaysTotal": "Days of the dated trips",
-  "evidence.badge.proof": "Evidence for this badge"
+  "evidence.badge.proof": "Evidence for this badge",
+  "evidence.ranking.companion.entries": "Shared entries with {{name}}",
+  "evidence.ranking.companion.days": "Days together with {{name}}",
+  "evidence.ranking.companion.countries": "Countries together with {{name}}",
+  "evidence.ranking.companion.trip": "Trips with {{name}}",
+  "evidence.ranking.companion.flight": "Flights with {{name}}",
+  "evidence.ranking.companion.cruise": "Cruises with {{name}}",
+  "evidence.ranking.companion.rail": "Train rides with {{name}}",
+  "evidence.ranking.companion.bus": "Bus rides with {{name}}",
+  "evidence.ranking.companion.ferry": "Ferry crossings with {{name}}",
+  "evidence.ranking.companion.rental": "Rental cars with {{name}}"
 }

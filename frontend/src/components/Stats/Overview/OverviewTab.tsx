@@ -23,6 +23,7 @@ import DomainToggleChips from "./DomainToggleChips";
 import DomainSummaryCard from "./DomainSummaryCard";
 import TravelAccountSection from "./TravelAccountSection";
 import DomainRecordsSection from "./DomainRecordsSection";
+import CompanionsTogetherSection from "./CompanionsTogetherSection";
 import TourStatsSection from "../roadtrip/TourStatsSection";
 import { useToursVisible } from "../../../hooks/useToursVisible";
 import { useDomainColors } from "../../../hooks/useDomainColors";
@@ -204,6 +205,9 @@ export default function OverviewTab({
 
       {/* Records beyond flights (forgejo#265), one per visible domain. */}
       {show("domainRecords") && <DomainRecordsSection />}
+
+      {/* Who the reader travels with, across every visible domain (all time). */}
+      {show("companions") && <CompanionsTogetherSection />}
 
       {toursHere && show("tours") && (
         <TourStatsSection year={selectedYear} accent={roadtripAccent} />

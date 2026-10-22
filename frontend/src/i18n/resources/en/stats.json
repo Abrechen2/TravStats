@@ -1425,5 +1425,48 @@
       "coverage": "Coverage",
       "exclusions": "Left out"
     }
+  },
+  "companionsTogether": {
+    "title": "Who you travel with",
+    "hint": "All time · shared entries that have already happened",
+    "loadFailed": "“Who you travel with” could not be loaded.",
+    "empty": "Nothing shared yet. Note on a flight, trip or ride who came along.",
+    "days_one": "{{value}} day together",
+    "days_other": "{{value}} days together",
+    "entries_one": "{{value}} shared entry",
+    "entries_other": "{{value}} shared entries",
+    "countries_one": "{{value}} country together",
+    "countries_other": "{{value}} countries together",
+    "countriesUnknown": "Countries: cannot be told from shared trips and rental cars alone",
+    "showAll": "Show all {{count}}",
+    "showTop": "Show only the first {{count}}",
+    "help": {
+      "days": {
+        "unit": "A calendar day you spent travelling with the person – a day two shared entries cover counts once.",
+        "time": "Each entry on its own calendar, as for “Active days”: a flight on its departure day at the departure airport, a trip from its first to its last day (up to today).",
+        "source": "Flights, trips, cruises, train, bus and ferry rides the person is on, from the areas you see.",
+        "coverage": "An entry without a date covers no day. Tap the number for the entries and their days.",
+        "exclusions": "Planned and cancelled entries do not count. An expense the person paid is not a day together. Rental cars cover no days."
+      },
+      "entries": {
+        "unit": "An entry the person is on – one per flight, trip or ride.",
+        "time": "All years.",
+        "source": "Your entries in the areas you see, and your trips.",
+        "coverage": "Every shared entry that has already happened. Tap the number for the entries.",
+        "exclusions": "Planned and cancelled entries do not count, a trip only from its first day. Paid expenses alone do not count."
+      },
+      "countries": {
+        "unit": "A country you visited together – by the same rule as the passport.",
+        "time": "All years.",
+        "source": "Only the shared flights, cruises, train, bus and ferry rides; your own corrections in the passport apply.",
+        "coverage": "Where only shared trips or rental cars exist, a note stands in place of a number. Tap the number for the entries.",
+        "exclusions": "A connection is not a visit. Countries you added to the passport by hand belong to no shared entry and do not count."
+      }
+    },
+    "helpTerms": {
+      "days": "Days together",
+      "entries": "Shared entries",
+      "countries": "Countries together"
+    }
   }
 }

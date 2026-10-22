@@ -1425,5 +1425,48 @@
       "coverage": "Abdeckung",
       "exclusions": "Nicht enthalten"
     }
+  },
+  "companionsTogether": {
+    "title": "Mit wem unterwegs",
+    "hint": "Gesamte Zeit · gemeinsame Einträge, die schon stattgefunden haben",
+    "loadFailed": "„Mit wem unterwegs“ konnte nicht geladen werden.",
+    "empty": "Noch nichts gemeinsam erlebt. Trag in einem Flug, einer Reise oder einer Fahrt ein, wer dabei war.",
+    "days_one": "{{value}} Tag zusammen",
+    "days_other": "{{value}} Tage zusammen",
+    "entries_one": "{{value}} gemeinsamer Eintrag",
+    "entries_other": "{{value}} gemeinsame Einträge",
+    "countries_one": "{{value}} Land zusammen",
+    "countries_other": "{{value}} Länder zusammen",
+    "countriesUnknown": "Länder: aus gemeinsamen Reisen und Mietwagen allein nicht ableitbar",
+    "showAll": "Alle {{count}} anzeigen",
+    "showTop": "Nur die ersten {{count}} anzeigen",
+    "help": {
+      "days": {
+        "unit": "Ein Kalendertag, an dem du mit der Person unterwegs warst – ein Tag, den zwei gemeinsame Einträge abdecken, zählt einmal.",
+        "time": "Jeder Eintrag auf seinem eigenen Kalender, wie bei „Aktive Tage“: ein Flug am Tag des Abflugs am Abflughafen, eine Reise von ihrem ersten bis zum letzten Tag (höchstens bis heute).",
+        "source": "Flüge, Reisen, Kreuzfahrten, Bahn-, Bus- und Fährfahrten, in denen die Person eingetragen ist, aus den Bereichen, die du siehst.",
+        "coverage": "Ein Eintrag ohne Datum belegt keinen Tag. Ein Tipp auf die Zahl zeigt die Einträge und ihre Tage.",
+        "exclusions": "Geplantes und Storniertes zählt nicht. Eine Ausgabe, die die Person bezahlt hat, ist kein gemeinsamer Tag. Mietwagen belegen keine Tage."
+      },
+      "entries": {
+        "unit": "Ein Eintrag, in dem die Person eingetragen ist – je Flug, Reise oder Fahrt eins.",
+        "time": "Alle Jahre.",
+        "source": "Deine Einträge in den Bereichen, die du siehst, und deine Reisen.",
+        "coverage": "Jeder gemeinsame Eintrag, der schon stattgefunden hat. Ein Tipp auf die Zahl zeigt die Einträge.",
+        "exclusions": "Geplantes und Storniertes zählt nicht, eine Reise erst ab ihrem ersten Tag. Bezahlte Ausgaben allein zählen nicht."
+      },
+      "countries": {
+        "unit": "Ein Land, das ihr gemeinsam besucht habt – nach derselben Regel wie im Reisepass.",
+        "time": "Alle Jahre.",
+        "source": "Nur die gemeinsamen Flüge, Kreuzfahrten, Bahn-, Bus- und Fährfahrten; deine eigenen Korrekturen im Reisepass gelten mit.",
+        "coverage": "Haben nur gemeinsame Reisen oder Mietwagen keine Länder, steht statt einer Zahl ein Hinweis. Ein Tipp auf die Zahl zeigt die Einträge.",
+        "exclusions": "Ein Umstieg ist kein Besuch. Länder, die du im Reisepass von Hand ergänzt hast, gehören zu keinem gemeinsamen Eintrag und zählen nicht."
+      }
+    },
+    "helpTerms": {
+      "days": "Tage zusammen",
+      "entries": "Gemeinsame Einträge",
+      "countries": "Länder zusammen"
+    }
   }
 }

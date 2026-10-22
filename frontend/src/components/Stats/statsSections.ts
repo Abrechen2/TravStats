@@ -45,6 +45,7 @@ export const OVERVIEW_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "perDomain", label: t("stats:overview.perDomainLabel") },
   { key: "travelAccount", label: t("stats:travelAccount.title") },
   { key: "domainRecords", label: t("stats:domainRecords.title") },
+  { key: "companions", label: t("stats:companionsTogether.title") },
 ];
 
 export const CRUISE_SECTIONS = (t: Translate): SectionOption[] => [
