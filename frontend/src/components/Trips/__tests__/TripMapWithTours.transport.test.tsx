@@ -169,6 +169,36 @@ describe("TripMapWithTours — rail, ferry and rental on the trip map", () => {
     }
   });
 
+  // beta.23 UAT before 2.7.0-rc.20: the bus line stayed the flat map's on the
+  // globe — unlifted, a straight chord through the sphere — so København →
+  // Hamburg ZOB showed a stub at each terminal and nothing between.
+  it("builds the bus line's globe variant too once the map turns to the globe", async () => {
+    const withBus = {
+      ...(trip as object),
+      busJourneys: [
+        {
+          id: "bus-1",
+          status: "completed",
+          depStationName: "København",
+          depLat: 55.6729,
+          depLon: 12.5646,
+          arrStationName: "Hamburg ZOB",
+          arrLat: 53.5522,
+          arrLon: 10.0136,
+          geometry: null,
+        },
+      ],
+    } as never;
+    render(<TripMapWithTours trip={withBus} />);
+    await act(async () => undefined);
+    const bus = (): number[][] =>
+      (JSON.parse(screen.getByTestId("trip-bus-rides").textContent ?? "[]") as number[][][]).flat();
+    expect(bus().every((p) => p[2] === undefined)).toBe(true);
+    act(() => projectionListener.current?.("globe"));
+    expect(bus().length).toBeGreaterThan(2);
+    expect(bus().every((p) => typeof p[2] === "number" && p[2] > 0)).toBe(true);
+  });
+
   it("draws and frames nothing of a hidden domain", async () => {
     hidden.add("ferry");
     hidden.add("rail");

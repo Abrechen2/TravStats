@@ -138,3 +138,47 @@ it("draws repeated bus geometry once, excluding cancellations and retaining actu
     ])
   ).toHaveLength(2);
 });
+
+// beta.23 UAT before 2.7.0-rc.20: on the trip map's globe the København →
+// Hamburg ZOB chord showed only two stubs at its terminals. A two-point line
+// is a straight segment through the sphere, so its middle sank under the
+// surface and was clipped; the trip map also never lifted the bus line at all.
+describe("bus rides on the globe", () => {
+  const kbhHamburg = ride({
+    depStationName: "København",
+    depLat: 55.6729,
+    depLon: 12.5646,
+    arrStationName: "Hamburg ZOB",
+    arrLat: 53.5522,
+    arrLon: 10.0136,
+  });
+  const pathOf = (layers: ReturnType<typeof buildBusLayers>, id: string): number[][] => {
+    const layer = layers.find((l) => l.id === id);
+    const props = layer?.props as unknown as {
+      data: { path: [number, number][] }[];
+      getPath: (d: unknown) => number[][];
+    };
+    return props.getPath(props.data[0]);
+  };
+
+  it("follows the great circle above the surface on the globe, flat on the flat map", () => {
+    const flat = pathOf(buildBusLayers([kbhHamburg], "#aa5500"), "trip-bus-rides");
+    expect(flat).toHaveLength(2);
+    const globe = pathOf(buildBusLayers([kbhHamburg], "#aa5500", true), "trip-bus-rides");
+    expect(globe.length).toBeGreaterThan(2);
+    expect(globe.every((p) => typeof p[2] === "number" && p[2] > 0)).toBe(true);
+    expect(globe[0].slice(0, 2)).toEqual([12.5646, 55.6729]);
+    expect(globe[globe.length - 1].slice(0, 2)).toEqual([10.0136, 53.5522]);
+  });
+
+  it("lifts the terminals on the globe too", () => {
+    const layer = buildBusLayers([kbhHamburg], "#aa5500", true).find(
+      (l) => l.id === "trip-bus-terminals"
+    );
+    const props = layer?.props as unknown as {
+      data: unknown[];
+      getPosition: (d: unknown) => number[];
+    };
+    expect(props.data.map((d) => props.getPosition(d)[2])).toEqual([5000, 5000]);
+  });
+});

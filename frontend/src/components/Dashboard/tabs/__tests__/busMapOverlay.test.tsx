@@ -43,6 +43,27 @@ describe("bus layer of the 'Alle' map (forgejo#180)", () => {
     expect(buildBusMapLayers([], "#c49a6c", false)).toEqual([]);
   });
 
+  // beta.23 UAT before 2.7.0-rc.20: a two-point chord is a straight segment
+  // through the sphere; lifted by 5 km it still sinks below the surface on any
+  // ride longer than ~500 km, and the globe clips the middle away.
+  it("follows the great circle with a chord on the globe, so its middle stays above ground", () => {
+    const long = ride({
+      depLat: 53.55,
+      depLon: 10.01,
+      arrLat: 48.85,
+      arrLon: 2.35,
+      geometry: null,
+    });
+    const [layer] = buildBusMapLayers([long], "#c49a6c", true);
+    const props = layer.props as unknown as {
+      data: { path: [number, number][] }[];
+      getPath: (d: { path: [number, number][] }) => number[][];
+    };
+    const path = props.getPath(props.data[0]);
+    expect(path.length).toBeGreaterThan(2);
+    expect(path.every((p) => p[2] > 0)).toBe(true);
+  });
+
   it("keys only the kinds of line actually drawn", () => {
     row.mockClear();
     buildBusLegendRows([ride()], "#c49a6c", t, row);

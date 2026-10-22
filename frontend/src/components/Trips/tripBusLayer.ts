@@ -12,6 +12,8 @@ import { buildStationLabelLayers } from "../layers/stationLabelsLayer";
 import { endKey } from "../map/cards/journeys/journeyStats";
 import { journeyFromBus } from "../map/cards/journeys/journeyNormalize";
 import { withJourneyCards } from "../map/cards/journeys/journeyLayerCards";
+import { greatCirclePath } from "../layers/greatCircle";
+import { RAIL_PATH_GLOBE_ALTITUDE_M } from "../layers/railPathsLayer";
 
 export interface BusPathDatum {
   id: string;
@@ -68,6 +70,26 @@ export function busPaths(rides: readonly TerminalRideLine[]): BusPathDatum[] {
   );
 }
 
+/**
+ * A ride's line as the map draws it: as stored on the flat map; on the globe
+ * lifted by `altitudeM`, and a chord densified along its great circle first.
+ * A two-point chord is a straight segment THROUGH the sphere — its middle sank
+ * below the surface and the globe clipped it, leaving a stub at each terminal
+ * (København → Hamburg ZOB, beta.23 UAT before 2.7.0-rc.20). Rail does the same
+ * (`railPathOf`).
+ */
+export function terminalRidePath(
+  d: BusPathDatum,
+  altitudeM: number
+): [number, number][] | [number, number, number][] {
+  if (altitudeM === 0) return d.path;
+  const path =
+    d.routed || d.path.length !== 2
+      ? d.path
+      : (greatCirclePath(d.path[0], d.path[1]).points as [number, number][]);
+  return path.map(([lon, lat]) => [lon, lat, altitudeM] as [number, number, number]);
+}
+
 export interface TerminalDatum {
   position: [number, number];
 }
@@ -103,16 +125,22 @@ export function busPathPoints(rides: readonly TripBusJourney[]): [number, number
  * the "important" reveal the trip map gives its hotels — this map has no label
  * switch of its own — and are thinned by zoom like every other label.
  */
-export function buildBusLayers(rides: readonly TripBusJourney[], colorHex: string): Layer[] {
+export function buildBusLayers(
+  rides: readonly TripBusJourney[],
+  colorHex: string,
+  onGlobe = false
+): Layer[] {
   const data = busPaths(rides);
   if (data.length === 0) return [];
   const color = hexToRgb(colorHex);
   const [r, g, b] = color;
+  // Lifted on the globe like rail, ferry and rental, or the line z-fights with the sphere.
+  const altitude = onGlobe ? RAIL_PATH_GLOBE_ALTITUDE_M : 0;
   const lines: Layer[] = [
     new PathLayer<BusPathDatum>({
       id: "trip-bus-rides",
       data,
-      getPath: (d) => d.path,
+      getPath: (d) => terminalRidePath(d, altitude),
       getColor: (d) => [r, g, b, d.routed ? 230 : 150],
       getWidth: (d) => (d.routed ? 3 : 2),
       widthUnits: "pixels",
@@ -123,7 +151,7 @@ export function buildBusLayers(rides: readonly TripBusJourney[], colorHex: strin
     new ScatterplotLayer<TerminalDatum>({
       id: "trip-bus-terminals",
       data: terminalPoints(rides),
-      getPosition: (d) => d.position,
+      getPosition: (d) => (altitude === 0 ? d.position : [d.position[0], d.position[1], altitude]),
       getFillColor: [r, g, b, 255],
       getLineColor: STATION_DOT_OUTLINE_RGBA,
       lineWidthUnits: "pixels",
@@ -140,6 +168,7 @@ export function buildBusLayers(rides: readonly TripBusJourney[], colorHex: strin
     ...buildStationLabelLayers([{ rides, color }], {
       labelsMode: "important",
       idPrefix: "trip-bus",
+      onGlobe,
     }),
   ];
 }

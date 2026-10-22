@@ -194,3 +194,24 @@ describe("TripSummaryPanel — the model is switched off by the admin", () => {
     await waitFor(() => expect(addToast).toHaveBeenCalledWith("error", "trips:summary.disabled"));
   });
 });
+
+/**
+ * beta.23 UAT before 2.7.0-rc.20: on an iPad the card sits in the overview's
+ * narrow side column, and with icon, text and button held in one row the text
+ * was squeezed to a word per line ("KI-" / "Zusammenfassung"). The button
+ * wraps under the text instead of taking its width.
+ */
+describe("TripSummaryPanel — the offer in a narrow column", () => {
+  beforeEach(() => {
+    demoState.shared = false;
+    llmState.current = true;
+  });
+
+  it("lets the button wrap below the text instead of squeezing it", () => {
+    render(<TripSummaryPanel trip={trip} t={t} language="de" onChanged={vi.fn()} />);
+    const text = screen.getByText("trips:summary.cta").parentElement as HTMLElement;
+    const row = text.parentElement as HTMLElement;
+    expect(row.className).toContain("flex-wrap");
+    expect(text.className).toMatch(/\bmin-w-(48|\[12rem\])\b/);
+  });
+});

@@ -25,6 +25,12 @@ export interface JourneyStopFigures {
 
 const MAX_DESTINATIONS = 3;
 
+/** The value cut to its calendar day — shown without a time (ADR 0002 D3). */
+function dayOnly(value: TimeValue | null): TimeValue | null {
+  if (!value) return null;
+  return value.precision === "minute" ? { ...value, precision: "day" } : value;
+}
+
 export function getJourneyStopFigures(
   journeys: readonly MapJourney[],
   stopKey: string
@@ -46,8 +52,11 @@ export function getJourneyStopFigures(
     }
     // Leaving, the visit is the departure; arriving (or bringing a rental
     // back), the arrival — the later of the two that are known. An arrival
-    // without a time is not dated by its departure: abstain instead.
-    for (const here of [startsHere ? j.departure : null, endsHere ? j.arrival : null]) {
+    // never recorded is dated by the departure's DAY, never its clock (that
+    // is the other station's): skipped, a date-only ride that ended here
+    // later let an older visit pass for the last one (beta.23 UAT).
+    const arrived = endsHere ? (j.arrival ?? dayOnly(j.departure)) : null;
+    for (const here of [startsHere ? j.departure : null, arrived]) {
       if (here && (!lastVisit || Date.parse(here.utc) > Date.parse(lastVisit.utc))) {
         lastVisit = here;
       }

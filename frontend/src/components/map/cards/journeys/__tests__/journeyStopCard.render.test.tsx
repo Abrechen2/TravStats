@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import deMap from "../../../../../i18n/resources/de/map.json";
 import enMap from "../../../../../i18n/resources/en/map.json";
@@ -194,6 +194,64 @@ describe("station card", () => {
       { name: "Kiel", lat: 54.316, lon: 10.135 },
       "de"
     );
+  });
+
+  // beta.23 UAT before 2.7.0-rc.20: the Hamburg ZOB photo carried no credit,
+  // only "Text: Wikipedia". The photo names its author and licence and links
+  // its file page, like the subject pictures; a photo without one is not shown.
+  it("credits the station photo's author and licence, linked to its file page", async () => {
+    details.stop.mockResolvedValue({
+      state: "found",
+      summary: {
+        title: "Kieler Hafen",
+        extract: "Der Kieler Hafen ist ein Seehafen.",
+        thumbnailUrl: "https://upload.wikimedia.org/wikipedia/commons/a/ab/K.jpg",
+        pageUrl: "https://de.wikipedia.org/wiki/Kieler_Hafen",
+        lang: "de",
+        imageCredit: {
+          file: "K.jpg",
+          licence: "CC BY-SA 4.0",
+          licenceUrl: null,
+          artist: "Jo Beispiel",
+          sourceUrl: "https://commons.wikimedia.org/wiki/File:K.jpg",
+          onCommons: true,
+        },
+      },
+    });
+    showStop();
+    const credit = await screen.findByText("Bild: CC BY-SA 4.0 · Jo Beispiel · Wikimedia Commons");
+    expect(credit.closest("a")).toHaveAttribute(
+      "href",
+      "https://commons.wikimedia.org/wiki/File:K.jpg"
+    );
+  });
+
+  it("shows no station photo it cannot credit", async () => {
+    details.stop.mockResolvedValue({
+      state: "found",
+      summary: {
+        title: "Kieler Hafen",
+        extract: "Der Kieler Hafen ist ein Seehafen.",
+        thumbnailUrl: "https://upload.wikimedia.org/k.jpg",
+        pageUrl: "https://de.wikipedia.org/wiki/Kieler_Hafen",
+        lang: "de",
+        imageCredit: null,
+      },
+    });
+    showStop();
+    await screen.findByText("Der Kieler Hafen ist ein Seehafen.");
+    expect(screen.getByTestId("stop-wikipedia").querySelector("img")).toBeNull();
+  });
+
+  // beta.23 UAT before 2.7.0-rc.20: on an iPad the pinned card's ✕ was
+  // 16×11 px, under the 44 px a finger needs.
+  it("gives the card's close button the 44 px touch minimum under a coarse pointer", async () => {
+    details.stop.mockResolvedValue({ state: "none" });
+    showStop();
+    const close = await screen.findByRole("button", { name: "Schließen" });
+    await act(async () => undefined);
+    expect(close.className).toContain("pointer-coarse:min-h-(--ts-size-touch-min)");
+    expect(close.className).toContain("pointer-coarse:min-w-(--ts-size-touch-min)");
   });
 
   it("says Wikipedia could not be asked, instead of looking like 'no article'", async () => {

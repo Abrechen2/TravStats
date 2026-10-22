@@ -132,7 +132,7 @@ export function PinnedCard({
           type="button"
           aria-label={t("common:accessibility.close")}
           onClick={onClose}
-          className="cursor-pointer rounded-sm px-1 text-[11px] leading-none opacity-70 hover:opacity-100"
+          className="cursor-pointer rounded-sm px-1 text-[11px] leading-none opacity-70 hover:opacity-100 pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:min-w-(--ts-size-touch-min)"
           style={{ background: "rgba(255,255,255,0.08)" }}
         >
           ✕

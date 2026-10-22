@@ -9,6 +9,7 @@ import type { Request, Response, NextFunction } from "express";
 const mockUserFindUnique = jest.fn();
 const mockUserCount = jest.fn();
 const mockUserDelete = jest.fn();
+const mockSyncChangeDeleteMany = jest.fn();
 
 jest.mock("../db", () => ({
   prisma: {
@@ -17,6 +18,11 @@ jest.mock("../db", () => ({
       count: (...args: unknown[]) => mockUserCount(...args),
       delete: (...args: unknown[]) => mockUserDelete(...args),
     },
+    syncChange: {
+      deleteMany: (...args: unknown[]) => mockSyncChangeDeleteMany(...args),
+    },
+    // The array form: the operations were already started, so await them.
+    $transaction: (ops: Promise<unknown>[]) => Promise.all(ops),
   },
 }));
 
@@ -171,6 +177,8 @@ describe("DELETE /admin/users/:id — guards", () => {
     expect(res.status).toBe(200);
     expect(mockDeleteAccountWithFiles).toHaveBeenCalledWith("target-user", expect.any(Function));
     expect(mockUserDelete).toHaveBeenCalledTimes(1);
+    // The change log goes with the account (beta.23 UAT before 2.7.0-rc.20).
+    expect(mockSyncChangeDeleteMany).toHaveBeenCalledWith({ where: { userId: "target-user" } });
   });
 
   it("guards refuse before any file is touched", async () => {

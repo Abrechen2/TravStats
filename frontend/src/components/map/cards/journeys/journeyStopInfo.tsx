@@ -53,10 +53,14 @@ export function StopWikipedia({
   }
   if (info.state !== "found") return null;
   const s = info.summary;
+  // A photo is shown only with its author and licence (beta.23 UAT before 2.7.0-rc.20).
+  const credit = s.thumbnailUrl ? s.imageCredit : null;
+  const linkClass =
+    "block text-[9.5px] underline-offset-2 hover:underline pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:leading-[44px]";
   return (
     <div data-testid="stop-wikipedia" className="mb-2.5">
       <div className="flex items-start gap-2.5">
-        {s.thumbnailUrl && (
+        {s.thumbnailUrl && credit && (
           <img
             src={s.thumbnailUrl}
             alt={s.title}
@@ -70,11 +74,28 @@ export function StopWikipedia({
           {s.extract}
         </p>
       </div>
+      {credit && (
+        <a
+          href={credit.sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`mt-1 ${linkClass}`}
+          style={{ color: tokens.color.faint }}
+        >
+          {`${t("map:journey.picture")}: ${[
+            credit.licence,
+            credit.artist,
+            credit.onCommons ? "Wikimedia Commons" : "Wikipedia",
+          ]
+            .filter(Boolean)
+            .join(" · ")}`}
+        </a>
+      )}
       <a
         href={s.pageUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-1 block text-[9.5px] underline-offset-2 hover:underline pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:leading-[44px]"
+        className={`${credit ? "" : "mt-1 "}${linkClass}`}
         style={{ color: tokens.color.faint }}
       >
         {t("openData:wikipedia.license")}

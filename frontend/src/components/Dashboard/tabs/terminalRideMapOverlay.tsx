@@ -5,6 +5,7 @@ import type { Layer } from "@deck.gl/core";
 import {
   busPaths,
   terminalPoints,
+  terminalRidePath,
   type BusPathDatum,
   type TerminalDatum,
   type TerminalRideLine,
@@ -73,10 +74,7 @@ export function buildTerminalRideMapLayers(
     new PathLayer<BusPathDatum>({
       id: `${idPrefix}-paths`,
       data,
-      getPath: (d) =>
-        altitude === 0
-          ? d.path
-          : d.path.map(([lon, lat]) => [lon, lat, altitude] as [number, number, number]),
+      getPath: (d) => terminalRidePath(d, altitude),
       getColor: (d) => [r, g, b, d.routed ? 255 : CHORD_ALPHA],
       getWidth: (d) => (d.routed ? WIDTH_PX.drawn : WIDTH_PX.chord),
       widthUnits: "pixels",

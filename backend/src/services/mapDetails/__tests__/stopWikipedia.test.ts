@@ -203,4 +203,115 @@ describe("stopWikipediaSummary", () => {
       OpenDataUnavailableError
     );
   });
+
+  // beta.23 UAT before 2.7.0-rc.20: the Hamburg ZOB card showed a Commons
+  // photo credited to no one — only "Text: Wikipedia". A picture is credited
+  // with its author and licence, like the subject pictures.
+  const ZOB_THUMB =
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/ZOB_Hamburg_2019.jpg/320px-ZOB_Hamburg_2019.jpg";
+  const zobSummary = {
+    type: "standard",
+    title: "ZOB Hamburg",
+    extract: "Eins. Zwei.",
+    thumbnail: { source: ZOB_THUMB },
+    content_urls: { desktop: { page: "https://de.wikipedia.org/wiki/ZOB_Hamburg" } },
+  };
+  const zobGeo = { query: { geosearch: [{ title: "ZOB Hamburg" }] } };
+  function imageinfo(meta: Record<string, string>) {
+    return {
+      query: {
+        pages: {
+          "-1": {
+            imageinfo: [
+              {
+                descriptionurl: "https://commons.wikimedia.org/wiki/File:ZOB_Hamburg_2019.jpg",
+                extmetadata: Object.fromEntries(
+                  Object.entries(meta).map(([k, value]) => [k, { value }])
+                ),
+              },
+            ],
+          },
+        },
+      },
+    };
+  }
+
+  it("credits the photo's author and licence from its file page", async () => {
+    use((url) => {
+      if (url.includes("geosearch")) return json(zobGeo);
+      if (url.includes("imageinfo"))
+        return json(
+          imageinfo({
+            Artist: '<a href="//commons.wikimedia.org/wiki/User:Jo">Jo Beispiel</a>',
+            LicenseShortName: "CC BY-SA 4.0",
+            LicenseUrl: "https://creativecommons.org/licenses/by-sa/4.0",
+            License: "cc-by-sa-4.0",
+          })
+        );
+      return json(zobSummary);
+    });
+    const s = await stopWikipediaSummary("bus", "Hamburg ZOB", 53.552, 10.013, "de");
+    expect(s?.thumbnailUrl).toBe(ZOB_THUMB);
+    expect(s?.imageCredit).toEqual({
+      file: "ZOB_Hamburg_2019.jpg",
+      licence: "CC BY-SA 4.0",
+      licenceUrl: "https://creativecommons.org/licenses/by-sa/4.0",
+      artist: "Jo Beispiel",
+      sourceUrl: "https://commons.wikimedia.org/wiki/File:ZOB_Hamburg_2019.jpg",
+      onCommons: true,
+    });
+  });
+
+  it("still links the photo's file page when its metadata cannot be read", async () => {
+    use((url) => {
+      if (url.includes("geosearch")) return json(zobGeo);
+      if (url.includes("imageinfo")) return json({}, 503);
+      return json(zobSummary);
+    });
+    const s = await stopWikipediaSummary("bus", "Hamburg ZOB", 53.552, 10.013, "de");
+    expect(s?.thumbnailUrl).toBe(ZOB_THUMB);
+    expect(s?.imageCredit).toEqual({
+      file: "ZOB_Hamburg_2019.jpg",
+      licence: null,
+      licenceUrl: null,
+      artist: null,
+      sourceUrl: "https://de.wikipedia.org/wiki/File:ZOB_Hamburg_2019.jpg",
+      onCommons: true,
+    });
+  });
+
+  it("drops a non-free photo instead of showing it outside Wikipedia", async () => {
+    use((url) => {
+      if (url.includes("geosearch")) return json(zobGeo);
+      if (url.includes("imageinfo")) return json(imageinfo({ NonFree: "true" }));
+      return json(zobSummary);
+    });
+    const s = await stopWikipediaSummary("bus", "Hamburg ZOB", 53.552, 10.013, "de");
+    expect(s?.thumbnailUrl).toBeNull();
+    expect(s?.imageCredit).toBeNull();
+  });
+
+  // Codex review: a local (non-Commons) file may be non-free; when its page
+  // cannot be read the licence is unknown, so the photo is not shown — and
+  // that answer is not remembered.
+  it("shows no local photo whose licence could not be read, and asks again next time", async () => {
+    const localThumb =
+      "https://upload.wikimedia.org/wikipedia/en/thumb/c/cd/ZOB_logo.png/320px-ZOB_logo.png";
+    let metadataUp = false;
+    use((url) => {
+      if (url.includes("geosearch")) return json(zobGeo);
+      if (url.includes("imageinfo"))
+        return metadataUp
+          ? json(imageinfo({ LicenseShortName: "CC BY-SA 3.0", License: "cc-by-sa-3.0" }))
+          : json({}, 503);
+      return json({ ...zobSummary, thumbnail: { source: localThumb } });
+    });
+    const first = await stopWikipediaSummary("bus", "Hamburg ZOB", 53.552, 10.013, "en");
+    expect(first?.thumbnailUrl).toBeNull();
+    expect(first?.imageCredit).toBeNull();
+    metadataUp = true;
+    const second = await stopWikipediaSummary("bus", "Hamburg ZOB", 53.552, 10.013, "en");
+    expect(second?.thumbnailUrl).toBe(localThumb);
+    expect(second?.imageCredit?.onCommons).toBe(false);
+  });
 });

@@ -28,6 +28,10 @@ import { z } from "zod";
 import { fetchOpenData, OPEN_DATA_TIMEOUT_MS, OpenDataUnavailableError } from "../openData/http";
 import { summaryOf, type WikiLanguage, type WikipediaSummary } from "../openData/wikipedia";
 import type { StopDomain } from "./ownership";
+import { stopImageCredit, type StopImageCredit } from "./stopImageCredit";
+
+/** A station's summary, and whom to credit for its photo (`thumbnailUrl`). */
+export type StopSummary = WikipediaSummary & { imageCredit: StopImageCredit | null };
 
 export const GEOSEARCH_RADIUS_M = 500;
 const GEOSEARCH_LIMIT = 10;
@@ -210,9 +214,9 @@ export function firstSentences(extract: string, count = 2): string {
     : joined;
 }
 
-const cache = new Map<string, { at: number; value: WikipediaSummary | null }>();
+const cache = new Map<string, { at: number; value: StopSummary | null }>();
 
-function remember(key: string, value: WikipediaSummary | null): WikipediaSummary | null {
+function remember(key: string, value: StopSummary | null): StopSummary | null {
   cache.delete(key);
   cache.set(key, { at: Date.now(), value });
   while (cache.size > MAX_ENTRIES) {
@@ -260,7 +264,7 @@ export async function stopWikipediaSummary(
   lon: number,
   lang: WikiLanguage,
   opts: { deadlineMs?: number } = {}
-): Promise<WikipediaSummary | null> {
+): Promise<StopSummary | null> {
   const key = `${domain}|${lat.toFixed(4)}|${lon.toFixed(4)}|${fold(name)}|${lang}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.value;
@@ -285,7 +289,24 @@ export async function stopWikipediaSummary(
     const title = matchStopTitle(domain, name, titles);
     if (!title) continue;
     const summary = await step((timeoutMs) => summaryOf(edition, title, { timeoutMs }));
-    if (summary) return remember(key, { ...summary, extract: firstSentences(summary.extract) });
+    if (!summary) continue;
+    const extract = firstSentences(summary.extract);
+    if (!summary.thumbnailUrl) return remember(key, { ...summary, extract, imageCredit: null });
+    // The photo's credit gets what is left of the deadline; out of time it is
+    // the link to the file page alone, not a failed card.
+    const credit = await stopImageCredit(
+      edition,
+      summary.thumbnailUrl,
+      Math.min(OPEN_DATA_TIMEOUT_MS, deadline - Date.now())
+    );
+    // A local file whose licence could not be read: the text, no photo, and
+    // not remembered — the next view asks again.
+    if (credit === "unverified")
+      return { ...summary, extract, thumbnailUrl: null, imageCredit: null };
+    if (credit === "nonFree" || credit === null) {
+      return remember(key, { ...summary, extract, thumbnailUrl: null, imageCredit: null });
+    }
+    return remember(key, { ...summary, extract, imageCredit: credit });
   }
   return remember(key, null);
 }

@@ -97,12 +97,53 @@ describe("last visit at a branch a rental went back to", () => {
     expect(f.lastVisit?.utc).toBe("2024-10-08T09:00:00Z");
   });
 
-  it("does not date an arrival by its departure when the arrival is unknown", () => {
+  it("dates an unknown arrival by its departure's day, never its clock", () => {
     const f = getJourneyStopFigures(
       [ride("x", BERLIN, HAMBURG, "2024-06-01T08:00:00Z", null)],
       endKey(HAMBURG)
     );
     expect(f.arrivals).toBe(1);
-    expect(f.lastVisit).toBeNull();
+    expect(f.lastVisit?.local.slice(0, 10)).toBe("2024-06-01");
+    expect(f.lastVisit?.precision).toBe("day");
+  });
+
+  // beta.23 UAT before 2.7.0-rc.20: München Hbf said "Zuletzt hier 05.03.2024"
+  // although a date-only ride Hamburg → München on 01.07.2025 (no arrival
+  // recorded) had ended there since. The later journey was skipped, so an
+  // older visit was named the last one.
+  it("does not name an older visit the last when a later date-only ride ended here", () => {
+    const dayOnly = journeyFromRail({
+      id: "late",
+      status: "completed",
+      depStationName: HAMBURG.name,
+      depLat: HAMBURG.lat,
+      depLon: HAMBURG.lon,
+      arrStationName: MUNICH.name,
+      arrLat: MUNICH.lat,
+      arrLon: MUNICH.lon,
+      departureTime: "2025-06-30T22:00:00Z",
+      times: {
+        departure: {
+          utc: "2025-06-30T22:00:00Z",
+          zone: "Europe/Berlin",
+          offset: "+02:00",
+          local: "2025-07-01T00:00:00",
+          precision: "day",
+        },
+        arrival: null,
+        actualDeparture: null,
+        actualArrival: null,
+      },
+    } as Parameters<typeof journeyFromRail>[0]);
+    const f = getJourneyStopFigures(
+      [
+        ride("c", HAMBURG, MUNICH, "2024-03-01T07:01:00Z", "2024-03-01T12:58:00Z"),
+        ride("d", MUNICH, HAMBURG, "2024-03-05T08:15:00Z", "2024-03-05T14:40:00Z"),
+        dayOnly,
+      ],
+      endKey(MUNICH)
+    );
+    expect(f.lastVisit?.local.slice(0, 10)).toBe("2025-07-01");
+    expect(f.lastVisit?.precision).toBe("day");
   });
 });
