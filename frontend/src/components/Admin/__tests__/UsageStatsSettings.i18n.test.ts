@@ -19,6 +19,9 @@ const USAGE_STATS_KEYS = [
   "admin.installId",
   "admin.installIdHint",
   "admin.endpointDisabled",
+  "legal.privacyLink",
+  "legal.privacyUrl",
+  "legal.controller",
 ];
 
 const COMMON_KEYS = ["loading.title"];
@@ -32,5 +35,17 @@ describe("UsageStatsSettings i18n keys", () => {
   it.each(COMMON_KEYS)("resolves common:%s to a string in DE and EN", (key) => {
     expect(typeof resolve(deCommon, key)).toBe("string");
     expect(typeof resolve(enCommon, key)).toBe("string");
+  });
+
+  it("links the locale's privacy policy and names the controller", () => {
+    expect(resolve(de, "legal.privacyUrl")).toBe("https://www.abrechen2.de/travstats/datenschutz/");
+    expect(resolve(en, "legal.privacyUrl")).toBe("https://www.abrechen2.de/en/travstats/privacy/");
+    expect(resolve(de, "legal.controller")).toBe("Verantwortlich: Dennis Wittke");
+    expect(resolve(en, "legal.controller")).toBe("Controller: Dennis Wittke");
+  });
+
+  it("makes no anonymity claim for the pseudonymous usage stats", () => {
+    expect(JSON.stringify(de)).not.toMatch(/anonym/i);
+    expect(JSON.stringify(en)).not.toMatch(/anonym/i);
   });
 });

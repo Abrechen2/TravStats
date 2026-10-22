@@ -81,7 +81,8 @@
     "supportTitle": "Support",
     "supportSub": "A star on GitHub or a donation helps keep it going.",
     "star": "Project on GitHub",
-    "donate": "Donate via PayPal"
+    "donate": "Donate via PayPal",
+    "madeBy": "A project by"
   },
   "profile": {
     "title": "User Profile",

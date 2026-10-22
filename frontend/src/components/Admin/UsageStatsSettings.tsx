@@ -3,6 +3,7 @@ import { usageStatsApi, type UsageStatsStatus } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
+import UsageStatsLegalNote from "../UsageStatsLegalNote";
 
 export default function UsageStatsSettings(): JSX.Element {
   const { t } = useTranslation(["usageStats", "common"]);
@@ -44,6 +45,7 @@ export default function UsageStatsSettings(): JSX.Element {
   return (
     <div className="flex flex-col gap-4">
       <p className="t-caption">{t("usageStats:admin.description")}</p>
+      <UsageStatsLegalNote />
 
       {!status.endpointConfigured && (
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>

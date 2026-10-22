@@ -1030,3 +1030,22 @@ Nicht gespiegelt, mit Absicht: `README.md` (gehoert dem Spiegel),
 (CT 141, `<secrets-host>`).
 
 Vollstaendiges Konzept: `D:\Projekte\CC\docs\git-konzept.md`
+
+## Brand: `<abrechen2 />` (mandatory)
+
+This project is part of Dennis Wittke's **abrechen2** umbrella brand. Everything
+published from here must carry at least the `<abrechen2 />` wordmark (below
+120 px the `<a2/>` icon or the round `<a2>` avatar) **linking to
+https://www.abrechen2.de/** (EN `/en/`). The project keeps its own name and logo;
+abrechen2 appears as the sender: "Ein Projekt von `<abrechen2 />`" / "A project
+by `<abrechen2 />`".
+
+- Brand guide: `\\CARDINAL\Unraid\Abrechen2-Brand` (`/mnt/user/Unraid/Abrechen2-Brand`
+  on Cardinal): logos, favicons, templates, fonts, `05_Brand-Guide/brand-guide.pdf`
+- Never typeset the logo in a font (JetBrains Mono turns `/>` into a ligature).
+  Use the outlined SVG paths from `01_Logo/SVG`.
+- Only `<` and `/>` in the accent colour: Glut `#C2410C` on light, Signal-Orange
+  `#FF7A1A` on dark. Minimum width 120 px. No gradients, shadows or outlines.
+- Imprint and privacy policy live on www.abrechen2.de, not in this project.
+- Full rule: `~/.claude/rules/common/branding.md`
+- **Here:** the About section of the web app shows the credit. travstats.de shows it in the footer (TravStatsWeb `A2Credit.astro`). Privacy policy: https://www.abrechen2.de/travstats/datenschutz/ (also the App Store privacy URL for the Companion).

@@ -327,6 +327,11 @@
     --accent-glow: rgba(240, 169, 71, 0.18);
     --accent-soft: rgba(240, 169, 71, 0.1);
 
+    /* abrechen2 maker mark (brand guide v1) — only "<" and "/>" carry it.
+       Signal-Orange is the dark-background accent; Glut (#c2410c) belongs to
+       light backgrounds, which this dark-only app does not have. */
+    --abrechen2-accent: #ff7a1a;
+
     /*
      * Per-domain accents. Since 2.7.0 they read the generated token layer
      * rather than carrying their own hexes, so `--domain-cruise` and
