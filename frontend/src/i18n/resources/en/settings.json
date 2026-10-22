@@ -308,8 +308,8 @@
       "sender": "The From email should match the SMTP server's domain — otherwise mails are frequently flagged as spam. SPF/DKIM DNS records improve deliverability."
     },
     "emailSub": "Where reminders go; empty = none",
-    "before24hSub": "One day before — for flights, cruises and train journeys; the morning of check-in for lodging",
-    "before2hSub": "Shortly before — for flights, cruises and train journeys",
+    "before24hSub": "One day before — for flights, cruises, train, ferry and bus journeys; the morning of check-in for lodging",
+    "before2hSub": "Shortly before — for flights, cruises, train, ferry and bus journeys",
     "saveFailed": "Notification preferences could not be saved"
   },
   "privacy": {

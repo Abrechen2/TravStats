@@ -308,8 +308,8 @@
       "sender": "Die Absender-E-Mail sollte zur Domain des SMTP-Servers passen — sonst werden Mails häufig als Spam markiert. SPF/DKIM-Einträge im DNS erhöhen die Zustellbarkeit."
     },
     "emailSub": "Wohin Erinnerungen gehen; leer = keine",
-    "before24hSub": "Einen Tag vorher — für Flüge, Kreuzfahrten und Zugfahrten; am Morgen des Check-ins für Unterkünfte",
-    "before2hSub": "Kurz vorher — für Flüge, Kreuzfahrten und Zugfahrten",
+    "before24hSub": "Einen Tag vorher — für Flüge, Kreuzfahrten, Zug-, Fähr- und Busfahrten; am Morgen des Check-ins für Unterkünfte",
+    "before2hSub": "Kurz vorher — für Flüge, Kreuzfahrten, Zug-, Fähr- und Busfahrten",
     "saveFailed": "Benachrichtigungen konnten nicht gespeichert werden"
   },
   "privacy": {
