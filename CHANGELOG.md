@@ -6,12 +6,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-**Before upgrading to 2.7.0-rc.22:** take a backup. No new migrations since rc.20. Coming from 2.7.0-rc.19: 4 migrations; from 2.7.0-rc.18: 25 migrations, and stored straight ferry crossings are re-routed once in the background.
+**Before upgrading to 2.7.0-rc.23:** take a backup. No new migrations since rc.20. Coming from 2.7.0-rc.19: 4 migrations; from 2.7.0-rc.18: 25 migrations, and stored straight ferry crossings are re-routed once in the background.
 
 - Full data export includes saved TravPlan content and proposals; daily quota counters are explicitly excluded.
 
 ### Added
 
+- **Settings → Mitreisende.** One page for everyone you travel with: how
+  often each person appears per area, rename (the name changes on every
+  entry), merge two spellings of the same person after a preview of what
+  moves, and delete people nobody is attached to. Merging is refused when
+  both are linked to different accounts.
+- **"Mit wem unterwegs" on the statistics overview:** days, entries and
+  countries shared with each companion across all switched-on areas, stays
+  included, each figure with the entries behind it. A shared day counts
+  once; paying an expense alone does not count as travelling together.
 - **Ferry crossings have a route map, the trip's photos taken during the
   crossing and a chapter in the year in review.** The map draws the stored sea route, or a faint
   straight line between the ports where there is none.
