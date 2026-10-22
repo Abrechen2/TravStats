@@ -6,7 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-**Before upgrading to 2.7.0-rc.20:** take a backup. 4 new migrations run on first start. Coming from 2.7.0-rc.18: 25 migrations, and stored straight ferry crossings are re-routed once in the background.
+**Before upgrading to 2.7.0-rc.21:** take a backup. No new migrations since rc.20. Coming from 2.7.0-rc.19: 4 migrations; from 2.7.0-rc.18: 25 migrations, and stored straight ferry crossings are re-routed once in the background.
 
 - Full data export includes saved TravPlan content and proposals; daily quota counters are explicitly excluded.
 
@@ -118,6 +118,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Fixed
 
+- **A Deutsche Bahn share link no longer reads as a failed import.** Such a
+  link carries no booking reference, price or seat, so the review dialog now
+  says so in one line instead of flagging every empty field as "not found in
+  the document".
+- **A train bahn.de names by number alone reads "Zug 57031"** (EN "Train
+  57031") on map cards, in the trip overview, the review and the ride
+  pickers, instead of a bare number. The number is
+  stored as the train number; a category is kept only where bahn.de states
+  one. Rides imported from a share link in rc.20 read the same way.
 - Bus lines are drawn on the globe.
 - A Wikimedia Commons photo on a map card carries its author and licence
   where Commons provides them; a non-free local photo is not shown.
