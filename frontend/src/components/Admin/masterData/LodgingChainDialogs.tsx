@@ -143,7 +143,7 @@ function EditDialog({ chain, onClose, onDone }: DialogProps): JSX.Element {
           <Input
             id="chain-edit-color"
             value={color}
-            placeholder="#a4123f"
+            placeholder="#rrggbb"
             onChange={(e) => setColor(e.target.value)}
           />
         </Field>
