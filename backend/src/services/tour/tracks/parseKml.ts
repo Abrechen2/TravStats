@@ -115,7 +115,9 @@ function collect(node: unknown, key: string, out: unknown[] = []): unknown[] {
   }
   if (!isXmlNode(node)) return out;
   for (const [k, v] of Object.entries(node)) {
-    if (k === key) out.push(...asArray(v));
+    // Pushed one by one: spreading a 300,000-placemark folder into `push`
+    // passes that many arguments and overflows the stack.
+    if (k === key) for (const item of asArray(v)) out.push(item);
     else collect(v, key, out);
   }
   return out;
@@ -206,7 +208,10 @@ function fromLineStrings(root: XmlNode): Reading {
       name ??= text(placemark["name"]);
       const previous = segments[segments.length - 1];
       if (previous && sameSpot(previous[previous.length - 1], points[0])) {
-        segments[segments.length - 1] = [...previous, ...points.slice(1)];
+        // Appended in place, never copied: a trail cut into tens of thousands
+        // of short lines made a copy per joint quadratic — 6.5 s of blocked
+        // event loop for a 3.7 MB file. The segment is this function's own.
+        for (let i = 1; i < points.length; i += 1) previous.push(points[i]);
       } else {
         segments.push(points);
       }

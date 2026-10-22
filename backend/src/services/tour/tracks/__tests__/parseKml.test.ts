@@ -228,3 +228,39 @@ describe("parseKml", () => {
     });
   });
 });
+
+describe("readKml — a trail cut into many short lines (Codex review before 2.7.0-rc.22)", () => {
+  // 40,000 two-point lines meeting end to end, ~3.7 MB. Joining them by
+  // copying the whole path at every joint took 6.5 s on one core; appending
+  // takes about 0.3 s. The bound is loose on purpose — it separates linear
+  // from quadratic without timing the machine.
+  it("joins them in linear time", () => {
+    const lines: string[] = [];
+    for (let i = 0; i < 40_000; i += 1) {
+      const a = (i * 0.0001).toFixed(4);
+      const b = ((i + 1) * 0.0001).toFixed(4);
+      lines.push(
+        `<Placemark><LineString><coordinates>${a},1 ${b},1</coordinates></LineString></Placemark>`
+      );
+    }
+    const xml = `<kml xmlns="http://www.opengis.net/kml/2.2"><Document>${lines.join("")}</Document></kml>`;
+
+    const started = Date.now();
+    const track = parseKml(xml);
+    const elapsed = Date.now() - started;
+
+    expect(track?.points).toHaveLength(40_001);
+    expect(track?.segmentStarts).toEqual([0]);
+    expect(elapsed).toBeLessThan(3_000);
+  }, 30_000);
+});
+
+describe("readKml — a folder of hundreds of thousands of placemarks", () => {
+  // 11 MB, inside the 15 MB upload limit. Collecting the placemarks by
+  // spreading them into one `push` call overflowed the stack, so the upload
+  // failed as a server error instead of the reason the file has no track.
+  it("answers with the reason, not a stack overflow", () => {
+    const xml = `<kml><Document>${"<Placemark><name>x</name></Placemark>".repeat(300_000)}</Document></kml>`;
+    expect(readKml(xml)).toEqual({ ok: false, reason: "kmlNoTrack" });
+  }, 30_000);
+});
