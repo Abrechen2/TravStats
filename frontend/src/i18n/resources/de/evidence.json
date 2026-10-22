@@ -457,5 +457,6 @@
   "evidence.ranking.companion.rail": "Zugfahrten mit {{name}}",
   "evidence.ranking.companion.bus": "Busfahrten mit {{name}}",
   "evidence.ranking.companion.ferry": "Fährüberfahrten mit {{name}}",
-  "evidence.ranking.companion.rental": "Mietwagen mit {{name}}"
+  "evidence.ranking.companion.rental": "Mietwagen mit {{name}}",
+  "evidence.ranking.companion.lodging": "Aufenthalte mit {{name}}"
 }

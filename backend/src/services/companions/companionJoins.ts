@@ -19,8 +19,25 @@ export const COMPANION_JOINS = [
   { kind: "rental", table: "rental_booking_companions", entry: "rental_booking_id" },
 ] as const;
 
-export type CompanionUseKind = (typeof COMPANION_JOINS)[number]["kind"];
-export const COMPANION_USE_KINDS: readonly CompanionUseKind[] = COMPANION_JOINS.map((j) => j.kind);
+/** A kind of entry that links a companion through a join table. */
+export type CompanionJoinKind = (typeof COMPANION_JOINS)[number]["kind"];
+
+/**
+ * Every kind of entry a companion can be on: the join tables, plus lodging
+ * stays, which name their companions as text only (`companionStays.ts`). In
+ * display order.
+ */
+export const COMPANION_USE_KINDS = [
+  "flight",
+  "trip",
+  "cruise",
+  "lodging",
+  "rail",
+  "bus",
+  "ferry",
+  "rental",
+] as const;
+export type CompanionUseKind = (typeof COMPANION_USE_KINDS)[number];
 
 export interface JoinMoveCount {
   /** Entries the source is on. */
@@ -34,8 +51,8 @@ export async function countJoinMoves(
   tx: DbTransaction,
   source: string,
   target: string
-): Promise<Record<CompanionUseKind, JoinMoveCount>> {
-  const out = {} as Record<CompanionUseKind, JoinMoveCount>;
+): Promise<Record<CompanionJoinKind, JoinMoveCount>> {
+  const out = {} as Record<CompanionJoinKind, JoinMoveCount>;
   for (const join of COMPANION_JOINS) {
     const table = Prisma.raw(`"${join.table}"`);
     const entry = Prisma.raw(`"${join.entry}"`);

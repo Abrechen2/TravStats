@@ -44,7 +44,9 @@
       "ferry_one": "{{count}} ferry crossing",
       "ferry_other": "{{count}} ferry crossings",
       "rental_one": "{{count}} rental car",
-      "rental_other": "{{count}} rental cars"
+      "rental_other": "{{count}} rental cars",
+      "lodging_one": "{{count}} stay",
+      "lodging_other": "{{count}} stays"
     },
     "rename": {
       "title": "Rename {{name}}",

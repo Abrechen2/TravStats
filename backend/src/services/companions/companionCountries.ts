@@ -24,7 +24,10 @@ import type { TogetherEntry } from "./companionTogether";
  * "Länder zusammen": the countries the passport's VISITED rule (forgejo#299)
  * proves from the entries two people shared — the same `buildPassport` the
  * passport and the overview's "Länder besucht" read, handed only the flights,
- * port calls and rides the companion was on. A connection both sat through is
+ * port calls, rides and stays the companion was on. A stay goes in with its
+ * house, and that house carries ONLY the shared stays: a house with no stay
+ * at all counts by itself, so a house the companion never stayed in must not
+ * reach the fold. A connection both sat through is
  * still a connection; a port call is a visit (owner rulings 2026-10-16).
  *
  * The user's own verdicts (forgejo#308) apply to the countries those entries
@@ -34,7 +37,7 @@ import type { TogetherEntry } from "./companionTogether";
  * Abstention: a companion whose shared entries include no kind that can prove
  * a country (only trips and rentals) gets `null`, not 0 — nothing was asked.
  */
-const PROVING_KINDS = new Set(["flight", "cruise", "rail", "bus", "ferry"]);
+const PROVING_KINDS = new Set(["flight", "cruise", "lodging", "rail", "bus", "ferry"]);
 
 export interface CompanionCountries {
   /** ISO codes, sorted; null when no shared entry could prove a country. */
@@ -48,7 +51,8 @@ async function loadInputs(userId: string, entries: readonly TogetherEntry[]) {
     new Set(entries.filter((e) => e.kind === kind).map((e) => e.entry.id));
   const flightIds = idsOf("flight");
   const cruiseIds = idsOf("cruise");
-  const [flights, portCalls, rail, bus, ferry] = await Promise.all([
+  const stayIds = idsOf("lodging");
+  const [flights, portCalls, rail, bus, ferry, lodgings] = await Promise.all([
     flightIds.size === 0
       ? []
       : prisma.flight.findMany({
@@ -73,6 +77,28 @@ async function loadInputs(userId: string, entries: readonly TogetherEntry[]) {
     idsOf("rail").size === 0 ? [] : loadRailEnds(userId),
     idsOf("bus").size === 0 ? [] : loadBusEnds(userId),
     idsOf("ferry").size === 0 ? [] : loadFerryEnds(userId),
+    stayIds.size === 0
+      ? []
+      : prisma.lodging.findMany({
+          // The passport's own cut: `visited: false` is a bookmark, not a visit.
+          where: { userId, visited: true, isoCountryCode: { not: null } },
+          select: {
+            isoCountryCode: true,
+            countryVisitKind: true,
+            city: true,
+            stays: {
+              where: { id: { in: [...stayIds] } },
+              select: {
+                id: true,
+                status: true,
+                checkIn: true,
+                checkOut: true,
+                datePrecision: true,
+                nights: true,
+              },
+            },
+          },
+        }),
   ]);
   const now = new Date();
   const [passportFlights, airportCountries, homeIatas, threshold, profile, overrides] =
@@ -98,6 +124,7 @@ async function loadInputs(userId: string, entries: readonly TogetherEntry[]) {
     rail,
     bus,
     ferry,
+    lodgings,
   };
 }
 
@@ -111,6 +138,11 @@ function foldOne(inputs: Inputs, entries: readonly TogetherEntry[]): CompanionCo
   const railIds = ids("rail");
   const busIds = ids("bus");
   const ferryIds = ids("ferry");
+  const stayIds = ids("lodging");
+  const lodgings = inputs.lodgings.flatMap((house) => {
+    const stays = house.stays.filter((stay) => stayIds.has(stay.id));
+    return stays.length > 0 ? [{ ...house, stays }] : [];
+  });
   const automatic = buildPassport(
     inputs.passportFlights.filter((f) => flightIds.has(f.id)),
     inputs.airportCountries,
@@ -124,7 +156,7 @@ function foldOne(inputs: Inputs, entries: readonly TogetherEntry[]): CompanionCo
         until: stop.departureTime,
       })),
     [],
-    [],
+    lodgings,
     inputs.threshold,
     [],
     [],

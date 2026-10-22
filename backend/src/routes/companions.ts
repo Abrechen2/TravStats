@@ -5,9 +5,8 @@ import { prisma } from "../db";
 import { authenticate, AuthRequest, requireWriteScope } from "../middleware/auth";
 import { rejectDemoWrites } from "../middleware/demoGuard";
 import { settingsLimiter, statsLimiter } from "../middleware/rateLimit";
+import { deleteCompanion, deleteUnusedCompanions } from "../services/companions/companionDelete";
 import {
-  deleteCompanion,
-  deleteUnusedCompanions,
   listManagedCompanions,
   mergeCompanions,
   mergePreview,

@@ -5,7 +5,8 @@ import type { EvidenceEntry } from "../../schemas/evidence";
 import { loadCrossDomainPopulation } from "../evidence/crossDomainPopulations";
 import { tripEvidenceEntry } from "../evidence/entryMappersDomains";
 import { userToday } from "../stats/userToday";
-import { COMPANION_JOINS, type CompanionUseKind } from "./companionJoins";
+import { COMPANION_JOINS, COMPANION_USE_KINDS, type CompanionUseKind } from "./companionJoins";
+import { loadStayLinks } from "./companionStays";
 
 /**
  * "Mit wem unterwegs": which of the caller's entries each companion was on,
@@ -17,7 +18,10 @@ import { COMPANION_JOINS, type CompanionUseKind } from "./companionJoins";
  * domain's local day), that the overview's "aktive Tage" counts. A planned
  * flight with someone is not yet a flight together. Trips, which are no domain,
  * count once they have started; their days are the trip's own local days
- * (`startDay`..`endDay`, cut at today) — a trip with no dates proves no day.
+ * (`startDay`..`endDay`, cut at the user's today) — a trip with no dates
+ * proves no day. A lodging stay names its companions as text
+ * (`companionStays.ts`) and counts, like on the lodging tab, once its
+ * check-out is past, on the nights it covered.
  *
  * Paying an expense is NOT travelling together (owner, 2026-10-22): the payer
  * link never enters this population.
@@ -27,18 +31,18 @@ export interface TogetherEntry {
   entry: EvidenceEntry;
   /** `YYYY-MM-DD`, each on its own entry's clock; possibly none. */
   dayKeys: string[];
-  /** ISO codes the entry's own places lie in (the overview's country row); none for a trip or rental. */
+  /** ISO codes the entry's own places lie in (a stay: its house's); none for a trip or rental. */
   touched: string[];
 }
 
 /** Kinds that are a domain (and gated like one); `trip` is never hidden. */
-const DOMAIN_KINDS = COMPANION_JOINS.map((j) => j.kind).filter(
+const DOMAIN_KINDS = COMPANION_USE_KINDS.filter(
   (k): k is Exclude<CompanionUseKind, "trip"> => k !== "trip"
 );
 
 /** The kinds a user with these visible domains sees, in display order. */
 export function visibleUseKinds(visible: readonly DomainKey[]): CompanionUseKind[] {
-  return COMPANION_JOINS.map((j) => j.kind).filter(
+  return COMPANION_USE_KINDS.filter(
     (k) => k === "trip" || (visible as readonly string[]).includes(k)
   );
 }
@@ -65,7 +69,34 @@ async function loadLinks(
       out.set(row.companionId, byKind);
     }
   }
+  if (kinds.includes("lodging")) {
+    const catalogue = await prisma.companion.findMany({
+      where: { userId },
+      select: { id: true, canonicalName: true },
+    });
+    const stays = await loadStayLinks(prisma, userId, catalogue);
+    for (const [companionId, ids] of stays.byCompanion) {
+      const byKind = out.get(companionId) ?? new Map<CompanionUseKind, Set<string>>();
+      byKind.set("lodging", ids);
+      out.set(companionId, byKind);
+    }
+  }
   return out;
+}
+
+/** stay id → its house's ISO country, for the stays some companion is on. */
+async function stayCountries(userId: string, ids: ReadonlySet<string>) {
+  if (ids.size === 0) return new Map<string, string[]>();
+  const rows = await prisma.lodgingStay.findMany({
+    where: { userId, id: { in: [...ids] } },
+    select: { id: true, lodging: { select: { isoCountryCode: true } } },
+  });
+  return new Map(
+    rows.map((r) => [
+      r.id,
+      r.lodging.isoCountryCode ? [r.lodging.isoCountryCode.toUpperCase()] : [],
+    ])
+  );
 }
 
 /** Every calendar day from `from` to `to` inclusive, both `YYYY-MM-DD`. */
@@ -122,10 +153,12 @@ export async function loadTogether(
   const kinds = visibleUseKinds(visible);
   const domains = DOMAIN_KINDS.filter((k) => kinds.includes(k));
   const links = await loadLinks(userId, kinds);
-  const tripIds = new Set([...links.values()].flatMap((m) => [...(m.get("trip") ?? [])]));
-  const [population, trips] = await Promise.all([
+  const idsOf = (kind: CompanionUseKind) =>
+    new Set([...links.values()].flatMap((m) => [...(m.get(kind) ?? [])]));
+  const [population, trips, stays] = await Promise.all([
     loadCrossDomainPopulation(userId, domains),
-    loadTrips(userId, tripIds),
+    loadTrips(userId, idsOf("trip")),
+    stayCountries(userId, idsOf("lodging")),
   ]);
   const happened = new Map<string, TogetherEntry>(
     [...trips].map(([id, entry]) => [`trip:${id}`, entry])
@@ -139,7 +172,9 @@ export async function loadTogether(
       kind: event.domain as CompanionUseKind,
       entry: event.entry,
       dayKeys: event.dayKeys,
-      touched: touched.get(key) ?? [],
+      // A stay's country row is its HOUSE's, keyed by the house: read it per stay.
+      touched:
+        event.domain === "lodging" ? (stays.get(event.entry.id) ?? []) : (touched.get(key) ?? []),
     });
   }
   const byCompanion = new Map<string, TogetherEntry[]>();

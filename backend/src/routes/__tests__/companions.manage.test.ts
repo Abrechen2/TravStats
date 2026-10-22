@@ -323,4 +323,89 @@ describe("companions — manage", () => {
       },
     ]);
   });
+
+  // Found by the Codex review: usage was checked, then the row deleted in a
+  // second statement — a link made in between was cascaded away under a 204.
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  it("refuses a delete when an entry links the companion while it runs", async () => {
+    const target = await companion(anna.id, "Racer");
+    let answer: Promise<request.Response> | null = null;
+    await prisma.$transaction(async (tx) => {
+      await tx.flightCompanion.create({
+        data: { flightId: full.flight.id, companionId: target.id, position: 0 },
+      });
+      answer = request(app)
+        .delete(`/api/v1/companions/${target.id}`)
+        .set("Cookie", anna.cookie)
+        .then((r) => r);
+      await sleep(400);
+    });
+    const res = await answer!;
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("COMPANION_IN_USE");
+    expect(await prisma.flightCompanion.count({ where: { companionId: target.id } })).toBe(1);
+  });
+
+  it("spares a companion in the bulk delete when an expense names it meanwhile", async () => {
+    const target = await companion(anna.id, "Payer later");
+    let answer: Promise<request.Response> | null = null;
+    await prisma.$transaction(async (tx) => {
+      await tx.tripExpense.create({
+        data: {
+          userId: anna.id,
+          tripId: full.trip.id,
+          kind: "food",
+          amount: 5,
+          currency: "EUR",
+          payerCompanionId: target.id,
+        },
+      });
+      answer = request(app)
+        .post("/api/v1/companions/delete-unused")
+        .set("Cookie", anna.cookie)
+        .then((r) => r);
+      await sleep(400);
+    });
+    const res = await answer!;
+    expect(res.status).toBe(200);
+    expect(await prisma.companion.findUnique({ where: { id: target.id } })).not.toBeNull();
+    expect(await prisma.tripExpense.count({ where: { payerCompanionId: target.id } })).toBe(1);
+  });
+
+  // Found by the Codex review: a stay names its companions as text only, so a
+  // person named only on a stay read as unused and could be deleted.
+  it("counts a stay that names the companion as a use, even in a hidden domain", async () => {
+    const onStay = await companion(anna.id, "Stay Only");
+    await prisma.lodgingStay.update({
+      where: { id: full.stay.id },
+      data: { companions: ["  stay   ONLY "] },
+    });
+    const del = await request(app)
+      .delete(`/api/v1/companions/${onStay.id}`)
+      .set("Cookie", anna.cookie)
+      .expect(409);
+    expect(del.body.code).toBe("COMPANION_IN_USE");
+    await request(app)
+      .post("/api/v1/companions/delete-unused")
+      .set("Cookie", anna.cookie)
+      .expect(200);
+    expect(await prisma.companion.findUnique({ where: { id: onStay.id } })).not.toBeNull();
+    const list = await request(app)
+      .get("/api/v1/companions/manage")
+      .set("Cookie", anna.cookie)
+      .expect(200);
+    // Lodging is switched off for Anna: the stay is a hidden use.
+    expect(list.body.companions[0]).toMatchObject({ id: onStay.id, hiddenUses: 1, inUse: true });
+
+    await prisma.userSettings.update({
+      where: { userId: anna.id },
+      data: { enabledDomains: ["flight", "lodging"] },
+    });
+    const shown = await request(app)
+      .get("/api/v1/companions/manage")
+      .set("Cookie", anna.cookie)
+      .expect(200);
+    expect(shown.body.companions[0]).toMatchObject({ uses: { lodging: 1 }, hiddenUses: 0 });
+  });
 });

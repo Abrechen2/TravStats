@@ -44,7 +44,9 @@
       "ferry_one": "{{count}} Fährüberfahrt",
       "ferry_other": "{{count}} Fährüberfahrten",
       "rental_one": "{{count}} Mietwagen",
-      "rental_other": "{{count}} Mietwagen"
+      "rental_other": "{{count}} Mietwagen",
+      "lodging_one": "{{count}} Aufenthalt",
+      "lodging_other": "{{count}} Aufenthalte"
     },
     "rename": {
       "title": "{{name}} umbenennen",

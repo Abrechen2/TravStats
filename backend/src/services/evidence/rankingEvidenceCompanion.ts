@@ -23,6 +23,7 @@ const UNITS: Record<CompanionUseKind, string> = {
   flight: "flights",
   trip: "trips",
   cruise: "cruises",
+  lodging: "stays",
   rail: "rides",
   bus: "rides",
   ferry: "rides",

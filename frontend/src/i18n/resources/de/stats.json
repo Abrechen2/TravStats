@@ -1444,9 +1444,9 @@
       "days": {
         "unit": "Ein Kalendertag, an dem du mit der Person unterwegs warst – ein Tag, den zwei gemeinsame Einträge abdecken, zählt einmal.",
         "time": "Jeder Eintrag auf seinem eigenen Kalender, wie bei „Aktive Tage“: ein Flug am Tag des Abflugs am Abflughafen, eine Reise von ihrem ersten bis zum letzten Tag (höchstens bis heute).",
-        "source": "Flüge, Reisen, Kreuzfahrten, Bahn-, Bus- und Fährfahrten, in denen die Person eingetragen ist, aus den Bereichen, die du siehst.",
+        "source": "Flüge, Reisen, Kreuzfahrten, Aufenthalte, Bahn-, Bus- und Fährfahrten, in denen die Person eingetragen ist, aus den Bereichen, die du siehst.",
         "coverage": "Ein Eintrag ohne Datum belegt keinen Tag. Ein Tipp auf die Zahl zeigt die Einträge und ihre Tage.",
-        "exclusions": "Geplantes und Storniertes zählt nicht. Eine Ausgabe, die die Person bezahlt hat, ist kein gemeinsamer Tag. Mietwagen belegen keine Tage."
+        "exclusions": "Geplantes und Storniertes zählt nicht, ein Aufenthalt erst nach dem Check-out. Eine Ausgabe, die die Person bezahlt hat, ist kein gemeinsamer Tag. Mietwagen belegen keine Tage."
       },
       "entries": {
         "unit": "Ein Eintrag, in dem die Person eingetragen ist – je Flug, Reise oder Fahrt eins.",
@@ -1458,7 +1458,7 @@
       "countries": {
         "unit": "Ein Land, das ihr gemeinsam besucht habt – nach derselben Regel wie im Reisepass.",
         "time": "Alle Jahre.",
-        "source": "Nur die gemeinsamen Flüge, Kreuzfahrten, Bahn-, Bus- und Fährfahrten; deine eigenen Korrekturen im Reisepass gelten mit.",
+        "source": "Nur die gemeinsamen Flüge, Kreuzfahrten, Aufenthalte, Bahn-, Bus- und Fährfahrten; deine eigenen Korrekturen im Reisepass gelten mit.",
         "coverage": "Haben nur gemeinsame Reisen oder Mietwagen keine Länder, steht statt einer Zahl ein Hinweis. Ein Tipp auf die Zahl zeigt die Einträge.",
         "exclusions": "Ein Umstieg ist kein Besuch. Länder, die du im Reisepass von Hand ergänzt hast, gehören zu keinem gemeinsamen Eintrag und zählen nicht."
       }

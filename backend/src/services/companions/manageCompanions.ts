@@ -5,13 +5,16 @@ import { loadVisibleDomains } from "../domainVisibility";
 import { PERSON_SELECT, toPerson, type SharePerson } from "../sharing/people";
 import { rewriteCompanionArrays } from "./companionArrays";
 import {
+  COMPANION_JOINS,
   COMPANION_USE_KINDS,
   countJoinMoves,
   moveJoins,
+  type CompanionJoinKind,
   type CompanionUseKind,
   type JoinMoveCount,
 } from "./companionJoins";
 import { daysTogether, loadTogether, visibleUseKinds } from "./companionTogether";
+import { loadStayLinks } from "./companionStays";
 
 /**
  * Settings → Mitreisende: the caller's companion catalogue, kept tidy by hand.
@@ -22,8 +25,8 @@ import { daysTogether, loadTogether, visibleUseKinds } from "./companionTogether
  * exactly like one that does not exist (404), so an id probe learns nothing.
  */
 
-/** The `_count` relation behind each kind of entry. */
-const RELATION: Record<CompanionUseKind, string> = {
+/** The `_count` relation behind each kind of entry linked through a join table. */
+export const RELATION: Record<CompanionJoinKind, string> = {
   flight: "flights",
   trip: "trips",
   cruise: "cruises",
@@ -33,7 +36,7 @@ const RELATION: Record<CompanionUseKind, string> = {
   rental: "rentals",
 };
 
-const COUNT_SELECT = {
+export const COUNT_SELECT = {
   flights: true,
   trips: true,
   cruises: true,
@@ -44,7 +47,23 @@ const COUNT_SELECT = {
   expensesPaid: true,
 } as const;
 
-const notFound = () => new AppError("Companion not found", 404, "COMPANION_NOT_FOUND");
+/**
+ * Entries per kind for one catalogue row: its join rows, and the stays that
+ * name it (text only — `companionStays.ts`). Every kind, hidden ones included.
+ */
+export function usesOf(
+  row: { id: string; _count: Record<string, number> },
+  stays: ReadonlyMap<string, ReadonlySet<string>>
+): Record<CompanionUseKind, number> {
+  return Object.fromEntries(
+    COMPANION_USE_KINDS.map((kind) => [
+      kind,
+      kind === "lodging" ? (stays.get(row.id)?.size ?? 0) : (row._count[RELATION[kind]] ?? 0),
+    ])
+  ) as Record<CompanionUseKind, number>;
+}
+
+export const notFound = () => new AppError("Companion not found", 404, "COMPANION_NOT_FOUND");
 
 /** The one canonical spelling a typed name is stored in: trimmed, inner whitespace collapsed. */
 export function cleanCompanionName(raw: string): string {
@@ -63,7 +82,7 @@ export interface ManagedCompanion {
   expensesPaid: number;
   /** The last day spent together (`YYYY-MM-DD`, the entry's own clock), or null. */
   lastTogether: string | null;
-  /** Anything that a delete would break: entries, expenses or an account link. */
+  /** Anything that a delete would break: entries (stays naming them included), expenses or a link. */
   inUse: boolean;
 }
 
@@ -79,9 +98,10 @@ export async function listManagedCompanions(
     }),
     loadTogether(userId, visible),
   ]);
+  const stays = await loadStayLinks(prisma, userId, rows);
   const companions = rows.map((row) => {
-    const counts = row._count as unknown as Record<string, number>;
-    const of = (kind: CompanionUseKind) => counts[RELATION[kind]] ?? 0;
+    const uses = usesOf(row, stays.byCompanion);
+    const of = (kind: CompanionUseKind) => uses[kind];
     const all = COMPANION_USE_KINDS.reduce((sum, kind) => sum + of(kind), 0);
     const shown = kinds.reduce((sum, kind) => sum + of(kind), 0);
     const days = daysTogether(together.byCompanion.get(row.id) ?? []);
@@ -201,6 +221,7 @@ async function preview(
     loadVisibleDomains(userId),
   ]);
   const kinds = visibleUseKinds(visible);
+  const joinKinds = COMPANION_JOINS.map((j) => j.kind);
   const [moves, expensesPaid, lists] = await Promise.all([
     countJoinMoves(tx, source.id, target.id),
     tx.tripExpense.count({ where: { userId, payerCompanionId: source.id } }),
@@ -215,11 +236,13 @@ async function preview(
   return {
     source: person(source),
     target: person(target),
-    entries: Object.fromEntries(kinds.map((kind) => [kind, moves[kind]])),
-    hiddenEntries: COMPANION_USE_KINDS.filter((k) => !kinds.includes(k)).reduce(
-      (sum, k) => sum + moves[k].entries,
-      0
+    // Stays carry no join row; their names are in `renamedLists`.
+    entries: Object.fromEntries(
+      joinKinds.filter((kind) => kinds.includes(kind)).map((kind) => [kind, moves[kind]])
     ),
+    hiddenEntries: joinKinds
+      .filter((k) => !kinds.includes(k))
+      .reduce((sum, k) => sum + moves[k].entries, 0),
     expensesPaid,
     renamedLists: Object.values(lists).reduce((sum, n) => sum + n, 0),
     link,
@@ -273,60 +296,4 @@ export async function mergeCompanions(
     },
     { timeout: 30_000 }
   );
-}
-
-async function usage(userId: string, id: string) {
-  const row = await prisma.companion.findFirst({
-    where: { id, userId },
-    include: { _count: { select: COUNT_SELECT } },
-  });
-  if (!row) throw notFound();
-  const counts = row._count as unknown as Record<string, number>;
-  const entries = COMPANION_USE_KINDS.reduce((sum, k) => sum + (counts[RELATION[k]] ?? 0), 0);
-  return { row, entries, expenses: row._count.expensesPaid, linked: row.linkedUserId !== null };
-}
-
-/** Deletes a companion nobody's entries, expenses or links still name. */
-export async function deleteCompanion(userId: string, id: string): Promise<void> {
-  const { row, entries, expenses, linked } = await usage(userId, id);
-  if (entries > 0 || expenses > 0 || linked) {
-    throw new AppError("The companion is still in use", 409, "COMPANION_IN_USE", undefined, {
-      entries,
-      expenses,
-      linked,
-    });
-  }
-  await prisma.companion.delete({ where: { id: row.id } });
-}
-
-/** Deletes every unused companion of the caller's at once; answers how many went. */
-export async function deleteUnusedCompanions(userId: string): Promise<{ deleted: number }> {
-  const rows = await prisma.companion.findMany({
-    where: { userId, linkedUserId: null },
-    include: { _count: { select: COUNT_SELECT } },
-  });
-  const unused = rows
-    .filter((row) =>
-      Object.values(row._count as unknown as Record<string, number>).every((n) => n === 0)
-    )
-    .map((row) => row.id);
-  if (unused.length === 0) return { deleted: 0 };
-  // The usage is asked again in the delete itself, so a link made between the
-  // read and the write keeps its companion.
-  const { count } = await prisma.companion.deleteMany({
-    where: {
-      userId,
-      id: { in: unused },
-      linkedUserId: null,
-      flights: { none: {} },
-      trips: { none: {} },
-      cruises: { none: {} },
-      rail: { none: {} },
-      bus: { none: {} },
-      ferry: { none: {} },
-      rentals: { none: {} },
-      expensesPaid: { none: {} },
-    },
-  });
-  return { deleted: count };
 }

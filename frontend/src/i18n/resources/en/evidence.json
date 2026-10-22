@@ -457,5 +457,6 @@
   "evidence.ranking.companion.rail": "Train rides with {{name}}",
   "evidence.ranking.companion.bus": "Bus rides with {{name}}",
   "evidence.ranking.companion.ferry": "Ferry crossings with {{name}}",
-  "evidence.ranking.companion.rental": "Rental cars with {{name}}"
+  "evidence.ranking.companion.rental": "Rental cars with {{name}}",
+  "evidence.ranking.companion.lodging": "Stays with {{name}}"
 }

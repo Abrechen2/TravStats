@@ -6,8 +6,9 @@ export interface Companion {
   usageCount: number;
 }
 
-/** A kind of entry a companion can be on: a domain, or a trip (never hidden). */
-export type CompanionUseKind = "flight" | "trip" | "cruise" | "rail" | "bus" | "ferry" | "rental";
+/** A kind of entry a companion can be on: a domain (a stay names them as text), or a trip (never hidden). */
+export type CompanionUseKind =
+  "flight" | "trip" | "cruise" | "lodging" | "rail" | "bus" | "ferry" | "rental";
 
 export interface CompanionPerson {
   id: string;

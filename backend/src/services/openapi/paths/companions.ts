@@ -49,7 +49,7 @@ registry.registerPath({
  * domain key, or `trip` (no domain, never hidden); only the kinds the caller
  * sees are keyed.
  */
-const useKind = z.enum(["flight", "trip", "cruise", "rail", "bus", "ferry", "rental"]);
+const useKind = z.enum(["flight", "trip", "cruise", "lodging", "rail", "bus", "ferry", "rental"]);
 const perKind = <T extends z.ZodTypeAny>(value: T) => z.record(useKind, value);
 const person = z.object({ id: z.string(), username: z.string(), displayName: z.string() });
 const idParams = z.object({ id: z.string().describe("A companion of yours") });
