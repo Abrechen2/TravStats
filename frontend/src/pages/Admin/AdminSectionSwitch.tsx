@@ -24,6 +24,7 @@ import PortsSection from "../../components/Admin/masterData/PortsSection";
 import AirlinesSection from "../../components/Admin/masterData/AirlinesSection";
 import AircraftSection from "../../components/Admin/masterData/AircraftSection";
 import AirportsSection from "../../components/Admin/masterData/AirportsSection";
+import LodgingChainsSection from "../../components/Admin/masterData/LodgingChainsSection";
 import TimeModelSection from "../../components/Admin/timeModel/TimeModelSection";
 import type { ActiveSection } from "./adminSections";
 
@@ -146,6 +147,7 @@ export const ADMIN_SECTION_FRAME: Record<ActiveSection, "own" | "card"> = {
   airportsMasterData: "card",
   shipsMasterData: "card",
   portsMasterData: "card",
+  lodgingChainsMasterData: "card",
 };
 
 /**
@@ -169,6 +171,9 @@ export default function AdminSectionSwitch(props: AdminSectionSwitchProps): JSX.
 
     case "airportsMasterData":
       return <AirportsSection />;
+
+    case "lodgingChainsMasterData":
+      return <LodgingChainsSection />;
 
     case "system":
       return props.systemInfo ? (

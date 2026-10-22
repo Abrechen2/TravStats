@@ -55,6 +55,10 @@ export async function seedLodgingChainsFromCSV(): Promise<number> {
     select: { name: true },
   });
   const existingLower = new Set(existing.map((c) => c.name.toLowerCase()));
+  // Names an admin renamed, merged away or deleted (Admin › Hotelketten): the
+  // seed must not bring them back as empty duplicates on the next boot.
+  const retired = await prisma.retiredLodgingChainName.findMany({ select: { name: true } });
+  for (const r of retired) existingLower.add(r.name);
 
   let inserted = 0;
   for (const row of valid) {

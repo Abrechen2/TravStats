@@ -3127,6 +3127,19 @@ model LodgingChain {
   @@map("lodging_chains")
 }
 
+/// A catalogue chain name an admin renamed, merged away or deleted
+/// (Admin › Unterkünfte › Hotelketten, forgejo#321). The CSV seed runs on
+/// every boot and inserts every name the catalogue lacks — without this list
+/// it would bring back each "Hilton" an admin had renamed to "Hilton Hotels"
+/// or merged into it, as an empty duplicate. Lower-cased, like the seed's
+/// own comparison. Renaming a chain BACK to a retired name un-retires it.
+model RetiredLodgingChainName {
+  name      String   @id
+  retiredAt DateTime @default(now()) @map("retired_at")
+
+  @@map("lodging_chain_retired_names")
+}
+
 /// One loyalty card of the user's — a hotel programme, a frequent-flyer
 /// programme or a cruise line's club. It was `LodgingMembership` until 2.7,
 /// when the owner asked for one page holding every programme (2026-09-25).

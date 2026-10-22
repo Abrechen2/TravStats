@@ -1192,13 +1192,15 @@
     "aircraftMasterData": "Aircraft",
     "airportsMasterData": "Airports",
     "shipsMasterData": "Ships",
-    "portsMasterData": "Ports"
+    "portsMasterData": "Ports",
+    "lodgingChainsMasterData": "Hotel chains"
   },
   "menu": {
     "manage": "Administration",
     "operations": "Services & operations",
     "masterFlight": "Master data · Flight",
-    "masterCruise": "Master data · Cruise"
+    "masterCruise": "Master data · Cruise",
+    "masterLodging": "Master data · Lodging"
   },
   "search": {
     "keywords": {
@@ -1224,7 +1226,8 @@
       "aircraftMasterData": "Aircraft, aircraft types, master data",
       "airportsMasterData": "Airports, master data, IATA",
       "shipsMasterData": "Ships, master data, IMO",
-      "portsMasterData": "Ports, master data, UN/LOCODE"
+      "portsMasterData": "Ports, master data, UN/LOCODE",
+      "lodgingChainsMasterData": "Hotel chains, chains, master data, hotels, lodging, merge"
     },
     "expertKeywords": {
       "instance": "Home network address, LAN, passkey, rpId, origins, beta switch",
@@ -1239,5 +1242,44 @@
     "switchSub": "Applies to the whole instance. No account, no key.",
     "loadFailed": "The setting could not be loaded.",
     "saveFailed": "The setting could not be saved."
+  },
+  "lodgingChains": {
+    "description": "The catalogue of hotel chains every account picks from. Chains an account added itself belong to that account and do not appear here.",
+    "name": "Name",
+    "program": "Loyalty programme",
+    "color": "Brand colour",
+    "colorHint": "As #rrggbb, or leave empty.",
+    "add": "Add",
+    "created": "Chain added.",
+    "saved": "Chain saved.",
+    "search": "Search chains",
+    "count_one": "{{count}} chain in the catalogue",
+    "count_other": "{{count}} chains in the catalogue",
+    "empty": "No chain found.",
+    "loadError": "The catalogue could not be loaded.",
+    "links": "{{lodgings}} lodgings · {{memberships}} loyalty cards",
+    "edit": "Edit",
+    "editTitle": "Edit {{name}}",
+    "renameNote": "{{lodgings}} lodgings and {{memberships}} loyalty cards are linked to this chain. They stay linked and show the new name afterwards.",
+    "merge": "Merge",
+    "mergeTitle": "Merge {{name}}",
+    "mergeTarget": "Merge into",
+    "mergeChoose": "Choose a chain …",
+    "mergeExplain": "{{lodgings}} lodgings and {{memberships}} loyalty cards of \"{{source}}\" are linked to \"{{target}}\", across all accounts. \"{{source}}\" is removed afterwards. No link is lost.",
+    "mergeConfirm": "Merge",
+    "merged": "Merged into {{name}}.",
+    "delete": "Delete",
+    "deleteTitle": "Delete {{name}}",
+    "deleteExplain": "Nothing is linked to this chain. It is removed from the catalogue.",
+    "deleteInUse": "This chain cannot be deleted: {{lodgings}} lodgings and {{memberships}} loyalty cards are linked to it and would lose the link. Merge it into another chain instead.",
+    "deleted": "Chain deleted.",
+    "errors": {
+      "chainNameTaken": "The catalogue already has a chain of this name.",
+      "chainInUse": "Lodgings or loyalty cards are still linked to this chain. Merge it instead of deleting it.",
+      "chainNotFound": "This chain is no longer in the catalogue.",
+      "mergeIntoItself": "A chain cannot be merged into itself.",
+      "invalidInput": "An input is invalid — the brand colour as #rrggbb.",
+      "unknown": "That did not work."
+    }
   }
 }

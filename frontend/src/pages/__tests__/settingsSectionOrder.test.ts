@@ -38,6 +38,7 @@ describe("settings menu order", () => {
       ],
       ["masterFlight", ["airlinesMasterData", "aircraftMasterData", "airportsMasterData"]],
       ["masterCruise", ["shipsMasterData", "portsMasterData"]],
+      ["masterLodging", ["lodgingChainsMasterData"]],
     ]);
   });
 

@@ -11,6 +11,7 @@
     "admin/index.ts",
     "admin/instanceSettings.ts",
     "admin/invitations.ts",
+    "admin/lodgingChains.ts",
     "admin/logging.ts",
     "admin/parseLogs.ts",
     "admin/parserSettings.ts",
