@@ -232,5 +232,12 @@ describe("FlightTrackSection", () => {
       expect(line.textContent).toMatch(/"greatCircle":"8,5\d\d /);
       expect(line.textContent).toContain('"difference":"+7"');
     });
+
+    it("sets no great circle beside a recording with holes, which measured only its stretches", async () => {
+      getTrackMock.mockResolvedValue(makeTrack({ distanceKm: 3399, segmentStarts: [0, 1, 47] }));
+      render(<FlightTrackSection flightId="f1" departure={MUC} arrival={ICN} />);
+      await screen.findByTestId("flight-track-caption");
+      expect(screen.queryByTestId("flight-track-comparison")).toBeNull();
+    });
   });
 });

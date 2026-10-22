@@ -98,7 +98,10 @@ export default function FlightTrackSection({
   const gaps = Math.max(0, new Set(track.segmentStarts).size - 1);
   const captionKey =
     track.source === "companion" ? "flights:track.caption" : "flights:track.captionFile";
-  const comparison = canUpload ? flownVsGreatCircle(track.distanceKm, departure, arrival) : null;
+  // A recording with holes measures only its recorded stretches, so set beside
+  // the great circle it would read as a shorter flight ("−60 %"); say nothing.
+  const comparison =
+    canUpload && gaps === 0 ? flownVsGreatCircle(track.distanceKm, departure, arrival) : null;
 
   return (
     <DetailSection title={t("flights:track.title")}>
