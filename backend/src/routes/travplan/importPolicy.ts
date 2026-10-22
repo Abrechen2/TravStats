@@ -8,6 +8,7 @@ import {
   configuration,
 } from "../../services/travplan/store";
 import { parseState } from "../../services/travplan/upgrade";
+import { assertTravPlanOffered } from "../../services/travplan/availability";
 import { withLlmRequestPolicy } from "../../services/llm/requestPolicy";
 const inputs = new Set(["/parse-email", "/parse-email-file", "/parse-pdf", "/parse-image"]);
 /** The existing parser pipeline reads under this trip's explicit request policy. */
@@ -17,6 +18,7 @@ export function planningImportPolicy(req: AuthRequest, res: Response, next: Next
   void authenticate(req, res, (error) => {
     if (error) return next(error);
     void (async () => {
+      await assertTravPlanOffered();
       await assertEnabled();
       const plan = await ownedPlan(req.userId!, z.string().uuid().parse(trip));
       const state = parseState(plan.state);

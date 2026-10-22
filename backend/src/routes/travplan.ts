@@ -27,9 +27,8 @@ import { packingSuggestions } from "../services/travplan/rules";
 import { recheckAchievementsAfterWrite } from "../middleware/recheckAchievementsAfterWrite";
 import { planningImportPolicy } from "./travplan/importPolicy";
 import routeEndpoints from "./travplan/routeEndpoints";
+import { assertTravPlanOffered, travPlanOffered } from "../services/travplan/availability";
 const router = Router();
-router.use(planningImportPolicy);
-router.use(routeEndpoints);
 const uuid = z.string().uuid();
 const writeGuard = [authenticate, requireWriteScope, rejectDemo];
 function route(fn: (req: AuthRequest, res: Response) => Promise<void>) {
@@ -37,15 +36,17 @@ function route(fn: (req: AuthRequest, res: Response) => Promise<void>) {
     void fn(req, res).catch(next);
   };
 }
-const tripId = (req: AuthRequest) => uuid.parse(req.params.tripId);
+router.use(planningImportPolicy);
+// Answers whatever the beta switch says: it is how a client learns that planning is off, and
+// the Companion stops at `enabled: false` instead of meeting a refusal on every call.
 router.get(
   "/travplan/capabilities",
   authenticate,
   route(async (_req, res) => {
-    const config = await configuration();
+    const [config, offered] = await Promise.all([configuration(), travPlanOffered()]);
     res.json({
       version: 1,
-      enabled: config.enabled,
+      enabled: config.enabled && offered,
       offlineWrites: true,
       ai: true,
       forecast: true,
@@ -53,6 +54,13 @@ router.get(
     });
   })
 );
+// Every other plan path — v1, the v2 route-plan endpoints and the admin config — is refused
+// while the instance's beta switch is off (`services/travplan/availability.ts`).
+router.use(["/travplan", "/trips/:tripId/plan"], (_req, _res, next) => {
+  assertTravPlanOffered().then(() => next(), next);
+});
+router.use(routeEndpoints);
+const tripId = (req: AuthRequest) => uuid.parse(req.params.tripId);
 router.get(
   "/travplan/config",
   authenticate,
