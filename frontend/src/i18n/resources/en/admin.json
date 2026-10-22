@@ -176,7 +176,7 @@
           },
           "flightTrackUpload": {
             "name": "Recorded flight tracks",
-            "what": "Upload, replace or remove a flight recording as a file (GPX, KML, TCX or FIT) on a flight’s page. The map and the globe then draw the flight along the recording instead of the great circle; the flight page sets the measured distance against the great circle."
+            "what": "Upload, replace or remove a flight recording as a file (GPX, KML, KMZ, TCX, FIT or Flightradar24’s CSV file) on a flight’s page. The map and the globe then draw the flight along the recording instead of the great circle; the flight page sets the measured distance against the great circle."
           },
           "ferryDomain": {
             "name": "Ferries",

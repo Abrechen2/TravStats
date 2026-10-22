@@ -21,6 +21,7 @@ import {
   fileUploadId,
   placeUntimedTrack,
   readFlightTrackFile,
+  refusalError,
   withoutEmptyElevations,
 } from "../../services/flightDevice/flightTrackFile";
 import { handleGpxUpload } from "../trips/tourTracks";
@@ -241,7 +242,9 @@ router.post(
 
 /**
  * POST /flights/:id/track/file — multipart, one recording under `file`
- * (forgejo#312): GPX, KML, TCX or FIT, up to 15 MB, told apart by its bytes.
+ * (forgejo#312): GPX, KML, KMZ, TCX, FIT or Flightradar24's CSV, up to 15 MB,
+ * told apart by its bytes. A file that gives no track is refused with its own
+ * code (`refusalError`).
  * Optional field `replace=true`. Stored in the same one-per-flight row the
  * Companion writes, under the same rules:
  *
@@ -266,13 +269,7 @@ router.post(
       if (!fields.success) throw new AppError(fields.error.message, 400, "VALIDATION_FAILED");
 
       const file = await readFlightTrackFile(req.file.buffer, req.file.originalname);
-      if (!file) {
-        throw new AppError(
-          "The file could not be read as GPX, KML, TCX or FIT with at least two positions",
-          400,
-          "TRACK_FILE_UNREADABLE"
-        );
-      }
+      if (!file.ok) throw refusalError(file.reason);
 
       const uploadId = fileUploadId(req.file.buffer);
       const existing = await prisma.flightTrack.findUnique({

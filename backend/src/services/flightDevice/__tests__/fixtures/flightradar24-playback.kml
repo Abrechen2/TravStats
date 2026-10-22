@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+	<Document>
+		<name>LH100/DLH100</name>
+		<Style id="trail0">
+			<LineStyle>
+				<color>ff00ffff</color>
+				<width>4</width>
+			</LineStyle>
+		</Style>
+		<Style id="trail1">
+			<LineStyle>
+				<color>ff00ff80</color>
+				<width>4</width>
+			</LineStyle>
+		</Style>
+		<Style id="trail2">
+			<LineStyle>
+				<color>ffff8000</color>
+				<width>4</width>
+			</LineStyle>
+		</Style>
+		<Style id="trail3">
+			<LineStyle>
+				<color>ffff0000</color>
+				<width>4</width>
+			</LineStyle>
+		</Style>
+		<Folder>
+			<name>Route</name>
+			<Placemark>
+				<name>08:00 UTC</name>
+				<description><![CDATA[<span><b>Altitude:</b> 350 ft</span><br/><span><b>Speed:</b> 140 kt</span><br/><span><b>Heading:</b> 250&deg;</span>]]></description>
+				<TimeStamp>
+					<when>2026-10-03T08:00:00Z</when>
+				</TimeStamp>
+				<Style>
+					<IconStyle>
+						<heading>250</heading>
+						<Icon>
+							<href>https://example.invalid/icons/plane.png</href>
+						</Icon>
+					</IconStyle>
+				</Style>
+				<Point>
+					<altitudeMode>absolute</altitudeMode>
+					<coordinates>8.5706,50.0333,106.7</coordinates>
+				</Point>
+			</Placemark>
+			<Placemark>
+				<name>08:06 UTC</name>
+				<description><![CDATA[<span><b>Altitude:</b> 4,500 ft</span><br/><span><b>Speed:</b> 250 kt</span><br/><span><b>Heading:</b> 120&deg;</span>]]></description>
+				<TimeStamp>
+					<when>2026-10-03T08:06:00Z</when>
+				</TimeStamp>
+				<Style>
+					<IconStyle>
+						<heading>120</heading>
+						<Icon>
+							<href>https://example.invalid/icons/plane.png</href>
+						</Icon>
+					</IconStyle>
+				</Style>
+				<Point>
+					<altitudeMode>absolute</altitudeMode>
+					<coordinates>8.9725,49.8234,1371.6</coordinates>
+				</Point>
+			</Placemark>
+			<Placemark>
+				<name>08:12 UTC</name>
+				<description><![CDATA[<span><b>Altitude:</b> 14,000 ft</span><br/><span><b>Speed:</b> 320 kt</span><br/><span><b>Heading:</b> 118&deg;</span>]]></description>
+				<TimeStamp>
+					<when>2026-10-03T08:12:00Z</when>
+				</TimeStamp>
+				<Style>
+					<IconStyle>
+						<heading>118</heading>
+						<Icon>
+							<href>https://example.invalid/icons/plane.png</href>
+						</Icon>
+					</IconStyle>
+				</Style>
+				<Point>
+					<altitudeMode>absolute</altitudeMode>
+					<coordinates>9.3745,49.6134,4267.2</coordinates>
+				</Point>
+			</Placemark>
+			<Placemark>
+				<name>08:18 UTC</name>
+				<description><![CDATA[<span><b>Altitude:</b> 24,000 ft</span><br/><span><b>Speed:</b> 420 kt</span><br/><span><b>Heading:</b> 117&deg;</span>]]></description>
+				<TimeStamp>
+					<when>2026-10-03T08:18:00Z</when>
+				</TimeStamp>
+				<Style>
+					<IconStyle>
+						<heading>117</heading>
+						<Icon>
+							<href>https://example.invalid/icons/plane.png</href>
+						</Icon>
+					</IconStyle>
+				</Style>
+				<Point>
+					<altitudeMode>absolute</altitudeMode>
+					<coordinates>9.7764,49.4035,7315.2</coordinates>
+				</Point>
+			</Placemark>
+			<Placemark>
+				<name>08:24 UTC</name>
+				<description><![CDATA[<span><b>Altitude:</b> 30,000 ft</span><br/><span><b>Speed:</b> 450 kt</span><br/><span><b>Heading:</b> 117&deg;</span>]]></description>
+				<TimeStamp>
+					<when>2026-10-03T08:24:00Z</when>
+				</TimeStamp>
+				<Style>
+					<IconStyle>
+						<heading>117</heading>
+						<Icon>
+							<href>https://example.invalid/icons/plane.png</href>
+						</Icon>
+					</IconStyle>
+				</Style>
+				<Point>
+					<altitudeMode>absolute</altitudeMode>
+					<coordinates>10.1784,49.1936,9144.0</coordinates>
+				</Point>
+			</Placemark>
+			<Placemark>
+				<name>08:30 UTC</name>
+				<description><![CDATA[<span><b>Altitude:</b> 30,000 ft</span><br/><span><b>Speed:</b> 450 kt</span><br/><span><b>Heading:</b> 118&deg;</span>]]></description>
+				<TimeStamp>
+					<when>2026-10-03T08:30:00Z</when>
+				</TimeStamp>
+				<Style>
+					<IconStyle>
+						<heading>118</heading>
+						<Icon>
+							<href>https://example.invalid/icons/plane.png</href>
+						</Icon>
+					</IconStyle>
+				</Style>
+				<Point>
+					<altitudeMode>absolute</altitudeMode>
+					<coordinates>10.5803,48.9836,9144.0</coordinates>
+				</Point>
+			</Placemark>
+			<Placemark>
+				<name>08:36 UTC</name>
+				<description><![CDATA[<span><b>Altitude:</b> 22,000 ft</span><br/><span><b>Speed:</b> 400 kt</span><br/><span><b>Heading:</b> 119&deg;</span>]]></description>
+				<TimeStamp>
+					<when>2026-10-03T08:36:00Z</when>
+				</TimeStamp>
+				<Style>
+					<IconStyle>
+						<heading>119</heading>
+						<Icon>
+							<href>https://example.invalid/icons/plane.png</href>
+						</Icon>
+					</IconStyle>
+				</Style>
+				<Point>
+					<altitudeMode>absolute</altitudeMode>
+					<coordinates>10.9822,48.7737,6705.6</coordinates>
+				</Point>
+			</Placemark>
+			<Placemark>
+				<name>08:42 UTC</name>
+				<description><![CDATA[<span><b>Altitude:</b> 9,000 ft</span><br/><span><b>Speed:</b> 280 kt</span><br/><span><b>Heading:</b> 120&deg;</span>]]></description>
+				<TimeStamp>
+					<when>2026-10-03T08:42:00Z</when>
+				</TimeStamp>
+				<Style>
+					<IconStyle>
+						<heading>120</heading>
+						<Icon>
+							<href>https://example.invalid/icons/plane.png</href>
+						</Icon>
+					</IconStyle>
+				</Style>
+				<Point>
+					<altitudeMode>absolute</altitudeMode>
+					<coordinates>11.3842,48.5637,2743.2</coordinates>
+				</Point>
+			</Placemark>
+			<Placemark>
+				<name>08:48 UTC</name>
+				<description><![CDATA[<span><b>Altitude:</b> 1,500 ft</span><br/><span><b>Speed:</b> 150 kt</span><br/><span><b>Heading:</b> 265&deg;</span>]]></description>
+				<TimeStamp>
+					<when>2026-10-03T08:48:00Z</when>
+				</TimeStamp>
+				<Style>
+					<IconStyle>
+						<heading>265</heading>
+						<Icon>
+							<href>https://example.invalid/icons/plane.png</href>
+						</Icon>
+					</IconStyle>
+				</Style>
+				<Point>
+					<altitudeMode>absolute</altitudeMode>
+					<coordinates>11.7861,48.3538,457.2</coordinates>
+				</Point>
+			</Placemark>
+		</Folder>
+		<Folder>
+			<name>Trail</name>
+			<Placemark>
+				<styleUrl>#trail0</styleUrl>
+				<LineString>
+					<extrude>1</extrude>
+					<tessellate>1</tessellate>
+					<altitudeMode>absolute</altitudeMode>
+					<coordinates>8.5706,50.0333,106.7 8.9725,49.8234,1371.6</coordinates>
+				</LineString>
+			</Placemark>
+			<Placemark>
+				<styleUrl>#trail0</styleUrl>
+				<LineString>
+					<extrude>1</extrude>
+					<tessellate>1</tessellate>
+					<altitudeMode>absolute</altitudeMode>
+					<coordinates>8.9725,49.8234,1371.6 9.3745,49.6134,4267.2</coordinates>
+				</LineString>
+			</Placemark>
+			<Placemark>
+				<styleUrl>#trail1</styleUrl>
+				<LineString>
+					<extrude>1</extrude>
+					<tessellate>1</tessellate>
+					<altitudeMode>absolute</altitudeMode>
+					<coordinates>9.3745,49.6134,4267.2 9.7764,49.4035,7315.2</coordinates>
+				</LineString>
+			</Placemark>
+			<Placemark>
+				<styleUrl>#trail2</styleUrl>
+				<LineString>
+					<extrude>1</extrude>
+					<tessellate>1</tessellate>
+					<altitudeMode>absolute</altitudeMode>
+					<coordinates>9.7764,49.4035,7315.2 10.1784,49.1936,9144.0</coordinates>
+				</LineString>
+			</Placemark>
+			<Placemark>
+				<styleUrl>#trail3</styleUrl>
+				<LineString>
+					<extrude>1</extrude>
+					<tessellate>1</tessellate>
+					<altitudeMode>absolute</altitudeMode>
+					<coordinates>10.1784,49.1936,9144.0 10.5803,48.9836,9144.0</coordinates>
+				</LineString>
+			</Placemark>
+			<Placemark>
+				<styleUrl>#trail3</styleUrl>
+				<LineString>
+					<extrude>1</extrude>
+					<tessellate>1</tessellate>
+					<altitudeMode>absolute</altitudeMode>
+					<coordinates>10.5803,48.9836,9144.0 10.9822,48.7737,6705.6</coordinates>
+				</LineString>
+			</Placemark>
+			<Placemark>
+				<styleUrl>#trail2</styleUrl>
+				<LineString>
+					<extrude>1</extrude>
+					<tessellate>1</tessellate>
+					<altitudeMode>absolute</altitudeMode>
+					<coordinates>10.9822,48.7737,6705.6 11.3842,48.5637,2743.2</coordinates>
+				</LineString>
+			</Placemark>
+			<Placemark>
+				<styleUrl>#trail0</styleUrl>
+				<LineString>
+					<extrude>1</extrude>
+					<tessellate>1</tessellate>
+					<altitudeMode>absolute</altitudeMode>
+					<coordinates>11.3842,48.5637,2743.2 11.7861,48.3538,457.2</coordinates>
+				</LineString>
+			</Placemark>
+		</Folder>
+	</Document>
+</kml>

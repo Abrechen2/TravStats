@@ -118,10 +118,11 @@ export const observedTimesSchema = z
 export type ObservedTimes = z.infer<typeof observedTimesSchema>;
 
 /**
- * Where a stored flight recording came from (forgejo#193, #312): the
- * Companion's JSON upload, or a file a person uploaded on the flight page.
+ * Where a stored flight recording came from (forgejo#193, forgejo#312): the
+ * Companion's JSON upload, or a file a person uploaded on the flight page —
+ * `csv` being Flightradar24's track export. A KMZ is stored as `kml`.
  */
-export const FLIGHT_TRACK_SOURCES = ["companion", "gpx", "kml", "tcx", "fit"] as const;
+export const FLIGHT_TRACK_SOURCES = ["companion", "gpx", "kml", "tcx", "fit", "csv"] as const;
 export type FlightTrackSource = (typeof FLIGHT_TRACK_SOURCES)[number];
 
 /**

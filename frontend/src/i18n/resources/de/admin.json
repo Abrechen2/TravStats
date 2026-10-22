@@ -176,7 +176,7 @@
           },
           "flightTrackUpload": {
             "name": "Aufgezeichnete Flugspuren",
-            "what": "Eine Flugaufzeichnung als Datei (GPX, KML, TCX oder FIT) auf der Seite eines Flugs hochladen, ersetzen oder entfernen. Die Karte und der Globus zeichnen den Flug dann entlang der Aufzeichnung statt auf dem Großkreis; die Flugseite stellt die gemessene Strecke dem Großkreis gegenüber."
+            "what": "Eine Flugaufzeichnung als Datei (GPX, KML, KMZ, TCX, FIT oder die CSV-Datei von Flightradar24) auf der Seite eines Flugs hochladen, ersetzen oder entfernen. Die Karte und der Globus zeichnen den Flug dann entlang der Aufzeichnung statt auf dem Großkreis; die Flugseite stellt die gemessene Strecke dem Großkreis gegenüber."
           },
           "ferryDomain": {
             "name": "Fähren",

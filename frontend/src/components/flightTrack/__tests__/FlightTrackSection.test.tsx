@@ -171,6 +171,35 @@ describe("FlightTrackSection", () => {
       expect(screen.queryByText("English prose")).not.toBeInTheDocument();
     });
 
+    it.each([
+      ["TRACK_FILE_UNSUPPORTED", "fileUnsupported"],
+      ["TRACK_KML_INVALID", "kmlInvalid"],
+      ["TRACK_KML_UNPAIRED", "kmlUnpaired"],
+      ["TRACK_KML_NO_TRACK", "kmlNoTrack"],
+      ["TRACK_KMZ_DAMAGED", "kmzDamaged"],
+      ["TRACK_KMZ_NO_KML", "kmzNoKml"],
+      ["TRACK_KMZ_TOO_LARGE", "kmzTooLarge"],
+      ["TRACK_CSV_COLUMNS", "csvColumns"],
+      ["TRACK_CSV_NO_POSITIONS", "csvNoPositions"],
+    ])("says %s as its own sentence", async (code, key) => {
+      getTrackMock.mockResolvedValue(null);
+      uploadMock.mockRejectedValue({ response: { status: 400, data: { code, error: "prose" } } });
+      render(<FlightTrackSection flightId="f1" />);
+      await screen.findByText("flights:track.uploadIntro");
+      pick("export.kml");
+      expect(await screen.findByRole("alert")).toHaveTextContent(`flights:track.errors.${key}`);
+    });
+
+    it("offers every format the server reads in the file picker", async () => {
+      getTrackMock.mockResolvedValue(null);
+      render(<FlightTrackSection flightId="f1" />);
+      await screen.findByText("flights:track.uploadIntro");
+      expect(screen.getByTestId("flight-track-file")).toHaveAttribute(
+        "accept",
+        ".gpx,.kml,.kmz,.tcx,.fit,.csv"
+      );
+    });
+
     it("asks before a file replaces a stored recording, and sends replace only then", async () => {
       getTrackMock.mockResolvedValue(makeTrack());
       uploadMock.mockResolvedValue({});

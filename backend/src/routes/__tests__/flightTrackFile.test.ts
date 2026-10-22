@@ -6,6 +6,12 @@ import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { FILE_LIMITS } from "../../config/constants";
 import { standThenMove, toGpx } from "../../services/tracks/__tests__/jitterFixtures";
+import { readFileSync } from "fs";
+import { join } from "path";
+import { strToU8, zipSync } from "fflate";
+
+const fixture = (name: string): Buffer =>
+  readFileSync(join(__dirname, "../../services/flightDevice/__tests__/fixtures", name));
 
 /**
  * A recorded flight track uploaded as a FILE (forgejo#312): GPX or KML from a
@@ -223,14 +229,69 @@ describe("Flight track file upload — POST /flights/:id/track/file", () => {
   });
 
   it.each([
-    ["broken XML", Buffer.from("<gpx><trk><trkseg><trkpt lat="), "broken.gpx"],
-    ["a KML with a single position", kmlLine(1), "one.kml"],
-    ["a file that is no track at all", Buffer.from("%PDF-1.7 not a track"), "ticket.pdf"],
-  ])("refuses %s with TRACK_FILE_UNREADABLE", async (_label, file, name) => {
+    [
+      "broken GPX",
+      Buffer.from("<gpx><trk><trkseg><trkpt lat="),
+      "broken.gpx",
+      "TRACK_FILE_UNREADABLE",
+    ],
+    ["a KML with a single position", kmlLine(1), "one.kml", "TRACK_KML_NO_TRACK"],
+    [
+      "a FlightAware KML of only the two airports",
+      fixture("flightaware-airports-only.kml"),
+      "DLH100.kml",
+      "TRACK_KML_NO_TRACK",
+    ],
+    ["a KML that is not XML", Buffer.from("<kml><Placemark>"), "a.kml", "TRACK_KML_INVALID"],
+    [
+      "a ZIP without a KML",
+      Buffer.from(zipSync({ "a.txt": strToU8("x") })),
+      "a.kmz",
+      "TRACK_KMZ_NO_KML",
+    ],
+    [
+      "a CSV that is not Flightradar24's",
+      Buffer.from("Date,Flight\n"),
+      "log.csv",
+      "TRACK_CSV_COLUMNS",
+    ],
+    [
+      "a file that is no track at all",
+      Buffer.from("%PDF-1.7 not a track"),
+      "ticket.pdf",
+      "TRACK_FILE_UNSUPPORTED",
+    ],
+  ])("refuses %s with its own code", async (_label, file, name, code) => {
     const res = await upload(flightId, file, name);
     expect(res.status).toBe(400);
-    expect(res.body.code).toBe("TRACK_FILE_UNREADABLE");
+    expect(res.body.code).toBe(code);
     expect(await prisma.flightTrack.count({ where: { flightId } })).toBe(0);
+  });
+
+  it("stores a Flightradar24 CSV as `csv`, its feet as metres", async () => {
+    const res = await upload(flightId, fixture("flightradar24-track.csv"), "DLH100.csv");
+    expect(res.status).toBe(201);
+    expect(res.body.track).toMatchObject({ source: "csv" });
+    const stored = await prisma.flightTrack.findUniqueOrThrow({ where: { flightId } });
+    // The column is the profile, `[km, metres]` pairs.
+    const metres = (stored.elevations as Array<[number, number]>).map(([, m]) => m);
+    expect(Math.max(...metres)).toBeCloseTo(30_000 * 0.3048, 0);
+  });
+
+  it("stores a KMZ of a FlightAware export as `kml`", async () => {
+    const kmz = Buffer.from(
+      zipSync({ "doc.kml": new Uint8Array(fixture("flightaware-track.kml")) })
+    );
+    const res = await upload(flightId, kmz, "DLH100.kmz");
+    expect(res.status).toBe(201);
+    expect(res.body.track).toMatchObject({ source: "kml" });
+    expect(res.body.track.times.startedAt.utc).toBe("2026-10-03T08:00:00.000Z");
+  });
+
+  it("stores a Flightradar24 KML from its timed positions", async () => {
+    const res = await upload(flightId, fixture("flightradar24-playback.kml"), "LH100.kml");
+    expect(res.status).toBe(201);
+    expect(res.body.track.times.endedAt.utc).toBe("2026-10-03T08:48:00.000Z");
   });
 
   it("refuses a request without a file", async () => {
