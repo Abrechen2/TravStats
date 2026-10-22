@@ -74,6 +74,29 @@ describe("WebdavSyncRow", () => {
     );
   });
 
+  it("says a bounded clean-up as itself, not as the generic failure", async () => {
+    respond({
+      ...STATUS,
+      lastStatus: "partial",
+      lastErrorCode: "cleanupIncomplete",
+      completedAt: STATUS.ranAt,
+      lastFileName: "travstats-export-0123456789ab-20261022T051500Z.json.gz",
+      lastSizeBytes: 2048,
+    });
+    render(<WebdavSyncRow />);
+    expect(await screen.findByText(/settings:webdavSync.last.partial/)).toHaveTextContent(
+      "settings:webdavSync.errors.cleanupIncomplete"
+    );
+  });
+
+  it("says a run that hit its deadline timed out", async () => {
+    respond({ ...STATUS, lastErrorCode: "timeout" });
+    render(<WebdavSyncRow />);
+    expect(await screen.findByText(/settings:webdavSync.last.failed/)).toHaveTextContent(
+      "settings:webdavSync.errors.timeout"
+    );
+  });
+
   it("never puts the stored password into the form", async () => {
     render(<WebdavSyncRow />);
     await userEvent.click(await screen.findByRole("button", { name: "settings:webdavSync.setup" }));

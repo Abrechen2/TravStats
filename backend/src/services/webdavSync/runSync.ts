@@ -9,6 +9,7 @@ import logger from "../../utils/logger";
 import { buildAccountExport } from "../export/allDataExport";
 import { getInstanceSettings } from "../instanceSettingsService";
 import { classifyWebdavError, WebdavSyncError, type WebdavSyncErrorCode } from "./errors";
+import { pruneOwnExports } from "./retention";
 import { guardedAgents, normalizeWebdavUrl, type TargetPolicy } from "./targetPolicy";
 
 /**
@@ -174,36 +175,6 @@ async function ensureFolder(
   }
 }
 
-/** Delete all but the newest `keep` of this owner's exports; returns how many went. */
-async function pruneOldExports(
-  client: Client,
-  remotePath: string,
-  pattern: RegExp,
-  keep: number,
-  deadline: AbortSignal
-): Promise<number> {
-  const listing = (await client.getDirectoryContents(remotePath, {
-    signal: requestSignal(deadline, REQUEST_TIMEOUT_MS),
-  } as never)) as unknown;
-  const items = (Array.isArray(listing) ? listing : []) as Array<{
-    type?: string;
-    basename?: string;
-  }>;
-  const ours = items
-    .filter((i) => i.type === "file" && pattern.test(i.basename ?? ""))
-    .map((i) => i.basename as string)
-    .sort()
-    .reverse();
-  let deleted = 0;
-  for (const name of ours.slice(keep)) {
-    await client.deleteFile(path.posix.join(remotePath, name), {
-      signal: requestSignal(deadline, REQUEST_TIMEOUT_MS),
-    });
-    deleted += 1;
-  }
-  return deleted;
-}
-
 async function record(userId: string, result: WebdavRunResult, at: Date): Promise<void> {
   await prisma.userWebdavSync.update({
     where: { userId },
@@ -253,16 +224,22 @@ async function upload(
   // out of either is a "partial" with `timeout`, never a failure.
   const retention = AbortSignal.any([deadline, AbortSignal.timeout(RETENTION_BUDGET_MS)]);
   try {
-    const deleted = await untilAborted(
+    const { deleted, complete } = await untilAborted(
       retention,
-      pruneOldExports(
-        client,
-        target.remotePath,
-        ownExportPattern(tag),
-        target.keepVersions,
-        retention
+      pruneOwnExports(client, target.remotePath, ownExportPattern(tag), target.keepVersions, () =>
+        requestSignal(retention, REQUEST_TIMEOUT_MS)
       )
     );
+    if (!complete) {
+      logger.warn({ operation: "webdav_user_sync_retention_bounded", userId, deleted });
+      return {
+        status: "partial",
+        errorCode: "cleanupIncomplete",
+        fileName,
+        sizeBytes: body.length,
+        deleted,
+      };
+    }
     return { status: "ok", errorCode: null, fileName, sizeBytes: body.length, deleted };
   } catch (error) {
     const errorCode = classifyWebdavError(error);

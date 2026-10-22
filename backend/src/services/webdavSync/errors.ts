@@ -30,6 +30,12 @@ export const WEBDAV_SYNC_ERROR_CODES = [
   "server",
   /** Anything else: answered, but not like a WebDAV share. */
   "protocol",
+  /**
+   * Retention stopped at its bounds — a listing too large to read, or more
+   * old versions due than one run deletes. The export is up; the rest of the
+   * clean-up follows on later runs.
+   */
+  "cleanupIncomplete",
   /** A run of this account's sync is already in progress. */
   "alreadyRunning",
 ] as const;

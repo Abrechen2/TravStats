@@ -11,7 +11,6 @@ type Fn = jest.Mock<(...args: unknown[]) => Promise<unknown>>;
 const share = {
   createDirectory: jest.fn() as Fn,
   putFileContents: jest.fn() as Fn,
-  getDirectoryContents: jest.fn() as Fn,
   deleteFile: jest.fn() as Fn,
   customRequest: jest.fn() as Fn,
 };
@@ -73,8 +72,7 @@ function multistatus(names: string[], folder = "/TravStats/"): string {
 }
 
 /**
- * A share that remembers what was put on it and lists it back, whichever way
- * the code asks for the listing.
+ * A share that remembers what was put on it and lists it back.
  */
 function statefulShare(initial: string[] = []): Set<string> {
   const files = new Set(initial);
@@ -85,9 +83,6 @@ function statefulShare(initial: string[] = []): Set<string> {
   share.deleteFile.mockImplementation(async (...args: unknown[]) => {
     files.delete(String(args[0]).split("/").pop() as string);
   });
-  share.getDirectoryContents.mockImplementation(async () =>
-    [...files].map((basename) => ({ type: "file", basename }))
-  );
   share.customRequest.mockImplementation(
     async () => new Response(multistatus([...files]), { status: 207 })
   );
@@ -103,7 +98,6 @@ beforeEach(() => {
   jest.clearAllMocks();
   share.createDirectory.mockResolvedValue(undefined);
   share.putFileContents.mockResolvedValue(true);
-  share.getDirectoryContents.mockResolvedValue([]);
   share.deleteFile.mockResolvedValue(undefined);
   share.customRequest.mockImplementation(
     async () => new Response(multistatus([]), { status: 207 })
@@ -183,6 +177,46 @@ describe("runWebdavSync", () => {
     expect(alicesName).not.toContain(alice);
   });
 
+  it("deletes at most a bounded number of old exports per run and calls the rest `partial`", async () => {
+    const userId = await makeUser();
+    const files = statefulShare();
+    const first = (await runWebdavSync(userId)).fileName as string;
+    for (let day = 1; day <= 60; day += 1) {
+      files.add(
+        olderSibling(
+          first,
+          `202608${String(day % 28 || 28).padStart(2, "0")}T${String(day).padStart(2, "0")}0000Z`
+        )
+      );
+    }
+    const before = files.size;
+    const result = await runWebdavSync(userId);
+    expect(share.deleteFile.mock.calls.length).toBeLessThanOrEqual(20);
+    expect(result).toMatchObject({ status: "partial", errorCode: "cleanupIncomplete" });
+    expect(files.size).toBeGreaterThan(2);
+    expect(files.size).toBeLessThan(before + 1);
+  });
+
+  it("refuses an oversized listing instead of reading it all, and deletes nothing", async () => {
+    const userId = await makeUser();
+    statefulShare();
+    const first = (await runWebdavSync(userId)).fileName as string;
+    jest.clearAllMocks();
+    // Five of its own old exports, then megabytes of padding: read whole, the
+    // listing would have three of them deleted.
+    const own = ["20261001", "20261002", "20261003", "20261004", "20261005"].map((day) =>
+      olderSibling(first, `${day}T051500Z`)
+    );
+    const padded = multistatus(own).replace(
+      "</d:multistatus>",
+      `${" ".repeat(3 * 1024 * 1024)}</d:multistatus>`
+    );
+    share.customRequest.mockImplementation(async () => new Response(padded, { status: 207 }));
+    const result = await runWebdavSync(userId);
+    expect(result).toMatchObject({ status: "partial", errorCode: "cleanupIncomplete" });
+    expect(share.deleteFile).not.toHaveBeenCalled();
+  });
+
   it("ends a run whose folder check hangs as a `timeout` failure and releases the account", async () => {
     const userId = await makeUser();
     const signals: AbortSignal[] = [];
@@ -231,7 +265,6 @@ describe("runWebdavSync", () => {
     const userId = await makeUser();
     share.putFileContents.mockResolvedValue(false);
     expect(await codeOf(runWebdavSync(userId))).toBe("protocol");
-    expect(share.getDirectoryContents).not.toHaveBeenCalled();
     expect(share.customRequest).not.toHaveBeenCalled();
     const row = await prisma.userWebdavSync.findUniqueOrThrow({ where: { userId } });
     expect(row.lastStatus).toBe("failed");
@@ -240,9 +273,6 @@ describe("runWebdavSync", () => {
 
   it("calls a failed clean-up `partial` with its reason: the export is up, the old ones are not gone", async () => {
     const userId = await makeUser();
-    share.getDirectoryContents.mockRejectedValue(
-      Object.assign(new Error("x"), { code: "ETIMEDOUT" })
-    );
     share.customRequest.mockRejectedValue(Object.assign(new Error("x"), { code: "ETIMEDOUT" }));
     const result = await runWebdavSync(userId);
     expect(result).toMatchObject({ status: "partial", errorCode: "timeout" });

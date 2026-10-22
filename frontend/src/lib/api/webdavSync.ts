@@ -21,6 +21,7 @@ export const WEBDAV_SYNC_ERROR_CODES = [
   "path",
   "server",
   "protocol",
+  "cleanupIncomplete",
   "alreadyRunning",
   "invalidInput",
 ] as const;

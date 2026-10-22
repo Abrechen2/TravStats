@@ -1271,6 +1271,7 @@
       "path": "Der Ordner ließ sich auf dem Speicher nicht finden oder anlegen.",
       "server": "Der Speicher hat mit einem Serverfehler geantwortet.",
       "protocol": "Der Speicher hat nicht wie ein WebDAV-Speicher geantwortet.",
+      "cleanupIncomplete": "Mehr alte Versionen als ein Durchlauf aufräumt; der Rest folgt bei den nächsten Durchläufen.",
       "alreadyRunning": "Ein Abgleich läuft bereits.",
       "invalidInput": "Eine Eingabe ist ungültig.",
       "unknown": "Der Abgleich ist fehlgeschlagen."
