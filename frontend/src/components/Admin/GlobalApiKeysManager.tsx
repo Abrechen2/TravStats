@@ -22,6 +22,8 @@ import { useDomainColors } from "../../hooks/useDomainColors";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useEffectiveSettingsLevel, useSettingsLevelStore } from "../../store/settingsLevelStore";
 import GeocoderSettingsCard from "../Settings/GeocoderSettingsCard";
+import { useHasLlm } from "../../hooks/useHasLlm";
+import { llmServiceState } from "../Settings/ServiceAccordion";
 import { ExpertPill } from "../ui/ExpertPill";
 import { ADMIN_SECTION_LABEL_KEY } from "../../pages/Admin/adminSections";
 
@@ -43,8 +45,6 @@ export interface GlobalApiKeys {
 
 export interface ParserApiKeySettings {
   allowUserApiKeys: boolean;
-  /** A language model is switched on and has somewhere to go (Import & Parser). */
-  llmConfigured?: boolean;
 }
 
 interface GlobalApiKeysManagerProps {
@@ -153,6 +153,7 @@ export default function GlobalApiKeysManager({
   // Keyless services have no key to count: one that is switched on is active
   // for everyone (beta.23 UAT: "0 für alle aktiv" with both lookups on).
   const [rail, setRail] = useState<RailProvidersStatus | null>(null);
+  const hasLlm = useHasLlm();
   const keys = globalApiKeys;
   const loaded = keys !== null && parserSettings !== null;
   // A stored key the server cannot decrypt serves nobody; it reads "nicht
@@ -236,12 +237,9 @@ export default function GlobalApiKeysManager({
           id: "llmParser",
           name: t("settings:services.names.llmParser"),
           what: t("settings:services.what.llmParser"),
-          state:
-            parserSettings?.llmConfigured === undefined
-              ? null
-              : parserSettings.llmConfigured
-                ? "admin"
-                : "none",
+          // The parser's own answer (`/parser-capabilities`), never a second
+          // reading of the settings that could disagree with it (Codex review).
+          state: llmServiceState(hasLlm),
           inline: true,
           body: (
             <Link to="/admin/parsers" className="t-caption underline">

@@ -10,6 +10,7 @@ import { useSectionInView } from "../hooks/useSectionInView";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { useDomainColors } from "../hooks/useDomainColors";
+import { resetHasLlmCache } from "../hooks/useHasLlm";
 import { useTranslation } from "../hooks/useTranslation";
 import { useEffectiveSettingsLevel } from "../store/settingsLevelStore";
 import { copyToClipboard } from "../lib/clipboard";
@@ -341,6 +342,9 @@ export default function AdminPage(): JSX.Element {
       // Re-read: the key comes back masked and "is this a cloud endpoint" is
       // the server's answer for what was actually stored.
       setParserSettings(await adminApi.getAdminParserSettings());
+      // The KI-Parser row of Externe Dienste reads the parser's capabilities,
+      // cached per tab; this save may have changed them.
+      resetHasLlmCache();
     } catch (error: unknown) {
       logger.error("Failed to save parser settings:", error);
       const code = apiErrorMachineCode(error);

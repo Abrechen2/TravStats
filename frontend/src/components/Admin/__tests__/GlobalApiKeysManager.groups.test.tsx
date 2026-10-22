@@ -9,20 +9,21 @@ vi.mock("../../../lib/api", () => ({
 vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => false }));
 vi.mock("../ImmichGlobalSettings", () => ({ default: () => null }));
 vi.mock("../../Settings/OperatorLogosCard", () => ({ default: () => null }));
+const llm = vi.hoisted(() => ({ value: null as boolean | "disabled" | null }));
+vi.mock("../../../hooks/useHasLlm", () => ({ useHasLlm: () => llm.value }));
 vi.mock("../../Settings/GeocoderSettingsCard", () => ({
   default: () => <div data-testid="geocoder-card" />,
 }));
 
 import GlobalApiKeysManager from "../GlobalApiKeysManager";
-import { isLlmConfigured } from "../llmConfigured";
 import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
 
-const renderManager = (llmConfigured?: boolean) =>
+const renderManager = () =>
   render(
     <MemoryRouter>
       <GlobalApiKeysManager
         globalApiKeys={{ allowUserFlightApiKeys: true }}
-        parserSettings={{ allowUserApiKeys: true, llmConfigured }}
+        parserSettings={{ allowUserApiKeys: true }}
         saving={false}
         onSave={() => {}}
         onGlobalApiKeysChange={() => {}}
@@ -53,35 +54,27 @@ describe("GlobalApiKeysManager — Karten & Ortssuche and the KI-Parser", () => 
     expect(document.querySelector('[data-testid="geocoder-card"]')).not.toBeNull();
   });
 
-  it("says whether a language model is set up, and points to Import & Parser", () => {
-    renderManager(true);
+  // Codex review: the row reads the parser's own answer, so a custom endpoint
+  // without a model or a remote Ollama without consent reads as not set up.
+  it("badges the KI-Parser by the parser's own answer, and points to Import & Parser", () => {
+    llm.value = true;
+    renderManager();
     const row = document.querySelector('[data-service="llmParser"]') as HTMLElement;
     expect(row).toHaveTextContent("settings:services.badge.setUp");
     expect(row.querySelector("a")).toHaveAttribute("href", "/admin/parsers");
+    for (const answer of [false, "disabled"] as const) {
+      cleanup();
+      llm.value = answer;
+      renderManager();
+      expect(document.querySelector('[data-service="llmParser"]')).toHaveTextContent(
+        "settings:services.badge.none"
+      );
+    }
     cleanup();
-    renderManager(false);
-    expect(document.querySelector('[data-service="llmParser"]')).toHaveTextContent(
-      "settings:services.badge.none"
+    llm.value = null;
+    renderManager();
+    expect(document.querySelector('[data-service="llmParser"]')).not.toHaveTextContent(
+      "settings:services.badge"
     );
-  });
-});
-
-describe("isLlmConfigured", () => {
-  const base = {
-    allowUserApiKeys: false,
-    fxCdnFallbackEnabled: false,
-    ollamaUrl: null,
-    ollamaModel: null,
-  };
-  it.each([
-    [{}, false],
-    [{ ollamaUrl: "http://o", ollamaModel: "m" }, true],
-    [{ ollamaUrl: "http://o", ollamaModel: "m", llmEnabled: false }, false],
-    [{ llmOpenaiApiKey: "k" }, false],
-    [{ llmOpenaiApiKey: "k", llmOpenaiOptIn: true }, true],
-    [{ openaiCompatBaseUrl: "http://lan", openaiCompatIsCloud: false }, true],
-    [{ openaiCompatBaseUrl: "https://cloud", openaiCompatIsCloud: true }, false],
-  ])("reads %j as %s", (extra, expected) => {
-    expect(isLlmConfigured({ ...base, ...extra })).toBe(expected);
   });
 });

@@ -6,6 +6,7 @@ import { token } from "../ui/tokens";
 import { Icon } from "../ui/Icon";
 import { HeadingAboveContext } from "./SettingsShared";
 import { foldForSearch } from "../../pages/Settings/settingsSearchMatch";
+import type { LlmAvailability } from "../../hooks/useHasLlm";
 
 /**
  * Who provides a service for this account (forgejo#321):
@@ -83,6 +84,16 @@ const BADGE: Record<ServiceState, { key: string; color: string; dashed?: boolean
   adminOwn: { key: "settings:services.badge.own", color: token("good") },
   none: { key: "settings:services.badge.none", color: token("muted"), dashed: true },
 };
+
+/**
+ * The KI-Parser row: the instance's model is the admin's for everyone, or
+ * absent ("disabled" — switched off — counts as absent); unknown while the
+ * capability request is outstanding.
+ */
+export function llmServiceState(hasLlm: LlmAvailability): ServiceState | null {
+  if (hasLlm === null) return null;
+  return hasLlm === true ? "admin" : "none";
+}
 
 /** The header line: "2 für alle aktiv · 1 eigener". */
 export function summarise(items: readonly ServiceItem[]): { shared: number; own: number } {

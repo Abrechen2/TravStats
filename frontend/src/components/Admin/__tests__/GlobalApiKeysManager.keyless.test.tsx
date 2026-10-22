@@ -1,4 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
+// The services page asks the parser whether a model is there (forgejo#321);
+// not the subject here.
+vi.mock("../../../hooks/useHasLlm", () => ({ useHasLlm: () => null, resetHasLlmCache: () => {} }));
 import { render, waitFor } from "@testing-library/react";
 
 /**

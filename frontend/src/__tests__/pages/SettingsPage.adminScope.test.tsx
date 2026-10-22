@@ -1,5 +1,8 @@
 vi.mock("../../components/Settings/DawarichStayScanCard", () => ({ default: () => null }));
 import { describe, it, expect, beforeEach, vi } from "vitest";
+// The services page asks the parser whether a model is there (forgejo#321);
+// not the subject here.
+vi.mock("../../hooks/useHasLlm", () => ({ useHasLlm: () => null, resetHasLlmCache: () => {} }));
 // The version line under the settings menu asks the server (forgejo#321).
 vi.mock("@/lib/api/version", () => ({
   versionApi: { get: vi.fn().mockResolvedValue({ version: "2.7.0", buildVersion: "2.7.0" }) },

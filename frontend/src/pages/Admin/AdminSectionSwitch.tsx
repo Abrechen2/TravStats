@@ -14,7 +14,6 @@ import InvitationManagement from "../../components/Admin/InvitationManagement";
 import CreateLinkInviteModal from "../../components/Admin/CreateLinkInviteModal";
 import CreateEmailInviteModal from "../../components/Admin/CreateEmailInviteModal";
 import InviteSuccessModal from "../../components/Admin/InviteSuccessModal";
-import { isLlmConfigured } from "../../components/Admin/llmConfigured";
 import GlobalApiKeysManager from "../../components/Admin/GlobalApiKeysManager";
 import AboutSection from "../../components/Settings/AboutSection";
 import ParserSettingsTab from "../../components/Admin/ParserSettings";
@@ -242,10 +241,7 @@ export default function AdminSectionSwitch(props: AdminSectionSwitchProps): JSX.
           globalApiKeys={props.globalApiKeys}
           parserSettings={
             props.parserSettings
-              ? {
-                  allowUserApiKeys: props.parserSettings.allowUserApiKeys,
-                  llmConfigured: isLlmConfigured(props.parserSettings),
-                }
+              ? { allowUserApiKeys: props.parserSettings.allowUserApiKeys }
               : null
           }
           saving={props.savingGlobalApiKeys || props.savingParsers}

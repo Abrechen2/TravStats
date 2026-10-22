@@ -11,6 +11,8 @@ const domains = vi.hoisted(() => ({ on: ["flight"] as string[] }));
 vi.mock("../../../hooks/useEnabledDomains", () => ({
   useEnabledDomains: () => ({ isEnabled: (d: string) => domains.on.includes(d) }),
 }));
+const llm = vi.hoisted(() => ({ value: true as boolean | "disabled" | null }));
+vi.mock("../../../hooks/useHasLlm", () => ({ useHasLlm: () => llm.value }));
 vi.mock("../ImmichConnectionCard", () => ({ default: () => null }));
 vi.mock("../PhotoJourneyNightlyScanCard", () => ({ default: () => null }));
 vi.mock("../StravaConnectionCard", () => ({ default: () => null }));
@@ -57,9 +59,11 @@ describe("ServicesSection — the groups of the prototype", () => {
 
   it("lists the KI-Parser and the map services, which the instance runs for everyone", () => {
     renderSection();
-    expect(group("cross")!.querySelector('[data-service="llmParser"]')).toHaveTextContent(
-      "settings:services.instanceOnly"
-    );
+    const parser = group("cross")!.querySelector('[data-service="llmParser"]') as HTMLElement;
+    expect(parser).toHaveTextContent("settings:services.instanceOnly");
+    // Every account can ask the parser whether a model is there.
+    expect(parser).toHaveTextContent("settings:services.badge.admin");
+    expect(parser.querySelector("[data-service-action]")).toBeNull();
     const maps = group("maps")!;
     for (const id of ["photon", "nominatim"]) {
       const row = maps.querySelector(`[data-service="${id}"]`) as HTMLElement;

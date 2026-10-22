@@ -1,7 +1,13 @@
 import { useState, type JSX } from "react";
 import { Link } from "react-router-dom";
 import { SectionCard, SectionTitle } from "./SettingsShared";
-import { ServiceAccordion, type ServiceGroup, type ServiceState } from "./ServiceAccordion";
+import {
+  ServiceAccordion,
+  llmServiceState,
+  type ServiceGroup,
+  type ServiceState,
+} from "./ServiceAccordion";
+import { useHasLlm } from "../../hooks/useHasLlm";
 import ApiKeysSection from "./ApiKeysSection";
 import PersonalRoutingKeysSection, { type RoutingKeysStatus } from "./PersonalRoutingKeysSection";
 import ImmichConnectionCard from "./ImmichConnectionCard";
@@ -96,6 +102,7 @@ export default function ServicesSection({ page }: { page: PageState }): JSX.Elem
   const [routing, setRouting] = useState<RoutingKeysStatus | null>(null);
   const flightOn = isEnabled("flight");
   const railOn = isEnabled("rail");
+  const hasLlm = useHasLlm();
   const level = useEffectiveSettingsLevel();
   const setLevel = useSettingsLevelStore((s) => s.setLevel);
   /**
@@ -158,7 +165,9 @@ export default function ServicesSection({ page }: { page: PageState }): JSX.Elem
         id: "llmParser",
         name: t("settings:services.names.llmParser"),
         what: t("settings:services.what.llmParser"),
-        state: null,
+        // The parser's own, account-visible answer (`/parser-capabilities`).
+        state: llmServiceState(hasLlm),
+        inline: true,
         body: instancePointer("/admin/parsers"),
       },
       ...(toursVisible
