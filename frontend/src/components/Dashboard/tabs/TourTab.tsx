@@ -32,6 +32,8 @@ const TOUR_PANEL: readonly AppearanceDomain[] = ["tour"];
 const ROADTRIP_PANEL: readonly AppearanceDomain[] = ["roadtrip", "roadtripStations"];
 
 /** A pass-through is no night: drawn in a neutral grey, as the timeline does. */
+/** The open list panel; `SidebarToggle` moves to its right edge (340 = 320 + 20). */
+const TOUR_LIST_WIDTH = 320;
 const PASS_RGB: [number, number, number] = [139, 148, 158];
 
 function isLegMode(value: string): value is LegMode {
@@ -178,7 +180,7 @@ export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Eleme
             top: 0,
             left: 0,
             bottom: 0,
-            width: 320,
+            width: TOUR_LIST_WIDTH,
             background: "rgba(22,27,34,0.95)",
             borderRight: "1px solid var(--color-border)",
             zIndex: 20,
@@ -336,6 +338,8 @@ export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Eleme
             isRoadtrip ? t("roadtrips:dashboard.emptyCta") : t("dashboard:tourTab.emptyCta")
           }
           onCta={() => navigate(isRoadtrip ? "/roadtrips" : "/trips")}
+          // The list opens with the tab, so the card keeps clear of it.
+          clearLeft={sidebarOpen ? TOUR_LIST_WIDTH : 0}
         />
       )}
     </div>

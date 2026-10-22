@@ -13,13 +13,25 @@ import type { JSX } from "react";
  * `pointerEvents` is split on purpose: the full-size backdrop lets clicks
  * through to the map underneath, the card itself takes them, so an empty
  * tab is still a usable map.
+ *
+ * The card is centred in the part of the map nothing else holds: below the
+ * row of the list button (`SidebarToggle`, top 12, ~34 px tall) and right of
+ * an open list panel (`clearLeft`). Centred in the whole tab, it covered the
+ * open tour list and — as a hint bar on rc.27 — the "Touren" button beside it,
+ * whose right half then took no click (board item
+ * tour-empty-state-overlaps-sidebar-toggle).
  */
+/** Where the overlay's free area starts: below the list button's row. */
+export const MAP_EMPTY_OVERLAY_TOP = 56;
+
 interface MapEmptyOverlayProps {
   emoji: string;
   title: string;
   body: string;
   ctaLabel: string;
   onCta(): void;
+  /** Width of an open list panel on the left, in px; the card stays clear of it. */
+  clearLeft?: number;
 }
 
 export function MapEmptyOverlay({
@@ -28,12 +40,18 @@ export function MapEmptyOverlay({
   body,
   ctaLabel,
   onCta,
+  clearLeft = 0,
 }: MapEmptyOverlayProps): JSX.Element {
   return (
     <div
+      data-testid="map-empty-overlay"
       style={{
         position: "absolute",
-        inset: 0,
+        top: MAP_EMPTY_OVERLAY_TOP,
+        right: 0,
+        bottom: 0,
+        left: clearLeft,
+        padding: 16,
         zIndex: 20,
         display: "flex",
         alignItems: "center",
