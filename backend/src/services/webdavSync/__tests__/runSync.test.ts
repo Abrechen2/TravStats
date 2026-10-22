@@ -320,6 +320,26 @@ describe("runWebdavSync", () => {
     expect(row.lastErrorCode).toBe("timeout");
   });
 
+  it("keeps an upload that is in as a success when the deadline hits during the clean-up", async () => {
+    const userId = await makeUser();
+    // The upload is in; the listing never answers and ignores cancellation.
+    share.customRequest.mockImplementation(() => new Promise(() => undefined));
+    const run = runWebdavSync as (
+      id: string,
+      o?: { deadlineMs?: number }
+    ) => Promise<{ status: string; errorCode: string | null; fileName: string | null }>;
+    const result = await run(userId, { deadlineMs: 300 });
+    expect(result).toMatchObject({ status: "partial", errorCode: "timeout" });
+    expect(result.fileName).toMatch(/^travstats-export-/);
+    expect(isWebdavSyncRunning(userId)).toBe(false);
+    const row = await prisma.userWebdavSync.findUniqueOrThrow({ where: { userId } });
+    expect(row.lastStatus).toBe("partial");
+    expect(row.lastErrorCode).toBe("timeout");
+    expect(row.lastFileName).toBe(result.fileName);
+    expect(row.lastSuccessAt).not.toBeNull();
+    expect(row.uploadedFiles).toEqual([result.fileName]);
+  });
+
   it("records a refused password as `auth` and fails the run — never a success", async () => {
     const userId = await makeUser();
     share.createDirectory.mockRejectedValue(Object.assign(new Error("401"), { status: 401 }));

@@ -198,12 +198,19 @@ async function record(
   });
 }
 
+interface StoredExport {
+  client: Client;
+  tag: string;
+  fileName: string;
+  sizeBytes: number;
+}
+
 async function upload(
   userId: string,
   target: ResolvedTarget,
   at: Date,
   deadline: AbortSignal
-): Promise<{ result: WebdavRunResult; history: string[] }> {
+): Promise<StoredExport> {
   const { instanceName } = await getInstanceSettings();
   const data = await buildAccountExport(userId, instanceName);
   if (!data) throw new WebdavSyncError("notConfigured");
@@ -226,7 +233,22 @@ async function upload(
   // `false` instead of throwing: nothing new is on the share, so this is no
   // success, and retention must not run on its strength (Codex review).
   if (stored !== true) throw new WebdavSyncError("protocol", "upload not accepted");
+  return { client, tag, fileName, sizeBytes: body.length };
+}
 
+/**
+ * The clean-up after a stored upload. Never throws: the export is on the
+ * share, so whatever happens here — the deadline included — is a "partial"
+ * with its cause, and the upload's name and size are kept (Codex review: a
+ * race around upload AND clean-up recorded a stored export as failed).
+ */
+async function cleanUp(
+  userId: string,
+  target: ResolvedTarget,
+  stored: StoredExport,
+  deadline: AbortSignal
+): Promise<{ result: WebdavRunResult; history: string[] }> {
+  const { client, tag, fileName, sizeBytes } = stored;
   // The export is on the share; a failed clean-up must not turn that into a
   // failure, nor be swallowed — it is reported as "partial" with its cause.
   // The clean-up gets a budget of its own inside the run's deadline; running
@@ -234,7 +256,7 @@ async function upload(
   const retention = AbortSignal.any([deadline, AbortSignal.timeout(RETENTION_BUDGET_MS)]);
   // What is known to be on the share once the upload is in: the record plus it.
   const progress = { history: recordUpload(target.history, fileName), deleted: 0 };
-  const uploaded = { fileName, sizeBytes: body.length };
+  const uploaded = { fileName, sizeBytes };
   try {
     const { deleted, history, complete } = await untilAborted(
       retention,
@@ -300,20 +322,9 @@ export async function runWebdavSync(
       }
       throw new WebdavSyncError(code);
     }
+    let stored: StoredExport;
     try {
-      const { result, history } = await untilAborted(
-        deadline.signal,
-        upload(userId, target, at, deadline.signal)
-      );
-      await record(userId, result, at, history);
-      logger.info({
-        operation: "webdav_user_sync_done",
-        userId,
-        status: result.status,
-        sizeBytes: result.sizeBytes,
-        deleted: result.deleted,
-      });
-      return result;
+      stored = await untilAborted(deadline.signal, upload(userId, target, at, deadline.signal));
     } catch (error) {
       const code = classifyWebdavError(error);
       logger.warn({
@@ -325,6 +336,16 @@ export async function runWebdavSync(
       await record(userId, failed(code), at);
       throw new WebdavSyncError(code);
     }
+    const { result, history } = await cleanUp(userId, target, stored, deadline.signal);
+    await record(userId, result, at, history);
+    logger.info({
+      operation: "webdav_user_sync_done",
+      userId,
+      status: result.status,
+      sizeBytes: result.sizeBytes,
+      deleted: result.deleted,
+    });
+    return result;
   } finally {
     clearTimeout(timer);
     running.delete(userId);
