@@ -2,7 +2,8 @@
 // ship, the rental's car model, the train category (owner, 2026-10-21). From
 // Commons via this server, freely licensed, credited and linked right under
 // it. Nothing is drawn until the server says there is a picture, and nothing
-// at all on a miss, a failure or an image that does not load.
+// at all on a miss or an image that does not load. When Wikimedia could not be
+// asked, one line says so — "could not ask" is not "there is none".
 
 import { useEffect, useState, type JSX } from "react";
 import {
@@ -23,22 +24,38 @@ export function SubjectPicture({
 }): JSX.Element | null {
   const [credit, setCredit] = useState<SubjectImageCredit | null>(null);
   const [broken, setBroken] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
   const kind = subject?.kind ?? null;
   const name = subject?.name ?? null;
 
   useEffect(() => {
     setCredit(null);
     setBroken(false);
+    setUnavailable(false);
     if (!kind || !name) return;
     let cancelled = false;
     void getSubjectImage(kind, name).then((picture) => {
-      if (!cancelled && picture.available) setCredit(picture.credit);
+      if (cancelled) return;
+      if (picture.available) setCredit(picture.credit);
+      else if (picture.unavailable) setUnavailable(true);
     });
     return () => {
       cancelled = true;
     };
   }, [kind, name]);
 
+  if (kind && name && unavailable) {
+    return (
+      <p
+        role="status"
+        data-testid="subject-picture-unavailable"
+        className="mb-2 text-[10.5px]"
+        style={{ color: tokens.color.faint }}
+      >
+        {t("map:journey.pictureUnavailable")}
+      </p>
+    );
+  }
   if (!kind || !name || !credit || broken) return null;
   return (
     <figure data-testid="subject-picture" className="mb-2.5">

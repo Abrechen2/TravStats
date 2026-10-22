@@ -236,6 +236,15 @@ describe("route card picture", () => {
     expect(screen.getByText("2× übergesetzt")).toBeInTheDocument();
   });
 
+  it("says the picture is unavailable when Wikimedia could not be asked", async () => {
+    details.subject.mockResolvedValue({ available: false, unavailable: true, credit: null });
+    showRoute();
+    expect(await screen.findByTestId("subject-picture-unavailable")).toHaveTextContent(
+      "Bild gerade nicht verfügbar."
+    );
+    expect(screen.queryByTestId("subject-picture")).toBeNull();
+  });
+
   it("draws nothing when there is no picture", async () => {
     showRoute();
     await Promise.resolve();

@@ -15,7 +15,10 @@ import {
   answerSubjectImage,
   type SubjectImageAnswer,
 } from "../services/mapDetails/subjectImageService";
-import { stopWikipediaSummary } from "../services/mapDetails/stopWikipedia";
+import {
+  StopLookupDeadlineError,
+  stopWikipediaSummary,
+} from "../services/mapDetails/stopWikipedia";
 
 /**
  * Rich map details (2026-10-21): a picture of what a journey travelled in, for
@@ -42,7 +45,7 @@ async function subjectFor(req: AuthRequest): Promise<SubjectImageAnswer> {
   const { kind, name } = parseSubject(req.query);
   const userId = req.userId;
   if (!userId || !(await ownsSubject(userId, kind, name))) {
-    return { picture: null, pending: false };
+    return { picture: null, pending: false, unavailable: false, disabled: false };
   }
   return answerSubjectImage(kind, name, { userId });
 }
@@ -53,12 +56,21 @@ router.get(
   airlineLogoLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { picture, pending } = await subjectFor(req);
-      res.setHeader("Cache-Control", pending ? "private, no-store" : "private, max-age=3600").json({
+      const { picture, pending, unavailable, disabled } = await subjectFor(req);
+      // Only an answer is cacheable; "not yet", "could not ask" and "switched
+      // off" (the admin may switch it on in a minute) are asked again.
+      const settled = !pending && !unavailable && !disabled;
+      res.setHeader("Cache-Control", settled ? "private, max-age=3600" : "private, no-store").json({
         success: true,
         data: picture
-          ? { available: true, pending: false, credit: picture.credit }
-          : { available: false, pending, credit: null },
+          ? {
+              available: true,
+              pending: false,
+              unavailable: false,
+              disabled: false,
+              credit: picture.credit,
+            }
+          : { available: false, pending, unavailable, disabled, credit: null },
       });
     } catch (error) {
       next(error);
@@ -66,18 +78,24 @@ router.get(
   }
 );
 
-/** GET /map-details/subject/image?kind=&name= — the picture bytes (raster), or 404. */
+/** GET /map-details/subject/image?kind=&name= — the picture bytes (raster), 404 or 503 (Wikimedia down). */
 router.get(
   "/subject/image",
   airlineLogoLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { picture, pending } = await subjectFor(req);
+      const { picture, pending, unavailable, disabled } = await subjectFor(req);
       if (!picture) {
         res
-          .status(404)
-          .setHeader("Cache-Control", pending ? "private, no-store" : "private, max-age=3600")
-          .json({ success: false, error: "No picture available" });
+          .status(unavailable ? 503 : 404)
+          .setHeader(
+            "Cache-Control",
+            pending || unavailable || disabled ? "private, no-store" : "private, max-age=3600"
+          )
+          .json({
+            success: false,
+            error: unavailable ? "pictureUnavailable" : "No picture available",
+          });
         return;
       }
       res
@@ -106,7 +124,8 @@ const stopQuery = z.object({
  * opening of the article about one of the caller's own stations. 409
  * `openDataDisabled` while the instance's open-data switch is off;
  * `unavailable: true` when Wikipedia did not answer — "could not ask" is not
- * "no article".
+ * "no article" — with `reason` `deadline` when the lookup ran out of its
+ * overall time (Wikipedia slow, not down) and `unavailable` otherwise.
  */
 router.get(
   "/stop",
@@ -118,17 +137,20 @@ router.get(
       const { domain, name, lat, lon, lang } = parsed.data;
       await assertOpenDataEnabled();
       if (!(await ownsStop(req.userId!, domain, lat, lon))) {
-        res.json({ success: true, data: { summary: null, unavailable: false } });
+        res.json({ success: true, data: { summary: null, unavailable: false, reason: null } });
         return;
       }
       try {
         const summary = await stopWikipediaSummary(domain, name, lat, lon, lang);
         res
           .setHeader("Cache-Control", "private, max-age=3600")
-          .json({ success: true, data: { summary, unavailable: false } });
+          .json({ success: true, data: { summary, unavailable: false, reason: null } });
       } catch (error) {
         if (!(error instanceof OpenDataUnavailableError)) throw error;
-        res.json({ success: true, data: { summary: null, unavailable: true } });
+        const reason = error instanceof StopLookupDeadlineError ? "deadline" : "unavailable";
+        res
+          .setHeader("Cache-Control", "private, no-store")
+          .json({ success: true, data: { summary: null, unavailable: true, reason } });
       }
     } catch (error) {
       if (error instanceof OpenDataDisabledError) {

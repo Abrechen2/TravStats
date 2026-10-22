@@ -24,6 +24,10 @@ export interface SubjectImageCredit {
 export interface SubjectImage {
   available: boolean;
   pending?: boolean;
+  /** Could not ask (Wikimedia down, or our own request failed) — not "no picture". */
+  unavailable?: boolean;
+  /** The instance's picture switch is off — an admin may turn it on: not "no picture". */
+  disabled?: boolean;
   credit: SubjectImageCredit | null;
 }
 
@@ -32,10 +36,14 @@ export function subjectImagePath(kind: SubjectKind, name: string): string {
   return `/api/v1/map-details/subject/image?kind=${kind}&name=${encodeURIComponent(name.trim())}`;
 }
 
-const NONE: SubjectImage = { available: false, credit: null };
+const UNAVAILABLE: SubjectImage = { available: false, unavailable: true, credit: null };
 const subjects = new Map<string, Promise<SubjectImage>>();
 
-/** Whether a subject has a picture, and its credit. A failure is "no picture", logged. */
+/**
+ * Whether a subject has a picture, and its credit. Only an answer is kept for
+ * the page load: a pending lookup, a failure (`unavailable`) or a switched-off
+ * instance (`disabled`) is asked again.
+ */
 export function getSubjectImage(kind: SubjectKind, name: string): Promise<SubjectImage> {
   const key = `${kind}:${name.trim().toLowerCase()}`;
   const known = subjects.get(key);
@@ -45,13 +53,13 @@ export function getSubjectImage(kind: SubjectKind, name: string): Promise<Subjec
       params: { kind, name: name.trim() },
     })
     .then(({ data }) => {
-      if (data.data.pending) subjects.delete(key);
+      if (data.data.pending || data.data.unavailable || data.data.disabled) subjects.delete(key);
       return data.data;
     })
     .catch((err: unknown) => {
       logger.warn("subject picture lookup failed", err);
       subjects.delete(key);
-      return NONE;
+      return UNAVAILABLE;
     });
   subjects.set(key, task);
   return task;
@@ -89,10 +97,17 @@ export function getStopInfo(
   const known = stops.get(key);
   if (known) return known;
   const task = api
-    .get<{ success: true; data: { summary: StopSummary | null; unavailable: boolean } }>(
-      "/map-details/stop",
-      { params: { domain, name: stop.name, lat: stop.lat, lon: stop.lon, lang } }
-    )
+    .get<{
+      success: true;
+      data: {
+        summary: StopSummary | null;
+        unavailable: boolean;
+        /** `deadline`: the server's whole lookup (8 s, inside our 10 s) ran out. */
+        reason: "unavailable" | "deadline" | null;
+      };
+    }>("/map-details/stop", {
+      params: { domain, name: stop.name, lat: stop.lat, lon: stop.lon, lang },
+    })
     .then(({ data }): StopInfo => {
       if (data.data.unavailable) {
         stops.delete(key);
@@ -101,9 +116,10 @@ export function getStopInfo(
       return data.data.summary ? { state: "found", summary: data.data.summary } : { state: "none" };
     })
     .catch((err: unknown): StopInfo => {
+      // Switched off is the admin's state of the moment, not an answer: not kept.
+      stops.delete(key);
       if (isAxiosError(err) && err.response?.status === 409) return { state: "disabled" };
       logger.warn("station Wikipedia lookup failed", err);
-      stops.delete(key);
       return { state: "unavailable" };
     });
   stops.set(key, task);

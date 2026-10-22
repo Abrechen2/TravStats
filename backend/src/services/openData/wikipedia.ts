@@ -94,12 +94,14 @@ async function articleTitles(qid: string): Promise<Partial<Record<WikiLanguage, 
  */
 export async function summaryOf(
   lang: WikiLanguage,
-  title: string
+  title: string,
+  init: { timeoutMs?: number } = {}
 ): Promise<WikipediaSummary | null> {
   const path = encodeURIComponent(title.replace(/ /g, "_"));
   const outcome = await fetchOpenData(
     "wikipedia",
-    `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${path}`
+    `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${path}`,
+    init
   );
   if (!outcome.ok) {
     if (outcome.status === 404) return null;

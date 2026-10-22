@@ -10,7 +10,8 @@ import { __resetWikimediaQueueForTests } from "../../operatorLogos/wikimedia";
 /**
  * Subject pictures (rich map details, 2026-10-21): the item must BE the name
  * and be the right kind of thing, its picture freely licensed and credited,
- * and every failure an absent picture — never a wrong one. Mocked HTTP; no
+ * an outage
+ * reported as unavailable (never as "no picture") — and never a wrong one. Mocked HTTP; no
  * request leaves the test.
  */
 
@@ -150,25 +151,65 @@ describe("subject pictures", () => {
     use(() => {
       throw new Error("must not ask");
     });
+    // "Switched off" is not "no picture": a client must not remember it.
     expect(await answerSubjectImage("vessel", "Color Fantasy")).toEqual({
       picture: null,
       pending: false,
+      unavailable: false,
+      disabled: true,
     });
   });
 
-  it("turns an outage into no picture and does not ask again within the hour", async () => {
+  it("reports an outage as unavailable, not as no picture, and asks again after a short back-off", async () => {
     use(() => json({}, 503));
-    expect((await answerSubjectImage("vessel", "Color Fantasy")).picture).toBeNull();
+    expect(await answerSubjectImage("vessel", "Color Fantasy")).toMatchObject({
+      picture: null,
+      pending: false,
+      unavailable: true,
+    });
     const calls = fetchMock.mock.calls.length;
-    expect((await answerSubjectImage("vessel", "Color Fantasy")).picture).toBeNull();
+    // Within the back-off: still "unavailable", without asking again.
+    expect(await answerSubjectImage("vessel", "Color Fantasy")).toMatchObject({
+      unavailable: true,
+    });
     expect(fetchMock.mock.calls.length).toBe(calls);
+    // Wikimedia is back a few minutes later: the outage was not cached as a miss.
+    use(
+      wikidata([{ id: "Q1", text: "Color Fantasy" }], {
+        Q1: entity("cruiseferry built in 2004", "Color Fantasy.jpg"),
+      })
+    );
+    const later = Date.now() + 5 * 60 * 1000;
+    const now = jest.spyOn(Date, "now").mockReturnValue(later);
+    try {
+      const answer = await answerSubjectImage("vessel", "Color Fantasy");
+      expect(answer.picture?.credit.qid).toBe("Q1");
+      expect(answer.unavailable).toBe(false);
+    } finally {
+      now.mockRestore();
+    }
+  });
+
+  it("reports a genuine miss as not unavailable", async () => {
+    use(
+      wikidata([{ id: "Q2", text: "ICE" }], {
+        Q2: entity("United States federal law enforcement agency", "ICE seal.jpg"),
+      })
+    );
+    expect(await answerSubjectImage("train", "ICE")).toEqual({
+      picture: null,
+      pending: false,
+      unavailable: false,
+      disabled: false,
+    });
   });
 
   it("answers pending past the wait, without failing", async () => {
     use(() => new Promise<Response>(() => undefined) as unknown as Response);
-    expect(await answerSubjectImage("vessel", "Slow Ship", { waitMs: 10 })).toEqual({
+    expect(await answerSubjectImage("vessel", "Slow Ship", { waitMs: 10 })).toMatchObject({
       picture: null,
       pending: true,
+      unavailable: false,
     });
   });
 });

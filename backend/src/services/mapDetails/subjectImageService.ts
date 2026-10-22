@@ -5,8 +5,9 @@
  *
  * - hits on disk for 30 days, with their credit; an expired entry is looked
  *   up again cold rather than refreshed in the background;
- * - misses in a capped in-memory LRU, a day for an answer, an hour for an
- *   outage (an outage is not an answer);
+ * - misses in a capped in-memory LRU for a day; an outage is NOT a miss: it
+ *   answers `unavailable` and holds the key back for a few minutes only, so a
+ *   Wikimedia 503 is neither shown nor remembered as "no picture";
  * - one lookup per key at a time; at most MAX_COLD_IN_FLIGHT cold lookups on
  *   the instance and PER_USER_COLD_LIMIT per user per window; a request waits
  *   COLD_WAIT_MS at most and answers `pending` past it (the tooltip simply has
@@ -38,11 +39,26 @@ export interface SubjectImageAnswer {
   picture: SubjectImage | null;
   /** A lookup is running or was not admitted yet: ask again on a later view. */
   pending: boolean;
+  /** Wikimedia did not answer (timeout, 429, 5xx, garbled): "could not ask", not "none". */
+  unavailable: boolean;
+  /** The instance's Wikimedia switch is off: nothing was asked — not "none" either. */
+  disabled: boolean;
 }
+
+const NONE: SubjectImageAnswer = {
+  picture: null,
+  pending: false,
+  unavailable: false,
+  disabled: false,
+};
+const PENDING: SubjectImageAnswer = { ...NONE, pending: true };
+const UNAVAILABLE: SubjectImageAnswer = { ...NONE, unavailable: true };
+const DISABLED: SubjectImageAnswer = { ...NONE, disabled: true };
 
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const MISS_TTL_MS = 24 * 60 * 60 * 1000;
-const OUTAGE_TTL_MS = 60 * 60 * 1000;
+/** How long an outage holds a key back — a back-off, not a verdict. */
+const OUTAGE_BACKOFF_MS = 2 * 60 * 1000;
 export const MAX_COLD_IN_FLIGHT = 3;
 export const PER_USER_COLD_LIMIT = 20;
 const PER_USER_WINDOW_MS = 15 * 60 * 1000;
@@ -50,8 +66,10 @@ const COLD_WAIT_MS = 3_000;
 export const MAX_REMEMBERED_MISSES = 2_000;
 const MAX_TRACKED_USERS = 1_000;
 
-const misses = new Map<string, number>();
-const inFlight = new Map<string, Promise<SubjectImage | null>>();
+type LookupOutcome = { picture: SubjectImage | null; unavailable: boolean };
+
+const misses = new Map<string, { until: number; unavailable: boolean }>();
+const inFlight = new Map<string, Promise<LookupOutcome>>();
 const coldByUser = new Map<string, { since: number; count: number }>();
 
 export function __resetSubjectImageCachesForTests(): void {
@@ -72,9 +90,12 @@ export function subjectImageKey(kind: SubjectKind, name: string): string {
   return crypto.createHash("sha1").update(`${kind}|${searched}`).digest("hex").slice(0, 24);
 }
 
-function rememberMiss(key: string, ttlMs: number): void {
+function rememberMiss(key: string, unavailable: boolean): void {
   misses.delete(key);
-  misses.set(key, Date.now() + ttlMs);
+  misses.set(key, {
+    until: Date.now() + (unavailable ? OUTAGE_BACKOFF_MS : MISS_TTL_MS),
+    unavailable,
+  });
   while (misses.size > MAX_REMEMBERED_MISSES) {
     const oldest = misses.keys().next().value;
     if (oldest === undefined) break;
@@ -148,31 +169,31 @@ async function writeCache(key: string, picture: SubjectImage): Promise<void> {
   }
 }
 
-function lookUp(key: string, kind: SubjectKind, name: string): Promise<SubjectImage | null> {
-  const task = (async (): Promise<SubjectImage | null> => {
+function lookUp(key: string, kind: SubjectKind, name: string): Promise<LookupOutcome> {
+  const task = (async (): Promise<LookupOutcome> => {
     try {
       const found = await lookupSubjectImage(kind, name);
       if (!found.ok) {
         const outage = ["rateLimited", "timeout", "unavailable", "malformed"].includes(
           found.reason
         );
-        rememberMiss(key, outage ? OUTAGE_TTL_MS : MISS_TTL_MS);
+        rememberMiss(key, outage);
         // The name is the user's own text: only its key reaches the log.
         logger.info({ operation: "subject_image_lookup", key, kind, outcome: found.reason });
-        return null;
+        return { picture: null, unavailable: outage };
       }
       const picture = { image: found.image, credit: found.credit };
       await writeCache(key, picture);
       logger.info({ operation: "subject_image_lookup", key, kind, outcome: "found" });
-      return picture;
+      return { picture, unavailable: false };
     } catch (error) {
-      rememberMiss(key, OUTAGE_TTL_MS);
+      rememberMiss(key, true);
       logger.warn({
         operation: "subject_image_lookup_failed",
         key,
         message: error instanceof Error ? error.message : "unknown error",
       });
-      return null;
+      return { picture: null, unavailable: true };
     } finally {
       inFlight.delete(key);
     }
@@ -181,19 +202,14 @@ function lookUp(key: string, kind: SubjectKind, name: string): Promise<SubjectIm
   return task;
 }
 
-async function waitFor(
-  task: Promise<SubjectImage | null>,
-  waitMs: number
-): Promise<SubjectImageAnswer> {
+async function waitFor(task: Promise<LookupOutcome>, waitMs: number): Promise<SubjectImageAnswer> {
   let timer: NodeJS.Timeout | undefined;
   const late = new Promise<"late">((resolve) => {
     timer = setTimeout(() => resolve("late"), waitMs);
   });
   try {
     const result = await Promise.race([task, late]);
-    return result === "late"
-      ? { picture: null, pending: true }
-      : { picture: result, pending: false };
+    return result === "late" ? PENDING : { ...NONE, ...result };
   } finally {
     clearTimeout(timer);
   }
@@ -204,20 +220,20 @@ export async function answerSubjectImage(
   name: string,
   ctx: { userId?: string; waitMs?: number } = {}
 ): Promise<SubjectImageAnswer> {
-  if (subjectSearchName(kind, name) === "") return { picture: null, pending: false };
+  if (subjectSearchName(kind, name) === "") return NONE;
   const { operatorLogosOpenDataEnabled } = await getInstanceSettings();
-  if (!operatorLogosOpenDataEnabled) return { picture: null, pending: false };
+  if (!operatorLogosOpenDataEnabled) return DISABLED;
   const key = subjectImageKey(kind, name);
   const cached = await readCache(key);
-  if (cached) return { picture: cached, pending: false };
-  const missUntil = misses.get(key);
-  if (missUntil !== undefined && missUntil > Date.now()) return { picture: null, pending: false };
+  if (cached) return { ...NONE, picture: cached };
+  const miss = misses.get(key);
+  if (miss !== undefined && miss.until > Date.now()) return miss.unavailable ? UNAVAILABLE : NONE;
   misses.delete(key);
   const waitMs = ctx.waitMs ?? COLD_WAIT_MS;
   const running = inFlight.get(key);
   if (running) return waitFor(running, waitMs);
   if (inFlight.size >= MAX_COLD_IN_FLIGHT || !admitUser(ctx.userId)) {
-    return { picture: null, pending: true };
+    return PENDING;
   }
   return waitFor(lookUp(key, kind, name), waitMs);
 }

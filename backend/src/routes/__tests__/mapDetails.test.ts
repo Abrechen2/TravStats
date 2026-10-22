@@ -4,7 +4,10 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { answerSubjectImage } from "../../services/mapDetails/subjectImageService";
-import { stopWikipediaSummary } from "../../services/mapDetails/stopWikipedia";
+import {
+  StopLookupDeadlineError,
+  stopWikipediaSummary,
+} from "../../services/mapDetails/stopWikipedia";
 import { OpenDataUnavailableError } from "../../services/openData/http";
 
 /**
@@ -110,6 +113,8 @@ describe("/api/v1/map-details", () => {
       answer.mockResolvedValue({
         picture: { image: { body: JPEG, contentType: "image/jpeg" }, credit: CREDIT },
         pending: false,
+        unavailable: false,
+        disabled: false,
       });
       const res = await request(app)
         .get("/api/v1/map-details/subject?kind=vessel&name=color%20fantasy")
@@ -117,7 +122,13 @@ describe("/api/v1/map-details", () => {
       expect(res.status).toBe(200);
       expect(res.body).toEqual({
         success: true,
-        data: { available: true, pending: false, credit: CREDIT },
+        data: {
+          available: true,
+          pending: false,
+          unavailable: false,
+          disabled: false,
+          credit: CREDIT,
+        },
       });
       expect(res.headers["cache-control"]).toMatch(/^private/);
     });
@@ -126,7 +137,13 @@ describe("/api/v1/map-details", () => {
       const res = await request(app)
         .get("/api/v1/map-details/subject?kind=vessel&name=Color%20Fantasy")
         .set("Cookie", ben);
-      expect(res.body.data).toEqual({ available: false, pending: false, credit: null });
+      expect(res.body.data).toEqual({
+        available: false,
+        pending: false,
+        unavailable: false,
+        disabled: false,
+        credit: null,
+      });
       expect(answer).not.toHaveBeenCalled();
     });
 
@@ -134,6 +151,8 @@ describe("/api/v1/map-details", () => {
       answer.mockResolvedValueOnce({
         picture: { image: { body: JPEG, contentType: "image/jpeg" }, credit: CREDIT },
         pending: false,
+        unavailable: false,
+        disabled: false,
       });
       const ok = await request(app)
         .get("/api/v1/map-details/subject/image?kind=vessel&name=Color%20Fantasy")
@@ -142,13 +161,64 @@ describe("/api/v1/map-details", () => {
       expect(ok.headers["content-type"]).toBe("image/jpeg");
       expect(ok.headers["cache-control"]).toBe("private, max-age=604800");
       expect(ok.headers["content-security-policy"]).toContain("sandbox");
-      answer.mockResolvedValueOnce({ picture: null, pending: true });
+      answer.mockResolvedValueOnce({
+        picture: null,
+        pending: true,
+        unavailable: false,
+        disabled: false,
+      });
       const missing = await request(app)
         .get("/api/v1/map-details/subject/image?kind=vessel&name=Color%20Fantasy")
         .set("Cookie", anna);
       expect(missing.status).toBe(404);
       // A pending answer is not cached: the next view asks again.
       expect(missing.headers["cache-control"]).toBe("private, no-store");
+    });
+
+    it("says when Wikimedia did not answer, uncached, instead of 'no picture'", async () => {
+      answer.mockResolvedValue({
+        picture: null,
+        pending: false,
+        unavailable: true,
+        disabled: false,
+      });
+      const res = await request(app)
+        .get("/api/v1/map-details/subject?kind=vessel&name=Color%20Fantasy")
+        .set("Cookie", anna);
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual({
+        available: false,
+        pending: false,
+        unavailable: true,
+        disabled: false,
+        credit: null,
+      });
+      expect(res.headers["cache-control"]).toBe("private, no-store");
+      const image = await request(app)
+        .get("/api/v1/map-details/subject/image?kind=vessel&name=Color%20Fantasy")
+        .set("Cookie", anna);
+      expect(image.status).toBe(503);
+      expect(image.headers["cache-control"]).toBe("private, no-store");
+    });
+
+    it("says the picture service is switched off, uncached, instead of 'no picture'", async () => {
+      answer.mockResolvedValue({
+        picture: null,
+        pending: false,
+        unavailable: false,
+        disabled: true,
+      });
+      const res = await request(app)
+        .get("/api/v1/map-details/subject?kind=vessel&name=Color%20Fantasy")
+        .set("Cookie", anna);
+      expect(res.body.data).toEqual({
+        available: false,
+        pending: false,
+        unavailable: false,
+        disabled: true,
+        credit: null,
+      });
+      expect(res.headers["cache-control"]).toBe("private, no-store");
     });
 
     it("refuses an unknown kind", async () => {
@@ -166,14 +236,17 @@ describe("/api/v1/map-details", () => {
       wiki.mockResolvedValue(SUMMARY);
       const res = await request(app).get(KIEL).set("Cookie", anna);
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ success: true, data: { summary: SUMMARY, unavailable: false } });
+      expect(res.body).toEqual({
+        success: true,
+        data: { summary: SUMMARY, unavailable: false, reason: null },
+      });
       expect(res.headers["cache-control"]).toMatch(/^private/);
       expect(wiki).toHaveBeenCalledWith("ferry", "Kiel", 54.3236, 10.1352, "de");
     });
 
     it("asks nothing for a point that is not one of the caller's stations", async () => {
       const res = await request(app).get(KIEL).set("Cookie", ben);
-      expect(res.body.data).toEqual({ summary: null, unavailable: false });
+      expect(res.body.data).toEqual({ summary: null, unavailable: false, reason: null });
       expect(wiki).not.toHaveBeenCalled();
     });
 
@@ -181,7 +254,15 @@ describe("/api/v1/map-details", () => {
       wiki.mockRejectedValue(new OpenDataUnavailableError("wikipedia"));
       const res = await request(app).get(KIEL).set("Cookie", anna);
       expect(res.status).toBe(200);
-      expect(res.body.data).toEqual({ summary: null, unavailable: true });
+      expect(res.body.data).toEqual({ summary: null, unavailable: true, reason: "unavailable" });
+    });
+
+    it("names a lookup that ran out of its overall time as its own reason", async () => {
+      wiki.mockRejectedValue(new StopLookupDeadlineError());
+      const res = await request(app).get(KIEL).set("Cookie", anna);
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual({ summary: null, unavailable: true, reason: "deadline" });
+      expect(res.headers["cache-control"]).toBe("private, no-store");
     });
 
     it("answers 409 while the instance's open-data switch is off", async () => {
