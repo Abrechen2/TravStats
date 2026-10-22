@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import type { Prisma } from "../../prisma";
 import { findVisibleChainByName, visibleChainsWhere } from "../lodging/chainScope";
 import { osmRefToStore } from "../lodging/osmRef";
 import { AppError } from "../../middleware/errorHandler";
@@ -194,20 +195,37 @@ export async function enrichLodgingFromOsm(
   const website = value("website");
   const wikidataId = value("wikidataId");
   const linkChain = value("chain") !== undefined && chainId !== null;
-  const filled = applied.map((f) => f.field);
 
-  if (filled.length > 0 || reference !== undefined) {
-    await prisma.lodging.update({
-      where: { id: lodging.id },
-      data: {
-        ...(typeof stars === "number" && { stars }),
-        ...(typeof website === "string" && { website }),
-        ...(typeof wikidataId === "string" && { wikidataId }),
-        ...(linkChain && { chainId }),
-        ...(reference !== undefined && { externalRef: reference }),
-      },
-    });
-  }
+  // One conditional write per field, each only while that field is STILL
+  // empty: Overpass was asked between reading the lodging and this write, and
+  // a value the user saved meanwhile is theirs. Only what landed is reported.
+  const writes: Array<{
+    field: EnrichedField | "externalRef";
+    data: Prisma.LodgingUpdateManyMutationInput;
+  }> = [
+    ...(typeof stars === "number" ? [{ field: "stars" as const, data: { stars } }] : []),
+    ...(typeof website === "string" ? [{ field: "website" as const, data: { website } }] : []),
+    ...(typeof wikidataId === "string"
+      ? [{ field: "wikidataId" as const, data: { wikidataId } }]
+      : []),
+    ...(reference !== undefined
+      ? [{ field: "externalRef" as const, data: { externalRef: reference } }]
+      : []),
+  ];
+  const results = await prisma.$transaction([
+    ...writes.map(({ field, data }) =>
+      prisma.lodging.updateMany({ where: { id: lodging.id, [field]: null }, data })
+    ),
+    ...(linkChain
+      ? [prisma.lodging.updateMany({ where: { id: lodging.id, chainId: null }, data: { chainId } })]
+      : []),
+  ]);
+  const landed = [...writes.map((w) => w.field), ...(linkChain ? ["chain" as const] : [])].filter(
+    (_, i) => results[i].count > 0
+  );
+  const filled = landed.filter((f): f is EnrichedField => f !== "externalRef");
+  const referenceStored = landed.includes("externalRef");
+
   logger.info({ operation: "lodging_osm_enrichment", lodgingId, filled });
   logger.debug({ operation: "lodging_osm_enrichment", lodgingId, osmRef: match.osmRef });
   return {
@@ -217,7 +235,7 @@ export async function enrichLodgingFromOsm(
     osmName: match.name,
     filled,
     match,
-    referenceStored: reference !== undefined,
+    referenceStored,
   };
 }
 
