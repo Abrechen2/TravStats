@@ -278,6 +278,15 @@ describe("TripMap: the globe toggle mounts the overlay the way the globe needs i
     expect(await screen.findByText("trips:detail.map.empty")).toBeInTheDocument();
   });
 
+  // beta.23 UAT before 2.7.0-rc.20: on an iPad the toggle was 71×30 px,
+  // under the 44 px a finger needs.
+  it("gives the projection toggle the 44 px touch minimum under a coarse pointer", async () => {
+    render(<TripMap trip={trip} />);
+    const toggle = await screen.findByRole("button", { pressed: false });
+    expect(toggle.className).toContain("pointer-coarse:min-h-(--ts-size-touch-min)");
+    expect(toggle.className).toContain("pointer-coarse:min-w-(--ts-size-touch-min)");
+  });
+
   // Acceptance 2026-09-26: the toggle read "🗺 Flat" in the German UI.
   it("labels the projection toggle through the translation, not in English", async () => {
     render(<TripMap trip={trip} />);

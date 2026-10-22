@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import deMap from "../../../../../i18n/resources/de/map.json";
 import enMap from "../../../../../i18n/resources/en/map.json";
@@ -241,6 +241,17 @@ describe("station card", () => {
     showStop();
     await screen.findByText("Der Kieler Hafen ist ein Seehafen.");
     expect(screen.getByTestId("stop-wikipedia").querySelector("img")).toBeNull();
+  });
+
+  // beta.23 UAT before 2.7.0-rc.20: on an iPad the pinned card's ✕ was
+  // 16×11 px, under the 44 px a finger needs.
+  it("gives the card's close button the 44 px touch minimum under a coarse pointer", async () => {
+    details.stop.mockResolvedValue({ state: "none" });
+    showStop();
+    const close = await screen.findByRole("button", { name: "Schließen" });
+    await act(async () => undefined);
+    expect(close.className).toContain("pointer-coarse:min-h-(--ts-size-touch-min)");
+    expect(close.className).toContain("pointer-coarse:min-w-(--ts-size-touch-min)");
   });
 
   it("says Wikipedia could not be asked, instead of looking like 'no article'", async () => {

@@ -760,7 +760,7 @@ export default function TripMap({
       <button
         type="button"
         onClick={toggleProjection}
-        className="absolute top-3 right-3 px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+        className="absolute top-3 right-3 px-3 py-1.5 rounded-full text-xs font-medium transition-colors pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:min-w-(--ts-size-touch-min)"
         style={{
           background: "rgba(13,17,23,0.85)",
           backdropFilter: "blur(6px)",
