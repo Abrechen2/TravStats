@@ -114,6 +114,35 @@ vi.mock("@/lib/api/settings", async (importOriginal) => {
   };
 });
 
+vi.mock("@/lib/api/webdavSync", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/webdavSync")>();
+  return {
+    ...actual,
+    // The WebDAV card on /settings/data fetches its status on mount; it is not
+    // the subject here, so it answers "not configured" without a request.
+    webdavSyncApi: {
+      ...actual.webdavSyncApi,
+      get: vi.fn().mockResolvedValue({
+        enabled: false,
+        url: null,
+        username: null,
+        hasPassword: false,
+        remotePath: "TravStats",
+        schedule: "daily",
+        keepVersions: 7,
+        ranAt: null,
+        completedAt: null,
+        lastStatus: null,
+        lastErrorCode: null,
+        lastFileName: null,
+        lastSizeBytes: null,
+        running: false,
+        allowPrivateTargets: false,
+      }),
+    },
+  };
+});
+
 vi.unmock("../../store/settingsStore");
 
 // Released from the beta registry on 2026-09-18, so these three now mount
