@@ -6,6 +6,7 @@ import BetaFeatureList from "./BetaFeatureList";
 import { LoginBackgroundsCard } from "./LoginBackgroundsCard";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useExpertRows } from "../Settings/frame/useExpertRows";
+import { ExpertPill } from "../ui/ExpertPill";
 import { logger } from "../../lib/logger";
 import type { PasskeyStatus } from "../../lib/api/admin";
 import { DEFAULT_COUNTRY_TIER, type CountryTier } from "../../types/passport";
@@ -227,7 +228,7 @@ export default function InstanceSettings(): JSX.Element {
         {expert && (
           <div>
             <label className="mb-1 block text-sm font-medium text-(--text-primary)">
-              {t("admin:instance.fields.lanUrl.label")}
+              {t("admin:instance.fields.lanUrl.label")} <ExpertPill />
             </label>
             <input
               type="url"
@@ -250,7 +251,9 @@ export default function InstanceSettings(): JSX.Element {
           <div
             style={{ borderTop: "1px solid var(--ts-border)", paddingTop: "var(--ts-space-lg)" }}
           >
-            <h3 className="t-label-mono">{t("admin:instance.passkeys.title")}</h3>
+            <h3 className="t-label-mono flex flex-wrap items-center gap-2">
+              {t("admin:instance.passkeys.title")} <ExpertPill />
+            </h3>
             <p className="mt-1 text-sm text-(--text-muted)">
               {t("admin:instance.passkeys.subtitle")}
             </p>
@@ -360,7 +363,9 @@ export default function InstanceSettings(): JSX.Element {
               className="mt-1 h-4 w-4 rounded-sm border-(--border)"
             />
             <span>
-              <span className="font-medium">{t("admin:instance.fields.betaFeatures.label")}</span>
+              <span className="font-medium">
+                {t("admin:instance.fields.betaFeatures.label")} <ExpertPill />
+              </span>
               <span className="block text-xs text-(--text-muted)">
                 {t("admin:instance.fields.betaFeatures.help")}
               </span>

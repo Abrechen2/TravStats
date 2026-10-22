@@ -49,7 +49,7 @@ const OLD_SETTINGS: Record<string, string> = {
 /** The same ids opened by an admin, where they differ. */
 const OLD_SETTINGS_ADMIN: Record<string, string> = {
   ...OLD_SETTINGS,
-  lodgingPreferences: "/admin/instance?section=geocoder",
+  lodgingPreferences: "/admin/externalServices?section=geocoder",
   about: "/admin/instance?section=about",
   admin: "/admin",
 };
@@ -120,9 +120,10 @@ describe("old personal settings links", () => {
 
   /** Pages that no longer exist, and the section that took their content. */
   const REMOVED_PAGES: Record<string, { admin: string; user: string }> = {
-    // Its one section, the geocoder, moved to Administration › Instanz.
+    // Its one section, the geocoder, moved to Administration (since
+    // forgejo#321 Externe Dienste, which resolves `geocoder` itself).
     lodging: {
-      admin: "/admin/instance?section=geocoder",
+      admin: "/admin/externalServices?section=geocoder",
       user: "/settings/account?section=lodgingPreferences",
     },
   };
@@ -150,10 +151,13 @@ describe("old personal settings links", () => {
     }
   });
 
-  it("sends a domain page whose domain is off to the default page", () => {
+  // forgejo#321 prototype: the page of a switched-off domain says so and
+  // offers the switch, rather than a bookmark landing on the account page.
+  it("keeps a domain page whose domain is off as an address, without its section", () => {
     const flightOff = (p: { domain?: string }): boolean => p.domain !== "flight";
-    expect(settings({ page: "flight", isReachable: flightOff })).toBe("/settings/account");
-    expect(settings({ section: "homeAirport", isReachable: flightOff })).toBe("/settings/account");
+    expect(settings({ page: "flight", isReachable: flightOff })).toBe("/settings/flight");
+    expect(settings({ section: "homeAirport", isReachable: flightOff })).toBe("/settings/flight");
+    expect(settings({ tab: "flight", isReachable: flightOff })).toBe("/settings/flight");
   });
 
   it("answers an unknown page or section with the default page, never an empty frame", () => {
@@ -230,7 +234,22 @@ describe("old admin links", () => {
 
   it("keeps a section that is not the page's first one", () => {
     expect(admin({ page: "instance", section: "push" })).toBe("/admin/instance?section=push");
-    expect(admin({ section: "geocoder" })).toBe("/admin/instance?section=geocoder");
+  });
+
+  // forgejo#321 prototype: the geocoder is a group of Externe Dienste now.
+  it("lands the old geocoder section on Karten & Ortssuche, with its expert rows", () => {
+    expect(admin({ section: "geocoder" })).toBe(
+      "/admin/externalServices?section=externalServices&expert=1&match=Photon"
+    );
+    expect(admin({ page: "instance", section: "geocoder" })).toBe(
+      "/admin/externalServices?section=externalServices&expert=1&match=Photon"
+    );
+  });
+
+  it("carries the service a search hit named into Externe Dienste", () => {
+    expect(admin({ section: "externalServices", match: "Transitous" })).toBe(
+      "/admin/externalServices?match=Transitous"
+    );
   });
 
   it("answers every section of today's table with its page", () => {
@@ -243,9 +262,14 @@ describe("old admin links", () => {
     }
   });
 
-  it("sends master data of a switched-off domain to the default page", () => {
+  it("keeps master data of a switched-off domain as an address that says so", () => {
     const cruiseOff = (p: { domain?: string }): boolean => p.domain !== "cruise";
-    expect(admin({ page: "shipsMasterData", isReachable: cruiseOff })).toBe("/admin/instance");
-    expect(admin({ tab: "cruise", isReachable: cruiseOff })).toBe("/admin/instance");
+    expect(admin({ page: "shipsMasterData", isReachable: cruiseOff })).toBe(
+      "/admin/shipsMasterData"
+    );
+    expect(admin({ tab: "cruise", isReachable: cruiseOff })).toBe("/admin/shipsMasterData");
+    expect(admin({ section: "portsMasterData", isReachable: cruiseOff })).toBe(
+      "/admin/portsMasterData"
+    );
   });
 });

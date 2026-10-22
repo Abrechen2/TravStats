@@ -1,4 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
+// The services page asks the parser whether a model is there (forgejo#321);
+// not the subject here.
+vi.mock("../../../hooks/useHasLlm", () => ({ useHasLlm: () => null, resetHasLlmCache: () => {} }));
 import { render, screen, within } from "@testing-library/react";
 
 /**
@@ -17,22 +20,25 @@ vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => fals
 vi.mock("../ImmichGlobalSettings", () => ({ default: () => null }));
 vi.mock("../../Settings/OperatorLogosCard", () => ({ default: () => null }));
 
+import { MemoryRouter } from "react-router-dom";
 import GlobalApiKeysManager from "../GlobalApiKeysManager";
 
 describe("GlobalApiKeysManager — a stored key that cannot be decrypted", () => {
   it("names the reason on that provider and on no other", () => {
     render(
-      <GlobalApiKeysManager
-        globalApiKeys={{
-          allowUserFlightApiKeys: true,
-          undecryptableKeys: ["globalAirlabsApiKey"],
-        }}
-        parserSettings={{ allowUserApiKeys: true }}
-        saving={false}
-        onSave={() => {}}
-        onGlobalApiKeysChange={() => {}}
-        onParserSettingsChange={() => {}}
-      />
+      <MemoryRouter>
+        <GlobalApiKeysManager
+          globalApiKeys={{
+            allowUserFlightApiKeys: true,
+            undecryptableKeys: ["globalAirlabsApiKey"],
+          }}
+          parserSettings={{ allowUserApiKeys: true }}
+          saving={false}
+          onSave={() => {}}
+          onGlobalApiKeysChange={() => {}}
+          onParserSettingsChange={() => {}}
+        />
+      </MemoryRouter>
     );
     const airlabs = document.querySelector('[data-service="airlabs"]') as HTMLElement;
     expect(within(airlabs).getByText("admin:globalApiKeys.undecryptable")).toBeInTheDocument();

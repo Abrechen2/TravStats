@@ -16,7 +16,6 @@ import CreateEmailInviteModal from "../../components/Admin/CreateEmailInviteModa
 import InviteSuccessModal from "../../components/Admin/InviteSuccessModal";
 import GlobalApiKeysManager from "../../components/Admin/GlobalApiKeysManager";
 import AboutSection from "../../components/Settings/AboutSection";
-import GeocoderSettingsCard from "../../components/Settings/GeocoderSettingsCard";
 import ParserSettingsTab from "../../components/Admin/ParserSettings";
 import LoggingManager from "../../components/Admin/LoggingManager";
 import SmtpManager from "../../components/Admin/SmtpManager";
@@ -129,7 +128,6 @@ export const ADMIN_SECTION_FRAME: Record<ActiveSection, "own" | "card"> = {
   importMode: "own",
   usageStats: "card",
   about: "own",
-  geocoder: "own",
   federation: "own",
   push: "card",
   users: "card",
@@ -297,10 +295,6 @@ export default function AdminSectionSwitch(props: AdminSectionSwitchProps): JSX.
       // Moved here from personal settings › Darstellung (tester, 2026-10-20);
       // every account still sees the version under the settings menu.
       return <AboutSection />;
-    case "geocoder":
-      // Moved here from personal settings › Unterkünfte, where only an admin
-      // ever saw it: it configures the instance, not the account.
-      return <GeocoderSettingsCard isAdmin />;
     case "federation":
       return <FederationSettings />;
     case "push":

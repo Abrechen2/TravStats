@@ -1,5 +1,8 @@
 vi.mock("../../components/Settings/DawarichStayScanCard", () => ({ default: () => null }));
 import { describe, it, expect, beforeEach, vi } from "vitest";
+// The services page asks the parser whether a model is there (forgejo#321);
+// not the subject here.
+vi.mock("../../hooks/useHasLlm", () => ({ useHasLlm: () => null, resetHasLlmCache: () => {} }));
 // The version line under the settings menu asks the server (forgejo#321).
 vi.mock("@/lib/api/version", () => ({
   versionApi: { get: vi.fn().mockResolvedValue({ version: "2.7.0", buildVersion: "2.7.0" }) },
@@ -322,8 +325,9 @@ describe("SettingsPage — the settings/admin boundary", () => {
   });
 
   // forgejo#321: the geocoder configures the instance and moved to
-  // Administration › Instanz, so an admin's old link follows it there.
-  it("sends an admin on to the geocoder in Administration › Instanz", async () => {
+  // Administration (Externe Dienste › Karten & Ortssuche since the prototype),
+  // so an admin's old link follows it there.
+  it("sends an admin on to the geocoder in Administration", async () => {
     isAdmin = true;
     useSettingsStore.setState({
       betaFeaturesEnabled: false,
@@ -332,7 +336,7 @@ describe("SettingsPage — the settings/admin boundary", () => {
     renderAt(LODGING_DEEP_LINK);
 
     expect(await screen.findByTestId("admin-page")).toHaveTextContent(
-      "/admin/instance?section=geocoder"
+      "/admin/externalServices?section=geocoder"
     );
     expect(screen.queryByText(ADMIN_ONLY_HINT)).toBeNull();
   });

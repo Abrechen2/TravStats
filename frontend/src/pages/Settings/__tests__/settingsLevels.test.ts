@@ -12,7 +12,9 @@ import { pageLevel, sectionsOf, type PageDef } from "../surface";
 const EXPERT_SECTIONS = {
   settings: ["apitokens", "countryCounting", "stayScan", "defaults", "enrichment"],
   admin: [
-    "geocoder",
+    // "geocoder" left this list as a section, not as a level: its two
+    // addresses are expert rows of Externe Dienste › Karten & Ortssuche now
+    // (forgejo#321 prototype), counted by that section's expert rows.
     "federation",
     "push",
     "templateRepo",
@@ -95,7 +97,14 @@ describe("level filtering", () => {
     const standard = shownAt(account, "standard");
     expect(standard.shown).not.toContain("apitokens");
     expect(standard.hiddenExpert).toBe(1);
-    expect(shownAt(instance, "standard").hiddenExpert).toBe(3);
+    expect(shownAt(instance, "standard").hiddenExpert).toBe(2);
+  });
+
+  // forgejo#321 prototype: the note counts settings, not sections.
+  it("counts the settings the hidden expert sections hold", () => {
+    expect(shownAt(findPage("flight")!, "standard").hiddenExpertSettings).toBe(4 + 3);
+    expect(shownAt(instance, "standard").hiddenExpertSettings).toBe(3 + 1);
+    expect(shownAt(instance, "expert").hiddenExpertSettings).toBe(0);
   });
 
   it("hides nothing at the expert level", () => {

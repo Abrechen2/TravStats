@@ -10,8 +10,14 @@ import { Switch } from "../ui/Field";
 import { SettingRows } from "../ui/SettingRow";
 import { useDomainOffered } from "../../hooks/useDomainVisible";
 import { useExpertRows } from "./frame/useExpertRows";
+import { ExpertPill } from "../ui/ExpertPill";
 
 type Switches = { railTransitousEnabled: boolean; railDbRestEnabled: boolean };
+
+/** What the card last read or saved — for the services accordion's badges and header. */
+export interface RailProvidersStatus extends Switches {
+  railRoutingUrl: string | null;
+}
 
 /**
  * Which timetable services the rail train lookup may ask (spec
@@ -22,7 +28,13 @@ type Switches = { railTransitousEnabled: boolean; railDbRestEnabled: boolean };
  * A failed load shows the failure and no switches — never switches in a
  * guessed position whose click would write that guess back.
  */
-export default function RailProvidersCard({ isAdmin }: { isAdmin: boolean }): JSX.Element | null {
+export default function RailProvidersCard({
+  isAdmin,
+  onStatus,
+}: {
+  isAdmin: boolean;
+  onStatus?: (status: RailProvidersStatus) => void;
+}): JSX.Element | null {
   const { t } = useTranslation(["settings"]);
   const offered = useDomainOffered("rail");
   const [switches, setSwitches] = useState<Switches | null>(null);
@@ -34,6 +46,10 @@ export default function RailProvidersCard({ isAdmin }: { isAdmin: boolean }): JS
   // routing engine lives is plumbing. Nothing is hidden when the card is not
   // drawn at all.
   const expert = useExpertRows(isAdmin && offered ? 1 : 0);
+
+  useEffect(() => {
+    if (switches) onStatus?.({ ...switches, railRoutingUrl: routingUrl });
+  }, [switches, routingUrl, onStatus]);
 
   useEffect(() => {
     if (!isAdmin || !offered) return;
@@ -108,7 +124,12 @@ export default function RailProvidersCard({ isAdmin }: { isAdmin: boolean }): JS
               label={t("settings:railProviders.dbRest")}
               sub={t("settings:railProviders.dbRestHint")}
             />
-            {expert && <RailRoutingUrlSetting savedUrl={routingUrl} onSaved={setRoutingUrl} />}
+            {expert && (
+              <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
+                <ExpertPill />
+                <RailRoutingUrlSetting savedUrl={routingUrl} onSaved={setRoutingUrl} />
+              </div>
+            )}
           </>
         )}
         {saveFailed && (

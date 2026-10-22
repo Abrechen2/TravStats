@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 const persisted = vi.hoisted(() => vi.fn());
@@ -34,7 +34,7 @@ describe("SectionFrame and expert rows (forgejo#321)", () => {
     const note = document.querySelector('[data-expert-note="settings"]');
     expect(note).toHaveTextContent("settings:level.moreSettings");
 
-    fireEvent.click(screen.getByRole("button", { name: "settings:level.showExpert" }));
+    fireEvent.click(screen.getByRole("button", { name: "settings:level.reveal" }));
     expect(useSettingsLevelStore.getState().level).toBe("expert");
     expect(persisted).toHaveBeenCalledWith(
       { settingsLevel: "expert" },
@@ -181,5 +181,156 @@ describe("ExpertNote — touch size follows the pointer (forgejo#321, iPad look)
     pointer(false);
     render(<DeepLinkedExpertNote />);
     expect(screen.getByRole("button").style.minHeight).toBe("");
+  });
+});
+
+describe("the surface tabs and breadcrumb (forgejo#321 prototype)", () => {
+  it("offers the Administration tab to an admin, marking the open surface", async () => {
+    const { SurfaceTabs } = await import("../SurfaceTabs");
+    render(
+      <MemoryRouter>
+        <SurfaceTabs surface="admin" isAdmin />
+      </MemoryRouter>
+    );
+    expect(screen.getByRole("link", { name: "settings:frame.surface.settings" })).toHaveAttribute(
+      "href",
+      "/settings"
+    );
+    expect(screen.getByRole("link", { name: "settings:frame.surface.admin" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+  });
+
+  it("gives an account without the permission no Administration tab", async () => {
+    const { SurfaceTabs } = await import("../SurfaceTabs");
+    render(
+      <MemoryRouter>
+        <SurfaceTabs surface="settings" isAdmin={false} />
+      </MemoryRouter>
+    );
+    expect(screen.queryByRole("link", { name: "settings:frame.surface.admin" })).toBeNull();
+    expect(screen.getByRole("link", { name: "settings:frame.surface.settings" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+  });
+
+  it("names the surface and the page above the title", async () => {
+    const { SettingsBreadcrumb } = await import("../SurfaceTabs");
+    render(
+      <MemoryRouter>
+        <SettingsBreadcrumb surface="admin" page="Instanz" />
+      </MemoryRouter>
+    );
+    const crumb = screen.getByRole("navigation", { name: "settings:frame.breadcrumb" });
+    expect(crumb).toHaveTextContent("settings:frame.surface.admin›Instanz");
+  });
+
+  it("draws a domain page's colour as a dot in the menu", () => {
+    render(
+      <MemoryRouter>
+        <SettingsMenuColumn
+          label="Einstellungen"
+          groups={[
+            {
+              id: "g",
+              label: null,
+              entries: [
+                {
+                  id: "flight",
+                  label: "Flug",
+                  to: "/settings/flight",
+                  icon: "plane",
+                  color: "#123456",
+                },
+                { id: "data", label: "Daten", to: "/settings/data", icon: "database" },
+              ],
+            },
+          ]}
+          activeId="flight"
+          hiddenPages={0}
+          search={null}
+        />
+      </MemoryRouter>
+    );
+    const dots = document.querySelectorAll("[data-domain-dot]");
+    expect(dots).toHaveLength(1);
+    expect((dots[0] as HTMLElement).style.background).toBe("rgb(18, 52, 86)");
+  });
+});
+
+describe("expert notes and pills (forgejo#321 prototype)", () => {
+  beforeEach(() => {
+    useSettingsLevelStore.setState({ level: "standard" });
+  });
+  // Unmount first: a level change under a mounted tree re-renders outside act.
+  afterEach(() => {
+    cleanup();
+    useSettingsLevelStore.setState({ level: null });
+  });
+
+  it("draws the section footer dashed, with 'Einblenden' switching to the expert view", () => {
+    render(
+      <SectionFrame anchorId="settings-x" label="X">
+        <TwoExpertRows />
+      </SectionFrame>
+    );
+    const note = document.querySelector('[data-expert-note="settings"]') as HTMLElement;
+    expect(note.style.border).toContain("dashed");
+    fireEvent.click(screen.getByRole("button", { name: "settings:level.reveal" }));
+    expect(useSettingsLevelStore.getState().level).toBe("expert");
+  });
+
+  it("passes every section's hidden rows up to the page, whose note counts them all", async () => {
+    const { PageExpertNote } = await import("../ExpertNote");
+    const { PageHiddenRowsContext, useHiddenRowsCollector } = await import("../useExpertRows");
+    function Page(): JSX.Element {
+      const [hidden, report] = useHiddenRowsCollector();
+      return (
+        <PageHiddenRowsContext.Provider value={report}>
+          {/* 3 settings of a hidden expert section, plus the rows below */}
+          <PageExpertNote count={3 + hidden} />
+          <SectionFrame anchorId="settings-a" label="A">
+            <TwoExpertRows />
+          </SectionFrame>
+          <SectionFrame anchorId="settings-b" label="B">
+            <TwoExpertRows />
+          </SectionFrame>
+        </PageHiddenRowsContext.Provider>
+      );
+    }
+    render(<Page />);
+    const note = document.querySelector('[data-expert-note="page"]') as HTMLElement;
+    expect(note).toHaveTextContent("settings:level.pageMore");
+    // `t` echoes keys here, so read the count the note was asked to say.
+    expect(note).toHaveAttribute("data-count", "7");
+    fireEvent.click(screen.getByRole("button", { name: "settings:level.showInExpert" }));
+    expect(useSettingsLevelStore.getState().level).toBe("expert");
+    // The sections show their rows now and report nothing hidden; the fixed 3
+    // stands for what the page itself would count at the expert level (0).
+    expect(document.querySelector('[data-expert-note="page"]')).toHaveAttribute("data-count", "3");
+  });
+
+  it("marks an expert section's heading and an expert row with the blue pill", async () => {
+    const { SectionCard, SectionTitle } = await import("../../SettingsShared");
+    const { Switch } = await import("../../../ui/Field");
+    render(
+      <SectionFrame anchorId="settings-x" label="X" expert>
+        <SectionCard>
+          <SectionTitle title="X" />
+          <Switch checked={false} onChange={() => {}} label="row" expert />
+          {/* A card nested in the section is a part of it: no second section pill. */}
+          <SectionCard>
+            <SectionTitle title="Nested" />
+          </SectionCard>
+        </SectionCard>
+      </SectionFrame>
+    );
+    const pills = document.querySelectorAll("[data-expert-pill]");
+    expect(pills).toHaveLength(2);
+    expect(pills[0]).toHaveTextContent("settings:level.expert");
+    // The pill is beside the switch's name, not part of it.
+    expect(screen.getByRole("switch", { name: "row" })).toBeInTheDocument();
   });
 });

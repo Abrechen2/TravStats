@@ -1019,7 +1019,7 @@
       "backup": "Backup, export, restore, download, Excel, spreadsheet, JSON, data",
       "import": "Import, CSV, Flightradar24, logbook, upload",
       "notifications": "Notification, email, SMTP, mail server, reminder",
-      "externalServices": "AirLabs, Aviationstack, AeroDataBox, OpenSky, OpenAI, Claude, AI, Immich, photos, Dawarich, location history, routing, satnav, road route, OpenRouteService, GraphHopper, OSRM, Strava",
+      "externalServices": "AirLabs, Aviationstack, AeroDataBox, OpenSky, OpenAI, Claude, AI, Immich, photos, Dawarich, location history, routing, satnav, road route, OpenRouteService, GraphHopper, OSRM, Strava, AI parser, rail, Transitous, db-rest, OpenRailRouting, maps, place search, Photon, Nominatim",
       "homeAirport": "home, residence, home airport, airport, move",
       "defaults": "Default, preset, booking class, seat, airline, carrier",
       "features": "Features, parser, boarding pass, email parser, boarding pass scan",
@@ -1035,8 +1035,6 @@
       "tripRecording": "Recording, positions, app, track, record trip",
       "stayScan": "Stays, detect stays, radius, minimum duration, markets, places as areas, re-evaluate"
     },
-    "expertOnly": "Expert view",
-    "switchAndOpen": "Switch to Expert and open",
     "expertKeywords": {
       "suggestions": "Immich evidence, photos as evidence, place type, AI classification",
       "autoupdate": "Check interval, interval, approval, expiry, only during flight",
@@ -1119,7 +1117,11 @@
     "showExpert": "Show Expert view",
     "deepLinkedExpert": "This section belongs to the Expert view. It is shown because the link names it.",
     "expertPage": "This page belongs to the Expert view.",
-    "revealedRows": "Expert setting: shown here because the link or the search names it."
+    "revealedRows": "Expert setting: shown here because the link or the search names it.",
+    "reveal": "Show",
+    "showInExpert": "Show in Expert",
+    "pageMore_one": "1 more setting on this page is only shown in the Expert view.",
+    "pageMore_other": "{{count}} more settings on this page are only shown in the Expert view."
   },
   "sectionChips": "Sections on this page",
   "pagePicker": "Page",
@@ -1129,12 +1131,14 @@
     "badge": {
       "admin": "Set up by the admin for everyone",
       "own": "Own key",
-      "none": "Not set up"
+      "none": "Not set up",
+      "setUp": "Set up"
     },
     "ownOverrides": "Your own key is used instead of the instance's.",
     "groups": {
       "cross": "All domains",
-      "routing": "Road routing"
+      "routing": "Road routing",
+      "maps": "Maps & place search"
     },
     "dawarichPointer": "Set up under Location history →",
     "what": {
@@ -1151,7 +1155,45 @@
       "graphhopper": "Road routes instead of straight lines",
       "logostream": "High-resolution airline logos",
       "googlePlaces": "Place search and place details",
-      "operatorLogos": "Logos for rail, bus, ferry and rental operators"
+      "operatorLogos": "Logos for rail, bus, ferry and rental operators",
+      "llmParser": "Read bookings from emails and PDFs, with OpenAI, Claude or your own Ollama",
+      "transitous": "Find trains by number and station",
+      "dbRest": "Look up Deutsche Bahn trains",
+      "openRailRouting": "Rail lines instead of straight lines (self-hosted)",
+      "photon": "Place search while typing",
+      "nominatim": "Turn addresses into coordinates"
+    },
+    "count_one": "1 service",
+    "count_other": "{{count}} services",
+    "summaryAdmin": "{{shared}} set up",
+    "legend": {
+      "admin": "runs for every account, nothing for you to do",
+      "own": "your own key is used instead of the instance's",
+      "adminSurface": "applies to every account on this instance",
+      "none": "no account can use the service"
+    },
+    "action": {
+      "useOwn": "Use my own key",
+      "edit": "Edit",
+      "setUp": "Set up"
+    },
+    "names": {
+      "llmParser": "AI parser"
+    },
+    "adminPointer": "Set up in Administration →",
+    "instanceOnly": "Provided by the instance for everyone; only the admin can set it up.",
+    "parserPointer": "Set up under Import & parser →"
+  },
+  "frame": {
+    "surfaces": "Settings areas",
+    "breadcrumb": "Breadcrumb",
+    "surface": {
+      "settings": "Settings",
+      "admin": "Administration"
     }
+  },
+  "domainOff": {
+    "message": "This domain is switched off: {{domain}}. Its settings appear here once you switch it on.",
+    "action": "Go to Domains & colours"
   }
 }

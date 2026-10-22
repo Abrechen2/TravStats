@@ -1207,12 +1207,11 @@
       "importMode": "Import mode, import",
       "usageStats": "Usage statistics, statistics, telemetry, anonymous",
       "about": "Version, licence, data sources, attribution, about, imprint, documentation",
-      "geocoder": "Geocoder, address, coordinates, Nominatim, Photon, place search",
       "federation": "Server connections, federation, other instance, server",
       "push": "Push, notifications, relay, push relay",
       "users": "Users, accounts, lock account, reset two-factor, password",
       "invitations": "Invitation, invite, invitation link, registration",
-      "externalServices": "API keys, global keys, AirLabs, Aviationstack, AeroDataBox, OpenSky, Logostream, Google Places, Immich, routing, OpenRouteService, rail, open data, operator logos, Wikidata, Wikimedia",
+      "externalServices": "API keys, global keys, AirLabs, Aviationstack, AeroDataBox, OpenSky, Logostream, Google Places, Immich, routing, OpenRouteService, rail, open data, operator logos, Wikidata, Wikimedia, Geocoder, address, coordinates, Nominatim, Photon, place search, AI parser, Transitous, db-rest, OpenRailRouting",
       "parsers": "Parser, AI, LLM, Ollama, OpenAI, Claude, read bookings",
       "templateRepo": "Templates, template repository, repository",
       "smtp": "Email, SMTP, mail server, delivery",
@@ -1230,7 +1229,7 @@
     "expertKeywords": {
       "instance": "Home network address, LAN, passkey, rpId, origins, beta switch",
       "parsers": "Ollama URL, pull model, model, quota, exchange-rate source",
-      "externalServices": "allow own keys, permissions"
+      "externalServices": "allow own keys, permissions, Photon address, Nominatim address, OpenRailRouting address"
     }
   },
   "operatorLogos": {

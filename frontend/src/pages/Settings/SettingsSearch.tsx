@@ -30,6 +30,8 @@ export interface SettingsSearchScope {
   /** The page's address: "/settings/account", "/admin/instance". */
   path: string;
   label: string;
+  /** The surface it belongs to — "Einstellungen", "Administration" — for the hit's path. */
+  surfaceLabel?: string;
   sections: readonly SearchableSection[];
 }
 
@@ -51,8 +53,7 @@ function hrefOf(path: string, section: string, expertRows: boolean): string {
  * administration — not only the one on screen, and it searches what the
  * current level hides as well: a person looking for "Abfrageintervall" at the
  * standard level must learn that it exists and where, not that it does not.
- * Such a hit says it belongs to the expert view and offers the switch; its
- * link alone already opens the section, which a named link always shows.
+ * Such a hit says it belongs to the expert view, and opening it switches there.
  */
 export function SettingsSearch({ scopes }: Props): JSX.Element {
   const { t } = useTranslation(["settings", "admin"]);
@@ -69,7 +70,9 @@ export function SettingsSearch({ scopes }: Props): JSX.Element {
         scope.sections.map((section) => ({
           section: section.id,
           label: t(section.labelKey),
-          groupLabel: scope.label,
+          // "Einstellungen › Konto": search covers both surfaces, so a hit says
+          // which one it is on (forgejo#321 prototype).
+          groupLabel: scope.surfaceLabel ? `${scope.surfaceLabel} › ${scope.label}` : scope.label,
           href: hrefOf(scope.path, section.id, false),
           keywords: splitKeywords(t(section.keywordsKey, { defaultValue: "" })),
           expertKeywords: section.expertKeywordsKey
@@ -102,9 +105,15 @@ export function SettingsSearch({ scopes }: Props): JSX.Element {
   );
   const searching = query.trim().length >= 2;
 
-  const open = (hit: SettingsSearchHit, switchLevel: boolean): void => {
-    if (switchLevel) setLevel("expert");
-    navigate(hit.href);
+  /**
+   * Opening an expert hit switches to the expert view, as the prototype does
+   * (forgejo#321): landing on a page that still hides what was found, behind a
+   * second button, sent testers looking for it. The page marks the section the
+   * hit names for a moment (`highlight`), so the eye finds it after the jump.
+   */
+  const open = (hit: SettingsSearchHit): void => {
+    if (hit.expertOnly && level === "standard") setLevel("expert");
+    navigate(hit.href, { state: { highlight: hit.section } });
     setQuery("");
   };
 
@@ -112,7 +121,7 @@ export function SettingsSearch({ scopes }: Props): JSX.Element {
     if (event.key === "Escape") setQuery("");
     if (event.key === "Enter" && hits.length > 0) {
       event.preventDefault();
-      open(hits[0], false);
+      open(hits[0]);
     }
   };
 
@@ -146,12 +155,18 @@ export function SettingsSearch({ scopes }: Props): JSX.Element {
           ) : (
             <ul aria-label={t("settings:search.results")} className="flex flex-col">
               {hits.map((hit) => {
-                const offerSwitch = hit.expertOnly && level === "standard";
                 return (
                   <li key={hit.href} className="flex flex-col">
                     <Link
                       to={hit.href}
-                      onClick={() => setQuery("")}
+                      state={{ highlight: hit.section }}
+                      onClick={(event) => {
+                        // A modified click opens a new tab, as any link does.
+                        if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0)
+                          return;
+                        event.preventDefault();
+                        open(hit);
+                      }}
                       className="flex flex-col"
                       style={{
                         padding: "var(--ts-space-sm) var(--ts-space-md)",
@@ -167,24 +182,9 @@ export function SettingsSearch({ scopes }: Props): JSX.Element {
                       <span className="t-caption" style={{ color: "var(--ts-muted)" }}>
                         {hit.groupLabel}
                         {hit.matchedKeyword ? ` · ${hit.matchedKeyword}` : ""}
-                        {hit.expertOnly ? ` · ${t("settings:search.expertOnly")}` : ""}
+                        {hit.expertOnly ? ` · ${t("settings:level.expert")}` : ""}
                       </span>
                     </Link>
-                    {offerSwitch && (
-                      <button
-                        type="button"
-                        onClick={() => open(hit, true)}
-                        className="t-caption self-start underline"
-                        style={{
-                          color: "var(--ts-accent)",
-                          fontWeight: 600,
-                          padding: "0 var(--ts-space-md) var(--ts-space-sm)",
-                          minHeight: coarse ? "var(--ts-size-touch-min)" : undefined,
-                        }}
-                      >
-                        {t("settings:search.switchAndOpen")}
-                      </button>
-                    )}
                   </li>
                 );
               })}

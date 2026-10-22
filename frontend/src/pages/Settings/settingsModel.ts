@@ -77,7 +77,7 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
       // pairing code has no other place to be minted while the key is closed.
       section("devices", "standard", { gate: "devicePairing", gateYieldsToLink: true }),
       section("notifications"),
-      section("apitokens", "expert"),
+      section("apitokens", "expert", { settings: 1 }),
     ],
   },
   {
@@ -88,7 +88,7 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
       section("display"),
       section("units"),
       section("domains"),
-      section("countryCounting", "expert"),
+      section("countryCounting", "expert", { settings: 1 }),
     ],
   },
   {
@@ -110,7 +110,11 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
     id: "location",
     labelKey: "settings:groups.location",
     icon: "map-pin",
-    sections: [section("dawarich"), section("tripRecording"), section("stayScan", "expert")],
+    sections: [
+      section("dawarich"),
+      section("tripRecording"),
+      section("stayScan", "expert", { settings: 4 }),
+    ],
   },
   {
     // Every domain's programmes in one place (owner, 2026-09-26).
@@ -128,8 +132,8 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
       section("homeAirport"),
       section("autoupdate"),
       section("features"),
-      section("defaults", "expert"),
-      section("enrichment", "expert"),
+      section("defaults", "expert", { settings: 4 }),
+      section("enrichment", "expert", { settings: 3 }),
     ],
   },
   {
@@ -185,11 +189,12 @@ export const SECTION_ALIASES: Readonly<Record<string, SettingsSectionId>> = {
 /**
  * Sections that left personal settings for Administration › Instanz: "Über
  * TravStats" (tester, 2026-10-20) and the geocoder, which configures the
- * instance and was never an account's to change.
+ * instance and was never an account's to change — since forgejo#321 in
+ * Externe Dienste › Karten & Ortssuche; the admin side resolves `geocoder`.
  */
 export const MOVED_TO_ADMIN: Readonly<Record<string, { page: string; section: string }>> = {
   about: { page: "instance", section: "about" },
-  lodgingPreferences: { page: "instance", section: "geocoder" },
+  lodgingPreferences: { page: "externalServices", section: "geocoder" },
 };
 
 /**

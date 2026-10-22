@@ -34,7 +34,6 @@ export type AdminSectionId =
   | "importMode"
   | "usageStats"
   | "about"
-  | "geocoder"
   | "federation"
   | "push"
   | "users"
@@ -67,7 +66,6 @@ export const ADMIN_SECTION_LABEL_KEY: Record<AdminSectionId, string> = {
   importMode: "admin:importMode.title",
   usageStats: "usageStats:admin.title",
   about: "settings:about.title",
-  geocoder: "settings:lodgingPreferences.geocoder.title",
   federation: "admin:federation.title",
   push: "pushRelay:title",
   users: "admin:pages.users",
@@ -88,10 +86,15 @@ export const ADMIN_SECTION_LABEL_KEY: Record<AdminSectionId, string> = {
   portsMasterData: "admin:pages.portsMasterData",
 };
 
-const section = (id: AdminSectionId, level: SettingsLevel = "standard"): AdminSectionDef => ({
+const section = (
+  id: AdminSectionId,
+  level: SettingsLevel = "standard",
+  settings?: number
+): AdminSectionDef => ({
   id,
   labelKey: ADMIN_SECTION_LABEL_KEY[id],
   level,
+  ...(settings === undefined ? {} : { settings }),
 });
 
 /** A page with one section of its own name. */
@@ -119,9 +122,8 @@ export const ADMIN_PAGES: readonly AdminPageDef[] = [
       section("importMode"),
       section("usageStats"),
       section("about"),
-      section("geocoder", "expert"),
-      section("federation", "expert"),
-      section("push", "expert"),
+      section("federation", "expert", 3),
+      section("push", "expert", 1),
     ],
   },
   single("users", "user"),
@@ -131,7 +133,7 @@ export const ADMIN_PAGES: readonly AdminPageDef[] = [
     id: "parsers",
     labelKey: "admin:pages.parsers",
     icon: "sparkles",
-    sections: [section("parsers"), section("templateRepo", "expert")],
+    sections: [section("parsers"), section("templateRepo", "expert", 1)],
   },
   single("smtp", "mail"),
   {
@@ -191,6 +193,18 @@ const OLD_TABS: Readonly<Record<string, AdminPageId>> = {
   cruise: "shipsMasterData",
 };
 
+/**
+ * Sections that became rows of another section, and how a link to the old one
+ * still lands on its content: the geocoder moved from Instanz into Externe
+ * Dienste › Karten & Ortssuche (forgejo#321 prototype), where its addresses
+ * are expert rows of the group.
+ */
+export const ADMIN_SECTION_REDIRECTS: Readonly<
+  Record<string, { section: AdminSectionId; match: string; expert: boolean }>
+> = {
+  geocoder: { section: "externalServices", match: "Photon", expert: true },
+};
+
 /** An admin section id as links write it, aliases and all, made canonical. */
 export function canonicalAdminSection(raw: string | null): string | null {
   return normalizeSectionId(raw);
@@ -221,7 +235,6 @@ export const LAZY_ADMIN_SECTIONS: ReadonlySet<AdminSectionId> = new Set<AdminSec
   "logging",
   "usageStats",
   "push",
-  "geocoder",
   "shipsMasterData",
   "portsMasterData",
   "airlinesMasterData",

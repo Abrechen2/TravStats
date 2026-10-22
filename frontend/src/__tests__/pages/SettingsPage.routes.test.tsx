@@ -1,5 +1,8 @@
 vi.mock("../../components/Settings/DawarichStayScanCard", () => ({ default: () => null }));
 import { describe, it, expect, beforeEach, vi } from "vitest";
+// The services page asks the parser whether a model is there (forgejo#321);
+// not the subject here.
+vi.mock("../../hooks/useHasLlm", () => ({ useHasLlm: () => null, resetHasLlmCache: () => {} }));
 // The version line under the settings menu asks the server (forgejo#321).
 vi.mock("@/lib/api/version", () => ({
   versionApi: { get: vi.fn().mockResolvedValue({ version: "2.7.0", buildVersion: "2.7.0" }) },
@@ -319,10 +322,22 @@ describe("SettingsPage — one page per menu entry", () => {
     expect(await findNamed("region", SECTION_LABEL_KEY.cruisePreferences)).toBeTruthy();
   });
 
-  it("sends a domain group whose domain is switched off back to the default", async () => {
+  // forgejo#321 prototype: the page stays and says the domain is off, with
+  // the way to switch it on — a bookmark no longer lands on the account page.
+  it("says a switched-off domain's page is off and points to Bereiche & Farben", async () => {
     useSettingsStore.setState({ enabledDomains: ["flight"] });
-    renderAt("/settings/cruise");
-    expect(await findNamed("region", SECTION_LABEL_KEY.profile)).toBeTruthy();
+    renderAt("/settings/cruise?section=cruisePreferences");
+    const notice = await screen.findByText("settings:domainOff.message");
+    expect(notice.closest("[data-domain-off]")).toHaveAttribute("data-domain-off", "cruise");
+    expect(screen.getByRole("link", { name: "settings:domainOff.action" })).toHaveAttribute(
+      "href",
+      "/settings/display?section=domains"
+    );
+    expect(sectionShown("cruisePreferences")).toBe(false);
+    expect(sectionShown("profile")).toBe(false);
+    expect(document.querySelector("h1")).toHaveTextContent("settings:tabs.cruise");
+    // Off the menu, as the prototype draws it.
+    expect(document.querySelector('[data-settings-menu] a[href="/settings/cruise"]')).toBeNull();
   });
 
   it("sends an unknown group back to the default rather than rendering an empty frame", async () => {
@@ -356,9 +371,24 @@ describe("SettingsPage — the standard level (forgejo#321)", () => {
     renderAt("/settings/account");
     await findNamed("region", SECTION_LABEL_KEY.profile);
     expect(sectionShown("apitokens")).toBe(false);
-    expect(document.querySelector('[data-expert-note="settings"]')).toHaveTextContent(
-      "settings:level.moreSettings"
-    );
+    // At the top of the page, counting settings (forgejo#321 prototype).
+    const note = document.querySelector('[data-expert-note="page"]');
+    expect(note).toHaveTextContent("settings:level.pageMore");
+    expect(note).toHaveAttribute("data-count", "1");
+  });
+
+  it("counts the flight page's hidden expert settings, not its sections, at the top", async () => {
+    renderAt("/settings/flight");
+    await findNamed("region", SECTION_LABEL_KEY.features);
+    // Defaults (4) and enrichment (3) are expert sections; auto-update hides
+    // no row while it is off (the stub's state).
+    expect(document.querySelector('[data-expert-note="page"]')).toHaveAttribute("data-count", "7");
+  });
+
+  it("puts the blue pill on an expert section a link opened", async () => {
+    renderAt("/settings?section=apitokens");
+    const region = await findNamed("region", SECTION_LABEL_KEY.apitokens);
+    expect(region.querySelector("[data-expert-pill]")).not.toBeNull();
   });
 
   it("shows an expert section a link names, with the note above it", async () => {
@@ -422,5 +452,70 @@ describe("the settings page table", () => {
         expect(section.labelKey).toBe(SECTION_LABEL_KEY[section.id]);
       }
     }
+  });
+});
+
+describe("SettingsPage — the frame of the prototype (forgejo#321)", () => {
+  beforeEach(() => {
+    useSettingsStore.setState({
+      betaFeaturesEnabled: false,
+      enabledDomains: ["flight", "cruise", "lodging"],
+    });
+  });
+
+  it("names the surface in a tab and a breadcrumb, with no Administration tab for a non-admin", async () => {
+    renderAt("/settings/display");
+    await findNamed("region", SECTION_LABEL_KEY.units);
+    expect(screen.getByRole("navigation", { name: "settings:frame.breadcrumb" })).toHaveTextContent(
+      "settings:frame.surface.settings›settings:groups.display"
+    );
+    const tabs = screen.getByRole("navigation", { name: "settings:frame.surfaces" });
+    expect(tabs).toHaveTextContent("settings:frame.surface.settings");
+    expect(tabs).not.toHaveTextContent("settings:frame.surface.admin");
+  });
+
+  it("dots each domain page in the menu with the colour the account chose", async () => {
+    const { useDomainColorStore } = await import("../../store/domainColorStore");
+    useDomainColorStore.setState({
+      colors: { ...useDomainColorStore.getState().colors, flight: "#123456" },
+    });
+    renderAt("/settings/display");
+    await findNamed("region", SECTION_LABEL_KEY.units);
+    const flight = document.querySelector(
+      '[data-settings-menu] a[href="/settings/flight"] [data-domain-dot]'
+    ) as HTMLElement;
+    expect(flight.style.background).toBe("rgb(18, 52, 86)");
+    expect(
+      document.querySelector('[data-settings-menu] a[href="/settings/data"] [data-domain-dot]')
+    ).toBeNull();
+  });
+});
+
+describe("SettingsPage — landing from a search hit (forgejo#321 prototype)", () => {
+  beforeEach(() => {
+    useSettingsStore.setState({
+      betaFeaturesEnabled: false,
+      enabledDomains: ["flight", "cruise", "lodging"],
+    });
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  it("marks and scrolls to the section the hit named, across the canonical redirect", async () => {
+    render(
+      <MemoryRouter
+        initialEntries={[
+          { pathname: "/settings", search: "?section=units", state: { highlight: "units" } },
+        ]}
+      >
+        <Routes>
+          <Route path="/settings" element={<SettingsLegacyRedirect />} />
+          <Route path="/settings/:group" element={<SettingsPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    const units = await findNamed("region", SECTION_LABEL_KEY.units);
+    expect(units).toHaveAttribute("data-highlighted", "true");
+    expect(queryNamed("region", SECTION_LABEL_KEY.display)).not.toHaveAttribute("data-highlighted");
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
   });
 });

@@ -30,8 +30,7 @@ const STRINGS: Record<string, string> = {
   "settings:search.expertKeywords.autoupdate": "Abfrageintervall",
   "settings:defaults.title": "Standard-Werte",
   "settings:search.keywords.defaults": "Buchungsklasse",
-  "settings:search.expertOnly": "Ansicht „Experte“",
-  "settings:search.switchAndOpen": "Zu „Experte“ wechseln und öffnen",
+  "settings:level.expert": "Experte",
 };
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({
@@ -42,7 +41,12 @@ vi.mock("../../hooks/useTranslation", () => ({
 
 function Where(): JSX.Element {
   const location = useLocation();
-  return <p data-testid="where">{location.pathname + location.search}</p>;
+  const highlight = (location.state as { highlight?: string } | null)?.highlight ?? "";
+  return (
+    <p data-testid="where" data-highlight={highlight}>
+      {location.pathname + location.search}
+    </p>
+  );
 }
 
 function renderSearch(): void {
@@ -58,11 +62,13 @@ function renderSearch(): void {
                   {
                     path: "/settings/account",
                     label: "Konto",
+                    surfaceLabel: "Einstellungen",
                     sections: [section("security", "settings:security.title")],
                   },
                   {
                     path: "/settings/flight",
                     label: "Flug",
+                    surfaceLabel: "Einstellungen",
                     sections: [
                       section("homeAirport", "settings:homeAirport.title"),
                       section("autoupdate", "settings:autoUpdate.title"),
@@ -93,7 +99,8 @@ describe("SettingsSearch", () => {
     fireEvent.change(box(), { target: { value: "passw" } });
 
     const hit = screen.getByRole("link", { name: /Sicherheit/ });
-    expect(hit).toHaveTextContent("Konto · Passwort");
+    // Which surface and page, as the prototype says it (forgejo#321).
+    expect(hit).toHaveTextContent("Einstellungen › Konto · Passwort");
     expect(hit).toHaveAttribute("href", "/settings/account?section=security");
   });
 
@@ -112,16 +119,17 @@ describe("SettingsSearch", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Nichts gefunden.");
   });
 
-  // forgejo#321: search always finds what the standard level hides, and says so.
-  it("finds an expert-only section at the standard level and offers to switch", () => {
+  // forgejo#321: search always finds what the standard level hides, says so,
+  // and opening such a hit switches to the expert view (prototype behaviour).
+  it("switches to the expert view when an expert hit is opened, and marks the section", () => {
     useSettingsLevelStore.setState({ level: "standard" });
     renderSearch();
     fireEvent.change(box(), { target: { value: "buchungskl" } });
 
     const hit = screen.getByRole("link", { name: /Standard-Werte/ });
-    expect(hit).toHaveTextContent("Ansicht „Experte“");
+    expect(hit).toHaveTextContent("Einstellungen › Flug · Buchungsklasse · Experte");
     expect(hit).toHaveAttribute("href", "/settings/flight?section=defaults");
-    fireEvent.click(screen.getByRole("button", { name: "Zu „Experte“ wechseln und öffnen" }));
+    fireEvent.click(hit);
 
     expect(useSettingsLevelStore.getState().level).toBe("expert");
     expect(persisted).toHaveBeenCalledWith(
@@ -130,27 +138,29 @@ describe("SettingsSearch", () => {
       expect.any(String)
     );
     expect(screen.getByTestId("where")).toHaveTextContent("/settings/flight?section=defaults");
+    expect(screen.getByTestId("where")).toHaveAttribute("data-highlight", "defaults");
   });
 
-  it("marks a hit on an expert row inside a standard section as expert", () => {
+  it("switches on Enter too, for a hit on an expert row inside a standard section", () => {
     useSettingsLevelStore.setState({ level: "standard" });
     renderSearch();
     fireEvent.change(box(), { target: { value: "abfrage" } });
     const hit = screen.getByRole("link", { name: /Automatische Updates/ });
-    expect(hit).toHaveTextContent("Abfrageintervall · Ansicht „Experte“");
-    // The link names the hidden row, so the page shows it (forgejo#321 review).
+    expect(hit).toHaveTextContent("Abfrageintervall · Experte");
     expect(hit).toHaveAttribute("href", "/settings/flight?section=autoupdate&expert=1");
-    expect(screen.getByRole("button", { name: /wechseln/ })).toBeInTheDocument();
     fireEvent.keyDown(box(), { key: "Enter" });
     expect(screen.getByTestId("where")).toHaveTextContent(
       "/settings/flight?section=autoupdate&expert=1"
     );
+    expect(useSettingsLevelStore.getState().level).toBe("expert");
   });
 
-  it("offers no switch to an account already on the expert level", () => {
+  it("leaves the level alone for an ordinary hit", () => {
+    useSettingsLevelStore.setState({ level: "standard" });
     renderSearch();
-    fireEvent.change(box(), { target: { value: "buchungskl" } });
-    expect(screen.getByRole("link", { name: /Standard-Werte/ })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /wechseln/ })).toBeNull();
+    fireEvent.change(box(), { target: { value: "passw" } });
+    fireEvent.click(screen.getByRole("link", { name: /Sicherheit/ }));
+    expect(useSettingsLevelStore.getState().level).toBe("standard");
+    expect(screen.getByTestId("where")).toHaveAttribute("data-highlight", "security");
   });
 });

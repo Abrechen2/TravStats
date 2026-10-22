@@ -62,7 +62,15 @@ export default function ModuleSection(): JSX.Element {
           const name = t(d.i18nKey);
           const on = enabledDomains.includes(key);
           return (
-            <div key={key} className="ts-setting-row flex items-center" style={{ gap: 12 }}>
+            // A switched-off domain keeps its row, dimmed as a whole — switch,
+            // name and colour alike (forgejo#321 prototype) — and stays operable.
+            <div
+              key={key}
+              data-domain-row={key}
+              data-domain-on={on ? "true" : "false"}
+              className="ts-setting-row flex items-center"
+              style={{ gap: 12, opacity: on ? 1 : 0.5 }}
+            >
               {/* The Switch is a label around its input, so the whole text
                   toggles — the finding UAT B9 asked for — without a second
                   click handler that could fire twice. */}
@@ -94,7 +102,6 @@ export default function ModuleSection(): JSX.Element {
                   height: coarse ? "var(--ts-size-touch-min)" : 32,
                   border: "1px solid var(--ts-border-button)",
                   background: "transparent",
-                  opacity: on ? 1 : 0.6,
                 }}
               />
             </div>

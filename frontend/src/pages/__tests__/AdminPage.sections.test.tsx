@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+// The services page asks the parser whether a model is there (forgejo#321);
+// not the subject here.
+vi.mock("../../hooks/useHasLlm", () => ({ useHasLlm: () => null, resetHasLlmCache: () => {} }));
 // The version line under the settings menu asks the server (forgejo#321).
 vi.mock("@/lib/api/version", () => ({
   versionApi: { get: vi.fn().mockResolvedValue({ version: "2.7.0", buildVersion: "2.7.0" }) },
@@ -146,7 +149,6 @@ describe("AdminPage — one page per menu entry, its sections as anchors", () =>
       "importMode",
       "usageStats",
       "about",
-      "geocoder",
       "federation",
       "push",
     ]) {
@@ -423,5 +425,23 @@ describe("AdminPage — deep-link scroll aligner (Wave C finding C1, follow-up)"
 
     // The budget timer already cancelled the aligner — no new call.
     expect(scrollSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("AdminPage — master data of a switched-off domain (forgejo#321 prototype)", () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  // The suite's settings store enables no domain, so cruise is off here.
+  it("says the domain is off and points to Bereiche & Farben, instead of leaving the page", async () => {
+    renderAdmin("/admin/shipsMasterData");
+    const notice = await within(document.body).findByText("settings:domainOff.message");
+    expect(notice.closest("[data-domain-off]")).toHaveAttribute("data-domain-off", "cruise");
+    expect(document.querySelector("h1")).toHaveTextContent("admin:pages.shipsMasterData");
+    expect(
+      within(document.body).getByRole("link", { name: "settings:domainOff.action" })
+    ).toHaveAttribute("href", "/settings/display?section=domains");
+    expect(document.querySelector("#admin-shipsMasterData")).toBeNull();
   });
 });

@@ -9,6 +9,8 @@ import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useSectionInView } from "../hooks/useSectionInView";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
+import { useDomainColors } from "../hooks/useDomainColors";
+import { resetHasLlmCache } from "../hooks/useHasLlm";
 import { useTranslation } from "../hooks/useTranslation";
 import { useEffectiveSettingsLevel } from "../store/settingsLevelStore";
 import { copyToClipboard } from "../lib/clipboard";
@@ -33,11 +35,17 @@ import { resolveAdminLink } from "./Settings/settingsLinks";
 import { pageLevel, sectionsOf } from "./Settings/surface";
 import { SettingsLayout } from "../components/Settings/frame/SettingsLayout";
 import { SectionFrame } from "../components/Settings/frame/SectionFrame";
-import { ExpertNote, ExpertPageNotice } from "../components/Settings/frame/ExpertNote";
+import { ExpertPageNotice, PageExpertNote } from "../components/Settings/frame/ExpertNote";
 import { VersionLine } from "../components/Settings/frame/VersionLine";
+import {
+  PageHiddenRowsContext,
+  useHiddenRowsCollector,
+} from "../components/Settings/frame/useExpertRows";
+import { DomainOffNotice } from "../components/Settings/frame/DomainOffNotice";
 import type { SettingsMenuGroup } from "../components/Settings/frame/SettingsMenu";
 import { SettingsSearch } from "./Settings/SettingsSearch";
 import { useSearchScopes } from "./Settings/useSearchScopes";
+import { useSearchHighlight } from "./Settings/useSearchHighlight";
 
 import type { SystemInfoData, AdminUser } from "../components/Admin/SystemInfo";
 import type { Invitation } from "../components/Admin/InvitationManagement";
@@ -82,6 +90,7 @@ export default function AdminPage(): JSX.Element {
   const location = useLocation();
   const { isEnabled } = useEnabledDomains();
   const { isFeatureVisible } = useBetaFeatures();
+  const { colorOf } = useDomainColors();
   const level = useEffectiveSettingsLevel();
   const searchScopes = useSearchScopes(true);
   const isReachable = useCallback(
@@ -95,6 +104,7 @@ export default function AdminPage(): JSX.Element {
     tab: searchParams.get("tab"),
     user: searchParams.get("user"),
     expert: searchParams.get("expert") === "1",
+    match: searchParams.get("match"),
     isReachable,
   });
   const target = new URL(canonical, "http://x");
@@ -332,6 +342,9 @@ export default function AdminPage(): JSX.Element {
       // Re-read: the key comes back masked and "is this a cloud endpoint" is
       // the server's answer for what was actually stored.
       setParserSettings(await adminApi.getAdminParserSettings());
+      // The KI-Parser row of Externe Dienste reads the parser's capabilities,
+      // cached per tab; this save may have changed them.
+      resetHasLlmCache();
     } catch (error: unknown) {
       logger.error("Failed to save parser settings:", error);
       const code = apiErrorMachineCode(error);
@@ -380,9 +393,11 @@ export default function AdminPage(): JSX.Element {
 
   // ==================== Sections + Navigation ====================
 
+  // Master data of a switched-off domain: the page says so, the catalogue is not drawn.
+  const domainOff = current?.domain && !isEnabled(current.domain) ? current.domain : null;
   const visible = useMemo(
     () =>
-      current
+      current && !domainOff
         ? sectionsOf(current, {
             // An expert page opened at the standard level — by a link, the
             // search or a bookmark — shows its sections, with a note above,
@@ -392,13 +407,22 @@ export default function AdminPage(): JSX.Element {
             isAdmin: true,
             deepLinked: namedSection,
           })
-        : { shown: [] as ActiveSection[], hiddenExpert: 0, deepLinkedExpert: null },
-    [current, level, isFeatureVisible, namedSection]
+        : {
+            shown: [] as ActiveSection[],
+            hiddenExpert: 0,
+            hiddenExpertSettings: 0,
+            deepLinkedExpert: null,
+          },
+    [current, domainOff, level, isFeatureVisible, namedSection]
   );
 
   // Which section is on screen, for the chips to mark — the scroll-spy
   // Settings uses (see useSectionInView), reused rather than duplicated.
   const inView = useSectionInView(visible.shown, "admin");
+  // Every setting the standard level keeps off this page, for the note at its top.
+  const [hiddenRows, reportHiddenRows] = useHiddenRowsCollector();
+  const highlighted = useSearchHighlight("admin");
+  const hiddenSettings = visible.hiddenExpertSettings + hiddenRows;
 
   // Scrolls a `?section=` deep link into view and keeps correcting that
   // position while the page's lazy sections are still settling — see
@@ -419,7 +443,10 @@ export default function AdminPage(): JSX.Element {
 
   // ==================== Render ====================
 
-  if (!isCanonical || !current) return <Navigate to={canonical} replace />;
+  // The state carries a search hit's highlight across the redirect.
+  if (!isCanonical || !current) {
+    return <Navigate to={canonical} replace state={location.state} />;
+  }
 
   if (loading) {
     return (
@@ -515,6 +542,7 @@ export default function AdminPage(): JSX.Element {
         to: `/admin/${p.id}`,
         icon: p.icon,
         badge: p.id === "users" ? users.length : undefined,
+        color: p.domain ? colorOf(p.domain) : undefined,
       })),
   })).filter((g) => g.entries.length > 0);
   const hiddenPages = reachable.filter((p) => !inMenu(p)).length;
@@ -525,6 +553,8 @@ export default function AdminPage(): JSX.Element {
   return (
     <>
       <SettingsLayout
+        surface="admin"
+        isAdmin
         navLabel={t("admin:title", { defaultValue: "Administration" })}
         groups={groups}
         activePage={current.id}
@@ -539,35 +569,50 @@ export default function AdminPage(): JSX.Element {
         anchorPrefix="admin"
         activeSection={inView}
         onJump={jump}
-        notice={isExpertPage ? <ExpertPageNotice /> : null}
+        notice={
+          domainOff ? (
+            <DomainOffNotice domain={domainOff} />
+          ) : isExpertPage ? (
+            <ExpertPageNotice />
+          ) : (
+            <PageExpertNote count={hiddenSettings} />
+          )
+        }
       >
-        <div ref={mainRef} className="flex min-w-0 flex-col" style={{ gap: "var(--ts-space-xl)" }}>
-          {visible.shown.map((id, index) => {
-            const body = <AdminSectionSwitch section={id} {...switchProps} />;
-            return (
-              <SectionFrame
-                key={id}
-                anchorId={`admin-${id}`}
-                headingAbove={index === 0 ? pageTitle : null}
-                label={labelOf(id)}
-                frame={ADMIN_SECTION_FRAME[id]}
-                deepLinkedExpert={visible.deepLinkedExpert === id && !isExpertPage}
-                revealExpertRows={namedSection === id && searchParams.get("expert") === "1"}
-              >
-                {/* A lazily-fetching section (see LAZY_ADMIN_SECTIONS) mounts its
+        <PageHiddenRowsContext.Provider value={reportHiddenRows}>
+          <div
+            ref={mainRef}
+            className="flex min-w-0 flex-col"
+            style={{ gap: "var(--ts-space-xl)" }}
+          >
+            {visible.shown.map((id, index) => {
+              const body = <AdminSectionSwitch section={id} {...switchProps} />;
+              return (
+                <SectionFrame
+                  key={id}
+                  anchorId={`admin-${id}`}
+                  headingAbove={index === 0 ? pageTitle : null}
+                  label={labelOf(id)}
+                  expert={current.sections.find((s) => s.id === id)?.level === "expert"}
+                  frame={ADMIN_SECTION_FRAME[id]}
+                  deepLinkedExpert={visible.deepLinkedExpert === id && !isExpertPage}
+                  revealExpertRows={namedSection === id && searchParams.get("expert") === "1"}
+                  highlighted={highlighted === id}
+                >
+                  {/* A lazily-fetching section (see LAZY_ADMIN_SECTIONS) mounts its
                     body only once it has been near the viewport. */}
-                {LAZY_ADMIN_SECTIONS.has(id) ? (
-                  <LazyBody id={`admin-${id}-body`} onVisible={sectionOnVisible[id]}>
-                    {body}
-                  </LazyBody>
-                ) : (
-                  body
-                )}
-              </SectionFrame>
-            );
-          })}
-          <ExpertNote count={visible.hiddenExpert} />
-        </div>
+                  {LAZY_ADMIN_SECTIONS.has(id) ? (
+                    <LazyBody id={`admin-${id}-body`} onVisible={sectionOnVisible[id]}>
+                      {body}
+                    </LazyBody>
+                  ) : (
+                    body
+                  )}
+                </SectionFrame>
+              );
+            })}
+          </div>
+        </PageHiddenRowsContext.Provider>
       </SettingsLayout>
       {confirmDialog}
     </>

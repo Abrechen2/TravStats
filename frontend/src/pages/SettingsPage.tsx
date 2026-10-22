@@ -5,17 +5,24 @@ import { useSettingsPage, type AutoSaveState } from "../components/Settings/useS
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { useDomainColors } from "../hooks/useDomainColors";
 import { useSectionInView } from "../hooks/useSectionInView";
 import { useEffectiveSettingsLevel } from "../store/settingsLevelStore";
 import PasswordModal from "../components/Settings/PasswordModal";
 import { SettingsLayout } from "../components/Settings/frame/SettingsLayout";
 import { SectionFrame } from "../components/Settings/frame/SectionFrame";
-import { ExpertNote } from "../components/Settings/frame/ExpertNote";
+import { PageExpertNote } from "../components/Settings/frame/ExpertNote";
 import { VersionLine } from "../components/Settings/frame/VersionLine";
+import {
+  PageHiddenRowsContext,
+  useHiddenRowsCollector,
+} from "../components/Settings/frame/useExpertRows";
+import { DomainOffNotice } from "../components/Settings/frame/DomainOffNotice";
 import type { SettingsMenuGroup } from "../components/Settings/frame/SettingsMenu";
 import SettingsSectionSwitch from "./Settings/SettingsSectionSwitch";
 import { SettingsSearch } from "./Settings/SettingsSearch";
 import { useSearchScopes } from "./Settings/useSearchScopes";
+import { useSearchHighlight } from "./Settings/useSearchHighlight";
 import { resolveSettingsLink } from "./Settings/settingsLinks";
 import { pageLevel, sectionsOf } from "./Settings/surface";
 import {
@@ -66,6 +73,7 @@ export default function SettingsPage(): JSX.Element {
   const page = useSettingsPage();
   const { isFeatureVisible } = useBetaFeatures();
   const { isEnabled } = useEnabledDomains();
+  const { colorOf } = useDomainColors();
   const level = useEffectiveSettingsLevel();
   const named = useNamedSection();
   const isAdmin = page.user?.isAdmin ?? false;
@@ -90,14 +98,21 @@ export default function SettingsPage(): JSX.Element {
     !location.hash &&
     !searchParams.get("tab");
 
+  // The page of a switched-off domain says so instead of drawing its settings.
+  const domainOff = current?.domain && !isEnabled(current.domain) ? current.domain : null;
   const visible = useMemo(
     () =>
-      current
+      current && !domainOff
         ? sectionsOf(current, { level, isGateOpen: isFeatureVisible, isAdmin, deepLinked: named })
-        : { shown: [], hiddenExpert: 0, deepLinkedExpert: null },
-    [current, level, isFeatureVisible, isAdmin, named]
+        : { shown: [], hiddenExpert: 0, hiddenExpertSettings: 0, deepLinkedExpert: null },
+    [current, domainOff, level, isFeatureVisible, isAdmin, named]
   );
   const inView = useSectionInView(visible.shown, "settings");
+  // Every setting the standard level keeps off this page — whole expert
+  // sections and the expert rows of standard ones — for the note at its top.
+  const [hiddenRows, reportHiddenRows] = useHiddenRowsCollector();
+  const highlighted = useSearchHighlight("settings");
+  const hiddenSettings = visible.hiddenExpertSettings + hiddenRows;
   const title = current ? t(current.labelKey) : "";
   useDocumentTitle(
     current
@@ -127,7 +142,10 @@ export default function SettingsPage(): JSX.Element {
     [setSearchParams]
   );
 
-  if (!isCanonical || !current) return <Navigate to={canonical} replace />;
+  // The state carries a search hit's highlight across the redirect.
+  if (!isCanonical || !current) {
+    return <Navigate to={canonical} replace state={location.state} />;
+  }
 
   const reachablePages = SETTINGS_PAGES.filter(isReachable);
   const inMenu = (p: SettingsPageDef): boolean =>
@@ -137,7 +155,13 @@ export default function SettingsPage(): JSX.Element {
     label: g.labelKey ? t(g.labelKey) : null,
     entries: reachablePages
       .filter((p) => g.pages.includes(p.id) && inMenu(p))
-      .map((p) => ({ id: p.id, label: t(p.labelKey), to: `/settings/${p.id}`, icon: p.icon })),
+      .map((p) => ({
+        id: p.id,
+        label: t(p.labelKey),
+        to: `/settings/${p.id}`,
+        icon: p.icon,
+        color: p.domain ? colorOf(p.domain) : undefined,
+      })),
   })).filter((g) => g.entries.length > 0);
   const hiddenPages = reachablePages.filter((p) => !inMenu(p)).length;
 
@@ -150,6 +174,8 @@ export default function SettingsPage(): JSX.Element {
 
   return (
     <SettingsLayout
+      surface="settings"
+      isAdmin={isAdmin}
       navLabel={t("settings:title", { defaultValue: "Einstellungen" })}
       groups={groups}
       activePage={current.id}
@@ -185,7 +211,9 @@ export default function SettingsPage(): JSX.Element {
       activeSection={inView}
       onJump={jump}
       notice={
-        adminOnlyNotice ? (
+        domainOff ? (
+          <DomainOffNotice domain={domainOff} />
+        ) : adminOnlyNotice ? (
           <p
             role="status"
             className="t-caption"
@@ -199,22 +227,27 @@ export default function SettingsPage(): JSX.Element {
           >
             {t("settings:deepLink.adminOnlySection")}
           </p>
-        ) : null
+        ) : (
+          <PageExpertNote count={hiddenSettings} />
+        )
       }
     >
-      {visible.shown.map((id, index) => (
-        <SectionFrame
-          key={id}
-          headingAbove={index === 0 ? title : null}
-          anchorId={`settings-${id}`}
-          label={labelOf(id)}
-          deepLinkedExpert={visible.deepLinkedExpert === id}
-          revealExpertRows={named === id && searchParams.get("expert") === "1"}
-        >
-          <SettingsSectionSwitch section={id} page={page} />
-        </SectionFrame>
-      ))}
-      <ExpertNote count={visible.hiddenExpert} />
+      <PageHiddenRowsContext.Provider value={reportHiddenRows}>
+        {visible.shown.map((id, index) => (
+          <SectionFrame
+            key={id}
+            headingAbove={index === 0 ? title : null}
+            anchorId={`settings-${id}`}
+            label={labelOf(id)}
+            expert={current.sections.find((s) => s.id === id)?.level === "expert"}
+            deepLinkedExpert={visible.deepLinkedExpert === id}
+            revealExpertRows={named === id && searchParams.get("expert") === "1"}
+            highlighted={highlighted === id}
+          >
+            <SettingsSectionSwitch section={id} page={page} />
+          </SectionFrame>
+        ))}
+      </PageHiddenRowsContext.Provider>
 
       {page.showPasswordModal && (
         <PasswordModal
