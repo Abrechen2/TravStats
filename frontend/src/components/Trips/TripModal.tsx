@@ -61,10 +61,11 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
   const [tab, setTab] = useState<ModalTab>("general");
   const [name, setName] = useState(trip?.name ?? "");
   const [description, setDescription] = useState(trip?.description ?? "");
-  // A new trip starts with the account's chosen colour (forgejo#321); without
-  // one, with the palette's first, as it always did.
+  // A new trip starts with the account's chosen colour (forgejo#321). Without
+  // one the colour is automatic: null until a swatch is picked, and then not
+  // sent, so the server gives the next palette colour like every other path.
   const preferredColor = useSuggestionSwitchesStore((s) => s.tripDefaultColor);
-  const [color, setColor] = useState(trip?.color ?? preferredColor ?? PALETTE[0]);
+  const [color, setColor] = useState<string | null>(trip?.color ?? preferredColor);
   const [category, setCategory] = useState<TripCategory | "">(trip?.category ?? "");
   const [startDate, setStartDate] = useState(toDateInput(trip?.startDate ?? null));
   const [endDate, setEndDate] = useState(toDateInput(trip?.endDate ?? null));
@@ -166,7 +167,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
         savedTrip = await tripsApi.update(trip.id, {
           name: name.trim(),
           description: description.trim() || null,
-          color,
+          color: color ?? trip.color,
           category: category === "" ? null : category,
           startDate: fromDateInput(startDate),
           endDate: fromDateInput(endDate),
@@ -181,7 +182,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
         savedTrip = await tripsApi.create({
           name: name.trim(),
           description: description.trim() || undefined,
-          color,
+          color: color ?? undefined,
           category: category === "" ? undefined : category,
           startDate: fromDateInput(startDate) ?? undefined,
           endDate: fromDateInput(endDate) ?? undefined,
@@ -413,7 +414,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
                   placeholder="kultur, food, fotos"
                   className="w-full rounded-lg px-3 py-2 text-sm"
                   style={inputStyle}
-                  accent={color}
+                  accent={color ?? PALETTE[0]}
                 />
               </Field>
             </>
@@ -431,7 +432,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
                 />
                 <CoverPreview
                   url={coverPreview ?? coverUrl}
-                  accent={color}
+                  accent={color ?? PALETTE[0]}
                   title={name || "—"}
                   onClick={() => coverInputRef.current?.click()}
                 />

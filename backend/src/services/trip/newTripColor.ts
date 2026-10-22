@@ -37,9 +37,7 @@ export async function tripColorSequence(
 
 /**
  * The account's chosen colour, or null when it has none (or one the palette
- * no longer holds). For a path whose automatic colour is NOT the rotation —
- * a travel plan's trip has always taken the column default — and which
- * therefore only changes when the account chose a colour.
+ * no longer holds).
  */
 export async function chosenTripColor(userId: string, db: Db = prisma): Promise<string | null> {
   const row = await db.userSettings.findUnique({

@@ -74,6 +74,23 @@ describe("Travel plan transactions against an isolated PostgreSQL database", () 
     expect((await get("/travplan/config")).status).toBe(403);
     expect((await get("/travplan/config", admin)).status).toBe(200);
   });
+  it("gives the plan's new trip the account's chosen colour (forgejo#321)", async () => {
+    await prisma.userSettings.upsert({
+      where: { userId: owner },
+      create: { userId: owner, data: {}, tripDefaultColor: "#f472b6" },
+      update: { tripDefaultColor: "#f472b6" },
+    });
+    try {
+      const p = await create();
+      const trip = await prisma.trip.findUniqueOrThrow({ where: { id: p.tripId } });
+      expect(trip.color).toBe("#f472b6");
+    } finally {
+      await prisma.userSettings.update({
+        where: { userId: owner },
+        data: { tripDefaultColor: null },
+      });
+    }
+  });
   it("hides a stranger’s plan on both reads and writes", async () => {
     const p = await create();
     expect((await get("/trips/" + p.tripId + "/plan", other)).status).toBe(404);

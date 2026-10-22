@@ -27,8 +27,8 @@ const saved = { id: "t1", name: "Neu", color: TRIP_COLORS[0], tags: [], companio
 
 /**
  * "Reisefarbe für neue Reisen" (forgejo#321): the "new trip" form starts with
- * the account's chosen colour; without one, with the palette's first, as it
- * always did. An existing trip keeps its own.
+ * the account's chosen colour; while it is automatic the form sends none and
+ * the server rotates through the palette, as for every other new trip.
  */
 describe("TripModal — the colour a new trip starts with", () => {
   beforeEach(() => {
@@ -51,10 +51,10 @@ describe("TripModal — the colour a new trip starts with", () => {
     expect(mocks.create.mock.calls[0][0].color).toBe(TRIP_COLORS[6]);
   });
 
-  it("sends the palette's first while the colour is automatic", async () => {
+  it("sends no colour while it is automatic, so the server rotates", async () => {
     useSuggestionSwitchesStore.setState({ tripDefaultColor: null });
     render(<TripModal trip={null} onClose={vi.fn()} onSaved={vi.fn()} />);
     await createWithName();
-    expect(mocks.create.mock.calls[0][0].color).toBe(TRIP_COLORS[0]);
+    expect(mocks.create.mock.calls[0][0].color).toBeUndefined();
   });
 });

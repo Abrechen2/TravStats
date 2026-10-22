@@ -61,7 +61,9 @@ describe("settings prototype rows", () => {
     expect(s.liveTracking).toBe(false);
     // A missing or malformed answer keeps what the store holds.
     useSuggestionSwitchesStore.getState().noteRemote({ tripDefaults: { color: 7 } });
-    expect(useSuggestionSwitchesStore.getState().tripDefaultColor).toBe(TRIP_COLORS[2]);
+    expect(useSuggestionSwitchesStore.getState().tripDefaultColor).toBe(TRIP_COLORS[2]); // Null is an answer: the next account's "automatic" must not keep this one's colour.
+    useSuggestionSwitchesStore.getState().noteRemote({ tripDefaults: { color: null } });
+    expect(useSuggestionSwitchesStore.getState().tripDefaultColor).toBeNull();
   });
 
   it("trip colour: offers Automatisch and the palette, and saves the pick", async () => {

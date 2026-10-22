@@ -81,6 +81,9 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
       liveTracking?: unknown;
     } | null;
     const stay = body?.staySuggestions;
+    // `null` is an answer (automatic), not an absence: only `undefined` keeps
+    // the old value, or a previous account's colour would survive a login.
+    const color = colorIn(body?.tripDefaults);
     set({
       trips: enabledIn(body?.tripSuggestions) ?? get().trips,
       stays: enabledIn(stay) ?? get().stays,
@@ -88,7 +91,7 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
       stayLlmPlaceClassification:
         booleanIn(stay, "llmPlaceClassification") ?? get().stayLlmPlaceClassification,
       tripRecording: enabledIn(body?.tripRecording) ?? get().tripRecording,
-      tripDefaultColor: colorIn(body?.tripDefaults) ?? get().tripDefaultColor,
+      tripDefaultColor: color === undefined ? get().tripDefaultColor : color,
       cruiseSeaDaysCounted: booleanIn(body?.cruiseSeaDays, "counted") ?? get().cruiseSeaDaysCounted,
       liveTracking: enabledIn(body?.liveTracking) ?? get().liveTracking,
     });
