@@ -17,9 +17,15 @@
  *
  * The reader's edition first, English as the fallback. A miss is remembered
  * for a day; an outage throws `OpenDataUnavailableError` and is not cached.
+ *
+ * Up to four requests run one after another, each allowed 8 s — 32 s, while
+ * the web client gives up after 10 s and would call a lookup that later
+ * succeeded "unavailable". So the whole lookup has ONE deadline that fits
+ * inside the client's timeout, every request gets only what is left of it, and
+ * overrunning it throws `StopLookupDeadlineError` — its own reason.
  */
 import { z } from "zod";
-import { fetchOpenData, OpenDataUnavailableError } from "../openData/http";
+import { fetchOpenData, OPEN_DATA_TIMEOUT_MS, OpenDataUnavailableError } from "../openData/http";
 import { summaryOf, type WikiLanguage, type WikipediaSummary } from "../openData/wikipedia";
 import type { StopDomain } from "./ownership";
 
@@ -30,6 +36,22 @@ const MAX_ENTRIES = 1_000;
 const MAX_EXTRACT_CHARS = 360;
 /** Words a station article's title may carry beyond the station's own name ("Bahnhof X Süd"). */
 const MAX_EXTRA_WORDS = 1;
+/**
+ * The whole lookup, all requests together. The web client's request timeout
+ * is 10 s (`frontend/src/lib/api/client.ts`); the route's own reads and the
+ * network need the rest.
+ */
+export const STOP_LOOKUP_DEADLINE_MS = 8_000;
+/** A request that failed this close to the deadline was cut off by it. */
+const DEADLINE_SLACK_MS = 50;
+
+/** The lookup ran out of its overall time — Wikipedia was slow, not absent. */
+export class StopLookupDeadlineError extends OpenDataUnavailableError {
+  constructor() {
+    super("wikipedia");
+    this.name = "StopLookupDeadlineError";
+  }
+}
 
 /** Words that name the kind of place, not WHICH one — never a distinctive match. */
 const GENERIC = new Set([
@@ -205,7 +227,12 @@ export function __clearStopWikipediaCache(): void {
   cache.clear();
 }
 
-async function nearbyTitles(lang: WikiLanguage, lat: number, lon: number): Promise<string[]> {
+async function nearbyTitles(
+  lang: WikiLanguage,
+  lat: number,
+  lon: number,
+  timeoutMs: number
+): Promise<string[]> {
   const params = new URLSearchParams({
     action: "query",
     list: "geosearch",
@@ -216,7 +243,8 @@ async function nearbyTitles(lang: WikiLanguage, lat: number, lon: number): Promi
   });
   const outcome = await fetchOpenData(
     "wikipedia",
-    `https://${lang}.wikipedia.org/w/api.php?${params.toString()}`
+    `https://${lang}.wikipedia.org/w/api.php?${params.toString()}`,
+    { timeoutMs }
   );
   if (!outcome.ok) throw new OpenDataUnavailableError("wikipedia");
   const parsed = geoSchema.safeParse(outcome.body);
@@ -230,17 +258,33 @@ export async function stopWikipediaSummary(
   name: string,
   lat: number,
   lon: number,
-  lang: WikiLanguage
+  lang: WikiLanguage,
+  opts: { deadlineMs?: number } = {}
 ): Promise<WikipediaSummary | null> {
   const key = `${domain}|${lat.toFixed(4)}|${lon.toFixed(4)}|${fold(name)}|${lang}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.value;
 
+  const deadline = Date.now() + (opts.deadlineMs ?? STOP_LOOKUP_DEADLINE_MS);
+  /** One request, given what is left of the deadline (never more than its own 8 s). */
+  const step = async <T>(ask: (timeoutMs: number) => Promise<T>): Promise<T> => {
+    const left = deadline - Date.now();
+    if (left <= 0) throw new StopLookupDeadlineError();
+    try {
+      return await ask(Math.min(OPEN_DATA_TIMEOUT_MS, left));
+    } catch (error) {
+      if (error instanceof OpenDataUnavailableError && deadline - Date.now() <= DEADLINE_SLACK_MS)
+        throw new StopLookupDeadlineError();
+      throw error;
+    }
+  };
+
   const editions: WikiLanguage[] = lang === "en" ? ["en"] : [lang, "en"];
   for (const edition of editions) {
-    const title = matchStopTitle(domain, name, await nearbyTitles(edition, lat, lon));
+    const titles = await step((timeoutMs) => nearbyTitles(edition, lat, lon, timeoutMs));
+    const title = matchStopTitle(domain, name, titles);
     if (!title) continue;
-    const summary = await summaryOf(edition, title);
+    const summary = await step((timeoutMs) => summaryOf(edition, title, { timeoutMs }));
     if (summary) return remember(key, { ...summary, extract: firstSentences(summary.extract) });
   }
   return remember(key, null);

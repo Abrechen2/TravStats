@@ -4,7 +4,10 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { answerSubjectImage } from "../../services/mapDetails/subjectImageService";
-import { stopWikipediaSummary } from "../../services/mapDetails/stopWikipedia";
+import {
+  StopLookupDeadlineError,
+  stopWikipediaSummary,
+} from "../../services/mapDetails/stopWikipedia";
 import { OpenDataUnavailableError } from "../../services/openData/http";
 
 /**
@@ -193,14 +196,17 @@ describe("/api/v1/map-details", () => {
       wiki.mockResolvedValue(SUMMARY);
       const res = await request(app).get(KIEL).set("Cookie", anna);
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ success: true, data: { summary: SUMMARY, unavailable: false } });
+      expect(res.body).toEqual({
+        success: true,
+        data: { summary: SUMMARY, unavailable: false, reason: null },
+      });
       expect(res.headers["cache-control"]).toMatch(/^private/);
       expect(wiki).toHaveBeenCalledWith("ferry", "Kiel", 54.3236, 10.1352, "de");
     });
 
     it("asks nothing for a point that is not one of the caller's stations", async () => {
       const res = await request(app).get(KIEL).set("Cookie", ben);
-      expect(res.body.data).toEqual({ summary: null, unavailable: false });
+      expect(res.body.data).toEqual({ summary: null, unavailable: false, reason: null });
       expect(wiki).not.toHaveBeenCalled();
     });
 
@@ -208,7 +214,15 @@ describe("/api/v1/map-details", () => {
       wiki.mockRejectedValue(new OpenDataUnavailableError("wikipedia"));
       const res = await request(app).get(KIEL).set("Cookie", anna);
       expect(res.status).toBe(200);
-      expect(res.body.data).toEqual({ summary: null, unavailable: true });
+      expect(res.body.data).toEqual({ summary: null, unavailable: true, reason: "unavailable" });
+    });
+
+    it("names a lookup that ran out of its overall time as its own reason", async () => {
+      wiki.mockRejectedValue(new StopLookupDeadlineError());
+      const res = await request(app).get(KIEL).set("Cookie", anna);
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual({ summary: null, unavailable: true, reason: "deadline" });
+      expect(res.headers["cache-control"]).toBe("private, no-store");
     });
 
     it("answers 409 while the instance's open-data switch is off", async () => {

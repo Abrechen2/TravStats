@@ -94,10 +94,17 @@ export function getStopInfo(
   const known = stops.get(key);
   if (known) return known;
   const task = api
-    .get<{ success: true; data: { summary: StopSummary | null; unavailable: boolean } }>(
-      "/map-details/stop",
-      { params: { domain, name: stop.name, lat: stop.lat, lon: stop.lon, lang } }
-    )
+    .get<{
+      success: true;
+      data: {
+        summary: StopSummary | null;
+        unavailable: boolean;
+        /** `deadline`: the server's whole lookup (8 s, inside our 10 s) ran out. */
+        reason: "unavailable" | "deadline" | null;
+      };
+    }>("/map-details/stop", {
+      params: { domain, name: stop.name, lat: stop.lat, lon: stop.lon, lang },
+    })
     .then(({ data }): StopInfo => {
       if (data.data.unavailable) {
         stops.delete(key);

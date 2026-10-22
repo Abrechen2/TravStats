@@ -2,6 +2,8 @@ import {
   __clearStopWikipediaCache,
   firstSentences,
   matchStopTitle,
+  STOP_LOOKUP_DEADLINE_MS,
+  StopLookupDeadlineError,
   stopWikipediaSummary,
 } from "../stopWikipedia";
 import { OpenDataUnavailableError } from "../../openData/http";
@@ -146,6 +148,53 @@ describe("stopWikipediaSummary", () => {
     await expect(stopWikipediaSummary("ferry", "Kiel", 54.3, 10.1, "en")).rejects.toThrow(
       OpenDataUnavailableError
     );
+  });
+
+  /** Every request answers after `delayMs`, unless its own timeout aborts it first. */
+  function useSlow(delayMs: number, route: (url: string) => Response): void {
+    fetchMock = jest.fn(
+      (input: string | URL, init?: RequestInit) =>
+        new Promise<Response>((resolve, reject) => {
+          const timer = setTimeout(() => resolve(route(String(input))), delayMs);
+          init?.signal?.addEventListener("abort", () => {
+            clearTimeout(timer);
+            reject(init.signal?.reason);
+          });
+        })
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+  }
+  // DE has no station article nearby; EN has: geosearch DE, geosearch EN, summary EN.
+  const deMissEnHit = (url: string): Response =>
+    url.includes("de.wikipedia")
+      ? json({ query: { geosearch: [{ title: "Hamburg Museum" }] } })
+      : url.includes("geosearch")
+        ? json({ query: { geosearch: [{ title: "Hamburg Hauptbahnhof" }] } })
+        : json(summary("Hamburg Hauptbahnhof", "Eins."));
+
+  it("fits the whole lookup inside the web client's 10 s request timeout", () => {
+    // frontend/src/lib/api/client.ts — API_TIMEOUTS.DEFAULT; the route's own DB
+    // reads and the network need the rest.
+    expect(STOP_LOOKUP_DEADLINE_MS).toBeLessThanOrEqual(8_000);
+  });
+
+  it("stops at the overall deadline and says so, instead of outliving the client", async () => {
+    useSlow(150, deMissEnHit);
+    const started = Date.now();
+    await expect(
+      stopWikipediaSummary("rail", "Hamburg Hbf", 53.5, 10, "de", { deadlineMs: 350 })
+    ).rejects.toThrow(StopLookupDeadlineError);
+    expect(Date.now() - started).toBeLessThan(450);
+    // A deadline is an outage, not a miss: the next view asks again.
+    useSlow(10, deMissEnHit);
+    expect(await stopWikipediaSummary("rail", "Hamburg Hbf", 53.5, 10, "de")).not.toBeNull();
+  });
+
+  it("answers a slow but successful lookup that finishes within the deadline", async () => {
+    useSlow(100, deMissEnHit);
+    expect(
+      await stopWikipediaSummary("rail", "Hamburg Hbf", 53.5, 10, "de", { deadlineMs: 1_000 })
+    ).toMatchObject({ title: "Hamburg Hauptbahnhof", lang: "en" });
   });
 
   it("treats a malformed geosearch answer as an outage", async () => {

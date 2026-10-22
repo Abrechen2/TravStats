@@ -15,7 +15,10 @@ import {
   answerSubjectImage,
   type SubjectImageAnswer,
 } from "../services/mapDetails/subjectImageService";
-import { stopWikipediaSummary } from "../services/mapDetails/stopWikipedia";
+import {
+  StopLookupDeadlineError,
+  stopWikipediaSummary,
+} from "../services/mapDetails/stopWikipedia";
 
 /**
  * Rich map details (2026-10-21): a picture of what a journey travelled in, for
@@ -114,7 +117,8 @@ const stopQuery = z.object({
  * opening of the article about one of the caller's own stations. 409
  * `openDataDisabled` while the instance's open-data switch is off;
  * `unavailable: true` when Wikipedia did not answer — "could not ask" is not
- * "no article".
+ * "no article" — with `reason` `deadline` when the lookup ran out of its
+ * overall time (Wikipedia slow, not down) and `unavailable` otherwise.
  */
 router.get(
   "/stop",
@@ -126,17 +130,20 @@ router.get(
       const { domain, name, lat, lon, lang } = parsed.data;
       await assertOpenDataEnabled();
       if (!(await ownsStop(req.userId!, domain, lat, lon))) {
-        res.json({ success: true, data: { summary: null, unavailable: false } });
+        res.json({ success: true, data: { summary: null, unavailable: false, reason: null } });
         return;
       }
       try {
         const summary = await stopWikipediaSummary(domain, name, lat, lon, lang);
         res
           .setHeader("Cache-Control", "private, max-age=3600")
-          .json({ success: true, data: { summary, unavailable: false } });
+          .json({ success: true, data: { summary, unavailable: false, reason: null } });
       } catch (error) {
         if (!(error instanceof OpenDataUnavailableError)) throw error;
-        res.json({ success: true, data: { summary: null, unavailable: true } });
+        const reason = error instanceof StopLookupDeadlineError ? "deadline" : "unavailable";
+        res
+          .setHeader("Cache-Control", "private, no-store")
+          .json({ success: true, data: { summary: null, unavailable: true, reason } });
       }
     } catch (error) {
       if (error instanceof OpenDataDisabledError) {
