@@ -222,5 +222,13 @@
     "failed": "The sea route could not be saved. Please try again.",
     "distance": "Sea route (estimate)",
     "autoFailed": "Saved — the sea route could not be calculated. Try again on the crossing's page."
+  },
+  "map": {
+    "title": "Route",
+    "line": {
+      "seaRoute": "Schematic sea route between the ports — not a recorded ship track.",
+      "drawn": "The crossing's stored line.",
+      "straight": "Straight line between the ports — not the way the ship sailed."
+    }
   }
 }

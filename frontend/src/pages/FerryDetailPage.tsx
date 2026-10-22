@@ -18,6 +18,8 @@ import DocumentsSection from "../components/documents/DocumentsSection";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { FerryLivePosition } from "../components/ferry/FerryLivePosition";
 import { FerryRoadtripLink } from "../components/ferry/FerryRoadtripLink";
+import { FerryRouteMap } from "../components/ferry/FerryRouteMap";
+import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import { useToursVisible } from "../hooks/useToursVisible";
 import { FerryFormModal } from "../components/ferry/FerryFormModal";
 import { useTranslation } from "../hooks/useTranslation";
@@ -238,6 +240,11 @@ export default function FerryDetailPage() {
               <TripPill trip={ride.trip} />
             </DetailSection>
           )}
+          {/* The trip's photos taken on board, as a train ride shows them. */}
+          {ride.tripId && <TripPhotoWindowStrip entry="ferry" id={ride.id} />}
+          <DetailSection title={t("ferry:map.title")}>
+            <FerryRouteMap ride={ride} />
+          </DetailSection>
           {ride.companions.length > 0 && (
             <DetailSection title={t("ferry:companionNames")}>
               <PeopleList names={ride.companions} />

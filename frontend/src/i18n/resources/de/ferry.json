@@ -222,5 +222,13 @@
     "failed": "Seeweg konnte nicht gespeichert werden. Bitte erneut versuchen.",
     "distance": "Seeweg (Schätzung)",
     "autoFailed": "Gespeichert – der Seeweg konnte nicht berechnet werden. Auf der Seite der Überfahrt erneut versuchen."
+  },
+  "map": {
+    "title": "Strecke",
+    "line": {
+      "seaRoute": "Schematisch berechneter Seeweg zwischen den Häfen – kein aufgezeichneter Schiffstrack.",
+      "drawn": "Gespeicherte Linie der Überfahrt.",
+      "straight": "Luftlinie zwischen den Häfen – nicht der Weg des Schiffs."
+    }
   }
 }
