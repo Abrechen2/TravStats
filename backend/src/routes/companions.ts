@@ -1,11 +1,23 @@
 import { Router, Response, NextFunction } from "express";
+import { z } from "zod";
 
 import { prisma } from "../db";
-import { authenticate, AuthRequest } from "../middleware/auth";
+import { authenticate, AuthRequest, requireWriteScope } from "../middleware/auth";
+import { rejectDemoWrites } from "../middleware/demoGuard";
+import { settingsLimiter, statsLimiter } from "../middleware/rateLimit";
+import {
+  deleteCompanion,
+  deleteUnusedCompanions,
+  listManagedCompanions,
+  mergeCompanions,
+  mergePreview,
+  renameCompanion,
+} from "../services/companions/manageCompanions";
+import { companionTogetherStats } from "../services/companions/companionStats";
 
 const router = Router();
 
-// No rate limiter: one route, one grouped read of the caller's own companion
+// No rate limiter on the list: one grouped read of the caller's own companion
 // links. It feeds a picker that opens on nearly every travel form, so a
 // per-user cap here would fire during ordinary data entry and protect nothing
 // — the query is bounded by how many people the caller has travelled with.
@@ -58,5 +70,96 @@ router.get("/", authenticate, async (req: AuthRequest, res: Response, next: Next
     next(error);
   }
 });
+
+/**
+ * Settings → Mitreisende and the overview's "Mit wem unterwegs". Bare, like
+ * the list above (ADR 0001). The list and the statistics each fold every
+ * shared entry of the caller's — the stats bucket's cost — and the writes are
+ * a settings page's: rare, by hand, in the settings bucket.
+ */
+const idSchema = z.string().min(1).max(100);
+export const companionRenameSchema = z.object({ name: z.string().trim().min(1).max(100) }).strict();
+export const companionMergeSchema = z.object({ into: idSchema }).strict();
+const mergePreviewQuery = z.object({ into: idSchema });
+
+type Handler = (req: AuthRequest, res: Response) => Promise<void>;
+const handle =
+  (fn: Handler) =>
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      await fn(req, res);
+    } catch (error) {
+      next(error);
+    }
+  };
+const write = [authenticate, requireWriteScope, rejectDemoWrites, settingsLimiter];
+
+router.get(
+  "/manage",
+  authenticate,
+  statsLimiter,
+  handle(async (req, res) => {
+    res.json(await listManagedCompanions(req.userId!));
+  })
+);
+
+router.get(
+  "/together",
+  authenticate,
+  statsLimiter,
+  handle(async (req, res) => {
+    res.json(await companionTogetherStats(req.userId!));
+  })
+);
+
+// Before `/:id`, which would otherwise read "unused" as an id.
+router.post(
+  "/delete-unused",
+  ...write,
+  handle(async (req, res) => {
+    res.json(await deleteUnusedCompanions(req.userId!));
+  })
+);
+
+router.patch(
+  "/:id",
+  ...write,
+  handle(async (req, res) => {
+    const id = idSchema.parse(req.params.id);
+    const { name } = companionRenameSchema.parse(req.body ?? {});
+    res.json({ companion: await renameCompanion(req.userId!, id, name) });
+  })
+);
+
+router.get(
+  "/:id/merge-preview",
+  authenticate,
+  settingsLimiter,
+  handle(async (req, res) => {
+    const id = idSchema.parse(req.params.id);
+    const { into } = mergePreviewQuery.parse(req.query);
+    res.json({ preview: await mergePreview(req.userId!, id, into) });
+  })
+);
+
+router.post(
+  "/:id/merge",
+  ...write,
+  handle(async (req, res) => {
+    const id = idSchema.parse(req.params.id);
+    const { into } = companionMergeSchema.parse(req.body ?? {});
+    res.json({ merged: await mergeCompanions(req.userId!, id, into) });
+  })
+);
+
+router.delete(
+  "/:id",
+  ...write,
+  handle(async (req, res) => {
+    const id = idSchema.parse(req.params.id);
+    await deleteCompanion(req.userId!, id);
+    res.status(204).end();
+  })
+);
 
 export default router;

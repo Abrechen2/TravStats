@@ -187,6 +187,43 @@ export function placeVisitAt(v: {
   return v.visitedAt;
 }
 
+/**
+ * Flights as `buildPassport` reads them — exported for the companion figures
+ * (`services/companions/companionCountries.ts`), which fold a SUBSET of them.
+ *
+ * The calendar day each flight belongs to, at the DEPARTURE airport's clock.
+ * The tiers ask whether a night passed between landing somewhere and taking
+ * off again, and that question only has an answer on a local clock: a 23:30
+ * arrival in Tokyo is already the next UTC day, so a UTC comparison would
+ * report an overnight for a two-hour connection. `withDepartureClock` is the
+ * same resolution every other "when did I fly" figure on this server goes
+ * through — deriving the timezone a second time here is exactly the drift
+ * #42 is about. The ICAO columns are selected only to feed it.
+ */
+/**
+ * The ARRIVAL clock as well, which `withDepartureClock` deliberately does not
+ * carry. A ground time is landing-here to taking-off-again, so it needs both
+ * ends resolved to real instants (spec §3.4b), which is what `realInstant`
+ * above does.
+ *
+ * A second `buildTzMap` pass rather than a rewrite of `withDepartureClock`:
+ * both read the same `getCachedAirports` cache, and widening that helper would
+ * touch every "when did I fly" figure on the server for one new column here.
+ */
+export async function passportFlightsOf<T extends PassportLoaderFlight>(flights: T[]) {
+  const [dated, tzMap] = await Promise.all([withDepartureClock(flights), buildTzMap(flights)]);
+  return dated.map((f) => ({
+    ...f,
+    localDay: departureDayOf(f),
+    departureInstant: realInstant(f.departureTime, f.depTimeSemantics, f.depTimezone),
+    arrivalInstant: realInstant(
+      f.arrivalTime,
+      f.arrTimeSemantics as FlightTimeSemantics,
+      flightEndZone(f.arrTimezone, tzMap, f.arrIata, f.arrIcao)
+    ),
+  }));
+}
+
 export async function loadPassport(
   userId: string,
   prefetchedFlights?: PassportLoaderFlight[],
@@ -215,45 +252,12 @@ export async function loadPassport(
       select: PASSPORT_FLIGHT_SELECT,
     }));
 
-  /**
-   * The calendar day each flight belongs to, at the DEPARTURE airport's clock.
-   *
-   * The tiers ask whether a night passed between landing somewhere and taking
-   * off again, and that question only has an answer on a local clock: a 23:30
-   * arrival in Tokyo is already the next UTC day, so a UTC comparison would
-   * report an overnight for a two-hour connection. `withDepartureClock` is the
-   * same resolution every other "when did I fly" figure on this server goes
-   * through — deriving the timezone a second time here is exactly the drift
-   * #42 is about. The ICAO columns are selected only to feed it.
-   */
-  /**
-   * The ARRIVAL clock as well, which `withDepartureClock` deliberately does not
-   * carry. A ground time is landing-here to taking-off-again, so it needs both
-   * ends resolved to real instants (spec §3.4b), which is what `realInstant`
-   * above does.
-   *
-   * A second `buildTzMap` pass rather than a rewrite of `withDepartureClock`:
-   * both read the same `getCachedAirports` cache, and widening that helper would
-   * touch every "when did I fly" figure on the server for one new column here.
-   */
-  const [dated, tzMap, profile] = await Promise.all([
-    withDepartureClock(flights),
-    buildTzMap(flights),
+  const [passportFlights, profile] = await Promise.all([
+    passportFlightsOf(flights),
     // "This year" for `isNew` is the user's own year (ADR 0002 D4), now that
     // every stamp is dated on a local day rather than a UTC one (forgejo#273).
     profileZoneOf(userId),
   ]);
-
-  const passportFlights = dated.map((f) => ({
-    ...f,
-    localDay: departureDayOf(f),
-    departureInstant: realInstant(f.departureTime, f.depTimeSemantics, f.depTimezone),
-    arrivalInstant: realInstant(
-      f.arrivalTime,
-      f.arrTimeSemantics as FlightTimeSemantics,
-      flightEndZone(f.arrTimezone, tzMap, f.arrIata, f.arrIcao)
-    ),
-  }));
 
   /**
    * Evidence beyond landings — Forgejo #42, owner's decision 2026-08-31.

@@ -1,5 +1,6 @@
 import type { RemoteShareApiErrorCode } from "./remoteShareErrorCodes";
 import type { FlightTrackFileApiErrorCode } from "./flightTrackFileErrorCodes";
+import type { CompanionApiErrorCode } from "./companionErrorCodes";
 import { Request, Response, NextFunction } from "express";
 import { MulterError } from "multer";
 import { ZodError } from "zod";
@@ -242,12 +243,11 @@ export type ApiErrorCode =
   /** The HEIC/HEIF converter failed for a reason that is not the file's — a
    *  timeout or a crashed worker (503). Nothing was stored; retry later. */
   | "PHOTO_CONVERSION_UNAVAILABLE"
-  /** Tour track upload: the file is over the size limit. */
-  | "TRACK_FILE_TOO_LARGE"
+  | "TRACK_FILE_TOO_LARGE" // tour track upload: the file is over the size limit
   | "TRACK_FILE_UNREADABLE" // tour track upload: not readable as GPX, TCX or FIT
   | FlightTrackFileApiErrorCode // a flight's track file upload, one per reason (forgejo#312)
-  /** Flight track file upload (forgejo#312): the multipart request carried no file. */
-  | "TRACK_FILE_MISSING"
+  | "TRACK_FILE_MISSING" // flight track file upload (forgejo#312): the request carried no file
+  | CompanionApiErrorCode // managing companions: rename, merge, delete (one per refusal)
   /** Tour track upload: a recording without timestamps cannot be placed in time. */
   | "TRACK_NO_TIMESTAMPS"
   /** Tour track upload: this recording is already on the tour. */

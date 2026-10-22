@@ -21,6 +21,8 @@ import { resolveRankingEvidence } from "../rankingEvidence";
  */
 describe("the evidence registry binds the resolvers that exist", () => {
   let userId: string;
+  /** A companion on the one flight — `companion:<figure>:<id>` needs a real id. */
+  let companionId = "";
   const page = { offset: 0, limit: 10 };
 
   /**
@@ -53,9 +55,14 @@ describe("the evidence registry binds the resolvers that exist", () => {
       data: { username: "evidenceregistrybinding", passwordHash: await hashPassword("pw123456") },
     });
     userId = user.id;
+    const companion = await prisma.companion.create({
+      data: { userId, canonicalName: "anna", displayName: "Anna", searchName: "anna" },
+    });
+    companionId = companion.id;
     await prisma.flight.create({
       data: {
         userId,
+        companionLinks: { create: { companionId, position: 0 } },
         depLat: 50.0379,
         depLon: 8.5622,
         arrLat: 51.47,
@@ -75,6 +82,7 @@ describe("the evidence registry binds the resolvers that exist", () => {
 
   afterAll(async () => {
     await prisma.flight.deleteMany({ where: { userId } });
+    await prisma.companion.deleteMany({ where: { userId } });
     await prisma.user.deleteMany({ where: { id: userId } });
   });
 
@@ -151,7 +159,10 @@ describe("the evidence registry binds the resolvers that exist", () => {
    * nobody, on purpose: no `/stats/continents` ranking exists for evidence to
    * agree with.
    */
-  const RANKING_CONTRACT: Record<string, { unit: string; sample: string } | null> = {
+  const RANKING_CONTRACT: Record<
+    string,
+    { unit: string; sample: string | (() => string); aggregation?: "sum" | "distinct" } | null
+  > = {
     airline: { unit: "flights", sample: "iata:LH" },
     airport: { unit: "visits", sample: "FRA" },
     country: { unit: "flights", sample: "DE" },
@@ -162,6 +173,8 @@ describe("the evidence registry binds the resolvers that exist", () => {
     seat: { unit: "flights", sample: "class:economy" },
     flightStatus: { unit: "flights", sample: "flown" },
     boardingGroup: { unit: "flights", sample: "3" },
+    // One figure stands for the dimension; `companions.together.test.ts` drives the rest.
+    companion: { unit: "days", sample: () => `days:${companionId}`, aggregation: "distinct" },
     continent: null,
   };
 
@@ -182,21 +195,25 @@ describe("the evidence registry binds the resolvers that exist", () => {
         expect([dimension, res]).toEqual([dimension, null]);
         continue;
       }
+      const sample = typeof contract.sample === "function" ? contract.sample() : contract.sample;
       const res = await resolveRankingEvidence(
         userId,
-        rankingKey(dimension as (typeof RANKING_DIMENSIONS)[number], contract.sample),
+        rankingKey(dimension as (typeof RANKING_DIMENSIONS)[number], sample),
         allTime,
         page
       );
       expect([dimension, res === null]).toEqual([dimension, false]);
-      expect([dimension, res!.measure.aggregation]).toEqual([dimension, "sum"]);
+      expect([dimension, res!.measure.aggregation]).toEqual([
+        dimension,
+        contract.aggregation ?? "sum",
+      ]);
       expect([dimension, res!.measure.unit]).toEqual([dimension, contract.unit]);
       expect([dimension, res!.measure.kind]).toEqual([dimension, "ranking"]);
 
       await expect(
         resolveRankingEvidence(
           userId,
-          rankingKey(dimension as (typeof RANKING_DIMENSIONS)[number], contract.sample),
+          rankingKey(dimension as (typeof RANKING_DIMENSIONS)[number], sample),
           { period: { kind: "year", year: 2025 } },
           page
         )

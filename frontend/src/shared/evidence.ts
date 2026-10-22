@@ -201,6 +201,13 @@ export const RANKING_DIMENSIONS = [
    */
   "flightStatus",
   "boardingGroup",
+  /**
+   * One figure of "Mit wem unterwegs" on the statistics overview:
+   * `companion:<figure>:<companionId>`, the figure being `entries`, `days`,
+   * `countries` or one kind of entry (`trip`, `flight`, …) —
+   * `services/evidence/rankingEvidenceCompanion.ts`.
+   */
+  "companion",
 ] as const;
 export type RankingDimension = (typeof RANKING_DIMENSIONS)[number];
 

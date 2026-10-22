@@ -21,6 +21,7 @@ import {
 import { withDepartureClock } from "../stats/departureClock";
 import { getCachedAirports } from "../../services/airportCache";
 import { resolvePassportCountryEntries } from "./metricEvidencePassport";
+import { resolveCompanionRankingEvidence } from "./rankingEvidenceCompanion";
 
 /**
  * `EvidenceResolver` for `kind: "ranking"`. `airline` (Task 5,
@@ -69,6 +70,8 @@ export async function resolveRankingEvidence(
     case "flightStatus":
     case "boardingGroup":
       return resolveFlightFieldRankingEvidence(userId, parsed.dimension, parsed.value, scope, page);
+    case "companion":
+      return resolveCompanionRankingEvidence(userId, parsed.value, scope, page);
     case "continent":
       // Deliberate abstention, not a gap (task-6-brief.md, "STOP AND
       // REPORT"; task-6-report.md has the finding in full). No
