@@ -6,10 +6,47 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Before upgrading to 2.7.0-rc.19:** take a backup. 21 new migrations run on first start, and stored straight ferry crossings are re-routed once in the background.
+
 - Full data export includes saved TravPlan content and proposals; daily quota counters are explicitly excluded.
 
 ### Added
 
+- **Map cards for every ground domain.** Rail, bus, ferry and rental routes
+  open a card with their own statistics — first and last journey, average
+  duration with fastest and slowest, average delay, total distance with what
+  it measures (air line, along the track, estimated sea route) — and, where
+  one exists, a picture of the train, ship or car model with its credit.
+  Stations and ports open a card with a Wikipedia photo and summary,
+  departures, arrivals and top destinations. Hovering shows a compact
+  profile. Pictures and Wikipedia text use the operator-logo open-data switch;
+  an outage says so instead of looking like "no picture".
+- **Station, terminal and port names on the map**, spaced by the same label
+  pass as airports and hotels.
+- **Trips shared across servers** (beta, `federatedTripSharing`): pair with a
+  person on another TravStats server by invitation code, offer a trip, keep it
+  in step both ways with conflicts shown, and end, pause or resume it. A server
+  restored from backup, or a peer with a new key, catches up after
+  confirmation.
+- **The Companion's trip recording reaches the server**: stored, drawn on the
+  trip map with a day filter, exportable as GPX and deletable.
+- **Recorded flight tracks** (beta, `flightTrackUpload`): upload a GPX or KML
+  export and see the flown line on the flight page and the maps.
+- **Calendar subscription** (beta, `calendarFeed`): a secret iCal URL for
+  upcoming entries.
+- **Imports from other flight apps**: OpenFlights, AirTrail, Jetlog, Flighty
+  and App in the Air exports.
+- **Passport corrections**: add, correct or exclude countries by hand.
+- **Settings have one page per menu entry**, with a Standard and an Expert
+  level per account.
+- **Template workshop**: rail, bus, ferry and rental templates, learning from
+  screenshots via OCR, and export for the community repository.
+- Inbox: per-user switches for trip and stay suggestions; stay cards show a
+  map and the probable place.
+- Admin: a 24-hour import mode that lifts upload and import limits; the
+  template repository URL is an instance setting.
+- A GPS jitter filter on every recording source before anything is measured;
+  each recording says how much it left out.
 - **Compare with friends is a leaderboard of totals.** `/compare` ranks you and
   the people who agreed — kilometres, trips, time away, countries, places —
   per year or overall. Each person decides which figures the other may see,
@@ -29,6 +66,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Changed
 
+- Ferry crossings stored as a straight line are re-routed along the sea once,
+  in the background, after the update.
+- An invitation code that is retried after it already connected reads as
+  "already connected".
 - The end-to-end encrypted transfer moved to its own page,
   `/encrypted-share`, behind its own beta switch.
 - A shared trip is copied for each person on their own calendar: a copy's
@@ -48,6 +89,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Fixed
 
+- **A global API key is no longer shown to every user.** The key-status
+  answer carried stored values; it now carries only whether a key is set. A
+  key the instance cannot decrypt no longer counts as "active for everyone".
+- The trip overview lists ferry crossings, and the trip map draws rail, ferry
+  and rental — on the globe as well.
+- Overnight journeys show their arrival day on cards and tooltips.
+- A date-only journey no longer gets an invented duration.
+- The "far from your destinations" hotel warning considers arrivals by rail,
+  bus and ferry, not only flights.
+- Map labels no longer print over each other in "All" and "Important", on the
+  globe (where they also keep clear of the time control) and on the trip map.
+- A failed route or rental load on a map says so and can be retried instead of
+  looking like no data.
+- iPad touch targets in the menu, the recording panel and settings follow the
+  pointer, not the width.
+- The statistics breakdown names ferries in both languages.
+- A settings search result opens its folded group.
+- Sharing records an entry's author only where it is known and checks a
+  received change's author.
 - Public-link lifetimes are calculated from the server clock, preventing a fast
   browser clock from rejecting “Until landing (+2 hours)” or “90 days”.
   Explicit expiry timestamps remain supported for existing API clients.
