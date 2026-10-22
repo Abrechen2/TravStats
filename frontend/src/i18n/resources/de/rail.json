@@ -533,6 +533,7 @@
       "appliesToAll": "Diese Buchungsangaben gelten für alle Fahrten unten. Der Gesamtpreis wird nur bei der ersten gespeicherten Fahrt eingetragen, damit er nicht mehrfach zählt.",
       "incomplete": "Nicht alle Buchungsangaben wurden im Dokument erkannt. Ergänze sie hier oder lass sie leer — es wird nichts erfunden.",
       "notRecognised": "Nicht im Dokument erkannt",
+      "shareLinkNote": "Teilen-Links der Bahn enthalten keine Buchungsangaben. Ergänze sie hier, wenn du willst — sonst bleiben sie leer.",
       "edited": "Von dir geändert",
       "noClass": "Keine Angabe",
       "problem": {

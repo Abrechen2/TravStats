@@ -235,4 +235,31 @@ describe("RailImportPreviewModal", () => {
     expect(create).toHaveBeenCalledTimes(3);
     expect(create.mock.calls[2][0]).toMatchObject({ trainNumber: "1507", connectsFrom: "new-1" });
   });
+
+  // Browser test of the bahn.de bookmarklet on 2.7.0-beta.24: a share link has
+  // no document and never carries booking facts, yet each field said "not
+  // recognised in the document" under a banner about the document.
+  it("tells a bahn.de share link apart from a document that missed its booking facts", () => {
+    render(
+      <RailImportPreviewModal
+        booking={booking({
+          source: "db-share-link",
+          bookingReference: null,
+          travelClass: null,
+          price: null,
+          currency: null,
+          operator: null,
+        })}
+        onCancel={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId("rail-import-share-link-note")).toHaveTextContent(
+      "rail:import.booking.shareLinkNote"
+    );
+    expect(screen.queryByTestId("rail-import-incomplete")).not.toBeInTheDocument();
+    expect(screen.queryByText("rail:import.booking.notRecognised")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("rail:form.operator")).toHaveValue("");
+    expect(screen.getByLabelText("rail:form.operator")).not.toBeDisabled();
+  });
 });

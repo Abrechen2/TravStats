@@ -13,6 +13,13 @@ import {
   type RailBookingDraft,
 } from "./railImportBookingDraft";
 
+/**
+ * The source the server names for a bahn.de share link. A share link is a
+ * timetable connection, not a document: it never carries booking facts, so
+ * their absence is not something a document failed to show.
+ */
+const SHARE_LINK_SOURCE = "db-share-link";
+
 interface Props {
   booking: RailImportBooking;
   draft: RailBookingDraft;
@@ -37,7 +44,8 @@ export function RailImportBookingFields({
 }: Props): JSX.Element {
   const { t } = useTranslation(["rail"]);
   const coarse = useCoarsePointer();
-  const unread = unreadFields(booking);
+  const fromShareLink = booking.source === SHARE_LINK_SOURCE;
+  const unread = fromShareLink ? [] : unreadFields(booking);
   const problems = draftProblems(draft);
   const inputClass = `w-full rounded-md border border-border bg-(--bg-surface) px-3 text-sm text-(--text-primary) ${
     coarse ? "min-h-11 py-2" : "py-1.5"
@@ -64,6 +72,11 @@ export function RailImportBookingFields({
   return (
     <section className="mb-3 flex flex-col gap-3" data-testid="rail-import-booking">
       <p className="t-caption">{t("rail:import.booking.appliesToAll")}</p>
+      {fromShareLink && (
+        <p className="t-caption" data-testid="rail-import-share-link-note">
+          {t("rail:import.booking.shareLinkNote")}
+        </p>
+      )}
       {unread.length > 0 && (
         <p className="text-sm text-(--warning)" data-testid="rail-import-incomplete">
           {t("rail:import.booking.incomplete")}
