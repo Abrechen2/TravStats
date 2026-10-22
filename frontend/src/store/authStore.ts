@@ -6,6 +6,7 @@ import { logger } from "../lib/logger";
 import { useDashboardCountsStore } from "./dashboardCountsStore";
 import { forgetQuotaRefusals } from "../lib/bulkRefreshRefusal";
 import { clearAllStationDrafts } from "../lib/roadtrip/stationDraftStore";
+import { clearBahnHandoff } from "../lib/rail/bahnHandoff";
 
 interface AuthState {
   user: User | null;
@@ -75,7 +76,11 @@ export const useAuthStore = create<AuthState>()(
             // Clear local user state regardless of API result
             useDashboardCountsStore.getState().reset();
             forgetQuotaRefusals();
-            if (!options.keepLocalDrafts) clearAllStationDrafts();
+            if (!options.keepLocalDrafts) {
+              clearAllStationDrafts();
+              // A bahn.de ride waiting for a re-login is this user's too.
+              clearBahnHandoff();
+            }
             set({ user: null });
           }
         },

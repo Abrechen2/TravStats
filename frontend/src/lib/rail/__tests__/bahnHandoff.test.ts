@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { MAX_HANDOFF_FRAGMENT } from "../bahnBookmarklet";
 import {
+  clearBahnHandoff,
   decodeBahnHandoff,
   pendingBahnHandoffPath,
   stashBahnHandoff,
@@ -108,6 +109,32 @@ describe("the hand-over waiting through a login", () => {
     stashBahnHandoff("#e=blocked", 0);
     expect(pendingBahnHandoffPath(10 * 60 * 1000 + 1)).toBeNull();
     expect(takeStashedBahnHandoff(10 * 60 * 1000 + 1)).toBeNull();
+  });
+
+  // Codex review before 2.7.0-rc.20: account A's session ran out mid-hand-over,
+  // and account B signing in in the same tab was shown A's ride to import.
+  it("goes back only to the account it was read for", () => {
+    stashBahnHandoff("#e=blocked", 1_000, "user-a");
+    expect(pendingBahnHandoffPath(2_000, "user-b")).toBeNull();
+    expect(takeStashedBahnHandoff(2_000, "user-b")).toBeNull();
+    // Discarded, not kept for A either: B has seen that something was waiting.
+    expect(takeStashedBahnHandoff(2_000, "user-a")).toBeNull();
+
+    stashBahnHandoff("#e=blocked", 1_000, "user-a");
+    expect(pendingBahnHandoffPath(2_000, "user-a")).toBe("/rail/from-bahn");
+    expect(takeStashedBahnHandoff(2_000, "user-a")).toBe("#e=blocked");
+  });
+
+  it("goes to whoever signs in first when it arrived signed out", () => {
+    stashBahnHandoff("#e=blocked", 1_000, null);
+    expect(pendingBahnHandoffPath(2_000, "user-b")).toBe("/rail/from-bahn");
+    expect(takeStashedBahnHandoff(2_000, "user-b")).toBe("#e=blocked");
+  });
+
+  it("is gone after clearBahnHandoff", () => {
+    stashBahnHandoff("#e=blocked", 1_000, "user-a");
+    clearBahnHandoff();
+    expect(takeStashedBahnHandoff(2_000, "user-a")).toBeNull();
   });
 
   it("stores nothing for a bare address", () => {
