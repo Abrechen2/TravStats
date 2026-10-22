@@ -42,7 +42,7 @@ async function subjectFor(req: AuthRequest): Promise<SubjectImageAnswer> {
   const { kind, name } = parseSubject(req.query);
   const userId = req.userId;
   if (!userId || !(await ownsSubject(userId, kind, name))) {
-    return { picture: null, pending: false };
+    return { picture: null, pending: false, unavailable: false };
   }
   return answerSubjectImage(kind, name, { userId });
 }
@@ -53,12 +53,14 @@ router.get(
   airlineLogoLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { picture, pending } = await subjectFor(req);
-      res.setHeader("Cache-Control", pending ? "private, no-store" : "private, max-age=3600").json({
+      const { picture, pending, unavailable } = await subjectFor(req);
+      // Only an answer is cacheable; "not yet" and "could not ask" are asked again.
+      const settled = !pending && !unavailable;
+      res.setHeader("Cache-Control", settled ? "private, max-age=3600" : "private, no-store").json({
         success: true,
         data: picture
-          ? { available: true, pending: false, credit: picture.credit }
-          : { available: false, pending, credit: null },
+          ? { available: true, pending: false, unavailable: false, credit: picture.credit }
+          : { available: false, pending, unavailable, credit: null },
       });
     } catch (error) {
       next(error);
@@ -66,18 +68,24 @@ router.get(
   }
 );
 
-/** GET /map-details/subject/image?kind=&name= — the picture bytes (raster), or 404. */
+/** GET /map-details/subject/image?kind=&name= — the picture bytes (raster), 404 or 503 (Wikimedia down). */
 router.get(
   "/subject/image",
   airlineLogoLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { picture, pending } = await subjectFor(req);
+      const { picture, pending, unavailable } = await subjectFor(req);
       if (!picture) {
         res
-          .status(404)
-          .setHeader("Cache-Control", pending ? "private, no-store" : "private, max-age=3600")
-          .json({ success: false, error: "No picture available" });
+          .status(unavailable ? 503 : 404)
+          .setHeader(
+            "Cache-Control",
+            pending || unavailable ? "private, no-store" : "private, max-age=3600"
+          )
+          .json({
+            success: false,
+            error: unavailable ? "pictureUnavailable" : "No picture available",
+          });
         return;
       }
       res

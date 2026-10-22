@@ -38,6 +38,12 @@ const subject = registry.register(
       pending: z
         .boolean()
         .describe("A lookup is still running or was deferred; ask again on a later view"),
+      unavailable: z
+        .boolean()
+        .describe(
+          "Wikimedia did not answer (timeout, 429, 5xx): could not ask — not 'no picture'. " +
+            "Not cached; ask again later"
+        ),
       credit: credit.nullable(),
     })
     .openapi("SubjectImage")
@@ -52,7 +58,8 @@ registry.registerPath({
     "Only a name the caller's own journeys record is looked up (a ferry's vessel, a rental's " +
     "vehicle example, a train category). Wikidata item whose label is the name and whose " +
     "description names the kind; its image from Commons, free licences only. Only while the " +
-    "admin switch `operatorLogosOpenDataEnabled` is on. `available: false` means no picture.",
+    "admin switch `operatorLogosOpenDataEnabled` is on. `available: false` with " +
+    "`unavailable: false` and `pending: false` means no picture.",
   request: { query: subjectQuery },
   responses: {
     200: {
@@ -80,6 +87,7 @@ registry.registerPath({
     },
     400: { description: "No kind or name", content: errorContent },
     404: { description: "No picture available", content: errorContent },
+    503: { description: "Wikimedia did not answer; ask again later", content: errorContent },
   },
 });
 

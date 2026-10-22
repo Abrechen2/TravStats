@@ -24,6 +24,8 @@ export interface SubjectImageCredit {
 export interface SubjectImage {
   available: boolean;
   pending?: boolean;
+  /** Could not ask (Wikimedia down, or our own request failed) — not "no picture". */
+  unavailable?: boolean;
   credit: SubjectImageCredit | null;
 }
 
@@ -32,10 +34,13 @@ export function subjectImagePath(kind: SubjectKind, name: string): string {
   return `/api/v1/map-details/subject/image?kind=${kind}&name=${encodeURIComponent(name.trim())}`;
 }
 
-const NONE: SubjectImage = { available: false, credit: null };
+const UNAVAILABLE: SubjectImage = { available: false, unavailable: true, credit: null };
 const subjects = new Map<string, Promise<SubjectImage>>();
 
-/** Whether a subject has a picture, and its credit. A failure is "no picture", logged. */
+/**
+ * Whether a subject has a picture, and its credit. Only an answer is kept for
+ * the page load: a pending lookup or a failure (`unavailable`) is asked again.
+ */
 export function getSubjectImage(kind: SubjectKind, name: string): Promise<SubjectImage> {
   const key = `${kind}:${name.trim().toLowerCase()}`;
   const known = subjects.get(key);
@@ -45,13 +50,13 @@ export function getSubjectImage(kind: SubjectKind, name: string): Promise<Subjec
       params: { kind, name: name.trim() },
     })
     .then(({ data }) => {
-      if (data.data.pending) subjects.delete(key);
+      if (data.data.pending || data.data.unavailable) subjects.delete(key);
       return data.data;
     })
     .catch((err: unknown) => {
       logger.warn("subject picture lookup failed", err);
       subjects.delete(key);
-      return NONE;
+      return UNAVAILABLE;
     });
   subjects.set(key, task);
   return task;

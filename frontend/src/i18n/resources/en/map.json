@@ -409,6 +409,7 @@
       "flight_one": "{{count}} departure",
       "flight_other": "{{count}} departures"
     },
-    "picture": "Picture"
+    "picture": "Picture",
+    "pictureUnavailable": "Picture currently unavailable."
   }
 }
