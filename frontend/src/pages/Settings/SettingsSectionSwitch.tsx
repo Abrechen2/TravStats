@@ -25,6 +25,7 @@ import TripRecordingSection from "../../components/Settings/TripRecordingSection
 import SharingSection from "../../components/Settings/SharingSection";
 import RemoteSharingSection from "../../components/Settings/RemoteSharingSection";
 import ShareLinksSection from "../../components/Settings/ShareLinksSection";
+import CompanionsSection from "../../components/Settings/companions/CompanionsSection";
 import CalendarFeedSection from "../../components/Settings/CalendarFeedSection";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import FeaturesSection from "../../components/Settings/FeaturesSection";
@@ -130,6 +131,9 @@ export default function SettingsSectionSwitch({
           {isFeatureVisible("federatedTripSharing") && <RemoteSharingSection />}
         </div>
       );
+    case "companions":
+      // Rename, merge and delete companions (owner, 2026-10-22).
+      return <CompanionsSection />;
     case "shareLinks":
       // Public share links (forgejo#281): own links and a pointer to administration.
       return <ShareLinksSection isAdmin={isAdmin} />;

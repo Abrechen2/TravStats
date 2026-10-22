@@ -20,6 +20,7 @@ export const SECTION_LABEL_KEY: Record<SettingsSectionId, string> = {
   trips: "settings:trips.title",
   suggestions: "settings:inboxSuggestions.title",
   sharing: "sharing:settings.title",
+  companions: "companions:manage.title",
   shareLinks: "sharing:links.section.title",
   calendarFeed: "settings:calendarFeed.title",
   dawarich: "trips:tours.dawarichSettings.title",

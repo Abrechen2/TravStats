@@ -3,5 +3,105 @@
     "label": "Begleitpersonen",
     "placeholder": "Namen eingeben und Enter drücken …",
     "remove": "{{name}} entfernen"
+  },
+  "manage": {
+    "title": "Mitreisende",
+    "description": "Alle Personen, die du in Flügen, Reisen und Fahrten eingetragen hast. Hier vereinheitlichst du Schreibweisen, führst doppelte Einträge einer Person zusammen und löschst, wen du nicht mehr brauchst.",
+    "loading": "Mitreisende werden geladen …",
+    "loadFailed": "Die Mitreisenden konnten nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "empty": "Noch keine Mitreisenden. Jeder Name, den du in einem Eintrag einträgst, erscheint hier.",
+    "count_one": "{{count}} Person",
+    "count_other": "{{count}} Personen",
+    "unused": "In keinem Eintrag",
+    "hiddenUses_one": "{{count}} Eintrag in ausgeblendeten Bereichen",
+    "hiddenUses_other": "{{count}} Einträge in ausgeblendeten Bereichen",
+    "expensesPaid_one": "hat {{count}} Ausgabe bezahlt",
+    "expensesPaid_other": "hat {{count}} Ausgaben bezahlt",
+    "lastTogether": "zuletzt gemeinsam unterwegs am {{date}}",
+    "linkedTo": "Verknüpft mit @{{username}}",
+    "linkAccount": "Konto verknüpfen",
+    "changeLink": "Verknüpfung ändern",
+    "inUseHint": "Wird verwendet – zum Entfernen mit einer anderen Person zusammenführen.",
+    "actions": {
+      "rename": "Umbenennen",
+      "merge": "Zusammenführen",
+      "delete": "Löschen",
+      "deleteUnused_one": "{{count}} ungenutzte löschen",
+      "deleteUnused_other": "{{count}} ungenutzte löschen"
+    },
+    "kinds": {
+      "flight_one": "{{count}} Flug",
+      "flight_other": "{{count}} Flüge",
+      "trip_one": "{{count}} Reise",
+      "trip_other": "{{count}} Reisen",
+      "cruise_one": "{{count}} Kreuzfahrt",
+      "cruise_other": "{{count}} Kreuzfahrten",
+      "rail_one": "{{count}} Zugfahrt",
+      "rail_other": "{{count}} Zugfahrten",
+      "bus_one": "{{count}} Busfahrt",
+      "bus_other": "{{count}} Busfahrten",
+      "ferry_one": "{{count}} Fährüberfahrt",
+      "ferry_other": "{{count}} Fährüberfahrten",
+      "rental_one": "{{count}} Mietwagen",
+      "rental_other": "{{count}} Mietwagen"
+    },
+    "rename": {
+      "title": "{{name}} umbenennen",
+      "label": "Neuer Name",
+      "hint": "Der neue Name steht danach auch in jedem Eintrag, in dem bisher {{name}} steht.",
+      "submit": "Umbenennen",
+      "done": "Umbenannt in {{name}}.",
+      "taken": "{{name}} gibt es schon. Ist das dieselbe Person? Dann führe die beiden zusammen.",
+      "mergeInstead": "Mit {{name}} zusammenführen"
+    },
+    "merge": {
+      "title": "{{name}} zusammenführen",
+      "targetLabel": "Zusammenführen mit",
+      "targetPlaceholder": "Person wählen …",
+      "loading": "Vorschau wird berechnet …",
+      "intro": "{{source}} wird gelöscht. Auf {{target}} gehen über:",
+      "nothing": "{{source}} steht in keinem Eintrag und wird nur gelöscht.",
+      "shared_one": "(davon {{count}} schon mit {{target}} – dort bleibt die Person einmal stehen)",
+      "shared_other": "(davon {{count}} schon mit {{target}} – dort bleibt die Person einmal stehen)",
+      "hiddenEntries_one": "{{count}} Eintrag in ausgeblendeten Bereichen",
+      "hiddenEntries_other": "{{count}} Einträge in ausgeblendeten Bereichen",
+      "expenses_one": "{{count}} bezahlte Ausgabe",
+      "expenses_other": "{{count}} bezahlte Ausgaben",
+      "lists_one": "In {{count}} Eintrag wird der Name zu {{target}}.",
+      "lists_other": "In {{count}} Einträgen wird der Name zu {{target}}.",
+      "link": {
+        "moveToTarget": "Die Verknüpfung mit @{{username}} geht auf {{target}} über.",
+        "keepTarget": "{{target}} bleibt mit @{{username}} verknüpft.",
+        "conflict": "Nicht möglich: {{source}} und {{target}} sind mit verschiedenen Konten verknüpft. Löse zuerst eine der Verknüpfungen unter Reisen teilen."
+      },
+      "submit": "Zusammenführen",
+      "done": "{{source}} ist jetzt {{target}}."
+    },
+    "delete": {
+      "title": "{{name}} löschen?",
+      "body": "{{name}} steht in keinem Eintrag und wird endgültig aus deiner Liste entfernt.",
+      "submit": "Löschen",
+      "done": "{{name}} gelöscht."
+    },
+    "deleteUnused": {
+      "title": "Ungenutzte Mitreisende löschen?",
+      "body_one": "{{count}} Person steht in keinem Eintrag, hat nichts bezahlt und ist mit keinem Konto verknüpft. Löschen entfernt diesen Namen endgültig aus deiner Liste.",
+      "body_other": "{{count}} Personen stehen in keinem Eintrag, haben nichts bezahlt und sind mit keinem Konto verknüpft. Löschen entfernt diese Namen endgültig aus deiner Liste.",
+      "submit": "Löschen",
+      "done_one": "{{count}} Person gelöscht.",
+      "done_other": "{{count}} Personen gelöscht."
+    },
+    "errors": {
+      "nameTaken": "Diesen Namen hat schon eine andere Person. Führe die beiden zusammen.",
+      "mergeSelf": "Eine Person kann nicht mit sich selbst zusammengeführt werden.",
+      "linkConflict": "Beide sind mit verschiedenen Konten verknüpft. Löse zuerst eine der Verknüpfungen unter Reisen teilen.",
+      "inUse": "Die Person wird noch verwendet. Führe sie mit einer anderen zusammen.",
+      "notFound": "Diese Person gibt es nicht mehr. Lade die Seite neu.",
+      "renameFailed": "Umbenennen fehlgeschlagen.",
+      "previewFailed": "Die Vorschau konnte nicht berechnet werden.",
+      "mergeFailed": "Zusammenführen fehlgeschlagen.",
+      "deleteFailed": "Löschen fehlgeschlagen."
+    }
   }
 }

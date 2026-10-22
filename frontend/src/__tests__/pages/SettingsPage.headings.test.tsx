@@ -39,6 +39,15 @@ vi.mock("@/lib/api/sharing", () => ({
   },
 }));
 
+// Settings → Mitreisende reads its list on mount.
+vi.mock("@/lib/api/companions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/companions")>()),
+  companionsApi: {
+    list: vi.fn().mockResolvedValue([]),
+    manage: vi.fn().mockResolvedValue({ companions: [], kinds: ["flight", "trip"] }),
+  },
+}));
+
 vi.mock("@/lib/api/twoFactor", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/twoFactor")>();
   return {

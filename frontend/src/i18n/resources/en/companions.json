@@ -3,5 +3,105 @@
     "label": "Companions",
     "placeholder": "Type a name and press Enter …",
     "remove": "Remove {{name}}"
+  },
+  "manage": {
+    "title": "Travel companions",
+    "description": "Everyone you have entered on flights, trips and rides. Make spellings consistent, merge two entries for the same person and delete the ones you no longer need.",
+    "loading": "Loading travel companions …",
+    "loadFailed": "Your travel companions could not be loaded.",
+    "retry": "Try again",
+    "empty": "No travel companions yet. Every name you enter on an entry appears here.",
+    "count_one": "{{count}} person",
+    "count_other": "{{count}} people",
+    "unused": "On no entry",
+    "hiddenUses_one": "{{count}} entry in hidden areas",
+    "hiddenUses_other": "{{count}} entries in hidden areas",
+    "expensesPaid_one": "paid {{count}} expense",
+    "expensesPaid_other": "paid {{count}} expenses",
+    "lastTogether": "last travelled together on {{date}}",
+    "linkedTo": "Linked to @{{username}}",
+    "linkAccount": "Link an account",
+    "changeLink": "Change link",
+    "inUseHint": "In use – merge with another person to remove.",
+    "actions": {
+      "rename": "Rename",
+      "merge": "Merge",
+      "delete": "Delete",
+      "deleteUnused_one": "Delete {{count}} unused",
+      "deleteUnused_other": "Delete {{count}} unused"
+    },
+    "kinds": {
+      "flight_one": "{{count}} flight",
+      "flight_other": "{{count}} flights",
+      "trip_one": "{{count}} trip",
+      "trip_other": "{{count}} trips",
+      "cruise_one": "{{count}} cruise",
+      "cruise_other": "{{count}} cruises",
+      "rail_one": "{{count}} train ride",
+      "rail_other": "{{count}} train rides",
+      "bus_one": "{{count}} bus ride",
+      "bus_other": "{{count}} bus rides",
+      "ferry_one": "{{count}} ferry crossing",
+      "ferry_other": "{{count}} ferry crossings",
+      "rental_one": "{{count}} rental car",
+      "rental_other": "{{count}} rental cars"
+    },
+    "rename": {
+      "title": "Rename {{name}}",
+      "label": "New name",
+      "hint": "The new name will also appear on every entry that now says {{name}}.",
+      "submit": "Rename",
+      "done": "Renamed to {{name}}.",
+      "taken": "{{name}} already exists. Is it the same person? Then merge the two.",
+      "mergeInstead": "Merge with {{name}}"
+    },
+    "merge": {
+      "title": "Merge {{name}}",
+      "targetLabel": "Merge with",
+      "targetPlaceholder": "Choose a person …",
+      "loading": "Working out the preview …",
+      "intro": "{{source}} will be deleted. Moving to {{target}}:",
+      "nothing": "{{source}} is on no entry and will only be deleted.",
+      "shared_one": "({{count}} of them already with {{target}} – the person stays on it once)",
+      "shared_other": "({{count}} of them already with {{target}} – the person stays on them once)",
+      "hiddenEntries_one": "{{count}} entry in hidden areas",
+      "hiddenEntries_other": "{{count}} entries in hidden areas",
+      "expenses_one": "{{count}} paid expense",
+      "expenses_other": "{{count}} paid expenses",
+      "lists_one": "On {{count}} entry the name becomes {{target}}.",
+      "lists_other": "On {{count}} entries the name becomes {{target}}.",
+      "link": {
+        "moveToTarget": "The link to @{{username}} moves to {{target}}.",
+        "keepTarget": "{{target}} stays linked to @{{username}}.",
+        "conflict": "Not possible: {{source}} and {{target}} are linked to different accounts. Remove one of the links under Share trips first."
+      },
+      "submit": "Merge",
+      "done": "{{source}} is now {{target}}."
+    },
+    "delete": {
+      "title": "Delete {{name}}?",
+      "body": "{{name}} is on no entry and will be removed from your list for good.",
+      "submit": "Delete",
+      "done": "{{name}} deleted."
+    },
+    "deleteUnused": {
+      "title": "Delete unused travel companions?",
+      "body_one": "{{count}} person is on no entry, paid nothing and is linked to no account. Deleting removes this name from your list for good.",
+      "body_other": "{{count}} people are on no entry, paid nothing and are linked to no account. Deleting removes these names from your list for good.",
+      "submit": "Delete",
+      "done_one": "{{count}} person deleted.",
+      "done_other": "{{count}} people deleted."
+    },
+    "errors": {
+      "nameTaken": "Another person already has this name. Merge the two.",
+      "mergeSelf": "A person cannot be merged with themselves.",
+      "linkConflict": "Both are linked to different accounts. Remove one of the links under Share trips first.",
+      "inUse": "This person is still in use. Merge them with another person.",
+      "notFound": "This person no longer exists. Reload the page.",
+      "renameFailed": "Renaming failed.",
+      "previewFailed": "The preview could not be worked out.",
+      "mergeFailed": "Merging failed.",
+      "deleteFailed": "Deleting failed."
+    }
   }
 }

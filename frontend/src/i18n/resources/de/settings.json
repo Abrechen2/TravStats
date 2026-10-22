@@ -1019,7 +1019,8 @@
     "loyalty": "Bonusprogramme",
     "data": "Daten",
     "services": "Dienste",
-    "location": "Standortverlauf"
+    "location": "Standortverlauf",
+    "companions": "Mitreisende"
   },
   "deepLink": {
     "adminOnlySection": "Der in der Adresse genannte Abschnitt ist der Administration dieser Instanz vorbehalten und wird dir deshalb nicht angezeigt. Die übrigen Einstellungen auf dieser Seite gehören dir."
@@ -1056,7 +1057,8 @@
       "calendarFeed": "Kalender, iCal, ICS, Abo, Kalenderabo",
       "dawarich": "Dawarich, Standortverlauf, Standortquelle, Positionen, Verbindung",
       "tripRecording": "Aufzeichnung, Positionen, App, Track, Reise aufzeichnen",
-      "stayScan": "Aufenthalte, Aufenthalt erkennen, Radius, Mindestdauer, Märkte, Orte als Fläche, neu auswerten"
+      "stayScan": "Aufenthalte, Aufenthalt erkennen, Radius, Mindestdauer, Märkte, Orte als Fläche, neu auswerten",
+      "companions": "Mitreisende, Begleitpersonen, Personen, Umbenennen, Zusammenführen, Doppelt, Duplikat, Löschen, Namen"
     },
     "expertKeywords": {
       "suggestions": "Immich-Belege, Fotos als Beleg, Ortstyp, KI-Klassifizierung",

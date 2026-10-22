@@ -19,6 +19,7 @@ export type SettingsPageId =
   | "account"
   | "display"
   | "trips"
+  | "companions"
   | "location"
   | "loyalty"
   | "flight"
@@ -40,6 +41,7 @@ export type SettingsSectionId =
   | "trips"
   | "suggestions"
   | "sharing"
+  | "companions"
   | "shareLinks"
   | "calendarFeed"
   | "dawarich"
@@ -105,6 +107,15 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
     ],
   },
   {
+    // Everyone typed into an entry, tidied by hand: rename, merge, delete
+    // (owner, 2026-10-22). Not a domain, so it never hides; linking a
+    // companion to an account stays in "Reisen teilen" above.
+    id: "companions",
+    labelKey: "settings:groups.companions",
+    icon: "users",
+    sections: [section("companions")],
+  },
+  {
     // What exists today: the Dawarich source, the app's trip recording and the
     // stay scan. The native location history is a branch of its own.
     id: "location",
@@ -159,7 +170,11 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
 
 /** The menu, in the order the owner set: the account first, the domains, then data. */
 export const SETTINGS_MENU: readonly MenuGroupDef<SettingsPageId>[] = [
-  { id: "general", labelKey: null, pages: ["account", "display", "trips", "location", "loyalty"] },
+  {
+    id: "general",
+    labelKey: null,
+    pages: ["account", "display", "trips", "companions", "location", "loyalty"],
+  },
   { id: "domains", labelKey: "settings:menu.domains", pages: ["flight", "cruise"] },
   { id: "data", labelKey: null, pages: ["data", "services"] },
 ];

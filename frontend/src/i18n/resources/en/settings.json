@@ -1019,7 +1019,8 @@
     "loyalty": "Loyalty programmes",
     "data": "Data",
     "services": "Services",
-    "location": "Location history"
+    "location": "Location history",
+    "companions": "Travel companions"
   },
   "deepLink": {
     "adminOnlySection": "The section named in the address is reserved for whoever administers this instance, so it is not shown to you. The rest of the settings on this page are yours."
@@ -1056,7 +1057,8 @@
       "calendarFeed": "Calendar, iCal, ICS, subscription, calendar feed",
       "dawarich": "Dawarich, location history, location source, positions, connection",
       "tripRecording": "Recording, positions, app, track, record trip",
-      "stayScan": "Stays, detect stays, radius, minimum duration, markets, places as areas, re-evaluate"
+      "stayScan": "Stays, detect stays, radius, minimum duration, markets, places as areas, re-evaluate",
+      "companions": "Companions, travel companions, people, rename, merge, duplicate, delete, names"
     },
     "expertKeywords": {
       "suggestions": "Immich evidence, photos as evidence, place type, AI classification",

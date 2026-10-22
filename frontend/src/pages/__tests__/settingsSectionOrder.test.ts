@@ -13,6 +13,7 @@ describe("settings menu order", () => {
       "account",
       "display",
       "trips",
+      "companions",
       "location",
       "loyalty",
       "flight",
