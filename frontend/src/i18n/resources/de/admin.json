@@ -1192,13 +1192,15 @@
     "aircraftMasterData": "Flugzeuge",
     "airportsMasterData": "Flughäfen",
     "shipsMasterData": "Schiffe",
-    "portsMasterData": "Häfen"
+    "portsMasterData": "Häfen",
+    "lodgingChainsMasterData": "Hotelketten"
   },
   "menu": {
     "manage": "Verwaltung",
     "operations": "Dienste & Betrieb",
     "masterFlight": "Stammdaten · Flug",
-    "masterCruise": "Stammdaten · Kreuzfahrt"
+    "masterCruise": "Stammdaten · Kreuzfahrt",
+    "masterLodging": "Stammdaten · Unterkünfte"
   },
   "search": {
     "keywords": {
@@ -1224,7 +1226,8 @@
       "aircraftMasterData": "Flugzeuge, Flugzeugtypen, Stammdaten",
       "airportsMasterData": "Flughäfen, Airports, Stammdaten, IATA",
       "shipsMasterData": "Schiffe, Stammdaten, IMO",
-      "portsMasterData": "Häfen, Stammdaten, UN/LOCODE"
+      "portsMasterData": "Häfen, Stammdaten, UN/LOCODE",
+      "lodgingChainsMasterData": "Hotelketten, Ketten, Stammdaten, Hotels, Unterkünfte, zusammenführen"
     },
     "expertKeywords": {
       "instance": "Heimnetz-Adresse, LAN, Passkey, rpId, Origins, Beta-Schalter",
@@ -1239,5 +1242,44 @@
     "switchSub": "Gilt für die ganze Instanz. Kein Konto, kein Schlüssel.",
     "loadFailed": "Die Einstellung konnte nicht geladen werden.",
     "saveFailed": "Die Einstellung konnte nicht gespeichert werden."
+  },
+  "lodgingChains": {
+    "description": "Der Katalog der Hotelketten, aus dem jedes Konto wählt. Eigene Ketten einzelner Konten gehören diesen und erscheinen hier nicht.",
+    "name": "Name",
+    "program": "Bonusprogramm",
+    "color": "Markenfarbe",
+    "colorHint": "Als #rrggbb, oder leer lassen.",
+    "add": "Hinzufügen",
+    "created": "Kette hinzugefügt.",
+    "saved": "Kette gespeichert.",
+    "search": "Ketten durchsuchen",
+    "count_one": "{{count}} Kette im Katalog",
+    "count_other": "{{count}} Ketten im Katalog",
+    "empty": "Keine Kette gefunden.",
+    "loadError": "Der Katalog konnte nicht geladen werden.",
+    "links": "Unterkünfte: {{lodgings}} · Bonuskarten: {{memberships}}",
+    "edit": "Bearbeiten",
+    "editTitle": "{{name}} bearbeiten",
+    "renameNote": "Mit dieser Kette verknüpft: Unterkünfte {{lodgings}}, Bonuskarten {{memberships}}. Die Verknüpfungen bleiben bestehen und zeigen danach den neuen Namen.",
+    "merge": "Zusammenführen",
+    "mergeTitle": "{{name}} zusammenführen",
+    "mergeTarget": "Zusammenführen mit",
+    "mergeChoose": "Kette wählen …",
+    "mergeExplain": "Alle Unterkünfte ({{lodgings}}) und Bonuskarten ({{memberships}}) von „{{source}}“ werden mit „{{target}}“ verknüpft, aus allen Konten. Danach wird „{{source}}“ entfernt. Keine Verknüpfung geht verloren.",
+    "mergeConfirm": "Zusammenführen",
+    "merged": "Mit {{name}} zusammengeführt.",
+    "delete": "Löschen",
+    "deleteTitle": "{{name}} löschen",
+    "deleteExplain": "Mit dieser Kette ist nichts verknüpft. Die Kette wird aus dem Katalog entfernt.",
+    "deleteInUse": "Diese Kette lässt sich nicht löschen: Unterkünfte ({{lodgings}}) und Bonuskarten ({{memberships}}) sind mit ihr verknüpft und würden die Verknüpfung verlieren. Führe sie stattdessen mit einer anderen Kette zusammen.",
+    "deleted": "Kette gelöscht.",
+    "errors": {
+      "chainNameTaken": "Eine Kette dieses Namens gibt es im Katalog schon.",
+      "chainInUse": "Mit dieser Kette sind noch Unterkünfte oder Bonuskarten verknüpft. Führe sie zusammen, statt sie zu löschen.",
+      "chainNotFound": "Diese Kette gibt es im Katalog nicht mehr.",
+      "mergeIntoItself": "Eine Kette lässt sich nicht mit sich selbst zusammenführen.",
+      "invalidInput": "Eine Eingabe ist ungültig — die Markenfarbe als #rrggbb.",
+      "unknown": "Das hat nicht geklappt."
+    }
   }
 }

@@ -26,7 +26,8 @@ export type AdminPageId =
   | "aircraftMasterData"
   | "airportsMasterData"
   | "shipsMasterData"
-  | "portsMasterData";
+  | "portsMasterData"
+  | "lodgingChainsMasterData";
 
 export type AdminSectionId =
   | "instance"
@@ -51,7 +52,8 @@ export type AdminSectionId =
   | "aircraftMasterData"
   | "airportsMasterData"
   | "shipsMasterData"
-  | "portsMasterData";
+  | "portsMasterData"
+  | "lodgingChainsMasterData";
 
 /** Kept for the section switch, which is about wiring, not navigation. */
 export type ActiveSection = AdminSectionId;
@@ -84,6 +86,7 @@ export const ADMIN_SECTION_LABEL_KEY: Record<AdminSectionId, string> = {
   airportsMasterData: "admin:pages.airportsMasterData",
   shipsMasterData: "admin:pages.shipsMasterData",
   portsMasterData: "admin:pages.portsMasterData",
+  lodgingChainsMasterData: "admin:pages.lodgingChainsMasterData",
 };
 
 const section = (
@@ -150,12 +153,15 @@ export const ADMIN_PAGES: readonly AdminPageDef[] = [
   single("airportsMasterData", "map-pin", "expert", { domain: "flight" }),
   single("shipsMasterData", "ship", "expert", { domain: "cruise" }),
   single("portsMasterData", "anchor", "expert", { domain: "cruise" }),
+  // Expert like the other catalogues (the prototype drew all of them standard;
+  // the build classed the catalogues expert on 2026-10-20 and this one follows).
+  single("lodgingChainsMasterData", "bed", "expert", { domain: "lodging" }),
 ];
 
 /**
  * The menu (owner, 2026-10-20): administration, services and operation, then
- * master data per domain. There is no "Hotelketten" entry: the chain catalogue
- * has no admin surface to move here, and a menu entry is no place to invent one.
+ * master data per domain — the hotel chains since forgejo#321 gave the chain
+ * catalogue an admin surface (Unterkünfte › Hotelketten).
  */
 export const ADMIN_MENU: readonly MenuGroupDef<AdminPageId>[] = [
   { id: "manage", labelKey: "admin:menu.manage", pages: ["instance", "users", "invitations"] },
@@ -173,6 +179,11 @@ export const ADMIN_MENU: readonly MenuGroupDef<AdminPageId>[] = [
     id: "masterCruise",
     labelKey: "admin:menu.masterCruise",
     pages: ["shipsMasterData", "portsMasterData"],
+  },
+  {
+    id: "masterLodging",
+    labelKey: "admin:menu.masterLodging",
+    pages: ["lodgingChainsMasterData"],
   },
 ];
 
@@ -240,4 +251,5 @@ export const LAZY_ADMIN_SECTIONS: ReadonlySet<AdminSectionId> = new Set<AdminSec
   "airlinesMasterData",
   "aircraftMasterData",
   "airportsMasterData",
+  "lodgingChainsMasterData",
 ]);

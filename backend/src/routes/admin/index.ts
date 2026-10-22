@@ -20,6 +20,7 @@ import pushAdminRouter from "./push";
 import federationAdminRouter from "./federation";
 import importModeRouter from "./importMode";
 import templateRepoRouter from "./templateRepo";
+import lodgingChainsAdminRouter from "./lodgingChains";
 
 const router = Router();
 
@@ -63,5 +64,6 @@ router.use("/push", pushAdminRouter);
 router.use("/federation", federationAdminRouter);
 router.use("/", importModeRouter);
 router.use("/", templateRepoRouter);
+router.use("/", lodgingChainsAdminRouter);
 
 export default router;

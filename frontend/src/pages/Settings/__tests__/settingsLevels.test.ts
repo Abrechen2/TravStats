@@ -26,6 +26,7 @@ const EXPERT_SECTIONS = {
     "airportsMasterData",
     "shipsMasterData",
     "portsMasterData",
+    "lodgingChainsMasterData",
   ],
 };
 
@@ -57,6 +58,7 @@ describe("the standard/expert classification", () => {
         "airportsMasterData",
         "shipsMasterData",
         "portsMasterData",
+        "lodgingChainsMasterData",
       ].sort()
     );
   });

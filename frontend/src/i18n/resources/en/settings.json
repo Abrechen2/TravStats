@@ -1061,7 +1061,7 @@
     "expertKeywords": {
       "suggestions": "Immich evidence, photos as evidence, place type, AI classification",
       "autoupdate": "Check interval, interval, approval, expiry, only during flight",
-      "backup": "Instance backup, last backup",
+      "backup": "Instance backup, last backup, WebDAV, Nextcloud, sync",
       "externalServices": "own key, own API key, API key, quota, AirLabs key, Aviationstack key, AeroDataBox key, AeroAPI key, OpenSky credentials, GraphHopper key, OpenRouteService key",
       "features": "seat statistics, seats, window seat, aisle seat"
     }
@@ -1220,5 +1220,60 @@
   "domainOff": {
     "message": "This domain is switched off: {{domain}}. Its settings appear here once you switch it on.",
     "action": "Go to Domains & colours"
+  },
+  "webdavSync": {
+    "title": "Sync with WebDAV",
+    "description": "Regularly uploads your complete data export to your own WebDAV storage, for example Nextcloud.",
+    "whatIsUploaded": "What is uploaded is your account's complete export as a compressed JSON file — the same data as the admin export \"All data\", without credentials. Photos and documents themselves are not included.",
+    "setup": "Set up",
+    "hide": "Hide",
+    "url": "WebDAV address",
+    "urlHint": "Public https addresses only. Storage on the home network is allowed for administrators only.",
+    "urlHintAdmin": "As an administrator you may also name storage on the home network; over the internet only with https.",
+    "username": "User name",
+    "password": "Password",
+    "passwordStored": "A password is stored. It is never shown.",
+    "passwordKeepPlaceholder": "Leave empty to keep the stored one",
+    "clearPassword": "Remove password",
+    "remotePath": "Folder on the storage",
+    "schedule": "Schedule",
+    "schedules": {
+      "daily": "Daily",
+      "weekly": "Weekly"
+    },
+    "keepVersions": "Versions to keep",
+    "save": "Save",
+    "saving": "Saving …",
+    "runNow": "Sync now",
+    "running": "Syncing …",
+    "runOk": "Sync successful.",
+    "runPartial": "Uploaded, but old versions could not be deleted: {{reason}}",
+    "runLost": "Whether the sync finished is unknown. The last result above is being reloaded.",
+    "loadError": "The WebDAV settings could not be loaded.",
+    "saveError": "Saving failed.",
+    "last": {
+      "never": "Never synced.",
+      "ok": "Last synced: {{when}} · {{file}} ({{size}})",
+      "partial": "Uploaded on {{when}}, but old versions could not be deleted: {{reason}}",
+      "failed": "Last attempt on {{when}} failed: {{reason}}"
+    },
+    "errors": {
+      "notConfigured": "Not set up: address, user name or password is missing, or the sync is off.",
+      "invalidUrl": "The address is not a valid http(s) address (without credentials and without a ? part).",
+      "httpsRequired": "This address needs https — otherwise the password would travel unencrypted.",
+      "blockedTarget": "This target is on a local or private network and is not allowed for your account.",
+      "auth": "The storage refused the user name or password.",
+      "unreachable": "The storage cannot be reached (unknown name or no answer).",
+      "timeout": "The storage took too long to answer.",
+      "tls": "The storage's certificate is not trusted.",
+      "quota": "The storage is full, or your quota is used up.",
+      "tooLarge": "The storage refuses a file of this size.",
+      "path": "The folder could not be found or created on the storage.",
+      "server": "The storage answered with a server error.",
+      "protocol": "The storage did not answer like a WebDAV storage.",
+      "alreadyRunning": "A sync is already running.",
+      "invalidInput": "An input is invalid.",
+      "unknown": "The sync failed."
+    }
   }
 }

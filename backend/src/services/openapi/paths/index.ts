@@ -38,6 +38,7 @@ import "./statsPage";
 import "./statsNetworkRoute";
 import "./statsInsights";
 import "./parsing";
+import "./webdavSync";
 import "./training";
 import "./tokens";
 import "./cruises";

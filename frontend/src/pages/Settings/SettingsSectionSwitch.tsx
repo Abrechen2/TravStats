@@ -12,6 +12,7 @@ import NotificationsSection from "../../components/Settings/NotificationsSection
 import BackupSection from "../../components/Settings/BackupSection";
 import SpreadsheetSection from "../../components/Settings/SpreadsheetSection";
 import TrackArchiveSection from "../../components/Settings/TrackArchiveSection";
+import WebdavSyncRow from "../../components/Settings/WebdavSyncRow";
 import AutoUpdateSection from "../../components/Settings/AutoUpdateSection";
 import EnrichmentSection from "../../components/Settings/EnrichmentSection";
 import ApiTokensSection from "../../components/Settings/ApiTokensSection";
@@ -108,6 +109,8 @@ export default function SettingsSectionSwitch({
           <SpreadsheetSection />
           {/* The recordings the spreadsheet cannot carry. */}
           <TrackArchiveSection />
+          {/* The same export, on a schedule, to the user's own share (expert). */}
+          <WebdavSyncRow />
         </BackupSection>
       );
     case "import":
