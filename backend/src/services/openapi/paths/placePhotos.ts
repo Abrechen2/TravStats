@@ -319,3 +319,16 @@ registry.registerPath({
   request: { params: z.object({ id: uuid }) },
   responses: windowPhotos,
 });
+
+registry.registerPath({
+  method: "get",
+  path: "/ferry/{id}/trip-photos",
+  summary: "Trip photos taken during this ferry crossing",
+  description:
+    "Photos of the crossing's trip taken between departure and arrival, by the train ride's " +
+    "rule. None when the crossing is on no trip, has no arrival or clock, or a port has no " +
+    "time zone.",
+  tags: ["Ferry"],
+  request: { params: z.object({ id: uuid }) },
+  responses: windowPhotos,
+});

@@ -1,9 +1,9 @@
 /**
  * The year in review beyond flights, cruises and rail (forgejo#265): one
  * chapter per further domain the user sees — stays, places, roadtrips, day
- * tours, rentals, bus rides. Each row arrives already COUNTED and FILED by its
+ * tours, rentals, bus rides, ferry crossings. Each row arrives already COUNTED and FILED by its
  * domain's own rule (the loader, `wrappedDomains.ts`, asks `lodgingCounting`,
- * `placeCounting`, `rentalCounting`, `busCounting`, …); this module only folds
+ * `placeCounting`, `rentalCounting`, `busCounting`, `ferryCounting`, …); this module only folds
  * one year out of them and names the years that hold anything.
  *
  * Three rules from the rest of the story hold here too:
@@ -49,6 +49,10 @@ export interface WrappedBusRow extends WithEntry {
   distanceKm: number | null;
   nights: number;
 }
+export interface WrappedFerryRow extends WithEntry {
+  year: number;
+  distanceKm: number | null;
+}
 
 /** `null` = the domain is hidden for this user (switched off, or behind the beta switch). */
 export interface WrappedChapterRows {
@@ -64,6 +68,8 @@ export interface WrappedChapterRows {
   tours: WrappedYearRow[] | null;
   rentals: WrappedRentalRow[] | null;
   bus: WrappedBusRow[] | null;
+  /** Optional: a caller that predates the ferry chapter answers without it — no chapter. */
+  ferry?: WrappedFerryRow[] | null;
 }
 
 export const NO_CHAPTERS: WrappedChapterRows = {
@@ -73,6 +79,7 @@ export const NO_CHAPTERS: WrappedChapterRows = {
   tours: null,
   rentals: null,
   bus: null,
+  ferry: null,
 };
 
 export interface WrappedChapters {
@@ -83,12 +90,14 @@ export interface WrappedChapters {
   rentals: { rentals: number; days: number } | null;
   /** `km` null when no ride of the year has a distance — unknown, never 0 (review I4). */
   bus: { rides: number; km: number | null; unmeasured: number; nights: number } | null;
+  /** Same abstention as `bus`: `km` null when no crossing of the year has a distance. */
+  ferry: { crossings: number; km: number | null; unmeasured: number } | null;
 }
 
 /** Every year any visible chapter has a row in. */
 export function chapterYears(rows: WrappedChapterRows): number[] {
-  const { lodging, places, roadtrips, tours, rentals, bus } = rows;
-  return [lodging, places, roadtrips, tours, rentals, bus].flatMap(
+  const { lodging, places, roadtrips, tours, rentals, bus, ferry = null } = rows;
+  return [lodging, places, roadtrips, tours, rentals, bus, ferry].flatMap(
     (list: Array<{ year: number }> | null) => (list ?? []).map((r) => r.year)
   );
 }
@@ -103,6 +112,7 @@ export function buildWrappedChapters(rows: WrappedChapterRows, year: number): Wr
   const tours = inYear(rows.tours, year);
   const rentals = inYear(rows.rentals, year);
   const bus = inYear(rows.bus, year);
+  const ferry = inYear(rows.ferry ?? null, year);
   return {
     lodging:
       stays === null
@@ -132,6 +142,16 @@ export function buildWrappedChapters(rows: WrappedChapterRows, year: number): Wr
               : null,
             unmeasured: bus.filter((r) => r.distanceKm === null).length,
             nights: bus.reduce((n, r) => n + r.nights, 0),
+          },
+    ferry:
+      ferry === null
+        ? null
+        : {
+            crossings: ferry.length,
+            km: ferry.some((r) => r.distanceKm !== null)
+              ? Math.round(ferry.reduce((n, r) => n + (r.distanceKm ?? 0), 0))
+              : null,
+            unmeasured: ferry.filter((r) => r.distanceKm === null).length,
           },
   };
 }

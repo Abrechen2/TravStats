@@ -12,7 +12,8 @@ import { timezoneOfLodging } from "../../utils/stayInstant";
  *    within 500 m of the house, days read in the house's zone;
  *  - a flight: its trip's photos taken between departure and arrival;
  *  - a cruise: its trip's photos taken from embarkation day to the last day;
- *  - a train or bus ride: its trip's photos taken between departure and arrival.
+ *  - a train or bus ride, or a ferry crossing: its trip's photos taken between
+ *    departure and arrival.
  *
  * Each abstains rather than guesses: a lodging without coordinates, a flight
  * whose times are not real instants, or an entry on no trip shows nothing.
@@ -305,6 +306,21 @@ export async function busTripPhotos(
 ): Promise<WindowResult | null> {
   const ride = await prisma.busJourney.findFirst({
     where: { id: busJourneyId, userId },
+    select: RIDE_WINDOW_SELECT,
+  });
+  return ride ? rideTripPhotos(userId, ride) : null;
+}
+
+/**
+ * A ferry crossing's window — a ride like a train's, by the same rule. Null
+ * when the crossing is not the caller's.
+ */
+export async function ferryTripPhotos(
+  userId: string,
+  ferryJourneyId: string
+): Promise<WindowResult | null> {
+  const ride = await prisma.ferryJourney.findFirst({
+    where: { id: ferryJourneyId, userId },
     select: RIDE_WINDOW_SELECT,
   });
   return ride ? rideTripPhotos(userId, ride) : null;

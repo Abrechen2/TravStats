@@ -1052,7 +1052,12 @@
       "busUnmeasured_one": "{{count}} ride without a distance",
       "busUnmeasured_other": "{{count}} rides without a distance",
       "busNights_one": "{{count}} night on board",
-      "busNights_other": "{{count}} nights on board"
+      "busNights_other": "{{count}} nights on board",
+      "ferry": "Ferry crossings",
+      "ferryDesc": "{{km}} km by ferry",
+      "ferryNoKm": "distance not recorded",
+      "ferryUnmeasured_one": "{{count}} crossing without a distance",
+      "ferryUnmeasured_other": "{{count}} crossings without a distance"
     },
     "help": {
       "stays": {
@@ -1096,6 +1101,13 @@
         "source": "Your completed bus rides.",
         "coverage": "Rides without a distance add no kilometres and are named; when none has one, no kilometre figure is shown. Tap the number to see the entries.",
         "exclusions": "Scheduled, ongoing and cancelled rides do not count. A hidden domain has no chapter. The chapter is never added to another one."
+      },
+      "ferry": {
+        "unit": "One ferry crossing; the line below gives the kilometres of the crossings with a known distance.",
+        "time": "In the year of departure, on the departure port's calendar.",
+        "source": "Your completed ferry crossings.",
+        "coverage": "Crossings without a distance add no kilometres and are named; if none has a distance, no kilometre figure is shown. Tap the number to see the entries.",
+        "exclusions": "Planned, ongoing and cancelled crossings do not count. A hidden domain has no chapter. The chapter is never added to any other."
       }
     }
   },

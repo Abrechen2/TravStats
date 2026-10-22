@@ -8,7 +8,8 @@ import type { CountingEntry } from "../counting/countingEntry";
 
 /**
  * The year in review's chapters beyond flights, cruises and rail
- * (forgejo#265): stays, places, roadtrips, day tours, rentals, bus rides.
+ * (forgejo#265): stays, places, roadtrips, day tours, rentals, bus rides,
+ * ferry crossings.
  * One card per chapter the server sent — it sends `null` for a domain this
  * reader does not see, and a null draws nothing rather than a card of zeros.
  * Each card is its own figure: rental days are not travel days, a stay's
@@ -30,7 +31,7 @@ export default function WrappedChapterCards({
   year: number;
 }): JSX.Element {
   const { t } = useTranslation(["stats"]);
-  const { lodging, places, roadtrips, tours, rentals, bus } = chapters;
+  const { lodging, places, roadtrips, tours, rentals, bus, ferry = null } = chapters;
   const evidence = (key: string, renderedValue: number) => ({
     kind: "metric" as const,
     key,
@@ -59,6 +60,10 @@ export default function WrappedChapterCards({
       helpKey: "stats:wrapped.help.rentals",
     },
     bus !== null && { term: t("stats:wrapped.chapters.bus"), helpKey: "stats:wrapped.help.bus" },
+    ferry !== null && {
+      term: t("stats:wrapped.chapters.ferry"),
+      helpKey: "stats:wrapped.help.ferry",
+    },
   ].filter((entry): entry is CountingEntry => entry !== false);
   return (
     <>
@@ -128,6 +133,23 @@ export default function WrappedChapterCards({
             .join(" · ")}
         />
       )}
+      {ferry !== null && (
+        <StatCard
+          title={t("stats:wrapped.chapters.ferry")}
+          value={count(ferry.crossings)}
+          evidence={evidence("wrappedFerryCrossingCount", ferry.crossings)}
+          description={[
+            ferry.km === null
+              ? t("stats:wrapped.chapters.ferryNoKm")
+              : t("stats:wrapped.chapters.ferryDesc", { km: count(ferry.km) }),
+            ferry.unmeasured > 0 && ferry.km !== null
+              ? t("stats:wrapped.chapters.ferryUnmeasured", { count: ferry.unmeasured })
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        />
+      )}
       {help.length > 0 && (
         <div className="col-span-full">
           <CountingHelp testId="wrapped-chapters-help" entries={help} />
@@ -140,13 +162,14 @@ export default function WrappedChapterCards({
 /** Whether any chapter the server sent holds something — "is the year empty" counts these too. */
 export function chaptersHoldAnything(chapters: WrappedChapters | undefined): boolean {
   if (!chapters) return false;
-  const { lodging, places, roadtrips, tours, rentals, bus } = chapters;
+  const { lodging, places, roadtrips, tours, rentals, bus, ferry } = chapters;
   return (
     (lodging?.stays ?? 0) > 0 ||
     (places?.visits ?? 0) > 0 ||
     (roadtrips?.roadtrips ?? 0) > 0 ||
     (tours?.tours ?? 0) > 0 ||
     (rentals?.rentals ?? 0) > 0 ||
-    (bus?.rides ?? 0) > 0
+    (bus?.rides ?? 0) > 0 ||
+    (ferry?.crossings ?? 0) > 0
   );
 }

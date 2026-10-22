@@ -12,7 +12,7 @@ import { domainSumEvidence } from "./domainMeasureResponse";
 
 /**
  * The year in review's chapter cards (forgejo#265): stays, places, roadtrips,
- * day tours, rentals and bus rides. Each panel lists the very rows the chapter
+ * day tours, rentals, bus rides and ferry crossings. Each panel lists the very rows the chapter
  * counted — the loader (`loadWrappedChapterRows`) files them by their domain's
  * own rule and attaches the entry each row stands for — and its value is the
  * chapter's own figure (`buildWrappedChapters`), so a card and its panel are
@@ -87,5 +87,11 @@ export const WRAPPED_RESOLVERS = {
     "rides",
     "bus",
     (c) => c.bus?.rides ?? null
+  ),
+  wrappedFerryCrossingCount: chapterCount(
+    "wrappedFerryCrossingCount",
+    "crossings",
+    "ferry",
+    (c) => c.ferry?.crossings ?? null
   ),
 };

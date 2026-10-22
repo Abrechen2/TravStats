@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
-import WrappedChapterCards from "../WrappedChapterCards";
+import WrappedChapterCards, { chaptersHoldAnything } from "../WrappedChapterCards";
 import type { WrappedChapters } from "../../../../types/wrapped";
 import { EVIDENCE_MEASURES } from "../../../../shared/evidenceMeasures";
 import { evidenceOpenedBy } from "../../__tests__/evidenceKeysOpened";
@@ -20,6 +20,7 @@ const NONE: WrappedChapters = {
   tours: null,
   rentals: null,
   bus: null,
+  ferry: null,
 };
 const ALL: WrappedChapters = {
   lodging: { stays: 2, nights: 5, nightsUnknown: 0 },
@@ -28,6 +29,7 @@ const ALL: WrappedChapters = {
   tours: { tours: 4 },
   rentals: { rentals: 1, days: 3 },
   bus: { rides: 2, km: 400, unmeasured: 0, nights: 1 },
+  ferry: { crossings: 2, km: 452, unmeasured: 0 },
 };
 const count = (n: number): string => String(n);
 
@@ -55,6 +57,37 @@ describe("WrappedChapterCards — bus kilometres", () => {
   });
 });
 
+// Ferry parity with bus: the same abstention, and no card at all when hidden.
+describe("WrappedChapterCards — ferry crossings", () => {
+  it("draws the ferry chapter with its kilometres and the crossings they leave out", () => {
+    draw({ ...NONE, ferry: { crossings: 3, km: 600, unmeasured: 1 } });
+    expect(screen.getByText("stats:wrapped.chapters.ferry")).toBeInTheDocument();
+    expect(
+      screen.getByText("stats:wrapped.chapters.ferryDesc · stats:wrapped.chapters.ferryUnmeasured")
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("wrapped-chapters-help").textContent).toContain(
+      "stats:wrapped.help.ferry.unit"
+    );
+  });
+
+  it("says the distance was not recorded instead of 0 km", () => {
+    draw({ ...NONE, ferry: { crossings: 1, km: null, unmeasured: 1 } });
+    expect(screen.getByText("stats:wrapped.chapters.ferryNoKm")).toBeInTheDocument();
+    expect(screen.queryByText(/ferryDesc/)).toBeNull();
+  });
+
+  it("draws nothing for a hidden ferry domain, or a server without the chapter", () => {
+    const { lodging, places, roadtrips, tours, rentals, bus } = NONE;
+    draw({ lodging, places, roadtrips, tours, rentals, bus });
+    draw(NONE);
+    expect(screen.queryByText("stats:wrapped.chapters.ferry")).toBeNull();
+    expect(chaptersHoldAnything(NONE)).toBe(false);
+    expect(
+      chaptersHoldAnything({ ...NONE, ferry: { crossings: 1, km: null, unmeasured: 1 } })
+    ).toBe(true);
+  });
+});
+
 describe("WrappedChapterCards — counting help and evidence (forgejo#265)", () => {
   it("opens each chapter's rows, scoped to the year in review, from served measures", async () => {
     const { opened, container } = await evidenceOpenedBy(
@@ -68,6 +101,7 @@ describe("WrappedChapterCards — counting help and evidence (forgejo#265)", () 
         "wrappedTourCount",
         "wrappedRentalCount",
         "wrappedBusRideCount",
+        "wrappedFerryCrossingCount",
       ].sort()
     );
     for (const o of opened) {

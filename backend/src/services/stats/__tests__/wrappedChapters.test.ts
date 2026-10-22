@@ -67,6 +67,7 @@ describe("buildWrapped — chapters beyond flights", () => {
       tours: { tours: 2 },
       rentals: { rentals: 0, days: 0 },
       bus: { rides: 2, km: 255, unmeasured: 1, nights: 1 },
+      ferry: null,
     });
   });
 
@@ -112,5 +113,27 @@ describe("buildWrapped — chapters beyond flights", () => {
       bus: [{ year: 2025, distanceKm: null, nights: 0 }],
     });
     expect(wrapped?.chapters?.bus).toEqual({ rides: 1, km: null, unmeasured: 1, nights: 0 });
+  });
+
+  // Ferry parity with bus: a ferry-only year is offered, its kilometres abstain
+  // when no crossing of the year has a distance, and a hidden ferry has no chapter.
+  it("tells a ferry-only year, with unknown kilometres kept unknown", () => {
+    const wrapped = buildWrapped([], [], [], null, [], {
+      ...NO_CHAPTERS,
+      ferry: [
+        { year: 2025, distanceKm: null },
+        { year: 2024, distanceKm: 120.6 },
+      ],
+    });
+    expect(wrapped?.availableYears).toEqual([2024, 2025]);
+    expect(wrapped?.chapters?.ferry).toEqual({ crossings: 1, km: null, unmeasured: 1 });
+    expect(
+      buildWrapped([], [], [], 2024, [], {
+        ...NO_CHAPTERS,
+        ferry: [{ year: 2024, distanceKm: 120.6 }],
+      })?.chapters?.ferry
+    ).toEqual({ crossings: 1, km: 121, unmeasured: 0 });
+    const parsed = wrappedSchema.safeParse(wrapped);
+    expect(parsed.success ? null : parsed.error.issues).toBeNull();
   });
 });

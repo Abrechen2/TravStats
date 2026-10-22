@@ -1052,7 +1052,12 @@
       "busUnmeasured_one": "{{count}} Fahrt ohne Strecke",
       "busUnmeasured_other": "{{count}} Fahrten ohne Strecke",
       "busNights_one": "{{count}} Nacht an Bord",
-      "busNights_other": "{{count}} Nächte an Bord"
+      "busNights_other": "{{count}} Nächte an Bord",
+      "ferry": "Fährüberfahrten",
+      "ferryDesc": "{{km}} km mit der Fähre",
+      "ferryNoKm": "Strecke nicht erfasst",
+      "ferryUnmeasured_one": "{{count}} Überfahrt ohne Strecke",
+      "ferryUnmeasured_other": "{{count}} Überfahrten ohne Strecke"
     },
     "help": {
       "stays": {
@@ -1096,6 +1101,13 @@
         "source": "Deine abgeschlossenen Busfahrten.",
         "coverage": "Fahrten ohne Strecke tragen keine Kilometer bei und werden genannt; hat keine eine Strecke, steht keine Kilometerzahl. Ein Tipp auf die Zahl zeigt die Einträge.",
         "exclusions": "Geplante, laufende und stornierte Fahrten zählen nicht. Ein ausgeblendeter Bereich hat kein Kapitel. Das Kapitel wird mit keinem anderen zusammengezählt."
+      },
+      "ferry": {
+        "unit": "Eine Fährüberfahrt; im Satz darunter die Kilometer der Überfahrten mit bekannter Strecke.",
+        "time": "Im Jahr der Abfahrt nach dem Kalender des Abfahrtshafens.",
+        "source": "Deine abgeschlossenen Fährüberfahrten.",
+        "coverage": "Überfahrten ohne Strecke tragen keine Kilometer bei und werden genannt; hat keine eine Strecke, steht keine Kilometerzahl. Ein Tipp auf die Zahl zeigt die Einträge.",
+        "exclusions": "Geplante, laufende und stornierte Überfahrten zählen nicht. Ein ausgeblendeter Bereich hat kein Kapitel. Das Kapitel wird mit keinem anderen zusammengezählt."
       }
     }
   },
