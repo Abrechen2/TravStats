@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+<Document>
+	<name>FlightAware ✈ DLH100 03-Oct-2026 (EDDF-EDDM)</name>
+	<Style id="departureAirport">
+		<IconStyle>
+			<scale>1.2</scale>
+			<Icon>
+				<href>https://example.invalid/icons/departure.png</href>
+			</Icon>
+		</IconStyle>
+	</Style>
+	<Style id="arrivalAirport">
+		<IconStyle>
+			<scale>1.2</scale>
+			<Icon>
+				<href>https://example.invalid/icons/arrival.png</href>
+			</Icon>
+		</IconStyle>
+	</Style>
+	<Style id="trackLine">
+		<LineStyle>
+			<color>ff0000ff</color>
+			<width>4</width>
+		</LineStyle>
+		<PolyStyle>
+			<color>7f0000ff</color>
+		</PolyStyle>
+	</Style>
+	<Placemark>
+		<name>EDDF</name>
+		<styleUrl>#departureAirport</styleUrl>
+		<Point>
+			<coordinates>8.570556,50.033333,111</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark>
+		<name>EDDM</name>
+		<styleUrl>#arrivalAirport</styleUrl>
+		<Point>
+			<coordinates>11.786086,48.353783,453</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark>
+		<styleUrl>#trackLine</styleUrl>
+		<gx:Track>
+			<altitudeMode>absolute</altitudeMode>
+			<extrude>1</extrude>
+			<when>2026-10-03T08:00:00Z</when>
+			<when>2026-10-03T08:06:00Z</when>
+			<when>2026-10-03T08:12:00Z</when>
+			<when>2026-10-03T08:18:00Z</when>
+			<when>2026-10-03T08:24:00Z</when>
+			<when>2026-10-03T08:30:00Z</when>
+			<when>2026-10-03T08:36:00Z</when>
+			<when>2026-10-03T08:42:00Z</when>
+			<when>2026-10-03T08:48:00Z</when>
+			<gx:coord>8.5706 50.0333 106.7</gx:coord>
+			<gx:coord>8.9725 49.8234 1371.6</gx:coord>
+			<gx:coord>9.3745 49.6134 4267.2</gx:coord>
+			<gx:coord>9.7764 49.4035 7315.2</gx:coord>
+			<gx:coord>10.1784 49.1936 9144.0</gx:coord>
+			<gx:coord>10.5803 48.9836 9144.0</gx:coord>
+			<gx:coord>10.9822 48.7737 6705.6</gx:coord>
+			<gx:coord>11.3842 48.5637 2743.2</gx:coord>
+			<gx:coord>11.7861 48.3538 457.2</gx:coord>
+		</gx:Track>
+	</Placemark>
+</Document>
+</kml>

@@ -4,28 +4,51 @@ import type { ParsedTrack } from "./parseGpx";
 
 /**
  * KML -> `ParsedTrack` (forgejo#312), the format flight trackers export.
- * Pure: a string in, a structure out, or `null` when the file is not KML or
- * holds fewer than two usable positions.
+ * Pure: a string in, a track or the reason there is none out.
  *
  * Three shapes are read, in order of preference, and the first that yields a
  * line wins — they are alternatives, never merged:
  *
- *   1. `gx:Track` — FlightAware's export: parallel `<when>` and `<gx:coord>`
- *      lists ("lon lat alt", space-separated). Each track is one recorded
- *      stretch. A track whose two lists differ in length cannot be paired, so
- *      the file is refused rather than guessed at.
- *   2. Timestamped `<Point>` placemarks — Flightradar24's export carries one
- *      per position, beside an UNTIMED `<LineString>` trail of the same
- *      flight. The timed points are the recording; the trail is a drawing of
- *      it, and reading both would draw the flight twice.
+ *   1. `gx:Track` — FlightAware's "Google Earth KML": one placemark holding
+ *      parallel `<when>` and `<gx:coord>` lists ("lon lat alt", space
+ *      separated, altitude mode absolute), beside two `<Point>` placemarks for
+ *      the origin and destination airports. The airports carry no time and are
+ *      never read as positions. The lists may come as two blocks or
+ *      interleaved (`when, coord, when, coord`); KML allows both and both are
+ *      read. A `gx:MultiTrack` is its tracks, each one recorded stretch. A
+ *      track whose two lists differ in length cannot be paired, so the file is
+ *      refused rather than guessed at.
+ *   2. Timestamped `<Point>` placemarks — Flightradar24's export: a folder of
+ *      one placemark per position, each with a `<TimeStamp><when>` (a
+ *      `<TimeSpan><begin>` is read the same way), beside a "Trail" drawn as
+ *      untimed `<LineString>`s. The timed points are the recording, sorted by
+ *      time because the folder's order is not a promise; the trail is a
+ *      drawing of it, and reading both would draw the flight twice — or pair
+ *      the trail's vertices with times nobody recorded.
  *   3. `<LineString>` — a bare line ("lon,lat[,alt]" tuples). It has no times;
  *      the caller decides whether it can place it (a flight can, from its
- *      schedule).
+ *      schedule). A trail cut into many short lines that meet end to end (one
+ *      per colour band) is one stretch, not a gap at every joint.
  *
- * Altitude is optional everywhere and kept as metres where present (KML's
- * unit). A position outside the globe is dropped on its own, as `parseGpx`
- * does, rather than refusing the file.
+ * Altitude is metres, KML's unit. Two exceptions, because exporters do not all
+ * honour that: an altitude a placemark's description states with its unit
+ * ("Altitude: 35,000 ft") wins over the coordinate, and coordinate altitudes
+ * above `MAX_ALTITUDE_M` — higher than anything this app records flies — can
+ * only be feet and are converted. A position outside the globe is dropped on
+ * its own, as `parseGpx` does, rather than refusing the file.
  */
+
+export type KmlRefusal = "kmlInvalid" | "kmlUnpaired" | "kmlNoTrack";
+export type KmlResult = { ok: true; track: ParsedTrack } | { ok: false; reason: KmlRefusal };
+
+const FEET_TO_M = 0.3048;
+
+/**
+ * 20 km. Concorde cruised at 18 km and business jets top out near 15.5 km,
+ * while a cruise level of FL350 read as metres is 35 km — so a value above
+ * this cannot be metres, and a file that has one wrote feet.
+ */
+const MAX_ALTITUDE_M = 20_000;
 
 const parser = new XMLParser({
   ignoreAttributes: true,
@@ -41,6 +64,8 @@ interface Point {
   lat: number;
   ele: number | null;
   time: number | null;
+  /** The altitude came with a stated unit and is already metres. */
+  eleStated?: boolean;
 }
 
 function isXmlNode(value: unknown): value is XmlNode {
@@ -58,6 +83,14 @@ function text(value: unknown): string | null {
   return null;
 }
 
+/** Every text below a node, joined — a description may be HTML parsed into elements. */
+function flatText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value.map(flatText).join(" ");
+  if (isXmlNode(value)) return Object.values(value).map(flatText).join(" ");
+  return "";
+}
+
 function epochMs(value: unknown): number | null {
   const s = text(value);
   if (s === null) return null;
@@ -68,7 +101,7 @@ function epochMs(value: unknown): number | null {
 /** One position from its numeric parts; null when off the globe or not numbers. */
 function toPoint(parts: string[], time: number | null): Point | null {
   if (parts.length < 2) return null;
-  const [lon, lat, alt] = parts.map(Number);
+  const [lon, lat, alt] = parts.map((p) => (p.trim() === "" ? NaN : Number(p)));
   if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
   if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
   return { lon, lat, ele: Number.isFinite(alt) ? alt : null, time };
@@ -88,49 +121,109 @@ function collect(node: unknown, key: string, out: unknown[] = []): unknown[] {
   return out;
 }
 
-/** `gx:Track`s as segments; `null` when a track's times and positions do not pair up. */
-function fromTracks(root: XmlNode): Point[][] | null {
-  const segments: Point[][] = [];
-  for (const track of collect(root, "Track").filter(isXmlNode)) {
-    const whens = asArray(track["when"]);
-    const coords = asArray(track["coord"]);
-    if (whens.length !== coords.length) return null;
-    const segment: Point[] = [];
-    coords.forEach((coord, i) => {
-      const point = toPoint((text(coord) ?? "").split(/\s+/), epochMs(whens[i]));
-      if (point) segment.push(point);
-    });
-    segments.push(segment);
-  }
-  return segments;
+/** Every placemark in the document, folders included. */
+function placemarks(root: XmlNode): XmlNode[] {
+  return collect(root, "Placemark").filter(isXmlNode);
 }
 
-/** Placemarks with a `<Point>` AND a `<TimeStamp>`, as one stretch in time order. */
-function fromTimedPoints(root: XmlNode): Point[][] {
+interface Reading {
+  segments: Point[][];
+  name: string | null;
+}
+
+/** `gx:Track`s as segments; `null` when a track's times and positions do not pair up. */
+function fromTracks(root: XmlNode): Reading | null {
+  const segments: Point[][] = [];
+  let name: string | null = null;
+  for (const placemark of placemarks(root)) {
+    for (const track of collect(placemark, "Track").filter(isXmlNode)) {
+      const whens = asArray(track["when"]);
+      const coords = asArray(track["coord"]);
+      if (whens.length !== coords.length) return null;
+      const segment: Point[] = [];
+      coords.forEach((coord, i) => {
+        const point = toPoint((text(coord) ?? "").split(/\s+/), epochMs(whens[i]));
+        if (point) segment.push(point);
+      });
+      if (segment.length > 0) name ??= text(placemark["name"]);
+      segments.push(segment);
+    }
+  }
+  return { segments, name };
+}
+
+/** "Altitude: 35,000 ft" (or "… m") from a placemark's description, as metres. */
+function statedAltitude(placemark: XmlNode): number | null {
+  const description = flatText(placemark["description"]);
+  const match = /altitude\D{0,40}?(-?[\d,.]+)\s*(ft|feet|m)\b/i.exec(description);
+  if (!match) return null;
+  const value = Number(match[1].replace(/,/g, ""));
+  if (!Number.isFinite(value)) return null;
+  return match[2].toLowerCase() === "m" ? value : value * FEET_TO_M;
+}
+
+function placemarkTime(placemark: XmlNode): number | null {
+  const stamp = placemark["TimeStamp"];
+  if (isXmlNode(stamp)) return epochMs(stamp["when"]);
+  const span = placemark["TimeSpan"];
+  if (isXmlNode(span)) return epochMs(span["begin"]);
+  return null;
+}
+
+/** Placemarks with a `<Point>` AND a time, as one stretch in time order. */
+function fromTimedPoints(root: XmlNode): Reading {
   const points: Point[] = [];
-  for (const placemark of collect(root, "Placemark").filter(isXmlNode)) {
-    const stamp = placemark["TimeStamp"];
+  for (const placemark of placemarks(root)) {
     const point = placemark["Point"];
-    if (!isXmlNode(stamp) || !isXmlNode(point)) continue;
-    const time = epochMs(stamp["when"]);
+    if (!isXmlNode(point)) continue;
+    const time = placemarkTime(placemark);
     if (time === null) continue;
     const parsed = toPoint((text(point["coordinates"]) ?? "").split(","), time);
-    if (parsed) points.push(parsed);
+    if (!parsed) continue;
+    const stated = statedAltitude(placemark);
+    points.push(stated === null ? parsed : { ...parsed, ele: stated, eleStated: true });
   }
-  // The exporters list positions newest first as often as oldest first.
-  return [[...points].sort((a, b) => (a.time ?? 0) - (b.time ?? 0))];
+  // A stable sort: two positions in the same second keep the file's order.
+  const ordered = [...points].sort((a, b) => (a.time ?? 0) - (b.time ?? 0));
+  return { segments: [ordered], name: null };
 }
 
-/** Every `<LineString>` as its own untimed stretch. */
-function fromLineStrings(root: XmlNode): Point[][] {
-  return collect(root, "LineString")
-    .filter(isXmlNode)
-    .map((line) =>
-      (text(line["coordinates"]) ?? "")
+function sameSpot(a: Point, b: Point): boolean {
+  return Math.abs(a.lon - b.lon) < 1e-9 && Math.abs(a.lat - b.lat) < 1e-9;
+}
+
+/** Every `<LineString>` as an untimed stretch; lines that meet end to end are one. */
+function fromLineStrings(root: XmlNode): Reading {
+  const segments: Point[][] = [];
+  let name: string | null = null;
+  for (const placemark of placemarks(root)) {
+    for (const line of collect(placemark, "LineString").filter(isXmlNode)) {
+      const points = (text(line["coordinates"]) ?? "")
         .split(/\s+/)
         .map((tuple) => toPoint(tuple.split(","), null))
-        .filter((p): p is Point => p !== null)
-    );
+        .filter((p): p is Point => p !== null);
+      if (points.length === 0) continue;
+      name ??= text(placemark["name"]);
+      const previous = segments[segments.length - 1];
+      if (previous && sameSpot(previous[previous.length - 1], points[0])) {
+        segments[segments.length - 1] = [...previous, ...points.slice(1)];
+      } else {
+        segments.push(points);
+      }
+    }
+  }
+  return { segments, name };
+}
+
+/** Coordinate altitudes that cannot be metres were written in feet. */
+function inMetres(segments: Point[][]): Point[][] {
+  const feet = segments.some((s) =>
+    s.some((p) => !p.eleStated && p.ele !== null && p.ele > MAX_ALTITUDE_M)
+  );
+  if (!feet) return segments;
+  return segments.map((s) =>
+    s.map((p) => (p.eleStated || p.ele === null ? p : { ...p, ele: p.ele * FEET_TO_M }))
+  );
 }
 
 function countPoints(segments: Point[][]): number {
@@ -169,33 +262,37 @@ function assemble(segments: Point[][], name: string | null): ParsedTrack {
   };
 }
 
-/** The first `<name>` of a placemark that carries the line, else of the document. */
-function firstName(root: XmlNode): string | null {
-  for (const placemark of collect(root, "Placemark").filter(isXmlNode)) {
-    const name = text(placemark["name"]);
-    if (name) return name;
-  }
-  return null;
+/** The document's own `<name>` — Flightradar24 puts the flight there. */
+function documentName(root: XmlNode): string | null {
+  const doc = root["Document"];
+  return text(isXmlNode(doc) ? doc["name"] : root["name"]);
 }
 
-export function parseKml(xml: string): ParsedTrack | null {
+export function readKml(xml: string): KmlResult {
+  const source = xml.replace(/^\uFEFF/, "");
+  let root: XmlNode;
   try {
-    if (XMLValidator.validate(xml) !== true) return null;
-    const parsed: unknown = parser.parse(xml);
-    if (!isXmlNode(parsed) || !isXmlNode(parsed["kml"])) return null;
-    const root = parsed["kml"];
-
-    const tracks = fromTracks(root);
-    if (tracks === null) return null;
-    const candidates = [tracks, fromTimedPoints(root), fromLineStrings(root)];
-    const chosen = candidates.find((segments) => countPoints(segments) >= 2);
-    return chosen ? assemble(chosen, firstName(root)) : null;
+    if (XMLValidator.validate(source) !== true) return { ok: false, reason: "kmlInvalid" };
+    const parsed: unknown = parser.parse(source);
+    if (!isXmlNode(parsed) || !isXmlNode(parsed["kml"])) return { ok: false, reason: "kmlInvalid" };
+    root = parsed["kml"];
   } catch {
-    return null;
+    return { ok: false, reason: "kmlInvalid" };
   }
+
+  const tracks = fromTracks(root);
+  if (tracks === null) return { ok: false, reason: "kmlUnpaired" };
+  const chosen = [tracks, fromTimedPoints(root), fromLineStrings(root)].find(
+    (reading) => countPoints(reading.segments) >= 2
+  );
+  if (!chosen) return { ok: false, reason: "kmlNoTrack" };
+  return {
+    ok: true,
+    track: assemble(inMetres(chosen.segments), chosen.name ?? documentName(root)),
+  };
 }
 
 /** Whether the bytes are a KML document (decided by the root element, not the name). */
 export function looksLikeKml(head: string): boolean {
-  return /<kml[\s>]/.test(head);
+  return /<(?:\w+:)?kml[\s>]/.test(head);
 }

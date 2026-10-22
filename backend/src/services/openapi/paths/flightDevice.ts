@@ -131,11 +131,11 @@ registry.registerPath({
 registry.registerPath({
   method: "post",
   path: "/flights/{id}/track/file",
-  summary: "Upload a recorded flight track as a file (GPX, KML, TCX, FIT)",
+  summary: "Upload a recorded flight track as a file (GPX, KML, KMZ, TCX, FIT, FR24 CSV)",
   description:
     "multipart/form-data, one file under 'file' (up to 15 MB), its format decided by its bytes; " +
     "optional field 'replace' ('true' | 'false'). Stored in the same one-per-flight recording " +
-    "the phone writes, `source` = the format. The same bytes again answer 200 with " +
+    "the phone writes, `source` = the format (a KMZ is stored as `kml`). The same bytes again answer 200 with " +
     "`replayed: true`. A file without times is placed in the flight's schedule; without a " +
     "schedule it is refused (400 TRACK_NO_TIMESTAMPS). Altitude is kept when the file has it. " +
     "Only the parsed line is stored, never the file.",
@@ -149,8 +149,11 @@ registry.registerPath({
     201: { description: "Stored", content: { "application/json": { schema: writeAnswer } } },
     400: {
       description:
-        "TRACK_FILE_MISSING, TRACK_FILE_TOO_LARGE, TRACK_FILE_UNREADABLE, TRACK_NO_TIMESTAMPS " +
-        "or VALIDATION_FAILED (the replace field)",
+        "TRACK_FILE_MISSING, TRACK_FILE_TOO_LARGE, TRACK_NO_TIMESTAMPS, VALIDATION_FAILED " +
+        "(the replace field), or why the file gave no track: TRACK_FILE_UNSUPPORTED, " +
+        "TRACK_FILE_UNREADABLE (GPX/TCX/FIT), TRACK_KML_INVALID, TRACK_KML_UNPAIRED, " +
+        "TRACK_KML_NO_TRACK, TRACK_KMZ_DAMAGED, TRACK_KMZ_NO_KML, TRACK_KMZ_TOO_LARGE, " +
+        "TRACK_CSV_COLUMNS, TRACK_CSV_NO_POSITIONS",
       content: errorContent,
     },
     403: { description: "Read-only token, or the shared demo account", content: errorContent },

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+<Document>
+	<name>FlightAware ✈ DLH100 03-Oct-2026 (EDDF-EDDM)</name>
+	<Style id="departureAirport">
+		<IconStyle>
+			<scale>1.2</scale>
+			<Icon>
+				<href>https://example.invalid/icons/departure.png</href>
+			</Icon>
+		</IconStyle>
+	</Style>
+	<Style id="arrivalAirport">
+		<IconStyle>
+			<scale>1.2</scale>
+			<Icon>
+				<href>https://example.invalid/icons/arrival.png</href>
+			</Icon>
+		</IconStyle>
+	</Style>
+	<Style id="trackLine">
+		<LineStyle>
+			<color>ff0000ff</color>
+			<width>4</width>
+		</LineStyle>
+		<PolyStyle>
+			<color>7f0000ff</color>
+		</PolyStyle>
+	</Style>
+	<Placemark>
+		<name>EDDF</name>
+		<styleUrl>#departureAirport</styleUrl>
+		<Point>
+			<coordinates>8.570556,50.033333,111</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark>
+		<name>EDDM</name>
+		<styleUrl>#arrivalAirport</styleUrl>
+		<Point>
+			<coordinates>11.786086,48.353783,453</coordinates>
+		</Point>
+	</Placemark>
+</Document>
+</kml>

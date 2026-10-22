@@ -1,18 +1,22 @@
 import { createHash } from "crypto";
 
-import { looksLikeKml, parseKml } from "../tour/tracks/parseKml";
+import { looksLikeKml, readKml, type KmlRefusal } from "../tour/tracks/parseKml";
 import { detectTrackFormat, parseTrackFile } from "../tour/tracks/parseTrackFile";
 import type { ParsedTrack } from "../tour/tracks/parseGpx";
 import type { FlightTrackSource } from "../../schemas/flightDevice";
+import { looksLikeFr24Csv, parseFr24Csv, type Fr24CsvRefusal } from "./parseFr24Csv";
+import { looksLikeZip, readKmz, type KmzRefusal } from "./readKmz";
+import { AppError, type ApiErrorCode } from "../../middleware/errorHandler";
 
 /**
  * A recorded flight uploaded as a FILE on the flight page (forgejo#312).
  *
- * KML is read here and not in the shared `parseTrackFile`: it is what flight
- * trackers export (FlightAware, Flightradar24), and offering it on the tour and
- * cruise uploads too would change their accepted formats and their error copy
- * — a decision for those features, not a side effect of this one. GPX, TCX and
- * FIT come through the shared reader unchanged.
+ * KML, KMZ and Flightradar24's CSV are read here and not in the shared
+ * `parseTrackFile`: they are what flight trackers export (FlightAware,
+ * Flightradar24), and offering them on the tour and cruise uploads too would
+ * change their accepted formats and their error copy — a decision for those
+ * features, not a side effect of this one. GPX, TCX and FIT come through the
+ * shared reader unchanged. A KMZ is stored as `kml`: it is one, zipped.
  */
 
 export type FlightTrackFileFormat = Exclude<FlightTrackSource, "companion">;
@@ -22,19 +26,104 @@ export interface FlightTrackFile {
   track: ParsedTrack;
 }
 
+/**
+ * Why a file gave no track — each its own sentence in the UI, because "could
+ * not be read" sends someone with a FlightAware export of only the two
+ * airports hunting for a broken download.
+ *
+ *   unsupported   the bytes are none of the formats, and the name names none
+ *   unreadable    GPX, TCX or FIT that the shared reader could not use
+ */
+export type FlightTrackFileRefusal =
+  "unsupported" | "unreadable" | KmlRefusal | KmzRefusal | Fr24CsvRefusal;
+
+export type FlightTrackFileResult =
+  ({ ok: true } & FlightTrackFile) | { ok: false; reason: FlightTrackFileRefusal };
+
+function fromKml(xml: string): FlightTrackFileResult {
+  const kml = readKml(xml);
+  return kml.ok ? { ok: true, format: "kml", track: kml.track } : kml;
+}
+
+function fromCsv(text: string): FlightTrackFileResult {
+  const csv = parseFr24Csv(text);
+  return csv.ok ? { ok: true, format: "csv", track: csv.track } : csv;
+}
+
+async function fromShared(buffer: Buffer, fileName?: string): Promise<FlightTrackFileResult> {
+  const file = await parseTrackFile(buffer, fileName);
+  return file ? { ok: true, ...file } : { ok: false, reason: "unreadable" };
+}
+
 /** The bytes decide, as in `detectTrackFormat`; the name only breaks a tie. */
 export async function readFlightTrackFile(
   buffer: Buffer,
   fileName?: string
-): Promise<FlightTrackFile | null> {
+): Promise<FlightTrackFileResult> {
   const head = buffer.toString("utf-8", 0, Math.min(buffer.length, 4096));
-  const extension = fileName?.toLowerCase().split(".").pop();
-  const isKml = looksLikeKml(head) || (detectTrackFormat(buffer) === null && extension === "kml");
-  if (isKml) {
-    const track = parseKml(buffer.toString("utf-8"));
-    return track ? { format: "kml", track } : null;
+  if (looksLikeZip(buffer)) {
+    const kmz = readKmz(buffer);
+    return kmz.ok ? fromKml(kmz.kml) : kmz;
   }
-  return parseTrackFile(buffer, fileName);
+  if (looksLikeKml(head)) return fromKml(buffer.toString("utf-8"));
+  if (detectTrackFormat(buffer) !== null) return fromShared(buffer, fileName);
+  if (looksLikeFr24Csv(head)) return fromCsv(buffer.toString("utf-8"));
+
+  switch (fileName?.toLowerCase().split(".").pop()) {
+    case "kml":
+      return fromKml(buffer.toString("utf-8"));
+    case "kmz":
+      return { ok: false, reason: "kmzDamaged" };
+    case "csv":
+      return fromCsv(buffer.toString("utf-8"));
+    case "gpx":
+    case "tcx":
+    case "fit":
+      return fromShared(buffer, fileName);
+    default:
+      return { ok: false, reason: "unsupported" };
+  }
+}
+
+/** Each refusal's stable code and server-side sentence (the UI maps the code to DE/EN copy). */
+const REFUSALS: Readonly<Record<FlightTrackFileRefusal, { code: ApiErrorCode; message: string }>> =
+  {
+    unsupported: {
+      code: "TRACK_FILE_UNSUPPORTED",
+      message: "The file is not GPX, KML, KMZ, TCX, FIT or a Flightradar24 CSV",
+    },
+    unreadable: {
+      code: "TRACK_FILE_UNREADABLE",
+      message: "The file could not be read as GPX, TCX or FIT with at least two positions",
+    },
+    kmlInvalid: { code: "TRACK_KML_INVALID", message: "The KML file is not well-formed XML" },
+    kmlUnpaired: {
+      code: "TRACK_KML_UNPAIRED",
+      message: "The KML track has a different number of times than positions",
+    },
+    kmlNoTrack: {
+      code: "TRACK_KML_NO_TRACK",
+      message: "The KML file holds no track of at least two positions",
+    },
+    kmzDamaged: { code: "TRACK_KMZ_DAMAGED", message: "The KMZ archive is damaged" },
+    kmzNoKml: { code: "TRACK_KMZ_NO_KML", message: "The ZIP archive holds no KML file" },
+    kmzTooLarge: {
+      code: "TRACK_KMZ_TOO_LARGE",
+      message: "The KML inside the KMZ is larger than 15 MB unpacked",
+    },
+    csvColumns: {
+      code: "TRACK_CSV_COLUMNS",
+      message: "The CSV file does not have Flightradar24's track columns",
+    },
+    csvNoPositions: {
+      code: "TRACK_CSV_NO_POSITIONS",
+      message: "The CSV file has fewer than two rows with a time and a position",
+    },
+  };
+
+export function refusalError(reason: FlightTrackFileRefusal): AppError {
+  const { code, message } = REFUSALS[reason];
+  return new AppError(message, 400, code);
 }
 
 /**

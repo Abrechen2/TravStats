@@ -1,6 +1,11 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { parseKml } from "../parseKml";
+import { readKml } from "../parseKml";
+
+function parseKml(xml: string) {
+  const result = readKml(xml);
+  return result.ok ? result.track : null;
+}
 
 /**
  * KML as the flight trackers export it (forgejo#312): FlightAware writes a
@@ -120,18 +125,106 @@ describe("parseKml", () => {
   });
 
   it.each([
-    ["broken XML", "<kml><Placemark><LineString>"],
-    ["XML that is not KML", "<gpx><trk/></gpx>"],
+    ["broken XML", "<kml><Placemark><LineString>", "kmlInvalid"],
+    ["XML that is not KML", "<gpx><trk/></gpx>", "kmlInvalid"],
     [
       "KML with a single position",
       "<kml><Placemark><Point><coordinates>1,2</coordinates></Point></Placemark></kml>",
+      "kmlNoTrack",
     ],
-    ["KML with no geometry", "<kml><Document><name>empty</name></Document></kml>"],
+    ["KML with no geometry", "<kml><Document><name>empty</name></Document></kml>", "kmlNoTrack"],
     [
       "a gx:Track whose times and positions do not pair up",
       FLIGHTAWARE.replace("<when>2026-10-03T08:02:00Z</when>", ""),
+      "kmlUnpaired",
     ],
-  ])("refuses %s", (_label, xml) => {
-    expect(parseKml(xml)).toBeNull();
+  ])("refuses %s with its own reason", (_label, xml, reason) => {
+    expect(readKml(xml)).toEqual({ ok: false, reason });
+  });
+
+  it("reads gx:Track lists that interleave <when> and <gx:coord>", () => {
+    const interleaved = `<kml xmlns:gx="http://www.google.com/kml/ext/2.2"><Placemark><gx:Track>
+      <when>2026-10-03T08:00:00Z</when><gx:coord>11.786 48.354 450</gx:coord>
+      <when>2026-10-03T08:01:00Z</when><gx:coord>11.9 48.4 1800</gx:coord>
+      <when>2026-10-03T08:02:00Z</when><gx:coord>12.1 48.5 3200</gx:coord>
+    </gx:Track></Placemark></kml>`;
+    const track = parseKml(interleaved);
+    expect(track!.points).toEqual([
+      [11.786, 48.354],
+      [11.9, 48.4],
+      [12.1, 48.5],
+    ]);
+    expect(track!.times![2]).toBe(Date.parse("2026-10-03T08:02:00Z"));
+  });
+
+  it("reads each gx:Track of a gx:MultiTrack as its own stretch", () => {
+    const multi = FLIGHTAWARE.replace("<gx:Track>", "<gx:MultiTrack><gx:Track>").replace(
+      "</gx:Track>",
+      "</gx:Track><gx:Track><when>2026-10-03T09:00:00Z</when><when>2026-10-03T09:01:00Z</when><gx:coord>13 49 9000</gx:coord><gx:coord>13.2 49.1 9000</gx:coord></gx:Track></gx:MultiTrack>"
+    );
+    const track = parseKml(multi);
+    expect(track!.points).toHaveLength(5);
+    expect(track!.segmentStarts).toEqual([0, 3]);
+  });
+
+  it("reads a TimeSpan's begin as a position's time", () => {
+    const span = FLIGHTRADAR.replace(
+      /<TimeStamp><when>([^<]+)<\/when><\/TimeStamp>/g,
+      "<TimeSpan><begin>$1</begin></TimeSpan>"
+    );
+    expect(parseKml(span)!.times).toEqual([
+      Date.parse("2026-10-03T08:00:00Z"),
+      Date.parse("2026-10-03T08:01:00Z"),
+      Date.parse("2026-10-03T08:02:00Z"),
+    ]);
+  });
+
+  it("joins lines that meet end to end into one stretch, and keeps a real gap", () => {
+    const pieces = `<kml><Document>
+      <Placemark><LineString><coordinates>1,50 2,50</coordinates></LineString></Placemark>
+      <Placemark><LineString><coordinates>2,50 3,50</coordinates></LineString></Placemark>
+      <Placemark><LineString><coordinates>5,50 6,50</coordinates></LineString></Placemark>
+    </Document></kml>`;
+    const track = parseKml(pieces);
+    expect(track!.points).toEqual([
+      [1, 50],
+      [2, 50],
+      [3, 50],
+      [5, 50],
+      [6, 50],
+    ]);
+    expect(track!.segmentStarts).toEqual([0, 3]);
+  });
+
+  describe("altitude", () => {
+    const timedPoint = (when: string, coords: string, description = "") =>
+      `<Placemark>${description}<TimeStamp><when>${when}</when></TimeStamp><Point><coordinates>${coords}</coordinates></Point></Placemark>`;
+
+    it("takes an altitude the description states in feet over the coordinate, as metres", () => {
+      const xml = `<kml><Folder>${timedPoint(
+        "2026-10-03T08:00:00Z",
+        "8,50,0",
+        "<description><![CDATA[<b>Altitude:</b> 35,000 ft]]></description>"
+      )}${timedPoint("2026-10-03T08:01:00Z", "8.1,50,0", "<description>Altitude: 1000 m</description>")}</Folder></kml>`;
+      expect(parseKml(xml)!.elevations).toEqual([10668, 1000]);
+    });
+
+    it("reads coordinate altitudes as metres while they could be metres", () => {
+      const xml = `<kml><Folder>${timedPoint("2026-10-03T08:00:00Z", "8,50,3000")}${timedPoint(
+        "2026-10-03T08:01:00Z",
+        "8.1,50,11000"
+      )}</Folder></kml>`;
+      expect(parseKml(xml)!.elevations).toEqual([3000, 11000]);
+    });
+
+    it("converts coordinate altitudes that cannot be metres from feet", () => {
+      const xml = `<kml><Folder>${timedPoint("2026-10-03T08:00:00Z", "8,50,3000")}${timedPoint(
+        "2026-10-03T08:01:00Z",
+        "8.1,50,37000"
+      )}</Folder></kml>`;
+      const [low, high] = parseKml(xml)!.elevations!;
+      expect(low).toBeCloseTo(914.4, 1);
+      expect(high).toBeCloseTo(11277.6, 1);
+    });
   });
 });
