@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { FormEvent, JSX } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { railApi } from "../../lib/api/rail";
@@ -24,6 +25,15 @@ type Failure = {
   reason: RailShareLinkFailure | RailShareLinkRequestFailure;
   facts: RailShareLinkFacts | null;
 };
+
+/** Failures the bookmarklet gets past: bahn.de refusing or not answering the server. */
+const BOOKMARKLET_HELPS: ReadonlySet<Failure["reason"]> = new Set([
+  "blocked",
+  "rateLimited",
+  "providerError",
+  "timeout",
+  "unreachable",
+]);
 
 const statusOf = (err: unknown): number | undefined =>
   (err as { response?: { status?: number } } | null)?.response?.status;
@@ -120,6 +130,15 @@ export function RailShareLinkRoute({ context }: Props): JSX.Element {
                 when: facts.departureLocal ? wallClockLabel(facts.departureLocal) : "—",
                 travelClass: facts.travelClass ? t(`rail:class.${facts.travelClass}`) : "—",
               })}
+            </p>
+          )}
+          {BOOKMARKLET_HELPS.has(failure.reason) && (
+            // The way that works where the server is refused (forgejo#204).
+            <p className="text-sm" data-testid="rail-share-link-bookmarklet">
+              {t("rail:shareLink.bookmarkletHint")}{" "}
+              <Link to="/settings/data?section=import" className="underline">
+                {t("rail:shareLink.bookmarkletSetup")}
+              </Link>
             </p>
           )}
           <p className="text-sm">{t("rail:shareLink.fallbackIntro")}</p>

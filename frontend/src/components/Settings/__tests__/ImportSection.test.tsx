@@ -26,6 +26,9 @@ vi.mock("../../import/LodgingCsvImportTile", () => ({
 vi.mock("../../import/PlaceCsvImportTile", () => ({
   PlaceCsvImportTile: () => <div data-testid="tile-poi-csv" />,
 }));
+vi.mock("../../import/RailBookmarkletTile", () => ({
+  RailBookmarkletTile: () => <div data-testid="tile-rail-bookmarklet" />,
+}));
 vi.mock("../../import/PlaceDocumentImportTile", () => ({
   PlaceDocumentImportTile: () => <div data-testid="tile-poi-document" />,
 }));
@@ -125,6 +128,18 @@ describe("ImportSection — central import hub", () => {
       expect(screen.getByTestId("tile-poi-document")).toBeTruthy();
     }
   );
+
+  // forgejo#204: the bahn.de bookmarklet is set up here, behind rail's own gates —
+  // the user's domain choice and the `railDomain` beta switch.
+  it.each([
+    [["flight", "rail"], true, true],
+    [["flight", "rail"], false, false],
+    [["flight"], true, false],
+  ])("offers the bahn.de bookmarklet for domains %j, beta %s: %s", (domains, flag, shown) => {
+    useSettingsStore.setState({ enabledDomains: domains as never, betaFeaturesEnabled: flag });
+    render(<ImportSection />);
+    expect(screen.queryByTestId("tile-rail-bookmarklet") !== null).toBe(shown);
+  });
 
   it("hides the places group when the user has the domain off", () => {
     useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });

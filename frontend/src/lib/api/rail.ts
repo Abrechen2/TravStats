@@ -15,6 +15,7 @@ import type {
   RailStats,
 } from "../../types/rail";
 import type { RailShareLinkOutcome } from "../../types/railShareLink";
+import type { BahnHandoffAnswer } from "../rail/bahnHandoff";
 
 /**
  * `/api/v1/rail` — the rail logbook (spec 2026-09-25-rail-domain). Enveloped,
@@ -183,6 +184,18 @@ export const railApi = {
       { url },
       { timeout: API_TIMEOUTS.RAIL_LOOKUP }
     );
+    return res.data.data;
+  },
+
+  /**
+   * A connection the bookmarklet read on bahn.de itself (forgejo#204). No
+   * request to bahn.de: the server reads the answer it is handed, with the
+   * same reader as `readShareLink`, and stores nothing.
+   */
+  async readBahnHandoff(answer: BahnHandoffAnswer): Promise<RailShareLinkOutcome> {
+    const res = await api.post<Envelope<RailShareLinkOutcome>>("/rail/share-link/connection", {
+      answer,
+    });
     return res.data.data;
   },
 

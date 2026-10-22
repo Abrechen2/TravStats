@@ -603,7 +603,9 @@
       "noConnectionInLink": "Das ist ein Suchlink, keine geteilte Verbindung: Er nennt Bahnhöfe und Zeit, aber keinen Zug.",
       "requestRateLimited": "Zu viele Abfragen in kurzer Zeit — warte eine Minute.",
       "requestFailed": "Der Link konnte nicht an den Server geschickt werden."
-    }
+    },
+    "bookmarkletHint": "Mit dem Lesezeichen „In TravStats übernehmen“ klappt es trotzdem: Es holt die Verbindung direkt auf bahn.de.",
+    "bookmarkletSetup": "Lesezeichen einrichten"
   },
   "routeRefresh": {
     "action": "Streckenverlauf erneut laden",
@@ -615,5 +617,45 @@
     "denied": "Die Berechtigung fehlt oder die Sitzung ist abgelaufen.",
     "missing": "Diese Bahnfahrt wurde nicht gefunden.",
     "network": "Der Server ist nicht erreichbar oder die Anfrage dauerte zu lange. Bitte erneut versuchen."
+  },
+  "bookmarklet": {
+    "title": "Verbindung von bahn.de übernehmen",
+    "description": "Die Bahn lässt TravStats geteilte Verbindungen nicht selbst abrufen. Dieses Lesezeichen holt die Verbindung auf bahn.de in deinem Browser und übergibt sie an TravStats — du prüfst jede Fahrt, bevor etwas gespeichert wird.",
+    "linkLabel": "In TravStats übernehmen",
+    "dragHint": "Hier anklicken tut nichts — zieh den Link in die Lesezeichenleiste deines Browsers.",
+    "step1": "Zieh „In TravStats übernehmen“ in die Lesezeichenleiste.",
+    "step2": "Öffne den geteilten Link der Bahn (bahn.de/buchung/start?vbid=…) im Browser.",
+    "step3": "Klick dort auf das Lesezeichen — TravStats öffnet sich mit der Verbindung zur Prüfung.",
+    "touchHint": "Auf iPad oder Telefon lässt sich nichts ziehen: Lege für irgendeine Seite ein Lesezeichen an, bearbeite es und ersetze die Adresse durch den kopierten Code. Öffne dann den geteilten Link in Safari oder Chrome und wähle das Lesezeichen.",
+    "copy": "Code kopieren",
+    "copied": "Kopiert.",
+    "copyFailed": "Kopieren ging nicht — markier den Code unten und kopier ihn von Hand.",
+    "codeLabel": "Code des Lesezeichens",
+    "privacy": "Das Lesezeichen fragt nur bahn.de nach der Verbindung und öffnet dann diese TravStats-Instanz. Die Fahrtdaten stehen im Adressteil hinter „#“, der nie an einen Server geschickt wird.",
+    "prompt": "Füg den geteilten Link der Bahn ein (bahn.de/buchung/start?vbid=…):"
+  },
+  "bahnHandoff": {
+    "title": "Verbindung von bahn.de",
+    "reading": "Verbindung wird gelesen …",
+    "review": "Prüf die Fahrten und speichere, was stimmt. Erst dann wird etwas eingetragen.",
+    "otherWays": "Klappt es nicht, geht es auch mit dem Ticket-PDF, der Buchungsmail oder von Hand — unter „Bahn“ → „Hinzufügen“.",
+    "toRail": "Zur Bahn-Übersicht",
+    "toSetup": "Lesezeichen einrichten",
+    "reason": {
+      "empty": "Hier ist keine Verbindung angekommen. Diese Seite öffnet das Lesezeichen „In TravStats übernehmen“ von bahn.de aus — eine bereits übernommene Verbindung lässt sich nicht ein zweites Mal öffnen.",
+      "damaged": "Die übergebenen Daten sind beschädigt oder stammen nicht vom Lesezeichen. Es wurde nichts übernommen.",
+      "tooLarge": "Die Verbindung ist zu groß für die Übergabe. Nimm das Ticket-PDF oder die Buchungsmail.",
+      "notBahn": "Das Lesezeichen wurde nicht auf bahn.de geklickt. Öffne zuerst den geteilten Link der Bahn und klick dann das Lesezeichen.",
+      "noVbid": "Auf dieser bahn.de-Seite steckt keine geteilte Verbindung. Öffne den geteilten Link (bahn.de/buchung/start?vbid=…) und klick das Lesezeichen gleich dort.",
+      "blocked": "bahn.de hat die Abfrage abgewiesen. Lade die bahn.de-Seite neu und klick das Lesezeichen noch einmal.",
+      "expired": "bahn.de kennt diese Verbindung nicht (mehr). Geteilte Links laufen nach einiger Zeit ab.",
+      "rateLimited": "bahn.de hat gerade zu viele Anfragen gezählt. Versuch es in ein paar Minuten noch einmal.",
+      "providerError": "bahn.de hat mit einem Fehler geantwortet. Versuch es später noch einmal.",
+      "fetchFailed": "bahn.de war aus dem Browser nicht erreichbar. Prüf die Verbindung und klick das Lesezeichen noch einmal.",
+      "unreadable": "bahn.de hat geantwortet, aber nicht mit einer Verbindung, die TravStats lesen kann.",
+      "noTrain": "Die geteilte Verbindung enthält keine Zugfahrt.",
+      "requestRateLimited": "Zu viele Abfragen in kurzer Zeit — warte eine Minute und klick das Lesezeichen noch einmal.",
+      "requestFailed": "Die Verbindung konnte nicht an den Server geschickt werden."
+    }
   }
 }
