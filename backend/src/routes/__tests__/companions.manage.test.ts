@@ -181,6 +181,24 @@ describe("companions — manage", () => {
     await merge(anna, source.id, target.id).expect(200);
 
     expect(await prisma.companion.findUnique({ where: { id: source.id } })).toBeNull();
+    // The phone hears of both: the source's tombstone and the rewritten entries.
+    const changes = await prisma.syncChange.findMany({
+      where: { userId: anna.id, entityId: { in: [source.id, full.flight.id, full.rail.id] } },
+      select: { entity: true, entityId: true, op: true, changedColumns: true },
+    });
+    const rewrote = (entity: string, entityId: string) =>
+      changes.some(
+        (c) =>
+          c.entity === entity && c.entityId === entityId && c.changedColumns.includes("companions")
+      );
+    expect(changes).toContainEqual({
+      entity: "companion",
+      entityId: source.id,
+      op: "delete",
+      changedColumns: [],
+    });
+    expect(rewrote("flight", full.flight.id)).toBe(true);
+    expect(rewrote("rail_journey", full.rail.id)).toBe(true);
     expect(await prisma.flightCompanion.findMany({ where: { flightId: full.flight.id } })).toEqual([
       { flightId: full.flight.id, companionId: target.id, position: 0 },
     ]);
