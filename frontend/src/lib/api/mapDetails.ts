@@ -67,12 +67,25 @@ export function getSubjectImage(kind: SubjectKind, name: string): Promise<Subjec
 
 export type StopDomain = "rail" | "bus" | "ferry" | "rental";
 
+/** Whom to credit for a station photo — mirrors `imageCredit` of `StopWikipediaSummary`. */
+export interface StopImageCredit {
+  file: string;
+  licence: string | null;
+  licenceUrl: string | null;
+  artist: string | null;
+  /** The file's description page. */
+  sourceUrl: string;
+  onCommons: boolean;
+}
+
 export interface StopSummary {
   title: string;
   extract: string;
   thumbnailUrl: string | null;
   pageUrl: string;
   lang: "de" | "en";
+  /** Null when the photo has no credit — then it is not shown. */
+  imageCredit: StopImageCredit | null;
 }
 
 /**

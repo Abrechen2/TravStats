@@ -196,6 +196,53 @@ describe("station card", () => {
     );
   });
 
+  // beta.23 UAT before 2.7.0-rc.20: the Hamburg ZOB photo carried no credit,
+  // only "Text: Wikipedia". The photo names its author and licence and links
+  // its file page, like the subject pictures; a photo without one is not shown.
+  it("credits the station photo's author and licence, linked to its file page", async () => {
+    details.stop.mockResolvedValue({
+      state: "found",
+      summary: {
+        title: "Kieler Hafen",
+        extract: "Der Kieler Hafen ist ein Seehafen.",
+        thumbnailUrl: "https://upload.wikimedia.org/wikipedia/commons/a/ab/K.jpg",
+        pageUrl: "https://de.wikipedia.org/wiki/Kieler_Hafen",
+        lang: "de",
+        imageCredit: {
+          file: "K.jpg",
+          licence: "CC BY-SA 4.0",
+          licenceUrl: null,
+          artist: "Jo Beispiel",
+          sourceUrl: "https://commons.wikimedia.org/wiki/File:K.jpg",
+          onCommons: true,
+        },
+      },
+    });
+    showStop();
+    const credit = await screen.findByText("Bild: CC BY-SA 4.0 · Jo Beispiel · Wikimedia Commons");
+    expect(credit.closest("a")).toHaveAttribute(
+      "href",
+      "https://commons.wikimedia.org/wiki/File:K.jpg"
+    );
+  });
+
+  it("shows no station photo it cannot credit", async () => {
+    details.stop.mockResolvedValue({
+      state: "found",
+      summary: {
+        title: "Kieler Hafen",
+        extract: "Der Kieler Hafen ist ein Seehafen.",
+        thumbnailUrl: "https://upload.wikimedia.org/k.jpg",
+        pageUrl: "https://de.wikipedia.org/wiki/Kieler_Hafen",
+        lang: "de",
+        imageCredit: null,
+      },
+    });
+    showStop();
+    await screen.findByText("Der Kieler Hafen ist ein Seehafen.");
+    expect(screen.getByTestId("stop-wikipedia").querySelector("img")).toBeNull();
+  });
+
   it("says Wikipedia could not be asked, instead of looking like 'no article'", async () => {
     details.stop.mockResolvedValue({ state: "unavailable" });
     showStop();

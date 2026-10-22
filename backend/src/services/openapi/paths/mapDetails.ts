@@ -102,9 +102,23 @@ const stopSummary = registry.register(
     .object({
       title: z.string(),
       extract: z.string().describe("The article's first two sentences"),
-      thumbnailUrl: z.string().nullable(),
+      thumbnailUrl: z
+        .string()
+        .nullable()
+        .describe("Only with `imageCredit`; a non-free file is left out"),
       pageUrl: z.string(),
       lang: z.enum(["de", "en"]),
+      imageCredit: z
+        .object({
+          file: z.string(),
+          licence: z.string().nullable(),
+          licenceUrl: z.string().nullable(),
+          artist: z.string().nullable().describe("The author, plain text, when stated"),
+          sourceUrl: z.string().describe("The file's description page"),
+          onCommons: z.boolean(),
+        })
+        .nullable()
+        .describe("Whom to credit for the photo; null when there is none"),
     })
     .openapi("StopWikipediaSummary")
 );

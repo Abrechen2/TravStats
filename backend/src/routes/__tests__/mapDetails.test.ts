@@ -46,6 +46,7 @@ const SUMMARY = {
   thumbnailUrl: null,
   pageUrl: "https://de.wikipedia.org/wiki/Kieler_Hafen",
   lang: "de" as const,
+  imageCredit: null,
 };
 
 describe("/api/v1/map-details", () => {
