@@ -56,6 +56,15 @@ export function ownExportPattern(tag: string): RegExp {
 const UPLOAD_TIMEOUT_MS = 5 * 60_000;
 /** How long a listing, a folder creation or a delete may take. */
 const REQUEST_TIMEOUT_MS = 60_000;
+/**
+ * How long a whole run may take, export build and every request included.
+ * A share that never answers — or a library call that ignores its signal —
+ * must not hold the account "running" forever and stall the nightly sweep,
+ * which syncs one account after another (Codex review).
+ */
+const RUN_DEADLINE_MS = 15 * 60_000;
+/** Of that, how long the clean-up after a stored upload may take. */
+const RETENTION_BUDGET_MS = 2 * 60_000;
 
 const running = new Set<string>();
 
@@ -66,6 +75,37 @@ export function exportFileName(at: Date, tag: string): string {
     .replace(/\.\d{3}Z$/, "Z")
     .replace(/[-:]/g, "");
   return `travstats-export-${tag}-${stamp}.json.gz`;
+}
+
+/** A request's signal: its own timeout, or the run's deadline, whichever comes first. */
+function requestSignal(deadline: AbortSignal, ms: number): AbortSignal {
+  return AbortSignal.any([deadline, AbortSignal.timeout(ms)]);
+}
+
+/**
+ * `work`, or the signal's reason the moment it aborts — whether or not the
+ * work itself listens. The signals handed to each request cancel the real
+ * I/O; this is the backstop for a call that does not pass them on.
+ */
+function untilAborted<T>(signal: AbortSignal, work: Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    if (signal.aborted) {
+      reject(signal.reason);
+      return;
+    }
+    const onAbort = (): void => reject(signal.reason);
+    signal.addEventListener("abort", onAbort, { once: true });
+    work.then(
+      (value) => {
+        signal.removeEventListener("abort", onAbort);
+        resolve(value);
+      },
+      (error: unknown) => {
+        signal.removeEventListener("abort", onAbort);
+        reject(error);
+      }
+    );
+  });
 }
 
 /** Whether a run of this account's sync is in progress in this process. */
@@ -107,17 +147,30 @@ async function resolveTarget(userId: string): Promise<ResolvedTarget> {
 type Client = ReturnType<typeof createClient>;
 
 /** Create the folder; "it already exists" is the normal answer and is fine. */
-async function ensureFolder(client: Client, remotePath: string): Promise<void> {
-  try {
-    await client.createDirectory(remotePath, {
-      recursive: true,
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-  } catch (error) {
-    // A refused password or a dead share answers here first: say so now
-    // rather than as whatever the upload would then fail with.
-    const code = classifyWebdavError(error);
-    if (["auth", "unreachable", "timeout", "tls", "blockedTarget"].includes(code)) throw error;
+/**
+ * One MKCOL per level, top down, each with the run's cancellation. Not the
+ * library's `recursive: true`: that probes every level with a PROPFIND that
+ * does not forward the signal, so a share that never answers it hangs the run.
+ */
+async function ensureFolder(
+  client: Client,
+  remotePath: string,
+  deadline: AbortSignal
+): Promise<void> {
+  const segments = remotePath.split("/").filter(Boolean);
+  for (let depth = 1; depth <= segments.length; depth += 1) {
+    const folder = `/${segments.slice(0, depth).join("/")}`;
+    try {
+      await client.createDirectory(folder, {
+        signal: requestSignal(deadline, REQUEST_TIMEOUT_MS),
+      });
+    } catch (error) {
+      // A refused password or a dead share answers here first: say so now
+      // rather than as whatever the upload would then fail with. Anything
+      // else — 405 "already there" above all — leaves the upload to tell.
+      const code = classifyWebdavError(error);
+      if (["auth", "unreachable", "timeout", "tls", "blockedTarget"].includes(code)) throw error;
+    }
   }
 }
 
@@ -126,10 +179,11 @@ async function pruneOldExports(
   client: Client,
   remotePath: string,
   pattern: RegExp,
-  keep: number
+  keep: number,
+  deadline: AbortSignal
 ): Promise<number> {
   const listing = (await client.getDirectoryContents(remotePath, {
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    signal: requestSignal(deadline, REQUEST_TIMEOUT_MS),
   } as never)) as unknown;
   const items = (Array.isArray(listing) ? listing : []) as Array<{
     type?: string;
@@ -143,7 +197,7 @@ async function pruneOldExports(
   let deleted = 0;
   for (const name of ours.slice(keep)) {
     await client.deleteFile(path.posix.join(remotePath, name), {
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: requestSignal(deadline, REQUEST_TIMEOUT_MS),
     });
     deleted += 1;
   }
@@ -164,7 +218,12 @@ async function record(userId: string, result: WebdavRunResult, at: Date): Promis
   });
 }
 
-async function upload(userId: string, target: ResolvedTarget, at: Date): Promise<WebdavRunResult> {
+async function upload(
+  userId: string,
+  target: ResolvedTarget,
+  at: Date,
+  deadline: AbortSignal
+): Promise<WebdavRunResult> {
   const { instanceName } = await getInstanceSettings();
   const data = await buildAccountExport(userId, instanceName);
   if (!data) throw new WebdavSyncError("notConfigured");
@@ -177,11 +236,11 @@ async function upload(userId: string, target: ResolvedTarget, at: Date): Promise
     password: target.password,
     ...guardedAgents(target.policy),
   });
-  await ensureFolder(client, target.remotePath);
+  await ensureFolder(client, target.remotePath, deadline);
   const stored = await client.putFileContents(path.posix.join(target.remotePath, fileName), body, {
     overwrite: false,
     contentLength: body.length,
-    signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
+    signal: requestSignal(deadline, UPLOAD_TIMEOUT_MS),
   });
   // With `overwrite: false` the client answers a 412 (the name is taken) with
   // `false` instead of throwing: nothing new is on the share, so this is no
@@ -190,12 +249,19 @@ async function upload(userId: string, target: ResolvedTarget, at: Date): Promise
 
   // The export is on the share; a failed clean-up must not turn that into a
   // failure, nor be swallowed — it is reported as "partial" with its cause.
+  // The clean-up gets a budget of its own inside the run's deadline; running
+  // out of either is a "partial" with `timeout`, never a failure.
+  const retention = AbortSignal.any([deadline, AbortSignal.timeout(RETENTION_BUDGET_MS)]);
   try {
-    const deleted = await pruneOldExports(
-      client,
-      target.remotePath,
-      ownExportPattern(tag),
-      target.keepVersions
+    const deleted = await untilAborted(
+      retention,
+      pruneOldExports(
+        client,
+        target.remotePath,
+        ownExportPattern(tag),
+        target.keepVersions,
+        retention
+      )
     );
     return { status: "ok", errorCode: null, fileName, sizeBytes: body.length, deleted };
   } catch (error) {
@@ -209,12 +275,23 @@ async function upload(userId: string, target: ResolvedTarget, at: Date): Promise
  * Run the sync for one account and record the outcome. Resolves with the
  * result for "ok" and "partial"; throws a `WebdavSyncError` for "failed",
  * AFTER recording it — so a clicked run's job fails with the same code the
- * page then shows as the last result.
+ * page then shows as the last result. A run that outlives its deadline
+ * (`deadlineMs`, default RUN_DEADLINE_MS) fails with `timeout` and frees the
+ * account for the next run.
  */
-export async function runWebdavSync(userId: string): Promise<WebdavRunResult> {
+export async function runWebdavSync(
+  userId: string,
+  options: { deadlineMs?: number } = {}
+): Promise<WebdavRunResult> {
   if (running.has(userId)) throw new WebdavSyncError("alreadyRunning");
   running.add(userId);
   const at = new Date();
+  const deadline = new AbortController();
+  const timer = setTimeout(
+    () => deadline.abort(new WebdavSyncError("timeout", "run deadline reached")),
+    options.deadlineMs ?? RUN_DEADLINE_MS
+  );
+  timer.unref();
   try {
     let target: ResolvedTarget;
     try {
@@ -229,7 +306,10 @@ export async function runWebdavSync(userId: string): Promise<WebdavRunResult> {
       throw new WebdavSyncError(code);
     }
     try {
-      const result = await upload(userId, target, at);
+      const result = await untilAborted(
+        deadline.signal,
+        upload(userId, target, at, deadline.signal)
+      );
       await record(userId, result, at);
       logger.info({
         operation: "webdav_user_sync_done",
@@ -251,6 +331,7 @@ export async function runWebdavSync(userId: string): Promise<WebdavRunResult> {
       throw new WebdavSyncError(code);
     }
   } finally {
+    clearTimeout(timer);
     running.delete(userId);
   }
 }

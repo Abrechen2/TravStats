@@ -183,6 +183,30 @@ describe("runWebdavSync", () => {
     expect(alicesName).not.toContain(alice);
   });
 
+  it("ends a run whose folder check hangs as a `timeout` failure and releases the account", async () => {
+    const userId = await makeUser();
+    const signals: AbortSignal[] = [];
+    // A share that never answers and ignores cancellation — the worst case.
+    share.createDirectory.mockImplementation((...args: unknown[]) => {
+      const options = args[1] as { signal?: AbortSignal } | undefined;
+      if (options?.signal) signals.push(options.signal);
+      return new Promise(() => undefined);
+    });
+    const run = runWebdavSync as (id: string, o?: { deadlineMs?: number }) => Promise<unknown>;
+    expect(await codeOf(run(userId, { deadlineMs: 300 }))).toBe("timeout");
+    expect(isWebdavSyncRunning(userId)).toBe(false);
+    expect(share.putFileContents).not.toHaveBeenCalled();
+    // The folder check was cancelled, not merely abandoned.
+    expect(signals.length).toBeGreaterThan(0);
+    expect(signals.every((signal) => signal.aborted)).toBe(true);
+    for (const call of share.createDirectory.mock.calls) {
+      expect((call[1] as { recursive?: boolean }).recursive).not.toBe(true);
+    }
+    const row = await prisma.userWebdavSync.findUniqueOrThrow({ where: { userId } });
+    expect(row.lastStatus).toBe("failed");
+    expect(row.lastErrorCode).toBe("timeout");
+  });
+
   it("records a refused password as `auth` and fails the run — never a success", async () => {
     const userId = await makeUser();
     share.createDirectory.mockRejectedValue(Object.assign(new Error("401"), { status: 401 }));
