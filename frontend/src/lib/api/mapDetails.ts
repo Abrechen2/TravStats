@@ -26,6 +26,8 @@ export interface SubjectImage {
   pending?: boolean;
   /** Could not ask (Wikimedia down, or our own request failed) — not "no picture". */
   unavailable?: boolean;
+  /** The instance's picture switch is off — an admin may turn it on: not "no picture". */
+  disabled?: boolean;
   credit: SubjectImageCredit | null;
 }
 
@@ -39,7 +41,8 @@ const subjects = new Map<string, Promise<SubjectImage>>();
 
 /**
  * Whether a subject has a picture, and its credit. Only an answer is kept for
- * the page load: a pending lookup or a failure (`unavailable`) is asked again.
+ * the page load: a pending lookup, a failure (`unavailable`) or a switched-off
+ * instance (`disabled`) is asked again.
  */
 export function getSubjectImage(kind: SubjectKind, name: string): Promise<SubjectImage> {
   const key = `${kind}:${name.trim().toLowerCase()}`;
@@ -50,7 +53,7 @@ export function getSubjectImage(kind: SubjectKind, name: string): Promise<Subjec
       params: { kind, name: name.trim() },
     })
     .then(({ data }) => {
-      if (data.data.pending || data.data.unavailable) subjects.delete(key);
+      if (data.data.pending || data.data.unavailable || data.data.disabled) subjects.delete(key);
       return data.data;
     })
     .catch((err: unknown) => {
@@ -113,9 +116,10 @@ export function getStopInfo(
       return data.data.summary ? { state: "found", summary: data.data.summary } : { state: "none" };
     })
     .catch((err: unknown): StopInfo => {
+      // Switched off is the admin's state of the moment, not an answer: not kept.
+      stops.delete(key);
       if (isAxiosError(err) && err.response?.status === 409) return { state: "disabled" };
       logger.warn("station Wikipedia lookup failed", err);
-      stops.delete(key);
       return { state: "unavailable" };
     });
   stops.set(key, task);

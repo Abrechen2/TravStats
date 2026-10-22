@@ -41,11 +41,19 @@ export interface SubjectImageAnswer {
   pending: boolean;
   /** Wikimedia did not answer (timeout, 429, 5xx, garbled): "could not ask", not "none". */
   unavailable: boolean;
+  /** The instance's Wikimedia switch is off: nothing was asked — not "none" either. */
+  disabled: boolean;
 }
 
-const NONE: SubjectImageAnswer = { picture: null, pending: false, unavailable: false };
-const PENDING: SubjectImageAnswer = { picture: null, pending: true, unavailable: false };
-const UNAVAILABLE: SubjectImageAnswer = { picture: null, pending: false, unavailable: true };
+const NONE: SubjectImageAnswer = {
+  picture: null,
+  pending: false,
+  unavailable: false,
+  disabled: false,
+};
+const PENDING: SubjectImageAnswer = { ...NONE, pending: true };
+const UNAVAILABLE: SubjectImageAnswer = { ...NONE, unavailable: true };
+const DISABLED: SubjectImageAnswer = { ...NONE, disabled: true };
 
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const MISS_TTL_MS = 24 * 60 * 60 * 1000;
@@ -201,7 +209,7 @@ async function waitFor(task: Promise<LookupOutcome>, waitMs: number): Promise<Su
   });
   try {
     const result = await Promise.race([task, late]);
-    return result === "late" ? PENDING : { ...result, pending: false };
+    return result === "late" ? PENDING : { ...NONE, ...result };
   } finally {
     clearTimeout(timer);
   }
@@ -214,7 +222,7 @@ export async function answerSubjectImage(
 ): Promise<SubjectImageAnswer> {
   if (subjectSearchName(kind, name) === "") return NONE;
   const { operatorLogosOpenDataEnabled } = await getInstanceSettings();
-  if (!operatorLogosOpenDataEnabled) return NONE;
+  if (!operatorLogosOpenDataEnabled) return DISABLED;
   const key = subjectImageKey(kind, name);
   const cached = await readCache(key);
   if (cached) return { ...NONE, picture: cached };

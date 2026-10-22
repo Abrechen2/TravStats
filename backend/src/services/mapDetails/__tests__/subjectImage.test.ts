@@ -151,9 +151,12 @@ describe("subject pictures", () => {
     use(() => {
       throw new Error("must not ask");
     });
-    expect(await answerSubjectImage("vessel", "Color Fantasy")).toMatchObject({
+    // "Switched off" is not "no picture": a client must not remember it.
+    expect(await answerSubjectImage("vessel", "Color Fantasy")).toEqual({
       picture: null,
       pending: false,
+      unavailable: false,
+      disabled: true,
     });
   });
 
@@ -197,6 +200,7 @@ describe("subject pictures", () => {
       picture: null,
       pending: false,
       unavailable: false,
+      disabled: false,
     });
   });
 

@@ -114,6 +114,7 @@ describe("/api/v1/map-details", () => {
         picture: { image: { body: JPEG, contentType: "image/jpeg" }, credit: CREDIT },
         pending: false,
         unavailable: false,
+        disabled: false,
       });
       const res = await request(app)
         .get("/api/v1/map-details/subject?kind=vessel&name=color%20fantasy")
@@ -121,7 +122,13 @@ describe("/api/v1/map-details", () => {
       expect(res.status).toBe(200);
       expect(res.body).toEqual({
         success: true,
-        data: { available: true, pending: false, unavailable: false, credit: CREDIT },
+        data: {
+          available: true,
+          pending: false,
+          unavailable: false,
+          disabled: false,
+          credit: CREDIT,
+        },
       });
       expect(res.headers["cache-control"]).toMatch(/^private/);
     });
@@ -134,6 +141,7 @@ describe("/api/v1/map-details", () => {
         available: false,
         pending: false,
         unavailable: false,
+        disabled: false,
         credit: null,
       });
       expect(answer).not.toHaveBeenCalled();
@@ -144,6 +152,7 @@ describe("/api/v1/map-details", () => {
         picture: { image: { body: JPEG, contentType: "image/jpeg" }, credit: CREDIT },
         pending: false,
         unavailable: false,
+        disabled: false,
       });
       const ok = await request(app)
         .get("/api/v1/map-details/subject/image?kind=vessel&name=Color%20Fantasy")
@@ -152,7 +161,12 @@ describe("/api/v1/map-details", () => {
       expect(ok.headers["content-type"]).toBe("image/jpeg");
       expect(ok.headers["cache-control"]).toBe("private, max-age=604800");
       expect(ok.headers["content-security-policy"]).toContain("sandbox");
-      answer.mockResolvedValueOnce({ picture: null, pending: true, unavailable: false });
+      answer.mockResolvedValueOnce({
+        picture: null,
+        pending: true,
+        unavailable: false,
+        disabled: false,
+      });
       const missing = await request(app)
         .get("/api/v1/map-details/subject/image?kind=vessel&name=Color%20Fantasy")
         .set("Cookie", anna);
@@ -162,7 +176,12 @@ describe("/api/v1/map-details", () => {
     });
 
     it("says when Wikimedia did not answer, uncached, instead of 'no picture'", async () => {
-      answer.mockResolvedValue({ picture: null, pending: false, unavailable: true });
+      answer.mockResolvedValue({
+        picture: null,
+        pending: false,
+        unavailable: true,
+        disabled: false,
+      });
       const res = await request(app)
         .get("/api/v1/map-details/subject?kind=vessel&name=Color%20Fantasy")
         .set("Cookie", anna);
@@ -171,6 +190,7 @@ describe("/api/v1/map-details", () => {
         available: false,
         pending: false,
         unavailable: true,
+        disabled: false,
         credit: null,
       });
       expect(res.headers["cache-control"]).toBe("private, no-store");
@@ -179,6 +199,26 @@ describe("/api/v1/map-details", () => {
         .set("Cookie", anna);
       expect(image.status).toBe(503);
       expect(image.headers["cache-control"]).toBe("private, no-store");
+    });
+
+    it("says the picture service is switched off, uncached, instead of 'no picture'", async () => {
+      answer.mockResolvedValue({
+        picture: null,
+        pending: false,
+        unavailable: false,
+        disabled: true,
+      });
+      const res = await request(app)
+        .get("/api/v1/map-details/subject?kind=vessel&name=Color%20Fantasy")
+        .set("Cookie", anna);
+      expect(res.body.data).toEqual({
+        available: false,
+        pending: false,
+        unavailable: false,
+        disabled: true,
+        credit: null,
+      });
+      expect(res.headers["cache-control"]).toBe("private, no-store");
     });
 
     it("refuses an unknown kind", async () => {

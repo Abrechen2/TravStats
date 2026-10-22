@@ -44,6 +44,11 @@ const subject = registry.register(
           "Wikimedia did not answer (timeout, 429, 5xx): could not ask — not 'no picture'. " +
             "Not cached; ask again later"
         ),
+      disabled: z
+        .boolean()
+        .describe(
+          "The admin switch `operatorLogosOpenDataEnabled` is off: nothing was asked. Not cached"
+        ),
       credit: credit.nullable(),
     })
     .openapi("SubjectImage")
@@ -59,7 +64,7 @@ registry.registerPath({
     "vehicle example, a train category). Wikidata item whose label is the name and whose " +
     "description names the kind; its image from Commons, free licences only. Only while the " +
     "admin switch `operatorLogosOpenDataEnabled` is on. `available: false` with " +
-    "`unavailable: false` and `pending: false` means no picture.",
+    "`unavailable`, `pending` and `disabled` all false means no picture.",
   request: { query: subjectQuery },
   responses: {
     200: {

@@ -45,7 +45,7 @@ async function subjectFor(req: AuthRequest): Promise<SubjectImageAnswer> {
   const { kind, name } = parseSubject(req.query);
   const userId = req.userId;
   if (!userId || !(await ownsSubject(userId, kind, name))) {
-    return { picture: null, pending: false, unavailable: false };
+    return { picture: null, pending: false, unavailable: false, disabled: false };
   }
   return answerSubjectImage(kind, name, { userId });
 }
@@ -56,14 +56,21 @@ router.get(
   airlineLogoLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { picture, pending, unavailable } = await subjectFor(req);
-      // Only an answer is cacheable; "not yet" and "could not ask" are asked again.
-      const settled = !pending && !unavailable;
+      const { picture, pending, unavailable, disabled } = await subjectFor(req);
+      // Only an answer is cacheable; "not yet", "could not ask" and "switched
+      // off" (the admin may switch it on in a minute) are asked again.
+      const settled = !pending && !unavailable && !disabled;
       res.setHeader("Cache-Control", settled ? "private, max-age=3600" : "private, no-store").json({
         success: true,
         data: picture
-          ? { available: true, pending: false, unavailable: false, credit: picture.credit }
-          : { available: false, pending, unavailable, credit: null },
+          ? {
+              available: true,
+              pending: false,
+              unavailable: false,
+              disabled: false,
+              credit: picture.credit,
+            }
+          : { available: false, pending, unavailable, disabled, credit: null },
       });
     } catch (error) {
       next(error);
@@ -77,13 +84,13 @@ router.get(
   airlineLogoLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { picture, pending, unavailable } = await subjectFor(req);
+      const { picture, pending, unavailable, disabled } = await subjectFor(req);
       if (!picture) {
         res
           .status(unavailable ? 503 : 404)
           .setHeader(
             "Cache-Control",
-            pending || unavailable ? "private, no-store" : "private, max-age=3600"
+            pending || unavailable || disabled ? "private, no-store" : "private, max-age=3600"
           )
           .json({
             success: false,
