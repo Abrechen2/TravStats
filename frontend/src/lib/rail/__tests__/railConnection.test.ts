@@ -28,7 +28,7 @@ describe("railConnection", () => {
   });
 
   it("lists only the trains a leg names", () => {
-    expect(connectionTrains([first, second])).toEqual(["ICE 696"]);
+    expect(connectionTrains([first, second], (n) => `Zug ${n}`)).toEqual(["ICE 696"]);
   });
 
   it("spans the first departure to the last arrival", () => {

@@ -20,6 +20,7 @@ import { RailConnectionView } from "../components/rail/RailConnectionView";
 import { RailConnectionLink } from "../components/rail/RailConnectionLink";
 import { formatRailDuration } from "../lib/rail/railDuration";
 import { trainLabel } from "../components/rail/trainLabel";
+import { bareTrainName } from "../lib/rail/trainName";
 import { connectionDraftFrom } from "../components/rail/railFormModel";
 import { isConvertedFromRoadtrip, railDistanceNoteKey } from "../components/rail/railDistanceLabel";
 import { useDocumentCount } from "../hooks/useDocumentCount";
@@ -242,7 +243,10 @@ export default function RailDetailPage(): JSX.Element {
             </span>
           ) : undefined
         }
-        meta={[trainLabel(journey), departure ? formatStationTime(departure, locale) : null]
+        meta={[
+          trainLabel(journey, bareTrainName(t)),
+          departure ? formatStationTime(departure, locale) : null,
+        ]
           .filter(Boolean)
           .join(" · ")}
         hero={kpis.length > 0 ? <DetailKpis items={kpis} /> : undefined}

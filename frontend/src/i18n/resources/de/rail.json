@@ -6,6 +6,7 @@
   "empty": "Noch keine Zugfahrten. Trag deine erste Fahrt ein.",
   "loadError": "Ich konnte deine Zugfahrten gerade nicht laden.",
   "search": "Suchen (Zug, Bahnhof, Buchung …)",
+  "bareTrain": "Zug {{number}}",
   "list": {
     "columns": {
       "operator": "Betreiber",

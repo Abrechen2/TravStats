@@ -252,3 +252,27 @@ describe("fetchDbConnection with a recon-only answer", () => {
     );
   });
 });
+
+describe("resolveBahnHandoff with a train bahn.de names by number only", () => {
+  // The shape of a real bahn.de answer (2.7.0-beta.24 browser test): the
+  // regional train carries no category, only its number, padded with blanks.
+  // Day invented, so it is no one's real ride.
+  const BARE =
+    "¶HKI¶" +
+    "T$A=1@O=Augsburg Hbf@X=10885568@Y=48365444@L=8000013@a=128@" +
+    "$A=1@O=München Hbf@X=11558339@Y=48140229@L=8000261@a=128@" +
+    "$202611030808$202611030854$            57031$$1$$$$$$§" +
+    "T$A=1@O=München Hbf (tief)@L=8098263@a=128@$A=1@O=München Flughafen Terminal@L=8004168@a=128@" +
+    "$202611030942$202611031028$               S1$$1$$$$$$" +
+    "¶KC¶#VE#2#RT#7#";
+
+  it("keeps the number as the train number and invents no category", async () => {
+    const outcome = await resolveBahnHandoff({ hinfahrtRecon: BARE }, "user-1");
+    expect(outcome).toMatchObject({ outcome: "read" });
+    const legs = outcome.outcome === "read" ? outcome.booking.legs : [];
+    expect(legs.map((l) => [l.trainCategory, l.trainNumber])).toEqual([
+      [null, "57031"],
+      ["S", "1"],
+    ]);
+  });
+});

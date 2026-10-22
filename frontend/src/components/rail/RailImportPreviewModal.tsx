@@ -17,6 +17,7 @@ import {
 } from "./railImportModel";
 import type { RailStationDraft } from "./RailStationField";
 import { RailImportBookingFields } from "./RailImportBookingFields";
+import { bareTrainName, trainName } from "../../lib/rail/trainName";
 import {
   applyBookingDraft,
   bookingDraftFrom,
@@ -179,7 +180,7 @@ function LegRow({
   t: Translate;
 }): JSX.Element {
   const { leg } = row;
-  const train = [leg.trainCategory, leg.trainNumber].filter(Boolean).join(" ");
+  const train = trainName(leg.trainCategory, leg.trainNumber, bareTrainName(t));
   const unresolved = (["departure", "arrival"] as const).filter(
     (end) => row[end].lat === null || row[end].lon === null
   );

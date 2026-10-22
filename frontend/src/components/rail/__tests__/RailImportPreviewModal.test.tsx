@@ -4,7 +4,13 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
     t: (k: string, o?: Record<string, unknown>) =>
-      o?.name ? `${k}:${String(o.name)}` : o?.count !== undefined ? `${k}/${String(o.count)}` : k,
+      o?.name
+        ? `${k}:${String(o.name)}`
+        : o?.number
+          ? `${k}:${String(o.number)}`
+          : o?.count !== undefined
+            ? `${k}/${String(o.count)}`
+            : k,
     i18n: { language: "de" },
     ready: true,
   }),
@@ -261,5 +267,22 @@ describe("RailImportPreviewModal", () => {
     expect(screen.queryByText("rail:import.booking.notRecognised")).not.toBeInTheDocument();
     expect(screen.getByLabelText("rail:form.operator")).toHaveValue("");
     expect(screen.getByLabelText("rail:form.operator")).not.toBeDisabled();
+  });
+
+  // Same browser test: bahn.de named the regional train "57031" with no category.
+  it("names a train known by its number alone as a train, and stores the number as read", async () => {
+    create.mockResolvedValue({ journey: { id: "new-1" }, geometry: null });
+    const onSaved = vi.fn();
+    render(
+      <RailImportPreviewModal
+        booking={booking({ legs: [leg({ trainCategory: null, trainNumber: "57031" })] })}
+        onCancel={vi.fn()}
+        onSaved={onSaved}
+      />
+    );
+    expect(screen.getByTestId("rail-import-leg-0")).toHaveTextContent("rail:bareTrain:57031");
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith(1));
+    expect(create.mock.calls[0][0]).toMatchObject({ trainCategory: null, trainNumber: "57031" });
   });
 });

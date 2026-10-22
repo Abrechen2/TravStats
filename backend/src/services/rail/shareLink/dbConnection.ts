@@ -173,11 +173,15 @@ function kindOfSection(s: Section): "vehicle" | "walk" | null {
 
 const isTrain = (s: Section): boolean => kindOfSection(s) === "vehicle";
 
-/** "ICE 578" → ICE / 578; a number only when printed — never invented. */
+/** "ICE 578" → ICE / 578, "57031" → – / 57031; a number only when printed — never invented. */
 function trainOf(s: Section): { category: string | null; number: string | null } {
   const t = s.verkehrsmittel ?? {};
   const named = /^([A-Za-zÄÖÜäöü]{1,8})\s*(\d{1,6})$/.exec((t.name ?? "").trim());
   if (named) return { category: named[1], number: named[2] };
+  // bahn.de names some regional trains by number alone ("57031"): that is the
+  // number, not a category — and no category ("RB") is guessed for it.
+  const bare = /^\d{1,6}$/.exec((t.name ?? "").trim());
+  if (bare) return { category: null, number: bare[0] };
   return {
     category: t.kurzText?.trim() || null,
     number: t.nummer && /^\d{1,6}$/.test(t.nummer.trim()) ? t.nummer.trim() : null,

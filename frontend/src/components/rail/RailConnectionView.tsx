@@ -8,6 +8,7 @@ import { railTransfers, type RailTransferLeg } from "../../lib/rail/railTransfer
 import type { RailJourney } from "../../types/rail";
 import { RailTransferNote } from "./RailTransferNote";
 import { trainLabel } from "./trainLabel";
+import { bareTrainName } from "../../lib/rail/trainName";
 import { useRailLegDocuments, type LegDocuments } from "./useRailLegDocuments";
 import { dateLocaleForLanguage } from "../../lib/units";
 
@@ -68,11 +69,14 @@ export function RailConnectionView({ legs, currentId, pnr, showPnr = true }: Pro
       <ol className="flex flex-col gap-2" data-testid="rail-connection-legs">
         {legs.map((leg, index) => {
           const label = `${index + 1}. ${leg.depStationName} → ${leg.arrStationName}`;
-          const train = trainLabel({
-            trainCategory: leg.trainCategory,
-            trainNumber: leg.trainNumber,
-            operator: leg.operator ?? null,
-          });
+          const train = trainLabel(
+            {
+              trainCategory: leg.trainCategory,
+              trainNumber: leg.trainNumber,
+              operator: leg.operator ?? null,
+            },
+            bareTrainName(t)
+          );
           const when = formatRailSpan(leg, locale);
           return (
             <li key={leg.id} className="text-sm" data-testid={`rail-connection-leg-${leg.id}`}>

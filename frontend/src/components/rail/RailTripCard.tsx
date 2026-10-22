@@ -7,10 +7,11 @@ import { formatRailSpan, formatStationTime } from "../../lib/railTime";
 import { railDeparture } from "../../lib/entityTimes";
 import { formatAmount, dateLocaleForLanguage } from "../../lib/units";
 import type { TripRailJourney } from "../../types/rail";
+import { bareTrainName, trainName, type BareTrainName } from "../../lib/rail/trainName";
 
 /** "ICE 578 · DB Fernverkehr" — whatever of the three is known. */
-function trainOf(journey: TripRailJourney): string | null {
-  const train = [journey.trainCategory, journey.trainNumber].filter(Boolean).join(" ");
+function trainOf(journey: TripRailJourney, bare: BareTrainName): string | null {
+  const train = trainName(journey.trainCategory, journey.trainNumber, bare);
   return [train, journey.operator].filter(Boolean).join(" · ") || null;
 }
 
@@ -41,7 +42,7 @@ export function RailTripCard({
         ? t("rail:delay", { minutes: journey.delayMinutes })
         : t("rail:onTime");
   const rows: Array<[string, string | null]> = [
-    [t("rail:form.train"), trainOf(journey)],
+    [t("rail:form.train"), trainOf(journey, bareTrainName(t))],
     [t("rail:detail.delay"), journey.status === "completed" ? delay : null],
     [
       t("rail:form.price"),

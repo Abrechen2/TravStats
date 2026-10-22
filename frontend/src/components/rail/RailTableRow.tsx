@@ -18,6 +18,7 @@ import TripPill from "../Trips/TripPill";
 import { TableRow, type TableColumn } from "../ui/Table";
 import { StationShortCode } from "./StationShortCode";
 import { trainLabel } from "./trainLabel";
+import { bareTrainName } from "../../lib/rail/trainName";
 import { dateLocaleForLanguage } from "../../lib/units";
 
 export type RailColumnId =
@@ -96,10 +97,10 @@ export function RailTableRow({ connection, columns, onOpen, actions }: Props): J
   const distance = <ConnectionDistance legs={legs} />;
 
   const train = single ? (
-    trainLabel(single) || "—"
+    trainLabel(single, bareTrainName(t)) || "—"
   ) : (
     <span className="flex flex-col">
-      <span>{connectionTrains(legs).join(" · ") || "—"}</span>
+      <span>{connectionTrains(legs, bareTrainName(t)).join(" · ") || "—"}</span>
       <span className="t-caption">{t("rail:connection.changes", { count: legs.length - 1 })}</span>
     </span>
   );

@@ -1,6 +1,7 @@
 import { railArrival, railDeparture, type RailLike } from "../entityTimes";
 import { railDurationMinutes } from "../railTime";
 import type { RailJourney, RailStatus } from "../../types/rail";
+import { trainName, type BareTrainName } from "./trainName";
 
 /**
  * What a ride with changes of trains shows as ONE entry (forgejo#187). These
@@ -29,10 +30,10 @@ export function connectionStations(legs: readonly Leg[]): string[] {
   return [legs[0].depStationName, ...legs.map((leg) => leg.arrStationName)];
 }
 
-/** "ICE 101", "EC 7" — one per leg that names a train; nothing invented. */
-export function connectionTrains(legs: readonly Leg[]): string[] {
+/** "ICE 101", "EC 7", "Zug 57031" — one per leg that names a train; nothing invented. */
+export function connectionTrains(legs: readonly Leg[], bare: BareTrainName): string[] {
   return legs
-    .map((leg) => [leg.trainCategory, leg.trainNumber].filter(Boolean).join(" "))
+    .map((leg) => trainName(leg.trainCategory, leg.trainNumber, bare))
     .filter((train) => train !== "");
 }
 

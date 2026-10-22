@@ -6,6 +6,7 @@
   "empty": "No train journeys yet. Add your first ride.",
   "loadError": "I couldn’t load your train journeys just now.",
   "search": "Search (train, station, booking …)",
+  "bareTrain": "Train {{number}}",
   "list": {
     "columns": {
       "operator": "Operator",
