@@ -153,11 +153,15 @@ async function upload(userId: string, target: ResolvedTarget, at: Date): Promise
     ...guardedAgents(target.policy),
   });
   await ensureFolder(client, target.remotePath);
-  await client.putFileContents(path.posix.join(target.remotePath, fileName), body, {
+  const stored = await client.putFileContents(path.posix.join(target.remotePath, fileName), body, {
     overwrite: false,
     contentLength: body.length,
     signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
   });
+  // With `overwrite: false` the client answers a 412 (the name is taken) with
+  // `false` instead of throwing: nothing new is on the share, so this is no
+  // success, and retention must not run on its strength (Codex review).
+  if (stored !== true) throw new WebdavSyncError("protocol", "upload not accepted");
 
   // The export is on the share; a failed clean-up must not turn that into a
   // failure, nor be swallowed — it is reported as "partial" with its cause.

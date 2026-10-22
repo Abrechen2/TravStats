@@ -163,31 +163,64 @@ function assertLiteralAllowed(options: ConnectionOptions): void {
   }
 }
 
+function callCreateConnection(
+  proto: http.Agent,
+  self: http.Agent,
+  options: ConnectionOptions,
+  callback?: (err: Error | null, stream: Duplex) => void
+): Duplex {
+  return (
+    proto as unknown as { createConnection: (o: unknown, cb?: unknown) => Duplex }
+  ).createConnection.call(self, options, callback);
+}
+
+/**
+ * Plain http, on EVERY connection — the first and each redirect the client
+ * follows. Refused outright for an ordinary account; for an admin only towards
+ * a LAN host. Checking the URL alone was not enough: a share answering 307/308
+ * to a public http address would have received the whole export in clear
+ * (Codex review before rc.20).
+ */
 class GuardedHttpAgent extends http.Agent {
+  constructor(
+    private readonly policy: TargetPolicy,
+    options: http.AgentOptions
+  ) {
+    super(options);
+  }
   createConnection(
     options: ConnectionOptions,
     callback?: (err: Error | null, stream: Duplex) => void
   ): Duplex {
-    assertLiteralAllowed(options);
-    return (
-      http.Agent.prototype as unknown as {
-        createConnection: (o: unknown, cb?: unknown) => Duplex;
-      }
-    ).createConnection.call(this, { ...options, lookup: guardedLookup }, callback);
+    const host = (options.host ?? options.hostname ?? "").replace(/^\[|\]$/g, "");
+    if (!this.policy.allowPrivate || !isLocalLlmHost(host)) {
+      throw new WebdavSyncError("httpsRequired");
+    }
+    return callCreateConnection(http.Agent.prototype, this, options, callback);
   }
 }
 
 class GuardedHttpsAgent extends https.Agent {
+  constructor(
+    private readonly policy: TargetPolicy,
+    options: https.AgentOptions
+  ) {
+    super(options);
+  }
   createConnection(
     options: ConnectionOptions,
     callback?: (err: Error | null, stream: Duplex) => void
   ): Duplex {
+    if (this.policy.allowPrivate) {
+      return callCreateConnection(https.Agent.prototype, this, options, callback);
+    }
     assertLiteralAllowed(options);
-    return (
-      https.Agent.prototype as unknown as {
-        createConnection: (o: unknown, cb?: unknown) => Duplex;
-      }
-    ).createConnection.call(this, { ...options, lookup: guardedLookup }, callback);
+    return callCreateConnection(
+      https.Agent.prototype,
+      this,
+      { ...options, lookup: guardedLookup } as ConnectionOptions,
+      callback
+    );
   }
 }
 
@@ -195,15 +228,17 @@ class GuardedHttpsAgent extends https.Agent {
 const SOCKET_TIMEOUT_MS = 60_000;
 
 /**
- * The agents a WebDAV client for this policy connects through. `undefined`
- * for an admin's policy: a LAN share is allowed, so there is nothing to check.
+ * The agents a WebDAV client for this policy connects through — redirects
+ * included, since the client hands every request to them. For an admin the
+ * https agent checks nothing (a LAN share is allowed) and the http agent
+ * still refuses any host off the LAN.
  */
-export function guardedAgents(
-  policy: TargetPolicy
-): { httpAgent: http.Agent; httpsAgent: https.Agent } | undefined {
-  if (policy.allowPrivate) return undefined;
+export function guardedAgents(policy: TargetPolicy): {
+  httpAgent: http.Agent;
+  httpsAgent: https.Agent;
+} {
   return {
-    httpAgent: new GuardedHttpAgent({ timeout: SOCKET_TIMEOUT_MS }),
-    httpsAgent: new GuardedHttpsAgent({ timeout: SOCKET_TIMEOUT_MS }),
+    httpAgent: new GuardedHttpAgent(policy, { timeout: SOCKET_TIMEOUT_MS }),
+    httpsAgent: new GuardedHttpsAgent(policy, { timeout: SOCKET_TIMEOUT_MS }),
   };
 }

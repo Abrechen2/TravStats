@@ -142,6 +142,16 @@ describe("runWebdavSync", () => {
     expect(row.lastErrorCode).toBe("quota");
   });
 
+  it("does not call an upload the share did not accept a success (412 answers false)", async () => {
+    const userId = await makeUser();
+    share.putFileContents.mockResolvedValue(false);
+    expect(await codeOf(runWebdavSync(userId))).toBe("protocol");
+    expect(share.getDirectoryContents).not.toHaveBeenCalled();
+    const row = await prisma.userWebdavSync.findUniqueOrThrow({ where: { userId } });
+    expect(row.lastStatus).toBe("failed");
+    expect(row.lastSuccessAt).toBeNull();
+  });
+
   it("calls a failed clean-up `partial` with its reason: the export is up, the old ones are not gone", async () => {
     const userId = await makeUser();
     share.getDirectoryContents.mockRejectedValue(

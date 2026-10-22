@@ -1,5 +1,6 @@
 import { describe, it, expect, afterAll, beforeAll } from "@jest/globals";
 import http from "http";
+import https from "https";
 import type { AddressInfo } from "net";
 
 import { guardedAgents, isBlockedAddress, normalizeWebdavUrl } from "../targetPolicy";
@@ -111,24 +112,43 @@ describe("guardedAgents — refusal when the socket opens", () => {
     });
   }
 
-  it("refuses a loopback literal for an ordinary account", async () => {
-    const agents = guardedAgents(user)!;
-    await expect(get("127.0.0.1", agents.httpAgent)).rejects.toMatchObject({
-      code: "blockedTarget",
+  function getTls(host: string, agent: https.Agent): Promise<unknown> {
+    return new Promise((resolve) => {
+      try {
+        const req = https.get({ host, port, path: "/", agent }, () => resolve("connected"));
+        req.on("error", resolve);
+      } catch (error) {
+        resolve(error);
+      }
     });
-    expect(hits).toBe(0);
+  }
+
+  it("refuses a loopback literal for an ordinary account", async () => {
+    const error = await getTls("127.0.0.1", guardedAgents(user).httpsAgent);
+    expect(classifyWebdavError(error)).toBe("blockedTarget");
   });
 
   it("refuses a name that RESOLVES to loopback (the rebinding case)", async () => {
-    const agents = guardedAgents(user)!;
-    const error = await get("localhost", agents.httpAgent).catch((e: unknown) => e);
+    const error = await getTls("localhost", guardedAgents(user).httpsAgent);
     expect(classifyWebdavError(error)).toBe("blockedTarget");
-    expect(hits).toBe(0);
   });
 
-  it("puts no guard in an admin's way", async () => {
-    expect(guardedAgents(admin)).toBeUndefined();
-    await expect(get("127.0.0.1", undefined)).resolves.toBe("reached");
+  it("lets an admin's sync reach a LAN share over http", async () => {
+    await expect(get("127.0.0.1", guardedAgents(admin).httpAgent)).resolves.toBe("reached");
+  });
+
+  // A redirect is a new connection through the same agent: an https share
+  // answering 307 to plain http must not get the export in clear (Codex review).
+  it("refuses plain http on any connection of an ordinary account — redirects included", async () => {
+    const before = hits;
+    const error = await get("127.0.0.1", guardedAgents(user).httpAgent).catch((e: unknown) => e);
+    expect(classifyWebdavError(error)).toBe("httpsRequired");
+    expect(hits).toBe(before);
+  });
+
+  it("refuses an admin's http connection to a host off the LAN", async () => {
+    const error = await get("example.com", guardedAgents(admin).httpAgent).catch((e: unknown) => e);
+    expect(classifyWebdavError(error)).toBe("httpsRequired");
   });
 });
 
