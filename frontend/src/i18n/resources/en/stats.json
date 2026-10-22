@@ -228,6 +228,7 @@
     "totalDistance": "Total distance",
     "longestLeg": "Longest leg",
     "totalDays": "Travel days total",
+    "totalDaysNoSea": "Travel days without sea days",
     "avgPortsPerCruise": "Avg ports / cruise",
     "maxPortsSingle": "Most catalogued ports in one cruise",
     "lineLoyaltyMax": "Top loyalty (same line)",
@@ -402,6 +403,13 @@
       },
       "totalDays": {
         "unit": "Days aboard: from start to end day, both counted.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards), start and end date.",
+        "coverage": "A cruise without both dates brings 0 days. Tap the figure for the cruises behind it.",
+        "exclusions": "Booked, running and cancelled cruises do not count."
+      },
+      "totalDaysNoSea": {
+        "unit": "Days aboard: from the first to the last day, both included, without the sea days — as set under Settings › Cruise (“Count sea days”).",
         "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
         "source": "Your sailed cruises (completed or recorded afterwards), start and end date.",
         "coverage": "A cruise without both dates brings 0 days. Tap the figure for the cruises behind it.",

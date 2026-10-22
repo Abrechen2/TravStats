@@ -160,6 +160,12 @@ export interface UserSettings {
   };
   /** Whether the server stores the app's trip positions (forgejo#316). */
   tripRecording?: { enabled?: boolean };
+  /** The colour of a new trip; null = automatic (forgejo#321). */
+  tripDefaults?: { color?: string | null };
+  /** Whether sea days count in the cruise day total (forgejo#321). */
+  cruiseSeaDays?: { counted?: boolean };
+  /** Whether the server takes the app's flight recording (forgejo#321). */
+  liveTracking?: { enabled?: boolean };
   /**
    * Which evidence tier the country headline counts from, for this user, or
    * `null` when they follow the instance default. Writable through

@@ -4,6 +4,7 @@ import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { TRIP_COLORS as PALETTE } from "../../lib/tripColors";
+import { useSuggestionSwitchesStore } from "../../store/suggestionSwitchesStore";
 import CompanionPicker from "../CompanionPicker";
 import TagInput from "../TagInput";
 import SuggestionChips from "../common/SuggestionChips";
@@ -60,7 +61,10 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
   const [tab, setTab] = useState<ModalTab>("general");
   const [name, setName] = useState(trip?.name ?? "");
   const [description, setDescription] = useState(trip?.description ?? "");
-  const [color, setColor] = useState(trip?.color ?? PALETTE[0]);
+  // A new trip starts with the account's chosen colour (forgejo#321); without
+  // one, with the palette's first, as it always did.
+  const preferredColor = useSuggestionSwitchesStore((s) => s.tripDefaultColor);
+  const [color, setColor] = useState(trip?.color ?? preferredColor ?? PALETTE[0]);
   const [category, setCategory] = useState<TripCategory | "">(trip?.category ?? "");
   const [startDate, setStartDate] = useState(toDateInput(trip?.startDate ?? null));
   const [endDate, setEndDate] = useState(toDateInput(trip?.endDate ?? null));

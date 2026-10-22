@@ -196,6 +196,11 @@ export default function CruiseStatsSection({
   // without dates but with sea days therefore fed the numerator and not the
   // denominator, and the donut drew past a full circle. Capped, because a
   // share of the days sailed cannot exceed those days.
+  // The account's "Seetage zählen" (forgejo#321). Off: the day total leaves
+  // the sea days out, so it says so in its label, and a share of sea days in
+  // a total that holds none would be a number about nothing — not drawn.
+  // Absent (an older server) reads as counted, the rule it followed.
+  const seaDaysCounted = stats.seaDaysCounted !== false;
   const seaDayRatioPct =
     stats.totalCruiseDays > 0
       ? Math.min(100, Math.round((stats.seaDays / stats.totalCruiseDays) * 100))
@@ -307,7 +312,9 @@ export default function CruiseStatsSection({
       evidence: { key: "cruiseSailedDeckCount", renderedValue: null },
     },
     {
-      label: t("stats:cruiseSection.totalDays"),
+      label: t(
+        seaDaysCounted ? "stats:cruiseSection.totalDays" : "stats:cruiseSection.totalDaysNoSea"
+      ),
       value: stats.totalCruiseDays,
       evidence: { key: "cruiseTotalDays", renderedValue: stats.totalCruiseDays },
     },
@@ -389,7 +396,7 @@ export default function CruiseStatsSection({
       {/* 2) Region bar chart + sea/port donut */}
       {show("regions") && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2">
+          <div className={seaDaysCounted ? "lg:col-span-2" : "lg:col-span-3"}>
             <RegionBars
               regionVisitCounts={stats.regionVisitCounts}
               title={t("stats:cruiseSection.regionsHeading")}
@@ -397,12 +404,14 @@ export default function CruiseStatsSection({
               t={t}
             />
           </div>
-          <SeaDayDonut
-            seaDays={stats.seaDays}
-            totalDays={stats.totalCruiseDays}
-            pct={seaDayRatioPct}
-            label={t("stats:cruiseSection.seaDayShare")}
-          />
+          {seaDaysCounted && (
+            <SeaDayDonut
+              seaDays={stats.seaDays}
+              totalDays={stats.totalCruiseDays}
+              pct={seaDayRatioPct}
+              label={t("stats:cruiseSection.seaDayShare")}
+            />
+          )}
           <div className="lg:col-span-3">
             <CountingHelp
               testId="cruise-regions-help"
@@ -411,10 +420,14 @@ export default function CruiseStatsSection({
                   term: t("stats:cruiseSection.regionsHeading"),
                   helpKey: "stats:cruiseSection.help.regions",
                 },
-                {
-                  term: t("stats:cruiseSection.seaDayShare"),
-                  helpKey: "stats:cruiseSection.help.seaDayShare",
-                },
+                ...(seaDaysCounted
+                  ? [
+                      {
+                        term: t("stats:cruiseSection.seaDayShare"),
+                        helpKey: "stats:cruiseSection.help.seaDayShare",
+                      },
+                    ]
+                  : []),
               ]}
             />
           </div>
@@ -449,8 +462,14 @@ export default function CruiseStatsSection({
                 helpKey: "stats:cruiseSection.help.maxDeck",
               },
               {
-                term: t("stats:cruiseSection.totalDays"),
-                helpKey: "stats:cruiseSection.help.totalDays",
+                term: t(
+                  seaDaysCounted
+                    ? "stats:cruiseSection.totalDays"
+                    : "stats:cruiseSection.totalDaysNoSea"
+                ),
+                helpKey: seaDaysCounted
+                  ? "stats:cruiseSection.help.totalDays"
+                  : "stats:cruiseSection.help.totalDaysNoSea",
               },
               {
                 term: t("stats:cruiseSection.revisitRate"),

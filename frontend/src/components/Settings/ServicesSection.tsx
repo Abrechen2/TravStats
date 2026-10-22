@@ -8,6 +8,7 @@ import {
   type ServiceState,
 } from "./ServiceAccordion";
 import { useHasLlm } from "../../hooks/useHasLlm";
+import { useInstanceServices } from "../../hooks/useInstanceServices";
 import ApiKeysSection from "./ApiKeysSection";
 import PersonalRoutingKeysSection, { type RoutingKeysStatus } from "./PersonalRoutingKeysSection";
 import ImmichConnectionCard from "./ImmichConnectionCard";
@@ -103,6 +104,9 @@ export default function ServicesSection({ page }: { page: PageState }): JSX.Elem
   const flightOn = isEnabled("flight");
   const railOn = isEnabled("rail");
   const hasLlm = useHasLlm();
+  // Keyless services only an admin switches; the account may know on or off
+  // (`GET /settings/instance-services`, booleans only — forgejo#321).
+  const instance = useInstanceServices(railOn);
   const level = useEffectiveSettingsLevel();
   const setLevel = useSettingsLevelStore((s) => s.setLevel);
   /**
@@ -248,9 +252,18 @@ export default function ServicesSection({ page }: { page: PageState }): JSX.Elem
       id,
       name: NAME[id],
       what: t(`settings:services.what.${id}`),
-      state: null,
+      state: instance.services ? (instance.services[id] ? ("admin" as const) : "none") : null,
     })),
-    footer: instancePointer("/admin/externalServices?section=externalServices&match=Transitous"),
+    footer: (
+      <>
+        {instance.failed && (
+          <p className="t-caption" role="status" data-testid="instance-services-failed">
+            {t("settings:services.instanceStatusFailed")}
+          </p>
+        )}
+        {instancePointer("/admin/externalServices?section=externalServices&match=Transitous")}
+      </>
+    ),
   };
   const mapsGroup: ServiceGroup = {
     id: "maps",

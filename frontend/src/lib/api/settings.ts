@@ -95,6 +95,13 @@ export interface ProfileZoneView {
   followsDevice: boolean;
 }
 
+/** `GET /settings/instance-services`. */
+export interface InstanceServices {
+  transitous: boolean;
+  dbRest: boolean;
+  openRailRouting: boolean;
+}
+
 // Settings API
 export const settingsApi = {
   get: async (): Promise<UserSettings> => {
@@ -103,6 +110,14 @@ export const settingsApi = {
   },
   update: async (payload: Partial<UserSettings>): Promise<UserSettings> => {
     const { data } = await api.put<UserSettings>("/settings", payload);
+    return data;
+  },
+  /**
+   * Which keyless services the instance runs for every account — booleans
+   * only, never an address (forgejo#321). Feeds the personal Dienste badges.
+   */
+  getInstanceServices: async (): Promise<InstanceServices> => {
+    const { data } = await api.get<InstanceServices>("/settings/instance-services");
     return data;
   },
   /**

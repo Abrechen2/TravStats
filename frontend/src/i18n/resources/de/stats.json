@@ -228,6 +228,7 @@
     "totalDistance": "Gesamtdistanz",
     "longestLeg": "Längste Etappe",
     "totalDays": "Reisetage gesamt",
+    "totalDaysNoSea": "Reisetage ohne Seetage",
     "avgPortsPerCruise": "Ø Häfen / Kreuzfahrt",
     "maxPortsSingle": "Meiste bekannte Häfen einer Kreuzfahrt",
     "lineLoyaltyMax": "Top-Loyalität (selbe Reederei)",
@@ -402,6 +403,13 @@
       },
       "totalDays": {
         "unit": "Tage an Bord: vom Start- bis zum Endtag, beide mitgezählt.",
+        "time": "Jahr: das Jahr des Starttags (der gespeicherte Kalendertag, in UTC gelesen); ohne Jahr alle.",
+        "source": "Deine gefahrenen Kreuzfahrten (abgeschlossen oder nachgetragen), Start- und Enddatum.",
+        "coverage": "Eine Kreuzfahrt ohne beide Daten bringt 0 Tage. Tippe auf den Wert für die Kreuzfahrten dahinter.",
+        "exclusions": "Gebuchte, laufende und stornierte Kreuzfahrten zählen nicht."
+      },
+      "totalDaysNoSea": {
+        "unit": "Tage an Bord: vom Start- bis zum Endtag, beide mitgezählt, ohne die Seetage — so eingestellt unter Einstellungen › Kreuzfahrt („Seetage zählen“).",
         "time": "Jahr: das Jahr des Starttags (der gespeicherte Kalendertag, in UTC gelesen); ohne Jahr alle.",
         "source": "Deine gefahrenen Kreuzfahrten (abgeschlossen oder nachgetragen), Start- und Enddatum.",
         "coverage": "Eine Kreuzfahrt ohne beide Daten bringt 0 Tage. Tippe auf den Wert für die Kreuzfahrten dahinter.",
