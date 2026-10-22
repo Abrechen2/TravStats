@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { MAP_EMPTY_OVERLAY_TOP } from "../MapEmptyOverlay";
 
 /**
  * The dedicated "Touren" dashboard tab (task 3 of the tour dashboard map
@@ -288,5 +289,21 @@ describe("TourTab", () => {
     expect(screen.getByText("dashboard:tourTab.listEmpty")).toBeInTheDocument();
     expect(screen.queryByText("dashboard:tours.loading")).not.toBeInTheDocument();
     expect(screen.queryByText("dashboard:tours.loadError")).not.toBeInTheDocument();
+  });
+
+  // Board item tour-empty-state-overlaps-sidebar-toggle: the tab opens with
+  // its list, which moves the list button to x 340; centred over the whole
+  // tab, the empty card covered the list and a hint there took the button's
+  // clicks. The card's area now starts below the button's row and right of
+  // the open list, and follows the list when it closes.
+  it("keeps the empty card clear of the open list and of the list button", () => {
+    renderTab();
+    const overlay = screen.getByTestId("map-empty-overlay");
+    expect(overlay.style.left).toBe("320px");
+    expect(overlay.style.top).toBe(`${MAP_EMPTY_OVERLAY_TOP}px`);
+    expect(overlay.style.inset).toBe("");
+
+    fireEvent.click(screen.getByRole("button", { name: /dashboard:tourTab\.listTitle/ }));
+    expect(screen.getByTestId("map-empty-overlay").style.left).toBe("0px");
   });
 });

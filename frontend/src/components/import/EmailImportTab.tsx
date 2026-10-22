@@ -16,6 +16,7 @@ import {
   providerDisclosure,
   type LlmProviderInfo,
 } from "../../lib/llmProviderCopy";
+import { domainHasModelReading } from "./modelReadingDomains";
 
 /** What `/parser-capabilities` says about the model — absent fields are older backends. */
 interface Capabilities {
@@ -96,14 +97,18 @@ export default function EmailImportTab({
   // there, where the text goes — before it is sent (beta.17).
   const [llm, setLlm] = useState<LlmState>({ kind: "unknown" });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Every model notice — offered, refused, missing — speaks about a reader
+  // this domain's server path never asks; for such a domain the card is silent.
+  const modelReads = domainHasModelReading(domain);
   const showLoader = useMinLoadingState(dropState === "loading", 2000);
 
   useEffect(() => {
+    if (!modelReads) return;
     api
       .get<Capabilities>("/parser-capabilities")
       .then(({ data }) => setLlm(llmStateOf(data)))
       .catch(() => setLlm({ kind: "unknown" }));
-  }, []);
+  }, [modelReads]);
 
   const handleFile = useCallback(
     async (file: File): Promise<void> => {
@@ -200,7 +205,7 @@ export default function EmailImportTab({
 
   return (
     <div className="flex flex-col gap-4">
-      {llm.kind === "disabled" && (
+      {modelReads && llm.kind === "disabled" && (
         <div
           data-testid="llm-disabled-notice"
           className="text-sm text-(--text-muted) bg-(--bg-surface) border border-(--color-border) rounded-lg px-4 py-3"
@@ -209,7 +214,7 @@ export default function EmailImportTab({
           <p>{t("import:email.llmDisabled.body")}</p>
         </div>
       )}
-      {(llm.kind === "cloudNotConsented" || llm.kind === "providerIncomplete") && (
+      {modelReads && (llm.kind === "cloudNotConsented" || llm.kind === "providerIncomplete") && (
         <div
           data-testid="llm-provider-refusal"
           className="text-sm text-amber-300 bg-amber-900/20 border border-amber-700 rounded-lg px-4 py-3"
@@ -218,13 +223,13 @@ export default function EmailImportTab({
           <p>{t(`import:email.${llm.kind}.body`)}</p>
         </div>
       )}
-      {llm.kind === "none" && (
+      {modelReads && llm.kind === "none" && (
         <div className="text-sm text-amber-300 bg-amber-900/20 border border-amber-700 rounded-lg px-4 py-3">
           <p className="font-medium mb-1">{t("import:email.regexWarning.title")}</p>
           <p className="whitespace-pre-line">{t("import:email.regexWarning.body")}</p>
         </div>
       )}
-      {llm.kind === "available" && llm.provider && (
+      {modelReads && llm.kind === "available" && llm.provider && (
         <p data-testid="llm-provider-disclosure" className="text-xs text-(--text-muted)">
           {providerDisclosure(llm.provider, t)}
         </p>

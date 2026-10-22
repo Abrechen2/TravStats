@@ -25,10 +25,13 @@
  * therefore names a key from this map, and a test asserts that every key used
  * in a gate exists here.
  *
- * IMPORTANT — this is a *visibility* gate, not a security boundary. The
- * backend endpoints behind these features (trip AI summary, `/pairing/*`)
+ * IMPORTANT — this is mostly a *visibility* gate, not a security boundary.
+ * Most backend endpoints behind these features (trip AI summary, `/pairing/*`)
  * remain reachable for any authenticated user whatever the flag says. That is
  * deliberate: hiding the Devices UI must not lock the owner out of pairing.
+ * The exceptions are features a client keeps calling after nobody looks at the
+ * page — the calendar feed, trip sharing across servers and TravPlan — whose
+ * server refuses while the flag is off; each entry says so.
  *
  * To un-gate a feature: delete its entry here and the `isFeatureVisible` call
  * at its gate site. TypeScript will point at every place that needs touching.
@@ -124,7 +127,7 @@ export const BETA_FEATURES = Object.freeze({
    * user's own domain choice.
    */
   rentalDomain: Object.freeze({
-    why: "Car rentals are a new domain (spec 2026-10-01-rental-domain-design), built in packages; the Companion app does not handle rentals yet and no release candidate has carried them.",
+    why: "Car rentals (spec 2026-10-01-rental-domain-design) are built and have been in every 2.7.0 release candidate since rc.1; the Companion reads, imports and creates them too. What is missing is the owner's acceptance. Known gap: a rental document is read only by a template — Sixt's confirmation and invoice from the template repository, or one the user made in the workshop — and never by the AI model (by design: a parking booking looks the same), so any other provider is typed in by hand.",
     returnsWhen:
       "The owner explicitly takes rental out of beta. Packages being done is not that event.",
     reason: "beta",
@@ -136,7 +139,7 @@ export const BETA_FEATURES = Object.freeze({
     reason: "beta",
   }),
   busDomain: Object.freeze({
-    why: "Long-distance coach rides are a new domain (spec 2026-10-07-bus-domain-design), built in packages; the Companion app does not handle them yet and no release candidate has carried them.",
+    why: "Long-distance coach rides (spec 2026-10-07-bus-domain-design) are built and have been in every release candidate since 2.7.0-rc.11; the Companion records and syncs them too. What is missing is the owner's acceptance. Known gap: a coach ticket is read only by a bus template from the workshop or the template repository, never by the AI model, so a ticket no template knows is typed in by hand.",
     returnsWhen:
       "The owner explicitly takes bus out of beta. Packages being done is not that event.",
     reason: "beta",
@@ -146,12 +149,15 @@ export const BETA_FEATURES = Object.freeze({
    * TravPlan, the planning mode for a trip that has not happened yet (`/plan*`).
    *
    * Gated in `hooks/useTravPlanVisible.ts` (nav entry, trip summary) and by
-   * `BetaFeatureRouteGuard` on the three routes in `App.tsx`. The instance's
-   * own `travel_plan_config.enabled` is a second, server-side condition the
-   * hook also asks — this key decides whether the mode is shown at all.
+   * `BetaFeatureRouteGuard` on the `/plan*` routes (`pages/TravPlanRoute.tsx`).
+   * The SERVER asks too (`services/travplan/availability.ts`): while the
+   * switch is off every plan endpoint answers `PLAN_DISABLED` and
+   * `/travplan/capabilities` says `enabled: false`. The instance's own
+   * `travel_plan_config.enabled` is a second, server-side condition the hook
+   * also asks — this key decides whether the mode exists at all.
    */
   travPlan: Object.freeze({
-    why: "An alpha experiment (owner, 2026-10-16). The planning mode arrived on 2026-10-14 open to every logged-in user with no gate, drawn with its own theme and its own navigation outside the design system. It is unfinished: its screens were rebuilt on the primitives on 2026-10-16, and nobody has walked the planning flow in a browser since.",
+    why: "An alpha experiment (owner, 2026-10-16). The planning mode arrived on 2026-10-14 open to every logged-in user with no gate, drawn with its own theme and its own navigation outside the design system. It is unfinished: its screens were rebuilt on the primitives on 2026-10-16, and nobody has walked the planning flow in a browser since. The v2 route plan (stations, stages, routed legs) is in the server without any screen; most of its plan is not built yet.",
     returnsWhen:
       "The owner has walked the planning flow after the UI rework in a browser review and accepts it for release.",
     reason: "beta",

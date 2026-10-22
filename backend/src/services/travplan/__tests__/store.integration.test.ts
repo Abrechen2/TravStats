@@ -8,6 +8,13 @@ import { prisma } from "../../../db";
 import { JWT_SECRET } from "../../../utils/jwtSecret";
 import travplanRouter from "../../../routes/travplan";
 import { errorHandler } from "../../../middleware/errorHandler";
+
+// The instance beta switch is a global row other suites flip; the gate itself is tested in
+// travplanBetaGate.integration.test.ts.
+jest.mock("../availability", () => ({
+  travPlanOffered: async () => true,
+  assertTravPlanOffered: async () => undefined,
+}));
 import { emptyState, bookingSchema, itemSchema } from "../schema";
 import { hash } from "../store";
 const app = express();
