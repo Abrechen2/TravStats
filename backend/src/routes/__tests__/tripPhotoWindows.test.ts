@@ -187,6 +187,42 @@ describe("trip photos by when and where", () => {
     expect((await request(app).get(url).set("Cookie", strangerCookie)).status).toBe(404);
   });
 
+  // Ferry parity with rail: a crossing shows its trip's photos by the ride's
+  // window, abstains without a port zone or a clock, and is the owner's only.
+  it("shows a ferry crossing its trip's photos between departure and arrival", async () => {
+    const ride = await prisma.ferryJourney.create({
+      data: {
+        userId,
+        tripId,
+        depStationName: "Civitavecchia",
+        arrStationName: "Olbia",
+        depLat: 42.094,
+        depLon: 11.79,
+        arrLat: 40.923,
+        arrLon: 9.51,
+        depTimezone: "Europe/Rome",
+        arrTimezone: "Europe/Rome",
+        departureTime: new Date("2024-05-01T08:00:00Z"),
+        arrivalTime: new Date("2024-05-01T10:00:00Z"),
+        status: "completed",
+      },
+    });
+    const url = `/api/v1/ferry/${ride.id}/trip-photos`;
+    expect(photoIds(await request(app).get(url).set("Cookie", cookie))).toEqual([ids.inFlight]);
+
+    await prisma.ferryJourney.update({ where: { id: ride.id }, data: { depPrecision: "day" } });
+    const clockless = await request(app).get(url).set("Cookie", cookie);
+    expect(clockless.body.data).toMatchObject({ total: 0, reason: "noClock" });
+
+    await prisma.ferryJourney.update({
+      where: { id: ride.id },
+      data: { depPrecision: "minute", arrTimezone: null },
+    });
+    expect(photoIds(await request(app).get(url).set("Cookie", cookie))).toEqual([]);
+
+    expect((await request(app).get(url).set("Cookie", strangerCookie)).status).toBe(404);
+  });
+
   it("shows a cruise its trip's photos from its first to its last day", async () => {
     const cruise = await prisma.cruise.create({
       data: {

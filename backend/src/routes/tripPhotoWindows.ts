@@ -6,6 +6,7 @@ import { AppError } from "../middleware/errorHandler";
 import { statsLimiter } from "../middleware/rateLimit";
 import {
   cruiseTripPhotos,
+  ferryTripPhotos,
   flightTripPhotos,
   lodgingTripPhotos,
   railTripPhotos,
@@ -13,7 +14,8 @@ import {
 } from "../services/photos/tripPhotoWindows";
 
 /**
- * Read-only trip photographs on a stay, a flight, a cruise and a train ride
+ * Read-only trip photographs on a stay, a flight, a cruise, a train ride and a
+ * ferry crossing
  * (package 9, item 4) — found by when and where they were taken, see the service.
  *
  * Mounted on `/api/v1`, so middleware is PER ROUTE: a `router.use` here would
@@ -66,6 +68,12 @@ router.get(
   authenticate,
   statsLimiter,
   windowRoute(railTripPhotos, "Rail journey not found")
+);
+router.get(
+  "/ferry/:id/trip-photos",
+  authenticate,
+  statsLimiter,
+  windowRoute(ferryTripPhotos, "Ferry journey not found")
 );
 
 export default router;
