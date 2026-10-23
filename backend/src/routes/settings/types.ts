@@ -108,6 +108,7 @@ export interface SettingsResponse extends SettingsDataJson {
   tripDefaults: AccountPrefsView["tripDefaults"];
   cruiseSeaDays: AccountPrefsView["cruiseSeaDays"];
   liveTracking: AccountPrefsView["liveTracking"];
+  railImport: AccountPrefsView["railImport"];
   /**
    * READ-ONLY mirror of the instance-level beta gate (AdminSettings row).
    * It is NOT part of the user's own settings and deliberately absent from

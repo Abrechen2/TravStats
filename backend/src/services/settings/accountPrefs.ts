@@ -30,16 +30,33 @@ export const cruiseSeaDaysSettingsSchema = z.object({ counted: z.boolean() }).pa
 
 export const liveTrackingSettingsSchema = z.object({ enabled: z.boolean() }).partial().strict();
 
+/**
+ * What a bahn.de import starts local-transit legs as (2026-10-23): a U-Bahn or
+ * tram leg skipped or kept as a rail journey of that mode, a bus leg skipped or
+ * saved as a bus ride. Written only by the import dialog's explicit „als
+ * Standard merken“, never implied by a single import.
+ */
+export const RAIL_IMPORT_LOCAL_TRANSIT = ["skip", "rail"] as const;
+export const RAIL_IMPORT_BUS = ["skip", "bus"] as const;
+export const railImportSettingsSchema = z
+  .object({ localTransit: z.enum(RAIL_IMPORT_LOCAL_TRANSIT), bus: z.enum(RAIL_IMPORT_BUS) })
+  .partial()
+  .strict();
+
 export const ACCOUNT_PREFS_SELECT = {
   tripDefaultColor: true,
   cruiseCountSeaDays: true,
   flightLiveTrackingEnabled: true,
+  railImportLocalTransit: true,
+  railImportBus: true,
 } as const;
 
 export interface AccountPrefsColumns {
   tripDefaultColor: string | null;
   cruiseCountSeaDays: boolean;
   flightLiveTrackingEnabled: boolean;
+  railImportLocalTransit: string;
+  railImportBus: string;
 }
 
 /** The column defaults — what an account without a settings row is answered with. */
@@ -47,6 +64,8 @@ export const ACCOUNT_PREFS_DEFAULTS: AccountPrefsColumns = {
   tripDefaultColor: null,
   cruiseCountSeaDays: true,
   flightLiveTrackingEnabled: true,
+  railImportLocalTransit: "skip",
+  railImportBus: "skip",
 };
 
 export interface AccountPrefsView {
@@ -56,6 +75,11 @@ export interface AccountPrefsView {
   cruiseSeaDays: { counted: boolean };
   /** Whether the server takes the Companion's flight recording. */
   liveTracking: { enabled: boolean };
+  /** What a bahn.de import starts U-Bahn/tram and bus legs as. */
+  railImport: {
+    localTransit: (typeof RAIL_IMPORT_LOCAL_TRANSIT)[number];
+    bus: (typeof RAIL_IMPORT_BUS)[number];
+  };
 }
 
 /**
@@ -66,11 +90,19 @@ function paletteColor(value: string | null): string | null {
   return value !== null && (TRIP_COLORS as readonly string[]).includes(value) ? value : null;
 }
 
+/** A stored word the vocabulary no longer holds reads as `skip`, the behaviour before. */
+const oneOf = <T extends string>(words: readonly T[], value: string): T =>
+  (words as readonly string[]).includes(value) ? (value as T) : words[0];
+
 export function accountPrefsView(record: AccountPrefsColumns): AccountPrefsView {
   return {
     tripDefaults: { color: paletteColor(record.tripDefaultColor) },
     cruiseSeaDays: { counted: record.cruiseCountSeaDays },
     liveTracking: { enabled: record.flightLiveTrackingEnabled },
+    railImport: {
+      localTransit: oneOf(RAIL_IMPORT_LOCAL_TRANSIT, record.railImportLocalTransit),
+      bus: oneOf(RAIL_IMPORT_BUS, record.railImportBus),
+    },
   };
 }
 
@@ -78,9 +110,14 @@ export function accountPrefsView(record: AccountPrefsColumns): AccountPrefsView 
 export function accountPrefsUpdate(
   trip: z.infer<typeof tripDefaultsSettingsSchema> | undefined,
   seaDays: z.infer<typeof cruiseSeaDaysSettingsSchema> | undefined,
-  live: z.infer<typeof liveTrackingSettingsSchema> | undefined
+  live: z.infer<typeof liveTrackingSettingsSchema> | undefined,
+  railImport?: z.infer<typeof railImportSettingsSchema>
 ): Partial<AccountPrefsColumns> {
   return {
+    ...(railImport?.localTransit !== undefined
+      ? { railImportLocalTransit: railImport.localTransit }
+      : {}),
+    ...(railImport?.bus !== undefined ? { railImportBus: railImport.bus } : {}),
     ...(trip?.color !== undefined ? { tripDefaultColor: trip.color } : {}),
     ...(seaDays?.counted !== undefined ? { cruiseCountSeaDays: seaDays.counted } : {}),
     ...(live?.enabled !== undefined ? { flightLiveTrackingEnabled: live.enabled } : {}),

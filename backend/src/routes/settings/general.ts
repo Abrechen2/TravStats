@@ -37,6 +37,7 @@ import {
   accountPrefsView,
   cruiseSeaDaysSettingsSchema,
   liveTrackingSettingsSchema,
+  railImportSettingsSchema,
   tripDefaultsSettingsSchema,
   type AccountPrefsColumns,
 } from "../../services/settings/accountPrefs";
@@ -223,6 +224,7 @@ const settingsSchema = z
     tripDefaults: tripDefaultsSettingsSchema.optional(),
     cruiseSeaDays: cruiseSeaDaysSettingsSchema.optional(),
     liveTracking: liveTrackingSettingsSchema.optional(),
+    railImport: railImportSettingsSchema.optional(),
     /**
      * Which evidence tier the country headline counts from, for THIS user
      * (spec §3.2). `.nullable()` because null is a value and not an absence:
@@ -508,6 +510,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       tripDefaults,
       cruiseSeaDays,
       liveTracking,
+      railImport,
       countryThreshold,
       homeCountry,
       settingsLevel,
@@ -515,7 +518,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     } = payload;
     const switches = {
       ...suggestionSwitchesUpdate(tripSuggestions, staySuggestions, tripRecording),
-      ...accountPrefsUpdate(tripDefaults, cruiseSeaDays, liveTracking),
+      ...accountPrefsUpdate(tripDefaults, cruiseSeaDays, liveTracking, railImport),
     };
     const {
       betaFeaturesEnabled,

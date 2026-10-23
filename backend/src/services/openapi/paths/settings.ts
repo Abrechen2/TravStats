@@ -32,6 +32,9 @@ import { settingsLevelSchema } from "../../../shared/settingsLevel";
 import {
   cruiseSeaDaysSettingsSchema,
   liveTrackingSettingsSchema,
+  RAIL_IMPORT_BUS,
+  RAIL_IMPORT_LOCAL_TRANSIT,
+  railImportSettingsSchema,
   tripDefaultsSettingsSchema,
 } from "../../settings/accountPrefs";
 import { instanceServicesSchema } from "../../settings/instanceServices";
@@ -89,6 +92,13 @@ const accountPrefsFields = {
         "/flights/{id}/track). Off: refused with 409 FLIGHT_TRACKING_DISABLED. A client " +
         "should not record while it is off."
     ),
+  railImport: z
+    .object({ localTransit: z.enum(RAIL_IMPORT_LOCAL_TRANSIT), bus: z.enum(RAIL_IMPORT_BUS) })
+    .describe(
+      "What a bahn.de import starts its local-transit legs as: U-Bahn/tram `skip` or `rail` " +
+        "(a rail journey of that mode, not counted in rail statistics), bus `skip` or `bus` " +
+        "(a bus ride). Set by the import dialog's explicit 'remember as default'."
+    ),
 };
 
 const settingsResponseSchema = z
@@ -105,6 +115,7 @@ const settingsUpdateBodySchema = z
     tripDefaults: tripDefaultsSettingsSchema.optional(),
     cruiseSeaDays: cruiseSeaDaysSettingsSchema.optional(),
     liveTracking: liveTrackingSettingsSchema.optional(),
+    railImport: railImportSettingsSchema.optional(),
   })
   .passthrough()
   .describe("Every block is optional; an omitted key leaves the stored value alone.");

@@ -117,4 +117,33 @@ describe("settings — account preferences (forgejo#321)", () => {
     const res = await request(app).get("/api/v1/settings").set("Cookie", cookie).expect(200);
     expect(res.body.tripDefaults).toEqual({ color: null });
   });
+
+  it("remembers the rail import's local-transit defaults, skip until told otherwise", async () => {
+    const before = await request(app).get("/api/v1/settings").set("Cookie", cookie).expect(200);
+    expect(before.body.railImport).toEqual({ localTransit: "skip", bus: "skip" });
+    const put = await request(app)
+      .put("/api/v1/settings")
+      .set("Cookie", cookie)
+      .send({ railImport: { localTransit: "rail" } })
+      .expect(200);
+    expect(put.body.railImport).toEqual({ localTransit: "rail", bus: "skip" });
+    await request(app)
+      .put("/api/v1/settings")
+      .set("Cookie", cookie)
+      .send({ railImport: { bus: "bus" } })
+      .expect(200);
+    const row = await prisma.userSettings.findUnique({ where: { userId } });
+    expect(row).toMatchObject({ railImportLocalTransit: "rail", railImportBus: "bus" });
+    expect(row?.data).not.toHaveProperty("railImport");
+  });
+
+  it("refuses a rail import default outside its words", async () => {
+    for (const railImport of [{ localTransit: "bus" }, { bus: "rail" }, { tram: "rail" }]) {
+      await request(app)
+        .put("/api/v1/settings")
+        .set("Cookie", cookie)
+        .send({ railImport })
+        .expect(400);
+    }
+  });
 });
