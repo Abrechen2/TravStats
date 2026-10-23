@@ -340,6 +340,7 @@ describe("TripDetailPage — the far-from-destinations hint", () => {
             distanceKm: null,
             distanceSource: null,
             status: "completed",
+            transitMode: "rail",
             delayMinutes: null,
             price: null,
             currency: null,

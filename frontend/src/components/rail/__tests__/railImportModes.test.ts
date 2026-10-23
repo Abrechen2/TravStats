@@ -3,7 +3,7 @@ import { stationDraftFrom, rowsFrom, totalGoesTo } from "../railImportModel";
 import { groupChoice, legStart, railTransitModeOf, toBusInput } from "../railImportModes";
 import { isCountableRail } from "../../../shared/railCounting";
 import { journeyFromRail } from "../../map/cards/journeys/journeyNormalize";
-import type { RailImportLeg } from "../../../types/rail";
+import type { RailImportLeg, TripRailJourney } from "../../../types/rail";
 import { booking, leg, station } from "./railImportFixture";
 
 const withMode = (
@@ -129,5 +129,39 @@ describe("a tram ride in the web's own rail figures", () => {
       typeof journeyFromRail
     >[0]);
     expect(train).toMatchObject({ travelled: true, planned: false });
+  });
+
+  it("is left untallied on the trip map too, which reads the trip's own rows", () => {
+    // Placed, as the trip map keeps only rows the server sent stations for.
+    const onTrip: TripRailJourney & {
+      depLat: number;
+      depLon: number;
+      arrLat: number;
+      arrLon: number;
+    } = {
+      id: "t1",
+      operator: null,
+      trainCategory: "STR",
+      trainNumber: "19",
+      depStationName: "Marienplatz",
+      arrStationName: "Odeonsplatz",
+      depTimezone: "Europe/Berlin",
+      arrTimezone: "Europe/Berlin",
+      departureTime: "2025-03-01T08:00:00.000Z",
+      arrivalTime: "2025-03-01T08:10:00.000Z",
+      distanceKm: 1,
+      distanceSource: "great_circle",
+      status: "completed",
+      transitMode: "tram",
+      delayMinutes: null,
+      price: null,
+      currency: null,
+      bookingId: null,
+      depLat: 48.137,
+      depLon: 11.575,
+      arrLat: 48.142,
+      arrLon: 11.577,
+    };
+    expect(journeyFromRail(onTrip)).toMatchObject({ travelled: false, planned: false });
   });
 });

@@ -119,6 +119,7 @@ export type TripRailJourney = Pick<
   | "distanceKm"
   | "distanceSource"
   | "status"
+  | "transitMode"
   | "delayMinutes"
   | "price"
   | "currency"

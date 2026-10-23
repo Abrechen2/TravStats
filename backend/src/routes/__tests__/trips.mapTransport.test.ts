@@ -137,6 +137,21 @@ describe("GET /trips/:id — what the trip map draws of rail and rentals", () =>
     });
   });
 
+  // Codex review 2026-10-23: the trip row left the mode out, the map card read
+  // the missing field as a train, and a kept tram ride was tallied as one.
+  it("sends each ride's transit mode, so the map card can leave a tram ride untallied", async () => {
+    await prisma.railJourney.updateMany({ where: { tripId }, data: { transitMode: "tram" } });
+    try {
+      const res = await request(app)
+        .get(`/api/v1/trips/${tripId}`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(res.body.trip.railJourneys[0].transitMode).toBe("tram");
+    } finally {
+      await prisma.railJourney.updateMany({ where: { tripId }, data: { transitMode: "rail" } });
+    }
+  });
+
   it("sends each rental what the dashboard's rental card prints of it", async () => {
     const res = await request(app).get(`/api/v1/trips/${tripId}`).set("Cookie", cookie).expect(200);
     const rental = res.body.trip.rentalBookings.find(

@@ -21,6 +21,7 @@ const ride = (id: string, departureTime: string): TripRailJourney => ({
   distanceKm: null,
   distanceSource: null,
   status: "completed",
+  transitMode: "rail",
   delayMinutes: null,
   price: null,
   currency: "EUR",

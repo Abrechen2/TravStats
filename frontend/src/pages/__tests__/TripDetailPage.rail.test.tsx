@@ -143,6 +143,7 @@ const ride = {
   distanceKm: 330,
   distanceSource: "great_circle" as const,
   status: "completed" as const,
+  transitMode: "rail" as const,
   delayMinutes: null,
   price: null,
   currency: "EUR",

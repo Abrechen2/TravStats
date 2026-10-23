@@ -36,6 +36,8 @@ export const TRIP_RAIL_SELECT = {
   distanceKm: true,
   distanceSource: true,
   status: true,
+  // A U-Bahn or tram ride is drawn but not tallied as a train (`railCounting`).
+  transitMode: true,
   delayMinutes: true,
   price: true,
   currency: true,
