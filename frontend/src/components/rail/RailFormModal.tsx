@@ -28,6 +28,7 @@ import { trainLabel, useRailEntrySuggestions } from "../../hooks/useRailEntrySug
 import { StationPicker } from "./StationPicker";
 import { RailLookupPanel } from "./RailLookupPanel";
 import { RailFormDetails } from "./RailFormDetails";
+import { RailTransitModeField } from "./RailTransitModeField";
 import { INPUT_CLASS, LabelledInput, Section } from "./railFormFields";
 import type { RailStationDraft } from "./RailStationField";
 import {
@@ -490,6 +491,10 @@ export function RailFormModal({
               {t("rail:form.suggestionsFailed")}
             </p>
           )}
+          <RailTransitModeField
+            value={draft.transitMode}
+            onChange={(v): void => set("transitMode", v)}
+          />
         </Section>
 
         <RailLookupPanel

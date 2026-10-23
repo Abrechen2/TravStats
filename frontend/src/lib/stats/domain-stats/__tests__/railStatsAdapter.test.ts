@@ -7,6 +7,7 @@ const ride = (over: Partial<RailJourney> = {}): RailJourney =>
   ({
     id: "r1",
     status: "completed",
+    transitMode: "rail",
     operator: "DB Fernverkehr",
     trainCategory: "ICE",
     depStationName: "Frankfurt (Main) Hbf",

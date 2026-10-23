@@ -6,7 +6,7 @@
 // "travelled" means is never decided here — each domain's counting module is
 // asked, so a card cannot count a ride the statistics page does not.
 
-import { isCountableRail } from "../../../../shared/railCounting";
+import { isCountableRail, isCountedRailMode } from "../../../../shared/railCounting";
 import { isCountableBus } from "../../../../shared/busCounting";
 import { isCountableFerry } from "../../../../shared/ferryCounting";
 import {
@@ -157,23 +157,33 @@ export function journeyFromRail(
   j: Partial2<RailJourney, TerminalCore | TerminalCoreEnd>
 ): MapJourney {
   const train = [j.trainCategory, j.trainNumber].filter(Boolean).join(" ");
-  return journey("rail", j, terminalEnds(j, { dep: j.depStationCode, arr: j.arrStationCode }), {
-    departureTime: j.departureTime ?? null,
-    departure: stationDeparture(j),
-    arrival: stationArrival(j),
-    distanceKm: knownKm(j.distanceKm),
-    distanceSource: knownKm(j.distanceKm) === null ? null : (j.distanceSource ?? null),
-    operator: j.operator ?? null,
-    travelled: isCountableRail(j),
-    facts: {
-      trainNumber: train || null,
-      trainCategory: j.trainCategory ?? null,
-      travelClass: j.travelClass ?? null,
-      seat: [j.coach, j.seat].filter(Boolean).join(" / ") || null,
-      durationMin: timedMinutes(timedDeparture(j), stationArrival(j)),
-      delayMinutes: clockedDelay(j),
-    },
-  });
+  // A U-Bahn or tram ride is drawn but tallied neither as travelled nor as
+  // planned: the card's figures are rail figures (`railCounting`). A row
+  // without the field is from a server before it, where every ride was a train.
+  const ride = { status: j.status, transitMode: j.transitMode ?? "rail" };
+  const mapped = journey(
+    "rail",
+    j,
+    terminalEnds(j, { dep: j.depStationCode, arr: j.arrStationCode }),
+    {
+      departureTime: j.departureTime ?? null,
+      departure: stationDeparture(j),
+      arrival: stationArrival(j),
+      distanceKm: knownKm(j.distanceKm),
+      distanceSource: knownKm(j.distanceKm) === null ? null : (j.distanceSource ?? null),
+      operator: j.operator ?? null,
+      travelled: isCountableRail(ride),
+      facts: {
+        trainNumber: train || null,
+        trainCategory: j.trainCategory ?? null,
+        travelClass: j.travelClass ?? null,
+        seat: [j.coach, j.seat].filter(Boolean).join(" / ") || null,
+        durationMin: timedMinutes(timedDeparture(j), stationArrival(j)),
+        delayMinutes: clockedDelay(j),
+      },
+    }
+  );
+  return isCountedRailMode(ride) ? mapped : { ...mapped, planned: false };
 }
 
 export function journeyFromBus(

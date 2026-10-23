@@ -244,6 +244,10 @@ export default function RailDetailPage(): JSX.Element {
           ) : undefined
         }
         meta={[
+          // A U-Bahn or tram ride names its kind: it is listed, not counted.
+          journey.transitMode && journey.transitMode !== "rail"
+            ? t(`rail:transitMode.${journey.transitMode}`)
+            : null,
           trainLabel(journey, bareTrainName(t)),
           departure ? formatStationTime(departure, locale) : null,
         ]

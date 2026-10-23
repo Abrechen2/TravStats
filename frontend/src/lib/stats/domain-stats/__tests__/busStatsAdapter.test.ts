@@ -50,6 +50,7 @@ describe("adaptBus", () => {
         {
           id: "r1",
           status: "completed",
+          transitMode: "rail",
           depStationName: "Hamburg Hbf",
           arrStationName: "Berlin Hbf",
           depCountry: "DE",

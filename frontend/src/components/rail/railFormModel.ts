@@ -6,6 +6,7 @@ import type {
   RailJourneyInput,
   RailLookupAnswer,
   RailLookupStop,
+  RailTransitMode,
   RailTravelClass,
 } from "../../types/rail";
 import { classifyWallClock, storedFold, type TimeValue } from "../../shared/time";
@@ -47,6 +48,8 @@ export interface RailFormDraft {
   /** Only what the user typed. A measured distance is not shown here. */
   distanceKm: string;
   travelClass: RailTravelClass | "";
+  /** A train, or a U-Bahn/tram ride kept as a journey (counted in no rail figure). */
+  transitMode: RailTransitMode;
   coach: string;
   seat: string;
   delayMinutes: string;
@@ -102,6 +105,7 @@ export function draftFrom(journey: RailJourney | null): RailFormDraft {
       arrivalFold: null,
       distanceKm: "",
       travelClass: "",
+      transitMode: "rail",
       coach: "",
       seat: "",
       delayMinutes: "",
@@ -152,6 +156,7 @@ export function draftFrom(journey: RailJourney | null): RailFormDraft {
         ? String(journey.distanceKm)
         : "",
     travelClass: journey.travelClass ?? "",
+    transitMode: journey.transitMode ?? "rail",
     coach: journey.coach ?? "",
     seat: journey.seat ?? "",
     delayMinutes: journey.delayMinutes === null ? "" : String(journey.delayMinutes),
@@ -281,6 +286,7 @@ export function toRailInput(draft: RailFormDraft): RailJourneyInput {
     arrivalFold: draft.arrivalFold,
     distanceKm: numberOrNull(draft.distanceKm),
     travelClass: draft.travelClass === "" ? null : draft.travelClass,
+    transitMode: draft.transitMode,
     coach: orNull(draft.coach),
     seat: orNull(draft.seat),
     // A delay is measured between clocks; the server refuses one on a ride

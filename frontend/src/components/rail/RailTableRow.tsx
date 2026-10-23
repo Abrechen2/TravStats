@@ -96,11 +96,27 @@ export function RailTableRow({ connection, columns, onOpen, actions }: Props): J
 
   const distance = <ConnectionDistance legs={legs} />;
 
+  // A U-Bahn or tram ride says so beside its line: it is listed, not counted.
+  const local = legs.find((leg) => leg.transitMode !== "rail");
+  const modeTag = local ? (
+    <span
+      className="ml-1.5 rounded-sm border border-border px-1 text-xs"
+      data-testid="rail-transit-mode"
+    >
+      {t(`rail:transitMode.${local.transitMode}`)}
+    </span>
+  ) : null;
   const train = single ? (
-    trainLabel(single, bareTrainName(t)) || "—"
+    <>
+      {trainLabel(single, bareTrainName(t)) || "—"}
+      {modeTag}
+    </>
   ) : (
     <span className="flex flex-col">
-      <span>{connectionTrains(legs, bareTrainName(t)).join(" · ") || "—"}</span>
+      <span>
+        {connectionTrains(legs, bareTrainName(t)).join(" · ") || "—"}
+        {modeTag}
+      </span>
       <span className="t-caption">{t("rail:connection.changes", { count: legs.length - 1 })}</span>
     </span>
   );

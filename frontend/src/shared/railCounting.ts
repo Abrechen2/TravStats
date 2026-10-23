@@ -20,17 +20,49 @@ import { isValidZone, localDay } from "./time";
 
 export const COUNTABLE_RAIL_STATUSES = ["completed"] as const;
 
+/**
+ * What a stored journey was: a train (`rail`), or a U-Bahn or tram ride the
+ * user chose to keep (the bahn.de import, 2026-10-23). The owner's rule: a
+ * metro or tram ride is stored and listed, on its trip and in the journey
+ * list, but it is not a train ride and counts in NO rail figure — rides,
+ * kilometres, records, map cards, countries, travel days. Every such figure
+ * reaches it through `isCountableRail` / `countableRailWhere` below, so the
+ * exclusion has this one home.
+ */
+export const RAIL_TRANSIT_MODES = ["rail", "metro", "tram"] as const;
+export type RailTransitMode = (typeof RAIL_TRANSIT_MODES)[number];
+export const COUNTED_RAIL_TRANSIT_MODES = ["rail"] as const;
+
 export interface CountableRail {
   status: string;
+  /** Required on purpose: a select that forgot the column would count a tram ride. */
+  transitMode: string;
+}
+
+/** The status half of the rule alone: the ride happened. Not a counting rule by itself. */
+export function isCompletedRail(ride: { status: string }): boolean {
+  return (COUNTABLE_RAIL_STATUSES as readonly string[]).includes(ride.status);
+}
+
+/** The mode half alone, for a figure that keeps its own status rule (a trip's countries). */
+export function countedRailModeWhere(): { transitMode: { in: string[] } } {
+  return { transitMode: { in: [...COUNTED_RAIL_TRANSIT_MODES] } };
+}
+
+export function isCountedRailMode(ride: { transitMode: string }): boolean {
+  return (COUNTED_RAIL_TRANSIT_MODES as readonly string[]).includes(ride.transitMode);
 }
 
 /** The Prisma `where` fragment: `{ userId, ...countableRailWhere() }`. A fresh object per call. */
-export function countableRailWhere(): { status: { in: string[] } } {
-  return { status: { in: [...COUNTABLE_RAIL_STATUSES] } };
+export function countableRailWhere(): {
+  status: { in: string[] };
+  transitMode: { in: string[] };
+} {
+  return { status: { in: [...COUNTABLE_RAIL_STATUSES] }, ...countedRailModeWhere() };
 }
 
 export function isCountableRail(ride: CountableRail): boolean {
-  return (COUNTABLE_RAIL_STATUSES as readonly string[]).includes(ride.status);
+  return isCompletedRail(ride) && isCountedRailMode(ride);
 }
 
 /**

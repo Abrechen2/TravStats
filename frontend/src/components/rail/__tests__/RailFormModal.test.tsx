@@ -284,7 +284,8 @@ describe("RailFormModal", () => {
     create.mockResolvedValue({ journey: { id: "new" }, geometry: null });
     render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={vi.fn()} />);
 
-    const [depSearch] = screen.getAllByRole("combobox");
+    // The station search, not the transit-mode select that is a combobox too.
+    const [depSearch] = screen.getAllByRole("combobox").filter((el) => el.tagName === "INPUT");
     fireEvent.change(depSearch, { target: { value: "frankfurt hbf" } });
     // Scoped to the picker: its search answers after a 250 ms debounce, and a
     // document-wide role query over this form is slow enough under load to use
@@ -528,6 +529,23 @@ describe("RailFormModal", () => {
     // Next to the arrival it qualifies: both in the same column.
     const arrival = screen.getByLabelText("rail:form.arrivalTime");
     expect(arrival.closest("label")?.parentElement).toBe(label?.parentElement);
+  });
+
+  // 2026-10-23: a U-Bahn or tram ride kept from a bahn.de import shows its
+  // mode, says it is not counted, and can be put back to a train.
+  it("shows a tram ride's mode, says it is not counted, and saves a change of it", async () => {
+    const tram = makeRailJourney({ transitMode: "tram" });
+    update.mockResolvedValue({ journey: tram, geometry: null });
+    render(<RailFormModal journey={tram} onClose={vi.fn()} onSaved={vi.fn()} />);
+    await waitFor(() => expect(getAllTrips).toHaveBeenCalled());
+    const mode = screen.getByLabelText("rail:transitMode.label");
+    expect(mode).toHaveValue("tram");
+    expect(mode).toHaveAccessibleDescription("rail:transitMode.notCounted");
+    fireEvent.change(mode, { target: { value: "rail" } });
+    expect(screen.queryByText("rail:transitMode.notCounted")).toBeNull();
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(update).toHaveBeenCalled());
+    expect(update.mock.calls[0][1]).toMatchObject({ transitMode: "rail" });
   });
 
   // forgejo#212: a day-only ride opened as 00:00 and a seat change saved it

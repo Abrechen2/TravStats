@@ -5,6 +5,9 @@
  */
 
 import type { RailTimes } from "./times";
+import type { RailTransitMode } from "../shared/railCounting";
+
+export type { RailTransitMode };
 
 export type RailStatus = "scheduled" | "in_progress" | "completed" | "cancelled";
 export type RailTravelClass = "first" | "second" | "sleeper" | "couchette";
@@ -76,6 +79,11 @@ export interface RailJourney {
    * (forgejo#234); set on the leg arriving at the change, never derived.
    */
   tightConnection: boolean;
+  /**
+   * A train, or a U-Bahn or tram ride kept as a journey — listed here, counted
+   * in no rail figure (`shared/railCounting.ts`).
+   */
+  transitMode: RailTransitMode;
   notes: string | null;
   tags: string[];
   companions: string[];
@@ -208,6 +216,8 @@ export interface RailJourneyInput {
   delayMinutes?: number | null;
   /** The "tight change" mark; the form never sends it, a PATCH of its own does. */
   tightConnection?: boolean;
+  /** Absent: a train, the server's default. */
+  transitMode?: RailTransitMode;
   notes?: string | null;
   tags?: string[];
   companions?: string[];
@@ -407,9 +417,21 @@ export interface RailImportStation {
   lon: number | null;
   country: string | null;
   timezone: string | null;
-  /** False: no unambiguous catalogue match — the review asks the user to pick one. */
+  /** False: no unambiguous catalogue match. */
   resolved: boolean;
+  /**
+   * Where lat/lon come from: the catalogue, or bahn.de's own position for a
+   * stop the catalogue lacks („Position von bahn.de“). Null or absent: no
+   * position — the review asks the user to pick the station.
+   */
+  positionSource?: "catalogue" | "provider" | null;
+  /** A catalogue row with this stop's EVA number lies this far off and was not trusted. */
+  catalogueConflictKm?: number | null;
 }
+
+/** The kind of vehicle of an imported leg (bahn.de connections only). */
+export type RailLegMode = "rail" | "metro" | "tram" | "bus" | "ferry" | "unknown";
+export type RailLegBusKind = "city" | "replacement" | "coach";
 
 /** One ride out of a parsed ticket, as the review shows it. */
 export interface RailImportLeg {
@@ -429,6 +451,8 @@ export interface RailImportLeg {
   duplicateOf: string | null;
   /** Only on a reservation document's legs: the logged journey the seat belongs to. */
   reservation?: RailReservationMatch;
+  /** The kind of vehicle; absent for a document's legs, which are trains. */
+  transit?: { mode: RailLegMode; busKind: RailLegBusKind | null };
 }
 
 /** A logged journey a later seat reservation may attach to (forgejo#203). */

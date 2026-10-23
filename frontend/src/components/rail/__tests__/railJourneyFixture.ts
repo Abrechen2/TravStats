@@ -43,6 +43,7 @@ export const RAIL_JOURNEY_FIXTURE = {
   status: "completed",
   delayMinutes: null,
   tightConnection: false,
+  transitMode: "rail",
   notes: null,
   tags: [],
   companions: [],

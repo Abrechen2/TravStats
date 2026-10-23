@@ -36,6 +36,19 @@ function renderRow(legs: RailJourney[], onOpen = vi.fn()): HTMLElement {
 const cellOf = (row: HTMLElement, column: RailColumnId): HTMLElement =>
   within(row).getAllByRole("cell")[IDS.indexOf(column)];
 
+describe("RailTableRow transit mode", () => {
+  it("labels a U-Bahn ride beside its line", () => {
+    const row = renderRow([{ ...base, transitMode: "metro" }]);
+    expect(within(row).getByTestId("rail-transit-mode")).toHaveTextContent(
+      "rail:transitMode.metro"
+    );
+  });
+
+  it("labels a train not at all", () => {
+    expect(within(renderRow([base])).queryByTestId("rail-transit-mode")).toBeNull();
+  });
+});
+
 describe("RailTableRow distance label", () => {
   it("says a distance runs along the traced line", () => {
     const row = renderRow([base]);

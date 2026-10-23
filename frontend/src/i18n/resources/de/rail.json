@@ -541,6 +541,38 @@
         "price": "Der Gesamtpreis ist kein Betrag. Schreib ihn z. B. als 59,90 oder lass das Feld leer.",
         "currency": "Zum Gesamtpreis fehlt die Währung (drei Buchstaben, z. B. EUR)."
       }
+    },
+    "mode": {
+      "rail": "Zug",
+      "metro": "U-Bahn",
+      "tram": "Tram",
+      "ferry": "Fähre",
+      "unknown": "Unbekannt",
+      "bus": {
+        "city": "Bus",
+        "replacement": "Ersatzbus (SEV)",
+        "coach": "Fernbus"
+      },
+      "asLocalTransit": "Angehakt wird der Abschnitt als Bahnfahrt dieser Art gespeichert — er erscheint in der Liste und auf der Reise, zählt aber nicht in der Bahnstatistik.",
+      "asBus": "Angehakt wird der Abschnitt als Busfahrt gespeichert.",
+      "busDisabled": "Busfahrten sind in deinem Konto ausgeschaltet — dieser Abschnitt wird übersprungen. Du kannst den Bereich Bus in den Einstellungen einschalten.",
+      "ferryNotHere": "Eine Fähre lässt sich hier nicht übernehmen — der Abschnitt wird übersprungen."
+    },
+    "positionFromBahn": "„{{name}}“: Position von bahn.de — der Halt steht nicht im Bahnhofsverzeichnis.",
+    "positionFromBahnConflict": "„{{name}}“: Position von bahn.de — der Eintrag mit dieser Haltnummer im Bahnhofsverzeichnis liegt {{km}} km entfernt und wurde nicht übernommen.",
+    "legSavedAsBus": "Als Busfahrt gespeichert.",
+    "remember": {
+      "mixed": "Wähl für alle Abschnitte dieser Art dasselbe, um es als Standard zu merken.",
+      "done": "Als Standard gemerkt.",
+      "isDefault": "Das ist dein Standard.",
+      "localTransit": {
+        "skip": "U-Bahn/Tram künftig überspringen (als Standard merken)",
+        "rail": "U-Bahn/Tram künftig als Bahnfahrt übernehmen (als Standard merken)"
+      },
+      "bus": {
+        "skip": "Busse künftig überspringen (als Standard merken)",
+        "bus": "Busse künftig als Busfahrt übernehmen (als Standard merken)"
+      }
     }
   },
   "summary": {
@@ -659,5 +691,12 @@
       "requestRateLimited": "Zu viele Abfragen in kurzer Zeit — warte eine Minute und klick das Lesezeichen noch einmal.",
       "requestFailed": "Die Verbindung konnte nicht an den Server geschickt werden."
     }
+  },
+  "transitMode": {
+    "label": "Verkehrsmittel",
+    "rail": "Zug",
+    "metro": "U-Bahn",
+    "tram": "Tram",
+    "notCounted": "U-Bahn- und Tramfahrten stehen im Fahrtenbuch, zählen aber nicht in der Bahnstatistik."
   }
 }

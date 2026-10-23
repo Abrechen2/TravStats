@@ -541,6 +541,38 @@
         "price": "The total is not an amount. Write it as e.g. 59.90, or leave the field empty.",
         "currency": "The total needs a currency (three letters, e.g. EUR)."
       }
+    },
+    "mode": {
+      "rail": "Train",
+      "metro": "U-Bahn",
+      "tram": "Tram",
+      "ferry": "Ferry",
+      "unknown": "Unknown",
+      "bus": {
+        "city": "Bus",
+        "replacement": "Replacement bus",
+        "coach": "Long-distance coach"
+      },
+      "asLocalTransit": "Ticked, this leg is saved as a rail journey of this kind — it shows in the list and on the trip but does not count in the rail statistics.",
+      "asBus": "Ticked, this leg is saved as a bus ride.",
+      "busDisabled": "Bus rides are switched off for your account — this leg is skipped. You can switch the bus area on in the settings.",
+      "ferryNotHere": "A ferry cannot be taken over here — this leg is skipped."
+    },
+    "positionFromBahn": "“{{name}}”: Position from bahn.de — the stop is not in the station catalogue.",
+    "positionFromBahnConflict": "“{{name}}”: Position from bahn.de — the catalogue entry with this stop number lies {{km}} km away and was not used.",
+    "legSavedAsBus": "Saved as a bus ride.",
+    "remember": {
+      "mixed": "Choose the same for every leg of this kind to remember it as the default.",
+      "done": "Remembered as the default.",
+      "isDefault": "This is your default.",
+      "localTransit": {
+        "skip": "Skip U-Bahn/tram from now on (remember as default)",
+        "rail": "Take U-Bahn/tram as rail journeys from now on (remember as default)"
+      },
+      "bus": {
+        "skip": "Skip buses from now on (remember as default)",
+        "bus": "Take buses as bus rides from now on (remember as default)"
+      }
     }
   },
   "summary": {
@@ -659,5 +691,12 @@
       "requestRateLimited": "Too many lookups in a short time — wait a minute and click the bookmark again.",
       "requestFailed": "The connection could not be sent to the server."
     }
+  },
+  "transitMode": {
+    "label": "Mode of transport",
+    "rail": "Train",
+    "metro": "U-Bahn",
+    "tram": "Tram",
+    "notCounted": "U-Bahn and tram rides stay in the logbook but do not count in the rail statistics."
   }
 }
