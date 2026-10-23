@@ -62,6 +62,9 @@ export function railSheet(t: T): SheetSpec<RailJourney> {
       text("operator", "operator", 20, (r) => r.operator),
       text("trainCategory", "trainCategory", 10, (r) => r.trainCategory),
       text("trainNumber", "trainNumber", 10, (r) => r.trainNumber),
+      // rail | metro | tram: a U-Bahn or tram ride must come back as one, not as
+      // a counted train (shared/railCounting.ts).
+      text("transitMode", "transitMode", 10, (r) => r.transitMode),
       text("depStationName", "fromStation", 24, (r) => r.depStationName),
       text("depStationCode", "fromStationCode", 12, (r) => r.depStationCode),
       coordinate("depLat", "fromLat", (r) => r.depLat),

@@ -111,6 +111,44 @@ describe("spreadsheet import — rail", () => {
     expect(after.departureTime.getTime()).toBe(ride.departureTime.getTime());
   });
 
+  // Codex review 2026-10-23: the sheet carried no mode, so a kept tram ride
+  // came back from a re-import as a counted train.
+  it("keeps a ride's transit mode through the sheet, and a sheet without the column alone", async () => {
+    const [created] = await importSheets(rail([nightTrainRow({ transitMode: "tram" })]), ctx());
+    expect(created).toMatchObject({ created: 1, errors: 0 });
+    const ride = await prisma.railJourney.findFirstOrThrow({ where: { userId } });
+    expect(ride.transitMode).toBe("tram");
+
+    const [old] = await importSheets(rail([nightTrainRow({ id: ride.id })]), ctx());
+    expect(old).toMatchObject({ skipped: 1, updated: 0 });
+    expect(
+      (await prisma.railJourney.findUniqueOrThrow({ where: { id: ride.id } })).transitMode
+    ).toBe("tram");
+
+    const [back] = await importSheets(
+      rail([nightTrainRow({ id: ride.id, transitMode: "Rail" })]),
+      ctx()
+    );
+    expect(back).toMatchObject({ updated: 1 });
+    expect(
+      (await prisma.railJourney.findUniqueOrThrow({ where: { id: ride.id } })).transitMode
+    ).toBe("rail");
+  });
+
+  it("refuses a row whose transit mode it does not know, rather than reading it as a train", async () => {
+    const [outcome] = await importSheets(rail([nightTrainRow({ transitMode: "bus" })]), ctx());
+    expect(outcome).toMatchObject({ created: 0, errors: 1 });
+    expect(outcome.rows[0]).toMatchObject({ action: "error", message: "invalid_transit_mode" });
+    expect(await prisma.railJourney.count({ where: { userId } })).toBe(0);
+  });
+
+  it("starts a new ride from a sheet without the column as a train", async () => {
+    await importSheets(rail([nightTrainRow()]), ctx());
+    expect((await prisma.railJourney.findFirstOrThrow({ where: { userId } })).transitMode).toBe(
+      "rail"
+    );
+  });
+
   it("recognises an id-less row by train, day and stations, so a second read converges", async () => {
     await importSheets(rail([nightTrainRow()]), ctx());
     const [again] = await importSheets(rail([nightTrainRow({ seat: "99" })]), ctx());

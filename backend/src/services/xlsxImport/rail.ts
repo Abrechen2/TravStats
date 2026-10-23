@@ -7,7 +7,9 @@
  * (train number + departure day on the boarding station's clock + both
  * station names) when it already is, created otherwise. A row that changes
  * nothing is not written. An unknown travel class or status is left empty and
- * reported, never a reason to refuse the row.
+ * reported, never a reason to refuse the row. An unknown transit mode IS one
+ * (`invalid_transit_mode`): read as a train it would be counted as one; a sheet
+ * from before the column leaves every ride as stored, a new one a train.
  *
  * Every write goes through the rail write rules (`railJourneyWrite.ts`): the
  * times in the sheet are the STATION's wall clock, as the export writes them,
@@ -33,6 +35,7 @@ import { getCountryResolver, type CountryResolver } from "../geo/countryFromCoor
 import { readStoredLine, tracedLengthKm } from "../rail/railGeometry";
 import { instantToWallClock, mergeRailJourney, withTracedDistance } from "../rail/railJourneyWrite";
 import * as cell from "./cells";
+import { RAIL_TRANSIT_MODES, type RailTransitMode } from "../../shared/railCounting";
 import { MATCHED, type Ctx, definedOnly, errorRow, keepDespiteError } from "./context";
 import { pruneMissing } from "./prune";
 import { resolveTrip } from "./references";
@@ -53,6 +56,15 @@ const DAY_MS = 86_400_000;
 function wallClock(raw: string | undefined): string | null | undefined {
   const iso = cell.isoTimestamp(raw);
   return iso ? iso.slice(0, 16) : iso;
+}
+
+/** The transit mode cell: a known word, absent (no column, empty cell), or invalid. */
+function transitModeCell(raw: string | undefined): RailTransitMode | undefined | "invalid" {
+  const value = cell.text(raw)?.toLowerCase();
+  if (value === undefined) return undefined;
+  return (RAIL_TRANSIT_MODES as readonly string[]).includes(value)
+    ? (value as RailTransitMode)
+    : "invalid";
 }
 
 /** The plain columns — no derivation, written as the sheet says. */
@@ -236,8 +248,16 @@ export async function importRail(sheet: IncomingSheet, ctx: Ctx): Promise<SheetO
       refuse("invalid_date");
       continue;
     }
+    const mode = transitModeCell(raw.transitMode);
+    if (mode === "invalid") {
+      refuse("invalid_transit_mode");
+      continue;
+    }
     const dropped: DroppedValue[] = [];
-    const fields = plainFields(raw, dropped);
+    const fields = {
+      ...plainFields(raw, dropped),
+      ...(mode !== undefined && { transitMode: mode }),
+    };
     if (Number.isNaN(fields.price) || Number.isNaN(fields.delayMinutes)) {
       refuse("invalid_number");
       continue;

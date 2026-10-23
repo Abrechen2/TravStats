@@ -29,6 +29,7 @@ const ride = (over: Partial<RailJourney> = {}): RailJourney =>
     depTimezone: "Europe/Vienna",
     arrTimezone: "Europe/Zurich",
     status: "completed",
+    transitMode: "rail",
     distanceKm: 598.4,
     distanceSource: "great_circle",
     delayMinutes: null,
@@ -72,6 +73,13 @@ describe("rail sheet", () => {
     const [row] = await roundTrip([ride()]);
     expect(row.distanceKm).toBe("598");
     expect(row.distanceSource).toBe("great_circle");
+  });
+
+  // Codex review 2026-10-23: without the column a kept tram ride came back
+  // from a re-import as a counted train.
+  it("writes each ride's transit mode for the way back", async () => {
+    const [train, tram] = await roundTrip([ride(), ride({ id: "rail-2", transitMode: "tram" })]);
+    expect([train.transitMode, tram.transitMode]).toEqual(["rail", "tram"]);
   });
 
   it("keeps the trip reference resolvable", async () => {
