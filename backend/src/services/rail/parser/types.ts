@@ -1,4 +1,5 @@
 import type { RAIL_TRAVEL_CLASSES } from "../../../schemas/rail";
+import type { LegTransit } from "../shareLink/legMode";
 
 /**
  * What a rail ticket parser reads out of a document — before any station is
@@ -37,6 +38,20 @@ export interface ParsedRailLeg {
   seat: string | null;
   /** "Hinfahrt" / "Rückfahrt" when the document sections its legs. */
   direction: "outbound" | "return" | null;
+  /**
+   * What the provider itself says about each stop — only a bahn.de connection
+   * says anything (its EVA number and position); absent for every document.
+   */
+  departureStop?: ProviderStop;
+  arrivalStop?: ProviderStop;
+  /** The kind of vehicle (`shareLink/legMode.ts`); absent = a document's train. */
+  transit?: LegTransit;
+}
+
+/** A stop as the connection's provider names it: its EVA/IBNR number and its position. */
+export interface ProviderStop {
+  eva: string | null;
+  position: { lat: number; lon: number } | null;
 }
 
 export interface ParsedRailBooking {

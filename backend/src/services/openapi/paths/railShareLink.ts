@@ -9,6 +9,7 @@ import { registry } from "../registry";
 import { errorContent } from "./shared";
 import { SHARE_LINK_FAILURES } from "../../rail/shareLink/dbConnection";
 import { RAIL_TRAVEL_CLASSES } from "../../../schemas/rail";
+import { BUS_KINDS, LEG_MODES } from "../../rail/shareLink/legMode";
 
 const envelope = <T extends z.ZodTypeAny>(data: T) => z.object({ success: z.literal(true), data });
 
@@ -30,8 +31,34 @@ const station = z.object({
   lon: z.number().nullable(),
   country: z.string().nullable(),
   timezone: z.string().nullable(),
-  resolved: z.boolean().describe("False: the review asks the user to pick the station"),
+  resolved: z.boolean().describe("True: tied to a catalogue row"),
+  positionSource: z
+    .enum(["catalogue", "provider"])
+    .nullable()
+    .describe(
+      "Where lat/lon come from: the catalogue row, or bahn.de's own position for a stop the " +
+        "catalogue does not hold (stationId null, still saveable). Null: no position — the " +
+        "review asks the user to pick the station"
+    ),
+  catalogueConflictKm: z
+    .number()
+    .nullable()
+    .describe(
+      "A catalogue row with this stop's EVA number lies this many km from bahn.de's position " +
+        "and was not trusted; null when none or it agrees"
+    ),
 });
+
+const transit = z
+  .object({
+    mode: z.enum(LEG_MODES),
+    busKind: z.enum(BUS_KINDS).nullable().describe("city | replacement | coach, for a bus only"),
+  })
+  .describe(
+    "The kind of vehicle, from bahn.de's product type or else the printed name. Only rail " +
+      "legs start ticked in the review; metro/tram may be saved as a rail journey of that " +
+      "mode, a bus as a bus ride"
+  );
 
 const leg = z.object({
   depStationName: z.string(),
@@ -46,6 +73,7 @@ const leg = z.object({
   departureStation: station,
   arrivalStation: station,
   duplicateOf: z.string().nullable().describe("A journey already logged with this departure"),
+  transit: transit.optional(),
 });
 
 const booking = z.object({

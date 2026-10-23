@@ -10,7 +10,8 @@ import {
   type ReservationMatch,
   type ReservationStation,
 } from "../reservationMatch";
-import type { ParsedRailBooking, ParsedRailLeg } from "./types";
+import type { ParsedRailBooking, ParsedRailLeg, ProviderStop } from "./types";
+import { lazyCountryResolver, resolveProviderStop } from "./railStopResolve";
 
 /**
  * A parsed booking as the review dialog shows it: every station either tied
@@ -39,6 +40,18 @@ export interface RailStationCandidate {
    * a station is never silently swapped for a similar-sounding other one.
    */
   resolved: boolean;
+  /**
+   * Where the position comes from: the catalogue row, or — for a stop the
+   * catalogue does not hold — bahn.de's own position for it (`provider`),
+   * which the review shows as „Position von bahn.de“. Null: no position.
+   */
+  positionSource: "catalogue" | "provider" | null;
+  /**
+   * A catalogue row with the stop's EVA number lies this many kilometres from
+   * where bahn.de puts it, so it was not trusted (`railStopResolve.ts`). Null
+   * when no such row exists or it agrees.
+   */
+  catalogueConflictKm: number | null;
 }
 
 export interface RailLegCandidate extends ParsedRailLeg {
@@ -60,7 +73,7 @@ export interface RailImportCandidate extends Omit<ParsedRailBooking, "legs"> {
 /** Two catalogue rows further apart than this are two different stations. */
 const SAME_PLACE_KM = 1;
 
-const STATION_SELECT = {
+export const STATION_SELECT = {
   id: true,
   name: true,
   uic: true,
@@ -71,7 +84,7 @@ const STATION_SELECT = {
   timezone: true,
 } as const;
 
-type StationRow = {
+export type StationRow = {
   id: number;
   name: string;
   uic: string | null;
@@ -126,7 +139,7 @@ function truncatedPrefix(printedName: string): string | null {
  * lists; among them the shortest name, which is the station and not one of
  * its platforms.
  */
-function oneStation(rows: StationRow[]): StationRow | null {
+export function oneStation(rows: StationRow[]): StationRow | null {
   const coded = rows.filter((r) => r.uic !== null || r.dbId !== null);
   const pool = (coded.length > 0 ? coded : rows).sort(
     (a, b) => a.name.length - b.name.length || a.id - b.id
@@ -145,19 +158,20 @@ function oneStation(rows: StationRow[]): StationRow | null {
  * bare "Neufahrn" (two towns of that name) matches neither exactly and stays
  * unresolved; rows kilometres apart under one name are refused as ambiguous.
  * A station is never swapped for a similar-sounding other one.
+ *
+ * `near` is where the provider itself puts the stop (a bahn.de connection):
+ * only rows within `near.km` of it are candidates, so of two namesakes the
+ * one at that place is taken — and neither when neither is there.
  */
-export async function resolveStationName(printedName: string): Promise<RailStationCandidate> {
-  const unresolved: RailStationCandidate = {
-    name: printedName,
-    printedName,
-    stationId: null,
-    code: null,
-    lat: null,
-    lon: null,
-    country: null,
-    timezone: null,
-    resolved: false,
-  };
+export async function resolveStationName(
+  printedName: string,
+  near?: { lat: number; lon: number; km: number }
+): Promise<RailStationCandidate> {
+  const unresolved = unresolvedStation(printedName);
+  const nearby = (rows: StationRow[]): StationRow[] =>
+    near
+      ? rows.filter((r) => calculateDistance(near.lat, near.lon, r.lat, r.lon) <= near.km)
+      : rows;
   const variants = exactVariants(printedName);
   if (variants.length === 0) return unresolved;
 
@@ -170,7 +184,7 @@ export async function resolveStationName(printedName: string): Promise<RailStati
       take: 20,
     });
     if (rows.length > 0) {
-      match = oneStation(rows);
+      match = oneStation(nearby(rows));
       break;
     }
   }
@@ -182,9 +196,28 @@ export async function resolveStationName(printedName: string): Promise<RailStati
       orderBy: { id: "asc" },
       take: 20,
     });
-    match = oneStation(rows);
+    match = oneStation(nearby(rows));
   }
-  if (!match) return unresolved;
+  return match ? catalogueStation(match, printedName) : unresolved;
+}
+
+export function unresolvedStation(printedName: string): RailStationCandidate {
+  return {
+    name: printedName,
+    printedName,
+    stationId: null,
+    code: null,
+    lat: null,
+    lon: null,
+    country: null,
+    timezone: null,
+    resolved: false,
+    positionSource: null,
+    catalogueConflictKm: null,
+  };
+}
+
+export function catalogueStation(match: StationRow, printedName: string): RailStationCandidate {
   return {
     name: match.name,
     printedName,
@@ -197,6 +230,8 @@ export async function resolveStationName(printedName: string): Promise<RailStati
     // it, the station's coordinates otherwise — never the raw column alone.
     timezone: zoneOf({ catalogueZone: match.timezone, lat: match.lat, lon: match.lon }),
     resolved: true,
+    positionSource: "catalogue",
+    catalogueConflictKm: null,
   };
 }
 
@@ -242,9 +277,12 @@ export async function toRailCandidate(
   userId: string | undefined
 ): Promise<RailImportCandidate> {
   const cache = new Map<string, Promise<RailStationCandidate>>();
-  const station = (name: string): Promise<RailStationCandidate> => {
-    const key = foldStationName(name);
-    if (!cache.has(key)) cache.set(key, resolveStationName(name));
+  const countryAt = lazyCountryResolver();
+  const station = (name: string, stop?: ProviderStop): Promise<RailStationCandidate> => {
+    const key = `${foldStationName(name)}|${stop?.eva ?? ""}|${stop?.position?.lat ?? ""},${stop?.position?.lon ?? ""}`;
+    if (!cache.has(key)) {
+      cache.set(key, stop ? resolveProviderStop(name, stop, countryAt) : resolveStationName(name));
+    }
     return cache
       .get(key)!
       .then((s) => ({ ...s, printedName: name, name: s.resolved ? s.name : name }));
@@ -253,11 +291,12 @@ export async function toRailCandidate(
     return reservationCandidate(booking, userId, station);
   }
   const legs: RailLegCandidate[] = [];
-  for (const leg of booking.legs) {
+  for (const { departureStop, arrivalStop, ...leg } of booking.legs) {
     legs.push({
       ...leg,
-      departureStation: await station(leg.depStationName),
-      arrivalStation: await station(leg.arrStationName),
+      // The provider's stops are read into the two stations, not passed on.
+      departureStation: await station(leg.depStationName, departureStop),
+      arrivalStation: await station(leg.arrStationName, arrivalStop),
       duplicateOf: userId ? await findDuplicate(userId, leg, booking.bookingReference) : null,
     });
   }

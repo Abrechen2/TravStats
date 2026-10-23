@@ -29,27 +29,39 @@ describe("parseHinfahrtRecon", () => {
     expect(sections).toEqual([
       {
         kind: "vehicle",
-        from: { name: "Augsburg Hbf", stationId: "8000013" },
-        to: { name: "München Hbf", stationId: "8000261" },
+        from: {
+          name: "Augsburg Hbf",
+          stationId: "8000013",
+          position: { lat: 48.365444, lon: 10.885568 },
+        },
+        to: {
+          name: "München Hbf",
+          stationId: "8000261",
+          position: { lat: 48.140229, lon: 11.558339 },
+        },
         departureLocal: "2026-11-03T08:08",
         arrivalLocal: "2026-11-03T08:54",
         vehicleName: "RB 57099",
+        // The KCC block is cut short here: no vehicle's category is named.
+        categoryCode: null,
       },
       {
         kind: "walk",
-        from: { name: "München Hbf", stationId: "8000261" },
-        to: { name: "München Hbf (tief)", stationId: "8004128" },
+        from: { name: "München Hbf", stationId: "8000261", position: null },
+        to: { name: "München Hbf (tief)", stationId: "8004128", position: null },
         departureLocal: "2026-11-03T08:54",
         arrivalLocal: "2026-11-03T09:01",
         vehicleName: null,
+        categoryCode: null,
       },
       {
         kind: "vehicle",
-        from: { name: "München Hbf (tief)", stationId: "8004128" },
-        to: { name: "München Flughafen Terminal", stationId: "8004168" },
+        from: { name: "München Hbf (tief)", stationId: "8004128", position: null },
+        to: { name: "München Flughafen Terminal", stationId: "8004168", position: null },
         departureLocal: "2026-11-03T09:42",
         arrivalLocal: "2026-11-03T10:28",
         vehicleName: "S 1",
+        categoryCode: null,
       },
     ]);
   });

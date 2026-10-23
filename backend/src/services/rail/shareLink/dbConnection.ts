@@ -2,7 +2,13 @@ import { z } from "zod";
 
 import logger from "../../../utils/logger";
 import { RAIL_LOOKUP_TIMEOUT_MS, railUserAgent } from "../lookup/railHttp";
-import type { ParsedRailBooking, ParsedRailLeg, RailTravelClassValue } from "../parser/types";
+import type {
+  ParsedRailBooking,
+  ParsedRailLeg,
+  ProviderStop,
+  RailTravelClassValue,
+} from "../parser/types";
+import { classifyLegMode } from "./legMode";
 import {
   MAX_RECON_LENGTH,
   isCalendarMinute,
@@ -65,8 +71,15 @@ const transport = z
     mittelText: z.string().max(60).optional(),
     nummer: z.string().max(20).optional(),
     typ: z.string().max(40).optional(),
+    /** bahn.de's product group ("ICE", "TRAM", "BUS"), when the web client states it. */
+    produktGattung: z.string().max(40).optional(),
+    /** The HAFAS category code a recon names the vehicle by ("DRB", "STR"). */
+    kategorieCode: z.string().max(8).optional(),
   })
   .passthrough();
+
+/** A stop's position as a recon states it, already in degrees. */
+const position = z.object({ lat: z.number().min(-90).max(90), lon: z.number().min(-180).max(180) });
 
 /**
  * `YYYY-MM-DDTHH:mm[:ss[.fff]][Z|±hh:mm]`, the whole string, and a real
@@ -88,6 +101,12 @@ const section = z
     abfahrtsZeitpunkt: dbTime,
     ankunftsZeitpunkt: dbTime.optional(),
     verkehrsmittel: transport.optional(),
+    /** EVA/IBNR numbers of the two stops, when stated. */
+    abfahrtsOrtExtId: z.string().max(12).optional(),
+    ankunftsOrtExtId: z.string().max(12).optional(),
+    /** Where bahn.de puts the two stops (from a recon's `@X=`/`@Y=`). */
+    abfahrtsPosition: position.optional(),
+    ankunftsPosition: position.optional(),
   })
   .passthrough();
 
@@ -116,8 +135,16 @@ function sectionFromRecon(s: ReconSection): Section {
     ankunftsZeitpunkt: `${s.arrivalLocal}:00`,
     verkehrsmittel:
       s.kind === "vehicle" && s.vehicleName
-        ? { name: s.vehicleName, kurzText: s.vehicleName.split(" ")[0].slice(0, 30) }
+        ? {
+            name: s.vehicleName,
+            kurzText: s.vehicleName.split(" ")[0].slice(0, 30),
+            ...(s.categoryCode && { kategorieCode: s.categoryCode }),
+          }
         : { typ: "WALK" },
+    ...(s.from.stationId && { abfahrtsOrtExtId: s.from.stationId }),
+    ...(s.to.stationId && { ankunftsOrtExtId: s.to.stationId }),
+    ...(s.from.position && { abfahrtsPosition: s.from.position }),
+    ...(s.to.position && { ankunftsPosition: s.to.position }),
   };
 }
 
@@ -192,8 +219,18 @@ function trainOf(s: Section): { category: string | null; number: string | null }
   };
 }
 
+/** An EVA number is digits only; anything else a section names is not one. */
+const eva = (value: string | undefined): string | null =>
+  value && /^\d{5,9}$/.test(value.trim()) ? value.trim() : null;
+
+const stopOf = (id: string | undefined, at: Section["abfahrtsPosition"]): ProviderStop => ({
+  eva: eva(id),
+  position: at ?? null,
+});
+
 function legOf(s: Section): ParsedRailLeg {
   const train = trainOf(s);
+  const t = s.verkehrsmittel ?? {};
   return {
     depStationName: s.abfahrtsOrt.trim(),
     arrStationName: s.ankunftsOrt.trim(),
@@ -204,6 +241,14 @@ function legOf(s: Section): ParsedRailLeg {
     coach: null,
     seat: null,
     direction: null,
+    departureStop: stopOf(s.abfahrtsOrtExtId, s.abfahrtsPosition),
+    arrivalStop: stopOf(s.ankunftsOrtExtId, s.ankunftsPosition),
+    transit: classifyLegMode({
+      productGroup: t.produktGattung,
+      categoryCode: t.kategorieCode,
+      category: train.category,
+      printedName: t.name ?? t.kurzText ?? null,
+    }),
   };
 }
 
