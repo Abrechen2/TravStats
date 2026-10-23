@@ -6,7 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-**Before upgrading to 2.7.0-rc.23:** take a backup. No new migrations since rc.20. Coming from 2.7.0-rc.19: 4 migrations; from 2.7.0-rc.18: 25 migrations, and stored straight ferry crossings are re-routed once in the background.
+**Before upgrading to 2.7.0-rc.24:** take a backup. No new migrations since rc.20. Coming from 2.7.0-rc.19: 4 migrations; from 2.7.0-rc.18: 25 migrations, and stored straight ferry crossings are re-routed once in the background.
 
 - Full data export includes saved TravPlan content and proposals; daily quota counters are explicitly excluded.
 
@@ -21,6 +21,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
   countries shared with each companion across all switched-on areas, stays
   included, each figure with the entries behind it. A shared day counts
   once; paying an expense alone does not count as travelling together.
+- **Server connections exchange keys by file.** Admin → Server-Verbindungen
+  hands out a connection file (a ZIP with this server's address, public key,
+  fingerprint and a short DE/EN guide) and reads the other server's file
+  into the form. An imported server is marked "Noch nicht überprüft" until
+  its address and fingerprint have been compared with the other admin over
+  a second channel, and nothing is stored before "Server hinterlegen"; a
+  known server arriving with a different key is flagged. The manual fields
+  stay, folded away under "Von Hand eingeben".
+- **Replacing the server key asks first.** When a key is already stored,
+  "Schlüssel erzeugen" explains that servers holding the old key refuse
+  this server until their admins check and store the new one.
 - **Ferry crossings have a route map, the trip's photos taken during the
   crossing and a chapter in the year in review.** The map draws the stored sea route, or a faint
   straight line between the ports where there is none.
