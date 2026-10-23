@@ -207,6 +207,10 @@ describe("FederationSettings", () => {
       );
       render(<FederationSettings />);
       fireEvent.click(await screen.findByRole("button", { name: "federation.generateKey" }));
+      // A key exists, so the replacement is asked first.
+      fireEvent.click(
+        await screen.findByRole("button", { name: "federation.rotateConfirm.confirm" })
+      );
       expect(await screen.findByRole("alert")).toHaveTextContent(
         "federation.error.COMPARISON_FEDERATION_ENV"
       );

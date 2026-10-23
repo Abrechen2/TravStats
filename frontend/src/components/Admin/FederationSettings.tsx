@@ -8,12 +8,14 @@ import {
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
+import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import { logger } from "../../lib/logger";
-import { Button, Field, Input, TextArea, Switch, ListRow, SectionLabel } from "../ui";
+import { Button, Field, Input, Switch, ListRow, SectionLabel } from "../ui";
 import { SectionCard, SectionTitle } from "../Settings/SettingsShared";
+import { ConnectionFileDownload } from "./FederationConnectionFile";
+import FederationPeerForm, { type PeerValues } from "./FederationPeerForm";
 
 const NS = "federation";
-const EMPTY_PEER = { origin: "", publicKey: "", fingerprint: "" };
 
 /** Admin → Instanz: this server's identity and the servers it trusts (comparison rework 2026-10-16). */
 export default function FederationSettings(): JSX.Element {
@@ -22,8 +24,9 @@ export default function FederationSettings(): JSX.Element {
   const { isFeatureVisible } = useBetaFeatures();
   const [state, setState] = useState<FederationState | null>(null);
   const [origin, setOrigin] = useState("");
-  const [peer, setPeer] = useState(EMPTY_PEER);
   const [busy, setBusy] = useState(false);
+  const [rotated, setRotated] = useState(false);
+  const { confirm, confirmDialog } = useConfirmDialog();
   // The i18n key of the last failure, so a wrong fingerprint, a dead peer and an
   // env-managed identity each get their own sentence instead of one shared shrug.
   const [errorKey, setErrorKey] = useState<string | null>(null);
@@ -46,7 +49,8 @@ export default function FederationSettings(): JSX.Element {
     };
   }, []);
 
-  const run = async (action: () => Promise<FederationState | void>): Promise<void> => {
+  /** Runs one action and reloads the state; resolves whether the action itself went through. */
+  const run = async (action: () => Promise<FederationState | void>): Promise<boolean> => {
     setBusy(true);
     setErrorKey(null);
     let next: FederationState | void;
@@ -56,7 +60,7 @@ export default function FederationSettings(): JSX.Element {
       logger.error("A federation settings action failed:", error);
       setErrorKey(`${NS}.error.${federationErrorCode(error) ?? "generic"}`);
       setBusy(false);
-      return;
+      return false;
     }
     try {
       setState(next ?? (await federationAdminApi.get()));
@@ -67,14 +71,28 @@ export default function FederationSettings(): JSX.Element {
     } finally {
       setBusy(false);
     }
+    return true;
   };
 
-  const pin = (): Promise<void> =>
-    run(async () => {
-      const next = await federationAdminApi.pinPeer({ ...peer, enabled: true });
-      setPeer(EMPTY_PEER);
-      return next;
-    });
+  const pin = (peer: PeerValues): Promise<boolean> =>
+    run(() => federationAdminApi.pinPeer({ ...peer, enabled: true }));
+
+  /** A first key needs no question; replacing one cuts every server that pinned the old one. */
+  const generateKey = async (): Promise<void> => {
+    const replacing = Boolean(state?.fingerprint);
+    if (
+      replacing &&
+      !(await confirm({
+        title: t(`${NS}.rotateConfirm.title`),
+        message: t(`${NS}.rotateConfirm.message`),
+        confirmText: t(`${NS}.rotateConfirm.confirm`),
+        destructive: true,
+      }))
+    )
+      return;
+    setRotated(false);
+    if ((await run(federationAdminApi.generateKey)) && replacing) setRotated(true);
+  };
 
   const readOnly = state?.source === "env";
   return (
@@ -104,14 +122,11 @@ export default function FederationSettings(): JSX.Element {
               }
             />
           </Field>
-          <Button
-            variant="secondary"
-            disabled={busy}
-            onClick={() => void run(federationAdminApi.generateKey)}
-          >
+          <Button variant="secondary" disabled={busy} onClick={() => void generateKey()}>
             {t(`${NS}.generateKey`)}
           </Button>
           {state.fingerprint && <p className="t-caption">{t(`${NS}.rotateWarning`)}</p>}
+          {rotated && <p role="status">{t(`${NS}.rotatedHint`)}</p>}
         </>
       )}
       {state?.fingerprint && (
@@ -119,7 +134,17 @@ export default function FederationSettings(): JSX.Element {
           <p className="t-caption">{t(`${NS}.fingerprint`)}</p>
           <code className="break-all">{state.fingerprint}</code>
           {state.publicKey && (
-            <pre className="t-caption whitespace-pre-wrap break-all">{state.publicKey}</pre>
+            <details>
+              <summary className="t-label-mono cursor-pointer">{t(`${NS}.showPublicKey`)}</summary>
+              <pre className="t-caption whitespace-pre-wrap break-all">{state.publicKey}</pre>
+            </details>
+          )}
+          {state.origin && (
+            <ConnectionFileDownload
+              disabled={busy}
+              stale={!readOnly && origin !== state.origin}
+              onError={setErrorKey}
+            />
           )}
         </div>
       )}
@@ -168,41 +193,11 @@ export default function FederationSettings(): JSX.Element {
               }
             />
           ))}
-          <Field label={t(`${NS}.peerOrigin`)} htmlFor="peer-origin">
-            <Input
-              id="peer-origin"
-              value={peer.origin}
-              onChange={(e) => setPeer({ ...peer, origin: e.target.value })}
-            />
-          </Field>
-          <Field label={t(`${NS}.peerKey`)} htmlFor="peer-key">
-            <TextArea
-              id="peer-key"
-              rows={6}
-              value={peer.publicKey}
-              onChange={(e) => setPeer({ ...peer, publicKey: e.target.value })}
-            />
-          </Field>
-          <Field
-            label={t(`${NS}.peerFingerprint`)}
-            htmlFor="peer-fingerprint"
-            hint={t(`${NS}.peerFingerprintHint`)}
-          >
-            <Input
-              id="peer-fingerprint"
-              value={peer.fingerprint}
-              onChange={(e) => setPeer({ ...peer, fingerprint: e.target.value.trim() })}
-            />
-          </Field>
-          <Button
-            disabled={busy || !peer.origin || !peer.publicKey || !peer.fingerprint}
-            onClick={() => void pin()}
-          >
-            {t(`${NS}.pin`)}
-          </Button>
+          <FederationPeerForm busy={busy} onPin={pin} onError={setErrorKey} />
         </>
       )}
       {errorKey && <p role="alert">{t(errorKey)}</p>}
+      {confirmDialog}
     </SectionCard>
   );
 }
