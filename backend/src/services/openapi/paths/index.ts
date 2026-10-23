@@ -86,6 +86,7 @@ import "./passportOverrides";
 import "./jobs";
 import "./placeImportResolve";
 import "./timeMigration";
+import "./federationConnectionFile";
 import "./sync";
 
 import "./dawarichStays";

@@ -1,6 +1,7 @@
 import type { RemoteShareApiErrorCode } from "./remoteShareErrorCodes";
 import type { FlightTrackFileApiErrorCode } from "./flightTrackFileErrorCodes";
 import type { CompanionApiErrorCode } from "./companionErrorCodes";
+import type { ConnectionFileApiErrorCode } from "./connectionFileErrorCodes";
 import { Request, Response, NextFunction } from "express";
 import { MulterError } from "multer";
 import { ZodError } from "zod";
@@ -487,16 +488,15 @@ export type ApiErrorCode =
   /** An invitation code that is malformed, unknown, used or expired. */
   | "COMPARISON_INVITE_INVALID"
   | "COMPARISON_INVITE_LIMIT"
-  /** This server has no federation identity. */
-  | "COMPARISON_FEDERATION_OFF"
+  | "COMPARISON_FEDERATION_OFF" // this server has no federation identity
   /** The identity is set by environment variables and cannot be changed in the UI. */
   | "COMPARISON_FEDERATION_ENV"
   /** The admin has not pinned and verified that server. */
   | "COMPARISON_PEER_UNKNOWN"
   | "COMPARISON_PEER_UNREACHABLE"
-  /** The other server predates the leaderboard protocol. */
-  | "COMPARISON_PEER_OUTDATED"
+  | "COMPARISON_PEER_OUTDATED" // the other server predates the leaderboard protocol
   | "COMPARISON_PEER_KEY_INVALID"
+  | ConnectionFileApiErrorCode // an uploaded server connection file, one per refusal
   | "COMPARISON_BOARD_NOT_FOUND"
   | "COMPARISON_BOARD_MEMBER_INVALID"
   | "COMPARISON_BOARD_LIMIT"

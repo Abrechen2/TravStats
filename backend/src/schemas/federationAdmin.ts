@@ -48,3 +48,15 @@ export interface FederationState {
     leaderboardVersions: number[];
   }>;
 }
+
+/** What `POST /admin/federation/connection-file/inspect` read from a file — nothing is pinned. */
+export const connectionFileInspectionSchema = z.object({
+  origin: z.string(),
+  publicKey: z.string().describe("SPKI PEM, exactly the text the fingerprint hashes"),
+  fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+  existingPeer: z
+    .object({ fingerprint: z.string(), sameKey: z.boolean() })
+    .nullable()
+    .describe("The server is already pinned; `sameKey` false means the file replaces its key"),
+});
+export type ConnectionFileInspection = z.infer<typeof connectionFileInspectionSchema>;

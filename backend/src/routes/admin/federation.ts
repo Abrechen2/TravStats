@@ -4,9 +4,13 @@
  * requireAdmin + requireWriteScope. Outside the published spec with the whole `admin` mount.
  * The peer routes moved here unchanged from the comparison router, where any admin
  * reached them through a user page.
+ *
+ * No rate limiter, like every route here (see `admin/index.ts`): all are admin-only and
+ * cheap; the connection-file upload is capped at 64 KB and inflates one bounded entry.
  */
 import { Router, type Response, type NextFunction } from "express";
-import { createPublicKey, generateKeyPairSync } from "crypto";
+import { generateKeyPairSync } from "crypto";
+import multer, { MulterError } from "multer";
 import { prisma } from "../../db";
 import type { AuthRequest } from "../../middleware/auth";
 import logger from "../../utils/logger";
@@ -20,6 +24,13 @@ import {
 } from "../../services/federation/identity";
 import { exchange, hash, PeerRefusal } from "../../services/federation/security";
 import { comparisonError } from "../../services/comparison/errors";
+import {
+  buildConnectionFile,
+  connectionFileName,
+  CONNECTION_FILE_MAX_BYTES,
+  readConnectionFile,
+} from "../../services/federation/connectionFile";
+import { parsePeerPublicKey } from "../../services/federation/peerKey";
 import { holdPeerMemberships } from "../../services/sharing/federation/lifecycle";
 import {
   federationSettingsSchema,
@@ -68,26 +79,6 @@ async function state(): Promise<FederationState> {
       leaderboardVersions: p.leaderboardVersions,
     })),
   };
-}
-
-const PEM_BLOCK = /^\s*-----BEGIN ([A-Z ]+)-----([\s\S]*?)-----END \1-----\s*$/;
-const PUBLIC_KEY_LABEL = "PUBLIC KEY";
-
-/** The label of a single PEM block ("PUBLIC KEY", "PRIVATE KEY", …), or null for anything else. */
-const pemLabel = (pem: string): string | null => PEM_BLOCK.exec(pem)?.[1] ?? null;
-
-/**
- * A pasted PEM often arrives with its newlines flattened to spaces or dropped (single-line
- * inputs, chat clients, e-mail). Re-wrap header, 64-column body and footer so
- * createPublicKey sees what it requires; anything that is not a PEM block passes unchanged
- * and is refused by the key parse as before.
- */
-export function normalisePastedPem(input: string): string {
-  const match = PEM_BLOCK.exec(input);
-  if (!match) return input;
-  const body = match[2].replace(/\s+/g, "");
-  const lines = body.match(/.{1,64}/g) ?? [];
-  return `-----BEGIN ${match[1]}-----\n${lines.join("\n")}\n-----END ${match[1]}-----\n`;
 }
 
 async function requirePeer(origin: string): Promise<void> {
@@ -171,23 +162,11 @@ router.post(
     const own = await currentIdentity();
     if (own && body.origin === own.origin)
       throw comparisonError("COMPARISON_PEER_KEY_INVALID", 400, "A server cannot pin itself");
-    const pasted = normalisePastedPem(body.publicKey);
-    // createPublicKey also derives a public key from a PRIVATE key PEM, so a pasted private
-    // key would pin and look fine. A private key in this field is a leaked key — refuse it.
-    if (pemLabel(pasted) !== PUBLIC_KEY_LABEL)
+    const pem = parsePeerPublicKey(body.publicKey);
+    if (!pem)
       throw comparisonError("COMPARISON_PEER_KEY_INVALID", 400, "Not an Ed25519 public key", {
         origin: body.origin,
       });
-    let pem: string;
-    try {
-      const key = createPublicKey(pasted);
-      if (key.asymmetricKeyType !== "ed25519") throw new Error("not ed25519");
-      pem = key.export({ type: "spki", format: "pem" }).toString();
-    } catch {
-      throw comparisonError("COMPARISON_PEER_KEY_INVALID", 400, "Not an Ed25519 public key", {
-        origin: body.origin,
-      });
-    }
     if (hash(pem) !== body.fingerprint)
       throw comparisonError(
         "COMPARISON_PEER_KEY_INVALID",
@@ -218,6 +197,87 @@ router.post(
     if (previous && previous.publicKey !== pem) await holdPeerMemberships(body.origin, "repinned");
     else if (previous && !body.enabled) await holdPeerMemberships(body.origin, "peer-blocked");
     res.json(await state());
+  })
+);
+
+/** The upload of `POST /connection-file/inspect`: one small file in the multipart field `file`. */
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: CONNECTION_FILE_MAX_BYTES, files: 1, fields: 0 },
+});
+const uploadFile = (req: AuthRequest, res: Response, next: NextFunction) => {
+  upload.single("file")(req, res, (err: unknown) => {
+    if (err instanceof MulterError && err.code === "LIMIT_FILE_SIZE") {
+      next(comparisonError("COMPARISON_CONNECTION_FILE_TOO_LARGE", 413, "The file is too large"));
+      return;
+    }
+    next(err);
+  });
+};
+
+/**
+ * This server's identity as a file for the other admin. Read-only, so it is served under an
+ * env-held identity too. Without a key and an address there is nothing to hand over.
+ */
+router.get(
+  "/connection-file",
+  handle(async (_req, res) => {
+    const own = await currentIdentity();
+    if (!own)
+      throw comparisonError(
+        "COMPARISON_FEDERATION_OFF",
+        409,
+        "No federation key or public address to put in a connection file"
+      );
+    const zip = buildConnectionFile(own, new Date());
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${connectionFileName(own.origin)}"`
+    );
+    // `private` on top of the /api no-store default: never a shared cache, never stored.
+    res.setHeader("Cache-Control", "private, no-store");
+    res.send(zip);
+  })
+);
+
+/**
+ * Reads another server's connection file and answers what it says — NEVER pins. The admin
+ * compares the values over a second channel and pins them through `POST /peers`, which
+ * checks them all again.
+ */
+router.post(
+  "/connection-file/inspect",
+  uploadFile,
+  handle(async (req, res) => {
+    if (!req.file)
+      throw comparisonError("COMPARISON_CONNECTION_FILE_UNREADABLE", 422, "No file uploaded");
+    const values = readConnectionFile(req.file.buffer);
+    const own = await currentIdentity();
+    const ownOrigin =
+      own?.origin ??
+      (
+        await prisma.adminSettings.findUnique({
+          where: { id: await ensureAdminSettingsRow() },
+          select: { federationOrigin: true },
+        })
+      )?.federationOrigin;
+    if (values.origin === ownOrigin)
+      throw comparisonError(
+        "COMPARISON_CONNECTION_FILE_SELF",
+        422,
+        "The file describes this server"
+      );
+    const known = await prisma.comparisonPeer.findUnique({
+      where: { origin: values.origin },
+      select: { publicKey: true },
+    });
+    res.json({
+      ...values,
+      existingPeer: known
+        ? { fingerprint: hash(known.publicKey), sameKey: known.publicKey === values.publicKey }
+        : null,
+    });
   })
 );
 
