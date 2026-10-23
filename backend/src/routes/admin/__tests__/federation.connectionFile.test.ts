@@ -293,6 +293,25 @@ describe("POST /connection-file/inspect", () => {
     }
   });
 
+  it("refuses a file under another field name, and two files, as unreadable", async () => {
+    const bytes = zipOfJson(fileJson());
+    const otherField = await request(app)
+      .post(`${BASE}/connection-file/inspect`)
+      .attach("upload", bytes, "connection.zip");
+    const twoFiles = await request(app)
+      .post(`${BASE}/connection-file/inspect`)
+      .attach("file", bytes, "a.zip")
+      .attach("file", bytes, "b.zip");
+    const extraField = await request(app)
+      .post(`${BASE}/connection-file/inspect`)
+      .field("note", "x")
+      .attach("file", bytes, "a.zip");
+    for (const res of [otherField, twoFiles, extraField]) {
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe("COMPARISON_CONNECTION_FILE_UNREADABLE");
+    }
+  });
+
   it("refuses a request without a file", async () => {
     const res = await request(app).post(`${BASE}/connection-file/inspect`);
     expect(res.status).toBe(422);

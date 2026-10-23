@@ -60,7 +60,12 @@ async function state(): Promise<FederationState> {
   const id = await ensureAdminSettingsRow();
   const row = await prisma.adminSettings.findUniqueOrThrow({
     where: { id },
-    select: { federationEnabled: true, federationOrigin: true, tripFederationEnabled: true },
+    select: {
+      federationEnabled: true,
+      federationOrigin: true,
+      federationPrivateKey: true,
+      tripFederationEnabled: true,
+    },
   });
   const local = await currentIdentity();
   const peers = await prisma.comparisonPeer.findMany({ orderBy: { origin: "asc" } });
@@ -70,6 +75,7 @@ async function state(): Promise<FederationState> {
     origin: local?.origin ?? row.federationOrigin,
     publicKey: local?.publicKey ?? null,
     fingerprint: local?.fingerprint ?? null,
+    hasKey: envOverrideActive() ? local !== null : Boolean(row.federationPrivateKey),
     tripSharingEnabled: row.tripFederationEnabled,
     peers: peers.map((p) => ({
       origin: p.origin,
@@ -209,6 +215,15 @@ const uploadFile = (req: AuthRequest, res: Response, next: NextFunction) => {
   upload.single("file")(req, res, (err: unknown) => {
     if (err instanceof MulterError && err.code === "LIMIT_FILE_SIZE") {
       next(comparisonError("COMPARISON_CONNECTION_FILE_TOO_LARGE", 413, "The file is too large"));
+      return;
+    }
+    // Two files, another field name, extra fields: not the one file this route reads.
+    if (err instanceof MulterError) {
+      next(
+        comparisonError("COMPARISON_CONNECTION_FILE_UNREADABLE", 400, "Not one file in `file`", {
+          multer: err.code,
+        })
+      );
       return;
     }
     next(err);
