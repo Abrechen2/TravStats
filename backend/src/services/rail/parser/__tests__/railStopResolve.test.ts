@@ -1,7 +1,7 @@
 import { prisma } from "../../../../db";
 import { foldStationName } from "../../railStations";
 import { PROVIDER_AGREES_KM, resolveProviderStop } from "../railStopResolve";
-import { toRailCandidate } from "../railCandidates";
+import { findBusDuplicate, toRailCandidate } from "../railCandidates";
 import type { ParsedRailBooking } from "../types";
 
 /**
@@ -167,5 +167,46 @@ describe("resolveProviderStop", () => {
     expect(candidate.legs[0]).not.toHaveProperty("departureStop");
     // The same printed names with no provider data: neither is placed.
     expect(candidate.legs[1].departureStation).toMatchObject({ positionSource: null, lat: null });
+  });
+});
+
+describe("findBusDuplicate", () => {
+  it("finds a bus leg imported before among the bus rides, at its stop's clock", async () => {
+    const user = await prisma.user.create({
+      data: { username: `railstop-bus-${Date.now()}`, passwordHash: "x" },
+    });
+    try {
+      const ride = await prisma.busJourney.create({
+        data: {
+          userId: user.id,
+          depStationName: "Odeonsplatz",
+          depLat: 48.1425,
+          depLon: 11.5775,
+          depTimezone: "Europe/Berlin",
+          arrStationName: "Chinesischer Turm",
+          arrLat: 48.152,
+          arrLon: 11.592,
+          departureTime: new Date("2026-03-14T08:40:00Z"),
+        },
+      });
+      const leg = {
+        depStationName: "Odeonsplatz",
+        arrStationName: "Chinesischer Turm",
+        departureLocal: "2026-03-14T09:40",
+        arrivalLocal: null,
+        trainCategory: "Bus",
+        trainNumber: "100",
+        coach: null,
+        seat: null,
+        direction: null,
+      };
+      expect(await findBusDuplicate(user.id, leg)).toBe(ride.id);
+      expect(await findBusDuplicate(user.id, { ...leg, departureLocal: "2026-03-14T09:41" })).toBe(
+        null
+      );
+    } finally {
+      await prisma.busJourney.deleteMany({ where: { userId: user.id } });
+      await prisma.user.delete({ where: { id: user.id } });
+    }
   });
 });
