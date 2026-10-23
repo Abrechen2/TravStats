@@ -21,7 +21,8 @@ import { serializedSetting } from "./serializedSetting";
  * switches live here: it is an account switch `GET /settings` answers, and
  * `settingsStore` has no room for it. So do the settings prototype rows of
  * forgejo#321 — the new-trip colour, whether sea days count, live tracking —
- * for the same two reasons.
+ * for the same two reasons, and the rail import's two remembered defaults
+ * for local-transit legs (2026-10-23).
  */
 interface SuggestionSwitchesState {
   trips: boolean;
@@ -38,6 +39,10 @@ interface SuggestionSwitchesState {
   cruiseSeaDaysCounted: boolean;
   /** Whether the server takes the app's flight recording (forgejo#321); server default on. */
   liveTracking: boolean;
+  /** What a bahn.de import starts U-Bahn/tram legs as; server default `skip`. */
+  railImportLocalTransit: RailImportLocalTransit;
+  /** What a bahn.de import starts bus legs as; server default `skip`. */
+  railImportBus: RailImportBus;
   /** What `GET /settings` said; anything that is not a boolean keeps the default. */
   noteRemote: (remote: unknown) => void;
   setTrips: (enabled: boolean) => void;
@@ -48,7 +53,24 @@ interface SuggestionSwitchesState {
   setTripDefaultColor: (color: string | null) => void;
   setCruiseSeaDaysCounted: (counted: boolean) => void;
   setLiveTracking: (enabled: boolean) => void;
+  setRailImportLocalTransit: (value: RailImportLocalTransit) => void;
+  setRailImportBus: (value: RailImportBus) => void;
 }
+
+export type RailImportLocalTransit = "skip" | "rail";
+export type RailImportBus = "skip" | "bus";
+
+/** `railImport.<key>` when it is one of `words`; anything else is no answer. */
+const wordIn = <T extends string>(
+  group: unknown,
+  key: string,
+  words: readonly T[]
+): T | undefined => {
+  const value = (group as Record<string, unknown> | null | undefined)?.[key];
+  return typeof value === "string" && (words as readonly string[]).includes(value)
+    ? (value as T)
+    : undefined;
+};
 
 const booleanIn = (group: unknown, key: string): boolean | undefined => {
   const value = (group as Record<string, unknown> | null | undefined)?.[key];
@@ -71,6 +93,8 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
   tripDefaultColor: null,
   cruiseSeaDaysCounted: true,
   liveTracking: true,
+  railImportLocalTransit: "skip",
+  railImportBus: "skip",
   noteRemote: (remote) => {
     const body = remote as {
       tripSuggestions?: unknown;
@@ -79,6 +103,7 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
       tripDefaults?: unknown;
       cruiseSeaDays?: unknown;
       liveTracking?: unknown;
+      railImport?: unknown;
     } | null;
     const stay = body?.staySuggestions;
     // `null` is an answer (automatic), not an absence: only `undefined` keeps
@@ -94,6 +119,11 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
       tripDefaultColor: color === undefined ? get().tripDefaultColor : color,
       cruiseSeaDaysCounted: booleanIn(body?.cruiseSeaDays, "counted") ?? get().cruiseSeaDaysCounted,
       liveTracking: enabledIn(body?.liveTracking) ?? get().liveTracking,
+      railImportLocalTransit:
+        wordIn(body?.railImport, "localTransit", ["skip", "rail"] as const) ??
+        get().railImportLocalTransit,
+      railImportBus:
+        wordIn(body?.railImport, "bus", ["skip", "bus"] as const) ?? get().railImportBus,
     });
   },
   setTrips: serializedSetting({
@@ -143,5 +173,17 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
     current: () => get().liveTracking,
     apply: (liveTracking) => set({ liveTracking }),
     what: "live tracking switch",
+  }),
+  setRailImportLocalTransit: serializedSetting({
+    payload: (localTransit: RailImportLocalTransit) => ({ railImport: { localTransit } }),
+    current: () => get().railImportLocalTransit,
+    apply: (railImportLocalTransit) => set({ railImportLocalTransit }),
+    what: "rail import U-Bahn/tram default",
+  }),
+  setRailImportBus: serializedSetting({
+    payload: (bus: RailImportBus) => ({ railImport: { bus } }),
+    current: () => get().railImportBus,
+    apply: (railImportBus) => set({ railImportBus }),
+    what: "rail import bus default",
   }),
 }));

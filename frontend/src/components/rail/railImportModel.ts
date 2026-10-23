@@ -6,6 +6,12 @@ import type {
   RailParseFallbackCode,
 } from "../../types/rail";
 import type { RailStationDraft } from "./RailStationField";
+import {
+  NO_LOCAL_TRANSIT,
+  legStart,
+  railTransitModeOf,
+  type RailImportDefaults,
+} from "./railImportModes";
 
 /**
  * The rail import review, as pure rules: which legs start ticked, when a leg
@@ -20,11 +26,21 @@ export interface RailImportRow {
   selected: boolean;
   departure: RailStationDraft;
   arrival: RailStationDraft;
+  /**
+   * What a ticked leg becomes: a rail journey (a train, or a U-Bahn/tram ride
+   * of that mode), or a bus ride. Null: it cannot be saved here (a ferry) and
+   * is only ever skipped (`railImportModes.ts`).
+   */
+  saveAs: "rail" | "bus" | null;
 }
 
-/** A resolved station arrives with its position; an unresolved one only with its name. */
+/**
+ * A resolved station arrives with its position, and so does a stop bahn.de
+ * placed itself (`positionSource: "provider"`); an unresolved one only with
+ * its name.
+ */
 export function stationDraftFrom(station: RailImportStation): RailStationDraft {
-  return station.resolved
+  return station.resolved || station.positionSource === "provider"
     ? {
         name: station.name,
         lat: station.lat,
@@ -36,10 +52,13 @@ export function stationDraftFrom(station: RailImportStation): RailStationDraft {
     : { name: station.name, lat: null, lon: null, country: null, code: null, stationId: null };
 }
 
-export function rowsFrom(booking: RailImportBooking): RailImportRow[] {
+export function rowsFrom(
+  booking: RailImportBooking,
+  defaults: RailImportDefaults = NO_LOCAL_TRANSIT
+): RailImportRow[] {
   return booking.legs.map((leg) => ({
     leg,
-    selected: leg.duplicateOf === null,
+    ...legStart(leg, defaults),
     departure: stationDraftFrom(leg.departureStation),
     arrival: stationDraftFrom(leg.arrivalStation),
   }));
@@ -77,7 +96,7 @@ function stationInput(s: RailStationDraft): RailJourneyInput["departureStation"]
  */
 export function totalGoesTo(rows: readonly RailImportRow[]): number {
   if (rows.some((r) => r.leg.duplicateOf !== null)) return -1;
-  return rows.findIndex((r) => r.selected);
+  return rows.findIndex((r) => r.selected && r.saveAs === "rail");
 }
 
 export function toImportInput(
@@ -107,6 +126,7 @@ export function toImportInput(
     tripId: null,
     notes: booking.tariff,
     lookup: null,
+    transitMode: railTransitModeOf(row.leg),
   };
 }
 

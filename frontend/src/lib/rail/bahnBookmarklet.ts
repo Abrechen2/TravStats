@@ -12,7 +12,9 @@
  * 2. GETs `/web/api/angebote/verbindung/{vbid}` same-origin — the one request
  *    the page itself makes. Never the recon POST, which bahn.de blocks after a
  *    few requests;
- * 3. opens THIS instance with the answer, trimmed to the connection, in the
+ * 3. opens THIS instance with the answer, trimmed to the connection — its
+ *    stops' EVA numbers and each vehicle's product group included, which tell
+ *    a tram from a train (2026-10-23) — in the
  *    URL FRAGMENT — a fragment is never sent to a server, so the ride does not
  *    land in any access log.
  *
@@ -45,7 +47,7 @@ fetch("/web/api/angebote/verbindung/"+v,{headers:{Accept:"application/json"},cre
 .then(function(j){
 var c=j.verbindung||(j.verbindungen||[])[0]||j,a=c.verbindungsAbschnitte;
 if(Array.isArray(a)&&a.length>30)return go("e=tooLarge");
-var d={v:1,answer:{hinfahrtRecon:j.hinfahrtRecon,klasse:j.klasse,verbindungsAbschnitte:Array.isArray(a)?a.map(function(s){var m=s.verkehrsmittel||{};return{abfahrtsOrt:s.abfahrtsOrt,ankunftsOrt:s.ankunftsOrt,abfahrtsZeitpunkt:s.abfahrtsZeitpunkt,ankunftsZeitpunkt:s.ankunftsZeitpunkt,verkehrsmittel:{name:m.name,kurzText:m.kurzText,nummer:m.nummer,typ:m.typ}}}):undefined}};
+var d={v:1,answer:{hinfahrtRecon:j.hinfahrtRecon,klasse:j.klasse,verbindungsAbschnitte:Array.isArray(a)?a.map(function(s){var m=s.verkehrsmittel||{};return{abfahrtsOrt:s.abfahrtsOrt,ankunftsOrt:s.ankunftsOrt,abfahrtsZeitpunkt:s.abfahrtsZeitpunkt,ankunftsZeitpunkt:s.ankunftsZeitpunkt,verkehrsmittel:{name:m.name,kurzText:m.kurzText,nummer:m.nummer,typ:m.typ,produktGattung:m.produktGattung},abfahrtsOrtExtId:s.abfahrtsOrtExtId,ankunftsOrtExtId:s.ankunftsOrtExtId}}):undefined}};
 var q=encodeURIComponent(JSON.stringify(d));
 go(q.length>__MAX__?"e=tooLarge":"d="+q)})
 .catch(function(s){go("e="+(s===403?"blocked":s===404||s===410?"expired":s===429?"rateLimited":typeof s==="number"?"providerError":s instanceof SyntaxError?"unreadable":"fetchFailed"))})

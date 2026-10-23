@@ -166,6 +166,8 @@ export interface UserSettings {
   cruiseSeaDays?: { counted?: boolean };
   /** Whether the server takes the app's flight recording (forgejo#321). */
   liveTracking?: { enabled?: boolean };
+  /** What a bahn.de import starts U-Bahn/tram and bus legs as (2026-10-23). */
+  railImport?: { localTransit?: "skip" | "rail"; bus?: "skip" | "bus" };
   /**
    * Which evidence tier the country headline counts from, for this user, or
    * `null` when they follow the instance default. Writable through

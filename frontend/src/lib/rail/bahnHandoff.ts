@@ -42,8 +42,16 @@ const section = z.object({
   abfahrtsZeitpunkt: text(40),
   ankunftsZeitpunkt: text(40),
   verkehrsmittel: z
-    .object({ name: text(60), kurzText: text(30), nummer: text(20), typ: text(40) })
+    .object({
+      name: text(60),
+      kurzText: text(30),
+      nummer: text(20),
+      typ: text(40),
+      produktGattung: text(40),
+    })
     .optional(),
+  abfahrtsOrtExtId: text(12),
+  ankunftsOrtExtId: text(12),
 });
 
 /** The connection answer, trimmed — the server's `railBahnHandoffSchema` bounds, mirrored. */
