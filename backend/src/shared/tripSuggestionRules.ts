@@ -17,7 +17,7 @@ import { isCountableCruise } from "./cruiseCounting";
 import { isCountableFlight } from "./flightCounting";
 import { classifyStay } from "./lodgingCounting";
 import { classifyVisit } from "./placeCounting";
-import { isCountableRail } from "./railCounting";
+import { isCompletedRail } from "./railCounting";
 
 /**
  * Farther than this from home is "away".
@@ -134,7 +134,9 @@ export function flightPresence(flight: { status: string }): PresenceState {
 
 /** A ride: completed happened, cancelled never, anything else is ahead. */
 export function railPresence(ride: { status: string }): PresenceState {
-  if (isCountableRail(ride)) return "happened";
+  // Presence, not a count: a U-Bahn or tram ride the user kept still says
+  // where they were, so only the status half of the rail rule is asked.
+  if (isCompletedRail(ride)) return "happened";
   return ride.status === "cancelled" ? "excluded" : "planned";
 }
 

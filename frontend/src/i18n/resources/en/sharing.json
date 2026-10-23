@@ -334,6 +334,7 @@
     "actualArrivalTime": "Actual arrival",
     "lookupProvider": "Lookup source",
     "lookupRef": "Lookup reference",
+    "transitMode": "Mode of transport",
     "provider": "Rental company",
     "operatedBy": "Operated by",
     "pickupStationName": "Pick-up station",

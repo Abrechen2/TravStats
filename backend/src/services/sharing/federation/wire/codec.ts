@@ -9,6 +9,7 @@
  */
 import { z } from "../../../../schemas/zod";
 import { lat, lon, requiredZone, zone } from "../../../trip/exchange/publicHalf";
+import { RAIL_TRANSIT_MODES } from "../../../../shared/railCounting";
 
 export interface Codec {
   /** What the receiver accepts; transforms to the value Prisma stores. */
@@ -61,6 +62,16 @@ export const optDay = codec(
   isoDay
 );
 export const strings = codec(z.array(z.string().max(200)).max(300));
+/**
+ * A rail journey's mode (`shared/railCounting.ts`). A sender from before the
+ * column sends none, and every journey it has is a train.
+ */
+export const railTransitMode = codec(
+  z
+    .enum(RAIL_TRANSIT_MODES)
+    .nullish()
+    .transform((v) => v ?? "rail")
+);
 /** A status word. Advisory only: the receiver re-derives it (`receivedStatus`). */
 export const status = codec(z.string().min(1).max(40));
 /** Free JSON a fact column holds (a flight's `specialData`); the message budget bounds it. */

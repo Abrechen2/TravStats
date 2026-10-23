@@ -334,6 +334,7 @@
     "actualArrivalTime": "Tatsächliche Ankunft",
     "lookupProvider": "Abfragequelle",
     "lookupRef": "Abfrage-Referenz",
+    "transitMode": "Verkehrsmittel",
     "provider": "Vermieter",
     "operatedBy": "Betrieben von",
     "pickupStationName": "Abholstation",

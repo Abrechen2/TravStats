@@ -43,7 +43,7 @@ export const CROSS_DOMAIN_TRIP_SELECT = {
   status: true,
   flights: STATUS,
   cruises: STATUS,
-  railJourneys: STATUS,
+  railJourneys: { select: { status: true, transitMode: true } },
   busJourneys: STATUS,
   lodgingStays: { select: { status: true, checkIn: true, checkOut: true } },
   placeVisits: { select: { visitedAt: true, visitedAtUtc: true } },
@@ -78,7 +78,7 @@ export interface CrossDomainTripRow {
   status: string;
   flights: { status: string }[];
   cruises: { status: string }[];
-  railJourneys: { status: string }[];
+  railJourneys: { status: string; transitMode: string }[];
   busJourneys: { status: string }[];
   lodgingStays: { status: string; checkIn: Date | null; checkOut: Date | null }[];
   placeVisits: { visitedAt: Date | null; visitedAtUtc: Date | null }[];

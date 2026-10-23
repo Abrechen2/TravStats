@@ -258,6 +258,7 @@ export const RAIL_SHAPE = {
   lookupRef: C.optText(),
   status: C.status,
   delayMinutes: C.optInt,
+  transitMode: C.railTransitMode,
 } as const satisfies Shape<Replace<RailFactField, (typeof CATALOGUE_REFS)["rail"]>>;
 
 /** Bus and ferry share their terminal columns; each adds its own service fields. */

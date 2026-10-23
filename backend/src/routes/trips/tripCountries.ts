@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import { toCountryCode } from "../../shared/countryEvidence";
 import { getCountryResolver } from "../../services/geo/countryFromCoordinates";
+import { countedRailModeWhere } from "../../shared/railCounting";
 import { STATION_SELECT, stationCountries } from "../../services/roadtrip/roadtripSummary";
 
 /**
@@ -198,7 +199,8 @@ export async function rideCountriesByTrip(tripIds: string[]): Promise<Map<string
   const where = { tripId: { in: tripIds }, status: { not: "cancelled" } };
   const select = { tripId: true, depCountry: true, arrCountry: true } as const;
   const [rail, bus] = await Promise.all([
-    prisma.railJourney.findMany({ where, select }),
+    // A U-Bahn or tram ride kept as a journey proves no country (`railCounting`).
+    prisma.railJourney.findMany({ where: { ...where, ...countedRailModeWhere() }, select }),
     prisma.busJourney.findMany({ where, select }),
   ]);
   for (const ride of [...rail, ...bus]) {

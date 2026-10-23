@@ -2,6 +2,7 @@ import { z } from "./zod";
 import { currencyField } from "./lodging";
 import { partialForUpdate } from "./partialUpdate";
 import { RAIL_LOOKUP_PROVIDERS } from "../services/rail/lookup/types";
+import { RAIL_TRANSIT_MODES } from "../shared/railCounting";
 
 /**
  * Rail journeys — spec docs/superpowers/specs/2026-09-25-rail-domain.md.
@@ -180,6 +181,11 @@ const baseRailSchema = z.object({
    * form never sends it, so a ride edited there keeps its mark.
    */
   tightConnection: z.boolean().optional(),
+  /**
+   * A train (`rail`, the default), or a U-Bahn or tram ride kept as a journey —
+   * stored and listed, never counted in a rail figure (`shared/railCounting.ts`).
+   */
+  transitMode: z.enum(RAIL_TRANSIT_MODES).optional(),
   notes: z.string().max(5000).nullable().optional(),
   tags: z.array(z.string().trim().max(40)).max(30).optional(),
   companions: z.array(z.string().max(100)).max(50).optional(),

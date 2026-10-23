@@ -80,6 +80,7 @@ export interface AccountFlight {
 export interface AccountRail extends NightTrainFacts {
   id: string;
   status: string;
+  transitMode: string;
 }
 
 /**

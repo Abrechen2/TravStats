@@ -96,6 +96,7 @@ export interface TravelAccountData extends TravelAccountInput {
 const RAIL_NIGHT_SELECT = {
   id: true,
   status: true,
+  transitMode: true,
   trainCategory: true,
   travelClass: true,
   departureTime: true,

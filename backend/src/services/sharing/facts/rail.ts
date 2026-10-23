@@ -4,7 +4,8 @@ import { jsonForWrite, pickFacts } from "./pick";
 /**
  * A rail journey's facts: train, both stations with position, country and
  * zone, the times as stored (real instants, ADR 0002), the frozen line, what
- * actually happened, status and delay. Private: class, coach, seat, booking
+ * actually happened, status and delay, and whether it was a train at all (a
+ * U-Bahn or tram ride counts in nobody's rail figures). Private: class, coach, seat, booking
  * reference, price and FX snapshot, notes, tags, companions.
  */
 export const RAIL_FACT_FIELDS = [
@@ -39,6 +40,7 @@ export const RAIL_FACT_FIELDS = [
   "lookupRef",
   "status",
   "delayMinutes",
+  "transitMode",
 ] as const satisfies readonly (keyof RailJourney)[];
 
 export type RailFactField = (typeof RAIL_FACT_FIELDS)[number];

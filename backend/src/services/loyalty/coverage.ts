@@ -57,6 +57,7 @@ export interface CoveredCruise {
 /** A train ride as a rail card reads it (forgejo#132 item 23). */
 export interface CoveredRide {
   status: string;
+  transitMode: string;
   operator: string | null;
   /** `YYYY-MM-DD` it left on, on the departure station's calendar. */
   day: string;
@@ -240,11 +241,19 @@ export async function loadCoveredRides(
 ): Promise<Array<CoveredRide & { id: string }>> {
   const rows = await prisma.railJourney.findMany({
     where: { userId, ...countableRailWhere() },
-    select: { id: true, status: true, operator: true, departureTime: true, depTimezone: true },
+    select: {
+      id: true,
+      status: true,
+      transitMode: true,
+      operator: true,
+      departureTime: true,
+      depTimezone: true,
+    },
   });
   return rows.map((r) => ({
     id: r.id,
     status: r.status,
+    transitMode: r.transitMode,
     operator: r.operator,
     day: stationDayKey(r.departureTime, r.depTimezone),
   }));

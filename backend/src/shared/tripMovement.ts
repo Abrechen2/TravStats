@@ -38,7 +38,7 @@ export type MovementMode = "flight" | "cruise" | "rail" | "bus" | "roadtrip";
 export interface TripMovementInput {
   flights: { status: string }[];
   cruises: { status: string }[];
-  railJourneys: { status: string }[];
+  railJourneys: { status: string; transitMode: string }[];
   busJourneys: { status: string }[];
   /** Roadtrip routes on the trip that have STARTED — the caller applies the cut. */
   startedRoadtrips: number;

@@ -32,7 +32,7 @@ const trip = (o: Partial<CrossDomainTripRow> = {}): CrossDomainTripRow => ({
   ...o,
 });
 const done = [{ status: "flown" }];
-const ride = [{ status: "completed" }];
+const ride = [{ status: "completed", transitMode: "rail" }];
 const stayed = [{ status: "completed", checkIn: PAST, checkOut: LATER }];
 const visited = [{ visitedAt: PAST, visitedAtUtc: PAST }];
 const station = (startDate: Date | null) => ({
@@ -105,7 +105,7 @@ describe("arrive and discover", () => {
       0
     );
     const planned = trip({
-      railJourneys: [{ status: "scheduled" }],
+      railJourneys: [{ status: "scheduled", transitMode: "rail" }],
       lodgingStays: stayed,
       placeVisits: visited,
     });

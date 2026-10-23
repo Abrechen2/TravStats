@@ -17,6 +17,7 @@ let seq = 0;
 const nightjet = (o: Partial<AccountRail> = {}): AccountRail => ({
   id: `ride-${(seq += 1)}`,
   status: "completed",
+  transitMode: "rail",
   trainCategory: "NJ",
   travelClass: "sleeper",
   // Wien Hbf 22:58 CET on 31 Dec -> Hamburg Hbf 09:00 CET on 1 Jan.
@@ -58,6 +59,11 @@ describe("the travel account — night trains and the remainder (forgejo#266)", 
     expect(y2025.railNights).toBe(1);
     expect(y2025.unassignedNights).toBe(364);
     expect(y2025).not.toHaveProperty("homeNights");
+  });
+
+  it("gives no night to a ride kept as a tram, whatever its clock says (2026-10-23)", () => {
+    const a = account({ rail: [nightjet({ transitMode: "tram" })] });
+    expect(a.years.find((row) => row.year === "2025")?.railNights ?? 0).toBe(0);
   });
 
   it("files a New Year's Eve night train under the old year, by the stations' calendars", () => {

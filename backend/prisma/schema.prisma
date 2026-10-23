@@ -938,6 +938,11 @@ model UserSettings {
   /// flight (forgejo#193). Off: an upload is refused with 409
   /// FLIGHT_TRACKING_DISABLED and nothing is stored; what is stored stays.
   flightLiveTrackingEnabled Boolean @default(true) @map("flight_live_tracking_enabled")
+  /// What a bahn.de import starts local-transit legs as (`services/settings/railImportPrefs.ts`):
+  /// U-Bahn/tram `skip` | `rail`, buses `skip` | `bus`. Set only by the import
+  /// dialog's explicit "remember as default"; `skip` is the behaviour before it.
+  railImportLocalTransit    String  @default("skip") @map("rail_import_local_transit")
+  railImportBus             String  @default("skip") @map("rail_import_bus")
 
   /// How much of the settings page this account sees (forgejo#321):
   /// `standard` | `expert`, see `shared/settingsLevel.ts`. New accounts start at
@@ -4188,6 +4193,11 @@ model RailJourney {
   /// computed on read and is not written here.
   tightConnection Boolean @default(false) @map("tight_connection")
 
+  /// rail | metro | tram (`shared/railCounting.ts`). A U-Bahn or tram ride the
+  /// user chose to keep is stored as a journey but never counted in the rail
+  /// statistics (owner, 2026-10-23); every row written before is `rail`.
+  transitMode String @default("rail") @map("transit_mode")
+
   notes      String?
   tags       String[] @default([])
   companions String[] @default([])
@@ -4256,6 +4266,8 @@ model RailStation {
   arrivals   RailJourney[] @relation("RailJourneyArrStation")
 
   @@index([uic])
+  /// A bahn.de connection names its stops by EVA number; the import looks them up here.
+  @@index([dbId])
   @@index([searchName(ops: raw("gin_trgm_ops"))], type: Gin)
   @@map("rail_stations")
 }
