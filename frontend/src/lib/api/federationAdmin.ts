@@ -16,6 +16,8 @@ export interface FederationState {
   origin: string | null;
   publicKey: string | null;
   fingerprint: string | null;
+  /** A key is stored even when `fingerprint` is null (federation off, no address). */
+  hasKey: boolean;
   /** The admin's switch for trip sharing across servers (default off). */
   tripSharingEnabled: boolean;
   peers: FederationPeer[];

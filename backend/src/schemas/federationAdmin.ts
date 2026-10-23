@@ -38,6 +38,11 @@ export interface FederationState {
   origin: string | null;
   publicKey: string | null;
   fingerprint: string | null;
+  /**
+   * A private key is stored (or the env identity holds one), even while `fingerprint` is null
+   * because federation is off or the address is missing. "Schlüssel erzeugen" asks first then.
+   */
+  hasKey: boolean;
   /** The admin's trip-sharing switch; effective only with an identity and the beta switch on. */
   tripSharingEnabled: boolean;
   peers: Array<{

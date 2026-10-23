@@ -33,6 +33,7 @@ const withKey: FederationState = {
   origin: "https://me.example",
   publicKey: null,
   fingerprint: "ab".repeat(32),
+  hasKey: true,
   tripSharingEnabled: false,
   peers: [],
 };

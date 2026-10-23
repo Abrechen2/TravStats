@@ -25,6 +25,7 @@ const base: FederationState = {
   origin: "https://me.example",
   publicKey: null,
   fingerprint: null,
+  hasKey: false,
   tripSharingEnabled: false,
   peers: [],
 };
@@ -158,6 +159,7 @@ describe("FederationSettings", () => {
       ...base,
       source: "settings",
       fingerprint: "ef".repeat(32),
+      hasKey: true,
       peers: [
         {
           origin: "https://friend.example",

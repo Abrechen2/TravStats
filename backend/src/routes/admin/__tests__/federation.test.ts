@@ -50,6 +50,21 @@ it("turns federation on with a key generated in the UI", async () => {
   expect(row.federationPrivateKey).not.toContain("PRIVATE KEY");
 });
 
+it("reports a stored key while federation is off, when no fingerprint can be shown", async () => {
+  await request(app)
+    .put("/api/v1/admin/federation")
+    .send({ enabled: true, origin: "https://me.admin-federation.test" });
+  expect((await request(app).post("/api/v1/admin/federation/key").send({})).status).toBe(200);
+  const off = await request(app)
+    .put("/api/v1/admin/federation")
+    .send({ enabled: false, origin: "https://me.admin-federation.test" });
+  expect(off.status).toBe(200);
+  expect(off.body).toMatchObject({ fingerprint: null, hasKey: true });
+  await prisma.adminSettings.update({ where: { id: rowId }, data: { federationPrivateKey: null } });
+  resetIdentityCache();
+  expect((await request(app).get("/api/v1/admin/federation")).body.hasKey).toBe(false);
+});
+
 it("refuses changes while the env override holds the identity", async () => {
   process.env.FEDERATION_ENABLED = "1";
   const res = await request(app).post("/api/v1/admin/federation/key").send({});

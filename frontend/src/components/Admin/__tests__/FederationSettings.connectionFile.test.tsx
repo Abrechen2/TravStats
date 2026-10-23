@@ -34,6 +34,7 @@ const noKey: FederationState = {
   origin: "https://me.example",
   publicKey: null,
   fingerprint: null,
+  hasKey: false,
   tripSharingEnabled: false,
   peers: [],
 };
@@ -42,6 +43,7 @@ const withKey: FederationState = {
   source: "settings",
   publicKey: "-----BEGIN PUBLIC KEY-----\nOWN\n-----END PUBLIC KEY-----\n",
   fingerprint: "ab".repeat(32),
+  hasKey: true,
 };
 const inspection: ConnectionFileInspection = {
   origin: "https://friend.example",
@@ -93,6 +95,21 @@ describe("FederationSettings: replacing the key", () => {
     expect(screen.getByText("federation.rotateConfirm.message")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "common:buttons.cancel" }));
     await waitFor(() => expect(screen.queryByText("federation.rotateConfirm.title")).toBeNull());
+    expect(federationAdminApi.generateKey).not.toHaveBeenCalled();
+  });
+
+  it("asks too while federation is off and no fingerprint is shown, but a key is stored", async () => {
+    // loadIdentity refuses with federation disabled, so the fingerprint is null — the stored
+    // key is still there, and replacing it must not pass without the question.
+    vi.mocked(federationAdminApi.get).mockResolvedValue({
+      ...noKey,
+      enabled: false,
+      source: null,
+      hasKey: true,
+    });
+    render(<FederationSettings />);
+    fireEvent.click(await screen.findByRole("button", { name: "federation.generateKey" }));
+    expect(await screen.findByText("federation.rotateConfirm.title")).toBeInTheDocument();
     expect(federationAdminApi.generateKey).not.toHaveBeenCalled();
   });
 

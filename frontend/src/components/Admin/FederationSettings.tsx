@@ -79,7 +79,9 @@ export default function FederationSettings(): JSX.Element {
 
   /** A first key needs no question; replacing one cuts every server that pinned the old one. */
   const generateKey = async (): Promise<void> => {
-    const replacing = Boolean(state?.fingerprint);
+    // `hasKey`, not `fingerprint`: with federation off or no address the fingerprint is null
+    // while a stored key still exists, and replacing it would pass without a question.
+    const replacing = Boolean(state?.hasKey);
     if (
       replacing &&
       !(await confirm({
@@ -125,7 +127,7 @@ export default function FederationSettings(): JSX.Element {
           <Button variant="secondary" disabled={busy} onClick={() => void generateKey()}>
             {t(`${NS}.generateKey`)}
           </Button>
-          {state.fingerprint && <p className="t-caption">{t(`${NS}.rotateWarning`)}</p>}
+          {state.hasKey && <p className="t-caption">{t(`${NS}.rotateWarning`)}</p>}
           {rotated && <p role="status">{t(`${NS}.rotatedHint`)}</p>}
         </>
       )}
