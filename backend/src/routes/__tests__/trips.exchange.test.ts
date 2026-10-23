@@ -64,6 +64,11 @@ describe("trip export / import (.travstats)", () => {
     stranger = await user("tx-stranger");
     older = await user("tx-older");
     seeded = await seedFullTrip(owner.id, stamp);
+    // A ride kept as a tram must come back as one, not as a counted train (2026-10-23).
+    await prisma.railJourney.updateMany({
+      where: { userId: owner.id },
+      data: { transitMode: "tram" },
+    });
     const res = await exportTrip(owner, "?documents=1&photos=1&private=1");
     expect(res.status).toBe(200);
     fullFile = res.body as Buffer;
@@ -198,7 +203,11 @@ describe("trip export / import (.travstats)", () => {
       [false, true, null],
       [false, false, "Atlantis"],
     ]);
-    expect(trip.railJourneys[0]).toMatchObject({ trainNumber: "AP 133", seat: "61" });
+    expect(trip.railJourneys[0]).toMatchObject({
+      trainNumber: "AP 133",
+      seat: "61",
+      transitMode: "tram",
+    });
     // forgejo#288: the ride is back, on the trip and its booking, with the
     // instants and zones as exported and (this file is private) its own fields.
     expect(trip.busJourneys).toHaveLength(1);

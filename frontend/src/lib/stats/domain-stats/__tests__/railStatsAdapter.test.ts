@@ -45,6 +45,20 @@ describe("adaptRail", () => {
     expect(kpi(stats, "overviewCard.kpi.railJourneys")).toBe(1);
   });
 
+  // 2026-10-23: a U-Bahn or tram ride kept as a journey is no train ride.
+  it("counts no U-Bahn or tram ride — not as a ride, a kilometre or a country", () => {
+    const stats = adaptRail({
+      journeys: [
+        ride(),
+        ride({ id: "r2", transitMode: "tram", distanceKm: 900, arrCountry: "CH" }),
+        ride({ id: "r3", transitMode: "metro" }),
+      ],
+    });
+    expect(stats.hasData && stats.totalEvents).toBe(1);
+    expect(stats.hasData && stats.totalDistanceKm).toBe(423);
+    expect(adaptRail({ journeys: [ride({ transitMode: "tram" })] }).hasData).toBe(false);
+  });
+
   it("keeps straight-line kilometres apart from the traced and ticket ones", () => {
     const stats = adaptRail({
       journeys: [

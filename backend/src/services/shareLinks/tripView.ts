@@ -21,6 +21,7 @@ import { toNoteDto } from "../notes/noteService";
 import { notesInSpan, tripDaySpan } from "../notes/tripNotes";
 import { buildItinerary } from "./itineraryView";
 import { shareablePhotoIds } from "./photoProxy";
+import { isCountedRailMode } from "../../shared/railCounting";
 
 /**
  * The public view of one trip — the share card and Trip Wrapped (forgejo#154,
@@ -74,7 +75,12 @@ async function loadLegs(tripId: string) {
     }),
     prisma.railJourney.findMany({
       where: { tripId, ...NOT_CANCELLED },
-      select: { depStationName: true, arrStationName: true, departureTime: true },
+      select: {
+        depStationName: true,
+        arrStationName: true,
+        departureTime: true,
+        transitMode: true,
+      },
       orderBy: { departureTime: "asc" },
     }),
     prisma.busJourney.findMany({
@@ -210,7 +216,8 @@ export async function buildTripView(
       flights: legs.flights.length,
       flightKm: legs.flights.length > 0 ? Math.round(km) : null,
       cruises: legs.cruises.length,
-      railRides: legs.rail.length,
+      // A U-Bahn or tram ride is on the route, but no train ride (`railCounting`).
+      railRides: legs.rail.filter(isCountedRailMode).length,
       busRides: legs.bus.length,
       countries: countries.length,
       days: times.start && times.end ? daysBetween(times.start.date, times.end.date) + 1 : null,

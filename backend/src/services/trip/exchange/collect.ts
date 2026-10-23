@@ -4,6 +4,7 @@
  * 0002) and the private fields only when asked. Returns the files to pack
  * beside it, so the archive writer streams bytes it never has to look up.
  */
+import { RAIL_TRANSIT_MODES, type RailTransitMode } from "../../../shared/railCounting";
 import path from "path";
 import { prisma } from "../../../db";
 import { AppError } from "../../../middleware/errorHandler";
@@ -363,6 +364,9 @@ export async function collectTrip(
       operator: r.operator,
       trainCategory: r.trainCategory,
       trainNumber: r.trainNumber,
+      transitMode: (RAIL_TRANSIT_MODES as readonly string[]).includes(r.transitMode)
+        ? (r.transitMode as RailTransitMode)
+        : "rail",
       bookingReference: r.bookingReference,
       dep: {
         name: r.depStationName,

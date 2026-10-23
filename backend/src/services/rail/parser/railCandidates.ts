@@ -272,6 +272,43 @@ export async function findDuplicate(
   return hit?.id ?? null;
 }
 
+/**
+ * A bus ride the user already has for a bus leg of a bahn.de connection: same
+ * departure wall clock at a stop of the same name. A bus leg is saved as a bus
+ * ride, so a repeat import is looked for there — never among the trains.
+ */
+export async function findBusDuplicate(userId: string, leg: ParsedRailLeg): Promise<string | null> {
+  const asUtc = new Date(`${leg.departureLocal}:00Z`).getTime();
+  if (Number.isNaN(asUtc)) return null;
+  const rows = await prisma.busJourney.findMany({
+    where: {
+      userId,
+      departureTime: {
+        gte: new Date(asUtc - WALL_CLOCK_WINDOW_MS),
+        lte: new Date(asUtc + WALL_CLOCK_WINDOW_MS),
+      },
+      depStationName: { equals: leg.depStationName, mode: "insensitive" as const },
+    },
+    select: { id: true, departureTime: true, depTimezone: true },
+    take: 20,
+  });
+  const hit = rows.find(
+    (r) => instantToWallClock(r.departureTime, r.depTimezone) === leg.departureLocal
+  );
+  return hit?.id ?? null;
+}
+
+async function duplicateOf(
+  userId: string | undefined,
+  leg: ParsedRailLeg,
+  bookingReference: string | null
+): Promise<string | null> {
+  if (!userId) return null;
+  return leg.transit?.mode === "bus"
+    ? findBusDuplicate(userId, leg)
+    : findDuplicate(userId, leg, bookingReference);
+}
+
 export async function toRailCandidate(
   booking: ParsedRailBooking,
   userId: string | undefined
@@ -297,7 +334,7 @@ export async function toRailCandidate(
       // The provider's stops are read into the two stations, not passed on.
       departureStation: await station(leg.depStationName, departureStop),
       arrivalStation: await station(leg.arrStationName, arrivalStop),
-      duplicateOf: userId ? await findDuplicate(userId, leg, booking.bookingReference) : null,
+      duplicateOf: await duplicateOf(userId, leg, booking.bookingReference),
     });
   }
   return { ...booking, legs };

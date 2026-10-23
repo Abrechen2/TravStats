@@ -449,6 +449,7 @@ export function railRow(
     operator: r.operator,
     trainCategory: r.trainCategory,
     trainNumber: r.trainNumber,
+    transitMode: r.transitMode,
     bookingReference: r.bookingReference,
     depStationName: r.dep.name,
     depStationCode: r.dep.code,

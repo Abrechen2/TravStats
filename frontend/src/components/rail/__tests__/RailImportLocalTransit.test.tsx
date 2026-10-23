@@ -174,6 +174,18 @@ describe("RailImportPreviewModal — U-Bahn, tram and bus legs of a bahn.de conn
     expect(screen.getByText("rail:import.legSavedAsBus")).toBeInTheDocument();
   });
 
+  it("binds no train across a bus leg that failed to save", async () => {
+    create
+      .mockResolvedValueOnce({ journey: { id: "rb" }, geometry: null })
+      .mockResolvedValueOnce({ journey: { id: "s1" }, geometry: null });
+    createBus.mockRejectedValueOnce(new Error("offline"));
+    render(<RailImportPreviewModal booking={connection()} onCancel={vi.fn()} onSaved={vi.fn()} />);
+    fireEvent.click(box(2));
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(create).toHaveBeenCalledTimes(2));
+    expect(create.mock.calls[1][0]).not.toHaveProperty("connectsFrom");
+  });
+
   it("never turns a bus into a train when the account has no bus domain, and says so", () => {
     enabledDomains.value = ["flight", "rail"];
     render(<RailImportPreviewModal booking={connection()} onCancel={vi.fn()} onSaved={vi.fn()} />);

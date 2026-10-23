@@ -16,7 +16,7 @@ import {
   totalGoesTo,
   type RailImportRow,
 } from "./railImportModel";
-import { toBusInput } from "./railImportModes";
+import { groupOf, toBusInput } from "./railImportModes";
 import { RailImportBookingFields } from "./RailImportBookingFields";
 import { RailImportLegRow, type RowState } from "./RailImportLegRow";
 import { RailImportRemember } from "./RailImportRemember";
@@ -92,7 +92,9 @@ export function RailImportPreviewModal({ booking, onCancel, onSaved }: Props): J
         continue;
       }
       if (!row.selected || row.saveAs === null) {
-        previousId = row.leg.duplicateOf;
+        // An already-logged train carries the chain on; a bus leg's duplicate
+        // is a bus ride, which no train continues.
+        previousId = groupOf(row.leg) === "bus" ? null : row.leg.duplicateOf;
         continue;
       }
       try {
@@ -113,6 +115,8 @@ export function RailImportPreviewModal({ booking, onCancel, onSaved }: Props): J
         // Each leg is a create: a lost answer may have stored it.
         next[index] = { kind: "failed", key: saveErrorFrom(err, { create: true }).key };
         failures += 1;
+        // The next leg is not bound across the one that failed.
+        previousId = null;
       }
     }
     setStates(next);

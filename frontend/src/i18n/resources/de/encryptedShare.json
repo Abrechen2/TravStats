@@ -394,6 +394,7 @@
     "tourStartMinute": "Startzeit der Tour (Minuten nach Mitternacht)",
     "trainCategory": "Zuggattung",
     "trainNumber": "Zugnummer",
+    "transitMode": "Verkehrsmittel",
     "travelClass": "Klasse",
     "tripId": "Reise (ID)",
     "tripRoute": "Tour oder Roadtrip",

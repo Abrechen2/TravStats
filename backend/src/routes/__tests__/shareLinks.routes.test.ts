@@ -602,6 +602,14 @@ describe("the field allow-list decides the payload", () => {
     });
     await prisma.railJourney.create({ data: ride("completed", "Rail kept") });
     await prisma.railJourney.create({ data: ride("cancelled", "Rail cancelled") });
+    // A tram ride kept as a journey is on the route but is no train ride (2026-10-23).
+    await prisma.railJourney.create({
+      data: {
+        ...ride("completed", "Tram"),
+        transitMode: "tram",
+        departureTime: new Date("2030-06-03T12:00:00Z"),
+      },
+    });
     await prisma.busJourney.create({ data: ride("cancelled", "Bus cancelled") });
     await prisma.cruise.create({
       data: {
@@ -619,7 +627,10 @@ describe("the field allow-list decides the payload", () => {
     });
     const { trip: shown } = (await view(token).expect(200)).body.data.view;
     expect(shown.totals).toMatchObject({ railRides: 1, busRides: 0, cruises: 0 });
-    expect(shown.route).toEqual([{ mode: "rail", from: "Rail kept A", to: "Rail kept B" }]);
+    expect(shown.route).toEqual([
+      { mode: "rail", from: "Rail kept A", to: "Rail kept B" },
+      { mode: "rail", from: "Tram A", to: "Tram B" },
+    ]);
   });
 
   it("names cost and companions only when they were chosen", async () => {

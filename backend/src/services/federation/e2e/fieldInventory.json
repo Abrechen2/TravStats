@@ -264,7 +264,7 @@
     "excluded": ""
   },
   "RailJourney": {
-    "details": "id operator trainCategory trainNumber depStationName depStationCode depStationId depLat depLon depCountry depTimezone arrStationName arrStationCode arrStationId arrLat arrLon arrCountry arrTimezone departureTime arrivalTime depPrecision arrPrecision distanceKm distanceSource geometry geometrySource actualDepartureTime actualArrivalTime lookupProvider lookupRef travelClass coach status delayMinutes tightConnection tripId bookingId externalRef importBatchId createdAt updatedAt",
+    "details": "id operator trainCategory trainNumber depStationName depStationCode depStationId depLat depLon depCountry depTimezone arrStationName arrStationCode arrStationId arrLat arrLon arrCountry arrTimezone departureTime arrivalTime depPrecision arrPrecision distanceKm distanceSource geometry geometrySource actualDepartureTime actualArrivalTime lookupProvider lookupRef travelClass coach status delayMinutes tightConnection transitMode tripId bookingId externalRef importBatchId createdAt updatedAt",
     "costs": "price currency priceBase fxRate fxRateDate fxBaseCurrency fxSource",
     "personal": "seat notes tags companions",
     "photos": "",

@@ -20,6 +20,7 @@
  * this one than the file needs to.
  */
 import { z } from "zod";
+import { RAIL_TRANSIT_MODES } from "../../../shared/railCounting";
 import { lat, lon, portRef, requiredZone, shipRef, zone, type PortRef } from "./publicHalf";
 
 export const TRIP_FILE_FORMAT = "travstats-trip";
@@ -323,6 +324,8 @@ const railSchema = z
     operator: optStr(200),
     trainCategory: optStr(200),
     trainNumber: optStr(200),
+    /** A file written before the field carries none: every journey in it was a train. */
+    transitMode: z.enum(RAIL_TRANSIT_MODES).default("rail"),
     bookingReference: optStr(200),
     dep: stationRef,
     arr: stationRef,

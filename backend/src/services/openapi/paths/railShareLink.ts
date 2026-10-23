@@ -72,7 +72,12 @@ const leg = z.object({
   direction: z.enum(["outbound", "return"]).nullable(),
   departureStation: station,
   arrivalStation: station,
-  duplicateOf: z.string().nullable().describe("A journey already logged with this departure"),
+  duplicateOf: z
+    .string()
+    .nullable()
+    .describe(
+      "A journey already logged with this departure — for a bus leg (transit.mode bus) a bus ride"
+    ),
   transit: transit.optional(),
 });
 

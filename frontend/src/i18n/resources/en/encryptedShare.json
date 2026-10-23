@@ -394,6 +394,7 @@
     "tourStartMinute": "Tour start (minutes after midnight)",
     "trainCategory": "Train category",
     "trainNumber": "Train number",
+    "transitMode": "Mode of transport",
     "travelClass": "Class",
     "tripId": "Trip (ID)",
     "tripRoute": "Tour or roadtrip",
