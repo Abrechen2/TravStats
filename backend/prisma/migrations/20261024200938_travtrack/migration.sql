@@ -79,6 +79,19 @@ CREATE TABLE "travtrack_privacy_zones" (
 );
 
 -- CreateTable
+CREATE TABLE "travtrack_zone_tombstones" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "lat" DOUBLE PRECISION NOT NULL,
+    "lon" DOUBLE PRECISION NOT NULL,
+    "radius_m" INTEGER NOT NULL,
+    "until_at" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "travtrack_zone_tombstones_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "travtrack_gaps" (
     "id" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
@@ -132,6 +145,9 @@ CREATE INDEX "travtrack_deleted_ranges_user_id_from_at_idx" ON "travtrack_delete
 CREATE INDEX "travtrack_privacy_zones_user_id_idx" ON "travtrack_privacy_zones"("user_id");
 
 -- CreateIndex
+CREATE INDEX "travtrack_zone_tombstones_user_id_until_at_idx" ON "travtrack_zone_tombstones"("user_id", "until_at");
+
+-- CreateIndex
 CREATE INDEX "travtrack_gaps_user_id_from_at_idx" ON "travtrack_gaps"("user_id", "from_at");
 
 -- CreateIndex
@@ -157,6 +173,9 @@ ALTER TABLE "travtrack_deleted_ranges" ADD CONSTRAINT "travtrack_deleted_ranges_
 
 -- AddForeignKey
 ALTER TABLE "travtrack_privacy_zones" ADD CONSTRAINT "travtrack_privacy_zones_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "travtrack_zone_tombstones" ADD CONSTRAINT "travtrack_zone_tombstones_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "travtrack_gaps" ADD CONSTRAINT "travtrack_gaps_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -240,6 +240,7 @@ export const NON_TRAVEL_RELATIONS = [
   "travTrackUploads",
   "travTrackDeletedRanges",
   "travTrackPrivacyZones",
+  "travTrackZoneTombstones",
   "travTrackGaps",
   "travTrackShareSnapshots",
   // The account's WebDAV export target (forgejo#321): a URL, a username and an

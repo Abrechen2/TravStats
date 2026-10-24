@@ -177,6 +177,45 @@ describe("TravTrack privacy zones", () => {
     );
   });
 
+  describe("what a zone protected stays protected after it goes (Codex P2)", () => {
+    const at = (iso: string, id: string, where = HOME) => ({ id, t: iso, ...where });
+    const send = (uploadId: string, points: object[]) =>
+      ingestTravTrackPoints({ userId, deviceId: "phone-1", uploadId, points: points as never });
+
+    it("an old fix re-sent after its zone is removed stays dropped; a new fix there is stored", async () => {
+      await send("before", [at("2026-10-12T01:00:00Z", "old")]);
+      const { zone } = await createZone(userId, { name: "Zuhause", ...HOME, radiusM: 250 }, true);
+      await deleteZone(userId, zone.id);
+
+      const again = await send("resent", [at("2026-10-12T01:00:00Z", "old")]);
+      expect(again.result.outcomes).toEqual([
+        { index: 0, id: "old", outcome: "dropped", reason: "privacy_zone" },
+      ]);
+      const fresh = await send("after", [at(new Date().toISOString(), "new")]);
+      expect(fresh.result.outcomes).toEqual([{ index: 0, id: "new", outcome: "stored" }]);
+    });
+
+    it("moving or shrinking a zone keeps its old circle's fixes dropped", async () => {
+      await send("before", [at("2026-10-12T01:00:00Z", "old", AT_200M)]);
+      const { zone } = await createZone(userId, { name: "Zuhause", ...HOME, radiusM: 250 }, true);
+      await updateZone(userId, zone.id, { radiusM: 100 }, false);
+
+      const again = await send("resent", [at("2026-10-12T01:00:00Z", "old", AT_200M)]);
+      expect(again.result.outcomes[0]).toMatchObject({
+        outcome: "dropped",
+        reason: "privacy_zone",
+      });
+      const fresh = await send("after", [at(new Date().toISOString(), "new", AT_200M)]);
+      expect(fresh.result.outcomes[0]).toMatchObject({ outcome: "stored" });
+    });
+
+    it("a zone that is only renamed leaves no tombstone", async () => {
+      const { zone } = await createZone(userId, { name: "Zuhause", ...HOME, radiusM: 250 }, false);
+      await updateZone(userId, zone.id, { name: "Daheim" }, false);
+      expect(await prisma.travTrackZoneTombstone.count({ where: { userId } })).toBe(0);
+    });
+  });
+
   it("a zone create and a zone update call onPointsRemoved even when they delete nothing", async () => {
     const { zone, deleted } = await createZone(
       userId,

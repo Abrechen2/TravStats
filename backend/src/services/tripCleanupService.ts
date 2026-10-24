@@ -37,6 +37,7 @@ import {
   retargetCoverUrl,
 } from "./trip/mergeTripRelations";
 import { moveTripLinks } from "./travtrack/links";
+import { takeTravTrackLock } from "./travtrack/lock";
 
 /** A trip is "micro" when it has at most this many flights. Matches the
  *  shape of the legacy one-booking auto-trips (outbound + return). */
@@ -277,7 +278,12 @@ export async function mergeTrips(
   let mergedDuplicates = { albums: 0, photos: 0 };
 
   await prisma.$transaction(async (tx) => {
-    // Lock every trip of the merge first, in one statement and in id order. A
+    // TravTrack's per-account lock BEFORE the trip rows: an ingest that resolved
+    // a source trip holds it until its link is written, so the merge either sees
+    // that link (and moves it) or the ingest sees the redirect afterwards. Taken
+    // first because ingest takes it first and never waits on a trip row lock.
+    await takeTravTrackLock(tx, userId);
+    // Then lock every trip of the merge, in one statement and in id order. A
     // Companion upload inserting a recording into a source trip needs its row
     // (FK check) and so waits until the merge commits — then finds the trip
     // gone and is refused. Without the lock an upload landing between the move

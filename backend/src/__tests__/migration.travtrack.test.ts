@@ -113,6 +113,8 @@ describe("migration 20261024200938 — TravTrack", () => {
            VALUES ('z', 'u1', 'Zuhause', 1, 1, 100, now())`,
         `INSERT INTO travtrack_gaps (id, user_id, device_id, from_at, to_at, reason)
            VALUES ('g', 'u1', 'd', now(), now() + interval '1 hour', 'recorderSilent')`,
+        `INSERT INTO travtrack_zone_tombstones (id, user_id, lat, lon, radius_m, until_at)
+           VALUES ('zt', 'u1', 1, 1, 100, now())`,
         `INSERT INTO travtrack_share_snapshots (id, user_id, trip_id, geometry, point_count)
            VALUES ('s', 'u1', 't1', '[]', 0)`,
       ]) {
@@ -126,6 +128,7 @@ describe("migration 20261024200938 — TravTrack", () => {
         "travtrack_uploads",
         "travtrack_deleted_ranges",
         "travtrack_privacy_zones",
+        "travtrack_zone_tombstones",
         "travtrack_gaps",
         "travtrack_share_snapshots",
       ]) {

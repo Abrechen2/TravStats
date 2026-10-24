@@ -26,7 +26,8 @@ import { takeTravTrackLock } from "./lock";
  * nothing is dropped silently, and only a non-2xx answer means "send again".
  *
  * Per point the order is zone → deleted range → duplicate: a fix inside a
- * privacy zone is never stored and never even compared, whatever else holds.
+ * privacy zone — one in force, or a former zone's circle from before it went
+ * (`zones.ts`) — is never stored and never even compared, whatever else holds.
  *
  * A duplicate still gets the links it is missing — the trip recorder and the
  * flight recorder hand over the same fix in two uploads — and an upload never
@@ -97,6 +98,32 @@ async function alreadyHeld(tx: Tx, userId: string, origin: string, points: reado
   };
 }
 
+/**
+ * The circles of zones that are gone (removed, moved, shrunk) still covering a
+ * fix of this batch: those whose exclusion ends after its earliest point.
+ */
+async function tombstonesFor(tx: Tx, userId: string, points: readonly ParsedPoint[]) {
+  if (points.length === 0) return [];
+  return tx.travTrackZoneTombstone.findMany({
+    where: { userId, untilAt: { gt: new Date(Math.min(...points.map((p) => p.tMs))) } },
+    select: { lat: true, lon: true, radiusM: true, untilAt: true },
+  });
+}
+
+type Tombstone = { lat: number; lon: number; radiusM: number; untilAt: Date };
+
+/** Inside a zone in force, or inside a former zone's circle from before it went. */
+const protectedFix = (
+  p: ParsedPoint,
+  zones: readonly { lat: number; lon: number; radiusM: number }[],
+  tombstones: readonly Tombstone[]
+): boolean =>
+  inPrivacyZone(p, zones) ||
+  inPrivacyZone(
+    p,
+    tombstones.filter((t) => p.tMs < t.untilAt.getTime())
+  );
+
 /** The deleted spans that can touch this upload: those overlapping its points' and gaps' extent. */
 async function rangesFor(
   tx: Tx,
@@ -127,13 +154,16 @@ type Judgement = {
 function judgeAll(
   candidates: readonly ParsedPoint[],
   zones: readonly { lat: number; lon: number; radiusM: number }[],
+  tombstones: readonly Tombstone[],
   ranges: readonly { fromAt: Date; toAt: Date }[],
   held: { byRef: Map<string, string>; byKey: Map<string, string> }
 ): Judgement {
   const out: Judgement = { outcomes: [], fresh: [], attach: [] };
   for (const p of candidates) {
     const key = positionKey(p);
-    if (inPrivacyZone(p, zones)) {
+    // The same outcome for a zone in force and a former one: the answer must
+    // not tell which circles once existed.
+    if (protectedFix(p, zones, tombstones)) {
       out.outcomes.push({ index: p.index, id: p.ref, outcome: "dropped", reason: "privacy_zone" });
       continue;
     }
@@ -231,15 +261,16 @@ export async function ingestTravTrackPoints(input: {
         }
       }
 
-      const [ranges, held, zones] = await Promise.all([
+      const [ranges, held, zones, tombstones] = await Promise.all([
         rangesFor(tx, userId, candidates, gaps),
         alreadyHeld(tx, userId, origin, candidates),
         tx.travTrackPrivacyZone.findMany({
           where: { userId },
           select: { lat: true, lon: true, radiusM: true },
         }),
+        tombstonesFor(tx, userId, candidates),
       ]);
-      const judged = judgeAll(candidates, zones, ranges, held);
+      const judged = judgeAll(candidates, zones, tombstones, ranges, held);
 
       if (judged.fresh.length > 0) {
         await tx.travTrackPoint.createMany({

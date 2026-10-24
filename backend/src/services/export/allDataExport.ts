@@ -237,6 +237,8 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   travTrackDeletedRanges: "TravTrack history (beta): a paged export section of its own, plan T7",
   travTrackPrivacyZones: "TravTrack history (beta): a paged export section of its own, plan T7",
   travTrackGaps: "TravTrack history (beta): a paged export section of its own, plan T7",
+  travTrackZoneTombstones:
+    "TravTrack history (beta): former privacy-zone circles, a paged export section, plan T7",
   travTrackUploads:
     "transport bookkeeping: upload receipts that answer a retry, pruned after 30 days",
   travTrackShareSnapshots:

@@ -171,6 +171,7 @@ model User {
   travTrackUploads        TravTrackUpload[]
   travTrackDeletedRanges  TravTrackDeletedRange[]
   travTrackPrivacyZones   TravTrackPrivacyZone[]
+  travTrackZoneTombstones TravTrackZoneTombstone[]
   travTrackGaps           TravTrackGap[]
   travTrackShareSnapshots TravTrackShareSnapshot[]
 
@@ -5722,6 +5723,28 @@ model TravTrackPrivacyZone {
 
   @@index([userId])
   @@map("travtrack_privacy_zones")
+}
+
+/// A privacy zone's circle after it stopped being in force — the zone was
+/// removed, moved or shrunk. Every fix inside it from before `untilAt` stays
+/// dropped on ingest, so an old fix the zone protected cannot come back under
+/// a fresh uploadId; a fix recorded there afterwards is taken. The zone also
+/// cleared every stored point inside it when it was made, so there is no
+/// lower bound.
+model TravTrackZoneTombstone {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  lat       Float
+  lon       Float
+  radiusM   Int      @map("radius_m")
+  /// Exclusive: fixes from this instant on are not covered.
+  untilAt   DateTime @map("until_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, untilAt])
+  @@map("travtrack_zone_tombstones")
 }
 
 /// What the phone reports it could not record: a span held for want of a zone

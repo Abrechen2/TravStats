@@ -18,6 +18,13 @@ import { takeTravTrackLock } from "./lock";
  * whether or not it deleted a point: a zone over no stored point can still
  * lie under a chord of a shared route (plan T7).
  *
+ * What a zone protected stays protected after it goes (Codex review of T1–T3):
+ * removing, moving or shrinking a zone leaves a tombstone of its old circle
+ * (`travtrack_zone_tombstones`, until now), and ingest keeps dropping a fix
+ * inside it from before that instant — an old fix re-sent under a fresh
+ * uploadId cannot come back. A fix recorded there afterwards is taken. Removing
+ * a zone deletes no point, so it calls no `onPointsRemoved`.
+ *
  * Every write takes the lock that ingest takes, so a point cannot slip in
  * between the count and the delete, nor be stored inside a zone that is being
  * written.
@@ -139,6 +146,16 @@ export async function createZone(userId: string, input: ZoneInput, deleteStoredP
   });
 }
 
+/** The old circle, kept as an exclusion for every fix from before now. */
+async function retireCircle(tx: DbTransaction, userId: string, z: ZoneCircle): Promise<void> {
+  await tx.travTrackZoneTombstone.create({
+    data: { userId, lat: z.lat, lon: z.lon, radiusM: z.radiusM, untilAt: new Date() },
+  });
+}
+
+const sameCircle = (a: ZoneCircle, b: ZoneCircle): boolean =>
+  a.lat === b.lat && a.lon === b.lon && a.radiusM === b.radiusM;
+
 /** Moving or resizing a zone: whatever its new circle covers is cleared, after the same question. */
 export async function updateZone(
   userId: string,
@@ -157,6 +174,9 @@ export async function updateZone(
       radiusM: patch.radiusM ?? current.radiusM,
     };
     const deleted = await clearInside(tx, userId, next, deleteStoredPoints);
+    if (!sameCircle(circleOf(current), circleOf(next))) {
+      await retireCircle(tx, userId, circleOf(current));
+    }
     const zone = await tx.travTrackPrivacyZone.update({
       where: { id },
       data: next,
@@ -174,7 +194,9 @@ export async function updateZone(
 export async function deleteZone(userId: string, id: string): Promise<void> {
   await prisma.$transaction(async (tx) => {
     await takeTravTrackLock(tx, userId);
-    const { count } = await tx.travTrackPrivacyZone.deleteMany({ where: { id, userId } });
-    if (count === 0) throw notFound();
+    const zone = await tx.travTrackPrivacyZone.findFirst({ where: { id, userId } });
+    if (!zone) throw notFound();
+    await retireCircle(tx, userId, circleOf(zone));
+    await tx.travTrackPrivacyZone.delete({ where: { id: zone.id } });
   });
 }
