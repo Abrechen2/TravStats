@@ -1057,6 +1057,7 @@
       "shareLinks": "Public link, share, link",
       "calendarFeed": "Calendar, iCal, ICS, subscription, calendar feed",
       "dawarich": "Dawarich, location history, location source, positions, connection",
+      "locationProvider": "Location source, location, positions, TravTrack, Dawarich, none, switch source, recording",
       "tripRecording": "Recording, positions, app, track, record trip",
       "stayScan": "Stays, detect stays, radius, minimum duration, markets, places as areas, re-evaluate",
       "companions": "Companions, travel companions, people, rename, merge, duplicate, delete, names"
@@ -1281,6 +1282,47 @@
     }
   },
   "locationProvider": {
+    "title": "Location source",
+    "description": "Where TravStats reads positions from to suggest country days, stays and routes, and what the Companion records for.",
+    "legend": "Choose a location source",
+    "loadError": "The location source could not be loaded.",
+    "meaning": "What this means",
+    "nothingMoves": "Switching only changes what is recorded and read from now on. Nothing is moved, copied or deleted.",
+    "connectDawarich": "Connect Dawarich first",
+    "status": {
+      "notConfigured": "Dawarich is your chosen location source, but your own Dawarich connection is missing or no longer works. Until you enter it again, TravStats reads nothing from Dawarich.",
+      "unavailable": "TravTrack is your chosen location source but is not available on this server right now. Until it is, nothing is recorded or read through it."
+    },
+    "options": {
+      "none": {
+        "label": "None",
+        "sub": "TravStats reads no positions.",
+        "points": {
+          "manual": "No automatic suggestions from positions: you enter country days and stays yourself.",
+          "noHistory": "The Companion offers no location history.",
+          "ownRecording": "The Companion records flights and trips itself. The track belongs to the entry and is stored here on the server."
+        }
+      },
+      "travtrack": {
+        "label": "TravTrack",
+        "sub": "The location history here on your server.",
+        "points": {
+          "records": "The Companion records through TravTrack, everyday, flight and trip; the points are stored on this server and are part of the backup.",
+          "segment": "The track of a flight or trip is a segment in TravTrack, linked to the entry.",
+          "inbox": "TravTrack sends suggestions to the inbox: country days, stays, missing journeys.",
+          "zones": "You manage privacy zones and deletion in TravTrack."
+        }
+      },
+      "dawarich": {
+        "label": "Dawarich",
+        "sub": "Your own Dawarich, read only.",
+        "points": {
+          "readOnly": "TravStats reads from your Dawarich, as before. It writes nothing there and deletes nothing there.",
+          "suggestions": "TravStats counts country days from it and suggests stays in the inbox.",
+          "recording": "For now the Companion keeps recording flights and trips itself."
+        }
+      }
+    },
     "errors": {
       "dawarichNotConfigured": "Dawarich can be your location source once you have entered your own connection under “Dawarich connection”.",
       "travtrackUnavailable": "TravTrack is not available on this server.",

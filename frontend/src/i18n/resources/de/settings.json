@@ -1057,6 +1057,7 @@
       "shareLinks": "Öffentlicher Link, Freigabe, teilen, Link",
       "calendarFeed": "Kalender, iCal, ICS, Abo, Kalenderabo",
       "dawarich": "Dawarich, Standortverlauf, Standortquelle, Positionen, Verbindung",
+      "locationProvider": "Standortquelle, Standort, Positionen, TravTrack, Dawarich, Keine, Quelle wechseln, Aufzeichnung",
       "tripRecording": "Aufzeichnung, Positionen, App, Track, Reise aufzeichnen",
       "stayScan": "Aufenthalte, Aufenthalt erkennen, Radius, Mindestdauer, Märkte, Orte als Fläche, neu auswerten",
       "companions": "Mitreisende, Begleitpersonen, Personen, Umbenennen, Zusammenführen, Doppelt, Duplikat, Löschen, Namen"
@@ -1281,6 +1282,47 @@
     }
   },
   "locationProvider": {
+    "title": "Standortquelle",
+    "description": "Woher TravStats Positionen liest, um dir Ländertage, Aufenthalte und Strecken vorzuschlagen, und wofür die Companion aufzeichnet.",
+    "legend": "Standortquelle wählen",
+    "loadError": "Die Standortquelle konnte nicht geladen werden.",
+    "meaning": "Was das bedeutet",
+    "nothingMoves": "Ein Wechsel ändert nur, was ab jetzt aufgezeichnet und gelesen wird. Es wird nichts verschoben, kopiert oder gelöscht.",
+    "connectDawarich": "Erst Dawarich verbinden",
+    "status": {
+      "notConfigured": "Dawarich ist als Standortquelle gewählt, aber deine eigene Dawarich-Verbindung fehlt oder funktioniert nicht mehr. Bis du sie wieder einträgst, liest TravStats nichts aus Dawarich.",
+      "unavailable": "TravTrack ist als Standortquelle gewählt, auf diesem Server aber gerade nicht verfügbar. Bis dahin wird darüber nichts aufgezeichnet oder gelesen."
+    },
+    "options": {
+      "none": {
+        "label": "Keine",
+        "sub": "TravStats liest keine Positionen.",
+        "points": {
+          "manual": "Keine automatischen Vorschläge aus Positionen: Ländertage und Aufenthalte trägst du selbst ein.",
+          "noHistory": "Die Companion bietet keinen Standortverlauf an.",
+          "ownRecording": "Flüge und Reisen zeichnet die Companion selbst auf. Die Strecke gehört zum Eintrag und liegt hier auf dem Server."
+        }
+      },
+      "travtrack": {
+        "label": "TravTrack",
+        "sub": "Der Standortverlauf hier auf deinem Server.",
+        "points": {
+          "records": "Die Companion zeichnet über TravTrack auf, Alltag, Flug und Reise; die Punkte liegen auf diesem Server und sind Teil der Sicherung.",
+          "segment": "Die Strecke eines Flugs oder einer Reise ist ein Abschnitt in TravTrack, verknüpft mit dem Eintrag.",
+          "inbox": "TravTrack schickt Vorschläge in den Posteingang: Ländertage, Aufenthalte, fehlende Fahrten.",
+          "zones": "Privatzonen und Löschen verwaltest du in TravTrack."
+        }
+      },
+      "dawarich": {
+        "label": "Dawarich",
+        "sub": "Dein eigenes Dawarich, nur gelesen.",
+        "points": {
+          "readOnly": "TravStats liest aus deinem Dawarich, wie bisher. Es schreibt dort nichts und löscht dort nichts.",
+          "suggestions": "TravStats zählt daraus Ländertage und schlägt Aufenthalte im Posteingang vor.",
+          "recording": "Flüge und Reisen zeichnet die Companion vorerst weiter selbst auf."
+        }
+      }
+    },
     "errors": {
       "dawarichNotConfigured": "Dawarich lässt sich erst als Standortquelle wählen, wenn du unter „Dawarich-Verbindung“ deine eigene Verbindung eingetragen hast.",
       "travtrackUnavailable": "TravTrack ist auf diesem Server nicht verfügbar.",
