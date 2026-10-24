@@ -22,8 +22,9 @@ export async function runDawarichStaySweep(): Promise<void> {
   });
   for (const { userId } of accounts) {
     try {
-      await reserveScan(userId);
-      await scanStays(userId);
+      // Scheduled: each step re-checks that Dawarich is still the provider.
+      await reserveScan(userId, new Date(), { scheduled: true });
+      await scanStays(userId, { scheduled: true });
     } catch (err) {
       logScanFailure(userId, err);
     }

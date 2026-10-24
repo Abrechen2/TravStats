@@ -27,6 +27,9 @@ jest.mock("../../db", () => ({
         findManyArgs.push(args);
         return findMany(args);
       },
+      // Every listed account is still a Dawarich account when its turn comes;
+      // a switch mid-night is `dawarichProviderGate.test.ts` business.
+      count: async () => 1,
     },
   },
 }));

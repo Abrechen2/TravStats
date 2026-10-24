@@ -39,7 +39,9 @@ it("continues after one unavailable account and asks only for enabled scans of a
     select: { userId: true },
   });
   expect(scanStays).toHaveBeenCalledTimes(1);
-  expect(scanStays).toHaveBeenCalledWith("ready");
+  // Scheduled: the scan re-checks the provider at every step, "scan now" does not.
+  expect(reserveScan).toHaveBeenCalledWith("ready", expect.any(Date), { scheduled: true });
+  expect(scanStays).toHaveBeenCalledWith("ready", { scheduled: true });
 });
 it("runs on a UTC schedule, never at boot, and only installs one task", () => {
   startDawarichStayScheduler();

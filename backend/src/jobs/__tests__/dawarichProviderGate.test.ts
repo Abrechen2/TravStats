@@ -21,9 +21,21 @@ import type { DawarichClient, DawarichPoint } from "../../services/dawarich/dawa
 jest.mock("../../utils/achievements", () => ({ recheckAchievements: jest.fn(async () => {}) }));
 
 const sweptUsers: string[] = [];
+/** Runs inside each account's walk, between its two requests (a mid-walk switch). */
+const midWalk: { hook: ((userId: string) => Promise<void>) | null } = { hook: null };
+const requestsSent: string[] = [];
 jest.mock("../../services/dawarich/countryDaySweep", () => ({
-  sweepUserCountryDays: async (userId: string) => {
+  sweepUserCountryDays: async (
+    userId: string,
+    deps: { client: { getPoints: (w: unknown) => Promise<unknown> } }
+  ) => {
     sweptUsers.push(userId);
+    const window = { startAt: new Date(0), endAt: new Date(1) };
+    await deps.client.getPoints(window);
+    requestsSent.push(`${userId}:1`);
+    await midWalk.hook?.(userId);
+    await deps.client.getPoints(window);
+    requestsSent.push(`${userId}:2`);
     return {
       userId,
       monthsSwept: 0,
@@ -52,9 +64,14 @@ const points: DawarichPoint[] = [0, 10, 20, 30].map((m, i) => ({
   velocity: null,
   trackId: null,
 }));
+/** Runs on every stay-scan request (a switch while that scan runs). */
+const onStayRequest: { hook: (() => Promise<void>) | null } = { hook: null };
 const fakeClient: DawarichClient = {
   checkHealth: async () => ({ reachable: true, version: null }),
-  getPoints: async () => ({ points, truncated: false }),
+  getPoints: async () => {
+    await onStayRequest.hook?.();
+    return { points, truncated: false };
+  },
 };
 jest.mock("../../services/dawarich/dawarichClient", () => ({
   ...jest.requireActual("../../services/dawarich/dawarichClient"),
@@ -87,6 +104,18 @@ async function connectedUser(name: string, provider: "none" | "dawarich"): Promi
   });
   await prisma.dawarichStayScan.create({ data: { userId: id, enabled: true } });
   return id;
+}
+
+async function setProvider(userId: string, provider: "none" | "dawarich"): Promise<void> {
+  await prisma.userSettings.update({ where: { userId }, data: { locationProvider: provider } });
+}
+
+async function resetScan(userId: string): Promise<void> {
+  await prisma.dawarichStay.deleteMany({ where: { userId } });
+  await prisma.dawarichStayScan.update({
+    where: { userId },
+    data: { leaseUntil: null, startedAt: null, finishedAt: null, result: null },
+  });
 }
 
 async function scanState(userId: string) {
@@ -148,5 +177,90 @@ describe("scan now, pressed by the person", () => {
     }
     expect((await scanState(noneUser)).result).toBe("succeeded");
     expect(await prisma.dawarichStay.count({ where: { userId: noneUser } })).toBe(1);
+  });
+});
+
+/**
+ * The account list is read once; a switch afterwards must still count (Codex
+ * review of S3, finding 2). Two accounts on Dawarich: the first one's run
+ * switches the second to none (or itself, mid-walk), and nothing more is
+ * requested or written for that account.
+ */
+describe("a switch to another source during the night", () => {
+  let second: string;
+
+  beforeAll(async () => {
+    second = await connectedUser("gate-second", "dawarich");
+  });
+
+  afterEach(async () => {
+    midWalk.hook = null;
+    onStayRequest.hook = null;
+    await setProvider(dawarichUser, "dawarich");
+    await setProvider(second, "dawarich");
+  });
+
+  afterAll(async () => {
+    await prisma.user.deleteMany({ where: { id: second } });
+  });
+
+  it("country days: an account switched to none before its turn is not walked", async () => {
+    sweptUsers.length = 0;
+    const [firstId, laterId] = [dawarichUser, second].sort();
+    midWalk.hook = async (userId) => {
+      if (userId === firstId) await setProvider(laterId, "none");
+    };
+    const result = await runDawarichCountryDaySweep({
+      countryAt: () => null,
+      createClient: () => fakeClient,
+    });
+    expect(sweptUsers).toContain(firstId);
+    expect(sweptUsers).not.toContain(laterId);
+    expect(result.failed).toBe(0);
+  });
+
+  it("country days: a switch during an account's own walk stops its next request", async () => {
+    requestsSent.length = 0;
+    midWalk.hook = async (userId) => {
+      if (userId === second) await setProvider(second, "none");
+    };
+    const result = await runDawarichCountryDaySweep({
+      userId: second,
+      countryAt: () => null,
+      createClient: () => fakeClient,
+    });
+    expect(requestsSent).toEqual([`${second}:1`]);
+    expect(result).toMatchObject({ failed: 0, degraded: 0 });
+  });
+
+  it("stay scan: an account switched to none before its turn is not scanned", async () => {
+    await resetScan(dawarichUser);
+    await resetScan(second);
+    // Whichever account goes first switches the other one away.
+    let first: string | null = null;
+    onStayRequest.hook = async () => {
+      if (first) return;
+      const running = await prisma.dawarichStayScan.findFirst({
+        where: { userId: { in: [dawarichUser, second] }, result: "running" },
+        select: { userId: true },
+      });
+      first = running!.userId;
+      await setProvider(first === second ? dawarichUser : second, "none");
+    };
+    await runDawarichStaySweep();
+    const other = first === second ? dawarichUser : second;
+    expect((await scanState(first!)).result).toBe("succeeded");
+    expect((await scanState(other)).result).toBeNull();
+    expect(await prisma.dawarichStay.count({ where: { userId: other } })).toBe(0);
+  });
+
+  it("stay scan: a switch while the scan runs stops it before it writes a finding", async () => {
+    await resetScan(dawarichUser);
+    await resetScan(second);
+    await setProvider(dawarichUser, "none");
+    onStayRequest.hook = async () => setProvider(second, "none");
+    await runDawarichStaySweep();
+    expect((await scanState(second)).result).not.toBe("succeeded");
+    expect(await prisma.dawarichStay.count({ where: { userId: second } })).toBe(0);
   });
 });

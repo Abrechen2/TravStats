@@ -20,7 +20,7 @@ import { Prisma } from "../../../prisma";
 import {
   requirePlacesEnabled,
   requireStaySuggestionsEnabled,
-  stayScanAllowedWhere,
+  stayScanAllowed,
 } from "./availability";
 import { publicMarketCoverage } from "./publicCoverage";
 import { tripForStay } from "./tripMatch";
@@ -43,14 +43,18 @@ export async function ownConnection(userId: string) {
 }
 
 /** A database lease also excludes another server process, not just another click. */
-export async function reserveScan(userId: string, now = new Date()): Promise<void> {
+export async function reserveScan(
+  userId: string,
+  now = new Date(),
+  options: { scheduled?: boolean } = {}
+): Promise<void> {
   await requireStaySuggestionsEnabled(userId);
   await requirePlacesEnabled(userId);
   const acquired = await prisma.dawarichStayScan.updateMany({
     where: {
       userId,
       enabled: true,
-      ...stayScanAllowedWhere,
+      ...stayScanAllowed(options.scheduled === true),
       OR: [{ leaseUntil: null }, { leaseUntil: { lt: now } }],
     },
     data: {
@@ -99,9 +103,12 @@ export async function scanStays(
     marketStore?: CatalogStore;
     marketFetcher?: typeof fetch;
     marketEndpoint?: string;
+    /** Run by the schedule: also stops once Dawarich is no longer the provider. */
+    scheduled?: boolean;
   } = {}
 ) {
   const now = options.now ?? new Date();
+  const stayScanAllowedWhere = stayScanAllowed(options.scheduled === true);
   const days = options.lookbackDays ?? 7;
   if (!Number.isInteger(days) || days < 1 || days > 30)
     throw new AppError("Invalid scan window", 400);

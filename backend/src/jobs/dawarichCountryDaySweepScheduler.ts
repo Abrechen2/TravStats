@@ -143,6 +143,31 @@ async function eligibleAccounts(userId?: string): Promise<EligibleAccount[]> {
   return accounts;
 }
 
+/** Thrown by the guarded client once an account's provider is no longer Dawarich. */
+class ProviderSwitchedAway extends Error {}
+
+async function stillDawarichProvider(userId: string): Promise<boolean> {
+  return (await prisma.userSettings.count({ where: { userId, ...DAWARICH_PROVIDER_WHERE } })) > 0;
+}
+
+/**
+ * The account's client, asking before every request whether Dawarich is still
+ * its location provider. The account list is read once at the start of the
+ * night; a switch while earlier accounts run — or during this account's own
+ * walk — must stop the requests and writes that follow (Codex review of S3),
+ * not wait for tomorrow. Months already written stay, like any other
+ * interrupted walk.
+ */
+function providerGuardedClient(client: DawarichClient, userId: string): DawarichClient {
+  return {
+    checkHealth: () => client.checkHealth(),
+    getPoints: async (window) => {
+      if (!(await stillDawarichProvider(userId))) throw new ProviderSwitchedAway();
+      return client.getPoints(window);
+    },
+  };
+}
+
 /**
  * One pass over every eligible account.
  *
@@ -182,6 +207,10 @@ export async function runDawarichCountryDaySweep(
 
   for (const account of accounts) {
     try {
+      if (!(await stillDawarichProvider(account.userId))) {
+        logSwitchedAway(account.userId);
+        continue;
+      }
       /**
        * The §8.2 signal, rebuilt for each account and never shared between
        * them: "an airport somebody flew through" is true of one traveller and
@@ -198,7 +227,7 @@ export async function runDawarichCountryDaySweep(
         options.inFlight ?? (await buildFlightAirTimeTest(account.userId, countryAt));
 
       const outcome = await sweepUserCountryDays(account.userId, {
-        client: createClient(account.connection),
+        client: providerGuardedClient(createClient(account.connection), account.userId),
         countryAt,
         atKnownAirport,
         inFlight,
@@ -214,6 +243,10 @@ export async function runDawarichCountryDaySweep(
       result.partialDays += outcome.partialDays;
       if (outcome.errorKind) result.degraded += 1;
     } catch (error) {
+      if (error instanceof ProviderSwitchedAway) {
+        logSwitchedAway(account.userId);
+        continue;
+      }
       result.failed += 1;
       logger.warn(
         {
@@ -261,4 +294,12 @@ export function startDawarichCountryDaySweepScheduler(): void {
 export function stopDawarichCountryDaySweepScheduler(): void {
   schedulerTask?.stop();
   schedulerTask = null;
+}
+
+/** Not a failure: the person chose another source tonight. */
+function logSwitchedAway(userId: string): void {
+  logger.info(
+    { operation: "dawarich_country_day_sweep_provider_switched", userId },
+    "Dawarich is no longer this account's location source — its sweep stops"
+  );
 }
