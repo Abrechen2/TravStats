@@ -171,7 +171,12 @@ const flightView = z.strictObject({
     .optional(),
   aircraft: z.string().nullable().optional(),
   lastPosition: z
-    .strictObject({ lat: z.number(), lon: z.number(), recordedAt: z.string().datetime() })
+    .strictObject({
+      lat: z.number(),
+      lon: z.number(),
+      // Null when the privacy cut hid the recording's last fix (TravTrack plan T5).
+      recordedAt: z.string().datetime().nullable(),
+    })
     .nullable()
     .optional()
     .describe("The last point the phone sent; null when it has sent none"),

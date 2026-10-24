@@ -88,7 +88,7 @@ export async function travTrackFlightLines(
       device.points.map((p) => ({ t: p.atMs, lat: p.lat, lon: p.lon }))
     );
     if (!columns) continue;
-    const cut = cutFlightTrackWith(columns, circles(columns.startedAt.getTime()));
+    const cut = cutFlightTrackWith(columns, circles(columns.startedAt.getTime())).track;
     const geometry = cut.geometry as Array<[number, number]>;
     if (geometry.length < 2) continue;
     lines.push({

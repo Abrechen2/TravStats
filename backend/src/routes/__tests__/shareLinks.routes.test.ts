@@ -553,11 +553,12 @@ describe("flight links", () => {
       data: { userId: anna.id, name: "Zuhause", lat: 52.52, lon: 13.4, radiusM: 500 },
     });
     try {
-      // The last vertex lies in the zone; the last one left is the one before the chord.
+      // The last vertex lies in the zone; the last one left is the one before the
+      // chord, and the recording's end time belongs to the hidden fix: no time.
       expect((await view(link.token)).body.data.view.flight.lastPosition).toEqual({
         lat: 50.05,
         lon: 8.6,
-        recordedAt: "2030-06-01T13:30:00.000Z",
+        recordedAt: null,
       });
       await prisma.travTrackPrivacyZone.create({
         data: { userId: anna.id, name: "Abflug", lat: 50.04, lon: 8.58, radiusM: 5000 },

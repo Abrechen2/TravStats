@@ -36,9 +36,11 @@ const trackMeta = z.object({
     ),
   deviceId: z.string().nullable().describe("The paired device that sent it; null from a browser"),
   times: z
-    .object({ startedAt: timeValueSchema, endedAt: timeValueSchema })
+    .object({ startedAt: timeValueSchema.nullable(), endedAt: timeValueSchema.nullable() })
     .describe(
-      "First and last fix — the start on the departure airport's clock, the end on the arrival's"
+      "First and last fix — the start on the departure airport's clock, the end on the " +
+        "arrival's. An end the privacy cut removed has no time (null): the line holds no " +
+        "per-vertex times"
     ),
   pointCount: z.number().int().describe("Points of the RAW recording, before simplification"),
   jitterDropped: jitterDroppedField,

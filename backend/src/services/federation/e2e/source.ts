@@ -81,10 +81,16 @@ export async function projectRow(
   if (spec.category && !scope[spec.category]) return null;
   // A recorded line leaves only through the privacy cut (TravTrack plan T5).
   if (spec.model === "FlightTrack" && row.startedAt instanceof Date) {
-    row = await viewableFlightTrack(
+    const cut = await viewableFlightTrack(
       userId,
       row as Row & { startedAt: Date; geometry: unknown; segmentStarts: unknown }
     );
+    // A cut end has no time: it would date a point the recipient may not see.
+    row = {
+      ...cut.track,
+      ...(cut.startCut ? { startedAt: null } : {}),
+      ...(cut.endCut ? { endedAt: null } : {}),
+    };
   }
   if (Object.entries(spec.only ?? {}).some(([k, v]) => row[k] !== v)) return null;
   const fields = FIELD_INVENTORY[spec.model];

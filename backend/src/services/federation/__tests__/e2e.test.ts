@@ -193,6 +193,11 @@ it("hands a flight recording over without any vertex inside the owner's privacy 
       [10, 51],
     ],
     cumulativeKm: [0, 150],
+    // What is left, measured; the hidden arrival end has no time.
+    distanceKm: 150,
+    pointCount: 2,
+    endedAt: null,
+    startedAt: "2026-03-01T08:00:00.000Z",
   });
 });
 

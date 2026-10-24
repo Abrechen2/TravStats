@@ -143,10 +143,18 @@ describe("flight tracks from the location provider", () => {
         ],
         segmentStarts: [0],
         cumulativeKm: [0, 100, 430],
+        elevations: [
+          [0, 100],
+          [50, 9000],
+          [100, 11000],
+          [300, 10000],
+          [430, 50],
+        ],
         pointCount: 3,
         distanceKm: 430,
       },
     });
+    // A zone over the arrival end.
     await prisma.travTrackPrivacyZone.create({
       data: { userId, name: "Ziel", lat: 33.5, lon: 126.5, radiusM: 1000 },
     });
@@ -155,6 +163,16 @@ describe("flight tracks from the location provider", () => {
       [126.45, 37.4],
       [126.47, 36.5],
     ]);
+    // Every figure describes what is left, and the hidden end has no time.
+    expect(page.body.track).toMatchObject({ distanceKm: 100, pointCount: 2 });
+    expect(page.body.track.elevations).toEqual([
+      [0, 100],
+      [50, 9000],
+      [100, 11000],
+    ]);
+    expect(page.body.track.times.endedAt).toBeNull();
+    expect(page.body.track.times.startedAt).not.toBeNull();
+    expect(page.body.track).not.toHaveProperty("cumulativeKm");
     const lines = await request(app).get("/api/v1/flights/track-lines").set("Cookie", cookie);
     expect(JSON.stringify(lines.body)).not.toContain("33.5");
   });

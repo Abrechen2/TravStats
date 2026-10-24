@@ -78,7 +78,8 @@ export interface FlightShareView {
     basis: "schedule" | "reported";
   };
   aircraft?: string | null;
-  lastPosition?: { lat: number; lon: number; recordedAt: string } | null;
+  /** `recordedAt` null when the privacy cut hid the recording's last fix. */
+  lastPosition?: { lat: number; lon: number; recordedAt: string | null } | null;
 }
 
 type FlightPhase = "scheduled" | "inFlight" | "landed" | "cancelled" | "unknown";

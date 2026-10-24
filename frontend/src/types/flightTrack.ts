@@ -24,7 +24,8 @@ export interface FlightTrack {
   source: FlightTrackSource;
   uploadId: string;
   deviceId: string | null;
-  times: { startedAt: TimeValue; endedAt: TimeValue };
+  /** An end the privacy cut removed has no time (TravTrack plan T5). */
+  times: { startedAt: TimeValue | null; endedAt: TimeValue | null };
   /** Points of the raw recording, before simplification. */
   pointCount: number;
   /**

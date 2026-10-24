@@ -56,6 +56,7 @@ function trackOf(
     distanceKm: columns.distanceKm,
     geometry: columns.geometry as unknown,
     segmentStarts: columns.segmentStarts as unknown,
+    cumulativeKm: columns.cumulativeKm as unknown,
     elevations: columns.elevations as unknown,
     createdAt: columns.endedAt,
     updatedAt: columns.endedAt,

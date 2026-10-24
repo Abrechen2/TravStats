@@ -30,7 +30,7 @@ import { trackTimes, type TrackZoneColumns } from "../../services/flightDevice/t
 import { flightLiveTrackingEnabled } from "../../services/settings/accountPrefs";
 import logger from "../../utils/logger";
 import { providerFlightTrack, trackSourceQuerySchema } from "./trackSource";
-import { viewableFlightTrack } from "../../services/travtrack/flightTrackView";
+import { viewableFlightTrack, type ViewableTrack } from "../../services/travtrack/flightTrackView";
 
 /**
  * The phone's recording of a flight (forgejo#193) — `GET`/`POST`/`DELETE
@@ -101,6 +101,26 @@ async function present<T extends { startedAt: Date; endedAt: Date }>(
   return { ...rest, times: await trackTimes({ startedAt, endedAt }, flight) };
 }
 
+/**
+ * A privacy-cut line as a client reads it: an end the cut removed has no time
+ * (the line holds no per-vertex times), and the running distance it was
+ * measured with stays on the server, as it always has.
+ */
+async function presentCut<T extends { startedAt: Date; endedAt: Date; cumulativeKm?: unknown }>(
+  viewable: ViewableTrack<T>,
+  flight: TrackZoneColumns
+) {
+  const { cumulativeKm: _cumulativeKm, ...track } = viewable.track;
+  const shown = await present(track, flight);
+  return {
+    ...shown,
+    times: {
+      startedAt: viewable.startCut ? null : shown.times.startedAt,
+      endedAt: viewable.endCut ? null : shown.times.endedAt,
+    },
+  };
+}
+
 const alreadyRecorded = () =>
   new AppError("This flight already has a recording", 409, "TRACK_ALREADY_RECORDED");
 
@@ -167,15 +187,21 @@ router.get("/:id/track", async (req: AuthRequest, res: Response, next: NextFunct
       alternatives: entry.alternatives,
     };
     if (entry.origin !== "travstats") {
-      res.json({ track: fromProvider ? await present(fromProvider, flight) : null, ...meta });
+      res.json({ track: fromProvider ? await presentCut(fromProvider, flight) : null, ...meta });
       return;
     }
     const stored = await prisma.flightTrack.findUnique({
       where: { flightId: flight.id },
-      select: { ...TRACK_META_SELECT, geometry: true, segmentStarts: true, elevations: true },
+      select: {
+        ...TRACK_META_SELECT,
+        geometry: true,
+        segmentStarts: true,
+        elevations: true,
+        cumulativeKm: true,
+      },
     });
     const track = stored ? await viewableFlightTrack(userId, stored) : null;
-    res.json({ track: track ? await present(track, flight) : null, ...meta });
+    res.json({ track: track ? await presentCut(track, flight) : null, ...meta });
   } catch (err) {
     next(err);
   }

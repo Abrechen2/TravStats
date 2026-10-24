@@ -44,7 +44,7 @@ router.get("/track-lines", async (req: AuthRequest, res: Response, next: NextFun
       providerIs(userId, "travtrack"),
     ]);
     const own = rows.flatMap((row) => {
-      const cut = cutFlightTrackWith(row, circles(row.startedAt.getTime()));
+      const cut = cutFlightTrackWith(row, circles(row.startedAt.getTime())).track;
       // A line the cut leaves nothing of is drawn as nothing, like a flight without one.
       if (!Array.isArray(cut.geometry) || cut.geometry.length < 2) return [];
       return [
