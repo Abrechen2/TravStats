@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { locationProviderApi, locationProviderErrorKey } from "../../lib/api/locationProvider";
+import { locationProviderErrorKey } from "../../lib/api/locationProvider";
+import { useLocationProviderStore } from "../../store/locationProviderStore";
 import { token } from "../ui/tokens";
 
 /**
@@ -12,10 +13,14 @@ import { token } from "../ui/tokens";
  * `check` changes after every successful save; the hint asks the server
  * again then. A failed lookup shows nothing: this is an offer, the save it
  * follows has already succeeded, and Settings → Standort shows the real state.
- * A failed switch says why.
+ * A failed switch says why. Both the lookup and the switch go through
+ * `locationProviderStore`, so the "Standortquelle" section on the same page
+ * shows the new choice at once.
  */
 export default function DawarichProviderHint({ check }: { check: number }): JSX.Element | null {
   const { t } = useTranslation(["settings"]);
+  const refresh = useLocationProviderStore((s) => s.refresh);
+  const choose = useLocationProviderStore((s) => s.choose);
   const [offer, setOffer] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -26,24 +31,19 @@ export default function DawarichProviderHint({ check }: { check: number }): JSX.
     let cancelled = false;
     setDone(false);
     setError(null);
-    void locationProviderApi
-      .get()
-      .then((state) => {
-        if (!cancelled) setOffer(state.kind === "none" && state.choices.dawarich);
-      })
-      .catch(() => {
-        if (!cancelled) setOffer(false);
-      });
+    void refresh().then((state) => {
+      if (!cancelled) setOffer(state !== null && state.kind === "none" && state.choices.dawarich);
+    });
     return () => {
       cancelled = true;
     };
-  }, [check]);
+  }, [check, refresh]);
 
   const use = async (): Promise<void> => {
     setBusy(true);
     setError(null);
     try {
-      await locationProviderApi.set("dawarich");
+      await choose("dawarich");
       setOffer(false);
       setDone(true);
     } catch (err) {

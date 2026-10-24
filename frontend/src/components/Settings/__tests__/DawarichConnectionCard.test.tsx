@@ -57,6 +57,7 @@ vi.mock("../../../hooks/useTranslation", () => ({
 }));
 
 import DawarichConnectionCard from "../DawarichConnectionCard";
+import { useLocationProviderStore } from "../../../store/locationProviderStore";
 
 const CONFIGURED = {
   baseUrl: "https://dawarich.lan",
@@ -87,6 +88,7 @@ async function saveConnection(): Promise<ReturnType<typeof userEvent.setup>> {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  useLocationProviderStore.getState().reset();
   mockTranslateFn.mockImplementation((key: string) => key);
   getSettings.mockResolvedValue(CONFIGURED);
   getProvider.mockResolvedValue(providerState("dawarich"));

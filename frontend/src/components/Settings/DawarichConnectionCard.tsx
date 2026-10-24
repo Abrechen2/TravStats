@@ -6,6 +6,7 @@ import type { DawarichConnectionStatus, DawarichTestResult } from "../../types/d
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import DemoLockedNotice from "./DemoLockedNotice";
 import DawarichProviderHint from "./DawarichProviderHint";
+import { useLocationProviderStore } from "../../store/locationProviderStore";
 import Pill from "../ui/Pill";
 import { token } from "../ui/tokens";
 
@@ -38,6 +39,7 @@ export default function DawarichConnectionCard(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   // Raised after each successful save so the provider offer asks again.
   const [saved, setSaved] = useState(0);
+  const refreshProvider = useLocationProviderStore((s) => s.refresh);
 
   const apply = useCallback((next: DawarichConnectionStatus) => {
     setStatus(next);
@@ -96,6 +98,8 @@ export default function DawarichConnectionCard(): JSX.Element {
     try {
       apply(await dawarichApi.updateSettings({ apiKey: null }));
       setApiKey("");
+      // A removed key closes the Dawarich choice on the "Standortquelle" section.
+      void refreshProvider();
     } catch (err) {
       const kind = dawarichFailureKind(err);
       setError(t(kind ? dawarichFailureKey(kind) : "trips:tours.dawarichSettings.saveError"));

@@ -16,7 +16,11 @@ vi.mock("../../../lib/api/locationProvider", async (importOriginal) => ({
   locationProviderApi: { get: getProvider, set: setProvider },
 }));
 
+const isDemo = vi.hoisted(() => ({ current: false }));
+vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => isDemo.current }));
+
 import LocationProviderSection from "../LocationProviderSection";
+import { useLocationProviderStore } from "../../../store/locationProviderStore";
 
 /**
  * Settings → Standort (TravTrack plan, task S5): choose where recordings go
@@ -45,6 +49,8 @@ const show = () =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  isDemo.current = false;
+  useLocationProviderStore.getState().reset();
   getProvider.mockResolvedValue(state());
 });
 
@@ -136,5 +142,13 @@ describe("LocationProviderSection", () => {
       "settings:locationProvider.loadError"
     );
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+  });
+
+  it("shows the shared demo account the demo-locked notice instead of choices", async () => {
+    isDemo.current = true;
+    show();
+    expect(await screen.findByText("settings:demoLocked")).toBeInTheDocument();
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(getProvider).not.toHaveBeenCalled();
   });
 });

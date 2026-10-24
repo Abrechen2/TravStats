@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import {
-  locationProviderApi,
   locationProviderErrorKey,
   type LocationProviderKind,
-  type LocationProviderSettings,
 } from "../../lib/api/locationProvider";
+import { useLocationProviderStore } from "../../store/locationProviderStore";
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import DemoLockedNotice from "./DemoLockedNotice";
 import { alpha, token } from "../ui/tokens";
 
 /**
@@ -23,6 +24,11 @@ import { alpha, token } from "../ui/tokens";
  *
  * TravTrack appears only where this server offers it (phase 1: nowhere), or
  * while it is the stored choice, so the warning has a card to sit under.
+ *
+ * The state lives in `locationProviderStore`, shared with the Dawarich
+ * connection card on the same page, which opens and closes the Dawarich choice
+ * and can switch the provider itself. The shared demo account sees the
+ * demo-locked notice: its choice would be every visitor's.
  */
 
 const POINTS: Record<LocationProviderKind, readonly string[]> = {
@@ -35,25 +41,17 @@ const NS = "settings:locationProvider";
 
 export default function LocationProviderSection(): JSX.Element {
   const { t } = useTranslation(["settings"]);
-  const [state, setState] = useState<LocationProviderSettings | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const isDemo = useIsDemoAccount();
+  const state = useLocationProviderStore((s) => s.settings);
+  const loadFailed = useLocationProviderStore((s) => s.loadFailed && s.settings === null);
+  const refresh = useLocationProviderStore((s) => s.refresh);
+  const choose = useLocationProviderStore((s) => s.choose);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    locationProviderApi
-      .get()
-      .then((next) => {
-        if (!cancelled) setState(next);
-      })
-      .catch(() => {
-        if (!cancelled) setLoadFailed(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (!isDemo) void refresh();
+  }, [isDemo, refresh]);
 
   const pick = useCallback(
     async (kind: LocationProviderKind): Promise<void> => {
@@ -61,14 +59,16 @@ export default function LocationProviderSection(): JSX.Element {
       setSaving(true);
       setError(null);
       try {
-        setState(await locationProviderApi.set(kind));
+        await choose(kind);
       } catch (err) {
         setError(t(locationProviderErrorKey(err)));
+        // A refusal may mean the choices moved (a key removed elsewhere): re-ask.
+        void refresh();
       } finally {
         setSaving(false);
       }
     },
-    [state, t]
+    [state, choose, refresh, t]
   );
 
   const kinds: LocationProviderKind[] = state
@@ -85,13 +85,15 @@ export default function LocationProviderSection(): JSX.Element {
     <SectionCard>
       <SectionTitle title={t(`${NS}.title`)} description={t(`${NS}.description`)} />
 
-      {loadFailed && (
+      {isDemo && <DemoLockedNotice />}
+
+      {!isDemo && loadFailed && (
         <p role="alert" className="text-sm" style={{ color: token("bad") }}>
           {t(`${NS}.loadError`)}
         </p>
       )}
 
-      {state && (
+      {!isDemo && state && (
         <>
           <fieldset className="border-0 p-0">
             <legend className="label">{t(`${NS}.legend`)}</legend>
