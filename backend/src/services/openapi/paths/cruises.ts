@@ -13,6 +13,8 @@ import { z } from "zod";
 import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { documentIdsBodySchema } from "../../../schemas/document";
+import { clientRefBodySchema } from "../../../schemas/clientRef";
+import { clientRefResponses } from "./clientRef";
 import { errorContent, timeRefused } from "./shared";
 import { CRUISE_QUERY_STATUSES } from "../../../schemas/cruise";
 import { CRUISE_SORT_FIELDS } from "../../../shared/cruiseListOrder";
@@ -263,6 +265,10 @@ registry.registerPath({
   },
 });
 
+const cruiseRefResponses = clientRefResponses({
+  "application/json": { schema: envelope(cruise) },
+});
+
 registry.registerPath({
   method: "post",
   path: "/cruises",
@@ -276,7 +282,10 @@ registry.registerPath({
     body: {
       content: {
         "application/json": {
-          schema: createCruiseSchema.openapi("CruiseCreateInput").and(documentIdsBodySchema),
+          schema: createCruiseSchema
+            .openapi("CruiseCreateInput")
+            .and(documentIdsBodySchema)
+            .and(clientRefBodySchema),
         },
       },
     },
@@ -284,8 +293,14 @@ registry.registerPath({
   responses: {
     422: timeRefused,
     201: { description: "Created", content: { "application/json": { schema: envelope(cruise) } } },
+    ...cruiseRefResponses,
     400: { description: "Validation failed", content: errorContent },
-    409: { description: "A cruise from the same import already exists", content: errorContent },
+    409: {
+      description:
+        "A cruise from the same import already exists (`already_imported`), or " +
+        cruiseRefResponses[409].description,
+      content: errorContent,
+    },
   },
 });
 

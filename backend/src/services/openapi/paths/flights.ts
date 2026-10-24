@@ -13,6 +13,8 @@ import {
   timeRefused,
 } from "./shared";
 import { documentIdsBodySchema } from "../../../schemas/document";
+import { clientRefBodySchema } from "../../../schemas/clientRef";
+import { clientRefResponses } from "./clientRef";
 import { FLIGHT_SORT_FIELDS } from "../../../schemas/flight";
 
 registry.registerPath({
@@ -221,6 +223,13 @@ registry.registerPath({
   },
 });
 
+const flightCreated = {
+  "application/json": {
+    schema: z.object({ flight: flightResponse, mergedFields: z.array(z.string()).optional() }),
+  },
+};
+const flightRefResponses = clientRefResponses(flightCreated);
+
 registry.registerPath({
   method: "post",
   path: "/flights",
@@ -238,26 +247,29 @@ registry.registerPath({
       force: z.enum(["true", "false"]).optional(),
     }),
     body: {
-      content: { "application/json": { schema: flightCreateInput.and(documentIdsBodySchema) } },
+      content: {
+        "application/json": {
+          schema: flightCreateInput.and(documentIdsBodySchema).and(clientRefBodySchema),
+        },
+      },
     },
   },
   responses: {
     422: timeRefused,
-    201: {
-      description: "Flight created",
-      content: {
-        "application/json": {
-          schema: z.object({
-            flight: flightResponse,
-            mergedFields: z.array(z.string()).optional(),
-          }),
-        },
-      },
+    201: { description: "Flight created", content: flightCreated },
+    ...flightRefResponses,
+    200: {
+      description:
+        "`?merge=true` folded the data into an existing flight (`mergedFields` names what " +
+        "it filled), or " +
+        flightRefResponses[200].description,
+      content: flightCreated,
     },
     400: { description: "Validation failed", content: errorContent },
     409: {
       description:
-        "Duplicate detected (omit `?force` or pass `?merge=true` to handle). A document import " +
+        flightRefResponses[409].description +
+        " Otherwise: duplicate detected (omit `?force` or pass `?merge=true` to handle). A document import " +
         'of a flight already stored answers `{ error: "already_imported", data: { id, ' +
         "filledDeadlines? } }`: nothing is overwritten, but an `onlineCheckInOpensAt` the stored " +
         "flight lacks is filled and named in `filledDeadlines` (forgejo#285).",

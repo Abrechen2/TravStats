@@ -889,6 +889,14 @@ model UserSettings {
   dawarichBaseUrl String? @map("dawarich_base_url")
   dawarichApiKey  String? @map("dawarich_api_key")
 
+  /// „Heimatort" (Companion audit 2026-10-23): where the traveller lives,
+  /// `{name, lat, lon, zone}` — the Companion's "leave" reminder reads it. Was
+  /// device-only (Companion decision D-home); the server is the record now.
+  homePlace      Json?     @map("home_place")
+  /// The passport's expiry, a calendar day (was device-only, Companion D13).
+  /// Private: never in a share, a public link, a comparison or a log line.
+  passportExpiry DateTime? @map("passport_expiry") @db.Date
+
   /// Strava connection (2.7, design 2026-09-24 §5). OAuth tokens, both
   /// encrypted at rest; the athlete id identifies the account for the UI.
   /// Strava's API agreement (Nov 2024) lets a third-party app show this data
@@ -1904,6 +1912,7 @@ model Trip {
   publicShareLinks PublicShareLink[]
   tripShareInvites TripShareInvite[]
   recordingBatches TripRecordingBatch[]
+  packingList      TripPackingList?
   mergedFrom       MergedTripRedirect[]
 
   documents  Document[]
@@ -5620,4 +5629,26 @@ model UserWebdavSync {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_webdav_syncs")
+}
+
+/// A trip's packing list (Companion audit 2026-10-23; was device-only, D12).
+/// One row per trip, the items as one JSON array: the list is small (≤ 200
+/// items) and is always read and written whole. `rev` is raised on every
+/// write; a writer names the `rev` it started from, so two devices never
+/// overwrite each other unseen (409 `PACKING_LIST_STALE`). `lastMutationId`
+/// lets a client resend a write whose answer it lost without a false conflict.
+model TripPackingList {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  tripId         String   @unique @map("trip_id")
+  /// `[{id, label, done}]`, in the list's order.
+  items          Json
+  rev            Int      @default(1)
+  lastMutationId String?  @map("last_mutation_id")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("trip_packing_lists")
 }

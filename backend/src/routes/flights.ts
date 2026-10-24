@@ -1,4 +1,3 @@
-import { findReimportedFlight } from "../services/flights/flightReimport";
 import { Router, Response, NextFunction } from "express";
 import { Prisma } from "../prisma";
 import { prisma } from "../db";
@@ -9,8 +8,9 @@ import { flightListHandler } from "./flights/list";
 import { flightFacetsHandler } from "./flights/facets";
 import { nextFlightHandler } from "./flights/next";
 import { deleteFlightHandler } from "./flights/remove";
+import { createFlightHandler } from "./flights/create";
 import { propagateWrite, shareSnapshot } from "../services/sharing/propagate";
-import { createFlightSchema, updateFlightSchema, flightQuerySchema } from "../schemas/flight";
+import { updateFlightSchema, flightQuerySchema } from "../schemas/flight";
 import logger from "../utils/logger";
 import { AppError } from "../middleware/errorHandler";
 import {
@@ -49,20 +49,13 @@ import {
   resolveAirportCoordinate,
 } from "../services/airportCoordinates";
 import { assertMergedChronology, toUtcDate } from "../services/flights/mergedChronology";
-import { buildFlightCreateData } from "../services/flights/flightCreateData";
-import { warnIfScheduledInPast } from "../services/flights/scheduledInPastWarning";
-import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
 import { airlineCodeUpdate } from "../utils/airlineCodeUpdate";
 import { normalizeAircraft } from "../utils/aircraftNormalize";
 import { calculateNextApiCheckAt } from "../utils/smartCheckSchedule";
-import { resolveDuplicateFlight } from "../services/flights/duplicateResolution";
 import batchRouter from "./flightsBatch";
-import { ownedImportBatchId, ownedTripId } from "./flights/createLinks";
-import { recomputeTripStatus } from "../services/tripStatusService";
-import { flightExternalRef, isDocumentImport } from "../services/importProvenance";
 import { deriveFlightStatus, FLIGHT_PASSTHROUGH } from "../shared/statusDerivation";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
-import { fxColumnsFor, flightOwnAmount, getBaseCurrency } from "../services/fx/snapshot";
+import { flightOwnAmount, getBaseCurrency } from "../services/fx/snapshot";
 import { refreshFxOnEdit } from "../services/fx/refreshOnEdit";
 
 const router = Router();
@@ -152,169 +145,9 @@ router.use(authenticate);
 router.use(requireWriteScope);
 router.use(batchRouter);
 
-// Create flight (rate limited to prevent abuse)
-router.post(
-  "/",
-  flightCreationLimiter,
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
-    try {
-      const userId = req.userId!;
-      const data = createFlightSchema.parse(await withAirportTimezones(req.body));
-      const documentIds = await takeDocumentIds(userId, req.body);
-
-      // A mail carrying ONE flight comes through here rather than the batch
-      // route, so provenance has to live in both places or half of every
-      // mail-imported logbook stays unrecorded.
-      const importBatchId = await ownedImportBatchId(userId, data.importBatchId);
-      const tripId = await ownedTripId(userId, data.tripId); // #355: was dropped
-      const externalRef = isDocumentImport(data.dataSource)
-        ? flightExternalRef({
-            flightNumber: data.flightNumber,
-            departureLocal: data.departureLocal,
-            depIata: data.departure.iata,
-            arrIata: data.arrival.iata,
-          })
-        : null;
-      if (externalRef) {
-        const existing = await findReimportedFlight(userId, externalRef, data, !!req.apiToken);
-        if (existing) {
-          // Re-reading a forwarded confirmation is ordinary. 409 says what
-          // happened; a 500 from the unique index would say the import broke.
-          // The kept confirmation is filed on the flight it already made.
-          await linkDocuments(userId, documentIds, { type: "flight", id: existing.id });
-          res.status(409).json({ success: false, error: "already_imported", data: existing });
-          return;
-        }
-      }
-
-      warnIfScheduledInPast(userId, data);
-
-      const departureUtc = toUtcDate(data.departureLocal, data.depTimezone, data.departureFold);
-      // ?force=true → bypass the duplicate check and create a real second row
-      //   (user opt-in). ?merge=true → fold the incoming data into the flight
-      //   the user already has. force wins if both are set.
-      //
-      // The decision itself, and the merge, live in `resolveDuplicateFlight` —
-      // two lookups, a merge patch, a companion resolution and a transaction are
-      // database choreography, not routing.
-      const forceCreate = req.query["force"] === "true";
-      const mergeIntoExisting = !forceCreate && req.query["merge"] === "true";
-      if (!forceCreate) {
-        const outcome = await resolveDuplicateFlight({
-          userId,
-          data,
-          departureUtc,
-          merge: mergeIntoExisting,
-        });
-
-        if (outcome.kind === "merged") {
-          await linkDocuments(userId, documentIds, { type: "flight", id: outcome.flight.id });
-          res.status(200).json({
-            flight: await withAirportFacts(outcome.flight),
-            mergedFields: outcome.mergedFields,
-          });
-          return;
-        }
-
-        if (outcome.kind === "duplicate") {
-          res.status(409).json({
-            error: "DUPLICATE_FLIGHT",
-            message: outcome.message,
-            existingFlight: outcome.existing,
-          });
-          return;
-        }
-      }
-
-      // Enrich airport data with missing information from database
-      const enriched = await enrichFlightAirports({
-        departure: {
-          iata: data.departure.iata ?? undefined,
-          icao: data.departure.icao ?? undefined,
-          name: data.departure.name ?? undefined,
-          lat: data.departure.lat,
-          lon: data.departure.lon,
-        },
-        arrival: {
-          iata: data.arrival.iata ?? undefined,
-          icao: data.arrival.icao ?? undefined,
-          name: data.arrival.name ?? undefined,
-          lat: data.arrival.lat,
-          lon: data.arrival.lon,
-        },
-      });
-
-      // Resolve companion names to Companion entities up front (find-or-create
-      // is idempotent via companionService, so it's safe to run outside the
-      // transaction below). The flight row and its links are written together
-      // inside a transaction so a failure never leaves the legacy `companions`
-      // array and the `companionLinks` table disagreeing.
-      const companionNames = data.companions ?? [];
-      const resolvedCompanions = await resolveCompanions(userId, companionNames);
-
-      const fxColumns = await fxColumnsFor(
-        {
-          amount: flightOwnAmount(data),
-          currency: data.currency,
-          date: departureUtc,
-        },
-        await getBaseCurrency(userId)
-      );
-      const createData = await buildFlightCreateData(data, {
-        mode: "single",
-        userId,
-        externalRef,
-        importBatchId,
-        tripId,
-        enriched,
-        companionNames: resolvedCompanions.map((c) => c.displayName),
-        fx: fxColumns,
-        apiToken: req.apiToken,
-      });
-
-      const flight = await prisma.$transaction(async (tx) => {
-        const created = await tx.flight.create({
-          data: createData,
-        });
-
-        if (resolvedCompanions.length > 0) {
-          await tx.flightCompanion.createMany({
-            data: linkRowsFor(resolvedCompanions.map((c) => c.id)).map((row) => ({
-              ...row,
-              flightId: created.id,
-            })),
-            skipDuplicates: true,
-          });
-        }
-        await propagateWrite(tx, userId, "flight", created.id);
-        return created;
-      });
-      await linkDocuments(userId, documentIds, { type: "flight", id: flight.id });
-      if (tripId) await recomputeTripStatus(tripId);
-
-      // Check achievements after creating a flight and return newly unlocked ones
-      let newAchievements: Awaited<ReturnType<typeof checkAndUpdateAchievements>> = [];
-      if (flight) {
-        try {
-          newAchievements = await checkAndUpdateAchievements(userId);
-        } catch (err: unknown) {
-          logger.error({
-            type: "achievement_check_failed",
-            userId,
-            error: err instanceof Error ? err.message : "Unknown error",
-          });
-        }
-      }
-
-      res.status(201).json({
-        flight: flight ? await withAirportFacts(flight) : flight,
-        newAchievements: newAchievements.length > 0 ? newAchievements : undefined,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-);
+// Create flight (rate limited to prevent abuse). The handler lives in
+// ./flights/create.ts: this file is frozen at its size and may only shrink.
+router.post("/", flightCreationLimiter, createFlightHandler);
 
 router.get("/next", nextFlightHandler);
 

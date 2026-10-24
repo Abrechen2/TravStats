@@ -4,7 +4,8 @@ import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { statsLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
-import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
+import { fileReceipts, takeDocumentIds } from "../services/documents/documentService";
+import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import { createCruiseSchema, updateCruiseSchema } from "../schemas/cruise";
 import { CRUISE_INCLUDE } from "./cruises/include";
@@ -196,108 +197,144 @@ router.get(
 router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
-    const parsed = createCruiseSchema.safeParse(req.body);
-    // The ZodError itself, not its `.message`: that is a JSON dump of the
-    // issues, which the edit form used to print verbatim into a German page.
-    // The error handler answers it with `code: VALIDATION_FAILED` + details.
-    if (!parsed.success) throw parsed.error;
-
-    const {
-      stops,
-      startDate,
-      endDate,
-      tripId,
-      bookingId,
-      status,
-      companions,
-      importBatchId,
-      ...rest
-    } = parsed.data;
-
-    // Prisma enforces that the trip and booking EXIST, never whose they are —
-    // so without this a cruise could be filed under a stranger's trip and
-    // would show up on their timeline (AUD-038).
-    await assertReferencesOwned(userId, { tripId, bookingId });
-    const documentIds = await takeDocumentIds(userId, req.body);
-
-    // A batch id means "this came from an import". It is client-supplied, so
-    // ownership is checked here — otherwise it is a handle into someone
-    // else's undo history. An unrecognised one is dropped rather than
-    // refused: the cruise the user asked for matters more than the record of
-    // where it came from.
-    let batchId: string | null = null;
-    if (importBatchId) {
-      const batch = await prisma.importBatch.findFirst({
-        where: { id: importBatchId, userId, domain: "cruise" },
-        select: { id: true },
-      });
-      batchId = batch?.id ?? null;
-    }
-    // Derived here, not by the caller: what counts as "the same cruise" is a
-    // rule about the data, and every client restating it would be a rule with
-    // several versions.
-    const externalRef = batchId
-      ? cruiseExternalRef({
-          bookingReference: rest.bookingReference,
-          shipNameOverride: rest.shipNameOverride,
-          cruiseLine: rest.cruiseLine,
-          startDate,
-        })
-      : null;
+    // An outbox replay carries the key it minted (forgejo#283): a repeat
+    // answers the cruise the first POST made, 200 instead of 201.
+    const { clientRef, rest: body } = takeClientRef(req.body);
+    const { created, result } = await createOnce({
+      userId,
+      clientRef,
+      kind: "cruise",
+      payload: body,
+      create: (claim) => createCruise(userId, body, Boolean(req.apiToken), claim),
+      replay: async (id) => {
+        const cruise = await prisma.cruise.findFirst({
+          where: { id, userId },
+          include: CRUISE_INCLUDE,
+        });
+        return cruise && { cruise };
+      },
+    });
 
     // Reading the same confirmation twice is a normal thing to do — a forward,
     // a second copy in the inbox. Answering it with a 500 from a unique-index
     // violation would read as "the import is broken"; 409 says what actually
     // happened, and the importer counts it instead of creating a twin.
-    if (externalRef) {
-      const existing = await prisma.cruise.findFirst({
-        where: { userId, externalRef },
-        select: { id: true },
+    if ("alreadyImported" in result) {
+      res.status(409).json({
+        success: false,
+        error: "already_imported",
+        data: { id: result.alreadyImported },
       });
-      if (existing) {
-        res.status(409).json({
-          success: false,
-          error: "already_imported",
-          data: { id: existing.id },
+      return;
+    }
+
+    if (created) {
+      // Await the recalc (was fire-and-forget). Its $transaction on
+      // user_achievement rows must commit before the response returns — a
+      // leaked, un-awaited transaction outlived the request and deadlocked
+      // (40P01) against the next mutation or the test teardown cascade, and
+      // could silently drop an achievement update on a rapid double-mutation
+      // for one user. Mirrors the awaited try/catch in flights.ts.
+      try {
+        await checkAndUpdateAchievements(userId);
+      } catch (achErr) {
+        logger.error({
+          operation: "cruise_achievement_check_failed",
+          error: achErr instanceof Error ? achErr.message : achErr,
         });
-        return;
       }
+      logger.info({ operation: "cruise_create", cruiseId: result.cruise.id, userId });
     }
-
-    // Everything from status derivation to leg recompute lives in
-    // `services/cruise/createCruise.ts`, shared with the spreadsheet import.
-    const cruise = await createCruiseRecord(
-      userId,
-      { ...rest, stops, startDate, endDate, tripId, bookingId, status, companions },
-      {
-        importBatchId: batchId,
-        externalRef,
-        request: { userId, viaToken: Boolean(req.apiToken) },
-      }
-    );
-    await linkDocuments(userId, documentIds, { type: "cruise", id: cruise.id });
-
-    // Await the recalc (was fire-and-forget). Its $transaction on
-    // user_achievement rows must commit before the response returns — a
-    // leaked, un-awaited transaction outlived the request and deadlocked
-    // (40P01) against the next mutation or the test teardown cascade, and
-    // could silently drop an achievement update on a rapid double-mutation
-    // for one user. Mirrors the awaited try/catch in flights.ts.
-    try {
-      await checkAndUpdateAchievements(userId);
-    } catch (achErr) {
-      logger.error({
-        operation: "cruise_achievement_check_failed",
-        error: achErr instanceof Error ? achErr.message : achErr,
-      });
-    }
-
-    logger.info({ operation: "cruise_create", cruiseId: cruise.id, userId });
-    res.status(201).json({ success: true, data: withCruiseTimes(cruise) });
+    res.status(created ? 201 : 200).json({ success: true, data: withCruiseTimes(result.cruise) });
   } catch (err) {
     next(err);
   }
 });
+
+async function createCruise(
+  userId: string,
+  body: unknown,
+  viaToken: boolean,
+  claim: ClaimClientRef
+): Promise<
+  { cruise: Awaited<ReturnType<typeof createCruiseRecord>> } | { alreadyImported: string }
+> {
+  const parsed = createCruiseSchema.safeParse(body);
+  // The ZodError itself, not its `.message`: that is a JSON dump of the
+  // issues, which the edit form used to print verbatim into a German page.
+  // The error handler answers it with `code: VALIDATION_FAILED` + details.
+  if (!parsed.success) throw parsed.error;
+
+  const {
+    stops,
+    startDate,
+    endDate,
+    tripId,
+    bookingId,
+    status,
+    companions,
+    importBatchId,
+    ...rest
+  } = parsed.data;
+
+  // Prisma enforces that the trip and booking EXIST, never whose they are —
+  // so without this a cruise could be filed under a stranger's trip and
+  // would show up on their timeline (AUD-038).
+  await assertReferencesOwned(userId, { tripId, bookingId });
+  const documentIds = await takeDocumentIds(userId, body);
+
+  // A batch id means "this came from an import". It is client-supplied, so
+  // ownership is checked here — otherwise it is a handle into someone
+  // else's undo history. An unrecognised one is dropped rather than
+  // refused: the cruise the user asked for matters more than the record of
+  // where it came from.
+  let batchId: string | null = null;
+  if (importBatchId) {
+    const batch = await prisma.importBatch.findFirst({
+      where: { id: importBatchId, userId, domain: "cruise" },
+      select: { id: true },
+    });
+    batchId = batch?.id ?? null;
+  }
+  // Derived here, not by the caller: what counts as "the same cruise" is a
+  // rule about the data, and every client restating it would be a rule with
+  // several versions.
+  const externalRef = batchId
+    ? cruiseExternalRef({
+        bookingReference: rest.bookingReference,
+        shipNameOverride: rest.shipNameOverride,
+        cruiseLine: rest.cruiseLine,
+        startDate,
+      })
+    : null;
+
+  if (externalRef) {
+    const existing = await prisma.cruise.findFirst({
+      where: { userId, externalRef },
+      select: { id: true },
+    });
+    // Nothing created, so the key stays unspent: a repeat asks again.
+    if (existing) return { alreadyImported: existing.id };
+  }
+
+  // Everything from status derivation to leg recompute lives in
+  // `services/cruise/createCruise.ts`, shared with the spreadsheet import.
+  // The key and the documents commit with the cruise (forgejo#283).
+  const cruise = await createCruiseRecord(
+    userId,
+    { ...rest, stops, startDate, endDate, tripId, bookingId, status, companions },
+    {
+      importBatchId: batchId,
+      externalRef,
+      request: { userId, viaToken },
+      inTx: async (tx, id) => {
+        await claim(tx, id);
+        await fileReceipts(tx, userId, documentIds, { type: "cruise", id });
+      },
+    }
+  );
+  return { cruise };
+}
 
 router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

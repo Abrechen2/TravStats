@@ -13,7 +13,7 @@
  * is a property of the request, not of the cruise.
  */
 
-import { prisma } from "../../db";
+import { prisma, type DbTransaction } from "../../db";
 import type { createCruiseSchema } from "../../schemas/cruise";
 import type { z } from "zod";
 import { CRUISE_INCLUDE } from "../../routes/cruises/include";
@@ -44,6 +44,12 @@ export interface CruiseProvenance {
    * whose time cells are legacy fake-UTC values an export wrote.
    */
   request?: StopRequestContext;
+  /**
+   * Runs inside the creating transaction, after the cruise and its stops are
+   * written: the route's client-ref claim and document filing (forgejo#283),
+   * which must commit with the cruise or not at all.
+   */
+  inTx?: (tx: DbTransaction, cruiseId: string) => Promise<void>;
 }
 
 export async function createCruiseRecord(
@@ -163,6 +169,7 @@ export async function createCruiseRecord(
 
     await recomputeLegsForCruise(created.id, tx);
     await propagateWrite(tx, userId, "cruise", created.id);
+    await provenance.inTx?.(tx, created.id);
     return tx.cruise.findUniqueOrThrow({ where: { id: created.id }, include: CRUISE_INCLUDE });
   });
 

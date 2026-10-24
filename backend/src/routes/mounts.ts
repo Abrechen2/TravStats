@@ -84,6 +84,7 @@ import tourPointRoutes from "./trips/tourPoints";
 import tourKindRoutes from "./trips/tourKind";
 import roadtripRoutes from "./roadtrips";
 import tripExpenseRoutes from "./trips/tripExpenses";
+import tripPackingRoutes from "./trips/tripPacking";
 import tripRecordingRoutes from "./trips/tripRecording";
 import stravaRoutes from "./integrations/strava";
 import openDataRoutes from "./openData";
@@ -370,6 +371,9 @@ export const apiMounts: ApiMount[] = [
   // Expenses (forgejo#140) on a trip, a roadtrip or any section. Every path
   // ends in `/expenses` or `/expenses/:expenseId`, so they shadow nothing above.
   { id: "tripExpenses", base: "/api/v1", router: tripExpenseRoutes },
+  // A trip's packing list (Companion audit 2026-10-23). Its paths end in
+  // `/packing`, so they shadow nothing above.
+  { id: "tripPacking", base: "/api/v1", router: tripPackingRoutes },
   // Strava (2.7): the OAuth round trip, the activity list and the imports.
   // Its `/tours/...` paths end in `/strava`, so they shadow nothing above.
   { id: "strava", base: "/api/v1", router: stravaRoutes },

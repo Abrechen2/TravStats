@@ -48,6 +48,8 @@ export const USER_EXPORT_SELECT = {
       // Which Immich albums a trip links, and in which mode. The album's
       // images live on the user's Immich; the link is what exists only here.
       immichAlbums: true,
+      // The packing list the Companion used to keep on the phone only.
+      packingList: { select: { items: true, rev: true, updatedAt: true } },
       // The saved plan and proposals are user content. Mutation receipts and
       // creation/replay keys are transport bookkeeping, not portable records.
       travelPlan: {
@@ -178,6 +180,9 @@ export const USER_EXPORT_SELECT = {
       appPrefs: true,
       autoCreateTrips: true,
       homeCountry: true,
+      // Personal facts the Companion used to keep on the phone only.
+      homePlace: true,
+      passportExpiry: true,
       preferredVisionParser: true,
       preferredTextParser: true,
       immichDefaultMode: true,

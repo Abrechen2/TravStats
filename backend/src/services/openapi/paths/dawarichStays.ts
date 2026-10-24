@@ -42,7 +42,11 @@ registry.registerPath({
   description:
     "Conservative stationary clusters; not proof of GPS measurement or overnight accommodation. Original evidence and corrected times remain separate. Up to 200 most recent rows per status. `covered` lists findings resolved because a recorded place visit or lodging stay already holds them (within 250 m, a visit clock within 2 h or on the same local day); `evidence.coveredBy` names that record. Reading `pending` resolves newly covered findings first. With the account's `staySuggestions.enabled` setting off, `pending` answers an empty list, nothing is resolved, and accept/reject/scan are refused with `STAY_SUGGESTIONS_DISABLED` (409); stored rows are kept.",
   request: {
-    query: z.object({ status: z.enum(["pending", "accepted", "rejected", "covered"]).optional() }),
+    query: z.object({
+      status: z.enum(["pending", "accepted", "rejected", "covered"]).optional(),
+      from: z.string().optional().describe("ISO instant: only stays ending at or after it"),
+      to: z.string().optional().describe("ISO instant: only stays starting at or before it"),
+    }),
   },
   responses: { 200: response(z.array(stay)) },
 });

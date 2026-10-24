@@ -212,4 +212,17 @@ describe("Dawarich stays already recorded by a visit or a hotel stay", () => {
     expect(accept.status).toBe(409);
     expect(await prisma.placeVisit.count({ where: { userId } })).toBe(1);
   });
+
+  it("lists only the stays overlapping a requested window (Companion audit 2026-10-23)", async () => {
+    expect(await scan()).toMatchObject({ created: 1 });
+    const list = (query: string) =>
+      request(app).get(`/api/v1/dawarich-stays?${query}`).set("Cookie", cookie);
+
+    const inside = await list("from=2026-10-10T00:00:00Z&to=2026-10-10T23:59:59Z");
+    expect(inside.body.data).toHaveLength(1);
+    // The stop ends 15:20 UTC: a window from 15:00 still overlaps it.
+    expect((await list("from=2026-10-10T15:00:00Z")).body.data).toHaveLength(1);
+    expect((await list("from=2026-10-10T16:00:00Z")).body.data).toEqual([]);
+    expect((await list("to=2026-10-10T14:00:00Z")).body.data).toEqual([]);
+  });
 });

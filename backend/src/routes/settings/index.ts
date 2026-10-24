@@ -14,6 +14,7 @@ import dawarichRouter from "./dawarich";
 import webPrefsRouter from "./webPrefs";
 import instanceServicesRouter from "./instanceServices";
 import webdavSyncRouter from "./webdavSync";
+import personalRouter from "./personal";
 
 const router = Router();
 
@@ -55,6 +56,8 @@ router.use(
     "/web-prefs",
     // An outbound target with credentials, run unattended every night.
     "/webdav-sync",
+    // A home address and a passport date: one visitor's would be everyone's.
+    "/personal",
   ],
   rejectDemoWrites
 );
@@ -73,5 +76,6 @@ router.use("/dawarich", dawarichRouter);
 router.use("/web-prefs", webPrefsRouter);
 router.use("/instance-services", instanceServicesRouter);
 router.use("/webdav-sync", webdavSyncRouter);
+router.use("/personal", personalRouter);
 
 export default router;

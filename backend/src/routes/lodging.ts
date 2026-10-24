@@ -41,6 +41,7 @@ export {
 import staysRouter from "./lodging/stays";
 import { withLodgingStayTimes } from "../services/lodging/timesDto";
 import { createLodgingRecord } from "../services/lodging/createLodging";
+import { createOnce, takeClientRef } from "../services/sync/clientRef";
 import { osmRefToStore } from "../services/lodging/osmRef";
 import {
   createLodgingSchema,
@@ -247,27 +248,40 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
 router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
-    const parsed = createLodgingSchema.safeParse(req.body);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    // An outbox replay carries the key it minted (forgejo#283): a repeat
+    // answers the lodging the first POST made, 200 instead of 201.
+    const { clientRef, rest: body } = takeClientRef(req.body);
+    const { created, result: lodging } = await createOnce({
+      userId,
+      clientRef,
+      kind: "lodging",
+      payload: body,
+      create: async (claim) => {
+        const parsed = createLodgingSchema.safeParse(body);
+        if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
-    // Both directions — see resolveLocation in lodgingGeocode.ts. A typed
-    // address gets coordinates, a dropped pin gets its address filled in.
-    // Never blocks the save: every failure path resolves to "no change".
-    const location = await resolveLocation(parsed.data);
+        // Both directions — see resolveLocation in lodgingGeocode.ts. A typed
+        // address gets coordinates, a dropped pin gets its address filled in.
+        // Never blocks the save: every failure path resolves to "no change".
+        const location = await resolveLocation(parsed.data);
 
-    // dataSource is provenance metadata, never client-set (finding 1) —
-    // a lodging created through this endpoint was hand-entered by the user.
-    // The ISO code is derived from the EFFECTIVE country inside the shared
-    // writer (`services/lodging/createLodging.ts`), which the spreadsheet
-    // import uses too.
-    const lodging = await createLodgingRecord(userId, parsed.data, {
-      dataSource: "manual",
-      location,
-      include: LODGING_INCLUDE,
+        // dataSource is provenance metadata, never client-set (finding 1) —
+        // a lodging created through this endpoint was hand-entered by the user.
+        // The ISO code is derived from the EFFECTIVE country inside the shared
+        // writer (`services/lodging/createLodging.ts`), which the spreadsheet
+        // import uses too.
+        return createLodgingRecord(userId, parsed.data, {
+          dataSource: "manual",
+          location,
+          include: LODGING_INCLUDE,
+          claim,
+        });
+      },
+      replay: (id) => prisma.lodging.findFirst({ where: { id, userId }, include: LODGING_INCLUDE }),
     });
-    logger.info({ operation: "lodging_create", lodgingId: lodging.id, userId });
+    if (created) logger.info({ operation: "lodging_create", lodgingId: lodging.id, userId });
     const baseCurrency = await getBaseCurrency(userId);
-    res.status(201).json({
+    res.status(created ? 201 : 200).json({
       success: true,
       data: { ...withLodgingStayTimes(lodging), ...computeAggregates(lodging.stays, baseCurrency) },
     });

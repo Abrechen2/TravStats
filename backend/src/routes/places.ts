@@ -1,9 +1,10 @@
 import { Router, Response, NextFunction } from "express";
-import { Prisma } from "../prisma";
+import { Prisma, type Place } from "../prisma";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
-import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
+import { fileReceipts, takeDocumentIds } from "../services/documents/documentService";
+import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
 // A visit must never attach itself to someone else's trip by id. The rule
 // lived here first and now serves every domain that links to a trip (AUD-038).
 import { assertTripOwned } from "../utils/ownedReferences";
@@ -326,44 +327,76 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
 router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
-    const parsed = createPlaceSchema.safeParse(req.body);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
-    const input = parsed.data;
-
-    // Dedup on the geocoder reference, so picking the same restaurant out of
-    // search twice yields one row rather than a second pin on top of the
-    // first. Hand-entered places carry no ref and are never blocked by this.
-    // The reference may also be an alias a merge left on a place (forgejo#232):
-    // `findPlaceIdByRef` asks the column AND the aliases.
-    if (input.externalRef) {
-      const holderId = await findPlaceIdByRef(prisma, userId, input.externalRef);
-      const existing = holderId
-        ? await prisma.place.findFirst({ where: { id: holderId, userId }, include: PLACE_INCLUDE })
-        : null;
-      if (existing) {
-        res.status(200).json({ success: true, data: decorate(existing), deduped: true });
-        return;
-      }
-    }
-
-    // Whatever the input method, the row ends up with a complete location —
-    // the same rule lodging follows (`routes/lodgingGeocode.ts`). A place
-    // entered by dropping a pin has a name and nothing else; the city and
-    // country it needs to be grouped, filtered and flagged come from the pin.
-    // Awaited here, unlike on the checklist tick: this is one row on an
-    // explicit save, so the address is present in the response the form gets
-    // back rather than appearing a second later.
-    const completed = await completeAddressFromCoordinates({
-      lat: input.lat,
-      lon: input.lon,
-      address: input.address,
-      city: input.city,
-      country: input.country,
+    // An outbox replay carries the key it minted (forgejo#283): a repeat
+    // answers the place the first POST made, 200 instead of 201.
+    const { clientRef, rest: body } = takeClientRef(req.body);
+    const { created, result } = await createOnce({
+      userId,
+      clientRef,
+      kind: "place",
+      payload: body,
+      create: (claim) => createPlace(userId, body, claim),
+      replay: async (id) => {
+        const place = await prisma.place.findFirst({
+          where: { id, userId },
+          include: PLACE_INCLUDE,
+        });
+        return place && { place, deduped: false };
+      },
     });
-    const country = input.country ?? completed?.country ?? null;
-    const names = normaliseNamePair(input.name, input.localName);
+    if (result.deduped) {
+      res.status(200).json({ success: true, data: decorate(result.place), deduped: true });
+      return;
+    }
+    if (created) await recheckAchievements(userId, "place create");
+    res.status(created ? 201 : 200).json({ success: true, data: decorate(result.place) });
+  } catch (error) {
+    next(error);
+  }
+});
 
-    const place = await prisma.place.create({
+async function createPlace(
+  userId: string,
+  body: unknown,
+  claim: ClaimClientRef
+): Promise<{ place: PlaceRow; deduped: boolean }> {
+  const parsed = createPlaceSchema.safeParse(body);
+  if (!parsed.success) throw new AppError(parsed.error.message, 400);
+  const input = parsed.data;
+
+  // Dedup on the geocoder reference, so picking the same restaurant out of
+  // search twice yields one row rather than a second pin on top of the
+  // first. Hand-entered places carry no ref and are never blocked by this.
+  // The reference may also be an alias a merge left on a place (forgejo#232):
+  // `findPlaceIdByRef` asks the column AND the aliases. Nothing is created,
+  // so a client ref stays unspent and a repeat finds the same place again.
+  if (input.externalRef) {
+    const holderId = await findPlaceIdByRef(prisma, userId, input.externalRef);
+    const existing = holderId
+      ? await prisma.place.findFirst({ where: { id: holderId, userId }, include: PLACE_INCLUDE })
+      : null;
+    if (existing) return { place: existing, deduped: true };
+  }
+
+  // Whatever the input method, the row ends up with a complete location —
+  // the same rule lodging follows (`routes/lodgingGeocode.ts`). A place
+  // entered by dropping a pin has a name and nothing else; the city and
+  // country it needs to be grouped, filtered and flagged come from the pin.
+  // Awaited here, unlike on the checklist tick: this is one row on an
+  // explicit save, so the address is present in the response the form gets
+  // back rather than appearing a second later.
+  const completed = await completeAddressFromCoordinates({
+    lat: input.lat,
+    lon: input.lon,
+    address: input.address,
+    city: input.city,
+    country: input.country,
+  });
+  const country = input.country ?? completed?.country ?? null;
+  const names = normaliseNamePair(input.name, input.localName);
+
+  const place = await prisma.$transaction(async (tx) => {
+    const row = await tx.place.create({
       data: {
         userId,
         name: names.name,
@@ -383,14 +416,11 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
       },
       include: PLACE_INCLUDE,
     });
-
-    await recheckAchievements(userId, "place create");
-
-    res.status(201).json({ success: true, data: decorate(place) });
-  } catch (error) {
-    next(error);
-  }
-});
+    await claim(tx, row.id);
+    return row;
+  });
+  return { place, deduped: false };
+}
 
 // ---------------------------------------------------------------- update
 
@@ -501,74 +531,88 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
     const place = await prisma.place.findFirst({ where: { id: req.params.id, userId } });
     if (!place) throw new AppError("Place not found", 404);
 
-    const parsed = createVisitSchema.safeParse(req.body);
-    if (!parsed.success) {
-      throw timeErrorFromZod(parsed.error) ?? new AppError(parsed.error.message, 400);
-    }
-    const input = parsed.data;
-    await assertTripOwned(input.tripId, userId);
-    const { columns: time, writtenVia } = await visitTimeColumns(
-      input.visitedAt ?? null,
-      place,
-      req
-    );
-    // Absent and null are two statements (Zod keeps the key out when it was
-    // not sent): no `tripId` at all means "file it where it belongs", which the
-    // visit's own day answers when exactly one trip spans it; `tripId: null`
-    // means "on no trip" and is kept (forgejo#199).
-    const tripId =
-      input.tripId !== undefined ? input.tripId : await tripForVisitDay(prisma, userId, time);
-    const documentIds = await takeDocumentIds(userId, req.body);
-
-    // Recording a visit that HAPPENED is the statement "I was here", so it
-    // promotes the place out of the wishlist in the SAME transaction. Leaving
-    // `visited` untouched there is the silent-wrong-count bug the default
-    // guards against: invisible until a headline number is wrong.
-    //
-    // A FUTURE-dated visit is the opposite statement — "I will be here" — and
-    // must not promote anything. Flipping the flag for it made the place read
-    // "Besucht" the moment a plan was entered, which is how a place you have
-    // never been to ends up in the visited count. The rule is
-    // `visitPromotesPlace`, asked of the INSTANT: the legacy wall-clock column
-    // alone runs ahead east of UTC, and a visit logged in Korea within nine
-    // hours read as a plan and never promoted its place (24 places, 2026-10).
-    //
-    // One-directional on purpose: nothing here ever sets `visited` back to
-    // false. A place may legitimately be visited with no visit rows at all
-    // ("I have been to that Maccis, no idea when"), and recomputing the flag
-    // from the visits would erase exactly that.
-    const happened = visitPromotesPlace(time);
-
-    const writes: Prisma.PrismaPromise<unknown>[] = [
-      prisma.placeVisit.create({
-        data: {
-          placeId: place.id,
-          userId,
-          tripId,
-          ...time,
-          writtenVia,
-          orderIdx: input.orderIdx ?? 0,
-          notes: input.notes ?? null,
-          rating: input.rating ?? null,
-        },
-      }),
-    ];
-    if (happened && !place.visited) {
-      writes.push(prisma.place.update({ where: { id: place.id }, data: { visited: true } }));
-    }
-    const [visit] = await prisma.$transaction(writes);
-    await linkDocuments(userId, documentIds, {
-      type: "placeVisit",
-      id: (visit as { id: string }).id,
+    // An outbox replay carries the key it minted (forgejo#283); the place is
+    // part of what makes two writes "the same".
+    const { clientRef, rest: body } = takeClientRef(req.body);
+    const { created, result: visit } = await createOnce({
+      userId,
+      clientRef,
+      kind: "placeVisit",
+      payload: { placeId: place.id, body },
+      create: (claim) => createVisit(userId, place, body, req, claim),
+      replay: (id) => prisma.placeVisit.findFirst({ where: { id, userId, placeId: place.id } }),
     });
+    if (created) await recheckAchievements(userId, "visit create");
 
-    await recheckAchievements(userId, "visit create");
-
-    res.status(201).json({ success: true, data: withVisitTimes(visit as PlaceVisit) });
+    res.status(created ? 201 : 200).json({ success: true, data: withVisitTimes(visit) });
   } catch (error) {
     next(error);
   }
 });
+
+async function createVisit(
+  userId: string,
+  place: Place,
+  body: unknown,
+  req: AuthRequest,
+  claim: ClaimClientRef
+): Promise<PlaceVisit> {
+  const parsed = createVisitSchema.safeParse(body);
+  if (!parsed.success) {
+    throw timeErrorFromZod(parsed.error) ?? new AppError(parsed.error.message, 400);
+  }
+  const input = parsed.data;
+  await assertTripOwned(input.tripId, userId);
+  const { columns: time, writtenVia } = await visitTimeColumns(input.visitedAt ?? null, place, req);
+  // Absent and null are two statements (Zod keeps the key out when it was
+  // not sent): no `tripId` at all means "file it where it belongs", which the
+  // visit's own day answers when exactly one trip spans it; `tripId: null`
+  // means "on no trip" and is kept (forgejo#199).
+  const tripId =
+    input.tripId !== undefined ? input.tripId : await tripForVisitDay(prisma, userId, time);
+  const documentIds = await takeDocumentIds(userId, body);
+
+  // Recording a visit that HAPPENED is the statement "I was here", so it
+  // promotes the place out of the wishlist in the SAME transaction. Leaving
+  // `visited` untouched there is the silent-wrong-count bug the default
+  // guards against: invisible until a headline number is wrong.
+  //
+  // A FUTURE-dated visit is the opposite statement — "I will be here" — and
+  // must not promote anything. Flipping the flag for it made the place read
+  // "Besucht" the moment a plan was entered, which is how a place you have
+  // never been to ends up in the visited count. The rule is
+  // `visitPromotesPlace`, asked of the INSTANT: the legacy wall-clock column
+  // alone runs ahead east of UTC, and a visit logged in Korea within nine
+  // hours read as a plan and never promoted its place (24 places, 2026-10).
+  //
+  // One-directional on purpose: nothing here ever sets `visited` back to
+  // false. A place may legitimately be visited with no visit rows at all
+  // ("I have been to that Maccis, no idea when"), and recomputing the flag
+  // from the visits would erase exactly that.
+  const happened = visitPromotesPlace(time);
+
+  // The key and the documents commit with the visit (forgejo#283).
+  return prisma.$transaction(async (tx) => {
+    const visit = await tx.placeVisit.create({
+      data: {
+        placeId: place.id,
+        userId,
+        tripId,
+        ...time,
+        writtenVia,
+        orderIdx: input.orderIdx ?? 0,
+        notes: input.notes ?? null,
+        rating: input.rating ?? null,
+      },
+    });
+    if (happened && !place.visited) {
+      await tx.place.update({ where: { id: place.id }, data: { visited: true } });
+    }
+    await claim(tx, visit.id);
+    await fileReceipts(tx, userId, documentIds, { type: "placeVisit", id: visit.id });
+    return visit;
+  });
+}
 
 router.patch("/visits/:visitId", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

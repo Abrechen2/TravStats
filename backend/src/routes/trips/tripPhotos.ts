@@ -14,6 +14,8 @@ import {
 } from "../../middleware/upload";
 import path from "path";
 import fs from "fs";
+import { createHash } from "node:crypto";
+import { createOnce, takeClientRef } from "../../services/sync/clientRef";
 import { resolveTrip } from "./resolveTrip";
 import { toPhotoDto } from "./photoDto";
 import {
@@ -48,6 +50,26 @@ const TRIP_PHOTO_LIST_CAP = 1000;
 
 /* ─────────── Photos (iter 7) ─────────── */
 
+/** Remove files multer stored for a request that made no row of them. */
+function removeUploaded(uploaded: readonly Express.Multer.File[]): void {
+  for (const f of uploaded) {
+    try {
+      // Rebuild from the trusted dir + basename of multer's generated
+      // filename, not the raw f.path — defense-in-depth + clears the
+      // CodeQL js/path-injection taint.
+      const safePath = path.join(getTripPhotoDir(), path.basename(f.filename));
+      fs.existsSync(safePath) && fs.unlinkSync(safePath);
+      removeDisplayRendition(getTripPhotoDir(), f.filename);
+    } catch (_e) {
+      logger.warn({
+        operation: "trip_photo_upload_cleanup_error",
+        message: "Failed to cleanup orphaned trip photo file",
+        context: { filename: f.filename },
+      });
+    }
+  }
+}
+
 /**
  * POST /trips/:id/photos — upload one or more images.
  *
@@ -72,13 +94,24 @@ router.post(
       const userId = req.userId!;
       await resolveTrip(userId, req.params.id);
       if (uploaded.length === 0) throw new AppError("No photos uploaded", 400);
+      // The Companion's outbox key (audit 2026-10-23): a resend whose answer
+      // was lost gets the photo it already made, not a second copy.
+      const { clientRef, rest: fieldsBody } = takeClientRef(req.body ?? {});
+      if (clientRef !== null && uploaded.length !== 1) {
+        throw new AppError(
+          "clientRef names ONE photo; send a single file",
+          400,
+          "VALIDATION_FAILED",
+          "clientRef"
+        );
+      }
       // Checked BEFORE any row is written; a refusal falls through to the
       // cleanup below, so the files multer already stored go too.
-      const { stopId } = tripPhotoUploadFieldsSchema.parse(req.body ?? {});
+      const { stopId } = tripPhotoUploadFieldsSchema.parse(fieldsBody ?? {});
       if (stopId !== undefined) await assertStopOnTrip(userId, req.params.id, stopId);
       // What the client says about the one photo it sent (companion#59),
       // refused here when malformed or beside several files.
-      const fields = parseCaptureFields(req.body, uploaded.length);
+      const fields = parseCaptureFields(fieldsBody, uploaded.length);
       // Capture time and position from each file's own metadata, and a JPEG
       // display copy for a HEIC/HEIF original — or a refusal, before any row.
       // EXIF wins; the fields fill only what the file did not say.
@@ -93,42 +126,49 @@ router.post(
       });
       let nextIdx = (last?.sortIdx ?? -1) + 1;
 
+      const rowData = (f: Express.Multer.File, i: number) => ({
+        tripId: req.params.id,
+        filename: f.filename,
+        mimetype: f.mimetype,
+        sizeBytes: f.size,
+        sortIdx: nextIdx++,
+        stopId: stopId ?? null,
+        takenAt: exif[i].takenAt,
+        lat: exif[i].lat,
+        lon: exif[i].lon,
+      });
+
+      if (clientRef !== null) {
+        const file = uploaded[0];
+        const sha256 = createHash("sha256")
+          .update(fs.readFileSync(path.join(getTripPhotoDir(), path.basename(file.filename))))
+          .digest("hex");
+        const { created, result } = await createOnce({
+          userId,
+          clientRef,
+          kind: "tripPhoto",
+          payload: { tripId: req.params.id, sha256, fields: fieldsBody },
+          create: (claim) =>
+            prisma.$transaction(async (tx) => {
+              const row = await tx.tripPhoto.create({ data: rowData(file, 0) });
+              await claim(tx, row.id);
+              return row;
+            }),
+          replay: (id) => prisma.tripPhoto.findFirst({ where: { id, tripId: req.params.id } }),
+        });
+        // A repeat: the bytes just received are a copy of a stored photo.
+        if (!created) removeUploaded(uploaded);
+        res.status(created ? 201 : 200).json({ photos: [toPhotoDto(result)] });
+        return;
+      }
+
       const created = await prisma.$transaction(
-        uploaded.map((f, i) =>
-          prisma.tripPhoto.create({
-            data: {
-              tripId: req.params.id,
-              filename: f.filename,
-              mimetype: f.mimetype,
-              sizeBytes: f.size,
-              sortIdx: nextIdx++,
-              stopId: stopId ?? null,
-              takenAt: exif[i].takenAt,
-              lat: exif[i].lat,
-              lon: exif[i].lon,
-            },
-          })
-        )
+        uploaded.map((f, i) => prisma.tripPhoto.create({ data: rowData(f, i) }))
       );
       res.status(201).json({ photos: created.map(toPhotoDto) });
     } catch (error) {
       // Cleanup uploaded files on any failure to avoid orphaning bytes.
-      for (const f of uploaded) {
-        try {
-          // Rebuild from the trusted dir + basename of multer's generated
-          // filename, not the raw f.path — defense-in-depth + clears the
-          // CodeQL js/path-injection taint.
-          const safePath = path.join(getTripPhotoDir(), path.basename(f.filename));
-          fs.existsSync(safePath) && fs.unlinkSync(safePath);
-          removeDisplayRendition(getTripPhotoDir(), f.filename);
-        } catch (_e) {
-          logger.warn({
-            operation: "trip_photo_upload_cleanup_error",
-            message: "Failed to cleanup orphaned trip photo file",
-            context: { filename: f.filename },
-          });
-        }
-      }
+      removeUploaded(uploaded);
       next(error);
     }
   }

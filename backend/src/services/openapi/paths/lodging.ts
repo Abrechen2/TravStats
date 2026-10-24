@@ -24,6 +24,8 @@ import { registry } from "../registry";
 import { deadlineDayColumns } from "./deadlineColumns";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { documentIdsBodySchema } from "../../../schemas/document";
+import { clientRefBodySchema } from "../../../schemas/clientRef";
+import { clientRefResponses } from "./clientRef";
 import { captureFieldsSchema } from "../../photos/captureFields";
 import { errorContent, photoConversionUnavailable, photoUnreadable, timeRefused } from "./shared";
 import { photoFileQuerySchema } from "../../../schemas/photoVariant";
@@ -459,10 +461,14 @@ registry.registerPath({
     "which is what makes a wishlist entry possible.",
   tags: ["Lodging"],
   request: {
-    body: { content: { "application/json": { schema: lodgingCreateInput } }, required: true },
+    body: {
+      content: { "application/json": { schema: lodgingCreateInput.and(clientRefBodySchema) } },
+      required: true,
+    },
   },
   responses: {
     201: { description: "Created", content: { "application/json": { schema: lodging } } },
+    ...clientRefResponses({ "application/json": { schema: lodging } }),
     400: { description: "Invalid input", content: errorContent },
   },
 });
@@ -508,13 +514,18 @@ registry.registerPath({
   request: {
     params: z.object({ id: z.string().uuid() }),
     body: {
-      content: { "application/json": { schema: stayCreateInput.and(documentIdsBodySchema) } },
+      content: {
+        "application/json": {
+          schema: stayCreateInput.and(documentIdsBodySchema).and(clientRefBodySchema),
+        },
+      },
       required: true,
     },
   },
   responses: {
     422: timeRefused,
     201: { description: "Created", content: { "application/json": { schema: stay } } },
+    ...clientRefResponses({ "application/json": { schema: stay } }),
     400: { description: "Invalid input", content: errorContent },
     404: { description: "Lodging not found", content: errorContent },
   },

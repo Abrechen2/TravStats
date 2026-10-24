@@ -45,7 +45,20 @@ import { SYNC_RETENTION_DAYS } from "./state";
  * bytes. Pruned by the sync retention job.
  */
 
-export type ClientRefKind = "rail" | "bus" | "ferry" | "expense" | "tour" | "note";
+export type ClientRefKind =
+  | "rail"
+  | "bus"
+  | "ferry"
+  | "expense"
+  | "tour"
+  | "note"
+  | "tripPhoto"
+  | "cruise"
+  | "place"
+  | "placeVisit"
+  | "lodging"
+  | "lodgingStay"
+  | "flight";
 
 export const CLIENT_REF_RETENTION_DAYS = SYNC_RETENTION_DAYS;
 

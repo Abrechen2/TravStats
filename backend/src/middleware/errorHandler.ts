@@ -1,6 +1,7 @@
 import type { RemoteShareApiErrorCode } from "./remoteShareErrorCodes";
 import type { FlightTrackFileApiErrorCode } from "./flightTrackFileErrorCodes";
 import type { CompanionApiErrorCode } from "./companionErrorCodes";
+import type { CompanionAppApiErrorCode } from "./companionAppErrorCodes";
 import type { ConnectionFileApiErrorCode } from "./connectionFileErrorCodes";
 import { Request, Response, NextFunction } from "express";
 import { MulterError } from "multer";
@@ -284,18 +285,15 @@ export type ApiErrorCode =
   | "TRACK_ALREADY_RECORDED"
   /** Flight recording: the body is over its size limit (413). */
   | "TRACK_BODY_TOO_LARGE"
-  /** Flight recording: its time span is nowhere near the flight's schedule —
-   *  a recording filed under the wrong flight (422). */
+  /** Flight recording: its span is nowhere near the schedule — filed under the wrong flight (422). */
   | "TRACK_OUTSIDE_FLIGHT"
   | "FLIGHT_TRACKING_DISABLED" // flight recording: live tracking off, nothing stored (409)
-  /** Trip recording (forgejo#316): the account switch is off — nothing stored (409). */
-  | "TRIP_RECORDING_DISABLED"
-  /** Trip recording: a point with a coordinate outside lat ±90 / lon ±180 (400). */
-  | "RECORDING_INVALID_POINT"
-  /** Trip recording: the trip has no first or last day to bound the points by (422). */
-  | "TRIP_RECORDING_NO_SPAN"
+  | "TRIP_RECORDING_DISABLED" // trip recording (forgejo#316): the account switch is off — nothing stored (409)
+  | "RECORDING_INVALID_POINT" // trip recording: a coordinate outside lat ±90 / lon ±180 (400)
+  | "TRIP_RECORDING_NO_SPAN" // trip recording: the trip has no first or last day to bound the points (422)
   /** Trip recording: this uploadId is already stored under another trip (409). */
   | "RECORDING_UPLOAD_ID_REUSED"
+  | CompanionAppApiErrorCode // packing lists and personal settings (companionAppErrorCodes.ts)
   /** Observed takeoff/landing (forgejo#194): a time in the future (400). */
   | "OBSERVED_TIME_IN_FUTURE"
   /** Observed takeoff/landing: more than 12 h from the schedule (422). */

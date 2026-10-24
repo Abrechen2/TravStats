@@ -164,9 +164,13 @@ router.post("/scan", rejectDemo, scanLimiter, async (req: AuthRequest, res, next
 router.get("/", async (req: AuthRequest, res, next) => {
   try {
     const userId = user(req);
-    const { status } = z
+    const { status, from, to } = z
       .object({
         status: z.enum(["pending", "accepted", "rejected", "covered"]).default("pending"),
+        // A window, so the Companion can ask for one trip's stays (audit
+        // 2026-10-23): a stay is in it when the two overlap.
+        from: z.coerce.date().optional(),
+        to: z.coerce.date().optional(),
       })
       .parse(req.query);
     // Switched off (forgejo#306): no pending suggestions are offered, and none
@@ -180,7 +184,12 @@ router.get("/", async (req: AuthRequest, res, next) => {
     // finding from that moment; the inbox must not offer it until the next scan.
     if (status === "pending") await resolveCoveredStays(userId);
     const rows = await prisma.dawarichStay.findMany({
-      where: { userId, status },
+      where: {
+        userId,
+        status,
+        ...(to ? { startAt: { lte: to } } : {}),
+        ...(from ? { endAt: { gte: from } } : {}),
+      },
       orderBy: { startAt: "desc" },
       take: 200,
       include: { visit: { select: { id: true, placeId: true } } },

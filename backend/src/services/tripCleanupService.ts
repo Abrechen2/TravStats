@@ -30,7 +30,12 @@ import { linkRowsFor, resolveCompanions } from "./companionService";
 import { AppError } from "../middleware/errorHandler";
 import logger from "../utils/logger";
 import { recomputeTripStatus } from "./tripStatusService";
-import { mergeImmichAlbums, mergeTripPhotos, retargetCoverUrl } from "./trip/mergeTripRelations";
+import {
+  mergeImmichAlbums,
+  mergePackingLists,
+  mergeTripPhotos,
+  retargetCoverUrl,
+} from "./trip/mergeTripRelations";
 
 /** A trip is "micro" when it has at most this many flights. Matches the
  *  shape of the legacy one-booking auto-trips (outbound + return). */
@@ -101,6 +106,8 @@ export const EMPTY_TRIP_WHERE = {
   documents: { none: {} },
   expenses: { none: {} },
   recordingBatches: { none: {} },
+  // One-to-one, so not a count above: a packing list is the user's own text.
+  packingList: { is: null },
   notes: null,
   description: null,
   summary: null,
@@ -121,6 +128,7 @@ interface EmptinessProbe {
   tags: string[];
   companions: string[];
   _count: Record<keyof typeof EMPTY_TRIP_COUNTS, number>;
+  packingList: { id: string } | null;
 }
 
 function isTripEmpty(t: EmptinessProbe): boolean {
@@ -129,6 +137,7 @@ function isTripEmpty(t: EmptinessProbe): boolean {
     .every((k) => t._count[k] === 0);
   return (
     holdsNothing &&
+    t.packingList === null &&
     !t.notes &&
     !t.description &&
     !t.summary &&
@@ -159,6 +168,7 @@ export async function findMicroTripCandidates(userId: string): Promise<MicroTrip
       tags: true,
       companions: true,
       _count: { select: EMPTY_TRIP_COUNTS },
+      packingList: { select: { id: true } },
     },
     orderBy: { startDate: "desc" },
   });
@@ -319,6 +329,9 @@ export async function mergeTrips(
     // uploadId stay as they are, so the (userId, uploadId) key cannot collide;
     // they are private and deliberately absent from the propagation below.
     await tx.tripRecordingBatch.updateMany(move);
+    // A packing list is one per trip and CASCADES with it: fold the sources'
+    // items into the target's, so no item the user wrote is lost.
+    await mergePackingLists(tx, sourceIds, targetId);
     // Albums BEFORE photos: an album left on a source trip is cascade-deleted
     // with it, and takes the photos this merge just moved with it (AUD-029).
     const duplicateAlbums = await mergeImmichAlbums(tx, sourceIds, targetId);
