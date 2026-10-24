@@ -31,7 +31,7 @@
       },
       "app": {
         "title": "Die Companion-App",
-        "body": "Die Companion-App koppelst du per QR-Code mit deinem Server. Gekoppelt meldet er Flugänderungen und Abflug-Erinnerungen als Push aufs Handy (ein Admin schaltet das Relay ein) und gleicht Einträge ab, ohne eine neuere Fassung still zu überschreiben. Kopplung, Push und Abgleich sind gebaut, wie die App selbst noch in Prüfung."
+        "body": "Die Companion-App koppelst du per QR-Code mit deinem Server. Gekoppelt meldet er Flugänderungen und Abflug-Erinnerungen als Push aufs Handy (ein Admin schaltet das Relay ein) und gleicht Einträge ab, ohne eine neuere Fassung still zu überschreiben. Kopplung, Push und Abgleich sind gebaut, wie die App selbst noch in Prüfung. Ebenso: TravTrack, ein eigener Standortverlauf."
       },
       "beta": {
         "title": "Roadtrips, Mietwagen, Bus und mehr",

@@ -76,7 +76,14 @@ const capabilities = z.object({
   }),
   travTrack: z.object({
     offered: z.boolean().describe("This server offers TravTrack to this account"),
-    enabled: z.boolean().describe("TravTrack is the chosen, working provider"),
+    enabled: z.boolean().describe("TravTrack is the chosen, working provider (= capture)"),
+    capture: z.boolean().describe("Start recording into TravTrack"),
+    upload: z
+      .boolean()
+      .describe(
+        "This server takes POST /travtrack/points, whatever the provider: points queued for " +
+          "TravTrack keep leaving the phone after a switch"
+      ),
   }),
 });
 

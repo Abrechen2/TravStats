@@ -4,6 +4,7 @@ import ShareLinksSettings from "../../components/Admin/ShareLinksSettings";
 import ImportModeSettings from "../../components/Admin/ImportModeSettings";
 import TemplateRepoSettings from "../../components/Admin/TemplateRepoSettings";
 import FederationSettings from "../../components/Admin/FederationSettings";
+import TravTrackSettings from "../../components/Admin/TravTrackSettings";
 import InstanceSettings from "../../components/Admin/InstanceSettings";
 import UsageStatsSettings from "../../components/Admin/UsageStatsSettings";
 import PushSettings from "../../components/Admin/PushSettings";
@@ -125,6 +126,7 @@ export interface AdminSectionSwitchProps {
  */
 export const ADMIN_SECTION_FRAME: Record<ActiveSection, "own" | "card"> = {
   instance: "card",
+  travTrack: "own",
   shareLinks: "own",
   importMode: "own",
   usageStats: "card",
@@ -290,6 +292,8 @@ export default function AdminSectionSwitch(props: AdminSectionSwitchProps): JSX.
 
     case "instance":
       return <InstanceSettings />;
+    case "travTrack":
+      return <TravTrackSettings />;
     case "shareLinks":
       return <ShareLinksSettings />;
     case "importMode":

@@ -6,6 +6,8 @@ import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { generateApiToken } from "../../utils/apiTokens";
 import { encryptApiKey } from "../../utils/encryption";
+import { setLocationProvider } from "../../services/locationProvider/provider";
+import { travTrackSwitches } from "../../services/travtrack/__tests__/switches";
 
 /**
  * `GET /api/v1/location/capabilities` (TravTrack plan, task S4): what the
@@ -23,6 +25,7 @@ const PATH = "/api/v1/location/capabilities";
 const DEPARTURE = Date.parse("2026-10-03T08:00:00Z");
 
 describe("location capabilities", () => {
+  const switches = travTrackSwitches();
   let userId: string;
   let cookie: string;
 
@@ -47,6 +50,8 @@ describe("location capabilities", () => {
     });
     userId = user.id;
     cookie = `auth_token=${generateToken(user.id)}`;
+    // The phase-1 cases below describe a server without TravTrack.
+    await switches.set({ beta: false, config: false });
   });
 
   beforeEach(async () => {
@@ -56,8 +61,51 @@ describe("location capabilities", () => {
   });
 
   afterAll(async () => {
+    await switches.restore();
     await prisma.user.deleteMany({ where: { id: userId } });
     await prisma.$disconnect();
+  });
+
+  describe("TravTrack: capture apart from upload (phase 2, T1)", () => {
+    afterEach(async () => {
+      await switches.set({ beta: false, config: false });
+    });
+
+    it("provider travtrack on an instance that takes points: capture and upload", async () => {
+      await switches.set({ beta: true, config: true });
+      await setLocationProvider(userId, "travtrack");
+      expect((await caps()).body.travTrack).toEqual({
+        offered: true,
+        enabled: true,
+        capture: true,
+        upload: true,
+      });
+    });
+
+    it("travTrack.upload stays true after a switch to provider none while the instance takes points", async () => {
+      await switches.set({ beta: true, config: true });
+      await setLocationProvider(userId, "travtrack");
+      await setLocationProvider(userId, "none");
+      const body = (await caps()).body;
+      expect(body.travTrack.upload).toBe(true);
+      // travTrack.capture is false then.
+      expect(body.travTrack.capture).toBe(false);
+      expect(body.travTrack.enabled).toBe(false);
+    });
+
+    it("upload false once the admin switches TravTrack off", async () => {
+      await switches.set({ beta: true, config: true });
+      await setLocationProvider(userId, "travtrack");
+      await switches.set({ beta: true, config: false });
+      const body = (await caps()).body;
+      expect(body.travTrack).toEqual({
+        offered: false,
+        enabled: false,
+        capture: false,
+        upload: false,
+      });
+      expect(body.provider).toMatchObject({ kind: "travtrack", status: "unavailable" });
+    });
   });
 
   describe("shape for each provider", () => {
@@ -66,7 +114,7 @@ describe("location capabilities", () => {
         version: 1,
         provider: { kind: "none", rev: 0, status: "ok" },
         capture: { flight: true, trip: true, everyday: false, modes: [] },
-        travTrack: { offered: false, enabled: false },
+        travTrack: { offered: false, enabled: false, capture: false, upload: false },
       });
     });
 
@@ -86,7 +134,7 @@ describe("location capabilities", () => {
         version: 1,
         provider: { kind: "dawarich", rev: 3, status: "ok" },
         capture: { flight: true, trip: true, everyday: false, modes: [] },
-        travTrack: { offered: false, enabled: false },
+        travTrack: { offered: false, enabled: false, capture: false, upload: false },
       });
     });
 
@@ -105,7 +153,7 @@ describe("location capabilities", () => {
         version: 1,
         provider: { kind: "travtrack", rev: 2, status: "unavailable" },
         capture: { flight: false, trip: false, everyday: false, modes: [] },
-        travTrack: { offered: false, enabled: false },
+        travTrack: { offered: false, enabled: false, capture: false, upload: false },
       });
     });
   });

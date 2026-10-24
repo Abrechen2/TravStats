@@ -166,6 +166,14 @@ model User {
   trackJitterRemeasures TrackJitterRemeasure[]
   mergedTripRedirects   MergedTripRedirect[]
 
+  travTrackPoints         TravTrackPoint[]
+  travTrackPointLinks     TravTrackPointLink[]
+  travTrackUploads        TravTrackUpload[]
+  travTrackDeletedRanges  TravTrackDeletedRange[]
+  travTrackPrivacyZones   TravTrackPrivacyZone[]
+  travTrackGaps           TravTrackGap[]
+  travTrackShareSnapshots TravTrackShareSnapshot[]
+
   @@map("users")
 }
 
@@ -1923,8 +1931,9 @@ model Trip {
   packingList      TripPackingList?
   mergedFrom       MergedTripRedirect[]
 
-  documents  Document[]
-  travelPlan TravelPlan?
+  documents              Document[]
+  travelPlan             TravelPlan?
+  travTrackShareSnapshot TravTrackShareSnapshot?
 
   @@index([userId])
   @@index([userId, status])
@@ -5581,6 +5590,178 @@ model TravelPlanConfig {
   updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@map("travel_plan_config")
+}
+
+/// TravTrack's instance switch (TravTrack plan, task T1): the admin turns the
+/// own location history on for this server. Effective only while the beta
+/// switch is on too (`services/travtrack/availability.ts`). One row, `default`;
+/// without it the `TRAVTRACK_ENABLED` env var decides.
+model TravTrackConfig {
+  id        String   @id @default("default")
+  enabled   Boolean  @default(false)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("travtrack_config")
+}
+
+/// One position of an account's TravTrack history. Raw and immutable: what
+/// the phone measured, never thinned or rewritten here. The same position
+/// twice is one row — Dawarich's key `(user, whole second, lon, lat)`, plus
+/// the origin's own id so a retry is recognised even when a client
+/// re-serialises a coordinate. Which flights and trips it belongs to lives in
+/// `travtrack_point_links`, never on the row.
+model TravTrackPoint {
+  id        String   @id @default(uuid())
+  /// A stable number for the point: reads page and tie-break on `(t, seq)`.
+  seq       BigInt   @unique @default(autoincrement())
+  userId    String   @map("user_id")
+  /// The instant, to the millisecond as sent.
+  t         DateTime
+  /// `t` in whole Unix seconds — the dedup key, as in Dawarich.
+  tS        Int      @map("t_s")
+  lat       Float
+  lon       Float
+  accuracyM Float?   @map("accuracy_m")
+  altitudeM Float?   @map("altitude_m")
+  speedMps  Float?   @map("speed_mps")
+  /// Degrees from north, as the device reported it.
+  course    Float?
+  /// What the phone said about movement (stationary, walking, automotive, …).
+  motion    String?
+  /// Where the point came from: `companion:<deviceId>`.
+  origin    String
+  /// The origin's own id for this point (the phone's fix id `atMs:lat:lon`).
+  originRef String   @map("origin_ref")
+  /// The paired device that sent it (`ApiToken.deviceId`).
+  deviceId  String?  @map("device_id")
+  /// What the phone was recording for when it took the fix:
+  /// `everyday | flight | trip` (CHECK constraint). Informational.
+  purpose   String   @default("everyday")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  links TravTrackPointLink[]
+
+  @@unique([userId, tS, lon, lat])
+  @@unique([userId, origin, originRef])
+  @@index([userId, t, seq])
+  @@map("travtrack_points")
+}
+
+/// A point belongs to a flight or a trip (one fix may belong to both). The
+/// entry id has no foreign key — it names one of two tables — so a link to a
+/// deleted entry is harmless by construction (every read joins the entry and
+/// its owner) and a nightly sweep removes it. The point always stays.
+model TravTrackPointLink {
+  userId    String   @map("user_id")
+  pointId   String   @map("point_id")
+  /// `flight | trip` (CHECK constraint).
+  entryKind String   @map("entry_kind")
+  entryId   String   @map("entry_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  point TravTrackPoint @relation(fields: [pointId], references: [id], onDelete: Cascade)
+
+  @@id([pointId, entryKind, entryId])
+  @@index([userId, entryKind, entryId])
+  @@map("travtrack_point_links")
+}
+
+/// The receipt of one `POST /travtrack/points`: a retry with the same uploadId
+/// and the same content gets the stored answer back; the same id with other
+/// content is refused. Kept 30 days.
+model TravTrackUpload {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  uploadId    String   @map("upload_id")
+  /// sha256 of the points and gaps as received, canonicalised.
+  payloadHash String   @map("payload_hash")
+  /// The answer given, replayed verbatim.
+  result      Json
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, uploadId])
+  @@index([createdAt])
+  @@map("travtrack_uploads")
+}
+
+/// A span the user deleted: points inside it are dropped on ingest and a gap
+/// reported into it is clipped away, so an offline phone cannot bring the
+/// span back.
+model TravTrackDeletedRange {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  fromAt    DateTime @map("from_at")
+  /// Exclusive.
+  toAt      DateTime @map("to_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, fromAt])
+  @@map("travtrack_deleted_ranges")
+}
+
+/// A circle where the user is never tracked: the phone drops a fix inside it,
+/// ingest drops it again, and creating or enlarging a zone deletes the points
+/// already stored inside it once the user agreed.
+model TravTrackPrivacyZone {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  lat       Float
+  lon       Float
+  radiusM   Int      @map("radius_m")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("travtrack_privacy_zones")
+}
+
+/// What the phone reports it could not record: a span held for want of a zone
+/// list, a recorder that fell silent, a missing „Immer" permission. Never a
+/// privacy-zone gap — a zone must not be visible as one.
+model TravTrackGap {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  deviceId  String   @map("device_id")
+  fromAt    DateTime @map("from_at")
+  /// Exclusive.
+  toAt      DateTime @map("to_at")
+  /// `zonesUnknown | recorderSilent | permission` (CHECK constraint).
+  reason    String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceId, fromAt, reason])
+  @@index([userId, fromAt])
+  @@map("travtrack_gaps")
+}
+
+/// The route of a shared trip as its recipients may see it: geometry only, no
+/// timestamps, privacy-cut on its final shape. Exists only once the owner
+/// shares the route; rebuilt by every range delete and zone change.
+model TravTrackShareSnapshot {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  tripId     String   @unique @map("trip_id")
+  version    Int      @default(1)
+  /// `[lon, lat][][]`, one array per line.
+  geometry   Json
+  pointCount Int      @map("point_count")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@map("travtrack_share_snapshots")
 }
 
 model TravelPlanUsage {

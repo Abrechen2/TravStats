@@ -31,7 +31,7 @@
       },
       "app": {
         "title": "The Companion app",
-        "body": "You pair the Companion app with your server by QR code. Once paired, the server sends flight changes and departure reminders to your phone as push messages (an admin switches the relay on) and syncs entries without silently overwriting a newer version. Pairing, push and sync are built, but like the app itself still under review."
+        "body": "You pair the Companion app with your server by QR code. Once paired, the server sends flight changes and departure reminders to your phone as push messages (an admin switches the relay on) and syncs entries without silently overwriting a newer version. Pairing, push and sync are built, but like the app itself still under review. Likewise: TravTrack, your own location history."
       },
       "beta": {
         "title": "Roadtrips, rental cars, coaches and more",

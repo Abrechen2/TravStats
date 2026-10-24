@@ -21,6 +21,7 @@ import { prisma } from "../../db";
 import { Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import { buildUserDawarichConnection } from "../dawarich/dawarichResolver";
+import { travTrackAvailable } from "../travtrack/availability";
 
 import { LOCATION_PROVIDER_KINDS, type LocationProviderKind, type ProviderStatus } from "./kinds";
 
@@ -41,12 +42,10 @@ export interface LocationProviderChoices {
 /**
  * Whether this instance offers TravTrack to this account (instance beta +
  * config, not the shared demo). Per-user activation IS choosing provider
- * `travtrack`; there is no second switch. Phase 1: TravTrack does not exist
- * yet, so never — Task T1 gives this its real body.
+ * `travtrack`; there is no second switch. Lives in `services/travtrack`;
+ * re-exported here because the provider's callers ask it beside the provider.
  */
-export async function travTrackAvailable(_userId: string): Promise<boolean> {
-  return false;
-}
+export { travTrackAvailable };
 
 const isKind = (raw: string): raw is LocationProviderKind =>
   (LOCATION_PROVIDER_KINDS as readonly string[]).includes(raw);

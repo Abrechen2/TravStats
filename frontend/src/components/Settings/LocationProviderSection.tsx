@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
+import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import {
   locationProviderErrorKey,
   type LocationProviderKind,
@@ -22,8 +23,9 @@ import { alpha, token } from "../ui/tokens";
  * the old choice and says why. A provider that stopped working stays shown as
  * chosen, with a warning — never as a silent fallback to none.
  *
- * TravTrack appears only where this server offers it (phase 1: nowhere), or
- * while it is the stored choice, so the warning has a card to sit under.
+ * TravTrack appears only where this server offers it AND the `travTrack` beta
+ * key is open (its first gate site), or while it is the stored choice, so the
+ * warning has a card to sit under.
  *
  * The state lives in `locationProviderStore`, shared with the Dawarich
  * connection card on the same page, which opens and closes the Dawarich choice
@@ -42,6 +44,7 @@ const NS = "settings:locationProvider";
 export default function LocationProviderSection(): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const isDemo = useIsDemoAccount();
+  const { isFeatureVisible } = useBetaFeatures();
   const state = useLocationProviderStore((s) => s.settings);
   const loadFailed = useLocationProviderStore((s) => s.loadFailed && s.settings === null);
   const refresh = useLocationProviderStore((s) => s.refresh);
@@ -74,7 +77,9 @@ export default function LocationProviderSection(): JSX.Element {
   const kinds: LocationProviderKind[] = state
     ? [
         "none",
-        ...(state.choices.travtrack || state.kind === "travtrack" ? ["travtrack" as const] : []),
+        ...((state.choices.travtrack && isFeatureVisible("travTrack")) || state.kind === "travtrack"
+          ? ["travtrack" as const]
+          : []),
         "dawarich",
       ]
     : [];

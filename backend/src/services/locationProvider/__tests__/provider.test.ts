@@ -7,6 +7,7 @@ import {
   setLocationProvider,
   travTrackAvailable,
 } from "../provider";
+import { travTrackSwitches } from "../../travtrack/__tests__/switches";
 
 /**
  * The per-user location provider (TravTrack plan, task S2). What it must hold:
@@ -45,6 +46,7 @@ async function trackCounts(): Promise<number[]> {
 }
 
 describe("location provider", () => {
+  const switches = travTrackSwitches();
   let userId: string;
   let adminBefore: { id: number; url: string | null; key: string | null } | null = null;
 
@@ -54,6 +56,7 @@ describe("location provider", () => {
       data: { username: USERNAME, passwordHash: await hashPassword("password123") },
     });
     userId = user.id;
+    await switches.set({ beta: false, config: false });
     const admin = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
     if (admin) {
       adminBefore = {
@@ -69,6 +72,7 @@ describe("location provider", () => {
   });
 
   afterAll(async () => {
+    await switches.restore();
     if (adminBefore) {
       await prisma.adminSettings.update({
         where: { id: adminBefore.id },
@@ -109,7 +113,39 @@ describe("location provider", () => {
     });
   });
 
-  it("travtrack is refused with TRAVTRACK_UNAVAILABLE in phase 1", async () => {
+  it("travtrack can be chosen once the instance offers it", async () => {
+    await switches.set({ beta: true, config: true });
+    try {
+      expect(await travTrackAvailable(userId)).toBe(true);
+      expect(await setLocationProvider(userId, "travtrack")).toEqual({ kind: "travtrack", rev: 1 });
+      expect(await getLocationProvider(userId)).toEqual({
+        kind: "travtrack",
+        rev: 1,
+        status: "ok",
+      });
+      expect(await providerIs(userId, "travtrack")).toBe(true);
+    } finally {
+      await switches.set({ beta: false, config: false });
+    }
+  });
+
+  it("status unavailable again when the admin switches it off — the choice stays", async () => {
+    await switches.set({ beta: true, config: true });
+    await setLocationProvider(userId, "travtrack");
+    await switches.set({ beta: true, config: false });
+    try {
+      expect(await getLocationProvider(userId)).toEqual({
+        kind: "travtrack",
+        rev: 1,
+        status: "unavailable",
+      });
+      expect(await providerIs(userId, "travtrack")).toBe(false);
+    } finally {
+      await switches.set({ beta: false, config: false });
+    }
+  });
+
+  it("travtrack is refused with TRAVTRACK_UNAVAILABLE while the instance does not offer it", async () => {
     expect(await travTrackAvailable(userId)).toBe(false);
     await expect(setLocationProvider(userId, "travtrack")).rejects.toMatchObject({
       statusCode: 409,

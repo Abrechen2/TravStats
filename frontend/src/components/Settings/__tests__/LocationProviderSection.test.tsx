@@ -19,6 +19,14 @@ vi.mock("../../../lib/api/locationProvider", async (importOriginal) => ({
 const isDemo = vi.hoisted(() => ({ current: false }));
 vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => isDemo.current }));
 
+const beta = vi.hoisted(() => ({ open: true }));
+vi.mock("../../../hooks/useBetaFeatures", () => ({
+  useBetaFeatures: () => ({
+    betaFeaturesEnabled: beta.open,
+    isFeatureVisible: (key: string) => beta.open && key === "travTrack",
+  }),
+}));
+
 import LocationProviderSection from "../LocationProviderSection";
 import { useLocationProviderStore } from "../../../store/locationProviderStore";
 
@@ -50,6 +58,7 @@ const show = () =>
 beforeEach(() => {
   vi.clearAllMocks();
   isDemo.current = false;
+  beta.open = true;
   useLocationProviderStore.getState().reset();
   getProvider.mockResolvedValue(state());
 });
@@ -106,6 +115,32 @@ describe("LocationProviderSection", () => {
     );
     show();
     expect(await screen.findByRole("radio", { name: new RegExp(TRAVTRACK) })).toBeEnabled();
+  });
+
+  it("the TravTrack card needs the beta key as well as choices.travtrack", async () => {
+    beta.open = false;
+    getProvider.mockResolvedValue(
+      state({ choices: { none: true, travtrack: true, dawarich: false } })
+    );
+    show();
+    await screen.findByRole("radio", { name: new RegExp(NONE) });
+    expect(screen.queryByRole("radio", { name: new RegExp(TRAVTRACK) })).not.toBeInTheDocument();
+  });
+
+  it("keeps the stored TravTrack choice visible with its warning while the beta key is closed", async () => {
+    beta.open = false;
+    getProvider.mockResolvedValue(
+      state({
+        kind: "travtrack",
+        status: "unavailable",
+        choices: { none: true, travtrack: false, dawarich: false },
+      })
+    );
+    show();
+    expect(await screen.findByRole("radio", { name: new RegExp(TRAVTRACK) })).toBeChecked();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "settings:locationProvider.status.unavailable"
+    );
   });
 
   it("disables Dawarich without an own connection and links to the connection card", async () => {

@@ -232,6 +232,16 @@ export const NON_TRAVEL_RELATIONS = [
   // Where a merged-away trip went (forgejo#316): server bookkeeping for the
   // Companion's uploads, not travel data.
   "mergedTripRedirects",
+  // TravTrack, the own location history (TravTrack plan, phase 2): private to its
+  // owner like the trip recording — never part of a comparison or a federation
+  // publication. A shared trip carries at most the owner's route snapshot (T7).
+  "travTrackPoints",
+  "travTrackPointLinks",
+  "travTrackUploads",
+  "travTrackDeletedRanges",
+  "travTrackPrivacyZones",
+  "travTrackGaps",
+  "travTrackShareSnapshots",
   // The account's WebDAV export target (forgejo#321): a URL, a username and an
   // encrypted password. A credential, so it never travels.
   "webdavSync",

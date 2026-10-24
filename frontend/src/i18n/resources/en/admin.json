@@ -197,6 +197,10 @@
           "federatedTripSharing": {
             "name": "Trip sharing across servers",
             "what": "Connect with companions on other TravStats servers by invitation code, under Settings → Trips; it has its own switch under server connections as well. No trip crosses yet. With the switch off, this server does not answer other servers for it at all."
+          },
+          "travTrack": {
+            "name": "TravTrack (own location history)",
+            "what": "An own location history on this server: the Companion app records positions, flights and trips included, with privacy zones and delete by time span. Also needs the TravTrack switch under Instance."
           }
         }
       },
@@ -1249,7 +1253,8 @@
       "airportsMasterData": "Airports, master data, IATA",
       "shipsMasterData": "Ships, master data, IMO",
       "portsMasterData": "Ports, master data, UN/LOCODE",
-      "lodgingChainsMasterData": "Hotel chains, chains, master data, hotels, lodging, merge"
+      "lodgingChainsMasterData": "Hotel chains, chains, master data, hotels, lodging, merge",
+      "travTrack": "TravTrack, location history, location, recording, Companion"
     },
     "expertKeywords": {
       "instance": "Home network address, LAN, passkey, rpId, origins, beta switch",
@@ -1306,6 +1311,18 @@
       "mergeIntoItself": "A chain cannot be merged into itself.",
       "invalidInput": "An input is invalid — the brand colour as #rrggbb.",
       "unknown": "That did not work."
+    }
+  },
+  "travTrack": {
+    "title": "TravTrack",
+    "description": "The own location history: the Companion app records positions on this server. Switching it off deletes nothing — accounts holding data keep their summary, export and delete.",
+    "needsBeta": "TravTrack is a beta feature. Switch on this instance's beta features first.",
+    "switch": "Offer TravTrack on this server",
+    "switchSub": "Accounts can then choose TravTrack as their location source.",
+    "errors": {
+      "loadFailed": "The TravTrack switch could not be loaded.",
+      "saveFailed": "The TravTrack switch could not be saved.",
+      "disabled": "TravTrack is switched off on this server. Switch on the beta features first."
     }
   }
 }

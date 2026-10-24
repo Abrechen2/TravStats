@@ -121,6 +121,8 @@
     "travplan.ts",
     "travplan/importPolicy.ts",
     "travplan/routeEndpoints.ts",
+    "travtrack.ts",
+    "travtrack/gate.ts",
     "tripSharePeer.ts",
     "trips.ts",
     "trips/entrySuggestions.ts",

@@ -31,6 +31,7 @@ export type AdminPageId =
 
 export type AdminSectionId =
   | "instance"
+  | "travTrack"
   | "shareLinks"
   | "importMode"
   | "usageStats"
@@ -64,6 +65,7 @@ export type AdminPageDef = PageDef<AdminPageId, AdminSectionId>;
 /** The heading of each section — its menu entry, chip and search title. */
 export const ADMIN_SECTION_LABEL_KEY: Record<AdminSectionId, string> = {
   instance: "admin:instance.title",
+  travTrack: "admin:travTrack.title",
   shareLinks: "sharing:links.section.title",
   importMode: "admin:importMode.title",
   usageStats: "usageStats:admin.title",
@@ -121,6 +123,7 @@ export const ADMIN_PAGES: readonly AdminPageDef[] = [
     icon: "settings",
     sections: [
       section("instance"),
+      section("travTrack", "expert", 1),
       section("shareLinks"),
       section("importMode"),
       section("usageStats"),

@@ -229,6 +229,18 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   analyticsEvents: "anonymous usage telemetry, not the user's travel data",
   trackJitterRemeasures:
     "the jitter re-measure job's bookkeeping (forgejo#319); the tracks themselves are exported",
+  // TravTrack, the own location history (beta, TravTrack plan). Not read through
+  // USER_EXPORT_SELECT: an account can hold a million points. Plan T7 adds a
+  // paged `travtrack` section carrying points with links, zones, ranges and gaps.
+  travTrackPoints: "TravTrack history (beta): a paged export section of its own, plan T7",
+  travTrackPointLinks: "TravTrack history (beta): carried with their points, plan T7",
+  travTrackDeletedRanges: "TravTrack history (beta): a paged export section of its own, plan T7",
+  travTrackPrivacyZones: "TravTrack history (beta): a paged export section of its own, plan T7",
+  travTrackGaps: "TravTrack history (beta): a paged export section of its own, plan T7",
+  travTrackUploads:
+    "transport bookkeeping: upload receipts that answer a retry, pruned after 30 days",
+  travTrackShareSnapshots:
+    "derived from the points on the owner's request and rebuilt from them; recipient-facing only",
   trainingData: "parser training corpus of raw source text, operational",
   parseLogs: "parser training log, operational",
   travelPlanUsage: "operational daily AI/weather quota counters, not travel-plan content",

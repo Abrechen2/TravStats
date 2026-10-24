@@ -69,6 +69,7 @@ import parserTemplatesRoutes from "./parserTemplates";
 import trainingRoutes from "./training";
 import tripsRoutes from "./trips";
 import travplanRoutes from "./travplan";
+import travtrackRoutes from "./travtrack";
 import tripBookingRoutes from "./trips/tripBookings";
 import tripPackageRoutes from "./trips/tripPackage";
 import tripExchangeRoutes from "./trips/tripExchange";
@@ -191,6 +192,9 @@ export const apiMounts: ApiMount[] = [
   // Trip sharing across servers (spec 2026-10-20): signed server-to-server messages, 404 when off.
   { id: "trip-share-peer", base: "/api/v1/trip-share-peer", router: tripSharePeerRoutes },
   { id: "travplan", base: "/api/v1", router: travplanRoutes },
+  // TravTrack, the own location history (TravTrack plan, phase 2): every path is
+  // `/travtrack/...`, each route carries its own authentication and gate tier.
+  { id: "travtrack", base: "/api/v1", router: travtrackRoutes },
   // OpenAPI spec + Swagger UI mounted FIRST so /api/v1/docs and
   // /api/v1/openapi.json don't fall through into authenticated routers.
   { id: "openapi", base: "/api/v1", router: openapiRoutes },
