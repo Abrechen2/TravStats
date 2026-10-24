@@ -8,6 +8,7 @@ import type { TripMapContent } from "./tripMapContent";
 import type { TripBusJourney } from "../../types/bus";
 import { buildBusLayers, busPathPoints } from "./tripBusLayer";
 import { useTripRecording } from "../../hooks/useTripRecording";
+import type { TrackOrigin } from "../../lib/api/trackOrigin";
 import { buildRecordingLayers, recordingPoints } from "./recording/recordingLayers";
 import TripRecordingPanel from "./recording/TripRecordingPanel";
 import { useTripTransportLayers, type TripTransportContent } from "./tripTransportLayers";
@@ -38,7 +39,8 @@ export default function TripMapWithTours({
   const busPoints = useMemo(() => busPathPoints(trip.busJourneys ?? []), [trip.busJourneys]);
   const transport = useTripTransportLayers(trip, projection === "globe");
   const [recordingDay, setRecordingDay] = useState<string | null>(null);
-  const recording = useTripRecording(trip.id, recordingDay);
+  const [recordingSource, setRecordingSource] = useState<TrackOrigin | null>(null);
+  const recording = useTripRecording(trip.id, recordingDay, recordingSource);
   const segments = recording.view?.segments;
   const extraLayers = useMemo(
     () => [...transport.layers, ...busLayers, ...buildRecordingLayers(segments ?? [])],
@@ -61,6 +63,11 @@ export default function TripMapWithTours({
         failed={recording.failed}
         day={recordingDay}
         onDayChange={setRecordingDay}
+        source={recordingSource}
+        onSourceChange={(next) => {
+          setRecordingDay(null);
+          setRecordingSource(next);
+        }}
         onDeleted={recording.reload}
       />
       <TripMap

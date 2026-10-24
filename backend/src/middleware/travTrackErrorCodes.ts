@@ -10,4 +10,5 @@ export type TravTrackApiErrorCode =
   | "TRAVTRACK_DEVICE_REQUIRED" // positions come from a paired device only (403)
   | "LOCATION_ZONE_HOLDS_POINTS" // a new or grown zone would delete stored points: ask first (409)
   | "LOCATION_ZONE_LIMIT" // the account holds the most privacy zones there may be (409)
-  | "LOCATION_ZONE_NOT_FOUND"; // no such zone of this account (404)
+  | "LOCATION_ZONE_NOT_FOUND" // no such zone of this account (404)
+  | "TRACK_SOURCE_NOT_AVAILABLE"; // ?source= names a source holding nothing for the entry (404)

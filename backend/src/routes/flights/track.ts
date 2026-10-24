@@ -29,6 +29,7 @@ import { overlapsSchedule, scheduledInstants } from "../../services/flightDevice
 import { trackTimes, type TrackZoneColumns } from "../../services/flightDevice/trackTimes";
 import { flightLiveTrackingEnabled } from "../../services/settings/accountPrefs";
 import logger from "../../utils/logger";
+import { cutStoredTrack, providerFlightTrack, trackSourceQuerySchema } from "./trackSource";
 
 /**
  * The phone's recording of a flight (forgejo#193) — `GET`/`POST`/`DELETE
@@ -153,12 +154,27 @@ async function writeTrack(
  */
 router.get("/:id/track", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const flight = await loadOwnedFlight(req.params.id, req.userId!);
-    const track = await prisma.flightTrack.findUnique({
+    const userId = req.userId!;
+    const flight = await loadOwnedFlight(req.params.id, userId);
+    const { source } = trackSourceQuerySchema.parse(req.query);
+    // Where the line comes from (TravTrack plan T5): the own recording by
+    // default, else the chosen provider; `?source=` shows another explicitly.
+    const { entry, track: fromProvider } = await providerFlightTrack(userId, flight, source);
+    const meta = {
+      origin: entry.origin,
+      coverage: entry.coverage,
+      alternatives: entry.alternatives,
+    };
+    if (entry.origin !== "travstats") {
+      res.json({ track: fromProvider ? await present(fromProvider, flight) : null, ...meta });
+      return;
+    }
+    const stored = await prisma.flightTrack.findUnique({
       where: { flightId: flight.id },
       select: { ...TRACK_META_SELECT, geometry: true, segmentStarts: true, elevations: true },
     });
-    res.json({ track: track ? await present(track, flight) : null });
+    const track = stored ? await cutStoredTrack(userId, stored, stored.startedAt.getTime()) : null;
+    res.json({ track: track ? await present(track, flight) : null, ...meta });
   } catch (err) {
     next(err);
   }

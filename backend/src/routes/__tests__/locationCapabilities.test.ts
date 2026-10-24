@@ -71,6 +71,18 @@ describe("location capabilities", () => {
       await switches.set({ beta: false, config: false });
     });
 
+    it("provider travtrack: both true with sink travtrack", async () => {
+      await switches.set({ beta: true, config: true });
+      await setLocationProvider(userId, "travtrack");
+      expect((await caps()).body.capture).toEqual({
+        flight: true,
+        trip: true,
+        everyday: true,
+        modes: ["off", "trips", "everyday"],
+        sink: "travtrack",
+      });
+    });
+
     it("provider travtrack on an instance that takes points: capture and upload", async () => {
       await switches.set({ beta: true, config: true });
       await setLocationProvider(userId, "travtrack");
@@ -113,7 +125,7 @@ describe("location capabilities", () => {
       expect((await caps()).body).toEqual({
         version: 1,
         provider: { kind: "none", rev: 0, status: "ok" },
-        capture: { flight: true, trip: true, everyday: false, modes: [] },
+        capture: { flight: true, trip: true, everyday: false, modes: [], sink: "entries" },
         travTrack: { offered: false, enabled: false, capture: false, upload: false },
       });
     });
@@ -125,15 +137,16 @@ describe("location capabilities", () => {
         trip: false,
         everyday: false,
         modes: [],
+        sink: null,
       });
     });
 
-    it("phase 1: provider dawarich still allows flight and trip capture", async () => {
+    it("provider dawarich: capture.flight and capture.trip false, sink null", async () => {
       await settings({ ...ownDawarich, locationProvider: "dawarich", locationProviderRev: 3 });
       expect((await caps()).body).toEqual({
         version: 1,
         provider: { kind: "dawarich", rev: 3, status: "ok" },
-        capture: { flight: true, trip: true, everyday: false, modes: [] },
+        capture: { flight: false, trip: false, everyday: false, modes: [], sink: null },
         travTrack: { offered: false, enabled: false, capture: false, upload: false },
       });
     });
@@ -152,7 +165,7 @@ describe("location capabilities", () => {
       expect((await caps()).body).toEqual({
         version: 1,
         provider: { kind: "travtrack", rev: 2, status: "unavailable" },
-        capture: { flight: false, trip: false, everyday: false, modes: [] },
+        capture: { flight: false, trip: false, everyday: false, modes: [], sink: null },
         travTrack: { offered: false, enabled: false, capture: false, upload: false },
       });
     });

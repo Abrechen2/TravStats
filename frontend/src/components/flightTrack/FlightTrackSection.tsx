@@ -12,12 +12,14 @@ import { flightsApi } from "../../lib/api";
 import { convertDistance, getDistanceLabel } from "../../lib/units";
 import { logger } from "../../lib/logger";
 import type { FlightTrack } from "../../types/flightTrack";
+import TrackOriginNote from "../tracks/TrackOriginNote";
+import { NO_ORIGIN_INFO, type TrackOrigin, type TrackOriginInfo } from "../../lib/api/trackOrigin";
 
 type TrackState =
   | { kind: "loading" }
-  | { kind: "none" }
+  | { kind: "none"; info: TrackOriginInfo }
   | { kind: "failed" }
-  | { kind: "loaded"; track: FlightTrack };
+  | { kind: "loaded"; track: FlightTrack; info: TrackOriginInfo };
 
 interface Props {
   flightId: string;
@@ -35,6 +37,11 @@ interface Props {
  * loading and nothing without a recording. With it, a flight without one gets
  * the upload, and one with a recording gets replace, delete and the measured
  * distance set against the great circle.
+ *
+ * Since TravTrack (plan T5) the line may come from the account's location
+ * provider; the section names its origin, says when Dawarich answered short or
+ * not at all, and offers another source only when one holds something. Upload,
+ * replace and delete act on the own recording only.
  */
 export default function FlightTrackSection({
   flightId,
@@ -47,6 +54,7 @@ export default function FlightTrackSection({
   const distanceUnit = useSettingsStore((state) => state.units.distanceUnit);
   const [state, setState] = useState<TrackState>({ kind: "loading" });
   const [reloadKey, setReloadKey] = useState(0);
+  const [source, setSource] = useState<TrackOrigin | null>(null);
   const reload = useCallback(() => setReloadKey((k) => k + 1), []);
 
   useEffect(() => {
@@ -54,8 +62,8 @@ export default function FlightTrackSection({
     setState({ kind: "loading" });
     void (async () => {
       try {
-        const track = await flightsApi.getTrack(flightId);
-        if (!cancelled) setState(track ? { kind: "loaded", track } : { kind: "none" });
+        const { track, info } = await flightsApi.getTrackView(flightId, source);
+        if (!cancelled) setState(track ? { kind: "loaded", track, info } : { kind: "none", info });
       } catch (err: unknown) {
         logger.warn({ err }, "FlightTrackSection: recording could not be loaded");
         if (!cancelled) setState({ kind: "failed" });
@@ -64,10 +72,16 @@ export default function FlightTrackSection({
     return () => {
       cancelled = true;
     };
-  }, [flightId, reloadKey]);
+  }, [flightId, reloadKey, source]);
 
   if (state.kind === "loading") return null;
-  if (state.kind === "none" && !canUpload) return null;
+  const info = state.kind === "failed" ? NO_ORIGIN_INFO : state.info;
+  const pick = (next: TrackOrigin): void => setSource(next === info.origin ? null : next);
+  const note = <TrackOriginNote info={info} onPick={pick} />;
+  const ownOrNone = info.origin === null || info.origin === "travstats";
+  if (state.kind === "none" && !canUpload && info.alternatives.length === 0) {
+    if (info.coverage !== "unreachable") return null;
+  }
   if (state.kind === "failed") {
     return (
       <DetailSection title={t("flights:track.title")}>
@@ -87,8 +101,13 @@ export default function FlightTrackSection({
     return (
       <DetailSection title={t("flights:track.title")}>
         <div className="flex flex-col gap-2">
-          <p className="t-caption">{t("flights:track.uploadIntro")}</p>
-          <FlightTrackControls flightId={flightId} hasTrack={false} onChanged={reload} />
+          {note}
+          {canUpload && ownOrNone && (
+            <>
+              <p className="t-caption">{t("flights:track.uploadIntro")}</p>
+              <FlightTrackControls flightId={flightId} hasTrack={false} onChanged={reload} />
+            </>
+          )}
         </div>
       </DetailSection>
     );
@@ -97,7 +116,9 @@ export default function FlightTrackSection({
   const { track } = state;
   const gaps = Math.max(0, new Set(track.segmentStarts).size - 1);
   const captionKey =
-    track.source === "companion" ? "flights:track.caption" : "flights:track.captionFile";
+    track.source === "companion" || track.source === "travtrack" || track.source === "dawarich"
+      ? "flights:track.caption"
+      : "flights:track.captionFile";
   // A recording with holes measures only its recorded stretches, so set beside
   // the great circle it would read as a shorter flight ("−60 %"); say nothing.
   const comparison =
@@ -121,6 +142,7 @@ export default function FlightTrackSection({
           {gaps > 0 && ` ${t("flights:track.gaps", { count: gaps })}`}
         </p>
         <JitterNote jitterDropped={track.jitterDropped} />
+        {note}
         {comparison && (
           <p className="t-caption" data-testid="flight-track-comparison">
             {t("flights:track.versusGreatCircle", {
@@ -130,7 +152,9 @@ export default function FlightTrackSection({
             })}
           </p>
         )}
-        {canUpload && <FlightTrackControls flightId={flightId} hasTrack onChanged={reload} />}
+        {canUpload && ownOrNone && (
+          <FlightTrackControls flightId={flightId} hasTrack onChanged={reload} />
+        )}
       </div>
     </DetailSection>
   );

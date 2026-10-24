@@ -134,6 +134,9 @@ describe("trip recording — private to its owner", () => {
       "services/tripCleanupService.ts",
       // Classifies the User relation as never published (NON_TRAVEL_RELATIONS).
       "services/federation/e2e/graph.ts",
+      // The trip recording's own read path since TravTrack plan T5: it chooses
+      // between the own recording and the provider for the same owner's router.
+      "services/locationProvider/entryTrack.ts",
     ]);
     const files = (dir: string): string[] =>
       readdirSync(dir).flatMap((name) => {

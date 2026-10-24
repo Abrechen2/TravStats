@@ -2,11 +2,14 @@
  * What the Companion should record for one account (TravTrack plan, task S4),
  * answered by `GET /location/capabilities`.
  *
- * Phase 1, by the sequencing rule: "Dawarich → the Companion records nothing"
- * takes effect only together with the reads that replace it (T5). Until then
- * a `dawarich` account keeps today's flight and trip recording, and only
- * `travtrack` — whose own segments will carry flights and trips — turns them
- * off. T5 changes the two lines below to `kind === "none" || kind === "travtrack"`.
+ * Since T5 (Codex's sequencing rule): "Dawarich → the Companion records
+ * nothing" — flights and trips are recorded only under `none` (into the entry
+ * routes, `sink: "entries"`) and under a working `travtrack` (into TravTrack,
+ * `sink: "travtrack"`). It took effect in the same change that shows Dawarich
+ * tracks on the flight and trip pages (`entryTrack.ts`), so a Dawarich user
+ * stops recording exactly when the replacement appears. A phase-1 Companion
+ * ignores `sink` and keeps recording through the entry routes under
+ * `travtrack` — accepted (review focus 12): the server is still the record.
  *
  * The recording routes (`POST /flights/:id/track`, `POST /trips/:id/recording`)
  * deliberately do NOT read this: a recording queued on the phone before a
@@ -27,11 +30,19 @@ import { getLocationProvider, travTrackAvailable } from "./provider";
 import type { LocationProviderKind, ProviderStatus } from "./kinds";
 
 export type CaptureMode = "off" | "trips" | "everyday";
+export type CaptureSink = "entries" | "travtrack";
 
 export interface LocationCapabilities {
   version: 1;
   provider: { kind: LocationProviderKind; rev: number; status: ProviderStatus };
-  capture: { flight: boolean; trip: boolean; everyday: boolean; modes: CaptureMode[] };
+  capture: {
+    flight: boolean;
+    trip: boolean;
+    everyday: boolean;
+    modes: CaptureMode[];
+    /** Where the phone sends what it records: the entry routes, TravTrack, or nowhere. */
+    sink: CaptureSink | null;
+  };
   travTrack: { offered: boolean; enabled: boolean; capture: boolean; upload: boolean };
 }
 
@@ -44,15 +55,19 @@ export async function locationCapabilities(userId: string): Promise<LocationCapa
     travTrackInstanceOn(),
   ]);
   const travTrackOn = provider.kind === "travtrack" && provider.status === "ok";
-  const ownCapture = provider.kind !== "travtrack";
+  const sink: CaptureSink | null =
+    provider.kind === "none" ? "entries" : travTrackOn ? "travtrack" : null;
+  const flight = sink !== null && flightSwitch;
+  const trip = sink !== null && tripSwitch;
   return {
     version: 1,
     provider,
     capture: {
-      flight: ownCapture && flightSwitch,
-      trip: ownCapture && tripSwitch,
+      flight,
+      trip,
       everyday: travTrackOn,
       modes: travTrackOn ? ["off", "trips", "everyday"] : [],
+      sink: flight || trip || travTrackOn ? sink : null,
     },
     travTrack: { offered, enabled: travTrackOn, capture: travTrackOn, upload },
   };

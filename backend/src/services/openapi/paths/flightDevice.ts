@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
+import { sourceNotAvailable, trackOriginFields, trackSourceQuery } from "./trackOrigin";
 import { errorContent, jitterDroppedField } from "./shared";
 import { timeValueSchema } from "../../../shared/time/wire";
 import {
@@ -23,8 +24,11 @@ const trackMeta = z.object({
   id: z.string().uuid(),
   flightId: z.string().uuid(),
   source: z
-    .enum(FLIGHT_TRACK_SOURCES)
-    .describe("`companion` from the phone; the file format for an uploaded file (forgejo#312)"),
+    .enum([...FLIGHT_TRACK_SOURCES, "travtrack", "dawarich"])
+    .describe(
+      "`companion` from the phone; the file format for an uploaded file (forgejo#312); " +
+        "`travtrack` / `dawarich` for a line drawn from that provider's points (not stored)"
+    ),
   uploadId: z
     .string()
     .describe(
@@ -71,15 +75,27 @@ registry.registerPath({
   method: "get",
   path: "/flights/{id}/track",
   summary: "The phone's recording of a flight",
-  description: "`{ track: null }` when no recording was sent — that is an answer, not an error.",
+  description:
+    "`{ track: null }` when no recording was sent — that is an answer, not an error. Without " +
+    "an own recording the line comes from the account's location provider (TravTrack: the " +
+    "points linked to the flight and those in its recorder window; Dawarich: the window). " +
+    "Every line is privacy-cut.",
   tags: ["Flights"],
-  request: { params: flightParams },
+  request: { params: flightParams, query: trackSourceQuery },
   responses: {
     200: {
-      description: "The recording, or null",
-      content: { "application/json": { schema: z.object({ track: flightTrack.nullable() }) } },
+      description: "The recording, or null, and where it came from",
+      content: {
+        "application/json": {
+          schema: z.object({ track: flightTrack.nullable(), ...trackOriginFields }),
+        },
+      },
     },
-    404: { description: "Flight not found — `code: FLIGHT_NOT_FOUND`", content: errorContent },
+    400: { description: "Unknown source (VALIDATION_FAILED)", content: errorContent },
+    404: {
+      description: `Flight not found — \`code: FLIGHT_NOT_FOUND\`; or ${sourceNotAvailable}`,
+      content: errorContent,
+    },
   },
 });
 
@@ -173,7 +189,9 @@ registry.registerPath({
   summary: "Every recorded flight line of the caller, for the map",
   description:
     "One entry per flight that has a recording: the simplified line and where each recorded " +
-    "stretch starts. A flight without a recording is absent, not an empty line.",
+    "stretch starts. A flight without a recording is absent, not an empty line. Under " +
+    "provider TravTrack a flight without an own recording is drawn from its TravTrack points " +
+    "(`origin: travtrack`); Dawarich is never asked here. Every line is privacy-cut.",
   tags: ["Flights"],
   responses: {
     200: {
@@ -186,6 +204,7 @@ registry.registerPath({
                 flightId: z.string().uuid(),
                 geometry: z.array(z.tuple([z.number(), z.number()])),
                 segmentStarts: z.array(z.number().int()),
+                origin: z.enum(["travstats", "travtrack"]),
               })
             ),
           }),

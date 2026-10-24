@@ -1,7 +1,16 @@
 import type { TimeValue } from "../shared/time";
 
 /** `companion` from the phone (forgejo#193); the file format for an upload (forgejo#312). */
-export type FlightTrackSource = "companion" | "gpx" | "kml" | "tcx" | "fit" | "csv";
+export type FlightTrackSource =
+  | "companion"
+  | "gpx"
+  | "kml"
+  | "tcx"
+  | "fit"
+  | "csv"
+  // Drawn from the location provider's points, not stored (TravTrack plan T5).
+  | "travtrack"
+  | "dawarich";
 
 /**
  * A recording of a flight, as `GET /flights/:id/track` serves it — the
@@ -46,6 +55,8 @@ export interface FlightTrackLine {
   geometry: Array<[number, number]>;
   /** Index into `geometry` where each recorded stretch starts. */
   segmentStarts: number[];
+  /** Where the line came from; absent from an older server (= the own recording). */
+  origin?: "travstats" | "travtrack";
 }
 
 /** A recording as it is drawn: what the receiver measured, and the holes between. */

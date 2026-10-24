@@ -67,3 +67,38 @@ export async function wipeTravTrack(userIds: string[]): Promise<void> {
   await prisma.travTrackZoneTombstone.deleteMany({ where });
 }
 
+let refCounter = 0;
+
+/** One stored TravTrack point, optionally linked to entries. */
+export async function storePoint(
+  userId: string,
+  p: {
+    t: number;
+    lat: number;
+    lon: number;
+    device?: string;
+    links?: Array<{ kind: "flight" | "trip"; id: string }>;
+  }
+): Promise<string> {
+  refCounter += 1;
+  const device = p.device ?? "phone-1";
+  const row = await prisma.travTrackPoint.create({
+    data: {
+      userId,
+      t: new Date(p.t),
+      tS: Math.floor(p.t / 1000),
+      lat: p.lat,
+      lon: p.lon,
+      accuracyM: 5,
+      origin: `companion:${device}`,
+      originRef: `fx-${refCounter}`,
+      deviceId: device,
+    },
+  });
+  for (const link of p.links ?? []) {
+    await prisma.travTrackPointLink.create({
+      data: { userId, pointId: row.id, entryKind: link.kind, entryId: link.id },
+    });
+  }
+  return row.id;
+}

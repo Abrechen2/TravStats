@@ -81,7 +81,8 @@ describe("Flight recordings — /flights/:id/track", () => {
   it("answers { track: null } before anything was recorded", async () => {
     const res = await request(app).get(`/api/v1/flights/${flightId}/track`).set("Cookie", cookie);
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ track: null });
+    // TravTrack plan T5: nothing to show says where nothing came from.
+    expect(res.body).toEqual({ track: null, origin: null, coverage: null, alternatives: [] });
   });
 
   it("stores a recording in its own table and serves its line", async () => {

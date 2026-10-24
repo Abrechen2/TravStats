@@ -13,6 +13,21 @@ const deleteMock = vi.fn();
 vi.mock("../../../lib/api", () => ({
   flightsApi: {
     getTrack: (...args: unknown[]) => getTrackMock(...args),
+    // The section reads the track with its origin (TravTrack plan T5).
+    getTrackView: async (...args: unknown[]) => {
+      const answer = (await getTrackMock(...(args[1] ? args : [args[0]]))) as
+        FlightTrack | null | { track: FlightTrack | null; info: unknown };
+      return answer && "info" in answer
+        ? answer
+        : {
+            track: answer,
+            info: {
+              origin: answer ? "travstats" : null,
+              coverage: answer ? "complete" : null,
+              alternatives: [],
+            },
+          };
+    },
     uploadTrackFile: (...args: unknown[]) => uploadMock(...args),
     deleteTrack: (...args: unknown[]) => deleteMock(...args),
   },
@@ -238,6 +253,42 @@ describe("FlightTrackSection", () => {
       render(<FlightTrackSection flightId="f1" departure={MUC} arrival={ICN} />);
       await screen.findByTestId("flight-track-caption");
       expect(screen.queryByTestId("flight-track-comparison")).toBeNull();
+    });
+  });
+
+  describe("where the line came from (TravTrack plan T5)", () => {
+    const view = (track: FlightTrack | null, info: object) => ({ track, info });
+
+    it("labels a TravTrack line and offers no upload controls for it", async () => {
+      betaOn = true;
+      getTrackMock.mockResolvedValue(
+        view(
+          { ...makeTrack(), source: "travtrack" },
+          { origin: "travtrack", coverage: "complete", alternatives: [] }
+        )
+      );
+      render(<FlightTrackSection flightId="f1" />);
+      expect(await screen.findByText("location:trackOrigin.label.travtrack")).toBeInTheDocument();
+      expect(screen.queryByRole("group")).not.toBeInTheDocument();
+    });
+
+    it("says Dawarich was unreachable instead of showing nothing", async () => {
+      getTrackMock.mockResolvedValue(
+        view(null, { origin: "dawarich", coverage: "unreachable", alternatives: [] })
+      );
+      render(<FlightTrackSection flightId="f1" />);
+      expect(
+        await screen.findByText("location:trackOrigin.coverage.unreachable")
+      ).toBeInTheDocument();
+    });
+
+    it("offers the other source only when one holds something, and asks for it", async () => {
+      getTrackMock.mockResolvedValue(
+        view(makeTrack(), { origin: "travstats", coverage: "complete", alternatives: ["dawarich"] })
+      );
+      render(<FlightTrackSection flightId="f1" />);
+      fireEvent.click(await screen.findByText("location:trackOrigin.show.dawarich"));
+      await waitFor(() => expect(getTrackMock).toHaveBeenLastCalledWith("f1", "dawarich"));
     });
   });
 });

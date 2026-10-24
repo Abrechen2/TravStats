@@ -62,17 +62,22 @@ const capabilities = z.object({
     flight: z
       .boolean()
       .describe(
-        "Record flights with the app (phase 1: every provider but travtrack, if switched on)"
+        "Record flights with the app: provider none or a working travtrack, if switched on"
       ),
     trip: z
       .boolean()
-      .describe(
-        "Record trips with the app (phase 1: every provider but travtrack, if switched on)"
-      ),
+      .describe("Record trips with the app: provider none or a working travtrack, if switched on"),
     everyday: z.boolean().describe("Everyday location history through TravTrack"),
     modes: z
       .array(z.enum(["off", "trips", "everyday"]))
       .describe("Recording modes to offer; empty without TravTrack"),
+    sink: z
+      .enum(["entries", "travtrack"])
+      .nullable()
+      .describe(
+        "Where recordings go: entries (/flights/:id/track, /trips/:id/recording), travtrack " +
+          "(/travtrack/points), or null when nothing is recorded (provider dawarich)"
+      ),
   }),
   travTrack: z.object({
     offered: z.boolean().describe("This server offers TravTrack to this account"),

@@ -92,7 +92,7 @@ describe("TripMapWithTours — the trip recording (forgejo#316)", () => {
   it("draws nothing and shows no widget when nothing was recorded", async () => {
     vi.mocked(tripRecordingApi.get).mockResolvedValue(EMPTY);
     render(<TripMapWithTours trip={trip} />);
-    await waitFor(() => expect(tripRecordingApi.get).toHaveBeenCalledWith("trip-1", null));
+    await waitFor(() => expect(tripRecordingApi.get).toHaveBeenCalledWith("trip-1", null, null));
     expect(screen.queryByTestId("trip-recording-panel")).not.toBeInTheDocument();
     expect(screen.queryByTestId("trip-recording-lines")).not.toBeInTheDocument();
   });
@@ -120,10 +120,12 @@ describe("TripMapWithTours — the trip recording (forgejo#316)", () => {
     const select = await screen.findByRole("combobox", { name: "trips:recording.dayFilter" });
     await userEvent.selectOptions(select, "2026-05-02");
     await waitFor(() =>
-      expect(tripRecordingApi.get).toHaveBeenLastCalledWith("trip-1", "2026-05-02")
+      expect(tripRecordingApi.get).toHaveBeenLastCalledWith("trip-1", "2026-05-02", null)
     );
     await userEvent.selectOptions(select, "");
-    await waitFor(() => expect(tripRecordingApi.get).toHaveBeenLastCalledWith("trip-1", null));
+    await waitFor(() =>
+      expect(tripRecordingApi.get).toHaveBeenLastCalledWith("trip-1", null, null)
+    );
   });
 
   it("deletes only after the confirmation, then re-reads and shows nothing", async () => {

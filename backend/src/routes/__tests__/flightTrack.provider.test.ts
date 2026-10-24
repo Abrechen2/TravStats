@@ -1,0 +1,130 @@
+import request from "supertest";
+import { jest } from "@jest/globals";
+
+import app from "../../index";
+import { prisma } from "../../db";
+import { generateToken } from "../../utils/jwt";
+import { encryptApiKey } from "../../utils/encryption";
+import { setLocationProvider } from "../../services/locationProvider/provider";
+import { travTrackSwitches } from "../../services/travtrack/__tests__/switches";
+import {
+  makeFlight,
+  makeUser,
+  storePoint,
+  wipeTravTrack,
+} from "../../services/travtrack/__tests__/fixtures";
+
+/**
+ * A flight's track from the chosen source (TravTrack plan T5): the flight page
+ * and the map's track lines. TravTrack lines join the map; Dawarich lines do
+ * not (no remote fan-out on a map load) — those flights keep their great
+ * circle and show the Dawarich track on their own page.
+ */
+
+const PREFIX = "travtrack-flight-provider-";
+// The flight fixture departs 00:30Z on 12 Oct, lands 01:30Z; the recorder window is 00:00–02:00Z.
+const DEP = Date.parse("2026-10-12T00:30:00Z");
+const MIN = 60_000;
+
+describe("flight tracks from the location provider", () => {
+  const switches = travTrackSwitches();
+  const realFetch = global.fetch;
+  let userId: string;
+  let cookie: string;
+  let flightId: string;
+
+  const flown = async () => {
+    for (let i = 0; i < 6; i++) {
+      await storePoint(userId, {
+        t: DEP + i * 10 * MIN,
+        lat: 37.4 - i * 0.6,
+        lon: 126.45 + i * 0.01,
+        links: i === 0 ? [{ kind: "flight", id: flightId }] : [],
+      });
+    }
+  };
+
+  beforeAll(async () => {
+    userId = await makeUser(`${PREFIX}a`);
+    cookie = `auth_token=${generateToken(userId)}`;
+  });
+
+  beforeEach(async () => {
+    await switches.set({ beta: true, config: true });
+    await wipeTravTrack([userId]);
+    await prisma.flight.deleteMany({ where: { userId } });
+    await prisma.userSettings.deleteMany({ where: { userId } });
+    flightId = await makeFlight(userId);
+    global.fetch = jest.fn<typeof fetch>() as unknown as typeof fetch;
+  });
+
+  afterAll(async () => {
+    global.fetch = realFetch;
+    await switches.restore();
+    await prisma.user.deleteMany({ where: { username: { startsWith: PREFIX } } });
+    await prisma.$disconnect();
+  });
+
+  it("draws a TravTrack flight on its page from its points and says so", async () => {
+    await setLocationProvider(userId, "travtrack");
+    await flown();
+    const res = await request(app).get(`/api/v1/flights/${flightId}/track`).set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ origin: "travtrack", coverage: "complete", alternatives: [] });
+    expect(res.body.track).toMatchObject({ flightId, source: "travtrack", pointCount: 6 });
+    expect(res.body.track.geometry.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("track-lines draws a TravTrack flight from its points and marks origin", async () => {
+    await setLocationProvider(userId, "travtrack");
+    await flown();
+    const res = await request(app).get("/api/v1/flights/track-lines").set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.lines).toEqual([
+      expect.objectContaining({ flightId, origin: "travtrack", segmentStarts: [0] }),
+    ]);
+  });
+
+  it("track-lines draws a Dawarich user's flight as before (no line) and makes no Dawarich request", async () => {
+    await prisma.userSettings.create({
+      data: {
+        userId,
+        data: {},
+        dawarichBaseUrl: "http://dawarich.local:3000",
+        dawarichApiKey: encryptApiKey("own"),
+      },
+    });
+    await setLocationProvider(userId, "dawarich");
+    await flown(); // TravTrack points exist, but TravTrack is not the provider
+    const res = await request(app).get("/api/v1/flights/track-lines").set("Cookie", cookie);
+    expect(res.body.lines).toEqual([]);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("an own recording keeps its line and is labelled travstats on the map", async () => {
+    await prisma.flightTrack.create({
+      data: {
+        flightId,
+        source: "companion",
+        uploadId: "own",
+        startedAt: new Date(DEP),
+        endedAt: new Date(DEP + 3_600_000),
+        geometry: [
+          [126.45, 37.4],
+          [126.5, 33.5],
+        ],
+        segmentStarts: [0],
+        cumulativeKm: [0, 430],
+        pointCount: 2,
+        distanceKm: 430,
+      },
+    });
+    await setLocationProvider(userId, "travtrack");
+    await flown();
+    const lines = await request(app).get("/api/v1/flights/track-lines").set("Cookie", cookie);
+    expect(lines.body.lines).toEqual([expect.objectContaining({ flightId, origin: "travstats" })]);
+    const page = await request(app).get(`/api/v1/flights/${flightId}/track`).set("Cookie", cookie);
+    expect(page.body).toMatchObject({ origin: "travstats", alternatives: ["travtrack"] });
+    expect(page.body.track.source).toBe("companion");
+  });
+});

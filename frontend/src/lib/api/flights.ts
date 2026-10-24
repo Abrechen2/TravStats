@@ -11,6 +11,7 @@ import type { FlightTrack, FlightTrackLine, FlightTrackMeta } from "../../types/
 
 import { API_TIMEOUTS } from "../../config/constants";
 import { api } from "./client";
+import { originInfoOf, type TrackOrigin, type TrackOriginInfo } from "./trackOrigin";
 
 /** The soonest upcoming flight for the dashboard block, enriched with the
  *  city/country of each end. `flight` is null when nothing lies ahead. */
@@ -177,6 +178,18 @@ export const flightsApi = {
   getTrack: async (id: string): Promise<FlightTrack | null> => {
     const { data } = await api.get<{ track: FlightTrack | null }>(`/flights/${id}/track`);
     return data.track;
+  },
+
+  /** The track with where it came from (TravTrack plan T5); `source` shows another origin. */
+  getTrackView: async (
+    id: string,
+    source: TrackOrigin | null = null
+  ): Promise<{ track: FlightTrack | null; info: TrackOriginInfo }> => {
+    const { data } = await api.get<{ track: FlightTrack | null } & Partial<TrackOriginInfo>>(
+      `/flights/${id}/track`,
+      source ? { params: { source } } : undefined
+    );
+    return { track: data.track, info: originInfoOf(data) };
   },
 
   /**

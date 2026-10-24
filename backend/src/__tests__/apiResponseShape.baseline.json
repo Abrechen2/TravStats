@@ -61,6 +61,7 @@
     "flights/timeInput.ts",
     "flights/track.ts",
     "flights/trackLines.ts",
+    "flights/trackSource.ts",
     "flightsBatch.ts",
     "geoServer.ts",
     "health.ts",
