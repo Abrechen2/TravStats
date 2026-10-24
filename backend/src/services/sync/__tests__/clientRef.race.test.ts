@@ -60,7 +60,7 @@ describe("createOnce — a retry that lost the race to itself", () => {
       payload: PAYLOAD,
       create: async () => {
         await firstSendCommits("race-thrown", "cruise-2");
-        throw new AppError("Duplicate", 409, "DUPLICATE_FLIGHT");
+        throw new AppError("Duplicate", 409, "DUPLICATE");
       },
       replay,
     });
@@ -68,7 +68,7 @@ describe("createOnce — a retry that lost the race to itself", () => {
   });
 
   it("without a winner the route's own dedup answer stands", async () => {
-    const outcome = await createOnce<{ alreadyImported: string }>({
+    const outcome = await createOnce<{ replayed?: string; alreadyImported?: string }>({
       userId,
       clientRef: "no-race",
       kind: "cruise",
@@ -85,16 +85,16 @@ describe("createOnce — a retry that lost the race to itself", () => {
         kind: "cruise",
         payload: PAYLOAD,
         create: async () => {
-          throw new AppError("Duplicate", 409, "DUPLICATE_FLIGHT");
+          throw new AppError("Duplicate", 409, "DUPLICATE");
         },
         replay: async () => null,
       })
-    ).rejects.toMatchObject({ code: "DUPLICATE_FLIGHT" });
+    ).rejects.toMatchObject({ code: "DUPLICATE" });
   });
 
   it("a winner with a different body is still CLIENT_REF_REUSED", async () => {
     await expect(
-      createOnce({
+      createOnce<{ replayed?: string; alreadyImported?: string }>({
         userId,
         clientRef: "race-other-body",
         kind: "cruise",
