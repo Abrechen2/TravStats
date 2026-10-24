@@ -12,12 +12,15 @@ import { privacyCutBy, type LonLat } from "./privacyCut";
  * and every former zone's circle that still covers a line begun before it
  * went. Nothing inside a circle and no chord through one ever leaves.
  *
- * And nothing ABOUT the hidden part leaves either: once the cut removed a
- * vertex, every figure describes what is left — `distanceKm` from the kept
- * stretches, `pointCount` the kept vertices, the altitude profile trimmed to
- * the kept distance ranges (dropped without `cumulativeKm` to place it), and
- * a cut end has no time (`startCut` / `endCut`): the line holds no
- * per-vertex times, so the time of the vertex that is now last is not known.
+ * And nothing ABOUT the hidden part leaves either: once the cut changed the
+ * line — a vertex removed, or a stretch broken where a chord crossed a zone —
+ * every figure describes what is left. `cumulativeKm` is rebased onto the
+ * kept stretches (each starts where the one before ended), `distanceKm` is
+ * their sum, `pointCount` the kept vertices, the altitude profile keeps only
+ * the kept stretches with its distances rebased the same way (dropped without
+ * a running distance to place it), and a cut end has no time (`startCut` /
+ * `endCut`): the line holds no per-vertex times, so the time of the vertex
+ * that is now last is not known.
  */
 
 export type FlightTrackLine = {
@@ -51,35 +54,52 @@ const asNumbers = (value: unknown): number[] | null =>
 
 type Kept = Array<Array<{ p: LonLat; i: number }>>;
 
-/** The kept stretches' length: by the recording's own running distance, else on the sphere. */
-function keptKm(kept: Kept, cumulative: number[] | null): number {
+/** The kept stretches' length on the sphere, for a line without a running distance. */
+function sphereKm(kept: Kept): number {
   let km = 0;
   for (const line of kept) {
-    const first = line[0];
-    const last = line[line.length - 1];
-    if (cumulative && cumulative[first.i] !== undefined && cumulative[last.i] !== undefined) {
-      km += cumulative[last.i] - cumulative[first.i];
-      continue;
-    }
     for (let k = 1; k < line.length; k++) {
       const [a, b] = [line[k - 1].p, line[k].p];
       km += haversineKm({ lon: a[0], lat: a[1] }, { lon: b[0], lat: b[1] });
     }
   }
-  return Math.round(km * 1000) / 1000;
+  return km;
 }
 
-/** The altitude profile within the kept distance ranges; null where it cannot be placed. */
-function keptElevations(elevations: unknown, kept: Kept, cumulative: number[] | null) {
+const round = (km: number) => Math.round(km * 1000) / 1000;
+
+/**
+ * The running distance rebased onto the kept stretches: each kept line starts
+ * where the one before ended, so no figure counts the distance through a hidden
+ * part or across a broken chord. `offsets[k]` maps the original running
+ * distance inside kept line k onto the rebased one.
+ */
+function rebase(kept: Kept, cumulative: number[]) {
+  const offsets: Array<{ from: number; to: number; shift: number }> = [];
+  const km: number[] = [];
+  let acc = 0;
+  for (const line of kept) {
+    const from = cumulative[line[0].i];
+    const to = cumulative[line[line.length - 1].i];
+    offsets.push({ from, to, shift: acc - from });
+    for (const v of line) km.push(round(cumulative[v.i] + acc - from));
+    acc += to - from;
+  }
+  return { km, offsets, total: round(acc) };
+}
+
+/** The altitude profile within the kept stretches, its distances rebased with them. */
+function keptElevations(
+  elevations: unknown,
+  offsets: ReturnType<typeof rebase>["offsets"] | null
+): unknown {
   if (!Array.isArray(elevations)) return elevations ?? null;
-  if (!cumulative) return null;
-  const ranges = kept.map((line) => [cumulative[line[0].i], cumulative[line[line.length - 1].i]]);
-  return elevations.filter(
-    (e) =>
-      Array.isArray(e) &&
-      typeof e[0] === "number" &&
-      ranges.some(([from, to]) => e[0] >= from && e[0] <= to)
-  );
+  if (!offsets) return null;
+  return elevations.flatMap((e) => {
+    if (!Array.isArray(e) || typeof e[0] !== "number") return [];
+    const range = offsets.find((o) => e[0] >= o.from && e[0] <= o.to);
+    return range ? [[round(e[0] + range.shift), e[1]]] : [];
+  });
 }
 
 /** The line cut with `circles`, and every figure describing only what is left. */
@@ -98,18 +118,22 @@ export function cutFlightTrackWith<T extends FlightTrackLine>(
   );
   const kept: Kept = privacyCutBy(lines, circles, (v) => v.p);
   const keptCount = kept.reduce((n, line) => n + line.length, 0);
-  if (keptCount === geometry.length) return { track, startCut: false, endCut: false };
+  // Unchanged only when every vertex stayed AND the pieces are the original
+  // stretches: a chord through a zone breaks a stretch without removing a vertex.
+  const sameShape =
+    keptCount === geometry.length &&
+    kept.length === lines.length &&
+    kept.every((line, k) => line[0].i === starts[k]);
+  if (sameShape) return { track, startCut: false, endCut: false };
 
   const out: LonLat[] = [];
   const outStarts: number[] = [];
-  const outKm: number[] = [];
   for (const line of kept) {
     outStarts.push(out.length);
-    for (const v of line) {
-      out.push(v.p);
-      if (cumulative) outKm.push(cumulative[v.i]);
-    }
+    for (const v of line) out.push(v.p);
   }
+  const usable = cumulative && cumulative.length === geometry.length ? cumulative : null;
+  const based = usable ? rebase(kept, usable) : null;
   const firstKept = kept[0]?.[0]?.i;
   const lastLine = kept[kept.length - 1];
   const lastKept = lastLine?.[lastLine.length - 1]?.i;
@@ -118,11 +142,11 @@ export function cutFlightTrackWith<T extends FlightTrackLine>(
       ...track,
       geometry: out,
       segmentStarts: out.length > 0 ? outStarts : [],
-      ...(cumulative ? { cumulativeKm: outKm } : {}),
-      ...("distanceKm" in track ? { distanceKm: keptKm(kept, cumulative) } : {}),
+      ...(cumulative ? { cumulativeKm: based ? based.km : null } : {}),
+      ...("distanceKm" in track ? { distanceKm: based ? based.total : round(sphereKm(kept)) } : {}),
       ...("pointCount" in track ? { pointCount: keptCount } : {}),
       ...("elevations" in track
-        ? { elevations: keptElevations(track.elevations, kept, cumulative) }
+        ? { elevations: keptElevations(track.elevations, based?.offsets ?? null) }
         : {}),
     },
     startCut: firstKept !== 0,

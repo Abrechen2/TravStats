@@ -62,4 +62,84 @@ describe("cutFlightTrackWith", () => {
       endCut: false,
     });
   });
+
+  it("breaks a chord between two kept vertices that crosses a zone, though no vertex goes", () => {
+    // Both vertices far outside a zone that lies on the straight line between them.
+    const zone = { lat: 50, lon: 10, radiusM: 2000 };
+    const { track, startCut, endCut } = cutFlightTrackWith(
+      {
+        geometry: [
+          [8, 50],
+          [9, 50.5],
+          [11, 49.5],
+          [12, 50],
+        ],
+        segmentStarts: [0],
+        cumulativeKm: [0, 90, 260, 350],
+        elevations: [
+          [0, 10],
+          [90, 900],
+          [200, 1000],
+          [260, 800],
+          [350, 20],
+        ],
+        startedAt: new Date("2026-03-01T08:00:00Z"),
+        distanceKm: 350,
+        pointCount: 4,
+      },
+      [zone]
+    );
+    expect(track.geometry).toEqual([
+      [8, 50],
+      [9, 50.5],
+      [11, 49.5],
+      [12, 50],
+    ]);
+    // Two pieces now: the chord through the zone is no longer drawn.
+    expect(track.segmentStarts).toEqual([0, 2]);
+    // No figure counts the distance through the hidden chord.
+    expect(track.cumulativeKm).toEqual([0, 90, 90, 180]);
+    expect(track.distanceKm).toBe(180);
+    expect(track.elevations).toEqual([
+      [0, 10],
+      [90, 900],
+      [90, 800],
+      [180, 20],
+    ]);
+    expect([startCut, endCut]).toEqual([false, false]);
+  });
+
+  it("rebases the running distance and the profile past a removed stretch", () => {
+    const zone = { lat: 51, lon: 10, radiusM: 1000 }; // over the middle vertex
+    const { track } = cutFlightTrackWith(
+      {
+        geometry: [
+          [8, 50],
+          [8.5, 50.2],
+          [10, 51],
+          [12, 52],
+          [12.5, 52.2],
+        ],
+        segmentStarts: [0],
+        cumulativeKm: [0, 40, 160, 300, 340],
+        elevations: [
+          [20, 500],
+          [100, 9000],
+          [320, 400],
+        ],
+        startedAt: new Date("2026-03-01T08:00:00Z"),
+        distanceKm: 340,
+        pointCount: 5,
+      },
+      [zone]
+    );
+    expect(track.segmentStarts).toEqual([0, 2]);
+    expect(track.cumulativeKm).toEqual([0, 40, 40, 80]);
+    expect(track.distanceKm).toBe(80);
+    // 100 km lay in the hidden part; 320 becomes 40 + (320 - 300).
+    expect(track.elevations).toEqual([
+      [20, 500],
+      [60, 400],
+    ]);
+  });
 });
