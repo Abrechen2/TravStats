@@ -93,6 +93,7 @@
     "settings/immich.ts",
     "settings/index.ts",
     "settings/instanceServices.ts",
+    "settings/locationProvider.ts",
     "settings/notifications.ts",
     "settings/parser.ts",
     "settings/personal.ts",

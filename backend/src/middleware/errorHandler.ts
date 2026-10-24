@@ -3,6 +3,7 @@ import type { FlightTrackFileApiErrorCode } from "./flightTrackFileErrorCodes";
 import type { CompanionApiErrorCode } from "./companionErrorCodes";
 import type { CompanionAppApiErrorCode } from "./companionAppErrorCodes";
 import type { ConnectionFileApiErrorCode } from "./connectionFileErrorCodes";
+import type { LocationProviderApiErrorCode } from "./locationProviderErrorCodes";
 import { Request, Response, NextFunction } from "express";
 import { MulterError } from "multer";
 import { ZodError } from "zod";
@@ -294,6 +295,7 @@ export type ApiErrorCode =
   /** Trip recording: this uploadId is already stored under another trip (409). */
   | "RECORDING_UPLOAD_ID_REUSED"
   | CompanionAppApiErrorCode // packing lists and personal settings (companionAppErrorCodes.ts)
+  | LocationProviderApiErrorCode // choosing the location provider (locationProviderErrorCodes.ts)
   /** Observed takeoff/landing (forgejo#194): a time in the future (400). */
   | "OBSERVED_TIME_IN_FUTURE"
   /** Observed takeoff/landing: more than 12 h from the schedule (422). */

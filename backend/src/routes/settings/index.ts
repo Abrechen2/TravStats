@@ -15,6 +15,7 @@ import webPrefsRouter from "./webPrefs";
 import instanceServicesRouter from "./instanceServices";
 import webdavSyncRouter from "./webdavSync";
 import personalRouter from "./personal";
+import locationProviderRouter from "./locationProvider";
 
 const router = Router();
 
@@ -58,6 +59,8 @@ router.use(
     "/webdav-sync",
     // A home address and a passport date: one visitor's would be everyone's.
     "/personal",
+    // Which source records and reads positions: one visitor's would be everyone's.
+    "/location-provider",
   ],
   rejectDemoWrites
 );
@@ -77,5 +80,6 @@ router.use("/web-prefs", webPrefsRouter);
 router.use("/instance-services", instanceServicesRouter);
 router.use("/webdav-sync", webdavSyncRouter);
 router.use("/personal", personalRouter);
+router.use("/location-provider", locationProviderRouter);
 
 export default router;
