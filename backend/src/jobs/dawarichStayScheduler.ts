@@ -2,14 +2,22 @@ import { schedulerZone } from "../shared/time/schedulerZone";
 import cron, { type ScheduledTask } from "node-cron";
 import { prisma } from "../db";
 import { reserveScan, scanStays } from "../services/dawarich/stays/scan";
+import { DAWARICH_PROVIDER_WHERE } from "../services/locationProvider/kinds";
 import logger from "../utils/logger";
 import { AppError } from "../middleware/errorHandler";
 let task: ScheduledTask | null = null;
 export async function runDawarichStaySweep(): Promise<void> {
   // An account with stay suggestions switched off (forgejo#306) is not even
   // attempted: reserveScan would refuse it anyway, but as a warning every six hours.
+  // Nor one whose location source is not Dawarich (TravTrack plan S3) — that
+  // gate is this schedule's alone: "scan now" (`routes/dawarichStays.ts`) is the
+  // person asking, and runs whatever the provider. Market visits ride inside
+  // `scanStays`, so they follow it too.
   const accounts = await prisma.dawarichStayScan.findMany({
-    where: { enabled: true, user: { settings: { is: { staySuggestionsEnabled: true } } } },
+    where: {
+      enabled: true,
+      user: { settings: { is: { staySuggestionsEnabled: true, ...DAWARICH_PROVIDER_WHERE } } },
+    },
     select: { userId: true },
   });
   for (const { userId } of accounts) {

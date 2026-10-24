@@ -36,6 +36,14 @@
  * somebody else's server, and a restart loop would turn into a request loop
  * against a machine TravStats does not own.
  *
+ * ## Only where Dawarich is the chosen location source
+ *
+ * An own connection is no longer enough on its own (TravTrack plan S3): the
+ * account's location provider must be `dawarich`. The migration that added the
+ * provider made every account with an own connection a `dawarich` one, so the
+ * set of swept accounts did not change that day. The admin's "sweep now"
+ * (`routes/admin/dawarich.ts`) is this job run early and follows the same rule.
+ *
  * ## An account without a Dawarich connection costs nothing
  *
  * Most instances have none, so eligibility is one indexed query over
@@ -55,6 +63,7 @@ import { getCountryResolver } from "../services/geo/countryFromCoordinates";
 import { createDawarichClient, type DawarichClient } from "../services/dawarich/dawarichClient";
 import { buildUserDawarichConnection } from "../services/dawarich/dawarichResolver";
 import { sweepUserCountryDays } from "../services/dawarich/countryDaySweep";
+import { DAWARICH_PROVIDER_WHERE } from "../services/locationProvider/kinds";
 import type { DawarichConnection } from "../services/dawarich/errors";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
@@ -119,6 +128,8 @@ async function eligibleAccounts(userId?: string): Promise<EligibleAccount[]> {
       ...(userId ? { userId } : {}),
       dawarichBaseUrl: { not: null },
       dawarichApiKey: { not: null },
+      // Only where Dawarich is the chosen location source (TravTrack plan S3).
+      ...DAWARICH_PROVIDER_WHERE,
     },
     select: { userId: true, dawarichBaseUrl: true, dawarichApiKey: true },
     orderBy: { userId: "asc" },

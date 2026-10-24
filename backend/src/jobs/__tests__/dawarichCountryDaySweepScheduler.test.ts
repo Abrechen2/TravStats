@@ -147,6 +147,17 @@ describe("runDawarichCountryDaySweep", () => {
     });
   });
 
+  /**
+   * TravTrack plan S3: the sweep follows the chosen location provider, in the
+   * query — an account with its own connection but provider `none` is never
+   * enumerated. `dawarichProviderGate.test.ts` drives it against the database.
+   */
+  it("asks the database only for accounts whose location provider is dawarich", async () => {
+    await runDawarichCountryDaySweep({ createClient });
+
+    expect(findManyArgs[0].where).toMatchObject({ locationProvider: "dawarich" });
+  });
+
   it("keeps going when one account's walk throws", async () => {
     findMany.mockResolvedValue([connected("a"), connected("b"), connected("c")]);
     sweepUserCountryDays

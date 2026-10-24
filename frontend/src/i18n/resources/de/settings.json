@@ -1279,5 +1279,17 @@
       "invalidInput": "Eine Eingabe ist ungültig.",
       "unknown": "Der Abgleich ist fehlgeschlagen."
     }
+  },
+  "locationProvider": {
+    "errors": {
+      "dawarichNotConfigured": "Dawarich lässt sich erst als Standortquelle wählen, wenn du unter „Dawarich-Verbindung“ deine eigene Verbindung eingetragen hast.",
+      "travtrackUnavailable": "TravTrack ist auf diesem Server nicht verfügbar.",
+      "saveFailed": "Die Standortquelle konnte nicht gespeichert werden. Bitte versuche es noch einmal."
+    },
+    "dawarichHint": {
+      "text": "Dawarich ist verbunden. Als Standortquelle verwenden?",
+      "use": "Als Standortquelle verwenden",
+      "done": "Dawarich ist jetzt deine Standortquelle."
+    }
   }
 }

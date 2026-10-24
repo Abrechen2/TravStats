@@ -1279,5 +1279,17 @@
       "invalidInput": "An input is invalid.",
       "unknown": "The sync failed."
     }
+  },
+  "locationProvider": {
+    "errors": {
+      "dawarichNotConfigured": "Dawarich can be your location source once you have entered your own connection under “Dawarich connection”.",
+      "travtrackUnavailable": "TravTrack is not available on this server.",
+      "saveFailed": "The location source could not be saved. Please try again."
+    },
+    "dawarichHint": {
+      "text": "Dawarich is connected. Use it as your location source?",
+      "use": "Use as location source",
+      "done": "Dawarich is now your location source."
+    }
   }
 }

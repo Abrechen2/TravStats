@@ -5,6 +5,7 @@ import { dawarichApi, dawarichFailureKey, dawarichFailureKind } from "../../lib/
 import type { DawarichConnectionStatus, DawarichTestResult } from "../../types/dawarich";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import DemoLockedNotice from "./DemoLockedNotice";
+import DawarichProviderHint from "./DawarichProviderHint";
 import Pill from "../ui/Pill";
 import { token } from "../ui/tokens";
 
@@ -35,6 +36,8 @@ export default function DawarichConnectionCard(): JSX.Element {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<DawarichTestResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Raised after each successful save so the provider offer asks again.
+  const [saved, setSaved] = useState(0);
 
   const apply = useCallback((next: DawarichConnectionStatus) => {
     setStatus(next);
@@ -73,6 +76,7 @@ export default function DawarichConnectionCard(): JSX.Element {
 
       apply(await dawarichApi.updateSettings(payload));
       setApiKey("");
+      setSaved((n) => n + 1);
     } catch (err) {
       // Preserve a machine-readable kind when the backend sent one (a
       // mistyped base URL comes back as `invalidUrl`) instead of always
@@ -213,6 +217,7 @@ export default function DawarichConnectionCard(): JSX.Element {
               {error}
             </p>
           )}
+          <DawarichProviderHint check={saved} />
         </>
       )}
     </SectionCard>

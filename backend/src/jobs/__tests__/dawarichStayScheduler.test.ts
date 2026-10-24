@@ -22,7 +22,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   stopDawarichStayScheduler();
 });
-it("continues after one unavailable account and asks only for enabled scans of accounts with stay suggestions on", async () => {
+it("continues after one unavailable account and asks only for enabled scans of accounts with stay suggestions on and provider dawarich", async () => {
   (prisma.dawarichStayScan.findMany as jest.Mock).mockResolvedValue([
     { userId: "offline" },
     { userId: "ready" },
@@ -30,8 +30,12 @@ it("continues after one unavailable account and asks only for enabled scans of a
   jest.mocked(reserveScan).mockRejectedValueOnce(new Error("offline")).mockResolvedValueOnce();
   await runDawarichStaySweep();
   expect(prisma.dawarichStayScan.findMany).toHaveBeenCalledWith({
-    // forgejo#306: an account with stay suggestions switched off is not attempted.
-    where: { enabled: true, user: { settings: { is: { staySuggestionsEnabled: true } } } },
+    // forgejo#306: an account with stay suggestions switched off is not attempted;
+    // TravTrack plan S3: nor one whose location provider is not Dawarich.
+    where: {
+      enabled: true,
+      user: { settings: { is: { staySuggestionsEnabled: true, locationProvider: "dawarich" } } },
+    },
     select: { userId: true },
   });
   expect(scanStays).toHaveBeenCalledTimes(1);
