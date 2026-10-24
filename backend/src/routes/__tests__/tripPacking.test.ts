@@ -132,4 +132,71 @@ describe("trip packing list", () => {
     await prisma.trip.delete({ where: { id: tripId } });
     expect(await prisma.tripPackingList.count()).toBe(0);
   });
+
+  /**
+   * Codex review of S1, finding 4: a trip merge drops nothing, so a merged
+   * list can be longer than any one request was allowed to be. It must stay
+   * editable as long as an edit does not grow it.
+   */
+  it("keeps a merged list over the request limit editable while it does not grow", async () => {
+    const many = Array.from({ length: 2200 }, (_, i) => item(`i${i}`, `Item ${i}`));
+    await prisma.tripPackingList.create({
+      data: {
+        userId: (await prisma.trip.findUniqueOrThrow({ where: { id: tripId } })).userId,
+        tripId,
+        items: many,
+        rev: 1,
+      },
+    });
+
+    const ticked = many.map((it, i) => (i === 0 ? { ...it, done: true } : it));
+    const edit = await put({ items: ticked, baseRev: 1, mutationId: "tick" }).expect(200);
+    expect(edit.body.rev).toBe(2);
+    expect(edit.body.items).toHaveLength(2200);
+
+    const shorter = await put({ items: ticked.slice(1), baseRev: 2, mutationId: "drop" }).expect(
+      200
+    );
+    expect(shorter.body.items).toHaveLength(2199);
+
+    const grown = await put({
+      items: [...ticked.slice(1), item("new", "Neu")],
+      baseRev: 3,
+      mutationId: "grow",
+    }).expect(400);
+    expect(grown.body.code).toBe("PACKING_LIST_INVALID");
+  });
+
+  /**
+   * Codex review of S1, finding 5: two identical first writes (baseRev 0, one
+   * mutationId) race; the one that loses the insert must answer the winner's
+   * row as its own applied write, not as stale. The loser's read before the
+   * insert is made to miss the winner, which is the interleaving of the race.
+   */
+  it("answers the loser of two identical first writes as replayed, not stale", async () => {
+    const body = { items: [item("a", "Pass")], baseRev: 0, mutationId: "first" };
+    await put(body).expect(200);
+
+    const realFindUnique = prisma.tripPackingList.findUnique.bind(prisma.tripPackingList);
+    const spy = jest
+      .spyOn(prisma.tripPackingList, "findUnique")
+      .mockImplementationOnce((async () => null) as unknown as typeof realFindUnique);
+    try {
+      const resend = await put(body).expect(200);
+      expect(resend.body).toMatchObject({ items: [item("a", "Pass")], rev: 1, replayed: true });
+    } finally {
+      spy.mockRestore();
+    }
+
+    // A different first write losing the same race is still stale.
+    const spy2 = jest
+      .spyOn(prisma.tripPackingList, "findUnique")
+      .mockImplementationOnce((async () => null) as unknown as typeof realFindUnique);
+    try {
+      const other = await put({ ...body, mutationId: "other" }).expect(409);
+      expect(other.body.code).toBe("PACKING_LIST_STALE");
+    } finally {
+      spy2.mockRestore();
+    }
+  });
 });

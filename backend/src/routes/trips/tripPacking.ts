@@ -113,12 +113,18 @@ router.put("/trips/:id/packing", async (req: AuthRequest, res: Response, next: N
         });
         res.json(toPayload(created));
       } catch (error) {
-        // Another device created the list a moment earlier.
+        // Another write created the list a moment earlier. If it was this very
+        // write — a resend racing its own first send — the winner IS this
+        // write's result: answer it as applied, not as stale.
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
           const winner = await prisma.tripPackingList.findUnique({
             where: { tripId: trip.id },
-            select: { rev: true },
+            select: SELECT,
           });
+          if (winner?.lastMutationId === mutationId) {
+            res.json({ ...toPayload(winner), replayed: true });
+            return;
+          }
           throw stale(winner?.rev ?? 1);
         }
         throw error;

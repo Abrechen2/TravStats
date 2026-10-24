@@ -13,8 +13,6 @@ import { isLocalDate } from "../shared/time/localDate";
  * when it is over this AND longer than the stored list (`tripPacking.ts`).
  */
 export const PACKING_MAX_ITEMS = 200;
-/** What one request may carry at all. */
-export const PACKING_HARD_MAX_ITEMS = 2000;
 export const PACKING_MAX_LABEL = 120;
 
 export const packingItemSchema = z.object({
@@ -27,9 +25,12 @@ export const packingItemSchema = z.object({
 export type PackingItem = z.infer<typeof packingItemSchema>;
 
 export const putPackingListSchema = z.object({
+  // No item cap here: the cap depends on the stored list (`tripPacking.ts` —
+  // over PACKING_MAX_ITEMS only while it does not grow), because a trip merge
+  // drops nothing and may leave a list no fixed cap would let anyone edit.
+  // The JSON body limit bounds what one request can carry at all.
   items: z
     .array(packingItemSchema)
-    .max(PACKING_HARD_MAX_ITEMS)
     .refine((items) => new Set(items.map((item) => item.id)).size === items.length, {
       message: "Every item id appears once",
     }),
