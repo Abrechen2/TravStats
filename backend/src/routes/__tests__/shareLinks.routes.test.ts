@@ -521,6 +521,55 @@ describe("flight links", () => {
     expect(plain).not.toHaveProperty("lastPosition");
     expect(JSON.stringify(plain)).not.toContain("55.25");
   });
+
+  // Security review of TravTrack T5: the last position leaves through the
+  // owner's privacy cut like every other read of a recording.
+  it("never reveals a position inside one of the owner's privacy zones", async () => {
+    const flight = await makeFlight(anna.id);
+    const link = await tokenFor(anna, {
+      kind: "flight",
+      targetId: flight.id,
+      fields: ["lastPosition"],
+    });
+    await prisma.flightTrack.create({
+      data: {
+        flightId: flight.id,
+        source: "companion",
+        uploadId: "sharelink-zone-upload",
+        startedAt: new Date("2030-06-01T12:05:00Z"),
+        endedAt: new Date("2030-06-01T13:30:00Z"),
+        geometry: [
+          [8.56, 50.03],
+          [8.6, 50.05],
+          [13.4, 52.52],
+        ],
+        segmentStarts: [0],
+        cumulativeKm: [0, 4, 430],
+        pointCount: 3,
+        distanceKm: 430,
+      },
+    });
+    await prisma.travTrackPrivacyZone.create({
+      data: { userId: anna.id, name: "Zuhause", lat: 52.52, lon: 13.4, radiusM: 500 },
+    });
+    try {
+      // The last vertex lies in the zone; the last one left is the one before the chord.
+      expect((await view(link.token)).body.data.view.flight.lastPosition).toEqual({
+        lat: 50.05,
+        lon: 8.6,
+        recordedAt: "2030-06-01T13:30:00.000Z",
+      });
+      await prisma.travTrackPrivacyZone.create({
+        data: { userId: anna.id, name: "Abflug", lat: 50.04, lon: 8.58, radiusM: 5000 },
+      });
+      // Nothing left of the line: no position at all.
+      const body = (await view(link.token)).body.data.view.flight;
+      expect(body.lastPosition).toBeNull();
+      expect(JSON.stringify(body)).not.toContain("52.52");
+    } finally {
+      await prisma.travTrackPrivacyZone.deleteMany({ where: { userId: anna.id } });
+    }
+  });
 });
 
 describe("the field allow-list decides the payload", () => {

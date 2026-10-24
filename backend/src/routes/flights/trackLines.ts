@@ -3,10 +3,9 @@ import { Router, type NextFunction, type Response } from "express";
 import { prisma } from "../../db";
 import { authenticate, type AuthRequest } from "../../middleware/auth";
 import { providerIs } from "../../services/locationProvider/provider";
-import { cutGeometry } from "../../services/travtrack/cutGeometry";
+import { cutFlightTrackWith } from "../../services/travtrack/flightTrackView";
 import { travTrackFlightLines } from "../../services/travtrack/flightLines";
 import { privacyCircleSet } from "../../services/travtrack/privacyCircles";
-import type { LonLat } from "../../services/travtrack/privacyCut";
 
 /**
  * `GET /flights/track-lines` — every recorded flight line of the caller, for
@@ -32,9 +31,6 @@ import type { LonLat } from "../../services/travtrack/privacyCut";
 const router = Router();
 router.use(authenticate);
 
-const asLine = (value: unknown): LonLat[] => (Array.isArray(value) ? (value as LonLat[]) : []);
-const asStarts = (value: unknown): number[] => (Array.isArray(value) ? (value as number[]) : [0]);
-
 router.get("/track-lines", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
@@ -47,15 +43,19 @@ router.get("/track-lines", async (req: AuthRequest, res: Response, next: NextFun
       privacyCircleSet(userId),
       providerIs(userId, "travtrack"),
     ]);
-    const own = rows.map((row) => ({
-      flightId: row.flightId,
-      ...cutGeometry(
-        asLine(row.geometry),
-        asStarts(row.segmentStarts),
-        circles(row.startedAt.getTime())
-      ),
-      origin: "travstats" as const,
-    }));
+    const own = rows.flatMap((row) => {
+      const cut = cutFlightTrackWith(row, circles(row.startedAt.getTime()));
+      // A line the cut leaves nothing of is drawn as nothing, like a flight without one.
+      if (!Array.isArray(cut.geometry) || cut.geometry.length < 2) return [];
+      return [
+        {
+          flightId: row.flightId,
+          geometry: cut.geometry,
+          segmentStarts: cut.segmentStarts,
+          origin: "travstats" as const,
+        },
+      ];
+    });
     const fromTravTrack = travTrack ? await travTrackFlightLines(userId, circles) : [];
     res.json({ lines: [...own, ...fromTravTrack] });
   } catch (err) {

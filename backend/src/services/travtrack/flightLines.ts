@@ -4,7 +4,7 @@ import { flightTrackColumns } from "../flightDevice/flightTrackIngest";
 import { observationOf, TRAVTRACK_OBSERVATION_SELECT } from "../locationProvider/travtrackProvider";
 import type { LocationObservation } from "../locationProvider/types";
 import { byDevice } from "../locationProvider/entryTrack";
-import { cutGeometry } from "./cutGeometry";
+import { cutFlightTrackWith } from "./flightTrackView";
 import type { CircleSet } from "./privacyCircles";
 
 /**
@@ -88,13 +88,15 @@ export async function travTrackFlightLines(
       device.points.map((p) => ({ t: p.atMs, lat: p.lat, lon: p.lon }))
     );
     if (!columns) continue;
-    const cut = cutGeometry(
-      columns.geometry as Array<[number, number]>,
-      columns.segmentStarts as number[],
-      circles(columns.startedAt.getTime())
-    );
-    if (cut.geometry.length < 2) continue;
-    lines.push({ flightId, ...cut, origin: "travtrack" });
+    const cut = cutFlightTrackWith(columns, circles(columns.startedAt.getTime()));
+    const geometry = cut.geometry as Array<[number, number]>;
+    if (geometry.length < 2) continue;
+    lines.push({
+      flightId,
+      geometry,
+      segmentStarts: cut.segmentStarts as number[],
+      origin: "travtrack",
+    });
   }
   return lines.sort((a, b) => a.flightId.localeCompare(b.flightId));
 }

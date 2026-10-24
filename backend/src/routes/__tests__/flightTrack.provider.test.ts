@@ -127,4 +127,35 @@ describe("flight tracks from the location provider", () => {
     expect(page.body).toMatchObject({ origin: "travstats", alternatives: ["travtrack"] });
     expect(page.body.track.source).toBe("companion");
   });
+
+  it("an own recording leaves the flight page and the map privacy-cut", async () => {
+    await prisma.flightTrack.create({
+      data: {
+        flightId,
+        source: "companion",
+        uploadId: "own-zone",
+        startedAt: new Date(DEP),
+        endedAt: new Date(DEP + 3_600_000),
+        geometry: [
+          [126.45, 37.4],
+          [126.47, 36.5],
+          [126.5, 33.5],
+        ],
+        segmentStarts: [0],
+        cumulativeKm: [0, 100, 430],
+        pointCount: 3,
+        distanceKm: 430,
+      },
+    });
+    await prisma.travTrackPrivacyZone.create({
+      data: { userId, name: "Ziel", lat: 33.5, lon: 126.5, radiusM: 1000 },
+    });
+    const page = await request(app).get(`/api/v1/flights/${flightId}/track`).set("Cookie", cookie);
+    expect(page.body.track.geometry).toEqual([
+      [126.45, 37.4],
+      [126.47, 36.5],
+    ]);
+    const lines = await request(app).get("/api/v1/flights/track-lines").set("Cookie", cookie);
+    expect(JSON.stringify(lines.body)).not.toContain("33.5");
+  });
 });

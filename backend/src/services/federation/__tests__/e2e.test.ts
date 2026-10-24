@@ -136,6 +136,66 @@ it("collects the complete graph and keeps ownership, personal categories and cre
   expect(restricted.sections.notes).toBeUndefined();
   expect(JSON.stringify(restricted)).not.toContain("shareable note deliberately shared");
 });
+// Security review of TravTrack T5: a recorded flight line leaves only through
+// the owner's privacy cut, here too.
+it("hands a flight recording over without any vertex inside the owner's privacy zones", async () => {
+  const a = await user();
+  await prisma.userSettings.create({
+    data: { userId: a, enabledDomains: scope.domains, data: {} },
+  });
+  const flight = await prisma.flight.create({
+    data: {
+      userId: a,
+      depIata: "FRA",
+      arrIata: "BER",
+      depLat: 50.03,
+      depLon: 8.56,
+      arrLat: 52.36,
+      arrLon: 13.5,
+      flightNumber: "LH1",
+      departureTime: new Date("2026-03-01T08:00:00Z"),
+      arrivalTime: new Date("2026-03-01T09:00:00Z"),
+      status: "flown",
+    },
+  });
+  await prisma.flightTrack.create({
+    data: {
+      flightId: flight.id,
+      source: "companion",
+      uploadId: "e2e-zone",
+      startedAt: new Date("2026-03-01T08:00:00Z"),
+      endedAt: new Date("2026-03-01T09:00:00Z"),
+      geometry: [
+        [8.56, 50.03],
+        [10.0, 51.0],
+        [13.4111, 52.5222],
+      ],
+      segmentStarts: [0],
+      cumulativeKm: [0, 150, 430],
+      pointCount: 3,
+      distanceKm: 430,
+    },
+  });
+  await prisma.travTrackPrivacyZone.create({
+    data: { userId: a, name: "Zuhause", lat: 52.5222, lon: 13.4111, radiusM: 500 },
+  });
+  const all = await collectComparison(a, await prepareScope(a, scope));
+  const text = JSON.stringify(all.sections);
+  expect(text).toContain("8.56");
+  expect(text).not.toContain("52.5222");
+  const flights = all.sections.flights as Array<{
+    track?: { geometry: unknown; cumulativeKm: unknown };
+  }>;
+  const track = flights.find((f) => f.track)?.track;
+  expect(track).toMatchObject({
+    geometry: [
+      [8.56, 50.03],
+      [10, 51],
+    ],
+    cumulativeKm: [0, 150],
+  });
+});
+
 it("stores ciphertext only, commits atomically, authenticates the device and stops reads after revocation", async () => {
   const a = await user(),
     b = await user(),

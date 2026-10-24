@@ -8,9 +8,7 @@ import {
 } from "../../services/locationProvider/entryTrack";
 import type { FlightWindowColumns } from "../../services/flightDevice/flightWindow";
 import { flightTrackColumns } from "../../services/flightDevice/flightTrackIngest";
-import { cutGeometry } from "../../services/travtrack/cutGeometry";
-import { privacyCirclesFor } from "../../services/travtrack/privacyCircles";
-import type { LonLat } from "../../services/travtrack/privacyCut";
+import { viewableFlightTrack } from "../../services/travtrack/flightTrackView";
 
 /**
  * Where `GET /flights/:id/track` takes its line from (TravTrack plan T5): the
@@ -26,32 +24,6 @@ import type { LonLat } from "../../services/travtrack/privacyCut";
 export const trackSourceQuerySchema = z.object({
   source: z.enum(TRACK_ORIGINS).optional().describe("Show this source explicitly"),
 });
-
-type StoredTrackShape = {
-  geometry: unknown;
-  segmentStarts: unknown;
-};
-
-const lonLatLine = (value: unknown): LonLat[] =>
-  Array.isArray(value)
-    ? value.filter(
-        (p): p is LonLat => Array.isArray(p) && typeof p[0] === "number" && typeof p[1] === "number"
-      )
-    : [];
-const indexList = (value: unknown): number[] =>
-  Array.isArray(value) ? value.filter((n): n is number => Number.isInteger(n)) : [0];
-
-/** A stored track's line, privacy-cut. */
-export async function cutStoredTrack<T extends StoredTrackShape>(
-  userId: string,
-  track: T,
-  fromMs: number
-): Promise<T> {
-  const circles = await privacyCirclesFor(userId, fromMs);
-  if (circles.length === 0) return track;
-  const cut = cutGeometry(lonLatLine(track.geometry), indexList(track.segmentStarts), circles);
-  return { ...track, ...cut };
-}
 
 /** The track shape from provider points, or null when they make no line. */
 function trackOf(
@@ -102,6 +74,6 @@ export async function providerFlightTrack(
     entry.origin === "travtrack" || entry.origin === "dawarich"
       ? trackOf(flight.id, entry.origin, entry.devices)
       : null;
-  const track = built ? await cutStoredTrack(userId, built, built.startedAt.getTime()) : null;
+  const track = built ? await viewableFlightTrack(userId, built) : null;
   return { entry, track };
 }

@@ -29,7 +29,8 @@ import { overlapsSchedule, scheduledInstants } from "../../services/flightDevice
 import { trackTimes, type TrackZoneColumns } from "../../services/flightDevice/trackTimes";
 import { flightLiveTrackingEnabled } from "../../services/settings/accountPrefs";
 import logger from "../../utils/logger";
-import { cutStoredTrack, providerFlightTrack, trackSourceQuerySchema } from "./trackSource";
+import { providerFlightTrack, trackSourceQuerySchema } from "./trackSource";
+import { viewableFlightTrack } from "../../services/travtrack/flightTrackView";
 
 /**
  * The phone's recording of a flight (forgejo#193) — `GET`/`POST`/`DELETE
@@ -173,7 +174,7 @@ router.get("/:id/track", async (req: AuthRequest, res: Response, next: NextFunct
       where: { flightId: flight.id },
       select: { ...TRACK_META_SELECT, geometry: true, segmentStarts: true, elevations: true },
     });
-    const track = stored ? await cutStoredTrack(userId, stored, stored.startedAt.getTime()) : null;
+    const track = stored ? await viewableFlightTrack(userId, stored) : null;
     res.json({ track: track ? await present(track, flight) : null, ...meta });
   } catch (err) {
     next(err);
