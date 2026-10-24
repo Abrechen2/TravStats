@@ -123,7 +123,7 @@ export const ADMIN_PAGES: readonly AdminPageDef[] = [
     icon: "settings",
     sections: [
       section("instance"),
-      section("travTrack", "expert", 1),
+      section("travTrack"),
       section("shareLinks"),
       section("importMode"),
       section("usageStats"),

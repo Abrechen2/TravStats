@@ -79,7 +79,7 @@ describe("the standard/expert classification", () => {
   });
 
   it.each([
-    ["instance", ["instance", "shareLinks", "importMode", "usageStats", "about"]],
+    ["instance", ["instance", "travTrack", "shareLinks", "importMode", "usageStats", "about"]],
     ["users", ["users"]],
     ["invitations", ["invitations"]],
     ["externalServices", ["externalServices"]],
