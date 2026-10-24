@@ -37,6 +37,9 @@
 3. **Old Companion against new server / new Companion against old server** — no `/location/capabilities` (404) means "legacy": the app behaves exactly like today. Pinned in C2.
 4. **Dawarich chosen without an own connection** — refused with `DAWARICH_NOT_CONFIGURED`; a removed key leaves provider `dawarich` reported as `notConfigured`, never silently `none`. Pinned in S2 and S4.
 5. **Flight inside a trip** — exactly one OS location task runs, and the trip track shows the flight window as a break, not a line. Pinned in C5.
+6. **First contact during an outage** — a new Companion that cannot reach `/location/capabilities` and has no cached answer starts nothing new (it does not fall back to legacy capture), keeps an already running recorder running, and retries. Pinned in C2.
+
+**Sequencing rule (Codex, 2026-10-24):** "Dawarich → the Companion records nothing" takes effect only together with the reads that replace it (T5). In phase 1 a `dawarich` user keeps today's flight and trip recording.
 
 ---
 
@@ -59,7 +62,7 @@ The pieces of `feat/companion-audit` that do not touch location: packing lists, 
 - Migration: `backend/prisma/migrations/20261023180000_companion_data/migration.sql` (keep its timestamp; it sorts after main's latest `20261023140047_rail_transit_mode`).
 - `backend/src/routes/trips/tripPacking.ts`, `backend/src/routes/settings/personal.ts`, `backend/src/schemas/companionData.ts`, `backend/src/services/trip/mergeTripRelations.ts`, `backend/src/services/openapi/paths/companionData.ts`
 - clientRef: `backend/src/services/sync/clientRef.ts` (widened `ClientRefKind`), `backend/src/routes/flights/create.ts` (split out, with `SHARE_TX_TIMEOUT_MS`), the clientRef parts of `routes/{cruises,places,lodging,lodging/stays,trips/tripPhotos}.ts`, `services/{cruise/createCruise,lodging/createLodging,lodging/stayWrites}.ts`
-- `backend/src/jobs/cronJobs.ts` WITHOUT the `location_transfer` row (branch :87-91) and WITHOUT the `snapshotLocationSources` boot call (:60-61); `backend/src/index.ts` accordingly
+- `backend/src/jobs/cronJobs.ts` WITHOUT the `location_transfer` row (branch :87-91) and WITHOUT the `snapshotLocationSources` boot block (~:58-67); `backend/src/index.ts` accordingly
 - `backend/src/routes/trips/resolveTrip.ts` (`TRIP_NOT_FOUND`)
 - Tests: `tripPacking.test.ts`, `settings.personal.test.ts`, `services/__tests__/tripMergePacking.test.ts`, `*.clientRef.test.ts` (cruises, flights, lodging, places, tripPhotos), `__tests__/openapi.createClientRef.test.ts`, `propagate.txTimeout.test.ts`
 
@@ -89,8 +92,8 @@ The pieces of `feat/companion-audit` that do not touch location: packing lists, 
   - `type LocationProviderKind = "none" | "travtrack" | "dawarich"`
   - `type ProviderStatus = "ok" | "notConfigured" | "unavailable"`
   - `getLocationProvider(userId: string): Promise<{ kind: LocationProviderKind; rev: number; status: ProviderStatus }>` — no settings row → `{kind:"none", rev:0, status:"ok"}`; `dawarich` without a user-tier connection → `status:"notConfigured"`; `travtrack` while `travTrackAvailable(userId)` is false → `status:"unavailable"`.
-  - `setLocationProvider(userId: string, kind: LocationProviderKind): Promise<{ kind; rev }>` — bumps `rev`; throws `AppError(409, "DAWARICH_NOT_CONFIGURED")` without a user-tier connection, `AppError(409, "TRAVTRACK_UNAVAILABLE")` while TravTrack is not available. Moves, copies, deletes nothing.
-  - `travTrackAvailable(userId: string): Promise<boolean>` — Phase 1: always `false` (TravTrack does not exist yet); Task T1 replaces the body.
+  - `setLocationProvider(userId: string, kind: LocationProviderKind): Promise<{ kind; rev }>` — bumps `rev`; throws `new AppError(<message>, 409, "DAWARICH_NOT_CONFIGURED")` without a user-tier connection, `new AppError(<message>, 409, "TRAVTRACK_UNAVAILABLE")` while TravTrack is not available (constructor is `(message, statusCode, code)`; add both codes to the closed `ApiErrorCode` union). Moves, copies, deletes nothing.
+  - `travTrackAvailable(userId: string): Promise<boolean>` — instance availability for this account (instance beta + config, not a demo user). Phase 1: always `false` (TravTrack does not exist yet); Task T1 replaces the body. Per-user activation IS choosing provider `travtrack`; there is no second per-user switch.
   - `providerIs(userId: string, kind: LocationProviderKind): Promise<boolean>` — `kind` matches AND `status === "ok"`.
 - Routes: `GET /settings/location-provider` → `{ kind, rev, status, choices: { none: true, travtrack: boolean, dawarich: boolean } }`; `PUT /settings/location-provider` `{ kind }` (write scope).
 
@@ -105,12 +108,12 @@ The pieces of `feat/companion-audit` that do not touch location: packing lists, 
 Today they run for anyone with an own Dawarich connection. From now on they run when `providerIs(userId, "dawarich")`. After the S2 backfill that is the same set of users. Explicit pulls a person presses (tour/cruise "pull from Dawarich", stay "scan now") stay available whenever `getDawarichConnection` resolves — they are a one-off copy into an entry, like a GPX upload.
 
 **Files:**
-- Modify: `backend/src/jobs/dawarichCountryDaySweepScheduler.ts`, `backend/src/jobs/dawarichStayScheduler.ts`, the market-visit job entry in `backend/src/services/dawarich/marketVisits/integration.ts`
+- Modify: `backend/src/jobs/dawarichCountryDaySweepScheduler.ts`, `backend/src/jobs/dawarichStayScheduler.ts` and its scheduled path in `backend/src/services/dawarich/stays/scan.ts` (market visits run inside the stay scan; `marketVisits/integration.ts` has no job). Explicit "scan now" keeps working regardless of provider.
 - Test: the existing `jobs/__tests__/dawarichCountryDaySweepScheduler.test.ts` and the stay-scheduler test, extended
 
 **Interfaces:** Consumes `providerIs` (S2).
 
-- [ ] **Step 1: Failing tests:** "the nightly sweep skips a user whose provider is none even with an own connection"; "the sweep runs for provider dawarich exactly as before" (existing assertions unchanged); same pair for the stay scan and market visits.
+- [ ] **Step 1: Failing tests:** "the nightly sweep skips a user whose provider is none even with an own connection"; "the sweep runs for provider dawarich exactly as before" (existing assertions unchanged); same pair for the scheduled stay scan (which carries market visits); "an explicit scan now by a provider-none user with an own connection still runs".
 - [ ] **Step 2:** Run → FAIL. **Step 3:** Add the `providerIs` filter where each job selects its users (in the query, not after loading). **Step 4:** Run → PASS.
 - [ ] **Step 5: Web hint** — `frontend/src/components/Settings/DawarichConnectionCard.tsx`: after a successful save while provider is `none`, show "Dawarich ist verbunden. Als Standortquelle verwenden?" / "Dawarich is connected. Use it as your location source?" with a button that PUTs `dawarich`. Vitest: the hint appears after save with provider none, not with provider dawarich, and a 409 shows the mapped copy.
 - [ ] **Step 6:** Commit `feat(dawarich): automatic Dawarich features follow the chosen location provider`.
@@ -128,8 +131,10 @@ Today they run for anyone with an own Dawarich connection. From now on they run 
     version: 1,
     provider: { kind: LocationProviderKind, rev: number, status: ProviderStatus },
     capture: {
-      flight: boolean,   // kind === "none" && flightLiveTrackingEnabled(user)
-      trip: boolean,     // kind === "none" && tripRecordingEnabled(user)
+      flight: boolean,   // phase 1: kind !== "travtrack" && flightLiveTrackingEnabled(user)
+                         // (dawarich keeps recording until T5 reads Dawarich tracks;
+                         //  T5 changes it to kind === "none" || kind === "travtrack")
+      trip: boolean,     // same rule with tripRecordingEnabled(user)
       everyday: boolean, // kind === "travtrack" && status === "ok"  (false in phase 1)
       modes: Array<"off" | "trips" | "everyday">  // [] for none/dawarich in phase 1
     },
@@ -138,7 +143,7 @@ Today they run for anyone with an own Dawarich connection. From now on they run 
   ```
 - Rule pinned here: `POST /flights/:id/track` and `POST /trips/:id/recording` do NOT consult the provider. A recording queued before a switch keeps its target and is accepted.
 
-- [ ] **Step 1: Failing tests:** shape for each provider; "provider dawarich → capture.flight and capture.trip false"; "a trip recording uploaded while provider is dawarich is still accepted (201)"; "a flight track uploaded while provider is dawarich is still accepted"; read-only PAT may call capabilities.
+- [ ] **Step 1: Failing tests:** shape for each provider; "phase 1: provider dawarich still allows flight and trip capture"; "a trip recording uploaded while provider is dawarich is still accepted (201)"; "a flight track uploaded while provider is dawarich is still accepted"; read-only PAT may call capabilities.
 - [ ] **Step 2–4:** Run → FAIL, implement, run → PASS.
 - [ ] **Step 5:** Commit `feat(location): tell the Companion what to record`.
 
@@ -159,7 +164,7 @@ Today they run for anyone with an own Dawarich connection. From now on they run 
 Repo `/home/claude/projekte/TravStatsCompanion`. Local `main` is stale (94a441a8); base on `forgejo/main` (bb7c5704).
 
 **Files to remove after the merge** (from the survey of `e63a6610`):
-`app/src/lib/location/source.ts`, `app/src/components/location/LocationSourceStatus.tsx`, their tests (`components/location/__tests__/location-source-status.test.tsx`, `lib/location/__tests__/source.test.ts`), `getLocationSummarySource` in `app/src/server/api/location.ts`, `STORE_KEYS.locationSource` (`store.ts`, `account-wipe.ts`), the `source.*` keys and relay sentences in `components/location/copy.ts`, the relay paragraphs in `product/privacy.md`, the `<LocationSourceStatus/>` line in `app/settings/location.tsx`. `deleteTripRecordingOnServer` stops returning `{dawarichPending}`.
+`app/src/lib/location/source.ts`, `app/src/components/location/LocationSourceStatus.tsx`, their tests (`components/location/__tests__/location-source-status.test.tsx`, `lib/location/__tests__/source.test.ts`), `getLocationSummarySource` in `app/src/server/api/location.ts`, `STORE_KEYS.locationSource` (`store.ts`, `account-wipe.ts`), the `source.*` keys and relay sentences in `components/location/copy.ts`, the relay paragraphs in `product/privacy.md`, the `<LocationSourceStatus/>` line in `app/src/app/settings/location.tsx`. Privacy zones (`PrivacyZones.tsx`, `/location/zones`) stay in the code but are shown only when `caps.travTrack.enabled` (C4) — the phase-1 server has no zone API, and zones kept only on the phone would break rule 8. `deleteTripRecordingOnServer` stops returning `{dawarichPending}` — update its consumer `lib/trip-track/store.ts` (~:335), the `EverywhereDeletion` union and their tests/UI. Review every removal against `ae4419df` (the survey of `e63a6610` predates three later commits, including the account-isolation and migration fixes).
 
 - [ ] **Step 1:** `git fetch forgejo && git checkout -b feat/travtrack-p1 forgejo/main && git merge --no-ff forgejo/fix/companion-audit`.
 - [ ] **Step 2:** Remove the files and keys above. `grep -rni "relay\|dawarichPending\|locationSource" app/src product` → no hits.
@@ -175,10 +180,10 @@ Repo `/home/claude/projekte/TravStatsCompanion`. Local `main` is stale (94a441a8
 **Interfaces:**
 - Produces:
   - `type LocationCapabilities` = the S4 response, plus `{ legacy: true }` variant
-  - `readLocationCapabilities(): Promise<LocationCapabilities>` — cached per server + account; refreshed on app foreground and when the location settings screen opens; 404 → `{ legacy: true }`; network error → last cached value, or `legacy` if none.
+  - `readLocationCapabilities(): Promise<LocationCapabilities | { unknown: true }>` — cached per server + account; refreshed on app foreground and when the location settings screen opens; a confirmed 404 → `{ legacy: true }`; network error → last cached value, or `{ unknown: true }` if none. `unknown` starts nothing new, keeps a running recorder on its current plan, and retries.
   - `captureAllowed(caps: LocationCapabilities, kind: "flight" | "trip" | "everyday"): boolean` — `legacy` → today's behaviour (`flight`/`trip` follow the existing server switches `liveTracking` / `tripRecording` from `lib/server-switches.ts`; `everyday` false).
 
-- [ ] **Step 1: Failing tests:** 404 → legacy and `captureAllowed(legacy,"trip")` follows `tripRecording`; provider dawarich → all false; network error keeps the cached value; unpair wipes the cache; another account's cache is never read.
+- [ ] **Step 1: Failing tests:** 404 → legacy and `captureAllowed(legacy,"trip")` follows `tripRecording`; "first contact during an outage → unknown, nothing new starts"; network error keeps the cached value; unpair wipes the cache; another account's cache is never read.
 - [ ] **Step 2–4:** FAIL → implement → PASS. Commit `feat(location): read what the server wants recorded`.
 
 ### Task C3: Companion — the recorders obey the provider
@@ -190,9 +195,9 @@ Repo `/home/claude/projekte/TravStatsCompanion`. Local `main` is stale (94a441a8
 **Rules:**
 - `backgroundPlan` / `tripRecorderPlan` take `captureAllowed(...)` as an input; not allowed → `'stop'` (running) or no start.
 - Nothing already queued is discarded on a switch; `uploadLocationQueueOnce` keeps sending envelopes to their frozen target.
-- `recordFlightFixes` queues raw flight fixes only when `captureAllowed(caps, "everyday")` (i.e. TravTrack); otherwise it is a no-op and the flight track goes through `POST /flights/:id/track` as on main. (Prevents raw fixes waiting forever for a `/location/points` route that does not exist.)
+- Gate ONLY the raw-history half: `recordFlightFixes` keeps calling `recordTrackPoint()` (the flight track that `POST /flights/:id/track` uploads), and queues raw fixes into the location queue only when `captureAllowed(caps, "everyday")`. The same gate goes into `flight-track/raw-backfill.ts` (`backfillLegacyFlightFixes`, called by `location/upload.ts` every run) and the held-fix path (`location/hold.ts`). `{kind:'points'}` envelopes already queued stay queued (never dropped) and wait for a server that accepts them.
 
-- [ ] **Step 1: Failing tests:** "provider dawarich stops a running trip recorder and starts none"; "a trip envelope queued before the switch is still uploaded after it"; "raw flight fixes are not queued with provider none"; "legacy server: plans unchanged from today" (existing cases stay green).
+- [ ] **Step 1: Failing tests:** "capture.trip false stops a running trip recorder and starts none"; "a trip envelope queued before the switch is still uploaded after it"; "provider none: the flight track is still recorded and uploaded, raw fixes are not queued"; "the legacy backfill queues nothing with provider none"; "legacy server: plans unchanged from today" (existing cases stay green).
 - [ ] **Step 2–4:** FAIL → implement → PASS. Commit `feat(location): record only what the chosen source asks for`.
 
 ### Task C4: Companion — settings screen by provider
@@ -200,11 +205,11 @@ Repo `/home/claude/projekte/TravStatsCompanion`. Local `main` is stale (94a441a8
 **Files:** `app/src/app/settings/location.tsx`, `app/src/components/location/copy.ts` (DE + EN), screen test.
 
 **Behaviour** (prototype board "Companion"):
-- `none` or `legacy`: today's screen — "Flüge und Reisen" with flight and trip switches, upload status, recordings list, privacy zones.
-- `dawarich`: no recording switches; text "Dein Server liest den Verlauf aus deinem Dawarich, auch für Flüge und Reisen. Aufgezeichnet wird mit der Dawarich-App; diese App zeichnet dann nichts auf." / "Your server reads your history from your Dawarich, flights and trips included. Record with the Dawarich app; this app records nothing then." Upload status stays visible while anything is still queued.
+- `none`, `legacy`, and in phase 1 also `dawarich`: today's screen — "Flüge und Reisen" with flight and trip switches, upload status, recordings list; no privacy zones (see C1).
+- `dawarich` from T5 on: no recording switches; text "Dein Server liest den Verlauf aus deinem Dawarich, auch für Flüge und Reisen. Aufgezeichnet wird mit der Dawarich-App; diese App zeichnet dann nichts auf." / "Your server reads your history from your Dawarich, flights and trips included. Record with the Dawarich app; this app records nothing then." Upload status stays visible while anything is still queued.
 - `travtrack`: not reachable in phase 1 (capability false).
 
-- [ ] **Step 1: Failing tests** for the three states, including "queued uploads still shown under dawarich".
+- [ ] **Step 1: Failing tests** for the states, including "queued uploads still shown under dawarich" and "no privacy-zone section while travTrack is not enabled".
 - [ ] **Step 2–4:** FAIL → implement → PASS. Commit `feat(settings): the location screen follows the server's source`.
 
 ### Task C5: Companion — one capture coordinator
@@ -214,7 +219,7 @@ Today `travstats.flight-track` and `travstats.trip-track` are two OS tasks; duri
 **Files:**
 - Create: `app/src/lib/location/coordinator.ts` (+ tests) — owns the single `TaskManager.defineTask(CAPTURE_TASK)` with `CAPTURE_TASK = 'travstats.capture'`, the single start/stop, and the rate choice.
 - Create: `app/src/components/system/CaptureSync.tsx` replacing the recorder halves of `FlightTrackSync` and `TripTrackSync` in `app/src/app/_layout.tsx`. The flight-track UPLOAD task and the push task are untouched.
-- Modify: `flight-track/background.ts` and `trip-track/background.ts` keep their plan functions (pure) and their location handlers; the coordinator calls them. Migration on first start: stop and unregister the two old task names if registered.
+- Modify: `flight-track/background.ts` and `trip-track/background.ts` keep their plan functions (pure). Their location handlers are split: the PROCESSING half (thin, record, queue, mark the flight window as a break, extend the flight window, update armed state, headless expiry decisions) stays and is called by the coordinator; the LIFECYCLE half (`stopTripRecorder()` on pause/disable/expiry, the flight self-stops) moves into the coordinator, which decides from `capturePlan`. Migration on first start: stop and unregister the two old task names if registered.
 - Create: `adrs/0015-one-capture-path-by-location-provider.md`, index in `adrs/README.md`.
 
 **Interfaces:**
@@ -239,15 +244,15 @@ Today `travstats.flight-track` and `travstats.trip-track` are two OS tasks; duri
 
 Planned at task level; each task gets its test list written out when phase 1 has landed (the S2/S4 interfaces may still move).
 
-- **T1 Gate.** Beta key `travTrack` in `frontend/src/config/betaFeatures.ts` (why + returnsWhen). Server: `services/travtrack/availability.ts` (`travTrackOffered()` = `betaFeaturesEnabled`) + `travtrack_config` row (`enabled`, env `TRAVTRACK_ENABLED` fallback), pattern of `services/travplan/{availability,store}.ts`. `GET /travtrack/capabilities` answers always; every other `/travtrack/*` route refuses with 403 `TRAVTRACK_DISABLED`. `travTrackAvailable()` (S2) gets its real body.
-- **T2 Point store.** Port the generic migrations from the archive tag — `location_points` (without the relay columns), `location_uploads`, `location_deleted_ranges`, `location_privacy_zones`, `seq` — as ONE new migration with a timestamp after main's latest, renamed to `travtrack_*` tables. Add to `travtrack_points`: `purpose` (`everyday|flight|trip`), `entry_kind` (`flight|trip|null`), `entry_id`. Port `classify.ts`, `ingest.ts`, `zones.ts` without `remoteObligation`/`relayConnection`/`remoteOnly`. Tests from the branch's `locationPoints.test.ts` (minus the "what a delete still owes Dawarich" block) and `locationZones.test.ts`.
+- **T1 Gate.** Instance availability only; per-user activation is provider `travtrack` (S2). Beta key `travTrack` in `frontend/src/config/betaFeatures.ts` (why + returnsWhen). Server: `services/travtrack/availability.ts` (`travTrackOffered()` = `betaFeaturesEnabled`) + `travtrack_config` row (`enabled`, env `TRAVTRACK_ENABLED` fallback), pattern of `services/travplan/{availability,store}.ts`. `GET /travtrack/capabilities` answers always; every other `/travtrack/*` route refuses with 403 `TRAVTRACK_DISABLED`. `travTrackAvailable()` (S2) gets its real body.
+- **T2 Point store.** Port the generic migrations from the archive tag — `location_points` (without the relay columns), `location_uploads`, `location_deleted_ranges`, `location_privacy_zones`, `seq` — as ONE new migration with a timestamp after main's latest, renamed to `travtrack_*` tables. Entry links are a separate table `travtrack_point_links (point_id, entry_kind flight|trip, entry_id, PK all three)`, because one fix can belong to a flight AND its surrounding trip, and identical measurements dedupe to one point (`fixId` = `atMs:lat:lon`); a duplicate upload adds missing links, never drops one. `purpose` on the point = the capture purpose at record time (`everyday|flight|trip`), informational. Port `classify.ts`, `ingest.ts`, `zones.ts` without `remoteObligation`/`relayConnection`/`remoteOnly`. Tests from the branch's `locationPoints.test.ts` (minus the "what a delete still owes Dawarich" block) and `locationZones.test.ts`.
 - **T3 Ingest route.** `POST /travtrack/points` (device token only, idempotent `uploadId`, zone → deleted range → duplicate order), `GET /travtrack/points`, `GET /travtrack/summary`, `DELETE /travtrack/points` (removes points, segment geometry, caches, unaccepted suggestions; leaves tombstones so late uploads cannot restore; flights/trips stay, their evidence marked deleted), zones CRUD.
-- **T4 Provider reads.** `LocationProvider` interface in `services/locationProvider/types.ts` with a neutral observation type (not the Dawarich alias): `readPoints(window, cursor?) → { points, next, coverage: "complete" | "truncated" | "unreachable" }`, `getCoverage(window)`. Adapters `travtrackProvider` and `dawarichProvider` (wrapping today's client). Callers that read Dawarich today (tour/cruise pulls, stays, country days, market visits) go through it; truncation is shown, never treated as complete.
-- **T5 Entry tracks from TravTrack.** Flight and trip pages read their track via the provider for the entry's window when the entry has no own `FlightTrack` / `TripRecordingBatch`; the response carries `origin: "travstats" | "travtrack" | "dawarich"` and `coverage`. Existing own recordings keep showing as "TravStats-Aufzeichnung" after any switch; another source is an explicit extra view, never a silent swap. Privacy-zone gaps stay gaps (no line through them).
+- **T4 Provider reads.** `LocationProvider` interface in `services/locationProvider/types.ts` with a neutral observation type (not the Dawarich alias): `readPoints(window, cursor?) → { points, next, coverage: "complete" | "truncated" | "unreachable" }`, `getCoverage(window)`. Adapters `travtrackProvider` and `dawarichProvider` (wrapping today's client). Automatic callers (stays, country days, market visits, trip-recording history) go through the user's provider; an explicit "pull from Dawarich" (tour/cruise) uses the Dawarich adapter directly whatever the provider. Truncation is shown, never treated as complete.
+- **T5 Entry tracks from TravTrack.** Flight and trip pages read their track via the provider for the entry's window when the entry has no own `FlightTrack` / `TripRecordingBatch`; the response carries `origin: "travstats" | "travtrack" | "dawarich"` and `coverage`. Existing own recordings keep showing as "TravStats-Aufzeichnung" after any switch; another source is an explicit extra view, never a silent swap. Privacy-zone gaps stay gaps (no line through them). Same task flips S4: `capture.flight/trip` become `kind === "none" || kind === "travtrack"`, so a `dawarich` user stops recording exactly when Dawarich tracks appear on the flight and trip pages.
 - **T6 Web `/track`.** Day view as the prototype board "Track-Tag": map, timeline labelled from TravStats context (flights, trips, home place), coverage bar, privacy zones, export (GPX + JSON with origin and coverage), delete by range. Domain-gated menu entry "Track".
 - **T7 Backup/export/share.** All-data export and backup include TravTrack points, zones, tombstones. A shared trip carries a filtered, versioned track snapshot only, revocable and removed with its history.
 - **T8 Default for new accounts.** On account creation: provider `travtrack` when `travTrackAvailable`, else `none`. Unlocking the beta later never changes existing accounts.
-- **C6 Companion modes.** With `capture.everyday`: modes Aus / Flug & Reise / Alltag (prototype board "Companion"). The coordinator (C5) gains the everyday rate (coarse) and raises precision during a flight or trip. `QueuedPoint` gains `purpose` and `entry` and sends to `POST /travtrack/points`; trip/flight envelopes queued under `none` keep their old target. Privacy zones on the device; stale zones → conservative, skipped intervals reported.
+- **C6 Companion modes.** With `capture.everyday`: modes Aus / Flug & Reise / Alltag (prototype board "Companion"). The coordinator (C5) gains the everyday rate (coarse) and raises precision during a flight or trip. `QueuedPoint` gains `purpose` and `entries` and sends to `POST /travtrack/points`; trip/flight envelopes queued under `none` keep their old target. Under `travtrack` the flight-track uploader (`POST /flights/:id/track`) and the trip upload (`/trips/:id/recording`) are off for NEW recordings — the flight and trip become TravTrack segments via their links, so no entry gets both an own track and history points. Privacy zones on the device; stale zones → conservative, skipped intervals reported.
 - **C7 Field test** on real phones before everyday recording is advertised (Android watchdog measurement from the archived P0 spec).
 
 ## Phase 3 — TravTrack helps TravStats
