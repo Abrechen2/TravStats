@@ -178,8 +178,31 @@ export async function createOnce<R>(
   const prior = await findRef(userId, clientRef);
   if (prior) return { created: false, result: await answerRepeat(prior, kind, hash, replay) };
 
+  // Whether this request's own create reached the key. A create that ends
+  // WITHOUT claiming — a dedup answer ("already imported", "duplicate"), a
+  // refusal — may have lost a race to an overlapping retry of itself: both
+  // passed the lookup above, the first committed its row and its key, and the
+  // second then met that row in the route's own dedup (Codex review of S1).
+  // So before such an answer goes out, the key is read again: if this key
+  // made a row in the meantime, the retry gets that row's replay like any
+  // repeat, not a 409 about its own first attempt.
+  let claimed = false;
+  const settledByRace = async (): Promise<{ created: false; result: R } | null> => {
+    if (claimed) return null;
+    let winner: RefRow | null;
+    try {
+      winner = await findRef(userId, clientRef);
+    } catch {
+      return null; // the route's own answer stands
+    }
+    return winner
+      ? { created: false, result: await answerRepeat(winner, kind, hash, replay) }
+      : null;
+  };
+
   try {
     const result = await create(async (tx, entityId) => {
+      claimed = true;
       try {
         await expectingUniqueConflict("ClientWriteRef", () =>
           tx.clientWriteRef.create({
@@ -193,9 +216,13 @@ export async function createOnce<R>(
         throw err;
       }
     });
-    return { created: true, result };
+    return (await settledByRace()) ?? { created: true, result };
   } catch (err) {
-    if (!(err instanceof ClientRefRace)) throw err;
+    if (!(err instanceof ClientRefRace)) {
+      const settled = await settledByRace();
+      if (settled) return settled;
+      throw err;
+    }
     const winner = await findRef(userId, clientRef);
     if (!winner) throw new AppError("clientRef could not be settled; send again", 503);
     return { created: false, result: await answerRepeat(winner, kind, hash, replay) };
