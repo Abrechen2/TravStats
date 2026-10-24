@@ -1,5 +1,6 @@
 import { AppError } from "../../middleware/errorHandler";
 import { instantMs } from "./classify";
+import { GAP_REASONS, MAX_GAPS, type GapReason } from "./limits";
 
 /**
  * What the phone reports it could not record (TravTrack plan T2): one wire
@@ -11,11 +12,7 @@ import { instantMs } from "./classify";
  * a late upload cannot re-create a gap inside a span the user deleted.
  */
 
-export const GAP_REASONS = ["zonesUnknown", "recorderSilent", "permission"] as const;
-export type GapReason = (typeof GAP_REASONS)[number];
-
-/** Gaps per upload. */
-export const MAX_GAPS = 100;
+export { GAP_REASONS, MAX_GAPS, type GapReason };
 
 export type Span = { fromMs: number; toMs: number };
 export type ParsedGap = Span & { reason: GapReason };

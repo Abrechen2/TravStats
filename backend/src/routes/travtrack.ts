@@ -16,6 +16,8 @@ import {
 } from "../services/travtrack/availability";
 import { setTravTrackConfig, travTrackConfig } from "../services/travtrack/config";
 import { travTrackTier } from "./travtrack/gate";
+import pointRoutes from "./travtrack/points";
+import zoneRoutes from "./travtrack/zones";
 
 /**
  * TravTrack, the own location history (TravTrack plan, phase 2): the router
@@ -87,5 +89,8 @@ router.patch(
     res.json(await setTravTrackConfig(configSchema.parse(req.body)));
   })
 );
+
+router.use(pointRoutes);
+router.use(zoneRoutes);
 
 export default router;

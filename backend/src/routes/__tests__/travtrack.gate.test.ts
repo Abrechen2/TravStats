@@ -96,6 +96,23 @@ describe("TravTrack gate", () => {
     expect(ROUTES.filter((r) => r.tier === null).map((r) => `${r.method} ${r.path}`)).toEqual([]);
   });
 
+  it("each route sits in the tier the plan names for it", () => {
+    const tiers = Object.fromEntries(ROUTES.map((r) => [`${r.method} ${r.path}`, r.tier]));
+    expect(tiers).toEqual({
+      "get /travtrack/capabilities": "open",
+      "get /travtrack/config": "offered",
+      "patch /travtrack/config": "offered",
+      "post /travtrack/points": "on",
+      "get /travtrack/points": "on",
+      "get /travtrack/summary": "held",
+      "delete /travtrack/points": "held",
+      "get /travtrack/zones": "held",
+      "post /travtrack/zones": "on",
+      "patch /travtrack/zones/:id": "on",
+      "delete /travtrack/zones/:id": "held",
+    });
+  });
+
   it("capabilities answer 200 with offered/enabled false while off", async () => {
     await switches.set({ beta: false, config: false });
     const res = await call("get", "/api/v1/travtrack/capabilities").expect(200);
