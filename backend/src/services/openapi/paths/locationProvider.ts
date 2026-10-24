@@ -1,13 +1,16 @@
+import { z } from "zod";
+
 import { registry } from "../registry";
 import { errorContent } from "./shared";
 import {
   locationProviderSettingsSchema,
+  locationProviderStateSchema,
   putLocationProviderSchema,
 } from "../../../schemas/locationProvider";
 
 /**
  * The per-user location provider (TravTrack plan 2026-10-24):
- * `routes/settings/locationProvider.ts`. Bare.
+ * `routes/settings/locationProvider.ts` and `routes/locationCapabilities.ts`. Bare.
  */
 
 registry.registerPath({
@@ -49,5 +52,48 @@ registry.registerPath({
         "(this server does not offer TravTrack); the stored choice is unchanged",
       content: errorContent,
     },
+  },
+});
+
+const capabilities = z.object({
+  version: z.literal(1),
+  provider: locationProviderStateSchema,
+  capture: z.object({
+    flight: z
+      .boolean()
+      .describe(
+        "Record flights with the app (phase 1: every provider but travtrack, if switched on)"
+      ),
+    trip: z
+      .boolean()
+      .describe(
+        "Record trips with the app (phase 1: every provider but travtrack, if switched on)"
+      ),
+    everyday: z.boolean().describe("Everyday location history through TravTrack"),
+    modes: z
+      .array(z.enum(["off", "trips", "everyday"]))
+      .describe("Recording modes to offer; empty without TravTrack"),
+  }),
+  travTrack: z.object({
+    offered: z.boolean().describe("This server offers TravTrack to this account"),
+    enabled: z.boolean().describe("TravTrack is the chosen, working provider"),
+  }),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/location/capabilities",
+  summary: "What the Companion should record",
+  description:
+    "Steers what the phone starts recording. The recording routes never consult it: a " +
+    "recording queued before a switch keeps its target and is accepted. Read-only tokens may " +
+    "call it; an older server answers 404, which a client treats as today's behaviour.",
+  tags: ["Settings"],
+  responses: {
+    200: {
+      description: "The provider and what to capture",
+      content: { "application/json": { schema: capabilities } },
+    },
+    401: { description: "No session", content: errorContent },
   },
 });

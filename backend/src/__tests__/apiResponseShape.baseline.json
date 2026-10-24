@@ -70,6 +70,7 @@
     "immich/tripCover.ts",
     "import.ts",
     "integrations/strava.ts",
+    "locationCapabilities.ts",
     "lodgingGeocode.ts",
     "loginBackgrounds.ts",
     "mapConfig.ts",
