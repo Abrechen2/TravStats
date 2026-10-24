@@ -32,6 +32,7 @@ export type SchedulerJob =
   | "placeAddressBackfill"
   | "statusSweep"
   | "syncRetention"
+  | "travTrackOrphanLinks"
   | "webdavSync"
   | "stayFxBackfill"
   | "usageStats"

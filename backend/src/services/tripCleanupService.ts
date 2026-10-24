@@ -36,6 +36,7 @@ import {
   mergeTripPhotos,
   retargetCoverUrl,
 } from "./trip/mergeTripRelations";
+import { moveTripLinks } from "./travtrack/links";
 
 /** A trip is "micro" when it has at most this many flights. Matches the
  *  shape of the legacy one-booking auto-trips (outbound + return). */
@@ -395,6 +396,8 @@ export async function mergeTrips(
       data: sourceIds.map((sourceTripId) => ({ sourceTripId, userId, mergedIntoTripId: targetId })),
       skipDuplicates: true,
     });
+    // TravTrack points linked to a source trip belong to the merged trip now.
+    await moveTripLinks(tx, userId, sourceIds, targetId);
     await tx.trip.deleteMany({ where: { id: { in: sourceIds }, userId } });
     for (const [entity, ids] of moved) {
       await propagateWrites(tx, userId, entity, ids);

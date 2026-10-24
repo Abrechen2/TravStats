@@ -84,6 +84,12 @@ export async function startCronJobs(): Promise<void> {
       "sync_retention",
       async () => (await import("./syncRetentionScheduler")).startSyncRetentionScheduler(),
     ],
+    // TravTrack links whose flight or trip is gone, daily 03:55 (TravTrack plan T2).
+    [
+      "travtrack_orphan_links",
+      async () =>
+        (await import("./travTrackOrphanLinkScheduler")).startTravTrackOrphanLinkScheduler(),
+    ],
     // Per-account WebDAV sync of the account's export, daily 05:15 (forgejo#321).
     ["webdav_sync", async () => (await import("./webdavSyncScheduler")).startWebdavSyncScheduler()],
     // Trip sharing across servers: the outbox, every 30 s and when nudged (forgejo#301).

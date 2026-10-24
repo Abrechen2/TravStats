@@ -25,6 +25,7 @@
  * | 03:30 | lodging FX backfill (stayFxBackfillScheduler.ts) |
  * | 03:45 | log retention (logRetentionScheduler.ts) |
  * | 03:50 | sync change-feed retention (syncRetentionScheduler.ts) |
+ * | 03:55 | TravTrack orphan-link sweep (travTrackOrphanLinkScheduler.ts) |
  * | every :00 | hourly status sweep |
  * | **04:10** | **this** |
  * | 04:40 | Dawarich country-day sweep |
