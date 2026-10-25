@@ -210,44 +210,70 @@ async function clearCaptured(
 /** The pending row this build relied on was removed before it took the lock. */
 class PendingRowGone extends Error {}
 
-/** How often a share re-commits its pending row when it was removed before the build took the lock. */
+/** The row this build read was removed while it ran: the share was revoked. */
+class RowRevoked extends Error {}
+
+/** The row this build read moved on while it ran (an automatic narrowing): build again. */
+class RowMoved extends Error {}
+
+/** How often a share builds again when its row was removed before, or moved during, the build. */
 const MAX_BUILD_ATTEMPTS = 3;
+
+/**
+ * The build's one write of a route: an update of exactly the row it read, at
+ * the version (and pending token) it read — never an upsert, so a row revoked
+ * meanwhile stays revoked (invariant 15, Codex review P1).
+ */
+async function storeBuilt(
+  tx: Db,
+  held: { id: string; version: number; buildToken: string | null },
+  fields: Record<string, unknown>
+) {
+  const { count } = await tx.travTrackShareSnapshot.updateMany({
+    where: { id: held.id, version: held.version, buildToken: held.buildToken },
+    data: { ...fields, version: { increment: 1 }, createdAt: new Date() },
+  });
+  if (count > 0) return;
+  const still = await tx.travTrackShareSnapshot.findUnique({
+    where: { id: held.id },
+    select: { id: true },
+  });
+  throw still ? new RowMoved() : new RowRevoked();
+}
 
 /** The owner's build, under the TravTrack lock, against the committed row it relies on. */
 async function buildUnderLock(tx: Db, userId: string, tripId: string) {
   await takeTravTrackLock(tx, userId);
-  const existing = await tx.travTrackShareSnapshot.findUnique({
-    where: { tripId },
-    select: { id: true },
+  const held = await tx.travTrackShareSnapshot.findFirst({
+    where: { tripId, userId },
+    select: { id: true, version: true, buildToken: true },
   });
   // Without a committed row a change made during the build has nothing to be
   // recorded against: commit the pending row again first.
-  if (!existing) throw new PendingRowGone();
+  if (!held) throw new PendingRowGone();
   // Read before any input: what is recorded after this stays recorded.
-  const cleared = await recordedRows(tx, existing.id);
+  const cleared = await recordedRows(tx, held.id);
   const bounds = await boundsOf(tx, userId, tripId);
   const built = bounds ? await buildShareGeometry(tx, userId, bounds) : null;
   if (!bounds || !built || built.geometry.length === 0) {
-    await tx.travTrackShareSnapshot.deleteMany({ where: { tripId, userId } });
+    await tx.travTrackShareSnapshot.deleteMany({ where: { id: held.id } });
     return null;
   }
-  const fields = {
+  await storeBuilt(tx, held, {
     geometry: built.geometry as unknown as object,
     pointCount: vertexCount(built.geometry),
     sharedFrom: new Date(bounds.fromMs),
     sharedUntil: new Date(bounds.untilMs),
     homeCircles: built.home ? [built.home] : [],
     buildToken: null,
-  };
-  const row = await tx.travTrackShareSnapshot.upsert({
-    where: { tripId },
-    create: { userId, tripId, ...fields },
-    update: { ...fields, version: { increment: 1 }, createdAt: new Date() },
+  });
+  const row = await tx.travTrackShareSnapshot.findUniqueOrThrow({
+    where: { id: held.id },
     select: OWNER_SELECT,
   });
   // The owner's share starts over from what this build read: the trip,
   // its flights and the home as they were when it read them.
-  await clearCaptured(tx, row.id, cleared);
+  await clearCaptured(tx, held.id, cleared);
   return ownerView(tx, userId, row);
 }
 
@@ -281,6 +307,10 @@ async function dropOwnPendingRow(userId: string, tripId: string, token: string) 
  * against. Two first shares at once rely on the same pending row; only the
  * one that committed it may remove it on failure (`dropOwnPendingRow`), and a
  * build that finds it removed commits it again before reading anything.
+ *
+ * Once the build has read its row, a revoke wins: it waits for the lock, and
+ * a row removed by any other path while the build ran is never written back
+ * (`storeBuilt`) — the share answers `TRAVTRACK_SHARE_REVOKED`.
  */
 export async function shareTripRoute(userId: string, tripId: string) {
   const trip = await prisma.trip.findFirst({ where: { id: tripId, userId }, select: { id: true } });
@@ -310,7 +340,14 @@ export async function shareTripRoute(userId: string, tripId: string) {
         });
         break;
       } catch (err) {
-        if (!(err instanceof PendingRowGone)) throw err;
+        if (err instanceof RowRevoked) {
+          throw new AppError(
+            "The route was revoked while it was being shared",
+            409,
+            "TRAVTRACK_SHARE_REVOKED"
+          );
+        }
+        if (!(err instanceof PendingRowGone) && !(err instanceof RowMoved)) throw err;
         if (attempt >= MAX_BUILD_ATTEMPTS) {
           throw new AppError(
             "The route is being shared by another request",
@@ -344,9 +381,20 @@ export async function shareTripRoute(userId: string, tripId: string) {
   return snapshot;
 }
 
-/** `DELETE /trips/:id/share-snapshot`: revoked for every recipient at once. */
+/**
+ * `DELETE /trips/:id/share-snapshot`: revoked for every recipient at once.
+ * Under the TravTrack lock, so it never lands inside a build that has read its
+ * row: it waits for that build and then removes what it stored.
+ */
 export async function revokeTripRoute(userId: string, tripId: string): Promise<boolean> {
-  const { count } = await prisma.travTrackShareSnapshot.deleteMany({ where: { tripId, userId } });
+  const count = await prisma.$transaction(
+    async (tx) => {
+      await takeTravTrackLock(tx, userId);
+      const res = await tx.travTrackShareSnapshot.deleteMany({ where: { tripId, userId } });
+      return res.count;
+    },
+    { maxWait: 10_000, timeout: 70_000 }
+  );
   return count > 0;
 }
 

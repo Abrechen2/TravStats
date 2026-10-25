@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
-import { routeShareErrorKey, travTrackApi, type TripRouteSnapshot } from "../../lib/api/travtrack";
+import {
+  routeShareErrorKey,
+  routeShareWasRevoked,
+  travTrackApi,
+  type TripRouteSnapshot,
+} from "../../lib/api/travtrack";
 import { logger } from "../../lib/logger";
 import { Button, Dialog } from "../ui";
 
@@ -64,6 +69,8 @@ export default function ShareRouteDialog({ open, onClose, tripId }: Props): JSX.
       setState({ kind: "loaded", snapshot: await action() });
     } catch (err) {
       logger.warn("Sharing the route failed", err);
+      // A revoke won the race: show the route as not shared, not as it was.
+      if (routeShareWasRevoked(err)) setState({ kind: "loaded", snapshot: null });
       setError(routeShareErrorKey(err));
     } finally {
       setBusy(false);

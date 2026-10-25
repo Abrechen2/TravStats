@@ -105,6 +105,16 @@ describe("ShareRouteDialog", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("sharing:route.errors.busy");
   });
 
+  it("shows the route as not shared when a revoke won the race against the share", async () => {
+    api.routeSnapshot.mockResolvedValue(SNAPSHOT);
+    api.shareRoute.mockRejectedValue(refusal("TRAVTRACK_SHARE_REVOKED"));
+    open();
+    fireEvent.click(await screen.findByRole("button", { name: "sharing:route.refresh" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("sharing:route.errors.revoked");
+    expect(screen.getByText("sharing:route.notShared")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "sharing:route.revoke" })).toBeNull();
+  });
+
   it("says TravTrack is off instead of pretending nothing is shared", async () => {
     api.routeSnapshot.mockRejectedValue(
       Object.assign(new Error("off"), {

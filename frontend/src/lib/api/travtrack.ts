@@ -274,6 +274,11 @@ export function trackErrorKey(err: unknown): string {
   }
 }
 
+/** The share was revoked while it was being built: nothing of this trip's route is shared now. */
+export function routeShareWasRevoked(err: unknown): boolean {
+  return apiErrorMachineCode(err) === "TRAVTRACK_SHARE_REVOKED";
+}
+
 /** The i18n key for a failed route-sharing call (plan T7). */
 export function routeShareErrorKey(err: unknown): string {
   switch (apiErrorMachineCode(err)) {
@@ -285,6 +290,8 @@ export function routeShareErrorKey(err: unknown): string {
       return "sharing:route.errors.rateLimited";
     case "TRAVTRACK_SHARE_BUSY":
       return "sharing:route.errors.busy";
+    case "TRAVTRACK_SHARE_REVOKED":
+      return "sharing:route.errors.revoked";
     default:
       return (err as { response?: unknown } | null)?.response
         ? "sharing:route.errors.generic"

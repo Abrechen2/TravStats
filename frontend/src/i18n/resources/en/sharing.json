@@ -755,6 +755,7 @@
       "generic": "The route could not be shared.",
       "rateLimited": "The route was shared again many times just now. Wait a few minutes, then try again.",
       "busy": "The route is being shared by another request right now. Try again in a moment.",
+      "revoked": "Sharing was stopped while the route was being built. Nothing is shared.",
       "network": "The server cannot be reached. Try again in a moment."
     }
   }

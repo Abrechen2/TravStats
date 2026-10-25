@@ -65,7 +65,8 @@ registry.registerPath({
     409: {
       description:
         "TRAVTRACK_ROUTE_EMPTY: nothing of the trip's line may be shown; " +
-        "TRAVTRACK_SHARE_BUSY: the pending route row was removed before each of three builds",
+        "TRAVTRACK_SHARE_BUSY: the pending route row was removed before each of three builds; " +
+        "TRAVTRACK_SHARE_REVOKED: the route was revoked while this build ran, nothing was stored",
       content: errorContent,
     },
     429: {
@@ -81,6 +82,9 @@ registry.registerPath({
   method: "delete",
   path: "/trips/{id}/share-snapshot",
   summary: "Stop sharing this trip's route, for every recipient at once",
+  description:
+    "Waits for a share being built at the same time and then removes what it stored; a build " +
+    "never writes a revoked route back.",
   tags: ["TravTrack"],
   request: { params: tripParams },
   responses: { 204: { description: "Not shared (also when it was not)" } },
