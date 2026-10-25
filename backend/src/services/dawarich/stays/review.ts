@@ -54,7 +54,7 @@ export async function applyStayAcceptance(
   userId: string,
   row: DawarichStay,
   input: StayReview,
-  extra: { suggestionRef?: string | null; clearClaim?: boolean } = {}
+  extra: { suggestionRef?: string | null; claimToken?: string } = {}
 ): Promise<{ row: DawarichStay; createdPlaceId: string | null }> {
   const id = row.id;
   let createdPlaceId: string | null = null;
@@ -183,24 +183,33 @@ export async function applyStayAcceptance(
   if (existing && !existing.tripId && input.tripId)
     await tx.placeVisit.update({ where: { id: existing.id }, data: { tripId: input.tripId } });
   await tx.place.update({ where: { id: place.id }, data: { visited: true } });
-  const updated = await tx.dawarichStay.update({
-    where: { id },
-    data: {
-      status: "accepted",
-      resolvedAt: new Date(),
-      visitId: visit.id,
-      placeId: place.id,
-      tripId: visit.tripId ?? input.tripId,
-      name: place.name,
-      lat: place.lat,
-      lon: place.lon,
-      zone: zone!,
-      startAt: start.visitedAtUtc,
-      endAt: end.visitedAtUtc,
-      ...(extra.clearClaim ? { claimToken: null, claimedAt: null } : {}),
-    },
+  const accepted = {
+    status: "accepted",
+    resolvedAt: new Date(),
+    visitId: visit.id,
+    placeId: place.id,
+    tripId: visit.tripId ?? input.tripId,
+    name: place.name,
+    lat: place.lat,
+    lon: place.lon,
+    zone: zone!,
+    startAt: start.visitedAtUtc,
+    endAt: end.visitedAtUtc,
+  };
+  if (extra.claimToken === undefined) {
+    const updated = await tx.dawarichStay.update({ where: { id }, data: accepted });
+    return { row: updated, createdPlaceId };
+  }
+  // The accept protocol (E4): only the holder of the claim may finish it. A
+  // claim taken over meanwhile aborts the whole transaction — no place, no
+  // visit, the other request's claim untouched.
+  const finished = await tx.dawarichStay.updateMany({
+    where: { id, userId, status: "accepting", claimToken: extra.claimToken },
+    data: { ...accepted, claimToken: null, claimedAt: null },
   });
-  return { row: updated, createdPlaceId };
+  if (finished.count !== 1)
+    throw new AppError("This suggestion is being accepted", 409, "SUGGESTION_ACCEPT_IN_PROGRESS");
+  return { row: await tx.dawarichStay.findUniqueOrThrow({ where: { id } }), createdPlaceId };
 }
 
 async function completeAcceptedPlace(placeId: string): Promise<void> {
@@ -266,10 +275,13 @@ function stayClaimStore(userId: string): ClaimStore<DawarichStay, DawarichStay> 
       return taken.count === 1;
     },
     async holdsClaim(tx, id, token) {
-      return !!(await tx.dawarichStay.findFirst({
-        where: { id, userId, status: "accepting", claimToken: token },
-        select: { id: true },
-      }));
+      // FOR UPDATE: the row stays ours until this transaction ends, so a stale
+      // takeover cannot slip in between this check and the final write.
+      const held = await tx.$queryRaw<{ id: string }[]>`
+        SELECT id FROM dawarich_stays
+        WHERE id = ${id} AND user_id = ${userId} AND status = 'accepting' AND claim_token = ${token}
+        FOR UPDATE`;
+      return held.length === 1;
     },
     async invalidate(tx, id, token) {
       await tx.dawarichStay.updateMany({
@@ -299,10 +311,10 @@ async function acceptTravTrackStay(userId: string, id: string, input: StayReview
     id,
     store: stayClaimStore(userId),
     recheck: (row) => recheckFinding(userId, row),
-    apply: async (tx, row) => {
+    apply: async (tx, row, token) => {
       const applied = await applyStayAcceptance(tx, userId, row, input, {
         suggestionRef: row.evidenceKey,
-        clearClaim: true,
+        claimToken: token,
       });
       createdPlaceId = applied.createdPlaceId;
       return applied.row;

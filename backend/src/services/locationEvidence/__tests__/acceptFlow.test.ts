@@ -17,6 +17,8 @@ import { travTrackSwitches } from "../../travtrack/__tests__/switches";
 import { wipeTravTrack } from "../../travtrack/__tests__/fixtures";
 import { deleteTravTrackRange } from "../../travtrack/deleteRange";
 import { bumpHistoryGeneration } from "../generation";
+import { applyStayAcceptance } from "../../dawarich/stays/review";
+import { stayReviewSchema } from "../../../schemas/dawarichStays";
 import {
   BASE,
   MIN,
@@ -192,6 +194,30 @@ describe("accepting a TravTrack finding", () => {
     expect((await prisma.dawarichStay.findUniqueOrThrow({ where: { id: row.id } })).status).toBe(
       "rejected"
     );
+  });
+
+  it("a publisher whose claim was taken over writes nothing: the final write needs its token", async () => {
+    const row = await finding();
+    // Our claim went stale and another request took the finding over.
+    await prisma.dawarichStay.update({
+      where: { id: row.id },
+      data: { status: "accepting", claimToken: "theirs", claimedAt: new Date() },
+    });
+    const claimed = await prisma.dawarichStay.findUniqueOrThrow({ where: { id: row.id } });
+    await expect(
+      prisma.$transaction((tx) =>
+        applyStayAcceptance(tx, userId, claimed, stayReviewSchema.parse(seoulReview()), {
+          suggestionRef: row.evidenceKey,
+          claimToken: "mine",
+        })
+      )
+    ).rejects.toMatchObject({ code: "SUGGESTION_ACCEPT_IN_PROGRESS" });
+    expect(await prisma.place.count({ where: { userId } })).toBe(0);
+    expect(await prisma.placeVisit.count({ where: { userId } })).toBe(0);
+    expect(await prisma.dawarichStay.findUniqueOrThrow({ where: { id: row.id } })).toMatchObject({
+      status: "accepting",
+      claimToken: "theirs",
+    });
   });
 
   it("a claim abandoned by a failed request goes back to pending", async () => {
