@@ -4,6 +4,7 @@ import { localDay } from "../../../shared/time/instant";
 import { fromDbDate } from "../../../shared/time/localDate";
 import { visitDay } from "../../places/visitTrip";
 import { meters } from "./detect";
+import { isOwnEntry } from "../../locationEvidence/acceptance";
 
 /**
  * "You already wrote this down."
@@ -44,6 +45,8 @@ export interface CoverageVisit {
   visitedAtUtc: Date | null;
   visitedZone: string | null;
   visitedPrecision: string | null;
+  /** The evidence key of the finding whose acceptance made it (TravTrack plan E4). */
+  suggestionRef?: string | null;
   place: { id: string; name: string; lat: number; lon: number };
 }
 
@@ -67,6 +70,8 @@ export interface StayToCover {
   lat: number;
   lon: number;
   zone: string;
+  /** The finding's neutral key: a visit made by accepting it never covers it. */
+  evidenceKey?: string | null;
 }
 
 export interface StayCoverage {
@@ -111,6 +116,7 @@ export function coverageFor(stay: StayToCover, ctx: CoverageContext): StayCovera
     if (c.distanceM < COVER_RADIUS_M && (!best || c.distanceM < best.distanceM)) best = c;
   };
   for (const v of ctx.visits) {
+    if (isOwnEntry(v, stay.evidenceKey)) continue;
     const instant = visitInstant(v);
     const holds = instant
       ? instant.getTime() >= from && instant.getTime() <= to
@@ -173,6 +179,7 @@ export async function loadCoverage(userId: string, from: Date, to: Date): Promis
         visitedAtUtc: true,
         visitedZone: true,
         visitedPrecision: true,
+        suggestionRef: true,
         place: { select: { id: true, name: true, lat: true, lon: true } },
       },
     }),
@@ -224,6 +231,7 @@ export async function resolveCoveredStays(userId: string): Promise<number> {
       lon: true,
       zone: true,
       evidence: true,
+      evidenceKey: true,
     },
   });
   const plain = pending.filter((p) => !(p.evidence as { market?: unknown } | null)?.market);

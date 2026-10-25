@@ -1,0 +1,156 @@
+{
+  "results": [
+    {
+      "created": 2,
+      "extended": 0,
+      "suppressed": 0,
+      "skippedNoZone": 0,
+      "covered": 0,
+      "resolvedCovered": 0,
+      "points": 27,
+      "truncated": false
+    },
+    {
+      "created": 1,
+      "extended": 0,
+      "suppressed": 0,
+      "skippedNoZone": 0,
+      "covered": 0,
+      "resolvedCovered": 0,
+      "points": 27,
+      "truncated": false,
+      "markets": {
+        "scope": "markets",
+        "status": "complete",
+        "tiles": 2,
+        "totalTiles": 2,
+        "failedTiles": 0,
+        "missingAreaCount": 0,
+        "invalidAreaCount": 0,
+        "limited": false,
+        "alreadyRecordedCount": 0,
+        "createdCount": 1,
+        "staleMapData": false
+      }
+    }
+  ],
+  "scan": {
+    "result": "succeeded",
+    "error": null,
+    "pointCount": 27,
+    "createdCount": 1,
+    "dataThrough": "2026-10-10T20:40:00.000Z",
+    "marketResult": {
+      "scope": "markets",
+      "tiles": 2,
+      "status": "complete",
+      "limited": false,
+      "totalTiles": 2,
+      "failedTiles": 0,
+      "createdCount": 1,
+      "staleMapData": false,
+      "invalidAreaCount": 0,
+      "missingAreaCount": 0,
+      "alreadyRecordedCount": 0
+    }
+  },
+  "rows": [
+    {
+      "fingerprint": "a44179d573d0754cb9e0fc2515f7808726667f1638661f846c778c6d5fe66a0f",
+      "sourceStartAt": "2026-10-10T14:50:00.000Z",
+      "sourceEndAt": "2026-10-10T15:10:00.000Z",
+      "sourceLat": 37.57,
+      "sourceLon": 126.97,
+      "status": "pending",
+      "startAt": "2026-10-10T14:50:00.000Z",
+      "endAt": "2026-10-10T15:10:00.000Z",
+      "lat": 37.57,
+      "lon": 126.97,
+      "zone": "Asia/Seoul",
+      "pointCount": 21,
+      "evidence": {
+        "kind": "market",
+        "zone": "Asia/Seoul",
+        "market": {
+          "osmRef": "way/1234",
+          "areaIds": ["way/1234"],
+          "identity": "wikidata:Q1234",
+          "sourceUrls": ["https://www.openstreetmap.org/way/1234"],
+          "interiorPointCount": 21,
+          "overlappingMarketIds": []
+        },
+        "source": "dawarich",
+        "pointIds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+        "maxGapMinutes": 1,
+        "uncertainties": ["sourceUnknown", "speedUnknown"],
+        "matchingVisitId": null,
+        "supersededFindingIds": ["acc02daf531a4b6ee53bd136ff21fb96b3cb2403d0d5db6739f31b0ca4fa990c"]
+      },
+      "tripId": null,
+      "name": "Test Market",
+      "visitId": null,
+      "claimToken": null,
+      "claimedAt": null,
+      "resolved": false,
+      "placeId": null
+    },
+    {
+      "fingerprint": "acc02daf531a4b6ee53bd136ff21fb96b3cb2403d0d5db6739f31b0ca4fa990c",
+      "sourceStartAt": "2026-10-10T14:50:00.000Z",
+      "sourceEndAt": "2026-10-10T15:10:00.000Z",
+      "sourceLat": 37.570000000000014,
+      "sourceLon": 126.96999999999996,
+      "status": "superseded",
+      "startAt": "2026-10-10T14:50:00.000Z",
+      "endAt": "2026-10-10T15:10:00.000Z",
+      "lat": 37.570000000000014,
+      "lon": 126.96999999999996,
+      "zone": "Asia/Seoul",
+      "pointCount": 21,
+      "evidence": {
+        "zone": "Asia/Seoul",
+        "source": "dawarich",
+        "pointIds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+        "maxGapMinutes": 1,
+        "uncertainties": ["sourceUnknown"],
+        "matchingVisitId": null
+      },
+      "tripId": null,
+      "name": null,
+      "visitId": null,
+      "claimToken": null,
+      "claimedAt": null,
+      "resolved": true,
+      "placeId": null
+    },
+    {
+      "fingerprint": "e37ac03868c2c3a9c57228112d4aaaee7611ebe3161fb09dc3c0b6ee01b70461",
+      "sourceStartAt": "2026-10-10T20:00:00.000Z",
+      "sourceEndAt": "2026-10-10T20:40:00.000Z",
+      "sourceLat": 35.1796,
+      "sourceLon": 129.0756,
+      "status": "pending",
+      "startAt": "2026-10-10T20:00:00.000Z",
+      "endAt": "2026-10-10T20:40:00.000Z",
+      "lat": 35.1796,
+      "lon": 129.0756,
+      "zone": "Asia/Seoul",
+      "pointCount": 5,
+      "evidence": {
+        "zone": "Asia/Seoul",
+        "source": "dawarich",
+        "pointIds": [100, 101, 102, 104, 105],
+        "maxGapMinutes": 10,
+        "uncertainties": ["sourceUnknown", "outliersIgnored"],
+        "matchingVisitId": null
+      },
+      "tripId": null,
+      "name": "Busan Station",
+      "visitId": null,
+      "claimToken": null,
+      "claimedAt": null,
+      "resolved": false,
+      "placeId": "place:Busan Station"
+    }
+  ]
+}

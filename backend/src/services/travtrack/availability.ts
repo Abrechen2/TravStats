@@ -1,4 +1,4 @@
-import { prisma } from "../../db";
+import { prisma, type DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import { isSharedDemoUser } from "../../utils/sharedDemo";
 import { getInstanceSettings } from "../instanceSettingsService";
@@ -41,15 +41,34 @@ export async function travTrackInstanceOn(): Promise<boolean> {
   return offered && config.enabled;
 }
 
+/**
+ * `travTrackInstanceOn` read inside a transaction (TravTrack plan E3, Codex
+ * review): a derivation that publishes asks it after taking the TravTrack
+ * lock, so a switch-off that lands while it waited commits nothing of it.
+ * Read-only — no settings row is created here; without one nothing is offered.
+ */
+export async function travTrackInstanceOnIn(tx: DbTransaction): Promise<boolean> {
+  const admin = await tx.adminSettings.findFirst({
+    orderBy: { id: "asc" },
+    select: { betaFeaturesEnabled: true },
+  });
+  if (!admin?.betaFeaturesEnabled) return false;
+  return (await travTrackConfig(tx)).enabled;
+}
+
 export async function assertTravTrackOn(): Promise<void> {
   if (!(await travTrackInstanceOn())) throw disabled();
 }
 
 /**
  * Whether this account holds anything TravTrack stored for it: points, zones,
- * reported gaps or deleted spans. One `EXISTS` per table, the first hit wins.
+ * reported gaps, deleted spans, file imports or a live ingest token. One `EXISTS` per table, the
+ * first hit wins. An import counts even without points (owner, 2026-10-25):
+ * a failed import must stay visible and deletable while TravTrack is off.
  * A deleted span counts — it is what keeps a late upload out, and the user
- * may want to see it in the summary.
+ * may want to see it in the summary. A live ingest token counts so it can be
+ * listed and revoked while TravTrack is off; otherwise it would stay usable the
+ * day TravTrack is switched on again.
  */
 export async function holdsTravTrackData(userId: string): Promise<boolean> {
   const rows = await prisma.$queryRaw<{ hit: number }[]>`
@@ -57,6 +76,8 @@ export async function holdsTravTrackData(userId: string): Promise<boolean> {
     UNION ALL SELECT 1 FROM travtrack_privacy_zones WHERE user_id = ${userId}
     UNION ALL SELECT 1 FROM travtrack_gaps WHERE user_id = ${userId}
     UNION ALL SELECT 1 FROM travtrack_deleted_ranges WHERE user_id = ${userId}
+    UNION ALL SELECT 1 FROM travtrack_imports WHERE user_id = ${userId}
+    UNION ALL SELECT 1 FROM travtrack_ingest_tokens WHERE user_id = ${userId} AND revoked_at IS NULL
     LIMIT 1`;
   return rows.length > 0;
 }

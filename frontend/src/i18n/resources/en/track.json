@@ -111,5 +111,85 @@
       "done": "{{count}} positions deleted.",
       "notDone": "The positions were not deleted. Try again."
     }
+  },
+  "imports": {
+    "title": "GPX files",
+    "intro": "A GPX file, say from a sports app or an older tracker, goes into your TravTrack history. Positions inside a privacy zone or a deleted span are discarded, and what is stored already is not added twice. An import starts no suggestions.",
+    "choose": "Import GPX",
+    "running": "Importing {{name}} …",
+    "cancelled": "The import was deleted before it finished.",
+    "report": {
+      "stored_one": "{{count}} position stored",
+      "stored_other": "{{count}} positions stored",
+      "duplicate_one": "{{count}} already there",
+      "duplicate_other": "{{count}} already there",
+      "zone_one": "{{count}} discarded in a privacy zone",
+      "zone_other": "{{count}} discarded in a privacy zone",
+      "deleted_one": "{{count}} discarded in a deleted span",
+      "deleted_other": "{{count}} discarded in a deleted span",
+      "invalid_one": "{{count}} unusable",
+      "invalid_other": "{{count}} unusable",
+      "withoutTime_one": "{{count}} without a time skipped",
+      "withoutTime_other": "{{count}} without a time skipped"
+    },
+    "points_one": "{{count}} position",
+    "points_other": "{{count}} positions",
+    "span": "{{from}} – {{to}}",
+    "status": {
+      "running": "running",
+      "interrupted": "interrupted (the server restarted) – import the file again",
+      "cancelled": "deleted"
+    },
+    "delete": "Delete import",
+    "deleteConfirm_one": "Delete the import “{{name}}” and its {{count}} position? Positions from other sources stay.",
+    "deleteConfirm_other": "Delete the import “{{name}}” and its {{count}} positions? Positions from other sources stay.",
+    "deleted_one": "{{count}} position deleted.",
+    "deleted_other": "{{count}} positions deleted.",
+    "errors": {
+      "noTimes": "The file holds no times – without a time a position is no history. Export it as a recording (track), not as a route.",
+      "unreadable": "The file is not a readable GPX file, or too large to read.",
+      "running": "An import is running already. Wait until it has finished.",
+      "tooLarge": "The file is too large – 25 MB at most.",
+      "notFound": "This import no longer exists.",
+      "rateLimited": "Too many imports in a short time. Try again in a quarter of an hour.",
+      "lost": "Whether the import finished is not known – the server restarted. Check the list.",
+      "tooManyPoints": "The file holds more than 200,000 positions – more than one import takes. Split it, say by month."
+    }
+  },
+  "sources": {
+    "title": "Further sources",
+    "intro": "OwnTracks (Android, iOS) and Overland (iOS) can send positions straight to TravTrack. Each device gets its own key, which can deliver positions and nothing else – it reads nothing and opens no other page.",
+    "privacy": "Unlike the Companion app, these apps cannot know your privacy zones: positions inside a privacy zone reach the server and are only discarded there.",
+    "kind": "App",
+    "kinds": {
+      "owntracks": "OwnTracks",
+      "overland": "Overland"
+    },
+    "label": "Device",
+    "labelPlaceholder": "e.g. Pixel 9",
+    "create": "Create key",
+    "shownOnce": "The key is shown only now. Enter it in the app; afterwards it cannot be seen here again.",
+    "owntracks": {
+      "howTo": "In OwnTracks: Settings → Connection → mode \"HTTP\". Enter the URL, switch authentication on, use any name as the user and the key as the password.",
+      "url": "URL",
+      "password": "Password"
+    },
+    "overland": {
+      "howTo": "In Overland: Settings → \"Receiver Endpoint\" is the URL, \"Access Token\" the key. Overland sends it in the Authorization header.",
+      "url": "Receiver Endpoint",
+      "token": "Access Token"
+    },
+    "done": "Done",
+    "lastUsed": "last {{at}}",
+    "neverUsed": "not used yet",
+    "revoke": "Revoke",
+    "revokeConfirm": "Revoke the key \"{{name}}\"? The device can send nothing afterwards; what it sent stays.",
+    "revoked": "\"{{name}}\" is revoked.",
+    "errors": {
+      "notActive": "Further sources are only available while TravTrack is your location source (Settings → Location).",
+      "limit": "You already hold as many keys as there may be. Revoke one first.",
+      "notFound": "This key no longer exists.",
+      "rateLimited": "Too many keys were created just now. Try again in a quarter of an hour."
+    }
   }
 }

@@ -224,9 +224,10 @@ describe("TravTrack privacy zones", () => {
     );
     expect(deleted).toBe(0);
     await updateZone(userId, zone.id, { radiusM: 300 }, false);
+    const nothing = { spans: [], days: [], keys: new Set() };
     expect(causes).toEqual([
-      { kind: "zone", zone: { lat: 10, lon: 10, radiusM: 100 } },
-      { kind: "zone", zone: { lat: 10, lon: 10, radiusM: 300 } },
+      { kind: "zone", zone: { lat: 10, lon: 10, radiusM: 100 }, ...nothing },
+      { kind: "zone", zone: { lat: 10, lon: 10, radiusM: 300 }, ...nothing },
     ]);
   });
 });

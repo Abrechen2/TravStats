@@ -112,6 +112,14 @@ describe("TravTrack gate", () => {
       "delete /travtrack/zones/:id": "held",
       "get /travtrack/day": "on",
       "get /travtrack/export": "held",
+      "post /travtrack/imports": "on",
+      "get /travtrack/imports": "held",
+      "delete /travtrack/imports/:id": "held",
+      "post /travtrack/ingest-tokens": "on",
+      "get /travtrack/ingest-tokens": "held",
+      "delete /travtrack/ingest-tokens/:id": "held",
+      "post /travtrack/ingest/owntracks": "on",
+      "post /travtrack/ingest/overland": "on",
       "get /trips/:id/share-snapshot": "held",
       "put /trips/:id/share-snapshot": "on",
       "delete /trips/:id/share-snapshot": "open",
@@ -128,6 +136,7 @@ describe("TravTrack gate", () => {
       enabled: false,
       active: false,
       hasData: false,
+      sources: ["companion", "gpx", "owntracks", "overland"],
     });
     const read = await call("get", "/api/v1/travtrack/capabilities", readOnly);
     expect(read.status).toBe(200);

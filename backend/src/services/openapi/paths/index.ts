@@ -93,10 +93,13 @@ import "./sync";
 
 import "./dawarichStays";
 import "./dawarichStayIdentity";
+import "./locationSuggestions";
 
 import "./travplan";
 import "./travtrack";
 import "./travtrackDay";
+import "./travtrackImports";
+import "./travtrackSources";
 import "./travtrackShare";
 
 import "./geoServer";

@@ -125,15 +125,47 @@ export async function setLocationProvider(
     data: [{ userId, data: {} as unknown as Prisma.InputJsonValue }],
     skipDuplicates: true,
   });
-  // One conditional UPDATE, so two concurrent switches cannot both raise rev
-  // from the same value or lose one another's choice.
-  await prisma.userSettings.updateMany({
-    where: { userId, NOT: { locationProvider: kind } },
-    data: { locationProvider: kind, locationProviderRev: { increment: 1 } },
-  });
+  // One conditional UPDATE per case, so two concurrent switches cannot both
+  // raise rev from the same value or lose one another's choice. Leaving
+  // TravTrack also records when (`travtrackLeftAt`, read by the OwnTracks and
+  // Overland ingest); coming back clears it; a switch between two other
+  // providers leaves it as it was.
+  await prisma.$transaction([
+    prisma.userSettings.updateMany({
+      where: { userId, locationProvider: "travtrack", NOT: { locationProvider: kind } },
+      data: {
+        locationProvider: kind,
+        locationProviderRev: { increment: 1 },
+        travtrackLeftAt: new Date(),
+      },
+    }),
+    prisma.userSettings.updateMany({
+      where: { userId, NOT: { locationProvider: kind } },
+      data: {
+        locationProvider: kind,
+        locationProviderRev: { increment: 1 },
+        ...(kind === "travtrack" ? { travtrackLeftAt: null } : {}),
+      },
+    }),
+  ]);
   const row = await prisma.userSettings.findUniqueOrThrow({
     where: { userId },
     select: { locationProviderRev: true },
   });
   return { kind, rev: row.locationProviderRev };
+}
+
+/**
+ * Until when OwnTracks and Overland positions are TravTrack's (TravTrack plan
+ * E9): every time while the provider is `travtrack`; positions recorded before
+ * the moment it left, once it did; none for an account that never chose it.
+ * In epoch milliseconds, exclusive.
+ */
+export async function travTrackAcceptsBefore(userId: string): Promise<number> {
+  const row = await prisma.userSettings.findUnique({
+    where: { userId },
+    select: { locationProvider: true, travtrackLeftAt: true },
+  });
+  if (row?.locationProvider === "travtrack") return Infinity;
+  return row?.travtrackLeftAt?.getTime() ?? -Infinity;
 }

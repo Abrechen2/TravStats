@@ -33,6 +33,7 @@ export const TRAVTRACK_SAFE_SELECT = {
   speedMps: true,
   course: true,
   deviceId: true,
+  origin: true,
   purpose: true,
   seq: true,
 } as const;
@@ -46,6 +47,8 @@ export type SafePointRow = {
   speedMps: number | null;
   course: number | null;
   deviceId: string | null;
+  /** Where the point came from: `companion:<deviceId>`, `gpx:<importId>`, … */
+  origin: string;
   purpose: string;
   seq: bigint;
 };

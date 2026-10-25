@@ -58,12 +58,15 @@ function optional(v: unknown, min: number, max: number): number | null | undefin
   return finiteIn(v, min, max) ?? undefined;
 }
 
+/** Not before 2000 and not more than a day ahead: a phone with a reset clock. */
+export const acceptedInstant = (ms: number): boolean =>
+  Number.isFinite(ms) && ms >= Date.UTC(2000, 0, 1) && ms <= Date.now() + 86_400_000;
+
 /** An instant WITH an offset, as the rest of the API takes it. */
 export function instantMs(v: unknown): number | null {
   if (typeof v !== "string" || !/(Z|[+-]\d{2}:\d{2})$/.test(v)) return null;
   const ms = Date.parse(v);
-  // Not before 2000 and not more than a day ahead: a phone with a reset clock.
-  return Number.isNaN(ms) || ms < Date.UTC(2000, 0, 1) || ms > Date.now() + 86_400_000 ? null : ms;
+  return acceptedInstant(ms) ? ms : null;
 }
 
 const hasControlChar = (s: string): boolean => [...s].some((c) => c.charCodeAt(0) < 0x20);

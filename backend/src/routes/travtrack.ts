@@ -18,6 +18,9 @@ import { setTravTrackConfig, travTrackConfig } from "../services/travtrack/confi
 import { travTrackTier } from "./travtrack/gate";
 import dayRoutes from "./travtrack/day";
 import exportRoutes from "./travtrack/export";
+import importRoutes from "./travtrack/imports";
+import ingestSourceRoutes from "./travtrack/ingestSources";
+import ingestTokenRoutes from "./travtrack/ingestTokens";
 import pointRoutes from "./travtrack/points";
 import shareSnapshotRoutes from "./travtrack/shareSnapshot";
 import zoneRoutes from "./travtrack/zones";
@@ -35,6 +38,9 @@ import zoneRoutes from "./travtrack/zones";
 
 const router = Router();
 
+/** Where TravTrack takes positions from on this server. */
+export const TRAVTRACK_SOURCES = ["companion", "gpx", "owntracks", "overland"] as const;
+
 function route(fn: (req: AuthRequest, res: Response) => Promise<void>) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     void fn(req, res).catch(next);
@@ -45,7 +51,8 @@ function route(fn: (req: AuthRequest, res: Response) => Promise<void>) {
  * How a client learns what TravTrack is doing here. `enabled`: the instance
  * captures and shows. `active`: this account's provider is TravTrack and it
  * works. `hasData`: this account holds TravTrack data, so summary, export and
- * delete stay reachable even while TravTrack is off.
+ * delete stay reachable even while TravTrack is off. `sources`: what this
+ * server takes positions from (plan E9; additive, the version stays 1).
  */
 router.get(
   "/travtrack/capabilities",
@@ -65,6 +72,7 @@ router.get(
       enabled,
       active: provider.kind === "travtrack" && provider.status === "ok",
       hasData,
+      sources: TRAVTRACK_SOURCES,
     });
   })
 );
@@ -97,6 +105,9 @@ router.use(pointRoutes);
 router.use(zoneRoutes);
 router.use(dayRoutes);
 router.use(exportRoutes);
+router.use(importRoutes);
+router.use(ingestTokenRoutes);
+router.use(ingestSourceRoutes);
 router.use(shareSnapshotRoutes);
 
 export default router;

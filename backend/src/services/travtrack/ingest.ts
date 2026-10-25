@@ -17,6 +17,7 @@ import {
 } from "./classify";
 import { clipSpan, parseGaps, type ParsedGap } from "./gaps";
 import { addLinks, entryKey, resolveEntries } from "./links";
+import { markTravTrackDaysDirty, neighbourDaysOf, utcDaysOf } from "./dirtyDays";
 import { takeTravTrackLock } from "./lock";
 
 /**
@@ -33,6 +34,12 @@ import { takeTravTrackLock } from "./lock";
  * flight recorder hand over the same fix in two uploads — and an upload never
  * removes a link. An entry this account does not own is counted `unlinked`
  * and logged; the point itself is stored.
+ *
+ * Every source goes through here (plan E8): the Companion (`companion:<deviceId>`,
+ * with its uploadId as the receipt), a GPX file (`gpx:<importId>`, no receipt),
+ * and later OwnTracks/Overland. The origin and its own id (`originRef`) make a
+ * repeat from the same source a duplicate; the position key makes one from
+ * any other source a duplicate too.
  */
 
 export type PointOutcome =
@@ -40,7 +47,8 @@ export type PointOutcome =
   | { index: number; id: string | null; outcome: "dropped"; reason: DropReason };
 
 export type IngestResult = {
-  uploadId: string;
+  /** The client's receipt id; null for a source without one (a file import). */
+  uploadId: string | null;
   stored: number;
   duplicate: number;
   dropped: number;
@@ -228,102 +236,154 @@ async function storeGaps(
   return count;
 }
 
-export async function ingestTravTrackPoints(input: {
+/** The work of one upload inside its transaction (`ingestPoints`). */
+async function ingestIn(
+  tx: Tx,
+  input: IngestInput,
+  gaps: readonly ParsedGap[],
+  hash: string | null
+): Promise<{ result: IngestResult; replayed: boolean }> {
+  const { userId, origin, deviceId, uploadId } = input;
+  await takeTravTrackLock(tx, userId);
+  // The caller's own condition, under the lock: an import that was deleted
+  // meanwhile throws here and this batch stores nothing.
+  if (input.fence) await input.fence(tx);
+  if (uploadId !== null && hash !== null) {
+    const stored = await receiptFor(tx, userId, uploadId, hash);
+    if (stored) return { result: stored, replayed: true };
+  }
+
+  const dropped: PointOutcome[] = [];
+  const candidates: ParsedPoint[] = [];
+  for (const [index, raw] of input.points.entries()) {
+    const judged = judgePoint(raw, index);
+    if (judged.kind === "dropped") {
+      dropped.push({ index, id: judged.ref, outcome: "dropped", reason: judged.reason });
+    } else {
+      candidates.push(judged.point);
+    }
+  }
+
+  const [ranges, held, zones, tombstones] = await Promise.all([
+    rangesFor(tx, userId, candidates, gaps),
+    alreadyHeld(tx, userId, origin, candidates),
+    tx.travTrackPrivacyZone.findMany({
+      where: { userId },
+      select: { lat: true, lon: true, radiusM: true },
+    }),
+    tombstonesFor(tx, userId, candidates),
+  ]);
+  const judged = judgeAll(candidates, zones, tombstones, ranges, held);
+
+  if (judged.fresh.length > 0) {
+    await tx.travTrackPoint.createMany({
+      data: judged.fresh.map((p) => ({
+        id: p.pointId,
+        userId,
+        t: new Date(p.tMs),
+        tS: p.tS,
+        lat: p.lat,
+        lon: p.lon,
+        accuracyM: p.accuracyM,
+        altitudeM: p.altitudeM,
+        speedMps: p.speedMps,
+        course: p.course,
+        motion: p.motion,
+        origin,
+        originRef: p.ref,
+        deviceId,
+        purpose: p.purpose,
+      })),
+    });
+  }
+  // The projections (country days, E6) re-derive the days that gained a
+  // point, and the neighbours that read it as context — in this transaction,
+  // so a day is never stored and unmarked. Every source: the Companion, a
+  // file import's batches, later OwnTracks/Overland.
+  if (judged.fresh.length > 0) {
+    const fresh = judged.fresh.map((p) => ({ tMs: p.tMs, deviceId }));
+    await markTravTrackDaysDirty(tx, userId, [
+      ...utcDaysOf(fresh.map((p) => p.tMs)),
+      ...(await neighbourDaysOf(tx, userId, fresh)),
+    ]);
+  }
+  const { linked, unlinked } = await linkAll(tx, userId, judged.attach);
+  const gapsStored = await storeGaps(tx, userId, deviceId, gaps, ranges);
+
+  const outcomes = [...dropped, ...judged.outcomes].sort((a, b) => a.index - b.index);
+  const count = (o: PointOutcome["outcome"]) => outcomes.filter((x) => x.outcome === o).length;
+  const result: IngestResult = {
+    uploadId,
+    stored: count("stored"),
+    duplicate: count("duplicate"),
+    dropped: count("dropped"),
+    linked,
+    unlinked,
+    gapsStored,
+    outcomes,
+  };
+  if (unlinked > 0) {
+    logger.warn({ operation: "travtrack.points.unlinked", origin, uploadId, unlinked });
+  }
+  if (uploadId !== null && hash !== null) {
+    await tx.travTrackUpload.create({
+      data: {
+        userId,
+        uploadId,
+        payloadHash: hash,
+        result: result as unknown as Prisma.InputJsonValue,
+      },
+    });
+    await tx.travTrackUpload.deleteMany({
+      where: { userId, createdAt: { lt: new Date(Date.now() - RECEIPT_DAYS * 86_400_000) } },
+    });
+  }
+  return { result, replayed: false };
+}
+
+export type IngestInput = {
+  userId: string;
+  /** Where the points come from: `companion:<deviceId>`, `gpx:<importId>`, … */
+  origin: string;
+  deviceId: string;
+  /**
+   * The client's receipt id. `null` for a source without one (a file import):
+   * no receipt is kept, and the origin's own ids and the position key still
+   * make a repeat a duplicate.
+   */
+  uploadId: string | null;
+  points: readonly Record<string, unknown>[];
+  gaps?: readonly Record<string, unknown>[];
+  /** Run inside this transaction instead of an own one (the caller holds it open). */
+  outer?: DbTransaction;
+  /** Runs first, under the lock; a throw aborts the upload and stores nothing. */
+  fence?: (tx: DbTransaction) => Promise<void>;
+};
+
+/**
+ * The one ingest every TravTrack source goes through (TravTrack plan E8):
+ * zone → deleted range → duplicate, per point, whoever sent it.
+ */
+export async function ingestPoints(
+  input: IngestInput
+): Promise<{ result: IngestResult; replayed: boolean }> {
+  const rawGaps = input.gaps ?? [];
+  if (input.points.length === 0 && rawGaps.length === 0) {
+    throw new AppError("An upload carries at least one point or one gap", 400, "VALIDATION_FAILED");
+  }
+  const gaps = parseGaps(rawGaps);
+  const hash = input.uploadId === null ? null : payloadHash(input.points, rawGaps);
+  if (input.outer) return ingestIn(input.outer, input, gaps, hash);
+  return prisma.$transaction((tx) => ingestIn(tx, input, gaps, hash), { timeout: 60_000 });
+}
+
+/** The Companion's upload: its device is its origin, its uploadId its receipt. */
+export function ingestTravTrackPoints(input: {
   userId: string;
   deviceId: string;
   uploadId: string;
   points: readonly Record<string, unknown>[];
   gaps?: readonly Record<string, unknown>[];
 }): Promise<{ result: IngestResult; replayed: boolean }> {
-  const { userId, deviceId, uploadId } = input;
-  const rawGaps = input.gaps ?? [];
-  if (input.points.length === 0 && rawGaps.length === 0) {
-    throw new AppError("An upload carries at least one point or one gap", 400, "VALIDATION_FAILED");
-  }
-  const gaps = parseGaps(rawGaps);
-  const origin = `companion:${deviceId}`;
-  const hash = payloadHash(input.points, rawGaps);
-
-  return prisma.$transaction(
-    async (tx) => {
-      await takeTravTrackLock(tx, userId);
-      const stored = await receiptFor(tx, userId, uploadId, hash);
-      if (stored) return { result: stored, replayed: true };
-
-      const dropped: PointOutcome[] = [];
-      const candidates: ParsedPoint[] = [];
-      for (const [index, raw] of input.points.entries()) {
-        const judged = judgePoint(raw, index);
-        if (judged.kind === "dropped") {
-          dropped.push({ index, id: judged.ref, outcome: "dropped", reason: judged.reason });
-        } else {
-          candidates.push(judged.point);
-        }
-      }
-
-      const [ranges, held, zones, tombstones] = await Promise.all([
-        rangesFor(tx, userId, candidates, gaps),
-        alreadyHeld(tx, userId, origin, candidates),
-        tx.travTrackPrivacyZone.findMany({
-          where: { userId },
-          select: { lat: true, lon: true, radiusM: true },
-        }),
-        tombstonesFor(tx, userId, candidates),
-      ]);
-      const judged = judgeAll(candidates, zones, tombstones, ranges, held);
-
-      if (judged.fresh.length > 0) {
-        await tx.travTrackPoint.createMany({
-          data: judged.fresh.map((p) => ({
-            id: p.pointId,
-            userId,
-            t: new Date(p.tMs),
-            tS: p.tS,
-            lat: p.lat,
-            lon: p.lon,
-            accuracyM: p.accuracyM,
-            altitudeM: p.altitudeM,
-            speedMps: p.speedMps,
-            course: p.course,
-            motion: p.motion,
-            origin,
-            originRef: p.ref,
-            deviceId,
-            purpose: p.purpose,
-          })),
-        });
-      }
-      const { linked, unlinked } = await linkAll(tx, userId, judged.attach);
-      const gapsStored = await storeGaps(tx, userId, deviceId, gaps, ranges);
-
-      const outcomes = [...dropped, ...judged.outcomes].sort((a, b) => a.index - b.index);
-      const count = (o: PointOutcome["outcome"]) => outcomes.filter((x) => x.outcome === o).length;
-      const result: IngestResult = {
-        uploadId,
-        stored: count("stored"),
-        duplicate: count("duplicate"),
-        dropped: count("dropped"),
-        linked,
-        unlinked,
-        gapsStored,
-        outcomes,
-      };
-      if (unlinked > 0) {
-        logger.warn({ operation: "travtrack.points.unlinked", uploadId, unlinked });
-      }
-      await tx.travTrackUpload.create({
-        data: {
-          userId,
-          uploadId,
-          payloadHash: hash,
-          result: result as unknown as Prisma.InputJsonValue,
-        },
-      });
-      await tx.travTrackUpload.deleteMany({
-        where: { userId, createdAt: { lt: new Date(Date.now() - RECEIPT_DAYS * 86_400_000) } },
-      });
-      return { result, replayed: false };
-    },
-    { timeout: 60_000 }
-  );
+  return ingestPoints({ ...input, origin: `companion:${input.deviceId}` });
 }

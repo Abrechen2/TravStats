@@ -83,3 +83,27 @@ export function stayEvidenceKeyWith(secret: Buffer, c: StayKeyInput): string {
 export function stayEvidenceKey(c: StayKeyInput): string {
   return stayEvidenceKeyWith(evidenceSecret(), c);
 }
+
+/** A country question's evidence key under `secret`: the country and its run's first day. */
+export function countryEvidenceKeyWith(
+  secret: Buffer,
+  countryCode: string,
+  firstDay: string
+): string {
+  return hmac(secret, ["country", countryCode, firstDay]).toString("hex");
+}
+
+/** A country question's provider-neutral evidence key (E6), under this instance's secret. */
+export function countryEvidenceKey(countryCode: string, firstDay: string): string {
+  return countryEvidenceKeyWith(evidenceSecret(), countryCode, firstDay);
+}
+
+/** A journey question's evidence key under `secret`: its local day and its first run's first fix. */
+export function journeyEvidenceKeyWith(secret: Buffer, day: string, firstKey: string): string {
+  return hmac(secret, ["journey", day, firstKey]).toString("hex");
+}
+
+/** A journey question's provider-neutral evidence key (E7), under this instance's secret. */
+export function journeyEvidenceKey(day: string, firstKey: string): string {
+  return journeyEvidenceKeyWith(evidenceSecret(), day, firstKey);
+}

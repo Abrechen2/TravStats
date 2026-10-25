@@ -11,20 +11,27 @@ export function meters(a: { lat: number; lon: number }, b: { lat: number; lon: n
     Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(((b.lon - a.lon) * rad) / 2) ** 2;
   return 12_742_000 * Math.asin(Math.sqrt(Math.min(1, h)));
 }
-const location = (p: DawarichPoint) => ({ lat: p.latitude, lon: p.longitude });
+/**
+ * A point id: Dawarich's number, or a TravTrack point's digest (TravTrack plan
+ * E3). The detectors only compare ids of one source with each other.
+ */
+export type PointId = number | string;
+/** What the stay and market detectors read: a Dawarich point, or a TravTrack one in its shape. */
+export type StayPoint = Omit<DawarichPoint, "id"> & { id: PointId };
+const location = (p: StayPoint) => ({ lat: p.latitude, lon: p.longitude });
 export interface StayCandidate {
   startAt: Date;
   endAt: Date;
   lat: number;
   lon: number;
   pointCount: number;
-  pointIds: number[];
+  pointIds: PointId[];
   uncertainties: string[];
   maxGapMinutes: number;
 }
 
 /** Conservative stationary clusters. Never interprets a hotel position as an overnight stay. */
-export function detectStays(input: readonly DawarichPoint[], truncated = false): StayCandidate[] {
+export function detectStays(input: readonly StayPoint[], truncated = false): StayCandidate[] {
   const points = [
     ...new Map(
       input
@@ -40,7 +47,7 @@ export function detectStays(input: readonly DawarichPoint[], truncated = false):
     ).values(),
   ].sort((a, b) => a.timestampMs - b.timestampMs);
   const result: StayCandidate[] = [];
-  let group: DawarichPoint[] = [];
+  let group: StayPoint[] = [];
   let skipped = 0;
   const flush = () => {
     if (group.length >= 3 && group.at(-1)!.timestampMs - group[0].timestampMs >= MIN_DURATION_MS) {

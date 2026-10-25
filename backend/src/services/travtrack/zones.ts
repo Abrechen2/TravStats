@@ -5,6 +5,7 @@ import type { ZoneCircle } from "./classify";
 
 import { onPointsRemoved } from "./deleteRange";
 import { takeTravTrackLock } from "./lock";
+import { collectRemoved, NOTHING_REMOVED, type RemovedHistory } from "./removedHistory";
 
 /**
  * TravTrack's privacy zones (TravTrack plan T2; ported from the archived
@@ -14,9 +15,10 @@ import { takeTravTrackLock } from "./lock";
  * inside it — their links with them — but only once the user has seen how
  * many and said yes.
  *
- * Every create and update calls `onPointsRemoved` with the new circle,
- * whether or not it deleted a point: a zone over no stored point can still
- * lie under a chord of a shared route (plan T7).
+ * Every create and update calls `onPointsRemoved` with the new circle and
+ * what it deleted (collected before the delete), whether or not it deleted a
+ * point: a zone over no stored point can still lie under a chord of a shared
+ * route (plan T7), or under an open finding's position (E5).
  *
  * What a zone protected stays protected after it goes (Codex review of T1–T3):
  * removing, moving or shrinking a zone leaves a tombstone of its old circle
@@ -89,9 +91,16 @@ async function pointsInside(tx: DbTransaction, userId: string, z: ZoneInput): Pr
   return Number(rows[0]?.n ?? 0);
 }
 
-/** Clears the circle; the points' links cascade. */
-async function deleteInside(tx: DbTransaction, userId: string, z: ZoneInput): Promise<number> {
-  return tx.$executeRaw`DELETE FROM travtrack_points WHERE user_id = ${userId} AND ${insideCircle(z)}`;
+/** Clears the circle; the points' links cascade. What went is collected first (E5). */
+async function deleteInside(
+  tx: DbTransaction,
+  userId: string,
+  z: ZoneInput
+): Promise<{ deleted: number; removed: RemovedHistory }> {
+  const removed = await collectRemoved(tx, userId, insideCircle(z));
+  const deleted =
+    await tx.$executeRaw`DELETE FROM travtrack_points WHERE user_id = ${userId} AND ${insideCircle(z)}`;
+  return { deleted, removed };
 }
 
 /**
@@ -103,9 +112,9 @@ async function clearInside(
   userId: string,
   z: ZoneInput,
   deleteStoredPoints: boolean
-): Promise<number> {
+): Promise<{ deleted: number; removed: RemovedHistory }> {
   const count = await pointsInside(tx, userId, z);
-  if (count === 0) return 0;
+  if (count === 0) return { deleted: 0, removed: NOTHING_REMOVED };
   if (!deleteStoredPoints) {
     throw new AppError(
       "Stored positions lie inside this zone",
@@ -136,12 +145,12 @@ export async function createZone(userId: string, input: ZoneInput, deleteStoredP
         "LOCATION_ZONE_LIMIT"
       );
     }
-    const deleted = await clearInside(tx, userId, input, deleteStoredPoints);
+    const { deleted, removed } = await clearInside(tx, userId, input, deleteStoredPoints);
     const zone = await tx.travTrackPrivacyZone.create({
       data: { userId, ...input },
       select: ZONE_SELECT,
     });
-    await onPointsRemoved(tx, userId, { kind: "zone", zone: circleOf(input) });
+    await onPointsRemoved(tx, userId, { kind: "zone", zone: circleOf(input), ...removed });
     return { zone, deleted };
   });
 }
@@ -173,7 +182,7 @@ export async function updateZone(
       lon: patch.lon ?? current.lon,
       radiusM: patch.radiusM ?? current.radiusM,
     };
-    const deleted = await clearInside(tx, userId, next, deleteStoredPoints);
+    const { deleted, removed } = await clearInside(tx, userId, next, deleteStoredPoints);
     if (!sameCircle(circleOf(current), circleOf(next))) {
       await retireCircle(tx, userId, circleOf(current));
     }
@@ -182,7 +191,7 @@ export async function updateZone(
       data: next,
       select: ZONE_SELECT,
     });
-    await onPointsRemoved(tx, userId, { kind: "zone", zone: circleOf(next) });
+    await onPointsRemoved(tx, userId, { kind: "zone", zone: circleOf(next), ...removed });
     return { zone, deleted };
   });
 }

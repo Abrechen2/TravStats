@@ -28,6 +28,9 @@ const capabilities = z.object({
   hasData: z
     .boolean()
     .describe("This account holds TravTrack data: summary, export and delete stay reachable"),
+  sources: z
+    .array(z.enum(["companion", "gpx", "owntracks", "overland"]))
+    .describe("Where this server takes TravTrack positions from"),
 });
 
 registry.registerPath({
@@ -245,7 +248,14 @@ registry.registerPath({
             lastAt: z.string().nullable(),
             lastReceivedAt: z.string().nullable(),
             devices: z.array(
-              z.object({ deviceId: z.string().nullable(), pointCount: z.number().int() })
+              z.object({
+                deviceId: z.string().nullable(),
+                pointCount: z.number().int(),
+                fileName: z
+                  .string()
+                  .nullable()
+                  .describe("For an imported file (`file:<importId>`), the name it was given"),
+              })
             ),
             deletedRanges: z.number().int().describe("Spans deleted, kept so they stay deleted"),
             zones: z.number().int().describe("Privacy zones of the account"),
@@ -265,7 +275,8 @@ registry.registerPath({
     "Hard delete of every point in `[from, to)`, or of the days `fromDay`…`toDay` (both " +
     "inclusive) on the account's profile clock, with their links; reported gaps are clipped. " +
     "The span is remembered, so a late upload cannot bring the points back. Flights and trips " +
-    "stay. Reachable with TravTrack off while the account holds data.",
+    "stay. Reachable with TravTrack off while the account holds data. Open suggestions drawn " +
+    "from the deleted points go with them; accepted ones stay, without the deleted positions.",
   tags: ["TravTrack"],
   request: { query: travTrackRangeQuerySchema },
   responses: {
@@ -321,7 +332,9 @@ registry.registerPath({
   method: "post",
   path: "/travtrack/zones",
   summary: "Create a privacy zone",
-  description: "Deletes the stored positions inside it, once confirmed. At most 20 per account.",
+  description:
+    "Deletes the stored positions inside it, once confirmed. At most 20 per account. Open " +
+    "suggestions inside the circle or drawn from the deleted points go with them.",
   tags: ["TravTrack"],
   request: { body: { content: { "application/json": { schema: travTrackZoneCreateSchema } } } },
   responses: {
@@ -339,7 +352,9 @@ registry.registerPath({
   method: "patch",
   path: "/travtrack/zones/{id}",
   summary: "Rename, move or resize a privacy zone",
-  description: "Whatever the new circle covers is deleted, once confirmed.",
+  description:
+    "Whatever the new circle covers is deleted, once confirmed. Open suggestions inside the " +
+    "circle or drawn from the deleted points go with them.",
   tags: ["TravTrack"],
   request: {
     params: z.object({ id: z.string() }),

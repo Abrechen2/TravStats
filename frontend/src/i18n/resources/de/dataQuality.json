@@ -271,7 +271,8 @@
         "updates": "Flug-Updates",
         "photos": "Foto-Vorschläge",
         "tripContext": "Reisezuordnungen",
-        "dawarich": "GPS-Aufenthalte"
+        "dawarich": "GPS-Aufenthalte",
+        "location": "Aus TravTrack"
       },
       "later": "Zurückgestellt",
       "laterHint": "Diese Einträge sind nur für diesen Besuch zurückgestellt. Es wurden keine Daten geändert.",
@@ -330,6 +331,74 @@
       "contextFailed": "Der Reiseverlauf konnte nicht geladen werden.",
       "recorded": "Bereits erfasst",
       "fullTrip": "Vollständigen Reiseverlauf öffnen",
+      "location": {
+        "cardTitle": "Land aus deinem Standortverlauf",
+        "question": "Warst du in {{country}}?",
+        "source": "aus TravTrack",
+        "evidence": "TravTrack hat dich an {{days}} Tagen am Boden in diesem Land gesehen ({{points}} Positionen), vom {{first}} bis {{last}}. Dein Reisepass kennt das Land noch nicht.",
+        "partial": "An mindestens einem dieser Tage wurden nicht alle Positionen gelesen.",
+        "effect": "„Besucht“ und „Nur am Boden durchgereist“ speichern deine eigene Angabe zu diesem Land im Reisepass. „Nicht dort gewesen“ ändert nichts, und diese Tage werden nicht noch einmal gefragt.",
+        "visited": "Besucht",
+        "ground": "Nur am Boden durchgereist",
+        "notThere": "Nicht dort gewesen",
+        "emptyTitle": "Keine offenen Fragen aus TravTrack",
+        "emptyDescription": "Hier erscheint eine Frage, sobald TravTrack dich an mindestens zwei Tagen am Boden in einem Land sieht, das dein Reisepass noch nicht kennt – oder an einem Tag eine Fahrt aufzeichnet, die zu keinem Eintrag in deinem Logbuch passt.",
+        "errors": {
+          "invalidated": "Die Standortdaten zu dieser Frage wurden inzwischen gelöscht oder geändert. Die Frage entfällt.",
+          "resolved": "Diese Frage wurde bereits beantwortet.",
+          "busy": "Deine Antwort wird noch gespeichert. Bitte versuche es gleich noch einmal.",
+          "disabled": "TravTrack ist auf diesem Server ausgeschaltet. Die Frage bleibt bestehen; „Nicht dort gewesen“ kannst du weiterhin wählen.",
+          "gone": "Diese Frage gibt es nicht mehr – der Standortverlauf dazu wurde inzwischen gelöscht.",
+          "historyChanged": "Dein Standortverlauf hat sich gerade geändert, während die Antwort geprüft wurde. Die Frage bleibt offen; bitte versuche es gleich noch einmal.",
+          "providerOff": "TravTrack ist nicht mehr deine Standortquelle. Die Frage bleibt bestehen; „Nicht dort gewesen“ kannst du weiterhin wählen."
+        }
+      },
+      "journey": {
+        "cardTitle": "Fahrt aus deinem Standortverlauf",
+        "subject_one": "{{count}} Fahrt · {{km}} km",
+        "subject_other": "{{count}} Fahrten · {{km}} km",
+        "question": "Du warst unterwegs – fehlt diese Fahrt in deinem Logbuch?",
+        "source": "aus TravTrack",
+        "evidence_one": "TravTrack hat an diesem Tag eine Fahrt aufgezeichnet, die zu keinem Eintrag in deinem Logbuch passt.",
+        "evidence_other": "TravTrack hat an diesem Tag {{count}} Fahrten aufgezeichnet, die zu keinem Eintrag in deinem Logbuch passen.",
+        "partial": "An diesem Tag wurden nicht alle Positionen gelesen.",
+        "run": "{{from}}–{{until}} · {{km}} km",
+        "hint": {
+          "rail": "Das Tempo sieht nach Bahn aus.",
+          "road": "Das Tempo sieht nach Straße aus."
+        },
+        "startNotRecorded": "Anfang nicht aufgezeichnet",
+        "endNotRecorded": "Ende nicht aufgezeichnet",
+        "enter": {
+          "rail": "Als Zugfahrt eintragen",
+          "bus": "Als Busfahrt eintragen",
+          "roadtrip": "Als Roadtrip eintragen"
+        },
+        "linkSaved": "Mit gespeichertem Eintrag verknüpfen",
+        "noEntry": "Kein Eintrag nötig",
+        "closeRest": "Alle übrigen Fahrten: kein Eintrag nötig",
+        "linked": {
+          "rail": "Mit einer Zugfahrt verknüpft",
+          "bus": "Mit einer Busfahrt verknüpft",
+          "roadtrip": "Mit einem Roadtrip verknüpft"
+        },
+        "closed": "Kein Eintrag nötig",
+        "invalidated": "Die Standortdaten belegen diese Fahrt nicht mehr.",
+        "effect": "Eintragen öffnet das passende Formular mit Zeiten und Positionen; gespeichert wird erst, wenn du speicherst. „Kein Eintrag nötig“ ändert nichts, und dieser Tag wird nicht noch einmal gefragt.",
+        "roadtripName": "Roadtrip am {{day}}",
+        "stationStart": "Start der Fahrt",
+        "stationEnd": "Ziel der Fahrt",
+        "errors": {
+          "invalidated": "Die Standortdaten zu dieser Fahrt wurden inzwischen gelöscht oder geändert. Dein Eintrag bleibt gespeichert.",
+          "resolved": "Diese Fahrt wurde bereits beantwortet.",
+          "busy": "Deine Antwort wird noch gespeichert. Bitte versuche es gleich noch einmal.",
+          "historyChanged": "Dein Standortverlauf hat sich gerade geändert. Die Frage bleibt offen – bitte versuche es noch einmal.",
+          "unverifiable": "Die Standortdaten zu dieser Fahrt können gerade nicht geprüft werden. Die Frage bleibt offen.",
+          "disabled": "TravTrack ist auf diesem Server ausgeschaltet. Die Frage bleibt bestehen; „Kein Eintrag nötig“ kannst du weiterhin wählen.",
+          "providerOff": "TravTrack ist nicht mehr deine Standortquelle. Die Frage bleibt bestehen; „Kein Eintrag nötig“ kannst du weiterhin wählen.",
+          "entryMismatch": "Der gespeicherte Eintrag deckt diese Fahrt nicht ab – bei einem Roadtrip fehlen vielleicht noch die Stationen. Er bleibt gespeichert; du kannst ihn später verknüpfen."
+        }
+      },
       "proposal": {
         "new_trip": "Diese Einträge könnten eine Reise bilden",
         "assign": "{{count}} Einträge könnten zu dieser Reise gehören",

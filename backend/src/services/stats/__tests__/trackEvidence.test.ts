@@ -63,4 +63,29 @@ describe("unconfirmed location observations (forgejo#299)", () => {
     expect(unconfirmedTrackCountries([], NOW)).toEqual([]);
     expect(unconfirmedTrackCountries([day("2026-10-13", "DE")], NOW)).toHaveLength(1);
   });
+
+  it("keeps TravTrack's observations apart from Dawarich's, one entry per source (TravTrack plan E6)", () => {
+    const rows = [
+      day("2024-06-01", "EE", { source: "dawarich" }),
+      day("2024-06-02", "EE", { source: "travtrack", pointCount: 5 }),
+      day("2024-06-03", "EE", { source: "travtrack", pointCount: 7 }),
+      // A source this build does not know is not guessed into one it does.
+      day("2024-06-04", "EE", { source: "gps" }),
+    ];
+    expect(unconfirmedTrackCountries(rows, NOW)).toEqual([
+      expect.objectContaining({ code: "EE", source: "dawarich", observedDays: 1, pointCount: 20 }),
+      expect.objectContaining({
+        code: "EE",
+        source: "travtrack",
+        observedDays: 2,
+        pointCount: 12,
+        firstDate: "2024-06-02",
+        lastDate: "2024-06-03",
+      }),
+    ]);
+  });
+
+  it("reads a row without a source as Dawarich's, as every row was before TravTrack", () => {
+    expect(unconfirmedTrackCountries([day("2024-06-01", "EE")], NOW)[0].source).toBe("dawarich");
+  });
 });

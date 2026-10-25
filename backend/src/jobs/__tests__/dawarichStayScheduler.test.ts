@@ -8,6 +8,8 @@ import { reserveScan, scanStays } from "../../services/dawarich/stays/scan";
 import cron from "node-cron";
 import logger from "../../utils/logger";
 import { AppError } from "../../middleware/errorHandler";
+import { travTrackInstanceOn } from "../../services/travtrack/availability";
+import { runTravTrackJourneySweep } from "../../services/locationEvidence/journeys/sweep";
 jest.mock("../../utils/logger", () => ({
   __esModule: true,
   default: { warn: jest.fn(), error: jest.fn(), info: jest.fn(), debug: jest.fn() },
@@ -18,6 +20,12 @@ jest.mock("../../services/dawarich/stays/scan", () => ({
   scanStays: jest.fn(),
 }));
 jest.mock("node-cron", () => ({ schedule: jest.fn(() => ({ stop: jest.fn() })) }));
+jest.mock("../../services/travtrack/availability", () => ({
+  travTrackInstanceOn: jest.fn(async () => false),
+}));
+jest.mock("../../services/locationEvidence/journeys/sweep", () => ({
+  runTravTrackJourneySweep: jest.fn(async () => {}),
+}));
 beforeEach(() => {
   jest.clearAllMocks();
   stopDawarichStayScheduler();
@@ -88,4 +96,42 @@ it("logs the cause when the whole sweep fails", async () => {
     expect.objectContaining({ operation: "dawarich_stay_sweep_failed", err: cause }),
     expect.any(String)
   );
+});
+
+describe("missing journeys (TravTrack plan E7)", () => {
+  it("run once after the stay scans while TravTrack is on, and never before them", async () => {
+    jest.mocked(travTrackInstanceOn).mockResolvedValue(true);
+    (prisma.dawarichStayScan.findMany as jest.Mock).mockResolvedValue([{ userId: "a" }]);
+    const order: string[] = [];
+    jest.mocked(scanStays).mockImplementation(async () => {
+      order.push("stay");
+      return {} as never;
+    });
+    jest.mocked(runTravTrackJourneySweep).mockImplementation(async () => {
+      order.push("journeys");
+    });
+    await runDawarichStaySweep();
+    expect(order).toEqual(["stay", "journeys"]);
+  });
+
+  it("do not run while TravTrack is off (and have no cron slot of their own)", async () => {
+    jest.mocked(travTrackInstanceOn).mockResolvedValue(false);
+    (prisma.dawarichStayScan.findMany as jest.Mock).mockResolvedValue([]);
+    await runDawarichStaySweep();
+    expect(runTravTrackJourneySweep).not.toHaveBeenCalled();
+    startDawarichStayScheduler();
+    expect(cron.schedule).toHaveBeenCalledTimes(1);
+  });
+
+  it("a failing journey sweep is logged as its own failure", async () => {
+    jest.mocked(travTrackInstanceOn).mockResolvedValue(true);
+    (prisma.dawarichStayScan.findMany as jest.Mock).mockResolvedValue([]);
+    const cause = new Error("journeys down");
+    jest.mocked(runTravTrackJourneySweep).mockRejectedValueOnce(cause);
+    await runDawarichStaySweep();
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ operation: "travtrack_journey_sweep_failed", err: cause }),
+      expect.any(String)
+    );
+  });
 });

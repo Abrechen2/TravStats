@@ -507,6 +507,7 @@
   "newDialog": {
     "title": "Neuer Roadtrip",
     "intro": "Nur der Name ist Pflicht. Alles andere geht auch später.",
+    "journeyStations": "Der Roadtrip bekommt diese Stationen aus der aufgezeichneten Fahrt – Namen und Daten kannst du danach ändern:",
     "name": "Name",
     "vehicle": "Womit unterwegs?",
     "railHint": "Mit dem Zug unterwegs? Zugreisen bekommen einen eigenen Bereich.",

@@ -59,6 +59,8 @@ import {
 interface Props {
   /** The ride to edit; null for a new one. */
   journey: BusJourney | null;
+  /** A prefilled new ride — a journey TravTrack saw (inbox, TravTrack plan E7). */
+  initialDraft?: BusFormDraft;
   onClose: () => void;
   onSaved: (ride: BusJourney) => void | Promise<void>;
   /**
@@ -94,6 +96,7 @@ const HINT_ID = "bus-form-save-blocked";
  */
 export function BusFormModal({
   journey,
+  initialDraft,
   onClose,
   onSaved,
   afterSaveFailedKey,
@@ -102,9 +105,9 @@ export function BusFormModal({
   const { t } = useTranslation(["bus", "common"]);
   // One function builds the state AND the dirty baseline, so an edit form
   // cannot open already "changed" (forgejo#248).
-  const [draft, setDraft] = useState<BusFormDraft>(() => draftFrom(journey));
+  const [draft, setDraft] = useState<BusFormDraft>(() => initialDraft ?? draftFrom(journey));
   /** The draft as the ride opened: the dirty baseline, and the clock a time changed away and back returns to. */
-  const [opened] = useState<BusFormDraft>(() => draftFrom(journey));
+  const [opened] = useState<BusFormDraft>(() => initialDraft ?? draftFrom(journey));
   const [trips, setTrips] = useState<Trip[]>([]);
   const [depBad, setDepBad] = useState<BadCoordinate>(null);
   const [arrBad, setArrBad] = useState<BadCoordinate>(null);
