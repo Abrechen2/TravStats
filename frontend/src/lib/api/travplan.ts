@@ -21,6 +21,35 @@ export interface PlanConfig {
   aiDailyLimit: number;
   weatherDailyLimit: number;
 }
+/** `GET /trips/:tripId/plan/actual` — plan versus actual (TravTrack plan L5). Read-only. */
+export type PlanStationStatus = "visited" | "shifted" | "skipped" | "unknown";
+export interface PlanActual {
+  plan: { revision: number };
+  actual: {
+    origin: "travstats" | "travtrack" | "dawarich";
+    coverage: "complete" | "truncated" | "unreachable" | null;
+    days: { day: string; state: "recorded" | "noData" }[];
+    segments: [number, number][][];
+  } | null;
+  stations: {
+    stationId: string;
+    title: string;
+    plannedFrom: string | null;
+    plannedUntil: string | null;
+    status: PlanStationStatus;
+    deltaDays: number | null;
+    actualFrom: string | null;
+    actualUntil: string | null;
+  }[];
+  stages: {
+    stageId: string;
+    fromStationId: string;
+    toStationId: string;
+    plannedKm: number | null;
+    actualKm: number | null;
+  }[];
+  unplanned: { kind: "lodging" | "place"; day: string; lat: number; lon: number; label: string }[];
+}
 export const travplanApi = {
   locations: async (q: string, language: "de" | "en") =>
     (
@@ -69,6 +98,7 @@ export const travplanApi = {
         clientRef: newPlanId(),
       })
     ).data,
+  actual: async (id: string) => (await api.get<PlanActual>("/trips/" + id + "/plan/actual")).data,
   packingSuggestions: async (id: string) =>
     (await api.get<{ suggestions: string[] }>("/trips/" + id + "/plan/packing-suggestions")).data
       .suggestions,

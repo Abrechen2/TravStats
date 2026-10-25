@@ -224,6 +224,58 @@ register(
   z.object({ suggestions: z.array(z.string()) })
 );
 
+const lonLat = z.tuple([z.number(), z.number()]);
+const planDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+register(
+  "get",
+  "/trips/{tripId}/plan/actual",
+  "Plan versus actual: each planned station visited, shifted, skipped or unknown, each stage's " +
+    "planned and actual length, and accepted stays far from every station. The track is the " +
+    "trip's entry track (own recording, TravTrack or Dawarich), privacy-cut; a station inside a " +
+    "privacy zone is unknown. Reads only — the plan is never changed.",
+  z.object({
+    plan: z.object({ revision: z.number().int() }),
+    actual: z
+      .object({
+        origin: z.enum(["travstats", "travtrack", "dawarich"]),
+        coverage: z.enum(["complete", "truncated", "unreachable"]).nullable(),
+        days: z.array(z.object({ day: planDay, state: z.enum(["recorded", "noData"]) })),
+        segments: z.array(z.array(lonLat)),
+      })
+      .nullable(),
+    stations: z.array(
+      z.object({
+        stationId: z.string(),
+        title: z.string(),
+        plannedFrom: planDay.nullable(),
+        plannedUntil: planDay.nullable(),
+        status: z.enum(["visited", "shifted", "skipped", "unknown"]),
+        deltaDays: z.number().int().nullable(),
+        actualFrom: planDay.nullable(),
+        actualUntil: planDay.nullable(),
+      })
+    ),
+    stages: z.array(
+      z.object({
+        stageId: z.string(),
+        fromStationId: z.string(),
+        toStationId: z.string(),
+        plannedKm: z.number().nullable(),
+        actualKm: z.number().nullable(),
+      })
+    ),
+    unplanned: z.array(
+      z.object({
+        kind: z.enum(["lodging", "place"]),
+        day: planDay,
+        lat: z.number(),
+        lon: z.number(),
+        label: z.string(),
+      })
+    ),
+  })
+);
+
 registry.registerPath({
   method: "get",
   path: "/travplan/locations",
