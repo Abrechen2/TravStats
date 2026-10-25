@@ -8,7 +8,8 @@ import {
   storePoint,
   wipeTravTrack,
 } from "../../travtrack/__tests__/fixtures";
-import { readTravTrackDerivation } from "../derivationRead";
+import * as anomaly from "../anomaly";
+import { LOOKAHEAD_PAGE, readTravTrackDerivation } from "../derivationRead";
 import { bumpHistoryGeneration, historyGeneration } from "../generation";
 import { observationKey, pointDigest } from "../key";
 
@@ -125,8 +126,10 @@ describe("readTravTrackDerivation", () => {
     });
     expect(asked).toBe(1);
     expect(read.cancelled).toBe(true);
-    // A cancelled read hands nothing on to derive from.
+    // A cancelled read hands nothing on to derive from, so the next attempt
+    // starts where this one did — not after the page it had read.
     expect(read.points).toEqual([]);
+    expect(read.next).toBeNull();
   });
 
   it("a frozen-fix teleport is masked, the points around it stay", async () => {
@@ -139,6 +142,162 @@ describe("readTravTrackDerivation", () => {
     );
     // Masked, never deleted.
     expect(await prisma.travTrackPoint.count({ where: { userId } })).toBe(10);
+  });
+
+  it("a flight's fast steps between stationary fixes are not masked", async () => {
+    // makeFlight: ICN 00:30Z -> CJU 01:30Z, armed 00:00Z..02:00Z. Two airborne
+    // fixes at ~1,134 km/h between the gates: two "jumps" and a run of one.
+    await makeFlight(userId);
+    const at = (iso: string) => Date.parse(`2026-10-12T${iso}:00Z`);
+    const ICN = { lat: 37.469, lon: 126.451 };
+    const CJU = { lat: 33.511, lon: 126.493 };
+    const STEP_MS = 466_000; // ~147 km a step: ~1,134 km/h
+    const leave = at("00:28");
+    const airborne = [1, 2].map((k) => ({
+      t: leave + k * STEP_MS,
+      lat: ICN.lat + ((CJU.lat - ICN.lat) * k) / 3,
+      lon: ICN.lon + ((CJU.lon - ICN.lon) * k) / 3,
+    }));
+    const fixes = [
+      ...[-8, -6, -4, -2, 0].map((m) => ({ t: leave + m * 60_000, ...ICN })),
+      ...airborne,
+      ...[0, 2, 4, 6, 8].map((m) => ({ t: leave + 3 * STEP_MS + m * 60_000, ...CJU })),
+    ];
+    for (const f of fixes) await storePoint(userId, f);
+    const read = await readTravTrackDerivation(userId, {
+      fromMs: at("00:00"),
+      untilMs: at("03:00"),
+    });
+    expect(read.points.map((p) => p.atMs)).toEqual(fixes.map((f) => f.t));
+  });
+
+  /** Every point a chain of reads hands on, each read at most `maxPoints`. */
+  const readInSplits = async (maxPoints: number): Promise<number[]> => {
+    const seen: number[] = [];
+    let cursor: string | undefined;
+    for (let reads = 0; reads < 50; reads += 1) {
+      const read = await readTravTrackDerivation(userId, WINDOW, {
+        pageSize: 2,
+        maxPoints,
+        cursor,
+      });
+      seen.push(...read.points.map((p) => p.atMs));
+      if (!read.next) return seen;
+      expect(read.coverage).toBe("truncated");
+      cursor = read.next;
+    }
+    throw new Error("the reads made no progress");
+  };
+
+  it("a split read masks exactly like an unsplit one", async () => {
+    // With six to a read, the teleport is the last point the first read holds
+    // and its return the first of the next.
+    await walk([0, 1, 2, 3, 4]);
+    await storePoint(userId, { t: BASE + 4.5 * 60_000, ...BUSAN });
+    await walk([5, 6, 7, 8]);
+    const whole = (await readTravTrackDerivation(userId, WINDOW)).points.map((p) => p.atMs);
+    expect(whole).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8].map((m) => BASE + m * 60_000));
+    for (let maxPoints = 6; maxPoints <= 10; maxPoints += 1) {
+      expect({ maxPoints, seen: await readInSplits(maxPoints) }).toEqual({
+        maxPoints,
+        seen: whole,
+      });
+    }
+  });
+
+  it("a split read masks like an unsplit one with two phones interleaved", async () => {
+    const minutes = (from: number, to: number, offset = 0) =>
+      Array.from({ length: to - from + 1 }, (_, i) => from + i + offset);
+    await walk(minutes(0, 9));
+    await storePoint(userId, { t: BASE + 9.5 * 60_000, ...BUSAN });
+    await walk(minutes(10, 19));
+    await walk(minutes(0, 7, 0.2), "phone-2");
+    for (const m of [7.7, 7.8]) {
+      await storePoint(userId, { t: BASE + m * 60_000, ...BUSAN, device: "phone-2" });
+    }
+    await walk(minutes(8, 19, 0.2), "phone-2");
+    const whole = await readTravTrackDerivation(userId, WINDOW);
+    expect(whole.points).toHaveLength(20 + 20);
+    for (let maxPoints = 12; maxPoints <= 20; maxPoints += 1) {
+      expect({ maxPoints, seen: await readInSplits(maxPoints) }).toEqual({
+        maxPoints,
+        seen: whole.points.map((p) => p.atMs),
+      });
+    }
+  });
+
+  it("a run still open where a read must stop is read to its end, never handed on unresolved", async () => {
+    // One phone, a fix every 50 ms, A A A B B B A A B with A and B ~2.2 km
+    // apart: same-second jumps. The B run is masked, the return to A is
+    // real, and the last B — a jump with no return — is left alone.
+    const B = { lat: SEOUL.lat + 0.02, lon: SEOUL.lon };
+    // A metre apart each: the store keeps one fix per second and place.
+    const fixes = [...("AAABBBAAB" as string)].map((c, i) => {
+      const at = c === "A" ? SEOUL : B;
+      return { t: BASE + i * 50, lat: at.lat, lon: at.lon + i * 0.00001 };
+    });
+    for (const f of fixes) await storePoint(userId, f);
+    const whole = (await readTravTrackDerivation(userId, WINDOW)).points.map((p) => p.atMs);
+    expect(whole).toEqual([0, 1, 2, 6, 7, 8].map((i) => fixes[i].t));
+    for (let maxPoints = 1; maxPoints <= 9; maxPoints += 1) {
+      expect({ maxPoints, seen: await readInSplits(maxPoints) }).toEqual({
+        maxPoints,
+        seen: whole,
+      });
+    }
+  });
+
+  it("runs chained across many phones end the lookahead at its cap, and say so", async () => {
+    // Twelve phones; each teleports out and back, and the next one leaves
+    // before the one before it has returned — some run is open at every point.
+    const PHONES = 12;
+    const T = BASE + 10 * 60_000;
+    const minute = (m: number) => T + Math.round(m * 60_000);
+    for (let i = 0; i < PHONES; i += 1) {
+      const device = `chain-${i}`;
+      const home = { lat: SEOUL.lat + i * 0.001, lon: SEOUL.lon };
+      for (const m of [-0.9, -0.8, -0.7])
+        await storePoint(userId, { t: minute(2 * i + m), ...home, device });
+      await storePoint(userId, { t: minute(2 * i), ...BUSAN, device });
+      for (const m of [3, 3.1, 3.2, 3.3])
+        await storePoint(userId, { t: minute(2 * i + m), ...home, device });
+    }
+    const whole = await readTravTrackDerivation(userId, WINDOW);
+    expect(whole.points).toHaveLength(PHONES * 7);
+
+    const maxPoints = 5;
+    const lookaheadMax = 20;
+    const pageSize = 2;
+    const spy = jest.spyOn(anomaly, "stableCut");
+    try {
+      let cursor: string | undefined;
+      let unresolved = 0;
+      let reads = 0;
+      for (; reads < 100; reads += 1) {
+        spy.mockClear();
+        const read = await readTravTrackDerivation(userId, WINDOW, {
+          pageSize,
+          maxPoints,
+          lookaheadMax,
+          cursor,
+        });
+        // Bounded work: one judgement per lookahead page, plus the cut at the end.
+        expect(spy.mock.calls.length).toBeLessThanOrEqual(
+          2 + Math.ceil(lookaheadMax / Math.min(pageSize, LOOKAHEAD_PAGE))
+        );
+        expect(read.points.length).toBeLessThanOrEqual(maxPoints + lookaheadMax);
+        if (read.unresolvedRun) {
+          unresolved += 1;
+          expect(read.coverage).toBe("truncated");
+        }
+        if (!read.next) break;
+        cursor = read.next;
+      }
+      expect(reads).toBeLessThan(100);
+      expect(unresolved).toBeGreaterThan(0);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("a point inside a flight window is inFlight", async () => {

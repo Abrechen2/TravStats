@@ -93,6 +93,39 @@ describe("anomalyMask", () => {
     expect(anomalyMask(interleaved).some(Boolean)).toBe(false);
   });
 
+  describe("in the air", () => {
+    // ICN on the ground, three airborne fixes ~300 km apart every 16 minutes
+    // (~1,125 km/h, a jet with a tailwind), then CJU on the ground.
+    const step = 300 / 111.2; // degrees of latitude for ~300 km
+    const flightPath = () => [
+      ...Array.from({ length: 5 }, (_, i) => obs(i * 60, SEOUL)),
+      obs(20 * 60, { lat: SEOUL.lat - step, lon: SEOUL.lon }),
+      obs(36 * 60, { lat: SEOUL.lat - 2 * step, lon: SEOUL.lon }),
+      ...Array.from({ length: 5 }, (_, i) =>
+        obs((52 + i) * 60, { lat: SEOUL.lat - 3 * step, lon: SEOUL.lon })
+      ),
+    ];
+    const window: [number, number] = [BASE + 10 * 60_000, BASE + 50 * 60_000];
+
+    it("without a flight window the fast steps are jumps", () => {
+      expect(anomalyMask(flightPath()).some(Boolean)).toBe(true);
+    });
+
+    it("a step that touches a flight window is never a jump", () => {
+      expect(anomalyMask(flightPath(), { flightWindows: [window] }).some(Boolean)).toBe(false);
+    });
+
+    it("a fix at null island is masked in the air as well", () => {
+      const points = flightPath();
+      points.splice(6, 0, obs(28 * 60, { lat: 0, lon: 0 }));
+      expect(
+        anomalyMask(points, { flightWindows: [window] })
+          .map((m, i) => (m ? i : -1))
+          .filter((i) => i >= 0)
+      ).toEqual([6]);
+    });
+  });
+
   it("an empty read masks nothing", () => {
     expect(anomalyMask([])).toEqual([]);
   });
