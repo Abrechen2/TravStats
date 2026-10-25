@@ -187,6 +187,32 @@ describe("projectExploredCells", () => {
     expect((await dirtyRow(D1)).done & EXPLORED_BIT).toBe(EXPLORED_BIT);
   });
 
+  it("TravTrack switched off while the day waits for the lock: nothing is written or acked (Codex review)", async () => {
+    await store(at(D1, "03:00:00"), SEOUL);
+    await dirty([D1]);
+
+    const result = await projectExploredCells(userId, {
+      afterLock: async () => switches.set({ beta: true, config: false }),
+    });
+
+    expect(result).toMatchObject({ status: "disabled", projected: 0 });
+    expect(await cells()).toEqual([]);
+    expect((await dirtyRow(D1)).done & EXPLORED_BIT).toBe(0);
+  });
+
+  it("TravTrack switched off between the replace and the ack: the day rolls back", async () => {
+    await store(at(D1, "03:00:00"), SEOUL);
+    await dirty([D1]);
+
+    const result = await projectExploredCells(userId, {
+      beforeAck: async () => switches.set({ beta: true, config: false }),
+    });
+
+    expect(result).toMatchObject({ status: "disabled", projected: 0 });
+    expect(await cells()).toEqual([]);
+    expect((await dirtyRow(D1)).done & EXPLORED_BIT).toBe(0);
+  });
+
   it("TravTrack off → nothing runs and the dirty days wait", async () => {
     await store(at(D1, "03:00:00"), SEOUL);
     await dirty([D1]);

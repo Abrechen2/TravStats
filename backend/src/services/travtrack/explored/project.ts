@@ -47,6 +47,8 @@ export type ExploredProjectionDeps = {
   maxPoints?: number;
   /** Test seam: runs inside the day's transaction, after the replace, before the ack. */
   beforeAck?: (day: string) => Promise<void>;
+  /** Test seam: runs inside the day's transaction right after the lock is taken. */
+  afterLock?: (day: string) => Promise<void>;
 };
 
 export type ExploredProjectionResult = {
@@ -59,6 +61,10 @@ export type ExploredProjectionResult = {
 class Cancelled extends Error {}
 class StaleRead extends Error {}
 class DayTooLarge extends Error {}
+
+async function assertStillAllowed(userId: string): Promise<void> {
+  if ((await travTrackDerivationAllowed(userId)) !== "ok") throw new Cancelled();
+}
 
 /** The day's ground cells: every page of the read, in-flight and masked points left out. */
 async function dayCells(
@@ -100,6 +106,10 @@ async function projectDay(
   return prisma.$transaction(
     async (tx) => {
       await takeTravTrackLock(tx, userId);
+      await deps.afterLock?.(dirty.day);
+      // Asked again under the lock (Codex review): a switch made while this
+      // day waited for it must stop the day, and a one-page read never asks.
+      await assertStillAllowed(userId);
       const row = await tx.travTrackDirtyDay.findUnique({
         where: { userId_day: { userId, day: startAt } },
         select: { version: true, done: true },
@@ -113,6 +123,9 @@ async function projectDay(
         });
       }
       await deps.beforeAck?.(dirty.day);
+      // And once more before the publication commits: switched off meanwhile,
+      // the day rolls back whole.
+      await assertStillAllowed(userId);
       return ackDirtyDay(tx, userId, { day: dirty.day, version: row.version }, EXPLORED_BIT);
     },
     { timeout: 120_000 }
