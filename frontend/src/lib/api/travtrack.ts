@@ -283,6 +283,8 @@ export function routeShareErrorKey(err: unknown): string {
       return "sharing:route.errors.disabled";
     case "TRAVTRACK_ROUTE_BUILD_RATE_LIMITED":
       return "sharing:route.errors.rateLimited";
+    case "TRAVTRACK_SHARE_BUSY":
+      return "sharing:route.errors.busy";
     default:
       return (err as { response?: unknown } | null)?.response
         ? "sharing:route.errors.generic"

@@ -97,6 +97,14 @@ describe("ShareRouteDialog", () => {
     expect(screen.getByRole("button", { name: "sharing:route.revoke" })).toBeInTheDocument();
   });
 
+  it("names a share another request is building instead of a generic failure", async () => {
+    api.routeSnapshot.mockResolvedValue(null);
+    api.shareRoute.mockRejectedValue(refusal("TRAVTRACK_SHARE_BUSY"));
+    open();
+    fireEvent.click(await screen.findByRole("button", { name: "sharing:route.share" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("sharing:route.errors.busy");
+  });
+
   it("says TravTrack is off instead of pretending nothing is shared", async () => {
     api.routeSnapshot.mockRejectedValue(
       Object.assign(new Error("off"), {

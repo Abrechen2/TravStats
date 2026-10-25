@@ -5817,6 +5817,12 @@ model TravTrackShareSnapshot {
   /// Every home circle in force since the owner's last build, `[{lat, lon,
   /// radiusM}]`: a moved home keeps its former place hidden too.
   homeCircles Json      @default("[]") @map("home_circles")
+  /// The first share that committed this row while it is pending (`version`
+  /// 0): a build that fails removes the pending row only if it carries its
+  /// own token, and only under the TravTrack lock, so it never takes the row
+  /// another build is relying on (Codex review, fourth round). Null once a
+  /// build has stored a route.
+  buildToken  String?   @map("build_token")
 
   user        User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
   trip        Trip                       @relation(fields: [tripId], references: [id], onDelete: Cascade)

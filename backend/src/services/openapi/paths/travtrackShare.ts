@@ -63,7 +63,9 @@ registry.registerPath({
     403: disabled,
     404: { description: "TRIP_NOT_FOUND", content: errorContent },
     409: {
-      description: "TRAVTRACK_ROUTE_EMPTY: nothing of the trip's line may be shown",
+      description:
+        "TRAVTRACK_ROUTE_EMPTY: nothing of the trip's line may be shown; " +
+        "TRAVTRACK_SHARE_BUSY: the pending route row was removed before each of three builds",
       content: errorContent,
     },
     429: {

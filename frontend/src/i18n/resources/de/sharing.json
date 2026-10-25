@@ -754,6 +754,7 @@
       "disabled": "TravTrack ist auf diesem Server ausgeschaltet. Eine Route kann gerade nicht mitgeteilt werden.",
       "generic": "Die Route konnte nicht mitgeteilt werden.",
       "rateLimited": "Die Route wurde gerade sehr oft neu mitgeteilt. Warte ein paar Minuten und versuch es dann noch einmal.",
+      "busy": "Die Route wird gerade schon von einer anderen Anfrage mitgeteilt. Versuch es gleich noch einmal.",
       "network": "Der Server ist nicht erreichbar. Versuch es gleich noch einmal."
     }
   }

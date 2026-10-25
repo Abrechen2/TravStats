@@ -1,5 +1,8 @@
+import { randomUUID } from "node:crypto";
+
 import { prisma, type DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
+import logger from "../../utils/logger";
 import { simplifyDegrees } from "../schematicRouter";
 import { classifyPoint, type TripRecordingBounds } from "../tripRecording/bounds";
 import { privacySafeDevices } from "../tripRecording/privacySafe";
@@ -204,6 +207,65 @@ async function clearCaptured(
   }
 }
 
+/** The pending row this build relied on was removed before it took the lock. */
+class PendingRowGone extends Error {}
+
+/** How often a share re-commits its pending row when it was removed before the build took the lock. */
+const MAX_BUILD_ATTEMPTS = 3;
+
+/** The owner's build, under the TravTrack lock, against the committed row it relies on. */
+async function buildUnderLock(tx: Db, userId: string, tripId: string) {
+  await takeTravTrackLock(tx, userId);
+  const existing = await tx.travTrackShareSnapshot.findUnique({
+    where: { tripId },
+    select: { id: true },
+  });
+  // Without a committed row a change made during the build has nothing to be
+  // recorded against: commit the pending row again first.
+  if (!existing) throw new PendingRowGone();
+  // Read before any input: what is recorded after this stays recorded.
+  const cleared = await recordedRows(tx, existing.id);
+  const bounds = await boundsOf(tx, userId, tripId);
+  const built = bounds ? await buildShareGeometry(tx, userId, bounds) : null;
+  if (!bounds || !built || built.geometry.length === 0) {
+    await tx.travTrackShareSnapshot.deleteMany({ where: { tripId, userId } });
+    return null;
+  }
+  const fields = {
+    geometry: built.geometry as unknown as object,
+    pointCount: vertexCount(built.geometry),
+    sharedFrom: new Date(bounds.fromMs),
+    sharedUntil: new Date(bounds.untilMs),
+    homeCircles: built.home ? [built.home] : [],
+    buildToken: null,
+  };
+  const row = await tx.travTrackShareSnapshot.upsert({
+    where: { tripId },
+    create: { userId, tripId, ...fields },
+    update: { ...fields, version: { increment: 1 }, createdAt: new Date() },
+    select: OWNER_SELECT,
+  });
+  // The owner's share starts over from what this build read: the trip,
+  // its flights and the home as they were when it read them.
+  await clearCaptured(tx, row.id, cleared);
+  return ownerView(tx, userId, row);
+}
+
+/**
+ * A failed build removes the pending row it committed — under the TravTrack
+ * lock, so never while another build holds it, and only if it still carries
+ * this build's token, so never the row another build committed or stored a
+ * route in.
+ */
+async function dropOwnPendingRow(userId: string, tripId: string, token: string) {
+  await prisma.$transaction(async (tx) => {
+    await takeTravTrackLock(tx, userId);
+    await tx.travTrackShareSnapshot.deleteMany({
+      where: { tripId, userId, version: PENDING_VERSION, buildToken: token },
+    });
+  });
+}
+
 /**
  * `PUT /trips/:id/share-snapshot`: the owner shares (or refreshes) the route.
  * Under the TravTrack lock, so a deletion or a zone write cannot interleave
@@ -216,57 +278,60 @@ async function clearCaptured(
  * included — stays and narrows the new share too. For the same reason a
  * first share commits a pending row before the build: without a committed row
  * the triggers would have nothing to record a change made during the build
- * against.
+ * against. Two first shares at once rely on the same pending row; only the
+ * one that committed it may remove it on failure (`dropOwnPendingRow`), and a
+ * build that finds it removed commits it again before reading anything.
  */
 export async function shareTripRoute(userId: string, tripId: string) {
   const trip = await prisma.trip.findFirst({ where: { id: tripId, userId }, select: { id: true } });
   if (!trip) throw new AppError("Trip not found", 404, "TRIP_NOT_FOUND");
-  await prisma.travTrackShareSnapshot.createMany({
-    data: [{ userId, tripId, geometry: [], pointCount: 0, version: PENDING_VERSION }],
-    skipDuplicates: true,
-  });
-  let snapshot: Awaited<ReturnType<typeof ownerView>> | null;
+  const token = randomUUID();
+  let committedPending = false;
+  let snapshot: Awaited<ReturnType<typeof ownerView>> | null = null;
   try {
-    snapshot = await prisma.$transaction(
-      async (tx) => {
-        await takeTravTrackLock(tx, userId);
-        const existing = await tx.travTrackShareSnapshot.findUnique({
-          where: { tripId },
-          select: { id: true },
+    for (let attempt = 1; ; attempt++) {
+      const { count } = await prisma.travTrackShareSnapshot.createMany({
+        data: [
+          {
+            userId,
+            tripId,
+            geometry: [],
+            pointCount: 0,
+            version: PENDING_VERSION,
+            buildToken: token,
+          },
+        ],
+        skipDuplicates: true,
+      });
+      committedPending = committedPending || count > 0;
+      try {
+        snapshot = await prisma.$transaction((tx) => buildUnderLock(tx, userId, tripId), {
+          timeout: 60_000,
         });
-        // Read before any input: what is recorded after this stays recorded.
-        const cleared = await recordedRows(tx, existing?.id);
-        const bounds = await boundsOf(tx, userId, tripId);
-        const built = bounds ? await buildShareGeometry(tx, userId, bounds) : null;
-        if (!bounds || !built || built.geometry.length === 0) {
-          await tx.travTrackShareSnapshot.deleteMany({ where: { tripId, userId } });
-          return null;
+        break;
+      } catch (err) {
+        if (!(err instanceof PendingRowGone)) throw err;
+        if (attempt >= MAX_BUILD_ATTEMPTS) {
+          throw new AppError(
+            "The route is being shared by another request",
+            409,
+            "TRAVTRACK_SHARE_BUSY"
+          );
         }
-        const fields = {
-          geometry: built.geometry as unknown as object,
-          pointCount: vertexCount(built.geometry),
-          sharedFrom: new Date(bounds.fromMs),
-          sharedUntil: new Date(bounds.untilMs),
-          homeCircles: built.home ? [built.home] : [],
-        };
-        const row = await tx.travTrackShareSnapshot.upsert({
-          where: { tripId },
-          create: { userId, tripId, ...fields },
-          update: { ...fields, version: { increment: 1 }, createdAt: new Date() },
-          select: OWNER_SELECT,
-        });
-        // The owner's share starts over from what this build read: the trip,
-        // its flights and the home as they were when it read them.
-        await clearCaptured(tx, row.id, cleared);
-        return ownerView(tx, userId, row);
-      },
-      { timeout: 60_000 }
-    );
+      }
+    }
   } catch (err) {
-    // A build that failed leaves no pending row behind (a finished share is not pending).
-    await prisma.travTrackShareSnapshot.deleteMany({
-      where: { tripId, userId, version: PENDING_VERSION },
-    });
+    // A build that failed leaves no pending row of its own behind.
+    if (committedPending) {
+      try {
+        await dropOwnPendingRow(userId, tripId, token);
+      } catch (cleanupErr) {
+        logger.error(
+          { err: cleanupErr, tripId },
+          "TravTrack share: removing the failed build's pending row failed"
+        );
+      }
+    }
     throw err;
   }
   if (!snapshot || snapshot.pointCount === 0) {

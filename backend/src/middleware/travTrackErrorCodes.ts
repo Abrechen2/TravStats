@@ -15,4 +15,5 @@ export type TravTrackApiErrorCode =
   | "TRAVTRACK_EXPORT_TOO_LONG" // an export covers at most 366 days (400)
   | "TRAVTRACK_ROUTE_EMPTY" // a route snapshot was asked for, but nothing of the trip may be shown (409)
   | "TRAVTRACK_ROUTE_BUILD_RATE_LIMITED" // too many route snapshot builds by this account just now (429)
+  | "TRAVTRACK_SHARE_BUSY" // the pending route row was removed before each of three builds (a failed share, a revoke); try again (409)
   | "SHARED_ROUTE_NOT_FOUND"; // no member of this shared trip shares its route with the reader (404)

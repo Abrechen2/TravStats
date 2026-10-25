@@ -5,6 +5,7 @@ import { shareSnapshotBuildLimiter } from "../../middleware/shareSnapshotBuildLi
 import { prisma } from "../../db";
 import { generateToken } from "../../utils/jwt";
 import type { LonLat } from "../../services/travtrack/privacyCut";
+import { takeTravTrackLock } from "../../services/travtrack/lock";
 import { travTrackSwitches } from "../../services/travtrack/__tests__/switches";
 import {
   makeFlight,
@@ -275,6 +276,97 @@ describe("TravTrack — restrictions recorded against a shared route", () => {
       const read = await recipientRead();
       expect(read.length).toBeGreaterThan(0);
       expect(nearMoved(read)).toBe(false);
+    });
+  });
+
+  describe("two first shares at once, one of them failing", () => {
+    /** Builds and cleanups of the owner's account waiting for its TravTrack lock. */
+    const lockWaiters = async () => {
+      const rows = await prisma.$queryRaw<Array<{ n: bigint }>>`
+        SELECT count(*) AS n FROM pg_locks l,
+          LATERAL (SELECT hashtextextended(${`travtrack:${owner}`}, 0) AS k) h
+        WHERE l.locktype = 'advisory' AND NOT l.granted
+          AND l.classid = ((h.k >> 32) & 4294967295)::oid
+          AND l.objid = (h.k & 4294967295)::oid`;
+      return Number(rows[0].n);
+    };
+    const until = async (done: () => Promise<boolean> | boolean) => {
+      for (let i = 0; i < 500; i++) {
+        if (await done()) return;
+        await new Promise((r) => setTimeout(r, 20));
+      }
+      throw new Error("condition not reached");
+    };
+
+    it("the failed build's cleanup never takes the pending row the other build is using", async () => {
+      await walk(126.95, 127.06, FLIGHT_WALK);
+      // A: creates the pending row, takes the lock, reads its inputs and holds.
+      const a = armHold(true);
+      let aSettled = false;
+      const first = share().then((r) => {
+        aSettled = true;
+        return r;
+      });
+      await a.atHold;
+      // B: finds A's pending row and waits for the lock A holds.
+      const second = share().then((r) => r);
+      await until(async () => (await lockWaiters()) >= 1);
+      const b = armHold();
+      // A fails; B takes the lock and reads its inputs.
+      a.release();
+      await b.atHold;
+      // A's cleanup either ran or waits for B's lock — never interleaves with B.
+      await until(async () => aSettled || (await lockWaiters()) >= 1);
+      await linkAndUnlink();
+      b.release();
+      const [resA, resB] = await Promise.all([first, second]);
+      expect(resA.status).toBe(500);
+      expect(resB.status).toBe(200);
+      expect(resB.body.snapshot.version).toBe(1);
+      const read = await recipientRead();
+      expect(read.length).toBeGreaterThan(0);
+      expect(westOf(read, IN_FLIGHT_LON)).toBe(false);
+    });
+
+    it("a build that finds its pending row removed commits it again before reading anything", async () => {
+      await walk(126.95, 127.06, FLIGHT_WALK);
+      // Something else holds the account's TravTrack lock.
+      let unlock!: () => void;
+      const unlocked = new Promise<void>((resolve) => (unlock = resolve));
+      let locked!: () => void;
+      const isLocked = new Promise<void>((resolve) => (locked = resolve));
+      const holder = prisma.$transaction(async (tx) => {
+        await takeTravTrackLock(tx, owner);
+        locked();
+        await unlocked;
+      });
+      await isLocked;
+      const b = armHold();
+      const building = share().then((r) => r);
+      await until(async () => (await lockWaiters()) >= 1);
+      // The pending row the share committed goes while it waits (a revoke, say).
+      await prisma.travTrackShareSnapshot.deleteMany({ where: { tripId } });
+      unlock();
+      await holder;
+      await b.atHold;
+      await linkAndUnlink();
+      b.release();
+      const res = await building;
+      expect(res.status).toBe(200);
+      expect(res.body.snapshot.version).toBe(1);
+      const read = await recipientRead();
+      expect(read.length).toBeGreaterThan(0);
+      expect(westOf(read, IN_FLIGHT_LON)).toBe(false);
+    });
+
+    it("a first share that fails alone leaves no pending row behind", async () => {
+      await walk(126.95, 127.06, FLIGHT_WALK);
+      const a = armHold(true);
+      const first = share().then((r) => r);
+      await a.atHold;
+      a.release();
+      expect((await first).status).toBe(500);
+      expect(await prisma.travTrackShareSnapshot.count({ where: { tripId } })).toBe(0);
     });
   });
 
