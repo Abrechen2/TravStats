@@ -178,6 +178,7 @@ model User {
   locationSuggestions      LocationSuggestion[]
   travTrackDirtyDays       TravTrackDirtyDay[]
   travTrackExploredCells   TravTrackExploredCell[]
+  travTrackZoneCells       TravTrackZoneCell[]
   travTrackDerivationState TravTrackDerivationState?
   travTrackImports         TravTrackImport[]
   travTrackIngestTokens    TravTrackIngestToken[]
@@ -6100,6 +6101,24 @@ model TravTrackExploredCell {
   @@map("travtrack_explored_cells")
 }
 
+/// The explored map's zone raster (TravTrack plan L1, Codex review of
+/// a3353f2a7): the zoom-14 tiles every privacy zone in force and the newest
+/// former zones' circles touch, each with its edge-connected component.
+/// Rebuilt in the transaction of every zone change, so a request reads a few
+/// rows instead of rasterising every circle the account ever had.
+model TravTrackZoneCell {
+  userId    String @map("user_id")
+  x         Int
+  y         Int
+  component Int
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, x, y])
+  @@index([userId, component])
+  @@map("travtrack_zone_cells")
+}
+
 /// Per account: the history generation every TravTrack removal raises (E5's
 /// fence) and the derivations' own bookkeeping. 0 = never ran.
 model TravTrackDerivationState {
@@ -6120,6 +6139,9 @@ model TravTrackDerivationState {
   failureCount          Int       @default(0) @map("failure_count")
   /// Not scheduled again before this instant after a failure (backoff).
   retryAfter            DateTime? @map("retry_after")
+  /// The explored map's zone raster version this account was built with
+  /// (L1); 0 = never built, so the first request builds it.
+  zoneCellsVersion      Int       @default(0) @map("zone_cells_version")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

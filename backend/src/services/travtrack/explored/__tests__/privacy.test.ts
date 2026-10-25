@@ -1,5 +1,6 @@
 import { TILES, tileOf, type Bbox, type Cell } from "../cells";
 import { circleCells, exploredView } from "../privacy";
+import { fillComponent } from "../zoneRaster";
 
 /**
  * The explored map's one privacy model (TravTrack plan L1, review focus 26;
@@ -139,6 +140,24 @@ describe("the explored map's privacy model", () => {
     }
     const view = keys(exploredView({ explored, circles: [pacific], bbox: WORLD }));
     for (const c of cells) expect(view.has(key(c))).toBe(true);
+  });
+
+  it("deciding a zone is linear: 40 000 zone cells inside a ring in well under a second", () => {
+    const component: Cell[] = [];
+    for (let x = 1000; x < 1200; x++) for (let y = 3000; y < 3200; y++) component.push({ x, y });
+    const ring: Cell[] = [];
+    for (let i = 999; i <= 1200; i++) {
+      ring.push(
+        { x: i, y: 2999 },
+        { x: i, y: 3200 },
+        { x: 999, y: i + 2000 },
+        { x: 1200, y: i + 2000 }
+      );
+    }
+    const started = Date.now();
+    const drawn = fillComponent(component, new Set(ring.map(key)));
+    expect(Date.now() - started).toBeLessThan(1_000);
+    expect(drawn).toHaveLength(component.length);
   });
 
   it("answers cells only, sorted, each once", () => {

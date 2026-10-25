@@ -5,6 +5,7 @@ import { prisma } from "../../db";
 import { generateToken } from "../../utils/jwt";
 import { utcMidnight } from "../../services/countryDays/store";
 import { tileOf } from "../../services/travtrack/explored/cells";
+import { createZone } from "../../services/travtrack/zones";
 import { circleCells, EXPLORED_MAX_CELLS } from "../../services/travtrack/explored/privacy";
 import { travTrackSwitches } from "../../services/travtrack/__tests__/switches";
 import { makeUser, wipeTravTrack } from "../../services/travtrack/__tests__/fixtures";
@@ -44,6 +45,10 @@ describe("TravTrack — the explored map", () => {
     await switches.set({ beta: true, config: true });
     await wipeTravTrack([userId, otherId]);
     await prisma.travTrackExploredCell.deleteMany({ where: { userId: { in: [userId, otherId] } } });
+    await prisma.travTrackZoneCell.deleteMany({ where: { userId: { in: [userId, otherId] } } });
+    await prisma.travTrackDerivationState.deleteMany({
+      where: { userId: { in: [userId, otherId] } },
+    });
   });
 
   afterAll(async () => {
@@ -72,7 +77,7 @@ describe("TravTrack — the explored map", () => {
   });
 
   it("the answer is the same cell set for any requested zoom", async () => {
-    await prisma.travTrackPrivacyZone.create({ data: { userId, name: "Zuhause", ...ZONE } });
+    await createZone(userId, { name: "Zuhause", ...ZONE }, true);
     // Explored ground all round the zone, so the zone is drawn too.
     const zoneCells = circleCells(ZONE);
     const inZone = new Set(zoneCells.map((c) => `${c.x}/${c.y}`));
@@ -95,7 +100,7 @@ describe("TravTrack — the explored map", () => {
   });
 
   it("a zone surrounded by explored cells is drawn as explored, never as a hole", async () => {
-    await prisma.travTrackPrivacyZone.create({ data: { userId, name: "Zuhause", ...ZONE } });
+    await createZone(userId, { name: "Zuhause", ...ZONE }, true);
     const zoneCells = circleCells(ZONE);
     const keys = new Set(zoneCells.map((c) => `${c.x}/${c.y}`));
     const xs = zoneCells.map((c) => c.x);
@@ -115,14 +120,14 @@ describe("TravTrack — the explored map", () => {
   });
 
   it("an isolated zone with no explored neighbour emits nothing", async () => {
-    await prisma.travTrackPrivacyZone.create({ data: { userId, name: "Zuhause", ...ZONE } });
+    await createZone(userId, { name: "Zuhause", ...ZONE }, true);
     const res = await explored({ bbox: BERLIN });
     expect(res.body).toEqual({ cells: [] });
   });
 
   it("another account's cells and zones are never read", async () => {
     await seed(otherId, [tileOf(52.52, 13.405)]);
-    await prisma.travTrackPrivacyZone.create({ data: { userId: otherId, name: "Z", ...ZONE } });
+    await createZone(otherId, { name: "Z", ...ZONE }, true);
     await seed(
       otherId,
       circleCells(ZONE).map((c) => ({ x: c.x + 30, y: c.y }))
