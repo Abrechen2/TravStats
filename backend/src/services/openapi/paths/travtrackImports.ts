@@ -69,7 +69,9 @@ registry.registerPath({
     body: {
       content: {
         "multipart/form-data": {
-          schema: z.object({ file: z.string().describe("The GPX file") }),
+          schema: z.object({
+            file: z.string().openapi({ format: "binary" }).describe("The GPX file"),
+          }),
         },
       },
       required: true,
@@ -94,6 +96,10 @@ registry.registerPath({
       content: errorContent,
     },
     413: { description: "TRACK_FILE_TOO_LARGE: over 25 MB", content: errorContent },
+    429: {
+      description: "RATE_LIMITED: at most 30 imports per account in 15 minutes, whatever the token",
+      content: errorContent,
+    },
   },
 });
 

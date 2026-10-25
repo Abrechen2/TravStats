@@ -118,7 +118,9 @@ export default function TravTrackImports({
     if (row.status === "running") return t(`${NS}.status.running`);
     if (row.status === "interrupted") return t(`${NS}.status.interrupted`);
     if (row.status === "cancelled") return t(`${NS}.status.cancelled`);
-    return t(`${NS}.points`, { count: row.pointCount });
+    const points = t(`${NS}.points`, { count: row.pointCount });
+    // The stored report, so what the import did is still readable after a reload.
+    return row.report ? `${points} · ${describe(row.report)}` : points;
   };
 
   return (

@@ -180,6 +180,16 @@ describe("TravTrackSection — GPX import", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("track:imports.errors.running");
   });
 
+  it("a finished import keeps its report in the list after a reload", async () => {
+    vi.spyOn(travTrackImportsApi, "list").mockResolvedValue([DONE]);
+    show();
+    const row = (await screen.findByText("Bukhansan.gpx")).closest("li")!;
+    expect(row.textContent).toContain('track:imports.report.stored {"count":100}');
+    expect(row.textContent).toContain('track:imports.report.duplicate {"count":12}');
+    expect(row.textContent).toContain('track:imports.report.zone {"count":5}');
+    expect(row.textContent).toContain('track:imports.report.withoutTime {"count":3}');
+  });
+
   it("lists the imports and deletes one only after naming its point count", async () => {
     vi.spyOn(travTrackImportsApi, "list").mockResolvedValue([
       DONE,
