@@ -123,6 +123,8 @@
     "travplan/importPolicy.ts",
     "travplan/routeEndpoints.ts",
     "travtrack.ts",
+    "travtrack/day.ts",
+    "travtrack/export.ts",
     "travtrack/gate.ts",
     "travtrack/pointEntries.ts",
     "travtrack/points.ts",

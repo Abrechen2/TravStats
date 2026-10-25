@@ -128,4 +128,20 @@ describe("level filtering", () => {
     expect(closed(null).shown).not.toContain("devices");
     expect(closed("devices").shown).toContain("devices");
   });
+
+  it("shows TravTrack's section only while its server condition holds, and no link lifts it", () => {
+    const location = findPage("location")!;
+    const at = (held: boolean | undefined, deepLinked: string | null = null) =>
+      sectionsOf(location, {
+        level: "standard",
+        isGateOpen: () => true,
+        isAdmin: false,
+        deepLinked,
+        conditions: held === undefined ? undefined : { travTrackHeld: held },
+      }).shown;
+    expect(at(true)).toContain("travTrack");
+    expect(at(false)).not.toContain("travTrack");
+    expect(at(undefined)).not.toContain("travTrack");
+    expect(at(false, "travTrack")).not.toContain("travTrack");
+  });
 });

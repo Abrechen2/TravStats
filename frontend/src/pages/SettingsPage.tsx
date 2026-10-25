@@ -20,6 +20,7 @@ import {
 import { DomainOffNotice } from "../components/Settings/frame/DomainOffNotice";
 import type { SettingsMenuGroup } from "../components/Settings/frame/SettingsMenu";
 import SettingsSectionSwitch from "./Settings/SettingsSectionSwitch";
+import { useSectionConditions } from "./Settings/useSectionConditions";
 import { SettingsSearch } from "./Settings/SettingsSearch";
 import { useSearchScopes } from "./Settings/useSearchScopes";
 import { useSearchHighlight } from "./Settings/useSearchHighlight";
@@ -100,12 +101,20 @@ export default function SettingsPage(): JSX.Element {
 
   // The page of a switched-off domain says so instead of drawing its settings.
   const domainOff = current?.domain && !isEnabled(current.domain) ? current.domain : null;
+  const conditions = useSectionConditions();
+  const travTrackHeld = conditions.travTrackHeld === true;
   const visible = useMemo(
     () =>
       current && !domainOff
-        ? sectionsOf(current, { level, isGateOpen: isFeatureVisible, isAdmin, deepLinked: named })
+        ? sectionsOf(current, {
+            level,
+            isGateOpen: isFeatureVisible,
+            conditions: { travTrackHeld },
+            isAdmin,
+            deepLinked: named,
+          })
         : { shown: [], hiddenExpert: 0, hiddenExpertSettings: 0, deepLinkedExpert: null },
-    [current, domainOff, level, isFeatureVisible, isAdmin, named]
+    [current, domainOff, level, isFeatureVisible, travTrackHeld, isAdmin, named]
   );
   const inView = useSectionInView(visible.shown, "settings");
   // Every setting the standard level keeps off this page — whole expert

@@ -1,0 +1,112 @@
+{
+  "title": "Track",
+  "intro": "Dein eigener Standortverlauf aus TravTrack, Tag für Tag — nur für dich, nie geteilt.",
+  "day": {
+    "label": "Tag",
+    "previous": "Vorheriger Tag",
+    "next": "Nächster Tag",
+    "today": "Heute",
+    "loading": "Der Tag wird geladen …",
+    "empty": "An diesem Tag ist nichts aufgezeichnet.",
+    "points_one": "{{count}} Position",
+    "points_other": "{{count}} Positionen",
+    "truncated": "Dieser Tag hält mehr Positionen, als eine Ansicht zeigt — die Linie ist unvollständig.",
+    "map": "Karte des Tages"
+  },
+  "coverage": {
+    "title": "Was aufgezeichnet ist",
+    "recorded": "Aufgezeichnet",
+    "noData": "Keine Daten",
+    "deleted": "Gelöscht",
+    "phonePaused": "Telefon pausiert",
+    "piece": "{{state}}, {{from}}–{{to}}"
+  },
+  "timeline": {
+    "title": "Tagesablauf",
+    "none": "TravStats kennt an diesem Tag keinen Flug, keine Reise und keine Zeit zuhause.",
+    "flight": "Flug {{label}}",
+    "trip": "Reise „{{label}}“",
+    "home": "Zuhause ({{label}})",
+    "span": "{{from}}–{{to}}",
+    "endOfDay": "24:00"
+  },
+  "zones": {
+    "legend": "Deine Privatzonen sind als Kreise eingezeichnet; dort wird nichts aufgezeichnet."
+  },
+  "actions": {
+    "export": "Exportieren",
+    "delete": "Zeitraum löschen"
+  },
+  "export": {
+    "title": "Verlauf exportieren",
+    "intro": "Lädt deine TravTrack-Positionen dieser Tage herunter, beide eingeschlossen, auf der Uhr deines Profils. Was eine Privatzone verdeckt, ist nicht in der Datei.",
+    "from": "Vom",
+    "to": "Bis",
+    "format": "Format",
+    "gpx": "GPX — für Karten- und Sportprogramme",
+    "json": "JSON — alles, mit Pausen und gelöschten Zeiträumen",
+    "do": "Herunterladen",
+    "done": "Die Datei wurde heruntergeladen.",
+    "truncated": "Der Zeitraum hält mehr Positionen, als eine Datei trägt. Die Datei endet vorher — exportiere den Rest als eigenen Zeitraum."
+  },
+  "delete": {
+    "title": "Zeitraum löschen",
+    "intro": "Löscht alle Positionen dieser Tage, beide eingeschlossen, auf der Uhr deines Profils. Der Zeitraum bleibt gelöscht: Auch ein Handy, das noch offline war, bringt sie nicht zurück. Flüge und Reisen bleiben stehen.",
+    "from": "Vom",
+    "to": "Bis",
+    "counting": "Gespeicherte Positionen werden gezählt …",
+    "preview_one": "{{count}} gespeicherte Position wird gelöscht.",
+    "preview_other": "{{count}} gespeicherte Positionen werden gelöscht.",
+    "previewNone": "In diesem Zeitraum ist nichts gespeichert.",
+    "do": "Positionen löschen",
+    "done_one": "{{count}} Position gelöscht.",
+    "done_other": "{{count}} Positionen gelöscht."
+  },
+  "errors": {
+    "disabled": "TravTrack ist auf diesem Server ausgeschaltet. Was gespeichert ist, kannst du unter Einstellungen → Standort exportieren und löschen.",
+    "exportTooLong": "Ein Export umfasst höchstens 366 Tage. Wähle einen kürzeren Zeitraum.",
+    "zoneLimit": "Du hast schon so viele Privatzonen, wie es geben kann.",
+    "network": "Der Server ist gerade nicht erreichbar. Versuche es gleich noch einmal.",
+    "generic": "Das hat nicht geklappt. Versuche es erneut."
+  },
+  "settings": {
+    "intro": "Die Positionen, die deine Companion für TravTrack aufzeichnet, liegen hier auf deinem Server – nur für dich, nie geteilt oder föderiert. Gespeichert bleibt alles, bis du es löschst.",
+    "off": "TravTrack ist auf diesem Server ausgeschaltet: Es wird nichts mehr aufgezeichnet. Was gespeichert ist, kannst du hier weiter exportieren und löschen.",
+    "loadFailed": "TravTrack konnte nicht geladen werden. Lade die Seite neu.",
+    "empty": "Noch keine Positionen gespeichert.",
+    "summary": "{{count}} Positionen gespeichert, vom {{from}} bis {{to}}, von {{devices}} Gerät(en).",
+    "open": "Track öffnen",
+    "zones": {
+      "title": "Privatzonen",
+      "intro": "In einer Privatzone wird gar nichts aufgezeichnet: Die App sendet von dort keine Position, und der Server verwirft sie dort ebenfalls. Die Zonen gelten für alle deine Geräte.",
+      "none": "Noch keine Privatzone.",
+      "radius": "Umkreis {{metres}} m",
+      "radiusLabel": "Umkreis",
+      "name": "Name",
+      "namePlaceholder": "z. B. Zuhause",
+      "centre": "Mittelpunkt",
+      "centreHint": "Koordinaten oder ein Google-Maps-Link, z. B. 52.5200, 13.4050",
+      "centreInvalid": "Diese Koordinaten kann TravStats nicht lesen.",
+      "add": "Privatzone anlegen",
+      "added": "Privatzone angelegt.",
+      "addedDeleted": "Privatzone angelegt, {{count}} gespeicherte Positionen darin gelöscht.",
+      "confirmTitle": "Positionen in der Zone löschen?",
+      "confirmMessage": "In dieser Zone liegen schon {{count}} gespeicherte Positionen. Mit der Zone werden sie gelöscht – das lässt sich nicht rückgängig machen.",
+      "confirmDo": "Löschen und anlegen",
+      "notSaved": "Die Privatzone wurde nicht gespeichert. Versuche es erneut.",
+      "remove": "Entfernen",
+      "removeConfirm": "Privatzone „{{name}}“ entfernen? Dort wird dann wieder aufgezeichnet; was die Zone gelöscht hat, bleibt gelöscht.",
+      "notRemoved": "Die Privatzone wurde nicht entfernt. Versuche es erneut."
+    },
+    "delete": {
+      "title": "Zeitraum löschen",
+      "intro": "Löscht alle Positionen dieser Tage, beide eingeschlossen, auf der Uhr deines Profils. Der Zeitraum bleibt gelöscht: Auch ein Handy, das noch offline war, bringt sie nicht zurück.",
+      "from": "Vom",
+      "to": "Bis",
+      "do": "Positionen löschen",
+      "confirm": "Alle {{count}} Positionen vom {{from}} bis {{to}} löschen? Das lässt sich nicht rückgängig machen.",
+      "done": "{{count}} Positionen gelöscht.",
+      "notDone": "Die Positionen wurden nicht gelöscht. Versuche es erneut."
+    }
+  }
+}

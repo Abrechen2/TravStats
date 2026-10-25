@@ -46,6 +46,7 @@ export type SettingsSectionId =
   | "calendarFeed"
   | "dawarich"
   | "locationProvider"
+  | "travTrack"
   | "tripRecording"
   | "stayScan"
   | "loyalty"
@@ -118,13 +119,15 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
   },
   {
     // The location source (TravTrack plan S5) first — it decides what the
-    // rest of the page does — then the Dawarich connection, the app's trip
-    // recording and the stay scan.
+    // rest of the page does — then TravTrack's own history (plan T6, shown
+    // while the account holds data or the instance shows TravTrack), the
+    // Dawarich connection, the app's trip recording and the stay scan.
     id: "location",
     labelKey: "settings:groups.location",
     icon: "map-pin",
     sections: [
       section("locationProvider"),
+      section("travTrack", "standard", { when: "travTrackHeld" }),
       section("dawarich"),
       section("tripRecording"),
       section("stayScan", "expert", { settings: 4 }),

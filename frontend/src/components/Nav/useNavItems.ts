@@ -5,6 +5,7 @@ import { useAuthStore } from "../../store/authStore";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { useTravPlanVisible } from "../../hooks/useTravPlanVisible";
+import { useTravTrackVisible } from "../../hooks/useTravTrackVisible";
 import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
 import type { IconName } from "../ui/Icon";
 
@@ -88,6 +89,7 @@ export function useNavItems(): {
     "comparison",
     "encryptedShare",
     "travplan",
+    "track",
   ]);
   const user = useAuthStore((s) => s.user);
   const { isEnabled } = useEnabledDomains();
@@ -97,6 +99,7 @@ export function useNavItems(): {
   const comparisonVisible = isFeatureVisible("comparison");
   const encryptedShareVisible = isFeatureVisible("encryptedShare");
   const travPlanVisible = useTravPlanVisible();
+  const travTrackVisible = useTravTrackVisible();
 
   return useMemo(() => {
     // `poi` asks through `usePlacesVisible`, the one home of the places rule;
@@ -147,6 +150,20 @@ export function useNavItems(): {
         label: t("notes:title"),
         icon: "pencil",
       },
+      // The own location history, day by day (TravTrack plan T6): only with
+      // the beta key, the instance showing TravTrack and this account
+      // recording into it or holding data (`useTravTrackVisible`).
+      ...(travTrackVisible
+        ? [
+            {
+              kind: "leaf" as const,
+              id: "track",
+              path: "/track",
+              label: t("track:title"),
+              icon: "map-pin" as const,
+            },
+          ]
+        : []),
       // Built from flights alone, so it is offered only when flights are on —
       // an entry leading to a page that explains why it is empty is worse than
       // no entry.
@@ -265,5 +282,6 @@ export function useNavItems(): {
     comparisonVisible,
     encryptedShareVisible,
     travPlanVisible,
+    travTrackVisible,
   ]);
 }

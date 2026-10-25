@@ -152,7 +152,9 @@ export function pointsByDevice(
 }
 
 /** Every stretch of every device, `[tMs…]` raw — the GPX's `<trkseg>`s. */
-export function rawSegments(devices: readonly DevicePoints[]): StoredPoint[][] {
+export function rawSegments(
+  devices: ReadonlyArray<Pick<DevicePoints, "points" | "breaks">>
+): StoredPoint[][] {
   return devices.flatMap((d) => splitAtGaps(d.points, d.breaks));
 }
 
@@ -194,7 +196,9 @@ export function recordingDays(points: readonly StoredPoint[], zone: string): str
  * hands the event loop back every few milliseconds (`pacing.ts`) instead of
  * holding every other request for the length of the recording.
  */
-export async function withoutJitter(devices: readonly DevicePoints[]): Promise<{
+export async function withoutJitter(
+  devices: ReadonlyArray<Pick<DevicePoints, "points" | "breaks">>
+): Promise<{
   segments: StoredPoint[][];
   dropped: number;
 }> {

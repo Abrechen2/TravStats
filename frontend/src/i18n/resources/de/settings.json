@@ -1060,7 +1060,8 @@
       "locationProvider": "Standortquelle, Standort, Positionen, TravTrack, Dawarich, Keine, Quelle wechseln, Aufzeichnung",
       "tripRecording": "Aufzeichnung, Positionen, App, Track, Reise aufzeichnen",
       "stayScan": "Aufenthalte, Aufenthalt erkennen, Radius, Mindestdauer, Märkte, Orte als Fläche, neu auswerten",
-      "companions": "Mitreisende, Begleitpersonen, Personen, Umbenennen, Zusammenführen, Doppelt, Duplikat, Löschen, Namen"
+      "companions": "Mitreisende, Begleitpersonen, Personen, Umbenennen, Zusammenführen, Doppelt, Duplikat, Löschen, Namen",
+      "travTrack": "TravTrack, Standortverlauf, Verlauf, Positionen, Privatzonen, Zone, Zeitraum löschen, Export, GPX"
     },
     "expertKeywords": {
       "suggestions": "Immich-Belege, Fotos als Beleg, Ortstyp, KI-Klassifizierung",
@@ -1333,5 +1334,8 @@
       "use": "Als Standortquelle verwenden",
       "done": "Dawarich ist jetzt deine Standortquelle."
     }
+  },
+  "travTrack": {
+    "title": "TravTrack"
   }
 }

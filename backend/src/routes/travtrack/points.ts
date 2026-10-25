@@ -9,13 +9,12 @@ import {
   LOCATION_MAX_BODY_BYTES,
   travTrackPointsQuerySchema,
   travTrackRangeQuerySchema,
+  travTrackSummaryQuerySchema,
   travTrackUploadSchema,
 } from "../../schemas/travtrack";
 import { deleteTravTrackRange } from "../../services/travtrack/deleteRange";
 import { ingestTravTrackPoints } from "../../services/travtrack/ingest";
-import { toInstant } from "../../shared/time/instant";
-import { fromDbDate, toDbDate } from "../../shared/time/localDate";
-import { profileZoneOf } from "../../shared/time/profileZone";
+import { resolveSpan } from "../../services/travtrack/range";
 import logger from "../../utils/logger";
 import { travTrackTier } from "./gate";
 import { entriesOfPoints } from "./pointEntries";
@@ -157,23 +156,31 @@ router.get(
   })
 );
 
-/** GET /travtrack/summary — how much is stored, from when to when, from which devices. */
+/**
+ * GET /travtrack/summary — how much is stored, from when to when, from which
+ * devices. With a span (named like a delete) it is that span's summary: the
+ * preview a delete dialog names its count from.
+ */
 router.get(
   "/travtrack/summary",
   authenticate,
   travTrackTier("held"),
   route(async (req, res) => {
     const userId = req.userId!;
+    const q = travTrackSummaryQuerySchema.parse(req.query);
+    const span =
+      q.from !== undefined || q.fromDay !== undefined ? await resolveSpan(userId, q) : null;
+    const where = span ? { userId, t: { gte: span.from, lt: span.to } } : { userId };
     const [agg, devices, deletedRanges, zones] = await Promise.all([
       prisma.travTrackPoint.aggregate({
-        where: { userId },
+        where,
         _count: { _all: true },
         _min: { t: true },
         _max: { t: true, createdAt: true },
       }),
       prisma.travTrackPoint.groupBy({
         by: ["deviceId"],
-        where: { userId },
+        where,
         _count: { _all: true },
       }),
       prisma.travTrackDeletedRange.count({ where: { userId } }),
@@ -193,10 +200,6 @@ router.get(
   })
 );
 
-/** Midnight starting `day` on `zone`'s clock; a midnight the zone skips is placed, not refused. */
-const midnightOf = (day: string, zone: string): Date =>
-  toInstant(`${day}T00:00:00`, zone, { origin: "machine" }).utc;
-
 /**
  * DELETE /travtrack/points?from&to (instants) or ?fromDay&toDay (days, both
  * inclusive, on the profile's clock) — every point of the span, and the span
@@ -210,17 +213,7 @@ router.delete(
   rejectDemo,
   route(async (req, res) => {
     const userId = req.userId!;
-    const q = travTrackRangeQuerySchema.parse(req.query);
-    let from: Date;
-    let to: Date;
-    if (q.fromDay !== undefined && q.toDay !== undefined) {
-      const { zone } = await profileZoneOf(userId);
-      from = midnightOf(q.fromDay, zone);
-      to = midnightOf(fromDbDate(new Date(toDbDate(q.toDay).getTime() + 86_400_000)), zone);
-    } else {
-      from = new Date(q.from!);
-      to = new Date(q.to!);
-    }
+    const { from, to } = await resolveSpan(userId, travTrackRangeQuerySchema.parse(req.query));
     const { deleted, gapsClipped } = await deleteTravTrackRange(userId, from, to);
     logger.info({ operation: "travtrack.points.delete", deleted, gapsClipped });
     res.json({ deleted });

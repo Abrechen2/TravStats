@@ -110,6 +110,8 @@ describe("TravTrack gate", () => {
       "post /travtrack/zones": "on",
       "patch /travtrack/zones/:id": "on",
       "delete /travtrack/zones/:id": "held",
+      "get /travtrack/day": "on",
+      "get /travtrack/export": "held",
     });
   });
 

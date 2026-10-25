@@ -52,36 +52,70 @@ export const travTrackPointsQuerySchema = z.object({
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
+/** The four ways to name a span: two instants, or two days on the profile clock. */
+const rangeFields = {
+  from: z.string().datetime({ offset: true }).optional().describe("Inclusive instant"),
+  to: z.string().datetime({ offset: true }).optional().describe("Exclusive instant"),
+  fromDay: day.optional().describe("First day, inclusive, on the profile's clock"),
+  toDay: day.optional().describe("Last day, inclusive, on the profile's clock"),
+};
+
+type RangeFields = {
+  from?: string;
+  to?: string;
+  fromDay?: string;
+  toDay?: string;
+};
+
+const oneForm = (q: RangeFields) =>
+  (q.from !== undefined &&
+    q.to !== undefined &&
+    q.fromDay === undefined &&
+    q.toDay === undefined) ||
+  (q.fromDay !== undefined && q.toDay !== undefined && q.from === undefined && q.to === undefined);
+
+const inOrder = (q: RangeFields) =>
+  q.from !== undefined && q.to !== undefined
+    ? Date.parse(q.from) < Date.parse(q.to)
+    : (q.fromDay ?? "") <= (q.toDay ?? "");
+
 /**
  * A span to delete: two instants, or two calendar days (both inclusive) on the
  * account's profile clock — what a person picks in a form.
  */
 export const travTrackRangeQuerySchema = z
-  .object({
-    from: z.string().datetime({ offset: true }).optional().describe("Inclusive instant"),
-    to: z.string().datetime({ offset: true }).optional().describe("Exclusive instant"),
-    fromDay: day.optional().describe("First day, inclusive, on the profile's clock"),
-    toDay: day.optional().describe("Last day, inclusive, on the profile's clock"),
-  })
+  .object(rangeFields)
+  .refine(oneForm, "Either `from` and `to`, or `fromDay` and `toDay`")
+  .refine(inOrder, "The span must not end before it starts");
+
+export type TravTrackRangeQuery = z.infer<typeof travTrackRangeQuerySchema>;
+
+/** The summary of everything, or of one span named like a delete (its preview). */
+export const travTrackSummaryQuerySchema = z
+  .object(rangeFields)
   .refine(
-    (q) =>
-      (q.from !== undefined &&
-        q.to !== undefined &&
-        q.fromDay === undefined &&
-        q.toDay === undefined) ||
-      (q.fromDay !== undefined &&
-        q.toDay !== undefined &&
-        q.from === undefined &&
-        q.to === undefined),
-    "Either `from` and `to`, or `fromDay` and `toDay`"
+    (q) => Object.values(q).every((v) => v === undefined) || oneForm(q),
+    "No span, or `from` and `to`, or `fromDay` and `toDay`"
   )
-  .refine(
-    (q) =>
-      q.from !== undefined && q.to !== undefined
-        ? Date.parse(q.from) < Date.parse(q.to)
-        : (q.fromDay ?? "") <= (q.toDay ?? ""),
-    "The span must not end before it starts"
-  );
+  .refine((q) => Object.values(q).every((v) => v === undefined) || inOrder(q), {
+    message: "The span must not end before it starts",
+  });
+
+/** One day of the history on the profile clock (`GET /travtrack/day`). */
+export const travTrackDayQuerySchema = z.object({
+  date: day.describe("The day, `YYYY-MM-DD`, on the profile's clock"),
+});
+
+/** The longest span one export answers. */
+export const TRAVTRACK_EXPORT_MAX_DAYS = 366;
+
+export const travTrackExportQuerySchema = z
+  .object({
+    ...rangeFields,
+    format: z.enum(["gpx", "json"]).default("json").describe("GPX 1.1 or TravTrack's JSON"),
+  })
+  .refine(oneForm, "Either `from` and `to`, or `fromDay` and `toDay`")
+  .refine(inOrder, "The span must not end before it starts");
 
 /** A privacy zone (§3.6): a circle, named so the user knows it again. */
 const zoneFields = {

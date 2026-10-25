@@ -184,6 +184,12 @@ describe("TravTrack — /travtrack/points", () => {
         pt("after", "2026-10-13T15:00:00Z"),
       ],
     });
+    // The summary of the same days is the delete's preview: it names the same count.
+    const preview = await request(app)
+      .get("/api/v1/travtrack/summary")
+      .query({ fromDay: "2026-10-12", toDay: "2026-10-13" })
+      .set("Cookie", cookie);
+    expect(preview.body).toMatchObject({ pointCount: 2, firstAt: "2026-10-11T15:00:00.000Z" });
     const del = await request(app)
       .delete("/api/v1/travtrack/points")
       .query({ fromDay: "2026-10-12", toDay: "2026-10-13" })

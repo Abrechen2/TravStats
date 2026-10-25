@@ -1,0 +1,112 @@
+{
+  "title": "Track",
+  "intro": "Your own location history from TravTrack, day by day — for you only, never shared.",
+  "day": {
+    "label": "Day",
+    "previous": "Previous day",
+    "next": "Next day",
+    "today": "Today",
+    "loading": "Loading the day …",
+    "empty": "Nothing was recorded on this day.",
+    "points_one": "{{count}} position",
+    "points_other": "{{count}} positions",
+    "truncated": "This day holds more positions than one view shows — the line is incomplete.",
+    "map": "Map of the day"
+  },
+  "coverage": {
+    "title": "What is recorded",
+    "recorded": "Recorded",
+    "noData": "No data",
+    "deleted": "Deleted",
+    "phonePaused": "Phone paused",
+    "piece": "{{state}}, {{from}}–{{to}}"
+  },
+  "timeline": {
+    "title": "The day",
+    "none": "TravStats knows of no flight, no trip and no time at home on this day.",
+    "flight": "Flight {{label}}",
+    "trip": "Trip “{{label}}”",
+    "home": "Home ({{label}})",
+    "span": "{{from}}–{{to}}",
+    "endOfDay": "24:00"
+  },
+  "zones": {
+    "legend": "Your privacy zones are drawn as circles; nothing is recorded inside them."
+  },
+  "actions": {
+    "export": "Export",
+    "delete": "Delete a span"
+  },
+  "export": {
+    "title": "Export the history",
+    "intro": "Downloads your TravTrack positions of these days, both included, on your profile's clock. What a privacy zone hides is not in the file.",
+    "from": "From",
+    "to": "To",
+    "format": "Format",
+    "gpx": "GPX — for map and sports apps",
+    "json": "JSON — everything, with pauses and deleted spans",
+    "do": "Download",
+    "done": "The file was downloaded.",
+    "truncated": "This span holds more positions than one file carries. The file ends early — export the rest as a span of its own."
+  },
+  "delete": {
+    "title": "Delete a span",
+    "intro": "Deletes every position of these days, both included, on your profile's clock. The span stays deleted: not even a phone that was still offline brings them back. Flights and trips stay.",
+    "from": "From",
+    "to": "To",
+    "counting": "Counting the stored positions …",
+    "preview_one": "{{count}} stored position will be deleted.",
+    "preview_other": "{{count}} stored positions will be deleted.",
+    "previewNone": "Nothing is stored in this span.",
+    "do": "Delete positions",
+    "done_one": "{{count}} position deleted.",
+    "done_other": "{{count}} positions deleted."
+  },
+  "errors": {
+    "disabled": "TravTrack is switched off on this server. What is stored can still be exported and deleted under Settings → Location.",
+    "exportTooLong": "An export covers at most 366 days. Pick a shorter span.",
+    "zoneLimit": "You already have as many privacy zones as there can be.",
+    "network": "The server cannot be reached right now. Try again in a moment.",
+    "generic": "That did not work. Try again."
+  },
+  "settings": {
+    "intro": "The positions your Companion records for TravTrack live here on your server – for you only, never shared or federated. They stay until you delete them.",
+    "off": "TravTrack is switched off on this server: nothing more is recorded. What is stored you can still export and delete here.",
+    "loadFailed": "TravTrack could not be loaded. Reload the page.",
+    "empty": "No positions stored yet.",
+    "summary": "{{count}} positions stored, from {{from}} to {{to}}, from {{devices}} device(s).",
+    "open": "Open Track",
+    "zones": {
+      "title": "Privacy zones",
+      "intro": "Inside a privacy zone nothing is recorded at all: the app sends no position from there, and the server drops it there too. The zones apply to all your devices.",
+      "none": "No privacy zone yet.",
+      "radius": "Radius {{metres}} m",
+      "radiusLabel": "Radius",
+      "name": "Name",
+      "namePlaceholder": "e.g. Home",
+      "centre": "Centre",
+      "centreHint": "Coordinates or a Google Maps link, e.g. 52.5200, 13.4050",
+      "centreInvalid": "TravStats cannot read these coordinates.",
+      "add": "Add privacy zone",
+      "added": "Privacy zone added.",
+      "addedDeleted": "Privacy zone added, {{count}} stored positions inside it deleted.",
+      "confirmTitle": "Delete the positions inside the zone?",
+      "confirmMessage": "{{count}} stored positions already lie inside this zone. Adding the zone deletes them – this cannot be undone.",
+      "confirmDo": "Delete and add",
+      "notSaved": "The privacy zone was not saved. Try again.",
+      "remove": "Remove",
+      "removeConfirm": "Remove the privacy zone “{{name}}”? Recording resumes there; what the zone deleted stays deleted.",
+      "notRemoved": "The privacy zone was not removed. Try again."
+    },
+    "delete": {
+      "title": "Delete a span",
+      "intro": "Deletes every position of these days, both included, on your profile's clock. The span stays deleted: not even a phone that was still offline brings them back.",
+      "from": "From",
+      "to": "To",
+      "do": "Delete positions",
+      "confirm": "Delete all {{count}} positions from {{from}} to {{to}}? This cannot be undone.",
+      "done": "{{count}} positions deleted.",
+      "notDone": "The positions were not deleted. Try again."
+    }
+  }
+}

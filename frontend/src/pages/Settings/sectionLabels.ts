@@ -25,6 +25,7 @@ export const SECTION_LABEL_KEY: Record<SettingsSectionId, string> = {
   calendarFeed: "settings:calendarFeed.title",
   dawarich: "trips:tours.dawarichSettings.title",
   locationProvider: "settings:locationProvider.title",
+  travTrack: "settings:travTrack.title",
   tripRecording: "settings:tripRecording.title",
   stayScan: "trips:dawarichStays.title",
   loyalty: "settings:memberships.title",

@@ -96,6 +96,7 @@ import "./dawarichStayIdentity";
 
 import "./travplan";
 import "./travtrack";
+import "./travtrackDay";
 
 import "./geoServer";
 import "./mapConfig";

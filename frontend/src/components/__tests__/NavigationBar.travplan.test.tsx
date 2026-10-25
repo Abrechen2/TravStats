@@ -23,6 +23,18 @@ vi.mock("../../lib/api/sharing", () => ({
 vi.mock("../../lib/api/travplan", () => ({
   travplanApi: { capabilities: mocks.capabilities },
 }));
+// TravTrack asks its own capabilities; it has no part in this suite (closed).
+vi.mock("../../lib/api/travtrack", () => ({
+  travTrackApi: {
+    capabilities: vi.fn().mockResolvedValue({
+      version: 1,
+      offered: false,
+      enabled: false,
+      active: false,
+      hasData: false,
+    }),
+  },
+}));
 vi.mock("../UpdateBadge", () => ({ default: () => null }));
 vi.mock("../Nav/UserMenu", () => ({ default: () => null }));
 vi.mock("../Nav/MoreMenu", () => ({

@@ -6,6 +6,7 @@ import {
   LOCATION_MAX_POINTS,
   travTrackPointsQuerySchema,
   travTrackRangeQuerySchema,
+  travTrackSummaryQuerySchema,
   travTrackZoneCreateSchema,
   travTrackZoneUpdateSchema,
 } from "../../../schemas/travtrack";
@@ -228,8 +229,11 @@ registry.registerPath({
   method: "get",
   path: "/travtrack/summary",
   summary: "How much TravTrack history is stored",
-  description: "Reachable with TravTrack off while the account holds data.",
+  description:
+    "Reachable with TravTrack off while the account holds data. With a span (named like a " +
+    "delete) it is that span's summary — the count a delete dialog names before deleting.",
   tags: ["TravTrack"],
+  request: { query: travTrackSummaryQuerySchema },
   responses: {
     200: {
       description: "The summary; zero points is an answer",

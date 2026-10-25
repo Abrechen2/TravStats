@@ -11,6 +11,11 @@ vi.mock("../../../store/authStore", () => ({
   useAuthStore: (sel?: (s: typeof authState) => unknown) => (sel ? sel(authState) : authState),
 }));
 
+const travTrack = vi.hoisted(() => ({ visible: false }));
+vi.mock("../../../hooks/useTravTrackVisible", () => ({
+  useTravTrackVisible: () => travTrack.visible,
+}));
+
 vi.unmock("../../../store/settingsStore");
 
 import {
@@ -89,6 +94,15 @@ describe("useNavItems — Mehr › Sammlungen", () => {
     const { primary, more } = run();
     expect(primary.some((n) => n.id === "achievements")).toBe(false);
     expect(section(more, "collections").map((i) => i.path)).toContain("/achievements");
+  });
+
+  // TravTrack plan T6: the rule lives in `useTravTrackVisible`; the menu follows it.
+  it("offers Track in Sammlungen exactly when TravTrack is offered to the account", () => {
+    travTrack.visible = false;
+    expect(section(run().more, "collections").map((i) => i.path)).not.toContain("/track");
+    travTrack.visible = true;
+    expect(section(run().more, "collections").map((i) => i.path)).toContain("/track");
+    travTrack.visible = false;
   });
 
   // forgejo#137: a note needs no domain, so the entry does not either.

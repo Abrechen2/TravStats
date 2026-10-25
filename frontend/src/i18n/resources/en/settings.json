@@ -1060,7 +1060,8 @@
       "locationProvider": "Location source, location, positions, TravTrack, Dawarich, none, switch source, recording",
       "tripRecording": "Recording, positions, app, track, record trip",
       "stayScan": "Stays, detect stays, radius, minimum duration, markets, places as areas, re-evaluate",
-      "companions": "Companions, travel companions, people, rename, merge, duplicate, delete, names"
+      "companions": "Companions, travel companions, people, rename, merge, duplicate, delete, names",
+      "travTrack": "TravTrack, location history, history, positions, privacy zones, zone, delete span, export, GPX"
     },
     "expertKeywords": {
       "suggestions": "Immich evidence, photos as evidence, place type, AI classification",
@@ -1333,5 +1334,8 @@
       "use": "Use as location source",
       "done": "Dawarich is now your location source."
     }
+  },
+  "travTrack": {
+    "title": "TravTrack"
   }
 }

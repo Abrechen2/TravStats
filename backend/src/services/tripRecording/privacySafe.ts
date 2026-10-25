@@ -18,18 +18,31 @@ import { splitAtGaps, type DevicePoints, type RecordingBreak, type StoredPoint }
 
 const coord = (p: StoredPoint): [number, number] => [p[2], p[1]];
 
+/**
+ * Stretches cut by the circles: a vertex inside goes, a chord through one
+ * breaks the stretch, and a piece the cut leaves with a single vertex goes. A
+ * stretch of one fix is a stretch the cut did not make: kept unless it lies
+ * inside. The stretches as they may leave the server.
+ */
+export function privacySafeStretches(
+  stretches: readonly StoredPoint[][],
+  circles: readonly ZoneCircle[]
+): StoredPoint[][] {
+  if (circles.length === 0) return stretches.map((s) => [...s]);
+  return stretches.flatMap((stretch) =>
+    stretch.length === 1
+      ? privacyCutBy([[stretch[0], stretch[0]]], circles, coord).map(() => [stretch[0]])
+      : privacyCutBy([stretch], circles, coord)
+  );
+}
+
 export function privacySafeDevices(
   devices: readonly DevicePoints[],
   circles: readonly ZoneCircle[]
 ): DevicePoints[] {
   if (circles.length === 0) return [...devices];
   return devices.flatMap((device) => {
-    // A stretch of one fix is a stretch the cut did not make: kept unless it lies inside.
-    const pieces = splitAtGaps(device.points, device.breaks).flatMap((stretch) =>
-      stretch.length === 1
-        ? privacyCutBy([[stretch[0], stretch[0]]], circles, coord).map(() => stretch)
-        : privacyCutBy([stretch], circles, coord)
-    );
+    const pieces = privacySafeStretches(splitAtGaps(device.points, device.breaks), circles);
     if (pieces.length === 0) return [];
     const breaks: RecordingBreak[] = [...(device.breaks ?? [])];
     for (let k = 1; k < pieces.length; k++) {

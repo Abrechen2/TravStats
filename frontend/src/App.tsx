@@ -57,6 +57,7 @@ import NavigationBar from "./components/NavigationBar";
 import { AdminOnlyNotice } from "./components/AdminOnlyNotice";
 import { LOYALTY_SETTINGS_PATH } from "./pages/Settings/settingsModel";
 import { planRoutes } from "./pages/planRoutes";
+import { trackRoutes } from "./pages/Track/trackRoutes";
 const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage"));
 const TripsPage = lazy(() => import("./pages/TripsPage"));
@@ -256,6 +257,7 @@ function AppContent() {
               {/* Public routes */}
               <Route path="/setup" element={<SetupPage />} />
               {planRoutes(isAuthenticated)}
+              {trackRoutes(isAuthenticated)}
               <Route
                 path="/login"
                 element={isAuthenticated ? <Navigate to="/" /> : <LoginPage />}
