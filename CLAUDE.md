@@ -42,26 +42,7 @@ for `/deploy`. Dev branches never deploy.
 
 ### Who writes to `main` (since 2026-09-25)
 
-> **Paperclip is out of service since 2026-09-27** (owner). Nothing arrives
-> through Forgejo pull requests any more, so `main` has two writers again: the
-> owner and the Claude sessions. The Paperclip rows and rules below are kept
-> as the record of how it worked and what to restore if it comes back — they
-> bind nobody while it is off. Rules 1 and 2 stay in force regardless: two
-> remotes can still disagree.
-
-"No PRs" above describes the Claude sessions, not everyone. `main` had
-three writers, and a plan computed against it minutes ago can be stale:
-
-| Writer | Route into `main` |
-|---|---|
-| The owner | Direct merge or push |
-| Claude sessions (PC, CT142) | Local merge on the owner's release decision, no PR |
-| ~~Paperclip agents~~ (CT 145, commits as `paperclip-bot`) — out of service since 2026-09-27 | Forgejo pull requests; merged only by the owner |
-
-On 2026-09-25 two Paperclip PRs were merged into `main` on Forgejo while a
-Claude session was integrating branches against the same `main`, and five
-CI commits existed only on Forgejo until a session fast-forwarded to them.
-Hence:
+Two writers: the owner and the Claude sessions. Three rules hold regardless:
 
 1. **Before moving `main`, fetch both remotes** (`git fetch origin main &&
    git fetch forgejo main`). If either moved, merge it into the branch being
@@ -69,17 +50,12 @@ Hence:
 2. **Fast-forward only, pushed to both remotes.** Never force-push `main`.
    When the two disagree, Forgejo is the side PRs land on — reconcile from it.
 3. **A Forgejo PR is `forgejo#N` in every commit message**, including the
-   merge commit. Forgejo's default "Merge pull request #128" becomes, once
-   the commit reaches GitHub, a link to GitHub #128 — a different thing (see
-   the reference rules under *Three trackers* below).
-4. **`.forgejo/workflows/`** was Paperclip's CI work (change it through a PR
-   or with the owner). While Paperclip is off it is ordinary repo config —
-   still change it deliberately, since the homelab runner executes it.
-5. **Paperclip work that matters for a release gets a Leitstand item.** The
-   board reads issues, not PRs, so an unrecorded PR is invisible there.
+   merge commit (Forgejo's default "Merge pull request #128" reads as GitHub
+   #128 once it reaches GitHub). `.forgejo/workflows/` runs on the homelab
+   runner — change it deliberately.
 
-Paperclip reads this file, not the private session memory on the owner's
-machines — a rule that must bind every writer belongs here.
+The three-writer era with Paperclip (2026-09-25 to -27) and its other rules:
+`docs/claude-md-history.md`.
 
 ### Long-running feature branches (e.g. `dev/multi-domain-v1`)
 
@@ -196,13 +172,8 @@ npm run check:coverage -- frontend
 npm run check:coverage -- backend
 ```
 
-This list is the real gate, and since 2026-09-15 CI runs almost all of it.
-`ci.yml` covers typecheck and lint in both trees, Vitest, Prettier on the whole
-tree (since forgejo#61), the **file-size ratchet** and the **schema-drift check** — the
-last two wired on 2026-09-15 (forgejo#60), having been runnable and unwired
-since 2026-09-01. The backend Jest job is **required** since 2026-09-16: it
-was advisory for a fortnight, then its first run that reached the suite at all
-went 524 of 524 on main, and the owner promoted it.
+CI (`.github/workflows/ci.yml`) runs all of this as required jobs; how it got
+there is in `docs/claude-md-history.md`.
 
 A green badge therefore covers the backend suite too. See **Rules** below for
 what is machine-enforced and what is not.
@@ -237,9 +208,6 @@ from — the schema enforces it, and it enforces the mirror rule too: a `github`
 or `forgejo` item must NOT carry a title, since its title is read live.
 
 ### Three trackers, and the two rules that make that safe
-
-Forgejo issues were once ruled out here, for two reasons that were correct and
-have both now been answered rather than argued away.
 
 **Reference collisions — solved by convention.** The numbering spaces are
 independent, and they have already collided: GitHub `#36` is a zod dependency
@@ -277,16 +245,10 @@ prose allows — "`dennis/TravStats` forgejo#42" costs four words and survives
 being quoted into an issue body, a changelog, or a chat log with no repository
 around it.
 
-**Board blindness — solved in the tool.** The objection that the Leitstand
-could only measure `github` items live, and would have to hand-copy the state
-of anything else, was true until 2026-08-30. It now has a `forgejo` source type
-that reads titles and open/closed state through the `tea` CLI, exactly as the
-`github` one shells out to `gh`, including the unassigned column. Configure it
-with a `forgejo:` block in `roadmap.local.yaml`.
-
-So: `source: { type: forgejo, ref: 36 }` is a first-class board item, carries no
-title, and is measured live. A finding the board cannot see is a finding nobody
-is measuring — that was the real objection, and it no longer applies.
+The Leitstand measures Forgejo items live through `tea`, as it does GitHub
+through `gh`: `source: { type: forgejo, ref: 36 }` is a first-class board item
+and carries no title. Configure it with a `forgejo:` block in
+`roadmap.local.yaml`.
 
 **Which tracker.** GitHub is the published statement: it is what a stranger
 reads to judge whether the project is alive and honest, so it stays signal-only
@@ -413,22 +375,13 @@ enforced, and merely practised** below.
 - **Beta gating (since 2.4.0)** — unfinished features register in
   `frontend/src/config/betaFeatures.ts` and hide behind `betaFeaturesEnabled`
   (admin_settings column, default `false`). **That registry is the list — do
-  not restate it here**; a list in prose beside a list in code is a list that
-  is wrong. Each entry carries `why` it is hidden and `returnsWhen` it may
-  come back, and a test fails when either is missing. Un-gating means deleting
-  the entry AND every `isFeatureVisible` call it named — a gate left wired to a
-  key that no longer exists reads like a gate that is still there. Two standing
-  notes: the flag is instance state, never persisted client-side (see the
-  `partialize` in `settingsStore.ts`); and the whole point of `returnsWhen` is
-  that it is acted on — on 2026-09-01 `devicePairing`, `tourRoutes` and
-  `dawarich` came off together, the first because the phone app it named
-  (TravStatsCompanion, not the abandoned TravStatsApp the entry still said)
-  had shipped while the gate hid the only place a claim code is minted, and
-  the last because releasing tour routes WAS the event its own `returnsWhen`
-  was waiting for. And on 2026-09-05, reading the 2.6.0 announcement that
-  called them "out of beta", the owner ruled all three beta and put them back
-  behind the switch (2.6.0 was re-cut) — a `returnsWhen` that has come true is a reason
-  to ask, not a licence to ship.
+  not restate it here.** Each entry carries `why` it is hidden and
+  `returnsWhen` it may come back, and a test fails when either is missing.
+  Un-gating deletes the entry AND every `isFeatureVisible` call it named. The
+  flag is instance state, never persisted client-side (`partialize` in
+  `settingsStore.ts`). A `returnsWhen` that has come true is a reason to ask
+  the owner, not a licence to ship (the 2026-09-01/-05 episode is in
+  `docs/claude-md-history.md`).
 - **Map colour modes (since 2.4.0)** — flight and cruise colouring are
   explicit modes (`lib/flightColor.ts`, `lib/cruiseColor.ts` + their
   Zustand stores). Layers AND the legend must resolve colours through
@@ -464,33 +417,20 @@ enforced, and merely practised** below.
   day (`components/Cruise/cruiseDayNumbers.ts`). It also clears
   `unresolvedPortName` whenever a stop becomes a matched port or a sea day.
 - **Dashboard is multi-domain** — `frontend/src/pages/DashboardPage.tsx` is a thin shell delegating to per-tab components under `frontend/src/components/Dashboard/tabs/`. Tab modes are domain-scoped via `frontend/src/types/dashboard.ts` (no more global `VisMode` union). URL carries tab + mode (`/dashboard/<tab>?mode=<mode>`); `localStorage` remembers the last mode per domain. `MapContainer3D` uses a private `MapMode = "routes" | "heatmap" | "trips" | "globe"` internally; retired modes `hexagon`, `contour`, `columns`, `trip-routes` are gone. Flight-only modes are opt-in via `showInternalCruises={false}` on FlightsTab.
-- **Cruise sea-routes** — `backend/src/services/schematicRouter.ts` runs
-  the schematic pipeline (coarse 1° A* water path → Douglas-Peucker
-  simplification to 3–8 waypoints; raw port coords are always the
-  first/last waypoint; if A* fails on a truly disconnected sea it returns
-  a straight `[dep, arr]` chord). This **replaced** the old Hybrid-v2 A*
-  pipeline (`seaRouter.ts`, removed) — the route-cache table was dropped
-  too (migration `20260425200000_drop_cruise_route_cache`; no more
-  `CruiseRouteCache` / `CACHE_VERSION`). The frontend fetches the
-  waypoints per leg via `GET /api/v1/cruises/:id/geometry` and runs a
-  Catmull-Rom spline through them; the dashboard Cruises tab consumes
-  this via `MapContainer3D`. When the backend returns no geometry for a
-  leg, `buildCruiseArcs` (`frontend/src/components/layers/cruiseArcsLayer.ts`)
-  falls back to a straight chord `[[a.lon,a.lat],[b.lon,b.lat]]` — there
-  is no `buildCruiseArc` Bezier helper anymore. Prototype iteration for
-  routing algorithms lives in `tools/sea-route-lab/` — not wired into the
-  app, browser-only.
-- **Marnet shipping-lane router is in-house** — the abandoned
-  `searoute-ts` npm package was dropped on 2026-04-30 (its extensionless
-  ESM imports broke silently on Node ≥ 22, so every cruise leg was
-  falling through to the coarse 1° fallback for weeks). The vendored
-  Eurostat marnet GeoJSON now lives at `backend/data/marnet/marnet.geojson`
-  and is loaded by `services/marnet/marnetGraph.ts` (graph + A*). The
-  high-level entry point is `routeMarnet()` in `services/marnet/marnetRouter.ts`.
-  Both `services/schematicRouter.ts` and `services/cruiseDistance/marnetCalculator.ts`
-  consume it. The Dockerfile copies `backend/data/marnet/marnet.geojson`
-  into the production image alongside the land mask — without it the
-  router throws ENOENT on first cruise request.
+- **Cruise sea-routes** — `backend/src/services/schematicRouter.ts`: coarse
+  1° A* water path → Douglas-Peucker to 3–8 waypoints; raw port coords are
+  always first/last; a disconnected sea yields a straight `[dep, arr]` chord.
+  There is no route cache. The frontend fetches waypoints per leg via
+  `GET /api/v1/cruises/:id/geometry` and runs a Catmull-Rom spline through
+  them; with no geometry, `buildCruiseArcs` (`components/layers/cruiseArcsLayer.ts`)
+  draws a straight chord. `tools/sea-route-lab/` is a browser-only prototype
+  bench, not wired into the app.
+- **Marnet shipping-lane router is in-house** (`searoute-ts` was dropped) —
+  `backend/data/marnet/marnet.geojson`, loaded by `services/marnet/marnetGraph.ts`,
+  entry point `routeMarnet()` in `services/marnet/marnetRouter.ts`, used by
+  `schematicRouter.ts` and `cruiseDistance/marnetCalculator.ts`. The Dockerfile
+  must copy the GeoJSON into the image, or the first cruise request throws
+  ENOENT.
 - **Ship + Port seeds are idempotent** — `seedShipsFromCSV` /
   `seedPortsFromCSV` skip rows whose `imo` / `unlocode` already exists.
   User-added rows (`isUserAdded=true`) are never overwritten by
@@ -518,13 +458,8 @@ enforced, and merely practised** below.
   of freezing forever. A nightly cron sweep (`jobs/airlineLogoRefreshScheduler.ts`,
   3 AM UTC) plus an admin re-sync (`POST /admin/airline-logos/refresh`) keep stored
   logos current.
-- **Schema drift** — the two cruise migrations (`20260419120000_cruise_module`,
-  `20260419130000_cruise_fixups`) were hand-written because schema.prisma had
-  drift that `prisma migrate dev` would have bundled into any new migration.
-  That is over; `prisma migrate dev` is normal again. This paragraph used to
-  carry the measurement, and claimed the opposite for months after it stopped
-  being true — which cost a design decision. `npm run check:drift` answers it
-  now, so ask the check, not the doc.
+- **Schema drift** — ask `npm run check:drift`, not a doc. `prisma migrate dev`
+  is normal (history: `docs/claude-md-history.md`).
 - **Cruise parser is live** —
   `backend/src/services/cruiseBookingParser.ts` implements the full
   AIDA / TUI / generic-LLM extraction pipeline. It is wired into
@@ -618,11 +553,6 @@ The split is the point. An **enforced** rule has a named check that fails; a
 into the first list without naming its check, and do not read the second list
 as decoration — it is where the properties worth the most currently live.
 
-The gap is a tooling one, not a discipline one, and it is measurable: the
-`any` ban has three violations in this tree and all three are the word "any"
-in an English sentence, while the 800-line limit — stated for just as long,
-checked by nothing until now — is broken by 21 files, the largest at 2161.
-
 ### Enforced
 
 | Rule | Check |
@@ -664,60 +594,27 @@ refuses to lower. The frontend figure counts EVERY source file
 denominator and reported 65.81 % instead of 56.21 %.
 
 **Where they run.** The pre-commit hooks and two workflows are automatic.
-`ci.yml` (2026-08-30) runs typecheck + lint for both trees, Vitest, and
-Prettier on the whole tree (since forgejo#61) as required jobs, and — since 2026-09-16 —
-the backend Jest suite as a required one too; its comment block keeps the
-history of why it was advisory until then. `security.yml` runs
-`npm audit` on production deps (the gate) and Trivy (a report in the job log)
-on every push to `main` and weekly. Nothing is uploaded to GitHub code
-scanning any more, and its CodeQL default setup is off (owner, 2026-10-25,
-the same move as Sublarr): the Security tab held 514 open alerts nobody
-triaged, mostly test code and unreachable dev chains. Dependabot alerts and
-security updates and secret scanning are untouched.
+`ci.yml` runs typecheck + lint for both trees, Vitest, the backend Jest suite,
+Prettier on the whole tree, `check:size` (`static` job) and `check:drift`
+(its own `schema-drift` job, the only static check that needs a database) as
+required jobs; the Jest/Vitest ratchets ride along with the suite that owns
+them. `security.yml` runs `npm audit` on production deps (the gate) and Trivy
+(a report in the job log) on every push to `main` and weekly. Nothing is
+uploaded to GitHub code scanning, and its CodeQL default setup is off (owner,
+2026-10-25); Dependabot alerts, security updates and secret scanning are on.
+A red job is never normal.
 
-`check:size` and `check:drift` DO run in CI since 2026-09-15 (forgejo#60) —
-size in the `static` job, drift in a `schema-drift` job of its own, because it
-is the only static check that needs a database. The four Jest/Vitest ratchets
-ride along with whichever suite owns them, which means the OpenAPI pair is
-exactly as binding as the backend job, which is required since 2026-09-16.
+**One drift script:** `backend/scripts/check-schema-drift.ts` replays the
+migrations (`--from-migrations`); `npm run check:drift` at the root delegates
+to it. A postgis diff is a real signal, not noise.
 
-**"Run in CI" was, until 2026-09-16, "is red in CI".** Both database jobs
-failed on every run from the day they were wired: the service image was
-`postgres:16-alpine`, which has no PostGIS, so `migrate deploy` in the Jest job
-and the migration replay in the drift job died on `CREATE EXTENSION postgis`;
-and `prisma migrate diff` does not create the shadow database it is pointed at
-(P1003), which every developer running `check:drift` the documented way met
-too. The images are `postgis/postgis:16-3.4` now and the script creates its
-shadow. Nobody noticed for a day because both jobs looked like the known
-advisory red — which is the argument for a red job never being normal.
+**The 800-line number is ratified** (owner, 2026-09-05). Files already over it
+are frozen in `scripts/file-size-baseline.json`: a listed file may shrink,
+never grow, and leaves the list at 800 or below — `--update` refuses to raise
+an entry.
 
-The delay cost exactly what the ratchet exists to prevent: on 2026-09-15 a
-branch landed on main with four files grown past their frozen size, and nobody
-saw it, because nothing asked. This paragraph has a history of being wrong in
-the other direction too — it claimed "only Prettier" for a week after `ci.yml`
-landed (corrected 2026-09-06), and the two plan docs that called drift
-"CI-guarded" before it was were corrected on 2026-09-04.
-
-**One drift script, since 2026-09-01.** There were two, and they disagreed:
-`scripts/check-schema-drift.mjs` at the root replayed the migrations into a
-shadow DB, while `backend/scripts/check-schema-drift.ts` compared against the
-connected database because `--from-migrations` reported postgis as false
-drift under the `postgresqlExtensions` preview feature. That feature left
-`schema.prisma`, the objection expired with it, and `e24c9a57` (forgejo#74)
-deleted the root script and moved the backend one onto `--from-migrations`.
-`npm run check:drift` at the root delegates to it. A postgis diff, should
-one ever appear again, is the feature coming back — not noise.
-
-**The 800-line number is ratified** (owner, 2026-09-05). What was settled
-first is the shape: a limit, a frozen baseline, and a list that only shrinks.
-`check-file-size.mjs` scans `backend/src` and `frontend/src` (tests and seed
-scripts excluded); 21 files already exceed 800 and are frozen at their
-current size in `scripts/file-size-baseline.json`, the largest at 2161. A
-listed file may shrink, may never grow, and must leave the list at 800 or
-below — `--update` refuses to raise an entry. The number was provisional for
-four days — it was what CLAUDE.md happened to say — and was confirmed as the
-rule on 2026-09-05 together with the design-system decisions in
-`ClaudeDesign/handoff/2026-09-05-web-redesign-rueckmeldung.md` §9.
+History of all three (red CI until 2026-09-16, the two drift scripts, the
+provisional number): `docs/claude-md-history.md`.
 
 ### Practised, not enforced
 
@@ -745,9 +642,7 @@ check.
   already drifted". Most are mirrored backend↔frontend with a "change both
   together" header, and **nothing checks the mirrors** — each side has its own
   test asserting the same truth table, which is a convention, not a guard.
-  `shared/flightCounting.ts` is the same move for flights; it lives on
-  `refactor/flight-counting-predicate` and is not merged, so
-  `status === 'flown' || status === 'historical'` is still inlined here.
+  `shared/flightCounting.ts` is the same move for flights.
 - **Comments justify, they do not describe.** The good ones name the defect
   that appeared when the code was the other way, and what it measured:
   `airportLookup.ts` on merge precedence ("measured at 242 of 878 airport
@@ -756,22 +651,9 @@ check.
   answer within 240 s — which is why a hotel confirmation timed out");
   `config/constants.ts` on why a seed needs 1000 rows, not one ("measured in
   the wild at 57 rows"). A comment restating the line below it is noise.
-- **Never document an invariant you do not test.** The OpenAPI description of
-  `/stats/timeseries` claimed it grouped by "the departure airport's calendar
-  day" while `utils/stats/timeseries.ts` bucketed on `getUTCFullYear` /
-  `getUTCMonth` and never consulted the timezone map the same route built for
-  durations. No test could have caught it: `stats.timeseries.test.ts` stubs the
-  airport cache empty, so the zone was structurally unobservable. The claim was
-  deleted rather than left standing — an empty spec beats a confident one.
-
-  **The sentence is back, because the code caught up.** forgejo#46 made
-  `timeseriesRows.ts` resolve `airportCalendarDay(...)`, and
-  `stats.timeseriesLocalTime.test.ts` pins it with real catalogue airports, so
-  the zone is now observable. The endpoint left the OpenAPI ratchet on
-  2026-09-15 with a schema and that description. The order is the point: the
-  claim followed the test, not the other way round. This paragraph itself
-  described the old state for however long the fix had been in — corrected
-  2026-09-15, which is the same failure mode one level up.
+- **Never document an invariant you do not test.** The claim follows the
+  test, never the other way round — an empty spec beats a confident one. The
+  `/stats/timeseries` example (forgejo#46) is in `docs/claude-md-history.md`.
 - **A visible change goes in the changelog, even when it is a fix.** `Fixed`
   is the largest section of 2.6.0; 2.5.1 and 2.5.2 are fix-only releases. Each
   entry is a sentence a user would recognise, then the cause — "**A backup no
@@ -848,8 +730,7 @@ from it, so the divergence is recorded here.
 - **80% minimum coverage** — measured since 2026-09-16 (forgejo#62), and it is
   not 80: backend 76 % lines, frontend 56 %. The floor is the ratchet at the
   real figure, not a target — a fixed 80 would reward tests written to move a
-  number. Both configs' old hard thresholds (50 and 30/20/20, never checked
-  against a run) were removed in the same change.
+  number.
 
 ### Open — do not settle these in passing
 
@@ -860,28 +741,15 @@ from it, so the divergence is recorded here.
   needs both green — a second red job that everyone learns to ignore is how
   the database jobs stayed broken unnoticed in September.
 
-The 800-line number was ratified on 2026-09-05. Thirteen design-system decisions from the same day
-are recorded, with the owner's answer to each, in
-`ClaudeDesign/handoff/2026-09-05-web-redesign-rueckmeldung.md` §9 — read
-that table before re-opening any of them (tours are ONE domain colour; the
-parser goes into the beta registry; settings become one route per group;
-companions and tags extend to all four domains). TWO of the thirteen have
-since been reversed by the owner:
-
-- No. 4, `domainColors`, was ruled to stay behind the beta badge on
-  2026-09-05 and ruled out from behind it on 2026-09-09, because the goal for
-  2.7 is that nothing is left in the beta registry at all. The table says so.
-- **"Dashboard tabs stay" was reversed on 2026-09-28**: the domain strip is
-  hidden, and the six-row domain filter answers "what is on the map" in its
-  place. The tab ROUTES are untouched — `/dashboard/:tab` still resolves, so
-  every bookmark keeps working — but the strip was the only way to reach them
-  from the page, so "Nur" in the filter navigates there instead. That is not
-  cosmetic: eight map modes exist on a single-domain view and nowhere else
-  (stats-map, trips, itinerary, port-frequency, nights, chains, markers,
-  sea-routes), because `TAB_MODE_REGISTRY` keys modes by tab. A filter that
-  only hid layers would have made those unreachable.
-  `DomainTabStrip.tsx` and `NextUpEntry.tsx` are still in the tree, unused by
-  the app, as the way back.
+Thirteen design-system decisions of 2026-09-05 are recorded with the owner's
+answer to each in `ClaudeDesign/handoff/2026-09-05-web-redesign-rueckmeldung.md`
+§9 — read that table before re-opening any. Two were reversed since:
+`domainColors` is out of beta (2026-09-09), and the dashboard domain strip is
+hidden (2026-09-28) — "Nur" in the domain filter navigates to `/dashboard/:tab`,
+whose routes must stay because eight map modes exist only on a single-domain
+view (`TAB_MODE_REGISTRY` keys modes by tab). `DomainTabStrip.tsx` and
+`NextUpEntry.tsx` stay unused in the tree as the way back. Details:
+`docs/claude-md-history.md`.
 
 Two standing rules came out of the same day, and they are about the browser
 build's target rather than any one screen:
@@ -980,10 +848,6 @@ git push forgejo --all      # zusaetzlich IMMER - alle lokalen Branches
 git push forgejo --tags
 ```
 
-Der zweite Befehl ist der entscheidende. Am 1. August 2026 existierten
-15 Branches ueber vier Repositories ausschliesslich lokal, obwohl alle ein
-GitHub-Remote hatten.
-
 **Dateien, die `.gitignore` hier ausschliesst** (`AGENTS.md`, `CLAUDE.local.md`,
 `roadmap.local.yaml`, `ROADMAP.local.md`, Pentest-Notizen), liegen im Begleitrepo
 **`TravStats-local`** auf Forgejo. Git kennt keine Ignore-Regeln pro Remote,
@@ -1012,13 +876,8 @@ cd ../TravStats-local
 kein Ritual, sondern die einzige Absicherung: ein `git pull` traegt diese
 Dateien nie, weil sie hier ignoriert sind.
 
-**Warum die Regel existiert:** bis zum 25.08.2026 pushte nur CT142 in den
-Spiegel, der PC kuratierte still seine eigene Fassung. Gemessen an dem Tag:
-`roadmap.local.yaml` hatte 50 gemeinsame Item-Ids, **120 nur auf dem PC und 18
-nur im Spiegel** — keine Seite war Obermenge, ein Kopieren haette also in jede
-Richtung echte Kuratierung geloescht. Das Zusammenfuehren kostete eine Sitzung.
-Deshalb bricht das Skript ab, wenn beide Seiten sich bewegt haben, statt zu
-kopieren.
+Das Skript bricht ab, wenn beide Seiten sich bewegt haben, statt zu kopieren
+(Hintergrund: `docs/claude-md-history.md`).
 
 Nicht gespiegelt, mit Absicht: `README.md` (gehoert dem Spiegel),
 `.roadmap/*` (Leitstand-Build-Artefakte), `.claude/settings.local.json` und
