@@ -9,6 +9,7 @@ import { segmentCrossesZone, type LonLat } from "../../services/travtrack/privac
 import { createZone } from "../../services/travtrack/zones";
 import { travTrackSwitches } from "../../services/travtrack/__tests__/switches";
 import {
+  makeFlight,
   makeTrip,
   makeUser,
   storePoint,
@@ -50,6 +51,7 @@ describe("TravTrack — a shared trip's route snapshot", () => {
     put: (path: string) => request(app).put(path).set("Cookie", cookie),
     get: (path: string) => request(app).get(path).set("Cookie", cookie),
     del: (path: string) => request(app).delete(path).set("Cookie", cookie),
+    patch: (path: string) => request(app).patch(path).set("Cookie", cookie),
   });
 
   /** A straight walk east along 37.5° N, one fix a minute, through home at 127.0° E. */
@@ -283,6 +285,84 @@ describe("TravTrack — a shared trip's route snapshot", () => {
     } else {
       expect(res.body.code).toBe("TRAVTRACK_ROUTE_EMPTY");
     }
+  });
+
+  const recipientRead = async (): Promise<Geometry | null> => {
+    const res = await as(recipientCookie).get(`/api/v1/trips/${copyId}/shared-route`);
+    if (res.status === 404) return null;
+    expect(res.status).toBe(200);
+    return (res.body.routes as Array<{ geometry: Geometry }>).flatMap((r) => r.geometry);
+  };
+
+  it("a moved home re-filters the stored copy and the recipient's read", async () => {
+    await walk();
+    await share();
+    const moved = { lat: 37.5, lon: 127.04 };
+    const res = await as(ownerCookie)
+      .put("/api/v1/settings/personal")
+      .send({ homePlace: { name: "Neu", ...moved, zone: null } });
+    expect(res.status).toBe(200);
+    const after = await stored();
+    expect(after?.version).toBe(2);
+    expect(near(after?.geometry as Geometry, moved, 1000)).toBe(false);
+    expect(crosses(after?.geometry as Geometry, { ...moved, radiusM: 1000 })).toBe(false);
+    const read = (await recipientRead()) ?? [];
+    expect(near(read, moved, 1000)).toBe(false);
+    expect(crosses(read, { ...moved, radiusM: 1000 })).toBe(false);
+  });
+
+  it("the recipient's read applies the current home even where the stored copy missed it", async () => {
+    await walk();
+    await share();
+    const moved = { lat: 37.5, lon: 127.04 };
+    // Written past every hook: only the read-time rebuild stands between.
+    await prisma.userSettings.update({
+      where: { userId: owner },
+      data: { homePlace: { name: "Neu", ...moved } },
+    });
+    // The stored line still runs through the new home's circle.
+    expect(crosses((await stored())?.geometry as Geometry, { ...moved, radiusM: 1000 })).toBe(true);
+    const read = await recipientRead();
+    expect(read).not.toBeNull();
+    expect(near(read ?? [], moved, 1000)).toBe(false);
+    expect(crosses(read ?? [], { ...moved, radiusM: 1000 })).toBe(false);
+  });
+
+  it("a flight added to the trip later hides its hours from the recipient", async () => {
+    // 01:30Z onwards; the fixture flight's recorder window runs to 02:00Z.
+    await walk(126.95, 127.06, Date.parse("2026-10-12T01:30:00Z"));
+    await share();
+    const west = (g: Geometry) => vertices(g).some((p) => p[0] < 126.985);
+    expect(west((await recipientRead()) ?? [])).toBe(true);
+    const flightId = await makeFlight(owner);
+    await prisma.flight.update({ where: { id: flightId }, data: { tripId } });
+    expect(west((await recipientRead()) ?? [])).toBe(false);
+  });
+
+  it("a recording made after sharing reaches the recipient only once the owner rebuilds", async () => {
+    await walk();
+    await share();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    await storePoint(owner, { t: T0 + 600 * MIN, lat: 37.65, lon: 127.2 });
+    await storePoint(owner, { t: T0 + 601 * MIN, lat: 37.651, lon: 127.2 });
+    const north = (g: Geometry) => vertices(g).some((p) => p[1] > 37.6);
+    expect(north((await recipientRead()) ?? [])).toBe(false);
+    // A re-filter the owner did not ask for takes nothing new in either.
+    await deleteTravTrackRange(owner, new Date(T0), new Date(T0 + MIN));
+    expect(north((await stored())?.geometry as Geometry)).toBe(false);
+    await share();
+    expect(north((await recipientRead()) ?? [])).toBe(true);
+  });
+
+  it("moving the trip's dates away from the route removes the shared copy", async () => {
+    await walk();
+    await share();
+    const res = await as(ownerCookie)
+      .patch(`/api/v1/trips/${tripId}`)
+      .send({ startDate: "2026-11-01", endDate: "2026-11-03" });
+    expect(res.status).toBe(200);
+    expect(await stored()).toBeNull();
+    expect(await recipientRead()).toBeNull();
   });
 
   it("building needs TravTrack on", async () => {

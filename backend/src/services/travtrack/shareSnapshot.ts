@@ -107,13 +107,16 @@ async function boundsOf(db: Db, userId: string, tripId: string) {
 export async function buildShareGeometry(
   db: Db,
   userId: string,
-  bounds: TripRecordingBounds
+  bounds: TripRecordingBounds,
+  recordedBy: Date | null = null
 ): Promise<ShareGeometry> {
   const window = { gte: new Date(bounds.fromMs), lt: new Date(bounds.untilMs) };
   const overlapping = { userId, fromAt: { lt: window.lt }, toAt: { gt: window.gte } };
   const [rows, deleted, gaps, circles, home] = await Promise.all([
     db.travTrackPoint.findMany({
-      where: { userId, t: window },
+      // A rebuild the owner did not ask for takes in nothing received since
+      // the owner's last build: it may only take away.
+      where: { userId, t: window, ...(recordedBy ? { createdAt: { lte: recordedBy } } : {}) },
       orderBy: [{ t: "asc" }, { seq: "asc" }],
       take: SNAPSHOT_POINT_CAP,
       select: { t: true, lat: true, lon: true, accuracyM: true, deviceId: true },
@@ -154,10 +157,16 @@ export async function buildShareGeometry(
   return privacyCut(simplifyWithin(lines, SNAPSHOT_MAX_VERTICES), allCircles);
 }
 
-/** Builds or rebuilds the snapshot; the version rises on every rebuild. Null when nothing is left. */
-async function writeSnapshot(db: Db, userId: string, tripId: string) {
+/**
+ * Builds or rebuilds the snapshot; the version rises on every rebuild. Null
+ * when nothing is left. `recordedBy` null is the owner's own build: every
+ * point, and `createdAt` becomes now — the moment the owner last shared. A
+ * re-filter passes the stored `createdAt` and so never shares more than the
+ * owner did.
+ */
+async function writeSnapshot(db: Db, userId: string, tripId: string, recordedBy: Date | null) {
   const bounds = await boundsOf(db, userId, tripId);
-  const geometry = bounds ? await buildShareGeometry(db, userId, bounds) : [];
+  const geometry = bounds ? await buildShareGeometry(db, userId, bounds, recordedBy) : [];
   if (geometry.length === 0) {
     await db.travTrackShareSnapshot.deleteMany({ where: { tripId, userId } });
     return null;
@@ -167,7 +176,12 @@ async function writeSnapshot(db: Db, userId: string, tripId: string) {
   return db.travTrackShareSnapshot.upsert({
     where: { tripId },
     create: { userId, tripId, geometry: json, pointCount },
-    update: { geometry: json, pointCount, version: { increment: 1 } },
+    update: {
+      geometry: json,
+      pointCount,
+      version: { increment: 1 },
+      ...(recordedBy ? {} : { createdAt: new Date() }),
+    },
     select: { version: true, geometry: true, pointCount: true, createdAt: true },
   });
 }
@@ -176,7 +190,7 @@ async function writeSnapshot(db: Db, userId: string, tripId: string) {
 export async function shareTripRoute(userId: string, tripId: string) {
   const trip = await prisma.trip.findFirst({ where: { id: tripId, userId }, select: { id: true } });
   if (!trip) throw new AppError("Trip not found", 404, "TRIP_NOT_FOUND");
-  const snapshot = await prisma.$transaction((tx) => writeSnapshot(tx, userId, tripId), {
+  const snapshot = await prisma.$transaction((tx) => writeSnapshot(tx, userId, tripId, null), {
     timeout: 60_000,
   });
   if (!snapshot) {
@@ -228,7 +242,7 @@ export async function refilterShareSnapshots(
 ): Promise<void> {
   const snapshots = await tx.travTrackShareSnapshot.findMany({
     where: { userId },
-    select: { tripId: true, geometry: true },
+    select: { tripId: true, geometry: true, createdAt: true },
   });
   for (const snapshot of snapshots) {
     let concerned: boolean;
@@ -240,19 +254,48 @@ export async function refilterShareSnapshots(
         !bounds || (bounds.fromMs < cause.to.getTime() && bounds.untilMs > cause.from.getTime());
     }
     if (!concerned) continue;
-    try {
-      await writeSnapshot(tx, userId, snapshot.tripId);
-    } catch (error) {
-      // Fail closed: a route that could not be re-filtered is not shared.
-      logger.warn({
-        operation: "travtrack.share_snapshot.refilter_failed",
-        tripId: snapshot.tripId,
-        cause: cause.kind,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      await tx.travTrackShareSnapshot.deleteMany({ where: { tripId: snapshot.tripId } });
-    }
+    await rebuildOrDrop(tx, userId, snapshot, cause.kind);
   }
+}
+
+/** One re-filter: rebuilt from what the owner shared, or removed when that fails. */
+async function rebuildOrDrop(
+  tx: Db,
+  userId: string,
+  snapshot: { tripId: string; createdAt: Date },
+  cause: string
+): Promise<void> {
+  try {
+    await writeSnapshot(tx, userId, snapshot.tripId, snapshot.createdAt);
+  } catch (error) {
+    // Fail closed: a route that could not be re-filtered is not shared.
+    logger.warn({
+      operation: "travtrack.share_snapshot.refilter_failed",
+      tripId: snapshot.tripId,
+      cause,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    await tx.travTrackShareSnapshot.deleteMany({ where: { tripId: snapshot.tripId } });
+  }
+}
+
+/**
+ * Re-filters the account's snapshots (one trip's, or all) after something
+ * they were built from changed without removing points: the home place
+ * (`settings/personal`), a trip's dates (`PATCH /trips/:id`). Each is rebuilt
+ * from what the owner shared, under the new settings, or removed.
+ */
+export async function refreshShareSnapshots(userId: string, tripId?: string): Promise<void> {
+  await prisma.$transaction(
+    async (tx) => {
+      const snapshots = await tx.travTrackShareSnapshot.findMany({
+        where: { userId, ...(tripId ? { tripId } : {}) },
+        select: { tripId: true, createdAt: true },
+      });
+      for (const snapshot of snapshots) await rebuildOrDrop(tx, userId, snapshot, "settings");
+    },
+    { timeout: 60_000 }
+  );
 }
 
 /**
@@ -261,6 +304,12 @@ export async function refilterShareSnapshots(
  * shared one and whose changes reach the reader (an accepted consent, an
  * active account — `receivingMembers`, the rule every shared write follows).
  * Geometry and version only; never a point, a time or a device.
+ *
+ * Built again at READ time, from what the owner shared (`createdAt`) under the
+ * rules in force NOW — the trip's current days and flights, every zone and
+ * former zone, the current home, every deletion — so no change the stored
+ * copy missed (a flight added, a home moved, a date changed by any path) ever
+ * reaches a recipient. The stored geometry is the owner's view and a cache.
  */
 export async function sharedTripRoutes(readerId: string, tripId: string) {
   const own = await prisma.trip.findFirst({
@@ -272,15 +321,16 @@ export async function sharedTripRoutes(readerId: string, tripId: string) {
   const groupId = own.shareGroupId;
   const snapshots = await prisma.travTrackShareSnapshot.findMany({
     where: { userId: { not: readerId }, trip: { shareGroupId: groupId } },
-    select: { userId: true, version: true, geometry: true, trip: { select: { createdAt: true } } },
+    select: { userId: true, tripId: true, version: true, createdAt: true },
     orderBy: { trip: { createdAt: "asc" } },
   });
   const routes: Array<{ version: number; geometry: unknown }> = [];
   for (const s of snapshots) {
     const reached = await receivingMembers(prisma, groupId, s.userId);
-    if (reached.some((m) => m.userId === readerId)) {
-      routes.push({ version: s.version, geometry: s.geometry });
-    }
+    if (!reached.some((m) => m.userId === readerId)) continue;
+    const bounds = await boundsOf(prisma, s.userId, s.tripId);
+    const geometry = bounds ? await buildShareGeometry(prisma, s.userId, bounds, s.createdAt) : [];
+    if (geometry.length > 0) routes.push({ version: s.version, geometry });
   }
   return routes;
 }
