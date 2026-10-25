@@ -53,10 +53,18 @@ export type ImportOutcome = {
 
 /**
  * The imports this process is working on — a GPX file's and a Dawarich copy's
- * (`dawarichImport.ts`); a `running` row not in here is left over from a restart.
+ * (`dawarichImport.ts`) — each with the run that owns it (a GPX import is its
+ * own run; a copy's run id changes with every resume). A `running` row not in
+ * here is left over from a restart. Only the owner releases an entry, so a
+ * refused second claim cannot unregister a live run (Codex review of L6).
  */
-export const activeImports = new Set<string>();
+export const activeImports = new Map<string, string>();
 const active = activeImports;
+
+/** Releases `importId` only when `owner` still holds it. */
+export function releaseActiveImport(importId: string, owner: string): void {
+  if (activeImports.get(importId) === owner) activeImports.delete(importId);
+}
 
 const emptyReport = (): ImportReport => ({
   read: 0,
@@ -229,7 +237,7 @@ export async function startGpxImport(
       }
       // Marked before the commit: a second request waiting on the lock must
       // see this row as worked on, not as a leftover.
-      active.add(importId);
+      active.set(importId, importId);
       await tx.travTrackImport.create({
         data: {
           id: importId,
@@ -241,7 +249,7 @@ export async function startGpxImport(
       });
     })
     .catch((err: unknown) => {
-      active.delete(importId);
+      releaseActiveImport(importId, importId);
       throw err;
     });
   const holder: { buffer: Buffer | null } = { buffer: file.buffer };
@@ -250,7 +258,7 @@ export async function startGpxImport(
       await opts.beforeRun?.();
       return await runGpxImport(importId, userId, holder, opts);
     } finally {
-      active.delete(importId);
+      releaseActiveImport(importId, importId);
     }
   });
   return { jobId: job.id, importId };

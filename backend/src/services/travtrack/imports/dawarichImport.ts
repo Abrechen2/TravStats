@@ -7,7 +7,7 @@ import { MAX_HISTORY_MONTHS } from "../../dawarich/countryDaySweep";
 import { getDawarichConnection } from "../../dawarich/dawarichResolver";
 import { startJob } from "../../jobs/jobRegistry";
 import { takeTravTrackLock } from "../lock";
-import { activeImports, settleLeftovers } from "./fileImport";
+import { activeImports, releaseActiveImport, settleLeftovers } from "./fileImport";
 import { DAY_MS, dayKey } from "./dawarichRead";
 import { monthsOf, readReport, totalsOf } from "./dawarichReport";
 import {
@@ -106,16 +106,20 @@ function launch(userId: string, runId: string, importId: string, opts: CopyRunOp
     try {
       return await runDawarichCopy(userId, runId, importId, opts);
     } finally {
-      activeImports.delete(importId);
+      releaseActiveImport(importId, runId);
     }
   });
   return { jobId: job.id, importId };
 }
 
-/** Runs `claim` under the lock with `importId` marked as worked on; unmarks it if the claim fails. */
+/**
+ * Runs `claim` under the lock with `importId` marked as worked on by `runId`;
+ * a failed claim releases only its own mark, never a live run's.
+ */
 async function claimed(
   userId: string,
   importId: string,
+  runId: string,
   claim: (tx: DbTransaction) => Promise<void>
 ): Promise<void> {
   await prisma
@@ -129,12 +133,12 @@ async function claimed(
       if (row?.status === "running") throw running();
       // Marked before the commit, as a file import does: a second request
       // waiting on the lock must see this one as worked on.
-      activeImports.add(importId);
+      activeImports.set(importId, runId);
       if (await settleLeftovers(tx, userId)) throw running();
       await claim(tx);
     })
     .catch((err: unknown) => {
-      activeImports.delete(importId);
+      releaseActiveImport(importId, runId);
       throw err;
     });
 }
@@ -149,7 +153,7 @@ export async function startDawarichCopy(
   const { fromMs, untilMs } = resolveCopyRange(range);
   const importId = randomUUID();
   const runId = randomUUID();
-  await claimed(userId, importId, async (tx) => {
+  await claimed(userId, importId, runId, async (tx) => {
     // Owner, 2026-10-25: a paused copy is resumed or deleted first, never
     // silently replaced by a new one.
     const earlier = await tx.travTrackDawarichImport.findUnique({
@@ -204,7 +208,7 @@ export async function resumeDawarichCopy(
   }
   const runId = randomUUID();
   const { importId } = current;
-  await claimed(userId, importId, async (tx) => {
+  await claimed(userId, importId, runId, async (tx) => {
     const row = await tx.travTrackDawarichImport.findUniqueOrThrow({ where: { userId } });
     if (row.importId !== importId || !RESUMABLE.has(row.status)) {
       throw new AppError("This copy cannot be resumed", 409, "TRAVTRACK_IMPORT_NOT_RESUMABLE");

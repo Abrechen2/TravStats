@@ -13,7 +13,7 @@ import { settleAllJobs } from "../../../jobs/jobRegistry";
 import { deleteTravTrackRange } from "../../deleteRange";
 import { makeUser, storePoint, wipeTravTrack } from "../../__tests__/fixtures";
 import { travTrackSwitches } from "../../__tests__/switches";
-import { deleteTravTrackImport } from "../fileImport";
+import { deleteTravTrackImport, listTravTrackImports } from "../fileImport";
 import {
   getDawarichCopy,
   resumeDawarichCopy,
@@ -504,6 +504,29 @@ describe("TravTrack — copying the Dawarich history", () => {
     expect(
       await codeOf(startDawarichCopy(userId, { fromDay: "2026-03-01", untilDay: "2999-01-01" }))
     ).toBe("VALIDATION_FAILED");
+  });
+
+  it("a refused resume of a running copy leaves it running and owned", async () => {
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { importId } = await startDawarichCopy(userId, range, {
+      clientFor: () => fakeDawarich(history()),
+      pauseMs: 0,
+      afterDay: () => held,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(await codeOf(resumeDawarichCopy(userId))).toBe("TRAVTRACK_IMPORT_RUNNING");
+    // The list settles leftovers of a restart: the live copy is not one.
+    await listTravTrackImports(userId);
+    expect(
+      (await prisma.travTrackImport.findUniqueOrThrow({ where: { id: importId } })).status
+    ).toBe("running");
+    release();
+    await settleAllJobs();
+    expect((await getDawarichCopy(userId)).copy?.status).toBe("complete");
+    expect(await stored()).toHaveLength(9);
   });
 
   it("stop pauses between two days, and resume goes on from there", async () => {
