@@ -40,6 +40,9 @@ export const COPY_STALE_MS = 2 * 60_000;
 
 export type CopyRange = { fromDay?: string; untilDay?: string };
 
+/** A copy that can go on from its checkpoint: a new one waits until it is resumed or deleted. */
+const RESUMABLE = new Set(["paused", "interrupted", "failed"]);
+
 const invalid = (message: string) => new AppError(message, 400, "VALIDATION_FAILED");
 const running = () => new AppError("An import is running already", 409, "TRAVTRACK_IMPORT_RUNNING");
 const notConfigured = () =>
@@ -147,6 +150,19 @@ export async function startDawarichCopy(
   const importId = randomUUID();
   const runId = randomUUID();
   await claimed(userId, importId, async (tx) => {
+    // Owner, 2026-10-25: a paused copy is resumed or deleted first, never
+    // silently replaced by a new one.
+    const earlier = await tx.travTrackDawarichImport.findUnique({
+      where: { userId },
+      select: { status: true },
+    });
+    if (earlier && RESUMABLE.has(earlier.status)) {
+      throw new AppError(
+        "Resume the paused copy or delete it first",
+        409,
+        "TRAVTRACK_IMPORT_PAUSED"
+      );
+    }
     await tx.travTrackImport.create({
       data: { id: importId, userId, kind: "dawarich", fileName: "Dawarich", status: "running" },
     });
@@ -172,8 +188,6 @@ export async function startDawarichCopy(
   });
   return launch(userId, runId, importId, opts);
 }
-
-const RESUMABLE = new Set(["paused", "interrupted", "failed"]);
 
 /** Goes on from the checkpoint of a paused, interrupted or failed copy. */
 export async function resumeDawarichCopy(

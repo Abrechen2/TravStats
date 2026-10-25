@@ -266,6 +266,20 @@ describe("TravTrack — copying the Dawarich history", () => {
     expect(await stored()).toHaveLength(9);
   });
 
+  it("refuses a new copy while an earlier one is paused, until it is resumed or deleted", async () => {
+    const { importId } = await copy(
+      fakeDawarich(history(), {
+        fail: (w) => (w.startAt >= new Date("2026-04-01T00:00:00Z") ? "unreachable" : null),
+      })
+    );
+    expect((await getDawarichCopy(userId)).copy?.status).toBe("paused");
+    expect(await codeOf(startDawarichCopy(userId, range))).toBe("TRAVTRACK_IMPORT_PAUSED");
+    expect(await prisma.travTrackImport.count({ where: { userId } })).toBe(1);
+    await deleteTravTrackImport(userId, importId);
+    await copy(fakeDawarich(history()));
+    expect((await getDawarichCopy(userId)).copy?.status).toBe("complete");
+  });
+
   it("a crash after a day's commit repeats nothing on resume", async () => {
     const client = fakeDawarich(history());
     let crashed = false;

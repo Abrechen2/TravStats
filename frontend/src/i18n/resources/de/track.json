@@ -218,7 +218,8 @@
       "notRunning": "Die Kopie läuft gerade nicht.",
       "notResumable": "Diese Kopie lässt sich nicht fortsetzen – starte eine neue.",
       "range": "Der Zeitraum geht nicht: Er braucht Anfang und Ende, liegt nicht in der Zukunft und höchstens zwanzig Jahre zurück.",
-      "rateLimited": "Zu viele Starts in kurzer Zeit. Versuche es in einer Viertelstunde noch einmal."
+      "rateLimited": "Zu viele Starts in kurzer Zeit. Versuche es in einer Viertelstunde noch einmal.",
+      "paused": "Setze die pausierte Übernahme fort oder lösche sie zuerst."
     }
   },
   "sources": {

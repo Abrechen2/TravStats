@@ -44,6 +44,7 @@ import { travTrackImportsApi } from "../../../lib/api/travtrackImports";
 import { api } from "../../../lib/api/client";
 import {
   dawarichCopyApi,
+  dawarichCopyErrorKey,
   type DawarichCopy,
   type DawarichCopyMonth,
 } from "../../../lib/api/travtrackDawarichCopy";
@@ -181,6 +182,25 @@ describe("TravTrackSection — copying the Dawarich history", () => {
     ).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "track:dawarichCopy.resume" }));
     await waitFor(() => expect(resume).toHaveBeenCalledTimes(1));
+  });
+
+  it("a paused copy offers resume, not a new copy, and says so", async () => {
+    vi.spyOn(dawarichCopyApi, "get").mockResolvedValue({
+      connection: "own",
+      copy: copyOf({ status: "paused" }),
+    });
+    show();
+    expect(await screen.findByRole("button", { name: "track:dawarichCopy.resume" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "track:dawarichCopy.start" })).toBeNull();
+    expect(screen.getByText("track:dawarichCopy.errors.paused")).toBeTruthy();
+  });
+
+  it("a refused start because of a paused copy reads as its sentence", () => {
+    expect(
+      dawarichCopyErrorKey({
+        response: { status: 409, data: { error: "x", code: "TRAVTRACK_IMPORT_PAUSED" } },
+      })
+    ).toBe("track:dawarichCopy.errors.paused");
   });
 
   it("a paused copy names why it paused", async () => {

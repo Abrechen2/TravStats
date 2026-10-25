@@ -218,7 +218,8 @@
       "notRunning": "The copy is not running.",
       "notResumable": "This copy cannot be resumed – start a new one.",
       "range": "That span does not work: it needs a start and an end, cannot lie in the future, and reaches back twenty years at most.",
-      "rateLimited": "Too many starts in a short time. Try again in a quarter of an hour."
+      "rateLimited": "Too many starts in a short time. Try again in a quarter of an hour.",
+      "paused": "Resume the paused copy or delete it first."
     }
   },
   "sources": {

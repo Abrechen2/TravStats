@@ -94,6 +94,8 @@ export function dawarichCopyErrorKey(err: unknown): string {
       return "track:dawarichCopy.errors.notConfigured";
     case "TRAVTRACK_IMPORT_RUNNING":
       return "track:dawarichCopy.errors.running";
+    case "TRAVTRACK_IMPORT_PAUSED":
+      return "track:dawarichCopy.errors.paused";
     case "TRAVTRACK_IMPORT_NOT_RUNNING":
       return "track:dawarichCopy.errors.notRunning";
     case "TRAVTRACK_IMPORT_NOT_RESUMABLE":

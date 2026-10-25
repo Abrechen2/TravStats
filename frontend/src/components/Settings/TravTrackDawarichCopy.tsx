@@ -171,48 +171,55 @@ export default function TravTrackDawarichCopy({
         </div>
       )}
 
-      {canStart && state?.connection === "own" && !running && (
-        <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
-          <label className="t-body">
-            <input type="radio" checked={whole} onChange={() => setWhole(true)} />{" "}
-            {t(`${NS}.whole`)}
-          </label>
-          <label className="t-body">
-            <input type="radio" checked={!whole} onChange={() => setWhole(false)} />{" "}
-            {t(`${NS}.span`)}
-          </label>
-          {!whole && (
-            <div className="flex" style={{ gap: "var(--ts-space-md)" }}>
-              <Field label={t(`${NS}.from`)} htmlFor="travtrack-dawarich-from">
-                <Input
-                  id="travtrack-dawarich-from"
-                  type="date"
-                  value={fromDay}
-                  onChange={(e) => setFromDay(e.target.value)}
-                />
-              </Field>
-              <Field label={t(`${NS}.until`)} htmlFor="travtrack-dawarich-until">
-                <Input
-                  id="travtrack-dawarich-until"
-                  type="date"
-                  value={untilDay}
-                  onChange={(e) => setUntilDay(e.target.value)}
-                />
-              </Field>
-            </div>
-          )}
-          <div>
-            <Button
-              disabled={busy || !rangeValid}
-              onClick={() =>
-                void act(() => dawarichCopyApi.start(whole ? null : { fromDay, untilDay }))
-              }
-            >
-              {t(`${NS}.start`)}
-            </Button>
-          </div>
-        </div>
+      {canStart && state?.connection === "own" && copy !== null && RESUMABLE.has(copy.status) && (
+        <p className="t-caption">{t(`${NS}.errors.paused`)}</p>
       )}
+
+      {canStart &&
+        state?.connection === "own" &&
+        !running &&
+        !(copy !== null && RESUMABLE.has(copy.status)) && (
+          <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
+            <label className="t-body">
+              <input type="radio" checked={whole} onChange={() => setWhole(true)} />{" "}
+              {t(`${NS}.whole`)}
+            </label>
+            <label className="t-body">
+              <input type="radio" checked={!whole} onChange={() => setWhole(false)} />{" "}
+              {t(`${NS}.span`)}
+            </label>
+            {!whole && (
+              <div className="flex" style={{ gap: "var(--ts-space-md)" }}>
+                <Field label={t(`${NS}.from`)} htmlFor="travtrack-dawarich-from">
+                  <Input
+                    id="travtrack-dawarich-from"
+                    type="date"
+                    value={fromDay}
+                    onChange={(e) => setFromDay(e.target.value)}
+                  />
+                </Field>
+                <Field label={t(`${NS}.until`)} htmlFor="travtrack-dawarich-until">
+                  <Input
+                    id="travtrack-dawarich-until"
+                    type="date"
+                    value={untilDay}
+                    onChange={(e) => setUntilDay(e.target.value)}
+                  />
+                </Field>
+              </div>
+            )}
+            <div>
+              <Button
+                disabled={busy || !rangeValid}
+                onClick={() =>
+                  void act(() => dawarichCopyApi.start(whole ? null : { fromDay, untilDay }))
+                }
+              >
+                {t(`${NS}.start`)}
+              </Button>
+            </div>
+          </div>
+        )}
 
       {loadError && (
         <p className="t-body" role="alert" style={{ color: token("bad") }}>

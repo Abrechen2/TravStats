@@ -93,7 +93,8 @@ const disabled = {
 const notConfigured = {
   description:
     "DAWARICH_NOT_CONFIGURED: no own Dawarich connection (the server's is never used); " +
-    "TRAVTRACK_IMPORT_RUNNING: an import of this account runs already",
+    "TRAVTRACK_IMPORT_RUNNING: an import of this account runs already; " +
+    "TRAVTRACK_IMPORT_PAUSED: a paused, interrupted or failed copy is resumed or deleted first",
   content: errorContent,
 };
 
