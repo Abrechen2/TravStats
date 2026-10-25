@@ -51,8 +51,12 @@ export type ImportOutcome = {
   report: ImportReport;
 };
 
-/** The imports this process is working on; a `running` row not in here is left over from a restart. */
-const active = new Set<string>();
+/**
+ * The imports this process is working on — a GPX file's and a Dawarich copy's
+ * (`dawarichImport.ts`); a `running` row not in here is left over from a restart.
+ */
+export const activeImports = new Set<string>();
+const active = activeImports;
 
 const emptyReport = (): ImportReport => ({
   read: 0,
@@ -168,7 +172,7 @@ export async function runGpxImport(
 }
 
 /** Marks this account's `running` rows no process works on as interrupted; true when one really runs. */
-async function settleLeftovers(tx: DbTransaction, userId: string): Promise<boolean> {
+export async function settleLeftovers(tx: DbTransaction, userId: string): Promise<boolean> {
   const running = await tx.travTrackImport.findMany({
     where: { userId, status: "running" },
     select: { id: true },
@@ -252,6 +256,9 @@ export async function startGpxImport(
   return { jobId: job.id, importId };
 }
 
+/** The origin an import's points are stored under: `gpx:<id>` or `dawarich:<id>`. */
+export const importOrigin = (kind: string, importId: string): string => `${kind}:${importId}`;
+
 /** The removed points' instants as spans, two instants within `SPAN_JOIN_MS` in one. */
 function spansOf(times: readonly Date[]): Array<[number, number]> {
   const spans: Array<[number, number]> = [];
@@ -278,14 +285,21 @@ export async function deleteTravTrackImport(
       await takeTravTrackLock(tx, userId);
       const row = await tx.travTrackImport.findFirst({
         where: { id: importId, userId },
-        select: { id: true, finishedAt: true },
+        select: { id: true, kind: true, finishedAt: true },
       });
       if (!row) throw notFound();
+      const finishedAt = row.finishedAt ?? new Date();
       await tx.travTrackImport.update({
         where: { id: row.id },
-        data: { status: "cancelled", finishedAt: row.finishedAt ?? new Date() },
+        data: { status: "cancelled", finishedAt },
       });
-      const origin = `gpx:${importId}`;
+      // A Dawarich copy's checkpoint row goes `cancelled` too, in this
+      // transaction: its next day's fence fails and stores nothing (plan L6).
+      await tx.travTrackDawarichImport.updateMany({
+        where: { importId, userId },
+        data: { status: "cancelled", runId: null, finishedAt },
+      });
+      const origin = importOrigin(row.kind, importId);
       const removed = await tx.travTrackPoint.findMany({
         where: { userId, origin },
         orderBy: { t: "asc" },

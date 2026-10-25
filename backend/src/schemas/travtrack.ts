@@ -146,3 +146,15 @@ export const travTrackZoneUpdateSchema = z
     deleteStoredPoints: z.boolean().default(false),
   })
   .refine((b) => (b.lat === undefined) === (b.lon === undefined), "`lat` and `lon` move together");
+
+/**
+ * Starting a Dawarich copy (plan L6): UTC days, both inclusive, both or
+ * neither — neither is the whole history.
+ */
+export const travTrackDawarichCopySchema = z
+  .object({ fromDay: day.optional(), untilDay: day.optional() })
+  .strict()
+  .refine(
+    (b) => (b.fromDay === undefined) === (b.untilDay === undefined),
+    "`fromDay` and `untilDay` move together"
+  );

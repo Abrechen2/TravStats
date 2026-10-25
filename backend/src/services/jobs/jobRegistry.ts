@@ -37,7 +37,8 @@ export type JobKind =
   | "placeImport.resolve"
   | "bus.routeStraight"
   | "webdavSync.run"
-  | "travtrack.fileImport";
+  | "travtrack.fileImport"
+  | "travtrack.dawarichImport";
 
 export type JobStatus = "running" | "succeeded" | "failed";
 

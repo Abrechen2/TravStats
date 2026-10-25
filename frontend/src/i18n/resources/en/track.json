@@ -138,7 +138,8 @@
     "status": {
       "running": "running",
       "interrupted": "interrupted (the server restarted) – import the file again",
-      "cancelled": "deleted"
+      "cancelled": "deleted",
+      "paused": "paused – resume it under “Copy your Dawarich history”"
     },
     "delete": "Delete import",
     "deleteConfirm_one": "Delete the import “{{name}}” and its {{count}} position? Positions from other sources stay.",
@@ -154,6 +155,70 @@
       "rateLimited": "Too many imports in a short time. Try again in a quarter of an hour.",
       "lost": "Whether the import finished is not known – the server restarted. Check the list.",
       "tooManyPoints": "The file holds more than 200,000 positions – more than one import takes. Split it, say by month."
+    }
+  },
+  "dawarichCopy": {
+    "title": "Copy your Dawarich history",
+    "intro": "Copies your location history from your own Dawarich into TravTrack – all of it or a span of days. Dawarich is only read: nothing there is changed or deleted, and your location source stays as it is. Positions inside a privacy zone or a deleted span are discarded, and what is stored already is not added twice. The copy starts no suggestions; you delete it like an import.",
+    "connection": {
+      "none": "Connect your own Dawarich first (Settings → Dawarich). Only then can the history be copied.",
+      "shared": "This server only has a shared Dawarich set up. A copy reads from your own only – enter your own connection for it."
+    },
+    "whole": "Whole history (up to yesterday)",
+    "span": "Span of days",
+    "from": "From (UTC)",
+    "until": "Until (UTC)",
+    "start": "Copy your Dawarich history",
+    "stop": "Pause",
+    "resume": "Resume",
+    "range": "{{from}} – {{until}}",
+    "status": {
+      "running": "Copying: day {{done}} of {{total}}",
+      "paused": "Paused, goes on from {{day}}",
+      "interrupted": "Interrupted (the server restarted), goes on from {{day}}",
+      "failed": "Stopped at {{day}}",
+      "complete": "Copied completely",
+      "incomplete": "Copied, but incomplete – what is missing is listed below",
+      "cancelled": "Deleted"
+    },
+    "reason": {
+      "unreachable": "Dawarich could not be reached",
+      "auth": "Dawarich refused the API key",
+      "notFound": "Dawarich does not know the path – check the address",
+      "protocol": "Dawarich answered unexpectedly",
+      "invalidUrl": "The Dawarich address is invalid",
+      "disabled": "TravTrack was switched off",
+      "notConfigured": "Your own Dawarich connection is missing",
+      "internal": "An error on the server"
+    },
+    "report": {
+      "read_one": "{{count}} position read",
+      "read_other": "{{count}} positions read",
+      "stored_one": "{{count}} stored",
+      "stored_other": "{{count}} stored",
+      "duplicate_one": "{{count}} already there",
+      "duplicate_other": "{{count}} already there",
+      "zone_one": "{{count}} discarded in a privacy zone",
+      "zone_other": "{{count}} discarded in a privacy zone",
+      "deleted_one": "{{count}} discarded in a deleted span",
+      "deleted_other": "{{count}} discarded in a deleted span",
+      "invalid_one": "{{count}} unusable",
+      "invalid_other": "{{count}} unusable"
+    },
+    "gaps": {
+      "title": "What is missing",
+      "hours_one": "{{count}} hour only in part: {{list}}",
+      "hours_other": "{{count}} hours only in part: {{list}}",
+      "days_one": "{{count}} day without an answer: {{list}}",
+      "days_other": "{{count}} days without an answer: {{list}}"
+    },
+    "errors": {
+      "notConfigured": "This needs your own Dawarich connection (Settings → Dawarich).",
+      "running": "An import or a copy is running already. Wait until it is done, or pause the copy.",
+      "notRunning": "The copy is not running.",
+      "notResumable": "This copy cannot be resumed – start a new one.",
+      "range": "That span does not work: it needs a start and an end, cannot lie in the future, and reaches back twenty years at most.",
+      "rateLimited": "Too many starts in a short time. Try again in a quarter of an hour."
     }
   },
   "sources": {

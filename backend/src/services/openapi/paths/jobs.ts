@@ -28,6 +28,7 @@ export const jobSchema = z.object({
     "bus.routeStraight",
     "webdavSync.run",
     "travtrack.fileImport",
+    "travtrack.dawarichImport",
   ]),
   status: z.enum(["running", "succeeded", "failed"]),
   startedAt: z.string().datetime(),

@@ -18,4 +18,6 @@ export type LocationEvidenceApiErrorCode =
   | "TRAVTRACK_IMPORT_UNREADABLE" // the imported file could not be read
   | "TRAVTRACK_IMPORT_TOO_MANY_POINTS" // the imported file holds more fixes than one import takes
   | "TRAVTRACK_IMPORT_RUNNING" // an import of this account is running already (409)
-  | "TRAVTRACK_IMPORT_NOT_FOUND"; // no such import of this account (404)
+  | "TRAVTRACK_IMPORT_NOT_FOUND" // no such import of this account (404)
+  | "TRAVTRACK_IMPORT_NOT_RUNNING" // no Dawarich copy of this account is running to stop (409)
+  | "TRAVTRACK_IMPORT_NOT_RESUMABLE"; // the Dawarich copy is complete, cancelled or replaced (409)

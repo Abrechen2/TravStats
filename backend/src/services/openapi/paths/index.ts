@@ -99,6 +99,7 @@ import "./travplan";
 import "./travtrack";
 import "./travtrackDay";
 import "./travtrackImports";
+import "./travtrackDawarichCopy";
 import "./travtrackSources";
 import "./travtrackShare";
 

@@ -25,6 +25,7 @@ vi.mock("../../../hooks/useTodayZone", () => ({
 }));
 
 import TravTrackSection from "../TravTrackSection";
+import { dawarichCopyApi } from "../../../lib/api/travtrackDawarichCopy";
 import { travTrackApi } from "../../../lib/api/travtrack";
 import { travTrackImportsApi } from "../../../lib/api/travtrackImports";
 
@@ -75,6 +76,8 @@ const show = () =>
 describe("TravTrackSection", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    // The Dawarich copy block (plan L6) reads its state on mount.
+    vi.spyOn(dawarichCopyApi, "get").mockResolvedValue({ connection: "none", copy: null });
     caps.current = { version: 1, offered: true, enabled: true, active: true, hasData: true };
     vi.spyOn(travTrackApi, "summary").mockResolvedValue(EMPTY);
     vi.spyOn(travTrackApi, "zones").mockResolvedValue([]);

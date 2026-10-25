@@ -24,6 +24,7 @@ import {
   type TravTrackSummary,
 } from "../../lib/api/travtrack";
 import TrackExportDialog from "../../pages/Track/TrackExportDialog";
+import TravTrackDawarichCopy from "./TravTrackDawarichCopy";
 import TravTrackImports from "./TravTrackImports";
 import TravTrackSources from "./TravTrackSources";
 
@@ -63,6 +64,7 @@ export default function TravTrackSection(): JSX.Element | null {
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [status, setStatus] = useState<Status>(null);
+  const [importsVersion, setImportsVersion] = useState(0);
 
   const load = useCallback(async () => {
     try {
@@ -75,6 +77,12 @@ export default function TravTrackSection(): JSX.Element | null {
       setLoadFailed(true);
     }
   }, []);
+
+  // The Dawarich copy changed stored positions and the list of imports.
+  const onCopyChanged = useCallback(() => {
+    setImportsVersion((v) => v + 1);
+    void load();
+  }, [load]);
 
   const shown = caps !== null && (caps.hasData || caps.enabled);
   useEffect(() => {
@@ -209,8 +217,11 @@ export default function TravTrackSection(): JSX.Element | null {
       <TravTrackImports
         canImport={caps.enabled && !isDemo}
         canDelete={!isDemo}
+        version={importsVersion}
         onChanged={() => void load()}
       />
+
+      <TravTrackDawarichCopy canStart={caps.enabled && !isDemo} onChanged={onCopyChanged} />
 
       {(caps.sources ?? []).some((s) => s === "owntracks" || s === "overland") && (
         <TravTrackSources canCreate={caps.enabled && caps.active && !isDemo} canRevoke={!isDemo} />

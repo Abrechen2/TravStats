@@ -138,7 +138,8 @@
     "status": {
       "running": "läuft",
       "interrupted": "abgebrochen (Server neu gestartet) – importiere die Datei erneut",
-      "cancelled": "gelöscht"
+      "cancelled": "gelöscht",
+      "paused": "angehalten – unter „Dawarich-Verlauf übernehmen“ fortsetzen"
     },
     "delete": "Import löschen",
     "deleteConfirm_one": "Den Import „{{name}}“ und seine {{count}} Position löschen? Positionen aus anderen Quellen bleiben.",
@@ -154,6 +155,70 @@
       "rateLimited": "Zu viele Importe in kurzer Zeit. Versuche es in einer Viertelstunde noch einmal.",
       "lost": "Ob der Import fertig wurde, ist nicht bekannt – der Server hat neu gestartet. Sieh in der Liste nach.",
       "tooManyPoints": "Die Datei enthält mehr als 200.000 Positionen – mehr nimmt ein Import nicht. Teile sie auf, etwa nach Monaten."
+    }
+  },
+  "dawarichCopy": {
+    "title": "Dawarich-Verlauf übernehmen",
+    "intro": "Kopiert deinen Standortverlauf aus deinem eigenen Dawarich nach TravTrack – den ganzen oder einen Zeitraum. Dawarich wird dabei nur gelesen: Dort wird nichts geändert oder gelöscht, und deine Standortquelle bleibt, wie sie ist. Positionen in einer Privatzone oder in einem gelöschten Zeitraum werden verworfen, und was schon gespeichert ist, kommt nicht doppelt dazu. Die Kopie löst keine Vorschläge aus; löschen lässt sie sich wie ein Import.",
+    "connection": {
+      "none": "Verbinde zuerst dein eigenes Dawarich (Einstellungen → Dawarich). Erst dann lässt sich der Verlauf übernehmen.",
+      "shared": "Auf diesem Server ist nur ein gemeinsames Dawarich eingerichtet. Eine Kopie liest ausschließlich aus deinem eigenen – trage dafür deine eigene Verbindung ein."
+    },
+    "whole": "Ganzer Verlauf (bis gestern)",
+    "span": "Zeitraum",
+    "from": "Vom (UTC)",
+    "until": "Bis (UTC)",
+    "start": "Dawarich-Verlauf übernehmen",
+    "stop": "Anhalten",
+    "resume": "Fortsetzen",
+    "range": "{{from}} – {{until}}",
+    "status": {
+      "running": "Wird übernommen: Tag {{done}} von {{total}}",
+      "paused": "Angehalten, weiter ab {{day}}",
+      "interrupted": "Unterbrochen (Server neu gestartet), weiter ab {{day}}",
+      "failed": "Abgebrochen bei {{day}}",
+      "complete": "Vollständig übernommen",
+      "incomplete": "Übernommen, aber unvollständig – was fehlt, steht unten",
+      "cancelled": "Gelöscht"
+    },
+    "reason": {
+      "unreachable": "Dawarich war nicht erreichbar",
+      "auth": "Dawarich hat den API-Schlüssel abgelehnt",
+      "notFound": "Dawarich kennt den Pfad nicht – prüfe die Adresse",
+      "protocol": "Dawarich hat unerwartet geantwortet",
+      "invalidUrl": "Die Dawarich-Adresse ist ungültig",
+      "disabled": "TravTrack wurde ausgeschaltet",
+      "notConfigured": "Die eigene Dawarich-Verbindung fehlt",
+      "internal": "Ein Fehler auf dem Server"
+    },
+    "report": {
+      "read_one": "{{count}} Position gelesen",
+      "read_other": "{{count}} Positionen gelesen",
+      "stored_one": "{{count}} gespeichert",
+      "stored_other": "{{count}} gespeichert",
+      "duplicate_one": "{{count}} schon vorhanden",
+      "duplicate_other": "{{count}} schon vorhanden",
+      "zone_one": "{{count}} in einer Privatzone verworfen",
+      "zone_other": "{{count}} in einer Privatzone verworfen",
+      "deleted_one": "{{count}} in einem gelöschten Zeitraum verworfen",
+      "deleted_other": "{{count}} in einem gelöschten Zeitraum verworfen",
+      "invalid_one": "{{count}} unbrauchbar",
+      "invalid_other": "{{count}} unbrauchbar"
+    },
+    "gaps": {
+      "title": "Was fehlt",
+      "hours_one": "{{count}} Stunde nur teilweise: {{list}}",
+      "hours_other": "{{count}} Stunden nur teilweise: {{list}}",
+      "days_one": "{{count}} Tag ohne Antwort: {{list}}",
+      "days_other": "{{count}} Tage ohne Antwort: {{list}}"
+    },
+    "errors": {
+      "notConfigured": "Dafür braucht es deine eigene Dawarich-Verbindung (Einstellungen → Dawarich).",
+      "running": "Es läuft schon ein Import oder eine Kopie. Warte, bis er fertig ist, oder halte die Kopie an.",
+      "notRunning": "Die Kopie läuft gerade nicht.",
+      "notResumable": "Diese Kopie lässt sich nicht fortsetzen – starte eine neue.",
+      "range": "Der Zeitraum geht nicht: Er braucht Anfang und Ende, liegt nicht in der Zukunft und höchstens zwanzig Jahre zurück.",
+      "rateLimited": "Zu viele Starts in kurzer Zeit. Versuche es in einer Viertelstunde noch einmal."
     }
   },
   "sources": {
