@@ -77,6 +77,7 @@ export async function storePoint(
     lat: number;
     lon: number;
     device?: string;
+    accuracyM?: number | null;
     links?: Array<{ kind: "flight" | "trip"; id: string }>;
   }
 ): Promise<string> {
@@ -89,7 +90,7 @@ export async function storePoint(
       tS: Math.floor(p.t / 1000),
       lat: p.lat,
       lon: p.lon,
-      accuracyM: 5,
+      accuracyM: p.accuracyM === undefined ? 5 : p.accuracyM,
       origin: `companion:${device}`,
       originRef: `fx-${refCounter}`,
       deviceId: device,

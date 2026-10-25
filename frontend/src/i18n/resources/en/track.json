@@ -191,5 +191,12 @@
       "notFound": "This key no longer exists.",
       "rateLimited": "Too many keys were created just now. Try again in a quarter of an hour."
     }
+  },
+  "lastSeen": {
+    "label": "Last seen",
+    "line": "Last seen {{age}} · {{device}}",
+    "unknownDevice": "Unknown device",
+    "none": "No position recorded yet.",
+    "open": "View this day"
   }
 }

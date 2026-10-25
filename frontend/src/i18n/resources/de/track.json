@@ -191,5 +191,12 @@
       "notFound": "Diesen Schlüssel gibt es nicht mehr.",
       "rateLimited": "Gerade wurden zu viele Schlüssel erstellt. Versuche es in einer Viertelstunde erneut."
     }
+  },
+  "lastSeen": {
+    "label": "Zuletzt gesehen",
+    "line": "Zuletzt gesehen {{age}} · {{device}}",
+    "unknownDevice": "Unbekanntes Gerät",
+    "none": "Noch keine Position aufgezeichnet.",
+    "open": "Diesen Tag ansehen"
   }
 }

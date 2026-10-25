@@ -18,6 +18,7 @@ import SimplifiedFlightFormV2 from "../SimplifiedFlightFormV2";
 import SpecialFlightModal from "../SpecialFlightModal";
 import { useCruiseImportAdapter } from "../import/adapters/cruiseAdapter";
 import { MapNextUpCard } from "./MapNextUpCard";
+import { LastSeenCard } from "./LastSeenCard";
 import { DomainFilterButton } from "./tabs/DomainFilterButton";
 import { AddDomainPicker, type AddableDomain } from "./AddDomainPicker";
 import { isValidDomain } from "../../shared/domains";
@@ -136,21 +137,23 @@ export function DashboardLayout({
   // line for a secondary and another for a trip name, so a fixed offset would
   // either overlap it or leave a gap, depending on the entry.
   const [domainFilterOpen, setDomainFilterOpen] = useState(false);
+  // „Zuletzt gesehen" (TravTrack plan L2) stacks under it in the same column.
+  // That card decides on its own whether it shows and loads on its own, so
+  // the column is always there and measured: empty, it holds nothing below.
   const nextUpRef = useRef<HTMLDivElement | null>(null);
   const [chromeTop, setChromeTop] = useState<number | null>(null);
   useLayoutEffect(() => {
-    if (!nextUp) {
-      setChromeTop(null);
-      return;
-    }
     const el = nextUpRef.current;
     if (!el) return;
-    const measure = (): void => setChromeTop(64 + el.offsetHeight + 8);
+    const measure = (): void => setChromeTop(el.offsetHeight > 0 ? 64 + el.offsetHeight + 8 : null);
     measure();
+    // The column fills in after its reads land; without an observer (jsdom,
+    // an old engine) the first measure is all there is.
+    if (typeof ResizeObserver === "undefined") return;
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [nextUp]);
+  }, []);
 
   const enabledDomains = {
     flight: isEnabled("flight"),
@@ -262,12 +265,23 @@ export function DashboardLayout({
             clears the "+ hinzufügen" button above it, the same offset
             GlobeStatsCard uses for the same reason. z-30 puts it in the
             chrome band, below the domain filter (35) so an open filter panel
-            is never covered by it. */}
-        {nextUp && (
-          <div ref={nextUpRef} style={{ position: "absolute", top: 64, right: 16, zIndex: 30 }}>
-            <MapNextUpCard entry={nextUp} nowMs={nowMs} />
-          </div>
-        )}
+            is never covered by it. „Zuletzt gesehen" stacks under it. */}
+        <div
+          ref={nextUpRef}
+          style={{
+            position: "absolute",
+            top: 64,
+            right: 16,
+            zIndex: 30,
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            pointerEvents: "none",
+          }}
+        >
+          {nextUp && <MapNextUpCard entry={nextUp} nowMs={nowMs} />}
+          <LastSeenCard />
+        </div>
         {/* On a single-domain view the filter is the ONLY way back — the tab
             strip that used to offer "Alle" is gone. "Alle" tabs keep their own
             instance inside the map (AllTab's `filterSlot`), where the tour

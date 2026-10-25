@@ -35,6 +35,18 @@ export interface TravTrackSummary {
   zones: number;
 }
 
+/** „Zuletzt gesehen" (plan L2): the newest real, privacy-safe fix of the own history. */
+export interface TravTrackLastSeen {
+  at: string;
+  lat: number;
+  lon: number;
+  accuracyM: number | null;
+  deviceId: string | null;
+  /** The paired phone's, the file's or the live source's own name; null when none is known. */
+  deviceLabel: string | null;
+  origin: string;
+}
+
 export interface PrivacyZone {
   id: string;
   name: string;
@@ -154,6 +166,9 @@ export const travTrackApi = {
   /** Both days inclusive, on the profile's clock; the count deleted. */
   deleteDays: async (span: DaySpan): Promise<number> =>
     (await api.delete<{ deleted: number }>("/travtrack/points", { params: span })).data.deleted,
+  /** The last position, or null while the history holds none. */
+  lastSeen: async (): Promise<TravTrackLastSeen | null> =>
+    (await api.get<{ lastSeen: TravTrackLastSeen | null }>("/travtrack/last-seen")).data.lastSeen,
   day: async (date: string): Promise<TravTrackDay> =>
     (await api.get<TravTrackDay>("/travtrack/day", { params: { date } })).data,
   /** What of a trip's route is shared, or null while nothing is. */

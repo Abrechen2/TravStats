@@ -111,6 +111,7 @@ describe("TravTrack gate", () => {
       "patch /travtrack/zones/:id": "on",
       "delete /travtrack/zones/:id": "held",
       "get /travtrack/day": "on",
+      "get /travtrack/last-seen": "on",
       "get /travtrack/export": "held",
       "post /travtrack/imports": "on",
       "get /travtrack/imports": "held",

@@ -268,6 +268,44 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/travtrack/last-seen",
+  summary: "Where the own history last placed the account",
+  description:
+    "Last seen (Zuletzt gesehen): the newest stored point that is a real fix — never a masked anomaly, " +
+    "a jump still waiting for its return, or a point inside a privacy zone or a deleted span " +
+    "(the last position before a zone). The owner's alone; never cached. Only while TravTrack " +
+    "is on.",
+  tags: ["TravTrack"],
+  responses: {
+    200: {
+      description: "The last position, or null when the history holds none",
+      content: {
+        "application/json": {
+          schema: z.object({
+            lastSeen: z
+              .object({
+                at: z.string(),
+                lat: z.number(),
+                lon: z.number(),
+                accuracyM: z.number().nullable(),
+                deviceId: z.string().nullable(),
+                deviceLabel: z
+                  .string()
+                  .nullable()
+                  .describe("The paired phone's, the file's or the live source's name"),
+                origin: z.string().describe("`companion:<deviceId>`, `gpx:<importId>`, …"),
+              })
+              .nullable(),
+          }),
+        },
+      },
+    },
+    403: disabled,
+  },
+});
+
+registry.registerPath({
   method: "delete",
   path: "/travtrack/points",
   summary: "Delete the points of a span",
