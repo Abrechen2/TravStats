@@ -258,6 +258,44 @@ describe("journey questions", () => {
     expect((await evidence()).runs[0].state).toBe("open");
   });
 
+  it("a claim taken over while it publishes is never overwritten", async () => {
+    const r = await railOver(0);
+    let intruder = -1;
+    const outcome = await acceptJourneyRun(
+      userId,
+      id,
+      { runIndex: 0, entryKind: "rail", entryId: r.id },
+      {
+        beforeWrite: async () => {
+          // Another worker takes the claim over (as after a stale claim), not awaited:
+          // with the row locked it waits for this publication to end.
+          void prisma.locationSuggestion
+            .updateMany({
+              where: { id, status: "accepting" },
+              data: { claimToken: "intruder", claimedAt: new Date() },
+            })
+            .then(({ count }) => (intruder = count));
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        },
+      }
+    ).then(
+      () => "accepted",
+      (e: { code?: string }) => e.code
+    );
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const after = await row();
+    if (outcome === "accepted") {
+      // The takeover found the question no longer being accepted.
+      expect(intruder).toBe(0);
+      expect(after.claimToken).toBeNull();
+    } else {
+      // The takeover won: the old worker wrote nothing.
+      expect(outcome).toBe("SUGGESTION_ACCEPT_IN_PROGRESS");
+      expect(after.claimToken).toBe("intruder");
+      expect((await evidence()).runs[0].state).toBe("open");
+    }
+  });
+
   it("two concurrent accepts write one link", async () => {
     const r = await railOver(0);
     const body = { runIndex: 0, entryKind: "rail", entryId: r.id };

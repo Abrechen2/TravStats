@@ -87,6 +87,8 @@ export type SuggestionAcceptKind = {
 export type AcceptHooks = {
   /** Test seam: after each re-check, before its publication. */
   afterRecheck?: () => Promise<unknown>;
+  /** Test seam: inside the publication, just before its write. */
+  beforeWrite?: () => Promise<unknown>;
 };
 
 export const notFound = () => new AppError("Suggestion not found", 404);
@@ -195,23 +197,32 @@ async function publish(
   row: StoredSuggestion,
   token: string,
   check: Recheck,
-  kind: SuggestionAcceptKind
+  kind: SuggestionAcceptKind,
+  hooks: AcceptHooks
 ): Promise<Published> {
   return prisma.$transaction(async (tx) => {
     await takeTravTrackLock(tx, row.userId);
-    const still = await tx.locationSuggestion.findFirst({
-      where: { id: row.id, status: "accepting", claimToken: token },
-      select: { id: true },
-    });
-    if (!still) throw inProgress();
+    // The row stays locked to the end of the publication: a takeover of the
+    // claim waits for it, and then finds the question no longer being accepted.
+    const still = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM location_suggestions
+       WHERE id = ${row.id} AND status = 'accepting' AND claim_token = ${token}
+         FOR UPDATE`;
+    if (still.length === 0) throw inProgress();
     if ((await historyGeneration(tx, row.userId)) !== check.generation) return { retry: true };
     // Asked again under the lock: a switch during the re-check writes nothing.
     await assertTravTrackDerivationAllowed(row.userId);
     const update = check.outcome === "holds" ? await kind.apply(tx, row) : kind.invalidate(row);
     const final = update.status !== "pending";
-    const written = await tx.locationSuggestion.update({
-      where: { id: row.id },
+    await hooks.beforeWrite?.();
+    // Written only under this claim; a lost claim writes nothing.
+    const { count } = await tx.locationSuggestion.updateMany({
+      where: { id: row.id, status: "accepting", claimToken: token },
       data: { ...update, claimToken: null, claimedAt: null, resolvedAt: final ? new Date() : null },
+    });
+    if (count !== 1) throw inProgress();
+    const written = await tx.locationSuggestion.findUniqueOrThrow({
+      where: { id: row.id },
       select: SUGGESTION_SELECT,
     });
     return check.outcome === "holds" ? { row: written } : { invalidated: true };
@@ -244,7 +255,7 @@ export async function runAcceptProtocol(
       const check = await kind.recheck(row);
       await hooks.afterRecheck?.();
       if (check.outcome === "unverifiable") throw unverifiable();
-      const published = await publish(row, token, check, kind);
+      const published = await publish(row, token, check, kind, hooks);
       if ("row" in published) return published.row;
       if ("invalidated" in published) {
         // Committed above; the answer leaves only now. Ids and counts only.
