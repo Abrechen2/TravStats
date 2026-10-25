@@ -909,3 +909,35 @@ Phase 4:
 ### Phase 4 exit
 
 Per task, not per phase: each L-task lands on `dev/travtrack` with the Build Checks green, `check:drift` green with its migration, a Codex review of its diff, a browser look where it has a screen, and its own single question to the owner when it should reach `main`.
+
+## Phase 5 — Track as an area of its own (owner, 2026-10-25)
+
+Owner, on the Beta: "/track has no main bar, and lacks the controls and views
+Dawarich has — in TravTrack's design." Designed and confirmed on the concept
+canvas (boards "Bereichswechsel", variant **B**, and "Track-Karte").
+
+**Area switch (variant B).** One header row, never a second one. The logo is
+"Trav" followed by the words **Stats · Plan · Track**; the active word is drawn
+in its area colour with an underline, the others dimmed and clickable. Then a
+divider and the active area's own menu. Area colours: Stats `#f0a947` (today's
+`--accent`), Plan `#9aa8ff`, Track `#5ec2b2`. The area follows the route
+(`/plan*` Plan, `/track*` Track, everything else Stats). A word appears only
+where its area is visible (`useTravPlanVisible`, `useTravTrackVisible`); with
+neither, the logo reads "TravStats" as today. Track leaves the "Mehr" menu.
+
+**Track menu:** Karte (`/track`, `/track/:date`), Erkundet (`/track/explored`),
+Statistik (`/track/months`), Aufenthalte (`/track/stays`), Importe
+(`/track/imports`).
+
+| Step | Scope | Server work |
+|---|---|---|
+| T5.1 | Header B for all three areas; `/track` and `/plan` render the main bar | none |
+| T5.2 | Map tab on today's data: range bar (Heute, Gestern, 7 Tage composed from day reads), live follow (polls `/last-seen`), export/delete; layers routes, points (clickable inspector), heatmap, explored fog, stays and places, logbook entries; route colour by speed (from consecutive safe vertices) or single colour, opacity, client-side split (can only split further); one-day replay that jumps gaps; totals panel and the existing timeline; Importe tab hosts the existing GPX / Dawarich-copy / ingest-token UI | none |
+| T5.3 | Monat / Jahr / Zeitraum (bounded, paginated, simplified safe range read); delete one point by id (E5 invalidation); flight panel: altitude series of the segment linked to a flight, photos during the flight by time window (Immich), placed on the safe track by timestamp; Aufenthalte tab; daily calendar in Statistik; countries layer | new endpoints, then UI |
+
+**Privacy, unchanged and binding for every view:** build on safe reads
+(`readSafeTravTrack`); never reconnect across a privacy, deletion, pause or
+flight-mode cut, in drawing, replay, distance or speed; private zones are never
+drawn on the ordinary map (they stay in Settings); a photo inside a zone, or one
+whose time falls in a cut, is not shown; a photo's position comes from the safe
+track, never from its EXIF.
