@@ -303,7 +303,8 @@ describe("TravTrack — GPX import", () => {
             orderBy: { day: "asc" },
           })
         ).map((d) => [d.day.toISOString().slice(0, 10), Number(d.version), d.done]);
-      // Two days, one batch each.
+      // Two days, one batch each. Each batch also marks the other day: its
+      // fixes sit at the edge the other day's projection reads as context (E6).
       await importFile(
         gpxFile([
           [
@@ -314,22 +315,22 @@ describe("TravTrack — GPX import", () => {
         { batchSize: 2 }
       );
       expect(await dirty()).toEqual([
-        ["2026-10-12", 1, 0],
-        ["2026-10-13", 1, 0],
+        ["2026-10-12", 2, 0],
+        ["2026-10-13", 2, 0],
       ]);
       await prisma.travTrackDirtyDay.updateMany({ where: { userId }, data: { done: 1 } });
-      // A file of the 13th only: that day again, the 12th stays acknowledged.
+      // A file of the 13th only: that day again, and both neighbours — the
+      // 13th holds fewer than the context fixes on either side of it.
       await importFile(gpxFile([minuteFixes("2026-10-13T05:00:00Z", 2, 37.7)]));
-      expect(await dirty()).toEqual([
-        ["2026-10-12", 1, 1],
-        ["2026-10-13", 2, 0],
-      ]);
+      const marked = [
+        ["2026-10-12", 3, 0],
+        ["2026-10-13", 3, 0],
+        ["2026-10-14", 1, 0],
+      ];
+      expect(await dirty()).toEqual(marked);
       // A file that stores nothing new marks nothing.
       await importFile(gpxFile([minuteFixes("2026-10-13T05:00:00Z", 2, 37.7)]));
-      expect(await dirty()).toEqual([
-        ["2026-10-12", 1, 1],
-        ["2026-10-13", 2, 0],
-      ]);
+      expect(await dirty()).toEqual(marked);
     });
 
     it("an import over last week creates no finding and no question", async () => {
@@ -429,10 +430,10 @@ describe("TravTrack — GPX import", () => {
         where: { userId },
         orderBy: { day: "asc" },
       });
-      expect(days.map((d) => [d.day.toISOString().slice(0, 10), d.done])).toEqual([
-        ["2026-10-12", 0],
-        ["2026-10-14", 0],
-      ]);
+      // (The import marked the neighbours too; they keep their acknowledgement.)
+      expect(days.filter((d) => d.done === 0).map((d) => d.day.toISOString().slice(0, 10))).toEqual(
+        ["2026-10-12", "2026-10-14"]
+      );
       const left = await prisma.countryDay.findMany({ where: { userId }, select: { date: true } });
       expect(left.map((r) => r.date.toISOString().slice(0, 10))).toEqual(["2026-10-13"]);
       await prisma.countryDay.deleteMany({ where: { userId } });
