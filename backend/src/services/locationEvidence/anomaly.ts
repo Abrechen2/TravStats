@@ -182,13 +182,11 @@ export type StableCut = {
 
 /**
  * Where a read that has to stop may stop with final verdicts (see the header).
- * `from` is the first index that may be handed on — the points before it are
- * the previous read's context. A cut that would hand on nothing gives up on
- * deferral and cuts at the end: a read must make progress.
+ * The cut may land before anything new — then a run is still open, and the
+ * caller reads on until it resolves rather than hand it on unresolved.
  */
 export function stableCut(
   points: readonly LocationObservation[],
-  from = 0,
   opts: AnomalyOptions = {}
 ): StableCut {
   const windows = opts.flightWindows ?? [];
@@ -219,7 +217,6 @@ export function stableCut(
       }
     }
   }
-  if (until <= from) until = points.length;
   const reference = points[Math.min(until, points.length - 1)]?.atMs ?? 0;
   let contextFrom = until;
   for (const { goodFixes } of devices) {

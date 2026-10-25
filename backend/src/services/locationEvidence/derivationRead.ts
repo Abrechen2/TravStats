@@ -16,8 +16,10 @@
  *     Anomalies are masked (`anomaly.ts`), never deleted.
  *   - A truncated read stops where its verdicts are final (`stableCut`): a
  *     run the next read could still close is deferred to it, with each
- *     device's last good fix as context (`derivationCursor.ts`). A split read
- *     masks like an unsplit one.
+ *     device's last good fix as context (`derivationCursor.ts`). When
+ *     deferring would hand on nothing, the read looks ahead past `maxPoints`
+ *     until the open run resolves — an unresolved run is never handed on. A
+ *     split read masks like an unsplit one.
  *
  * Privacy: stored TravTrack points already exclude privacy zones and deleted
  * ranges (ingest drops them, zone creation deletes them), so this read adds no
@@ -28,7 +30,14 @@ import { prisma } from "../../db";
 import { flightRecorderWindows, FLIGHT_WINDOW_SELECT } from "../tripRecording/bounds";
 import { TRAVTRACK_PAGE_CAP, travtrackProvider } from "../locationProvider/travtrackProvider";
 import type { Coverage, LocationObservation, ReadWindow } from "../locationProvider/types";
-import { anomalyMask, isBadFix, stableCut } from "./anomaly";
+import {
+  anomalyMask,
+  isBadFix,
+  MAX_MASKED_RUN,
+  stableCut,
+  type FlightWindow,
+  type StableCut,
+} from "./anomaly";
 import {
   formatDerivationCursor,
   isContext,
@@ -70,10 +79,7 @@ export type DerivationReadOptions = {
 };
 
 /** The recorder windows of the account's flights that touch `window`, `[from, to]` inclusive. */
-async function flightWindowsIn(
-  userId: string,
-  window: ReadWindow
-): Promise<Array<[number, number]>> {
+async function flightWindowsIn(userId: string, window: ReadWindow): Promise<FlightWindow[]> {
   const flights = await prisma.flight.findMany({
     where: { userId, status: { not: "cancelled" } },
     select: FLIGHT_WINDOW_SELECT,
@@ -92,6 +98,8 @@ export async function readTravTrackDerivation(
   const generation = await prisma.$transaction((tx) => historyGeneration(tx, userId));
 
   const start = parseDerivationCursor(opts.cursor);
+  // In the air first: the mask must know which steps are an aircraft's.
+  const flightWindows = await flightWindowsIn(userId, window);
   const raw: LocationObservation[] = [];
   let contextCount = 0;
   let cursor = start.resumeAfter;
@@ -108,32 +116,31 @@ export async function readTravTrackDerivation(
       };
     }
     first = false;
-    // Never past `maxPoints` handed on; the previous read's context does not count.
-    const cap = Math.min(pageSize, maxPoints - (raw.length - contextCount));
+    const handedOn = raw.length - contextCount;
+    // Up to `maxPoints` handed on (the previous read's context does not
+    // count); past it only to look ahead for the end of an open run.
+    const cap =
+      handedOn < maxPoints
+        ? Math.min(pageSize, maxPoints - handedOn)
+        : Math.min(pageSize, MAX_MASKED_RUN + 1);
     const page = await travtrackProvider(userId, cap).readPoints(window, cursor);
     for (const p of page.points) {
       raw.push(p);
       if (isContext(p, start.emitAfter)) contextCount += 1;
     }
     cursor = page.next ?? undefined;
-    if (!cursor) break;
+    const read: RawRead = { raw, contextCount, resumeAfter: start.resumeAfter };
+    if (!cursor)
+      return finish(userId, judge(read, flightWindows, false), flightWindows, generation);
     if (raw.length - contextCount >= maxPoints) {
-      return finish(
-        userId,
-        window,
-        { raw, contextCount, resumeAfter: start.resumeAfter },
-        true,
-        generation
-      );
+      const judgement = judge(read, flightWindows, true);
+      // A cut that would hand on nothing sits in front of a run still open:
+      // read on until it resolves. Runs are bounded, so this ends.
+      if (judgement.cut.until > judgement.fresh) {
+        return finish(userId, judgement, flightWindows, generation);
+      }
     }
   }
-  return finish(
-    userId,
-    window,
-    { raw, contextCount, resumeAfter: start.resumeAfter },
-    false,
-    generation
-  );
 }
 
 type RawRead = {
@@ -142,6 +149,17 @@ type RawRead = {
   contextCount: number;
   /** Where this read started. */
   resumeAfter: string | undefined;
+};
+
+type Judgement = {
+  read: RawRead;
+  /** Indices into `read.raw` of what is judged: the context fixes, then every fresh point. */
+  judged: number[];
+  /** Index into `judged` of the first fresh point. */
+  fresh: number;
+  masked: boolean[];
+  cut: StableCut;
+  truncated: boolean;
 };
 
 /** Of the previous read's context, each device's last good fix — all the next judgement needs. */
@@ -153,28 +171,29 @@ function contextFixes(raw: readonly LocationObservation[], count: number): numbe
   return [...last.values()].sort((a, b) => a - b);
 }
 
-async function finish(
-  userId: string,
-  window: ReadWindow,
-  read: RawRead,
-  truncated: boolean,
-  generation: bigint
-): Promise<DerivationRead> {
+function judge(read: RawRead, flightWindows: FlightWindow[], truncated: boolean): Judgement {
   const { raw, contextCount } = read;
-  // In the air first: the mask must know which steps are an aircraft's.
-  const flightWindows = await flightWindowsIn(userId, window);
   const judged = [...contextFixes(raw, contextCount), ...raw.map((_, i) => i).slice(contextCount)];
   const fresh = judged.length - (raw.length - contextCount);
   const observations = judged.map((i) => raw[i]);
   const masked = anomalyMask(observations, { flightWindows });
   const cut = truncated
-    ? stableCut(observations, fresh, { flightWindows })
+    ? stableCut(observations, { flightWindows })
     : { until: observations.length, contextFrom: observations.length };
+  return { read, judged, fresh, masked, cut, truncated };
+}
 
+function finish(
+  userId: string,
+  { read, judged, fresh, masked, cut, truncated }: Judgement,
+  flightWindows: FlightWindow[],
+  generation: bigint
+): DerivationRead {
+  const { raw } = read;
   const points: DerivationPoint[] = [];
   for (let j = fresh; j < cut.until; j += 1) {
     if (masked[j]) continue;
-    const o = observations[j];
+    const o = raw[judged[j]];
     const key = observationKey(o);
     points.push({
       ...o,

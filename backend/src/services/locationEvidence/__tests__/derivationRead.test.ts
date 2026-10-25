@@ -225,6 +225,27 @@ describe("readTravTrackDerivation", () => {
     }
   });
 
+  it("a run still open where a read must stop is read to its end, never handed on unresolved", async () => {
+    // One phone, a fix every 50 ms, A A A B B B A A B with A and B ~2.2 km
+    // apart: same-second jumps. The B run is masked, the return to A is
+    // real, and the last B — a jump with no return — is left alone.
+    const B = { lat: SEOUL.lat + 0.02, lon: SEOUL.lon };
+    // A metre apart each: the store keeps one fix per second and place.
+    const fixes = [...("AAABBBAAB" as string)].map((c, i) => {
+      const at = c === "A" ? SEOUL : B;
+      return { t: BASE + i * 50, lat: at.lat, lon: at.lon + i * 0.00001 };
+    });
+    for (const f of fixes) await storePoint(userId, f);
+    const whole = (await readTravTrackDerivation(userId, WINDOW)).points.map((p) => p.atMs);
+    expect(whole).toEqual([0, 1, 2, 6, 7, 8].map((i) => fixes[i].t));
+    for (let maxPoints = 1; maxPoints <= 9; maxPoints += 1) {
+      expect({ maxPoints, seen: await readInSplits(maxPoints) }).toEqual({
+        maxPoints,
+        seen: whole,
+      });
+    }
+  });
+
   it("a point inside a flight window is inFlight", async () => {
     // makeFlight: ICN 00:30Z -> CJU 01:30Z, armed 00:00Z..02:00Z.
     await makeFlight(userId);
