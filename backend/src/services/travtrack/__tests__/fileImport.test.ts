@@ -61,6 +61,8 @@ describe("TravTrack — GPX import", () => {
     await settleAllJobs();
     await wipeTravTrack([userId]);
     await prisma.travTrackImport.deleteMany({ where: { userId } });
+    await prisma.travTrackDirtyDay.deleteMany({ where: { userId } });
+    await prisma.travTrackDerivationState.deleteMany({ where: { userId } });
   });
 
   afterAll(async () => {
@@ -289,6 +291,43 @@ describe("TravTrack — GPX import", () => {
         "TRAVTRACK_IMPORT_UNREADABLE"
       );
       expect(await statusOf(row.id)).toBe("failed");
+    });
+
+    it("each committed batch marks its days dirty; a later import raises them again", async () => {
+      const dirty = async () =>
+        (
+          await prisma.travTrackDirtyDay.findMany({
+            where: { userId },
+            orderBy: { day: "asc" },
+          })
+        ).map((d) => [d.day.toISOString().slice(0, 10), Number(d.version), d.done]);
+      // Two days, one batch each.
+      await importFile(
+        gpxFile([
+          [
+            ...minuteFixes("2026-10-12T23:58:00Z", 2),
+            ...minuteFixes("2026-10-13T00:00:00Z", 2, 37.6),
+          ],
+        ]),
+        { batchSize: 2 }
+      );
+      expect(await dirty()).toEqual([
+        ["2026-10-12", 1, 0],
+        ["2026-10-13", 1, 0],
+      ]);
+      await prisma.travTrackDirtyDay.updateMany({ where: { userId }, data: { done: 1 } });
+      // A file of the 13th only: that day again, the 12th stays acknowledged.
+      await importFile(gpxFile([minuteFixes("2026-10-13T05:00:00Z", 2, 37.7)]));
+      expect(await dirty()).toEqual([
+        ["2026-10-12", 1, 1],
+        ["2026-10-13", 2, 0],
+      ]);
+      // A file that stores nothing new marks nothing.
+      await importFile(gpxFile([minuteFixes("2026-10-13T05:00:00Z", 2, 37.7)]));
+      expect(await dirty()).toEqual([
+        ["2026-10-12", 1, 1],
+        ["2026-10-13", 2, 0],
+      ]);
     });
 
     it("an import over last week creates no finding and no question", async () => {
