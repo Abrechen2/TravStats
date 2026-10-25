@@ -244,7 +244,8 @@ const NARROW_ATTEMPTS = 3;
  * Narrows one stored route in place: written only where the row is still the
  * one read (id and version); a row that went meanwhile stays gone. A row that
  * moved on (another narrowing, the owner sharing again) is read again and
- * narrowed once more. Illegible geometry is left as it is: it is served to
+ * narrowed once more — whether this one was to shrink it or to remove it.
+ * Illegible geometry is left as it is: it is served to
  * nobody, and the owner's next share replaces it.
  */
 async function narrowOne(db: Db, userId: string, id: string, extraHomes: readonly ZoneCircle[]) {
@@ -259,8 +260,9 @@ async function narrowOne(db: Db, userId: string, id: string, extraHomes: readonl
     const kept = n ? narrow(lines, n) : [];
     const guard = { id: row.id, version: row.version };
     if (!n || kept.length === 0) {
-      await db.travTrackShareSnapshot.deleteMany({ where: guard });
-      return;
+      const { count } = await db.travTrackShareSnapshot.deleteMany({ where: guard });
+      if (count > 0) return;
+      continue;
     }
     const window = {
       sharedFrom: new Date(n.bounds.fromMs),

@@ -1,10 +1,11 @@
 import request from "supertest";
 
 import app from "../../index";
-import { observeQueries, prisma, type ObservedQuery } from "../../db";
+import { observeQueries, prisma, type DbTransaction, type ObservedQuery } from "../../db";
 import { generateToken } from "../../utils/jwt";
 import { distanceM } from "../../services/travtrack/classify";
 import { deleteTravTrackRange } from "../../services/travtrack/deleteRange";
+import { narrowShareSnapshots } from "../../services/travtrack/shareNarrow";
 import { segmentCrossesZone, type LonLat } from "../../services/travtrack/privacyCut";
 import { travTrackSwitches } from "../../services/travtrack/__tests__/switches";
 import {
@@ -288,6 +289,50 @@ describe("TravTrack — a shared route is selected once and only ever narrowed",
     expect(own.body.snapshot?.geometry ?? []).toEqual([]);
     await share();
     expect(await recipientRead()).not.toBeNull();
+  });
+
+  it("a narrowing that would remove the route retries when the row moved on under it", async () => {
+    await walk(126.95, 127.06, T0);
+    await share();
+    // The trip's days now lie past every stored vertex: the route goes.
+    await prisma.trip.update({
+      where: { id: tripId },
+      data: {
+        startDate: new Date("2026-10-20T00:00:00Z"),
+        endDate: new Date("2026-10-21T00:00:00Z"),
+        startDay: new Date("2026-10-20"),
+        endDay: new Date("2026-10-21"),
+      },
+    });
+    let bumped = false;
+    await prisma.$transaction(
+      async (tx) => {
+        // Another narrowing commits between this one's read and its delete.
+        const snapshots = new Proxy(tx.travTrackShareSnapshot, {
+          get(target, key, receiver) {
+            if (key !== "deleteMany") return Reflect.get(target, key, receiver);
+            return async (args: { where: { id: string } }) => {
+              if (!bumped) {
+                bumped = true;
+                await target.updateMany({
+                  where: { id: args.where.id },
+                  data: { version: { increment: 1 } },
+                });
+              }
+              return target.deleteMany(args);
+            };
+          },
+        });
+        const db = new Proxy(tx, {
+          get: (target, key, receiver) =>
+            key === "travTrackShareSnapshot" ? snapshots : Reflect.get(target, key, receiver),
+        }) as DbTransaction;
+        await narrowShareSnapshots(db, owner, { tripId });
+      },
+      { timeout: 30_000 }
+    );
+    expect(bumped).toBe(true);
+    expect(await prisma.travTrackShareSnapshot.count({ where: { tripId } })).toBe(0);
   });
 
   it("a recipient's reads are rate-limited", async () => {
