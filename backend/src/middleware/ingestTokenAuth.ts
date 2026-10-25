@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
 import {
+  looksLikeIngestToken,
   verifyIngestToken,
   type IngestTokenKind,
   type VerifiedIngestToken,
@@ -29,8 +30,10 @@ import {
  * opens these two paths and nothing else. Nothing here logs the token, a
  * digest of it, or the header; rejections are only counted.
  *
- * An address over its failure bound (`ingestSourceLimits.ts`) is refused
- * with 429 before the header is read or any token looked up.
+ * The per-address failure bound (`ingestSourceLimits.ts`): a well-formed
+ * token is always verified and refused by the bound only when it fails; a
+ * request with no usable credential is refused early once the address is
+ * over the bound.
  */
 
 export type IngestTokenRequest = Request & {
@@ -96,25 +99,45 @@ function refuse(
   ingestAuthFailureLimiter(req, res, () => next(invalid()));
 }
 
-/** Whether this address has spent its failures: then nothing is looked up at all. */
+/** Whether this address has spent its failures. */
 async function overFailureBound(req: Request): Promise<boolean> {
   const info = await ingestAuthFailureLimiter.getKey(ingestFailureKey(req));
   return (info?.totalHits ?? 0) >= INGEST_AUTH_FAILURES_PER_WINDOW;
 }
 
+/**
+ * A request without a usable credential — none, the other app's scheme, a
+ * malformed one, or one in the URL — is refused before anything is looked
+ * up; past the address's bound, with 429.
+ */
+async function refuseUnusable(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+  kind: IngestTokenKind,
+  reason: string
+) {
+  if (await overFailureBound(req)) {
+    noteRejection(kind, "rate_limited");
+    return next(limited());
+  }
+  refuse(req, res, next, kind, reason);
+}
+
 export function ingestTokenAuth(kind: IngestTokenKind) {
   return (req: IngestTokenRequest, res: Response, next: NextFunction): void => {
     void (async () => {
-      if (await overFailureBound(req)) {
-        noteRejection(kind, "rate_limited");
-        return next(limited());
-      }
       const inUrl = Object.keys(req.query ?? {}).some((k) =>
         URL_CREDENTIALS.includes(k.toLowerCase())
       );
-      if (inUrl) return refuse(req, res, next, kind, "token_in_url");
+      if (inUrl) return refuseUnusable(req, res, next, kind, "token_in_url");
       const token = credentialOf(kind, req.headers.authorization);
-      if (token === null) return refuse(req, res, next, kind, "wrong_scheme");
+      if (token === null) return refuseUnusable(req, res, next, kind, "wrong_scheme");
+      if (!looksLikeIngestToken(token)) return refuseUnusable(req, res, next, kind, "malformed");
+      // A well-formed token is always verified — one indexed keyed-hash
+      // lookup — so other clients failing at this address cannot lock out a
+      // phone with a good token. Only a failed verification is counted
+      // against the address and refused by its bound.
       const verified = await verifyIngestToken(token, kind);
       if (!verified) return refuse(req, res, next, kind, "unknown_token");
       req.ingestToken = verified;

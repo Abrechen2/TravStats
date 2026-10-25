@@ -15,12 +15,13 @@ import { travTrackImportKey } from "./travTrackImportLimiter";
  *     times the bucket.
  *   - per address, failures only: a request whose token does not verify. A
  *     256-bit token cannot be guessed at any rate; this bounds the database
- *     work and log volume a stranger can cause. Only failures are counted,
- *     but once an address is over the bound it is refused BEFORE any token
- *     lookup (`ingestTokenAuth`) — a good token included, since telling it
- *     apart would need the lookup the bound exists to spare. Accepted: a phone
- *     sharing an address with a client that keeps failing waits out the
- *     window; it keeps its queue meanwhile.
+ *     work and log volume a stranger can cause. Only failures are counted
+ *     and only failures are refused by it: a well-formed token is always
+ *     verified (one indexed keyed-hash lookup), so a phone sharing an address
+ *     with a client that keeps failing — one home connection, a reverse
+ *     proxy — is never locked out. A request with no usable credential is
+ *     refused before any lookup once the address is over the bound
+ *     (`ingestTokenAuth`).
  *   - creating tokens: per account, like the file imports.
  */
 

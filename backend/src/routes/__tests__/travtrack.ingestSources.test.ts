@@ -618,18 +618,31 @@ describe("TravTrack — OwnTracks and Overland", () => {
       expect([spent.status, spent.body.code]).toEqual([429, "RATE_LIMITED"]);
     });
 
-    it("an address that keeps failing is refused before any token lookup", async () => {
+    it("an address over the failure bound still accepts a valid token", async () => {
       const wrong = `tt_ingest_${"0".repeat(64)}`;
       for (let i = 0; i < INGEST_AUTH_FAILURES_PER_WINDOW; i++) {
         expect((await emptyPost(wrong)).status).toBe(401);
       }
-      const lookups = jest.spyOn(prisma.travTrackIngestToken, "findUnique");
+      // Other clients' failures at this address do not lock the phone out.
+      expect((await emptyPost(owntracks.token)).status).toBe(200);
+      // A token that fails verification is refused by the bound.
       const limited = await emptyPost(wrong);
       expect([limited.status, limited.body.code]).toEqual([429, "RATE_LIMITED"]);
-      // Over the bound the address is refused outright, a good token included:
-      // telling them apart would need the lookup the bound exists to spare.
-      expect((await emptyPost(owntracks.token)).status).toBe(429);
+      // No well-formed credential at all: refused before any lookup.
+      const lookups = jest.spyOn(prisma.travTrackIngestToken, "findUnique");
+      const bare = await request(app).post(OT).send({});
+      expect(bare.status).toBe(429);
+      const garbage = await request(app).post(OT).set("Authorization", basic("nope")).send({});
+      expect(garbage.status).toBe(429);
       expect(lookups).not.toHaveBeenCalled();
+    });
+
+    it("over the bound, invalid tokens are refused without a log line per attempt", async () => {
+      const wrong = `tt_ingest_${"2".repeat(64)}`;
+      for (let i = 0; i < INGEST_AUTH_FAILURES_PER_WINDOW; i++) await emptyPost(wrong);
+      const warn = jest.spyOn(securityLogger, "warn");
+      for (let i = 0; i < 5; i++) expect((await emptyPost(wrong)).status).toBe(429);
+      expect(warn.mock.calls.length).toBeLessThanOrEqual(1);
     });
 
     it("a rejected attempt is counted, not logged one line each", async () => {
