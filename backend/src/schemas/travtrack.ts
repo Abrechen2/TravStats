@@ -53,28 +53,28 @@ export const travTrackPointsQuerySchema = z.object({
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 /** The four ways to name a span: two instants, or two days on the profile clock. */
-const rangeFields = {
+export const rangeFields = {
   from: z.string().datetime({ offset: true }).optional().describe("Inclusive instant"),
   to: z.string().datetime({ offset: true }).optional().describe("Exclusive instant"),
   fromDay: day.optional().describe("First day, inclusive, on the profile's clock"),
   toDay: day.optional().describe("Last day, inclusive, on the profile's clock"),
 };
 
-type RangeFields = {
+export type RangeFields = {
   from?: string;
   to?: string;
   fromDay?: string;
   toDay?: string;
 };
 
-const oneForm = (q: RangeFields) =>
+export const oneForm = (q: RangeFields) =>
   (q.from !== undefined &&
     q.to !== undefined &&
     q.fromDay === undefined &&
     q.toDay === undefined) ||
   (q.fromDay !== undefined && q.toDay !== undefined && q.from === undefined && q.to === undefined);
 
-const inOrder = (q: RangeFields) =>
+export const inOrder = (q: RangeFields) =>
   q.from !== undefined && q.to !== undefined
     ? Date.parse(q.from) < Date.parse(q.to)
     : (q.fromDay ?? "") <= (q.toDay ?? "");

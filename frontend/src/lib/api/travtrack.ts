@@ -97,6 +97,8 @@ export interface TravTrackDay {
   zone: string;
   /** Stretches already cut at every gap and privacy-cut — never join two. */
   segments: TrackPoint[][];
+  /** The stored point of each vertex, aligned with `segments`; absent on an older server. */
+  pointIds?: string[][];
   coverage: Array<{ fromMs: number; untilMs: number; state: TrackCoverageState }>;
   context: TravTrackDayEntry[];
   pointCount: number;
