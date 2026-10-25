@@ -42,6 +42,7 @@ import { loadFerryEnds } from "./ferryEvidence";
 import { loadVisibleDomains } from "../domainVisibility";
 import { applyCountryOverrides } from "./countryOverrides";
 import { listCountryOverrides } from "./countryOverrideStore";
+import { clampPassportToYear, scopeOverrides } from "./passportYear";
 
 /**
  * The airport codes a passport-shaped flight row touches, deduplicated.
@@ -224,11 +225,28 @@ export async function passportFlightsOf<T extends PassportLoaderFlight>(flights:
   }));
 }
 
+/**
+ * How much of the account the passport covers. `year` (companion-redesign C4)
+ * limits it to the evidence of one calendar year — see `./passportYear.ts` for
+ * what that means per source and which records no year can claim. Omitted: the
+ * lifetime passport, exactly as before.
+ *
+ * `prefetchedFlights` stays the FULL countable list under a year too: the
+ * travel chain is graded on every leg before the year is cut, so a trip over
+ * New Year keeps its destination. A caller such as `/stats/hero` therefore
+ * calls `loadPassport(userId, flights, {}, { year })` with its unfiltered rows.
+ */
+export interface PassportOptions {
+  year?: number;
+}
+
 export async function loadPassport(
   userId: string,
   prefetchedFlights?: PassportLoaderFlight[],
-  sources: PassportSources = {}
+  sources: PassportSources = {},
+  options: PassportOptions = {}
 ): Promise<ReturnType<typeof buildPassport>> {
+  const { year } = options;
   const readRail = sources.rail ?? true;
   const readRoadtrip = sources.roadtrip ?? true;
   const readPlace = sources.place ?? true;
@@ -427,11 +445,20 @@ export async function loadPassport(
     profile.zone,
     busEnds,
     homeCountries,
-    ferryEnds
+    ferryEnds,
+    year
   );
-  return applyCountryOverrides(
-    automatic,
-    overrides,
-    Number(localDay(now, profile.zone).slice(0, 4))
+  if (year === undefined) {
+    return applyCountryOverrides(
+      automatic,
+      overrides,
+      Number(localDay(now, profile.zone).slice(0, 4))
+    );
+  }
+  // "New" under a year means new in that year, as in `buildPassport`.
+  const inYear = new Set(automatic.countries.map((c) => c.code));
+  return clampPassportToYear(
+    applyCountryOverrides(automatic, scopeOverrides(overrides, year, inYear), year),
+    year
   );
 }
