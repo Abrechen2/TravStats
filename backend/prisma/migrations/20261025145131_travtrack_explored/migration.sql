@@ -1,5 +1,6 @@
 -- AlterTable
-ALTER TABLE "travtrack_derivation_state" ADD COLUMN     "zone_cells_version" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "travtrack_derivation_state" ADD COLUMN     "zone_cells_overflow" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "zone_cells_version" INTEGER NOT NULL DEFAULT 0;
 
 -- CreateTable
 CREATE TABLE "travtrack_explored_cells" (

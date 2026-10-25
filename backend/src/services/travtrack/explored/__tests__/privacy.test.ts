@@ -142,6 +142,41 @@ describe("the explored map's privacy model", () => {
     for (const c of cells) expect(view.has(key(c))).toBe(true);
   });
 
+  it("no answer ever holds a hole at a zone: every zone cell left out is open on two sides at least", () => {
+    // A seeded pseudo-random walk of explored ground around the zone, many times.
+    let seed = 7;
+    const rand = () => (seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
+    const b = boxOf(zoneCells);
+    for (let round = 0; round < 40; round++) {
+      const explored: Cell[] = [];
+      const density = rand();
+      for (let x = b.x0 - 3; x <= b.x1 + 3; x++) {
+        for (let y = b.y0 - 3; y <= b.y1 + 3; y++) {
+          if (!zoneKeys.has(`${x}/${y}`) && rand() < density) explored.push({ x, y });
+        }
+      }
+      const ex = keys(explored);
+      const drawn = keys(exploredView({ explored, circles: [zone], bbox: WORLD }));
+      const reaches = (c: Cell, dx: number, dy: number) => {
+        for (let k = 1; ; k++) {
+          const n = `${c.x + dx * k}/${c.y + dy * k}`;
+          if (ex.has(n)) return true;
+          if (!zoneKeys.has(n)) return false;
+        }
+      };
+      for (const c of zoneCells) {
+        if (drawn.has(key(c))) continue;
+        const closed = [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ].filter(([dx, dy]) => reaches(c, dx, dy)).length;
+        expect(closed).toBeLessThanOrEqual(2);
+      }
+    }
+  });
+
   it("deciding a zone is linear: 40 000 zone cells inside a ring in well under a second", () => {
     const component: Cell[] = [];
     for (let x = 1000; x < 1200; x++) for (let y = 3000; y < 3200; y++) component.push({ x, y });

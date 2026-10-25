@@ -111,6 +111,19 @@ describe("TrackExploredMap", () => {
     expect(await screen.findByRole("status")).toHaveTextContent(/näher heran/);
   });
 
+  it("a map refused for too large privacy zones says so and draws no cell", async () => {
+    api.explored.mockRejectedValue({
+      response: { status: 409, data: { code: "TRAVTRACK_EXPLORED_UNAVAILABLE" } },
+    });
+    render(<TrackExploredMap />);
+    await act(async () => mapHandlers.onLoad?.(fakeMap({ w: 13, s: 52, e: 14, n: 53 })));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Die Erkundet-Karte ist für so große Privatzonen nicht verfügbar."
+    );
+    const cells = lastCells();
+    expect((cells?.data as GeoJSON.FeatureCollection).features).toHaveLength(0);
+  });
+
   it("shows a refusal as itself", async () => {
     api.explored.mockRejectedValue({
       response: { status: 403, data: { code: "TRAVTRACK_DISABLED" } },

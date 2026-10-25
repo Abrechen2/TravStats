@@ -6142,6 +6142,9 @@ model TravTrackDerivationState {
   /// The explored map's zone raster version this account was built with
   /// (L1); 0 = never built, so the first request builds it.
   zoneCellsVersion      Int       @default(0) @map("zone_cells_version")
+  /// The zone raster outgrew its cap (L1): the explored map then refuses
+  /// whole (409 TRAVTRACK_EXPLORED_UNAVAILABLE) rather than draw any part.
+  zoneCellsOverflow     Boolean   @default(false) @map("zone_cells_overflow")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

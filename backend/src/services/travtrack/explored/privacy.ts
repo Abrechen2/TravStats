@@ -14,7 +14,7 @@
  *     one beside a road or nobody's ground draws nothing. The legend says so
  *     ("Privatzonen werden als erkundet gezeigt").
  *
- * The circles are the zones in force AND the newest former zones' circles:
+ * The circles are the zones in force AND every former zone's circle:
  * points inside one were deleted when it was made, so its old hole would
  * outline it just the same. They are rasterised once per zone change into
  * `travtrack_zone_cells` (`zoneCells.ts`); a request reads the zones touching
@@ -124,7 +124,15 @@ async function filledZonesIn(userId: string, ranges: readonly TileRange[]): Prom
  * queries: the raster check, the box's cells, the zones touching the box.
  */
 export async function exploredAnswer(userId: string, bbox: Bbox): Promise<{ cells: Cell[] }> {
-  await ensureZoneCells(userId);
+  // Fail closed for the whole view: a raster too large to hold is never
+  // answered in part, since any part could outline a zone.
+  if ((await ensureZoneCells(userId)).overflow) {
+    throw new AppError(
+      "The explored map is not available for privacy zones this large",
+      409,
+      "TRAVTRACK_EXPLORED_UNAVAILABLE"
+    );
+  }
   const ranges = bboxRanges(bbox);
   const inBox = await prisma.$queryRaw<Cell[]>`
     SELECT DISTINCT x, y FROM travtrack_explored_cells

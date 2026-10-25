@@ -32,6 +32,12 @@ registry.registerPath({
         "VALIDATION_FAILED: not a box; TRAVTRACK_EXPLORED_ZOOM_IN: more tiles than one answer carries",
       content: errorContent,
     },
+    409: {
+      description:
+        "TRAVTRACK_EXPLORED_UNAVAILABLE: the account's privacy zones cover more ground than " +
+        "the explored map can keep private; no part of the map is answered",
+      content: errorContent,
+    },
     403: {
       description: "TRAVTRACK_DISABLED: TravTrack is switched off on this server",
       content: errorContent,

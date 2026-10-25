@@ -146,6 +146,19 @@ describe("TravTrack — the explored map", () => {
     expect(res.body.code).toBe("TRAVTRACK_EXPLORED_ZOOM_IN");
   });
 
+  it("an account whose zones outgrew the raster gets a refusal and no cells at all", async () => {
+    await seed(userId, [tileOf(52.52, 13.405)]);
+    await prisma.travTrackDerivationState.upsert({
+      where: { userId },
+      create: { userId, zoneCellsVersion: 1, zoneCellsOverflow: true },
+      update: { zoneCellsVersion: 1, zoneCellsOverflow: true },
+    });
+    const res = await explored({ bbox: BERLIN });
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("TRAVTRACK_EXPLORED_UNAVAILABLE");
+    expect(res.body.cells).toBeUndefined();
+  });
+
   it("refuses a box that is not one", async () => {
     for (const bbox of ["", "1,2,3", "a,b,c,d", "10,60,20,50", "0,-91,10,0", "-181,0,0,10"]) {
       const res = await explored({ bbox });

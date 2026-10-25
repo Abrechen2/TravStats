@@ -146,7 +146,11 @@ export default function TrackExploredMap(): JSX.Element {
         if (id !== request.current) return;
         const key = trackErrorKey(err);
         if (key === "track:explored.zoomIn") setStatus({ kind: "zoomIn" });
-        else {
+        else if (key === "track:explored.unavailable") {
+          // Refused whole: nothing of the map stays drawn.
+          setCells([]);
+          setStatus({ kind: "failed", key });
+        } else {
           logger.warn("TravTrack explored map could not be loaded", err);
           setStatus({ kind: "failed", key });
         }

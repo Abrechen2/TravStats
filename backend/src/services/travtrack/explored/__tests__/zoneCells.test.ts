@@ -5,7 +5,7 @@ import { makeUser, wipeTravTrack } from "../../__tests__/fixtures";
 import { travTrackSwitches } from "../../__tests__/switches";
 import { tileOf, type Cell } from "../cells";
 import { circleCells, exploredAnswer } from "../privacy";
-import { MAX_FORMER_CIRCLES, MAX_ZONE_CELLS, rebuildZoneCells } from "../zoneCells";
+import { addZoneCircle, rebuildZoneCells } from "../zoneCells";
 
 /**
  * The explored map's zone raster (TravTrack plan L1; Codex review of
@@ -162,31 +162,108 @@ describe("the explored map's zone raster", () => {
     for (const c of bigCells) expect(drawn.has(key(c))).toBe(true);
   });
 
-  it("more raster cells than the cap fail closed: no zone cell is drawn, not a partial fill", async () => {
-    const huge = { lat: 52.52, lon: 13.405, radiusM: 250_000 };
-    expect(circleCells(huge).length).toBeGreaterThan(MAX_ZONE_CELLS);
-    await prisma.travTrackPrivacyZone.create({ data: { userId, name: "Riesig", ...huge } });
+  it("more raster cells than the cap: the zone is still made, and the whole map refuses — no cells at all", async () => {
     const centre = tileOf(52.52, 13.405);
     await seed([
       { x: centre.x - 1, y: centre.y },
       { x: centre.x + 1, y: centre.y },
-      { x: centre.x, y: centre.y - 1 },
-      { x: centre.x, y: centre.y + 1 },
+      tileOf(48.137, 11.575),
     ]);
+    // Over the cap through many large former circles, then one more zone.
+    await prisma.travTrackZoneTombstone.createMany({
+      data: Array.from({ length: 12 }, (_, i) => ({
+        userId,
+        lat: 45 + i * 1.5,
+        lon: 20,
+        radiusM: 60_000,
+        untilAt: new Date(Date.parse("2026-10-01T00:00:00Z") + i * 60_000),
+      })),
+    });
     await prisma.$transaction((tx) => rebuildZoneCells(tx, userId), { timeout: 30_000 });
+    const { zone } = await createZone(userId, { name: "Zuhause", ...BERLIN }, true);
+    expect(zone.id).toBeTruthy();
 
+    await expect(
+      exploredAnswer(userId, { west: 13.3, south: 52.45, east: 13.5, north: 52.6 })
+    ).rejects.toMatchObject({ statusCode: 409, code: "TRAVTRACK_EXPLORED_UNAVAILABLE" });
+    await expect(
+      exploredAnswer(userId, { west: 11, south: 48, east: 12, north: 49 })
+    ).rejects.toMatchObject({ code: "TRAVTRACK_EXPLORED_UNAVAILABLE" });
     expect(await prisma.travTrackZoneCell.count({ where: { userId } })).toBe(0);
+  });
+
+  it("a zone whose tiles cross the cap is still made; the account is marked and the map refuses", async () => {
+    await createZone(userId, { name: "Zuhause", ...BERLIN }, true);
+    const held = await prisma.travTrackZoneCell.count({ where: { userId } });
+    await seed([tileOf(48.137, 11.575)]);
+
+    await prisma.$transaction((tx) => addZoneCircle(tx, userId, MUNICH, held + 3));
+
+    const state = await prisma.travTrackDerivationState.findUniqueOrThrow({ where: { userId } });
+    expect(state.zoneCellsOverflow).toBe(true);
+    await expect(
+      exploredAnswer(userId, { west: 11, south: 48, east: 12, north: 49 })
+    ).rejects.toMatchObject({ code: "TRAVTRACK_EXPLORED_UNAVAILABLE" });
+    // And it stays refused through further zone changes.
+    await createZone(userId, { name: "Eltern", ...MUNICH }, true);
+    await expect(
+      exploredAnswer(userId, { west: 11, south: 48, east: 12, north: 49 })
+    ).rejects.toMatchObject({ code: "TRAVTRACK_EXPLORED_UNAVAILABLE" });
+  });
+
+  it("every former zone counts, however many: the oldest of 150 is still filled from its surroundings", async () => {
+    const base = Date.parse("2026-10-01T00:00:00Z");
+    const oldest = { lat: 52.52, lon: 13.405, radiusM: 2_000 };
+    await prisma.travTrackZoneTombstone.createMany({
+      data: [
+        { userId, ...oldest, untilAt: new Date(base) },
+        ...Array.from({ length: 149 }, (_, i) => ({
+          userId,
+          lat: 40 + (i % 15) * 0.3,
+          lon: 0 + Math.floor(i / 15) * 0.3,
+          radiusM: 3_000,
+          untilAt: new Date(base + (i + 1) * 60_000),
+        })),
+      ],
+    });
+    await seed(ringAround(circleCells(oldest), 1));
+
     const { cells } = await exploredAnswer(userId, {
       west: 13.3,
       south: 52.45,
       east: 13.5,
       north: 52.6,
     });
-    expect(cells.map(key)).not.toContain(key(centre));
-    expect(cells).toHaveLength(4);
+
+    const drawn = new Set(cells.map(key));
+    for (const c of circleCells(oldest)) expect(drawn.has(key(c))).toBe(true);
   });
 
-  it("only the newest former circles are rasterised, and one inside another adds nothing", async () => {
+  it("adding zones one by one gives the raster a full rebuild gives, components merged", async () => {
+    const nearBerlin = { lat: 52.52, lon: 13.47, radiusM: 3_000 };
+    await createZone(userId, { name: "A", ...BERLIN }, true);
+    await createZone(userId, { name: "B", ...MUNICH }, true);
+    await createZone(userId, { name: "C", ...nearBerlin }, true);
+    const rows = async () =>
+      (
+        await prisma.travTrackZoneCell.findMany({
+          where: { userId },
+          select: { x: true, y: true, component: true },
+        })
+      ).map((r) => ({ k: key(r), component: r.component }));
+    const partition = (list: Array<{ k: string; component: number }>) => {
+      const groups = new Map<number, string[]>();
+      for (const r of list) groups.set(r.component, [...(groups.get(r.component) ?? []), r.k]);
+      return [...groups.values()].map((g) => g.sort().join(",")).sort();
+    };
+    const incremental = partition(await rows());
+    await prisma.$transaction((tx) => rebuildZoneCells(tx, userId));
+    expect(incremental).toEqual(partition(await rows()));
+    // Berlin and its neighbour touch: one component; Munich its own.
+    expect(incremental).toHaveLength(2);
+  });
+
+  it("the same circle many times over, or one inside another, adds nothing", async () => {
     const base = Date.parse("2026-10-01T00:00:00Z");
     await prisma.travTrackZoneTombstone.createMany({
       data: [
@@ -202,6 +279,5 @@ describe("the explored map's zone raster", () => {
     });
     await prisma.$transaction((tx) => rebuildZoneCells(tx, userId));
     expect((await stored()).length).toBe(circleCells(BERLIN).length);
-    expect(MAX_FORMER_CIRCLES).toBeGreaterThanOrEqual(50);
   });
 });

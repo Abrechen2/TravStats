@@ -4,7 +4,7 @@ import { AppError } from "../../middleware/errorHandler";
 import type { ZoneCircle } from "./classify";
 
 import { onPointsRemoved } from "./deleteRange";
-import { rebuildZoneCells } from "./explored/zoneCells";
+import { addZoneCircle } from "./explored/zoneCells";
 import { takeTravTrackLock } from "./lock";
 import { collectRemoved, NOTHING_REMOVED, type RemovedHistory } from "./removedHistory";
 
@@ -28,8 +28,9 @@ import { collectRemoved, NOTHING_REMOVED, type RemovedHistory } from "./removedH
  * uploadId cannot come back. A fix recorded there afterwards is taken. Removing
  * a zone deletes no point, so it calls no `onPointsRemoved`.
  *
- * Every write also rebuilds the explored map's zone raster in its transaction
- * (`explored/zoneCells.ts`, plan L1).
+ * A create or move also adds the new circle to the explored map's zone raster
+ * in its transaction (`explored/zoneCells.ts`, plan L1); a removed zone's
+ * circle stays there as a former zone's.
  *
  * Every write takes the lock that ingest takes, so a point cannot slip in
  * between the count and the delete, nor be stored inside a zone that is being
@@ -155,7 +156,7 @@ export async function createZone(userId: string, input: ZoneInput, deleteStoredP
       select: ZONE_SELECT,
     });
     await onPointsRemoved(tx, userId, { kind: "zone", zone: circleOf(input), ...removed });
-    await rebuildZoneCells(tx, userId);
+    await addZoneCircle(tx, userId, circleOf(input));
     return { zone, deleted };
   });
 }
@@ -197,7 +198,7 @@ export async function updateZone(
       select: ZONE_SELECT,
     });
     await onPointsRemoved(tx, userId, { kind: "zone", zone: circleOf(next), ...removed });
-    await rebuildZoneCells(tx, userId);
+    await addZoneCircle(tx, userId, circleOf(next));
     return { zone, deleted };
   });
 }
@@ -213,6 +214,6 @@ export async function deleteZone(userId: string, id: string): Promise<void> {
     if (!zone) throw notFound();
     await retireCircle(tx, userId, circleOf(zone));
     await tx.travTrackPrivacyZone.delete({ where: { id: zone.id } });
-    await rebuildZoneCells(tx, userId);
+    // Its circle stays in the explored map's raster as a former zone's.
   });
 }
