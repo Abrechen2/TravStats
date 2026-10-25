@@ -24,6 +24,12 @@ import { formatStayPeriod, hasUnknownLength, stayNights } from "../../lib/lodgin
  */
 export interface EditableRow extends LodgingImportPreviewRow {
   /**
+   * The user has answered an ambiguous name — by picking one of the offered
+   * houses or by declaring it a new one. Until then the row cannot be
+   * imported: which house the stay belongs to is exactly what is unknown.
+   */
+  ambiguityResolved?: boolean;
+  /**
    * "" while a needs_input row is still undecided.
    *
    * `update` is offered only for a row the server classified that way — a
@@ -56,8 +62,10 @@ export const HEURISTIC_MATCH: ReadonlySet<LodgingDedupeHint> = new Set([
  * no currency field (AUD-057). The row is held back until the unit is set.
  */
 export function priceLacksCurrency(row: EditableRow): boolean {
+  // `update` too: a changed booking whose price has no unit is dropped by
+  // the server just as silently as a new one (`stayChanges`).
   return (
-    row.decision === "create" &&
+    (row.decision === "create" || row.decision === "update") &&
     row.stay !== null &&
     (row.stay.totalPrice != null || row.stay.pricePerNight != null) &&
     !row.stay.currency
@@ -105,11 +113,6 @@ export function matchedStayLabel(
   return hasUnknownLength(stay)
     ? period
     : `${period} (${t("lodging:field.nightsCount", { count: stayNights(stay) })})`;
-}
-
-/** What a changed booking would move, as "field: old → new". */
-export function changeSummary(row: EditableRow): string {
-  return (row.changes ?? []).map((c) => `${c.field}: ${c.from ?? "—"} → ${c.to ?? "—"}`).join(", ");
 }
 
 /**

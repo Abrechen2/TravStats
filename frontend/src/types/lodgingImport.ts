@@ -89,6 +89,8 @@ export type LodgingDedupeHint =
   | "none"
   | "lodging_exact_ref"
   | "lodging_name_city"
+  /** The name matches and the import names no city — less evidence than name + city. */
+  | "lodging_name_only"
   | "lodging_name_similar"
   | "lodging_nearby"
   | "stay_exact_ref"
@@ -137,18 +139,51 @@ export interface LodgingImportMatchedStay {
   href: string;
 }
 
+/** One stored stay of a candidate house. */
+export interface LodgingImportOptionStay extends LodgingImportMatchedStay {
+  id: string;
+}
+
+/** A stored house an ambiguous row may mean, offered for the user to pick. */
+export interface LodgingImportLodgingOption {
+  id: string;
+  name: string;
+  city: string | null;
+  /** The house's stays, so a pick is checked for a stay already on file.
+   *  Absent on an older backend. */
+  stays?: LodgingImportOptionStay[];
+}
+
+/** The stored value of every stay field a re-import compares, deadlines aside
+ *  (backend `LodgingImportStoredStayValues`). A date is an ISO day. */
+export type LodgingImportStoredStayValues = Record<
+  Exclude<UpdatableStayField, "freeCancellationUntil" | "paymentDueOn">,
+  string | number | null
+>;
+
 export interface LodgingImportPreviewRow extends LodgingImportCandidate {
   flags: LodgingImportFlag[];
   dedupeHint: LodgingDedupeHint;
+  /** What the HOUSE match rests on, kept apart from a stay match that
+   *  overwrites `dedupeHint`. Absent on an older backend. */
+  lodgingDedupeHint?: LodgingDedupeHint;
+  /** The stored houses an ambiguous row may mean. Absent on an older backend. */
+  lodgingOptions?: LodgingImportLodgingOption[];
   matchedLodgingId: string | null;
   /** The stored name behind `matchedLodgingId` — what a guessed match is judged against. */
   matchedLodgingName: string | null;
+  /** The stored city behind `matchedLodgingId` — never the import's spelling.
+   *  Absent on an older backend. */
+  matchedLodgingCity?: string | null;
   /** The match is a guess the user may reject (AUD-056). Absent on a backend
    *  older than 2.7, where the dedupe hint is the only signal. */
   matchIsGuess?: boolean;
   matchedStayId: string | null;
   /** The stay behind `matchedStayId`. Absent on a backend older than 2.7. */
   matchedStay?: LodgingImportMatchedStay | null;
+  /** The stored values behind `matchedStayId`, compared against the row as
+   *  edited. Absent on an older backend. */
+  matchedStayValues?: LodgingImportStoredStayValues | null;
   action: LodgingImportAction;
   /** Non-empty only on `action: "update"` — what a changed booking would move.
    *  Absent on a backend older than 2.7 (forgejo#122). */

@@ -72,9 +72,10 @@ describe("LodgingImportPreviewModal — a changed booking", () => {
       />
     );
     const badge = screen.getByTestId("lodging-import-changes-0");
-    expect(badge.textContent).toContain("checkOut");
-    expect(badge.textContent).toContain("2026-04-07");
-    expect(badge.textContent).toContain("2026-04-09");
+    // The field by its label, the days in the reader's date format.
+    expect(badge.textContent).toContain("lodging:import.changeFields.checkOut");
+    expect(badge.textContent).toContain("07.04.2026");
+    expect(badge.textContent).toContain("09.04.2026");
   });
 
   it("commits it as an update and carries the stay it patches", async () => {
@@ -127,8 +128,10 @@ describe("LodgingImportPreviewModal", () => {
       />
     );
 
+    // The numbers themselves are asserted through real DE/EN strings in
+    // LodgingImportPreviewModal.copy.test.tsx; the mock here drops them.
     const counts = screen.getByTestId("lodging-import-counts");
-    expect(counts.textContent).toContain("1");
+    expect(counts.textContent).toContain("lodging:import.preview.summaryCreate");
 
     const nameInputs = screen.getAllByTestId(/lodging-import-name-/);
     expect(nameInputs[0]).toHaveValue("Unknown Hotel");
@@ -272,7 +275,8 @@ describe("LodgingImportPreviewModal", () => {
         flags: [],
         dedupeHint: "lodging_name_city",
         matchedLodgingId: "guessed-lodging-id",
-        matchedLodgingName: null,
+        matchedLodgingName: "Stored Hotel Name",
+        matchedLodgingCity: "München",
         matchedStayId: null,
         action: "needs_input",
       },
@@ -294,8 +298,13 @@ describe("LodgingImportPreviewModal", () => {
     const cityField = screen.getByTestId("lodging-import-city-9");
     expect(nameField.tagName).not.toBe("INPUT");
     expect(cityField.tagName).not.toBe("INPUT");
-    expect(nameField).toHaveTextContent("OCR'd Hotel Nmae");
-    expect(cityField).toHaveTextContent("Munich");
+    // The STORED house is what is shown as the target; the import's own
+    // spelling is beside it as source detail, never as the target's city.
+    expect(nameField).toHaveTextContent("Stored Hotel Name");
+    expect(cityField).toHaveTextContent("München");
+    expect(screen.getByTestId("lodging-import-imported-as-9")).toHaveTextContent(
+      "OCR'd Hotel Nmae, Munich"
+    );
 
     // Resolve the row and commit — dates/price remain editable and DO reach
     // the payload for a matched row.
@@ -351,21 +360,6 @@ describe("LodgingImportPreviewModal", () => {
     // proves the error message is the translated constant, not the thrown
     // error's `.message`.
     expect(alert.textContent).toBe("lodging:import.preview.commitError");
-  });
-
-  it("updates the live counts when the user flips a row to skip", () => {
-    render(
-      <LodgingImportPreviewModal
-        rows={rows}
-        summary={summary}
-        onCommit={vi.fn()}
-        onCancel={vi.fn()}
-      />
-    );
-    fireEvent.change(screen.getByTestId("lodging-import-action-0"), { target: { value: "skip" } });
-    const counts = screen.getByTestId("lodging-import-counts");
-    // 0 new · 2 already present · 1 needs input
-    expect(counts.textContent).toMatch(/\b0\b/);
   });
 
   // Finding 1: `ensureStay` is a one-way door — the first touch of any stay
@@ -546,9 +540,7 @@ describe("LodgingImportPreviewModal — rejecting a guessed match", () => {
         onCancel={vi.fn()}
       />
     );
-    expect(screen.getByTestId("lodging-import-matched-name-4")).toHaveTextContent(
-      "Synthetic Annex One"
-    );
+    expect(screen.getByTestId("lodging-import-name-4")).toHaveTextContent("Synthetic Annex One");
   });
 
   it("lets the user reject the guess and create a NEW house instead", async () => {
@@ -859,7 +851,7 @@ describe("LodgingImportPreviewModal — a stay already on file", () => {
     expect(select.className).toMatch(/min-w-/);
     // …and the alternative is named on screen, not hidden in the list.
     expect(screen.getByTestId("lodging-import-create-anyway-0")).toHaveTextContent(
-      "lodging:import.createAnyway"
+      "lodging:import.actions.createAnotherStay"
     );
   });
 
