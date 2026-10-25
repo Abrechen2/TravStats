@@ -145,6 +145,9 @@ export async function scanStays(
           select: { userId: true },
         })) && (await stillAllowed())
     );
+    // A TravTrack read cancelled by a switch-off is a failure, not an empty window.
+    if (source.kind === "travtrack" && !(await stillAllowed()))
+      throw new AppError("TravTrack is switched off on this server", 403, "TRAVTRACK_DISABLED");
     const points = result.points;
     const stationary = detectStays(points, result.truncated);
     const places = await prisma.place.findMany({

@@ -20,6 +20,7 @@ import { STAY_ALGORITHM } from "../../locationEvidence/types";
 import type { CircleSet } from "../../travtrack/privacyCircles";
 import { inPrivacyZone } from "../../travtrack/classify";
 import { takeTravTrackLock } from "../../travtrack/lock";
+import { travTrackInstanceOnIn } from "../../travtrack/availability";
 import { meters, RADIUS_METERS, type StayCandidate, type StayPoint } from "./detect";
 import {
   collectMarketFindings,
@@ -41,6 +42,8 @@ import {
 import logger from "../../../utils/logger";
 
 const DAY = 86_400_000;
+const travTrackDisabled = () =>
+  new AppError("TravTrack is switched off on this server", 403, "TRAVTRACK_DISABLED");
 /** Bounded prompting (review focus 19): new TravTrack findings one run may publish. */
 export const TRAVTRACK_FINDINGS_PER_RUN = 20;
 
@@ -135,7 +138,9 @@ export async function scanCandidates(
       where: { userId, ...ctx.allowedWhere },
       select: { userId: true },
     });
-    if (!current || !(await ctx.stillAllowed())) break;
+    if (!current) break;
+    // TravTrack switched off stops the run as a failure the scan row names.
+    if (!(await ctx.stillAllowed())) throw travTrackDisabled();
     if (ctx.travtrack && inPrivacyZone(c, ctx.travtrack.circles(c.startAt.getTime()))) {
       // Counted only: neither the answer nor a log names where it was.
       counts.skippedPrivate++;
@@ -320,6 +325,10 @@ export async function scanCandidates(
       evidenceKey,
     };
     const inserted = await prisma.$transaction(async (tx) => {
+      // TravTrack: the lock first, so every check below is made once nothing
+      // can change the history under this finding any more, and a consent
+      // withdrawal never waits for a scan stuck behind the lock.
+      if (ctx.travtrack) await takeTravTrackLock(tx, userId);
       // Lock the scan row with the consent/reservation predicate. Revocation
       // or takeover cannot slip between this check and the finding insert.
       const owned = await tx.dawarichStayScan.updateMany({
@@ -328,9 +337,10 @@ export async function scanCandidates(
       });
       if (!owned.count) return { count: 0, extended: 0, stale: false };
       if (ctx.travtrack) {
+        // Switched off while this candidate was matched or waited: nothing.
+        if (!(await travTrackInstanceOnIn(tx))) throw travTrackDisabled();
         // The publication fence (E5): a removal raises the generation under
         // this lock, in its own transaction. Read before it, publish nothing.
-        await takeTravTrackLock(tx, userId);
         if ((await historyGeneration(tx, userId)) !== ctx.travtrack.generation)
           return { count: 0, extended: 0, stale: true };
       }

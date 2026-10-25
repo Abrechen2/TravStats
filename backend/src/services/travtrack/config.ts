@@ -1,4 +1,4 @@
-import { prisma } from "../../db";
+import { prisma, type DbTransaction } from "../../db";
 
 /**
  * TravTrack's instance switch (TravTrack plan, task T1): one `travtrack_config`
@@ -15,8 +15,11 @@ export interface TravTrackConfig {
   enabled: boolean;
 }
 
-export async function travTrackConfig(): Promise<TravTrackConfig> {
-  const row = await prisma.travTrackConfig.findUnique({
+type ConfigReader = Pick<DbTransaction, "travTrackConfig">;
+
+/** Read through `db` — a transaction's, when the answer must hold for its writes. */
+export async function travTrackConfig(db: ConfigReader = prisma): Promise<TravTrackConfig> {
+  const row = await db.travTrackConfig.findUnique({
     where: { id: "default" },
     select: { enabled: true },
   });

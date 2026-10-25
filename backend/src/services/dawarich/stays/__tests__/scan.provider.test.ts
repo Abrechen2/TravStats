@@ -23,6 +23,7 @@ import { makeUser, storePoint, wipeTravTrack } from "../../../travtrack/__tests_
 import { travTrackSwitches } from "../../../travtrack/__tests__/switches";
 import { deleteTravTrackRange } from "../../../travtrack/deleteRange";
 import { bumpHistoryGeneration } from "../../../locationEvidence/generation";
+import { takeTravTrackLock } from "../../../travtrack/lock";
 
 jest.mock("../../../../utils/achievements", () => ({
   recheckAchievements: jest.fn(async () => {}),
@@ -460,6 +461,71 @@ describe("TravTrack as the source", () => {
     const state = await prisma.dawarichStayScan.findUniqueOrThrow({ where: { userId } });
     expect(state.result).toBe("stale");
     expect(state.leaseUntil).toBeNull();
+  });
+
+  /** Holds the account's TravTrack lock in another transaction until released. */
+  async function holdTravTrackLock() {
+    let release!: () => void;
+    let held!: () => void;
+    const released = new Promise<void>((resolve) => (release = resolve));
+    const isHeld = new Promise<void>((resolve) => (held = resolve));
+    const done = prisma.$transaction(
+      async (tx) => {
+        await takeTravTrackLock(tx, userId);
+        held();
+        await released;
+      },
+      { timeout: 30_000 }
+    );
+    await isHeld;
+    return async () => {
+      release();
+      await done;
+    };
+  }
+
+  /** Until some transaction waits for an advisory lock (the scan's publication). */
+  async function untilSomeoneWaitsForTheLock() {
+    const deadline = Date.now() + 10_000;
+    while (Date.now() < deadline) {
+      const [{ n }] = await prisma.$queryRaw<{ n: number }[]>`
+        SELECT count(*)::int AS n FROM pg_locks WHERE locktype = 'advisory' AND NOT granted`;
+      if (n > 0) return;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    throw new Error("the scan never waited for the lock");
+  }
+
+  it("TravTrack switched off while the publication waits for the lock commits nothing", async () => {
+    await stop(SEOUL, 0);
+    await reserveScan(userId, now);
+    const release = await holdTravTrackLock();
+    const run = scanStays(userId, { now }).catch((e: unknown) => e);
+    await untilSomeoneWaitsForTheLock();
+    await switches.set({ beta: true, config: false });
+    await release();
+    expect(await run).toMatchObject({ statusCode: 502 });
+    expect(await prisma.dawarichStay.count({ where: { userId } })).toBe(0);
+    const state = await prisma.dawarichStayScan.findUniqueOrThrow({ where: { userId } });
+    expect(state).toMatchObject({ result: "failed", error: "TRAVTRACK_DISABLED" });
+  });
+
+  it("consent withdrawn while the publication waits for the lock commits nothing", async () => {
+    await stop(SEOUL, 0);
+    await reserveScan(userId, now);
+    const release = await holdTravTrackLock();
+    const run = scanStays(userId, { now });
+    await untilSomeoneWaitsForTheLock();
+    // The withdrawal must not wait for the scan: it takes no lock the scan holds.
+    const withdraw = prisma.dawarichStayScan.update({
+      where: { userId },
+      data: { enabled: false, leaseUntil: null },
+    });
+    await Promise.race([withdraw, new Promise((resolve) => setTimeout(resolve, 1000))]);
+    await release();
+    await withdraw;
+    await run;
+    expect(await prisma.dawarichStay.count({ where: { userId } })).toBe(0);
   });
 
   it("at most 20 new findings per run; the rest wait for the next run", async () => {
