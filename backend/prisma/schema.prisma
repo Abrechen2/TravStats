@@ -6122,6 +6122,10 @@ model TravTrackMonthValue {
   cities       Json?
   daysWithData Int      @map("days_with_data")
   daysPaused   Int      @map("days_paused")
+  /// Per UTC day of the month with a privacy-safe vertex, `{ "YYYY-MM-DD": km }`
+  /// on the ground (TravTrack plan T5.3, the Statistik calendar); null on a row
+  /// written before the calendar existed, until the month is recomputed.
+  dayValues    Json?    @map("day_values")
   algorithm    Int
   computedAt   DateTime @default(now()) @map("computed_at")
 
