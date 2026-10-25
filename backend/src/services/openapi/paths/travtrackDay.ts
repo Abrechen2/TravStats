@@ -4,6 +4,7 @@ import { registry } from "../registry";
 import { errorContent } from "./shared";
 import { travTrackDayQuerySchema, travTrackExportQuerySchema } from "../../../schemas/travtrack";
 import { GAP_REASONS } from "../../travtrack/limits";
+import { DOMAIN_KEYS } from "../../../shared/domains";
 
 /**
  * TravTrack's day view and export (TravTrack plan T6). Beside `travtrack.ts`,
@@ -42,12 +43,39 @@ const day = z.object({
     .array(
       z.object({
         ...span,
-        kind: z.enum(["flight", "trip", "home"]),
-        id: z.string().nullable().describe("The flight or trip; null for home"),
-        label: z.string(),
+        kind: z
+          .enum([...DOMAIN_KEYS, "trip", "home", "suggestion", "movement"])
+          .describe(
+            "A domain's entry (every domain with an entry-window adapter), a trip, time at " +
+              "home, an open TravTrack question, or a moving stretch no entry covers"
+          ),
+        id: z
+          .string()
+          .nullable()
+          .describe("The entry, trip or question; null for home and movement"),
+        label: z.string().describe("The record's own name; empty when it has none"),
+        href: z
+          .string()
+          .nullable()
+          .describe("The web path the label opens: the entry's page or the question's inbox card"),
+        anchor: z
+          .object({ lat: z.number(), lon: z.number() })
+          .nullable()
+          .describe(
+            "Where the label sits on the map: the record's own pin or the first privacy-safe " +
+              "vertex of its stretch; null rather than a point inside a privacy circle"
+          ),
+        unlabelled: z
+          .boolean()
+          .describe("A moving stretch (≥ 2 km) no entry covers; never carries a guessed mode"),
+        suggestion: z.enum(["stay", "journey"]).optional().describe("On a `suggestion`: which"),
       })
     )
-    .describe("What TravStats knows of the day: flights, trips, stretches within 300 m of home"),
+    .describe(
+      "What TravStats knows of the day, from its own records: every visible domain's entries, " +
+        "trips, stretches within 300 m of home, the open TravTrack questions and the unlabelled " +
+        "moving stretches"
+    ),
   pointCount: z.number().int(),
   truncated: z.boolean().describe("More points than one day answer carries"),
 });
@@ -57,8 +85,9 @@ registry.registerPath({
   path: "/travtrack/day",
   summary: "One day of the TravTrack history",
   description:
-    "On the profile clock: the lines, what the phone did and did not record, and the day's " +
-    "flights, trips and home stretches. Only while TravTrack is on.",
+    "On the profile clock: the lines, what the phone did and did not record, and the day " +
+    "labelled from TravStats — its entries, trips, home stretches, open TravTrack questions and " +
+    "the moving stretches no entry covers. Only while TravTrack is on.",
   tags: ["TravTrack"],
   request: { query: travTrackDayQuerySchema },
   responses: {

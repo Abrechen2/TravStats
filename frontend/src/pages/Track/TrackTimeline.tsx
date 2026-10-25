@@ -3,25 +3,20 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatTime } from "../../lib/displayFormat";
 import type { TravTrackDay } from "../../lib/api/travtrack";
+import { contextLabel } from "./trackContextLabel";
 
 /**
- * The day as TravStats knows it (TravTrack plan T6): its flights, the trips
- * spanning it and the stretches at home, in time order, each linked to its
- * entry. TravTrack suggests nothing here yet (phase 3); these are labels.
+ * The day as the logbook tells it (TravTrack plan T6, every domain since
+ * E10): the entries TravStats holds — rides, nights, visits, flights — the
+ * trips spanning it and the stretches at home, each linked to its page; the
+ * day's open TravTrack questions, linked to their inbox card; and the moving
+ * stretches nothing covers, "Unterwegs, ohne Eintrag". The server reads all
+ * of it from TravStats' records and links; this list only words it.
  */
 
 interface Props {
   day: TravTrackDay;
 }
-
-const pathOf = (kind: "flight" | "trip" | "home", id: string | null): string | null =>
-  id === null
-    ? null
-    : kind === "flight"
-      ? `/flights/${id}`
-      : kind === "trip"
-        ? `/trips/${id}`
-        : null;
 
 export default function TrackTimeline({ day }: Props): JSX.Element {
   const { t } = useTranslation(["track"]);
@@ -37,17 +32,22 @@ export default function TrackTimeline({ day }: Props): JSX.Element {
       ) : (
         <ol className="flex flex-col gap-1" data-testid="track-timeline">
           {day.context.map((item) => {
-            const label = t(`track:timeline.${item.kind}`, { label: item.label });
-            const path = pathOf(item.kind, item.id);
+            const label = contextLabel(item, t);
+            const when =
+              item.untilMs === item.fromMs
+                ? t("track:timeline.at", { at: clock(item.fromMs) })
+                : t("track:timeline.span", { from: clock(item.fromMs), to: until(item.untilMs) });
             return (
               <li
                 key={`${item.kind}-${item.id ?? ""}-${item.fromMs}`}
                 className="flex gap-3 t-body"
               >
-                <span className="t-caption tabular-nums">
-                  {t("track:timeline.span", { from: clock(item.fromMs), to: until(item.untilMs) })}
-                </span>
-                {path ? <Link to={path}>{label}</Link> : <span>{label}</span>}
+                <span className="t-caption tabular-nums">{when}</span>
+                {item.href ? (
+                  <Link to={item.href}>{label}</Link>
+                ) : (
+                  <span className={item.unlabelled ? "t-caption italic" : undefined}>{label}</span>
+                )}
               </li>
             );
           })}

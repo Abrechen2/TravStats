@@ -116,6 +116,51 @@ describe("TravTrack — the day view", () => {
     });
   });
 
+  it("every label carries its link and map anchor; the way into town is unlabelled", async () => {
+    const flightId = await makeFlight(userId); // ICN–CJU, 00:30Z–01:30Z on 12 Oct
+    const tripId = await makeTrip(userId);
+    // The morning at home, then 2 km into town without an entry for the way.
+    for (let i = 0; i < 3; i++) {
+      await storePoint(userId, { t: DAY_START + i * 5 * MIN, lat: 37.5501, lon: 126.99 });
+    }
+    for (let i = 0; i < 3; i++) {
+      await storePoint(userId, { t: DAY_START + (20 + i * 5) * MIN, lat: 37.57, lon: 127 });
+    }
+
+    const res = await day();
+    expect(res.status).toBe(200);
+    const context = res.body.context as Array<Record<string, unknown>>;
+    for (const entry of context) {
+      expect(entry).toHaveProperty("href");
+      expect(entry).toHaveProperty("anchor");
+      expect(typeof entry.unlabelled).toBe("boolean");
+    }
+    expect(context.find((c) => c.kind === "flight")).toMatchObject({
+      id: flightId,
+      href: `/flights/${flightId}`,
+      anchor: { lat: 37.469, lon: 126.451 },
+    });
+    expect(context.find((c) => c.kind === "trip")).toMatchObject({
+      href: `/trips/${tripId}`,
+      anchor: null,
+    });
+    // Home is drawn from the first privacy-safe fix at home, never from the stored place.
+    expect(context.find((c) => c.kind === "home")).toMatchObject({
+      href: null,
+      anchor: { lat: 37.5501, lon: 126.99 },
+    });
+    const moving = context.filter((c) => c.unlabelled === true);
+    expect(moving).toEqual([
+      expect.objectContaining({
+        kind: "movement",
+        label: "",
+        fromMs: DAY_START + 10 * MIN,
+        untilMs: DAY_START + 20 * MIN,
+        anchor: { lat: 37.5501, lon: 126.99 },
+      }),
+    ]);
+  });
+
   it("a reported gap is phonePaused, a deleted range is deleted, nothing marks a zone", async () => {
     await prisma.travTrackPrivacyZone.create({
       data: { userId, name: "Büro", lat: 37.6, lon: 127.1, radiusM: 300 },
