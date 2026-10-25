@@ -42,6 +42,7 @@ describe("getActualRoute", () => {
     getPoints.mockReset();
     await switches.set({ beta: true, config: true });
     await wipeTravTrack([userId]);
+    await prisma.flight.deleteMany({ where: { userId } });
     await prisma.trip.deleteMany({ where: { userId } });
     await prisma.lodging.deleteMany({ where: { userId } });
     await prisma.place.deleteMany({ where: { userId } });
@@ -141,6 +142,38 @@ describe("getActualRoute", () => {
     expect(route!.positions.some(inZone)).toBe(false);
     expect(route!.segments.flat().some(([lon, lat]) => inZone({ lat, lon }))).toBe(false);
     expect(route!.days.find((d) => d.day === "2026-10-03")!.state).toBe("noData");
+  });
+
+  it("a gap, a privacy cut or a flight starts a new stretch", async () => {
+    const { tripId } = await makePlanTrip(userId);
+    // A flight on the 2nd, 12:00–12:20Z; its recorder window (±30 min) is the break.
+    await prisma.flight.create({
+      data: {
+        userId,
+        tripId,
+        depIata: "MUC",
+        arrIata: "SZG",
+        depLat: MUNICH.lat,
+        depLon: MUNICH.lon,
+        arrLat: SALZBURG.lat,
+        arrLon: SALZBURG.lon,
+        departureTime: new Date("2026-10-02T12:00:00Z"),
+        arrivalTime: new Date("2026-10-02T12:20:00Z"),
+        status: "flown",
+      },
+    });
+    const before = driveNear(MUNICH, Date.parse("2026-10-02T11:00:00Z"));
+    // 20 km on, under 2 h later: no gap by distance or by time alone — but the flight lies between.
+    const after = driveNear(
+      { lat: MUNICH.lat + 0.18, lon: MUNICH.lon },
+      Date.parse("2026-10-02T13:00:00Z")
+    );
+    await ownRecording(userId, tripId, [...before, ...after]);
+    const route = await getActualRoute(userId, tripId);
+    const stretchOf = (t: number) => route!.positions.find((p) => p.atMs === t)?.stretch;
+    expect(stretchOf(before[0][0])).toBeDefined();
+    expect(stretchOf(after[after.length - 1][0])).toBeDefined();
+    expect(stretchOf(before[0][0])).not.toBe(stretchOf(after[after.length - 1][0]));
   });
 
   it("stays: an over lodging stay per day and a visit that happened; a future one is not a stay", async () => {

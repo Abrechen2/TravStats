@@ -160,21 +160,27 @@ function compareStation(
   return unknownStation(base);
 }
 
-/** Positions of one device in time order. */
-function byDevice(positions: readonly ActualPosition[]): ActualPosition[][] {
-  const map = new Map<string | null, ActualPosition[]>();
+/**
+ * Positions of one unbroken stretch (one device, no gap, cut or flight in
+ * between) in time order. Never regrouped by device: summing across a break
+ * would invent the kilometres nobody recorded.
+ */
+function byStretch(positions: readonly ActualPosition[]): ActualPosition[][] {
+  const map = new Map<number, ActualPosition[]>();
   for (const p of positions) {
-    const list = map.get(p.deviceId) ?? [];
+    const list = map.get(p.stretch) ?? [];
     list.push(p);
-    map.set(p.deviceId, list);
+    map.set(p.stretch, list);
   }
   return [...map.values()].map((list) => [...list].sort((a, b) => a.atMs - b.atMs));
 }
 
 /**
  * The track's length from the last time near `a` to the first near `b` after
- * it, each end taken at the closest approach, on the device that recorded that stretch most densely. Null when
- * the track never leads from one to the other (a stay-only visit, say).
+ * it, each end taken at the closest approach, within ONE unbroken stretch —
+ * the densest where several lead there (two phones). Null when no stretch
+ * leads from one to the other: a stay-only visit, or a path that crosses a
+ * break (abstention, never a sum across the gap).
  */
 function trackKm(
   positions: readonly ActualPosition[],
@@ -182,7 +188,7 @@ function trackKm(
   b: { lat: number; lon: number }
 ): number | null {
   let best: { count: number; km: number } | null = null;
-  for (const list of byDevice(positions)) {
+  for (const list of byStretch(positions)) {
     let lastA = -1;
     let arrival = -1;
     for (let i = 0; i < list.length; i++) {

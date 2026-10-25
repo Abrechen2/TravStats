@@ -12,6 +12,7 @@ import {
   MUNICH,
   SALZBURG,
   VIENNA,
+  driveBetween,
   driveNear,
   makePlanTrip,
   noon,
@@ -61,7 +62,8 @@ describe("GET /trips/:tripId/plan/actual", () => {
     const { tripId, state } = await makePlanTrip(owner);
     await ownRecording(owner, tripId, [
       ...driveNear(MUNICH, noon(1)),
-      ...driveNear(SALZBURG, noon(4, 0)),
+      // One continuous drive on the 4th; the stage is measured along it.
+      ...driveBetween(MUNICH, SALZBURG, noon(4, -180)),
       ...driveNear(VIENNA, noon(5)),
     ]);
     const r = await getActual(tripId);
@@ -77,7 +79,9 @@ describe("GET /trips/:tripId/plan/actual", () => {
     expect(v).toMatchObject({ status: "visited", deltaDays: 1 });
     expect(r.body.stages).toHaveLength(2);
     expect(r.body.stages[0]).toMatchObject({ plannedKm: 145 });
-    expect(r.body.stages[0].actualKm).toBeGreaterThan(90);
+    expect(r.body.stages[0].actualKm).toBeGreaterThan(100);
+    // Salzburg → Wien: the recording breaks between them (a night without fixes), so no figure.
+    expect(r.body.stages[1].actualKm).toBeNull();
     // The comparison's server-side inputs never leave.
     expect(Object.keys(r.body.actual).sort()).toEqual(["coverage", "days", "origin", "segments"]);
     expect(JSON.stringify(r.body)).not.toMatch(/positions|circles|radiusM/);

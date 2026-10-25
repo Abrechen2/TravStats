@@ -70,10 +70,11 @@ let clock = Date.parse("2026-10-01T08:00:00Z");
 const at = (
   day: string,
   p: { lat: number; lon: number },
-  deviceId: string | null = "phone"
+  deviceId: string | null = "phone",
+  stretch = 0
 ): ActualPosition => {
   clock += 60_000;
-  return { atMs: clock, day, ...p, deviceId };
+  return { atMs: clock, day, ...p, deviceId, stretch };
 };
 const ALL_DAYS = [
   "2026-09-30",
@@ -247,6 +248,20 @@ describe("comparePlanActual", () => {
     const result = comparePlanActual(plan(), actual(track));
     const chordKm = distanceM(MUNICH, SALZBURG) / 1000;
     expect(result.stages.find((s) => s.stageId === "ms")!.actualKm).toBeCloseTo(chordKm, 0);
+  });
+
+  it("never sums across a break: a stage whose path crosses one has no length", () => {
+    const track = [
+      at("2026-10-02", MUNICH, "phone", 0),
+      at("2026-10-02", { lat: 47.95, lon: 12.3 }, "phone", 0),
+      // A deleted range, a privacy cut, a flight or a recording gap lies here.
+      at("2026-10-03", { lat: 47.9, lon: 12.7 }, "phone", 1),
+      at("2026-10-03", SALZBURG, "phone", 1),
+    ];
+    const result = comparePlanActual(plan(), actual(track));
+    expect(statusOf(result, "m").status).toBe("visited");
+    expect(statusOf(result, "s").status).toBe("visited");
+    expect(result.stages.find((s) => s.stageId === "ms")!.actualKm).toBeNull();
   });
 
   it("a stay-only visit gives the stage no length", () => {

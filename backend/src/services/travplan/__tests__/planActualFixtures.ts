@@ -108,3 +108,16 @@ export function driveNear(
 ): Array<[number, number, number]> {
   return [0, 1, 2, 3].map((i) => [startMs + i * 120_000, at.lat + i * 0.004, at.lon + i * 0.004]);
 }
+
+/** A continuous drive from `a` to `b`: 41 fixes, three minutes apart, a few km each. */
+export function driveBetween(
+  a: { lat: number; lon: number },
+  b: { lat: number; lon: number },
+  startMs: number
+): Array<[number, number, number]> {
+  return Array.from({ length: 41 }, (_, i) => [
+    startMs + i * 180_000,
+    a.lat + ((b.lat - a.lat) * i) / 40,
+    a.lon + ((b.lon - a.lon) * i) / 40,
+  ]);
+}

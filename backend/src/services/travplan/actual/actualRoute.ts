@@ -11,6 +11,7 @@ import { privacyCut, privacyCutBy, type LonLat } from "../../travtrack/privacyCu
 import {
   TRIP_RECORDING_TRIP_SELECT,
   tripClockZone,
+  tripFlightWindows,
   type RecordingTrip,
 } from "../../tripRecording/bounds";
 import { localDayReader } from "../../tripRecording/localDays";
@@ -48,6 +49,12 @@ export type ActualPosition = {
   lat: number;
   lon: number;
   deviceId: string | null;
+  /**
+   * The unbroken stretch the position belongs to. A new stretch begins at
+   * every recording gap, deleted range, reported pause, privacy cut and
+   * flight: nothing is ever measured across one.
+   */
+  stretch: number;
 };
 
 export type ActualStay = {
@@ -170,9 +177,17 @@ async function positionsOf(
   for (const device of devices) {
     const clean = await withoutJitter([device]);
     for (const stretch of privacyCutBy(clean.segments, circles, coord)) {
+      const id = stretches.length;
       stretches.push(stretch);
       for (const [atMs, lat, lon] of stretch) {
-        positions.push({ atMs, day: dayOf(atMs), lat, lon, deviceId: device.deviceId });
+        positions.push({
+          atMs,
+          day: dayOf(atMs),
+          lat,
+          lon,
+          deviceId: device.deviceId,
+          stretch: id,
+        });
       }
     }
   }
@@ -192,7 +207,13 @@ export async function getActualRoute(userId: string, tripId: string): Promise<Ac
   ]);
   if (!entry.origin) return null;
 
-  const raw = pointsByDevice(entry.batches, zone);
+  // A flight's recorder window breaks the line: the trip recording holds no
+  // fix inside it, and two fixes either side of a flight are not a drive.
+  const flights = await tripFlightWindows(userId, trip.id);
+  const raw = pointsByDevice(entry.batches, zone).map((d) => ({
+    ...d,
+    breaks: [...(d.breaks ?? []), ...flights],
+  }));
   const first = Math.min(...raw.map((d) => d.points[0]?.[0] ?? Infinity));
   const circles = await privacyCirclesFor(userId, Number.isFinite(first) ? first : 0);
   // Whatever a zone hides is gone before anything is counted (T5).
