@@ -15,6 +15,7 @@ import {
   type EditableRow,
 } from "./lodgingImportRowModel";
 import { PreviewRowLine } from "./LodgingImportPreviewRow";
+import { canCreate, isMatched, liveFlags, rowBlockers } from "./lodgingImportRowState";
 
 // Re-exported because the suite imports them from here, and because this
 // is the surface everything else in the app already knows.
@@ -22,6 +23,11 @@ export { currencyOptionGroups, isEmptyStay, parseTotalPriceInput } from "./lodgi
 
 export interface LodgingImportPreviewModalProps {
   rows: LodgingImportPreviewRow[];
+  /**
+   * The server's first impression. Not shown: every count and warning here
+   * is recomputed from the rows as edited, because a header that restated
+   * this said "Bitte prüfe und entscheide" over rows already decided.
+   */
   summary: LodgingImportSummary;
   /**
    * Called with the user's final decisions. Rows the user left as
@@ -37,6 +43,15 @@ export interface LodgingImportPreviewModalProps {
   onCancel: () => void;
 }
 
+// Only rows where "create" does something: a matched hotel without a stay has
+// nothing to create, and setting it would offer a no-op.
+const bulkCreatable = (r: EditableRow): boolean => r.decision === "" && canCreate(r);
+
+// A chain is offered only on a row that creates its hotel — a matched row
+// never writes hotel fields, so its chain would be created for nothing.
+const offersChain = (r: EditableRow): boolean =>
+  !isMatched(r) && liveFlags(r).includes("unknown_chain");
+
 /**
  * Post-import review — the single editable table BOTH the email/PDF and the
  * CSV import paths land in. The backend already ordered `rows` questionable
@@ -46,7 +61,6 @@ export interface LodgingImportPreviewModalProps {
  */
 export function LodgingImportPreviewModal({
   rows,
-  summary,
   onCommit,
   onCancel,
 }: LodgingImportPreviewModalProps): JSX.Element {
@@ -62,14 +76,19 @@ export function LodgingImportPreviewModal({
     );
   }, []);
 
-  // Live counts — must react to the user's edits, not restate the server's
-  // first impression (`summary`, kept only for the static needsInputHint).
+  // Live counts of what each ROW is set to do — never the server's first
+  // impression. They count rows, and say so: a row "to add" may add a hotel,
+  // a stay, or both. A skipped row is "to skip", never "already present" —
+  // a new booking the user declines is not on file anywhere (owner,
+  // 2026-10-25), and the warning below follows these numbers, not `summary`,
+  // so it cannot ask for decisions nobody still owes.
   const counts = useMemo(() => {
-    const newRows = edited.filter((r) => r.decision === "create").length;
-    const alreadyPresent = edited.filter((r) => r.decision === "skip").length;
-    const needsInput = edited.filter((r) => r.decision === "").length;
-    const changed = edited.filter((r) => r.decision === "update").length;
-    return { newRows, alreadyPresent, needsInput, changed };
+    const create = edited.filter((r) => r.decision === "create").length;
+    const skip = edited.filter((r) => r.decision === "skip").length;
+    const pending = edited.filter((r) => r.decision === "").length;
+    const update = edited.filter((r) => r.decision === "update").length;
+    const blocked = edited.filter((r) => rowBlockers(r).length > 0).length;
+    return { create, skip, pending, update, blocked };
   }, [edited]);
 
   /**
@@ -93,36 +112,31 @@ export function LodgingImportPreviewModal({
    * the server had recommended something. The hint under it says what is
    * being overruled; a reader who wants the matches keeps skipping by hand.
    */
-  const undecidedCount = useMemo(() => edited.filter((r) => r.decision === "").length, [edited]);
+  const undecidedCount = useMemo(() => edited.filter(bulkCreatable).length, [edited]);
 
   const uncheckedChains = useMemo(
-    () =>
-      edited.filter(
-        (r) =>
-          r.flags.includes("unknown_chain") &&
-          r.lodging?.chainName !== undefined &&
-          r.lodging.createChain !== true
-      ).length,
+    () => edited.filter((r) => offersChain(r) && r.lodging?.createChain !== true).length,
     [edited]
   );
 
   const createAllUndecided = useCallback((): void => {
-    setEdited((prev) => prev.map((r) => (r.decision === "" ? { ...r, decision: "create" } : r)));
+    setEdited((prev) => prev.map((r) => (bulkCreatable(r) ? { ...r, decision: "create" } : r)));
   }, []);
 
   const createAllChains = useCallback((): void => {
     setEdited((prev) =>
       prev.map((r) =>
-        r.flags.includes("unknown_chain") && r.lodging?.chainName !== undefined
-          ? { ...r, lodging: { ...r.lodging, createChain: true } }
-          : r
+        offersChain(r) && r.lodging ? { ...r, lodging: { ...r.lodging, createChain: true } } : r
       )
     );
   }, []);
 
   const pricesWithoutCurrency = useMemo(() => edited.filter(priceLacksCurrency).length, [edited]);
 
-  const canCommit = counts.needsInput === 0 && pricesWithoutCurrency === 0 && !saving;
+  // Revalidated on every edit (`rowBlockers`): a date typed wrong after the
+  // preview, or a house still to be chosen among several, holds the commit
+  // exactly as an undecided row does. A skipped row blocks nothing.
+  const canCommit = counts.pending === 0 && counts.blocked === 0 && !saving;
 
   const handleCommit = useCallback(async (): Promise<void> => {
     // The real double-commit guard is the native `disabled` attribute on the
@@ -247,29 +261,26 @@ export function LodgingImportPreviewModal({
         </>
       }
     >
-      {/*
-          The three numbers are rendered as plain JSX values, NOT baked into
-          one interpolated t() string — a single interpolated key can't be
-          unit-tested here, since the project's global react-i18next test
-          mock (src/__tests__/setup.ts) returns the bare key and discards
-          every interpolation option. Each label still goes through t().
-        */}
+      {/* Each part is its own pluralised string, so "1 Zeile" and "2 Zeilen"
+          both read right; the DE/EN tests render them through real i18next. */}
       <p data-testid="lodging-import-counts" className="mb-1 text-sm text-[var(--text-muted)]">
-        {counts.newRows} {t("lodging:import.preview.newLabel")}
-        {" · "}
-        {counts.alreadyPresent} {t("lodging:import.preview.presentLabel")}
-        {" · "}
-        {counts.needsInput} {t("lodging:import.preview.needsInputLabel")}
-        {counts.changed > 0 && (
-          <>
-            {" · "}
-            {counts.changed} {t("lodging:import.preview.changedLabel")}
-          </>
-        )}
+        {[
+          t("lodging:import.preview.summaryCreate", { count: counts.create }),
+          t("lodging:import.preview.summarySkip", { count: counts.skip }),
+          t("lodging:import.preview.summaryPending", { count: counts.pending }),
+          ...(counts.update > 0
+            ? [t("lodging:import.preview.summaryUpdate", { count: counts.update })]
+            : []),
+        ].join(" · ")}
       </p>
-      {summary.needsInput > 0 && (
-        <p className="mb-3 text-xs text-amber-300/90">
-          {t("lodging:import.preview.needsInputHint")}
+      {counts.pending > 0 && (
+        <p data-testid="lodging-import-pending-hint" className="mb-3 text-xs text-amber-300/90">
+          {t("lodging:import.preview.pendingHint")}
+        </p>
+      )}
+      {counts.blocked > 0 && (
+        <p data-testid="lodging-import-blocked-hint" className="mb-3 text-xs text-amber-300/90">
+          {t("lodging:import.preview.blockedHint", { count: counts.blocked })}
         </p>
       )}
       {pricesWithoutCurrency > 0 && (

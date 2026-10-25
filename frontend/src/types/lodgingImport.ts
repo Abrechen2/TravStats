@@ -89,6 +89,8 @@ export type LodgingDedupeHint =
   | "none"
   | "lodging_exact_ref"
   | "lodging_name_city"
+  /** The name matches and the import names no city — less evidence than name + city. */
+  | "lodging_name_only"
   | "lodging_name_similar"
   | "lodging_nearby"
   | "stay_exact_ref"
@@ -137,12 +139,27 @@ export interface LodgingImportMatchedStay {
   href: string;
 }
 
+/** A stored house an ambiguous row may mean, offered for the user to pick. */
+export interface LodgingImportLodgingOption {
+  id: string;
+  name: string;
+  city: string | null;
+}
+
 export interface LodgingImportPreviewRow extends LodgingImportCandidate {
   flags: LodgingImportFlag[];
   dedupeHint: LodgingDedupeHint;
+  /** What the HOUSE match rests on, kept apart from a stay match that
+   *  overwrites `dedupeHint`. Absent on an older backend. */
+  lodgingDedupeHint?: LodgingDedupeHint;
+  /** The stored houses an ambiguous row may mean. Absent on an older backend. */
+  lodgingOptions?: LodgingImportLodgingOption[];
   matchedLodgingId: string | null;
   /** The stored name behind `matchedLodgingId` — what a guessed match is judged against. */
   matchedLodgingName: string | null;
+  /** The stored city behind `matchedLodgingId` — never the import's spelling.
+   *  Absent on an older backend. */
+  matchedLodgingCity?: string | null;
   /** The match is a guess the user may reject (AUD-056). Absent on a backend
    *  older than 2.7, where the dedupe hint is the only signal. */
   matchIsGuess?: boolean;

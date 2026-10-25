@@ -310,25 +310,28 @@
       "title": "Vorschau ({{count}} Zeilen)",
       "title_one": "Vorschau ({{count}} Zeile)",
       "title_other": "Vorschau ({{count}} Zeilen)",
-      "newLabel": "neu",
-      "presentLabel": "bereits vorhanden",
-      "needsInputLabel": "brauchen dich",
-      "needsInputHint": "Bitte prüfe und entscheide diese Zeilen, bevor du übernimmst.",
-      "commit": "Übernehmen",
+      "commit": "Auswahl importieren",
       "commitError": "Import konnte nicht übernommen werden",
       "chooseCurrency": "— Währung —",
-      "currencyMissingHint": "Ein Preis braucht eine Währung — bitte für die markierten Zeilen auswählen, sonst wird der Betrag nicht übernommen.",
-      "changedLabel": "geändert",
-      "createAllUndecided": "Alle {{count}} offenen als neu anlegen",
-      "createAllChains": "Alle {{count}} Ketten anlegen"
+      "currencyMissingHint": "Ein Preis braucht eine Währung: Währung ergänzen, Preis entfernen oder Zeile überspringen.",
+      "createAllChains": "Alle {{count}} Ketten anlegen",
+      "summaryCreate_one": "{{count}} Zeile hinzufügen",
+      "summaryCreate_other": "{{count}} Zeilen hinzufügen",
+      "summarySkip_one": "{{count}} überspringen",
+      "summarySkip_other": "{{count}} überspringen",
+      "summaryPending_one": "{{count}} noch zu entscheiden",
+      "summaryPending_other": "{{count}} noch zu entscheiden",
+      "summaryUpdate_one": "{{count}} aktualisieren",
+      "summaryUpdate_other": "{{count}} aktualisieren",
+      "pendingHint": "Bitte wähle für die markierten Zeilen eine Aktion.",
+      "blockedHint_one": "{{count}} Zeile braucht noch Angaben — siehe die markierten Hinweise.",
+      "blockedHint_other": "{{count}} Zeilen brauchen noch Angaben — siehe die markierten Hinweise.",
+      "createAllUndecided_one": "Die {{count}} offene Zeile anlegen",
+      "createAllUndecided_other": "Alle {{count}} offenen Zeilen anlegen"
     },
-    "matchedLodgingHint": "Diese Zeile wird mit einem vorhandenen Hotel verknüpft — Name und Ort können hier nicht geändert werden.",
-    "matchedAs": "Zugeordnet zu:",
     "matchedStayAt": "Vorhandener Aufenthalt:",
     "openMatchedStay": "Vorhandenen Aufenthalt in einem neuen Tab öffnen",
-    "createAnyway": "Trotzdem anlegen",
     "createAnywayHint": "Legt einen zweiten Aufenthalt für dieselbe Buchung an. Die Dublettenprüfung zeigt weiterhin auf den vorhandenen; die Buchungsnummer steht danach auf beiden.",
-    "rejectMatch": "Nicht dasselbe Hotel — neu anlegen",
     "fields": {
       "name": "Name",
       "type": "Typ",
@@ -344,7 +347,7 @@
       "checkOut": "Abreise",
       "roomCategory": "Zimmerkategorie",
       "board": "Verpflegung",
-      "totalPrice": "Preis",
+      "totalPrice": "Gesamtpreis",
       "currency": "Währung",
       "ratingRoom": "Bewertung Zimmer",
       "ratingBreakfast": "Bewertung Frühstück",
@@ -356,26 +359,21 @@
     },
     "actions": {
       "choose": "— auswählen —",
-      "create": "Anlegen",
-      "skip": "Überspringen",
-      "update": "Aktualisieren"
+      "addStay": "Aufenthalt hinzufügen",
+      "createHotelAndStay": "Hotel und Aufenthalt anlegen",
+      "createHotel": "Hotel anlegen",
+      "createAnotherStay": "Weiteren Aufenthalt anlegen",
+      "update": "Aufenthalt aktualisieren",
+      "skip": "Überspringen"
     },
     "flags": {
       "missing_name": "Name fehlt",
       "unresolvable_lodging_name": "Hotelname nicht zuordenbar",
-      "ambiguous_lodging_name": "Hotelname mehrdeutig",
+      "ambiguous_lodging_name": "Mehrere mögliche Hotels — bitte zuordnen.",
       "malformed_date": "Datum ungültig",
       "invalid_date_range": "Zeitraum ungültig",
-      "missing_coordinates": "Keine Koordinaten",
+      "missing_coordinates": "Importdaten ohne Koordinaten; Import ist möglich.",
       "unknown_chain": "Kette nicht im Katalog"
-    },
-    "dedupeHints": {
-      "lodging_exact_ref": "Bereits importiert (gleiche Referenz)",
-      "lodging_name_city": "Passendes Hotel gefunden (Name + Ort)",
-      "stay_exact_ref": "Aufenthalt bereits vorhanden (gleiche Referenz)",
-      "stay_same_dates": "Aufenthalt bereits vorhanden (gleiche Daten)",
-      "lodging_name_similar": "Ähnlich benanntes Hotel gefunden — dasselbe Haus?",
-      "lodging_nearby": "Hotel an derselben Stelle gefunden — dasselbe Haus?"
     },
     "noBookings": "Es wurden keine Buchungsdaten erkannt. Ist es eine Buchungsbestätigung? Sonst trag die Unterkunft von Hand ein.",
     "csv": {
@@ -402,8 +400,8 @@
       "previewFailed": "Die Vorschau konnte nicht geladen werden."
     },
     "commitResult": {
-      "success": "{{hotels}} und {{stays}} importiert, {{skipped}} übersprungen (bereits vorhanden).",
-      "partial": "{{hotels}} und {{stays}} importiert, {{skipped}} übersprungen (bereits vorhanden), {{rows}} fehlgeschlagen: {{reasons}}",
+      "success": "{{hotels}} und {{stays}} importiert, {{skipped}} übersprungen.",
+      "partial": "{{hotels}} und {{stays}} importiert, {{skipped}} übersprungen, {{rows}} fehlgeschlagen: {{reasons}}",
       "failureCodes": {
         "ownership_mismatch": "gehört einem anderen Konto",
         "missing_lodging_reference": "Hotel-Referenz fehlt",
@@ -451,7 +449,41 @@
       "withoutId": "{{count}} Zeilen bringen keine Ortskennung mit — sie werden übernommen, aber ein zweiter Import erkennt sie nicht wieder."
     },
     "createChain": "„{{name}}\" anlegen",
-    "changedHint": "Geändert"
+    "changedHint": "Geändert",
+    "matchedLodgingLabel": "Vorhandenes Hotel",
+    "matchedLodgingExplain": "Der Aufenthalt wird diesem vorhandenen Hotel zugeordnet. Die Hoteldaten bleiben unverändert.",
+    "openMatchedLodging": "Vorhandenes Hotel in einem neuen Tab öffnen",
+    "importedAs": "Laut Import:",
+    "rejectMatch": "Anderes Hotel? Zuordnung aufheben",
+    "chooseLodging": "Hotel zuordnen",
+    "chooseLodgingPlaceholder": "— Hotel wählen —",
+    "chooseLodgingNew": "Keines davon — neues Hotel anlegen",
+    "importedStay": "Import:",
+    "blockers": {
+      "missing_currency": "Währung ergänzen, Preis entfernen oder Zeile überspringen."
+    },
+    "matchHints": {
+      "lodging_exact_ref": "Vorhandenes Hotel mit gleicher Importreferenz.",
+      "lodging_name_city": "Mögliches Hotel: Name und Ort stimmen überein.",
+      "lodging_name_only": "Mögliches Hotel: Name stimmt überein; Ort fehlt im Import.",
+      "lodging_name_similar": "Mögliches Hotel: ähnlicher Name — dasselbe Haus?",
+      "lodging_nearby": "Mögliches Hotel an derselben Stelle — dasselbe Haus?",
+      "stay_exact_ref": "Aufenthalt bereits vorhanden (gleiche Buchungsreferenz).",
+      "stay_same_dates": "Möglicher vorhandener Aufenthalt mit gleicher Anreise."
+    },
+    "changeFields": {
+      "checkIn": "Anreise",
+      "checkOut": "Abreise",
+      "roomCategory": "Zimmerkategorie",
+      "board": "Verpflegung",
+      "guests": "Gäste",
+      "totalPrice": "Gesamtpreis",
+      "pricePerNight": "Preis pro Nacht",
+      "currency": "Währung",
+      "bookingReference": "Buchungsnummer",
+      "freeCancellationUntil": "Kostenlos stornierbar bis",
+      "paymentDueOn": "Zahlung fällig am"
+    }
   },
   "stats": {
     "more": "+ {{count}} weitere",
