@@ -3,6 +3,7 @@ import { haversineKm } from "../../shared/geo/haversine";
 import type { DomainKey } from "../../shared/domains";
 import { homePlaceSchema } from "../../schemas/companionData";
 import { loadVisibleDomains } from "../domainVisibility";
+import { staySuggestionsEnabled } from "../settings/suggestionSwitches";
 import {
   ENTRY_WINDOW_ADAPTERS,
   logbookWindows,
@@ -197,6 +198,11 @@ const inboxHref = (source: "dawarich" | "location", id: string) =>
  * The day's open TravTrack questions. A stay is one label; a journey question
  * is one label per run still open — a run answered (linked or closed) is gone
  * from the day as the whole question is once it is answered.
+ *
+ * A stay is asked only while the account has stay suggestions on
+ * (forgejo#306): off, the inbox has no stay tab, so a label would link into
+ * nothing. Journey questions have no switch of their own — they live behind
+ * the `travTrack` beta key, which this day view sits behind as well.
  */
 async function suggestionContext(
   userId: string,
@@ -204,17 +210,20 @@ async function suggestionContext(
   read: SafeSpan
 ): Promise<{ entries: DayContextEntry[]; runs: Span[] }> {
   const overlapping = { lt: new Date(window.untilMs) };
+  const staysShown = await staySuggestionsEnabled(userId);
   const [stays, journeys] = await Promise.all([
-    prisma.dawarichStay.findMany({
-      where: {
-        userId,
-        provider: "travtrack",
-        status: "pending",
-        startAt: overlapping,
-        endAt: { gt: new Date(window.fromMs) },
-      },
-      select: { id: true, name: true, startAt: true, endAt: true, lat: true, lon: true },
-    }),
+    staysShown
+      ? prisma.dawarichStay.findMany({
+          where: {
+            userId,
+            provider: "travtrack",
+            status: "pending",
+            startAt: overlapping,
+            endAt: { gt: new Date(window.fromMs) },
+          },
+          select: { id: true, name: true, startAt: true, endAt: true, lat: true, lon: true },
+        })
+      : Promise.resolve([]),
     prisma.locationSuggestion.findMany({
       where: {
         userId,

@@ -234,6 +234,36 @@ describe("TravTrack — a day's labels from TravStats", () => {
     expect(ofKind(await context(), "suggestion")).toEqual([]);
   });
 
+  it("a pending stay is not shown while the account has stay suggestions switched off", async () => {
+    // The inbox hides the stay tab then (forgejo#306); a label would link into nothing.
+    await prisma.dawarichStay.create({
+      data: {
+        userId,
+        fingerprint: "tt-off",
+        provider: "travtrack",
+        name: "Mainufer",
+        sourceStartAt: new Date(at("2026-10-20T12:00:00Z")),
+        sourceEndAt: new Date(at("2026-10-20T13:00:00Z")),
+        sourceLat: 49.79,
+        sourceLon: 9.95,
+        startAt: new Date(at("2026-10-20T12:00:00Z")),
+        endAt: new Date(at("2026-10-20T13:00:00Z")),
+        lat: 49.79,
+        lon: 9.95,
+        zone: "Europe/Berlin",
+        pointCount: 12,
+        evidence: { zone: "Europe/Berlin", source: "travtrack", pointDigests: ["aa"] },
+      },
+    });
+    expect(ofKind(await context(), "suggestion")).toHaveLength(1);
+
+    await prisma.userSettings.update({
+      where: { userId },
+      data: { staySuggestionsEnabled: false },
+    });
+    expect(ofKind(await context(), "suggestion")).toEqual([]);
+  });
+
   /** A walk out of town: `km` kilometres east in `minutes`, one fix a minute, from `t0`. */
   const drive = async (t0: number, km: number, minutes: number) => {
     // Ten quiet minutes first, at the start.
