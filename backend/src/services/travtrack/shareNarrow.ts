@@ -44,6 +44,14 @@ import { privacyCutBy, type LonLat } from "./privacyCut";
 
 type Db = DbTransaction;
 
+/**
+ * A route the owner's first build has not finished yet (Codex review, third
+ * round). It exists so the restriction triggers have a committed row to record
+ * against while the build reads its inputs; it serves nothing (no window), no
+ * narrowing touches it, and the owner does not see it as a share.
+ */
+export const PENDING_VERSION = 0;
+
 /** Nothing within this distance of the owner's home is in a shared route. */
 export const SNAPSHOT_HOME_M = 1000;
 
@@ -317,7 +325,8 @@ async function narrowOne(db: Db, userId: string, id: string) {
       select: NARROW_SELECT,
     });
     const lines = row ? readStored(row.geometry) : null;
-    if (!row || !lines) return;
+    // A pending first share (version 0) is the owner's build's to finish.
+    if (!row || !lines || row.version === PENDING_VERSION) return;
     const n = await narrowingFor(db, userId, row.tripId, row);
     const kept = n ? narrow(lines, n) : [];
     const guard = { id: row.id, version: row.version };

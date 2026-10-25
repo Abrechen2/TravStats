@@ -13,6 +13,7 @@ import {
   boundsOf,
   homeCircle,
   narrowedRoute,
+  PENDING_VERSION,
   SHARED_STATE_SELECT,
   untimed,
   type SharedState,
@@ -152,46 +153,93 @@ async function ownerView(
   };
 }
 
+/** The ids of what is recorded against the route now: only these may the build clear. */
+async function recordedIds(db: Db, snapshotId: string | undefined) {
+  if (!snapshotId) return { spans: [], flights: [], homes: [] };
+  const where = { snapshotId };
+  const select = { id: true } as const;
+  const [spans, flights, homes] = await Promise.all([
+    db.travTrackSharePastSpan.findMany({ where, select }),
+    db.travTrackSharePastFlight.findMany({ where, select }),
+    db.travTrackSharePastHome.findMany({ where, select }),
+  ]);
+  const ids = (rows: Array<{ id: string }>) => rows.map((r) => r.id);
+  return { spans: ids(spans), flights: ids(flights), homes: ids(homes) };
+}
+
 /**
  * `PUT /trips/:id/share-snapshot`: the owner shares (or refreshes) the route.
  * Under the TravTrack lock, so a deletion or a zone write cannot interleave
  * with the selection; the version rises on every share.
+ *
+ * Flight, trip and settings writes do not take that lock, so a restriction
+ * can be recorded while the build runs. The build clears only what was
+ * recorded BEFORE it read its inputs (the ids it read first); anything
+ * recorded later stays and narrows the new share too. For the same reason a
+ * first share commits a pending row before the build: without a committed row
+ * the triggers would have nothing to record a change made during the build
+ * against.
  */
 export async function shareTripRoute(userId: string, tripId: string) {
   const trip = await prisma.trip.findFirst({ where: { id: tripId, userId }, select: { id: true } });
   if (!trip) throw new AppError("Trip not found", 404, "TRIP_NOT_FOUND");
-  const snapshot = await prisma.$transaction(
-    async (tx) => {
-      await takeTravTrackLock(tx, userId);
-      const bounds = await boundsOf(tx, userId, tripId);
-      const built = bounds ? await buildShareGeometry(tx, userId, bounds) : null;
-      if (!bounds || !built || built.geometry.length === 0) {
-        await tx.travTrackShareSnapshot.deleteMany({ where: { tripId, userId } });
-        return null;
-      }
-      const fields = {
-        geometry: built.geometry as unknown as object,
-        pointCount: vertexCount(built.geometry),
-        sharedFrom: new Date(bounds.fromMs),
-        sharedUntil: new Date(bounds.untilMs),
-        homeCircles: built.home ? [built.home] : [],
-      };
-      const row = await tx.travTrackShareSnapshot.upsert({
-        where: { tripId },
-        create: { userId, tripId, ...fields },
-        update: { ...fields, version: { increment: 1 }, createdAt: new Date() },
-        select: OWNER_SELECT,
-      });
-      // The owner's share starts over: what restricted the route before it is
-      // in this build already (it read the trip, its flights and the home now).
-      const since = { snapshotId: row.id };
-      await tx.travTrackSharePastSpan.deleteMany({ where: since });
-      await tx.travTrackSharePastFlight.deleteMany({ where: since });
-      await tx.travTrackSharePastHome.deleteMany({ where: since });
-      return ownerView(tx, userId, row);
-    },
-    { timeout: 60_000 }
-  );
+  await prisma.travTrackShareSnapshot.createMany({
+    data: [{ userId, tripId, geometry: [], pointCount: 0, version: PENDING_VERSION }],
+    skipDuplicates: true,
+  });
+  let snapshot: Awaited<ReturnType<typeof ownerView>> | null;
+  try {
+    snapshot = await prisma.$transaction(
+      async (tx) => {
+        await takeTravTrackLock(tx, userId);
+        const existing = await tx.travTrackShareSnapshot.findUnique({
+          where: { tripId },
+          select: { id: true },
+        });
+        // Read before any input: what is recorded after this stays recorded.
+        const cleared = await recordedIds(tx, existing?.id);
+        const bounds = await boundsOf(tx, userId, tripId);
+        const built = bounds ? await buildShareGeometry(tx, userId, bounds) : null;
+        if (!bounds || !built || built.geometry.length === 0) {
+          await tx.travTrackShareSnapshot.deleteMany({ where: { tripId, userId } });
+          return null;
+        }
+        const fields = {
+          geometry: built.geometry as unknown as object,
+          pointCount: vertexCount(built.geometry),
+          sharedFrom: new Date(bounds.fromMs),
+          sharedUntil: new Date(bounds.untilMs),
+          homeCircles: built.home ? [built.home] : [],
+        };
+        const row = await tx.travTrackShareSnapshot.upsert({
+          where: { tripId },
+          create: { userId, tripId, ...fields },
+          update: { ...fields, version: { increment: 1 }, createdAt: new Date() },
+          select: OWNER_SELECT,
+        });
+        // The owner's share starts over from what this build read: the trip,
+        // its flights and the home as they were when it read them.
+        const snapshotId = row.id;
+        await tx.travTrackSharePastSpan.deleteMany({
+          where: { snapshotId, id: { in: cleared.spans } },
+        });
+        await tx.travTrackSharePastFlight.deleteMany({
+          where: { snapshotId, id: { in: cleared.flights } },
+        });
+        await tx.travTrackSharePastHome.deleteMany({
+          where: { snapshotId, id: { in: cleared.homes } },
+        });
+        return ownerView(tx, userId, row);
+      },
+      { timeout: 60_000 }
+    );
+  } catch (err) {
+    // A build that failed leaves no pending row behind (a finished share is not pending).
+    await prisma.travTrackShareSnapshot.deleteMany({
+      where: { tripId, userId, version: PENDING_VERSION },
+    });
+    throw err;
+  }
   if (!snapshot || snapshot.pointCount === 0) {
     throw new AppError(
       "Nothing of this trip's TravTrack line may be shown",
@@ -211,7 +259,7 @@ export async function revokeTripRoute(userId: string, tripId: string): Promise<b
 /** The owner's own view of what is shared, or null. */
 export async function tripRouteSnapshot(userId: string, tripId: string) {
   const row = await prisma.travTrackShareSnapshot.findFirst({
-    where: { tripId, userId },
+    where: { tripId, userId, version: { gt: PENDING_VERSION } },
     select: OWNER_SELECT,
   });
   return row ? ownerView(prisma, userId, row) : null;
@@ -239,7 +287,11 @@ export async function sharedTripRoutes(readerId: string, tripId: string) {
   if (!own.shareGroupId) return [];
   const groupId = own.shareGroupId;
   const snapshots = await prisma.travTrackShareSnapshot.findMany({
-    where: { userId: { not: readerId }, trip: { shareGroupId: groupId } },
+    where: {
+      userId: { not: readerId },
+      version: { gt: PENDING_VERSION },
+      trip: { shareGroupId: groupId },
+    },
     select: {
       userId: true,
       ...OWNER_SELECT,
