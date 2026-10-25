@@ -1,5 +1,6 @@
 import type { Response } from "express";
 import { z } from "zod";
+import { AppError } from "../../middleware/errorHandler";
 
 /**
  * `?year=` for the domain rollups (`/stats/cruise`, `/stats/lodging`).
@@ -88,4 +89,41 @@ export function scopeLodgingsToStays<L extends { id: string }>(
   if (year === undefined) return lodgings;
   const stayedAt = new Set(stays.map((stay) => stay.lodgingId));
   return lodgings.filter((l) => stayedAt.has(l.id));
+}
+
+/**
+ * What a year-scopable stats answer says it covers (companion-redesign C4).
+ *
+ * Carried in the response so a client can CHECK that it got the scope it asked
+ * for. A server that predates `?year=` on an endpoint strips the unknown
+ * parameter and answers all-time with a 200 — so the status code proves
+ * nothing, and a client that trusted it would show a lifetime figure under a
+ * year heading. A missing `scope` means "not scoped yet"; `year: null` means
+ * all-time on purpose.
+ */
+export interface StatsScope {
+  year: number | null;
+}
+
+export function statsScope(year: number | null | undefined): StatsScope {
+  return { year: year ?? null };
+}
+
+/**
+ * Refuses `?year=` together with `?fromDate=`/`?toDate=`: two scopes for one
+ * answer, and whichever the server preferred would be a guess the client
+ * cannot see.
+ */
+export function assertYearWithoutRange(query: {
+  year?: number;
+  fromDate?: string;
+  toDate?: string;
+}): void {
+  if (query.year !== undefined && (query.fromDate || query.toDate)) {
+    throw new AppError(
+      "year cannot be combined with fromDate/toDate",
+      400,
+      "STATS_YEAR_CONFLICTING_RANGE"
+    );
+  }
 }
