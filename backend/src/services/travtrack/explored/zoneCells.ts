@@ -27,7 +27,7 @@ import logger from "../../../utils/logger";
 import type { ZoneCircle } from "../classify";
 import { takeTravTrackLock } from "../lock";
 import { cellKey, TILES, type Cell } from "./cells";
-import { circleCells, wrapX, zoneComponents } from "./zoneRaster";
+import { circleCells, wrapX } from "./zoneRaster";
 
 /** Raised when the raster's rule changes; an account below it is rebuilt. */
 export const ZONE_CELLS_VERSION = 1;
