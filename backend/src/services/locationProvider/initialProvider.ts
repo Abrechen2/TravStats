@@ -10,8 +10,10 @@ import type { LocationProviderKind } from "./kinds";
  * is unlocked; existing users are never switched").
  *
  * Called by every account-creation path inside its transaction —
- * registration (`routes/auth.ts`), the first admin (`routes/setup.ts`) and an
- * administrator creating an account (`routes/admin/users.ts`) — and by
+ * registration (`routes/auth.ts`), the first admin (`routes/setup.ts`), an
+ * administrator creating an account (`routes/admin/users.ts`), the
+ * `createAdmin` script (`scripts/firstAdmin.ts`) and the dev seed's demo login
+ * (`seedLoginUser.ts`, flagged `isDemo`, so it stays `none`) — and by
  * nothing else: an existing account is never moved, and switching TravTrack
  * on later changes nobody. The demo seeds do not call it, and a demo account
  * passed in anyway stays on `none`.

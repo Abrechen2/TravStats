@@ -9,6 +9,8 @@ import { hashPassword } from "../../../utils/password";
 import { getInstanceSettings, updateInstanceSettings } from "../../instanceSettingsService";
 import { travTrackSwitches } from "../../travtrack/__tests__/switches";
 import { initialLocationProvider } from "../initialProvider";
+import { createFirstAdmin } from "../../../scripts/firstAdmin";
+import { seedLoginUser } from "../../../seedLoginUser";
 
 /**
  * TravTrack as the default for new accounts (TravTrack plan T8, spec rule 4):
@@ -161,5 +163,34 @@ describe("the initial location provider", () => {
     expect((await providerOf(off.body.id ?? off.body.user?.id))?.locationProvider ?? "none").toBe(
       "none"
     );
+  });
+  it("the first admin the createAdmin script makes follows the same rule", async () => {
+    await switches.set({ beta: true, config: true });
+    const on = await createFirstAdmin(prisma, {
+      username: `${PREFIX}script-on`,
+      passwordHash: "x",
+    });
+    expect(await providerOf(on.id)).toMatchObject({ locationProvider: "travtrack" });
+    await switches.set({ beta: true, config: false });
+    const off = await createFirstAdmin(prisma, {
+      username: `${PREFIX}script-off`,
+      passwordHash: "x",
+    });
+    expect((await providerOf(off.id))?.locationProvider ?? "none").toBe("none");
+  });
+
+  it("the dev seed's demo login is a demo account and stays none", async () => {
+    await switches.set({ beta: true, config: true });
+    const user = await seedLoginUser(prisma, { username: `${PREFIX}seed-demo`, passwordHash: "x" });
+    expect(user.isDemo).toBe(true);
+    expect((await providerOf(user.id))?.locationProvider ?? "none").toBe("none");
+  });
+
+  it("the scripts create their accounts through these helpers", () => {
+    const read = (file: string) => readFileSync(path.join(__dirname, "../../..", file), "utf8");
+    expect(read("scripts/createAdmin.ts")).toContain("createFirstAdmin(");
+    expect(read("seed.ts")).toContain("seedLoginUser(");
+    expect(read("scripts/createAdmin.ts")).not.toContain("prisma.user.create(");
+    expect(read("seed.ts")).not.toContain("prisma.user.upsert(");
   });
 });

@@ -5,10 +5,10 @@
  * Defaults: admin / admin123
  */
 
-import { createPrismaClient } from "../prismaClient";
 import bcrypt from "bcrypt";
+import { prisma } from "../db";
+import { createFirstAdmin } from "./firstAdmin";
 
-const prisma = createPrismaClient();
 const SALT_ROUNDS = 10;
 
 async function createAdmin() {
@@ -38,14 +38,8 @@ async function createAdmin() {
     // Hash password
     const passwordHash = await bcrypt.hash(adminPassword, SALT_ROUNDS);
 
-    // Create admin user
-    await prisma.user.create({
-      data: {
-        username: adminUsername,
-        passwordHash,
-        isAdmin: true,
-      },
-    });
+    // Create admin user, with its initial location provider (TravTrack plan T8)
+    await createFirstAdmin(prisma, { username: adminUsername, passwordHash });
 
     console.log("✅ Admin user created");
     console.log(`   Username: ${adminUsername}`);
