@@ -20,12 +20,18 @@ const RAMP = `linear-gradient(90deg, ${SPEED_STOPS.map((s) => rgb(s.rgb)).join("
  * which a stretch is cut further. The note under the select says what the
  * select cannot do: zones, deletions and flight mode always cut.
  */
+/** Layers drawn from the days' labels: a range read carries none. */
+const DAY_ONLY: ReadonlySet<string> = new Set(["visits", "entries"]);
+
 export default function TrackLayersPanel({
   prefs,
   onChange,
+  long = false,
 }: {
   prefs: TrackMapPrefs;
   onChange: (patch: Partial<TrackMapPrefs>) => void;
+  /** A month, a year or a Zeitraum: the day-only layers are not available. */
+  long?: boolean;
 }): JSX.Element {
   const { t } = useTranslation(["track"]);
   return (
@@ -39,16 +45,27 @@ export default function TrackLayersPanel({
           {t("track:map.layers.title")}
         </legend>
         {TRACK_LAYERS.map((id) => (
-          <label key={id} className="flex items-center gap-3" style={{ minHeight: 40 }}>
+          <label
+            key={id}
+            className="flex items-center gap-3"
+            style={{ minHeight: 40, opacity: long && DAY_ONLY.has(id) ? 0.55 : 1 }}
+          >
             <input
               type="checkbox"
+              disabled={long && DAY_ONLY.has(id)}
               checked={prefs.layers[id]}
               onChange={() => onChange({ layers: { ...prefs.layers, [id]: !prefs.layers[id] } })}
               style={{ width: 18, height: 18, accentColor: TRACK_COLOR }}
             />
             <span className="flex flex-col">
               <span style={{ fontSize: 15 }}>{t(`track:map.layers.${id}`)}</span>
-              <span className="t-caption">{t(`track:map.layers.${id}Hint`)}</span>
+              <span className="t-caption">
+                {t(
+                  long && DAY_ONLY.has(id)
+                    ? "track:map.layers.dayOnly"
+                    : `track:map.layers.${id}Hint`
+                )}
+              </span>
             </span>
           </label>
         ))}

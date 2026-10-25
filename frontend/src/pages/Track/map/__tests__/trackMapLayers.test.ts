@@ -19,13 +19,15 @@ const input = (over: Partial<TrackLayerInput> = {}): TrackLayerInput => ({
   opacity: 0.8,
   lines: [seg.map((q) => [q[2], q[1]])],
   segments: [seg],
-  points: seg.map((point) => ({ point, zone: "UTC" })),
+  points: seg.map((point, i) => ({ point, zone: "UTC", id: `p-${i}` })),
   anchors: [
     { lat: 1, lon: 1, kind: "home", text: "Zuhause", group: "visits", open: false },
     { lat: 2, lon: 2, kind: "flight", text: "Flug", group: "entries", open: false },
   ],
   replay: [],
   onPoint: vi.fn(),
+  photos: [],
+  onPhoto: vi.fn(),
   ...over,
 });
 
@@ -60,6 +62,32 @@ describe("buildTrackLayers", () => {
     }
     const none = Object.fromEntries(TRACK_LAYERS.map((id) => [id, false]));
     expect(ids(input({ layers: none as TrackLayerInput["layers"] }))).toEqual([]);
+  });
+
+  it("draws photos only where the server placed them, and a click opens one", () => {
+    const photo = {
+      assetId: "a1",
+      type: "IMAGE" as const,
+      takenAt: "2026-10-25T06:00:30.000Z",
+      lat: 52.505,
+      lon: 13.405,
+    };
+    const onPhoto = vi.fn();
+    expect(ids(input())).not.toContain("track-photos");
+    const layer = buildTrackLayers(input({ photos: [photo], onPhoto })).find(
+      (l) => l.id === "track-photos"
+    );
+    expect(layer).toBeDefined();
+    const props = layer!.props as unknown as {
+      data: (typeof photo)[];
+      getPosition: (p: typeof photo) => [number, number];
+      onClick: (info: { object: typeof photo }) => boolean;
+    };
+    expect(props.data.map(props.getPosition)).toEqual([[13.405, 52.505]]);
+    props.onClick({ object: photo });
+    expect(onPhoto).toHaveBeenCalledWith(photo);
+    const off = { ...input().layers, photos: false };
+    expect(ids(input({ layers: off, photos: [photo] }))).not.toContain("track-photos");
   });
 
   it("single colour draws the stretches whole; the replay adds its head", () => {

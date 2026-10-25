@@ -5,6 +5,8 @@ import type { TravTrackMonths } from "../../../lib/api/travtrackMonths";
 
 const api = vi.hoisted(() => ({ months: vi.fn(), cityLookup: vi.fn(), setCityLookup: vi.fn() }));
 vi.mock("../../../lib/api/travtrackMonths", () => ({ travTrackMonthsApi: api }));
+const views = vi.hoisted(() => ({ calendar: vi.fn() }));
+vi.mock("../../../lib/api/travtrackViews", () => ({ travTrackViewsApi: views }));
 vi.mock("../../../hooks/useTodayZone", () => ({ useTodayZone: () => "UTC" }));
 vi.mock("../../../shared/time/clock", () => ({ todayIn: () => "2026-10-25" }));
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -58,6 +60,7 @@ const show = () =>
 describe("TrackMonths", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    views.calendar.mockResolvedValue({ year: 2026, days: [], pending: [], unavailable: [] });
     api.months.mockResolvedValue(DATA);
   });
 

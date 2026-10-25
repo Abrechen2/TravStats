@@ -33,14 +33,12 @@ vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => fals
 vi.mock("../../../hooks/useBetaFeatures", () => ({
   useBetaFeatures: () => ({ isFeatureVisible: () => true }),
 }));
-// The trip note reads the home periods on its own; covered by TravTrackTripNote.test.tsx.
-vi.mock("../TravTrackTripNote", () => ({ default: () => null }));
 vi.mock("../../../hooks/useTodayZone", () => ({
   useTodayZone: () => "UTC",
   todayZoneNow: () => "UTC",
 }));
 
-import TravTrackSection from "../TravTrackSection";
+import TrackImports from "../TrackImports";
 import { travTrackApi } from "../../../lib/api/travtrack";
 import { travTrackImportsApi } from "../../../lib/api/travtrackImports";
 import { api } from "../../../lib/api/client";
@@ -53,7 +51,7 @@ import {
 } from "../../../lib/api/travtrackDawarichCopy";
 
 /**
- * "Dawarich-Verlauf übernehmen" in Settings (TravTrack plan L6): a copy is
+ * "Dawarich-Verlauf übernehmen" on Track › Importe (TravTrack plan L6): a copy is
  * started by the user — the whole history or a span — its progress shows
  * while it runs, it pauses and resumes, and an incomplete copy names the
  * hours and days it could not get instead of reading "fertig". Without an own
@@ -110,11 +108,11 @@ const copyOf = (c: Partial<DawarichCopy>): DawarichCopy => ({
 const show = () =>
   render(
     <MemoryRouter>
-      <TravTrackSection />
+      <TrackImports />
     </MemoryRouter>
   );
 
-describe("TravTrackSection — copying the Dawarich history", () => {
+describe("Track › Importe — copying the Dawarich history", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     caps.current = { version: 1, offered: true, enabled: true, active: true, hasData: true };

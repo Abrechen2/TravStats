@@ -24,6 +24,10 @@ export function useRangeDays(
 
   useEffect(() => {
     const id = ++run.current;
+    if (!key) {
+      setResults([]);
+      return;
+    }
     const list = key.split(",");
     setResults(list.map((date) => ({ date, kind: "loading" })));
     void readDays(

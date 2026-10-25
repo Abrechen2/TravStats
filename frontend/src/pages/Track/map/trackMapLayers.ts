@@ -3,6 +3,7 @@ import { HeatmapLayer } from "@deck.gl/aggregation-layers";
 import type { Layer, PickingInfo } from "@deck.gl/core";
 import { token } from "../../../components/ui/tokens";
 import type { TrackPoint, TravTrackDayEntry } from "../../../lib/api/travtrack";
+import type { TravTrackPhoto } from "../../../lib/api/travtrackViews";
 import { contextLabel } from "../trackContextLabel";
 import { lonLat, speedColor, speedPieces, type LonLat, type SpeedPiece } from "./trackGeometry";
 import type { RouteColorMode, TrackLayer } from "./trackMapPrefs";
@@ -67,6 +68,8 @@ export function mapAnchors(context: readonly TravTrackDayEntry[], t: Translate):
 export interface MapPoint {
   point: TrackPoint;
   zone: string;
+  /** The stored point behind the vertex (for „Punkt löschen"); null from an older server. */
+  id: string | null;
 }
 
 export interface TrackLayerInput {
@@ -81,7 +84,13 @@ export interface TrackLayerInput {
   /** Where the replay stands; empty while it is not running. */
   replay: readonly LonLat[];
   onPoint: (point: MapPoint) => void;
+  /** Photos at the positions the server placed them; empty while the layer is off. */
+  photos: readonly TravTrackPhoto[];
+  onPhoto: (photo: TravTrackPhoto) => void;
 }
+
+/** The photo markers' colour: the Stats accent, apart from the track's own. */
+const PHOTO_RGB: [number, number, number] = [240, 169, 71];
 
 /** A label's words on hover; nothing for lines, points and the heat. */
 export const tooltipOf = (info: PickingInfo): string | null => {
@@ -188,6 +197,27 @@ export function buildTrackLayers(input: TrackLayerInput): Layer[] {
         "track-entries",
         input.anchors.filter((a) => a.group === "entries")
       )
+    );
+  }
+  if (on.photos && input.photos.length > 0) {
+    out.push(
+      new ScatterplotLayer<TravTrackPhoto>({
+        id: "track-photos",
+        data: [...input.photos],
+        getPosition: (p) => [p.lon, p.lat],
+        getRadius: 7,
+        radiusUnits: "pixels",
+        stroked: true,
+        getFillColor: [...PHOTO_RGB, 255],
+        getLineColor: [255, 255, 255, 255],
+        lineWidthUnits: "pixels",
+        getLineWidth: 2,
+        pickable: true,
+        onClick: (info: PickingInfo<TravTrackPhoto>) => {
+          if (info.object) input.onPhoto(info.object);
+          return true;
+        },
+      })
     );
   }
   if (input.replay.length > 0) {

@@ -7,7 +7,15 @@ import { useCallback, useState } from "react";
  * something unreadable falls back to the defaults, and the map works without.
  */
 
-export const TRACK_LAYERS = ["routes", "points", "heat", "fog", "visits", "entries"] as const;
+export const TRACK_LAYERS = [
+  "routes",
+  "points",
+  "heat",
+  "fog",
+  "visits",
+  "entries",
+  "photos",
+] as const;
 export type TrackLayer = (typeof TRACK_LAYERS)[number];
 
 export type RouteColorMode = "speed" | "plain";
@@ -25,7 +33,15 @@ export interface TrackMapPrefs {
 }
 
 export const DEFAULT_PREFS: TrackMapPrefs = {
-  layers: { routes: true, points: false, heat: false, fog: false, visits: true, entries: true },
+  layers: {
+    routes: true,
+    points: false,
+    heat: false,
+    fog: false,
+    visits: true,
+    entries: true,
+    photos: false,
+  },
   color: "speed",
   opacity: 0.85,
   splitMinutes: null,

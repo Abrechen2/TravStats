@@ -54,8 +54,10 @@ export interface TravTrackPhoto {
 
 export interface TravTrackPhotos {
   photos: TravTrackPhoto[];
-  /** Immich held more photos in the window than one search returns. */
+  /** Not every photo of the window was considered (Immich's page, or the track read's bound). */
   truncated: boolean;
+  /** The window's track was longer than one read; absent on an older server. */
+  trackTruncated?: boolean;
 }
 
 export type TravTrackStayState = "pending" | "accepted" | "rejected";

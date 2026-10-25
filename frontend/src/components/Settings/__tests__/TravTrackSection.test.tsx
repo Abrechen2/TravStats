@@ -179,6 +179,23 @@ describe("TravTrackSection", () => {
     expect(screen.queryByText("track:settings.open")).not.toBeInTheDocument();
   });
 
+  it("links to Track › Importe while the Track area is open, instead of a second import UI", async () => {
+    show();
+    const link = await screen.findByRole("link", { name: "track:settings.importsMoved" });
+    expect(link).toHaveAttribute("href", "/track/imports");
+    expect(travTrackImportsApi.list).not.toHaveBeenCalled();
+    expect(dawarichCopyApi.get).not.toHaveBeenCalled();
+  });
+
+  it("keeps the imports here while the Track area is closed, so held data stays deletable", async () => {
+    caps.current = { version: 1, offered: true, enabled: false, active: false, hasData: true };
+    vi.spyOn(travTrackApi, "summary").mockResolvedValue(HELD);
+    show();
+    await screen.findByText("track:settings.summary");
+    expect(screen.queryByTestId("travtrack-imports-link")).not.toBeInTheDocument();
+    await waitFor(() => expect(travTrackImportsApi.list).toHaveBeenCalled());
+  });
+
   it("shows nothing for an account without data while TravTrack is off", () => {
     caps.current = { version: 1, offered: true, enabled: false, active: false, hasData: false };
     const { container } = show();

@@ -42,6 +42,12 @@ vi.mock("../TrackExploredMap", () => ({
 vi.mock("../TrackMonths", () => ({
   default: () => <div data-testid="track-months-stub" />,
 }));
+vi.mock("../TrackStays", () => ({
+  default: () => <div data-testid="track-stays-stub" />,
+}));
+vi.mock("../TrackImports", () => ({
+  default: () => <div data-testid="track-imports-stub" />,
+}));
 
 // The app header polls the inbox; its own tests cover it. Here it only has to be there.
 vi.mock("../../../components/NavigationBar", () => ({
@@ -209,11 +215,11 @@ describe("TrackPage", () => {
   });
 
   it.each([
-    ["/track/stays", "track-stays", "track:coming.staysTitle"],
-    ["/track/imports", "track-imports", "track:coming.importsTitle"],
-  ])("%s shows its placeholder and no day controls", async (path, testId, title) => {
+    ["/track/stays", "track-stays-stub"],
+    ["/track/imports", "track-imports-stub"],
+  ])("%s shows its view and no day controls", async (path, testId) => {
     renderAt(path);
-    expect(await screen.findByTestId(testId)).toHaveTextContent(title);
+    expect(await screen.findByTestId(testId)).toBeInTheDocument();
     expect(api.day).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "track:actions.delete" })).not.toBeInTheDocument();
   });

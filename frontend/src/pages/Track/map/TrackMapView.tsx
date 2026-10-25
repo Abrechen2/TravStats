@@ -4,98 +4,110 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { token } from "../../../components/ui/tokens";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useTodayZone } from "../../../hooks/useTodayZone";
-import type { TravTrackDay } from "../../../lib/api/travtrack";
-import { formatDayLong } from "../../../shared/time/calendar";
+import type { TrackPoint } from "../../../lib/api/travtrack";
+import type { TravTrackPhoto } from "../../../lib/api/travtrackViews";
 import { todayIn } from "../../../shared/time/clock";
-import TrackCoverageBar from "../TrackCoverageBar";
 import TrackDeleteDialog from "../TrackDeleteDialog";
 import TrackExportDialog from "../TrackExportDialog";
-import TrackTimeline from "../TrackTimeline";
+import TrackFlightPanel, { type SelectedFlight } from "../flight/TrackFlightPanel";
+import TrackPhotoNotice from "../photos/TrackPhotoNotice";
+import TrackPhotoThumb from "../photos/TrackPhotoThumb";
+import { photoWindowOf } from "../photos/trackPhotos";
+import { useTrackPhotos } from "../photos/useTrackPhotos";
 import type { FogStatus } from "./TrackFogLayer";
 import TrackLayersPanel from "./TrackLayersPanel";
+import TrackMapAside from "./TrackMapAside";
+import TrackMapNotices from "./TrackMapNotices";
 import TrackPointInspector from "./TrackPointInspector";
 import TrackRangeBar from "./TrackRangeBar";
 import TrackRangeMap from "./TrackRangeMap";
 import TrackReplayBar from "./TrackReplayBar";
-import TrackTotalsPanel from "./TrackTotalsPanel";
 import { lonLat, rangeTotals, splitAfterPause, type LonLat } from "./trackGeometry";
 import { mapAnchors, type MapPoint } from "./trackMapLayers";
 import { useTrackMapPrefs } from "./trackMapPrefs";
 import { panelStyle } from "./trackMapStyle";
+import type { DayResult } from "./trackRange";
 import {
-  presetRange,
-  rangeDays,
-  rangePath,
-  stepRange,
-  type DayResult,
-  type TrackRange,
-} from "./trackRange";
+  REPLAY_MAX_DAYS,
+  parseSpan,
+  presetSpan,
+  spanDays,
+  spanPath,
+  stepSpan,
+  type TrackSpan,
+} from "./trackSpan";
 import { clipSegments, replayPositions } from "./trackReplay";
 import { useLiveFollow } from "./useLiveFollow";
-import { useRangeDays } from "./useRangeDays";
 import { useReplay } from "./useReplay";
-
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
+import { useTrackMapData } from "./useTrackMapData";
 
 type Loaded = Extract<DayResult, { kind: "loaded" }>;
-type Failed = Extract<DayResult, { kind: "failed" }>;
 
-const toLines = (segments: TravTrackDay["segments"]): LonLat[][] =>
-  segments.filter((s) => s.length > 1).map((s) => s.map(lonLat));
+/** No stretches for the replay of a span longer than it plays. */
+const NO_STRETCHES: TrackPoint[][] = [];
+
+const toLines = (segments: readonly TrackPoint[][]) =>
+  segments.filter((s) => s.length > 1).map((s): LonLat[] => s.map(lonLat));
 
 /**
- * The „Karte" tab of `/track` (TravTrack plan T5.2, board „Track-Karte"): a
- * range bar, the layers and route panel, the map with its replay, and the
- * span's totals beside the coverage and the logbook's timeline. Everything is
- * drawn from the day reads' safe stretches; a day that failed to load says so
- * by name and is never drawn as an empty day. Private zones are not drawn.
+ * The „Karte" tab of `/track` (TravTrack plan T5.2 + T5.3, board „Track-Karte"):
+ * a range bar from one day to a year or a picked Zeitraum, the layers and route
+ * panel, the map with its replay (up to seven days), photos on the track, the
+ * point inspector with its delete, the flight panel, and the span's totals
+ * beside the coverage and the logbook's timeline. Everything is drawn from
+ * safe stretches; a day or a part that failed says so and is never drawn as
+ * empty. Private zones are not drawn.
  */
 export default function TrackMapView(): JSX.Element {
-  const { t, i18n } = useTranslation(["track"]);
+  const { t } = useTranslation(["track"]);
   const navigate = useNavigate();
   const params = useParams<{ date?: string }>();
   const [search] = useSearchParams();
   const profileZone = useTodayZone();
   const today = todayIn(profileZone);
-  const end = params.date && DAY.test(params.date) ? params.date : today;
-  const length = search.get("range") === "7" ? 7 : 1;
-  const range = useMemo<TrackRange>(() => ({ end, length }), [end, length]);
-  const days = useMemo(() => rangeDays(range), [range]);
+  const span = useMemo(() => parseSpan(params.date, search, today), [params.date, search, today]);
   const [generation, setGeneration] = useState(0);
-  const { results, refresh } = useRangeDays(days, generation);
+  const data = useTrackMapData(span, generation);
+  const { long, days, dayResults, source, loading } = data;
   const [prefs, setPrefs] = useTrackMapPrefs();
   const [dialog, setDialog] = useState<"export" | "delete" | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [selected, setSelected] = useState<MapPoint | null>(null);
+  const [photo, setPhoto] = useState<TravTrackPhoto | null>(null);
+  const [flight, setFlight] = useState<SelectedFlight | null>(null);
   const [fog, setFog] = useState<FogStatus>({ kind: "idle" });
   const [live, setLive] = useState(false);
-  const following = live && days.includes(today);
-  const liveState = useLiveFollow(following, () => refresh(today));
+  const following = live && !long && days.includes(today);
+  const liveState = useLiveFollow(following, () => data.refresh(today));
+  const short = spanDays(span) <= REPLAY_MAX_DAYS;
 
-  const go = (next: TrackRange) => {
+  const go = (next: TrackSpan) => {
     setNotice(null);
     setSelected(null);
-    navigate(rangePath(next, today));
+    setPhoto(null);
+    setFlight(null);
+    navigate(spanPath(next, today));
   };
 
   useEffect(() => {
     if (!prefs.layers.fog) setFog({ kind: "idle" });
   }, [prefs.layers.fog]);
 
-  const loaded = useMemo(() => results.filter((r): r is Loaded => r.kind === "loaded"), [results]);
-  const failed = results.filter((r): r is Failed => r.kind === "failed");
-  const loading = results.some((r) => r.kind === "loading");
+  const loaded = useMemo(
+    () => dayResults.filter((r): r is Loaded => r.kind === "loaded"),
+    [dayResults]
+  );
   const zone = loaded[0]?.day.zone ?? profileZone;
 
   const shown = useMemo(
     () =>
       splitAfterPause(
-        loaded.flatMap((r) => r.day.segments),
+        source.segments,
         prefs.splitMinutes === null ? null : prefs.splitMinutes * 60_000
       ),
-    [loaded, prefs.splitMinutes]
+    [source.segments, prefs.splitMinutes]
   );
-  const replay = useReplay(shown);
+  const replay = useReplay(short ? shown : NO_STRETCHES);
   const drawn = useMemo(
     () => (replay.t === null ? shown : clipSegments(shown, replay.t)),
     [shown, replay.t]
@@ -108,39 +120,52 @@ export default function TrackMapView(): JSX.Element {
   );
   const points = useMemo<MapPoint[]>(
     () =>
-      loaded.flatMap((r) => r.day.segments.flat().map((point) => ({ point, zone: r.day.zone }))),
-    [loaded]
+      source.segments.flatMap((segment, i) =>
+        segment.map((point, j) => ({ point, zone, id: source.ids[i]?.[j] ?? null }))
+      ),
+    [source, zone]
   );
   const anchors = useMemo(() => loaded.flatMap((r) => mapAnchors(r.day.context, t)), [loaded, t]);
   const totals = useMemo(
-    () =>
-      rangeTotals(
-        shown,
-        loaded.map((r) => r.day)
-      ),
-    [shown, loaded]
+    () => rangeTotals(shown, [{ pointCount: source.positions, coverage: source.coverage }]),
+    [shown, source]
   );
-  // In a week, a day with nothing recorded and nothing known is one name in a line, not a card.
-  const isQuiet = (r: Loaded) => r.day.pointCount === 0 && r.day.context.length === 0;
-  const quiet = loaded.filter(isQuiet);
-  const busy = loaded.filter((r) => !isQuiet(r));
+
+  const photoWindow = useMemo(
+    () =>
+      prefs.layers.photos
+        ? short
+          ? photoWindowOf(source.segments)
+          : ({ kind: "tooLong" } as const)
+        : null,
+    [prefs.layers.photos, short, source.segments]
+  );
+  const photos = useTrackPhotos(
+    !loading && photoWindow?.kind === "window" ? photoWindow.window : null
+  );
+  const photoList = photos.kind === "loaded" ? photos.photos : [];
+
   const onPoint = useCallback((p: MapPoint) => setSelected(p), []);
+  const onPhoto = useCallback((p: TravTrackPhoto) => setPhoto(p), []);
   const follow = liveState.kind === "following" ? liveState.at : null;
-  const empty = !loading && failed.length === 0 && totals.points === 0;
+  const failed = long ? data.range?.kind === "failed" : dayResults.some((r) => r.kind === "failed");
+  const empty = !loading && !failed && totals.points === 0;
+  const hasDrawing = source.segments.some((s) => s.length > 0);
+  const reload = () => setGeneration((g) => g + 1);
 
   return (
     <div className="flex flex-col gap-4">
       <TrackRangeBar
-        range={range}
+        span={span}
         today={today}
         live={following}
-        onRange={(direction) => go(stepRange(range, direction))}
-        onPreset={(preset) => go(presetRange(preset, today, range))}
-        onPick={(day) => go({ end: day, length: 1 })}
+        onStep={(direction) => go(stepSpan(span, direction, today))}
+        onPreset={(preset) => go(presetSpan(preset, today, span))}
+        onSpan={go}
         onLive={() => {
           if (following) return setLive(false);
           setLive(true);
-          if (!days.includes(today)) go({ end: today, length: 1 });
+          if (long || !days.includes(today)) go({ kind: "day", fromDay: today, toDay: today });
         }}
         onExport={() => setDialog("export")}
         onDelete={() => setDialog("delete")}
@@ -156,40 +181,28 @@ export default function TrackMapView(): JSX.Element {
           {t("track:map.live.failed", { reason: t(liveState.key) })}
         </p>
       )}
-      {failed.length > 0 && (
-        <div role="alert" className="flex flex-col gap-1" data-testid="track-failed-days">
-          {failed.map((f) => (
-            <p key={f.date} className="t-body" style={{ color: token("bad") }}>
-              {t("track:map.dayFailed", {
-                day: formatDayLong(f.date, i18n.language),
-                reason: t(f.key),
-              })}
-            </p>
-          ))}
-          <button
-            type="button"
-            className="self-start underline"
-            onClick={() => setGeneration((g) => g + 1)}
-          >
-            {t("track:map.retry")}
-          </button>
-        </div>
-      )}
-      {loading && <p className="t-caption">{t("track:day.loading")}</p>}
+      <TrackMapNotices
+        long={long}
+        dayResults={dayResults}
+        range={data.range}
+        onRetry={reload}
+        onResume={data.resume}
+      />
+      {loading && !long && <p className="t-caption">{t("track:day.loading")}</p>}
 
       <div className="flex flex-wrap gap-4">
-        <TrackLayersPanel prefs={prefs} onChange={setPrefs} />
+        <TrackLayersPanel prefs={prefs} onChange={setPrefs} long={long} />
 
         <section className="flex min-w-0 flex-col gap-3" style={{ flex: "999 1 480px" }}>
           {empty && (
             <p className="t-body" data-testid="track-day-empty" style={panelStyle}>
-              {t(length === 1 ? "track:day.empty" : "track:map.rangeEmpty")}
+              {t(span.kind === "day" ? "track:day.empty" : "track:map.rangeEmpty")}
             </p>
           )}
-          {!loading && totals.points > 0 && (
+          {hasDrawing && (long || !loading) && (
             <div className="relative">
               <TrackRangeMap
-                key={days.join(",")}
+                key={`${span.fromDay}|${span.toDay}|${loading ? "partial" : "whole"}`}
                 layers={prefs.layers}
                 color={prefs.color}
                 opacity={prefs.opacity}
@@ -200,17 +213,52 @@ export default function TrackMapView(): JSX.Element {
                 anchors={anchors}
                 replay={head}
                 onPoint={onPoint}
+                photos={photoList}
+                onPhoto={onPhoto}
                 follow={follow}
                 onFogStatus={setFog}
               />
               {selected && (
-                <TrackPointInspector point={selected} onClose={() => setSelected(null)} />
+                <TrackPointInspector
+                  point={selected}
+                  onClose={() => setSelected(null)}
+                  onDeleted={() => {
+                    setSelected(null);
+                    setNotice(t("track:map.point.deleted"));
+                    reload();
+                  }}
+                />
+              )}
+              {photo && photos.kind === "loaded" && (
+                <div
+                  role="dialog"
+                  aria-label={t("track:photos.title")}
+                  data-testid="track-photo-popup"
+                  className="flex flex-col gap-2"
+                  style={{ ...panelStyle, position: "absolute", right: 12, top: 12, zIndex: 2 }}
+                >
+                  <TrackPhotoThumb photo={photo} window={photos.window} zone={zone} size={160} />
+                  <button type="button" className="underline" onClick={() => setPhoto(null)}>
+                    {t("track:map.point.close")}
+                  </button>
+                </div>
               )}
             </div>
           )}
-          {!loading && totals.points > 0 && (
-            <TrackReplayBar replay={replay} zone={zone} multiDay={length > 1} />
+          {!loading && totals.points > 0 && short && (
+            <TrackReplayBar replay={replay} zone={zone} multiDay={span.kind !== "day"} />
           )}
+          {!short && totals.points > 0 && (
+            <p className="t-caption" data-testid="track-replay-limit">
+              {t("track:map.replay.limit", { days: REPLAY_MAX_DAYS })}
+            </p>
+          )}
+          {prefs.layers.photos && photoWindow?.kind === "tooLong" && (
+            <p className="t-caption" data-testid="track-photos-too-long">
+              {t("track:photos.needsShorter")}
+            </p>
+          )}
+          {prefs.layers.photos && <TrackPhotoNotice state={photos} />}
           {fog.kind === "failed" && (
             <p className="t-caption" role="status" style={{ color: token("warn") }}>
               {t(fog.key)}
@@ -222,56 +270,41 @@ export default function TrackMapView(): JSX.Element {
               {t("track:day.points", { count: totals.points })}
             </p>
           )}
-          {loaded
-            .filter((r) => r.day.truncated)
-            .map((r) => (
-              <p key={r.date} className="t-caption" role="status" style={{ color: token("warn") }}>
-                {length > 1 ? `${formatDayLong(r.date, i18n.language)}: ` : ""}
-                {t("track:day.truncated")}
-              </p>
-            ))}
+          {flight && (
+            <TrackFlightPanel
+              flight={flight}
+              zone={zone}
+              cursor={replay.t}
+              onClose={() => setFlight(null)}
+            />
+          )}
         </section>
 
-        <aside className="flex flex-col gap-3" style={{ flex: "1 1 280px", maxWidth: 360 }}>
-          <TrackTotalsPanel totals={totals} />
-          {length > 1 && quiet.length > 0 && (
-            <p className="t-caption" style={panelStyle} data-testid="track-quiet-days">
-              {t("track:map.quietDays", {
-                days: quiet
-                  .map((r) =>
-                    formatDayLong(r.date, i18n.language, { weekday: "short", day: "numeric" })
-                  )
-                  .join(", "),
-              })}
-            </p>
-          )}
-          {(length > 1 ? busy : loaded).map((r) => (
-            <section key={r.date} className="flex flex-col gap-3" style={panelStyle}>
-              {length > 1 && (
-                <h2 className="t-card-title">{formatDayLong(r.date, i18n.language)}</h2>
-              )}
-              <TrackCoverageBar coverage={r.day.coverage} zone={r.day.zone} />
-              <TrackTimeline day={r.day} />
-            </section>
-          ))}
-        </aside>
+        <TrackMapAside
+          span={span}
+          totals={totals}
+          loaded={loaded}
+          long={long}
+          flightId={flight?.id ?? null}
+          onFlight={setFlight}
+        />
       </div>
 
       <TrackExportDialog
         open={dialog === "export"}
         onClose={() => setDialog(null)}
-        fromDay={days[0]}
-        toDay={days[days.length - 1]}
+        fromDay={span.fromDay}
+        toDay={span.toDay}
       />
       <TrackDeleteDialog
         open={dialog === "delete"}
         onClose={() => setDialog(null)}
-        fromDay={days[0]}
-        toDay={days[days.length - 1]}
+        fromDay={span.fromDay}
+        toDay={span.toDay}
         onDeleted={(count) => {
           setNotice(t("track:delete.done", { count }));
           setSelected(null);
-          setGeneration((g) => g + 1);
+          reload();
         }}
       />
     </div>

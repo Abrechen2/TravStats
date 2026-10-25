@@ -312,6 +312,10 @@ export function trackErrorKey(err: unknown): string {
       return "track:errors.disabled";
     case "TRAVTRACK_EXPORT_TOO_LONG":
       return "track:errors.exportTooLong";
+    case "TRAVTRACK_RANGE_TOO_LONG":
+      return "track:errors.rangeTooLong";
+    case "TRAVTRACK_POINT_NOT_FOUND":
+      return "track:errors.pointGone";
     case "TRAVTRACK_EXPLORED_ZOOM_IN":
       return "track:explored.zoomIn";
     case "TRAVTRACK_EXPLORED_UNAVAILABLE":
