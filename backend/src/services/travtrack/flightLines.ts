@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { extentOf } from "../../utils/extrema";
 import { recorderWindow, scheduledInstants } from "../flightDevice/flightWindow";
 import { observationOf, TRAVTRACK_OBSERVATION_SELECT } from "../locationProvider/travtrackProvider";
 import type { LocationObservation } from "../locationProvider/types";
@@ -81,14 +82,11 @@ export async function travTrackFlightLines(
   }
   for (const link of linked) add(link.entryId, observationOf(link.point));
 
-  const times = [...perFlight.values()].flatMap((m) => [...m.values()].map((o) => o.atMs));
-  const breaksOf =
-    times.length === 0
-      ? () => []
-      : await travTrackBreakSet(userId, {
-          fromMs: Math.min(...times),
-          untilMs: Math.max(...times) + 1,
-        });
+  // Iteratively: a long history spread into Math.min/max overflows the call.
+  const span = extentOf([...perFlight.values()].flatMap((m) => [...m.values()].map((o) => o.atMs)));
+  const breaksOf = span
+    ? await travTrackBreakSet(userId, { fromMs: span.min, untilMs: span.max + 1 })
+    : () => [];
 
   const lines: TravTrackFlightLine[] = [];
   for (const [flightId, map] of perFlight) {

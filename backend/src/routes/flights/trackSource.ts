@@ -12,6 +12,7 @@ import { viewableFlightTrack } from "../../services/travtrack/flightTrackView";
 import { privacyCirclesFor } from "../../services/travtrack/privacyCircles";
 import { zoneSafeFlightColumns } from "../../services/travtrack/providerFlightColumns";
 import { travTrackBreakSet } from "../../services/travtrack/readSafe";
+import { extentOf } from "../../utils/extrema";
 import type { RecordingBreak } from "../../services/tripRecording/segments";
 
 /**
@@ -74,12 +75,10 @@ function trackOf(
 export type ProviderFlightTrack = NonNullable<ReturnType<typeof trackOf>>;
 
 async function travTrackBreaksOf(userId: string, device: EntryTrackDevice) {
-  const times = device.points.map((p) => p.atMs);
-  if (times.length === 0) return [];
-  const set = await travTrackBreakSet(userId, {
-    fromMs: Math.min(...times),
-    untilMs: Math.max(...times) + 1,
-  });
+  // Iteratively: a long recording spread into Math.min/max overflows the call.
+  const span = extentOf(device.points.map((p) => p.atMs));
+  if (!span) return [];
+  const set = await travTrackBreakSet(userId, { fromMs: span.min, untilMs: span.max + 1 });
   return set(device.deviceId);
 }
 
