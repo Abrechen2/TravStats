@@ -24,6 +24,7 @@ import {
   type TravTrackSummary,
 } from "../../lib/api/travtrack";
 import TrackExportDialog from "../../pages/Track/TrackExportDialog";
+import TravTrackCityLookup from "./TravTrackCityLookup";
 import TravTrackImports from "./TravTrackImports";
 import TravTrackSources from "./TravTrackSources";
 
@@ -215,6 +216,9 @@ export default function TravTrackSection(): JSX.Element | null {
       {(caps.sources ?? []).some((s) => s === "owntracks" || s === "overland") && (
         <TravTrackSources canCreate={caps.enabled && caps.active && !isDemo} canRevoke={!isDemo} />
       )}
+
+      {/* The monthly values' city lookup (plan L3): a setting of a view, so only while on. */}
+      {caps.enabled && <TravTrackCityLookup canChange={caps.active && !isDemo} />}
 
       <h3 className="t-card-title" style={{ marginTop: "var(--ts-space-lg)" }}>
         {t(`${NS}.zones.title`)}

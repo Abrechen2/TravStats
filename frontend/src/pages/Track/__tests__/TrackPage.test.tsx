@@ -36,6 +36,10 @@ vi.mock("../TrackExploredMap", () => ({
   default: () => <div data-testid="track-explored-stub" />,
 }));
 
+vi.mock("../TrackMonths", () => ({
+  default: () => <div data-testid="track-months-stub" />,
+}));
+
 import TrackPage from "../TrackPage";
 
 /**
@@ -80,6 +84,7 @@ const renderAt = (path = "/track/2026-10-12") =>
     <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route path="/track/explored" element={<TrackPage view="explored" />} />
+        <Route path="/track/months" element={<TrackPage view="months" />} />
         <Route path="/track/:date" element={<TrackPage />} />
         <Route path="/track" element={<TrackPage />} />
         <Route path="/dashboard" element={<p>dashboard</p>} />
@@ -145,6 +150,17 @@ describe("TrackPage", () => {
     await screen.findByTestId("track-day-map-stub");
     fireEvent.click(screen.getByRole("radio", { name: "track:tabs.explored" }));
     expect(await screen.findByTestId("track-explored-stub")).toBeInTheDocument();
+  });
+
+  it("the Monate tab shows the monthly values and no day controls (L3)", async () => {
+    renderAt("/track/months");
+    expect(await screen.findByTestId("track-months-stub")).toBeInTheDocument();
+    expect(api.day).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "track:actions.delete" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "track:tabs.explored" }));
+    expect(await screen.findByTestId("track-explored-stub")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "track:tabs.months" }));
+    expect(await screen.findByTestId("track-months-stub")).toBeInTheDocument();
   });
 
   it("a day without a fix says so", async () => {

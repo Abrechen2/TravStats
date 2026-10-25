@@ -42,6 +42,7 @@ vi.mock("../../../hooks/useTodayZone", () => ({
 import TravTrackSection from "../TravTrackSection";
 import { travTrackApi } from "../../../lib/api/travtrack";
 import { travTrackImportsApi } from "../../../lib/api/travtrackImports";
+import { travTrackMonthsApi } from "../../../lib/api/travtrackMonths";
 import {
   sourcesErrorKey,
   travTrackSourcesApi,
@@ -103,6 +104,7 @@ describe("TravTrackSection — further sources", () => {
     vi.spyOn(travTrackApi, "summary").mockResolvedValue(EMPTY);
     vi.spyOn(travTrackApi, "zones").mockResolvedValue([]);
     vi.spyOn(travTrackImportsApi, "list").mockResolvedValue([]);
+    vi.spyOn(travTrackMonthsApi, "cityLookup").mockResolvedValue(false);
     vi.spyOn(travTrackSourcesApi, "list").mockResolvedValue([]);
   });
 

@@ -45,6 +45,7 @@ import {
   travTrackImportsApi,
   type TravTrackImport,
 } from "../../../lib/api/travtrackImports";
+import { travTrackMonthsApi } from "../../../lib/api/travtrackMonths";
 import { api } from "../../../lib/api/client";
 import { JobFailedError } from "../../../lib/api/jobs";
 
@@ -108,6 +109,7 @@ describe("TravTrackSection — GPX import", () => {
     vi.spyOn(travTrackApi, "summary").mockResolvedValue(EMPTY);
     vi.spyOn(travTrackApi, "zones").mockResolvedValue([]);
     vi.spyOn(travTrackImportsApi, "list").mockResolvedValue([]);
+    vi.spyOn(travTrackMonthsApi, "cityLookup").mockResolvedValue(false);
   });
 
   it("uploads the file as multipart and waits for the job", async () => {

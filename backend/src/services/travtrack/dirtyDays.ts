@@ -11,12 +11,14 @@
 import { prisma, type DbTransaction } from "../../db";
 import { MAX_JUMP_STEP_MS, MAX_MASKED_RUN } from "../locationEvidence/anomaly";
 
-/** `done` bit of the country-day projection (E6). L3 adds 4. */
+/** `done` bit of the country-day projection (E6). */
 export const COUNTRY_DAYS_BIT = 1;
 /** `done` bit of the explored map's cells (L1). */
 export const EXPLORED_BIT = 2;
+/** `done` bit of the monthly values (L3): the day's month was recomputed for this version. */
+export const MONTHS_BIT = 4;
 /** Every projection's bit: a day with any of them unset still has work. */
-export const ALL_PROJECTION_BITS = COUNTRY_DAYS_BIT | EXPLORED_BIT;
+export const ALL_PROJECTION_BITS = COUNTRY_DAYS_BIT | EXPLORED_BIT | MONTHS_BIT;
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const DAY_MS = 86_400_000;

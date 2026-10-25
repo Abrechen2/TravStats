@@ -130,6 +130,7 @@
     "travtrack/imports.ts",
     "travtrack/ingestSources.ts",
     "travtrack/ingestTokens.ts",
+    "travtrack/months.ts",
     "travtrack/pointEntries.ts",
     "travtrack/points.ts",
     "travtrack/shareSnapshot.ts",

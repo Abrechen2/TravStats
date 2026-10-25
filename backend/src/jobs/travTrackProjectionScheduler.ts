@@ -2,7 +2,8 @@
  * TravTrack projections (TravTrack plan E6): every 15 minutes, each account
  * on provider `travtrack` with dirty days — or with points the current country reducer has not seen —
  * gets its country days projected (`services/travtrack/countryProjection.ts`),
- * then its explored-map cells (`services/travtrack/explored/project.ts`, L1),
+ * then its explored-map cells (`services/travtrack/explored/project.ts`, L1)
+ * and its monthly values (`services/travtrack/months/project.ts`, L3),
  * then its country questions asked (`services/locationEvidence/
  * countrySuggestions.ts`). Bounded per account by the projection's day budget
  * and the questions' cap (review focus 19).
@@ -26,6 +27,7 @@ import {
 } from "../services/travtrack/countryProjection";
 import { ALL_PROJECTION_BITS } from "../services/travtrack/dirtyDays";
 import { projectExploredCells } from "../services/travtrack/explored/project";
+import { projectMonths } from "../services/travtrack/months/project";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
 
@@ -134,6 +136,18 @@ async function runAccount(
       await recordFailure(userId, now);
       return { failed: true, questions: 0, days: days + explored.projected + explored.rerun };
     }
+    // The monthly values (L3) after both, so a month reads its days' country
+    // rows as just projected; its acknowledged days count against the budget.
+    const monthsBudget = maxDays - days - explored.projected - explored.rerun;
+    const months =
+      monthsBudget > 0
+        ? await projectMonths(userId, { countryAt })
+        : { status: "done" as const, days: 0 };
+    const spent = days + explored.projected + explored.rerun + months.days;
+    if (months.status === "failed") {
+      await recordFailure(userId, now);
+      return { failed: true, questions: 0, days: spent };
+    }
     if (projected.projected > 0) {
       await prisma.travTrackDerivationState.update({
         where: { userId },
@@ -161,7 +175,7 @@ async function runAccount(
       where: { userId },
       data: { failureCount: 0, retryAfter: null },
     });
-    return { failed: false, questions, days: days + explored.projected + explored.rerun };
+    return { failed: false, questions, days: spent };
   } catch (error) {
     logger.warn({
       operation: "travtrack_projections_account_failed",

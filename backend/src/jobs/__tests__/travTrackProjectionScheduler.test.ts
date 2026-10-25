@@ -4,6 +4,7 @@ import { setLocationProvider } from "../../services/locationProvider/provider";
 import {
   ALL_PROJECTION_BITS,
   COUNTRY_DAYS_BIT,
+  EXPLORED_BIT,
   markTravTrackDaysDirty,
 } from "../../services/travtrack/dirtyDays";
 import { makeUser, storePoint, wipeTravTrack } from "../../services/travtrack/__tests__/fixtures";
@@ -87,6 +88,33 @@ describe("runTravTrackProjections", () => {
     await runTravTrackProjections({ countryAt });
 
     expect(await prisma.travTrackExploredCell.count({ where: { userId } })).toBe(2);
+  });
+
+  it("projects the month's values in the same run, after its country days (L3)", async () => {
+    await prisma.travTrackMonthValue.deleteMany({ where: { userId } });
+
+    await runTravTrackProjections({ countryAt });
+
+    const month = await prisma.travTrackMonthValue.findUniqueOrThrow({
+      where: { userId_month: { userId, month: utcMidnight("2026-10-01") } },
+    });
+    expect(month).toMatchObject({ countries: ["PT"], daysWithData: 2, cities: null });
+  });
+
+  it("an account whose only owed work is its months is still picked (L3)", async () => {
+    // As the L3 migration leaves an account: country days and cells acked, months owed.
+    await prisma.travTrackMonthValue.deleteMany({ where: { userId } });
+    await prisma.travTrackDirtyDay.updateMany({
+      where: { userId },
+      data: { done: COUNTRY_DAYS_BIT | EXPLORED_BIT },
+    });
+    await prisma.travTrackDerivationState.create({
+      data: { userId, countryReducerVersion: 99 },
+    });
+
+    await runTravTrackProjections({ countryAt });
+
+    expect(await prisma.travTrackMonthValue.count({ where: { userId } })).toBe(1);
   });
 
   it("skips an account whose provider is not TravTrack", async () => {

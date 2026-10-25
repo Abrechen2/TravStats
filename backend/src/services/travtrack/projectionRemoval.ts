@@ -9,13 +9,14 @@
  * question run or a country accept could publish from them under the new
  * generation. The next projection run re-derives whatever is left; until then
  * nothing reads those days (`unprojectedDaysIn`). Dawarich's rows are another
- * source and never touched. The explored map's cells (L1) of the same days go
- * the same way.
+ * source and never touched. The explored map's cells (L1) and the monthly
+ * values (L3) of the same days go the same way.
  */
 import type { DbTransaction } from "../../db";
 import type { PointsRemovedCause } from "./deleteRange";
 import { markTravTrackDaysDirty, removalDays } from "./dirtyDays";
 import { exploredOnHistoryDeleted } from "./explored/project";
+import { monthsOnHistoryDeleted } from "./months/project";
 
 const dayMs = (day: string) => Date.parse(`${day}T00:00:00.000Z`);
 
@@ -36,6 +37,8 @@ export async function projectionsOnHistoryDeleted(
   });
   // The explored map's cells of the same days (L1), in the same transaction.
   await exploredOnHistoryDeleted(tx, userId, days);
+  // The monthly values of their months (L3), likewise.
+  await monthsOnHistoryDeleted(tx, userId, days);
   await markTravTrackDaysDirty(tx, userId, affected);
 }
 

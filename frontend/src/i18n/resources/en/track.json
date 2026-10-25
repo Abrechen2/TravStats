@@ -110,6 +110,15 @@
       "confirm": "Delete all {{count}} positions from {{from}} to {{to}}? This cannot be undone.",
       "done": "{{count}} positions deleted.",
       "notDone": "The positions were not deleted. Try again."
+    },
+    "cities": {
+      "title": "Cities in the monthly values",
+      "intro": "Names the cities you stayed in for at least 30 minutes. To do so the server sends rounded positions (to about 1 km) to this server's geocoder – which may be a public service such as Nominatim. Stays inside privacy zones are never looked up.",
+      "label": "Determine cities",
+      "loadFailed": "The setting could not be loaded.",
+      "notSaved": "The setting was not saved.",
+      "savedOn": "Cities are determined on the next run.",
+      "savedOff": "City lookup off – cities already determined are removed."
     }
   },
   "imports": {
@@ -195,12 +204,33 @@
   "tabs": {
     "label": "View",
     "day": "Day",
-    "explored": "Explored"
+    "explored": "Explored",
+    "months": "Months"
   },
   "explored": {
     "map": "Map of the explored areas",
     "legend": "Each square is about 1–2 km across: a place where your history holds at least one position on the ground.",
     "zones": "Privacy zones are shown as explored.",
     "zoomIn": "There are too many explored squares here for one view. Zoom in closer."
+  },
+  "months": {
+    "previous": "Previous year",
+    "next": "Next year",
+    "loading": "Loading months …",
+    "empty": "Your history holds no positions in {{year}}.",
+    "table": "Monthly values {{year}}",
+    "month": "Month",
+    "km": "On the ground",
+    "countries": "Countries",
+    "cities": "Cities",
+    "days": "Days with data",
+    "pausedCount": "{{count}} paused",
+    "noCountries": "No countries determined",
+    "citiesUnknown": "Cities not determined",
+    "citiesNone": "No city",
+    "pending": "Being recomputed right now – the values may still change.",
+    "pendingMonth": "being computed",
+    "legend": "Kilometres on the ground count only the visible line: nothing in the air, nothing faster than 500 km/h, nothing a privacy zone hides. Months without positions are left out.",
+    "citiesOff": "The overview names cities only once you switch on the city lookup in the settings."
   }
 }

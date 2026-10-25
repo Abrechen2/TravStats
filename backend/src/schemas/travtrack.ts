@@ -175,3 +175,18 @@ export const travTrackExploredQuerySchema = z.object({
       return { west, south, east, north };
     }),
 });
+
+/** `GET /travtrack/months?year=YYYY` (plan L3): the UTC year whose months are asked for. */
+export const travTrackMonthsQuerySchema = z.object({
+  year: z
+    .string()
+    .regex(/^\d{4}$/, "year is YYYY")
+    .transform(Number)
+    .refine((y) => y >= 1970 && y <= 2100, "year is between 1970 and 2100")
+    .describe("The UTC calendar year, `YYYY`"),
+});
+
+/** `PUT /travtrack/city-lookup` (plan L3): whether the monthly values name cities. */
+export const travTrackCityLookupSchema = z
+  .object({ enabled: z.boolean().describe("Name the cities stayed in, by rounded position") })
+  .strict();
