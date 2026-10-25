@@ -98,7 +98,7 @@ const statsResponse = registry.register(
             "size of the union of the five sets. A record with no usable date contributes no day. " +
             "Scoped exactly like the flight figures beside it: with `year`, the year's days."
         ),
-      scope: statsScopeSchema,
+      scope: statsScopeSchema.optional().describe("Absent inside `current`/`compare`"),
     })
     .openapi("StatsSummary")
 );
@@ -122,8 +122,19 @@ registry.registerPath({
   },
   responses: {
     200: {
-      description: "Stats",
-      content: { "application/json": { schema: statsResponse } },
+      description: "Stats; with `year` AND `compareYear`, both years side by side",
+      content: {
+        "application/json": {
+          schema: z.union([
+            statsResponse,
+            z.object({
+              current: statsResponse,
+              compare: statsResponse,
+              scope: statsScopeSchema,
+            }),
+          ]),
+        },
+      },
     },
     ...yearScopeErrors,
   },

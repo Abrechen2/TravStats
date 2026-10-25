@@ -106,6 +106,7 @@
     "stats/cruiseInsights.ts",
     "stats/domainRecords.ts",
     "stats/flightInsights.ts",
+    "stats/hero.ts",
     "stats/insights.ts",
     "stats/networkRoute.ts",
     "stats/page.ts",

@@ -157,12 +157,20 @@ vorschlägst"). Minimum server: the first RC cut from this branch.
   **local calendar** of where it happened — a flight by its departure
   airport's day, rail/bus/ferry by the station's or port's clock, a place by
   its own calendar. Lodging stays and port calls carry no zone and are dated
-  as stored, exactly as the lifetime figures date them. A record spanning New
-  Year (a trip, a stay) shows in **both** years with the days it has in each;
-  flight figures count a flight once, in the year it departed.
-- Invalid `year` → 400. `year` together with `fromDate`/`toDate` → 400
-  `{ error, code: "VALIDATION_FAILED", field: "year" }` — the generic code with
-  the field, not a code of its own.
+  as stored, exactly as the lifetime figures date them. Two rules for a record
+  spanning New Year, each already the rule of its screen:
+  - **Counting tabs** (summary, hero figures except countries, airports,
+    airlines, aircraft types, punctuality, records, timeseries, lodging,
+    cruise, rail) count an event **once, in the year it started** — a flight
+    by its departure, a stay by its check-in, a cruise by its start, the rule
+    the cross-domain overview already uses (`utils/stats/domainYear.ts`).
+  - **Presence** (passport, country page, hero `countries`) shows a country in
+    **every** year the evidence has days in.
+- Invalid `year` → 400 (range 1900–2100; `/rail/stats` keeps its older bound
+  of 2200). On the endpoints that also take a range (summary, timeseries,
+  airports, punctuality), `year` together with `fromDate`/`toDate` → 400
+  `{ error, code: "VALIDATION_FAILED", field: "year" }`. The others take no
+  range at all and ignore `fromDate`/`toDate` as before.
 - Undated records belong to no year: they appear only in the all-time view.
 - Every response carries `scope: { year: number | null }` (inside `data` on the
   enveloped ones: lodging, records, rail). `null` = all-time. Without `year`
