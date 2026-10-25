@@ -52,6 +52,13 @@ export type EntryTrack = {
   origin: TrackOrigin | null;
   coverage: Coverage | null;
   alternatives: TrackOrigin[];
+  /**
+   * The alternatives offered without being read: Dawarich is remote, and
+   * asking it on every page load to learn whether it holds anything is the
+   * fan-out the entry pages must not wait on. It is offered because a working
+   * connection exists, and said to be unchecked — never claimed to hold data.
+   */
+  unchecked: TrackOrigin[];
 };
 
 const notAvailable = (source: TrackOrigin): AppError =>
@@ -110,7 +117,7 @@ export function byDevice(points: readonly LocationObservation[]): EntryTrackDevi
   return [...map.entries()].map(([deviceId, list]) => ({ deviceId, points: list }));
 }
 
-type Plan = { origin: TrackOrigin | null; alternatives: TrackOrigin[] };
+type Plan = { origin: TrackOrigin | null; alternatives: TrackOrigin[]; unchecked: TrackOrigin[] };
 
 /** Which source answers, given what holds something and what was asked for. */
 async function choose(
@@ -137,7 +144,13 @@ async function choose(
   } else {
     origin = dawarich ? "dawarich" : null;
   }
-  return { origin, alternatives: holding.filter((o) => o !== origin), dawarich };
+  const alternatives = holding.filter((o) => o !== origin);
+  return {
+    origin,
+    alternatives,
+    unchecked: alternatives.filter((o) => o === "dawarich"),
+    dawarich,
+  };
 }
 
 /** A flight's recorder window as a read window, or null without a schedule. */
@@ -171,6 +184,7 @@ export async function flightEntryTrack(
   return {
     origin: plan.origin,
     alternatives: plan.alternatives,
+    unchecked: plan.unchecked,
     coverage: plan.origin ? "complete" : null,
     window,
     devices: [],
@@ -211,6 +225,7 @@ export async function tripEntryTrack(
   return {
     origin: plan.origin,
     alternatives: plan.alternatives,
+    unchecked: plan.unchecked,
     coverage: history.coverage,
     batches: history.batches,
   };
@@ -248,12 +263,12 @@ export async function entryTrack(
       },
     });
     if (!flight) throw new AppError("Flight not found", 404);
-    const { origin, coverage, alternatives, devices } = await flightEntryTrack(
+    const { origin, coverage, alternatives, unchecked, devices } = await flightEntryTrack(
       userId,
       flight,
       opts
     );
-    return { origin, coverage, alternatives, devices };
+    return { origin, coverage, alternatives, unchecked, devices };
   }
   const trip = await prisma.trip.findFirst({
     where: { id: entry.id, userId },
@@ -269,7 +284,11 @@ export async function entryTrack(
     },
   });
   if (!trip) throw new AppError("Trip not found", 404, "TRIP_NOT_FOUND");
-  const { origin, coverage, alternatives, batches } = await tripEntryTrack(userId, trip, opts);
+  const { origin, coverage, alternatives, unchecked, batches } = await tripEntryTrack(
+    userId,
+    trip,
+    opts
+  );
   const devices = batches.map((b) => ({
     deviceId: b.deviceId,
     points: (b.points as unknown as Array<[number, number, number, number | null]>).map(
@@ -286,5 +305,5 @@ export async function entryTrack(
       })
     ),
   }));
-  return { origin, coverage, alternatives, devices };
+  return { origin, coverage, alternatives, unchecked, devices };
 }

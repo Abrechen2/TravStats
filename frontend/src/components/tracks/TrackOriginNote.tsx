@@ -14,12 +14,15 @@ const NS = "location:trackOrigin";
 /**
  * Where a flight's or trip's line came from (TravTrack plan T5): "TravStats-
  * Aufzeichnung", "aus TravTrack" or "aus Dawarich"; a short or failed read
- * says so instead of passing for the whole; and only when another source holds
- * something, a switch to it — an extra view, never a silent swap.
+ * says so instead of passing for the whole; and only when another source may
+ * hold something, a switch to it — an extra view, never a silent swap. A source
+ * offered without being read (Dawarich) says "not checked yet".
  */
 export default function TrackOriginNote({ info, onPick }: Props): JSX.Element | null {
   const { t } = useTranslation(["location"]);
   const { origin, coverage, alternatives } = info;
+  // An info built by hand (not through `originInfoOf`) may leave it out.
+  const unchecked = info.unchecked ?? [];
   if (!origin && alternatives.length === 0) return null;
   return (
     <div className="flex flex-col gap-1" data-testid="track-origin">
@@ -43,7 +46,8 @@ export default function TrackOriginNote({ info, onPick }: Props): JSX.Element | 
               className="rounded-sm border border-(--color-border) px-2 py-1 text-xs hover:bg-(--bg-surface)"
               onClick={() => onPick(source)}
             >
-              {t(`${NS}.show.${source}`)}
+              {/* Offered because a connection exists, not because it was read. */}
+              {t(unchecked.includes(source) ? `${NS}.check.${source}` : `${NS}.show.${source}`)}
             </button>
           ))}
         </div>

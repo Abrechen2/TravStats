@@ -70,6 +70,7 @@ describe("trip recording from the location provider", () => {
       origin: "travtrack",
       coverage: "complete",
       alternatives: [],
+      unchecked: [],
       pointCount: 8,
       devices: ["phone-a", "phone-b"],
       uploadedWithoutDevice: false,

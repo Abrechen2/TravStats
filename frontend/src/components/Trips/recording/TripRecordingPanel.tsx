@@ -9,6 +9,7 @@ import { downloadBlob } from "../../../lib/export";
 import { formatDayLong } from "../../../shared/time/calendar";
 import { formatTimeValue } from "../../../shared/time/wire";
 import TrackOriginNote from "../../tracks/TrackOriginNote";
+import TrackSourceError from "../../tracks/TrackSourceError";
 import { originInfoOf, type TrackOrigin } from "../../../lib/api/trackOrigin";
 
 const CONTROL =
@@ -24,6 +25,8 @@ interface Props {
   tripId: string;
   view: TripRecordingView | null;
   failed: boolean;
+  /** The failed answer's machine code, if any. */
+  failedCode?: string | null;
   /** `YYYY-MM-DD` on the trip's clock, or null for every day. */
   day: string | null;
   onDayChange: (day: string | null) => void;
@@ -44,6 +47,7 @@ export default function TripRecordingPanel({
   tripId,
   view,
   failed,
+  failedCode = null,
   day,
   onDayChange,
   source = null,
@@ -59,6 +63,14 @@ export default function TripRecordingPanel({
   const coarse = useCoarsePointer();
   const touch = coarse ? { minHeight: "var(--ts-size-touch-min)" } : undefined;
 
+  // A source picked on request failed: say why, and keep the way back.
+  if (failed && source !== null && onSourceChange) {
+    return (
+      <section className="mb-2 text-sm" data-testid="trip-recording-panel">
+        <TrackSourceError source={source} code={failedCode} onBack={() => onSourceChange(null)} />
+      </section>
+    );
+  }
   if (failed) {
     return (
       <p role="status" className="mb-2 text-sm text-(--text-muted)">

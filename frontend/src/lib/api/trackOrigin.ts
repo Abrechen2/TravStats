@@ -9,11 +9,18 @@ export type TrackCoverage = "complete" | "truncated" | "unreachable";
 export interface TrackOriginInfo {
   origin: TrackOrigin | null;
   coverage: TrackCoverage | null;
-  /** Other sources holding something for the entry; `?source=` shows one. */
+  /** Other sources that may hold something for the entry; `?source=` shows one. */
   alternatives: TrackOrigin[];
+  /** Alternatives offered without being read (Dawarich): "not checked yet", never "holds data". */
+  unchecked: TrackOrigin[];
 }
 
-export const NO_ORIGIN_INFO: TrackOriginInfo = { origin: null, coverage: null, alternatives: [] };
+export const NO_ORIGIN_INFO: TrackOriginInfo = {
+  origin: null,
+  coverage: null,
+  alternatives: [],
+  unchecked: [],
+};
 
 /** The fields as an answer carries them, defaulted for a server that sends none. */
 export function originInfoOf(raw: Partial<TrackOriginInfo> | null | undefined): TrackOriginInfo {
@@ -21,5 +28,6 @@ export function originInfoOf(raw: Partial<TrackOriginInfo> | null | undefined): 
     origin: raw?.origin ?? null,
     coverage: raw?.coverage ?? null,
     alternatives: Array.isArray(raw?.alternatives) ? raw.alternatives : [],
+    unchecked: Array.isArray(raw?.unchecked) ? raw.unchecked : [],
   };
 }

@@ -83,4 +83,36 @@ describe("TripRecordingPanel — origin", () => {
     const { container } = panel(view({ days: [], pointCount: 0 }));
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("names an unread Dawarich as not checked yet", () => {
+    panel(
+      view({
+        origin: "travstats",
+        coverage: "complete",
+        alternatives: ["dawarich"],
+        unchecked: ["dawarich"],
+      })
+    );
+    expect(screen.getByText("location:trackOrigin.check.dawarich")).toBeInTheDocument();
+  });
+
+  it("keeps the way back when the picked source could not be shown", () => {
+    const onSourceChange = vi.fn();
+    render(
+      <TripRecordingPanel
+        tripId="trip-1"
+        view={null}
+        failed
+        failedCode="TRACK_SOURCE_NOT_AVAILABLE"
+        day={null}
+        onDayChange={() => undefined}
+        source="dawarich"
+        onSourceChange={onSourceChange}
+        onDeleted={() => undefined}
+      />
+    );
+    expect(screen.getByText("location:trackOrigin.notAvailable.dawarich")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "location:trackOrigin.back" }));
+    expect(onSourceChange).toHaveBeenCalledWith(null);
+  });
 });

@@ -61,6 +61,7 @@ export default function TripMapWithTours({
         tripId={trip.id}
         view={recording.view}
         failed={recording.failed}
+        failedCode={recording.failedCode}
         day={recordingDay}
         onDayChange={setRecordingDay}
         source={recordingSource}

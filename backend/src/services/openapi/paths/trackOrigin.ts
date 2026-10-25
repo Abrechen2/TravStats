@@ -21,7 +21,16 @@ export const trackOriginFields = {
     .describe("A short (truncated) or failed (unreachable) read is said, never passed off whole"),
   alternatives: z
     .array(z.enum(origins))
-    .describe("Other sources holding something for the entry; `?source=` shows one"),
+    .describe(
+      "Other sources that may hold something for the entry; `?source=` shows one (404 " +
+        "TRACK_SOURCE_NOT_AVAILABLE when it turns out to hold nothing)"
+    ),
+  unchecked: z
+    .array(z.enum(origins))
+    .describe(
+      "The alternatives offered without being read (Dawarich: a working connection exists, " +
+        "its window was not asked) — a client says 'not checked yet', never that they hold data"
+    ),
 };
 
 export const trackSourceQuery = z.object({

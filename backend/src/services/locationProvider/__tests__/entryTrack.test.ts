@@ -220,6 +220,25 @@ describe("entryTrack", () => {
     });
   });
 
+  it("Dawarich offered beside an own recording is named as not checked yet, and is not read", async () => {
+    const tripId = await makeTrip(userId);
+    await ownBatch(tripId);
+    await ownDawarich();
+    await setLocationProvider(userId, "dawarich");
+
+    const track = await entryTrack(userId, { kind: "trip", id: tripId });
+    expect(track).toMatchObject({
+      origin: "travstats",
+      alternatives: ["dawarich"],
+      unchecked: ["dawarich"],
+    });
+    expect(getPoints).not.toHaveBeenCalled();
+    // Once read, it is no longer unchecked; what it was read beside is.
+    getPoints.mockResolvedValue({ points: [remote(DAY + 9 * HOUR)], truncated: false });
+    const asked = await entryTrack(userId, { kind: "trip", id: tripId }, { source: "dawarich" });
+    expect(asked).toMatchObject({ alternatives: ["travstats"], unchecked: [] });
+  });
+
   it("a Dawarich timeout answers coverage unreachable with the own recording untouched", async () => {
     const tripId = await makeTrip(userId);
     await ownBatch(tripId);

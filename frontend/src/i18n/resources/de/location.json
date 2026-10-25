@@ -44,6 +44,18 @@
       "travstats": "TravStats-Aufzeichnung zeigen",
       "travtrack": "TravTrack zeigen",
       "dawarich": "Dawarich zeigen"
-    }
+    },
+    "check": {
+      "travstats": "TravStats-Aufzeichnung nachsehen (noch nicht geprüft)",
+      "travtrack": "In TravTrack nachsehen (noch nicht geprüft)",
+      "dawarich": "In Dawarich nachsehen (noch nicht geprüft)"
+    },
+    "notAvailable": {
+      "travstats": "Für diesen Eintrag gibt es keine TravStats-Aufzeichnung.",
+      "travtrack": "TravTrack hat für diesen Zeitraum keine Punkte.",
+      "dawarich": "Dawarich hat für diesen Zeitraum keine Punkte."
+    },
+    "failed": "Diese Quelle konnte gerade nicht geladen werden.",
+    "back": "Zurück zur eigenen Aufzeichnung"
   }
 }

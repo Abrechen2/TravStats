@@ -70,7 +70,12 @@ describe("flight tracks from the location provider", () => {
     await flown();
     const res = await request(app).get(`/api/v1/flights/${flightId}/track`).set("Cookie", cookie);
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ origin: "travtrack", coverage: "complete", alternatives: [] });
+    expect(res.body).toMatchObject({
+      origin: "travtrack",
+      coverage: "complete",
+      alternatives: [],
+      unchecked: [],
+    });
     expect(res.body.track).toMatchObject({ flightId, source: "travtrack", pointCount: 6 });
     expect(res.body.track.geometry.length).toBeGreaterThanOrEqual(2);
   });

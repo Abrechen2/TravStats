@@ -44,6 +44,18 @@
       "travstats": "Show the TravStats recording",
       "travtrack": "Show TravTrack",
       "dawarich": "Show Dawarich"
-    }
+    },
+    "check": {
+      "travstats": "Look for a TravStats recording (not checked yet)",
+      "travtrack": "Look in TravTrack (not checked yet)",
+      "dawarich": "Look in Dawarich (not checked yet)"
+    },
+    "notAvailable": {
+      "travstats": "This entry has no TravStats recording.",
+      "travtrack": "TravTrack holds no points for this period.",
+      "dawarich": "Dawarich holds no points for this period."
+    },
+    "failed": "This source could not be loaded just now.",
+    "back": "Back to your own recording"
   }
 }

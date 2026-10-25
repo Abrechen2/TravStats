@@ -13,12 +13,14 @@ import { convertDistance, getDistanceLabel } from "../../lib/units";
 import { logger } from "../../lib/logger";
 import type { FlightTrack } from "../../types/flightTrack";
 import TrackOriginNote from "../tracks/TrackOriginNote";
+import TrackSourceError from "../tracks/TrackSourceError";
+import { apiErrorMachineCode } from "../../lib/apiError";
 import { NO_ORIGIN_INFO, type TrackOrigin, type TrackOriginInfo } from "../../lib/api/trackOrigin";
 
 type TrackState =
   | { kind: "loading" }
   | { kind: "none"; info: TrackOriginInfo }
-  | { kind: "failed" }
+  | { kind: "failed"; code: string | null }
   | { kind: "loaded"; track: FlightTrack; info: TrackOriginInfo };
 
 interface Props {
@@ -66,7 +68,7 @@ export default function FlightTrackSection({
         if (!cancelled) setState(track ? { kind: "loaded", track, info } : { kind: "none", info });
       } catch (err: unknown) {
         logger.warn({ err }, "FlightTrackSection: recording could not be loaded");
-        if (!cancelled) setState({ kind: "failed" });
+        if (!cancelled) setState({ kind: "failed", code: apiErrorMachineCode(err) });
       }
     })();
     return () => {
@@ -81,6 +83,13 @@ export default function FlightTrackSection({
   const ownOrNone = info.origin === null || info.origin === "travstats";
   if (state.kind === "none" && !canUpload && info.alternatives.length === 0) {
     if (info.coverage !== "unreachable") return null;
+  }
+  if (state.kind === "failed" && source !== null) {
+    return (
+      <DetailSection title={t("flights:track.title")}>
+        <TrackSourceError source={source} code={state.code} onBack={() => setSource(null)} />
+      </DetailSection>
+    );
   }
   if (state.kind === "failed") {
     return (

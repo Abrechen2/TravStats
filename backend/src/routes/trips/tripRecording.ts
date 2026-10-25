@@ -267,7 +267,12 @@ async function loadDevices(
   const circles = await circlesFor(userId, raw);
   const all = privacySafeDevices(raw, circles);
   const devices = day === undefined ? all : devicesOnDay(all, zone, day);
-  const meta = { origin: entry.origin, coverage: entry.coverage, alternatives: entry.alternatives };
+  const meta = {
+    origin: entry.origin,
+    coverage: entry.coverage,
+    alternatives: entry.alternatives,
+    unchecked: entry.unchecked,
+  };
   return { zone, all, devices, circles, meta };
 }
 

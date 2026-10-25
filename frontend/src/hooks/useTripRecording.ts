@@ -2,12 +2,15 @@ import { useCallback, useEffect, useState } from "react";
 import { tripRecordingApi, type TripRecordingView } from "../lib/api/tripRecording";
 import type { TrackOrigin } from "../lib/api/trackOrigin";
 import { logger } from "../lib/logger";
+import { apiErrorMachineCode } from "../lib/apiError";
 
 export interface TripRecordingState {
   /** Null until the first answer — and after a failure. */
   view: TripRecordingView | null;
   /** The recording could not be loaded: the map must say so, not look unrecorded. */
   failed: boolean;
+  /** The failure's machine code (`TRACK_SOURCE_NOT_AVAILABLE`, …), null when it carried none. */
+  failedCode: string | null;
   reload: () => void;
 }
 
@@ -23,12 +26,14 @@ export function useTripRecording(
 ): TripRecordingState {
   const [view, setView] = useState<TripRecordingView | null>(null);
   const [failed, setFailed] = useState(false);
+  const [failedCode, setFailedCode] = useState<string | null>(null);
   const [generation, setGeneration] = useState(0);
   const reload = useCallback(() => setGeneration((g) => g + 1), []);
 
   useEffect(() => {
     let cancelled = false;
     setFailed(false);
+    setFailedCode(null);
     void (async (): Promise<void> => {
       try {
         const next = await tripRecordingApi.get(tripId, day, source);
@@ -38,6 +43,7 @@ export function useTripRecording(
         logger.warn("useTripRecording: failed to load the trip's recording", err);
         setView(null);
         setFailed(true);
+        setFailedCode(apiErrorMachineCode(err));
       }
     })();
     return () => {
@@ -45,5 +51,5 @@ export function useTripRecording(
     };
   }, [tripId, day, source, generation]);
 
-  return { view, failed, reload };
+  return { view, failed, failedCode, reload };
 }

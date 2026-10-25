@@ -185,6 +185,7 @@ router.get("/:id/track", async (req: AuthRequest, res: Response, next: NextFunct
       origin: entry.origin,
       coverage: entry.coverage,
       alternatives: entry.alternatives,
+      unchecked: entry.unchecked,
     };
     if (entry.origin !== "travstats") {
       res.json({ track: fromProvider ? await presentCut(fromProvider, flight) : null, ...meta });

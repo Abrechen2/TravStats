@@ -290,5 +290,41 @@ describe("FlightTrackSection", () => {
       fireEvent.click(await screen.findByText("location:trackOrigin.show.dawarich"));
       await waitFor(() => expect(getTrackMock).toHaveBeenLastCalledWith("f1", "dawarich"));
     });
+
+    it("names an unread Dawarich as not checked yet, never as holding a line", async () => {
+      getTrackMock.mockResolvedValue(
+        view(makeTrack(), {
+          origin: "travstats",
+          coverage: "complete",
+          alternatives: ["dawarich"],
+          unchecked: ["dawarich"],
+        })
+      );
+      render(<FlightTrackSection flightId="f1" />);
+      expect(await screen.findByText("location:trackOrigin.check.dawarich")).toBeInTheDocument();
+      expect(screen.queryByText("location:trackOrigin.show.dawarich")).not.toBeInTheDocument();
+    });
+
+    it("keeps the way back when the picked source holds nothing", async () => {
+      getTrackMock.mockImplementation(async (_id: string, source?: string) => {
+        if (source === "dawarich") {
+          throw { response: { status: 404, data: { code: "TRACK_SOURCE_NOT_AVAILABLE" } } };
+        }
+        return view(makeTrack(), {
+          origin: "travstats",
+          coverage: "complete",
+          alternatives: ["dawarich"],
+          unchecked: ["dawarich"],
+        });
+      });
+      render(<FlightTrackSection flightId="f1" />);
+      fireEvent.click(await screen.findByText("location:trackOrigin.check.dawarich"));
+      expect(
+        await screen.findByText("location:trackOrigin.notAvailable.dawarich")
+      ).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "location:trackOrigin.back" }));
+      expect(await screen.findByText("location:trackOrigin.label.travstats")).toBeInTheDocument();
+      expect(getTrackMock).toHaveBeenLastCalledWith("f1");
+    });
   });
 });
