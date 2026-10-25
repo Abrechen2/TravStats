@@ -6,9 +6,12 @@ import {
   type VerifiedIngestToken,
 } from "../services/travtrack/sources/ingestTokens";
 import { securityLogger } from "../utils/logger";
-import { requestPathForLog } from "../utils/logging/requestPath";
 import { AppError } from "./errorHandler";
-import { ingestAuthFailureLimiter } from "./ingestSourceLimits";
+import {
+  INGEST_AUTH_FAILURES_PER_WINDOW,
+  ingestAuthFailureLimiter,
+  ingestFailureKey,
+} from "./ingestSourceLimits";
 
 /**
  * Authentication of the OwnTracks and Overland ingest paths (TravTrack plan
@@ -24,7 +27,10 @@ import { ingestAuthFailureLimiter } from "./ingestSourceLimits";
  *
  * Sets `req.ingestToken` and `req.userId`; never `req.apiToken` — the token
  * opens these two paths and nothing else. Nothing here logs the token, a
- * digest of it, or the header.
+ * digest of it, or the header; rejections are only counted.
+ *
+ * An address over its failure bound (`ingestSourceLimits.ts`) is refused
+ * with 429 before the header is read or any token looked up.
  */
 
 export type IngestTokenRequest = Request & {
@@ -51,6 +57,32 @@ function credentialOf(kind: IngestTokenKind, header: string | undefined): string
 const invalid = () =>
   new AppError("The ingest token is missing or invalid", 401, "INGEST_TOKEN_INVALID");
 
+const limited = () =>
+  new AppError("Too many requests, please try again later", 429, "RATE_LIMITED");
+
+/**
+ * Rejections are counted, not logged one line each: a stranger hammering the
+ * path would otherwise write the log for us. The counts go out as one
+ * security line at most once a minute, on the next rejection after it.
+ */
+const SUMMARY_EVERY_MS = 60_000;
+let counts: Record<string, number> = {};
+let lastSummaryAt = 0;
+
+function noteRejection(kind: IngestTokenKind, reason: string): void {
+  const key = `${kind}.${reason}`;
+  counts = { ...counts, [key]: (counts[key] ?? 0) + 1 };
+  const now = Date.now();
+  if (now - lastSummaryAt < SUMMARY_EVERY_MS) return;
+  securityLogger.warn({
+    operation: "security_event",
+    message: "Ingest tokens rejected",
+    context: { eventType: "auth_failure", counts, sinceMs: lastSummaryAt || null },
+  });
+  counts = {};
+  lastSummaryAt = now;
+}
+
 function refuse(
   req: Request,
   res: Response,
@@ -58,29 +90,36 @@ function refuse(
   kind: IngestTokenKind,
   reason: string
 ) {
-  securityLogger.warn({
-    operation: "security_event",
-    message: "Ingest token rejected",
-    context: { eventType: "auth_failure", reason, kind, ip: req.ip, path: requestPathForLog(req) },
-  });
+  noteRejection(kind, reason);
   if (kind === "owntracks") res.setHeader("WWW-Authenticate", 'Basic realm="TravTrack"');
-  // Counted, and refused with 429 once an address has failed too often.
+  // Counted; refused with 429 once this address has failed too often.
   ingestAuthFailureLimiter(req, res, () => next(invalid()));
+}
+
+/** Whether this address has spent its failures: then nothing is looked up at all. */
+async function overFailureBound(req: Request): Promise<boolean> {
+  const info = await ingestAuthFailureLimiter.getKey(ingestFailureKey(req));
+  return (info?.totalHits ?? 0) >= INGEST_AUTH_FAILURES_PER_WINDOW;
 }
 
 export function ingestTokenAuth(kind: IngestTokenKind) {
   return (req: IngestTokenRequest, res: Response, next: NextFunction): void => {
-    const inUrl = Object.keys(req.query ?? {}).some((k) =>
-      URL_CREDENTIALS.includes(k.toLowerCase())
-    );
-    if (inUrl) return refuse(req, res, next, kind, "token_in_url");
-    const token = credentialOf(kind, req.headers.authorization);
-    if (token === null) return refuse(req, res, next, kind, "wrong_scheme");
-    verifyIngestToken(token, kind).then((verified) => {
+    void (async () => {
+      if (await overFailureBound(req)) {
+        noteRejection(kind, "rate_limited");
+        return next(limited());
+      }
+      const inUrl = Object.keys(req.query ?? {}).some((k) =>
+        URL_CREDENTIALS.includes(k.toLowerCase())
+      );
+      if (inUrl) return refuse(req, res, next, kind, "token_in_url");
+      const token = credentialOf(kind, req.headers.authorization);
+      if (token === null) return refuse(req, res, next, kind, "wrong_scheme");
+      const verified = await verifyIngestToken(token, kind);
       if (!verified) return refuse(req, res, next, kind, "unknown_token");
       req.ingestToken = verified;
       req.userId = verified.userId;
       next();
-    }, next);
+    })().catch(next);
   };
 }

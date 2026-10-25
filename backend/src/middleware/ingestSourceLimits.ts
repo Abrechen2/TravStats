@@ -15,10 +15,12 @@ import { travTrackImportKey } from "./travTrackImportLimiter";
  *     times the bucket.
  *   - per address, failures only: a request whose token does not verify. A
  *     256-bit token cannot be guessed at any rate; this bounds the database
- *     work a stranger can cause. Only a failing request is counted AND only a
- *     failing request is refused by it (`ingestTokenAuth`), so a stranger
- *     sharing an address with a phone — one home connection, a reverse proxy —
- *     cannot lock the phone out.
+ *     work and log volume a stranger can cause. Only failures are counted,
+ *     but once an address is over the bound it is refused BEFORE any token
+ *     lookup (`ingestTokenAuth`) — a good token included, since telling it
+ *     apart would need the lookup the bound exists to spare. Accepted: a phone
+ *     sharing an address with a client that keeps failing waits out the
+ *     window; it keeps its queue meanwhile.
  *   - creating tokens: per account, like the file imports.
  */
 
@@ -51,7 +53,11 @@ export const ingestAccountLimiter = rateLimit({
   keyGenerator: (req: Request) => `ingest-user:${(req as IngestRequest).ingestToken?.userId}`,
 });
 
-/** Called by `ingestTokenAuth` on a failed verification only. */
+/** The failure bucket of a request's address. */
+export const ingestFailureKey = (req: Request): string =>
+  `ingest-fail:${req.ip ? ipKeyGenerator(req.ip) : "unknown"}`;
+
+/** Counted by `ingestTokenAuth` on a failed verification only; read before every one. */
 export const ingestAuthFailureLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: INGEST_AUTH_FAILURES_PER_WINDOW,

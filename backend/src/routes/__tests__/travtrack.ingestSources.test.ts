@@ -618,15 +618,25 @@ describe("TravTrack — OwnTracks and Overland", () => {
       expect([spent.status, spent.body.code]).toEqual([429, "RATE_LIMITED"]);
     });
 
-    it("an address that keeps failing to authenticate is slowed down", async () => {
+    it("an address that keeps failing is refused before any token lookup", async () => {
       const wrong = `tt_ingest_${"0".repeat(64)}`;
       for (let i = 0; i < INGEST_AUTH_FAILURES_PER_WINDOW; i++) {
         expect((await emptyPost(wrong)).status).toBe(401);
       }
-      expect((await emptyPost(wrong)).status).toBe(429);
-      // Only failures are slowed: a device with a good token at the same address
-      // (one home connection, one reverse proxy) is not locked out by them.
-      expect((await emptyPost(owntracks.token)).status).toBe(200);
+      const lookups = jest.spyOn(prisma.travTrackIngestToken, "findUnique");
+      const limited = await emptyPost(wrong);
+      expect([limited.status, limited.body.code]).toEqual([429, "RATE_LIMITED"]);
+      // Over the bound the address is refused outright, a good token included:
+      // telling them apart would need the lookup the bound exists to spare.
+      expect((await emptyPost(owntracks.token)).status).toBe(429);
+      expect(lookups).not.toHaveBeenCalled();
+    });
+
+    it("a rejected attempt is counted, not logged one line each", async () => {
+      const warn = jest.spyOn(securityLogger, "warn");
+      const wrong = `tt_ingest_${"1".repeat(64)}`;
+      for (let i = 0; i < 5; i++) expect((await emptyPost(wrong)).status).toBe(401);
+      expect(warn.mock.calls.length).toBeLessThanOrEqual(1);
     });
   });
 });
