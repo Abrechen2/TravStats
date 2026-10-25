@@ -100,7 +100,7 @@ const DAY_MS = 86_400_000;
  * began in 2009 — and short enough that a fully empty walk completes in four
  * nights at the window budget below.
  */
-const MAX_HISTORY_MONTHS = 240;
+export const MAX_HISTORY_MONTHS = 240;
 
 /** Months that actually held points, per run. */
 const MAX_MONTHS_WITH_DATA_PER_RUN = 12;

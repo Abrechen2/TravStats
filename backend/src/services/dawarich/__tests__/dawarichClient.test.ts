@@ -284,6 +284,26 @@ describe("getPoints", () => {
     expect(secondCallUrl.searchParams.get("page")).toBe("2");
   });
 
+  it("runs beforePage before every page, and a throw there sends no further request", async () => {
+    const fullPage = Array.from({ length: 1000 }, (_, i) => ({ ...REAL_POINT, id: i }));
+    const fetchMock = jest
+      .fn<typeof fetch>()
+      .mockImplementation(async () => fakeResponse({ body: fullPage }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const seen: number[] = [];
+    const read = createDawarichClient(CONN).getPoints({
+      startAt: new Date(0),
+      endAt: new Date(),
+      beforePage: async (page) => {
+        seen.push(page);
+        if (page === 3) throw new Error("stopped");
+      },
+    });
+    await expect(read).rejects.toThrow("stopped");
+    expect(seen).toEqual([1, 2, 3]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   // MEDIUM-2 (final whole-phase review, 2026-08-29): a window that still had
   // more to give when the hard page cap (`MAX_PAGES=50`) was hit used to only
   // LOG a warning — the caller got back a plain array indistinguishable from

@@ -190,3 +190,15 @@ export const travTrackMonthsQuerySchema = z.object({
 export const travTrackCityLookupSchema = z
   .object({ enabled: z.boolean().describe("Name the cities stayed in, by rounded position") })
   .strict();
+
+/**
+ * Starting a Dawarich copy (plan L6): UTC days, both inclusive, both or
+ * neither — neither is the whole history.
+ */
+export const travTrackDawarichCopySchema = z
+  .object({ fromDay: day.optional(), untilDay: day.optional() })
+  .strict()
+  .refine(
+    (b) => (b.fromDay === undefined) === (b.untilDay === undefined),
+    "`fromDay` and `untilDay` move together"
+  );

@@ -54,6 +54,12 @@ export interface DawarichHealth {
 export interface DawarichPointsWindow {
   startAt: Date;
   endAt: Date;
+  /**
+   * Runs before EVERY page request; a throw stops the read with no further
+   * request. The Dawarich copy (TravTrack plan L6) throttles, beats its
+   * heartbeat and checks for a stop here, since one window can be 50 pages.
+   */
+  beforePage?: (page: number) => Promise<void>;
 }
 
 export interface DawarichPoint {
@@ -82,6 +88,12 @@ export interface DawarichPointsResult {
    * not the complete one its `distanceKm` would otherwise imply.
    */
   truncated: boolean;
+  /**
+   * Rows Dawarich returned that carried no usable id, coordinate or timestamp
+   * and were dropped (`mapPoint`). A copy's completeness report counts them
+   * (TravTrack plan L6); optional so the existing fakes stay valid.
+   */
+  unusable?: number;
 }
 
 export interface DawarichClient {
@@ -197,9 +209,14 @@ export function createDawarichClient(conn: DawarichConnection): DawarichClient {
       return { reachable: true, version };
     },
 
-    async getPoints({ startAt, endAt }: DawarichPointsWindow): Promise<DawarichPointsResult> {
+    async getPoints({
+      startAt,
+      endAt,
+      beforePage,
+    }: DawarichPointsWindow): Promise<DawarichPointsResult> {
       const collected: DawarichPoint[] = [];
       let truncated = false;
+      let unusable = 0;
 
       for (let page = 1; page <= MAX_PAGES; page += 1) {
         const params = new URLSearchParams({
@@ -209,6 +226,7 @@ export function createDawarichClient(conn: DawarichConnection): DawarichClient {
           per_page: String(PAGE_SIZE),
         });
 
+        await beforePage?.(page);
         const response = await request(POINTS_PATH, params, true);
         if (!response.ok) throw toDawarichError(response.status, `points page=${page}`);
 
@@ -228,6 +246,7 @@ export function createDawarichClient(conn: DawarichConnection): DawarichClient {
         for (const raw of data) {
           const mapped = mapPoint(raw);
           if (mapped) collected.push(mapped);
+          else unusable += 1;
         }
 
         if (data.length < PAGE_SIZE) break;
@@ -248,7 +267,7 @@ export function createDawarichClient(conn: DawarichConnection): DawarichClient {
       // adopted from this array assumes chronological order, so sort
       // ascending here once rather than trust every caller to remember.
       const points = [...collected].sort((a, b) => a.timestampMs - b.timestampMs);
-      return { points, truncated };
+      return { points, truncated, unusable };
     },
   };
 }

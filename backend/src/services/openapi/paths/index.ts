@@ -101,6 +101,7 @@ import "./travtrackDay";
 import "./travtrackExplored";
 import "./travtrackMonths";
 import "./travtrackImports";
+import "./travtrackDawarichCopy";
 import "./travtrackSources";
 import "./travtrackShare";
 

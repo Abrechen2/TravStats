@@ -182,6 +182,7 @@ model User {
   travTrackZoneCells       TravTrackZoneCell[]
   travTrackDerivationState TravTrackDerivationState?
   travTrackImports         TravTrackImport[]
+  travTrackDawarichImport  TravTrackDawarichImport?
   travTrackIngestTokens    TravTrackIngestToken[]
 
   @@map("users")
@@ -6219,10 +6220,40 @@ model TravTrackImport {
   createdAt  DateTime  @default(now()) @map("created_at")
   finishedAt DateTime? @map("finished_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dawarichImport TravTrackDawarichImport?
 
   @@index([userId, createdAt])
   @@map("travtrack_imports")
+}
+
+/// The copy of an account's own Dawarich history into TravTrack (TravTrack
+/// plan L6): one row per account, the durable checkpoint of the copy. In the
+/// database, not in the job: `jobRegistry` is in memory, so the job is only
+/// the handle for the click. Dawarich is only ever read.
+model TravTrackDawarichImport {
+  userId        String    @id @map("user_id")
+  importId      String    @unique @map("import_id")
+  /// `running | paused | interrupted | complete | incomplete | failed | cancelled` (CHECK).
+  status        String
+  /// The run that owns the row while `running`; a day's fence compares it.
+  runId         String?   @map("run_id")
+  fromDay       DateTime  @map("from_day") @db.Date
+  untilDay      DateTime  @map("until_day") @db.Date
+  /// The first day not yet copied: the durable checkpoint.
+  nextDay       DateTime  @map("next_day") @db.Date
+  daysDone      Int       @default(0) @map("days_done")
+  /// Per month `{ read, stored, duplicate, dropped, truncatedHours, unreachableDays, daysWithPoints }`.
+  report        Json      @default("{}")
+  lastErrorKind String?   @map("last_error_kind")
+  heartbeatAt   DateTime? @map("heartbeat_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  finishedAt    DateTime? @map("finished_at")
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  travTrackImport TravTrackImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  @@map("travtrack_dawarich_imports")
 }
 
 /// A per-device token OwnTracks or Overland posts positions with (E9). Not an

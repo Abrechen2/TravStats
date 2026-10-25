@@ -29,10 +29,13 @@ type Status = { tone: "ok" | "bad"; text: string } | null;
 export default function TravTrackImports({
   canImport,
   canDelete,
+  version = 0,
   onChanged,
 }: {
   canImport: boolean;
   canDelete: boolean;
+  /** Raised when the list changed elsewhere (a Dawarich copy): the list loads again. */
+  version?: number;
   /** The stored positions changed: the card reloads its summary. */
   onChanged: () => void;
 }): JSX.Element {
@@ -56,7 +59,7 @@ export default function TravTrackImports({
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, version]);
 
   const describe = (r: TravTrackImportReport) =>
     [
@@ -116,7 +119,9 @@ export default function TravTrackImports({
   const rowText = (row: TravTrackImport) => {
     if (row.status === "failed") return t(storedImportErrorKey(row.report?.error));
     if (row.status === "running") return t(`${NS}.status.running`);
-    if (row.status === "interrupted") return t(`${NS}.status.interrupted`);
+    if (row.status === "interrupted") {
+      return t(row.kind === "dawarich" ? `${NS}.status.paused` : `${NS}.status.interrupted`);
+    }
     if (row.status === "cancelled") return t(`${NS}.status.cancelled`);
     const points = t(`${NS}.points`, { count: row.pointCount });
     // The stored report, so what the import did is still readable after a reload.
