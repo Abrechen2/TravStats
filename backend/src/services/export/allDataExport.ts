@@ -244,7 +244,7 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   travTrackUploads:
     "transport bookkeeping: upload receipts that answer a retry, pruned after 30 days",
   travTrackShareSnapshots:
-    "derived from the points on the owner's request and rebuilt from them; recipient-facing only",
+    "selected from the points on the owner's request, then only narrowed; recipient-facing only",
   trainingData: "parser training corpus of raw source text, operational",
   parseLogs: "parser training log, operational",
   travelPlanUsage: "operational daily AI/weather quota counters, not travel-plan content",

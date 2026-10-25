@@ -1,5 +1,5 @@
 import { Router, Response, NextFunction } from "express";
-import { refreshShareSnapshots } from "../services/travtrack/shareSnapshot";
+import { narrowShareSnapshotsAfter } from "../services/travtrack/shareNarrow";
 import { z } from "zod";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
@@ -527,14 +527,8 @@ router.patch(
       // recomputed at all (AUD-024). After the transaction, like every other
       // caller: the derivation reads the row it is about to judge.
       const shown = withTripTimes(await restatusIfDatesMoved(trip, days));
-      // A shared route follows the trip's new days (TravTrack plan T7).
-      await refreshShareSnapshots(userId, trip.id).catch((error: unknown) =>
-        logger.warn({
-          operation: "travtrack.share_snapshot.refresh_failed",
-          tripId: trip.id,
-          error,
-        })
-      );
+      // A shared route narrows to the trip's new days, never widens (TravTrack plan T7).
+      await narrowShareSnapshotsAfter(userId, { tripId: trip.id });
       res.json({ trip: shown });
     } catch (error) {
       next(error);

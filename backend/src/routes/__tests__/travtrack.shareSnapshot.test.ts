@@ -166,7 +166,9 @@ describe("TravTrack — a shared trip's route snapshot", () => {
     const snapshot = await share();
     const read = await as(recipientCookie).get(`/api/v1/trips/${copyId}/shared-route`);
     expect(read.status).toBe(200);
-    expect(read.body).toEqual({ routes: [{ version: 1, geometry: snapshot.geometry }] });
+    expect(read.body).toEqual({
+      routes: [{ version: 1, sharedBy: `${PREFIX}owner`, geometry: snapshot.geometry }],
+    });
     // The owner's own endpoints answer the recipient with nothing of the owner's.
     const own = await as(recipientCookie).get(`/api/v1/trips/${tripId}/share-snapshot`);
     expect(own.body).toEqual({ snapshot: null });

@@ -2,7 +2,7 @@ import { prisma, type DbTransaction } from "../../db";
 import type { ZoneCircle } from "./classify";
 import { clipSpan } from "./gaps";
 import { takeTravTrackLock } from "./lock";
-import { refilterShareSnapshots } from "./shareSnapshot";
+import { narrowOnPointsRemoved } from "./shareNarrow";
 
 /**
  * Deleting a span of the TravTrack history (TravTrack plan T2, review focus
@@ -14,7 +14,8 @@ import { refilterShareSnapshots } from "./shareSnapshot";
  * Every removal of points — a range here, a privacy zone in `zones.ts` —
  * calls `onPointsRemoved` in its own transaction. The hook is where whatever
  * was derived from the points and handed on (plan T7: a shared trip's route
- * snapshot) is re-filtered, so a recipient never reads what the user deleted.
+ * snapshot) is narrowed, so what the user deleted is not kept there either.
+ * It only ever takes away: nothing it calls selects points again.
  */
 
 export type PointsRemovedCause =
@@ -26,8 +27,8 @@ export type PointsRemovedHandler = (
   cause: PointsRemovedCause
 ) => Promise<void>;
 
-/** The share snapshots (plan T7) are re-filtered by every removal, from the start. */
-const handlers: PointsRemovedHandler[] = [refilterShareSnapshots];
+/** The share snapshots (plan T7) are narrowed by every removal, from the start. */
+const handlers: PointsRemovedHandler[] = [narrowOnPointsRemoved];
 
 /** Registers a further handler; returns its removal. */
 export function registerPointsRemovedHandler(handler: PointsRemovedHandler): () => void {

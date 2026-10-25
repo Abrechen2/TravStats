@@ -1,6 +1,5 @@
 import { Router, Response, NextFunction } from "express";
-import { refreshShareSnapshots } from "../../services/travtrack/shareSnapshot";
-import logger from "../../utils/logger";
+import { homeCircle, narrowShareSnapshotsAfter } from "../../services/travtrack/shareNarrow";
 import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
 import { AuthRequest } from "../../middleware/auth";
@@ -84,15 +83,14 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     });
 
     if (homePlace !== undefined) {
+      const formerHome = await homeCircle(prisma, userId);
       await prisma.userSettings.updateMany({
         where: onlyIfEmpty ? { userId, homePlace: { equals: Prisma.DbNull } } : { userId },
         data: { homePlace: homePlace === null ? Prisma.DbNull : homePlace },
       });
-      // A shared route keeps away from the NEW home too (TravTrack plan T7);
-      // the recipients' read rebuilds it as well, so a failure here only logs.
-      await refreshShareSnapshots(userId).catch((error: unknown) =>
-        logger.warn({ operation: "travtrack.share_snapshot.refresh_failed", userId, error })
-      );
+      // A shared route keeps away from the new home AND the one it replaces
+      // (TravTrack plan T7); every read narrows by the current home as well.
+      await narrowShareSnapshotsAfter(userId, { homes: formerHome ? [formerHome] : [] });
     }
     if (passportExpiry !== undefined) {
       await prisma.userSettings.updateMany({

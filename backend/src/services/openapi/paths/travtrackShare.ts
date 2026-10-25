@@ -5,8 +5,8 @@ import { errorContent } from "./shared";
 
 /**
  * A shared trip's route snapshot (TravTrack plan T7): built by the owner on
- * request, geometry only, re-filtered by every point removal; read by the
- * trip's other members through their own copy.
+ * request, geometry only, afterwards only ever narrowed; read by the trip's
+ * other members through their own copy, narrowed again at read time.
  */
 
 const tripParams = z.object({ id: z.string().describe("The trip's id") });
@@ -16,7 +16,7 @@ const geometry = z
   .describe("`[lon, lat][][]`, one array per line; no times, nothing near home or in a zone");
 
 const snapshot = z.object({
-  version: z.number().int().describe("Raised on every rebuild"),
+  version: z.number().int().describe("Raised on every share and every narrowing"),
   geometry,
   pointCount: z.number().int().describe("Vertices drawn"),
   createdAt: z.string().datetime(),
@@ -35,7 +35,8 @@ registry.registerPath({
   request: { params: tripParams },
   responses: {
     200: {
-      description: "The snapshot, or null while the route is not shared",
+      description:
+        "The snapshot as a recipient reads it now, or null while the route is not shared",
       content: { "application/json": { schema: z.object({ snapshot: snapshot.nullable() }) } },
     },
     403: disabled,
@@ -79,7 +80,10 @@ registry.registerPath({
   method: "get",
   path: "/trips/{id}/shared-route",
   summary: "The routes the other members of this shared trip share with the reader",
-  description: "`id` is the reader's own copy. Geometry and version only.",
+  description:
+    "`id` is the reader's own copy. Geometry, version and the sharer's display name only: the " +
+    "stored route narrowed by the sharer's current zones, homes, deletions, flights and trip " +
+    "days. Rate-limited per reader (429).",
   tags: ["TravTrack"],
   request: { params: tripParams },
   responses: {
@@ -88,12 +92,19 @@ registry.registerPath({
       content: {
         "application/json": {
           schema: z.object({
-            routes: z.array(z.object({ version: z.number().int(), geometry })),
+            routes: z.array(
+              z.object({
+                version: z.number().int(),
+                sharedBy: z.string().describe("The sharer's display name"),
+                geometry,
+              })
+            ),
           }),
         },
       },
     },
     403: disabled,
+    429: { description: "Too many reads in a minute", content: errorContent },
     404: {
       description: "TRIP_NOT_FOUND, or SHARED_ROUTE_NOT_FOUND: nobody shares a route with you",
       content: errorContent,

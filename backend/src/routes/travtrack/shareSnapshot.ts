@@ -1,7 +1,9 @@
 import { Router, type NextFunction, type Response } from "express";
+import rateLimit from "express-rate-limit";
 
 import { authenticate, requireWriteScope, type AuthRequest } from "../../middleware/auth";
 import { rejectDemo } from "../../middleware/demoGuard";
+import { patAwareMax, userOrIpKey } from "../../middleware/rateLimit";
 import { AppError } from "../../middleware/errorHandler";
 import {
   revokeTripRoute,
@@ -25,6 +27,21 @@ import { travTrackTier } from "./gate";
  */
 
 const router = Router();
+
+/**
+ * Per reader: a read narrows every stored route of the group at request time.
+ * Bounded by the stored vertices, not the owner's history — but a loop still
+ * spends the server, and a map asks once per view. Mounted after
+ * `authenticate`, so the bucket is the reader's.
+ */
+const sharedRouteLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: patAwareMax(30),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many shared-route reads, please try again later" },
+  keyGenerator: userOrIpKey,
+});
 
 function route(fn: (req: AuthRequest, res: Response) => Promise<void>) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -74,6 +91,7 @@ router.delete(
 router.get(
   "/trips/:id/shared-route",
   authenticate,
+  sharedRouteLimiter,
   travTrackTier("on"),
   route(async (req, res) => {
     const routes = await sharedTripRoutes(req.userId!, req.params.id);
