@@ -459,6 +459,7 @@ describe("Trip recording — /trips/:id/recording", () => {
           origin: null,
           coverage: null,
           alternatives: [],
+          unchecked: [],
         },
         segments: [],
       });
