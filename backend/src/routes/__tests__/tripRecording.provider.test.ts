@@ -101,6 +101,86 @@ describe("trip recording from the location provider", () => {
     expect(gpx.text.match(/<trkseg>/g)).toHaveLength(2);
   });
 
+  it("a recording wholly inside a privacy zone gives away nothing, not even its summary", async () => {
+    await prisma.travTrackPrivacyZone.create({
+      data: { userId, name: "Zuhause", lat: 37.5665, lon: 126.978, radiusM: 500 },
+    });
+    for (let i = 0; i < 4; i++) {
+      await storePoint(userId, {
+        t: DAY + i * MIN,
+        lat: 37.5665 + i * 0.0002,
+        lon: 126.978,
+        device: "phone-a",
+      });
+    }
+    const res = await request(app).get(`/api/v1/trips/${tripId}/recording`).set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.summary).toMatchObject({
+      pointCount: 0,
+      jitterDropped: 0,
+      firstAt: null,
+      lastAt: null,
+      devices: [],
+      days: [],
+    });
+    expect(res.body.segments).toEqual([]);
+  });
+
+  it("the summary counts only what the privacy cut lets through", async () => {
+    await prisma.travTrackPrivacyZone.create({
+      data: { userId, name: "Zuhause", lat: 37.5665, lon: 126.978, radiusM: 500 },
+    });
+    // Two fixes at home on the evening before, then a walk far from it.
+    await storePoint(userId, { t: DAY + 60 * MIN, lat: 37.5665, lon: 126.978, device: "home" });
+    await storePoint(userId, { t: DAY + 61 * MIN, lat: 37.5666, lon: 126.978, device: "home" });
+    for (let i = 0; i < 3; i++) {
+      await storePoint(userId, {
+        t: DAY + (600 + i) * MIN,
+        lat: 37.6 + i * 0.001,
+        lon: 127.05,
+        device: "phone-a",
+      });
+    }
+    const res = await request(app).get(`/api/v1/trips/${tripId}/recording`).set("Cookie", cookie);
+    expect(res.body.summary).toMatchObject({ pointCount: 3, devices: ["phone-a"] });
+    expect(res.body.summary.firstAt.utc).toBe(new Date(DAY + 600 * MIN).toISOString());
+  });
+
+  it("an own recording inside a zone is summarised from the cut too", async () => {
+    await setLocationProvider(userId, "none");
+    await prisma.travTrackPrivacyZone.create({
+      data: { userId, name: "Zuhause", lat: 37.5665, lon: 126.978, radiusM: 500 },
+    });
+    await prisma.tripRecordingBatch.create({
+      data: {
+        userId,
+        tripId,
+        deviceId: "phone-own",
+        uploadId: `${PREFIX}own-inside`,
+        startedAt: new Date(DAY),
+        endedAt: new Date(DAY + 2 * MIN),
+        points: [
+          [DAY, 37.5665, 126.978, 5],
+          [DAY + MIN, 37.5666, 126.978, 5],
+          [DAY + 2 * MIN, 37.5667, 126.978, 5],
+        ],
+        pointCount: 3,
+        skippedOutsideTrip: 0,
+        skippedInFlight: 0,
+      },
+    });
+    const res = await request(app).get(`/api/v1/trips/${tripId}/recording`).set("Cookie", cookie);
+    expect(res.body.summary).toMatchObject({
+      origin: "travstats",
+      pointCount: 0,
+      firstAt: null,
+      lastAt: null,
+      devices: [],
+      uploadedWithoutDevice: false,
+      days: [],
+    });
+  });
+
   it("?source= that holds nothing is 404 TRACK_SOURCE_NOT_AVAILABLE; an unknown one is 400", async () => {
     const none = await request(app)
       .get(`/api/v1/trips/${tripId}/recording`)

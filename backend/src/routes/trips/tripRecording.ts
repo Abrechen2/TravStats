@@ -35,6 +35,7 @@ import logger from "../../utils/logger";
 import { tripEntryTrack, type TrackOrigin } from "../../services/locationProvider/entryTrack";
 import { privacyCirclesFor } from "../../services/travtrack/privacyCircles";
 import { privacyCut, privacyCutBy } from "../../services/travtrack/privacyCut";
+import { devicesOnDay, privacySafeDevices } from "../../services/tripRecording/privacySafe";
 
 /**
  * The Companion's trip recording (forgejo#316) — `POST`/`GET`/`DELETE
@@ -247,6 +248,10 @@ router.post(
  * default, else the account's provider; `?source=` shows another explicitly.
  * The shape stays the batches' own, so the day filter, the jitter filter, the
  * map and the GPX read every origin alike — and two phones stay two lines.
+ *
+ * Privacy-safe from here on: whatever a zone hides is gone before anything is
+ * counted, so the summary describes only what the map may show (`all` for the
+ * recorded days and devices, `devices` narrowed to `day`).
  */
 async function loadDevices(
   userId: string,
@@ -258,9 +263,12 @@ async function loadDevices(
     tripEntryTrack(userId, trip, { source }),
     tripClockZone(userId, trip),
   ]);
-  const { batches } = entry;
+  const raw = pointsByDevice(entry.batches, zone);
+  const circles = await circlesFor(userId, raw);
+  const all = privacySafeDevices(raw, circles);
+  const devices = day === undefined ? all : devicesOnDay(all, zone, day);
   const meta = { origin: entry.origin, coverage: entry.coverage, alternatives: entry.alternatives };
-  return { batches, zone, devices: pointsByDevice(batches, zone, day), meta };
+  return { zone, all, devices, circles, meta };
 }
 
 /** The circles the trip's lines must not show, scoped to the trip's first point. */
@@ -279,33 +287,30 @@ router.get("/trips/:id/recording", async (req: AuthRequest, res: Response, next:
     const userId = req.userId!;
     const trip = await loadOwnedTrip(req.params.id, userId);
     const { day, source } = tripRecordingQuerySchema.parse(req.query);
-    const { batches, zone, devices, meta } = await loadDevices(userId, trip, day, source);
-    // Unfiltered, `devices` already holds every point; gather again only for a day's view.
-    const all = (day === undefined ? devices : pointsByDevice(batches, zone)).flatMap(
-      (d) => d.points
-    );
+    const { zone, all, devices, circles, meta } = await loadDevices(userId, trip, day, source);
     const shown = devices.flatMap((d) => d.points).sort((a, b) => a[0] - b[0]);
     const first = shown[0];
     const last = shown[shown.length - 1];
     // The line leaves the jitter out; the count says how much (forgejo#319).
     const clean = await withoutJitter(devices);
-    const circles = await circlesFor(userId, devices);
     res.json({
       summary: {
         pointCount: shown.length,
         jitterDropped: clean.dropped,
         firstAt: first ? serializeTime(new Date(first[0]), zone) : null,
         lastAt: last ? serializeTime(new Date(last[0]), zone) : null,
-        devices: [...new Set(batches.flatMap((b) => (b.deviceId ? [b.deviceId] : [])))].sort(),
+        devices: [...new Set(all.flatMap((d) => (d.deviceId ? [d.deviceId] : [])))].sort(),
         // An upload without a paired device (the web) is named, not counted as zero
         // devices. Only for the own recording: Dawarich names no device at all.
-        uploadedWithoutDevice: meta.origin === "travstats" && batches.some((b) => !b.deviceId),
-        days: recordingDays(all, zone).map((date) => ({ date, zone, precision: "day" as const })),
+        uploadedWithoutDevice: meta.origin === "travstats" && all.some((d) => !d.deviceId),
+        days: recordingDays(
+          all.flatMap((d) => d.points),
+          zone
+        ).map((date) => ({ date, zone, precision: "day" as const })),
         ...meta,
       },
-      // Privacy-cut twice (plan T5): on the filtered points, so a stretch either
-      // side of a zone stays a stretch of its own when simplification would have
-      // joined them, and on the line as it leaves, so no simplified chord crosses one.
+      // Privacy-cut again on the way out (plan T5): a jitter stay's synthetic
+      // point, and every chord simplification makes, is checked as it leaves.
       segments: privacyCut(
         displaySegments(
           privacyCutBy(clean.segments, circles, (p): [number, number] => [p[2], p[1]])
@@ -326,12 +331,11 @@ router.get(
       const userId = req.userId!;
       const trip = await loadOwnedTrip(req.params.id, userId);
       const { source } = tripRecordingQuerySchema.parse(req.query);
-      const { devices } = await loadDevices(userId, trip, undefined, source);
-      const segments = privacyCutBy(
-        rawSegments(devices),
-        await circlesFor(userId, devices),
-        (p): [number, number] => [p[2], p[1]]
-      );
+      const { devices, circles } = await loadDevices(userId, trip, undefined, source);
+      const segments = privacyCutBy(rawSegments(devices), circles, (p): [number, number] => [
+        p[2],
+        p[1],
+      ]);
       const first = segments[0]?.[0];
       res.setHeader("Content-Type", "application/gpx+xml; charset=utf-8");
       res.setHeader(
