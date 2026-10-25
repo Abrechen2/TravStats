@@ -73,10 +73,17 @@ describe("TravTrack — the explored map", () => {
 
   it("the answer is the same cell set for any requested zoom", async () => {
     await prisma.travTrackPrivacyZone.create({ data: { userId, name: "Zuhause", ...ZONE } });
-    // The zone's own shape moved one zone-width east: explored ground beside it.
+    // Explored ground all round the zone, so the zone is drawn too.
     const zoneCells = circleCells(ZONE);
-    const width = Math.max(...zoneCells.map((c) => c.x)) - Math.min(...zoneCells.map((c) => c.x));
-    const beside = zoneCells.map((c) => ({ x: c.x + width + 1, y: c.y }));
+    const inZone = new Set(zoneCells.map((c) => `${c.x}/${c.y}`));
+    const xs = zoneCells.map((c) => c.x);
+    const ys = zoneCells.map((c) => c.y);
+    const beside: Array<{ x: number; y: number }> = [];
+    for (let x = Math.min(...xs) - 1; x <= Math.max(...xs) + 1; x++) {
+      for (let y = Math.min(...ys) - 1; y <= Math.max(...ys) + 1; y++) {
+        if (!inZone.has(`${x}/${y}`)) beside.push({ x, y });
+      }
+    }
     await seed(userId, beside);
     const plain = await explored({ bbox: BERLIN });
     expect(plain.body.cells.length).toBeGreaterThan(beside.length);
