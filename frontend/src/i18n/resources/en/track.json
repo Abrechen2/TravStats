@@ -324,5 +324,18 @@
     "unknownDevice": "Unknown device",
     "none": "No position recorded yet.",
     "open": "View this day"
+  },
+  "menu": {
+    "map": "Map",
+    "explored": "Explored",
+    "stats": "Statistics",
+    "stays": "Stays",
+    "imports": "Imports"
+  },
+  "coming": {
+    "staysTitle": "Stays",
+    "staysBody": "The places where you stayed for a while will appear here soon.",
+    "importsTitle": "Imports",
+    "importsBody": "All imports of your location history will soon be gathered here."
   }
 }
