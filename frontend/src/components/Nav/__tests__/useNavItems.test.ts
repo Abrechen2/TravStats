@@ -111,6 +111,17 @@ describe("useNavItems — Mehr › Sammlungen", () => {
     travTrack.visible = false;
   });
 
+  // Phase 5: the "Plan" word of the logo replaces the "Mehr › Planung" entry.
+  it("never offers TravPlan in Mehr, whether or not TravPlan is offered", () => {
+    for (const visible of [false, true]) {
+      travPlan.visible = visible;
+      const { more } = run();
+      expect(more.flatMap((s) => s.items.map((i) => i.path))).not.toContain("/plan");
+      expect(more.map((s) => s.id)).not.toContain("planning");
+    }
+    travPlan.visible = false;
+  });
+
   it("names the areas the logo spells, in order, from the two visibility rules", () => {
     const cases: [boolean, boolean, string[]][] = [
       [false, false, ["stats"]],

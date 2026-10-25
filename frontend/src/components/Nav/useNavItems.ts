@@ -100,7 +100,6 @@ export function useNavItems(): {
     "notes",
     "comparison",
     "encryptedShare",
-    "travplan",
     "track",
   ]);
   const user = useAuthStore((s) => s.user);
@@ -250,27 +249,12 @@ export function useNavItems(): {
         : []),
     ];
 
-    // TravPlan used to swap this whole model for its own eight sections on
-    // `/plan*`, so a planner lost the way back to the rest of the app. It is
-    // one destination here instead; its sections live on its own page.
-    const planning: NavLeaf[] = travPlanVisible
-      ? [
-          {
-            kind: "leaf",
-            id: "travplan",
-            path: "/plan",
-            label: t("travplan:title"),
-            icon: "calendar",
-          },
-        ]
-      : [];
-
+    // TravPlan is reached through the "Plan" word of the logo (header variant
+    // B), never a second time from "Mehr" — it once swapped this whole model
+    // for its own sections, and later sat under "Mehr › Planung" as well.
     const more: NavSection[] = [
       { id: "collections", label: t("dashboard:nav.collections"), items: collections },
       { id: "tools", label: t("dashboard:nav.tools"), items: tools },
-      ...(planning.length > 0
-        ? [{ id: "planning", label: t("travplan:title"), items: planning }]
-        : []),
     ];
 
     const areas: AreaId[] = [
