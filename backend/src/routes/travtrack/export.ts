@@ -16,7 +16,11 @@ import { travTrackTier } from "./gate";
  * plan T6): a span of the history as a file — `exportFormats.ts`. Tier
  * `held`: with TravTrack switched off an account holding data still takes it
  * away (review focus 14). At most 366 days per request; a longer span is 400
- * `TRAVTRACK_EXPORT_TOO_LONG`, never a silently shortened file.
+ * `TRAVTRACK_EXPORT_TOO_LONG`, never a silently shortened file. A span over
+ * the point cap answers its first part with `X-TravTrack-Coverage: truncated`
+ * and the rest's span in `X-TravTrack-Next` / `X-TravTrack-Until`; asked
+ * as `?from&to`, a part can begin mid-day, so even one day over the cap comes
+ * out whole.
  */
 
 const router = Router();
@@ -44,7 +48,11 @@ router.get(
       const name = `travtrack_${stamp(span.from)}_${stamp(new Date(window.untilMs - 1))}`;
       res.setHeader("X-TravTrack-Origin", "travtrack");
       res.setHeader("X-TravTrack-Coverage", built.coverage);
-      if (built.next) res.setHeader("X-TravTrack-Next", built.next);
+      // The rest of a truncated span is exactly `?from=<Next>&to=<Until>`.
+      if (built.next) {
+        res.setHeader("X-TravTrack-Next", built.next);
+        res.setHeader("X-TravTrack-Until", new Date(window.untilMs).toISOString());
+      }
       if (q.format === "gpx") {
         res.setHeader("Content-Type", "application/gpx+xml; charset=utf-8");
         res.setHeader("Content-Disposition", `attachment; filename="${name}.gpx"`);

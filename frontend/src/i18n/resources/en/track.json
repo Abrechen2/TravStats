@@ -47,7 +47,10 @@
     "json": "JSON — everything, with pauses and deleted spans",
     "do": "Download",
     "done": "The file was downloaded.",
-    "truncated": "This span holds more positions than one file carries. The file ends early — export the rest as a span of its own."
+    "truncated": "This span holds more positions than one file carries. Part {{part}} is downloaded — “Export the rest” downloads the next part.",
+    "rest": "Export the rest",
+    "doneParts": "All {{count}} parts were downloaded — together, the whole span.",
+    "truncatedNoRest": "The file ends early, and the server does not say where the rest begins. Export a shorter span."
   },
   "delete": {
     "title": "Delete a span",

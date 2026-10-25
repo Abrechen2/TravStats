@@ -47,7 +47,10 @@
     "json": "JSON — alles, mit Pausen und gelöschten Zeiträumen",
     "do": "Herunterladen",
     "done": "Die Datei wurde heruntergeladen.",
-    "truncated": "Der Zeitraum hält mehr Positionen, als eine Datei trägt. Die Datei endet vorher — exportiere den Rest als eigenen Zeitraum."
+    "truncated": "Der Zeitraum hält mehr Positionen, als eine Datei trägt. Teil {{part}} ist heruntergeladen — „Rest exportieren“ lädt den nächsten Teil.",
+    "rest": "Rest exportieren",
+    "doneParts": "Alle {{count}} Teile wurden heruntergeladen — zusammen der ganze Zeitraum.",
+    "truncatedNoRest": "Die Datei endet vorher, und der Server sagt nicht, wo der Rest beginnt. Exportiere einen kürzeren Zeitraum."
   },
   "delete": {
     "title": "Zeitraum löschen",

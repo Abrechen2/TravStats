@@ -100,7 +100,19 @@ const corsOrigin =
   (process.env.NODE_ENV !== "production" ? "http://localhost:3000" : undefined);
 
 if (corsOrigin) {
-  const corsMiddleware = cors({ origin: corsOriginCheck(corsOrigin), credentials: true });
+  const corsMiddleware = cors({
+    origin: corsOriginCheck(corsOrigin),
+    credentials: true,
+    // A file's name and a TravTrack export's continuation are read from
+    // headers; across origins a browser hides them unless they are exposed.
+    exposedHeaders: [
+      "Content-Disposition",
+      "X-TravTrack-Origin",
+      "X-TravTrack-Coverage",
+      "X-TravTrack-Next",
+      "X-TravTrack-Until",
+    ],
+  });
   // The public share-link endpoints (forgejo#281) are asked by the /share page
   // this server itself serves, with no credentials. A browser sends an Origin
   // on that same-origin POST, and an instance whose CORS_ORIGIN does not name

@@ -81,6 +81,20 @@ export interface DaySpan {
   toDay: string;
 }
 
+/** Two instants, `[from, to)` — how the rest of a truncated export is asked for. */
+export interface InstantSpan {
+  from: string;
+  to: string;
+}
+
+/** One file of an export; `rest` is the span still to fetch when the file ended early. */
+export interface TravTrackExportPart {
+  blob: Blob;
+  filename: string;
+  truncated: boolean;
+  rest: InstantSpan | null;
+}
+
 /** A 409 with this code names `pointsInside`: ask, then send again with `deleteStoredPoints`. */
 export const ZONE_HOLDS_POINTS = "LOCATION_ZONE_HOLDS_POINTS";
 
@@ -112,10 +126,16 @@ export const travTrackApi = {
     (await api.delete<{ deleted: number }>("/travtrack/points", { params: span })).data.deleted,
   day: async (date: string): Promise<TravTrackDay> =>
     (await api.get<TravTrackDay>("/travtrack/day", { params: { date } })).data,
+  /**
+   * One file of a span. A span over the server's point cap comes in parts:
+   * the answer then names the rest (`X-TravTrack-Next` / `X-TravTrack-Until`),
+   * which is asked for as an `InstantSpan` — so a single day over the cap
+   * still comes out whole.
+   */
   exportFile: async (
-    span: DaySpan,
+    span: DaySpan | InstantSpan,
     format: TravTrackExportFormat
-  ): Promise<{ blob: Blob; filename: string; truncated: boolean }> => {
+  ): Promise<TravTrackExportPart> => {
     const res = await api
       .get<Blob>("/travtrack/export", { params: { ...span, format }, responseType: "blob" })
       .catch(async (err: unknown) => {
@@ -125,9 +145,16 @@ export const travTrackApi = {
       blob: res.data,
       filename: filenameFrom(res.headers["content-disposition"], `travtrack.${format}`),
       truncated: res.headers["x-travtrack-coverage"] === "truncated",
+      rest: restOf(res.headers["x-travtrack-next"], res.headers["x-travtrack-until"]),
     };
   },
 };
+
+function restOf(next: unknown, until: unknown): InstantSpan | null {
+  return typeof next === "string" && next !== "" && typeof until === "string" && until !== ""
+    ? { from: next, to: until }
+    : null;
+}
 
 /**
  * A refused blob request carries its error body as a Blob; read it as JSON so

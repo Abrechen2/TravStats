@@ -9,15 +9,20 @@ import { readSafeTravTrack, type Span } from "./readSafe";
  *
  * Bounded at `EXPORT_POINT_CAP` points. Beyond it the answer says
  * `coverage: "truncated"` and names `next`, the first instant left out, so a
- * client asks again from there instead of taking a part for the whole.
+ * client asks again for `[next, to)` instead of taking a part for the whole —
+ * the route says both as headers, so a GPX part can be followed too.
  */
 
 export const EXPORT_POINT_CAP = 200_000;
 
 export type TravTrackExport = Awaited<ReturnType<typeof buildTravTrackExport>>;
 
-export async function buildTravTrackExport(userId: string, window: Span) {
-  const read = await readSafeTravTrack(userId, window, EXPORT_POINT_CAP);
+export async function buildTravTrackExport(
+  userId: string,
+  window: Span,
+  cap: number = EXPORT_POINT_CAP
+) {
+  const read = await readSafeTravTrack(userId, window, cap);
   return {
     read,
     coverage: read.next ? ("truncated" as const) : ("complete" as const),

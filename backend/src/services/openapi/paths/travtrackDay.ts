@@ -109,7 +109,8 @@ registry.registerPath({
   description:
     "GPX 1.1 (one `<trkseg>` per stretch) or TravTrack's JSON, privacy-cut, as an attachment. " +
     "Headers `X-TravTrack-Origin`, `X-TravTrack-Coverage` and, when truncated, " +
-    "`X-TravTrack-Next`. Reachable with TravTrack off while the account holds data.",
+    "`X-TravTrack-Next` and `X-TravTrack-Until`: the rest is `?from=<Next>&to=<Until>`. " +
+    "Reachable with TravTrack off while the account holds data.",
   tags: ["TravTrack"],
   request: { query: travTrackExportQuerySchema },
   responses: {
