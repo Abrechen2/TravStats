@@ -43,17 +43,18 @@ export type DayHarvest = {
 
 export type ReadDeps = {
   client: DawarichClient;
-  /** Runs before every request: the heartbeat, the pause between requests, the fence. */
+  /** Runs before every HTTP page: the heartbeat, the pause between requests, the stop check. */
   beforeRequest: () => Promise<void>;
 };
 
 type Window = { points: DawarichPoint[]; unusable: number; truncated: boolean };
 
 async function readWindow(deps: ReadDeps, fromMs: number, toMs: number): Promise<Window> {
-  await deps.beforeRequest();
+  // Before every page, not once per window: a window can be 50 requests.
   const result = await deps.client.getPoints({
     startAt: new Date(fromMs),
     endAt: new Date(toMs - 1000),
+    beforePage: deps.beforeRequest,
   });
   return {
     // Defensive: never a fix outside the window asked for.

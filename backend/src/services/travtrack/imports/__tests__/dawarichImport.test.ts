@@ -76,6 +76,7 @@ function fakeDawarich(
     windows,
     checkHealth: async () => ({ reachable: true, version: "1.9.2" }),
     async getPoints(w) {
+      await w.beforePage?.(1);
       windows.push(w);
       const kind = opts.fail?.(w) ?? null;
       if (kind) throw new DawarichError(kind, "fake");
@@ -474,6 +475,35 @@ describe("TravTrack — copying the Dawarich history", () => {
       expect(init?.body).toBeUndefined();
     }
     expect(await stored()).toHaveLength(9);
+  });
+
+  it("stop during a multi-page read fetches no further page", async () => {
+    const realFetch = global.fetch;
+    const pages: number[] = [];
+    const spy = jest.fn<typeof fetch>(async (input) => {
+      const url = new URL(String(input));
+      const page = Number(url.searchParams.get("page"));
+      pages.push(page);
+      if (page === 2) await stopDawarichCopy(userId);
+      // Full pages: Dawarich has more to give every time.
+      const rows = Array.from({ length: 1000 }, (_, i) => ({
+        id: page * 10_000 + i,
+        latitude: "37.5",
+        longitude: String(127 + (page * 1000 + i) * 0.00001),
+        timestamp: at("2026-03-30T00:00:00Z") / 1000 + page * 1000 + i,
+      }));
+      return new Response(JSON.stringify(rows), { status: 200 });
+    });
+    global.fetch = spy as unknown as typeof fetch;
+    try {
+      await startDawarichCopy(userId, range, { pauseMs: 0 });
+      await settleAllJobs();
+    } finally {
+      global.fetch = realFetch;
+    }
+    expect(pages).toEqual([1, 2]);
+    expect((await getDawarichCopy(userId)).copy?.status).toBe("paused");
+    expect(await stored()).toHaveLength(0);
   });
 
   it("refuses an admin-global or ENV connection: only the account's own", async () => {
