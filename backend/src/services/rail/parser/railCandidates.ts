@@ -1,6 +1,5 @@
 import { prisma } from "../../../db";
 import { foldStationName } from "../railStations";
-import { instantToWallClock } from "../railJourneyWrite";
 import { calculateDistance } from "../../../utils/geo";
 import { zoneOf } from "../../../shared/time/zoneOf";
 import {
@@ -12,6 +11,12 @@ import {
 } from "../reservationMatch";
 import type { ParsedRailBooking, ParsedRailLeg, ProviderStop } from "./types";
 import { lazyCountryResolver, resolveProviderStop } from "./railStopResolve";
+import {
+  NO_DUPLICATE,
+  findBusDuplicate,
+  findDuplicate,
+  type DuplicateMatch,
+} from "./railDuplicates";
 
 /**
  * A parsed booking as the review dialog shows it: every station either tied
@@ -59,6 +64,11 @@ export interface RailLegCandidate extends ParsedRailLeg {
   arrivalStation: RailStationCandidate;
   /** The id of a journey already logged with this reference and departure. */
   duplicateOf: string | null;
+  /**
+   * A bus ride that may be this leg, but whose line one side does not name —
+   * shown in the review, never unticked on its strength (`railDuplicates.ts`).
+   */
+  possibleDuplicateOf: string | null;
   /**
    * Present only on a reservation document's legs (forgejo#203): the logged
    * journey this seat belongs to, or why there is none to attach it to.
@@ -235,78 +245,17 @@ export function catalogueStation(match: StationRow, printedName: string): RailSt
   };
 }
 
-/** The widest a wall clock can sit from UTC — the search window for a duplicate. */
-const WALL_CLOCK_WINDOW_MS = 14 * 60 * 60 * 1000;
-
-/**
- * A journey the user already has for this leg: same departure wall clock at
- * the departure station, and the same booking reference — or, when the
- * document prints none, the same departure station. Compared on the stored
- * row's own station clock, so an unresolved station (no zone yet) still finds
- * the ride it was saved as.
- */
-export async function findDuplicate(
-  userId: string,
-  leg: ParsedRailLeg,
-  bookingReference: string | null
-): Promise<string | null> {
-  const asUtc = new Date(`${leg.departureLocal}:00Z`).getTime();
-  if (Number.isNaN(asUtc)) return null;
-  const rows = await prisma.railJourney.findMany({
-    where: {
-      userId,
-      departureTime: {
-        gte: new Date(asUtc - WALL_CLOCK_WINDOW_MS),
-        lte: new Date(asUtc + WALL_CLOCK_WINDOW_MS),
-      },
-      ...(bookingReference
-        ? { bookingReference: { equals: bookingReference, mode: "insensitive" as const } }
-        : { depStationName: { equals: leg.depStationName, mode: "insensitive" as const } }),
-    },
-    select: { id: true, departureTime: true, depTimezone: true },
-    take: 20,
-  });
-  const hit = rows.find(
-    (r) => instantToWallClock(r.departureTime, r.depTimezone) === leg.departureLocal
-  );
-  return hit?.id ?? null;
-}
-
-/**
- * A bus ride the user already has for a bus leg of a bahn.de connection: same
- * departure wall clock at a stop of the same name. A bus leg is saved as a bus
- * ride, so a repeat import is looked for there — never among the trains.
- */
-export async function findBusDuplicate(userId: string, leg: ParsedRailLeg): Promise<string | null> {
-  const asUtc = new Date(`${leg.departureLocal}:00Z`).getTime();
-  if (Number.isNaN(asUtc)) return null;
-  const rows = await prisma.busJourney.findMany({
-    where: {
-      userId,
-      departureTime: {
-        gte: new Date(asUtc - WALL_CLOCK_WINDOW_MS),
-        lte: new Date(asUtc + WALL_CLOCK_WINDOW_MS),
-      },
-      depStationName: { equals: leg.depStationName, mode: "insensitive" as const },
-    },
-    select: { id: true, departureTime: true, depTimezone: true },
-    take: 20,
-  });
-  const hit = rows.find(
-    (r) => instantToWallClock(r.departureTime, r.depTimezone) === leg.departureLocal
-  );
-  return hit?.id ?? null;
-}
-
 async function duplicateOf(
   userId: string | undefined,
   leg: ParsedRailLeg,
-  bookingReference: string | null
-): Promise<string | null> {
-  if (!userId) return null;
-  return leg.transit?.mode === "bus"
-    ? findBusDuplicate(userId, leg)
-    : findDuplicate(userId, leg, bookingReference);
+  bookingReference: string | null,
+  departure: RailStationCandidate,
+  arrival: RailStationCandidate
+): Promise<DuplicateMatch> {
+  if (!userId) return NO_DUPLICATE;
+  if (leg.transit?.mode === "bus") return findBusDuplicate(userId, leg, departure, arrival);
+  const id = await findDuplicate(userId, leg, bookingReference, departure);
+  return { duplicateOf: id, possibleDuplicateOf: null };
 }
 
 export async function toRailCandidate(
@@ -329,12 +278,20 @@ export async function toRailCandidate(
   }
   const legs: RailLegCandidate[] = [];
   for (const { departureStop, arrivalStop, ...leg } of booking.legs) {
+    // The provider's stops are read into the two stations, not passed on.
+    const departureStation = await station(leg.depStationName, departureStop);
+    const arrivalStation = await station(leg.arrStationName, arrivalStop);
     legs.push({
       ...leg,
-      // The provider's stops are read into the two stations, not passed on.
-      departureStation: await station(leg.depStationName, departureStop),
-      arrivalStation: await station(leg.arrStationName, arrivalStop),
-      duplicateOf: await duplicateOf(userId, leg, booking.bookingReference),
+      departureStation,
+      arrivalStation,
+      ...(await duplicateOf(
+        userId,
+        leg,
+        booking.bookingReference,
+        departureStation,
+        arrivalStation
+      )),
     });
   }
   return { ...booking, legs };
@@ -371,7 +328,7 @@ async function reservationCandidate(
         journeys
       )
     );
-    legs.push({ ...leg, departureStation, arrivalStation, duplicateOf: null });
+    legs.push({ ...leg, departureStation, arrivalStation, ...NO_DUPLICATE });
   }
   const settled = withoutSharedTargets(matches);
   return {

@@ -78,6 +78,12 @@ const leg = z.object({
     .describe(
       "A journey already logged with this departure — for a bus leg (transit.mode bus) a bus ride"
     ),
+  possibleDuplicateOf: z
+    .string()
+    .nullable()
+    .describe(
+      "A bus ride that may be this leg — same stop, minute and destination, but a line one side does not name. Shown, never unticked on its strength"
+    ),
   transit: transit.optional(),
 });
 

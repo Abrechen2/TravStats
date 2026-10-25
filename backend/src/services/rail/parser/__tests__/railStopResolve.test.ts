@@ -1,7 +1,8 @@
 import { prisma } from "../../../../db";
 import { foldStationName } from "../../railStations";
 import { PROVIDER_AGREES_KM, resolveProviderStop } from "../railStopResolve";
-import { findBusDuplicate, toRailCandidate } from "../railCandidates";
+import { toRailCandidate } from "../railCandidates";
+import { findBusDuplicate } from "../railDuplicates";
 import type { ParsedRailBooking } from "../types";
 
 /**
@@ -187,6 +188,7 @@ describe("findBusDuplicate", () => {
           arrLat: 48.152,
           arrLon: 11.592,
           departureTime: new Date("2026-03-14T08:40:00Z"),
+          lineName: "Bus 100",
         },
       });
       const leg = {
@@ -200,10 +202,15 @@ describe("findBusDuplicate", () => {
         seat: null,
         direction: null,
       };
-      expect(await findBusDuplicate(user.id, leg)).toBe(ride.id);
-      expect(await findBusDuplicate(user.id, { ...leg, departureLocal: "2026-03-14T09:41" })).toBe(
-        null
-      );
+      const stop = (name: string) => ({ name, printedName: name, stationId: null, code: null });
+      const [dep, arr] = [stop("Odeonsplatz"), stop("Chinesischer Turm")];
+      expect(await findBusDuplicate(user.id, leg, dep, arr)).toEqual({
+        duplicateOf: ride.id,
+        possibleDuplicateOf: null,
+      });
+      expect(
+        await findBusDuplicate(user.id, { ...leg, departureLocal: "2026-03-14T09:41" }, dep, arr)
+      ).toEqual({ duplicateOf: null, possibleDuplicateOf: null });
     } finally {
       await prisma.busJourney.deleteMany({ where: { userId: user.id } });
       await prisma.user.delete({ where: { id: user.id } });

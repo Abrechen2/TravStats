@@ -487,6 +487,7 @@
     },
     "noTrain": "no train number on the ticket",
     "duplicate": "Already in your logbook (same booking, same departure) — not ticked.",
+    "possibleDuplicate": "Possibly in your logbook already: a ride leaving this stop in the same minute for the same destination, but with no line to compare — please check.",
     "legSaved": "Saved.",
     "unresolved": "“{{name}}” is not unambiguous in the station catalogue. Pick the station:",
     "pickStations": "Pick both stations for every ticked ride — without a station the time cannot be placed in a time zone.",

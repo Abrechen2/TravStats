@@ -450,6 +450,11 @@ export interface RailImportLeg {
   arrivalStation: RailImportStation;
   /** A journey the user already logged with this reference and departure. */
   duplicateOf: string | null;
+  /**
+   * A ride that may be this leg, but nothing tells the two apart (a bus whose
+   * line one side does not name): the review says so and leaves the leg ticked.
+   */
+  possibleDuplicateOf: string | null;
   /** Only on a reservation document's legs: the logged journey the seat belongs to. */
   reservation?: RailReservationMatch;
   /** The kind of vehicle; absent for a document's legs, which are trains. */
