@@ -5,7 +5,7 @@ import { Prisma } from "../../../prisma";
 import { AppError } from "../../../middleware/errorHandler";
 import logger from "../../../utils/logger";
 import { jobErrorOf, startJob } from "../../jobs/jobRegistry";
-import type { DropReason } from "../classify";
+import { positionKey, type DropReason } from "../classify";
 import { bumpHistoryGeneration } from "../../locationEvidence/generation";
 import { onPointsRemoved } from "../deleteRange";
 import { utcDaysOf } from "../dirtyDays";
@@ -290,7 +290,7 @@ export async function deleteTravTrackImport(
       const removed = await tx.travTrackPoint.findMany({
         where: { userId, origin },
         orderBy: { t: "asc" },
-        select: { t: true },
+        select: { t: true, tS: true, lat: true, lon: true },
       });
       if (removed.length === 0) return { deleted: 0 };
       const { count } = await tx.travTrackPoint.deleteMany({ where: { userId, origin } });
@@ -300,6 +300,7 @@ export async function deleteTravTrackImport(
       await onPointsRemoved(tx, userId, {
         kind: "origin",
         origin,
+        keys: new Set(removed.map((r) => positionKey(r))),
         spans: spansOf(removed.map((r) => r.t)),
         days: utcDaysOf(removed.map((r) => r.t.getTime())),
       });

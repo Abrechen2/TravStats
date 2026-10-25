@@ -24,11 +24,19 @@ export type PointsRemovedCause =
   | { kind: "zone"; zone: ZoneCircle }
   /**
    * Every point of one origin went (a file import deleted, plan E8). No
-   * tombstone is left, so the cause says what went: `spans`, the removed
-   * points' instants merged, and `days`, their UTC days — computed in the
-   * transaction before the points were deleted.
+   * tombstone is left, so the cause says what went, computed in the
+   * transaction before the points were deleted: `keys`, each removed point's
+   * position key (second | lon | lat, `positionKey`) — what a shared route's
+   * stored vertices are matched by, so another source's vertex in the same
+   * hours stays; `spans`, their instants merged; `days`, their UTC days.
    */
-  | { kind: "origin"; origin: string; spans: Array<[number, number]>; days: string[] };
+  | {
+      kind: "origin";
+      origin: string;
+      keys: ReadonlySet<string>;
+      spans: Array<[number, number]>;
+      days: string[];
+    };
 
 export type PointsRemovedHandler = (
   tx: DbTransaction,

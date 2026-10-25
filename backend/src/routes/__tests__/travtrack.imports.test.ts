@@ -253,6 +253,49 @@ describe("TravTrack — /travtrack/imports", () => {
     expect(res.body.imports).toEqual([expect.objectContaining({ status: "failed" })]);
   });
 
+  it("deleting an import keeps another source's vertices in the same hours on a shared route", async () => {
+    await prisma.trip.deleteMany({ where: { userId } });
+    await shareSnapshotBuildLimiter.resetKey(`user:${userId}`);
+    const tripId = await makeTrip(userId);
+    const start = Date.parse("2026-10-12T05:00:00Z");
+    // The phone and the file record the same hours, half a minute apart, 11 km apart.
+    for (let i = 0; i < 20; i++) {
+      await storePoint(userId, {
+        t: start + i * 60_000,
+        lat: 37.5 + (i % 2) * 0.001,
+        lon: 127.0 + i * 0.002,
+      });
+    }
+    const file = Array.from({ length: 20 }, (_, i) => ({
+      t: new Date(start + 30_000 + i * 60_000).toISOString(),
+      lat: 37.6 + (i % 2) * 0.001,
+      lon: 127.0 + i * 0.002,
+    }));
+    const { importId } = await importDone(gpxFile([file]));
+    expect(
+      (await request(app).put(`/api/v1/trips/${tripId}/share-snapshot`).set("Cookie", cookie))
+        .status
+    ).toBe(200);
+    // A route narrowed to nothing is deleted: then it holds no vertex at all.
+    const vertices = async () => {
+      const row = await prisma.travTrackShareSnapshot.findUnique({ where: { tripId } });
+      return ((row?.geometry ?? []) as number[][][]).flat();
+    };
+    const phone = (vs: number[][]) => vs.filter((v) => v[1] < 37.55).map((v) => v[2]);
+    const fromFile = (vs: number[][]) => vs.filter((v) => v[1] > 37.55);
+    const phoneBefore = phone(await vertices());
+    expect(phoneBefore.length).toBeGreaterThan(2);
+    expect(fromFile(await vertices()).length).toBeGreaterThan(0);
+
+    await request(app)
+      .delete(`/api/v1/travtrack/imports/${importId}`)
+      .set("Cookie", cookie)
+      .expect(200);
+    const after = await vertices();
+    expect(fromFile(after)).toEqual([]);
+    expect(phone(after)).toEqual(phoneBefore);
+  });
+
   it("deleting an import takes its points out of a shared trip's route", async () => {
     await prisma.trip.deleteMany({ where: { userId } });
     await shareSnapshotBuildLimiter.resetKey(`user:${userId}`);
