@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { Card, EmptyState, StatusPill } from "../../../components/ui";
+import { Button, Card, EmptyState, StatusPill } from "../../../components/ui";
 import { travplanApi, type PlanActual, type PlanStationStatus } from "../../../lib/api/travplan";
 import { formatLocalDate } from "../../../lib/displayFormat";
-import { PlanCardHead, PlanGrow, PlanNotice, PlanRow, PlanStack } from "../planLayout";
+import { PlanActions, PlanCardHead, PlanGrow, PlanNotice, PlanRow, PlanStack } from "../planLayout";
 import type { PlanCtx } from "../planContext";
 import { PlanActualSketch } from "./PlanActualSketch";
 
@@ -26,10 +26,30 @@ const span = (from: string | null, until: string | null) =>
 
 type Load = { state: "loading" } | { state: "failed" } | { state: "ready"; data: PlanActual };
 
+/**
+ * What the comparison depends on in the plan: the trip's days and the
+ * route's stations with the days the plan gives them. A packing item or a
+ * note raises the revision without touching any of it, and must not cost a
+ * read of the whole trip's track (Codex review of L5).
+ */
+function routeKey(ctx: PlanCtx): string {
+  const { tripId, state, plan } = ctx;
+  return JSON.stringify([
+    tripId,
+    state.startDay,
+    state.endDay,
+    state.stations.map((s) => [s.id, s.place.lat, s.place.lon, s.place.zone]),
+    plan.schedule?.stations ?? null,
+  ]);
+}
+
 export function PlanActualPanel({ ctx }: { ctx: PlanCtx }) {
   const { t } = useTranslation("travplan"),
-    { state, tripId, plan, onError } = ctx,
-    [load, setLoad] = useState<Load>({ state: "loading" });
+    { state, tripId, onError } = ctx,
+    [load, setLoad] = useState<Load>({ state: "loading" }),
+    [reloads, setReloads] = useState(0),
+    key = routeKey(ctx);
+  // Asked on opening, when the route or the trip's days change, and on the user's refresh.
   useEffect(() => {
     if (state.stations.length === 0) return;
     let live = true;
@@ -47,7 +67,7 @@ export function PlanActualPanel({ ctx }: { ctx: PlanCtx }) {
     return () => {
       live = false;
     };
-  }, [tripId, plan.revision, state.stations.length]);
+  }, [key, reloads]);
 
   if (state.stations.length === 0)
     return <EmptyState title={t("actual.noRoute")} description={t("actual.noRouteHint")} />;
@@ -66,6 +86,9 @@ export function PlanActualPanel({ ctx }: { ctx: PlanCtx }) {
   return (
     <PlanStack>
       <p className="t-body">{t("actual.intro")}</p>
+      <PlanActions>
+        <Button onClick={() => setReloads((n) => n + 1)}>{t("actual.refresh")}</Button>
+      </PlanActions>
       {data.actual === null ? (
         <PlanNotice>{t("actual.noTrack")}</PlanNotice>
       ) : (

@@ -121,6 +121,19 @@ describe("GET /trips/:tripId/plan/actual", () => {
     expect(r.body.code).toBe("PLAN_DISABLED");
   });
 
+  it("has its own per-account limit, answered as RATE_LIMITED", async () => {
+    const busy = await makeUser(`${PREFIX}busy`);
+    const { tripId } = await makePlanTrip(busy);
+    const answers: number[] = [];
+    for (let i = 0; i < 20; i++) answers.push((await getActual(tripId, busy)).status);
+    expect(answers.every((s) => s === 200)).toBe(true);
+    const refused = await getActual(tripId, busy);
+    expect(refused.status).toBe(429);
+    expect(refused.body.code).toBe("RATE_LIMITED");
+    // Another account's bucket is its own.
+    expect((await getActual((await makePlanTrip(owner)).tripId)).status).toBe(200);
+  });
+
   it("another user's trip → 404", async () => {
     const { tripId } = await makePlanTrip(owner);
     await ownRecording(owner, tripId, driveNear(MUNICH, noon(1)));

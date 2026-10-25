@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { PlanActualPanel } from "../sections/PlanActualPanel";
 import type { PlanCtx } from "../planContext";
 import type { PlanActual, PlanStation } from "../../../lib/api/travplan";
@@ -95,11 +96,43 @@ describe("PlanActualPanel", () => {
     expect(mocks.actual).toHaveBeenCalledWith("trip-one");
   });
 
-  it("offers nothing that would change the plan", async () => {
+  it("offers nothing that would change the plan — its one button reloads the comparison", async () => {
     mocks.actual.mockResolvedValue(answer());
     render(<PlanActualPanel ctx={ctx()} />);
     await screen.findByText("actual.status.visited");
-    expect(screen.queryAllByRole("button")).toEqual([]);
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["actual.refresh"]);
+  });
+
+  it("asks again on refresh, not on every plan revision", async () => {
+    mocks.actual.mockResolvedValue(answer());
+    const first = ctx();
+    const { rerender } = render(<PlanActualPanel ctx={first} />);
+    await screen.findByText("actual.status.visited");
+    // An unrelated edit (a packing item, a note) raises the revision only.
+    const edited = { ...first, plan: { ...first.plan, revision: 5 } } as PlanCtx;
+    rerender(<PlanActualPanel ctx={edited} />);
+    await screen.findByText("actual.status.visited");
+    expect(mocks.actual).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getByRole("button", { name: "actual.refresh" }));
+    await waitFor(() => expect(mocks.actual).toHaveBeenCalledTimes(2));
+  });
+
+  it("asks again when the route's stations or the trip's days change", async () => {
+    mocks.actual.mockResolvedValue(answer());
+    const first = ctx();
+    const { rerender } = render(<PlanActualPanel ctx={first} />);
+    await screen.findByText("actual.status.visited");
+    const moved = ctx([
+      STATIONS[0],
+      station("s", "Salzburg", 47.7, 13.2),
+      STATIONS[2],
+      STATIONS[3],
+    ]);
+    rerender(<PlanActualPanel ctx={moved} />);
+    await waitFor(() => expect(mocks.actual).toHaveBeenCalledTimes(2));
+    const later = { ...moved, state: { ...moved.state, endDay: "2026-11-09" } } as PlanCtx;
+    rerender(<PlanActualPanel ctx={later} />);
+    await waitFor(() => expect(mocks.actual).toHaveBeenCalledTimes(3));
   });
 
   it("no track says so, instead of counting stations as skipped", async () => {

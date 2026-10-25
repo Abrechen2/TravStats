@@ -15,6 +15,7 @@ import {
   type RecordingTrip,
 } from "../../tripRecording/bounds";
 import { privacySafeDevices } from "../../tripRecording/privacySafe";
+import { cachedTrack, clearTrackCache } from "./trackCache";
 import {
   displaySegments,
   pointsByDevice,
@@ -206,13 +207,13 @@ async function positionsOf(
   return { positions, stretches };
 }
 
-/** Null when the trip is not this user's, or when no source holds a track for it. */
-export async function getActualRoute(userId: string, tripId: string): Promise<ActualRoute | null> {
-  const trip = await prisma.trip.findFirst({
-    where: { id: tripId, userId },
-    select: TRIP_RECORDING_TRIP_SELECT,
-  });
-  if (!trip) return null;
+type TrackPart = Omit<ActualRoute, "stays">;
+
+/** The track as far as it may be told: privacy-safe, in stretches, with its line. Cached. */
+async function readTrack(
+  userId: string,
+  trip: RecordingTrip & { id: string }
+): Promise<TrackPart | null> {
   const [entry, zone] = await Promise.all([
     tripEntryTrack(userId, trip),
     tripClockZone(userId, trip),
@@ -232,15 +233,11 @@ export async function getActualRoute(userId: string, tripId: string): Promise<Ac
   const safe = privacySafeDevices(raw, circles);
   const safePoints = safe.flatMap((d) => d.points);
   const recorded = recordingDays(safePoints, zone);
-  const [{ positions, stretches }, stays] = await Promise.all([
-    positionsOf(safe, circles),
-    tripStays(userId, trip.id, zone),
-  ]);
+  const { positions, stretches } = await positionsOf(safe, circles);
   return {
     // Cut again on the final, simplified line: a chord simplification makes is checked as it leaves.
     segments: privacyCut(displaySegments(stretches), circles),
     days: tripDays(trip, recorded),
-    stays,
     coverage: entry.coverage,
     origin: entry.origin,
     zone,
@@ -249,3 +246,21 @@ export async function getActualRoute(userId: string, tripId: string): Promise<Ac
     circles,
   };
 }
+
+/**
+ * Null when the trip is not this user's, or when no source holds a track for
+ * it. The track is read once per change (`trackCache.ts`); the stays are
+ * TravStats' own records, cheap to read, and read fresh every time.
+ */
+export async function getActualRoute(userId: string, tripId: string): Promise<ActualRoute | null> {
+  const trip = await prisma.trip.findFirst({
+    where: { id: tripId, userId },
+    select: { ...TRIP_RECORDING_TRIP_SELECT, updatedAt: true },
+  });
+  if (!trip) return null;
+  const track = await cachedTrack(userId, trip, () => readTrack(userId, trip));
+  if (!track) return null;
+  return { ...track, stays: await tripStays(userId, trip.id, track.zone) };
+}
+
+export const clearActualTrackCache = clearTrackCache;

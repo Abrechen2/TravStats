@@ -140,7 +140,8 @@
     "PLAN_INVALID_NIGHT": "This kind of night does not fit how you arrive.",
     "PLAN_SHAPE_IN_USE": "The plan has stations; remove them before it becomes a single-destination plan again.",
     "PLAN_STAGE_CHANGED": "The stage changed in the meantime. Please calculate the route again.",
-    "PLAN_VARIANT_LIMIT": "More than three variants are not possible."
+    "PLAN_VARIANT_LIMIT": "More than three variants are not possible.",
+    "RATE_LIMITED": "Too many comparisons in a short time. Please try again in a minute."
   },
   "enabled": "Enable TravPlan on this server",
   "config": "TravPlan settings",
@@ -301,6 +302,7 @@
       "lodging": "Lodging",
       "place": "Place"
     },
-    "readOnly": "A comparison only: nothing here changes your plan."
+    "readOnly": "A comparison only: nothing here changes your plan.",
+    "refresh": "Reload"
   }
 }
