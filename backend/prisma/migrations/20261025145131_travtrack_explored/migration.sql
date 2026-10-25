@@ -34,10 +34,9 @@ ALTER TABLE "travtrack_explored_cells" ADD CONSTRAINT "travtrack_explored_cells_
 -- AddForeignKey
 ALTER TABLE "travtrack_zone_cells" ADD CONSTRAINT "travtrack_zone_cells_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- Backfill (TravTrack plan L1): every UTC day holding a TravTrack point gets a
--- dirty-day row, so the explored projection (done bit 2, not set on any
--- existing row) derives the whole history once. Existing rows keep their
--- version and their other bits; `t` is a TIMESTAMP holding UTC.
-INSERT INTO "travtrack_dirty_days" ("user_id", "day", "version", "done")
-SELECT DISTINCT "user_id", "t"::date, 1, 0 FROM "travtrack_points"
-ON CONFLICT ("user_id", "day") DO NOTHING;
+-- No backfill (Codex review of L1): every day holding a TravTrack point
+-- already has a dirty-day row (ingest marks it; the country projection's
+-- first run marked every point day), and the explored map's done bit (2) is
+-- set on none of them, so the projection scheduler finds them on its own —
+-- in its bounded ticks, with no whole-history scan at deploy and no country
+-- bit cleared.

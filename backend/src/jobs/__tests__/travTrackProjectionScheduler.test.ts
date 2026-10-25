@@ -34,6 +34,7 @@ describe("runTravTrackProjections", () => {
     await wipeTravTrack([userId]);
     await prisma.countryDay.deleteMany({ where: { userId } });
     await prisma.travTrackDirtyDay.deleteMany({ where: { userId } });
+    await prisma.travTrackExploredCell.deleteMany({ where: { userId } });
     await prisma.locationSuggestion.deleteMany({ where: { userId } });
     await prisma.travTrackDerivationState.deleteMany({ where: { userId } });
     await setLocationProvider(userId, "travtrack");
@@ -87,6 +88,13 @@ describe("runTravTrackProjections", () => {
     await runTravTrackProjections({ countryAt });
 
     expect(await prisma.travTrackExploredCell.count({ where: { userId } })).toBe(2);
+  });
+
+  it("with both projections owed, the day budget is shared: the explored map is not starved (Codex review)", async () => {
+    await runTravTrackProjections({ countryAt, maxDays: 2 });
+
+    expect(await prisma.countryDay.count({ where: { userId, source: "travtrack" } })).toBe(1);
+    expect(await prisma.travTrackExploredCell.count({ where: { userId } })).toBe(1);
   });
 
   it("skips an account whose provider is not TravTrack", async () => {

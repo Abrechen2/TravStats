@@ -24,7 +24,11 @@ import {
   PROJECTION_DAYS_PER_RUN,
   projectTravTrackCountryDays,
 } from "../services/travtrack/countryProjection";
-import { ALL_PROJECTION_BITS } from "../services/travtrack/dirtyDays";
+import {
+  ALL_PROJECTION_BITS,
+  EXPLORED_BIT,
+  pendingDirtyDays,
+} from "../services/travtrack/dirtyDays";
 import { projectExploredCells } from "../services/travtrack/explored/project";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
@@ -115,7 +119,14 @@ async function runAccount(
   maxDays: number
 ): Promise<{ failed: boolean; questions: number; days: number }> {
   try {
-    const projected = await projectTravTrackCountryDays(userId, { countryAt, maxDays });
+    // With the explored map owed too, the country days take half the budget,
+    // so a long country backlog cannot starve the map (Codex review of L1).
+    const exploredOwed = (await pendingDirtyDays(userId, EXPLORED_BIT, 1)).length > 0;
+    const countryBudget = exploredOwed ? Math.ceil(maxDays / 2) : maxDays;
+    const projected = await projectTravTrackCountryDays(userId, {
+      countryAt,
+      maxDays: countryBudget,
+    });
     const days = projected.projected + projected.rerun;
     if (projected.status === "failed") {
       await recordFailure(userId, now);
