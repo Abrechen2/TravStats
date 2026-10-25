@@ -1,4 +1,5 @@
 import { prisma } from "../../../db";
+import * as bounds from "../../tripRecording/bounds";
 import { lastSeen } from "../lastSeen";
 import { makeFlight, makeUser, storePoint, wipeTravTrack } from "./fixtures";
 
@@ -93,6 +94,43 @@ describe("TravTrack — last seen", () => {
     }
     await storePoint(userId, { t: dep + 10 * MIN, lat: 33.511, lon: 126.493 });
     expect((await lastSeen(userId))?.atMs).toBe(dep + 10 * MIN);
+  });
+
+  it("a long flight history is not read: only the flights near the points are", async () => {
+    // Sixty flights years before the history, and one inside it.
+    await prisma.flight.createMany({
+      data: Array.from({ length: 60 }, (_, i) => {
+        const dep = Date.parse("2019-01-01T08:00:00Z") + i * 86_400_000;
+        return {
+          userId,
+          depIata: "MUC",
+          arrIata: "BER",
+          depLat: 48.354,
+          depLon: 11.786,
+          arrLat: 52.366,
+          arrLon: 13.503,
+          departureTime: new Date(dep),
+          arrivalTime: new Date(dep + 3_600_000),
+          status: "flown",
+        };
+      }),
+    });
+    await makeFlight(userId); // 00:30Z–01:30Z on 12 Oct, beside the points
+    const dep = Date.parse("2026-10-12T00:40:00Z");
+    for (let i = 0; i < 3; i++) {
+      await storePoint(userId, { t: dep + i * MIN, lat: 37.469, lon: 126.451 });
+    }
+    await storePoint(userId, { t: dep + 10 * MIN, lat: 33.511, lon: 126.493 });
+
+    const resolve = jest.spyOn(bounds, "flightRecorderWindows");
+    try {
+      // The flight inside still makes the fast step a flight, not a teleport.
+      expect((await lastSeen(userId))?.atMs).toBe(dep + 10 * MIN);
+      const resolved = resolve.mock.calls.reduce((n, [flights]) => n + flights.length, 0);
+      expect(resolved).toBe(1);
+    } finally {
+      resolve.mockRestore();
+    }
   });
 
   it("a bad fix — 50 km accuracy, null island — is skipped", async () => {
