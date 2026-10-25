@@ -11,21 +11,29 @@ import { userOrIpKey } from "./rateLimit";
  * loop (Codex review). A person shares or refreshes a route a few times; ten
  * builds in ten minutes is room for that and no more.
  *
- * Mounted after `authenticate`, so `userOrIpKey` keys the account (a PAT its
- * own bucket, the shared demo its address — masked through `ipKeyGenerator`
- * there, as express-rate-limit 8 demands). Not PAT-multiplied: a token does
- * not make the build any cheaper. Refuses before the transaction opens, with
+ * Keyed on the ACCOUNT (`shareSnapshotBuildKey`), not on `userOrIpKey` alone:
+ * that one gives every PAT a bucket of its own (`pat:<tokenId>`), so an
+ * account with several tokens would hold several times the budget for the
+ * same lock. The shared demo account and an unauthenticated request keep
+ * `userOrIpKey`'s per-address buckets (masked through `ipKeyGenerator`).
+ * Not PAT-multiplied: a token does not make the build any cheaper. Refuses before the transaction opens, with
  * a code the page names in DE and EN and the wait in seconds.
  */
 export const SHARE_SNAPSHOT_BUILD_WINDOW_MS = 10 * 60 * 1000;
 export const SHARE_SNAPSHOT_BUILD_MAX = 10;
+
+/** One bucket per account, whichever session or token asks; the demo and the anonymous per address. */
+export const shareSnapshotBuildKey = (req: Request): string => {
+  const r = req as { userId?: string; isSharedDemo?: boolean };
+  return r.userId && !r.isSharedDemo ? `user:${r.userId}` : userOrIpKey(req);
+};
 
 export const shareSnapshotBuildLimiter = rateLimit({
   windowMs: SHARE_SNAPSHOT_BUILD_WINDOW_MS,
   max: SHARE_SNAPSHOT_BUILD_MAX,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: userOrIpKey,
+  keyGenerator: shareSnapshotBuildKey,
   handler: (req: Request, res: Response) => {
     const resetAt = (req as { rateLimit?: { resetTime?: Date } }).rateLimit?.resetTime;
     const retryAfterSeconds = resetAt

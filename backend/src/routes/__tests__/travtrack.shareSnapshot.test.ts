@@ -4,6 +4,7 @@ import app from "../../index";
 import { shareSnapshotBuildLimiter } from "../../middleware/shareSnapshotBuildLimit";
 import { prisma } from "../../db";
 import { generateToken } from "../../utils/jwt";
+import { generateApiToken } from "../../utils/apiTokens";
 import { distanceM } from "../../services/travtrack/classify";
 import { deleteTravTrackRange } from "../../services/travtrack/deleteRange";
 import { segmentCrossesZone, type LonLat } from "../../services/travtrack/privacyCut";
@@ -426,6 +427,44 @@ describe("TravTrack — a shared trip's route snapshot", () => {
     // service (and is refused there, holding no route), not the limiter.
     const other = await as(recipientCookie).put(`/api/v1/trips/${copyId}/share-snapshot`);
     expect(other.status).not.toBe(429);
+  });
+
+  it("two tokens of one account draw on one build bucket, not one each", async () => {
+    await walk(126.95, 126.97);
+    const bearers: string[] = [];
+    for (const label of ["build-a", "build-b"]) {
+      const tok = await generateApiToken();
+      await prisma.apiToken.create({
+        data: {
+          userId: owner,
+          label,
+          lookupHash: tok.lookupHash,
+          hash: tok.hash,
+          scope: "write",
+        },
+      });
+      bearers.push(`Bearer ${tok.plaintext}`);
+    }
+    const put = (bearer: string) =>
+      request(app).put(`/api/v1/trips/${tripId}/share-snapshot`).set("Authorization", bearer);
+    try {
+      let built = 0;
+      for (let i = 0; i < 10; i++) {
+        if ((await put(bearers[i % 2])).status === 200) built += 1;
+      }
+      expect(built).toBe(10);
+      // The account spent its ten; neither token nor the browser session has more.
+      for (const bearer of bearers) {
+        const res = await put(bearer);
+        expect(res.status).toBe(429);
+        expect(res.body.code).toBe("TRAVTRACK_ROUTE_BUILD_RATE_LIMITED");
+      }
+      expect((await as(ownerCookie).put(`/api/v1/trips/${tripId}/share-snapshot`)).status).toBe(
+        429
+      );
+    } finally {
+      await prisma.apiToken.deleteMany({ where: { userId: owner } });
+    }
   });
 
   it("building needs TravTrack on", async () => {
