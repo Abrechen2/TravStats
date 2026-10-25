@@ -750,7 +750,7 @@
       "rejected": "Verworfen",
       "covered": "Bereits erfasst",
       "accepting": "Wird übernommen",
-      "invalidated": "Nicht übernommen – der Standortverlauf dazu wurde gelöscht"
+      "invalidated": "Die Belege dafür gelten nicht mehr"
     },
     "source": {
       "travtrack": "Aus TravTrack"

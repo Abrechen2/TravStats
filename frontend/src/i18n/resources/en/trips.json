@@ -750,7 +750,7 @@
       "rejected": "Dismissed",
       "covered": "Already recorded",
       "accepting": "Being accepted",
-      "invalidated": "Not accepted – its location history was deleted"
+      "invalidated": "Its evidence no longer holds"
     },
     "source": {
       "travtrack": "From TravTrack"
