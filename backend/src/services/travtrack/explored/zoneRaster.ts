@@ -6,15 +6,18 @@
  * A zone cell is decided by its SURROUNDINGS, never by the circle — filling
  * the whole circle once anything touched it drew its footprint, and leaving
  * it empty drew a hole. A cell explored itself is drawn. Any other cell looks
- * along each of its four directions through the component to the first cell
- * outside it (or the first explored one): when at least three of the four
- * reach explored ground it is drawn. Then, to a fixed point, a cell with at
- * least three edge neighbours explored or drawn is drawn too.
+ * along eight directions — four orthogonal, four diagonal — through the
+ * component to the first cell outside it (or the first explored one). It is
+ * drawn when both rays of an opposite pair (W–E, N–S, NW–SE, SW–NE) reach
+ * explored ground, so a road through a zone runs on through it (Codex
+ * re-review), or when three of the four orthogonal rays do. Then, to a fixed
+ * point, a cell with at least three edge neighbours explored or drawn is
+ * drawn too.
  *
- * Linear in the component's size: the four directions are one pass per row
- * and per column each way, the fixed point a worklist. Columns wrap at the
- * date line; a component across it is processed with its columns shifted by
- * half the grid, so no row needs to wrap.
+ * Linear in the component's size: each direction is one pass per line of its
+ * family (rows, columns, both diagonals) each way, the fixed point a
+ * worklist. Columns wrap at the date line; a component across it is processed
+ * with its columns shifted by half the grid, so no line needs to wrap.
  */
 import { distanceM, type ZoneCircle } from "../classify";
 import { cellKey, TILES, tileBounds, tileOf, type Cell } from "./cells";
@@ -92,36 +95,92 @@ export function zoneComponents(cells: Iterable<Cell>): Cell[][] {
   return components;
 }
 
-/** The share of a cell's four directions that must reach explored ground. */
+/** The share of a cell's four orthogonal directions that must reach explored ground. */
 const CLOSED_OF_FOUR = 3;
 
-/** Per line of cells, sorted: whether each one's ray forward reaches explored ground. */
+/** Ray bits: the direction each ray looks in. */
+const W = 1;
+const E = 2;
+const N = 4;
+const S = 8;
+const NW = 16;
+const SE = 32;
+const SW = 64;
+const NE = 128;
+const OPPOSITE_PAIRS = [W | E, N | S, NW | SE, SW | NE];
+const ORTHOGONAL = [W, E, N, S];
+
+/**
+ * A family of parallel lines through the grid: rows, columns, or one of the
+ * two diagonals. `line`/`pos` place a cell on it; `at` is the inverse. The
+ * sweep in ascending `pos` order sets `back` (the ray looking towards lower
+ * `pos`), the descending one `ahead`.
+ */
+type LineFamily = {
+  line: (c: Cell) => number;
+  pos: (c: Cell) => number;
+  at: (line: number, pos: number) => Cell;
+  back: number;
+  ahead: number;
+};
+
+const FAMILIES: LineFamily[] = [
+  { line: (c) => c.y, pos: (c) => c.x, at: (l, p) => ({ x: p, y: l }), back: W, ahead: E },
+  // y grows southwards: looking to lower y is looking north.
+  { line: (c) => c.x, pos: (c) => c.y, at: (l, p) => ({ x: l, y: p }), back: N, ahead: S },
+  // Steps of (1, 1): lower x is north-west.
+  {
+    line: (c) => c.x - c.y,
+    pos: (c) => c.x,
+    at: (l, p) => ({ x: p, y: p - l }),
+    back: NW,
+    ahead: SE,
+  },
+  // Steps of (1, -1): lower x is south-west.
+  {
+    line: (c) => c.x + c.y,
+    pos: (c) => c.x,
+    at: (l, p) => ({ x: p, y: l - p }),
+    back: SW,
+    ahead: NE,
+  },
+];
+
+/**
+ * One pass along a line of cells in travel order: the ray looking back
+ * reaches explored ground when the nearest stop behind it is explored — the
+ * cell just outside the run, or an explored cell of the run itself.
+ */
 function sweep(
-  line: readonly number[],
-  coord: (i: number) => Cell,
+  positions: readonly number[],
+  at: (pos: number) => Cell,
   explored: (c: Cell) => boolean,
   dir: 1 | -1,
-  out: Map<string, number>
+  bit: number,
+  rays: Map<string, number>
 ): void {
-  // `line` holds the positions along the line in order of travel.
   let closed = false;
-  for (let i = 0; i < line.length; i++) {
-    const here = line[i];
-    const prev = i === 0 ? null : line[i - 1];
-    // A new run starts where the previous position is not the next one: its
-    // stop is the cell just before it, outside the component.
-    if (prev === null || here !== prev + dir) closed = explored(coord(here - dir));
-    const cell = coord(here);
-    const k = cellKey(cell);
-    if (closed) out.set(k, (out.get(k) ?? 0) + 1);
-    // An explored zone cell stops every ray behind it.
+  for (let i = 0; i < positions.length; i++) {
+    const here = positions[i];
+    if (i === 0 || here !== positions[i - 1] + dir) closed = explored(at(here - dir));
+    const cell = at(here);
+    if (closed) {
+      const k = cellKey(cell);
+      rays.set(k, (rays.get(k) ?? 0) | bit);
+    }
     if (explored(cell)) closed = true;
   }
 }
 
+/** Whether a cell's rays close it: an opposite pair both, or three of the four orthogonal ones. */
+const closedByRays = (bits: number): boolean =>
+  OPPOSITE_PAIRS.some((pair) => (bits & pair) === pair) ||
+  ORTHOGONAL.filter((b) => (bits & b) !== 0).length >= CLOSED_OF_FOUR;
+
 /**
  * Which cells of one component are drawn (see the file comment). `explored`
- * must name every explored cell in the component and on its edges.
+ * must name every explored cell in the component and on its edges, corners
+ * included.
  */
 export function fillComponent(component: readonly Cell[], explored: ReadonlySet<string>): Cell[] {
   if (component.length === 0) return [];
@@ -134,35 +193,27 @@ export function fillComponent(component: readonly Cell[], explored: ReadonlySet<
 
   const cells = component.map(local);
   const inside = new Set(cells.map(cellKey));
-  const rows = new Map<number, number[]>();
-  const cols = new Map<number, number[]>();
-  const add = (m: Map<number, number[]>, at: number, v: number) => {
-    const list = m.get(at);
-    if (list) list.push(v);
-    else m.set(at, [v]);
-  };
-  for (const c of cells) {
-    add(rows, c.y, c.x);
-    add(cols, c.x, c.y);
-  }
-  const closedRays = new Map<string, number>();
-  for (const [y, line] of rows) {
-    const sorted = [...line].sort((a, b) => a - b);
-    const at = (x: number): Cell => ({ x, y });
-    sweep(sorted, at, isExplored, 1, closedRays);
-    sweep([...sorted].reverse(), at, isExplored, -1, closedRays);
-  }
-  for (const [x, line] of cols) {
-    const sorted = [...line].sort((a, b) => a - b);
-    const at = (y: number): Cell => ({ x, y });
-    sweep(sorted, at, isExplored, 1, closedRays);
-    sweep([...sorted].reverse(), at, isExplored, -1, closedRays);
+  const rays = new Map<string, number>();
+  for (const family of FAMILIES) {
+    const lines = new Map<number, number[]>();
+    for (const c of cells) {
+      const l = family.line(c);
+      const list = lines.get(l);
+      if (list) list.push(family.pos(c));
+      else lines.set(l, [family.pos(c)]);
+    }
+    for (const [l, positions] of lines) {
+      const sorted = [...positions].sort((a, b) => a - b);
+      const at = (p: number) => family.at(l, p);
+      sweep(sorted, at, isExplored, 1, family.back, rays);
+      sweep(sorted.reverse(), at, isExplored, -1, family.ahead, rays);
+    }
   }
 
   const drawn = new Set<string>();
   for (const c of cells) {
     const k = cellKey(c);
-    if (isExplored(c) || (closedRays.get(k) ?? 0) >= CLOSED_OF_FOUR) drawn.add(k);
+    if (isExplored(c) || closedByRays(rays.get(k) ?? 0)) drawn.add(k);
   }
   // The fixed point, as a worklist: a cell is looked at again only when a
   // neighbour of it was just drawn.

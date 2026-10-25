@@ -65,6 +65,47 @@ describe("the explored map's privacy model", () => {
     expect(zoneIn(view).length).toBeLessThanOrEqual(1);
   });
 
+  it("a straight road through a zone continues through it: no gap at the zone (Codex re-review)", () => {
+    const b = boxOf(zoneCells);
+    const row = Math.round((b.y0 + b.y1) / 2);
+    const road: Cell[] = [];
+    for (let x = b.x0 - 6; x <= b.x1 + 6; x++) {
+      if (!zoneKeys.has(`${x}/${row}`)) road.push({ x, y: row });
+    }
+    const view = keys(exploredView({ explored: road, circles: [zone], bbox: WORLD }));
+    for (let x = b.x0 - 6; x <= b.x1 + 6; x++) expect(view.has(`${x}/${row}`)).toBe(true);
+    // The road, not the zone: nothing beside the road's row is drawn.
+    expect(
+      zoneIn([...view].map((k) => ({ x: +k.split("/")[0], y: +k.split("/")[1] }))).every(
+        (c) => c.y === row
+      )
+    ).toBe(true);
+  });
+
+  it("a diagonal road through a zone continues through it too", () => {
+    const centre = tileOf(zone.lat, zone.lon);
+    const road: Cell[] = [];
+    const line: Cell[] = [];
+    for (let i = -12; i <= 12; i++) {
+      const c = { x: centre.x + i, y: centre.y + i };
+      line.push(c);
+      if (!zoneKeys.has(key(c))) road.push(c);
+    }
+    const view = keys(exploredView({ explored: road, circles: [zone], bbox: WORLD }));
+    for (const c of line) expect(view.has(key(c))).toBe(true);
+  });
+
+  it("a stair-stepped diagonal road is closed as well", () => {
+    const centre = tileOf(zone.lat, zone.lon);
+    const line: Cell[] = [];
+    for (let i = -12; i <= 12; i++) {
+      line.push({ x: centre.x + i, y: centre.y + i }, { x: centre.x + i + 1, y: centre.y + i });
+    }
+    const road = line.filter((c) => !zoneKeys.has(key(c)));
+    const view = keys(exploredView({ explored: road, circles: [zone], bbox: WORLD }));
+    for (const c of line) expect(view.has(key(c))).toBe(true);
+  });
+
   it("a road along one side draws none of the zone", () => {
     const b = boxOf(zoneCells);
     const road = Array.from({ length: b.y1 - b.y0 + 7 }, (_, i) => ({
