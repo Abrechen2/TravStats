@@ -4,6 +4,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { token } from "../../../components/ui/tokens";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useTodayZone } from "../../../hooks/useTodayZone";
+import type { Feature, Geometry } from "geojson";
 import type { TrackPoint } from "../../../lib/api/travtrack";
 import type { TravTrackPhoto } from "../../../lib/api/travtrackViews";
 import { todayIn } from "../../../shared/time/clock";
@@ -14,6 +15,8 @@ import TrackPhotoNotice from "../photos/TrackPhotoNotice";
 import TrackPhotoThumb from "../photos/TrackPhotoThumb";
 import { photoWindowOf } from "../photos/trackPhotos";
 import { useTrackPhotos } from "../photos/useTrackPhotos";
+import TrackCountriesNotice from "../countries/TrackCountriesNotice";
+import { useVisitedCountries } from "../countries/useVisitedCountries";
 import type { FogStatus } from "./TrackFogLayer";
 import TrackLayersPanel from "./TrackLayersPanel";
 import TrackMapAside from "./TrackMapAside";
@@ -45,6 +48,7 @@ type Loaded = Extract<DayResult, { kind: "loaded" }>;
 
 /** No stretches for the replay of a span longer than it plays. */
 const NO_STRETCHES: TrackPoint[][] = [];
+const NO_SHAPES: Feature<Geometry>[] = [];
 
 const toLines = (segments: readonly TrackPoint[][]) =>
   segments.filter((s) => s.length > 1).map((s): LonLat[] => s.map(lonLat));
@@ -145,6 +149,8 @@ export default function TrackMapView(): JSX.Element {
     generation
   );
   const photoList = photos.kind === "loaded" ? photos.photos : [];
+  const countries = useVisitedCountries(prefs.layers.countries ? span : null, generation);
+  const countryShapes = countries.kind === "loaded" ? countries.shapes : NO_SHAPES;
 
   const onPoint = useCallback((p: MapPoint) => setSelected(p), []);
   const onPhoto = useCallback((p: TravTrackPhoto) => setPhoto(p), []);
@@ -216,6 +222,7 @@ export default function TrackMapView(): JSX.Element {
                 onPoint={onPoint}
                 photos={photoList}
                 onPhoto={onPhoto}
+                countries={countryShapes}
                 follow={follow}
                 onFogStatus={setFog}
               />
@@ -260,6 +267,7 @@ export default function TrackMapView(): JSX.Element {
             </p>
           )}
           {prefs.layers.photos && <TrackPhotoNotice state={photos} />}
+          {prefs.layers.countries && <TrackCountriesNotice state={countries} />}
           {fog.kind === "failed" && (
             <p className="t-caption" role="status" style={{ color: token("warn") }}>
               {t(fog.key)}

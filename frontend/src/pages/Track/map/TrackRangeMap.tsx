@@ -41,7 +41,7 @@ export default function TrackRangeMap(props: TrackRangeMapProps): JSX.Element | 
   const [mapLoaded, setMapLoaded] = useState(false);
   const bounds = useMemo(() => linesBounds(props.frameLines), [props.frameLines]);
   const { layers, color, opacity, lines, segments, points, anchors, replay, onPoint } = props;
-  const { photos, onPhoto } = props;
+  const { photos, onPhoto, countries } = props;
   const deckLayers = useMemo(
     () =>
       buildTrackLayers({
@@ -56,8 +56,22 @@ export default function TrackRangeMap(props: TrackRangeMapProps): JSX.Element | 
         onPoint,
         photos,
         onPhoto,
+        countries,
       }),
-    [layers, color, opacity, lines, segments, points, anchors, replay, onPoint, photos, onPhoto]
+    [
+      layers,
+      color,
+      opacity,
+      lines,
+      segments,
+      points,
+      anchors,
+      replay,
+      onPoint,
+      photos,
+      onPhoto,
+      countries,
+    ]
   );
   const follow = props.follow;
 

@@ -380,7 +380,9 @@
       "entriesHint": "Flüge, Fahrten, Reisen",
       "photos": "Fotos",
       "photosHint": "Aus Immich, auf der Strecke eingeordnet",
-      "dayOnly": "Nur in der Tages- und 7-Tage-Ansicht"
+      "dayOnly": "Nur in der Tages- und 7-Tage-Ansicht",
+      "countries": "Länder",
+      "countriesHint": "Besuchte Länder der Monate, die der Zeitraum berührt"
     },
     "route": {
       "title": "Strecken",
@@ -437,7 +439,16 @@
     "rangeSimplified": "Für diesen Zeitraum ist die Linie vereinfacht; die Strecke ist deshalb etwas kürzer als gemessen.",
     "rangeOmitted_one": "{{count}} kurzes Stück passte nicht mehr in die Ansicht und fehlt.",
     "rangeOmitted_other": "{{count}} kurze Stücke passten nicht mehr in die Ansicht und fehlen.",
-    "rangeNoTimeline": "Für Monat, Jahr und Zeitraum zeigt die Karte die Linie allein. Tagesablauf, Aufenthalte und Logbuch-Einträge stehen in der Tages- und 7-Tage-Ansicht."
+    "rangeNoTimeline": "Für Monat, Jahr und Zeitraum zeigt die Karte die Linie allein. Tagesablauf, Aufenthalte und Logbuch-Einträge stehen in der Tages- und 7-Tage-Ansicht.",
+    "countries": {
+      "loading": "Länder werden geladen …",
+      "none": "In den berührten Monaten ist kein Land ermittelt.",
+      "list_one": "{{count}} Land: {{names}}",
+      "list_other": "{{count}} Länder: {{names}}",
+      "note": "Eingefärbt sind die Länder der Monatswerte aller Monate, die der Zeitraum berührt (Monate nach UTC) – bei einem einzelnen Tag also die seines Monats.",
+      "pending": "Einige dieser Monate werden gerade neu berechnet; die Länder können sich noch ändern.",
+      "shapesFailed": "Die Ländergrenzen konnten nicht geladen werden."
+    }
   },
   "photos": {
     "title": "Foto",

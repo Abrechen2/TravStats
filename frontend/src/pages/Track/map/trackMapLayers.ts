@@ -1,4 +1,5 @@
-import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
+import { GeoJsonLayer, PathLayer, ScatterplotLayer } from "@deck.gl/layers";
+import type { Feature, Geometry } from "geojson";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
 import type { Layer, PickingInfo } from "@deck.gl/core";
 import { token } from "../../../components/ui/tokens";
@@ -87,6 +88,8 @@ export interface TrackLayerInput {
   /** Photos at the positions the server placed them; empty while the layer is off. */
   photos: readonly TravTrackPhoto[];
   onPhoto: (photo: TravTrackPhoto) => void;
+  /** The visited countries' shapes (the countries layer); empty while it is off. */
+  countries: readonly Feature<Geometry>[];
 }
 
 /** The photo markers' colour: the Stats accent, apart from the track's own. */
@@ -147,6 +150,22 @@ export function buildTrackLayers(input: TrackLayerInput): Layer[] {
   const alpha = Math.round(input.opacity * 255);
   const on = input.layers;
   const out: Layer[] = [];
+  // Under everything else: a country is the ground the line runs on.
+  if (on.countries && input.countries.length > 0) {
+    out.push(
+      new GeoJsonLayer({
+        id: "track-countries",
+        data: { type: "FeatureCollection", features: [...input.countries] },
+        filled: true,
+        stroked: true,
+        getFillColor: [...TRACK_RGB, 60],
+        getLineColor: [...TRACK_RGB, 180],
+        lineWidthUnits: "pixels",
+        getLineWidth: 1,
+        pickable: false,
+      })
+    );
+  }
   if (on.heat) {
     out.push(
       new HeatmapLayer<MapPoint>({

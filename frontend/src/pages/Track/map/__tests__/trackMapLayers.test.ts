@@ -28,6 +28,7 @@ const input = (over: Partial<TrackLayerInput> = {}): TrackLayerInput => ({
   onPoint: vi.fn(),
   photos: [],
   onPhoto: vi.fn(),
+  countries: [],
   ...over,
 });
 
@@ -88,6 +89,20 @@ describe("buildTrackLayers", () => {
     expect(onPhoto).toHaveBeenCalledWith(photo);
     const off = { ...input().layers, photos: false };
     expect(ids(input({ layers: off, photos: [photo] }))).not.toContain("track-photos");
+  });
+
+  it("colours the visited countries under everything else, only while switched on", () => {
+    const de = {
+      type: "Feature" as const,
+      id: "276",
+      properties: { name: "Germany" },
+      geometry: { type: "Point" as const, coordinates: [10, 51] },
+    };
+    expect(ids(input())).not.toContain("track-countries");
+    const all = ids(input({ countries: [de] }));
+    expect(all[0]).toBe("track-countries");
+    const off = { ...input().layers, countries: false };
+    expect(ids(input({ layers: off, countries: [de] }))).not.toContain("track-countries");
   });
 
   it("single colour draws the stretches whole; the replay adds its head", () => {

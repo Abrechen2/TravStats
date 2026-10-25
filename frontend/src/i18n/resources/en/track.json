@@ -380,7 +380,9 @@
       "entriesHint": "Flights, rides, trips",
       "photos": "Photos",
       "photosHint": "From Immich, placed on the track",
-      "dayOnly": "Only in the day and 7-day views"
+      "dayOnly": "Only in the day and 7-day views",
+      "countries": "Countries",
+      "countriesHint": "Visited countries of the months the range touches"
     },
     "route": {
       "title": "Routes",
@@ -437,7 +439,16 @@
     "rangeSimplified": "For this range the line is simplified, so the distance is a little shorter than measured.",
     "rangeOmitted_one": "{{count}} short piece no longer fitted into the view and is missing.",
     "rangeOmitted_other": "{{count}} short pieces no longer fitted into the view and are missing.",
-    "rangeNoTimeline": "For month, year and range the map shows the line alone. The day's timeline, stays and logbook entries are in the day and 7-day views."
+    "rangeNoTimeline": "For month, year and range the map shows the line alone. The day's timeline, stays and logbook entries are in the day and 7-day views.",
+    "countries": {
+      "loading": "Loading countries …",
+      "none": "No country was determined in the months touched.",
+      "list_one": "{{count}} country: {{names}}",
+      "list_other": "{{count}} countries: {{names}}",
+      "note": "Coloured are the countries of the monthly values of every month the range touches (months in UTC) – for a single day, those of its month.",
+      "pending": "Some of these months are being recomputed; the countries may still change.",
+      "shapesFailed": "The country borders could not be loaded."
+    }
   },
   "photos": {
     "title": "Photo",

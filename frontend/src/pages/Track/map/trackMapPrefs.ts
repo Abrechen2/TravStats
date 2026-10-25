@@ -15,6 +15,7 @@ export const TRACK_LAYERS = [
   "visits",
   "entries",
   "photos",
+  "countries",
 ] as const;
 export type TrackLayer = (typeof TRACK_LAYERS)[number];
 
@@ -41,6 +42,7 @@ export const DEFAULT_PREFS: TrackMapPrefs = {
     visits: true,
     entries: true,
     photos: false,
+    countries: false,
   },
   color: "speed",
   opacity: 0.85,

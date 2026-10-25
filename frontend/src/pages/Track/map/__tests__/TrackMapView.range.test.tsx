@@ -30,6 +30,10 @@ vi.mock("../../../../lib/api/travtrackViews", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../../lib/api/travtrackViews")>()),
   travTrackViewsApi: views,
 }));
+const months = vi.hoisted(() => ({ months: vi.fn() }));
+vi.mock("../../../../lib/api/travtrackMonths", () => ({ travTrackMonthsApi: months }));
+const world = vi.hoisted(() => ({ load: vi.fn() }));
+vi.mock("../../../../lib/geo/worldCountries", () => ({ loadWorldCountries: world.load }));
 vi.mock("../../../../hooks/useTodayZone", () => ({ useTodayZone: () => "UTC" }));
 vi.mock("../../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
@@ -41,6 +45,7 @@ vi.mock("../../../../hooks/useTranslation", () => ({
 
 type Stub = Record<string, unknown> & {
   lines: unknown[];
+  countries: unknown[];
   points: Array<{ id: string | null }>;
   photos: unknown[];
   onPoint: (p: unknown) => void;
@@ -51,7 +56,8 @@ vi.mock("../TrackRangeMap", () => ({
     mapProps.last = props;
     return (
       <div data-testid="map-stub">
-        {props.lines.length} lines · {props.photos.length} photos
+        {props.lines.length} lines · {props.photos.length} photos · {props.countries.length}{" "}
+        countries
         <button type="button" onClick={() => props.onPoint(props.points[0])}>
           pick
         </button>
@@ -130,6 +136,8 @@ describe("TrackMapView — long spans", () => {
     setClockForTests("2026-10-25T12:00:00Z");
     Object.values(api).forEach((fn) => fn.mockReset());
     Object.values(views).forEach((fn) => fn.mockReset());
+    months.months.mockReset();
+    world.load.mockReset();
     api.day.mockImplementation(async (date: string) => dayOf(date));
     api.lastSeen.mockResolvedValue(null);
     views.photoUrl.mockReturnValue("/thumb");
@@ -287,5 +295,63 @@ describe("TrackMapView — long spans", () => {
     renderAt("/track/2026-10-25?range=month");
     expect(await screen.findByTestId("track-photos-too-long")).toBeInTheDocument();
     expect(views.photos).not.toHaveBeenCalled();
+  });
+
+  it("colours the countries of the touched months, from the monthly values and shipped shapes", async () => {
+    window.localStorage.setItem(PREFS_KEY, JSON.stringify({ layers: { countries: true } }));
+    months.months.mockResolvedValue({
+      months: [
+        {
+          month: "2026-10",
+          kmGround: 1,
+          countries: ["DE"],
+          cities: null,
+          daysWithData: 1,
+          daysPaused: 0,
+        },
+        {
+          month: "2026-09",
+          kmGround: 1,
+          countries: ["KR"],
+          cities: null,
+          daysWithData: 1,
+          daysPaused: 0,
+        },
+      ],
+      pending: ["2026-10"],
+    });
+    world.load.mockResolvedValue({
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          id: "276",
+          properties: { name: "Germany" },
+          geometry: { type: "Point", coordinates: [10, 51] },
+        },
+        {
+          type: "Feature",
+          id: "410",
+          properties: { name: "South Korea" },
+          geometry: { type: "Point", coordinates: [127, 37] },
+        },
+      ],
+    });
+    renderAt("/track");
+    await waitFor(() => expect(screen.getByTestId("map-stub")).toHaveTextContent("1 countries"));
+    expect(months.months).toHaveBeenCalledWith(2026);
+    const notice = screen.getByTestId("track-countries");
+    expect(notice).toHaveTextContent("track:map.countries.list");
+    expect(notice).toHaveTextContent("track:map.countries.pending");
+  });
+
+  it("a failed read of the countries says so instead of colouring nothing", async () => {
+    window.localStorage.setItem(PREFS_KEY, JSON.stringify({ layers: { countries: true } }));
+    months.months.mockRejectedValue({ response: { status: 500, data: {} } });
+    renderAt("/track");
+    expect(await screen.findByTestId("track-countries-failed")).toHaveTextContent(
+      "track:errors.generic"
+    );
+    expect(world.load).not.toHaveBeenCalled();
   });
 });
