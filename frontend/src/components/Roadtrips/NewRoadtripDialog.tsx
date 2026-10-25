@@ -74,8 +74,11 @@ export default function NewRoadtripDialog({
   onClose,
   onCreated,
   onReload,
+  initialName = "",
 }: {
   open: boolean;
+  /** The name a new roadtrip opens with — a journey TravTrack saw (inbox, TravTrack plan E7). */
+  initialName?: string;
   onClose: () => void;
   onCreated: (route: TourRoute) => void;
   /**
@@ -86,17 +89,19 @@ export default function NewRoadtripDialog({
   onReload?: () => void;
 }): JSX.Element | null {
   const { t } = useTranslation(["roadtrips", "common"]);
-  const [draft, setDraft] = useState<Draft>(emptyDraft);
+  // The draft one opening starts from: empty, or named by the caller.
+  const opening = (): Draft => ({ ...emptyDraft(), name: initialName });
+  const [draft, setDraft] = useState<Draft>(opening);
   const [trips, setTrips] = useState<Array<{ id: string; name: string }>>([]);
   const [tripsFailed, setTripsFailed] = useState(false);
 
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) setDraft(emptyDraft());
+    if (open) setDraft(opening());
   }
 
-  const { dirty, markSaved } = useDirtyGuard(emptyDraft(), draft, { open });
+  const { dirty, markSaved } = useDirtyGuard(opening(), draft, { open });
   const saving = useSaveOnce<TourRoute>({ open });
   const failure = useFormFailure(JSON.stringify(draft));
 

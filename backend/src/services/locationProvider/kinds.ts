@@ -14,3 +14,6 @@ export type ProviderStatus = "ok" | "notConfigured" | "unavailable";
  * exactly the accounts `providerIs` would.
  */
 export const DAWARICH_PROVIDER_WHERE = { locationProvider: "dawarich" } as const;
+
+/** The same filter for an account whose source is TravTrack. */
+export const TRAVTRACK_PROVIDER_WHERE = { locationProvider: "travtrack" } as const;

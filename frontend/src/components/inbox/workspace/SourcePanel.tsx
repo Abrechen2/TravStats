@@ -21,6 +21,10 @@ const EMPTY: Record<Exclude<InboxSource, "photos">, { title: string; description
     description: "pendingUpdates:empty.description",
   },
   dawarich: { title: "trips:dawarichStays.title", description: "trips:dawarichStays.empty" },
+  location: {
+    title: "dataQuality:inbox.workspace.journey.emptyTitle",
+    description: "dataQuality:inbox.workspace.journey.emptyDescription",
+  },
 };
 
 /**

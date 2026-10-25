@@ -1,4 +1,4 @@
-import type { DawarichPoint } from "../dawarichClient";
+import type { StayPoint } from "../stays/detect";
 import { polygons, type MarketArea } from "./geometry";
 
 /** Grid cell edge in degrees; about one kilometre, the size of a large venue. */
@@ -39,7 +39,7 @@ const cellOf = (degrees: number) => Math.floor(degrees / CELL_DEGREES);
  * and last point inside it. Each area then reads its own stretch of the
  * timeline instead of every point.
  */
-export function pointGrid(points: readonly DawarichPoint[]) {
+export function pointGrid(points: readonly StayPoint[]) {
   const cells = new Map<string, number[]>();
   points.forEach((p, i) => {
     const key = `${cellOf(p.latitude)}:${cellOf(p.longitude)}`;
@@ -47,7 +47,7 @@ export function pointGrid(points: readonly DawarichPoint[]) {
     if (list) list.push(i);
     else cells.set(key, [i]);
   });
-  const inside = (p: DawarichPoint, b: Bounds) =>
+  const inside = (p: StayPoint, b: Bounds) =>
     p.longitude >= b.minLon &&
     p.longitude <= b.maxLon &&
     p.latitude >= b.minLat &&

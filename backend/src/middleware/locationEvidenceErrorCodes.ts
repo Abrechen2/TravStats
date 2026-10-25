@@ -6,6 +6,8 @@
  */
 export type LocationEvidenceApiErrorCode =
   | "EVIDENCE_INVALIDATED" // the finding's history changed or was deleted while it was accepted (409)
+  | "HISTORY_CHANGED" // the location history kept changing while the suggestion was accepted; it stays open — retry (409)
+  | "EVIDENCE_UNVERIFIABLE" // the finding's evidence cannot be checked right now (map data missing); it stays open — retry later (409)
   | "SUGGESTION_ALREADY_RESOLVED" // the suggestion was answered already (409)
   | "SUGGESTION_ACCEPT_IN_PROGRESS" // another accept of the same suggestion is running; retry (409)
   | "INGEST_TOKEN_INVALID" // unknown, revoked or other-kind OwnTracks/Overland token (401)

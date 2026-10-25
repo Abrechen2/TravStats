@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
-import type { DawarichPoint } from "../dawarichClient";
-import { meters, type StayCandidate } from "../stays/detect";
+import { meters, type StayCandidate, type StayPoint } from "../stays/detect";
 import { discoverMarketAreas, type CatalogStore } from "./catalog";
 import { marketCatalogStore } from "./catalogStore";
 import { prepareMarketAreas } from "./areas";
@@ -29,7 +28,7 @@ export interface MarketFinding extends StayCandidate {
   };
 }
 export async function collectMarketFindings(
-  points: readonly DawarichPoint[],
+  points: readonly StayPoint[],
   known: { places: KnownPlace[]; visits: KnownVisit[]; trips: KnownTrip[] },
   options: {
     isAllowed: () => Promise<boolean>;

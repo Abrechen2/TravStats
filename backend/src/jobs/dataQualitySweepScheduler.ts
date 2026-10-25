@@ -30,6 +30,7 @@
  * | **04:10** | **this** |
  * | 04:40 | Dawarich country-day sweep |
  * | 04:55 | nightly photo-journey scan (opt-in accounts) |
+ * | 05:05 | TravTrack missing journeys (travTrackJourneyScheduler.ts) |
  * | every :25 | document sweep |
  *
  * The ordering is not just about avoiding contention. Two of those jobs write

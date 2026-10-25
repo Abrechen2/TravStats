@@ -33,6 +33,7 @@ export type SchedulerJob =
   | "statusSweep"
   | "syncRetention"
   | "travTrackOrphanLinks"
+  | "travTrackJourneys"
   | "webdavSync"
   | "stayFxBackfill"
   | "usageStats"
