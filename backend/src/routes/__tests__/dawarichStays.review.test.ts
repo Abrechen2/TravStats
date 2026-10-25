@@ -107,6 +107,19 @@ describe("accepting a Dawarich stay", () => {
   });
 });
 
+describe("accepting a finding that does not exist", () => {
+  // Golden (owner decision 2026-10-25): SUGGESTION_NOT_FOUND is a TravTrack
+  // row's answer. A missing row answers byte-for-byte what dev/travtrack did.
+  it("answers the code-less 404 it always did", async () => {
+    const res = await api()
+      .post("/api/v1/dawarich-stays/00000000-0000-4000-8000-000000000000/accept")
+      .set("Cookie", cookie)
+      .send(review);
+    expect(res.status).toBe(404);
+    expect(res.text).toBe(JSON.stringify({ error: "Finding not found" }));
+  });
+});
+
 describe("GET /dawarich-stays/settings", () => {
   it("answers connected:false only for a missing own connection", async () => {
     const r = await api().get("/api/v1/dawarich-stays/settings").set("Cookie", cookie);

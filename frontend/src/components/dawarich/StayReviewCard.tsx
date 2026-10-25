@@ -80,7 +80,13 @@ export default function StayReviewCard({
       } else await dawarichStaysApi.reject(row.id);
       onDone();
     } catch (e) {
-      const code = apiErrorMachineCode(e);
+      // A TravTrack finding that went with deleted history before the accept
+      // reached it answers the stays route's code-less 404 (a missing row names
+      // no provider). On a TravTrack card that 404 means the same as
+      // SUGGESTION_NOT_FOUND; a Dawarich card reads it as before.
+      const status = (e as { response?: { status?: number } } | undefined)?.response?.status;
+      const code =
+        apiErrorMachineCode(e) ?? (travtrack && status === 404 ? "SUGGESTION_NOT_FOUND" : null);
       setError(
         text(
           code === "DAWARICH_VISIT_TRIP_CONFLICT"

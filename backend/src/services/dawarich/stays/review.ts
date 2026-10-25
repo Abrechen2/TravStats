@@ -353,9 +353,11 @@ export async function acceptStay(userId: string, id: string, input: StayReview) 
     where: { id, userId },
     select: { provider: true },
   });
-  // No row: whichever provider found it, nothing is there to accept — a
-  // TravTrack finding may have gone with the history it came from (E5).
-  if (!source) throw new AppError("Finding not found", 404, "SUGGESTION_NOT_FOUND");
+  // No row: the answer stays the code-less 404 it always was (owner decision
+  // 2026-10-25) — a missing row names no provider, and a Dawarich client must
+  // read exactly what it read before. `SUGGESTION_NOT_FOUND` belongs to a
+  // TravTrack row, which the protocol answers when the row goes mid-accept (E5).
+  if (!source) throw new AppError("Finding not found", 404);
   if (source.provider === "travtrack") return acceptTravTrackStay(userId, id, input);
   for (let attempt = 0; attempt < 3; attempt++) {
     try {

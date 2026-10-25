@@ -184,12 +184,14 @@ describe("accepting a TravTrack finding", () => {
     expect(await prisma.placeVisit.count({ where: { userId } })).toBe(0);
   });
 
-  it("points deleted since the scan take the finding with them (E5): accepting it is 404 and writes nothing", async () => {
+  it("points deleted since the scan take the finding with them (E5): accepting it is the plain 404 and writes nothing", async () => {
     const row = await finding();
     await deleteTravTrackRange(userId, new Date(BASE - MIN), new Date(BASE + 60 * MIN));
     const res = await accept(row.id);
     expect(res.status).toBe(404);
-    expect(res.body.code).toBe("SUGGESTION_NOT_FOUND");
+    // A row that is gone names no provider: the stays route answers the
+    // code-less 404 a Dawarich client always read (owner decision 2026-10-25).
+    expect(res.body.code).toBeUndefined();
     expect(await prisma.dawarichStay.findUnique({ where: { id: row.id } })).toBeNull();
     expect(await prisma.placeVisit.count({ where: { userId } })).toBe(0);
   });

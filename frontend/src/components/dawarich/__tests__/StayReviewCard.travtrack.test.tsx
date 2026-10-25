@@ -125,6 +125,37 @@ describe("a TravTrack finding on the review card", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("trips:dawarichStays.suggestionGone");
   });
 
+  it("a code-less 404 on a TravTrack card is the finding gone with its history", async () => {
+    vi.mocked(dawarichStaysApi.accept).mockRejectedValue({
+      response: { status: 404, data: { error: "Finding not found" } },
+    });
+    const done = mount();
+    fireEvent.click(screen.getByRole("button", { name: "trips:dawarichStays.accept" }));
+    await waitFor(() => expect(done).toHaveBeenCalled());
+    expect(screen.getByRole("alert")).toHaveTextContent("trips:dawarichStays.suggestionGone");
+  });
+
+  it("a code-less 404 on a Dawarich card reads as before: a plain error, the card stays", async () => {
+    vi.mocked(dawarichStaysApi.accept).mockRejectedValue({
+      response: { status: 404, data: { error: "Finding not found" } },
+    });
+    const done = mount({
+      ...travtrackRow,
+      evidence: {
+        source: "dawarich",
+        zone: "Asia/Seoul",
+        pointIds: [1, 2, 3, 4],
+        maxGapMinutes: 10,
+        uncertainties: [],
+      },
+    } as DawarichStay);
+    fireEvent.click(screen.getByRole("button", { name: "trips:dawarichStays.accept" }));
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent("trips:dawarichStays.error")
+    );
+    expect(done).not.toHaveBeenCalled();
+  });
+
   it("SUGGESTION_ACCEPT_IN_PROGRESS is retried quietly", async () => {
     vi.useFakeTimers();
     vi.mocked(dawarichStaysApi.accept)
