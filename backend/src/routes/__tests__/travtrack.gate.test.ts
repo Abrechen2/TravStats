@@ -133,6 +133,13 @@ describe("TravTrack gate", () => {
       "put /trips/:id/share-snapshot": "on",
       "delete /trips/:id/share-snapshot": "open",
       "get /trips/:id/shared-route": "on",
+      "delete /travtrack/points/:id": "held",
+      "get /travtrack/range": "on",
+      "get /travtrack/flights/:id/panel": "on",
+      "get /travtrack/stays": "on",
+      "get /travtrack/calendar": "on",
+      "get /travtrack/photos": "on",
+      "get /travtrack/photos/:assetId/file": "on",
     });
   });
 

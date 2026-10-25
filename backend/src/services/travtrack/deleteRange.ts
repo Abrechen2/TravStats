@@ -18,7 +18,8 @@ import { narrowOnPointsRemoved } from "./shareNarrow";
  *
  * Every removal of points — a range here (a day delete is one too; its
  * tombstone is the range), a new or grown privacy zone in `zones.ts`, a file
- * import deleted in `imports/fileImport.ts` — calls `onPointsRemoved` in its
+ * import deleted in `imports/fileImport.ts`, one point deleted by id in
+ * `deletePoint.ts` — calls `onPointsRemoved` in its
  * own transaction, under the TravTrack lock. The hook raises the account's
  * history generation (E5's fence: a scan or an accept that read before this
  * cannot publish after it) and runs every handler: the open findings and
@@ -43,7 +44,14 @@ export type PointsRemovedCause =
    * what a shared route's stored vertices are matched by, so another
    * source's vertex in the same hours stays.
    */
-  | ({ kind: "origin"; origin: string; keys: ReadonlySet<string> } & RemovedHistory);
+  | ({ kind: "origin"; origin: string; keys: ReadonlySet<string> } & RemovedHistory)
+  /**
+   * One point the owner deleted by id (plan T5.3, `deletePoint.ts`). Like an
+   * origin, no tombstone: a span would also hide every other fix of that
+   * instant. `keys` names exactly the one point, so a shared route loses that
+   * vertex and no other.
+   */
+  | ({ kind: "point"; pointId: string; keys: ReadonlySet<string> } & RemovedHistory);
 
 export type PointsRemovedHandler = (
   tx: DbTransaction,

@@ -104,6 +104,7 @@ import "./travtrackImports";
 import "./travtrackDawarichCopy";
 import "./travtrackSources";
 import "./travtrackShare";
+import "./travtrackViews";
 
 import "./geoServer";
 import "./mapConfig";

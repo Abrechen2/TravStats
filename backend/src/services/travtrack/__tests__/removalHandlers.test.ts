@@ -101,6 +101,22 @@ describe("every removal path runs the handler", () => {
     expect(await generation()).toBe(before + 1n);
   });
 
+  it("DELETE /travtrack/points/:id", async () => {
+    const row = await finding();
+    const point = await prisma.travTrackPoint.findFirstOrThrow({
+      where: { userId },
+      orderBy: { t: "asc" },
+    });
+    const before = await generation();
+    const res = await request(app)
+      .delete(`/api/v1/travtrack/points/${point.id}`)
+      .set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ deleted: 1 });
+    expect(await gone(row.id)).toBe(true);
+    expect(await generation()).toBe(before + 1n);
+  });
+
   it("POST /travtrack/zones", async () => {
     const row = await finding();
     const before = await generation();
