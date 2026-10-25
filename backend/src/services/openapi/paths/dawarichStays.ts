@@ -14,6 +14,8 @@ const scanTimes = z.object({
   windowEnd: timeValueSchema.nullable(),
 });
 const tags = ["Dawarich"];
+/** The scan row as answered: `provider` (the last scan's source) stays server-side. */
+const { provider: _scanProvider, ...scanColumns } = prismaColumns("DawarichStayScan");
 const failure = {
   description: "Invalid input, inaccessible finding, absent connection, or concurrent operation",
   content: errorContent,
@@ -29,6 +31,10 @@ const stay = z.object({
   }),
   ...prismaColumns("DawarichStay"),
   visit: z.object({ id: z.string(), placeId: z.string() }).nullable().optional(),
+  beforeSourceSwitch: z
+    .literal(true)
+    .optional()
+    .describe("Only on a TravTrack finding made before the account's last source switch"),
 });
 const response = (schema: z.ZodTypeAny) => ({
   description: "Account-scoped result",
@@ -43,7 +49,7 @@ registry.registerPath({
     "Conservative stationary clusters; not proof of GPS measurement or overnight accommodation. Original evidence and corrected times remain separate. Up to 200 most recent rows per status. `covered` lists findings resolved because a recorded place visit or lodging stay already holds them (within 250 m, a visit clock within 2 h or on the same local day); `evidence.coveredBy` names that record. Reading `pending` resolves newly covered findings first. With the account's `staySuggestions.enabled` setting off, `pending` answers an empty list, nothing is resolved, and accept/reject/scan are refused with `STAY_SUGGESTIONS_DISABLED` (409); stored rows are kept.",
   request: {
     query: z.object({
-      status: z.enum(["pending", "accepted", "rejected", "covered"]).optional(),
+      status: z.enum(["pending", "accepted", "rejected", "covered", "invalidated"]).optional(),
       from: z.string().optional().describe("ISO instant: only stays ending at or after it"),
       to: z.string().optional().describe("ISO instant: only stays starting at or before it"),
     }),
@@ -59,15 +65,26 @@ registry.registerPath({
     200: response(
       z
         .object({
-          ...prismaColumns("DawarichStayScan"),
+          ...scanColumns,
           times: scanTimes,
           connected: z.boolean(),
+          source: z
+            .literal("travtrack")
+            .describe(
+              "Present only when the scan reads TravTrack (provider `travtrack`); absent, it reads the own Dawarich connection"
+            ),
           placesEnabled: z.boolean(),
           pausedReason: z
-            .enum(["suggestionsDisabled", "disabled", "placesDisabled", "connectionMissing"])
+            .enum([
+              "suggestionsDisabled",
+              "disabled",
+              "placesDisabled",
+              "connectionMissing",
+              "travTrackDisabled",
+            ])
             .nullable()
             .describe(
-              "`suggestionsDisabled`: the account switched stay suggestions off (forgejo#306)"
+              "`suggestionsDisabled`: the account switched stay suggestions off (forgejo#306). `travTrackDisabled`: the source is TravTrack and the server's TravTrack is off"
             ),
           nextScanAt: z.string().datetime().nullable(),
           result: z.string().nullable(),
@@ -103,7 +120,12 @@ registry.registerPath({
     },
   },
   responses: {
-    200: response(z.object({ ...prismaColumns("DawarichStayScan"), times: scanTimes })),
+    200: response(z.object({ ...scanColumns, times: scanTimes })),
+    403: {
+      description:
+        "TRAVTRACK_DISABLED: consent through TravTrack while the server's TravTrack is off (revoking is always allowed)",
+      content: errorContent,
+    },
     409: failure,
   },
 });
@@ -157,11 +179,20 @@ registry.registerPath({
   path: "/dawarich-stays/{id}/accept",
   tags,
   summary: "Confirm a corrected stay, reusing or creating one visit atomically",
+  description:
+    "A TravTrack finding is claimed, its evidence re-checked against the history as it is now, and published under the account's TravTrack lock. Accepting an accepted finding answers it again (no second visit). 409 `SUGGESTION_ACCEPT_IN_PROGRESS`: another accept of it is being published — retry. 409 `EVIDENCE_INVALIDATED`: its history no longer holds it; the finding is invalidated before this answer. 409 `HISTORY_CHANGED`: the history kept changing while it was accepted — the finding stays open; retry. 409 `EVIDENCE_UNVERIFIABLE`: its evidence cannot be checked right now (map data missing) — the finding stays open. 403 `TRAVTRACK_DISABLED`: TravTrack is off on this server; the finding stays pending and can still be rejected. A Dawarich finding is accepted as before, without a re-check.",
   request: {
     params: z.object({ id: z.string().uuid() }),
     body: { content: { "application/json": { schema: stayReviewSchema } } },
   },
-  responses: { 200: response(stay), 400: failure, 404: failure, 409: failure, 422: failure },
+  responses: {
+    200: response(stay),
+    400: failure,
+    403: { description: "TRAVTRACK_DISABLED", content: errorContent },
+    404: failure,
+    409: failure,
+    422: failure,
+  },
 });
 registry.registerPath({
   method: "post",

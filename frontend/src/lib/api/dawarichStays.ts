@@ -5,6 +5,8 @@ import { waitForJob } from "./jobs";
 export interface StayScanState {
   enabled: boolean;
   connected: boolean;
+  /** Present only when the scan reads TravTrack; absent, it reads the own Dawarich connection. */
+  source?: "travtrack";
   marketEnabled?: boolean;
   venueEnabled?: boolean;
   marketResult?: {
@@ -22,7 +24,13 @@ export interface StayScanState {
     staleMapData: boolean;
   } | null;
   placesEnabled?: boolean;
-  pausedReason?: "suggestionsDisabled" | "disabled" | "placesDisabled" | "connectionMissing" | null;
+  pausedReason?:
+    | "suggestionsDisabled"
+    | "disabled"
+    | "placesDisabled"
+    | "connectionMissing"
+    | "travTrackDisabled"
+    | null;
   nextScanAt?: string | null;
   result: string | null;
   error: string | null;
@@ -40,7 +48,10 @@ export interface DawarichStay {
     TimeValue | null
   >;
   id: string;
-  status: "pending" | "accepted" | "rejected" | "covered";
+  /** `accepting`: a TravTrack finding mid-accept; still offered. `invalidated`: its history went. */
+  status: "pending" | "accepting" | "accepted" | "rejected" | "covered" | "invalidated";
+  /** Only on a TravTrack finding made before the account's last source switch. */
+  beforeSourceSwitch?: true;
   name: string | null;
   startAt: string;
   endAt: string;
@@ -59,7 +70,7 @@ export interface DawarichStay {
   detectedAt: string;
   resolvedAt: string | null;
   evidence: {
-    source: "dawarich";
+    source: "dawarich" | "travtrack";
     kind?: "market" | "venue";
     market?: {
       identity: string;
@@ -80,9 +91,13 @@ export interface DawarichStay {
       distanceM: number;
     };
     zone: string;
-    pointIds: number[];
+    /** Dawarich only: a TravTrack finding names its points by server-side digests. */
+    pointIds?: number[];
     maxGapMinutes: number;
     uncertainties: string[];
+    /** TravTrack only: why the finding was made, as a stable code and scalar params. */
+    explanation?: { code: string; params: Record<string, number | string> };
+    readCoverage?: "complete" | "truncated" | "unreachable";
   };
 }
 export interface StayChoices {

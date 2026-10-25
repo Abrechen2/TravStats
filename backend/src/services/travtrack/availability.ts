@@ -1,4 +1,4 @@
-import { prisma } from "../../db";
+import { prisma, type DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import { isSharedDemoUser } from "../../utils/sharedDemo";
 import { getInstanceSettings } from "../instanceSettingsService";
@@ -39,6 +39,21 @@ export async function assertTravTrackOffered(): Promise<void> {
 export async function travTrackInstanceOn(): Promise<boolean> {
   const [offered, config] = await Promise.all([travTrackOffered(), travTrackConfig()]);
   return offered && config.enabled;
+}
+
+/**
+ * `travTrackInstanceOn` read inside a transaction (TravTrack plan E3, Codex
+ * review): a derivation that publishes asks it after taking the TravTrack
+ * lock, so a switch-off that lands while it waited commits nothing of it.
+ * Read-only — no settings row is created here; without one nothing is offered.
+ */
+export async function travTrackInstanceOnIn(tx: DbTransaction): Promise<boolean> {
+  const admin = await tx.adminSettings.findFirst({
+    orderBy: { id: "asc" },
+    select: { betaFeaturesEnabled: true },
+  });
+  if (!admin?.betaFeaturesEnabled) return false;
+  return (await travTrackConfig(tx)).enabled;
 }
 
 export async function assertTravTrackOn(): Promise<void> {

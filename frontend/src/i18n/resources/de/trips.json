@@ -676,6 +676,13 @@
     "nextScan": "Nächste automatische Auswertung",
     "noPoints": "Für diesen Zeitraum wurden keine Positionspunkte geliefert. Daraus lassen sich keine Aufenthalte ableiten.",
     "staleData": "Die zuletzt gelieferten Positionsdaten sind mehr als 24 Stunden alt. Prüfe die Synchronisierung mit Dawarich; ein erfolgreicher Abruf bedeutet nicht, dass aktuelle Punkte vorliegen.",
+    "travtrack": {
+      "title": "Aufenthalte aus TravTrack",
+      "source": "Aus deinem TravTrack-Verlauf",
+      "description": "Aus deinem TravTrack-Verlauf werden alle sechs Stunden mögliche Aufenthalte der letzten sieben Tage erkannt. Es entstehen nur Vorschläge: Ein Besuch wird erst nach deiner Bestätigung eingetragen. Dies aktiviert weder den Immich-Scan noch die Ländererkennung.",
+      "off": "TravTrack ist auf diesem Server gerade ausgeschaltet. Es werden keine neuen Aufenthalte erkannt; du kannst die Erkennung aber jederzeit ausschalten.",
+      "staleData": "Die neuesten Positionsdaten in TravTrack sind mehr als 24 Stunden alt. Prüfe, ob dein Telefon noch aufzeichnet und hochlädt."
+    },
     "markets": {
       "enable": "Marktbesuche automatisch vorschlagen",
       "privacy": "Für die Flächenerkennung werden ungefähre Regionen (etwa 5-km-Raster) bei OpenStreetMap/Overpass abgefragt. Deine Positionsfolgen, Zeiten und Punkt-IDs werden nicht übertragen. Besuche werden erst nach deiner Bestätigung eingetragen.",
@@ -734,14 +741,37 @@
       "succeeded": "Auswertung abgeschlossen",
       "partial": "Auswertung teilweise – bitte die Datenlücken beachten",
       "failed": "Auswertung fehlgeschlagen",
-      "interrupted": "Auswertung unterbrochen; bitte erneut starten"
+      "interrupted": "Auswertung unterbrochen; bitte erneut starten",
+      "stale": "Auswertung abgebrochen – der Standortverlauf wurde währenddessen gelöscht; die nächste Auswertung liest ihn neu"
     },
     "status": {
       "pending": "Zu prüfen",
       "accepted": "Übernommen",
       "rejected": "Verworfen",
-      "covered": "Bereits erfasst"
+      "covered": "Bereits erfasst",
+      "accepting": "Wird übernommen",
+      "invalidated": "Die Belege dafür gelten nicht mehr"
     },
+    "source": {
+      "travtrack": "Aus TravTrack"
+    },
+    "beforeSourceSwitch": "Vor dem Quellwechsel erkannt",
+    "explanation": {
+      "stay": {
+        "dwell": "{{points}} Positionen innerhalb von {{radiusM}} m über {{minutes}} Minuten (längste Lücke {{maxGapMinutes}} Minuten)"
+      },
+      "market": {
+        "visit": "{{points}} Positionen über {{minutes}} Minuten auf dem Marktgelände"
+      },
+      "venue": {
+        "visit": "{{points}} Positionen über {{minutes}} Minuten auf dem Gelände"
+      }
+    },
+    "evidenceInvalidated": "Nicht übernommen: Der Standortverlauf zu diesem Vorschlag wurde inzwischen gelöscht oder hat sich geändert.",
+    "evidenceUnverifiable": "Die Belege für diesen Vorschlag lassen sich gerade nicht prüfen, weil die Kartendaten dazu fehlen. Der Vorschlag bleibt erhalten; versuche es nach der nächsten Auswertung erneut.",
+    "travTrackDisabled": "TravTrack ist auf diesem Server gerade ausgeschaltet. Der Vorschlag bleibt erhalten und kann später übernommen oder jetzt verworfen werden.",
+    "acceptInProgress": "Dieser Vorschlag wird gerade an anderer Stelle übernommen. Bitte versuche es gleich noch einmal.",
+    "historyChanged": "Der Standortverlauf hat sich während der Übernahme mehrfach geändert. Der Vorschlag bleibt erhalten; bitte versuche es gleich noch einmal.",
     "coveredBy": {
       "visit": "Bereits erfasst als Besuch: {{name}}",
       "lodging": "Bereits erfasst als Unterkunft: {{name}}"

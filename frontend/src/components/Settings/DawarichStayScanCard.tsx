@@ -54,6 +54,11 @@ export default function DawarichStayScanCard({
   const stale =
     !!state?.dataThrough && Date.now() - Date.parse(state.dataThrough) > 24 * 60 * 60_000;
   const text = (key: string) => t(`trips:dawarichStays.${key}`);
+  // A TravTrack account reads its own history: the copy names that source and
+  // never a Dawarich connection it does not need (TravTrack plan E3).
+  const travtrack = state?.source === "travtrack";
+  const sourceText = (key: "title" | "description" | "staleData") =>
+    text(travtrack ? `travtrack.${key}` : key);
   const errorKey =
     state?.error &&
     ["auth", "unreachable", "protocol", "notFound", "invalidUrl"].includes(state.error)
@@ -61,8 +66,9 @@ export default function DawarichStayScanCard({
       : null;
   return (
     <SectionCard>
-      <h3 className="t-heading-sm">{text("title")}</h3>
-      <p className="t-body mt-2">{text("description")}</p>
+      <h3 className="t-heading-sm">{sourceText("title")}</h3>
+      <p className="t-body mt-2">{sourceText("description")}</p>
+      {travtrack && <p className="t-caption mt-1">{text("travtrack.source")}</p>}
       <label className="flex items-center gap-3 my-4">
         <input
           type="checkbox"
@@ -129,7 +135,7 @@ export default function DawarichStayScanCard({
           </p>
         </div>
       )}
-      {state && !state.connected && <p>{text("ownConnection")}</p>}
+      {state && !state.connected && <p>{text(travtrack ? "travtrack.off" : "ownConnection")}</p>}
       {suggestionsPaused && <p className="my-3">{text("suggestionsPaused")}</p>}
       {placesPaused && <p className="my-3">{text("placesPaused")}</p>}
       {state && !state.enabled && <p className="my-3">{text("disabled")}</p>}
@@ -197,7 +203,7 @@ export default function DawarichStayScanCard({
       {state?.finishedAt &&
         ["succeeded", "partial"].includes(state.result ?? "") &&
         !state.dataThrough && <p>{text("noPoints")}</p>}
-      {stale && <p>{text("staleData")}</p>}
+      {stale && <p>{sourceText("staleData")}</p>}
       {(error || loadError || (state?.error && !state.pausedReason)) && (
         <p role="alert" className="mt-3">
           {errorKey ? t(errorKey) : text("error")}
