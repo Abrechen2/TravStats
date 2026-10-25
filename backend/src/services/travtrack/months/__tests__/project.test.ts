@@ -3,6 +3,7 @@ import { haversineKm } from "../../../../shared/geo/haversine";
 import { utcMidnight } from "../../../countryDays/store";
 import { setLocationProvider } from "../../../locationProvider/provider";
 import { deleteTravTrackRange } from "../../deleteRange";
+import { createZone, updateZone } from "../../zones";
 import { COUNTRY_DAYS_BIT, MONTHS_BIT, markTravTrackDaysDirty } from "../../dirtyDays";
 import { makeFlight, makeUser, storePoint, wipeTravTrack } from "../../__tests__/fixtures";
 import { travTrackSwitches } from "../../__tests__/switches";
@@ -225,6 +226,44 @@ describe("projectMonths", () => {
     await countriesDone();
     await projectMonths(userId);
     expect(await month()).toMatchObject({ daysWithData: 1, kmGround: 0 });
+  });
+
+  it("a new zone over a counted chord invalidates the month even when it deletes no point", async () => {
+    await store(at(D1, "03:00:00"), { lat: SEOUL.lat, lon: SEOUL.lon - 0.015 });
+    await store(at(D1, "03:05:00"), { lat: SEOUL.lat, lon: SEOUL.lon + 0.015 });
+    await busanWalk(D1);
+    await dirty([D1]);
+    await countriesDone();
+    await projectMonths(userId);
+    expect((await month())!.kmGround).toBeGreaterThan(2);
+
+    const { deleted } = await createZone(userId, { name: "Z", ...SEOUL, radiusM: 500 }, false);
+    expect(deleted).toBe(0);
+
+    // Gone with the zone, in its transaction, and owed again.
+    expect(await month()).toBeNull();
+    expect((await dirtyRow(D1)).done & MONTHS_BIT).toBe(0);
+    await countriesDone();
+    await projectMonths(userId);
+    expect((await month())!.kmGround).toBeCloseTo(km(BUSAN, BUSAN_EAST), 6);
+  });
+
+  it("a zone grown over a counted chord invalidates it too; a far zone leaves the month alone", async () => {
+    await store(at(D1, "03:00:00"), { lat: SEOUL.lat, lon: SEOUL.lon - 0.015 });
+    await store(at(D1, "03:05:00"), { lat: SEOUL.lat, lon: SEOUL.lon + 0.015 });
+    await dirty([D1]);
+    await countriesDone();
+    await projectMonths(userId);
+    const far = await createZone(
+      userId,
+      { name: "Far", lat: 48.137, lon: 11.575, radiusM: 500 },
+      false
+    );
+    expect(await month()).not.toBeNull();
+
+    await updateZone(userId, far.zone.id, { ...SEOUL, radiusM: 500 }, false);
+
+    expect(await month()).toBeNull();
   });
 
   it("a rolled-back delete leaves the month as it was", async () => {

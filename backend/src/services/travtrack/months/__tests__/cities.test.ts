@@ -7,6 +7,7 @@ import { travTrackSwitches } from "../../__tests__/switches";
 import type { StoredPoint } from "../../../tripRecording/segments";
 import { cityCellOf, dwellCells } from "../cities";
 import { projectMonths } from "../project";
+import { createZone } from "../../zones";
 import { setTravTrackCityLookup } from "../read";
 
 /**
@@ -23,7 +24,7 @@ const at = (day: string, time: string) => Date.parse(`${day}T${time}Z`);
 const SEOUL = { lat: 37.5665, lon: 126.978 };
 const SEOUL_NEAR = { lat: 37.5671, lon: 126.9786 };
 const BUSAN = { lat: 35.1796, lon: 129.0756 };
-const CELLS = ["37.57,126.98", "35.18,129.08"];
+const CELLS = ["37.57,126.98", "35.18,129.08", "52.52,13.40"];
 
 const ok = (city: string) => ({ parts: { city }, degraded: false });
 
@@ -132,6 +133,28 @@ describe("monthly values — cities", () => {
 
     expect(geocode.mock.calls.map(([lat]) => lat)).toEqual([37.57]);
     expect((await month())!.cities).toEqual([{ name: "Seoul", countryCode: "KR" }]);
+  });
+
+  it("a new zone over a named dwell's cell centre takes the city back, though it deletes no fix", async () => {
+    await setTravTrackCityLookup(userId, true);
+    // 365 m from the zone's centre, outside its 300 m — but its cell's centre is inside.
+    await dwell("03:00:00", { lat: 52.5225, lon: 13.4035 });
+    await dirty();
+    await run();
+    expect((await month())!.cities).toHaveLength(1);
+
+    const { deleted } = await createZone(
+      userId,
+      { name: "Z", lat: 52.52, lon: 13.4, radiusM: 300 },
+      false
+    );
+    expect(deleted).toBe(0);
+    expect(await month()).toBeNull();
+
+    await prisma.$executeRaw`UPDATE travtrack_dirty_days SET done = done | ${COUNTRY_DAYS_BIT}
+                              WHERE user_id = ${userId}`;
+    await run();
+    expect((await month())!.cities).toEqual([]);
   });
 
   it("a failed lookup leaves the cities null, the month owed and nothing cached", async () => {

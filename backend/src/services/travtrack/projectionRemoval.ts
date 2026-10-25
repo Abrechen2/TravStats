@@ -17,6 +17,7 @@ import type { PointsRemovedCause } from "./deleteRange";
 import { markTravTrackDaysDirty, removalDays } from "./dirtyDays";
 import { exploredOnHistoryDeleted } from "./explored/project";
 import { monthsOnHistoryDeleted } from "./months/project";
+import { monthsOnZoneChanged } from "./months/zoneChange";
 
 const dayMs = (day: string) => Date.parse(`${day}T00:00:00.000Z`);
 
@@ -43,10 +44,13 @@ export async function projectionsOnHistoryDeleted(
 }
 
 /** The removal hook (`onPointsRemoved`): every cause names the days it emptied. */
-export function projectionsOnPointsRemoved(
+export async function projectionsOnPointsRemoved(
   tx: DbTransaction,
   userId: string,
   cause: PointsRemovedCause
 ): Promise<void> {
-  return projectionsOnHistoryDeleted(tx, userId, cause.days);
+  await projectionsOnHistoryDeleted(tx, userId, cause.days);
+  // A new or grown zone can hide counted kilometres and a city's cell
+  // without a stored point inside it (L3): its months are owed again.
+  if (cause.kind === "zone") await monthsOnZoneChanged(tx, userId, cause.zone);
 }
