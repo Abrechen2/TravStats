@@ -253,6 +253,9 @@ describe("a range delete", () => {
     const said = JSON.stringify(row.evidence);
     for (const d of digests) expect(said).not.toContain(d);
     expect(said).not.toContain(String(SEOUL.lat));
+    // The explanation keeps its code and the rule's radius — no count or
+    // duration read from the deleted history (Codex review of L4).
+    expect(evidence.explanation).toEqual({ code: "stay.dwell", params: { radiusM: 150 } });
   });
 
   it("an accepted country question stays accepted with its override, and keeps no evidence but a summary", async () => {
@@ -271,6 +274,12 @@ describe("a range delete", () => {
     expect(Object.keys(row.evidence as object).sort()).toEqual(
       ["algorithmVersion", "countryCode", "historyDeletedAt", "provider", "source"].sort()
     );
+    // The question keeps its country and its days; the point count read from
+    // the deleted history goes (Codex review of L4).
+    expect(row.explanation).toEqual({
+      code: "country.groundDays",
+      params: { country: "PT", days: 2 },
+    });
     expect(await prisma.countryOverride.count({ where: { id: override.id } })).toBe(1);
   });
 

@@ -31,11 +31,15 @@
  * (`source`, `provider`, `algorithmVersion`, the explanation, the time zone or
  * the country, a trip's span, `historyDeletedAt`); a stay's source position becomes its
  * accepted pin; a journey keeps, per run, its times, its answer and the entry
- * it was linked to — no end, no line, no digest. Dawarich rows are never touched: their history is not ours.
+ * it was linked to — no end, no line, no digest. The explanation keeps its code
+ * and only the params that name the question or its span
+ * (`KEPT_EXPLANATION_PARAMS`): no count, duration or distance read from the
+ * deleted points. Dawarich rows are never touched: their history is not ours.
  *
  * Logged with ids and counts only (`EvidenceInvalidated`).
  */
 import type { DbTransaction } from "../../db";
+import { Prisma } from "../../prisma";
 import logger from "../../utils/logger";
 import { distanceM } from "../travtrack/classify";
 import type { ZoneCircle } from "../travtrack/classify";
@@ -248,6 +252,25 @@ async function removeOpenStays(tx: DbTransaction, userId: string, ids: string[])
   return count;
 }
 
+/**
+ * The explanation params an answer keeps once its history went: what names the
+ * question (a country, a trip it widened), its span (days, runs) and a rule's
+ * own constant (`radiusM`). Every figure read from the deleted points — counts,
+ * durations, gaps, kilometres — goes with them (Codex review of L4).
+ */
+export const KEPT_EXPLANATION_PARAMS = ["country", "days", "runs", "tripId", "radiusM"];
+
+/** SQL: `explanation` (a jsonb expression) cut to its code and the kept params. */
+const scrubbedExplanation = (expr: Prisma.Sql) => Prisma.sql`
+  CASE WHEN jsonb_typeof(${expr}) = 'object' THEN jsonb_build_object(
+    'code', ${expr}->'code',
+    'params', COALESCE((
+      SELECT jsonb_object_agg(k, v)
+        FROM jsonb_each(CASE WHEN jsonb_typeof(${expr}->'params') = 'object'
+                             THEN ${expr}->'params' ELSE '{}'::jsonb END) AS p(k, v)
+       WHERE k = ANY(${KEPT_EXPLANATION_PARAMS}::text[])), '{}'::jsonb))
+  END`;
+
 /** An accepted stay keeps its answer and a summary; its source position becomes its pin. */
 async function stripAcceptedStays(tx: DbTransaction, ids: string[], at: string): Promise<void> {
   if (ids.length === 0) return;
@@ -260,7 +283,7 @@ async function stripAcceptedStays(tx: DbTransaction, ids: string[], at: string):
              'algorithmVersion', algorithm_version,
              'kind', evidence->'kind',
              'zone', evidence->'zone',
-             'explanation', evidence->'explanation',
+             'explanation', ${scrubbedExplanation(Prisma.sql`evidence->'explanation'`)},
              'historyDeletedAt', COALESCE(evidence->'historyDeletedAt', to_jsonb(${at}::text))))
      WHERE id = ANY(${ids}::text[])`;
 }
@@ -275,7 +298,8 @@ async function stripAcceptedSuggestions(
   // a TravStats entry — and nothing that places it: no end, line or digest.
   await tx.$executeRaw`
     UPDATE location_suggestions
-       SET evidence = jsonb_strip_nulls(jsonb_build_object(
+       SET explanation = COALESCE(${scrubbedExplanation(Prisma.sql`explanation`)}, explanation),
+           evidence = jsonb_strip_nulls(jsonb_build_object(
              'source', 'travtrack',
              'provider', provider,
              'algorithmVersion', algorithm,

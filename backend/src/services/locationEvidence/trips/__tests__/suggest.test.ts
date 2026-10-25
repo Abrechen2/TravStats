@@ -253,5 +253,7 @@ describe("suggestTrips", () => {
     expect(kept.evidence).not.toHaveProperty("countries");
     expect(kept.evidence).not.toHaveProperty("km");
     expect(kept.evidence).toHaveProperty("historyDeletedAt");
+    // The distance from home was measured on the deleted history; the span stays.
+    expect(kept.explanation).toEqual({ code: "trip.away", params: { days: 2 } });
   });
 });
