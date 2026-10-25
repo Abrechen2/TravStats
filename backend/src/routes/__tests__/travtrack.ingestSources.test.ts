@@ -328,6 +328,15 @@ describe("TravTrack — OwnTracks and Overland", () => {
       expect(await pointCount()).toBe(1);
     });
 
+    it("an OwnTracks tst no Date can hold is counted; its siblings are stored", async () => {
+      const res = await request(app)
+        .post(OT)
+        .set("Authorization", basic(owntracks.token))
+        .send([{ ...owntracksAndroidLocation, tst: 9_000_000_000_000 }, owntracksIosLocation]);
+      expect([res.status, res.body]).toEqual([200, []]);
+      expect(await pointCount()).toBe(1);
+    });
+
     it("the recorded Overland batch stores every point and answers result ok", async () => {
       const res = await request(app)
         .post(OL)

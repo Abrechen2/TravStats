@@ -1,5 +1,6 @@
 import { z } from "../../../schemas/zod";
 import { LOCATION_MAX_POINTS } from "../../../schemas/travtrack";
+import { instantMs } from "../classify";
 
 /**
  * Overland batches as TravTrack points (TravTrack plan E9). The app posts
@@ -46,8 +47,6 @@ export type OverlandBody = z.infer<typeof overlandBodySchema>;
 export const normaliseOffset = (ts: string): string =>
   ts.replace(/([+-])(\d{2})(\d{2})$/, "$1$2:$3");
 
-const HAS_OFFSET = /(Z|[+-]\d{2}:\d{2})$/;
-
 /** Overland's activity words in TravTrack's motion vocabulary. */
 const MOTION: Record<string, string> = {
   driving: "automotive",
@@ -72,7 +71,8 @@ export function mapOverland(body: OverlandBody): MappedOverland {
   for (const raw of body.locations) {
     const f = featureSchema.safeParse(raw);
     const timestamp = f.success ? normaliseOffset(f.data.properties.timestamp) : "";
-    if (!f.success || !HAS_OFFSET.test(timestamp)) {
+    // An instant with an offset, in the years the ingest accepts.
+    if (!f.success || instantMs(timestamp) === null) {
       out.invalid += 1;
       continue;
     }

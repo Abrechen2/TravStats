@@ -72,4 +72,15 @@ describe("mapOwnTracks", () => {
       ignored: 1,
     });
   });
+
+  it("a tst no Date can hold, or one outside the accepted years, is invalid; siblings stay", () => {
+    const mapped = mapOwnTracks([
+      { ...owntracksAndroidLocation, tst: 9_000_000_000_000 },
+      { ...owntracksAndroidLocation, tst: 100 },
+      { ...owntracksAndroidLocation, tst: Math.floor(Date.now() / 1000) + 3 * 86_400 },
+      owntracksIosLocation,
+    ]);
+    expect(mapped.points).toHaveLength(1);
+    expect(mapped.invalid).toBe(3);
+  });
 });

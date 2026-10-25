@@ -1,4 +1,5 @@
 import { z } from "../../../schemas/zod";
+import { acceptedInstant } from "../classify";
 
 /**
  * OwnTracks messages as TravTrack points (TravTrack plan E9). The app posts in
@@ -11,7 +12,8 @@ import { z } from "../../../schemas/zod";
  *
  * Field by field: `tst` (seconds) → `t`, `acc` → accuracy (m), `alt` →
  * altitude (m), `vel` (km/h) → speed (m/s), `cog` → course (°). A negative
- * `acc`, `vel` or `cog` is the app's "unknown" and becomes null.
+ * `acc`, `vel` or `cog` is the app's "unknown" and becomes null. A `tst`
+ * outside the years the ingest accepts makes the message invalid.
  */
 
 const finite = z.number();
@@ -67,6 +69,12 @@ export function mapOwnTracks(body: unknown): MappedOwnTracks {
       continue;
     }
     const m = loc.data;
+    // Checked before `toISOString`, which throws on a tst no Date can hold —
+    // and one throw would have failed the whole batch on every resend.
+    if (!acceptedInstant(m.tst * 1000)) {
+      out.invalid += 1;
+      continue;
+    }
     const vel = known(m.vel);
     out.points.push({
       id: `${m.tst}:${m.lat}:${m.lon}`,

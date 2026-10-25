@@ -66,4 +66,23 @@ describe("mapOverland", () => {
     expect(overlandBodySchema.safeParse({}).success).toBe(false);
     expect(overlandBodySchema.safeParse({ locations: "x" }).success).toBe(false);
   });
+
+  it("a timestamp outside the accepted years is invalid; siblings stay", () => {
+    const [good] = overlandBatch.locations;
+    const at = (timestamp: string) => ({
+      ...good,
+      properties: { ...good.properties, timestamp },
+    });
+    const mapped = parse({
+      locations: [
+        good,
+        at("+275760-09-13T00:00:00Z"),
+        at("1970-01-01T00:00:00+0000"),
+        at("2999-01-01T00:00:00Z"),
+        at("2026-13-45T99:00:00Z"),
+      ],
+    });
+    expect(mapped.points).toHaveLength(1);
+    expect(mapped.invalid).toBe(4);
+  });
 });
