@@ -7,8 +7,10 @@ import {
   type TrackOrigin,
 } from "../../services/locationProvider/entryTrack";
 import type { FlightWindowColumns } from "../../services/flightDevice/flightWindow";
-import { flightTrackColumns } from "../../services/flightDevice/flightTrackIngest";
+import type { ZoneCircle } from "../../services/travtrack/classify";
 import { viewableFlightTrack } from "../../services/travtrack/flightTrackView";
+import { privacyCirclesFor } from "../../services/travtrack/privacyCircles";
+import { zoneSafeFlightColumns } from "../../services/travtrack/providerFlightColumns";
 
 /**
  * Where `GET /flights/:id/track` takes its line from (TravTrack plan T5): the
@@ -29,18 +31,20 @@ export const trackSourceQuerySchema = z.object({
 function trackOf(
   flightId: string,
   origin: Exclude<TrackOrigin, "travstats">,
-  devices: readonly EntryTrackDevice[]
+  device: EntryTrackDevice | undefined,
+  circles: readonly ZoneCircle[]
 ) {
-  const device = [...devices].sort((a, b) => b.points.length - a.points.length)[0];
   if (!device || device.points.length < 2) return null;
-  const columns = flightTrackColumns(
+  // Cut on the fixes, before anything is measured (Codex review of T5).
+  const columns = zoneSafeFlightColumns(
     device.points.map((p) => ({
       t: p.atMs,
       lat: p.lat,
       lon: p.lon,
       ...(p.altitudeM !== null ? { alt: p.altitudeM } : {}),
       ...(p.accuracyM !== null ? { accuracy: p.accuracyM } : {}),
-    }))
+    })),
+    circles
   );
   if (!columns) return null;
   return {
@@ -71,9 +75,15 @@ export async function providerFlightTrack(
   source: TrackOrigin | undefined
 ) {
   const entry = await flightEntryTrack(userId, flight, { source });
+  const device = [...entry.devices].sort((a, b) => b.points.length - a.points.length)[0];
   const built =
-    entry.origin === "travtrack" || entry.origin === "dawarich"
-      ? trackOf(flight.id, entry.origin, entry.devices)
+    (entry.origin === "travtrack" || entry.origin === "dawarich") && device
+      ? trackOf(
+          flight.id,
+          entry.origin,
+          device,
+          await privacyCirclesFor(userId, device.points[0]?.atMs ?? 0)
+        )
       : null;
   const track = built ? await viewableFlightTrack(userId, built) : null;
   return { entry, track };

@@ -1,10 +1,10 @@
 import { prisma } from "../../db";
 import { recorderWindow, scheduledInstants } from "../flightDevice/flightWindow";
-import { flightTrackColumns } from "../flightDevice/flightTrackIngest";
 import { observationOf, TRAVTRACK_OBSERVATION_SELECT } from "../locationProvider/travtrackProvider";
 import type { LocationObservation } from "../locationProvider/types";
 import { byDevice } from "../locationProvider/entryTrack";
 import { cutFlightTrackWith } from "./flightTrackView";
+import { zoneSafeFlightColumns } from "./providerFlightColumns";
 import type { CircleSet } from "./privacyCircles";
 
 /**
@@ -84,8 +84,10 @@ export async function travTrackFlightLines(
     const points = [...map.values()].sort((a, b) => a.atMs - b.atMs);
     const device = byDevice(points).sort((a, b) => b.points.length - a.points.length)[0];
     if (!device || device.points.length < 2) continue;
-    const columns = flightTrackColumns(
-      device.points.map((p) => ({ t: p.atMs, lat: p.lat, lon: p.lon }))
+    // Cut on the fixes before they are measured, then once more on the simplified line.
+    const columns = zoneSafeFlightColumns(
+      device.points.map((p) => ({ t: p.atMs, lat: p.lat, lon: p.lon })),
+      circles(device.points[0].atMs)
     );
     if (!columns) continue;
     const cut = cutFlightTrackWith(columns, circles(columns.startedAt.getTime())).track;

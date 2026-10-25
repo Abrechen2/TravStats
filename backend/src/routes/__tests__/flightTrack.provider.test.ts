@@ -75,6 +75,27 @@ describe("flight tracks from the location provider", () => {
     expect(res.body.track.geometry.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("a fix inside a zone is out of the flight's figures, though simplification would hide it", async () => {
+    await setLocationProvider(userId, "travtrack");
+    for (let i = 0; i < 10; i++) {
+      await storePoint(userId, {
+        t: DEP + i * MIN,
+        lat: 37.4 - i * 0.06,
+        // The sixth fix strays 4 m east — inside a 3 m zone around it.
+        lon: i === 5 ? 126.45005 : 126.45,
+      });
+    }
+    await prisma.travTrackPrivacyZone.create({
+      data: { userId, name: "Klein", lat: 37.1, lon: 126.45005, radiusM: 3 },
+    });
+    const res = await request(app).get(`/api/v1/flights/${flightId}/track`).set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.track.pointCount).toBe(9);
+    // Nine steps of ~6.7 km would be ~60 km; the step over the zone is not counted.
+    expect(res.body.track.distanceKm).toBeLessThan(50);
+    expect(res.body.track.segmentStarts).toHaveLength(2);
+  });
+
   it("track-lines draws a TravTrack flight from its points and marks origin", async () => {
     await setLocationProvider(userId, "travtrack");
     await flown();

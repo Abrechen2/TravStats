@@ -2,7 +2,7 @@ import { prisma } from "../../db";
 import { haversineKm } from "../../shared/geo/haversine";
 import type { ZoneCircle } from "./classify";
 import { privacyCirclesFor } from "./privacyCircles";
-import { privacyCutBy, type LonLat } from "./privacyCut";
+import { privacyCutBy, segmentCrossesZone, type LonLat } from "./privacyCut";
 
 /**
  * The ONE way a stored flight recording reaches anybody (TravTrack plan T5,
@@ -12,15 +12,17 @@ import { privacyCutBy, type LonLat } from "./privacyCut";
  * and every former zone's circle that still covers a line begun before it
  * went. Nothing inside a circle and no chord through one ever leaves.
  *
- * And nothing ABOUT the hidden part leaves either: once the cut changed the
- * line — a vertex removed, or a stretch broken where a chord crossed a zone —
- * every figure describes what is left. `cumulativeKm` is rebased onto the
- * kept stretches (each starts where the one before ended), `distanceKm` is
- * their sum, `pointCount` the kept vertices, the altitude profile keeps only
- * the kept stretches with its distances rebased the same way (dropped without
- * a running distance to place it), and a cut end has no time (`startCut` /
- * `endCut`): the line holds no per-vertex times, so the time of the vertex
- * that is now last is not known.
+ * And nothing ABOUT the hidden part leaves either. A stored line is
+ * simplified and its raw fixes are gone, so whether a figure's basis held a
+ * fix inside a circle can only be bounded: a line farther than
+ * `FIGURE_TRUST_MARGIN_M` from every circle is served as stored; any other is
+ * rebuilt from its kept geometry — the running distance re-measured on the
+ * chords near a circle (each kept stretch starting where the one before
+ * ended), `distanceKm` its total, `pointCount` the kept vertices, the
+ * altitude profile only on trusted chords, no jitter count, and an end that
+ * was cut or lies near a circle without its time (`startCut` / `endCut`).
+ * A line built from a provider's fixes is cut BEFORE it is measured
+ * (`providerFlightColumns.ts`) and checked here once more.
  */
 
 export type FlightTrackLine = {
@@ -30,6 +32,7 @@ export type FlightTrackLine = {
   distanceKm?: number;
   pointCount?: number;
   elevations?: unknown;
+  jitterDropped?: number | null;
   startedAt: Date;
 };
 
@@ -54,61 +57,88 @@ const asNumbers = (value: unknown): number[] | null =>
 
 type Kept = Array<Array<{ p: LonLat; i: number }>>;
 
-/** The kept stretches' length on the sphere, for a line without a running distance. */
-function sphereKm(kept: Kept): number {
-  let km = 0;
-  for (const line of kept) {
-    for (let k = 1; k < line.length; k++) {
-      const [a, b] = [line[k - 1].p, line[k].p];
-      km += haversineKm({ lon: a[0], lat: a[1] }, { lon: b[0], lat: b[1] });
-    }
-  }
-  return km;
-}
+/**
+ * How near a zone a stored line may pass before its figures are no longer
+ * trusted. A stored line is simplified and its raw fixes are gone; a fix
+ * simplification dropped lay within the simplification tolerance of a kept
+ * chord — 11 m at the start, raised only while a long recording exceeds its
+ * vertex cap. 5 km is far beyond that, so a chord farther than this from every
+ * circle provably had no fix inside one, and its stored running distance,
+ * altitude profile and end times are kept; nearer, they are measured again on
+ * the kept geometry or left out.
+ */
+export const FIGURE_TRUST_MARGIN_M = 5000;
+
+const near = (a: LonLat, b: LonLat, circles: readonly ZoneCircle[]) =>
+  circles.some((c) =>
+    segmentCrossesZone(a, b, { ...c, radiusM: c.radiusM + FIGURE_TRUST_MARGIN_M })
+  );
 
 const round = (km: number) => Math.round(km * 1000) / 1000;
 
+const stepKm = (a: LonLat, b: LonLat) =>
+  haversineKm({ lon: a[0], lat: a[1] }, { lon: b[0], lat: b[1] });
+
 /**
- * The running distance rebased onto the kept stretches: each kept line starts
- * where the one before ended, so no figure counts the distance through a hidden
- * part or across a broken chord. `offsets[k]` maps the original running
- * distance inside kept line k onto the rebased one.
+ * The running distance over the kept stretches, each starting where the one
+ * before ended. A chord far from every circle keeps its stored raw distance
+ * (exact, AUD-034); a chord near one, or a line without a running distance,
+ * is measured on the sphere. `ranges` place the altitude profile: the stored
+ * distance range of each trusted chord and how far it moved.
  */
-function rebase(kept: Kept, cumulative: number[]) {
-  const offsets: Array<{ from: number; to: number; shift: number }> = [];
+function remeasure(kept: Kept, circles: readonly ZoneCircle[], cumulative: number[] | null) {
   const km: number[] = [];
+  const ranges: Array<{ from: number; to: number; shift: number }> = [];
   let acc = 0;
   for (const line of kept) {
-    const from = cumulative[line[0].i];
-    const to = cumulative[line[line.length - 1].i];
-    offsets.push({ from, to, shift: acc - from });
-    for (const v of line) km.push(round(cumulative[v.i] + acc - from));
-    acc += to - from;
+    km.push(round(acc));
+    for (let k = 1; k < line.length; k++) {
+      const [a, b] = [line[k - 1], line[k]];
+      const trusted = cumulative !== null && !near(a.p, b.p, circles);
+      const step = trusted ? cumulative[b.i] - cumulative[a.i] : stepKm(a.p, b.p);
+      if (trusted)
+        ranges.push({ from: cumulative[a.i], to: cumulative[b.i], shift: acc - cumulative[a.i] });
+      acc += step;
+      km.push(round(acc));
+    }
   }
-  return { km, offsets, total: round(acc) };
+  return { km, ranges, total: round(acc) };
 }
 
-/** The altitude profile within the kept stretches, its distances rebased with them. */
+/** The altitude profile on the trusted chords only, its distances moved with them. */
 function keptElevations(
   elevations: unknown,
-  offsets: ReturnType<typeof rebase>["offsets"] | null
+  ranges: ReturnType<typeof remeasure>["ranges"] | null
 ): unknown {
   if (!Array.isArray(elevations)) return elevations ?? null;
-  if (!offsets) return null;
-  return elevations.flatMap((e) => {
+  if (!ranges) return null;
+  const kept = elevations.flatMap((e) => {
     if (!Array.isArray(e) || typeof e[0] !== "number") return [];
-    const range = offsets.find((o) => e[0] >= o.from && e[0] <= o.to);
+    const range = ranges.find((r) => e[0] >= r.from && e[0] <= r.to);
     return range ? [[round(e[0] + range.shift), e[1]]] : [];
   });
+  // Two chords meeting at a vertex both hold the vertex's sample: keep it once.
+  const unique = kept.filter(
+    (e, k) => k === 0 || e[0] !== kept[k - 1][0] || e[1] !== kept[k - 1][1]
+  );
+  return unique.length > 0 ? unique : null;
 }
 
-/** The line cut with `circles`, and every figure describing only what is left. */
+/**
+ * The line cut with `circles`, and every figure describing only what is left.
+ * A line far from every circle is returned as it is; any other is rebuilt:
+ * the kept pieces, the running distance re-measured where its basis may have
+ * held a hidden fix, the vertex count of what is drawn, no jitter count (its
+ * basis held the hidden part), and an end near a circle without its time.
+ */
 export function cutFlightTrackWith<T extends FlightTrackLine>(
   track: T,
   circles: readonly ZoneCircle[]
 ): ViewableTrack<T> {
   const geometry = asLine(track.geometry);
-  if (circles.length === 0) return { track, startCut: false, endCut: false };
+  if (circles.length === 0 || geometry.length === 0) {
+    return { track, startCut: false, endCut: false };
+  }
   const cumulative = asNumbers(track.cumulativeKm);
   const starts = [...new Set([0, ...asStarts(track.segmentStarts)])]
     .filter((i) => i < geometry.length)
@@ -116,16 +146,13 @@ export function cutFlightTrackWith<T extends FlightTrackLine>(
   const lines = starts.map((start, k) =>
     geometry.slice(start, starts[k + 1] ?? geometry.length).map((p, j) => ({ p, i: start + j }))
   );
+  const anyNear = lines.some((line) =>
+    line.some((v, k) => near(line[k - 1]?.p ?? v.p, v.p, circles))
+  );
+  if (!anyNear) return { track, startCut: false, endCut: false };
+
   const kept: Kept = privacyCutBy(lines, circles, (v) => v.p);
   const keptCount = kept.reduce((n, line) => n + line.length, 0);
-  // Unchanged only when every vertex stayed AND the pieces are the original
-  // stretches: a chord through a zone breaks a stretch without removing a vertex.
-  const sameShape =
-    keptCount === geometry.length &&
-    kept.length === lines.length &&
-    kept.every((line, k) => line[0].i === starts[k]);
-  if (sameShape) return { track, startCut: false, endCut: false };
-
   const out: LonLat[] = [];
   const outStarts: number[] = [];
   for (const line of kept) {
@@ -133,24 +160,27 @@ export function cutFlightTrackWith<T extends FlightTrackLine>(
     for (const v of line) out.push(v.p);
   }
   const usable = cumulative && cumulative.length === geometry.length ? cumulative : null;
-  const based = usable ? rebase(kept, usable) : null;
-  const firstKept = kept[0]?.[0]?.i;
-  const lastLine = kept[kept.length - 1];
-  const lastKept = lastLine?.[lastLine.length - 1]?.i;
+  const measured = remeasure(kept, circles, usable);
+  const first = geometry[0];
+  const last = geometry[geometry.length - 1];
   return {
     track: {
       ...track,
       geometry: out,
       segmentStarts: out.length > 0 ? outStarts : [],
-      ...(cumulative ? { cumulativeKm: based ? based.km : null } : {}),
-      ...("distanceKm" in track ? { distanceKm: based ? based.total : round(sphereKm(kept)) } : {}),
+      ...(cumulative ? { cumulativeKm: out.length > 0 ? measured.km : null } : {}),
+      ...("distanceKm" in track ? { distanceKm: measured.total } : {}),
       ...("pointCount" in track ? { pointCount: keptCount } : {}),
+      ...("jitterDropped" in track ? { jitterDropped: null } : {}),
       ...("elevations" in track
-        ? { elevations: keptElevations(track.elevations, based?.offsets ?? null) }
+        ? { elevations: keptElevations(track.elevations, usable ? measured.ranges : null) }
         : {}),
     },
-    startCut: firstKept !== 0,
-    endCut: lastKept !== geometry.length - 1,
+    // The time of a hidden vertex, or of one beside a circle, is not given.
+    startCut: kept[0]?.[0]?.i !== 0 || near(first, first, circles),
+    endCut:
+      kept[kept.length - 1]?.[kept[kept.length - 1].length - 1]?.i !== geometry.length - 1 ||
+      near(last, last, circles),
   };
 }
 

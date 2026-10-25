@@ -1,4 +1,5 @@
 import { cutFlightTrackWith } from "../flightTrackView";
+import { zoneSafeFlightColumns } from "../providerFlightColumns";
 
 /**
  * A cut flight line describes only what is left (security review of T5): its
@@ -25,6 +26,7 @@ describe("cutFlightTrackWith", () => {
       {
         ...base,
         cumulativeKm: [0, 150, 430],
+        jitterDropped: 3,
         elevations: [
           [0, 100],
           [150, 10000],
@@ -37,6 +39,8 @@ describe("cutFlightTrackWith", () => {
     expect(track).toMatchObject({
       distanceKm: 150,
       pointCount: 2,
+      // The jitter count's basis held the hidden part; it is not carried past a cut.
+      jitterDropped: null,
       cumulativeKm: [0, 150],
       elevations: [
         [0, 100],
@@ -141,5 +145,90 @@ describe("cutFlightTrackWith", () => {
       [20, 500],
       [60, 400],
     ]);
+  });
+
+  it("a line near a zone keeps no figure whose basis simplification may have hidden there", () => {
+    // A meridian chord 2.8 km beside a 1 km zone: no vertex is inside and the
+    // chord does not cross it, but a fix simplification dropped could have
+    // been inside, and the stored running distance would count that detour.
+    const zone = { lat: 51, lon: 10.04, radiusM: 1000 };
+    const { track, startCut, endCut } = cutFlightTrackWith(
+      {
+        geometry: [
+          [10, 50],
+          [10, 52],
+        ],
+        segmentStarts: [0],
+        cumulativeKm: [0, 260],
+        elevations: [
+          [0, 100],
+          [130, 11000],
+          [260, 50],
+        ],
+        jitterDropped: 4,
+        startedAt: new Date("2026-03-01T08:00:00Z"),
+        distanceKm: 260,
+        pointCount: 40,
+      },
+      [zone]
+    );
+    expect(track.geometry).toEqual([
+      [10, 50],
+      [10, 52],
+    ]);
+    // Measured on the kept chord itself, not on the stored detour.
+    expect(track.distanceKm).toBeGreaterThan(222);
+    expect(track.distanceKm).toBeLessThan(223);
+    expect(track.cumulativeKm).toEqual([0, track.distanceKm]);
+    expect(track.pointCount).toBe(2);
+    expect(track.jitterDropped).toBeNull();
+    expect(track.elevations).toBeNull();
+    expect([startCut, endCut]).toEqual([false, false]);
+  });
+
+  it("an end vertex near a zone has no time", () => {
+    const zone = { lat: 50, lon: 10.01, radiusM: 300 };
+    const { startCut, endCut } = cutFlightTrackWith(
+      {
+        geometry: [
+          [10, 50],
+          [10, 52],
+        ],
+        segmentStarts: [0],
+        startedAt: new Date("2026-03-01T08:00:00Z"),
+      },
+      [zone]
+    );
+    expect([startCut, endCut]).toEqual([true, false]);
+  });
+});
+
+describe("zoneSafeFlightColumns", () => {
+  const T0 = Date.parse("2026-03-01T08:00:00Z");
+  const line = Array.from({ length: 10 }, (_, i) => ({
+    t: T0 + i * 60_000,
+    lat: 50 + i * 0.06,
+    // The sixth fix strays 4 m east: simplification would drop it.
+    lon: i === 5 ? 10.00006 : 10,
+  }));
+  const zone = { lat: 50.3, lon: 10.00006, radiusM: 3 };
+
+  it("leaves a fix inside a zone out before anything is measured, and breaks the line there", () => {
+    const columns = zoneSafeFlightColumns(line, [zone]);
+    expect(columns).not.toBeNull();
+    expect(columns!.pointCount).toBe(9);
+    expect(columns!.segmentStarts).toHaveLength(2);
+    // Eight steps of ~6.67 km would be ~53 km; the step over the zone is not counted.
+    expect(columns!.distanceKm).toBeLessThan(48);
+  });
+
+  it("measures an untouched line exactly as the pipeline does", () => {
+    const columns = zoneSafeFlightColumns(line, []);
+    expect(columns!.pointCount).toBe(10);
+    expect(columns!.segmentStarts).toEqual([0]);
+  });
+
+  it("is null when nothing outside the zones makes a line", () => {
+    expect(zoneSafeFlightColumns(line.slice(5, 6), [zone])).toBeNull();
   });
 });
