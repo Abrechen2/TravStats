@@ -49,17 +49,17 @@ export function metresBetween(lat1: number, lon1: number, lat2: number, lon2: nu
  * two hotels can genuinely share an address (a chain's two brands in one
  * building), and quietly folding them together loses a house.
  */
-export function findNearbyLodgings(
-  stored: ReadonlyArray<PinnedLodging>,
+export function findNearbyLodgings<T extends PinnedLodging>(
+  stored: ReadonlyArray<T>,
   lat: number | null | undefined,
   lon: number | null | undefined,
   radiusMetres: number
-): PinnedLodging[] {
+): T[] {
   if (typeof lat !== "number" || typeof lon !== "number") return [];
 
   return stored
     .filter(
-      (candidate): candidate is PinnedLodging & { lat: number; lon: number } =>
+      (candidate): candidate is T & { lat: number; lon: number } =>
         typeof candidate.lat === "number" && typeof candidate.lon === "number"
     )
     .map((candidate) => ({

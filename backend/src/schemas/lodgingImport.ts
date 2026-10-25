@@ -187,6 +187,8 @@ export type LodgingDedupeHint =
   | "none"
   | "lodging_exact_ref"
   | "lodging_name_city"
+  /** The name matches and the import names no city to compare — less evidence than name + city. */
+  | "lodging_name_only"
   /** A decorated spelling of a stored name, in the same town or with two identifying words in common. */
   | "lodging_name_similar"
   | "lodging_nearby"
@@ -258,9 +260,28 @@ export interface LodgingImportMatchedStay {
   href: string;
 }
 
+/** A stored house an ambiguous row may mean — offered for the user to pick. */
+export interface LodgingImportLodgingOption {
+  id: string;
+  name: string;
+  city: string | null;
+}
+
 export interface LodgingImportPreviewRow extends LodgingImportCandidate {
   flags: LodgingImportFlag[];
   dedupeHint: LodgingDedupeHint;
+  /**
+   * What the HOUSE match rests on (`none` or one of the `lodging_*` hints).
+   * `dedupeHint` is overwritten by a stay match, so a same-check-in row could
+   * not also say whether its hotel was matched by name and city or by name
+   * alone — and the stays-only name join never set a hint at all.
+   */
+  lodgingDedupeHint: LodgingDedupeHint;
+  /**
+   * The stored houses an `ambiguous_lodging_name` row may mean, so the user
+   * can choose one. Empty on every other row.
+   */
+  lodgingOptions: LodgingImportLodgingOption[];
   matchedLodgingId: string | null;
   /**
    * The stored name behind `matchedLodgingId`. A guessed match is a question
@@ -268,6 +289,12 @@ export interface LodgingImportPreviewRow extends LodgingImportCandidate {
    * user was asked "the same house?" without being told which one (AUD-056).
    */
   matchedLodgingName: string | null;
+  /**
+   * The stored CITY behind `matchedLodgingId`. The preview showed the
+   * import's city in the matched row, which the commit never writes — so the
+   * reader saw "Zurich" for a house filed under "Zürich".
+   */
+  matchedLodgingCity: string | null;
   /**
    * True when `matchedLodgingId` is a guess (name, similarity, place, or a
    * stays-only row's free-text name) and not a proven reference, so the user
