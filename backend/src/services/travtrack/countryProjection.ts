@@ -9,7 +9,10 @@
  * interleave with it:
  *   1. the dirty row's `version` is read;
  *   2. the day `[00:00Z, next 00:00Z)` is read through the derivation read
- *      (E2: every page, anomalies masked, in-flight points marked);
+ *      (E2: every page, anomalies masked, in-flight points marked), with each
+ *      device's `CONTEXT_FIXES` beyond either edge as context, so a run
+ *      across midnight is masked as in one continuous read. A stored point
+ *      that is such context marks the neighbouring day too (`ingest.ts`);
  *   3. in-flight and masked points are dropped, the rest reduced exactly as
  *      the Dawarich sweep reduces its points (`accumulateCountryDays`);
  *   4. the day's `travtrack` rows are replaced (`replaceCountryDays` in this
@@ -43,6 +46,7 @@ import { historyGeneration } from "../locationEvidence/generation";
 import { toTimedPosition } from "../locationEvidence/toDetectorInput";
 import {
   ackDirtyDay,
+  contextWindow,
   COUNTRY_DAYS_BIT,
   markAllPointDaysDirty,
   pendingDirtyDays,
@@ -146,9 +150,12 @@ async function projectDay(
         select: { version: true, done: true },
       });
       if (!version || (version.done & COUNTRY_DAYS_BIT) !== 0) return true;
+      // The day and its context beyond each edge: the mask judges a run across
+      // midnight as a continuous read would; only the day's rows are written
+      // (`replaceCountryDays` drops every other day's).
       const read = await readTravTrackDerivation(
         userId,
-        { fromMs: startAt.getTime(), untilMs: endAtExclusive.getTime() },
+        await contextWindow(userId, startAt, endAtExclusive, tx),
         {
           // Between pages: a switch takes effect within the day, not after it.
           isAllowed: async () => (await travTrackDerivationAllowed(userId)) === "ok",

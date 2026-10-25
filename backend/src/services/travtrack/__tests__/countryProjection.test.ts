@@ -353,6 +353,57 @@ describe("projectTravTrackCountryDays", () => {
     expect(await isAllowed!()).toBe(false);
   });
 
+  it("an excursion spanning midnight is masked as in one continuous read", async () => {
+    const tokyo = (t: number) => storePoint(userId, { t, lat: 35.6762, lon: 139.6503 });
+    for (const time of ["23:30:00", "23:40:00", "23:50:00"]) await seoul(at(D1, time));
+    // A stale fix from Tokyo, eight minutes there and back across midnight.
+    await tokyo(at(D1, "23:58:00"));
+    await tokyo(at(D2, "00:02:00"));
+    for (const time of ["00:10:00", "00:20:00", "00:30:00"]) await seoul(at(D2, time));
+    await dirty([D1, D2]);
+
+    await projectTravTrackCountryDays(userId, deps);
+
+    expect((await rows()).map((r) => [r.date.toISOString().slice(0, 10), r.countryCode])).toEqual([
+      [D1, "KR"],
+      [D2, "KR"],
+    ]);
+  });
+
+  it("a point stored near midnight re-marks the neighbouring day, one deep in its day does not", async () => {
+    await dirty([D1]);
+    await projectTravTrackCountryDays(userId, deps);
+    expect((await dirtyRow(D1))!.done & COUNTRY_DAYS_BIT).toBe(COUNTRY_DAYS_BIT);
+    const upload = (uploadId: string, times: string[]) =>
+      ingestTravTrackPoints({
+        userId,
+        deviceId: "phone-1",
+        uploadId,
+        points: times.map((t, i) => ({
+          id: `${uploadId}-${i}`,
+          t,
+          lat: 37.5665,
+          lon: 126.978,
+          accuracy: 12,
+        })),
+      });
+
+    // Early on D2, with no fix of that device before it: D1's context changed.
+    await upload("near", [`${D2}T00:05:00Z`]);
+    expect((await dirtyRow(D1))!.done & COUNTRY_DAYS_BIT).toBe(0);
+
+    await projectTravTrackCountryDays(userId, deps);
+    expect((await dirtyRow(D1))!.done & COUNTRY_DAYS_BIT).toBe(COUNTRY_DAYS_BIT);
+    // Six more fixes of D2, then one deep in the day: D1's context is the same.
+    await upload(
+      "fill",
+      ["01", "02", "03", "04", "05", "06"].map((h) => `${D2}T${h}:00:00Z`)
+    );
+    await projectTravTrackCountryDays(userId, deps);
+    await upload("deep", [`${D2}T12:00:00Z`]);
+    expect((await dirtyRow(D1))!.done & COUNTRY_DAYS_BIT).toBe(COUNTRY_DAYS_BIT);
+  });
+
   it("a dawarich sweep never deletes a travtrack row and the reverse", async () => {
     const window = { startAt: utcMidnight(D1), endAtExclusive: utcMidnight(D2) };
     await replaceCountryDays(userId, "dawarich", window, [
@@ -413,9 +464,13 @@ describe("projectTravTrackCountryDays", () => {
       ],
     });
 
-    const marked = await prisma.travTrackDirtyDay.findMany({ where: { userId } });
-    expect(marked.map((r) => r.day.toISOString().slice(0, 10))).toEqual([D1]);
-    expect(marked[0].done).toBe(0);
+    const marked = await prisma.travTrackDirtyDay.findMany({
+      where: { userId },
+      orderBy: { day: "asc" },
+    });
+    // Its day, and both neighbours: the lone fix is context of either edge.
+    expect(marked.map((r) => r.day.toISOString().slice(0, 10))).toEqual(["2026-10-11", D1, D2]);
+    expect(marked.every((r) => r.done === 0)).toBe(true);
   });
 
   it("the Dawarich sweep's files are not edited by this projection", () => {

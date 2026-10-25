@@ -17,7 +17,7 @@ import {
 } from "./classify";
 import { clipSpan, parseGaps, type ParsedGap } from "./gaps";
 import { addLinks, entryKey, resolveEntries } from "./links";
-import { markTravTrackDaysDirty, utcDaysOf } from "./dirtyDays";
+import { markTravTrackDaysDirty, neighbourDaysOf, utcDaysOf } from "./dirtyDays";
 import { takeTravTrackLock } from "./lock";
 
 /**
@@ -295,8 +295,15 @@ export async function ingestTravTrackPoints(input: {
         });
       }
       // The projections (country days, E6) re-derive the days that gained a
-      // point — in this transaction, so a day is never stored and unmarked.
-      await markTravTrackDaysDirty(tx, userId, utcDaysOf(judged.fresh.map((p) => p.tMs)));
+      // point, and the neighbours that read it as context — in this
+      // transaction, so a day is never stored and unmarked.
+      if (judged.fresh.length > 0) {
+        const fresh = judged.fresh.map((p) => ({ tMs: p.tMs, deviceId }));
+        await markTravTrackDaysDirty(tx, userId, [
+          ...utcDaysOf(fresh.map((p) => p.tMs)),
+          ...(await neighbourDaysOf(tx, userId, fresh)),
+        ]);
+      }
       const { linked, unlinked } = await linkAll(tx, userId, judged.attach);
       const gapsStored = await storeGaps(tx, userId, deviceId, gaps, ranges);
 

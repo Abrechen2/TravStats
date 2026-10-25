@@ -62,7 +62,13 @@ export async function projectionsOnPointsRemoved(
         date: { gte: new Date(first), lt: new Date(endExclusive) },
       },
     });
-    await markTravTrackDaysDirty(tx, userId, [utcDayOf(first), utcDayOf(endExclusive - DAY_MS)]);
+    // The edge days may keep points; their outer neighbours read them as context.
+    await markTravTrackDaysDirty(tx, userId, [
+      utcDayOf(first - DAY_MS),
+      utcDayOf(first),
+      utcDayOf(endExclusive - DAY_MS),
+      utcDayOf(endExclusive),
+    ]);
     return;
   }
   const held = await tx.countryDay.findMany({
