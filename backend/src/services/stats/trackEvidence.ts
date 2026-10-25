@@ -9,6 +9,7 @@
  * deleting stored country-days would only hide the problem until the next sync.
  */
 import { toCountryCode } from "../../shared/countryEvidence";
+import type { CountryDaySource } from "../countryDays/countryDaySource";
 
 /** A stored CountryDay. Airport counts and completeness are not ground proof. */
 export interface CountryDayRow {
@@ -21,7 +22,8 @@ export interface CountryDayRow {
 
 export interface UnconfirmedTrackCountry {
   code: string;
-  source: "dawarich";
+  /** The pipeline that observed it. Every row read here is Dawarich's today (E6 adds TravTrack's). */
+  source: CountryDaySource;
   reason: "ground-unconfirmed";
   observedDays: number;
   pointCount: number;

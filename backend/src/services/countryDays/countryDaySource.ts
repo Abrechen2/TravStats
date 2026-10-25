@@ -36,8 +36,11 @@
  * by then in someone's passport.
  */
 
-/** Every pipeline allowed to write a country-day. */
-export const COUNTRY_DAY_SOURCES = ["dawarich"] as const;
+/**
+ * Every pipeline allowed to write a country-day. `travtrack` is TravTrack's
+ * own projection (TravTrack plan E6); a Dawarich day is never rewritten by it.
+ */
+export const COUNTRY_DAY_SOURCES = ["dawarich", "travtrack"] as const;
 
 export type CountryDaySource = (typeof COUNTRY_DAY_SOURCES)[number];
 

@@ -175,6 +175,12 @@ model User {
   travTrackGaps           TravTrackGap[]
   travTrackShareSnapshots TravTrackShareSnapshot[]
 
+  locationSuggestions      LocationSuggestion[]
+  travTrackDirtyDays       TravTrackDirtyDay[]
+  travTrackDerivationState TravTrackDerivationState?
+  travTrackImports         TravTrackImport[]
+  travTrackIngestTokens    TravTrackIngestToken[]
+
   @@map("users")
 }
 
@@ -3453,6 +3459,11 @@ model PlaceVisit {
   notes  String?
   rating Int?
 
+  /// The evidence key of the location finding whose acceptance made this
+  /// visit (TravTrack plan E1/E4), so the finding never counts its own visit
+  /// as cover or support. Null for every visit written any other way.
+  suggestionRef String? @map("suggestion_ref")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -5245,42 +5256,59 @@ model DawarichStayScan {
   windowEnd     DateTime? @map("window_end")
   pointCount    Int       @default(0) @map("point_count")
   createdCount  Int       @default(0) @map("created_count")
+  /// The source of the last scan, `dawarich | travtrack` (CHECK); null before
+  /// TravTrack could be one. The row stays the one consent and lease per account.
+  provider      String?
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("dawarich_stay_scans")
 }
 
 model DawarichStay {
-  id            String      @id @default(uuid())
-  userId        String      @map("user_id")
-  fingerprint   String
-  sourceStartAt DateTime    @map("source_start_at")
-  sourceEndAt   DateTime    @map("source_end_at")
-  sourceLat     Float       @map("source_lat")
-  sourceLon     Float       @map("source_lon")
-  status        String      @default("pending")
-  startAt       DateTime    @map("start_at")
-  endAt         DateTime    @map("end_at")
-  lat           Float
-  lon           Float
-  zone          String
-  pointCount    Int         @map("point_count")
-  evidence      Json
-  placeId       String?     @map("place_id")
-  tripId        String?     @map("trip_id")
-  name          String?
-  visitId       String?     @map("visit_id")
-  detectedAt    DateTime    @default(now()) @map("detected_at")
-  resolvedAt    DateTime?   @map("resolved_at")
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  visit         PlaceVisit? @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  id               String      @id @default(uuid())
+  userId           String      @map("user_id")
+  fingerprint      String
+  sourceStartAt    DateTime    @map("source_start_at")
+  sourceEndAt      DateTime    @map("source_end_at")
+  sourceLat        Float       @map("source_lat")
+  sourceLon        Float       @map("source_lon")
+  status           String      @default("pending")
+  startAt          DateTime    @map("start_at")
+  endAt            DateTime    @map("end_at")
+  lat              Float
+  lon              Float
+  zone             String
+  pointCount       Int         @map("point_count")
+  evidence         Json
+  placeId          String?     @map("place_id")
+  tripId           String?     @map("trip_id")
+  name             String?
+  visitId          String?     @map("visit_id")
+  detectedAt       DateTime    @default(now()) @map("detected_at")
+  resolvedAt       DateTime?   @map("resolved_at")
+  /// Where the finding's points came from, `dawarich | travtrack` (CHECK).
+  /// Every row from before TravTrack is Dawarich's (TravTrack plan E1).
+  provider         String      @default("dawarich")
+  /// The account's provider revision when the finding was made.
+  providerRev      Int         @default(0) @map("provider_rev")
+  /// 0 = made before detectors were versioned (every legacy Dawarich row).
+  algorithmVersion Int         @default(0) @map("algorithm_version")
+  /// The provider-neutral key of the stop (`locationEvidence/key.ts`).
+  /// Server-side only; `fingerprint` stays as each provider wrote it.
+  evidenceKey      String?     @map("evidence_key")
+  /// The accept protocol's claim (E4): who holds `accepting`, since when.
+  claimToken       String?     @map("claim_token")
+  claimedAt        DateTime?   @map("claimed_at")
+  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  visit            PlaceVisit? @relation(fields: [visitId], references: [id], onDelete: SetNull)
   /// A finding outlives the place or trip it named: it keeps its evidence and
   /// loses only the link (a merge repoints it first, `placeMerge.ts`).
-  place         Place?      @relation(fields: [placeId], references: [id], onDelete: SetNull)
-  trip          Trip?       @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  place            Place?      @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  trip             Trip?       @relation(fields: [tripId], references: [id], onDelete: SetNull)
 
   @@unique([userId, fingerprint])
   @@index([userId, status, startAt])
+  @@index([userId, provider, status])
   @@index([visitId])
   @@index([placeId])
   @@index([tripId])
@@ -5945,4 +5973,119 @@ model TripPackingList {
 
   @@index([userId])
   @@map("trip_packing_lists")
+}
+
+/// A question location history raises for TravStats to decide (TravTrack plan
+/// E1): a country day or a journey the logbook does not hold. Stays keep their
+/// own table (`dawarich_stays`). The finding is a suggestion until the user
+/// answers it; TravTrack never writes the entry itself.
+model LocationSuggestion {
+  id                String    @id @default(uuid())
+  userId            String    @map("user_id")
+  /// `country | journey` (CHECK).
+  kind              String
+  /// `dawarich | travtrack` (CHECK).
+  provider          String
+  providerRev       Int       @map("provider_rev")
+  /// The detector's version.
+  algorithm         Int
+  /// Provider-neutral and server-side only; one finding per key and kind.
+  evidenceKey       String    @map("evidence_key")
+  windowFrom        DateTime  @map("window_from")
+  /// Exclusive.
+  windowUntil       DateTime  @map("window_until")
+  /// `pending | accepting | accepted | rejected | invalidated` (CHECK).
+  status            String    @default("pending")
+  claimToken        String?   @map("claim_token")
+  claimedAt         DateTime? @map("claimed_at")
+  /// `{ code, params }` — a stable code and scalar params, never prose and
+  /// never a coordinate.
+  explanation       Json
+  evidence          Json
+  /// The entry an acceptance made. No foreign key: it names one of several tables.
+  acceptedEntryKind String?   @map("accepted_entry_kind")
+  acceptedEntryId   String?   @map("accepted_entry_id")
+  detectedAt        DateTime  @default(now()) @map("detected_at")
+  resolvedAt        DateTime? @map("resolved_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, evidenceKey])
+  @@index([userId, status, windowFrom])
+  @@map("location_suggestions")
+}
+
+/// A UTC day of TravTrack history whose projections must run again (E6):
+/// `version` is raised on every re-mark, `done` holds a bit per projection that
+/// ran on that version (1 country days).
+model TravTrackDirtyDay {
+  userId  String   @map("user_id")
+  day     DateTime @db.Date
+  version BigInt
+  done    Int      @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, day])
+  @@map("travtrack_dirty_days")
+}
+
+/// Per account: the history generation every TravTrack removal raises (E5's
+/// fence) and the derivations' own bookkeeping. 0 = never ran.
+model TravTrackDerivationState {
+  userId                String    @id @map("user_id")
+  historyGeneration     BigInt    @default(0) @map("history_generation")
+  countryReducerVersion Int       @default(0) @map("country_reducer_version")
+  stayAlgorithm         Int       @default(0) @map("stay_algorithm")
+  journeyAlgorithm      Int       @default(0) @map("journey_algorithm")
+  lastRunAt             DateTime? @map("last_run_at")
+  /// A closed vocabulary (E6), never a message.
+  lastErrorKind         String?   @map("last_error_kind")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("travtrack_derivation_state")
+}
+
+/// A file imported into TravTrack (E8).
+model TravTrackImport {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  /// `gpx | dawarich` (CHECK).
+  kind       String
+  fileName   String    @map("file_name") @db.VarChar(200)
+  /// `running | succeeded | failed | interrupted | cancelled` (CHECK).
+  status     String
+  report     Json?
+  fromAt     DateTime? @map("from_at")
+  toAt       DateTime? @map("to_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  finishedAt DateTime? @map("finished_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("travtrack_imports")
+}
+
+/// A per-device token OwnTracks or Overland posts positions with (E9). Not an
+/// `ApiToken`: it posts points for its owner and does nothing else.
+model TravTrackIngestToken {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  /// `owntracks | overland` (CHECK).
+  kind       String
+  label      String    @db.VarChar(60)
+  /// SHA-256 of the token, for the O(1) lookup.
+  lookupHash String    @unique @map("lookup_hash")
+  /// bcrypt of the token.
+  hash       String
+  createdAt  DateTime  @default(now()) @map("created_at")
+  lastUsedAt DateTime? @map("last_used_at")
+  revokedAt  DateTime? @map("revoked_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("travtrack_ingest_tokens")
 }
