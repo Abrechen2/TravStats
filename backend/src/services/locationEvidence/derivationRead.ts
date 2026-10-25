@@ -11,8 +11,13 @@
  *     shortened silently.
  *   - `isAllowed()` is asked between pages — the scan's lease and consent.
  *     Answered false, the read is cancelled and hands on nothing.
- *   - Anomalies are masked (`anomaly.ts`), never deleted; fixes inside one of
- *     the account's flight windows carry `inFlight: true`.
+ *   - Fixes inside one of the account's flight windows carry `inFlight:
+ *     true`, and that is settled first: a step in the air is no jump.
+ *     Anomalies are masked (`anomaly.ts`), never deleted.
+ *   - A truncated read stops where its verdicts are final (`stableCut`): a
+ *     run the next read could still close is deferred to it, with each
+ *     device's last good fix as context (`derivationCursor.ts`). A split read
+ *     masks like an unsplit one.
  *
  * Privacy: stored TravTrack points already exclude privacy zones and deleted
  * ranges (ingest drops them, zone creation deletes them), so this read adds no
@@ -23,7 +28,13 @@ import { prisma } from "../../db";
 import { flightRecorderWindows, FLIGHT_WINDOW_SELECT } from "../tripRecording/bounds";
 import { TRAVTRACK_PAGE_CAP, travtrackProvider } from "../locationProvider/travtrackProvider";
 import type { Coverage, LocationObservation, ReadWindow } from "../locationProvider/types";
-import { anomalyMask } from "./anomaly";
+import { anomalyMask, isBadFix, stableCut } from "./anomaly";
+import {
+  formatDerivationCursor,
+  isContext,
+  parseDerivationCursor,
+  positionOf,
+} from "./derivationCursor";
 import { historyGeneration } from "./generation";
 import { observationKey, pointDigest } from "./key";
 
@@ -42,7 +53,7 @@ export type DerivationPoint = LocationObservation & {
 export type DerivationRead = {
   points: DerivationPoint[];
   coverage: Coverage;
-  /** Where a truncated read stopped; null when the window was read to its end. */
+  /** Where the next read continues (`derivationCursor.ts`); null when the window was read to its end. */
   next: string | null;
   /** The account's history generation before the first page was read. */
   generation: bigint;
@@ -80,53 +91,111 @@ export async function readTravTrackDerivation(
   const pageSize = opts.pageSize ?? TRAVTRACK_PAGE_CAP;
   const generation = await prisma.$transaction((tx) => historyGeneration(tx, userId));
 
+  const start = parseDerivationCursor(opts.cursor);
   const raw: LocationObservation[] = [];
-  let cursor = opts.cursor;
+  let contextCount = 0;
+  let cursor = start.resumeAfter;
   let first = true;
   for (;;) {
     if (!first && opts.isAllowed && !(await opts.isAllowed())) {
+      // Nothing is handed on, so the next attempt starts where this one did.
       return {
         points: [],
         coverage: "truncated",
-        next: cursor ?? null,
+        next: opts.cursor ?? null,
         generation,
         cancelled: true,
       };
     }
     first = false;
-    // Never past `maxPoints`: the cursor then names exactly the first unread point.
-    const cap = Math.min(pageSize, maxPoints - raw.length);
+    // Never past `maxPoints` handed on; the previous read's context does not count.
+    const cap = Math.min(pageSize, maxPoints - (raw.length - contextCount));
     const page = await travtrackProvider(userId, cap).readPoints(window, cursor);
-    raw.push(...page.points);
+    for (const p of page.points) {
+      raw.push(p);
+      if (isContext(p, start.emitAfter)) contextCount += 1;
+    }
     cursor = page.next ?? undefined;
     if (!cursor) break;
-    if (raw.length >= maxPoints) {
-      return finish(userId, window, raw, "truncated", cursor, generation);
+    if (raw.length - contextCount >= maxPoints) {
+      return finish(
+        userId,
+        window,
+        { raw, contextCount, resumeAfter: start.resumeAfter },
+        true,
+        generation
+      );
     }
   }
-  return finish(userId, window, raw, "complete", null, generation);
+  return finish(
+    userId,
+    window,
+    { raw, contextCount, resumeAfter: start.resumeAfter },
+    false,
+    generation
+  );
+}
+
+type RawRead = {
+  raw: readonly LocationObservation[];
+  /** The leading points that are the previous read's context. */
+  contextCount: number;
+  /** Where this read started. */
+  resumeAfter: string | undefined;
+};
+
+/** Of the previous read's context, each device's last good fix — all the next judgement needs. */
+function contextFixes(raw: readonly LocationObservation[], count: number): number[] {
+  const last = new Map<string | null, number>();
+  for (let i = 0; i < count; i += 1) {
+    if (!isBadFix(raw[i])) last.set(raw[i].deviceId, i);
+  }
+  return [...last.values()].sort((a, b) => a - b);
 }
 
 async function finish(
   userId: string,
   window: ReadWindow,
-  raw: readonly LocationObservation[],
-  coverage: Coverage,
-  next: string | null,
+  read: RawRead,
+  truncated: boolean,
   generation: bigint
 ): Promise<DerivationRead> {
-  const flights = await flightWindowsIn(userId, window);
-  const masked = anomalyMask(raw);
-  const points = raw
-    .filter((_, i) => !masked[i])
-    .map((o): DerivationPoint => {
-      const key = observationKey(o);
-      return {
-        ...o,
-        key,
-        digest: pointDigest(userId, key),
-        inFlight: flights.some(([from, to]) => o.atMs >= from && o.atMs <= to),
-      };
+  const { raw, contextCount } = read;
+  // In the air first: the mask must know which steps are an aircraft's.
+  const flightWindows = await flightWindowsIn(userId, window);
+  const judged = [...contextFixes(raw, contextCount), ...raw.map((_, i) => i).slice(contextCount)];
+  const fresh = judged.length - (raw.length - contextCount);
+  const observations = judged.map((i) => raw[i]);
+  const masked = anomalyMask(observations, { flightWindows });
+  const cut = truncated
+    ? stableCut(observations, fresh, { flightWindows })
+    : { until: observations.length, contextFrom: observations.length };
+
+  const points: DerivationPoint[] = [];
+  for (let j = fresh; j < cut.until; j += 1) {
+    if (masked[j]) continue;
+    const o = observations[j];
+    const key = observationKey(o);
+    points.push({
+      ...o,
+      key,
+      digest: pointDigest(userId, key),
+      inFlight: flightWindows.some(([from, to]) => o.atMs >= from && o.atMs <= to),
     });
-  return { points, coverage, next, generation, cancelled: false };
+  }
+
+  let next: string | null = null;
+  if (truncated) {
+    const rawIndex = (j: number) => (j < judged.length ? judged[j] : raw.length);
+    const resumeAt = rawIndex(cut.contextFrom);
+    const resumeAfter = resumeAt > 0 ? positionOf(raw[resumeAt - 1]) : read.resumeAfter;
+    next = formatDerivationCursor(resumeAfter, positionOf(raw[rawIndex(cut.until) - 1]));
+  }
+  return {
+    points,
+    coverage: truncated ? "truncated" : "complete",
+    next,
+    generation,
+    cancelled: false,
+  };
 }
