@@ -254,6 +254,12 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   locationSuggestions:
     "derived from the TravTrack history and carrying server-keyed point digests; derived again after restore",
   travTrackDirtyDays: "derivation bookkeeping: days waiting to be re-derived",
+  // TravTrack phase 4 (plan L1, L3): projections of the history, rebuilt from
+  // the restored points by the projection scheduler.
+  travTrackExploredCells:
+    "projection of the TravTrack history: the explored map's cells, re-derived",
+  travTrackZoneCells: "projection of the privacy zones: the explored map's zone raster, rebuilt",
+  travTrackMonthValues: "projection of the TravTrack history: monthly values, re-derived",
   travTrackImports: "import job bookkeeping: status and per-run reports of a file import",
   travTrackIngestTokens: "credential material",
   trainingData: "parser training corpus of raw source text, operational",
