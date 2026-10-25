@@ -45,9 +45,6 @@
     "at": "{{at}}",
     "endOfDay": "24:00"
   },
-  "zones": {
-    "legend": "Deine Privatzonen sind als Kreise eingezeichnet; dort wird nichts aufgezeichnet."
-  },
   "actions": {
     "export": "Exportieren",
     "delete": "Zeitraum löschen"
@@ -324,5 +321,88 @@
     "unknownDevice": "Unbekanntes Gerät",
     "none": "Noch keine Position aufgezeichnet.",
     "open": "Diesen Tag ansehen"
+  },
+  "map": {
+    "panel": "Ebenen und Darstellung",
+    "zonesNeverDrawn": "Private Zonen sind ausgespart und nie eingezeichnet",
+    "dayFailed": "{{day}} konnte nicht geladen werden: {{reason}}",
+    "retry": "Erneut laden",
+    "rangeEmpty": "In diesen Tagen ist nichts aufgezeichnet.",
+    "fogLoading": "Erkundete Gegenden werden geladen …",
+    "range": {
+      "previous": "Zeitraum zurück",
+      "next": "Zeitraum vor",
+      "today": "Heute, {{day}}",
+      "yesterday": "Gestern, {{day}}",
+      "span": "{{from}} – {{to}}",
+      "preset": {
+        "today": "Heute",
+        "yesterday": "Gestern",
+        "week": "7 Tage"
+      }
+    },
+    "live": {
+      "off": "Live folgen",
+      "on": "● Live folgt",
+      "failed": "Live folgen klappt gerade nicht: {{reason}}"
+    },
+    "layers": {
+      "title": "Ebenen",
+      "routes": "Strecken",
+      "routesHint": "Linien zwischen den Punkten",
+      "points": "Punkte",
+      "pointsHint": "Jede Position, anklickbar",
+      "heat": "Heatmap",
+      "heatHint": "Wo du dich oft aufhältst",
+      "fog": "Erkundet-Nebel",
+      "fogHint": "Unbekanntes abgedunkelt",
+      "visits": "Aufenthalte und Orte",
+      "visitsHint": "Zuhause, Unterkünfte, Orte, erkannte Aufenthalte",
+      "entries": "Logbuch-Einträge",
+      "entriesHint": "Flüge, Fahrten, Reisen"
+    },
+    "route": {
+      "title": "Strecken",
+      "color": "Farbe",
+      "speed": "Nach Tempo",
+      "plain": "Einfarbig",
+      "kmhMax": "{{kmh}}+ km/h",
+      "opacity": "Deckkraft",
+      "split": "Strecke trennen nach Pause ab",
+      "splitNone": "Nur wo der Server trennt",
+      "splitMinutes_one": "{{count}} Minute",
+      "splitMinutes_other": "{{count}} Minuten",
+      "splitHours_one": "{{count}} Stunde",
+      "splitHours_other": "{{count}} Stunden",
+      "alwaysCut": "Private Zonen, gelöschte Zeiträume, Pausen und Flugmodus-Lücken trennen immer, egal was hier steht. Hier lässt sich nur weiter trennen, nie verbinden."
+    },
+    "replay": {
+      "play": "Wiedergabe starten",
+      "pause": "Wiedergabe anhalten",
+      "scrub": "Wiedergabe-Zeitpunkt",
+      "rate": "Tempo der Wiedergabe",
+      "reset": "Ganze Strecke zeigen",
+      "gaps": "Springt über Lücken, nichts wird dazuerfunden"
+    },
+    "point": {
+      "title": "Position",
+      "accuracy": "Genauigkeit ±{{m}} m",
+      "accuracyUnknown": "Genauigkeit unbekannt",
+      "close": "Schließen"
+    },
+    "totals": {
+      "title": "Zusammenfassung",
+      "distance": "Strecke",
+      "moving": "Unterwegs",
+      "avgSpeed": "Ø Tempo",
+      "points": "Punkte",
+      "coverage": "Abdeckung",
+      "km": "{{km}} km",
+      "kmh": "{{kmh}} km/h",
+      "minutes": "{{m}} min",
+      "hours": "{{h}} h {{m}} min",
+      "note": "Gezählt wird nur innerhalb einer Strecke — nie über eine Lücke, Zone oder Pause hinweg. Unterwegs heißt: schneller als 3 km/h."
+    },
+    "quietDays": "Ohne Aufzeichnung und ohne Eintrag: {{days}}"
   }
 }

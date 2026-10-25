@@ -29,9 +29,9 @@ vi.mock("../../../hooks/useTranslation", () => ({
   }),
 }));
 // WebGL is not there in jsdom: the map stub says what it was given.
-vi.mock("../TrackDayMap", () => ({
-  default: ({ segments }: { segments: unknown[] }) => (
-    <div data-testid="track-day-map-stub">{segments.length} segments</div>
+vi.mock("../map/TrackRangeMap", () => ({
+  default: ({ lines }: { lines: unknown[] }) => (
+    <div data-testid="track-day-map-stub">{lines.length} segments</div>
   ),
 }));
 
