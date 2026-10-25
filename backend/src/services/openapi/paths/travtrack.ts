@@ -28,6 +28,9 @@ const capabilities = z.object({
   hasData: z
     .boolean()
     .describe("This account holds TravTrack data: summary, export and delete stay reachable"),
+  sources: z
+    .array(z.enum(["companion", "gpx", "owntracks", "overland"]))
+    .describe("Where this server takes TravTrack positions from"),
 });
 
 registry.registerPath({

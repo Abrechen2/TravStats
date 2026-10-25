@@ -127,6 +127,8 @@
     "travtrack/export.ts",
     "travtrack/gate.ts",
     "travtrack/imports.ts",
+    "travtrack/ingestSources.ts",
+    "travtrack/ingestTokens.ts",
     "travtrack/pointEntries.ts",
     "travtrack/points.ts",
     "travtrack/shareSnapshot.ts",

@@ -155,5 +155,41 @@
       "lost": "Whether the import finished is not known – the server restarted. Check the list.",
       "tooManyPoints": "The file holds more than 200,000 positions – more than one import takes. Split it, say by month."
     }
+  },
+  "sources": {
+    "title": "Further sources",
+    "intro": "OwnTracks (Android, iOS) and Overland (iOS) can send positions straight to TravTrack. Each device gets its own key, which can deliver positions and nothing else – it reads nothing and opens no other page.",
+    "privacy": "Unlike the Companion app, these apps cannot know your privacy zones: positions inside a privacy zone reach the server and are only discarded there.",
+    "kind": "App",
+    "kinds": {
+      "owntracks": "OwnTracks",
+      "overland": "Overland"
+    },
+    "label": "Device",
+    "labelPlaceholder": "e.g. Pixel 9",
+    "create": "Create key",
+    "shownOnce": "The key is shown only now. Enter it in the app; afterwards it cannot be seen here again.",
+    "owntracks": {
+      "howTo": "In OwnTracks: Settings → Connection → mode \"HTTP\". Enter the URL, switch authentication on, use any name as the user and the key as the password.",
+      "url": "URL",
+      "password": "Password"
+    },
+    "overland": {
+      "howTo": "In Overland: Settings → \"Receiver Endpoint\" is the URL, \"Access Token\" the key. Overland sends it in the Authorization header.",
+      "url": "Receiver Endpoint",
+      "token": "Access Token"
+    },
+    "done": "Done",
+    "lastUsed": "last {{at}}",
+    "neverUsed": "not used yet",
+    "revoke": "Revoke",
+    "revokeConfirm": "Revoke the key \"{{name}}\"? The device can send nothing afterwards; what it sent stays.",
+    "revoked": "\"{{name}}\" is revoked.",
+    "errors": {
+      "notActive": "Further sources are only available while TravTrack is your location source (Settings → Location).",
+      "limit": "You already hold as many keys as there may be. Revoke one first.",
+      "notFound": "This key no longer exists.",
+      "rateLimited": "Too many keys were created just now. Try again in a quarter of an hour."
+    }
   }
 }

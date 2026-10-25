@@ -6125,9 +6125,9 @@ model TravTrackIngestToken {
   /// `owntracks | overland` (CHECK).
   kind       String
   label      String    @db.VarChar(60)
-  /// SHA-256 of the token, for the O(1) lookup.
+  /// HMAC-SHA256 of the token under an instance-derived key, for the O(1) lookup.
   lookupHash String    @unique @map("lookup_hash")
-  /// bcrypt of the token.
+  /// HMAC-SHA256 of the token under a second instance-derived key, compared in constant time.
   hash       String
   createdAt  DateTime  @default(now()) @map("created_at")
   lastUsedAt DateTime? @map("last_used_at")

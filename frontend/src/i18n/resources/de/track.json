@@ -155,5 +155,41 @@
       "lost": "Ob der Import fertig wurde, ist nicht bekannt – der Server hat neu gestartet. Sieh in der Liste nach.",
       "tooManyPoints": "Die Datei enthält mehr als 200.000 Positionen – mehr nimmt ein Import nicht. Teile sie auf, etwa nach Monaten."
     }
+  },
+  "sources": {
+    "title": "Weitere Quellen",
+    "intro": "OwnTracks (Android, iOS) und Overland (iOS) können Positionen direkt an TravTrack schicken. Jedes Gerät bekommt einen eigenen Schlüssel, der nur Positionen abliefern kann und sonst nichts – er liest nichts und öffnet keine andere Seite.",
+    "privacy": "Anders als die Companion-App können diese Apps deine Privatzonen nicht kennen: Positionen in einer Privatzone erreichen den Server und werden erst dort verworfen.",
+    "kind": "App",
+    "kinds": {
+      "owntracks": "OwnTracks",
+      "overland": "Overland"
+    },
+    "label": "Gerät",
+    "labelPlaceholder": "z. B. Pixel 9",
+    "create": "Schlüssel erstellen",
+    "shownOnce": "Der Schlüssel wird nur jetzt angezeigt. Trage ihn in der App ein; danach ist er hier nicht mehr zu sehen.",
+    "owntracks": {
+      "howTo": "In OwnTracks: Einstellungen → Verbindung → Modus „HTTP“. URL eintragen, Authentifizierung einschalten, als Benutzer einen beliebigen Namen und als Passwort den Schlüssel.",
+      "url": "URL",
+      "password": "Passwort"
+    },
+    "overland": {
+      "howTo": "In Overland: Settings → „Receiver Endpoint“ ist die URL, „Access Token“ der Schlüssel. Overland schickt ihn im Authorization-Header.",
+      "url": "Receiver Endpoint",
+      "token": "Access Token"
+    },
+    "done": "Fertig",
+    "lastUsed": "zuletzt {{at}}",
+    "neverUsed": "noch nicht benutzt",
+    "revoke": "Widerrufen",
+    "revokeConfirm": "Den Schlüssel „{{name}}“ widerrufen? Das Gerät kann danach nichts mehr schicken; was es geschickt hat, bleibt.",
+    "revoked": "„{{name}}“ ist widerrufen.",
+    "errors": {
+      "notActive": "Weitere Quellen gibt es nur, wenn TravTrack deine Standortquelle ist (Einstellungen → Standort).",
+      "limit": "Du hast schon so viele Schlüssel, wie es geben kann. Widerrufe zuerst einen.",
+      "notFound": "Diesen Schlüssel gibt es nicht mehr.",
+      "rateLimited": "Gerade wurden zu viele Schlüssel erstellt. Versuche es in einer Viertelstunde erneut."
+    }
   }
 }
