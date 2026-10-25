@@ -183,14 +183,19 @@ export async function acceptJourneyRun(
   return runAcceptProtocol(userId, id, journeyAcceptKind(answer), hooks);
 }
 
-/** An accept holds this row right now: a claim younger than `CLAIM_STALE_MS`. */
-async function freshlyClaimed(id: string): Promise<boolean> {
-  const row = await prisma.locationSuggestion.findFirst({
-    where: { id, status: "accepting", claimedAt: { gte: new Date(Date.now() - CLAIM_STALE_MS) } },
-    select: { id: true },
+/** The row's claim as read, so a write can be made conditional on it. */
+async function claimOf(id: string) {
+  return prisma.locationSuggestion.findFirst({
+    where: { id },
+    select: { status: true, claimToken: true, claimedAt: true },
   });
-  return row !== null;
 }
+
+/** An accept holds this claim right now: one younger than `CLAIM_STALE_MS`. */
+const fresh = (claim: { status: string; claimedAt: Date | null } | null) =>
+  claim?.status === "accepting" &&
+  claim.claimedAt !== null &&
+  claim.claimedAt.getTime() >= Date.now() - CLAIM_STALE_MS;
 
 /** Nothing left to close: a repeat answers the row; anything else was answered otherwise. */
 function closedAlready(row: StoredSuggestion, evidence: JourneyEvidence, runIndex?: number) {
@@ -211,26 +216,33 @@ function closedAlready(row: StoredSuggestion, evidence: JourneyEvidence, runInde
 export async function closeJourneyRuns(
   userId: string,
   id: string,
-  runIndex?: number
+  runIndex?: number,
+  hooks: { afterRead?: () => Promise<unknown> } = {}
 ): Promise<StoredSuggestion> {
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const row = await loadSuggestion(userId, id);
+    const claim = await claimOf(id);
     const evidence = journeyOf(row);
     if (runIndex !== undefined && !evidence.runs[runIndex]) {
       throw invalidInput("No such run in this question", "runIndex");
     }
-    if (await freshlyClaimed(id)) throw inProgress();
+    if (fresh(claim)) throw inProgress();
     const targets = runIndex === undefined ? evidence.runs.map((_, i) => i) : [runIndex];
     const open = targets.filter((i) => evidence.runs[i].state === "open");
     if (open.length === 0) return closedAlready(row, evidence, runIndex);
     if (row.status !== "pending" && row.status !== "accepting") throw resolved();
     const next = open.reduce((e, i) => withRun(e, i, "closed", null), evidence);
     const update = settle(next);
+    await hooks.afterRead?.();
+    // Only on the row as read — its status, evidence AND claim: a fresh accept
+    // that took a stale claim over meanwhile is never cancelled by a close.
     const { count } = await prisma.locationSuggestion.updateMany({
       where: {
         id,
         userId,
         status: row.status,
+        claimToken: claim?.claimToken ?? null,
+        claimedAt: claim?.claimedAt ?? null,
         evidence: { equals: row.evidence as Prisma.InputJsonValue },
       },
       data: {

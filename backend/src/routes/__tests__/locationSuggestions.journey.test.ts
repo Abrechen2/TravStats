@@ -7,7 +7,10 @@ import { travTrackSwitches } from "../../services/travtrack/__tests__/switches";
 import { bumpHistoryGeneration } from "../../services/locationEvidence/generation";
 import { parseJourneyEvidence } from "../../services/locationEvidence/journeys/evidence";
 import { suggestJourneys } from "../../services/locationEvidence/journeys/suggest";
-import { acceptJourneyRun } from "../../services/locationEvidence/journeys/accept";
+import {
+  acceptJourneyRun,
+  closeJourneyRuns,
+} from "../../services/locationEvidence/journeys/accept";
 import {
   H,
   NOW,
@@ -294,6 +297,28 @@ describe("journey questions", () => {
       expect(after.claimToken).toBe("intruder");
       expect((await evidence()).runs[0].state).toBe("open");
     }
+  });
+
+  it("closing a run cannot cancel an accept that took over a stale claim", async () => {
+    await prisma.locationSuggestion.update({
+      where: { id },
+      data: {
+        status: "accepting",
+        claimToken: "crashed",
+        claimedAt: new Date(Date.now() - 3 * 60_000),
+      },
+    });
+    await expect(
+      closeJourneyRuns(userId, id, 0, {
+        afterRead: () =>
+          prisma.locationSuggestion.update({
+            where: { id },
+            data: { claimToken: "fresh", claimedAt: new Date() },
+          }),
+      })
+    ).rejects.toMatchObject({ code: "SUGGESTION_ACCEPT_IN_PROGRESS" });
+    expect(await row()).toMatchObject({ status: "accepting", claimToken: "fresh" });
+    expect((await evidence()).runs[0].state).toBe("open");
   });
 
   it("two concurrent accepts write one link", async () => {
