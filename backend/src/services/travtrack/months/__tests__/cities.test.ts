@@ -47,7 +47,8 @@ describe("monthly values — cities", () => {
     prisma.travTrackMonthValue.findUnique({
       where: { userId_month: { userId: owner, month: utcMidnight(OCT) } },
     });
-  const run = (owner = userId) => projectMonths(owner, { geocode, countryAt });
+  const run = (owner = userId, now = new Date("2026-10-25T12:00:00Z")) =>
+    projectMonths(owner, { geocode, countryAt, cityIntervalMs: 0, now });
 
   beforeAll(async () => {
     userId = await makeUser(`${PREFIX}a`);
@@ -65,6 +66,7 @@ describe("monthly values — cities", () => {
       data: { travtrackCityLookup: false },
     });
     await prisma.geoCityCache.deleteMany({ where: { cell: { in: CELLS } } });
+    await prisma.travTrackDerivationState.deleteMany({ where: { userId } });
   });
 
   afterAll(async () => {
@@ -144,7 +146,8 @@ describe("monthly values — cities", () => {
     expect(days.done & MONTHS_BIT).toBe(0);
     expect(await prisma.geoCityCache.count({ where: { cell: { in: CELLS } } })).toBe(0);
 
-    expect(await run()).toMatchObject({ projected: 1 });
+    // Backed off: the next attempt waits (lookup.test.ts), then succeeds.
+    expect(await run(userId, new Date("2026-10-26T12:00:00Z"))).toMatchObject({ projected: 1 });
     expect((await month())!.cities).toEqual([{ name: "Seoul", countryCode: "KR" }]);
   });
 

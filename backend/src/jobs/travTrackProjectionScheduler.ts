@@ -28,6 +28,7 @@ import {
 import { ALL_PROJECTION_BITS } from "../services/travtrack/dirtyDays";
 import { projectExploredCells } from "../services/travtrack/explored/project";
 import { projectMonths } from "../services/travtrack/months/project";
+import { CITY_LOOKUPS_PER_TICK } from "../services/travtrack/months/cities";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
 
@@ -47,6 +48,8 @@ export type ProjectionRunOptions = {
   maxAccounts?: number;
   /** Days one tick projects at most, over all its accounts. */
   maxDays?: number;
+  /** Shared by the tick's accounts: cells sent to the geocoder at most (L3). */
+  cityBudget?: { left: number };
 };
 
 /**
@@ -141,7 +144,7 @@ async function runAccount(
     const monthsBudget = maxDays - days - explored.projected - explored.rerun;
     const months =
       monthsBudget > 0
-        ? await projectMonths(userId, { countryAt })
+        ? await projectMonths(userId, { countryAt, cityBudget: options.cityBudget })
         : { status: "done" as const, days: 0 };
     const spent = days + explored.projected + explored.rerun + months.days;
     if (months.status === "failed") {
@@ -199,12 +202,17 @@ export async function runTravTrackProjections(
   // Loaded once per run: the boundary index is several megabytes.
   const countryAt = options.countryAt ?? (await getCountryResolver()).countryAt;
   const dayBudget = options.maxDays ?? DAYS_PER_TICK;
+  // One city budget for the whole tick: at 4 requests a minute it bounds the tick's length.
+  const tickOptions = {
+    ...options,
+    cityBudget: options.cityBudget ?? { left: CITY_LOOKUPS_PER_TICK },
+  };
   for (const userId of accounts) {
     const left = Math.min(PROJECTION_DAYS_PER_RUN, dayBudget - result.days);
     if (left <= 0) break;
     result.accounts += 1;
     // One account's failure is one account's: the next is still projected.
-    const outcome = await runAccount(userId, countryAt, options, now, left);
+    const outcome = await runAccount(userId, countryAt, tickOptions, now, left);
     if (outcome.failed) result.failed += 1;
     result.questions += outcome.questions;
     result.days += outcome.days;

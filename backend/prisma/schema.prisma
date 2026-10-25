@@ -6162,6 +6162,11 @@ model TravTrackDerivationState {
   failureCount          Int       @default(0) @map("failure_count")
   /// Not scheduled again before this instant after a failure (backoff).
   retryAfter            DateTime? @map("retry_after")
+  /// Consecutive failed city lookups of the monthly values (L3); the
+  /// geocoder's own backoff below grows with it, a lookup that answers resets it.
+  cityLookupFailures    Int       @default(0) @map("city_lookup_failures")
+  /// No city is sent to the geocoder for this account before this instant.
+  cityLookupRetryAfter  DateTime? @map("city_lookup_retry_after")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

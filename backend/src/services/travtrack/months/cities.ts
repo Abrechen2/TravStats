@@ -14,8 +14,11 @@
  *     track. The geocoder is the codebase's one reverse geocoder
  *     (`geo/nominatim.ts`), which may be a public Nominatim; that is why the
  *     lookup is off by default and its switch says so.
- *   - A lookup that failed (`degraded`) is not cached, so it is retried; an
- *     answer without a settlement is cached as `name: null`.
+ *   - A lookup that failed (`degraded`) is not cached and ends the batch;
+ *     `lookup.ts` backs the account off. An answer without a settlement is
+ *     cached as `name: null`.
+ *   - Requests are spaced for a scheduled job (`CITY_JOB_INTERVAL_MS`), and
+ *     every condition is asked again right before each one (`mayLookUp`).
  */
 import { prisma, type DbTransaction } from "../../../db";
 import { reverseGeocodeDetailed } from "../../geo/nominatim";
@@ -25,8 +28,10 @@ import type { InFlight } from "./values";
 
 export const DWELL_MIN_MS = 30 * 60_000;
 export const DWELL_RADIUS_M = 250;
-/** New cells one projection run sends to the geocoder at most (it allows 1 request/s). */
-export const MAX_CITY_LOOKUPS_PER_RUN = 20;
+/** New cells one account's run sends to the geocoder at most. */
+export const MAX_CITY_LOOKUPS_PER_RUN = 4;
+/** …and one projection tick over all its accounts: 12 at 4 a minute is three minutes. */
+export const CITY_LOOKUPS_PER_TICK = 12;
 
 export type CityCell = { cell: string; lat: number; lon: number };
 export type City = { name: string; countryCode: string | null };
@@ -117,34 +122,81 @@ export async function citiesFromCache(
   return { cities, missing };
 }
 
+/**
+ * Nominatim's usage policy allows a regularly scheduled job at most 4
+ * requests a minute (https://operations.osmfoundation.org/policies/nominatim/),
+ * stricter than the 1 request/s the interactive geocoder keeps. This job
+ * spaces its own requests at least 15 s apart, across every account of the
+ * process, on top of that throttle; the geocoder sends the server's
+ * identifying User-Agent (`geo/nominatim.ts`).
+ */
+export const CITY_JOB_INTERVAL_MS = 15_000;
+let lastJobRequestAt = 0;
+
+async function jobThrottle(intervalMs: number): Promise<void> {
+  const wait = Math.max(0, intervalMs - (Date.now() - lastJobRequestAt));
+  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+  lastJobRequestAt = Date.now();
+}
+
 export type CityLookupDeps = {
   /** The reverse geocoder; `reverseGeocodeDetailed` unless a test stands in. */
   geocode?: typeof reverseGeocodeDetailed;
   /** The offline country of a position (ISO alpha-2), the cache's country code. */
   countryAt: (lat: number, lon: number) => string | null;
   max?: number;
+  /**
+   * Asked right before EACH request: whether this cell may still leave the
+   * server — the account's switch, TravTrack's allowance, its history
+   * unchanged and the cell clear of every privacy circle now in force. False
+   * ends the batch at once; nothing further is sent.
+   */
+  mayLookUp: (cell: CityCell) => Promise<boolean>;
+  /** The job's spacing; `CITY_JOB_INTERVAL_MS` unless a test needs none. */
+  intervalMs?: number;
+};
+
+export type CityLookupOutcome = {
+  /** Requests sent. */
+  looked: number;
+  /** `mayLookUp` said no: the batch ended there. */
+  stopped: boolean;
+  /** The geocoder failed (timeout, 429, 5xx, network): the batch ended there. */
+  failed: { retryAfterMs: number | null } | null;
 };
 
 /**
  * Looks the cells up — their centres, never a fix — and caches each answer.
- * Answers how many were looked up; a failed lookup is not cached.
+ * A failed lookup is not cached and ends the batch, so a struggling geocoder
+ * is not asked again in the same run.
  */
 export async function lookUpCityCells(
   cells: readonly CityCell[],
   deps: CityLookupDeps
-): Promise<number> {
+): Promise<CityLookupOutcome> {
   const geocode = deps.geocode ?? reverseGeocodeDetailed;
-  let looked = 0;
+  const outcome: CityLookupOutcome = { looked: 0, stopped: false, failed: null };
   for (const c of cells.slice(0, deps.max ?? MAX_CITY_LOOKUPS_PER_RUN)) {
-    const outcome = await geocode(c.lat, c.lon);
-    looked += 1;
-    if (outcome.degraded) continue;
-    const data = { name: outcome.parts?.city ?? null, countryCode: deps.countryAt(c.lat, c.lon) };
+    await jobThrottle(deps.intervalMs ?? CITY_JOB_INTERVAL_MS);
+    // After the wait, not before: whatever changed while it lasted counts.
+    if (!(await deps.mayLookUp(c))) return { ...outcome, stopped: true };
+    const answer = await geocode(c.lat, c.lon);
+    outcome.looked += 1;
+    if (answer.degraded)
+      return { ...outcome, failed: { retryAfterMs: answer.retryAfterMs ?? null } };
+    const data = { name: answer.parts?.city ?? null, countryCode: deps.countryAt(c.lat, c.lon) };
     await prisma.geoCityCache.upsert({
       where: { cell: c.cell },
       create: { cell: c.cell, ...data },
       update: { ...data, fetchedAt: new Date() },
     });
   }
-  return looked;
+  return outcome;
+}
+
+/** The cells from `offset` on, then the ones before it: a cell that keeps failing starves none behind it. */
+export function rotated<T>(items: readonly T[], offset: number): T[] {
+  if (items.length === 0) return [];
+  const k = ((offset % items.length) + items.length) % items.length;
+  return [...items.slice(k), ...items.slice(0, k)];
 }

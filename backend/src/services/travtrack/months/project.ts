@@ -20,8 +20,9 @@
  *     zero (abstention).
  *   - `cities` is null while the lookup is off — and while a dwell's cell has
  *     no cached answer yet: the cells are looked up after the transaction (no
- *     network call holds the lock) and the month runs once more; a lookup that
- *     failed leaves it unacknowledged for the next run.
+ *     network call holds the lock), each one only while every condition still
+ *     holds (`lookup.ts`), and the month runs once more; a failed lookup
+ *     leaves it unacknowledged and backs the account's lookups off.
  *
  * Only while the instance's TravTrack is on and the account's provider is
  * TravTrack (`travTrackDerivationAllowed`). A removal deletes the months of its
@@ -36,6 +37,7 @@ import {
   type DerivationAllowance,
 } from "../../locationEvidence/allowed";
 import { flightWindowsIn } from "../../locationEvidence/derivationRead";
+import { historyGeneration } from "../../locationEvidence/generation";
 import {
   ackDirtyDay,
   COUNTRY_DAYS_BIT,
@@ -48,11 +50,12 @@ import { readSafeTravTrack, type SafeCursor } from "../readSafe";
 import {
   citiesFromCache,
   dwellCells,
-  lookUpCityCells,
   MAX_CITY_LOOKUPS_PER_RUN,
   type CityCell,
   type CityLookupDeps,
 } from "./cities";
+import { lookUpMonthCities } from "./lookup";
+import { monthWindow } from "./window";
 import { groundKm, inFlightBy, spanDays, vertexDays } from "./values";
 
 /** Raised when the figures' rules change, so a reader can tell an old row from a new one. */
@@ -71,6 +74,17 @@ export type MonthsProjectionDeps = {
   countryAt?: CityLookupDeps["countryAt"];
   /** Points per page of the safe read; `PAGE` unless a test needs small pages. */
   pageSize?: number;
+  /**
+   * Days this run may spend: each month costs the days it owed, and no month
+   * starts once they are spent. Unbounded unless the scheduler passes its budget.
+   */
+  maxDays?: number;
+  /** Lookups left in the whole tick, shared by its accounts (`cityTickBudget`). */
+  cityBudget?: { left: number };
+  /** The job's spacing between geocoder requests; its default unless a test needs none. */
+  cityIntervalMs?: number;
+  /** The run's clock (the geocoder's backoff); now unless a test moves it. */
+  now?: Date;
 };
 
 export type MonthsProjectionResult = {
@@ -82,6 +96,8 @@ export type MonthsProjectionResult = {
   rerun: number;
   /** Days acknowledged over all months. */
   days: number;
+  /** Days the months worked owed, acknowledged or not: what the run spent of its budget. */
+  spentDays: number;
   /** Cells sent to the geocoder. */
   lookups: number;
 };
@@ -89,13 +105,6 @@ export type MonthsProjectionResult = {
 class MonthTooLarge extends Error {}
 
 const DAY_MS = 86_400_000;
-
-/** `[first day, first day of the next month)` of the month starting on `month` (`YYYY-MM-01`). */
-export function monthWindow(month: string): { fromMs: number; untilMs: number } {
-  const from = new Date(`${month}T00:00:00.000Z`);
-  const until = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + 1, 1));
-  return { fromMs: from.getTime(), untilMs: until.getTime() };
-}
 
 const monthOf = (day: string) => `${day.slice(0, 7)}-01`;
 const dayString = (ms: number) => new Date(ms).toISOString().slice(0, 10);
@@ -135,7 +144,15 @@ async function readMonth(
   throw new MonthTooLarge();
 }
 
-type MonthOutcome = { acked: number; owed: boolean; missing: CityCell[] };
+type MonthOutcome = {
+  acked: number;
+  owed: boolean;
+  missing: CityCell[];
+  /** Days of the month owed when it was read: what it costs against the run's budget. */
+  pendingDays: number;
+  /** The history generation the month was read at: a lookup after it must still see it. */
+  generation: bigint;
+};
 
 /** One month: read, replace, ack — one transaction. */
 async function projectMonth(
@@ -152,10 +169,12 @@ async function projectMonth(
         SELECT day, version FROM travtrack_dirty_days
          WHERE user_id = ${userId} AND (done & ${MONTHS_BIT}) = 0
            AND day >= ${month}::date AND day <= ${lastDay}::date`;
-      if (pending.length === 0) return { acked: 0, owed: false, missing: [] };
+      const generation = await historyGeneration(tx, userId);
+      const base = { pendingDays: pending.length, generation };
+      if (pending.length === 0) return { ...base, acked: 0, owed: false, missing: [] };
       // The countries are the country projection's: wait until it is done here.
       const countriesOwed = await unprojectedDaysIn(userId, COUNTRY_DAYS_BIT, month, lastDay, tx);
-      if (countriesOwed.size > 0) return { acked: 0, owed: true, missing: [] };
+      if (countriesOwed.size > 0) return { ...base, acked: 0, owed: true, missing: [] };
 
       const settings = await tx.userSettings.findUnique({
         where: { userId },
@@ -200,13 +219,13 @@ async function projectMonth(
       }
       await deps.beforeAck?.(month);
       // A city still to look up: written without cities, and owed.
-      if (missing.length > 0) return { acked: 0, owed: true, missing };
+      if (missing.length > 0) return { ...base, acked: 0, owed: true, missing };
       let acked = 0;
       for (const row of pending) {
         const day = dayString(row.day.getTime());
         if (await ackDirtyDay(tx, userId, { day, version: row.version }, MONTHS_BIT)) acked += 1;
       }
-      return { acked, owed: acked < pending.length, missing };
+      return { ...base, acked, owed: acked < pending.length, missing };
     },
     { timeout: 120_000 }
   );
@@ -230,6 +249,7 @@ export async function projectMonths(
     projected: 0,
     rerun: 0,
     days: 0,
+    spentDays: 0,
     lookups: 0,
   };
   const stop = (allowance: DerivationAllowance): MonthsProjectionResult => ({
@@ -239,22 +259,32 @@ export async function projectMonths(
   });
   const allowance = await travTrackDerivationAllowed(userId);
   if (allowance !== "ok") return stop(allowance);
+  const maxDays = deps.maxDays ?? Number.POSITIVE_INFINITY;
   try {
     let countryAt = deps.countryAt;
     for (const month of await pendingMonths(userId, deps.maxMonths ?? MONTHS_PER_RUN)) {
+      if (result.spentDays >= maxDays) break;
       // Asked before every month: a switch stops the run, not the next one.
       const now = await travTrackDerivationAllowed(userId);
       if (now !== "ok") return stop(now);
       let outcome = await projectMonth(userId, month, deps);
-      const budget = MAX_CITY_LOOKUPS_PER_RUN - result.lookups;
-      if (outcome.missing.length > 0 && budget > 0) {
+      result.spentDays += outcome.pendingDays;
+      const lookupsLeft = Math.min(
+        MAX_CITY_LOOKUPS_PER_RUN - result.lookups,
+        deps.cityBudget?.left ?? Number.POSITIVE_INFINITY
+      );
+      if (outcome.missing.length > 0 && lookupsLeft > 0) {
         countryAt ??= (await getCountryResolver()).countryAt;
-        result.lookups += await lookUpCityCells(outcome.missing, {
+        const looked = await lookUpMonthCities(userId, month, outcome, {
           geocode: deps.geocode,
           countryAt,
-          max: budget,
+          max: lookupsLeft,
+          intervalMs: deps.cityIntervalMs,
+          now: deps.now ?? new Date(),
         });
-        outcome = await projectMonth(userId, month, deps);
+        result.lookups += looked;
+        if (deps.cityBudget) deps.cityBudget.left -= looked;
+        if (looked > 0) outcome = await projectMonth(userId, month, deps);
       }
       result.days += outcome.acked;
       if (outcome.owed) result.rerun += 1;
