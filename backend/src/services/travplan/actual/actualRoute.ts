@@ -1,0 +1,266 @@
+import { prisma } from "../../../db";
+import { classifyStay } from "../../../shared/lodgingCounting";
+import { classifyVisit } from "../../../shared/placeCounting";
+import { localDay } from "../../../shared/time/instant";
+import { fromDbDate, toDbDate } from "../../../shared/time/localDate";
+import { tripEntryTrack, type TrackOrigin } from "../../locationProvider/entryTrack";
+import type { Coverage } from "../../locationProvider/types";
+import type { ZoneCircle } from "../../travtrack/classify";
+import { privacyCirclesFor } from "../../travtrack/privacyCircles";
+import { privacyCut, privacyCutBy, type LonLat } from "../../travtrack/privacyCut";
+import {
+  TRIP_RECORDING_TRIP_SELECT,
+  tripClockZone,
+  tripFlightWindows,
+  type RecordingTrip,
+} from "../../tripRecording/bounds";
+import { privacySafeDevices } from "../../tripRecording/privacySafe";
+import { cachedTrack, clearTrackCache } from "./trackCache";
+import {
+  displaySegments,
+  pointsByDevice,
+  recordingDays,
+  withoutJitter,
+  type DevicePoints,
+  type StoredPoint,
+} from "../../tripRecording/segments";
+
+/**
+ * Where the trip actually went (TravTrack plan L5), for comparing it with the
+ * plan. The track is `tripEntryTrack`'s (T5): the own recording, else
+ * TravTrack or Dawarich by the account's provider — TravTrack off means
+ * TravTrack is simply not a source. So a Dawarich user gets the comparison
+ * too, and nothing here reads a provider directly.
+ *
+ * Privacy (review focus 10, 15): every point inside a circle is gone before
+ * anything is counted or compared, and the line is `privacyCut` again on its
+ * final, simplified form as it leaves. Own account only: this is read for the
+ * owner's plan page and never selected by a share, an export, a public link, a
+ * comparison or a federation payload.
+ *
+ * `positions` and `circles` are for the comparison on the server and are never
+ * serialised; the route answers with an explicit shape.
+ */
+
+/**
+ * A position as an instant, never as a day: each station reads it on its own
+ * calendar (compare.ts), so a fix just after a station's midnight is that
+ * station's next day whatever clock the trip is listed on.
+ */
+export type ActualPosition = {
+  atMs: number;
+  lat: number;
+  lon: number;
+  deviceId: string | null;
+  /**
+   * The unbroken stretch the position belongs to. A new stretch begins at
+   * every recording gap, deleted range, reported pause, privacy cut and
+   * flight: nothing is ever measured across one.
+   */
+  stretch: number;
+};
+
+export type ActualStay = {
+  id: string;
+  kind: "lodging" | "place";
+  /**
+   * The visit's instant where it is known (a place visit's `visitedAtUtc`),
+   * read on the station's calendar like a fix; null for a lodging night,
+   * which is a calendar day of the hotel already, and for a visit known only
+   * by its wall clock.
+   */
+  atMs: number | null;
+  /** The day on the record's own calendar (the hotel's, the place's). */
+  day: string;
+  lat: number;
+  lon: number;
+  label: string;
+};
+
+export type ActualDay = { day: string; state: "recorded" | "noData" };
+
+export type ActualRoute = {
+  segments: LonLat[][];
+  days: ActualDay[];
+  stays: ActualStay[];
+  coverage: Coverage | null;
+  origin: TrackOrigin;
+  /** The trip's clock — a station's calendar when neither it nor the plan names a zone. */
+  zone: string;
+  /** Every privacy-safe fix's instant, ascending: which of a station's days hold data. */
+  recordedAtMs: number[];
+  positions: ActualPosition[];
+  circles: ZoneCircle[];
+};
+
+const DAY_MS = 86_400_000;
+const MAX_DAYS = 366;
+const addDays = (day: string, n: number): string =>
+  fromDbDate(new Date(toDbDate(day).getTime() + n * DAY_MS));
+
+function dayRange(from: string, until: string): string[] {
+  const out: string[] = [];
+  for (let d = from; d <= until && out.length < MAX_DAYS; d = addDays(d, 1)) out.push(d);
+  return out;
+}
+
+/** The trip's days and every recorded day, each said to hold data or not. */
+function tripDays(trip: RecordingTrip, recorded: readonly string[]): ActualDay[] {
+  const span =
+    trip.startDay && trip.endDay
+      ? dayRange(fromDbDate(trip.startDay), fromDbDate(trip.endDay))
+      : [];
+  const has = new Set(recorded);
+  return [...new Set([...span, ...recorded])]
+    .sort()
+    .map((day) => ({ day, state: has.has(day) ? "recorded" : "noData" }));
+}
+
+/**
+ * The trip's accepted TravStats records with a place and a day: lodging stays
+ * that are over (the counting rule: a stay counts once its check-out is past)
+ * and place visits that happened. A month- or year-precision stay names no day
+ * and is left out rather than spread over invented days.
+ */
+async function tripStays(userId: string, tripId: string, zone: string): Promise<ActualStay[]> {
+  const [lodging, visits] = await Promise.all([
+    prisma.lodgingStay.findMany({
+      where: { userId, tripId },
+      select: {
+        id: true,
+        status: true,
+        checkIn: true,
+        checkOut: true,
+        checkInDate: true,
+        checkOutDate: true,
+        datePrecision: true,
+        lodging: { select: { name: true, lat: true, lon: true } },
+      },
+    }),
+    prisma.placeVisit.findMany({
+      where: { userId, tripId },
+      select: {
+        id: true,
+        visitedAt: true,
+        visitedAtUtc: true,
+        visitedZone: true,
+        place: { select: { name: true, lat: true, lon: true } },
+      },
+    }),
+  ]);
+  const stays: ActualStay[] = [];
+  for (const s of lodging) {
+    const { lat, lon, name } = s.lodging;
+    if (lat === null || lon === null || s.datePrecision !== "DAY") continue;
+    if (!s.checkInDate || classifyStay(s) !== "visited") continue;
+    const until = s.checkOutDate ? fromDbDate(s.checkOutDate) : fromDbDate(s.checkInDate);
+    for (const day of dayRange(fromDbDate(s.checkInDate), until)) {
+      stays.push({ id: s.id, kind: "lodging", atMs: null, day, lat, lon, label: name });
+    }
+  }
+  for (const v of visits) {
+    if (classifyVisit(v) !== "visited") continue;
+    const day = v.visitedAtUtc
+      ? localDay(v.visitedAtUtc, v.visitedZone ?? zone)
+      : v.visitedAt
+        ? localDay(v.visitedAt, "UTC") // the legacy column's wall clock, stored as fake UTC
+        : null;
+    if (!day) continue;
+    stays.push({
+      id: v.id,
+      kind: "place",
+      atMs: v.visitedAtUtc ? v.visitedAtUtc.getTime() : null,
+      day,
+      lat: v.place.lat,
+      lon: v.place.lon,
+      label: v.place.name,
+    });
+  }
+  return stays;
+}
+
+const coord = (p: StoredPoint): LonLat => [p[2], p[1]];
+
+/** Jitter-free, privacy-safe positions, device by device, each in its stretch. */
+async function positionsOf(
+  devices: readonly DevicePoints[],
+  circles: readonly ZoneCircle[]
+): Promise<{ positions: ActualPosition[]; stretches: StoredPoint[][] }> {
+  const positions: ActualPosition[] = [];
+  const stretches: StoredPoint[][] = [];
+  for (const device of devices) {
+    const clean = await withoutJitter([device]);
+    for (const stretch of privacyCutBy(clean.segments, circles, coord)) {
+      const id = stretches.length;
+      stretches.push(stretch);
+      for (const [atMs, lat, lon] of stretch) {
+        positions.push({
+          atMs,
+          lat,
+          lon,
+          deviceId: device.deviceId,
+          stretch: id,
+        });
+      }
+    }
+  }
+  return { positions, stretches };
+}
+
+type TrackPart = Omit<ActualRoute, "stays">;
+
+/** The track as far as it may be told: privacy-safe, in stretches, with its line. Cached. */
+async function readTrack(
+  userId: string,
+  trip: RecordingTrip & { id: string }
+): Promise<TrackPart | null> {
+  const [entry, zone] = await Promise.all([
+    tripEntryTrack(userId, trip),
+    tripClockZone(userId, trip),
+  ]);
+  if (!entry.origin) return null;
+
+  // A flight's recorder window breaks the line: the trip recording holds no
+  // fix inside it, and two fixes either side of a flight are not a drive.
+  const flights = await tripFlightWindows(userId, trip.id);
+  const raw = pointsByDevice(entry.batches, zone).map((d) => ({
+    ...d,
+    breaks: [...(d.breaks ?? []), ...flights],
+  }));
+  const first = Math.min(...raw.map((d) => d.points[0]?.[0] ?? Infinity));
+  const circles = await privacyCirclesFor(userId, Number.isFinite(first) ? first : 0);
+  // Whatever a zone hides is gone before anything is counted (T5).
+  const safe = privacySafeDevices(raw, circles);
+  const safePoints = safe.flatMap((d) => d.points);
+  const recorded = recordingDays(safePoints, zone);
+  const { positions, stretches } = await positionsOf(safe, circles);
+  return {
+    // Cut again on the final, simplified line: a chord simplification makes is checked as it leaves.
+    segments: privacyCut(displaySegments(stretches), circles),
+    days: tripDays(trip, recorded),
+    coverage: entry.coverage,
+    origin: entry.origin,
+    zone,
+    recordedAtMs: safePoints.map((p) => p[0]).sort((a, b) => a - b),
+    positions,
+    circles,
+  };
+}
+
+/**
+ * Null when the trip is not this user's, or when no source holds a track for
+ * it. The track is read once per change (`trackCache.ts`); the stays are
+ * TravStats' own records, cheap to read, and read fresh every time.
+ */
+export async function getActualRoute(userId: string, tripId: string): Promise<ActualRoute | null> {
+  const trip = await prisma.trip.findFirst({
+    where: { id: tripId, userId },
+    select: { ...TRIP_RECORDING_TRIP_SELECT, updatedAt: true },
+  });
+  if (!trip) return null;
+  const track = await cachedTrack(userId, trip, () => readTrack(userId, trip));
+  if (!track) return null;
+  return { ...track, stays: await tripStays(userId, trip.id, track.zone) };
+}
+
+export const clearActualTrackCache = clearTrackCache;
