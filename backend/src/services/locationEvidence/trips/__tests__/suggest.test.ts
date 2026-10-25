@@ -15,6 +15,7 @@ import {
   resetTripUser,
   setHomes,
   storeDay,
+  storeSpan,
 } from "./tripFixtures";
 
 /**
@@ -173,6 +174,23 @@ describe("suggestTrips", () => {
     await away(["2026-08-10", "2026-08-11"]);
     await away(["2026-10-24", "2026-10-25"]);
     expect(await suggestTrips(userId, { nowMs: NOW })).toMatchObject({ created: 0 });
+  });
+
+  it("finished days are the residence's, not the profile's: a Honolulu day still running is not asked", async () => {
+    const HONOLULU = { lat: 21.31, lon: -157.86 };
+    const HILO = { lat: 19.72, lon: -155.08 };
+    await setHomes(userId, [{ ...HOME_PERIOD, residence: { name: "Honolulu", ...HONOLULU } }]);
+    // Away on the Honolulu days of the 23rd and the 24th, 06:00–23:00 HST.
+    for (const d of ["2026-10-23", "2026-10-24"]) {
+      const start = Date.parse(`${d}T16:00:00Z`);
+      await storeSpan(userId, start, start + 17 * 3_600_000, HILO);
+    }
+    // 04:25 UTC on the 25th: Berlin (the profile) is on the 25th, Honolulu
+    // still on the 24th — which is not over, so only the 23rd is finished.
+    const at = Date.parse("2026-10-25T04:25:00Z");
+    expect(await suggestTrips(userId, { nowMs: at })).toMatchObject({ created: 0 });
+    // A day later both days are over: one question.
+    expect(await suggestTrips(userId, { nowMs: at + 86_400_000 })).toMatchObject({ created: 1 });
   });
 
   it("no confirmed residence → no questions", async () => {

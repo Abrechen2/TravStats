@@ -237,6 +237,17 @@ export function confirmedHomes(periods: readonly HomePeriod[], fallbackZone: str
 }
 
 /**
+ * "Today" as the account's home names it: the local day, in the zone of the
+ * home period that holds this instant, that `nowMs` falls on — so "finished
+ * days" are counted on the same clock the days are classified on. Null
+ * without a confirmed residence.
+ */
+export async function homeToday(userId: string, nowMs: number): Promise<string | null> {
+  const { zone: fallbackZone } = await profileZoneOf(userId);
+  return confirmedHomes(await loadHomePeriods(userId), fallbackZone)?.dayOf(nowMs) ?? null;
+}
+
+/**
  * The away days and runs over the local days `[fromDay, untilDay]`. A read
  * that stopped early (truncated) leaves every day from its last fix on
  * `unknown`: a day read in part is not judged.

@@ -32,10 +32,8 @@
 import { prisma } from "../../../db";
 import { Prisma } from "../../../prisma";
 import { now } from "../../../shared/time/clock";
-import { localDay } from "../../../shared/time/instant";
 import { startOfDayAt } from "../../../shared/time/legacyValues";
 import { fromDbDate } from "../../../shared/time/localDate";
-import { profileZoneOf } from "../../../shared/time/profileZone";
 import logger from "../../../utils/logger";
 import { getLocationProvider } from "../../locationProvider/provider";
 import { takeTravTrackLock } from "../../travtrack/lock";
@@ -43,7 +41,7 @@ import { travTrackDerivationAllowed, type DerivationAllowance } from "../allowed
 import { explanation } from "../envelope";
 import { historyGeneration } from "../generation";
 import { tripEvidenceKey } from "../key";
-import { awayPeriods, shiftDay, type AwayRun } from "./awayPeriods";
+import { awayPeriods, homeToday, shiftDay, type AwayRun } from "./awayPeriods";
 import { parseTripEvidence, type TripEvidence } from "./evidence";
 
 /** The trip detector's version (`location_suggestions.algorithm`). */
@@ -227,8 +225,9 @@ export async function suggestTrips(
   if (allowance !== "ok") return result("skipped", { reason: allowance });
 
   const nowMs = opts.nowMs ?? now().getTime();
-  const { zone } = await profileZoneOf(userId);
-  const today = localDay(new Date(nowMs), zone);
+  // Finished days on the residence's clock, the one the days are classified on.
+  const today = await homeToday(userId, nowMs);
+  if (!today) return result("skipped", { reason: "noResidence" });
   const window = {
     fromDay: shiftDay(today, -(opts.windowDays ?? TRIP_WINDOW_DAYS)),
     untilDay: shiftDay(today, -1),
