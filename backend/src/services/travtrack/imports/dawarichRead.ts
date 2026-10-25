@@ -106,9 +106,13 @@ async function readDay(deps: ReadDeps, dayMs: number): Promise<DayHarvest> {
 /** Groups a whole window's points by UTC day, oldest first. */
 function byDay(read: Window, fromMs: number, toMs: number): DayHarvest[] {
   const days = new Map<number, DawarichPoint[]>();
+  // Appended in place: copying a day's array per fix made a dense day
+  // quadratic (50,000 fixes ≈ 1.25 billion copied references).
   for (const p of read.points) {
     const start = Math.floor(p.timestampMs / DAY_MS) * DAY_MS;
-    days.set(start, [...(days.get(start) ?? []), p]);
+    const day = days.get(start);
+    if (day) day.push(p);
+    else days.set(start, [p]);
   }
   const harvest = [...days.entries()]
     .sort(([a], [b]) => a - b)
