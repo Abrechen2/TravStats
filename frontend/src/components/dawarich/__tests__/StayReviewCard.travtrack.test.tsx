@@ -153,6 +153,19 @@ describe("a TravTrack finding on the review card", () => {
     expect(done).not.toHaveBeenCalled();
   });
 
+  it("HISTORY_CHANGED is retried quietly, then said, and the card stays", async () => {
+    vi.useFakeTimers();
+    vi.mocked(dawarichStaysApi.accept).mockRejectedValue(refusal("HISTORY_CHANGED"));
+    const done = mount();
+    fireEvent.click(screen.getByRole("button", { name: "trips:dawarichStays.accept" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+    expect(vi.mocked(dawarichStaysApi.accept).mock.calls.length).toBeGreaterThan(1);
+    expect(screen.getByRole("alert")).toHaveTextContent("trips:dawarichStays.historyChanged");
+    expect(done).not.toHaveBeenCalled();
+  });
+
   it("a finding mid-accept is still offered for review", () => {
     mount({ ...travtrackRow, status: "accepting" });
     expect(screen.getByRole("button", { name: "trips:dawarichStays.accept" })).toBeInTheDocument();

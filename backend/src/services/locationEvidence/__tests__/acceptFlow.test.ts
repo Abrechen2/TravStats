@@ -240,6 +240,30 @@ describe("accepting a TravTrack finding", () => {
     expect(await prisma.placeVisit.count({ where: { userId } })).toBe(0);
   });
 
+  it("history that keeps changing answers HISTORY_CHANGED and keeps the finding pending", async () => {
+    const row = await finding();
+    const real = jest.requireActual<typeof recheckModule>("../recheck").recheckFinding;
+    // Every re-check is followed by a removal elsewhere: the generation moves each round.
+    const spy = jest.spyOn(recheckModule, "recheckFinding").mockImplementation(async (...args) => {
+      const checked = await real(...args);
+      await prisma.$transaction((tx) => bumpHistoryGeneration(tx, userId));
+      return checked;
+    });
+    try {
+      const res = await accept(row.id);
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe("HISTORY_CHANGED");
+    } finally {
+      spy.mockRestore();
+    }
+    // What the answer says is what is stored: still open, nothing written.
+    expect(await prisma.dawarichStay.findUniqueOrThrow({ where: { id: row.id } })).toMatchObject({
+      status: "pending",
+      claimToken: null,
+    });
+    expect(await prisma.placeVisit.count({ where: { userId } })).toBe(0);
+  });
+
   it("a claim abandoned by a failed request goes back to pending", async () => {
     const row = await finding();
     const res = await request(app)

@@ -771,6 +771,7 @@
     "evidenceUnverifiable": "The evidence for this suggestion cannot be checked right now because its map data is missing. The suggestion is kept; please try again after the next scan.",
     "travTrackDisabled": "TravTrack is currently switched off on this server. The suggestion is kept and can be accepted later or dismissed now.",
     "acceptInProgress": "This suggestion is being accepted elsewhere right now. Please try again in a moment.",
+    "historyChanged": "The location history changed several times while this was being accepted. The suggestion is kept; please try again in a moment.",
     "coveredBy": {
       "visit": "Already recorded as a visit: {{name}}",
       "lodging": "Already recorded as a stay: {{name}}"

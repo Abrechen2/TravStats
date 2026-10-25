@@ -7,7 +7,11 @@ import { apiErrorMachineCode } from "../../lib/apiError";
 import { Card } from "../ui/Card";
 import StayIdentityPanel from "./StayIdentityPanel";
 
-/** How often an accept still being published elsewhere is asked again, and how far apart. */
+/**
+ * How often an accept is asked again when the server says "try again" — it is
+ * being published elsewhere, or the history moved under it — and how far apart.
+ */
+const RETRYABLE = new Set(["SUGGESTION_ACCEPT_IN_PROGRESS", "HISTORY_CHANGED"]);
 const IN_PROGRESS_RETRIES = 4;
 const IN_PROGRESS_DELAY_MS = 1500;
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -61,17 +65,14 @@ export default function StayReviewCard({
     };
     try {
       if (accept) {
-        // Another tab or device is publishing this very accept: ask again
-        // quietly — the answer will be its visit (the replay).
+        // Another tab or device is publishing this very accept (the answer will
+        // be its visit, the replay), or the history moved under it: ask again quietly.
         for (let attempt = 0; ; attempt++) {
           try {
             await dawarichStaysApi.accept(row.id, review);
             break;
           } catch (e) {
-            if (
-              apiErrorMachineCode(e) !== "SUGGESTION_ACCEPT_IN_PROGRESS" ||
-              attempt >= IN_PROGRESS_RETRIES
-            )
+            if (!RETRYABLE.has(apiErrorMachineCode(e) ?? "") || attempt >= IN_PROGRESS_RETRIES)
               throw e;
             await pause(IN_PROGRESS_DELAY_MS);
           }
@@ -96,7 +97,9 @@ export default function StayReviewCard({
                       ? "travTrackDisabled"
                       : code === "SUGGESTION_ACCEPT_IN_PROGRESS"
                         ? "acceptInProgress"
-                        : "error"
+                        : code === "HISTORY_CHANGED"
+                          ? "historyChanged"
+                          : "error"
         )
       );
       // The history behind it is gone: the finding is no longer a question.

@@ -14,7 +14,9 @@
  *    generation.
  * 3. Publish, in a transaction under the TravTrack lock: TravTrack still on,
  *    the claim still this one, the generation unchanged — otherwise the
- *    re-check runs once more, and then 409 `EVIDENCE_INVALIDATED`. Evidence
+ *    re-check runs once more, and if the history moved again the claim is
+ *    handed back with 409 `HISTORY_CHANGED` (retry; nothing is invalidated
+ *    without proof). Evidence
  *    that holds → `apply` writes the entry. Evidence that does not → the row
  *    is `invalidated` and committed, and only then the 409 goes out, so a
  *    client that never sees the answer finds the row invalidated.
@@ -67,6 +69,12 @@ const unverifiable = () =>
     "The evidence for this suggestion cannot be checked right now",
     409,
     "EVIDENCE_UNVERIFIABLE"
+  );
+const historyChanged = () =>
+  new AppError(
+    "The location history changed while this suggestion was accepted",
+    409,
+    "HISTORY_CHANGED"
   );
 const invalidated = () =>
   new AppError("The evidence for this suggestion has changed", 409, "EVIDENCE_INVALIDATED");
@@ -168,7 +176,9 @@ export async function acceptFlow<Row extends ClaimState, Entry>(opts: {
       }
       // The history moved between re-check and publication: read it again.
     }
-    throw invalidated();
+    // It moved again. Nothing says the evidence is gone, so nothing is
+    // invalidated: the claim is handed back and the answer says "try again".
+    throw historyChanged();
   } catch (error) {
     if (!handedBack) await store.release(id, token);
     throw error;

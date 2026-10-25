@@ -771,6 +771,7 @@
     "evidenceUnverifiable": "Die Belege für diesen Vorschlag lassen sich gerade nicht prüfen, weil die Kartendaten dazu fehlen. Der Vorschlag bleibt erhalten; versuche es nach der nächsten Auswertung erneut.",
     "travTrackDisabled": "TravTrack ist auf diesem Server gerade ausgeschaltet. Der Vorschlag bleibt erhalten und kann später übernommen oder jetzt verworfen werden.",
     "acceptInProgress": "Dieser Vorschlag wird gerade an anderer Stelle übernommen. Bitte versuche es gleich noch einmal.",
+    "historyChanged": "Der Standortverlauf hat sich während der Übernahme mehrfach geändert. Der Vorschlag bleibt erhalten; bitte versuche es gleich noch einmal.",
     "coveredBy": {
       "visit": "Bereits erfasst als Besuch: {{name}}",
       "lodging": "Bereits erfasst als Unterkunft: {{name}}"
