@@ -15,6 +15,8 @@ import {
 } from "../../services/travtrack/__tests__/fixtures";
 import { gpxFile, minuteFixes } from "../../services/travtrack/__tests__/gpxFixtures";
 import { GPX_IMPORT_MAX_BYTES } from "../../services/travtrack/imports/mapGpx";
+import { travTrackImportLimiter } from "../../middleware/travTrackImportLimiter";
+import { resetImportModeCache, startImportMode, stopImportMode } from "../../services/importMode";
 
 /**
  * GPX files into TravTrack over HTTP (TravTrack plan E8): a multipart upload
@@ -58,6 +60,7 @@ describe("TravTrack — /travtrack/imports", () => {
     await wipeTravTrack([userId, otherId]);
     await prisma.travTrackImport.deleteMany({ where: { userId: { in: [userId, otherId] } } });
     await prisma.apiToken.deleteMany({ where: { userId } });
+    await travTrackImportLimiter.resetKey(`user:${userId}`);
   });
 
   afterAll(async () => {
@@ -150,6 +153,48 @@ describe("TravTrack — /travtrack/imports", () => {
     ]);
     expect(res.status).toBe(403);
     expect(await prisma.travTrackImport.count({ where: { userId } })).toBe(0);
+  });
+
+  it("one account has one import bucket: two tokens share it, and it holds a fixed 30", async () => {
+    const pat = async () => {
+      const t = await generateApiToken();
+      await prisma.apiToken.create({
+        data: { userId, label: "pat", lookupHash: t.lookupHash, hash: t.hash, scope: "write" },
+      });
+      return `Bearer ${t.plaintext}`;
+    };
+    const [a, b] = [await pat(), await pat()];
+    const empty = (auth: string) =>
+      request(app).post("/api/v1/travtrack/imports").set("Authorization", auth).field("x", "y");
+    for (let i = 0; i < 15; i++) expect((await empty(a)).status).toBe(400);
+    for (let i = 0; i < 15; i++) expect((await empty(b)).status).toBe(400);
+    expect((await empty(a)).status).toBe(429);
+    expect((await empty(b)).status).toBe(429);
+    // The browser session is the same account.
+    expect(
+      (await request(app).post("/api/v1/travtrack/imports").set("Cookie", cookie)).status
+    ).toBe(429);
+  });
+
+  it("import mode does not lift the import bucket", async () => {
+    await startImportMode(userId, userId);
+    try {
+      for (let i = 0; i < 30; i++) {
+        const res = await request(app)
+          .post("/api/v1/travtrack/imports")
+          .set("Cookie", cookie)
+          .field("x", "y");
+        expect(res.status).toBe(400);
+      }
+      const over = await request(app)
+        .post("/api/v1/travtrack/imports")
+        .set("Cookie", cookie)
+        .field("x", "y");
+      expect(over.status).toBe(429);
+    } finally {
+      await stopImportMode(userId);
+      resetImportModeCache();
+    }
   });
 
   it("the summary lists the file as a device, with its file name", async () => {
