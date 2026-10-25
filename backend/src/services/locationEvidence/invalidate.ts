@@ -234,8 +234,9 @@ async function removeOpenStays(tx: DbTransaction, userId: string, ids: string[])
   });
   const { count } = await tx.dawarichStay.deleteMany({ where: { userId, id: { in: ids } } });
   if (fragments.length > 0) {
+    // TravTrack's own rows only: a Dawarich row is never touched (Codex review).
     await tx.dawarichStay.updateMany({
-      where: { userId, id: { in: fragments }, status: "superseded" },
+      where: { userId, provider: "travtrack", id: { in: fragments }, status: "superseded" },
       data: { status: "pending", resolvedAt: null },
     });
   }

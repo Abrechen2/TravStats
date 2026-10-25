@@ -420,6 +420,46 @@ describe("TravTrack as the source", () => {
     expect(evidence).not.toHaveProperty("pointIds");
   });
 
+  it("a TravTrack venue never supersedes a Dawarich fragment, and deleting the venue's history leaves it byte-identical (Codex review)", async () => {
+    // The Dawarich stop, inside the market's area, pending.
+    await prisma.userSettings.update({
+      where: { userId },
+      data: {
+        locationProvider: "none",
+        dawarichBaseUrl: "http://dawarich.local:3000",
+        dawarichApiKey: encryptApiKey("own-key"),
+      },
+    });
+    const seen = [0, 10, 20, 30].map((m, i) => dawarichPoint(i + 1, BASE + m * MIN, SEOUL));
+    await scanOnce(userId, { client: fakeClient(seen) });
+    const dawarich = await prisma.dawarichStay.findFirstOrThrow({ where: { userId } });
+    expect(dawarich).toMatchObject({ provider: "dawarich", status: "pending" });
+
+    // TravTrack sees a market dwell over the same stop.
+    await prisma.userSettings.update({
+      where: { userId },
+      data: { locationProvider: "travtrack" },
+    });
+    for (let i = 0; i < 21; i++) await storePoint(userId, { t: BASE + i * MIN, ...SEOUL });
+    await prisma.dawarichStayScan.update({ where: { userId }, data: { marketEnabled: true } });
+    await scanOnce(userId, {
+      marketStore: memoryStore(),
+      marketFetcher: jest.fn(async () => Response.json(marketRaw)),
+    });
+    const venue = await prisma.dawarichStay.findFirstOrThrow({
+      where: { userId, provider: "travtrack" },
+    });
+    expect((venue.evidence as { kind?: string }).kind).toBe("market");
+    expect((venue.evidence as { supersededFindingIds?: string[] }).supersededFindingIds).toEqual(
+      []
+    );
+    expect(await prisma.dawarichStay.findUnique({ where: { id: dawarich.id } })).toEqual(dawarich);
+
+    await deleteTravTrackRange(userId, new Date(BASE - MIN), new Date(BASE + 30 * MIN));
+    expect(await prisma.dawarichStay.findUnique({ where: { id: venue.id } })).toBeNull();
+    expect(await prisma.dawarichStay.findUnique({ where: { id: dawarich.id } })).toEqual(dawarich);
+  });
+
   it("a TravTrack stay inside a privacy circle is not suggested and the result does not name it", async () => {
     await stop(SEOUL, 0);
     await stop(BUSAN, 120);

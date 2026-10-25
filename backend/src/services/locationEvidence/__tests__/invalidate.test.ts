@@ -319,6 +319,16 @@ describe("a range delete", () => {
     expect((await fresh(outside.id))?.status).toBe("pending");
   });
 
+  it("a venue's Dawarich 'fragment' is never handed back or touched (Codex review)", async () => {
+    await points([0, 10, 20, 30]);
+    const dawarich = await stay({ status: "superseded", provider: "dawarich", from: 90, to: 120 });
+    const venue = await stay({ kind: "venue", from: 0, to: 30, superseded: [dawarich.id] });
+    const before = await fresh(dawarich.id);
+    await deleteTravTrackRange(userId, at(-1), at(60));
+    expect(await fresh(venue.id)).toBeNull();
+    expect(await fresh(dawarich.id)).toEqual(before);
+  });
+
   it("deletes the country days of the removed days and their neighbours, and marks them dirty", async () => {
     // Points on the 10th only; the range runs over the 10th and 11th.
     await points([0, 10]);

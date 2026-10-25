@@ -168,6 +168,10 @@ export async function scanCandidates(
     const fragments =
       market && markets
         ? old.filter((row) => {
+            // A venue supersedes its own source's fragments only: a TravTrack
+            // scan never modifies a Dawarich row, nor the other way round
+            // (Codex review) — the area containment below would match across.
+            if (row.provider !== source) return false;
             const evidence = (row.evidence ?? {}) as { market?: unknown };
             if (evidence.market) return false;
             const area = markets.areas.find((a) => a.id === market.market.osmRef);
@@ -177,8 +181,8 @@ export async function scanCandidates(
               !isMarketFragment({ ...c, lat: row.sourceLat, lon: row.sourceLon }, markets, places)
             )
               return false;
-            // Ids are compared within one source only: numbers with numbers,
-            // digests with digests. The area-containment half works across.
+            // Ids are compared within one source: numbers with numbers,
+            // digests with digests.
             const shared =
               storedPointIds(row, source)?.filter((id) => market.pointIds.includes(id)).length ?? 0;
             return shared >= 3 || !!(area && contains(area, row.sourceLon, row.sourceLat));
