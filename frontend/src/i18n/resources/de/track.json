@@ -78,6 +78,7 @@
     "loadFailed": "TravTrack konnte nicht geladen werden. Lade die Seite neu.",
     "empty": "Noch keine Positionen gespeichert.",
     "summary": "{{count}} Positionen gespeichert, vom {{from}} bis {{to}}, von {{devices}} Gerät(en).",
+    "tripsNoResidence": "Reisen erkennt TravTrack erst, wenn dein Wohnort bestätigt ist: Gemessen wird der Abstand zu deinem Zuhause. Bestätige ihn unter Einstellungen → Zuhause.",
     "open": "Track öffnen",
     "zones": {
       "title": "Privatzonen",

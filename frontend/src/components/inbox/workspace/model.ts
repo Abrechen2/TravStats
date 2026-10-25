@@ -124,7 +124,18 @@ export function buildInboxItems(
       }
       case "location": {
         const s = record.data;
-        if (s.kind === "journey") {
+        if (s.kind === "trip") {
+          // A TravTrack trip question (plan L4): about a span of local days.
+          title = t(`${W}.tripAway.cardTitle`);
+          if (s.aggregate) {
+            subject = t(`${W}.tripAway.more`, { count: s.aggregate.length });
+          } else {
+            subject = s.trip?.tripName ?? t(`${W}.tripAway.subject`, { count: s.trip?.days ?? 0 });
+            tripId = s.trip?.tripId ?? null;
+            knownName = s.trip?.tripName ?? null;
+          }
+          day = s.trip?.fromDay ?? null;
+        } else if (s.kind === "journey") {
           // A TravTrack journey question (plan E7): about a local day.
           title = t(`${W}.journey.cardTitle`);
           subject = t(`${W}.journey.subject`, {

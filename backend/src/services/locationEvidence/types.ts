@@ -1,7 +1,7 @@
 /**
  * The provider-neutral shape of everything location history suggests to
  * TravStats (TravTrack plan, phase 3, E1): a stay, a market or venue visit, a
- * country day, a journey. TravTrack and Dawarich findings read alike; the
+ * country day, a journey, a trip (phase 4, L4). TravTrack and Dawarich findings read alike; the
  * evidence key and the point digests never leave the server.
  */
 import type { Coverage } from "../locationProvider/types";
@@ -9,8 +9,8 @@ import type { Coverage } from "../locationProvider/types";
 export const EVIDENCE_PROVIDERS = ["travtrack", "dawarich"] as const;
 export type EvidenceProvider = (typeof EVIDENCE_PROVIDERS)[number];
 
-export type EvidenceKind = "stay" | "market" | "venue" | "country" | "journey";
-export type EvidenceAlgorithm = "stay" | "market" | "country" | "journey";
+export type EvidenceKind = "stay" | "market" | "venue" | "country" | "journey" | "trip";
+export type EvidenceAlgorithm = "stay" | "market" | "country" | "journey" | "trip";
 
 export type EvidenceStatus =
   "pending" | "accepted" | "rejected" | "invalidated" | "covered" | "superseded";

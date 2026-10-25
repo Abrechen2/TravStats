@@ -6034,7 +6034,7 @@ model TripPackingList {
 model LocationSuggestion {
   id                String    @id @default(uuid())
   userId            String    @map("user_id")
-  /// `country | journey` (CHECK).
+  /// `country | journey | trip` (CHECK).
   kind              String
   /// `dawarich | travtrack` (CHECK).
   provider          String

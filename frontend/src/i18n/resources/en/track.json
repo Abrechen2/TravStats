@@ -78,6 +78,7 @@
     "loadFailed": "TravTrack could not be loaded. Reload the page.",
     "empty": "No positions stored yet.",
     "summary": "{{count}} positions stored, from {{from}} to {{to}}, from {{devices}} device(s).",
+    "tripsNoResidence": "TravTrack recognises trips only once your home is confirmed: it measures the distance from where you live. Confirm it under Settings → Home.",
     "open": "Open Track",
     "zones": {
       "title": "Privacy zones",

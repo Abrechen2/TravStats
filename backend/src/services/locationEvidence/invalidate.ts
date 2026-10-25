@@ -3,7 +3,7 @@
  * review focus 23). The `onPointsRemoved` handler for everything TravStats
  * derived from TravTrack history and asked the user about: stay, market and
  * venue findings (`dawarich_stays`, provider `travtrack`) and the questions of
- * `location_suggestions` (country, E6; journey, E7). It runs in
+ * `location_suggestions` (country, E6; journey, E7; trip, L4). It runs in
  * the removal's transaction, under the TravTrack lock, after the points went
  * and after the history generation was raised (`deleteRange.ts`).
  *
@@ -15,7 +15,7 @@
  *     deleted no point; for a journey, an end of one of its runs or a vertex
  *     of its privacy-cut line lies in it, or a chord of that line crosses it
  *     (`segmentCrossesZone`, the check a line leaving the server gets);
- *   - a country question (no pin) or a journey: one of its days is a removed
+ *   - a country or trip question (no pin) or a journey: one of its days is a removed
  *     day or the neighbour of one (`removalDays`) — a neighbour's country
  *     rows were derived with the removed points as edge context and go with
  *     them (`projectionRemoval.ts`); a journey's runs are bounded by the stays
@@ -29,7 +29,7 @@
  * Affected ACCEPTED rows stay — the entry the answer made is TravStats data —
  * with their evidence cut to a summary holding no position and no digest
  * (`source`, `provider`, `algorithmVersion`, the explanation, the time zone or
- * the country, `historyDeletedAt`); a stay's source position becomes its
+ * the country, a trip's span, `historyDeletedAt`); a stay's source position becomes its
  * accepted pin; a journey keeps, per run, its times, its answer and the entry
  * it was linked to — no end, no line, no digest. Dawarich rows are never touched: their history is not ours.
  *
@@ -177,13 +177,14 @@ async function affectedSuggestions(
   for (const r of rows) {
     const from = r.windowFrom.getTime();
     const until = r.windowUntil.getTime();
-    // A country question has no pin: it is about its days. A journey is about
-    // its runs, and about the days they were read from.
+    // A country question has no pin: it is about its days. A trip (L4) is
+    // pinless too: its away days were judged from every fix of them. A journey
+    // is about its runs, and about the days they were read from.
     const affected =
       r.kind === "country"
         ? dayInWindow(days, from, until)
         : overlapsAny(spans, from, until - 1) ||
-          (r.kind === "journey" && dayInWindow(days, from, until));
+          ((r.kind === "journey" || r.kind === "trip") && dayInWindow(days, from, until));
     if (affected) hit.add(r.id);
   }
   // Zone: a journey's line and ends, even when the zone deleted no point.
@@ -280,6 +281,8 @@ async function stripAcceptedSuggestions(
              'algorithmVersion', algorithm,
              'countryCode', evidence->'countryCode',
              'day', evidence->'day',
+             'fromDay', evidence->'fromDay',
+             'toDay', evidence->'toDay',
              'zone', evidence->'zone',
              'runs', CASE WHEN kind = 'journey' AND jsonb_typeof(evidence->'runs') = 'array'
                        THEN (SELECT jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
