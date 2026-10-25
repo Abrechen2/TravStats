@@ -28,6 +28,7 @@ import { AppError, type ApiErrorCode } from "../../middleware/errorHandler";
 import { Prisma } from "../../prisma";
 import { travTrackInstanceOn, travTrackInstanceOnIn } from "../travtrack/availability";
 import { takeTravTrackLock } from "../travtrack/lock";
+import { takeStayAcceptLock } from "../dawarich/stays/acceptLock";
 import logger from "../../utils/logger";
 import { historyGeneration } from "./generation";
 import type { Recheck } from "./recheck";
@@ -93,16 +94,18 @@ async function publish<Row extends ClaimState, Entry>(
   apply: (tx: DbTransaction) => Promise<Entry>
 ): Promise<Published<Entry>> {
   // READ COMMITTED on purpose: every check below must see what committed
-  // while this transaction waited for the lock. A serializable snapshot is
+  // while this transaction waited for the locks. A serializable snapshot is
   // taken at the first statement — the lock request — and would read the
-  // generation as it was before the removal it waited behind. The account's
-  // TravTrack accepts are serialized by the lock itself, which is what the
-  // Dawarich accept's serializable isolation buys it for place and visit reuse.
+  // generation, the places and the visits as they were before the work it
+  // waited behind. The stay-accept lock serializes this against every other
+  // accept of the account, Dawarich's included (`acceptLock.ts`).
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       return await prisma.$transaction(
         async (tx): Promise<Published<Entry>> => {
           await takeTravTrackLock(tx, userId);
+          // Every stay accept of the account, Dawarich's too, one at a time.
+          await takeStayAcceptLock(tx, userId);
           if (!(await travTrackInstanceOnIn(tx))) throw disabled();
           if (!(await store.holdsClaim(tx, id, token))) throw inProgress();
           if ((await historyGeneration(tx, userId)) !== checked.generation) return { moved: true };

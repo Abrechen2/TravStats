@@ -8,6 +8,7 @@ import { recheckAchievements } from "../../../utils/achievements";
 import type { StayReview } from "../../../schemas/dawarichStays";
 import { venueCategory, VENUE_TYPES, type VenueType } from "../marketVisits/venueTypes";
 import { meters } from "./detect";
+import { takeStayAcceptLock } from "./acceptLock";
 import { completePlaceAddress } from "../../places/addressBackfill";
 import logger from "../../../utils/logger";
 import { acceptFlow, type ClaimStore } from "../../locationEvidence/acceptFlow";
@@ -17,6 +18,8 @@ async function acceptStayOnce(userId: string, id: string, input: StayReview) {
   let createdPlaceId: string | null = null;
   const outcome = await prisma.$transaction(
     async (tx) => {
+      // The account's accepts, of either provider, one at a time (acceptLock.ts).
+      await takeStayAcceptLock(tx, userId);
       const row = await tx.dawarichStay.findFirst({ where: { id, userId } });
       if (!row) throw new AppError("Finding not found", 404);
       if (row.status === "accepted") return row;
@@ -32,7 +35,9 @@ async function acceptStayOnce(userId: string, id: string, input: StayReview) {
       createdPlaceId = applied.createdPlaceId;
       return applied.row;
     },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    // READ COMMITTED under the lock: Serializable took its snapshot before the
+    // lock wait and read places the other accept had just made as missing.
+    { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted }
   );
   // A place made here had no country, so an accepted stay never reached the
   // passport or the country filter. Its address comes from the pin the way the

@@ -302,6 +302,82 @@ describe("never self-evidence", () => {
   });
 });
 
+describe("accepts across providers", () => {
+  /** Holds a row lock on one stay until released: a transaction touching it waits there. */
+  async function holdStayRow(id: string) {
+    let release!: () => void;
+    let held!: () => void;
+    const released = new Promise<void>((resolve) => (release = resolve));
+    const isHeld = new Promise<void>((resolve) => (held = resolve));
+    const done = prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT id FROM dawarich_stays WHERE id = ${id} FOR UPDATE`;
+        held();
+        await released;
+      },
+      { timeout: 30_000 }
+    );
+    await isHeld;
+    return async () => {
+      release();
+      await done;
+    };
+  }
+
+  async function untilSomeoneWaitsForARowLock() {
+    const deadline = Date.now() + 10_000;
+    while (Date.now() < deadline) {
+      const [{ n }] = await prisma.$queryRaw<{ n: number }[]>`
+        SELECT count(*)::int AS n FROM pg_stat_activity
+        WHERE datname = current_database() AND wait_event_type = 'Lock'`;
+      if (n > 0) return;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    throw new Error("nobody waited for the row");
+  }
+
+  it("interleaved Dawarich and TravTrack accepts of one stop make one place and one visit", async () => {
+    const travtrack = await finding();
+    const dawarich = await prisma.dawarichStay.create({
+      data: {
+        userId,
+        fingerprint: "dawarich-copy",
+        provider: "dawarich",
+        sourceStartAt: travtrack.sourceStartAt,
+        sourceEndAt: travtrack.sourceEndAt,
+        sourceLat: travtrack.sourceLat,
+        sourceLon: travtrack.sourceLon,
+        startAt: travtrack.startAt,
+        endAt: travtrack.endAt,
+        lat: travtrack.lat,
+        lon: travtrack.lon,
+        zone: travtrack.zone,
+        pointCount: 4,
+        evidence: {
+          source: "dawarich",
+          zone: travtrack.zone,
+          pointIds: [1, 2, 3, 4],
+          maxGapMinutes: 10,
+          uncertainties: [],
+        },
+      },
+    });
+    // The Dawarich accept starts, reads, and stalls on its finding's row …
+    const release = await holdStayRow(dawarich.id);
+    const fromDawarich = accept(dawarich.id).then((r) => r);
+    await untilSomeoneWaitsForARowLock();
+    // … while the TravTrack accept of the same stop runs.
+    const fromTravTrack = accept(travtrack.id).then((r) => r);
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    await release();
+    const [a, b] = await Promise.all([fromDawarich, fromTravTrack]);
+    expect([a.status, b.status]).toEqual([200, 200]);
+    expect(await prisma.place.count({ where: { userId } })).toBe(1);
+    expect(await prisma.placeVisit.count({ where: { userId } })).toBe(1);
+    expect(a.body.data.visitId).toBe(b.body.data.visitId);
+  });
+});
+
 describe("a Dawarich finding", () => {
   it("accepts exactly as before — no re-check, no claim columns written", async () => {
     const dawarichUser = await evidenceAccount(`${PREFIX}dawarich`, "none", true);
