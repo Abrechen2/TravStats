@@ -1,7 +1,11 @@
 import { prisma } from "../../db";
 import { utcMidnight } from "../../services/countryDays/store";
 import { setLocationProvider } from "../../services/locationProvider/provider";
-import { markTravTrackDaysDirty } from "../../services/travtrack/dirtyDays";
+import {
+  ALL_PROJECTION_BITS,
+  COUNTRY_DAYS_BIT,
+  markTravTrackDaysDirty,
+} from "../../services/travtrack/dirtyDays";
 import { makeUser, storePoint, wipeTravTrack } from "../../services/travtrack/__tests__/fixtures";
 import { travTrackSwitches } from "../../services/travtrack/__tests__/switches";
 import { runTravTrackProjections } from "../travTrackProjectionScheduler";
@@ -57,6 +61,32 @@ describe("runTravTrackProjections", () => {
       expect.arrayContaining([utcMidnight("2026-10-12"), utcMidnight("2026-10-13")])
     );
     expect(await prisma.locationSuggestion.count({ where: { userId, kind: "country" } })).toBe(1);
+  });
+
+  it("projects the explored map's cells in the same run (L1)", async () => {
+    await runTravTrackProjections({ countryAt });
+
+    expect(await prisma.travTrackExploredCell.count({ where: { userId } })).toBe(2);
+    const rows = await prisma.travTrackDirtyDay.findMany({ where: { userId } });
+    expect(rows.map((r) => r.done & ALL_PROJECTION_BITS)).toEqual([
+      ALL_PROJECTION_BITS,
+      ALL_PROJECTION_BITS,
+    ]);
+  });
+
+  it("an account whose only owed work is the explored map is still picked (L1)", async () => {
+    // As the L1 migration leaves an account: country days acked, cells owed.
+    await prisma.travTrackDirtyDay.updateMany({
+      where: { userId },
+      data: { done: COUNTRY_DAYS_BIT },
+    });
+    await prisma.travTrackDerivationState.create({
+      data: { userId, countryReducerVersion: 99 },
+    });
+
+    await runTravTrackProjections({ countryAt });
+
+    expect(await prisma.travTrackExploredCell.count({ where: { userId } })).toBe(2);
   });
 
   it("skips an account whose provider is not TravTrack", async () => {

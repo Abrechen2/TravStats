@@ -124,6 +124,7 @@
     "travplan/routeEndpoints.ts",
     "travtrack.ts",
     "travtrack/day.ts",
+    "travtrack/explored.ts",
     "travtrack/export.ts",
     "travtrack/gate.ts",
     "travtrack/imports.ts",

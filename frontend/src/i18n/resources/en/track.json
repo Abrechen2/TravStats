@@ -191,5 +191,16 @@
       "notFound": "This key no longer exists.",
       "rateLimited": "Too many keys were created just now. Try again in a quarter of an hour."
     }
+  },
+  "tabs": {
+    "label": "View",
+    "day": "Day",
+    "explored": "Explored"
+  },
+  "explored": {
+    "map": "Map of the explored areas",
+    "legend": "Each square is about 1–2 km across: a place where your history holds at least one position on the ground.",
+    "zones": "Privacy zones are shown as explored.",
+    "zoomIn": "There are too many explored squares here for one view. Zoom in closer."
   }
 }

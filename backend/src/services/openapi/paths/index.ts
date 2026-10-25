@@ -98,6 +98,7 @@ import "./locationSuggestions";
 import "./travplan";
 import "./travtrack";
 import "./travtrackDay";
+import "./travtrackExplored";
 import "./travtrackImports";
 import "./travtrackSources";
 import "./travtrackShare";

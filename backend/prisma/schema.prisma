@@ -177,6 +177,7 @@ model User {
 
   locationSuggestions      LocationSuggestion[]
   travTrackDirtyDays       TravTrackDirtyDay[]
+  travTrackExploredCells   TravTrackExploredCell[]
   travTrackDerivationState TravTrackDerivationState?
   travTrackImports         TravTrackImport[]
   travTrackIngestTokens    TravTrackIngestToken[]
@@ -6080,6 +6081,23 @@ model TravTrackDirtyDay {
 
   @@id([userId, day])
   @@map("travtrack_dirty_days")
+}
+
+/// The explored map (TravTrack plan L1): the Web-Mercator tiles at zoom 14 an
+/// account's ground points fell in, per UTC day, so a removed day's cells go
+/// with it and the rest stay exact. Derived from `travtrack_points` by the
+/// dirty-day projection; holds tiles and days, never a position or a time of day.
+model TravTrackExploredCell {
+  userId String   @map("user_id")
+  day    DateTime @db.Date
+  x      Int
+  y      Int
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, day, x, y])
+  @@index([userId, x, y])
+  @@map("travtrack_explored_cells")
 }
 
 /// Per account: the history generation every TravTrack removal raises (E5's

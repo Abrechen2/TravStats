@@ -191,5 +191,16 @@
       "notFound": "Diesen Schlüssel gibt es nicht mehr.",
       "rateLimited": "Gerade wurden zu viele Schlüssel erstellt. Versuche es in einer Viertelstunde erneut."
     }
+  },
+  "tabs": {
+    "label": "Ansicht",
+    "day": "Tag",
+    "explored": "Erkundet"
+  },
+  "explored": {
+    "map": "Karte der erkundeten Gegenden",
+    "legend": "Jedes Feld ist etwa 1–2 km groß: ein Ort, an dem dein Verlauf mindestens eine Position am Boden hat.",
+    "zones": "Privatzonen werden als erkundet gezeigt.",
+    "zoomIn": "Hier liegen zu viele erkundete Felder für eine Ansicht. Zoom näher heran."
   }
 }

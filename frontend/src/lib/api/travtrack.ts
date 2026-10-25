@@ -133,6 +133,11 @@ function filenameFrom(disposition: unknown, fallback: string): string {
   return match?.[1] ?? fallback;
 }
 
+/** A Web-Mercator tile at zoom 14, `[x, y]` — the explored map's one resolution. */
+export type ExploredCell = [number, number];
+/** A map box in degrees; west > east crosses the antimeridian. */
+export type ExploredBox = { west: number; south: number; east: number; north: number };
+
 export const travTrackApi = {
   capabilities: async (): Promise<TravTrackCapabilities> =>
     (await api.get<TravTrackCapabilities>("/travtrack/capabilities")).data,
@@ -156,6 +161,13 @@ export const travTrackApi = {
     (await api.delete<{ deleted: number }>("/travtrack/points", { params: span })).data.deleted,
   day: async (date: string): Promise<TravTrackDay> =>
     (await api.get<TravTrackDay>("/travtrack/day", { params: { date } })).data,
+  /** The explored zoom-14 tiles in a box (plan L1); zones drawn as explored ground. */
+  explored: async (box: ExploredBox): Promise<ExploredCell[]> =>
+    (
+      await api.get<{ cells: ExploredCell[] }>("/travtrack/explored", {
+        params: { bbox: [box.west, box.south, box.east, box.north].join(",") },
+      })
+    ).data.cells,
   /** What of a trip's route is shared, or null while nothing is. */
   routeSnapshot: async (tripId: string): Promise<TripRouteSnapshot | null> =>
     (
@@ -267,6 +279,8 @@ export function trackErrorKey(err: unknown): string {
       return "track:errors.disabled";
     case "TRAVTRACK_EXPORT_TOO_LONG":
       return "track:errors.exportTooLong";
+    case "TRAVTRACK_EXPLORED_ZOOM_IN":
+      return "track:explored.zoomIn";
     case "LOCATION_ZONE_LIMIT":
       return "track:errors.zoneLimit";
     default:

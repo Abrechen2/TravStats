@@ -2,6 +2,7 @@
  * TravTrack projections (TravTrack plan E6): every 15 minutes, each account
  * on provider `travtrack` with dirty days — or with points the current country reducer has not seen —
  * gets its country days projected (`services/travtrack/countryProjection.ts`),
+ * then its explored-map cells (`services/travtrack/explored/project.ts`, L1),
  * then its country questions asked (`services/locationEvidence/
  * countrySuggestions.ts`). Bounded per account by the projection's day budget
  * and the questions' cap (review focus 19).
@@ -23,7 +24,8 @@ import {
   PROJECTION_DAYS_PER_RUN,
   projectTravTrackCountryDays,
 } from "../services/travtrack/countryProjection";
-import { COUNTRY_DAYS_BIT } from "../services/travtrack/dirtyDays";
+import { ALL_PROJECTION_BITS } from "../services/travtrack/dirtyDays";
+import { projectExploredCells } from "../services/travtrack/explored/project";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
 
@@ -81,7 +83,8 @@ async function accountsWithWork(now: Date, limit: number): Promise<string[]> {
      WHERE (s.retry_after IS NULL OR s.retry_after <= ${now})
        AND (EXISTS (
               SELECT 1 FROM travtrack_dirty_days d
-               WHERE d.user_id = u.id AND (d.done & ${COUNTRY_DAYS_BIT}) = 0)
+               WHERE d.user_id = u.id
+                 AND (d.done & ${ALL_PROJECTION_BITS}) <> ${ALL_PROJECTION_BITS})
             OR COALESCE(s.country_questions_due, false)
             OR (COALESCE(s.country_reducer_version, 0) < ${COUNTRY_DAY_REDUCER_VERSION}
                 AND EXISTS (SELECT 1 FROM travtrack_points p WHERE p.user_id = u.id)))
@@ -120,6 +123,17 @@ async function runAccount(
     }
     // Disabled or switched away: nothing ran, nothing failed.
     if (projected.status !== "done") return { failed: false, questions: 0, days };
+    // The explored map's cells (L1): the same days on its own bit, from what
+    // is left of the budget — a day either projection works counts once each.
+    const exploredBudget = maxDays - days;
+    const explored =
+      exploredBudget > 0
+        ? await projectExploredCells(userId, { maxDays: exploredBudget })
+        : { status: "done" as const, projected: 0, rerun: 0 };
+    if (explored.status === "failed") {
+      await recordFailure(userId, now);
+      return { failed: true, questions: 0, days: days + explored.projected + explored.rerun };
+    }
     if (projected.projected > 0) {
       await prisma.travTrackDerivationState.update({
         where: { userId },
@@ -147,7 +161,7 @@ async function runAccount(
       where: { userId },
       data: { failureCount: 0, retryAfter: null },
     });
-    return { failed: false, questions, days };
+    return { failed: false, questions, days: days + explored.projected + explored.rerun };
   } catch (error) {
     logger.warn({
       operation: "travtrack_projections_account_failed",

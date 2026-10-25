@@ -146,3 +146,32 @@ export const travTrackZoneUpdateSchema = z
     deleteStoredPoints: z.boolean().default(false),
   })
   .refine((b) => (b.lat === undefined) === (b.lon === undefined), "`lat` and `lon` move together");
+
+/**
+ * `GET /travtrack/explored` (plan L1): the map's box as `west,south,east,north`
+ * in degrees. West may exceed east — a box across the antimeridian. Any other
+ * query field (a client's `zoom`) is ignored: the answer has one resolution.
+ */
+export const travTrackExploredQuerySchema = z.object({
+  bbox: z
+    .string()
+    .describe("`west,south,east,north` in degrees; west > east crosses the antimeridian")
+    .transform((raw, ctx) => {
+      const parts = raw.split(",").map((p) => (p.trim() === "" ? NaN : Number(p)));
+      const [west, south, east, north] = parts;
+      const lonOk = (v: number) => Number.isFinite(v) && v >= -180 && v <= 180;
+      const latOk = (v: number) => Number.isFinite(v) && v >= -90 && v <= 90;
+      if (
+        parts.length !== 4 ||
+        !lonOk(west) ||
+        !lonOk(east) ||
+        !latOk(south) ||
+        !latOk(north) ||
+        south > north
+      ) {
+        ctx.addIssue({ code: "custom", message: "bbox must be west,south,east,north" });
+        return z.NEVER;
+      }
+      return { west, south, east, north };
+    }),
+});
