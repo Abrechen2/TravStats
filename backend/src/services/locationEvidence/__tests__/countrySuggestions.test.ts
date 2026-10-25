@@ -239,4 +239,16 @@ describe("countrySuggestions", () => {
     expect(result).toMatchObject({ status: "stale", created: 0 });
     expect(await questions()).toEqual([]);
   });
+
+  it("TravTrack switched off between the read and the publication publishes nothing", async () => {
+    await day("2026-10-12", "PT");
+    await day("2026-10-13", "PT");
+
+    const result = await countrySuggestions(userId, {
+      afterRead: () => switches.set({ beta: true, config: false }),
+    });
+
+    expect(result).toMatchObject({ status: "skipped", created: 0 });
+    expect(await questions()).toEqual([]);
+  });
 });

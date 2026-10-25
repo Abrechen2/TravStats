@@ -135,6 +135,8 @@ async function publish(
     });
     if (!still) throw inProgress();
     if ((await historyGeneration(tx, row.userId)) !== generation) return { retry: true };
+    // Asked again under the lock: a switch during the re-check writes nothing.
+    if (row.provider === "travtrack") await assertTravTrackDerivationAllowed(row.userId);
     const done = { claimToken: null, claimedAt: null, resolvedAt: new Date() };
     if (outcome === "invalidated") {
       await tx.locationSuggestion.update({

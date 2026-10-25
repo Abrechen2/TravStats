@@ -9,6 +9,7 @@ import { deleteTravTrackRange } from "../deleteRange";
 import { COUNTRY_DAYS_BIT, markTravTrackDaysDirty } from "../dirtyDays";
 import { ingestTravTrackPoints } from "../ingest";
 import { setLocationProvider } from "../../locationProvider/provider";
+import * as derivationRead from "../../locationEvidence/derivationRead";
 import { makeFlight, makeUser, storePoint, wipeTravTrack } from "./fixtures";
 import { travTrackSwitches } from "./switches";
 
@@ -281,6 +282,75 @@ describe("projectTravTrackCountryDays", () => {
     // Back on TravTrack, the waiting day runs.
     await setLocationProvider(userId, "travtrack");
     expect((await projectTravTrackCountryDays(userId, deps)).projected).toBe(1);
+  });
+
+  it("TravTrack switched off during a run stops it before the next day", async () => {
+    await seoul(at(D1, "03:00:00"));
+    await seoul(at(D2, "03:00:00"));
+    await dirty([D1, D2]);
+
+    const result = await projectTravTrackCountryDays(userId, {
+      ...deps,
+      beforeAck: async () => switches.set({ beta: true, config: false }),
+    });
+
+    expect(result).toMatchObject({ status: "disabled", projected: 1 });
+    expect((await dirtyRow(D2))!.done & COUNTRY_DAYS_BIT).toBe(0);
+  });
+
+  it("a provider switch during a run stops it before the next day", async () => {
+    await seoul(at(D1, "03:00:00"));
+    await seoul(at(D2, "03:00:00"));
+    await dirty([D1, D2]);
+
+    const result = await projectTravTrackCountryDays(userId, {
+      ...deps,
+      beforeAck: async () => {
+        await setLocationProvider(userId, "none");
+      },
+    });
+
+    expect(result).toMatchObject({ status: "skipped", projected: 1 });
+    expect((await rows()).map((r) => r.date.toISOString().slice(0, 10))).toEqual([D1]);
+  });
+
+  it("the read asks between pages whether it may go on, and a cancelled read writes nothing", async () => {
+    await replaceCountryDays(
+      userId,
+      "travtrack",
+      { startAt: utcMidnight(D1), endAtExclusive: utcMidnight(D2) },
+      [{ date: D1, countryCode: "JP", pointCount: 7, airportPointCount: 0, spanKm: 0 }]
+    );
+    await seoul(at(D1, "03:00:00"));
+    await dirty([D1]);
+    const before = await rows();
+    let isAllowed: (() => Promise<boolean>) | undefined;
+    const spy = jest
+      .spyOn(derivationRead, "readTravTrackDerivation")
+      .mockImplementation(async (_user, _window, opts) => {
+        isAllowed = opts?.isAllowed;
+        return {
+          points: [],
+          coverage: "truncated",
+          next: null,
+          generation: 0n,
+          cancelled: true,
+          unresolvedRun: false,
+        };
+      });
+    try {
+      const result = await projectTravTrackCountryDays(userId, deps);
+      expect(result.projected).toBe(0);
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(await rows()).toEqual(before);
+    expect((await dirtyRow(D1))!.done & COUNTRY_DAYS_BIT).toBe(0);
+    expect(isAllowed).toBeDefined();
+    expect(await isAllowed!()).toBe(true);
+    await switches.set({ beta: true, config: false });
+    expect(await isAllowed!()).toBe(false);
   });
 
   it("a dawarich sweep never deletes a travtrack row and the reverse", async () => {

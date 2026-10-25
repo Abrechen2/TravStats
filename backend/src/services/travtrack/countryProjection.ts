@@ -38,7 +38,7 @@ import { buildKnownAirportTest } from "../countryDays/knownAirports";
 import { COUNTRY_DAY_REDUCER_VERSION } from "../dawarich/countryDaySweep";
 import { getCountryResolver } from "../geo/countryFromCoordinates";
 import { readTravTrackDerivation } from "../locationEvidence/derivationRead";
-import { travTrackDerivationAllowed } from "../locationEvidence/allowed";
+import { travTrackDerivationAllowed, type DerivationAllowance } from "../locationEvidence/allowed";
 import { historyGeneration } from "../locationEvidence/generation";
 import { toTimedPosition } from "../locationEvidence/toDetectorInput";
 import {
@@ -84,6 +84,9 @@ export type CountryProjectionResult = {
 
 /** A failure of the reduction itself, kept apart from the database's. */
 class ReducerFailure extends Error {}
+
+/** The read was cancelled: TravTrack or the provider was switched while it ran. */
+class Cancelled extends Error {}
 
 /** The generation moved under the lock — impossible while removals take it; never published. */
 class StaleRead extends Error {}
@@ -146,8 +149,14 @@ async function projectDay(
       const read = await readTravTrackDerivation(
         userId,
         { fromMs: startAt.getTime(), untilMs: endAtExclusive.getTime() },
-        deps.maxPoints === undefined ? {} : { maxPoints: deps.maxPoints }
+        {
+          // Between pages: a switch takes effect within the day, not after it.
+          isAllowed: async () => (await travTrackDerivationAllowed(userId)) === "ok",
+          ...(deps.maxPoints === undefined ? {} : { maxPoints: deps.maxPoints }),
+        }
       );
+      // Rolls the day back whole: its rows and its dirty mark stay.
+      if (read.cancelled) throw new Cancelled();
       if ((await historyGeneration(tx, userId)) !== read.generation) throw new StaleRead();
 
       const accumulator = createCountryDayAccumulator();
@@ -193,13 +202,17 @@ export async function projectTravTrackCountryDays(
     rerun: 0,
     errorKind: null,
   };
+  // Not allowed: TravTrack off is recorded; an account that switched away
+  // keeps its rows and dirty days exactly as they are.
+  const stop = async (allowance: DerivationAllowance): Promise<CountryProjectionResult> => {
+    if (allowance === "disabled") {
+      await recordState(userId, "disabled");
+      return { ...result, status: "disabled", errorKind: "disabled" };
+    }
+    return { ...result, status: allowance === "providerOff" ? "skipped" : "done" };
+  };
   const allowance = await travTrackDerivationAllowed(userId);
-  if (allowance === "disabled") {
-    await recordState(userId, "disabled");
-    return { ...result, status: "disabled", errorKind: "disabled" };
-  }
-  // Switched away: its rows and dirty days stay exactly as they are.
-  if (allowance === "providerOff") return { ...result, status: "skipped" };
+  if (allowance !== "ok") return stop(allowance);
   try {
     await remarkOnReducerChange(userId);
     const days = await pendingDirtyDays(
@@ -210,8 +223,16 @@ export async function projectTravTrackCountryDays(
     if (days.length > 0) {
       const resolved = await resolveDeps(userId, deps);
       for (const day of days) {
-        if (await projectDay(userId, day, resolved, deps)) result.projected += 1;
-        else result.rerun += 1;
+        // Asked before every day: a switch stops the run, not the next one.
+        const now = await travTrackDerivationAllowed(userId);
+        if (now !== "ok") return stop(now);
+        try {
+          if (await projectDay(userId, day, resolved, deps)) result.projected += 1;
+          else result.rerun += 1;
+        } catch (error) {
+          if (!(error instanceof Cancelled)) throw error;
+          return stop(await travTrackDerivationAllowed(userId));
+        }
       }
     }
   } catch (error) {

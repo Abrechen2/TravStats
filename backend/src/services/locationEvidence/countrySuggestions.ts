@@ -26,6 +26,7 @@ import logger from "../../utils/logger";
 import { loadPassport } from "../stats/passportLoader";
 import { getLocationProvider } from "../locationProvider/provider";
 import { takeTravTrackLock } from "../travtrack/lock";
+import { travTrackDerivationAllowed } from "./allowed";
 import { explanation } from "./envelope";
 import { historyGeneration } from "./generation";
 import { countryEvidenceKey } from "./key";
@@ -232,6 +233,10 @@ export async function countrySuggestions(
 
   return prisma.$transaction(async (tx) => {
     await takeTravTrackLock(tx, userId);
+    // Asked again under the lock: a switch during the read publishes nothing.
+    if ((await travTrackDerivationAllowed(userId)) !== "ok") {
+      return { ...result, status: "skipped" as const };
+    }
     if ((await historyGeneration(tx, userId)) !== generation) {
       logger.info({ operation: "location.countrySuggestions.stale", userId });
       return { ...result, status: "stale" as const };

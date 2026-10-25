@@ -4,6 +4,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { generateToken } from "../../utils/jwt";
 import { utcMidnight } from "../../services/countryDays/store";
+import * as countryRule from "../../services/locationEvidence/countrySuggestions";
 import { countrySuggestions } from "../../services/locationEvidence/countrySuggestions";
 import { setLocationProvider } from "../../services/locationProvider/provider";
 import { deleteTravTrackRange } from "../../services/travtrack/deleteRange";
@@ -247,6 +248,23 @@ describe("/api/v1/location-suggestions", () => {
     expect(await prisma.countryOverride.count({ where: { userId } })).toBe(0);
 
     expect((await reject(id)).status).toBe(200);
+  });
+
+  it("TravTrack switched off during the re-check writes no override and leaves the question", async () => {
+    const id = await question();
+    const spy = jest.spyOn(countryRule, "countryRunHolds").mockImplementation(async () => {
+      await switches.set({ beta: true, config: false });
+      return true;
+    });
+    try {
+      const res = await accept(id, "visited");
+      expect(res.status).toBe(403);
+      expect(res.body.code).toBe("TRAVTRACK_DISABLED");
+    } finally {
+      spy.mockRestore();
+    }
+    expect(await prisma.countryOverride.count({ where: { userId } })).toBe(0);
+    expect(await fresh(id)).toMatchObject({ status: "pending", claimToken: null });
   });
 
   it("reject is final: accepting afterwards is SUGGESTION_ALREADY_RESOLVED; rejecting again is fine", async () => {
