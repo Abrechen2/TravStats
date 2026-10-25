@@ -31,27 +31,109 @@ let running = false;
 export type ProjectionRunOptions = {
   /** Injected by tests so the boundary file is not needed. */
   countryAt?: (lat: number, lon: number) => string | null;
+  /** The run's clock (backoff); now unless a test moves it. */
+  now?: Date;
+  /** The question step; `countrySuggestions` unless a test makes it fail. */
+  suggest?: typeof countrySuggestions;
 };
+
+/** The first retry waits one tick, each further failure twice as long, at most a day. */
+const BACKOFF_BASE_MS = 15 * 60_000;
+const BACKOFF_MAX_MS = 24 * 60 * 60_000;
+
+export const backoffMs = (failures: number): number =>
+  Math.min(BACKOFF_MAX_MS, BACKOFF_BASE_MS * 2 ** Math.max(0, failures - 1));
 
 export type ProjectionRunResult = { accounts: number; failed: number; questions: number };
 
 /**
  * The accounts with projection work: TravTrack is their provider (owner rule,
  * 2026-10-25 — an account that switched away is never recomputed), and they
- * hold a dirty day or points the current country reducer has not seen.
+ * hold a dirty day, points the current country reducer has not seen, or
+ * country questions still owed — and are not inside a failure's backoff.
  */
-async function accountsWithWork(): Promise<string[]> {
+async function accountsWithWork(now: Date): Promise<string[]> {
   const rows = await prisma.$queryRaw<{ id: string }[]>`
     SELECT u.id FROM users u
       JOIN user_settings us ON us.user_id = u.id AND us.location_provider = 'travtrack'
       LEFT JOIN travtrack_derivation_state s ON s.user_id = u.id
-     WHERE EXISTS (
-             SELECT 1 FROM travtrack_dirty_days d
-              WHERE d.user_id = u.id AND (d.done & ${COUNTRY_DAYS_BIT}) = 0)
-        OR (COALESCE(s.country_reducer_version, 0) < ${COUNTRY_DAY_REDUCER_VERSION}
-            AND EXISTS (SELECT 1 FROM travtrack_points p WHERE p.user_id = u.id))
+     WHERE (s.retry_after IS NULL OR s.retry_after <= ${now})
+       AND (EXISTS (
+              SELECT 1 FROM travtrack_dirty_days d
+               WHERE d.user_id = u.id AND (d.done & ${COUNTRY_DAYS_BIT}) = 0)
+            OR COALESCE(s.country_questions_due, false)
+            OR (COALESCE(s.country_reducer_version, 0) < ${COUNTRY_DAY_REDUCER_VERSION}
+                AND EXISTS (SELECT 1 FROM travtrack_points p WHERE p.user_id = u.id)))
      ORDER BY u.id`;
   return rows.map((r) => r.id);
+}
+
+async function recordFailure(userId: string, now: Date): Promise<void> {
+  const row = await prisma.travTrackDerivationState.upsert({
+    where: { userId },
+    create: { userId, failureCount: 1 },
+    update: { failureCount: { increment: 1 } },
+    select: { failureCount: true },
+  });
+  await prisma.travTrackDerivationState.update({
+    where: { userId },
+    data: { retryAfter: new Date(now.getTime() + backoffMs(row.failureCount)) },
+  });
+}
+
+/** One account: project, then ask what is owed. Throws nothing; answers whether it failed. */
+async function runAccount(
+  userId: string,
+  countryAt: (lat: number, lon: number) => string | null,
+  options: ProjectionRunOptions,
+  now: Date
+): Promise<{ failed: boolean; questions: number }> {
+  try {
+    const projected = await projectTravTrackCountryDays(userId, { countryAt });
+    if (projected.status === "failed") {
+      await recordFailure(userId, now);
+      return { failed: true, questions: 0 };
+    }
+    // Disabled or switched away: nothing ran, nothing failed.
+    if (projected.status !== "done") return { failed: false, questions: 0 };
+    if (projected.projected > 0) {
+      await prisma.travTrackDerivationState.update({
+        where: { userId },
+        data: { countryQuestionsDue: true },
+      });
+    }
+    const state = await prisma.travTrackDerivationState.findUnique({
+      where: { userId },
+      select: { countryQuestionsDue: true },
+    });
+    let questions = 0;
+    if (state?.countryQuestionsDue) {
+      const asked = await (options.suggest ?? countrySuggestions)(userId);
+      questions = asked.created;
+      // Owed until a run finishes with nothing deferred; a stale run asks again.
+      const owed = asked.status === "stale" || asked.deferred > 0;
+      if (!owed) {
+        await prisma.travTrackDerivationState.update({
+          where: { userId },
+          data: { countryQuestionsDue: false },
+        });
+      }
+    }
+    await prisma.travTrackDerivationState.update({
+      where: { userId },
+      data: { failureCount: 0, retryAfter: null },
+    });
+    return { failed: false, questions };
+  } catch (error) {
+    logger.warn({
+      operation: "travtrack_projections_account_failed",
+      userId,
+      // The name only: a message could carry a query's values.
+      errorName: error instanceof Error ? error.name : "unknown",
+    });
+    await recordFailure(userId, now).catch(() => undefined);
+    return { failed: true, questions: 0 };
+  }
 }
 
 export async function runTravTrackProjections(
@@ -59,29 +141,17 @@ export async function runTravTrackProjections(
 ): Promise<ProjectionRunResult> {
   const result: ProjectionRunResult = { accounts: 0, failed: 0, questions: 0 };
   if (!(await travTrackInstanceOn())) return result;
-  const accounts = await accountsWithWork();
+  const now = options.now ?? new Date();
+  const accounts = await accountsWithWork(now);
   if (accounts.length === 0) return result;
   // Loaded once per run: the boundary index is several megabytes.
   const countryAt = options.countryAt ?? (await getCountryResolver()).countryAt;
   for (const userId of accounts) {
     result.accounts += 1;
-    try {
-      const projected = await projectTravTrackCountryDays(userId, { countryAt });
-      if (projected.status !== "done") {
-        if (projected.status === "failed") result.failed += 1;
-        continue;
-      }
-      result.questions += (await countrySuggestions(userId)).created;
-    } catch (error) {
-      // One account's failure is one account's: the next is still projected.
-      result.failed += 1;
-      logger.warn({
-        operation: "travtrack_projections_account_failed",
-        userId,
-        // The name only: a message could carry a query's values.
-        errorName: error instanceof Error ? error.name : "unknown",
-      });
-    }
+    // One account's failure is one account's: the next is still projected.
+    const outcome = await runAccount(userId, countryAt, options, now);
+    if (outcome.failed) result.failed += 1;
+    result.questions += outcome.questions;
   }
   return result;
 }

@@ -77,4 +77,89 @@ describe("runTravTrackProjections", () => {
     expect(await prisma.countryDay.count({ where: { userId } })).toBe(0);
     expect(await prisma.travTrackDirtyDay.count({ where: { userId, done: 0 } })).toBe(2);
   });
+
+  it("questions deferred past the cap keep the account scheduled until they are asked", async () => {
+    await prisma.travTrackDirtyDay.deleteMany({ where: { userId } });
+    await wipeTravTrack([userId]);
+    for (const code of ["PT", "ES", "FR", "IT", "AT"]) {
+      for (const day of ["2026-10-12", "2026-10-13"]) {
+        await prisma.countryDay.create({
+          data: {
+            userId,
+            source: "travtrack",
+            date: utcMidnight(day),
+            countryCode: code,
+            pointCount: 5,
+            airportPointCount: 0,
+            spanKm: 1,
+          },
+        });
+      }
+    }
+    // As a projection that changed these rows leaves it.
+    await prisma.travTrackDerivationState.create({
+      data: { userId, countryReducerVersion: 99, countryQuestionsDue: true },
+    });
+
+    const first = await runTravTrackProjections({ countryAt });
+    expect(first.questions).toBe(3);
+    expect(
+      (await prisma.travTrackDerivationState.findUniqueOrThrow({ where: { userId } }))
+        .countryQuestionsDue
+    ).toBe(true);
+
+    // Nothing is dirty any more; the owed questions alone schedule it.
+    const second = await runTravTrackProjections({ countryAt });
+    expect(second.questions).toBe(2);
+    const state = await prisma.travTrackDerivationState.findUniqueOrThrow({ where: { userId } });
+    expect(state.countryQuestionsDue).toBe(false);
+    expect((await runTravTrackProjections({ countryAt })).accounts).toBe(0);
+  });
+
+  it("a failed run is retried after a growing backoff, not on every tick", async () => {
+    const now = new Date("2026-10-25T12:00:00Z");
+    const broken = () => {
+      throw new Error("boundary index unreadable");
+    };
+
+    const failed = await runTravTrackProjections({ countryAt: broken, now });
+    expect(failed.failed).toBe(1);
+    const state = await prisma.travTrackDerivationState.findUniqueOrThrow({ where: { userId } });
+    expect(state.failureCount).toBe(1);
+    expect(state.retryAfter!.getTime()).toBeGreaterThan(now.getTime());
+
+    // Inside the backoff the account is left alone.
+    expect((await runTravTrackProjections({ countryAt, now })).accounts).toBe(0);
+
+    // A second failure waits longer.
+    const later = new Date(state.retryAfter!.getTime() + 1000);
+    await runTravTrackProjections({ countryAt: broken, now: later });
+    const twice = await prisma.travTrackDerivationState.findUniqueOrThrow({ where: { userId } });
+    expect(twice.failureCount).toBe(2);
+    expect(twice.retryAfter!.getTime() - later.getTime()).toBeGreaterThan(
+      state.retryAfter!.getTime() - now.getTime()
+    );
+
+    // After it, the work is done and the failures are forgotten.
+    const after = new Date(twice.retryAfter!.getTime() + 1000);
+    const ok = await runTravTrackProjections({ countryAt, now: after });
+    expect(ok).toMatchObject({ accounts: 1, failed: 0, questions: 1 });
+    const done = await prisma.travTrackDerivationState.findUniqueOrThrow({ where: { userId } });
+    expect(done).toMatchObject({ failureCount: 0, retryAfter: null, countryQuestionsDue: false });
+  });
+
+  it("a question run that fails keeps the questions owed and is retried after the backoff", async () => {
+    const now = new Date("2026-10-25T12:00:00Z");
+    const failing = jest.fn(async () => {
+      throw new Error("database gone");
+    });
+
+    const result = await runTravTrackProjections({ countryAt, now, suggest: failing });
+    expect(result.failed).toBe(1);
+    const state = await prisma.travTrackDerivationState.findUniqueOrThrow({ where: { userId } });
+    expect(state).toMatchObject({ countryQuestionsDue: true, failureCount: 1 });
+
+    const after = new Date(state.retryAfter!.getTime() + 1000);
+    expect((await runTravTrackProjections({ countryAt, now: after })).questions).toBe(1);
+  });
 });

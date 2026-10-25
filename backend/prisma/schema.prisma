@@ -6090,6 +6090,14 @@ model TravTrackDerivationState {
   /// A closed vocabulary (E6), never a message: `disabled | database |
   /// reducer` or null (CHECK, migration travtrack_derivation_error_kind_check).
   lastErrorKind         String?   @map("last_error_kind")
+  /// Country questions still owed (E6): set after a projection changed
+  /// rows or a run deferred questions past its cap; cleared by a question
+  /// run that finished with nothing deferred. Keeps the account scheduled.
+  countryQuestionsDue   Boolean   @default(false) @map("country_questions_due")
+  /// Consecutive failed projection runs; the backoff below grows with it.
+  failureCount          Int       @default(0) @map("failure_count")
+  /// Not scheduled again before this instant after a failure (backoff).
+  retryAfter            DateTime? @map("retry_after")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
