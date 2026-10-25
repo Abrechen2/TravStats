@@ -73,7 +73,7 @@ describe("runTravTrackProjections", () => {
 
     const result = await runTravTrackProjections({ countryAt });
 
-    expect(result).toEqual({ accounts: 0, failed: 0, questions: 0 });
+    expect(result).toEqual({ accounts: 0, failed: 0, questions: 0, days: 0 });
     expect(await prisma.countryDay.count({ where: { userId } })).toBe(0);
     expect(await prisma.travTrackDirtyDay.count({ where: { userId, done: 0 } })).toBe(2);
   });
@@ -161,5 +161,30 @@ describe("runTravTrackProjections", () => {
 
     const after = new Date(state.retryAfter!.getTime() + 1000);
     expect((await runTravTrackProjections({ countryAt, now: after })).questions).toBe(1);
+  });
+
+  it("a tick works through at most its budget of accounts, and the next continues with the rest", async () => {
+    const otherId = await makeUser(`${PREFIX}b`);
+    await setLocationProvider(otherId, "travtrack");
+    await storePoint(otherId, { t: Date.parse("2026-10-12T10:00:00Z"), lat: 38.72, lon: -9.14 });
+    await prisma.$transaction((tx) => markTravTrackDaysDirty(tx, otherId, ["2026-10-12"]));
+    const projectedOf = (id: string) => prisma.countryDay.count({ where: { userId: id } });
+
+    expect((await runTravTrackProjections({ countryAt, maxAccounts: 1 })).accounts).toBe(1);
+    const firstTick = [await projectedOf(userId), await projectedOf(otherId)];
+    expect(firstTick.filter((n) => n > 0)).toHaveLength(1);
+
+    expect((await runTravTrackProjections({ countryAt, maxAccounts: 1 })).accounts).toBe(1);
+    expect(await projectedOf(userId)).toBeGreaterThan(0);
+    expect(await projectedOf(otherId)).toBeGreaterThan(0);
+  });
+
+  it("a tick projects at most its budget of days; the rest wait for the next", async () => {
+    const result = await runTravTrackProjections({ countryAt, maxDays: 1 });
+    expect(result.days).toBe(1);
+    expect(await prisma.travTrackDirtyDay.count({ where: { userId, done: 0 } })).toBe(1);
+
+    await runTravTrackProjections({ countryAt, maxDays: 1 });
+    expect(await prisma.travTrackDirtyDay.count({ where: { userId, done: 0 } })).toBe(0);
   });
 });
