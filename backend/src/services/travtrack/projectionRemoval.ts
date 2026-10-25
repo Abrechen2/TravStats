@@ -9,11 +9,15 @@
  * question run or a country accept could publish from them under the new
  * generation. The next projection run re-derives whatever is left; until then
  * nothing reads those days (`unprojectedDaysIn`). Dawarich's rows are another
- * source and never touched.
+ * source and never touched. The explored map's cells (L1) and the monthly
+ * values (L3) of the same days go the same way.
  */
 import type { DbTransaction } from "../../db";
 import type { PointsRemovedCause } from "./deleteRange";
 import { markTravTrackDaysDirty, removalDays } from "./dirtyDays";
+import { exploredOnHistoryDeleted } from "./explored/project";
+import { monthsOnHistoryDeleted } from "./months/project";
+import { monthsOnZoneChanged } from "./months/zoneChange";
 
 const dayMs = (day: string) => Date.parse(`${day}T00:00:00.000Z`);
 
@@ -32,14 +36,21 @@ export async function projectionsOnHistoryDeleted(
       date: { in: affected.map((d) => new Date(dayMs(d))) },
     },
   });
+  // The explored map's cells of the same days (L1), in the same transaction.
+  await exploredOnHistoryDeleted(tx, userId, days);
+  // The monthly values of their months (L3), likewise.
+  await monthsOnHistoryDeleted(tx, userId, days);
   await markTravTrackDaysDirty(tx, userId, affected);
 }
 
 /** The removal hook (`onPointsRemoved`): every cause names the days it emptied. */
-export function projectionsOnPointsRemoved(
+export async function projectionsOnPointsRemoved(
   tx: DbTransaction,
   userId: string,
   cause: PointsRemovedCause
 ): Promise<void> {
-  return projectionsOnHistoryDeleted(tx, userId, cause.days);
+  await projectionsOnHistoryDeleted(tx, userId, cause.days);
+  // A new or grown zone can hide counted kilometres and a city's cell
+  // without a stored point inside it (L3): its months are owed again.
+  if (cause.kind === "zone") await monthsOnZoneChanged(tx, userId, cause.zone);
 }

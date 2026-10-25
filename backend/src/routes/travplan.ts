@@ -28,6 +28,8 @@ import { recheckAchievementsAfterWrite } from "../middleware/recheckAchievements
 import { planningImportPolicy } from "./travplan/importPolicy";
 import routeEndpoints from "./travplan/routeEndpoints";
 import { assertTravPlanOffered, travPlanOffered } from "../services/travplan/availability";
+import { planVersusActual } from "../services/travplan/actual/planActual";
+import { planActualLimiter } from "../middleware/planActualLimit";
 const router = Router();
 const uuid = z.string().uuid();
 const writeGuard = [authenticate, requireWriteScope, rejectDemo];
@@ -124,6 +126,15 @@ router.post(
   },
   route(async (req, res) => {
     res.json(await writePlan(req.userId!, tripId(req), writeSchema.parse(req.body)));
+  })
+);
+// Plan versus actual (TravTrack plan L5): a read of the plan and the trip's track, never a write.
+router.get(
+  "/trips/:tripId/plan/actual",
+  authenticate,
+  planActualLimiter,
+  route(async (req, res) => {
+    res.json(await planVersusActual(req.userId!, tripId(req)));
   })
 );
 router.get(

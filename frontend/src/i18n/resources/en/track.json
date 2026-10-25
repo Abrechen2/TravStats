@@ -32,7 +32,7 @@
     "ferry": "Ferry {{label}}",
     "cruise": "Cruise {{label}}",
     "rental": "Rental car {{label}}",
-    "roadtrip": "Road trip {{label}}",
+    "roadtrip": "Roadtrip {{label}}",
     "lodging": "Night {{label}}",
     "poi": "Visit {{label}}",
     "entry": "Entry {{label}}",
@@ -93,6 +93,7 @@
     "loadFailed": "TravTrack could not be loaded. Reload the page.",
     "empty": "No positions stored yet.",
     "summary": "{{count}} positions stored, from {{from}} to {{to}}, from {{devices}} device(s).",
+    "tripsNoResidence": "TravTrack recognises trips only once your home is confirmed: it measures the distance from where you live. Confirm it under Settings → Home.",
     "open": "Open Track",
     "zones": {
       "title": "Privacy zones",
@@ -125,6 +126,15 @@
       "confirm": "Delete all {{count}} positions from {{from}} to {{to}}? This cannot be undone.",
       "done": "{{count}} positions deleted.",
       "notDone": "The positions were not deleted. Try again."
+    },
+    "cities": {
+      "title": "Cities in the monthly values",
+      "intro": "Names the cities you stayed in for at least 30 minutes. To do so the server sends rounded positions (to about 1 km) to this server's geocoder – which may be a public service such as Nominatim. Stays inside privacy zones are never looked up.",
+      "label": "Determine cities",
+      "loadFailed": "The setting could not be loaded.",
+      "notSaved": "The setting was not saved.",
+      "savedOn": "Cities are determined on the next run.",
+      "savedOff": "City lookup off – cities already determined are removed."
     }
   },
   "imports": {
@@ -153,7 +163,8 @@
     "status": {
       "running": "running",
       "interrupted": "interrupted (the server restarted) – import the file again",
-      "cancelled": "deleted"
+      "cancelled": "deleted",
+      "paused": "paused – resume it under “Copy your Dawarich history”"
     },
     "delete": "Delete import",
     "deleteConfirm_one": "Delete the import “{{name}}” and its {{count}} position? Positions from other sources stay.",
@@ -169,6 +180,71 @@
       "rateLimited": "Too many imports in a short time. Try again in a quarter of an hour.",
       "lost": "Whether the import finished is not known – the server restarted. Check the list.",
       "tooManyPoints": "The file holds more than 200,000 positions – more than one import takes. Split it, say by month."
+    }
+  },
+  "dawarichCopy": {
+    "title": "Copy your Dawarich history",
+    "intro": "Copies your location history from your own Dawarich into TravTrack – all of it or a span of days. Dawarich is only read: nothing there is changed or deleted, and your location source stays as it is. Positions inside a privacy zone or a deleted span are discarded, and what is stored already is not added twice. The copy starts no suggestions; you delete it like an import.",
+    "connection": {
+      "none": "Connect your own Dawarich first (Settings → Dawarich). Only then can the history be copied.",
+      "shared": "This server only has a shared Dawarich set up. A copy reads from your own only – enter your own connection for it."
+    },
+    "whole": "Whole history (up to yesterday)",
+    "span": "Span of days",
+    "from": "From (UTC)",
+    "until": "Until (UTC)",
+    "start": "Copy your Dawarich history",
+    "stop": "Pause",
+    "resume": "Resume",
+    "range": "{{from}} – {{until}}",
+    "status": {
+      "running": "Copying: day {{done}} of {{total}}",
+      "paused": "Paused, goes on from {{day}}",
+      "interrupted": "Interrupted (the server restarted), goes on from {{day}}",
+      "failed": "Stopped at {{day}}",
+      "complete": "Copied completely",
+      "incomplete": "Copied, but incomplete – what is missing is listed below",
+      "cancelled": "Deleted"
+    },
+    "reason": {
+      "unreachable": "Dawarich could not be reached",
+      "auth": "Dawarich refused the API key",
+      "notFound": "Dawarich does not know the path – check the address",
+      "protocol": "Dawarich answered unexpectedly",
+      "invalidUrl": "The Dawarich address is invalid",
+      "disabled": "TravTrack was switched off",
+      "notConfigured": "Your own Dawarich connection is missing",
+      "internal": "An error on the server"
+    },
+    "report": {
+      "read_one": "{{count}} position read",
+      "read_other": "{{count}} positions read",
+      "stored_one": "{{count}} stored",
+      "stored_other": "{{count}} stored",
+      "duplicate_one": "{{count}} already there",
+      "duplicate_other": "{{count}} already there",
+      "zone_one": "{{count}} discarded in a privacy zone",
+      "zone_other": "{{count}} discarded in a privacy zone",
+      "deleted_one": "{{count}} discarded in a deleted span",
+      "deleted_other": "{{count}} discarded in a deleted span",
+      "invalid_one": "{{count}} unusable",
+      "invalid_other": "{{count}} unusable"
+    },
+    "gaps": {
+      "title": "What is missing",
+      "hours_one": "{{count}} hour only in part: {{list}}",
+      "hours_other": "{{count}} hours only in part: {{list}}",
+      "days_one": "{{count}} day without an answer: {{list}}",
+      "days_other": "{{count}} days without an answer: {{list}}"
+    },
+    "errors": {
+      "notConfigured": "This needs your own Dawarich connection (Settings → Dawarich).",
+      "running": "An import or a copy is running already. Wait until it is done, or pause the copy.",
+      "notRunning": "The copy is not running.",
+      "notResumable": "This copy cannot be resumed – start a new one.",
+      "range": "That span does not work: it needs a start and an end, cannot lie in the future, and reaches back twenty years at most.",
+      "rateLimited": "Too many starts in a short time. Try again in a quarter of an hour.",
+      "paused": "Resume the paused copy or delete it first."
     }
   },
   "sources": {
@@ -206,5 +282,47 @@
       "notFound": "This key no longer exists.",
       "rateLimited": "Too many keys were created just now. Try again in a quarter of an hour."
     }
+  },
+  "tabs": {
+    "label": "View",
+    "day": "Day",
+    "explored": "Explored",
+    "months": "Months"
+  },
+  "explored": {
+    "map": "Map of the explored areas",
+    "legend": "Each square is about 1–2 km across: a place where your history holds at least one position on the ground.",
+    "zones": "Privacy zones are shown as explored.",
+    "zoomIn": "There are too many explored squares here for one view. Zoom in closer.",
+    "unavailable": "The explored map is not available for privacy zones this large.",
+    "preparing": "The explored map is being prepared. Check back in a few minutes."
+  },
+  "months": {
+    "previous": "Previous year",
+    "next": "Next year",
+    "loading": "Loading months …",
+    "empty": "Your history holds no positions in {{year}}.",
+    "table": "Monthly values {{year}}",
+    "month": "Month",
+    "km": "On the ground",
+    "countries": "Countries",
+    "cities": "Cities",
+    "days": "Days with data",
+    "pausedCount": "{{count}} paused",
+    "noCountries": "No countries determined",
+    "citiesUnknown": "Cities not determined",
+    "citiesNone": "No city",
+    "pending": "Being recomputed right now – the values may still change.",
+    "pendingMonth": "being computed",
+    "legend": "Kilometres on the ground count only the visible line: nothing in the air, nothing faster than 500 km/h, nothing a privacy zone hides. Months without positions are left out.",
+    "citiesOff": "The overview names cities only once you switch on the city lookup in the settings.",
+    "utc": "Months in UTC: a day counts in the month it falls in by UTC – what happens around local midnight may appear in the neighbouring month."
+  },
+  "lastSeen": {
+    "label": "Last seen",
+    "line": "Last seen {{age}} · {{device}}",
+    "unknownDevice": "Unknown device",
+    "none": "No position recorded yet.",
+    "open": "View this day"
   }
 }

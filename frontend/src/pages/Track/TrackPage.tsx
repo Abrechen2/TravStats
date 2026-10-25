@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import Button from "../../components/ui/Button";
 import { Field, Input } from "../../components/ui/Field";
+import { Segmented } from "../../components/ui/Segmented";
 import { token } from "../../components/ui/tokens";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useTodayZone } from "../../hooks/useTodayZone";
@@ -14,12 +15,15 @@ import {
   type PrivacyZone,
   type TravTrackDay,
 } from "../../lib/api/travtrack";
+import { LastSeenLine } from "../../components/Dashboard/LastSeenCard";
 import { addDays } from "../../shared/time/calendar";
 import { todayIn } from "../../shared/time/clock";
 import TrackCoverageBar from "./TrackCoverageBar";
 import TrackDayMap from "./TrackDayMap";
 import TrackDeleteDialog from "./TrackDeleteDialog";
 import TrackExportDialog from "./TrackExportDialog";
+import TrackExploredMap from "./TrackExploredMap";
+import TrackMonths from "./TrackMonths";
 import TrackTimeline from "./TrackTimeline";
 import { dayAnchors } from "./trackContextLabel";
 
@@ -28,18 +32,55 @@ type DayState =
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
+export type TrackView = "day" | "explored" | "months";
+
 /**
  * `/track` and `/track/:date` — one day of the own location history
  * (TravTrack plan T6, prototype board "Track-Tag"): the map, what the phone
- * recorded, what TravStats knows of the day, export and delete. Offered only
- * where `useTravTrackAccess` says so; a refusal on the way (TravTrack switched
- * off meanwhile) shows its own copy, never an empty map.
+ * recorded, what TravStats knows of the day, export and delete. `/track/explored`
+ * is the second tab, the explored map (plan L1), `/track/months` the third,
+ * the monthly values (plan L3). Offered only where
+ * `useTravTrackAccess` says so; a refusal on the way (TravTrack switched off
+ * meanwhile) shows its own copy, never an empty map.
  */
-export default function TrackPage(): JSX.Element | null {
+export default function TrackPage({ view = "day" }: { view?: TrackView }): JSX.Element | null {
   const access = useTravTrackAccess();
   if (access === "pending") return null;
   if (access === "hidden") return <Navigate to="/dashboard" replace />;
+  if (view === "explored") return <TrackTabView view="explored" />;
+  if (view === "months") return <TrackTabView view="months" />;
   return <TrackDayView />;
+}
+
+function TrackHeader({ view }: { view: TrackView }): JSX.Element {
+  const { t } = useTranslation(["track"]);
+  const navigate = useNavigate();
+  return (
+    <header className="flex flex-col gap-2">
+      <h1 className="t-screen-title">{t("track:title")}</h1>
+      <p className="t-caption">{t("track:intro")}</p>
+      <LastSeenLine />
+      <Segmented<TrackView>
+        label={t("track:tabs.label")}
+        value={view}
+        options={[
+          { value: "day", label: t("track:tabs.day") },
+          { value: "explored", label: t("track:tabs.explored") },
+          { value: "months", label: t("track:tabs.months") },
+        ]}
+        onChange={(next) => navigate(next === "day" ? "/track" : `/track/${next}`)}
+      />
+    </header>
+  );
+}
+
+function TrackTabView({ view }: { view: "explored" | "months" }): JSX.Element {
+  return (
+    <div className="mx-auto flex max-w-5xl flex-col gap-4 p-4">
+      <TrackHeader view={view} />
+      {view === "explored" ? <TrackExploredMap /> : <TrackMonths />}
+    </div>
+  );
 }
 
 function TrackDayView(): JSX.Element {
@@ -92,10 +133,7 @@ function TrackDayView(): JSX.Element {
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-4 p-4">
-      <header className="flex flex-col gap-2">
-        <h1 className="t-screen-title">{t("track:title")}</h1>
-        <p className="t-caption">{t("track:intro")}</p>
-      </header>
+      <TrackHeader view="day" />
 
       <div className="flex flex-wrap items-end gap-2">
         <Button onClick={() => go(addDays(date, -1))}>{t("track:day.previous")}</Button>

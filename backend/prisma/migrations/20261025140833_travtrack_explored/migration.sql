@@ -1,0 +1,23 @@
+-- CreateTable
+CREATE TABLE "travtrack_explored_cells" (
+    "user_id" TEXT NOT NULL,
+    "day" DATE NOT NULL,
+    "x" INTEGER NOT NULL,
+    "y" INTEGER NOT NULL,
+
+    CONSTRAINT "travtrack_explored_cells_pkey" PRIMARY KEY ("user_id","day","x","y")
+);
+
+-- CreateIndex
+CREATE INDEX "travtrack_explored_cells_user_id_x_y_idx" ON "travtrack_explored_cells"("user_id", "x", "y");
+
+-- AddForeignKey
+ALTER TABLE "travtrack_explored_cells" ADD CONSTRAINT "travtrack_explored_cells_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Backfill (TravTrack plan L1): every UTC day holding a TravTrack point gets a
+-- dirty-day row, so the explored projection (done bit 2, not set on any
+-- existing row) derives the whole history once. Existing rows keep their
+-- version and their other bits; `t` is a TIMESTAMP holding UTC.
+INSERT INTO "travtrack_dirty_days" ("user_id", "day", "version", "done")
+SELECT DISTINCT "user_id", "t"::date, 1, 0 FROM "travtrack_points"
+ON CONFLICT ("user_id", "day") DO NOTHING;

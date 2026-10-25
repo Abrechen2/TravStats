@@ -35,6 +35,18 @@ export interface TravTrackSummary {
   zones: number;
 }
 
+/** „Zuletzt gesehen" (plan L2): the newest real, privacy-safe fix of the own history. */
+export interface TravTrackLastSeen {
+  at: string;
+  lat: number;
+  lon: number;
+  accuracyM: number | null;
+  deviceId: string | null;
+  /** The paired phone's, the file's or the live source's own name; null when none is known. */
+  deviceLabel: string | null;
+  origin: string;
+}
+
 export interface PrivacyZone {
   id: string;
   name: string;
@@ -149,6 +161,11 @@ function filenameFrom(disposition: unknown, fallback: string): string {
   return match?.[1] ?? fallback;
 }
 
+/** A Web-Mercator tile at zoom 14, `[x, y]` — the explored map's one resolution. */
+export type ExploredCell = [number, number];
+/** A map box in degrees; west > east crosses the antimeridian. */
+export type ExploredBox = { west: number; south: number; east: number; north: number };
+
 export const travTrackApi = {
   capabilities: async (): Promise<TravTrackCapabilities> =>
     (await api.get<TravTrackCapabilities>("/travtrack/capabilities")).data,
@@ -170,8 +187,18 @@ export const travTrackApi = {
   /** Both days inclusive, on the profile's clock; the count deleted. */
   deleteDays: async (span: DaySpan): Promise<number> =>
     (await api.delete<{ deleted: number }>("/travtrack/points", { params: span })).data.deleted,
+  /** The last position, or null while the history holds none. */
+  lastSeen: async (): Promise<TravTrackLastSeen | null> =>
+    (await api.get<{ lastSeen: TravTrackLastSeen | null }>("/travtrack/last-seen")).data.lastSeen,
   day: async (date: string): Promise<TravTrackDay> =>
     (await api.get<TravTrackDay>("/travtrack/day", { params: { date } })).data,
+  /** The explored zoom-14 tiles in a box (plan L1); zones drawn as explored ground. */
+  explored: async (box: ExploredBox): Promise<ExploredCell[]> =>
+    (
+      await api.get<{ cells: ExploredCell[] }>("/travtrack/explored", {
+        params: { bbox: [box.west, box.south, box.east, box.north].join(",") },
+      })
+    ).data.cells,
   /** What of a trip's route is shared, or null while nothing is. */
   routeSnapshot: async (tripId: string): Promise<TripRouteSnapshot | null> =>
     (
@@ -283,6 +310,12 @@ export function trackErrorKey(err: unknown): string {
       return "track:errors.disabled";
     case "TRAVTRACK_EXPORT_TOO_LONG":
       return "track:errors.exportTooLong";
+    case "TRAVTRACK_EXPLORED_ZOOM_IN":
+      return "track:explored.zoomIn";
+    case "TRAVTRACK_EXPLORED_UNAVAILABLE":
+      return "track:explored.unavailable";
+    case "TRAVTRACK_EXPLORED_PREPARING":
+      return "track:explored.preparing";
     case "LOCATION_ZONE_LIMIT":
       return "track:errors.zoneLimit";
     default:

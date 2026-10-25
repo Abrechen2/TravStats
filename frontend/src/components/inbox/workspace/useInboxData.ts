@@ -4,7 +4,10 @@ import { tripSuggestionsApi } from "../../../lib/api/tripSuggestions";
 import { pendingUpdatesApi } from "../../../lib/api/pendingUpdates";
 import { photoJourneysApi } from "../../../lib/api/photoJourneys";
 import { dawarichStaysApi, type StayChoices } from "../../../lib/api/dawarichStays";
-import { locationSuggestionsApi } from "../../../lib/api/locationSuggestions";
+import {
+  collapseTripAggregate,
+  locationSuggestionsApi,
+} from "../../../lib/api/locationSuggestions";
 import { tripsApi } from "../../../lib/api/trips";
 import type { Trip } from "../../../types";
 import type { TripSuggestionList } from "../../../types/tripSuggestion";
@@ -20,7 +23,7 @@ export interface InboxVisibility {
   photos: boolean;
   trips: boolean;
   stays: boolean;
-  /** TravTrack's questions (plan E6/E7), behind TravTrack's beta key. Omitted: not asked. */
+  /** TravTrack's questions (plan E6/E7/L4), behind TravTrack's beta key. Omitted: not asked. */
   location?: boolean;
 }
 
@@ -91,7 +94,9 @@ export function useInboxData(visible: InboxVisibility, active = true) {
     );
     append(photos, "photos", (value) => value.map((data) => ({ source: "photos", data })));
     append(stays, "dawarich", (value) => value.rows.map((data) => ({ source: "dawarich", data })));
-    append(location, "location", (value) => value.map((data) => ({ source: "location", data })));
+    append(location, "location", (value) =>
+      collapseTripAggregate(value).map((data) => ({ source: "location", data }))
+    );
     if (stays.status === "fulfilled") setStayChoices(stays.value.choices);
     if (tripList.status === "fulfilled") setTrips(tripList.value);
     else errors.push("tripContext");

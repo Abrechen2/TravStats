@@ -34,14 +34,18 @@ vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => demo
 vi.mock("../../../hooks/useBetaFeatures", () => ({
   useBetaFeatures: () => ({ isFeatureVisible: () => true }),
 }));
+// The trip note reads the home periods on its own; covered by TravTrackTripNote.test.tsx.
+vi.mock("../TravTrackTripNote", () => ({ default: () => null }));
 vi.mock("../../../hooks/useTodayZone", () => ({
   useTodayZone: () => "UTC",
   todayZoneNow: () => "UTC",
 }));
 
 import TravTrackSection from "../TravTrackSection";
+import { dawarichCopyApi } from "../../../lib/api/travtrackDawarichCopy";
 import { travTrackApi } from "../../../lib/api/travtrack";
 import { travTrackImportsApi } from "../../../lib/api/travtrackImports";
+import { travTrackMonthsApi } from "../../../lib/api/travtrackMonths";
 import {
   sourcesErrorKey,
   travTrackSourcesApi,
@@ -91,6 +95,8 @@ async function confirmInDialog() {
 describe("TravTrackSection — further sources", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    // The Dawarich copy block (plan L6) reads its state on mount.
+    vi.spyOn(dawarichCopyApi, "get").mockResolvedValue({ connection: "none", copy: null });
     demo.current = false;
     caps.current = {
       version: 1,
@@ -103,6 +109,7 @@ describe("TravTrackSection — further sources", () => {
     vi.spyOn(travTrackApi, "summary").mockResolvedValue(EMPTY);
     vi.spyOn(travTrackApi, "zones").mockResolvedValue([]);
     vi.spyOn(travTrackImportsApi, "list").mockResolvedValue([]);
+    vi.spyOn(travTrackMonthsApi, "cityLookup").mockResolvedValue(false);
     vi.spyOn(travTrackSourcesApi, "list").mockResolvedValue([]);
   });
 

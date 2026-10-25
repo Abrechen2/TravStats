@@ -252,6 +252,14 @@ export const NON_TRAVEL_RELATIONS = [
   "travTrackDerivationState",
   "travTrackImports",
   "travTrackIngestTokens",
+  // TravTrack phase 4 (plan L1, L3, L6): the explored map's cells and zone
+  // raster, the monthly values and the Dawarich copy's progress — projections
+  // of the private history and import bookkeeping. Never part of a comparison
+  // or a federation publication (review focus 26–30).
+  "travTrackExploredCells",
+  "travTrackZoneCells",
+  "travTrackMonthValues",
+  "travTrackDawarichImport",
   // The account's WebDAV export target (forgejo#321): a URL, a username and an
   // encrypted password. A credential, so it never travels.
   "webdavSync",

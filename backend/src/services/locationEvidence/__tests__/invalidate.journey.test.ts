@@ -234,6 +234,8 @@ describe("an accepted journey", () => {
       ],
     });
     expect(await prisma.railJourney.count({ where: { id: rail.id } })).toBe(1);
+    // The kilometres were measured on the deleted history (Codex review of L4).
+    expect(kept.explanation).toEqual({ code: "journey.unlogged", params: { runs: 1 } });
 
     const again = await accept();
     expect(again.status).toBe(200);

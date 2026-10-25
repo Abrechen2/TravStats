@@ -8,10 +8,18 @@ import { AppError } from "../../middleware/errorHandler";
 import { travTrackImportLimiter } from "../../middleware/travTrackImportLimiter";
 import {
   deleteTravTrackImport,
+  importOrigin,
   listTravTrackImports,
   startGpxImport,
 } from "../../services/travtrack/imports/fileImport";
 import { GPX_IMPORT_MAX_BYTES } from "../../services/travtrack/imports/mapGpx";
+import {
+  getDawarichCopy,
+  resumeDawarichCopy,
+  startDawarichCopy,
+  stopDawarichCopy,
+} from "../../services/travtrack/imports/dawarichImport";
+import { travTrackDawarichCopySchema } from "../../schemas/travtrack";
 import logger from "../../utils/logger";
 import { travTrackTier } from "./gate";
 
@@ -26,6 +34,12 @@ import { travTrackTier } from "./gate";
  *
  * Tiers: starting an import is `on` (new capture); the list and a delete are
  * `held` — TravTrack off still lets an account see and remove what it has.
+ *
+ * The Dawarich copy (plan L6) lives here too: started, resumed and stopped by
+ * the user only — nothing starts it on its own — through the account's OWN
+ * Dawarich connection, which is only ever read. Starting and resuming are
+ * `on`; its state and stop are `held`. Deleting the copy is deleting its
+ * import (`DELETE /travtrack/imports/:id`).
  */
 
 const router = Router();
@@ -73,6 +87,62 @@ router.post(
   })
 );
 
+/** POST /travtrack/imports/dawarich — `{ fromDay?, untilDay? }` → 202 `{ jobId, importId }`. */
+router.post(
+  "/travtrack/imports/dawarich",
+  authenticate,
+  travTrackTier("on"),
+  requireWriteScope,
+  rejectDemo,
+  travTrackImportLimiter,
+  route(async (req, res) => {
+    const range = travTrackDawarichCopySchema.parse(req.body ?? {});
+    const started = await startDawarichCopy(req.userId!, range);
+    logger.info({ operation: "travtrack.dawarichCopy.start", importId: started.importId });
+    res.status(202).json(started);
+  })
+);
+
+/** GET /travtrack/imports/dawarich — the copy, its report per month, and the connection it may use. */
+router.get(
+  "/travtrack/imports/dawarich",
+  authenticate,
+  travTrackTier("held"),
+  route(async (req, res) => {
+    res.json(await getDawarichCopy(req.userId!));
+  })
+);
+
+/** POST /travtrack/imports/dawarich/resume — on from the checkpoint → 202 `{ jobId, importId }`. */
+router.post(
+  "/travtrack/imports/dawarich/resume",
+  authenticate,
+  travTrackTier("on"),
+  requireWriteScope,
+  rejectDemo,
+  travTrackImportLimiter,
+  route(async (req, res) => {
+    const started = await resumeDawarichCopy(req.userId!);
+    logger.info({ operation: "travtrack.dawarichCopy.resume", importId: started.importId });
+    res.status(202).json(started);
+  })
+);
+
+/** POST /travtrack/imports/dawarich/stop — pauses the running copy; answers its state. */
+router.post(
+  "/travtrack/imports/dawarich/stop",
+  authenticate,
+  travTrackTier("held"),
+  requireWriteScope,
+  rejectDemo,
+  route(async (req, res) => {
+    const userId = req.userId!;
+    await stopDawarichCopy(userId);
+    logger.info({ operation: "travtrack.dawarichCopy.stop" });
+    res.json(await getDawarichCopy(userId));
+  })
+);
+
 /** GET /travtrack/imports — the account's imports, newest first, each with its points' count. */
 router.get(
   "/travtrack/imports",
@@ -83,7 +153,7 @@ router.get(
     const rows = await listTravTrackImports(userId);
     const counts = await prisma.travTrackPoint.groupBy({
       by: ["origin"],
-      where: { userId, origin: { in: rows.map((r) => `gpx:${r.id}`) } },
+      where: { userId, origin: { in: rows.map((r) => importOrigin(r.kind, r.id)) } },
       _count: { _all: true },
     });
     const countOf = new Map(counts.map((c) => [c.origin, c._count._all]));
@@ -94,7 +164,7 @@ router.get(
         fileName: r.fileName,
         status: r.status,
         report: r.report ?? null,
-        pointCount: countOf.get(`gpx:${r.id}`) ?? 0,
+        pointCount: countOf.get(importOrigin(r.kind, r.id)) ?? 0,
         fromAt: r.fromAt?.toISOString() ?? null,
         toAt: r.toAt?.toISOString() ?? null,
         createdAt: r.createdAt.toISOString(),

@@ -137,6 +137,10 @@ describe("trip recording — private to its owner", () => {
       // The trip recording's own read path since TravTrack plan T5: it chooses
       // between the own recording and the provider for the same owner's router.
       "services/locationProvider/entryTrack.ts",
+      // TravPlan's plan-vs-actual cache key (plan L5): the count and newest
+      // batch time of the owner's own trip, so a new batch reads the track
+      // again. No position leaves it; the track itself comes from entryTrack.
+      "services/travplan/actual/trackCache.ts",
     ]);
     const files = (dir: string): string[] =>
       readdirSync(dir).flatMap((name) => {

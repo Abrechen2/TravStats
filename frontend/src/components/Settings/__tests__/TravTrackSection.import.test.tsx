@@ -33,18 +33,22 @@ vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => fals
 vi.mock("../../../hooks/useBetaFeatures", () => ({
   useBetaFeatures: () => ({ isFeatureVisible: () => true }),
 }));
+// The trip note reads the home periods on its own; covered by TravTrackTripNote.test.tsx.
+vi.mock("../TravTrackTripNote", () => ({ default: () => null }));
 vi.mock("../../../hooks/useTodayZone", () => ({
   useTodayZone: () => "UTC",
   todayZoneNow: () => "UTC",
 }));
 
 import TravTrackSection from "../TravTrackSection";
+import { dawarichCopyApi } from "../../../lib/api/travtrackDawarichCopy";
 import { travTrackApi } from "../../../lib/api/travtrack";
 import {
   storedImportErrorKey,
   travTrackImportsApi,
   type TravTrackImport,
 } from "../../../lib/api/travtrackImports";
+import { travTrackMonthsApi } from "../../../lib/api/travtrackMonths";
 import { api } from "../../../lib/api/client";
 import { JobFailedError } from "../../../lib/api/jobs";
 
@@ -104,10 +108,13 @@ async function confirmInDialog() {
 describe("TravTrackSection — GPX import", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    // The Dawarich copy block (plan L6) reads its state on mount.
+    vi.spyOn(dawarichCopyApi, "get").mockResolvedValue({ connection: "none", copy: null });
     caps.current = { version: 1, offered: true, enabled: true, active: true, hasData: true };
     vi.spyOn(travTrackApi, "summary").mockResolvedValue(EMPTY);
     vi.spyOn(travTrackApi, "zones").mockResolvedValue([]);
     vi.spyOn(travTrackImportsApi, "list").mockResolvedValue([]);
+    vi.spyOn(travTrackMonthsApi, "cityLookup").mockResolvedValue(false);
   });
 
   it("uploads the file as multipart and waits for the job", async () => {

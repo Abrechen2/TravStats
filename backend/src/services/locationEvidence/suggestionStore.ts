@@ -60,6 +60,7 @@ export type StoredSuggestion = {
 export type SuggestionUpdate = {
   status: "pending" | "accepted" | "rejected" | "invalidated";
   evidence?: Prisma.InputJsonValue;
+  explanation?: Prisma.InputJsonValue;
   acceptedEntryKind?: string | null;
   acceptedEntryId?: string | null;
 };

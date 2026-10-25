@@ -9,6 +9,7 @@ const api = vi.hoisted(() => ({
   summary: vi.fn(),
   deleteDays: vi.fn(),
   exportFile: vi.fn(),
+  lastSeen: vi.fn(),
 }));
 vi.mock("../../../lib/api/travtrack", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../lib/api/travtrack")>()),
@@ -17,12 +18,14 @@ vi.mock("../../../lib/api/travtrack", async (importOriginal) => ({
 const access = vi.hoisted(() => ({ value: "visible" as "visible" | "hidden" | "pending" }));
 vi.mock("../../../hooks/useTravTrackVisible", () => ({
   useTravTrackAccess: () => access.value,
+  useTravTrackVisible: () => access.value === "visible",
 }));
 vi.mock("../../../hooks/useTodayZone", () => ({ useTodayZone: () => "Asia/Seoul" }));
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) =>
       opts ? `${key} ${JSON.stringify(opts)}` : key,
+    i18n: { language: "de" },
   }),
 }));
 // WebGL is not there in jsdom: the map stub says what it was given.
@@ -30,6 +33,14 @@ vi.mock("../TrackDayMap", () => ({
   default: ({ segments }: { segments: unknown[] }) => (
     <div data-testid="track-day-map-stub">{segments.length} segments</div>
   ),
+}));
+
+vi.mock("../TrackExploredMap", () => ({
+  default: () => <div data-testid="track-explored-stub" />,
+}));
+
+vi.mock("../TrackMonths", () => ({
+  default: () => <div data-testid="track-months-stub" />,
 }));
 
 import TrackPage from "../TrackPage";
@@ -87,6 +98,8 @@ const renderAt = (path = "/track/2026-10-12") =>
   render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
+        <Route path="/track/explored" element={<TrackPage view="explored" />} />
+        <Route path="/track/months" element={<TrackPage view="months" />} />
         <Route path="/track/:date" element={<TrackPage />} />
         <Route path="/track" element={<TrackPage />} />
         <Route path="/dashboard" element={<p>dashboard</p>} />
@@ -100,6 +113,24 @@ describe("TrackPage", () => {
     Object.values(api).forEach((fn) => fn.mockReset());
     api.day.mockResolvedValue(DAY);
     api.zones.mockResolvedValue([]);
+    api.lastSeen.mockResolvedValue(null);
+  });
+
+  it("the header says where the history last placed the account", async () => {
+    api.lastSeen.mockResolvedValue({
+      at: "2026-10-12T05:00:00.000Z",
+      lat: 37.5,
+      lon: 127,
+      accuracyM: 5,
+      deviceId: "phone-1",
+      deviceLabel: "Pixel 9",
+      origin: "companion:phone-1",
+    });
+    renderAt();
+    const line = await screen.findByTestId("track-last-seen");
+    expect(line.textContent).toContain("track:lastSeen.line");
+    expect(line.textContent).toContain("Pixel 9");
+    expect(line.textContent).not.toContain("37.5");
   });
 
   it("the day shows segments and labels them from TravStats context", async () => {
@@ -136,6 +167,33 @@ describe("TrackPage", () => {
     renderAt();
     expect(await screen.findByRole("alert")).toHaveTextContent("track:errors.disabled");
     expect(screen.queryByTestId("track-day-map-stub")).not.toBeInTheDocument();
+  });
+
+  it("the Erkundet tab shows the explored map and no day controls (L1)", async () => {
+    renderAt("/track/explored");
+    expect(await screen.findByTestId("track-explored-stub")).toBeInTheDocument();
+    expect(api.day).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "track:actions.delete" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "track:tabs.day" }));
+    expect(await screen.findByTestId("track-day-map-stub")).toBeInTheDocument();
+  });
+
+  it("the Tag tab switches to the explored map", async () => {
+    renderAt();
+    await screen.findByTestId("track-day-map-stub");
+    fireEvent.click(screen.getByRole("radio", { name: "track:tabs.explored" }));
+    expect(await screen.findByTestId("track-explored-stub")).toBeInTheDocument();
+  });
+
+  it("the Monate tab shows the monthly values and no day controls (L3)", async () => {
+    renderAt("/track/months");
+    expect(await screen.findByTestId("track-months-stub")).toBeInTheDocument();
+    expect(api.day).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "track:actions.delete" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "track:tabs.explored" }));
+    expect(await screen.findByTestId("track-explored-stub")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "track:tabs.months" }));
+    expect(await screen.findByTestId("track-months-stub")).toBeInTheDocument();
   });
 
   it("a day without a fix says so", async () => {

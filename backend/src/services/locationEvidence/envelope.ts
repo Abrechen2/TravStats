@@ -1,6 +1,6 @@
 /**
  * Stored findings read as one envelope (TravTrack plan E1): a stay row of
- * `dawarich_stays` and a country or journey row of `location_suggestions`
+ * `dawarich_stays` and a country, journey or trip row of `location_suggestions`
  * answer in the same shape. What is server-side stays server-side — the
  * envelope is built from named fields only, so no evidence key, fingerprint,
  * point id or digest can ride along.
@@ -87,6 +87,9 @@ const STAY_STATUSES: readonly EvidenceStatus[] = [
   "covered",
   "superseded",
 ];
+const SUGGESTION_KINDS = ["country", "journey", "trip"] as const;
+type SuggestionKind = (typeof SUGGESTION_KINDS)[number];
+
 const SUGGESTION_STATUSES: readonly EvidenceStatus[] = [
   "pending",
   "accepted",
@@ -120,14 +123,14 @@ function stayEnvelope(row: StayRow): EvidenceSuggested | null {
 function suggestionEnvelope(row: SuggestionRow): EvidenceSuggested | null {
   const provider = parseProvider(row.provider);
   const status = parseStatus(row.status, SUGGESTION_STATUSES);
-  if (!provider || !status || (row.kind !== "country" && row.kind !== "journey")) return null;
+  if (!provider || !status || !SUGGESTION_KINDS.includes(row.kind as SuggestionKind)) return null;
   const evidence = isRecord(row.evidence) ? row.evidence : {};
   return {
     id: row.id,
-    kind: row.kind,
+    kind: row.kind as SuggestionKind,
     provider: { kind: provider, rev: row.providerRev },
     window: { fromMs: row.windowFrom.getTime(), untilMs: row.windowUntil.getTime() },
-    algorithm: { name: row.kind, version: row.algorithm },
+    algorithm: { name: row.kind as SuggestionKind, version: row.algorithm },
     explanation: parseExplanation(row.explanation) ?? {
       code: `${row.kind}.unexplained`,
       params: {},
