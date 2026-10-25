@@ -133,16 +133,21 @@ function evidenceOf(
   };
 }
 
-function columnsOf(evidence: TripEvidence) {
+/** A trip question's explanation: its code by whether it widens a trip, days, km. */
+export function tripExplanation(evidence: TripEvidence) {
   const params: Record<string, number | string> = {
     days: spanLength(evidence),
     km: evidence.km,
   };
   if (evidence.tripId) params.tripId = evidence.tripId;
+  return explanation(evidence.tripId ? "trip.extend" : "trip.away", params);
+}
+
+function columnsOf(evidence: TripEvidence) {
   return {
     windowFrom: startOfDayAt(evidence.fromDay, evidence.zone),
     windowUntil: startOfDayAt(shiftDay(evidence.toDay, 1), evidence.zone),
-    explanation: explanation(evidence.tripId ? "trip.extend" : "trip.away", params),
+    explanation: tripExplanation(evidence),
     evidence: evidence as unknown as Prisma.InputJsonValue,
   };
 }

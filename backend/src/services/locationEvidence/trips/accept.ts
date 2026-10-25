@@ -12,7 +12,9 @@
  * repeat answers it again without writing (the replay).
  *
  * Re-check: the run's away days still hold — `awayPeriods` over the span ± 2
- * days still finds a run holding at least `RECHECK_SHARE` of them. A read that
+ * days still finds a run holding at least `RECHECK_SHARE` of them — and the
+ * span is RE-DERIVED from that run (`validSpan`): only the days that hold now
+ * are applied, and the question records the span it applied. A read that
  * could not be completed, or an account that no longer has a confirmed
  * residence, is `unverifiable`: never accepted on a weaker rule, never
  * invalidated without proof.
@@ -37,8 +39,10 @@ import {
   type StoredSuggestion,
   type SuggestionKind,
 } from "../suggestionStore";
-import { awayPeriods, shiftDay } from "./awayPeriods";
+import type { Prisma } from "../../../prisma";
+import { awayPeriods, shiftDay, type AwayRun } from "./awayPeriods";
 import { parseTripEvidence, type TripEvidence } from "./evidence";
+import { tripExplanation } from "./suggest";
 
 /** The run still holds when a run found now holds this share of its away days. */
 export const RECHECK_SHARE = 0.8;
@@ -109,7 +113,30 @@ async function create(tx: DbTransaction, userId: string, name: string, run: Trip
   return trip.id;
 }
 
+type ValidSpan = Pick<TripEvidence, "fromDay" | "toDay" | "awayDays">;
+
+/**
+ * The part of the asked span that holds NOW: the run found today that shares
+ * the most of the asked away days, cut to the asked span — so a departure or
+ * return day joined by an away night is applied only while that night still
+ * reads away, and a day re-read as home is never applied. Null when no run
+ * found now holds `RECHECK_SHARE` of the asked away days.
+ */
+export function validSpan(asked: TripEvidence, now: readonly AwayRun[]): ValidSpan | null {
+  const wanted = new Set(asked.awayDays);
+  const best = now
+    .map((r) => ({ r, shared: r.awayDays.filter((d) => wanted.has(d)).length }))
+    .sort((a, b) => b.shared - a.shared)[0];
+  if (!best || best.shared < RECHECK_SHARE * wanted.size) return null;
+  const fromDay = best.r.fromDay > asked.fromDay ? best.r.fromDay : asked.fromDay;
+  const toDay = best.r.toDay < asked.toDay ? best.r.toDay : asked.toDay;
+  const awayDays = best.r.awayDays.filter((d) => d >= fromDay && d <= toDay);
+  return fromDay <= toDay && awayDays.length > 0 ? { fromDay, toDay, awayDays } : null;
+}
+
 export function tripAcceptKind(answer: TripAnswer): SuggestionKind {
+  /** What the latest re-check found valid; `apply` writes only this. */
+  let valid: ValidSpan | null = null;
   return {
     async validate(row, db) {
       tripOf(row);
@@ -121,6 +148,7 @@ export function tripAcceptKind(answer: TripAnswer): SuggestionKind {
       if (!trip) throw tripNotFound();
     },
     async recheck(row) {
+      valid = null;
       const run = tripOf(row);
       const read = await awayPeriods(row.userId, {
         fromDay: shiftDay(run.fromDay, -2),
@@ -132,19 +160,25 @@ export function tripAcceptKind(answer: TripAnswer): SuggestionKind {
           ? { outcome: "unverifiable", generation: read.generation }
           : "unverifiable";
       }
-      const wanted = new Set(run.awayDays);
-      const holds = read.runs.some(
-        (now) => now.awayDays.filter((d) => wanted.has(d)).length >= RECHECK_SHARE * wanted.size
-      );
-      return { outcome: holds ? "holds" : "invalidated", generation: read.generation };
+      valid = validSpan(run, read.runs);
+      return { outcome: valid ? "holds" : "invalidated", generation: read.generation };
     },
     async apply(tx, row) {
-      const run = tripOf(row);
+      const asked = tripOf(row);
+      // Only what the re-check found valid now — never a day that no longer holds.
+      if (!valid) throw new Error("trip accept applied without a valid span");
+      const run: TripEvidence = { ...asked, ...valid };
       const tripId =
         answer.action === "create"
           ? await create(tx, row.userId, answer.name, run)
           : await widen(tx, row.userId, answer.tripId, run);
-      return { status: "accepted", acceptedEntryKind: "trip", acceptedEntryId: tripId };
+      return {
+        status: "accepted",
+        acceptedEntryKind: "trip",
+        acceptedEntryId: tripId,
+        evidence: run as unknown as Prisma.InputJsonValue,
+        explanation: tripExplanation(run) as unknown as Prisma.InputJsonValue,
+      };
     },
   };
 }

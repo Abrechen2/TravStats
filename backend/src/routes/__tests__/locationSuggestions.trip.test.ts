@@ -13,7 +13,9 @@ import {
   makeTripUser,
   resetTripUser,
   setHomes,
+  HOME as HOME_POS,
   storeDay,
+  storeSpan,
 } from "../../services/locationEvidence/trips/__tests__/tripFixtures";
 
 /**
@@ -194,6 +196,58 @@ describe("trip questions", () => {
     expect(res.body.code).toBe("EVIDENCE_INVALIDATED");
     expect((await row(id)).status).toBe("invalidated");
     expect(await prisma.trip.count({ where: { userId } })).toBe(0);
+  });
+
+  it("a day that no longer holds is never applied: the trip gets only the span valid now", async () => {
+    for (const d of ["2026-10-10", "2026-10-11", "2026-10-12", "2026-10-13", "2026-10-14"]) {
+      await storeDay(userId, d, AWAY);
+    }
+    await suggestTrips(userId, { nowMs: NOW });
+    const id = (
+      await prisma.locationSuggestion.findFirstOrThrow({ where: { userId, kind: "trip" } })
+    ).id;
+    // A residence correction: from the 14th the user lived in Munich, so that day was home.
+    await setHomes(userId, [
+      { ...HOME_PERIOD, toDate: "2026-10-14" },
+      { ...HOME_PERIOD, fromDate: "2026-10-14", residence: { name: "München", ...AWAY } },
+    ]);
+    const res = await accept(id, { action: "create", name: "München" });
+    expect(res.status).toBe(200);
+    const trip = await prisma.trip.findUniqueOrThrow({
+      where: { id: (await row(id)).acceptedEntryId! },
+    });
+    expect(trip.startDay?.toISOString().slice(0, 10)).toBe("2026-10-10");
+    expect(trip.endDay?.toISOString().slice(0, 10)).toBe("2026-10-13");
+    // The answer names the span it applied.
+    expect(res.body.data.trip).toMatchObject({ fromDay: "2026-10-10", toDay: "2026-10-13" });
+    expect(res.body.data.explanation).toMatchObject({ params: { days: 4 } });
+  });
+
+  it("a departure evening that no longer holds is not applied", async () => {
+    // Left Frankfurt on the evening of the 9th: that day joins the trip by its away night.
+    await storeDay(userId, "2026-10-09", HOME_POS);
+    await storeSpan(
+      userId,
+      Date.parse("2026-10-09T21:10:00Z"),
+      Date.parse("2026-10-09T21:50:00Z"),
+      AWAY
+    );
+    const id = await question();
+    expect((await row(id)).evidence).toMatchObject({ fromDay: "2026-10-09" });
+    // The evening's fixes go (straight from the table: a removal through
+    // TravTrack would take the whole question with it, E5).
+    await prisma.travTrackPoint.deleteMany({
+      where: {
+        userId,
+        t: { gte: new Date("2026-10-09T21:00:00Z"), lt: new Date("2026-10-09T22:00:00Z") },
+      },
+    });
+    const res = await accept(id, { action: "create", name: "München" });
+    expect(res.status).toBe(200);
+    const trip = await prisma.trip.findUniqueOrThrow({
+      where: { id: (await row(id)).acceptedEntryId! },
+    });
+    expect(trip.startDay?.toISOString().slice(0, 10)).toBe("2026-10-10");
   });
 
   it("no confirmed residence at accept → unverifiable, the question stays open", async () => {
