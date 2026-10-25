@@ -433,8 +433,10 @@ describe("TravTrack — GPX import", () => {
       expect(days.filter((d) => d.done === 0).map((d) => d.day.toISOString().slice(0, 10))).toEqual(
         ["2026-10-11", "2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15"]
       );
+      // The 13th neighbours both removed days: its rows read their points as
+      // edge context and go with them, to be re-derived (Codex review of E5/E6).
       const left = await prisma.countryDay.findMany({ where: { userId }, select: { date: true } });
-      expect(left.map((r) => r.date.toISOString().slice(0, 10))).toEqual(["2026-10-13"]);
+      expect(left).toEqual([]);
       await prisma.countryDay.deleteMany({ where: { userId } });
     });
 
