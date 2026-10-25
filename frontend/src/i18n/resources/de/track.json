@@ -111,5 +111,48 @@
       "done": "{{count}} Positionen gelöscht.",
       "notDone": "Die Positionen wurden nicht gelöscht. Versuche es erneut."
     }
+  },
+  "imports": {
+    "title": "GPX-Dateien",
+    "intro": "Eine GPX-Datei, etwa aus einer Sport-App oder einem älteren Tracker, kommt in deinen TravTrack-Verlauf. Positionen in einer Privatzone oder in einem gelöschten Zeitraum werden dabei verworfen, und was schon gespeichert ist, kommt nicht doppelt dazu. Ein Import löst keine Vorschläge aus.",
+    "choose": "GPX importieren",
+    "running": "{{name}} wird importiert …",
+    "cancelled": "Der Import wurde gelöscht, bevor er fertig war.",
+    "report": {
+      "stored_one": "{{count}} Position gespeichert",
+      "stored_other": "{{count}} Positionen gespeichert",
+      "duplicate_one": "{{count}} schon vorhanden",
+      "duplicate_other": "{{count}} schon vorhanden",
+      "zone_one": "{{count}} in einer Privatzone verworfen",
+      "zone_other": "{{count}} in einer Privatzone verworfen",
+      "deleted_one": "{{count}} in einem gelöschten Zeitraum verworfen",
+      "deleted_other": "{{count}} in einem gelöschten Zeitraum verworfen",
+      "invalid_one": "{{count}} unbrauchbar",
+      "invalid_other": "{{count}} unbrauchbar",
+      "withoutTime_one": "{{count}} ohne Zeit übersprungen",
+      "withoutTime_other": "{{count}} ohne Zeit übersprungen"
+    },
+    "points_one": "{{count}} Position",
+    "points_other": "{{count}} Positionen",
+    "span": "{{from}} – {{to}}",
+    "status": {
+      "running": "läuft",
+      "interrupted": "abgebrochen (Server neu gestartet) – importiere die Datei erneut",
+      "cancelled": "gelöscht"
+    },
+    "delete": "Import löschen",
+    "deleteConfirm_one": "Den Import „{{name}}“ und seine {{count}} Position löschen? Positionen aus anderen Quellen bleiben.",
+    "deleteConfirm_other": "Den Import „{{name}}“ und seine {{count}} Positionen löschen? Positionen aus anderen Quellen bleiben.",
+    "deleted_one": "{{count}} Position gelöscht.",
+    "deleted_other": "{{count}} Positionen gelöscht.",
+    "errors": {
+      "noTimes": "Die Datei enthält keine Zeitangaben – ohne Zeit ist eine Position kein Verlauf. Exportiere sie als Aufzeichnung (Track), nicht als Route.",
+      "unreadable": "Die Datei ist keine lesbare GPX-Datei.",
+      "running": "Es läuft schon ein Import. Warte, bis er fertig ist.",
+      "tooLarge": "Die Datei ist zu groß – höchstens 25 MB.",
+      "notFound": "Diesen Import gibt es nicht mehr.",
+      "rateLimited": "Zu viele Importe in kurzer Zeit. Versuche es in einer Viertelstunde noch einmal.",
+      "lost": "Ob der Import fertig wurde, ist nicht bekannt – der Server hat neu gestartet. Sieh in der Liste nach."
+    }
   }
 }

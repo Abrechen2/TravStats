@@ -245,7 +245,14 @@ registry.registerPath({
             lastAt: z.string().nullable(),
             lastReceivedAt: z.string().nullable(),
             devices: z.array(
-              z.object({ deviceId: z.string().nullable(), pointCount: z.number().int() })
+              z.object({
+                deviceId: z.string().nullable(),
+                pointCount: z.number().int(),
+                fileName: z
+                  .string()
+                  .nullable()
+                  .describe("For an imported file (`file:<importId>`), the name it was given"),
+              })
             ),
             deletedRanges: z.number().int().describe("Spans deleted, kept so they stay deleted"),
             zones: z.number().int().describe("Privacy zones of the account"),

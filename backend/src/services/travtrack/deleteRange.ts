@@ -19,7 +19,14 @@ import { narrowOnPointsRemoved } from "./shareNarrow";
  */
 
 export type PointsRemovedCause =
-  { kind: "range"; from: Date; to: Date } | { kind: "zone"; zone: ZoneCircle };
+  | { kind: "range"; from: Date; to: Date }
+  | { kind: "zone"; zone: ZoneCircle }
+  /**
+   * Every point of one origin went (a file import deleted, plan E8). No
+   * tombstone is left, so `spans` — the removed points' instants, merged —
+   * is what lets a handler find what was derived from them.
+   */
+  | { kind: "origin"; origin: string; spans: Array<[number, number]> };
 
 export type PointsRemovedHandler = (
   tx: DbTransaction,

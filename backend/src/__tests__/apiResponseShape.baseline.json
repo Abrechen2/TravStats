@@ -126,6 +126,7 @@
     "travtrack/day.ts",
     "travtrack/export.ts",
     "travtrack/gate.ts",
+    "travtrack/imports.ts",
     "travtrack/pointEntries.ts",
     "travtrack/points.ts",
     "travtrack/shareSnapshot.ts",

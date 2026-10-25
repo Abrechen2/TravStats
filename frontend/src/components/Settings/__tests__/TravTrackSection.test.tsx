@@ -26,6 +26,7 @@ vi.mock("../../../hooks/useTodayZone", () => ({
 
 import TravTrackSection from "../TravTrackSection";
 import { travTrackApi } from "../../../lib/api/travtrack";
+import { travTrackImportsApi } from "../../../lib/api/travtrackImports";
 
 /**
  * TravTrack in Settings (TravTrack plan T6, ported from the archived
@@ -77,6 +78,7 @@ describe("TravTrackSection", () => {
     caps.current = { version: 1, offered: true, enabled: true, active: true, hasData: true };
     vi.spyOn(travTrackApi, "summary").mockResolvedValue(EMPTY);
     vi.spyOn(travTrackApi, "zones").mockResolvedValue([]);
+    vi.spyOn(travTrackImportsApi, "list").mockResolvedValue([]);
   });
 
   it("says what is stored, and that nothing is", async () => {

@@ -36,7 +36,8 @@ export type JobKind =
   | "timeZones.reResolveApply"
   | "placeImport.resolve"
   | "bus.routeStraight"
-  | "webdavSync.run";
+  | "webdavSync.run"
+  | "travtrack.fileImport";
 
 export type JobStatus = "running" | "succeeded" | "failed";
 

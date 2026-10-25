@@ -11,6 +11,7 @@ import {
 import type { RecordingBreak } from "../tripRecording/segments";
 import { profileZoneFromSettings } from "../../shared/time/profileZone";
 import type { ZoneCircle } from "./classify";
+import type { PointsRemovedCause } from "./deleteRange";
 import { privacyCirclesFor } from "./privacyCircles";
 import { privacyCutBy, type LonLat } from "./privacyCut";
 
@@ -339,7 +340,7 @@ const NARROW_ATTEMPTS = 3;
  * Illegible geometry is left as it is: it is served to nobody, and the
  * owner's next share replaces it.
  */
-async function narrowOne(db: Db, userId: string, id: string) {
+async function narrowOne(db: Db, userId: string, id: string, extraCuts: RecordingBreak[] = []) {
   for (let attempt = 0; attempt < NARROW_ATTEMPTS; attempt++) {
     const row = await db.travTrackShareSnapshot.findFirst({
       where: { id, userId },
@@ -348,7 +349,9 @@ async function narrowOne(db: Db, userId: string, id: string) {
     const lines = row ? readStored(row.geometry) : null;
     // A pending first share (version 0) is the owner's build's to finish.
     if (!row || !lines || row.version === PENDING_VERSION) return;
-    const n = await narrowingFor(db, userId, row.tripId, row);
+    const found = await narrowingFor(db, userId, row.tripId, row);
+    const n =
+      found && extraCuts.length > 0 ? { ...found, cuts: [...found.cuts, ...extraCuts] } : found;
     const kept = n ? narrow(lines, n) : [];
     const guard = { id: row.id, version: row.version };
     if (!n || kept.length === 0) {
@@ -389,15 +392,24 @@ async function narrowOne(db: Db, userId: string, id: string) {
 export async function narrowShareSnapshots(
   db: Db,
   userId: string,
-  opts: { tripId?: string } = {}
+  opts: { tripId?: string; cuts?: RecordingBreak[] } = {}
 ): Promise<void> {
   const rows = await db.travTrackShareSnapshot.findMany({
     where: { userId, ...(opts.tripId ? { tripId: opts.tripId } : {}) },
     select: { id: true },
   });
-  for (const row of rows) await narrowOne(db, userId, row.id);
+  for (const row of rows) await narrowOne(db, userId, row.id, opts.cuts ?? []);
 }
 
-/** The `onPointsRemoved` handler (`deleteRange.ts`): the deletion or zone is already in `tx`. */
-export const narrowOnPointsRemoved = (tx: Db, userId: string): Promise<void> =>
-  narrowShareSnapshots(tx, userId);
+/**
+ * The `onPointsRemoved` handler (`deleteRange.ts`): the deletion or zone is
+ * already in `tx`. A removal that leaves no tombstone (an import deleted)
+ * hands its spans over as one-off cuts: the stored route only ever shrinks,
+ * so they need not be remembered past this narrowing.
+ */
+export const narrowOnPointsRemoved = (
+  tx: Db,
+  userId: string,
+  cause?: PointsRemovedCause
+): Promise<void> =>
+  narrowShareSnapshots(tx, userId, { cuts: cause?.kind === "origin" ? cause.spans : [] });
