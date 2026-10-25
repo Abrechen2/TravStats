@@ -19,8 +19,12 @@ export type PhotosState =
     }
   | { kind: "failed"; key: string };
 
-/** The window's placed photos while `window` is set; a failure is reported as its own kind. */
-export function useTrackPhotos(window: PhotoWindow | null): PhotosState {
+/**
+ * The window's placed photos while `window` is set; a failure is reported as
+ * its own kind. Read again when `generation` moves: after a deletion a photo
+ * may have lost its place on the track, and must not stay on the map.
+ */
+export function useTrackPhotos(window: PhotoWindow | null, generation = 0): PhotosState {
   const [state, setState] = useState<PhotosState>({ kind: "idle" });
   const from = window?.from;
   const to = window?.to;
@@ -50,6 +54,6 @@ export function useTrackPhotos(window: PhotoWindow | null): PhotosState {
     return () => {
       live = false;
     };
-  }, [from, to]);
+  }, [from, to, generation]);
   return state;
 }

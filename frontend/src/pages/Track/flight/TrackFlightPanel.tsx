@@ -34,18 +34,21 @@ export default function TrackFlightPanel({
   flight,
   zone,
   cursor,
+  generation = 0,
   onClose,
 }: {
   flight: SelectedFlight;
   zone: string;
   cursor: number | null;
+  /** The map's reload generation: a deletion reads the panel and its photos again. */
+  generation?: number;
   onClose: () => void;
 }): JSX.Element {
   const { t, i18n } = useTranslation(["track"]);
-  const state = useFlightPanel(flight.id);
+  const state = useFlightPanel(flight.id, generation);
   const panel = state.kind === "loaded" ? state.panel : null;
   const window = useMemo(() => (panel ? photoWindowOf(instantsOf(panel)) : null), [panel]);
-  const photos = useTrackPhotos(window?.kind === "window" ? window.window : null);
+  const photos = useTrackPhotos(window?.kind === "window" ? window.window : null, generation);
   const [picked, setPicked] = useState<TravTrackPhoto | null>(null);
   const list = photos.kind === "loaded" ? photos.photos : [];
   const number = (v: number) => new Intl.NumberFormat(i18n.language).format(Math.round(v));

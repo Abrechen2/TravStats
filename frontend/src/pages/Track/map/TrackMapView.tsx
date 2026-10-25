@@ -141,7 +141,8 @@ export default function TrackMapView(): JSX.Element {
     [prefs.layers.photos, short, source.segments]
   );
   const photos = useTrackPhotos(
-    !loading && photoWindow?.kind === "window" ? photoWindow.window : null
+    !loading && photoWindow?.kind === "window" ? photoWindow.window : null,
+    generation
   );
   const photoList = photos.kind === "loaded" ? photos.photos : [];
 
@@ -275,6 +276,7 @@ export default function TrackMapView(): JSX.Element {
               flight={flight}
               zone={zone}
               cursor={replay.t}
+              generation={generation}
               onClose={() => setFlight(null)}
             />
           )}

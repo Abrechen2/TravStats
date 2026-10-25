@@ -1,7 +1,7 @@
 import { prisma } from "../../../db";
 import { holdsTravTrackData } from "../availability";
 import { deleteTravTrackPoint } from "../deletePoint";
-import { deletedPointDigest } from "../deletedPoints";
+import { deletedPointDigest, deletedPointDigests } from "../deletedPoints";
 import { ingestTravTrackPoints } from "../ingest";
 import { deleteTravTrackImport, runGpxImport } from "../imports/fileImport";
 import { settleAllJobs } from "../../jobs/jobRegistry";
@@ -121,5 +121,24 @@ describe("TravTrack — a deleted point stays deleted", () => {
     expect(JSON.stringify(rows)).not.toContain(String(FIXES[2].lon));
     expect(await prisma.travTrackPoint.count({ where: { userId } })).toBe(0);
     expect(await holdsTravTrackData(userId)).toBe(true);
+  });
+  it("finds the batch's own tombstones only, never every deletion between its seconds", async () => {
+    const early = { tS: 1_600_000_000, lat: 37.5, lon: 127 };
+    const late = { tS: 1_790_000_000, lat: 37.5, lon: 127 };
+    // Deletions years between the two fixes, none of them the batch's.
+    await prisma.travTrackDeletedPoint.createMany({
+      data: [1_650_000_000, 1_700_000_000, 1_750_000_000].map((tS) => ({
+        userId,
+        tS,
+        digest: deletedPointDigest(userId, { tS, lat: 37.5, lon: 127 }),
+      })),
+    });
+    await prisma.travTrackDeletedPoint.create({
+      data: { userId, tS: late.tS, digest: deletedPointDigest(userId, late) },
+    });
+
+    const found = await prisma.$transaction((tx) => deletedPointDigests(tx, userId, [early, late]));
+
+    expect([...found]).toEqual([deletedPointDigest(userId, late)]);
   });
 });

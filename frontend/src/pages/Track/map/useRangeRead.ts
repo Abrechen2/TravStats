@@ -34,10 +34,13 @@ export async function readRangeParts(
   span: DaySpan,
   read: typeof travTrackViewsApi.range,
   onPart: (part: TravTrackRange) => boolean,
-  cursor: string | null = null
+  cursor: string | null = null,
+  /** Checked before every request: false once the reader left (unmount, another span). */
+  alive: () => boolean = () => true
 ): Promise<void> {
   let next = cursor;
   do {
+    if (!alive()) return;
     const part = await read(span, next);
     if (!onPart(part)) return;
     next = part.next ? part.cursor : null;
@@ -76,7 +79,8 @@ export function useRangeRead(
           );
           return true;
         },
-        cursor
+        cursor,
+        () => id === run.current
       ).catch((err: unknown) => {
         if (id !== run.current) return;
         logger.warn("TravTrack range part could not be loaded", err);
@@ -100,6 +104,10 @@ export function useRangeRead(
     const [fromDay, toDay] = key.split("|");
     resumeAt.current = null;
     start({ fromDay, toDay }, null, []);
+    // Unmount or another span: the running read stops before its next request.
+    return () => {
+      run.current++;
+    };
   }, [key, generation, start]);
 
   const resume = useCallback(() => {

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 const views = vi.hoisted(() => ({
@@ -132,5 +132,38 @@ describe("TrackFlightPanel", () => {
     });
     show();
     expect(await screen.findByRole("alert")).toHaveTextContent("track:flight.notFound");
+  });
+
+  it("a deletion on the map (a new generation) reads the panel and its photos again", async () => {
+    views.flightPanel.mockResolvedValue({
+      flightId: "f1",
+      series: [
+        [
+          [T, 100, 70],
+          [T + MIN, 900, 100],
+        ],
+      ],
+      pointCount: 2,
+      truncated: false,
+      summary: { maxAltitudeM: 900, maxSpeedMps: 100, climbToCruiseMinutes: null },
+    });
+    views.photos.mockResolvedValue({ photos: [], truncated: false });
+    const panel = (generation: number) => (
+      <MemoryRouter>
+        <TrackFlightPanel
+          flight={FLIGHT}
+          zone="UTC"
+          cursor={null}
+          generation={generation}
+          onClose={() => undefined}
+        />
+      </MemoryRouter>
+    );
+    const { rerender } = render(panel(0));
+    await waitFor(() => expect(views.photos).toHaveBeenCalledTimes(1));
+    rerender(panel(1));
+    await waitFor(() => expect(views.flightPanel).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(views.photos).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("track:flight.noPhotos")).toBeInTheDocument();
   });
 });

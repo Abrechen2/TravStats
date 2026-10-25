@@ -8,7 +8,11 @@ export type FlightPanelState =
   | { kind: "loaded"; panel: TravTrackFlightPanel }
   | { kind: "failed"; key: string };
 
-export function useFlightPanel(flightId: string): FlightPanelState {
+/**
+ * The flight's panel, read again whenever `generation` moves: a deletion on
+ * the map (a span or one point) can take vertices of this very flight.
+ */
+export function useFlightPanel(flightId: string, generation = 0): FlightPanelState {
   const [state, setState] = useState<FlightPanelState>({ kind: "loading" });
   useEffect(() => {
     let live = true;
@@ -23,7 +27,7 @@ export function useFlightPanel(flightId: string): FlightPanelState {
     return () => {
       live = false;
     };
-  }, [flightId]);
+  }, [flightId, generation]);
   return state;
 }
 

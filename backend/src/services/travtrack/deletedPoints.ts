@@ -38,22 +38,28 @@ export async function rememberDeletedPoint(
   });
 }
 
-/** The digests of deleted points this batch could hit (within its seconds' extent). */
+/** At most this many digests per lookup query; a batch is asked in chunks. */
+const LOOKUP_CHUNK = 5_000;
+
+/**
+ * The tombstones among exactly this batch's fixes: their digests are looked
+ * up by the primary key, a chunk at a time — never every deletion between the
+ * batch's first and last second, which for two fixes years apart would read
+ * the whole tombstone history under the ingest lock.
+ */
 export async function deletedPointDigests(
   tx: DbTransaction,
   userId: string,
-  points: readonly Pick<Position, "tS">[]
+  points: readonly Position[]
 ): Promise<ReadonlySet<string>> {
-  if (points.length === 0) return new Set();
-  let min = Infinity;
-  let max = -Infinity;
-  for (const p of points) {
-    if (p.tS < min) min = p.tS;
-    if (p.tS > max) max = p.tS;
+  const digests = [...new Set(points.map((p) => deletedPointDigest(userId, p)))];
+  const found = new Set<string>();
+  for (let i = 0; i < digests.length; i += LOOKUP_CHUNK) {
+    const rows = await tx.travTrackDeletedPoint.findMany({
+      where: { userId, digest: { in: digests.slice(i, i + LOOKUP_CHUNK) } },
+      select: { digest: true },
+    });
+    for (const r of rows) found.add(r.digest);
   }
-  const rows = await tx.travTrackDeletedPoint.findMany({
-    where: { userId, tS: { gte: min, lte: max } },
-    select: { digest: true },
-  });
-  return new Set(rows.map((r) => r.digest));
+  return found;
 }
