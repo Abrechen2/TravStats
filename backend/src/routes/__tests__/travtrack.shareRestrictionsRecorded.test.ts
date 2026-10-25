@@ -191,4 +191,67 @@ describe("TravTrack — restrictions recorded against a shared route", () => {
       expect(own.body.snapshot ?? null).toBeNull();
     });
   });
+
+  describe("the profile zone a trip's days were read in", () => {
+    // A trip with no zone of its own: its days are read on the profile clock.
+    // Under UTC it ends at 15 Oct 00:00Z; under Asia/Tokyo at 14 Oct 15:00Z.
+    const AT_TOKYO_END = Date.parse("2026-10-14T14:30:00Z");
+    // Fixes from 15:00Z lie east of this.
+    const AFTER_TOKYO_END_LON = 126.95 + 29 * 0.002 + 0.001;
+
+    beforeEach(async () => {
+      await prisma.trip.update({ where: { id: tripId }, data: { startZone: null, endZone: null } });
+    });
+
+    it("a profile zone changed and changed back keeps the hours it cut off hidden", async () => {
+      await walk(126.95, 127.06, AT_TOKYO_END);
+      expect((await share()).status).toBe(200);
+      expect(eastOf(await recipientRead(), AFTER_TOKYO_END_LON)).toBe(true);
+      await setProfileZone("Asia/Tokyo");
+      expect(eastOf(await recipientRead(), AFTER_TOKYO_END_LON)).toBe(false);
+      await setProfileZone(null);
+      const read = await recipientRead();
+      expect(read.length).toBeGreaterThan(0);
+      expect(eastOf(read, AFTER_TOKYO_END_LON)).toBe(false);
+    });
+
+    it("a span recorded under one zone is read in it after the zone changed", async () => {
+      // Under Tokyo a trip ending on 13 Oct ends at 13 Oct 15:00Z; under UTC a day later.
+      await walk(126.95, 127.06, Date.parse("2026-10-13T14:30:00Z"));
+      expect((await share()).status).toBe(200);
+      expect(eastOf(await recipientRead(), AFTER_TOKYO_END_LON)).toBe(true);
+      await setProfileZone("Asia/Tokyo");
+      // Under Tokyo the days narrow to 13 Oct and widen again…
+      await prisma.trip.update({
+        where: { id: tripId },
+        data: { endDate: new Date("2026-10-13T00:00:00Z"), endDay: new Date("2026-10-13") },
+      });
+      await prisma.trip.update({
+        where: { id: tripId },
+        data: { endDate: new Date("2026-10-14T00:00:00Z"), endDay: new Date("2026-10-14") },
+      });
+      // …and that span stays Tokyo's after the zone went back to UTC.
+      await setProfileZone(null);
+      const read = await recipientRead();
+      expect(read.length).toBeGreaterThan(0);
+      expect(eastOf(read, AFTER_TOKYO_END_LON)).toBe(false);
+    });
+
+    it("a settings row deleted and created again keeps the default zone's cut hidden", async () => {
+      // Under Tokyo the trip starts on 10 Oct 15:00Z; under UTC on 11 Oct 00:00Z.
+      await walk(126.95, 127.06, Date.parse("2026-10-10T14:30:00Z"));
+      await setProfileZone("Asia/Tokyo");
+      expect((await share()).status).toBe(200);
+      expect(eastOf(await recipientRead(), AFTER_TOKYO_END_LON)).toBe(true);
+      await prisma.userSettings.delete({ where: { userId: owner } });
+      await prisma.userSettings.create({
+        data: {
+          userId: owner,
+          data: { display: { timezone: "Asia/Tokyo" } },
+          homePlace: { name: "Zuhause", ...HOME },
+        },
+      });
+      expect(eastOf(await recipientRead(), AFTER_TOKYO_END_LON)).toBe(false);
+    });
+  });
 });

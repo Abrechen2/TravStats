@@ -70,15 +70,28 @@ export async function tripSpanInstants(
   userId: string,
   trip: TripTimeColumns
 ): Promise<Pick<TripRecordingBounds, "fromMs" | "untilMs" | "zone"> | null> {
+  const profile = trip.startZone && trip.endZone ? "UTC" : (await profileZoneOf(userId)).zone;
+  return tripSpanInstantsIn(trip, profile);
+}
+
+/**
+ * The trip's span as instants with `profileZone` answering for a missing trip
+ * zone — for a span recorded in the past, read in the profile zone in force
+ * then, not today's (TravTrack T7). Null when the trip has no first or no
+ * last day.
+ */
+export function tripSpanInstantsIn(
+  trip: TripTimeColumns,
+  profileZone: string
+): Pick<TripRecordingBounds, "fromMs" | "untilMs" | "zone"> | null {
   const span = tripDaySpan(trip);
   if (!span) return null;
-  const profile = trip.startZone && trip.endZone ? null : (await profileZoneOf(userId)).zone;
-  const startZone = trip.startZone ?? profile ?? "UTC";
-  const endZone = trip.endZone ?? profile ?? "UTC";
+  const startZone = trip.startZone ?? profileZone;
+  const endZone = trip.endZone ?? profileZone;
   return {
     fromMs: midnight(span.start, startZone),
     untilMs: midnight(nextDay(span.end), endZone),
-    zone: trip.startZone ?? trip.endZone ?? profile ?? "UTC",
+    zone: trip.startZone ?? trip.endZone ?? profileZone,
   };
 }
 

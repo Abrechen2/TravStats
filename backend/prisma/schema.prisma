@@ -5837,15 +5837,21 @@ model TravTrackShareSnapshot {
 /// A trip's days as they were before a change: the route keeps to the
 /// intersection of every span the trip has had.
 model TravTrackSharePastSpan {
-  id         String    @id @default(uuid())
-  snapshotId String    @map("snapshot_id")
-  startDate  DateTime? @map("start_date")
-  endDate    DateTime? @map("end_date")
-  startDay   DateTime? @map("start_day") @db.Date
-  endDay     DateTime? @map("end_day") @db.Date
-  startZone  String?   @map("start_zone")
-  endZone    String?   @map("end_zone")
-  capturedAt DateTime  @default(now()) @map("captured_at")
+  id          String    @id @default(uuid())
+  snapshotId  String    @map("snapshot_id")
+  startDate   DateTime? @map("start_date")
+  endDate     DateTime? @map("end_date")
+  startDay    DateTime? @map("start_day") @db.Date
+  endDay      DateTime? @map("end_day") @db.Date
+  startZone   String?   @map("start_zone")
+  endZone     String?   @map("end_zone")
+  /// The profile zone in force when the span was recorded, as stored in
+  /// `user_settings.data.display.timezone` (null: no settings row or none set,
+  /// which reads as UTC). A span without a zone of its own is read in THIS
+  /// zone, never in today's — and a profile-zone change records the trip's
+  /// span in the zone it leaves (Codex review, third round).
+  profileZone String?   @map("profile_zone")
+  capturedAt  DateTime  @default(now()) @map("captured_at")
 
   snapshot TravTrackShareSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
 

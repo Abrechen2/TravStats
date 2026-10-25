@@ -5,10 +5,11 @@ import {
   flightRecorderWindows,
   TRIP_RECORDING_TRIP_SELECT,
   tripRecordingBounds,
-  tripSpanInstants,
+  tripSpanInstantsIn,
   type TripRecordingBounds,
 } from "../tripRecording/bounds";
 import type { RecordingBreak } from "../tripRecording/segments";
+import { profileZoneFromSettings } from "../../shared/time/profileZone";
 import type { ZoneCircle } from "./classify";
 import { privacyCirclesFor } from "./privacyCircles";
 import { privacyCutBy, type LonLat } from "./privacyCut";
@@ -39,6 +40,9 @@ import { privacyCutBy, type LonLat } from "./privacyCut";
  * `travtrack_share_restrictions`), whatever path the change took. A read and a
  * narrowing apply them on top of the rules in force, so widening the days,
  * removing a flight or clearing the home never brings back what they hid.
+ * A span without a zone of its own carries the profile zone it was read in, and
+ * a profile-zone change records the trip's span in the zone it leaves, so a
+ * zone changed and changed back does not either.
  * Only the owner's own share clears them (`shareSnapshot.ts`).
  */
 
@@ -187,15 +191,29 @@ const TRIP_RECORDING_SPAN_SELECT = {
   endZone: true,
 } as const;
 
-/** What the triggers recorded against the stored route since the share. */
-async function restrictionsSince(db: Db, userId: string, snapshotId: string) {
+/** A recorded profile zone as `profileZoneOf` reads it: unset or not a zone is UTC. */
+const recordedProfileZone = (zone: string | null) =>
+  profileZoneFromSettings({ display: { timezone: zone ?? undefined } }).zone;
+
+/**
+ * What the triggers recorded against the stored route since the share. A span
+ * is read in the profile zone in force when it was recorded — never today's,
+ * which would let a zone changed and changed back show what the first change
+ * hid.
+ */
+async function restrictionsSince(db: Db, snapshotId: string) {
   const where = { snapshotId };
   const [spans, flights, homes] = await Promise.all([
-    db.travTrackSharePastSpan.findMany({ where, select: TRIP_RECORDING_SPAN_SELECT }),
+    db.travTrackSharePastSpan.findMany({
+      where,
+      select: { ...TRIP_RECORDING_SPAN_SELECT, profileZone: true },
+    }),
     db.travTrackSharePastFlight.findMany({ where }),
     db.travTrackSharePastHome.findMany({ where, select: { homePlace: true } }),
   ]);
-  const instants = await Promise.all(spans.map((span) => tripSpanInstants(userId, span)));
+  const instants = spans.map((span) =>
+    tripSpanInstantsIn(span, recordedProfileZone(span.profileZone))
+  );
   return {
     // A span the server cannot state any more narrows to nothing (fail closed).
     spans: instants,
@@ -230,7 +248,7 @@ export async function narrowingFor(
   const shared = current ? effectiveBounds(current, state) : null;
   const stored = homesOf(state);
   if (!shared || !stored) return null;
-  const since = await restrictionsSince(db, userId, state.id);
+  const since = await restrictionsSince(db, state.id);
   const bounds = withinSpans(shared, since.spans);
   if (!bounds) return null;
   const [zones, home, deleted] = await Promise.all([
