@@ -1,6 +1,7 @@
 import { prisma } from "../../../../db";
 import { foldStationName } from "../../railStations";
 import { toRailCandidate } from "../railCandidates";
+import { findBusDuplicate, findDuplicate, type DuplicateStation } from "../railDuplicates";
 import type { ParsedRailBooking, ParsedRailLeg } from "../types";
 
 /**
@@ -119,7 +120,52 @@ describe("repeat import of a connection without a booking reference", () => {
   it("still finds a ride saved under the printed name", async () => {
     const saved = await savedTrain({ depStationName: "Dedupstadt Hbf (tief)", depStationId: null });
     const candidate = await toRailCandidate(connection([leg()]), userId);
+    // The stop resolved by its EVA number, so the lookup ran on the catalogue
+    // row — and the printed name still had to be among the names it tried.
+    expect(candidate.legs[0].departureStation).toMatchObject({
+      name: "Dedupstadt Hauptbahnhof",
+      stationId,
+      resolved: true,
+    });
     expect(candidate.legs[0].duplicateOf).toBe(saved.id);
+  });
+
+  /** A stop as a resolver that dropped the printed spelling hands it over. */
+  const catalogueOnly = (name: string): DuplicateStation => ({
+    name,
+    printedName: name,
+    stationId: null,
+    code: null,
+  });
+
+  it("looks for the leg's own printed names, whatever the resolved stop carries", async () => {
+    const train = await savedTrain({ depStationName: "Dedupstadt Hbf (tief)", depStationId: null });
+    expect(await findDuplicate(userId, leg(), null, catalogueOnly("Dedupstadt Hauptbahnhof"))).toBe(
+      train.id
+    );
+
+    const bus = await prisma.busJourney.create({
+      data: {
+        userId,
+        depStationName: "Dedupstadt Hbf (tief)",
+        depLat: 48.1,
+        depLon: 11.5,
+        depTimezone: "Europe/Berlin",
+        arrStationName: "Dedupdorf",
+        arrLat: 48.2,
+        arrLon: 11.6,
+        departureTime: new Date("2026-05-02T08:00:00Z"),
+        lineName: "Bus 100",
+      },
+    });
+    expect(
+      await findBusDuplicate(
+        userId,
+        leg({ trainCategory: "Bus", trainNumber: "100", transit: BUS }),
+        catalogueOnly("Dedupstadt Hauptbahnhof"),
+        catalogueOnly("Dedupdorf Mitte")
+      )
+    ).toEqual({ duplicateOf: bus.id, possibleDuplicateOf: null });
   });
 
   const savedBus = (over: { arrStationName: string; lineName: string | null }) =>
@@ -161,6 +207,18 @@ describe("repeat import of a connection without a booking reference", () => {
     expect(candidate.legs.map((l) => [l.duplicateOf, l.possibleDuplicateOf])).toEqual([
       [null, null],
       [null, null],
+    ]);
+  });
+
+  it("never takes a bare category for a line: two unnumbered buses are only possibly one", async () => {
+    const saved = await savedBus({ arrStationName: "Dedupdorf", lineName: "Bus" });
+    const candidate = await toRailCandidate(
+      connection([busLeg({ trainNumber: null }), busLeg()]),
+      userId
+    );
+    expect(candidate.legs.map((l) => [l.duplicateOf, l.possibleDuplicateOf])).toEqual([
+      [null, saved.id],
+      [null, saved.id],
     ]);
   });
 

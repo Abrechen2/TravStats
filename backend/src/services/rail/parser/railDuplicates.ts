@@ -44,10 +44,18 @@ function departureWindow(departureLocal: string): { gte: Date; lte: Date } | nul
   };
 }
 
-const spellings = (s: DuplicateStation): string[] => [...new Set([s.name, s.printedName])];
+/**
+ * Every name a stop may have been saved under: the catalogue's, the resolved
+ * stop's printed one and the leg's own. The leg's name is passed separately
+ * because it is the one spelling that cannot be lost on the way through a
+ * resolver — an earlier import of an unresolved stop saved exactly that.
+ */
+const spellings = (s: DuplicateStation, legName: string): string[] => [
+  ...new Set([s.name, s.printedName, legName].filter((n) => n.trim() !== "")),
+];
 
-const nameIsOneOf = (s: DuplicateStation) =>
-  spellings(s).map((name) => ({
+const nameIsOneOf = (s: DuplicateStation, legName: string) =>
+  spellings(s, legName).map((name) => ({
     depStationName: { equals: name, mode: "insensitive" as const },
   }));
 
@@ -70,7 +78,7 @@ export async function findDuplicate(
   const sameStation = [
     ...(departure.stationId !== null ? [{ depStationId: departure.stationId }] : []),
     ...(departure.code ? [{ depStationCode: departure.code }] : []),
-    ...nameIsOneOf(departure),
+    ...nameIsOneOf(departure, leg.depStationName),
   ];
   const rows = await prisma.railJourney.findMany({
     where: {
@@ -95,8 +103,23 @@ const foldLine = (line: string | null): string | null => {
   return folded === "" ? null : folded.slice(0, 40);
 };
 
+/**
+ * The leg's line, or null when the document names none. A category alone
+ * ("Bus", "SEV") is no line: every unnumbered bus would share it, and two of
+ * them leaving one stop in the same minute would be taken for one ride.
+ */
 const lineOf = (leg: ParsedRailLeg): string | null =>
-  foldLine([leg.trainCategory, leg.trainNumber].filter(Boolean).join(" "));
+  leg.trainNumber?.trim() ? foldLine(`${leg.trainCategory ?? ""} ${leg.trainNumber}`) : null;
+
+/**
+ * A stored ride's line, or null when it names none. The import saves an
+ * unnumbered bus as its bare category, so a stored "Bus" is as silent about
+ * the line as an empty field.
+ */
+const storedLineOf = (lineName: string | null, leg: ParsedRailLeg): string | null => {
+  const line = foldLine(lineName);
+  return line !== null && line === foldLine(leg.trainCategory) ? null : line;
+};
 
 /**
  * A bus ride the user already has for a bus leg of a bahn.de connection. A bus
@@ -115,7 +138,7 @@ export async function findBusDuplicate(
   const window = departureWindow(leg.departureLocal);
   if (!window) return NO_DUPLICATE;
   const rows = await prisma.busJourney.findMany({
-    where: { userId, departureTime: window, OR: nameIsOneOf(departure) },
+    where: { userId, departureTime: window, OR: nameIsOneOf(departure, leg.depStationName) },
     select: {
       id: true,
       departureTime: true,
@@ -126,15 +149,15 @@ export async function findBusDuplicate(
     orderBy: { createdAt: "asc" },
     take: 20,
   });
-  const arrivals = new Set(spellings(arrival).map(foldStationName));
+  const arrivals = new Set(spellings(arrival, leg.arrStationName).map(foldStationName));
   const line = lineOf(leg);
   const sameRide = rows.filter(
     (r) =>
       instantToWallClock(r.departureTime, r.depTimezone) === leg.departureLocal &&
       arrivals.has(foldStationName(r.arrStationName))
   );
-  const certain = sameRide.find((r) => line !== null && foldLine(r.lineName) === line);
+  const certain = sameRide.find((r) => line !== null && storedLineOf(r.lineName, leg) === line);
   if (certain) return { duplicateOf: certain.id, possibleDuplicateOf: null };
-  const possible = sameRide.find((r) => line === null || foldLine(r.lineName) === null);
+  const possible = sameRide.find((r) => line === null || storedLineOf(r.lineName, leg) === null);
   return { duplicateOf: null, possibleDuplicateOf: possible?.id ?? null };
 }

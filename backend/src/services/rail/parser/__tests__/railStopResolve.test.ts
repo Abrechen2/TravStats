@@ -52,6 +52,9 @@ describe("resolveProviderStop", () => {
     });
     expect(s).toMatchObject({
       name: "Teststadt Hauptbahnhof",
+      // What the document printed stays with the stop, so a ride saved under it
+      // is still found as a duplicate.
+      printedName: "Teststadt Hbf (tief)",
       resolved: true,
       positionSource: "catalogue",
       lat: 48.1,
