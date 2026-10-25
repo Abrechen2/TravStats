@@ -508,8 +508,404 @@ Before everyday recording is advertised or `travTrack` leaves the beta registry.
 
 ## Phase 3 — TravTrack helps TravStats
 
-Stay and country-day suggestions from TravTrack into the existing inbox (same cards as Dawarich stays, `EvidenceSuggested` with id, provider + rev, window, algorithm version; accept is idempotent and re-checks the evidence; an accepted entry never counts as evidence for itself); missing-journey suggestions; GPX import; OwnTracks and Overland ingest.
+Written on 2026-10-25 against what Phase 2 built on `dev/travtrack` (`services/travtrack/{ingest,classify,zones,deleteRange,readSafe,privacyCut,privacyCircles,dayView,gaps,links,lock}.ts`, `services/locationProvider/{types,travtrackProvider,dawarichProvider,resolveProvider,entryTrack}.ts`, `routes/travtrack/*`) and on the direct Dawarich reads it left in place (review focus 13): `services/dawarich/stays/{scan,window,detect,review,coverage,suppression}.ts`, `services/dawarich/marketVisits/{integration,detect,pointGrid}.ts`, `services/dawarich/countryDaySweep.ts` + `services/countryDays/{reduce,store,countryDaySource}.ts`, `jobs/{dawarichStayScheduler,dawarichCountryDaySweepScheduler}.ts`. Revised the same day after Codex's review of the first draft.
+
+**What changes for whom.**
+- **Dawarich users: nothing** (owner rule; review focus 1, 17). Their stays, market/venue visits and country days stay byte-identical: the Dawarich detectors keep their legacy input path — `readStayWindow` (`stays/window.ts`, one read for a window ≤ 7 days, the per-day fallback when it truncates), `DawarichPoint` with numeric ids, today's fingerprint and evidence JSON, the country sweep and its cursors — with no new anomaly mask, no zone filter and no deleted-range filter on Dawarich reads, and no new re-check on their accept. The only Dawarich-side change is that each new stay row also records `provider`, `provider_rev`, `algorithm_version` and the neutral `evidence_key` in their own columns (E1); `evidence` and `fingerprint` are written exactly as today. No new inbox kind reaches them.
+- **TravTrack users** get the same stay and venue cards from TravTrack, country and missing-journey questions in the inbox, labelled days, and two more sources (GPX files, OwnTracks/Overland). Rule 7 ("Companion only") is lifted here; `/travtrack/capabilities` gains `sources` (additive, version stays 1).
+
+**Open owner decisions (not built):** (a) applying privacy zones to Dawarich-derived suggestions; (b) re-checking a Dawarich finding's evidence on accept; (c) country and journey questions for Dawarich users. Each changes what a Dawarich user sees, so each needs the owner's word.
+
+**Where the code lives.** TravTrack provides points; turning points into a question is TravStats code (`services/locationEvidence/*`), and TravTrack never writes `place_visits`, `country_overrides`, journeys or trips — TravStats' accept handlers do, on the user's decision (rule 6), as the Dawarich stay accept does today. The stay finding table stays `dawarich_stays` (a rename Prisma cannot see is a hand-written migration with a replay obligation; separate refactor if wanted); it gains provider columns. New kinds (country, journey; phase 4 trip) go into one new table `location_suggestions`.
+
+**TravTrack off.** When the instance's TravTrack is off (`travTrackInstanceOn()` false), **no TravTrack derivation runs**: no scheduled or manual stay scan from TravTrack, no country projection, no journey detection, and accepting a pending TravTrack suggestion answers 403 `TRAVTRACK_DISABLED` (rejecting still works — it writes nothing but the answer). Already accepted entries stay. Removals stay possible (the `held` tier) and their invalidation (E5) still runs inside the removal's transaction; dirty days queue up and are drained once TravTrack is on again. Dawarich derivations do not look at the TravTrack switch.
+
+**Privacy rules every TravTrack task states and tests** (review focus 10, 15 carried forward):
+- **Zones and tombstones.** Stored TravTrack points already exclude zones in force and former zones' circles (ingest drops, zone create deletes); new sources go through the same ingest (E8, E9, L6). A TravTrack candidate whose centroid, endpoint or line lies in a circle is not created; no explanation, label, count or coverage state names a zone.
+- **Deleted ranges.** Ingest refuses points in a tombstone for every source; derivations read only stored points.
+- **Deletion.** Every removal (`onPointsRemoved`) removes what was derived from the removed points in the same transaction, under the per-user TravTrack lock, and raises the account's history generation; a derivation that read before the removal cannot publish after it (E5's generation fence). Open suggestions vanish; accepted entries stay, their evidence stripped to a summary holding no position or digest from the deleted history.
+- **Output.** Geometry that leaves the server goes through `privacyCut` on its final form (T5). Suggestions carry centroids, endpoints and lines for the owner's inbox only — never in a share, `.travstats` file, public link, comparison or federation payload; point digests never leave the server at all.
+
+**Order.** E1 (migration, envelope, generation) first. E2 (TravTrack derivation read) before E3, E6, E7. E3 → E4 → E5 for stays; E5 also covers E6/E7 rows once they exist (its handler is extended in each). E6 and E7 are independent of each other. E8 (one ingest pipeline + GPX) before E9 (OwnTracks/Overland). E10 needs E7's entry-window adapters. No Companion task: the phone records exactly as in phase 2.
+
+### Task E1: The evidence envelope, the history generation, one migration
+
+**Files:**
+- Modify: `backend/prisma/schema.prisma`
+- Create: migration `<ts>_location_evidence` (generated in a throw-away clone DB; `<ts>` after `20261024200938_travtrack`), `backend/src/__tests__/migration.locationEvidence.test.ts`
+- Create: `backend/src/services/locationEvidence/{types,key,envelope,generation}.ts`
+- Modify: `backend/src/services/countryDays/countryDaySource.ts` (`COUNTRY_DAY_SOURCES = ["dawarich", "travtrack"]`), `backend/src/services/stats/trackEvidence.ts` (`source: CountryDaySource` instead of the literal; Dawarich output unchanged), `middleware/errorHandler.ts` (`EVIDENCE_INVALIDATED`, `SUGGESTION_ALREADY_RESOLVED`, `SUGGESTION_ACCEPT_IN_PROGRESS`, `INGEST_TOKEN_INVALID`, `TRAVTRACK_IMPORT_NO_TIMES`, `TRAVTRACK_IMPORT_UNREADABLE`, `TRAVTRACK_IMPORT_RUNNING` into `ApiErrorCode`)
+- Tests: `locationEvidence/__tests__/{key,envelope,generation}.test.ts`
+
+**Schema (all in this one migration):**
+- `dawarich_stays` + `provider String @default("dawarich")` (CHECK `dawarich|travtrack`), `provider_rev Int @default(0)`, `algorithm_version Int @default(0)` (0 = before versioning), `evidence_key String?`, `claim_token String?`, `claimed_at DateTime?`; index `(user_id, provider, status)`.
+- `dawarich_stay_scans` + `provider String?` (the last scan's source; the row stays the one consent and lease per account).
+- `place_visits` + `suggestion_ref String?` (the evidence key of the finding that made the visit; null for every existing visit).
+- `location_suggestions` — `id uuid`, `user_id` FK cascade, `kind` (CHECK `country|journey`; L4 adds `trip`), `provider` (CHECK `dawarich|travtrack`), `provider_rev Int`, `algorithm Int`, `evidence_key`, `window_from`, `window_until`, `status` (CHECK `pending|accepting|accepted|rejected|invalidated`), `claim_token`, `claimed_at`, `explanation jsonb` (`{ code, params }`, never prose, never a coordinate), `evidence jsonb`, `accepted_entry_kind String?`, `accepted_entry_id String?` (no FK: polymorphic), `detected_at`, `resolved_at`. `UNIQUE (user_id, kind, evidence_key)`, index `(user_id, status, window_from)`.
+- `travtrack_dirty_days` — `user_id`, `day Date`, `version BigInt` (raised on every re-mark), `done Int @default(0)` (bitmask of projections that ran on this `version`: 1 country days; L1 adds 2, L3 adds 4); `PRIMARY KEY (user_id, day)`.
+- `travtrack_derivation_state` — `user_id` PK, `history_generation BigInt @default(0)`, `country_reducer_version Int`, `stay_algorithm Int`, `journey_algorithm Int`, `last_run_at`, `last_error_kind String?` (closed vocabulary, never a message).
+- `travtrack_imports` (E8) and `travtrack_ingest_tokens` (E9) as defined there.
+
+**Interfaces:**
+```ts
+type EvidenceProvider = "travtrack" | "dawarich";
+type EvidenceSuggested = {
+  id: string;
+  kind: "stay" | "market" | "venue" | "country" | "journey";
+  provider: { kind: EvidenceProvider; rev: number };
+  window: { fromMs: number; untilMs: number };          // [from, until)
+  algorithm: { name: "stay" | "market" | "country" | "journey"; version: number };
+  explanation: { code: string; params: Record<string, number | string> };
+  status: "pending" | "accepted" | "rejected" | "invalidated" | "covered" | "superseded";
+  coverage: Coverage;                                   // T4's vocabulary
+};                                                     // evidence_key and digests stay server-side
+```
+- `observationKey(o)` = `` `${Math.floor(o.atMs / 1000)}|${o.lon}|${o.lat}` `` — TravTrack's `positionKey`, and Dawarich's own dedup key (user + timestamp + lonlat, spec §10.1). **The neutral key replacing numeric point ids:** a fix has the same key read from Dawarich, from TravTrack, or copied from Dawarich into TravTrack (L6).
+- `pointDigest(userId, key)` = HMAC-SHA256 under a **server secret** (derived with HKDF, label `travtrack-evidence-digest`, from the instance key in `utils/encryptionKey.ts`), cut to 16 bytes hex. Treated as sensitive: never in an API response, the account export, a log or a share; deleted with the history it came from (E5). TravTrack rows store digests in `evidence.pointDigests` (capped at 20 000, first and last kept); Dawarich rows keep `evidence.pointIds` exactly as today.
+- `stayEvidenceKey(c)` = HMAC of `["stay", firstKey, lastKey, startMs, endMs, lat.toFixed(5), lon.toFixed(5)]` — provider-neutral; stored in `evidence_key` for both providers; for TravTrack rows also the `fingerprint`. Dawarich rows keep today's fingerprint.
+- `historyGeneration(tx, userId)` / `bumpHistoryGeneration(tx, userId)` — the counter every TravTrack removal raises inside its transaction under `takeTravTrackLock` (E5); derivations capture it before reading and compare it when publishing (E3, E4, E6, E7).
+- `toEnvelope(row)` — legacy rows (version 0) map to `algorithm.version 0`, explanation `{ code: "stay.legacy", params: {} }`.
+
+- [ ] **Step 1: Failing tests** — `key.test.ts`: "a Dawarich point and a TravTrack point with the same second and coordinates have the same key"; "milliseconds do not change the key"; "a digest differs per account and per server secret"; "the stay key holds no provider id". `envelope.test.ts`: "a legacy Dawarich stay maps to version 0"; "the envelope carries no evidence key and no digest"; "every new explanation has a code and scalar params". `generation.test.ts`: "a bump inside a rolled-back transaction leaves the generation unchanged". **Upgrade test** `migration.locationEvidence.test.ts`: build the database at the **Phase 2 schema** (`migrate deploy` up to `20261024200938_travtrack`), insert rows in that shape — a pending and an accepted `dawarich_stays` row with `pointIds`, a `dawarich_stay_scans` row, a `place_visits` row, TravTrack points — apply this migration and assert: rows survive, `provider = 'dawarich'`, `algorithm_version = 0`, evidence JSON byte-identical, `suggestion_ref` null; the CHECKs refuse `provider='gps'` and `kind='stay'`; deleting the user removes every new row.
+- [ ] **Step 2:** `cd backend && npx jest locationEvidence migration.locationEvidence --forceExit` → FAIL.
+- [ ] **Step 3:** Generate the migration in the clone DB, apply to the shared dev DB with `migrate deploy`, implement the modules.
+- [ ] **Step 4:** Tests + `npm run check:drift` + `npx jest trackEvidence passport countryDays --forceExit` (green, unchanged) → PASS.
+- [ ] **Step 5:** Commit `feat(location): a provider-neutral evidence envelope, key and history generation`.
+
+### Task E2: The TravTrack derivation read
+
+TravTrack only. Dawarich keeps `readStayWindow` and the sweep's own reads unchanged.
+
+**Files:**
+- Create: `backend/src/services/locationEvidence/{derivationRead,anomaly,toDetectorInput}.ts`
+- Tests: `locationEvidence/__tests__/{derivationRead,anomaly,toDetectorInput}.test.ts`
+
+**Interfaces:**
+- `readTravTrackDerivation(userId, window: ReadWindow, opts?: { isAllowed?: () => Promise<boolean>; maxPoints?: number /* 250_000, the stay window's cap */ }): Promise<{ points: DerivationPoint[]; coverage: Coverage; generation: bigint; cancelled: boolean }>`:
+  - Captures `historyGeneration` **before** the first page (E5 compares it at publication).
+  - Reads `travtrackProvider` pages to the end (cursor paging: TravTrack never truncates silently); stopping at `maxPoints` answers `coverage: "truncated"` with `next` kept, never a silently shortened window. `isAllowed()` between pages (the scan's lease and consent predicate).
+  - **Anomalies** (`anomaly.ts`, Dawarich's thresholds, spec §10 point 1, per device): accuracy > 10 km, null island, same-second jump > 1 km, speed above `max(1000 km/h, 3 × median)`, runs of ≤ 5 points between two such jumps — masked, never deleted.
+  - **In the air:** points in the account's flight windows (`recorderWindow`, as T5) carry `inFlight: true`.
+  - Privacy: stored points already exclude zones and tombstones; the read adds no second filter and no Dawarich path.
+- `DerivationPoint = LocationObservation & { key: string; digest: string; inFlight: boolean }`.
+- `toDetectorInput(p: DerivationPoint)` — the explicit conversion to the shape the stay and market detectors take (`{ id: digest, timestampMs, latitude, longitude, altitude, accuracy, velocity, trackId: null }`), so the detectors keep their code and Dawarich keeps its `DawarichPoint`; `toTimedPosition(p)` — the country reducer's `TimedPosition` (E6). Both pure, both tested for unit conversions (m/s stays m/s; `courseDeg` dropped).
+
+- [ ] **Step 1: Failing tests** — "a window larger than one page is read to the end, oldest first"; "stopping at maxPoints says truncated and keeps the cursor"; "the generation is captured before the first page"; "a frozen-fix teleport is masked, the points around it stay"; "a point inside a flight window is inFlight"; "isAllowed false between pages cancels"; "toDetectorInput keeps speed in m/s and uses the digest as id"; "nothing in this module imports the Dawarich client" (source scan).
+- [ ] **Step 2–4:** `npx jest derivationRead anomaly toDetectorInput --forceExit` → FAIL, implement, → PASS.
+- [ ] **Step 5:** Commit `feat(location): one filtered read of TravTrack for everything derived from it`.
+
+### Task E3: Stays and market visits from TravTrack
+
+Same detector, thresholds (150 m / 20 min, forgejo#294), suppression, coverage and market logic. The scan picks its source; the Dawarich branch is today's code path.
+
+**Files:**
+- Modify: `backend/src/services/dawarich/stays/scan.ts` (split: `scanSource.ts` resolves the source; `scanCandidates.ts` takes the per-candidate loop, so each file stays under 400 lines), `stays/detect.ts` and `marketVisits/{integration,detect,pointGrid}.ts` (point id type widened from `number` to `number | string` — Dawarich still passes numbers; no other change), `stays/availability.ts` (scheduled predicate = provider `dawarich`, OR provider `travtrack` AND instance on), `jobs/dawarichStayScheduler.ts` (same selection, in the query), `services/locationProvider/kinds.ts` (`STAY_SCAN_PROVIDER_WHERE`)
+- Tests: the existing `stays/*`, `marketVisits/*`, scheduler and stay route suites green unchanged; new `stays/__tests__/scan.provider.test.ts` with a golden fixture
+
+**Interfaces:**
+- `staySource(userId, { scheduled })` → `{ kind: "dawarich"; client; rev } | { kind: "travtrack"; rev }`. Scheduled: by `getLocationProvider` (`dawarich` + ok → own connection; `travtrack` + ok + instance on → TravTrack; else refuse with today's `DAWARICH_SCAN_UNAVAILABLE`). "Scan now": provider `travtrack` → TravTrack, or 403 `TRAVTRACK_DISABLED` when the instance is off (nothing reserved); otherwise today's behaviour (own Dawarich connection, whatever the provider; 409 `DAWARICH_OWN_CONNECTION_REQUIRED`).
+- **Dawarich branch:** `readStayWindow(client, …)` → `DawarichPoint[]` → detectors → rows written exactly as today, plus the columns `provider = 'dawarich'`, `provider_rev`, `algorithm_version = 0` (the legacy path is not re-versioned), `evidence_key`. The golden test compares every written field but those four.
+- **TravTrack branch:** `readTravTrackDerivation` → `toDetectorInput` (in-flight and masked points removed) → detectors → rows with `provider = 'travtrack'`, `algorithm_version = STAY_ALGORITHM` (1), `fingerprint = evidence_key`, `evidence.pointDigests` (no `pointIds`), `evidence.source = "travtrack"`, `evidence.explanation = { code: "stay.dwell" | "market.visit" | "venue.visit", params: { minutes, points, radiusM, maxGapMinutes } }`. A candidate whose centroid lies in a privacy circle is skipped (`skippedPrivate`, counted, never logged with a position).
+- **Cross-provider identity:** the interval/radius `known` match (unchanged, provider-agnostic) keeps a stop found in Dawarich from being suggested again from TravTrack; market fragment overlap ("shared ≥ 3 points") compares ids within one provider only (numbers with numbers, digests with digests); the area-containment half works across.
+- **Publication fence:** every finding insert of a TravTrack scan runs in a transaction that takes `takeTravTrackLock(tx, userId)` and compares `historyGeneration` with the one the read captured; changed → the run stops, publishes nothing more, and is recorded `result: "stale"` (the next run reads afresh). Dawarich inserts are unchanged.
+- **Bounded prompting:** a scan reads its window only (7 days scheduled, ≤ 30 by "scan now"); imports (E8, L6) never trigger a scan of their span; at most 20 new TravTrack findings per run (the rest wait for the next run, counted in the result).
+
+- [ ] **Step 1: Failing tests** (`scan.provider.test.ts`, fake client / seeded TravTrack points, real DB): "golden: the Dawarich fixture yields the same rows as on main — every field but provider, provider_rev, algorithm_version and evidence_key" (review focus 1; fixture captured on `main` before editing); "a Dawarich scan applies no zone, no anomaly mask and no deleted-range filter" (a fixture point inside a TravTrack zone still counts, as today); "TravTrack points yield a stay with provider travtrack, rev and algorithm 1, digests and no pointIds"; "the same stop seen in Dawarich and later in TravTrack is one finding"; "a TravTrack stay inside a privacy circle is not suggested and the result does not name it"; "a range deleted while the scan ran: the scan publishes nothing after the delete and records stale"; "at most 20 new findings per run"; "the scheduler scans a travtrack account while the instance is on and skips it when off"; "the scheduler still skips provider none with an own connection" (S3); "scan now by a travtrack user with TravTrack off is 403 TRAVTRACK_DISABLED and reserves nothing"; "scan now by a provider-none user with an own connection reads Dawarich as before".
+- [ ] **Step 2:** Capture the golden fixture on `main` (`GOLDEN_WRITE=1 npx jest scan.provider -t golden --forceExit`), then `npx jest dawarich/stays marketVisits dawarichStayScheduler scan.provider --forceExit` → FAIL.
+- [ ] **Step 3–4:** Implement → PASS; `npm run check:size`.
+- [ ] **Step 5:** Commit `feat(stays): stay and venue suggestions from TravTrack, Dawarich unchanged`.
+
+### Task E4: Accepting a TravTrack suggestion — idempotent, re-checked, never self-evidence
+
+Dawarich findings accept exactly as today (open decision (b)). Everything below applies to `provider = 'travtrack'` rows in `dawarich_stays` and to every `location_suggestions` row (E6, E7 reuse this machinery).
+
+**Files:**
+- Create: `backend/src/services/locationEvidence/{acceptFlow,recheck,acceptance}.ts`
+- Modify: `backend/src/services/dawarich/stays/review.ts` (TravTrack rows go through `acceptFlow`; Dawarich rows keep `acceptStayOnce` untouched), `stays/coverage.ts` (`coverageFor` skips visits whose `suggestion_ref` equals the candidate's evidence key — self-evidence)
+- Modify (web): `frontend/src/components/dawarich/StayReviewCard.tsx` (source label "aus TravTrack" / "aus Dawarich"; "vor dem Quellwechsel erkannt" when `provider.rev` < the current rev; explanation copy by `explanation.code`), `frontend/src/components/inbox/workspace/{model.ts,InboxCard.tsx,InboxHistory.tsx}`, `frontend/src/lib/api/dawarichStays.ts`, `i18n/resources/{de,en}/trips.json`
+- Tests: `locationEvidence/__tests__/{acceptFlow,recheck}.test.ts`, `routes/__tests__/dawarichStays.accept.test.ts` (extend), Vitest `StayReviewCard.test.tsx`
+
+**Interfaces — `acceptFlow(userId, ref, input, apply)`, three committed steps:**
+1. **Claim** (own transaction, committed): `accepted` → **replay**: answer the stored entry, no re-check (an accepted stay survives a later deletion, rule 6). `pending`, or `accepting` with `claimed_at` older than `CLAIM_STALE_MS` (2 min — recovery after a crash between steps) → set `accepting`, a fresh `claim_token`, `claimed_at = now`. `accepting` with a fresh claim → 409 `SUGGESTION_ACCEPT_IN_PROGRESS` (the client retries; a concurrent second click never writes twice). Anything else → 409 `SUGGESTION_ALREADY_RESOLVED` (stays: `DAWARICH_ALREADY_RESOLVED`, the code the web reads). TravTrack off → 403 `TRAVTRACK_DISABLED` before claiming.
+2. **Re-check** (no transaction held; reads TravTrack through E2, capturing the generation) by **the kind's own detector rules**, run over the suggestion's window ± 30 min:
+   - stay: `detectStays` (accuracy ≤ 100 m, speed ≤ 3 m/s, gap ≤ 30 min, ≥ 3 points, ≥ 20 min) yields a candidate within `2 × RADIUS_METERS` of the source position covering ≥ 80 % of the window;
+   - market/venue: `detectMarketVisits` against the area stored in the evidence (`market.areaIds` from the catalogue store) yields a visit meeting `MARKET_RULES`' duration;
+   - country: E6's rule on the run's days; journey: E7's `movementRuns` yields a run overlapping ≥ 80 %.
+   Outcome `holds` or `invalidated`.
+3. **Publish** (transaction under `takeTravTrackLock`): the row must still be `accepting` with this `claim_token`, and the generation must equal the one the re-check captured — otherwise go back to step 2 once, then 409 `EVIDENCE_INVALIDATED`.
+   - `holds` → `apply(tx)` (stay: today's place/visit logic, the visit written with `suggestion_ref = evidence_key`; country/journey: E6/E7), row `accepted`, claim cleared.
+   - `invalidated` → row `invalidated`, `resolved_at`, claim cleared, **committed**, `EvidenceInvalidated` logged (ids and counts only) — and only then the HTTP answer 409 `EVIDENCE_INVALIDATED`. A client that never sees the answer finds the row invalidated on its next read.
+- **Never self-evidence** (`acceptance.ts`): `ownEntries(userId, evidenceKey)` = entries whose `suggestion_ref` or `accepted_entry_*` names the key. The re-check, `coverageFor` and E7's logbook test never count them as support or cover of that same key; a retry after a lost answer reaches the entry through the replay in step 1, never as "already covered". An entry made from a DIFFERENT finding still covers (two scans of one stop → one visit).
+- Reject: TravTrack rows as today (rejection memory, venue fragments restored), allowed with TravTrack off.
+
+- [ ] **Step 1: Failing tests** — "accepting twice answers the same visit and writes one"; "two concurrent accepts write one visit; the second gets SUGGESTION_ACCEPT_IN_PROGRESS, then the replay"; "a claim left by a crash is taken over after two minutes"; "a lost response then a retry returns the first visit, not covered"; "points deleted since the scan → 409 EVIDENCE_INVALIDATED, and the row is invalidated even when the response is lost" (row read in a fresh connection after the request); "a range deleted between re-check and publish invalidates instead of accepting"; "a stay whose points now have a 40-minute gap no longer holds"; "a venue whose points no longer last the market duration no longer holds"; "TravTrack off → 403 TRAVTRACK_DISABLED, the finding stays pending, reject still works"; "the visit made by accepting does not cover its own finding on the next scan, and covers a different overlapping one"; "a Dawarich finding accepts exactly as before — no re-check, no claim columns written". Web: source label, pre-switch line, `EVIDENCE_INVALIDATED` copy removes the card, `SUGGESTION_ACCEPT_IN_PROGRESS` retries quietly, `TRAVTRACK_DISABLED` copy keeps it.
+- [ ] **Step 2–4:** `npx jest acceptFlow recheck dawarichStays review coverage --forceExit`, `npx vitest --run StayReviewCard InboxCard localeKeyParity` → FAIL, implement, → PASS.
+- [ ] **Step 5:** Commit `feat(inbox): accepting a TravTrack suggestion re-checks its evidence and never counts itself`.
+
+### Task E5: History deleted — open questions vanish, answers stay
+
+**Files:**
+- Create: `backend/src/services/locationEvidence/invalidate.ts`, `backend/src/services/travtrack/removalHandlers.ts` (registers every handler once; imported by `routes/travtrack.ts` and `jobs/cronJobs.ts`)
+- Modify: `backend/src/services/travtrack/deleteRange.ts` (each `PointsRemovedCause` gains `removed: { spans: Span[]; days: string[]; digests: Set<string> }` computed in the transaction BEFORE the delete — `spans` are the removed points' instants merged with a 30-min join gap; a new variant `{ kind: "origin"; origin: string }` for "delete this import"; `bumpHistoryGeneration` in the same transaction), `services/travtrack/zones.ts` (same collection before deleting inside a new or grown zone; a zone that deletes nothing still runs the handlers with empty `removed`), `services/travtrack/ingest.ts` (marks the UTC days of stored points dirty, raising `version`)
+- Tests: `locationEvidence/__tests__/invalidate.test.ts`, `travtrack/__tests__/removalHandlers.test.ts`
+
+**Interfaces:**
+- `HistoryDeleted` = `onPointsRemoved(tx, userId, cause)`; `invalidateOnHistoryDeleted` is registered here; E6 (country projection), L1, L3 add theirs; T7's snapshot handler beside them.
+- A TravTrack finding or suggestion is **affected** when any of:
+  - its window overlaps one of `removed.spans` (range, origin, zone);
+  - one of its `evidence.pointDigests` is in `removed.digests` (a constituent point went, wherever its window lies);
+  - zone cause: its source position, a journey's stored line (`evidence.line`, E7: a chord crossing the circle, `segmentCrossesZone`) or endpoint lies in the circle — even when the zone deleted no point;
+  - no pin (country, trip): one of its days is in `removed.days`.
+- Affected **open** rows (`pending`, `accepting`, `superseded`, `covered`, `rejected`, `invalidated`) → **deleted** (they hold positions and digests of the deleted history and none is an entry the user made); `EvidenceInvalidated { id, reason: "historyDeleted" | "zone" }` logged with ids and counts only. Affected **accepted** rows → evidence replaced by `{ source, provider, algorithmVersion, explanation, historyDeletedAt }`; stays' `source_lat/lon` set to the accepted `lat/lon` (the place's own pin, TravStats data); digests, lines and endpoints dropped.
+- `removed.days` are marked dirty (projections re-derive them). Dawarich rows are never touched (their history is not ours to see).
+- The generation bump makes every derivation that read before this removal discard its publication (E3, E4, E6, E7).
+
+- [ ] **Step 1: Failing tests** — "a range delete removes every open TravTrack finding and suggestion inside it, in the same transaction"; "deleting points outside a finding's window that were among its constituent points still removes it" (origin delete); "a new zone that deletes nothing still removes a pending journey whose line crosses it"; "a country question on a day whose points went is removed"; "an accepted stay and its visit survive; the finding keeps no digest and no source position but the accepted pin"; "a rejected finding inside the range is deleted, one outside stays"; "Dawarich findings are untouched"; "a rolled-back delete changes nothing and does not raise the generation"; "the zone's removed days and digests are those of the points it deleted, computed before they went"; "ingest marks only stored points' days dirty"; "every removal path runs the handler" (range route, day delete, zone create, zone update with `deleteStoredPoints`, import delete — through the app, so a test-only registration cannot pass).
+- [ ] **Step 2–4:** `npx jest invalidate removalHandlers deleteRange zones ingest travtrack.points travtrack.zones --forceExit` → FAIL, implement, → PASS.
+- [ ] **Step 5:** Commit `feat(location): deleted history takes its open questions with it; accepted entries stay`.
+
+### Task E6: TravTrack country days, and country questions
+
+The projection writes `country_days` rows with source `travtrack`, read by the passport as "unconfirmed track countries" like Dawarich's (forgejo#299: observations never enter the evidence fold). The Dawarich sweep is not touched.
+
+**Files:**
+- Modify: `backend/src/services/countryDays/store.ts` (`replaceCountryDays(…, tx?: DbTransaction)` — runs inside a caller's transaction when given one; the Dawarich sweep calls it as before)
+- Create: `backend/src/services/travtrack/countryProjection.ts`, `backend/src/services/locationEvidence/countrySuggestions.ts`, `backend/src/routes/locationSuggestions.ts` (`/api/v1/location-suggestions`, enveloped family like `dawarichStays.ts`), OpenAPI paths, `apiResponseShape.baseline.json` entry; cron row `travtrack_projections` in `jobs/cronJobs.ts` (every 15 min)
+- Modify (web): inbox `model.ts` (`InboxSource` + `"location"`), `InboxCard.tsx` (country card: country, days, first–last day, point count; "Besucht" / "Nur am Boden durchgereist" / "Nicht dort gewesen"), `frontend/src/lib/api/locationSuggestions.ts`, `i18n/resources/{de,en}/dataQuality.json`
+- Tests: `travtrack/__tests__/countryProjection.test.ts`, `locationEvidence/__tests__/countrySuggestions.test.ts`, `routes/__tests__/locationSuggestions.test.ts`, existing `countryDaySweep.test.ts` and `countryDays/store` tests green unchanged, Vitest `InboxCard.location.test.tsx`
+
+**Interfaces:**
+- `projectTravTrackCountryDays(userId)` — only while the instance is on (TravTrack off: nothing runs, dirty days wait). Per run up to 62 dirty days, oldest first, one **day per transaction**, each transaction under `takeTravTrackLock`: read the dirty row's `version`; read the day `[day 00:00Z, next day 00:00Z)` (half-open) through `readTravTrackDerivation`; `toTimedPosition` (in-flight and masked points dropped before the reducer, exactly as the Dawarich sweep drops airborne ones); `accumulateCountryDays` with `knownAirports`; `replaceCountryDays(userId, "travtrack", dayWindow, observations, partialDays, tx)` — a day read as `truncated` (over 250 000 points) is written with `partialWindow: true`; then **ack**: set the `done` bit only if `version` is unchanged (a point stored meanwhile re-marked the day and it runs again). No subdivision: TravTrack pages to the end. Failure kinds into `travtrack_derivation_state.last_error_kind`: `disabled`, `database`, `reducer`.
+- A raise of `COUNTRY_DAY_REDUCER_VERSION` re-marks every day holding TravTrack points once.
+- E5's handler (`projectionsOnHistoryDeleted`) deletes the `travtrack` rows on `removed.days` in the removal's transaction.
+- `countrySuggestions(userId)` — after a projection run, provider `travtrack` + ok only: a country with ≥ 2 ground days (`airportPointCount < pointCount`) in `travtrack` rows, not among the passport's confirmed countries, with no `CountryOverride` → one `location_suggestions` row per contiguous run of days (`kind: "country"`, `evidence_key = HMAC(["country", code, firstDay])`, `evidence = { countryCode, days, pointCount }`, explanation `{ code: "country.groundDays", params: { days, points } }`); a pending row for the same run grows; a rejected run is never asked again. **Bounded:** at most 3 new country questions per run. Publication under the lock with the generation check (E5).
+- `POST /location-suggestions/:id/accept { verdict: "visited" | "ground" }` through `acceptFlow` (E4): re-check = the run's `travtrack` rows still name the country on ≥ 2 ground days; apply = `CountryOverride { verdict, day: firstDay, note: "" }`, `accepted_entry_kind = "countryOverride"`. An override the user set meanwhile → the suggestion resolves `accepted` naming it; nothing overwritten. `POST /:id/reject`. `GET /location-suggestions?status=pending` → `{ success, data: EvidenceSuggested[] }`.
+
+- [ ] **Step 1: Failing tests** — "a dirty day becomes travtrack country days and is acked"; "a point stored during the projection re-marks the day and it runs again" (version changed between read and ack); "a failed day leaves the dirty row and the old rows unchanged" (transaction); "the window is half-open: a point at 00:00:00Z belongs to the next day"; "airside-only points make no ground day; in-flight points none at all"; "a day over the cap is written partial"; "deleting a range removes that day's travtrack rows in the same transaction; the next run re-derives what is left"; "TravTrack off: nothing runs, the dirty days stay"; "a dawarich sweep never deletes a travtrack row and the reverse"; "the Dawarich sweep's suite is unchanged" (no file of it edited but the shared `store.ts` signature). Suggestions: "two ground days in a country the passport lacks → one question"; "held already / overridden → none"; "a third day grows it"; "a rejected run is not asked again"; "no more than three new per run"; "provider dawarich → none"; "accept writes the override once, twice answers the same"; "accept after the days were deleted → 409 EVIDENCE_INVALIDATED, committed". Web: the three answers and their codes' copy.
+- [ ] **Step 2–4:** `npx jest countryProjection countrySuggestions locationSuggestions countryDaySweep store openapi apiResponseShape passport --forceExit`, `npx vitest --run InboxCard localeKeyParity` → FAIL, implement, → PASS.
+- [ ] **Step 5:** Commit `feat(countries): TravTrack country days, and a question for a country the passport lacks`.
+
+### Task E7: Missing journeys — movement the logbook does not hold
+
+**Files:**
+- Create: `backend/src/services/locationEvidence/journeys/{segment.ts,entryWindows.ts,suggest.ts}`; journey accept in `routes/locationSuggestions.ts`
+- Modify (web): inbox journey card, and the forms it opens with a prefill — `components/rail/RailFormModal.tsx`, `components/bus/BusFormModal.tsx`, the roadtrip create in `components/Roadtrips` — via `components/inbox/workspace/journeyPrefill.ts`; `i18n/resources/{de,en}/dataQuality.json`
+- Tests: `journeys/__tests__/{segment,entryWindows,suggest}.test.ts`, `routes/__tests__/locationSuggestions.journey.test.ts`, Vitest `journeyPrefill.test.ts`
+
+**Interfaces:**
+- `movementRuns(points: DerivationPoint[]): Run[]` — pure; between stays (E3's detector), a run with ≥ 10 points, ≥ 20 km along its privacy-cut line, median ground speed 15–300 km/h, no `inFlight` point; `modeHint: "rail" | "road" | "unknown"` from the speed profile only — a hint, never a decision.
+- **`entryWindows.ts` — explicit per-domain adapters.** `AVAILABLE_DOMAINS` names domains; it reads nothing. So: `ENTRY_WINDOW_ADAPTERS: Record<DomainKey, { read(userId, window): Promise<EntryWindow[]> } | { none: string /* why the domain has no time window */ }>` with one adapter per domain that has one — flight (`recorderWindow`), rail, bus, ferry, cruise, rental, roadtrip, lodging (check-in…check-out), poi (place visits with an instant) — each a Prisma read of that table's own columns on its own clock. A test fails when a key of `DOMAIN_KEYS` is missing (the `DOMAIN_SHARING` pattern), so a new domain must be classified. `logbookWindows(userId, window)` iterates `AVAILABLE_DOMAINS` through the adapters. A run is covered when ≥ 50 % of its duration lies in one window; `ownEntries` (E4) never cover their own suggestion.
+- `suggestJourneys(userId)` — after the TravTrack stay scan, same window (7 days), provider `travtrack` + ok + instance on; skipped when none of `rail`, `bus`, `roadtrip` is enabled. **Bounded:** one question per local day (the day's uncovered runs listed inside it, each linkable separately), at most 7 new per run. Row: `kind: "journey"`, `evidence_key = HMAC(["journey", day, firstKey])`, `evidence = { runs: [{ fromMs, untilMs, km, start, end, line /* ≤ 200 vertices, privacyCut */, modeHint, pointDigests }] }`, explanation `{ code: "journey.unlogged", params: { runs, km } }`. Publication under the lock with the generation check.
+- Accept per run, through `acceptFlow` (E4): `POST /location-suggestions/:id/accept { runIndex, entryKind: "rail" | "bus" | "roadtrip", entryId }` — the entry is created by the user through the TravStats form; the server checks it exists, is the user's, overlaps the run ≥ 50 % (else 400 `VALIDATION_FAILED`); the suggestion is `accepted` when every run is linked or the user closes the rest. Same entry twice → the same answer; another entry on a linked run → 409 `SUGGESTION_ALREADY_RESOLVED`. A form saved whose accept failed leaves the entry standing and the run open; the card offers "mit gespeichertem Eintrag verknüpfen" next time (the pending `entryId` in the client's draft store).
+- **Privacy:** km, endpoints and line are taken from the run after `privacyCut`; a run ending in a zone ends at its last point outside and the card says "Ende nicht aufgezeichnet". Lines are inbox-only and dropped by E5 on deletion.
+
+- [ ] **Step 1: Failing tests** — "a 90-minute run between two stays is one run with a speed-profile hint"; "an in-flight point makes no journey"; "a run covered by a rail ride, bus ride or roadtrip day is not suggested"; "every DOMAIN_KEYS entry has an adapter or a reason" (fails for a fake new key); "each adapter reads its own table's window" (one case per adapter); "the rail ride created from a run does not cover that run next time"; "three runs on one day are one question"; "no more than seven new per run"; "accept links once; twice the same; another entry 409"; "an entry outside the run's window is refused"; "a run crossing a zone measures only its visible part and never ends inside it"; "no questions when rail, bus and roadtrip are all disabled"; "provider dawarich → none". Web: prefill opens the rail form with times and both ends; a saved form whose accept failed offers the link.
+- [ ] **Step 2–4:** `npx jest journeys locationSuggestions --forceExit`, `npx vitest --run journeyPrefill InboxCard localeKeyParity` → FAIL, implement, → PASS.
+- [ ] **Step 5:** Commit `feat(inbox): a journey TravTrack saw and the logbook lacks becomes a question`.
+
+### Task E8: One ingest pipeline, and GPX files into TravTrack
+
+GPX only. TCX and FIT (both parsers exist in `services/tour/tracks/parseTrackFile.ts`) are listed for later; they need their own fixtures and nothing here depends on them.
+
+**Files:**
+- Modify: `backend/src/services/travtrack/ingest.ts` → `ingestPoints({ userId, origin, deviceId, uploadId: string | null, points, gaps?, outer?: DbTransaction, fence?: (tx) => Promise<void> })` — the Companion route passes `origin = companion:<deviceId>` and its `uploadId` (answers unchanged); `uploadId: null` skips the receipt (dedup by `(origin, originRef)` and the position key still hold); `outer` runs inside a caller's transaction (L6); `fence` runs first under the lock and may throw to abort (imports, below). Zone → deleted range → duplicate, per point, for every source.
+- Create: `backend/src/services/travtrack/imports/{fileImport,mapGpx}.ts`, `backend/src/routes/travtrack/imports.ts`, OpenAPI paths, baseline entry; `JobKind` `"travtrack.fileImport"` in `services/jobs/jobRegistry.ts`
+- Schema (E1's migration): `travtrack_imports` — `id`, `user_id` FK cascade, `kind` (CHECK `gpx|dawarich`), `file_name` (≤ 200), `status` (CHECK `running|succeeded|failed|interrupted|cancelled`), `report jsonb`, `from_at`, `to_at`, `created_at`, `finished_at`
+- Modify (web): `TravTrackSection.tsx` ("GPX importieren", the imports with their report, "Import löschen"), `i18n/resources/{de,en}/track.json`
+- Tests: `travtrack/__tests__/{ingest.origin,fileImport}.test.ts`, `routes/__tests__/travtrack.imports.test.ts`, `travtrack.points.test.ts` (unchanged), Vitest `TravTrackSection.import.test.tsx`
+
+**Interfaces:**
+- `POST /travtrack/imports` (multipart `file`, write scope, `rejectDemo`, `on` tier, ≤ 25 MB, multipart Content-Type set by hand on the web) → 202 `{ jobId, importId }`. The job parses with `parseGpx`, maps each point with a time — `origin = gpx:<importId>`, `originRef = <segment>:<index>`, `deviceId = file:<importId>`, `purpose: "everyday"` — and ingests batches of 5000 with `fence` = "this import is still `running`" (so a delete of the import stops it: below). No times → `failed`, `TRAVTRACK_IMPORT_NO_TIMES`; unreadable → `TRAVTRACK_IMPORT_UNREADABLE`; one running already → 409 `TRAVTRACK_IMPORT_RUNNING`. Report `{ read, stored, duplicate, dropped: { privacy_zone, deleted_range, invalid, null_island }, withoutTime }`.
+- `GET /travtrack/imports` (`held`); `DELETE /travtrack/imports/:id` (`held`, write scope, `rejectDemo`) → under the lock: status `cancelled` (a running import's next batch fails its fence and stores nothing), delete the points with that origin, `onPointsRemoved({ kind: "origin", origin, removed })`. No tombstone: other sources' points in that span stay; a GPX fix that duplicated a Companion fix was never stored under this origin, so the Companion's copy stays.
+- Imports mark their days dirty; they never trigger a stay or journey scan of their span and never prompt (review focus 19).
+- Export JSON (T6) carries each point's `origin`; the summary lists `file:<id>` devices with the file name.
+
+- [ ] **Step 1: Failing tests** — "the Companion route answers exactly as before" (existing suite); "an upload without uploadId stays idempotent by origin ref and position"; "inside an outer transaction nothing is visible until it commits"; "a GPX point inside a privacy zone is dropped and counted"; "a GPX file into a deleted range stores nothing there"; "a GPX fix equal to a Companion fix is a duplicate; deleting the import leaves the Companion fix"; "deleting a running import cancels it: no batch after the delete stores a point"; "deleting an import removes only its points and leaves no tombstone"; "a file without times fails with TRAVTRACK_IMPORT_NO_TIMES"; "a second import while one runs is 409"; "TravTrack off: import 403, list and delete reachable for an account holding data"; "an import over last week creates no finding". Web: multipart upload and report; delete asks with the point count.
+- [ ] **Step 2–4:** `npx jest ingest fileImport travtrack.imports travtrack.points openapi apiResponseShape --forceExit`, `npx vitest --run TravTrackSection localeKeyParity` → FAIL, implement, → PASS.
+- [ ] **Step 5:** Commit `feat(travtrack): import GPX files through the same pipeline`.
+
+### Task E9: OwnTracks and Overland with per-device tokens
+
+**Step 0 (before any code): record real requests.** OwnTracks (Android and iOS, HTTP mode) and Overland (iOS) against a request-capturing endpoint on the dev stack: one location message of each, one empty OwnTracks POST and one non-location message (`transition`, `lwt`), one Overland batch of ≥ 3 points. Saved as fixtures under `backend/src/services/travtrack/sources/__fixtures__/`, every real position replaced by a fixed test coordinate. The mappings below follow the apps' documented formats; where a fixture disagrees, the fixture wins and this task is amended.
+
+**Files:**
+- Create: `backend/src/services/travtrack/sources/{owntracks,overland,ingestTokens}.ts`, `backend/src/middleware/ingestTokenAuth.ts`, `backend/src/routes/travtrack/{ingestSources,ingestTokens}.ts`, OpenAPI paths, baseline entries
+- Schema (E1's migration): `travtrack_ingest_tokens` — `id`, `user_id` FK cascade, `kind` (CHECK `owntracks|overland`), `label` (≤ 60), `lookup_hash` UNIQUE, `hash`, `created_at`, `last_used_at`, `revoked_at`
+- Modify: `/travtrack/capabilities` (`sources: Array<"companion" | "gpx" | "owntracks" | "overland">`), the logger's redaction list (`authorization` header)
+- Modify (web): `TravTrackSection.tsx` ("Weitere Quellen": create → shown once with URL and the app's field names, list, revoke), `i18n/resources/{de,en}/track.json`
+- Tests: `sources/__tests__/{owntracks,overland,ingestTokens}.test.ts`, `routes/__tests__/travtrack.ingestSources.test.ts`
+
+**Interfaces:**
+- **Tokens** (`ingestTokens.ts`, the `utils/apiTokens.ts` scheme): `tt_ingest_` + 32 random bytes (`randomBytes`), `lookup_hash` = SHA-256 (O(1) lookup), `hash` = bcrypt, verified by `bcrypt.compare`; the row's `kind` must equal the path's kind — an OwnTracks token on the Overland path, a revoked or unknown token → 401 `INGEST_TOKEN_INVALID`. A token posts points for its owner and does nothing else; it is not an `ApiToken`.
+- Management: `POST /travtrack/ingest-tokens { kind, label }` (`on` tier, write scope, `rejectDemo`) → `{ id, token, url }` once; `GET` (`held`) → list without secrets; `DELETE /:id` (`held`, write scope, `rejectDemo`) → revoked.
+- **OwnTracks** `POST /travtrack/ingest/owntracks` — **HTTP Basic only** (username free, password = token). Body: one message, an array, or empty. `_type: "location"` → `{ t: tst (s) → ISO, lat, lon, accuracy: acc, altitude: alt, speed: vel (km/h → m/s), course: cog }`, `originRef = "<tst>:<lat>:<lon>"`; every other `_type` and an empty body (0 bytes or `{}`) store nothing. Answer always **200 `[]`** once authenticated (OwnTracks resends on an error status); invalid points are counted, never refused, so one bad message cannot wedge the phone's queue.
+- **Overland** `POST /travtrack/ingest/overland` — **`Authorization: Bearer <token>` header only**; no query-string token, ever (if Step 0 shows a build that cannot send the header, Overland is left out and the owner is told). `{ locations: Feature<Point>[] }`: `coordinates [lon, lat]`, `properties.timestamp` (offsets like `-0700` normalised to `-07:00` before parsing; no offset → invalid), `horizontal_accuracy` and `speed` (negative → null), `altitude`, `course`, `motion[0]` → `motion`; `originRef = <normalised timestamp>:<lon>:<lat>`. Answer **200 `{ "result": "ok" }` only after the transaction committed** (Overland deletes its batch on that answer alone); an empty `locations` → the same answer; any failure → non-2xx so the phone keeps it.
+- Both: `origin = deviceId = <kind>:<tokenId>`, `purpose: "everyday"`, `uploadId: null` (E8), `on` tier (off → 403 `TRAVTRACK_DISABLED`, the app keeps its queue), provider not consulted (as T3), limiter keyed by token id, body ≤ `LOCATION_MAX_BODY_BYTES`. **Privacy:** these apps cannot filter zones; ingest drops the points there, and the settings copy says positions inside a zone reach the server and are discarded there, unlike the Companion.
+
+- [ ] **Step 1: Failing tests** — fixtures: "the recorded OwnTracks location becomes one point with speed in m/s"; "an empty OwnTracks POST and a transition store nothing and answer []"; "the recorded Overland batch stores every point and answers result ok"; "a -0700 offset is read as -07:00"; "negative accuracy or speed is stored as unknown". Auth: "OwnTracks takes Basic with the token as password and refuses Bearer"; "Overland takes the Bearer header and refuses a query token and Basic"; "an OwnTracks token on the Overland path is 401 INGEST_TOKEN_INVALID"; "a revoked token is 401"; "a token cannot read /travtrack/points or call any other route"; "creating and revoking need write scope and refuse the demo account". Pipeline: "an OwnTracks point inside a zone is dropped and the answer is still []"; "a resent Overland batch stores nothing twice"; "a failure inside the transaction answers 5xx, never result ok"; "TravTrack off: 403, nothing stored"; "no log line carries a token" (captured logs).
+- [ ] **Step 2–4:** `npx jest owntracks overland ingestTokens travtrack.ingestSources travtrack.gate openapi apiResponseShape --forceExit`, `npx vitest --run TravTrackSection localeKeyParity` → FAIL, implement, → PASS.
+- [ ] **Step 5:** Real apps against the Beta server with TravTrack on: a short walk arrives on `/track` as its own device line; a zone at the start leaves no point inside it. Commit `feat(travtrack): take positions from OwnTracks and Overland with per-device tokens`.
+
+### Task E10: Timeline labels from TravStats
+
+Depends on E7's entry-window adapters (and on E3/E7 for suggestion labels; without them those labels are absent).
+
+**Files:**
+- Create: `backend/src/services/travtrack/dayContext.ts` (moved out of `dayView.ts`, which keeps the geometry; both under 400 lines)
+- Modify: `backend/src/routes/travtrack/day.ts`, OpenAPI path, `frontend/src/pages/Track/{TrackTimeline,TrackDayMap}.tsx`, `i18n/resources/{de,en}/track.json`
+- Tests: `travtrack/__tests__/dayContext.test.ts`, `routes/__tests__/travtrack.day.test.ts` (extend), Vitest `TrackTimeline.test.tsx`
+
+**Interfaces:**
+- `context[].kind` widens from `flight | trip | home` to `flight | trip | home | <every domain with an entry-window adapter> | suggestion`, each `{ kind, id, label, fromMs, untilMs, href }`, read through `logbookWindows` (E7) — records from TravStats tables, not from points — plus open TravTrack stay/journey suggestions of the day (`href` to the inbox card).
+- Moving stretches of the day's privacy-safe segments covered by no context entry (≥ 2 km) are `unlabelled: true` — "Unterwegs, ohne Eintrag" — never with a guessed mode.
+- **Privacy:** labels attach to TravStats records; a label's map anchor is the record's own pin or the first privacy-safe vertex of its stretch, never a point inside a circle; "home" stays computed from privacy-safe points only (T6). The `on` tier as before.
+
+- [ ] **Step 1: Failing tests** — "a day with a rail ride, a hotel night and a café visit shows all three with links"; "an open stay suggestion appears with its inbox link and goes once answered"; "an uncovered moving stretch is unlabelled, without a mode"; "a place visit whose pin lies in a zone is listed without a map anchor"; "a fake domain with an adapter appears without editing dayContext". Web: timeline labels, links, "Unterwegs, ohne Eintrag".
+- [ ] **Step 2–4:** `npx jest dayContext travtrack.day --forceExit`, `npx vitest --run TrackTimeline localeKeyParity` → FAIL, implement, → PASS; browser look at a seeded day.
+- [ ] **Step 5:** Commit `feat(travtrack): a day reads like the logbook — labelled from TravStats`.
+
+### Review Focus additions (append to the list at the top)
+
+Phase 3:
+
+17. **Dawarich users see nothing change** — stays, venues and country days come out byte-identical (golden fixture from `main`, E3; the sweep untouched, E6); no zone, mask or deleted-range filter on Dawarich reads; no re-check on their accept; no new inbox kind. Zones on Dawarich-derived suggestions, a Dawarich re-check and Dawarich country/journey questions are open owner decisions.
+18. **The neutral key** — TravTrack evidence is identified by the position key (second + coordinates) and stored only as server-keyed HMAC digests that never leave the server; cross-provider repeats are caught by the interval/radius match; no stop is suggested twice across the change, a provider switch or an import. Pinned in E1, E3.
+19. **Bounded prompting** — imports and projections never trigger detection of their span; per run at most 20 stays, 3 countries, 7 journey days (one question per day), and in phase 4 three trips. Pinned in E3, E6, E7, E8, L4.
+20. **TravTrack off** — no TravTrack derivation runs and accepting a TravTrack suggestion is 403 `TRAVTRACK_DISABLED`; removal and its invalidation keep working; Dawarich derivations ignore the switch. Pinned in E3, E4, E6.
+21. **Accept is a committed protocol** — claim, re-check by the kind's own detector rules, publish under the lock with the generation check; an invalidation is committed before the 409; concurrent clicks write once; a crashed claim recovers. Pinned in E4.
+22. **Self-evidence** — an entry made by accepting is reached by replay on a retry, never counted as cover or support of the same evidence key, and still covers a different finding. Pinned in E4, E7.
+23. **A scan cannot publish from deleted history** — every removal raises the history generation in its transaction; every TravTrack publication and acceptance compares it under the same lock. Affected evidence is found by window, by constituent digest, by line crossing a new zone, and by day for pinless questions. Pinned in E3, E4, E5.
+24. **Projection writes are atomic** — read, replace and ack of a dirty day in one transaction, acked only for the version read. Pinned in E6.
+25. **Third-party clients** — OwnTracks Basic only, Overland Bearer header only, no token in a URL or a log; tokens are kind-bound; Overland gets `result: ok` only after commit; OwnTracks always gets `[]`. Pinned in E9.
+
+### Phase 3 exit
+
+- [ ] Server gates (Build Checks) green on `dev/travtrack`; `npm run check:drift` green with `<ts>_location_evidence`.
+- [ ] Codex review of the diff since phase 2; findings fixed.
+- [ ] Browser look: a TravTrack stay card, a country card, a journey card through the rail form, `/track` labels, the GPX import and token screens.
+- [ ] Ask the owner, as a single question, whether phase 3 goes to `main` / an RC (still behind `travTrack`); ask the three open decisions separately.
+
+---
 
 ## Phase 4 — later
 
-Erkundet map (fog of war), Zuletzt gesehen, monthly values, journey/trip inference, TravPlan plan-vs-actual, Dawarich history import as an explicit copy with a completeness report.
+Every task here is TravTrack-only, behind the `travTrack` beta key and the **`on` tier** for computing and for reading (TravTrack off: 403 `TRAVTRACK_DISABLED`, nothing runs) — except L5, which sits behind TravPlan's gate and reads through `entryTrack`, so Dawarich users get it too, and L6, which needs an own Dawarich connection. Each task has its own migration (throw-away clone DB, `migrate deploy` on the shared dev DB, `check:drift` green). The phase-3 privacy rules hold for every output: zones and zone tombstones, deleted ranges, `privacyCut` on final geometry, own account only (never in a share, `.travstats` file, public link, comparison or federation payload), and every projection is removed with the history it came from (a handler in `removalHandlers.ts`, same transaction, then dirty-day re-derivation acked per version, as E6).
+
+**Dependencies.** L1 extends E6's dirty-day protocol (its own `done` bit); L3 needs L1's bit scheme and E6's country days; L4 needs the envelope and `acceptFlow` (E1, E4), the suggestions route (E6) and `movementRuns` (E7); L5 needs only T5's `entryTrack`; L6 needs E8's `ingestPoints` (`outer`, `fence`) and E5's generation. **Order:** L6 first if the owner wants the Dawarich history in TravTrack before the views are judged; then L1 → L3, L4, L2, L5.
+
+### Task L1: „Erkundet" — the explored map
+
+**Files:**
+- Create: migration `<ts>_travtrack_explored`, `backend/src/services/travtrack/explored/{cells,project,privacy}.ts`, `backend/src/routes/travtrack/explored.ts`, OpenAPI path, baseline entry; `frontend/src/pages/Track/TrackExploredMap.tsx` (a tab on `/track`; a dashboard map mode is a separate owner decision — `TAB_MODE_REGISTRY` keys modes by tab and TravTrack has none)
+- Tests: `explored/__tests__/{cells,project,privacy}.test.ts`, `routes/__tests__/travtrack.explored.test.ts`, Vitest `TrackExploredMap.test.tsx`
+
+**Schema:** `travtrack_explored_cells` — `user_id` FK cascade, `day Date`, `x Int`, `y Int` (Web-Mercator tile at **zoom 14**, the one resolution stored and served); `PRIMARY KEY (user_id, day, x, y)`. Rows per day keep re-derivation exact.
+
+**Interfaces:**
+- `projectExploredCells(userId)` — E6's protocol with `done` bit 2: one day per transaction under the lock, cells from `readTravTrackDerivation` (masked and in-flight points excluded), ack only for the version read.
+- Removal handler: deletes the cells of `removed.days`; the next run rebuilds them from what is left.
+- **One output format, one privacy model:** `GET /travtrack/explored?bbox=<w,s,e,n>` → `{ cells: [x, y][] }` — always zoom-14 cells, whatever the map's zoom (the client draws them larger or smaller; there is no coarser or finer answer whose difference could outline a zone), ≤ 50 000 per answer (else 400 "zoom in"), no time. **Zones are shown as explored ground, never as a hole and never as a different shape:** a cell that intersects a privacy circle is emitted when any cell edge-adjacent to it is explored — a fixed display rule, said in the legend ("Privatzonen werden als erkundet gezeigt"). A zone (≤ 5 km radius) is therefore indistinguishable from an area the user moved through.
+- Map: a MapLibre fill of the cells over a fog layer; no dots at any zoom.
+
+- [ ] **Step 1: Failing tests** — "a day's points become its cells once, acked"; "deleting a day's range removes its cells and keeps cells other days explored"; "a 5 km zone surrounded by explored cells leaves no hole: its cells are emitted"; "an isolated zone with no explored neighbour emits nothing"; "the answer is the same cell set for any requested zoom"; "airborne and masked points explore nothing"; "the answer carries no time"; "TravTrack off → 403"; "another account's cells are never read". Web: cells drawn, never points; the legend line.
+- [ ] **Step 2–4:** `npx jest explored travtrack.explored openapi apiResponseShape --forceExit`, `npx vitest --run TrackExploredMap localeKeyParity` → FAIL, implement, → PASS. **Step 5:** Browser look; commit `feat(travtrack): the explored map`.
+
+### Task L2: „Zuletzt gesehen"
+
+**Files:**
+- Create: `backend/src/services/travtrack/lastSeen.ts`, route `GET /travtrack/last-seen` in `routes/travtrack/points.ts` (`on` tier), OpenAPI path; `frontend/src/components/Dashboard/LastSeenCard.tsx` (beside `MapNextUpCard.tsx` in `DashboardLayout.tsx`, shown by `useTravTrackVisible`) + `/track` header line
+- Tests: `travtrack/__tests__/lastSeen.test.ts`, `routes/__tests__/travtrack.lastSeen.test.ts`, a separation test, Vitest `LastSeenCard.test.tsx`
+
+**Interfaces:**
+- `lastSeen(userId): Promise<{ atMs; lat; lon; accuracyM; deviceId; origin } | null>` — the newest stored point (`(user_id, t, seq)` index, one row), masked points skipped. Points inside a zone are never stored, so it is the last position before a zone (spec §3: "Nothing derives from a zone — „Zuletzt gesehen" shows the last position before it"). Answers `no-store` (the `/api` default). TravTrack-only: a Dawarich equivalent would read Dawarich unfiltered and is not built (open decision (a) applies).
+- No share, public-link, comparison or federation module imports `lastSeen.ts` (source scan, like `encryptedShare/__tests__/separation.test.ts`).
+
+- [ ] **Step 1: Failing tests** — "the newest point with its device"; "a masked teleport is not the last seen"; "no points → null"; "TravTrack off → 403"; "no sharing, public-link or federation module imports lastSeen"; "the answer is no-store". Web: age ("vor 12 Min."), device label, hidden when TravTrack is not visible.
+- [ ] **Step 2–4:** FAIL → implement → PASS (`npx jest lastSeen travtrack.lastSeen apiNoStore --forceExit`, `npx vitest --run LastSeenCard localeKeyParity`). **Step 5:** Commit `feat(travtrack): where you were last seen`.
+
+### Task L3: Monthly values — km, countries, cities
+
+Needs L1's `done`-bit scheme (bit 4) and E6's travtrack country days.
+
+**Files:**
+- Create: migration `<ts>_travtrack_months`, `backend/src/services/travtrack/months/{project,cities}.ts`, `backend/src/routes/travtrack/months.ts`, OpenAPI path, baseline entry; `frontend/src/pages/Track/TrackMonths.tsx`; a per-account switch `travtrack_city_lookup Boolean @default(false)` on `user_settings` with its line in `TravTrackSection.tsx`
+- Tests: `months/__tests__/{project,cities}.test.ts`, `routes/__tests__/travtrack.months.test.ts`, Vitest `TrackMonths.test.tsx`
+
+**Schema:** `travtrack_month_values` — `user_id`, `month Date`, `km_ground Float`, `countries String[]`, `cities jsonb | null`, `days_with_data Int`, `days_paused Int`, `algorithm Int`, `computed_at`; `PRIMARY KEY (user_id, month)`. `geo_city_cache` — `cell String @id` (lat/lon rounded to 0.01°), `name`, `country_code`, `fetched_at`; no user id, no time, no track (precedent `market_catalog_tiles`).
+
+**Interfaces:**
+- `projectMonths(userId)` — a month is recomputed (in one transaction, acked per day version) when any of its days is dirty: `km_ground` from the privacy-safe segments (`readSafeTravTrack`, so no figure counts a hidden part) minus in-flight points and runs above 500 km/h (spec §10 point 5); `countries` from `country_days` source `travtrack`; `cities` only when the account switched the lookup on.
+- `cities.ts` — reuses the reverse geocoder the codebase already has (`services/geo/nominatim.ts` `reverseGeocode`, the one place addresses come from); dwell clusters ≥ 30 min outside privacy circles, each rounded cell looked up once through `geo_city_cache`. Because that geocoder may be a public Nominatim, the lookup is **off by default** and the switch's copy says rounded positions are sent to it; off → `cities: null` and "Städte nicht ermittelt" (abstention, never an empty list). No new geocoder infrastructure.
+- Removal handler: deletes the months of `removed.days`; re-derived next run.
+- `GET /travtrack/months?year=YYYY` (`on`) → `{ months: [{ month, kmGround, countries, cities, daysWithData, daysPaused }] }`; a month without data is absent, not zero.
+
+- [ ] **Step 1: Failing tests** — "km counts only the visible line: a stretch through a zone adds nothing for its hidden chord"; "a flight's points add no ground km"; "a month without points is absent"; "cities: off by default → null, no geocoder call"; "on: one lookup per rounded cell, never for a cluster inside a zone"; "the city cache holds no user id"; "deleting a day recomputes its month in the same transaction"; "TravTrack off → 403". Web: the month table, "nicht ermittelt", the switch copy.
+- [ ] **Step 2–4:** FAIL → implement → PASS (`npx jest months travtrack.months openapi --forceExit`, `npx vitest --run TrackMonths TravTrackSection localeKeyParity`). **Step 5:** Commit `feat(travtrack): monthly kilometres, countries and cities`.
+
+### Task L4: Trip inference
+
+Needs E1/E4 (envelope, `acceptFlow`), E6 (suggestions route) and E7 (`movementRuns`). Phase 3 asks about single unlogged legs; this task groups what TravTrack saw into trips: away-from-home periods without a trip.
+
+**Files:**
+- Create: migration `<ts>_location_suggestion_trip` (`location_suggestions.kind` CHECK + `trip`), `backend/src/services/locationEvidence/trips/{awayPeriods,suggest}.ts`; trip accept in `routes/locationSuggestions.ts`
+- Modify (web): inbox trip card (new / extend), `i18n/resources/{de,en}/dataQuality.json`
+- Tests: `trips/__tests__/{awayPeriods,suggest}.test.ts`, `routes/__tests__/locationSuggestions.trip.test.ts`, Vitest `InboxCard.trip.test.tsx`
+
+**Interfaces:**
+- `awayPeriods(userId, window)` — per local day (the home period's zone) from privacy-safe points: `away` when mostly > 50 km from that day's confirmed residence (`loadHomePeriods`), `home` when mostly within, `unknown` without points (absence of data is not presence; an `unknown` day never joins two runs). Runs of ≥ 2 away days or one away night. No confirmed residence → nothing inferred, and the settings line says why.
+- `suggestTrips(userId)` — nightly over the last 60 days only (never the whole history, never over an import's span by itself), provider `travtrack` + ok + instance on. **Bounded:** at most 3 new trip questions per run; runs beyond that are aggregated into one "Weitere N Zeiträume unterwegs" entry that expands on request rather than as separate cards. Row: `kind: "trip"`, `evidence_key = HMAC(["trip", fromDay])` (grown while pending), `evidence = { fromDay, toDay, countries, km }`, explanation `{ code: "trip.away" | "trip.extend", params: { days, km, tripId? } }`. Publication under the lock with the generation check.
+- Accept through `acceptFlow`: re-check = the run's away days still hold; apply (TravStats, on the user's decision) = `{ action: "create", name }` → the existing trip create service with the run's days, or `{ action: "extend", tripId }` → that trip's days widened, nothing else; idempotent through `accepted_entry_*`. Pinless: E5 removes an open one whose days are in `removed.days`.
+- **Privacy:** the card shows days, countries, km — no map.
+
+- [ ] **Step 1: Failing tests** — "three days > 50 km from the confirmed home are one away run"; "a day without points is unknown and splits nothing into home"; "no confirmed residence → no questions"; "a run covered by a trip → none; touching its edge → extend"; "at most three new per run, the rest aggregated"; "accept create makes one trip, twice the same"; "accept extend widens only the dates"; "a rejected run is not asked again"; "deleting the run's points removes the open question"; "TravTrack off → nothing runs, accept 403". Web: both cards, the aggregate entry, the name field.
+- [ ] **Step 2–4:** FAIL → implement → PASS (`npx jest awayPeriods trips locationSuggestions --forceExit`, `npx vitest --run InboxCard localeKeyParity`). **Step 5:** Commit `feat(inbox): a trip TravTrack saw becomes a question`.
+
+### Task L5: TravPlan — plan versus actual
+
+**Files:**
+- Create: `backend/src/services/travplan/actual/{planSnapshot,actualRoute,compare}.ts`, route `GET /trips/:tripId/plan/actual` in `routes/travplan.ts` (behind `assertTravPlanOffered` and the plan's own access check), OpenAPI path; `frontend/src/pages/TravPlan/sections/PlanActualPanel.tsx`, `i18n/resources/{de,en}/travplan.json`
+- Tests: `services/travplan/__tests__/{planSnapshot,compare}.test.ts`, `actualRoute.integration.test.ts`, `planActual.route.integration.test.ts`, Vitest `PlanActualPanel.test.tsx`
+
+**Interfaces:**
+- `getPlanSnapshot(userId, tripId)` → `{ revision; stations; stages; items; startDay; endDay; timezone } | null` — a read of `travel_plans.state` (active variant), deep-frozen; no write, no mutation row, no revision bump.
+- `getActualRoute(userId, tripId)` → `{ segments: [lon, lat][][]; days: Array<{ day; state: "recorded" | "noData" }>; stays: Array<{ day; lat; lon; label }>; coverage; origin } | null` — `entryTrack(trip)` (T5: own recording, TravTrack or Dawarich by its rules; TravTrack off → TravTrack is simply not a source, as T5), simplified and `privacyCut` on the final geometry; stays from accepted place visits and lodging stays in the trip (TravStats records).
+- `comparePlanActual(plan, actual)` — pure: per station `visited` (an actual position or stay within 15 km during its planned days ± 1), `shifted` (visited on other days; delta), `skipped` (recorded days around it, never within 15 km), `unknown` (no data on its days — never `skipped`); a station whose place lies in a TravTrack privacy circle is `unknown` (the missing points there are the zone, not a skip); per stage `{ plannedKm, actualKm | null }` (only between two visited stations); `unplanned` stays > 15 km from every station.
+- `GET /trips/:tripId/plan/actual` → `{ plan: { revision }, actual: { origin, coverage } | null, stations, stages, unplanned }`; no track → `actual: null`, every station `unknown`. **The plan is never changed:** nothing here writes; the panel has no "apply".
+
+- [ ] **Step 1: Failing tests** — "a station passed on its planned day is visited"; "a day late is shifted by one"; "recorded days around a station never near it → skipped"; "no data on its days → unknown"; "a station inside a zone → unknown"; "stage km only between two visited stations"; "a far accepted stay is unplanned"; "the request leaves the plan's revision, state hash, mutations and proposals unchanged"; "TravPlan off → 403 PLAN_DISABLED"; "another user's trip → 404". Web: the four states.
+- [ ] **Step 2–4:** FAIL → implement → PASS (`npx jest planSnapshot compare actualRoute planActual --forceExit`, `npx vitest --run PlanActualPanel travplanTypesMirror localeKeyParity`). **Step 5:** Browser look on a seeded route plan; commit `feat(travplan): compare the plan with where you actually went`.
+
+### Task L6: Copy the Dawarich history into TravTrack
+
+An explicit copy the user starts. Dawarich is only read (rule 5), the provider does not change (rule 2), and the copy says what it did and did not get.
+
+**Files:**
+- Create: migration `<ts>_travtrack_dawarich_import`, `backend/src/services/travtrack/imports/dawarichImport.ts`, routes in `routes/travtrack/imports.ts` (`POST /travtrack/imports/dawarich`, `GET …/dawarich`, `POST …/resume`, `POST …/stop`), OpenAPI paths; `JobKind` `"travtrack.dawarichImport"`; web block "Dawarich-Verlauf übernehmen" in `TravTrackSection.tsx`, `i18n/resources/{de,en}/track.json`
+- Tests: `imports/__tests__/dawarichImport.test.ts`, `routes/__tests__/travtrack.dawarichImport.test.ts`, Vitest `TravTrackSection.dawarich.test.tsx`
+
+**Schema:** `travtrack_dawarich_imports` — `user_id` PK FK cascade, `import_id` (→ `travtrack_imports`, kind `dawarich`), `status` (CHECK `running|paused|interrupted|complete|incomplete|failed|cancelled`), `from_day`, `until_day`, `next_day` (the durable checkpoint), `days_done`, `report jsonb` (per month `{ read, stored, duplicate, dropped: { privacy_zone, deleted_range, invalid, null_island }, truncatedHours: string[], unreachableDays: string[] }`), `last_error_kind`, `heartbeat_at`. In the database, not in the job: `jobRegistry` is in memory by design, so the job is only the handle for the click; a `running` row with a stale `heartbeat_at` reads as `interrupted`, and `resume` continues from `next_day`.
+
+**Interfaces:**
+- Start: own user-tier Dawarich connection only (admin-global/ENV → 409 `DAWARICH_NOT_CONFIGURED`), `on` tier, write scope, `rejectDemo`, one per account (409 `TRAVTRACK_IMPORT_RUNNING`). Range: the whole history (earliest month by the country sweep's backward walk) or a chosen `[fromDay, untilDay]`.
+- Per UTC day, oldest first, **one transaction per day = the checkpoint protocol**: read the day from Dawarich (outside the transaction; a truncated day halved down to one hour, an hour still truncated listed in `truncatedHours`, never stored as whole; unreachable → `paused` with the kind, checkpoint kept); then in one transaction under the lock: `fence` = the import row is still `running` with this run's id, else abort; `ingestPoints({ origin: "dawarich:<importId>", deviceId: "dawarich", uploadId: null, outer: tx })` (zones, zone tombstones, deleted ranges and duplicates exactly as every source; `originRef` = the Dawarich point id); `next_day`, `days_done`, the month's report and `heartbeat_at` updated in the same transaction. A crash repeats at most one day, and the repeat is all duplicates.
+- **Racing a deletion:** every removal holds the same lock, so a day's transaction runs wholly before or after it; points of a deleted range are refused by ingest (tombstone); deleting the import (E8's delete) sets `cancelled` under the lock and the next day's fence stops the job; "delete all TravTrack data" cancels a running import the same way.
+- Report: `complete` only when every day was read whole and each point stored, duplicate or deliberately dropped; otherwise `incomplete` with the truncated hours and unreachable days per month. The web shows totals and the list, never just "fertig".
+- After the copy: its days are dirty (projections); no stay, journey or trip detection over the copied span and no prompt (review focus 19). Stop → `paused`, resumable.
+
+- [ ] **Step 1: Failing tests** — "copies a two-month fake history day by day with the report per month"; "a truncated day is subdivided, an hour still truncated is listed and the import ends incomplete"; "Dawarich unreachable pauses with the checkpoint kept; resume stores nothing twice"; "a crash after a day's commit repeats nothing; a crash before it repeats that day as duplicates"; "a stale heartbeat reads as interrupted and resumes"; "a range deleted while the import runs stays empty"; "deleting the import while it runs cancels it: no later day stores a point"; "a point inside a zone or a deleted range is counted dropped"; "a Dawarich point equal to a Companion fix is a duplicate"; "the provider is unchanged"; "nothing is sent to Dawarich but GET /api/v1/points" (fetch spy); "the admin-global connection is refused"; "the copy creates no finding". Web: progress, pause/resume, the incomplete list.
+- [ ] **Step 2–4:** FAIL → implement → PASS (`npx jest dawarichImport travtrack.dawarichImport ingest openapi apiResponseShape --forceExit`, `npx vitest --run TravTrackSection localeKeyParity`). **Step 5:** Against the owner's Dawarich on the Beta server (CT 106), one real year: compare the report's totals with Dawarich's own count for that year and record both on the board item. Commit `feat(travtrack): copy the Dawarich history, and say how complete the copy is`.
+
+### Review Focus additions (append to the list at the top)
+
+Phase 4:
+
+26. **No zone shape on the explored map** — one stored and served resolution, and zones shown as explored ground by a fixed neighbour rule; neither a hole nor a resolution change outlines one. Pinned in L1.
+27. **Abstention in every figure** — a day without data is `unknown`, never "home", "skipped" or 0 km; cities are `null` unless the user switched the lookup on; a month without points is absent. Pinned in L3, L4, L5.
+28. **Projections follow deletion** — explored cells, month values and country days are removed in the removal's transaction and re-derived, acked per day version. Pinned in L1, L3 (E5/E6).
+29. **The plan is read, never written.** Pinned in L5.
+30. **The Dawarich copy is a copy** — read-only, user-tier connection only, a per-day transaction as the durable checkpoint, fenced by the import's status under the lock so a deletion wins every race, the same pipeline as every source, provider unchanged, and a report that says `incomplete` with the hours and days. Pinned in L6.
+31. **Phase 4 is TravTrack `on`** — every view and job answers 403 with TravTrack off; L5 reads through `entryTrack` and is TravPlan-gated. Pinned in each task.
+
+### Phase 4 exit
+
+Per task, not per phase: each L-task lands on `dev/travtrack` with the Build Checks green, `check:drift` green with its migration, a Codex review of its diff, a browser look where it has a screen, and its own single question to the owner when it should reach `main`.
