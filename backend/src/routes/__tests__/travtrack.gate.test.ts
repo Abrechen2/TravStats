@@ -115,6 +115,7 @@ describe("TravTrack gate", () => {
       "get /travtrack/months": "on",
       "get /travtrack/city-lookup": "on",
       "put /travtrack/city-lookup": "on",
+      "get /travtrack/last-seen": "on",
       "get /travtrack/export": "held",
       "post /travtrack/imports": "on",
       "get /travtrack/imports": "held",

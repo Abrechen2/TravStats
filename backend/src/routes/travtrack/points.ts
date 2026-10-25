@@ -14,6 +14,7 @@ import {
 } from "../../schemas/travtrack";
 import { deleteTravTrackRange } from "../../services/travtrack/deleteRange";
 import { ingestTravTrackPoints } from "../../services/travtrack/ingest";
+import { lastSeen } from "../../services/travtrack/lastSeen";
 import { resolveSpan } from "../../services/travtrack/range";
 import logger from "../../utils/logger";
 import { travTrackTier } from "./gate";
@@ -215,6 +216,31 @@ router.get(
         .sort((a, b) => b.pointCount - a.pointCount),
       deletedRanges,
       zones,
+    });
+  })
+);
+
+/**
+ * GET /travtrack/last-seen — „Zuletzt gesehen" (TravTrack plan L2): the
+ * newest real, privacy-safe fix of the own history, or `{ lastSeen: null }`.
+ * Tier `on`: a view. The owner's alone, and `no-store` like all of `/api`.
+ */
+router.get(
+  "/travtrack/last-seen",
+  authenticate,
+  travTrackTier("on"),
+  route(async (req, res) => {
+    const seen = await lastSeen(req.userId!);
+    res.json({
+      lastSeen: seen && {
+        at: new Date(seen.atMs).toISOString(),
+        lat: seen.lat,
+        lon: seen.lon,
+        accuracyM: seen.accuracyM,
+        deviceId: seen.deviceId,
+        deviceLabel: seen.deviceLabel,
+        origin: seen.origin,
+      },
     });
   })
 );

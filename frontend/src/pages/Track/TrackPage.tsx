@@ -15,6 +15,7 @@ import {
   type PrivacyZone,
   type TravTrackDay,
 } from "../../lib/api/travtrack";
+import { LastSeenLine } from "../../components/Dashboard/LastSeenCard";
 import { addDays } from "../../shared/time/calendar";
 import { todayIn } from "../../shared/time/clock";
 import TrackCoverageBar from "./TrackCoverageBar";
@@ -58,6 +59,7 @@ function TrackHeader({ view }: { view: TrackView }): JSX.Element {
     <header className="flex flex-col gap-2">
       <h1 className="t-screen-title">{t("track:title")}</h1>
       <p className="t-caption">{t("track:intro")}</p>
+      <LastSeenLine />
       <Segmented<TrackView>
         label={t("track:tabs.label")}
         value={view}

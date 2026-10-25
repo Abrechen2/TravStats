@@ -9,6 +9,7 @@ const api = vi.hoisted(() => ({
   summary: vi.fn(),
   deleteDays: vi.fn(),
   exportFile: vi.fn(),
+  lastSeen: vi.fn(),
 }));
 vi.mock("../../../lib/api/travtrack", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../lib/api/travtrack")>()),
@@ -17,12 +18,14 @@ vi.mock("../../../lib/api/travtrack", async (importOriginal) => ({
 const access = vi.hoisted(() => ({ value: "visible" as "visible" | "hidden" | "pending" }));
 vi.mock("../../../hooks/useTravTrackVisible", () => ({
   useTravTrackAccess: () => access.value,
+  useTravTrackVisible: () => access.value === "visible",
 }));
 vi.mock("../../../hooks/useTodayZone", () => ({ useTodayZone: () => "Asia/Seoul" }));
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) =>
       opts ? `${key} ${JSON.stringify(opts)}` : key,
+    i18n: { language: "de" },
   }),
 }));
 // WebGL is not there in jsdom: the map stub says what it was given.
@@ -110,6 +113,24 @@ describe("TrackPage", () => {
     Object.values(api).forEach((fn) => fn.mockReset());
     api.day.mockResolvedValue(DAY);
     api.zones.mockResolvedValue([]);
+    api.lastSeen.mockResolvedValue(null);
+  });
+
+  it("the header says where the history last placed the account", async () => {
+    api.lastSeen.mockResolvedValue({
+      at: "2026-10-12T05:00:00.000Z",
+      lat: 37.5,
+      lon: 127,
+      accuracyM: 5,
+      deviceId: "phone-1",
+      deviceLabel: "Pixel 9",
+      origin: "companion:phone-1",
+    });
+    renderAt();
+    const line = await screen.findByTestId("track-last-seen");
+    expect(line.textContent).toContain("track:lastSeen.line");
+    expect(line.textContent).toContain("Pixel 9");
+    expect(line.textContent).not.toContain("37.5");
   });
 
   it("the day shows segments and labels them from TravStats context", async () => {
