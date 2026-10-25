@@ -17,7 +17,8 @@ import { storedPoints, type RecordingBatchRow, type StoredPoint } from "./segmen
  * map, the day filter, the GPX and the jitter filter read both alike.
  *
  * Like the trip recording, a point inside a flight's recorder window stays
- * out: the flight has those hours, and the trip track shows them as a break.
+ * out: the flight has those hours, and the trip track shows them as a break —
+ * an explicit one (`RecordingBreak`), carried to the map and the GPX.
  * A point the trip recording also holds (same device, same second, same
  * position) is shown once. `extra` are observations the caller adds — the
  * TravTrack points linked to the trip — deduplicated by the provider's ref.
@@ -62,9 +63,13 @@ export async function locationHistoryBatches(
     byDevice.set(o.deviceId, list);
   }
   return {
+    // The flight windows go along as explicit breaks: with their points left
+    // out, two fixes either side of a short flight are close enough in time and
+    // space for the gap rule to join them, and the line would fly the plane.
     batches: [...byDevice.entries()].map(([deviceId, points]) => ({
       deviceId,
       points: points as unknown as Prisma.JsonValue,
+      breaks: bounds.flightWindows,
     })),
     coverage: read.coverage,
   };

@@ -1,4 +1,5 @@
 import { locationHistoryBatches } from "../historyPoints";
+import { pointsByDevice, rawSegments, withoutJitter } from "../segments";
 import type { RecordingTrip } from "../bounds";
 import type {
   LocationObservation,
@@ -15,6 +16,7 @@ import type {
 const FROM = Date.parse("2026-03-10T00:00:00Z");
 const UNTIL = Date.parse("2026-03-12T00:00:00Z");
 const FLIGHT: [number, number] = [FROM + 10 * 3_600_000, FROM + 12 * 3_600_000];
+const mockWindows: { flightWindows: Array<[number, number]> } = { flightWindows: [FLIGHT] };
 
 jest.mock("../bounds", () => ({
   ...jest.requireActual("../bounds"),
@@ -22,7 +24,7 @@ jest.mock("../bounds", () => ({
     fromMs: FROM,
     untilMs: UNTIL,
     zone: "UTC",
-    flightWindows: [FLIGHT],
+    flightWindows: mockWindows.flightWindows,
   }),
 }));
 
@@ -51,6 +53,34 @@ const providerOf = (kind: "travtrack" | "dawarich", answer: ReadResult): Locatio
 const pointsOf = (batch: { points: unknown }) => (batch.points as number[][]).map((p) => p[0]);
 
 describe("a trip's history through its provider", () => {
+  afterEach(() => {
+    mockWindows.flightWindows = [FLIGHT];
+  });
+
+  it("a short flight inside the trip stays a break, though the fixes either side are close", async () => {
+    const MIN = 60_000;
+    const start = FROM + 10 * 3_600_000;
+    mockWindows.flightWindows = [[start, start + 40 * MIN]];
+    const provider = providerOf("travtrack", {
+      points: [
+        obs("1", start - 20 * MIN, "phone-a"),
+        obs("2", start - 10 * MIN, "phone-a", 60.391),
+        obs("3", start + 20 * MIN, "phone-a", 60.4), // in flight
+        obs("4", start + 50 * MIN, "phone-a", 60.392),
+        obs("5", start + 60 * MIN, "phone-a", 60.393),
+      ],
+      next: null,
+      coverage: "complete",
+    });
+    const { batches } = await locationHistoryBatches("u", trip, provider);
+    const devices = pointsByDevice(batches, "UTC");
+    expect(rawSegments(devices).map((s) => s.map((p) => p[0]))).toEqual([
+      [start - 20 * MIN, start - 10 * MIN],
+      [start + 50 * MIN, start + 60 * MIN],
+    ]);
+    expect((await withoutJitter(devices)).segments).toHaveLength(2);
+  });
+
   it("a trip reads its share of TravTrack points per device, minus the flight window", async () => {
     const provider = providerOf("travtrack", {
       points: [
