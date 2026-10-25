@@ -8,6 +8,7 @@
 export type TravTrackApiErrorCode =
   | "TRAVTRACK_DISABLED" // the instance does not capture or show TravTrack now (403)
   | "TRAVTRACK_DEVICE_REQUIRED" // positions come from a paired device only (403)
+  | "TRAVTRACK_NOT_ACTIVE" // this account's location provider is not a working TravTrack (403/409)
   | "LOCATION_ZONE_HOLDS_POINTS" // a new or grown zone would delete stored points: ask first (409)
   | "LOCATION_ZONE_LIMIT" // the account holds the most privacy zones there may be (409)
   | "LOCATION_ZONE_NOT_FOUND" // no such zone of this account (404)

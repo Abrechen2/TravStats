@@ -133,6 +133,7 @@ if (corsOrigin) {
 
 import { RATE_LIMITS, FILE_LIMITS } from "./config/constants";
 import { skipGlobalRateLimit } from "./middleware/rateLimit";
+import { ingestRawBody, TRAVTRACK_INGEST_PATH } from "./middleware/ingestBody";
 
 // Rate limiting. `skipGlobalRateLimit` (middleware/rateLimit.ts) says who is
 // let through uncounted, and why it is nobody in production.
@@ -147,6 +148,10 @@ const limiter = rateLimit({
   skip: (req) => skipGlobalRateLimit(req.ip),
 });
 app.use("/api/", limiter);
+
+// OwnTracks and Overland bodies are read by their own capped reader first
+// (middleware/ingestBody.ts), so the 10 MB parser below never sees them.
+app.use(TRAVTRACK_INGEST_PATH, ingestRawBody);
 
 // Body parsing with increased limits for email imports
 app.use(express.json({ limit: FILE_LIMITS.JSON_BODY_MAX_SIZE }));

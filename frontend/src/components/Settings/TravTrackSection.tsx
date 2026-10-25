@@ -25,6 +25,7 @@ import {
 } from "../../lib/api/travtrack";
 import TrackExportDialog from "../../pages/Track/TrackExportDialog";
 import TravTrackImports from "./TravTrackImports";
+import TravTrackSources from "./TravTrackSources";
 
 /** The circles offered, metres: a flat to a small town (the server takes 50–5000). */
 export const ZONE_RADII = [100, 250, 500, 1000, 2000] as const;
@@ -210,6 +211,10 @@ export default function TravTrackSection(): JSX.Element | null {
         canDelete={!isDemo}
         onChanged={() => void load()}
       />
+
+      {(caps.sources ?? []).some((s) => s === "owntracks" || s === "overland") && (
+        <TravTrackSources canCreate={caps.enabled && caps.active && !isDemo} canRevoke={!isDemo} />
+      )}
 
       <h3 className="t-card-title" style={{ marginTop: "var(--ts-space-lg)" }}>
         {t(`${NS}.zones.title`)}

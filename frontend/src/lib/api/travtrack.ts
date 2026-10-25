@@ -16,6 +16,8 @@ export interface TravTrackCapabilities {
   active: boolean;
   /** This account holds TravTrack data: summary, export and delete stay reachable. */
   hasData: boolean;
+  /** Where this server takes positions from (plan E9); absent on an older server. */
+  sources?: Array<"companion" | "gpx" | "owntracks" | "overland">;
 }
 
 export interface TravTrackConfig {

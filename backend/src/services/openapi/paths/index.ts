@@ -99,6 +99,7 @@ import "./travplan";
 import "./travtrack";
 import "./travtrackDay";
 import "./travtrackImports";
+import "./travtrackSources";
 import "./travtrackShare";
 
 import "./geoServer";

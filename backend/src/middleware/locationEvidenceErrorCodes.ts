@@ -12,6 +12,8 @@ export type LocationEvidenceApiErrorCode =
   | "SUGGESTION_ACCEPT_IN_PROGRESS" // another accept of the same suggestion is running; retry (409)
   | "SUGGESTION_NOT_FOUND" // no such suggestion of this account — or it went with deleted history (404)
   | "INGEST_TOKEN_INVALID" // unknown, revoked or other-kind OwnTracks/Overland token (401)
+  | "INGEST_TOKEN_LIMIT" // the account holds the most ingest tokens there may be (409)
+  | "INGEST_TOKEN_NOT_FOUND" // no such live ingest token of this account (404)
   | "TRAVTRACK_IMPORT_NO_TIMES" // the imported file holds no point with a time
   | "TRAVTRACK_IMPORT_UNREADABLE" // the imported file could not be read
   | "TRAVTRACK_IMPORT_TOO_MANY_POINTS" // the imported file holds more fixes than one import takes
