@@ -14,6 +14,8 @@ const scanTimes = z.object({
   windowEnd: timeValueSchema.nullable(),
 });
 const tags = ["Dawarich"];
+/** The scan row as answered: `provider` (the last scan's source) stays server-side. */
+const { provider: _scanProvider, ...scanColumns } = prismaColumns("DawarichStayScan");
 const failure = {
   description: "Invalid input, inaccessible finding, absent connection, or concurrent operation",
   content: errorContent,
@@ -59,13 +61,13 @@ registry.registerPath({
     200: response(
       z
         .object({
-          ...prismaColumns("DawarichStayScan"),
+          ...scanColumns,
           times: scanTimes,
           connected: z.boolean(),
           source: z
-            .enum(["dawarich", "travtrack"])
+            .literal("travtrack")
             .describe(
-              "Where the scan reads: TravTrack for provider `travtrack`, otherwise the own Dawarich connection"
+              "Present only when the scan reads TravTrack (provider `travtrack`); absent, it reads the own Dawarich connection"
             ),
           placesEnabled: z.boolean(),
           pausedReason: z
@@ -114,7 +116,7 @@ registry.registerPath({
     },
   },
   responses: {
-    200: response(z.object({ ...prismaColumns("DawarichStayScan"), times: scanTimes })),
+    200: response(z.object({ ...scanColumns, times: scanTimes })),
     403: {
       description:
         "TRAVTRACK_DISABLED: consent through TravTrack while the server's TravTrack is off (revoking is always allowed)",

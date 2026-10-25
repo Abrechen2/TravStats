@@ -5,8 +5,8 @@ import { waitForJob } from "./jobs";
 export interface StayScanState {
   enabled: boolean;
   connected: boolean;
-  /** Where the scan reads: TravTrack for provider `travtrack`, otherwise the own Dawarich connection. */
-  source?: "dawarich" | "travtrack";
+  /** Present only when the scan reads TravTrack; absent, it reads the own Dawarich connection. */
+  source?: "travtrack";
   marketEnabled?: boolean;
   venueEnabled?: boolean;
   marketResult?: {

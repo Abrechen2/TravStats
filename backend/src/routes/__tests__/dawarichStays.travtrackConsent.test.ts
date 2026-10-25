@@ -12,6 +12,8 @@ import { encryptApiKey } from "../../utils/encryption";
 import { generateToken } from "../../utils/jwt";
 import { makeUser } from "../../services/travtrack/__tests__/fixtures";
 import { travTrackSwitches } from "../../services/travtrack/__tests__/switches";
+import { reserveScan, scanStays } from "../../services/dawarich/stays/scan";
+import type { DawarichClient } from "../../services/dawarich/dawarichClient";
 
 jest.mock("../../utils/achievements", () => ({ recheckAchievements: jest.fn(async () => {}) }));
 
@@ -142,6 +144,105 @@ describe("providers dawarich and none keep today's rule", () => {
   it("provider none with an own connection consents and reads Dawarich, as today", async () => {
     expect((await patch(noneConnected.cookie, { enabled: true })).status).toBe(200);
     const res = await settings(noneConnected.cookie);
-    expect(res.body.data).toMatchObject({ source: "dawarich", connected: true });
+    expect(res.body.data).toMatchObject({ connected: true });
+    expect(res.body.data).not.toHaveProperty("source");
   });
+});
+
+/**
+ * Golden: what a Dawarich account's settings answer held on main before
+ * TravTrack — the fifteen `dawarich_stay_scans` columns, `times` and the
+ * derived fields, and nothing else (no `source`, no scan `provider`). Instants
+ * are normalised; everything else is compared as is.
+ */
+describe("a Dawarich account's settings answer is what it was", () => {
+  const now = new Date("2026-10-11T06:00:00Z");
+  const client: DawarichClient = {
+    checkHealth: async () => ({ reachable: true, version: null }),
+    getPoints: async () => ({
+      points: [0, 10, 20, 30].map((m, i) => ({
+        id: i + 1,
+        latitude: 37.57,
+        longitude: 126.97,
+        timestampMs: Date.parse("2026-10-10T14:50:00Z") + m * 60_000,
+        accuracy: 10,
+        altitude: null,
+        velocity: null,
+        trackId: null,
+      })),
+      truncated: false,
+    }),
+  };
+  const ISO = /^\d{4}-\d{2}-\d{2}T/;
+  const normalise = (value: unknown): unknown => {
+    if (typeof value === "string" && ISO.test(value)) return "<instant>";
+    if (Array.isArray(value)) return value.map(normalise);
+    if (value && typeof value === "object")
+      return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, normalise(v)]));
+    return value;
+  };
+  const minute = {
+    utc: "<instant>",
+    local: "<instant>",
+    offset: "+00:00",
+    zone: "UTC",
+    zoneSource: "stored",
+    precision: "minute",
+  };
+  const expected = (userId: string) => ({
+    userId,
+    enabled: true,
+    marketEnabled: false,
+    venueEnabled: false,
+    marketResult: null,
+    startedAt: "<instant>",
+    finishedAt: "<instant>",
+    leaseUntil: null,
+    result: "succeeded",
+    error: null,
+    dataThrough: "<instant>",
+    windowStart: "<instant>",
+    windowEnd: "<instant>",
+    pointCount: 4,
+    createdCount: 1,
+    times: {
+      startedAt: minute,
+      finishedAt: minute,
+      leaseUntil: null,
+      dataThrough: minute,
+      windowStart: minute,
+      windowEnd: minute,
+    },
+    placesEnabled: true,
+    pausedReason: null,
+    nextScanAt: "<instant>",
+    connected: true,
+  });
+
+  for (const provider of ["dawarich", "none"] as const) {
+    it(`provider ${provider}: GET and PATCH answer exactly the fields of main`, async () => {
+      const own = await account(`golden-${provider}`, provider, true);
+      expect((await patch(own.cookie, { enabled: true })).status).toBe(200);
+      await reserveScan(own.id, now);
+      await scanStays(own.id, { now, client });
+      // The scan records its source in its own column; the answer never shows it.
+      expect(
+        (await prisma.dawarichStayScan.findUniqueOrThrow({ where: { userId: own.id } })).provider
+      ).toBe("dawarich");
+      const got = await settings(own.cookie);
+      expect(got.status).toBe(200);
+      expect(normalise(got.body)).toEqual({ success: true, data: expected(own.id) });
+      expect(Object.keys(got.body.data).sort()).toEqual(Object.keys(expected(own.id)).sort());
+
+      const patched = await patch(own.cookie, { marketEnabled: false });
+      const {
+        placesEnabled: _p,
+        pausedReason: _r,
+        nextScanAt: _n,
+        connected: _c,
+        ...stored
+      } = expected(own.id);
+      expect(Object.keys(patched.body.data).sort()).toEqual(Object.keys(stored).sort());
+    });
+  }
 });

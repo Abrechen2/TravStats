@@ -82,7 +82,9 @@ router.get("/settings", async (req: AuthRequest, res, next) => {
         nextScanAt: pausedReason ? null : nextStayScanAt().toISOString(),
         enabled: state?.enabled ?? false,
         connected,
-        source,
+        // Only a TravTrack account learns its source: a Dawarich account's
+        // answer stays exactly what it was before TravTrack.
+        ...(source === "travtrack" ? { source } : {}),
         marketEnabled: state?.marketEnabled ?? false,
         venueEnabled: state?.venueEnabled ?? false,
         marketResult: publicMarketCoverage(state?.marketResult),

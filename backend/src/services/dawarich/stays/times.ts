@@ -23,17 +23,24 @@ export function withStayTimes<T extends DawarichStay & { visit?: unknown }>(row:
     },
   };
 }
-export function withScanTimes(row: DawarichStayScan | null) {
+/**
+ * The scan state as the API answers it. `provider` (the last scan's source,
+ * TravTrack plan E1) is bookkeeping and stays server-side, so a Dawarich
+ * account's answer holds exactly the columns it held before TravTrack; a
+ * TravTrack account learns its source from the settings' `source` instead.
+ */
+export function withScanTimes(scan: DawarichStayScan | null) {
+  const { provider: _provider, ...row } = scan ?? ({} as Partial<DawarichStayScan>);
   return {
-    ...row,
-    ...(row ? { marketResult: publicMarketCoverage(row.marketResult) } : {}),
+    ...(scan ? row : {}),
+    ...(scan ? { marketResult: publicMarketCoverage(scan.marketResult) } : {}),
     times: {
-      startedAt: at(row?.startedAt ?? null),
-      finishedAt: at(row?.finishedAt ?? null),
-      leaseUntil: at(row?.leaseUntil ?? null),
-      dataThrough: at(row?.dataThrough ?? null),
-      windowStart: at(row?.windowStart ?? null),
-      windowEnd: at(row?.windowEnd ?? null),
+      startedAt: at(scan?.startedAt ?? null),
+      finishedAt: at(scan?.finishedAt ?? null),
+      leaseUntil: at(scan?.leaseUntil ?? null),
+      dataThrough: at(scan?.dataThrough ?? null),
+      windowStart: at(scan?.windowStart ?? null),
+      windowEnd: at(scan?.windowEnd ?? null),
     },
   };
 }

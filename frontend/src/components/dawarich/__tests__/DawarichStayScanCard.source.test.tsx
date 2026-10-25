@@ -68,7 +68,6 @@ describe("the scan card by source", () => {
     vi.mocked(dawarichStaysApi.state).mockResolvedValue({
       ...base,
       connected: false,
-      source: "dawarich",
     } as never);
     mount();
     expect(await screen.findByText("trips:dawarichStays.title")).toBeInTheDocument();
