@@ -14,7 +14,7 @@
 | # | Phase | Companion | Server | State |
 |---|---|---|---|---|
 | 1 | Navigation + Start | Fixed bar Start · Reisen · + · Karte · Statistik; account button top right (old "Mehr" sheet, carries the inbox dot); board editor and presets removed; Start picks its composition from the trips (between / before a trip within 14 days / travelling), computed on the device from `GET /trips` | none — existing endpoints only | **done** (app, `c2b0ade1`) |
-| 2 | Reisen + Track | Reisen list and trip header with cover image; "Bearbeiten im Web" buttons; review findings in the inbox with resolve + undo | C1 (no work), C2 (pattern only, optional `webBaseUrl`), C3 (new finding kinds, undo) | open |
+| 2 | Reisen + Track | Reisen list and trip header with cover image; "Bearbeiten im Web" buttons; review findings in the inbox with resolve + undo | C1 (no work), C2 (pattern only), C3 (new finding kinds, undo) | open |
 | 3 | Statistik | Gesamt/Jahr switch driving every drilldown | C4 (`year` on every stats endpoint the app reads) | open |
 
 C5 (server-side trip phase) is **not** built — see below.
@@ -71,10 +71,9 @@ so a link is `<serverUrl><path>`. Patterns, all existing web routes:
 | Settings group | `/settings/:page` |
 
 - Unknown id → the web shows its own not-found; the app needs no check first.
-- **Optional, only if an instance serves the web elsewhere:** an additive
-  `webBaseUrl: string | null` on `GET /api/v1/version` (from the admin
-  setting `frontend_url`; `null` = same origin as the API). Not built until
-  the app asks for it — the standard image does not need it.
+- No `webBaseUrl` field: every instance serves web and API on one origin
+  (Companion, 2026-10-25). If that ever changes, an additive
+  `webBaseUrl: string | null` on `GET /api/v1/version` is the way.
 - Airports, airlines, ports and ships have no web detail page today; a
   button for them is out of scope until one exists.
 
@@ -160,8 +159,24 @@ partial scope would lie.
   `include` supports it; until then the 400 stands, per section.
 - Each response carries `scope: { year: number | null }`, so the app can
   check that the answer is the one it asked for.
-- **The app must send the list of endpoints it reads** (message, then added
-  here); the server builds exactly those first.
+- On `yearUnsupported` the app greys out the year switch on that screen and
+  says so; it never falls back to all-time silently.
+
+**Endpoints the app reads** (Companion, 2026-10-25), in build order, with
+today's state:
+
+| # | Endpoint | Today | Work |
+|---|---|---|---|
+| 1 | `/stats/summary` | `year`, `compareYear` | add `scope` only |
+| 2 | `/stats/hero` | no parameters | add `year` |
+| 3 | `/stats/timeseries` | `year` + `window=year`, `fromDate`/`toDate` | `year` alone means the 12 months of that year (`granularity=month`); add `scope` |
+| 4 | `/stats/airports` · `/stats/airlines` · `/stats/aircraft-types` | `fromDate`/`toDate` · none · none | add `year` |
+| 5 | `/stats/lodging` · `/stats/cruise` · `/rail/stats` | none · none · `year` (+ `until`) | add `year` to the first two; rail: add `scope` only |
+| 6 | `/stats/countries/:code` · `/stats/passport` | none · none | add `year` |
+| 7 | `/stats/punctuality` · `/stats/records` | `fromDate`/`toDate` · none | add `year` |
+
+Not scoped: `/stats/wrapped` (has its own year), `/stats/page` (not used by
+the app).
 
 ### C5 — Server-side trip phase: not built
 
@@ -174,10 +189,13 @@ from there — then it becomes a contract item.
 
 ## Open for Companion
 
-- The list of stats endpoints the app reads (C4).
-- Whether C2's `webBaseUrl` is needed by any real instance.
+- Nothing. C1/C2/C4 accepted as written; C3 sits behind a feature check in
+  the app (2026-10-25).
 
 ## Open for server
 
-- Owner decisions on C3 (undo location, detector order).
-- C4 implementation after the endpoint list arrives.
+- Owner decisions on C3 (undo location, detector order). Server and
+  Companion both recommend: app-side ~5 s undo in phase 2, server undo only
+  for dismiss/link, duplicate detector first.
+- C4 implementation, in the order of the table above — waiting for the
+  owner's go.
