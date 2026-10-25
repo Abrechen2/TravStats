@@ -29,9 +29,9 @@ vi.mock("../../../hooks/useTranslation", () => ({
   }),
 }));
 // WebGL is not there in jsdom: the map stub says what it was given.
-vi.mock("../TrackDayMap", () => ({
-  default: ({ segments }: { segments: unknown[] }) => (
-    <div data-testid="track-day-map-stub">{segments.length} segments</div>
+vi.mock("../map/TrackRangeMap", () => ({
+  default: ({ lines }: { lines: unknown[] }) => (
+    <div data-testid="track-day-map-stub">{lines.length} segments</div>
   ),
 }));
 
@@ -187,8 +187,10 @@ describe("TrackPage", () => {
   ])("%s renders the main bar and no tab strip of its own", async (path) => {
     renderAt(path);
     expect(await screen.findByTestId("main-bar-stub")).toBeInTheDocument();
-    expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
-    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    // The old view tabs were a radio group; the map's own controls (route
+    // colour) are radio groups too, so the tab strip is looked up by its name.
+    expect(screen.queryByRole("radiogroup", { name: "track:tabs.label" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: "track:tabs.day" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("track:title");
   });
 

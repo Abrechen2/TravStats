@@ -45,9 +45,6 @@
     "at": "{{at}}",
     "endOfDay": "24:00"
   },
-  "zones": {
-    "legend": "Your privacy zones are drawn as circles; nothing is recorded inside them."
-  },
   "actions": {
     "export": "Export",
     "delete": "Delete a span"
@@ -337,5 +334,88 @@
     "staysBody": "The places where you stayed for a while will appear here soon.",
     "importsTitle": "Imports",
     "importsBody": "All imports of your location history will soon be gathered here."
+  },
+  "map": {
+    "panel": "Layers and appearance",
+    "zonesNeverDrawn": "Private zones are left out and never drawn",
+    "dayFailed": "{{day}} could not be loaded: {{reason}}",
+    "retry": "Load again",
+    "rangeEmpty": "Nothing was recorded on these days.",
+    "fogLoading": "Loading explored areas …",
+    "range": {
+      "previous": "Previous range",
+      "next": "Next range",
+      "today": "Today, {{day}}",
+      "yesterday": "Yesterday, {{day}}",
+      "span": "{{from}} – {{to}}",
+      "preset": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "week": "7 days"
+      }
+    },
+    "live": {
+      "off": "Follow live",
+      "on": "● Following live",
+      "failed": "Following live is not working right now: {{reason}}"
+    },
+    "layers": {
+      "title": "Layers",
+      "routes": "Routes",
+      "routesHint": "Lines between the points",
+      "points": "Points",
+      "pointsHint": "Every position, clickable",
+      "heat": "Heatmap",
+      "heatHint": "Where you spend a lot of time",
+      "fog": "Explored fog",
+      "fogHint": "Unknown ground darkened",
+      "visits": "Stays and places",
+      "visitsHint": "Home, lodging, places, detected stays",
+      "entries": "Logbook entries",
+      "entriesHint": "Flights, rides, trips"
+    },
+    "route": {
+      "title": "Routes",
+      "color": "Colour",
+      "speed": "By speed",
+      "plain": "Single colour",
+      "kmhMax": "{{kmh}}+ km/h",
+      "opacity": "Opacity",
+      "split": "Split a route after a pause of",
+      "splitNone": "Only where the server splits",
+      "splitMinutes_one": "{{count}} minute",
+      "splitMinutes_other": "{{count}} minutes",
+      "splitHours_one": "{{count}} hour",
+      "splitHours_other": "{{count}} hours",
+      "alwaysCut": "Private zones, deleted spans, pauses and flight-mode gaps always split, whatever is set here. This can only split further, never join."
+    },
+    "replay": {
+      "play": "Start replay",
+      "pause": "Pause replay",
+      "scrub": "Replay position",
+      "rate": "Replay speed",
+      "reset": "Show the whole route",
+      "gaps": "Jumps over gaps, nothing is made up"
+    },
+    "point": {
+      "title": "Position",
+      "accuracy": "Accuracy ±{{m}} m",
+      "accuracyUnknown": "Accuracy unknown",
+      "close": "Close"
+    },
+    "totals": {
+      "title": "Summary",
+      "distance": "Distance",
+      "moving": "Moving",
+      "avgSpeed": "Avg. speed",
+      "points": "Points",
+      "coverage": "Coverage",
+      "km": "{{km}} km",
+      "kmh": "{{kmh}} km/h",
+      "minutes": "{{m}} min",
+      "hours": "{{h}} h {{m}} min",
+      "note": "Counted within a route only — never across a gap, zone or pause. Moving means faster than 3 km/h."
+    },
+    "quietDays": "Nothing recorded and no entry: {{days}}"
   }
 }
