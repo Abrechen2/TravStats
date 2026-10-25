@@ -676,6 +676,13 @@
     "nextScan": "Next automatic scan",
     "noPoints": "No location points were returned for this period. Stays cannot be inferred from missing data.",
     "staleData": "The newest returned location data is over 24 hours old. Check your Dawarich sync; a successful request does not mean current points are available.",
+    "travtrack": {
+      "title": "Stays from TravTrack",
+      "source": "From your TravTrack history",
+      "description": "Every six hours, your TravTrack history is checked for possible stays in the last seven days. These are suggestions only: a visit is recorded after your confirmation. This does not enable Immich scanning or country detection.",
+      "off": "TravTrack is currently switched off on this server. No new stays are detected; you can still switch detection off at any time.",
+      "staleData": "The newest location data in TravTrack is over 24 hours old. Check that your phone is still recording and uploading."
+    },
     "markets": {
       "enable": "Suggest market visits automatically",
       "privacy": "Area recognition queries approximate regions (roughly 5 km grid cells) from OpenStreetMap/Overpass. Your location sequences, times and point IDs are not sent. Visits are only recorded after your confirmation.",

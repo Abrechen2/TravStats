@@ -61,3 +61,41 @@ export async function staySource(
   const client = options.client ?? createDawarichClient(await ownConnection(userId));
   return { kind: "dawarich", client, rev: choice.rev };
 }
+
+/**
+ * Where the account's stay scan would read, and whether it can (the settings
+ * card). Provider `travtrack` reads TravTrack: connected while TravTrack is
+ * available to the account. Every other provider reads the own Dawarich
+ * connection, exactly as before.
+ */
+export async function staySourceStatus(
+  userId: string
+): Promise<{ source: StaySourceKind; connected: boolean }> {
+  const provider = await getLocationProvider(userId);
+  if (provider.kind === "travtrack")
+    return { source: "travtrack", connected: provider.status === "ok" };
+  try {
+    await ownConnection(userId);
+    return { source: "dawarich", connected: true };
+  } catch (error) {
+    // Only "no own connection" means disconnected; a database error is one.
+    if (error instanceof AppError && error.code === "DAWARICH_OWN_CONNECTION_REQUIRED")
+      return { source: "dawarich", connected: false };
+    throw error;
+  }
+}
+
+/**
+ * Consent to the scan (or its map modules) needs a source that can be read
+ * (owner decision 2026-10-25): provider `travtrack` while TravTrack is on —
+ * no own Dawarich connection — or else 403 `TRAVTRACK_DISABLED`; every other
+ * provider the own Dawarich connection, as before. Revoking is never checked.
+ */
+export async function requireConsentSource(userId: string): Promise<void> {
+  const provider = await getLocationProvider(userId);
+  if (provider.kind === "travtrack") {
+    if (provider.status === "ok") return;
+    throw new AppError("TravTrack is switched off on this server", 403, "TRAVTRACK_DISABLED");
+  }
+  await ownConnection(userId);
+}

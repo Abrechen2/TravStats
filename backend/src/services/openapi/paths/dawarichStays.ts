@@ -62,12 +62,23 @@ registry.registerPath({
           ...prismaColumns("DawarichStayScan"),
           times: scanTimes,
           connected: z.boolean(),
+          source: z
+            .enum(["dawarich", "travtrack"])
+            .describe(
+              "Where the scan reads: TravTrack for provider `travtrack`, otherwise the own Dawarich connection"
+            ),
           placesEnabled: z.boolean(),
           pausedReason: z
-            .enum(["suggestionsDisabled", "disabled", "placesDisabled", "connectionMissing"])
+            .enum([
+              "suggestionsDisabled",
+              "disabled",
+              "placesDisabled",
+              "connectionMissing",
+              "travTrackDisabled",
+            ])
             .nullable()
             .describe(
-              "`suggestionsDisabled`: the account switched stay suggestions off (forgejo#306)"
+              "`suggestionsDisabled`: the account switched stay suggestions off (forgejo#306). `travTrackDisabled`: the source is TravTrack and the server's TravTrack is off"
             ),
           nextScanAt: z.string().datetime().nullable(),
           result: z.string().nullable(),
@@ -104,6 +115,11 @@ registry.registerPath({
   },
   responses: {
     200: response(z.object({ ...prismaColumns("DawarichStayScan"), times: scanTimes })),
+    403: {
+      description:
+        "TRAVTRACK_DISABLED: consent through TravTrack while the server's TravTrack is off (revoking is always allowed)",
+      content: errorContent,
+    },
     409: failure,
   },
 });

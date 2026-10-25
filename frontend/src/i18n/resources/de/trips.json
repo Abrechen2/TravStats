@@ -676,6 +676,13 @@
     "nextScan": "Nächste automatische Auswertung",
     "noPoints": "Für diesen Zeitraum wurden keine Positionspunkte geliefert. Daraus lassen sich keine Aufenthalte ableiten.",
     "staleData": "Die zuletzt gelieferten Positionsdaten sind mehr als 24 Stunden alt. Prüfe die Synchronisierung mit Dawarich; ein erfolgreicher Abruf bedeutet nicht, dass aktuelle Punkte vorliegen.",
+    "travtrack": {
+      "title": "Aufenthalte aus TravTrack",
+      "source": "Aus deinem TravTrack-Verlauf",
+      "description": "Aus deinem TravTrack-Verlauf werden alle sechs Stunden mögliche Aufenthalte der letzten sieben Tage erkannt. Es entstehen nur Vorschläge: Ein Besuch wird erst nach deiner Bestätigung eingetragen. Dies aktiviert weder den Immich-Scan noch die Ländererkennung.",
+      "off": "TravTrack ist auf diesem Server gerade ausgeschaltet. Es werden keine neuen Aufenthalte erkannt; du kannst die Erkennung aber jederzeit ausschalten.",
+      "staleData": "Die neuesten Positionsdaten in TravTrack sind mehr als 24 Stunden alt. Prüfe, ob dein Telefon noch aufzeichnet und hochlädt."
+    },
     "markets": {
       "enable": "Marktbesuche automatisch vorschlagen",
       "privacy": "Für die Flächenerkennung werden ungefähre Regionen (etwa 5-km-Raster) bei OpenStreetMap/Overpass abgefragt. Deine Positionsfolgen, Zeiten und Punkt-IDs werden nicht übertragen. Besuche werden erst nach deiner Bestätigung eingetragen.",

@@ -6,7 +6,8 @@ import { authenticate, requireWriteScope, type AuthRequest } from "../middleware
 import { rejectDemo } from "../middleware/demoGuard";
 import { userOrIpKey, patAwareMax } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
-import { ownConnection, reserveScan, scanStays } from "../services/dawarich/stays/scan";
+import { reserveScan, scanStays } from "../services/dawarich/stays/scan";
+import { requireConsentSource, staySourceStatus } from "../services/dawarich/stays/scanSource";
 import { acceptStay, rejectStay } from "../services/dawarich/stays/review";
 import { resolveCoveredStays } from "../services/dawarich/stays/coverage";
 import { stayReviewSchema } from "../schemas/dawarichStays";
@@ -55,16 +56,9 @@ router.get("/settings", async (req: AuthRequest, res, next) => {
   try {
     const userId = user(req);
     const state = await prisma.dawarichStayScan.findUnique({ where: { userId } });
-    let connected = false;
-    try {
-      await ownConnection(userId);
-      connected = true;
-    } catch (error) {
-      // Only "no own connection" means disconnected. A database error used to
-      // land here too and was shown as a missing connection.
-      if (!(error instanceof AppError && error.code === "DAWARICH_OWN_CONNECTION_REQUIRED"))
-        throw error;
-    }
+    // TravTrack accounts read TravTrack (connected while it is on); every
+    // other provider the own Dawarich connection, as before.
+    const { source, connected } = await staySourceStatus(userId);
     const places = await placesEnabled(userId);
     // The account-wide inbox switch (forgejo#306) outranks the scan's own consent.
     const suggestions = await staySuggestionsEnabled(userId);
@@ -75,7 +69,9 @@ router.get("/settings", async (req: AuthRequest, res, next) => {
         : !places
           ? "placesDisabled"
           : !connected
-            ? "connectionMissing"
+            ? source === "travtrack"
+              ? "travTrackDisabled"
+              : "connectionMissing"
             : null;
     res.json({
       success: true,
@@ -86,6 +82,7 @@ router.get("/settings", async (req: AuthRequest, res, next) => {
         nextScanAt: pausedReason ? null : nextStayScanAt().toISOString(),
         enabled: state?.enabled ?? false,
         connected,
+        source,
         marketEnabled: state?.marketEnabled ?? false,
         venueEnabled: state?.venueEnabled ?? false,
         marketResult: publicMarketCoverage(state?.marketResult),
@@ -122,7 +119,7 @@ router.patch("/settings", rejectDemo, async (req: AuthRequest, res, next) => {
       throw new AppError("Enable own stay scan first", 409, "DAWARICH_SCAN_UNAVAILABLE");
     if (enabled && (patch.enabled || patch.marketEnabled || patch.venueEnabled)) {
       await requirePlacesEnabled(userId);
-      await ownConnection(userId);
+      await requireConsentSource(userId);
     }
     const state = await prisma.dawarichStayScan.upsert({
       where: { userId },

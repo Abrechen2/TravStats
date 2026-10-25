@@ -5,6 +5,8 @@ import { waitForJob } from "./jobs";
 export interface StayScanState {
   enabled: boolean;
   connected: boolean;
+  /** Where the scan reads: TravTrack for provider `travtrack`, otherwise the own Dawarich connection. */
+  source?: "dawarich" | "travtrack";
   marketEnabled?: boolean;
   venueEnabled?: boolean;
   marketResult?: {
@@ -22,7 +24,13 @@ export interface StayScanState {
     staleMapData: boolean;
   } | null;
   placesEnabled?: boolean;
-  pausedReason?: "suggestionsDisabled" | "disabled" | "placesDisabled" | "connectionMissing" | null;
+  pausedReason?:
+    | "suggestionsDisabled"
+    | "disabled"
+    | "placesDisabled"
+    | "connectionMissing"
+    | "travTrackDisabled"
+    | null;
   nextScanAt?: string | null;
   result: string | null;
   error: string | null;
