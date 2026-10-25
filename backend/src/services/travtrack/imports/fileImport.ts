@@ -6,7 +6,9 @@ import { AppError } from "../../../middleware/errorHandler";
 import logger from "../../../utils/logger";
 import { jobErrorOf, startJob } from "../../jobs/jobRegistry";
 import type { DropReason } from "../classify";
+import { bumpHistoryGeneration } from "../../locationEvidence/generation";
 import { onPointsRemoved } from "../deleteRange";
+import { utcDaysOf } from "../dirtyDays";
 import { ingestPoints, type IngestResult } from "../ingest";
 import { takeTravTrackLock } from "../lock";
 import type { GpxWorkerOptions } from "./gpxWorker";
@@ -292,10 +294,14 @@ export async function deleteTravTrackImport(
       });
       if (removed.length === 0) return { deleted: 0 };
       const { count } = await tx.travTrackPoint.deleteMany({ where: { userId, origin } });
+      // History went: a derivation that read before this must not publish
+      // after it (E1's generation fence), and the days go back to the projections.
+      await bumpHistoryGeneration(tx, userId);
       await onPointsRemoved(tx, userId, {
         kind: "origin",
         origin,
         spans: spansOf(removed.map((r) => r.t)),
+        days: utcDaysOf(removed.map((r) => r.t.getTime())),
       });
       return { deleted: count };
     },

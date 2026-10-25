@@ -1,6 +1,8 @@
 import { prisma } from "../../../db";
 import { AppError } from "../../../middleware/errorHandler";
 import { ingestTravTrackPoints } from "../ingest";
+import { registerPointsRemovedHandler } from "../deleteRange";
+import { historyGeneration } from "../../locationEvidence/generation";
 import { deleteTravTrackImport, runGpxImport, startGpxImport } from "../imports/fileImport";
 import { displayFileName, mapGpx, readGpxFile } from "../imports/mapGpx";
 import { GPX_IMPORT_MAX_POINTS } from "../imports/gpxWorker";
@@ -392,6 +394,66 @@ describe("TravTrack — GPX import", () => {
       expect(batches).toEqual([1]);
       expect(await statusOf(row.id)).toBe("cancelled");
       expect(await prisma.travTrackPoint.count({ where: { userId } })).toBe(0);
+    });
+
+    it("deleting an import raises the history generation and re-derives its days", async () => {
+      const { importId } = await importFile(
+        gpxFile([
+          [
+            ...minuteFixes("2026-10-12T05:00:00Z", 2),
+            ...minuteFixes("2026-10-14T05:00:00Z", 2, 37.6),
+          ],
+        ])
+      );
+      await prisma.travTrackDirtyDay.updateMany({ where: { userId }, data: { done: 1 } });
+      for (const day of ["2026-10-12", "2026-10-13", "2026-10-14"]) {
+        await prisma.countryDay.create({
+          data: {
+            userId,
+            date: new Date(`${day}T00:00:00Z`),
+            countryCode: "KR",
+            source: "travtrack",
+            pointCount: 2,
+            airportPointCount: 0,
+            spanKm: 0,
+          },
+        });
+      }
+      // What a derivation captures before it reads.
+      const before = await prisma.$transaction((tx) => historyGeneration(tx, userId));
+      await deleteTravTrackImport(userId, importId);
+      const after = await prisma.$transaction((tx) => historyGeneration(tx, userId));
+      expect(Number(after)).toBe(Number(before) + 1);
+      // The removed points' days, and only those, go back to the projections.
+      const days = await prisma.travTrackDirtyDay.findMany({
+        where: { userId },
+        orderBy: { day: "asc" },
+      });
+      expect(days.map((d) => [d.day.toISOString().slice(0, 10), d.done])).toEqual([
+        ["2026-10-12", 0],
+        ["2026-10-14", 0],
+      ]);
+      const left = await prisma.countryDay.findMany({ where: { userId }, select: { date: true } });
+      expect(left.map((r) => r.date.toISOString().slice(0, 10))).toEqual(["2026-10-13"]);
+      await prisma.countryDay.deleteMany({ where: { userId } });
+    });
+
+    it("a rolled-back import delete raises nothing", async () => {
+      const { importId } = await importFile(gpxFile([minuteFixes("2026-10-12T05:00:00Z", 2)]));
+      const before = await prisma.$transaction((tx) => historyGeneration(tx, userId));
+      const fail = registerPointsRemovedHandler(async () => {
+        throw new Error("handler failed");
+      });
+      try {
+        await expect(deleteTravTrackImport(userId, importId)).rejects.toThrow("handler failed");
+      } finally {
+        fail();
+      }
+      expect(Number(await prisma.$transaction((tx) => historyGeneration(tx, userId)))).toBe(
+        Number(before)
+      );
+      expect(await prisma.travTrackPoint.count({ where: { userId } })).toBe(2);
+      expect(await statusOf(importId)).toBe("succeeded");
     });
 
     it("an import of another account is not found", async () => {
