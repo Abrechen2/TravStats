@@ -28,6 +28,7 @@
  * | 03:55 | TravTrack orphan-link sweep (travTrackOrphanLinkScheduler.ts) |
  * | every :00 | hourly status sweep |
  * | **04:10** | **this** |
+ * | 04:25 | TravTrack trip questions (travTrackTripScheduler.ts) |
  * | 04:40 | Dawarich country-day sweep |
  * | 04:55 | nightly photo-journey scan (opt-in accounts) |
  * | every :25 | document sweep |

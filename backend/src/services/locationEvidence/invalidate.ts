@@ -3,7 +3,7 @@
  * review focus 23). The `onPointsRemoved` handler for everything TravStats
  * derived from TravTrack history and asked the user about: stay, market and
  * venue findings (`dawarich_stays`, provider `travtrack`) and the questions of
- * `location_suggestions` (country, E6; journey, E7). It runs in
+ * `location_suggestions` (country, E6; journey, E7; trip, L4). It runs in
  * the removal's transaction, under the TravTrack lock, after the points went
  * and after the history generation was raised (`deleteRange.ts`).
  *
@@ -15,7 +15,7 @@
  *     deleted no point; for a journey, an end of one of its runs or a vertex
  *     of its privacy-cut line lies in it, or a chord of that line crosses it
  *     (`segmentCrossesZone`, the check a line leaving the server gets);
- *   - a country question (no pin) or a journey: one of its days is a removed
+ *   - a country or trip question (no pin) or a journey: one of its days is a removed
  *     day or the neighbour of one (`removalDays`) — a neighbour's country
  *     rows were derived with the removed points as edge context and go with
  *     them (`projectionRemoval.ts`); a journey's runs are bounded by the stays
@@ -29,13 +29,17 @@
  * Affected ACCEPTED rows stay — the entry the answer made is TravStats data —
  * with their evidence cut to a summary holding no position and no digest
  * (`source`, `provider`, `algorithmVersion`, the explanation, the time zone or
- * the country, `historyDeletedAt`); a stay's source position becomes its
+ * the country, a trip's span, `historyDeletedAt`); a stay's source position becomes its
  * accepted pin; a journey keeps, per run, its times, its answer and the entry
- * it was linked to — no end, no line, no digest. Dawarich rows are never touched: their history is not ours.
+ * it was linked to — no end, no line, no digest. The explanation keeps its code
+ * and only the params that name the question or its span
+ * (`KEPT_EXPLANATION_PARAMS`): no count, duration or distance read from the
+ * deleted points. Dawarich rows are never touched: their history is not ours.
  *
  * Logged with ids and counts only (`EvidenceInvalidated`).
  */
 import type { DbTransaction } from "../../db";
+import { Prisma } from "../../prisma";
 import logger from "../../utils/logger";
 import { distanceM } from "../travtrack/classify";
 import type { ZoneCircle } from "../travtrack/classify";
@@ -177,13 +181,14 @@ async function affectedSuggestions(
   for (const r of rows) {
     const from = r.windowFrom.getTime();
     const until = r.windowUntil.getTime();
-    // A country question has no pin: it is about its days. A journey is about
-    // its runs, and about the days they were read from.
+    // A country question has no pin: it is about its days. A trip (L4) is
+    // pinless too: its away days were judged from every fix of them. A journey
+    // is about its runs, and about the days they were read from.
     const affected =
       r.kind === "country"
         ? dayInWindow(days, from, until)
         : overlapsAny(spans, from, until - 1) ||
-          (r.kind === "journey" && dayInWindow(days, from, until));
+          ((r.kind === "journey" || r.kind === "trip") && dayInWindow(days, from, until));
     if (affected) hit.add(r.id);
   }
   // Zone: a journey's line and ends, even when the zone deleted no point.
@@ -247,6 +252,25 @@ async function removeOpenStays(tx: DbTransaction, userId: string, ids: string[])
   return count;
 }
 
+/**
+ * The explanation params an answer keeps once its history went: what names the
+ * question (a country, a trip it widened), its span (days, runs) and a rule's
+ * own constant (`radiusM`). Every figure read from the deleted points — counts,
+ * durations, gaps, kilometres — goes with them (Codex review of L4).
+ */
+export const KEPT_EXPLANATION_PARAMS = ["country", "days", "runs", "tripId", "radiusM"];
+
+/** SQL: `explanation` (a jsonb expression) cut to its code and the kept params. */
+const scrubbedExplanation = (expr: Prisma.Sql) => Prisma.sql`
+  CASE WHEN jsonb_typeof(${expr}) = 'object' THEN jsonb_build_object(
+    'code', ${expr}->'code',
+    'params', COALESCE((
+      SELECT jsonb_object_agg(k, v)
+        FROM jsonb_each(CASE WHEN jsonb_typeof(${expr}->'params') = 'object'
+                             THEN ${expr}->'params' ELSE '{}'::jsonb END) AS p(k, v)
+       WHERE k = ANY(${KEPT_EXPLANATION_PARAMS}::text[])), '{}'::jsonb))
+  END`;
+
 /** An accepted stay keeps its answer and a summary; its source position becomes its pin. */
 async function stripAcceptedStays(tx: DbTransaction, ids: string[], at: string): Promise<void> {
   if (ids.length === 0) return;
@@ -259,7 +283,7 @@ async function stripAcceptedStays(tx: DbTransaction, ids: string[], at: string):
              'algorithmVersion', algorithm_version,
              'kind', evidence->'kind',
              'zone', evidence->'zone',
-             'explanation', evidence->'explanation',
+             'explanation', ${scrubbedExplanation(Prisma.sql`evidence->'explanation'`)},
              'historyDeletedAt', COALESCE(evidence->'historyDeletedAt', to_jsonb(${at}::text))))
      WHERE id = ANY(${ids}::text[])`;
 }
@@ -274,12 +298,15 @@ async function stripAcceptedSuggestions(
   // a TravStats entry — and nothing that places it: no end, line or digest.
   await tx.$executeRaw`
     UPDATE location_suggestions
-       SET evidence = jsonb_strip_nulls(jsonb_build_object(
+       SET explanation = COALESCE(${scrubbedExplanation(Prisma.sql`explanation`)}, explanation),
+           evidence = jsonb_strip_nulls(jsonb_build_object(
              'source', 'travtrack',
              'provider', provider,
              'algorithmVersion', algorithm,
              'countryCode', evidence->'countryCode',
              'day', evidence->'day',
+             'fromDay', evidence->'fromDay',
+             'toDay', evidence->'toDay',
              'zone', evidence->'zone',
              'runs', CASE WHEN kind = 'journey' AND jsonb_typeof(evidence->'runs') = 'array'
                        THEN (SELECT jsonb_agg(jsonb_strip_nulls(jsonb_build_object(

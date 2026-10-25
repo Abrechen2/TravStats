@@ -6041,7 +6041,7 @@ model TripPackingList {
 model LocationSuggestion {
   id                String    @id @default(uuid())
   userId            String    @map("user_id")
-  /// `country | journey` (CHECK).
+  /// `country | journey | trip` (CHECK).
   kind              String
   /// `dawarich | travtrack` (CHECK).
   provider          String
@@ -6195,6 +6195,9 @@ model TravTrackDerivationState {
   /// The background build of the raster (L1): the last former-zone id it
   /// added; null = not started. Never read by a map request.
   zoneCellsBuildCursor  String?   @map("zone_cells_build_cursor")
+  /// When the nightly trip sweep last took this account (L4): the least
+  /// recently taken go first, so a capped run still comes round to everyone.
+  tripScannedAt         DateTime? @map("trip_scanned_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

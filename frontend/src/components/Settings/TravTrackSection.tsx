@@ -27,6 +27,7 @@ import TrackExportDialog from "../../pages/Track/TrackExportDialog";
 import TravTrackCityLookup from "./TravTrackCityLookup";
 import TravTrackImports from "./TravTrackImports";
 import TravTrackSources from "./TravTrackSources";
+import TravTrackTripNote from "./TravTrackTripNote";
 
 /** The circles offered, metres: a flat to a small town (the server takes 50–5000). */
 export const ZONE_RADII = [100, 250, 500, 1000, 2000] as const;
@@ -206,6 +207,8 @@ export default function TravTrackSection(): JSX.Element | null {
           )}
         </div>
       )}
+
+      {caps.enabled && <TravTrackTripNote />}
 
       <TravTrackImports
         canImport={caps.enabled && !isDemo}

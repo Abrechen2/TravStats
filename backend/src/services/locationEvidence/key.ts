@@ -107,3 +107,13 @@ export function journeyEvidenceKeyWith(secret: Buffer, day: string, firstKey: st
 export function journeyEvidenceKey(day: string, firstKey: string): string {
   return journeyEvidenceKeyWith(evidenceSecret(), day, firstKey);
 }
+
+/** A trip question's evidence key under `secret`: the first day of its away run. */
+export function tripEvidenceKeyWith(secret: Buffer, fromDay: string): string {
+  return hmac(secret, ["trip", fromDay]).toString("hex");
+}
+
+/** A trip question's provider-neutral evidence key (L4), under this instance's secret. */
+export function tripEvidenceKey(fromDay: string): string {
+  return tripEvidenceKeyWith(evidenceSecret(), fromDay);
+}
