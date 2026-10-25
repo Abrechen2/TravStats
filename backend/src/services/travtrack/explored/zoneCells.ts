@@ -144,17 +144,15 @@ export async function addZoneCircle(
   }
 }
 
-/** Builds the raster once for an account that never had it; answers whether it overflowed. */
-export async function ensureZoneCells(userId: string): Promise<{ overflow: boolean }> {
+/** Builds the raster once for an account that never had it. */
+export async function ensureZoneCells(userId: string): Promise<void> {
   const read = () =>
     prisma.travTrackDerivationState.findUnique({
       where: { userId },
       select: { zoneCellsVersion: true, zoneCellsOverflow: true },
     });
   const state = await read();
-  if ((state?.zoneCellsVersion ?? 0) >= ZONE_CELLS_VERSION) {
-    return { overflow: state?.zoneCellsOverflow ?? false };
-  }
+  if ((state?.zoneCellsVersion ?? 0) >= ZONE_CELLS_VERSION) return;
   await prisma.$transaction(
     async (tx) => {
       await takeTravTrackLock(tx, userId);
@@ -162,5 +160,4 @@ export async function ensureZoneCells(userId: string): Promise<{ overflow: boole
     },
     { timeout: 60_000 }
   );
-  return { overflow: (await read())?.zoneCellsOverflow ?? false };
 }

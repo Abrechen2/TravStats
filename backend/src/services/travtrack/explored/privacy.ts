@@ -21,7 +21,7 @@
  * its box and decides each WHOLE, never the part inside the box, so panning
  * or a smaller box cannot change what a cell shows.
  */
-import { prisma } from "../../../db";
+import { prisma, type DbTransaction } from "../../../db";
 import { AppError } from "../../../middleware/errorHandler";
 import type { ZoneCircle } from "../classify";
 import { Prisma } from "../../../prisma";
@@ -84,30 +84,41 @@ const rangesSql = (ranges: readonly TileRange[]) =>
 const zoomIn = () =>
   new AppError("Too many explored cells in this area; zoom in", 400, "TRAVTRACK_EXPLORED_ZOOM_IN");
 
+type Reader = Pick<DbTransaction, "$queryRaw" | "travTrackDerivationState">;
+
+const unavailable = () =>
+  new AppError(
+    "The explored map is not available for privacy zones this large",
+    409,
+    "TRAVTRACK_EXPLORED_UNAVAILABLE"
+  );
+
 /**
  * The zones touching the box, each decided WHOLE: all of its cells and the
- * explored state of each and of its edge neighbours, never cut to the box. So
- * a box that ends inside a zone answers for it what the whole map answers.
+ * explored state of each and of its neighbours, never cut to the box. So a
+ * box that ends inside a zone answers for it what the whole map answers.
  */
-async function filledZonesIn(userId: string, ranges: readonly TileRange[]): Promise<Cell[]> {
-  const components = await prisma.$queryRaw<{ component: number }[]>`
+async function filledZonesIn(
+  db: Reader,
+  userId: string,
+  ranges: readonly TileRange[]
+): Promise<Cell[]> {
+  const components = await db.$queryRaw<{ component: number }[]>`
     SELECT DISTINCT component FROM travtrack_zone_cells
      WHERE user_id = ${userId} AND (${rangesSql(ranges)})`;
   if (components.length === 0) return [];
   const ids = components.map((c) => c.component);
-  const [cells, near] = await Promise.all([
-    prisma.$queryRaw<(Cell & { component: number })[]>`
-      SELECT x, y, component FROM travtrack_zone_cells
-       WHERE user_id = ${userId} AND component = ANY(${ids}::int[])`,
-    // Each zone cell and its edge neighbours (columns wrap at the date line).
-    prisma.$queryRaw<Cell[]>`
-      SELECT DISTINCT e.x, e.y FROM travtrack_zone_cells z
-        JOIN travtrack_explored_cells e
-          ON e.user_id = z.user_id AND e.y BETWEEN z.y - 1 AND z.y + 1
-         AND (e.x BETWEEN z.x - 1 AND z.x + 1
-              OR (z.x = 0 AND e.x = ${TILES - 1}) OR (z.x = ${TILES - 1} AND e.x = 0))
-       WHERE z.user_id = ${userId} AND z.component = ANY(${ids}::int[])`,
-  ]);
+  const cells = await db.$queryRaw<(Cell & { component: number })[]>`
+    SELECT x, y, component FROM travtrack_zone_cells
+     WHERE user_id = ${userId} AND component = ANY(${ids}::int[])`;
+  // Each zone cell and its eight neighbours (columns wrap at the date line).
+  const near = await db.$queryRaw<Cell[]>`
+    SELECT DISTINCT e.x, e.y FROM travtrack_zone_cells z
+      JOIN travtrack_explored_cells e
+        ON e.user_id = z.user_id AND e.y BETWEEN z.y - 1 AND z.y + 1
+       AND (e.x BETWEEN z.x - 1 AND z.x + 1
+            OR (z.x = 0 AND e.x = ${TILES - 1}) OR (z.x = ${TILES - 1} AND e.x = 0))
+     WHERE z.user_id = ${userId} AND z.component = ANY(${ids}::int[])`;
   const explored = new Set(near.map(cellKey));
   const byComponent = new Map<number, Cell[]>();
   for (const c of cells) {
@@ -118,32 +129,49 @@ async function filledZonesIn(userId: string, ranges: readonly TileRange[]): Prom
   return [...byComponent.values()].flatMap((component) => fillComponent(component, explored));
 }
 
+export type ExploredAnswerOptions = {
+  /** Test seam: runs between the snapshot's first read and the rest of them. */
+  betweenReads?: () => Promise<void>;
+};
+
 /**
  * `GET /travtrack/explored`: this account's cells in `bbox`, zone rule
  * applied. Reads only the account's own rows, in a fixed number of bounded
- * queries: the raster check, the box's cells, the zones touching the box.
+ * queries — the raster state, the box's cells, the zones touching the box —
+ * all in ONE repeatable-read snapshot (Codex re-review): a zone write
+ * committing between them can neither split a component's fill nor slip an
+ * overflow past the refusal. Read-only, so it never waits on a zone write.
  */
-export async function exploredAnswer(userId: string, bbox: Bbox): Promise<{ cells: Cell[] }> {
-  // Fail closed for the whole view: a raster too large to hold is never
-  // answered in part, since any part could outline a zone.
-  if ((await ensureZoneCells(userId)).overflow) {
-    throw new AppError(
-      "The explored map is not available for privacy zones this large",
-      409,
-      "TRAVTRACK_EXPLORED_UNAVAILABLE"
-    );
-  }
+export async function exploredAnswer(
+  userId: string,
+  bbox: Bbox,
+  opts: ExploredAnswerOptions = {}
+): Promise<{ cells: Cell[] }> {
+  await ensureZoneCells(userId);
   const ranges = bboxRanges(bbox);
-  const inBox = await prisma.$queryRaw<Cell[]>`
-    SELECT DISTINCT x, y FROM travtrack_explored_cells
-     WHERE user_id = ${userId} AND (${rangesSql(ranges)})
-     LIMIT ${EXPLORED_MAX_CELLS + 1}`;
-  if (inBox.length > EXPLORED_MAX_CELLS) throw zoomIn();
-  const out = new Map<string, Cell>();
-  for (const c of inBox) out.set(cellKey(c), { x: c.x, y: c.y });
-  for (const c of await filledZonesIn(userId, ranges)) {
-    if (inRanges(c, ranges)) out.set(cellKey(c), c);
-  }
-  if (out.size > EXPLORED_MAX_CELLS) throw zoomIn();
-  return { cells: sortCells(out.values()) };
+  return prisma.$transaction(
+    async (tx) => {
+      const state = await tx.travTrackDerivationState.findUnique({
+        where: { userId },
+        select: { zoneCellsOverflow: true },
+      });
+      await opts.betweenReads?.();
+      // Fail closed for the whole view: a raster too large to hold is never
+      // answered in part, since any part could outline a zone.
+      if (state?.zoneCellsOverflow) throw unavailable();
+      const inBox = await tx.$queryRaw<Cell[]>`
+        SELECT DISTINCT x, y FROM travtrack_explored_cells
+         WHERE user_id = ${userId} AND (${rangesSql(ranges)})
+         LIMIT ${EXPLORED_MAX_CELLS + 1}`;
+      if (inBox.length > EXPLORED_MAX_CELLS) throw zoomIn();
+      const out = new Map<string, Cell>();
+      for (const c of inBox) out.set(cellKey(c), { x: c.x, y: c.y });
+      for (const c of await filledZonesIn(tx, userId, ranges)) {
+        if (inRanges(c, ranges)) out.set(cellKey(c), c);
+      }
+      if (out.size > EXPLORED_MAX_CELLS) throw zoomIn();
+      return { cells: sortCells(out.values()) };
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead }
+  );
 }
