@@ -311,6 +311,43 @@ describe("TravTrack — a shared trip's route snapshot", () => {
     expect(crosses(read, { ...moved, radiusM: 1000 })).toBe(false);
   });
 
+  it("a moved home keeps the former home hidden as well", async () => {
+    // Security review: a rebuild with only the new home would uncover the old one.
+    await walk();
+    await share();
+    const moved = { lat: 37.5, lon: 127.04 };
+    await as(ownerCookie)
+      .put("/api/v1/settings/personal")
+      .send({ homePlace: { name: "Neu", ...moved, zone: null } })
+      .expect(200);
+    const read = (await recipientRead()) ?? [];
+    const storedGeometry = (await stored())?.geometry as Geometry;
+    for (const g of [read, storedGeometry]) {
+      for (const home of [HOME, moved]) {
+        expect(near(g, home, 1000)).toBe(false);
+        expect(crosses(g, { ...home, radiusM: 1000 })).toBe(false);
+      }
+    }
+  });
+
+  it("widened trip dates do not extend the shared route until the owner shares again", async () => {
+    await walk();
+    // Two days after the trip's last day, recorded before the route was shared.
+    const later = Date.parse("2026-10-16T03:00:00Z");
+    await storePoint(owner, { t: later, lat: 37.7, lon: 127.2 });
+    await storePoint(owner, { t: later + MIN, lat: 37.701, lon: 127.2 });
+    await share();
+    const north = (g: Geometry) => vertices(g).some((p) => p[1] > 37.65);
+    await as(ownerCookie)
+      .patch(`/api/v1/trips/${tripId}`)
+      .send({ startDate: "2026-10-11", endDate: "2026-10-17" })
+      .expect(200);
+    expect(north((await recipientRead()) ?? [])).toBe(false);
+    expect(north((await stored())?.geometry as Geometry)).toBe(false);
+    await share();
+    expect(north((await recipientRead()) ?? [])).toBe(true);
+  });
+
   it("the recipient's read applies the current home even where the stored copy missed it", async () => {
     await walk();
     await share();

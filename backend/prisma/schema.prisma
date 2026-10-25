@@ -5780,6 +5780,14 @@ model TravTrackShareSnapshot {
   geometry   Json
   pointCount Int      @map("point_count")
   createdAt  DateTime @default(now()) @map("created_at")
+  /// The time window the owner shared, `[sharedFrom, sharedUntil)`: the trip's
+  /// days at the owner's last build. An automatic rebuild or a read uses its
+  /// overlap with the trip's current days — it may narrow, never widen.
+  sharedFrom  DateTime? @map("shared_from")
+  sharedUntil DateTime? @map("shared_until")
+  /// Every home circle in force since the owner's last build, `[{lat, lon,
+  /// radiusM}]`: a moved home keeps its former place hidden too.
+  homeCircles Json      @default("[]") @map("home_circles")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)

@@ -100,16 +100,65 @@ async function boundsOf(db: Db, userId: string, tripId: string) {
 }
 
 /**
+ * What the owner shared, as a rebuild the owner did not ask for must respect
+ * it: the points received by `createdAt`, the window `[sharedFrom,
+ * sharedUntil)` and every home circle in force since. A re-filter or a read
+ * may only take away from it, never widen it (security review of T7); only
+ * the owner's own build sets it anew.
+ */
+export type SharedState = {
+  createdAt: Date;
+  sharedFrom: Date | null;
+  sharedUntil: Date | null;
+  homeCircles: unknown;
+};
+
+const circleList = z.array(
+  z.object({
+    lat: z.number().finite(),
+    lon: z.number().finite(),
+    radiusM: z.number().finite().positive(),
+  })
+);
+
+/** The stored home circles, or null when they cannot be read (then nothing is shared). */
+const homesOf = (state: SharedState): ZoneCircle[] | null => {
+  const parsed = circleList.safeParse(state.homeCircles);
+  return parsed.success ? parsed.data : null;
+};
+
+/**
+ * The bounds an automatic rebuild or a read may use: the overlap of the
+ * window the owner shared with the trip's current days, the current flights
+ * kept as breaks. Null when they no longer overlap, or the window is unknown.
+ */
+export function effectiveBounds(
+  current: TripRecordingBounds,
+  state: SharedState
+): TripRecordingBounds | null {
+  if (!state.sharedFrom || !state.sharedUntil) return null;
+  const fromMs = Math.max(current.fromMs, state.sharedFrom.getTime());
+  const untilMs = Math.min(current.untilMs, state.sharedUntil.getTime());
+  return fromMs < untilMs ? { ...current, fromMs, untilMs } : null;
+}
+
+const sameCircle = (a: ZoneCircle, b: ZoneCircle) =>
+  a.lat === b.lat && a.lon === b.lon && a.radiusM === b.radiusM;
+
+/**
  * The route as it may be shared, or an empty list when nothing of the trip may
  * be shown. Read through `db`, so inside a removal's transaction the deleted
- * points are already gone and a new zone already in force.
+ * points are already gone and a new zone already in force. `recordedBy` and
+ * `homes` narrow it to what the owner shared (`SharedState`); the current home
+ * is always cut too, and returned so a rebuild can keep it.
  */
 export async function buildShareGeometry(
   db: Db,
   userId: string,
   bounds: TripRecordingBounds,
-  recordedBy: Date | null = null
-): Promise<ShareGeometry> {
+  opts: { recordedBy?: Date | null; homes?: readonly ZoneCircle[] } = {}
+): Promise<{ geometry: ShareGeometry; home: ZoneCircle | null }> {
+  const recordedBy = opts.recordedBy ?? null;
   const window = { gte: new Date(bounds.fromMs), lt: new Date(bounds.untilMs) };
   const overlapping = { userId, fromAt: { lt: window.lt }, toAt: { gt: window.gte } };
   const [rows, deleted, gaps, circles, home] = await Promise.all([
@@ -138,7 +187,7 @@ export async function buildShareGeometry(
     list.push([row.t.getTime(), row.lat, row.lon, row.accuracyM]);
     byDevice.set(row.deviceId, list);
   }
-  const allCircles = home ? [...circles, home] : circles;
+  const allCircles = [...circles, ...(opts.homes ?? []), ...(home ? [home] : [])];
   const devices = [...byDevice.entries()].map(([deviceId, points]) => ({
     deviceId,
     points,
@@ -154,37 +203,60 @@ export async function buildShareGeometry(
     s.map((p): LonLat => [p[2], p[1]])
   );
   // The check that counts: on the final, simplified geometry.
-  return privacyCut(simplifyWithin(lines, SNAPSHOT_MAX_VERTICES), allCircles);
+  return { geometry: privacyCut(simplifyWithin(lines, SNAPSHOT_MAX_VERTICES), allCircles), home };
 }
 
 /**
  * Builds or rebuilds the snapshot; the version rises on every rebuild. Null
- * when nothing is left. `recordedBy` null is the owner's own build: every
- * point, and `createdAt` becomes now — the moment the owner last shared. A
- * re-filter passes the stored `createdAt` and so never shares more than the
- * owner did.
+ * when nothing is left. `shared` null is the owner's own build: every point of
+ * the trip's current days, the current home, and `createdAt` becomes now. A
+ * re-filter passes the stored `SharedState` and so never shares more than the
+ * owner did: narrower window, more home circles, no newer point.
  */
-async function writeSnapshot(db: Db, userId: string, tripId: string, recordedBy: Date | null) {
-  const bounds = await boundsOf(db, userId, tripId);
-  const geometry = bounds ? await buildShareGeometry(db, userId, bounds, recordedBy) : [];
-  if (geometry.length === 0) {
+async function writeSnapshot(db: Db, userId: string, tripId: string, shared: SharedState | null) {
+  const current = await boundsOf(db, userId, tripId);
+  const homes = shared ? homesOf(shared) : [];
+  const bounds = current && shared ? effectiveBounds(current, shared) : current;
+  const built =
+    bounds && homes
+      ? await buildShareGeometry(db, userId, bounds, {
+          recordedBy: shared?.createdAt ?? null,
+          homes,
+        })
+      : null;
+  if (!built || !bounds || built.geometry.length === 0) {
     await db.travTrackShareSnapshot.deleteMany({ where: { tripId, userId } });
     return null;
   }
+  const { geometry, home } = built;
+  const keptHomes = [
+    ...(homes ?? []),
+    ...(home && !(homes ?? []).some((h) => sameCircle(h, home)) ? [home] : []),
+  ];
+  const window = { sharedFrom: new Date(bounds.fromMs), sharedUntil: new Date(bounds.untilMs) };
   const pointCount = vertexCount(geometry);
   const json = geometry as unknown as object;
   return db.travTrackShareSnapshot.upsert({
     where: { tripId },
-    create: { userId, tripId, geometry: json, pointCount },
+    create: { userId, tripId, geometry: json, pointCount, ...window, homeCircles: keptHomes },
     update: {
       geometry: json,
       pointCount,
       version: { increment: 1 },
-      ...(recordedBy ? {} : { createdAt: new Date() }),
+      ...window,
+      homeCircles: keptHomes,
+      ...(shared ? {} : { createdAt: new Date() }),
     },
     select: { version: true, geometry: true, pointCount: true, createdAt: true },
   });
 }
+
+const SHARED_STATE_SELECT = {
+  createdAt: true,
+  sharedFrom: true,
+  sharedUntil: true,
+  homeCircles: true,
+} as const;
 
 /** `PUT /trips/:id/share-snapshot`: the owner shares (or refreshes) the route. */
 export async function shareTripRoute(userId: string, tripId: string) {
@@ -242,7 +314,7 @@ export async function refilterShareSnapshots(
 ): Promise<void> {
   const snapshots = await tx.travTrackShareSnapshot.findMany({
     where: { userId },
-    select: { tripId: true, geometry: true, createdAt: true },
+    select: { tripId: true, geometry: true, ...SHARED_STATE_SELECT },
   });
   for (const snapshot of snapshots) {
     let concerned: boolean;
@@ -262,11 +334,11 @@ export async function refilterShareSnapshots(
 async function rebuildOrDrop(
   tx: Db,
   userId: string,
-  snapshot: { tripId: string; createdAt: Date },
+  snapshot: SharedState & { tripId: string },
   cause: string
 ): Promise<void> {
   try {
-    await writeSnapshot(tx, userId, snapshot.tripId, snapshot.createdAt);
+    await writeSnapshot(tx, userId, snapshot.tripId, snapshot);
   } catch (error) {
     // Fail closed: a route that could not be re-filtered is not shared.
     logger.warn({
@@ -290,7 +362,7 @@ export async function refreshShareSnapshots(userId: string, tripId?: string): Pr
     async (tx) => {
       const snapshots = await tx.travTrackShareSnapshot.findMany({
         where: { userId, ...(tripId ? { tripId } : {}) },
-        select: { tripId: true, createdAt: true },
+        select: { tripId: true, ...SHARED_STATE_SELECT },
       });
       for (const snapshot of snapshots) await rebuildOrDrop(tx, userId, snapshot, "settings");
     },
@@ -305,9 +377,11 @@ export async function refreshShareSnapshots(userId: string, tripId?: string): Pr
  * active account — `receivingMembers`, the rule every shared write follows).
  * Geometry and version only; never a point, a time or a device.
  *
- * Built again at READ time, from what the owner shared (`createdAt`) under the
- * rules in force NOW — the trip's current days and flights, every zone and
- * former zone, the current home, every deletion — so no change the stored
+ * Built again at READ time, from what the owner shared (`SharedState`: the
+ * points received by then, the window shared, every home since) under the
+ * rules in force NOW — the overlap with the trip's current days, its current
+ * flights, every zone and former zone, the current home, every deletion — so
+ * no change the stored
  * copy missed (a flight added, a home moved, a date changed by any path) ever
  * reaches a recipient. The stored geometry is the owner's view and a cache.
  */
@@ -321,15 +395,21 @@ export async function sharedTripRoutes(readerId: string, tripId: string) {
   const groupId = own.shareGroupId;
   const snapshots = await prisma.travTrackShareSnapshot.findMany({
     where: { userId: { not: readerId }, trip: { shareGroupId: groupId } },
-    select: { userId: true, tripId: true, version: true, createdAt: true },
+    select: { userId: true, tripId: true, version: true, ...SHARED_STATE_SELECT },
     orderBy: { trip: { createdAt: "asc" } },
   });
   const routes: Array<{ version: number; geometry: unknown }> = [];
   for (const s of snapshots) {
     const reached = await receivingMembers(prisma, groupId, s.userId);
     if (!reached.some((m) => m.userId === readerId)) continue;
-    const bounds = await boundsOf(prisma, s.userId, s.tripId);
-    const geometry = bounds ? await buildShareGeometry(prisma, s.userId, bounds, s.createdAt) : [];
+    const current = await boundsOf(prisma, s.userId, s.tripId);
+    const bounds = current ? effectiveBounds(current, s) : null;
+    const homes = homesOf(s);
+    if (!bounds || !homes) continue;
+    const { geometry } = await buildShareGeometry(prisma, s.userId, bounds, {
+      recordedBy: s.createdAt,
+      homes,
+    });
     if (geometry.length > 0) routes.push({ version: s.version, geometry });
   }
   return routes;
