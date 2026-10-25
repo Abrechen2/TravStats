@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
 import {
+  isKnownGoodIngestToken,
   looksLikeIngestToken,
   verifyIngestToken,
   type IngestTokenKind,
@@ -10,6 +11,7 @@ import { securityLogger } from "../utils/logger";
 import { AppError } from "./errorHandler";
 import {
   INGEST_AUTH_FAILURES_PER_WINDOW,
+  INGEST_AUTH_HARD_CAP,
   ingestAuthFailureLimiter,
   ingestFailureKey,
 } from "./ingestSourceLimits";
@@ -33,7 +35,8 @@ import {
  * The per-address failure bound (`ingestSourceLimits.ts`): a well-formed
  * token is always verified and refused by the bound only when it fails; a
  * request with no usable credential is refused early once the address is
- * over the bound.
+ * over the bound; past the hard cap only a recently verified token is still
+ * looked up.
  */
 
 export type IngestTokenRequest = Request & {
@@ -99,10 +102,15 @@ function refuse(
   ingestAuthFailureLimiter(req, res, () => next(invalid()));
 }
 
+/** This address's failures in the window. */
+async function failuresOf(req: Request): Promise<number> {
+  const info = await ingestAuthFailureLimiter.getKey(ingestFailureKey(req));
+  return info?.totalHits ?? 0;
+}
+
 /** Whether this address has spent its failures. */
 async function overFailureBound(req: Request): Promise<boolean> {
-  const info = await ingestAuthFailureLimiter.getKey(ingestFailureKey(req));
-  return (info?.totalHits ?? 0) >= INGEST_AUTH_FAILURES_PER_WINDOW;
+  return (await failuresOf(req)) >= INGEST_AUTH_FAILURES_PER_WINDOW;
 }
 
 /**
@@ -134,10 +142,15 @@ export function ingestTokenAuth(kind: IngestTokenKind) {
       const token = credentialOf(kind, req.headers.authorization);
       if (token === null) return refuseUnusable(req, res, next, kind, "wrong_scheme");
       if (!looksLikeIngestToken(token)) return refuseUnusable(req, res, next, kind, "malformed");
-      // A well-formed token is always verified — one indexed keyed-hash
-      // lookup — so other clients failing at this address cannot lock out a
-      // phone with a good token. Only a failed verification is counted
-      // against the address and refused by its bound.
+      // A well-formed token is verified — one indexed keyed-hash lookup — so
+      // other clients failing at this address cannot lock out a phone with a
+      // good token; only a failed verification is counted against the address
+      // and refused by its bound. Past the hard cap only a token that verified
+      // recently is still looked up: a flood of fakes costs no database work.
+      if (!isKnownGoodIngestToken(token) && (await failuresOf(req)) >= INGEST_AUTH_HARD_CAP) {
+        noteRejection(kind, "hard_cap");
+        return next(limited());
+      }
       const verified = await verifyIngestToken(token, kind);
       if (!verified) return refuse(req, res, next, kind, "unknown_token");
       req.ingestToken = verified;

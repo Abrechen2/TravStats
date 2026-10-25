@@ -23,6 +23,7 @@ import {
 } from "../../services/travtrack/sources/__fixtures__/requests";
 import {
   INGEST_AUTH_FAILURES_PER_WINDOW,
+  INGEST_AUTH_HARD_CAP,
   INGEST_PER_ACCOUNT_PER_MINUTE,
   INGEST_PER_TOKEN_PER_MINUTE,
   ingestAccountLimiter,
@@ -635,6 +636,37 @@ describe("TravTrack — OwnTracks and Overland", () => {
       const garbage = await request(app).post(OT).set("Authorization", basic("nope")).send({});
       expect(garbage.status).toBe(429);
       expect(lookups).not.toHaveBeenCalled();
+    });
+
+    it("a flood of fake tokens past the hard cap is refused before any lookup; a known device passes", async () => {
+      // Known: it verified before the flood.
+      expect((await emptyPost(owntracks.token)).status).toBe(200);
+      const fresh = await mint("owntracks", "never posted");
+      for (let i = 0; i < INGEST_AUTH_HARD_CAP; i++) {
+        const fake = `tt_ingest_${i.toString(16).padStart(64, "0")}`;
+        expect([401, 429]).toContain((await emptyPost(fake)).status);
+      }
+      const lookups = jest.spyOn(prisma.travTrackIngestToken, "findUnique");
+      for (let i = 0; i < 5; i++) {
+        const fake = `tt_ingest_${"f".repeat(60)}${i.toString(16).padStart(4, "0")}`;
+        expect((await emptyPost(fake)).status).toBe(429);
+      }
+      expect(lookups).not.toHaveBeenCalled();
+      // The known device is still verified (and its revocation re-checked) …
+      expect((await emptyPost(owntracks.token)).status).toBe(200);
+      expect(lookups).toHaveBeenCalledTimes(1);
+      // … while a valid token never seen from anywhere waits out the window.
+      expect((await emptyPost(fresh.token)).status).toBe(429);
+    });
+
+    it("a revoked token that verified before is refused", async () => {
+      expect((await emptyPost(owntracks.token)).status).toBe(200);
+      await request(app)
+        .delete(`/api/v1/travtrack/ingest-tokens/${owntracks.id}`)
+        .set("Cookie", cookie)
+        .expect(200);
+      const res = await emptyPost(owntracks.token);
+      expect([res.status, res.body.code]).toEqual([401, "INGEST_TOKEN_INVALID"]);
     });
 
     it("over the bound, invalid tokens are refused without a log line per attempt", async () => {

@@ -5,6 +5,7 @@ import {
   MAX_INGEST_TOKENS,
   createIngestToken,
   ingestTokenDigestsWith,
+  isKnownGoodIngestToken,
   listIngestTokens,
   looksLikeIngestToken,
   revokeIngestToken,
@@ -114,5 +115,24 @@ describe("ingest tokens", () => {
     await expect(
       createIngestToken(userId, { kind: "owntracks", label: "one more" })
     ).rejects.toMatchObject({ statusCode: 409, code: "INGEST_TOKEN_LIMIT" });
+  });
+
+  it("a token that verified is known-good until it is revoked or fails", async () => {
+    const { id, token } = await createIngestToken(userId, { kind: "owntracks", label: "Pixel" });
+    expect(isKnownGoodIngestToken(token)).toBe(false);
+    await verifyIngestToken(token, "owntracks");
+    expect(isKnownGoodIngestToken(token)).toBe(true);
+    await revokeIngestToken(userId, id);
+    expect(isKnownGoodIngestToken(token)).toBe(false);
+
+    const other = await createIngestToken(userId, { kind: "owntracks", label: "Pixel 2" });
+    await verifyIngestToken(other.token, "owntracks");
+    await prisma.user.update({ where: { id: userId }, data: { isActive: false } });
+    try {
+      expect(await verifyIngestToken(other.token, "owntracks")).toBeNull();
+      expect(isKnownGoodIngestToken(other.token)).toBe(false);
+    } finally {
+      await prisma.user.update({ where: { id: userId }, data: { isActive: true } });
+    }
   });
 });

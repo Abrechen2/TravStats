@@ -21,13 +21,22 @@ import { travTrackImportKey } from "./travTrackImportLimiter";
  *     with a client that keeps failing — one home connection, a reverse
  *     proxy — is never locked out. A request with no usable credential is
  *     refused before any lookup once the address is over the bound
- *     (`ingestTokenAuth`).
+ *     (`ingestTokenAuth`). Past the hard cap (10× the bound), only tokens
+ *     that verified within the last day are still looked up, so a flood of
+ *     well-formed fakes costs no database work either; a valid token never
+ *     seen before waits out the window there.
  *   - creating tokens: per account, like the file imports.
  */
 
 export const INGEST_PER_TOKEN_PER_MINUTE = 60;
 export const INGEST_PER_ACCOUNT_PER_MINUTE = 180;
 export const INGEST_AUTH_FAILURES_PER_WINDOW = 30;
+/**
+ * Past this many failures in the window, an address gets no lookup at all for
+ * a token that has not verified recently (`isKnownGoodIngestToken`): a flood
+ * of well-formed fakes costs no database work, a known phone still passes.
+ */
+export const INGEST_AUTH_HARD_CAP = 10 * INGEST_AUTH_FAILURES_PER_WINDOW;
 export const INGEST_TOKEN_CREATES_PER_WINDOW = 20;
 
 const limited = { error: "Too many requests, please try again later", code: "RATE_LIMITED" };

@@ -71,6 +71,46 @@ function digests(token: string): Digests {
   return { lookupHash: digest(k.lookup, token), hash: digest(k.verify, token) };
 }
 
+/**
+ * Lookup digests of tokens that verified recently (Codex/security review of
+ * E9): an address past its hard failure cap still lets these through to
+ * verification, so a known phone is not locked out by a flood of fake tokens
+ * at its address. Membership only lets a request be VERIFIED — every request
+ * is still checked against its row (revocation, kind, account) — and a
+ * revoke or a failed verification evicts the entry. Bounded: 1,000 entries,
+ * oldest use evicted first, 24 hours each.
+ */
+const KNOWN_GOOD_MAX = 1_000;
+const KNOWN_GOOD_TTL_MS = 24 * 60 * 60 * 1000;
+const knownGood = new Map<string, { tokenId: string; until: number }>();
+
+function rememberGood(lookupHash: string, tokenId: string): void {
+  knownGood.delete(lookupHash);
+  knownGood.set(lookupHash, { tokenId, until: Date.now() + KNOWN_GOOD_TTL_MS });
+  while (knownGood.size > KNOWN_GOOD_MAX) {
+    const oldest = knownGood.keys().next().value;
+    if (oldest === undefined) break;
+    knownGood.delete(oldest);
+  }
+}
+
+function forgetToken(tokenId: string): void {
+  for (const [hash, entry] of knownGood) if (entry.tokenId === tokenId) knownGood.delete(hash);
+}
+
+/** Whether `token` verified within the last day (and was not revoked since). No database read. */
+export function isKnownGoodIngestToken(token: string): boolean {
+  if (!looksLikeIngestToken(token)) return false;
+  const { lookupHash } = digests(token);
+  const entry = knownGood.get(lookupHash);
+  if (!entry) return false;
+  if (entry.until <= Date.now()) {
+    knownGood.delete(lookupHash);
+    return false;
+  }
+  return true;
+}
+
 /** Cheap structural check before any database work. */
 export const looksLikeIngestToken = (v: unknown): v is string =>
   typeof v === "string" && TOKEN_SHAPE.test(v);
@@ -131,6 +171,7 @@ export async function revokeIngestToken(userId: string, id: string): Promise<voi
   if (count === 0) {
     throw new AppError("No such ingest token", 404, "INGEST_TOKEN_NOT_FOUND");
   }
+  forgetToken(id);
 }
 
 export type VerifiedIngestToken = { tokenId: string; userId: string; kind: IngestTokenKind };
@@ -157,11 +198,21 @@ export async function verifyIngestToken(
       user: { select: { isActive: true } },
     },
   });
-  if (!row) return null;
+  if (!row) {
+    knownGood.delete(lookupHash);
+    return null;
+  }
   const stored = Buffer.from(row.hash, "hex");
   const given = Buffer.from(hash, "hex");
-  if (stored.length !== given.length || !timingSafeEqual(stored, given)) return null;
-  if (row.revokedAt !== null || row.kind !== kind || !row.user.isActive) return null;
+  if (stored.length !== given.length || !timingSafeEqual(stored, given)) {
+    knownGood.delete(lookupHash);
+    return null;
+  }
+  if (row.revokedAt !== null || row.kind !== kind || !row.user.isActive) {
+    knownGood.delete(lookupHash);
+    return null;
+  }
+  rememberGood(lookupHash, row.id);
   const now = Date.now();
   if (!row.lastUsedAt || now - row.lastUsedAt.getTime() >= LAST_USED_RESOLUTION_MS) {
     await prisma.travTrackIngestToken.update({
