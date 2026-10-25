@@ -55,6 +55,7 @@ vi.mock("../FlightTrackMap", () => ({
 }));
 
 import FlightTrackSection from "../FlightTrackSection";
+import { formatTimeValueShown } from "../../../lib/displayFormat";
 
 const MUC = { lat: 48.3538, lon: 11.7861 };
 const ICN = { lat: 37.4602, lon: 126.4407 };
@@ -325,6 +326,36 @@ describe("FlightTrackSection", () => {
       fireEvent.click(screen.getByRole("button", { name: "location:trackOrigin.back" }));
       expect(await screen.findByText("location:trackOrigin.label.travstats")).toBeInTheDocument();
       expect(getTrackMock).toHaveBeenLastCalledWith("f1");
+    });
+  });
+  describe("when the recording ran", () => {
+    const departure = at("2026-10-03T07:40:00Z", "Europe/Berlin");
+    const arrival = at("2026-10-03T19:20:00Z", "Asia/Seoul");
+    const scheduled = { departure, arrival };
+
+    it("names the recording's own start and end", async () => {
+      getTrackMock.mockResolvedValue(makeTrack());
+      render(<FlightTrackSection flightId="f1" scheduled={scheduled} />);
+      const span = (await screen.findByTestId("flight-track-span")).textContent ?? "";
+      expect(span).toContain(formatTimeValueShown(at("2026-10-03T08:00:00Z", "Europe/Berlin")));
+      expect(span).toContain(formatTimeValueShown(at("2026-10-03T19:00:00Z", "Asia/Seoul")));
+    });
+
+    it("shows the flight's own times where a zone hid an end, and says nothing of it", async () => {
+      getTrackMock.mockResolvedValue(makeTrack({ times: { startedAt: null, endedAt: null } }));
+      render(<FlightTrackSection flightId="f1" scheduled={scheduled} />);
+      const span = (await screen.findByTestId("flight-track-span")).textContent ?? "";
+      expect(span).toContain(formatTimeValueShown(departure));
+      expect(span).toContain(formatTimeValueShown(arrival));
+      const section = document.body.textContent ?? "";
+      expect(section).not.toMatch(/zone|hidden|privacy|verborgen/i);
+    });
+
+    it("shows no span when neither the recording nor the flight names a time", async () => {
+      getTrackMock.mockResolvedValue(makeTrack({ times: { startedAt: null, endedAt: null } }));
+      render(<FlightTrackSection flightId="f1" />);
+      await screen.findByTestId("flight-track-map-stub");
+      expect(screen.queryByTestId("flight-track-span")).toBeNull();
     });
   });
 });

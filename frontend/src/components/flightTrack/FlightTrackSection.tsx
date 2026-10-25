@@ -16,6 +16,8 @@ import TrackOriginNote from "../tracks/TrackOriginNote";
 import TrackSourceError from "../tracks/TrackSourceError";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import { NO_ORIGIN_INFO, type TrackOrigin, type TrackOriginInfo } from "../../lib/api/trackOrigin";
+import { formatTimeValueShown } from "../../lib/displayFormat";
+import type { TimeValue } from "../../shared/time";
 
 type TrackState =
   | { kind: "loading" }
@@ -28,6 +30,23 @@ interface Props {
   /** The airports' positions, for the flown-vs-great-circle line (forgejo#312). */
   departure?: AirportPosition | null;
   arrival?: AirportPosition | null;
+  /** The flight's own departure and arrival, shown where the recording names no time. */
+  scheduled?: { departure: TimeValue | null; arrival: TimeValue | null };
+}
+
+/**
+ * When the recording ran. An end a privacy zone cut away has no time
+ * (TravTrack plan T5); there the flight's own departure or arrival stands in
+ * — owner, 2026-10-25: show the flight's times and say nothing of what is
+ * hidden. Null when either side is still unknown.
+ */
+export function shownTrackSpan(
+  times: FlightTrack["times"],
+  scheduled: Props["scheduled"]
+): { from: TimeValue; to: TimeValue } | null {
+  const from = times.startedAt ?? scheduled?.departure ?? null;
+  const to = times.endedAt ?? scheduled?.arrival ?? null;
+  return from && to ? { from, to } : null;
 }
 
 /**
@@ -49,6 +68,7 @@ export default function FlightTrackSection({
   flightId,
   departure,
   arrival,
+  scheduled,
 }: Props): JSX.Element | null {
   const { t, i18n } = useTranslation(["flights", "stats"]);
   const { isFeatureVisible } = useBetaFeatures();
@@ -132,6 +152,7 @@ export default function FlightTrackSection({
   // the great circle it would read as a shorter flight ("−60 %"); say nothing.
   const comparison =
     canUpload && gaps === 0 ? flownVsGreatCircle(track.distanceKm, departure, arrival) : null;
+  const span = shownTrackSpan(track.times, scheduled);
 
   return (
     <DetailSection title={t("flights:track.title")}>
@@ -150,6 +171,14 @@ export default function FlightTrackSection({
           })}
           {gaps > 0 && ` ${t("flights:track.gaps", { count: gaps })}`}
         </p>
+        {span && (
+          <p className="t-caption" data-testid="flight-track-span">
+            {t("flights:track.span", {
+              from: formatTimeValueShown(span.from),
+              to: formatTimeValueShown(span.to),
+            })}
+          </p>
+        )}
         <JitterNote jitterDropped={track.jitterDropped} />
         {note}
         {comparison && (
