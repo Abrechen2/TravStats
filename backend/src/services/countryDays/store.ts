@@ -24,7 +24,7 @@
  * the gap is never observable.
  */
 
-import { prisma } from "../../db";
+import { prisma, type DbTransaction } from "../../db";
 import type { CountryDaySource } from "./countryDaySource";
 import type { CountryDayObservation } from "./reduce";
 
@@ -60,13 +60,19 @@ export function utcMidnight(day: string): Date {
  * An observation dated outside `window` is dropped rather than written: it
  * would survive the delete of every later re-sweep of its own window and become
  * a row nothing can correct.
+ *
+ * Given `tx`, the pair runs inside the caller's transaction (TravTrack's
+ * projection reads, replaces and acknowledges a day in one), so it commits or
+ * rolls back with the caller's other writes. Without it, it is its own
+ * transaction, as the Dawarich sweep has always called it.
  */
 export async function replaceCountryDays(
   userId: string,
   source: CountryDaySource,
   window: CountryDayWindow,
   observations: readonly CountryDayObservation[],
-  partialDays: ReadonlySet<string> = new Set()
+  partialDays: ReadonlySet<string> = new Set(),
+  tx?: DbTransaction
 ): Promise<ReplaceCountryDaysResult> {
   const rows = observations
     .map((observation) => ({
@@ -85,14 +91,19 @@ export async function replaceCountryDays(
         row.date.getTime() < window.endAtExclusive.getTime()
     );
 
+  const where = {
+    userId,
+    source,
+    date: { gte: window.startAt, lt: window.endAtExclusive },
+  };
+  if (tx) {
+    const deleted = await tx.countryDay.deleteMany({ where });
+    if (rows.length > 0) await tx.countryDay.createMany({ data: rows });
+    return { removed: deleted.count, written: rows.length };
+  }
+
   const [deleted] = await prisma.$transaction([
-    prisma.countryDay.deleteMany({
-      where: {
-        userId,
-        source,
-        date: { gte: window.startAt, lt: window.endAtExclusive },
-      },
-    }),
+    prisma.countryDay.deleteMany({ where }),
     ...(rows.length > 0 ? [prisma.countryDay.createMany({ data: rows })] : []),
   ]);
 

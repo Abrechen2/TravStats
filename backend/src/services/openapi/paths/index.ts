@@ -93,6 +93,7 @@ import "./sync";
 
 import "./dawarichStays";
 import "./dawarichStayIdentity";
+import "./locationSuggestions";
 
 import "./travplan";
 import "./travtrack";

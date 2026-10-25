@@ -9,18 +9,20 @@ import { photoJourneyLabel } from "../photoJourneyLabel";
 import { suggestedTripName } from "../tripSuggestionCopy";
 
 import type { DawarichStay } from "../../../lib/api/dawarichStays";
+import { suggestionDays, type LocationSuggestion } from "../../../lib/api/locationSuggestions";
 import { localDay } from "../../../shared/time";
 
 export const W = "dataQuality:inbox.workspace";
 export type Translate = (key: string, options?: Record<string, unknown>) => string;
-export type InboxSource = "review" | "trips" | "updates" | "photos" | "dawarich";
+export type InboxSource = "review" | "trips" | "updates" | "photos" | "dawarich" | "location";
 export type InboxView = "cards" | "list" | "journey";
 export type InboxRecord =
   | { source: "review"; data: DataQualityFlag }
   | { source: "trips"; data: TripSuggestion }
   | { source: "updates"; data: PendingUpdate }
   | { source: "photos"; data: PhotoJourney }
-  | { source: "dawarich"; data: DawarichStay };
+  | { source: "dawarich"; data: DawarichStay }
+  | { source: "location"; data: LocationSuggestion };
 export type InboxItem = InboxRecord & {
   key: string;
   title: string;
@@ -118,6 +120,15 @@ export function buildInboxItems(
         subject = stay.name ?? t("trips:dawarichStays.unnamed");
         day = localDay(stay.startAt, stay.zone);
         tripId = stay.tripId;
+        break;
+      }
+      case "location": {
+        // A TravTrack country question (plan E6): about a country, on UTC days.
+        const s = record.data;
+        const code = String(s.explanation.params.country ?? "");
+        title = t(`${W}.location.cardTitle`);
+        subject = countryName(code, language) || code;
+        day = suggestionDays(s).first;
         break;
       }
       case "photos": {

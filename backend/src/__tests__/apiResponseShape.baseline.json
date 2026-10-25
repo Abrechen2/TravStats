@@ -185,6 +185,7 @@
     "geo.ts",
     "importBatches.ts",
     "jobs.ts",
+    "locationSuggestions.ts",
     "lodging.ts",
     "lodging/deleteFacts.ts",
     "lodging/entrySuggestions.ts",

@@ -90,6 +90,12 @@ export async function startCronJobs(): Promise<void> {
       async () =>
         (await import("./travTrackOrphanLinkScheduler")).startTravTrackOrphanLinkScheduler(),
     ],
+    // TravTrack country days and country questions, every 15 min (TravTrack plan E6).
+    [
+      "travtrack_projections",
+      async () =>
+        (await import("./travTrackProjectionScheduler")).startTravTrackProjectionScheduler(),
+    ],
     // Per-account WebDAV sync of the account's export, daily 05:15 (forgejo#321).
     ["webdav_sync", async () => (await import("./webdavSyncScheduler")).startWebdavSyncScheduler()],
     // Trip sharing across servers: the outbox, every 30 s and when nudged (forgejo#301).

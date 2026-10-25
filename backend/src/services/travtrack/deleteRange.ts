@@ -2,6 +2,7 @@ import { prisma, type DbTransaction } from "../../db";
 import type { ZoneCircle } from "./classify";
 import { clipSpan } from "./gaps";
 import { takeTravTrackLock } from "./lock";
+import { projectionsOnPointsRemoved } from "./projectionRemoval";
 import { narrowOnPointsRemoved } from "./shareNarrow";
 
 /**
@@ -34,8 +35,12 @@ export type PointsRemovedHandler = (
   cause: PointsRemovedCause
 ) => Promise<void>;
 
-/** The share snapshots (plan T7) are narrowed by every removal, from the start. */
-const handlers: PointsRemovedHandler[] = [narrowOnPointsRemoved];
+/**
+ * The share snapshots (plan T7) are narrowed by every removal, from the start,
+ * and the country days derived from the removed days go with them (plan E6).
+ * Listed here rather than registered, so no removal path can run without them.
+ */
+const handlers: PointsRemovedHandler[] = [narrowOnPointsRemoved, projectionsOnPointsRemoved];
 
 /** Registers a further handler; returns its removal. */
 export function registerPointsRemovedHandler(handler: PointsRemovedHandler): () => void {

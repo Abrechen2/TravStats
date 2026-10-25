@@ -17,6 +17,7 @@ import {
 } from "./classify";
 import { clipSpan, parseGaps, type ParsedGap } from "./gaps";
 import { addLinks, entryKey, resolveEntries } from "./links";
+import { markTravTrackDaysDirty, utcDaysOf } from "./dirtyDays";
 import { takeTravTrackLock } from "./lock";
 
 /**
@@ -295,6 +296,10 @@ async function ingestIn(
       })),
     });
   }
+  // The projections (country days, E6) re-derive the days that gained a
+  // point — in this transaction, so a day is never stored and unmarked. Every
+  // source: the Companion, a file import's batches, later OwnTracks/Overland.
+  await markTravTrackDaysDirty(tx, userId, utcDaysOf(judged.fresh.map((p) => p.tMs)));
   const { linked, unlinked } = await linkAll(tx, userId, judged.attach);
   const gapsStored = await storeGaps(tx, userId, deviceId, gaps, ranges);
 

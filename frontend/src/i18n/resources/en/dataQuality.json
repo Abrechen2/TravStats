@@ -271,7 +271,8 @@
         "updates": "Flight updates",
         "photos": "Photo suggestions",
         "tripContext": "Trip assignments",
-        "dawarich": "GPS stays"
+        "dawarich": "GPS stays",
+        "location": "Countries from TravTrack"
       },
       "later": "Deferred",
       "laterHint": "These items are deferred for this visit only. No data has been changed.",
@@ -330,6 +331,25 @@
       "contextFailed": "Could not load the trip timeline.",
       "recorded": "Recorded",
       "fullTrip": "Open full trip timeline",
+      "location": {
+        "cardTitle": "Country from your location history",
+        "question": "Were you in {{country}}?",
+        "source": "from TravTrack",
+        "evidence": "TravTrack saw you on the ground in this country on {{days}} days ({{points}} positions), from {{first}} to {{last}}. Your passport does not know the country yet.",
+        "partial": "On at least one of these days not every position was read.",
+        "effect": "“Visited” and “Only passed through on the ground” save your own verdict on this country in the passport. “Not there” changes nothing, and these days are not asked again.",
+        "visited": "Visited",
+        "ground": "Only passed through on the ground",
+        "notThere": "Not there",
+        "emptyTitle": "No open questions about countries",
+        "emptyDescription": "A question appears here once TravTrack sees you on the ground on at least two days in a country your passport does not know yet.",
+        "errors": {
+          "invalidated": "The location data behind this question was deleted or changed meanwhile. The question no longer applies.",
+          "resolved": "This question was answered already.",
+          "busy": "Your answer is still being saved. Please try again in a moment.",
+          "disabled": "TravTrack is switched off on this server. The question stays; you can still choose “Not there”."
+        }
+      },
       "proposal": {
         "new_trip": "These entries may form a trip",
         "assign": "{{count}} entries may belong to this trip",
