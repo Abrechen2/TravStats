@@ -21,24 +21,45 @@ import {
  * moves no recorder window, or repeats one already recorded, adds no row.
  */
 
-/** Holds the owner's build after it read its inputs, while `mockHold.armed` is set. */
-const mockHold: { armed: boolean; reached?: () => void; release?: Promise<void> } = {
-  armed: false,
-};
+/**
+ * Holds the owner's build after it read its inputs, while `mockHold.armed` is
+ * set; with `fail`, the held build then throws instead of going on.
+ */
+const mockHold: {
+  armed: boolean;
+  fail?: boolean;
+  reached?: () => void;
+  release?: Promise<void>;
+} = { armed: false };
 jest.mock("../../services/travtrack/privacyCircles", () => {
   const actual = jest.requireActual("../../services/travtrack/privacyCircles");
   return {
     ...actual,
     privacyCirclesFor: async (...args: unknown[]) => {
       if (mockHold.armed) {
+        const fail = mockHold.fail === true;
         mockHold.armed = false;
+        mockHold.fail = false;
         mockHold.reached?.();
         await mockHold.release;
+        if (fail) throw new Error("build failed (test)");
       }
       return actual.privacyCirclesFor(...args);
     },
   };
 });
+
+/** Arms the hold for the next build: resolves `atHold` when reached, holds until `release()`. */
+function armHold(fail = false) {
+  let reached!: () => void;
+  const atHold = new Promise<void>((resolve) => (reached = resolve));
+  let release!: () => void;
+  mockHold.release = new Promise<void>((resolve) => (release = resolve));
+  mockHold.reached = reached;
+  mockHold.fail = fail;
+  mockHold.armed = true;
+  return { atHold, release };
+}
 
 const PREFIX = "travtrack-share-recorded-";
 const MIN = 60_000;
@@ -130,36 +151,30 @@ describe("TravTrack — restrictions recorded against a shared route", () => {
     await prisma.$disconnect();
   });
 
-  describe("a build running while a flight comes and goes", () => {
-    // From 01:30Z; the fixture flight's recorder window runs to 02:00Z.
-    const FLIGHT_WALK = Date.parse("2026-10-12T01:30:00Z");
-    const IN_FLIGHT_LON = 126.985;
-
-    /** Runs the owner's share, and `during` while the build holds after reading its inputs. */
-    async function shareWhile(during: () => Promise<void>) {
-      let reached!: () => void;
-      const atHold = new Promise<void>((resolve) => (reached = resolve));
-      let release!: () => void;
-      mockHold.release = new Promise<void>((resolve) => (release = resolve));
-      mockHold.reached = reached;
-      mockHold.armed = true;
-      const building = share();
-      const done = building.then((r) => r);
-      await atHold;
-      try {
-        await during();
-      } finally {
-        release();
-      }
-      return done;
+  /** Runs the owner's share, and `during` while the build holds after reading its inputs. */
+  async function shareWhile(during: () => Promise<void>) {
+    const { atHold, release } = armHold();
+    const done = share().then((r) => r);
+    await atHold;
+    try {
+      await during();
+    } finally {
+      release();
     }
+    return done;
+  }
 
-    const linkAndUnlink = async () => {
-      const flightId = await makeFlight(owner);
-      await prisma.flight.update({ where: { id: flightId }, data: { tripId } });
-      await prisma.flight.update({ where: { id: flightId }, data: { tripId: null } });
-    };
+  const linkAndUnlink = async () => {
+    const flightId = await makeFlight(owner);
+    await prisma.flight.update({ where: { id: flightId }, data: { tripId } });
+    await prisma.flight.update({ where: { id: flightId }, data: { tripId: null } });
+  };
 
+  // From 01:30Z; the fixture flight's recorder window runs to 02:00Z.
+  const FLIGHT_WALK = Date.parse("2026-10-12T01:30:00Z");
+  const IN_FLIGHT_LON = 126.985;
+
+  describe("a build running while a flight comes and goes", () => {
     it("a flight linked and unlinked during a new share keeps its hours hidden", async () => {
       await walk(126.95, 127.06, FLIGHT_WALK);
       expect((await share()).status).toBe(200);
@@ -189,6 +204,77 @@ describe("TravTrack — restrictions recorded against a shared route", () => {
         .get(`/api/v1/trips/${tripId}/share-snapshot`)
         .set("Cookie", ownerCookie);
       expect(own.body.snapshot ?? null).toBeNull();
+    });
+  });
+
+  describe("a restriction repeated while a refresh runs", () => {
+    // The refresh captures what is recorded, then reads its inputs; the same
+    // restriction recorded again after that read must survive the refresh,
+    // although it lands on the row the refresh captured (one row per key).
+
+    it("a flight linked and unlinked again during the refresh keeps its hours hidden", async () => {
+      await walk(126.95, 127.06, FLIGHT_WALK);
+      expect((await share()).status).toBe(200);
+      await linkAndUnlink();
+      expect(westOf(await recipientRead(), IN_FLIGHT_LON)).toBe(false);
+      const res = await shareWhile(linkAndUnlink);
+      expect(res.status).toBe(200);
+      const read = await recipientRead();
+      expect(read.length).toBeGreaterThan(0);
+      expect(westOf(read, IN_FLIGHT_LON)).toBe(false);
+    });
+
+    it("days narrowed and widened again during the refresh keep the cut-off hours hidden", async () => {
+      // The trip (Asia/Seoul) ends on 14 Oct at 15:00Z; narrowed to 13 Oct, a day earlier.
+      const AFTER_NARROW_END_LON = 126.95 + 29 * 0.002 + 0.001;
+      const narrowAndWiden = async () => {
+        await prisma.trip.update({
+          where: { id: tripId },
+          data: { endDate: new Date("2026-10-13T00:00:00Z"), endDay: new Date("2026-10-13") },
+        });
+        await prisma.trip.update({
+          where: { id: tripId },
+          data: { endDate: new Date("2026-10-14T00:00:00Z"), endDay: new Date("2026-10-14") },
+        });
+      };
+      await walk(126.95, 127.06, Date.parse("2026-10-13T14:30:00Z"));
+      expect((await share()).status).toBe(200);
+      expect(eastOf(await recipientRead(), AFTER_NARROW_END_LON)).toBe(true);
+      await narrowAndWiden();
+      expect(eastOf(await recipientRead(), AFTER_NARROW_END_LON)).toBe(false);
+      const res = await shareWhile(narrowAndWiden);
+      expect(res.status).toBe(200);
+      const read = await recipientRead();
+      expect(read.length).toBeGreaterThan(0);
+      expect(eastOf(read, AFTER_NARROW_END_LON)).toBe(false);
+    });
+
+    it("a home moved and moved back during the refresh keeps its former place hidden", async () => {
+      const MOVED = { lat: 37.6, lon: 127.0 };
+      const nearMoved = (g: Geometry) =>
+        vertices(g).some(
+          (p) => Math.abs(p[0] - MOVED.lon) < 0.005 && Math.abs(p[1] - MOVED.lat) < 0.005
+        );
+      const moveAndBack = async () => {
+        await prisma.userSettings.update({
+          where: { userId: owner },
+          data: { homePlace: { name: "Zuhause", ...MOVED } },
+        });
+        await prisma.userSettings.update({
+          where: { userId: owner },
+          data: { homePlace: { name: "Zuhause", ...HOME } },
+        });
+      };
+      await walk(126.95, 127.06, Date.parse("2026-10-12T03:00:00Z"));
+      expect((await share()).status).toBe(200);
+      expect(nearMoved(await recipientRead())).toBe(true);
+      await moveAndBack();
+      expect(nearMoved(await recipientRead())).toBe(false);
+      const res = await shareWhile(moveAndBack);
+      expect(res.status).toBe(200);
+      const read = await recipientRead();
+      expect(read.length).toBeGreaterThan(0);
+      expect(nearMoved(read)).toBe(false);
     });
   });
 
@@ -256,8 +342,6 @@ describe("TravTrack — restrictions recorded against a shared route", () => {
   });
 
   describe("what a change adds to the records", () => {
-    const FLIGHT_WALK = Date.parse("2026-10-12T01:30:00Z");
-
     it("a flight's provider readings add nothing, and a repeated window is recorded once", async () => {
       await walk(126.95, 127.06, FLIGHT_WALK);
       expect((await share()).status).toBe(200);

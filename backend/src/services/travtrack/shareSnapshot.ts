@@ -153,18 +153,55 @@ async function ownerView(
   };
 }
 
-/** The ids of what is recorded against the route now: only these may the build clear. */
-async function recordedIds(db: Db, snapshotId: string | undefined) {
-  if (!snapshotId) return { spans: [], flights: [], homes: [] };
+/** One recorded restriction as the build found it: its row, and when it was last recorded. */
+type Recorded = { id: string; recordedSeq: bigint };
+
+/**
+ * What is recorded against the route now: only these may the build clear —
+ * and each only while it is still recorded as it was. A repeat of a recorded
+ * restriction lands on the same row (one row per distinct restriction) and
+ * draws a new `recordedSeq`, so a row repeated after this read is told apart
+ * from the one captured here (Codex review, fourth round).
+ */
+async function recordedRows(db: Db, snapshotId: string | undefined) {
+  const none: Recorded[] = [];
+  if (!snapshotId) return { spans: none, flights: none, homes: none };
   const where = { snapshotId };
-  const select = { id: true } as const;
+  const select = { id: true, recordedSeq: true } as const;
   const [spans, flights, homes] = await Promise.all([
     db.travTrackSharePastSpan.findMany({ where, select }),
     db.travTrackSharePastFlight.findMany({ where, select }),
     db.travTrackSharePastHome.findMany({ where, select }),
   ]);
-  const ids = (rows: Array<{ id: string }>) => rows.map((r) => r.id);
-  return { spans: ids(spans), flights: ids(flights), homes: ids(homes) };
+  return { spans, flights, homes };
+}
+
+/** The filter for exactly the captured rows, each still at its captured number. */
+function stillAsCaptured(snapshotId: string, rows: readonly Recorded[]) {
+  return { snapshotId, OR: rows.map((r) => ({ id: r.id, recordedSeq: r.recordedSeq })) };
+}
+
+/** Clears what the build captured; a row recorded again since keeps narrowing the new share. */
+async function clearCaptured(
+  db: Db,
+  snapshotId: string,
+  cleared: Awaited<ReturnType<typeof recordedRows>>
+) {
+  if (cleared.spans.length > 0) {
+    await db.travTrackSharePastSpan.deleteMany({
+      where: stillAsCaptured(snapshotId, cleared.spans),
+    });
+  }
+  if (cleared.flights.length > 0) {
+    await db.travTrackSharePastFlight.deleteMany({
+      where: stillAsCaptured(snapshotId, cleared.flights),
+    });
+  }
+  if (cleared.homes.length > 0) {
+    await db.travTrackSharePastHome.deleteMany({
+      where: stillAsCaptured(snapshotId, cleared.homes),
+    });
+  }
 }
 
 /**
@@ -174,8 +211,9 @@ async function recordedIds(db: Db, snapshotId: string | undefined) {
  *
  * Flight, trip and settings writes do not take that lock, so a restriction
  * can be recorded while the build runs. The build clears only what was
- * recorded BEFORE it read its inputs (the ids it read first); anything
- * recorded later stays and narrows the new share too. For the same reason a
+ * recorded BEFORE it read its inputs (the rows and their record numbers it
+ * read first); anything recorded later — a repeat of a captured restriction
+ * included — stays and narrows the new share too. For the same reason a
  * first share commits a pending row before the build: without a committed row
  * the triggers would have nothing to record a change made during the build
  * against.
@@ -197,7 +235,7 @@ export async function shareTripRoute(userId: string, tripId: string) {
           select: { id: true },
         });
         // Read before any input: what is recorded after this stays recorded.
-        const cleared = await recordedIds(tx, existing?.id);
+        const cleared = await recordedRows(tx, existing?.id);
         const bounds = await boundsOf(tx, userId, tripId);
         const built = bounds ? await buildShareGeometry(tx, userId, bounds) : null;
         if (!bounds || !built || built.geometry.length === 0) {
@@ -219,16 +257,7 @@ export async function shareTripRoute(userId: string, tripId: string) {
         });
         // The owner's share starts over from what this build read: the trip,
         // its flights and the home as they were when it read them.
-        const snapshotId = row.id;
-        await tx.travTrackSharePastSpan.deleteMany({
-          where: { snapshotId, id: { in: cleared.spans } },
-        });
-        await tx.travTrackSharePastFlight.deleteMany({
-          where: { snapshotId, id: { in: cleared.flights } },
-        });
-        await tx.travTrackSharePastHome.deleteMany({
-          where: { snapshotId, id: { in: cleared.homes } },
-        });
+        await clearCaptured(tx, row.id, cleared);
         return ownerView(tx, userId, row);
       },
       { timeout: 60_000 }

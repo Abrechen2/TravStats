@@ -5853,8 +5853,15 @@ model TravTrackSharePastSpan {
   profileZone String?   @map("profile_zone")
   /// What makes this restriction what it is (an md5 of the values that
   /// decide it, set by the trigger): one row per distinct restriction, a
-  /// repeat is `ON CONFLICT DO NOTHING`. Rows from before it carry their id.
+  /// repeat lands on the same row. Rows from before it carry their id.
   dedupeKey   String    @map("dedupe_key")
+  /// When this restriction was last recorded: a number from the one sequence
+  /// `travtrack_share_restriction_seq`, set by the trigger on insert and drawn
+  /// anew when a repeat lands on this row (`ON CONFLICT DO UPDATE`). The
+  /// owner's build captures each row's id with its number and clears only rows
+  /// whose number is still the captured one, so a repeat recorded after the
+  /// build read its inputs survives it (Codex review, fourth round).
+  recordedSeq BigInt    @map("recorded_seq")
   capturedAt  DateTime  @default(now()) @map("captured_at")
 
   snapshot TravTrackShareSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
@@ -5889,8 +5896,15 @@ model TravTrackSharePastFlight {
   arrIcao              String?   @map("arr_icao")
   /// What makes this restriction what it is (an md5 of the values that
   /// decide it, set by the trigger): one row per distinct restriction, a
-  /// repeat is `ON CONFLICT DO NOTHING`. Rows from before it carry their id.
+  /// repeat lands on the same row. Rows from before it carry their id.
   dedupeKey            String    @map("dedupe_key")
+  /// When this restriction was last recorded: a number from the one sequence
+  /// `travtrack_share_restriction_seq`, set by the trigger on insert and drawn
+  /// anew when a repeat lands on this row (`ON CONFLICT DO UPDATE`). The
+  /// owner's build captures each row's id with its number and clears only rows
+  /// whose number is still the captured one, so a repeat recorded after the
+  /// build read its inputs survives it (Codex review, fourth round).
+  recordedSeq          BigInt    @map("recorded_seq")
   capturedAt           DateTime  @default(now()) @map("captured_at")
 
   snapshot TravTrackShareSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
@@ -5902,14 +5916,21 @@ model TravTrackSharePastFlight {
 
 /// A home the owner had before a change: the route keeps away from it too.
 model TravTrackSharePastHome {
-  id         String   @id @default(uuid())
-  snapshotId String   @map("snapshot_id")
-  homePlace  Json     @map("home_place")
+  id          String   @id @default(uuid())
+  snapshotId  String   @map("snapshot_id")
+  homePlace   Json     @map("home_place")
   /// What makes this restriction what it is (an md5 of the values that
   /// decide it, set by the trigger): one row per distinct restriction, a
-  /// repeat is `ON CONFLICT DO NOTHING`. Rows from before it carry their id.
-  dedupeKey  String   @map("dedupe_key")
-  capturedAt DateTime @default(now()) @map("captured_at")
+  /// repeat lands on the same row. Rows from before it carry their id.
+  dedupeKey   String   @map("dedupe_key")
+  /// When this restriction was last recorded: a number from the one sequence
+  /// `travtrack_share_restriction_seq`, set by the trigger on insert and drawn
+  /// anew when a repeat lands on this row (`ON CONFLICT DO UPDATE`). The
+  /// owner's build captures each row's id with its number and clears only rows
+  /// whose number is still the captured one, so a repeat recorded after the
+  /// build read its inputs survives it (Codex review, fourth round).
+  recordedSeq BigInt   @map("recorded_seq")
+  capturedAt  DateTime @default(now()) @map("captured_at")
 
   snapshot TravTrackShareSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
 
