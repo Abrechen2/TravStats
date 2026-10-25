@@ -175,6 +175,7 @@ describe("TrackMapView — long spans", () => {
     renderAt("/track/2026-10-25?range=custom&from=2024-01-01");
     const alert = await screen.findByTestId("track-range-failed");
     expect(alert).toHaveTextContent("track:errors.rangeTooLong");
+    expect(within(alert).queryByRole("button")).not.toBeInTheDocument();
     expect(screen.queryByTestId("track-day-empty")).not.toBeInTheDocument();
   });
 
@@ -198,7 +199,9 @@ describe("TrackMapView — long spans", () => {
     await screen.findByTestId("map-stub");
     expect(screen.getByTestId("track-replay-limit")).toHaveTextContent('"days":7');
     expect(screen.queryByTestId("track-replay")).not.toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: /track:map.layers.visits\b/ })).toBeDisabled();
+    const visits = screen.getByRole("checkbox", { name: /track:map.layers.visits\b/ });
+    expect(visits).toBeDisabled();
+    expect(visits).not.toBeChecked();
   });
 
   it("the Zeitraum picker applies two days together", async () => {

@@ -77,9 +77,12 @@ export default function TrackMapNotices({
                 })
               : t(range.key)}
           </p>
-          <button type="button" className="self-start underline" onClick={onResume}>
-            {t(parts.length > 0 ? "track:map.rangeResume" : "track:map.retry")}
-          </button>
+          {/* A span the server refuses as too long stays refused: no retry to offer. */}
+          {range.key !== "track:errors.rangeTooLong" && (
+            <button type="button" className="self-start underline" onClick={onResume}>
+              {t(parts.length > 0 ? "track:map.rangeResume" : "track:map.retry")}
+            </button>
+          )}
         </div>
       )}
       {!long &&

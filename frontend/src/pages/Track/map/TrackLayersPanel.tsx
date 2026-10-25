@@ -53,7 +53,7 @@ export default function TrackLayersPanel({
             <input
               type="checkbox"
               disabled={long && DAY_ONLY.has(id)}
-              checked={prefs.layers[id]}
+              checked={prefs.layers[id] && !(long && DAY_ONLY.has(id))}
               onChange={() => onChange({ layers: { ...prefs.layers, [id]: !prefs.layers[id] } })}
               style={{ width: 18, height: 18, accentColor: TRACK_COLOR }}
             />
