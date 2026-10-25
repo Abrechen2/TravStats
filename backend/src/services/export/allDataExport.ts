@@ -1,5 +1,6 @@
 import { prisma } from "../../db";
 import { buildTravTrackDataExport } from "../travtrack/accountExport";
+import { PUBLIC_STAY_SELECT, publicEvidence } from "../dawarich/stays/publicStay";
 
 /**
  * What `GET /admin/export/all-data` carries per user — kept here so the route
@@ -162,8 +163,10 @@ export const USER_EXPORT_SELECT = {
   // journeys the photo inbox proposed from it: evidence the passport reads.
   countryDays: true,
   photoJourneys: true,
-  // Includes review decisions and edited evidence, not just regenerable suggestions.
-  dawarichStays: true,
+  // Includes review decisions and edited evidence, not just regenerable
+  // suggestions. Named columns only: the evidence key and the claim stay
+  // server-side, and the evidence leaves through `withPublicStays`.
+  dawarichStays: { select: PUBLIC_STAY_SELECT },
   // The answers to trip suggestions: without them a restored account would be
   // asked again every question it already dismissed. The suggestions
   // themselves are derived and never stored.
@@ -305,6 +308,21 @@ export async function loadUserAddedCatalogue(): Promise<{
 }
 
 /**
+ * A user record read with `USER_EXPORT_SELECT`, its stays' evidence without
+ * the server-only point digests. Every path that writes the export out — the
+ * admin download and the per-account export the WebDAV sync uploads — passes
+ * its records through here.
+ */
+export function withPublicStays<T extends { dawarichStays: Array<{ evidence: unknown }> }>(
+  user: T
+): T {
+  return {
+    ...user,
+    dawarichStays: user.dawarichStays.map((s) => ({ ...s, evidence: publicEvidence(s.evidence) })),
+  };
+}
+
+/**
  * One account's share of the export above — what a per-account WebDAV sync
  * uploads (forgejo#321). The same selection, so a table added to the export
  * reaches the sync with it; photo and document bytes stay out, as they do in
@@ -320,7 +338,7 @@ export async function buildAccountExport(
     format: "travstats-account-export/1",
     exportedAt: new Date().toISOString(),
     instanceName,
-    user,
+    user: withPublicStays(user),
     travtrack: await buildTravTrackDataExport(userId),
   };
 }

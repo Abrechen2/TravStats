@@ -7,7 +7,11 @@ import { startAirportSeeding, getSeedingStatus } from "../../services/airportSee
 import { sweepStaleLogos } from "../../jobs/airlineLogoRefreshScheduler";
 import logger from "../../utils/logger";
 import { appVersion, buildVersion } from "../../utils/version";
-import { USER_EXPORT_SELECT, loadUserAddedCatalogue } from "../../services/export/allDataExport";
+import {
+  USER_EXPORT_SELECT,
+  loadUserAddedCatalogue,
+  withPublicStays,
+} from "../../services/export/allDataExport";
 import { withTravTrackSections } from "../../services/travtrack/accountExport";
 
 const router = Router();
@@ -239,7 +243,7 @@ router.get(
       // one module the export test holds against the schema.
       // TravTrack's history rides along per user, read in pages (plan T7).
       const users = await withTravTrackSections(
-        await prisma.user.findMany({ select: USER_EXPORT_SELECT })
+        (await prisma.user.findMany({ select: USER_EXPORT_SELECT })).map(withPublicStays)
       );
       const catalogue = await loadUserAddedCatalogue();
 

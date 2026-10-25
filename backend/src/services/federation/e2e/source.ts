@@ -8,6 +8,7 @@ import { TRAVEL_GRAPH, type NodeSpec } from "./graph";
 import inventory from "./fieldInventory.json";
 import { rowAssets, type AssetRef } from "./assets";
 import { viewableFlightTrack } from "../../travtrack/flightTrackView";
+import { publicEvidence } from "../../dawarich/stays/publicStay";
 
 type Scope = ReturnType<typeof storedScope>;
 type Row = Record<string, unknown>;
@@ -93,6 +94,8 @@ export async function projectRow(
     };
   }
   if (Object.entries(spec.only ?? {}).some(([k, v]) => row[k] !== v)) return null;
+  // A stay's point digests are server-keyed and never published (TravTrack E1).
+  if (spec.model === "DawarichStay") row = { ...row, evidence: publicEvidence(row.evidence) };
   const fields = FIELD_INVENTORY[spec.model];
   const allowed = [
     ...words(fields.details),
