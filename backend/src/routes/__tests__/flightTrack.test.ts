@@ -7,6 +7,7 @@ import { generateToken } from "../../utils/jwt";
 import { generateApiToken } from "../../utils/apiTokens";
 import { FLIGHT_TRACK_MAX_BODY_BYTES, FLIGHT_TRACK_MAX_POINTS } from "../../schemas/flightDevice";
 import { haversineKm } from "../../shared/geo/haversine";
+import { flightDeviceDataLimiter } from "../../middleware/rateLimit";
 import { standThenMove } from "../../services/tracks/__tests__/jitterFixtures";
 
 /**
@@ -55,6 +56,8 @@ describe("Flight recordings — /flights/:id/track", () => {
   });
 
   beforeEach(async () => {
+    // Thirty uploads per quarter hour: the suite outgrew one bucket for the whole file.
+    await flightDeviceDataLimiter.resetKey(`user:${userId}`);
     await prisma.flight.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
     await prisma.apiToken.deleteMany({ where: { userId } });
     const base = {
@@ -169,6 +172,80 @@ describe("Flight recordings — /flights/:id/track", () => {
     expect(stored.segmentStarts).toEqual([0, 2]);
     // 38 recorded steps; the 430 km jump is not one of them.
     expect(stored.distanceKm).toBeLessThan(600);
+  });
+
+  describe("segments: a recording uploaded in pieces (privacy-zone fixes taken out)", () => {
+    // Fixes 28 and 29 removed: the pieces are three steps (~43 km, under the
+    // 50 km hole rule) and three minutes apart, so only the break keeps them apart.
+    const all = points(60);
+    const pieces = [all.slice(0, 28), all.slice(30)];
+    const STEP_KM = 14.3;
+
+    it("stores the pieces apart and never draws or measures across the break", async () => {
+      const post = await request(app)
+        .post(`/api/v1/flights/${flightId}/track`)
+        .set("Cookie", cookie)
+        .send({ uploadId: "rec-seg", segments: pieces });
+      expect(post.status).toBe(201);
+      expect(post.body.track).toMatchObject({ pointCount: 58 });
+      const stored = await prisma.flightTrack.findUniqueOrThrow({ where: { flightId } });
+      expect(stored.segmentStarts).toEqual([0, 2]);
+      // 27 + 29 steps; the 43 km chord between the pieces is not one of them.
+      expect(stored.distanceKm).toBeLessThan(57 * STEP_KM);
+      expect(stored.distanceKm).toBeGreaterThan(55 * STEP_KM);
+      const geometry = stored.geometry as Array<[number, number]>;
+      expect(geometry[1][0]).toBeCloseTo(8 + 27 * 0.2, 6);
+      expect(geometry[2][0]).toBeCloseTo(8 + 30 * 0.2, 6);
+
+      const get = await request(app).get(`/api/v1/flights/${flightId}/track`).set("Cookie", cookie);
+      expect(get.body.track.segmentStarts).toEqual([0, 2]);
+      expect(get.body.track.distanceKm).toBe(stored.distanceKm);
+    });
+
+    it("the same fixes as one flat list are one line, bridged as before", async () => {
+      const post = await request(app)
+        .post(`/api/v1/flights/${flightId}/track`)
+        .set("Cookie", cookie)
+        .send({ uploadId: "rec-flat", points: pieces.flat() });
+      expect(post.status).toBe(201);
+      const stored = await prisma.flightTrack.findUniqueOrThrow({ where: { flightId } });
+      expect(stored.segmentStarts).toEqual([0]);
+      expect(stored.distanceKm).toBeGreaterThan(58 * STEP_KM);
+    });
+
+    it("refuses points and segments together, neither, overlapping pieces or too few fixes", async () => {
+      const bodies = [
+        { uploadId: "bad-both", points: all, segments: pieces },
+        { uploadId: "bad-none" },
+        { uploadId: "bad-order", segments: [pieces[1], pieces[0]] },
+        { uploadId: "bad-inner", segments: [[all[1], all[0]], pieces[1]] },
+        { uploadId: "bad-few", segments: [[all[0]]] },
+        { uploadId: "bad-empty", segments: [[], pieces[1]] },
+      ];
+      for (const body of bodies) {
+        const res = await request(app)
+          .post(`/api/v1/flights/${flightId}/track`)
+          .set("Cookie", cookie)
+          .send(body);
+        expect({ id: body.uploadId, status: res.status }).toEqual({
+          id: body.uploadId,
+          status: 400,
+        });
+      }
+      expect(await prisma.flightTrack.count({ where: { flightId } })).toBe(0);
+    });
+
+    it("counts every piece against the point limit", async () => {
+      const many = points(FLIGHT_TRACK_MAX_POINTS / 2 + 1);
+      const res = await request(app)
+        .post(`/api/v1/flights/${flightId}/track`)
+        .set("Cookie", cookie)
+        .send({
+          uploadId: "too-many",
+          segments: [many, many.map((p) => ({ ...p, t: p.t + 1e8 }))],
+        });
+      expect([400, 413]).toContain(res.status);
+    });
   });
 
   it("answers an outbox retry with the stored row and writes nothing", async () => {

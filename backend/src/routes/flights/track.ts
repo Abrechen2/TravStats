@@ -9,6 +9,7 @@ import { flightDeviceDataLimiter } from "../../middleware/rateLimit";
 import {
   FLIGHT_TRACK_MAX_BODY_BYTES,
   flightTrackFileFieldsSchema,
+  flightTrackUploadPieces,
   flightTrackUploadSchema,
   type FlightTrackSource,
 } from "../../schemas/flightDevice";
@@ -200,7 +201,9 @@ router.get("/:id/track", async (req: AuthRequest, res: Response, next: NextFunct
 
 /**
  * POST /flights/:id/track — JSON `{ uploadId, replace?, points: [{t, lat, lon,
- * alt?, speed?}] }`.
+ * alt?, speed?}] }`, or `segments: [[{…}, …], …]` in place of `points`: the
+ * recording in pieces that are never joined (advertised as
+ * `uploads.flightTrackSegments` in GET /location/capabilities).
  *
  *   - same `uploadId` as the stored recording → 200 with it, `replayed: true`
  *     (an outbox retry; nothing is written)
@@ -240,8 +243,9 @@ router.post(
       }
       if (existing && !body.replace) throw alreadyRecorded();
 
-      const first = body.points[0].t;
-      const last = body.points[body.points.length - 1].t;
+      const { points, segmentStarts } = flightTrackUploadPieces(body);
+      const first = points[0].t;
+      const last = points[points.length - 1].t;
       if (!overlapsSchedule(first, last, await scheduledInstants(flight))) {
         throw new AppError(
           "The recording does not overlap this flight's schedule",
@@ -250,7 +254,7 @@ router.post(
         );
       }
 
-      const columns = flightTrackColumns(body.points);
+      const columns = flightTrackColumns(points, segmentStarts);
       if (!columns) {
         throw new AppError("Too few distinct points to draw a line", 400, "VALIDATION_FAILED");
       }

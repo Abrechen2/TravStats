@@ -90,6 +90,16 @@ const capabilities = z.object({
           "TravTrack keep leaving the phone after a switch"
       ),
   }),
+  uploads: z
+    .object({
+      flightTrackSegments: z
+        .literal(true)
+        .describe(
+          "POST /flights/:id/track takes `segments` (the recording in pieces, never joined " +
+            "across a break) in place of `points`. Absent on an older server: send `points`."
+        ),
+    })
+    .describe("What the upload routes take, whatever the provider (additive; version stays 1)"),
 });
 
 registry.registerPath({

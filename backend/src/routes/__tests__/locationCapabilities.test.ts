@@ -127,6 +127,7 @@ describe("location capabilities", () => {
         provider: { kind: "none", rev: 0, status: "ok" },
         capture: { flight: true, trip: true, everyday: false, modes: [], sink: "entries" },
         travTrack: { offered: false, enabled: false, capture: false, upload: false },
+        uploads: { flightTrackSegments: true },
       });
     });
 
@@ -148,6 +149,7 @@ describe("location capabilities", () => {
         provider: { kind: "dawarich", rev: 3, status: "ok" },
         capture: { flight: false, trip: false, everyday: false, modes: [], sink: null },
         travTrack: { offered: false, enabled: false, capture: false, upload: false },
+        uploads: { flightTrackSegments: true },
       });
     });
 
@@ -167,6 +169,7 @@ describe("location capabilities", () => {
         provider: { kind: "travtrack", rev: 2, status: "unavailable" },
         capture: { flight: false, trip: false, everyday: false, modes: [], sink: null },
         travTrack: { offered: false, enabled: false, capture: false, upload: false },
+        uploads: { flightTrackSegments: true },
       });
     });
   });
@@ -188,6 +191,17 @@ describe("location capabilities", () => {
       .expect(200);
     expect(res.body.version).toBe(1);
     await prisma.apiToken.deleteMany({ where: { userId } });
+  });
+
+  it("says the flight-track upload takes segments, whatever the provider", async () => {
+    // Additive (version stays 1): a Companion holding a track it cut at a
+    // privacy zone sends it as pieces only where this is true.
+    expect((await caps()).body).toMatchObject({
+      version: 1,
+      uploads: { flightTrackSegments: true },
+    });
+    await settings({ ...ownDawarich, locationProvider: "dawarich", locationProviderRev: 1 });
+    expect((await caps()).body.uploads).toEqual({ flightTrackSegments: true });
   });
 
   it("answers 401 without a session", async () => {

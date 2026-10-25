@@ -50,28 +50,93 @@ export const flightTrackPointSchema = z.object({
 
 export type FlightTrackPoint = z.infer<typeof flightTrackPointSchema>;
 
+/** Upper bound on the pieces of one segmented recording. */
+export const FLIGHT_TRACK_MAX_SEGMENTS = 1_000;
+
+/**
+ * The recording as one flat list (`points`) or in pieces (`segments`) —
+ * exactly one of the two. A piece is a stretch the phone recorded without a
+ * break: the Companion takes the fixes inside a privacy zone out of an old
+ * recording and sends what is left as pieces, so the server never joins two
+ * of them — not on the line, not in the distance, not in any export. A flat
+ * list keeps its meaning: one stretch, cut only where the hole rule cuts it.
+ * The points of all pieces together obey the same limits as a flat list.
+ */
 export const flightTrackUploadSchema = z
   .object({
     /** The client's id for this recording — an outbox retry sends the same one. */
     uploadId: z.string().trim().min(1).max(200),
     /** Replace a recording already stored for this flight under another id. */
     replace: z.boolean().optional(),
-    points: z.array(flightTrackPointSchema).min(2).max(FLIGHT_TRACK_MAX_POINTS),
+    points: z
+      .array(flightTrackPointSchema)
+      .min(2)
+      .max(FLIGHT_TRACK_MAX_POINTS)
+      .optional()
+      .describe("The recording as one stretch. Send this or `segments`, not both."),
+    segments: z
+      .array(z.array(flightTrackPointSchema).min(1))
+      .min(1)
+      .max(FLIGHT_TRACK_MAX_SEGMENTS)
+      .optional()
+      .describe(
+        "The recording in pieces, in time order, never joined across a break (drawn, " +
+          "measured and exported apart). Send this or `points`, not both; together at least 2 " +
+          `and at most ${FLIGHT_TRACK_MAX_POINTS} points. Advertised by ` +
+          "`uploads.flightTrackSegments` in GET /location/capabilities."
+      ),
   })
   .superRefine((body, ctx) => {
-    // Non-decreasing: a GPS fix can repeat its second, it cannot go back in
-    // time. One reported issue is enough — 50 000 would drown the answer.
-    for (let i = 1; i < body.points.length; i++) {
-      if (body.points[i].t < body.points[i - 1].t) {
+    if ((body.points === undefined) === (body.segments === undefined)) {
+      ctx.addIssue({ code: "custom", path: [], message: "Send either points or segments" });
+      return;
+    }
+    const all = body.points ?? (body.segments ?? []).flat();
+    const path = (i: number): Array<string | number> => {
+      if (body.points) return ["points", i, "t"];
+      let rest = i;
+      for (const [k, piece] of (body.segments ?? []).entries()) {
+        if (rest < piece.length) return ["segments", k, rest, "t"];
+        rest -= piece.length;
+      }
+      return ["segments"];
+    };
+    if (all.length < 2 || all.length > FLIGHT_TRACK_MAX_POINTS) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["segments"],
+        message: `A recording holds 2 to ${FLIGHT_TRACK_MAX_POINTS} points`,
+      });
+      return;
+    }
+    // Non-decreasing, across pieces too: a GPS fix can repeat its second, it
+    // cannot go back in time. One reported issue is enough — 50 000 would drown the answer.
+    for (let i = 1; i < all.length; i++) {
+      if (all[i].t < all[i - 1].t) {
         ctx.addIssue({
           code: "custom",
-          path: ["points", i, "t"],
+          path: path(i),
           message: "Point times must not go backwards",
         });
         return;
       }
     }
   });
+
+/** The upload's fixes as one time-ordered list and where each piece starts in it. */
+export function flightTrackUploadPieces(body: FlightTrackUpload): {
+  points: FlightTrackPoint[];
+  segmentStarts: number[];
+} {
+  if (body.points) return { points: body.points, segmentStarts: [0] };
+  const segmentStarts: number[] = [];
+  const points: FlightTrackPoint[] = [];
+  for (const piece of body.segments ?? []) {
+    segmentStarts.push(points.length);
+    for (const p of piece) points.push(p);
+  }
+  return { points, segmentStarts };
+}
 
 export type FlightTrackUpload = z.infer<typeof flightTrackUploadSchema>;
 

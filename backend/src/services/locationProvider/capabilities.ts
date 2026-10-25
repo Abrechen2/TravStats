@@ -44,6 +44,15 @@ export interface LocationCapabilities {
     sink: CaptureSink | null;
   };
   travTrack: { offered: boolean; enabled: boolean; capture: boolean; upload: boolean };
+  /**
+   * What the upload routes of this server take, whatever the provider (they
+   * never consult it). Additive: `version` stays 1, and a server without the
+   * key takes the older forms only.
+   */
+  uploads: {
+    /** `POST /flights/:id/track` takes `segments` (pieces never joined) in place of `points`. */
+    flightTrackSegments: true;
+  };
 }
 
 export async function locationCapabilities(userId: string): Promise<LocationCapabilities> {
@@ -70,5 +79,6 @@ export async function locationCapabilities(userId: string): Promise<LocationCapa
       sink: flight || trip || travTrackOn ? sink : null,
     },
     travTrack: { offered, enabled: travTrackOn, capture: travTrackOn, upload },
+    uploads: { flightTrackSegments: true },
   };
 }

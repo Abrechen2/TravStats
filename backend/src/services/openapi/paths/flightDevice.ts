@@ -114,6 +114,10 @@ registry.registerPath({
   summary: "Upload the phone's recording of a flight",
   description:
     `Up to ${FLIGHT_TRACK_MAX_POINTS} points with non-decreasing times; body at most 8 MB. ` +
+    "The points come as one flat `points` list or as `segments`, pieces in time order that are " +
+    "never joined — drawn, measured and exported apart (`segmentStarts`); exactly one of the " +
+    "two. A server that takes `segments` says `uploads.flightTrackSegments: true` in " +
+    "GET /location/capabilities. " +
     "Idempotent per uploadId: a retry answers 200 with the stored recording. A recording " +
     "under another uploadId is refused (409 TRACK_ALREADY_RECORDED) unless `replace: true`. " +
     "The span must overlap the flight's schedule widened by 12 h (422 TRACK_OUTSIDE_FLIGHT). " +
