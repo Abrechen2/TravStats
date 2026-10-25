@@ -16,6 +16,11 @@ vi.mock("../../../hooks/useTravTrackVisible", () => ({
   useTravTrackVisible: () => travTrack.visible,
 }));
 
+const travPlan = vi.hoisted(() => ({ visible: false }));
+vi.mock("../../../hooks/useTravPlanVisible", () => ({
+  useTravPlanVisible: () => travPlan.visible,
+}));
+
 vi.unmock("../../../store/settingsStore");
 
 import {
@@ -96,16 +101,32 @@ describe("useNavItems — Mehr › Sammlungen", () => {
     expect(section(more, "collections").map((i) => i.path)).toContain("/achievements");
   });
 
-  // TravTrack plan T6: the rule lives in `useTravTrackVisible`; the menu follows it.
-  it("offers Track in Sammlungen exactly when TravTrack is offered to the account", () => {
-    travTrack.visible = false;
-    expect(section(run().more, "collections").map((i) => i.path)).not.toContain("/track");
-    travTrack.visible = true;
-    expect(section(run().more, "collections").map((i) => i.path)).toContain("/track");
+  // Phase 5 (header variant B): Track is a word in the logo, so it left "Mehr".
+  it("never offers Track in Mehr, whether or not TravTrack is offered", () => {
+    for (const visible of [false, true]) {
+      travTrack.visible = visible;
+      const paths = run().more.flatMap((s) => s.items.map((i) => i.path));
+      expect(paths).not.toContain("/track");
+    }
     travTrack.visible = false;
   });
 
-  // forgejo#137: a note needs no domain, so the entry does not either.
+  it("names the areas the logo spells, in order, from the two visibility rules", () => {
+    const cases: [boolean, boolean, string[]][] = [
+      [false, false, ["stats"]],
+      [true, false, ["stats", "plan"]],
+      [false, true, ["stats", "track"]],
+      [true, true, ["stats", "plan", "track"]],
+    ];
+    for (const [plan, track, areas] of cases) {
+      travPlan.visible = plan;
+      travTrack.visible = track;
+      expect(run().areas).toEqual(areas);
+    }
+    travPlan.visible = false;
+    travTrack.visible = false;
+  });
+
   it("offers Notizen without flights", () => {
     useSettingsStore.setState({ enabledDomains: ["cruise"] });
     expect(section(run().more, "collections").map((i) => i.path)).toContain("/notes");

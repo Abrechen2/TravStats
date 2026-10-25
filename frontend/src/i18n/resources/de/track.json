@@ -324,5 +324,18 @@
     "unknownDevice": "Unbekanntes Gerät",
     "none": "Noch keine Position aufgezeichnet.",
     "open": "Diesen Tag ansehen"
+  },
+  "menu": {
+    "map": "Karte",
+    "explored": "Erkundet",
+    "stats": "Statistik",
+    "stays": "Aufenthalte",
+    "imports": "Importe"
+  },
+  "coming": {
+    "staysTitle": "Aufenthalte",
+    "staysBody": "Hier erscheinen bald die Orte, an denen du dich länger aufgehalten hast.",
+    "importsTitle": "Importe",
+    "importsBody": "Hier findest du bald alle Importe deines Standortverlaufs an einem Ort."
   }
 }
