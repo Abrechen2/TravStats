@@ -35,7 +35,7 @@ import {
   type Cell,
   type TileRange,
 } from "./cells";
-import { ensureZoneCells } from "./zoneCells";
+import { zoneRasterState } from "./zoneCells";
 import { circleCells, fillComponent, zoneComponents } from "./zoneRaster";
 
 /** The most cells one answer carries; more → 400 `TRAVTRACK_EXPLORED_ZOOM_IN`. */
@@ -93,6 +93,9 @@ const unavailable = () =>
     "TRAVTRACK_EXPLORED_UNAVAILABLE"
   );
 
+const preparing = () =>
+  new AppError("The explored map is being prepared", 409, "TRAVTRACK_EXPLORED_PREPARING");
+
 /**
  * The zones touching the box, each decided WHOLE: all of its cells and the
  * explored state of each and of its neighbours, never cut to the box. So a
@@ -147,7 +150,6 @@ export async function exploredAnswer(
   bbox: Bbox,
   opts: ExploredAnswerOptions = {}
 ): Promise<{ cells: Cell[] }> {
-  await ensureZoneCells(userId);
   const ranges = bboxRanges(bbox);
   return prisma.$transaction(
     async (tx) => {
@@ -156,6 +158,9 @@ export async function exploredAnswer(
         select: { zoneCellsOverflow: true },
       });
       await opts.betweenReads?.();
+      // Never built: the background build is under way. Nothing is
+      // rasterised here, and nothing is answered in part.
+      if ((await zoneRasterState(tx, userId)) === "preparing") throw preparing();
       // Fail closed for the whole view: a raster too large to hold is never
       // answered in part, since any part could outline a zone.
       if (state?.zoneCellsOverflow) throw unavailable();

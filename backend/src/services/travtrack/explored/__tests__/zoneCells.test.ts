@@ -5,7 +5,7 @@ import { makeUser, wipeTravTrack } from "../../__tests__/fixtures";
 import { travTrackSwitches } from "../../__tests__/switches";
 import { tileOf, type Cell } from "../cells";
 import { circleCells, exploredAnswer } from "../privacy";
-import { addZoneCircle, rebuildZoneCells } from "../zoneCells";
+import { addZoneCircle, buildZoneRasterStep } from "../zoneCells";
 
 /**
  * The explored map's zone raster (TravTrack plan L1; Codex review of
@@ -42,6 +42,15 @@ describe("the explored map's zone raster", () => {
       data: cells.map((c) => ({ userId, day: utcMidnight("2026-10-12"), x: c.x, y: c.y })),
       skipDuplicates: true,
     });
+  /** A build from scratch, as the background job does it, to the end. */
+  const buildAll = async () => {
+    await prisma.travTrackZoneCell.deleteMany({ where: { userId } });
+    await prisma.travTrackDerivationState.updateMany({
+      where: { userId },
+      data: { zoneCellsVersion: 0, zoneCellsOverflow: false, zoneCellsBuildCursor: null },
+    });
+    while ((await buildZoneRasterStep(userId, 500)) !== "done");
+  };
   const stored = () =>
     prisma.travTrackZoneCell.findMany({ where: { userId }, select: { x: true, y: true } });
 
@@ -76,10 +85,14 @@ describe("the explored map's zone raster", () => {
     expect(new Set((await stored()).map(key))).toEqual(both);
   });
 
-  it("an account never built is built by its first request", async () => {
+  it("an account never built is built by the background job, then answered", async () => {
     await prisma.travTrackPrivacyZone.create({ data: { userId, name: "Z", ...BERLIN } });
     await seed(ringAround(circleCells(BERLIN), 1));
     const box = { west: 13.3, south: 52.45, east: 13.5, north: 52.6 };
+    await expect(exploredAnswer(userId, box)).rejects.toMatchObject({
+      code: "TRAVTRACK_EXPLORED_PREPARING",
+    });
+    await buildAll();
 
     const { cells } = await exploredAnswer(userId, box);
 
@@ -113,7 +126,7 @@ describe("the explored map's zone raster", () => {
       untilAt: new Date(Date.parse("2026-10-01T00:00:00Z") + i * 60_000),
     }));
     await prisma.travTrackZoneTombstone.createMany({ data: tombstones });
-    await prisma.$transaction((tx) => rebuildZoneCells(tx, userId));
+    await buildAll();
     expect(await prisma.travTrackZoneCell.count({ where: { userId } })).toBeGreaterThan(0);
 
     let queries = 0;
@@ -152,7 +165,7 @@ describe("the explored map's zone raster", () => {
     await seed(ringAround(bigCells, 2));
 
     const built = Date.now();
-    await prisma.$transaction((tx) => rebuildZoneCells(tx, userId), { timeout: 30_000 });
+    await buildAll();
     expect(Date.now() - built).toBeLessThan(5_000);
 
     const asked = Date.now();
@@ -179,7 +192,7 @@ describe("the explored map's zone raster", () => {
         untilAt: new Date(Date.parse("2026-10-01T00:00:00Z") + i * 60_000),
       })),
     });
-    await prisma.$transaction((tx) => rebuildZoneCells(tx, userId), { timeout: 30_000 });
+    await buildAll();
     const { zone } = await createZone(userId, { name: "Zuhause", ...BERLIN }, true);
     expect(zone.id).toBeTruthy();
 
@@ -227,6 +240,7 @@ describe("the explored map's zone raster", () => {
       ],
     });
     await seed(ringAround(circleCells(oldest), 1));
+    await buildAll();
 
     const { cells } = await exploredAnswer(userId, {
       west: 13.3,
@@ -257,7 +271,7 @@ describe("the explored map's zone raster", () => {
       return [...groups.values()].map((g) => g.sort().join(",")).sort();
     };
     const incremental = partition(await rows());
-    await prisma.$transaction((tx) => rebuildZoneCells(tx, userId));
+    await buildAll();
     expect(incremental).toEqual(partition(await rows()));
     // Berlin and its neighbour touch: one component; Munich its own.
     expect(incremental).toHaveLength(2);
@@ -277,7 +291,7 @@ describe("the explored map's zone raster", () => {
         { userId, lat: 52.52, lon: 13.405, radiusM: 500, untilAt: new Date(base) },
       ],
     });
-    await prisma.$transaction((tx) => rebuildZoneCells(tx, userId));
+    await buildAll();
     expect((await stored()).length).toBe(circleCells(BERLIN).length);
   });
 });

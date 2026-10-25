@@ -97,6 +97,20 @@ describe("runTravTrackProjections", () => {
     expect(await prisma.travTrackExploredCell.count({ where: { userId } })).toBe(1);
   });
 
+  it("a tick advances the explored map's background raster build (L1)", async () => {
+    await prisma.travTrackPrivacyZone.deleteMany({ where: { userId } });
+    await prisma.travTrackPrivacyZone.create({
+      data: { userId, name: "Alt", lat: 38.72, lon: -9.14, radiusM: 500 },
+    });
+
+    await runTravTrackProjections({ countryAt });
+
+    const state = await prisma.travTrackDerivationState.findUniqueOrThrow({ where: { userId } });
+    expect(state.zoneCellsVersion).toBeGreaterThan(0);
+    expect(await prisma.travTrackZoneCell.count({ where: { userId } })).toBeGreaterThan(0);
+    await prisma.travTrackPrivacyZone.deleteMany({ where: { userId } });
+  });
+
   it("skips an account whose provider is not TravTrack", async () => {
     await setLocationProvider(userId, "none");
 

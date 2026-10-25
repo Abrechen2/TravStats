@@ -35,7 +35,8 @@ registry.registerPath({
     409: {
       description:
         "TRAVTRACK_EXPLORED_UNAVAILABLE: the account's privacy zones cover more ground than " +
-        "the explored map can keep private; no part of the map is answered",
+        "the explored map can keep private; TRAVTRACK_EXPLORED_PREPARING: the zone raster is " +
+        "still being built in the background. Either way no part of the map is answered",
       content: errorContent,
     },
     403: {

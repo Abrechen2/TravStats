@@ -7,10 +7,14 @@
  * many there were: moving a zone back and forth adds nothing.
  *
  * The set only grows: a zone removed or moved leaves its old circle as a
- * former zone's. So a zone change adds its new circle's tiles incrementally,
- * in the change's own transaction under the TravTrack lock, and merges the
- * components they touch. An account never built is built whole by its first
- * explored-map request.
+ * former zone's. So the raster is strictly incremental (Codex re-review): a
+ * zone write adds its new circle's tiles once, at write time, in its own
+ * transaction under the TravTrack lock, and merges the components they
+ * touch. A map request never rasterises anything. An account whose raster
+ * was never built — zones from before the explored map — is built by a
+ * bounded background job (`buildPendingZoneRasters`, from the projection
+ * scheduler), a slice of former circles per tick; its map answers 409
+ * `TRAVTRACK_EXPLORED_PREPARING` until the build is done.
  *
  * Beyond `MAX_ZONE_CELLS` the account is marked `zoneCellsOverflow` and the
  * explored map refuses WHOLE (409 `TRAVTRACK_EXPLORED_UNAVAILABLE`): any
@@ -29,7 +33,10 @@ import { circleCells, wrapX, zoneComponents } from "./zoneRaster";
 export const ZONE_CELLS_VERSION = 1;
 /** Merged raster tiles an account holds at most; beyond it the map refuses whole. */
 export const MAX_ZONE_CELLS = 50_000;
-const TOMBSTONE_PAGE = 500;
+/** Former circles one background slice adds at most. */
+export const BUILD_CIRCLES_PER_STEP = 100;
+/** Accounts one scheduler tick advances at most. */
+export const BUILD_ACCOUNTS_PER_TICK = 10;
 
 const usable = (c: ZoneCircle) => c.radiusM > 0;
 
@@ -41,40 +48,6 @@ async function markOverflow(tx: DbTransaction, userId: string, cells: number): P
     where: { userId },
     create: { userId, zoneCellsVersion: ZONE_CELLS_VERSION, zoneCellsOverflow: true },
     update: { zoneCellsVersion: ZONE_CELLS_VERSION, zoneCellsOverflow: true },
-  });
-}
-
-/** Rebuilds the whole raster from every zone and every former zone. Under the lock. */
-export async function rebuildZoneCells(tx: DbTransaction, userId: string): Promise<void> {
-  const select = { lat: true, lon: true, radiusM: true } as const;
-  const cells = new Map<string, Cell>();
-  const add = (circle: ZoneCircle) => {
-    if (!usable(circle)) return;
-    for (const c of circleCells(circle)) cells.set(cellKey(c), c);
-  };
-  for (const z of await tx.travTrackPrivacyZone.findMany({ where: { userId }, select })) add(z);
-  for (let cursor: string | undefined; ;) {
-    const page = await tx.travTrackZoneTombstone.findMany({
-      where: { userId },
-      orderBy: { id: "asc" },
-      select: { ...select, id: true },
-      take: TOMBSTONE_PAGE,
-      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    });
-    page.forEach(add);
-    if (cells.size > MAX_ZONE_CELLS) return markOverflow(tx, userId, cells.size);
-    if (page.length < TOMBSTONE_PAGE) break;
-    cursor = page[page.length - 1].id;
-  }
-  const rows = zoneComponents(cells.values()).flatMap((component, i) =>
-    component.map((c) => ({ userId, x: c.x, y: c.y, component: i }))
-  );
-  await tx.travTrackZoneCell.deleteMany({ where: { userId } });
-  if (rows.length > 0) await tx.travTrackZoneCell.createMany({ data: rows });
-  await tx.travTrackDerivationState.upsert({
-    where: { userId },
-    create: { userId, zoneCellsVersion: ZONE_CELLS_VERSION, zoneCellsOverflow: false },
-    update: { zoneCellsVersion: ZONE_CELLS_VERSION, zoneCellsOverflow: false },
   });
 }
 
@@ -92,11 +65,31 @@ export async function addZoneCircle(
 ): Promise<void> {
   const state = await tx.travTrackDerivationState.findUnique({
     where: { userId },
-    select: { zoneCellsVersion: true, zoneCellsOverflow: true },
+    select: { zoneCellsVersion: true, zoneCellsOverflow: true, zoneCellsBuildCursor: true },
   });
-  if ((state?.zoneCellsVersion ?? 0) < ZONE_CELLS_VERSION) return rebuildZoneCells(tx, userId);
   if (state?.zoneCellsOverflow || !usable(circle)) return;
+  // Not built yet: the circle is added all the same, the build adds the rest.
+  // An account whose only zone is this new one, with no former zone, is then
+  // complete: nothing is left for a build to add.
+  if ((state?.zoneCellsVersion ?? 0) < ZONE_CELLS_VERSION) {
+    const zones = await tx.travTrackPrivacyZone.count({ where: { userId } });
+    const former = await tx.travTrackZoneTombstone.count({ where: { userId } });
+    if (zones <= 1 && former === 0 && !state?.zoneCellsBuildCursor) {
+      await addCells(tx, userId, circle, cap);
+      await markBuilt(tx, userId);
+      return;
+    }
+  }
+  await addCells(tx, userId, circle, cap);
+}
 
+/** The circle's tiles merged into the raster, components joined; overflow marked. */
+async function addCells(
+  tx: DbTransaction,
+  userId: string,
+  circle: ZoneCircle,
+  cap: number
+): Promise<void> {
   const cells = circleCells(circle);
   const probe = new Map<string, Cell>();
   for (const c of cells) {
@@ -144,20 +137,111 @@ export async function addZoneCircle(
   }
 }
 
-/** Builds the raster once for an account that never had it. */
-export async function ensureZoneCells(userId: string): Promise<void> {
-  const read = () =>
-    prisma.travTrackDerivationState.findUnique({
-      where: { userId },
-      select: { zoneCellsVersion: true, zoneCellsOverflow: true },
-    });
-  const state = await read();
-  if ((state?.zoneCellsVersion ?? 0) >= ZONE_CELLS_VERSION) return;
-  await prisma.$transaction(
+export type ZoneRasterState = "ready" | "preparing";
+
+/**
+ * Whether the account's raster can be read. An account holding no zone and
+ * no former zone has nothing to build and is marked ready on the spot —
+ * without rasterising anything. Read inside the map's snapshot.
+ */
+export async function zoneRasterState(
+  db: Pick<DbTransaction, "travTrackDerivationState" | "$queryRaw">,
+  userId: string
+): Promise<ZoneRasterState> {
+  const state = await db.travTrackDerivationState.findUnique({
+    where: { userId },
+    select: { zoneCellsVersion: true },
+  });
+  if ((state?.zoneCellsVersion ?? 0) >= ZONE_CELLS_VERSION) return "ready";
+  const [{ any }] = await db.$queryRaw<{ any: boolean }[]>`
+    SELECT EXISTS (SELECT 1 FROM travtrack_privacy_zones WHERE user_id = ${userId})
+        OR EXISTS (SELECT 1 FROM travtrack_zone_tombstones WHERE user_id = ${userId}) AS any`;
+  return any ? "preparing" : "ready";
+}
+
+const markBuilt = (tx: DbTransaction, userId: string) =>
+  tx.travTrackDerivationState.upsert({
+    where: { userId },
+    create: { userId, zoneCellsVersion: ZONE_CELLS_VERSION },
+    update: { zoneCellsVersion: ZONE_CELLS_VERSION },
+  });
+
+/**
+ * One slice of an account's background build, in one transaction under the
+ * lock: on the first slice every zone in force, then up to `maxCircles`
+ * former circles after the cursor (by id). A former circle made after the
+ * build began was a zone the build or a write already added, so the cursor
+ * never needs to look back.
+ */
+export async function buildZoneRasterStep(
+  userId: string,
+  maxCircles = BUILD_CIRCLES_PER_STEP
+): Promise<"done" | "more"> {
+  return prisma.$transaction(
     async (tx) => {
       await takeTravTrackLock(tx, userId);
-      await rebuildZoneCells(tx, userId);
+      const state = await tx.travTrackDerivationState.findUnique({
+        where: { userId },
+        select: { zoneCellsVersion: true, zoneCellsOverflow: true, zoneCellsBuildCursor: true },
+      });
+      if ((state?.zoneCellsVersion ?? 0) >= ZONE_CELLS_VERSION) return "done" as const;
+      const select = { lat: true, lon: true, radiusM: true } as const;
+      const cursor = state?.zoneCellsBuildCursor ?? null;
+      if (cursor === null) {
+        for (const z of await tx.travTrackPrivacyZone.findMany({ where: { userId }, select })) {
+          await addZoneCircle(tx, userId, z);
+        }
+      }
+      const page = await tx.travTrackZoneTombstone.findMany({
+        where: { userId, ...(cursor ? { id: { gt: cursor } } : {}) },
+        orderBy: { id: "asc" },
+        select: { ...select, id: true },
+        take: maxCircles,
+      });
+      for (const c of page) await addZoneCircle(tx, userId, c);
+      const last = page.length > 0 ? page[page.length - 1].id : (cursor ?? "");
+      await tx.travTrackDerivationState.upsert({
+        where: { userId },
+        create: { userId, zoneCellsBuildCursor: last },
+        update: { zoneCellsBuildCursor: last },
+      });
+      if (page.length < maxCircles) {
+        await markBuilt(tx, userId);
+        return "done" as const;
+      }
+      return "more" as const;
     },
     { timeout: 60_000 }
   );
+}
+
+/**
+ * The scheduler's pass: up to `maxAccounts` accounts whose raster was never
+ * built and that hold a zone or a former zone, one slice each. Bounded per
+ * tick; the rest continue on the next.
+ */
+export async function buildPendingZoneRasters({
+  maxAccounts = BUILD_ACCOUNTS_PER_TICK,
+  maxCircles = BUILD_CIRCLES_PER_STEP,
+}: { maxAccounts?: number; maxCircles?: number } = {}): Promise<number> {
+  const accounts = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT u.id FROM users u
+      LEFT JOIN travtrack_derivation_state s ON s.user_id = u.id
+     WHERE COALESCE(s.zone_cells_version, 0) < ${ZONE_CELLS_VERSION}
+       AND (EXISTS (SELECT 1 FROM travtrack_privacy_zones z WHERE z.user_id = u.id)
+            OR EXISTS (SELECT 1 FROM travtrack_zone_tombstones t WHERE t.user_id = u.id))
+     ORDER BY u.id
+     LIMIT ${maxAccounts}`;
+  for (const { id } of accounts) {
+    try {
+      await buildZoneRasterStep(id, maxCircles);
+    } catch (error) {
+      logger.warn({
+        operation: "travtrack.explored.zoneRasterBuildFailed",
+        userId: id,
+        errorName: error instanceof Error ? error.name : "unknown",
+      });
+    }
+  }
+  return accounts.length;
 }

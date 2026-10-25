@@ -104,7 +104,8 @@ function cellsExtent(cells: readonly ExploredCell[]): [[number, number], [number
   ];
 }
 
-type Status = { kind: "idle" } | { kind: "zoomIn" } | { kind: "failed"; key: string };
+type Status =
+  { kind: "idle" } | { kind: "zoomIn" } | { kind: "preparing" } | { kind: "failed"; key: string };
 
 const boundsOf = (map: MapLibreMap): ExploredBox => {
   const b = map.getBounds();
@@ -146,7 +147,11 @@ export default function TrackExploredMap(): JSX.Element {
         if (id !== request.current) return;
         const key = trackErrorKey(err);
         if (key === "track:explored.zoomIn") setStatus({ kind: "zoomIn" });
-        else if (key === "track:explored.unavailable") {
+        else if (key === "track:explored.preparing") {
+          // Nothing is drawn until the server can answer the whole map.
+          setCells([]);
+          setStatus({ kind: "preparing" });
+        } else if (key === "track:explored.unavailable") {
           // Refused whole: nothing of the map stays drawn.
           setCells([]);
           setStatus({ kind: "failed", key });
@@ -209,6 +214,11 @@ export default function TrackExploredMap(): JSX.Element {
       {status.kind === "zoomIn" && (
         <p className="t-caption" role="status" style={{ color: token("warn") }}>
           {t("track:explored.zoomIn")}
+        </p>
+      )}
+      {status.kind === "preparing" && (
+        <p className="t-caption" role="status">
+          {t("track:explored.preparing")}
         </p>
       )}
       {status.kind === "failed" && (

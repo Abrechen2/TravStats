@@ -3,6 +3,7 @@
  * on provider `travtrack` with dirty days — or with points the current country reducer has not seen —
  * gets its country days projected (`services/travtrack/countryProjection.ts`),
  * then its explored-map cells (`services/travtrack/explored/project.ts`, L1),
+ * after a slice of any never-built zone raster (`explored/zoneCells.ts`),
  * then its country questions asked (`services/locationEvidence/
  * countrySuggestions.ts`). Bounded per account by the projection's day budget
  * and the questions' cap (review focus 19).
@@ -30,6 +31,7 @@ import {
   pendingDirtyDays,
 } from "../services/travtrack/dirtyDays";
 import { projectExploredCells } from "../services/travtrack/explored/project";
+import { buildPendingZoneRasters } from "../services/travtrack/explored/zoneCells";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
 
@@ -190,6 +192,14 @@ export async function runTravTrackProjections(
 ): Promise<ProjectionRunResult> {
   const result: ProjectionRunResult = { accounts: 0, failed: 0, questions: 0, days: 0 };
   if (!(await travTrackInstanceOn())) return result;
+  // The explored map's zone raster for accounts that never had one (L1): a
+  // bounded slice per tick, never inside a map request.
+  await buildPendingZoneRasters().catch((error: unknown) =>
+    logger.warn({
+      operation: "travtrack_zone_raster_build_failed",
+      errorName: error instanceof Error ? error.name : "unknown",
+    })
+  );
   const now = options.now ?? new Date();
   const accounts = await accountsWithWork(now, options.maxAccounts ?? ACCOUNTS_PER_TICK);
   if (accounts.length === 0) return result;

@@ -202,6 +202,7 @@
     "legend": "Each square is about 1–2 km across: a place where your history holds at least one position on the ground.",
     "zones": "Privacy zones are shown as explored.",
     "zoomIn": "There are too many explored squares here for one view. Zoom in closer.",
-    "unavailable": "The explored map is not available for privacy zones this large."
+    "unavailable": "The explored map is not available for privacy zones this large.",
+    "preparing": "The explored map is being prepared. Check back in a few minutes."
   }
 }

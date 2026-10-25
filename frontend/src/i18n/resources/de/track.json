@@ -202,6 +202,7 @@
     "legend": "Jedes Feld ist etwa 1–2 km groß: ein Ort, an dem dein Verlauf mindestens eine Position am Boden hat.",
     "zones": "Privatzonen werden als erkundet gezeigt.",
     "zoomIn": "Hier liegen zu viele erkundete Felder für eine Ansicht. Zoom näher heran.",
-    "unavailable": "Die Erkundet-Karte ist für so große Privatzonen nicht verfügbar."
+    "unavailable": "Die Erkundet-Karte ist für so große Privatzonen nicht verfügbar.",
+    "preparing": "Die Erkundet-Karte wird gerade vorbereitet. Schau in ein paar Minuten wieder vorbei."
   }
 }

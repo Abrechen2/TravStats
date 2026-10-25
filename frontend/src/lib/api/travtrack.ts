@@ -283,6 +283,8 @@ export function trackErrorKey(err: unknown): string {
       return "track:explored.zoomIn";
     case "TRAVTRACK_EXPLORED_UNAVAILABLE":
       return "track:explored.unavailable";
+    case "TRAVTRACK_EXPLORED_PREPARING":
+      return "track:explored.preparing";
     case "LOCATION_ZONE_LIMIT":
       return "track:errors.zoneLimit";
     default:
