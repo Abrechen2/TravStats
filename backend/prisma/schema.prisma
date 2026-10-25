@@ -6102,6 +6102,9 @@ model TravTrackDerivationState {
   failureCount          Int       @default(0) @map("failure_count")
   /// Not scheduled again before this instant after a failure (backoff).
   retryAfter            DateTime? @map("retry_after")
+  /// When the nightly trip sweep last took this account (L4): the least
+  /// recently taken go first, so a capped run still comes round to everyone.
+  tripScannedAt         DateTime? @map("trip_scanned_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
