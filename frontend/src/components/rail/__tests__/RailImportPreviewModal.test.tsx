@@ -144,6 +144,25 @@ describe("RailImportPreviewModal", () => {
     expect(create.mock.calls[0][0]).toMatchObject({ connectsFrom: "old-1", price: null });
   });
 
+  it("says a ride may be logged already, and still leaves the choice — and the tick — to the user", async () => {
+    create.mockResolvedValue({ journey: { id: "new-3" }, geometry: null });
+    const onSaved = vi.fn();
+    const b = booking();
+    render(
+      <RailImportPreviewModal
+        booking={{ ...b, legs: [{ ...b.legs[0], possibleDuplicateOf: "maybe-1" }, b.legs[1]] }}
+        onCancel={vi.fn()}
+        onSaved={onSaved}
+      />
+    );
+
+    expect(screen.getByText("rail:import.possibleDuplicate")).toBeInTheDocument();
+    expect(screen.queryByText("rail:import.duplicate")).not.toBeInTheDocument();
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith(2));
+    expect(create).toHaveBeenCalledTimes(2);
+  });
+
   // forgejo#161: a fact the document did not carry is marked as such, can be
   // filled in before saving, and is never made up.
   it("marks unread booking facts, lets them be filled in, and writes what was confirmed", async () => {

@@ -57,6 +57,7 @@ export function lazyCountryResolver(): CountryAt {
 }
 
 async function byEva(
+  printedName: string,
   eva: string,
   position: ProviderStop["position"]
 ): Promise<{ match: RailStationCandidate | null; conflictKm: number | null }> {
@@ -68,10 +69,10 @@ async function byEva(
   });
   const row = oneStation(rows);
   if (!row) return { match: null, conflictKm: null };
-  if (!position) return { match: catalogueStation(row, row.name), conflictKm: null };
+  if (!position) return { match: catalogueStation(row, printedName), conflictKm: null };
   const km = calculateDistance(position.lat, position.lon, row.lat, row.lon);
   return km <= PROVIDER_AGREES_KM
-    ? { match: catalogueStation(row, row.name), conflictKm: null }
+    ? { match: catalogueStation(row, printedName), conflictKm: null }
     : { match: null, conflictKm: Math.round(km) };
 }
 
@@ -100,7 +101,7 @@ export async function resolveProviderStop(
   countryAt: CountryAt = lazyCountryResolver()
 ): Promise<RailStationCandidate> {
   const { match, conflictKm } = stop.eva
-    ? await byEva(stop.eva, stop.position)
+    ? await byEva(printedName, stop.eva, stop.position)
     : { match: null, conflictKm: null };
   if (match) return match;
   const near = stop.position ? { ...stop.position, km: PROVIDER_AGREES_KM } : undefined;

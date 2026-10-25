@@ -41,6 +41,7 @@ export function leg(over: Partial<RailImportLeg> = {}): RailImportLeg {
     departureStation: station("Kiel Hbf", true, 1),
     arrivalStation: station("Hamburg Hbf", true, 2),
     duplicateOf: null,
+    possibleDuplicateOf: null,
     ...over,
   };
 }
