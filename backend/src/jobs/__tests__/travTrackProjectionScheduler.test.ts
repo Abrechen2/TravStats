@@ -35,6 +35,7 @@ describe("runTravTrackProjections", () => {
     await wipeTravTrack([userId]);
     await prisma.countryDay.deleteMany({ where: { userId } });
     await prisma.travTrackDirtyDay.deleteMany({ where: { userId } });
+    await prisma.travTrackExploredCell.deleteMany({ where: { userId } });
     await prisma.locationSuggestion.deleteMany({ where: { userId } });
     await prisma.travTrackDerivationState.deleteMany({ where: { userId } });
     await setLocationProvider(userId, "travtrack");
@@ -140,6 +141,43 @@ describe("runTravTrackProjections", () => {
       "2026-08",
     ]);
     expect(result.days).toBe(4);
+  });
+
+  it("with both projections owed, the day budget is shared: the explored map is not starved (Codex review)", async () => {
+    await runTravTrackProjections({ countryAt, maxDays: 2 });
+
+    expect(await prisma.countryDay.count({ where: { userId, source: "travtrack" } })).toBe(1);
+    expect(await prisma.travTrackExploredCell.count({ where: { userId } })).toBe(1);
+  });
+
+  it("with the explored map and the months owed, the map leaves the months their share (Phase 4 merge)", async () => {
+    await prisma.travTrackMonthValue.deleteMany({ where: { userId } });
+    // Country days done: only the explored map and the months are owed.
+    await prisma.travTrackDirtyDay.updateMany({
+      where: { userId },
+      data: { done: COUNTRY_DAYS_BIT },
+    });
+    await prisma.travTrackDerivationState.create({ data: { userId, countryReducerVersion: 99 } });
+
+    await runTravTrackProjections({ countryAt, maxDays: 2 });
+
+    // Before the share the map took both days and the month waited a tick.
+    expect(await prisma.travTrackExploredCell.count({ where: { userId } })).toBe(1);
+    expect(await prisma.travTrackMonthValue.count({ where: { userId } })).toBe(1);
+  });
+
+  it("a tick advances the explored map's background raster build (L1)", async () => {
+    await prisma.travTrackPrivacyZone.deleteMany({ where: { userId } });
+    await prisma.travTrackPrivacyZone.create({
+      data: { userId, name: "Alt", lat: 38.72, lon: -9.14, radiusM: 500 },
+    });
+
+    await runTravTrackProjections({ countryAt });
+
+    const state = await prisma.travTrackDerivationState.findUniqueOrThrow({ where: { userId } });
+    expect(state.zoneCellsVersion).toBeGreaterThan(0);
+    expect(await prisma.travTrackZoneCell.count({ where: { userId } })).toBeGreaterThan(0);
+    await prisma.travTrackPrivacyZone.deleteMany({ where: { userId } });
   });
 
   it("skips an account whose provider is not TravTrack", async () => {

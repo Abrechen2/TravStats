@@ -1,28 +1,39 @@
-import { tileOf, type Bbox, type Cell } from "../cells";
+import { TILES, tileOf, type Bbox, type Cell } from "../cells";
 import { circleCells, exploredView } from "../privacy";
+import { fillComponent } from "../zoneRaster";
 
 /**
- * The explored map's one privacy model (TravTrack plan L1, review focus 26):
- * a privacy zone is shown as explored ground — never a hole, never a shape of
- * its own — by a fixed rule: the cells a privacy circle touches are drawn when
- * they connect, edge to edge through such cells, to an explored cell. A zone
- * nobody moved next to draws nothing.
+ * The explored map's one privacy model (TravTrack plan L1, review focus 26;
+ * Codex review of a3353f2a7): a privacy zone is never a hole and never a
+ * shape of its own. Its cells are decided by the SURROUNDINGS, not by the
+ * circle — a zone cell is drawn when at least three of its four directions
+ * reach explored ground (through other zone cells), closed to a fixed point
+ * with the same three-of-four count on its edge neighbours. A zone inside
+ * explored ground fills in; a zone at the edge of explored ground follows the
+ * surroundings' edge; a zone nobody moved around draws (almost) nothing.
  */
 
 const key = (c: Cell) => `${c.x}/${c.y}`;
 const keys = (cells: readonly Cell[]) => new Set(cells.map(key));
 const WORLD: Bbox = { west: -180, south: -85, east: 180, north: 85 };
 
-/** A 5 km zone in Berlin and every cell of a ring two cells wide around it. */
+/** A 5 km zone in Berlin. */
 const zone = { lat: 52.52, lon: 13.405, radiusM: 5_000 };
-function ringAround(cells: readonly Cell[], width: number): Cell[] {
-  const inner = keys(cells);
+
+function boxOf(cells: readonly Cell[]) {
   const xs = cells.map((c) => c.x);
   const ys = cells.map((c) => c.y);
+  return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+}
+
+/** Every cell of the zone's tile box widened by `width`, minus the zone's own cells. */
+function around(cells: readonly Cell[], width: number, keep: (c: Cell) => boolean = () => true) {
+  const inner = keys(cells);
+  const b = boxOf(cells);
   const out: Cell[] = [];
-  for (let x = Math.min(...xs) - width; x <= Math.max(...xs) + width; x++) {
-    for (let y = Math.min(...ys) - width; y <= Math.max(...ys) + width; y++) {
-      if (!inner.has(`${x}/${y}`)) out.push({ x, y });
+  for (let x = b.x0 - width; x <= b.x1 + width; x++) {
+    for (let y = b.y0 - width; y <= b.y1 + width; y++) {
+      if (!inner.has(`${x}/${y}`) && keep({ x, y })) out.push({ x, y });
     }
   }
   return out;
@@ -30,52 +41,199 @@ function ringAround(cells: readonly Cell[], width: number): Cell[] {
 
 describe("the explored map's privacy model", () => {
   const zoneCells = circleCells(zone);
+  const zoneKeys = keys(zoneCells);
+  const zoneIn = (view: readonly Cell[]) => view.filter((c) => zoneKeys.has(key(c)));
 
   it("a 5 km circle touches the cells around its centre, and only nearby ones", () => {
     expect(zoneCells.length).toBeGreaterThan(9);
-    expect(keys(zoneCells).has(key(tileOf(zone.lat, zone.lon)))).toBe(true);
-    expect(keys(zoneCells).has(key(tileOf(52.7, 13.405)))).toBe(false);
+    expect(zoneKeys.has(key(tileOf(zone.lat, zone.lon)))).toBe(true);
+    expect(zoneKeys.has(key(tileOf(52.7, 13.405)))).toBe(false);
   });
 
-  it("a 5 km zone surrounded by explored cells leaves no hole: its cells are emitted", () => {
-    const explored = ringAround(zoneCells, 2);
+  it("a zone fully surrounded by explored cells is filled whole: no hole", () => {
+    const explored = around(zoneCells, 2);
     const view = keys(exploredView({ explored, circles: [zone], bbox: WORLD }));
     for (const c of zoneCells) expect(view.has(key(c))).toBe(true);
-    for (const c of explored) expect(view.has(key(c))).toBe(true);
     expect(view.size).toBe(zoneCells.length + explored.length);
   });
 
-  it("a zone with explored ground on one side only is still drawn whole, not as a bite", () => {
-    const edge = zoneCells.reduce((a, b) => (b.x > a.x ? b : a));
-    const explored = [{ x: edge.x + 1, y: edge.y }];
-    const view = keys(exploredView({ explored, circles: [zone], bbox: WORLD }));
-    expect(view.size).toBe(zoneCells.length + 1);
+  it("one explored cell beside a 5 km zone draws (almost) none of it — no circle footprint", () => {
+    const b = boxOf(zoneCells);
+    const midY = Math.round((b.y0 + b.y1) / 2);
+    const explored = [{ x: b.x1 + 1, y: midY }];
+    const view = exploredView({ explored, circles: [zone], bbox: WORLD });
+    expect(zoneIn(view).length).toBeLessThanOrEqual(1);
+  });
+
+  it("a straight road through a zone continues through it: no gap at the zone (Codex re-review)", () => {
+    const b = boxOf(zoneCells);
+    const row = Math.round((b.y0 + b.y1) / 2);
+    const road: Cell[] = [];
+    for (let x = b.x0 - 6; x <= b.x1 + 6; x++) {
+      if (!zoneKeys.has(`${x}/${row}`)) road.push({ x, y: row });
+    }
+    const view = keys(exploredView({ explored: road, circles: [zone], bbox: WORLD }));
+    for (let x = b.x0 - 6; x <= b.x1 + 6; x++) expect(view.has(`${x}/${row}`)).toBe(true);
+    // The road, not the zone: nothing beside the road's row is drawn.
+    expect(
+      zoneIn([...view].map((k) => ({ x: +k.split("/")[0], y: +k.split("/")[1] }))).every(
+        (c) => c.y === row
+      )
+    ).toBe(true);
+  });
+
+  it("a diagonal road through a zone continues through it too", () => {
+    const centre = tileOf(zone.lat, zone.lon);
+    const road: Cell[] = [];
+    const line: Cell[] = [];
+    for (let i = -12; i <= 12; i++) {
+      const c = { x: centre.x + i, y: centre.y + i };
+      line.push(c);
+      if (!zoneKeys.has(key(c))) road.push(c);
+    }
+    const view = keys(exploredView({ explored: road, circles: [zone], bbox: WORLD }));
+    for (const c of line) expect(view.has(key(c))).toBe(true);
+  });
+
+  it("a stair-stepped diagonal road is closed as well", () => {
+    const centre = tileOf(zone.lat, zone.lon);
+    const line: Cell[] = [];
+    for (let i = -12; i <= 12; i++) {
+      line.push({ x: centre.x + i, y: centre.y + i }, { x: centre.x + i + 1, y: centre.y + i });
+    }
+    const road = line.filter((c) => !zoneKeys.has(key(c)));
+    const view = keys(exploredView({ explored: road, circles: [zone], bbox: WORLD }));
+    for (const c of line) expect(view.has(key(c))).toBe(true);
+  });
+
+  it("a road along one side draws none of the zone", () => {
+    const b = boxOf(zoneCells);
+    const road = Array.from({ length: b.y1 - b.y0 + 7 }, (_, i) => ({
+      x: b.x1 + 1,
+      y: b.y0 - 3 + i,
+    }));
+    const view = exploredView({ explored: road, circles: [zone], bbox: WORLD });
+    expect(zoneIn(view)).toEqual([]);
+  });
+
+  it("a zone at the edge of explored ground follows the surroundings' edge, not the circle", () => {
+    // Explored ground west of the zone's centre column, nothing east of it.
+    const b = boxOf(zoneCells);
+    const edge = tileOf(zone.lat, zone.lon).x;
+    const explored = around(zoneCells, 3, (c) => c.x < edge);
+    const drawn = zoneIn(exploredView({ explored, circles: [zone], bbox: WORLD }));
+    // West of the edge filled, east of it empty: the line between them is the
+    // surroundings' edge (one column), not the circle's eastern arc.
+    expect(drawn.length).toBeGreaterThan(0);
+    for (const c of drawn) expect(c.x).toBeLessThan(edge);
+    for (const c of zoneCells.filter((z) => z.x < edge - 1 && z.y > b.y0 + 1 && z.y < b.y1 - 1)) {
+      expect(keys(drawn).has(key(c))).toBe(true);
+    }
   });
 
   it("an isolated zone with no explored neighbour emits nothing", () => {
-    const far = { x: tileOf(48.1, 11.5).x, y: tileOf(48.1, 11.5).y };
+    const far = tileOf(48.1, 11.5);
     expect(exploredView({ explored: [far], circles: [zone], bbox: WORLD })).toEqual([far]);
     expect(exploredView({ explored: [], circles: [zone], bbox: WORLD })).toEqual([]);
   });
 
-  it("a diagonal neighbour is not an edge neighbour", () => {
-    const xs = zoneCells.map((c) => c.x);
-    const ys = zoneCells.map((c) => c.y);
-    const corner = { x: Math.max(...xs) + 1, y: Math.max(...ys) + 1 };
-    // The corner outside the circle's tile box touches none of its cells by an edge.
-    const view = exploredView({ explored: [corner], circles: [zone], bbox: WORLD });
-    expect(view).toEqual([corner]);
+  it("the answer inside any box is the whole answer cut to it — boxes cannot be differenced", () => {
+    const explored = around(zoneCells, 2);
+    const whole = exploredView({ explored, circles: [zone], bbox: WORLD });
+    for (const small of [
+      { west: 13.3, south: 52.45, east: 13.42, north: 52.53 },
+      { west: 13.4, south: 52.5, east: 13.41, north: 52.51 },
+      { west: 13.0, south: 52.3, east: 13.8, north: 52.8 },
+    ]) {
+      const part = exploredView({ explored, circles: [zone], bbox: small });
+      expect(part).toEqual(exploredView({ explored: whole, circles: [], bbox: small }));
+    }
   });
 
-  it("the answer inside a smaller box is the larger answer cut to it — no other shape", () => {
-    const explored = ringAround(zoneCells, 2);
-    const whole = exploredView({ explored, circles: [zone], bbox: WORLD });
-    const small: Bbox = { west: 13.3, south: 52.45, east: 13.42, north: 52.53 };
-    const part = exploredView({ explored, circles: [zone], bbox: small });
-    const inSmall = exploredView({ explored: whole, circles: [], bbox: small });
-    expect(part).toEqual(inSmall);
-    expect(part.length).toBeGreaterThan(0);
-    expect(part.length).toBeLessThan(whole.length);
+  it("a zone across the date line covers both edges of the grid and fills across them", () => {
+    const pacific = { lat: -16.5, lon: 179.99, radiusM: 5_000 };
+    const cells = circleCells(pacific);
+    const xs = new Set(cells.map((c) => c.x));
+    expect(xs.has(TILES - 1)).toBe(true);
+    expect(xs.has(0)).toBe(true);
+    // Surrounded on both sides of the line: filled whole.
+    const ys = cells.map((c) => c.y);
+    const [y0, y1] = [Math.min(...ys) - 2, Math.max(...ys) + 2];
+    const inZone = keys(cells);
+    const explored: Cell[] = [];
+    for (let y = y0; y <= y1; y++) {
+      for (const x of [
+        TILES - 6,
+        TILES - 5,
+        TILES - 4,
+        TILES - 3,
+        TILES - 2,
+        TILES - 1,
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+      ]) {
+        if (!inZone.has(`${x}/${y}`)) explored.push({ x, y });
+      }
+    }
+    const view = keys(exploredView({ explored, circles: [pacific], bbox: WORLD }));
+    for (const c of cells) expect(view.has(key(c))).toBe(true);
+  });
+
+  it("no answer ever holds a hole at a zone: every zone cell left out is open on two sides at least", () => {
+    // A seeded pseudo-random walk of explored ground around the zone, many times.
+    let seed = 7;
+    const rand = () => (seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
+    const b = boxOf(zoneCells);
+    for (let round = 0; round < 40; round++) {
+      const explored: Cell[] = [];
+      const density = rand();
+      for (let x = b.x0 - 3; x <= b.x1 + 3; x++) {
+        for (let y = b.y0 - 3; y <= b.y1 + 3; y++) {
+          if (!zoneKeys.has(`${x}/${y}`) && rand() < density) explored.push({ x, y });
+        }
+      }
+      const ex = keys(explored);
+      const drawn = keys(exploredView({ explored, circles: [zone], bbox: WORLD }));
+      const reaches = (c: Cell, dx: number, dy: number) => {
+        for (let k = 1; ; k++) {
+          const n = `${c.x + dx * k}/${c.y + dy * k}`;
+          if (ex.has(n)) return true;
+          if (!zoneKeys.has(n)) return false;
+        }
+      };
+      for (const c of zoneCells) {
+        if (drawn.has(key(c))) continue;
+        const closed = [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ].filter(([dx, dy]) => reaches(c, dx, dy)).length;
+        expect(closed).toBeLessThanOrEqual(2);
+      }
+    }
+  });
+
+  it("deciding a zone is linear: 40 000 zone cells inside a ring in well under a second", () => {
+    const component: Cell[] = [];
+    for (let x = 1000; x < 1200; x++) for (let y = 3000; y < 3200; y++) component.push({ x, y });
+    const ring: Cell[] = [];
+    for (let i = 999; i <= 1200; i++) {
+      ring.push(
+        { x: i, y: 2999 },
+        { x: i, y: 3200 },
+        { x: 999, y: i + 2000 },
+        { x: 1200, y: i + 2000 }
+      );
+    }
+    const started = Date.now();
+    const drawn = fillComponent(component, new Set(ring.map(key)));
+    expect(Date.now() - started).toBeLessThan(1_000);
+    expect(drawn).toHaveLength(component.length);
   });
 
   it("answers cells only, sorted, each once", () => {

@@ -2,7 +2,8 @@
  * TravTrack projections (TravTrack plan E6): every 15 minutes, each account
  * on provider `travtrack` with dirty days — or with points the current country reducer has not seen —
  * gets its country days projected (`services/travtrack/countryProjection.ts`),
- * then its explored-map cells (`services/travtrack/explored/project.ts`, L1)
+ * then its explored-map cells (`services/travtrack/explored/project.ts`, L1,
+ * after a slice of any never-built zone raster, `explored/zoneCells.ts`)
  * and its monthly values (`services/travtrack/months/project.ts`, L3),
  * then its country questions asked (`services/locationEvidence/
  * countrySuggestions.ts`). Bounded per account by the projection's day budget
@@ -25,10 +26,16 @@ import {
   PROJECTION_DAYS_PER_RUN,
   projectTravTrackCountryDays,
 } from "../services/travtrack/countryProjection";
-import { ALL_PROJECTION_BITS } from "../services/travtrack/dirtyDays";
+import {
+  ALL_PROJECTION_BITS,
+  EXPLORED_BIT,
+  MONTHS_BIT,
+  pendingDirtyDays,
+} from "../services/travtrack/dirtyDays";
 import { projectExploredCells } from "../services/travtrack/explored/project";
 import { projectMonths } from "../services/travtrack/months/project";
 import { CITY_LOOKUPS_PER_TICK } from "../services/travtrack/months/cities";
+import { buildPendingZoneRasters } from "../services/travtrack/explored/zoneCells";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
 
@@ -120,7 +127,18 @@ async function runAccount(
   maxDays: number
 ): Promise<{ failed: boolean; questions: number; days: number }> {
   try {
-    const projected = await projectTravTrackCountryDays(userId, { countryAt, maxDays });
+    // One day budget shared by the three projections: with the explored map
+    // or the months owed too, the country days take only their share, so a
+    // long country backlog cannot starve the map (Codex review of L1), and
+    // the map leaves the months theirs below.
+    const exploredOwed = (await pendingDirtyDays(userId, EXPLORED_BIT, 1)).length > 0;
+    const monthsOwed = (await pendingDirtyDays(userId, MONTHS_BIT, 1)).length > 0;
+    const sharers = 1 + Number(exploredOwed) + Number(monthsOwed);
+    const countryBudget = Math.ceil(maxDays / sharers);
+    const projected = await projectTravTrackCountryDays(userId, {
+      countryAt,
+      maxDays: countryBudget,
+    });
     const days = projected.projected + projected.rerun;
     if (projected.status === "failed") {
       await recordFailure(userId, now);
@@ -130,7 +148,7 @@ async function runAccount(
     if (projected.status !== "done") return { failed: false, questions: 0, days };
     // The explored map's cells (L1): the same days on its own bit, from what
     // is left of the budget — a day either projection works counts once each.
-    const exploredBudget = maxDays - days;
+    const exploredBudget = monthsOwed ? Math.ceil((maxDays - days) / 2) : maxDays - days;
     const explored =
       exploredBudget > 0
         ? await projectExploredCells(userId, { maxDays: exploredBudget })
@@ -201,6 +219,14 @@ export async function runTravTrackProjections(
 ): Promise<ProjectionRunResult> {
   const result: ProjectionRunResult = { accounts: 0, failed: 0, questions: 0, days: 0 };
   if (!(await travTrackInstanceOn())) return result;
+  // The explored map's zone raster for accounts that never had one (L1): a
+  // bounded slice per tick, never inside a map request.
+  await buildPendingZoneRasters().catch((error: unknown) =>
+    logger.warn({
+      operation: "travtrack_zone_raster_build_failed",
+      errorName: error instanceof Error ? error.name : "unknown",
+    })
+  );
   const now = options.now ?? new Date();
   const accounts = await accountsWithWork(now, options.maxAccounts ?? ACCOUNTS_PER_TICK);
   if (accounts.length === 0) return result;
