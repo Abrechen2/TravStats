@@ -4,6 +4,7 @@ import { z } from "zod";
 import { authenticate, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { loadRailStats } from "../../services/rail/railStats";
+import { statsScope } from "../../utils/stats/domainYear";
 
 /**
  * The rail statistics (spec 2026-09-25-rail-domain, phase 2b). Enveloped, as
@@ -42,7 +43,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       parsed.data.year ?? null,
       parsed.data.until ?? null
     );
-    res.json({ success: true, data });
+    res.json({ success: true, data: { ...data, scope: statsScope(parsed.data.year) } });
   } catch (err) {
     next(err);
   }

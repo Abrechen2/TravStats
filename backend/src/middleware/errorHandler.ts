@@ -233,9 +233,6 @@ export type ApiErrorCode =
   /** A request body failed its schema. Sent on every ZodError answer, so a
    *  form shows its own sentence instead of zod's JSON issue dump. */
   | "VALIDATION_FAILED"
-  /** A stats request named `year` AND `fromDate`/`toDate`. Two scopes for one
-   *  answer; the server will not pick one silently (companion-redesign C4). */
-  | "STATS_YEAR_CONFLICTING_RANGE"
   /** Time-zone re-resolution (ADR 0002 D2): `apply` named a dry run that
    *  does not exist or expired — run the dry run again. */
   | "DRY_RUN_NOT_FOUND"

@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import type { Prisma } from "../../prisma";
 import { haversineKm } from "../../shared/geo/haversine";
 import { busiestDayOf } from "../../shared/busiestDay";
 import { countableFlightWhere } from "../../shared/flightCounting";
@@ -342,9 +343,13 @@ export function travelRecordWitnesses(
  * response goes through: a DATE_ONLY row comes back with a null duration and
  * the aloft record abstains, exactly as it does in the app.
  */
-export async function loadRecordFlights(userId: string): Promise<RecordFlightInput[]> {
+/** `scope` narrows the rows (e.g. to one local year); omitted, every countable flight. */
+export async function loadRecordFlights(
+  userId: string,
+  scope: Prisma.FlightWhereInput = {}
+): Promise<RecordFlightInput[]> {
   const flights = await prisma.flight.findMany({
-    where: { userId, ...countableFlightWhere() },
+    where: { userId, ...scope, ...countableFlightWhere() },
     select: {
       id: true,
       flightNumber: true,

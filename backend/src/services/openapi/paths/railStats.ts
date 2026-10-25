@@ -134,6 +134,9 @@ const railStats = registry.register(
         })
         .describe("Rides of a kind, counted by the rule the rail badges use"),
       connected: railJourneyFigures,
+      scope: z
+        .object({ year: z.number().int().nullable() })
+        .describe("companion-redesign C4: the year the answer covers; null = all-time"),
     })
     .openapi("RailStats")
 );

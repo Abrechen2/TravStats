@@ -120,10 +120,13 @@ export function assertYearWithoutRange(query: {
   toDate?: string;
 }): void {
   if (query.year !== undefined && (query.fromDate || query.toDate)) {
+    // The generic code plus the field, rather than a code of its own: the
+    // client branches on `field: "year"`, and the error union is at its size cap.
     throw new AppError(
       "year cannot be combined with fromDate/toDate",
       400,
-      "STATS_YEAR_CONFLICTING_RANGE"
+      "VALIDATION_FAILED",
+      "year"
     );
   }
 }
