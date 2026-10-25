@@ -119,4 +119,18 @@ describe("TravTrack availability", () => {
     expect(await holdsTravTrackData(userId)).toBe(true);
     await prisma.travTrackImport.deleteMany({ where: { userId } });
   });
+
+  it("a live ingest token is TravTrack data, so it can be revoked while TravTrack is off", async () => {
+    expect(await holdsTravTrackData(userId)).toBe(false);
+    const token = await prisma.travTrackIngestToken.create({
+      data: { userId, kind: "owntracks", label: "Phone", lookupHash: `${PREFIX}lookup`, hash: "h" },
+    });
+    expect(await holdsTravTrackData(userId)).toBe(true);
+    await prisma.travTrackIngestToken.update({
+      where: { id: token.id },
+      data: { revokedAt: new Date() },
+    });
+    expect(await holdsTravTrackData(userId)).toBe(false);
+    await prisma.travTrackIngestToken.deleteMany({ where: { userId } });
+  });
 });

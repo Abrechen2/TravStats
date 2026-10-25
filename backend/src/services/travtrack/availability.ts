@@ -62,11 +62,13 @@ export async function assertTravTrackOn(): Promise<void> {
 
 /**
  * Whether this account holds anything TravTrack stored for it: points, zones,
- * reported gaps, deleted spans or file imports. One `EXISTS` per table, the
+ * reported gaps, deleted spans, file imports or a live ingest token. One `EXISTS` per table, the
  * first hit wins. An import counts even without points (owner, 2026-10-25):
  * a failed import must stay visible and deletable while TravTrack is off.
  * A deleted span counts — it is what keeps a late upload out, and the user
- * may want to see it in the summary.
+ * may want to see it in the summary. A live ingest token counts so it can be
+ * listed and revoked while TravTrack is off; otherwise it would stay usable the
+ * day TravTrack is switched on again.
  */
 export async function holdsTravTrackData(userId: string): Promise<boolean> {
   const rows = await prisma.$queryRaw<{ hit: number }[]>`
@@ -75,6 +77,7 @@ export async function holdsTravTrackData(userId: string): Promise<boolean> {
     UNION ALL SELECT 1 FROM travtrack_gaps WHERE user_id = ${userId}
     UNION ALL SELECT 1 FROM travtrack_deleted_ranges WHERE user_id = ${userId}
     UNION ALL SELECT 1 FROM travtrack_imports WHERE user_id = ${userId}
+    UNION ALL SELECT 1 FROM travtrack_ingest_tokens WHERE user_id = ${userId} AND revoked_at IS NULL
     LIMIT 1`;
   return rows.length > 0;
 }
