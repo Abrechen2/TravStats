@@ -7,6 +7,11 @@ import { apiErrorMachineCode } from "../../lib/apiError";
 import { Card } from "../ui/Card";
 import StayIdentityPanel from "./StayIdentityPanel";
 
+/** How often an accept still being published elsewhere is asked again, and how far apart. */
+const IN_PROGRESS_RETRIES = 4;
+const IN_PROGRESS_DELAY_MS = 1500;
+const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export default function StayReviewCard({
   row,
   choices,
@@ -18,6 +23,11 @@ export default function StayReviewCard({
 }): JSX.Element {
   const { t } = useTranslation("trips");
   const text = (key: string) => t(`trips:dawarichStays.${key}`);
+  // A TravTrack finding (plan E4) names its source and explains itself; a
+  // Dawarich one reads exactly as it always did.
+  const travtrack = row.evidence.source === "travtrack";
+  // Mid-accept is still a question: a claim a crash left is taken over.
+  const open = row.status === "pending" || row.status === "accepting";
   const [name, setName] = useState(row.name ?? "");
   // Set once the user types or picks; a late identity answer never overwrites them.
   const [nameTouched, setNameTouched] = useState(false);
@@ -40,18 +50,33 @@ export default function StayReviewCard({
   const submit = async (accept: boolean) => {
     setBusy(true);
     setError(null);
+    const review = {
+      name,
+      placeId: placeId || null,
+      tripId: tripId || null,
+      lat: Number(lat),
+      lon: Number(lon),
+      startAt: { local: start },
+      endAt: { local: end },
+    };
     try {
-      if (accept)
-        await dawarichStaysApi.accept(row.id, {
-          name,
-          placeId: placeId || null,
-          tripId: tripId || null,
-          lat: Number(lat),
-          lon: Number(lon),
-          startAt: { local: start },
-          endAt: { local: end },
-        });
-      else await dawarichStaysApi.reject(row.id);
+      if (accept) {
+        // Another tab or device is publishing this very accept: ask again
+        // quietly — the answer will be its visit (the replay).
+        for (let attempt = 0; ; attempt++) {
+          try {
+            await dawarichStaysApi.accept(row.id, review);
+            break;
+          } catch (e) {
+            if (
+              apiErrorMachineCode(e) !== "SUGGESTION_ACCEPT_IN_PROGRESS" ||
+              attempt >= IN_PROGRESS_RETRIES
+            )
+              throw e;
+            await pause(IN_PROGRESS_DELAY_MS);
+          }
+        }
+      } else await dawarichStaysApi.reject(row.id);
       onDone();
     } catch (e) {
       const code = apiErrorMachineCode(e);
@@ -63,15 +88,27 @@ export default function StayReviewCard({
               ? "invalidInterval"
               : code === "TIME_AMBIGUOUS" || code === "LOCAL_TIME_NONEXISTENT"
                 ? "ambiguousTime"
-                : "error"
+                : code === "EVIDENCE_INVALIDATED"
+                  ? "evidenceInvalidated"
+                  : code === "TRAVTRACK_DISABLED"
+                    ? "travTrackDisabled"
+                    : code === "SUGGESTION_ACCEPT_IN_PROGRESS"
+                      ? "acceptInProgress"
+                      : "error"
         )
       );
+      // The history behind it is gone: the finding is no longer a question.
+      if (code === "EVIDENCE_INVALIDATED") onDone();
     } finally {
       setBusy(false);
     }
   };
   return (
     <Card>
+      {travtrack && <p className="t-caption">{text("source.travtrack")}</p>}
+      {travtrack && row.beforeSourceSwitch && (
+        <p className="t-caption">{text("beforeSourceSwitch")}</p>
+      )}
       {row.evidence.kind === "market" && <p className="t-caption">{text("markets.venue")}</p>}
       {row.evidence.kind === "venue" && (
         <p className="t-caption">
@@ -96,17 +133,25 @@ export default function StayReviewCard({
         })}{" "}
         · {row.sourceLat.toFixed(5)}, {row.sourceLon.toFixed(5)}
       </p>
+      {travtrack && row.evidence.explanation && (
+        <p className="t-caption">
+          {t(
+            `trips:dawarichStays.explanation.${row.evidence.explanation.code}`,
+            row.evidence.explanation.params
+          )}
+        </p>
+      )}
       <StayIdentityPanel
         stayId={row.id}
         lat={row.lat}
         lon={row.lon}
-        onPickName={row.status === "pending" && !placeId && !busy ? pickName : undefined}
+        onPickName={open && !placeId && !busy ? pickName : undefined}
         onIdentity={(identity) => {
           // Prefill an empty, untouched name with a specific place — an address
           // or a nearby place, never just the photos' city. It sits in the field,
           // visible and editable, until the user accepts.
           const probable = identity.probable;
-          if (row.status !== "pending" || nameTouched || placeId || name) return;
+          if (!open || nameTouched || placeId || name) return;
           if (probable && probable.source !== "photos") setName(probable.name);
         }}
       />
@@ -115,10 +160,12 @@ export default function StayReviewCard({
           <li key={reason}>{text(`uncertainty.${reason}`)}</li>
         ))}
       </ul>
-      {row.status === "pending" && row.evidence.matchingVisitId && <p>{text("existingVisit")}</p>}
+      {open && row.evidence.matchingVisitId && <p>{text("existingVisit")}</p>}
       <details>
         <summary>{text("provenance")}</summary>
-        <p className="break-all">Dawarich · {row.id}</p>
+        <p className="break-all">
+          {travtrack ? "TravTrack" : "Dawarich"} · {row.id}
+        </p>
         {row.evidence.market && (
           <div>
             <p>
@@ -152,11 +199,13 @@ export default function StayReviewCard({
             {text("resolved")}: {row.resolvedAt}
           </p>
         )}
-        <p className="break-all">
-          {text("points")}: {row.evidence.pointIds.join(", ")}
-        </p>
+        {row.evidence.pointIds && (
+          <p className="break-all">
+            {text("points")}: {row.evidence.pointIds.join(", ")}
+          </p>
+        )}
       </details>
-      {row.status === "pending" ? (
+      {open ? (
         <form
           className="grid gap-3 mt-4"
           onSubmit={(e) => {

@@ -165,7 +165,11 @@ router.get("/", async (req: AuthRequest, res, next) => {
     const userId = user(req);
     const { status, from, to } = z
       .object({
-        status: z.enum(["pending", "accepted", "rejected", "covered"]).default("pending"),
+        // `invalidated`: a TravTrack finding whose history went before it was
+        // accepted (E4). A Dawarich account never has one.
+        status: z
+          .enum(["pending", "accepted", "rejected", "covered", "invalidated"])
+          .default("pending"),
         // A window, so the Companion can ask for one trip's stays (audit
         // 2026-10-23): a stay is in it when the two overlap.
         from: z.coerce.date().optional(),
@@ -185,7 +189,10 @@ router.get("/", async (req: AuthRequest, res, next) => {
     const rows = await prisma.dawarichStay.findMany({
       where: {
         userId,
-        status,
+        // A TravTrack finding mid-accept (E4) is still a question: a claim a
+        // crash left behind is taken over by the next accept, so it must stay
+        // reachable. Dawarich findings never commit `accepting`.
+        status: status === "pending" ? { in: ["pending", "accepting"] } : status,
         ...(to ? { startAt: { lte: to } } : {}),
         ...(from ? { endAt: { gte: from } } : {}),
       },
@@ -193,7 +200,23 @@ router.get("/", async (req: AuthRequest, res, next) => {
       take: 200,
       include: { visit: { select: { id: true, placeId: true } } },
     });
-    res.json({ success: true, data: rows.map(withStayTimes) });
+    // A TravTrack finding made under an earlier source choice says so (E4);
+    // a Dawarich row carries no new field.
+    const rev = (
+      await prisma.userSettings.findUnique({
+        where: { userId },
+        select: { locationProviderRev: true },
+      })
+    )?.locationProviderRev;
+    res.json({
+      success: true,
+      data: rows.map((row) => ({
+        ...withStayTimes(row),
+        ...(row.provider === "travtrack" && rev !== undefined && row.providerRev < rev
+          ? { beforeSourceSwitch: true as const }
+          : {}),
+      })),
+    });
   } catch (e) {
     next(e);
   }

@@ -748,8 +748,28 @@
       "pending": "To review",
       "accepted": "Accepted",
       "rejected": "Dismissed",
-      "covered": "Already recorded"
+      "covered": "Already recorded",
+      "accepting": "Being accepted",
+      "invalidated": "Not accepted – its location history was deleted"
     },
+    "source": {
+      "travtrack": "From TravTrack"
+    },
+    "beforeSourceSwitch": "Detected before the source was switched",
+    "explanation": {
+      "stay": {
+        "dwell": "{{points}} positions within {{radiusM}} m over {{minutes}} minutes (longest gap {{maxGapMinutes}} minutes)"
+      },
+      "market": {
+        "visit": "{{points}} positions over {{minutes}} minutes on the market site"
+      },
+      "venue": {
+        "visit": "{{points}} positions over {{minutes}} minutes on the site"
+      }
+    },
+    "evidenceInvalidated": "Not accepted: the location history behind this suggestion has since been deleted or has changed.",
+    "travTrackDisabled": "TravTrack is currently switched off on this server. The suggestion is kept and can be accepted later or dismissed now.",
+    "acceptInProgress": "This suggestion is being accepted elsewhere right now. Please try again in a moment.",
     "coveredBy": {
       "visit": "Already recorded as a visit: {{name}}",
       "lodging": "Already recorded as a stay: {{name}}"

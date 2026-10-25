@@ -241,7 +241,8 @@ export async function scanCandidates(
     // Plain stops only: a market or venue finding is the whole site, and a
     // confirmed shop inside it is not that visit — `collectMarketFindings`
     // answers "already recorded" for those by the venue's own identity.
-    if (!market && !growing && coverageFor({ ...c, zone }, coverage)) {
+    const evidenceKey = evidenceKeyOf(c, byId);
+    if (!market && !growing && coverageFor({ ...c, zone, evidenceKey }, coverage)) {
       counts.covered++;
       continue;
     }
@@ -285,7 +286,6 @@ export async function scanCandidates(
           select: { id: true },
         })
       : null;
-    const evidenceKey = evidenceKeyOf(c, byId);
     const fingerprint = findingFingerprint(source, c, market, evidenceKey);
     const kind = market ? findingKind(market) : null;
     const uncertainties = [

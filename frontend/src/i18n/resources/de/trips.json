@@ -748,8 +748,28 @@
       "pending": "Zu prüfen",
       "accepted": "Übernommen",
       "rejected": "Verworfen",
-      "covered": "Bereits erfasst"
+      "covered": "Bereits erfasst",
+      "accepting": "Wird übernommen",
+      "invalidated": "Nicht übernommen – der Standortverlauf dazu wurde gelöscht"
     },
+    "source": {
+      "travtrack": "Aus TravTrack"
+    },
+    "beforeSourceSwitch": "Vor dem Quellwechsel erkannt",
+    "explanation": {
+      "stay": {
+        "dwell": "{{points}} Positionen innerhalb von {{radiusM}} m über {{minutes}} Minuten (längste Lücke {{maxGapMinutes}} Minuten)"
+      },
+      "market": {
+        "visit": "{{points}} Positionen über {{minutes}} Minuten auf dem Marktgelände"
+      },
+      "venue": {
+        "visit": "{{points}} Positionen über {{minutes}} Minuten auf dem Gelände"
+      }
+    },
+    "evidenceInvalidated": "Nicht übernommen: Der Standortverlauf zu diesem Vorschlag wurde inzwischen gelöscht oder hat sich geändert.",
+    "travTrackDisabled": "TravTrack ist auf diesem Server gerade ausgeschaltet. Der Vorschlag bleibt erhalten und kann später übernommen oder jetzt verworfen werden.",
+    "acceptInProgress": "Dieser Vorschlag wird gerade an anderer Stelle übernommen. Bitte versuche es gleich noch einmal.",
     "coveredBy": {
       "visit": "Bereits erfasst als Besuch: {{name}}",
       "lodging": "Bereits erfasst als Unterkunft: {{name}}"

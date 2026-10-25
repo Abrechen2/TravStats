@@ -152,14 +152,16 @@ async function loadHistory(
       })),
     };
   }
-  const [accepted, rejected, covered] = await Promise.all([
+  const [accepted, rejected, covered, invalidated] = await Promise.all([
     dawarichStaysApi.list("accepted"),
     dawarichStaysApi.list("rejected"),
     dawarichStaysApi.list("covered"),
+    // A TravTrack finding whose history went before it was accepted (E4).
+    dawarichStaysApi.list("invalidated"),
   ]);
   return {
     totals: null,
-    rows: [...accepted, ...rejected, ...covered].map((stay) => ({
+    rows: [...accepted, ...rejected, ...covered, ...invalidated].map((stay) => ({
       key: stay.id,
       title: stay.name ?? t("trips:dawarichStays.unnamed"),
       // A covered finding says what already holds it, not just that it left.
