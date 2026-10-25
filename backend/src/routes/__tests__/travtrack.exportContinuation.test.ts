@@ -21,8 +21,11 @@ jest.mock("../../services/travtrack/exportFormats", () => {
   );
   return {
     ...actual,
-    buildTravTrackExport: (userId: string, window: { fromMs: number; untilMs: number }) =>
-      actual.buildTravTrackExport(userId, window, 2),
+    buildTravTrackExport: (
+      userId: string,
+      window: { fromMs: number; untilMs: number },
+      after: Parameters<typeof actual.buildTravTrackExport>[2]
+    ) => actual.buildTravTrackExport(userId, window, after, 2),
   };
 });
 
@@ -78,6 +81,53 @@ describe("TravTrack — an export in parts", () => {
     );
   });
 
+  /** Follows the continuation to the end; at most `max` parts. */
+  const exportAll = async (owner: string, max = 8) => {
+    const ownerCookie = `auth_token=${generateToken(owner)}`;
+    const times: string[] = [];
+    let parts = 0;
+    let query: Record<string, string> = { fromDay: "2026-10-12", toDay: "2026-10-12" };
+    for (let part = 0; part < max; part++) {
+      const res = await request(app)
+        .get("/api/v1/travtrack/export")
+        .query({ ...query, format: "json" })
+        .set("Cookie", ownerCookie);
+      expect(res.status).toBe(200);
+      parts += 1;
+      times.push(...JSON.parse(res.text).points.map((p: { t: string }) => p.t));
+      if (res.headers["x-travtrack-coverage"] === "complete") return { times, parts, done: true };
+      query = {
+        from: res.headers["x-travtrack-next"],
+        to: res.headers["x-travtrack-until"],
+        cursor: res.headers["x-travtrack-cursor"],
+      };
+    }
+    return { times, parts, done: false };
+  };
+
+  it("a part boundary between points of one instant neither repeats nor loses one", async () => {
+    const other = await makeUser(`${PREFIX}same-instant`);
+    // One fix, three sharing the next minute, one more: the first part ends inside the three.
+    const at = [0, 1, 1, 1, 2].map((m) => T0 + m * MIN);
+    for (const [i, t] of at.entries()) {
+      await storePoint(other, { t, lat: 37.5 + i * 0.001, lon: 127 });
+    }
+    const { times, done } = await exportAll(other);
+    expect(done).toBe(true);
+    expect(times).toEqual(at.map((t) => new Date(t).toISOString()));
+  });
+
+  it("more points at one instant than a part holds still come out, each once", async () => {
+    const other = await makeUser(`${PREFIX}one-instant`);
+    for (let i = 0; i < 5; i++) {
+      await storePoint(other, { t: T0, lat: 37.5 + i * 0.001, lon: 127 + i * 0.001 });
+    }
+    const { times, done, parts } = await exportAll(other);
+    expect(done).toBe(true);
+    expect(parts).toBe(3);
+    expect(times).toHaveLength(5);
+  });
+
   it("lets a browser on another origin read the continuation", async () => {
     const res = await request(app)
       .get("/api/v1/travtrack/export")
@@ -87,5 +137,6 @@ describe("TravTrack — an export in parts", () => {
     const exposed = String(res.headers["access-control-expose-headers"] ?? "");
     expect(exposed).toContain("X-TravTrack-Next");
     expect(exposed).toContain("X-TravTrack-Until");
+    expect(exposed).toContain("X-TravTrack-Cursor");
   });
 });

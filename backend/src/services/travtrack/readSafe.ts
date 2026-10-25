@@ -18,7 +18,10 @@ import { privacyCirclesFor } from "./privacyCircles";
  *
  * Bounded: at most `cap` points are read. `next` names the first instant left
  * unread, so a reader says the answer is truncated instead of passing it off
- * as the whole span.
+ * as the whole span, and `cursor` the last point read by the read's own order
+ * `(t, seq)`: points sharing an instant can fall either side of a part's end
+ * (or outnumber a part), so a continuation carries both, never the time
+ * alone — which repeated the points of that instant, or looped on them.
  */
 
 export const TRAVTRACK_SAFE_SELECT = {
@@ -31,6 +34,7 @@ export const TRAVTRACK_SAFE_SELECT = {
   course: true,
   deviceId: true,
   purpose: true,
+  seq: true,
 } as const;
 
 export type SafePointRow = {
@@ -43,7 +47,21 @@ export type SafePointRow = {
   course: number | null;
   deviceId: string | null;
   purpose: string;
+  seq: bigint;
 };
+
+/** A position in the read's order: after the point at `tMs` with this `seq`. */
+export type SafeCursor = { tMs: number; seq: bigint };
+
+const CURSOR = /^(\d{1,15}):(\d{1,19})$/;
+
+export const formatSafeCursor = (c: SafeCursor): string => `${c.tMs}:${c.seq}`;
+
+/** The cursor a continuation carries, or null when it is not one. */
+export function parseSafeCursor(text: string | undefined): SafeCursor | null {
+  const m = text ? CURSOR.exec(text) : null;
+  return m ? { tMs: Number(m[1]), seq: BigInt(m[2]) } : null;
+}
 
 export type Span = { fromMs: number; untilMs: number };
 
@@ -57,6 +75,8 @@ export type SafeSpan = {
   paused: Array<Span & { deviceId: string; reason: string }>;
   /** The first instant not read, or null when the span was read whole. */
   next: Date | null;
+  /** The last point read, where a continuation picks up; null when read whole. */
+  cursor: SafeCursor | null;
 };
 
 const clip = (from: Date, to: Date, window: Span): Span => ({
@@ -67,9 +87,18 @@ const clip = (from: Date, to: Date, window: Span): Span => ({
 export async function readSafeTravTrack(
   userId: string,
   window: Span,
-  cap: number
+  cap: number,
+  after: SafeCursor | null = null
 ): Promise<SafeSpan> {
   const range = { gte: new Date(window.fromMs), lt: new Date(window.untilMs) };
+  const afterWhere = after
+    ? {
+        OR: [
+          { t: { gt: new Date(after.tMs) } },
+          { t: new Date(after.tMs), seq: { gt: after.seq } },
+        ],
+      }
+    : {};
   const overlapping = {
     userId,
     fromAt: { lt: new Date(window.untilMs) },
@@ -77,7 +106,7 @@ export async function readSafeTravTrack(
   };
   const [rows, deletedRows, gapRows, circles] = await Promise.all([
     prisma.travTrackPoint.findMany({
-      where: { userId, t: range },
+      where: { userId, t: range, ...afterWhere },
       orderBy: [{ t: "asc" }, { seq: "asc" }],
       take: cap + 1,
       select: TRAVTRACK_SAFE_SELECT,
@@ -96,6 +125,8 @@ export async function readSafeTravTrack(
   ]);
   const read = rows.slice(0, cap);
   const next = rows.length > cap ? rows[cap].t : null;
+  const last = read[read.length - 1];
+  const cursor = next && last ? { tMs: last.t.getTime(), seq: last.seq } : null;
 
   const deleted = deletedRows.map((r) => clip(r.fromAt, r.toAt, window));
   const paused = gapRows.map((g) => ({
@@ -128,7 +159,7 @@ export async function readSafeTravTrack(
   // The safe devices are already the cut; the stretches go through it once
   // more as they leave, so the output itself is what was checked.
   const segments = privacySafeStretches(rawSegments(privacySafeDevices(devices, circles)), circles);
-  return { segments, rowOf: (p) => rowByPoint.get(p), circles, deleted, paused, next };
+  return { segments, rowOf: (p) => rowByPoint.get(p), circles, deleted, paused, next, cursor };
 }
 
 /**

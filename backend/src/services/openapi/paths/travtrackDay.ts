@@ -77,6 +77,10 @@ const exportJson = z.object({
     .enum(["complete", "truncated"])
     .describe("truncated: more points than one export carries; ask again from `next`"),
   next: z.string().nullable().describe("The first instant left out, or null"),
+  cursor: z
+    .string()
+    .nullable()
+    .describe("The last point given, `<tMs>:<seq>`, where the next part continues; or null"),
   points: z.array(
     z.object({
       t: z.string(),
@@ -109,7 +113,9 @@ registry.registerPath({
   description:
     "GPX 1.1 (one `<trkseg>` per stretch) or TravTrack's JSON, privacy-cut, as an attachment. " +
     "Headers `X-TravTrack-Origin`, `X-TravTrack-Coverage` and, when truncated, " +
-    "`X-TravTrack-Next` and `X-TravTrack-Until`: the rest is `?from=<Next>&to=<Until>`. " +
+    "`X-TravTrack-Next`, `X-TravTrack-Until` and `X-TravTrack-Cursor`: the rest is " +
+    "`?from=<Next>&to=<Until>&cursor=<Cursor>` (the cursor is the last point given, by " +
+    "time and order, so points sharing an instant are neither repeated nor lost). " +
     "Reachable with TravTrack off while the account holds data.",
   tags: ["TravTrack"],
   request: { query: travTrackExportQuerySchema },

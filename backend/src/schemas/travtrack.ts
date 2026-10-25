@@ -113,6 +113,11 @@ export const travTrackExportQuerySchema = z
   .object({
     ...rangeFields,
     format: z.enum(["gpx", "json"]).default("json").describe("GPX 1.1 or TravTrack's JSON"),
+    cursor: z
+      .string()
+      .regex(/^\d{1,15}:\d{1,19}$/)
+      .optional()
+      .describe("Continue after this point (`X-TravTrack-Cursor` of the previous part)"),
   })
   .refine(oneForm, "Either `from` and `to`, or `fromDay` and `toDay`")
   .refine(inOrder, "The span must not end before it starts");

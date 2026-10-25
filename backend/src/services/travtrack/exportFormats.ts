@@ -1,5 +1,5 @@
 import { recordingToGpx } from "../tripRecording/gpx";
-import { readSafeTravTrack, type Span } from "./readSafe";
+import { formatSafeCursor, readSafeTravTrack, type SafeCursor, type Span } from "./readSafe";
 
 /**
  * TravTrack's history of a span as a file the owner takes away (TravTrack plan
@@ -8,9 +8,10 @@ import { readSafeTravTrack, type Span } from "./readSafe";
  * Both privacy-cut (`readSafe.ts`): what a zone hides is not in the file.
  *
  * Bounded at `EXPORT_POINT_CAP` points. Beyond it the answer says
- * `coverage: "truncated"` and names `next`, the first instant left out, so a
- * client asks again for `[next, to)` instead of taking a part for the whole —
- * the route says both as headers, so a GPX part can be followed too.
+ * `coverage: "truncated"` and names `next`, the first instant left out, and
+ * `cursor`, the last point given, so a client asks again for `[next, to)`
+ * after that cursor instead of taking a part for the whole — the route says
+ * all three as headers, so a GPX part can be followed too.
  */
 
 export const EXPORT_POINT_CAP = 200_000;
@@ -20,13 +21,15 @@ export type TravTrackExport = Awaited<ReturnType<typeof buildTravTrackExport>>;
 export async function buildTravTrackExport(
   userId: string,
   window: Span,
+  after: SafeCursor | null = null,
   cap: number = EXPORT_POINT_CAP
 ) {
-  const read = await readSafeTravTrack(userId, window, cap);
+  const read = await readSafeTravTrack(userId, window, cap, after);
   return {
     read,
     coverage: read.next ? ("truncated" as const) : ("complete" as const),
     next: read.next ? read.next.toISOString() : null,
+    cursor: read.cursor ? formatSafeCursor(read.cursor) : null,
   };
 }
 
@@ -39,6 +42,7 @@ export function travTrackExportJson(window: Span, built: TravTrackExport) {
     to: new Date(window.untilMs).toISOString(),
     coverage: built.coverage,
     next: built.next,
+    cursor: built.cursor,
     points: read.segments.flatMap((segment, index) =>
       segment.map((p) => {
         const row = read.rowOf(p);

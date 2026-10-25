@@ -92,7 +92,16 @@ export interface TravTrackExportPart {
   blob: Blob;
   filename: string;
   truncated: boolean;
-  rest: InstantSpan | null;
+  rest: ExportContinuation | null;
+}
+
+/**
+ * The rest of a truncated export: its span and the last point given
+ * (`<tMs>:<seq>`), so points sharing an instant at the part's end are
+ * neither repeated nor lost.
+ */
+export interface ExportContinuation extends InstantSpan {
+  cursor: string;
 }
 
 /** A shared trip's route as its recipients see it (plan T7): geometry only. */
@@ -154,12 +163,12 @@ export const travTrackApi = {
   },
   /**
    * One file of a span. A span over the server's point cap comes in parts:
-   * the answer then names the rest (`X-TravTrack-Next` / `X-TravTrack-Until`),
-   * which is asked for as an `InstantSpan` — so a single day over the cap
-   * still comes out whole.
+   * the answer then names the rest (`X-TravTrack-Next` / `X-TravTrack-Until`
+   * / `X-TravTrack-Cursor`), which is asked for as an `ExportContinuation` —
+   * so a single instant over the cap still comes out whole, each point once.
    */
   exportFile: async (
-    span: DaySpan | InstantSpan,
+    span: DaySpan | InstantSpan | ExportContinuation,
     format: TravTrackExportFormat
   ): Promise<TravTrackExportPart> => {
     const res = await api
@@ -171,14 +180,21 @@ export const travTrackApi = {
       blob: res.data,
       filename: filenameFrom(res.headers["content-disposition"], `travtrack.${format}`),
       truncated: res.headers["x-travtrack-coverage"] === "truncated",
-      rest: restOf(res.headers["x-travtrack-next"], res.headers["x-travtrack-until"]),
+      rest: restOf(
+        res.headers["x-travtrack-next"],
+        res.headers["x-travtrack-until"],
+        res.headers["x-travtrack-cursor"]
+      ),
     };
   },
 };
 
-function restOf(next: unknown, until: unknown): InstantSpan | null {
-  return typeof next === "string" && next !== "" && typeof until === "string" && until !== ""
-    ? { from: next, to: until }
+const present = (v: unknown): v is string => typeof v === "string" && v !== "";
+
+/** Null unless all three are named: a rest by time alone would repeat an instant. */
+function restOf(next: unknown, until: unknown, cursor: unknown): ExportContinuation | null {
+  return present(next) && present(until) && present(cursor)
+    ? { from: next, to: until, cursor }
     : null;
 }
 

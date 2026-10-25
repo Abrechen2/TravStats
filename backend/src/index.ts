@@ -111,6 +111,7 @@ if (corsOrigin) {
       "X-TravTrack-Coverage",
       "X-TravTrack-Next",
       "X-TravTrack-Until",
+      "X-TravTrack-Cursor",
     ],
   });
   // The public share-link endpoints (forgejo#281) are asked by the /share page
