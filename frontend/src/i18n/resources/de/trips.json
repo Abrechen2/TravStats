@@ -734,7 +734,8 @@
       "succeeded": "Auswertung abgeschlossen",
       "partial": "Auswertung teilweise – bitte die Datenlücken beachten",
       "failed": "Auswertung fehlgeschlagen",
-      "interrupted": "Auswertung unterbrochen; bitte erneut starten"
+      "interrupted": "Auswertung unterbrochen; bitte erneut starten",
+      "stale": "Auswertung abgebrochen – der Standortverlauf wurde währenddessen gelöscht; die nächste Auswertung liest ihn neu"
     },
     "status": {
       "pending": "Zu prüfen",

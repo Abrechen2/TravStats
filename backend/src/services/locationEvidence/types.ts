@@ -37,3 +37,10 @@ export type EvidenceSuggested = {
    */
   coverage: Coverage | null;
 };
+
+/**
+ * The version of the stay and market detectors a TravTrack finding is made
+ * with (`algorithm_version`). 0 is every finding from before versioning — the
+ * legacy Dawarich path, which keeps it.
+ */
+export const STAY_ALGORITHM = 1;

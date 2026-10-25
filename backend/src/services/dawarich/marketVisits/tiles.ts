@@ -1,4 +1,4 @@
-import type { DawarichPoint } from "../dawarichClient";
+import type { StayPoint } from "../stays/detect";
 export interface MarketTile {
   key: string;
   south: number;
@@ -9,7 +9,7 @@ export interface MarketTile {
 export const TILE_SIZE = 0.05;
 export const MAX_SCAN_TILES = 48;
 /** Coarse public regions only. Never include point ids, times or exact positions in a query. */
-export function planMarketTiles(points: readonly DawarichPoint[]) {
+export function planMarketTiles(points: readonly StayPoint[]) {
   const cells = new Map<string, { tile: MarketTile; times: Set<number> }>();
   for (const p of points) {
     if (

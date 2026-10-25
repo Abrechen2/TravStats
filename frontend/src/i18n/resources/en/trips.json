@@ -734,7 +734,8 @@
       "succeeded": "Scan completed",
       "partial": "Scan partly completed – please note the data gaps",
       "failed": "Scan failed",
-      "interrupted": "Scan interrupted; please start again"
+      "interrupted": "Scan interrupted; please start again",
+      "stale": "Scan stopped – the location history was deleted while it ran; the next scan reads it afresh"
     },
     "status": {
       "pending": "To review",
