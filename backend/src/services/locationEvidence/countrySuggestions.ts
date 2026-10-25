@@ -17,14 +17,19 @@
  *   - Bounded: at most `MAX_NEW_COUNTRY_QUESTIONS` new questions per run.
  *   - Published under the TravTrack lock, and only if the history generation
  *     is still the one captured before the read (E5's fence).
+ *   - Never from rows of a day still to be (re)projected (`unprojectedDaysIn`,
+ *     asked under the lock): a run touching one waits — it is neither asked
+ *     nor grown — until the projection ran again. Its rows may hold what a
+ *     point stored or removed since then changed.
  *
  * A question holds a country code, days and counts — no position, no digest.
  */
-import { prisma } from "../../db";
+import { prisma, type DbTransaction } from "../../db";
 import { Prisma } from "../../prisma";
 import logger from "../../utils/logger";
 import { loadPassport } from "../stats/passportLoader";
 import { getLocationProvider } from "../locationProvider/provider";
+import { COUNTRY_DAYS_BIT, unprojectedDaysIn } from "../travtrack/dirtyDays";
 import { takeTravTrackLock } from "../travtrack/lock";
 import { travTrackDerivationAllowed } from "./allowed";
 import { explanation } from "./envelope";
@@ -169,6 +174,10 @@ const countryOf = (row: Existing): string | null => {
   return typeof e?.countryCode === "string" ? e.countryCode : null;
 };
 
+/** Whether one of `days` lies inside the run. */
+const runTouchesDay = (run: Pick<GroundRun, "firstDay" | "lastDay">, days: ReadonlySet<string>) =>
+  [...days].some((d) => d >= run.firstDay && d <= run.lastDay);
+
 /** The run touches the row's window (overlapping or adjoining). */
 const touches = (run: GroundRun, row: Existing) => {
   const { from, until } = runWindow(run);
@@ -241,7 +250,12 @@ export async function countrySuggestions(
       logger.info({ operation: "location.countrySuggestions.stale", userId });
       return { ...result, status: "stale" as const };
     }
+    const first = runs.reduce((d, r) => (r.firstDay < d ? r.firstDay : d), runs[0].firstDay);
+    const last = runs.reduce((d, r) => (r.lastDay > d ? r.lastDay : d), runs[0].lastDay);
+    const unprojected = await unprojectedDaysIn(userId, COUNTRY_DAYS_BIT, first, last, tx);
     for (const run of runs) {
+      // A day of it still to re-derive: its rows may be stale. Next run.
+      if (runTouchesDay(run, unprojected)) continue;
       const matching = existing.filter(
         (row) => countryOf(row) === run.countryCode && touches(run, row)
       );
@@ -299,15 +313,39 @@ export async function countrySuggestions(
   });
 }
 
+const lastDayOf = (window: { until: Date }) => dayOf(new Date(window.until.getTime() - DAY_MS));
+
+/**
+ * Whether a day of the question's window is still to be (re)projected. Then
+ * its rows prove nothing either way: the accept waits (`unverifiable`). In
+ * `tx` when given — the publication asks it again under the TravTrack lock.
+ */
+export async function countryWindowUnprojected(
+  userId: string,
+  window: { from: Date; until: Date },
+  tx?: DbTransaction
+): Promise<boolean> {
+  const days = await unprojectedDaysIn(
+    userId,
+    COUNTRY_DAYS_BIT,
+    dayOf(window.from),
+    lastDayOf(window),
+    tx
+  );
+  return days.size > 0;
+}
+
 /**
  * The accept's re-check by the country rule itself: TravTrack still names
- * the country on at least two ground days inside the question's window.
+ * the country on at least two ground days inside the question's window —
+ * `unverifiable` while one of its days waits to be re-derived.
  */
 export async function countryRunHolds(
   userId: string,
   countryCode: string,
   window: { from: Date; until: Date }
-): Promise<boolean> {
+): Promise<"holds" | "invalidated" | "unverifiable"> {
+  if (await countryWindowUnprojected(userId, window)) return "unverifiable";
   const rows = await travTrackCountryDays(userId, window, countryCode);
-  return rows.filter(isGround).length >= MIN_GROUND_DAYS;
+  return rows.filter(isGround).length >= MIN_GROUND_DAYS ? "holds" : "invalidated";
 }

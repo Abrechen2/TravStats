@@ -574,7 +574,7 @@ describe("a country question through the same protocol", () => {
         where: { id },
         data: { claimToken: "theirs", claimedAt: new Date() },
       });
-      return true;
+      return "holds" as const;
     });
     try {
       await expect(acceptCountrySuggestion(countryUser, id, "visited")).rejects.toMatchObject({

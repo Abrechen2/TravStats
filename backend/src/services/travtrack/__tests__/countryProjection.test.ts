@@ -227,6 +227,25 @@ describe("projectTravTrackCountryDays", () => {
     expect((await rows()).map((r) => r.pointCount)).toEqual([1]);
   });
 
+  it("a removal takes the neighbouring days' rows too — they read the removed points as context — and they re-derive (Codex review)", async () => {
+    // A fix late on D1 and one early on D2: each is the other day's edge context.
+    await seoul(at(D1, "23:50:00"));
+    await seoul(at(D2, "00:10:00"));
+    await seoul(at(D2, "12:00:00"));
+    await dirty([D1, D2]);
+    await projectTravTrackCountryDays(userId, deps);
+    expect((await rows()).map((r) => r.date.toISOString().slice(0, 10))).toEqual([D1, D2]);
+
+    await deleteTravTrackRange(userId, new Date(at(D2, "00:00:00")), new Date(at(D2, "01:00:00")));
+
+    // D1's row went with the delete, in its transaction: it was derived with
+    // the removed fix as context, and nothing may read it until it re-derives.
+    expect(await rows()).toEqual([]);
+    expect((await dirtyRow(D1))!.done & COUNTRY_DAYS_BIT).toBe(0);
+    await projectTravTrackCountryDays(userId, deps);
+    expect((await rows()).map((r) => r.date.toISOString().slice(0, 10))).toEqual([D1, D2]);
+  });
+
   it("a rolled-back delete leaves the rows and the dirty day as they were", async () => {
     await seoul(at(D1, "03:00:00"));
     await dirty([D1]);

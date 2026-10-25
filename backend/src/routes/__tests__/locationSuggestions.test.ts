@@ -75,6 +75,8 @@ describe("/api/v1/location-suggestions", () => {
     await prisma.travTrackDerivationState.deleteMany({ where: { userId } });
     await prisma.travTrackPoint.deleteMany({ where: { userId } });
     await prisma.travTrackDeletedRange.deleteMany({ where: { userId } });
+    // A removal in one test leaves its days to re-derive; no question reads them.
+    await prisma.travTrackDirtyDay.deleteMany({ where: { userId } });
     await setLocationProvider(userId, "travtrack");
   });
 
@@ -282,7 +284,7 @@ describe("/api/v1/location-suggestions", () => {
     const id = await question();
     const spy = jest.spyOn(countryRule, "countryRunHolds").mockImplementation(async () => {
       await switches.set({ beta: true, config: false });
-      return true;
+      return "holds" as const;
     });
     try {
       const res = await accept(id, "visited");

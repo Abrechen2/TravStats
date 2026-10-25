@@ -319,7 +319,7 @@ describe("a range delete", () => {
     expect((await fresh(outside.id))?.status).toBe("pending");
   });
 
-  it("deletes the country days of the removed days and marks them and their neighbours dirty", async () => {
+  it("deletes the country days of the removed days and their neighbours, and marks them dirty", async () => {
     // Points on the 10th only; the range runs over the 10th and 11th.
     await points([0, 10]);
     for (const day of ["2026-10-09", "2026-10-10", "2026-10-12"]) {
@@ -337,10 +337,9 @@ describe("a range delete", () => {
     }
     await deleteTravTrackRange(userId, at(-1), new Date("2026-10-12T00:00:00Z"));
     const left = await prisma.countryDay.findMany({ where: { userId }, orderBy: { date: "asc" } });
-    expect(left.map((r) => r.date.toISOString().slice(0, 10))).toEqual([
-      "2026-10-09",
-      "2026-10-12",
-    ]);
+    // The 9th and the 11th neighbour the removed 10th: their rows read its
+    // points as edge context and go too (Codex review). The 12th stays.
+    expect(left.map((r) => r.date.toISOString().slice(0, 10))).toEqual(["2026-10-12"]);
     const dirty = await prisma.travTrackDirtyDay.findMany({
       where: { userId },
       orderBy: { day: "asc" },
@@ -357,7 +356,7 @@ describe("a range delete", () => {
     const spy = jest.spyOn(countryRule, "countryRunHolds").mockImplementation(async () => {
       // The removal lands while the accept re-checks, holding no lock.
       await deleteTravTrackRange(userId, at(-1), at(60));
-      return true;
+      return "holds" as const;
     });
     try {
       await expect(acceptCountrySuggestion(userId, q.id, "visited")).rejects.toMatchObject({

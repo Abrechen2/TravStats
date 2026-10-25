@@ -16,9 +16,11 @@
  *     of its privacy-cut line lies in it, or a chord of that line crosses it
  *     (`segmentCrossesZone`, the check a line leaving the server gets);
  *   - a country question (no pin) or a journey: one of its days is a removed
- *     day. A journey's runs are bounded by the stays and silences around
- *     them, read from those days, so a removal elsewhere on the day may
- *     change what the run is.
+ *     day or the neighbour of one (`removalDays`) — a neighbour's country
+ *     rows were derived with the removed points as edge context and go with
+ *     them (`projectionRemoval.ts`); a journey's runs are bounded by the stays
+ *     and silences around them, read from those days, so a removal elsewhere
+ *     on the day may change what the run is.
  *
  * Affected OPEN rows (every status but `accepted`) are DELETED: they hold
  * positions and digests of the deleted history, and none is an entry the user
@@ -38,6 +40,7 @@ import logger from "../../utils/logger";
 import { distanceM } from "../travtrack/classify";
 import type { ZoneCircle } from "../travtrack/classify";
 import type { PointsRemovedCause } from "../travtrack/deleteRange";
+import { removalDays } from "../travtrack/dirtyDays";
 import { segmentCrossesZone, type LonLat } from "../travtrack/privacyCut";
 import { pointDigest } from "./key";
 
@@ -165,6 +168,7 @@ async function affectedSuggestions(
   digests: string[]
 ): Promise<{ open: string[]; accepted: string[] }> {
   const spans = sortedSpans(cause);
+  const days = removalDays(cause.days);
   const rows = await tx.locationSuggestion.findMany({
     where: { userId, provider: "travtrack" },
     select: { id: true, kind: true, status: true, windowFrom: true, windowUntil: true },
@@ -177,9 +181,9 @@ async function affectedSuggestions(
     // its runs, and about the days they were read from.
     const affected =
       r.kind === "country"
-        ? dayInWindow(cause.days, from, until)
+        ? dayInWindow(days, from, until)
         : overlapsAny(spans, from, until - 1) ||
-          (r.kind === "journey" && dayInWindow(cause.days, from, until));
+          (r.kind === "journey" && dayInWindow(days, from, until));
     if (affected) hit.add(r.id);
   }
   // Zone: a journey's line and ends, even when the zone deleted no point.

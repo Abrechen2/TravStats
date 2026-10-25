@@ -62,6 +62,44 @@ export async function markAllPointDaysDirty(tx: DbTransaction, userId: string): 
     DO UPDATE SET version = travtrack_dirty_days.version + 1, done = 0`;
 }
 
+/**
+ * The days a removal of `days` makes unusable: the days themselves and both
+ * neighbours, whose projection read the removed points as edge context
+ * (`CONTEXT_FIXES`). Their derived rows go with the removal, and every open
+ * question resting on one of them goes too (E5, `invalidate.ts`).
+ */
+export function removalDays(days: readonly string[]): string[] {
+  const out = new Set<string>();
+  for (const day of days) {
+    if (!DAY.test(day)) continue;
+    const ms = Date.parse(`${day}T00:00:00.000Z`);
+    out.add(utcDayOf(ms - DAY_MS));
+    out.add(day);
+    out.add(utcDayOf(ms + DAY_MS));
+  }
+  return [...out].sort();
+}
+
+/**
+ * The days of `[fromDay, untilDay]` (inclusive) whose `bit` is not set on
+ * their current version: rows derived for them may be stale, so nothing reads
+ * them until the projection ran again. In `tx` when given, so a check under
+ * the TravTrack lock sees what committed before it.
+ */
+export async function unprojectedDaysIn(
+  userId: string,
+  bit: number,
+  fromDay: string,
+  untilDay: string,
+  tx: DbTransaction | typeof prisma = prisma
+): Promise<Set<string>> {
+  const rows = await tx.$queryRaw<{ day: Date }[]>`
+    SELECT day FROM travtrack_dirty_days
+     WHERE user_id = ${userId} AND (done & ${bit}) = 0
+       AND day >= ${fromDay}::date AND day <= ${untilDay}::date`;
+  return new Set(rows.map((r) => r.day.toISOString().slice(0, 10)));
+}
+
 export type DirtyDay = { day: string; version: bigint };
 
 /** Days whose `bit` is not set on their current version, oldest first. */

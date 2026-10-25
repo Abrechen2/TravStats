@@ -114,7 +114,7 @@ const inProgress = () =>
     409,
     "SUGGESTION_ACCEPT_IN_PROGRESS"
   );
-const unverifiable = () =>
+export const unverifiable = () =>
   new AppError(
     "The evidence for this suggestion cannot be checked right now",
     409,

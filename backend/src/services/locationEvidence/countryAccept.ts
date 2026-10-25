@@ -6,8 +6,8 @@
  * the question resolves accepted and names it.
  */
 import { AppError } from "../../middleware/errorHandler";
-import type { AcceptHooks } from "./acceptFlow";
-import { countryRunHolds } from "./countrySuggestions";
+import { unverifiable, type AcceptHooks } from "./acceptFlow";
+import { countryRunHolds, countryWindowUnprojected } from "./countrySuggestions";
 import { acceptSuggestion, type StoredSuggestion, type SuggestionKind } from "./suggestionStore";
 
 export type CountryVerdict = "visited" | "ground";
@@ -21,15 +21,14 @@ const countryOf = (row: StoredSuggestion): string => {
   return code;
 };
 
+const windowOf = (row: StoredSuggestion) => ({ from: row.windowFrom, until: row.windowUntil });
+
 const countryKind = (verdict: CountryVerdict): SuggestionKind => ({
-  recheck: async (row) =>
-    (await countryRunHolds(row.userId, countryOf(row), {
-      from: row.windowFrom,
-      until: row.windowUntil,
-    }))
-      ? "holds"
-      : "invalidated",
+  recheck: (row) => countryRunHolds(row.userId, countryOf(row), windowOf(row)),
   apply: async (tx, row) => {
+    // Asked again under the lock: a day marked since the re-check holds rows
+    // nothing may read until they are re-derived. The claim is handed back.
+    if (await countryWindowUnprojected(row.userId, windowOf(row), tx)) throw unverifiable();
     const countryCode = countryOf(row);
     // `update: {}` — an override that exists already is the user's, and stays as it is.
     const override = await tx.countryOverride.upsert({

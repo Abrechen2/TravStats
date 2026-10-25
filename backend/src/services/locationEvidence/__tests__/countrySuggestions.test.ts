@@ -4,6 +4,10 @@ import { setLocationProvider } from "../../locationProvider/provider";
 import { makeUser } from "../../travtrack/__tests__/fixtures";
 import { travTrackSwitches } from "../../travtrack/__tests__/switches";
 import { countrySuggestions, MAX_NEW_COUNTRY_QUESTIONS } from "../countrySuggestions";
+import { acceptCountrySuggestion } from "../countryAccept";
+import { deleteTravTrackRange } from "../../travtrack/deleteRange";
+import { COUNTRY_DAYS_BIT, markTravTrackDaysDirty } from "../../travtrack/dirtyDays";
+import { storePoint } from "../../travtrack/__tests__/fixtures";
 import { bumpHistoryGeneration } from "../generation";
 
 /**
@@ -55,6 +59,8 @@ describe("countrySuggestions", () => {
     await prisma.countryOverride.deleteMany({ where: { userId } });
     await prisma.place.deleteMany({ where: { userId } });
     await prisma.travTrackDerivationState.deleteMany({ where: { userId } });
+    await prisma.travTrackDirtyDay.deleteMany({ where: { userId } });
+    await prisma.travTrackPoint.deleteMany({ where: { userId } });
     await setLocationProvider(userId, "travtrack");
   });
 
@@ -250,5 +256,62 @@ describe("countrySuggestions", () => {
 
     expect(result).toMatchObject({ status: "skipped", created: 0 });
     expect(await questions()).toEqual([]);
+  });
+
+  describe("never from rows of a dirty day (Codex review)", () => {
+    const dirty = (days: string[]) =>
+      prisma.$transaction((tx) => markTravTrackDaysDirty(tx, userId, days));
+    const ack = (d: string) =>
+      prisma.travTrackDirtyDay.update({
+        where: { userId_day: { userId, day: utcMidnight(d) } },
+        data: { done: COUNTRY_DAYS_BIT },
+      });
+
+    it("a run with a day still to re-derive is not asked, and is once the day is projected", async () => {
+      await day("2026-10-12", "PT");
+      await day("2026-10-13", "PT");
+      await dirty(["2026-10-13"]);
+      expect((await countrySuggestions(userId)).created).toBe(0);
+      expect(await questions()).toEqual([]);
+      await ack("2026-10-13");
+      expect((await countrySuggestions(userId)).created).toBe(1);
+    });
+
+    it("a pending run does not grow from a dirty day", async () => {
+      await day("2026-10-12", "PT");
+      await day("2026-10-13", "PT");
+      await countrySuggestions(userId);
+      await day("2026-10-14", "PT");
+      await dirty(["2026-10-14"]);
+      expect((await countrySuggestions(userId)).grown).toBe(0);
+      const [q] = await questions();
+      expect(q.windowUntil).toEqual(utcMidnight("2026-10-14"));
+    });
+
+    it("an accept while one of the run's days waits to re-derive is EVIDENCE_UNVERIFIABLE and leaves it open", async () => {
+      await day("2026-10-12", "PT");
+      await day("2026-10-13", "PT");
+      await countrySuggestions(userId);
+      const [q] = await questions();
+      await dirty(["2026-10-12"]);
+      await expect(acceptCountrySuggestion(userId, q.id, "visited")).rejects.toMatchObject({
+        code: "EVIDENCE_UNVERIFIABLE",
+      });
+      expect(
+        await prisma.locationSuggestion.findUniqueOrThrow({ where: { id: q.id } })
+      ).toMatchObject({ status: "pending", claimToken: null });
+      expect(await prisma.countryOverride.count({ where: { userId } })).toBe(0);
+    });
+
+    it("a removal on a neighbouring day removes the open question resting on it", async () => {
+      await day("2026-10-12", "PT");
+      await day("2026-10-13", "PT");
+      await countrySuggestions(userId);
+      expect(await questions()).toHaveLength(1);
+      const t = Date.parse("2026-10-14T00:10:00Z");
+      await storePoint(userId, { t, lat: 38.7, lon: -9.1 });
+      await deleteTravTrackRange(userId, new Date(t - 60_000), new Date(t + 60_000));
+      expect(await questions()).toEqual([]);
+    });
   });
 });
