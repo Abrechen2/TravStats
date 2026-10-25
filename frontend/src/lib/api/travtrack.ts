@@ -57,6 +57,28 @@ export type TrackPoint = [number, number, number, number | null];
 
 export type TrackCoverageState = "recorded" | "noData" | "deleted" | "phonePaused";
 
+/**
+ * One label of a day (TravTrack plan E10): a TravStats record — a domain's
+ * entry (`kind` is its domain key; the server may know domains this build
+ * does not), a trip, time at home — an open TravTrack question (`suggestion`,
+ * linked to its inbox card), or a moving stretch no entry covers
+ * (`movement`, `unlabelled: true`, never with a mode).
+ */
+export interface TravTrackDayEntry {
+  kind: string;
+  id: string | null;
+  /** The record's own name; empty when it has none. */
+  label: string;
+  /** The page the label opens, or null. */
+  href: string | null;
+  /** Where the label sits on the map; null rather than a point in a privacy zone. */
+  anchor: { lat: number; lon: number } | null;
+  unlabelled: boolean;
+  suggestion?: "stay" | "journey";
+  fromMs: number;
+  untilMs: number;
+}
+
 export interface TravTrackDay {
   date: string;
   /** The profile zone the day is read on. */
@@ -64,13 +86,7 @@ export interface TravTrackDay {
   /** Stretches already cut at every gap and privacy-cut — never join two. */
   segments: TrackPoint[][];
   coverage: Array<{ fromMs: number; untilMs: number; state: TrackCoverageState }>;
-  context: Array<{
-    kind: "flight" | "trip" | "home";
-    id: string | null;
-    label: string;
-    fromMs: number;
-    untilMs: number;
-  }>;
+  context: TravTrackDayEntry[];
   pointCount: number;
   truncated: boolean;
 }

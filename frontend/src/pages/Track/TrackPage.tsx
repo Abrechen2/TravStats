@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import Button from "../../components/ui/Button";
@@ -21,6 +21,7 @@ import TrackDayMap from "./TrackDayMap";
 import TrackDeleteDialog from "./TrackDeleteDialog";
 import TrackExportDialog from "./TrackExportDialog";
 import TrackTimeline from "./TrackTimeline";
+import { dayAnchors } from "./trackContextLabel";
 
 type DayState =
   { kind: "loading" } | { kind: "failed"; key: string } | { kind: "loaded"; day: TravTrackDay };
@@ -149,6 +150,7 @@ function TrackDayView(): JSX.Element {
 
 function DayBody({ day, zones }: { day: TravTrackDay; zones: PrivacyZone[] }): JSX.Element {
   const { t } = useTranslation(["track"]);
+  const anchors = useMemo(() => dayAnchors(day.context, t), [day.context, t]);
   return (
     <>
       {day.pointCount === 0 ? (
@@ -157,7 +159,7 @@ function DayBody({ day, zones }: { day: TravTrackDay; zones: PrivacyZone[] }): J
         </p>
       ) : (
         <>
-          <TrackDayMap key={day.date} segments={day.segments} zones={zones} />
+          <TrackDayMap key={day.date} segments={day.segments} zones={zones} anchors={anchors} />
           <p className="t-caption" data-testid="track-day-count">
             {t("track:day.points", { count: day.pointCount })}
           </p>

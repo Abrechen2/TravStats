@@ -3,25 +3,34 @@ import type { JSX } from "react";
 import MapGL, { useControl } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
-import type { Layer } from "@deck.gl/core";
+import type { Layer, PickingInfo } from "@deck.gl/core";
 import { SharedMapOverlays } from "../../components/map/SharedMapOverlays";
 import { useBasemapStyle } from "../../components/map/useBasemapStyle";
 import { RECORDING_RGB } from "../../components/Trips/recording/recordingLayers";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { PrivacyZone, TrackPoint } from "../../lib/api/travtrack";
+import type { DayAnchor } from "./trackContextLabel";
 
 type Line = Array<[number, number]>;
 
 /** Muted slate for the zone circles: a frame around nothing, not a place drawn. */
 const ZONE_RGB: [number, number, number] = [148, 163, 184];
 
+/** A label's words on hover; nothing for the lines and circles, which are not pickable. */
+const tooltipOf = (info: PickingInfo): string | null =>
+  (info.object as DayAnchor | undefined)?.text ?? null;
+
 function DeckGLOverlay({ layers }: { layers: Layer[] }): null {
-  const overlay = useControl<MapboxOverlay>(() => new MapboxOverlay({ layers }), {
-    position: "top-left",
-  });
+  const overlay = useControl<MapboxOverlay>(
+    () => new MapboxOverlay({ layers, getTooltip: tooltipOf }),
+    { position: "top-left" }
+  );
   overlay.setProps({ layers });
   return null;
 }
+
+/** A record of the logbook sits in the recording colour; a question or a bare stretch is hollow. */
+const isOpen = (a: DayAnchor) => a.kind === "suggestion" || a.kind === "movement";
 
 /** The day's stretches as map lines; a stretch of one fix draws nothing (no dots at world zoom). */
 export function dayLines(segments: readonly TrackPoint[][]): Line[] {
@@ -54,15 +63,20 @@ export function dayBounds(lines: readonly Line[]): [[number, number], [number, n
  * The day on the map (TravTrack plan T6): one line per stretch the server cut,
  * in the recording colour (`recordingLayers.ts` — a history is no domain), and
  * the account's own privacy zones as faint circles so the reader sees why a
- * line stops there. MapLibre with a deck.gl overlay through `useControl`, never
+ * line stops there. The day's labels (plan E10) sit at the anchors the server
+ * chose — a record's own pin or a privacy-safe vertex, never inside a zone —
+ * and name themselves on hover; a label without an anchor is in the timeline
+ * only. MapLibre with a deck.gl overlay through `useControl`, never
  * `<DeckGL>` (CLAUDE.md).
  */
 export default function TrackDayMap({
   segments,
   zones,
+  anchors = [],
 }: {
   segments: readonly TrackPoint[][];
   zones: readonly PrivacyZone[];
+  anchors?: readonly DayAnchor[];
 }): JSX.Element | null {
   const { t } = useTranslation(["track"]);
   const mapStyle = useBasemapStyle();
@@ -97,8 +111,22 @@ export default function TrackDayMap({
         jointRounded: true,
         pickable: false,
       }),
+      new ScatterplotLayer<DayAnchor>({
+        id: "track-day-labels",
+        data: [...anchors],
+        getPosition: (a) => [a.lon, a.lat],
+        getRadius: 6,
+        radiusUnits: "pixels",
+        stroked: true,
+        filled: true,
+        getFillColor: (a) => (isOpen(a) ? [255, 255, 255, 230] : [...RECORDING_RGB, 255]),
+        getLineColor: [...RECORDING_RGB, 255],
+        lineWidthUnits: "pixels",
+        getLineWidth: 2,
+        pickable: true,
+      }),
     ],
-    [lines, zones]
+    [lines, zones, anchors]
   );
   if (!bounds) return null;
 

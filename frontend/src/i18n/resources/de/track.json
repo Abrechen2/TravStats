@@ -23,11 +23,26 @@
   },
   "timeline": {
     "title": "Tagesablauf",
-    "none": "TravStats kennt an diesem Tag keinen Flug, keine Reise und keine Zeit zuhause.",
+    "none": "TravStats kennt an diesem Tag keinen Eintrag, keine Reise und keine Zeit zuhause.",
     "flight": "Flug {{label}}",
     "trip": "Reise „{{label}}“",
     "home": "Zuhause ({{label}})",
+    "rail": "Bahnfahrt {{label}}",
+    "bus": "Busfahrt {{label}}",
+    "ferry": "Fähre {{label}}",
+    "cruise": "Kreuzfahrt {{label}}",
+    "rental": "Mietwagen {{label}}",
+    "roadtrip": "Roadtrip {{label}}",
+    "lodging": "Übernachtung {{label}}",
+    "poi": "Besuch {{label}}",
+    "entry": "Eintrag {{label}}",
+    "suggestion": {
+      "stay": "Vorschlag: Aufenthalt {{label}}",
+      "journey": "Vorschlag: Fahrt über {{label}} km"
+    },
+    "movement": "Unterwegs, ohne Eintrag",
     "span": "{{from}}–{{to}}",
+    "at": "{{at}}",
     "endOfDay": "24:00"
   },
   "zones": {

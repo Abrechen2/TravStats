@@ -23,11 +23,26 @@
   },
   "timeline": {
     "title": "The day",
-    "none": "TravStats knows of no flight, no trip and no time at home on this day.",
+    "none": "TravStats knows of no entry, no trip and no time at home on this day.",
     "flight": "Flight {{label}}",
     "trip": "Trip “{{label}}”",
     "home": "Home ({{label}})",
+    "rail": "Train {{label}}",
+    "bus": "Bus {{label}}",
+    "ferry": "Ferry {{label}}",
+    "cruise": "Cruise {{label}}",
+    "rental": "Rental car {{label}}",
+    "roadtrip": "Road trip {{label}}",
+    "lodging": "Night {{label}}",
+    "poi": "Visit {{label}}",
+    "entry": "Entry {{label}}",
+    "suggestion": {
+      "stay": "Suggestion: stay {{label}}",
+      "journey": "Suggestion: journey of {{label}} km"
+    },
+    "movement": "On the move, no entry",
     "span": "{{from}}–{{to}}",
+    "at": "{{at}}",
     "endOfDay": "24:00"
   },
   "zones": {
