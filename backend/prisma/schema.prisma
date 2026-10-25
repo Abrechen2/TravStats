@@ -6060,7 +6060,8 @@ model TravTrackDerivationState {
   stayAlgorithm         Int       @default(0) @map("stay_algorithm")
   journeyAlgorithm      Int       @default(0) @map("journey_algorithm")
   lastRunAt             DateTime? @map("last_run_at")
-  /// A closed vocabulary (E6), never a message.
+  /// A closed vocabulary (E6), never a message: `disabled | database |
+  /// reducer` or null (CHECK, migration travtrack_derivation_error_kind_check).
   lastErrorKind         String?   @map("last_error_kind")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
