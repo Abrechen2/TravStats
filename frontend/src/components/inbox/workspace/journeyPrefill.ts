@@ -2,7 +2,8 @@ import { draftFrom as busDraftFrom, type BusFormDraft } from "../../bus/busFormM
 import { draftFrom as railDraftFrom, type RailFormDraft } from "../../rail/railFormModel";
 import { EMPTY_STATION } from "../../rail/RailStationField";
 import { EMPTY_TERMINAL } from "../../bus/BusStationField";
-import { toLocal } from "../../../shared/time";
+import { localDay, toLocal } from "../../../shared/time";
+import type { StationInput } from "../../../types/roadtrip";
 import type { JourneyEntryKind, JourneyRun } from "../../../lib/api/locationSuggestions";
 
 /**
@@ -39,6 +40,33 @@ export function busDraftFromRun(run: JourneyRun): BusFormDraft {
     departureLocal: localMinute(run.fromMs, run.startZone),
     arrivalLocal: localMinute(run.untilMs, run.endZone),
   };
+}
+
+/**
+ * A roadtrip's first two stations from the run: its ends as pass-through
+ * stations on their local days — what makes the roadtrip hold the run (its
+ * attested days), so the card can link it. The user sees them before saving.
+ */
+export function roadtripStationsFromRun(
+  run: JourneyRun,
+  titles: { start: string; end: string }
+): StationInput[] {
+  return [
+    {
+      title: titles.start,
+      lat: run.start.lat,
+      lon: run.start.lon,
+      startDate: localDay(run.fromMs, run.startZone),
+      night: { kind: "pass" },
+    },
+    {
+      title: titles.end,
+      lat: run.end.lat,
+      lon: run.end.lon,
+      startDate: localDay(run.untilMs, run.endZone),
+      night: { kind: "pass" },
+    },
+  ];
 }
 
 export interface PendingLink {

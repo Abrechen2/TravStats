@@ -26,6 +26,7 @@ import {
 import { vehicleChoices } from "../../lib/roadtrip/roadtripView";
 import type { RoadtripVehicle } from "../../shared/tour/roadtrip";
 import type { TourRoute } from "../../types/tour";
+import type { StationInput } from "../../types/roadtrip";
 
 const MAX_ODOMETER = 10_000_000;
 const NAME_ID = "roadtrip-new-name";
@@ -75,10 +76,16 @@ export default function NewRoadtripDialog({
   onCreated,
   onReload,
   initialName = "",
+  initialStations,
 }: {
   open: boolean;
   /** The name a new roadtrip opens with — a journey TravTrack saw (inbox, TravTrack plan E7). */
   initialName?: string;
+  /**
+   * Stations the new roadtrip is created with — a journey's dated ends, so the
+   * roadtrip holds the journey it answers. Shown before saving.
+   */
+  initialStations?: StationInput[];
   onClose: () => void;
   onCreated: (route: TourRoute) => void;
   /**
@@ -146,8 +153,16 @@ export default function NewRoadtripDialog({
           tripId: draft.tripId || null,
           ...(odometer.value !== null ? { startOdometerKm: odometer.value } : {}),
         }),
-      (created) => {
+      async (created) => {
         markSaved();
+        if (initialStations?.length) {
+          try {
+            await roadtripsApi.replaceStations(created.id, initialStations, []);
+          } catch (err: unknown) {
+            // The roadtrip stands; its stations can be added on its page.
+            logger.warn("Recording a new roadtrip's stations failed", err);
+          }
+        }
         onCreated(created);
       }
     );
@@ -198,6 +213,18 @@ export default function NewRoadtripDialog({
       >
         <div ref={failure.rootRef} className="flex flex-col" style={{ gap: "var(--ts-space-lg)" }}>
           <p className="t-caption">{t("roadtrips:newDialog.intro")}</p>
+          {initialStations?.length ? (
+            <div className="t-caption">
+              <p>{t("roadtrips:newDialog.journeyStations")}</p>
+              <ul>
+                {initialStations.map((s) => (
+                  <li key={`${s.title}-${s.startDate ?? ""}`}>
+                    {s.title} · {s.startDate}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <Field
             label={
               <>

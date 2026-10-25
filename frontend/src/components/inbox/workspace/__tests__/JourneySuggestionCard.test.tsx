@@ -30,7 +30,19 @@ vi.mock("../../../rail/RailFormModal", () => ({
   },
 }));
 vi.mock("../../../bus/BusFormModal", () => ({ BusFormModal: () => null }));
-vi.mock("../../../Roadtrips/NewRoadtripDialog", () => ({ default: () => null }));
+const roadtripDialog = vi.hoisted(() => ({ props: null as Record<string, unknown> | null }));
+vi.mock("../../../Roadtrips/NewRoadtripDialog", () => ({
+  default: (
+    props: Record<string, unknown> & { open: boolean; onCreated: (r: { id: string }) => void }
+  ) => {
+    if (props.open) roadtripDialog.props = props;
+    return props.open ? (
+      <button type="button" onClick={() => props.onCreated({ id: "rt-1" })}>
+        save-roadtrip
+      </button>
+    ) : null;
+  },
+}));
 
 import JourneySuggestionCard from "../JourneySuggestionCard";
 
@@ -131,5 +143,35 @@ describe("JourneySuggestionCard", () => {
     render(<JourneySuggestionCard suggestion={suggestion} disabled={false} reload={reload} />);
     fireEvent.click(screen.getByRole("button", { name: `${J}.noEntry` }));
     await waitFor(() => expect(api.closeJourneyRuns).toHaveBeenCalledWith("s1", 0));
+  });
+
+  it("a roadtrip answer creates the roadtrip with the run's dated ends and links it", async () => {
+    api.acceptJourneyRun.mockResolvedValue(suggestion);
+    render(<JourneySuggestionCard suggestion={suggestion} disabled={false} reload={reload} />);
+    fireEvent.click(screen.getByRole("button", { name: `${J}.enter.roadtrip` }));
+    expect(roadtripDialog.props?.initialStations).toEqual([
+      {
+        title: `${J}.stationStart`,
+        lat: run.start.lat,
+        lon: run.start.lon,
+        startDate: "2026-10-20",
+        night: { kind: "pass" },
+      },
+      {
+        title: `${J}.stationEnd`,
+        lat: run.end.lat,
+        lon: run.end.lon,
+        startDate: "2026-10-20",
+        night: { kind: "pass" },
+      },
+    ]);
+    fireEvent.click(screen.getByRole("button", { name: "save-roadtrip" }));
+    await waitFor(() =>
+      expect(api.acceptJourneyRun).toHaveBeenCalledWith("s1", {
+        runIndex: 0,
+        entryKind: "roadtrip",
+        entryId: "rt-1",
+      })
+    );
   });
 });

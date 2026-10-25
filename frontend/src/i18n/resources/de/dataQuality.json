@@ -364,6 +364,8 @@
         "invalidated": "Die Standortdaten belegen diese Fahrt nicht mehr.",
         "effect": "Eintragen öffnet das passende Formular mit Zeiten und Positionen; gespeichert wird erst, wenn du speicherst. „Kein Eintrag nötig“ ändert nichts, und dieser Tag wird nicht noch einmal gefragt.",
         "roadtripName": "Roadtrip am {{day}}",
+        "stationStart": "Start der Fahrt",
+        "stationEnd": "Ziel der Fahrt",
         "emptyTitle": "Keine offenen Fragen zu Fahrten",
         "emptyDescription": "Hier erscheint eine Frage, sobald TravTrack an einem Tag eine Fahrt aufzeichnet, die zu keinem Eintrag in deinem Logbuch passt.",
         "errors": {

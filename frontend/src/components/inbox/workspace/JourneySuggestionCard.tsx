@@ -20,6 +20,7 @@ import {
   clearPendingLink,
   pendingLink,
   railDraftFromRun,
+  roadtripStationsFromRun,
   savePendingLink,
   type PendingLink,
 } from "./journeyPrefill";
@@ -239,6 +240,14 @@ export default function JourneySuggestionCard({
         open={form?.kind === "roadtrip"}
         initialName={
           suggestion.journey ? t(`${J}.roadtripName`, { day: suggestion.journey.day }) : ""
+        }
+        initialStations={
+          form?.kind === "roadtrip"
+            ? roadtripStationsFromRun(form.run, {
+                start: t(`${J}.stationStart`),
+                end: t(`${J}.stationEnd`),
+              })
+            : undefined
         }
         onClose={() => setForm(null)}
         onCreated={(route) => void saved({ entryKind: "roadtrip", entryId: route.id })}

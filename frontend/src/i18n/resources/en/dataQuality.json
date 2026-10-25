@@ -364,6 +364,8 @@
         "invalidated": "The location data no longer shows this journey.",
         "effect": "Entering opens the matching form with times and positions; nothing is saved until you save it. “No entry needed” changes nothing, and this day is not asked again.",
         "roadtripName": "Roadtrip on {{day}}",
+        "stationStart": "Start of the journey",
+        "stationEnd": "End of the journey",
         "emptyTitle": "No open questions about journeys",
         "emptyDescription": "A question appears here once TravTrack records a journey on a day that matches no entry in your logbook.",
         "errors": {

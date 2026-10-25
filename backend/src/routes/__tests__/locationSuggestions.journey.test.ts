@@ -146,6 +146,34 @@ describe("journey questions", () => {
     });
   });
 
+  it("a roadtrip answered from the card, with its two dated stations, is linked", async () => {
+    const run = (await evidence()).runs[0];
+    const created = await request(app)
+      .post("/api/v1/roadtrips")
+      .set("Cookie", cookie)
+      .send({ name: `Roadtrip am ${DAY}` });
+    expect(created.status).toBe(201);
+    const routeId = created.body.roadtrip.id;
+    // What the card sends: the run's ends as pass-through stations on their local days.
+    const stations = await request(app)
+      .put(`/api/v1/roadtrips/${routeId}/stations`)
+      .set("Cookie", cookie)
+      .send({
+        expectedStationIds: [],
+        stations: [
+          { title: "Start", ...run.start, startDate: DAY, night: { kind: "pass" } },
+          { title: "Ziel", ...run.end, startDate: DAY, night: { kind: "pass" } },
+        ],
+      });
+    expect(stations.status).toBe(200);
+    const res = await accept({ runIndex: 0, entryKind: "roadtrip", entryId: routeId });
+    expect(res.status).toBe(200);
+    expect(res.body.data.journey.runs[0]).toMatchObject({
+      state: "linked",
+      link: { entryKind: "roadtrip", entryId: routeId },
+    });
+  });
+
   it("an entry outside the run's window, another user's or none at all is refused", async () => {
     const run = (await evidence()).runs[0];
     const far = await prisma.railJourney.create({
