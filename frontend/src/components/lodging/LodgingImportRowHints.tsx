@@ -1,6 +1,7 @@
 import type { JSX } from "react";
 import { matchedStayLabel, type EditableRow } from "./lodgingImportRowModel";
 import {
+  BLOCKER_LIMITS,
   changeLabel,
   incomingStayLabel,
   liveChanges,
@@ -9,7 +10,17 @@ import {
   needsLodgingChoice,
   rowBlockers,
   stayHintKey,
+  type RowBlocker,
 } from "./lodgingImportRowState";
+
+/** The blockers this line words itself, each under `lodging:import.blockers.<key>`. */
+const BLOCKER_COPY: Readonly<Record<string, true>> = {
+  name_too_long: true,
+  city_too_long: true,
+  negative_price: true,
+  stay_too_long: true,
+  nothing_to_create: true,
+};
 
 type T = (key: string, options?: Record<string, unknown>) => string;
 
@@ -29,6 +40,8 @@ export function rowHints(row: EditableRow): {
   stayHint: ReturnType<typeof stayHintKey>;
   changes: ReturnType<typeof liveChanges>;
   missingCurrency: boolean;
+  /** Blockers that are no server flag and not the currency (said on its own). */
+  blockers: RowBlocker[];
   any: boolean;
 } {
   // The ambiguity is said by its own hint, next to the chooser it asks for.
@@ -36,8 +49,11 @@ export function rowHints(row: EditableRow): {
   const lodgingHint = lodgingHintKey(row);
   const stayHint = stayHintKey(row);
   const changes = row.decision === "update" ? liveChanges(row) : [];
-  const missingCurrency = rowBlockers(row).includes("missing_currency");
+  const allBlockers = rowBlockers(row);
+  const missingCurrency = allBlockers.includes("missing_currency");
+  const blockers = allBlockers.filter((b) => b in BLOCKER_COPY);
   const any =
+    blockers.length > 0 ||
     flags.length > 0 ||
     needsLodgingChoice(row) ||
     lodgingHint !== null ||
@@ -45,7 +61,7 @@ export function rowHints(row: EditableRow): {
     row.matchedStay != null ||
     changes.length > 0 ||
     missingCurrency;
-  return { flags, lodgingHint, stayHint, changes, missingCurrency, any };
+  return { flags, lodgingHint, stayHint, changes, missingCurrency, blockers, any };
 }
 
 export interface RowHintsProps {
@@ -63,7 +79,7 @@ export interface RowHintsProps {
  */
 export function RowHints({ row, t, language, onChange }: RowHintsProps): JSX.Element {
   const { sourceRowIndex } = row;
-  const { flags, lodgingHint, stayHint, changes, missingCurrency } = rowHints(row);
+  const { flags, lodgingHint, stayHint, changes, missingCurrency, blockers } = rowHints(row);
   const incoming = stayHint === "stay_same_dates" ? incomingStayLabel(row, language, t) : null;
 
   return (
@@ -87,6 +103,15 @@ export function RowHints({ row, t, language, onChange }: RowHintsProps): JSX.Ele
           {t("lodging:import.blockers.missing_currency")}
         </span>
       )}
+      {blockers.map((blocker) => (
+        <span
+          key={blocker}
+          data-testid={`lodging-import-blocker-${blocker}-${sourceRowIndex}`}
+          className={AMBER}
+        >
+          {t(`lodging:import.blockers.${blocker}`, { max: BLOCKER_LIMITS[blocker] })}
+        </span>
+      ))}
       {/* An unknown chain is an OFFER, never a silent create. Only on a row
           that creates its hotel — a matched row never writes hotel fields,
           so the tick there would decide nothing. */}

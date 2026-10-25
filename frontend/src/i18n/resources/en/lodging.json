@@ -460,7 +460,12 @@
     "chooseLodgingNew": "None of these — create a new hotel",
     "importedStay": "Import:",
     "blockers": {
-      "missing_currency": "Add a currency, remove the price, or skip the row."
+      "missing_currency": "Add a currency, remove the price, or skip the row.",
+      "name_too_long": "Name too long (at most {{max}} characters).",
+      "city_too_long": "City too long (at most {{max}} characters).",
+      "negative_price": "Price cannot be negative.",
+      "stay_too_long": "Stay too long (at most {{max}} nights).",
+      "nothing_to_create": "No stay given — there is nothing to create. Enter dates or skip the row."
     },
     "matchHints": {
       "lodging_exact_ref": "Existing hotel with the same import reference.",

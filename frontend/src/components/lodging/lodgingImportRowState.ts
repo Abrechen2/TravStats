@@ -1,9 +1,11 @@
 import { formatLocalDate } from "../../lib/displayFormat";
 import { isRealCalendarDay } from "../../lib/importers/lodgingCsv";
 import { formatStayPeriod } from "../../lib/lodgingDateDisplay";
+import { LODGING_IMPORT_LIMITS } from "../../shared/lodgingImportLimits";
 import type {
   LodgingDedupeHint,
   LodgingImportFlag,
+  LodgingImportStoredStayValues,
   LodgingStayChange,
 } from "../../types/lodgingImport";
 import {
@@ -25,8 +27,22 @@ import {
  * reads and what the button allows cannot disagree.
  */
 
-/** A blocker that is not a server flag: a price the commit would drop. */
-export type RowBlocker = LodgingImportFlag | "missing_currency";
+/**
+ * A blocker that is not a server flag: a price the commit would drop, a value
+ * the commit schema refuses (`LODGING_IMPORT_LIMITS` — the numbers the backend
+ * builds that schema from, so one over-long name cannot 400 the whole batch),
+ * or a "create" that would create nothing.
+ */
+export type LimitBlocker = "name_too_long" | "city_too_long" | "negative_price" | "stay_too_long";
+export type RowBlocker =
+  LodgingImportFlag | "missing_currency" | LimitBlocker | "nothing_to_create";
+
+/** The number a blocker's copy names, so the message and the rule cannot disagree. */
+export const BLOCKER_LIMITS: Readonly<Partial<Record<RowBlocker, number>>> = {
+  name_too_long: LODGING_IMPORT_LIMITS.nameMaxLength,
+  city_too_long: LODGING_IMPORT_LIMITS.cityMaxLength,
+  stay_too_long: LODGING_IMPORT_LIMITS.maxStayNights,
+};
 
 /** Flags that stop a row the user chose to import. The rest inform. */
 const BLOCKING: ReadonlySet<LodgingImportFlag> = new Set([
@@ -95,11 +111,51 @@ export function liveFlags(row: EditableRow): LodgingImportFlag[] {
   return out;
 }
 
+const DAY_MS = 86_400_000;
+
+/**
+ * The commit schema's limits on what the reader can edit. Only these: every
+ * other field arrived through the preview request, which the server validated
+ * with the same field schema, and the dialog never changes it.
+ */
+function limitBlockers(row: EditableRow): LimitBlocker[] {
+  const L = LODGING_IMPORT_LIMITS;
+  const out: LimitBlocker[] = [];
+  // Both are sent (`lodgingName` too), and the schema trims before it counts.
+  const names = [row.lodging?.name, row.lodgingName];
+  if (names.some((n) => (n ?? "").trim().length > L.nameMaxLength)) out.push("name_too_long");
+  if ((row.lodging?.city ?? "").length > L.cityMaxLength) out.push("city_too_long");
+  const stay = row.stay;
+  if (stay && !isEmptyStay(stay)) {
+    const prices = [stay.totalPrice, stay.pricePerNight];
+    if (prices.some((p) => p != null && p < L.minPrice)) out.push("negative_price");
+    if (isRealCalendarDay(stay.checkIn) && isRealCalendarDay(stay.checkOut)) {
+      const nights = (Date.parse(stay.checkOut) - Date.parse(stay.checkIn)) / DAY_MS;
+      if (nights > L.maxStayNights) out.push("stay_too_long");
+    }
+  }
+  return out;
+}
+
+/**
+ * "Create" on a row that has nothing of its own to create: a stored house, or
+ * one another row of this import creates, with the stay cleared away. The
+ * payload drops an empty stay, so the commit would write nothing and report
+ * nothing (Codex review, 2026-10-25).
+ */
+function createsNothing(row: EditableRow): boolean {
+  return (
+    row.decision === "create" && !hasStayData(row) && (isMatched(row) || joinsPayloadHouse(row))
+  );
+}
+
 /** What stops this row from being imported as chosen. A skipped or undecided row blocks nothing. */
 export function rowBlockers(row: EditableRow): RowBlocker[] {
   if (row.decision !== "create" && row.decision !== "update") return [];
   const blockers: RowBlocker[] = liveFlags(row).filter((f) => BLOCKING.has(f));
   if (priceLacksCurrency(row)) blockers.push("missing_currency");
+  blockers.push(...limitBlockers(row));
+  if (createsNothing(row)) blockers.push("nothing_to_create");
   return blockers;
 }
 
@@ -121,14 +177,21 @@ export type CreateActionKey =
  */
 export function createActionKey(row: EditableRow): CreateActionKey {
   if (isMatched(row)) return row.matchedStayId !== null ? "createAnotherStay" : "addStay";
-  // A stays-only row whose name another row of THIS import creates: the
-  // server resolved it without a flag, and the commit attaches it there.
-  const joinsPayloadHouse =
+  if (joinsPayloadHouse(row) && hasStayData(row)) return "addStay";
+  return hasStayData(row) ? "createHotelAndStay" : "createHotel";
+}
+
+/**
+ * A stays-only row whose name another row of THIS import creates: the server
+ * resolved it without a flag, and the commit attaches it there.
+ */
+function joinsPayloadHouse(row: EditableRow): boolean {
+  return (
+    !isMatched(row) &&
     row.lodging === null &&
     !row.flags.includes("unresolvable_lodging_name") &&
-    !row.flags.includes("ambiguous_lodging_name");
-  if (joinsPayloadHouse && hasStayData(row)) return "addStay";
-  return hasStayData(row) ? "createHotelAndStay" : "createHotel";
+    !row.flags.includes("ambiguous_lodging_name")
+  );
 }
 
 /**
@@ -173,29 +236,70 @@ function sameValue(a: unknown, b: unknown): boolean {
   return a === b;
 }
 
+type ComparedField = keyof LodgingImportStoredStayValues;
+
+/** Every field `stayChanges` (backend) compares, in its order. Deadlines aside: fill-only, not editable here. */
+const COMPARED_FIELDS: readonly ComparedField[] = [
+  "checkIn",
+  "checkOut",
+  "roomCategory",
+  "board",
+  "guests",
+  "totalPrice",
+  "pricePerNight",
+  "currency",
+  "bookingReference",
+];
+
+/**
+ * The stored values to compare against. An older backend sent none: then the
+ * stored dates (`matchedStay`) and the `from` of each change the server listed
+ * are all that is known, and a field known nowhere is not compared.
+ */
+function storedValues(row: EditableRow): Partial<LodgingImportStoredStayValues> {
+  if (row.matchedStayValues) return row.matchedStayValues;
+  const known: Partial<LodgingImportStoredStayValues> = {};
+  for (const c of row.changes ?? []) {
+    if ((COMPARED_FIELDS as readonly string[]).includes(c.field)) {
+      known[c.field as ComparedField] = c.from;
+    }
+  }
+  if (row.matchedStay) {
+    known.checkIn = row.matchedStay.checkIn;
+    known.checkOut = row.matchedStay.checkOut;
+  }
+  return known;
+}
+
 /**
  * What a changed booking would move, recomputed against the row as edited.
  *
- * The server's list describes the mail; the user may have corrected a date
- * since. A value the row no longer carries is no change — the server ignores
- * a missing value rather than clear the stored one — and the stored dates are
- * known (`matchedStay`), so an edited check-in or check-out is compared
- * against them, not against the mail.
+ * The server's list describes the mail; the user may have corrected a date or
+ * typed a price since. Every compared field is held against its STORED value,
+ * by the rules the server's `stayChanges` applies at the commit: a value the
+ * row does not carry is no change (the server never clears a stored one), a
+ * price counts only with its currency, and a currency only beside a price.
+ * Deadlines are fill-only and not editable here, so the server's word stands.
  */
 export function liveChanges(row: EditableRow): LodgingStayChange[] {
   if (!row.stay) return [];
   const stay = row.stay as unknown as Record<string, unknown>;
-  const byField = new Map((row.changes ?? []).map((c) => [c.field, c]));
-  for (const field of ["checkIn", "checkOut"] as const) {
-    const from = row.matchedStay?.[field] ?? byField.get(field)?.from ?? null;
-    if (row.matchedStay || byField.has(field)) byField.set(field, { field, from, to: null });
-  }
-  return [...byField.values()].flatMap((c) => {
-    const current = stay[c.field];
+  const stored = storedValues(row);
+  const hasPrice = row.stay.totalPrice != null || row.stay.pricePerNight != null;
+  const compared = COMPARED_FIELDS.flatMap((field): LodgingStayChange[] => {
+    if (!(field in stored)) return [];
+    const current = stay[field];
     if (current == null || current === "") return [];
-    if (sameValue(current, c.from)) return [];
-    return [{ ...c, to: current as string | number }];
+    if ((field === "totalPrice" || field === "pricePerNight") && !row.stay?.currency) return [];
+    if (field === "currency" && !hasPrice) return [];
+    const from = stored[field] ?? null;
+    if (sameValue(current, from)) return [];
+    return [{ field, from, to: current as string | number }];
   });
+  const deadlines = (row.changes ?? []).filter(
+    (c) => !(COMPARED_FIELDS as readonly string[]).includes(c.field) && stay[c.field] != null
+  );
+  return [...compared, ...deadlines];
 }
 
 /** One change as a reader writes it: "Abreise: 07.04.2026 → 09.04.2026". */

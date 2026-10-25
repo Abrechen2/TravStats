@@ -139,12 +139,27 @@ export interface LodgingImportMatchedStay {
   href: string;
 }
 
+/** One stored stay of a candidate house. */
+export interface LodgingImportOptionStay extends LodgingImportMatchedStay {
+  id: string;
+}
+
 /** A stored house an ambiguous row may mean, offered for the user to pick. */
 export interface LodgingImportLodgingOption {
   id: string;
   name: string;
   city: string | null;
+  /** The house's stays, so a pick is checked for a stay already on file.
+   *  Absent on an older backend. */
+  stays?: LodgingImportOptionStay[];
 }
+
+/** The stored value of every stay field a re-import compares, deadlines aside
+ *  (backend `LodgingImportStoredStayValues`). A date is an ISO day. */
+export type LodgingImportStoredStayValues = Record<
+  Exclude<UpdatableStayField, "freeCancellationUntil" | "paymentDueOn">,
+  string | number | null
+>;
 
 export interface LodgingImportPreviewRow extends LodgingImportCandidate {
   flags: LodgingImportFlag[];
@@ -166,6 +181,9 @@ export interface LodgingImportPreviewRow extends LodgingImportCandidate {
   matchedStayId: string | null;
   /** The stay behind `matchedStayId`. Absent on a backend older than 2.7. */
   matchedStay?: LodgingImportMatchedStay | null;
+  /** The stored values behind `matchedStayId`, compared against the row as
+   *  edited. Absent on an older backend. */
+  matchedStayValues?: LodgingImportStoredStayValues | null;
   action: LodgingImportAction;
   /** Non-empty only on `action: "update"` — what a changed booking would move.
    *  Absent on a backend older than 2.7 (forgejo#122). */

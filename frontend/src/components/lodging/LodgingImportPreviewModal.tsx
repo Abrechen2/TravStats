@@ -53,6 +53,26 @@ const offersChain = (r: EditableRow): boolean =>
   !isMatched(r) && liveFlags(r).includes("unknown_chain");
 
 /**
+ * A skipped row as the commit receives it: the decision and nothing else.
+ *
+ * It used to carry its edited hotel and stay along, which the commit never
+ * reads for a skip but still validates — so a skipped row left with a cleared
+ * name or date made the schema refuse the WHOLE batch (Codex review,
+ * 2026-10-25). The server stays strict for every row that writes something.
+ */
+function skippedRow(sourceRowIndex: number): LodgingImportCommitRow {
+  return {
+    sourceRowIndex,
+    action: "skip",
+    matchedLodgingId: null,
+    matchedStayId: null,
+    lodging: null,
+    lodgingName: null,
+    stay: null,
+  };
+}
+
+/**
  * Post-import review — the single editable table BOTH the email/PDF and the
  * CSV import paths land in. The backend already ordered `rows` questionable
  * first (spec §3.1); this component intentionally does NOT re-sort as the
@@ -169,52 +189,55 @@ export function LodgingImportPreviewModal({
           .map((r) => r.lodging!.name.trim().toLowerCase())
       );
 
-      const payload: LodgingImportCommitRow[] = decided.map((r) => ({
-        sourceRowIndex: r.sourceRowIndex,
-        action: r.decision,
-        matchedLodgingId: r.matchedLodgingId,
-        // An `update` row names the stay it PATCHES. A `create` row names the
-        // stay it deliberately duplicates: "Anlegen" over a match is the user
-        // saying "I know one is on file, make another". The server needs to be
-        // told which, because the incoming external reference belongs to that
-        // stay and cannot be held twice — without this the create hit the
-        // unique index and was counted as a silent skip. Either way the id
-        // comes from a response the client could have edited, so the server
-        // re-checks that the stay is the caller's before it acts on it.
-        // A `skip` row asks for nothing and sends nothing.
-        matchedStayId: r.decision === "skip" ? null : r.matchedStayId,
-        // `ensureLodging` materialises the lodging object lazily, on the
-        // first EDIT of a lodging field. A stays-only row the user simply
-        // marked "create" — hotel name plus dates, nothing to edit — never
-        // triggered that, so it went out as `lodging: null` and the backend
-        // answered `missing_lodging_reference` and created NOTHING. That is
-        // the whole "0 Hotel(s) und 0 Aufenthalt(e) angelegt" report Alex
-        // hit on 2026-08-09 with a CSV of stays.
-        //
-        // Choosing "create" IS the instruction to create it, and the name is
-        // the one field such a row always carries. Two rows keep `null`: one
-        // the user chose to SKIP (inventing a lodging there would create a
-        // hotel they just declined), and one whose name another row in this
-        // payload already creates (the payload-name join, unchanged).
-        lodging:
-          r.lodging ??
-          (r.decision === "create" &&
-          r.lodgingName &&
-          !createdByPayload.has(r.lodgingName.trim().toLowerCase())
-            ? { name: r.lodgingName }
-            : null),
-        // An UNEDITED stays-only row the preview matched by free-text name
-        // against ANOTHER candidate in this same payload (`lodging` stays
-        // null, no dedupe hint) still needs that name at commit time — the
-        // commit service resolves it against the lodging the other row
-        // creates. Harmless to send even when `lodging` is set: the backend
-        // only consults it when `lodging` is null.
-        lodgingName: r.lodgingName ?? null,
-        // See `isEmptyStay` — fold a touched-then-cleared stay back to null
-        // instead of sending an all-empty stay that fails the backend's
-        // date validation.
-        stay: r.stay && isEmptyStay(r.stay) ? null : r.stay,
-      }));
+      const payload: LodgingImportCommitRow[] = decided.map((r) =>
+        r.decision === "skip"
+          ? skippedRow(r.sourceRowIndex)
+          : {
+              sourceRowIndex: r.sourceRowIndex,
+              action: r.decision,
+              matchedLodgingId: r.matchedLodgingId,
+              // An `update` row names the stay it PATCHES. A `create` row names the
+              // stay it deliberately duplicates: "Anlegen" over a match is the user
+              // saying "I know one is on file, make another". The server needs to be
+              // told which, because the incoming external reference belongs to that
+              // stay and cannot be held twice — without this the create hit the
+              // unique index and was counted as a silent skip. Either way the id
+              // comes from a response the client could have edited, so the server
+              // re-checks that the stay is the caller's before it acts on it.
+              matchedStayId: r.matchedStayId,
+              // `ensureLodging` materialises the lodging object lazily, on the
+              // first EDIT of a lodging field. A stays-only row the user simply
+              // marked "create" — hotel name plus dates, nothing to edit — never
+              // triggered that, so it went out as `lodging: null` and the backend
+              // answered `missing_lodging_reference` and created NOTHING. That is
+              // the whole "0 Hotel(s) und 0 Aufenthalt(e) angelegt" report Alex
+              // hit on 2026-08-09 with a CSV of stays.
+              //
+              // Choosing "create" IS the instruction to create it, and the name is
+              // the one field such a row always carries. Two rows keep `null`: one
+              // the user chose to SKIP (it travels as `skippedRow`, empty), and one
+              // whose name another row in this payload already creates (the
+              // payload-name join, unchanged).
+              lodging:
+                r.lodging ??
+                (r.decision === "create" &&
+                r.lodgingName &&
+                !createdByPayload.has(r.lodgingName.trim().toLowerCase())
+                  ? { name: r.lodgingName }
+                  : null),
+              // An UNEDITED stays-only row the preview matched by free-text name
+              // against ANOTHER candidate in this same payload (`lodging` stays
+              // null, no dedupe hint) still needs that name at commit time — the
+              // commit service resolves it against the lodging the other row
+              // creates. Harmless to send even when `lodging` is set: the backend
+              // only consults it when `lodging` is null.
+              lodgingName: r.lodgingName ?? null,
+              // See `isEmptyStay` — fold a touched-then-cleared stay back to null
+              // instead of sending an all-empty stay that fails the backend's
+              // date validation.
+              stay: r.stay && isEmptyStay(r.stay) ? null : r.stay,
+            }
+      );
       await onCommit(payload);
     } catch (err) {
       // Log the real error for diagnostics, but never surface the raw

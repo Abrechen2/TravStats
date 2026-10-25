@@ -18,6 +18,7 @@ import type {
   LodgingImportLodgingOption,
   LodgingImportMatchedStay,
   LodgingImportPreviewRow,
+  LodgingImportStoredStayValues,
   LodgingImportSummary,
   LodgingStayChange,
   StayCandidateFields,
@@ -120,6 +121,7 @@ interface RowVerdict {
   matchIsGuess: boolean;
   matchedStayId: string | null;
   matchedStay: LodgingImportMatchedStay | null;
+  matchedStayValues: LodgingImportStoredStayValues | null;
   action: LodgingImportAction;
   /** Non-empty only when the action is `update` — see `stayChanges`. */
   changes: LodgingStayChange[];
@@ -245,6 +247,21 @@ function describeStay(stay: ExistingStay): LodgingImportMatchedStay {
     datePrecision: timing.precision,
     nights: timing.nightsKnown ? timing.nights : null,
     href: `/lodging/${stay.lodgingId}`,
+  };
+}
+
+/** The values `stayChanges` compares, as the dialog reads them — see `LodgingImportStoredStayValues`. */
+function storedStayValues(stay: ComparableStay): LodgingImportStoredStayValues {
+  return {
+    checkIn: stay.checkIn ? dayKey(stay.checkIn) : null,
+    checkOut: stay.checkOut ? dayKey(stay.checkOut) : null,
+    roomCategory: stay.roomCategory,
+    board: stay.board,
+    guests: stay.guests,
+    totalPrice: stay.totalPrice,
+    pricePerNight: stay.pricePerNight,
+    currency: stay.currency,
+    bookingReference: stay.bookingReference,
   };
 }
 
@@ -494,15 +511,22 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
     lodgingDedupeHint,
     lodgingOptions: matchedLodgingId
       ? []
-      : lodgingOptions
-          .slice(0, MAX_LODGING_OPTIONS)
-          .map((l) => ({ id: l.id, name: l.name, city: l.city })),
+      : lodgingOptions.slice(0, MAX_LODGING_OPTIONS).map((l) => ({
+          id: l.id,
+          name: l.name,
+          city: l.city,
+          stays: (idx.staysByLodging.get(l.id) ?? []).map((st) => ({
+            id: st.id,
+            ...describeStay(st),
+          })),
+        })),
     matchedLodgingId,
     matchedLodgingName: matchedHouse?.name ?? null,
     matchedLodgingCity: matchedHouse?.city ?? null,
     matchIsGuess,
     matchedStayId,
     matchedStay: matchedStay ? describeStay(matchedStay) : null,
+    matchedStayValues: matchedStay ? storedStayValues(matchedStay) : null,
     action,
     changes,
   };

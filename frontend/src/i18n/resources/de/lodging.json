@@ -460,7 +460,12 @@
     "chooseLodgingNew": "Keines davon — neues Hotel anlegen",
     "importedStay": "Import:",
     "blockers": {
-      "missing_currency": "Währung ergänzen, Preis entfernen oder Zeile überspringen."
+      "missing_currency": "Währung ergänzen, Preis entfernen oder Zeile überspringen.",
+      "name_too_long": "Name zu lang (höchstens {{max}} Zeichen).",
+      "city_too_long": "Ort zu lang (höchstens {{max}} Zeichen).",
+      "negative_price": "Preis darf nicht negativ sein.",
+      "stay_too_long": "Aufenthalt zu lang (höchstens {{max}} Nächte).",
+      "nothing_to_create": "Kein Aufenthalt angegeben — es gibt nichts anzulegen. Daten eintragen oder Zeile überspringen."
     },
     "matchHints": {
       "lodging_exact_ref": "Vorhandenes Hotel mit gleicher Importreferenz.",

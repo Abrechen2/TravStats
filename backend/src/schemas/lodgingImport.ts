@@ -2,6 +2,7 @@ import { z } from "./zod";
 import { BOARD_TYPES, currencyField, LODGING_TYPES, MAX_STAY_SPAN_NIGHTS } from "./lodging";
 import type { LodgingDatePrecision } from "../shared/lodgingTiming";
 import { parsedDeadlineValuesShape } from "./deadlines";
+import { LODGING_IMPORT_LIMITS } from "../shared/lodgingImportLimits";
 
 /**
  * Shared import-candidate contract for the lodging import pipeline (see
@@ -49,8 +50,12 @@ const isoDay = z
 // the editor can produce, or a round-trip through export/import loses one.
 const rating = z.number().min(0.5).max(5).nullable().optional();
 
+// The fields the preview dialog lets the reader edit are capped by the shared
+// limits, which the dialog's blockers read too (shared/lodgingImportLimits.ts).
+const L = LODGING_IMPORT_LIMITS;
+
 export const lodgingCandidateFieldsSchema = z.object({
-  name: z.string().trim().min(1).max(200),
+  name: z.string().trim().min(1).max(L.nameMaxLength),
   type: z.enum(LODGING_TYPES).nullable().optional(),
   chainName: z.string().trim().max(120).nullable().optional(),
   /**
@@ -65,7 +70,7 @@ export const lodgingCandidateFieldsSchema = z.object({
   createChain: z.boolean().optional(),
   stars: z.number().int().min(1).max(5).nullable().optional(),
   address: z.string().max(300).nullable().optional(),
-  city: z.string().max(120).nullable().optional(),
+  city: z.string().max(L.cityMaxLength).nullable().optional(),
   country: z.string().max(120).nullable().optional(),
   lat: z.number().min(-90).max(90).nullable().optional(),
   lon: z.number().min(-180).max(180).nullable().optional(),
@@ -89,11 +94,11 @@ export const stayCandidateFieldsSchema = z.object({
   // Nullable/optional and deliberately NOT required: a real 380-row import batch
   // (stays joined by hotel name) never carries a price, and that is a valid stay,
   // not a malformed one — it simply never gets an FX snapshot at commit time.
-  totalPrice: z.number().min(0).nullable().optional(),
+  totalPrice: z.number().min(L.minPrice).nullable().optional(),
   // Stated by 47 % of real confirmations. Kept alongside the total rather than
   // derived from it: a rate that excludes taxes divided out of a total that
   // includes them is a different number, and the document knows which is which.
-  pricePerNight: z.number().min(0).nullable().optional(),
+  pricePerNight: z.number().min(L.minPrice).nullable().optional(),
   currency: currencyField.nullable().optional(),
   /**
    * How many people the booking covers. Stored: the count is a fact of the
@@ -162,7 +167,7 @@ export const lodgingImportCandidateSchema = z
     // null on a stays-only row — the stay joins an existing lodging by `lodgingName`.
     lodging: lodgingCandidateFieldsSchema.nullable(),
     // Free-text hotel name used to join a stays-only row.
-    lodgingName: z.string().trim().max(200).nullable().optional(),
+    lodgingName: z.string().trim().max(L.nameMaxLength).nullable().optional(),
     stay: stayCandidateFieldsSchema.nullable(),
   })
   // A row must identify a lodging one way or the other — either it carries the
@@ -260,12 +265,38 @@ export interface LodgingImportMatchedStay {
   href: string;
 }
 
+/** One stored stay of a candidate house, named so a choice can be checked against it. */
+export interface LodgingImportOptionStay extends LodgingImportMatchedStay {
+  id: string;
+}
+
 /** A stored house an ambiguous row may mean — offered for the user to pick. */
 export interface LodgingImportLodgingOption {
   id: string;
   name: string;
   city: string | null;
+  /**
+   * The house's stays. Picking a house in the dialog used to skip the stay
+   * check the server runs for every matched row, so a booking already on file
+   * under the chosen house went in a second time without a word (Codex review,
+   * 2026-10-25). With these the dialog runs the same same-check-in test.
+   */
+  stays: LodgingImportOptionStay[];
 }
+
+/**
+ * The stored value of every stay field a re-import compares (`stayChanges`),
+ * deadlines aside — those only fill an empty field and the dialog does not
+ * edit them. A date is an ISO day.
+ *
+ * `changes` lists only what the MAIL moved, so the dialog could not tell what
+ * an edit of any other field did: a price typed into an update row changed the
+ * payload and the summary said nothing (Codex review, 2026-10-25).
+ */
+export type LodgingImportStoredStayValues = Record<
+  Exclude<UpdatableStayField, "freeCancellationUntil" | "paymentDueOn">,
+  string | number | null
+>;
 
 export interface LodgingImportPreviewRow extends LodgingImportCandidate {
   flags: LodgingImportFlag[];
@@ -306,6 +337,8 @@ export interface LodgingImportPreviewRow extends LodgingImportCandidate {
   matchedStayId: string | null;
   /** The stay behind `matchedStayId`, named rather than merely counted. */
   matchedStay: LodgingImportMatchedStay | null;
+  /** The stored values behind `matchedStayId`, for the dialog to compare edits against. */
+  matchedStayValues: LodgingImportStoredStayValues | null;
   action: LodgingImportAction;
   /**
    * Non-empty only on `action: "update"`: what a changed booking would move.
@@ -374,7 +407,7 @@ export const commitRowSchema = z.object({
   // commit service resolves it against that other row's `createdByName`
   // entry; if it resolves nothing the row fails `missing_lodging_reference`
   // exactly as before this field existed.
-  lodgingName: z.string().trim().max(200).nullable().optional(),
+  lodgingName: z.string().trim().max(L.nameMaxLength).nullable().optional(),
   stay: stayCommitFieldsSchema.nullable(),
 });
 export type CommitRowInput = z.infer<typeof commitRowSchema>;

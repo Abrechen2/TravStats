@@ -1,3 +1,4 @@
+import { LODGING_IMPORT_LIMITS } from "../shared/lodgingImportLimits";
 import { z } from "./zod";
 import { isCurrencyCode } from "../shared/currencies";
 import { receiptUrlValidator } from "./receiptUrl";
@@ -40,7 +41,7 @@ export const currencyField = z
  * the public preview instance, the shared demo account) could trigger against
  * itself with one write.
  */
-export const MAX_STAY_SPAN_NIGHTS = 3650;
+export const MAX_STAY_SPAN_NIGHTS = LODGING_IMPORT_LIMITS.maxStayNights;
 
 // A stay's check-in and check-out are CALENDAR DAYS at the hotel (ADR 0002
 // D1): `YYYY-MM-DD`, or an offset-bearing ISO string read as the day it

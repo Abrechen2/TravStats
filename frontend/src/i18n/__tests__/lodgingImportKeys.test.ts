@@ -4,6 +4,7 @@ import enImport from "../resources/en/import.json";
 import deLodging from "../resources/de/lodging.json";
 import enLodging from "../resources/en/lodging.json";
 import { LODGING_CSV_FIELDS } from "../../lib/importers/lodgingCsv";
+import type { RowBlocker } from "../../components/lodging/lodgingImportRowState";
 import type {
   LodgingDedupeHint,
   LodgingImportFlag,
@@ -50,6 +51,17 @@ const ACTIONS = [
   "skip",
 ] as const;
 
+// Every blocker that is not a server flag (`rowBlockers`) — worded on its own.
+const BLOCKERS = [
+  "missing_currency",
+  "name_too_long",
+  "city_too_long",
+  "negative_price",
+  "stay_too_long",
+  "nothing_to_create",
+] as const satisfies readonly Exclude<RowBlocker, LodgingImportFlag>[];
+const LIMIT_BLOCKERS = ["name_too_long", "city_too_long", "stay_too_long"] as const;
+
 const FAILURE_CODES = [
   "ownership_mismatch",
   "missing_lodging_reference",
@@ -85,6 +97,17 @@ describe("lodging import i18n", () => {
     for (const flag of FLAGS) {
       expect(deLodging.import.flags[flag], `de flags.${flag}`).toBeTruthy();
       expect(enLodging.import.flags[flag], `en flags.${flag}`).toBeTruthy();
+    }
+  });
+
+  it("words every blocker in both locales, and names the limit where there is one", () => {
+    for (const blocker of BLOCKERS) {
+      expect(deLodging.import.blockers[blocker], `de blockers.${blocker}`).toBeTruthy();
+      expect(enLodging.import.blockers[blocker], `en blockers.${blocker}`).toBeTruthy();
+    }
+    for (const blocker of LIMIT_BLOCKERS) {
+      expect(deLodging.import.blockers[blocker]).toContain("{{max}}");
+      expect(enLodging.import.blockers[blocker]).toContain("{{max}}");
     }
   });
 

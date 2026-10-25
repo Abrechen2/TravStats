@@ -1,6 +1,11 @@
 import type { JSX } from "react";
 import { INPUT, ensureLodging, type EditableRow } from "./lodgingImportRowModel";
-import { isGuessedMatch, isMatched, needsLodgingChoice } from "./lodgingImportRowState";
+import {
+  hasStayData,
+  isGuessedMatch,
+  isMatched,
+  needsLodgingChoice,
+} from "./lodgingImportRowState";
 
 type T = (key: string, options?: Record<string, unknown>) => string;
 type OnChange = (sourceRowIndex: number, patch: Partial<EditableRow>) => void;
@@ -42,18 +47,37 @@ function rejectMatchPatch(row: EditableRow): Partial<EditableRow> {
   };
 }
 
+/**
+ * Pick one of the offered houses — and run on it the stay check the server
+ * runs on every house it matched itself: a stored stay with the same check-in
+ * is a possible duplicate. Without it the pick went straight to "Aufenthalt
+ * hinzufügen", and a booking already on file was added a second time (Codex
+ * review, 2026-10-25). A "create" given before the house was known (the bulk
+ * button) is taken back then, so the reader decides with the stay in view.
+ */
 function chooseLodgingPatch(row: EditableRow, value: string): Partial<EditableRow> | null {
   if (value === NEW_LODGING) {
     return { ambiguityResolved: true, lodging: ensureLodging(row, importedName(row)) };
   }
   const option = (row.lodgingOptions ?? []).find((o) => o.id === value);
   if (!option) return null;
-  return {
+  const checkIn = row.stay && hasStayData(row) ? row.stay.checkIn : null;
+  const sameDay = checkIn ? (option.stays ?? []).find((s) => s.checkIn === checkIn) : undefined;
+  const base: Partial<EditableRow> = {
     matchedLodgingId: option.id,
     matchedLodgingName: option.name,
     matchedLodgingCity: option.city,
     matchIsGuess: true,
     ambiguityResolved: true,
+  };
+  if (!sameDay) return base;
+  const { id, ...described } = sameDay;
+  return {
+    ...base,
+    matchedStayId: id,
+    matchedStay: described,
+    dedupeHint: "stay_same_dates",
+    decision: row.decision === "create" ? "" : row.decision,
   };
 }
 
