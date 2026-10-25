@@ -4,7 +4,8 @@
  * check. Idempotent, concurrent clicks write once, a crashed claim recovers,
  * an invalidation is committed before the 409, and the visit made by
  * accepting never counts as cover of its own finding. A Dawarich finding
- * accepts exactly as before.
+ * accepts exactly as before. A country question (`location_suggestions`, E6)
+ * goes through the same protocol.
  */
 import request from "supertest";
 import { prisma } from "../../../db";
@@ -17,6 +18,11 @@ import { travTrackSwitches } from "../../travtrack/__tests__/switches";
 import { wipeTravTrack } from "../../travtrack/__tests__/fixtures";
 import { deleteTravTrackRange } from "../../travtrack/deleteRange";
 import { bumpHistoryGeneration } from "../generation";
+import { utcMidnight } from "../../countryDays/store";
+import { setLocationProvider } from "../../locationProvider/provider";
+import { makeUser } from "../../travtrack/__tests__/fixtures";
+import { acceptCountrySuggestion } from "../countryAccept";
+import * as countryRule from "../countrySuggestions";
 import * as recheckModule from "../recheck";
 import { applyStayAcceptance } from "../../dawarich/stays/review";
 import { stayReviewSchema } from "../../../schemas/dawarichStays";
@@ -452,5 +458,110 @@ describe("a Dawarich finding", () => {
     expect(stored).toMatchObject({ status: "accepted", claimToken: null, claimedAt: null });
     const visit = await prisma.placeVisit.findUniqueOrThrow({ where: { id: stored.visitId! } });
     expect(visit.suggestionRef).toBeNull();
+  });
+});
+
+/**
+ * The protocol claims the question and works on the row it claimed (Codex
+ * review of E6): a run that grew while the answer was on its way is answered
+ * as it stands at the claim, never as an older snapshot. And a country
+ * question shares the stays' protocol, so it shares its answers.
+ */
+describe("a country question through the same protocol", () => {
+  let countryUser: string;
+
+  const day = (date: string) =>
+    prisma.countryDay.create({
+      data: {
+        userId: countryUser,
+        source: "travtrack",
+        date: utcMidnight(date),
+        countryCode: "PT",
+        pointCount: 10,
+        airportPointCount: 0,
+        spanKm: 1,
+      },
+    });
+
+  async function question() {
+    await day("2026-10-12");
+    await day("2026-10-13");
+    await countryRule.countrySuggestions(countryUser);
+    return (await prisma.locationSuggestion.findFirstOrThrow({ where: { userId: countryUser } }))
+      .id;
+  }
+
+  beforeAll(async () => {
+    countryUser = await makeUser(`${PREFIX}country`);
+  });
+
+  beforeEach(async () => {
+    await prisma.countryDay.deleteMany({ where: { userId: countryUser } });
+    await prisma.locationSuggestion.deleteMany({ where: { userId: countryUser } });
+    await prisma.countryOverride.deleteMany({ where: { userId: countryUser } });
+    await setLocationProvider(countryUser, "travtrack");
+  });
+
+  it("a run that grows backwards between load and claim is answered on its new first day", async () => {
+    const id = await question();
+
+    const accepted = await acceptCountrySuggestion(countryUser, id, "visited", {
+      afterLoad: async () => {
+        await day("2026-10-11");
+        await countryRule.countrySuggestions(countryUser);
+      },
+    });
+
+    expect(accepted.windowFrom).toEqual(utcMidnight("2026-10-11"));
+    const override = await prisma.countryOverride.findFirstOrThrow({
+      where: { userId: countryUser },
+    });
+    expect(override.day).toEqual(utcMidnight("2026-10-11"));
+  });
+
+  it("history that keeps changing answers HISTORY_CHANGED and keeps the question pending", async () => {
+    const id = await question();
+    const real = jest.requireActual<typeof countryRule>("../countrySuggestions").countryRunHolds;
+    const spy = jest.spyOn(countryRule, "countryRunHolds").mockImplementation(async (...args) => {
+      const holds = await real(...args);
+      await prisma.$transaction((tx) => bumpHistoryGeneration(tx, countryUser));
+      return holds;
+    });
+    try {
+      await expect(acceptCountrySuggestion(countryUser, id, "visited")).rejects.toMatchObject({
+        code: "HISTORY_CHANGED",
+      });
+    } finally {
+      spy.mockRestore();
+    }
+    expect(await prisma.locationSuggestion.findUniqueOrThrow({ where: { id } })).toMatchObject({
+      status: "pending",
+      claimToken: null,
+    });
+    expect(await prisma.countryOverride.count({ where: { userId: countryUser } })).toBe(0);
+  });
+
+  it("a publisher whose claim was taken over writes no override", async () => {
+    const id = await question();
+    const spy = jest.spyOn(countryRule, "countryRunHolds").mockImplementation(async () => {
+      // Our claim went stale and another request took the question over.
+      await prisma.locationSuggestion.update({
+        where: { id },
+        data: { claimToken: "theirs", claimedAt: new Date() },
+      });
+      return true;
+    });
+    try {
+      await expect(acceptCountrySuggestion(countryUser, id, "visited")).rejects.toMatchObject({
+        code: "SUGGESTION_ACCEPT_IN_PROGRESS",
+      });
+    } finally {
+      spy.mockRestore();
+    }
+    expect(await prisma.countryOverride.count({ where: { userId: countryUser } })).toBe(0);
+    expect(await prisma.locationSuggestion.findUniqueOrThrow({ where: { id } })).toMatchObject({
+      status: "accepting",
+      claimToken: "theirs",
+    });
   });
 });

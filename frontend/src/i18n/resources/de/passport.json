@@ -113,7 +113,9 @@
   "unconfirmed": {
     "title": "Unbestätigte Standorttage",
     "explanation": "Diese Dawarich-Standorte belegen keinen Bodenkontakt. Sie können von Überflügen oder ungenauen Positionen stammen und erhöhen weder Länderzahlen noch Aufenthaltstage. Ein bestätigter Ortsbesuch oder Reiseeintrag wird unabhängig davon gezählt.",
-    "observation": "Dawarich · Standorttage: {{days}} · Punkte: {{points}}"
+    "explanationLocation": "Diese Standorte aus deinem Standortverlauf belegen keinen Bodenkontakt. Sie können von Überflügen oder ungenauen Positionen stammen und erhöhen weder Länderzahlen noch Aufenthaltstage. Ein bestätigter Ortsbesuch oder Reiseeintrag wird unabhängig davon gezählt.",
+    "observation": "Dawarich · Standorttage: {{days}} · Punkte: {{points}}",
+    "observationTravTrack": "TravTrack · Standorttage: {{days}} · Punkte: {{points}}"
   },
   "countingRule": "Bodenkontakt umfasst Umstiege und Durchfahrten. Besuche brauchen einen belegten Aufenthalt außerhalb reiner Transitorte oder eine nachvollziehbare Hin-/Rückflugkette. Nächte und Standortpunkte allein beweisen keinen Besuch.",
   "overrides": {

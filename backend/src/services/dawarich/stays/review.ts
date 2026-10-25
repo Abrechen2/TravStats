@@ -11,7 +11,8 @@ import { meters } from "./detect";
 import { takeStayAcceptLock } from "./acceptLock";
 import { completePlaceAddress } from "../../places/addressBackfill";
 import logger from "../../../utils/logger";
-import { acceptFlow, type ClaimStore } from "../../locationEvidence/acceptFlow";
+import { acceptFlow, disabled, type ClaimStore } from "../../locationEvidence/acceptFlow";
+import { travTrackInstanceOn, travTrackInstanceOnIn } from "../../travtrack/availability";
 import { recheckFinding } from "../../locationEvidence/recheck";
 
 async function acceptStayOnce(userId: string, id: string, input: StayReview) {
@@ -264,10 +265,19 @@ export async function rejectStay(userId: string, id: string) {
 
 /** A TravTrack stay finding as the accept protocol claims, re-checks and publishes it. */
 function stayClaimStore(userId: string): ClaimStore<DawarichStay, DawarichStay> {
+  const find = (id: string) => prisma.dawarichStay.findFirst({ where: { id, userId } });
+  // E4: a stay is accepted while the instance's TravTrack is on.
+  const gate = async () => {
+    if (!(await travTrackInstanceOn())) throw disabled();
+  };
   return {
     resolvedCode: "DAWARICH_ALREADY_RESOLVED",
-    find: (id) => prisma.dawarichStay.findFirst({ where: { id, userId } }),
-    async claim(id, token, now, staleBefore) {
+    find,
+    assertAllowed: gate,
+    async assertAllowedIn(tx) {
+      if (!(await travTrackInstanceOnIn(tx))) throw disabled();
+    },
+    async claim(id, token, staleBefore) {
       const taken = await prisma.dawarichStay.updateMany({
         where: {
           id,
@@ -275,18 +285,20 @@ function stayClaimStore(userId: string): ClaimStore<DawarichStay, DawarichStay> 
           provider: "travtrack",
           OR: [{ status: "pending" }, { status: "accepting", claimedAt: { lt: staleBefore } }],
         },
-        data: { status: "accepting", claimToken: token, claimedAt: now },
+        data: { status: "accepting", claimToken: token, claimedAt: new Date() },
       });
-      return taken.count === 1;
+      // Ours now: nothing changes a claimed row but a stale takeover two minutes on.
+      return taken.count === 1 ? find(id) : null;
     },
+    // Every stay accept of the account, Dawarich's too, one at a time (lock order (2)).
+    lock: (tx) => takeStayAcceptLock(tx, userId),
     async holdsClaim(tx, id, token) {
-      // FOR UPDATE: the row stays ours until this transaction ends, so a stale
-      // takeover cannot slip in between this check and the final write.
-      const held = await tx.$queryRaw<{ id: string }[]>`
-        SELECT id FROM dawarich_stays
-        WHERE id = ${id} AND user_id = ${userId} AND status = 'accepting' AND claim_token = ${token}
+      const [row] = await tx.$queryRaw<{ status: string; claim_token: string | null }[]>`
+        SELECT status, claim_token FROM dawarich_stays
+        WHERE id = ${id} AND user_id = ${userId}
         FOR UPDATE`;
-      return held.length === 1;
+      if (!row) return "gone";
+      return row.status === "accepting" && row.claim_token === token ? "held" : "lost";
     },
     async invalidate(tx, id, token) {
       await tx.dawarichStay.updateMany({

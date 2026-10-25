@@ -37,6 +37,7 @@ import {
 } from "../../../schemas/statsAircraft";
 
 import { registry } from "../registry";
+import { COUNTRY_DAY_SOURCES } from "../../countryDays/countryDaySource";
 
 const statsResponse = registry.register(
   "StatsSummary",
@@ -251,7 +252,7 @@ const passportResponse = registry.register(
         .array(
           z.object({
             code: z.string(),
-            source: z.literal("dawarich"),
+            source: z.enum(COUNTRY_DAY_SOURCES),
             reason: z.literal("ground-unconfirmed"),
             observedDays: z.number().int(),
             pointCount: z.number().int(),

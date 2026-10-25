@@ -271,7 +271,8 @@
         "updates": "Flug-Updates",
         "photos": "Foto-Vorschläge",
         "tripContext": "Reisezuordnungen",
-        "dawarich": "GPS-Aufenthalte"
+        "dawarich": "GPS-Aufenthalte",
+        "location": "Länder aus TravTrack"
       },
       "later": "Zurückgestellt",
       "laterHint": "Diese Einträge sind nur für diesen Besuch zurückgestellt. Es wurden keine Daten geändert.",
@@ -330,6 +331,27 @@
       "contextFailed": "Der Reiseverlauf konnte nicht geladen werden.",
       "recorded": "Bereits erfasst",
       "fullTrip": "Vollständigen Reiseverlauf öffnen",
+      "location": {
+        "cardTitle": "Land aus deinem Standortverlauf",
+        "question": "Warst du in {{country}}?",
+        "source": "aus TravTrack",
+        "evidence": "TravTrack hat dich an {{days}} Tagen am Boden in diesem Land gesehen ({{points}} Positionen), vom {{first}} bis {{last}}. Dein Reisepass kennt das Land noch nicht.",
+        "partial": "An mindestens einem dieser Tage wurden nicht alle Positionen gelesen.",
+        "effect": "„Besucht“ und „Nur am Boden durchgereist“ speichern deine eigene Angabe zu diesem Land im Reisepass. „Nicht dort gewesen“ ändert nichts, und diese Tage werden nicht noch einmal gefragt.",
+        "visited": "Besucht",
+        "ground": "Nur am Boden durchgereist",
+        "notThere": "Nicht dort gewesen",
+        "emptyTitle": "Keine offenen Fragen zu Ländern",
+        "emptyDescription": "Hier erscheint eine Frage, sobald TravTrack dich an mindestens zwei Tagen am Boden in einem Land sieht, das dein Reisepass noch nicht kennt.",
+        "errors": {
+          "invalidated": "Die Standortdaten zu dieser Frage wurden inzwischen gelöscht oder geändert. Die Frage entfällt.",
+          "resolved": "Diese Frage wurde bereits beantwortet.",
+          "busy": "Deine Antwort wird noch gespeichert. Bitte versuche es gleich noch einmal.",
+          "disabled": "TravTrack ist auf diesem Server ausgeschaltet. Die Frage bleibt bestehen; „Nicht dort gewesen“ kannst du weiterhin wählen.",
+          "historyChanged": "Dein Standortverlauf hat sich gerade geändert, während die Antwort geprüft wurde. Die Frage bleibt offen; bitte versuche es gleich noch einmal.",
+          "providerOff": "TravTrack ist nicht mehr deine Standortquelle. Die Frage bleibt bestehen; „Nicht dort gewesen“ kannst du weiterhin wählen."
+        }
+      },
       "proposal": {
         "new_trip": "Diese Einträge könnten eine Reise bilden",
         "assign": "{{count}} Einträge könnten zu dieser Reise gehören",

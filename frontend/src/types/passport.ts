@@ -286,7 +286,8 @@ export interface Passport {
   /** Absent on older servers. Observations do not contribute to visit figures. */
   unconfirmedCountries?: Array<{
     code: string;
-    source: "dawarich";
+    /** One entry per country and source: Dawarich's and TravTrack's are never merged. */
+    source: "dawarich" | "travtrack";
     reason: "ground-unconfirmed";
     observedDays: number;
     pointCount: number;

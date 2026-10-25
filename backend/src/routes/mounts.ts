@@ -33,6 +33,7 @@ import flightBookingRoutes from "./flights/booking";
 import flightBulkEditRoutes from "./flights/bulkEdit";
 import upcomingRoutes from "./upcoming";
 import dawarichStayRoutes from "./dawarichStays";
+import locationSuggestionRoutes from "./locationSuggestions";
 import locationCapabilitiesRoutes from "./locationCapabilities";
 import photoJourneyRoutes from "./photoJourneys";
 import tripSuggestionRoutes from "./tripSuggestions";
@@ -201,6 +202,12 @@ export const apiMounts: ApiMount[] = [
   // Public and unauthenticated, like the spec: the About section reads it before login.
   { id: "version", base: "/api/v1", router: versionRoutes },
   { id: "dawarichStays", base: "/api/v1/dawarich-stays", router: dawarichStayRoutes },
+  // What location history asks the user: country questions (TravTrack plan E6).
+  {
+    id: "locationSuggestions",
+    base: "/api/v1/location-suggestions",
+    router: locationSuggestionRoutes,
+  },
   // What the Companion should record (TravTrack plan S4); answers every session.
   {
     id: "locationCapabilities",

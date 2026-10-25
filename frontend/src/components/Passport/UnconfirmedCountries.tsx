@@ -12,6 +12,8 @@ export default function UnconfirmedCountries({
 }): JSX.Element | null {
   const { t } = useTranslation(["passport"]);
   if (countries.length === 0) return null;
+  // Dawarich alone reads exactly as before TravTrack (plan E6); any TravTrack row names both.
+  const onlyDawarich = countries.every((country) => country.source === "dawarich");
   const date = (day: string): string =>
     new Date(`${day}T00:00:00Z`).toLocaleDateString(locale, {
       timeZone: "UTC",
@@ -33,17 +35,26 @@ export default function UnconfirmedCountries({
         {t("passport:unconfirmed.title")}
       </h2>
       <p className="text-sm mb-4" style={{ color: "var(--text-secondary)" }}>
-        {t("passport:unconfirmed.explanation")}
+        {t(
+          onlyDawarich
+            ? "passport:unconfirmed.explanation"
+            : "passport:unconfirmed.explanationLocation"
+        )}
       </p>
       <ul className="space-y-3">
         {countries.map((country) => (
-          <li key={country.code} className="text-sm">
+          <li key={`${country.code}-${country.source}`} className="text-sm">
             <span className="font-medium">{countryName(country.code, locale)}</span>
             <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-              {t("passport:unconfirmed.observation", {
-                days: country.observedDays,
-                points: country.pointCount,
-              })}
+              {t(
+                country.source === "travtrack"
+                  ? "passport:unconfirmed.observationTravTrack"
+                  : "passport:unconfirmed.observation",
+                {
+                  days: country.observedDays,
+                  points: country.pointCount,
+                }
+              )}
               {" · "}
               <time dateTime={country.firstDate}>{date(country.firstDate)}</time>
               {country.lastDate !== country.firstDate && (
