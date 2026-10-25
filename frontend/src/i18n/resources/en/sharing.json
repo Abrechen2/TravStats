@@ -138,7 +138,8 @@
     "button": "Share",
     "companions": "With travel companions (own copy)",
     "link": "Public link",
-    "loading": "Loading …"
+    "loading": "Loading …",
+    "route": "Share the route (TravTrack)"
   },
   "trip": {
     "leaveConfirm": "Leave the shared trip? Your copy stays as your own trip; the others are notified.",
@@ -737,6 +738,22 @@
         "acceptFailed": "The trip could not be accepted.",
         "declineFailed": "The offer could not be declined."
       }
+    }
+  },
+  "route": {
+    "title": "Share the route",
+    "intro": "Whoever shares this trip with you sees the line TravTrack recorded on it — the line only: no times, nothing inside your privacy zones and nothing within a kilometre of your home. What you record afterwards is added only with “Rebuild”.",
+    "loading": "Loading …",
+    "notShared": "This trip's route is not shared.",
+    "shared": "The route is shared ({{count}} points on the line).",
+    "share": "Share the route",
+    "refresh": "Rebuild",
+    "revoke": "Stop sharing",
+    "errors": {
+      "empty": "Nothing of this trip can be shown: TravTrack holds no line for its days outside your privacy zones and your home.",
+      "disabled": "TravTrack is switched off on this server. A route cannot be shared right now.",
+      "generic": "The route could not be shared.",
+      "network": "The server cannot be reached. Try again in a moment."
     }
   }
 }

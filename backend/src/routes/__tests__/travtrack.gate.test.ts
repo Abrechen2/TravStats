@@ -112,6 +112,10 @@ describe("TravTrack gate", () => {
       "delete /travtrack/zones/:id": "held",
       "get /travtrack/day": "on",
       "get /travtrack/export": "held",
+      "get /trips/:id/share-snapshot": "held",
+      "put /trips/:id/share-snapshot": "on",
+      "delete /trips/:id/share-snapshot": "open",
+      "get /trips/:id/shared-route": "on",
     });
   });
 

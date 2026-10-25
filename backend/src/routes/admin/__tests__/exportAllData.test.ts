@@ -13,6 +13,11 @@ import {
   EXPORT_EXCLUDED_USER_RELATIONS,
   USER_EXPORT_SELECT,
 } from "../../../services/export/allDataExport";
+import { buildTravTrackDataExport } from "../../../services/travtrack/accountExport";
+import {
+  getInstanceSettings,
+  updateInstanceSettings,
+} from "../../../services/instanceSettingsService";
 
 /**
  * `GET /admin/export/all-data` calls itself "export all data" and
@@ -529,5 +534,89 @@ describe("GET /api/v1/admin/export/all-data", () => {
     } finally {
       await prisma.port.delete({ where: { id: port.id } });
     }
+  });
+
+  it("carries TravTrack points with their links, zones, deleted ranges and gaps — TravTrack off or not", async () => {
+    // TravTrack plan T7. The switch governs capture, not taking one's data away.
+    const settings = await getInstanceSettings();
+    await updateInstanceSettings({ betaFeaturesEnabled: false });
+    try {
+      const userId = createdUserIds[0];
+      const trip = await prisma.trip.findFirstOrThrow({ where: { userId }, select: { id: true } });
+      const point = await prisma.travTrackPoint.create({
+        data: {
+          userId,
+          t: new Date("2026-10-12T03:00:00Z"),
+          tS: 1_791_774_000,
+          lat: 37.5,
+          lon: 127,
+          origin: "companion:phone-1",
+          originRef: "export-1",
+          deviceId: "phone-1",
+          purpose: "trip",
+        },
+      });
+      await prisma.travTrackPointLink.create({
+        data: { userId, pointId: point.id, entryKind: "trip", entryId: trip.id },
+      });
+      await prisma.travTrackPrivacyZone.create({
+        data: { userId, name: "Zuhause", lat: 52.5, lon: 13.4, radiusM: 500 },
+      });
+      await prisma.travTrackDeletedRange.create({
+        data: { userId, fromAt: new Date("2026-10-01Z"), toAt: new Date("2026-10-02Z") },
+      });
+      await prisma.travTrackGap.create({
+        data: {
+          userId,
+          deviceId: "phone-1",
+          fromAt: new Date("2026-10-05Z"),
+          toAt: new Date("2026-10-06Z"),
+          reason: "permission",
+        },
+      });
+      const res = await request(app)
+        .get("/api/v1/admin/export/all-data")
+        .set("Cookie", adminCookie)
+        .expect(200);
+      const user = res.body.users.find((u: { id: string }) => u.id === userId);
+      expect(user.travtrack.points).toEqual([
+        expect.objectContaining({
+          id: point.id,
+          seq: point.seq.toString(),
+          lat: 37.5,
+          lon: 127,
+          purpose: "trip",
+          links: [{ kind: "trip", id: trip.id }],
+        }),
+      ]);
+      expect(user.travtrack.zones).toEqual([expect.objectContaining({ name: "Zuhause" })]);
+      expect(user.travtrack.deletedRanges).toHaveLength(1);
+      expect(user.travtrack.gaps).toEqual([expect.objectContaining({ reason: "permission" })]);
+    } finally {
+      await updateInstanceSettings({ betaFeaturesEnabled: settings.betaFeaturesEnabled });
+    }
+  });
+
+  it("reads the TravTrack points in pages and loses none at a page edge", async () => {
+    const userId = createdUserIds[0];
+    await prisma.travTrackPoint.deleteMany({ where: { userId } });
+    for (let i = 0; i < 5; i++) {
+      await prisma.travTrackPoint.create({
+        data: {
+          userId,
+          t: new Date(Date.UTC(2026, 9, 12, 3, i)),
+          tS: Math.floor(Date.UTC(2026, 9, 12, 3, i) / 1000),
+          lat: 37.5 + i * 0.001,
+          lon: 127,
+          origin: "companion:phone-1",
+          originRef: `page-${i}`,
+          deviceId: "phone-1",
+        },
+      });
+    }
+    const exported = await buildTravTrackDataExport(userId, 2);
+    expect(exported.points.map((p) => p.originRef)).toEqual(
+      [0, 1, 2, 3, 4].map((i) => `page-${i}`)
+    );
   });
 });

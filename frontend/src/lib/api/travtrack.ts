@@ -95,6 +95,14 @@ export interface TravTrackExportPart {
   rest: InstantSpan | null;
 }
 
+/** A shared trip's route as its recipients see it (plan T7): geometry only. */
+export interface TripRouteSnapshot {
+  version: number;
+  pointCount: number;
+  createdAt: string;
+  geometry: Array<Array<[number, number]>>;
+}
+
 /** A 409 with this code names `pointsInside`: ask, then send again with `deleteStoredPoints`. */
 export const ZONE_HOLDS_POINTS = "LOCATION_ZONE_HOLDS_POINTS";
 
@@ -126,6 +134,24 @@ export const travTrackApi = {
     (await api.delete<{ deleted: number }>("/travtrack/points", { params: span })).data.deleted,
   day: async (date: string): Promise<TravTrackDay> =>
     (await api.get<TravTrackDay>("/travtrack/day", { params: { date } })).data,
+  /** What of a trip's route is shared, or null while nothing is. */
+  routeSnapshot: async (tripId: string): Promise<TripRouteSnapshot | null> =>
+    (
+      await api.get<{ snapshot: TripRouteSnapshot | null }>(
+        `/trips/${encodeURIComponent(tripId)}/share-snapshot`
+      )
+    ).data.snapshot,
+  /** Shares the trip's route, or rebuilds it from what TravTrack holds now. */
+  shareRoute: async (tripId: string): Promise<TripRouteSnapshot> =>
+    (
+      await api.put<{ snapshot: TripRouteSnapshot }>(
+        `/trips/${encodeURIComponent(tripId)}/share-snapshot`
+      )
+    ).data.snapshot,
+  /** Takes the shared route back, for every recipient at once. */
+  revokeRoute: async (tripId: string): Promise<void> => {
+    await api.delete(`/trips/${encodeURIComponent(tripId)}/share-snapshot`);
+  },
   /**
    * One file of a span. A span over the server's point cap comes in parts:
    * the answer then names the rest (`X-TravTrack-Next` / `X-TravTrack-Until`),
@@ -202,6 +228,20 @@ export function trackErrorKey(err: unknown): string {
       return (err as { response?: unknown } | null)?.response
         ? "track:errors.generic"
         : "track:errors.network";
+  }
+}
+
+/** The i18n key for a failed route-sharing call (plan T7). */
+export function routeShareErrorKey(err: unknown): string {
+  switch (apiErrorMachineCode(err)) {
+    case "TRAVTRACK_ROUTE_EMPTY":
+      return "sharing:route.errors.empty";
+    case "TRAVTRACK_DISABLED":
+      return "sharing:route.errors.disabled";
+    default:
+      return (err as { response?: unknown } | null)?.response
+        ? "sharing:route.errors.generic"
+        : "sharing:route.errors.network";
   }
 }
 

@@ -19,6 +19,7 @@ import { travTrackTier } from "./travtrack/gate";
 import dayRoutes from "./travtrack/day";
 import exportRoutes from "./travtrack/export";
 import pointRoutes from "./travtrack/points";
+import shareSnapshotRoutes from "./travtrack/shareSnapshot";
 import zoneRoutes from "./travtrack/zones";
 
 /**
@@ -96,5 +97,6 @@ router.use(pointRoutes);
 router.use(zoneRoutes);
 router.use(dayRoutes);
 router.use(exportRoutes);
+router.use(shareSnapshotRoutes);
 
 export default router;

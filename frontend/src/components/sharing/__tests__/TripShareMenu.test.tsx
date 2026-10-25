@@ -37,12 +37,20 @@ vi.mock("../../../store/toastStore", () => ({
 const demo = { value: false };
 vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => demo.value }));
 vi.mock("../../../lib/logger", () => ({ logger: { error: vi.fn() } }));
+const travTrack = { value: false };
+vi.mock("../../../hooks/useTravTrackVisible", () => ({
+  useTravTrackVisible: () => travTrack.value,
+}));
+vi.mock("../ShareRouteDialog", () => ({
+  default: ({ tripId }: { tripId: string }) => <div>route-dialog {tripId}</div>,
+}));
 const api = vi.mocked(sharingApi);
 
 describe("TripShareMenu", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     demo.value = false;
+    travTrack.value = false;
     api.tripSharing.mockResolvedValue({
       groupId: null,
       bookingTotals: [],
@@ -57,6 +65,19 @@ describe("TripShareMenu", () => {
     expect(screen.getByRole("menuitem", { name: "sharing:menu.companions" })).toBeTruthy();
     await userEvent.click(screen.getByRole("menuitem", { name: "sharing:menu.link" }));
     expect(screen.getByText("link-dialog trip t1")).toBeTruthy();
+  });
+
+  it("offers sharing the route only where TravTrack is offered (plan T7)", async () => {
+    render(<TripShareMenu tripId="t1" />);
+    await userEvent.click(screen.getByRole("button", { name: "sharing:menu.button" }));
+    expect(screen.queryByRole("menuitem", { name: "sharing:menu.route" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "sharing:menu.button" }));
+
+    travTrack.value = true;
+    render(<TripShareMenu tripId="t2" />);
+    await userEvent.click(screen.getAllByRole("button", { name: "sharing:menu.button" })[1]);
+    await userEvent.click(screen.getByRole("menuitem", { name: "sharing:menu.route" }));
+    expect(screen.getByText("route-dialog t2")).toBeTruthy();
   });
 
   it("opens the share dialog with a person picker", async () => {

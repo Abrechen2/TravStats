@@ -1,4 +1,4 @@
-import { prisma } from "../../db";
+import { prisma, type DbTransaction } from "../../db";
 import type { ZoneCircle } from "./classify";
 
 /**
@@ -11,13 +11,19 @@ import type { ZoneCircle } from "./classify";
 export type CircleSet = (lineFromMs: number) => ZoneCircle[];
 
 /** Read once, asked per line — for a read that draws many lines (the map). */
-export async function privacyCircleSet(userId: string): Promise<CircleSet> {
+/** Read through `db` inside a transaction, so a zone written in it is already in force. */
+type CircleReader = Pick<DbTransaction, "travTrackPrivacyZone" | "travTrackZoneTombstone">;
+
+export async function privacyCircleSet(
+  userId: string,
+  db: CircleReader = prisma
+): Promise<CircleSet> {
   const [zones, tombstones] = await Promise.all([
-    prisma.travTrackPrivacyZone.findMany({
+    db.travTrackPrivacyZone.findMany({
       where: { userId },
       select: { lat: true, lon: true, radiusM: true },
     }),
-    prisma.travTrackZoneTombstone.findMany({
+    db.travTrackZoneTombstone.findMany({
       where: { userId },
       select: { lat: true, lon: true, radiusM: true, untilAt: true },
     }),
@@ -30,6 +36,10 @@ export async function privacyCircleSet(userId: string): Promise<CircleSet> {
   ];
 }
 
-export async function privacyCirclesFor(userId: string, fromMs: number): Promise<ZoneCircle[]> {
-  return (await privacyCircleSet(userId))(fromMs);
+export async function privacyCirclesFor(
+  userId: string,
+  fromMs: number,
+  db: CircleReader = prisma
+): Promise<ZoneCircle[]> {
+  return (await privacyCircleSet(userId, db))(fromMs);
 }

@@ -12,4 +12,6 @@ export type TravTrackApiErrorCode =
   | "LOCATION_ZONE_LIMIT" // the account holds the most privacy zones there may be (409)
   | "LOCATION_ZONE_NOT_FOUND" // no such zone of this account (404)
   | "TRACK_SOURCE_NOT_AVAILABLE" // ?source= names a source holding nothing for the entry (404)
-  | "TRAVTRACK_EXPORT_TOO_LONG"; // an export covers at most 366 days (400)
+  | "TRAVTRACK_EXPORT_TOO_LONG" // an export covers at most 366 days (400)
+  | "TRAVTRACK_ROUTE_EMPTY" // a route snapshot was asked for, but nothing of the trip may be shown (409)
+  | "SHARED_ROUTE_NOT_FOUND"; // no member of this shared trip shares its route with the reader (404)

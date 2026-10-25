@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { buildTravTrackDataExport } from "../travtrack/accountExport";
 
 /**
  * What `GET /admin/export/all-data` carries per user — kept here so the route
@@ -230,15 +231,16 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   trackJitterRemeasures:
     "the jitter re-measure job's bookkeeping (forgejo#319); the tracks themselves are exported",
   // TravTrack, the own location history (beta, TravTrack plan). Not read through
-  // USER_EXPORT_SELECT: an account can hold a million points. Plan T7 adds a
-  // paged `travtrack` section carrying points with links, zones, ranges and gaps.
-  travTrackPoints: "TravTrack history (beta): a paged export section of its own, plan T7",
-  travTrackPointLinks: "TravTrack history (beta): carried with their points, plan T7",
-  travTrackDeletedRanges: "TravTrack history (beta): a paged export section of its own, plan T7",
-  travTrackPrivacyZones: "TravTrack history (beta): a paged export section of its own, plan T7",
-  travTrackGaps: "TravTrack history (beta): a paged export section of its own, plan T7",
+  // USER_EXPORT_SELECT: an account can hold a million points. The `travtrack`
+  // section beside each user record carries them, read in pages
+  // (`services/travtrack/accountExport.ts`, plan T7).
+  travTrackPoints: "TravTrack history (beta): the paged `travtrack` section, accountExport.ts",
+  travTrackPointLinks: "TravTrack history (beta): carried with their points in `travtrack`",
+  travTrackDeletedRanges: "TravTrack history (beta): the `travtrack` section, accountExport.ts",
+  travTrackPrivacyZones: "TravTrack history (beta): the `travtrack` section, accountExport.ts",
+  travTrackGaps: "TravTrack history (beta): the `travtrack` section, accountExport.ts",
   travTrackZoneTombstones:
-    "TravTrack history (beta): former privacy-zone circles, a paged export section, plan T7",
+    "TravTrack history (beta): former privacy-zone circles, the `travtrack` section",
   travTrackUploads:
     "transport bookkeeping: upload receipts that answer a retry, pruned after 30 days",
   travTrackShareSnapshots:
@@ -311,5 +313,6 @@ export async function buildAccountExport(
     exportedAt: new Date().toISOString(),
     instanceName,
     user,
+    travtrack: await buildTravTrackDataExport(userId),
   };
 }
