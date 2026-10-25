@@ -125,6 +125,15 @@
       "confirm": "Alle {{count}} Positionen vom {{from}} bis {{to}} löschen? Das lässt sich nicht rückgängig machen.",
       "done": "{{count}} Positionen gelöscht.",
       "notDone": "Die Positionen wurden nicht gelöscht. Versuche es erneut."
+    },
+    "cities": {
+      "title": "Städte in den Monatswerten",
+      "intro": "Nennt die Städte, in denen du dich mindestens 30 Minuten aufgehalten hast. Dafür schickt der Server gerundete Positionen (auf etwa 1 km) an den Geocoder dieses Servers – das kann ein öffentlicher Dienst wie Nominatim sein. Aufenthalte in Privatzonen werden nie nachgeschlagen.",
+      "label": "Städte ermitteln",
+      "loadFailed": "Die Einstellung konnte nicht geladen werden.",
+      "notSaved": "Die Einstellung wurde nicht gespeichert.",
+      "savedOn": "Städte werden beim nächsten Durchlauf ermittelt.",
+      "savedOff": "Städtesuche aus – bereits ermittelte Städte sind entfernt."
     }
   },
   "imports": {
@@ -206,5 +215,38 @@
       "notFound": "Diesen Schlüssel gibt es nicht mehr.",
       "rateLimited": "Gerade wurden zu viele Schlüssel erstellt. Versuche es in einer Viertelstunde erneut."
     }
+  },
+  "tabs": {
+    "label": "Ansicht",
+    "day": "Tag",
+    "explored": "Erkundet",
+    "months": "Monate"
+  },
+  "explored": {
+    "map": "Karte der erkundeten Gegenden",
+    "legend": "Jedes Feld ist etwa 1–2 km groß: ein Ort, an dem dein Verlauf mindestens eine Position am Boden hat.",
+    "zones": "Privatzonen werden als erkundet gezeigt.",
+    "zoomIn": "Hier liegen zu viele erkundete Felder für eine Ansicht. Zoom näher heran."
+  },
+  "months": {
+    "previous": "Vorjahr",
+    "next": "Folgejahr",
+    "loading": "Monate werden geladen …",
+    "empty": "In {{year}} hat dein Verlauf keine Positionen.",
+    "table": "Monatswerte {{year}}",
+    "month": "Monat",
+    "km": "Am Boden",
+    "countries": "Länder",
+    "cities": "Städte",
+    "days": "Tage mit Daten",
+    "pausedCount": "{{count}} pausiert",
+    "noCountries": "Keine Länder ermittelt",
+    "citiesUnknown": "Städte nicht ermittelt",
+    "citiesNone": "Keine Stadt",
+    "pending": "Wird gerade neu berechnet – die Werte können sich noch ändern.",
+    "pendingMonth": "wird berechnet",
+    "legend": "Kilometer am Boden zählen nur die sichtbare Linie: nichts in der Luft, nichts schneller als 500 km/h, nichts, was eine Privatzone verbirgt. Monate ohne Positionen fehlen.",
+    "citiesOff": "Städte nennt die Übersicht erst, wenn du die Städtesuche in den Einstellungen einschaltest.",
+    "utc": "Monate nach UTC: Ein Tag zählt zu dem Monat, in den er nach UTC fällt – was um Mitternacht Ortszeit geschieht, kann im Nachbarmonat stehen."
   }
 }

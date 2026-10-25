@@ -85,7 +85,7 @@ export type DerivationReadOptions = {
 };
 
 /** The recorder windows of the account's flights that touch `window`, `[from, to]` inclusive. */
-async function flightWindowsIn(userId: string, window: ReadWindow): Promise<FlightWindow[]> {
+export async function flightWindowsIn(userId: string, window: ReadWindow): Promise<FlightWindow[]> {
   const flights = await prisma.flight.findMany({
     where: { userId, status: { not: "cancelled" } },
     select: FLIGHT_WINDOW_SELECT,

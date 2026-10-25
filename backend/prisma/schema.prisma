@@ -177,6 +177,8 @@ model User {
 
   locationSuggestions      LocationSuggestion[]
   travTrackDirtyDays       TravTrackDirtyDay[]
+  travTrackExploredCells   TravTrackExploredCell[]
+  travTrackMonthValues     TravTrackMonthValue[]
   travTrackDerivationState TravTrackDerivationState?
   travTrackImports         TravTrackImport[]
   travTrackIngestTokens    TravTrackIngestToken[]
@@ -908,13 +910,17 @@ model UserSettings {
   /// plan 2026-10-24, rule 2): `none` | `travtrack` | `dawarich`, held by a
   /// CHECK constraint. Switching moves, copies and deletes nothing.
   /// `services/locationProvider/provider.ts` is the only writer.
-  locationProvider    String @default("none") @map("location_provider")
+  locationProvider    String    @default("none") @map("location_provider")
   /// Raised on every switch, so a client can tell a stale answer from a fresh one.
-  locationProviderRev Int    @default(0) @map("location_provider_rev")
+  locationProviderRev Int       @default(0) @map("location_provider_rev")
   /// When the provider last changed away from `travtrack`; null while it is
   /// `travtrack` or never was. OwnTracks/Overland points recorded before it are
   /// still TravTrack's, later ones are refused (TravTrack plan E9).
   travtrackLeftAt     DateTime? @map("travtrack_left_at")
+  /// Whether TravTrack's monthly values name the cities stayed in (TravTrack
+  /// plan L3). Off by default: the lookup sends rounded positions (0.01°) to
+  /// the instance's reverse geocoder, which may be a public Nominatim.
+  travtrackCityLookup Boolean   @default(false) @map("travtrack_city_lookup")
 
   /// „Heimatort" (Companion audit 2026-10-23): where the traveller lives,
   /// `{name, lat, lon, zone}` — the Companion's "leave" reminder reads it. Was
@@ -6082,6 +6088,60 @@ model TravTrackDirtyDay {
   @@map("travtrack_dirty_days")
 }
 
+/// The explored map (TravTrack plan L1): the Web-Mercator tiles at zoom 14 an
+/// account's ground points fell in, per UTC day, so a removed day's cells go
+/// with it and the rest stay exact. Derived from `travtrack_points` by the
+/// dirty-day projection; holds tiles and days, never a position or a time of day.
+model TravTrackExploredCell {
+  userId String   @map("user_id")
+  day    DateTime @db.Date
+  x      Int
+  y      Int
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, day, x, y])
+  @@index([userId, x, y])
+  @@map("travtrack_explored_cells")
+}
+
+/// TravTrack's monthly values (TravTrack plan L3): ground kilometres from the
+/// privacy-safe line, the countries of the month's `travtrack` country days and,
+/// only when the account switched the lookup on, the cities stayed in. One row
+/// per account and UTC month, derived by the dirty-day projection (done bit 4);
+/// a month without points has no row — absent, never zero.
+model TravTrackMonthValue {
+  userId       String   @map("user_id")
+  /// The first day of the UTC month.
+  month        DateTime @db.Date
+  kmGround     Float    @map("km_ground")
+  countries    String[]
+  /// `[{ name, countryCode }]`; null when the lookup is off or not complete.
+  cities       Json?
+  daysWithData Int      @map("days_with_data")
+  daysPaused   Int      @map("days_paused")
+  algorithm    Int
+  computedAt   DateTime @default(now()) @map("computed_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, month])
+  @@map("travtrack_month_values")
+}
+
+/// Reverse-geocoded cities by rounded cell (lat/lon to 0.01°, `"52.52,13.41"`),
+/// shared by every account (TravTrack plan L3; precedent `market_catalog_tiles`).
+/// No user id, no time, no track: a cell names a place, never who was there.
+/// `name` null: the geocoder answered and there is no settlement.
+model GeoCityCache {
+  cell        String   @id
+  name        String?
+  countryCode String?  @map("country_code")
+  fetchedAt   DateTime @default(now()) @map("fetched_at")
+
+  @@map("geo_city_cache")
+}
+
 /// Per account: the history generation every TravTrack removal raises (E5's
 /// fence) and the derivations' own bookkeeping. 0 = never ran.
 model TravTrackDerivationState {
@@ -6102,6 +6162,11 @@ model TravTrackDerivationState {
   failureCount          Int       @default(0) @map("failure_count")
   /// Not scheduled again before this instant after a failure (backoff).
   retryAfter            DateTime? @map("retry_after")
+  /// Consecutive failed city lookups of the monthly values (L3); the
+  /// geocoder's own backoff below grows with it, a lookup that answers resets it.
+  cityLookupFailures    Int       @default(0) @map("city_lookup_failures")
+  /// No city is sent to the geocoder for this account before this instant.
+  cityLookupRetryAfter  DateTime? @map("city_lookup_retry_after")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

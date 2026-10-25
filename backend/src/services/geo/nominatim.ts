@@ -132,6 +132,25 @@ function buildQuery(parts: GeocodeParts): string {
  * Everything else non-OK is a definitive answer about the query and may be
  * cached — a malformed query would otherwise be retried on every call.
  */
+/** A 408/429/5xx answer: says nothing about the point; `retryAfterMs` from its `Retry-After`. */
+class TransientGeocoderError extends Error {
+  constructor(
+    readonly status: number,
+    readonly retryAfterMs: number | null
+  ) {
+    super(`reverse geocoding provider returned ${status}`);
+  }
+}
+
+/** `Retry-After` as milliseconds: seconds or an HTTP date; null when absent or unreadable. */
+export function retryAfterMs(header: string | null, nowMs = Date.now()): number | null {
+  if (!header) return null;
+  const seconds = Number(header.trim());
+  if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000;
+  const at = Date.parse(header);
+  return Number.isFinite(at) ? Math.max(0, at - nowMs) : null;
+}
+
 function isTransientStatus(status: number): boolean {
   return status >= 500 || status === 429 || status === 408;
 }
@@ -333,7 +352,7 @@ async function fetchAddress(
     // the point. Returning null here cached "no address" for the process
     // lifetime and told the map modal the pin was in open water.
     if (isTransientStatus(res.status)) {
-      throw new Error(`reverse geocoding provider returned ${res.status}`);
+      throw new TransientGeocoderError(res.status, retryAfterMs(res.headers.get("retry-after")));
     }
     return null;
   }
@@ -395,6 +414,8 @@ export async function reverseGeocode(lat: number, lon: number): Promise<GeocodeP
 /** `reverseGeocode` plus whether the provider failed (`degraded`) - for the map modal. */
 export interface ReverseGeocodeOutcome {
   parts: GeocodeParts | null;
+  /** With `degraded`: how long the provider asked to be left alone (`Retry-After`), when it said. */
+  retryAfterMs?: number;
   /**
    * true = the lookup did not happen (429, 5xx, timeout, network). `parts`
    * is then null for that reason, NOT because the point has no address -
@@ -438,7 +459,10 @@ export async function reverseGeocodeDetailed(
       // lifetime.
       logger.warn({ error }, "reverse geocoding failed");
       logger.debug({ lat, lon }, "reverse geocoding failed");
-      return { parts: null, degraded: true };
+      const wait = error instanceof TransientGeocoderError ? error.retryAfterMs : null;
+      return wait === null
+        ? { parts: null, degraded: true }
+        : { parts: null, degraded: true, retryAfterMs: wait };
     }
   });
   queue = task.catch(() => undefined);
