@@ -38,46 +38,13 @@ import {
 
 import { registry } from "../registry";
 import { TimeseriesQuerySchema } from "../../../schemas/statsQuery";
-
-/** companion-redesign C4: what a year-scopable answer says it covers. */
-const statsScopeSchema = z
-  .object({
-    year: z
-      .number()
-      .int()
-      .nullable()
-      .describe("The local calendar year the answer covers; null = all-time"),
-  })
-  .describe(
-    "Check this rather than the status code: a server without `year` on an endpoint " +
-      "ignores the parameter and answers all-time with no `scope`."
-  );
-
-const yearQuery = z.object({
-  year: z.coerce
-    .number()
-    .int()
-    .min(1900)
-    .max(2100)
-    .optional()
-    .describe("Local calendar year of the departure; omitted = all-time"),
-});
-
-const yearOrRangeQuery = yearQuery.extend({
-  fromDate: z.string().optional(),
-  toDate: z.string().optional(),
-});
-
-const yearScopeErrors = {
-  400: {
-    description:
-      "Invalid query, or `year` together with `fromDate`/`toDate` " +
-      "(`code: VALIDATION_FAILED`, `field: year`)",
-    content: {
-      "application/json": { schema: z.object({ error: z.string(), code: z.string().optional() }) },
-    },
-  },
-};
+import {
+  statsScopeSchema,
+  yearOrRangeQuery,
+  yearQuery,
+  yearScopeErrors,
+  yearScopeQuery,
+} from "./statsYearScope";
 
 const statsResponse = registry.register(
   "StatsSummary",
@@ -172,6 +139,7 @@ const heroStatsResponse = registry.register(
       airports: z.number(),
       co2Kg: z.number(),
       flightTimeMinutes: z.number().describe("Total flight time, in minutes"),
+      scope: statsScopeSchema,
     })
     .openapi("HeroStats")
 );
@@ -231,14 +199,16 @@ registry.registerPath({
   summary: "Composed hero aggregate",
   description:
     "Single aggregate combining totals from /stats/summary, /stats/airports " +
-    "and /stats/fun, for dashboard hero widgets. All-time only (no date-range " +
-    "filtering yet).",
+    "and /stats/fun, for dashboard hero widgets. With `year`, every figure — " +
+    "countries included — covers that local calendar year.",
   tags: ["Stats"],
+  request: { query: yearQuery },
   responses: {
     200: {
       description: "Hero stats",
       content: { "application/json": { schema: heroStatsResponse } },
     },
+    ...yearScopeErrors,
   },
 });
 
@@ -264,26 +234,6 @@ const statsTag = ["Stats"];
 // description and nothing else. Every /stats endpoint now publishes a schema
 // (forgejo#52), so it has no callers — and leaving it would be leaving the
 // easy way to add another shapeless endpoint.
-
-/**
- * `?year=` on the passport and the country page (companion-redesign C4), and
- * the `scope` every such answer carries so a client can check what it got.
- */
-const yearScopeQuery = z.object({
-  year: z.coerce
-    .number()
-    .int()
-    .min(1900)
-    .max(2100)
-    .optional()
-    .describe(
-      "Only this calendar year's evidence, each record dated by its own local day; " +
-        "undated records belong to no year and are left out. Omitted: lifetime."
-    ),
-});
-const statsScopeSchema = z
-  .object({ year: z.number().int().nullable() })
-  .describe("What the answer covers: the requested year, or null for lifetime");
 
 const passportResponse = registry.register(
   "Passport",

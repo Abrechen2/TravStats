@@ -15,7 +15,7 @@
 |---|---|---|---|---|
 | 1 | Navigation + Start | Fixed bar Start · Reisen · + · Karte · Statistik; account button top right (old "Mehr" sheet, carries the inbox dot); board editor and presets removed; Start picks its composition from the trips (between / before a trip within 14 days / travelling), computed on the device from `GET /trips` | none — existing endpoints only | **done** (app, `c2b0ade1`) |
 | 2 | Reisen + Track | Reisen list and trip header with cover image; "Bearbeiten im Web" buttons; review findings in the inbox with resolve + undo | C1 (no work), C2 (pattern only), C3 (new finding kinds, undo) | open |
-| 3 | Statistik | Gesamt/Jahr switch driving every drilldown | C4 (`year` on every stats endpoint the app reads) | open |
+| 3 | Statistik | Gesamt/Jahr switch driving every drilldown | C4 (`year` on every stats endpoint the app reads) | server **built** (C4), app open |
 
 C5 (server-side trip phase) is **not** built — see below.
 
@@ -123,7 +123,8 @@ Endpoints:
 - Errors use stable codes (`notFound`, `invalidAction`, `undoExpired`,
   `staleFinding` when the records changed since the check ran), never prose.
 
-**Open for the owner (decide before phase 2 server work):**
+**Decided by the owner, 2026-10-25 ("Wie du vorschlägst") — the two
+recommendations below are the plan:**
 
 1. *Where the undo lives.* A server undo for `merge` means keeping enough of
    the merged-away record to restore it — real work per kind. The cheap
@@ -148,39 +149,56 @@ partial scope would lie.
 
 **Contract.**
 
-- `year=<YYYY>` (optional, integer 1900–2100) on every stats endpoint the app
-  reads. It means the **local calendar year of the departure / check-in**
-  (`shared/time`, the same rule as `/stats/timeseries`), not UTC.
-- `year` together with `fromDate`/`toDate` → 400 `{ error: "conflictingRange" }`.
-- An endpoint that cannot honour `year` answers **400
-  `{ error: "yearUnsupported" }`**, never an all-time answer. The app shows
-  "nur gesamt" for that drilldown.
-- `/stats/page?include=…&year=YYYY` becomes valid once every section in
-  `include` supports it; until then the 400 stands, per section.
-- Each response carries `scope: { year: number | null }`, so the app can
-  check that the answer is the one it asked for.
-- **Feature check:** until an endpoint ships its `year`, it ignores the
-  unknown parameter (Zod strips it) and answers all-time with no `scope`. The
-  app therefore trusts `scope.year` in the response, never the status code
-  alone; a missing `scope` means "not scoped yet".
-- On `yearUnsupported` the app greys out the year switch on that screen and
-  says so; it never falls back to all-time silently.
+**Built 2026-10-25** on `feat/companion-redesign` (owner: "Wie du
+vorschlägst"). Minimum server: the first RC cut from this branch.
 
-**Endpoints the app reads** (Companion, 2026-10-25), in build order, with
-today's state:
+- `year=<YYYY>` (optional, integer 1900–2100) on every endpoint below. A
+  record belongs to a year when one of the days it covers falls in it, on the
+  **local calendar** of where it happened — a flight by its departure
+  airport's day, rail/bus/ferry by the station's or port's clock, a place by
+  its own calendar. Lodging stays and port calls carry no zone and are dated
+  as stored, exactly as the lifetime figures date them. A record spanning New
+  Year (a trip, a stay) shows in **both** years with the days it has in each;
+  flight figures count a flight once, in the year it departed.
+- Invalid `year` → 400. `year` together with `fromDate`/`toDate` → 400
+  `{ error, code: "VALIDATION_FAILED", field: "year" }` — the generic code with
+  the field, not a code of its own.
+- Undated records belong to no year: they appear only in the all-time view.
+- Every response carries `scope: { year: number | null }` (inside `data` on the
+  enveloped ones: lodging, records, rail). `null` = all-time. Without `year`
+  the body is exactly the old one plus `scope`.
+- **Feature check:** a server without `year` on an endpoint ignores the
+  parameter (Zod strips it) and answers all-time with no `scope`. Trust
+  `scope.year`, never the status code; a missing `scope` means "not scoped".
+  No endpoint in the list answers "year unsupported" — the code for it was
+  never needed and is not built.
+- `/stats/page` still refuses any range; the app does not read it.
 
-| # | Endpoint | Today | Work |
+Per endpoint:
+
+| # | Endpoint | Before | Now |
 |---|---|---|---|
-| 1 | `/stats/summary` | `year`, `compareYear` | add `scope` only |
-| 2 | `/stats/hero` | no parameters | add `year` |
-| 3 | `/stats/timeseries` | `year` + `window=year`, `fromDate`/`toDate` | `year` alone means the 12 months of that year (`granularity=month`); add `scope` |
-| 4 | `/stats/airports` · `/stats/airlines` · `/stats/aircraft-types` | `fromDate`/`toDate` · none · none | add `year` |
-| 5 | `/stats/lodging` · `/stats/cruise` · `/rail/stats` | none · none · `year` (+ `until`) | add `year` to the first two; rail: add `scope` only |
-| 6 | `/stats/countries/:code` · `/stats/passport` | none · none | add `year` |
-| 7 | `/stats/punctuality` · `/stats/records` | `fromDate`/`toDate` · none | add `year` |
+| 1 | `/stats/summary` | `year`, `compareYear` | + `scope` (with `compareYear`: `{ current, compare, scope }`) |
+| 2 | `/stats/hero` | none | `year` on every figure, countries from the year-scoped passport |
+| 3 | `/stats/timeseries` | `year` with `window=year` | `year` with no `window` = that year's 12 months; `scope.year` is the year the window resolved to, `null` for rolling/all/range |
+| 4 | `/stats/airports` · `/stats/airlines` · `/stats/aircraft-types` | range · none · none | `year` |
+| 5 | `/stats/lodging` · `/stats/cruise` · `/rail/stats` | `year` (all three already had it) | + `scope` |
+| 6 | `/stats/passport` · `/stats/countries/:code` | none | `year`; see below |
+| 7 | `/stats/punctuality` · `/stats/records` | range · none | `year` |
 
-Not scoped: `/stats/wrapped` (has its own year), `/stats/page` (not used by
-the app).
+Passport and country page under a year:
+
+- Tiers, thresholds, `daysPresent` and "unclear" reasons are computed from
+  that year's evidence only. A flight chain over New Year is graded on all its
+  legs first, then its evidence is cut by day — otherwise its destination
+  would read as an open chain in both years.
+- `firstYear`/`lastYear` are that year. `isNew` / `newThisYear` mean **"first
+  visited in that year"** (without `year`: the current year, as before);
+  `firstVisitedYear` stays the lifetime value.
+- `/stats/countries/:code?year=Y` for a country with no record in Y → **404**.
+- A stay over New Year counts all its nights in both years (`lodging.nights`).
+
+Not scoped: `/stats/wrapped` (has its own year), `/stats/page`.
 
 ### C5 — Server-side trip phase: not built
 
@@ -198,8 +216,7 @@ from there — then it becomes a contract item.
 
 ## Open for server
 
-- Owner decisions on C3 (undo location, detector order). Server and
-  Companion both recommend: app-side ~5 s undo in phase 2, server undo only
-  for dismiss/link, duplicate detector first.
-- C4 implementation, in the order of the table above — waiting for the
-  owner's go.
+- C3, as decided by the owner on 2026-10-25 ("Wie du vorschlägst"): the app
+  delays a resolve ~5 s for its own undo in phase 2; the server builds `undo`
+  for `dismiss` and `link` only, and the `duplicate` detector first, then
+  `ferryMatch`. Photo journeys stay as they are. Not started.

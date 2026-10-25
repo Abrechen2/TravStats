@@ -2,6 +2,7 @@ import { Router, Response, NextFunction } from "express";
 import aircraftStatsRouter from "./stats/aircraft";
 import statsPageRouter from "./stats/page";
 import passportStatsRouter from "./stats/passport";
+import heroStatsRouter from "./stats/hero";
 import {
   DateRangeQuerySchema,
   DateRangeYearQuerySchema,
@@ -29,7 +30,6 @@ import { calculateLodgingStats } from "../utils/lodgingStats";
 import logger from "../utils/logger";
 import { userToday } from "../services/stats/userToday";
 import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "../services/stats/departureClock";
-import { loadPassport } from "../services/stats/passportLoader";
 import { buildWhere, computeSummary } from "../services/stats/summary";
 import { loadDaysAway } from "../services/stats/daysAwayLoader";
 import { loadWrapped } from "../services/stats/wrappedLoad";
@@ -109,106 +109,8 @@ router.get(
   }
 );
 
-interface HeroStats {
-  distanceKm: number;
-  flights: number;
-  countries: number;
-  airports: number;
-  co2Kg: number;
-  flightTimeMinutes: number;
-}
-
-// GET /api/v1/stats/hero — single composed aggregate for the Companion app's
-// Start-board hero widget. Reuses the SAME functions that back /summary,
-// /airports and /fun (computeSummary, calculateAirportStats, calculateFunStats)
-// instead of duplicating their queries. All-time only for the MVP — no
-// date-range params yet. The airport+fun flight select is fetched ONCE and
-// shared between calculateAirportStats and calculateFunStats since both use
-// the identical select already used by /airports and /fun.
-router.get("/hero", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const userId = req.userId!;
-
-    const flightsWhere: Prisma.FlightWhereInput = {
-      userId,
-      ...countableFlightWhere(),
-    };
-    const baseCurrency = await getBaseCurrency(userId);
-
-    // Read the flight table THREE times per request until forgejo#49: in
-    // computeSummary, inside loadPassport, and here. `arrTimeSemantics` is the
-    // one column below the passport needed and this did not have, so the same
-    // rows now serve both. The cost is the parallelism between this scan and
-    // the passport — the smaller price, since a full per-user scan is not
-    // worth running twice concurrently to save the latency of running it once.
-    const [{ stats: summary }, flights] = await Promise.all([
-      buildWhere(userId, undefined, undefined).then((w) => computeSummary(w, baseCurrency)),
-      prisma.flight.findMany({
-        where: flightsWhere,
-        select: {
-          id: true,
-          depLat: true,
-          depLon: true,
-          arrLat: true,
-          arrLon: true,
-          ...FLIGHT_CLOCK_SELECT,
-          airline: true,
-          aircraft: true,
-          departureTime: true,
-          arrivalTime: true,
-          arrTimeSemantics: true,
-          status: true,
-          price: true,
-          taxes: true,
-          fees: true,
-          category: true,
-          seatClass: true,
-          createdAt: true,
-        },
-      }),
-    ]);
-    const passport = await loadPassport(userId, flights);
-    const datedFlights = await withDepartureClock(flights);
-
-    // No home periods, deliberately: this endpoint only reads
-    // airportCount, which doesn't depend on home — only the
-    // unused farthestFromHome field does. Skips /airports's extra
-    // userSettings.findUnique lookup.
-    const [airportStats, funStats] = await Promise.all([
-      calculateAirportStats(datedFlights, []),
-      calculateFunStats(datedFlights),
-    ]);
-
-    const hero: HeroStats = {
-      distanceKm: summary.totalDistance,
-      flights: summary.totalFlights,
-      /**
-       * The SAME number the passport shows, from the same module — not
-       * `airportStats.countryCount`, which this tile read until 2026-09-03.
-       *
-       * That field counts the countries a FLIGHT touched. It is blind to a
-       * country reached by car and slept in for a week, and it counts one
-       * reached by a four-hour connection, so it was wrong in both directions
-       * at once — which is why it looked plausible for so long.
-       *
-       * This tile is the Companion's Start board, and the Companion draws a
-       * passport too. One screen therefore had two answers to "how many
-       * countries", which is the exact drift the design named as the reason
-       * for a single home: "folding lodging in without unifying the rule
-       * would create a fifth answer" (§4 of the country-counting design).
-       * The tile was that answer.
-       */
-      countries: passport.summary.countries,
-      airports: airportStats.airportCount,
-      co2Kg: funStats.co2FootprintKg,
-      flightTimeMinutes: summary.totalFlightTime,
-    };
-
-    res.json(hero);
-  } catch (error) {
-    next(error);
-  }
-});
+// `/hero` lives in `stats/hero` — mounted HERE so route order is unchanged.
+router.use(heroStatsRouter);
 
 // GET /api/v1/stats/timeseries — bucketed series (month|year) + current/previous
 // window totals, domain-parameterized (flight|cruise). Powers the Wave A
