@@ -32,16 +32,24 @@ export interface DuplicateMatch {
 
 export const NO_DUPLICATE: DuplicateMatch = { duplicateOf: null, possibleDuplicateOf: null };
 
-/** The widest a wall clock can sit from UTC — the search window for a duplicate. */
-const WALL_CLOCK_WINDOW_MS = 14 * 60 * 60 * 1000;
+const MINUTE_MS = 60 * 1000;
+const QUARTER_HOUR_MS = 15 * MINUTE_MS;
+/** UTC offsets in use run from −12:00 to +14:00, all in whole quarter hours. */
+const OFFSET_QUARTERS = Array.from({ length: (12 + 14) * 4 + 1 }, (_, i) => i - 12 * 4);
 
-function departureWindow(departureLocal: string): { gte: Date; lte: Date } | null {
+/**
+ * Every instant at which a ride could show `departureLocal` on its own station
+ * clock: one minute per UTC offset in use. The lookup is narrowed to these in
+ * the database, so no limit is needed and none can cut off the ride sought —
+ * a 28-hour window capped at 20 rows did, for a user with more rides that day.
+ */
+function departureMinutes(departureLocal: string): { departureTime: { gte: Date; lt: Date } }[] {
   const asUtc = new Date(`${departureLocal}:00Z`).getTime();
-  if (Number.isNaN(asUtc)) return null;
-  return {
-    gte: new Date(asUtc - WALL_CLOCK_WINDOW_MS),
-    lte: new Date(asUtc + WALL_CLOCK_WINDOW_MS),
-  };
+  if (Number.isNaN(asUtc)) return [];
+  return OFFSET_QUARTERS.map((q) => {
+    const at = asUtc - q * QUARTER_HOUR_MS;
+    return { departureTime: { gte: new Date(at), lt: new Date(at + MINUTE_MS) } };
+  });
 }
 
 /**
@@ -59,42 +67,114 @@ const nameIsOneOf = (s: DuplicateStation, legName: string) =>
     depStationName: { equals: name, mode: "insensitive" as const },
   }));
 
+interface StoredEnd {
+  id: number | null;
+  code: string | null;
+  name: string;
+}
+
+/** The stored end is this stop: its catalogue row, its code, or one of its names. */
+function isStation(stored: StoredEnd, s: DuplicateStation, legName: string): boolean {
+  if (s.stationId !== null && stored.id === s.stationId) return true;
+  if (s.code && stored.code === s.code) return true;
+  const names = new Set(spellings(s, legName).map(foldStationName));
+  return names.has(foldStationName(stored.name));
+}
+
+const foldTrainPart = (v: string | null): string | null => {
+  const folded = (v ?? "").toLowerCase().replace(/\s+/g, "");
+  return folded === "" ? null : folded;
+};
+
 /**
- * A journey the user already has for this leg: same departure wall clock at
- * the departure station, and the same booking reference — or, when the
- * document prints none, the same departure station: its catalogue row, its
- * code, the catalogue's name or the printed one. Compared on the stored row's
- * own station clock, so an unresolved station (no zone yet) still finds the
- * ride it was saved as.
+ * Whether two trains are one: "same" when the numbers agree (and the
+ * categories, where both name one), "other" when they differ, "unknown" when
+ * either side names no number — then nothing tells them apart.
+ */
+function trainIdentity(
+  stored: { trainCategory: string | null; trainNumber: string | null },
+  leg: ParsedRailLeg
+): "same" | "other" | "unknown" {
+  const [a, b] = [foldTrainPart(stored.trainNumber), foldTrainPart(leg.trainNumber)];
+  if (a === null || b === null) return "unknown";
+  if (a !== b) return "other";
+  const [ca, cb] = [foldTrainPart(stored.trainCategory), foldTrainPart(leg.trainCategory)];
+  return ca !== null && cb !== null && ca !== cb ? "other" : "same";
+}
+
+/**
+ * A journey the user already has for this leg, at the same departure wall
+ * clock — compared on the stored row's own station clock, so an unresolved
+ * station (no zone yet) still finds the ride it was saved as.
+ *
+ * The same booking reference settles it. Without one — or when no ride
+ * carries it, as when the ride was saved from a reference-free bahn.de
+ * connection before the ticket came — the ride must leave the same station
+ * (catalogue row, code, or a name) for the same arrival station on the same
+ * train. Several trains leave one station in the same minute, so a missing
+ * train number makes it a POSSIBLE duplicate only, and a different number or
+ * destination a ride of its own.
  */
 export async function findDuplicate(
   userId: string,
   leg: ParsedRailLeg,
   bookingReference: string | null,
-  departure: DuplicateStation
-): Promise<string | null> {
-  const window = departureWindow(leg.departureLocal);
-  if (!window) return null;
-  const sameStation = [
+  departure: DuplicateStation,
+  arrival: DuplicateStation
+): Promise<DuplicateMatch> {
+  const minutes = departureMinutes(leg.departureLocal);
+  if (minutes.length === 0) return NO_DUPLICATE;
+  const matchers = [
+    ...(bookingReference
+      ? [{ bookingReference: { equals: bookingReference, mode: "insensitive" as const } }]
+      : []),
     ...(departure.stationId !== null ? [{ depStationId: departure.stationId }] : []),
     ...(departure.code ? [{ depStationCode: departure.code }] : []),
     ...nameIsOneOf(departure, leg.depStationName),
   ];
   const rows = await prisma.railJourney.findMany({
-    where: {
-      userId,
-      departureTime: window,
-      ...(bookingReference
-        ? { bookingReference: { equals: bookingReference, mode: "insensitive" as const } }
-        : { OR: sameStation }),
+    where: { userId, AND: [{ OR: minutes }, { OR: matchers }] },
+    select: {
+      id: true,
+      departureTime: true,
+      depTimezone: true,
+      bookingReference: true,
+      depStationId: true,
+      depStationCode: true,
+      depStationName: true,
+      arrStationId: true,
+      arrStationCode: true,
+      arrStationName: true,
+      trainCategory: true,
+      trainNumber: true,
     },
-    select: { id: true, departureTime: true, depTimezone: true },
-    take: 20,
+    orderBy: { createdAt: "asc" },
   });
-  const hit = rows.find(
+  const atMinute = rows.filter(
     (r) => instantToWallClock(r.departureTime, r.depTimezone) === leg.departureLocal
   );
-  return hit?.id ?? null;
+  const reference = bookingReference?.toLowerCase();
+  const booked = reference
+    ? atMinute.find((r) => r.bookingReference?.toLowerCase() === reference)
+    : undefined;
+  if (booked) return { duplicateOf: booked.id, possibleDuplicateOf: null };
+  const sameRoute = atMinute.filter(
+    (r) =>
+      isStation(
+        { id: r.depStationId, code: r.depStationCode, name: r.depStationName },
+        departure,
+        leg.depStationName
+      ) &&
+      isStation(
+        { id: r.arrStationId, code: r.arrStationCode, name: r.arrStationName },
+        arrival,
+        leg.arrStationName
+      )
+  );
+  const certain = sameRoute.find((r) => trainIdentity(r, leg) === "same");
+  if (certain) return { duplicateOf: certain.id, possibleDuplicateOf: null };
+  const possible = sameRoute.find((r) => trainIdentity(r, leg) === "unknown");
+  return { duplicateOf: null, possibleDuplicateOf: possible?.id ?? null };
 }
 
 /** "Bus 100", "bus  100" — the line as the bus import stores it (`lineName`). */
@@ -135,10 +215,10 @@ export async function findBusDuplicate(
   departure: DuplicateStation,
   arrival: DuplicateStation
 ): Promise<DuplicateMatch> {
-  const window = departureWindow(leg.departureLocal);
-  if (!window) return NO_DUPLICATE;
+  const minutes = departureMinutes(leg.departureLocal);
+  if (minutes.length === 0) return NO_DUPLICATE;
   const rows = await prisma.busJourney.findMany({
-    where: { userId, departureTime: window, OR: nameIsOneOf(departure, leg.depStationName) },
+    where: { userId, AND: [{ OR: minutes }, { OR: nameIsOneOf(departure, leg.depStationName) }] },
     select: {
       id: true,
       departureTime: true,
@@ -147,7 +227,6 @@ export async function findBusDuplicate(
       lineName: true,
     },
     orderBy: { createdAt: "asc" },
-    take: 20,
   });
   const arrivals = new Set(spellings(arrival, leg.arrStationName).map(foldStationName));
   const line = lineOf(leg);

@@ -254,8 +254,7 @@ async function duplicateOf(
 ): Promise<DuplicateMatch> {
   if (!userId) return NO_DUPLICATE;
   if (leg.transit?.mode === "bus") return findBusDuplicate(userId, leg, departure, arrival);
-  const id = await findDuplicate(userId, leg, bookingReference, departure);
-  return { duplicateOf: id, possibleDuplicateOf: null };
+  return findDuplicate(userId, leg, bookingReference, departure, arrival);
 }
 
 export async function toRailCandidate(

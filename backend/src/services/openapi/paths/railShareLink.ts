@@ -82,7 +82,7 @@ const leg = z.object({
     .string()
     .nullable()
     .describe(
-      "A bus ride that may be this leg — same stop, minute and destination, but a line one side does not name. Shown, never unticked on its strength"
+      "A ride that may be this leg — same station, minute and destination, but a train number or bus line one side does not name. Shown, never unticked on its strength"
     ),
   transit: transit.optional(),
 });
