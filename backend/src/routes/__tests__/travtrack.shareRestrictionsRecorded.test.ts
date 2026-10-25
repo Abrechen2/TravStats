@@ -254,4 +254,52 @@ describe("TravTrack — restrictions recorded against a shared route", () => {
       expect(eastOf(await recipientRead(), AFTER_TOKYO_END_LON)).toBe(false);
     });
   });
+
+  describe("what a change adds to the records", () => {
+    const FLIGHT_WALK = Date.parse("2026-10-12T01:30:00Z");
+
+    it("a flight's provider readings add nothing, and a repeated window is recorded once", async () => {
+      await walk(126.95, 127.06, FLIGHT_WALK);
+      expect((await share()).status).toBe(200);
+      const flightId = await makeFlight(owner);
+      await prisma.flight.update({ where: { id: flightId }, data: { tripId } });
+      const id = await snapshotId();
+      for (let i = 0; i < 10; i++) {
+        const at = new Date(Date.parse("2026-10-12T00:35:00Z") + i * MIN);
+        await prisma.flight.update({
+          where: { id: flightId },
+          data: { actualDeparture: at, runwayDepartureTime: at, actualArrival: at },
+        });
+      }
+      expect(await prisma.travTrackSharePastFlight.count({ where: { snapshotId: id } })).toBe(0);
+      const a = new Date("2026-10-12T00:30:00Z");
+      const b = new Date("2026-10-12T00:40:00Z");
+      for (let i = 0; i < 10; i++) {
+        await prisma.flight.update({
+          where: { id: flightId },
+          data: { departureTime: i % 2 === 0 ? b : a },
+        });
+      }
+      expect(await prisma.travTrackSharePastFlight.count({ where: { snapshotId: id } })).toBe(2);
+    });
+
+    it("days and profile zones toggled back and forth are each recorded once", async () => {
+      await prisma.trip.update({ where: { id: tripId }, data: { startZone: null, endZone: null } });
+      await walk(126.95, 127.06, Date.parse("2026-10-12T03:00:00Z"));
+      expect((await share()).status).toBe(200);
+      const id = await snapshotId();
+      for (let i = 0; i < 6; i++) {
+        await setProfileZone(i % 2 === 0 ? "Asia/Tokyo" : null);
+        await prisma.trip.update({
+          where: { id: tripId },
+          data: { endDay: new Date(i % 2 === 0 ? "2026-10-13" : "2026-10-14") },
+        });
+      }
+      // Two zones × two spans at most, whatever the number of writes.
+      expect(
+        await prisma.travTrackSharePastSpan.count({ where: { snapshotId: id } })
+      ).toBeLessThanOrEqual(4);
+      expect((await recipientRead()).length).toBeGreaterThan(0);
+    });
+  });
 });

@@ -43,6 +43,9 @@ import { privacyCutBy, type LonLat } from "./privacyCut";
  * A span without a zone of its own carries the profile zone it was read in, and
  * a profile-zone change records the trip's span in the zone it leaves, so a
  * zone changed and changed back does not either.
+ * Each restriction is recorded once (a key over the values that decide it), and
+ * a flight only when something that places its recorder window changed, so a
+ * read replays distinct restrictions, not writes.
  * Only the owner's own share clears them (`shareSnapshot.ts`).
  */
 

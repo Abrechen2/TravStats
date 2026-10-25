@@ -5851,10 +5851,15 @@ model TravTrackSharePastSpan {
   /// zone, never in today's — and a profile-zone change records the trip's
   /// span in the zone it leaves (Codex review, third round).
   profileZone String?   @map("profile_zone")
+  /// What makes this restriction what it is (an md5 of the values that
+  /// decide it, set by the trigger): one row per distinct restriction, a
+  /// repeat is `ON CONFLICT DO NOTHING`. Rows from before it carry their id.
+  dedupeKey   String    @map("dedupe_key")
   capturedAt  DateTime  @default(now()) @map("captured_at")
 
   snapshot TravTrackShareSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
 
+  @@unique([snapshotId, dedupeKey])
   @@index([snapshotId])
   @@map("travtrack_share_past_spans")
 }
@@ -5882,10 +5887,15 @@ model TravTrackSharePastFlight {
   depIcao              String?   @map("dep_icao")
   arrIata              String?   @map("arr_iata")
   arrIcao              String?   @map("arr_icao")
+  /// What makes this restriction what it is (an md5 of the values that
+  /// decide it, set by the trigger): one row per distinct restriction, a
+  /// repeat is `ON CONFLICT DO NOTHING`. Rows from before it carry their id.
+  dedupeKey            String    @map("dedupe_key")
   capturedAt           DateTime  @default(now()) @map("captured_at")
 
   snapshot TravTrackShareSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
 
+  @@unique([snapshotId, dedupeKey])
   @@index([snapshotId])
   @@map("travtrack_share_past_flights")
 }
@@ -5895,10 +5905,15 @@ model TravTrackSharePastHome {
   id         String   @id @default(uuid())
   snapshotId String   @map("snapshot_id")
   homePlace  Json     @map("home_place")
+  /// What makes this restriction what it is (an md5 of the values that
+  /// decide it, set by the trigger): one row per distinct restriction, a
+  /// repeat is `ON CONFLICT DO NOTHING`. Rows from before it carry their id.
+  dedupeKey  String   @map("dedupe_key")
   capturedAt DateTime @default(now()) @map("captured_at")
 
   snapshot TravTrackShareSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
 
+  @@unique([snapshotId, dedupeKey])
   @@index([snapshotId])
   @@map("travtrack_share_past_homes")
 }
