@@ -11,5 +11,6 @@ export type LocationEvidenceApiErrorCode =
   | "INGEST_TOKEN_INVALID" // unknown, revoked or other-kind OwnTracks/Overland token (401)
   | "TRAVTRACK_IMPORT_NO_TIMES" // the imported file holds no point with a time
   | "TRAVTRACK_IMPORT_UNREADABLE" // the imported file could not be read
+  | "TRAVTRACK_IMPORT_TOO_MANY_POINTS" // the imported file holds more fixes than one import takes
   | "TRAVTRACK_IMPORT_RUNNING" // an import of this account is running already (409)
   | "TRAVTRACK_IMPORT_NOT_FOUND"; // no such import of this account (404)

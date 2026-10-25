@@ -3,6 +3,7 @@ import { AppError } from "../../../middleware/errorHandler";
 import { ingestTravTrackPoints } from "../ingest";
 import { deleteTravTrackImport, runGpxImport, startGpxImport } from "../imports/fileImport";
 import { displayFileName, mapGpx, readGpxFile } from "../imports/mapGpx";
+import { GPX_IMPORT_MAX_POINTS } from "../imports/gpxWorker";
 import { settleAllJobs } from "../../jobs/jobRegistry";
 import { makeUser, pt, wipeTravTrack } from "./fixtures";
 import { BILLION_LAUGHS, gpxFile, minuteFixes, XXE } from "./gpxFixtures";
@@ -16,6 +17,14 @@ import { BILLION_LAUGHS, gpxFile, minuteFixes, XXE } from "./gpxFixtures";
  */
 
 const PREFIX = "travtrack-gpx-";
+
+/** `count` fixes a second apart, inside a small square: a long recording. */
+const manyFixes = (count: number) =>
+  Array.from({ length: count }, (_, i) => ({
+    t: new Date(Date.parse("2026-10-12T01:00:00Z") + i * 1000).toISOString(),
+    lat: 37.5 + (i % 500) * 0.0001,
+    lon: 127 + Math.floor(i / 500) * 0.0001,
+  }));
 
 const codeOf = async (p: Promise<unknown>) => {
   try {
@@ -61,8 +70,8 @@ describe("TravTrack — GPX import", () => {
   });
 
   describe("reading the file", () => {
-    it("maps every fix with a time, names it by segment and index, and counts the rest", () => {
-      const track = readGpxFile(
+    it("maps every fix with a time, names it by segment and index, and counts the rest", async () => {
+      const track = await readGpxFile(
         gpxFile([
           [
             { t: "2026-10-12T01:00:00Z", lat: 37.5, lon: 127.0, ele: 42 },
@@ -108,34 +117,84 @@ describe("TravTrack — GPX import", () => {
       expect(mapped.untilMs).toBe(Date.parse("2026-10-12T02:01:00Z"));
     });
 
-    it("refuses a document type declaration: no entity is ever expanded or fetched", () => {
+    it("refuses a document type declaration: no entity is ever expanded or fetched", async () => {
       for (const file of [BILLION_LAUGHS, XXE]) {
-        expect(() => readGpxFile(file)).toThrow(
+        await expect(readGpxFile(file)).rejects.toEqual(
           expect.objectContaining({ code: "TRAVTRACK_IMPORT_UNREADABLE" })
         );
       }
     });
 
-    it("reads a file that starts with a byte-order mark", () => {
+    it("reads a file that starts with a byte-order mark", async () => {
       const file = Buffer.concat([
         Buffer.from([0xef, 0xbb, 0xbf]),
         gpxFile([minuteFixes("2026-10-12T01:00:00Z", 2)]),
       ]);
-      expect(mapGpx(readGpxFile(file)).points).toHaveLength(2);
+      expect(mapGpx(await readGpxFile(file)).points).toHaveLength(2);
     });
 
-    it("refuses what is not GPX as unreadable", () => {
+    it("refuses what is not GPX as unreadable", async () => {
       for (const file of [
         Buffer.from("not xml at all"),
         Buffer.from("<gpx><trk><trkseg><trkpt lat='1' lon='1'></trkseg></gpx>"),
         Buffer.from('<?xml version="1.0"?><kml></kml>'),
         Buffer.alloc(0),
       ]) {
-        expect(() => readGpxFile(file)).toThrow(
+        await expect(readGpxFile(file)).rejects.toEqual(
           expect.objectContaining({ code: "TRAVTRACK_IMPORT_UNREADABLE" })
         );
       }
     });
+
+    it("counts a fix whose position cannot be read as invalid", async () => {
+      const file = Buffer.from(
+        `<?xml version="1.0"?><gpx version="1.1"><trk><trkseg>` +
+          `<trkpt lat="95" lon="1"><time>2026-10-12T01:00:00Z</time></trkpt>` +
+          `<trkpt lat="1" lon="1"><time>2026-10-12T01:01:00Z</time></trkpt>` +
+          `</trkseg></trk></gpx>`
+      );
+      const mapped = mapGpx(await readGpxFile(file));
+      expect(mapped).toMatchObject({ read: 2, invalid: 1 });
+      expect(mapped.points).toHaveLength(1);
+    });
+
+    it("refuses a file over the point cap with TRAVTRACK_IMPORT_TOO_MANY_POINTS", async () => {
+      expect(GPX_IMPORT_MAX_POINTS).toBe(200_000);
+      const file = gpxFile([minuteFixes("2026-10-12T01:00:00Z", 6)]);
+      await expect(readGpxFile(file, { maxPoints: 5 })).rejects.toEqual(
+        expect.objectContaining({ code: "TRAVTRACK_IMPORT_TOO_MANY_POINTS" })
+      );
+      expect((await readGpxFile(file, { maxPoints: 6 })).lon).toHaveLength(6);
+    });
+
+    it("a parse that runs out of its heap is unreadable, and the server goes on", async () => {
+      const file = gpxFile([manyFixes(100_000)]);
+      await expect(readGpxFile(file, { heapMb: 16 })).rejects.toEqual(
+        expect.objectContaining({ code: "TRAVTRACK_IMPORT_UNREADABLE" })
+      );
+      expect(
+        (await readGpxFile(gpxFile([minuteFixes("2026-10-12T01:00:00Z", 2)]))).lon
+      ).toHaveLength(2);
+    });
+
+    it("the main event loop keeps ticking while a large file is read", async () => {
+      const file = gpxFile([manyFixes(150_000)]);
+      let last = Date.now();
+      let maxGap = 0;
+      const tick = setInterval(() => {
+        const now = Date.now();
+        maxGap = Math.max(maxGap, now - last);
+        last = now;
+      }, 5);
+      try {
+        const fixes = await readGpxFile(file);
+        expect(fixes.lon).toHaveLength(150_000);
+      } finally {
+        clearInterval(tick);
+      }
+      // The parse itself takes well over a second; the loop never waits that long.
+      expect(maxGap).toBeLessThan(250);
+    }, 60_000);
 
     it("a file name is a label: no path, no control characters, at most 200 characters", () => {
       expect(displayFileName("../../etc/passwd")).toBe("passwd");

@@ -75,6 +75,8 @@ export function importErrorKey(err: unknown): string {
       return "track:imports.errors.noTimes";
     case "TRAVTRACK_IMPORT_UNREADABLE":
       return "track:imports.errors.unreadable";
+    case "TRAVTRACK_IMPORT_TOO_MANY_POINTS":
+      return "track:imports.errors.tooManyPoints";
     case "TRAVTRACK_IMPORT_RUNNING":
       return "track:imports.errors.running";
     case "TRACK_FILE_TOO_LARGE":
@@ -97,6 +99,8 @@ export function storedImportErrorKey(code: string | undefined): string {
       return "track:imports.errors.noTimes";
     case "TRAVTRACK_IMPORT_UNREADABLE":
       return "track:imports.errors.unreadable";
+    case "TRAVTRACK_IMPORT_TOO_MANY_POINTS":
+      return "track:imports.errors.tooManyPoints";
     default:
       return "track:errors.generic";
   }

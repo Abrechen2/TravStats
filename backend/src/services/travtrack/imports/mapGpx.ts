@@ -1,14 +1,14 @@
 import { AppError } from "../../../middleware/errorHandler";
-import { parseGpx, type ParsedTrack } from "../../tour/tracks/parseGpx";
+import { parseGpxInWorker, type GpxFixes, type GpxWorkerOptions } from "./gpxWorker";
 
 /**
  * A GPX file as TravTrack points (TravTrack plan E8). The file is untrusted
  * input: it is read from memory only (never a path, never the disk), it is
- * capped in size before it gets here (`GPX_IMPORT_MAX_BYTES`), and a document
- * type declaration is refused before any parser sees it — GPX has no use for
- * one, and a DTD is the door for entity expansion (billion laughs) and
- * external entities (XXE). Parsing itself is the tour-track parser, which
- * validates first, so a malformed file is unreadable rather than half read.
+ * capped in size before it gets here (`GPX_IMPORT_MAX_BYTES`) and in fixes
+ * while it is read, and it is read in a worker thread with its own heap
+ * limit (`gpxWorker.ts`), which also refuses any document type declaration
+ * before a parser sees the text — GPX has no use for one, and a DTD is the
+ * door for entity expansion (billion laughs) and external entities (XXE).
  */
 
 /** The largest file the import takes. */
@@ -17,31 +17,29 @@ export const GPX_IMPORT_MAX_BYTES = 25 * 1024 * 1024;
 /** The longest file name kept, as the column allows. */
 const FILE_NAME_MAX = 200;
 
-/** `<!DOCTYPE` or `<!ENTITY`, with any whitespace and case. */
-const DTD = /<!\s*(doctype|entity)/i;
-
 const unreadable = () =>
   new AppError("The file could not be read as GPX", 422, "TRAVTRACK_IMPORT_UNREADABLE");
 
-/** The parsed track, or `TRAVTRACK_IMPORT_UNREADABLE`. */
-export function readGpxFile(buffer: Buffer): ParsedTrack {
+/**
+ * The file's fixes, or `TRAVTRACK_IMPORT_UNREADABLE` /
+ * `TRAVTRACK_IMPORT_TOO_MANY_POINTS`. Never blocks the main thread.
+ */
+export async function readGpxFile(buffer: Buffer, opts: GpxWorkerOptions = {}): Promise<GpxFixes> {
   if (buffer.length === 0 || buffer.length > GPX_IMPORT_MAX_BYTES) throw unreadable();
-  const xml = buffer.toString("utf8").replace(/^\uFEFF/, "");
-  if (DTD.test(xml)) throw unreadable();
-  const track = parseGpx(xml);
-  if (!track) throw unreadable();
-  return track;
+  return parseGpxInWorker(buffer, opts);
 }
 
 /** A receiver's elevation within what the point store takes; anything else is unknown. */
-const altitudeOf = (ele: number | null | undefined) =>
-  ele === null || ele === undefined || ele < -1_000 || ele > 30_000 ? null : ele;
+const altitudeOf = (ele: number) =>
+  !Number.isFinite(ele) || ele < -1_000 || ele > 30_000 ? null : ele;
 
 export type MappedGpx = {
   /** Points as the ingest takes them; only fixes with a time. */
   points: Record<string, unknown>[];
-  /** Fixes with a position the file held. */
+  /** Fixes the file held, readable or not. */
   read: number;
+  /** Of those, without a readable position. */
+  invalid: number;
   /** Of those, without a time: not stored, a position without an instant is no history. */
   withoutTime: number;
   fromMs: number | null;
@@ -53,36 +51,41 @@ export type MappedGpx = {
  * origin's own id, so the same file imported again under the same import is a
  * duplicate by reference, and under another import by position.
  */
-export function mapGpx(track: ParsedTrack): MappedGpx {
-  const times = track.times ?? [];
-  const elevations = track.elevations ?? [];
-  const starts = track.segmentStarts.length > 0 ? track.segmentStarts : [0];
+export function mapGpx(fixes: GpxFixes): MappedGpx {
+  const count = fixes.lon.length;
+  const starts = fixes.segmentStarts.length > 0 ? fixes.segmentStarts : [0];
   const points: Record<string, unknown>[] = [];
   let withoutTime = 0;
   let fromMs: number | null = null;
   let untilMs: number | null = null;
   for (let segment = 0; segment < starts.length; segment++) {
-    const end = segment + 1 < starts.length ? starts[segment + 1] : track.points.length;
+    const end = segment + 1 < starts.length ? starts[segment + 1] : count;
     for (let i = starts[segment]; i < end; i++) {
-      const tMs = times[i];
-      if (tMs === null || tMs === undefined) {
+      const tMs = fixes.time[i];
+      if (!Number.isFinite(tMs)) {
         withoutTime += 1;
         continue;
       }
-      const [lon, lat] = track.points[i];
       points.push({
         id: `${segment}:${i - starts[segment]}`,
         t: new Date(tMs).toISOString(),
-        lat,
-        lon,
-        altitude: altitudeOf(elevations[i]),
+        lat: fixes.lat[i],
+        lon: fixes.lon[i],
+        altitude: altitudeOf(fixes.ele[i]),
         purpose: "everyday",
       });
       if (fromMs === null || tMs < fromMs) fromMs = tMs;
       if (untilMs === null || tMs > untilMs) untilMs = tMs;
     }
   }
-  return { points, read: track.points.length, withoutTime, fromMs, untilMs };
+  return {
+    points,
+    read: count + fixes.invalid,
+    invalid: fixes.invalid,
+    withoutTime,
+    fromMs,
+    untilMs,
+  };
 }
 
 /**

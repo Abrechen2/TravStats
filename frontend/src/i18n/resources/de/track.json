@@ -147,12 +147,13 @@
     "deleted_other": "{{count}} Positionen gelöscht.",
     "errors": {
       "noTimes": "Die Datei enthält keine Zeitangaben – ohne Zeit ist eine Position kein Verlauf. Exportiere sie als Aufzeichnung (Track), nicht als Route.",
-      "unreadable": "Die Datei ist keine lesbare GPX-Datei.",
+      "unreadable": "Die Datei ist keine lesbare GPX-Datei, oder sie ist zu umfangreich, um sie zu lesen.",
       "running": "Es läuft schon ein Import. Warte, bis er fertig ist.",
       "tooLarge": "Die Datei ist zu groß – höchstens 25 MB.",
       "notFound": "Diesen Import gibt es nicht mehr.",
       "rateLimited": "Zu viele Importe in kurzer Zeit. Versuche es in einer Viertelstunde noch einmal.",
-      "lost": "Ob der Import fertig wurde, ist nicht bekannt – der Server hat neu gestartet. Sieh in der Liste nach."
+      "lost": "Ob der Import fertig wurde, ist nicht bekannt – der Server hat neu gestartet. Sieh in der Liste nach.",
+      "tooManyPoints": "Die Datei enthält mehr als 200.000 Positionen – mehr nimmt ein Import nicht. Teile sie auf, etwa nach Monaten."
     }
   }
 }

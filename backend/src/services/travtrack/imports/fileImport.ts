@@ -9,6 +9,7 @@ import type { DropReason } from "../classify";
 import { onPointsRemoved } from "../deleteRange";
 import { ingestPoints, type IngestResult } from "../ingest";
 import { takeTravTrackLock } from "../lock";
+import type { GpxWorkerOptions } from "./gpxWorker";
 import { mapGpx, readGpxFile, displayFileName } from "./mapGpx";
 
 /**
@@ -93,6 +94,8 @@ async function finish(
 
 export type RunOptions = {
   batchSize?: number;
+  /** The reader's limits (tests lower them). */
+  reader?: GpxWorkerOptions;
   /** Test seam: after each committed batch, with the number of batches done. */
   afterBatch?: (done: number) => Promise<void>;
 };
@@ -119,8 +122,9 @@ export async function runGpxImport(
   try {
     const buffer = file.buffer ?? Buffer.alloc(0);
     file.buffer = null;
-    const mapped = mapGpx(readGpxFile(buffer));
+    const mapped = mapGpx(await readGpxFile(buffer, opts.reader));
     report.read = mapped.read;
+    report.dropped.invalid = mapped.invalid;
     report.withoutTime = mapped.withoutTime;
     if (mapped.points.length === 0) {
       throw new AppError("The file holds no point with a time", 422, "TRAVTRACK_IMPORT_NO_TIMES");

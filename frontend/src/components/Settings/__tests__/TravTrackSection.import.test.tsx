@@ -40,7 +40,11 @@ vi.mock("../../../hooks/useTodayZone", () => ({
 
 import TravTrackSection from "../TravTrackSection";
 import { travTrackApi } from "../../../lib/api/travtrack";
-import { travTrackImportsApi, type TravTrackImport } from "../../../lib/api/travtrackImports";
+import {
+  storedImportErrorKey,
+  travTrackImportsApi,
+  type TravTrackImport,
+} from "../../../lib/api/travtrackImports";
 import { api } from "../../../lib/api/client";
 import { JobFailedError } from "../../../lib/api/jobs";
 
@@ -151,6 +155,20 @@ describe("TravTrackSection — GPX import", () => {
     show();
     await userEvent.upload(await screen.findByLabelText("track:imports.choose"), gpx());
     expect(await screen.findByRole("alert")).toHaveTextContent("track:imports.errors.noTimes");
+  });
+
+  it("a file over the point cap says so, live and in the list", async () => {
+    vi.spyOn(travTrackImportsApi, "importGpx").mockRejectedValue(
+      new JobFailedError("TRAVTRACK_IMPORT_TOO_MANY_POINTS", 422)
+    );
+    show();
+    await userEvent.upload(await screen.findByLabelText("track:imports.choose"), gpx());
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "track:imports.errors.tooManyPoints"
+    );
+    expect(storedImportErrorKey("TRAVTRACK_IMPORT_TOO_MANY_POINTS")).toBe(
+      "track:imports.errors.tooManyPoints"
+    );
   });
 
   it("an import already running says so", async () => {

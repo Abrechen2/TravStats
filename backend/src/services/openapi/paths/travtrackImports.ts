@@ -27,7 +27,8 @@ const report = z
       .string()
       .optional()
       .describe(
-        "Why the import failed: TRAVTRACK_IMPORT_NO_TIMES, TRAVTRACK_IMPORT_UNREADABLE or JOB_FAILED"
+        "Why the import failed: TRAVTRACK_IMPORT_NO_TIMES, TRAVTRACK_IMPORT_UNREADABLE, " +
+          "TRAVTRACK_IMPORT_TOO_MANY_POINTS or JOB_FAILED"
       ),
   })
   .nullable();
@@ -59,7 +60,9 @@ registry.registerPath({
   description:
     "multipart/form-data with one `file` (GPX, at most 25 MB). Answers at once with a job " +
     "(`GET /jobs/{id}`); the job fails with TRAVTRACK_IMPORT_NO_TIMES (no fix with a time) or " +
-    "TRAVTRACK_IMPORT_UNREADABLE (not GPX, or a file with a document type declaration). " +
+    "TRAVTRACK_IMPORT_UNREADABLE (not GPX, a file with a document type declaration, or one " +
+    "too large to read in the reader's memory) or TRAVTRACK_IMPORT_TOO_MANY_POINTS (over " +
+    "200,000 fixes). " +
     "An import never starts a stay, country or journey scan.",
   tags: ["TravTrack"],
   request: {

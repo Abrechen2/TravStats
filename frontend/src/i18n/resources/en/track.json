@@ -147,12 +147,13 @@
     "deleted_other": "{{count}} positions deleted.",
     "errors": {
       "noTimes": "The file holds no times – without a time a position is no history. Export it as a recording (track), not as a route.",
-      "unreadable": "The file is not a readable GPX file.",
+      "unreadable": "The file is not a readable GPX file, or too large to read.",
       "running": "An import is running already. Wait until it has finished.",
       "tooLarge": "The file is too large – 25 MB at most.",
       "notFound": "This import no longer exists.",
       "rateLimited": "Too many imports in a short time. Try again in a quarter of an hour.",
-      "lost": "Whether the import finished is not known – the server restarted. Check the list."
+      "lost": "Whether the import finished is not known – the server restarted. Check the list.",
+      "tooManyPoints": "The file holds more than 200,000 positions – more than one import takes. Split it, say by month."
     }
   }
 }
