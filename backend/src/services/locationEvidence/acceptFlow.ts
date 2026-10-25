@@ -7,7 +7,8 @@
  *      stored entry is answered and nothing is re-checked (an accepted answer
  *      survives a later deletion, rule 6). A pending row, or one whose claim is
  *      older than `CLAIM_STALE_MS` (a crash between the steps), is claimed with
- *      a fresh token. A fresh claim of someone else answers 409
+ *      a fresh token — and returned as claimed, in the same statement, so the
+ *      re-check and the entry use the window the row holds now. A fresh claim of someone else answers 409
  *      `SUGGESTION_ACCEPT_IN_PROGRESS` — two clicks never write twice —
  *      anything else 409 `SUGGESTION_ALREADY_RESOLVED`. TravTrack switched off
  *      answers 403 `TRAVTRACK_DISABLED`, an account no longer on provider
@@ -160,21 +161,74 @@ async function publish(
   });
 }
 
+type ClaimedRow = {
+  id: string;
+  user_id: string;
+  kind: string;
+  provider: string;
+  provider_rev: number;
+  algorithm: number;
+  window_from: Date;
+  window_until: Date;
+  status: string;
+  explanation: unknown;
+  evidence: unknown;
+  accepted_entry_kind: string | null;
+  accepted_entry_id: string | null;
+};
+
+/**
+ * Claims the row and answers it AS CLAIMED, in one statement: a run that grew
+ * between the first read and the claim is re-checked and applied as it now
+ * stands. A claimed row no longer grows (`countrySuggestions` updates pending
+ * rows only), so this is the window the answer is about.
+ */
+async function claim(userId: string, id: string, token: string): Promise<StoredSuggestion | null> {
+  const staleBefore = new Date(Date.now() - CLAIM_STALE_MS);
+  const [row] = await prisma.$queryRaw<ClaimedRow[]>`
+    UPDATE location_suggestions
+       SET status = 'accepting', claim_token = ${token}, claimed_at = now()
+     WHERE id = ${id} AND user_id = ${userId}
+       AND (status = 'pending' OR (status = 'accepting' AND claimed_at < ${staleBefore}))
+    RETURNING id, user_id, kind, provider, provider_rev, algorithm, window_from, window_until,
+              status, explanation, evidence, accepted_entry_kind, accepted_entry_id`;
+  if (!row) return null;
+  return {
+    id: row.id,
+    userId: row.user_id,
+    kind: row.kind,
+    provider: row.provider,
+    providerRev: row.provider_rev,
+    algorithm: row.algorithm,
+    windowFrom: row.window_from,
+    windowUntil: row.window_until,
+    status: row.status,
+    explanation: row.explanation,
+    evidence: row.evidence,
+    acceptedEntryKind: row.accepted_entry_kind,
+    acceptedEntryId: row.accepted_entry_id,
+  };
+}
+
+export type AcceptHooks = {
+  /** Test seam: runs after the first read, before the claim. */
+  afterLoad?: () => Promise<void>;
+};
+
 export async function acceptFlow(
   userId: string,
   id: string,
-  kind: AcceptKind
+  kind: AcceptKind,
+  hooks: AcceptHooks = {}
 ): Promise<StoredSuggestion> {
-  const row = await load(userId, id);
-  if (row.status === "accepted") return row;
-  if (row.provider === "travtrack") await assertTravTrackDerivationAllowed(userId);
+  const loaded = await load(userId, id);
+  if (loaded.status === "accepted") return loaded;
+  if (loaded.provider === "travtrack") await assertTravTrackDerivationAllowed(userId);
+  await hooks.afterLoad?.();
 
   const token = randomUUID();
-  const { count } = await prisma.locationSuggestion.updateMany({
-    where: { id, userId, ...claimable(Date.now()) },
-    data: { status: "accepting", claimToken: token, claimedAt: new Date() },
-  });
-  if (count === 0) return refusal(userId, id);
+  const row = await claim(userId, id, token);
+  if (!row) return refusal(userId, id);
 
   try {
     for (let attempt = 0; attempt < 2; attempt += 1) {

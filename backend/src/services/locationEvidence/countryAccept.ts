@@ -6,7 +6,7 @@
  * and names it.
  */
 import { AppError } from "../../middleware/errorHandler";
-import { acceptFlow, type AcceptKind, type StoredSuggestion } from "./acceptFlow";
+import { acceptFlow, type AcceptHooks, type AcceptKind, type StoredSuggestion } from "./acceptFlow";
 import { countryRunHolds } from "./countrySuggestions";
 
 export type CountryVerdict = "visited" | "ground";
@@ -44,7 +44,8 @@ const countryKind = (verdict: CountryVerdict): AcceptKind => ({
 export async function acceptCountrySuggestion(
   userId: string,
   id: string,
-  verdict: CountryVerdict
+  verdict: CountryVerdict,
+  hooks: AcceptHooks = {}
 ): Promise<StoredSuggestion> {
-  return acceptFlow(userId, id, countryKind(verdict));
+  return acceptFlow(userId, id, countryKind(verdict), hooks);
 }
