@@ -159,6 +159,10 @@ partial scope would lie.
   `include` supports it; until then the 400 stands, per section.
 - Each response carries `scope: { year: number | null }`, so the app can
   check that the answer is the one it asked for.
+- **Feature check:** until an endpoint ships its `year`, it ignores the
+  unknown parameter (Zod strips it) and answers all-time with no `scope`. The
+  app therefore trusts `scope.year` in the response, never the status code
+  alone; a missing `scope` means "not scoped yet".
 - On `yearUnsupported` the app greys out the year switch on that screen and
   says so; it never falls back to all-time silently.
 
