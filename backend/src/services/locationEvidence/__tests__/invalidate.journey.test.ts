@@ -29,7 +29,7 @@ import {
   storeAll,
   storeJourney,
 } from "../journeys/__tests__/journeyFixtures";
-import { point } from "../journeys/__tests__/journeyPoints";
+import { point, stopDriveStop } from "../journeys/__tests__/journeyPoints";
 
 const PREFIX = "evidence-invalidate-journey-";
 const DAY = "2026-10-20";
@@ -37,6 +37,8 @@ const T0 = morning(DAY);
 /** The drive: 90 min at 100 km/h east along 50° N from 8° E, after a 30-min stop. */
 const DRIVE_FROM = T0 + 30 * MIN;
 const DRIVE_UNTIL = DRIVE_FROM + 90 * MIN;
+/** A drive origin no generated id or timestamp contains by chance. */
+const ODD = { lat: 47.123456, lon: 11.654321 };
 const kmEast = (km: number) => ({ lat: 50, lon: 8 + km * LON_PER_KM_AT_50 });
 
 const switches = travTrackSwitches();
@@ -183,8 +185,19 @@ describe("range, digest and day", () => {
 
 describe("an accepted journey", () => {
   it("keeps its answer and link, loses ends, line and digests; a repeat still answers it; the day is not asked again", async () => {
+    // Its own drive, at coordinates no id or timestamp can contain by chance
+    // (a run along 50° N once matched "50" inside a random UUID).
+    await resetJourneyUser(userId);
+    await storeAll(userId, stopDriveStop(T0, 90, 100, ODD.lat, ODD.lon));
+    await suggestJourneys(userId, { nowMs: NOW });
     const q = (await question())!;
     const run = parseJourneyEvidence(q.evidence)!.runs[0];
+    // The run starts at its first moving fix, east of ODD along its latitude.
+    expect(run.start.lat).toBe(ODD.lat);
+    const coordinates = [run.start.lat, run.start.lon, run.end.lat, run.end.lon].map((c) =>
+      JSON.stringify(c)
+    );
+    for (const c of coordinates) expect(JSON.stringify(q.evidence)).toContain(c);
     const rail = await prisma.railJourney.create({ data: ride(userId, run.fromMs, run.untilMs) });
     const body = { runIndex: 0, entryKind: "rail", entryId: rail.id };
     const accept = () =>
@@ -205,7 +218,7 @@ describe("an accepted journey", () => {
       acceptedEntryId: rail.id,
     });
     const text = JSON.stringify(kept.evidence);
-    for (const gone of ["line", "start", "end", "pointDigests", `${run.end.lat}`]) {
+    for (const gone of ["line", "start", "end", "pointDigests", ...coordinates]) {
       expect(text).not.toContain(gone);
     }
     expect(kept.evidence).toMatchObject({
