@@ -26,6 +26,13 @@
  * read then masks like an unsplit one — given the device's speed limit is the
  * 1000 km/h floor, i.e. its median speed below 333 km/h, which a ground history
  * always is (the median is the one figure judged per read).
+ *
+ * The read looks ahead for a run's end, but only so far (`LOOKAHEAD_MAX` in
+ * `derivationRead.ts`): runs of many devices can overlap in a chain that
+ * keeps some run open at every point. At the cap the read cuts at its end
+ * (`stableCut` with `atEnd`) and says so (`unresolvedRun`) — the next read may
+ * then judge that boundary differently from an unsplit read, and nothing
+ * claims it does not.
  */
 import { haversineKm } from "../../shared/geo/haversine";
 import type { LocationObservation } from "../locationProvider/types";
@@ -184,10 +191,13 @@ export type StableCut = {
  * Where a read that has to stop may stop with final verdicts (see the header).
  * The cut may land before anything new — then a run is still open, and the
  * caller reads on until it resolves rather than hand it on unresolved.
+ * `atEnd` cuts at the end regardless, with each device's context: the
+ * caller's last resort once its lookahead is spent.
  */
 export function stableCut(
   points: readonly LocationObservation[],
-  opts: AnomalyOptions = {}
+  opts: AnomalyOptions = {},
+  { atEnd = false }: { atEnd?: boolean } = {}
 ): StableCut {
   const windows = opts.flightWindows ?? [];
   const devices = byDevice(points).map((indices) => {
@@ -206,7 +216,7 @@ export function stableCut(
     };
   });
   let until = points.length;
-  for (let moved = true; moved;) {
+  for (let moved = !atEnd; moved;) {
     moved = false;
     for (const { spans } of devices) {
       for (const [start, end] of spans) {

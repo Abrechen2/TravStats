@@ -8,7 +8,8 @@ import {
   storePoint,
   wipeTravTrack,
 } from "../../travtrack/__tests__/fixtures";
-import { readTravTrackDerivation } from "../derivationRead";
+import * as anomaly from "../anomaly";
+import { LOOKAHEAD_PAGE, readTravTrackDerivation } from "../derivationRead";
 import { bumpHistoryGeneration, historyGeneration } from "../generation";
 import { observationKey, pointDigest } from "../key";
 
@@ -243,6 +244,59 @@ describe("readTravTrackDerivation", () => {
         maxPoints,
         seen: whole,
       });
+    }
+  });
+
+  it("runs chained across many phones end the lookahead at its cap, and say so", async () => {
+    // Twelve phones; each teleports out and back, and the next one leaves
+    // before the one before it has returned — some run is open at every point.
+    const PHONES = 12;
+    const T = BASE + 10 * 60_000;
+    const minute = (m: number) => T + Math.round(m * 60_000);
+    for (let i = 0; i < PHONES; i += 1) {
+      const device = `chain-${i}`;
+      const home = { lat: SEOUL.lat + i * 0.001, lon: SEOUL.lon };
+      for (const m of [-0.9, -0.8, -0.7])
+        await storePoint(userId, { t: minute(2 * i + m), ...home, device });
+      await storePoint(userId, { t: minute(2 * i), ...BUSAN, device });
+      for (const m of [3, 3.1, 3.2, 3.3])
+        await storePoint(userId, { t: minute(2 * i + m), ...home, device });
+    }
+    const whole = await readTravTrackDerivation(userId, WINDOW);
+    expect(whole.points).toHaveLength(PHONES * 7);
+
+    const maxPoints = 5;
+    const lookaheadMax = 20;
+    const pageSize = 2;
+    const spy = jest.spyOn(anomaly, "stableCut");
+    try {
+      let cursor: string | undefined;
+      let unresolved = 0;
+      let reads = 0;
+      for (; reads < 100; reads += 1) {
+        spy.mockClear();
+        const read = await readTravTrackDerivation(userId, WINDOW, {
+          pageSize,
+          maxPoints,
+          lookaheadMax,
+          cursor,
+        });
+        // Bounded work: one judgement per lookahead page, plus the cut at the end.
+        expect(spy.mock.calls.length).toBeLessThanOrEqual(
+          2 + Math.ceil(lookaheadMax / Math.min(pageSize, LOOKAHEAD_PAGE))
+        );
+        expect(read.points.length).toBeLessThanOrEqual(maxPoints + lookaheadMax);
+        if (read.unresolvedRun) {
+          unresolved += 1;
+          expect(read.coverage).toBe("truncated");
+        }
+        if (!read.next) break;
+        cursor = read.next;
+      }
+      expect(reads).toBeLessThan(100);
+      expect(unresolved).toBeGreaterThan(0);
+    } finally {
+      spy.mockRestore();
     }
   });
 

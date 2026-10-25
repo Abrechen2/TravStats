@@ -30,14 +30,7 @@ import { prisma } from "../../db";
 import { flightRecorderWindows, FLIGHT_WINDOW_SELECT } from "../tripRecording/bounds";
 import { TRAVTRACK_PAGE_CAP, travtrackProvider } from "../locationProvider/travtrackProvider";
 import type { Coverage, LocationObservation, ReadWindow } from "../locationProvider/types";
-import {
-  anomalyMask,
-  isBadFix,
-  MAX_MASKED_RUN,
-  stableCut,
-  type FlightWindow,
-  type StableCut,
-} from "./anomaly";
+import { anomalyMask, isBadFix, stableCut, type FlightWindow, type StableCut } from "./anomaly";
 import {
   formatDerivationCursor,
   isContext,
@@ -49,6 +42,11 @@ import { observationKey, pointDigest } from "./key";
 
 /** The stay window's cap: more than this in one derivation read is truncated, and said to be. */
 export const DERIVATION_MAX_POINTS = 250_000;
+
+/** Past `maxPoints`, at most this many points are read looking for an open run's end. */
+export const LOOKAHEAD_MAX = 10_000;
+/** The lookahead's page: every page is one more judgement of the buffer, so not tiny ones. */
+export const LOOKAHEAD_PAGE = 1_000;
 
 export type DerivationPoint = LocationObservation & {
   /** The provider-neutral observation key (`observationKey`). Server-side only. */
@@ -67,6 +65,12 @@ export type DerivationRead = {
   /** The account's history generation before the first page was read. */
   generation: bigint;
   cancelled: boolean;
+  /**
+   * The lookahead ran out with a run still open, so the read cut at its end
+   * and handed that run on unresolved: the next read may judge the boundary
+   * differently from an unsplit read. Only ever true with `truncated`.
+   */
+  unresolvedRun: boolean;
 };
 
 export type DerivationReadOptions = {
@@ -76,6 +80,8 @@ export type DerivationReadOptions = {
   cursor?: string;
   /** Points per page; the provider's cap unless a test needs small pages. */
   pageSize?: number;
+  /** `LOOKAHEAD_MAX` unless a test needs a small one. */
+  lookaheadMax?: number;
 };
 
 /** The recorder windows of the account's flights that touch `window`, `[from, to]` inclusive. */
@@ -95,6 +101,7 @@ export async function readTravTrackDerivation(
 ): Promise<DerivationRead> {
   const maxPoints = opts.maxPoints ?? DERIVATION_MAX_POINTS;
   const pageSize = opts.pageSize ?? TRAVTRACK_PAGE_CAP;
+  const lookaheadMax = opts.lookaheadMax ?? LOOKAHEAD_MAX;
   const generation = await prisma.$transaction((tx) => historyGeneration(tx, userId));
 
   const start = parseDerivationCursor(opts.cursor);
@@ -113,16 +120,18 @@ export async function readTravTrackDerivation(
         next: opts.cursor ?? null,
         generation,
         cancelled: true,
+        unresolvedRun: false,
       };
     }
     first = false;
     const handedOn = raw.length - contextCount;
     // Up to `maxPoints` handed on (the previous read's context does not
-    // count); past it only to look ahead for the end of an open run.
+    // count); past it only to look ahead for the end of an open run, and
+    // never past `lookaheadMax`.
     const cap =
       handedOn < maxPoints
         ? Math.min(pageSize, maxPoints - handedOn)
-        : Math.min(pageSize, MAX_MASKED_RUN + 1);
+        : Math.min(pageSize, LOOKAHEAD_PAGE, maxPoints + lookaheadMax - handedOn);
     const page = await travtrackProvider(userId, cap).readPoints(window, cursor);
     for (const p of page.points) {
       raw.push(p);
@@ -130,14 +139,20 @@ export async function readTravTrackDerivation(
     }
     cursor = page.next ?? undefined;
     const read: RawRead = { raw, contextCount, resumeAfter: start.resumeAfter };
-    if (!cursor)
-      return finish(userId, judge(read, flightWindows, false), flightWindows, generation);
-    if (raw.length - contextCount >= maxPoints) {
-      const judgement = judge(read, flightWindows, true);
+    if (!cursor) {
+      return finish(userId, judge(read, flightWindows, "complete"), flightWindows, generation);
+    }
+    const handedOnNow = raw.length - contextCount;
+    if (handedOnNow >= maxPoints) {
+      const judgement = judge(read, flightWindows, "stable");
       // A cut that would hand on nothing sits in front of a run still open:
-      // read on until it resolves. Runs are bounded, so this ends.
+      // read on until it resolves — up to the lookahead's cap, then cut at
+      // the end and say the run went on unresolved.
       if (judgement.cut.until > judgement.fresh) {
         return finish(userId, judgement, flightWindows, generation);
+      }
+      if (handedOnNow >= maxPoints + lookaheadMax) {
+        return finish(userId, judge(read, flightWindows, "atEnd"), flightWindows, generation);
       }
     }
   }
@@ -159,8 +174,11 @@ type Judgement = {
   fresh: number;
   masked: boolean[];
   cut: StableCut;
-  truncated: boolean;
+  mode: CutMode;
 };
+
+/** `complete`: the window's end. `stable`: final verdicts. `atEnd`: the lookahead is spent. */
+type CutMode = "complete" | "stable" | "atEnd";
 
 /** Of the previous read's context, each device's last good fix — all the next judgement needs. */
 function contextFixes(raw: readonly LocationObservation[], count: number): number[] {
@@ -171,25 +189,27 @@ function contextFixes(raw: readonly LocationObservation[], count: number): numbe
   return [...last.values()].sort((a, b) => a - b);
 }
 
-function judge(read: RawRead, flightWindows: FlightWindow[], truncated: boolean): Judgement {
+function judge(read: RawRead, flightWindows: FlightWindow[], mode: CutMode): Judgement {
   const { raw, contextCount } = read;
   const judged = [...contextFixes(raw, contextCount), ...raw.map((_, i) => i).slice(contextCount)];
   const fresh = judged.length - (raw.length - contextCount);
   const observations = judged.map((i) => raw[i]);
   const masked = anomalyMask(observations, { flightWindows });
-  const cut = truncated
-    ? stableCut(observations, { flightWindows })
-    : { until: observations.length, contextFrom: observations.length };
-  return { read, judged, fresh, masked, cut, truncated };
+  const cut =
+    mode === "complete"
+      ? { until: observations.length, contextFrom: observations.length }
+      : stableCut(observations, { flightWindows }, { atEnd: mode === "atEnd" });
+  return { read, judged, fresh, masked, cut, mode };
 }
 
 function finish(
   userId: string,
-  { read, judged, fresh, masked, cut, truncated }: Judgement,
+  { read, judged, fresh, masked, cut, mode }: Judgement,
   flightWindows: FlightWindow[],
   generation: bigint
 ): DerivationRead {
   const { raw } = read;
+  const truncated = mode !== "complete";
   const points: DerivationPoint[] = [];
   for (let j = fresh; j < cut.until; j += 1) {
     if (masked[j]) continue;
@@ -216,5 +236,6 @@ function finish(
     next,
     generation,
     cancelled: false,
+    unresolvedRun: mode === "atEnd",
   };
 }
