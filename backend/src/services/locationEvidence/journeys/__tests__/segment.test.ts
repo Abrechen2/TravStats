@@ -118,4 +118,33 @@ describe("movementRuns", () => {
     expect(vertices[vertices.length - 1]).toEqual([run.end.lon, run.end.lat]);
     expect(run.pointCount).toBeGreaterThan(890);
   });
+
+  it("a line cut into 150 pieces is stored within the cap, and the call returns", () => {
+    // A fix every 20 s at 100 km/h, and a tiny zone on every other chord:
+    // 150 visible two-vertex pieces, more ends than the cap can ever hold.
+    const leg = Array.from({ length: 300 }, (_, i) =>
+      point(T0 + 30 * MIN + (i + 1) * 20_000, 50, 8 + (i + 1) * 0.0078)
+    );
+    const circles = leg
+      .slice(0, -1)
+      .flatMap((p, i) =>
+        i % 2 === 1 ? [{ lat: 50, lon: (p.lon + leg[i + 1].lon) / 2, radiusM: 100 }] : []
+      );
+    const last = leg[leg.length - 1];
+    const points = [
+      ...stop(T0, 30, 50, 8),
+      ...leg,
+      ...stop(last.atMs + 2 * MIN, 30, last.lat, last.lon),
+    ];
+    const started = Date.now();
+    const runs = movementRuns(points, opts(points, circles as never));
+    expect(Date.now() - started).toBeLessThan(5_000);
+    expect(runs).toHaveLength(1);
+    const vertices = runs[0].line.flat();
+    expect(vertices.length).toBeLessThanOrEqual(LINE_MAX_VERTICES);
+    expect(vertices.length).toBeGreaterThan(0);
+    for (const [lon, lat] of vertices) {
+      for (const c of circles) expect(distanceM({ lat, lon }, c)).toBeGreaterThan(c.radiusM);
+    }
+  });
 });

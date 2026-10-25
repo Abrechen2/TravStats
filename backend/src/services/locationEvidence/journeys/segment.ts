@@ -147,17 +147,48 @@ function thin(pieces: readonly DerivationPoint[][], step: number): DerivationPoi
   );
 }
 
-/** The thinned line, cut again on its final form, within the vertex cap. */
-function storedLine(pieces: DerivationPoint[][], circles: readonly ZoneCircle[]): LonLat[][] {
-  const total = pieces.reduce((n, p) => n + p.length, 0);
-  let step = Math.max(1, Math.ceil(total / (LINE_MAX_VERTICES - 2 * pieces.length)));
-  for (;;) {
-    const line = privacyCutBy(thin(pieces, step), circles, coord);
-    if (line.reduce((n, p) => n + p.length, 0) <= LINE_MAX_VERTICES) {
-      return line.map((piece) => piece.map(coord));
-    }
-    step += 1;
+/** Thinning rounds before the line is cut down to fit; each round doubles the step. */
+const MAX_THIN_ROUNDS = 12;
+
+const vertexCount = (pieces: readonly unknown[][]) => pieces.reduce((n, p) => n + p.length, 0);
+
+/**
+ * At most `LINE_MAX_VERTICES / 2` pieces — every piece keeps both its ends, so
+ * more could never fit. The longest stay (ties: the earlier), in time order.
+ */
+function fewestPieces(pieces: DerivationPoint[][]): DerivationPoint[][] {
+  const max = Math.floor(LINE_MAX_VERTICES / 2);
+  if (pieces.length <= max) return pieces;
+  return pieces
+    .map((piece, i) => ({ i, km: lengthKm([piece]) }))
+    .sort((a, b) => b.km - a.km || a.i - b.i)
+    .slice(0, max)
+    .sort((a, b) => a.i - b.i)
+    .map(({ i }) => pieces[i]);
+}
+
+/**
+ * The thinned line, cut again on its final form, within the vertex cap.
+ * Bounded: the step doubles a fixed number of times; a line that still does
+ * not fit (the final cut split it further) keeps its pieces in order while
+ * they fit. Never loops on a line it cannot shrink.
+ */
+function storedLine(all: DerivationPoint[][], circles: readonly ZoneCircle[]): LonLat[][] {
+  const pieces = fewestPieces(all);
+  let step = Math.max(1, Math.ceil(vertexCount(pieces) / LINE_MAX_VERTICES));
+  let line = privacyCutBy(thin(pieces, step), circles, coord);
+  for (let round = 0; round < MAX_THIN_ROUNDS && vertexCount(line) > LINE_MAX_VERTICES; round++) {
+    step *= 2;
+    line = privacyCutBy(thin(pieces, step), circles, coord);
   }
+  const kept: DerivationPoint[][] = [];
+  let total = 0;
+  for (const piece of line) {
+    if (total + piece.length > LINE_MAX_VERTICES) break;
+    kept.push(piece);
+    total += piece.length;
+  }
+  return kept.map((piece) => piece.map(coord));
 }
 
 function judge(segment: Segment, circles: readonly ZoneCircle[]): MovementRun | null {
