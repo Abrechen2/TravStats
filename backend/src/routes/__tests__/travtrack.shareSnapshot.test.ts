@@ -1,6 +1,7 @@
 import request from "supertest";
 
 import app from "../../index";
+import { shareSnapshotBuildLimiter } from "../../middleware/shareSnapshotBuildLimit";
 import { prisma } from "../../db";
 import { generateToken } from "../../utils/jwt";
 import { distanceM } from "../../services/travtrack/classify";
@@ -84,6 +85,9 @@ describe("TravTrack — a shared trip's route snapshot", () => {
 
   beforeEach(async () => {
     await switches.set({ beta: true, config: true });
+    // Each test builds afresh; the build limiter's own test spends the bucket on purpose.
+    for (const id of [owner, recipient, stranger])
+      await shareSnapshotBuildLimiter.resetKey(`user:${id}`);
     await wipeTravTrack([owner, recipient, stranger]);
     await prisma.trip.deleteMany({ where: { userId: { in: [owner, recipient, stranger] } } });
     await prisma.shareConsent.deleteMany({
@@ -402,6 +406,26 @@ describe("TravTrack — a shared trip's route snapshot", () => {
     expect(res.status).toBe(200);
     expect(await stored()).toBeNull();
     expect(await recipientRead()).toBeNull();
+  });
+
+  it("building is limited per user, before any work, with a code the page names", async () => {
+    // Codex P2: a build reads up to 200k points under an advisory lock in a
+    // 60 s transaction, and only the global limiter stood in front of it.
+    await walk(126.95, 126.97);
+    const statuses: number[] = [];
+    let refused: request.Response | undefined;
+    for (let i = 0; i < 30 && !refused; i++) {
+      const res = await as(ownerCookie).put(`/api/v1/trips/${tripId}/share-snapshot`);
+      statuses.push(res.status);
+      if (res.status === 429) refused = res;
+    }
+    expect(refused?.body).toMatchObject({ code: "TRAVTRACK_ROUTE_BUILD_RATE_LIMITED" });
+    expect(refused?.body.retryAfterSeconds).toBeGreaterThan(0);
+    expect(statuses.filter((s) => s === 200).length).toBeLessThanOrEqual(10);
+    // Another account's bucket is its own: the recipient's build reaches the
+    // service (and is refused there, holding no route), not the limiter.
+    const other = await as(recipientCookie).put(`/api/v1/trips/${copyId}/share-snapshot`);
+    expect(other.status).not.toBe(429);
   });
 
   it("building needs TravTrack on", async () => {

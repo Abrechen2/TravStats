@@ -81,6 +81,22 @@ describe("ShareRouteDialog", () => {
     expect(screen.getByText("sharing:route.notShared")).toBeInTheDocument();
   });
 
+  it("names the build limit instead of a generic failure, and keeps the shared route", async () => {
+    api.routeSnapshot.mockResolvedValue(SNAPSHOT);
+    api.shareRoute.mockRejectedValue(
+      Object.assign(new Error("429"), {
+        response: {
+          status: 429,
+          data: { code: "TRAVTRACK_ROUTE_BUILD_RATE_LIMITED", retryAfterSeconds: 120 },
+        },
+      })
+    );
+    open();
+    fireEvent.click(await screen.findByRole("button", { name: "sharing:route.refresh" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("sharing:route.errors.rateLimited");
+    expect(screen.getByRole("button", { name: "sharing:route.revoke" })).toBeInTheDocument();
+  });
+
   it("says TravTrack is off instead of pretending nothing is shared", async () => {
     api.routeSnapshot.mockRejectedValue(
       Object.assign(new Error("off"), {

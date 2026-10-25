@@ -753,6 +753,7 @@
       "empty": "Von dieser Reise ist nichts zu zeigen: TravTrack hält für ihre Tage keine Linie außerhalb deiner Privatzonen und deines Zuhauses.",
       "disabled": "TravTrack ist auf diesem Server ausgeschaltet. Eine Route kann gerade nicht mitgeteilt werden.",
       "generic": "Die Route konnte nicht mitgeteilt werden.",
+      "rateLimited": "Die Route wurde gerade sehr oft neu mitgeteilt. Warte ein paar Minuten und versuch es dann noch einmal.",
       "network": "Der Server ist nicht erreichbar. Versuch es gleich noch einmal."
     }
   }

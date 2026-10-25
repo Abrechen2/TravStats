@@ -1,6 +1,7 @@
 import request from "supertest";
 
 import app from "../../index";
+import { shareSnapshotBuildLimiter } from "../../middleware/shareSnapshotBuildLimit";
 import { observeQueries, prisma } from "../../db";
 import { Prisma } from "../../prisma";
 import { generateToken } from "../../utils/jwt";
@@ -127,6 +128,8 @@ describe("TravTrack — what hid part of a shared route keeps it hidden", () => 
 
   beforeEach(async () => {
     await switches.set({ beta: true, config: true });
+    // Each test builds afresh; the build limiter's own test spends the bucket on purpose.
+    for (const id of [owner, recipient]) await shareSnapshotBuildLimiter.resetKey(`user:${id}`);
     await wipeTravTrack([owner, recipient]);
     await prisma.flight.deleteMany({ where: { userId: owner } });
     await prisma.trip.deleteMany({ where: { userId: { in: [owner, recipient] } } });

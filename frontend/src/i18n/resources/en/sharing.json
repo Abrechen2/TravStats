@@ -753,6 +753,7 @@
       "empty": "Nothing of this trip can be shown: TravTrack holds no line for its days outside your privacy zones and your home.",
       "disabled": "TravTrack is switched off on this server. A route cannot be shared right now.",
       "generic": "The route could not be shared.",
+      "rateLimited": "The route was shared again many times just now. Wait a few minutes, then try again.",
       "network": "The server cannot be reached. Try again in a moment."
     }
   }

@@ -65,6 +65,12 @@ registry.registerPath({
       description: "TRAVTRACK_ROUTE_EMPTY: nothing of the trip's line may be shown",
       content: errorContent,
     },
+    429: {
+      description:
+        "TRAVTRACK_ROUTE_BUILD_RATE_LIMITED: ten builds per account in ten minutes; " +
+        "`retryAfterSeconds` says how long to wait",
+      content: errorContent,
+    },
   },
 });
 

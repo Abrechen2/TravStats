@@ -13,6 +13,7 @@ import {
 } from "../../services/travtrack/shareSnapshot";
 import logger from "../../utils/logger";
 import { travTrackTier } from "./gate";
+import { shareSnapshotBuildLimiter } from "../../middleware/shareSnapshotBuildLimit";
 
 /**
  * A shared trip's route (TravTrack plan T7). The owner shares the trip's
@@ -64,6 +65,7 @@ router.put(
   travTrackTier("on"),
   requireWriteScope,
   rejectDemo,
+  shareSnapshotBuildLimiter,
   route(async (req, res) => {
     const snapshot = await shareTripRoute(req.userId!, req.params.id);
     logger.info({
