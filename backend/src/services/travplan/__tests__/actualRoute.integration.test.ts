@@ -1,4 +1,5 @@
 import { prisma } from "../../../db";
+import { localDay } from "../../../shared/time/instant";
 import { encryptApiKey } from "../../../utils/encryption";
 import { setLocationProvider } from "../../locationProvider/provider";
 import { distanceM } from "../../travtrack/classify";
@@ -28,6 +29,7 @@ jest.mock("../../dawarich/dawarichClient", () => ({
  */
 
 const PREFIX = "plan-actual-route-";
+const viennaDay = (atMs: number) => localDay(new Date(atMs), "Europe/Vienna");
 
 describe("getActualRoute", () => {
   const switches = travTrackSwitches();
@@ -61,8 +63,14 @@ describe("getActualRoute", () => {
       ...driveNear(VIENNA, noon(5)),
     ]);
     const route = await getActualRoute(userId, tripId);
-    expect(route).toMatchObject({ origin: "travstats", coverage: "complete" });
-    expect(new Set(route!.positions.map((p) => p.day))).toEqual(
+    expect(route).toMatchObject({
+      origin: "travstats",
+      coverage: "complete",
+      zone: "Europe/Vienna",
+    });
+    // Every privacy-safe fix's instant, in order: what a station's own days are read against.
+    expect(route!.recordedAtMs).toHaveLength(8);
+    expect(new Set(route!.positions.map((p) => viennaDay(p.atMs)))).toEqual(
       new Set(["2026-10-01", "2026-10-05"])
     );
     expect(route!.days).toEqual([
@@ -83,7 +91,7 @@ describe("getActualRoute", () => {
       await storePoint(userId, { t, lat, lon });
     const route = await getActualRoute(userId, tripId);
     expect(route).toMatchObject({ origin: "travtrack" });
-    expect(route!.positions.every((p) => p.day === "2026-10-03")).toBe(true);
+    expect(route!.positions.every((p) => viennaDay(p.atMs) === "2026-10-03")).toBe(true);
   });
 
   it("TravTrack off: TravTrack is simply not a source", async () => {
@@ -125,7 +133,7 @@ describe("getActualRoute", () => {
     const route = await getActualRoute(userId, tripId);
     expect(route).toMatchObject({ origin: "dawarich", coverage: "complete" });
     expect(route!.positions.length).toBeGreaterThan(0);
-    expect(route!.positions.every((p) => p.day === "2026-10-04")).toBe(true);
+    expect(route!.positions.every((p) => viennaDay(p.atMs) === "2026-10-04")).toBe(true);
   });
 
   it("a privacy zone: no position or vertex inside it, and its day holds no data", async () => {
@@ -219,6 +227,9 @@ describe("getActualRoute", () => {
       },
     });
     const route = await getActualRoute(userId, tripId);
+    expect(route!.stays.find((s) => s.kind === "place")!.atMs).toBe(
+      Date.parse("2026-10-03T12:00:00Z")
+    );
     expect(route!.stays.map((s) => [s.kind, s.label, s.day])).toEqual([
       ["lodging", "Hotel Sacher", "2026-10-04"],
       ["lodging", "Hotel Sacher", "2026-10-05"],

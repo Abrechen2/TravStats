@@ -14,7 +14,6 @@ import {
   tripFlightWindows,
   type RecordingTrip,
 } from "../../tripRecording/bounds";
-import { localDayReader } from "../../tripRecording/localDays";
 import { privacySafeDevices } from "../../tripRecording/privacySafe";
 import {
   displaySegments,
@@ -42,10 +41,13 @@ import {
  * serialised; the route answers with an explicit shape.
  */
 
+/**
+ * A position as an instant, never as a day: each station reads it on its own
+ * calendar (compare.ts), so a fix just after a station's midnight is that
+ * station's next day whatever clock the trip is listed on.
+ */
 export type ActualPosition = {
   atMs: number;
-  /** The day on the trip's clock. */
-  day: string;
   lat: number;
   lon: number;
   deviceId: string | null;
@@ -60,6 +62,14 @@ export type ActualPosition = {
 export type ActualStay = {
   id: string;
   kind: "lodging" | "place";
+  /**
+   * The visit's instant where it is known (a place visit's `visitedAtUtc`),
+   * read on the station's calendar like a fix; null for a lodging night,
+   * which is a calendar day of the hotel already, and for a visit known only
+   * by its wall clock.
+   */
+  atMs: number | null;
+  /** The day on the record's own calendar (the hotel's, the place's). */
   day: string;
   lat: number;
   lon: number;
@@ -74,6 +84,10 @@ export type ActualRoute = {
   stays: ActualStay[];
   coverage: Coverage | null;
   origin: TrackOrigin;
+  /** The trip's clock — a station's calendar when neither it nor the plan names a zone. */
+  zone: string;
+  /** Every privacy-safe fix's instant, ascending: which of a station's days hold data. */
+  recordedAtMs: number[];
   positions: ActualPosition[];
   circles: ZoneCircle[];
 };
@@ -140,7 +154,7 @@ async function tripStays(userId: string, tripId: string, zone: string): Promise<
     if (!s.checkInDate || classifyStay(s) !== "visited") continue;
     const until = s.checkOutDate ? fromDbDate(s.checkOutDate) : fromDbDate(s.checkInDate);
     for (const day of dayRange(fromDbDate(s.checkInDate), until)) {
-      stays.push({ id: s.id, kind: "lodging", day, lat, lon, label: name });
+      stays.push({ id: s.id, kind: "lodging", atMs: null, day, lat, lon, label: name });
     }
   }
   for (const v of visits) {
@@ -154,6 +168,7 @@ async function tripStays(userId: string, tripId: string, zone: string): Promise<
     stays.push({
       id: v.id,
       kind: "place",
+      atMs: v.visitedAtUtc ? v.visitedAtUtc.getTime() : null,
       day,
       lat: v.place.lat,
       lon: v.place.lon,
@@ -165,15 +180,13 @@ async function tripStays(userId: string, tripId: string, zone: string): Promise<
 
 const coord = (p: StoredPoint): LonLat => [p[2], p[1]];
 
-/** Jitter-free, privacy-safe positions, device by device, with their day. */
+/** Jitter-free, privacy-safe positions, device by device, each in its stretch. */
 async function positionsOf(
   devices: readonly DevicePoints[],
-  circles: readonly ZoneCircle[],
-  zone: string
+  circles: readonly ZoneCircle[]
 ): Promise<{ positions: ActualPosition[]; stretches: StoredPoint[][] }> {
   const positions: ActualPosition[] = [];
   const stretches: StoredPoint[][] = [];
-  const dayOf = localDayReader(zone);
   for (const device of devices) {
     const clean = await withoutJitter([device]);
     for (const stretch of privacyCutBy(clean.segments, circles, coord)) {
@@ -182,7 +195,6 @@ async function positionsOf(
       for (const [atMs, lat, lon] of stretch) {
         positions.push({
           atMs,
-          day: dayOf(atMs),
           lat,
           lon,
           deviceId: device.deviceId,
@@ -218,12 +230,10 @@ export async function getActualRoute(userId: string, tripId: string): Promise<Ac
   const circles = await privacyCirclesFor(userId, Number.isFinite(first) ? first : 0);
   // Whatever a zone hides is gone before anything is counted (T5).
   const safe = privacySafeDevices(raw, circles);
-  const recorded = recordingDays(
-    safe.flatMap((d) => d.points),
-    zone
-  );
+  const safePoints = safe.flatMap((d) => d.points);
+  const recorded = recordingDays(safePoints, zone);
   const [{ positions, stretches }, stays] = await Promise.all([
-    positionsOf(safe, circles, zone),
+    positionsOf(safe, circles),
     tripStays(userId, trip.id, zone),
   ]);
   return {
@@ -233,6 +243,8 @@ export async function getActualRoute(userId: string, tripId: string): Promise<Ac
     stays,
     coverage: entry.coverage,
     origin: entry.origin,
+    zone,
+    recordedAtMs: safePoints.map((p) => p[0]).sort((a, b) => a - b),
     positions,
     circles,
   };

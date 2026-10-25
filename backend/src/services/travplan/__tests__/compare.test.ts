@@ -66,16 +66,23 @@ function plan(): PlanSnapshot {
   };
 }
 
-let clock = Date.parse("2026-10-01T08:00:00Z");
+/** Positions at mid-day UTC of `day` (mid-day in Berlin and Vienna too), a minute apart. */
+let tick = 0;
 const at = (
   day: string,
   p: { lat: number; lon: number },
   deviceId: string | null = "phone",
   stretch = 0
 ): ActualPosition => {
-  clock += 60_000;
-  return { atMs: clock, day, ...p, deviceId, stretch };
+  tick += 1;
+  return { atMs: Date.parse(`${day}T10:00:00Z`) + tick * 60_000, ...p, deviceId, stretch };
 };
+const instant = (iso: string, p: { lat: number; lon: number }): ActualPosition => ({
+  atMs: Date.parse(iso),
+  ...p,
+  deviceId: "phone",
+  stretch: 0,
+});
 const ALL_DAYS = [
   "2026-09-30",
   "2026-10-01",
@@ -94,15 +101,22 @@ function actual(
     recorded?: string[];
     circles?: ActualRoute["circles"];
     coverage?: ActualRoute["coverage"];
+    zone?: string;
   } = {}
 ): ActualRoute {
-  const recorded = new Set(opts.recorded ?? positions.map((p) => p.day));
+  const recordedAtMs = (
+    opts.recorded
+      ? opts.recorded.map((d) => Date.parse(`${d}T10:00:00Z`))
+      : positions.map((p) => p.atMs)
+  ).sort((a, b) => a - b);
   return {
     segments: [],
-    days: ALL_DAYS.map((day) => ({ day, state: recorded.has(day) ? "recorded" : "noData" })),
+    days: ALL_DAYS.map((day) => ({ day, state: "noData" })),
     stays: opts.stays ?? [],
     coverage: opts.coverage ?? "complete",
     origin: "travtrack",
+    zone: opts.zone ?? "Europe/Berlin",
+    recordedAtMs,
     positions,
     circles: opts.circles ?? [],
   };
@@ -185,6 +199,7 @@ describe("comparePlanActual", () => {
     const stay: ActualStay = {
       id: "st1",
       kind: "lodging",
+      atMs: null,
       day: "2026-10-05",
       ...VIENNA,
       label: "Hotel Sacher",
@@ -199,6 +214,7 @@ describe("comparePlanActual", () => {
     const stay: ActualStay = {
       id: "h",
       kind: "lodging",
+      atMs: null,
       day: "2026-10-05",
       lat: zone.lat,
       lon: zone.lon,
@@ -266,8 +282,8 @@ describe("comparePlanActual", () => {
 
   it("a stay-only visit gives the stage no length", () => {
     const stays: ActualStay[] = [
-      { id: "a", kind: "lodging", day: "2026-10-01", ...MUNICH, label: "A" },
-      { id: "b", kind: "place", day: "2026-10-03", ...SALZBURG, label: "B" },
+      { id: "a", kind: "lodging", atMs: null, day: "2026-10-01", ...MUNICH, label: "A" },
+      { id: "b", kind: "place", atMs: null, day: "2026-10-03", ...SALZBURG, label: "B" },
     ];
     const result = comparePlanActual(plan(), actual([], { stays }));
     expect(result.stages.find((s) => s.stageId === "ms")!.actualKm).toBeNull();
@@ -275,14 +291,88 @@ describe("comparePlanActual", () => {
 
   it("a far accepted stay is unplanned, listed once", () => {
     const stays: ActualStay[] = [
-      { id: "z", kind: "lodging", day: "2026-10-02", ...ZURICH, label: "Hotel Zürich" },
-      { id: "z", kind: "lodging", day: "2026-10-03", ...ZURICH, label: "Hotel Zürich" },
-      { id: "w", kind: "place", day: "2026-10-05", ...VIENNA, label: "Stephansdom" },
+      { id: "z", kind: "lodging", atMs: null, day: "2026-10-02", ...ZURICH, label: "Hotel Zürich" },
+      { id: "z", kind: "lodging", atMs: null, day: "2026-10-03", ...ZURICH, label: "Hotel Zürich" },
+      { id: "w", kind: "place", atMs: null, day: "2026-10-05", ...VIENNA, label: "Stephansdom" },
     ];
     const result = comparePlanActual(plan(), actual([], { stays }));
     expect(result.unplanned).toEqual([
       { kind: "lodging", day: "2026-10-02", ...ZURICH, label: "Hotel Zürich" },
     ]);
+  });
+
+  describe("on each station's own calendar", () => {
+    // 22:30 UTC on the 3rd is 00:30 on the 4th in Salzburg: one day late there,
+    // whatever clock the trip is listed on.
+    const lateNight = "2026-10-03T22:30:00Z";
+
+    it("a fix just after the station's midnight counts on the station's day", () => {
+      const result = comparePlanActual(
+        plan(),
+        actual([instant(lateNight, SALZBURG)], { zone: "UTC" })
+      );
+      expect(statusOf(result, "s")).toMatchObject({ deltaDays: 1, actualFrom: "2026-10-04" });
+    });
+
+    it("the same visit gets the same day and delta from a fix as from a place visit", () => {
+      const fromTrack = statusOf(
+        comparePlanActual(plan(), actual([instant(lateNight, SALZBURG)], { zone: "UTC" })),
+        "s"
+      );
+      const visit: ActualStay = {
+        id: "p",
+        kind: "place",
+        atMs: Date.parse(lateNight),
+        day: "2026-10-04",
+        ...SALZBURG,
+        label: "Festung",
+      };
+      const fromVisit = statusOf(
+        comparePlanActual(plan(), actual([], { stays: [visit], recorded: [], zone: "UTC" })),
+        "s"
+      );
+      expect(fromVisit).toEqual(fromTrack);
+    });
+
+    it("across the date line a station is read on its own side of it", () => {
+      const KIRITIMATI = { lat: 1.87, lon: -157.4 };
+      const p = plan();
+      const island = {
+        ...p.stations[1],
+        place: { ...p.stations[1].place, ...KIRITIMATI, zone: "Pacific/Kiritimati" },
+      };
+      const onIsland: PlanSnapshot = {
+        ...p,
+        stations: [p.stations[0], island, p.stations[2]],
+        schedule: {
+          ...p.schedule,
+          stations: [
+            p.schedule.stations[0],
+            { stationId: "s", arriveDay: "2026-10-04", departDay: "2026-10-04" },
+            p.schedule.stations[2],
+          ],
+        },
+      };
+      // 11:00 UTC on the 3rd: 01:00 on the 4th in Kiritimati (UTC+14), but still
+      // midnight of the 3rd on a trip listed in Pago Pago (UTC−11).
+      const fix = instant("2026-10-03T11:00:00Z", KIRITIMATI);
+      const result = comparePlanActual(onIsland, actual([fix], { zone: "Pacific/Pago_Pago" }));
+      expect(statusOf(result, "s")).toMatchObject({
+        status: "visited",
+        deltaDays: 0,
+        actualFrom: "2026-10-04",
+      });
+    });
+
+    it("a skip is judged on the station's days: a recorded fix late on its eve is not its day", () => {
+      // Only fix: 21:30 UTC on the 2nd = 23:30 on the 2nd in Salzburg, far away.
+      const result = comparePlanActual(
+        plan(),
+        actual([instant("2026-10-02T21:30:00Z", { lat: 52.5, lon: 13.4 })], { zone: "Asia/Tokyo" })
+      );
+      // On Tokyo's clock that fix is on the 3rd, Salzburg's planned day — but not in Salzburg.
+      expect(statusOf(result, "s").status).toBe("unknown");
+    });
   });
 
   it("no track: every station unknown, no stage length, nothing unplanned", () => {

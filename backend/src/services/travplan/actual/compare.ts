@@ -1,5 +1,8 @@
 import { distanceM, type ZoneCircle } from "../../travtrack/classify";
 import { daysBetween, fromDbDate, toDbDate } from "../../../shared/time/localDate";
+import { toInstant } from "../../../shared/time/instant";
+import { isValidZone } from "../../../shared/time/zonedParts";
+import { localDayReader } from "../../tripRecording/localDays";
 import { routeLegs } from "../routeSchedule";
 import type { PlanSnapshot } from "./planSnapshot";
 import type { ActualPosition, ActualRoute, ActualStay } from "./actualRoute";
@@ -85,6 +88,41 @@ const unknownStation = (
   actualUntil: null,
 });
 
+/**
+ * The calendar a station's days are named in: its own place's zone, else the
+ * plan's, else the trip's clock. Every piece of evidence with an instant —
+ * a fix or a place visit — is read on it, so the same moment gives the same
+ * day and delta whichever source holds it, around midnight and across the
+ * date line alike.
+ */
+function stationZone(plan: PlanSnapshot, index: number, actual: ActualRoute): string {
+  const own = plan.stations[index].place.zone;
+  if (isValidZone(own)) return own;
+  return isValidZone(plan.timezone) ? plan.timezone : actual.zone;
+}
+
+/** First index whose value is ≥ `target` in an ascending list. */
+function lowerBound(sorted: readonly number[], target: number): number {
+  let lo = 0;
+  let hi = sorted.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (sorted[mid] < target) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
+const midnight = (day: string, zone: string): number =>
+  toInstant(`${day}T00:00:00`, zone, { origin: "machine" }).utc.getTime();
+
+/** Whether any fix falls on `day` of the station's calendar. */
+function recordedOn(day: string, zone: string, instants: readonly number[]): boolean {
+  const from = midnight(day, zone);
+  const i = lowerBound(instants, from);
+  return i < instants.length && instants[i] < midnight(addDays(day, 1), zone);
+}
+
 function compareStation(
   plan: PlanSnapshot,
   index: number,
@@ -104,14 +142,16 @@ function compareStation(
   // nothing about the station may say otherwise.
   if (!actual || insideCircle(station.place, actual.circles)) return unknownStation(base);
 
+  const zone = stationZone(plan, index, actual);
+  const dayOf = localDayReader(zone);
   const nearDays = [
     ...new Set([
-      ...actual.positions.filter((p) => near(p, station.place)).map((p) => p.day),
+      ...actual.positions.filter((p) => near(p, station.place)).map((p) => dayOf(p.atMs)),
       // A stay inside a privacy circle is the owner's own record and still listed, but it
       // never proves a station outside the zone by itself: only track evidence does there.
       ...actual.stays
         .filter((s) => near(s, station.place) && !insideCircle(s, actual.circles))
-        .map((s) => s.day),
+        .map((s) => (s.atMs === null ? s.day : dayOf(s.atMs))),
     ]),
   ].sort();
 
@@ -151,8 +191,7 @@ function compareStation(
       actualUntil: run[run.length - 1],
     };
   }
-  const recorded = new Set(actual.days.filter((d) => d.state === "recorded").map((d) => d.day));
-  const allRecorded = daysFrom(from, until).every((d) => recorded.has(d));
+  const allRecorded = daysFrom(from, until).every((d) => recordedOn(d, zone, actual.recordedAtMs));
   // A short read is said to be short: it never proves an absence.
   if (actual.coverage === "complete" && allRecorded) {
     return { ...base, status: "skipped", deltaDays: null, actualFrom: null, actualUntil: null };
