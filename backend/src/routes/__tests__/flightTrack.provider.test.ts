@@ -95,7 +95,9 @@ describe("flight tracks from the location provider", () => {
     });
     const res = await request(app).get(`/api/v1/flights/${flightId}/track`).set("Cookie", cookie);
     expect(res.status).toBe(200);
-    expect(res.body.track.pointCount).toBe(9);
+    // With a zone in force every figure describes the line as shown.
+    expect(res.body.track.pointCount).toBe(res.body.track.geometry.length);
+    expect(res.body.track.jitterDropped).toBeNull();
     // Nine steps of ~6.7 km would be ~60 km; the step over the zone is not counted.
     expect(res.body.track.distanceKm).toBeLessThan(50);
     expect(res.body.track.segmentStarts).toHaveLength(2);
@@ -190,11 +192,12 @@ describe("flight tracks from the location provider", () => {
       [126.47, 36.5],
     ]);
     // Every figure describes what is left, and the hidden end has no time.
-    expect(page.body.track).toMatchObject({ distanceKm: 100, pointCount: 2 });
+    // Measured on the shown chord (100.091 km), not on the stored 100.
+    expect(page.body.track).toMatchObject({ distanceKm: 100.091, pointCount: 2 });
+    // Only the samples at shown vertices; the one between them (50 km) may describe a hidden fix.
     expect(page.body.track.elevations).toEqual([
       [0, 100],
-      [50, 9000],
-      [100, 11000],
+      [100.091, 11000],
     ]);
     expect(page.body.track.times.endedAt).toBeNull();
     expect(page.body.track.times.startedAt).not.toBeNull();

@@ -2,7 +2,7 @@ import { prisma } from "../../db";
 import { haversineKm } from "../../shared/geo/haversine";
 import type { ZoneCircle } from "./classify";
 import { privacyCirclesFor } from "./privacyCircles";
-import { privacyCutBy, segmentCrossesZone, type LonLat } from "./privacyCut";
+import { privacyCutBy, type LonLat } from "./privacyCut";
 
 /**
  * The ONE way a stored flight recording reaches anybody (TravTrack plan T5,
@@ -12,17 +12,19 @@ import { privacyCutBy, segmentCrossesZone, type LonLat } from "./privacyCut";
  * and every former zone's circle that still covers a line begun before it
  * went. Nothing inside a circle and no chord through one ever leaves.
  *
- * And nothing ABOUT the hidden part leaves either. A stored line is
- * simplified and its raw fixes are gone, so whether a figure's basis held a
- * fix inside a circle can only be bounded: a line farther than
- * `FIGURE_TRUST_MARGIN_M` from every circle is served as stored; any other is
- * rebuilt from its kept geometry — the running distance re-measured on the
- * chords near a circle (each kept stretch starting where the one before
- * ended), `distanceKm` its total, `pointCount` the kept vertices, the
- * altitude profile only on trusted chords, no jitter count, and an end that
- * was cut or lies near a circle without its time (`startCut` / `endCut`).
- * A line built from a provider's fixes is cut BEFORE it is measured
- * (`providerFlightColumns.ts`) and checked here once more.
+ * And nothing ABOUT the hidden part leaves either. A stored line is jitter
+ * filtered and simplified and its raw fixes are gone, so no distance from a
+ * circle proves that a figure's basis held no fix inside one: the filter can
+ * fold a fix arbitrarily far away into a stay, and simplification raises its
+ * tolerance without bound while a long recording exceeds its vertex cap
+ * (Codex, P1 — a 5 km "trust margin" stood here and proved nothing). So the
+ * rule is all or nothing: with no circle in force the stored figures are
+ * served unchanged; with ANY circle in force every figure is derived from the
+ * line as shown — the distance on the kept chords, `pointCount` the shown
+ * vertices, no jitter count, the altitude profile only at the shown vertices, and an
+ * end's time only where the shown end is provably the recorded end
+ * (`startCut` / `endCut`). A line built from a provider's fixes is cut BEFORE
+ * it is measured (`providerFlightColumns.ts`) and comes through here as well.
  */
 
 export type FlightTrackLine = {
@@ -38,9 +40,9 @@ export type FlightTrackLine = {
 
 export type ViewableTrack<T> = {
   track: T;
-  /** The cut removed the first vertex: `startedAt` describes a hidden point. */
+  /** `startedAt` may describe a point not shown: the first shown vertex is not provably the recorded first. */
   startCut: boolean;
-  /** The cut removed the last vertex: `endedAt` describes a hidden point. */
+  /** `endedAt` may describe a point not shown: the last shown vertex is not provably the recorded last. */
   endCut: boolean;
 };
 
@@ -57,88 +59,93 @@ const asNumbers = (value: unknown): number[] | null =>
 
 type Kept = Array<Array<{ p: LonLat; i: number }>>;
 
-/**
- * How near a zone a stored line may pass before its figures are no longer
- * trusted. A stored line is simplified and its raw fixes are gone; a fix
- * simplification dropped lay within the simplification tolerance of a kept
- * chord — 11 m at the start, raised only while a long recording exceeds its
- * vertex cap. 5 km is far beyond that, so a chord farther than this from every
- * circle provably had no fix inside one, and its stored running distance,
- * altitude profile and end times are kept; nearer, they are measured again on
- * the kept geometry or left out.
- */
-export const FIGURE_TRUST_MARGIN_M = 5000;
-
-const near = (a: LonLat, b: LonLat, circles: readonly ZoneCircle[]) =>
-  circles.some((c) =>
-    segmentCrossesZone(a, b, { ...c, radiusM: c.radiusM + FIGURE_TRUST_MARGIN_M })
-  );
-
 const round = (km: number) => Math.round(km * 1000) / 1000;
 
 const stepKm = (a: LonLat, b: LonLat) =>
   haversineKm({ lon: a[0], lat: a[1] }, { lon: b[0], lat: b[1] });
 
+/** A shown vertex: its stored running distance and where it sits on the shown line. */
+type ShownVertex = { stored: number; at: number };
+
 /**
- * The running distance over the kept stretches, each starting where the one
- * before ended. A chord far from every circle keeps its stored raw distance
- * (exact, AUD-034); a chord near one, or a line without a running distance,
- * is measured on the sphere. `ranges` place the altitude profile: the stored
- * distance range of each trusted chord and how far it moved.
+ * The running distance over the shown line, measured on its own chords, each
+ * kept stretch starting where the one before ended. `vertices` place the
+ * altitude profile.
  */
-function remeasure(kept: Kept, circles: readonly ZoneCircle[], cumulative: number[] | null) {
+function measureShown(kept: Kept, cumulative: number[] | null) {
   const km: number[] = [];
-  const ranges: Array<{ from: number; to: number; shift: number }> = [];
+  const vertices: ShownVertex[] = [];
   let acc = 0;
   for (const line of kept) {
-    km.push(round(acc));
-    for (let k = 1; k < line.length; k++) {
-      const [a, b] = [line[k - 1], line[k]];
-      const trusted = cumulative !== null && !near(a.p, b.p, circles);
-      const step = trusted ? cumulative[b.i] - cumulative[a.i] : stepKm(a.p, b.p);
-      if (trusted)
-        ranges.push({ from: cumulative[a.i], to: cumulative[b.i], shift: acc - cumulative[a.i] });
-      acc += step;
+    for (let k = 0; k < line.length; k++) {
+      if (k > 0) acc += stepKm(line[k - 1].p, line[k].p);
       km.push(round(acc));
+      if (cumulative) vertices.push({ stored: cumulative[line[k].i], at: round(acc) });
     }
   }
-  return { km, ranges, total: round(acc) };
+  return { km, vertices, total: round(acc) };
 }
 
-/** The altitude profile on the trusted chords only, its distances moved with them. */
-function keptElevations(
+/** Stored profile positions are rounded to the metre (`elevationProfile`). */
+const sameKm = (a: number, b: number) => Math.abs(a - b) < 0.0005;
+
+/**
+ * The altitude profile at the shown vertices only. A vertex is a recorded fix
+ * the viewer sees, so its sample describes nothing hidden; a sample between
+ * two vertices may come from a fix simplification or the jitter filter took
+ * out — one inside a zone among them (security review) — and goes, however
+ * near or far the zone. A stored position shared with a vertex that is NOT
+ * shown (a segment boundary carries one running distance for two vertices)
+ * goes too. Without a running distance no sample can be placed, and the
+ * profile is left out.
+ */
+function shownElevations(
   elevations: unknown,
-  ranges: ReturnType<typeof remeasure>["ranges"] | null
+  vertices: readonly ShownVertex[] | null,
+  hidden: readonly number[]
 ): unknown {
   if (!Array.isArray(elevations)) return elevations ?? null;
-  if (!ranges) return null;
+  if (!vertices) return null;
   const kept = elevations.flatMap((e) => {
     if (!Array.isArray(e) || typeof e[0] !== "number") return [];
-    const range = ranges.find((r) => e[0] >= r.from && e[0] <= r.to);
-    return range ? [[round(e[0] + range.shift), e[1]]] : [];
+    if (hidden.some((km) => sameKm(km, e[0]))) return [];
+    const vertex = vertices.find((v) => sameKm(v.stored, e[0]));
+    return vertex ? [[vertex.at, e[1]]] : [];
   });
-  // Two chords meeting at a vertex both hold the vertex's sample: keep it once.
+  // Two shown vertices at one stored position both match its sample: keep it once.
   const unique = kept.filter(
     (e, k) => k === 0 || e[0] !== kept[k - 1][0] || e[1] !== kept[k - 1][1]
   );
   return unique.length > 0 ? unique : null;
 }
 
+/** The stored running distances of the vertices the cut did not keep. */
+function hiddenKm(cumulative: readonly number[], kept: Kept): number[] {
+  const shown = new Set(kept.flatMap((line) => line.map((v) => v.i)));
+  return cumulative.filter((_, i) => !shown.has(i));
+}
+
 /**
- * The line cut with `circles`, and every figure describing only what is left.
- * A line far from every circle is returned as it is; any other is rebuilt:
- * the kept pieces, the running distance re-measured where its basis may have
- * held a hidden fix, the vertex count of what is drawn, no jitter count (its
- * basis held the hidden part), and an end near a circle without its time.
+ * Whether the stored line's ends are the recorded ends. Simplification keeps
+ * every segment's ends, so only the jitter filter can replace one (a stay
+ * becomes its middle, a coarse first fix is dropped): with nothing filtered
+ * (`0`) or the line never checked (`null`) they are; an unknown count proves
+ * nothing.
+ */
+const endsAreRecorded = (track: FlightTrackLine) =>
+  track.jitterDropped === 0 || track.jitterDropped === null;
+
+/**
+ * The line cut with `circles`, and every figure describing only what is
+ * shown. With no circle the line is returned as it is; with any, it is
+ * rebuilt from its kept geometry (see the module comment).
  */
 export function cutFlightTrackWith<T extends FlightTrackLine>(
   track: T,
   circles: readonly ZoneCircle[]
 ): ViewableTrack<T> {
+  if (circles.length === 0) return { track, startCut: false, endCut: false };
   const geometry = asLine(track.geometry);
-  if (circles.length === 0 || geometry.length === 0) {
-    return { track, startCut: false, endCut: false };
-  }
   const cumulative = asNumbers(track.cumulativeKm);
   const starts = [...new Set([0, ...asStarts(track.segmentStarts)])]
     .filter((i) => i < geometry.length)
@@ -146,13 +153,8 @@ export function cutFlightTrackWith<T extends FlightTrackLine>(
   const lines = starts.map((start, k) =>
     geometry.slice(start, starts[k + 1] ?? geometry.length).map((p, j) => ({ p, i: start + j }))
   );
-  const anyNear = lines.some((line) =>
-    line.some((v, k) => near(line[k - 1]?.p ?? v.p, v.p, circles))
-  );
-  if (!anyNear) return { track, startCut: false, endCut: false };
 
   const kept: Kept = privacyCutBy(lines, circles, (v) => v.p);
-  const keptCount = kept.reduce((n, line) => n + line.length, 0);
   const out: LonLat[] = [];
   const outStarts: number[] = [];
   for (const line of kept) {
@@ -160,9 +162,11 @@ export function cutFlightTrackWith<T extends FlightTrackLine>(
     for (const v of line) out.push(v.p);
   }
   const usable = cumulative && cumulative.length === geometry.length ? cumulative : null;
-  const measured = remeasure(kept, circles, usable);
-  const first = geometry[0];
-  const last = geometry[geometry.length - 1];
+  const measured = measureShown(kept, usable);
+  const firstShown = kept[0]?.[0]?.i;
+  const lastLine = kept[kept.length - 1];
+  const lastShown = lastLine?.[lastLine.length - 1]?.i;
+  const recorded = endsAreRecorded(track);
   return {
     track: {
       ...track,
@@ -170,17 +174,21 @@ export function cutFlightTrackWith<T extends FlightTrackLine>(
       segmentStarts: out.length > 0 ? outStarts : [],
       ...(cumulative ? { cumulativeKm: out.length > 0 ? measured.km : null } : {}),
       ...("distanceKm" in track ? { distanceKm: measured.total } : {}),
-      ...("pointCount" in track ? { pointCount: keptCount } : {}),
+      ...("pointCount" in track ? { pointCount: out.length } : {}),
       ...("jitterDropped" in track ? { jitterDropped: null } : {}),
       ...("elevations" in track
-        ? { elevations: keptElevations(track.elevations, usable ? measured.ranges : null) }
+        ? {
+            elevations: shownElevations(
+              track.elevations,
+              usable ? measured.vertices : null,
+              usable ? hiddenKm(usable, kept) : []
+            ),
+          }
         : {}),
     },
-    // The time of a hidden vertex, or of one beside a circle, is not given.
-    startCut: kept[0]?.[0]?.i !== 0 || near(first, first, circles),
-    endCut:
-      kept[kept.length - 1]?.[kept[kept.length - 1].length - 1]?.i !== geometry.length - 1 ||
-      near(last, last, circles),
+    // An end's time only where the shown end is the recorded one.
+    startCut: !(recorded && firstShown === 0),
+    endCut: !(recorded && lastShown !== undefined && lastShown === geometry.length - 1),
   };
 }
 
@@ -203,7 +211,13 @@ export async function lastViewablePosition(
 ): Promise<{ lat: number; lon: number; recordedAt: string | null } | null> {
   const track = await prisma.flightTrack.findUnique({
     where: { flightId },
-    select: { geometry: true, segmentStarts: true, startedAt: true, endedAt: true },
+    select: {
+      geometry: true,
+      segmentStarts: true,
+      startedAt: true,
+      endedAt: true,
+      jitterDropped: true,
+    },
   });
   if (!track) return null;
   const { track: cut, endCut } = await viewableFlightTrack(userId, track);
