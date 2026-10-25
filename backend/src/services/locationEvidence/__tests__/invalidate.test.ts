@@ -22,6 +22,8 @@ import { acceptCountrySuggestion } from "../countryAccept";
 import * as countryRule from "../countrySuggestions";
 import { historyGeneration } from "../generation";
 import { pointDigest } from "../key";
+import { rejectStay } from "../../dawarich/stays/review";
+import { holdTravTrackLock } from "./evidenceFixtures";
 
 const PREFIX = "evidence-invalidate-";
 const MIN = 60_000;
@@ -327,6 +329,54 @@ describe("a range delete", () => {
     await deleteTravTrackRange(userId, at(-1), at(60));
     expect(await fresh(venue.id)).toBeNull();
     expect(await fresh(dawarich.id)).toEqual(before);
+  });
+
+  it("rejecting a TravTrack venue waits for a removal holding the TravTrack lock (one lock order, no deadlock)", async () => {
+    await points([0, 10, 20, 30]);
+    const fragment = await stay({ status: "superseded", from: 90, to: 120 });
+    const venue = await stay({ kind: "venue", from: 0, to: 30, superseded: [fragment.id] });
+    const release = await holdTravTrackLock(userId);
+    let settled = false;
+    let rejected: Promise<unknown> = Promise.resolve();
+    try {
+      rejected = rejectStay(userId, venue.id).then(
+        () => (settled = true),
+        () => (settled = true)
+      );
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      // Waiting behind the lock: no row of the venue or its fragments locked yet.
+      expect(settled).toBe(false);
+    } finally {
+      await release();
+    }
+    await rejected;
+    expect((await fresh(venue.id))?.status).toBe("rejected");
+    expect((await fresh(fragment.id))?.status).toBe("pending");
+  });
+
+  it("a removal and a venue rejection racing each other both finish", async () => {
+    for (let round = 0; round < 5; round++) {
+      await prisma.dawarichStay.deleteMany({ where: { userId } });
+      await wipeTravTrack([userId]);
+      await points([0, 10, 20, 30, 90, 100]);
+      const fragment = await stay({ status: "superseded", from: 0, to: 30 });
+      const other = await stay({ status: "superseded", from: 90, to: 110 });
+      const venue = await stay({
+        kind: "venue",
+        from: 0,
+        to: 110,
+        superseded: [fragment.id, other.id],
+      });
+      const outcomes = await Promise.allSettled([
+        deleteTravTrackRange(userId, at(-1), at(60)),
+        rejectStay(userId, venue.id),
+      ]);
+      expect(outcomes[0].status).toBe("fulfilled");
+      // The reject either went first, or found the venue gone with its history.
+      if (outcomes[1].status === "rejected") {
+        expect((outcomes[1].reason as { statusCode?: number }).statusCode).toBe(404);
+      }
+    }
   });
 
   it("deletes the country days of the removed days and their neighbours, and marks them dirty", async () => {

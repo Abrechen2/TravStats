@@ -217,7 +217,11 @@ async function affectedSuggestions(
   };
 }
 
-/** Deletes open stay findings; a venue's unaffected fragments go back to pending. */
+/**
+ * Deletes open stay findings; a venue's unaffected fragments go back to
+ * pending. Runs under the TravTrack lock, which a TravTrack venue's rejection
+ * takes too (`rejectStay`), so the two never lock rows in opposite orders.
+ */
 async function removeOpenStays(tx: DbTransaction, userId: string, ids: string[]): Promise<number> {
   if (ids.length === 0) return 0;
   const venues = await tx.dawarichStay.findMany({

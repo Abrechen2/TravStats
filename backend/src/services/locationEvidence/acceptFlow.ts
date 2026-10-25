@@ -42,10 +42,12 @@
  *       stay-accept lock, `acceptLock.ts`)
  *   (3) the suggestion's row (`holdsClaim`, `FOR UPDATE`) and the rows the
  *       entry writes.
- * Removals (E5), TravTrack scans and projections take (1) then rows; the
- * Dawarich stay accept takes (2) then rows; the claim, the release and a
- * reject take only a row, each in a statement of its own. Nothing takes (1)
- * or (2) while holding a row lock, so no cycle can form.
+ * Removals (E5), TravTrack scans and projections take (1) then rows; so does
+ * the rejection of a TravTrack stay finding, which hands a venue's fragments
+ * back as a removal does (`rejectStay`). The Dawarich stay accept takes (2)
+ * then rows; the claim, the release and any other reject take only a row,
+ * each in a statement of its own. Nothing takes (1) or (2) while holding a
+ * row lock, so no cycle can form.
  */
 import crypto from "crypto";
 import { prisma, type DbTransaction } from "../../db";

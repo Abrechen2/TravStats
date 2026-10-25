@@ -9,6 +9,7 @@ import type { StayReview } from "../../../schemas/dawarichStays";
 import { venueCategory, VENUE_TYPES, type VenueType } from "../marketVisits/venueTypes";
 import { meters } from "./detect";
 import { takeStayAcceptLock } from "./acceptLock";
+import { takeTravTrackLock } from "../../travtrack/lock";
 import { completePlaceAddress } from "../../places/addressBackfill";
 import logger from "../../../utils/logger";
 import { acceptFlow, disabled, type ClaimStore } from "../../locationEvidence/acceptFlow";
@@ -232,6 +233,17 @@ async function completeAcceptedPlace(placeId: string): Promise<void> {
 
 export async function rejectStay(userId: string, id: string) {
   await prisma.$transaction(async (tx) => {
+    // A TravTrack finding is rejected under the account's TravTrack lock,
+    // taken before any row (lock order (1) in `acceptFlow.ts`): a removal (E5)
+    // holds that lock while it deletes venues and hands their fragments back,
+    // so the two can never lock a venue and its fragments in opposite orders
+    // (Codex review). A plain read, no row lock; a Dawarich finding is
+    // rejected exactly as before.
+    const source = await tx.dawarichStay.findFirst({
+      where: { id, userId },
+      select: { provider: true },
+    });
+    if (source?.provider === "travtrack") await takeTravTrackLock(tx, userId);
     const result = await tx.dawarichStay.updateMany({
       where: { id, userId, status: "pending" },
       data: { status: "rejected", resolvedAt: new Date() },
