@@ -5,6 +5,7 @@ import {
   awayPeriods,
   awayRuns,
   classifyDays,
+  confirmedHomes,
   dayRange,
   type AwayPoint,
   type HomeAt,
@@ -149,6 +150,37 @@ describe("classifyDays and awayRuns", () => {
       classifyDays(points, dayRange("2026-10-10", "2026-10-12"), homeAt, { fallbackZone: ZONE })
     );
     expect(run).toMatchObject({ openStart: true, openEnd: false });
+  });
+});
+
+describe("a move between zones", () => {
+  const HONOLULU = { lat: 21.31, lon: -157.86 };
+  const periods = [
+    {
+      ...HOME_PERIOD,
+      toDate: "2026-10-12",
+      residence: { name: "Honolulu", ...HONOLULU },
+    },
+    { ...HOME_PERIOD, fromDate: "2026-10-12" },
+  ];
+
+  it("a fix belongs to the home period whose own local day holds it", () => {
+    const homes = confirmedHomes(periods, ZONE)!;
+    // 05:00 UTC on the 12th is still the evening of the 11th in Honolulu —
+    // the old home's last day — and the user is still there.
+    const atMs = Date.parse("2026-10-12T05:00:00Z");
+    expect(homes.dayOf(atMs)).toBe("2026-10-11");
+    const days = classifyDays(
+      [{ atMs, ...HONOLULU, inFlight: false }],
+      dayRange("2026-10-11", "2026-10-12"),
+      homes.at,
+      { fallbackZone: ZONE, dayOf: homes.dayOf }
+    );
+    // Measured against Honolulu, on Honolulu's day: home — never an away day in Frankfurt.
+    expect(days.map((d) => [d.day, d.state, d.pointCount])).toEqual([
+      ["2026-10-11", "home", 1],
+      ["2026-10-12", "unknown", 0],
+    ]);
   });
 });
 

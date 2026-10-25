@@ -6,7 +6,8 @@
  * air time are marked, and they count for nothing here.
  *
  * A day is named in the zone of the residence the user had that day (the home
- * period's zone; the profile zone where the residence has none) and is
+ * period's zone; the profile zone where the residence has none); a fix belongs
+ * to the period whose own local days hold it (`confirmedHomes`). A day is
  *   - `away` when more than half of its ground fixes lie more than `AWAY_KM`
  *     from that day's CONFIRMED residence (`loadHomePeriods`),
  *   - `home` when at least half lie within it,
@@ -107,24 +108,26 @@ const unknownDay = (day: string, zone: string): AwayDay => ({
   countries: [],
 });
 
-/** The local day a fix belongs to: named in the zone of the home its UTC day had. */
-function dayOf(atMs: number, homeAt: HomeAt, fallbackZone: string): string {
-  const utc = new Date(atMs).toISOString().slice(0, 10);
-  const zone = homeAt(utc)?.zone ?? fallbackZone;
-  return localDay(new Date(atMs), zone);
-}
+/** Which local day a fix belongs to. */
+export type DayOf = (atMs: number) => string;
 
 /** Pure: `days` classified from `points` (any order). */
 export function classifyDays(
   points: readonly AwayPoint[],
   days: readonly string[],
   homeAt: HomeAt,
-  opts: { fallbackZone: string; countryAt?: (lat: number, lon: number) => string | null }
+  opts: {
+    fallbackZone: string;
+    countryAt?: (lat: number, lon: number) => string | null;
+    /** The day a fix belongs to; the fallback zone's day unless the homes say (`confirmedHomes`). */
+    dayOf?: DayOf;
+  }
 ): AwayDay[] {
   const byDay = new Map<string, AwayPoint[]>();
   const ground = points.filter((p) => !p.inFlight).sort((a, b) => a.atMs - b.atMs);
+  const dayOf = opts.dayOf ?? ((atMs: number) => localDay(new Date(atMs), opts.fallbackZone));
   for (const p of ground) {
-    const d = dayOf(p.atMs, homeAt, opts.fallbackZone);
+    const d = dayOf(p.atMs);
     const list = byDay.get(d);
     if (list) list.push(p);
     else byDay.set(d, [p]);
@@ -193,18 +196,43 @@ export function awayRuns(days: readonly AwayDay[]): AwayRun[] {
   return runs;
 }
 
-/** The confirmed residence per day, or null when the account has none at all. */
-export function confirmedHomes(
-  periods: readonly HomePeriod[],
-  fallbackZone: string
-): HomeAt | null {
+export type Homes = {
+  /** The confirmed residence on a local day, with that day's zone. */
+  at: HomeAt;
+  /**
+   * The local day a fix belongs to: the day, in a home period's OWN zone,
+   * that the period holds (`[fromDate, toDate)`). Around a move between zones
+   * the fix's UTC date can name the other period — the evening of a Honolulu
+   * day is already the next UTC date — so the period is chosen by its own
+   * local-day boundaries. A fix no period holds (the hours a move skips) is
+   * named in the profile zone.
+   */
+  dayOf: DayOf;
+};
+
+const covers = (p: HomePeriod, day: string) =>
+  p.fromDate <= day && (p.toDate === null || day < p.toDate);
+
+/** The confirmed residences of an account, or null when it has none at all. */
+export function confirmedHomes(periods: readonly HomePeriod[], fallbackZone: string): Homes | null {
   if (!periods.some((p) => p.residenceConfirmed && p.residence)) return null;
-  return (day) => {
-    const period = periodAt(periods, day);
-    const residence = period?.residenceConfirmed ? period.residence : null;
-    if (!residence) return null;
-    const zone = zoneOfCoordinates(residence.lat, residence.lon) ?? fallbackZone;
-    return { lat: residence.lat, lon: residence.lon, zone };
+  const zoneOf = (p: HomePeriod | null) =>
+    (p?.residence && zoneOfCoordinates(p.residence.lat, p.residence.lon)) || fallbackZone;
+  const zones = periods.map((p) => ({ period: p, zone: zoneOf(p) }));
+  return {
+    at: (day) => {
+      const period = periodAt(periods, day);
+      const residence = period?.residenceConfirmed ? period.residence : null;
+      if (!residence) return null;
+      return { lat: residence.lat, lon: residence.lon, zone: zoneOf(period) };
+    },
+    dayOf: (atMs) => {
+      for (const { period, zone } of zones) {
+        const day = localDay(new Date(atMs), zone);
+        if (covers(period, day)) return day;
+      }
+      return localDay(new Date(atMs), fallbackZone);
+    },
   };
 }
 
@@ -219,8 +247,8 @@ export async function awayPeriods(
   opts: { isAllowed?: () => Promise<boolean> } = {}
 ): Promise<AwayRead> {
   const { zone: fallbackZone } = await profileZoneOf(userId);
-  const homeAt = confirmedHomes(await loadHomePeriods(userId), fallbackZone);
-  if (!homeAt) return { status: "noResidence" };
+  const homes = confirmedHomes(await loadHomePeriods(userId), fallbackZone);
+  if (!homes) return { status: "noResidence" };
   // A UTC day either side: a local day of any zone lies inside.
   const read = await readTravTrackDerivation(
     userId,
@@ -232,13 +260,13 @@ export async function awayPeriods(
   );
   if (read.cancelled) return { status: "cancelled" };
   const resolver = await getCountryResolver();
-  const days = classifyDays(read.points, dayRange(window.fromDay, window.untilDay), homeAt, {
+  const days = classifyDays(read.points, dayRange(window.fromDay, window.untilDay), homes.at, {
     fallbackZone,
     countryAt: resolver.countryAt,
+    dayOf: homes.dayOf,
   });
   const last = read.points[read.points.length - 1];
-  const cutDay =
-    read.coverage === "complete" ? null : last ? dayOf(last.atMs, homeAt, fallbackZone) : "";
+  const cutDay = read.coverage === "complete" ? null : last ? homes.dayOf(last.atMs) : "";
   const judged =
     cutDay === null ? days : days.map((d) => (d.day >= cutDay ? unknownDay(d.day, d.zone) : d));
   return {
