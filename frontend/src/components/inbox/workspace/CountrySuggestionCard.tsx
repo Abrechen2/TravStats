@@ -22,11 +22,16 @@ const BUSY_RETRIES = 3;
 const BUSY_DELAY_MS = 600;
 
 /** Codes whose answer removes the card: the list is reloaded after the message. */
-const RELOADING = new Set(["EVIDENCE_INVALIDATED", "SUGGESTION_ALREADY_RESOLVED"]);
+const RELOADING = new Set([
+  "EVIDENCE_INVALIDATED",
+  "SUGGESTION_ALREADY_RESOLVED",
+  "SUGGESTION_NOT_FOUND",
+]);
 
 const ERROR_KEYS: Readonly<Record<string, string>> = {
   EVIDENCE_INVALIDATED: `${L}.errors.invalidated`,
   SUGGESTION_ALREADY_RESOLVED: `${L}.errors.resolved`,
+  SUGGESTION_NOT_FOUND: `${L}.errors.gone`,
   SUGGESTION_ACCEPT_IN_PROGRESS: `${L}.errors.busy`,
   HISTORY_CHANGED: `${L}.errors.historyChanged`,
   TRAVTRACK_DISABLED: `${L}.errors.disabled`,

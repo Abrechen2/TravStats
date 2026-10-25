@@ -117,6 +117,14 @@ describe("a TravTrack finding on the review card", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("trips:dawarichStays.evidenceInvalidated");
   });
 
+  it("SUGGESTION_NOT_FOUND — the finding went with deleted history — says so and takes the card away", async () => {
+    vi.mocked(dawarichStaysApi.accept).mockRejectedValue(refusal("SUGGESTION_NOT_FOUND"));
+    const done = mount();
+    fireEvent.click(screen.getByRole("button", { name: "trips:dawarichStays.accept" }));
+    await waitFor(() => expect(done).toHaveBeenCalled());
+    expect(screen.getByRole("alert")).toHaveTextContent("trips:dawarichStays.suggestionGone");
+  });
+
   it("SUGGESTION_ACCEPT_IN_PROGRESS is retried quietly", async () => {
     vi.useFakeTimers();
     vi.mocked(dawarichStaysApi.accept)

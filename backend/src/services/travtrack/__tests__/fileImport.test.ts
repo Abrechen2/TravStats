@@ -425,14 +425,13 @@ describe("TravTrack — GPX import", () => {
       await deleteTravTrackImport(userId, importId);
       const after = await prisma.$transaction((tx) => historyGeneration(tx, userId));
       expect(Number(after)).toBe(Number(before) + 1);
-      // The removed points' days, and only those, go back to the projections.
+      // The removed points' days and their neighbours go back to the projections.
       const days = await prisma.travTrackDirtyDay.findMany({
         where: { userId },
         orderBy: { day: "asc" },
       });
-      // (The import marked the neighbours too; they keep their acknowledgement.)
       expect(days.filter((d) => d.done === 0).map((d) => d.day.toISOString().slice(0, 10))).toEqual(
-        ["2026-10-12", "2026-10-14"]
+        ["2026-10-11", "2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15"]
       );
       const left = await prisma.countryDay.findMany({ where: { userId }, select: { date: true } });
       expect(left.map((r) => r.date.toISOString().slice(0, 10))).toEqual(["2026-10-13"]);

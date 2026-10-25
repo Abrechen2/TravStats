@@ -10,6 +10,7 @@ export type LocationEvidenceApiErrorCode =
   | "EVIDENCE_UNVERIFIABLE" // the finding's evidence cannot be checked right now (map data missing); it stays open — retry later (409)
   | "SUGGESTION_ALREADY_RESOLVED" // the suggestion was answered already (409)
   | "SUGGESTION_ACCEPT_IN_PROGRESS" // another accept of the same suggestion is running; retry (409)
+  | "SUGGESTION_NOT_FOUND" // no such suggestion of this account — or it went with deleted history (404)
   | "INGEST_TOKEN_INVALID" // unknown, revoked or other-kind OwnTracks/Overland token (401)
   | "TRAVTRACK_IMPORT_NO_TIMES" // the imported file holds no point with a time
   | "TRAVTRACK_IMPORT_UNREADABLE" // the imported file could not be read

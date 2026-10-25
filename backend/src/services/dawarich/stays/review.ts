@@ -353,7 +353,10 @@ export async function acceptStay(userId: string, id: string, input: StayReview) 
     where: { id, userId },
     select: { provider: true },
   });
-  if (source?.provider === "travtrack") return acceptTravTrackStay(userId, id, input);
+  // No row: whichever provider found it, nothing is there to accept — a
+  // TravTrack finding may have gone with the history it came from (E5).
+  if (!source) throw new AppError("Finding not found", 404, "SUGGESTION_NOT_FOUND");
+  if (source.provider === "travtrack") return acceptTravTrackStay(userId, id, input);
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       return await acceptStayOnce(userId, id, input);

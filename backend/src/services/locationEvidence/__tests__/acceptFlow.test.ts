@@ -83,6 +83,23 @@ async function finding() {
   return prisma.dawarichStay.findFirstOrThrow({ where: { userId, status: "pending" } });
 }
 
+/**
+ * Runs `work` while the re-check reads the history as it is but finds the
+ * evidence gone — what a change other than a removal (which deletes the
+ * finding, E5) does to it.
+ */
+async function withInvalidatingRecheck<T>(work: () => Promise<T>): Promise<T> {
+  const real = jest.requireActual<typeof recheckModule>("../recheck").recheckFinding;
+  const spy = jest
+    .spyOn(recheckModule, "recheckFinding")
+    .mockImplementation(async (...args) => ({ ...(await real(...args)), outcome: "invalidated" }));
+  try {
+    return await work();
+  } finally {
+    spy.mockRestore();
+  }
+}
+
 const accept = (id: string, as = cookie) =>
   request(app).post(`/api/v1/dawarich-stays/${id}/accept`).set("Cookie", as).send(seoulReview());
 const reject = (id: string) =>
@@ -151,10 +168,9 @@ describe("accepting a TravTrack finding", () => {
     expect(retry.body.data).toMatchObject({ status: "accepted", visitId: first.body.data.visitId });
   });
 
-  it("points deleted since the scan → 409 EVIDENCE_INVALIDATED, and the row is invalidated even when the response is lost", async () => {
+  it("evidence that no longer holds → 409 EVIDENCE_INVALIDATED, and the row is invalidated even when the response is lost", async () => {
     const row = await finding();
-    await deleteTravTrackRange(userId, new Date(BASE - MIN), new Date(BASE + 60 * MIN));
-    const res = await accept(row.id);
+    const res = await withInvalidatingRecheck(() => accept(row.id));
     expect(res.status).toBe(409);
     expect(res.body.code).toBe("EVIDENCE_INVALIDATED");
     const fresh = createPrismaClient();
@@ -168,23 +184,31 @@ describe("accepting a TravTrack finding", () => {
     expect(await prisma.placeVisit.count({ where: { userId } })).toBe(0);
   });
 
-  it("a range deleted between re-check and publish invalidates instead of accepting", async () => {
+  it("points deleted since the scan take the finding with them (E5): accepting it is 404 and writes nothing", async () => {
+    const row = await finding();
+    await deleteTravTrackRange(userId, new Date(BASE - MIN), new Date(BASE + 60 * MIN));
+    const res = await accept(row.id);
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("SUGGESTION_NOT_FOUND");
+    expect(await prisma.dawarichStay.findUnique({ where: { id: row.id } })).toBeNull();
+    expect(await prisma.placeVisit.count({ where: { userId } })).toBe(0);
+  });
+
+  it("a range deleted between re-check and publish: 409 EVIDENCE_INVALIDATED instead of accepting", async () => {
     const row = await finding();
     const release = await holdTravTrackLock(userId);
     const pending = accept(row.id).then((r) => r);
     await untilSomeoneWaitsForTheLock();
-    // The removal lands while the accept waits to publish, under the same lock.
+    // The removal lands while the accept waits to publish, under the same lock;
+    // it takes the claimed finding with it (E5).
     await release(async (tx) => {
       await deleteTravTrackRange(userId, new Date(BASE - MIN), new Date(BASE + 60 * MIN), tx);
-      await bumpHistoryGeneration(tx, userId);
     });
     const res = await pending;
     expect(res.status).toBe(409);
     expect(res.body.code).toBe("EVIDENCE_INVALIDATED");
     expect(await prisma.placeVisit.count({ where: { userId } })).toBe(0);
-    expect((await prisma.dawarichStay.findUniqueOrThrow({ where: { id: row.id } })).status).toBe(
-      "invalidated"
-    );
+    expect(await prisma.dawarichStay.findUnique({ where: { id: row.id } })).toBeNull();
   });
 
   it("TravTrack off → 403 TRAVTRACK_DISABLED, the finding stays pending, reject still works", async () => {
@@ -310,8 +334,7 @@ describe("the list a TravTrack finding is read from", () => {
       data: { locationProviderRev: { increment: 1 } },
     });
     expect((await list())[0]).toMatchObject({ id: row.id, beforeSourceSwitch: true });
-    await deleteTravTrackRange(userId, new Date(BASE - MIN), new Date(BASE + 60 * MIN));
-    expect((await accept(row.id)).status).toBe(409);
+    expect((await withInvalidatingRecheck(() => accept(row.id))).status).toBe(409);
     expect((await list("invalidated")).map((r) => r.id)).toEqual([row.id]);
   });
 });

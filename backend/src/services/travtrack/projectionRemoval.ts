@@ -1,19 +1,12 @@
 /**
  * What a removal of TravTrack history does to the projections derived from it
- * (TravTrack plan E6; E5 builds the rest of the removal handler): the
- * `travtrack` country days of the removed days are deleted in the removal's
- * own transaction, and those days are marked dirty, so the next projection run
- * re-derives whatever of them is left. Dawarich's rows are another source and
- * never touched.
- *
- * EXTENSION POINT for E5: E5 computes the removed points' days before they
- * go (`cause.removed.days`) and calls `projectionsOnHistoryDeleted` with
- * them. Until then the days come from the cause itself:
- *   - a range: every UTC day it touches. Its inner days lost all their points,
- *     its two edge days may keep some; all are deleted and marked.
- *   - a zone: which days it emptied is not known after the delete, so every
- *     day holding a `travtrack` country row is marked dirty (not deleted) and
- *     re-derived over the following runs. Correct, only slower than E5's.
+ * (TravTrack plan E6, E5): the `travtrack` country days of the removed days —
+ * the UTC days of the points that went, collected before they went
+ * (`removedHistory.ts`) — are deleted in the removal's own transaction, and
+ * those days and their neighbours are marked dirty: the next projection run
+ * re-derives whatever of a day is left, and a neighbour re-reads its edge,
+ * whose context fixes may have been among the removed ones (`dirtyDays.ts`).
+ * Dawarich's rows are another source and never touched.
  */
 import type { DbTransaction } from "../../db";
 import type { PointsRemovedCause } from "./deleteRange";
@@ -21,9 +14,9 @@ import { markTravTrackDaysDirty, utcDayOf } from "./dirtyDays";
 
 const DAY_MS = 86_400_000;
 
-const midnight = (ms: number) => Math.floor(ms / DAY_MS) * DAY_MS;
+const dayMs = (day: string) => Date.parse(`${day}T00:00:00.000Z`);
 
-/** Deletes the `travtrack` country days of `days` and marks them dirty. */
+/** Deletes the `travtrack` country days of `days`; marks them and their neighbours dirty. */
 export async function projectionsOnHistoryDeleted(
   tx: DbTransaction,
   userId: string,
@@ -34,53 +27,24 @@ export async function projectionsOnHistoryDeleted(
     where: {
       userId,
       source: "travtrack",
-      date: { in: days.map((d) => new Date(`${d}T00:00:00.000Z`)) },
+      date: { in: days.map((d) => new Date(dayMs(d))) },
     },
   });
-  await markTravTrackDaysDirty(tx, userId, days);
+  const marked = new Set<string>();
+  for (const day of days) {
+    const ms = dayMs(day);
+    marked.add(utcDayOf(ms - DAY_MS));
+    marked.add(day);
+    marked.add(utcDayOf(ms + DAY_MS));
+  }
+  await markTravTrackDaysDirty(tx, userId, [...marked].sort());
 }
 
-/** The removal hook (`onPointsRemoved`), until E5 hands over `removed.days`. */
-export async function projectionsOnPointsRemoved(
+/** The removal hook (`onPointsRemoved`): every cause names the days it emptied. */
+export function projectionsOnPointsRemoved(
   tx: DbTransaction,
   userId: string,
   cause: PointsRemovedCause
 ): Promise<void> {
-  // An import deleted: its points' days are known exactly (plan E8).
-  if (cause.kind === "origin") return projectionsOnHistoryDeleted(tx, userId, cause.days);
-  if (cause.kind === "range") {
-    const fromMs = cause.from.getTime();
-    const toMs = cause.to.getTime();
-    if (!(toMs > fromMs)) return;
-    const first = midnight(fromMs);
-    const endExclusive = midnight(toMs - 1) + DAY_MS;
-    // Inner days lost every point: delete their rows in one statement,
-    // however long the range. Only the two edge days can keep a point, so
-    // only they need re-deriving.
-    await tx.countryDay.deleteMany({
-      where: {
-        userId,
-        source: "travtrack",
-        date: { gte: new Date(first), lt: new Date(endExclusive) },
-      },
-    });
-    // The edge days may keep points; their outer neighbours read them as context.
-    await markTravTrackDaysDirty(tx, userId, [
-      utcDayOf(first - DAY_MS),
-      utcDayOf(first),
-      utcDayOf(endExclusive - DAY_MS),
-      utcDayOf(endExclusive),
-    ]);
-    return;
-  }
-  const held = await tx.countryDay.findMany({
-    where: { userId, source: "travtrack" },
-    select: { date: true },
-    distinct: ["date"],
-  });
-  await markTravTrackDaysDirty(
-    tx,
-    userId,
-    held.map((r) => r.date.toISOString().slice(0, 10))
-  );
+  return projectionsOnHistoryDeleted(tx, userId, cause.days);
 }

@@ -60,7 +60,7 @@ registry.registerPath({
   tags,
   summary: "Answer a country question: visited, or only on the ground",
   description:
-    "Writes the user's country override (`visited` or `ground`, dated at the run's first day) after re-checking that TravTrack still names the country on two ground days. Idempotent: a repeat answers the first decision. An override the user set meanwhile is kept and named. 409 `SUGGESTION_ACCEPT_IN_PROGRESS` (retry), `SUGGESTION_ALREADY_RESOLVED`, `EVIDENCE_INVALIDATED` (the history went; the question is invalidated before the answer), `HISTORY_CHANGED` (the history kept changing while it was checked — the question stays open; retry) or `TRAVTRACK_UNAVAILABLE` (TravTrack is no longer the account's location source — the question stays). 403 `TRAVTRACK_DISABLED` while TravTrack is off — the question stays.",
+    "Writes the user's country override (`visited` or `ground`, dated at the run's first day) after re-checking that TravTrack still names the country on two ground days. Idempotent: a repeat answers the first decision. An override the user set meanwhile is kept and named. 409 `SUGGESTION_ACCEPT_IN_PROGRESS` (retry), `SUGGESTION_ALREADY_RESOLVED`, `EVIDENCE_INVALIDATED` (the history went; the question is invalidated before the answer), `HISTORY_CHANGED` (the history kept changing while it was checked — the question stays open; retry) or `TRAVTRACK_UNAVAILABLE` (TravTrack is no longer the account's location source — the question stays). 403 `TRAVTRACK_DISABLED` while TravTrack is off — the question stays. 404 `SUGGESTION_NOT_FOUND`: no such question — or it went with the location history it came from.",
   request: {
     params: idParams,
     body: {

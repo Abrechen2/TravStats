@@ -91,19 +91,21 @@ export default function StayReviewCard({
                 ? "ambiguousTime"
                 : code === "EVIDENCE_INVALIDATED"
                   ? "evidenceInvalidated"
-                  : code === "EVIDENCE_UNVERIFIABLE"
-                    ? "evidenceUnverifiable"
-                    : code === "TRAVTRACK_DISABLED"
-                      ? "travTrackDisabled"
-                      : code === "SUGGESTION_ACCEPT_IN_PROGRESS"
-                        ? "acceptInProgress"
-                        : code === "HISTORY_CHANGED"
-                          ? "historyChanged"
-                          : "error"
+                  : code === "SUGGESTION_NOT_FOUND"
+                    ? "suggestionGone"
+                    : code === "EVIDENCE_UNVERIFIABLE"
+                      ? "evidenceUnverifiable"
+                      : code === "TRAVTRACK_DISABLED"
+                        ? "travTrackDisabled"
+                        : code === "SUGGESTION_ACCEPT_IN_PROGRESS"
+                          ? "acceptInProgress"
+                          : code === "HISTORY_CHANGED"
+                            ? "historyChanged"
+                            : "error"
         )
       );
       // The history behind it is gone: the finding is no longer a question.
-      if (code === "EVIDENCE_INVALIDATED") onDone();
+      if (code === "EVIDENCE_INVALIDATED" || code === "SUGGESTION_NOT_FOUND") onDone();
     } finally {
       setBusy(false);
     }

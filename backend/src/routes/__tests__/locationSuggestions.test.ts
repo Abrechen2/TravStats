@@ -17,8 +17,8 @@ jest.mock("../../utils/achievements", () => ({ recheckAchievements: jest.fn(asyn
  * focus 21): a country question is answered "visited" or "ground" by writing
  * the user's own country override — once, however often the answer is sent —
  * after re-checking that TravTrack still names the country on two ground days.
- * Evidence that went meanwhile invalidates the question, committed before the
- * 409. Rejecting writes nothing but the answer, and works with TravTrack off.
+ * Evidence that no longer holds invalidates the question, committed before the
+ * 409; history deleted takes the question with it (E5). Rejecting writes nothing but the answer, and works with TravTrack off.
  */
 
 const PREFIX = "location-suggestions-route-";
@@ -73,6 +73,8 @@ describe("/api/v1/location-suggestions", () => {
     await prisma.locationSuggestion.deleteMany({ where: { userId } });
     await prisma.countryOverride.deleteMany({ where: { userId } });
     await prisma.travTrackDerivationState.deleteMany({ where: { userId } });
+    await prisma.travTrackPoint.deleteMany({ where: { userId } });
+    await prisma.travTrackDeletedRange.deleteMany({ where: { userId } });
     await setLocationProvider(userId, "travtrack");
   });
 
@@ -203,13 +205,12 @@ describe("/api/v1/location-suggestions", () => {
     expect(await prisma.countryOverride.count({ where: { userId } })).toBe(1);
   });
 
-  it("accept after the days were deleted → 409 EVIDENCE_INVALIDATED, committed", async () => {
+  it("accept after the days were re-derived without the country → 409 EVIDENCE_INVALIDATED, committed", async () => {
     const id = await question();
-    await deleteTravTrackRange(
-      userId,
-      new Date("2026-10-12T00:00:00Z"),
-      new Date("2026-10-13T00:00:00Z")
-    );
+    // The projection no longer names Portugal on the 12th.
+    await prisma.countryDay.deleteMany({
+      where: { userId, date: utcMidnight("2026-10-12") },
+    });
 
     const res = await accept(id, "visited");
 
@@ -220,6 +221,33 @@ describe("/api/v1/location-suggestions", () => {
     expect(await prisma.countryOverride.count({ where: { userId } })).toBe(0);
     // And it is not asked again as if nothing happened.
     expect((await accept(id, "visited")).body.code).toBe("SUGGESTION_ALREADY_RESOLVED");
+  });
+
+  it("deleting the days' points takes the question with it (E5): accepting is 404, nothing written", async () => {
+    const id = await question();
+    await prisma.travTrackPoint.create({
+      data: {
+        userId,
+        t: new Date("2026-10-12T09:00:00Z"),
+        tS: Math.floor(Date.parse("2026-10-12T09:00:00Z") / 1000),
+        lat: 38.72,
+        lon: -9.14,
+        origin: "companion:phone-1",
+        originRef: "pt-1",
+        deviceId: "phone-1",
+      },
+    });
+    await deleteTravTrackRange(
+      userId,
+      new Date("2026-10-12T00:00:00Z"),
+      new Date("2026-10-13T00:00:00Z")
+    );
+
+    expect(await prisma.locationSuggestion.findUnique({ where: { id } })).toBeNull();
+    const res = await accept(id, "visited");
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("SUGGESTION_NOT_FOUND");
+    expect(await prisma.countryOverride.count({ where: { userId } })).toBe(0);
   });
 
   it("TravTrack off → 403 TRAVTRACK_DISABLED, the question stays pending, reject still works", async () => {

@@ -95,6 +95,8 @@ export interface ClaimStore<Row extends ClaimState, Entry> {
   replay(row: Row): Entry;
 }
 
+/** No such suggestion of this account — or it went with the history it came from (E5). */
+const notFound = () => new AppError("Suggestion not found", 404, "SUGGESTION_NOT_FOUND");
 export const disabled = () =>
   new AppError("TravTrack is switched off on this server", 403, "TRAVTRACK_DISABLED");
 const inProgress = () =>
@@ -129,7 +131,7 @@ async function claim<Row extends ClaimState, Entry>(
   hooks: AcceptHooks
 ): Promise<{ token: string; row: Row } | { replay: Entry }> {
   const loaded = await store.find(id);
-  if (!loaded) throw new AppError("Suggestion not found", 404);
+  if (!loaded) throw notFound();
   if (loaded.status === "accepted") return { replay: store.replay(loaded) };
   await store.assertAllowed(loaded);
   await hooks.afterLoad?.();
@@ -139,7 +141,7 @@ async function claim<Row extends ClaimState, Entry>(
   if (row) return { token, row };
   // Lost the race, or not claimable: say which, from what the row is now.
   const current = await store.find(id);
-  if (!current) throw new AppError("Suggestion not found", 404);
+  if (!current) throw notFound();
   if (current.status === "accepted") return { replay: store.replay(current) };
   if (current.status === "accepting") throw inProgress();
   throw new AppError("Suggestion already resolved", 409, store.resolvedCode);

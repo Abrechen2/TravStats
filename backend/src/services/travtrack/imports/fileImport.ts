@@ -6,7 +6,6 @@ import { AppError } from "../../../middleware/errorHandler";
 import logger from "../../../utils/logger";
 import { jobErrorOf, startJob } from "../../jobs/jobRegistry";
 import { positionKey, type DropReason } from "../classify";
-import { bumpHistoryGeneration } from "../../locationEvidence/generation";
 import { onPointsRemoved } from "../deleteRange";
 import { utcDaysOf } from "../dirtyDays";
 import { ingestPoints, type IngestResult } from "../ingest";
@@ -294,9 +293,9 @@ export async function deleteTravTrackImport(
       });
       if (removed.length === 0) return { deleted: 0 };
       const { count } = await tx.travTrackPoint.deleteMany({ where: { userId, origin } });
-      // History went: a derivation that read before this must not publish
-      // after it (E1's generation fence), and the days go back to the projections.
-      await bumpHistoryGeneration(tx, userId);
+      // History went: the hook raises the generation (a derivation that read
+      // before this must not publish after it), takes the open questions of
+      // these points with it and gives their days back to the projections (E5).
       await onPointsRemoved(tx, userId, {
         kind: "origin",
         origin,

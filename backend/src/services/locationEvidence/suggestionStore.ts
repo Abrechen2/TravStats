@@ -72,7 +72,7 @@ const find = (userId: string, id: string) =>
 
 async function load(userId: string, id: string): Promise<StoredSuggestion> {
   const row = await find(userId, id);
-  if (!row) throw new AppError("Suggestion not found", 404);
+  if (!row) throw new AppError("Suggestion not found", 404, "SUGGESTION_NOT_FOUND");
   return row;
 }
 

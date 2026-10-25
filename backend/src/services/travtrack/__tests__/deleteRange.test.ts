@@ -76,7 +76,18 @@ describe("TravTrack range delete", () => {
         select: { fromAt: true, toAt: true },
       })
     ).toEqual([{ fromAt: from, toAt: to }]);
-    expect(causes).toEqual([{ kind: "range", from, to }]);
+    // What went is named, collected before the delete (E5): the one point inside.
+    const inside = Math.floor(Date.parse("2026-10-12T01:00:00Z") / 1000);
+    expect(causes).toEqual([
+      {
+        kind: "range",
+        from,
+        to,
+        spans: [[inside * 1000, inside * 1000]],
+        days: ["2026-10-12"],
+        keys: new Set([`${inside}|1|1`]),
+      },
+    ]);
   });
 
   it("deleting a range shortens a gap that overlaps its edge and splits one that spans it", async () => {

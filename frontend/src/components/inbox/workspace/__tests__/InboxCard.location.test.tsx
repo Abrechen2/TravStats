@@ -138,6 +138,18 @@ describe("country question card", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  it("SUGGESTION_NOT_FOUND says the question went with its history and removes the card", async () => {
+    vi.mocked(locationSuggestionsApi.accept).mockRejectedValue(
+      refusal("SUGGESTION_NOT_FOUND", 404)
+    );
+    const { reload } = mount();
+
+    fireEvent.click(screen.getByRole("button", { name: "Besucht" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/gibt es nicht mehr/);
+    expect(reload).toHaveBeenCalled();
+  });
+
   it("HISTORY_CHANGED is retried quietly, and said once the retries are spent", async () => {
     vi.mocked(locationSuggestionsApi.accept).mockRejectedValue(refusal("HISTORY_CHANGED"));
     const { reload } = mount();

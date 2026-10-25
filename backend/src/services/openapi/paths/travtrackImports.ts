@@ -125,7 +125,8 @@ registry.registerPath({
   summary: "Delete an import and the points it brought",
   description:
     "The import's row stays as `cancelled` (a running import stops before its next batch); " +
-    "its points go, nothing else does, and no span is remembered as deleted.",
+    "its points go, nothing else does, and no span is remembered as deleted. Open suggestions " +
+    "drawn from its points go with them; accepted ones stay, without the deleted positions.",
   tags: ["TravTrack"],
   request: { params: z.object({ id: z.string() }) },
   responses: {

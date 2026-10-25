@@ -348,6 +348,7 @@
           "resolved": "This question was answered already.",
           "busy": "Your answer is still being saved. Please try again in a moment.",
           "disabled": "TravTrack is switched off on this server. The question stays; you can still choose “Not there”.",
+          "gone": "This question no longer exists — the location history behind it has since been deleted.",
           "historyChanged": "Your location history changed while the answer was being checked. The question stays open; please try again in a moment.",
           "providerOff": "TravTrack is no longer your location source. The question stays; you can still choose “Not there”."
         }
