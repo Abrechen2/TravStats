@@ -4,6 +4,7 @@ import { prisma } from "../db";
 import { reserveScan, scanStays } from "../services/dawarich/stays/scan";
 import { STAY_SCAN_PROVIDER_WHERE } from "../services/locationProvider/kinds";
 import { travTrackInstanceOn } from "../services/travtrack/availability";
+import { runTravTrackJourneySweep } from "../services/locationEvidence/journeys/sweep";
 import logger from "../utils/logger";
 import { AppError } from "../middleware/errorHandler";
 let task: ScheduledTask | null = null;
@@ -31,7 +32,8 @@ export async function runDawarichStaySweep(): Promise<void> {
   // — while the instance's TravTrack is on — TravTrack (E3). That gate is this
   // schedule's alone: "scan now" (`routes/dawarichStays.ts`) is the person
   // asking. Market visits ride inside `scanStays`, so they follow it too.
-  const providerWhere = (await travTrackOnForSweep())
+  const travTrackOn = await travTrackOnForSweep();
+  const providerWhere = travTrackOn
     ? STAY_SCAN_PROVIDER_WHERE.travTrackOn
     : STAY_SCAN_PROVIDER_WHERE.travTrackOff;
   const accounts = await prisma.dawarichStayScan.findMany({
@@ -48,6 +50,18 @@ export async function runDawarichStaySweep(): Promise<void> {
       await scanStays(userId, { scheduled: true });
     } catch (err) {
       logScanFailure(userId, err);
+    }
+  }
+  // Missing journeys (E7) after the TravTrack stay scans, over the same week.
+  // Its own failure never reads as a stay sweep failure.
+  if (travTrackOn) {
+    try {
+      await runTravTrackJourneySweep();
+    } catch (err) {
+      logger.error(
+        { operation: "travtrack_journey_sweep_failed", err },
+        "TravTrack journey sweep failed"
+      );
     }
   }
 }

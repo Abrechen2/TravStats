@@ -202,7 +202,7 @@ export const apiMounts: ApiMount[] = [
   // Public and unauthenticated, like the spec: the About section reads it before login.
   { id: "version", base: "/api/v1", router: versionRoutes },
   { id: "dawarichStays", base: "/api/v1/dawarich-stays", router: dawarichStayRoutes },
-  // What location history asks the user: country questions (TravTrack plan E6).
+  // What location history asks the user: country (E6) and journey (E7) questions.
   {
     id: "locationSuggestions",
     base: "/api/v1/location-suggestions",

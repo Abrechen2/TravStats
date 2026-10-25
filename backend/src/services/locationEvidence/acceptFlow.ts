@@ -88,11 +88,20 @@ export interface ClaimStore<Row extends ClaimState, Entry> {
    * between this check and the final write. `gone`: the row no longer exists.
    */
   holdsClaim(tx: DbTransaction, id: string, token: string): Promise<"held" | "lost" | "gone">;
-  invalidate(tx: DbTransaction, id: string, token: string): Promise<void>;
+  /** The evidence no longer holds: write the kind's invalidation under the claim. */
+  invalidate(tx: DbTransaction, row: Row, token: string): Promise<void>;
   /** Hand the claim back: `pending` again. */
   release(id: string, token: string): Promise<void>;
   /** The stored entry of an accepted row. */
   replay(row: Row): Entry;
+  /**
+   * Whether this request repeats an answer the row already holds, so the
+   * stored answer goes out with no re-check (rule 6). Default: the row is
+   * `accepted`. A kind whose question takes several answers (a journey's
+   * runs, E7) decides per request — and may throw: an answer that conflicts
+   * with the one the row holds is refused before anything is claimed.
+   */
+  isReplay?(row: Row): boolean;
 }
 
 /** No such suggestion of this account — or it went with the history it came from (E5). */
@@ -122,18 +131,33 @@ const invalidated = () =>
 
 export type AcceptHooks = {
   /** Test seam: runs after the first read, before the claim. */
-  afterLoad?: () => Promise<void>;
+  afterLoad?: () => Promise<unknown>;
+  /** Test seam: after each re-check, before its publication. */
+  afterRecheck?: () => Promise<unknown>;
+  /** Test seam: inside the publication, the claim held, just before its write. */
+  beforeWrite?: () => Promise<unknown>;
 };
+
+/**
+ * Refuses a request the row can never take (throws the client's error). Runs
+ * on the row as first read, before the claim, and again on the row as claimed.
+ */
+type Validate<Row> = (row: Row) => Promise<void>;
+
+const replays = <Row extends ClaimState, Entry>(store: ClaimStore<Row, Entry>, row: Row) =>
+  store.isReplay ? store.isReplay(row) : row.status === "accepted";
 
 async function claim<Row extends ClaimState, Entry>(
   id: string,
   store: ClaimStore<Row, Entry>,
-  hooks: AcceptHooks
+  hooks: AcceptHooks,
+  validate: Validate<Row> | undefined
 ): Promise<{ token: string; row: Row } | { replay: Entry }> {
   const loaded = await store.find(id);
   if (!loaded) throw notFound();
-  if (loaded.status === "accepted") return { replay: store.replay(loaded) };
+  if (replays(store, loaded)) return { replay: store.replay(loaded) };
   await store.assertAllowed(loaded);
+  await validate?.(loaded);
   await hooks.afterLoad?.();
   const token = crypto.randomUUID();
   const staleBefore = new Date(Date.now() - CLAIM_STALE_MS);
@@ -142,7 +166,7 @@ async function claim<Row extends ClaimState, Entry>(
   // Lost the race, or not claimable: say which, from what the row is now.
   const current = await store.find(id);
   if (!current) throw notFound();
-  if (current.status === "accepted") return { replay: store.replay(current) };
+  if (replays(store, current)) return { replay: store.replay(current) };
   if (current.status === "accepting") throw inProgress();
   throw new AppError("Suggestion already resolved", 409, store.resolvedCode);
 }
@@ -155,7 +179,8 @@ async function publish<Row extends ClaimState, Entry>(
   token: string,
   checked: Recheck,
   store: ClaimStore<Row, Entry>,
-  apply: (tx: DbTransaction) => Promise<Entry>
+  apply: (tx: DbTransaction) => Promise<Entry>,
+  hooks: AcceptHooks
 ): Promise<Published<Entry>> {
   // READ COMMITTED on purpose: every check below must see what committed
   // while this transaction waited for the locks. A serializable snapshot is
@@ -173,8 +198,9 @@ async function publish<Row extends ClaimState, Entry>(
           if (held === "gone") return { gone: true };
           if (held === "lost") throw inProgress();
           if ((await historyGeneration(tx, userId)) !== checked.generation) return { moved: true };
+          await hooks.beforeWrite?.();
           if (checked.outcome === "invalidated") {
-            await store.invalidate(tx, row.id, token);
+            await store.invalidate(tx, row, token);
             return { invalidated: true };
           }
           return { entry: await apply(tx) };
@@ -200,21 +226,38 @@ export async function acceptFlow<Row extends ClaimState & { id: string }, Entry>
    * transaction: the entry, and the row marked accepted under `token`.
    */
   apply: (tx: DbTransaction, row: Row, token: string) => Promise<Entry>;
+  /** Refuses a request the row can never take; before the claim and on the claimed row. */
+  validate?: Validate<Row>;
   hooks?: AcceptHooks;
 }): Promise<Entry> {
   const { userId, id, store } = opts;
-  const claimed = await claim(id, store, opts.hooks ?? {});
+  const hooks = opts.hooks ?? {};
+  const claimed = await claim(id, store, hooks, opts.validate);
   if ("replay" in claimed) return claimed.replay;
   const { token, row } = claimed;
   let handedBack = false;
   try {
+    // The claim read the row as it is now; it may have taken this answer meanwhile.
+    if (replays(store, row)) {
+      handedBack = true;
+      await store.release(id, token);
+      return store.replay(row);
+    }
+    await opts.validate?.(row);
     for (let round = 0; round < 2; round++) {
       const checked = await opts.recheck(row);
+      await hooks.afterRecheck?.();
       // Cannot be checked now: neither accepted nor invalidated; the claim is
       // handed back below and the suggestion stays open.
       if (checked.outcome === "unverifiable") throw unverifiable();
-      const outcome = await publish(userId, row, token, checked, store, (tx) =>
-        opts.apply(tx, row, token)
+      const outcome = await publish(
+        userId,
+        row,
+        token,
+        checked,
+        store,
+        (tx) => opts.apply(tx, row, token),
+        hooks
       );
       if ("entry" in outcome) return outcome.entry;
       if ("invalidated" in outcome || "gone" in outcome) {

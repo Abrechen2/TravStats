@@ -20,7 +20,7 @@ export interface InboxVisibility {
   photos: boolean;
   trips: boolean;
   stays: boolean;
-  /** TravTrack's questions (plan E6), behind TravTrack's beta key. Omitted: not asked. */
+  /** TravTrack's questions (plan E6/E7), behind TravTrack's beta key. Omitted: not asked. */
   location?: boolean;
 }
 

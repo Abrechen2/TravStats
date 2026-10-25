@@ -272,7 +272,7 @@
         "photos": "Photo suggestions",
         "tripContext": "Trip assignments",
         "dawarich": "GPS stays",
-        "location": "Countries from TravTrack"
+        "location": "From TravTrack"
       },
       "later": "Deferred",
       "laterHint": "These items are deferred for this visit only. No data has been changed.",
@@ -341,8 +341,8 @@
         "visited": "Visited",
         "ground": "Only passed through on the ground",
         "notThere": "Not there",
-        "emptyTitle": "No open questions about countries",
-        "emptyDescription": "A question appears here once TravTrack sees you on the ground on at least two days in a country your passport does not know yet.",
+        "emptyTitle": "No open questions from TravTrack",
+        "emptyDescription": "A question appears here once TravTrack sees you on the ground on at least two days in a country your passport does not know yet — or records a journey on a day that matches no entry in your logbook.",
         "errors": {
           "invalidated": "The location data behind this question was deleted or changed meanwhile. The question no longer applies.",
           "resolved": "This question was answered already.",
@@ -351,6 +351,52 @@
           "gone": "This question no longer exists — the location history behind it has since been deleted.",
           "historyChanged": "Your location history changed while the answer was being checked. The question stays open; please try again in a moment.",
           "providerOff": "TravTrack is no longer your location source. The question stays; you can still choose “Not there”."
+        }
+      },
+      "journey": {
+        "cardTitle": "Journey from your location history",
+        "subject_one": "{{count}} journey · {{km}} km",
+        "subject_other": "{{count}} journeys · {{km}} km",
+        "question": "You were on the move – is this journey missing from your logbook?",
+        "source": "from TravTrack",
+        "evidence_one": "TravTrack recorded a journey on this day that matches no entry in your logbook.",
+        "evidence_other": "TravTrack recorded {{count}} journeys on this day that match no entry in your logbook.",
+        "partial": "Not every position of this day was read.",
+        "run": "{{from}}–{{until}} · {{km}} km",
+        "hint": {
+          "rail": "The speed looks like a train.",
+          "road": "The speed looks like a road."
+        },
+        "startNotRecorded": "Start not recorded",
+        "endNotRecorded": "End not recorded",
+        "enter": {
+          "rail": "Enter as a train ride",
+          "bus": "Enter as a bus ride",
+          "roadtrip": "Enter as a roadtrip"
+        },
+        "linkSaved": "Link the saved entry",
+        "noEntry": "No entry needed",
+        "closeRest": "All other journeys: no entry needed",
+        "linked": {
+          "rail": "Linked to a train ride",
+          "bus": "Linked to a bus ride",
+          "roadtrip": "Linked to a roadtrip"
+        },
+        "closed": "No entry needed",
+        "invalidated": "The location data no longer shows this journey.",
+        "effect": "Entering opens the matching form with times and positions; nothing is saved until you save it. “No entry needed” changes nothing, and this day is not asked again.",
+        "roadtripName": "Roadtrip on {{day}}",
+        "stationStart": "Start of the journey",
+        "stationEnd": "End of the journey",
+        "errors": {
+          "invalidated": "The location data behind this journey was deleted or changed meanwhile. Your entry stays saved.",
+          "resolved": "This journey was answered already.",
+          "busy": "Your answer is still being saved. Please try again in a moment.",
+          "historyChanged": "Your location history just changed. The question stays open – please try again.",
+          "unverifiable": "The location data behind this journey cannot be checked right now. The question stays open.",
+          "disabled": "TravTrack is switched off on this server. The question stays; you can still choose “No entry needed”.",
+          "providerOff": "TravTrack is no longer your location source. The question stays; you can still choose “No entry needed”.",
+          "entryMismatch": "The saved entry does not cover this journey – a roadtrip may still lack its stations. It stays saved; you can link it later."
         }
       },
       "proposal": {

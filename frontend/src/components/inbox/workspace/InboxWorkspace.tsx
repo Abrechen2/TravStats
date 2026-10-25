@@ -64,7 +64,7 @@ export default function InboxWorkspace({
   // The account's suggestion switches (forgejo#306): an off kind has no tab and is not loaded.
   const tripsVisible = useSuggestionSwitchesStore((s) => s.trips);
   const staysVisible = useSuggestionSwitchesStore((s) => s.stays);
-  // TravTrack's questions (plan E6) exist only behind its beta key.
+  // TravTrack's questions (plan E6/E7) exist only behind its beta key.
   const locationVisible = useBetaFeatures().isFeatureVisible("travTrack");
   const visibility = useMemo(
     () => ({

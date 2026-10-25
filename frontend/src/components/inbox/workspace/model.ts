@@ -123,12 +123,22 @@ export function buildInboxItems(
         break;
       }
       case "location": {
-        // A TravTrack country question (plan E6): about a country, on UTC days.
         const s = record.data;
-        const code = String(s.explanation.params.country ?? "");
-        title = t(`${W}.location.cardTitle`);
-        subject = countryName(code, language) || code;
-        day = suggestionDays(s).first;
+        if (s.kind === "journey") {
+          // A TravTrack journey question (plan E7): about a local day.
+          title = t(`${W}.journey.cardTitle`);
+          subject = t(`${W}.journey.subject`, {
+            count: Number(s.explanation.params.runs ?? 0),
+            km: s.explanation.params.km ?? 0,
+          });
+          day = s.journey?.day ?? null;
+        } else {
+          // A TravTrack country question (plan E6): about a country, on UTC days.
+          const code = String(s.explanation.params.country ?? "");
+          title = t(`${W}.location.cardTitle`);
+          subject = countryName(code, language) || code;
+          day = suggestionDays(s).first;
+        }
         break;
       }
       case "photos": {

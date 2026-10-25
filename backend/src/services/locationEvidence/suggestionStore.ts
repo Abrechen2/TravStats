@@ -1,9 +1,12 @@
 /**
  * `location_suggestions` as the accept protocol (`acceptFlow.ts`) claims,
  * re-checks and publishes it — the store every kind of that table shares
- * (country, E6; journey, E7). A kind brings only its re-check and the entry
- * its answer makes (`SuggestionKind`); marking the row accepted, under the
- * claim token, is the store's.
+ * (country, E6; journey, E7). A kind brings its re-check and the row's next
+ * state its answer makes (`SuggestionKind`); writing that state, under the
+ * claim token, is the store's. A country answer closes its question; a
+ * journey answer links one run, and the question stays open while other runs
+ * wait — so `apply` names the next status rather than the store assuming
+ * `accepted`.
  *
  * The gate is the owner rule of 2026-10-25 (`allowed.ts`): a TravTrack
  * question is answered only while the instance's TravTrack is on AND the
@@ -15,9 +18,11 @@
  */
 import { prisma, type DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
+import type { Prisma } from "../../prisma";
 import { acceptFlow, CLAIM_STALE_MS, type AcceptHooks, type ClaimStore } from "./acceptFlow";
 import { assertTravTrackDerivationAllowed } from "./allowed";
 import { historyGeneration } from "./generation";
+import type { Recheck } from "./recheck";
 
 export const SUGGESTION_SELECT = {
   id: true,
@@ -51,16 +56,40 @@ export type StoredSuggestion = {
   acceptedEntryId: string | null;
 };
 
-export type SuggestionKind = {
-  /** The kind's own rule against the history as it is now. */
-  recheck: (row: StoredSuggestion) => Promise<"holds" | "invalidated">;
-  /** Writes (or finds) the entry the answer makes, inside the publication's transaction. */
-  apply: (tx: DbTransaction, row: StoredSuggestion) => Promise<{ kind: string; id: string }>;
+/** The fields a publication writes; the store clears the claim itself. */
+export type SuggestionUpdate = {
+  status: "pending" | "accepted" | "rejected" | "invalidated";
+  evidence?: Prisma.InputJsonValue;
+  acceptedEntryKind?: string | null;
+  acceptedEntryId?: string | null;
 };
 
-const resolved = () =>
+type Outcome = Recheck["outcome"];
+
+export type SuggestionKind = {
+  /**
+   * The kind's own rule against the history as it is now. A bare outcome is
+   * fenced by the generation the store captured before the rule ran; a kind
+   * that reads through `readTravTrackDerivation` may hand back that read's own
+   * (equally early) generation.
+   */
+  recheck: (row: StoredSuggestion) => Promise<Outcome | Recheck>;
+  /**
+   * The row's next state when the evidence holds, inside the publication's
+   * transaction — writing (or finding) the entry the answer makes first.
+   */
+  apply: (tx: DbTransaction, row: StoredSuggestion) => Promise<SuggestionUpdate>;
+  /** The row's state when the evidence no longer holds. Default: `invalidated`. */
+  invalidate?: (row: StoredSuggestion) => SuggestionUpdate;
+  /** See `ClaimStore.isReplay`. Default: the row is `accepted`. */
+  isReplay?: (row: StoredSuggestion) => boolean;
+  /** Refuses a request the row can never take, before the claim and on the claimed row. */
+  validate?: (row: StoredSuggestion, db: DbTransaction) => Promise<void>;
+};
+
+export const resolved = () =>
   new AppError("This suggestion was answered already", 409, "SUGGESTION_ALREADY_RESOLVED");
-const inProgress = () =>
+export const inProgress = () =>
   new AppError(
     "This suggestion is being accepted; try again",
     409,
@@ -70,7 +99,8 @@ const inProgress = () =>
 const find = (userId: string, id: string) =>
   prisma.locationSuggestion.findFirst({ where: { id, userId }, select: SUGGESTION_SELECT });
 
-async function load(userId: string, id: string): Promise<StoredSuggestion> {
+/** The account's row, or 404 `SUGGESTION_NOT_FOUND` (every row here is TravTrack's). */
+export async function loadSuggestion(userId: string, id: string): Promise<StoredSuggestion> {
   const row = await find(userId, id);
   if (!row) throw new AppError("Suggestion not found", 404, "SUGGESTION_NOT_FOUND");
   return row;
@@ -112,8 +142,32 @@ const gate = async (row: StoredSuggestion) => {
   if (row.provider === "travtrack") await assertTravTrackDerivationAllowed(row.userId);
 };
 
-function suggestionStore(userId: string): ClaimStore<StoredSuggestion, StoredSuggestion> {
+/** Written under the claim only; the claim cleared, `resolvedAt` set once the question is closed. */
+async function writeUnderClaim(
+  tx: DbTransaction,
+  userId: string,
+  id: string,
+  token: string,
+  update: SuggestionUpdate
+): Promise<number> {
+  const { count } = await tx.locationSuggestion.updateMany({
+    where: { id, userId, status: "accepting", claimToken: token },
+    data: {
+      ...update,
+      claimToken: null,
+      claimedAt: null,
+      resolvedAt: update.status === "pending" ? null : new Date(),
+    },
+  });
+  return count;
+}
+
+function suggestionStore(
+  userId: string,
+  kind: SuggestionKind
+): ClaimStore<StoredSuggestion, StoredSuggestion> {
   return {
+    isReplay: kind.isReplay,
     resolvedCode: "SUGGESTION_ALREADY_RESOLVED",
     find: (id) => find(userId, id),
     assertAllowed: gate,
@@ -142,11 +196,14 @@ function suggestionStore(userId: string): ClaimStore<StoredSuggestion, StoredSug
       if (!row) return "gone";
       return row.status === "accepting" && row.claim_token === token ? "held" : "lost";
     },
-    async invalidate(tx, id, token) {
-      await tx.locationSuggestion.updateMany({
-        where: { id, userId, status: "accepting", claimToken: token },
-        data: { status: "invalidated", claimToken: null, claimedAt: null, resolvedAt: new Date() },
-      });
+    async invalidate(tx, row, token) {
+      await writeUnderClaim(
+        tx,
+        userId,
+        row.id,
+        token,
+        kind.invalidate?.(row) ?? { status: "invalidated" }
+      );
     },
     async release(id, token) {
       await prisma.locationSuggestion.updateMany({
@@ -165,31 +222,23 @@ export async function acceptSuggestion(
   kind: SuggestionKind,
   hooks: AcceptHooks = {}
 ): Promise<StoredSuggestion> {
+  const validate = kind.validate;
   return acceptFlow({
     userId,
     id,
-    store: suggestionStore(userId),
+    store: suggestionStore(userId, kind),
     hooks,
+    validate: validate ? (row) => validate(row, prisma) : undefined,
     // The generation is captured BEFORE the rule reads (E5's fence).
     recheck: async (row) => {
       const generation = await prisma.$transaction((tx) => historyGeneration(tx, userId));
-      return { outcome: await kind.recheck(row), generation };
+      const checked = await kind.recheck(row);
+      return typeof checked === "string" ? { outcome: checked, generation } : checked;
     },
     apply: async (tx, row, token) => {
-      const entry = await kind.apply(tx, row);
-      const { count } = await tx.locationSuggestion.updateMany({
-        where: { id: row.id, userId, status: "accepting", claimToken: token },
-        data: {
-          status: "accepted",
-          acceptedEntryKind: entry.kind,
-          acceptedEntryId: entry.id,
-          claimToken: null,
-          claimedAt: null,
-          resolvedAt: new Date(),
-        },
-      });
+      const update = await kind.apply(tx, row);
       // Row-locked by `holdsClaim` in this transaction: a miss is a bug, not a race.
-      if (count !== 1) throw inProgress();
+      if ((await writeUnderClaim(tx, userId, row.id, token, update)) !== 1) throw inProgress();
       return tx.locationSuggestion.findUniqueOrThrow({
         where: { id: row.id },
         select: SUGGESTION_SELECT,
@@ -206,12 +255,12 @@ const claimable = (now: number) => ({
 });
 
 export async function rejectSuggestion(userId: string, id: string): Promise<StoredSuggestion> {
-  await load(userId, id);
+  await loadSuggestion(userId, id);
   const { count } = await prisma.locationSuggestion.updateMany({
     where: { id, userId, ...claimable(Date.now()) },
     data: { status: "rejected", claimToken: null, claimedAt: null, resolvedAt: new Date() },
   });
-  const row = await load(userId, id);
+  const row = await loadSuggestion(userId, id);
   if (count === 0 && row.status !== "rejected") {
     throw row.status === "accepting" ? inProgress() : resolved();
   }

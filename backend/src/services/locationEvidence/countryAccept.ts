@@ -38,7 +38,11 @@ const countryKind = (verdict: CountryVerdict): SuggestionKind => ({
       update: {},
       select: { id: true },
     });
-    return { kind: "countryOverride", id: override.id };
+    return {
+      status: "accepted",
+      acceptedEntryKind: "countryOverride",
+      acceptedEntryId: override.id,
+    };
   },
 });
 

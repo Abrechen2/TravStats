@@ -97,3 +97,13 @@ export function countryEvidenceKeyWith(
 export function countryEvidenceKey(countryCode: string, firstDay: string): string {
   return countryEvidenceKeyWith(evidenceSecret(), countryCode, firstDay);
 }
+
+/** A journey question's evidence key under `secret`: its local day and its first run's first fix. */
+export function journeyEvidenceKeyWith(secret: Buffer, day: string, firstKey: string): string {
+  return hmac(secret, ["journey", day, firstKey]).toString("hex");
+}
+
+/** A journey question's provider-neutral evidence key (E7), under this instance's secret. */
+export function journeyEvidenceKey(day: string, firstKey: string): string {
+  return journeyEvidenceKeyWith(evidenceSecret(), day, firstKey);
+}

@@ -300,7 +300,7 @@ function stayClaimStore(userId: string): ClaimStore<DawarichStay, DawarichStay> 
       if (!row) return "gone";
       return row.status === "accepting" && row.claim_token === token ? "held" : "lost";
     },
-    async invalidate(tx, id, token) {
+    async invalidate(tx, { id }, token) {
       await tx.dawarichStay.updateMany({
         where: { id, userId, status: "accepting", claimToken: token },
         data: { status: "invalidated", resolvedAt: new Date(), claimToken: null, claimedAt: null },

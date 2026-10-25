@@ -8,7 +8,9 @@ import NewRoadtripDialog from "../NewRoadtripDialog";
 import { roadtripsApi } from "../../../lib/api/roadtrips";
 import { tripsApi } from "../../../lib/api/trips";
 
-vi.mock("../../../lib/api/roadtrips", () => ({ roadtripsApi: { create: vi.fn() } }));
+vi.mock("../../../lib/api/roadtrips", () => ({
+  roadtripsApi: { create: vi.fn(), replaceStations: vi.fn() },
+}));
 vi.mock("../../../lib/api/trips", () => ({
   tripsApi: { getAll: vi.fn(async () => [{ id: "t1", name: "Herbst in Norwegen" }]) },
 }));
@@ -201,5 +203,41 @@ describe("NewRoadtripDialog", () => {
       expect(screen.queryByLabelText(/roadtrips:newDialog.name/)).not.toBeInTheDocument()
     );
     expect(screen.queryByText("common:discard.title")).not.toBeInTheDocument();
+  });
+
+  it("a roadtrip opened from a journey records its stations after it is created", async () => {
+    vi.mocked(roadtripsApi.create).mockResolvedValue({ id: "rt1" } as never);
+    vi.mocked(roadtripsApi.replaceStations).mockResolvedValue({} as never);
+    const stations = [
+      {
+        title: "Start",
+        lat: 50,
+        lon: 8,
+        startDate: "2026-10-20",
+        night: { kind: "pass" as const },
+      },
+      {
+        title: "Ziel",
+        lat: 50,
+        lon: 10,
+        startDate: "2026-10-20",
+        night: { kind: "pass" as const },
+      },
+    ];
+    const onCreated = vi.fn();
+    render(
+      <NewRoadtripDialog
+        open
+        onClose={vi.fn()}
+        onCreated={onCreated}
+        initialName="Roadtrip am 2026-10-20"
+        initialStations={stations}
+      />
+    );
+    expect(screen.getByText("roadtrips:newDialog.journeyStations")).toBeInTheDocument();
+    await screen.findByText("Herbst in Norwegen");
+    fireEvent.click(submitButton());
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith({ id: "rt1" }));
+    expect(roadtripsApi.replaceStations).toHaveBeenCalledWith("rt1", stations, []);
   });
 });
