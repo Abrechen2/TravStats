@@ -90,11 +90,13 @@ export default function StayReviewCard({
                 ? "ambiguousTime"
                 : code === "EVIDENCE_INVALIDATED"
                   ? "evidenceInvalidated"
-                  : code === "TRAVTRACK_DISABLED"
-                    ? "travTrackDisabled"
-                    : code === "SUGGESTION_ACCEPT_IN_PROGRESS"
-                      ? "acceptInProgress"
-                      : "error"
+                  : code === "EVIDENCE_UNVERIFIABLE"
+                    ? "evidenceUnverifiable"
+                    : code === "TRAVTRACK_DISABLED"
+                      ? "travTrackDisabled"
+                      : code === "SUGGESTION_ACCEPT_IN_PROGRESS"
+                        ? "acceptInProgress"
+                        : "error"
         )
       );
       // The history behind it is gone: the finding is no longer a question.

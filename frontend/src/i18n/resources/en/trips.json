@@ -768,6 +768,7 @@
       }
     },
     "evidenceInvalidated": "Not accepted: the location history behind this suggestion has since been deleted or has changed.",
+    "evidenceUnverifiable": "The evidence for this suggestion cannot be checked right now because its map data is missing. The suggestion is kept; please try again after the next scan.",
     "travTrackDisabled": "TravTrack is currently switched off on this server. The suggestion is kept and can be accepted later or dismissed now.",
     "acceptInProgress": "This suggestion is being accepted elsewhere right now. Please try again in a moment.",
     "coveredBy": {

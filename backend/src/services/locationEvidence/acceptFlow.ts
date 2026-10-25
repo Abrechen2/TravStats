@@ -62,6 +62,12 @@ const disabled = () =>
   new AppError("TravTrack is switched off on this server", 403, "TRAVTRACK_DISABLED");
 const inProgress = () =>
   new AppError("This suggestion is being accepted", 409, "SUGGESTION_ACCEPT_IN_PROGRESS");
+const unverifiable = () =>
+  new AppError(
+    "The evidence for this suggestion cannot be checked right now",
+    409,
+    "EVIDENCE_UNVERIFIABLE"
+  );
 const invalidated = () =>
   new AppError("The evidence for this suggestion has changed", 409, "EVIDENCE_INVALIDATED");
 
@@ -145,6 +151,9 @@ export async function acceptFlow<Row extends ClaimState, Entry>(opts: {
       const row = await store.find(id);
       if (!row) throw new AppError("Finding not found", 404);
       const checked = await opts.recheck(row);
+      // Cannot be checked now: neither accepted nor invalidated; the claim is
+      // handed back below and the finding stays open.
+      if (checked.outcome === "unverifiable") throw unverifiable();
       const outcome = await publish(userId, id, token, checked, store, (tx) =>
         opts.apply(tx, row, token)
       );

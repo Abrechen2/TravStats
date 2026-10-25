@@ -143,6 +143,16 @@ describe("a TravTrack finding on the review card", () => {
     expect(screen.getByRole("button", { name: "trips:dawarichStays.accept" })).toBeEnabled();
   });
 
+  it("EVIDENCE_UNVERIFIABLE is said and the card stays", async () => {
+    vi.mocked(dawarichStaysApi.accept).mockRejectedValue(refusal("EVIDENCE_UNVERIFIABLE"));
+    const done = mount();
+    fireEvent.click(screen.getByRole("button", { name: "trips:dawarichStays.accept" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "trips:dawarichStays.evidenceUnverifiable"
+    );
+    expect(done).not.toHaveBeenCalled();
+  });
+
   it("a finding mid-accept is still offered for review", () => {
     mount({ ...travtrackRow, status: "accepting" });
     expect(screen.getByRole("button", { name: "trips:dawarichStays.accept" })).toBeInTheDocument();

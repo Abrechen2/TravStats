@@ -86,6 +86,24 @@ describe("recheckFinding", () => {
     expect((await recheckFinding(userId, row)).outcome).toBe("holds");
   });
 
+  it("a venue whose points now have gaps beyond the venue rule no longer holds", async () => {
+    await storeMinutes(userId, range(0, 20));
+    await prisma.dawarichStayScan.update({ where: { userId }, data: { marketEnabled: true } });
+    const row = await scan({ marketFetcher: jest.fn(async () => Response.json(marketRaw)) });
+    await deleteMinutes(3, 15);
+    expect((await recheckFinding(userId, row)).outcome).toBe("invalidated");
+  });
+
+  it("a venue whose map area is no longer cached is unverifiable — never accepted on a weaker rule", async () => {
+    await storeMinutes(userId, range(0, 20));
+    await prisma.dawarichStayScan.update({ where: { userId }, data: { marketEnabled: true } });
+    const row = await scan({ marketFetcher: jest.fn(async () => Response.json(marketRaw)) });
+    // Gaps of 14 minutes, beyond the venue's 10: the detector would say no.
+    await deleteMinutes(3, 15);
+    await prisma.marketCatalogTile.deleteMany({});
+    expect((await recheckFinding(userId, row)).outcome).toBe("unverifiable");
+  });
+
   it("a venue whose points no longer last the market duration no longer holds", async () => {
     await storeMinutes(userId, range(0, 20));
     await prisma.dawarichStayScan.update({ where: { userId }, data: { marketEnabled: true } });

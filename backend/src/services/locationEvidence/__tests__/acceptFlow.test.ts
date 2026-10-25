@@ -17,6 +17,7 @@ import { travTrackSwitches } from "../../travtrack/__tests__/switches";
 import { wipeTravTrack } from "../../travtrack/__tests__/fixtures";
 import { deleteTravTrackRange } from "../../travtrack/deleteRange";
 import { bumpHistoryGeneration } from "../generation";
+import * as recheckModule from "../recheck";
 import { applyStayAcceptance } from "../../dawarich/stays/review";
 import { stayReviewSchema } from "../../../schemas/dawarichStays";
 import {
@@ -218,6 +219,25 @@ describe("accepting a TravTrack finding", () => {
       status: "accepting",
       claimToken: "theirs",
     });
+  });
+
+  it("evidence that cannot be checked answers EVIDENCE_UNVERIFIABLE and keeps the finding pending", async () => {
+    const row = await finding();
+    const spy = jest
+      .spyOn(recheckModule, "recheckFinding")
+      .mockResolvedValue({ outcome: "unverifiable", generation: 0n });
+    try {
+      const res = await accept(row.id);
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe("EVIDENCE_UNVERIFIABLE");
+    } finally {
+      spy.mockRestore();
+    }
+    expect(await prisma.dawarichStay.findUniqueOrThrow({ where: { id: row.id } })).toMatchObject({
+      status: "pending",
+      claimToken: null,
+    });
+    expect(await prisma.placeVisit.count({ where: { userId } })).toBe(0);
   });
 
   it("a claim abandoned by a failed request goes back to pending", async () => {

@@ -768,6 +768,7 @@
       }
     },
     "evidenceInvalidated": "Nicht übernommen: Der Standortverlauf zu diesem Vorschlag wurde inzwischen gelöscht oder hat sich geändert.",
+    "evidenceUnverifiable": "Die Belege für diesen Vorschlag lassen sich gerade nicht prüfen, weil die Kartendaten dazu fehlen. Der Vorschlag bleibt erhalten; versuche es nach der nächsten Auswertung erneut.",
     "travTrackDisabled": "TravTrack ist auf diesem Server gerade ausgeschaltet. Der Vorschlag bleibt erhalten und kann später übernommen oder jetzt verworfen werden.",
     "acceptInProgress": "Dieser Vorschlag wird gerade an anderer Stelle übernommen. Bitte versuche es gleich noch einmal.",
     "coveredBy": {
