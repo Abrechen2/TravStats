@@ -31,6 +31,7 @@ import { readTravTrackDerivation } from "../derivationRead";
 import { ENTRY_WINDOW_ADAPTERS, overlapShare, COVER_SHARE } from "./entryWindows";
 import {
   allAnswered,
+  journeyAnswers,
   parseJourneyEvidence,
   type JourneyEntryKind,
   type JourneyEvidence,
@@ -133,6 +134,13 @@ export function journeyAcceptKind(answer: JourneyAnswer): SuggestionKind {
   };
   return {
     isReplay(row) {
+      // An accepted question whose history went (E5) keeps only its answers:
+      // the same answer is still a replay, anything else answered already.
+      if (row.status === "accepted" && !parseJourneyEvidence(row.evidence)) {
+        const link = journeyAnswers(row.evidence)?.runs[answer.runIndex]?.link;
+        if (link?.entryKind === answer.entryKind && link.entryId === answer.entryId) return true;
+        throw resolved();
+      }
       const { run } = runOf(row);
       if (run.state === "open") return false;
       if (

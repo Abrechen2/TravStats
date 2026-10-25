@@ -67,6 +67,46 @@ export function parseJourneyEvidence(value: unknown): JourneyEvidence | null {
   return parsed.success ? parsed.data : null;
 }
 
+/**
+ * What an ACCEPTED journey keeps once its history was deleted (E5,
+ * `invalidate.ts`): its day and, per run, its times, state and link — no end,
+ * no line, no digest. The answer survives the deletion (rule 6), so a repeat
+ * of it is still recognised and the day is still settled.
+ */
+const strippedJourney = z.object({
+  day: z.string(),
+  historyDeletedAt: z.string(),
+  runs: z
+    .array(
+      z.object({
+        state: z.enum(RUN_STATES),
+        link: z
+          .object({ entryKind: z.enum(JOURNEY_ENTRY_KINDS), entryId: z.string() })
+          .nullable()
+          .optional(),
+      })
+    )
+    .min(1),
+});
+
+export type JourneyAnswers = {
+  day: string;
+  runs: Array<{ state: RunState; link: { entryKind: JourneyEntryKind; entryId: string } | null }>;
+};
+
+/** A journey's day and per-run answers, from full evidence or from a stripped summary. */
+export function journeyAnswers(value: unknown): JourneyAnswers | null {
+  const full = parseJourneyEvidence(value);
+  if (full)
+    return { day: full.day, runs: full.runs.map((r) => ({ state: r.state, link: r.link })) };
+  const stripped = strippedJourney.safeParse(value);
+  if (!stripped.success) return null;
+  return {
+    day: stripped.data.day,
+    runs: stripped.data.runs.map((r) => ({ state: r.state, link: r.link ?? null })),
+  };
+}
+
 /** At most `RUN_DIGEST_CAP` digests, first and last kept. */
 export function capDigests(digests: readonly string[]): string[] {
   if (digests.length <= RUN_DIGEST_CAP) return [...digests];
@@ -74,7 +114,7 @@ export function capDigests(digests: readonly string[]): string[] {
 }
 
 /** Every entry this question was answered with, as `kind:id` (`entryRef`). */
-export function linkedRefs(evidence: JourneyEvidence | null): Set<string> {
+export function linkedRefs(evidence: Pick<JourneyAnswers, "runs"> | null): Set<string> {
   return new Set(
     (evidence?.runs ?? []).flatMap((r) => (r.link ? [`${r.link.entryKind}:${r.link.entryId}`] : []))
   );

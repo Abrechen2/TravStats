@@ -43,8 +43,8 @@ import { coveringWindow, logbookWindows } from "./entryWindows";
 import {
   JOURNEY_ENTRY_KINDS,
   capDigests,
+  journeyAnswers,
   linkedRefs,
-  parseJourneyEvidence,
   type JourneyEvidence,
   type StoredJourneyRun,
 } from "./evidence";
@@ -143,7 +143,8 @@ async function existingQuestions(userId: string, fromMs: number) {
   const settled = new Set<string>();
   const own = new Set<string>();
   for (const row of rows) {
-    const evidence = parseJourneyEvidence(row.evidence);
+    // An accepted journey whose history went keeps its day and links (E5).
+    const evidence = journeyAnswers(row.evidence);
     if (!evidence) continue;
     settled.add(evidence.day);
     for (const ref of linkedRefs(evidence)) own.add(ref);

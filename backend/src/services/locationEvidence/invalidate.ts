@@ -3,7 +3,7 @@
  * review focus 23). The `onPointsRemoved` handler for everything TravStats
  * derived from TravTrack history and asked the user about: stay, market and
  * venue findings (`dawarich_stays`, provider `travtrack`) and the questions of
- * `location_suggestions` (country; journey once E7 writes them). It runs in
+ * `location_suggestions` (country, E6; journey, E7). It runs in
  * the removal's transaction, under the TravTrack lock, after the points went
  * and after the history generation was raised (`deleteRange.ts`).
  *
@@ -12,8 +12,13 @@
  *   - one of its point digests is a removed point's (a constituent point went,
  *     wherever its window lies);
  *   - zone: its source position lies in the circle — even when the zone
- *     deleted no point (a journey's line and ends: E7 adds them here);
- *   - no pin (a country question): one of its days is a removed day.
+ *     deleted no point; for a journey, an end of one of its runs or a vertex
+ *     of its privacy-cut line lies in it, or a chord of that line crosses it
+ *     (`segmentCrossesZone`, the check a line leaving the server gets);
+ *   - a country question (no pin) or a journey: one of its days is a removed
+ *     day. A journey's runs are bounded by the stays and silences around
+ *     them, read from those days, so a removal elsewhere on the day may
+ *     change what the run is.
  *
  * Affected OPEN rows (every status but `accepted`) are DELETED: they hold
  * positions and digests of the deleted history, and none is an entry the user
@@ -23,14 +28,17 @@
  * with their evidence cut to a summary holding no position and no digest
  * (`source`, `provider`, `algorithmVersion`, the explanation, the time zone or
  * the country, `historyDeletedAt`); a stay's source position becomes its
- * accepted pin. Dawarich rows are never touched: their history is not ours.
+ * accepted pin; a journey keeps, per run, its times, its answer and the entry
+ * it was linked to — no end, no line, no digest. Dawarich rows are never touched: their history is not ours.
  *
  * Logged with ids and counts only (`EvidenceInvalidated`).
  */
 import type { DbTransaction } from "../../db";
 import logger from "../../utils/logger";
 import { distanceM } from "../travtrack/classify";
+import type { ZoneCircle } from "../travtrack/classify";
 import type { PointsRemovedCause } from "../travtrack/deleteRange";
+import { segmentCrossesZone, type LonLat } from "../travtrack/privacyCut";
 import { pointDigest } from "./key";
 
 const DAY_MS = 86_400_000;
@@ -104,6 +112,52 @@ async function affectedStays(
   };
 }
 
+type JourneyGeometry = {
+  runs?: Array<{
+    start?: { lat?: unknown; lon?: unknown };
+    end?: { lat?: unknown; lon?: unknown };
+    line?: unknown;
+  }>;
+};
+
+const isLonLat = (v: unknown): v is LonLat =>
+  Array.isArray(v) &&
+  v.length === 2 &&
+  typeof v[0] === "number" &&
+  typeof v[1] === "number" &&
+  Number.isFinite(v[0]) &&
+  Number.isFinite(v[1]);
+
+const inCircle = (p: { lat?: unknown; lon?: unknown } | undefined, circle: ZoneCircle) =>
+  typeof p?.lat === "number" &&
+  typeof p.lon === "number" &&
+  distanceM({ lat: p.lat, lon: p.lon }, circle) <= circle.radiusM;
+
+/**
+ * Whether a journey's stored geometry meets the zone: an end of a run, a
+ * vertex of its line, or a chord between two consecutive vertices. A row
+ * whose evidence cannot be read counts as meeting it — an unreadable line is
+ * no proof it stays out.
+ */
+export function journeyMeetsZone(evidence: unknown, circle: ZoneCircle): boolean {
+  const runs = (evidence as JourneyGeometry | null)?.runs;
+  if (!Array.isArray(runs)) return true;
+  return runs.some((run) => {
+    if (inCircle(run.start, circle) || inCircle(run.end, circle)) return true;
+    const pieces = Array.isArray(run.line) ? run.line : [];
+    return pieces.some((piece) => {
+      if (!Array.isArray(piece)) return true;
+      const vertices = piece.filter(isLonLat);
+      if (vertices.length !== piece.length) return true;
+      return vertices.some(
+        (v, i) =>
+          inCircle({ lon: v[0], lat: v[1] }, circle) ||
+          (i > 0 && segmentCrossesZone(vertices[i - 1], v, circle))
+      );
+    });
+  });
+}
+
 async function affectedSuggestions(
   tx: DbTransaction,
   userId: string,
@@ -119,12 +173,25 @@ async function affectedSuggestions(
   for (const r of rows) {
     const from = r.windowFrom.getTime();
     const until = r.windowUntil.getTime();
-    // A country question has no pin: it is about its days.
+    // A country question has no pin: it is about its days. A journey is about
+    // its runs, and about the days they were read from.
     const affected =
       r.kind === "country"
         ? dayInWindow(cause.days, from, until)
-        : overlapsAny(spans, from, until - 1);
+        : overlapsAny(spans, from, until - 1) ||
+          (r.kind === "journey" && dayInWindow(cause.days, from, until));
     if (affected) hit.add(r.id);
+  }
+  // Zone: a journey's line and ends, even when the zone deleted no point.
+  if (cause.kind === "zone") {
+    const journeys = rows.filter((r) => r.kind === "journey" && !hit.has(r.id));
+    if (journeys.length > 0) {
+      const stored = await tx.locationSuggestion.findMany({
+        where: { id: { in: journeys.map((r) => r.id) } },
+        select: { id: true, evidence: true },
+      });
+      for (const r of stored) if (journeyMeetsZone(r.evidence, cause.zone)) hit.add(r.id);
+    }
   }
   if (digests.length > 0) {
     const byDigest = await tx.$queryRaw<{ id: string }[]>`
@@ -194,6 +261,8 @@ async function stripAcceptedSuggestions(
   at: string
 ): Promise<void> {
   if (ids.length === 0) return;
+  // A journey keeps per run what the user answered and when — the link names
+  // a TravStats entry — and nothing that places it: no end, line or digest.
   await tx.$executeRaw`
     UPDATE location_suggestions
        SET evidence = jsonb_strip_nulls(jsonb_build_object(
@@ -201,6 +270,17 @@ async function stripAcceptedSuggestions(
              'provider', provider,
              'algorithmVersion', algorithm,
              'countryCode', evidence->'countryCode',
+             'day', evidence->'day',
+             'zone', evidence->'zone',
+             'runs', CASE WHEN kind = 'journey' AND jsonb_typeof(evidence->'runs') = 'array'
+                       THEN (SELECT jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
+                                      'fromMs', run->'fromMs',
+                                      'untilMs', run->'untilMs',
+                                      'state', run->'state',
+                                      'link', run->'link')) ORDER BY ord)
+                               FROM jsonb_array_elements(evidence->'runs')
+                                    WITH ORDINALITY AS r(run, ord))
+                     END,
              'historyDeletedAt', COALESCE(evidence->'historyDeletedAt', to_jsonb(${at}::text))))
      WHERE id = ANY(${ids}::text[])`;
 }
