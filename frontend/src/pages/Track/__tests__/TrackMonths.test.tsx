@@ -81,6 +81,12 @@ describe("TrackMonths", () => {
     expect(screen.queryByTestId("track-month-2026-04")).not.toBeInTheDocument();
   });
 
+  it("says the months are UTC months", async () => {
+    show();
+    await screen.findByTestId("track-month-2026-10");
+    expect(screen.getByText("track:months.utc")).toBeInTheDocument();
+  });
+
   it("cities not determined read so, never an empty cell", async () => {
     show();
     const march = await screen.findByTestId("track-month-2026-03");

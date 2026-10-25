@@ -231,6 +231,7 @@
     "pending": "Being recomputed right now – the values may still change.",
     "pendingMonth": "being computed",
     "legend": "Kilometres on the ground count only the visible line: nothing in the air, nothing faster than 500 km/h, nothing a privacy zone hides. Months without positions are left out.",
-    "citiesOff": "The overview names cities only once you switch on the city lookup in the settings."
+    "citiesOff": "The overview names cities only once you switch on the city lookup in the settings.",
+    "utc": "Months in UTC: a day counts in the month it falls in by UTC – what happens around local midnight may appear in the neighbouring month."
   }
 }

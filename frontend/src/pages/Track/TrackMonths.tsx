@@ -152,6 +152,7 @@ export default function TrackMonths(): JSX.Element {
                 </table>
               </TableScroll>
               <p className="t-caption">{t("track:months.legend")}</p>
+              <p className="t-caption">{t("track:months.utc")}</p>
               {citiesOff && (
                 <p className="t-caption">
                   <Link to="/settings/location">{t("track:months.citiesOff")}</Link>

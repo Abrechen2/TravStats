@@ -231,6 +231,7 @@
     "pending": "Wird gerade neu berechnet – die Werte können sich noch ändern.",
     "pendingMonth": "wird berechnet",
     "legend": "Kilometer am Boden zählen nur die sichtbare Linie: nichts in der Luft, nichts schneller als 500 km/h, nichts, was eine Privatzone verbirgt. Monate ohne Positionen fehlen.",
-    "citiesOff": "Städte nennt die Übersicht erst, wenn du die Städtesuche in den Einstellungen einschaltest."
+    "citiesOff": "Städte nennt die Übersicht erst, wenn du die Städtesuche in den Einstellungen einschaltest.",
+    "utc": "Monate nach UTC: Ein Tag zählt zu dem Monat, in den er nach UTC fällt – was um Mitternacht Ortszeit geschieht, kann im Nachbarmonat stehen."
   }
 }

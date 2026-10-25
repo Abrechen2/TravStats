@@ -117,6 +117,31 @@ describe("runTravTrackProjections", () => {
     expect(await prisma.travTrackMonthValue.count({ where: { userId } })).toBe(1);
   });
 
+  it("a month costs its days against the tick's budget (L3)", async () => {
+    await prisma.travTrackMonthValue.deleteMany({ where: { userId } });
+    const days = ["2026-07-02", "2026-07-03", "2026-08-02", "2026-08-03", "2026-09-02"];
+    for (const day of days) {
+      await storePoint(userId, { t: Date.parse(`${day}T10:00:00Z`), lat: 38.72, lon: -9.14 });
+    }
+    await prisma.$transaction((tx) => markTravTrackDaysDirty(tx, userId, days));
+    // Country days and cells done everywhere: only the months are owed.
+    await prisma.travTrackDirtyDay.updateMany({
+      where: { userId },
+      data: { done: COUNTRY_DAYS_BIT | EXPLORED_BIT },
+    });
+    await prisma.travTrackDerivationState.create({ data: { userId, countryReducerVersion: 99 } });
+
+    const result = await runTravTrackProjections({ countryAt, maxDays: 3 });
+
+    // July (2 days) starts, August (2 more) starts below the budget, nothing after.
+    const months = await prisma.travTrackMonthValue.findMany({ where: { userId } });
+    expect(months.map((m) => m.month.toISOString().slice(0, 7)).sort()).toEqual([
+      "2026-07",
+      "2026-08",
+    ]);
+    expect(result.days).toBe(4);
+  });
+
   it("skips an account whose provider is not TravTrack", async () => {
     await setLocationProvider(userId, "none");
 

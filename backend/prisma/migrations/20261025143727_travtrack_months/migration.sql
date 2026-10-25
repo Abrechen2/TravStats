@@ -29,10 +29,8 @@ CREATE TABLE "geo_city_cache" (
 -- AddForeignKey
 ALTER TABLE "travtrack_month_values" ADD CONSTRAINT "travtrack_month_values_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- Backfill (TravTrack plan L3): every UTC day holding a TravTrack point gets a
--- dirty-day row, so the month projection (done bit 4, not set on any existing
--- row) derives the whole history once. Existing rows keep their version and
--- their other bits; `t` is a TIMESTAMP holding UTC.
-INSERT INTO "travtrack_dirty_days" ("user_id", "day", "version", "done")
-SELECT DISTINCT "user_id", "t"::date, 1, 0 FROM "travtrack_points"
-ON CONFLICT ("user_id", "day") DO NOTHING;
+-- No backfill scan (Codex review of L3): the month projection is discovered
+-- by the scheduler. Every UTC day holding a TravTrack point already has its
+-- `travtrack_dirty_days` row — each store marks its day, and the L1 migration
+-- (travtrack_explored) backfilled the older ones — and no existing row has done bit 4
+-- set, so every such day is owed to the months without touching another bit.

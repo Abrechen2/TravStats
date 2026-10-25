@@ -140,13 +140,18 @@ async function runAccount(
       return { failed: true, questions: 0, days: days + explored.projected + explored.rerun };
     }
     // The monthly values (L3) after both, so a month reads its days' country
-    // rows as just projected; its acknowledged days count against the budget.
+    // rows as just projected; no month starts once the budget is spent.
     const monthsBudget = maxDays - days - explored.projected - explored.rerun;
     const months =
       monthsBudget > 0
-        ? await projectMonths(userId, { countryAt, cityBudget: options.cityBudget })
-        : { status: "done" as const, days: 0 };
-    const spent = days + explored.projected + explored.rerun + months.days;
+        ? await projectMonths(userId, {
+            countryAt,
+            cityBudget: options.cityBudget,
+            maxDays: monthsBudget,
+          })
+        : { status: "done" as const, spentDays: 0 };
+    // A month costs every day it owed, acknowledged or not.
+    const spent = days + explored.projected + explored.rerun + months.spentDays;
     if (months.status === "failed") {
       await recordFailure(userId, now);
       return { failed: true, questions: 0, days: spent };
