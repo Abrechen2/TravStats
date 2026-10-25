@@ -6,6 +6,7 @@ import { prisma } from "../../db";
 import { generateToken } from "../../utils/jwt";
 import { encryptApiKey } from "../../utils/encryption";
 import { setLocationProvider } from "../../services/locationProvider/provider";
+import { deleteTravTrackRange } from "../../services/travtrack/deleteRange";
 import { travTrackSwitches } from "../../services/travtrack/__tests__/switches";
 import {
   makeFlight,
@@ -101,6 +102,23 @@ describe("flight tracks from the location provider", () => {
     // Nine steps of ~6.7 km would be ~60 km; the step over the zone is not counted.
     expect(res.body.track.distanceKm).toBeLessThan(50);
     expect(res.body.track.segmentStarts).toHaveLength(2);
+  });
+
+  it("a deleted range inside a flight is a break on its page and on the map, not a bridged step", async () => {
+    // Codex P2: tombstones were not breaks, so a short deleted span was bridged and measured.
+    await setLocationProvider(userId, "travtrack");
+    for (let i = 0; i < 10; i++) {
+      await storePoint(userId, { t: DEP + i * MIN, lat: 37.4 - i * 0.06, lon: 126.45 });
+    }
+    await deleteTravTrackRange(userId, new Date(DEP + 3.5 * MIN), new Date(DEP + 5.5 * MIN));
+    const res = await request(app).get(`/api/v1/flights/${flightId}/track`).set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.track.segmentStarts).toHaveLength(2);
+    // Six steps of ~6.67 km are ~40 km; bridged, the 20 km across the deleted span made ~60.
+    expect(res.body.track.distanceKm).toBeLessThan(45);
+    const lines = await request(app).get("/api/v1/flights/track-lines").set("Cookie", cookie);
+    expect(lines.body.lines).toEqual([expect.objectContaining({ flightId, origin: "travtrack" })]);
+    expect(lines.body.lines[0].segmentStarts).toHaveLength(2);
   });
 
   it("track-lines draws a TravTrack flight from its points and marks origin", async () => {

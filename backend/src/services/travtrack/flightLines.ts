@@ -6,12 +6,14 @@ import { byDevice } from "../locationProvider/entryTrack";
 import { cutFlightTrackWith } from "./flightTrackView";
 import { zoneSafeFlightColumns } from "./providerFlightColumns";
 import type { CircleSet } from "./privacyCircles";
+import { travTrackBreakSet } from "./readSafe";
 
 /**
  * TravTrack lines for the map's flights without an own recording (TravTrack
  * plan T5): each flight's points — linked to it, or inside its recorder window
- * — drawn the way a phone's upload is drawn, then privacy-cut. ONE query for
- * the windows' points and one for the links, never one per flight.
+ * — drawn the way a phone's upload is drawn, broken at every deleted span and
+ * reported pause, then privacy-cut. ONE query for the windows' points, one
+ * for the links and one pair for the breaks, never one per flight.
  */
 
 export type TravTrackFlightLine = {
@@ -79,6 +81,15 @@ export async function travTrackFlightLines(
   }
   for (const link of linked) add(link.entryId, observationOf(link.point));
 
+  const times = [...perFlight.values()].flatMap((m) => [...m.values()].map((o) => o.atMs));
+  const breaksOf =
+    times.length === 0
+      ? () => []
+      : await travTrackBreakSet(userId, {
+          fromMs: Math.min(...times),
+          untilMs: Math.max(...times) + 1,
+        });
+
   const lines: TravTrackFlightLine[] = [];
   for (const [flightId, map] of perFlight) {
     const points = [...map.values()].sort((a, b) => a.atMs - b.atMs);
@@ -87,7 +98,8 @@ export async function travTrackFlightLines(
     // Cut on the fixes before they are measured, then once more on the simplified line.
     const columns = zoneSafeFlightColumns(
       device.points.map((p) => ({ t: p.atMs, lat: p.lat, lon: p.lon })),
-      circles(device.points[0].atMs)
+      circles(device.points[0].atMs),
+      breaksOf(device.deviceId)
     );
     if (!columns) continue;
     const cut = cutFlightTrackWith(columns, circles(columns.startedAt.getTime())).track;

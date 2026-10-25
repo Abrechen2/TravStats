@@ -1,5 +1,10 @@
 import { prisma } from "../../db";
-import { rawSegments, type DevicePoints, type StoredPoint } from "../tripRecording/segments";
+import {
+  rawSegments,
+  type DevicePoints,
+  type RecordingBreak,
+  type StoredPoint,
+} from "../tripRecording/segments";
 import { privacySafeDevices, privacySafeStretches } from "../tripRecording/privacySafe";
 import type { ZoneCircle } from "./classify";
 import { privacyCirclesFor } from "./privacyCircles";
@@ -124,4 +129,39 @@ export async function readSafeTravTrack(
   // more as they leave, so the output itself is what was checked.
   const segments = privacySafeStretches(rawSegments(privacySafeDevices(devices, circles)), circles);
   return { segments, rowOf: (p) => rowByPoint.get(p), circles, deleted, paused, next };
+}
+
+/**
+ * The spans a TravTrack line of this account must not be joined across
+ * within `window`, asked per device: every deleted range (it breaks every
+ * device's line) and the pauses that device reported. Read once for a read
+ * that draws many lines (the map). A flight line built from TravTrack points
+ * goes through these exactly as the day view and the export do.
+ */
+export async function travTrackBreakSet(
+  userId: string,
+  window: Span
+): Promise<(deviceId: string | null) => RecordingBreak[]> {
+  const overlapping = {
+    userId,
+    fromAt: { lt: new Date(window.untilMs) },
+    toAt: { gt: new Date(window.fromMs) },
+  };
+  const [deletedRows, gapRows] = await Promise.all([
+    prisma.travTrackDeletedRange.findMany({
+      where: overlapping,
+      select: { fromAt: true, toAt: true },
+    }),
+    prisma.travTrackGap.findMany({
+      where: overlapping,
+      select: { fromAt: true, toAt: true, deviceId: true },
+    }),
+  ]);
+  const deleted = deletedRows.map((r): RecordingBreak => [r.fromAt.getTime(), r.toAt.getTime()]);
+  return (deviceId) => [
+    ...deleted,
+    ...gapRows
+      .filter((g) => g.deviceId === deviceId)
+      .map((g): RecordingBreak => [g.fromAt.getTime(), g.toAt.getTime()]),
+  ];
 }

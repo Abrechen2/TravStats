@@ -311,6 +311,21 @@ describe("zoneSafeFlightColumns", () => {
     expect(columns!.segmentStarts).toEqual([0]);
   });
 
+  it("breaks the line at a deleted range and measures no step across it", () => {
+    // Fixes 4 and 5 were deleted: the range lies between fix 3 and fix 6.
+    const kept = line.filter((_, i) => i !== 4 && i !== 5);
+    const breaks: Array<[number, number]> = [[T0 + 3.5 * 60_000, T0 + 5.5 * 60_000]];
+    const columns = zoneSafeFlightColumns(kept, [], breaks);
+    expect(columns!.segmentStarts).toHaveLength(2);
+    // Six steps of ~6.67 km are ~40 km; bridged, the 20 km across the deleted span made ~60.
+    expect(columns!.distanceKm).toBeLessThan(45);
+  });
+
+  it("a deleted range outside every step changes nothing", () => {
+    const columns = zoneSafeFlightColumns(line, [], [[T0 - 600_000, T0 - 60_000]]);
+    expect(columns!.segmentStarts).toEqual([0]);
+  });
+
   it("is null when nothing outside the zones makes a line", () => {
     expect(zoneSafeFlightColumns(line.slice(5, 6), [zone])).toBeNull();
   });

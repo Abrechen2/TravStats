@@ -11,6 +11,8 @@ import type { ZoneCircle } from "../../services/travtrack/classify";
 import { viewableFlightTrack } from "../../services/travtrack/flightTrackView";
 import { privacyCirclesFor } from "../../services/travtrack/privacyCircles";
 import { zoneSafeFlightColumns } from "../../services/travtrack/providerFlightColumns";
+import { travTrackBreakSet } from "../../services/travtrack/readSafe";
+import type { RecordingBreak } from "../../services/tripRecording/segments";
 
 /**
  * Where `GET /flights/:id/track` takes its line from (TravTrack plan T5): the
@@ -32,7 +34,8 @@ function trackOf(
   flightId: string,
   origin: Exclude<TrackOrigin, "travstats">,
   device: EntryTrackDevice | undefined,
-  circles: readonly ZoneCircle[]
+  circles: readonly ZoneCircle[],
+  breaks: readonly RecordingBreak[]
 ) {
   if (!device || device.points.length < 2) return null;
   // Cut on the fixes, before anything is measured (Codex review of T5).
@@ -44,7 +47,8 @@ function trackOf(
       ...(p.altitudeM !== null ? { alt: p.altitudeM } : {}),
       ...(p.accuracyM !== null ? { accuracy: p.accuracyM } : {}),
     })),
-    circles
+    circles,
+    breaks
   );
   if (!columns) return null;
   return {
@@ -69,6 +73,16 @@ function trackOf(
 
 export type ProviderFlightTrack = NonNullable<ReturnType<typeof trackOf>>;
 
+async function travTrackBreaksOf(userId: string, device: EntryTrackDevice) {
+  const times = device.points.map((p) => p.atMs);
+  if (times.length === 0) return [];
+  const set = await travTrackBreakSet(userId, {
+    fromMs: Math.min(...times),
+    untilMs: Math.max(...times) + 1,
+  });
+  return set(device.deviceId);
+}
+
 export async function providerFlightTrack(
   userId: string,
   flight: FlightWindowColumns & { id: string },
@@ -82,7 +96,10 @@ export async function providerFlightTrack(
           flight.id,
           entry.origin,
           device,
-          await privacyCirclesFor(userId, device.points[0]?.atMs ?? 0)
+          await privacyCirclesFor(userId, device.points[0]?.atMs ?? 0),
+          // TravTrack's own deleted spans and reported pauses break its line;
+          // they say nothing about another provider's history.
+          entry.origin === "travtrack" ? await travTrackBreaksOf(userId, device) : []
         )
       : null;
   const track = built ? await viewableFlightTrack(userId, built) : null;
