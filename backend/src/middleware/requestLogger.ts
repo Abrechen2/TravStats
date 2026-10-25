@@ -59,7 +59,11 @@ export function requestLoggerMiddleware(req: AuthRequest, res: Response, next: N
         userId: req.user?.id,
         isAdmin: req.user?.isAdmin,
         requestId: req.requestId,
-        ...(req.method !== "GET" && req.body && { bodyKeys: Object.keys(req.body) }),
+        // Not of a raw body (the ingest paths before parsing): a Buffer's keys
+        // are its byte indices.
+        ...(req.method !== "GET" &&
+          req.body &&
+          !Buffer.isBuffer(req.body) && { bodyKeys: Object.keys(req.body) }),
       },
       performance: { duration, memoryDelta: formatBytes(memoryDelta) },
     });

@@ -1,3 +1,5 @@
+import { gzipSync } from "node:zlib";
+
 import { ipKeyGenerator } from "express-rate-limit";
 import request from "supertest";
 
@@ -40,6 +42,20 @@ import {
 const PREFIX = "travtrack-ingest-src-";
 const OT = "/api/v1/travtrack/ingest/owntracks";
 const OL = "/api/v1/travtrack/ingest/overland";
+
+/**
+ * A gzip-encoded JSON post. Written raw: superagent serialises a Buffer sent
+ * with a JSON content type instead of sending its bytes.
+ */
+function gzipPost(path: string, auth: string, json: string) {
+  const r = request(app)
+    .post(path)
+    .set("Authorization", auth)
+    .set("Content-Type", "application/json")
+    .set("Content-Encoding", "gzip");
+  r.write(gzipSync(json));
+  return r;
+}
 
 const basic = (token: string, user = "pixel") =>
   `Basic ${Buffer.from(`${user}:${token}`).toString("base64")}`;
@@ -402,7 +418,38 @@ describe("TravTrack — OwnTracks and Overland", () => {
         .post(OL)
         .set("Authorization", `Bearer ${overland.token}`)
         .send(big);
-      expect(res.status).toBe(413);
+      expect([res.status, res.body.code]).toEqual([413, "TRACK_BODY_TOO_LARGE"]);
+      expect(await pointCount()).toBe(0);
+    });
+
+    it("the limit holds before authentication: a stranger's 3 MB body is 413, not read on", async () => {
+      const res = await request(app)
+        .post(OT)
+        .set("Content-Type", "application/json")
+        .send(`[${" ".repeat(3 * 1024 * 1024)}]`);
+      expect([res.status, res.body.code]).toEqual([413, "TRACK_BODY_TOO_LARGE"]);
+    });
+
+    it("a compressed body is measured inflated: tiny on the wire, over the limit unpacked", async () => {
+      const padded = JSON.stringify(overlandBatch).replace("{", `{${" ".repeat(3 * 1024 * 1024)}`);
+      const res = await gzipPost(OL, `Bearer ${overland.token}`, padded);
+      expect([res.status, res.body.code]).toEqual([413, "TRACK_BODY_TOO_LARGE"]);
+      expect(await pointCount()).toBe(0);
+    });
+
+    it("a compressed batch within the limit is stored", async () => {
+      const res = await gzipPost(OL, `Bearer ${overland.token}`, JSON.stringify(overlandBatch));
+      expect([res.status, res.body]).toEqual([200, { result: "ok" }]);
+      expect(await pointCount()).toBe(3);
+    });
+
+    it("a body that is not JSON is 400 and stores nothing", async () => {
+      const res = await request(app)
+        .post(OL)
+        .set("Authorization", `Bearer ${overland.token}`)
+        .set("Content-Type", "application/json")
+        .send("{not json");
+      expect(res.status).toBe(400);
       expect(await pointCount()).toBe(0);
     });
 

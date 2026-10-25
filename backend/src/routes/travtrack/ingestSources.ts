@@ -1,9 +1,10 @@
 import { Router, type NextFunction, type Request, type Response } from "express";
 
 import { AppError } from "../../middleware/errorHandler";
+import { parseIngestJson } from "../../middleware/ingestBody";
 import { ingestAccountLimiter, ingestTokenLimiter } from "../../middleware/ingestSourceLimits";
 import { ingestTokenAuth, type IngestTokenRequest } from "../../middleware/ingestTokenAuth";
-import { LOCATION_MAX_BODY_BYTES, LOCATION_MAX_POINTS } from "../../schemas/travtrack";
+import { LOCATION_MAX_POINTS } from "../../schemas/travtrack";
 import { travTrackAcceptsBefore } from "../../services/locationProvider/provider";
 import { ingestPoints, type IngestResult } from "../../services/travtrack/ingest";
 import { mapOverland, overlandBodySchema } from "../../services/travtrack/sources/overland";
@@ -48,24 +49,13 @@ function route(fn: (req: IngestTokenRequest, res: Response) => Promise<void>) {
   };
 }
 
-function capBody(req: Request, _res: Response, next: NextFunction): void {
-  // The header first (cheap), then the parsed body itself: a chunked request
-  // carries no Content-Length.
-  if (
-    Number(req.get("content-length") ?? 0) > LOCATION_MAX_BODY_BYTES ||
-    Buffer.byteLength(JSON.stringify(req.body ?? null)) > LOCATION_MAX_BODY_BYTES
-  ) {
-    return next(new AppError("The upload is too large", 413, "TRACK_BODY_TOO_LARGE"));
-  }
-  next();
-}
-
 const ingestChain = (kind: IngestTokenKind) => [
   travTrackTier("on"),
   ingestTokenAuth(kind),
   ingestTokenLimiter,
   ingestAccountLimiter,
-  capBody,
+  // The bytes were read, capped, by `ingestRawBody` (index.ts); parsed only now.
+  parseIngestJson,
 ];
 
 /**
