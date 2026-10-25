@@ -107,7 +107,11 @@ function compareStation(
   const nearDays = [
     ...new Set([
       ...actual.positions.filter((p) => near(p, station.place)).map((p) => p.day),
-      ...actual.stays.filter((s) => near(s, station.place)).map((s) => s.day),
+      // A stay inside a privacy circle is the owner's own record and still listed, but it
+      // never proves a station outside the zone by itself: only track evidence does there.
+      ...actual.stays
+        .filter((s) => near(s, station.place) && !insideCircle(s, actual.circles))
+        .map((s) => s.day),
     ]),
   ].sort();
 

@@ -192,6 +192,32 @@ describe("comparePlanActual", () => {
     expect(statusOf(result, "v")).toMatchObject({ status: "visited", deltaDays: 1 });
   });
 
+  it("a stay inside a privacy circle never makes a station outside it visited by itself", () => {
+    // The zone is 3 km across, 10 km from Vienna's station: the hotel in it is near the station.
+    const zone = { lat: VIENNA.lat + 0.09, lon: VIENNA.lon, radiusM: 3000 };
+    const stay: ActualStay = {
+      id: "h",
+      kind: "lodging",
+      day: "2026-10-05",
+      lat: zone.lat,
+      lon: zone.lon,
+      label: "Home",
+    };
+    const alone = comparePlanActual(
+      plan(),
+      actual([], { stays: [stay], recorded: [], circles: [zone] })
+    );
+    expect(statusOf(alone, "v").status).toBe("unknown");
+    // Track evidence for the station still counts.
+    const withTrack = comparePlanActual(
+      plan(),
+      actual([at("2026-10-05", VIENNA)], { stays: [stay], circles: [zone] })
+    );
+    expect(statusOf(withTrack, "v")).toMatchObject({ status: "visited", deltaDays: 1 });
+    // Near a station, so not unplanned either (a far one is listed: the owner's own record).
+    expect(alone.unplanned).toEqual([]);
+  });
+
   it("stage km only between two visited stations", () => {
     const track = [
       at("2026-10-02", MUNICH),
