@@ -2,7 +2,7 @@ import { draftFrom as busDraftFrom, type BusFormDraft } from "../../bus/busFormM
 import { draftFrom as railDraftFrom, type RailFormDraft } from "../../rail/railFormModel";
 import { EMPTY_STATION } from "../../rail/RailStationField";
 import { EMPTY_TERMINAL } from "../../bus/BusStationField";
-import { localDay, toLocal } from "../../../shared/time";
+import { classifyWallClock, localDay, storedFold, toLocal } from "../../../shared/time";
 import type { StationInput } from "../../../types/roadtrip";
 import type { JourneyEntryKind, JourneyRun } from "../../../lib/api/locationSuggestions";
 
@@ -22,13 +22,30 @@ import type { JourneyEntryKind, JourneyRun } from "../../../lib/api/locationSugg
 /** `YYYY-MM-DDTHH:mm` on `zone`'s clock — the forms' local time field. */
 const localMinute = (ms: number, zone: string): string => toLocal(ms, zone).local.slice(0, 16);
 
+/**
+ * Which occurrence of a repeated autumn hour the instant is — the forms send
+ * it beside the wall clock, which alone would be read as the earlier one.
+ * Null when the clock is not repeated.
+ */
+function foldAt(ms: number, zone: string): "earlier" | "later" | null {
+  const local = localMinute(ms, zone);
+  if (classifyWallClock(local, zone) !== "repeated") return null;
+  return storedFold(local, zone, new Date(ms).toISOString()) === "later" ? "later" : "earlier";
+}
+
+const ends = (run: JourneyRun) => ({
+  departureLocal: localMinute(run.fromMs, run.startZone),
+  arrivalLocal: localMinute(run.untilMs, run.endZone),
+  departureFold: foldAt(run.fromMs, run.startZone),
+  arrivalFold: foldAt(run.untilMs, run.endZone),
+});
+
 export function railDraftFromRun(run: JourneyRun): RailFormDraft {
   return {
     ...railDraftFrom(null),
     departure: { ...EMPTY_STATION, lat: run.start.lat, lon: run.start.lon },
     arrival: { ...EMPTY_STATION, lat: run.end.lat, lon: run.end.lon },
-    departureLocal: localMinute(run.fromMs, run.startZone),
-    arrivalLocal: localMinute(run.untilMs, run.endZone),
+    ...ends(run),
   };
 }
 
@@ -37,8 +54,7 @@ export function busDraftFromRun(run: JourneyRun): BusFormDraft {
     ...busDraftFrom(null),
     departure: { ...EMPTY_TERMINAL, lat: run.start.lat, lon: run.start.lon },
     arrival: { ...EMPTY_TERMINAL, lat: run.end.lat, lon: run.end.lon },
-    departureLocal: localMinute(run.fromMs, run.startZone),
-    arrivalLocal: localMinute(run.untilMs, run.endZone),
+    ...ends(run),
   };
 }
 

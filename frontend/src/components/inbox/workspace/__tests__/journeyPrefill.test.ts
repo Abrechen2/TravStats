@@ -27,6 +27,29 @@ describe("journeyPrefill", () => {
     expect(draft.arrivalDayOnly).toBe(false);
   });
 
+  it("keeps the second occurrence of a repeated autumn hour", () => {
+    // Berlin, 25 Oct 2026: 02:30 happens twice; 01:30Z is the second one (CET).
+    const second = {
+      ...run,
+      fromMs: Date.parse("2026-10-25T01:30:00Z"),
+      untilMs: Date.parse("2026-10-25T00:40:00Z") + 3_600_000,
+    };
+    const late = { ...second, endZone: "Europe/Berlin" };
+    const rail = railDraftFromRun(late);
+    expect(rail.departureLocal).toBe("2026-10-25T02:30");
+    expect(rail.departureFold).toBe("later");
+    expect(rail.arrivalLocal).toBe("2026-10-25T02:40");
+    expect(rail.arrivalFold).toBe("later");
+    const first = railDraftFromRun({ ...late, fromMs: Date.parse("2026-10-25T00:30:00Z") });
+    expect(first.departureLocal).toBe("2026-10-25T02:30");
+    expect(first.departureFold).toBe("earlier");
+    // An hour that happens once carries no fold.
+    expect(railDraftFromRun(run).departureFold).toBeNull();
+    const bus = busDraftFromRun(late);
+    expect(bus.departureFold).toBe("later");
+    expect(bus.arrivalFold).toBe("later");
+  });
+
   it("opens the bus form the same way", () => {
     const draft = busDraftFromRun(run);
     expect(draft.departure).toMatchObject({ lat: 50.1, lon: 8.66 });
