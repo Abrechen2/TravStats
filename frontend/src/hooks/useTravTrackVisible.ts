@@ -72,6 +72,20 @@ export function useTravTrackVisible(): boolean {
 }
 
 /**
+ * Whether TravTrack is on on this server — the beta key and the instance
+ * (`enabled`), whatever this account does with it. What a reader needs to see
+ * a route another member shares (`GET /trips/:id/shared-route`, the server's
+ * `on` tier): a recipient who never recorded anything still reads it. Fails
+ * closed while pending or after a failed read.
+ */
+export function useTravTrackInstanceOn(): boolean {
+  const { isFeatureVisible } = useBetaFeatures();
+  const keyOpen = isFeatureVisible("travTrack");
+  const { caps } = useCapabilitiesRead(keyOpen);
+  return keyOpen && caps !== null && caps.enabled;
+}
+
+/**
  * Whether Settings shows the TravTrack section: whenever the account holds
  * data (so it can still read, export and delete it with TravTrack off —
  * review focus 14) or the instance shows TravTrack. Not behind the beta key:

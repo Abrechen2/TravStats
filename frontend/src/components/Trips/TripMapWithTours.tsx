@@ -11,7 +11,7 @@ import { useTripRecording } from "../../hooks/useTripRecording";
 import type { TrackOrigin } from "../../lib/api/trackOrigin";
 import { buildRecordingLayers, recordingPoints } from "./recording/recordingLayers";
 import TripRecordingPanel from "./recording/TripRecordingPanel";
-import { useTravTrackVisible } from "../../hooks/useTravTrackVisible";
+import { useTravTrackInstanceOn } from "../../hooks/useTravTrackVisible";
 import { useSharedTripRoutes } from "../../hooks/useSharedTripRoutes";
 import SharedRouteLegend from "./recording/SharedRouteLegend";
 import { buildSharedRouteLayers, sharedRoutePoints } from "./recording/sharedRouteLayers";
@@ -47,7 +47,8 @@ export default function TripMapWithTours({
   const [recordingSource, setRecordingSource] = useState<TrackOrigin | null>(null);
   const recording = useTripRecording(trip.id, recordingDay, recordingSource);
   const segments = recording.view?.segments;
-  const shared = useSharedTripRoutes(trip.id, useTravTrackVisible());
+  // A recipient needs TravTrack on here, not a history of their own.
+  const shared = useSharedTripRoutes(trip.id, useTravTrackInstanceOn());
   const extraLayers = useMemo(
     () => [
       ...transport.layers,

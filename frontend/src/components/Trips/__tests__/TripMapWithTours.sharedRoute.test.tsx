@@ -19,7 +19,9 @@ vi.mock("../../../lib/api/tours", () => ({
 }));
 vi.mock("../../../lib/api/tourIndex", () => ({ tourIndexApi: { geometryBatch: vi.fn() } }));
 vi.mock("../../../hooks/useToursVisible", () => ({ useToursVisible: vi.fn(() => false) }));
-vi.mock("../../../hooks/useTravTrackVisible", () => ({ useTravTrackVisible: vi.fn(() => true) }));
+vi.mock("../../../hooks/useTravTrackVisible", () => ({
+  useTravTrackInstanceOn: vi.fn(() => true),
+}));
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
     t: (k: string, o?: Record<string, unknown>) => (o ? `${k} ${JSON.stringify(o)}` : k),
@@ -50,7 +52,7 @@ vi.mock("../../../lib/api/travtrack", async (importOriginal) => ({
 
 import TripMapWithTours from "../TripMapWithTours";
 import { travTrackApi } from "../../../lib/api/travtrack";
-import { useTravTrackVisible } from "../../../hooks/useTravTrackVisible";
+import { useTravTrackInstanceOn } from "../../../hooks/useTravTrackVisible";
 
 const trip = { id: "copy-1", flights: [], cruises: [], lodgingStays: [], stops: [] } as never;
 const sharedRoutes = vi.mocked(travTrackApi.sharedRoutes);
@@ -58,7 +60,7 @@ const sharedRoutes = vi.mocked(travTrackApi.sharedRoutes);
 describe("TripMapWithTours — a route another member shares", () => {
   beforeEach(() => {
     sharedRoutes.mockReset();
-    vi.mocked(useTravTrackVisible).mockReturnValue(true);
+    vi.mocked(useTravTrackInstanceOn).mockReturnValue(true);
   });
 
   it("draws the shared route read-only and names whose it is", async () => {
@@ -97,7 +99,7 @@ describe("TripMapWithTours — a route another member shares", () => {
   });
 
   it("does not ask where TravTrack is not shown", async () => {
-    vi.mocked(useTravTrackVisible).mockReturnValue(false);
+    vi.mocked(useTravTrackInstanceOn).mockReturnValue(false);
     render(<TripMapWithTours trip={trip} />);
     await screen.findByTestId("map");
     expect(sharedRoutes).not.toHaveBeenCalled();

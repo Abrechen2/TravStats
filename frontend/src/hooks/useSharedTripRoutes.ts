@@ -11,7 +11,7 @@ export interface SharedTripRoutesState {
 
 /**
  * The routes the other members of a shared trip share with the reader
- * (TravTrack plan T7), for the trip map. Asked only where TravTrack is shown
+ * (TravTrack plan T7), for the trip map. Asked only where TravTrack is on
  * (`enabled`); nobody sharing one is an empty list, a failed read its own state.
  */
 export function useSharedTripRoutes(tripId: string, enabled: boolean): SharedTripRoutesState {
