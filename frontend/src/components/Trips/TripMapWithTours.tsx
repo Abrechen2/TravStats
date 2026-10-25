@@ -11,13 +11,18 @@ import { useTripRecording } from "../../hooks/useTripRecording";
 import type { TrackOrigin } from "../../lib/api/trackOrigin";
 import { buildRecordingLayers, recordingPoints } from "./recording/recordingLayers";
 import TripRecordingPanel from "./recording/TripRecordingPanel";
+import { useTravTrackVisible } from "../../hooks/useTravTrackVisible";
+import { useSharedTripRoutes } from "../../hooks/useSharedTripRoutes";
+import SharedRouteLegend from "./recording/SharedRouteLegend";
+import { buildSharedRouteLayers, sharedRoutePoints } from "./recording/sharedRouteLayers";
 import { useTripTransportLayers, type TripTransportContent } from "./tripTransportLayers";
 import type { TripProjection } from "./TripMapGlobeLayers";
 
 /**
  * The trip detail page's "Karte" tab: the trip, and — while tours are visible
  * — the lines of its tours, and the positions the Companion recorded during
- * it (forgejo#316). Split from `TripDetailPage`, which is over the file-size
+ * it (forgejo#316), and the routes other members of a shared trip share with
+ * the reader (TravTrack plan T7), read-only. Split from `TripDetailPage`, which is over the file-size
  * limit and may not grow.
  */
 export default function TripMapWithTours({
@@ -42,13 +47,24 @@ export default function TripMapWithTours({
   const [recordingSource, setRecordingSource] = useState<TrackOrigin | null>(null);
   const recording = useTripRecording(trip.id, recordingDay, recordingSource);
   const segments = recording.view?.segments;
+  const shared = useSharedTripRoutes(trip.id, useTravTrackVisible());
   const extraLayers = useMemo(
-    () => [...transport.layers, ...busLayers, ...buildRecordingLayers(segments ?? [])],
-    [transport.layers, busLayers, segments]
+    () => [
+      ...transport.layers,
+      ...busLayers,
+      ...buildSharedRouteLayers(shared.routes),
+      ...buildRecordingLayers(segments ?? []),
+    ],
+    [transport.layers, busLayers, shared.routes, segments]
   );
   const extraPoints = useMemo(
-    () => [...transport.points, ...busPoints, ...recordingPoints(segments ?? [])],
-    [transport.points, busPoints, segments]
+    () => [
+      ...transport.points,
+      ...busPoints,
+      ...sharedRoutePoints(shared.routes),
+      ...recordingPoints(segments ?? []),
+    ],
+    [transport.points, busPoints, shared.routes, segments]
   );
   return (
     <>
@@ -57,6 +73,7 @@ export default function TripMapWithTours({
           {t("trips:tours.map.loadError")}
         </p>
       )}
+      <SharedRouteLegend routes={shared.routes} failed={shared.failed} />
       <TripRecordingPanel
         tripId={trip.id}
         view={recording.view}

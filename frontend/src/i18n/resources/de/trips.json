@@ -884,5 +884,10 @@
     "loadError": "Die Aufzeichnung dieser Reise konnte nicht geladen werden.",
     "downloadError": "Die GPX-Datei konnte nicht heruntergeladen werden.",
     "deleteError": "Die Aufzeichnung konnte nicht gelöscht werden."
+  },
+  "sharedRoute": {
+    "title": "Mitgeteilte Routen",
+    "legend": "Route von {{name}} – mitgeteilt, nur zum Ansehen",
+    "loadError": "Die mitgeteilte Route dieser Reise konnte nicht geladen werden."
   }
 }

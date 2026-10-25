@@ -884,5 +884,10 @@
     "loadError": "This trip's recording could not be loaded.",
     "downloadError": "The GPX file could not be downloaded.",
     "deleteError": "The recording could not be deleted."
+  },
+  "sharedRoute": {
+    "title": "Shared routes",
+    "legend": "Route by {{name}} – shared with you, view only",
+    "loadError": "The route shared on this trip could not be loaded."
   }
 }

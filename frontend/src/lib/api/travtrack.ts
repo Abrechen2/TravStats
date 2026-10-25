@@ -112,6 +112,17 @@ export interface TripRouteSnapshot {
   geometry: Array<Array<[number, number]>>;
 }
 
+/** A route another member of a shared trip shares with the reader: geometry and a name only. */
+export interface SharedTripRoute {
+  version: number;
+  /** The sharer's display name, for the map's label. */
+  sharedBy: string;
+  geometry: Array<Array<[number, number]>>;
+}
+
+/** The answer when nobody shares a route of this trip with the reader. */
+export const SHARED_ROUTE_NOT_FOUND = "SHARED_ROUTE_NOT_FOUND";
+
 /** A 409 with this code names `pointsInside`: ask, then send again with `deleteStoredPoints`. */
 export const ZONE_HOLDS_POINTS = "LOCATION_ZONE_HOLDS_POINTS";
 
@@ -157,6 +168,22 @@ export const travTrackApi = {
         `/trips/${encodeURIComponent(tripId)}/share-snapshot`
       )
     ).data.snapshot,
+  /**
+   * The routes the trip's other members share with the reader, read through
+   * the reader's own copy. Nobody sharing one is an empty list, not a failure.
+   */
+  sharedRoutes: async (tripId: string): Promise<SharedTripRoute[]> => {
+    try {
+      return (
+        await api.get<{ routes: SharedTripRoute[] }>(
+          `/trips/${encodeURIComponent(tripId)}/shared-route`
+        )
+      ).data.routes;
+    } catch (err: unknown) {
+      if (apiErrorMachineCode(err) === SHARED_ROUTE_NOT_FOUND) return [];
+      throw err;
+    }
+  },
   /** Takes the shared route back, for every recipient at once. */
   revokeRoute: async (tripId: string): Promise<void> => {
     await api.delete(`/trips/${encodeURIComponent(tripId)}/share-snapshot`);
