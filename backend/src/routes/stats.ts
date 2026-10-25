@@ -1,8 +1,8 @@
 import { Router, Response, NextFunction } from "express";
 import aircraftStatsRouter from "./stats/aircraft";
 import statsPageRouter from "./stats/page";
+import passportStatsRouter from "./stats/passport";
 import {
-  CountryCodeParamSchema,
   DateRangeQuerySchema,
   DateRangeYearQuerySchema,
   RoutesQuerySchema,
@@ -32,7 +32,6 @@ import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "../services/stats/depar
 import { loadPassport } from "../services/stats/passportLoader";
 import { buildWhere, computeSummary } from "../services/stats/summary";
 import { loadDaysAway } from "../services/stats/daysAwayLoader";
-import { loadCountryDetail } from "../services/stats/countryDetailLoader";
 import { loadWrapped } from "../services/stats/wrappedLoad";
 import { fetchFlightDatedRows, fetchCruiseDatedRows } from "../services/stats/timeseriesRows";
 import { buildTravelRecords, loadRecordFlights } from "../services/stats/records";
@@ -802,15 +801,6 @@ router.get(
 );
 
 /**
- * The passport — countries, their airports, and a continent quota.
- *
- * One endpoint rather than two raw ones the clients re-aggregate: the Companion
- * app already derives this screen client-side, and a second derivation in the
- * web frontend would be a third copy of arithmetic that has to agree. The
- * rules, and why each was chosen to match a figure published elsewhere on this
- * server, are in services/stats/passport.ts.
- */
-/**
  * GET /stats/records — the seven travel records, derived here (Forgejo #41).
  *
  * The Companion computes these client-side today, from the raw flight list.
@@ -848,56 +838,9 @@ router.get(
   }
 );
 
-router.get(
-  "/passport",
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      res.json(await loadPassport(req.userId!));
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-/**
- * GET /stats/countries/:code — one country, in detail (Forgejo #42).
- *
- * The drill-down behind a passport row. It answers for a country reached only
- * by cruise or by a recorded place too, because the passport lists those rows
- * and a 404 there would put the list and the page into the disagreement #42 is
- * about. The rules are in services/stats/countryDetail.ts.
- *
- * Bare object rather than a `{ success, data }` envelope: it sits beside
- * `/stats/countries` and `/stats/passport`, and a client that walks from a row
- * to its page should not have to unwrap a second shape halfway.
- */
-router.get(
-  "/countries/:code",
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const userId = req.userId!;
-      const parsed = CountryCodeParamSchema.safeParse(req.params);
-      if (!parsed.success) {
-        res.status(400).json({ error: "Invalid country", details: parsed.error.issues });
-        return;
-      }
-
-      const detail = await loadCountryDetail(userId, parsed.data.code);
-
-      if (!detail) {
-        // Nothing evidences this country — including a code the catalogue does
-        // not know. Both are "you have not been there", and saying so is
-        // better than an empty page that looks like a loading failure.
-        res.status(404).json({ error: "No record of this country" });
-        return;
-      }
-
-      res.json(detail);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
+// `/passport` and `/countries/:code` live in `stats/passport` — mounted HERE so
+// route-matching order is exactly what it was.
+router.use(passportStatsRouter);
 
 /**
  * GET /stats/wrapped?year= — the year in review (Forgejo #42, the last piece).

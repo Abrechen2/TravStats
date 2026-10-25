@@ -265,6 +265,26 @@ const statsTag = ["Stats"];
 // (forgejo#52), so it has no callers — and leaving it would be leaving the
 // easy way to add another shapeless endpoint.
 
+/**
+ * `?year=` on the passport and the country page (companion-redesign C4), and
+ * the `scope` every such answer carries so a client can check what it got.
+ */
+const yearScopeQuery = z.object({
+  year: z.coerce
+    .number()
+    .int()
+    .min(1900)
+    .max(2100)
+    .optional()
+    .describe(
+      "Only this calendar year's evidence, each record dated by its own local day; " +
+        "undated records belong to no year and are left out. Omitted: lifetime."
+    ),
+});
+const statsScopeSchema = z
+  .object({ year: z.number().int().nullable() })
+  .describe("What the answer covers: the requested year, or null for lifetime");
+
 const passportResponse = registry.register(
   "Passport",
   z
@@ -335,11 +355,15 @@ registry.registerPath({
   path: "/stats/passport",
   summary: "The passport: countries, their airports, and a continent quota",
   tags: statsTag,
+  request: { query: yearScopeQuery },
   responses: {
     200: {
       description: "The passport",
-      content: { "application/json": { schema: passportResponse } },
+      content: {
+        "application/json": { schema: passportResponse.extend({ scope: statsScopeSchema }) },
+      },
     },
+    400: { description: "`year` is not an integer between 1900 and 2100" },
   },
   description:
     "Derived server-side so several clients draw the same picture. A country counts " +
@@ -491,13 +515,16 @@ registry.registerPath({
     "never a verdict: the upstream payload cannot say whether a point was " +
     "measured by GPS or estimated from a photograph, so nothing here claims to.",
   tags: statsTag,
-  request: { params: z.object({ code: z.string() }) },
+  request: { params: z.object({ code: z.string() }), query: yearScopeQuery },
   responses: {
     200: {
       description: "Country detail",
-      content: { "application/json": { schema: countryDetail } },
+      content: {
+        "application/json": { schema: countryDetail.extend({ scope: statsScopeSchema }) },
+      },
     },
-    404: { description: "Nothing evidences that country" },
+    400: { description: "Not a country, or `year` is not an integer between 1900 and 2100" },
+    404: { description: "Nothing evidences that country (in that year, when `year` is given)" },
   },
 });
 
