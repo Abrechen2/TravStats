@@ -199,6 +199,15 @@ describe("TravTrack — /travtrack/imports", () => {
     expect(del.body).toEqual({ deleted: 2 });
   });
 
+  it("TravTrack off: an account whose only data is a failed import still reaches the list", async () => {
+    await importDone(Buffer.from("garbage"), "broken.gpx");
+    expect(await prisma.travTrackPoint.count({ where: { userId } })).toBe(0);
+    await switches.set({ beta: true, config: false });
+    const res = await list();
+    expect(res.status).toBe(200);
+    expect(res.body.imports).toEqual([expect.objectContaining({ status: "failed" })]);
+  });
+
   it("deleting an import takes its points out of a shared trip's route", async () => {
     await prisma.trip.deleteMany({ where: { userId } });
     await shareSnapshotBuildLimiter.resetKey(`user:${userId}`);

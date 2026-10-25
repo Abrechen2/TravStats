@@ -47,7 +47,9 @@ export async function assertTravTrackOn(): Promise<void> {
 
 /**
  * Whether this account holds anything TravTrack stored for it: points, zones,
- * reported gaps or deleted spans. One `EXISTS` per table, the first hit wins.
+ * reported gaps, deleted spans or file imports. One `EXISTS` per table, the
+ * first hit wins. An import counts even without points (owner, 2026-10-25):
+ * a failed import must stay visible and deletable while TravTrack is off.
  * A deleted span counts — it is what keeps a late upload out, and the user
  * may want to see it in the summary.
  */
@@ -57,6 +59,7 @@ export async function holdsTravTrackData(userId: string): Promise<boolean> {
     UNION ALL SELECT 1 FROM travtrack_privacy_zones WHERE user_id = ${userId}
     UNION ALL SELECT 1 FROM travtrack_gaps WHERE user_id = ${userId}
     UNION ALL SELECT 1 FROM travtrack_deleted_ranges WHERE user_id = ${userId}
+    UNION ALL SELECT 1 FROM travtrack_imports WHERE user_id = ${userId}
     LIMIT 1`;
   return rows.length > 0;
 }
