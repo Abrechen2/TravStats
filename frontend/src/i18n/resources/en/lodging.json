@@ -310,25 +310,28 @@
       "title": "Preview ({{count}} rows)",
       "title_one": "Preview ({{count}} row)",
       "title_other": "Preview ({{count}} rows)",
-      "newLabel": "new",
-      "presentLabel": "already present",
-      "needsInputLabel": "need you",
-      "needsInputHint": "Please review and decide these rows before committing.",
-      "commit": "Commit",
+      "commit": "Import selection",
       "commitError": "Could not commit the import",
       "chooseCurrency": "— currency —",
-      "currencyMissingHint": "A price needs a currency — pick one for the highlighted rows, or the amount will not be imported.",
-      "changedLabel": "changed",
-      "createAllUndecided": "Create all {{count}} undecided as new",
-      "createAllChains": "Create all {{count}} chains"
+      "currencyMissingHint": "A price needs a currency: add a currency, remove the price, or skip the row.",
+      "createAllChains": "Create all {{count}} chains",
+      "summaryCreate_one": "{{count}} row to add",
+      "summaryCreate_other": "{{count}} rows to add",
+      "summarySkip_one": "{{count}} to skip",
+      "summarySkip_other": "{{count}} to skip",
+      "summaryPending_one": "{{count}} awaiting a decision",
+      "summaryPending_other": "{{count}} awaiting a decision",
+      "summaryUpdate_one": "{{count}} to update",
+      "summaryUpdate_other": "{{count}} to update",
+      "pendingHint": "Choose an action for the highlighted rows.",
+      "blockedHint_one": "{{count}} row still needs details — see the highlighted notes.",
+      "blockedHint_other": "{{count}} rows still need details — see the highlighted notes.",
+      "createAllUndecided_one": "Create the {{count}} undecided row",
+      "createAllUndecided_other": "Create all {{count}} undecided rows"
     },
-    "matchedLodgingHint": "This row attaches to an existing hotel — name and city cannot be edited here.",
-    "matchedAs": "Matched to:",
     "matchedStayAt": "Existing stay:",
     "openMatchedStay": "Open the existing stay in a new tab",
-    "createAnyway": "Create anyway",
     "createAnywayHint": "Creates a second stay for the same booking. The duplicate check keeps pointing at the existing one; the booking reference then appears on both.",
-    "rejectMatch": "Not the same hotel — create new",
     "fields": {
       "name": "Name",
       "type": "Type",
@@ -344,7 +347,7 @@
       "checkOut": "Check-out",
       "roomCategory": "Room category",
       "board": "Board",
-      "totalPrice": "Price",
+      "totalPrice": "Total price",
       "currency": "Currency",
       "ratingRoom": "Room rating",
       "ratingBreakfast": "Breakfast rating",
@@ -356,26 +359,21 @@
     },
     "actions": {
       "choose": "— choose —",
-      "create": "Create",
-      "skip": "Skip",
-      "update": "Update"
+      "addStay": "Add stay",
+      "createHotelAndStay": "Create hotel and stay",
+      "createHotel": "Create hotel",
+      "createAnotherStay": "Create another stay",
+      "update": "Update stay",
+      "skip": "Skip"
     },
     "flags": {
       "missing_name": "Missing name",
       "unresolvable_lodging_name": "Hotel name could not be matched",
-      "ambiguous_lodging_name": "Hotel name is ambiguous",
+      "ambiguous_lodging_name": "Multiple possible hotels — choose a match.",
       "malformed_date": "Malformed date",
       "invalid_date_range": "Invalid date range",
-      "missing_coordinates": "Missing coordinates",
+      "missing_coordinates": "Imported data has no coordinates; importing is possible.",
       "unknown_chain": "Chain not in the catalogue"
-    },
-    "dedupeHints": {
-      "lodging_exact_ref": "Already imported (exact reference match)",
-      "lodging_name_city": "Matching hotel found (name + city)",
-      "stay_exact_ref": "Stay already on file (exact reference match)",
-      "stay_same_dates": "Stay already on file (same dates)",
-      "lodging_name_similar": "Similarly named hotel found — the same house?",
-      "lodging_nearby": "Hotel at the same spot found — the same house?"
     },
     "noBookings": "No booking data was recognised. Is it a booking confirmation? Otherwise, enter the stay by hand.",
     "csv": {
@@ -402,8 +400,8 @@
       "previewFailed": "The import preview could not be loaded."
     },
     "commitResult": {
-      "success": "Imported {{hotels}} and {{stays}}, skipped {{skipped}} (already present).",
-      "partial": "Imported {{hotels}} and {{stays}}, skipped {{skipped}} (already present), {{rows}} failed: {{reasons}}",
+      "success": "Imported {{hotels}} and {{stays}}, skipped {{skipped}}.",
+      "partial": "Imported {{hotels}} and {{stays}}, skipped {{skipped}}, {{rows}} failed: {{reasons}}",
       "failureCodes": {
         "ownership_mismatch": "belongs to another account",
         "missing_lodging_reference": "missing hotel reference",
@@ -451,7 +449,46 @@
       "withoutId": "{{count}} rows carry no place id. They are imported, but a second import will not recognise them."
     },
     "createChain": "Create “{{name}}”",
-    "changedHint": "Changed"
+    "changedHint": "Changed",
+    "matchedLodgingLabel": "Existing hotel",
+    "matchedLodgingExplain": "The stay will be added to this existing hotel. Hotel details will remain unchanged.",
+    "openMatchedLodging": "Open the existing hotel in a new tab",
+    "importedAs": "In the import:",
+    "rejectMatch": "Different hotel? Remove match",
+    "chooseLodging": "Choose a hotel",
+    "chooseLodgingPlaceholder": "— choose a hotel —",
+    "chooseLodgingNew": "None of these — create a new hotel",
+    "importedStay": "Import:",
+    "blockers": {
+      "missing_currency": "Add a currency, remove the price, or skip the row.",
+      "name_too_long": "Name too long (at most {{max}} characters).",
+      "city_too_long": "City too long (at most {{max}} characters).",
+      "negative_price": "Price cannot be negative.",
+      "stay_too_long": "Stay too long (at most {{max}} nights).",
+      "nothing_to_create": "No stay given — there is nothing to create. Enter dates or skip the row."
+    },
+    "matchHints": {
+      "lodging_exact_ref": "Existing hotel with the same import reference.",
+      "lodging_name_city": "Possible hotel: name and city match.",
+      "lodging_name_only": "Possible hotel: name matches; imported city is missing.",
+      "lodging_name_similar": "Possible hotel: similar name — the same house?",
+      "lodging_nearby": "Possible hotel at the same spot — the same house?",
+      "stay_exact_ref": "Stay already on file (same booking reference).",
+      "stay_same_dates": "Possible existing stay with the same check-in date."
+    },
+    "changeFields": {
+      "checkIn": "Check-in",
+      "checkOut": "Check-out",
+      "roomCategory": "Room category",
+      "board": "Board",
+      "guests": "Guests",
+      "totalPrice": "Total price",
+      "pricePerNight": "Price per night",
+      "currency": "Currency",
+      "bookingReference": "Booking reference",
+      "freeCancellationUntil": "Free cancellation until",
+      "paymentDueOn": "Payment due on"
+    }
   },
   "stats": {
     "more": "+ {{count}} more",

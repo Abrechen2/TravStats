@@ -487,6 +487,7 @@
     },
     "noTrain": "keine Zugnummer auf dem Ticket",
     "duplicate": "Schon im Fahrtenbuch (gleiche Buchung, gleiche Abfahrt) — nicht angehakt.",
+    "possibleDuplicate": "Vielleicht schon im Fahrtenbuch: eine Fahrt zur gleichen Minute ab dieser Haltestelle zum gleichen Ziel, aber ohne Linie zum Vergleichen — bitte prüfen.",
     "legSaved": "Gespeichert.",
     "unresolved": "„{{name}}“ ist im Bahnhofsverzeichnis nicht eindeutig. Wähl den Bahnhof aus:",
     "pickStations": "Wähl für jede angehakte Fahrt beide Bahnhöfe — ohne Bahnhof ist die Uhrzeit keiner Zeitzone zuzuordnen.",

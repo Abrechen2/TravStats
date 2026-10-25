@@ -215,7 +215,7 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
  * constructor can print as 2026-03-29 or 2026-03-31 depending on the
  * browser's offset — this path never constructs a Date from a bare string).
  */
-function isRealCalendarDay(iso: string): boolean {
+export function isRealCalendarDay(iso: string): boolean {
   if (!ISO_DATE_RE.test(iso)) return false;
   const t = Date.parse(`${iso}T00:00:00Z`);
   return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === iso;

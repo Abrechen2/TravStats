@@ -111,6 +111,9 @@ export function RailImportLegRow({
           {leg.duplicateOf && (
             <span className="t-caption text-(--warning)">{t("rail:import.duplicate")}</span>
           )}
+          {!leg.duplicateOf && leg.possibleDuplicateOf && (
+            <span className="t-caption text-(--warning)">{t("rail:import.possibleDuplicate")}</span>
+          )}
           {state.kind === "saved" && (
             <span className="t-caption text-(--success)">
               {t(state.as === "bus" ? "rail:import.legSavedAsBus" : "rail:import.legSaved")}

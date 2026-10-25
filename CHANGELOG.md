@@ -6,12 +6,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-**Before upgrading to 2.7.0-rc.24:** take a backup. No new migrations since rc.20. Coming from 2.7.0-rc.19: 4 migrations; from 2.7.0-rc.18: 25 migrations, and stored straight ferry crossings are re-routed once in the background.
+**Before upgrading to 2.7.0-rc.25:** take a backup. One new migration since rc.24: every stored rail ride is marked as a train, and the two new rail import settings start at "skip". Coming from 2.7.0-rc.19: 5 migrations; from 2.7.0-rc.18: 26 migrations, and stored straight ferry crossings are re-routed once in the background.
 
 - Full data export includes saved TravPlan content and proposals; daily quota counters are explicitly excluded.
 
 ### Added
 
+- **A rail ride knows whether it was a train, an U-Bahn, a tram or a bus.** The mode is shown and can be changed on the ride, and the rail statistics count trains only. Every ride stored before this version is a train.
+- **A bahn.de connection's U-Bahn, tram and bus legs are reviewed in place.** The import dialog names each leg's mode; U-Bahn and tram legs can be kept as rail rides of that mode or skipped, bus legs can be saved as bus rides or skipped. Settings → Daten remembers the choice for each kind ("skip" until changed).
+- **bahn.de stops are resolved from bahn.de's own station data,** so a stop named the way bahn.de prints it finds its catalogue station.
 - **Settings → Mitreisende.** One page for everyone you travel with: how
   often each person appears per area, rename (the name changes on every
   entry), merge two spellings of the same person after a preview of what
@@ -134,6 +137,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Changed
 
+- **The lodging import preview says what each row will do.** The action reads "Aufenthalt hinzufügen", "Hotel und Aufenthalt anlegen", "Weiteren Aufenthalt anlegen" or "Aufenthalt aktualisieren" instead of a bare "Anlegen"; a matched hotel is shown with its stored name and city as plain text, with the import's spelling beside it where it differs; the summary counts what will be added, skipped and still needs a decision, and the reminder to decide only shows while something is undecided. A guessed match says what it rests on (name and city, name only, a similar name, the same place) instead of a green "Passendes Hotel gefunden"; several possible hotels offer a choice; "Keine Koordinaten" is gone from rows that join a stored hotel. "Anderes Hotel? Zuordnung aufheben" replaces "Nicht dasselbe Hotel — neu anlegen", which never created anything.
 - **Recorded flight paths are off on the dashboard by default.** The map
   shows routes; a recording belongs to one flight. A new map option
   "Aufgezeichnete Flugwege zeigen (wo vorhanden)" draws them as thin lines on
@@ -163,6 +167,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Fixed
 
+- **A skipped row no longer fails the whole lodging import.** A skipped row with a cleared date or name made the server refuse every row; skipped rows are now sent without their fields.
+- **"Auswahl importieren" is only enabled for a preview the server will accept.** Names and cities over 200 characters, negative prices and stays over ten years are flagged on the row instead of failing the import, a price without a currency is flagged on updates as well, and a row set to add a stay with both dates cleared is flagged instead of creating nothing.
+- **Picking one of several possible hotels checks that hotel's stays for the same check-in,** and an update shows every changed field, an edited price or currency included.
+- **Importing the same bahn.de connection twice no longer saves its rides twice.** The repeat was looked up by the printed stop name, while the first import had stored the catalogue's name.
+- **Two buses or trains leaving the same stop in the same minute are no longer taken for one ride.** A ride counts as already logged only when its destination and its line or train number agree too; where one side names no line, the leg is kept ticked and marked "möglicherweise schon erfasst".
+- **A ticket with a booking number finds a ride saved earlier from a bahn.de connection without one,** and a busy day no longer hides the ride sought behind older rides at the same stop.
 - **A recorded flight is drawn whole.** Sparse fixes from a phone in the
   cabin were dropped as single points, so LH719 Seoul-Munich showed only its
   last third. Every fix is kept; recorded stretches are solid and the holes

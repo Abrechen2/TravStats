@@ -41,7 +41,8 @@ describe("import preview: a row without a city still finds the hotel", () => {
   it("matches on the name alone and does not propose a second copy", async () => {
     const { rows } = await buildLodgingPreviewRows(userId, [nameOnly("Bastion Hotel Zoetermeer")]);
     expect(rows[0].matchedLodgingId).toBe(existingId);
-    expect(rows[0].dedupeHint).toBe("lodging_name_city");
+    // Named for what it rests on: the name alone, since the row has no city.
+    expect(rows[0].dedupeHint).toBe("lodging_name_only");
     // Not "create": the house exists, and the row brings nothing new to add.
     expect(rows[0].action).not.toBe("create");
   });

@@ -4,6 +4,7 @@ import enImport from "../resources/en/import.json";
 import deLodging from "../resources/de/lodging.json";
 import enLodging from "../resources/en/lodging.json";
 import { LODGING_CSV_FIELDS } from "../../lib/importers/lodgingCsv";
+import type { RowBlocker } from "../../components/lodging/lodgingImportRowState";
 import type {
   LodgingDedupeHint,
   LodgingImportFlag,
@@ -24,17 +25,42 @@ const FLAGS = [
   "malformed_date",
   "invalid_date_range",
   "missing_coordinates",
+  "unknown_chain",
 ] as const satisfies readonly LodgingImportFlag[];
 
-// "none" is deliberately excluded — `LodgingImportPreviewModal` only renders
-// the dedupe-hint badge when `row.dedupeHint !== "none"`, so "none" is never
-// looked up as a translation key.
+// "none" is deliberately excluded — the preview renders a match hint only for
+// a real one (`lodgingHintKey` / `stayHintKey`), so "none" is never looked up.
 const DEDUPE_HINTS = [
   "lodging_exact_ref",
   "lodging_name_city",
+  "lodging_name_only",
+  "lodging_name_similar",
+  "lodging_nearby",
   "stay_exact_ref",
   "stay_same_dates",
 ] as const satisfies readonly Exclude<LodgingDedupeHint, "none">[];
+
+// Every outcome-named label the action select can show (`createActionKey`).
+const ACTIONS = [
+  "choose",
+  "addStay",
+  "createHotelAndStay",
+  "createHotel",
+  "createAnotherStay",
+  "update",
+  "skip",
+] as const;
+
+// Every blocker that is not a server flag (`rowBlockers`) — worded on its own.
+const BLOCKERS = [
+  "missing_currency",
+  "name_too_long",
+  "city_too_long",
+  "negative_price",
+  "stay_too_long",
+  "nothing_to_create",
+] as const satisfies readonly Exclude<RowBlocker, LodgingImportFlag>[];
+const LIMIT_BLOCKERS = ["name_too_long", "city_too_long", "stay_too_long"] as const;
 
 const FAILURE_CODES = [
   "ownership_mismatch",
@@ -74,10 +100,28 @@ describe("lodging import i18n", () => {
     }
   });
 
-  it("has a label for every non-none dedupe hint in both locales", () => {
+  it("words every blocker in both locales, and names the limit where there is one", () => {
+    for (const blocker of BLOCKERS) {
+      expect(deLodging.import.blockers[blocker], `de blockers.${blocker}`).toBeTruthy();
+      expect(enLodging.import.blockers[blocker], `en blockers.${blocker}`).toBeTruthy();
+    }
+    for (const blocker of LIMIT_BLOCKERS) {
+      expect(deLodging.import.blockers[blocker]).toContain("{{max}}");
+      expect(enLodging.import.blockers[blocker]).toContain("{{max}}");
+    }
+  });
+
+  it("has a label for every non-none match hint in both locales", () => {
     for (const hint of DEDUPE_HINTS) {
-      expect(deLodging.import.dedupeHints[hint], `de dedupeHints.${hint}`).toBeTruthy();
-      expect(enLodging.import.dedupeHints[hint], `en dedupeHints.${hint}`).toBeTruthy();
+      expect(deLodging.import.matchHints[hint], `de matchHints.${hint}`).toBeTruthy();
+      expect(enLodging.import.matchHints[hint], `en matchHints.${hint}`).toBeTruthy();
+    }
+  });
+
+  it("has a label for every action outcome in both locales", () => {
+    for (const action of ACTIONS) {
+      expect(deLodging.import.actions[action], `de actions.${action}`).toBeTruthy();
+      expect(enLodging.import.actions[action], `en actions.${action}`).toBeTruthy();
     }
   });
 
@@ -99,18 +143,26 @@ describe("lodging import i18n", () => {
     expect(enLodging.import.errors.skippedRows).toContain("{{count}}");
   });
 
-  it("carries the preview count labels (new / already present / needs input) in both locales", () => {
-    // The real preview header does NOT use a single interpolated
-    // "{{newRows}} ... {{alreadyPresent}} ... {{needsInput}}" string (that
-    // was the brief's assumption) — `LodgingImportPreviewModal` renders the
-    // three counters as raw numbers interpolated inline in JSX, each
-    // followed by its own translated label (`newLabel` / `presentLabel` /
-    // `needsInputLabel`). Verify those three labels directly instead.
+  it("pluralises every part of the preview summary in both locales", () => {
     for (const locale of [deLodging, enLodging]) {
-      expect(locale.import.preview.newLabel).toBeTruthy();
-      expect(locale.import.preview.presentLabel).toBeTruthy();
-      expect(locale.import.preview.needsInputLabel).toBeTruthy();
-      expect(locale.import.preview.needsInputHint).toBeTruthy();
+      const p = locale.import.preview;
+      for (const v of [
+        p.summaryCreate_one,
+        p.summaryCreate_other,
+        p.summarySkip_one,
+        p.summarySkip_other,
+        p.summaryPending_one,
+        p.summaryPending_other,
+        p.summaryUpdate_one,
+        p.summaryUpdate_other,
+        p.blockedHint_one,
+        p.blockedHint_other,
+        p.createAllUndecided_one,
+        p.createAllUndecided_other,
+      ]) {
+        expect(v).toContain("{{count}}");
+      }
+      expect(p.pendingHint).toBeTruthy();
     }
   });
 

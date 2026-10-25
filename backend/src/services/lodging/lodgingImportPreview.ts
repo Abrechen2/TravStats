@@ -15,8 +15,10 @@ import type {
   LodgingImportAction,
   LodgingImportCandidate,
   LodgingImportFlag,
+  LodgingImportLodgingOption,
   LodgingImportMatchedStay,
   LodgingImportPreviewRow,
+  LodgingImportStoredStayValues,
   LodgingImportSummary,
   LodgingStayChange,
   StayCandidateFields,
@@ -102,14 +104,24 @@ function dayKey(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * How many stored houses an ambiguous row offers to choose from. A name that
+ * fits more than this is not a choice anybody can make from a dropdown.
+ */
+const MAX_LODGING_OPTIONS = 10;
+
 interface RowVerdict {
   flags: LodgingImportFlag[];
   dedupeHint: LodgingDedupeHint;
+  lodgingDedupeHint: LodgingDedupeHint;
+  lodgingOptions: LodgingImportLodgingOption[];
   matchedLodgingId: string | null;
   matchedLodgingName: string | null;
+  matchedLodgingCity: string | null;
   matchIsGuess: boolean;
   matchedStayId: string | null;
   matchedStay: LodgingImportMatchedStay | null;
+  matchedStayValues: LodgingImportStoredStayValues | null;
   action: LodgingImportAction;
   /** Non-empty only when the action is `update` — see `stayChanges`. */
   changes: LodgingStayChange[];
@@ -238,6 +250,21 @@ function describeStay(stay: ExistingStay): LodgingImportMatchedStay {
   };
 }
 
+/** The values `stayChanges` compares, as the dialog reads them — see `LodgingImportStoredStayValues`. */
+function storedStayValues(stay: ComparableStay): LodgingImportStoredStayValues {
+  return {
+    checkIn: stay.checkIn ? dayKey(stay.checkIn) : null,
+    checkOut: stay.checkOut ? dayKey(stay.checkOut) : null,
+    roomCategory: stay.roomCategory,
+    board: stay.board,
+    guests: stay.guests,
+    totalPrice: stay.totalPrice,
+    pricePerNight: stay.pricePerNight,
+    currency: stay.currency,
+    bookingReference: stay.bookingReference,
+  };
+}
+
 /**
  * Classify one candidate. The rules, in the order they bind:
  *
@@ -264,6 +291,14 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
   let matchIsGuess = false;
   let matchedStayId: string | null = null;
   let changes: LodgingStayChange[] = [];
+  // The stored houses an ambiguous row could mean, so the reader can pick one
+  // instead of being told "ambiguous" and left with no way to say which. The
+  // first ambiguous rule to fire names them; a later, looser rule does not
+  // replace a tighter rule's list.
+  let lodgingOptions: ExistingLodging[] = [];
+  const offer = (houses: ExistingLodging[]): void => {
+    if (lodgingOptions.length === 0) lodgingOptions = houses;
+  };
 
   const lodging = candidate.lodging;
   const joinName = candidate.lodgingName ?? lodging?.name ?? null;
@@ -292,13 +327,18 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
     const hits = cityKey
       ? (idx.byNameCity.get(`${nameKey}|${cityKey}`) ?? [])
       : (idx.byName.get(nameKey) ?? []);
+    // Which of the two keys matched is part of the hint: "name and city
+    // agree" and "the name agrees, the import names no city" are different
+    // amounts of evidence, and both used to read "Name + Ort".
+    const nameHint: LodgingDedupeHint = cityKey ? "lodging_name_city" : "lodging_name_only";
     if (hits.length === 1) {
-      dedupeHint = "lodging_name_city";
+      dedupeHint = nameHint;
       matchedLodgingId = hits[0].id;
       matchIsGuess = true;
     } else if (hits.length > 1) {
-      dedupeHint = "lodging_name_city";
+      dedupeHint = nameHint;
       flags = [...flags, "ambiguous_lodging_name"];
+      offer(hits);
     }
   }
 
@@ -325,6 +365,7 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
     } else if (similar.length > 1) {
       dedupeHint = "lodging_name_similar";
       flags = [...flags, "ambiguous_lodging_name"];
+      offer(similar);
     }
   }
 
@@ -343,6 +384,7 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
     } else if (nearby.length > 1) {
       dedupeHint = "lodging_nearby";
       flags = [...flags, "ambiguous_lodging_name"];
+      offer(nearby);
     }
   }
 
@@ -355,14 +397,23 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
     flags = [...flags, "unknown_chain"];
   }
 
+  // The lodging-level evidence, before a stay match below overwrites
+  // `dedupeHint`. A stays-only row joined by its free-text name sets it but
+  // not `dedupeHint`: that join has always committed as `create`, and the
+  // hint is there to say what the guess rests on, not to change the action.
+  let lodgingDedupeHint: LodgingDedupeHint = dedupeHint;
+
   if (!lodging && joinName) {
     const joinKey = normalizeLodgingName(joinName);
     const hits = joinKey ? (idx.byName.get(joinKey) ?? []) : [];
     if (hits.length === 1) {
       matchedLodgingId = hits[0].id;
       matchIsGuess = true;
+      lodgingDedupeHint = "lodging_name_only";
     } else if (hits.length > 1) {
       flags = [...flags, "ambiguous_lodging_name"];
+      lodgingDedupeHint = "lodging_name_only";
+      offer(hits);
     } else if (!joinKey || !idx.payloadNames.has(joinKey)) {
       // Neither in the DB nor created by an earlier row of this same import.
       flags = [...flags, "unresolvable_lodging_name"];
@@ -420,6 +471,7 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
     action = "needs_input";
   } else if (
     dedupeHint === "lodging_name_city" ||
+    dedupeHint === "lodging_name_only" ||
     dedupeHint === "lodging_name_similar" ||
     dedupeHint === "lodging_nearby" ||
     dedupeHint === "stay_same_dates"
@@ -440,8 +492,12 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
   // The name of the house a match points at, so the user can judge the
   // guess against something (AUD-056). Looked up rather than carried along
   // from each branch above: a stay-ref hit knows only the lodging's id.
-  const matchedLodgingName = matchedLodgingId
-    ? (idx.allLodgings.find((l) => l.id === matchedLodgingId)?.name ?? null)
+  // The city too, and the STORED one: the import's own spelling ("Zurich")
+  // is not what the house is filed under ("Zürich"), and the commit never
+  // writes it — showing it as the target's city named a place the row will
+  // not touch.
+  const matchedHouse = matchedLodgingId
+    ? (idx.allLodgings.find((l) => l.id === matchedLodgingId) ?? null)
     : null;
 
   // The stay the match points at, described rather than merely identified —
@@ -449,13 +505,28 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
   const matchedStay = matchedStayId ? (idx.staysById.get(matchedStayId) ?? null) : null;
 
   return {
-    flags,
+    // One rule after another can find the same ambiguity; it is one flag.
+    flags: [...new Set(flags)],
     dedupeHint,
+    lodgingDedupeHint,
+    lodgingOptions: matchedLodgingId
+      ? []
+      : lodgingOptions.slice(0, MAX_LODGING_OPTIONS).map((l) => ({
+          id: l.id,
+          name: l.name,
+          city: l.city,
+          stays: (idx.staysByLodging.get(l.id) ?? []).map((st) => ({
+            id: st.id,
+            ...describeStay(st),
+          })),
+        })),
     matchedLodgingId,
-    matchedLodgingName,
+    matchedLodgingName: matchedHouse?.name ?? null,
+    matchedLodgingCity: matchedHouse?.city ?? null,
     matchIsGuess,
     matchedStayId,
     matchedStay: matchedStay ? describeStay(matchedStay) : null,
+    matchedStayValues: matchedStay ? storedStayValues(matchedStay) : null,
     action,
     changes,
   };
