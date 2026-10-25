@@ -21,6 +21,7 @@ import {
 } from "./model";
 import { useInboxData } from "./useInboxData";
 import { useSuggestionSwitchesStore } from "../../../store/suggestionSwitchesStore";
+import { useBetaFeatures } from "../../../hooks/useBetaFeatures";
 import InboxCard from "./InboxCard";
 import InboxHistory, { HISTORY_SOURCES, type HistorySource } from "./InboxHistory";
 import SourcePanel from "./SourcePanel";
@@ -34,6 +35,7 @@ export const INBOX_SOURCES: readonly InboxSource[] = [
   "updates",
   "photos",
   "dawarich",
+  "location",
 ];
 const VIEWS: readonly InboxView[] = ["cards", "list", "journey"];
 
@@ -62,9 +64,16 @@ export default function InboxWorkspace({
   // The account's suggestion switches (forgejo#306): an off kind has no tab and is not loaded.
   const tripsVisible = useSuggestionSwitchesStore((s) => s.trips);
   const staysVisible = useSuggestionSwitchesStore((s) => s.stays);
+  // TravTrack's questions (plan E6) exist only behind its beta key.
+  const locationVisible = useBetaFeatures().isFeatureVisible("travTrack");
   const visibility = useMemo(
-    () => ({ photos: photosVisible, trips: tripsVisible, stays: staysVisible }),
-    [photosVisible, tripsVisible, staysVisible]
+    () => ({
+      photos: photosVisible,
+      trips: tripsVisible,
+      stays: staysVisible,
+      location: locationVisible,
+    }),
+    [photosVisible, tripsVisible, staysVisible, locationVisible]
   );
   const data = useInboxData(visibility, active);
   const [params, setParams] = useSearchParams();
@@ -75,7 +84,8 @@ export default function InboxWorkspace({
     (s) =>
       (s !== "photos" || photosVisible) &&
       (s !== "trips" || tripsVisible) &&
-      (s !== "dawarich" || staysVisible)
+      (s !== "dawarich" || staysVisible) &&
+      (s !== "location" || locationVisible)
   );
   const requestedSource = params.get("tab");
   const source: InboxSource | "all" = sources.find((s) => s === requestedSource) ?? "all";

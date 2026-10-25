@@ -343,6 +343,8 @@ export async function loadPassport(
             pointCount: true,
             airportPointCount: true,
             partialWindow: true,
+            // Dawarich's and TravTrack's observations are listed apart (plan E6).
+            source: true,
           },
         })
       : [],
@@ -421,6 +423,7 @@ export async function loadPassport(
       pointCount: row.pointCount,
       airportPointCount: row.airportPointCount,
       partialWindow: row.partialWindow,
+      source: row.source,
     })),
     roadtripStations,
     railEnds,

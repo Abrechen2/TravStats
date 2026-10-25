@@ -4,6 +4,7 @@ import { tripSuggestionsApi } from "../../../lib/api/tripSuggestions";
 import { pendingUpdatesApi } from "../../../lib/api/pendingUpdates";
 import { photoJourneysApi } from "../../../lib/api/photoJourneys";
 import { dawarichStaysApi, type StayChoices } from "../../../lib/api/dawarichStays";
+import { locationSuggestionsApi } from "../../../lib/api/locationSuggestions";
 import { tripsApi } from "../../../lib/api/trips";
 import type { Trip } from "../../../types";
 import type { TripSuggestionList } from "../../../types/tripSuggestion";
@@ -19,16 +20,24 @@ export interface InboxVisibility {
   photos: boolean;
   trips: boolean;
   stays: boolean;
+  /** TravTrack's questions (plan E6), behind TravTrack's beta key. Omitted: not asked. */
+  location?: boolean;
 }
 
 const hiddenSource = (source: InboxSource, visible: InboxVisibility): boolean =>
   (source === "photos" && !visible.photos) ||
   (source === "trips" && !visible.trips) ||
-  (source === "dawarich" && !visible.stays);
+  (source === "dawarich" && !visible.stays) ||
+  (source === "location" && !visible.location);
 
 /** A failed source is named, never reported as an empty inbox. Latest load wins. */
 export function useInboxData(visible: InboxVisibility, active = true) {
-  const { photos: photosVisible, trips: tripsVisible, stays: staysVisible } = visible;
+  const {
+    photos: photosVisible,
+    trips: tripsVisible,
+    stays: staysVisible,
+    location: locationVisible = false,
+  } = visible;
   const [records, setRecords] = useState<InboxRecord[]>([]);
   const [stayChoices, setStayChoices] = useState<StayChoices>({ places: [], trips: [] });
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -55,8 +64,9 @@ export function useInboxData(visible: InboxVisibility, active = true) {
             choices: rows.length ? await dawarichStaysApi.choices() : { places: [], trips: [] },
           }))
         : Promise.resolve({ rows: [], choices: { places: [], trips: [] } }),
+      locationVisible ? locationSuggestionsApi.list("pending") : Promise.resolve([]),
     ] as const;
-    const [flags, suggestions, updates, edited, photos, tripList, stays] =
+    const [flags, suggestions, updates, edited, photos, tripList, stays, location] =
       await Promise.allSettled(requests);
     if (current !== generation.current) return;
     const errors: string[] = [];
@@ -81,11 +91,17 @@ export function useInboxData(visible: InboxVisibility, active = true) {
     );
     append(photos, "photos", (value) => value.map((data) => ({ source: "photos", data })));
     append(stays, "dawarich", (value) => value.rows.map((data) => ({ source: "dawarich", data })));
+    append(location, "location", (value) => value.map((data) => ({ source: "location", data })));
     if (stays.status === "fulfilled") setStayChoices(stays.value.choices);
     if (tripList.status === "fulfilled") setTrips(tripList.value);
     else errors.push("tripContext");
     setProposalInfo(suggestions.status === "fulfilled" ? suggestions.value : null);
-    const shown = { photos: photosVisible, trips: tripsVisible, stays: staysVisible };
+    const shown = {
+      photos: photosVisible,
+      trips: tripsVisible,
+      stays: staysVisible,
+      location: locationVisible,
+    };
     // Keep last known rows for a failing source, visibly disabled by the caller.
     setRecords((previous) => {
       const kept = previous.filter(
@@ -98,7 +114,7 @@ export function useInboxData(visible: InboxVisibility, active = true) {
     setFailed([...new Set(errors)]);
     setLoading(false);
     setLoaded(true);
-  }, [photosVisible, tripsVisible, staysVisible]);
+  }, [photosVisible, tripsVisible, staysVisible, locationVisible]);
 
   useEffect(() => {
     if (active) void reload();

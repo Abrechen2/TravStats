@@ -10,6 +10,7 @@ import ReviewCard from "./ReviewCard";
 import TripProposalCard from "./TripProposalCard";
 import FlightUpdateCard from "./FlightUpdateCard";
 import PhotoProposalCard from "./PhotoProposalCard";
+import CountrySuggestionCard from "./CountrySuggestionCard";
 import VisitSuggestionCard from "../visitReview/VisitSuggestionCard";
 import type { VisitReviewState } from "../visitReview/useVisitReview";
 import { photoJourneyLabel } from "../photoJourneyLabel";
@@ -111,6 +112,9 @@ export default function InboxCard({
         <fieldset disabled={disabled} className="min-w-0">
           <StayReviewCard row={item.data} choices={stayChoices} onDone={() => void reload()} />
         </fieldset>
+      )}
+      {item.source === "location" && (
+        <CountrySuggestionCard suggestion={item.data} disabled={disabled} reload={reload} />
       )}
       {busy && (
         <p role="status" className="mt-3 t-caption">
