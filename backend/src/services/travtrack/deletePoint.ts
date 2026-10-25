@@ -4,6 +4,7 @@ import { Prisma } from "../../prisma";
 import { positionKey } from "./classify";
 import { onPointsRemoved } from "./deleteRange";
 import { takeTravTrackLock } from "./lock";
+import { rememberDeletedPoint } from "./deletedPoints";
 import { collectRemoved } from "./removedHistory";
 
 /**
@@ -17,9 +18,10 @@ import { collectRemoved } from "./removedHistory";
  * monthly values of its day and neighbours going back to the projections and
  * those days marked dirty).
  *
- * No tombstone, as with a deleted import: a range tombstone would hide the
- * other fixes of the instant too. Another account's point, or one already
- * gone, is 404 — the same answer, so an id cannot be probed.
+ * Final: the point leaves a tombstone of its own identity (`deletedPoints.ts`)
+ * so no source brings it back — not a range, which would hide the other fixes
+ * of the instant too. Another account's point, or one already gone, is 404 —
+ * the same answer, so an id cannot be probed.
  */
 
 const notFound = () => new AppError("No such point", 404, "TRAVTRACK_POINT_NOT_FOUND");
@@ -39,6 +41,7 @@ export async function deleteTravTrackPoint(
       const removed = await collectRemoved(tx, userId, Prisma.sql`id = ${row.id}`);
       const { count } = await tx.travTrackPoint.deleteMany({ where: { id: row.id, userId } });
       if (count === 0) throw notFound();
+      await rememberDeletedPoint(tx, userId, row);
       await onPointsRemoved(tx, userId, {
         kind: "point",
         pointId: row.id,

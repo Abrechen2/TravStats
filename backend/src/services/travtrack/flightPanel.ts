@@ -1,6 +1,5 @@
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
-import { extentOf } from "../../utils/extrema";
 import type { StoredPoint } from "../tripRecording/segments";
 import { readSafeTravTrack } from "./readSafe";
 
@@ -65,16 +64,22 @@ export function climbToCruiseMinutes(series: readonly FlightSample[][]): number 
 
 const notFound = () => new AppError("No such flight", 404, "TRAVTRACK_FLIGHT_NOT_FOUND");
 
-export async function travTrackFlightPanel(userId: string, flightId: string): Promise<FlightPanel> {
+/**
+ * Bounded at every step: the linked points' extent is one aggregate, the
+ * safe read stops at `cap`, and only the links of the points that read
+ * returned are loaded — a recording of a million linked fixes never
+ * materialises its links.
+ */
+export async function travTrackFlightPanel(
+  userId: string,
+  flightId: string,
+  cap: number = FLIGHT_PANEL_POINT_CAP
+): Promise<FlightPanel> {
   const flight = await prisma.flight.findFirst({
     where: { id: flightId, userId },
     select: { id: true },
   });
   if (!flight) throw notFound();
-  const links = await prisma.travTrackPointLink.findMany({
-    where: { userId, entryKind: "flight", entryId: flightId },
-    select: { point: { select: { id: true, t: true } } },
-  });
   const empty: FlightPanel = {
     flightId,
     series: [],
@@ -82,14 +87,30 @@ export async function travTrackFlightPanel(userId: string, flightId: string): Pr
     truncated: false,
     summary: { maxAltitudeM: null, maxSpeedMps: null, climbToCruiseMinutes: null },
   };
-  const span = extentOf(links.map((l) => l.point.t.getTime()));
-  if (!span) return empty;
-  const linked = new Set(links.map((l) => l.point.id));
+  const [extent] = await prisma.$queryRaw<{ from_t: Date | null; to_t: Date | null }[]>`
+    SELECT min(p.t) AS from_t, max(p.t) AS to_t
+      FROM travtrack_point_links l JOIN travtrack_points p ON p.id = l.point_id
+     WHERE l.user_id = ${userId} AND l.entry_kind = 'flight' AND l.entry_id = ${flightId}`;
+  if (!extent?.from_t || !extent.to_t) return empty;
   const read = await readSafeTravTrack(
     userId,
-    { fromMs: span.min, untilMs: span.max + 1 },
-    FLIGHT_PANEL_POINT_CAP
+    { fromMs: extent.from_t.getTime(), untilMs: extent.to_t.getTime() + 1 },
+    cap
   );
+  const readIds = read.segments.flatMap((stretch) =>
+    (stretch as StoredPoint[]).flatMap((p) => {
+      const row = read.rowOf(p);
+      return row ? [row.id] : [];
+    })
+  );
+  const links =
+    readIds.length === 0
+      ? []
+      : await prisma.travTrackPointLink.findMany({
+          where: { userId, entryKind: "flight", entryId: flightId, pointId: { in: readIds } },
+          select: { pointId: true },
+        });
+  const linked = new Set(links.map((l) => l.pointId));
   const series: FlightSample[][] = [];
   for (const stretch of read.segments) {
     let run: FlightSample[] = [];

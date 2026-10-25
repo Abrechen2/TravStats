@@ -3,6 +3,7 @@ import request from "supertest";
 import app from "../../index";
 import { prisma } from "../../db";
 import { generateToken } from "../../utils/jwt";
+import { travTrackFlightPanel } from "../../services/travtrack/flightPanel";
 import { travTrackSwitches } from "../../services/travtrack/__tests__/switches";
 import {
   makeFlight,
@@ -159,6 +160,27 @@ describe("TravTrack — flight panel", () => {
     expect((await panel(theirs)).body.code).toBe("TRAVTRACK_FLIGHT_NOT_FOUND");
     expect((await panel("00000000-0000-4000-8000-000000000000")).status).toBe(404);
     expect((await panel("nope")).status).toBe(404);
+  });
+
+  it("bounds the read: more linked points than the cap never loads every link", async () => {
+    for (let m = 0; m < 6; m++) await fix(m, 1000 + m * 100, 200);
+    const returned: number[] = [];
+    const original = prisma.travTrackPointLink.findMany.bind(prisma.travTrackPointLink);
+    const spy = jest.spyOn(prisma.travTrackPointLink, "findMany").mockImplementation(((
+      args: Parameters<typeof original>[0]
+    ) =>
+      original(args).then((rows) => {
+        returned.push(rows.length);
+        return rows;
+      })) as unknown as typeof prisma.travTrackPointLink.findMany);
+    try {
+      const res = await travTrackFlightPanel(userId, flightId, 3);
+      expect(res.truncated).toBe(true);
+      expect(res.pointCount).toBeLessThanOrEqual(3);
+      expect(Math.max(0, ...returned)).toBeLessThanOrEqual(3);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("TravTrack off → 403", async () => {

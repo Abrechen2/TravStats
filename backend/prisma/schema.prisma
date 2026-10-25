@@ -172,6 +172,7 @@ model User {
   travTrackDeletedRanges  TravTrackDeletedRange[]
   travTrackPrivacyZones   TravTrackPrivacyZone[]
   travTrackZoneTombstones TravTrackZoneTombstone[]
+  travTrackDeletedPoints  TravTrackDeletedPoint[]
   travTrackGaps           TravTrackGap[]
   travTrackShareSnapshots TravTrackShareSnapshot[]
 
@@ -5744,6 +5745,28 @@ model TravTrackDeletedRange {
 
   @@index([userId, fromAt])
   @@map("travtrack_deleted_ranges")
+}
+
+/// One point the user deleted by itself (the map's point inspector, TravTrack
+/// plan T5.3): ingest drops a fix with this identity from every source, so a
+/// repeated GPX file, a Dawarich copy or a late phone upload cannot bring it
+/// back. The identity is the ingest's own cross-source duplicate key
+/// (`positionKey`: whole second, lon, lat), kept only as a digest salted with
+/// the account — the coordinates of a deleted point are not stored again.
+/// Other fixes of the same second, at another position, are not touched.
+model TravTrackDeletedPoint {
+  userId    String   @map("user_id")
+  /// sha256 of the account and the position key (`deletedPoints.ts`).
+  digest    String
+  /// The point's whole Unix second: what a batch narrows the lookup by.
+  tS        Int      @map("t_s")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, digest])
+  @@index([userId, tS])
+  @@map("travtrack_deleted_points")
 }
 
 /// A circle where the user is never tracked: the phone drops a fix inside it,

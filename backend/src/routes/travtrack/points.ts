@@ -271,7 +271,9 @@ router.delete(
 /**
  * DELETE /travtrack/points/:id — one point, by the id a day or range read
  * names (plan T5.3): exactly that row, with the same invalidation as a range
- * delete. Another account's point, or one already gone, is 404.
+ * delete, and final: a tombstone of its identity keeps every source from
+ * bringing it back (`deletedPoints.ts`). Another account's point, or one
+ * already gone, is 404.
  */
 router.delete(
   "/travtrack/points/:id",

@@ -15,6 +15,7 @@ import {
   type EntryRef,
   type ParsedPoint,
 } from "./classify";
+import { deletedPointDigest, deletedPointDigests } from "./deletedPoints";
 import { clipSpan, parseGaps, type ParsedGap } from "./gaps";
 import { addLinks, entryKey, resolveEntries } from "./links";
 import { markTravTrackDaysDirty, neighbourDaysOf, utcDaysOf } from "./dirtyDays";
@@ -26,7 +27,10 @@ import { takeTravTrackLock } from "./lock";
  * idempotently, in one transaction, and with an outcome for every point:
  * nothing is dropped silently, and only a non-2xx answer means "send again".
  *
- * Per point the order is zone → deleted range → duplicate: a fix inside a
+ * Per point the order is zone → deleted range → deleted point → duplicate
+ * (a point deleted by itself, `deletedPoints.ts`, answers `deleted_range` like
+ * a deleted span: the same final "this was deleted" to every client, and no
+ * new reason a phone in the field would not know). A fix inside a
  * privacy zone — one in force, or a former zone's circle from before it went
  * (`zones.ts`) — is never stored and never even compared, whatever else holds.
  *
@@ -164,7 +168,8 @@ function judgeAll(
   zones: readonly { lat: number; lon: number; radiusM: number }[],
   tombstones: readonly Tombstone[],
   ranges: readonly { fromAt: Date; toAt: Date }[],
-  held: { byRef: Map<string, string>; byKey: Map<string, string> }
+  held: { byRef: Map<string, string>; byKey: Map<string, string> },
+  deleted: { userId: string; digests: ReadonlySet<string> }
 ): Judgement {
   const out: Judgement = { outcomes: [], fresh: [], attach: [] };
   for (const p of candidates) {
@@ -175,7 +180,10 @@ function judgeAll(
       out.outcomes.push({ index: p.index, id: p.ref, outcome: "dropped", reason: "privacy_zone" });
       continue;
     }
-    if (inDeletedRange(p.tMs, ranges)) {
+    if (
+      inDeletedRange(p.tMs, ranges) ||
+      (deleted.digests.size > 0 && deleted.digests.has(deletedPointDigest(deleted.userId, p)))
+    ) {
       out.outcomes.push({ index: p.index, id: p.ref, outcome: "dropped", reason: "deleted_range" });
       continue;
     }
@@ -264,7 +272,7 @@ async function ingestIn(
     }
   }
 
-  const [ranges, held, zones, tombstones] = await Promise.all([
+  const [ranges, held, zones, tombstones, deletedDigests] = await Promise.all([
     rangesFor(tx, userId, candidates, gaps),
     alreadyHeld(tx, userId, origin, candidates),
     tx.travTrackPrivacyZone.findMany({
@@ -272,8 +280,12 @@ async function ingestIn(
       select: { lat: true, lon: true, radiusM: true },
     }),
     tombstonesFor(tx, userId, candidates),
+    deletedPointDigests(tx, userId, candidates),
   ]);
-  const judged = judgeAll(candidates, zones, tombstones, ranges, held);
+  const judged = judgeAll(candidates, zones, tombstones, ranges, held, {
+    userId,
+    digests: deletedDigests,
+  });
 
   if (judged.fresh.length > 0) {
     await tx.travTrackPoint.createMany({
@@ -362,7 +374,7 @@ export type IngestInput = {
 
 /**
  * The one ingest every TravTrack source goes through (TravTrack plan E8):
- * zone → deleted range → duplicate, per point, whoever sent it.
+ * zone → deleted range → deleted point → duplicate, per point, whoever sent it.
  */
 export async function ingestPoints(
   input: IngestInput

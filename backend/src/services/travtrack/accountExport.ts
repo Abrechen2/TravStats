@@ -59,7 +59,7 @@ export async function buildTravTrackDataExport(
     after = rows[rows.length - 1].seq;
   }
   const where = { userId };
-  const [zones, zoneTombstones, deletedRanges, gaps] = await Promise.all([
+  const [zones, zoneTombstones, deletedRanges, deletedPoints, gaps] = await Promise.all([
     prisma.travTrackPrivacyZone.findMany({
       where,
       orderBy: { createdAt: "asc" },
@@ -75,13 +75,17 @@ export async function buildTravTrackDataExport(
       orderBy: { fromAt: "asc" },
       select: { fromAt: true, toAt: true, createdAt: true },
     }),
+    // A point deleted by itself: its second and when, never its position (only a digest is kept).
+    prisma.travTrackDeletedPoint
+      .findMany({ where, orderBy: { tS: "asc" }, select: { tS: true, createdAt: true } })
+      .then((rows) => rows.map((r) => ({ at: new Date(r.tS * 1000), createdAt: r.createdAt }))),
     prisma.travTrackGap.findMany({
       where,
       orderBy: { fromAt: "asc" },
       select: { deviceId: true, fromAt: true, toAt: true, reason: true },
     }),
   ]);
-  return { points, zones, zoneTombstones, deletedRanges, gaps };
+  return { points, zones, zoneTombstones, deletedRanges, deletedPoints, gaps };
 }
 
 /** Each user record with its `travtrack` section, one user at a time. */

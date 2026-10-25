@@ -46,13 +46,21 @@ export type TravTrackPhoto = {
 
 export type TravTrackPhotos = {
   photos: TravTrackPhoto[];
-  /** Immich held more photos in the window than one search returns. */
+  /**
+   * Not every photo of the window could be considered: Immich held more than
+   * one search returns, or the track was longer than one answer reads
+   * (`trackTruncated`). A shorter window shows the rest.
+   */
   truncated: boolean;
+  /** The window's track was longer than the read bound: photos after its read part are not placed. */
+  trackTruncated: boolean;
 };
 
 export type PhotoDeps = {
   connection?: (userId: string) => Promise<ImmichConnection | null>;
   client?: (conn: ImmichConnection) => Pick<ImmichClient, "searchAssetsByDate">;
+  /** Test seam: the track read's page size and page bound. */
+  readLimits?: { page: number; pages: number };
 };
 
 /** No Immich connection resolves for the account. */
@@ -96,19 +104,31 @@ export function positionAt(
   return null;
 }
 
-/** The window's safe stretches, page by page (each page's stretches stand alone). */
-async function safeStretches(userId: string, window: Span) {
+/**
+ * The window's safe stretches, page by page (each page's stretches stand
+ * alone). `complete` is false when the page bound ran out before the window
+ * did: the rest of the track is not read, and the answer must say so.
+ */
+async function safeStretches(
+  userId: string,
+  window: Span,
+  limits: { page: number; pages: number } = { page: READ_PAGE, pages: MAX_READ_PAGES }
+) {
   const stretches: StoredPoint[][] = [];
   const circles: ZoneCircle[] = [];
   let cursor: SafeCursor | null = null;
-  for (let page = 0; page < MAX_READ_PAGES; page++) {
-    const read = await readSafeTravTrack(userId, window, READ_PAGE, cursor);
+  let complete = false;
+  for (let page = 0; page < limits.pages; page++) {
+    const read = await readSafeTravTrack(userId, window, limits.page, cursor);
     stretches.push(...read.segments);
     if (page === 0) circles.push(...read.circles);
-    if (!read.next || !read.cursor) break;
+    if (!read.next || !read.cursor) {
+      complete = true;
+      break;
+    }
     cursor = read.cursor;
   }
-  return { stretches, circles };
+  return { stretches, circles, complete };
 }
 
 const cache = new Map<string, { at: number; value: Promise<TravTrackPhotos> }>();
@@ -125,8 +145,8 @@ async function computePhotos(
   deps: PhotoDeps
 ): Promise<TravTrackPhotos> {
   const client = (deps.client ?? createImmichClient)(conn);
-  const [{ stretches, circles }, page] = await Promise.all([
-    safeStretches(userId, window),
+  const [{ stretches, circles, complete }, page] = await Promise.all([
+    safeStretches(userId, window, deps.readLimits),
     // Immich's range is inclusive on both ends; the window's end is not.
     client.searchAssetsByDate({
       takenAfter: new Date(window.fromMs),
@@ -142,7 +162,7 @@ async function computePhotos(
     photos.push({ assetId: asset.id, type: asset.type, takenAt: new Date(t).toISOString(), ...at });
   }
   photos.sort((a, b) => a.takenAt.localeCompare(b.takenAt) || a.assetId.localeCompare(b.assetId));
-  return { photos, truncated: page.truncated };
+  return { photos, truncated: page.truncated || !complete, trackTruncated: !complete };
 }
 
 /**
@@ -158,7 +178,8 @@ export async function travTrackPhotos(
   const conn = await (deps.connection ?? getImmichConnection)(userId);
   if (!conn) throw new PhotosNotConfigured();
   const generation = await historyGeneration(prisma, userId);
-  const key = `${userId}|${window.fromMs}|${window.untilMs}|${generation}|${conn.source}|${conn.baseUrl}`;
+  const limits = deps.readLimits ? `|${deps.readLimits.page}x${deps.readLimits.pages}` : "";
+  const key = `${userId}|${window.fromMs}|${window.untilMs}|${generation}|${conn.source}|${conn.baseUrl}${limits}`;
   const now = Date.now();
   const hit = cache.get(key);
   if (hit && now - hit.at < CACHE_TTL_MS) return hit.value;

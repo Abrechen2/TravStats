@@ -76,7 +76,9 @@ registry.registerPath({
   description:
     "Exactly the named point — never the other fixes of its instant — with the invalidation " +
     "a range delete runs: the findings resting on it, its share-route vertex, and its day's " +
-    "and neighbours' country days, explored cells and monthly values. Reachable with " +
+    "and neighbours' country days, explored cells and monthly values. Final: the same fix " +
+    "(same second and position) sent again by any source is dropped as `deleted_range`. " +
+    "Reachable with " +
     "TravTrack off while the account holds data.",
   tags: ["TravTrack"],
   request: { params: z.object({ id: z.string().uuid() }) },
@@ -155,7 +157,15 @@ const photos = z.object({
       lon: z.number(),
     })
   ),
-  truncated: z.boolean().describe("Immich held more photos than one search returns"),
+  truncated: z
+    .boolean()
+    .describe(
+      "Not every photo of the window was considered: Immich held more than one search returns, " +
+        "or the track was longer than one read (`trackTruncated`); a shorter window shows the rest"
+    ),
+  trackTruncated: z
+    .boolean()
+    .describe("The window's track was longer than one read: later photos are not placed"),
 });
 
 registry.registerPath({
