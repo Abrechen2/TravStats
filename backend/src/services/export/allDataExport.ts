@@ -245,6 +245,14 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
     "transport bookkeeping: upload receipts that answer a retry, pruned after 30 days",
   travTrackShareSnapshots:
     "selected from the points on the owner's request, then only narrowed; recipient-facing only",
+  // TravTrack phase 3 (plan E1). A suggestion is derived from the history and
+  // carries server-keyed point digests, which never leave the server; it is
+  // derived again after a restore. The rest is bookkeeping and credentials.
+  locationSuggestions:
+    "derived from the TravTrack history and carrying server-keyed point digests; derived again after restore",
+  travTrackDirtyDays: "derivation bookkeeping: days waiting to be re-derived",
+  travTrackImports: "import job bookkeeping: status and per-run reports of a file import",
+  travTrackIngestTokens: "credential material",
   trainingData: "parser training corpus of raw source text, operational",
   parseLogs: "parser training log, operational",
   travelPlanUsage: "operational daily AI/weather quota counters, not travel-plan content",

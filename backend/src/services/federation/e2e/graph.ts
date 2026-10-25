@@ -243,6 +243,15 @@ export const NON_TRAVEL_RELATIONS = [
   "travTrackZoneTombstones",
   "travTrackGaps",
   "travTrackShareSnapshots",
+  // TravTrack's derived findings and their machinery (TravTrack plan, phase 3,
+  // E1): location suggestions carry server-keyed point digests and are
+  // re-derived from the owner's private history; the rest is derivation and
+  // import bookkeeping, and ingest tokens are credentials. None of it travels.
+  "locationSuggestions",
+  "travTrackDirtyDays",
+  "travTrackDerivationState",
+  "travTrackImports",
+  "travTrackIngestTokens",
   // The account's WebDAV export target (forgejo#321): a URL, a username and an
   // encrypted password. A credential, so it never travels.
   "webdavSync",
