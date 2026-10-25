@@ -529,7 +529,7 @@
     },
     "legendLess": "wenig",
     "legendMore": "viel",
-    "legendStep": "ab {{km}} km",
+    "legendStep": "≥{{km}}",
     "legendNone": "leer = nichts aufgezeichnet, schraffiert = noch nicht bekannt",
     "utc": "Tage nach UTC, wie die Monatswerte."
   }

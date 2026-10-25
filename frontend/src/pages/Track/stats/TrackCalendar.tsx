@@ -138,17 +138,19 @@ export default function TrackCalendar({ year }: { year: number }): JSX.Element {
           >
             <span>{t("track:calendar.legendLess")}</span>
             {KM_STEPS.map((km, i) => (
-              <span
-                key={km}
-                title={t("track:calendar.legendStep", { km })}
-                style={{
-                  width: CELL,
-                  height: CELL,
-                  borderRadius: 3,
-                  border: `1px solid ${token("border")}`,
-                  background: alpha(TRACK_COLOR, SHARES[i]),
-                }}
-              />
+              <span key={km} className="flex flex-col items-center tabular-nums">
+                <span
+                  aria-hidden
+                  style={{
+                    width: CELL,
+                    height: CELL,
+                    borderRadius: 3,
+                    border: `1px solid ${token("border")}`,
+                    background: alpha(TRACK_COLOR, SHARES[i]),
+                  }}
+                />
+                {t("track:calendar.legendStep", { km })}
+              </span>
             ))}
             <span>{t("track:calendar.legendMore")}</span>
             <span>· {t("track:calendar.legendNone")}</span>

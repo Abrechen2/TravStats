@@ -529,7 +529,7 @@
     },
     "legendLess": "less",
     "legendMore": "more",
-    "legendStep": "from {{km}} km",
+    "legendStep": "≥{{km}}",
     "legendNone": "empty = nothing recorded, hatched = not known yet",
     "utc": "Days in UTC, like the monthly values."
   }

@@ -84,6 +84,15 @@ describe("TrackMonths", () => {
     expect(screen.queryByTestId("track-month-2026-04")).not.toBeInTheDocument();
   });
 
+  it("draws kilometres per month above the table, and the year's calendar", async () => {
+    show();
+    const chart = await screen.findByTestId("track-km-chart");
+    const table = screen.getByRole("table");
+    expect(chart.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(await screen.findByTestId("track-calendar")).toBeInTheDocument();
+    expect(views.calendar).toHaveBeenCalledWith(2026);
+  });
+
   it("says the months are UTC months", async () => {
     show();
     await screen.findByTestId("track-month-2026-10");
