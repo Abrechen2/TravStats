@@ -12,7 +12,10 @@ import {
   travTrackSummaryQuerySchema,
   travTrackUploadSchema,
 } from "../../schemas/travtrack";
+import { travTrackPointDeleteLimiter } from "../../middleware/travTrackViewLimits";
+import { travTrackPointIdSchema } from "../../schemas/travtrackViews";
 import { deleteTravTrackRange } from "../../services/travtrack/deleteRange";
+import { deleteTravTrackPoint } from "../../services/travtrack/deletePoint";
 import { ingestTravTrackPoints } from "../../services/travtrack/ingest";
 import { lastSeen } from "../../services/travtrack/lastSeen";
 import { resolveSpan } from "../../services/travtrack/range";
@@ -261,6 +264,29 @@ router.delete(
     const { from, to } = await resolveSpan(userId, travTrackRangeQuerySchema.parse(req.query));
     const { deleted, gapsClipped } = await deleteTravTrackRange(userId, from, to);
     logger.info({ operation: "travtrack.points.delete", deleted, gapsClipped });
+    res.json({ deleted });
+  })
+);
+
+/**
+ * DELETE /travtrack/points/:id — one point, by the id a day or range read
+ * names (plan T5.3): exactly that row, with the same invalidation as a range
+ * delete, and final: a tombstone of its identity keeps every source from
+ * bringing it back (`deletedPoints.ts`). Another account's point, or one
+ * already gone, is 404.
+ */
+router.delete(
+  "/travtrack/points/:id",
+  authenticate,
+  travTrackTier("held"),
+  requireWriteScope,
+  rejectDemo,
+  travTrackPointDeleteLimiter,
+  route(async (req, res) => {
+    const id = travTrackPointIdSchema.safeParse(req.params.id);
+    if (!id.success) throw new AppError("No such point", 404, "TRAVTRACK_POINT_NOT_FOUND");
+    const { deleted } = await deleteTravTrackPoint(req.userId!, id.data);
+    logger.info({ operation: "travtrack.point.delete", deleted });
     res.json({ deleted });
   })
 );

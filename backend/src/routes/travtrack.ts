@@ -23,8 +23,10 @@ import importRoutes from "./travtrack/imports";
 import monthRoutes from "./travtrack/months";
 import ingestSourceRoutes from "./travtrack/ingestSources";
 import ingestTokenRoutes from "./travtrack/ingestTokens";
+import photoRoutes from "./travtrack/photos";
 import pointRoutes from "./travtrack/points";
 import shareSnapshotRoutes from "./travtrack/shareSnapshot";
+import viewRoutes from "./travtrack/views";
 import zoneRoutes from "./travtrack/zones";
 
 /**
@@ -113,5 +115,7 @@ router.use(importRoutes);
 router.use(ingestTokenRoutes);
 router.use(ingestSourceRoutes);
 router.use(shareSnapshotRoutes);
+router.use(viewRoutes);
+router.use(photoRoutes);
 
 export default router;

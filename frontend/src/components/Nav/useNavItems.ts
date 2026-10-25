@@ -8,6 +8,7 @@ import { useTravPlanVisible } from "../../hooks/useTravPlanVisible";
 import { useTravTrackVisible } from "../../hooks/useTravTrackVisible";
 import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
 import type { IconName } from "../ui/Icon";
+import type { AreaId } from "./areas";
 
 export interface NavLeaf {
   kind: "leaf";
@@ -17,6 +18,11 @@ export interface NavLeaf {
   icon?: IconName;
   badge?: number;
   warn?: boolean;
+  /**
+   * When the leaf counts as the current page, where a path prefix says too
+   * much: Track's Karte is `/track` and every day, but not `/track/explored`.
+   */
+  activeWhen?: (pathname: string) => boolean;
 }
 
 export interface NavGroup {
@@ -41,9 +47,13 @@ export function isPathActive(path: string, pathname: string): boolean {
   return pathname === path || pathname.startsWith(`${path}/`);
 }
 
+export function isLeafActive(leaf: NavLeaf, pathname: string): boolean {
+  return leaf.activeWhen ? leaf.activeWhen(pathname) : isPathActive(leaf.path, pathname);
+}
+
 export function isNodeActive(node: NavNode, pathname: string): boolean {
-  if (node.kind === "leaf") return isPathActive(node.path, pathname);
-  return node.children.some((c) => isPathActive(c.path, pathname));
+  if (node.kind === "leaf") return isLeafActive(node, pathname);
+  return node.children.some((c) => isLeafActive(c, pathname));
 }
 
 /** A group with exactly one visible child renders as that child (owner rule:
@@ -77,6 +87,8 @@ function collapseSingleChild(group: NavGroup): NavNode {
 export function useNavItems(): {
   primary: NavNode[];
   more: NavSection[];
+  /** The areas the logo spells, in its order; Stats is always one of them. */
+  areas: AreaId[];
 } {
   const { t } = useTranslation([
     "dashboard",
@@ -88,7 +100,6 @@ export function useNavItems(): {
     "notes",
     "comparison",
     "encryptedShare",
-    "travplan",
     "track",
   ]);
   const user = useAuthStore((s) => s.user);
@@ -150,20 +161,8 @@ export function useNavItems(): {
         label: t("notes:title"),
         icon: "pencil",
       },
-      // The own location history, day by day (TravTrack plan T6): only with
-      // the beta key, the instance showing TravTrack and this account
-      // recording into it or holding data (`useTravTrackVisible`).
-      ...(travTrackVisible
-        ? [
-            {
-              kind: "leaf" as const,
-              id: "track",
-              path: "/track",
-              label: t("track:title"),
-              icon: "map-pin" as const,
-            },
-          ]
-        : []),
+      // Track is an area of its own since phase 5 (header variant B): it is a
+      // word in the logo, not an entry here.
       // Built from flights alone, so it is offered only when flights are on —
       // an entry leading to a page that explains why it is empty is worse than
       // no entry.
@@ -250,30 +249,21 @@ export function useNavItems(): {
         : []),
     ];
 
-    // TravPlan used to swap this whole model for its own eight sections on
-    // `/plan*`, so a planner lost the way back to the rest of the app. It is
-    // one destination here instead; its sections live on its own page.
-    const planning: NavLeaf[] = travPlanVisible
-      ? [
-          {
-            kind: "leaf",
-            id: "travplan",
-            path: "/plan",
-            label: t("travplan:title"),
-            icon: "calendar",
-          },
-        ]
-      : [];
-
+    // TravPlan is reached through the "Plan" word of the logo (header variant
+    // B), never a second time from "Mehr" — it once swapped this whole model
+    // for its own sections, and later sat under "Mehr › Planung" as well.
     const more: NavSection[] = [
       { id: "collections", label: t("dashboard:nav.collections"), items: collections },
       { id: "tools", label: t("dashboard:nav.tools"), items: tools },
-      ...(planning.length > 0
-        ? [{ id: "planning", label: t("travplan:title"), items: planning }]
-        : []),
     ];
 
-    return { primary, more };
+    const areas: AreaId[] = [
+      "stats",
+      ...(travPlanVisible ? (["plan"] as const) : []),
+      ...(travTrackVisible ? (["track"] as const) : []),
+    ];
+
+    return { primary, more, areas };
   }, [
     t,
     isEnabled,

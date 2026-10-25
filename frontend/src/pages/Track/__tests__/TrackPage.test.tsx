@@ -29,9 +29,9 @@ vi.mock("../../../hooks/useTranslation", () => ({
   }),
 }));
 // WebGL is not there in jsdom: the map stub says what it was given.
-vi.mock("../TrackDayMap", () => ({
-  default: ({ segments }: { segments: unknown[] }) => (
-    <div data-testid="track-day-map-stub">{segments.length} segments</div>
+vi.mock("../map/TrackRangeMap", () => ({
+  default: ({ lines }: { lines: unknown[] }) => (
+    <div data-testid="track-day-map-stub">{lines.length} segments</div>
   ),
 }));
 
@@ -41,6 +41,17 @@ vi.mock("../TrackExploredMap", () => ({
 
 vi.mock("../TrackMonths", () => ({
   default: () => <div data-testid="track-months-stub" />,
+}));
+vi.mock("../TrackStays", () => ({
+  default: () => <div data-testid="track-stays-stub" />,
+}));
+vi.mock("../TrackImports", () => ({
+  default: () => <div data-testid="track-imports-stub" />,
+}));
+
+// The app header polls the inbox; its own tests cover it. Here it only has to be there.
+vi.mock("../../../components/NavigationBar", () => ({
+  default: () => <nav data-testid="main-bar-stub" />,
 }));
 
 import TrackPage from "../TrackPage";
@@ -100,6 +111,8 @@ const renderAt = (path = "/track/2026-10-12") =>
       <Routes>
         <Route path="/track/explored" element={<TrackPage view="explored" />} />
         <Route path="/track/months" element={<TrackPage view="months" />} />
+        <Route path="/track/stays" element={<TrackPage view="stays" />} />
+        <Route path="/track/imports" element={<TrackPage view="imports" />} />
         <Route path="/track/:date" element={<TrackPage />} />
         <Route path="/track" element={<TrackPage />} />
         <Route path="/dashboard" element={<p>dashboard</p>} />
@@ -169,31 +182,46 @@ describe("TrackPage", () => {
     expect(screen.queryByTestId("track-day-map-stub")).not.toBeInTheDocument();
   });
 
-  it("the Erkundet tab shows the explored map and no day controls (L1)", async () => {
+  // Phase 5 (header variant B): the main bar carries Track's menu, so every
+  // view renders it and none draws a tab strip of its own.
+  it.each([
+    "/track/2026-10-12",
+    "/track/explored",
+    "/track/months",
+    "/track/stays",
+    "/track/imports",
+  ])("%s renders the main bar and no tab strip of its own", async (path) => {
+    renderAt(path);
+    expect(await screen.findByTestId("main-bar-stub")).toBeInTheDocument();
+    // The old view tabs were a radio group; the map's own controls (route
+    // colour) are radio groups too, so the tab strip is looked up by its name.
+    expect(screen.queryByRole("radiogroup", { name: "track:tabs.label" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: "track:tabs.day" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("track:title");
+  });
+
+  it("the Erkundet view shows the explored map and no day controls (L1)", async () => {
     renderAt("/track/explored");
     expect(await screen.findByTestId("track-explored-stub")).toBeInTheDocument();
     expect(api.day).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "track:actions.delete" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("radio", { name: "track:tabs.day" }));
-    expect(await screen.findByTestId("track-day-map-stub")).toBeInTheDocument();
   });
 
-  it("the Tag tab switches to the explored map", async () => {
-    renderAt();
-    await screen.findByTestId("track-day-map-stub");
-    fireEvent.click(screen.getByRole("radio", { name: "track:tabs.explored" }));
-    expect(await screen.findByTestId("track-explored-stub")).toBeInTheDocument();
-  });
-
-  it("the Monate tab shows the monthly values and no day controls (L3)", async () => {
+  it("the Monate view shows the monthly values and no day controls (L3)", async () => {
     renderAt("/track/months");
     expect(await screen.findByTestId("track-months-stub")).toBeInTheDocument();
     expect(api.day).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "track:actions.delete" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("radio", { name: "track:tabs.explored" }));
-    expect(await screen.findByTestId("track-explored-stub")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("radio", { name: "track:tabs.months" }));
-    expect(await screen.findByTestId("track-months-stub")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["/track/stays", "track-stays-stub"],
+    ["/track/imports", "track-imports-stub"],
+  ])("%s shows its view and no day controls", async (path, testId) => {
+    renderAt(path);
+    expect(await screen.findByTestId(testId)).toBeInTheDocument();
+    expect(api.day).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "track:actions.delete" })).not.toBeInTheDocument();
   });
 
   it("a day without a fix says so", async () => {
@@ -207,6 +235,7 @@ describe("TrackPage", () => {
     access.value = "hidden";
     renderAt();
     expect(await screen.findByText("dashboard")).toBeInTheDocument();
+    expect(screen.queryByTestId("main-bar-stub")).not.toBeInTheDocument();
     expect(api.day).not.toHaveBeenCalled();
   });
 });

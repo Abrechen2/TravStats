@@ -29,6 +29,7 @@ import TravTrackDawarichCopy from "./TravTrackDawarichCopy";
 import TravTrackImports from "./TravTrackImports";
 import TravTrackSources from "./TravTrackSources";
 import TravTrackTripNote from "./TravTrackTripNote";
+import { hasPushSources } from "./travTrackPushSources";
 
 /** The circles offered, metres: a flat to a small town (the server takes 50–5000). */
 export const ZONE_RADII = [100, 250, 500, 1000, 2000] as const;
@@ -218,17 +219,32 @@ export default function TravTrackSection(): JSX.Element | null {
 
       {caps.enabled && <TravTrackTripNote />}
 
-      <TravTrackImports
-        canImport={caps.enabled && !isDemo}
-        canDelete={!isDemo}
-        version={importsVersion}
-        onChanged={() => void load()}
-      />
+      {/* Imports and push sources live on the Track area's Importe tab (phase 5);
+          while that area is not open (TravTrack off with data held, or nothing
+          recorded yet) they stay here, so a first file and every delete remain
+          reachable. */}
+      {trackOpen ? (
+        <p className="t-body" data-testid="travtrack-imports-link">
+          <Link to="/track/imports">{t(`${NS}.importsMoved`)}</Link>
+        </p>
+      ) : (
+        <>
+          <TravTrackImports
+            canImport={caps.enabled && !isDemo}
+            canDelete={!isDemo}
+            version={importsVersion}
+            onChanged={() => void load()}
+          />
 
-      <TravTrackDawarichCopy canStart={caps.enabled && !isDemo} onChanged={onCopyChanged} />
+          <TravTrackDawarichCopy canStart={caps.enabled && !isDemo} onChanged={onCopyChanged} />
 
-      {(caps.sources ?? []).some((s) => s === "owntracks" || s === "overland") && (
-        <TravTrackSources canCreate={caps.enabled && caps.active && !isDemo} canRevoke={!isDemo} />
+          {hasPushSources(caps.sources) && (
+            <TravTrackSources
+              canCreate={caps.enabled && caps.active && !isDemo}
+              canRevoke={!isDemo}
+            />
+          )}
+        </>
       )}
 
       {/* The monthly values' city lookup (plan L3): a setting of a view, so only while on. */}

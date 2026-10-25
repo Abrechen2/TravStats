@@ -65,6 +65,7 @@ export async function wipeTravTrack(userIds: string[]): Promise<void> {
   await prisma.travTrackPrivacyZone.deleteMany({ where });
   await prisma.travTrackGap.deleteMany({ where });
   await prisma.travTrackZoneTombstone.deleteMany({ where });
+  await prisma.travTrackDeletedPoint.deleteMany({ where });
 }
 
 let refCounter = 0;

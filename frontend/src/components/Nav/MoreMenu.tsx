@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useClickOutside } from "../../hooks/useClickOutside";
 import { useTranslation } from "../../hooks/useTranslation";
 import { Icon } from "../ui/Icon";
-import { isPathActive, type NavNode, type NavSection } from "./useNavItems";
+import { isLeafActive, type NavNode, type NavSection } from "./useNavItems";
 
 interface MoreMenuProps {
   sections: NavSection[];
@@ -14,6 +14,8 @@ interface MoreMenuProps {
    */
   primary?: NavNode[];
   align?: "left" | "right";
+  /** The button's label; "Mehr" unless an area's own menu is folded in. */
+  label?: string;
 }
 
 function badgeText(badge: number): string {
@@ -29,6 +31,7 @@ export default function MoreMenu({
   sections,
   primary,
   align = "left",
+  label,
 }: MoreMenuProps): JSX.Element {
   const { t } = useTranslation(["dashboard"]);
   const [open, setOpen] = useState(false);
@@ -58,7 +61,7 @@ export default function MoreMenu({
     ...sections.filter((section) => section.items.length > 0),
   ];
   const active = allSections.some((section) =>
-    section.items.some((item) => isPathActive(item.path, location.pathname))
+    section.items.some((item) => isLeafActive(item, location.pathname))
   );
   const badge = sections.reduce(
     (sum, section) => sum + section.items.reduce((n, item) => n + (item.badge ?? 0), 0),
@@ -79,7 +82,7 @@ export default function MoreMenu({
           background: open ? "var(--ts-tile)" : "transparent",
         }}
       >
-        {t("dashboard:nav.more")}
+        {label ?? t("dashboard:nav.more")}
         <Icon name="chevron-down" size={14} />
         {badge > 0 && (
           <span
@@ -108,7 +111,7 @@ export default function MoreMenu({
                 {section.label}
               </span>
               {section.items.map((item) => {
-                const itemActive = isPathActive(item.path, location.pathname);
+                const itemActive = isLeafActive(item, location.pathname);
                 return (
                   <Link
                     key={item.id}

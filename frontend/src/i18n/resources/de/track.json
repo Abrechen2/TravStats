@@ -45,9 +45,6 @@
     "at": "{{at}}",
     "endOfDay": "24:00"
   },
-  "zones": {
-    "legend": "Deine Privatzonen sind als Kreise eingezeichnet; dort wird nichts aufgezeichnet."
-  },
   "actions": {
     "export": "Exportieren",
     "delete": "Zeitraum löschen"
@@ -85,7 +82,9 @@
     "exportTooLong": "Ein Export umfasst höchstens 366 Tage. Wähle einen kürzeren Zeitraum.",
     "zoneLimit": "Du hast schon so viele Privatzonen, wie es geben kann.",
     "network": "Der Server ist gerade nicht erreichbar. Versuche es gleich noch einmal.",
-    "generic": "Das hat nicht geklappt. Versuche es erneut."
+    "generic": "Das hat nicht geklappt. Versuche es erneut.",
+    "rangeTooLong": "Ein Zeitraum auf der Karte umfasst höchstens 400 Tage. Wähle einen kürzeren.",
+    "pointGone": "Diese Position gibt es nicht mehr – sie wurde schon gelöscht."
   },
   "settings": {
     "intro": "Die Positionen, die deine Companion für TravTrack aufzeichnet, liegen hier auf deinem Server – nur für dich, nie geteilt oder föderiert. Gespeichert bleibt alles, bis du es löschst.",
@@ -135,7 +134,8 @@
       "notSaved": "Die Einstellung wurde nicht gespeichert.",
       "savedOn": "Städte werden beim nächsten Durchlauf ermittelt.",
       "savedOff": "Städtesuche aus – bereits ermittelte Städte sind entfernt."
-    }
+    },
+    "importsMoved": "GPX-Importe, die Dawarich-Kopie und OwnTracks/Overland findest du jetzt unter Track › Importe."
   },
   "imports": {
     "title": "GPX-Dateien",
@@ -316,7 +316,9 @@
     "pendingMonth": "wird berechnet",
     "legend": "Kilometer am Boden zählen nur die sichtbare Linie: nichts in der Luft, nichts schneller als 500 km/h, nichts, was eine Privatzone verbirgt. Monate ohne Positionen fehlen.",
     "citiesOff": "Städte nennt die Übersicht erst, wenn du die Städtesuche in den Einstellungen einschaltest.",
-    "utc": "Monate nach UTC: Ein Tag zählt zu dem Monat, in den er nach UTC fällt – was um Mitternacht Ortszeit geschieht, kann im Nachbarmonat stehen."
+    "utc": "Monate nach UTC: Ein Tag zählt zu dem Monat, in den er nach UTC fällt – was um Mitternacht Ortszeit geschieht, kann im Nachbarmonat stehen.",
+    "chartTitle": "Strecke am Boden pro Monat ({{unit}})",
+    "chartNote": "Monate ohne Positionen und Monate in Berechnung haben keinen Balken."
   },
   "lastSeen": {
     "label": "Zuletzt gesehen",
@@ -324,5 +326,222 @@
     "unknownDevice": "Unbekanntes Gerät",
     "none": "Noch keine Position aufgezeichnet.",
     "open": "Diesen Tag ansehen"
+  },
+  "menu": {
+    "map": "Karte",
+    "explored": "Erkundet",
+    "stats": "Statistik",
+    "stays": "Aufenthalte",
+    "imports": "Importe"
+  },
+  "map": {
+    "panel": "Ebenen und Darstellung",
+    "zonesNeverDrawn": "Private Zonen sind ausgespart und nie eingezeichnet",
+    "dayFailed": "{{day}} konnte nicht geladen werden: {{reason}}",
+    "retry": "Erneut laden",
+    "rangeEmpty": "In diesen Tagen ist nichts aufgezeichnet.",
+    "fogLoading": "Erkundete Gegenden werden geladen …",
+    "range": {
+      "previous": "Zeitraum zurück",
+      "next": "Zeitraum vor",
+      "today": "Heute, {{day}}",
+      "yesterday": "Gestern, {{day}}",
+      "span": "{{from}} – {{to}}",
+      "preset": {
+        "today": "Heute",
+        "yesterday": "Gestern",
+        "week": "7 Tage",
+        "month": "Monat",
+        "year": "Jahr",
+        "custom": "Zeitraum …"
+      },
+      "from": "Zeitraum von",
+      "to": "Zeitraum bis",
+      "apply": "Anzeigen"
+    },
+    "live": {
+      "off": "Live folgen",
+      "on": "● Live folgt",
+      "failed": "Live folgen klappt gerade nicht: {{reason}}"
+    },
+    "layers": {
+      "title": "Ebenen",
+      "routes": "Strecken",
+      "routesHint": "Linien zwischen den Punkten",
+      "points": "Punkte",
+      "pointsHint": "Jede Position, anklickbar",
+      "heat": "Heatmap",
+      "heatHint": "Wo du dich oft aufhältst",
+      "fog": "Erkundet-Nebel",
+      "fogHint": "Unbekanntes abgedunkelt",
+      "visits": "Aufenthalte und Orte",
+      "visitsHint": "Zuhause, Unterkünfte, Orte, erkannte Aufenthalte",
+      "entries": "Logbuch-Einträge",
+      "entriesHint": "Flüge, Fahrten, Reisen",
+      "photos": "Fotos",
+      "photosHint": "Aus Immich, auf der Strecke eingeordnet",
+      "dayOnly": "Nur in der Tages- und 7-Tage-Ansicht",
+      "countries": "Länder",
+      "countriesHint": "Besuchte Länder der Monate, die der Zeitraum berührt"
+    },
+    "route": {
+      "title": "Strecken",
+      "color": "Farbe",
+      "speed": "Nach Tempo",
+      "plain": "Einfarbig",
+      "kmhMax": "{{kmh}}+ km/h",
+      "opacity": "Deckkraft",
+      "split": "Strecke trennen nach Pause ab",
+      "splitNone": "Nur wo der Server trennt",
+      "splitMinutes_one": "{{count}} Minute",
+      "splitMinutes_other": "{{count}} Minuten",
+      "splitHours_one": "{{count}} Stunde",
+      "splitHours_other": "{{count}} Stunden",
+      "alwaysCut": "Private Zonen, gelöschte Zeiträume, Pausen und Flugmodus-Lücken trennen immer, egal was hier steht. Hier lässt sich nur weiter trennen, nie verbinden."
+    },
+    "replay": {
+      "play": "Wiedergabe starten",
+      "pause": "Wiedergabe anhalten",
+      "scrub": "Wiedergabe-Zeitpunkt",
+      "rate": "Tempo der Wiedergabe",
+      "reset": "Ganze Strecke zeigen",
+      "gaps": "Springt über Lücken, nichts wird dazuerfunden",
+      "limit": "Die Wiedergabe gibt es für Zeiträume bis {{days}} Tage – wähle einen kürzeren, um sie abzuspielen."
+    },
+    "point": {
+      "title": "Position",
+      "accuracy": "Genauigkeit ±{{m}} m",
+      "accuracyUnknown": "Genauigkeit unbekannt",
+      "close": "Schließen",
+      "delete": "Punkt löschen",
+      "deleting": "Wird gelöscht …",
+      "deleteConfirm": "Diese eine Position endgültig löschen? Auch ein erneuter Import derselben Datei bringt sie nicht zurück.",
+      "deleted": "Die Position ist gelöscht."
+    },
+    "totals": {
+      "title": "Zusammenfassung",
+      "distance": "Strecke",
+      "moving": "Unterwegs",
+      "avgSpeed": "Ø Tempo",
+      "points": "Punkte",
+      "coverage": "Abdeckung",
+      "km": "{{km}} km",
+      "kmh": "{{kmh}} km/h",
+      "minutes": "{{m}} min",
+      "hours": "{{h}} h {{m}} min",
+      "note": "Gezählt wird nur innerhalb einer Strecke — nie über eine Lücke, Zone oder Pause hinweg. Unterwegs heißt: schneller als 3 km/h."
+    },
+    "quietDays": "Ohne Aufzeichnung und ohne Eintrag: {{days}}",
+    "rangeLoading": "Wird in Teilen geladen … {{parts}} Teile, {{percent}} %",
+    "rangeProgress": "Ladefortschritt",
+    "rangePartFailed": "Nach {{percent}} % ist ein Teil nicht angekommen: {{reason}} Was schon da ist, bleibt sichtbar.",
+    "rangeResume": "Weiterladen",
+    "rangeSimplified": "Für diesen Zeitraum ist die Linie vereinfacht; die Strecke ist deshalb etwas kürzer als gemessen.",
+    "rangeOmitted_one": "{{count}} kurzes Stück passte nicht mehr in die Ansicht und fehlt.",
+    "rangeOmitted_other": "{{count}} kurze Stücke passten nicht mehr in die Ansicht und fehlen.",
+    "rangeNoTimeline": "Für Monat, Jahr und Zeitraum zeigt die Karte die Linie allein. Tagesablauf, Aufenthalte und Logbuch-Einträge stehen in der Tages- und 7-Tage-Ansicht.",
+    "countries": {
+      "loading": "Länder werden geladen …",
+      "none": "In den berührten Monaten ist kein Land ermittelt.",
+      "list_one": "{{count}} Land: {{names}}",
+      "list_other": "{{count}} Länder: {{names}}",
+      "note": "Eingefärbt sind die Länder der Monatswerte aller Monate, die der Zeitraum berührt (Monate nach UTC) – bei einem einzelnen Tag also die seines Monats.",
+      "pending": "Einige dieser Monate werden gerade neu berechnet; die Länder können sich noch ändern.",
+      "shapesFailed": "Die Ländergrenzen konnten nicht geladen werden."
+    }
+  },
+  "photos": {
+    "title": "Foto",
+    "loading": "Fotos werden geladen …",
+    "alt": "Foto von {{time}}",
+    "thumbFailed": "Nicht geladen",
+    "truncated": "Nicht alle Fotos dieses Zeitraums konnten berücksichtigt werden. Ein kürzerer Zeitraum zeigt den Rest.",
+    "needsShorter": "Fotos gibt es für Zeiträume bis 7 Tage. Wähle einen kürzeren Zeitraum.",
+    "connect": "Immich in den Einstellungen verbinden",
+    "failure": {
+      "notConfigured": "Fotos kommen aus Immich, und Immich ist noch nicht verbunden.",
+      "unreachable": "Immich ist gerade nicht erreichbar.",
+      "auth": "Immich hat den Zugang abgelehnt – prüfe den API-Schlüssel.",
+      "notFound": "Immich kennt diese Fotos nicht mehr.",
+      "protocol": "Immich hat unerwartet geantwortet – vielleicht passt die Version nicht.",
+      "invalidUrl": "Die Immich-Adresse ist ungültig – prüfe sie in den Einstellungen."
+    }
+  },
+  "flight": {
+    "show": "Flugdaten",
+    "title": "Flug {{label}}",
+    "open": "Flug im Logbuch öffnen",
+    "loading": "Flugdaten werden geladen …",
+    "notFound": "Diesen Flug gibt es nicht mehr.",
+    "figure": {
+      "altitude": "Reiseflughöhe",
+      "speed": "Höchstes Tempo",
+      "climb": "Steigflug bis Reiseflug",
+      "photos": "Fotos an Bord"
+    },
+    "altitudeValue": "FL{{fl}} · {{m}} m",
+    "kmh": "{{kmh}} km/h",
+    "minutes": "{{m}} min",
+    "profile": "Höhenprofil",
+    "profileHint": "Die Linie läuft mit der Wiedergabe mit",
+    "noRecording": "Mit diesem Flug ist keine Aufzeichnung verknüpft.",
+    "truncated": "Dieser Flug hält mehr Positionen, als eine Ansicht zeigt – das Profil ist unvollständig.",
+    "photosTitle": "Fotos während des Flugs",
+    "noPhotos": "Keine Fotos während des Flugs.",
+    "allPhotos": "Alle Fotos",
+    "photosNote": "Aus Immich, wenn verbunden. Die Foto-Position kommt aus der Flugspur, nicht aus dem Foto; Fotos in privaten Zonen erscheinen nicht."
+  },
+  "stays": {
+    "title": "Aufenthalte",
+    "intro": "Aufenthalte, die TravTrack erkannt hat. Bestätigt wird im Posteingang; bestätigte landen als Ort oder Unterkunft im Logbuch.",
+    "loading": "Aufenthalte werden geladen …",
+    "empty": "Für diese Auswahl gibt es keine Aufenthalte.",
+    "more": "Weitere laden",
+    "unnamed": "Unbenannter Ort",
+    "when": "{{date}}, {{from}}–{{to}}",
+    "inZone": "In einer Privatzone – ohne Karte",
+    "review": "Im Posteingang prüfen",
+    "openPlace": "Ort öffnen",
+    "openTrip": "Reise öffnen",
+    "onMap": "Auf der Karte",
+    "state": {
+      "pending": "Offen",
+      "accepted": "Bestätigt",
+      "rejected": "Abgelehnt"
+    },
+    "filter": {
+      "status": "Status",
+      "from": "Von",
+      "to": "Bis",
+      "apply": "Anwenden",
+      "noStatus": "Wähle mindestens einen Status.",
+      "badSpan": "Gib beide Tage an, den ersten zuerst."
+    }
+  },
+  "importsTab": {
+    "title": "Importe",
+    "intro": "Alles, was Positionen in deinen Verlauf bringt: GPX-Dateien, die Kopie aus Dawarich und OwnTracks/Overland.",
+    "loading": "Wird geladen …"
+  },
+  "calendar": {
+    "title": "Kalender {{year}}",
+    "intro": "Jeder Tag ein Kästchen, Farbe nach Strecke; ein Klick öffnet den Tag auf der Karte.",
+    "loading": "Der Kalender wird geladen …",
+    "cellKm": "{{day}}: {{km}}",
+    "cell": {
+      "none": "{{day}}: nichts aufgezeichnet",
+      "pending": "{{day}}: wird vorbereitet",
+      "unavailable": "{{day}}: nicht bekannt",
+      "future": "{{day}}"
+    },
+    "month": {
+      "pending": "wird vorbereitet",
+      "unavailable": "Tageswerte nicht bekannt"
+    },
+    "legendLess": "wenig",
+    "legendMore": "viel",
+    "legendStep": "≥{{km}}",
+    "legendNone": "leer = nichts aufgezeichnet, schraffiert = noch nicht bekannt",
+    "utc": "Tage nach UTC, wie die Monatswerte."
   }
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { TravTrackDay, TravTrackDayEntry } from "../../../lib/api/travtrack";
 import de from "../../../i18n/resources/de/track.json";
@@ -159,5 +159,32 @@ describe("TrackTimeline", () => {
       [50.1, 8.66, "movement"],
     ]);
     expect(anchors[1].text).toBe("track:timeline.movement");
+  });
+});
+
+describe("TrackTimeline — the flight panel (T5.3)", () => {
+  it("a logbook flight offers its flight data; another entry does not", () => {
+    const onFlight = vi.fn();
+    render(
+      <MemoryRouter>
+        <TrackTimeline
+          day={day([
+            entry({ kind: "flight", id: "f1", label: "KE1201", href: "/flights/f1" }),
+            entry({}),
+          ])}
+          onFlight={onFlight}
+          selectedFlightId={null}
+        />
+      </MemoryRouter>
+    );
+    const buttons = screen.getAllByRole("button", { name: "track:flight.show" });
+    expect(buttons).toHaveLength(1);
+    fireEvent.click(buttons[0]);
+    expect(onFlight).toHaveBeenCalledWith({ id: "f1", label: "KE1201", href: "/flights/f1" });
+  });
+
+  it("without a handler no flight is pickable", () => {
+    renderDay([entry({ kind: "flight", id: "f1" })]);
+    expect(screen.queryByRole("button", { name: "track:flight.show" })).not.toBeInTheDocument();
   });
 });

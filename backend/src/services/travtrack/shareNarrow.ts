@@ -406,7 +406,7 @@ export async function narrowShareSnapshots(
 
 /**
  * The `onPointsRemoved` handler (`deleteRange.ts`): the deletion or zone is
- * already in `tx`. A removal that leaves no tombstone (an import deleted)
+ * already in `tx`. A removal that leaves no tombstone (an import or one point deleted)
  * names the removed points by position key; exactly the stored vertices that
  * were those points go — never another source's vertex in the same hours —
  * and the line breaks where they were. The stored route only ever shrinks,
@@ -418,5 +418,5 @@ export const narrowOnPointsRemoved = (
   cause?: PointsRemovedCause
 ): Promise<void> =>
   narrowShareSnapshots(tx, userId, {
-    removedKeys: cause?.kind === "origin" ? cause.keys : undefined,
+    removedKeys: cause?.kind === "origin" || cause?.kind === "point" ? cause.keys : undefined,
   });

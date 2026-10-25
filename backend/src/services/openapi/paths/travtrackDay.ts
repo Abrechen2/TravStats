@@ -28,6 +28,12 @@ const day = z.object({
   segments: z
     .array(z.array(storedPoint))
     .describe("Stretches cut at gaps, deleted spans and reported pauses; privacy-cut"),
+  pointIds: z
+    .array(z.array(z.string()))
+    .describe(
+      "The stored point of each vertex, aligned with `segments` — what " +
+        "`DELETE /travtrack/points/{id}` names"
+    ),
   coverage: z
     .array(
       z.object({

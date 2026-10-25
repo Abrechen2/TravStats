@@ -239,6 +239,7 @@ export const NON_TRAVEL_RELATIONS = [
   "travTrackPointLinks",
   "travTrackUploads",
   "travTrackDeletedRanges",
+  "travTrackDeletedPoints",
   "travTrackPrivacyZones",
   "travTrackZoneTombstones",
   "travTrackGaps",

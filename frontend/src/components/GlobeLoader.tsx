@@ -6,40 +6,8 @@ import { useTranslation } from "../hooks/useTranslation"; // Monochrome spinning
 
 import { useEffect, useMemo, useRef } from "react";
 import { geoOrthographic, geoPath, geoGraticule10 } from "d3-geo";
-import { feature } from "topojson-client";
 import type { Feature, FeatureCollection, Geometry } from "geojson";
-import type { Topology, GeometryCollection } from "topojson-specification";
-
-type TopoCache =
-  | { status: "pending"; promise: Promise<FeatureCollection<Geometry>> }
-  | { status: "ready"; data: FeatureCollection<Geometry> }
-  | { status: "error" }
-  | null;
-
-let topoCache: TopoCache = null;
-
-async function loadCountries(): Promise<FeatureCollection<Geometry>> {
-  if (topoCache?.status === "ready") return topoCache.data;
-  if (topoCache?.status === "pending") return topoCache.promise;
-
-  const promise = fetch("/countries-110m.json")
-    .then((r) => {
-      if (!r.ok) throw new Error(`globe topojson: HTTP ${r.status}`);
-      return r.json() as Promise<Topology<{ countries: GeometryCollection }>>;
-    })
-    .then((world) => {
-      const fc = feature(world, world.objects.countries) as unknown as FeatureCollection<Geometry>;
-      topoCache = { status: "ready", data: fc };
-      return fc;
-    })
-    .catch((err) => {
-      topoCache = { status: "error" };
-      throw err;
-    });
-
-  topoCache = { status: "pending", promise };
-  return promise;
-}
+import { loadWorldCountries } from "../lib/geo/worldCountries";
 
 interface GlobeLoaderProps {
   /** Diameter of the globe in px. Whirl rings extend ~20% beyond this. */
@@ -104,7 +72,7 @@ export function GlobeLoader({
 
     let countries: FeatureCollection<Geometry> | null = null;
     let cancelled = false;
-    loadCountries()
+    loadWorldCountries()
       .then((fc) => {
         if (!cancelled) countries = fc;
       })

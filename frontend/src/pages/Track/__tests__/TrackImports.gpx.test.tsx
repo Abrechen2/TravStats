@@ -33,14 +33,12 @@ vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => fals
 vi.mock("../../../hooks/useBetaFeatures", () => ({
   useBetaFeatures: () => ({ isFeatureVisible: () => true }),
 }));
-// The trip note reads the home periods on its own; covered by TravTrackTripNote.test.tsx.
-vi.mock("../TravTrackTripNote", () => ({ default: () => null }));
 vi.mock("../../../hooks/useTodayZone", () => ({
   useTodayZone: () => "UTC",
   todayZoneNow: () => "UTC",
 }));
 
-import TravTrackSection from "../TravTrackSection";
+import TrackImports from "../TrackImports";
 import { dawarichCopyApi } from "../../../lib/api/travtrackDawarichCopy";
 import { travTrackApi } from "../../../lib/api/travtrack";
 import {
@@ -53,7 +51,7 @@ import { api } from "../../../lib/api/client";
 import { JobFailedError } from "../../../lib/api/jobs";
 
 /**
- * GPX files into TravTrack, in Settings (TravTrack plan E8): the file goes up
+ * GPX files into TravTrack, on Track › Importe (TravTrack plan E8): the file goes up
  * as multipart, the outcome is the job's and reads as a report, a failure
  * reads as its own sentence, and deleting an import names how many positions
  * go with it first.
@@ -93,7 +91,7 @@ const DONE: TravTrackImport = {
 const show = () =>
   render(
     <MemoryRouter>
-      <TravTrackSection />
+      <TrackImports />
     </MemoryRouter>
   );
 
@@ -105,7 +103,7 @@ async function confirmInDialog() {
   await userEvent.click(buttons[buttons.length - 1]);
 }
 
-describe("TravTrackSection — GPX import", () => {
+describe("Track › Importe — GPX import", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     // The Dawarich copy block (plan L6) reads its state on mount.

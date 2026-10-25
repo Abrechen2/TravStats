@@ -327,6 +327,13 @@
     --accent-glow: rgba(240, 169, 71, 0.18);
     --accent-soft: rgba(240, 169, 71, 0.1);
 
+    /* The three areas (TravTrack plan, phase 5, header variant B). Stats is
+       the brand amber itself; Plan and Track carry their own hue, used for
+       the logo word, its underline and the active menu entry. */
+    --area-stats: var(--accent);
+    --area-plan: #9aa8ff;
+    --area-track: #5ec2b2;
+
     /* abrechen2 maker mark (brand guide v1) — only "<" and "/>" carry it.
        Signal-Orange is the dark-background accent; Glut (#c2410c) belongs to
        light backgrounds, which this dark-only app does not have. */

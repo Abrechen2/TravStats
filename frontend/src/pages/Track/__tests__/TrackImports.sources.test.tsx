@@ -34,14 +34,12 @@ vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => demo
 vi.mock("../../../hooks/useBetaFeatures", () => ({
   useBetaFeatures: () => ({ isFeatureVisible: () => true }),
 }));
-// The trip note reads the home periods on its own; covered by TravTrackTripNote.test.tsx.
-vi.mock("../TravTrackTripNote", () => ({ default: () => null }));
 vi.mock("../../../hooks/useTodayZone", () => ({
   useTodayZone: () => "UTC",
   todayZoneNow: () => "UTC",
 }));
 
-import TravTrackSection from "../TravTrackSection";
+import TrackImports from "../TrackImports";
 import { dawarichCopyApi } from "../../../lib/api/travtrackDawarichCopy";
 import { travTrackApi } from "../../../lib/api/travtrack";
 import { travTrackImportsApi } from "../../../lib/api/travtrackImports";
@@ -53,7 +51,7 @@ import {
 } from "../../../lib/api/travtrackSources";
 
 /**
- * OwnTracks and Overland in Settings (TravTrack plan E9): a token is created
+ * OwnTracks and Overland on Track › Importe (TravTrack plan E9): a token is created
  * for a named device and shown once with the URL and the app's field names;
  * the list carries no token; revoking asks first; every refusal reads as its
  * own sentence.
@@ -82,7 +80,7 @@ const SECRET = `tt_ingest_${"ab".repeat(32)}`;
 const show = () =>
   render(
     <MemoryRouter>
-      <TravTrackSection />
+      <TrackImports />
     </MemoryRouter>
   );
 
@@ -92,7 +90,7 @@ async function confirmInDialog() {
   await userEvent.click(buttons[buttons.length - 1]);
 }
 
-describe("TravTrackSection — further sources", () => {
+describe("Track › Importe — further sources", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     // The Dawarich copy block (plan L6) reads its state on mount.
@@ -202,7 +200,7 @@ describe("TravTrackSection — further sources", () => {
   it("an older server without the sources list shows no section", async () => {
     caps.current = { ...caps.current, sources: undefined };
     show();
-    await screen.findByTestId("travtrack-summary");
+    await screen.findByTestId("track-imports");
     expect(screen.queryByText("track:sources.title")).toBeNull();
     expect(travTrackSourcesApi.list).not.toHaveBeenCalled();
   });

@@ -35,9 +35,11 @@ export function inFlightBy(
 
 const fix = (p: StoredPoint) => ({ atMs: p[0], lat: p[1], lon: p[2], accuracyM: p[3] });
 
-/** Ground kilometres of these stretches; a step in the air, too fast or from a bad fix adds nothing. */
-export function groundKm(stretches: readonly StoredPoint[][], inFlight: InFlight): number {
-  let km = 0;
+/** Each ground step of these stretches: its end's instant and its kilometres. */
+function* groundSteps(
+  stretches: readonly StoredPoint[][],
+  inFlight: InFlight
+): Generator<{ atMs: number; km: number }> {
   for (const stretch of stretches) {
     for (let i = 1; i < stretch.length; i++) {
       const a = stretch[i - 1];
@@ -47,10 +49,34 @@ export function groundKm(stretches: readonly StoredPoint[][], inFlight: InFlight
       if (inFlight(a) || inFlight(b) || isBadFix(fix(a)) || isBadFix(fix(b))) continue;
       const step = haversineKm(fix(a), fix(b));
       if (step / hours > MAX_GROUND_KMH) continue;
-      km += step;
+      yield { atMs: b[0], km: step };
     }
   }
+}
+
+/** Ground kilometres of these stretches; a step in the air, too fast or from a bad fix adds nothing. */
+export function groundKm(stretches: readonly StoredPoint[][], inFlight: InFlight): number {
+  let km = 0;
+  for (const step of groundSteps(stretches, inFlight)) km += step.km;
   return km;
+}
+
+/**
+ * The ground kilometres per UTC day (the Statistik calendar, plan T5.3), added
+ * into `into`: a step counts on the day its end falls on, and every day a
+ * vertex falls on is present — a recorded day without movement is 0, a
+ * measurement; a day without a vertex is absent, never 0.
+ */
+export function addGroundKmByDay(
+  into: Map<string, number>,
+  stretches: readonly StoredPoint[][],
+  inFlight: InFlight
+): void {
+  for (const day of vertexDays(stretches)) if (!into.has(day)) into.set(day, 0);
+  for (const step of groundSteps(stretches, inFlight)) {
+    const day = utcDayOf(step.atMs);
+    into.set(day, (into.get(day) ?? 0) + step.km);
+  }
 }
 
 /** The distinct UTC days the stretches' vertices fall on. */

@@ -56,7 +56,7 @@ import {
 } from "./cities";
 import { lookUpMonthCities } from "./lookup";
 import { monthWindow } from "./window";
-import { groundKm, inFlightBy, spanDays, vertexDays } from "./values";
+import { addGroundKmByDay, groundKm, inFlightBy, spanDays, vertexDays } from "./values";
 
 /** Raised when the figures' rules change, so a reader can tell an old row from a new one. */
 export const MONTHS_ALGORITHM = 1;
@@ -109,7 +109,14 @@ const DAY_MS = 86_400_000;
 const monthOf = (day: string) => `${day.slice(0, 7)}-01`;
 const dayString = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
-type MonthFigures = { km: number; days: Set<string>; paused: Set<string>; cells: CityCell[] };
+type MonthFigures = {
+  km: number;
+  days: Set<string>;
+  /** Ground kilometres per UTC day with a vertex (the calendar, plan T5.3). */
+  dayKm: Map<string, number>;
+  paused: Set<string>;
+  cells: CityCell[];
+};
 
 /** The month read whole, page by page, every figure from the privacy-safe stretches. */
 async function readMonth(
@@ -119,7 +126,13 @@ async function readMonth(
   pageSize: number
 ): Promise<MonthFigures> {
   const flights = await flightWindowsIn(userId, window);
-  const figures: MonthFigures = { km: 0, days: new Set(), paused: new Set(), cells: [] };
+  const figures: MonthFigures = {
+    km: 0,
+    days: new Set(),
+    dayKm: new Map(),
+    paused: new Set(),
+    cells: [],
+  };
   const cells = new Map<string, CityCell>();
   let cursor: SafeCursor | null = null;
   for (let page = 0; page < MAX_PAGES_PER_MONTH; page++) {
@@ -128,6 +141,7 @@ async function readMonth(
     // A page boundary ends each stretch: the one step across it is not
     // counted — an undercount of a step, never a hidden one.
     figures.km += groundKm(read.segments, inFlight);
+    addGroundKmByDay(figures.dayKm, read.segments, inFlight);
     for (const day of vertexDays(read.segments)) figures.days.add(day);
     for (const span of read.paused) {
       for (const day of spanDays(span, window)) figures.paused.add(day);
@@ -208,6 +222,9 @@ async function projectMonth(
           cities,
           daysWithData: figures.days.size,
           daysPaused: figures.paused.size,
+          dayValues: Object.fromEntries(
+            [...figures.dayKm].sort(([a], [b]) => a.localeCompare(b))
+          ) as unknown as Prisma.InputJsonValue,
           algorithm: MONTHS_ALGORITHM,
           computedAt: new Date(),
         };

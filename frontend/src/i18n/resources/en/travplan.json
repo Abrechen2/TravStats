@@ -304,5 +304,9 @@
     },
     "readOnly": "A comparison only: nothing here changes your plan.",
     "refresh": "Reload"
+  },
+  "menu": {
+    "plans": "Plans",
+    "config": "Settings"
   }
 }

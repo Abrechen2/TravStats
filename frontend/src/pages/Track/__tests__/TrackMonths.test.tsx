@@ -5,6 +5,8 @@ import type { TravTrackMonths } from "../../../lib/api/travtrackMonths";
 
 const api = vi.hoisted(() => ({ months: vi.fn(), cityLookup: vi.fn(), setCityLookup: vi.fn() }));
 vi.mock("../../../lib/api/travtrackMonths", () => ({ travTrackMonthsApi: api }));
+const views = vi.hoisted(() => ({ calendar: vi.fn() }));
+vi.mock("../../../lib/api/travtrackViews", () => ({ travTrackViewsApi: views }));
 vi.mock("../../../hooks/useTodayZone", () => ({ useTodayZone: () => "UTC" }));
 vi.mock("../../../shared/time/clock", () => ({ todayIn: () => "2026-10-25" }));
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -58,6 +60,7 @@ const show = () =>
 describe("TrackMonths", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    views.calendar.mockResolvedValue({ year: 2026, days: [], pending: [], unavailable: [] });
     api.months.mockResolvedValue(DATA);
   });
 
@@ -79,6 +82,15 @@ describe("TrackMonths", () => {
       "track-month-2026-03",
     ]);
     expect(screen.queryByTestId("track-month-2026-04")).not.toBeInTheDocument();
+  });
+
+  it("draws kilometres per month above the table, and the year's calendar", async () => {
+    show();
+    const chart = await screen.findByTestId("track-km-chart");
+    const table = screen.getByRole("table");
+    expect(chart.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(await screen.findByTestId("track-calendar")).toBeInTheDocument();
+    expect(views.calendar).toHaveBeenCalledWith(2026);
   });
 
   it("says the months are UTC months", async () => {

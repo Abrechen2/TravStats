@@ -240,6 +240,8 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   travTrackPoints: "TravTrack history (beta): the paged `travtrack` section, accountExport.ts",
   travTrackPointLinks: "TravTrack history (beta): carried with their points in `travtrack`",
   travTrackDeletedRanges: "TravTrack history (beta): the `travtrack` section, accountExport.ts",
+  travTrackDeletedPoints:
+    "TravTrack history (beta): the `travtrack` section (second only, no position), accountExport.ts",
   travTrackPrivacyZones: "TravTrack history (beta): the `travtrack` section, accountExport.ts",
   travTrackGaps: "TravTrack history (beta): the `travtrack` section, accountExport.ts",
   travTrackZoneTombstones:

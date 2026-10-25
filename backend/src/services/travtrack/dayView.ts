@@ -10,7 +10,8 @@ import { readSafeTravTrack, type SafeSpan, type Span } from "./readSafe";
  * TravStats knows of the day.
  *
  *   - `segments` — every stretch, cut at gaps, deleted spans and reported
- *     pauses, privacy-cut (`readSafe.ts`).
+ *     pauses, privacy-cut (`readSafe.ts`); `pointIds` names each vertex's
+ *     stored point, aligned with them.
  *   - `coverage` — the whole day in consecutive pieces, each `recorded`,
  *     `phonePaused` (the phone reported it could not record), `deleted` (the
  *     owner deleted it) or `noData`. A privacy zone is never a state of its
@@ -31,6 +32,8 @@ export type TravTrackDay = {
   date: string;
   zone: string;
   segments: StoredPoint[][];
+  /** The stored point of each vertex, aligned with `segments` (plan T5.3): what a single delete names. */
+  pointIds: string[][];
   coverage: DayCoverage;
   context: DayContext;
   pointCount: number;
@@ -90,6 +93,7 @@ export async function travTrackDay(userId: string, date: string): Promise<TravTr
     date,
     zone,
     segments: read.segments,
+    pointIds: read.segments.map((s) => s.map((p) => read.rowOf(p)?.id ?? "")),
     coverage: coverageOf(window, read),
     context,
     pointCount: read.segments.reduce((n, s) => n + s.length, 0),

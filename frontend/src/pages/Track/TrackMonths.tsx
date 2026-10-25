@@ -17,6 +17,8 @@ import { appLocale, formatDistance, formatShortDistance } from "../../lib/units"
 import { todayIn } from "../../shared/time/clock";
 import { countryName } from "../../shared/geo/countryCode";
 import { useSettingsStore } from "../../store/settingsStore";
+import TrackCalendar from "./stats/TrackCalendar";
+import TrackKmChart from "./stats/TrackKmChart";
 
 type State =
   { kind: "loading" } | { kind: "failed"; key: string } | { kind: "loaded"; data: TravTrackMonths };
@@ -116,6 +118,7 @@ export default function TrackMonths(): JSX.Element {
                   {t("track:months.pending")}
                 </p>
               )}
+              <TrackKmChart data={state.data} year={year} />
               <h2 id="track-months-table" className="t-card-title">
                 {t("track:months.table", { year })}
               </h2>
@@ -158,6 +161,7 @@ export default function TrackMonths(): JSX.Element {
                   <Link to="/settings/location">{t("track:months.citiesOff")}</Link>
                 </p>
               )}
+              <TrackCalendar year={year} />
             </>
           );
         })()}

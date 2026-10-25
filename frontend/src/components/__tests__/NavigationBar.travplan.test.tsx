@@ -100,11 +100,14 @@ describe("NavigationBar on a TravPlan route", () => {
     await waitFor(() => expect(mocks.capabilities).toHaveBeenCalled());
   });
 
-  it("offers TravPlan as one entry in Mehr while it is visible", async () => {
+  // Phase 5: the "Plan" word of the logo leads to TravPlan; "Mehr" no longer repeats it.
+  it("never offers TravPlan in Mehr, even while it is visible", async () => {
     renderAt("/dashboard");
-    await waitFor(() =>
-      expect(within(screen.getAllByTestId("more")[0]).getByText("/plan")).toBeInTheDocument()
-    );
+    await waitFor(() => expect(mocks.capabilities).toHaveBeenCalled());
+    await act(async () => undefined);
+    for (const more of screen.getAllByTestId("more")) {
+      expect(within(more).queryByText("/plan")).toBeNull();
+    }
   });
 
   it("drops the entry while the beta switch is off", async () => {

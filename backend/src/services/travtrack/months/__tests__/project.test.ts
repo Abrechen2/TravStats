@@ -88,6 +88,20 @@ describe("projectMonths", () => {
     expect(await projectMonths(userId)).toMatchObject({ projected: 0, days: 0 });
   });
 
+  it("stores each recorded day's ground km for the calendar; a day without a step is 0", async () => {
+    await busanWalk(D1);
+    await store(at(D2, "09:00:00"), SEOUL);
+    await dirty([D1, D2]);
+    await countriesDone();
+
+    await projectMonths(userId);
+
+    const values = (await month())!.dayValues as Record<string, number>;
+    expect(Object.keys(values)).toEqual([D1, D2]);
+    expect(values[D1]).toBeCloseTo(km(BUSAN, BUSAN_EAST), 6);
+    expect(values[D2]).toBe(0);
+  });
+
   it("km counts only the visible line: a stretch through a zone adds nothing for its hidden chord", async () => {
     const zone = { ...SEOUL, radiusM: 500 };
     await prisma.travTrackPrivacyZone.create({ data: { userId, name: "Zuhause", ...zone } });

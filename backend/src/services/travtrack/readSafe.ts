@@ -25,6 +25,7 @@ import { privacyCirclesFor } from "./privacyCircles";
  */
 
 export const TRAVTRACK_SAFE_SELECT = {
+  id: true,
   t: true,
   lat: true,
   lon: true,
@@ -39,6 +40,8 @@ export const TRAVTRACK_SAFE_SELECT = {
 } as const;
 
 export type SafePointRow = {
+  /** The point's stable id: what a single-point delete names (plan T5.3). */
+  id: string;
   t: Date;
   lat: number;
   lon: number;

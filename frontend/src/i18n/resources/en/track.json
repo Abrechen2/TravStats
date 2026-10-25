@@ -45,9 +45,6 @@
     "at": "{{at}}",
     "endOfDay": "24:00"
   },
-  "zones": {
-    "legend": "Your privacy zones are drawn as circles; nothing is recorded inside them."
-  },
   "actions": {
     "export": "Export",
     "delete": "Delete a span"
@@ -85,7 +82,9 @@
     "exportTooLong": "An export covers at most 366 days. Pick a shorter span.",
     "zoneLimit": "You already have as many privacy zones as there can be.",
     "network": "The server cannot be reached right now. Try again in a moment.",
-    "generic": "That did not work. Try again."
+    "generic": "That did not work. Try again.",
+    "rangeTooLong": "A range on the map covers at most 400 days. Pick a shorter one.",
+    "pointGone": "This position no longer exists – it has already been deleted."
   },
   "settings": {
     "intro": "The positions your Companion records for TravTrack live here on your server – for you only, never shared or federated. They stay until you delete them.",
@@ -135,7 +134,8 @@
       "notSaved": "The setting was not saved.",
       "savedOn": "Cities are determined on the next run.",
       "savedOff": "City lookup off – cities already determined are removed."
-    }
+    },
+    "importsMoved": "GPX imports, the Dawarich copy and OwnTracks/Overland now live under Track › Imports."
   },
   "imports": {
     "title": "GPX files",
@@ -316,7 +316,9 @@
     "pendingMonth": "being computed",
     "legend": "Kilometres on the ground count only the visible line: nothing in the air, nothing faster than 500 km/h, nothing a privacy zone hides. Months without positions are left out.",
     "citiesOff": "The overview names cities only once you switch on the city lookup in the settings.",
-    "utc": "Months in UTC: a day counts in the month it falls in by UTC – what happens around local midnight may appear in the neighbouring month."
+    "utc": "Months in UTC: a day counts in the month it falls in by UTC – what happens around local midnight may appear in the neighbouring month.",
+    "chartTitle": "Distance on the ground per month ({{unit}})",
+    "chartNote": "Months without positions and months being computed have no bar."
   },
   "lastSeen": {
     "label": "Last seen",
@@ -324,5 +326,222 @@
     "unknownDevice": "Unknown device",
     "none": "No position recorded yet.",
     "open": "View this day"
+  },
+  "menu": {
+    "map": "Map",
+    "explored": "Explored",
+    "stats": "Statistics",
+    "stays": "Stays",
+    "imports": "Imports"
+  },
+  "map": {
+    "panel": "Layers and appearance",
+    "zonesNeverDrawn": "Private zones are left out and never drawn",
+    "dayFailed": "{{day}} could not be loaded: {{reason}}",
+    "retry": "Load again",
+    "rangeEmpty": "Nothing was recorded on these days.",
+    "fogLoading": "Loading explored areas …",
+    "range": {
+      "previous": "Previous range",
+      "next": "Next range",
+      "today": "Today, {{day}}",
+      "yesterday": "Yesterday, {{day}}",
+      "span": "{{from}} – {{to}}",
+      "preset": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "week": "7 days",
+        "month": "Month",
+        "year": "Year",
+        "custom": "Range …"
+      },
+      "from": "Range from",
+      "to": "Range to",
+      "apply": "Show"
+    },
+    "live": {
+      "off": "Follow live",
+      "on": "● Following live",
+      "failed": "Following live is not working right now: {{reason}}"
+    },
+    "layers": {
+      "title": "Layers",
+      "routes": "Routes",
+      "routesHint": "Lines between the points",
+      "points": "Points",
+      "pointsHint": "Every position, clickable",
+      "heat": "Heatmap",
+      "heatHint": "Where you spend a lot of time",
+      "fog": "Explored fog",
+      "fogHint": "Unknown ground darkened",
+      "visits": "Stays and places",
+      "visitsHint": "Home, lodging, places, detected stays",
+      "entries": "Logbook entries",
+      "entriesHint": "Flights, rides, trips",
+      "photos": "Photos",
+      "photosHint": "From Immich, placed on the track",
+      "dayOnly": "Only in the day and 7-day views",
+      "countries": "Countries",
+      "countriesHint": "Visited countries of the months the range touches"
+    },
+    "route": {
+      "title": "Routes",
+      "color": "Colour",
+      "speed": "By speed",
+      "plain": "Single colour",
+      "kmhMax": "{{kmh}}+ km/h",
+      "opacity": "Opacity",
+      "split": "Split a route after a pause of",
+      "splitNone": "Only where the server splits",
+      "splitMinutes_one": "{{count}} minute",
+      "splitMinutes_other": "{{count}} minutes",
+      "splitHours_one": "{{count}} hour",
+      "splitHours_other": "{{count}} hours",
+      "alwaysCut": "Private zones, deleted spans, pauses and flight-mode gaps always split, whatever is set here. This can only split further, never join."
+    },
+    "replay": {
+      "play": "Start replay",
+      "pause": "Pause replay",
+      "scrub": "Replay position",
+      "rate": "Replay speed",
+      "reset": "Show the whole route",
+      "gaps": "Jumps over gaps, nothing is made up",
+      "limit": "Replay is available for ranges of up to {{days}} days – pick a shorter one to play it."
+    },
+    "point": {
+      "title": "Position",
+      "accuracy": "Accuracy ±{{m}} m",
+      "accuracyUnknown": "Accuracy unknown",
+      "close": "Close",
+      "delete": "Delete point",
+      "deleting": "Deleting …",
+      "deleteConfirm": "Delete this one position for good? Importing the same file again will not bring it back.",
+      "deleted": "The position is deleted."
+    },
+    "totals": {
+      "title": "Summary",
+      "distance": "Distance",
+      "moving": "Moving",
+      "avgSpeed": "Avg. speed",
+      "points": "Points",
+      "coverage": "Coverage",
+      "km": "{{km}} km",
+      "kmh": "{{kmh}} km/h",
+      "minutes": "{{m}} min",
+      "hours": "{{h}} h {{m}} min",
+      "note": "Counted within a route only — never across a gap, zone or pause. Moving means faster than 3 km/h."
+    },
+    "quietDays": "Nothing recorded and no entry: {{days}}",
+    "rangeLoading": "Loading in parts … {{parts}} parts, {{percent}} %",
+    "rangeProgress": "Loading progress",
+    "rangePartFailed": "After {{percent}} % a part did not arrive: {{reason}} What is already here stays visible.",
+    "rangeResume": "Continue loading",
+    "rangeSimplified": "For this range the line is simplified, so the distance is a little shorter than measured.",
+    "rangeOmitted_one": "{{count}} short piece no longer fitted into the view and is missing.",
+    "rangeOmitted_other": "{{count}} short pieces no longer fitted into the view and are missing.",
+    "rangeNoTimeline": "For month, year and range the map shows the line alone. The day's timeline, stays and logbook entries are in the day and 7-day views.",
+    "countries": {
+      "loading": "Loading countries …",
+      "none": "No country was determined in the months touched.",
+      "list_one": "{{count}} country: {{names}}",
+      "list_other": "{{count}} countries: {{names}}",
+      "note": "Coloured are the countries of the monthly values of every month the range touches (months in UTC) – for a single day, those of its month.",
+      "pending": "Some of these months are being recomputed; the countries may still change.",
+      "shapesFailed": "The country borders could not be loaded."
+    }
+  },
+  "photos": {
+    "title": "Photo",
+    "loading": "Loading photos …",
+    "alt": "Photo from {{time}}",
+    "thumbFailed": "Not loaded",
+    "truncated": "Not every photo of this range could be considered. A shorter range shows the rest.",
+    "needsShorter": "Photos are available for ranges of up to 7 days. Pick a shorter range.",
+    "connect": "Connect Immich in the settings",
+    "failure": {
+      "notConfigured": "Photos come from Immich, and Immich is not connected yet.",
+      "unreachable": "Immich cannot be reached right now.",
+      "auth": "Immich refused access – check the API key.",
+      "notFound": "Immich no longer knows these photos.",
+      "protocol": "Immich answered unexpectedly – perhaps the version does not match.",
+      "invalidUrl": "The Immich address is invalid – check it in the settings."
+    }
+  },
+  "flight": {
+    "show": "Flight data",
+    "title": "Flight {{label}}",
+    "open": "Open flight in the logbook",
+    "loading": "Loading flight data …",
+    "notFound": "This flight no longer exists.",
+    "figure": {
+      "altitude": "Cruising altitude",
+      "speed": "Top speed",
+      "climb": "Climb to cruise",
+      "photos": "Photos on board"
+    },
+    "altitudeValue": "FL{{fl}} · {{m}} m",
+    "kmh": "{{kmh}} km/h",
+    "minutes": "{{m}} min",
+    "profile": "Altitude profile",
+    "profileHint": "The line follows the replay",
+    "noRecording": "No recording is linked to this flight.",
+    "truncated": "This flight holds more positions than one view shows – the profile is incomplete.",
+    "photosTitle": "Photos during the flight",
+    "noPhotos": "No photos during the flight.",
+    "allPhotos": "All photos",
+    "photosNote": "From Immich, when connected. A photo's position comes from the flight track, not from the photo; photos in private zones do not appear."
+  },
+  "stays": {
+    "title": "Stays",
+    "intro": "Stays TravTrack detected. They are confirmed in the inbox; confirmed ones become a place or lodging in the logbook.",
+    "loading": "Loading stays …",
+    "empty": "There are no stays for this selection.",
+    "more": "Load more",
+    "unnamed": "Unnamed place",
+    "when": "{{date}}, {{from}}–{{to}}",
+    "inZone": "In a privacy zone – no map",
+    "review": "Review in the inbox",
+    "openPlace": "Open place",
+    "openTrip": "Open trip",
+    "onMap": "On the map",
+    "state": {
+      "pending": "Open",
+      "accepted": "Confirmed",
+      "rejected": "Declined"
+    },
+    "filter": {
+      "status": "Status",
+      "from": "From",
+      "to": "To",
+      "apply": "Apply",
+      "noStatus": "Pick at least one status.",
+      "badSpan": "Enter both days, the first one first."
+    }
+  },
+  "importsTab": {
+    "title": "Imports",
+    "intro": "Everything that brings positions into your history: GPX files, the copy from Dawarich and OwnTracks/Overland.",
+    "loading": "Loading …"
+  },
+  "calendar": {
+    "title": "Calendar {{year}}",
+    "intro": "One box per day, coloured by distance; a click opens the day on the map.",
+    "loading": "Loading the calendar …",
+    "cellKm": "{{day}}: {{km}}",
+    "cell": {
+      "none": "{{day}}: nothing recorded",
+      "pending": "{{day}}: being prepared",
+      "unavailable": "{{day}}: not known",
+      "future": "{{day}}"
+    },
+    "month": {
+      "pending": "being prepared",
+      "unavailable": "day values not known"
+    },
+    "legendLess": "less",
+    "legendMore": "more",
+    "legendStep": "≥{{km}}",
+    "legendNone": "empty = nothing recorded, hatched = not known yet",
+    "utc": "Days in UTC, like the monthly values."
   }
 }
