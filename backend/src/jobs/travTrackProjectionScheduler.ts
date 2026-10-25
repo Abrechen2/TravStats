@@ -1,6 +1,6 @@
 /**
  * TravTrack projections (TravTrack plan E6): every 15 minutes, each account
- * with dirty days — or with points the current country reducer has not seen —
+ * on provider `travtrack` with dirty days — or with points the current country reducer has not seen —
  * gets its country days projected (`services/travtrack/countryProjection.ts`),
  * then its country questions asked (`services/locationEvidence/
  * countrySuggestions.ts`). Bounded per account by the projection's day budget
@@ -19,7 +19,7 @@ import { getCountryResolver } from "../services/geo/countryFromCoordinates";
 import { countrySuggestions } from "../services/locationEvidence/countrySuggestions";
 import { travTrackInstanceOn } from "../services/travtrack/availability";
 import { projectTravTrackCountryDays } from "../services/travtrack/countryProjection";
-import { accountsWithDirtyDays, COUNTRY_DAYS_BIT } from "../services/travtrack/dirtyDays";
+import { COUNTRY_DAYS_BIT } from "../services/travtrack/dirtyDays";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
 
@@ -35,14 +35,21 @@ export type ProjectionRunOptions = {
 
 export type ProjectionRunResult = { accounts: number; failed: number; questions: number };
 
-/** Accounts holding points the current country reducer has not projected yet. */
-async function accountsBehindReducer(): Promise<string[]> {
+/**
+ * The accounts with projection work: TravTrack is their provider (owner rule,
+ * 2026-10-25 — an account that switched away is never recomputed), and they
+ * hold a dirty day or points the current country reducer has not seen.
+ */
+async function accountsWithWork(): Promise<string[]> {
   const rows = await prisma.$queryRaw<{ id: string }[]>`
     SELECT u.id FROM users u
-     WHERE EXISTS (SELECT 1 FROM travtrack_points p WHERE p.user_id = u.id)
-       AND NOT EXISTS (
-         SELECT 1 FROM travtrack_derivation_state s
-          WHERE s.user_id = u.id AND s.country_reducer_version >= ${COUNTRY_DAY_REDUCER_VERSION})
+      JOIN user_settings us ON us.user_id = u.id AND us.location_provider = 'travtrack'
+      LEFT JOIN travtrack_derivation_state s ON s.user_id = u.id
+     WHERE EXISTS (
+             SELECT 1 FROM travtrack_dirty_days d
+              WHERE d.user_id = u.id AND (d.done & ${COUNTRY_DAYS_BIT}) = 0)
+        OR (COALESCE(s.country_reducer_version, 0) < ${COUNTRY_DAY_REDUCER_VERSION}
+            AND EXISTS (SELECT 1 FROM travtrack_points p WHERE p.user_id = u.id))
      ORDER BY u.id`;
   return rows.map((r) => r.id);
 }
@@ -52,12 +59,7 @@ export async function runTravTrackProjections(
 ): Promise<ProjectionRunResult> {
   const result: ProjectionRunResult = { accounts: 0, failed: 0, questions: 0 };
   if (!(await travTrackInstanceOn())) return result;
-  const accounts = [
-    ...new Set([
-      ...(await accountsWithDirtyDays(COUNTRY_DAYS_BIT)),
-      ...(await accountsBehindReducer()),
-    ]),
-  ].sort();
+  const accounts = await accountsWithWork();
   if (accounts.length === 0) return result;
   // Loaded once per run: the boundary index is several megabytes.
   const countryAt = options.countryAt ?? (await getCountryResolver()).countryAt;

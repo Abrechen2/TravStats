@@ -236,6 +236,19 @@ describe("/api/v1/location-suggestions", () => {
     expect(await prisma.countryOverride.count({ where: { userId } })).toBe(0);
   });
 
+  it("an account no longer on TravTrack → 409 TRAVTRACK_UNAVAILABLE, the question stays, reject still works", async () => {
+    const id = await question();
+    await setLocationProvider(userId, "none");
+
+    const res = await accept(id, "visited");
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("TRAVTRACK_UNAVAILABLE");
+    expect((await fresh(id)).status).toBe("pending");
+    expect(await prisma.countryOverride.count({ where: { userId } })).toBe(0);
+
+    expect((await reject(id)).status).toBe(200);
+  });
+
   it("reject is final: accepting afterwards is SUGGESTION_ALREADY_RESOLVED; rejecting again is fine", async () => {
     const id = await question();
     expect((await reject(id)).status).toBe(200);

@@ -347,7 +347,8 @@
           "invalidated": "The location data behind this question was deleted or changed meanwhile. The question no longer applies.",
           "resolved": "This question was answered already.",
           "busy": "Your answer is still being saved. Please try again in a moment.",
-          "disabled": "TravTrack is switched off on this server. The question stays; you can still choose “Not there”."
+          "disabled": "TravTrack is switched off on this server. The question stays; you can still choose “Not there”.",
+          "providerOff": "TravTrack is no longer your location source. The question stays; you can still choose “Not there”."
         }
       },
       "proposal": {

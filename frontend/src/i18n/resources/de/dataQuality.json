@@ -347,7 +347,8 @@
           "invalidated": "Die Standortdaten zu dieser Frage wurden inzwischen gelöscht oder geändert. Die Frage entfällt.",
           "resolved": "Diese Frage wurde bereits beantwortet.",
           "busy": "Deine Antwort wird noch gespeichert. Bitte versuche es gleich noch einmal.",
-          "disabled": "TravTrack ist auf diesem Server ausgeschaltet. Die Frage bleibt bestehen; „Nicht dort gewesen“ kannst du weiterhin wählen."
+          "disabled": "TravTrack ist auf diesem Server ausgeschaltet. Die Frage bleibt bestehen; „Nicht dort gewesen“ kannst du weiterhin wählen.",
+          "providerOff": "TravTrack ist nicht mehr deine Standortquelle. Die Frage bleibt bestehen; „Nicht dort gewesen“ kannst du weiterhin wählen."
         }
       },
       "proposal": {

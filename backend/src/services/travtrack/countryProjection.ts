@@ -38,9 +38,9 @@ import { buildKnownAirportTest } from "../countryDays/knownAirports";
 import { COUNTRY_DAY_REDUCER_VERSION } from "../dawarich/countryDaySweep";
 import { getCountryResolver } from "../geo/countryFromCoordinates";
 import { readTravTrackDerivation } from "../locationEvidence/derivationRead";
+import { travTrackDerivationAllowed } from "../locationEvidence/allowed";
 import { historyGeneration } from "../locationEvidence/generation";
 import { toTimedPosition } from "../locationEvidence/toDetectorInput";
-import { travTrackInstanceOn } from "./availability";
 import {
   ackDirtyDay,
   COUNTRY_DAYS_BIT,
@@ -73,7 +73,8 @@ export type CountryProjectionDeps = {
 };
 
 export type CountryProjectionResult = {
-  status: "done" | "disabled" | "failed";
+  /** `skipped`: the account's provider is not TravTrack; nothing was touched. */
+  status: "done" | "disabled" | "skipped" | "failed";
   /** Days replaced and acknowledged. */
   projected: number;
   /** Days marked again while they were projected; they run again. */
@@ -192,10 +193,13 @@ export async function projectTravTrackCountryDays(
     rerun: 0,
     errorKind: null,
   };
-  if (!(await travTrackInstanceOn())) {
+  const allowance = await travTrackDerivationAllowed(userId);
+  if (allowance === "disabled") {
     await recordState(userId, "disabled");
     return { ...result, status: "disabled", errorKind: "disabled" };
   }
+  // Switched away: its rows and dirty days stay exactly as they are.
+  if (allowance === "providerOff") return { ...result, status: "skipped" };
   try {
     await remarkOnReducerChange(userId);
     const days = await pendingDirtyDays(

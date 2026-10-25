@@ -151,6 +151,16 @@ describe("country question card", () => {
     expect(screen.getByRole("button", { name: "Nicht dort gewesen" })).toBeEnabled();
   });
 
+  it("TRAVTRACK_UNAVAILABLE says TravTrack is no longer the source and keeps the question", async () => {
+    vi.mocked(locationSuggestionsApi.accept).mockRejectedValue(refusal("TRAVTRACK_UNAVAILABLE"));
+    const { reload } = mount();
+
+    fireEvent.click(screen.getByRole("button", { name: "Besucht" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/nicht mehr deine Standortquelle/);
+    expect(reload).not.toHaveBeenCalled();
+  });
+
   it("SUGGESTION_ALREADY_RESOLVED says so and reloads", async () => {
     vi.mocked(locationSuggestionsApi.accept).mockRejectedValue(
       refusal("SUGGESTION_ALREADY_RESOLVED")

@@ -59,6 +59,15 @@ describe("runTravTrackProjections", () => {
     expect(await prisma.locationSuggestion.count({ where: { userId, kind: "country" } })).toBe(1);
   });
 
+  it("skips an account whose provider is not TravTrack", async () => {
+    await setLocationProvider(userId, "none");
+
+    await runTravTrackProjections({ countryAt });
+
+    expect(await prisma.countryDay.count({ where: { userId } })).toBe(0);
+    expect(await prisma.travTrackDirtyDay.count({ where: { userId, done: 0 } })).toBe(2);
+  });
+
   it("with TravTrack off does nothing; the dirty days wait", async () => {
     await switches.set({ beta: true, config: false });
 

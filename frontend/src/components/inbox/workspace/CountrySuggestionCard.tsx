@@ -26,6 +26,7 @@ const ERROR_KEYS: Readonly<Record<string, string>> = {
   SUGGESTION_ALREADY_RESOLVED: `${L}.errors.resolved`,
   SUGGESTION_ACCEPT_IN_PROGRESS: `${L}.errors.busy`,
   TRAVTRACK_DISABLED: `${L}.errors.disabled`,
+  TRAVTRACK_UNAVAILABLE: `${L}.errors.providerOff`,
 };
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

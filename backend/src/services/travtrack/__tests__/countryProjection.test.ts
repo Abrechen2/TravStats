@@ -8,6 +8,7 @@ import { projectTravTrackCountryDays, type CountryProjectionDeps } from "../coun
 import { deleteTravTrackRange } from "../deleteRange";
 import { COUNTRY_DAYS_BIT, markTravTrackDaysDirty } from "../dirtyDays";
 import { ingestTravTrackPoints } from "../ingest";
+import { setLocationProvider } from "../../locationProvider/provider";
 import { makeFlight, makeUser, storePoint, wipeTravTrack } from "./fixtures";
 import { travTrackSwitches } from "./switches";
 
@@ -58,6 +59,7 @@ describe("projectTravTrackCountryDays", () => {
 
   beforeEach(async () => {
     await switches.set({ beta: true, config: true });
+    await setLocationProvider(userId, "travtrack");
     await wipeTravTrack([userId]);
     await prisma.flight.deleteMany({ where: { userId } });
     await prisma.countryDay.deleteMany({ where: { userId } });
@@ -256,6 +258,29 @@ describe("projectTravTrackCountryDays", () => {
     expect(result).toMatchObject({ status: "disabled", errorKind: "disabled", projected: 0 });
     expect(await rows()).toEqual([]);
     expect((await dirtyRow(D1))!.done & COUNTRY_DAYS_BIT).toBe(0);
+  });
+
+  it("an account whose provider is not TravTrack is not projected; its rows stay as they are", async () => {
+    await replaceCountryDays(
+      userId,
+      "travtrack",
+      { startAt: utcMidnight(D1), endAtExclusive: utcMidnight(D2) },
+      [{ date: D1, countryCode: "JP", pointCount: 7, airportPointCount: 0, spanKm: 0 }]
+    );
+    await seoul(at(D1, "03:00:00"));
+    await dirty([D1]);
+    await setLocationProvider(userId, "none");
+    const before = await rows();
+
+    const result = await projectTravTrackCountryDays(userId, deps);
+
+    expect(result).toMatchObject({ status: "skipped", projected: 0 });
+    expect(await rows()).toEqual(before);
+    expect((await dirtyRow(D1))!.done & COUNTRY_DAYS_BIT).toBe(0);
+
+    // Back on TravTrack, the waiting day runs.
+    await setLocationProvider(userId, "travtrack");
+    expect((await projectTravTrackCountryDays(userId, deps)).projected).toBe(1);
   });
 
   it("a dawarich sweep never deletes a travtrack row and the reverse", async () => {

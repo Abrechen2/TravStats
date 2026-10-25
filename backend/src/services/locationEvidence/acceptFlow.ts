@@ -10,7 +10,8 @@
  *      a fresh token. A fresh claim of someone else answers 409
  *      `SUGGESTION_ACCEPT_IN_PROGRESS` — two clicks never write twice —
  *      anything else 409 `SUGGESTION_ALREADY_RESOLVED`. TravTrack switched off
- *      answers 403 `TRAVTRACK_DISABLED` before claiming.
+ *      answers 403 `TRAVTRACK_DISABLED`, an account no longer on provider
+ *      `travtrack` 409 `TRAVTRACK_UNAVAILABLE`, both before claiming.
  *   2. RE-CHECK by the kind's own rule, holding no transaction, after
  *      capturing the history generation.
  *   3. PUBLISH under the TravTrack lock: the row must still carry this claim
@@ -27,8 +28,8 @@ import { randomUUID } from "crypto";
 import { prisma, type DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
-import { travTrackInstanceOn } from "../travtrack/availability";
 import { takeTravTrackLock } from "../travtrack/lock";
+import { assertTravTrackDerivationAllowed } from "./allowed";
 import { historyGeneration } from "./generation";
 
 /** A claim older than this is a crashed accept and may be taken over. */
@@ -164,9 +165,7 @@ export async function acceptFlow(
 ): Promise<StoredSuggestion> {
   const row = await load(userId, id);
   if (row.status === "accepted") return row;
-  if (row.provider === "travtrack" && !(await travTrackInstanceOn())) {
-    throw new AppError("TravTrack is switched off on this server", 403, "TRAVTRACK_DISABLED");
-  }
+  if (row.provider === "travtrack") await assertTravTrackDerivationAllowed(userId);
 
   const token = randomUUID();
   const { count } = await prisma.locationSuggestion.updateMany({

@@ -79,11 +79,3 @@ export async function ackDirtyDay(
      WHERE user_id = ${userId} AND day = ${day}::date AND version = ${version}`;
   return count > 0;
 }
-
-/** Accounts with a day `bit` has still to run on. */
-export async function accountsWithDirtyDays(bit: number): Promise<string[]> {
-  const rows = await prisma.$queryRaw<{ user_id: string }[]>`
-    SELECT DISTINCT user_id FROM travtrack_dirty_days WHERE (done & ${bit}) = 0
-     ORDER BY user_id`;
-  return rows.map((r) => r.user_id);
-}
