@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import type { TrackPoint } from "../../../../lib/api/travtrack";
 import {
   distanceM,
+  linesBounds,
   rangeTotals,
   speedColor,
   speedPieces,
   splitAfterPause,
   SPEED_STOPS,
+  type LonLat,
 } from "../trackGeometry";
 
 /**
@@ -98,5 +100,25 @@ describe("rangeTotals", () => {
     expect(still.avgKmh).toBeNull();
     expect(still.movingMs).toBe(0);
     expect(still.coverage).toBeNull();
+  });
+});
+
+describe("linesBounds", () => {
+  it("frames a year of vertices without spreading them into Math.min (no RangeError)", () => {
+    const many: LonLat[] = Array.from({ length: 400_000 }, (_, i) => [
+      10 + (i % 1000) * 0.001,
+      50 + Math.floor(i / 1000) * 0.001,
+    ]);
+    const bounds = linesBounds([many]);
+    expect(bounds).not.toBeNull();
+    const [[west, south], [east, north]] = bounds!;
+    expect(west).toBeLessThan(10);
+    expect(east).toBeGreaterThan(10.999);
+    expect(south).toBeLessThan(50);
+    expect(north).toBeGreaterThan(50.399);
+  });
+
+  it("is null without a vertex", () => {
+    expect(linesBounds([[], []])).toBeNull();
   });
 });

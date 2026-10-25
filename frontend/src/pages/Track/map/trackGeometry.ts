@@ -148,14 +148,24 @@ export function rangeTotals(
   };
 }
 
-/** The frame around the lines, the margin following their own extent (≥ ~500 m). */
+/**
+ * The frame around the lines, the margin following their own extent (≥ ~500 m).
+ * One loop, never `Math.min(...all)`: a year of vertices overflows the call stack.
+ */
 export function linesBounds(lines: readonly LonLat[][]): [LonLat, LonLat] | null {
-  const points = lines.flat();
-  if (points.length === 0) return null;
-  const lons = points.map((p) => p[0]);
-  const lats = points.map((p) => p[1]);
-  const [west, east] = [Math.min(...lons), Math.max(...lons)];
-  const [south, north] = [Math.min(...lats), Math.max(...lats)];
+  let west = Infinity;
+  let east = -Infinity;
+  let south = Infinity;
+  let north = -Infinity;
+  for (const line of lines) {
+    for (const [lon, lat] of line) {
+      if (lon < west) west = lon;
+      if (lon > east) east = lon;
+      if (lat < south) south = lat;
+      if (lat > north) north = lat;
+    }
+  }
+  if (west === Infinity) return null;
   const pad = Math.max(0.005, (east - west) / 10, (north - south) / 10);
   return [
     [west - pad, Math.max(-90, south - pad)],
