@@ -24,6 +24,7 @@ import {
   type TravTrackSummary,
 } from "../../lib/api/travtrack";
 import TrackExportDialog from "../../pages/Track/TrackExportDialog";
+import TravTrackImports from "./TravTrackImports";
 
 /** The circles offered, metres: a flat to a small town (the server takes 50–5000). */
 export const ZONE_RADII = [100, 250, 500, 1000, 2000] as const;
@@ -203,6 +204,12 @@ export default function TravTrackSection(): JSX.Element | null {
           )}
         </div>
       )}
+
+      <TravTrackImports
+        canImport={caps.enabled && !isDemo}
+        canDelete={!isDemo}
+        onChanged={() => void load()}
+      />
 
       <h3 className="t-card-title" style={{ marginTop: "var(--ts-space-lg)" }}>
         {t(`${NS}.zones.title`)}

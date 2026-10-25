@@ -110,4 +110,13 @@ describe("TravTrack availability", () => {
     expect(await holdsTravTrackData(userId)).toBe(true);
     await prisma.travTrackDeletedRange.deleteMany({ where: { userId } });
   });
+
+  it("an import, even a failed one without points, is TravTrack data", async () => {
+    expect(await holdsTravTrackData(userId)).toBe(false);
+    await prisma.travTrackImport.create({
+      data: { userId, kind: "gpx", fileName: "x.gpx", status: "failed" },
+    });
+    expect(await holdsTravTrackData(userId)).toBe(true);
+    await prisma.travTrackImport.deleteMany({ where: { userId } });
+  });
 });

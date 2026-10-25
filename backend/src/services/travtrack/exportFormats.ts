@@ -55,6 +55,7 @@ export function travTrackExportJson(window: Span, built: TravTrackExport) {
           speed: row?.speedMps ?? null,
           course: row?.course ?? null,
           deviceId: row?.deviceId ?? null,
+          origin: row?.origin ?? null,
           purpose: row?.purpose ?? "everyday",
           segment: index,
         };

@@ -46,6 +46,8 @@ export async function projectionsOnPointsRemoved(
   userId: string,
   cause: PointsRemovedCause
 ): Promise<void> {
+  // An import deleted: its points' days are known exactly (plan E8).
+  if (cause.kind === "origin") return projectionsOnHistoryDeleted(tx, userId, cause.days);
   if (cause.kind === "range") {
     const fromMs = cause.from.getTime();
     const toMs = cause.to.getTime();

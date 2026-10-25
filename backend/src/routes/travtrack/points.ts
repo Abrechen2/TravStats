@@ -156,6 +156,17 @@ router.get(
   })
 );
 
+/** The file names of the imports among these devices (`file:<importId>`). */
+async function fileNamesOf(userId: string, deviceIds: Array<string | null>) {
+  const ids = deviceIds.flatMap((d) => (d?.startsWith("file:") ? [d.slice(5)] : []));
+  if (ids.length === 0) return new Map<string, string>();
+  const rows = await prisma.travTrackImport.findMany({
+    where: { userId, id: { in: ids } },
+    select: { id: true, fileName: true },
+  });
+  return new Map(rows.map((r) => [`file:${r.id}`, r.fileName]));
+}
+
 /**
  * GET /travtrack/summary — how much is stored, from when to when, from which
  * devices. With a span (named like a delete) it is that span's summary: the
@@ -186,13 +197,21 @@ router.get(
       prisma.travTrackDeletedRange.count({ where: { userId } }),
       prisma.travTrackPrivacyZone.count({ where: { userId } }),
     ]);
+    const files = await fileNamesOf(
+      userId,
+      devices.map((d) => d.deviceId)
+    );
     res.json({
       pointCount: agg._count._all,
       firstAt: agg._min.t?.toISOString() ?? null,
       lastAt: agg._max.t?.toISOString() ?? null,
       lastReceivedAt: agg._max.createdAt?.toISOString() ?? null,
       devices: devices
-        .map((d) => ({ deviceId: d.deviceId, pointCount: d._count._all }))
+        .map((d) => ({
+          deviceId: d.deviceId,
+          pointCount: d._count._all,
+          fileName: (d.deviceId && files.get(d.deviceId)) ?? null,
+        }))
         .sort((a, b) => b.pointCount - a.pointCount),
       deletedRanges,
       zones,

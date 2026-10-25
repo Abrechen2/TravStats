@@ -111,5 +111,49 @@
       "done": "{{count}} positions deleted.",
       "notDone": "The positions were not deleted. Try again."
     }
+  },
+  "imports": {
+    "title": "GPX files",
+    "intro": "A GPX file, say from a sports app or an older tracker, goes into your TravTrack history. Positions inside a privacy zone or a deleted span are discarded, and what is stored already is not added twice. An import starts no suggestions.",
+    "choose": "Import GPX",
+    "running": "Importing {{name}} …",
+    "cancelled": "The import was deleted before it finished.",
+    "report": {
+      "stored_one": "{{count}} position stored",
+      "stored_other": "{{count}} positions stored",
+      "duplicate_one": "{{count}} already there",
+      "duplicate_other": "{{count}} already there",
+      "zone_one": "{{count}} discarded in a privacy zone",
+      "zone_other": "{{count}} discarded in a privacy zone",
+      "deleted_one": "{{count}} discarded in a deleted span",
+      "deleted_other": "{{count}} discarded in a deleted span",
+      "invalid_one": "{{count}} unusable",
+      "invalid_other": "{{count}} unusable",
+      "withoutTime_one": "{{count}} without a time skipped",
+      "withoutTime_other": "{{count}} without a time skipped"
+    },
+    "points_one": "{{count}} position",
+    "points_other": "{{count}} positions",
+    "span": "{{from}} – {{to}}",
+    "status": {
+      "running": "running",
+      "interrupted": "interrupted (the server restarted) – import the file again",
+      "cancelled": "deleted"
+    },
+    "delete": "Delete import",
+    "deleteConfirm_one": "Delete the import “{{name}}” and its {{count}} position? Positions from other sources stay.",
+    "deleteConfirm_other": "Delete the import “{{name}}” and its {{count}} positions? Positions from other sources stay.",
+    "deleted_one": "{{count}} position deleted.",
+    "deleted_other": "{{count}} positions deleted.",
+    "errors": {
+      "noTimes": "The file holds no times – without a time a position is no history. Export it as a recording (track), not as a route.",
+      "unreadable": "The file is not a readable GPX file, or too large to read.",
+      "running": "An import is running already. Wait until it has finished.",
+      "tooLarge": "The file is too large – 25 MB at most.",
+      "notFound": "This import no longer exists.",
+      "rateLimited": "Too many imports in a short time. Try again in a quarter of an hour.",
+      "lost": "Whether the import finished is not known – the server restarted. Check the list.",
+      "tooManyPoints": "The file holds more than 200,000 positions – more than one import takes. Split it, say by month."
+    }
   }
 }
