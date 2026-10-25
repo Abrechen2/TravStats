@@ -1,10 +1,11 @@
 import { z } from "zod";
 
-import { prisma, type DbTransaction } from "../../db";
-import logger from "../../utils/logger";
+import type { DbTransaction } from "../../db";
 import {
+  flightRecorderWindows,
   TRIP_RECORDING_TRIP_SELECT,
   tripRecordingBounds,
+  tripSpanInstants,
   type TripRecordingBounds,
 } from "../tripRecording/bounds";
 import type { RecordingBreak } from "../tripRecording/segments";
@@ -30,6 +31,15 @@ import { privacyCutBy, type LonLat } from "./privacyCut";
  * A revoke wins: an automatic narrowing writes only the row it read, at the
  * version it read (`updateMany`/`deleteMany` on id and version), and never
  * creates one.
+ *
+ * What restricted the route since the share only accumulates (Codex review,
+ * second round): every former home, every span the trip's days had and every
+ * flight the trip had are recorded by database triggers in the transaction of
+ * the change itself (`travtrack_share_past_*`, migration
+ * `travtrack_share_restrictions`), whatever path the change took. A read and a
+ * narrowing apply them on top of the rules in force, so widening the days,
+ * removing a flight or clearing the home never brings back what they hid.
+ * Only the owner's own share clears them (`shareSnapshot.ts`).
  */
 
 type Db = DbTransaction;
@@ -66,6 +76,12 @@ const homePosition = z.object({
   lon: z.number().finite().min(-180).max(180),
 });
 
+/** A stored home place as the circle a route keeps out of, or null when it names no position. */
+const circleOfHome = (place: unknown): ZoneCircle | null => {
+  const home = homePosition.safeParse(place);
+  return home.success ? { lat: home.data.lat, lon: home.data.lon, radiusM: SNAPSHOT_HOME_M } : null;
+};
+
 export async function homeCircle(
   db: Pick<Db, "userSettings">,
   userId: string
@@ -74,8 +90,7 @@ export async function homeCircle(
     where: { userId },
     select: { homePlace: true },
   });
-  const home = homePosition.safeParse(settings?.homePlace);
-  return home.success ? { lat: home.data.lat, lon: home.data.lon, radiusM: SNAPSHOT_HOME_M } : null;
+  return circleOfHome(settings?.homePlace);
 }
 
 export async function boundsOf(db: Db, userId: string, tripId: string) {
@@ -91,12 +106,15 @@ export async function boundsOf(db: Db, userId: string, tripId: string) {
  * circle in force since. A narrowing or a read may only take away from it.
  */
 export type SharedState = {
+  /** The stored route's row: what restricted it since is recorded against it. */
+  id: string;
   sharedFrom: Date | null;
   sharedUntil: Date | null;
   homeCircles: unknown;
 };
 
 export const SHARED_STATE_SELECT = {
+  id: true,
   sharedFrom: true,
   sharedUntil: true,
   homeCircles: true,
@@ -144,25 +162,69 @@ export const withCircles = (list: readonly ZoneCircle[], more: readonly ZoneCirc
 /** Everything a stored route is narrowed by, as of now. */
 export type Narrowing = {
   bounds: TripRecordingBounds;
-  /** Every home the route keeps away from: those stored, those passed in, the current one. */
+  /** Every home the route keeps away from: those stored, those recorded since, the current one. */
   homes: ZoneCircle[];
   /** Zones in force, former zones that still cover the window, every home. */
   circles: ZoneCircle[];
-  /** Deleted spans and the current flights' recorder windows. */
+  /** Deleted spans, and the recorder windows of the trip's flights now and since the share. */
   cuts: RecordingBreak[];
 };
+
+const TRIP_RECORDING_SPAN_SELECT = {
+  startDate: true,
+  endDate: true,
+  startDay: true,
+  endDay: true,
+  startZone: true,
+  endZone: true,
+} as const;
+
+/** What the triggers recorded against the stored route since the share. */
+async function restrictionsSince(db: Db, userId: string, snapshotId: string) {
+  const where = { snapshotId };
+  const [spans, flights, homes] = await Promise.all([
+    db.travTrackSharePastSpan.findMany({ where, select: TRIP_RECORDING_SPAN_SELECT }),
+    db.travTrackSharePastFlight.findMany({ where }),
+    db.travTrackSharePastHome.findMany({ where, select: { homePlace: true } }),
+  ]);
+  const instants = await Promise.all(spans.map((span) => tripSpanInstants(userId, span)));
+  return {
+    // A span the server cannot state any more narrows to nothing (fail closed).
+    spans: instants,
+    flightWindows: await flightRecorderWindows(flights),
+    // A recorded home that names no position kept nothing away when it was in force either.
+    homes: homes.map((h) => circleOfHome(h.homePlace)).filter((c): c is ZoneCircle => c !== null),
+  };
+}
+
+/** `bounds` narrowed to each recorded span, or null when one is unknown or nothing is left. */
+function withinSpans(
+  bounds: TripRecordingBounds,
+  spans: ReadonlyArray<Pick<TripRecordingBounds, "fromMs" | "untilMs"> | null>
+): TripRecordingBounds | null {
+  let fromMs = bounds.fromMs;
+  let untilMs = bounds.untilMs;
+  for (const span of spans) {
+    if (!span) return null;
+    fromMs = Math.max(fromMs, span.fromMs);
+    untilMs = Math.min(untilMs, span.untilMs);
+  }
+  return fromMs < untilMs ? { ...bounds, fromMs, untilMs } : null;
+}
 
 export async function narrowingFor(
   db: Db,
   userId: string,
   tripId: string,
-  state: SharedState,
-  extraHomes: readonly ZoneCircle[] = []
+  state: SharedState
 ): Promise<Narrowing | null> {
   const current = await boundsOf(db, userId, tripId);
-  const bounds = current ? effectiveBounds(current, state) : null;
+  const shared = current ? effectiveBounds(current, state) : null;
   const stored = homesOf(state);
-  if (!bounds || !stored) return null;
+  if (!shared || !stored) return null;
+  const since = await restrictionsSince(db, userId, state.id);
+  const bounds = withinSpans(shared, since.spans);
+  if (!bounds) return null;
   const [zones, home, deleted] = await Promise.all([
     privacyCirclesFor(userId, bounds.fromMs, db),
     homeCircle(db, userId),
@@ -175,7 +237,7 @@ export async function narrowingFor(
       select: { fromAt: true, toAt: true },
     }),
   ]);
-  const homes = withCircles(stored, [...extraHomes, ...(home ? [home] : [])]);
+  const homes = withCircles(stored, [...since.homes, ...(home ? [home] : [])]);
   return {
     bounds,
     homes,
@@ -183,6 +245,7 @@ export async function narrowingFor(
     cuts: [
       ...deleted.map((d): RecordingBreak => [d.fromAt.getTime(), d.toAt.getTime()]),
       ...bounds.flightWindows,
+      ...since.flightWindows,
     ],
   };
 }
@@ -232,7 +295,6 @@ export async function narrowedRoute(
 }
 
 const NARROW_SELECT = {
-  id: true,
   tripId: true,
   version: true,
   geometry: true,
@@ -245,10 +307,10 @@ const NARROW_ATTEMPTS = 3;
  * one read (id and version); a row that went meanwhile stays gone. A row that
  * moved on (another narrowing, the owner sharing again) is read again and
  * narrowed once more — whether this one was to shrink it or to remove it.
- * Illegible geometry is left as it is: it is served to
- * nobody, and the owner's next share replaces it.
+ * Illegible geometry is left as it is: it is served to nobody, and the
+ * owner's next share replaces it.
  */
-async function narrowOne(db: Db, userId: string, id: string, extraHomes: readonly ZoneCircle[]) {
+async function narrowOne(db: Db, userId: string, id: string) {
   for (let attempt = 0; attempt < NARROW_ATTEMPTS; attempt++) {
     const row = await db.travTrackShareSnapshot.findFirst({
       where: { id, userId },
@@ -256,7 +318,7 @@ async function narrowOne(db: Db, userId: string, id: string, extraHomes: readonl
     });
     const lines = row ? readStored(row.geometry) : null;
     if (!row || !lines) return;
-    const n = await narrowingFor(db, userId, row.tripId, row, extraHomes);
+    const n = await narrowingFor(db, userId, row.tripId, row);
     const kept = n ? narrow(lines, n) : [];
     const guard = { id: row.id, version: row.version };
     if (!n || kept.length === 0) {
@@ -291,43 +353,21 @@ async function narrowOne(db: Db, userId: string, id: string, extraHomes: readonl
 
 /**
  * Narrows the account's stored routes (one trip's, or all) by the rules in
- * force through `db`. `homes` are former homes to keep hidden as well (the
- * one a settings change just replaced). Inside a removal's transaction a
- * failure fails the removal; it never widens anything.
+ * force through `db`, in the transaction of the change that calls it: a
+ * failure here fails the change. It never widens anything.
  */
 export async function narrowShareSnapshots(
   db: Db,
   userId: string,
-  opts: { tripId?: string; homes?: readonly ZoneCircle[] } = {}
+  opts: { tripId?: string } = {}
 ): Promise<void> {
   const rows = await db.travTrackShareSnapshot.findMany({
     where: { userId, ...(opts.tripId ? { tripId: opts.tripId } : {}) },
     select: { id: true },
   });
-  for (const row of rows) await narrowOne(db, userId, row.id, opts.homes ?? []);
+  for (const row of rows) await narrowOne(db, userId, row.id);
 }
 
 /** The `onPointsRemoved` handler (`deleteRange.ts`): the deletion or zone is already in `tx`. */
 export const narrowOnPointsRemoved = (tx: Db, userId: string): Promise<void> =>
   narrowShareSnapshots(tx, userId);
-
-/**
- * After a change that removed no point — the home place, a trip's days: in
- * its own transaction, and a failure only logs, because every read narrows
- * by the same rules anyway.
- */
-export async function narrowShareSnapshotsAfter(
-  userId: string,
-  opts: { tripId?: string; homes?: readonly ZoneCircle[] } = {}
-): Promise<void> {
-  try {
-    await prisma.$transaction((tx) => narrowShareSnapshots(tx, userId, opts), { timeout: 60_000 });
-  } catch (error) {
-    logger.warn({
-      operation: "travtrack.share_snapshot.narrow_failed",
-      userId,
-      tripId: opts.tripId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-}

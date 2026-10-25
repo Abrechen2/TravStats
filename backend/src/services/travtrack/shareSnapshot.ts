@@ -15,6 +15,7 @@ import {
   narrowedRoute,
   SHARED_STATE_SELECT,
   untimed,
+  type SharedState,
   vertexCount,
   type TimedGeometry,
   type TimedVertex,
@@ -34,7 +35,9 @@ import {
  * more with the home circle added, because simplification makes chords the
  * raw points never had. It stores the result with each vertex's time, the
  * window and the home circle; from then on it is only ever narrowed
- * (`shareNarrow.ts`), and every read narrows it again by the rules in force.
+ * (`shareNarrow.ts`), and every read narrows it again by the rules in force
+ * and by every restriction recorded since. A new share clears those records:
+ * it selects from the trip, its flights and the home as they are now.
  */
 
 export const SNAPSHOT_MAX_VERTICES = 2000;
@@ -138,11 +141,7 @@ const OWNER_SELECT = {
 async function ownerView(
   db: Db,
   userId: string,
-  row: { version: number; geometry: unknown; createdAt: Date; tripId: string } & {
-    sharedFrom: Date | null;
-    sharedUntil: Date | null;
-    homeCircles: unknown;
-  }
+  row: { version: number; geometry: unknown; createdAt: Date; tripId: string } & SharedState
 ) {
   const geometry = untimed(await narrowedRoute(db, userId, row));
   return {
@@ -183,6 +182,12 @@ export async function shareTripRoute(userId: string, tripId: string) {
         update: { ...fields, version: { increment: 1 }, createdAt: new Date() },
         select: OWNER_SELECT,
       });
+      // The owner's share starts over: what restricted the route before it is
+      // in this build already (it read the trip, its flights and the home now).
+      const since = { snapshotId: row.id };
+      await tx.travTrackSharePastSpan.deleteMany({ where: since });
+      await tx.travTrackSharePastFlight.deleteMany({ where: since });
+      await tx.travTrackSharePastHome.deleteMany({ where: since });
       return ownerView(tx, userId, row);
     },
     { timeout: 60_000 }

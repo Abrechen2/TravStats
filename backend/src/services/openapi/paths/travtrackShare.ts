@@ -50,7 +50,8 @@ registry.registerPath({
   description:
     "Builds a geometry-only snapshot from the trip's TravTrack points: inside the trip's days, " +
     "outside its flights, privacy-cut on the final simplified geometry, nothing within 1 km of " +
-    "home. A rebuild raises the version.",
+    "home. A rebuild raises the version and starts over: what restricted the former share " +
+    "since (homes, flights, narrower days) no longer applies beyond what the trip has now.",
   tags: ["TravTrack"],
   request: { params: tripParams },
   responses: {
@@ -83,7 +84,9 @@ registry.registerPath({
   description:
     "`id` is the reader's own copy. Geometry, version and the sharer's display name only: the " +
     "stored route narrowed by the sharer's current zones, homes, deletions, flights and trip " +
-    "days. Rate-limited per reader (429).",
+    "days, and by every home, flight and narrower span of days the sharer had since sharing — " +
+    "widening the days, removing a flight or clearing the home never shows more again; only a " +
+    "new share does. Rate-limited per reader (429).",
   tags: ["TravTrack"],
   request: { params: tripParams },
   responses: {

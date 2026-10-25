@@ -5772,27 +5772,101 @@ model TravTrackGap {
 /// timestamps, privacy-cut on its final shape. Exists only once the owner
 /// shares the route; rebuilt by every range delete and zone change.
 model TravTrackShareSnapshot {
-  id         String   @id @default(uuid())
-  userId     String   @map("user_id")
-  tripId     String   @unique @map("trip_id")
-  version    Int      @default(1)
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  tripId      String    @unique @map("trip_id")
+  version     Int       @default(1)
   /// `[lon, lat][][]`, one array per line.
-  geometry   Json
-  pointCount Int      @map("point_count")
-  createdAt  DateTime @default(now()) @map("created_at")
+  geometry    Json
+  pointCount  Int       @map("point_count")
+  createdAt   DateTime  @default(now()) @map("created_at")
   /// The time window the owner shared, `[sharedFrom, sharedUntil)`: the trip's
   /// days at the owner's last build. An automatic rebuild or a read uses its
-  /// overlap with the trip's current days — it may narrow, never widen.
+  /// overlap with the trip's current days and every span recorded since
+  /// (`TravTrackSharePastSpan`) — it may narrow, never widen.
   sharedFrom  DateTime? @map("shared_from")
   sharedUntil DateTime? @map("shared_until")
   /// Every home circle in force since the owner's last build, `[{lat, lon,
   /// radiusM}]`: a moved home keeps its former place hidden too.
   homeCircles Json      @default("[]") @map("home_circles")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user        User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip        Trip                       @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  pastSpans   TravTrackSharePastSpan[]
+  pastFlights TravTrackSharePastFlight[]
+  pastHomes   TravTrackSharePastHome[]
 
   @@map("travtrack_share_snapshots")
+}
+
+/// What restricted a shared route since the owner's last share, recorded by
+/// database triggers in the transaction of the change itself, whatever path
+/// it took (migration `travtrack_share_restrictions`): every read and every
+/// narrowing applies them on top of the rules in force, so widening a trip's
+/// days, removing a flight or clearing the home never brings back what they
+/// hid. Only the owner's own share clears them. Columns mirror the source rows.
+///
+/// A trip's days as they were before a change: the route keeps to the
+/// intersection of every span the trip has had.
+model TravTrackSharePastSpan {
+  id         String    @id @default(uuid())
+  snapshotId String    @map("snapshot_id")
+  startDate  DateTime? @map("start_date")
+  endDate    DateTime? @map("end_date")
+  startDay   DateTime? @map("start_day") @db.Date
+  endDay     DateTime? @map("end_day") @db.Date
+  startZone  String?   @map("start_zone")
+  endZone    String?   @map("end_zone")
+  capturedAt DateTime  @default(now()) @map("captured_at")
+
+  snapshot TravTrackShareSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@index([snapshotId])
+  @@map("travtrack_share_past_spans")
+}
+
+/// A flight of the trip as it was before it was changed, moved, cancelled or
+/// deleted: its recorder window stays cut out of the route.
+model TravTrackSharePastFlight {
+  id                   String    @id @default(uuid())
+  snapshotId           String    @map("snapshot_id")
+  departureTime        DateTime? @map("departure_time")
+  arrivalTime          DateTime? @map("arrival_time")
+  depTimeSemantics     String    @map("dep_time_semantics")
+  arrTimeSemantics     String    @map("arr_time_semantics")
+  depTimezone          String?   @map("dep_timezone")
+  arrTimezone          String?   @map("arr_timezone")
+  depPrecision         String?   @map("dep_precision")
+  arrPrecision         String?   @map("arr_precision")
+  actualDeparture      DateTime? @map("actual_departure")
+  actualArrival        DateTime? @map("actual_arrival")
+  runwayDepartureTime  DateTime? @map("runway_departure_time")
+  runwayArrivalTime    DateTime? @map("runway_arrival_time")
+  onlineCheckInOpensAt DateTime? @map("online_check_in_opens_at")
+  onlineCheckInZone    String?   @map("online_check_in_zone")
+  depIata              String?   @map("dep_iata")
+  depIcao              String?   @map("dep_icao")
+  arrIata              String?   @map("arr_iata")
+  arrIcao              String?   @map("arr_icao")
+  capturedAt           DateTime  @default(now()) @map("captured_at")
+
+  snapshot TravTrackShareSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@index([snapshotId])
+  @@map("travtrack_share_past_flights")
+}
+
+/// A home the owner had before a change: the route keeps away from it too.
+model TravTrackSharePastHome {
+  id         String   @id @default(uuid())
+  snapshotId String   @map("snapshot_id")
+  homePlace  Json     @map("home_place")
+  capturedAt DateTime @default(now()) @map("captured_at")
+
+  snapshot TravTrackShareSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@index([snapshotId])
+  @@map("travtrack_share_past_homes")
 }
 
 model TravelPlanUsage {

@@ -1,7 +1,8 @@
 import { Router, Response, NextFunction } from "express";
-import { homeCircle, narrowShareSnapshotsAfter } from "../../services/travtrack/shareNarrow";
 import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
+import { takeTravTrackLock } from "../../services/travtrack/lock";
+import { narrowShareSnapshots } from "../../services/travtrack/shareNarrow";
 import { AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { settingsLimiter } from "../../middleware/rateLimit";
@@ -83,14 +84,22 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     });
 
     if (homePlace !== undefined) {
-      const formerHome = await homeCircle(prisma, userId);
-      await prisma.userSettings.updateMany({
-        where: onlyIfEmpty ? { userId, homePlace: { equals: Prisma.DbNull } } : { userId },
-        data: { homePlace: homePlace === null ? Prisma.DbNull : homePlace },
-      });
-      // A shared route keeps away from the new home AND the one it replaces
-      // (TravTrack plan T7); every read narrows by the current home as well.
-      await narrowShareSnapshotsAfter(userId, { homes: formerHome ? [formerHome] : [] });
+      // A shared route keeps away from the new home AND every one it replaces
+      // (TravTrack plan T7). The replaced home is recorded by a trigger on this
+      // row, under its row lock, so two changes at once both count; the
+      // narrowing runs in the same transaction under the TravTrack lock, and
+      // if it fails the home does not change.
+      await prisma.$transaction(
+        async (tx) => {
+          await takeTravTrackLock(tx, userId);
+          await tx.userSettings.updateMany({
+            where: onlyIfEmpty ? { userId, homePlace: { equals: Prisma.DbNull } } : { userId },
+            data: { homePlace: homePlace === null ? Prisma.DbNull : homePlace },
+          });
+          await narrowShareSnapshots(tx, userId);
+        },
+        { timeout: 60_000 }
+      );
     }
     if (passportExpiry !== undefined) {
       await prisma.userSettings.updateMany({
