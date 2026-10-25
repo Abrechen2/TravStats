@@ -1,16 +1,17 @@
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import { buildUserDawarichConnection } from "../dawarich/dawarichResolver";
-import {
-  recorderWindow,
-  scheduledInstants,
-  type FlightWindowColumns,
-} from "../flightDevice/flightWindow";
 import { travTrackInstanceOn } from "../travtrack/availability";
 import { travTrackBreakSet } from "../travtrack/readSafe";
 import { extentOf } from "../../utils/extrema";
 import { locationHistoryBatches } from "../tripRecording/historyPoints";
-import { tripRecordingBounds, type RecordingTrip } from "../tripRecording/bounds";
+import {
+  FLIGHT_WINDOW_SELECT,
+  flightRecorderWindow,
+  tripRecordingBounds,
+  type FlightWindowColumns,
+  type RecordingTrip,
+} from "../tripRecording/bounds";
 import type { RecordingBatchRow, RecordingBreak } from "../tripRecording/segments";
 import { dawarichProvider } from "./dawarichProvider";
 import { getLocationProvider } from "./provider";
@@ -155,9 +156,16 @@ async function choose(
   };
 }
 
-/** A flight's recorder window as a read window, or null without a schedule. */
+/**
+ * A flight's recorder window as a read window, or null when it armed none.
+ * Precision-aware, the one window the trip exclusion and the share narrowing
+ * use too: a date-only or year-only flight stores a placeholder clock (noon,
+ * midnight on the 1st), and a window around it would serve everyday fixes as
+ * a flight recording. No window, no window read — only the fixes the phone
+ * linked to the flight remain (abstention, not invention).
+ */
 async function flightWindow(flight: FlightWindowColumns): Promise<ReadWindow | null> {
-  const window = recorderWindow(await scheduledInstants(flight));
+  const window = await flightRecorderWindow(flight);
   return window ? { fromMs: window[0], untilMs: window[1] + 1 } : null;
 }
 
@@ -268,17 +276,7 @@ export async function entryTrack(
   if (entry.kind === "flight") {
     const flight = await prisma.flight.findFirst({
       where: { id: entry.id, userId },
-      select: {
-        id: true,
-        departureTime: true,
-        arrivalTime: true,
-        depTimeSemantics: true,
-        arrTimeSemantics: true,
-        depIata: true,
-        depIcao: true,
-        arrIata: true,
-        arrIcao: true,
-      },
+      select: { id: true, ...FLIGHT_WINDOW_SELECT },
     });
     if (!flight) throw new AppError("Flight not found", 404);
     const { origin, coverage, alternatives, unchecked, devices } = await flightEntryTrack(

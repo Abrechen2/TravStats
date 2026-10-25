@@ -26,6 +26,7 @@ import {
 } from "../../services/flightDevice/flightTrackFile";
 import { handleGpxUpload } from "../trips/tourTracks";
 import { overlapsSchedule, scheduledInstants } from "../../services/flightDevice/flightWindow";
+import { FLIGHT_WINDOW_SELECT } from "../../services/tripRecording/bounds";
 import { trackTimes, type TrackZoneColumns } from "../../services/flightDevice/trackTimes";
 import { flightLiveTrackingEnabled } from "../../services/settings/accountPrefs";
 import logger from "../../utils/logger";
@@ -68,19 +69,8 @@ type TrackMeta = Prisma.FlightTrackGetPayload<{ select: typeof TRACK_META_SELECT
 async function loadOwnedFlight(flightId: string, userId: string) {
   const flight = await prisma.flight.findFirst({
     where: { id: flightId, userId },
-    select: {
-      id: true,
-      departureTime: true,
-      arrivalTime: true,
-      depTimeSemantics: true,
-      arrTimeSemantics: true,
-      depTimezone: true,
-      arrTimezone: true,
-      depIata: true,
-      depIcao: true,
-      arrIata: true,
-      arrIcao: true,
-    },
+    // The window columns: a provider track is read in the precision-aware recorder window.
+    select: { id: true, ...FLIGHT_WINDOW_SELECT },
   });
   if (!flight) throw new AppError("Flight not found", 404, "FLIGHT_NOT_FOUND");
   return flight;

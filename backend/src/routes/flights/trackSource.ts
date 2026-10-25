@@ -6,7 +6,7 @@ import {
   type EntryTrackDevice,
   type TrackOrigin,
 } from "../../services/locationProvider/entryTrack";
-import type { FlightWindowColumns } from "../../services/flightDevice/flightWindow";
+import type { FlightWindowColumns } from "../../services/tripRecording/bounds";
 import type { ZoneCircle } from "../../services/travtrack/classify";
 import { viewableFlightTrack } from "../../services/travtrack/flightTrackView";
 import { privacyCirclesFor } from "../../services/travtrack/privacyCircles";

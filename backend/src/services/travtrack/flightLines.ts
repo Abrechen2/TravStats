@@ -1,6 +1,6 @@
 import { prisma } from "../../db";
 import { extentOf } from "../../utils/extrema";
-import { recorderWindow, scheduledInstants } from "../flightDevice/flightWindow";
+import { FLIGHT_WINDOW_SELECT, flightRecorderWindow } from "../tripRecording/bounds";
 import { observationOf, TRAVTRACK_OBSERVATION_SELECT } from "../locationProvider/travtrackProvider";
 import type { LocationObservation } from "../locationProvider/types";
 import { byDevice } from "../locationProvider/entryTrack";
@@ -24,17 +24,9 @@ export type TravTrackFlightLine = {
   origin: "travtrack";
 };
 
-const FLIGHT_SELECT = {
-  id: true,
-  departureTime: true,
-  arrivalTime: true,
-  depTimeSemantics: true,
-  arrTimeSemantics: true,
-  depIata: true,
-  depIcao: true,
-  arrIata: true,
-  arrIcao: true,
-} as const;
+// The window columns: a date-only or year-only flight arms no window (its
+// stored clock is a placeholder), the same precision-aware window everywhere.
+const FLIGHT_SELECT = { id: true, ...FLIGHT_WINDOW_SELECT } as const;
 
 export async function travTrackFlightLines(
   userId: string,
@@ -47,7 +39,7 @@ export async function travTrackFlightLines(
   if (flights.length === 0) return [];
   const windows = new Map<string, [number, number]>();
   for (const f of flights) {
-    const w = recorderWindow(await scheduledInstants(f));
+    const w = await flightRecorderWindow(f);
     if (w) windows.set(f.id, w);
   }
   const [inWindows, linked] = await Promise.all([

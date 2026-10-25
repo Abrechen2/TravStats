@@ -104,6 +104,44 @@ describe("flight tracks from the location provider", () => {
     expect(res.body.track.segmentStarts).toHaveLength(2);
   });
 
+  it("a date-only or year-only flight arms no window: everyday fixes around its placeholder are no flight", async () => {
+    // Codex P2: `scheduledInstants` read the stored placeholders (noon, midnight
+    // on the 1st) as clocks, so ground fixes near them showed as a recording.
+    await setLocationProvider(userId, "travtrack");
+    const placeholders = [
+      { at: Date.parse("2026-10-12T03:00:00Z"), semantics: "DATE_ONLY", precision: "day" },
+      { at: Date.parse("2026-10-01T00:00:00Z"), semantics: "UNKNOWN", precision: "year" },
+    ];
+    for (const ph of placeholders) {
+      await wipeTravTrack([userId]);
+      await prisma.flight.update({
+        where: { id: flightId },
+        data: {
+          departureTime: new Date(ph.at),
+          arrivalTime: new Date(ph.at),
+          depTimeSemantics: ph.semantics,
+          arrTimeSemantics: ph.semantics,
+          depTimezone: "Asia/Seoul",
+          arrTimezone: "Asia/Seoul",
+          depPrecision: ph.precision,
+          arrPrecision: ph.precision,
+        },
+      });
+      for (let i = 0; i < 6; i++) {
+        await storePoint(userId, {
+          t: ph.at + (i - 3) * 10 * MIN,
+          lat: 37.5 + i * 0.001,
+          lon: 127,
+        });
+      }
+      const res = await request(app).get(`/api/v1/flights/${flightId}/track`).set("Cookie", cookie);
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ origin: null, track: null });
+      const lines = await request(app).get("/api/v1/flights/track-lines").set("Cookie", cookie);
+      expect(lines.body.lines).toEqual([]);
+    }
+  });
+
   it("a deleted range inside a flight is a break on its page and on the map, not a bridged step", async () => {
     // Codex P2: tombstones were not breaks, so a short deleted span was bridged and measured.
     await setLocationProvider(userId, "travtrack");
