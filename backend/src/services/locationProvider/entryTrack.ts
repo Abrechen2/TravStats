@@ -7,9 +7,11 @@ import {
   type FlightWindowColumns,
 } from "../flightDevice/flightWindow";
 import { travTrackInstanceOn } from "../travtrack/availability";
+import { travTrackBreakSet } from "../travtrack/readSafe";
+import { extentOf } from "../../utils/extrema";
 import { locationHistoryBatches } from "../tripRecording/historyPoints";
 import { tripRecordingBounds, type RecordingTrip } from "../tripRecording/bounds";
-import type { RecordingBatchRow } from "../tripRecording/segments";
+import type { RecordingBatchRow, RecordingBreak } from "../tripRecording/segments";
 import { dawarichProvider } from "./dawarichProvider";
 import { getLocationProvider } from "./provider";
 import {
@@ -214,6 +216,11 @@ export async function tripEntryTrack(
     plan.origin === "travtrack" ? emptyProvider : plan.dawarich;
   const history = await locationHistoryBatches(userId, trip, provider, {
     extra: plan.origin === "travtrack" ? travTrack : [],
+    // TravTrack's deleted ranges and reported pauses break its trip line as
+    // they break its flight lines; they say nothing about Dawarich's history.
+    ...(plan.origin === "travtrack"
+      ? { breaksOf: await travTrackBreaksFor(userId, travTrack) }
+      : {}),
   });
   if (
     opts.source === "dawarich" &&
@@ -229,6 +236,17 @@ export async function tripEntryTrack(
     coverage: history.coverage,
     batches: history.batches,
   };
+}
+
+/** The break set over the span the points cover; a linked fix may lie outside the trip's days. */
+async function travTrackBreaksFor(
+  userId: string,
+  points: readonly LocationObservation[]
+): Promise<(deviceId: string | null) => RecordingBreak[]> {
+  // Iteratively: a long history spread into Math.min/max overflows the call.
+  const span = extentOf(points.map((p) => p.atMs));
+  if (!span) return () => [];
+  return travTrackBreakSet(userId, { fromMs: span.min, untilMs: span.max + 1 });
 }
 
 /** A provider holding nothing: TravTrack's points for a trip arrive as `extra`. */

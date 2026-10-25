@@ -7,7 +7,12 @@ import {
 } from "../locationProvider/types";
 
 import { classifyPoint, tripRecordingBounds, type RecordingTrip } from "./bounds";
-import { storedPoints, type RecordingBatchRow, type StoredPoint } from "./segments";
+import {
+  storedPoints,
+  type RecordingBatchRow,
+  type RecordingBreak,
+  type StoredPoint,
+} from "./segments";
 
 /**
  * A trip's share of the account's location history (TravTrack plan T4; from
@@ -22,6 +27,10 @@ import { storedPoints, type RecordingBatchRow, type StoredPoint } from "./segmen
  * A point the trip recording also holds (same device, same second, same
  * position) is shown once. `extra` are observations the caller adds — the
  * TravTrack points linked to the trip — deduplicated by the provider's ref.
+ * `breaksOf` names the spans a device's line must not be joined across beyond
+ * the flights — TravTrack's deleted ranges and the pauses that phone reported
+ * (`travTrackBreakSet`), exactly as its day view, its export and its flight
+ * lines are broken.
  *
  * The answer carries the provider's coverage: a truncated or unreachable read
  * is said to be one, never served as the whole recording.
@@ -35,7 +44,11 @@ export async function locationHistoryBatches(
   userId: string,
   trip: RecordingTrip,
   provider: LocationProvider | null,
-  opts: { legacy?: readonly RecordingBatchRow[]; extra?: readonly LocationObservation[] } = {}
+  opts: {
+    legacy?: readonly RecordingBatchRow[];
+    extra?: readonly LocationObservation[];
+    breaksOf?: (deviceId: string | null) => readonly RecordingBreak[];
+  } = {}
 ): Promise<HistoryBatches> {
   if (!provider) return { batches: [], coverage: null };
   const bounds = await tripRecordingBounds(userId, trip);
@@ -69,7 +82,7 @@ export async function locationHistoryBatches(
     batches: [...byDevice.entries()].map(([deviceId, points]) => ({
       deviceId,
       points: points as unknown as Prisma.JsonValue,
-      breaks: bounds.flightWindows,
+      breaks: [...bounds.flightWindows, ...(opts.breaksOf?.(deviceId) ?? [])],
     })),
     coverage: read.coverage,
   };

@@ -3,6 +3,7 @@ import { encryptApiKey } from "../../../utils/encryption";
 import { entryTrack, flightEntryTrack, tripEntryTrack } from "../entryTrack";
 import { setLocationProvider } from "../provider";
 import { travTrackSwitches } from "../../travtrack/__tests__/switches";
+import { pointsByDevice, rawSegments } from "../../tripRecording/segments";
 import {
   makeFlight,
   makeTrip,
@@ -203,6 +204,65 @@ describe("entryTrack", () => {
       DAY - HOUR,
       DAY + 3 * HOUR,
     ]);
+  });
+
+  it("the trip track breaks at a deleted range and at a pause the phone reported, never across", async () => {
+    const tripId = await makeTrip(userId);
+    await setLocationProvider(userId, "travtrack");
+    const MIN = 60_000;
+    // Two pairs of close fixes (minutes and metres apart), each straddling a break.
+    await storePoint(userId, { t: DAY + 5 * HOUR, lat: 37.5, lon: 127, device: "phone-a" });
+    await storePoint(userId, {
+      t: DAY + 5 * HOUR + 20 * MIN,
+      lat: 37.501,
+      lon: 127,
+      device: "phone-a",
+    });
+    await storePoint(userId, { t: DAY + 7 * HOUR, lat: 37.502, lon: 127, device: "phone-a" });
+    await storePoint(userId, {
+      t: DAY + 7 * HOUR + 20 * MIN,
+      lat: 37.503,
+      lon: 127,
+      device: "phone-a",
+    });
+    await storePoint(userId, { t: DAY + 7 * HOUR, lat: 37.6, lon: 127, device: "phone-b" });
+    await storePoint(userId, {
+      t: DAY + 7 * HOUR + 20 * MIN,
+      lat: 37.601,
+      lon: 127,
+      device: "phone-b",
+    });
+    await prisma.travTrackDeletedRange.create({
+      data: {
+        userId,
+        fromAt: new Date(DAY + 5 * HOUR + 5 * MIN),
+        toAt: new Date(DAY + 5 * HOUR + 15 * MIN),
+      },
+    });
+    await prisma.travTrackGap.create({
+      data: {
+        userId,
+        deviceId: "phone-a",
+        fromAt: new Date(DAY + 7 * HOUR + 5 * MIN),
+        toAt: new Date(DAY + 7 * HOUR + 15 * MIN),
+        reason: "recorderSilent",
+      },
+    });
+
+    const track = await tripEntryTrack(userId, await tripOf(tripId));
+    const segments = rawSegments(pointsByDevice(track.batches, "UTC")).map((s) =>
+      s.map((p) => p[0])
+    );
+    expect(segments).toEqual(
+      expect.arrayContaining([
+        [DAY + 5 * HOUR],
+        [DAY + 5 * HOUR + 20 * MIN, DAY + 7 * HOUR],
+        [DAY + 7 * HOUR + 20 * MIN],
+        // phone-a's pause says nothing about phone-b.
+        [DAY + 7 * HOUR, DAY + 7 * HOUR + 20 * MIN],
+      ])
+    );
+    expect(segments).toHaveLength(4);
   });
 
   it("?source=dawarich on an entry with an own recording shows Dawarich and says so", async () => {
