@@ -56,3 +56,8 @@ export const yearScopeQuery = z.object({
         "undated records belong to no year and are left out. Omitted: lifetime."
     ),
 });
+
+/** `/stats/summary` with `year` AND `compareYear`: both years side by side. */
+export function summaryCompareResponse<T extends z.ZodTypeAny>(summary: T) {
+  return z.object({ current: summary, compare: summary, scope: statsScopeSchema });
+}

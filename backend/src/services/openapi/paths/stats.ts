@@ -40,6 +40,7 @@ import { registry } from "../registry";
 import { TimeseriesQuerySchema } from "../../../schemas/statsQuery";
 import {
   statsScopeSchema,
+  summaryCompareResponse,
   yearOrRangeQuery,
   yearQuery,
   yearScopeErrors,
@@ -125,14 +126,7 @@ registry.registerPath({
       description: "Stats; with `year` AND `compareYear`, both years side by side",
       content: {
         "application/json": {
-          schema: z.union([
-            statsResponse,
-            z.object({
-              current: statsResponse,
-              compare: statsResponse,
-              scope: statsScopeSchema,
-            }),
-          ]),
+          schema: z.union([statsResponse, summaryCompareResponse(statsResponse)]),
         },
       },
     },
