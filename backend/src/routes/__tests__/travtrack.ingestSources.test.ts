@@ -421,19 +421,94 @@ describe("TravTrack — OwnTracks and Overland", () => {
       expect(await pointCount()).toBe(0);
     });
 
-    it("the account's provider is not TravTrack: 403 TRAVTRACK_NOT_ACTIVE, nothing stored", async () => {
-      await setLocationProvider(userId, "none");
-      const ot = await request(app)
-        .post(OT)
-        .set("Authorization", basic(owntracks.token))
-        .send(owntracksAndroidLocation);
-      expect([ot.status, ot.body.code]).toEqual([403, "TRAVTRACK_NOT_ACTIVE"]);
-      const ol = await request(app)
-        .post(OL)
-        .set("Authorization", `Bearer ${overland.token}`)
-        .send(overlandBatch);
-      expect([ol.status, ol.body.code]).toEqual([403, "TRAVTRACK_NOT_ACTIVE"]);
-      expect(await pointCount()).toBe(0);
+    describe("after the provider left TravTrack", () => {
+      // The fixtures are recorded at 2026-10-20T08:00Z (Overland: 08:00–08:02).
+      const leaveAt = async (iso: string | null) => {
+        await setLocationProvider(userId, "none");
+        await prisma.userSettings.update({
+          where: { userId },
+          data: { travtrackLeftAt: iso === null ? null : new Date(iso) },
+        });
+      };
+
+      it("points recorded before the switch are stored and answered as usual", async () => {
+        await leaveAt("2026-10-21T00:00:00Z");
+        await request(app)
+          .post(OT)
+          .set("Authorization", basic(owntracks.token))
+          .send(owntracksAndroidLocation)
+          .expect(200, []);
+        await request(app)
+          .post(OL)
+          .set("Authorization", `Bearer ${overland.token}`)
+          .send(overlandBatch)
+          .expect(200, { result: "ok" });
+        // Overland's first fix is the OwnTracks one again (same second and place).
+        expect(await pointCount()).toBe(3);
+      });
+
+      it("points recorded after it: 403 TRAVTRACK_NOT_ACTIVE, nothing stored", async () => {
+        await leaveAt("2026-10-19T00:00:00Z");
+        const ot = await request(app)
+          .post(OT)
+          .set("Authorization", basic(owntracks.token))
+          .send(owntracksAndroidLocation);
+        expect([ot.status, ot.body.code]).toEqual([403, "TRAVTRACK_NOT_ACTIVE"]);
+        const ol = await request(app)
+          .post(OL)
+          .set("Authorization", `Bearer ${overland.token}`)
+          .send(overlandBatch);
+        expect([ol.status, ol.body.code]).toEqual([403, "TRAVTRACK_NOT_ACTIVE"]);
+        expect(await pointCount()).toBe(0);
+      });
+
+      it("a mixed batch stores the earlier points and still refuses: never ok for a dropped one", async () => {
+        // Between the Overland batch's second (08:01) and third (08:02) point.
+        await leaveAt("2026-10-20T08:01:30Z");
+        const ol = await request(app)
+          .post(OL)
+          .set("Authorization", `Bearer ${overland.token}`)
+          .send(overlandBatch);
+        expect(ol.status).toBe(403);
+        expect(ol.body).toMatchObject({ code: "TRAVTRACK_NOT_ACTIVE", stored: 2, refused: 1 });
+        expect(await pointCount()).toBe(2);
+        // The phone resends the whole batch: nothing is stored twice.
+        const again = await request(app)
+          .post(OL)
+          .set("Authorization", `Bearer ${overland.token}`)
+          .send(overlandBatch);
+        expect(again.body).toMatchObject({ stored: 0, refused: 1 });
+        expect(await pointCount()).toBe(2);
+
+        const ot = await request(app)
+          .post(OT)
+          .set("Authorization", basic(owntracks.token))
+          .send([
+            { ...owntracksIosLocation, tst: 1_792_483_200 + 30 },
+            { ...owntracksAndroidLocation, tst: 1_792_483_200 + 600 },
+          ]);
+        expect([ot.status, ot.body.code]).toEqual([403, "TRAVTRACK_NOT_ACTIVE"]);
+        expect(await pointCount()).toBe(3);
+      });
+
+      it("an account that never had TravTrack as its provider gets nothing stored", async () => {
+        await leaveAt(null);
+        const ot = await request(app)
+          .post(OT)
+          .set("Authorization", basic(owntracks.token))
+          .send(owntracksAndroidLocation);
+        expect([ot.status, ot.body.code]).toEqual([403, "TRAVTRACK_NOT_ACTIVE"]);
+        expect(await pointCount()).toBe(0);
+      });
+
+      it("a message holding no location is still answered [] (nothing to refuse)", async () => {
+        await leaveAt(null);
+        await request(app)
+          .post(OT)
+          .set("Authorization", basic(owntracks.token))
+          .send(owntracksTransition)
+          .expect(200, []);
+      });
     });
 
     it("no log line carries a token", async () => {

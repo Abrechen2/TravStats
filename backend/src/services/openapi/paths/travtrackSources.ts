@@ -53,8 +53,11 @@ const ingestRefusals = {
   401: invalidToken,
   403: {
     description:
-      "TRAVTRACK_DISABLED (TravTrack is off) or TRAVTRACK_NOT_ACTIVE (this account's location " +
-      "provider is not TravTrack): nothing stored, the app keeps its queue",
+      "TRAVTRACK_DISABLED (TravTrack is off; nothing stored) or TRAVTRACK_NOT_ACTIVE (positions " +
+      "recorded after the account's provider left TravTrack, or on an account that never chose " +
+      "it). With TRAVTRACK_NOT_ACTIVE the positions recorded before the switch ARE stored and " +
+      "`stored`/`refused` count both; the app keeps the batch and a resend finds the stored " +
+      "part as duplicates",
     content: errorContent,
   },
   413: { description: "TRACK_BODY_TOO_LARGE: over 2 MB", content: errorContent },

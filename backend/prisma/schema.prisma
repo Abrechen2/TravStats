@@ -911,6 +911,10 @@ model UserSettings {
   locationProvider    String @default("none") @map("location_provider")
   /// Raised on every switch, so a client can tell a stale answer from a fresh one.
   locationProviderRev Int    @default(0) @map("location_provider_rev")
+  /// When the provider last changed away from `travtrack`; null while it is
+  /// `travtrack` or never was. OwnTracks/Overland points recorded before it are
+  /// still TravTrack's, later ones are refused (TravTrack plan E9).
+  travtrackLeftAt     DateTime? @map("travtrack_left_at")
 
   /// „Heimatort" (Companion audit 2026-10-23): where the traveller lives,
   /// `{name, lat, lon, zone}` — the Companion's "leave" reminder reads it. Was
