@@ -440,7 +440,8 @@ are written at the top of that job.
 
 [`.github/workflows/security.yml`](.github/workflows/security.yml) runs
 `npm audit` over production dependencies (blocking at *critical*), plus
-Trivy and CodeQL, whose findings land in the repository's Security tab.
+Trivy, whose report is printed into the job log; nothing is uploaded to
+GitHub code scanning.
 
 Locally, [`.pre-commit-config.yaml`](.pre-commit-config.yaml) runs
 typecheck and lint for whichever tree a commit touches, alongside the
