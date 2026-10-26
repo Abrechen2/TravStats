@@ -7,6 +7,7 @@ import {
   indexCruiseLegs,
   journeysFromCruise,
   withCruiseLegHover,
+  type CruiseLegSource,
 } from "../cruiseLegJourneys";
 import { journeyPath } from "../journeyCardParts";
 import { createCruiseArcsLayer } from "../../../../layers/cruiseArcsLayer";
@@ -223,5 +224,36 @@ describe("the hover a cruise leg shows", () => {
     expect(html).toContain("Oslo");
     expect(cruiseLegHoverHtml({}, "AIDAperla", tFor("de"))).toContain("AIDAperla");
     expect(cruiseLegHoverHtml({}, "AIDAperla", tFor("de"))).not.toContain("gesegelt");
+  });
+});
+
+describe("a cruise leg's hover names ports, not UN/LOCODEs", () => {
+  const coded = (id: number, name: string, unlocode: string, lat: number, lon: number): Port => ({
+    ...port(id, name, unlocode.slice(0, 2), lat, lon),
+    unlocode,
+  });
+  const leg = (dep: Port, arr: Port) =>
+    journeysFromCruise({
+      id: "cx",
+      cruiseLine: "AIDA",
+      startDate: "2025-06-01",
+      status: "completed",
+      departurePort: dep,
+      arrivalPort: arr,
+      stops: [],
+    } as CruiseLegSource)[0];
+
+  it("shows Copenhagen → Kiel, with no DKCPH / DEKEL beside them", () => {
+    const j = leg(
+      coded(1, "Copenhagen", "DKCPH", 55.68, 12.6),
+      coded(2, "Kiel", "DEKEL", 54.3, 10.1)
+    );
+    expect(j.dep).toMatchObject({ name: "Copenhagen", code: null });
+    expect(j.arr).toMatchObject({ name: "Kiel", code: null });
+  });
+
+  it("falls back to the code only where the port has no name", () => {
+    const j = leg(coded(1, " ", "DKCPH", 55.68, 12.6), coded(2, "Kiel", "DEKEL", 54.3, 10.1));
+    expect(j.dep.name).toBe("DKCPH");
   });
 });

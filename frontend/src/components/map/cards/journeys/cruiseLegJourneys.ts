@@ -42,10 +42,16 @@ export interface CruiseLegDatum {
   color?: Rgb;
 }
 
+/**
+ * A port by its name. Unlike an airport's IATA code, nobody reads a UN/LOCODE
+ * ("DKCPH", "DEKEL" — the beta.29 hover), so it is no second label here; it
+ * stands in only for a port that has no name (see `map/portLabel.ts`).
+ */
 function endOf(port: Port): JourneyEnd {
+  const name = port.name?.trim();
   return {
-    name: port.name,
-    code: port.unlocode,
+    name: name || port.unlocode || "?",
+    code: null,
     country: port.country,
     lat: port.lat,
     lon: port.lon,
