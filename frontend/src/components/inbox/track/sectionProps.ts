@@ -12,6 +12,11 @@ import type { TrackSectionPanelProps } from "./TrackSectionPanel";
  *   - a trip: its span.
  */
 
+const finiteOrNull = (v: unknown): number | null => {
+  const n = typeof v === "number" ? v : Number(v);
+  return v != null && v !== "" && Number.isFinite(n) ? n : null;
+};
+
 /** The approach shown before a stay: where it was reached from. */
 export const STAY_LEAD_MS = 60 * 60_000;
 
@@ -28,6 +33,7 @@ export function staySectionProps(row: DawarichStay): TrackSectionPanelProps | nu
     zone: row.zone,
     why: { key: `track:inbox.why.${kind}` },
     coverage: row.evidence.readCoverage ?? null,
+    pointCount: row.pointCount,
     ring:
       Number.isFinite(radius) && radius > 0
         ? { lat: row.lat, lon: row.lon, radiusM: radius }
@@ -47,6 +53,7 @@ export function countrySectionProps(
     zone: "UTC",
     why: { key: "track:inbox.why.country", values: { country } },
     coverage: suggestion.coverage,
+    pointCount: finiteOrNull(suggestion.explanation.params.points),
     countryCode: String(suggestion.explanation.params.country ?? "") || null,
   };
 }

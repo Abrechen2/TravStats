@@ -55,6 +55,14 @@ export interface TrackSectionPanelProps {
   ring?: { lat: number; lon: number; radiusM: number } | null;
   /** ISO alpha-2 of a country question: its outline is drawn under the line. */
   countryCode?: string | null;
+  /**
+   * The positions the question itself names (its evidence: a stay's points,
+   * a country question's points on the ground). Set, it is THE count the card
+   * shows — tile and detail alike — so the card never states two numbers
+   * (beta.29 UAT: "6764 Positionen" beside a tile reading 7657, the drawn
+   * vertices of the whole window). Unset, the drawn section's count.
+   */
+  pointCount?: number | null;
 }
 
 function useCountryShape(code: string | null | undefined, enabled: boolean) {
@@ -87,6 +95,10 @@ export default function TrackSectionPanel(props: TrackSectionPanelProps): JSX.El
 
   const loaded = state.kind === "loaded" ? state.stretches : null;
   const facts = useMemo(() => (loaded ? sectionFacts(loaded) : null), [loaded]);
+  const points =
+    props.pointCount != null && Number.isFinite(props.pointCount)
+      ? props.pointCount
+      : (facts?.points ?? null);
   const none = t("track:inbox.value.none");
   const rows: SectionFact[] = [
     { label: t("track:inbox.fact.span"), value: formatSpan(props.window, zone, t) },
@@ -99,7 +111,7 @@ export default function TrackSectionPanel(props: TrackSectionPanelProps): JSX.El
       label: t("track:inbox.fact.speed"),
       value: formatSpeed(facts?.avgKmh ?? null, facts?.maxKmh ?? null, locale, t),
     },
-    { label: t("track:inbox.fact.points"), value: facts ? String(facts.points) : none },
+    { label: t("track:inbox.fact.points"), value: points === null ? none : String(points) },
     ...(props.facts ?? []).map((f) => ({ label: t(f.labelKey), value: f.value })),
   ];
   const bar = dayBarFor(props.window, zone);
@@ -118,7 +130,7 @@ export default function TrackSectionPanel(props: TrackSectionPanelProps): JSX.El
           facts.cuts > 0
             ? t("track:inbox.detail.cuts", { count: facts.cuts })
             : t("track:inbox.detail.noCuts"),
-          t("track:inbox.detail.points", { count: facts.points }),
+          ...(points === null ? [] : [t("track:inbox.detail.points", { count: points })]),
         ]
       : []),
     ...(props.more ?? []),

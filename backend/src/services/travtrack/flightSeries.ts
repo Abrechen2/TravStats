@@ -16,6 +16,12 @@ export const TAKEOFF_CLIMB_M = 300;
 const CRUISE_MIN_ALTITUDE_M = 3000;
 const GROUND_SHARE = 0.2;
 const CRUISE_SHARE = 0.9;
+/** A level-off: the altitude stays within this band … */
+const LEVEL_BAND_M = 150;
+/** … for at least this long. */
+const LEVEL_HOLD_MS = 5 * 60_000;
+/** A level-off below this share of the apex is a hold during the climb, not cruise. */
+const LEVEL_MIN_SHARE = 0.6;
 /** The most samples one answer carries. */
 export const FLIGHT_PANEL_MAX_SAMPLES = 2000;
 
@@ -93,10 +99,44 @@ export function landingOf(series: readonly FlightSample[][]): number | null {
 }
 
 /**
- * Minutes from take-off to the first sample at 90 % of the highest altitude,
- * inside the take-off's stretch, and only for a real cruise (≥ 3000 m). Null
- * when there is no take-off or the climb was broken — never counted from the
- * start of the window, which would add the taxi.
+ * The first level-off of the cruise inside `run` from `from` on: a sample at
+ * or above 60 % of the apex (and 3000 m) the altitude then stays within
+ * ±150 m of for at least five minutes. A later step climb (LH719 levelled at
+ * 10,500 m 37 min after take-off, stepped to 11,500 m hours later — beta.29
+ * UAT) is cruise, not climb, so the first level wins.
+ */
+function firstLevelOff(
+  run: readonly FlightSample[],
+  from: number,
+  top: number
+): FlightSample | null {
+  const floor = Math.max(CRUISE_MIN_ALTITUDE_M, top * LEVEL_MIN_SHARE);
+  for (let i = from; i < run.length; i++) {
+    const alt = run[i][1];
+    if (alt === null || alt < floor) continue;
+    let held = false;
+    for (let j = i + 1; j < run.length; j++) {
+      const next = run[j][1];
+      // A missing altitude proves nothing: only a reading in the band holds the level.
+      if (next === null) continue;
+      if (Math.abs(next - alt) > LEVEL_BAND_M) break;
+      if (run[j][0] - run[i][0] >= LEVEL_HOLD_MS) {
+        held = true;
+        break;
+      }
+    }
+    if (held) return run[i];
+  }
+  return null;
+}
+
+/**
+ * Minutes from take-off to the first level-off of the cruise
+ * (`firstLevelOff`), inside the take-off's stretch, and only for a real
+ * cruise (≥ 3000 m). Without a level-off in the data (too few samples), the
+ * first sample at 90 % of the highest altitude. Null when there is no
+ * take-off or the climb was broken — never counted from the start of the
+ * window, which would add the taxi.
  */
 export function climbToCruiseMinutes(series: readonly FlightSample[][]): number | null {
   const top = topAltitude(series);
@@ -104,7 +144,9 @@ export function climbToCruiseMinutes(series: readonly FlightSample[][]): number 
   const takeoff = takeoffOf(series);
   if (!takeoff) return null;
   const run = series[takeoff.stretch];
-  const reached = run.slice(takeoff.index).find((s) => s[1] !== null && s[1] >= top * CRUISE_SHARE);
+  const reached =
+    firstLevelOff(run, takeoff.index, top) ??
+    run.slice(takeoff.index).find((s) => s[1] !== null && s[1] >= top * CRUISE_SHARE);
   if (!reached) return null;
   return Math.round(((reached[0] - takeoff.tMs) / 60_000) * 10) / 10;
 }

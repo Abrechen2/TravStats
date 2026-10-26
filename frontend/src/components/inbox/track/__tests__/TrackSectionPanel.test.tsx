@@ -135,6 +135,17 @@ describe("TrackSectionPanel", () => {
     expect(fact("points")).toBe("2");
   });
 
+  it("one count on the card: the question's own positions win over the drawn vertices (beta.29 UAT)", async () => {
+    views.range.mockResolvedValue(part([[p(0, 50, 8), p(10, 50.1, 8), p(20, 50.2, 8)]]));
+    show({ pointCount: 6764 });
+    scrollIntoView();
+    await screen.findByTestId("section-map");
+    expect(fact("points")).toBe("6764");
+    fireEvent.click(screen.getByRole("button", { name: "track:inbox.more" }));
+    expect(screen.getByText(`track:inbox.detail.points {"count":6764}`)).toBeInTheDocument();
+    expect(screen.queryByText(`track:inbox.detail.points {"count":3}`)).toBeNull();
+  });
+
   it("TravTrack switched off is said as itself", async () => {
     views.range.mockRejectedValue({
       response: { status: 403, data: { code: "TRAVTRACK_DISABLED" } },

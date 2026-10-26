@@ -41,6 +41,53 @@ describe("take-off, landing and the climb", () => {
     expect(climbToCruiseMinutes(series)).toBe(12);
   });
 
+  it("the climb ends at the first level-off; a later step climb is cruise (LH719, beta.29 UAT)", () => {
+    const series = [
+      [
+        s(0, 450, 5),
+        s(10, 460, 75), // take-off
+        s(30, 9000, 220),
+        s(47, 10500, 240), // levelled, 37 min after take-off
+        s(60, 10520, 245),
+        s(120, 10510, 245),
+        s(290, 11000, 245), // step climb hours later
+        s(303, 11500, 245), // old rule: first sample at 90 % of the apex — 293 min
+        s(380, 12500, 240),
+        s(400, 12510, 240),
+      ],
+    ];
+    expect(climbToCruiseMinutes(series)).toBe(37);
+  });
+
+  it("missing altitudes never confirm a level-off (Codex)", () => {
+    const series = [
+      [
+        s(0, 450, 5),
+        s(5, 460, 75), // take-off
+        s(20, 7000, 200),
+        s(22, null, 210),
+        s(25, null, 220),
+        s(35, 11000, 240),
+        s(45, 11020, 240),
+      ],
+    ];
+    expect(climbToCruiseMinutes(series)).toBe(30);
+  });
+
+  it("a short hold low in the climb is not the cruise", () => {
+    const series = [
+      [
+        s(0, 450, 5),
+        s(5, 460, 75), // take-off
+        s(15, 4000, 160),
+        s(25, 4050, 160), // ten minutes held at 4,000 m (< 60 % of the apex)
+        s(40, 11000, 240),
+        s(50, 11020, 240),
+      ],
+    ];
+    expect(climbToCruiseMinutes(series)).toBe(35);
+  });
+
   it("abstains: a series starting in the air has no take-off and no climb", () => {
     const series = [[s(0, 9000, null), s(5, 10000, null)]];
     expect(takeoffOf(series)).toBeNull();
