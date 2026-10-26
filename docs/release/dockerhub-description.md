@@ -27,11 +27,23 @@ passes (QR / PDF417 / OCR) and confirmation emails — all on your own
 
 server, no cloud, no telemetry.
 
-It's a logbook, not a live tracker — you record trips manually, scan a
+A logbook first — you record trips by hand, scan a boarding
 
-boarding pass, or import a confirmation email, and TravStats turns them
+pass, or import a confirmation email, and TravStats turns them
 
-into history, stats and maps.
+into history, stats and maps. Recording is optional and opt-in:
+
+the TravStats Companion app (in beta) can record your own
+
+flights and trips on your phone and upload them to your own
+
+server. TravTrack, an opt-in location history with privacy
+
+zones, is in development. TravStats does not follow other
+
+aircraft or people, and nobody sees where you are unless you
+
+create a share link yourself.
 
 
 

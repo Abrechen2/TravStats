@@ -5,7 +5,7 @@
 # TravStats
 
 **Self-hosted travel logbook for small households and groups (1–10 users).**
-It's a logbook, not a live tracker — you record trips manually, scan a boarding pass, or import a confirmation email, and TravStats turns them into history, stats and maps.
+A logbook first — record trips by hand, scan a boarding pass, import a confirmation email, or let the Companion app (in beta) record them on your phone — and TravStats turns them into history, stats and maps.
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Release](https://img.shields.io/github/v/release/Abrechen2/TravStats?include_prereleases&sort=semver)](https://github.com/Abrechen2/TravStats/releases)
@@ -36,9 +36,14 @@ interactive 2D and 3D maps, collect 270+ achievements, and import flights
 from boarding passes (QR / PDF417 / OCR), confirmation emails, or
 Excel/CSV — all on your own server, no cloud, no telemetry.
 
-It's a logbook, not a live tracker — you record trips manually, scan a
-boarding pass, or import a confirmation email, and TravStats turns them
-into history, stats and maps. Flight data is optionally enriched from
+A logbook first — you record trips by hand, scan a boarding pass, or
+import a confirmation email, and TravStats turns them into history,
+stats and maps. Recording is optional and opt-in: the TravStats
+Companion app (in beta) can record your own flights and trips on your
+phone and upload them to your own server. TravTrack, an opt-in location
+history with privacy zones, is in development. TravStats does not follow
+other aircraft or people, and nobody sees where you are unless you
+create a share link yourself. Flight data is optionally enriched from
 AirLabs / Aviationstack / OpenSky, but everything you record lives in
 your own PostgreSQL. No accounts on someone else's servers, no analytics,
 no ads.
