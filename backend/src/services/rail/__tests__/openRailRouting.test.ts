@@ -44,7 +44,11 @@ it("requests only railway tracks from the first attempt", async () => {
     snap_preventions: [],
     details: ["railway_class"],
     "ch.disable": true,
-    custom_model: { priority: [{ if: "railway_class != RAIL", multiply_by: "0" }] },
+    custom_model: {
+      priority: [
+        { if: "!(railway_class == RAIL || railway_class == NARROW_GAUGE)", multiply_by: "0" },
+      ],
+    },
   });
 });
 it("refuses any station snap beyond 500 metres", async () => {
@@ -178,10 +182,21 @@ describe("a tram or U-Bahn ride (tester report 2026-10-25)", () => {
       expect((await routeRailLine("https://routing.test", points, { mode })).ok).toBe(true);
       expect(bodies()[0]).toMatchObject({
         profile: "all_tracks",
-        custom_model: { priority: [{ if: "railway_class != RAIL", multiply_by: "0" }] },
+        custom_model: {
+          priority: [
+            { if: "!(railway_class == RAIL || railway_class == NARROW_GAUGE)", multiply_by: "0" },
+          ],
+        },
       });
     }
   );
+
+  it("accepts a narrow-gauge train (RhB, Harz) and still refuses light rail for a train", async () => {
+    fetchMock.mockResolvedValueOnce(response(answerOf("narrow_gauge")));
+    expect((await routeRailLine("https://routing.test", points)).ok).toBe(true);
+    fetchMock.mockResolvedValueOnce(response(answerOf("light_rail")));
+    expect((await routeRailLine("https://routing.test", points, { refresh: true })).ok).toBe(false);
+  });
 
   it("refuses a tram profile's answer that runs over mainline track", async () => {
     fetchMock.mockResolvedValue(response(answerOf("rail")));

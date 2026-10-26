@@ -47,7 +47,10 @@ interface ModeRouting {
  * OpenRailRouting's own `tramtrain` model counts it.
  */
 export const RAIL_MODE_ROUTING: Readonly<Record<RailRoutingMode, ModeRouting>> = {
-  rail: { profile: RAIL_ROUTING_PROFILE, classes: ["RAIL"] },
+  // Narrow gauge is a train too (RhB, Harz): RAIL alone left those rides
+  // without a route. Light rail and tram stay out — the reason main restricted
+  // trains at all is that a plain all_tracks route can run over them.
+  rail: { profile: RAIL_ROUTING_PROFILE, classes: ["RAIL", "NARROW_GAUGE"] },
   tram: { profile: "tram", classes: ["TRAM", "LIGHT_RAIL"] },
   metro: { profile: "subway", classes: ["SUBWAY", "LIGHT_RAIL"] },
 };
@@ -206,7 +209,7 @@ const UNKNOWN_PROFILE_MESSAGE = /profile '[^']*' does not exist/i;
  * connection (a station off its extract, or no tracks between); anything else
  * that is not a usable line is `unavailable`.
  *
- * A train asks `all_tracks` restricted to RAIL. A tram or U-Bahn ride asks its
+ * A train asks `all_tracks` restricted to RAIL and NARROW_GAUGE. A tram or U-Bahn ride asks its
  * own profile; where the instance has none, `all_tracks` restricted to the
  * mode's classes (a request custom model, which needs `ch.disable`). An
  * instance that refuses that too is `modeUnsupported` — never a plain
