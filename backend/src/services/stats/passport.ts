@@ -19,7 +19,6 @@ import { CONTINENT_GROUPS } from "../../shared/passportContinents";
 import {
   DEFAULT_COUNTRY_TIER,
   countCountries,
-  daysBetween,
   foldCountryEvidence,
   lodgingEvidence,
   type CountryGroundTime,
@@ -48,6 +47,7 @@ import { countEvidencePerCountry } from "./evidenceCountry";
 import { lodgingStampsPerCountry, type LodgingStamp, type StampLodging } from "./lodgingStamp";
 import { compareCountryRows, summarizePassport } from "./passportSummary";
 import type { CountryOverrideView, ExcludedCountry } from "./countryOverrides";
+import { dayInYear, portCallDays, scopeEvidenceInputs, scopeLodgingStays } from "./passportYear";
 
 /**
  * Re-exported so every caller and every test keeps importing the passport's
@@ -405,12 +405,35 @@ export function buildPassport(
    */
   homeCountries: readonly string[] = [],
   /** Port ends of completed ferry crossings (`./ferryEvidence.ts`), while ferry is visible. */
-  ferryEnds: readonly FerryEnd[] = []
+  ferryEnds: readonly FerryEnd[] = [],
+  /**
+   * Only this calendar year's evidence (companion-redesign C4, `./passportYear.ts`).
+   * Pass the WHOLE account's records: the chain is graded on all of them first.
+   */
+  year?: number
 ): Passport {
   flights = flights.filter((f) => !f.departureTime || f.departureTime <= now);
   placeVisits = placeVisits.filter((v) => !v.at || v.at <= now);
   portCalls = portCalls.filter((v) => !v.at || v.at <= now);
-  const thisYear = Number(localDay(now, profileZone).slice(0, 4));
+  // Under a year, "new" means first visited in THAT year — a lifetime fact, so
+  // it is read off the lifetime passport rather than off the year's evidence.
+  const lifetimeFirstVisit =
+    year === undefined
+      ? null
+      : new Map(
+          buildPassport(flights, airportCountries, homeIatas, now, portCalls, placeVisits, lodgings, _threshold, trackDays, roadtripStations, railEnds, profileZone, busEnds, homeCountries, ferryEnds) // prettier-ignore
+            .countries.map((c) => [c.code, c.firstVisitedYear ?? null])
+        );
+  // The sources that make rows on their own; the chain's legs stay whole.
+  const stampFlights =
+    year === undefined ? flights : flights.filter((f) => dayInYear(flightDay(f), year));
+  if (year !== undefined) {
+    portCalls = portCalls.filter((call) => portCallDays(call).some((d) => dayInYear(d, year)));
+    placeVisits = placeVisits.filter((v) => dayInYear(isoDayOf(v.at), year));
+    lodgings = scopeLodgingStays(lodgings, year, now);
+    trackDays = trackDays.filter((row) => dayInYear(row.date, year));
+  }
+  const thisYear = year ?? Number(localDay(now, profileZone).slice(0, 4));
   const home = new Set(homeIatas.map((c) => c.toUpperCase()));
   const homeCountrySet = new Set(
     homeCountries.map((c) => isoCountryCode(c)).filter((c): c is string => c !== null)
@@ -419,7 +442,7 @@ export function buildPassport(
   const byCountry = new Map<string, CountryAcc>();
   const firstSeen = new Map<string, { date: string | null; country: string | null }>();
 
-  for (const flight of flights) {
+  for (const flight of stampFlights) {
     if (!FLOWN.has(flight.status)) continue;
     // The departure airport's day, the one the spells below are read on — a
     // UTC cut made a Tokyo 07:30 on 1 January a stamp of the year before (forgejo#273).
@@ -595,11 +618,9 @@ export function buildPassport(
     ],
     homeCountrySet
   );
-  const evidenceInputs: EvidenceInput[] = [
+  const allInputs: EvidenceInput[] = [
     ...journeyInputs,
     ...portCalls.map((call): EvidenceInput => {
-      const from = isoDayOf(call.at);
-      const to = isoDayOf(call.until);
       return {
         country: call.country,
         kind: "port",
@@ -612,7 +633,7 @@ export function buildPassport(
         // The days the ship was alongside. No `groundMinutes`: a port call
         // bounds no departure that this derivation can read, and §3.4b forbids
         // synthesising one for anything but a flight pair.
-        days: from ? (to ? daysBetween(from, to) : [from]) : [],
+        days: portCallDays(call),
       };
     }),
     ...placeVisits.map((visit): EvidenceInput => ({
@@ -625,6 +646,7 @@ export function buildPassport(
     // Curated roadtrip stations attest ground travel; raw location points do not.
     ...roadtripEvidence(roadtripStations),
   ];
+  const evidenceInputs = year === undefined ? allInputs : scopeEvidenceInputs(allInputs, year);
   const evidence = foldCountryEvidence(evidenceInputs);
   const annotations = countryAnnotations(evidenceInputs);
   const liftedHome = new Set<string>();
@@ -697,16 +719,19 @@ export function buildPassport(
   // A home country lifted to visited dates from its own earliest record — a
   // real year, never the home setting's.
   const visitedYearOf = (code: string, acc: CountryAcc): number | null =>
-    firstVisitYears.get(code) ?? (homeCountrySet.has(code) ? acc.firstYear : null);
+    lifetimeFirstVisit
+      ? (lifetimeFirstVisit.get(code) ?? null)
+      : (firstVisitYears.get(code) ?? (homeCountrySet.has(code) ? acc.firstYear : null));
 
   const countries: PassportCountry[] = [...byCountry.entries()]
     .map(([code, acc]) => ({
       code,
       continent: acc.continent,
       entries: acc.entries.size,
-      firstYear: acc.firstYear,
+      // A year view's rows stand on that year's evidence alone (see `year`).
+      firstYear: year !== undefined && acc.firstYear !== null ? year : acc.firstYear,
       firstVisitedYear: visitedYearOf(code, acc),
-      lastYear: acc.lastYear,
+      lastYear: year !== undefined && acc.lastYear !== null ? year : acc.lastYear,
       airports: [...acc.airports.entries()]
         .sort(
           (a, b) =>

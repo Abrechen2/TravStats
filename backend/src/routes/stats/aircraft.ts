@@ -18,6 +18,8 @@ import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
 import { AuthRequest } from "../../middleware/auth";
 import { countableFlightWhere } from "../../shared/flightCounting";
+import { buildWhere } from "../../services/stats/summary";
+import { readYearQuery, statsScope } from "../../utils/stats/domainYear";
 // The response shapes live in `schemas/statsAircraft` and this file infers
 // from them, so the spec and the handler cannot describe different things
 // (forgejo#52).
@@ -45,7 +47,12 @@ router.get(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const where: Prisma.FlightWhereInput = { userId, ...countableFlightWhere() };
+      const year = readYearQuery(req.query, res);
+      if (year === null) return;
+      const where: Prisma.FlightWhereInput = {
+        ...(await buildWhere(userId, undefined, undefined, year)),
+        ...countableFlightWhere(),
+      };
 
       const [total, typeCounts] = await Promise.all([
         prisma.flight.count({ where }),
@@ -65,7 +72,7 @@ router.get(
         .sort((a, b) => b.count - a.count);
 
       const response: AircraftTypesResponse = { aircraftTypes, total };
-      res.json(response);
+      res.json({ ...response, scope: statsScope(year) });
     } catch (error) {
       next(error);
     }

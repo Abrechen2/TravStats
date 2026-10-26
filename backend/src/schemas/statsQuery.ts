@@ -14,6 +14,15 @@ export const DateRangeQuerySchema = z.object({
   toDate: z.string().optional(),
 });
 
+/**
+ * A date range OR a local calendar year (companion-redesign C4). Both at once
+ * is refused by `assertYearWithoutRange`, not here, so the refusal carries a
+ * stable code rather than a zod issue dump.
+ */
+export const DateRangeYearQuerySchema = DateRangeQuerySchema.extend({
+  year: z.coerce.number().int().min(1900).max(2100).optional(),
+});
+
 // Extended schema for summary endpoint with year comparison support
 export const SummaryQuerySchema = z.object({
   fromDate: z.string().optional(),

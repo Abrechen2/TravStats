@@ -197,6 +197,7 @@ describe("GET /api/v1/stats/hero", () => {
       airports: 3, // FRA, MUC, JFK
       co2Kg: expectedCo2Kg,
       flightTimeMinutes: 539, // 60 measured + 479 estimated (#268)
+      scope: { year: null },
     });
   });
 });
