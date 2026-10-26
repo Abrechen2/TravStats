@@ -97,8 +97,8 @@ const instancePatchSchema = z.object({
   /** May the rail lookup ask Transitous / db-rest (both on by default). */
   railTransitousEnabled: z.boolean().optional(),
   railDbRestEnabled: z.boolean().optional(),
-  /** A self-hosted OpenRailRouting for rail lines; "" switches it off. */
-  railRoutingUrl: railRoutingUrlField.optional(),
+  /** A self-hosted OpenRailRouting for rail lines; "" or null switches it off. */
+  railRoutingUrl: railRoutingUrlField.nullable().optional(),
 });
 
 /**

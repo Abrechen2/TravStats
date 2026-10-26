@@ -347,6 +347,17 @@ describe("Rail journeys and the instance's OpenRailRouting", () => {
       expect(res.body.settings.railRoutingUrl).toBeNull();
     });
 
+    it("reads the URL back on GET, and null clears it like an empty string", async () => {
+      await put({ railRoutingUrl: "https://orr.example.org" });
+      const read = () =>
+        request(app).get("/api/v1/admin/instance-settings").set("Cookie", adminCookie);
+      expect((await read()).body.settings.railRoutingUrl).toBe("https://orr.example.org");
+      const cleared = await put({ railRoutingUrl: null });
+      expect(cleared.status).toBe(200);
+      expect(cleared.body.settings.railRoutingUrl).toBeNull();
+      expect((await read()).body.settings.railRoutingUrl).toBeNull();
+    });
+
     it("refuses a URL with credentials, another scheme, or a query", async () => {
       for (const bad of ["http://u:p@orr.lan", "ftp://orr.lan", "http://orr.lan/?k=1", "orr"]) {
         const res = await put({ railRoutingUrl: bad });
