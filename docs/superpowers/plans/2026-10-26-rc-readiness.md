@@ -55,14 +55,14 @@ S = server (travstats-server), T = TravTrack session, A = app.
 | forgejo#320 station labels on the map | S | build |
 | forgejo#322 "a logbook, not a live tracker" text | S | rewrite README / Docker Hub / llms.txt copy |
 | forgejo#323 route and endpoint details for every domain | S | build |
-| forgejo#318 settings levels for market/place detection | S | build (owner: only this candidate in the RC) |
+| forgejo#318 settings levels for market/place detection | S | built on `feat/settings-levels-places` (level field already on main via forgejo#321 work) → beta.29 |
 | forgejo#321 full settings redesign | — | after the RC (owner) |
 | Discord "Domain: Bahn" tram/metro routing | S | `feat/rail-tram-routing` in progress |
 | companion#76 iOS background-launch crash | A | likely the F1 fix; verify on build 62, close |
 | companion#73 trip recording to the server | A | done through C6; close with evidence |
 | companion#79 cockpit GPS 0 after lock screen | A | fix |
 | companion#78 offline route map never completes | A | fix (download button, region first) |
-| companion#74 settings levels in the app | A | same scope as forgejo#318: market/place detection only |
+| companion#74 settings levels in the app | A | no app change: the app has no market/place detection setting; `settingsLevel` is read once it has one — after the RC |
 
 ### Out of the RC (owner, 2026-10-26)
 
