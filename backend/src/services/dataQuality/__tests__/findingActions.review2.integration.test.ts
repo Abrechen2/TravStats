@@ -565,4 +565,41 @@ describe("C3 review findings, round two", () => {
     expect(flags).toHaveLength(2);
     expect(flags.map((f) => f.status)).toEqual(["dismissed", "dismissed"]);
   });
+
+  it("undoing that keep re-opens the sibling born answered by it too", async () => {
+    const FLIGHT = {
+      airline: "Lufthansa",
+      flightNumber: "LH400",
+      depIata: "FRA",
+      depLat: 50.03,
+      depLon: 8.57,
+      arrIata: "JFK",
+      arrLat: 40.64,
+      arrLon: -73.78,
+      status: "flown",
+      depTimeSemantics: "UTC",
+      arrTimeSemantics: "UTC",
+      depTimezone: "Europe/Berlin",
+      arrTimezone: "America/New_York",
+      departureTime: new Date("2026-03-10T08:00:00Z"),
+      arrivalTime: new Date("2026-03-10T16:00:00Z"),
+    };
+    for (const d of ["01", "02", "03"]) {
+      await prisma.flight.create({
+        data: { ...FLIGHT, userId: anna.id, createdAt: new Date(`2026-03-${d}T00:00:00Z`) },
+      });
+    }
+    await runDataQualityChecks(anna.id, NOW);
+    const [one, other] = await listFlags(anna.id, { kind: "duplicate_candidate" });
+    await prisma.dataQualityFlag.delete({ where: { id: other.id } });
+    await resolveFinding(one.id, anna.id, { action: "keep" });
+    await runDataQualityChecks(anna.id, NOW);
+
+    await undoFinding(one.id, anna.id);
+
+    const flags = await prisma.dataQualityFlag.findMany({
+      where: { userId: anna.id, kind: "duplicate_candidate" },
+    });
+    expect(flags.map((f) => f.status)).toEqual(["open", "open"]);
+  });
 });

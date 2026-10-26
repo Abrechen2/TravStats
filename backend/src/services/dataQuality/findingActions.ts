@@ -316,6 +316,21 @@ export async function undoFinding(
         },
       });
       if (updated.count === 0) throw new FindingActionError("staleFinding");
+      if (resolution.action === "keep") {
+        // Siblings born under this answer after it was given (`runner.ts`),
+        // under the same lock as their creation, and only while untouched.
+        await lockDuplicateAnswers(tx, userId);
+        await tx.dataQualityFlag.updateMany({
+          where: {
+            userId,
+            kind: "duplicate_candidate",
+            status: "dismissed",
+            revision: 0,
+            resolution: { path: ["inheritedFrom"], equals: flag.id },
+          },
+          data: { status: "open", resolvedAt: null, resolution: Prisma.DbNull, ...NEXT_REVISION },
+        });
+      }
       for (const sibling of resolution.siblings ?? []) {
         // Only a sibling still carrying this answer's stamp: one the user has
         // answered since (or a run has touched) keeps that later answer.

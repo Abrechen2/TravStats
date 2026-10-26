@@ -28,13 +28,17 @@ export function duplicateIdSet(entityId: string, details: unknown): Set<string> 
 const sameSet = (a: Set<string>, b: Set<string>) =>
   a.size === b.size && [...a].every((id) => b.has(id));
 
-/** True when a dismissed duplicate flag already answers exactly these copies. */
+/**
+ * The dismissed duplicate flag that already answers exactly these copies, or
+ * null. A flag born answered records it (`resolution.inheritedFrom`), so an
+ * undo of that answer re-opens the newcomer too.
+ */
 export async function answeredByDismissal(
   tx: DbTransaction,
   userId: string,
   entityType: string,
   ids: Set<string>
-): Promise<boolean> {
+): Promise<string | null> {
   const dismissed = await tx.dataQualityFlag.findMany({
     where: {
       userId,
@@ -43,10 +47,11 @@ export async function answeredByDismissal(
       entityId: { in: [...ids] },
       status: "dismissed",
     },
-    select: { entityId: true, details: true },
+    select: { id: true, entityId: true, details: true },
   });
-  return dismissed.some((flag) => {
+  const match = dismissed.find((flag) => {
     const theirs = duplicateIdSet(flag.entityId, flag.details);
     return theirs !== null && sameSet(theirs, ids);
   });
+  return match?.id ?? null;
 }

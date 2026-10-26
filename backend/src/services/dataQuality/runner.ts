@@ -196,20 +196,32 @@ async function createOrAdopt(
       const open = await prisma.$transaction(async (tx) => {
         await lockDuplicateAnswers(tx, userId);
         const ids = duplicateIdSet(finding.entityId, finding.details);
-        const answered =
-          ids !== null && (await answeredByDismissal(tx, userId, finding.entityType, ids));
+        const answeredBy =
+          ids === null ? null : await answeredByDismissal(tx, userId, finding.entityType, ids);
         await tx.dataQualityFlag.create({
           data: {
             userId,
             entityType: finding.entityType,
             entityId: finding.entityId,
             kind: finding.kind,
-            status: answered ? "dismissed" : "open",
-            resolvedAt: answered ? new Date() : null,
+            status: answeredBy ? "dismissed" : "open",
+            resolvedAt: answeredBy ? new Date() : null,
             details: asJson(finding.details),
+            // Which answer this flag was born under, so undoing it re-opens
+            // this one as well (`undoFinding`).
+            ...(answeredBy
+              ? {
+                  resolution: {
+                    action: "keep",
+                    previousStatus: "open",
+                    previousResolvedAt: null,
+                    inheritedFrom: answeredBy,
+                  },
+                }
+              : {}),
           },
         });
-        return !answered;
+        return answeredBy === null;
       });
       return { created: true, open };
     }

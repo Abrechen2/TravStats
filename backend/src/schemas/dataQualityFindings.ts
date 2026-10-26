@@ -121,6 +121,11 @@ export const findingResolutionSchema = z.object({
     .optional(),
   /** `link`: the row and the trip it was put on. */
   link: z.object({ entityType: z.string(), id: z.string(), tripId: z.string() }).optional(),
+  /**
+   * A duplicate flag created after a `keep` over the same copies is born
+   * dismissed and names that answer's flag here; undoing it re-opens this one.
+   */
+  inheritedFrom: z.string().optional(),
   /** `merge`: a record of what happened. Not undoable. */
   merged: z.object({ keptId: z.string(), removedIds: z.array(z.string()) }).optional(),
 });
