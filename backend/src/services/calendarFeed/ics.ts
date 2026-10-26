@@ -1,17 +1,21 @@
 /**
  * A minimal RFC 5545 writer for the calendar feed (forgejo#310) — only what
- * the feed emits: one VCALENDAR of VEVENTs with timed (UTC) or all-day
+ * the feed emits: one VCALENDAR of VEVENTs with timed (place-local, else UTC) or all-day
  * (`VALUE=DATE`) bounds. No dependency: the format is small, and every rule a
  * calendar app is strict about is pinned by `__tests__/ics.test.ts`.
  *
- * The four rules a hand-written writer usually breaks:
+ * The rules a hand-written writer usually breaks:
  * - lines end in CRLF (§3.1), including the last one;
  * - a content line longer than 75 OCTETS is folded (§3.1) — octets, not
  *   characters: "München" is 8 octets, and folding by `.length` produced lines
  *   a strict parser refuses. A fold never splits a UTF-8 sequence;
  * - TEXT escapes backslash, semicolon, comma and newline (§3.3.11);
- * - DTSTAMP is required in every VEVENT (§3.6.1).
+ * - DTSTAMP is required in every VEVENT (§3.6.1);
+ * - every TZID a property names has its VTIMEZONE in the calendar (§3.2.19).
  */
+
+import { formatParts, isValidZone, wallClockParts } from "../../shared/time/zonedParts";
+import { vtimezoneLines } from "./vtimezone";
 
 const CRLF = "\r\n";
 const MAX_LINE_OCTETS = 75;
@@ -67,11 +71,17 @@ export function foldLine(line: string): string {
   return pieces.join(`${CRLF} `);
 }
 
-/** A timed event: real instants, written in UTC. No `end`: a moment without a length. */
+/**
+ * A timed event: real instants. No `end`: a moment without a length. Each
+ * bound with a known place zone is written on that place's clock with a TZID
+ * (a flight departs in Seoul's time and lands in Berlin's); without one, in UTC.
+ */
 export interface TimedBounds {
   kind: "timed";
   start: Date;
   end: Date | null;
+  startZone?: string | null;
+  endZone?: string | null;
 }
 
 /** An all-day event: calendar days, `endExclusive` the day after the last one (§3.6.1). */
@@ -105,6 +115,46 @@ export interface IcsCalendar {
 
 const property = (name: string, value: string): string => foldLine(`${name}:${value}`);
 
+/** The zone a bound is written in, or null for UTC — an unknown zone is UTC, never a guess. */
+const writableZone = (zone: string | null | undefined): string | null =>
+  zone && isValidZone(zone) ? zone : null;
+
+/** `NAME;TZID=Zone:YYYYMMDDTHHMMSS` on the place's clock, or `NAME:…Z` in UTC. */
+function instantProperty(name: string, instant: Date, zone: string | null | undefined): string {
+  const tz = writableZone(zone);
+  const parts = tz ? wallClockParts(instant.getTime(), tz) : null;
+  if (!tz || !parts) return property(name, formatUtc(instant));
+  const local = formatParts(parts).replace(/[-:]/g, "");
+  return property(`${name};TZID=${tz}`, local);
+}
+
+/** The UTC years each zone's bounds touch, so its VTIMEZONE covers them. */
+function zoneYears(events: IcsEvent[]): Map<string, { from: number; to: number }> {
+  const years = new Map<string, { from: number; to: number }>();
+  const note = (zone: string | null | undefined, instant: Date | null): void => {
+    const tz = writableZone(zone);
+    if (!tz || !instant) return;
+    const year = instant.getUTCFullYear();
+    const seen = years.get(tz);
+    years.set(tz, {
+      from: Math.min(seen?.from ?? year, year),
+      to: Math.max(seen?.to ?? year, year),
+    });
+  };
+  for (const { bounds } of events) {
+    if (bounds.kind !== "timed") continue;
+    note(bounds.startZone, bounds.start);
+    note(bounds.endZone, bounds.end);
+  }
+  return years;
+}
+
+function timezoneLines(events: IcsEvent[]): string[] {
+  return [...zoneYears(events)]
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .flatMap(([zone, { from, to }]) => vtimezoneLines(zone, from, to) ?? []);
+}
+
 function eventLines(event: IcsEvent, stamp: string): string[] {
   const lines = [
     "BEGIN:VEVENT",
@@ -112,8 +162,9 @@ function eventLines(event: IcsEvent, stamp: string): string[] {
     property("DTSTAMP", stamp),
   ];
   if (event.bounds.kind === "timed") {
-    lines.push(property("DTSTART", formatUtc(event.bounds.start)));
-    if (event.bounds.end) lines.push(property("DTEND", formatUtc(event.bounds.end)));
+    const { start, end, startZone, endZone } = event.bounds;
+    lines.push(instantProperty("DTSTART", start, startZone));
+    if (end) lines.push(instantProperty("DTEND", end, endZone));
   } else {
     lines.push(property("DTSTART;VALUE=DATE", formatDay(event.bounds.start)));
     lines.push(property("DTEND;VALUE=DATE", formatDay(event.bounds.endExclusive)));
@@ -144,6 +195,7 @@ export function writeCalendar(calendar: IcsCalendar): string {
     property("X-WR-CALNAME", escapeText(calendar.name)),
     `REFRESH-INTERVAL;VALUE=DURATION:${ttl}`,
     `X-PUBLISHED-TTL:${ttl}`,
+    ...timezoneLines(calendar.events),
     ...calendar.events.flatMap((event) => eventLines(event, stamp)),
     "END:VCALENDAR",
   ];

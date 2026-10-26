@@ -142,3 +142,140 @@ describe("ics writer", () => {
     expect(() => formatDay("2030-12-31T00:00")).toThrow();
   });
 });
+
+/**
+ * Local times at the place (owner, 2026-10-26): a Korea flight was shown at
+ * German times. A timed event with a known zone is written as that zone's wall
+ * clock with a TZID, and the calendar carries a VTIMEZONE for each zone used.
+ */
+describe("ics writer — place zones", () => {
+  const calendar = (events: IcsEvent[]): string =>
+    unfold(
+      writeCalendar({
+        name: "TravStats",
+        refreshMinutes: 60,
+        generatedAt: new Date("2026-10-01T10:00:00Z"),
+        events,
+      })
+    );
+
+  // KE1206: 03:05 UTC is 12:05 in Seoul.
+  const seoul: IcsEvent = {
+    uid: "flight-ke1206@travstats",
+    summary: "✈ Jeju 12:05 → Gimpo 13:10 · KE1206",
+    bounds: {
+      kind: "timed",
+      start: new Date("2026-10-17T03:05:00Z"),
+      end: new Date("2026-10-17T04:10:00Z"),
+      startZone: "Asia/Seoul",
+      endZone: "Asia/Seoul",
+    },
+  };
+
+  // Departs at local midnight on the night Berlin leaves summer time (25 Oct,
+  // 03:00 CEST → 02:00 CET), lands at 07:00 CET.
+  const berlinNight: IcsEvent = {
+    uid: "rail-night@travstats",
+    summary: "🚆 Berlin 00:00 → München 07:00",
+    bounds: {
+      kind: "timed",
+      start: new Date("2026-10-24T22:00:00Z"),
+      end: new Date("2026-10-25T06:00:00Z"),
+      startZone: "Europe/Berlin",
+      endZone: "Europe/Berlin",
+    },
+  };
+
+  const vtimezone = (text: string, zone: string): string => {
+    const match = text.match(
+      new RegExp(`BEGIN:VTIMEZONE\\r\\nTZID:${zone}\\r\\n[\\s\\S]*?END:VTIMEZONE`)
+    );
+    if (!match) throw new Error(`no VTIMEZONE for ${zone}`);
+    return match[0];
+  };
+
+  it("writes a Seoul flight on Seoul's clock, with a VTIMEZONE for Asia/Seoul", () => {
+    const text = calendar([seoul]);
+    expect(text).toContain("DTSTART;TZID=Asia/Seoul:20261017T120500\r\n");
+    expect(text).toContain("DTEND;TZID=Asia/Seoul:20261017T131000\r\n");
+    const block = vtimezone(text, "Asia/Seoul");
+    expect(block).toContain("TZOFFSETTO:+0900");
+    expect(block).not.toContain("BEGIN:DAYLIGHT");
+  });
+
+  it("writes start and end each in its own zone", () => {
+    const text = calendar([
+      {
+        ...seoul,
+        bounds: {
+          kind: "timed",
+          start: new Date("2026-10-17T03:05:00Z"),
+          end: new Date("2026-10-17T15:00:00Z"),
+          startZone: "Asia/Seoul",
+          endZone: "Europe/Berlin",
+        },
+      },
+    ]);
+    expect(text).toContain("DTSTART;TZID=Asia/Seoul:20261017T120500\r\n");
+    expect(text).toContain("DTEND;TZID=Europe/Berlin:20261017T170000\r\n");
+    vtimezone(text, "Asia/Seoul");
+    vtimezone(text, "Europe/Berlin");
+  });
+
+  it("crosses Berlin's October DST change with both offsets and the transition", () => {
+    const text = calendar([berlinNight]);
+    expect(text).toContain("DTSTART;TZID=Europe/Berlin:20261025T000000\r\n");
+    expect(text).toContain("DTEND;TZID=Europe/Berlin:20261025T070000\r\n");
+    const block = vtimezone(text, "Europe/Berlin");
+    // Onsets are local times in the offset in force BEFORE them (RFC 5545 §3.6.5).
+    expect(block).toMatch(
+      /BEGIN:STANDARD\r\nDTSTART:20261025T030000\r\nTZOFFSETFROM:\+0200\r\nTZOFFSETTO:\+0100\r\nEND:STANDARD/
+    );
+    expect(block).toMatch(
+      /BEGIN:DAYLIGHT\r\nDTSTART:20260329T020000\r\nTZOFFSETFROM:\+0100\r\nTZOFFSETTO:\+0200\r\nEND:DAYLIGHT/
+    );
+  });
+
+  it("keeps an event without a known zone in UTC and adds no VTIMEZONE", () => {
+    const unknown: IcsEvent = {
+      ...seoul,
+      uid: "x@travstats",
+      bounds: { ...seoul.bounds, startZone: "Mars/Olympus", endZone: null } as IcsEvent["bounds"],
+    };
+    const text = calendar([timed, unknown]);
+    expect(text).toContain("DTSTART:20300601T120500Z\r\n");
+    expect(text).toContain("DTSTART:20261017T030500Z\r\n");
+    expect(text).toContain("DTEND:20261017T041000Z\r\n");
+    expect(text).not.toContain("VTIMEZONE");
+    expect(text).not.toContain("TZID");
+  });
+
+  it("is a valid calendar: folded lines, balanced blocks, a VTIMEZONE for every TZID", () => {
+    const raw = writeCalendar({
+      name: "TravStats",
+      refreshMinutes: 60,
+      generatedAt: new Date("2026-10-01T10:00:00Z"),
+      events: [
+        { ...seoul, summary: `${seoul.summary} ${"Ü".repeat(60)}` },
+        berlinNight,
+        timed,
+        allDay,
+      ],
+    });
+    const physical = raw.split("\r\n").slice(0, -1);
+    for (const line of physical) expect(octets(line)).toBeLessThanOrEqual(75);
+    const lines = unfold(raw).split("\r\n");
+    const stack: string[] = [];
+    for (const line of lines) {
+      if (line.startsWith("BEGIN:")) stack.push(line.slice(6));
+      if (line.startsWith("END:")) expect(stack.pop()).toBe(line.slice(4));
+    }
+    expect(stack).toEqual([]);
+    const referenced = new Set([...unfold(raw).matchAll(/;TZID=([^:;]+):/g)].map((m) => m[1]));
+    const defined = new Set([...unfold(raw).matchAll(/\r\nTZID:([^\r]+)\r\n/g)].map((m) => m[1]));
+    expect([...referenced].sort()).toEqual(["Asia/Seoul", "Europe/Berlin"]);
+    expect([...defined].sort()).toEqual([...referenced].sort());
+    // Every VTIMEZONE precedes the first VEVENT.
+    expect(raw.lastIndexOf("END:VTIMEZONE")).toBeLessThan(raw.indexOf("BEGIN:VEVENT"));
+  });
+});

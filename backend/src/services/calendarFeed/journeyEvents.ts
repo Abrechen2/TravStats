@@ -5,7 +5,7 @@ import { railTimes } from "../rail/timesDto";
 import { rentalTimes } from "../rental/timesDto";
 import { airportDisplayName } from "../../utils/airportDisplay";
 import logger from "../../utils/logger";
-import { boundsOfInstants } from "./eventBounds";
+import { boundsOfInstants, clockSpan, localClock } from "./eventBounds";
 import {
   FEED_ROW_LIMIT,
   feedEvent,
@@ -16,6 +16,7 @@ import {
   type FeedContext,
 } from "./feedEvent";
 import type { IcsEvent } from "./ics";
+import type { TimeValue } from "../../shared/time/wire";
 
 /**
  * Flights, train, bus and ferry rides and car rentals in the calendar feed
@@ -24,6 +25,19 @@ import type { IcsEvent } from "./ics";
  */
 
 const TRIP_ICON = "🧳";
+
+/**
+ * `Jeju 12:05 → Gimpo 13:10`: each end with its local time, where one is
+ * known — the summary is what a calendar shows at a glance, so the time a
+ * traveller reads on the boarding pass belongs in it.
+ */
+const route = (
+  from: string,
+  departure: TimeValue | null,
+  to: string,
+  arrival: TimeValue | null
+): string =>
+  `${joined(" ", from, localClock(departure))} → ${joined(" ", to, localClock(arrival))}`;
 const tripLine = (trip: { name: string } | null): string | null =>
   trip ? `${TRIP_ICON} ${trip.name}` : null;
 
@@ -105,7 +119,15 @@ export async function flightEvents(ctx: FeedContext): Promise<IcsEvent[]> {
       return feedEvent(
         {
           uid: `flight-${f.id}`,
-          summary: joined(" ", iconOf("flight"), `${end(f.depIata)} → ${end(f.arrIata)}`, number),
+          summary: joined(
+            " ",
+            iconOf("flight"),
+            joined(
+              " · ",
+              route(end(f.depIata), f.times.departure, end(f.arrIata), f.times.arrival),
+              number
+            )
+          ),
           bounds: boundsOfInstants(f.times.departure, f.times.arrival),
           location: joined(" → ", f.depIata, f.arrIata) || null,
           details: [f.airline, tripLine(f.trip)],
@@ -146,6 +168,12 @@ const rideWhere = (ctx: FeedContext) => {
 };
 const RIDE_ORDER = [{ departureTime: "asc" as const }, { id: "asc" as const }];
 
+type RideEnds = { depStationName: string; arrStationName: string };
+const rideRoute = (
+  r: RideEnds,
+  times: { departure: TimeValue | null; arrival: TimeValue | null }
+): string => route(r.depStationName, times.departure, r.arrStationName, times.arrival);
+
 export async function railEvents(ctx: FeedContext): Promise<IcsEvent[]> {
   const rows = await prisma.railJourney.findMany({
     where: rideWhere(ctx),
@@ -160,7 +188,7 @@ export async function railEvents(ctx: FeedContext): Promise<IcsEvent[]> {
       return feedEvent(
         {
           uid: `rail-${r.id}`,
-          summary: joined(" ", iconOf("rail"), `${r.depStationName} → ${r.arrStationName}`, train),
+          summary: joined(" ", iconOf("rail"), joined(" · ", rideRoute(r, times), train)),
           bounds: boundsOfInstants(times.departure, times.arrival),
           location: r.depStationName,
           details: [r.operator, tripLine(r.trip)],
@@ -186,12 +214,7 @@ export async function busEvents(ctx: FeedContext): Promise<IcsEvent[]> {
       return feedEvent(
         {
           uid: `bus-${r.id}`,
-          summary: joined(
-            " ",
-            iconOf("bus"),
-            `${r.depStationName} → ${r.arrStationName}`,
-            r.lineName
-          ),
+          summary: joined(" ", iconOf("bus"), joined(" · ", rideRoute(r, times), r.lineName)),
           bounds: boundsOfInstants(times.departure, times.arrival),
           location: r.depStationName,
           details: [r.operator, tripLine(r.trip)],
@@ -217,7 +240,7 @@ export async function ferryEvents(ctx: FeedContext): Promise<IcsEvent[]> {
       return feedEvent(
         {
           uid: `ferry-${r.id}`,
-          summary: joined(" ", iconOf("ferry"), `${r.depStationName} → ${r.arrStationName}`),
+          summary: joined(" ", iconOf("ferry"), rideRoute(r, times)),
           bounds: boundsOfInstants(times.departure, times.arrival),
           location: r.depStationName,
           details: [joined(" · ", r.operator, r.vesselName), tripLine(r.trip)],
@@ -269,7 +292,15 @@ export async function rentalEvents(ctx: FeedContext): Promise<IcsEvent[]> {
       return feedEvent(
         {
           uid: `rental-${r.id}`,
-          summary: joined(" ", iconOf("rental"), joined(" · ", r.provider, r.pickupStationName)),
+          summary: joined(
+            " ",
+            iconOf("rental"),
+            joined(
+              " · ",
+              r.provider,
+              joined(" ", r.pickupStationName, clockSpan(times.pickup, times.return))
+            )
+          ),
           bounds: boundsOfInstants(times.pickup, times.return),
           location: r.pickupStationName,
           details: [

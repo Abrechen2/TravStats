@@ -225,7 +225,11 @@ describe("calendar feed", () => {
     // Upcoming, and inside the 30-day look-back.
     expect(text).toContain("UID:flight-00000000-0000-4000-8000-0000000000a1@travstats");
     expect(text).toContain("UID:flight-00000000-0000-4000-8000-0000000000a2@travstats");
-    expect(text).toContain("DTSTART:20300601T120000Z\r\nDTEND:20300601T131500Z");
+    // On each airport's clock: 14:00 in Munich, 15:15 in Vienna.
+    expect(text).toContain(
+      "DTSTART;TZID=Europe/Berlin:20300601T140000\r\nDTEND;TZID=Europe/Vienna:20300601T151500"
+    );
+    expect(text).toMatch(/SUMMARY:✈ [^\r]* 14:00 → [^\r]* 15:15 · LH2280\r\n/);
     // Stay: its nights, the check-out day excluded; its name escaped.
     expect(text).toContain(
       "UID:stay-00000000-0000-4000-8000-0000000000c1@travstats\r\nDTSTAMP:20300520T100000Z\r\n" +
@@ -246,6 +250,32 @@ describe("calendar feed", () => {
       "UID:tour-00000000-0000-4000-8000-000000000121@travstats\r\n" +
         "DTSTAMP:20300520T100000Z\r\nDTSTART;VALUE=DATE:20300612\r\nDTEND;VALUE=DATE:20300613"
     );
+  });
+
+  it("writes a Korea flight on Seoul's clock, with its local times in the summary", async () => {
+    // KE1206 as the owner saw it: 03:05 UTC is 12:05 in Seoul, not 05:05 in Germany.
+    await flight(owner.id, "00000000-0000-4000-8000-0000000000a5", "2030-06-15T03:05:00Z", {
+      flightNumber: "KE1206",
+      airlineIata: "KE",
+      depIata: "CJU",
+      depLat: 33.51,
+      depLon: 126.49,
+      depTimezone: "Asia/Seoul",
+      arrIata: "GMP",
+      arrLat: 37.56,
+      arrLon: 126.79,
+      arrTimezone: "Asia/Seoul",
+      arrivalTime: new Date("2030-06-15T04:10:00Z"),
+    });
+    const { url } = await issue(owner);
+    const text = unfolded((await request(app).get(feedPath(url))).text);
+    expect(text).toContain(
+      "DTSTART;TZID=Asia/Seoul:20300615T120500\r\nDTEND;TZID=Asia/Seoul:20300615T131000"
+    );
+    expect(text).toContain("BEGIN:VTIMEZONE\r\nTZID:Asia/Seoul\r\n");
+    expect(text).toMatch(/SUMMARY:✈ [^\r]* 12:05 → [^\r]* 13:10 · KE1206\r\n/);
+    // The rail ride the same way: 09:00 in Munich, 12:30 in Zurich.
+    expect(text).toMatch(/SUMMARY:🚆 München Hbf 09:00 → Zürich HB 12:30\r\n/);
   });
 
   it("leaves out cancelled entries, entries older than the look-back, and switched-off domains", async () => {
