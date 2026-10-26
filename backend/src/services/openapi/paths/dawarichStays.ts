@@ -77,6 +77,11 @@ registry.registerPath({
   path: "/dawarich-stays/settings",
   tags,
   summary: "Explicit per-account opt-in, separate from Immich and country days",
+  description:
+    "Switching `enabled` on also switches `marketEnabled` and `venueEnabled` on, unless the " +
+    "request names them (forgejo#318: places are detected as whole areas by default). " +
+    "Switching `enabled` off switches both off. While the scan stays on, either area switch " +
+    "keeps whatever was last set.",
   request: {
     body: {
       content: {

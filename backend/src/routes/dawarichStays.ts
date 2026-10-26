@@ -124,20 +124,30 @@ router.patch("/settings", rejectDemo, async (req: AuthRequest, res, next) => {
       await requirePlacesEnabled(userId);
       await ownConnection(userId);
     }
+    // Places are detected as whole areas by default (forgejo#318, owner
+    // 2026-10-20): the stay scan's own switch is the consent, and switching it
+    // on brings both area switches to on unless the request names them. While
+    // the scan stays on, an area switch an expert turned off stays off.
+    const switchingOn = patch.enabled === true && !current?.enabled;
+    const areaDefaults = switchingOn
+      ? { marketEnabled: patch.marketEnabled ?? true, venueEnabled: patch.venueEnabled ?? true }
+      : {};
     const state = await prisma.dawarichStayScan.upsert({
       where: { userId },
       create: {
         userId,
         enabled,
-        marketEnabled: patch.marketEnabled ?? false,
-        venueEnabled: patch.venueEnabled ?? false,
+        marketEnabled: patch.marketEnabled ?? enabled,
+        venueEnabled: patch.venueEnabled ?? enabled,
       },
       // Invalidate an in-flight reservation across off/on consent changes.
       // Its delayed response may never write under a later consent.
-      // Switching the scan off withdraws the map consents too. Left set, a later
-      // switch-on resumed Overpass queries the user had not been asked about again.
+      // Switching the scan off withdraws the map consents too; the next
+      // switch-on sets them from the default above, which the switch's own
+      // text discloses (Overpass is asked for ~5 km regions, never positions).
       update: {
         ...patch,
+        ...areaDefaults,
         ...(patch.enabled === false ? { marketEnabled: false, venueEnabled: false } : {}),
         leaseUntil: null,
       },
