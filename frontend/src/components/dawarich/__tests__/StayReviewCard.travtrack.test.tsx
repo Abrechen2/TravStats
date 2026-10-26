@@ -18,6 +18,9 @@ vi.mock("../../../hooks/useTranslation", () => ({
   }),
 }));
 vi.mock("../StayIdentityPanel", () => ({ default: () => null }));
+// The section panel has its own tests (inbox/track); here only that it is asked for.
+const section = vi.hoisted(() => vi.fn((_props: unknown) => null));
+vi.mock("../../inbox/track/TrackSectionPanel", () => ({ default: section }));
 vi.mock("../../../lib/api/dawarichStays", () => ({
   dawarichStaysApi: { accept: vi.fn(), reject: vi.fn() },
 }));
@@ -107,6 +110,38 @@ describe("a TravTrack finding on the review card", () => {
     });
     expect(screen.queryByText(/trips:dawarichStays\.source\./)).not.toBeInTheDocument();
     expect(screen.queryByText(/trips:dawarichStays\.explanation\./)).not.toBeInTheDocument();
+  });
+
+  it("a TravTrack stay shows its section from an hour before it, with its radius ring", () => {
+    section.mockClear();
+    mount();
+    expect(section).toHaveBeenCalledWith(
+      expect.objectContaining({
+        window: {
+          fromMs: Date.parse("2026-10-10T09:00:00Z"),
+          untilMs: Date.parse("2026-10-10T10:30:00Z"),
+        },
+        zone: "Asia/Seoul",
+        why: { key: "track:inbox.why.stay" },
+        ring: { lat: 37.57, lon: 126.97, radiusM: 150 },
+      }),
+      undefined
+    );
+  });
+
+  it("a Dawarich stay shows no section map at all", () => {
+    section.mockClear();
+    mount({
+      ...travtrackRow,
+      evidence: {
+        source: "dawarich",
+        zone: "Asia/Seoul",
+        pointIds: [1, 2, 3, 4],
+        maxGapMinutes: 10,
+        uncertainties: [],
+      },
+    });
+    expect(section).not.toHaveBeenCalled();
   });
 
   it("EVIDENCE_INVALIDATED says why and takes the card away", async () => {

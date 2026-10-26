@@ -6,6 +6,8 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import { Card } from "../ui/Card";
 import StayIdentityPanel from "./StayIdentityPanel";
+import TrackSectionPanel from "../inbox/track/TrackSectionPanel";
+import { staySectionProps } from "../inbox/track/sectionProps";
 
 /**
  * How often an accept is asked again when the server says "try again" — it is
@@ -30,6 +32,8 @@ export default function StayReviewCard({
   // A TravTrack finding (plan E4) names its source and explains itself; a
   // Dawarich one reads exactly as it always did.
   const travtrack = row.evidence.source === "travtrack";
+  // The section of the history behind it — TravTrack findings only.
+  const section = staySectionProps(row);
   // Mid-accept is still a question: a claim a crash left is taken over.
   const open = row.status === "pending" || row.status === "accepting";
   const [name, setName] = useState(row.name ?? "");
@@ -154,6 +158,7 @@ export default function StayReviewCard({
           )}
         </p>
       )}
+      {section && <TrackSectionPanel {...section} />}
       <StayIdentityPanel
         stayId={row.id}
         lat={row.lat}
