@@ -93,6 +93,18 @@ describe("TrackSectionPanel", () => {
     );
   });
 
+  it("unmounts the map when the card leaves the screen, keeps what was read, and redraws it", async () => {
+    views.range.mockResolvedValue(part([[p(0, 50, 8), p(30, 50.1, 8)]]));
+    show();
+    scrollIntoView();
+    await screen.findByTestId("section-map");
+    act(() => io.observers[0].trigger(false));
+    expect(screen.queryByTestId("section-map")).toBeNull();
+    scrollIntoView();
+    expect(await screen.findByTestId("section-map")).toBeInTheDocument();
+    expect(views.range).toHaveBeenCalledTimes(1);
+  });
+
   it("hands the map its stretches apart and does not count the distance across a cut", async () => {
     views.range.mockResolvedValue(
       part([

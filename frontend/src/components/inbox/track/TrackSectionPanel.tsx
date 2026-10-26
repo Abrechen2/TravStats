@@ -77,7 +77,7 @@ function useCountryShape(code: string | null | undefined, enabled: boolean) {
 
 export default function TrackSectionPanel(props: TrackSectionPanelProps): JSX.Element {
   const { t, i18n } = useTranslation(["track"]);
-  const { ref, seen } = useInView<HTMLDivElement>();
+  const { ref, inView, seen } = useInView<HTMLDivElement>();
   const state = useSectionTrack(props.window, seen);
   const country = useCountryShape(props.countryCode, seen);
   const [open, setOpen] = useState(false);
@@ -191,16 +191,20 @@ export default function TrackSectionPanel(props: TrackSectionPanelProps): JSX.El
             {t("track:inbox.empty")}
           </p>
         )}
-        {state.kind === "loaded" && (
-          <Suspense fallback={<div className="h-56" />}>
-            <SectionMap
-              stretches={state.stretches}
-              label={t("track:inbox.mapLabel")}
-              ring={props.ring ?? null}
-              country={country}
-            />
-          </Suspense>
-        )}
+        {/* Mounted only while on screen: a browser holds few WebGL contexts, an inbox many cards. */}
+        {state.kind === "loaded" &&
+          (inView ? (
+            <Suspense fallback={<div className="h-56" />}>
+              <SectionMap
+                stretches={state.stretches}
+                label={t("track:inbox.mapLabel")}
+                ring={props.ring ?? null}
+                country={country}
+              />
+            </Suspense>
+          ) : (
+            <div className="h-56" aria-hidden="true" />
+          ))}
         <figcaption className="flex flex-wrap justify-between gap-2 t-caption">
           <span>{t("track:inbox.zonesNeverDrawn")}</span>
           <Link to={href} data-testid="track-section-link">
