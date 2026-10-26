@@ -682,7 +682,7 @@
       "description": "Every six hours, your TravTrack history is checked for possible stays in the last seven days. These are suggestions only: a visit is recorded after your confirmation. This does not enable Immich scanning or country detection.",
       "off": "TravTrack is currently switched off on this server. No new stays are detected; you can still switch detection off at any time.",
       "staleData": "The newest location data in TravTrack is over 24 hours old. Check that your phone is still recording and uploading."
-      },
+    },
     "areas": {
       "title": "Detect places automatically",
       "description": "Markets, shopping malls, parks, zoos, theme parks and museums are suggested as whole venues rather than as single stays – this runs along with stay detection. It queries approximate regions (roughly 5 km grid cells) from OpenStreetMap/Overpass; your location sequences, times and point IDs are not sent. Visits are only recorded after your confirmation."

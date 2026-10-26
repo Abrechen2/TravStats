@@ -31,6 +31,10 @@ vi.mock("../../../../lib/api/travtrackViews", async (importOriginal) => ({
 }));
 const months = vi.hoisted(() => ({ months: vi.fn() }));
 vi.mock("../../../../lib/api/travtrackMonths", () => ({ travTrackMonthsApi: months }));
+// The photo read asks for the Immich connection first (beta.28 UAT); without
+// a mock the test would reach the network.
+const immich = vi.hoisted(() => ({ getSettings: vi.fn() }));
+vi.mock("../../../../lib/api/immich", () => ({ immichApi: immich }));
 const world = vi.hoisted(() => ({ load: vi.fn() }));
 vi.mock("../../../../lib/geo/worldCountries", () => ({ loadWorldCountries: world.load }));
 vi.mock("../../../../hooks/useTodayZone", () => ({ useTodayZone: () => "UTC" }));
@@ -153,6 +157,7 @@ const renderAt = (path: string) =>
 
 describe("TrackMapView — the open flight", () => {
   beforeEach(() => {
+    immich.getSettings.mockReset().mockResolvedValue({ hasAccess: false });
     setClockForTests("2026-10-25T12:00:00Z");
     Object.values(api).forEach((fn) => fn.mockReset());
     Object.values(views).forEach((fn) => fn.mockReset());

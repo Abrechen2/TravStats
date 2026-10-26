@@ -682,7 +682,7 @@
       "description": "Aus deinem TravTrack-Verlauf werden alle sechs Stunden mögliche Aufenthalte der letzten sieben Tage erkannt. Es entstehen nur Vorschläge: Ein Besuch wird erst nach deiner Bestätigung eingetragen. Dies aktiviert weder den Immich-Scan noch die Ländererkennung.",
       "off": "TravTrack ist auf diesem Server gerade ausgeschaltet. Es werden keine neuen Aufenthalte erkannt; du kannst die Erkennung aber jederzeit ausschalten.",
       "staleData": "Die neuesten Positionsdaten in TravTrack sind mehr als 24 Stunden alt. Prüfe, ob dein Telefon noch aufzeichnet und hochlädt."
-      },
+    },
     "areas": {
       "title": "Orte automatisch erkennen",
       "description": "Märkte, Einkaufszentren, Parks, Zoos, Freizeitparks und Museen werden als ganzes Gelände vorgeschlagen statt als einzelne Aufenthalte – das läuft mit der Aufenthaltserkennung mit. Dafür werden ungefähre Regionen (etwa 5-km-Raster) bei OpenStreetMap/Overpass abgefragt; deine Positionsfolgen, Zeiten und Punkt-IDs werden nicht übertragen. Besuche werden erst nach deiner Bestätigung eingetragen."
