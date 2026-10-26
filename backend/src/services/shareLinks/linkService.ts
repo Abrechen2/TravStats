@@ -22,8 +22,7 @@ import {
   shareTokenMatches,
 } from "./token";
 import { itineraryAutoExpiry } from "./itineraryNow";
-import { buildTripView, loadOwnedTrip } from "./tripView";
-import { withTripTimes } from "../trips/timesDto";
+import { buildTripView, loadOwnedTrip, tripLastDay } from "./tripView";
 import { buildWrappedView } from "./wrappedView";
 
 /**
@@ -92,7 +91,7 @@ async function buildView(
     const set = new Set(fields) as Set<ShareLinkField<"trip">>;
     built = {
       view: { kind: "trip", trip: await buildTripView(userId, trip, set, owner, photoIds) },
-      autoExpiry: set.has("itinerary") ? tripAutoExpiry(trip) : null,
+      autoExpiry: set.has("itinerary") ? await tripAutoExpiry(trip) : null,
     };
   } else if (target.kind === "wrapped" && target.year !== null) {
     const set = new Set(fields) as Set<ShareLinkField<"wrapped">>;
@@ -106,9 +105,14 @@ async function buildView(
 
 const earlier = (a: Date, b: Date | null): Date => (b && b < a ? b : a);
 
-/** An itinerary link ends by itself a day after the trip's last local day (forgejo#302). */
-function tripAutoExpiry(trip: Parameters<typeof withTripTimes>[0]): Date | null {
-  return itineraryAutoExpiry(withTripTimes(trip).times.end);
+/**
+ * An itinerary link ends by itself a day after the trip's last local day
+ * (forgejo#302) — for a trip without dates, its entries' last day (forgejo#317).
+ */
+async function tripAutoExpiry(
+  trip: NonNullable<Awaited<ReturnType<typeof loadOwnedTrip>>>
+): Promise<Date | null> {
+  return itineraryAutoExpiry(await tripLastDay(trip));
 }
 
 /**
@@ -229,7 +233,7 @@ async function targetAutoExpiry(row: LinkRow): Promise<Date | null> {
   }
   if (row.tripId && row.fields.includes("itinerary")) {
     const trip = await loadOwnedTrip(row.userId, row.tripId);
-    return trip ? tripAutoExpiry(trip) : null;
+    return trip ? await tripAutoExpiry(trip) : null;
   }
   return null;
 }
