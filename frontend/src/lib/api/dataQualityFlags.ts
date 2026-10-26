@@ -43,7 +43,7 @@ export const dataQualityFlagsApi = {
    */
   resolve: async (
     id: string,
-    answer?: { action: FindingAction; keptId?: string; revision?: number }
+    answer?: { action?: FindingAction; keptId?: string; revision?: number }
   ): Promise<FindingAnswer> => {
     const { data } = answer
       ? await api.post<FindingAnswer>(`/data-quality-flags/${id}/resolve`, answer)
@@ -51,15 +51,26 @@ export const dataQualityFlagsApi = {
     return data;
   },
 
-  /** "This is not wrong, stop asking." Never re-opened. */
-  dismiss: async (id: string): Promise<FindingAnswer> => {
-    const { data } = await api.post<FindingAnswer>(`/data-quality-flags/${id}/dismiss`);
+  /**
+   * "This is not wrong, stop asking." Never re-opened. With the `revision`
+   * the card showed, refused (`staleFinding`) if the finding moved since.
+   */
+  dismiss: async (id: string, revision?: number): Promise<FindingAnswer> => {
+    const url = `/data-quality-flags/${id}/dismiss`;
+    const { data } =
+      revision === undefined
+        ? await api.post<FindingAnswer>(url)
+        : await api.post<FindingAnswer>(url, { revision });
     return data;
   },
 
   /** Take the last answer back while `undoUntil` lies ahead (spec C3). */
-  undo: async (id: string): Promise<FindingAnswer> => {
-    const { data } = await api.post<FindingAnswer>(`/data-quality-flags/${id}/undo`);
+  undo: async (id: string, revision?: number): Promise<FindingAnswer> => {
+    const url = `/data-quality-flags/${id}/undo`;
+    const { data } =
+      revision === undefined
+        ? await api.post<FindingAnswer>(url)
+        : await api.post<FindingAnswer>(url, { revision });
     return data;
   },
 

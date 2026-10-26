@@ -13,6 +13,7 @@ import { mergeDuplicates } from "./duplicateMerge";
 import { applyFerryLink, undoFerryLink } from "./ferryLink";
 import { FindingActionError } from "./findingErrors";
 import { SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
+import { restatusTrips } from "../trip/restatusTrips";
 
 export { FindingActionError };
 
@@ -236,7 +237,7 @@ export async function resolveFinding(
 
   // `link` — the only other action: put the ride on the trip, in the same
   // transaction as the answer.
-  await prisma.$transaction(
+  const linked = await prisma.$transaction(
     async (tx) => {
       const link = await applyFerryLink(tx, flag);
       const updated = await tx.dataQualityFlag.updateMany({
@@ -250,9 +251,13 @@ export async function resolveFinding(
         },
       });
       if (updated.count === 0) throw new FindingActionError("staleFinding");
+      return link;
     },
     { timeout: SHARE_TX_TIMEOUT_MS }
   );
+  // A ride extends its trip's span — re-derived after commit, as the ferry
+  // routes do.
+  await restatusTrips([linked.tripId]);
 }
 
 /**
@@ -311,4 +316,7 @@ export async function undoFinding(
     // A link's undo propagates like the link: same sharing timeout.
     { timeout: SHARE_TX_TIMEOUT_MS }
   );
+  if (resolution.action === "link" && resolution.link) {
+    await restatusTrips([resolution.link.tripId]);
+  }
 }

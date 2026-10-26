@@ -42,11 +42,12 @@ import { FindingActionError } from "./findingErrors";
  * the merge commits.
  */
 async function assertStillDuplicates(
+  tx: DbTransaction,
   userId: string,
   entityType: RecordCheckDomain,
   ids: readonly string[]
 ): Promise<void> {
-  const snapshot = await loadRecordSnapshot(userId);
+  const snapshot = await loadRecordSnapshot(userId, tx);
   const groups = new Map<string, Set<string>>();
   for (const finding of findDuplicateCandidates(snapshot)) {
     if (finding.kind !== "duplicate_candidate" || finding.entityType !== entityType) continue;
@@ -125,7 +126,7 @@ async function mergeFlights(
   userId: string,
   keptId: string,
   removedIds: readonly string[]
-): Promise<void> {
+): Promise<(string | null)[]> {
   const rows = await tx.flight.findMany({
     where: { userId, id: { in: [keptId, ...removedIds] } },
     select: { id: true, tripId: true, bookingId: true, track: { select: { id: true } } },
@@ -179,11 +180,7 @@ async function mergeFlights(
   const gone = await shareSnapshots(tx, "flight", [...removedIds]);
   await tx.flight.deleteMany({ where: { userId, id: { in: [...removedIds] } } });
   await propagateDeletes(tx, userId, [...gone.values()]);
-  // A trip's status follows its entries' dates — re-derive it, as a delete does.
-  await restatusTrips(
-    rows.map((r) => r.tripId),
-    tx
-  );
+  return rows.map((r) => r.tripId);
 }
 
 async function mergeStays(
@@ -191,7 +188,7 @@ async function mergeStays(
   userId: string,
   keptId: string,
   removedIds: readonly string[]
-): Promise<void> {
+): Promise<(string | null)[]> {
   const rows = await tx.lodgingStay.findMany({
     where: { userId, id: { in: [keptId, ...removedIds] } },
     select: { id: true, tripId: true, bookingId: true, membershipId: true },
@@ -238,10 +235,7 @@ async function mergeStays(
   const gone = await shareSnapshots(tx, "lodgingStay", [...removedIds]);
   await tx.lodgingStay.deleteMany({ where: { userId, id: { in: [...removedIds] } } });
   await propagateDeletes(tx, userId, [...gone.values()]);
-  await restatusTrips(
-    rows.map((r) => r.tripId),
-    tx
-  );
+  return rows.map((r) => r.tripId);
 }
 
 /**
@@ -256,20 +250,27 @@ export async function mergeDuplicates(
   removedIds: readonly string[],
   alsoInTx: (tx: DbTransaction) => Promise<void>
 ): Promise<void> {
-  await prisma.$transaction(
+  const tripIds = await prisma.$transaction(
     async (tx) => {
       // Validate HERE, on locked rows, in the transaction that deletes: a
       // check outside it could pass, then an edit turn a copy into a real,
       // different entry that the delete below would take with it.
       const ids = [keptId, ...removedIds];
       await lockCopies(tx, entityType, userId, ids);
-      await assertStillDuplicates(userId, entityType, ids);
-      if (entityType === "flight") await mergeFlights(tx, userId, keptId, removedIds);
-      else if (entityType === "lodging_stay") await mergeStays(tx, userId, keptId, removedIds);
-      else throw new FindingActionError("invalidAction", "notOffered");
+      await assertStillDuplicates(tx, userId, entityType, ids);
+      let trips: (string | null)[];
+      if (entityType === "flight") trips = await mergeFlights(tx, userId, keptId, removedIds);
+      else if (entityType === "lodging_stay") {
+        trips = await mergeStays(tx, userId, keptId, removedIds);
+      } else throw new FindingActionError("invalidAction", "notOffered");
       await alsoInTx(tx);
+      return trips;
     },
     { timeout: SHARE_TX_TIMEOUT_MS }
   );
+  // After commit, like the ride routes do: a trip's status follows its
+  // entries' dates, and its derivation reads the profile through the global
+  // client — inside the transaction that would be a second pool connection.
+  await restatusTrips(tripIds);
   await recheckAchievements(userId, `merge ${entityType}`);
 }

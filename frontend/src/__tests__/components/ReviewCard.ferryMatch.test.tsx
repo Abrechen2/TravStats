@@ -17,10 +17,11 @@ vi.mock("../../hooks/useTranslation", async () => {
 });
 
 const resolve = vi.fn(async () => ({ success: true }));
+const dismiss = vi.fn(async () => ({ success: true }));
 vi.mock("../../lib/api/dataQualityFlags", () => ({
   dataQualityFlagsApi: {
     resolve: (...args: unknown[]) => resolve(...(args as [])),
-    dismiss: vi.fn(),
+    dismiss: (...args: unknown[]) => dismiss(...(args as [])),
     run: vi.fn(),
   },
 }));
@@ -99,5 +100,15 @@ describe("ReviewCard — ferry match", () => {
   it("shows no link button when the server does not offer it", () => {
     renderCard(flag(undefined));
     expect(screen.queryByRole("button", { name: "Zur Reise hinzufügen" })).toBeNull();
+  });
+
+  it("sends the revision it showed with every answer", () => {
+    renderCard({ ...flag(["link"]), revision: 3 });
+    fireEvent.click(screen.getByRole("button", { name: "Das stimmt so" }));
+    expect(dismiss).toHaveBeenCalledWith("flag-1", 3);
+    fireEvent.click(screen.getByRole("button", { name: "Ich habe es korrigiert" }));
+    expect(resolve).toHaveBeenCalledWith("flag-1", { revision: 3 });
+    fireEvent.click(screen.getByRole("button", { name: "Zur Reise hinzufügen" }));
+    expect(resolve).toHaveBeenCalledWith("flag-1", { action: "link", revision: 3 });
   });
 });

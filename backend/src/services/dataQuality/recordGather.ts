@@ -1,4 +1,4 @@
-import { prisma } from "../../db";
+import { prisma, type DbTransaction } from "../../db";
 import { endHasClock } from "../../shared/railClock";
 import { isPlaceholderPrecision } from "../../shared/time/legacyValues";
 import { localDay } from "../../shared/time/instant";
@@ -180,8 +180,26 @@ const NOT_DAY_PRECISE = new Set(["year", "month"]);
 const isTimePrecision = (value: string | null): value is TimePrecision =>
   (TIME_PRECISIONS as readonly (string | null)[]).includes(value);
 
-async function loadFlights(userId: string) {
-  return prisma.flight.findMany({
+/**
+ * The client the snapshot reads through. The global one by default; an answer
+ * that re-validates inside its transaction passes the transaction, so it never
+ * asks the pool for a second connection while holding row locks.
+ */
+export type RecordDb = Pick<
+  DbTransaction,
+  | "flight"
+  | "railJourney"
+  | "busJourney"
+  | "cruise"
+  | "lodgingStay"
+  | "trip"
+  | "airport"
+  | "placeVisit"
+  | "ferryJourney"
+>;
+
+async function loadFlights(userId: string, db: RecordDb) {
+  return db.flight.findMany({
     where: { userId },
     orderBy: { id: "asc" },
     select: {
@@ -325,7 +343,10 @@ const GROUND_SELECT = {
   arrPrecision: true,
 } as const;
 
-export async function loadRecordSnapshot(userId: string): Promise<RecordSnapshot> {
+export async function loadRecordSnapshot(
+  userId: string,
+  db: RecordDb = prisma
+): Promise<RecordSnapshot> {
   const [
     flightRows,
     railRows,
@@ -337,8 +358,8 @@ export async function loadRecordSnapshot(userId: string): Promise<RecordSnapshot
     visitRows,
     ferryRows,
   ] = await Promise.all([
-    loadFlights(userId),
-    prisma.railJourney.findMany({
+    loadFlights(userId, db),
+    db.railJourney.findMany({
       where: { userId },
       orderBy: { id: "asc" },
       select: {
@@ -351,12 +372,12 @@ export async function loadRecordSnapshot(userId: string): Promise<RecordSnapshot
         arrStationCode: true,
       },
     }),
-    prisma.busJourney.findMany({
+    db.busJourney.findMany({
       where: { userId },
       orderBy: { id: "asc" },
       select: { ...GROUND_SELECT, lineName: true },
     }),
-    prisma.cruise.findMany({
+    db.cruise.findMany({
       where: { userId },
       orderBy: { id: "asc" },
       select: {
@@ -376,7 +397,7 @@ export async function loadRecordSnapshot(userId: string): Promise<RecordSnapshot
         ship: { select: { name: true } },
       },
     }),
-    prisma.lodgingStay.findMany({
+    db.lodgingStay.findMany({
       where: { userId },
       orderBy: { id: "asc" },
       select: {
@@ -394,7 +415,7 @@ export async function loadRecordSnapshot(userId: string): Promise<RecordSnapshot
         lodging: { select: { name: true } },
       },
     }),
-    prisma.trip.findMany({
+    db.trip.findMany({
       where: { userId },
       orderBy: { id: "asc" },
       select: {
@@ -407,8 +428,8 @@ export async function loadRecordSnapshot(userId: string): Promise<RecordSnapshot
         endDate: true,
       },
     }),
-    prisma.airport.findFirst({ select: { id: true } }),
-    prisma.placeVisit.findMany({
+    db.airport.findFirst({ select: { id: true } }),
+    db.placeVisit.findMany({
       where: { userId, tripId: { not: null } },
       orderBy: { id: "asc" },
       select: {
@@ -421,7 +442,7 @@ export async function loadRecordSnapshot(userId: string): Promise<RecordSnapshot
         place: { select: { name: true } },
       },
     }),
-    prisma.ferryJourney.findMany({
+    db.ferryJourney.findMany({
       where: { userId },
       orderBy: { id: "asc" },
       select: { ...GROUND_SELECT, roadtripLegId: true },

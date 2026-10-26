@@ -50,6 +50,13 @@ describe("dataQualityFlagsApi", () => {
     expect(post).toHaveBeenCalledWith("/data-quality-flags/abc/resolve", { action: "keep" });
   });
 
+  it("sends the served revision with dismiss and undo when given", async () => {
+    await dataQualityFlagsApi.dismiss("abc", 4);
+    expect(post).toHaveBeenCalledWith("/data-quality-flags/abc/dismiss", { revision: 4 });
+    await dataQualityFlagsApi.undo("abc", 5);
+    expect(post).toHaveBeenCalledWith("/data-quality-flags/abc/undo", { revision: 5 });
+  });
+
   it("takes an answer back via /undo", async () => {
     await dataQualityFlagsApi.undo("abc");
     expect(post).toHaveBeenCalledWith("/data-quality-flags/abc/undo");

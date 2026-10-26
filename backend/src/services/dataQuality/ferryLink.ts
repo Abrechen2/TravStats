@@ -2,7 +2,6 @@ import type { DbTransaction } from "../../db";
 import { Prisma, type DataQualityFlag } from "../../prisma";
 import { ferryMatchDetailsSchema } from "../../schemas/dataQualityRecordChecks";
 import { propagateWrite, shareSnapshot } from "../sharing/propagate";
-import { restatusTrips } from "../trip/restatusTrips";
 import { findFerryMatches } from "./checks/ferryMatch";
 import { FindingActionError } from "./findingErrors";
 import { loadRecordSnapshot } from "./recordGather";
@@ -38,7 +37,8 @@ export async function applyFerryLink(tx: DbTransaction, flag: DataQualityFlag): 
   const { ferryId, candidateTripId } = details.data;
 
   await lockRideAndTrip(tx, ferryId, candidateTripId);
-  const snapshot = await loadRecordSnapshot(flag.userId);
+  // Through the transaction: never a second pool connection while locked.
+  const snapshot = await loadRecordSnapshot(flag.userId, tx);
   const still = findFerryMatches(snapshot).find((f) => f.entityId === ferryId);
   if (!still || still.kind !== "ferry_match" || still.details.candidateTripId !== candidateTripId) {
     throw new FindingActionError("staleFinding");
@@ -51,8 +51,7 @@ export async function applyFerryLink(tx: DbTransaction, flag: DataQualityFlag): 
   });
   if (linked.count === 0) throw new FindingActionError("staleFinding");
   await propagateWrite(tx, flag.userId, "ferry", ferryId, before);
-  // A ride extends its trip's span — the ferry routes do the same.
-  await restatusTrips([candidateTripId], tx);
+  // The caller re-derives the trip's status after commit (`restatusTrips`).
   return { entityType: "ferry_journey", id: ferryId, tripId: candidateTripId };
 }
 
@@ -71,5 +70,4 @@ export async function undoFerryLink(
   });
   if (unlinked.count === 0) throw new FindingActionError("staleFinding");
   await propagateWrite(tx, userId, "ferry", link.id, before);
-  await restatusTrips([link.tripId], tx);
 }

@@ -108,7 +108,10 @@ export default function ReviewCard({
                 disabled={busy}
                 onClick={() =>
                   void act(
-                    () => dataQualityFlagsApi.resolve(flag.id),
+                    () =>
+                      flag.revision === undefined
+                        ? dataQualityFlagsApi.resolve(flag.id)
+                        : dataQualityFlagsApi.resolve(flag.id, { revision: flag.revision }),
                     false,
                     t("dataQuality:inbox.messages.resolved")
                   )
@@ -123,7 +126,10 @@ export default function ReviewCard({
                 disabled={busy}
                 onClick={() =>
                   void act(
-                    () => dataQualityFlagsApi.dismiss(flag.id),
+                    () =>
+                      flag.revision === undefined
+                        ? dataQualityFlagsApi.dismiss(flag.id)
+                        : dataQualityFlagsApi.dismiss(flag.id, flag.revision),
                     false,
                     t("dataQuality:inbox.messages.dismissed")
                   )
