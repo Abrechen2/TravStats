@@ -169,8 +169,7 @@ export async function previewLodgingEnrichment(
 }
 
 /**
- * Fill a lodging's empty fields from its OpenStreetMap entry (beta,
- * `lodgingEnrichment`). Never overwrites: a value the user typed, or that an
+ * Fill a lodging's empty fields from its OpenStreetMap entry. Never overwrites: a value the user typed, or that an
  * import brought, is theirs. A chain is only linked when the catalogue already
  * knows the brand — an unknown one is an offer elsewhere, never a silent
  * create (same rule as the import preview).

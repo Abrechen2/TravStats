@@ -154,10 +154,6 @@
             "name": "Roadtrips und Touren",
             "what": "Die Domäne „Roadtrips“ (mehrtägige Touren mit Stationen an deinen Unterkünften) und alle Touren: die Touren-Seite und der Editor, der Touren-Reiter im Dashboard und in einer Reise, die Touren auf der Übersichtskarte sowie die Karten für Routing-Anbieter und Strava."
           },
-          "lodgingEnrichment": {
-            "name": "Unterkünfte aus OpenStreetMap ergänzen",
-            "what": "Der Knopf „Aus OpenStreetMap ergänzen“ auf der Seite einer Unterkunft: Er trägt Sterne, Webseite, Kette und die Wikipedia-Verknüpfung in leere Felder ein. Braucht zusätzlich den Schalter für offene Datendienste."
-          },
           "rentalDomain": {
             "name": "Mietwagen",
             "what": "Der Bereich „Mietwagen“: ein Fahrtenbuch für Mietwagen mit Abholung und Rückgabe in Ortszeit der Station, Fahrzeuggruppe, Preis und den Kilometern aus der Schlussrechnung."

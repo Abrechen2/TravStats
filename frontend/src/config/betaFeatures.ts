@@ -110,18 +110,6 @@ export const BETA_FEATURES = Object.freeze({
     reason: "beta",
   }),
   /**
-   * "Complete from OpenStreetMap" on a lodging's page: stars, website, the
-   * house's Wikidata item and a known chain, written only into empty fields.
-   * Also needs the instance's open data switch; the button asks both.
-   */
-  lodgingEnrichment: Object.freeze({
-    why: "Owner ruling 2026-09-24: the OpenStreetMap enrichment of hotels goes in behind the beta switch. It matches a house by its pin and its name within 150 m, and that match has not yet been checked against real lodgings — a wrong match would write a stranger's stars and website into the user's record.",
-    returnsWhen:
-      "The enrichment has been run over the owner's real lodgings on the RC's copy of production, its wrong matches counted and found acceptable, and the owner accepts it for release.",
-    reason: "beta",
-  }),
-
-  /**
    * Car rentals (spec 2026-10-01-rental-domain-design). Like every domain
    * switch here, gated through `config/domainBetaGates.ts`: this flag AND the
    * user's own domain choice.

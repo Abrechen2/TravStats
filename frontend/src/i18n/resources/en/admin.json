@@ -154,10 +154,6 @@
             "name": "Roadtrips and tours",
             "what": "The “Roadtrips” domain (multi-day trips with stations at your stays) and all tours: the tours page and editor, the tour tab on the dashboard and on a trip, the tours on the overview map, and the routing provider and Strava cards."
           },
-          "lodgingEnrichment": {
-            "name": "Complete lodgings from OpenStreetMap",
-            "what": "The “Complete from OpenStreetMap” button on a lodging’s page: it writes stars, website, chain and the Wikipedia link into empty fields. Also needs the open data services switch."
-          },
           "rentalDomain": {
             "name": "Rental cars",
             "what": "The Rental cars area: a logbook for car rentals with pickup and return in station local time, car group, price and the kilometres from the final invoice."
