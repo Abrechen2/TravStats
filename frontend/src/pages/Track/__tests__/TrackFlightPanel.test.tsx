@@ -79,7 +79,7 @@ describe("TrackFlightPanel", () => {
     expect(figures.querySelector('[data-figure="speed"]')).toHaveTextContent('"kmh":"900"');
     expect(await screen.findAllByTestId("track-altitude-pin")).toHaveLength(1);
     expect(screen.getByTestId("track-altitude-cursor")).toBeInTheDocument();
-    expect(screen.getByTestId("track-altitude-profile").querySelectorAll("path")).toHaveLength(2);
+    expect(screen.getAllByTestId("track-altitude-line")).toHaveLength(2);
     expect(within(screen.getByTestId("track-flight-photos")).getAllByRole("img")).toHaveLength(1);
     expect(views.photos).toHaveBeenCalledWith({
       from: new Date(T).toISOString(),

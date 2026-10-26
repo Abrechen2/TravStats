@@ -1,8 +1,18 @@
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
+import { getAirportTimezone } from "../../utils/timezone";
 import { FLIGHT_WINDOW_SELECT, flightRecorderWindow } from "../tripRecording/bounds";
 import type { StoredPoint } from "../tripRecording/segments";
-import { readSafeTravTrack, type SafePointRow } from "./readSafe";
+import { DAY_LABEL_DESCRIBERS } from "./dayContextLabels";
+import {
+  climbToCruiseMinutes,
+  downsample,
+  landingOf,
+  maxOf,
+  takeoffOf,
+  type FlightSample,
+} from "./flightSeries";
+import { readSafeTravTrack, type SafeCursor, type SafePointRow } from "./readSafe";
 
 /**
  * A flight's altitude and speed over time from the account's own TravTrack
@@ -22,34 +32,48 @@ import { readSafeTravTrack, type SafePointRow } from "./readSafe";
  * answer is. A flight whose times are a placeholder (date-only) arms no window
  * and stays empty: abstention, not invention.
  *
+ * The whole flight (owner 2026-10-26): the read pages through the safe
+ * read's cursor up to FLIGHT_PANEL_READ_CAP points in all, so a long-haul
+ * recording is no longer cut at the first page; the answer is then thinned to
+ * at most FLIGHT_PANEL_MAX_SAMPLES samples (`flightSeries.ts`), keeping each
+ * bucket's apex and top speed, never spanning a break. The summary is taken
+ * from every sample read, before the thinning. `truncated` now means only
+ * that the read hit its total cap. A page boundary breaks the series like a
+ * cut does — two parts of a read are never joined.
+ *
  * Summary figures abstain rather than guess (null, never 0):
  *   - `maxAltitudeM` / `maxSpeedMps` — null without a single recorded value;
- *   - `climbToCruiseMinutes` — from the first shown vertex, when it is near
- *     the ground (≤ 20 % of the highest altitude), to the first vertex at 90 %
- *     of it, both in ONE stretch, and only for a real cruise (≥ 3000 m);
- *     otherwise null — a series starting in the air or broken during the
- *     climb cannot say how long the climb took.
+ *   - `climbToCruiseMinutes` — from the take-off (`takeoffOf`) to the first
+ *     sample at 90 % of the highest altitude, in the take-off's stretch, only
+ *     for a real cruise (≥ 3000 m); null without a take-off or when the climb
+ *     was broken. Never from the window's start: that counted the taxi.
  */
 
-export const FLIGHT_PANEL_POINT_CAP = 20_000;
-const CRUISE_MIN_ALTITUDE_M = 3000;
-const GROUND_SHARE = 0.2;
-const CRUISE_SHARE = 0.9;
+/** Points one page of the safe read takes; also what one links query names. */
+export const FLIGHT_PANEL_PAGE = 20_000;
+/** Points one panel reads in all, across its pages. */
+export const FLIGHT_PANEL_READ_CAP = 300_000;
 
-/** `[tMs, altitudeM, speedMps]` of one shown vertex. */
-export type FlightSample = [number, number | null, number | null];
+export type { FlightSample } from "./flightSeries";
 
 export type FlightPanelBasis = "linked" | "window";
 
 export type FlightPanel = {
   flightId: string;
+  /** The flight as the day's timeline names it, e.g. "LH718 MUC–ICN". */
+  label: string;
+  /** The departure airport's zone, for the clock the profile is read in; null when unknown. */
+  departureZone: string | null;
   /** Where the samples come from: points linked to the flight, or its time window; null when empty. */
   basis: FlightPanelBasis | null;
-  /** Stretches of samples, oldest first; never joined across a cut. */
+  /** Stretches of samples, oldest first, thinned to at most 2000; never joined across a cut. */
   series: FlightSample[][];
+  /** The flight's points read (before the thinning). */
   pointCount: number;
-  /** More linked points than one answer carries; the rest is not shown. */
+  /** The read hit FLIGHT_PANEL_READ_CAP: the rest of the recording is not shown. */
   truncated: boolean;
+  takeoffMs: number | null;
+  landingMs: number | null;
   summary: {
     maxAltitudeM: number | null;
     maxSpeedMps: number | null;
@@ -57,69 +81,66 @@ export type FlightPanel = {
   };
 };
 
-const maxOf = (values: Array<number | null>): number | null => {
-  let best: number | null = null;
-  for (const v of values)
-    if (v !== null && Number.isFinite(v) && (best === null || v > best)) best = v;
-  return best;
-};
-
-/** Minutes from a near-ground start to cruise, inside the first stretch only; null when not derivable. */
-export function climbToCruiseMinutes(series: readonly FlightSample[][]): number | null {
-  const top = maxOf(series.flat().map((s) => s[1]));
-  if (top === null || top < CRUISE_MIN_ALTITUDE_M) return null;
-  const first = series[0];
-  const start = first?.[0];
-  if (!start || start[1] === null || start[1] > top * GROUND_SHARE) return null;
-  const reached = first.find((s) => s[1] !== null && s[1] >= top * CRUISE_SHARE);
-  if (!reached) return null;
-  return Math.round(((reached[0] - start[0]) / 60_000) * 10) / 10;
-}
-
 const notFound = () => new AppError("No such flight", 404, "TRAVTRACK_FLIGHT_NOT_FOUND");
 
+type Header = Pick<FlightPanel, "flightId" | "label" | "departureZone">;
+
+/** Points in all, and per page of the safe read (tests make pages small). */
+export type ReadLimits = { total: number; page: number };
+
 /**
- * Bounded at every step: the linked points' extent is one aggregate, the
- * safe read stops at `cap`, and only the links of the points that read
- * returned are loaded — a recording of a million linked fixes never
- * materialises its links.
+ * Bounded at every step: the linked points' extent is one aggregate, each
+ * page of the safe read takes FLIGHT_PANEL_PAGE points, the pages stop at
+ * `cap` in all, and only the links of the points a page returned are loaded
+ * — a recording of a million linked fixes never materialises its links.
  */
 export async function travTrackFlightPanel(
   userId: string,
   flightId: string,
-  cap: number = FLIGHT_PANEL_POINT_CAP
+  limits: number | ReadLimits = FLIGHT_PANEL_READ_CAP
 ): Promise<FlightPanel> {
+  const cap: ReadLimits =
+    typeof limits === "number" ? { total: limits, page: FLIGHT_PANEL_PAGE } : limits;
   const flight = await prisma.flight.findFirst({
     where: { id: flightId, userId },
     select: { id: true, ...FLIGHT_WINDOW_SELECT },
   });
   if (!flight) throw notFound();
+  const described = (await DAY_LABEL_DESCRIBERS.flight(userId, [flightId])).get(flightId);
+  const header: Header = {
+    flightId,
+    label: described?.label ?? "",
+    departureZone:
+      (await getAirportTimezone(flight.depIata ?? flight.depIcao)) ?? flight.depTimezone ?? null,
+  };
   const [extent] = await prisma.$queryRaw<{ from_t: Date | null; to_t: Date | null }[]>`
     SELECT min(p.t) AS from_t, max(p.t) AS to_t
       FROM travtrack_point_links l JOIN travtrack_points p ON p.id = l.point_id
      WHERE l.user_id = ${userId} AND l.entry_kind = 'flight' AND l.entry_id = ${flightId}`;
   if (extent?.from_t && extent.to_t) {
-    return linkedPanel(userId, flightId, [extent.from_t.getTime(), extent.to_t.getTime()], cap);
+    return linkedPanel(userId, header, [extent.from_t.getTime(), extent.to_t.getTime()], cap);
   }
   const window = await flightRecorderWindow(flight);
-  if (!window) return emptyPanel(flightId);
-  return windowPanel(userId, flightId, window, cap);
+  if (!window) return emptyPanel(header);
+  return windowPanel(userId, header, window, cap);
 }
 
-function emptyPanel(flightId: string): FlightPanel {
+function emptyPanel(header: Header, truncated = false): FlightPanel {
   return {
-    flightId,
+    ...header,
     basis: null,
     series: [],
     pointCount: 0,
-    truncated: false,
+    truncated,
+    takeoffMs: null,
+    landingMs: null,
     summary: { maxAltitudeM: null, maxSpeedMps: null, climbToCruiseMinutes: null },
   };
 }
 
 type SafeRead = Awaited<ReturnType<typeof readSafeTravTrack>>;
 
-/** The read's stretches, keeping only members; a non-member breaks the stretch. */
+/** One page's stretches, keeping only members; a non-member breaks the stretch. */
 function seriesOf(read: SafeRead, member: (row: SafePointRow) => boolean): FlightSample[][] {
   const series: FlightSample[][] = [];
   for (const stretch of read.segments) {
@@ -141,20 +162,47 @@ function seriesOf(read: SafeRead, member: (row: SafePointRow) => boolean): Fligh
   return series;
 }
 
+/**
+ * Every page of the window through the safe read's cursor, up to `cap` points
+ * in all. `member` decides per page (it may ask the database about that
+ * page's points only). A page boundary breaks the series.
+ */
+async function readPaged(
+  userId: string,
+  [fromMs, toMs]: [number, number],
+  cap: ReadLimits,
+  member: (read: SafeRead) => Promise<(row: SafePointRow) => boolean>
+): Promise<{ series: FlightSample[][]; truncated: boolean }> {
+  const series: FlightSample[][] = [];
+  let after: SafeCursor | null = null;
+  let left = cap.total;
+  for (;;) {
+    const page = Math.min(cap.page, left);
+    const read = await readSafeTravTrack(userId, { fromMs, untilMs: toMs + 1 }, page, after);
+    series.push(...seriesOf(read, await member(read)));
+    left -= page;
+    if (read.next === null || read.cursor === null) return { series, truncated: false };
+    if (left <= 0) return { series, truncated: true };
+    after = read.cursor;
+  }
+}
+
 function panelOf(
-  flightId: string,
+  header: Header,
   basis: FlightPanelBasis,
   series: FlightSample[][],
   truncated: boolean
 ): FlightPanel {
-  if (series.length === 0) return { ...emptyPanel(flightId), truncated };
+  if (series.length === 0) return emptyPanel(header, truncated);
   const samples = series.flat();
   return {
-    flightId,
+    ...header,
     basis,
-    series,
+    series: downsample(series),
     pointCount: samples.length,
     truncated,
+    takeoffMs: takeoffOf(series)?.tMs ?? null,
+    landingMs: landingOf(series),
     summary: {
       maxAltitudeM: maxOf(samples.map((s) => s[1])),
       maxSpeedMps: maxOf(samples.map((s) => s[2])),
@@ -165,31 +213,33 @@ function panelOf(
 
 async function linkedPanel(
   userId: string,
-  flightId: string,
-  [fromMs, toMs]: [number, number],
-  cap: number
+  header: Header,
+  window: [number, number],
+  cap: ReadLimits
 ): Promise<FlightPanel> {
-  const read = await readSafeTravTrack(userId, { fromMs, untilMs: toMs + 1 }, cap);
-  const readIds = read.segments.flatMap((stretch) =>
-    (stretch as StoredPoint[]).flatMap((p) => {
-      const row = read.rowOf(p);
-      return row ? [row.id] : [];
-    })
-  );
-  const links =
-    readIds.length === 0
-      ? []
-      : await prisma.travTrackPointLink.findMany({
-          where: { userId, entryKind: "flight", entryId: flightId, pointId: { in: readIds } },
-          select: { pointId: true },
-        });
-  const linked = new Set(links.map((l) => l.pointId));
-  return panelOf(
-    flightId,
-    "linked",
-    seriesOf(read, (row) => linked.has(row.id)),
-    read.next !== null
-  );
+  const { series, truncated } = await readPaged(userId, window, cap, async (read) => {
+    const readIds = read.segments.flatMap((stretch) =>
+      (stretch as StoredPoint[]).flatMap((p) => {
+        const row = read.rowOf(p);
+        return row ? [row.id] : [];
+      })
+    );
+    const links =
+      readIds.length === 0
+        ? []
+        : await prisma.travTrackPointLink.findMany({
+            where: {
+              userId,
+              entryKind: "flight",
+              entryId: header.flightId,
+              pointId: { in: readIds },
+            },
+            select: { pointId: true },
+          });
+    const linked = new Set(links.map((l) => l.pointId));
+    return (row) => linked.has(row.id);
+  });
+  return panelOf(header, "linked", series, truncated);
 }
 
 /** A stored point's source: its device, else its origin (an import names no device). */
@@ -197,9 +247,9 @@ const sourceOf = (row: SafePointRow): string => row.deviceId ?? row.origin;
 
 /**
  * The source holding most fixes in the WHOLE window, counted in the database
- * before any cap: picking it from a capped read would let the first 20 000
- * fixes outvote the rest. The count only chooses; what is shown still comes
- * from the privacy-safe read.
+ * before any cap: picking it from a capped read would let the first fixes
+ * outvote the rest. The count only chooses; what is shown still comes from
+ * the privacy-safe read.
  */
 async function mainSourceIn(
   userId: string,
@@ -217,17 +267,17 @@ async function mainSourceIn(
 
 async function windowPanel(
   userId: string,
-  flightId: string,
+  header: Header,
   window: [number, number],
-  cap: number
+  cap: ReadLimits
 ): Promise<FlightPanel> {
   const main = await mainSourceIn(userId, window);
-  if (main === null) return emptyPanel(flightId);
-  const read = await readSafeTravTrack(userId, { fromMs: window[0], untilMs: window[1] + 1 }, cap);
-  return panelOf(
-    flightId,
-    "window",
-    seriesOf(read, (row) => sourceOf(row) === main),
-    read.next !== null
+  if (main === null) return emptyPanel(header);
+  const { series, truncated } = await readPaged(
+    userId,
+    window,
+    cap,
+    async () => (row) => sourceOf(row) === main
   );
+  return panelOf(header, "window", series, truncated);
 }

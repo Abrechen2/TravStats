@@ -100,6 +100,11 @@ registry.registerPath({
 
 const panel = z.object({
   flightId: z.string(),
+  label: z.string().describe("The flight as the day's timeline names it, e.g. `LH718 MUC–ICN`"),
+  departureZone: z
+    .string()
+    .nullable()
+    .describe("The departure airport's IANA zone, for the profile's clock; null when unknown"),
   basis: z
     .enum(["linked", "window"])
     .nullable()
@@ -115,9 +120,20 @@ const panel = z.object({
           .describe("`[tMs, altitudeM, speedMps]`; null where the phone gave none")
       )
     )
-    .describe("The linked privacy-safe points as stretches; never join two"),
-  pointCount: z.number().int(),
-  truncated: z.boolean().describe("More linked points than one answer carries"),
+    .describe(
+      "The privacy-safe points as stretches, thinned to at most 2000 samples by time bucket " +
+        "(each bucket keeps its lowest and highest altitude and top speed); never join two"
+    ),
+  pointCount: z.number().int().describe("The flight's points read, before the series was thinned"),
+  truncated: z
+    .boolean()
+    .describe("The read hit its total cap: the rest of the recording is not in the series"),
+  takeoffMs: z
+    .number()
+    .int()
+    .nullable()
+    .describe("The first airborne sample after one on the ground; null when not found"),
+  landingMs: z.number().int().nullable().describe("The mirror of `takeoffMs`, from the end"),
   summary: z.object({
     maxAltitudeM: z.number().nullable().describe("Null without a single altitude"),
     maxSpeedMps: z.number().nullable().describe("Null without a single speed"),
@@ -125,7 +141,7 @@ const panel = z.object({
       .number()
       .nullable()
       .describe(
-        "From a near-ground first vertex to 90 % of the highest altitude in one stretch; " +
+        "From the take-off to 90 % of the highest altitude in the take-off's stretch; " +
           "null when not derivable — never 0"
       ),
   }),

@@ -47,6 +47,7 @@ import FlightPlanActual from "../components/flightDetail/FlightPlanActual";
 import FlightDayCard, { dayCardShown } from "../components/flightDetail/FlightDayCard";
 import BookingItinerary from "../components/flightDetail/BookingItinerary";
 import BookingPrice from "../components/flightDetail/BookingPrice";
+import FlightProfileLink from "../components/flightDetail/FlightProfileLink";
 import { useFlightBooking } from "../components/flightDetail/useFlightBooking";
 
 /**
@@ -410,6 +411,7 @@ export default function FlightDetailPage(): JSX.Element {
             arrival={{ lat: flight.arrLat, lon: flight.arrLon }}
             scheduled={{ departure, arrival: flightArrival(flight) }}
           />
+          <FlightProfileLink flightId={flight.id} departure={departure} />
 
           <DetailSection
             title={t("flights:form.aircraft")}

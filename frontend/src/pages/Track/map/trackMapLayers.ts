@@ -90,7 +90,12 @@ export interface TrackLayerInput {
   onPhoto: (photo: TravTrackPhoto) => void;
   /** The visited countries' shapes (the countries layer); empty while it is off. */
   countries: readonly Feature<Geometry>[];
+  /** The open flight panel's whole flight, drawn over the span's line; empty without one. */
+  highlight?: readonly LonLat[][];
 }
+
+/** The open flight's line: bright, over the span's line, never joined across its own breaks. */
+const HIGHLIGHT_RGB: [number, number, number] = [244, 236, 224];
 
 /** The photo markers' colour: the Stats accent, apart from the track's own. */
 const PHOTO_RGB: [number, number, number] = [240, 169, 71];
@@ -180,6 +185,21 @@ export function buildTrackLayers(input: TrackLayerInput): Layer[] {
     );
   }
   if (on.routes) out.push(routeLayer(input, alpha));
+  if (input.highlight && input.highlight.length > 0) {
+    out.push(
+      new PathLayer<LonLat[]>({
+        id: "track-flight",
+        data: [...input.highlight],
+        getPath: (d) => d,
+        getColor: [...HIGHLIGHT_RGB, 255],
+        getWidth: 4,
+        widthUnits: "pixels",
+        capRounded: true,
+        jointRounded: true,
+        pickable: false,
+      })
+    );
+  }
   if (on.points) {
     out.push(
       new ScatterplotLayer<MapPoint>({

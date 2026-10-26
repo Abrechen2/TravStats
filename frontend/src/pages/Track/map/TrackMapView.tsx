@@ -6,7 +6,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { useTodayZone } from "../../../hooks/useTodayZone";
 import type { Feature, Geometry } from "geojson";
 import type { TrackPoint } from "../../../lib/api/travtrack";
-import type { TravTrackPhoto } from "../../../lib/api/travtrackViews";
+import type { TravTrackFlightPanel, TravTrackPhoto } from "../../../lib/api/travtrackViews";
 import { todayIn } from "../../../shared/time/clock";
 import TrackDeleteDialog from "../TrackDeleteDialog";
 import TrackExportDialog from "../TrackExportDialog";
@@ -40,6 +40,7 @@ import {
   type TrackSpan,
 } from "./trackSpan";
 import { clipSegments, replayPositions } from "./trackReplay";
+import { useFlightTrack } from "./useFlightTrack";
 import { useLiveFollow } from "./useLiveFollow";
 import { useReplay } from "./useReplay";
 import { useTrackMapData } from "./useTrackMapData";
@@ -49,6 +50,19 @@ type Loaded = Extract<DayResult, { kind: "loaded" }>;
 /** No stretches for the replay of a span longer than it plays. */
 const NO_STRETCHES: TrackPoint[][] = [];
 const NO_SHAPES: Feature<Geometry>[] = [];
+const NO_LINES: LonLat[][] = [];
+
+/** A flight named only by its id (a link): the panel reads its label from the server. */
+const flightById = (id: string): SelectedFlight => ({ id, label: "", href: `/flights/${id}` });
+
+/** The instants the open panel's series covers, for the map's flight line. */
+function seriesWindow(
+  panel: TravTrackFlightPanel | null
+): { fromMs: number; untilMs: number } | null {
+  const all = panel?.series.flat() ?? [];
+  if (all.length < 2) return null;
+  return { fromMs: all[0][0], untilMs: all[all.length - 1][0] + 1 };
+}
 
 const toLines = (segments: readonly TrackPoint[][]) =>
   segments.filter((s) => s.length > 1).map((s): LonLat[] => s.map(lonLat));
@@ -66,7 +80,8 @@ export default function TrackMapView(): JSX.Element {
   const { t } = useTranslation(["track"]);
   const navigate = useNavigate();
   const params = useParams<{ date?: string }>();
-  const [search] = useSearchParams();
+  const [search, setSearch] = useSearchParams();
+  const flightParam = search.get("flight");
   const profileZone = useTodayZone();
   const today = todayIn(profileZone);
   const span = useMemo(() => parseSpan(params.date, search, today), [params.date, search, today]);
@@ -78,7 +93,33 @@ export default function TrackMapView(): JSX.Element {
   const [notice, setNotice] = useState<string | null>(null);
   const [selected, setSelected] = useState<MapPoint | null>(null);
   const [photo, setPhoto] = useState<TravTrackPhoto | null>(null);
-  const [flight, setFlight] = useState<SelectedFlight | null>(null);
+  const [flight, setFlightState] = useState<SelectedFlight | null>(() =>
+    flightParam ? flightById(flightParam) : null
+  );
+  const [flightPanel, setFlightPanel] = useState<TravTrackFlightPanel | null>(null);
+  // `?flight=` opens the panel (a link from the flight's page); back and forward follow it.
+  useEffect(() => {
+    setFlightState((current) =>
+      flightParam === null ? null : current?.id === flightParam ? current : flightById(flightParam)
+    );
+    setFlightPanel((panel) => (panel?.flightId === flightParam ? panel : null));
+  }, [flightParam]);
+  const setFlight = useCallback(
+    (next: SelectedFlight | null) => {
+      setFlightState(next);
+      setFlightPanel(null);
+      setSearch(
+        (prev) => {
+          const params = new URLSearchParams(prev);
+          if (next) params.set("flight", next.id);
+          else params.delete("flight");
+          return params;
+        },
+        { replace: true }
+      );
+    },
+    [setSearch]
+  );
   const [fog, setFog] = useState<FogStatus>({ kind: "idle" });
   const [live, setLive] = useState(false);
   const following = live && !long && days.includes(today);
@@ -159,6 +200,9 @@ export default function TrackMapView(): JSX.Element {
   const empty = !loading && !failed && totals.points === 0;
   const hasDrawing = source.segments.some((s) => s.length > 0);
   const reload = () => setGeneration((g) => g + 1);
+  const flightTrack = useFlightTrack(flight ? seriesWindow(flightPanel) : null, generation);
+  const highlight = flightTrack.kind === "loaded" ? flightTrack.lines : NO_LINES;
+  const framed = highlight.length > 0 ? highlight : frameLines;
 
   return (
     <div className="flex flex-col gap-4">
@@ -206,14 +250,16 @@ export default function TrackMapView(): JSX.Element {
               {t(span.kind === "day" ? "track:day.empty" : "track:map.rangeEmpty")}
             </p>
           )}
-          {hasDrawing && (long || !loading) && (
+          {(hasDrawing || highlight.length > 0) && (long || !loading) && (
             <div className="relative">
               <TrackRangeMap
                 key={`${span.fromDay}|${span.toDay}|${loading ? "partial" : "whole"}`}
+                refit={highlight.length > 0 ? `flight:${flight?.id ?? ""}` : "day"}
                 layers={prefs.layers}
                 color={prefs.color}
                 opacity={prefs.opacity}
-                frameLines={frameLines}
+                frameLines={framed}
+                highlight={highlight}
                 lines={lines}
                 segments={drawn}
                 points={points}
@@ -286,7 +332,18 @@ export default function TrackMapView(): JSX.Element {
               cursor={replay.t}
               generation={generation}
               onClose={() => setFlight(null)}
+              onPanel={setFlightPanel}
             />
+          )}
+          {flight && flightTrack.kind === "failed" && (
+            <p className="t-caption" role="status" style={{ color: token("warn") }}>
+              {t("track:flight.mapFailed", { reason: t(flightTrack.key) })}
+            </p>
+          )}
+          {flight && flightTrack.kind === "loaded" && flightTrack.partial && (
+            <p className="t-caption" role="status">
+              {t("track:flight.mapPartial")}
+            </p>
           )}
         </section>
 
