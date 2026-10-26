@@ -2,8 +2,9 @@ import { api } from "./client";
 
 /**
  * The calendar subscription (`/api/v1/calendar-feed`, forgejo#310). Enveloped
- * (`{success, data}`, ADR 0001). The URL is returned once, by `issue` — only
- * its hash is stored, so `status` can say THAT a URL exists, never which.
+ * (`{success, data}`, ADR 0001). `issue` returns the new URL; `status` lists
+ * the live one again where the server can recover it (kept encrypted since
+ * 2026-10-26) — null for one issued before that.
  * A failure is thrown as the axios error; `saveErrorKey` turns it into copy.
  */
 
@@ -19,12 +20,19 @@ export interface CalendarFeedStatus {
   createdAt: string | null;
   /** When a calendar app last read the URL; null when never. */
   lastUsedAt: string | null;
+  /** The live URL; null without one, or for one issued before tokens were kept. */
+  url: string | null;
+  webcalUrl: string | null;
+  /** False when the link's host is a private/loopback IP or `localhost`. */
+  reachableFromInternet: boolean;
 }
 
 export interface IssuedCalendarFeed {
   url: string;
   webcalUrl: string;
   createdAt: string;
+  /** False when the link's host is a private/loopback IP or `localhost`. */
+  reachableFromInternet: boolean;
 }
 
 export const calendarFeedApi = {

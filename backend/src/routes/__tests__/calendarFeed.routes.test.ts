@@ -205,11 +205,13 @@ describe("calendar feed", () => {
 
     const after = await request(app).get("/api/v1/calendar-feed").set("Cookie", owner.cookie);
     expect(after.body.data).toMatchObject({ enabled: true, active: true, lastUsedAt: null });
-    // The token is shown once; the state never carries it.
-    expect(JSON.stringify(after.body)).not.toContain("ts_cal_");
+    // The state lists the URL again (recovered from its ciphertext); the hash never leaves.
+    // (supertest binds a fresh port per request, so the paths are compared.)
+    expect(feedPath(after.body.data.url)).toBe(feedPath(url));
     const row = await prisma.calendarFeed.findUniqueOrThrow({ where: { userId: owner.id } });
     expect(row.tokenHash).toMatch(/^[0-9a-f]{64}$/);
     expect(url).not.toContain(row.tokenHash);
+    expect(JSON.stringify(after.body)).not.toContain(row.tokenHash);
   });
 
   it("answers the owner's calendar with no cookie, as private text/calendar", async () => {
@@ -225,7 +227,11 @@ describe("calendar feed", () => {
     // Upcoming, and inside the 30-day look-back.
     expect(text).toContain("UID:flight-00000000-0000-4000-8000-0000000000a1@travstats");
     expect(text).toContain("UID:flight-00000000-0000-4000-8000-0000000000a2@travstats");
-    expect(text).toContain("DTSTART:20300601T120000Z\r\nDTEND:20300601T131500Z");
+    // On each airport's clock: 14:00 in Munich, 15:15 in Vienna.
+    expect(text).toContain(
+      "DTSTART;TZID=Europe/Berlin:20300601T140000\r\nDTEND;TZID=Europe/Vienna:20300601T151500"
+    );
+    expect(text).toMatch(/SUMMARY:✈ [^\r]* 14:00 → [^\r]* 15:15 · LH2280\r\n/);
     // Stay: its nights, the check-out day excluded; its name escaped.
     expect(text).toContain(
       "UID:stay-00000000-0000-4000-8000-0000000000c1@travstats\r\nDTSTAMP:20300520T100000Z\r\n" +
@@ -248,6 +254,32 @@ describe("calendar feed", () => {
     );
   });
 
+  it("writes a Korea flight on Seoul's clock, with its local times in the summary", async () => {
+    // KE1206 as the owner saw it: 03:05 UTC is 12:05 in Seoul, not 05:05 in Germany.
+    await flight(owner.id, "00000000-0000-4000-8000-0000000000a5", "2030-06-15T03:05:00Z", {
+      flightNumber: "KE1206",
+      airlineIata: "KE",
+      depIata: "CJU",
+      depLat: 33.51,
+      depLon: 126.49,
+      depTimezone: "Asia/Seoul",
+      arrIata: "GMP",
+      arrLat: 37.56,
+      arrLon: 126.79,
+      arrTimezone: "Asia/Seoul",
+      arrivalTime: new Date("2030-06-15T04:10:00Z"),
+    });
+    const { url } = await issue(owner);
+    const text = unfolded((await request(app).get(feedPath(url))).text);
+    expect(text).toContain(
+      "DTSTART;TZID=Asia/Seoul:20300615T120500\r\nDTEND;TZID=Asia/Seoul:20300615T131000"
+    );
+    expect(text).toContain("BEGIN:VTIMEZONE\r\nTZID:Asia/Seoul\r\n");
+    expect(text).toMatch(/SUMMARY:✈ [^\r]* 12:05 → [^\r]* 13:10 · KE1206\r\n/);
+    // The rail ride the same way: 09:00 in Munich, 12:30 in Zurich.
+    expect(text).toMatch(/SUMMARY:🚆 München Hbf 09:00 → Zürich HB 12:30\r\n/);
+  });
+
   it("leaves out cancelled entries, entries older than the look-back, and switched-off domains", async () => {
     const { url } = await issue(owner);
     const text = unfolded((await request(app).get(feedPath(url))).text);
@@ -267,6 +299,36 @@ describe("calendar feed", () => {
     expect(theirText).toContain("0000000000b1");
     expect(theirText).not.toContain("0000000000a1");
     expect(theirText).not.toContain("Sacher");
+  });
+
+  it("lists the current URL again, recovered from its ciphertext, never stored in plain", async () => {
+    const issued = await issue(owner);
+    const state = await request(app).get("/api/v1/calendar-feed").set("Cookie", owner.cookie);
+    expect(state.body.data.active).toBe(true);
+    expect(feedPath(state.body.data.url)).toBe(feedPath(issued.url));
+    expect(state.body.data.webcalUrl).toMatch(/^webcal:\/\//);
+    expect(feedPath(state.body.data.webcalUrl.replace(/^webcal:/, "http:"))).toBe(
+      feedPath(issued.url)
+    );
+    expect(typeof state.body.data.reachableFromInternet).toBe("boolean");
+    const row = await prisma.calendarFeed.findUniqueOrThrow({ where: { userId: owner.id } });
+    const token = feedPath(issued.url)
+      .split("/")
+      .pop()!
+      .replace(/\.ics$/, "");
+    expect(row.tokenEncrypted).toBeTruthy();
+    expect(row.tokenEncrypted).not.toContain(token);
+  });
+
+  it("answers url null for a link issued before tokens were kept, and leaves it working", async () => {
+    const issued = await issue(owner);
+    await prisma.calendarFeed.update({
+      where: { userId: owner.id },
+      data: { tokenEncrypted: null },
+    });
+    const state = await request(app).get("/api/v1/calendar-feed").set("Cookie", owner.cookie);
+    expect(state.body.data).toMatchObject({ active: true, url: null, webcalUrl: null });
+    expect((await request(app).get(feedPath(issued.url))).status).toBe(200);
   });
 
   it("records when a calendar app last read the feed", async () => {
@@ -303,6 +365,33 @@ describe("calendar feed", () => {
     expect(res.body.code).toBe("CALENDAR_FEED_NOT_FOUND");
   });
 
+  it("builds the link on a known name rather than an IP, and flags an address the internet cannot reach", async () => {
+    // The stored row, not the ENV-merged view, so the restore writes back what was there.
+    const before = await prisma.adminSettings.findFirstOrThrow({ orderBy: { id: "asc" } });
+    try {
+      await updateInstanceSettings({
+        publicUrl: "http://192.168.178.120:3010",
+        frontendUrl: "https://trav.example.org",
+      });
+      const named = await request(app).post("/api/v1/calendar-feed").set("Cookie", owner.cookie);
+      expect(named.body.data.url).toMatch(/^https:\/\/trav\.example\.org\/api\/v1\/calendar\//);
+      expect(named.body.data.reachableFromInternet).toBe(true);
+
+      await updateInstanceSettings({ publicUrl: "http://192.168.178.120:3010", frontendUrl: null });
+      const ip = await request(app)
+        .post("/api/v1/calendar-feed")
+        .set("Cookie", owner.cookie)
+        .set("Host", "10.0.0.7:8000");
+      expect(ip.body.data.url).toMatch(/^http:\/\/192\.168\.178\.120:3010\//);
+      expect(ip.body.data.reachableFromInternet).toBe(false);
+    } finally {
+      await updateInstanceSettings({
+        publicUrl: before.publicUrl,
+        frontendUrl: before.frontendUrl,
+      });
+    }
+  });
+
   it("is off with the instance's beta switch: no URL issued, none answered", async () => {
     const { url } = await issue(owner);
     await updateInstanceSettings({ betaFeaturesEnabled: false });
@@ -319,20 +408,126 @@ describe("calendar feed", () => {
     expect((await request(app).get(feedPath(url))).status).toBe(200);
   });
 
-  it("is managed from a browser session only — an API token cannot mint one", async () => {
+  const bearer = async (
+    scope: string,
+    deviceId: string | null,
+    user: Account = owner
+  ): Promise<string> => {
     const tok = await generateApiToken();
     await prisma.apiToken.create({
       data: {
-        userId: owner.id,
+        userId: user.id,
         label: `${PREFIX}pat`,
         lookupHash: tok.lookupHash,
         hash: tok.hash,
-        scope: "admin",
+        scope,
+        deviceId,
       },
     });
-    const res = await request(app)
-      .post("/api/v1/calendar-feed")
-      .set("Authorization", `Bearer ${tok.plaintext}`);
+    return `Bearer ${tok.plaintext}`;
+  };
+
+  it("refuses a generic API token — reading, minting and revoking alike", async () => {
+    const auth = await bearer("admin", null);
+    for (const method of ["get", "post", "delete"] as const) {
+      const res = await request(app)[method]("/api/v1/calendar-feed").set("Authorization", auth);
+      expect(res.status).toBe(403);
+    }
+  });
+
+  const revokeAll = () => request(app).delete("/api/v1/calendar-feed").set("Cookie", owner.cookie);
+
+  it("lets the paired Companion read and issue the URL, but not revoke it", async () => {
+    await revokeAll();
+    const auth = await bearer("write", "device-calfeed-1");
+    const state = await request(app).get("/api/v1/calendar-feed").set("Authorization", auth);
+    expect(state.status).toBe(200);
+    expect(state.body.data).toMatchObject({ enabled: true, active: false });
+    const issued = await request(app).post("/api/v1/calendar-feed").set("Authorization", auth);
+    expect(issued.status).toBe(201);
+    expect(issued.body.data.url).toMatch(/\/api\/v1\/calendar\/ts_cal_/);
+    const revoke = await request(app).delete("/api/v1/calendar-feed").set("Authorization", auth);
+    expect(revoke.status).toBe(403);
+  });
+
+  describe("issued from a paired device", () => {
+    // Its own account: the issue limiter allows 20 new URLs an hour per user.
+    let phone: Account;
+    beforeAll(async () => {
+      phone = await account("phone", ["flight"]);
+    });
+
+    it("never rotates a live URL from a device unless asked to", async () => {
+      const auth = await bearer("write", "device-calfeed-3", phone);
+      const first = await request(app).post("/api/v1/calendar-feed").set("Authorization", auth);
+      expect(first.status).toBe(201);
+
+      const again = await request(app).post("/api/v1/calendar-feed").set("Authorization", auth);
+      expect(again.status).toBe(409);
+      expect(again.body.code).toBe("CALENDAR_FEED_EXISTS");
+      expect((await request(app).get(feedPath(first.body.data.url))).status).toBe(200);
+
+      const rotated = await request(app)
+        .post("/api/v1/calendar-feed")
+        .set("Authorization", auth)
+        .send({ rotate: true });
+      expect(rotated.status).toBe(201);
+      expect(rotated.body.data.url).not.toBe(first.body.data.url);
+      expect((await request(app).get(feedPath(first.body.data.url))).status).toBe(404);
+
+      // A browser session keeps replacing it without being asked.
+      expect(
+        (await request(app).post("/api/v1/calendar-feed").set("Cookie", phone.cookie)).status
+      ).toBe(201);
+    });
+
+    it("ends a device-issued URL with the token that issued it — revoked or deleted", async () => {
+      await request(app).delete("/api/v1/calendar-feed").set("Cookie", phone.cookie);
+      const tok = await generateApiToken();
+      const row = await prisma.apiToken.create({
+        data: {
+          userId: phone.id,
+          label: `${PREFIX}pat`,
+          lookupHash: tok.lookupHash,
+          hash: tok.hash,
+          scope: "write",
+          deviceId: "device-calfeed-4",
+        },
+      });
+      const issued = await request(app)
+        .post("/api/v1/calendar-feed")
+        .set("Authorization", `Bearer ${tok.plaintext}`);
+      expect(issued.status).toBe(201);
+      expect((await request(app).get(feedPath(issued.body.data.url))).status).toBe(200);
+
+      // Unpairing revokes the device's token (soft, `revokedAt`).
+      await prisma.apiToken.update({ where: { id: row.id }, data: { revokedAt: new Date(NOW) } });
+      expect((await request(app).get(feedPath(issued.body.data.url))).status).toBe(404);
+      const state = await request(app).get("/api/v1/calendar-feed").set("Cookie", phone.cookie);
+      expect(state.body.data).toMatchObject({ active: false, url: null });
+
+      // A hard-deleted token takes its feed with it.
+      const auth = await bearer("write", "device-calfeed-5", phone);
+      const second = await request(app).post("/api/v1/calendar-feed").set("Authorization", auth);
+      expect(second.status).toBe(201);
+      await prisma.apiToken.deleteMany({ where: { deviceId: "device-calfeed-5" } });
+      expect(await prisma.calendarFeed.count({ where: { userId: phone.id } })).toBe(0);
+    });
+
+    it("leaves a browser-issued URL alone when a device token is revoked", async () => {
+      const issued = await request(app).post("/api/v1/calendar-feed").set("Cookie", phone.cookie);
+      expect(issued.status).toBe(201);
+      await prisma.apiToken.updateMany({
+        where: { userId: phone.id, deviceId: { not: null } },
+        data: { revokedAt: new Date(NOW) },
+      });
+      expect((await request(app).get(feedPath(issued.body.data.url))).status).toBe(200);
+    });
+  });
+
+  it("refuses a paired device's read-only token", async () => {
+    const auth = await bearer("read", "device-calfeed-2");
+    const res = await request(app).get("/api/v1/calendar-feed").set("Authorization", auth);
     expect(res.status).toBe(403);
   });
 

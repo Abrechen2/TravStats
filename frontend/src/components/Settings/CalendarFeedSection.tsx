@@ -28,10 +28,11 @@ type CopyState = "idle" | "copied" | "failed";
  * "Kalender-Abo" (forgejo#310): one secret URL any calendar app can subscribe
  * to, with the user's upcoming entries in it.
  *
- * The URL is shown ONCE, right after it is made: the server keeps only its
- * hash, as for API tokens and share links, so afterwards the card can say that
- * a URL exists and when it was last read, but not which one. Losing it means
- * making a new one, which is also how a leaked URL is replaced.
+ * The live URL is shown right after it is made and again whenever the server
+ * can recover it (it keeps the token encrypted since 2026-10-26); a URL from
+ * before that still works but cannot be shown. Replacing it is how a leaked
+ * URL is retired. Under the link, a warning when its address is a private IP
+ * or `localhost` — Google Calendar fetches from the internet and never gets it.
  */
 export default function CalendarFeedSection(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
@@ -115,12 +116,12 @@ export default function CalendarFeedSection(): JSX.Element {
    * field the reader can select, and a failed copy says so.
    */
   const copyUrl = async (): Promise<void> => {
-    if (!issued) return;
+    if (!link) return;
     try {
       if (!window.isSecureContext || !navigator.clipboard?.writeText) {
         throw new Error("Clipboard unavailable");
       }
-      await navigator.clipboard.writeText(issued.url);
+      await navigator.clipboard.writeText(link.url);
       setCopy("copied");
     } catch (error) {
       logger.warn("Copying the calendar feed URL failed:", error);
@@ -129,6 +130,16 @@ export default function CalendarFeedSection(): JSX.Element {
   };
 
   const active = status?.active === true;
+  // The URL just issued, else the live one the state recovered.
+  const link: { url: string; webcalUrl: string; reachableFromInternet: boolean } | null =
+    issued ??
+    (active && status?.url && status.webcalUrl
+      ? {
+          url: status.url,
+          webcalUrl: status.webcalUrl,
+          reachableFromInternet: status.reachableFromInternet,
+        }
+      : null);
 
   return (
     <SectionCard>
@@ -181,7 +192,9 @@ export default function CalendarFeedSection(): JSX.Element {
 
         {isDemo && status?.enabled && <DemoLockedNotice />}
 
-        {issued && (
+        {active && !link && <p className="t-caption">{t(`${NS}.notRecoverable`)}</p>}
+
+        {link && (
           <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
             <label className="label" htmlFor="calendar-feed-url">
               {t(`${NS}.urlLabel`)}
@@ -190,16 +203,21 @@ export default function CalendarFeedSection(): JSX.Element {
               id="calendar-feed-url"
               className="input"
               readOnly
-              value={issued.url}
+              value={link.url}
               onFocus={(event) => event.currentTarget.select()}
               style={{ fontFamily: "var(--ts-font-mono)" }}
             />
-            <p className="t-caption">{t(`${NS}.shownOnce`)}</p>
+            {!link.reachableFromInternet && (
+              <p role="note" className="t-caption" style={{ color: "var(--ts-warn)" }}>
+                {t(`${NS}.unreachable`)}
+              </p>
+            )}
+            <p className="t-caption">{t(`${NS}.keepSecret`)}</p>
             <span className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
               <Button variant="primary" onClick={() => void copyUrl()}>
                 {t(`${NS}.copy`)}
               </Button>
-              <a className="btn-secondary" href={issued.webcalUrl}>
+              <a className="btn-secondary" href={link.webcalUrl}>
                 {t(`${NS}.openInCalendar`)}
               </a>
             </span>

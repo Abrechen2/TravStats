@@ -10,8 +10,9 @@ import type { EventBounds } from "./ics";
  * nothing else, so a flight's fake-UTC legacy row or a stay's legacy day anchor
  * is read by the same code that reads it for the web and the Companion.
  *
- * - An instant known to the minute goes out as itself, in UTC — a calendar app
- *   shows it on the reader's own clock, which is what a calendar is for.
+ * - An instant known to the minute goes out as itself, with its place's zone:
+ *   the writer puts it on that place's clock (owner, 2026-10-26 — a Korea
+ *   flight read at German times), and in UTC where no zone is known.
  * - A ride logged by day only (`precision: "day"`) and every day value becomes
  *   an all-day event on the PLACE's calendar day, never the UTC date.
  * - Anything vaguer (`month`, `year`, `unknown`) is left out. A stay "some time
@@ -49,7 +50,13 @@ export function boundsOfInstants(
     // timed departure says nothing about when the event ends.
     const to =
       end && end.precision === "minute" && new Date(end.utc) > from ? new Date(end.utc) : null;
-    return { kind: "timed", start: from, end: to };
+    return {
+      kind: "timed",
+      start: from,
+      end: to,
+      startZone: start.zone,
+      endZone: to && end ? end.zone : null,
+    };
   }
   const first = dayOf(start);
   const last = knownToDay(end) ? later(dayOf(end), first) : first;
@@ -93,4 +100,22 @@ export function endOfBounds(bounds: EventBounds): Date {
   // The exclusive end day at UTC midnight. The window is 30 days wide; which
   // zone that midnight is read in moves an entry by hours, not by days.
   return toDbDate(bounds.endExclusive);
+}
+
+/**
+ * `HH:mm` on the place's clock, for an event's summary — only for an instant
+ * known to the minute at a known zone. Without a zone the reading would be
+ * UTC passed off as local, so there is none.
+ */
+export function localClock(value: TimeValue | null): string | null {
+  if (!value || value.precision !== "minute" || !value.zone) return null;
+  return value.local.slice(11, 16);
+}
+
+/** `12:05 → 13:10`, `12:05` alone, or null — the clock span of a stay or a rental. */
+export function clockSpan(start: TimeValue | null, end: TimeValue | null): string | null {
+  const from = localClock(start);
+  if (!from) return null;
+  const to = localClock(end);
+  return to ? `${from} → ${to}` : from;
 }

@@ -2,7 +2,7 @@ import { prisma } from "../../db";
 import { cruiseTimes } from "../cruise/timesDto";
 import { stayTimes } from "../lodging/timesDto";
 import { tripTimes } from "../trips/timesDto";
-import { boundsOfDaySpan, boundsOfInstants, boundsOfNights } from "./eventBounds";
+import { boundsOfDaySpan, boundsOfInstants, boundsOfNights, clockSpan } from "./eventBounds";
 import {
   FEED_ROW_LIMIT,
   feedEvent,
@@ -120,7 +120,16 @@ export async function stayEvents(ctx: FeedContext): Promise<IcsEvent[]> {
       return feedEvent(
         {
           uid: `stay-${s.id}`,
-          summary: joined(" ", iconOf("lodging"), s.lodging.name),
+          // Check-in and check-out hours when the stay is timed: `🏨 Hotel · 15:00 → 11:00`.
+          summary: joined(
+            " ",
+            iconOf("lodging"),
+            joined(
+              " · ",
+              s.lodging.name,
+              bounds?.kind === "timed" ? clockSpan(times.checkInAt, times.checkOutAt) : null
+            )
+          ),
           bounds,
           location: joined(", ", s.lodging.address, s.lodging.city, s.lodging.country) || null,
           details: [s.trip ? `${TRIP_ICON} ${s.trip.name}` : null],

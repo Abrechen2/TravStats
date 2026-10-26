@@ -5,6 +5,8 @@ import {
   boundsOfDaySpan,
   boundsOfInstants,
   boundsOfNights,
+  clockSpan,
+  localClock,
   endOfBounds,
 } from "../eventBounds";
 
@@ -18,14 +20,26 @@ const at = (local: string, zone: string, precision: "minute" | "day" | "unknown"
   serializeTime(toInstant(local, zone, { origin: "machine" }).utc, zone, precision);
 
 describe("calendar event bounds", () => {
-  it("keeps a timed journey's real instants", () => {
+  it("keeps a timed journey's real instants, each with its place's zone", () => {
     const dep = at("2030-06-01T08:00", "Europe/Berlin");
     const arr = at("2030-06-01T10:30", "Europe/London");
     expect(boundsOfInstants(dep, arr)).toEqual({
       kind: "timed",
       start: new Date("2030-06-01T06:00:00.000Z"),
       end: new Date("2030-06-01T09:30:00.000Z"),
+      startZone: "Europe/Berlin",
+      endZone: "Europe/London",
     });
+  });
+
+  it("gives a summary the local clock only where the zone is known", () => {
+    const dep = at("2030-06-01T08:00", "Europe/Berlin");
+    const arr = at("2030-06-01T10:30", "Europe/London");
+    expect(localClock(dep)).toBe("08:00");
+    expect(clockSpan(dep, arr)).toBe("08:00 → 10:30");
+    expect(clockSpan(dep, null)).toBe("08:00");
+    expect(localClock({ ...dep, zone: null })).toBeNull();
+    expect(localClock(at("2030-06-01T00:00", "Europe/Berlin", "day"))).toBeNull();
   });
 
   it("drops an arrival that is not a later instant rather than inventing a length", () => {
