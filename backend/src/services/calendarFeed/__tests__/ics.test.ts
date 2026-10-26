@@ -250,6 +250,42 @@ describe("ics writer — place zones", () => {
     expect(text).not.toContain("TZID");
   });
 
+  it("writes a far-off event in UTC without walking its zone's millennia", () => {
+    // The feed URL is public: one entry dated 9999 must not make every read
+    // generate eight thousand years of Berlin transitions.
+    const far = (iso: string, uid: string): IcsEvent => ({
+      ...berlinNight,
+      uid,
+      bounds: { kind: "timed", start: new Date(iso), end: null, startZone: "Europe/Berlin" },
+    });
+    const started = performance.now();
+    const text = calendar([
+      far("9999-06-01T10:00:00Z", "a"),
+      far("0001-06-01T10:00:00Z", "b"),
+      seoul,
+    ]);
+    expect(performance.now() - started).toBeLessThan(100);
+    expect(text).toContain("DTSTART:99990601T100000Z\r\n");
+    expect(text).toContain("DTSTART:00010601T100000Z\r\n");
+    expect(text).not.toContain("TZID:Europe/Berlin");
+    expect(text).toContain("DTSTART;TZID=Asia/Seoul:20261017T120500\r\n");
+  });
+
+  it("keeps the zone window to thirty years around the calendar's date", () => {
+    // Inside 1970–2100, but decades from the feed's date: UTC, and no
+    // VTIMEZONE stretched across the gap.
+    const at = (iso: string, uid: string): IcsEvent => ({
+      ...berlinNight,
+      uid,
+      bounds: { kind: "timed", start: new Date(iso), end: null, startZone: "Europe/Berlin" },
+    });
+    const text = calendar([at("2026-12-01T10:00:00Z", "near"), at("2090-06-01T10:00:00Z", "far")]);
+    expect(text).toContain("DTSTART;TZID=Europe/Berlin:20261201T110000\r\n");
+    expect(text).toContain("DTSTART:20900601T100000Z\r\n");
+    const block = vtimezone(text, "Europe/Berlin");
+    expect(block).not.toMatch(/DTSTART:20[3-9]\d/);
+  });
+
   it("is a valid calendar: folded lines, balanced blocks, a VTIMEZONE for every TZID", () => {
     const raw = writeCalendar({
       name: "TravStats",

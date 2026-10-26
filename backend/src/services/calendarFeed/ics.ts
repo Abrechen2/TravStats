@@ -115,54 +115,89 @@ export interface IcsCalendar {
 
 const property = (name: string, value: string): string => foldLine(`${name}:${value}`);
 
-/** The zone a bound is written in, or null for UTC — an unknown zone is UTC, never a guess. */
-const writableZone = (zone: string | null | undefined): string | null =>
-  zone && isValidZone(zone) ? zone : null;
-
-/** `NAME;TZID=Zone:YYYYMMDDTHHMMSS` on the place's clock, or `NAME:…Z` in UTC. */
-function instantProperty(name: string, instant: Date, zone: string | null | undefined): string {
-  const tz = writableZone(zone);
-  const parts = tz ? wallClockParts(instant.getTime(), tz) : null;
-  if (!tz || !parts) return property(name, formatUtc(instant));
-  const local = formatParts(parts).replace(/[-:]/g, "");
-  return property(`${name};TZID=${tz}`, local);
+/**
+ * The UTC years a bound may be written on its place's clock in. The feed URL
+ * is public and an entry's date is whatever was typed, so the VTIMEZONE span
+ * is bounded: 1970–2100 (what zone data describes with any confidence), and
+ * at most thirty years around the calendar's own date. A bound outside is
+ * written in UTC — still the right instant, only not on the local clock.
+ */
+export interface ZoneWindow {
+  fromYear: number;
+  toYear: number;
 }
 
-/** The UTC years each zone's bounds touch, so its VTIMEZONE covers them. */
-function zoneYears(events: IcsEvent[]): Map<string, { from: number; to: number }> {
+export function zoneWindow(generatedAt: Date): ZoneWindow {
+  const year = generatedAt.getUTCFullYear();
+  return { fromYear: Math.max(1970, year - 10), toYear: Math.min(2100, year + 20) };
+}
+
+/** The zone a bound is written in, or null for UTC — an unknown zone is UTC, never a guess. */
+function writableZone(
+  zone: string | null | undefined,
+  instant: Date,
+  window: ZoneWindow
+): string | null {
+  const year = instant.getUTCFullYear();
+  if (!zone || year < window.fromYear || year > window.toYear) return null;
+  return isValidZone(zone) ? zone : null;
+}
+
+/** `NAME;TZID=Zone:YYYYMMDDTHHMMSS` on the place's clock, or `NAME:…Z` in UTC. */
+function instantProperty(name: string, instant: Date, zone: string | null): string {
+  const parts = zone ? wallClockParts(instant.getTime(), zone) : null;
+  if (!zone || !parts) return property(name, formatUtc(instant));
+  const local = formatParts(parts).replace(/[-:]/g, "");
+  return property(`${name};TZID=${zone}`, local);
+}
+
+interface ZonedBounds {
+  start: Date;
+  end: Date | null;
+  startZone: string | null;
+  endZone: string | null;
+}
+
+const zonedBounds = (bounds: TimedBounds, window: ZoneWindow): ZonedBounds => ({
+  start: bounds.start,
+  end: bounds.end,
+  startZone: writableZone(bounds.startZone, bounds.start, window),
+  endZone: bounds.end ? writableZone(bounds.endZone, bounds.end, window) : null,
+});
+
+/** The UTC years each zone's bounds touch, so its VTIMEZONE covers them — and no more. */
+function zoneYears(all: ZonedBounds[]): Map<string, { from: number; to: number }> {
   const years = new Map<string, { from: number; to: number }>();
-  const note = (zone: string | null | undefined, instant: Date | null): void => {
-    const tz = writableZone(zone);
-    if (!tz || !instant) return;
+  const note = (zone: string | null, instant: Date | null): void => {
+    if (!zone || !instant) return;
     const year = instant.getUTCFullYear();
-    const seen = years.get(tz);
-    years.set(tz, {
+    const seen = years.get(zone);
+    years.set(zone, {
       from: Math.min(seen?.from ?? year, year),
       to: Math.max(seen?.to ?? year, year),
     });
   };
-  for (const { bounds } of events) {
-    if (bounds.kind !== "timed") continue;
-    note(bounds.startZone, bounds.start);
-    note(bounds.endZone, bounds.end);
+  for (const b of all) {
+    note(b.startZone, b.start);
+    note(b.endZone, b.end);
   }
   return years;
 }
 
-function timezoneLines(events: IcsEvent[]): string[] {
-  return [...zoneYears(events)]
+function timezoneLines(all: ZonedBounds[]): string[] {
+  return [...zoneYears(all)]
     .sort(([a], [b]) => (a < b ? -1 : 1))
     .flatMap(([zone, { from, to }]) => vtimezoneLines(zone, from, to) ?? []);
 }
 
-function eventLines(event: IcsEvent, stamp: string): string[] {
+function eventLines(event: IcsEvent, stamp: string, window: ZoneWindow): string[] {
   const lines = [
     "BEGIN:VEVENT",
     property("UID", escapeText(event.uid)),
     property("DTSTAMP", stamp),
   ];
   if (event.bounds.kind === "timed") {
-    const { start, end, startZone, endZone } = event.bounds;
+    const { start, end, startZone, endZone } = zonedBounds(event.bounds, window);
     lines.push(instantProperty("DTSTART", start, startZone));
     if (end) lines.push(instantProperty("DTEND", end, endZone));
   } else {
@@ -184,6 +219,7 @@ function eventLines(event: IcsEvent, stamp: string): string[] {
 /** The whole calendar as one string, CRLF-terminated. */
 export function writeCalendar(calendar: IcsCalendar): string {
   const stamp = formatUtc(calendar.generatedAt);
+  const window = zoneWindow(calendar.generatedAt);
   const ttl = `PT${calendar.refreshMinutes}M`;
   const lines = [
     "BEGIN:VCALENDAR",
@@ -195,8 +231,12 @@ export function writeCalendar(calendar: IcsCalendar): string {
     property("X-WR-CALNAME", escapeText(calendar.name)),
     `REFRESH-INTERVAL;VALUE=DURATION:${ttl}`,
     `X-PUBLISHED-TTL:${ttl}`,
-    ...timezoneLines(calendar.events),
-    ...calendar.events.flatMap((event) => eventLines(event, stamp)),
+    ...timezoneLines(
+      calendar.events.flatMap((e) =>
+        e.bounds.kind === "timed" ? [zonedBounds(e.bounds, window)] : []
+      )
+    ),
+    ...calendar.events.flatMap((event) => eventLines(event, stamp, window)),
     "END:VCALENDAR",
   ];
   return lines.join(CRLF) + CRLF;

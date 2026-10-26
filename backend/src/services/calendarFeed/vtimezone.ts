@@ -18,6 +18,14 @@ import { offsetMsAt } from "../../shared/time/zonedParts";
  */
 
 const DAY_MS = 86_400_000;
+/**
+ * The sampling step. Transitions are found by comparing offsets a step apart,
+ * then narrowed to the second; a zone changing twice within one step would be
+ * missed, which no zone's rules have done in the years the feed writes locally.
+ */
+const STEP_MS = 7 * DAY_MS;
+/** A caller's span is capped; the writer already bounds it (`zoneWindow` in ics.ts). */
+const MAX_YEARS = 31;
 const SECOND_MS = 1000;
 
 const pad = (n: number): string => String(n).padStart(2, "0");
@@ -57,9 +65,8 @@ function transitionBetween(zone: string, lo: number, hi: number): number {
 }
 
 /**
- * The offset at `fromMs` and every change up to `toMs`. Sampled daily, then
- * narrowed to the second: zones change at most a few times a year, never
- * twice within a day.
+ * The offset at `fromMs` and every change up to `toMs`. Sampled weekly, then
+ * narrowed to the second.
  */
 function onsets(zone: string, fromMs: number, toMs: number): Onset[] | null {
   const first = offsetMsAt(fromMs, zone);
@@ -68,7 +75,7 @@ function onsets(zone: string, fromMs: number, toMs: number): Onset[] | null {
   let previous = first;
   let at = fromMs;
   while (at < toMs) {
-    const next = Math.min(at + DAY_MS, toMs);
+    const next = Math.min(at + STEP_MS, toMs);
     const offset = offsetMsAt(next, zone);
     if (offset !== null && offset !== previous) {
       result.push({ atMs: transitionBetween(zone, at, next), fromMs: previous, toMs: offset });
@@ -85,9 +92,10 @@ const yearStartMs = (year: number): number => Date.UTC(year, 0, 1);
 /**
  * The VTIMEZONE lines for `zone` covering the calendar years `fromYear` to
  * `toYear` inclusive (UTC years of the events; one day of margin on each
- * side), or null for a zone the runtime does not know.
+ * side), or null for a zone the runtime does not know or a span over the cap.
  */
 export function vtimezoneLines(zone: string, fromYear: number, toYear: number): string[] | null {
+  if (!(toYear >= fromYear) || toYear - fromYear > MAX_YEARS) return null;
   const list = onsets(zone, yearStartMs(fromYear) - DAY_MS, yearStartMs(toYear + 1) + DAY_MS);
   if (!list) return null;
   const lowest = Math.min(...list.map((o) => o.toMs));
