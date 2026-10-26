@@ -89,9 +89,8 @@ function renderPage() {
 async function openVisitDeleteDialog(
   user: ReturnType<typeof userEvent.setup>
 ): Promise<HTMLElement> {
-  await screen.findByText("2019-08-14 10:00");
-  const rowDeletes = screen.getAllByRole("button", { name: "common:buttons.delete" });
-  await user.click(rowDeletes[0]);
+  // The row's own delete names the visit (the global test mock answers keys).
+  await user.click(await screen.findByRole("button", { name: "places:visitList.delete" }));
   return screen.findByTestId("confirm-modal");
 }
 
@@ -134,7 +133,7 @@ describe("PlaceDetailPage visit delete", () => {
   it("counts nothing until the dialog is opening", async () => {
     renderPage();
 
-    await screen.findByText("2019-08-14 10:00");
+    await screen.findByRole("button", { name: "places:visitList.delete" });
     expect(listForEntryMock).not.toHaveBeenCalled();
   });
 

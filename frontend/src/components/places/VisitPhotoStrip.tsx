@@ -8,6 +8,8 @@ import type { PlaceVisitPhoto } from "../../types/placeList";
 interface Props {
   visitId: string;
   photos: PlaceVisitPhoto[];
+  /** Offer "Fotos aus deiner Reise vorschlagen" below the strip. Default true. */
+  showSuggestions?: boolean;
 }
 
 /**
@@ -19,7 +21,7 @@ interface Props {
  * this component asks no ownership question, so a second copy of the markup
  * would buy nothing.
  */
-export function VisitPhotoStrip({ visitId, photos }: Props): JSX.Element {
+export function VisitPhotoStrip({ visitId, photos, showSuggestions = true }: Props): JSX.Element {
   return (
     <PhotoStrip<PlaceVisitPhoto>
       photos={photos}
@@ -27,7 +29,11 @@ export function VisitPhotoStrip({ visitId, photos }: Props): JSX.Element {
       onUpload={(files) => uploadVisitPhotos(visitId, files)}
       onDelete={(photoId) => deleteVisitPhoto(visitId, photoId)}
       onCaption={(photoId, caption) => updateVisitPhoto(visitId, photoId, { caption })}
-      footer={(merge) => <VisitPhotoSuggestions visitId={visitId} onLinked={merge} />}
+      footer={
+        showSuggestions
+          ? (merge) => <VisitPhotoSuggestions visitId={visitId} onLinked={merge} />
+          : undefined
+      }
     />
   );
 }

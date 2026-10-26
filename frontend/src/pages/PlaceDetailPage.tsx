@@ -10,14 +10,12 @@ import { statusPillStyle } from "../components/table/statusPillStyle";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { LocationMiniMap } from "../components/location/LocationMiniMap";
 import { PlaceFormModal } from "../components/places/PlaceFormModal";
-import { VisitPhotoStrip } from "../components/places/VisitPhotoStrip";
+import { PlaceVisitList } from "../components/places/PlaceVisitList";
 import { PlaceGallery } from "../components/places/PlaceGallery";
 import { VisitDialog } from "../components/places/VisitDialog";
 import { PlaceMergeDialog } from "../components/places/PlaceMergeDialog";
 import { FormErrorBanner } from "../components/form";
 import { isTransientSaveError, saveErrorKey } from "../lib/saveErrorMessage";
-import DocumentsSection from "../components/documents/DocumentsSection";
-import { RowActionButton, RowActions } from "../components/table/RowActionButton";
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
@@ -34,8 +32,7 @@ import { tripsApi } from "../lib/api/trips";
 import type { Trip } from "../types";
 import { useToastStore } from "../store/toastStore";
 import { PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
-import { classifyVisit } from "../shared/placeCounting";
-import { splitTimeValue } from "../lib/tripTimeline";
+import { useDisplayFormat } from "../lib/displayFormat";
 import { visitTime as visitTimeOf } from "../lib/entityTimes";
 import type { Place, PlaceVisit } from "../types/place";
 
@@ -105,26 +102,6 @@ export default function PlaceDetailPage(): JSX.Element {
   useEffect(() => {
     void load();
   }, [load]);
-
-  /**
-   * Visits newest first, with the PLANNED ones kept separate rather than
-   * folded in. The split is the future-date rule made visible: a visit dated
-   * next month belongs on the page, and belongs in no count
-   * (shared/placeCounting.ts).
-   */
-  const { completed, planned } = useMemo(() => {
-    const all = place?.visits ?? [];
-    const now = new Date();
-    const byDateDesc = (a: PlaceVisit, b: PlaceVisit): number => {
-      const av = a.visitedAt ? Date.parse(a.visitedAt) : Number.NEGATIVE_INFINITY;
-      const bv = b.visitedAt ? Date.parse(b.visitedAt) : Number.NEGATIVE_INFINITY;
-      return bv - av;
-    };
-    return {
-      completed: all.filter((v) => classifyVisit(v, now) === "visited").sort(byDateDesc),
-      planned: all.filter((v) => classifyVisit(v, now) === "planned").sort(byDateDesc),
-    };
-  }, [place]);
 
   /**
    * Re-read the place after a visit was stored, WITHOUT the page's loading
@@ -230,16 +207,16 @@ export default function PlaceDetailPage(): JSX.Element {
     navigate("/places");
   }, [place, addToast, t, navigate]);
 
-  // ISO date in the visit list, as every table row in round 4 (E7).
+  // The visit as the delete question names it, in the user's date format.
+  const fmt = useDisplayFormat();
   const formatVisit = useCallback(
     (v: PlaceVisit): string => {
       const shown = visitTimeOf(v);
-      if (!shown) return t("places:detail.undated");
-      const { date, time } = splitTimeValue(shown);
-      return time ? `${date} ${time}` : date;
+      return shown ? fmt.timeValue(shown) : t("places:detail.undated");
     },
-    [t]
+    [fmt, t]
   );
+  const tripNames = useMemo(() => new Map(trips.map((trip) => [trip.id, trip.name])), [trips]);
 
   if (access === "denied") {
     return (
@@ -282,72 +259,6 @@ export default function PlaceDetailPage(): JSX.Element {
 
   const countryLabel = placeCountryLabel(place, i18n.language);
   const countryCode = placeCountryCode(place);
-  const visitCount = completed.length + planned.length;
-
-  const visitRow = (v: PlaceVisit, isPlanned: boolean, first: boolean): JSX.Element => (
-    <li
-      key={v.id}
-      className="flex flex-col gap-2 py-3"
-      style={first ? undefined : { borderTop: "1px solid var(--ts-border)" }}
-    >
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <span
-          className="shrink-0 whitespace-nowrap text-sm"
-          style={{
-            fontFamily: "var(--ts-font-mono)",
-            minWidth: 96,
-            color: v.visitedAt ? "var(--ts-text-bright)" : "var(--ts-muted)",
-          }}
-        >
-          {formatVisit(v)}
-        </span>
-        <span
-          className="order-last min-w-0 basis-full truncate text-sm sm:order-none sm:basis-0 sm:flex-1"
-          style={{ color: "var(--ts-text)" }}
-        >
-          {v.notes ?? ""}
-        </span>
-        <span className="ml-auto flex shrink-0 items-center gap-2 sm:ml-0">
-          {isPlanned && (
-            <span
-              className="ts-status-pill shrink-0"
-              style={{
-                color: "var(--ts-warn)",
-                borderColor: "color-mix(in srgb, var(--ts-warn) 35%, transparent)",
-                background: "color-mix(in srgb, var(--ts-warn) 8%, transparent)",
-              }}
-            >
-              {t("places:detail.notCountedYet")}
-            </span>
-          )}
-          <RowActions>
-            <RowActionButton
-              icon="edit"
-              label={t("places:detail.editVisit")}
-              onClick={() => openVisitEditor(v)}
-            />
-            <RowActionButton
-              icon="delete"
-              label={t("common:buttons.delete")}
-              onClick={() => setConfirmVisitDelete(v)}
-            />
-          </RowActions>
-        </span>
-      </div>
-      {/* Proof hangs off the VISIT, not the place: "I was here in 2019" and
-          "I was here last week" are two different sets of pictures. */}
-      {!isPlanned && <VisitPhotoStrip visitId={v.id} photos={v.photos ?? []} />}
-      {/* Same reasoning, same place: the API files documents against the VISIT
-          (`/places/visits/:id/documents`), so a ticket belongs to the day it
-          was used rather than to the place that is always there.
-          NOT guarded by `isPlanned`, unlike the photographs above: a ticket
-          exists BEFORE the day it is used, and that is the commonest reason
-          to keep one at all. The photo strip is guarded because a picture of
-          a visit that has not happened is not a thing. */}
-      <DocumentsSection entry={{ type: "placeVisit", id: v.id }} layout="inline" />
-    </li>
-  );
-
   return (
     <AppShell width="list">
       <DetailHeader
@@ -414,36 +325,14 @@ export default function PlaceDetailPage(): JSX.Element {
         <div className="flex flex-col gap-6">
           <PlaceGallery key={place.id} place={place} />
           <WikipediaCard kind="place" id={place.id} />
-          <section className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="t-label-mono">
-                {t("places:detail.visits")} · {visitCount}
-              </h2>
-              <Button variant="primary" onClick={() => setVisitDialog({ visit: null })}>
-                + {t("places:detail.addVisit")}
-              </Button>
-            </div>
-
-            <div className="rounded-[var(--ts-radius-card)] px-5 py-1" style={PANEL}>
-              {visitCount === 0 ? (
-                /* A place ticked off a curated checklist carries `visited` and
-                 * no visit row — deliberate, since a checklist tick says "I
-                 * have been here" without claiming a date. "No visit recorded"
-                 * under a "Visited" badge would read as a contradiction, so
-                 * say which of the two states this actually is. */
-                <p className="t-caption py-3">
-                  {place.visited
-                    ? t("places:detail.visitedWithoutVisit")
-                    : t("places:detail.noVisits")}
-                </p>
-              ) : (
-                <ul>
-                  {completed.map((v, i) => visitRow(v, false, i === 0))}
-                  {planned.map((v, i) => visitRow(v, true, completed.length === 0 && i === 0))}
-                </ul>
-              )}
-            </div>
-          </section>
+          <PlaceVisitList
+            visits={place.visits ?? []}
+            placeVisited={place.visited}
+            tripNames={tripNames}
+            onAdd={() => setVisitDialog({ visit: null })}
+            onEdit={openVisitEditor}
+            onDelete={setConfirmVisitDelete}
+          />
 
           {place.notes && (
             <DetailSection title={t("places:detail.notes")}>
@@ -599,8 +488,3 @@ export default function PlaceDetailPage(): JSX.Element {
     </AppShell>
   );
 }
-
-const PANEL = {
-  background: "var(--ts-surface)",
-  border: "1px solid var(--ts-border)",
-} as const;

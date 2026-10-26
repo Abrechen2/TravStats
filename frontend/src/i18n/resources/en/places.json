@@ -884,5 +884,38 @@
       "noneFiltered": "No places match the filters.",
       "wider": "Widen to {{radius}}"
     }
+  },
+  "visitList": {
+    "filterLabel": "Filter visits",
+    "filterAll": "All",
+    "filterVisited": "Visited · {{count}}",
+    "filterPlanned": "Planned · {{count}}",
+    "summaryVisited": "visited {{count}}×",
+    "summaryLast": "last {{date}}",
+    "summaryFirst": "first dated visit {{date}}",
+    "summaryNext": "next {{date}}",
+    "groupPlanned": "Planned",
+    "groupPlannedHint": "counts once the visit is over",
+    "groupYearCount_one": "{{count}} visit",
+    "groupYearCount_other": "{{count}} visits",
+    "groupUndated": "Undated",
+    "groupUndatedHint": "counts as a visit",
+    "undated": "Undated",
+    "plannedToday": "Planned · today",
+    "plannedTomorrow": "Planned · tomorrow",
+    "plannedInDays_one": "Planned · in {{count}} day",
+    "plannedInDays_other": "Planned · in {{count}} days",
+    "trip": "Trip: {{name}}",
+    "photos_one": "{{count}} photo",
+    "photos_other": "{{count}} photos",
+    "documents_one": "{{count}} document",
+    "documents_other": "{{count}} documents",
+    "rating": "{{rating}} out of 5 stars",
+    "edit": "Edit the visit on {{date}}",
+    "delete": "Delete the visit on {{date}}",
+    "editUndated": "Edit the undated visit",
+    "deleteUndated": "Delete the undated visit",
+    "showOlder": "Load older visits",
+    "emptyFilter": "No visits in this selection."
   }
 }
