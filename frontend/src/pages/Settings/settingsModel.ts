@@ -117,15 +117,13 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
   },
   {
     // What exists today: the Dawarich source, the app's trip recording and the
-    // stay scan. The native location history is a branch of its own.
+    // stay scan. The native location history is a branch of its own. The stay
+    // scan is standard: detecting places as whole areas runs by default, and
+    // only its two switches are expert rows (forgejo#318).
     id: "location",
     labelKey: "settings:groups.location",
     icon: "map-pin",
-    sections: [
-      section("dawarich"),
-      section("tripRecording"),
-      section("stayScan", "expert", { settings: 4 }),
-    ],
+    sections: [section("dawarich"), section("tripRecording"), section("stayScan")],
   },
   {
     // Every domain's programmes in one place (owner, 2026-09-26).

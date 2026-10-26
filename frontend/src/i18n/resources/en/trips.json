@@ -676,9 +676,12 @@
     "nextScan": "Next automatic scan",
     "noPoints": "No location points were returned for this period. Stays cannot be inferred from missing data.",
     "staleData": "The newest returned location data is over 24 hours old. Check your Dawarich sync; a successful request does not mean current points are available.",
+    "areas": {
+      "title": "Detect places automatically",
+      "description": "Markets, shopping malls, parks, zoos, theme parks and museums are suggested as whole venues rather than as single stays – this runs along with stay detection. It queries approximate regions (roughly 5 km grid cells) from OpenStreetMap/Overpass; your location sequences, times and point IDs are not sent. Visits are only recorded after your confirmation."
+    },
     "markets": {
-      "enable": "Suggest market visits automatically",
-      "privacy": "Area recognition queries approximate regions (roughly 5 km grid cells) from OpenStreetMap/Overpass. Your location sequences, times and point IDs are not sent. Visits are only recorded after your confirmation.",
+      "enable": "Detect markets as whole grounds",
       "coverage": "Regions checked: {{tiles}} of {{total}}",
       "missing": "{{count}} map entries have no usable market boundary. This does not mean you did not visit.",
       "stale": "Some map data is older. Please check these suggestions carefully.",
@@ -765,7 +768,7 @@
     },
     "existingVisit": "An existing visit was found in this window. Acceptance checks whether this suggestion can be linked to it.",
     "venues": {
-      "enable": "Suggest other places as whole venues",
+      "enable": "Detect other places as whole venues",
       "description": "Recognize shopping malls, parks, zoos, theme parks and museums using their OSM boundaries. Parks require at least 15 minutes; other venues require 10 minutes. Independent places within larger grounds remain available for review. Only suggestions are created.",
       "missing": "{{count}} map entries have no usable venue boundary. This does not mean you did not visit.",
       "counts": "New area suggestions: {{created}} · Already recorded: {{known}}",

@@ -1058,7 +1058,7 @@
       "calendarFeed": "Calendar, iCal, ICS, subscription, calendar feed",
       "dawarich": "Dawarich, location history, location source, positions, connection",
       "tripRecording": "Recording, positions, app, track, record trip",
-      "stayScan": "Stays, detect stays, radius, minimum duration, markets, places as areas, re-evaluate",
+      "stayScan": "Stays, detect stays, radius, minimum duration, detect places automatically, detect places, places as areas, venues, re-evaluate",
       "companions": "Companions, travel companions, people, rename, merge, duplicate, delete, names"
     },
     "expertKeywords": {
@@ -1066,7 +1066,8 @@
       "autoupdate": "Check interval, interval, approval, expiry, only during flight",
       "backup": "Instance backup, last backup, WebDAV, Nextcloud, sync",
       "externalServices": "own key, own API key, API key, quota, AirLabs key, Aviationstack key, AeroDataBox key, AeroAPI key, OpenSky credentials, GraphHopper key, OpenRouteService key",
-      "features": "seat statistics, seats, window seat, aisle seat"
+      "features": "seat statistics, seats, window seat, aisle seat",
+      "stayScan": "markets, market grounds, shopping malls, parks, zoos, theme parks, museums"
     }
   },
   "railProviders": {
@@ -1148,7 +1149,8 @@
     "reveal": "Show",
     "showInExpert": "Show in Expert",
     "pageMore_one": "1 more setting on this page is only shown in the Expert view.",
-    "pageMore_other": "{{count}} more settings on this page are only shown in the Expert view."
+    "pageMore_other": "{{count}} more settings on this page are only shown in the Expert view.",
+    "hint": "Expert also shows fine-tuning, your own API keys and technical options."
   },
   "sectionChips": "Sections on this page",
   "pagePicker": "Page",

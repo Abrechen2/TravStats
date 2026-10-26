@@ -1058,7 +1058,7 @@
       "calendarFeed": "Kalender, iCal, ICS, Abo, Kalenderabo",
       "dawarich": "Dawarich, Standortverlauf, Standortquelle, Positionen, Verbindung",
       "tripRecording": "Aufzeichnung, Positionen, App, Track, Reise aufzeichnen",
-      "stayScan": "Aufenthalte, Aufenthalt erkennen, Radius, Mindestdauer, Märkte, Orte als Fläche, neu auswerten",
+      "stayScan": "Aufenthalte, Aufenthalt erkennen, Radius, Mindestdauer, Orte automatisch erkennen, Orte erkennen, Orte als Fläche, Gelände, neu auswerten",
       "companions": "Mitreisende, Begleitpersonen, Personen, Umbenennen, Zusammenführen, Doppelt, Duplikat, Löschen, Namen"
     },
     "expertKeywords": {
@@ -1066,7 +1066,8 @@
       "autoupdate": "Abfrageintervall, Intervall, Freigabe, Ablauf, nur während des Flugs",
       "backup": "Instanz-Backup, letzte Sicherung, WebDAV, Nextcloud, Abgleich, Sync",
       "externalServices": "eigener Schlüssel, eigener API-Schlüssel, API-Schlüssel, Kontingent, Quote, AirLabs-Schlüssel, Aviationstack-Schlüssel, AeroDataBox-Schlüssel, AeroAPI-Schlüssel, OpenSky-Zugang, GraphHopper-Schlüssel, OpenRouteService-Schlüssel",
-      "features": "Sitzplatz-Statistik, Sitzplätze, Fensterplatz, Gangplatz"
+      "features": "Sitzplatz-Statistik, Sitzplätze, Fensterplatz, Gangplatz",
+      "stayScan": "Märkte, Marktgelände, Einkaufszentren, Parks, Zoos, Freizeitparks, Museen"
     }
   },
   "railProviders": {
@@ -1148,7 +1149,8 @@
     "reveal": "Einblenden",
     "showInExpert": "In Experte zeigen",
     "pageMore_one": "1 weitere Einstellung auf dieser Seite ist nur in der Ansicht „Experte“ zu sehen.",
-    "pageMore_other": "{{count}} weitere Einstellungen auf dieser Seite sind nur in der Ansicht „Experte“ zu sehen."
+    "pageMore_other": "{{count}} weitere Einstellungen auf dieser Seite sind nur in der Ansicht „Experte“ zu sehen.",
+    "hint": "„Experte“ zeigt zusätzlich Feineinstellungen, eigene API-Schlüssel und technische Optionen."
   },
   "sectionChips": "Abschnitte auf dieser Seite",
   "pagePicker": "Seite",

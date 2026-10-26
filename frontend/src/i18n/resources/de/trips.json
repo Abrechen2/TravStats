@@ -676,9 +676,12 @@
     "nextScan": "Nächste automatische Auswertung",
     "noPoints": "Für diesen Zeitraum wurden keine Positionspunkte geliefert. Daraus lassen sich keine Aufenthalte ableiten.",
     "staleData": "Die zuletzt gelieferten Positionsdaten sind mehr als 24 Stunden alt. Prüfe die Synchronisierung mit Dawarich; ein erfolgreicher Abruf bedeutet nicht, dass aktuelle Punkte vorliegen.",
+    "areas": {
+      "title": "Orte automatisch erkennen",
+      "description": "Märkte, Einkaufszentren, Parks, Zoos, Freizeitparks und Museen werden als ganzes Gelände vorgeschlagen statt als einzelne Aufenthalte – das läuft mit der Aufenthaltserkennung mit. Dafür werden ungefähre Regionen (etwa 5-km-Raster) bei OpenStreetMap/Overpass abgefragt; deine Positionsfolgen, Zeiten und Punkt-IDs werden nicht übertragen. Besuche werden erst nach deiner Bestätigung eingetragen."
+    },
     "markets": {
-      "enable": "Marktbesuche automatisch vorschlagen",
-      "privacy": "Für die Flächenerkennung werden ungefähre Regionen (etwa 5-km-Raster) bei OpenStreetMap/Overpass abgefragt. Deine Positionsfolgen, Zeiten und Punkt-IDs werden nicht übertragen. Besuche werden erst nach deiner Bestätigung eingetragen.",
+      "enable": "Märkte als ganzes Gelände erkennen",
       "coverage": "Geprüfte Regionen: {{tiles}} von {{total}}",
       "missing": "Bei {{count}} Karteneinträgen fehlt eine nutzbare Marktfläche. Das bedeutet nicht, dass du dort nicht warst.",
       "stale": "Ein Teil der Kartendaten ist älter. Bitte prüfe die Zuordnung besonders sorgfältig.",
@@ -765,7 +768,7 @@
     },
     "existingVisit": "Für diesen Zeitraum wurde bereits ein Besuch gefunden. Bei der Übernahme wird geprüft, ob dein Vorschlag damit verknüpft werden kann.",
     "venues": {
-      "enable": "Weitere Orte als gesamtes Gelände vorschlagen",
+      "enable": "Weitere Orte als ganzes Gelände erkennen",
       "description": "Einkaufszentren, Parks, Zoos, Freizeitparks und Museen anhand ihrer OSM-Flächen erkennen. Parks benötigen mindestens 15 Minuten, die übrigen Orte 10 Minuten Aufenthalt. Eigenständige Orte innerhalb größerer Gelände bleiben prüfbar. Es entstehen nur Vorschläge.",
       "missing": "Bei {{count}} Karteneinträgen fehlt eine nutzbare Ortsfläche. Das bedeutet nicht, dass du dort nicht warst.",
       "counts": "Neue Flächen-Vorschläge: {{created}} · Bereits erfasst: {{known}}",

@@ -3,6 +3,8 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import DawarichStayScanCard from "../../Settings/DawarichStayScanCard";
 import { dawarichStaysApi } from "../../../lib/api/dawarichStays";
+import { HiddenRowsContext } from "../../Settings/frame/useExpertRows";
+import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
 
 vi.mock("../../../lib/api/dawarichStays", () => ({
   dawarichStaysApi: {
@@ -28,6 +30,8 @@ const mount = () =>
 afterEach(() => {
   vi.useRealTimers();
   vi.resetAllMocks();
+  // Still mounted here: the level change re-renders the card.
+  act(() => useSettingsLevelStore.setState({ level: null }));
 });
 
 describe("Dawarich settings failure recovery", () => {
@@ -159,7 +163,7 @@ describe("Market discovery consent", () => {
       name: "trips:dawarichStays.markets.enable",
     });
     expect(consent).not.toBeChecked();
-    expect(screen.getByText("trips:dawarichStays.markets.privacy")).toBeInTheDocument();
+    expect(screen.getByText("trips:dawarichStays.areas.description")).toBeInTheDocument();
     fireEvent.click(consent);
     await waitFor(() => expect(dawarichStaysApi.enableMarkets).toHaveBeenCalledWith(true));
     await waitFor(() => expect(screen.getByRole("combobox")).toBeEnabled());
@@ -277,5 +281,56 @@ describe("additional whole venues", () => {
     expect(
       screen.queryByText("trips:dawarichStays.markets.status.partial")
     ).not.toBeInTheDocument();
+  });
+});
+
+// forgejo#318: places are detected as whole areas by default. At the standard
+// level the card says so and offers no knob; the two area switches are expert.
+describe("detecting places automatically at each settings level", () => {
+  const mountReporting = () => {
+    const report = vi.fn();
+    render(
+      <MemoryRouter>
+        <HiddenRowsContext.Provider value={report}>
+          <DawarichStayScanCard />
+        </HiddenRowsContext.Provider>
+      </MemoryRouter>
+    );
+    return report;
+  };
+  const areaState = { ...state, result: "succeeded", marketEnabled: true, venueEnabled: true };
+
+  it("names the detection and hides its two switches at the standard level", async () => {
+    useSettingsLevelStore.setState({ level: "standard" });
+    vi.mocked(dawarichStaysApi.state).mockResolvedValue(areaState as never);
+    const report = mountReporting();
+    await waitFor(() =>
+      expect(screen.getByRole("checkbox", { name: "trips:dawarichStays.enable" })).toBeChecked()
+    );
+    expect(screen.getByText("trips:dawarichStays.areas.title")).toBeInTheDocument();
+    expect(screen.getByText("trips:dawarichStays.areas.description")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("checkbox", { name: "trips:dawarichStays.markets.enable" })
+    ).toBeNull();
+    expect(
+      screen.queryByRole("checkbox", { name: "trips:dawarichStays.venues.enable" })
+    ).toBeNull();
+    expect(report.mock.calls[report.mock.calls.length - 1][1]).toBe(2);
+  });
+
+  it("shows both switches at the expert level", async () => {
+    useSettingsLevelStore.setState({ level: "expert" });
+    vi.mocked(dawarichStaysApi.state).mockResolvedValue(areaState as never);
+    const report = mountReporting();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("checkbox", { name: "trips:dawarichStays.markets.enable" })
+      ).toBeChecked()
+    );
+    expect(
+      screen.getByRole("checkbox", { name: "trips:dawarichStays.venues.enable" })
+    ).toBeChecked();
+    expect(screen.getByText("trips:dawarichStays.areas.title")).toBeInTheDocument();
+    expect(report.mock.calls[report.mock.calls.length - 1][1]).toBe(0);
   });
 });
