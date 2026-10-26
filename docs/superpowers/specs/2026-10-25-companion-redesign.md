@@ -138,6 +138,102 @@ recommendations below are the plan:**
    them? **Recommendation:** keep photo journeys as they are, and build
    `duplicate` first (it has the clearest evidence), then `ferryMatch`.
 
+**As built (server, 2026-10-26, branch `feat/inbox-findings-c3`).** The
+Companion builds against this, not against the proposal above where they differ.
+
+- *Kinds.* `duplicate` is the existing **`duplicate_candidate`** check
+  (forgejo#282: flights, rail, bus, cruises, stays — same-day rules, no second
+  rule invented). `ferryMatch` ships as **`ferry_match`** on entity type
+  `ferry_journey`, in the stored vocabulary's snake_case. `photoMatch` is not
+  built (photo journeys stay as they are).
+- *Every flag* gains `evidence` (an alias of `details`), `undoUntil`
+  (`string | null`), **`actions`** — the kind-specific answers `resolve`
+  takes for this flag; a client offers exactly those — and **`revision`**
+  (integer), bumped by every write to the flag (a run refreshing evidence,
+  re-opening or resolving it, any answer, an undo).
+- *Revision guard.* `resolve`, `dismiss` and `undo` accept an OPTIONAL body
+  field `revision`. When a client sends it, the answer is checked strictly:
+  any other current revision answers 409 `staleFinding`. Without it (a
+  Companion build against the earlier contract) every answer works as
+  before — the server guards each write with the revision it read itself,
+  and merge/link re-validate inside their transaction. The response carries
+  `revision` additively. New clients should send the revision they showed.
+
+  | Kind | `actions` | Status after | Data change | Server undo |
+  |---|---|---|---|---|
+  | any (no body) | — | `resolved` | none | yes |
+  | any (`dismiss`) | — | `dismissed` | none | yes |
+  | `duplicate_candidate` | `keep` | `dismissed`, plus every open flag over the same copies; never asked again | none | yes |
+  | `duplicate_candidate` on `flight` / `lodging_stay` | `merge` | `resolved`, flag moved onto the kept record | see below | **no** (`undoUntil` null; app delays ~5 s) |
+  | `ferry_match` | `link` | `resolved` | ride's `tripId` set | yes, while the ride is still on that trip |
+
+  `keep` answers `dismissed`, not `resolved`: the runner re-opens a resolved
+  flag whose finding still holds, and "these are two entries" is such a finding.
+  `merge` is not offered for rail, bus or cruise copies (`actions: ["keep"]`).
+  Only `keep` answers the GROUP: the other open flags over exactly the same
+  copies are dismissed with it (`staleFinding` if one now names another set),
+  a flag over those copies created or re-found later is born/folded dismissed
+  under it, and `undo` re-opens all of them unless the user answered one
+  since. A plain `dismiss` answers its own flag only. The web's "Das stimmt
+  so" sends `keep` where `actions` offers it.
+- *Duplicate evidence:* the stored details plus `entityType`, `ids` (this flag's
+  record first, ≥2), `keptId` with `keptReason: "oldest"` (the earliest-created
+  copy), `matchedFields`. The flag sits on every copy but the oldest, so a group
+  of three has two flags over one id set — a pair (the normal case) has one.
+- *`merge`* (`{ action: "merge", keptId?, revision? }`): in ONE transaction it
+  locks the copies (`FOR UPDATE`), re-runs the duplicate rule through that
+  transaction (`staleFinding` if they no longer match), refuses with
+  `invalidAction` + `reason: "conflictingRecordings"` when more than one copy
+  carries a flight recording and `reason: "conflictingLinks"` when the copies
+  name different trips, bookings or loyalty cards (or one opted out of
+  loyalty crediting beside one with a card); then moves documents, the
+  trip/booking/card link a removed copy alone has, a flight's companions,
+  recording and public share links, timeline stops (`sourceId`) and roadtrip
+  stations (after the kept copy has joined the shared trip); deletes the
+  other copies with share snapshot + `propagateDelete` like their own DELETE;
+  deletes the flags on the removed rows. After commit: one more stop sweep,
+  trip status re-derived, achievements re-checked. The kept copy's own fields
+  are not filled from the others.
+- *`ferry_match` evidence:* `ferryId`, `candidateTripId`, `candidateTripName`
+  (extra), `departurePort`, `arrivalPort`, **`departureTime` as a `TimeValue`**
+  (the time-shape rule forbids a bare instant), `reason: "insideTripWindow"`.
+  Raised only when both crossing days — the arrival day must be recorded and
+  not before the departure day — lie inside exactly one non-cancelled trip's
+  first and last day, for a ride on no trip and no roadtrip leg. `link`
+  locks the ride and the trip, asks the rule again through its transaction
+  and writes only if the ride is still on no trip and no leg; `undo` locks
+  the ride and clears the trip only while it is still that trip and no leg
+  (else `staleFinding`). A dismissal answers the match to THAT trip: when a
+  different trip holds the crossing later, it is asked again.
+- *Responses.* `resolve`, `dismiss` and `undo` answer
+  `{ success: true, data: Finding | null }` (this router's enveloped family;
+  `data` is null only if the record is gone). Refusals answer
+  `{ error: "notFound" }` (404), `{ error: "invalidAction", reason }` (400;
+  `reason` ∈ `unknownAction | notOffered | keptIdNotInFinding |
+  conflictingRecordings | conflictingLinks`),
+  `{ error: "undoExpired" }` (409; also for a merge, which has no undo) and
+  `{ error: "staleFinding" }` (409; flag not open for an action, copies no
+  longer matching, ride moved, or undo of a flag a re-run already re-opened).
+  A malformed body (non-string `action`, non-integer `revision`) is the generic
+  400 `VALIDATION_FAILED`.
+- *Runs vs answers.* A run reads the flags before the records and writes only
+  at the revision it read; it never re-opens or refreshes a flag answered
+  meanwhile, and leaves a flag it lost the create to alone once anyone has
+  written to it.
+- *Known, out of scope:* `trip_stops.source_id` has no foreign key and the
+  stop create route does not validate it, so a stop created after the merge's
+  final sweep can name a deleted copy — the same as after any DELETE.
+- *When the checks run:* after a create on `/flights`, `/rail`, `/bus`,
+  `/ferry`, `/cruises`, `/lodging`, `/lodging/:id/stays` (detached, coalesced
+  per account), after imports as before, and nightly — where the sweep now also
+  visits accounts holding only flights or rides; it skipped them before, so
+  their duplicates had never been asked. That nightly pass is the backfill; no
+  separate job-registry job was added.
+- *Not built:* a merge button on the web (the web still links each copy and
+  keeps "delete on the record's page"; it shows `keep`'s effect through
+  "Das stimmt so"); a web undo toast. The web renders `ferry_match` with DE/EN
+  copy, links ride and trip, and offers "Zur Reise hinzufügen".
+
 ### C4 — Statistics scoped by year
 
 **What exists.** Most `/api/v1/stats/*` endpoints take `fromDate`/`toDate`

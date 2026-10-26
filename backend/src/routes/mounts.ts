@@ -168,6 +168,7 @@ import documentRoutes from "./documents";
 import tripPhotoWindowRoutes from "./tripPhotoWindows";
 import syncRoutes from "./sync";
 import syncPreconditionRoutes from "./syncPreconditions";
+import dataQualityAfterCreateRoutes from "./dataQualityAfterCreate";
 
 export interface ApiMount {
   /** Mount path, always absolute and always under /api/v1. */
@@ -227,6 +228,10 @@ export const apiMounts: ApiMount[] = [
   // cruises, lodging, trips, tours, places; a request without a base version
   // passes through it untouched.
   { id: "syncPreconditions", base: "/api/v1", router: syncPreconditionRoutes },
+  // Queues the inbox checks after a flight, ride, cruise, lodging or stay is
+  // created (spec 2026-10-25 C3). Answers nothing — it listens for the
+  // create's response — so it sits before the routers it watches.
+  { id: "dataQualityAfterCreate", base: "/api/v1", router: dataQualityAfterCreateRoutes },
   // The incremental change feed, forgejo#141. Its only path is `/sync/...`.
   { id: "sync", base: "/api/v1", router: syncRoutes },
   // Kept originals (forgejo#116). At /api/v1 because the per-entry lists span

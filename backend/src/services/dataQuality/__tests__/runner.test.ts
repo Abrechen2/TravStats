@@ -19,6 +19,7 @@ interface Row {
   details: unknown;
   createdAt: Date;
   resolvedAt: Date | null;
+  revision?: number;
 }
 
 let rows: Row[] = [];
@@ -62,19 +63,27 @@ jest.mock("../../../db", () => ({
         rows.push(row);
         return { ...row };
       }),
-      update: jest.fn(async (args: { where: { id: string }; data: Partial<Row> }) => {
-        const row = rows.find((r) => r.id === args.where.id);
-        if (row) {
-          Object.assign(row, args.data);
-          if ("details" in args.data) row.details = jsonbOrder(args.data.details);
+      // Every runner write is conditional on the revision it read: `{ id,
+      // revision }` for one flag, `{ OR: [...] }` for the stale batch.
+      updateMany: jest.fn(
+        async (args: {
+          where: { id?: string; revision?: number; OR?: { id: string; revision: number }[] };
+          data: Partial<Row> & { revision?: { increment: number } };
+        }) => {
+          const matches = (r: Row, w: { id?: string; revision?: number }) =>
+            r.id === w.id && (w.revision === undefined || (r.revision ?? 0) === w.revision);
+          const hit = rows.filter((r) =>
+            args.where.OR ? args.where.OR.some((w) => matches(r, w)) : matches(r, args.where)
+          );
+          for (const row of hit) {
+            const { revision, ...data } = args.data;
+            Object.assign(row, data);
+            if (revision) row.revision = (row.revision ?? 0) + revision.increment;
+            if ("details" in data) row.details = jsonbOrder(data.details);
+          }
+          return { count: hit.length };
         }
-        return row ? { ...row } : null;
-      }),
-      updateMany: jest.fn(async (args: { where: { id: { in: string[] } }; data: Partial<Row> }) => {
-        const hit = rows.filter((r) => args.where.id.in.includes(r.id));
-        for (const row of hit) Object.assign(row, args.data);
-        return { count: hit.length };
-      }),
+      ),
       count: jest.fn(
         async (args: { where: { userId: string; status: string } }) =>
           rows.filter((r) => r.userId === args.where.userId && r.status === args.where.status)
@@ -110,6 +119,7 @@ const noCoordinates = () => ({
     flights: [],
     railJourneys: [],
     busJourneys: [],
+    ferryJourneys: [],
     cruises: [],
     stays: [],
     trips: [],

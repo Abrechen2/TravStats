@@ -81,6 +81,7 @@ export function snapshot(over: Partial<RecordSnapshot> = {}): RecordSnapshot {
     flights: [],
     railJourneys: [],
     busJourneys: [],
+    ferryJourneys: [],
     cruises: [],
     stays: [],
     trips: [],

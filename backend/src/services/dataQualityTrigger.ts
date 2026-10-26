@@ -40,7 +40,12 @@ import { runDataQualityChecks } from "./dataQuality";
  */
 
 /** Which seam kicked the run. Only used for the log line. */
-export type DataQualityTrigger = "lodging_import" | "place_import" | "home_settings";
+export type DataQualityTrigger =
+  | "lodging_import"
+  | "place_import"
+  | "home_settings"
+  /** A flight, ride, cruise, lodging or stay was created (spec C3: duplicates, ferry matches). */
+  | "record_create";
 
 export interface DataQualityTriggerContext {
   trigger: DataQualityTrigger;
@@ -76,10 +81,14 @@ const inFlight = new Map<string, Promise<void>>();
  */
 export async function triggerDataQualityChecks(
   userId: string,
-  context: DataQualityTriggerContext
+  context: DataQualityTriggerContext,
+  onStart?: () => void
 ): Promise<void> {
   const previous = inFlight.get(userId) ?? Promise.resolve();
-  const next = previous.then(() => runOnce(userId, context));
+  const next = previous.then(() => {
+    onStart?.();
+    return runOnce(userId, context);
+  });
   inFlight.set(userId, next);
   try {
     await next;
@@ -113,4 +122,19 @@ async function runOnce(userId: string, context: DataQualityTriggerContext): Prom
       "Data-quality checks failed after import — the import itself is unaffected"
     );
   }
+}
+
+/** Accounts with a run queued that has not started yet. */
+const waiting = new Set<string>();
+
+/**
+ * A run after a single create — detached, and coalesced: while one run is
+ * queued and not yet started, another create adds nothing, because that
+ * queued run will read the new row anyway. A phone syncing fifty flights
+ * therefore costs one or two passes, not fifty.
+ */
+export function queueDataQualityChecks(userId: string, context: DataQualityTriggerContext): void {
+  if (waiting.has(userId)) return;
+  waiting.add(userId);
+  void triggerDataQualityChecks(userId, context, () => waiting.delete(userId));
 }

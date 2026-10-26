@@ -23,6 +23,11 @@ function answeredRecords(kind: string, details: unknown): Set<string> | null {
     const key = refKey(shape.conflictWith);
     return key ? new Set([key]) : null;
   }
+  // "This crossing does not belong to trip A" says nothing about trip B.
+  if (kind === "ferry_match") {
+    const tripId = (details as { candidateTripId?: unknown }).candidateTripId;
+    return typeof tripId === "string" ? new Set([`trip:${tripId}`]) : null;
+  }
   if (kind === "trip_entries_outside" && Array.isArray(shape.entries)) {
     const keys = (shape.entries as Ref[]).map(refKey);
     return keys.every((k): k is string => k !== null) ? new Set(keys) : null;

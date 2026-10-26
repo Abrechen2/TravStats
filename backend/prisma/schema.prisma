@@ -1629,6 +1629,19 @@ model DataQualityFlag {
   details    Json
   createdAt  DateTime  @default(now()) @map("created_at")
   resolvedAt DateTime? @map("resolved_at")
+  /// Until when the last answer can be taken back (`POST /:id/undo`, spec
+  /// 2026-10-25 C3). Null when there is nothing to undo — an open flag, an
+  /// answer older than the window, or a `merge`, which has no server undo.
+  undoUntil  DateTime? @map("undo_until")
+  /// What the last answer did, so `undo` can put it back: the action, the
+  /// status before it, and per action what it changed (a sibling flag it
+  /// answered too, the trip a `link` set). Null on an open flag.
+  resolution Json?
+  /// Bumped by every write to the flag — a run refreshing its evidence,
+  /// re-opening or resolving it, an answer, an undo. An answer or a run
+  /// writes only against the revision it read, so a write that lost a race
+  /// changes nothing (`staleFinding` for an answer, a skip for a run).
+  revision   Int       @default(0)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

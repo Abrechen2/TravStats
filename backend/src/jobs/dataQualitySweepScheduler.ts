@@ -74,10 +74,9 @@ export interface DataQualitySweepResult {
 /**
  * Whose account is worth reading.
  *
- * All three checks derive from lodgings and places: flights and port calls only
- * ever contribute DATED evidence, which can suppress a finding but never
- * produce one. An account with nothing but flights can therefore be skipped
- * without changing a single flag.
+ * Every table a check reads: lodgings and places for the country checks, the
+ * travel tables for the record checks. (The country checks alone could skip
+ * an account with nothing but flights; the duplicate check cannot.)
  *
  * The third term is the one that is easy to leave out and wrong to. A user who
  * deleted their last lodging still owns the open flag it raised, and the runner
@@ -87,14 +86,23 @@ export interface DataQualitySweepResult {
  * it.
  */
 async function eligibleUserIds(): Promise<string[]> {
-  const [withLodgings, withPlaces, withOpenFlags] = await Promise.all([
+  // The record checks (forgejo#282) and the ferry match (spec C3) read the
+  // travel tables too, so an account holding only flights is no longer one
+  // the run can skip: its duplicate flights were never asked about. A stay
+  // needs a lodging, so `lodging` already covers stays.
+  const groups = await Promise.all([
     prisma.lodging.groupBy({ by: ["userId"] }),
     prisma.place.groupBy({ by: ["userId"] }),
     prisma.dataQualityFlag.groupBy({ by: ["userId"], where: { status: "open" } }),
+    prisma.flight.groupBy({ by: ["userId"] }),
+    prisma.railJourney.groupBy({ by: ["userId"] }),
+    prisma.busJourney.groupBy({ by: ["userId"] }),
+    prisma.ferryJourney.groupBy({ by: ["userId"] }),
+    prisma.cruise.groupBy({ by: ["userId"] }),
   ]);
 
   const ids = new Set<string>();
-  for (const group of [...withLodgings, ...withPlaces, ...withOpenFlags]) {
+  for (const group of groups.flat()) {
     ids.add(group.userId);
   }
   // Sorted so two nights' logs line up and a test can assert an order.

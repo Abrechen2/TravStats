@@ -5,7 +5,8 @@
  * column that reorders `details` would otherwise re-write every flag each run.
  */
 import { prisma } from "../../../db";
-import { listFlags, dismissFlag } from "../flagService";
+import { listFlags } from "../flagService";
+import { dismissFinding as dismissFlag } from "../findingActions";
 import { runDataQualityChecks } from "../runner";
 
 const NOW = new Date("2026-10-10T12:00:00Z");

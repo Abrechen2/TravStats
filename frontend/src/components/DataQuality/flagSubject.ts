@@ -19,7 +19,7 @@ export function flagSubjectPath(flag: DataQualityFlag): string | null {
   // rows like `flight`, and only the kind says which link fits.
   if (isRecordCheckKind(flag.kind)) return recordFlagSubjectPath(flag);
   if (isTimeFlagEntityType(flag.entityType)) return timeFlagEditorPath(flag);
-  if (flag.entityType === "bus_journey") return null;
+  if (flag.entityType === "bus_journey" || flag.entityType === "ferry_journey") return null;
   return flaggedRecordPath({ entityType: flag.entityType, entityId: flag.entityId, label: "" });
 }
 

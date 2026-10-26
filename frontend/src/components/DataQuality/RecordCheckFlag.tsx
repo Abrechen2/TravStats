@@ -10,7 +10,8 @@ import { recordPath } from "./recordFlagLinks";
 /**
  * The record checks' questions (forgejo#282): a possible duplicate, two
  * entries that overlap, a missing flight number, an unknown airport, a trip
- * whose dates do not hold its entries.
+ * whose dates do not hold its entries — and a ferry ride on no trip that lies
+ * inside one (spec 2026-10-25 C3).
  *
  * Same rule as every flag: **a question, not a verdict.** Nothing here offers
  * to delete or merge. Each question names the records involved and links to
@@ -178,6 +179,33 @@ export default function RecordCheckFlag({ flag }: { flag: DataQualityFlag }): JS
           <Hint>{k("safePath")}</Hint>
         </div>
       );
+
+    case "ferry_match": {
+      const d = flag.details;
+      const route = `${d.departurePort ?? "?"} → ${d.arrivalPort ?? "?"}`;
+      return (
+        <div className="space-y-3">
+          <Question>
+            {k("question", {
+              route,
+              date: fmt.timeValue(d.departureTime),
+              trip: d.candidateTripName,
+            })}
+          </Question>
+          <div className="text-xs" style={{ color: "var(--text-muted)" }}>
+            {k("tripLink")}{" "}
+            <Link
+              to={`/trips/${d.candidateTripId}`}
+              className="text-sm underline"
+              style={{ color: "var(--accent)" }}
+            >
+              {d.candidateTripName}
+            </Link>
+          </div>
+          <Hint>{k("safePath")}</Hint>
+        </div>
+      );
+    }
 
     default:
       return null;

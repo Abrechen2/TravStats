@@ -90,7 +90,7 @@ export async function fillTripDatesFromSegments(tripId: string): Promise<void> {
  */
 export async function recomputeTripStatus(
   tripId: string,
-  client: Pick<DbTransaction, "trip"> = prisma
+  client: Pick<DbTransaction, "trip" | "userSettings"> = prisma
 ): Promise<void> {
   const trip = await client.trip.findUnique({
     where: { id: tripId },
@@ -132,7 +132,9 @@ export async function recomputeTripStatus(
     rentals: trip.rentalBookings,
     ownStartDate: trip.startDate,
     ownEndDate: trip.endDate,
-    zone: (await profileZoneOf(trip.userId)).zone,
+    // Through `client` too: inside a transaction a global read would take a
+    // second pool connection while the first holds locks.
+    zone: (await profileZoneOf(trip.userId, client)).zone,
   });
   const derived = deriveTripStatus(bounds);
   if (derived == null || derived === trip.status) return;

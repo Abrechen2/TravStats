@@ -21,6 +21,7 @@ jest.mock("../../utils/logger", () => ({
 jest.mock("../../utils/jwtSecret", () => ({ JWT_SECRET: "test-secret" }));
 
 const flagFindMany = jest.fn<(args: unknown) => Promise<unknown[]>>(async () => []);
+const flagFindFirst = jest.fn<(args: unknown) => Promise<unknown>>(async () => null);
 const flagUpdateMany = jest.fn<(args: unknown) => Promise<{ count: number }>>(async () => ({
   count: 0,
 }));
@@ -31,6 +32,7 @@ jest.mock("../../db", () => ({
   prisma: {
     dataQualityFlag: {
       findMany: (args: unknown) => flagFindMany(args),
+      findFirst: (args: unknown) => flagFindFirst(args),
       updateMany: (args: unknown) => flagUpdateMany(args),
     },
     lodging: { findMany: (args: unknown) => lodgingFindMany(args) },
@@ -105,6 +107,7 @@ const storedFlag = (over: Record<string, unknown> = {}) => ({
 beforeEach(() => {
   jest.clearAllMocks();
   flagFindMany.mockResolvedValue([]);
+  flagFindFirst.mockResolvedValue(null);
   flagUpdateMany.mockResolvedValue({ count: 0 });
   lodgingFindMany.mockResolvedValue([]);
   placeFindMany.mockResolvedValue([]);
@@ -219,26 +222,30 @@ describe("data-quality-flags ownership", () => {
   });
 
   it("resolves only a flag that belongs to the caller", async () => {
+    flagFindFirst.mockResolvedValue(storedFlag());
     flagUpdateMany.mockResolvedValue({ count: 1 });
 
     const res = await request(makeApp()).post(`/api/v1/data-quality-flags/${FLAG_ID}/resolve`);
 
     expect(res.status).toBe(200);
+    expect(flagFindFirst).toHaveBeenCalledWith({ where: { id: FLAG_ID, userId: "u1" } });
     expect(flagUpdateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: FLAG_ID, userId: "u1" } })
+      expect.objectContaining({
+        where: expect.objectContaining({ id: FLAG_ID, userId: "u1" }),
+      })
     );
   });
 
-  it("answers 404 for another user's flag, indistinguishably from a missing one", async () => {
-    // count 0 is what a foreign id produces, because `userId` is in the WHERE.
-    flagUpdateMany.mockResolvedValue({ count: 0 });
+  it("answers 404 notFound for another user's flag, indistinguishably from a missing one", async () => {
+    // null is what a foreign id produces, because `userId` is in the WHERE.
+    flagFindFirst.mockResolvedValue(null);
 
     const res = await request(makeApp()).post(`/api/v1/data-quality-flags/${FLAG_ID}/dismiss`);
 
     expect(res.status).toBe(404);
-    expect(flagUpdateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: FLAG_ID, userId: "u1" } })
-    );
+    expect(res.body).toEqual({ error: "notFound" });
+    expect(flagFindFirst).toHaveBeenCalledWith({ where: { id: FLAG_ID, userId: "u1" } });
+    expect(flagUpdateMany).not.toHaveBeenCalled();
   });
 
   it("rejects an id that is not a uuid with 400", async () => {

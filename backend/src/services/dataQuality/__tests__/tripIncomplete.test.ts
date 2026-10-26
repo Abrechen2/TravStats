@@ -11,6 +11,7 @@ const trip = (over: {
   startDay?: string | null;
   endDay?: string | null;
 }) => ({
+  name: over.id,
   status: "completed",
   startDay: "2026-03-09",
   endDay: "2026-03-15",

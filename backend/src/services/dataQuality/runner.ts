@@ -1,4 +1,4 @@
-import type { DataQualityFlag, Prisma } from "../../prisma";
+import { Prisma, type DataQualityFlag } from "../../prisma";
 
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
@@ -13,9 +13,11 @@ import { findChronologyConflicts } from "./checks/chronologyConflicts";
 import { findMissingFlightNumbers } from "./checks/flightNumberMissing";
 import { findUnknownAirports } from "./checks/airportUnknown";
 import { findIncompleteTrips } from "./checks/tripIncomplete";
+import { findFerryMatches } from "./checks/ferryMatch";
 import { loadAccountSnapshot } from "./gather";
 import { findingKey, type DataQualityFinding } from "./types";
 import { outgrowsDismissal } from "./dismissalScope";
+import { answeredByDismissal, duplicateIdSet, lockDuplicateAnswers } from "./duplicateAnswers";
 
 /**
  * Run every check for one account and reconcile the inbox with the answer.
@@ -114,6 +116,7 @@ export function collectFindings(
     ...findMissingFlightNumbers(snapshot.records.flights),
     ...findUnknownAirports(snapshot.records),
     ...findIncompleteTrips(snapshot.records, now),
+    ...findFerryMatches(snapshot.records),
   ];
 }
 
@@ -185,8 +188,43 @@ function isUniqueViolation(error: unknown): boolean {
 async function createOrAdopt(
   userId: string,
   finding: DataQualityFinding
-): Promise<{ created: true } | { created: false; row: DataQualityFlag | null }> {
+): Promise<{ created: true; open: boolean } | { created: false; row: DataQualityFlag | null }> {
   try {
+    if (finding.kind === "duplicate_candidate") {
+      // Under the lock `keep` takes: a copy group the user has already kept
+      // gets this flag born answered, never as a fresh question.
+      const open = await prisma.$transaction(async (tx) => {
+        await lockDuplicateAnswers(tx, userId);
+        const ids = duplicateIdSet(finding.entityId, finding.details);
+        const answeredBy =
+          ids === null ? null : await answeredByDismissal(tx, userId, finding.entityType, ids);
+        await tx.dataQualityFlag.create({
+          data: {
+            userId,
+            entityType: finding.entityType,
+            entityId: finding.entityId,
+            kind: finding.kind,
+            status: answeredBy ? "dismissed" : "open",
+            resolvedAt: answeredBy ? new Date() : null,
+            details: asJson(finding.details),
+            // Which answer this flag was born under, so undoing it re-opens
+            // this one as well (`undoFinding`).
+            ...(answeredBy
+              ? {
+                  resolution: {
+                    action: "keep",
+                    previousStatus: "open",
+                    previousResolvedAt: null,
+                    inheritedFrom: answeredBy,
+                  },
+                }
+              : {}),
+          },
+        });
+        return answeredBy === null;
+      });
+      return { created: true, open };
+    }
     await prisma.dataQualityFlag.create({
       data: {
         userId,
@@ -197,7 +235,7 @@ async function createOrAdopt(
         details: asJson(finding.details),
       },
     });
-    return { created: true };
+    return { created: true, open: true };
   } catch (error) {
     if (!isUniqueViolation(error)) throw error;
     const row = await prisma.dataQualityFlag.findUnique({
@@ -222,8 +260,56 @@ type ReconcileOutcome = "untouched" | "reopened" | "updated";
  * Shared by both ways of arriving at one — it was there when the pass started,
  * or a concurrent pass wrote it in between — because the answer depends on the
  * row's CURRENT status, never on when this pass first learned of it.
+ *
+ * Every write is conditional on the revision this pass READ. The pass can
+ * take seconds, and a user may answer meanwhile — dismiss what the pass saw as
+ * resolved, say. An unconditional write would re-open that dismissal and wipe
+ * its undo; a conditional one matches nothing, and the pass leaves the row to
+ * the answer (the next run reconciles against the new state).
  */
-async function reconcileExisting(
+/**
+ * A resolved duplicate flag found again: it joins a `keep` over the same
+ * copies, or re-opens — decided AND written under the lock `keep` takes, so
+ * a keep given in between cannot be overtaken by the re-open.
+ */
+async function reconcileResolvedDuplicate(
+  current: DataQualityFlag,
+  finding: DataQualityFinding
+): Promise<ReconcileOutcome> {
+  const ids = duplicateIdSet(finding.entityId, finding.details);
+  return prisma.$transaction(async (tx) => {
+    await lockDuplicateAnswers(tx, current.userId);
+    const answeredBy =
+      ids === null ? null : await answeredByDismissal(tx, current.userId, finding.entityType, ids);
+    const written = await tx.dataQualityFlag.updateMany({
+      where: { id: current.id, revision: current.revision },
+      data: answeredBy
+        ? {
+            status: "dismissed",
+            details: asJson(finding.details),
+            undoUntil: null,
+            resolution: {
+              action: "keep",
+              previousStatus: "open",
+              previousResolvedAt: null,
+              inheritedFrom: answeredBy,
+            },
+            revision: { increment: 1 },
+          }
+        : {
+            status: "open",
+            resolvedAt: null,
+            details: asJson(finding.details),
+            undoUntil: null,
+            resolution: Prisma.DbNull,
+            revision: { increment: 1 },
+          },
+    });
+    return written.count > 0 && !answeredBy ? "reopened" : "untouched";
+  });
+}
+
+export async function reconcileExisting(
   current: DataQualityFlag,
   finding: DataQualityFinding
 ): Promise<ReconcileOutcome> {
@@ -231,23 +317,38 @@ async function reconcileExisting(
     current.status === "dismissed" && outgrowsDismissal(current.kind, current.details, finding);
   if (current.status === "dismissed" && !askedAnew) return "untouched";
 
+  // A duplicate group the user has kept ("these are separate entries") stays
+  // answered: a copy flag resolved earlier joins that answer instead of
+  // coming back, under the lock `keep` takes, and undoing the keep re-opens it.
+  if (current.status === "resolved" && current.kind === "duplicate_candidate") {
+    return reconcileResolvedDuplicate(current, finding);
+  }
+
   if (current.status === "resolved" || askedAnew) {
-    await prisma.dataQualityFlag.update({
-      where: { id: current.id },
-      data: { status: "open", resolvedAt: null, details: asJson(finding.details) },
+    const reopened = await prisma.dataQualityFlag.updateMany({
+      where: { id: current.id, revision: current.revision },
+      // A re-opened question has no answer left to take back.
+      data: {
+        status: "open",
+        resolvedAt: null,
+        details: asJson(finding.details),
+        undoUntil: null,
+        resolution: Prisma.DbNull,
+        revision: { increment: 1 },
+      },
     });
-    return "reopened";
+    return reopened.count > 0 ? "reopened" : "untouched";
   }
 
   // Open. Only write when the details actually moved — an unchanged run
   // should cost nothing, because it will happen far more often than a
   // changed one.
   if (stableStringify(current.details) !== stableStringify(finding.details)) {
-    await prisma.dataQualityFlag.update({
-      where: { id: current.id },
-      data: { details: asJson(finding.details) },
+    const updated = await prisma.dataQualityFlag.updateMany({
+      where: { id: current.id, revision: current.revision },
+      data: { details: asJson(finding.details), revision: { increment: 1 } },
     });
-    return "updated";
+    return updated.count > 0 ? "updated" : "untouched";
   }
 
   return "untouched";
@@ -257,10 +358,14 @@ export async function runDataQualityChecks(
   userId: string,
   now: Date = new Date()
 ): Promise<DataQualityRunSummary> {
+  // The flags FIRST, then the records. An answer that commits while the
+  // records are gathered (a link, say) bumps its flag's revision past the one
+  // read here, so every write below — conditional on that revision — leaves
+  // it alone. Read the other way round, the pass would hold the answer's new
+  // revision and stale records, and re-open what the user just answered.
+  const existing = await prisma.dataQualityFlag.findMany({ where: { userId } });
   const snapshot = await loadAccountSnapshot(userId, now);
   const findings = collectFindings(snapshot, now);
-
-  const existing = await prisma.dataQualityFlag.findMany({ where: { userId } });
   const byKey = new Map(existing.map((flag) => [findingKey(flag), flag]));
 
   const summary: DataQualityRunSummary = {
@@ -281,7 +386,7 @@ export async function runDataQualityChecks(
     if (!current) {
       const attempt = await createOrAdopt(userId, finding);
       if (attempt.created) {
-        summary.opened += 1;
+        if (attempt.open) summary.opened += 1;
         continue;
       }
       if (!attempt.row) {
@@ -303,6 +408,11 @@ export async function runDataQualityChecks(
       }
       // Adopt what the other pass wrote and reconcile it as if it had been
       // there all along. Notably NOT counted as `opened` — that pass opened it.
+      // Only while nobody has written to it since its creation (revision 0):
+      // this pass's records predate that row, and an answer given to it
+      // meanwhile (a link, a dismissal) must not meet stale evidence. Such a
+      // row is left to the next run, which reads it before its records.
+      if (attempt.row.revision > 0) continue;
       current = attempt.row;
     }
 
@@ -313,11 +423,12 @@ export async function runDataQualityChecks(
 
   const stale = existing.filter((flag) => flag.status === "open" && !seen.has(findingKey(flag)));
   if (stale.length > 0) {
-    await prisma.dataQualityFlag.updateMany({
-      where: { id: { in: stale.map((flag) => flag.id) } },
-      data: { status: "resolved", resolvedAt: now },
+    // Each only at the revision this pass read — see `reconcileExisting`.
+    const resolved = await prisma.dataQualityFlag.updateMany({
+      where: { OR: stale.map((flag) => ({ id: flag.id, revision: flag.revision })) },
+      data: { status: "resolved", resolvedAt: now, revision: { increment: 1 } },
     });
-    summary.autoResolved = stale.length;
+    summary.autoResolved = resolved.count;
   }
 
   summary.open = await prisma.dataQualityFlag.count({ where: { userId, status: "open" } });

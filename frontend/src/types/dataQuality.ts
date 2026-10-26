@@ -4,6 +4,7 @@ import type {
   TimeParentType,
   TimeQuestionDetails,
 } from "./timeMigration";
+import type { TimeValue } from "../shared/time/wire";
 
 /**
  * The data-quality inbox, as the frontend reads it.
@@ -25,7 +26,7 @@ import type {
  * lives on (`TimeFlagEntityType`): each open value is flagged on its own row.
  */
 export type DataQualityEntityType =
-  "lodging" | "place" | "country" | "home" | TimeFlagEntityType | "bus_journey";
+  "lodging" | "place" | "country" | "home" | TimeFlagEntityType | "bus_journey" | "ferry_journey";
 
 /**
  * The rows a record check (forgejo#282) sits on or names. Each is its own
@@ -42,6 +43,8 @@ export const RECORD_CHECK_KINDS = [
   "airport_unknown",
   "trip_end_missing",
   "trip_entries_outside",
+  /** A ferry ride on no trip, inside one trip's days (spec 2026-10-25 C3). */
+  "ferry_match",
 ] as const;
 export type RecordCheckKind = (typeof RECORD_CHECK_KINDS)[number];
 
@@ -100,8 +103,11 @@ export type DataQualityFlagSubject =
  * backend's `TimeFlagSubject` (`types/timeMigration.ts`).
  */
 export interface TimeValueRecord {
-  /** A time row — or a bus ride, which only the record checks raise (same shape). */
-  entityType: TimeFlagEntityType | "bus_journey";
+  /**
+   * A time row — or a bus ride (record checks) or a ferry ride (ferry match),
+   * which share the shape.
+   */
+  entityType: TimeFlagEntityType | "bus_journey" | "ferry_journey";
   entityId: string;
   /** What to call it on screen. The user's own text, never a code. */
   label: string;
@@ -217,6 +223,18 @@ export interface TripEntriesOutsideDetails {
   })[];
 }
 
+/** A ferry ride on no trip whose crossing lies inside one trip's days. Answered with `link`. */
+export interface FerryMatchDetails {
+  ferryId: string;
+  candidateTripId: string;
+  candidateTripName: string;
+  departurePort: string | null;
+  arrivalPort: string | null;
+  /** The departure on the port's own clock (the time model's wire shape). */
+  departureTime: TimeValue;
+  reason: "insideTripWindow";
+}
+
 /** Every detail shape, as a union. Only useful where `kind` is already known. */
 export type DataQualityFlagDetails =
   | AddressCountryMismatchDetails
@@ -230,6 +248,7 @@ export type DataQualityFlagDetails =
   | AirportUnknownDetails
   | TripEndMissingDetails
   | TripEntriesOutsideDetails
+  | FerryMatchDetails
   | TimeQuestionDetails;
 
 /**
@@ -249,7 +268,20 @@ interface DataQualityFlagBase {
   subject?: DataQualityFlagSubject | null;
   createdAt: string;
   resolvedAt: string | null;
+  /**
+   * Spec 2026-10-25 C3, all additive (an older server sends none of them):
+   * until when `undo` can take the last answer back, the kind-specific answers
+   * `resolve` takes, and `evidence` — `details` under the contract's name.
+   */
+  undoUntil?: string | null;
+  actions?: FindingAction[];
+  evidence?: unknown;
+  /** Bumped by every write; sent back with an answer so a moved finding is refused. */
+  revision?: number;
 }
+
+/** The kind-specific answers `POST /:id/resolve` takes (`{ action }`). */
+export type FindingAction = "keep" | "merge" | "link";
 
 /**
  * One flag as the API returns it, with `kind` and `details` tied together.
@@ -293,6 +325,7 @@ export type DataQualityFlag =
   | (DataQualityFlagBase & { kind: "airport_unknown"; details: AirportUnknownDetails })
   | (DataQualityFlagBase & { kind: "trip_end_missing"; details: TripEndMissingDetails })
   | (DataQualityFlagBase & { kind: "trip_entries_outside"; details: TripEntriesOutsideDetails })
+  | (DataQualityFlagBase & { kind: "ferry_match"; details: FerryMatchDetails })
   | (DataQualityFlagBase & {
       kind: TimeFlagKind;
       details: TimeQuestionDetails;

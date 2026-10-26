@@ -7,5 +7,12 @@
  * vocabulary; the checks themselves each carry the rule they encode.
  */
 
-export { listFlags, resolveFlag, dismissFlag, type ListFlagsFilters } from "./flagService";
+export { listFlags, getFlagView, type ListFlagsFilters } from "./flagService";
+export {
+  dismissFinding,
+  resolveFinding,
+  undoFinding,
+  FindingActionError,
+  FINDING_UNDO_WINDOW_MS,
+} from "./findingActions";
 export { runDataQualityChecks, type DataQualityRunSummary } from "./runner";
