@@ -1010,3 +1010,24 @@ could be lost behind a waiting request or answer (requests compare their `accept
 replaced); a resync from a member shown unreachable was acknowledged but never answered; an own
 entry too large to push up vanished without a word (now `entries-too-large`).
 
+
+## Owner direction 2026-10-26 — simplify the setup
+
+Owner, after trying RC ↔ Prod: "Das Konzept ist gut, aber viel zu umständlich."
+Direction (concept board: https://claude.ai/artifact/UPvVWW7fkBxa9Z9sWS8obB):
+
+1. **Server keys are enough at the server level.** Two admins pin each other's
+   key (connection file + fingerprint compared out of band); that is the whole
+   server-to-server trust. No separate per-person invite codes.
+2. **One place per remote person** (Einstellungen → Teilen → „Personen auf
+   verbundenen Servern"): each person on a connected server gets individual
+   switches for the leaderboard and for one's own statistics. A person appears
+   only after opting in to being findable by connected servers.
+3. **Trips are shared from the trip's „Teilen" button.** Choosing „Auf anderem
+   Server" asks for the server and the user (lookup among findable users of
+   that server only), shows warnings (data is stored on the other server and
+   readable by its admin; edits flow both ways; private notes, costs and
+   documents stay; what was sent cannot be recalled), and sends an offer the
+   person accepts in their inbox.
+
+Not built yet; planned after 2.7. The existing invite codes stay until it is.
