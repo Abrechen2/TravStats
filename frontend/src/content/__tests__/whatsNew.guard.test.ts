@@ -33,7 +33,6 @@ const KEYWORDS: Record<keyof typeof BETA_FEATURES, [RegExp, RegExp]> = {
   encryptedShare: [/verschlüsseltes Teilen/i, /encrypted sharing/i],
   devicePairing: [/koppel/i, /\bpair/i],
   roadtrips: [/Roadtrip|Touren/, /Roadtrip|\btours\b/i],
-  lodgingEnrichment: [/Anreicherung/, /enrichment/i],
   cruiseTracks: [/Kreuzfahrt-Spuren/, /cruise tracks/i],
   flightTrackUpload: [/Flugspuren/, /flight tracks/i],
   travPlan: [/TravPlan/, /TravPlan/],

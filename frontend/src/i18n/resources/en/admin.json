@@ -154,10 +154,6 @@
             "name": "Roadtrips and tours",
             "what": "The “Roadtrips” domain (multi-day trips with stations at your stays) and all tours: the tours page and editor, the tour tab on the dashboard and on a trip, the tours on the overview map, and the routing provider and Strava cards."
           },
-          "lodgingEnrichment": {
-            "name": "Complete lodgings from OpenStreetMap",
-            "what": "The “Complete from OpenStreetMap” button on a lodging’s page: it writes stars, website, chain and the Wikipedia link into empty fields. Also needs the open data services switch."
-          },
           "travPlan": {
             "name": "TravPlan (alpha)",
             "what": "The planning mode for a trip still ahead: day plan, ideas, booking import, transfers, packing list, budget and the handover to the travel log. Alpha experiment: may still change fundamentally."

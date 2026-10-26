@@ -176,3 +176,74 @@ describe("a place, a decoration or a brand is not identity", () => {
     ).toBe(true);
   });
 });
+
+/**
+ * The OSM enrichment audit of 2026-10-26: 200 real lodgings against the houses
+ * within 150 m of their pins. Every wrong or doubtful match shared ONE word,
+ * and that word named the town or what the house looks at. Pins prove the
+ * neighbourhood, not the house — a town word is on every sign in the street.
+ */
+describe("nearby: a place or landmark word is never the only shared word", () => {
+  const nearbyIn = (a: string, b: string, places: string[]): boolean =>
+    namesCouldBeOneHouse(a, b, true, { nearby: true, places });
+
+  it("does not take the town's other hotel (audit cases 1, 3, 4)", () => {
+    expect(nearbyIn("Lestar Hotel Hanoi", "Hanoi Grandeur Hotel & Spa", ["Hanoi", "Vietnam"])).toBe(
+      false
+    );
+    // Case 3, decided by the rule: H+ and Moxy share only "Zürich".
+    expect(nearbyIn("H+ Hotel Zürich", "Moxy Zürich", ["Zürich", "Switzerland"])).toBe(false);
+    expect(
+      nearbyIn("Jugendherberge Aschau", "Aktiv Hotel Aschau", ["Aschau im Chiemgau", "Germany"])
+    ).toBe(false);
+  });
+
+  it("does not take the house next door for sharing a view (audit case 2)", () => {
+    expect(nearbyIn("PANORAMA view pyramids", "Great Pyramids Inn", ["Giza", "Egypt"])).toBe(false);
+    // OSM's name:en for the same node shares two words — both landmark words.
+    expect(nearbyIn("PANORAMA view pyramids", "Pyramids View Inn", ["Giza", "Egypt"])).toBe(false);
+  });
+
+  it("matches a town word written with or without its accents", () => {
+    expect(nearbyIn("Hotel Hue Palace", "Hue Sunrise Hotel", ["Huế"])).toBe(false);
+  });
+
+  it("keeps two shared words that are not place words (audit cases 5, 6)", () => {
+    // Case 5 shares the brand "Radisson Blu" 17 m away; case 6 shares "Thanh
+    // Lich". Both stay matches by this rule — a brand counts beside a pin.
+    expect(
+      nearbyIn("Radisson Blu Airport Terminal Hotel", "Radisson Blu SkyCity", [
+        "Stockholm-Arlanda",
+        "Sweden",
+      ])
+    ).toBe(true);
+    expect(nearbyIn("Thanh Lich Hotel", "Thanh Lich Royal Boutique", ["Huế", "Vietnam"])).toBe(
+      true
+    );
+  });
+
+  it("keeps a house named after its town when one name holds the other", () => {
+    expect(
+      nearbyIn("Hotel Fohnsdorf ~ Entspannung, Spaß & vieles mehr", "Hotel Fohnsdorf", [
+        "Fohnsdorf",
+      ])
+    ).toBe(true);
+    expect(nearbyIn("City Central Hotel Örebro", "City Central", ["Örebro", "Sweden"])).toBe(true);
+  });
+
+  it.each([
+    ["Hampton by Hilton Konstanz", "Hampton by Hilton", "Konstanz"],
+    ["Novotel Erlangen", "Novotel", "Erlangen"],
+    ["Courtyard by Marriott Dallas DFW Airport North/Irving", "Courtyard", "Irving"],
+    ["Courtyard Dallas DFW Airport South/Irving", "Courtyard", "Irving"],
+    ["Mercure Hotel Hagen", "Mercure Hotel", "Hagen"],
+    ["Mercure Singapore Bugis", "Mercure", "Singapore"],
+    ["Hotel Novotel Lausanne Bussigny", "Novotel", "Bussigny"],
+    ["Hampton Inn closest to Universal Orlando", "Hampton", "Orlando"],
+    ["Moxy Stuttgart Feuerbach", "Moxy Stuttgart", "Stuttgart"],
+    ["Radisson RED Dubai Silicon Oasis", "RED Radisson Hotel DSO", "Dubai"],
+    ["Novotel Barcelona Cornella", "Novotel Cornella", "Cornellà de Llobregat"],
+  ])("keeps the audit's correct brand match %s → %s", (lodging, osm, city) => {
+    expect(nearbyIn(lodging, osm, [city])).toBe(true);
+  });
+});

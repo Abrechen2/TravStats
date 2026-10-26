@@ -3,7 +3,6 @@ import type { JSX } from "react";
 
 import Button from "../ui/Button";
 import LodgingEnrichPreviewDialog from "./LodgingEnrichPreviewDialog";
-import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
   isOpenDataDisabled,
@@ -17,8 +16,8 @@ import { useSettingsStore } from "../../store/settingsStore";
 import { useToastStore } from "../../store/toastStore";
 
 /**
- * "Complete from OpenStreetMap" (beta `lodgingEnrichment`, 2026-09-24).
- * Behind both the beta switch and the instance's open data switch.
+ * "Complete from OpenStreetMap" (2026-09-24; out of beta 2026-10-26, after an
+ * audit of 200 real lodgings). Behind the instance's open data switch.
  *
  * Since 2026-10-22 in two steps: the click asks what WOULD be filled and
  * shows the matched house (name, OSM object, distance, link) before anything
@@ -41,13 +40,12 @@ export default function LodgingEnrichButton({
   onDone: () => void;
 }): JSX.Element | null {
   const { t } = useTranslation(["openData"]);
-  const { isFeatureVisible } = useBetaFeatures();
   const openData = useSettingsStore((s) => s.openDataEnabled) === true;
   const addToast = useToastStore((s) => s.addToast);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<LodgingEnrichmentPreview | null>(null);
 
-  if (!openData || !isFeatureVisible("lodgingEnrichment")) return null;
+  if (!openData) return null;
 
   /** A found-nothing answer, as the reader's own message. */
   const sayNothing = (reason: LodgingEnrichmentReason): void => {
