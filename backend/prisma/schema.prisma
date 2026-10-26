@@ -1593,6 +1593,11 @@ model DataQualityFlag {
   /// status before it, and per action what it changed (a sibling flag it
   /// answered too, the trip a `link` set). Null on an open flag.
   resolution Json?
+  /// Bumped by every write to the flag — a run refreshing its evidence,
+  /// re-opening or resolving it, an answer, an undo. An answer or a run
+  /// writes only against the revision it read, so a write that lost a race
+  /// changes nothing (`staleFinding` for an answer, a skip for a run).
+  revision   Int       @default(0)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

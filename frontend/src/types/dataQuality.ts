@@ -276,6 +276,8 @@ interface DataQualityFlagBase {
   undoUntil?: string | null;
   actions?: FindingAction[];
   evidence?: unknown;
+  /** Bumped by every write; sent back with an answer so a moved finding is refused. */
+  revision?: number;
 }
 
 /** The kind-specific answers `POST /:id/resolve` takes (`{ action }`). */

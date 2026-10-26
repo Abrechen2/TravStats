@@ -86,7 +86,11 @@ export default function ReviewCard({
                 disabled={busy}
                 onClick={() =>
                   void act(
-                    () => dataQualityFlagsApi.resolve(flag.id, { action: "link" }),
+                    () =>
+                      dataQualityFlagsApi.resolve(flag.id, {
+                        action: "link",
+                        revision: flag.revision,
+                      }),
                     false,
                     t("dataQuality:inbox.messages.linked")
                   )

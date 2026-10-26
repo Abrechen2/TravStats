@@ -43,7 +43,7 @@ export const dataQualityFlagsApi = {
    */
   resolve: async (
     id: string,
-    answer?: { action: FindingAction; keptId?: string }
+    answer?: { action: FindingAction; keptId?: string; revision?: number }
   ): Promise<FindingAnswer> => {
     const { data } = answer
       ? await api.post<FindingAnswer>(`/data-quality-flags/${id}/resolve`, answer)

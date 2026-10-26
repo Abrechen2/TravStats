@@ -19,6 +19,7 @@ import {
   listDataQualityFlagsQuerySchema,
 } from "../../../schemas/dataQualityFlag";
 import {
+  answerGuardBodySchema,
   INVALID_ACTION_REASONS,
   resolveFindingBodySchema,
 } from "../../../schemas/dataQualityFindings";
@@ -141,8 +142,13 @@ registry.registerPath({
     "`evidence.keptId` — moves documents, companions, recording, share links, " +
     "roadtrip stations and the trip/booking link onto it, and deletes the other " +
     "copies through their own delete path; no server undo). Applying the change " +
-    "and answering the flag happen in one transaction. Sets `undoUntil` (10 " +
-    "minutes) except after a merge.",
+    "and answering the flag happen in one transaction. A merge locks the copies " +
+    "and re-checks them there; it is refused with `conflictingRecordings` when " +
+    "more than one copy carries a recording and `conflictingLinks` when copies " +
+    "name different trips, bookings or cards. `link` re-checks the ferry rule " +
+    "on locked rows. Send `revision` (as served) to be refused with " +
+    "`staleFinding` if the finding moved since. Sets `undoUntil` (10 minutes) " +
+    "except after a merge.",
   tags,
   request: {
     params: z.object({ id: uuid }),
@@ -151,7 +157,9 @@ registry.registerPath({
   responses: {
     ...answerResponses("Answered"),
     400: {
-      description: "`invalidAction` — unknown, not offered, or `keptId` outside the finding",
+      description:
+        "`invalidAction` — unknown, not offered, `keptId` outside the finding, " +
+        "or a merge that would lose a recording or a link",
       content: findingError(["invalidAction"]),
     },
     409: {
@@ -167,9 +175,13 @@ registry.registerPath({
   summary: "Answer a finding: this is not wrong",
   description:
     "No later run re-opens it. The escape hatch for a check that is right that " +
-    "two sources disagree and wrong about which to believe. Sets `undoUntil`.",
+    "two sources disagree and wrong about which to believe. Sets `undoUntil`. " +
+    "With `revision`, refused as `staleFinding` unless the flag is still at it.",
   tags,
-  request: { params: z.object({ id: uuid }) },
+  request: {
+    params: z.object({ id: uuid }),
+    body: { content: { "application/json": { schema: answerGuardBodySchema } } },
+  },
   responses: {
     ...answerResponses("Dismissed"),
     409: { description: "`staleFinding`", content: findingError(["staleFinding"]) },
@@ -183,9 +195,13 @@ registry.registerPath({
   description:
     "While `now < undoUntil` (10 minutes after the answer): restores the status " +
     "the flag had before — usually `open` — and reverts what the answer changed " +
-    "(the other flags a `keep` answered). A `merge` cannot be undone here.",
+    "(the other flags a `keep` answered, unless answered since; the ride a " +
+    "`link` moved, unless moved since). A `merge` cannot be undone here.",
   tags,
-  request: { params: z.object({ id: uuid }) },
+  request: {
+    params: z.object({ id: uuid }),
+    body: { content: { "application/json": { schema: answerGuardBodySchema } } },
+  },
   responses: {
     ...answerResponses("Taken back"),
     409: {

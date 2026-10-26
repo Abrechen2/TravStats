@@ -1,4 +1,5 @@
 import { prisma, type DbTransaction } from "../../db";
+import { Prisma } from "../../prisma";
 import type { RecordCheckDomain } from "../../schemas/dataQualityRecordChecks";
 import {
   propagateDeletes,
@@ -35,9 +36,11 @@ import { FindingActionError } from "./findingErrors";
  * `staleFinding` unless the copies are, right now, still one duplicate group.
  * The flag may be hours old; an edit since (another day, another number) means
  * the question it asked no longer stands, and merging on it would delete a
- * real entry.
+ * real entry. Called inside the merge transaction AFTER `lockCopies`: the
+ * snapshot reads committed rows, and the locked copies cannot change until
+ * the merge commits.
  */
-export async function assertStillDuplicates(
+async function assertStillDuplicates(
   userId: string,
   entityType: RecordCheckDomain,
   ids: readonly string[]
@@ -54,6 +57,47 @@ export async function assertStillDuplicates(
   if (!holds) throw new FindingActionError("staleFinding");
 }
 
+/**
+ * `conflictingLinks` when the copies name DIFFERENT trips, bookings or cards.
+ * Keeping one would silently drop the other association; which one is right
+ * is the user's call. One copy with a link and the rest without is fine — the
+ * kept copy takes it over.
+ */
+function assertOneLink<K extends string>(
+  rows: readonly Record<K, string | null>[],
+  keys: readonly K[]
+): void {
+  for (const key of keys) {
+    if (new Set(rows.map((r) => r[key]).filter((v) => v !== null)).size > 1) {
+      throw new FindingActionError("invalidAction", "conflictingLinks");
+    }
+  }
+}
+
+const TABLE: Partial<Record<RecordCheckDomain, string>> = {
+  flight: "flights",
+  lodging_stay: "lodging_stays",
+};
+
+/**
+ * Lock the copies for the rest of the transaction (`FOR UPDATE`), so no edit
+ * can land between the check that they are still one entry and the delete.
+ * An edit already in flight is waited for, then seen by the check.
+ */
+async function lockCopies(
+  tx: DbTransaction,
+  entityType: RecordCheckDomain,
+  userId: string,
+  ids: readonly string[]
+): Promise<void> {
+  const table = TABLE[entityType];
+  if (!table) throw new FindingActionError("invalidAction", "notOffered");
+  const locked = await tx.$queryRaw<{ id: string }[]>(
+    Prisma.sql`SELECT id FROM ${Prisma.raw(`"${table}"`)} WHERE user_id = ${userId} AND id IN (${Prisma.join([...ids])}) FOR UPDATE`
+  );
+  if (locked.length !== ids.length) throw new FindingActionError("staleFinding");
+}
+
 async function mergeFlights(
   tx: DbTransaction,
   userId: string,
@@ -67,6 +111,11 @@ async function mergeFlights(
   const kept = rows.find((r) => r.id === keptId);
   const removed = rows.filter((r) => r.id !== keptId);
   if (!kept || removed.length !== removedIds.length) throw new FindingActionError("staleFinding");
+  // A flight holds one recording. Two copies with one each would lose one.
+  if (rows.filter((r) => r.track).length > 1) {
+    throw new FindingActionError("invalidAction", "conflictingRecordings");
+  }
+  assertOneLink(rows, ["tripId", "bookingId"]);
 
   await tx.document.updateMany({
     where: { userId, flightId: { in: [...removedIds] } },
@@ -91,7 +140,7 @@ async function mergeFlights(
     });
   }
   const withTrack = removed.find((r) => r.track);
-  if (!kept.track && withTrack) {
+  if (withTrack) {
     await tx.flightTrack.update({ where: { flightId: withTrack.id }, data: { flightId: keptId } });
   }
 
@@ -121,6 +170,7 @@ async function mergeStays(
   const kept = rows.find((r) => r.id === keptId);
   const removed = rows.filter((r) => r.id !== keptId);
   if (!kept || removed.length !== removedIds.length) throw new FindingActionError("staleFinding");
+  assertOneLink(rows, ["tripId", "bookingId", "membershipId"]);
 
   await tx.document.updateMany({
     where: { userId, lodgingStayId: { in: [...removedIds] } },
@@ -173,6 +223,12 @@ export async function mergeDuplicates(
 ): Promise<void> {
   await prisma.$transaction(
     async (tx) => {
+      // Validate HERE, on locked rows, in the transaction that deletes: a
+      // check outside it could pass, then an edit turn a copy into a real,
+      // different entry that the delete below would take with it.
+      const ids = [keptId, ...removedIds];
+      await lockCopies(tx, entityType, userId, ids);
+      await assertStillDuplicates(userId, entityType, ids);
       if (entityType === "flight") await mergeFlights(tx, userId, keptId, removedIds);
       else if (entityType === "lodging_stay") await mergeStays(tx, userId, keptId, removedIds);
       else throw new FindingActionError("invalidAction", "notOffered");

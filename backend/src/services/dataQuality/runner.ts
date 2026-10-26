@@ -224,8 +224,14 @@ type ReconcileOutcome = "untouched" | "reopened" | "updated";
  * Shared by both ways of arriving at one — it was there when the pass started,
  * or a concurrent pass wrote it in between — because the answer depends on the
  * row's CURRENT status, never on when this pass first learned of it.
+ *
+ * Every write is conditional on the revision this pass READ. The pass can
+ * take seconds, and a user may answer meanwhile — dismiss what the pass saw as
+ * resolved, say. An unconditional write would re-open that dismissal and wipe
+ * its undo; a conditional one matches nothing, and the pass leaves the row to
+ * the answer (the next run reconciles against the new state).
  */
-async function reconcileExisting(
+export async function reconcileExisting(
   current: DataQualityFlag,
   finding: DataQualityFinding
 ): Promise<ReconcileOutcome> {
@@ -234,8 +240,8 @@ async function reconcileExisting(
   if (current.status === "dismissed" && !askedAnew) return "untouched";
 
   if (current.status === "resolved" || askedAnew) {
-    await prisma.dataQualityFlag.update({
-      where: { id: current.id },
+    const reopened = await prisma.dataQualityFlag.updateMany({
+      where: { id: current.id, revision: current.revision },
       // A re-opened question has no answer left to take back.
       data: {
         status: "open",
@@ -243,20 +249,21 @@ async function reconcileExisting(
         details: asJson(finding.details),
         undoUntil: null,
         resolution: Prisma.DbNull,
+        revision: { increment: 1 },
       },
     });
-    return "reopened";
+    return reopened.count > 0 ? "reopened" : "untouched";
   }
 
   // Open. Only write when the details actually moved — an unchanged run
   // should cost nothing, because it will happen far more often than a
   // changed one.
   if (stableStringify(current.details) !== stableStringify(finding.details)) {
-    await prisma.dataQualityFlag.update({
-      where: { id: current.id },
-      data: { details: asJson(finding.details) },
+    const updated = await prisma.dataQualityFlag.updateMany({
+      where: { id: current.id, revision: current.revision },
+      data: { details: asJson(finding.details), revision: { increment: 1 } },
     });
-    return "updated";
+    return updated.count > 0 ? "updated" : "untouched";
   }
 
   return "untouched";
@@ -322,11 +329,12 @@ export async function runDataQualityChecks(
 
   const stale = existing.filter((flag) => flag.status === "open" && !seen.has(findingKey(flag)));
   if (stale.length > 0) {
-    await prisma.dataQualityFlag.updateMany({
-      where: { id: { in: stale.map((flag) => flag.id) } },
-      data: { status: "resolved", resolvedAt: now },
+    // Each only at the revision this pass read — see `reconcileExisting`.
+    const resolved = await prisma.dataQualityFlag.updateMany({
+      where: { OR: stale.map((flag) => ({ id: flag.id, revision: flag.revision })) },
+      data: { status: "resolved", resolvedAt: now, revision: { increment: 1 } },
     });
-    summary.autoResolved = stale.length;
+    summary.autoResolved = resolved.count;
   }
 
   summary.open = await prisma.dataQualityFlag.count({ where: { userId, status: "open" } });

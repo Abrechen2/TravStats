@@ -9,7 +9,7 @@ import {
 } from "../../schemas/dataQualityFindings";
 import { duplicateCandidateDetailsSchema } from "../../schemas/dataQualityRecordChecks";
 import { duplicateEvidence, findingActionsOf } from "./findingEvidence";
-import { mergeDuplicates, assertStillDuplicates } from "./duplicateMerge";
+import { mergeDuplicates } from "./duplicateMerge";
 import { applyFerryLink, undoFerryLink } from "./ferryLink";
 import { FindingActionError } from "./findingErrors";
 import { SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
@@ -31,8 +31,11 @@ export { FindingActionError };
  * flag whose finding still holds, and "these are two entries" is exactly a
  * finding that still holds. A dismissed pair is never asked again.
  *
- * Every write names the status it read in its WHERE, so an answer that races
- * a re-run or a second click changes nothing and says `staleFinding`.
+ * Every write names the REVISION it read in its WHERE and bumps it, so an
+ * answer that races a re-run, a second click or another device changes
+ * nothing and says `staleFinding`. A client that names the revision it was
+ * served (`revision` in the body) is held to that one instead — the evidence
+ * it showed the user is then exactly the evidence the answer applies to.
  */
 
 /** How long an answer can be taken back. Server-side constant (owner, 2026-10-25). */
@@ -41,9 +44,17 @@ export const FINDING_UNDO_WINDOW_MS = 10 * 60 * 1000;
 const asJson = (value: FindingResolution): Prisma.InputJsonValue =>
   value as unknown as Prisma.InputJsonValue;
 
-async function loadFlag(id: string, userId: string): Promise<DataQualityFlag> {
+/** What every answer may carry: the revision the client was served. */
+export interface AnswerGuard {
+  revision?: number;
+}
+
+async function loadFlag(id: string, userId: string, guard: AnswerGuard): Promise<DataQualityFlag> {
   const flag = await prisma.dataQualityFlag.findFirst({ where: { id, userId } });
   if (!flag) throw new FindingActionError("notFound");
+  if (guard.revision !== undefined && guard.revision !== flag.revision) {
+    throw new FindingActionError("staleFinding");
+  }
   return flag;
 }
 
@@ -58,8 +69,10 @@ const undoUntil = (now: Date) => new Date(now.getTime() + FINDING_UNDO_WINDOW_MS
 const asRead = (flag: DataQualityFlag) => ({
   id: flag.id,
   userId: flag.userId,
-  status: flag.status,
+  revision: flag.revision,
 });
+
+const NEXT_REVISION = { revision: { increment: 1 } } as const;
 
 /** A status-only answer: the old `resolve`/`dismiss`, now with an undo window. */
 async function answerStatus(
@@ -75,6 +88,7 @@ async function answerStatus(
       resolvedAt: now,
       undoUntil: undoUntil(now),
       resolution: asJson({ action, ...previousOf(flag) }),
+      ...NEXT_REVISION,
     },
   });
   if (updated.count === 0) throw new FindingActionError("staleFinding");
@@ -84,8 +98,13 @@ async function answerStatus(
  * "This is not wrong, stop asking." Never re-opened by a run. Any status may be
  * dismissed, as before — the history view takes back a `resolved` this way.
  */
-export async function dismissFinding(id: string, userId: string, now = new Date()): Promise<void> {
-  await answerStatus(await loadFlag(id, userId), "dismissed", "dismiss", now);
+export async function dismissFinding(
+  id: string,
+  userId: string,
+  guard: AnswerGuard = {},
+  now = new Date()
+): Promise<void> {
+  await answerStatus(await loadFlag(id, userId, guard), "dismissed", "dismiss", now);
 }
 
 function parseAction(raw: string | undefined): FindingAction | undefined {
@@ -102,7 +121,11 @@ function duplicateOf(flag: DataQualityFlag) {
   return duplicateEvidence(flag.entityType as never, flag.entityId, details.data);
 }
 
-/** `keep`: these are separate entries. Answers every open flag over the same copies. */
+/**
+ * `keep`: these are separate entries. Answers every open flag over the same
+ * copies, and records each sibling's NEW revision — the answer's stamp — so an
+ * undo restores only a sibling nothing has touched since.
+ */
 async function keep(flag: DataQualityFlag, now: Date): Promise<void> {
   const { ids, entityType } = duplicateOf(flag);
   await prisma.$transaction(async (tx) => {
@@ -129,16 +152,19 @@ async function keep(flag: DataQualityFlag, now: Date): Promise<void> {
             id: s.id,
             status: s.status as FindingResolution["previousStatus"],
             resolvedAt: s.resolvedAt ? s.resolvedAt.toISOString() : null,
+            revision: s.revision + 1,
           })),
         }),
+        ...NEXT_REVISION,
       },
     });
     if (updated.count === 0) throw new FindingActionError("staleFinding");
-    if (siblings.length > 0) {
-      await tx.dataQualityFlag.updateMany({
-        where: { id: { in: siblings.map((s) => s.id) }, status: "open" },
-        data: { status: "dismissed", resolvedAt: now },
+    for (const sibling of siblings) {
+      const answered = await tx.dataQualityFlag.updateMany({
+        where: { id: sibling.id, revision: sibling.revision, status: "open" },
+        data: { status: "dismissed", resolvedAt: now, ...NEXT_REVISION },
       });
+      if (answered.count === 0) throw new FindingActionError("staleFinding");
     }
   });
 }
@@ -151,7 +177,7 @@ async function merge(flag: DataQualityFlag, keptIdOverride: string | undefined, 
     throw new FindingActionError("invalidAction", "keptIdNotInFinding");
   }
   const removedIds = evidence.ids.filter((id) => id !== keptId);
-  await assertStillDuplicates(flag.userId, evidence.entityType, evidence.ids);
+  // Validation happens INSIDE the merge's transaction, on locked rows.
   await mergeDuplicates(flag.userId, evidence.entityType, keptId, removedIds, async (tx) => {
     // The other questions about these copies are answered by the merge: the
     // copies they name are gone. This flag moves onto the kept record, so the
@@ -176,6 +202,7 @@ async function merge(flag: DataQualityFlag, keptIdOverride: string | undefined, 
           ...previousOf(flag),
           merged: { keptId, removedIds },
         }),
+        ...NEXT_REVISION,
       },
     });
     if (updated.count === 0) throw new FindingActionError("staleFinding");
@@ -190,10 +217,10 @@ async function merge(flag: DataQualityFlag, keptIdOverride: string | undefined, 
 export async function resolveFinding(
   id: string,
   userId: string,
-  body: { action?: string; keptId?: string },
+  body: { action?: string; keptId?: string } & AnswerGuard,
   now = new Date()
 ): Promise<void> {
-  const flag = await loadFlag(id, userId);
+  const flag = await loadFlag(id, userId, body);
   const action = parseAction(body.action);
   if (!action) {
     await answerStatus(flag, "resolved", "resolve", now);
@@ -219,6 +246,7 @@ export async function resolveFinding(
           resolvedAt: now,
           undoUntil: undoUntil(now),
           resolution: asJson({ action: "link", ...previousOf(flag), link }),
+          ...NEXT_REVISION,
         },
       });
       if (updated.count === 0) throw new FindingActionError("staleFinding");
@@ -231,8 +259,13 @@ export async function resolveFinding(
  * `POST /:id/undo`. Puts the last answer back while `now < undoUntil`, and
  * re-opens the finding (or restores whatever status it had before).
  */
-export async function undoFinding(id: string, userId: string, now = new Date()): Promise<void> {
-  const flag = await loadFlag(id, userId);
+export async function undoFinding(
+  id: string,
+  userId: string,
+  guard: AnswerGuard = {},
+  now = new Date()
+): Promise<void> {
+  const flag = await loadFlag(id, userId, guard);
   if (flag.status === "open") throw new FindingActionError("staleFinding");
   if (!flag.undoUntil || flag.undoUntil.getTime() <= now.getTime()) {
     throw new FindingActionError("undoExpired");
@@ -248,22 +281,26 @@ export async function undoFinding(id: string, userId: string, now = new Date()):
       await undoFerryLink(tx, userId, resolution.link);
     }
     const updated = await tx.dataQualityFlag.updateMany({
-      where: { ...asRead(flag), undoUntil: flag.undoUntil },
+      where: asRead(flag),
       data: {
         status: resolution.previousStatus,
         resolvedAt: resolution.previousResolvedAt ? new Date(resolution.previousResolvedAt) : null,
         undoUntil: null,
         resolution: Prisma.DbNull,
+        ...NEXT_REVISION,
       },
     });
     if (updated.count === 0) throw new FindingActionError("staleFinding");
     for (const sibling of resolution.siblings ?? []) {
-      // Only a sibling this answer dismissed, and nothing has touched since.
+      // Only a sibling still carrying this answer's stamp: one the user has
+      // answered since (or a run has touched) keeps that later answer.
+      if (sibling.revision === undefined) continue;
       await tx.dataQualityFlag.updateMany({
-        where: { id: sibling.id, userId, status: "dismissed" },
+        where: { id: sibling.id, userId, revision: sibling.revision },
         data: {
           status: sibling.status,
           resolvedAt: sibling.resolvedAt ? new Date(sibling.resolvedAt) : null,
+          ...NEXT_REVISION,
         },
       });
     }

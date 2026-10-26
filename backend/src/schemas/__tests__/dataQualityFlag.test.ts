@@ -157,6 +157,7 @@ describe("dataQualityFlagSchema — the whole flag as it goes over the wire", ()
     resolvedAt: null,
     undoUntil: null,
     actions: [],
+    revision: 0,
   };
 
   it("accepts a flag whose details match its kind", () => {

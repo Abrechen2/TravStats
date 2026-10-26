@@ -31,6 +31,7 @@ interface StoredFlag {
   createdAt: Date;
   resolvedAt: Date | null;
   undoUntil?: Date | null;
+  revision?: number;
 }
 
 export interface ListFlagsFilters {
@@ -174,6 +175,7 @@ function toView(
     resolvedAt: flag.resolvedAt ? flag.resolvedAt.toISOString() : null,
     undoUntil: flag.undoUntil ? flag.undoUntil.toISOString() : null,
     actions: findingActionsOf(flag.kind, flag.entityType),
+    revision: flag.revision ?? 0,
   } as DataQualityFlagView;
 }
 

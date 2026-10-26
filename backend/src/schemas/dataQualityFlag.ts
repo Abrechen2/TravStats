@@ -469,6 +469,12 @@ const dataQualityFlagBase = z.object({
   undoUntil: z.string().datetime().nullable(),
   /** The kind-specific answers `POST /:id/resolve` takes for THIS flag. */
   actions: z.array(findingActionSchema),
+  /**
+   * Bumped by every write to the flag (evidence refreshed, answered, undone).
+   * Send it back as `revision` with an answer to have it refused with
+   * `staleFinding` if the finding moved since it was shown.
+   */
+  revision: z.number().int(),
 });
 
 /**

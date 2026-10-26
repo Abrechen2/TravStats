@@ -6,7 +6,7 @@ import {
   dataQualityFlagIdParamSchema,
   listDataQualityFlagsQuerySchema,
 } from "../schemas/dataQualityFlag";
-import { resolveFindingBodySchema } from "../schemas/dataQualityFindings";
+import { answerGuardBodySchema, resolveFindingBodySchema } from "../schemas/dataQualityFindings";
 import {
   dismissFinding,
   FindingActionError,
@@ -145,7 +145,9 @@ router.post("/:id/resolve", (req: AuthRequest, res: Response, next: NextFunction
  * veto over the user's own data — this is where the user says so.
  */
 router.post("/:id/dismiss", (req: AuthRequest, res: Response, next: NextFunction) =>
-  answer(req, res, next, (id, userId) => dismissFinding(id, userId))
+  answer(req, res, next, (id, userId) =>
+    dismissFinding(id, userId, answerGuardBodySchema.parse(req.body ?? {}))
+  )
 );
 
 /**
@@ -153,7 +155,9 @@ router.post("/:id/dismiss", (req: AuthRequest, res: Response, next: NextFunction
  * `keep`, a plain `resolve`. A `merge` has no server undo (owner, 2026-10-25).
  */
 router.post("/:id/undo", (req: AuthRequest, res: Response, next: NextFunction) =>
-  answer(req, res, next, (id, userId) => undoFinding(id, userId))
+  answer(req, res, next, (id, userId) =>
+    undoFinding(id, userId, answerGuardBodySchema.parse(req.body ?? {}))
+  )
 );
 
 export default router;

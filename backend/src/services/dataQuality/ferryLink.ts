@@ -1,9 +1,11 @@
 import type { DbTransaction } from "../../db";
-import type { DataQualityFlag } from "../../prisma";
+import { Prisma, type DataQualityFlag } from "../../prisma";
 import { ferryMatchDetailsSchema } from "../../schemas/dataQualityRecordChecks";
 import { propagateWrite, shareSnapshot } from "../sharing/propagate";
 import { restatusTrips } from "../trip/restatusTrips";
+import { findFerryMatches } from "./checks/ferryMatch";
 import { FindingActionError } from "./findingErrors";
+import { loadRecordSnapshot } from "./recordGather";
 
 /**
  * `link` for a ferry match (spec C3): put the ride on the candidate trip, and
@@ -11,9 +13,13 @@ import { FindingActionError } from "./findingErrors";
  * the flag's answer, and propagate like the ferry PATCH does — a shared
  * trip's members get the ride.
  *
- * Both refuse with `staleFinding` when the ride moved meanwhile: linked to
- * some trip already, or (undo) no longer on the trip the link put it on —
- * undoing then would take away a link the user made themselves.
+ * `link` asks the check again, on locked rows: the flag may be hours old, and
+ * since then the crossing may have moved out of the trip's days, been
+ * cancelled, or a second trip may now hold it. Unless the rule still names
+ * this ride and this one trip, the answer is `staleFinding`. The writes are
+ * conditional on the state they expect (on no trip and no roadtrip leg; on
+ * the linked trip for an undo), so a change that slips in anyway matches
+ * nothing and is refused rather than overwritten.
  */
 export interface FerryLink {
   entityType: "ferry_journey";
@@ -21,25 +27,29 @@ export interface FerryLink {
   tripId: string;
 }
 
+async function lockRideAndTrip(tx: DbTransaction, rideId: string, tripId: string) {
+  await tx.$queryRaw(Prisma.sql`SELECT id FROM "ferry_journeys" WHERE id = ${rideId} FOR UPDATE`);
+  await tx.$queryRaw(Prisma.sql`SELECT id FROM "trips" WHERE id = ${tripId} FOR UPDATE`);
+}
+
 export async function applyFerryLink(tx: DbTransaction, flag: DataQualityFlag): Promise<FerryLink> {
   const details = ferryMatchDetailsSchema.safeParse(flag.details);
   if (!details.success) throw new FindingActionError("staleFinding");
   const { ferryId, candidateTripId } = details.data;
-  const [ride, trip] = await Promise.all([
-    tx.ferryJourney.findFirst({
-      where: { id: ferryId, userId: flag.userId },
-      select: { tripId: true, roadtripLegId: true },
-    }),
-    tx.trip.findFirst({
-      where: { id: candidateTripId, userId: flag.userId },
-      select: { id: true },
-    }),
-  ]);
-  if (!ride || !trip || ride.tripId !== null || ride.roadtripLegId !== null) {
+
+  await lockRideAndTrip(tx, ferryId, candidateTripId);
+  const snapshot = await loadRecordSnapshot(flag.userId);
+  const still = findFerryMatches(snapshot).find((f) => f.entityId === ferryId);
+  if (!still || still.kind !== "ferry_match" || still.details.candidateTripId !== candidateTripId) {
     throw new FindingActionError("staleFinding");
   }
+
   const before = await shareSnapshot(tx, "ferry", ferryId);
-  await tx.ferryJourney.update({ where: { id: ferryId }, data: { tripId: candidateTripId } });
+  const linked = await tx.ferryJourney.updateMany({
+    where: { id: ferryId, userId: flag.userId, tripId: null, roadtripLegId: null },
+    data: { tripId: candidateTripId },
+  });
+  if (linked.count === 0) throw new FindingActionError("staleFinding");
   await propagateWrite(tx, flag.userId, "ferry", ferryId, before);
   // A ride extends its trip's span — the ferry routes do the same.
   await restatusTrips([candidateTripId], tx);
@@ -51,13 +61,14 @@ export async function undoFerryLink(
   userId: string,
   link: { id: string; tripId: string }
 ): Promise<void> {
-  const ride = await tx.ferryJourney.findFirst({
-    where: { id: link.id, userId },
-    select: { tripId: true },
-  });
-  if (!ride || ride.tripId !== link.tripId) throw new FindingActionError("staleFinding");
   const before = await shareSnapshot(tx, "ferry", link.id);
-  await tx.ferryJourney.update({ where: { id: link.id }, data: { tripId: null } });
+  // Only while the ride is still on the trip the link put it on: a ride the
+  // user has moved since keeps the user's choice.
+  const unlinked = await tx.ferryJourney.updateMany({
+    where: { id: link.id, userId, tripId: link.tripId },
+    data: { tripId: null },
+  });
+  if (unlinked.count === 0) throw new FindingActionError("staleFinding");
   await propagateWrite(tx, userId, "ferry", link.id, before);
   await restatusTrips([link.tripId], tx);
 }

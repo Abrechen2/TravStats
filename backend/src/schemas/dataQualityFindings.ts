@@ -48,6 +48,10 @@ export const INVALID_ACTION_REASONS = [
   "notOffered",
   /** `keptId` names a record that is not one of the finding's `ids`. */
   "keptIdNotInFinding",
+  /** `merge`: more than one copy carries a flight recording — merging would lose one. */
+  "conflictingRecordings",
+  /** `merge`: the copies sit on different trips, bookings or loyalty cards. */
+  "conflictingLinks",
 ] as const;
 export type InvalidActionReason = (typeof INVALID_ACTION_REASONS)[number];
 
@@ -61,7 +65,19 @@ export const resolveFindingBodySchema = z
   .object({
     action: z.string().min(1).optional(),
     keptId: z.string().min(1).optional(),
+    /**
+     * The flag's `revision` as the client was served it. When given, the
+     * answer applies only to that revision, else `staleFinding`. Optional so
+     * an old client keeps working; the server then guards with the revision
+     * it read itself.
+     */
+    revision: z.number().int().min(0).optional(),
   })
+  .default({});
+
+/** `dismiss` / `undo` body: only the optional served revision. */
+export const answerGuardBodySchema = z
+  .object({ revision: z.number().int().min(0).optional() })
   .default({});
 
 /** Why `keptId` is the suggested copy. One rule today: the oldest entry. */
@@ -98,6 +114,8 @@ export const findingResolutionSchema = z.object({
         id: z.string(),
         status: z.enum(["open", "resolved", "dismissed"]),
         resolvedAt: z.string().nullable(),
+        /** The sibling's revision right after this answer — its stamp. */
+        revision: z.number().int().optional(),
       })
     )
     .optional(),
