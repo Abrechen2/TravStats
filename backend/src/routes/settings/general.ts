@@ -464,6 +464,19 @@ router.put(
 );
 
 // PUT /
+/** One fixed-field block of the settings blob, the stored fields under the sent ones. */
+function mergeFixedBlock(
+  key: "display" | "units",
+  stored: SettingsDataJson,
+  sent: Record<string, unknown>
+): Partial<SettingsDataJson> {
+  const next = sent[key];
+  if (next === undefined || next === null || typeof next !== "object") return {};
+  const before = (stored as Record<string, unknown>)[key];
+  const base = before !== null && typeof before === "object" ? before : {};
+  return { [key]: { ...base, ...next } } as Partial<SettingsDataJson>;
+}
+
 router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
@@ -562,12 +575,22 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       await prisma.user.update({ where: { id: userId }, data: nameUpdate });
     }
 
+    const stored =
+      typeof existing?.data === "object" && existing.data !== null
+        ? (existing.data as SettingsDataJson)
+        : {};
     const merged: SettingsDataJson = {
       ...defaultSettings,
-      ...(typeof existing?.data === "object" && existing.data !== null
-        ? (existing.data as SettingsDataJson)
-        : {}),
+      ...stored,
       ...payloadWithoutDirectFields,
+      // `display` and `units` are fixed sets of fields, merged field by field: a
+      // PUT naming only `display.dateFormat` replaced the whole block and wiped
+      // the profile zone (beta.28 UAT). The web always sends the full block, so
+      // only API clients such as the Companion met it. Blocks keyed by data
+      // (colour maps and the like) keep their replace semantics, because there
+      // an omitted key is how an entry is removed.
+      ...mergeFixedBlock("display", stored, payloadWithoutDirectFields),
+      ...mergeFixedBlock("units", stored, payloadWithoutDirectFields),
     };
 
     const updateData: UserSettingsUpdateData = {

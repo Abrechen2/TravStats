@@ -71,12 +71,9 @@ describe("documentsApi", () => {
     expect(sent.get("file")).toBe(file);
     // The format is deliberately NOT sent: the server decides from the bytes.
     expect(sent.get("format")).toBeNull();
-    // And no Content-Type of our own. A multipart type without a boundary is
-    // an unparsable request; axios scrubs ours in a browser and hands the job
-    // to the platform (helpers/resolveConfig.js), so writing one here asserts
-    // a header that never reaches the wire — and breaks the upload anywhere
-    // that scrubbing does not happen.
-    expect(config?.headers).toBeUndefined();
+    // The multipart type is named, or the shared instance's JSON default goes
+    // out and the server parses no file (every upload failed until beta.28).
+    expect(config?.headers).toEqual({ "Content-Type": "multipart/form-data" });
   });
 
   it("gives a 10 MB document longer than the shared 10-second timeout", async () => {
