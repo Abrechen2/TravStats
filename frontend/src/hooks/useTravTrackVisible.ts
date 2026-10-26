@@ -53,26 +53,36 @@ export type TravTrackAccess = "pending" | "visible" | "hidden";
 
 /**
  * Whether `/track` and its menu entry are offered (TravTrack plan T6) — the
- * one home of the rule: the `travTrack` beta key, the instance showing
- * TravTrack (`enabled`), and this account either recording into it (`active`)
- * or holding data. A failed read is not offered; a read still pending is
- * `pending`, and so is the beta key while `GET /settings` has not answered —
- * a direct link to `/track` opened in a new tab must wait for it, not bounce
- * to the dashboard (the /places bug `useBetaFeatureAccess` names; Codex VM
- * test 2026-10-26, F2). `useTravTrackVisible`, the chrome, still fails closed.
+ * one home of the rule: the `travTrack` beta key and the instance showing
+ * TravTrack (`enabled`). Every account sees it the moment the admin switches
+ * it on, an empty one too (owner, 2026-10-26: "soll nach Aktivierung sofort da
+ * sein mit Meldung, was er tun kann, dass Daten reinkommen" — on prod an account
+ * on Dawarich with no points saw nothing); the page then says how data comes
+ * in (`TrackGettingStarted`). A failed read is not offered; a read still
+ * pending is `pending`, and so is the beta key while `GET /settings` has not
+ * answered — a direct link to `/track` opened in a new tab must wait for it,
+ * not bounce to the dashboard (Codex VM test 2026-10-26, F2).
+ * `useTravTrackVisible`, the chrome, still fails closed.
  *
  * TravTrack switched off hides the page even for an account holding data;
  * Settings keeps that account's summary, export and delete (`TravTrackSection`).
  */
-export function useTravTrackAccess(): TravTrackAccess {
+export function useTravTrackState(): {
+  access: TravTrackAccess;
+  caps: TravTrackCapabilities | null;
+} {
   const key = useBetaFeatureAccess("travTrack");
   const keyOpen = key === "allowed";
   const { caps, settled } = useCapabilitiesRead(keyOpen);
-  if (key === "pending") return "pending";
-  if (!keyOpen) return "hidden";
-  if (!settled) return "pending";
-  if (!caps) return "hidden";
-  return caps.enabled && (caps.active || caps.hasData) ? "visible" : "hidden";
+  if (key === "pending") return { access: "pending", caps: null };
+  if (!keyOpen) return { access: "hidden", caps: null };
+  if (!settled) return { access: "pending", caps: null };
+  if (!caps) return { access: "hidden", caps: null };
+  return { access: caps.enabled ? "visible" : "hidden", caps };
+}
+
+export function useTravTrackAccess(): TravTrackAccess {
+  return useTravTrackState().access;
 }
 
 export function useTravTrackVisible(): boolean {

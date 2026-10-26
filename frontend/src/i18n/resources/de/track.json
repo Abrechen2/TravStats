@@ -602,5 +602,27 @@
       "tripAway": "Du warst mehrere Tage weit weg von zu Hause, und keine Reise im Logbuch deckt diese Tage.",
       "tripExtend": "Du warst direkt vor oder nach deiner Reise {{trip}} weiter unterwegs; die Reise deckt diese Tage noch nicht."
     }
+  },
+  "start": {
+    "title": "So kommen Daten in TravTrack",
+    "intro": "TravTrack ist eingeschaltet, aber für dein Konto liegt noch nichts vor. Drei Wege bringen deinen Standortverlauf hierher:",
+    "companion": {
+      "title": "Mit der Companion aufzeichnen",
+      "body": "Stell deine Standortquelle auf TravTrack (Einstellungen → Standortverlauf → Standortquelle). Dann zeichnet die Companion deine Wege hierher auf.",
+      "done": "TravTrack ist deine Standortquelle. Sobald die Companion aufzeichnet, erscheinen deine Wege hier.",
+      "action": "Standortquelle einstellen"
+    },
+    "dawarich": {
+      "title": "Dawarich-Verlauf übernehmen",
+      "body": "Kopiert deinen bisherigen Verlauf aus Dawarich nach TravTrack. In Dawarich wird nichts verändert.",
+      "action": "Aus Dawarich übernehmen"
+    },
+    "gpx": {
+      "title": "GPX-Datei importieren",
+      "body": "Lädt Spuren aus einer GPX-Datei, etwa aus einer Sport-App oder einem GPS-Gerät.",
+      "action": "GPX importieren"
+    },
+    "pairing": "Noch keine Companion gekoppelt: Unter Einstellungen → Konto → Geräte zeigt TravStats einen QR-Code, den du mit der App scannst.",
+    "pairingAction": "Gerät koppeln"
   }
 }

@@ -602,5 +602,27 @@
       "tripAway": "You were far from home for several days, and no trip in your logbook covers them.",
       "tripExtend": "You kept travelling right before or after your trip {{trip}}; the trip does not cover these days yet."
     }
+  },
+  "start": {
+    "title": "How data gets into TravTrack",
+    "intro": "TravTrack is switched on, but your account holds nothing yet. Three ways bring your location history here:",
+    "companion": {
+      "title": "Record with the Companion",
+      "body": "Set your location source to TravTrack (Settings → Location history → Location source). The Companion then records your ways here.",
+      "done": "TravTrack is your location source. As soon as the Companion records, your ways appear here.",
+      "action": "Set the location source"
+    },
+    "dawarich": {
+      "title": "Copy your Dawarich history",
+      "body": "Copies your existing history from Dawarich into TravTrack. Nothing in Dawarich is changed.",
+      "action": "Copy from Dawarich"
+    },
+    "gpx": {
+      "title": "Import a GPX file",
+      "body": "Loads tracks from a GPX file, for example from a sports app or a GPS device.",
+      "action": "Import GPX"
+    },
+    "pairing": "No Companion paired yet: under Settings → Account → Devices TravStats shows a QR code you scan with the app.",
+    "pairingAction": "Pair a device"
   }
 }

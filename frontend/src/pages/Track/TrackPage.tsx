@@ -2,9 +2,10 @@ import type { JSX } from "react";
 import { Navigate } from "react-router-dom";
 import NavigationBar from "../../components/NavigationBar";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useTravTrackAccess } from "../../hooks/useTravTrackVisible";
+import { useTravTrackState } from "../../hooks/useTravTrackVisible";
 import { LastSeenLine } from "../../components/Dashboard/LastSeenCard";
 import TrackExploredMap from "./TrackExploredMap";
+import TrackGettingStarted from "./TrackGettingStarted";
 import TrackImports from "./TrackImports";
 import TrackMonths from "./TrackMonths";
 import TrackStays from "./TrackStays";
@@ -29,7 +30,7 @@ const TAB_BODY: Record<TrackTab, () => JSX.Element> = {
  * switched off meanwhile) shows its own copy, never an empty map.
  */
 export default function TrackPage({ view = "day" }: { view?: TrackView }): JSX.Element | null {
-  const access = useTravTrackAccess();
+  const { access, caps } = useTravTrackState();
   if (access === "pending") return null;
   if (access === "hidden") return <Navigate to="/dashboard" replace />;
   // The app's own header carries Track's menu (phase 5, header variant B);
@@ -37,7 +38,17 @@ export default function TrackPage({ view = "day" }: { view?: TrackView }): JSX.E
   return (
     <>
       <NavigationBar />
-      {view === "day" ? <TrackDayView /> : <TrackTabView view={view} />}
+      {view === "day" && caps && !caps.hasData ? (
+        // Nothing recorded or imported yet: how data comes in, instead of an empty map.
+        <div className="mx-auto flex max-w-5xl flex-col gap-4 p-4">
+          <TrackHeader />
+          <TrackGettingStarted active={caps.active} />
+        </div>
+      ) : view === "day" ? (
+        <TrackDayView />
+      ) : (
+        <TrackTabView view={view} />
+      )}
     </>
   );
 }
