@@ -1,5 +1,6 @@
 import { prisma } from "../../db";
 import { buildTravTrackDataExport } from "../travtrack/accountExport";
+import { withZoneCutRecordings } from "./zoneCutRecordings";
 import { PUBLIC_STAY_SELECT, publicEvidence } from "../dawarich/stays/publicStay";
 
 /**
@@ -346,7 +347,7 @@ export async function buildAccountExport(
     format: "travstats-account-export/1",
     exportedAt: new Date().toISOString(),
     instanceName,
-    user: withPublicStays(user),
+    user: await withZoneCutRecordings(userId, withPublicStays(user)),
     travtrack: await buildTravTrackDataExport(userId),
   };
 }
