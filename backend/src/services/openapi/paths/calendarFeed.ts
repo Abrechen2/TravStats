@@ -22,8 +22,14 @@ const ok = (description: string, data: z.ZodTypeAny) => ({
   },
 });
 
+const sessionOrCompanion = err(
+  "A generic API token (the URL is a credential, managed from a browser session), a paired " +
+    "device's read-only token, or the shared demo account. The paired Companion (a device-" +
+    "pairing token with write scope) may read and issue"
+);
 const sessionOnly = err(
-  "An API token: the URL is a credential, managed from a browser session only; or the shared demo account"
+  "An API token, the paired Companion's included: revoking is for a browser session only; " +
+    "or the shared demo account"
 );
 
 registry.registerPath({
@@ -49,7 +55,7 @@ registry.registerPath({
           .describe("When a calendar app last read the URL; null when never"),
       })
     ),
-    403: sessionOnly,
+    403: sessionOrCompanion,
   },
 });
 
@@ -78,7 +84,7 @@ registry.registerPath({
           ),
       })
     ),
-    403: sessionOnly,
+    403: sessionOrCompanion,
     409: err("`CALENDAR_FEED_DISABLED`: the instance's beta switch is off"),
     429: err("Too many new URLs this hour"),
   },

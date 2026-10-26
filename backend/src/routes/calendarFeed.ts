@@ -14,17 +14,29 @@ import { getInstanceSettings } from "../services/instanceSettingsService";
  * itself (`routes/calendarFeedPublic.ts`) needs no session.
  *
  * Enveloped (`{success, data}`, ADR 0001), like the share links it mirrors.
- * Browser sessions only: the URL is a credential for the account's whole
- * travel calendar, and an API token minting credentials is the escalation
- * `settings/tokens.ts` already refuses. The shared demo account may read but
- * not issue or revoke — every visitor of a public instance is that account.
+ * The URL is a credential for the account's whole travel calendar, and an API
+ * token minting credentials is the escalation `settings/tokens.ts` already
+ * refuses — so a generic API token is refused outright. The one exception is
+ * the paired Companion (a token minted by device pairing, `deviceId` set,
+ * write scope): it may read the state and issue the URL so the phone can
+ * offer the subscription, but revoking stays with a browser session. The
+ * shared demo account may read but not issue or revoke — every visitor of a
+ * public instance is that account.
  */
+
+/** What a paired device's token may do here; DELETE is not among them. */
+const COMPANION_METHODS = new Set(["GET", "HEAD", "POST"]);
+
+/** A paired device's token with write scope, on a method it may use. */
+const isCompanionCall = (req: AuthRequest): boolean =>
+  !!req.apiToken?.deviceId && req.apiToken.scope !== "read" && COMPANION_METHODS.has(req.method);
+
 const router = Router();
 router.use(authenticate);
 router.use(requireWriteScope);
 router.use(rejectDemoWrites);
 router.use((req: AuthRequest, _res: Response, next: NextFunction) => {
-  if (req.apiToken) {
+  if (req.apiToken && !isCompanionCall(req)) {
     next(new AppError("The calendar feed is managed from a browser session", 403));
     return;
   }

@@ -353,7 +353,10 @@ describe("calendar feed", () => {
       expect(ip.body.data.url).toMatch(/^http:\/\/192\.168\.178\.120:3010\//);
       expect(ip.body.data.reachableFromInternet).toBe(false);
     } finally {
-      await updateInstanceSettings({ publicUrl: before.publicUrl, frontendUrl: before.frontendUrl });
+      await updateInstanceSettings({
+        publicUrl: before.publicUrl,
+        frontendUrl: before.frontendUrl,
+      });
     }
   });
 
@@ -373,7 +376,7 @@ describe("calendar feed", () => {
     expect((await request(app).get(feedPath(url))).status).toBe(200);
   });
 
-  it("is managed from a browser session only — an API token cannot mint one", async () => {
+  const bearer = async (scope: string, deviceId: string | null): Promise<string> => {
     const tok = await generateApiToken();
     await prisma.apiToken.create({
       data: {
@@ -381,12 +384,36 @@ describe("calendar feed", () => {
         label: `${PREFIX}pat`,
         lookupHash: tok.lookupHash,
         hash: tok.hash,
-        scope: "admin",
+        scope,
+        deviceId,
       },
     });
-    const res = await request(app)
-      .post("/api/v1/calendar-feed")
-      .set("Authorization", `Bearer ${tok.plaintext}`);
+    return `Bearer ${tok.plaintext}`;
+  };
+
+  it("refuses a generic API token — reading, minting and revoking alike", async () => {
+    const auth = await bearer("admin", null);
+    for (const method of ["get", "post", "delete"] as const) {
+      const res = await request(app)[method]("/api/v1/calendar-feed").set("Authorization", auth);
+      expect(res.status).toBe(403);
+    }
+  });
+
+  it("lets the paired Companion read and issue the URL, but not revoke it", async () => {
+    const auth = await bearer("write", "device-calfeed-1");
+    const state = await request(app).get("/api/v1/calendar-feed").set("Authorization", auth);
+    expect(state.status).toBe(200);
+    expect(state.body.data).toMatchObject({ enabled: true });
+    const issued = await request(app).post("/api/v1/calendar-feed").set("Authorization", auth);
+    expect(issued.status).toBe(201);
+    expect(issued.body.data.url).toMatch(/\/api\/v1\/calendar\/ts_cal_/);
+    const revoke = await request(app).delete("/api/v1/calendar-feed").set("Authorization", auth);
+    expect(revoke.status).toBe(403);
+  });
+
+  it("refuses a paired device's read-only token", async () => {
+    const auth = await bearer("read", "device-calfeed-2");
+    const res = await request(app).get("/api/v1/calendar-feed").set("Authorization", auth);
     expect(res.status).toBe(403);
   });
 
