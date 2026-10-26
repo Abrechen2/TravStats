@@ -328,7 +328,7 @@ describe("Tram and U-Bahn rides and the instance's OpenRailRouting", () => {
         new Response(
           JSON.stringify({
             profiles: [{ name: "all_tracks" }, { name: "tram" }],
-            data_date: "x",
+            data_date: "2026-10-26T07:20:00Z",
           }),
           { status: 200 }
         )
@@ -340,7 +340,7 @@ describe("Tram and U-Bahn rides and the instance's OpenRailRouting", () => {
       expect(res.body).toEqual({
         ok: true,
         profile: "all_tracks",
-        dataDate: "x",
+        dataDate: "2026-10-26T07:20:00Z",
         modeProfiles: { tram: true, subway: false },
       });
     });
