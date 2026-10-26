@@ -81,6 +81,33 @@ describe("Travel plan transactions against an isolated PostgreSQL database", () 
     expect((await get("/travplan/config")).status).toBe(403);
     expect((await get("/travplan/config", admin)).status).toBe(200);
   });
+  // Admin → Instanz → TravPlan (2026-10-26) saves the switch alone; the daily limits it never
+  // loaded must survive, and an empty body is still a mistake.
+  it("saves the switch alone and keeps the daily limits", async () => {
+    const patch = (body: object, who = admin) =>
+      request(app).patch("/api/v1/travplan/config").set("Cookie", cookie(who)).send(body);
+    const before = await prisma.travelPlanConfig.findUniqueOrThrow({ where: { id: "default" } });
+    try {
+      await prisma.travelPlanConfig.update({
+        where: { id: "default" },
+        data: { aiDailyLimit: 7, weatherDailyLimit: 15 },
+      });
+      const off = await patch({ enabled: false });
+      expect(off.status).toBe(200);
+      expect(off.body).toMatchObject({ enabled: false, aiDailyLimit: 7, weatherDailyLimit: 15 });
+      expect((await patch({})).status).toBe(400);
+      expect((await patch({ enabled: true }, owner)).status).toBe(403);
+    } finally {
+      await prisma.travelPlanConfig.update({
+        where: { id: "default" },
+        data: {
+          enabled: before.enabled,
+          aiDailyLimit: before.aiDailyLimit,
+          weatherDailyLimit: before.weatherDailyLimit,
+        },
+      });
+    }
+  });
   it("gives the plan's new trip the account's chosen colour (forgejo#321)", async () => {
     await prisma.userSettings.upsert({
       where: { userId: owner },

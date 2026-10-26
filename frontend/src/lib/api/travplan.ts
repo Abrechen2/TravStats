@@ -1,5 +1,6 @@
 import { newPlanId } from "../travplanId";
 import { api, parserApi } from "./client";
+import { apiErrorMachineCode } from "../apiError";
 import type {
   PlanView,
   PlanSummary,
@@ -66,7 +67,8 @@ export const travplanApi = {
     ).data.locations,
   capabilities: async () => (await api.get<PlanCapabilities>("/travplan/capabilities")).data,
   config: async () => (await api.get<PlanConfig>("/travplan/config")).data,
-  setConfig: async (config: PlanConfig) =>
+  /** Any subset: the admin switch saves `{enabled}` alone and keeps the limits. */
+  setConfig: async (config: Partial<PlanConfig>) =>
     (await api.patch<PlanConfig>("/travplan/config", config)).data,
   list: async () => (await api.get<{ plans: PlanSummary[] }>("/travplan/plans")).data.plans,
   create: async (
@@ -103,3 +105,14 @@ export const travplanApi = {
     (await api.get<{ suggestions: string[] }>("/trips/" + id + "/plan/packing-suggestions")).data
       .suggestions,
 };
+
+/**
+ * The admin switch's error copy (Admin → Instanz → TravPlan): `PLAN_DISABLED`
+ * is the server's answer while the instance's beta switch is off, everything
+ * else is a plain failed save.
+ */
+export function travPlanErrorKey(err: unknown): string {
+  return apiErrorMachineCode(err) === "PLAN_DISABLED"
+    ? "admin:travPlan.errors.disabled"
+    : "admin:travPlan.errors.saveFailed";
+}

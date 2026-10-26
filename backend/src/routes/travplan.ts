@@ -76,13 +76,18 @@ router.patch(
   ...writeGuard,
   requireAdmin,
   route(async (req, res) => {
+    // Any subset: Admin → Instanz → TravPlan saves `{enabled}` alone, so it never writes back
+    // limits it loaded minutes ago; `/plan/admin` still sends all three. Fields left out keep
+    // their stored value, or the column default on the first write.
     const data = z
       .object({
         enabled: z.boolean(),
         aiDailyLimit: z.number().int().min(0).max(100),
         weatherDailyLimit: z.number().int().min(0).max(200),
       })
+      .partial()
       .strict()
+      .refine((d) => Object.keys(d).length > 0, "Nothing to change")
       .parse(req.body);
     res.json(
       await prisma.travelPlanConfig.upsert({

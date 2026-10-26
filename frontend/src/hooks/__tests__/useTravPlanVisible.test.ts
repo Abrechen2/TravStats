@@ -60,10 +60,21 @@ describe("useTravPlanVisible", () => {
     expect(result.current).toBe(false);
   });
 
-  it("shows it to an admin with the server switch off — the admin page is where it is turned on", () => {
+  // The admin exception is gone (owner, 2026-10-26): the switch now has a home
+  // in Admin → Instanz → TravPlan, so the nav entry need not stay open as the
+  // way to it.
+  it("hides it from an admin too while the server switch is off", async () => {
     authState.user = { id: "a1", isAdmin: true };
-    expect(renderHook(() => useTravPlanVisible()).result.current).toBe(true);
-    expect(mocks.capabilities).not.toHaveBeenCalled();
+    mocks.capabilities.mockResolvedValue({ enabled: false });
+    const { result } = renderHook(() => useTravPlanVisible());
+    await waitFor(() => expect(mocks.capabilities).toHaveBeenCalled());
+    expect(result.current).toBe(false);
+  });
+
+  it("shows it to an admin once the server switch is on", async () => {
+    authState.user = { id: "a1", isAdmin: true };
+    const { result } = renderHook(() => useTravPlanVisible());
+    await waitFor(() => expect(result.current).toBe(true));
   });
 
   it("shows nothing without a session", () => {
