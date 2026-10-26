@@ -76,7 +76,7 @@ export default function RailRoutingUrlSetting({
             ok: true,
             text: t("settings:railRouting.test.ok", {
               profile: test.result.profile,
-              date: test.result.dataDate ?? "—",
+              date: test.result.dataDate ?? t("settings:railRouting.test.dateUnknown"),
             }),
           }
         : { ok: false, text: t(`settings:railRouting.test.${test.result.code}`) }

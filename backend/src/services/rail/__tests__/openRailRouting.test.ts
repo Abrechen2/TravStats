@@ -302,3 +302,16 @@ it.each([
     modeProfiles,
   });
 });
+
+it.each([["1970-01-01T00:00:00Z"], ["1970-01-01"], ["not a date"]])(
+  "the probe reports no map date for %j — an extract without one says epoch 0",
+  async (dataDate) => {
+    fetchMock.mockResolvedValue(
+      response({ profiles: [{ name: "all_tracks" }], data_date: dataDate })
+    );
+    expect(await probeRailRouting("https://routing.test")).toMatchObject({
+      ok: true,
+      dataDate: null,
+    });
+  }
+);

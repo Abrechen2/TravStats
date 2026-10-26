@@ -372,6 +372,17 @@ const infoSchema = z.object({
 });
 
 /**
+ * GraphHopper reports the OSM extract's timestamp, and an extract without one
+ * as epoch 0 — which the test line showed as "1970-01-01". Neither that nor an
+ * unreadable value is a map date; null says "unknown".
+ */
+function knownDataDate(raw: string | undefined): string | null {
+  if (!raw) return null;
+  const ms = Date.parse(raw);
+  return Number.isFinite(ms) && ms > 0 ? raw : null;
+}
+
+/**
  * The admin's test button: does this URL answer like an OpenRailRouting with
  * the profile the journeys are routed with? Reads `/info` only, so it works
  * whatever region the instance was built for.
@@ -387,7 +398,7 @@ export async function probeRailRouting(baseUrl: string): Promise<RailRoutingProb
   return {
     ok: true,
     profile: RAIL_ROUTING_PROFILE,
-    dataDate: parsed.data.data_date ?? null,
+    dataDate: knownDataDate(parsed.data.data_date),
     modeProfiles: {
       tram: names.has(RAIL_MODE_ROUTING.tram.profile),
       subway: names.has(RAIL_MODE_ROUTING.metro.profile),

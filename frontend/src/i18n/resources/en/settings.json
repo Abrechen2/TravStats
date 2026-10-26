@@ -1093,6 +1093,7 @@
     "testButton": "Test connection",
     "test": {
       "ok": "Connected. Profile {{profile}}, map data of {{date}}.",
+      "dateUnknown": "unknown",
       "notConfigured": "No address has been entered.",
       "unreachable": "No service answers at this address.",
       "notOpenRailRouting": "The service answers, but it is not an OpenRailRouting.",

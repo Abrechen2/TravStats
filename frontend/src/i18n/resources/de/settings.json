@@ -1093,6 +1093,7 @@
     "testButton": "Verbindung testen",
     "test": {
       "ok": "Verbunden. Profil {{profile}}, Kartenstand {{date}}.",
+      "dateUnknown": "unbekannt",
       "notConfigured": "Es ist keine Adresse eingetragen.",
       "unreachable": "Unter dieser Adresse antwortet kein Dienst.",
       "notOpenRailRouting": "Der Dienst antwortet, ist aber kein OpenRailRouting.",
