@@ -313,20 +313,23 @@
       "rail": "Zugfahrt",
       "bus": "Busfahrt",
       "ferry": "Fähre",
-      "rental": "Mietwagen"
+      "rental": "Mietwagen",
+      "cruise": "Kreuzfahrt"
     },
     "times": {
       "rail": "{{count}}× gefahren",
       "bus": "{{count}}× gefahren",
       "ferry": "{{count}}× übergesetzt",
-      "rental": "{{count}}× gemietet"
+      "rental": "{{count}}× gemietet",
+      "cruise": "{{count}}× gesegelt"
     },
     "stop": {
       "flight": "Flughafen",
       "rail": "Bahnhof",
       "bus": "Busbahnhof",
       "ferry": "Fährhafen",
-      "rental": "Mietwagenstation"
+      "rental": "Mietwagenstation",
+      "cruise": "Kreuzfahrthafen"
     },
     "tourKind": {
       "tour": "Tagestour",
@@ -410,7 +413,9 @@
       "rental_one": "{{count}} Abholung",
       "rental_other": "{{count}} Abholungen",
       "flight_one": "{{count}} Abflug",
-      "flight_other": "{{count}} Abflüge"
+      "flight_other": "{{count}} Abflüge",
+      "cruise_one": "{{count}} Abfahrt",
+      "cruise_other": "{{count}} Abfahrten"
     },
     "picture": "Bild",
     "pictureUnavailable": "Bild gerade nicht verfügbar."

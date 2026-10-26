@@ -14,6 +14,7 @@ export interface JourneySubject {
 function subjectName(j: MapJourney): string | null {
   switch (j.domain) {
     case "ferry":
+    case "cruise":
       return j.facts.vesselName ?? null;
     case "rental":
       return j.facts.vehicleModel ?? null;
@@ -26,6 +27,7 @@ function subjectName(j: MapJourney): string | null {
 
 const KIND: Partial<Record<MapJourney["domain"], SubjectKind>> = {
   ferry: "vessel",
+  cruise: "vessel",
   rental: "vehicle",
   rail: "train",
 };

@@ -8,6 +8,7 @@ import type { CruiseStatus } from "../../types/cruise";
 import type { CruiseRouteFeatureCollection } from "../../lib/api/cruise";
 import { effectivePortSequence } from "../Cruise/cruisePorts";
 import { catmullRomSpline } from "./catmullRom";
+import { indexCruiseLegs, withCruiseLegHover } from "../map/cards/journeys/cruiseLegJourneys";
 import {
   DEFAULT_CRUISE_COLOR_CONFIG,
   resolveCruiseArcColor,
@@ -186,10 +187,15 @@ export function createCruiseArcsLayer(
   onCruiseClick?: (cruiseId: string) => void,
   options: CruiseArcBuildOptions = {}
 ): Layer | null {
-  const arcs = groupMapData(
-    buildCruiseArcs(cruises, geometryByCruise, options),
-    (a) => JSON.stringify([a.color, a.planned, pathIdentity(a.path)]),
-    (a) => a.cruiseId
+  // Each leg carries the journey hover a flight route has: both ports and
+  // how often the leg was sailed (forgejo#323), in the leg's own colour.
+  const arcs = withCruiseLegHover(
+    groupMapData(
+      buildCruiseArcs(cruises, geometryByCruise, options),
+      (a) => JSON.stringify([a.color, a.planned, pathIdentity(a.path)]),
+      (a) => a.cruiseId
+    ),
+    indexCruiseLegs(cruises)
   );
   if (arcs.length === 0) return null;
 

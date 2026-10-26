@@ -4,6 +4,7 @@
 
 import type { Quartile } from "./heatmapUtils";
 import type { Rgb } from "../../lib/cruiseColor";
+import type { JourneyRouteHover } from "../map/cards/journeys/journeyLayerCards";
 import type { CruiseStatus } from "../../types/cruise";
 import type { Lodging } from "../../types/lodging";
 import type { Place } from "../../types/place";
@@ -109,6 +110,11 @@ export interface CruisePathDatum {
    * renderers agree pixel-for-pixel.
    */
   color: Rgb;
+  /** The leg's ports — what its journey hover is looked up by (forgejo#323). */
+  fromPortId?: number;
+  toPortId?: number;
+  /** Both ports and how often the leg was sailed (`withCruiseLegHover`). */
+  journeyRoute?: JourneyRouteHover;
 }
 
 export interface TooltipState {

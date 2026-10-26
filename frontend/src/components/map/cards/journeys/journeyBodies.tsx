@@ -175,6 +175,7 @@ const FACT_LABEL: Record<MapJourney["domain"], string> = {
   bus: "line",
   ferry: "vessel",
   rental: "vehicle",
+  cruise: "vessel",
 };
 
 function LatestRows({

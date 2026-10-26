@@ -35,7 +35,6 @@ import { GLOBE_SKY, fitMaxZoom, flyToZoom } from "./tripMapProjection";
 import { useTripLayers } from "./tripMapExtraLayers";
 import {
   TRIP_MAP_CHROME,
-  resolveTripCruiseColor,
   resolveTripFlightColor,
   resolveTripStopColor,
   useTripMapColorConfig,
@@ -48,6 +47,7 @@ import { TripMapCardHost } from "./TripMapCardHost";
 import { shareMapLabels } from "../map/labelObstacles";
 import { stationLabelPoints } from "../Globe/globePinLabels";
 import { useTripCruiseGeometry } from "./useTripCruiseGeometry";
+import { buildTripCruisePaths } from "./tripCruisePaths";
 import { MapLoadFailedNotice } from "../map/MapLoadFailedNotice";
 
 const INITIAL_VIEW: MapViewState = {
@@ -158,29 +158,10 @@ export default function TripMap({
     return out;
   }, [trip.flights, colorConfig.flight]);
 
-  const cruisePaths = useMemo<CruisePath[]>(() => {
-    const out: CruisePath[] = [];
-    const cruiseLabel = new Map<string, string>();
-    // Resolve each cruise colour once for all its legs.
-    const cruiseTint = new Map<string, [number, number, number]>();
-    for (const c of trip.cruises ?? []) {
-      cruiseLabel.set(c.id, c.cruiseLine ?? "Cruise");
-      cruiseTint.set(c.id, resolveTripCruiseColor(c, colorConfig.cruise));
-    }
-    for (const [cruiseId, fc] of cruiseGeometry.entries()) {
-      for (const feat of fc.features) {
-        if (feat.geometry.coordinates.length >= 2) {
-          out.push({
-            cruiseId,
-            path: feat.geometry.coordinates,
-            label: cruiseLabel.get(cruiseId) ?? "Cruise",
-            color: cruiseTint.get(cruiseId) ?? colorConfig.cruise.colors.past,
-          });
-        }
-      }
-    }
-    return out;
-  }, [cruiseGeometry, trip.cruises, colorConfig.cruise]);
+  const cruisePaths = useMemo<CruisePath[]>(
+    () => buildTripCruisePaths(trip.cruises ?? [], cruiseGeometry, colorConfig.cruise),
+    [cruiseGeometry, trip.cruises, colorConfig.cruise]
+  );
 
   const airportPoints = useMemo<PointDatum[]>(() => {
     const seen = new Map<string, PointDatum>();
