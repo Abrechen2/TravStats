@@ -29,7 +29,7 @@ const sameSet = (a: Set<string>, b: Set<string>) =>
   a.size === b.size && [...a].every((id) => b.has(id));
 
 /**
- * The dismissed duplicate flag that already answers exactly these copies, or
+ * The `keep` that already answers exactly these copies (its flag's id), or
  * null. A flag born answered records it (`resolution.inheritedFrom`), so an
  * undo of that answer re-opens the newcomer too.
  */
@@ -49,7 +49,10 @@ export async function answeredByDismissal(
     },
     select: { id: true, entityId: true, details: true, resolution: true },
   });
+  // Only a KEEP answers the group. A plain dismissal answers its own flag;
+  // a sibling of it is still a question of its own.
   const match = dismissed.find((flag) => {
+    if ((flag.resolution as { action?: unknown } | null)?.action !== "keep") return false;
     const theirs = duplicateIdSet(flag.entityId, flag.details);
     return theirs !== null && sameSet(theirs, ids);
   });

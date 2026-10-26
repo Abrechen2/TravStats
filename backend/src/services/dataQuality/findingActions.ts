@@ -312,6 +312,8 @@ export async function undoFinding(
 
   await prisma.$transaction(
     async (tx) => {
+      // Same lock order as `keep`: the duplicate lock before any flag row.
+      if (resolution.action === "keep") await lockDuplicateAnswers(tx, userId);
       if (resolution.action === "link" && resolution.link) {
         await undoFerryLink(tx, userId, resolution.link);
       }
@@ -330,8 +332,7 @@ export async function undoFinding(
       if (updated.count === 0) throw new FindingActionError("staleFinding");
       if (resolution.action === "keep") {
         // Siblings born under this answer after it was given (`runner.ts`),
-        // under the same lock as their creation — and its own siblings.
-        await lockDuplicateAnswers(tx, userId);
+        // under the lock taken above — and its own siblings.
         await tx.dataQualityFlag.updateMany({
           where: {
             userId,
