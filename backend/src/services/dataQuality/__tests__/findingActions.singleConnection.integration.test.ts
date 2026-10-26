@@ -12,6 +12,7 @@ import { prisma } from "../../../db";
 import { runDataQualityChecks } from "../runner";
 import { listFlags } from "../flagService";
 import { resolveFinding } from "../findingActions";
+import { clearAirportCache } from "../../airportCache";
 import { shareTrip } from "../../sharing/shareTrip";
 import {
   linkWithConsent,
@@ -67,6 +68,9 @@ describe("answers on a pool of one connection", () => {
     });
     await runDataQualityChecks(userId, NOW);
     const [flag] = await listFlags(userId, { kind: "duplicate_candidate" });
+    // A cold airport cache: the re-validation must read the catalogue
+    // through the transaction too.
+    clearAirportCache();
 
     await resolveFinding(flag.id, userId, { action: "merge" });
     expect(await prisma.flight.count({ where: { userId } })).toBe(1);

@@ -457,7 +457,7 @@ export async function loadRecordSnapshot(
         .filter((c): c is string => c !== null)
     ),
   ];
-  const airports = codes.length > 0 ? await getCachedAirports(codes) : new Map();
+  const airports = codes.length > 0 ? await getCachedAirports(codes, db) : new Map();
   const tzMap = tzMapFromAirports(airports);
 
   return {
