@@ -656,4 +656,116 @@ describe("C3 review findings, round two", () => {
     expect(flags).toHaveLength(3);
     expect(flags.every((f) => f.status === "open")).toBe(true);
   });
+
+  it("a run does not re-open a resolved copy flag once a keep has answered its group", async () => {
+    const FLIGHT = {
+      airline: "Lufthansa",
+      flightNumber: "LH400",
+      depIata: "FRA",
+      depLat: 50.03,
+      depLon: 8.57,
+      arrIata: "JFK",
+      arrLat: 40.64,
+      arrLon: -73.78,
+      status: "flown",
+      depTimeSemantics: "UTC",
+      arrTimeSemantics: "UTC",
+      depTimezone: "Europe/Berlin",
+      arrTimezone: "America/New_York",
+      departureTime: new Date("2026-03-10T08:00:00Z"),
+      arrivalTime: new Date("2026-03-10T16:00:00Z"),
+    };
+    for (const d of ["01", "02", "03"]) {
+      await prisma.flight.create({
+        data: { ...FLIGHT, userId: anna.id, createdAt: new Date(`2026-03-${d}T00:00:00Z`) },
+      });
+    }
+    await runDataQualityChecks(anna.id, NOW);
+    const [one, other] = await listFlags(anna.id, { kind: "duplicate_candidate" });
+    await resolveFinding(other.id, anna.id, {}); // "I corrected it" — the copies stay
+    await resolveFinding(one.id, anna.id, { action: "keep" });
+
+    await runDataQualityChecks(anna.id, NOW);
+    expect(
+      (await prisma.dataQualityFlag.findUniqueOrThrow({ where: { id: other.id } })).status
+    ).toBe("dismissed");
+
+    await undoFinding(one.id, anna.id);
+    expect(
+      (await prisma.dataQualityFlag.findUniqueOrThrow({ where: { id: other.id } })).status
+    ).toBe("open");
+  });
+
+  it("a stop created during a merge that names a removed copy ends on the kept one", async () => {
+    const full = await makeFullTrip(anna);
+    const {
+      id: _id,
+      tripId: _trip,
+      createdAt: _c,
+      updatedAt: _u,
+      durationMinutes: _d,
+      ...rest
+    } = full.flight;
+    const older = await prisma.flight.create({
+      data: {
+        ...(rest as unknown as Parameters<typeof prisma.flight.create>[0]["data"]),
+        createdAt: new Date("2024-01-01T00:00:00Z"),
+        shareKey: null,
+      },
+    });
+    await runDataQualityChecks(anna.id, NOW);
+    const [flag] = await listFlags(anna.id, { kind: "duplicate_candidate" });
+
+    const original = prisma.$transaction.bind(prisma);
+    let lateStopId: string | null = null;
+    const spy = jest.spyOn(prisma, "$transaction").mockImplementation(((
+      fn: (tx: unknown) => Promise<unknown>,
+      opts?: unknown
+    ) =>
+      original(
+        ((tx: Record<string, unknown>) =>
+          fn(
+            new Proxy(tx, {
+              get(target, prop, receiver) {
+                const value = Reflect.get(target, prop, receiver);
+                if (prop !== "flight") return value;
+                return new Proxy(value as Record<string, unknown>, {
+                  get(d, p, r) {
+                    const inner = Reflect.get(d, p, r) as (...a: unknown[]) => Promise<unknown>;
+                    if (p !== "deleteMany" || lateStopId) return inner;
+                    return async (...args: unknown[]) => {
+                      // Another request adds a stop for the copy about to go.
+                      const stop = await original((other) =>
+                        other.tripStop.create({
+                          data: {
+                            tripId: full.trip.id,
+                            orderIdx: 9,
+                            domain: "flight",
+                            sourceId: full.flight.id,
+                            title: "late",
+                          },
+                        })
+                      );
+                      lateStopId = stop.id;
+                      return inner.apply(d, args);
+                    };
+                  },
+                });
+              },
+            })
+          )) as never,
+        opts as never
+      )) as never);
+    try {
+      await resolveFinding(flag.id, anna.id, { action: "merge" });
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(lateStopId).not.toBeNull();
+    expect(
+      (await prisma.tripStop.findUniqueOrThrow({ where: { id: lateStopId as unknown as string } }))
+        .sourceId
+    ).toBe(older.id);
+  });
 });

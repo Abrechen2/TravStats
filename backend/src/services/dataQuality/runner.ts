@@ -267,6 +267,36 @@ type ReconcileOutcome = "untouched" | "reopened" | "updated";
  * its undo; a conditional one matches nothing, and the pass leaves the row to
  * the answer (the next run reconciles against the new state).
  */
+/** `untouched` when the flag joined a kept group (or lost a race), null when no keep covers it. */
+async function joinKeptGroup(
+  current: DataQualityFlag,
+  finding: DataQualityFinding
+): Promise<ReconcileOutcome | null> {
+  const ids = duplicateIdSet(finding.entityId, finding.details);
+  if (ids === null) return null;
+  return prisma.$transaction(async (tx) => {
+    await lockDuplicateAnswers(tx, current.userId);
+    const answeredBy = await answeredByDismissal(tx, current.userId, finding.entityType, ids);
+    if (answeredBy === null) return null;
+    await tx.dataQualityFlag.updateMany({
+      where: { id: current.id, revision: current.revision },
+      data: {
+        status: "dismissed",
+        details: asJson(finding.details),
+        undoUntil: null,
+        resolution: {
+          action: "keep",
+          previousStatus: "open",
+          previousResolvedAt: null,
+          inheritedFrom: answeredBy,
+        },
+        revision: { increment: 1 },
+      },
+    });
+    return "untouched" as const;
+  });
+}
+
 export async function reconcileExisting(
   current: DataQualityFlag,
   finding: DataQualityFinding
@@ -274,6 +304,14 @@ export async function reconcileExisting(
   const askedAnew =
     current.status === "dismissed" && outgrowsDismissal(current.kind, current.details, finding);
   if (current.status === "dismissed" && !askedAnew) return "untouched";
+
+  // A duplicate group the user has kept ("these are separate entries") stays
+  // answered: a copy flag resolved earlier joins that answer instead of
+  // coming back, under the lock `keep` takes, and undoing the keep re-opens it.
+  if (current.status === "resolved" && current.kind === "duplicate_candidate") {
+    const joined = await joinKeptGroup(current, finding);
+    if (joined !== null) return joined;
+  }
 
   if (current.status === "resolved" || askedAnew) {
     const reopened = await prisma.dataQualityFlag.updateMany({

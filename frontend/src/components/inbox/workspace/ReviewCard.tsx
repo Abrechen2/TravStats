@@ -34,6 +34,21 @@ import { W } from "./model";
  * matters at the moment of clicking. A question already answered (the history
  * view) shows its answer and offers none.
  */
+/**
+ * "Das stimmt so". For a duplicate the server offers `keep`, which answers
+ * every flag over the same copies; a plain dismiss would leave the sibling
+ * question of a three-copy group open. Other kinds — and an older server
+ * that sends no `actions` — get the dismiss they always got.
+ */
+function answerThisIsRight(flag: DataQualityFlag) {
+  if (flag.actions?.includes("keep")) {
+    return dataQualityFlagsApi.resolve(flag.id, { action: "keep", revision: flag.revision });
+  }
+  return flag.revision === undefined
+    ? dataQualityFlagsApi.dismiss(flag.id)
+    : dataQualityFlagsApi.dismiss(flag.id, flag.revision);
+}
+
 export default function ReviewCard({
   flag,
   busy,
@@ -126,10 +141,7 @@ export default function ReviewCard({
                 disabled={busy}
                 onClick={() =>
                   void act(
-                    () =>
-                      flag.revision === undefined
-                        ? dataQualityFlagsApi.dismiss(flag.id)
-                        : dataQualityFlagsApi.dismiss(flag.id, flag.revision),
+                    () => answerThisIsRight(flag),
                     false,
                     t("dataQuality:inbox.messages.dismissed")
                   )

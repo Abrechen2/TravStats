@@ -330,14 +330,15 @@ export async function undoFinding(
       if (updated.count === 0) throw new FindingActionError("staleFinding");
       if (resolution.action === "keep") {
         // Siblings born under this answer after it was given (`runner.ts`),
-        // under the same lock as their creation, and only while untouched.
+        // under the same lock as their creation — and its own siblings.
         await lockDuplicateAnswers(tx, userId);
         await tx.dataQualityFlag.updateMany({
           where: {
             userId,
             kind: "duplicate_candidate",
             status: "dismissed",
-            revision: 0,
+            // The stamp is the resolution itself: a flag the user answered
+            // since carries that answer instead, and is left alone.
             resolution: { path: ["inheritedFrom"], equals: flag.id },
           },
           data: { status: "open", resolvedAt: null, resolution: Prisma.DbNull, ...NEXT_REVISION },

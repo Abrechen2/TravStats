@@ -288,6 +288,14 @@ export async function mergeDuplicates(
     },
     { timeout: SHARE_TX_TIMEOUT_MS }
   );
+  // `sourceId` has no foreign key, so a stop another request created for a
+  // removed copy while the merge ran would point at nothing. Sweep once more
+  // now that the copies are gone: anything committed by now is re-pointed,
+  // and anything later names a record that no longer exists.
+  await prisma.$transaction(
+    (tx) => repointStops(tx, userId, { sourceId: { in: [...removedIds] } }, { sourceId: keptId }),
+    { timeout: SHARE_TX_TIMEOUT_MS }
+  );
   // After commit, like the ride routes do: a trip's status follows its
   // entries' dates, and its derivation reads the profile through the global
   // client — inside the transaction that would be a second pool connection.
