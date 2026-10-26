@@ -16,6 +16,8 @@ interface Props {
   tripName: string | null;
   onEdit: (visit: PlaceVisit) => void;
   onDelete: (visit: PlaceVisit) => void;
+  /** A photo or document of this visit changed — the page re-reads the place. */
+  onChanged: () => void;
 }
 
 const CHIP = "inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs";
@@ -33,6 +35,7 @@ export function PlaceVisitRow({
   tripName,
   onEdit,
   onDelete,
+  onChanged,
 }: Props): JSX.Element {
   const { t } = useTranslation(["places", "common"]);
   const fmt = useDisplayFormat();
@@ -177,12 +180,16 @@ export function PlaceVisitRow({
               planned one. The strip carries the photo suggestions (trip
               photos and the photo library), with or without a trip. */}
           {state !== "planned" && (
-            <VisitPhotoStrip visitId={visit.id} photos={visit.photos ?? []} />
+            <VisitPhotoStrip visitId={visit.id} photos={visit.photos ?? []} onChanged={onChanged} />
           )}
           {/* Not guarded by the state, unlike the photographs: a ticket exists
               BEFORE the day it is used, and that is the commonest reason to
               keep one at all. */}
-          <DocumentsSection entry={{ type: "placeVisit", id: visit.id }} layout="inline" />
+          <DocumentsSection
+            entry={{ type: "placeVisit", id: visit.id }}
+            layout="inline"
+            onChanged={onChanged}
+          />
         </div>
       )}
     </li>

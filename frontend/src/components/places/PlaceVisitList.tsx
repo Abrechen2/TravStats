@@ -26,6 +26,12 @@ interface Props {
   onAdd: () => void;
   onEdit: (visit: PlaceVisit) => void;
   onDelete: (visit: PlaceVisit) => void;
+  /**
+   * A visit's photos or documents changed. The page re-reads the place, so the
+   * row chips are right and a panel opened again starts from what is stored —
+   * the panel's own state goes when it collapses.
+   */
+  onVisitChanged: () => void;
 }
 
 const PANEL = {
@@ -48,6 +54,7 @@ export function PlaceVisitList({
   onAdd,
   onEdit,
   onDelete,
+  onVisitChanged,
 }: Props): JSX.Element {
   const { t } = useTranslation(["places", "common"]);
   const fmt = useDisplayFormat();
@@ -165,6 +172,7 @@ export function PlaceVisitList({
                   tripName={entry.visit.tripId ? (tripNames.get(entry.visit.tripId) ?? null) : null}
                   onEdit={onEdit}
                   onDelete={onDelete}
+                  onChanged={onVisitChanged}
                 />
               )}
               more={

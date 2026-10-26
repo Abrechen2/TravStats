@@ -29,6 +29,10 @@ vi.mock("../../store/settingsStore", async () => {
   return { ...actual, useSettingsStore };
 });
 
+function photo(id: string) {
+  return { id, url: `/api/v1/places/visits/feb/photos/${id}/file`, caption: null };
+}
+
 const VISITS = [
   visitAt("past-2025", "2025-11-14T18:30:00.000Z", { notes: "Saisonauftakt" }),
   visitAt("next-week", "2026-11-06T18:30:00.000Z", { notes: "AEV – Eisbären" }),
@@ -38,12 +42,19 @@ const VISITS = [
     tripId: "t1",
     rating: 4,
     documentCount: 2,
-    photos: [{ id: "ph1" }, { id: "ph2" }] as never,
+    photos: [photo("ph1"), photo("ph2")] as never,
   }),
   visitAt("thursday", "2026-10-29T12:30:00.000Z", { notes: "DEL", documentCount: 1 }),
 ];
 
+/** What the next `getPlace` answers — a test swaps it to the state after a change. */
+const served = vi.hoisted(() => ({ visits: null as unknown[] | null }));
+const uploadVisitPhotos = vi.hoisted(() => vi.fn());
+
 vi.mock("../../lib/api/places", () => ({
+  uploadVisitPhotos: (...a: unknown[]) => uploadVisitPhotos(...a),
+  deleteVisitPhoto: vi.fn(),
+  updateVisitPhoto: vi.fn(),
   getPlace: vi.fn(async () => ({
     id: "p1",
     name: "Curt-Frenzel-Stadion",
@@ -54,7 +65,7 @@ vi.mock("../../lib/api/places", () => ({
     lat: 48.3738,
     lon: 10.8865,
     visited: true,
-    visits: VISITS,
+    visits: served.visits ?? VISITS,
   })),
   createVisit: vi.fn(),
   deleteVisit: vi.fn(),
@@ -67,8 +78,16 @@ vi.mock("../../components/places/VisitPhotoSuggestions", () => ({
     <div data-testid={`photo-suggestions-${visitId}`} />
   ),
 }));
+// Stands in for an upload that went through: the real section calls
+// `onChanged` after one (its own tests pin that).
 vi.mock("../../components/documents/DocumentsSection", () => ({
-  default: ({ entry }: { entry: { id: string } }) => <div data-testid={`documents-${entry.id}`} />,
+  default: ({ entry, onChanged }: { entry: { id: string }; onChanged?: () => void }) => (
+    <div data-testid={`documents-${entry.id}`}>
+      <button type="button" onClick={() => onChanged?.()}>
+        stub-document-uploaded
+      </button>
+    </div>
+  ),
 }));
 vi.mock("../../hooks/useTranslation", async () => {
   const { germanUseTranslationNs } = await import("../../__tests__/helpers/germanT");
@@ -104,6 +123,8 @@ describe("PlaceDetailPage — visit list", () => {
     // Monday 26 October 2026, 09:00 in Augsburg.
     setClockForTests(new Date("2026-10-26T08:00:00.000Z"));
     display.dateFormat = "DD.MM.YYYY";
+    served.visits = null;
+    uploadVisitPhotos.mockReset();
   });
   afterEach(() => setClockForTests(null));
 
@@ -204,5 +225,49 @@ describe("PlaceDetailPage — visit list", () => {
     expect(rowToggles()).toHaveLength(3);
     expect(screen.queryByTestId("visit-row-thursday")).not.toBeInTheDocument();
     expect(screen.getByTestId("visit-row-undated")).toBeInTheDocument();
+  });
+
+  it("keeps an uploaded photo after the row is collapsed and opened again, and counts it on the row", async () => {
+    const added = photo("ph3");
+    uploadVisitPhotos.mockImplementation(async () => {
+      // The server now holds three; the page's re-read must bring them back.
+      served.visits = VISITS.map((v) =>
+        v.id === "feb" ? { ...v, photos: [photo("ph1"), photo("ph2"), added] } : v
+      );
+      return [added];
+    });
+    const user = userEvent.setup();
+    renderPage();
+    const toggle = () =>
+      within(screen.getByTestId("visit-row-feb")).getAllByRole("button")[0] as HTMLElement;
+    await screen.findByTestId("visit-row-feb");
+    await user.click(toggle());
+
+    const input = screen
+      .getByTestId("visit-panel-feb")
+      .querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(input, new File(["x"], "neu.jpg", { type: "image/jpeg" }));
+
+    const row = screen.getByTestId("visit-row-feb");
+    await within(row).findByText("3 Fotos");
+    await user.click(toggle());
+    expect(screen.queryByTestId("visit-panel-feb")).not.toBeInTheDocument();
+    await user.click(toggle());
+    expect(
+      within(screen.getByTestId("visit-panel-feb")).getAllByRole("img", { name: "Foto zum Besuch" })
+    ).toHaveLength(3);
+  });
+
+  it("updates the row's document count after a document upload", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const row = await screen.findByTestId("visit-row-feb");
+    expect(within(row).getByText("2 Dokumente")).toBeInTheDocument();
+    await user.click(within(row).getAllByRole("button")[0]);
+
+    served.visits = VISITS.map((v) => (v.id === "feb" ? { ...v, documentCount: 3 } : v));
+    await user.click(screen.getByRole("button", { name: "stub-document-uploaded" }));
+
+    expect(await within(row).findByText("3 Dokumente")).toBeInTheDocument();
   });
 });

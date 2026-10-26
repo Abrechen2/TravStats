@@ -332,6 +332,7 @@ export default function PlaceDetailPage(): JSX.Element {
             onAdd={() => setVisitDialog({ visit: null })}
             onEdit={openVisitEditor}
             onDelete={setConfirmVisitDelete}
+            onVisitChanged={() => void refreshQuietly()}
           />
 
           {place.notes && (
