@@ -13,7 +13,8 @@ import { isSetAside } from "./setAside";
  *
  * Conservative, like every check: a question about the wrong trip invites a
  * wrong link.
- * - Both the departure and the arrival day (each on its own port's clock)
+ * - Both the departure and the arrival day (each on its own port's clock;
+ *   a crossing with no recorded arrival day is never asked about)
  *   must lie inside the trip's first and last day. A trip without both days
  *   is not a window.
  * - EXACTLY one trip may qualify. Two overlapping trips are a choice the

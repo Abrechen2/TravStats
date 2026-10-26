@@ -276,33 +276,39 @@ export async function undoFinding(
   }
   const resolution = parsed.data;
 
-  await prisma.$transaction(async (tx) => {
-    if (resolution.action === "link" && resolution.link) {
-      await undoFerryLink(tx, userId, resolution.link);
-    }
-    const updated = await tx.dataQualityFlag.updateMany({
-      where: asRead(flag),
-      data: {
-        status: resolution.previousStatus,
-        resolvedAt: resolution.previousResolvedAt ? new Date(resolution.previousResolvedAt) : null,
-        undoUntil: null,
-        resolution: Prisma.DbNull,
-        ...NEXT_REVISION,
-      },
-    });
-    if (updated.count === 0) throw new FindingActionError("staleFinding");
-    for (const sibling of resolution.siblings ?? []) {
-      // Only a sibling still carrying this answer's stamp: one the user has
-      // answered since (or a run has touched) keeps that later answer.
-      if (sibling.revision === undefined) continue;
-      await tx.dataQualityFlag.updateMany({
-        where: { id: sibling.id, userId, revision: sibling.revision },
+  await prisma.$transaction(
+    async (tx) => {
+      if (resolution.action === "link" && resolution.link) {
+        await undoFerryLink(tx, userId, resolution.link);
+      }
+      const updated = await tx.dataQualityFlag.updateMany({
+        where: asRead(flag),
         data: {
-          status: sibling.status,
-          resolvedAt: sibling.resolvedAt ? new Date(sibling.resolvedAt) : null,
+          status: resolution.previousStatus,
+          resolvedAt: resolution.previousResolvedAt
+            ? new Date(resolution.previousResolvedAt)
+            : null,
+          undoUntil: null,
+          resolution: Prisma.DbNull,
           ...NEXT_REVISION,
         },
       });
-    }
-  });
+      if (updated.count === 0) throw new FindingActionError("staleFinding");
+      for (const sibling of resolution.siblings ?? []) {
+        // Only a sibling still carrying this answer's stamp: one the user has
+        // answered since (or a run has touched) keeps that later answer.
+        if (sibling.revision === undefined) continue;
+        await tx.dataQualityFlag.updateMany({
+          where: { id: sibling.id, userId, revision: sibling.revision },
+          data: {
+            status: sibling.status,
+            resolvedAt: sibling.resolvedAt ? new Date(sibling.resolvedAt) : null,
+            ...NEXT_REVISION,
+          },
+        });
+      }
+    },
+    // A link's undo propagates like the link: same sharing timeout.
+    { timeout: SHARE_TX_TIMEOUT_MS }
+  );
 }

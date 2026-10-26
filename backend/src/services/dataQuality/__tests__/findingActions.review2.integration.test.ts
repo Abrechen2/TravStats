@@ -1,8 +1,10 @@
 /**
- * The second Codex round on C3 (2026-10-26): a run that gathered before a
- * link must not undo it, an undo must not tear a ride off a roadtrip leg, and
- * a merge must carry timeline stops — and a shared trip's stations — over to
- * the kept copy.
+ * The second and third Codex rounds on C3 (2026-10-26): a run that gathered
+ * before a link must not undo it (nor one that lost the create to another
+ * pass), an undo must not tear a ride off a roadtrip leg and gets the sharing
+ * timeout, a merge must carry timeline stops — and a shared trip's stations —
+ * over to the kept copy and re-derive the trip's status, and a ferry with no
+ * known arrival day is never offered.
  */
 import { describe, it, expect, beforeEach, afterAll, jest } from "@jest/globals";
 
@@ -22,10 +24,24 @@ jest.mock("../gather", () => {
   };
 });
 
+const restatusCalls: string[][] = [];
+jest.mock("../../trip/restatusTrips", () => {
+  const actual = jest.requireActual<typeof import("../../trip/restatusTrips")>(
+    "../../trip/restatusTrips"
+  );
+  return {
+    restatusTrips: async (...args: Parameters<typeof actual.restatusTrips>) => {
+      restatusCalls.push(args[0].filter((id): id is string => typeof id === "string"));
+      return actual.restatusTrips(...args);
+    },
+  };
+});
+
 import { prisma } from "../../../db";
 import { runDataQualityChecks } from "../runner";
 import { listFlags } from "../flagService";
 import { resolveFinding, undoFinding } from "../findingActions";
+import { SHARE_TX_TIMEOUT_MS } from "../../sharing/propagate";
 import { shareTrip } from "../../sharing/shareTrip";
 import {
   linkWithConsent,
@@ -37,6 +53,38 @@ import {
 
 const NOW = new Date("2026-10-10T12:00:00Z");
 const day = (d: string) => new Date(`${d}T00:00:00Z`);
+
+async function ferryRows(
+  userId: string,
+  arrivalTime: Date | null = new Date("2026-07-05T12:30:00Z")
+) {
+  const trip = await prisma.trip.create({
+    data: {
+      userId,
+      name: "Kykladen",
+      status: "completed",
+      startDay: day("2026-07-01"),
+      endDay: day("2026-07-14"),
+    },
+  });
+  const ride = await prisma.ferryJourney.create({
+    data: {
+      userId,
+      depStationName: "Piraeus",
+      depLat: 37.94,
+      depLon: 23.64,
+      depTimezone: "Europe/Athens",
+      arrStationName: "Naxos",
+      arrLat: 37.1,
+      arrLon: 25.37,
+      arrTimezone: "Europe/Athens",
+      departureTime: new Date("2026-07-05T07:00:00Z"),
+      arrivalTime,
+      status: "completed",
+    },
+  });
+  return { trip, ride };
+}
 
 async function ferrySetup(userId: string) {
   const trip = await prisma.trip.create({
@@ -199,5 +247,68 @@ describe("C3 review findings, round two", () => {
       where: { trip: { userId: ben.id }, title: "Night in Lisbon" },
     });
     expect(bensStation.lodgingStayId).not.toBeNull();
+  });
+
+  it("a run that lost the create to another pass leaves a link made meanwhile alone", async () => {
+    await ferryRows(anna.id);
+    afterGather = async () => {
+      // The other pass creates the flag; the user links it at once.
+      await runDataQualityChecks(anna.id, NOW);
+      const [flag] = await listFlags(anna.id, { kind: "ferry_match" });
+      await resolveFinding(flag.id, anna.id, { action: "link" });
+    };
+
+    await runDataQualityChecks(anna.id, NOW);
+
+    const [row] = await prisma.dataQualityFlag.findMany({
+      where: { userId: anna.id, kind: "ferry_match" },
+    });
+    expect(row.status).toBe("resolved");
+    expect(row.undoUntil).not.toBeNull();
+  });
+
+  it("undoes a link inside the sharing timeout, like the link itself", async () => {
+    const { flag } = await ferrySetup(anna.id);
+    await resolveFinding(flag.id, anna.id, { action: "link" });
+    const spy = jest.spyOn(prisma, "$transaction");
+    try {
+      await undoFinding(flag.id, anna.id);
+      // The undo's own transaction — the first one it opens.
+      expect(spy.mock.calls[0]?.[1]).toMatchObject({ timeout: SHARE_TX_TIMEOUT_MS });
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("never offers a crossing whose arrival day is unknown", async () => {
+    await ferryRows(anna.id, null);
+    await runDataQualityChecks(anna.id, NOW);
+    expect(await listFlags(anna.id, { kind: "ferry_match" })).toEqual([]);
+  });
+
+  it("re-derives the trip's status after a merge", async () => {
+    const full = await makeFullTrip(anna);
+    const {
+      id: _id,
+      tripId: _trip,
+      createdAt: _c,
+      updatedAt: _u,
+      durationMinutes: _d,
+      ...rest
+    } = full.flight;
+    await prisma.flight.create({
+      data: {
+        ...(rest as unknown as Parameters<typeof prisma.flight.create>[0]["data"]),
+        createdAt: new Date("2024-01-01T00:00:00Z"),
+        shareKey: null,
+      },
+    });
+    await runDataQualityChecks(anna.id, NOW);
+    const [flag] = await listFlags(anna.id, { kind: "duplicate_candidate" });
+    restatusCalls.length = 0;
+
+    await resolveFinding(flag.id, anna.id, { action: "merge" });
+
+    expect(restatusCalls.flat()).toContain(full.trip.id);
   });
 });

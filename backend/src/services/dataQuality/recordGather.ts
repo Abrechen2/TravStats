@@ -516,7 +516,11 @@ export async function loadRecordSnapshot(userId: string): Promise<RecordSnapshot
           isTimePrecision(row.depPrecision) ? row.depPrecision : "minute"
         ),
         firstDay: ground.firstDay,
-        lastDay: ground.lastDay,
+        // Its own arrival day, or null: `toGroundRecord` falls back to the
+        // departure day, and the ferry match must not offer a crossing on an
+        // arrival day nobody recorded.
+        lastDay:
+          row.arrivalTime && !NOT_DAY_PRECISE.has(row.arrPrecision ?? "") ? ground.lastDay : null,
       };
     }),
     trips: tripRows.map((row) => ({

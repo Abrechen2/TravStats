@@ -10,6 +10,7 @@ import {
   SHARE_TX_TIMEOUT_MS,
 } from "../sharing/propagate";
 import { recheckAchievements } from "../../utils/achievements";
+import { restatusTrips } from "../trip/restatusTrips";
 import { findDuplicateCandidates } from "./checks/duplicateCandidates";
 import { loadRecordSnapshot } from "./recordGather";
 import { FindingActionError } from "./findingErrors";
@@ -178,6 +179,11 @@ async function mergeFlights(
   const gone = await shareSnapshots(tx, "flight", [...removedIds]);
   await tx.flight.deleteMany({ where: { userId, id: { in: [...removedIds] } } });
   await propagateDeletes(tx, userId, [...gone.values()]);
+  // A trip's status follows its entries' dates — re-derive it, as a delete does.
+  await restatusTrips(
+    rows.map((r) => r.tripId),
+    tx
+  );
 }
 
 async function mergeStays(
@@ -232,6 +238,10 @@ async function mergeStays(
   const gone = await shareSnapshots(tx, "lodgingStay", [...removedIds]);
   await tx.lodgingStay.deleteMany({ where: { userId, id: { in: [...removedIds] } } });
   await propagateDeletes(tx, userId, [...gone.values()]);
+  await restatusTrips(
+    rows.map((r) => r.tripId),
+    tx
+  );
 }
 
 /**

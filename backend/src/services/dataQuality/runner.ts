@@ -323,6 +323,11 @@ export async function runDataQualityChecks(
       }
       // Adopt what the other pass wrote and reconcile it as if it had been
       // there all along. Notably NOT counted as `opened` — that pass opened it.
+      // Only while nobody has written to it since its creation (revision 0):
+      // this pass's records predate that row, and an answer given to it
+      // meanwhile (a link, a dismissal) must not meet stale evidence. Such a
+      // row is left to the next run, which reads it before its records.
+      if (attempt.row.revision > 0) continue;
       current = attempt.row;
     }
 
