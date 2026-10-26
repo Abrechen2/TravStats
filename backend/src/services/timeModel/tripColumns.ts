@@ -3,6 +3,7 @@ import { fromDbDate, toDbDate } from "../../shared/time/localDate";
 import { zoneOf } from "../../shared/time/zoneOf";
 import { dbDayOf } from "./dayColumns";
 import { instantOfFakeUtc } from "../../shared/time/resolveInput";
+import { tripDateBounds } from "../../shared/statusDerivation";
 
 /**
  * A trip's span as local days (ADR 0002 phase 2, owner decision 2026-09-26
@@ -132,6 +133,31 @@ export function flightEnds(
     if (arrival) ends.push(arrival);
   }
   return { starts, ends };
+}
+
+type SegmentRide = Parameters<typeof flightEnds>[0][number];
+
+/**
+ * A trip's span as its segments date it — the columns a trip without dates of
+ * its own is filled with at auto-creation (`fillTripDatesFromSegments`), and
+ * the end an itinerary share link falls back to (forgejo#317). One rule for
+ * both: the earliest departure to the latest arrival; the local days of those
+ * ends at their place, except that a span with a cruise keeps its UTC days
+ * without a zone (a cruise's ends are days already). Null when no segment is
+ * dated.
+ */
+export function segmentTripSpan(
+  rides: SegmentRide[],
+  cruises: Array<{ startDate: Date | null; endDate: Date | null }>
+): ({ startDate: Date | null; endDate: Date | null } & TripDayColumns) | null {
+  const bounds = tripDateBounds(rides, cruises);
+  if (bounds.earliestStart == null && bounds.latestEnd == null) return null;
+  const { starts, ends } = flightEnds(rides);
+  const days =
+    cruises.length > 0
+      ? typedTripDays({ startDate: bounds.earliestStart, endDate: bounds.latestEnd })
+      : segmentTripDays(starts, ends);
+  return { startDate: bounds.earliestStart, endDate: bounds.latestEnd, ...days };
 }
 
 /**

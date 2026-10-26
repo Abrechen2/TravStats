@@ -1066,11 +1066,83 @@ describe("trip itinerary (forgejo#302)", () => {
     expect(plain.status).toBe(201);
   });
 
-  it("a trip with no last day keeps the owner's own expiry", async () => {
-    const { trip } = await makeItineraryTrip(anna.id);
-    await prisma.trip.update({ where: { id: trip.id }, data: { endDay: null, endDate: null } });
-    const res = await create(anna, { kind: "trip", targetId: trip.id, fields: ["itinerary"] });
-    expect(res.status).toBe(201);
-    expect(res.body.data.effectiveExpiresAt).toBe(IN_A_WEEK);
+  describe("a trip without dates of its own (forgejo#317)", () => {
+    const undated = { startDay: null, endDay: null, startDate: null, endDate: null };
+
+    it("ends a day after its entries' last local day", async () => {
+      const trip = await prisma.trip.create({ data: { userId: anna.id, name: "Undated" } });
+      await makeFlight(anna.id, trip.id); // lands 1 June 20:00Z, 16:00 in New York
+      const res = await create(anna, {
+        kind: "trip",
+        targetId: trip.id,
+        fields: ["itinerary"],
+        expiresAt: "2030-06-20T00:00:00Z",
+      });
+      expect(res.status).toBe(201);
+      // 1 June in New York ends at 2 June 04:00Z; plus 24 hours.
+      expect(res.body.data.effectiveExpiresAt).toBe("2030-06-03T04:00:00.000Z");
+    });
+
+    it("refuses an itinerary when every entry lies in the past", async () => {
+      const { trip } = await makeItineraryTrip(anna.id);
+      await prisma.trip.update({ where: { id: trip.id }, data: undated });
+      setClockForTests("2031-01-01T00:00:00Z");
+      const res = await create(anna, {
+        kind: "trip",
+        targetId: trip.id,
+        fields: ["itinerary"],
+        expiresAt: "2031-01-08T00:00:00Z",
+      });
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe("SHARE_LINK_TRIP_ENDED");
+    });
+
+    it("ends a link made before the fix once it is next read", async () => {
+      const { trip } = await makeItineraryTrip(anna.id);
+      await prisma.trip.update({ where: { id: trip.id }, data: undated });
+      const { token, id } = await tokenFor(anna, {
+        kind: "trip",
+        targetId: trip.id,
+        fields: ["itinerary"],
+        expiresAt: "2030-08-01T00:00:00Z",
+      });
+      // What the old rule stored: the owner's own expiry, open past the trip.
+      await prisma.publicShareLink.update({
+        where: { id },
+        data: { effectiveExpiresAt: new Date("2030-08-01T00:00:00Z") },
+      });
+      setClockForTests("2030-07-01T00:00:00Z");
+      expect((await view(token)).status).toBe(404);
+    });
+
+    it("ignores a cancelled entry when finding the last day", async () => {
+      const trip = await prisma.trip.create({ data: { userId: anna.id, name: "Undated" } });
+      await makeFlight(anna.id, trip.id);
+      const late = await makeFlight(anna.id, trip.id);
+      await prisma.flight.update({
+        where: { id: late.id },
+        data: {
+          status: "cancelled",
+          departureTime: new Date("2030-06-15T12:00:00Z"),
+          arrivalTime: new Date("2030-06-15T20:00:00Z"),
+        },
+      });
+      const res = await create(anna, {
+        kind: "trip",
+        targetId: trip.id,
+        fields: ["itinerary"],
+        expiresAt: "2030-06-20T00:00:00Z",
+      });
+      expect(res.body.data.effectiveExpiresAt).toBe("2030-06-03T04:00:00.000Z");
+    });
+
+    it("with no dated entry either, keeps the owner's own expiry", async () => {
+      // Nothing on the trip names a day, so there is no end to derive: the
+      // link stays open until the owner's chosen expiry (abstention, not a guess).
+      const trip = await prisma.trip.create({ data: { userId: anna.id, name: "Empty" } });
+      const res = await create(anna, { kind: "trip", targetId: trip.id, fields: ["itinerary"] });
+      expect(res.status).toBe(201);
+      expect(res.body.data.effectiveExpiresAt).toBe(IN_A_WEEK);
+    });
   });
 });

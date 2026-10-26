@@ -1,8 +1,8 @@
 import { profileZoneOf } from "../shared/time/profileZone";
 import { RAIL_CLOCK_SELECT, rideStatusSpan } from "../shared/railClock";
 import { prisma, type DbTransaction } from "../db";
-import { deriveTripStatus, tripDateBounds, tripStatusBounds } from "../shared/statusDerivation";
-import { flightEnds, segmentTripDays, typedTripDays } from "./timeModel/tripColumns";
+import { deriveTripStatus, tripStatusBounds } from "../shared/statusDerivation";
+import { segmentTripSpan } from "./timeModel/tripColumns";
 
 /**
  * Recompute a single trip's status from its linked flights/cruises date
@@ -75,29 +75,12 @@ export async function fillTripDatesFromSegments(tripId: string): Promise<void> {
   if (trip.startDate != null || trip.endDate != null) return;
 
   // A ride has the flight's shape (departure, arrival), so it joins them.
-  const bounds = tripDateBounds(
+  const span = segmentTripSpan(
     [...trip.flights, ...trip.railJourneys, ...trip.busJourneys, ...trip.ferryJourneys],
     trip.cruises
   );
-  if (bounds.earliestStart == null && bounds.latestEnd == null) return;
-
-  // The local days of the first departure and the last arrival (ADR 0002,
-  // owner decision on open point 1). A cruise's ends are days already, so a
-  // span that includes one keeps its UTC days without a zone.
-  const { starts, ends } = flightEnds([
-    ...trip.flights,
-    ...trip.railJourneys,
-    ...trip.busJourneys,
-    ...trip.ferryJourneys,
-  ]);
-  const days =
-    trip.cruises.length > 0
-      ? typedTripDays({ startDate: bounds.earliestStart, endDate: bounds.latestEnd })
-      : segmentTripDays(starts, ends);
-  await prisma.trip.update({
-    where: { id: tripId },
-    data: { startDate: bounds.earliestStart, endDate: bounds.latestEnd, ...days },
-  });
+  if (!span) return;
+  await prisma.trip.update({ where: { id: tripId }, data: span });
 }
 
 /**
