@@ -174,14 +174,10 @@ export function PlaceVisitRow({
           )}
           {/* Proof hangs off the VISIT, not the place, and a picture of a
               visit that has not happened is not a thing — so no strip for a
-              planned one. The suggestions search the visit's trip and day;
-              offered only where there is a trip to search. */}
+              planned one. The strip carries the photo suggestions (trip
+              photos and the photo library), with or without a trip. */}
           {state !== "planned" && (
-            <VisitPhotoStrip
-              visitId={visit.id}
-              photos={visit.photos ?? []}
-              showSuggestions={visit.tripId !== null}
-            />
+            <VisitPhotoStrip visitId={visit.id} photos={visit.photos ?? []} />
           )}
           {/* Not guarded by the state, unlike the photographs: a ticket exists
               BEFORE the day it is used, and that is the commonest reason to

@@ -58,28 +58,16 @@ export interface BuildOptions {
 export const PAST_PAGE_SIZE = 50;
 
 /**
- * Planned or happened.
- *
- * `classifyVisit` answers on the instant, which is right for a visit with a
- * time of day. A visit known only to the DAY is stored at the day's start at
- * the place, so the instant alone would call it over at midnight — before the
- * user has even gone. Such a visit is over when its day is, read on the
- * place's own calendar (never the reader's).
+ * Planned or happened — `classifyVisit`, exactly as the server counts, so the
+ * list and every figure beside it cannot disagree about a visit.
  */
-function isPlanned(visit: PlaceVisit, when: TimeValue, now: Date): boolean {
-  if (when.precision === "day" && when.zone) {
-    return dayOf(when) >= todayIn(when.zone, now);
-  }
-  return classifyVisit(visit, now) === "planned";
-}
-
 function toEntry(visit: PlaceVisit, now: Date, fallbackZone: string): VisitEntry {
   const when = visitTime(visit);
   if (!when) {
     return { visit, when: null, state: "undated", day: null, clock: null, daysAhead: null };
   }
   const day = dayOf(when);
-  const planned = isPlanned(visit, when, now);
+  const planned = classifyVisit(visit, now) === "planned";
   return {
     visit,
     when,

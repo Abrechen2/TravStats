@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { classifyVisit } from "../../../shared/placeCounting";
 import { buildVisitList, type BuildOptions } from "../placeVisitListModel";
 import { visitAt } from "./visitFixtures";
 
@@ -63,36 +64,36 @@ describe("buildVisitList — order and groups", () => {
   });
 });
 
-describe("buildVisitList — today", () => {
+describe("buildVisitList — one counting rule", () => {
   const today = [
     // 26 Oct, day only: stored as 00:00 Berlin = 25 Oct 23:00 UTC.
     visitAt("today-day", "2026-10-25T23:00:00.000Z", { precision: "day" }),
     visitAt("this-morning", "2026-10-26T06:00:00.000Z"),
     visitAt("tonight", "2026-10-26T18:30:00.000Z"),
+    visitAt("undated", null),
   ];
 
-  it("keeps a day-only visit today planned while the day lasts — the instant alone said 'over' at midnight", () => {
+  it.each([
+    ["09:00", "2026-10-26T08:00:00.000Z"],
+    ["23:30", "2026-10-26T22:30:00.000Z"],
+    ["00:30 next day", "2026-10-26T23:30:00.000Z"],
+  ])("puts every visit where classifyVisit puts it (%s at the place)", (_label, at) => {
+    const now = new Date(at);
+    const { groups } = buildVisitList([...today, ...VISITS], opts({ now }));
+    for (const entry of groups.flatMap((g) => g.entries)) {
+      const counted = classifyVisit(entry.visit, now);
+      expect([entry.visit.id, entry.state === "planned"]).toEqual([
+        entry.visit.id,
+        counted === "planned",
+      ]);
+    }
+  });
+
+  it("calls a visit later today 'today'", () => {
     const { groups } = buildVisitList(today, opts());
     expect(groups[0].kind).toBe("planned");
-    expect(ids(groups[0].entries)).toEqual(["today-day", "tonight"]);
-    expect(groups[0].entries.map((e) => e.daysAhead)).toEqual([0, 0]);
-    expect(ids(groups[1].entries)).toEqual(["this-morning"]);
-  });
-
-  it("still planned at 23:30 at the place, done at 00:30 the next day", () => {
-    const late = buildVisitList(today, opts({ now: new Date("2026-10-26T22:30:00.000Z") }));
-    expect(ids(late.groups[0].entries)).toEqual(["today-day"]);
-    const after = buildVisitList(today, opts({ now: new Date("2026-10-26T23:30:00.000Z") }));
-    expect(after.counts.planned).toBe(0);
-  });
-
-  it("reads 'today' at the place, not in UTC: Tokyo's day ends nine hours earlier", () => {
-    const tokyo = [
-      visitAt("tokyo-day", "2026-10-25T15:00:00.000Z", { precision: "day", zone: "Asia/Tokyo" }),
-    ];
-    // 26 Oct 15:30 UTC is 27 Oct 00:30 in Tokyo — the day is over there.
-    const { counts } = buildVisitList(tokyo, opts({ now: new Date("2026-10-26T15:30:00.000Z") }));
-    expect(counts.planned).toBe(0);
+    expect(ids(groups[0].entries)).toEqual(["tonight"]);
+    expect(groups[0].entries[0].daysAhead).toBe(0);
   });
 });
 

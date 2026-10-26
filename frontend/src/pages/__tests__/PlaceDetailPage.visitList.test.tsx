@@ -61,12 +61,11 @@ vi.mock("../../lib/api/places", () => ({
   deletePlace: vi.fn(),
 }));
 
-const photoStripProps = vi.hoisted(() => [] as Array<Record<string, unknown>>);
-vi.mock("../../components/places/VisitPhotoStrip", () => ({
-  VisitPhotoStrip: (props: Record<string, unknown>) => {
-    photoStripProps.push(props);
-    return <div data-testid={`photo-strip-${String(props.visitId)}`} />;
-  },
+// The real strip renders; its suggestions (which fetch on click) are stubbed.
+vi.mock("../../components/places/VisitPhotoSuggestions", () => ({
+  VisitPhotoSuggestions: ({ visitId }: { visitId: string }) => (
+    <div data-testid={`photo-suggestions-${visitId}`} />
+  ),
 }));
 vi.mock("../../components/documents/DocumentsSection", () => ({
   default: ({ entry }: { entry: { id: string } }) => <div data-testid={`documents-${entry.id}`} />,
@@ -105,7 +104,6 @@ describe("PlaceDetailPage — visit list", () => {
     // Monday 26 October 2026, 09:00 in Augsburg.
     setClockForTests(new Date("2026-10-26T08:00:00.000Z"));
     display.dateFormat = "DD.MM.YYYY";
-    photoStripProps.length = 0;
   });
   afterEach(() => setClockForTests(null));
 
@@ -164,18 +162,14 @@ describe("PlaceDetailPage — visit list", () => {
     renderPage();
     await screen.findByTestId("visit-row-feb");
     expect(screen.queryByTestId(/^documents-/)).not.toBeInTheDocument();
-    expect(screen.queryByTestId(/^photo-strip-/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(/^photo-suggestions-/)).not.toBeInTheDocument();
 
     const feb = within(screen.getByTestId("visit-row-feb")).getAllByRole("button")[0];
     await user.click(feb);
     expect(feb).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByTestId("documents-feb")).toBeInTheDocument();
-    expect(screen.getByTestId("photo-strip-feb")).toBeInTheDocument();
     // It has a trip, so the suggestions are offered.
-    expect(photoStripProps[photoStripProps.length - 1]).toMatchObject({
-      visitId: "feb",
-      showSuggestions: true,
-    });
+    expect(screen.getByTestId("photo-suggestions-feb")).toBeInTheDocument();
     expect(screen.getByText(/Mit Alex, Stehplatz Nord\./)).toBeInTheDocument();
 
     const thursday = within(screen.getByTestId("visit-row-thursday")).getAllByRole("button")[0];
@@ -183,18 +177,15 @@ describe("PlaceDetailPage — visit list", () => {
     expect(screen.queryByTestId("documents-feb")).not.toBeInTheDocument();
     // A planned visit: its ticket, but no photo strip.
     expect(screen.getByTestId("documents-thursday")).toBeInTheDocument();
-    expect(screen.queryByTestId("photo-strip-thursday")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("photo-suggestions-thursday")).not.toBeInTheDocument();
   });
 
-  it("offers no trip photo suggestions for a visit without a trip", async () => {
+  it("offers the photo suggestions for a past visit without a trip too", async () => {
     const user = userEvent.setup();
     renderPage();
     const row = await screen.findByTestId("visit-row-past-2025");
     await user.click(within(row).getAllByRole("button")[0]);
-    expect(photoStripProps[photoStripProps.length - 1]).toMatchObject({
-      visitId: "past-2025",
-      showSuggestions: false,
-    });
+    expect(screen.getByTestId("photo-suggestions-past-2025")).toBeInTheDocument();
   });
 
   it("filters to planned or to visited", async () => {
