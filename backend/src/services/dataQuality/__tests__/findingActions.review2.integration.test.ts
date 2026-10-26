@@ -472,4 +472,59 @@ describe("C3 review findings, round two", () => {
     }
     expect(order[0]).toBe("lock");
   });
+
+  it("a dismissed ferry match is asked again when another trip now holds the crossing", async () => {
+    const { trip, flag } = await ferrySetup(anna.id);
+    await prisma.dataQualityFlag.update({
+      where: { id: flag.id },
+      data: { status: "dismissed", resolvedAt: new Date(), revision: { increment: 1 } },
+    });
+    // The user rebuilt the holiday as another trip.
+    await prisma.trip.delete({ where: { id: trip.id } });
+    const other = await prisma.trip.create({
+      data: {
+        userId: anna.id,
+        name: "Naxos",
+        status: "completed",
+        startDay: day("2026-07-04"),
+        endDay: day("2026-07-08"),
+      },
+    });
+
+    await runDataQualityChecks(anna.id, NOW);
+
+    const row = await prisma.dataQualityFlag.findUniqueOrThrow({ where: { id: flag.id } });
+    expect(row.status).toBe("open");
+    expect(row.details).toMatchObject({ candidateTripId: other.id });
+  });
+
+  it("refuses to merge stays when one opted out of the loyalty card another carries", async () => {
+    const lodging = await prisma.lodging.create({ data: { userId: anna.id, name: "Hotel Roma" } });
+    const card = await prisma.loyaltyMembership.create({
+      data: { userId: anna.id, programName: "Bonvoy" },
+    });
+    const stay = (createdAt: string, extra: object) =>
+      prisma.lodgingStay.create({
+        data: {
+          userId: anna.id,
+          lodgingId: lodging.id,
+          createdAt: new Date(createdAt),
+          checkIn: day("2026-06-10"),
+          checkOut: day("2026-06-13"),
+          checkInDate: day("2026-06-10"),
+          checkOutDate: day("2026-06-13"),
+          ...extra,
+        },
+      });
+    await stay("2026-05-01T00:00:00Z", { membershipOptOut: true });
+    await stay("2026-05-02T00:00:00Z", { membershipId: card.id });
+    await runDataQualityChecks(anna.id, NOW);
+    const [flag] = await listFlags(anna.id, { kind: "duplicate_candidate" });
+
+    await expect(resolveFinding(flag.id, anna.id, { action: "merge" })).rejects.toMatchObject({
+      code: "invalidAction",
+      reason: "conflictingLinks",
+    });
+    expect(await prisma.lodgingStay.count({ where: { userId: anna.id } })).toBe(2);
+  });
 });

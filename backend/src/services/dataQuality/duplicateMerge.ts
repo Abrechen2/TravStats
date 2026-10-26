@@ -199,12 +199,24 @@ async function mergeStays(
 ): Promise<(string | null)[]> {
   const rows = await tx.lodgingStay.findMany({
     where: { userId, id: { in: [keptId, ...removedIds] } },
-    select: { id: true, tripId: true, bookingId: true, membershipId: true },
+    select: {
+      id: true,
+      tripId: true,
+      bookingId: true,
+      membershipId: true,
+      membershipOptOut: true,
+    },
   });
   const kept = rows.find((r) => r.id === keptId);
   const removed = rows.filter((r) => r.id !== keptId);
   if (!kept || removed.length !== removedIds.length) throw new FindingActionError("staleFinding");
   assertOneLink(rows, ["tripId", "bookingId", "membershipId"]);
+  // A copy that opted out of loyalty crediting beside one that names a card:
+  // whichever survives, the other's choice is lost, and the loyalty totals
+  // change without anyone deciding it.
+  if (rows.some((r) => r.membershipOptOut) && rows.some((r) => r.membershipId !== null)) {
+    throw new FindingActionError("invalidAction", "conflictingLinks");
+  }
 
   await tx.document.updateMany({
     where: { userId, lodgingStayId: { in: [...removedIds] } },
