@@ -23,12 +23,14 @@ const api = vi.mocked(calendarFeedApi);
 const URL_HTTPS = "https://travstats.example/api/v1/calendar/ts_cal_abc.ics";
 const URL_WEBCAL = "webcal://travstats.example/api/v1/calendar/ts_cal_abc.ics";
 
-const none = { enabled: true, active: false, createdAt: null, lastUsedAt: null };
+const unlisted = { url: null, webcalUrl: null, reachableFromInternet: true };
+const none = { enabled: true, active: false, createdAt: null, lastUsedAt: null, ...unlisted };
 const live = {
   enabled: true,
   active: true,
   createdAt: "2030-05-20T10:00:00.000Z",
   lastUsedAt: null,
+  ...unlisted,
 };
 
 /** An axios-shaped refusal with the server's code. */
@@ -55,6 +57,7 @@ describe("CalendarFeedSection", () => {
       url: URL_HTTPS,
       webcalUrl: URL_WEBCAL,
       createdAt: "2030-05-20T10:00:00.000Z",
+      reachableFromInternet: true,
     });
     api.revoke.mockResolvedValue();
     writeText.mockResolvedValue(undefined);
@@ -75,7 +78,7 @@ describe("CalendarFeedSection", () => {
 
     const field = await screen.findByLabelText("settings:calendarFeed.urlLabel");
     expect((field as HTMLInputElement).value).toBe(URL_HTTPS);
-    expect(screen.getByText("settings:calendarFeed.shownOnce")).toBeTruthy();
+    expect(screen.getByText("settings:calendarFeed.keepSecret")).toBeTruthy();
     const open = screen.getByRole("link", { name: "settings:calendarFeed.openInCalendar" });
     expect(open.getAttribute("href")).toBe(URL_WEBCAL);
     // A first link needs no question: nothing is replaced.
@@ -85,6 +88,56 @@ describe("CalendarFeedSection", () => {
     expect(writeText).toHaveBeenCalledWith(URL_HTTPS);
     expect(await screen.findByText("settings:calendarFeed.copied")).toBeTruthy();
     expect(await screen.findByText("settings:calendarFeed.stateActive")).toBeTruthy();
+  });
+
+  it("warns under the link when Google Calendar cannot reach its address, and only then", async () => {
+    api.issue.mockResolvedValueOnce({
+      url: "http://192.168.178.120:3010/api/v1/calendar/ts_cal_abc.ics",
+      webcalUrl: "webcal://192.168.178.120:3010/api/v1/calendar/ts_cal_abc.ics",
+      createdAt: "2030-05-20T10:00:00.000Z",
+      reachableFromInternet: false,
+    });
+    render(<CalendarFeedSection />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "settings:calendarFeed.create" })
+    );
+    await screen.findByLabelText("settings:calendarFeed.urlLabel");
+    expect(screen.getByText("settings:calendarFeed.unreachable")).toBeTruthy();
+  });
+
+  it("shows no reachability warning for a named address", async () => {
+    render(<CalendarFeedSection />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "settings:calendarFeed.create" })
+    );
+    await screen.findByLabelText("settings:calendarFeed.urlLabel");
+    expect(screen.queryByText("settings:calendarFeed.unreachable")).toBeNull();
+  });
+
+  it("lists a live link again from the state, warning when its address is private", async () => {
+    api.status.mockResolvedValue({
+      ...live,
+      url: URL_HTTPS,
+      webcalUrl: URL_WEBCAL,
+      reachableFromInternet: false,
+    });
+    render(<CalendarFeedSection />);
+    const field = await screen.findByLabelText("settings:calendarFeed.urlLabel");
+    expect((field as HTMLInputElement).value).toBe(URL_HTTPS);
+    expect(screen.getByText("settings:calendarFeed.unreachable")).toBeTruthy();
+    expect(api.issue).not.toHaveBeenCalled();
+  });
+
+  it("says a live link from before cannot be shown again", async () => {
+    api.status.mockResolvedValue({
+      ...live,
+      url: null,
+      webcalUrl: null,
+      reachableFromInternet: true,
+    });
+    render(<CalendarFeedSection />);
+    expect(await screen.findByText("settings:calendarFeed.notRecoverable")).toBeTruthy();
+    expect(screen.queryByLabelText("settings:calendarFeed.urlLabel")).toBeNull();
   });
 
   it("says the copy failed where there is no clipboard, and keeps the link selectable", async () => {
