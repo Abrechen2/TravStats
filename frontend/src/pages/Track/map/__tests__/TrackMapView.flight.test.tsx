@@ -193,6 +193,13 @@ describe("TrackMapView — the open flight", () => {
     await waitFor(() => expect(mapProps.last?.highlight).toHaveLength(0));
   });
 
+  it("a flight whose day holds nothing else still gets its map", async () => {
+    api.day.mockResolvedValue({ ...day, segments: [], pointIds: [], pointCount: 0 });
+    renderAt("/track/2026-10-03?flight=f1");
+    await waitFor(() => expect(mapProps.last?.highlight).toHaveLength(2));
+    expect(screen.getByTestId("map-stub")).toHaveTextContent("0 lines · 2 flight lines");
+  });
+
   it("a flight line that cannot be loaded says so", async () => {
     views.range.mockRejectedValue({
       response: { status: 403, data: { code: "TRAVTRACK_DISABLED" } },

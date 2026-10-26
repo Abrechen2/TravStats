@@ -142,6 +142,10 @@ function bucketed(
       bucket.push(s);
     }
     if (bucket.length > 0) out.push(...keepersOf(bucket));
+    // A stretch's last sample always stays: it is where the line ends, and the
+    // map's read of the whole flight is bounded by the series' last instant.
+    const last = run[run.length - 1];
+    if (last && out[out.length - 1] !== last) out.push(last);
     return out;
   });
 }
@@ -152,7 +156,8 @@ const sampleCount = (series: readonly FlightSample[][]) =>
 /**
  * At most `max` samples, by time bucket, per stretch: a bucket never spans a
  * break, and each keeps its first sample, its lowest and highest altitude and
- * its top speed, so the apex and the fastest moment survive the thinning.
+ * its top speed, so the apex and the fastest moment survive the thinning; each
+ * stretch keeps its first and last sample.
  * Wider buckets are tried until the answer fits (a series of many tiny
  * stretches cannot be thinned below one sample each, so the last resort keeps
  * every stretch's first and last sample only, and past that one sample of

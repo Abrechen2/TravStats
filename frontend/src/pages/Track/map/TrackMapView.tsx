@@ -250,7 +250,7 @@ export default function TrackMapView(): JSX.Element {
               {t(span.kind === "day" ? "track:day.empty" : "track:map.rangeEmpty")}
             </p>
           )}
-          {hasDrawing && (long || !loading) && (
+          {(hasDrawing || highlight.length > 0) && (long || !loading) && (
             <div className="relative">
               <TrackRangeMap
                 key={`${span.fromDay}|${span.toDay}|${loading ? "partial" : "whole"}|${highlight.length > 0 ? flight?.id : ""}`}

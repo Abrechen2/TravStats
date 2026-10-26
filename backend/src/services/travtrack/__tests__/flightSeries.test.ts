@@ -102,6 +102,14 @@ describe("downsample", () => {
     expect(out.flat().length).toBeLessThanOrEqual(2000);
   });
 
+  it("each stretch keeps its first and last sample, even with a flat tail", () => {
+    const flat: FlightSample[] = Array.from({ length: 9000 }, (_, i) => [i * 1000, 11000, 240]);
+    const out = downsample([flat]);
+    expect(out[0][0]).toEqual(flat[0]);
+    expect(out[0][out[0].length - 1]).toEqual(flat[flat.length - 1]);
+    expect(out.flat().length).toBeLessThanOrEqual(2000);
+  });
+
   it("leaves a short series untouched", () => {
     const series = [[s(0, 100, 5), s(1, 200, 80)]];
     expect(downsample(series)).toEqual(series);
