@@ -59,6 +59,24 @@ describe("take-off, landing and the climb", () => {
     expect(climbToCruiseMinutes(series)).toBe(37);
   });
 
+  it("an ATC level inside the climb is not the cruise when the aircraft climbs on soon (LH719, beta.31 UAT)", () => {
+    const series = [
+      [
+        s(-5, 450, 5),
+        s(0, 460, 75), // take-off
+        s(10, 6065, 200),
+        s(18, 8727, 220),
+        s(22, 8717, 225),
+        s(28, 8709, 225), // held 10 min at 69 % of the apex
+        s(32, 10213, 235),
+        s(36, 10737, 240),
+        s(42, 10742, 240),
+        s(60, 10679, 240),
+      ],
+    ];
+    expect(climbToCruiseMinutes(series)).toBe(36);
+  });
+
   it("missing altitudes never confirm a level-off (Codex)", () => {
     const series = [
       [

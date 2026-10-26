@@ -20,6 +20,10 @@ const CRUISE_SHARE = 0.9;
 const LEVEL_BAND_M = 150;
 /** … for at least this long. */
 const LEVEL_HOLD_MS = 5 * 60_000;
+/** A level the aircraft leaves upward by more than this … */
+const STEP_CLIMB_M = 1000;
+/** … within this long after the level began was an ATC level in the climb (LH719, beta.31 UAT). */
+const STEP_CLIMB_WITHIN_MS = 20 * 60_000;
 /** A level-off below this share of the apex is a hold during the climb, not cruise. */
 const LEVEL_MIN_SHARE = 0.6;
 /** The most samples one answer carries. */
@@ -103,8 +107,20 @@ export function landingOf(series: readonly FlightSample[][]): number | null {
  * or above 60 % of the apex (and 3000 m) the altitude then stays within
  * ±150 m of for at least five minutes. A later step climb (LH719 levelled at
  * 10,500 m 37 min after take-off, stepped to 11,500 m hours later — beta.29
- * UAT) is cruise, not climb, so the first level wins.
+ * UAT) is cruise, not climb, so the first level wins — unless the aircraft
+ * climbs on by more than 1,000 m within 20 minutes of reaching it: that was an
+ * ATC level inside the climb (LH719 held 8,720 m for 11 min, then went on to
+ * 10,740 m — beta.31 UAT).
  */
+/** Whether the series rises more than `STEP_CLIMB_M` above `alt` soon after sample `i`. */
+function climbsOnSoon(run: readonly FlightSample[], i: number, alt: number): boolean {
+  for (let j = i + 1; j < run.length && run[j][0] - run[i][0] <= STEP_CLIMB_WITHIN_MS; j++) {
+    const next = run[j][1];
+    if (next !== null && next - alt > STEP_CLIMB_M) return true;
+  }
+  return false;
+}
+
 function firstLevelOff(
   run: readonly FlightSample[],
   from: number,
@@ -125,7 +141,7 @@ function firstLevelOff(
         break;
       }
     }
-    if (held) return run[i];
+    if (held && !climbsOnSoon(run, i, alt)) return run[i];
   }
   return null;
 }
