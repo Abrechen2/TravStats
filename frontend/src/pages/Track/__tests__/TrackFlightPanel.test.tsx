@@ -7,6 +7,8 @@ const views = vi.hoisted(() => ({
   photos: vi.fn(),
   photoUrl: vi.fn(() => "/thumb"),
 }));
+const immich = vi.hoisted(() => ({ getSettings: vi.fn() }));
+vi.mock("../../../lib/api/immich", () => ({ immichApi: immich }));
 vi.mock("../../../lib/api/travtrackViews", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../lib/api/travtrackViews")>()),
   travTrackViewsApi: views,
@@ -40,6 +42,7 @@ const show = (cursor: number | null = null) =>
 
 describe("TrackFlightPanel", () => {
   beforeEach(() => {
+    immich.getSettings.mockReset().mockResolvedValue({ hasAccess: true });
     Object.values(views).forEach((fn) => fn.mockReset());
     views.photoUrl.mockReturnValue("/thumb");
   });

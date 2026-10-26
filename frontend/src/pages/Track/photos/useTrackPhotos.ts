@@ -4,8 +4,26 @@ import {
   type PhotoWindow,
   type TravTrackPhoto,
 } from "../../../lib/api/travtrackViews";
+import { immichApi } from "../../../lib/api/immich";
 import { logger } from "../../../lib/logger";
-import { photoFailureKey } from "./trackPhotos";
+import { isNotConfigured, photoFailureKey } from "./trackPhotos";
+
+const NOT_CONFIGURED = "track:photos.failure.notConfigured";
+
+/**
+ * Whether this account reaches an Immich, asked with every photo read (one
+ * small GET, never cached: a connection saved in Settings must count the
+ * moment the user comes back); null when the status read failed — then the
+ * photo read itself answers, and "no connection" is never claimed unproven.
+ * Asking first keeps the expected "not connected" out of the browser console:
+ * a 409 is logged there as a failed request whatever the page does with it
+ * (UAT beta.28).
+ */
+const immichAccess = (): Promise<boolean | null> =>
+  immichApi.getSettings().then(
+    (status) => status?.hasAccess === true,
+    () => null
+  );
 
 export type PhotosState =
   | { kind: "idle" }
@@ -35,9 +53,16 @@ export function useTrackPhotos(window: PhotoWindow | null, generation = 0): Phot
     }
     let live = true;
     setState({ kind: "loading" });
-    travTrackViewsApi
-      .photos({ from, to })
+    immichAccess()
+      .then((access) => {
+        if (access === false) return null;
+        return travTrackViewsApi.photos({ from, to });
+      })
       .then((answer) => {
+        if (answer === null) {
+          if (live) setState({ kind: "failed", key: NOT_CONFIGURED });
+          return;
+        }
         if (live) {
           setState({
             kind: "loaded",
@@ -48,8 +73,10 @@ export function useTrackPhotos(window: PhotoWindow | null, generation = 0): Phot
         }
       })
       .catch((err: unknown) => {
-        logger.warn("TravTrack photos could not be loaded", err);
-        if (live) setState({ kind: "failed", key: photoFailureKey(err) });
+        const key = photoFailureKey(err);
+        // Not connected is a state the panel explains, not a failure to log.
+        if (!isNotConfigured(key)) logger.warn("TravTrack photos could not be loaded", err);
+        if (live) setState({ kind: "failed", key });
       });
     return () => {
       live = false;

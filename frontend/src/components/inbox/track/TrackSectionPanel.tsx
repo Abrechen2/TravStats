@@ -125,93 +125,100 @@ export default function TrackSectionPanel(props: TrackSectionPanelProps): JSX.El
   ];
 
   return (
-    <div
-      ref={ref}
-      className="grid gap-3 md:grid-cols-[1fr_minmax(0,22rem)]"
-      data-testid="track-section"
-    >
-      <div className="grid content-start gap-3">
-        <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3" data-testid="track-section-facts">
-          {rows.map((row) => (
-            <div key={row.label} className="rounded-lg bg-(--ts-tile) px-3 py-2">
-              <dt className="t-caption">{row.label}</dt>
-              <dd className="font-semibold tabular-nums">{row.value}</dd>
-            </div>
-          ))}
-        </dl>
-        {bar && (
-          <div className="grid gap-1" data-testid="track-section-daybar">
-            <span className="t-caption">{t("track:inbox.dayBar")}</span>
-            <div
-              aria-hidden="true"
-              className="relative h-3 overflow-hidden rounded-full bg-(--ts-tile)"
-            >
-              <div
-                className="absolute inset-y-0 bg-(--ts-live)"
-                style={{ left: `${bar.left}%`, width: `${bar.width}%` }}
-              />
-            </div>
-          </div>
-        )}
-        <p className="text-sm">
-          <span className="font-semibold">{t("track:inbox.whyLabel")}</span>{" "}
-          {t(props.why.key, props.why.values)}
-        </p>
-        {open && details.length > 0 && (
-          <ul className="list-disc pl-5 text-sm" data-testid="track-section-more">
-            {details.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-        )}
-        {details.length > 0 && (
-          <button
-            type="button"
-            className="justify-self-start text-sm text-(--ts-live) underline"
-            aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
+    // Laid out by the CARD's width, not the window's (UAT beta.28, D2): the
+    // inbox puts two cards side by side, so at 1366 px a viewport breakpoint
+    // gave a half-width card the map column plus three fact columns, and the
+    // labels broke one letter group per line. The map moves beside the facts
+    // only once the card itself is wide enough, and a fact never gets
+    // narrower than its label.
+    <div ref={ref} className="@container" data-testid="track-section">
+      <div className="grid gap-3 @2xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+        <div className="grid content-start gap-3">
+          <dl
+            className="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-2"
+            data-testid="track-section-facts"
           >
-            {open ? t("track:inbox.less") : t("track:inbox.more")}
-          </button>
-        )}
+            {rows.map((row) => (
+              <div key={row.label} className="rounded-lg bg-(--ts-tile) px-3 py-2">
+                <dt className="t-caption">{row.label}</dt>
+                <dd className="font-semibold tabular-nums">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+          {bar && (
+            <div className="grid gap-1" data-testid="track-section-daybar">
+              <span className="t-caption">{t("track:inbox.dayBar")}</span>
+              <div
+                aria-hidden="true"
+                className="relative h-3 overflow-hidden rounded-full bg-(--ts-tile)"
+              >
+                <div
+                  className="absolute inset-y-0 bg-(--ts-live)"
+                  style={{ left: `${bar.left}%`, width: `${bar.width}%` }}
+                />
+              </div>
+            </div>
+          )}
+          <p className="text-sm">
+            <span className="font-semibold">{t("track:inbox.whyLabel")}</span>{" "}
+            {t(props.why.key, props.why.values)}
+          </p>
+          {open && details.length > 0 && (
+            <ul className="list-disc pl-5 text-sm" data-testid="track-section-more">
+              {details.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          )}
+          {details.length > 0 && (
+            <button
+              type="button"
+              className="justify-self-start text-sm text-(--ts-live) underline"
+              aria-expanded={open}
+              onClick={() => setOpen((v) => !v)}
+            >
+              {open ? t("track:inbox.less") : t("track:inbox.more")}
+            </button>
+          )}
+        </div>
+        <figure className="m-0 grid content-start gap-2">
+          {(state.kind === "idle" || state.kind === "loading") && (
+            <p className="t-caption" role="status">
+              {t("track:inbox.loading")}
+            </p>
+          )}
+          {state.kind === "failed" && (
+            <p className="text-sm text-(--ts-bad)" role="alert">
+              {t(state.key)}
+            </p>
+          )}
+          {state.kind === "empty" && (
+            <p className="t-caption" role="status">
+              {t("track:inbox.empty")}
+            </p>
+          )}
+          {/* Mounted only while on screen: a browser holds few WebGL contexts, an inbox many cards. */}
+          {state.kind === "loaded" &&
+            (inView ? (
+              <Suspense fallback={<div className="h-56" />}>
+                <SectionMap
+                  stretches={state.stretches}
+                  label={t("track:inbox.mapLabel")}
+                  ring={props.ring ?? null}
+                  country={country}
+                />
+              </Suspense>
+            ) : (
+              <div className="h-56" aria-hidden="true" />
+            ))}
+          <figcaption className="flex flex-wrap justify-between gap-2 t-caption">
+            <span>{t("track:inbox.zonesNeverDrawn")}</span>
+            <Link to={href} data-testid="track-section-link">
+              {t("track:inbox.openOnMap")}
+            </Link>
+          </figcaption>
+        </figure>
       </div>
-      <figure className="m-0 grid content-start gap-2">
-        {(state.kind === "idle" || state.kind === "loading") && (
-          <p className="t-caption" role="status">
-            {t("track:inbox.loading")}
-          </p>
-        )}
-        {state.kind === "failed" && (
-          <p className="text-sm text-(--ts-bad)" role="alert">
-            {t(state.key)}
-          </p>
-        )}
-        {state.kind === "empty" && (
-          <p className="t-caption" role="status">
-            {t("track:inbox.empty")}
-          </p>
-        )}
-        {/* Mounted only while on screen: a browser holds few WebGL contexts, an inbox many cards. */}
-        {state.kind === "loaded" &&
-          (inView ? (
-            <Suspense fallback={<div className="h-56" />}>
-              <SectionMap
-                stretches={state.stretches}
-                label={t("track:inbox.mapLabel")}
-                ring={props.ring ?? null}
-                country={country}
-              />
-            </Suspense>
-          ) : (
-            <div className="h-56" aria-hidden="true" />
-          ))}
-        <figcaption className="flex flex-wrap justify-between gap-2 t-caption">
-          <span>{t("track:inbox.zonesNeverDrawn")}</span>
-          <Link to={href} data-testid="track-section-link">
-            {t("track:inbox.openOnMap")}
-          </Link>
-        </figcaption>
-      </figure>
     </div>
   );
 }

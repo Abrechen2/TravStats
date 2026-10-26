@@ -567,6 +567,8 @@
       "none": "—",
       "sameDay": "{{day}}, {{from}} – {{until}}",
       "days": "{{fromDay}} {{from}} – {{untilDay}} {{until}}",
+      "wholeDay": "{{day}}, ganzer Tag",
+      "wholeDays": "{{fromDay}} – {{untilDay}}",
       "minutes": "{{m}} min",
       "hours": "{{h}} h {{m}} min",
       "daysHours": "{{d}} T {{h}} h",

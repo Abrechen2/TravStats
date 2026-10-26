@@ -174,6 +174,18 @@ describe("TrackSectionPanel", () => {
     expect(screen.getByText("track:inbox.detail.truncated")).toBeInTheDocument();
   });
 
+  it("D2: lays out by the card's width, and no fact is narrower than its label", () => {
+    views.range.mockResolvedValue(part([]));
+    show();
+    const section = screen.getByTestId("track-section");
+    // A container, not a viewport breakpoint: a half-width card at 1366 px stays one column.
+    expect(section.className).toContain("@container");
+    expect(section.innerHTML).not.toMatch(/\bmd:grid-cols/);
+    const facts = screen.getByTestId("track-section-facts");
+    expect(facts.className).toContain("minmax(9rem,1fr)");
+    expect(facts.className).not.toMatch(/grid-cols-3/);
+  });
+
   it("the Track-map link carries the section's days", () => {
     views.range.mockResolvedValue(part([]));
     show({
