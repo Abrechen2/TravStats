@@ -99,7 +99,8 @@ describe("TravTrack — flight panel", () => {
       ],
       pointCount: 5,
       truncated: false,
-      summary: { maxAltitudeM: 10500, maxSpeedMps: 240, climbToCruiseMinutes: 5 },
+      // Take-off at 5 (180 m/s); still climbing at 10 (10,000 → 10,500), level from 15 on.
+      summary: { maxAltitudeM: 10500, maxSpeedMps: 240, climbToCruiseMinutes: 10 },
     });
   });
 
