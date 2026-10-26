@@ -1021,7 +1021,11 @@ Direction (concept board: https://claude.ai/artifact/UPvVWW7fkBxa9Z9sWS8obB):
    server-to-server trust. No separate per-person invite codes.
 2. **One place per remote person** (Einstellungen → Teilen → „Personen auf
    verbundenen Servern"): each person on a connected server gets individual
-   switches for the leaderboard and for one's own statistics. A person appears
+   switches for the leaderboard and for one's own statistics. Statistics have
+   three levels (owner, 2026-10-26): off, „Übersicht" (totals and year values,
+   no entries) and „Voll" (the whole statistics page as the owner sees it —
+   routes, airports, airlines, countries, records, map and the entries behind
+   them — without private notes, costs and documents). A person appears
    only after opting in to being findable by connected servers.
 3. **Trips are shared from the trip's „Teilen" button.** Choosing „Auf anderem
    Server" asks for the server and the user (lookup among findable users of
