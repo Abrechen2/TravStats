@@ -381,4 +381,95 @@ describe("C3 review findings, round two", () => {
       "re-pointed-by-the-user"
     );
   });
+
+  it("keep refuses when another flag over these copies now asks about a different set", async () => {
+    const FLIGHT = {
+      airline: "Lufthansa",
+      flightNumber: "LH400",
+      depIata: "FRA",
+      depLat: 50.03,
+      depLon: 8.57,
+      arrIata: "JFK",
+      arrLat: 40.64,
+      arrLon: -73.78,
+      status: "flown",
+      depTimeSemantics: "UTC",
+      arrTimeSemantics: "UTC",
+      depTimezone: "Europe/Berlin",
+      arrTimezone: "America/New_York",
+      departureTime: new Date("2026-03-10T08:00:00Z"),
+      arrivalTime: new Date("2026-03-10T16:00:00Z"),
+    };
+    for (const d of ["01", "02", "03"]) {
+      await prisma.flight.create({
+        data: { ...FLIGHT, userId: anna.id, createdAt: new Date(`2026-03-${d}T00:00:00Z`) },
+      });
+    }
+    await runDataQualityChecks(anna.id, NOW);
+    const [one, other] = await listFlags(anna.id, { kind: "duplicate_candidate" });
+    // A run has already moved the sibling on to a set that includes a copy D.
+    const details = other.details as { copies: Record<string, unknown>[] };
+    await prisma.dataQualityFlag.update({
+      where: { id: other.id },
+      data: {
+        details: {
+          ...details,
+          copies: [...details.copies, { ...details.copies[0], entityId: "copy-d" }],
+        } as never,
+        revision: { increment: 1 },
+      },
+    });
+
+    await expect(resolveFinding(one.id, anna.id, { action: "keep" })).rejects.toMatchObject({
+      code: "staleFinding",
+    });
+    expect(
+      (await prisma.dataQualityFlag.findUniqueOrThrow({ where: { id: other.id } })).status
+    ).toBe("open");
+  });
+
+  it("an undo locks the ride before it reads it for propagation", async () => {
+    const { flag } = await ferrySetup(anna.id);
+    await resolveFinding(flag.id, anna.id, { action: "link" });
+    const order: string[] = [];
+    const original = prisma.$transaction.bind(prisma);
+    const spy = jest.spyOn(prisma, "$transaction").mockImplementation(((
+      fn: (tx: unknown) => Promise<unknown>,
+      opts?: unknown
+    ) =>
+      original(
+        ((tx: Record<string, unknown>) =>
+          fn(
+            new Proxy(tx, {
+              get(target, prop, receiver) {
+                const value = Reflect.get(target, prop, receiver);
+                if (prop === "$queryRaw") {
+                  return (...a: unknown[]) => {
+                    order.push("lock");
+                    return (value as (...x: unknown[]) => unknown).apply(target, a);
+                  };
+                }
+                if (prop !== "ferryJourney") return value;
+                return new Proxy(value as Record<string, unknown>, {
+                  get(d, p, r) {
+                    const inner = Reflect.get(d, p, r) as (...x: unknown[]) => unknown;
+                    if (typeof inner !== "function") return inner;
+                    return (...a: unknown[]) => {
+                      order.push(`ferry.${String(p)}`);
+                      return inner.apply(d, a);
+                    };
+                  },
+                });
+              },
+            })
+          )) as never,
+        opts as never
+      )) as never);
+    try {
+      await undoFinding(flag.id, anna.id);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(order[0]).toBe("lock");
+  });
 });

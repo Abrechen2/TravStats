@@ -129,6 +129,7 @@ function duplicateOf(flag: DataQualityFlag) {
  */
 async function keep(flag: DataQualityFlag, now: Date): Promise<void> {
   const { ids, entityType } = duplicateOf(flag);
+  const idSet = new Set(ids);
   await prisma.$transaction(async (tx) => {
     const siblings = await tx.dataQualityFlag.findMany({
       where: {
@@ -140,6 +141,18 @@ async function keep(flag: DataQualityFlag, now: Date): Promise<void> {
         id: { not: flag.id },
       },
     });
+    // A sibling answers the same question only while it names the same
+    // copies. One a run has moved on to another set asks something the user
+    // has not seen — refuse rather than answer it for them.
+    const sameSet = (details: unknown) => {
+      const parsed = duplicateCandidateDetailsSchema.safeParse(details);
+      if (!parsed.success) return false;
+      const theirs = new Set(parsed.data.copies.map((c) => c.entityId));
+      return idSet.size === theirs.size + 1 && [...theirs].every((id) => idSet.has(id));
+    };
+    if (siblings.some((s) => !sameSet(s.details) || !idSet.has(s.entityId))) {
+      throw new FindingActionError("staleFinding");
+    }
     const updated = await tx.dataQualityFlag.updateMany({
       where: asRead(flag),
       data: {

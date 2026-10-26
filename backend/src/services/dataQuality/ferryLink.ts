@@ -60,6 +60,9 @@ export async function undoFerryLink(
   userId: string,
   link: { id: string; tripId: string }
 ): Promise<void> {
+  // Lock first: the snapshot propagation reads and the conditional write
+  // below must see the same trip, or a removal notice goes to the wrong group.
+  await tx.$queryRaw(Prisma.sql`SELECT id FROM "ferry_journeys" WHERE id = ${link.id} FOR UPDATE`);
   const before = await shareSnapshot(tx, "ferry", link.id);
   // Only while the ride is still on the trip the link put it on, and on no
   // roadtrip leg: a ride the user has moved or attached to a leg since keeps
