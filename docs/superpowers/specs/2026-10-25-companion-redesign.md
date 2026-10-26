@@ -138,6 +138,66 @@ recommendations below are the plan:**
    them? **Recommendation:** keep photo journeys as they are, and build
    `duplicate` first (it has the clearest evidence), then `ferryMatch`.
 
+**As built (server, 2026-10-26, branch `feat/inbox-findings-c3`).** The
+Companion builds against this, not against the proposal above where they differ.
+
+- *Kinds.* `duplicate` is the existing **`duplicate_candidate`** check
+  (forgejo#282: flights, rail, bus, cruises, stays — same-day rules, no second
+  rule invented). `ferryMatch` ships as **`ferry_match`** on entity type
+  `ferry_journey`, in the stored vocabulary's snake_case. `photoMatch` is not
+  built (photo journeys stay as they are).
+- *Every flag* gains `evidence` (an alias of `details`), `undoUntil`
+  (`string | null`) and **`actions`** — the kind-specific answers `resolve`
+  takes for this flag. A client offers exactly those; it never needs the table.
+
+  | Kind | `actions` | Status after | Data change | Server undo |
+  |---|---|---|---|---|
+  | any (no body) | — | `resolved` | none | yes |
+  | any (`dismiss`) | — | `dismissed` | none | yes |
+  | `duplicate_candidate` | `keep` | `dismissed`, plus every open flag over the same copies; never asked again | none | yes |
+  | `duplicate_candidate` on `flight` / `lodging_stay` | `merge` | `resolved`, flag moved onto the kept record | see below | **no** (`undoUntil` null; app delays ~5 s) |
+  | `ferry_match` | `link` | `resolved` | ride's `tripId` set | yes, while the ride is still on that trip |
+
+  `keep` answers `dismissed`, not `resolved`: the runner re-opens a resolved
+  flag whose finding still holds, and "these are two entries" is such a finding.
+  `merge` is not offered for rail, bus or cruise copies (`actions: ["keep"]`).
+- *Duplicate evidence:* the stored details plus `entityType`, `ids` (this flag's
+  record first, ≥2), `keptId` with `keptReason: "oldest"` (the earliest-created
+  copy), `matchedFields`. The flag sits on every copy but the oldest, so a group
+  of three has two flags over one id set — a pair (the normal case) has one.
+- *`merge`* (`{ action: "merge", keptId? }`): re-runs the duplicate rule on the
+  account first (`staleFinding` if the copies no longer match), then in one
+  transaction moves documents, the trip/booking link (and loyalty card) when the
+  kept copy has none, a flight's companions, recording and public share links,
+  a stay's roadtrip stations; deletes the other copies with share snapshot +
+  `propagateDelete` like their own DELETE; deletes the flags on the removed
+  rows; re-checks achievements afterwards. The kept copy's own fields are not
+  filled from the others.
+- *`ferry_match` evidence:* `ferryId`, `candidateTripId`, `candidateTripName`
+  (extra), `departurePort`, `arrivalPort`, **`departureTime` as a `TimeValue`**
+  (the time-shape rule forbids a bare instant), `reason: "insideTripWindow"`.
+  Raised only when both crossing days lie inside exactly one non-cancelled
+  trip's first and last day, for a ride on no trip and no roadtrip leg.
+- *Responses.* `resolve`, `dismiss` and `undo` answer
+  `{ success: true, data: Finding | null }` (this router's enveloped family;
+  `data` is null only if the record is gone). Refusals answer
+  `{ error: "notFound" }` (404), `{ error: "invalidAction", reason }` (400;
+  `reason` ∈ `unknownAction | notOffered | keptIdNotInFinding`),
+  `{ error: "undoExpired" }` (409; also for a merge, which has no undo) and
+  `{ error: "staleFinding" }` (409; flag not open for an action, copies no
+  longer matching, ride moved, or undo of a flag a re-run already re-opened).
+  A malformed body (non-string `action`) is the generic 400 `VALIDATION_FAILED`.
+- *When the checks run:* after a create on `/flights`, `/rail`, `/bus`,
+  `/ferry`, `/cruises`, `/lodging`, `/lodging/:id/stays` (detached, coalesced
+  per account), after imports as before, and nightly — where the sweep now also
+  visits accounts holding only flights or rides; it skipped them before, so
+  their duplicates had never been asked. That nightly pass is the backfill; no
+  separate job-registry job was added.
+- *Not built:* a merge button on the web (the web still links each copy and
+  keeps "delete on the record's page"; it shows `keep`'s effect through
+  "Das stimmt so"); a web undo toast. The web renders `ferry_match` with DE/EN
+  copy, links ride and trip, and offers "Zur Reise hinzufügen".
+
 ### C4 — Statistics scoped by year
 
 **What exists.** Most `/api/v1/stats/*` endpoints take `fromDate`/`toDate`
