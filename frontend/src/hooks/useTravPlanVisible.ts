@@ -3,6 +3,7 @@ import { useBetaFeatures } from "./useBetaFeatures";
 import { useAuthStore } from "../store/authStore";
 import { travplanApi } from "../lib/api/travplan";
 import { logger } from "../lib/logger";
+import { useCapabilitiesEpochStore } from "../store/capabilitiesEpochStore";
 
 /**
  * The instance half alone: whether the beta switch lets TravPlan be shown at
@@ -30,6 +31,8 @@ export function useTravPlanOffered(): boolean {
 export function useTravPlanVisible(): boolean {
   const offered = useTravPlanOffered();
   const userId = useAuthStore((s) => s.user?.id);
+  // Bumped when Admin → Instanz → TravPlan saves, so the entry follows at once.
+  const epoch = useCapabilitiesEpochStore((s) => s.epoch.travPlan);
   const [serverEnabled, setServerEnabled] = useState<boolean | null>(null);
   const mustAsk = offered && Boolean(userId);
 
@@ -49,7 +52,7 @@ export function useTravPlanVisible(): boolean {
     return () => {
       live = false;
     };
-  }, [mustAsk, userId]);
+  }, [mustAsk, userId, epoch]);
 
   if (!offered || !userId) return false;
   return serverEnabled === true;

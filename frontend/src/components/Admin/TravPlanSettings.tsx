@@ -6,6 +6,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { Switch } from "../ui/Field";
 import { SectionCard, SectionTitle } from "../Settings/SettingsShared";
+import { useCapabilitiesEpochStore } from "../../store/capabilitiesEpochStore";
 
 const NS = "admin:travPlan";
 
@@ -24,6 +25,7 @@ export default function TravPlanSettings(): JSX.Element {
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const bumpCapabilities = useCapabilitiesEpochStore((s) => s.bump);
 
   useEffect(() => {
     let alive = true;
@@ -46,6 +48,7 @@ export default function TravPlanSettings(): JSX.Element {
     setError(null);
     try {
       setEnabled((await travplanApi.setConfig({ enabled: on })).enabled);
+      bumpCapabilities("travPlan");
     } catch (err) {
       logger.error("Saving the TravPlan switch failed:", err);
       setError(t(travPlanErrorKey(err)));
