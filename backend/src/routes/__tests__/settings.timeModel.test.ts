@@ -173,4 +173,43 @@ describe("Settings — time model (phase 2)", () => {
       expect(backupZone().source).not.toBe("admin");
     });
   });
+
+  describe("partial display update", () => {
+    it("keeps the profile zone when a PUT names only the date format", async () => {
+      await request(app)
+        .put("/api/v1/settings/profile-zone")
+        .set("Cookie", cookie)
+        .send({ zone: "Europe/Berlin" })
+        .expect(200);
+      await request(app)
+        .put("/api/v1/settings")
+        .set("Cookie", cookie)
+        .send({ display: { dateFormat: "MM/DD/YYYY" } })
+        .expect(200);
+      const res = await request(app).get("/api/v1/settings").set("Cookie", cookie);
+      expect(res.body.display).toMatchObject({
+        timezone: "Europe/Berlin",
+        dateFormat: "MM/DD/YYYY",
+      });
+    });
+
+    it("keeps the other unit fields when a PUT names only the currency", async () => {
+      await request(app)
+        .put("/api/v1/settings")
+        .set("Cookie", cookie)
+        .send({ units: { distanceUnit: "miles", weightUnit: "lb" } })
+        .expect(200);
+      await request(app)
+        .put("/api/v1/settings")
+        .set("Cookie", cookie)
+        .send({ units: { currency: "USD" } })
+        .expect(200);
+      const res = await request(app).get("/api/v1/settings").set("Cookie", cookie);
+      expect(res.body.units).toMatchObject({
+        distanceUnit: "miles",
+        weightUnit: "lb",
+        currency: "USD",
+      });
+    });
+  });
 });
