@@ -134,6 +134,34 @@ describe("TrackFlightPanel", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("track:flight.notFound");
   });
 
+  it("a series from the flight's time window (nothing linked) says so; a linked one does not", async () => {
+    const answer = (basis: "linked" | "window") => ({
+      flightId: "f1",
+      basis,
+      series: [
+        [
+          [T, 100, 70],
+          [T + MIN, 900, 100],
+        ],
+      ],
+      pointCount: 2,
+      truncated: false,
+      summary: { maxAltitudeM: 900, maxSpeedMps: 100, climbToCruiseMinutes: null },
+    });
+    views.photos.mockResolvedValue({ photos: [], truncated: false, trackTruncated: false });
+    views.flightPanel.mockResolvedValue(answer("window"));
+    const { unmount } = show();
+    expect(await screen.findByTestId("track-flight-window-basis")).toHaveTextContent(
+      "track:flight.windowBasis"
+    );
+    unmount();
+
+    views.flightPanel.mockResolvedValue(answer("linked"));
+    show();
+    await screen.findByTestId("track-flight-figures");
+    expect(screen.queryByTestId("track-flight-window-basis")).toBeNull();
+  });
+
   it("a deletion on the map (a new generation) reads the panel and its photos again", async () => {
     views.flightPanel.mockResolvedValue({
       flightId: "f1",
