@@ -1,6 +1,6 @@
 import { prisma } from "../../../db";
 import { encryptApiKey } from "../../../utils/encryption";
-import { entryTrack, flightEntryTrack, tripEntryTrack } from "../entryTrack";
+import { entryTrack, entryTrackLimits, flightEntryTrack, tripEntryTrack } from "../entryTrack";
 import { setLocationProvider } from "../provider";
 import { travTrackSwitches } from "../../travtrack/__tests__/switches";
 import { pointsByDevice, rawSegments } from "../../tripRecording/segments";
@@ -170,6 +170,52 @@ describe("entryTrack", () => {
       DAY + 6 * HOUR,
       DAY + 5 * 24 * HOUR,
     ]);
+  });
+
+  it("choosing the source reads no recording: an own trip recording loads no TravTrack point (RC review)", async () => {
+    const tripId = await makeTrip(userId);
+    await ownBatch(tripId);
+    await setLocationProvider(userId, "travtrack");
+    for (let i = 0; i < 5; i++) {
+      await storePoint(userId, {
+        t: DAY + (5 + i / 10) * HOUR,
+        lat: 37.5,
+        lon: 127,
+        links: [{ kind: "trip", id: tripId }],
+      });
+    }
+    const spy = jest.spyOn(prisma.travTrackPoint, "findMany");
+    try {
+      const track = await tripEntryTrack(userId, await tripOf(tripId));
+      expect(track.origin).toBe("travstats");
+      expect(track.alternatives).toContain("travtrack");
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("a TravTrack trip track is bounded and says truncated past the cap, never complete (RC review)", async () => {
+    const tripId = await makeTrip(userId);
+    await setLocationProvider(userId, "travtrack");
+    for (let i = 0; i < 6; i++) {
+      await storePoint(userId, {
+        t: DAY + (5 + i / 10) * HOUR,
+        lat: 37.5 + i / 1000,
+        lon: 127,
+        links: [{ kind: "trip", id: tripId }],
+      });
+    }
+    const before = entryTrackLimits.points;
+    entryTrackLimits.points = 4;
+    try {
+      const track = await entryTrack(userId, { kind: "trip", id: tripId });
+      expect(track.origin).toBe("travtrack");
+      expect(track.coverage).toBe("truncated");
+      expect(track.devices.flatMap((d) => d.points).length).toBeLessThanOrEqual(4);
+    } finally {
+      entryTrackLimits.points = before;
+    }
   });
 
   it("a fix linked to a delayed flight outside its scheduled window still shows", async () => {

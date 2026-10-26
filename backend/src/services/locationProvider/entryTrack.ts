@@ -79,35 +79,86 @@ async function chosenDawarich(userId: string): Promise<LocationProvider | null> 
   return connection ? dawarichProvider(connection) : null;
 }
 
-/** TravTrack's points linked to the entry, as observations. */
+/**
+ * The most TravTrack fixes one entry's track reads (final Codex review before
+ * the RC): an entry page never drains a history. Past it the answer says
+ * `truncated`, never `complete`. Measured on a real 56-day trip: 117,111
+ * fixes — the cap leaves such a trip whole.
+ */
+export const entryTrackLimits = { points: 250_000 };
+
+/** TravTrack's points linked to the entry, as observations, oldest first, at most `cap`. */
 async function linkedObservations(
   userId: string,
   kind: "flight" | "trip",
-  entryId: string
+  entryId: string,
+  cap: number
 ): Promise<LocationObservation[]> {
   const rows = await prisma.travTrackPoint.findMany({
     where: { userId, links: { some: { entryKind: kind, entryId } } },
     orderBy: [{ t: "asc" }, { seq: "asc" }],
+    take: cap,
     select: TRAVTRACK_OBSERVATION_SELECT,
   });
   return rows.map(observationOf);
 }
 
-/** Linked ∪ window, once each, ascending. Empty while the instance is off. */
-async function travTrackRead(
+/**
+ * Whether TravTrack holds anything for the entry — one indexed row, read
+ * before a source is chosen, so choosing never loads a recording.
+ */
+async function travTrackHolds(
   userId: string,
   kind: "flight" | "trip",
   entryId: string,
   window: ReadWindow | null
-): Promise<LocationObservation[]> {
-  if (!(await travTrackInstanceOn())) return [];
+): Promise<boolean> {
+  if (!(await travTrackInstanceOn())) return false;
+  const row = await prisma.travTrackPoint.findFirst({
+    where: {
+      userId,
+      OR: [
+        { links: { some: { entryKind: kind, entryId } } },
+        ...(window ? [{ t: { gte: new Date(window.fromMs), lt: new Date(window.untilMs) } }] : []),
+      ],
+    },
+    select: { seq: true },
+  });
+  return row !== null;
+}
+
+/** Linked ∪ window, once each, ascending, bounded by `cap`. Empty while the instance is off. */
+async function travTrackRead(
+  userId: string,
+  kind: "flight" | "trip",
+  entryId: string,
+  window: ReadWindow | null,
+  cap: number = entryTrackLimits.points
+): Promise<{ points: LocationObservation[]; truncated: boolean }> {
+  if (!(await travTrackInstanceOn())) return { points: [], truncated: false };
+  const readWindow = async (): Promise<{ points: LocationObservation[]; truncated: boolean }> => {
+    if (!window) return { points: [], truncated: false };
+    const provider = travtrackProvider(userId);
+    const points: LocationObservation[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await provider.readPoints(window, cursor);
+      points.push(...page.points);
+      cursor = page.next ?? undefined;
+    } while (cursor && points.length < cap);
+    return { points: points.slice(0, cap), truncated: cursor !== undefined || points.length > cap };
+  };
   const [linked, inWindow] = await Promise.all([
-    linkedObservations(userId, kind, entryId),
-    window ? readAll(travtrackProvider(userId), window).then((r) => r.points) : [],
+    linkedObservations(userId, kind, entryId, cap + 1),
+    readWindow(),
   ]);
   const byRef = new Map<string, LocationObservation>();
-  for (const o of [...inWindow, ...linked]) byRef.set(o.ref, o);
-  return [...byRef.values()].sort((a, b) => a.atMs - b.atMs);
+  for (const o of [...inWindow.points, ...linked]) byRef.set(o.ref, o);
+  const all = [...byRef.values()].sort((a, b) => a.atMs - b.atMs);
+  return {
+    points: all.slice(0, cap),
+    truncated: inWindow.truncated || linked.length > cap || all.length > cap,
+  };
 }
 
 export function byDevice(points: readonly LocationObservation[]): EntryTrackDevice[] {
@@ -175,13 +226,19 @@ export async function flightEntryTrack(
   opts: { source?: TrackOrigin } = {}
 ): Promise<EntryTrack & { window: ReadWindow | null; devices: EntryTrackDevice[] }> {
   const window = await flightWindow(flight);
-  const [own, travTrack] = await Promise.all([
-    prisma.flightTrack.count({ where: { flightId: flight.id } }),
-    travTrackRead(userId, "flight", flight.id, window),
+  const [own, holds] = await Promise.all([
+    prisma.flightTrack.findFirst({ where: { flightId: flight.id }, select: { id: true } }),
+    travTrackHolds(userId, "flight", flight.id, window),
   ]);
-  const plan = await choose(userId, own > 0, travTrack.length > 0, opts.source);
+  const plan = await choose(userId, own !== null, holds, opts.source);
   if (plan.origin === "travtrack") {
-    return { ...plan, coverage: "complete", window, devices: byDevice(travTrack) };
+    const read = await travTrackRead(userId, "flight", flight.id, window);
+    return {
+      ...plan,
+      coverage: read.truncated ? "truncated" : "complete",
+      window,
+      devices: byDevice(read.points),
+    };
   }
   if (plan.origin === "dawarich" && plan.dawarich && window) {
     const read = await readAll(plan.dawarich, window);
@@ -208,26 +265,36 @@ export async function tripEntryTrack(
 ): Promise<EntryTrack & { batches: RecordingBatchRow[] }> {
   const bounds = await tripRecordingBounds(userId, trip);
   const window = bounds ? { fromMs: bounds.fromMs, untilMs: bounds.untilMs } : null;
-  const [own, travTrack] = await Promise.all([
-    prisma.tripRecordingBatch.findMany({
+  const [own, holds] = await Promise.all([
+    prisma.tripRecordingBatch.findFirst({
+      where: { tripId: trip.id, userId },
+      select: { id: true },
+    }),
+    travTrackHolds(userId, "trip", trip.id, window),
+  ]);
+  const plan = await choose(userId, own !== null, holds, opts.source);
+  if (plan.origin === "travstats") {
+    const batches = await prisma.tripRecordingBatch.findMany({
       where: { tripId: trip.id, userId },
       orderBy: [{ startedAt: "asc" }, { id: "asc" }],
       select: { deviceId: true, points: true },
-    }),
-    travTrackRead(userId, "trip", trip.id, window),
-  ]);
-  const plan = await choose(userId, own.length > 0, travTrack.length > 0, opts.source);
-  if (plan.origin === "travstats") return { ...plan, coverage: "complete", batches: own };
+    });
+    return { ...plan, coverage: "complete", batches };
+  }
   if (plan.origin === null) return { ...plan, coverage: null, batches: [] };
-  // TravTrack: the trip's window already read, the links added; Dawarich: its window.
+  // TravTrack: the trip's window and its links, read once and bounded; Dawarich: its window.
+  const travTrack =
+    plan.origin === "travtrack"
+      ? await travTrackRead(userId, "trip", trip.id, window)
+      : { points: [], truncated: false };
   const provider: LocationProvider | null =
     plan.origin === "travtrack" ? emptyProvider : plan.dawarich;
   const history = await locationHistoryBatches(userId, trip, provider, {
-    extra: plan.origin === "travtrack" ? travTrack : [],
+    extra: travTrack.points,
     // TravTrack's deleted ranges and reported pauses break its trip line as
     // they break its flight lines; they say nothing about Dawarich's history.
     ...(plan.origin === "travtrack"
-      ? { breaksOf: await travTrackBreaksFor(userId, travTrack) }
+      ? { breaksOf: await travTrackBreaksFor(userId, travTrack.points) }
       : {}),
   });
   if (
@@ -241,7 +308,7 @@ export async function tripEntryTrack(
     origin: plan.origin,
     alternatives: plan.alternatives,
     unchecked: plan.unchecked,
-    coverage: history.coverage,
+    coverage: travTrack.truncated ? "truncated" : history.coverage,
     batches: history.batches,
   };
 }
