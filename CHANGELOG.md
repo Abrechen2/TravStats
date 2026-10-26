@@ -6,12 +6,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Before upgrading to 2.7.0-rc.26:** take a backup. 27 new migrations since rc.25, almost all for TravTrack (new tables, nothing existing is rewritten), plus the inbox finding undo/revision columns and the encrypted calendar-feed token. TravTrack stays off until an admin enables it and its beta key is open.
+
 **Before upgrading to 2.7.0-rc.25:** take a backup. One new migration since rc.24: every stored rail ride is marked as a train, and the two new rail import settings start at "skip". Coming from 2.7.0-rc.19: 5 migrations; from 2.7.0-rc.18: 26 migrations, and stored straight ferry crossings are re-routed once in the background.
 
 - Full data export includes saved TravPlan content and proposals; daily quota counters are explicitly excluded.
 
 ### Added
 
+- **TravTrack (beta): your own location history on your server.** The Companion records into it; a map of days and ranges, explored areas, monthly values, stays, a flight panel with the altitude profile and the photos taken on board, imports from GPX and a Dawarich copy, privacy zones that delete and never draw what lies inside them. Behind its own instance switch and the beta key.
+- **Inbox questions from TravTrack show their stretch of track:** a small map, from–to, duration, distance and why the question was asked.
+- **Duplicates are merged from the inbox, with undo.** Keep both, merge into one (refused with a reason when the copies carry different recordings or trips), and a ferry crossing inside a trip is offered to that trip. Dismiss, keep and link can be undone for ten minutes.
+- **Statistics for one year.** Every statistics endpoint the Companion reads takes a year and says which year it answered for; the passport counts a country in every year with evidence for it.
+- **Tram and U-Bahn rides run on their own tracks.** OpenRailRouting is asked with a tram or subway profile instead of the mainline one, so a U2 ride no longer detours over S-Bahn tracks; without such a profile the ride keeps a straight line with a reason. Rides can be routed again, one by one or all at once by an admin. Setup: docs/features/rail-routing.md.
+- **The calendar subscription shows local times.** Flights and rides carry the departure and arrival time zone and the local time in the title ("✈ Jeju 12:05 → Gimpo 13:10 · KE1206"); the link prefers a host name over an IP and warns when Google cannot reach it; the Companion can add it to the phone's calendar.
+- **A setup checklist for server-to-server sharing** in Admin → Instance, and the trip's share menu says why sharing with another server is not available yet.
+- **TravPlan has its own switch** in Admin → Instance (still beta).
+- **A place's visits, redesigned:** planned visits first, past ones by year, undated last, dates in your format, trip, photos, documents and rating on the row.
 - **A rail ride knows whether it was a train, an U-Bahn, a tram or a bus.** The mode is shown and can be changed on the ride, and the rail statistics count trains only. Every ride stored before this version is a train.
 - **A bahn.de connection's U-Bahn, tram and bus legs are reviewed in place.** The import dialog names each leg's mode; U-Bahn and tram legs can be kept as rail rides of that mode or skipped, bus legs can be saved as bus rides or skipped. Settings → Daten remembers the choice for each kind ("skip" until changed).
 - **bahn.de stops are resolved from bahn.de's own station data,** so a stop named the way bahn.de prints it finds its catalogue station.
@@ -137,6 +148,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Changed
 
+- **Rental cars, coach rides and ferry crossings are out of beta.** They show whenever you enable the area in your settings.
+- **Completing a stay from OpenStreetMap is out of beta,** with a stricter name rule: a town or landmark word alone no longer matches a house, and English and German names are compared too. Measured on 200 real stays: 1 wrong match in 156 (was 2 in 152).
+- **Detect places automatically** is on by default with the stay scan; its two area switches are expert settings.
+- **The export cuts privacy zones out of older recordings** (trip recordings and flight tracks from before TravTrack). Stored data and the admin backup stay complete.
+- The README and store texts describe TravStats as a logbook first, with optional recording through the Companion.
 - **The lodging import preview says what each row will do.** The action reads "Aufenthalt hinzufügen", "Hotel und Aufenthalt anlegen", "Weiteren Aufenthalt anlegen" or "Aufenthalt aktualisieren" instead of a bare "Anlegen"; a matched hotel is shown with its stored name and city as plain text, with the import's spelling beside it where it differs; the summary counts what will be added, skipped and still needs a decision, and the reminder to decide only shows while something is undecided. A guessed match says what it rests on (name and city, name only, a similar name, the same place) instead of a green "Passendes Hotel gefunden"; several possible hotels offer a choice; "Keine Koordinaten" is gone from rows that join a stored hotel. "Anderes Hotel? Zuordnung aufheben" replaces "Nicht dasselbe Hotel — neu anlegen", which never created anything.
 - **Recorded flight paths are off on the dashboard by default.** The map
   shows routes; a recording belongs to one flight. A new map option
@@ -167,6 +183,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Fixed
 
+- **Uploading a document from the web works again.** Every web upload had failed with "No file uploaded" since September.
+- **A server no longer crashes when another server cannot be reached over IPv6** while checking it; addresses are tried IPv4 first.
+- A share link of a trip without dates ends after the trip's last entry.
+- Saving part of the display settings over the API no longer clears the time zone.
+- Station names of rail, bus and ferry on the trip map no longer print over each other; a cruise leg's hover shows its ports and sailings.
 - **A skipped row no longer fails the whole lodging import.** A skipped row with a cleared date or name made the server refuse every row; skipped rows are now sent without their fields.
 - **"Auswahl importieren" is only enabled for a preview the server will accept.** Names and cities over 200 characters, negative prices and stays over ten years are flagged on the row instead of failing the import, a price without a currency is flagged on updates as well, and a row set to add a stay with both dates cleared is flagged instead of creating nothing.
 - **Picking one of several possible hotels checks that hotel's stays for the same check-in,** and an update shows every changed field, an edited price or currency included.
