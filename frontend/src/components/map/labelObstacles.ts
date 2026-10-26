@@ -169,6 +169,36 @@ export function shareMapLabels(layers: Layer[], labelsMode: LabelsMode, zoom: nu
 }
 
 /**
+ * Every station-name layer in `layers` joined into one per reveal mode, at the
+ * place the last of them stood — so names stay above every line — and every
+ * other layer untouched (forgejo#320). The trip map hands in rail, ferry and
+ * bus names built by three builders; three passes never compared a station
+ * with the bus terminal beside it, and printed both. One layer is one
+ * collision pass, as the dashboard's "Alle" map already builds it. Without two
+ * layers to join, the very same array comes back.
+ */
+export function joinStationLabelLayers(layers: readonly Layer[]): readonly Layer[] {
+  const groups = new Map<string, StationLabelsLayer[]>();
+  for (const l of layers) {
+    if (!(l instanceof StationLabelsLayer)) continue;
+    const key = `${l.props.labelsMode}|${Boolean(l.props.onGlobe)}`;
+    groups.set(key, [...(groups.get(key) ?? []), l]);
+  }
+  if ([...groups.values()].every((g) => g.length < 2)) return layers;
+  const joinedAt = new Map<Layer, Layer | null>();
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const last = group[group.length - 1];
+    const data = group.flatMap((l) => l.props.data);
+    for (const l of group) joinedAt.set(l, l === last ? (last.clone({ data }) as Layer) : null);
+  }
+  return layers.flatMap((l) => {
+    const joined = joinedAt.get(l);
+    return joined === undefined ? [l] : joined ? [joined] : [];
+  });
+}
+
+/**
  * `extraLayers` with every station label layer told about `mapLayers`'
  * labels. Any other layer is passed through untouched, and without a station
  * layer the very same array comes back.
@@ -176,7 +206,7 @@ export function shareMapLabels(layers: Layer[], labelsMode: LabelsMode, zoom: nu
 export function withLabelObstacles(extraLayers: Layer[], mapLayers: readonly Layer[]): Layer[] {
   if (!extraLayers.some((l) => l instanceof StationLabelsLayer)) return extraLayers;
   const obstacles = labelObstaclesOf(mapLayers);
-  return extraLayers.map((l) =>
+  return joinStationLabelLayers(extraLayers).map((l) =>
     l instanceof StationLabelsLayer ? (l.clone({ obstacles }) as Layer) : l
   );
 }
@@ -209,7 +239,7 @@ export function withStationLabels(
   if (!onGlobe) return appendWithLabelObstacles(own, [...extraLayers]);
   return [
     ...own,
-    ...extraLayers.map((l) =>
+    ...joinStationLabelLayers(extraLayers).map((l) =>
       l instanceof StationLabelsLayer ? (l.clone({ onGlobe: true }) as Layer) : l
     ),
   ];
