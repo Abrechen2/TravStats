@@ -1,20 +1,15 @@
 import { departureClockedWhere } from "../../shared/railClock";
-import { getInstanceSettings } from "../instanceSettingsService";
 import type { ReminderUser } from "../emailService";
 import logger from "../../utils/logger";
-import { reminderDomainVisible } from "./domainEnabled";
+import { reminderDomainEnabled } from "./domainEnabled";
 
 /**
  * The shared half of the ferry and bus departure reminders: rail's windows,
  * switches and dedup, for domains whose rows carry rail's time columns (real
  * UTC instants, the terminal's zone, a departure precision) but form no ride
- * of several legs — one row is one mail.
- *
- * Both domains sit behind the instance's beta switch, so the switch is read
- * once per tick: with it off the domain is not even queried. When it cannot
- * be read, nothing is sent — a reminder for a domain the app may be hiding is
- * worse than none, and the next tick (15 min later, still inside the
- * ±15-minute window of the one after) tries again.
+ * of several legs — one row is one mail. A mail goes only to a user who has
+ * the domain switched on; neither domain sits behind the instance's beta
+ * switch since 2026-10-26.
  */
 
 export const REMINDER_WINDOWS = [
@@ -64,28 +59,10 @@ export interface SingleRideReminderJob<Row extends DueRow> {
   send: (row: Row, user: ReminderUser, hoursAhead: number) => Promise<void>;
 }
 
-async function instanceShowsBeta(domain: string): Promise<boolean | null> {
-  try {
-    return (await getInstanceSettings()).betaFeaturesEnabled;
-  } catch (error) {
-    logger.error({
-      operation: "reminder_scheduler_instance_settings_failed",
-      domain,
-      error: { message: error instanceof Error ? error.message : "Unknown error" },
-    });
-    return null;
-  }
-}
-
 export async function runSingleRideReminders<Row extends DueRow>(
   job: SingleRideReminderJob<Row>,
   now: Date
 ): Promise<void> {
-  const beta = await instanceShowsBeta(job.domain);
-  if (beta === null) return;
-  // A domain the instance hides is hidden for every user: nothing to ask.
-  if (!reminderDomainVisible({ enabledDomains: [job.domain] }, job.domain, beta)) return;
-
   for (const { hoursAhead, key } of REMINDER_WINDOWS) {
     const target = now.getTime() + hoursAhead * 60 * 60 * 1000;
 
@@ -109,7 +86,7 @@ export async function runSingleRideReminders<Row extends DueRow>(
       const { user } = row;
       const shouldSend =
         user.notificationEmail !== null &&
-        reminderDomainVisible(user.settings, job.domain, beta) &&
+        reminderDomainEnabled(user.settings, job.domain) &&
         ((key === "24h" && user.notifyBefore24h) || (key === "2h" && user.notifyBefore2h));
       if (!shouldSend) continue;
 

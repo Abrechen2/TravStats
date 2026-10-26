@@ -36,8 +36,8 @@ import type { BusJourney } from "../types/bus";
 /**
  * One bus ride (spec 2026-10-07-bus-domain-design §11). Every time is on its
  * terminal's clock, a distance says what it measures, and an unrecorded delay
- * stays apart from an on-time arrival. Gated in App.tsx like the logbook: the
- * `busDomain` beta switch, then the user's domain choice.
+ * stays apart from an on-time arrival. Gated in App.tsx like the logbook, by
+ * the user's domain choice.
  */
 export default function BusDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();

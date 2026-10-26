@@ -72,7 +72,7 @@ vi.mock("../../places/PlaceFormModal", () => ({
   PlaceFormModal: () => <div data-testid="place-form-modal" />,
 }));
 
-// The bus gate (beta switch AND domain) has its own tests; here it is open.
+// The bus gate (the user's domain) has its own tests; here it is open.
 
 // The real form pulls in the geocoder; a stub that can report a save is enough.
 vi.mock("../../bus/BusFormModal", () => ({

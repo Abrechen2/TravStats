@@ -11,7 +11,7 @@
  * day keys are the terminals' calendars (a zone-less terminal reads as UTC,
  * the bus abstention, which is rail's too).
  *
- * Only completed rides (`shared/busCounting.ts`). Behind the bus beta switch:
+ * Only completed rides (`shared/busCounting.ts`). Behind the bus domain toggle:
  * the loaders read these only while the user sees the bus domain.
  */
 

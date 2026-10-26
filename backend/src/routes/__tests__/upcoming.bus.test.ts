@@ -98,12 +98,18 @@ describe("upcoming buses (companion#62)", () => {
       }),
     ]);
   });
-  it.each(["user", "instance"])("honours the %s domain switch", async (gate) => {
+  it("honours the user's domain switch", async () => {
     await prisma.busJourney.create({ data: ride("2026-10-13T00:00:00Z") });
-    if (gate === "user")
-      await prisma.userSettings.update({ where: { userId }, data: { enabledDomains: [] } });
-    else await updateInstanceSettings({ betaFeaturesEnabled: false });
+    await prisma.userSettings.update({ where: { userId }, data: { enabledDomains: [] } });
     expect((await get()).body.data.entries).toEqual([]);
+  });
+  // Bus left beta on 2026-10-26 (owner): the instance's switch hides nothing.
+  it("lists the ride with the instance's beta switch off", async () => {
+    await prisma.busJourney.create({ data: ride("2026-10-13T00:00:00Z") });
+    await updateInstanceSettings({ betaFeaturesEnabled: false });
+    expect((await get()).body.data.entries.map((e: { domain: string }) => e.domain)).toContain(
+      "bus"
+    );
   });
   it("keeps an open ticket until its terminal day ends, without claiming a clock", async () => {
     const bus = await prisma.busJourney.create({

@@ -120,7 +120,7 @@
   "delete": "Delete crossing",
   "loadError": "Could not load crossings.",
   "subtitle": "Crossings between two ports.",
-  "betaNote": "Available in beta. Tickets can be attached as documents.",
+  "pageNote": "Tickets can be attached as documents.",
   "sections": {
     "route": "Ports and times",
     "booking": "Booking and accommodation",

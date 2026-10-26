@@ -18,9 +18,9 @@ async function account(name: string): Promise<TestAccount> {
   const user = await prisma.user.create({
     data: { username: `${PREFIX}${name}`, passwordHash: "x", firstName: name },
   });
-  // Rail and cruise visible; rental stays behind its beta switch.
+  // Rail and cruise visible; rental switched off by the user.
   await prisma.userSettings.create({
-    data: { userId: user.id, data: {}, enabledDomains: ["flight", "cruise", "rail", "rental"] },
+    data: { userId: user.id, data: {}, enabledDomains: ["flight", "cruise", "rail"] },
   });
   return { id: user.id, username: user.username, cookie: `auth_token=${generateToken(user.id)}` };
 }
@@ -145,7 +145,7 @@ describe("companions — manage", () => {
       where: { id: full.rail.id },
       data: { companions: ["Ben", "Norber"] },
     });
-    // Rental is behind its beta switch: hidden, but it moves too.
+    // Rental is switched off: hidden, but it moves too.
     await prisma.rentalBookingCompanion.create({
       data: { rentalBookingId: full.rental.id, companionId: source.id, position: 0 },
     });

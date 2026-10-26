@@ -15,13 +15,13 @@ vi.mock("../../api/rentalLinks", () => ({ rentalLinksApi: { stats: api.rentalSta
 vi.mock("../../api/bus", () => ({ busApi: { stats: api.busStats } }));
 vi.mock("../../logger", () => ({ logger: { error: vi.fn() } }));
 
-import { mergeYears, useBetaDomainYears } from "../useBetaDomainYears";
+import { mergeYears, useRentalBusYears } from "../useRentalBusYears";
 
 /**
  * forgejo#265 — a rental- or bus-only account gets years to pick on the
  * statistics page; a hidden domain is not even asked.
  */
-describe("useBetaDomainYears", () => {
+describe("useRentalBusYears", () => {
   beforeEach(() => {
     gates.rental = false;
     gates.bus = false;
@@ -34,14 +34,14 @@ describe("useBetaDomainYears", () => {
     gates.bus = true;
     api.rentalStats.mockResolvedValue({ byYear: [{ year: 2023 }, { year: 2025 }] });
     api.busStats.mockResolvedValue({ byYear: [{ year: 2024 }, { year: 2025 }] });
-    const { result } = renderHook(() => useBetaDomainYears());
+    const { result } = renderHook(() => useRentalBusYears());
     await waitFor(() => expect(result.current).toEqual([2023, 2024, 2025]));
   });
 
   it("does not ask a hidden domain, and survives a failed load", async () => {
     gates.bus = true;
     api.busStats.mockRejectedValue(new Error("down"));
-    const { result } = renderHook(() => useBetaDomainYears());
+    const { result } = renderHook(() => useRentalBusYears());
     await waitFor(() => expect(api.busStats).toHaveBeenCalled());
     expect(api.rentalStats).not.toHaveBeenCalled();
     expect(result.current).toEqual([]);

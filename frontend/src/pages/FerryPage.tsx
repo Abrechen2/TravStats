@@ -260,7 +260,7 @@ export default function FerryPage(): JSX.Element {
           unknown={loading || loadFailed || summary === null}
         />
         <p className="mb-4 text-xs text-(--text-muted)">
-          {t("ferry:subtitle")} {t("ferry:betaNote", { add })}
+          {t("ferry:subtitle")} {t("ferry:pageNote")}
         </p>
 
         <ListFilterBar

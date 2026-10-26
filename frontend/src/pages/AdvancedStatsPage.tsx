@@ -55,7 +55,7 @@ import RailStatsSection from "../components/Stats/rail/RailStatsSection";
 import RentalStatsSection from "../components/Stats/rental/RentalStatsSection";
 import BusStatsSection from "../components/Stats/bus/BusStatsSection";
 import FerryStatsSection from "../components/Stats/ferry/FerryStatsSection";
-import { mergeYears, useBetaDomainYears } from "../lib/stats/useBetaDomainYears";
+import { mergeYears, useRentalBusYears } from "../lib/stats/useRentalBusYears";
 import RoadtripStatsSection from "../components/Stats/RoadtripStatsSection";
 import OverviewTab from "../components/Stats/Overview/OverviewTab";
 import FlightScorecardBlock from "../components/Stats/scorecard/FlightScorecardBlock";
@@ -169,10 +169,10 @@ export default function AdvancedStatsPage(): JSX.Element {
     flights,
     ready: !loading,
   });
-  const betaYears = useBetaDomainYears(); // rental and bus years (forgejo#265)
+  const rentalBusYears = useRentalBusYears(); // rental and bus years (forgejo#265)
   const periodYears = useMemo(
-    () => mergeYears(collectYears(domainStats, {}), betaYears),
-    [domainStats, betaYears]
+    () => mergeYears(collectYears(domainStats, {}), rentalBusYears),
+    [domainStats, rentalBusYears]
   );
   const period = useUrlStatsPeriod(periodYears, domainStatsLoading);
   const { selectedYear, compareYear, compareEnabled, scope } = period;

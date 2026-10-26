@@ -6,8 +6,8 @@ import type { AchievementDefinition } from "../achievements";
  * The domain ones are measured by `utils/rentalAchievements.ts` and
  * `utils/busAchievements.ts`, the shared ones by
  * `utils/crossDomainAchievements.ts`; `utils/domainAchievementChecks.ts`
- * hands all three to the planner. A rental or bus badge is hidden while its
- * domain's beta switch is off (`services/achievementVisibility.ts`).
+ * hands all three to the planner. A rental or bus badge is hidden while the
+ * user has its domain off (`services/achievementVisibility.ts`).
  *
  * The thresholds are the issues' product proposals, marked one by one for
  * the owner to confirm.
@@ -122,7 +122,7 @@ export const seedsPartL: AchievementDefinition[] = [
 ];
 
 /**
- * Shared badges that only a beta domain can earn (forgejo#265): such a badge
+ * Shared badges that only some domains can earn (forgejo#265): such a badge
  * is listed while at least one of its domains is visible, and hidden with all
  * of them — "Ankommen und entdecken" needs a train or a coach; three modes on
  * one trip cannot be reached with flights and cruises alone. Read by

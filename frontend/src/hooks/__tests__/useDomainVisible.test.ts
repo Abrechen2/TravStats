@@ -25,7 +25,7 @@ describe("domain visibility", () => {
   });
 
   it("gates exactly the beta domains", () => {
-    expect([...GATED].sort()).toEqual(["bus", "ferry", "rental", "roadtrip"]);
+    expect([...GATED].sort()).toEqual(["roadtrip"]);
   });
 
   // Rail left beta in 2.7.0-rc.20 (owner, 2026-10-22): like flights and cruises.

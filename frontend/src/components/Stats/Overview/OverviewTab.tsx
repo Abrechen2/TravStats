@@ -58,7 +58,7 @@ export default function OverviewTab({
   // beta flag off for an account that had the domain on from beta days.
   const { enabled: enabledDomains } = useEnabledDomains();
   const placesAccess = usePlacesAccess();
-  // The beta switches are already applied to `enabledDomains`. Rental takes
+  // The roadtrip beta switch is already applied to `enabledDomains`. Rental takes
   // part with its rentals as experiences, never with its days or countries
   // (rental spec §11 D3 a — see `rentalStatsAdapter`).
   const enabled = useMemo(

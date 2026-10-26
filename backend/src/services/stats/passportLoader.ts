@@ -161,9 +161,9 @@ export type PassportLoaderFlight = Prisma.FlightGetPayload<{
  */
 export interface PassportSources {
   rail?: boolean;
-  /** Omitted: read while the user sees the bus domain (its beta switch included). */
+  /** Omitted: read while the user sees the bus domain */
   bus?: boolean;
-  /** Omitted: read while the user sees the ferry domain (its beta switch included). */
+  /** Omitted: read while the user sees the ferry domain */
   ferry?: boolean;
   roadtrip?: boolean;
   place?: boolean;

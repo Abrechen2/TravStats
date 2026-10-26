@@ -440,7 +440,7 @@ export const apiMounts: ApiMount[] = [
     router: railRoadtripConversionRouter,
   },
   { id: "rail", base: "/api/v1/rail", router: railRouter },
-  // Bus rides (spec 2026-10-07-bus-domain-design). Behind the beta switch in the UI only.
+  // Bus rides (spec 2026-10-07-bus-domain-design).
   // Mounts FIRST on its prefix: the bus router's '/:id' would answer it as a 404.
   {
     id: "bus.entrySuggestions",
@@ -451,8 +451,7 @@ export const apiMounts: ApiMount[] = [
   { id: "bus", base: "/api/v1/bus", router: busRouter },
   { id: "ferry.roadtrip", base: "/api/v1/ferry", router: ferryRoadtripRouter },
   { id: "ferry", base: "/api/v1/ferry", router: ferryRouter },
-  // Car rentals (spec 2026-10-01-rental-domain-design). Behind the beta switch in
-  // the UI only. Sub-routers mount FIRST: '/:id' would answer them as a 404.
+  // Car rentals (spec 2026-10-01-rental-domain-design). Sub-routers mount FIRST: '/:id' would answer them as a 404.
   { id: "rental.stations", base: "/api/v1/rentals/stations", router: rentalStationsRouter },
   { id: "rental.providers", base: "/api/v1/rentals/providers", router: rentalProvidersRouter },
   { id: "rental.import", base: "/api/v1/rentals/import", router: rentalImportRouter },

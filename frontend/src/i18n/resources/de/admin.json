@@ -158,17 +158,9 @@
             "name": "Unterkünfte aus OpenStreetMap ergänzen",
             "what": "Der Knopf „Aus OpenStreetMap ergänzen“ auf der Seite einer Unterkunft: Er trägt Sterne, Webseite, Kette und die Wikipedia-Verknüpfung in leere Felder ein. Braucht zusätzlich den Schalter für offene Datendienste."
           },
-          "rentalDomain": {
-            "name": "Mietwagen",
-            "what": "Der Bereich „Mietwagen“: ein Fahrtenbuch für Mietwagen mit Abholung und Rückgabe in Ortszeit der Station, Fahrzeuggruppe, Preis und den Kilometern aus der Schlussrechnung."
-          },
           "travPlan": {
             "name": "TravPlan (Alpha)",
             "what": "Der Planungsmodus für eine Reise, die noch bevorsteht: Tagesplan, Ideen, Buchungsimport, Transfers, Packliste, Budget und die Übergabe an das Reisetagebuch. Alpha-Versuch: kann sich noch grundlegend ändern."
-          },
-          "busDomain": {
-            "name": "Bus",
-            "what": "Der Bereich „Bus“: ein Fahrtenbuch für Fernbus-, Intercity- und Shuttlefahrten mit Abfahrt und Ankunft in Ortszeit des Terminals, Linie, Platz und Preis. Kein Stadtverkehr."
           },
           "cruiseTracks": {
             "name": "Aufgezeichnete Spuren bei Kreuzfahrten",
@@ -177,10 +169,6 @@
           "flightTrackUpload": {
             "name": "Aufgezeichnete Flugspuren",
             "what": "Eine Flugaufzeichnung als Datei (GPX, KML, KMZ, TCX, FIT oder die CSV-Datei von Flightradar24) auf der Seite eines Flugs hochladen, ersetzen oder entfernen. Die Karte und der Globus zeichnen den Flug dann entlang der Aufzeichnung statt auf dem Großkreis; die Flugseite stellt die gemessene Strecke dem Großkreis gegenüber."
-          },
-          "ferryDomain": {
-            "name": "Fähren",
-            "what": "Überfahrten mit Häfen, Ortszeiten, Fahrzeug, Tickets und Roadtrip-Verknüpfung."
           },
           "comparison": {
             "name": "Freundesvergleiche",

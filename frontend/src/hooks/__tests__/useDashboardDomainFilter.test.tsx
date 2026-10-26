@@ -124,8 +124,8 @@ describe("useDashboardDomainFilter", () => {
     expect(result.current.visibleCount).toBe(0);
   });
 
-  // forgejo#180: bus beside rail, behind its own beta gate and the user's domain.
-  it("bus sits beside rail once its gate and the domain are on, with an unknown count", () => {
+  // forgejo#180: bus beside rail, behind the user's domain (out of beta since 2026-10-26).
+  it("bus sits beside rail once the domain is on, with an unknown count, unlabelled", () => {
     useSettingsStore.setState({
       enabledDomains: ["flight", "rail", "bus"],
       betaFeaturesEnabled: true,
@@ -136,7 +136,7 @@ describe("useDashboardDomainFilter", () => {
     expect(result.current.rows.map((r) => r.key)).toEqual(["flight", "tour", "rail", "bus"]);
     const bus = result.current.rows.find((r) => r.key === "bus");
     expect(bus?.count).toBeNull();
-    expect(bus?.beta).toBe(true);
+    expect(bus?.beta).toBe(false);
   });
 
   // beta.22 UAT: bus, ferry and rental showed no count while every other row did.
@@ -165,13 +165,22 @@ describe("useDashboardDomainFilter", () => {
     expect([countOf("bus"), countOf("ferry"), countOf("rental")]).toEqual([5, 2, 4]);
   });
 
-  it("bus stays out while its beta gate is closed", () => {
-    useSettingsStore.setState({ enabledDomains: ["flight", "bus"], betaFeaturesEnabled: false });
-    const { result } = renderHook(() => useDashboardDomainFilter(0), {
-      wrapper: wrapper(["/dashboard"]),
-    });
-    expect(result.current.rows.map((r) => r.key)).not.toContain("bus");
-  });
+  it.each(["bus", "ferry", "rental"] as const)(
+    "%s keeps its row with the beta switch closed, and loses it with the domain off",
+    (domain) => {
+      useSettingsStore.setState({ enabledDomains: ["flight", domain], betaFeaturesEnabled: false });
+      const on = renderHook(() => useDashboardDomainFilter(0), {
+        wrapper: wrapper(["/dashboard"]),
+      });
+      expect(on.result.current.rows.map((r) => r.key)).toContain(domain);
+      on.unmount();
+      useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: false });
+      const off = renderHook(() => useDashboardDomainFilter(0), {
+        wrapper: wrapper(["/dashboard"]),
+      });
+      expect(off.result.current.rows.map((r) => r.key)).not.toContain(domain);
+    }
+  );
 
   it("isolating bus keeps the reader on 'Alle' with only bus visible — it has no view of its own", () => {
     useSettingsStore.setState({ enabledDomains: ["flight", "bus"], betaFeaturesEnabled: true });
@@ -183,8 +192,8 @@ describe("useDashboardDomainFilter", () => {
     expect(result.current.isVisible("flight")).toBe(false);
   });
   // Ferry crossings: the one transport line the "Alle" map did not draw had no
-  // row either. Beside bus, behind its own beta gate, no view of its own.
-  it("ferry sits beside bus once its gate and the domain are on, with an unknown count", () => {
+  // row either. Beside bus, no view of its own.
+  it("ferry sits beside bus once the domain is on, with an unknown count, unlabelled", () => {
     useSettingsStore.setState({
       enabledDomains: ["flight", "bus", "ferry"],
       betaFeaturesEnabled: true,
@@ -195,17 +204,9 @@ describe("useDashboardDomainFilter", () => {
     expect(result.current.rows.map((r) => r.key)).toEqual(["flight", "tour", "bus", "ferry"]);
     const ferry = result.current.rows.find((r) => r.key === "ferry");
     expect(ferry?.count).toBeNull();
-    expect(ferry?.beta).toBe(true);
+    expect(ferry?.beta).toBe(false);
     act(() => result.current.isolate("ferry"));
     expect(result.current.isVisible("ferry")).toBe(true);
     expect(result.current.isVisible("flight")).toBe(false);
-  });
-
-  it("ferry stays out while its beta gate is closed", () => {
-    useSettingsStore.setState({ enabledDomains: ["flight", "ferry"], betaFeaturesEnabled: false });
-    const { result } = renderHook(() => useDashboardDomainFilter(0), {
-      wrapper: wrapper(["/dashboard"]),
-    });
-    expect(result.current.rows.map((r) => r.key)).not.toContain("ferry");
   });
 });

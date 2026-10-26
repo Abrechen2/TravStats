@@ -141,9 +141,12 @@ describe("wrapped and badges across domains", () => {
     });
   });
 
-  it("has no story at all while the rental domain is behind the switch", async () => {
+  // Rental left beta on 2026-10-26 (owner): the switch no longer hides the story.
+  it("tells the rental year with the beta switch off", async () => {
     await updateInstanceSettings({ betaFeaturesEnabled: false });
-    expect((await wrapped()).status).toBe(404);
+    const res = await wrapped();
+    expect(res.status).toBe(200);
+    expect(res.body.chapters.rentals).toMatchObject({ rentals: 1 });
   });
 
   it("lists 'Ankommen und entdecken' only while rail or bus is visible", async () => {
@@ -153,23 +156,27 @@ describe("wrapped and badges across domains", () => {
       );
     const setDomains = (enabledDomains: string[]) =>
       prisma.userSettings.update({ where: { userId }, data: { enabledDomains } });
+    // Rail, rental, bus and ferry are out of beta: the user's switch alone
+    // decides, with the instance's beta switch closed throughout.
     await updateInstanceSettings({ betaFeaturesEnabled: false });
-    await setDomains(["flight", "rental"]);
-    const off = await codes();
-    expect(off).not.toContain("TRIP_ARRIVE_DISCOVER");
-    expect(off).not.toContain("RENTAL_FIRST");
-    expect(off).toContain("DOCUMENTED_TRIP_1");
-    // Rail is out of beta: the user's switch alone lists it, beta switch closed.
-    await setDomains(["flight", "rental", "rail"]);
-    const railOn = await codes();
-    expect(railOn).toContain("TRIP_ARRIVE_DISCOVER");
-    expect(railOn).not.toContain("RENTAL_FIRST");
-    await updateInstanceSettings({ betaFeaturesEnabled: true });
-    const on = await codes();
-    expect(on).toContain("TRIP_ARRIVE_DISCOVER");
-    expect(on).toContain("RENTAL_FIRST");
-    // Bus is not one of this user's domains: its badges stay out.
-    expect(on).not.toContain("BUS_FIRST");
+    try {
+      await setDomains(["flight"]);
+      const off = await codes();
+      for (const code of ["TRIP_ARRIVE_DISCOVER", "RENTAL_FIRST", "BUS_FIRST", "FERRY_FIRST"]) {
+        expect(off).not.toContain(code);
+      }
+      expect(off).toContain("DOCUMENTED_TRIP_1");
+      await setDomains(["flight", "rail"]);
+      expect(await codes()).toContain("TRIP_ARRIVE_DISCOVER");
+      await setDomains(["flight", "rental", "bus", "ferry"]);
+      const on = await codes();
+      for (const code of ["TRIP_ARRIVE_DISCOVER", "RENTAL_FIRST", "BUS_FIRST", "FERRY_FIRST"]) {
+        expect(on).toContain(code);
+      }
+    } finally {
+      await updateInstanceSettings({ betaFeaturesEnabled: true });
+      await setDomains(["flight", "rental", "rail"]);
+    }
   });
 
   // forgejo#265: with flights switched off, a flight's year leaves the picker.

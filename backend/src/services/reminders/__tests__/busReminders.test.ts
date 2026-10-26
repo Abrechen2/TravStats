@@ -147,25 +147,15 @@ describe("checkBusReminders", () => {
     expect(mockSendBusReminder).not.toHaveBeenCalled();
   });
 
-  it("sends nothing, and asks for nothing, on an instance that hides the beta domains", async () => {
+  // Out of beta on 2026-10-26: the instance's switch no longer holds a mail back.
+  it("sends with the instance's beta switch off, the user's domain on", async () => {
     mockGetInstanceSettings.mockResolvedValue({ betaFeaturesEnabled: false });
     serve([makeRide()]);
 
     const { checkBusReminders } = await import("../busReminders");
     await checkBusReminders(new Date());
 
-    expect(mockFindMany).not.toHaveBeenCalled();
-    expect(mockSendBusReminder).not.toHaveBeenCalled();
-  });
-
-  it("sends nothing when the instance's beta switch cannot be read", async () => {
-    mockGetInstanceSettings.mockRejectedValue(new Error("DB hiccup"));
-    serve([makeRide()]);
-
-    const { checkBusReminders } = await import("../busReminders");
-    await checkBusReminders(new Date());
-
-    expect(mockSendBusReminder).not.toHaveBeenCalled();
+    expect(mockSendBusReminder).toHaveBeenCalledTimes(1);
   });
 
   it("skips a ride whose user has no notificationEmail", async () => {

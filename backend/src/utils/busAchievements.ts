@@ -9,7 +9,7 @@ import { loadBusRows, type BusStatsRow } from "../services/bus/busStats";
  * `shared/busRideKinds.ts`, the rules the bus tab reads, so a badge and the
  * tab cannot disagree.
  *
- * Hidden with the `busDomain` beta gate off: `services/achievementVisibility`
+ * Hidden while the user has the bus domain off: `services/achievementVisibility`
  * drops every `domain: "bus"` badge from lists, counts and points then.
  */
 

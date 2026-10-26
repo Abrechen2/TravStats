@@ -81,8 +81,8 @@ describe("visibleStatsTabs", () => {
   });
 });
 
-// Rail, rental and bus behind their beta switches: asked through the real
-// `useEnabledDomains` in `statsTabAccess.betaGates.test.ts`.
+// Rail, rental, bus and ferry follow the user's domain choice: asked through the
+// real `useEnabledDomains` in `statsTabAccess.domainGates.test.ts`.
 
 describe("parseStatsTab", () => {
   it("reads every registered domain, rail included", () => {

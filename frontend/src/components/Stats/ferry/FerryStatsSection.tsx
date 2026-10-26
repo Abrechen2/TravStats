@@ -21,7 +21,7 @@ import CountingHelp from "../counting/CountingHelp";
  * tab and the card cannot disagree. Kilometres say what they measure, and the
  * hours on board abstain when no crossing carries both of its times.
  *
- * Mounted only behind the `ferryDomain` beta gate — the page decides that
+ * Mounted only while the user has the ferry domain on — the page decides that
  * through `resolveStatsTab`; this component does not ask again.
  */
 export default function FerryStatsSection({

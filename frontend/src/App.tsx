@@ -365,13 +365,9 @@ function AppContent() {
                 path="/rentals"
                 element={
                   isAuthenticated ? (
-                    // Two gates, outer first: the instance beta switch
-                    // (rentalDomain), then the user's own domain choice.
-                    <BetaFeatureRouteGuard feature="rentalDomain" redirectTo="/dashboard">
-                      <DomainRouteGuard domain="rental">
-                        <RentalsPage />
-                      </DomainRouteGuard>
-                    </BetaFeatureRouteGuard>
+                    <DomainRouteGuard domain="rental">
+                      <RentalsPage />
+                    </DomainRouteGuard>
                   ) : (
                     <Navigate to="/login" />
                   )
@@ -381,13 +377,9 @@ function AppContent() {
                 path="/rentals/:id"
                 element={
                   isAuthenticated ? (
-                    // Two gates, outer first: the instance beta switch
-                    // (rentalDomain), then the user's own domain choice.
-                    <BetaFeatureRouteGuard feature="rentalDomain" redirectTo="/dashboard">
-                      <DomainRouteGuard domain="rental">
-                        <RentalDetailPage />
-                      </DomainRouteGuard>
-                    </BetaFeatureRouteGuard>
+                    <DomainRouteGuard domain="rental">
+                      <RentalDetailPage />
+                    </DomainRouteGuard>
                   ) : (
                     <Navigate to="/login" />
                   )
@@ -397,12 +389,9 @@ function AppContent() {
                 path="/bus"
                 element={
                   isAuthenticated ? (
-                    // Two gates, outer first: the instance beta switch (busDomain), then the user's own domain choice.
-                    <BetaFeatureRouteGuard feature="busDomain" redirectTo="/dashboard">
-                      <DomainRouteGuard domain="bus">
-                        <BusPage />
-                      </DomainRouteGuard>
-                    </BetaFeatureRouteGuard>
+                    <DomainRouteGuard domain="bus">
+                      <BusPage />
+                    </DomainRouteGuard>
                   ) : (
                     <Navigate to="/login" />
                   )
@@ -412,12 +401,9 @@ function AppContent() {
                 path="/ferry"
                 element={
                   isAuthenticated ? (
-                    // Two gates, outer first: the instance beta switch (ferryDomain), then the user's own domain choice.
-                    <BetaFeatureRouteGuard feature="ferryDomain" redirectTo="/dashboard">
-                      <DomainRouteGuard domain="ferry">
-                        <FerryPage />
-                      </DomainRouteGuard>
-                    </BetaFeatureRouteGuard>
+                    <DomainRouteGuard domain="ferry">
+                      <FerryPage />
+                    </DomainRouteGuard>
                   ) : (
                     <Navigate to="/login" />
                   )
@@ -427,12 +413,10 @@ function AppContent() {
                 path="/bus/:id"
                 element={
                   isAuthenticated ? (
-                    // The same two gates as the logbook, in the same order.
-                    <BetaFeatureRouteGuard feature="busDomain" redirectTo="/dashboard">
-                      <DomainRouteGuard domain="bus">
-                        <BusDetailPage />
-                      </DomainRouteGuard>
-                    </BetaFeatureRouteGuard>
+                    // The same gate as the logbook.
+                    <DomainRouteGuard domain="bus">
+                      <BusDetailPage />
+                    </DomainRouteGuard>
                   ) : (
                     <Navigate to="/login" />
                   )
@@ -442,12 +426,10 @@ function AppContent() {
                 path="/ferry/:id"
                 element={
                   isAuthenticated ? (
-                    // The same two gates as the logbook, in the same order.
-                    <BetaFeatureRouteGuard feature="ferryDomain" redirectTo="/dashboard">
-                      <DomainRouteGuard domain="ferry">
-                        <FerryDetailPage />
-                      </DomainRouteGuard>
-                    </BetaFeatureRouteGuard>
+                    // The same gate as the logbook.
+                    <DomainRouteGuard domain="ferry">
+                      <FerryDetailPage />
+                    </DomainRouteGuard>
                   ) : (
                     <Navigate to="/login" />
                   )

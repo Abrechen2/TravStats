@@ -97,8 +97,8 @@ export interface DashboardRentals {
 
 /**
  * Every rental the map draws, for one year or all. `enabled` gates the FETCH,
- * not just the drawing — a domain behind the beta switch or switched off by
- * the user never reaches the network. A failed load is logged AND reported as
+ * not just the drawing — a domain switched off by the user never reaches the
+ * network. A failed load is logged AND reported as
  * `failed`, with a `reload`, so the map can say it instead of looking empty.
  */
 export function useDashboardRentals(enabled: boolean, year: number | null): DashboardRentals {

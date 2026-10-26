@@ -104,11 +104,9 @@ export function importableSpecs(
     tourSheet(t),
     tourPointSheet(t),
     ...(options.rail ? [railSheet(t)] : []),
-    // Bus behind `busDomain` + the user's domain (forgejo#180), beside rail.
+    // Bus, ferry and rentals follow the user's domain choice, like rail (forgejo#180, forgejo#267).
     ...(options.bus ? [busSheet(t)] : []),
-    // Ferry behind `ferryDomain` + the user's domain, beside bus.
     ...(options.ferry ? [ferrySheet(t)] : []),
-    // Rentals the same way, behind `rentalDomain` + the user's domain (forgejo#267).
     ...(options.rental ? [rentalSheet(t)] : []),
   ] as unknown as SheetSpec<never>[];
 }

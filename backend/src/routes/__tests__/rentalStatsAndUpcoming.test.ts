@@ -117,7 +117,8 @@ describe("rental stats, upcoming and reminders", () => {
     ]);
   });
 
-  it("names the next pickup in the upcoming feed, on the instance's beta switch", async () => {
+  // Rental left beta on 2026-10-26 (owner): the instance's switch hides nothing.
+  it("names the next pickup in the upcoming feed, whatever the beta switch says", async () => {
     const now = Date.now();
     await rental({
       status: "scheduled",
@@ -137,7 +138,7 @@ describe("rental stats, upcoming and reminders", () => {
       res = await request(app).get("/api/v1/upcoming").set("Cookie", cookie);
       expect(
         res.body.data.entries.find((e: { domain: string }) => e.domain === "rental")
-      ).toBeUndefined();
+      ).toMatchObject({ primary: "Nextcar · Testport" });
     } finally {
       await updateInstanceSettings({ betaFeaturesEnabled: before });
     }

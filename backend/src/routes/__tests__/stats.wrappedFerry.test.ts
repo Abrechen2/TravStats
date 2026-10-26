@@ -13,8 +13,7 @@ import { resolveMetricEvidence } from "../../services/evidence/metricEvidence";
 /**
  * Ferry parity with rail and bus in the year in review: completed crossings
  * get a chapter of their own, filed under the departure port's year, and a
- * ferry domain the user does not see — switched off, or behind the beta
- * switch — contributes no chapter and no year.
+ * ferry domain the user switched off contributes no chapter and no year.
  */
 describe("wrapped — the ferry chapter", () => {
   const username = "wrapped-ferry";
@@ -125,19 +124,20 @@ describe("wrapped — the ferry chapter", () => {
     ]);
   });
 
-  it("has no ferry chapter and no ferry year behind the beta switch", async () => {
+  // Ferry left beta on 2026-10-26 (owner): the switch no longer hides a chapter.
+  it("keeps the ferry chapter and its years with the beta switch off", async () => {
     await updateInstanceSettings({ betaFeaturesEnabled: false });
-    const res = await wrapped();
+    const res = await wrapped(2024);
     expect(res.status).toBe(200);
-    expect(res.body.chapters.ferry).toBeNull();
-    expect(res.body.availableYears).toEqual([2022]);
+    expect(res.body.chapters.ferry).toMatchObject({ crossings: 2 });
+    expect(res.body.availableYears).toEqual([2022, 2023, 2024]);
     const evidence = await resolveMetricEvidence(
       userId,
       "wrappedFerryCrossingCount",
       { period: { kind: "year", year: 2024 } },
       { offset: 0, limit: 50 }
     );
-    expect(evidence?.measure.value).toBeNull();
+    expect(evidence?.measure.value).toBe(2);
   });
 
   it("has no ferry chapter when the user switched ferries off", async () => {

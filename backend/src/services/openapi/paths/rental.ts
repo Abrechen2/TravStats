@@ -639,7 +639,7 @@ registry.registerPath({
   summary: "Returned rentals whose km wait for their invoice",
   description:
     "Completed within the last 60 days and no km yet (D11 b). One entry per rental, so a " +
-    "client can say which one; the rental beta switch is the client's to apply.",
+    "client can say which one; the user's rental domain toggle is the client's to apply.",
   tags: ["Rentals"],
   responses: {
     200: {

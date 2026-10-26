@@ -122,30 +122,6 @@ export const BETA_FEATURES = Object.freeze({
   }),
 
   /**
-   * Car rentals (spec 2026-10-01-rental-domain-design). Like every domain
-   * switch here, gated through `config/domainBetaGates.ts`: this flag AND the
-   * user's own domain choice.
-   */
-  rentalDomain: Object.freeze({
-    why: "Car rentals (spec 2026-10-01-rental-domain-design) are built and have been in every 2.7.0 release candidate since rc.1; the Companion reads, imports and creates them too. What is missing is the owner's acceptance. Known gap: a rental document is read only by a template — Sixt's confirmation and invoice from the template repository, or one the user made in the workshop — and never by the AI model (by design: a parking booking looks the same), so any other provider is typed in by hand.",
-    returnsWhen:
-      "The owner explicitly takes rental out of beta. Packages being done is not that event.",
-    reason: "beta",
-  }),
-
-  ferryDomain: Object.freeze({
-    why: "Ferry crossings (forgejo#293) await acceptance with real tickets on RC.",
-    returnsWhen: "The owner accepts ferry crossings for release after RC verification.",
-    reason: "beta",
-  }),
-  busDomain: Object.freeze({
-    why: "Long-distance coach rides (spec 2026-10-07-bus-domain-design) are built and have been in every release candidate since 2.7.0-rc.11; the Companion records and syncs them too. What is missing is the owner's acceptance. Known gap: a coach ticket is read only by a bus template from the workshop or the template repository, never by the AI model, so a ticket no template knows is typed in by hand.",
-    returnsWhen:
-      "The owner explicitly takes bus out of beta. Packages being done is not that event.",
-    reason: "beta",
-  }),
-
-  /**
    * TravPlan, the planning mode for a trip that has not happened yet (`/plan*`).
    *
    * Gated in `hooks/useTravPlanVisible.ts` (nav entry, trip summary) and by

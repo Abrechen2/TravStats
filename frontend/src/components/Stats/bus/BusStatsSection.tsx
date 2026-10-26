@@ -27,7 +27,7 @@ import BusStatsBlocks from "./BusStatsBlocks";
  * hours and delays name the sample they were taken over, and a night bus is
  * one whose clocks say so — a missing time is never filled in.
  *
- * Mounted only behind the `busDomain` beta gate — the page decides that
+ * Mounted only while the user has the bus domain on — the page decides that
  * through `resolveStatsTab`; this component does not ask again.
  */
 export default function BusStatsSection({

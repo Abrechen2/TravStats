@@ -158,17 +158,9 @@
             "name": "Complete lodgings from OpenStreetMap",
             "what": "The “Complete from OpenStreetMap” button on a lodging’s page: it writes stars, website, chain and the Wikipedia link into empty fields. Also needs the open data services switch."
           },
-          "rentalDomain": {
-            "name": "Rental cars",
-            "what": "The Rental cars area: a logbook for car rentals with pickup and return in station local time, car group, price and the kilometres from the final invoice."
-          },
           "travPlan": {
             "name": "TravPlan (alpha)",
             "what": "The planning mode for a trip still ahead: day plan, ideas, booking import, transfers, packing list, budget and the handover to the travel log. Alpha experiment: may still change fundamentally."
-          },
-          "busDomain": {
-            "name": "Bus",
-            "what": "The Bus area: a logbook for coach, intercity and shuttle rides with departure and arrival in the terminal's local time, line, seat and price. Not city transit."
           },
           "cruiseTracks": {
             "name": "Recorded tracks on cruises",
@@ -177,10 +169,6 @@
           "flightTrackUpload": {
             "name": "Recorded flight tracks",
             "what": "Upload, replace or remove a flight recording as a file (GPX, KML, KMZ, TCX, FIT or Flightradar24’s CSV file) on a flight’s page. The map and the globe then draw the flight along the recording instead of the great circle; the flight page sets the measured distance against the great circle."
-          },
-          "ferryDomain": {
-            "name": "Ferries",
-            "what": "Crossings with ports, local times, vehicle details, tickets and roadtrip links."
           },
           "comparison": {
             "name": "Friend comparisons",

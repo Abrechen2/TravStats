@@ -16,7 +16,7 @@ import { useDomainVisible } from "../../hooks/useDomainVisible";
  * year, exactly as the server's year in review does. A failed load contributes
  * none either and is logged; the page still has every other domain's years.
  */
-export function useBetaDomainYears(): number[] {
+export function useRentalBusYears(): number[] {
   const rentalVisible = useDomainVisible("rental");
   const busVisible = useDomainVisible("bus");
   const [years, setYears] = useState<number[]>([]);
@@ -27,13 +27,13 @@ export function useBetaDomainYears(): number[] {
       const [rental, bus] = await Promise.all([
         rentalVisible
           ? rentalLinksApi.stats().catch((err: unknown) => {
-              logger.error("useBetaDomainYears: rental years failed", err);
+              logger.error("useRentalBusYears: rental years failed", err);
               return null;
             })
           : Promise.resolve(null),
         busVisible
           ? busApi.stats(null).catch((err: unknown) => {
-              logger.error("useBetaDomainYears: bus years failed", err);
+              logger.error("useRentalBusYears: bus years failed", err);
               return null;
             })
           : Promise.resolve(null),

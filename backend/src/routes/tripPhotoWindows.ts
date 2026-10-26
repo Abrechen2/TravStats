@@ -70,8 +70,8 @@ router.get(
   statsLimiter,
   windowRoute(railTripPhotos, "Rail journey not found")
 );
-// Bus is behind its beta switch on the web; the endpoint answers like every
-// other bus endpoint, and the switch hides the detail page that asks.
+// The endpoint answers like every other bus endpoint; the user's bus domain
+// toggle hides the detail page that asks.
 router.get(
   "/bus/:id/trip-photos",
   authenticate,

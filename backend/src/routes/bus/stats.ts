@@ -9,8 +9,8 @@ import { loadBusStats } from "../../services/bus/busStats";
  * GET /api/v1/bus/stats — the bus statistics (spec 2026-10-07-bus-domain-design
  * §6, package B2; forgejo#263). Enveloped, as the rest of the bus family.
  * Mounted ahead of the bus router, whose `/:id` would otherwise take "stats"
- * for a ride id. Like every bus endpoint it answers whatever the beta switch
- * says; the switch hides the statistics tab, it is not a boundary.
+ * for a ride id. Like every bus endpoint it answers whatever the domain toggle
+ * says; the toggle hides the statistics tab, it is not a boundary.
  */
 const router = Router();
 router.use(authenticate);

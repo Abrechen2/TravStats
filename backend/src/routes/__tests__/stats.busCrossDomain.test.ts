@@ -11,7 +11,7 @@ import {
 
 /**
  * forgejo#265 — bus rides in the cross-domain figures, the passport and the
- * country page, behind the bus beta switch. A coach ride counts ONCE beside
+ * country page, behind the user's bus domain. A coach ride counts ONCE beside
  * the trip's other legs: it adds an experience, but a day or a country a
  * flight already proved stays one day and one country.
  *
@@ -134,15 +134,27 @@ describe("bus in the cross-domain figures and the passport", () => {
     expect(page.body.timeline[0]).toMatchObject({ kind: "bus" });
   });
 
-  it("leaves every bus figure out while the bus domain is behind the switch", async () => {
+  // Bus left beta on 2026-10-26 (owner): the switch no longer hides a figure.
+  it("keeps every bus figure with the instance's beta switch off", async () => {
     await updateInstanceSettings({ betaFeaturesEnabled: false });
-    // A chip list naming bus is answered without it, as the overview never folds it.
-    expect((await metric("crossDomainEventCount")).body.measure.value).toBe(1);
-    expect((await metric("crossDomainCountryCount")).body.measure.value).toBe(0);
+    expect((await metric("crossDomainEventCount")).body.measure.value).toBe(3);
+    expect((await metric("crossDomainCountryCount")).body.measure.value).toBe(1);
     const passport = (await request(app).get("/api/v1/stats/passport").set("Cookie", cookie)).body;
-    expect(passport.countries.map((c: { code: string }) => c.code)).not.toContain("AT");
-    expect(
-      (await request(app).get("/api/v1/stats/countries/AT").set("Cookie", cookie)).status
-    ).toBe(404);
+    expect(passport.countries.map((c: { code: string }) => c.code)).toContain("AT");
+  });
+
+  it("leaves the coach country out of the passport while the user has bus off", async () => {
+    await updateInstanceSettings({ betaFeaturesEnabled: true });
+    await prisma.userSettings.update({ where: { userId }, data: { enabledDomains: ["flight"] } });
+    try {
+      const passport = (await request(app).get("/api/v1/stats/passport").set("Cookie", cookie))
+        .body;
+      expect(passport.countries.map((c: { code: string }) => c.code)).not.toContain("AT");
+    } finally {
+      await prisma.userSettings.update({
+        where: { userId },
+        data: { enabledDomains: ["flight", "bus"] },
+      });
+    }
   });
 });

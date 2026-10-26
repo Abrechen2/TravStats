@@ -111,11 +111,10 @@ type Pending = ParsedSheet[];
 export default function SpreadsheetSection(): JSX.Element {
   const { t, i18n } = useTranslation(["xlsx", "common"]);
   const { isEnabled } = useEnabledDomains();
-  // Rail follows the user's domain choice: with rail off the export carries no rail sheet.
+  // Rail, rentals, bus and ferry follow the user's domain choice: with one off
+  // the export carries no sheet for it (forgejo#267, forgejo#180).
   const railVisible = useDomainVisible("rail");
-  // Rentals likewise: behind `rentalDomain` and the user's domain (forgejo#267).
   const rentalVisible = useDomainVisible("rental");
-  // Bus likewise: behind `busDomain` and the user's domain (forgejo#180).
   const busVisible = useDomainVisible("bus");
   const ferryVisible = useDomainVisible("ferry");
   const toursVisible = useToursVisible();

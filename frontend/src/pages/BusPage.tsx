@@ -251,7 +251,7 @@ export default function BusPage(): JSX.Element {
           unknown={loading || loadFailed || summary === null}
         />
         <p className="mb-4 text-xs text-(--text-muted)">
-          {t("bus:subtitle")} {t("bus:betaNote", { add })}
+          {t("bus:subtitle")} {t("bus:pageNote", { add })}
         </p>
 
         <BusRouteAllPanel

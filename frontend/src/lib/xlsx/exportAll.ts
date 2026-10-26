@@ -53,11 +53,11 @@ export interface ExportInput {
   places?: readonly Place[];
   /** Only passed when the user has the rail domain on. */
   rail?: readonly RailJourney[];
-  /** Only passed when the bus domain is visible (beta gate + user), forgejo#180. */
+  /** Only passed when the bus domain is visible (the user's choice), forgejo#180. */
   bus?: readonly BusJourney[];
-  /** Only passed when the ferry domain is visible (beta gate + user). */
+  /** Only passed when the ferry domain is visible (the user's choice). */
   ferry?: readonly FerryJourney[];
-  /** Only passed when the rental domain is visible (beta gate + user), forgejo#267. */
+  /** Only passed when the rental domain is visible (the user's choice), forgejo#267. */
   rentals?: readonly RentalBooking[];
   roadtrips?: readonly RoadtripDetail[];
   /** Day tours only — a roadtrip is on its own sheet. Each carries its points

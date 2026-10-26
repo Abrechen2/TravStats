@@ -12,11 +12,11 @@ import { getInstanceSettings } from "./instanceSettingsService";
  * counted 81).
  *
  * A badge of a domain the user does not see — switched off, or behind the
- * instance's beta switch — stays in the database (it was earned and is kept),
+ * instance's beta switch (roadtrip) — stays in the database (it was earned and is kept),
  * but it is neither listed nor counted nor scored until the domain is visible.
  * `shared` badges belong to no domain and are visible — unless they are the
  * day-tour badges (`TOUR_BADGE_CODES`, shown by the tour rule alone), or only
- * beta domains can earn them (`SHARED_BADGE_DOMAINS`, forgejo#265): such a badge
+ * some domains can earn them (`SHARED_BADGE_DOMAINS`, forgejo#265): such a badge
  * shows while at least one of its domains does, so the trophy case never
  * offers a badge nobody on the instance can reach.
  */

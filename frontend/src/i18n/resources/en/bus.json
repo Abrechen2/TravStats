@@ -1,7 +1,7 @@
 {
   "title": "Bus",
   "subtitle": "Coach, intercity and shuttle rides — terminal to terminal",
-  "betaNote": "Beta: bus rides are entered by hand (“{{add}}”). Not city transit — a ride is a ticket between two terminals.",
+  "pageNote": "Bus rides are added with “{{add}}”. Not city transit — a ride is a ticket between two terminals.",
   "add": "Add ride",
   "empty": "No bus rides yet. The first one starts with “{{add}}”.",
   "loadError": "The bus rides could not be loaded.",

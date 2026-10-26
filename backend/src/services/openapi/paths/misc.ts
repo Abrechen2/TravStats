@@ -154,7 +154,7 @@ registry.registerPath({
     "One entry per domain the user has enabled — next flight, cruise, stay, train, bus, ferry, rental — " +
     "plus the next trip, sorted by start. Domains the user cannot see are absent " +
     "rather than empty: switched off by the user, OR hidden by the instance's beta " +
-    "switch (rental, bus, ferry, roadtrip while `betaFeaturesEnabled` is false) — a client need not apply " +
+    "switch (roadtrip while `betaFeaturesEnabled` is false) — a client need not apply " +
     "that check itself. An account with no settings row is treated as " +
     "flights-only, matching the column default.",
   tags: ["Dashboard"],

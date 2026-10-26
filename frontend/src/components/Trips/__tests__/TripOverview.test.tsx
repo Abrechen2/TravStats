@@ -30,7 +30,7 @@ vi.mock("../../../hooks/useBetaFeatures", () => ({
 const mockRoadtrips = vi.hoisted(() => vi.fn((): unknown[] => []));
 vi.mock("../../Roadtrips/useTripRoadtrips", () => ({ useTripRoadtrips: () => mockRoadtrips() }));
 
-// Rail and rental are beta areas; each test says whether they are on.
+// Each test says whether the user has rail, rental, bus and ferry on.
 const visible = vi.hoisted(() => ({ rail: true, rental: true, bus: true, ferry: true }));
 vi.mock("../../../hooks/useDomainVisible", () => ({
   useDomainVisible: (key: string): boolean =>
@@ -207,7 +207,7 @@ describe("TripOverview", () => {
     }
   });
 
-  it("keeps a rental of a hidden beta area out — and then says nothing is linked", () => {
+  it("keeps a rental of a hidden domain out — and then says nothing is linked", () => {
     visible.rental = false;
     try {
       renderOverview(
