@@ -249,6 +249,7 @@
     "alt": "Photo of this visit",
     "delete": "Delete photo",
     "uploadFailed": "The photo could not be uploaded.",
+    "unsupportedType": "That is not a photo. Choose an image (JPEG, PNG, WebP, GIF or HEIC).",
     "deleteFailed": "The photo could not be deleted.",
     "caption": "Caption",
     "captionAdd": "Caption…",

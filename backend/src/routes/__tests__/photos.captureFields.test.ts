@@ -181,6 +181,15 @@ describe("photo uploads carrying capture fields", () => {
         .attach("photos", PNG, { filename: "b.png", contentType: "image/png" });
       expect(many.status).toBe(400);
     });
+
+    it("refuses a file that is not an image with a stable code the web can word", async () => {
+      const res = await upload().attach("photos", Buffer.from("not a photo"), {
+        filename: "notes.txt",
+        contentType: "text/plain",
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe("UNSUPPORTED_UPLOAD_TYPE");
+    });
   });
 
   describe("POST /lodging/:id/photos", () => {

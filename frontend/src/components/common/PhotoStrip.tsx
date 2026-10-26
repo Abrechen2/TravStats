@@ -4,6 +4,7 @@ import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
+import { apiErrorMachineCode } from "../../lib/apiError";
 
 /** The shape every photo endpoint answers with. */
 export interface StripPhoto {
@@ -58,6 +59,11 @@ export function PhotoStrip<T extends StripPhoto>({
   const inputRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<T[]>(photos);
   const [busy, setBusy] = useState(false);
+  /**
+   * Why the last upload was refused, shown beside the button. A toast alone
+   * was not enough: inside the visit editor it never reached the reader.
+   */
+  const [uploadError, setUploadError] = useState<string | null>(null);
   /** Photo currently being captioned, and the text as typed so far. */
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
 
@@ -65,12 +71,19 @@ export function PhotoStrip<T extends StripPhoto>({
     async (files: FileList | null): Promise<void> => {
       if (!files || files.length === 0) return;
       setBusy(true);
+      setUploadError(null);
       try {
         const added = await onUpload(Array.from(files));
         setRows((prev) => [...prev, ...added]);
       } catch (err: unknown) {
         logger.error({ err, context }, "PhotoStrip: upload failed");
-        addToast("error", t("places:photos.uploadFailed"));
+        // The server's sentence is English prose; its stable code picks the copy.
+        const message =
+          apiErrorMachineCode(err) === "UNSUPPORTED_UPLOAD_TYPE"
+            ? t("places:photos.unsupportedType")
+            : t("places:photos.uploadFailed");
+        setUploadError(message);
+        addToast("error", message);
       } finally {
         setBusy(false);
         // Clear the input, or picking the same file twice in a row fires no
@@ -227,6 +240,11 @@ export function PhotoStrip<T extends StripPhoto>({
           />
         </label>
       </div>
+      {uploadError && (
+        <p role="alert" className="mt-1 text-xs" style={{ color: "var(--color-danger)" }}>
+          {uploadError}
+        </p>
+      )}
       {footer?.(merge)}
     </>
   );

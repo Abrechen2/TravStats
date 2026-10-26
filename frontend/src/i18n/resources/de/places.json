@@ -249,6 +249,7 @@
     "alt": "Foto zum Besuch",
     "delete": "Foto löschen",
     "uploadFailed": "Das Foto konnte nicht hochgeladen werden.",
+    "unsupportedType": "Das ist kein Foto. Wähle ein Bild (JPEG, PNG, WebP, GIF oder HEIC).",
     "deleteFailed": "Das Foto konnte nicht gelöscht werden.",
     "caption": "Bildunterschrift",
     "captionAdd": "Bildunterschrift…",
