@@ -31,9 +31,16 @@ export type FlightSample = [number, number | null, number | null];
 
 export interface TravTrackFlightPanel {
   flightId: string;
+  /** As the day's timeline names it, e.g. "LH718 MUC–ICN"; may be empty from an older server. */
+  label?: string;
+  /** The departure airport's zone; the profile's clock. */
+  departureZone?: string | null;
+  /** The first airborne sample after one on the ground; null when not found. */
+  takeoffMs?: number | null;
+  landingMs?: number | null;
   /** `window`: nothing was linked, so the fixes of the flight's time window (an import). */
   basis: "linked" | "window" | null;
-  /** Stretches of samples; never join two. */
+  /** Stretches of samples, thinned to at most 2000 by the server; never join two. */
   series: FlightSample[][];
   pointCount: number;
   truncated: boolean;

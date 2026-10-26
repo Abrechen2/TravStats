@@ -109,6 +109,7 @@ vi.mock("../hooks/useEnabledDomains", () => ({
 }));
 vi.mock("../hooks/useBetaFeatures", () => ({
   useBetaFeatures: () => ({ isFeatureVisible: () => false }),
+  useBetaFeatureAccess: () => "denied",
 }));
 vi.mock("../components/NavigationBar", () => ({ default: () => <div /> }));
 vi.mock("../components/FlightEditModal", () => ({ default: () => null }));

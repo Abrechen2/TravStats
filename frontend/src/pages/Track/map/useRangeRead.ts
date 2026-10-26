@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { DaySpan } from "../../../lib/api/travtrack";
+import type { DaySpan, InstantSpan } from "../../../lib/api/travtrack";
 import { trackErrorKey } from "../../../lib/api/travtrack";
 import { travTrackViewsApi, type TravTrackRange } from "../../../lib/api/travtrackViews";
 import { logger } from "../../../lib/logger";
@@ -31,7 +31,7 @@ export function rangeProgress(part: TravTrackRange): number {
 
 /** Reads one part after another until the span ends, handing each to `onPart`; throws on a failed part. */
 export async function readRangeParts(
-  span: DaySpan,
+  span: DaySpan | InstantSpan,
   read: typeof travTrackViewsApi.range,
   onPart: (part: TravTrackRange) => boolean,
   cursor: string | null = null,

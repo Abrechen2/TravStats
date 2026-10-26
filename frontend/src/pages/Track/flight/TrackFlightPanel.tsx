@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import { token } from "../../../components/ui/tokens";
@@ -29,6 +29,11 @@ const instantsOf = (panel: TravTrackFlightPanel) =>
  * the altitude profile (cursor follows the replay), and the photos taken
  * during it, placed on the track by the server. A figure that cannot be
  * derived reads "—", never 0.
+ *
+ * Opening it brings it into view and moves the focus to its heading (owner
+ * 2026-10-26: below the map it went unseen); reduced motion jumps instead of
+ * scrolling. `onPanel` hands the loaded answer to the map, which draws the
+ * whole flight from it.
  */
 export default function TrackFlightPanel({
   flight,
@@ -36,6 +41,7 @@ export default function TrackFlightPanel({
   cursor,
   generation = 0,
   onClose,
+  onPanel,
 }: {
   flight: SelectedFlight;
   zone: string;
@@ -43,16 +49,41 @@ export default function TrackFlightPanel({
   /** The map's reload generation: a deletion reads the panel and its photos again. */
   generation?: number;
   onClose: () => void;
+  /** The loaded answer, or null while loading or after a failure. */
+  onPanel?: (panel: TravTrackFlightPanel | null) => void;
 }): JSX.Element {
   const { t, i18n } = useTranslation(["track"]);
   const state = useFlightPanel(flight.id, generation);
   const panel = state.kind === "loaded" ? state.panel : null;
-  const window = useMemo(() => (panel ? photoWindowOf(instantsOf(panel)) : null), [panel]);
-  const photos = useTrackPhotos(window?.kind === "window" ? window.window : null, generation);
+  const photoWindow = useMemo(() => (panel ? photoWindowOf(instantsOf(panel)) : null), [panel]);
+  const photos = useTrackPhotos(
+    photoWindow?.kind === "window" ? photoWindow.window : null,
+    generation
+  );
   const [picked, setPicked] = useState<TravTrackPhoto | null>(null);
   const list = photos.kind === "loaded" ? photos.photos : [];
   const number = (v: number) => new Intl.NumberFormat(i18n.language).format(Math.round(v));
   const s = panel?.summary;
+  const label = flight.label || panel?.label || "";
+  const profileZone = panel?.departureZone ?? zone;
+  const heading = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    onPanel?.(panel);
+  }, [panel, onPanel]);
+
+  useEffect(() => {
+    const el = heading.current;
+    if (!el) return;
+    const reduced =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.closest("section")?.scrollIntoView?.({
+      behavior: reduced ? "auto" : "smooth",
+      block: "start",
+    });
+    el.focus({ preventScroll: true });
+  }, [flight.id]);
 
   const figures: Array<[string, string]> = [
     [
@@ -81,12 +112,12 @@ export default function TrackFlightPanel({
     <section
       style={{ ...panelStyle, borderColor: token("live") }}
       className="flex flex-col gap-3"
-      aria-label={t("track:flight.title", { label: flight.label })}
+      aria-label={t("track:flight.title", { label })}
       data-testid="track-flight-panel"
     >
       <div className="flex flex-wrap items-start gap-2">
-        <h2 className="t-card-title" style={{ flex: "1 1 auto" }}>
-          {t("track:flight.title", { label: flight.label })}
+        <h2 ref={heading} tabIndex={-1} className="t-card-title" style={{ flex: "1 1 auto" }}>
+          {t("track:flight.title", { label })}
         </h2>
         {flight.href && <Link to={flight.href}>{t("track:flight.open")}</Link>}
         <button type="button" onClick={onClose} style={pillStyle(false)}>
@@ -122,7 +153,9 @@ export default function TrackFlightPanel({
           ) : (
             <TrackAltitudeProfile
               series={panel.series}
-              zone={zone}
+              zone={profileZone}
+              takeoffMs={panel.takeoffMs ?? null}
+              landingMs={panel.landingMs ?? null}
               cursor={cursor}
               photos={list}
               onPhoto={setPicked}
@@ -140,7 +173,7 @@ export default function TrackFlightPanel({
           )}
           <h3 className="t-card-title">{t("track:flight.photosTitle")}</h3>
           <TrackPhotoNotice state={photos} />
-          {window?.kind === "tooLong" && (
+          {photoWindow?.kind === "tooLong" && (
             <p className="t-caption">{t("track:photos.needsShorter")}</p>
           )}
           {photos.kind === "loaded" && list.length === 0 && (
