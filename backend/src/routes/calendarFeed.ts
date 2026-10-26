@@ -68,7 +68,9 @@ const handle =
 router.get(
   "/",
   handle(async (req, res) => {
-    res.json({ success: true, data: await feedStatus(req.userId!) });
+    const { baseUrl, reachableFromInternet } = await feedBaseUrl(req);
+    const status = await feedStatus(req.userId!, baseUrl);
+    res.json({ success: true, data: { ...status, reachableFromInternet } });
   })
 );
 

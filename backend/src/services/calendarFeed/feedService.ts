@@ -2,6 +2,7 @@ import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import type { DomainKey } from "../../shared/domains";
 import { now } from "../../shared/time/clock";
+import { decryptApiKey, encryptApiKey } from "../../utils/encryption";
 import { loadVisibleDomains } from "../domainVisibility";
 import { getInstanceSettings } from "../instanceSettingsService";
 import type { FeedContext } from "./feedEvent";
@@ -65,21 +66,38 @@ export interface CalendarFeedStatus {
   active: boolean;
   createdAt: string | null;
   lastUsedAt: string | null;
+  /** The current URL, when it can be recovered; null without one, or for a URL issued before tokens were kept. */
+  url: string | null;
+  webcalUrl: string | null;
 }
 
-export async function feedStatus(userId: string): Promise<CalendarFeedStatus> {
+/**
+ * The plaintext token of a feed row, or null. Checked against the stored
+ * hash, so a ciphertext from another key (a restored backup) or a damaged
+ * value yields no URL rather than a wrong one.
+ */
+function recoverToken(feed: { tokenHash: string; tokenEncrypted: string | null }): string | null {
+  const token = decryptApiKey(feed.tokenEncrypted);
+  if (!token || !looksLikeCalendarToken(token)) return null;
+  return calendarTokenHash(token) === feed.tokenHash ? token : null;
+}
+
+export async function feedStatus(userId: string, baseUrl: string): Promise<CalendarFeedStatus> {
   const [enabled, feed] = await Promise.all([
     calendarFeedEnabled(),
     prisma.calendarFeed.findUnique({
       where: { userId },
-      select: { createdAt: true, lastUsedAt: true },
+      select: { createdAt: true, lastUsedAt: true, tokenHash: true, tokenEncrypted: true },
     }),
   ]);
+  const token = feed ? recoverToken(feed) : null;
+  const urls = token ? feedUrls(baseUrl, token) : { url: null, webcalUrl: null };
   return {
     enabled,
     active: feed !== null,
     createdAt: feed?.createdAt.toISOString() ?? null,
     lastUsedAt: feed?.lastUsedAt?.toISOString() ?? null,
+    ...urls,
   };
 }
 
@@ -97,16 +115,20 @@ export function feedUrls(baseUrl: string, token: string): { url: string; webcalU
 
 /**
  * A new URL for the user — the first one, or a replacement. The previous token
- * stops working in the same write: one row per user, its hash replaced.
+ * stops working in the same write: one row per user, its hash replaced. The
+ * hash is what a read looks up; the ciphertext beside it only lets the owner's
+ * own session (or paired Companion) list the URL again without replacing it,
+ * which would cut off every calendar already subscribed.
  */
 export async function issueFeed(userId: string, baseUrl: string): Promise<IssuedCalendarFeed> {
   if (!(await calendarFeedEnabled())) throw feedDisabled();
   const { token, tokenHash } = generateCalendarToken();
+  const tokenEncrypted = encryptApiKey(token);
   const createdAt = now();
   await prisma.calendarFeed.upsert({
     where: { userId },
-    create: { userId, tokenHash, createdAt },
-    update: { tokenHash, createdAt, lastUsedAt: null },
+    create: { userId, tokenHash, tokenEncrypted, createdAt },
+    update: { tokenHash, tokenEncrypted, createdAt, lastUsedAt: null },
   });
   return { ...feedUrls(baseUrl, token), createdAt: createdAt.toISOString() };
 }

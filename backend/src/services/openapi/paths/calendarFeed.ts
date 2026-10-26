@@ -37,8 +37,9 @@ registry.registerPath({
   path: "/calendar-feed",
   summary: "Whether the caller has a calendar subscription URL",
   description:
-    "The URL itself is not listed — only its hash is stored, so it is shown once, when it is " +
-    "made. `enabled` is the instance's beta switch: no URL is issued, and none answers, while " +
+    "`url`/`webcalUrl` list the current URL again: the token is kept AES-GCM encrypted beside " +
+    "its lookup hash. They are null without a URL, and for a URL issued before tokens were " +
+    "kept — that one still answers, it just cannot be shown. `enabled` is the instance's beta switch: no URL is issued, and none answers, while " +
     "it is off.",
   tags,
   responses: {
@@ -53,6 +54,14 @@ registry.registerPath({
           .datetime()
           .nullable()
           .describe("When a calendar app last read the URL; null when never"),
+        url: z
+          .string()
+          .nullable()
+          .describe("`<base>/api/v1/calendar/<token>.ics`, when recoverable"),
+        webcalUrl: z.string().nullable().describe("The same address under `webcal://`"),
+        reachableFromInternet: z
+          .boolean()
+          .describe("False when the link's host is a private/loopback IP or `localhost`"),
       })
     ),
     403: sessionOrCompanion,
@@ -64,7 +73,7 @@ registry.registerPath({
   path: "/calendar-feed",
   summary: "Issue a new calendar subscription URL",
   description:
-    "Returns the URL ONCE, as `https:` and as `webcal:`. The link is built on the first of " +
+    "Returns the URL as `https:` and as `webcal:`. The link is built on the first of " +
     "the public URL, the frontend URL and the request host that has a DNS name; with none, on " +
     "the first of them. A previous URL of the caller stops " +
     "answering in the same write. Limited to 20 an hour per user.",
@@ -73,7 +82,7 @@ registry.registerPath({
     201: ok(
       "The new URL",
       z.object({
-        url: z.string().describe("`<public base>/api/v1/calendar/<token>.ics` — shown once"),
+        url: z.string().describe("`<base>/api/v1/calendar/<token>.ics`"),
         webcalUrl: z.string().describe("The same address under `webcal://`"),
         createdAt: z.string().datetime(),
         reachableFromInternet: z

@@ -205,11 +205,13 @@ describe("calendar feed", () => {
 
     const after = await request(app).get("/api/v1/calendar-feed").set("Cookie", owner.cookie);
     expect(after.body.data).toMatchObject({ enabled: true, active: true, lastUsedAt: null });
-    // The token is shown once; the state never carries it.
-    expect(JSON.stringify(after.body)).not.toContain("ts_cal_");
+    // The state lists the URL again (recovered from its ciphertext); the hash never leaves.
+    // (supertest binds a fresh port per request, so the paths are compared.)
+    expect(feedPath(after.body.data.url)).toBe(feedPath(url));
     const row = await prisma.calendarFeed.findUniqueOrThrow({ where: { userId: owner.id } });
     expect(row.tokenHash).toMatch(/^[0-9a-f]{64}$/);
     expect(url).not.toContain(row.tokenHash);
+    expect(JSON.stringify(after.body)).not.toContain(row.tokenHash);
   });
 
   it("answers the owner's calendar with no cookie, as private text/calendar", async () => {
@@ -297,6 +299,36 @@ describe("calendar feed", () => {
     expect(theirText).toContain("0000000000b1");
     expect(theirText).not.toContain("0000000000a1");
     expect(theirText).not.toContain("Sacher");
+  });
+
+  it("lists the current URL again, recovered from its ciphertext, never stored in plain", async () => {
+    const issued = await issue(owner);
+    const state = await request(app).get("/api/v1/calendar-feed").set("Cookie", owner.cookie);
+    expect(state.body.data.active).toBe(true);
+    expect(feedPath(state.body.data.url)).toBe(feedPath(issued.url));
+    expect(state.body.data.webcalUrl).toMatch(/^webcal:\/\//);
+    expect(feedPath(state.body.data.webcalUrl.replace(/^webcal:/, "http:"))).toBe(
+      feedPath(issued.url)
+    );
+    expect(typeof state.body.data.reachableFromInternet).toBe("boolean");
+    const row = await prisma.calendarFeed.findUniqueOrThrow({ where: { userId: owner.id } });
+    const token = feedPath(issued.url)
+      .split("/")
+      .pop()!
+      .replace(/\.ics$/, "");
+    expect(row.tokenEncrypted).toBeTruthy();
+    expect(row.tokenEncrypted).not.toContain(token);
+  });
+
+  it("answers url null for a link issued before tokens were kept, and leaves it working", async () => {
+    const issued = await issue(owner);
+    await prisma.calendarFeed.update({
+      where: { userId: owner.id },
+      data: { tokenEncrypted: null },
+    });
+    const state = await request(app).get("/api/v1/calendar-feed").set("Cookie", owner.cookie);
+    expect(state.body.data).toMatchObject({ active: true, url: null, webcalUrl: null });
+    expect((await request(app).get(feedPath(issued.url))).status).toBe(200);
   });
 
   it("records when a calendar app last read the feed", async () => {

@@ -376,6 +376,8 @@ model CalendarFeed {
   id         String    @id @default(uuid())
   userId     String    @unique @map("user_id")
   tokenHash  String    @unique @map("token_hash")
+  /// The token itself, AES-GCM encrypted like the API keys (`encryptApiKey`), so the URL can be listed again. Null for a URL issued before it was kept: that one still works, it just cannot be shown.
+  tokenEncrypted String? @map("token_encrypted")
   /// When a calendar app last read the feed — so the owner can tell a URL in use from a forgotten one.
   lastUsedAt DateTime? @map("last_used_at")
   createdAt  DateTime  @default(now()) @map("created_at")
