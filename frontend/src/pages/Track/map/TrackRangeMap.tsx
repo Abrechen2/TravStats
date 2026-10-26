@@ -10,6 +10,8 @@ import { buildTrackLayers, tooltipOf, type TrackLayerInput } from "./trackMapLay
 import { linesBounds, type LonLat } from "./trackGeometry";
 import TrackFogLayer, { type FogStatus } from "./TrackFogLayer";
 
+const FRAME_PADDING = { top: 40, right: 24, bottom: 40, left: 24 };
+
 function DeckGLOverlay({ layers }: { layers: Layer[] }): null {
   const overlay = useControl<MapboxOverlay>(
     () => new MapboxOverlay({ layers, getTooltip: tooltipOf }),
@@ -25,6 +27,12 @@ export interface TrackRangeMapProps extends Omit<TrackLayerInput, "lines"> {
   lines: readonly LonLat[][];
   /** Where live follow wants the camera; null leaves the reader steering. */
   follow: LonLat | null;
+  /**
+   * Changing it frames the map again on `frameLines`, without a remount: a
+   * remounted reused map never fires its load again, and its overlay — every
+   * line — would stay away (found in a browser look, 2026-10-26).
+   */
+  refit?: string;
   onFogStatus: (status: FogStatus) => void;
 }
 
@@ -76,6 +84,13 @@ export default function TrackRangeMap(props: TrackRangeMapProps): JSX.Element | 
     ]
   );
   const follow = props.follow;
+  const refit = props.refit ?? "";
+  const fitted = useRef(refit);
+  useEffect(() => {
+    if (!mapLoaded || !bounds || refit === fitted.current) return;
+    fitted.current = refit;
+    mapRef.current?.fitBounds(bounds, { padding: FRAME_PADDING, duration: 600 });
+  }, [refit, bounds, mapLoaded]);
 
   // The camera moves only when the newest fix moved: a poll with the same answer leaves the reader's view.
   const followed = useRef<string | null>(null);
@@ -100,7 +115,7 @@ export default function TrackRangeMap(props: TrackRangeMapProps): JSX.Element | 
         reuseMaps
         initialViewState={{
           bounds,
-          fitBoundsOptions: { padding: { top: 40, right: 24, bottom: 40, left: 24 } },
+          fitBoundsOptions: { padding: FRAME_PADDING },
         }}
         attributionControl={{ compact: true }}
         mapStyle={mapStyle}

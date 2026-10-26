@@ -116,7 +116,13 @@ export default function TrackFlightPanel({
       data-testid="track-flight-panel"
     >
       <div className="flex flex-wrap items-start gap-2">
-        <h2 ref={heading} tabIndex={-1} className="t-card-title" style={{ flex: "1 1 auto" }}>
+        <h2
+          ref={heading}
+          tabIndex={-1}
+          className="t-card-title"
+          // Focused only to bring the reader here; the heading is no control to ring.
+          style={{ flex: "1 1 auto", outline: "none" }}
+        >
           {t("track:flight.title", { label })}
         </h2>
         {flight.href && <Link to={flight.href}>{t("track:flight.open")}</Link>}

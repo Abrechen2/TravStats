@@ -253,7 +253,8 @@ export default function TrackMapView(): JSX.Element {
           {(hasDrawing || highlight.length > 0) && (long || !loading) && (
             <div className="relative">
               <TrackRangeMap
-                key={`${span.fromDay}|${span.toDay}|${loading ? "partial" : "whole"}|${highlight.length > 0 ? flight?.id : ""}`}
+                key={`${span.fromDay}|${span.toDay}|${loading ? "partial" : "whole"}`}
+                refit={highlight.length > 0 ? `flight:${flight?.id ?? ""}` : "day"}
                 layers={prefs.layers}
                 color={prefs.color}
                 opacity={prefs.opacity}
