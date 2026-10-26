@@ -91,6 +91,6 @@ describe("GET /api/v1/stats/aircraft-types", () => {
 
     const res = await request(app).get("/api/v1/stats/aircraft-types");
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ aircraftTypes: [], total: 0 });
+    expect(res.body).toEqual({ aircraftTypes: [], total: 0, scope: { year: null } });
   });
 });

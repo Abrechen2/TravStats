@@ -40,6 +40,7 @@ import {
   calculateAirportStats,
 } from "../../utils/statsCalculator";
 import { computePunctuality } from "../punctualityStats";
+import { statsScope } from "../../utils/stats/domainYear";
 import { getBaseCurrency } from "../fx/snapshot";
 // The shape lives in `schemas/statsPage.ts`, which assembles it from the very
 // schemas the per-endpoint routes answer with — so a section here cannot drift
@@ -93,17 +94,27 @@ export async function buildStatsPage(
   if (sections.has("airports")) {
     // "New this year" means the user's own year (forgejo#256).
     const today = todayIn(profile?.zone ?? "UTC");
-    out.airports = await calculateAirportStats(rows, homePeriods, today);
+    // `scope` as on `/stats/airports`, so a section stays equal to its endpoint;
+    // the page takes no year, so it is always all-time.
+    out.airports = {
+      ...(await calculateAirportStats(rows, homePeriods, today)),
+      scope: statsScope(null),
+    };
   }
   if (sections.has("seats")) out.seats = computeSeatStats(rows);
   if (sections.has("countries")) out.countries = await computeCountryStats(rows);
   if (sections.has("airlines")) {
-    out.airlines = computeAirlineRanking(airlineIdentities(rows), rows.length);
+    out.airlines = {
+      ...computeAirlineRanking(airlineIdentities(rows), rows.length),
+      scope: statsScope(null),
+    };
   }
   // `computeAircraftRanking` and `computePunctuality` each drop the rows their
   // endpoint excluded in SQL — see the subset note at the top of this file.
   if (sections.has("aircraft")) out.aircraft = computeAircraftRanking(rows);
-  if (sections.has("punctuality")) out.punctuality = computePunctuality(rows);
+  if (sections.has("punctuality")) {
+    out.punctuality = { ...computePunctuality(rows), scope: statsScope(null) };
+  }
 
   return out;
 }

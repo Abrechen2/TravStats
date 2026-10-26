@@ -18,9 +18,12 @@ name: Security
 # ----------------------------------------
 # Only one thing blocks: a CRITICAL vulnerability in production
 # dependencies. That threshold was picked by measuring, not by taste — see
-# the audit job. Everything else lands in the Security tab, where findings
-# get triaged instead of trained-past. A scanner wired to fail the build on
-# its first run just teaches everyone to ignore a red X.
+# the audit job. Everything else is printed into the job log. Until
+# 2026-10-25 it was uploaded to GitHub code scanning; the Security tab then
+# held 514 open alerts (324 CodeQL, 190 Trivy), mostly test code and
+# unreachable dev chains, and nobody triaged them (owner, 2026-10-25: same
+# as Sublarr). A scanner wired to fail the build on its first run just
+# teaches everyone to ignore a red X.
 
 on:
   push:
@@ -128,24 +131,14 @@ jobs:
           done
 
   # ---------------------------------------------------------------------
-  # Trivy — repository scan, findings go to the Security tab.
+  # Trivy — repository scan, findings go to the job log.
   #
   # NOT a gate, and `exit-code: 0` below says so honestly rather than
-  # hiding a failure behind continue-on-error. The SARIF upload is the
-  # product of this job: findings become Code Scanning alerts that can be
-  # triaged, dismissed with a reason, and tracked over time. An exit code
-  # cannot do any of that, and this scanner has never run against this repo
-  # before — nobody has seen its first output, so gating on it would be
-  # gating on an unknown.
+  # hiding a failure behind continue-on-error. The table report in the log
+  # is the product of this job; nothing is uploaded to code scanning.
   #
-  # Two details that silently break this job if changed carelessly:
-  #
-  #   * The action tag is `v0.36.0`. The tags carry a leading `v`; a
-  #     plain `0.33.1` does not resolve and the step fails to load.
-  #   * `limit-severities-for-sarif: true` is REQUIRED for `severity` to
-  #     mean anything in SARIF output. Without it Trivy writes every
-  #     severity into the report regardless of the filter, and the Security
-  #     tab fills with LOW noise that buries the findings worth reading.
+  # The action tag is `v0.36.0`. The tags carry a leading `v`; a plain
+  # `0.33.1` does not resolve and the step fails to load.
   #
   # `ignore-unfixed` keeps the list actionable: an advisory with no
   # released fix is not something this repo can act on today.
@@ -153,9 +146,6 @@ jobs:
   trivy:
     name: Trivy filesystem scan
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
     steps:
       - uses: actions/checkout@v7
 
@@ -164,22 +154,11 @@ jobs:
         with:
           scan-type: fs
           scan-ref: .
-          format: sarif
-          output: trivy-results.sarif
+          format: table
           severity: CRITICAL,HIGH,MEDIUM
-          limit-severities-for-sarif: true
           ignore-unfixed: true
-          # Reporting job: the alerts are the output, not the exit status.
+          # Reporting job: the log is the output, not the exit status.
           exit-code: "0"
-
-      - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v4
-        # `if: always()` so a scan that dies mid-run still publishes what it
-        # managed to produce instead of losing the whole run.
-        if: always()
-        with:
-          sarif_file: trivy-results.sarif
-          category: trivy-fs
 
   # ---------------------------------------------------------------------
   # Trivy, against the IMAGE this time (forgejo#28).
@@ -207,7 +186,6 @@ jobs:
     permissions:
       contents: read
       packages: read
-      security-events: write
     steps:
       - name: Check the tag exists before scanning it
         id: probe
@@ -225,37 +203,18 @@ jobs:
         with:
           scan-type: image
           image-ref: ghcr.io/abrechen2/travstats:latest
-          format: sarif
-          output: trivy-image.sarif
+          format: table
           severity: CRITICAL,HIGH,MEDIUM
-          # Same two details as the filesystem job: the tag carries a
-          # leading `v`, and without `limit-severities-for-sarif` the
-          # `severity` filter does not reach the report.
-          limit-severities-for-sarif: true
           ignore-unfixed: true
-          # Reporting job: the alerts are the output, not the exit status.
+          # Reporting job: the log is the output, not the exit status.
           exit-code: "0"
 
-      - name: Upload SARIF
-        if: steps.probe.outputs.found == 'true'
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: trivy-image.sarif
-          # A category of its own, so an image finding and a source finding
-          # do not overwrite each other in the Security tab.
-          category: trivy-image
-
   # ---------------------------------------------------------------------
-  # CodeQL — deliberately NOT here.
+  # CodeQL — deliberately NOT here, and not in the repository either.
   #
-  # The repository has GitHub's default code-scanning setup switched on
-  # (since 2026-08-01: actions, javascript-typescript and python, weekly).
-  # A CodeQL job in a workflow is the "advanced" configuration, and GitHub
-  # refuses to accept both: every run of the job this file used to carry
-  # ended in "CodeQL analyses from advanced configurations cannot be
-  # processed when the default setup is enabled" — a red Security badge on
-  # every push to main for a week, saying nothing about the code. Trivy's
-  # SARIF upload above is not affected; the restriction is CodeQL-only.
-  # If CodeQL ever needs a custom query pack, switch the default setup off
-  # in the repository settings FIRST, then bring the job back.
+  # GitHub's default code-scanning setup ran CodeQL from 2026-08-01 and was
+  # switched off on 2026-10-25 together with Trivy's SARIF uploads: its
+  # results only fed the Security tab and never gated anything. A CodeQL job
+  # brought back into a workflow would print its results to the log like
+  # Trivy does, not upload them.
   # ---------------------------------------------------------------------
