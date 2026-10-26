@@ -10,10 +10,13 @@ import { render, screen, waitFor } from "@testing-library/react";
  */
 const remoteBeta = vi.hoisted(() => ({ value: true as boolean }));
 const listPlans = vi.fn();
+const planConfig = vi.fn();
+const capabilities = vi.fn();
 vi.mock("../../lib/api/travplan", () => ({
   travplanApi: {
     list: (...a: unknown[]) => listPlans(...a),
-    capabilities: vi.fn().mockResolvedValue({ enabled: true }),
+    capabilities: (...a: unknown[]) => capabilities(...a),
+    config: (...a: unknown[]) => planConfig(...a),
   },
 }));
 vi.mock("../../pages/DashboardPage", () => ({
@@ -46,7 +49,7 @@ vi.mock("../../hooks/useWhatsNew", () => ({
 }));
 
 const authState = {
-  user: { id: "u1", username: "demo", isAdmin: false },
+  user: { id: "u1", username: "demo", isAdmin: false as boolean },
   _hasHydrated: true,
 };
 vi.mock("../../store/authStore", () => ({
@@ -77,6 +80,13 @@ describe("the /plan route", () => {
   beforeEach(() => {
     listPlans.mockReset();
     listPlans.mockResolvedValue([]);
+    capabilities.mockReset().mockResolvedValue({ enabled: true });
+    planConfig.mockReset().mockResolvedValue({
+      enabled: false,
+      aiDailyLimit: 10,
+      weatherDailyLimit: 20,
+    });
+    authState.user = { id: "u1", username: "demo", isAdmin: false };
     useSettingsStore.setState({ betaFeaturesEnabled: null, enabledDomainsLoaded: true });
   });
 
@@ -117,4 +127,21 @@ describe("the /plan route", () => {
       view.unmount();
     }
   });
+
+  // The nav entry follows the server switch for admins too since 2026-10-26;
+  // `/plan/admin` must stay reachable for them, or the limits it holds would be
+  // stranded while TravPlan is off.
+  it(
+    "still opens the configuration for an admin while the server switch is off",
+    { timeout: 10000 },
+    async () => {
+      remoteBeta.value = true;
+      authState.user = { id: "a1", username: "root", isAdmin: true };
+      capabilities.mockResolvedValue({ enabled: false });
+      window.history.pushState({}, "", "/plan/admin");
+      render(<App />);
+      await waitFor(() => expect(planConfig).toHaveBeenCalled(), { timeout: 8000 });
+      expect(screen.queryByTestId("dashboard-stub")).toBeNull();
+    }
+  );
 });

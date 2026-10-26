@@ -38,6 +38,15 @@ import {
 
 import { registry } from "../registry";
 import { COUNTRY_DAY_SOURCES } from "../../countryDays/countryDaySource";
+import { TimeseriesQuerySchema } from "../../../schemas/statsQuery";
+import {
+  statsScopeSchema,
+  summaryCompareResponse,
+  yearOrRangeQuery,
+  yearQuery,
+  yearScopeErrors,
+  yearScopeQuery,
+} from "./statsYearScope";
 
 const statsResponse = registry.register(
   "StatsSummary",
@@ -91,6 +100,7 @@ const statsResponse = registry.register(
             "size of the union of the five sets. A record with no usable date contributes no day. " +
             "Scoped exactly like the flight figures beside it: with `year`, the year's days."
         ),
+      scope: statsScopeSchema.optional().describe("Absent inside `current`/`compare`"),
     })
     .openapi("StatsSummary")
 );
@@ -107,11 +117,21 @@ registry.registerPath({
     "specialized breakdowns (routes, fun, business, unique, seats, " +
     "airlines, countries) — see the Stats tag for the full list.",
   tags: ["Stats"],
+  request: {
+    query: yearOrRangeQuery.extend({
+      compareYear: z.coerce.number().int().min(1900).max(2100).optional(),
+    }),
+  },
   responses: {
     200: {
-      description: "Stats",
-      content: { "application/json": { schema: statsResponse } },
+      description: "Stats; with `year` AND `compareYear`, both years side by side",
+      content: {
+        "application/json": {
+          schema: z.union([statsResponse, summaryCompareResponse(statsResponse)]),
+        },
+      },
     },
+    ...yearScopeErrors,
   },
 });
 
@@ -125,6 +145,7 @@ const heroStatsResponse = registry.register(
       airports: z.number(),
       co2Kg: z.number(),
       flightTimeMinutes: z.number().describe("Total flight time, in minutes"),
+      scope: statsScopeSchema,
     })
     .openapi("HeroStats")
 );
@@ -184,14 +205,16 @@ registry.registerPath({
   summary: "Composed hero aggregate",
   description:
     "Single aggregate combining totals from /stats/summary, /stats/airports " +
-    "and /stats/fun, for dashboard hero widgets. All-time only (no date-range " +
-    "filtering yet).",
+    "and /stats/fun, for dashboard hero widgets. With `year`, every figure — " +
+    "countries included — covers that local calendar year.",
   tags: ["Stats"],
+  request: { query: yearQuery },
   responses: {
     200: {
       description: "Hero stats",
       content: { "application/json": { schema: heroStatsResponse } },
     },
+    ...yearScopeErrors,
   },
 });
 
@@ -288,11 +311,15 @@ registry.registerPath({
   path: "/stats/passport",
   summary: "The passport: countries, their airports, and a continent quota",
   tags: statsTag,
+  request: { query: yearScopeQuery },
   responses: {
     200: {
       description: "The passport",
-      content: { "application/json": { schema: passportResponse } },
+      content: {
+        "application/json": { schema: passportResponse.extend({ scope: statsScopeSchema }) },
+      },
     },
+    400: { description: "`year` is not an integer between 1900 and 2100" },
   },
   description:
     "Derived server-side so several clients draw the same picture. A country counts " +
@@ -333,7 +360,11 @@ registry.registerPath({
 
 const lodgingStats = registry.register(
   "LodgingStats",
-  lodgingStatsResponseSchema.openapi("LodgingStats")
+  lodgingStatsResponseSchema
+    .extend({
+      data: lodgingStatsResponseSchema.shape.data.extend({ scope: statsScopeSchema }),
+    })
+    .openapi("LodgingStats")
 );
 
 registry.registerPath({
@@ -346,11 +377,13 @@ registry.registerPath({
     "`plannedNights`. Money is only summed for stays whose FX snapshot matches " +
     "the current base currency — the rest are counted, not converted.",
   tags: statsTag,
+  request: { query: yearQuery },
   responses: {
     200: {
       description: "Lodging aggregates, with price, ratings, geography, rhythm and loyalty",
       content: { "application/json": { schema: lodgingStats } },
     },
+    ...yearScopeErrors,
   },
 });
 
@@ -360,7 +393,7 @@ const countryDetail = registry.register(
 );
 const cruiseStats = registry.register(
   "CruiseStats",
-  cruiseStatsResponseSchema.openapi("CruiseStats")
+  cruiseStatsResponseSchema.extend({ scope: statsScopeSchema }).openapi("CruiseStats")
 );
 
 registry.registerPath({
@@ -374,17 +407,23 @@ registry.registerPath({
     "`countriesIso` is alpha-2 for counting, and a port whose name does not " +
     "resolve is dropped from the count rather than counted under its raw name.",
   tags: statsTag,
+  request: { query: yearQuery },
   responses: {
     200: {
       description: "Cruise aggregates",
       content: { "application/json": { schema: cruiseStats } },
     },
+    ...yearScopeErrors,
   },
 });
 
 const travelRecords = registry.register(
   "TravelRecords",
-  travelRecordsResponseSchema.openapi("TravelRecords")
+  travelRecordsResponseSchema
+    .extend({
+      data: travelRecordsResponseSchema.shape.data.extend({ scope: statsScopeSchema }),
+    })
+    .openapi("TravelRecords")
 );
 
 registry.registerPath({
@@ -400,11 +439,13 @@ registry.registerPath({
     'flight of 0 km would win forever, and a missing delay means "not recorded", ' +
     'which is a different fact from "on time".',
   tags: statsTag,
+  request: { query: yearQuery },
   responses: {
     200: {
       description: "The records that could be derived",
       content: { "application/json": { schema: travelRecords } },
     },
+    ...yearScopeErrors,
   },
 });
 
@@ -430,13 +471,16 @@ registry.registerPath({
     "never a verdict: the upstream payload cannot say whether a point was " +
     "measured by GPS or estimated from a photograph, so nothing here claims to.",
   tags: statsTag,
-  request: { params: z.object({ code: z.string() }) },
+  request: { params: z.object({ code: z.string() }), query: yearScopeQuery },
   responses: {
     200: {
       description: "Country detail",
-      content: { "application/json": { schema: countryDetail } },
+      content: {
+        "application/json": { schema: countryDetail.extend({ scope: statsScopeSchema }) },
+      },
     },
-    404: { description: "Nothing evidences that country" },
+    400: { description: "Not a country, or `year` is not an integer between 1900 and 2100" },
+    404: { description: "Nothing evidences that country (in that year, when `year` is given)" },
   },
 });
 
@@ -494,7 +538,10 @@ registry.registerPath({
   },
 });
 
-const timeseries = registry.register("Timeseries", timeseriesResponseSchema.openapi("Timeseries"));
+const timeseries = registry.register(
+  "Timeseries",
+  timeseriesResponseSchema.extend({ scope: statsScopeSchema }).openapi("Timeseries")
+);
 const funStats = registry.register("FunStats", funStatsSchema.openapi("FunStats"));
 
 registry.registerPath({
@@ -507,11 +554,13 @@ registry.registerPath({
     "in the previous period — and was deleted rather than left standing. It is " +
     "back because forgejo#46 made it true and a test pins it.",
   tags: statsTag,
+  request: { query: TimeseriesQuerySchema },
   responses: {
     200: {
       description: "Buckets plus this window's totals and the one before it",
       content: { "application/json": { schema: timeseries } },
     },
+    ...yearScopeErrors,
   },
 });
 
@@ -540,7 +589,10 @@ const businessStats = registry.register(
   businessStatsSchema.openapi("BusinessStats")
 );
 const uniqueStats = registry.register("UniqueStats", uniqueStatsSchema.openapi("UniqueStats"));
-const airportStats = registry.register("AirportStats", airportStatsSchema.openapi("AirportStats"));
+const airportStats = registry.register(
+  "AirportStats",
+  airportStatsSchema.extend({ scope: statsScopeSchema }).openapi("AirportStats")
+);
 
 registry.registerPath({
   method: "get",
@@ -563,11 +615,13 @@ registry.registerPath({
   path: "/stats/airports",
   summary: "Airports, by visits and by role as origin or destination",
   tags: statsTag,
+  request: { query: yearOrRangeQuery },
   responses: {
     200: {
       description: "Airport, country and continent aggregates",
       content: { "application/json": { schema: airportStats } },
     },
+    ...yearScopeErrors,
   },
 });
 
@@ -597,11 +651,14 @@ registry.registerPath({
   },
 });
 
-const punctuality = registry.register("Punctuality", punctualityStatsSchema.openapi("Punctuality"));
+const punctuality = registry.register(
+  "Punctuality",
+  punctualityStatsSchema.extend({ scope: statsScopeSchema }).openapi("Punctuality")
+);
 const seatStats = registry.register("SeatStats", seatStatsSchema.openapi("SeatStats"));
 const airlineRanking = registry.register(
   "AirlineRanking",
-  airlineRankingResponseSchema.openapi("AirlineRanking")
+  airlineRankingResponseSchema.extend({ scope: statsScopeSchema }).openapi("AirlineRanking")
 );
 const countryStats = registry.register(
   "CountryStats",
@@ -613,11 +670,13 @@ registry.registerPath({
   path: "/stats/airlines",
   summary: "Airlines, by flights and distance",
   tags: statsTag,
+  request: { query: yearQuery },
   responses: {
     200: {
       description: "Carriers, most-flown first",
       content: { "application/json": { schema: airlineRanking } },
     },
+    ...yearScopeErrors,
   },
 });
 
@@ -659,11 +718,13 @@ registry.registerPath({
     "with scheduled times alone is not counted as on time — it is outside the " +
     "sample entirely.",
   tags: statsTag,
+  request: { query: yearOrRangeQuery },
   responses: {
     200: {
       description: "Delay aggregates over the flights that carry one",
       content: { "application/json": { schema: punctuality } },
     },
+    ...yearScopeErrors,
   },
 });
 
@@ -676,7 +737,7 @@ const aircraftRanking = registry.register(
 );
 const aircraftTypes = registry.register(
   "AircraftTypes",
-  aircraftTypesResponseSchema.openapi("AircraftTypes")
+  aircraftTypesResponseSchema.extend({ scope: statsScopeSchema }).openapi("AircraftTypes")
 );
 const aircraftProfile = registry.register(
   "AircraftProfile",
@@ -708,11 +769,13 @@ registry.registerPath({
     "numbers. `total` is the user's whole flight count, so percentages need not " +
     "sum to 100 — the gap is the flights with no type recorded.",
   tags: statsTag,
+  request: { query: yearQuery },
   responses: {
     200: {
       description: "Types, most-flown first",
       content: { "application/json": { schema: aircraftTypes } },
     },
+    ...yearScopeErrors,
   },
 });
 

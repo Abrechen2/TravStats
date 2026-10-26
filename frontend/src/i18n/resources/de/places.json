@@ -884,5 +884,38 @@
       "noneFiltered": "Keine Orte passen zu den Filtern.",
       "wider": "Umkreis auf {{radius}} erweitern"
     }
+  },
+  "visitList": {
+    "filterLabel": "Besuche filtern",
+    "filterAll": "Alle",
+    "filterVisited": "Besucht · {{count}}",
+    "filterPlanned": "Geplant · {{count}}",
+    "summaryVisited": "{{count}}× besucht",
+    "summaryLast": "zuletzt {{date}}",
+    "summaryFirst": "erster datierter Besuch {{date}}",
+    "summaryNext": "nächster {{date}}",
+    "groupPlanned": "Geplant",
+    "groupPlannedHint": "zählt erst, wenn der Besuch vorbei ist",
+    "groupYearCount_one": "{{count}} Besuch",
+    "groupYearCount_other": "{{count}} Besuche",
+    "groupUndated": "Ohne Datum",
+    "groupUndatedHint": "zählt als Besuch",
+    "undated": "Ohne Datum",
+    "plannedToday": "Geplant · heute",
+    "plannedTomorrow": "Geplant · morgen",
+    "plannedInDays_one": "Geplant · in {{count}} Tag",
+    "plannedInDays_other": "Geplant · in {{count}} Tagen",
+    "trip": "Reise: {{name}}",
+    "photos_one": "{{count}} Foto",
+    "photos_other": "{{count}} Fotos",
+    "documents_one": "{{count}} Dokument",
+    "documents_other": "{{count}} Dokumente",
+    "rating": "{{rating}} von 5 Sternen",
+    "edit": "Besuch vom {{date}} bearbeiten",
+    "delete": "Besuch vom {{date}} löschen",
+    "editUndated": "Besuch ohne Datum bearbeiten",
+    "deleteUndated": "Besuch ohne Datum löschen",
+    "showOlder": "Ältere Besuche laden",
+    "emptyFilter": "Keine Besuche in dieser Auswahl."
   }
 }

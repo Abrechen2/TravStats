@@ -9,6 +9,7 @@
  */
 
 import { z } from "./zod";
+import { statsScopeSchema } from "./statsScope";
 import {
   airlineRankingResponseSchema,
   airportStatsSchema,
@@ -54,12 +55,12 @@ export const statsPageResponseSchema = z.object({
   fun: funStatsSchema.optional(),
   business: businessStatsSchema.optional(),
   unique: uniqueStatsSchema.optional(),
-  airports: airportStatsSchema.optional(),
+  airports: airportStatsSchema.extend({ scope: statsScopeSchema }).optional(),
   seats: seatStatsSchema.optional(),
   countries: countryStatsResponseSchema.optional(),
-  airlines: airlineRankingResponseSchema.optional(),
+  airlines: airlineRankingResponseSchema.extend({ scope: statsScopeSchema }).optional(),
   aircraft: aircraftRankingResponseSchema.optional(),
-  punctuality: punctualityStatsSchema.optional(),
+  punctuality: punctualityStatsSchema.extend({ scope: statsScopeSchema }).optional(),
 });
 
 export type StatsPageResponse = z.infer<typeof statsPageResponseSchema>;

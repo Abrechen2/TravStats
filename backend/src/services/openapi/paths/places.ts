@@ -81,6 +81,11 @@ const placeVisit = registry.register(
         ),
       times: visitTimesSchema,
       photos: z.array(visitPhoto).optional().describe("The visit's photos; GET /places/{id} only"),
+      documentCount: z
+        .number()
+        .int()
+        .optional()
+        .describe("How many documents are filed against the visit; GET /places/{id} only"),
     })
     .openapi("PlaceVisit")
 );

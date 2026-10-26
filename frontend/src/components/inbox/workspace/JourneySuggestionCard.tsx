@@ -11,6 +11,8 @@ import {
 } from "../../../lib/api/locationSuggestions";
 import { toLocal } from "../../../shared/time";
 import Button from "../../ui/Button";
+import TrackSectionPanel from "../track/TrackSectionPanel";
+import { journeyRunSectionProps } from "../track/sectionProps";
 import { RailFormModal } from "../../rail/RailFormModal";
 import { BusFormModal } from "../../bus/BusFormModal";
 import NewRoadtripDialog from "../../Roadtrips/NewRoadtripDialog";
@@ -168,6 +170,9 @@ export default function JourneySuggestionCard({
               )}
               {r.state === "closed" && <p className="text-sm">{t(`${J}.closed`)}</p>}
               {r.state === "invalidated" && <p className="text-sm">{t(`${J}.invalidated`)}</p>}
+              {r.state !== "invalidated" && (
+                <TrackSectionPanel {...journeyRunSectionProps(suggestion, r)} />
+              )}
               {r.state === "open" && (
                 <div className="flex flex-wrap gap-2">
                   {pending && (

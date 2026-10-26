@@ -115,9 +115,9 @@ register("get", "/travplan/config", "Admin-only planning configuration.", config
 register(
   "patch",
   "/travplan/config",
-  "Admin-only planning switch and persistent daily limits.",
+  "Admin-only planning switch and persistent daily limits. Any non-empty subset; fields left out keep their stored value.",
   config,
-  config
+  config.partial()
 );
 register(
   "get",

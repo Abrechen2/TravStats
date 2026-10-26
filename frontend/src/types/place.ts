@@ -29,6 +29,8 @@ export interface PlaceVisit {
    * list payload stay the same shape everywhere else.
    */
   photos?: PlaceVisitPhoto[];
+  /** Documents filed against the visit. DETAIL response only, like `photos`. */
+  documentCount?: number;
   /** ADR 0002 phase 4 — read through lib/entityTimes.ts. */
   times?: VisitTimes;
 }

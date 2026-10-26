@@ -101,6 +101,8 @@ export interface CountryDetailPortCall {
   /** Free text; resolved through `isoCountryCode`, never trusted raw. */
   country: string | null;
   at: Date | null;
+  /** When the ship left again — only the year cut reads it (`./passportYear.ts`). */
+  until?: Date | null;
 }
 
 /** A place the user recorded visiting, with its country already resolved. */

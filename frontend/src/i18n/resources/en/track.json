@@ -551,5 +551,54 @@
     "legendStep": "≥{{km}}",
     "legendNone": "empty = nothing recorded, hatched = not known yet",
     "utc": "Days in UTC, like the monthly values."
+  },
+  "inbox": {
+    "mapLabel": "Map of the part of your recording this question is about",
+    "openOnMap": "Open on the Track map",
+    "loading": "Loading this part of your recording …",
+    "empty": "There is no recording left for this part.",
+    "zonesNeverDrawn": "Privacy zones and deleted parts stay cut out.",
+    "dayBar": "Day in local time, the part marked",
+    "whyLabel": "Why this is asked:",
+    "more": "Show more",
+    "less": "Show less",
+    "fact": {
+      "span": "From – to",
+      "duration": "Duration",
+      "distance": "Distance",
+      "speed": "Speed",
+      "points": "Positions",
+      "matches": "Matches"
+    },
+    "value": {
+      "none": "—",
+      "sameDay": "{{day}}, {{from}} – {{until}}",
+      "days": "{{fromDay}} {{from}} – {{untilDay}} {{until}}",
+      "minutes": "{{m}} min",
+      "hours": "{{h}} h {{m}} min",
+      "daysHours": "{{d}} d {{h}} h",
+      "km": "{{km}} km",
+      "speed": "avg {{avg}}, max {{max}} km/h",
+      "speedAvg": "avg {{avg}} km/h"
+    },
+    "detail": {
+      "truncated": "Not the whole part fitted into one view – the map shows its beginning. The Track map shows all of it.",
+      "coverageTruncated": "The analysis behind this question did not read the whole history; it may be incomplete.",
+      "coverageUnreachable": "The source could not be reached during the analysis; the question rests only on what was there.",
+      "cuts_one": "Recording has gaps: {{count}} break in this part. The map does not join it.",
+      "cuts_other": "Recording has gaps: {{count}} breaks in this part. The map does not join them.",
+      "noCuts": "Recorded throughout, without a break.",
+      "points_one": "{{count}} position in this part.",
+      "points_other": "{{count}} positions in this part."
+    },
+    "why": {
+      "stay": "You stayed in one place for a while, and your logbook has no visit there yet.",
+      "market": "You spent a while on a known market site, and your logbook has no visit there yet.",
+      "venue": "You spent a while on a known site, and your logbook has no visit there yet.",
+      "country": "TravTrack saw you on the ground in {{country}}; your passport does not count the country for these days yet.",
+      "journey": "Speed and route look like a journey, and your logbook has no entry for this time.",
+      "tripAway": "You were far from home for several days, and no trip in your logbook covers them.",
+      "tripExtend": "You kept travelling right before or after your trip {{trip}}; the trip does not cover these days yet."
+    }
   }
 }

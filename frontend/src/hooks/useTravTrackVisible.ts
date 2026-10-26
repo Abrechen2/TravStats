@@ -3,6 +3,7 @@ import { useBetaFeatureAccess, useBetaFeatures } from "./useBetaFeatures";
 import { useAuthStore } from "../store/authStore";
 import { travTrackApi, type TravTrackCapabilities } from "../lib/api/travtrack";
 import { logger } from "../lib/logger";
+import { useCapabilitiesEpochStore } from "../store/capabilitiesEpochStore";
 
 /**
  * What `/travtrack/capabilities` says for this account, or null while it is
@@ -20,6 +21,8 @@ function useCapabilitiesRead(ask: boolean): {
   settled: boolean;
 } {
   const userId = useAuthStore((s) => s.user?.id);
+  // Bumped when Admin → Instanz → TravTrack saves, so every reader asks again.
+  const epoch = useCapabilitiesEpochStore((s) => s.epoch.travTrack);
   const [read, setRead] = useState<{ caps: TravTrackCapabilities | null; settled: boolean }>({
     caps: null,
     settled: false,
@@ -41,7 +44,7 @@ function useCapabilitiesRead(ask: boolean): {
     return () => {
       live = false;
     };
-  }, [userId, ask]);
+  }, [userId, ask, epoch]);
 
   return read;
 }

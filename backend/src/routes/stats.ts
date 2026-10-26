@@ -1,9 +1,11 @@
 import { Router, Response, NextFunction } from "express";
 import aircraftStatsRouter from "./stats/aircraft";
 import statsPageRouter from "./stats/page";
+import passportStatsRouter from "./stats/passport";
+import heroStatsRouter from "./stats/hero";
 import {
-  CountryCodeParamSchema,
   DateRangeQuerySchema,
+  DateRangeYearQuerySchema,
   RoutesQuerySchema,
   SummaryQuerySchema,
   TimeseriesQuerySchema,
@@ -28,10 +30,8 @@ import { calculateLodgingStats } from "../utils/lodgingStats";
 import logger from "../utils/logger";
 import { userToday } from "../services/stats/userToday";
 import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "../services/stats/departureClock";
-import { loadPassport } from "../services/stats/passportLoader";
 import { buildWhere, computeSummary } from "../services/stats/summary";
 import { loadDaysAway } from "../services/stats/daysAwayLoader";
-import { loadCountryDetail } from "../services/stats/countryDetailLoader";
 import { loadWrapped } from "../services/stats/wrappedLoad";
 import { fetchFlightDatedRows, fetchCruiseDatedRows } from "../services/stats/timeseriesRows";
 import { buildTravelRecords, loadRecordFlights } from "../services/stats/records";
@@ -44,7 +44,7 @@ import {
   withinWindow,
   type DatedRow,
 } from "../utils/stats/timeseries";
-import { readYearQuery } from "../utils/stats/domainYear";
+import { assertYearWithoutRange, readYearQuery, statsScope } from "../utils/stats/domainYear";
 import { buildTravelAccount } from "../services/stats/travelAccount";
 import { loadVisibleTravelAccountData } from "../services/stats/travelAccountData";
 import { loadCruiseStatsData } from "../services/stats/cruiseStatsData";
@@ -87,6 +87,7 @@ router.get(
         return;
       }
       const { fromDate, toDate, year, compareYear } = parsed.data;
+      assertYearWithoutRange(parsed.data);
       const baseCurrency = await getBaseCurrency(userId);
 
       // `daysAway` rides on every summary, scoped like its flight figures (forgejo#92).
@@ -98,9 +99,9 @@ router.get(
       };
       if (year !== undefined && compareYear !== undefined) {
         const [current, compare] = await Promise.all([summarize(year), summarize(compareYear)]);
-        res.json({ current, compare });
+        res.json({ current, compare, scope: statsScope(year) });
       } else {
-        res.json(await summarize(year));
+        res.json({ ...(await summarize(year)), scope: statsScope(year) });
       }
     } catch (error) {
       next(error);
@@ -108,106 +109,8 @@ router.get(
   }
 );
 
-interface HeroStats {
-  distanceKm: number;
-  flights: number;
-  countries: number;
-  airports: number;
-  co2Kg: number;
-  flightTimeMinutes: number;
-}
-
-// GET /api/v1/stats/hero — single composed aggregate for the Companion app's
-// Start-board hero widget. Reuses the SAME functions that back /summary,
-// /airports and /fun (computeSummary, calculateAirportStats, calculateFunStats)
-// instead of duplicating their queries. All-time only for the MVP — no
-// date-range params yet. The airport+fun flight select is fetched ONCE and
-// shared between calculateAirportStats and calculateFunStats since both use
-// the identical select already used by /airports and /fun.
-router.get("/hero", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const userId = req.userId!;
-
-    const flightsWhere: Prisma.FlightWhereInput = {
-      userId,
-      ...countableFlightWhere(),
-    };
-    const baseCurrency = await getBaseCurrency(userId);
-
-    // Read the flight table THREE times per request until forgejo#49: in
-    // computeSummary, inside loadPassport, and here. `arrTimeSemantics` is the
-    // one column below the passport needed and this did not have, so the same
-    // rows now serve both. The cost is the parallelism between this scan and
-    // the passport — the smaller price, since a full per-user scan is not
-    // worth running twice concurrently to save the latency of running it once.
-    const [{ stats: summary }, flights] = await Promise.all([
-      buildWhere(userId, undefined, undefined).then((w) => computeSummary(w, baseCurrency)),
-      prisma.flight.findMany({
-        where: flightsWhere,
-        select: {
-          id: true,
-          depLat: true,
-          depLon: true,
-          arrLat: true,
-          arrLon: true,
-          ...FLIGHT_CLOCK_SELECT,
-          airline: true,
-          aircraft: true,
-          departureTime: true,
-          arrivalTime: true,
-          arrTimeSemantics: true,
-          status: true,
-          price: true,
-          taxes: true,
-          fees: true,
-          category: true,
-          seatClass: true,
-          createdAt: true,
-        },
-      }),
-    ]);
-    const passport = await loadPassport(userId, flights);
-    const datedFlights = await withDepartureClock(flights);
-
-    // No home periods, deliberately: this endpoint only reads
-    // airportCount, which doesn't depend on home — only the
-    // unused farthestFromHome field does. Skips /airports's extra
-    // userSettings.findUnique lookup.
-    const [airportStats, funStats] = await Promise.all([
-      calculateAirportStats(datedFlights, []),
-      calculateFunStats(datedFlights),
-    ]);
-
-    const hero: HeroStats = {
-      distanceKm: summary.totalDistance,
-      flights: summary.totalFlights,
-      /**
-       * The SAME number the passport shows, from the same module — not
-       * `airportStats.countryCount`, which this tile read until 2026-09-03.
-       *
-       * That field counts the countries a FLIGHT touched. It is blind to a
-       * country reached by car and slept in for a week, and it counts one
-       * reached by a four-hour connection, so it was wrong in both directions
-       * at once — which is why it looked plausible for so long.
-       *
-       * This tile is the Companion's Start board, and the Companion draws a
-       * passport too. One screen therefore had two answers to "how many
-       * countries", which is the exact drift the design named as the reason
-       * for a single home: "folding lodging in without unifying the rule
-       * would create a fifth answer" (§4 of the country-counting design).
-       * The tile was that answer.
-       */
-      countries: passport.summary.countries,
-      airports: airportStats.airportCount,
-      co2Kg: funStats.co2FootprintKg,
-      flightTimeMinutes: summary.totalFlightTime,
-    };
-
-    res.json(hero);
-  } catch (error) {
-    next(error);
-  }
-});
+// `/hero` lives in `stats/hero` — mounted HERE so route order is unchanged.
+router.use(heroStatsRouter);
 
 // GET /api/v1/stats/timeseries — bucketed series (month|year) + current/previous
 // window totals, domain-parameterized (flight|cruise). Powers the Wave A
@@ -222,7 +125,13 @@ router.get(
         res.status(400).json({ error: "Invalid query parameters", details: parsed.error.issues });
         return;
       }
-      const { domain, granularity, window, year, fromDate, toDate } = parsed.data;
+      const { domain, granularity, year, fromDate, toDate } = parsed.data;
+      assertYearWithoutRange(parsed.data);
+      // `year` with no `window` means that calendar year (companion-redesign
+      // C4). The schema defaults `window` to rolling12m, so the raw query is the
+      // only place that still knows whether the caller named one.
+      const window =
+        req.query.window === undefined && year !== undefined ? "year" : parsed.data.window;
       const w = resolveWindow(window, year, fromDate, toDate, new Date());
 
       const fetchRows = domain === "cruise" ? fetchCruiseDatedRows : fetchFlightDatedRows;
@@ -255,6 +164,10 @@ router.get(
         series,
         current: sumTotals(currentRows),
         previous: sumTotals(previousRows),
+        // The year the window resolved to — `window=year` without `year` is this year.
+        scope: statsScope(
+          window === "year" && !fromDate && !toDate ? w.from.getUTCFullYear() : null
+        ),
       });
     } catch (error) {
       next(error);
@@ -740,16 +653,20 @@ router.get(
     try {
       const userId = req.userId!;
 
-      const parsed = DateRangeQuerySchema.safeParse(req.query);
+      const parsed = DateRangeYearQuerySchema.safeParse(req.query);
       if (!parsed.success) {
         res.status(400).json({ error: "Invalid query parameters", details: parsed.error.issues });
         return;
       }
-      const { fromDate, toDate } = parsed.data;
+      const { fromDate, toDate, year } = parsed.data;
+      assertYearWithoutRange(parsed.data);
 
       // Airport stats are time-insensitive (counts, country/continent, distance),
       // so historical flights are included.
-      const where: Prisma.FlightWhereInput = { userId, ...countableFlightWhere() };
+      const where: Prisma.FlightWhereInput = {
+        ...(await buildWhere(userId, undefined, undefined, year)),
+        ...countableFlightWhere(),
+      };
       if (fromDate || toDate) {
         where.departureTime = {};
         if (fromDate) where.departureTime.gte = new Date(fromDate);
@@ -778,22 +695,13 @@ router.get(
         homePeriods,
         today
       );
-      res.json(stats);
+      res.json({ ...stats, scope: statsScope(year) });
     } catch (error) {
       next(error);
     }
   }
 );
 
-/**
- * The passport — countries, their airports, and a continent quota.
- *
- * One endpoint rather than two raw ones the clients re-aggregate: the Companion
- * app already derives this screen client-side, and a second derivation in the
- * web frontend would be a third copy of arithmetic that has to agree. The
- * rules, and why each was chosen to match a figure published elsewhere on this
- * server, are in services/stats/passport.ts.
- */
 /**
  * GET /stats/records — the seven travel records, derived here (Forgejo #41).
  *
@@ -814,66 +722,27 @@ router.get(
     try {
       const userId = req.userId!;
 
+      const year = readYearQuery(req.query, res);
+      if (year === null) return;
       // The loader lives beside the records so their evidence reads the same rows.
-      const flights = await loadRecordFlights(userId);
+      const flights = await loadRecordFlights(
+        userId,
+        await buildWhere(userId, undefined, undefined, year)
+      );
 
-      res.json({ success: true, data: { records: buildTravelRecords(flights) } });
+      res.json({
+        success: true,
+        data: { records: buildTravelRecords(flights), scope: statsScope(year) },
+      });
     } catch (error) {
       next(error);
     }
   }
 );
 
-router.get(
-  "/passport",
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      res.json(await loadPassport(req.userId!));
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-/**
- * GET /stats/countries/:code — one country, in detail (Forgejo #42).
- *
- * The drill-down behind a passport row. It answers for a country reached only
- * by cruise or by a recorded place too, because the passport lists those rows
- * and a 404 there would put the list and the page into the disagreement #42 is
- * about. The rules are in services/stats/countryDetail.ts.
- *
- * Bare object rather than a `{ success, data }` envelope: it sits beside
- * `/stats/countries` and `/stats/passport`, and a client that walks from a row
- * to its page should not have to unwrap a second shape halfway.
- */
-router.get(
-  "/countries/:code",
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const userId = req.userId!;
-      const parsed = CountryCodeParamSchema.safeParse(req.params);
-      if (!parsed.success) {
-        res.status(400).json({ error: "Invalid country", details: parsed.error.issues });
-        return;
-      }
-
-      const detail = await loadCountryDetail(userId, parsed.data.code);
-
-      if (!detail) {
-        // Nothing evidences this country — including a code the catalogue does
-        // not know. Both are "you have not been there", and saying so is
-        // better than an empty page that looks like a loading failure.
-        res.status(404).json({ error: "No record of this country" });
-        return;
-      }
-
-      res.json(detail);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
+// `/passport` and `/countries/:code` live in `stats/passport` — mounted HERE so
+// route-matching order is exactly what it was.
+router.use(passportStatsRouter);
 
 /**
  * GET /stats/wrapped?year= — the year in review (Forgejo #42, the last piece).
@@ -965,7 +834,12 @@ router.get(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const where: Prisma.FlightWhereInput = { userId, ...countableFlightWhere() };
+      const year = readYearQuery(req.query, res);
+      if (year === null) return;
+      const where: Prisma.FlightWhereInput = {
+        ...(await buildWhere(userId, undefined, undefined, year)),
+        ...countableFlightWhere(),
+      };
 
       const [total, airlineCounts] = await Promise.all([
         prisma.flight.count({ where }),
@@ -979,8 +853,8 @@ router.get(
       // The fold lives in `services/stats/airlineRanking.ts`, shared with the
       // composing `GET /stats/page`, which reaches it from the rows it already
       // holds instead of from these two aggregates.
-      res.json(
-        computeAirlineRanking(
+      res.json({
+        ...computeAirlineRanking(
           airlineCounts.map((row) => ({
             airline: row.airline,
             airlineIata: row.airlineIata,
@@ -988,8 +862,9 @@ router.get(
             count: row._count,
           })),
           total
-        )
-      );
+        ),
+        scope: statsScope(year),
+      });
     } catch (error) {
       next(error);
     }
@@ -1065,7 +940,10 @@ router.get(
         stats = calculateCruiseStats([], userBirthday);
       }
 
-      res.json(buildCruiseTabResponse(stats, cruiseRows, baseCurrency));
+      res.json({
+        ...buildCruiseTabResponse(stats, cruiseRows, baseCurrency),
+        scope: statsScope(year),
+      });
     } catch (error) {
       next(error);
     }
@@ -1123,6 +1001,7 @@ router.get(
         data: {
           ...stats,
           countries: Array.from(stats.countries).sort(),
+          scope: statsScope(year),
         },
       });
     } catch (error) {
@@ -1147,15 +1026,16 @@ router.get(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const parsed = DateRangeQuerySchema.safeParse(req.query);
+      const parsed = DateRangeYearQuerySchema.safeParse(req.query);
       if (!parsed.success) {
         res.status(400).json({ error: "Invalid query parameters", details: parsed.error.issues });
         return;
       }
-      const { fromDate, toDate } = parsed.data;
+      const { fromDate, toDate, year } = parsed.data;
+      assertYearWithoutRange(parsed.data);
 
       const where: Prisma.FlightWhereInput = {
-        userId,
+        ...(await buildWhere(userId, undefined, undefined, year)),
         ...countableFlightWhere(),
         delayMinutes: { not: null },
       };
@@ -1176,7 +1056,7 @@ router.get(
         },
       });
 
-      res.json(computePunctuality(flights));
+      res.json({ ...computePunctuality(flights), scope: statsScope(year) });
     } catch (error) {
       next(error);
     }

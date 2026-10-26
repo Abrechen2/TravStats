@@ -32,6 +32,7 @@ export type AdminPageId =
 export type AdminSectionId =
   | "instance"
   | "travTrack"
+  | "travPlan"
   | "shareLinks"
   | "importMode"
   | "usageStats"
@@ -66,6 +67,7 @@ export type AdminPageDef = PageDef<AdminPageId, AdminSectionId>;
 export const ADMIN_SECTION_LABEL_KEY: Record<AdminSectionId, string> = {
   instance: "admin:instance.title",
   travTrack: "admin:travTrack.title",
+  travPlan: "admin:travPlan.title",
   shareLinks: "sharing:links.section.title",
   importMode: "admin:importMode.title",
   usageStats: "usageStats:admin.title",
@@ -124,6 +126,9 @@ export const ADMIN_PAGES: readonly AdminPageDef[] = [
     sections: [
       section("instance"),
       section("travTrack"),
+      // TravPlan's server switch (owner, 2026-10-26): shown only while its beta
+      // key is open — the server refuses every plan path otherwise.
+      { ...section("travPlan"), gate: "travPlan" },
       section("shareLinks"),
       section("importMode"),
       section("usageStats"),

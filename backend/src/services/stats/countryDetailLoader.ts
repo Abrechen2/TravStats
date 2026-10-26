@@ -41,6 +41,14 @@ import { applyCountryOverrides } from "./countryOverrides";
 import { listCountryOverrides } from "./countryOverrideStore";
 import { departureDayOf } from "../../utils/stats/departureClock";
 import { isoCountryCode } from "../../utils/continents";
+import { flightDay } from "./flightEvidence";
+import {
+  anyDayInYear,
+  dayInYear,
+  portCallDays,
+  scopeLodgingStays,
+  scopeOverrides,
+} from "./passportYear";
 
 /** Every argument `buildCountryDetail` takes after the country code, in its order. */
 export type CountryDetailInputs =
@@ -51,19 +59,73 @@ export type CountryDetailInputs =
  * @returns null when nothing evidences it and no verdict of the user's puts it
  *   in the passport — the route's 404
  */
+/**
+ * The drill-down's records limited to one calendar year — the same per-source
+ * cut `buildPassport` makes under a year (`./passportYear.ts`), so the page
+ * opened from a year's row shows that year's records and no other. Undated
+ * records belong to no year and are left out.
+ */
+export function scopeCountryDetailInputs(
+  inputs: CountryDetailInputs,
+  year: number,
+  now: Date = new Date()
+): CountryDetailInputs {
+  const [
+    flights,
+    airports,
+    home,
+    ports,
+    places,
+    lodgings,
+    track,
+    limit,
+    stations,
+    rail,
+    bus,
+    ferry,
+  ] = inputs;
+  const endsIn = (ends: typeof rail = []) => ends.filter((e) => anyDayInYear(e.days, year));
+  return [
+    flights.filter((f) => dayInYear(flightDay(f), year)),
+    airports,
+    home,
+    (ports ?? []).filter((call) => anyDayInYear(portCallDays(call), year)),
+    (places ?? []).filter((v) => dayInYear(v.at?.toISOString().slice(0, 10), year)),
+    scopeLodgingStays(lodgings ?? [], year, now),
+    (track ?? []).filter((row) => dayInYear(row.date, year)),
+    limit,
+    (stations ?? []).filter((s) => anyDayInYear(s.days, year)),
+    endsIn(rail),
+    endsIn(bus),
+    endsIn(ferry),
+  ];
+}
+
+/**
+ * @param options.year only that calendar year's records (companion-redesign
+ *   C4); a country with none answers null — the 404 — even if other years
+ *   have some. Omitted: the lifetime page, exactly as before.
+ */
 export async function loadCountryDetail(
   userId: string,
-  code: string
+  code: string,
+  options: { year?: number } = {}
 ): Promise<CountryDetail | null> {
+  const { year } = options;
   const wanted = isoCountryCode(code);
   if (!wanted) return null;
   const inputs = await loadCountryDetailInputs(userId);
-  const evidenced = buildCountryDetail(code, ...inputs);
+  const scoped = year === undefined ? inputs : scopeCountryDetailInputs(inputs, year);
+  const evidenced = buildCountryDetail(code, ...scoped);
   // Read before deciding on a 404: a `visited` or `ground` verdict lists a
   // country with no record behind it, and its row must open (forgejo#308).
+  // Under a year only a verdict dated in it can open an otherwise empty page.
   const overrides = await listCountryOverrides(userId);
   const manual = overrides.some(
-    (o) => o.verdict !== "excluded" && o.countryCode.toUpperCase() === wanted
+    (o) =>
+      o.verdict !== "excluded" &&
+      o.countryCode.toUpperCase() === wanted &&
+      (year === undefined || dayInYear(o.day, year))
   );
   if (!evidenced && !manual) return null;
   const detail = evidenced ?? manualCountryDetail(wanted);
@@ -89,13 +151,31 @@ export async function loadCountryDetail(
     undefined,
     bus,
     homeCountries,
-    ferry
+    ferry,
+    // The whole account goes in and the year is cut inside, exactly as
+    // `loadPassport` does, so the flags below match the year's passport row.
+    year
   );
-  const passport = applyCountryOverrides(automatic, overrides, Number(today.slice(0, 4)));
+  const passport =
+    year === undefined
+      ? applyCountryOverrides(automatic, overrides, Number(today.slice(0, 4)))
+      : applyCountryOverrides(
+          automatic,
+          scopeOverrides(overrides, year, new Set(automatic.countries.map((c) => c.code))),
+          year
+        );
   const row = passport.countries.find((country) => country.code === detail.code);
   const excluded = passport.excludedCountries.find((country) => country.code === detail.code);
   return {
     ...detail,
+    // A year page carries no other year: a stay over New Year dates itself by
+    // its check-out, which may fall in the next one.
+    ...(year === undefined
+      ? {}
+      : {
+          firstYear: detail.firstYear === null ? null : year,
+          lastYear: detail.lastYear === null ? null : year,
+        }),
     groundPresence: row?.groundPresence ?? false,
     visited: row?.visited ?? false,
     // An excluded country is decided, not unclear: the user took it out.
@@ -167,6 +247,7 @@ export async function loadCountryDetailInputs(userId: string): Promise<CountryDe
       select: {
         cruiseId: true,
         arrivalTime: true,
+        departureTime: true,
         date: true,
         port: { select: { name: true, country: true } },
       },
@@ -242,6 +323,9 @@ export async function loadCountryDetailInputs(userId: string): Promise<CountryDe
       portName: stop.port?.name ?? null,
       country: stop.port?.country ?? null,
       at: stop.arrivalTime ?? stop.date,
+      // Read only by the year cut, which dates a call by its days in port as
+      // the passport does; the page itself still dates a call by its arrival.
+      until: stop.departureTime,
     })),
     // Only visits that have HAPPENED. A booking for 2099 is not evidence of
     // ever having been in a country, and passing it made the detail page agree

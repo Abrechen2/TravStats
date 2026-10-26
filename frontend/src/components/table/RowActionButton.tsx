@@ -63,9 +63,22 @@ interface Props {
   label: string;
   onClick: () => void;
   testId?: string;
+  /**
+   * `compact` (default) is the 28 px box of a table's fixed action column,
+   * grown to 44 px of HIT area on a coarse pointer only. `touch` draws the
+   * 44 px box itself, for a row with room for it (a place's visit list).
+   */
+  size?: "compact" | "touch";
 }
 
-export function RowActionButton({ icon, label, onClick, testId }: Props): JSX.Element {
+export function RowActionButton({
+  icon,
+  label,
+  onClick,
+  testId,
+  size = "compact",
+}: Props): JSX.Element {
+  const box = size === "touch" ? "h-11 w-11 rounded-md" : `h-7 w-7 rounded-sm ${TOUCH_HIT_AREA}`;
   return (
     <button
       type="button"
@@ -74,7 +87,7 @@ export function RowActionButton({ icon, label, onClick, testId }: Props): JSX.El
         e.stopPropagation();
         onClick();
       }}
-      className={`relative inline-flex h-7 w-7 items-center justify-center rounded-sm ${TOUCH_HIT_AREA} ${HOVER_CLASS[icon]}`}
+      className={`relative inline-flex items-center justify-center ${box} ${HOVER_CLASS[icon]}`}
       style={{ color: "var(--text-muted)" }}
       aria-label={label}
       title={label}

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 import type { Cruise, Flight, Trip } from "../types";
@@ -310,11 +310,19 @@ describe("the documents section is mounted on every entry the API serves", () =>
     } as unknown as Awaited<ReturnType<typeof getPlace>>);
 
     routed("/places/:id", "/places/p1", <PlaceDetailPage />);
+    // A visit's documents mount when its row is opened (the visit list loads
+    // details lazily), so open each row in turn.
+    for (const id of ["visit-1", "visit-2"]) {
+      const row = await screen.findByTestId(`visit-row-${id}`);
+      fireEvent.click(within(row).getAllByRole("button")[0]);
+    }
     await waitFor(() =>
-      expect(mounted).toEqual([
-        { type: "placeVisit", id: "visit-1" },
-        { type: "placeVisit", id: "visit-2" },
-      ])
+      expect(mounted).toEqual(
+        expect.arrayContaining([
+          { type: "placeVisit", id: "visit-1" },
+          { type: "placeVisit", id: "visit-2" },
+        ])
+      )
     );
   });
 

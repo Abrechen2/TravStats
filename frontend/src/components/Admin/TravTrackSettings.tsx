@@ -6,6 +6,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { Switch } from "../ui/Field";
 import { SectionCard, SectionTitle } from "../Settings/SettingsShared";
+import { useCapabilitiesEpochStore } from "../../store/capabilitiesEpochStore";
 
 const NS = "admin:travTrack";
 
@@ -23,6 +24,7 @@ export default function TravTrackSettings(): JSX.Element {
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const bumpCapabilities = useCapabilitiesEpochStore((s) => s.bump);
 
   useEffect(() => {
     if (!offered) return;
@@ -46,6 +48,7 @@ export default function TravTrackSettings(): JSX.Element {
     setError(null);
     try {
       setEnabled((await travTrackApi.setConfig({ enabled: on })).enabled);
+      bumpCapabilities("travTrack");
     } catch (err) {
       logger.error("Saving the TravTrack switch failed:", err);
       setError(t(travTrackErrorKey(err)));

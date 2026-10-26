@@ -668,14 +668,12 @@ denominator and reported 65.81 % instead of 56.21 %.
 Prettier on the whole tree (since forgejo#61) as required jobs, and — since 2026-09-16 —
 the backend Jest suite as a required one too; its comment block keeps the
 history of why it was advisory until then. `security.yml` runs
-`npm audit` on production deps, Trivy and CodeQL on every push to `main` and
-weekly. CodeQL is NOT in that file, on purpose: the repository has GitHub's
-default code-scanning setup switched on (since 2026-08-01), and a
-workflow-defined CodeQL job is refused by it — "CodeQL analyses from
-advanced configurations cannot be processed when the default setup is
-enabled" — which kept the Security badge red for a week for no finding at
-all. The job was removed on 2026-09-06; its comment block says what to
-switch off first if it ever comes back.
+`npm audit` on production deps (the gate) and Trivy (a report in the job log)
+on every push to `main` and weekly. Nothing is uploaded to GitHub code
+scanning any more, and its CodeQL default setup is off (owner, 2026-10-25,
+the same move as Sublarr): the Security tab held 514 open alerts nobody
+triaged, mostly test code and unreachable dev chains. Dependabot alerts and
+security updates and secret scanning are untouched.
 
 `check:size` and `check:drift` DO run in CI since 2026-09-15 (forgejo#60) —
 size in the `static` job, drift in a `schema-drift` job of its own, because it
