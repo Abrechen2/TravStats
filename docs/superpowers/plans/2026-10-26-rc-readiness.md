@@ -55,15 +55,16 @@ S = server (travstats-server), T = TravTrack session, A = app.
 | forgejo#320 station labels on the map | S | build |
 | forgejo#322 "a logbook, not a live tracker" text | S | rewrite README / Docker Hub / llms.txt copy |
 | forgejo#323 route and endpoint details for every domain | S | build |
-| forgejo#318 + forgejo#321 settings levels and settings redesign | S | scope with the owner (see Open) |
+| forgejo#318 settings levels for market/place detection | S | build (owner: only this candidate in the RC) |
+| forgejo#321 full settings redesign | — | after the RC (owner) |
 | Discord "Domain: Bahn" tram/metro routing | S | `feat/rail-tram-routing` in progress |
 | companion#76 iOS background-launch crash | A | likely the F1 fix; verify on build 62, close |
 | companion#73 trip recording to the server | A | done through C6; close with evidence |
 | companion#79 cockpit GPS 0 after lock screen | A | fix |
 | companion#78 offline route map never completes | A | fix (download button, region first) |
-| companion#74 settings levels in the app | A | with forgejo#318 |
+| companion#74 settings levels in the app | A | same scope as forgejo#318: market/place detection only |
 
-### Proposed out of the RC (owner to confirm)
+### Out of the RC (owner, 2026-10-26)
 
 forgejo#313 mail intake (design), forgejo#303 market analysis (umbrella),
 forgejo#301 federation, forgejo#299 country counting redesign, forgejo#59
@@ -81,8 +82,11 @@ voice notes, companion#9 watch workouts, bus line routes (real line course).
 4. Exit: full gates, Codex review over `main...dev/travtrack`, UAT on the Beta,
    then the owner's RC question.
 
-## Open for the owner
+## Owner decisions 2026-10-26
 
-- The out-of-RC list above.
-- forgejo#318/#321: full settings redesign in this RC, or only the levels for
-  the first candidate (market/place detection)?
+- Out-of-RC list confirmed as above.
+- Settings: only the Standard/Expert levels for market/place detection
+  (forgejo#318, companion#74); forgejo#321 after the RC.
+- A place visit dated without a time keeps counting from midnight of its day
+  (`classifyVisit` unchanged).
+- CT147 gets DACH rail data and the tram/subway profiles.
