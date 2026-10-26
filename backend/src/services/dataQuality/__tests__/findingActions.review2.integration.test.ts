@@ -311,4 +311,74 @@ describe("C3 review findings, round two", () => {
 
     expect(restatusCalls.flat()).toContain(full.trip.id);
   });
+
+  it("a merge does not overwrite a stop the user re-pointed while it ran", async () => {
+    const full = await makeFullTrip(anna);
+    const {
+      id: _id,
+      tripId: _trip,
+      createdAt: _c,
+      updatedAt: _u,
+      durationMinutes: _d,
+      ...rest
+    } = full.flight;
+    await prisma.flight.create({
+      data: {
+        ...(rest as unknown as Parameters<typeof prisma.flight.create>[0]["data"]),
+        createdAt: new Date("2024-01-01T00:00:00Z"),
+        shareKey: null,
+      },
+    });
+    await runDataQualityChecks(anna.id, NOW);
+    const [flag] = await listFlags(anna.id, { kind: "duplicate_candidate" });
+    const stopId = full.stops[0].id;
+
+    // The merge's transaction, with a user edit landing right after it found
+    // the stops to re-point and before it wrote them.
+    const original = prisma.$transaction.bind(prisma);
+    let edited = false;
+    const spy = jest.spyOn(prisma, "$transaction").mockImplementation(((
+      fn: (tx: unknown) => Promise<unknown>,
+      opts?: unknown
+    ) =>
+      original(
+        ((tx: Record<string, unknown>) =>
+          fn(
+            new Proxy(tx, {
+              get(target, prop, receiver) {
+                const value = Reflect.get(target, prop, receiver);
+                if (prop !== "tripStop") return value;
+                return new Proxy(value as Record<string, unknown>, {
+                  get(d, p, r) {
+                    const inner = Reflect.get(d, p, r) as (...a: unknown[]) => Promise<unknown>;
+                    if (p !== "findMany" || edited) return inner;
+                    return async (...args: unknown[]) => {
+                      const found = await inner.apply(d, args);
+                      edited = true;
+                      await original((other) =>
+                        other.tripStop.update({
+                          where: { id: stopId },
+                          data: { sourceId: "re-pointed-by-the-user" },
+                        })
+                      );
+                      return found;
+                    };
+                  },
+                });
+              },
+            })
+          )) as never,
+        opts as never
+      )) as never);
+    try {
+      await resolveFinding(flag.id, anna.id, { action: "merge" });
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(edited).toBe(true);
+    expect((await prisma.tripStop.findUniqueOrThrow({ where: { id: stopId } })).sourceId).toBe(
+      "re-pointed-by-the-user"
+    );
+  });
 });

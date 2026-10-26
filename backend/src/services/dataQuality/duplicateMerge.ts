@@ -110,8 +110,16 @@ async function repointStops(
   match: Prisma.TripStopWhereInput,
   data: { lodgingStayId: string } | { sourceId: string }
 ): Promise<void> {
+  const scope = { ...match, OR: [{ trip: { userId } }, { route: { userId } }] };
+  const found = await tx.tripStop.findMany({ where: scope, select: { id: true } });
+  if (found.length === 0) return;
+  // Lock, then ask again: a stop the user re-pointed between the two reads
+  // no longer matches and keeps the user's choice.
+  await tx.$queryRaw(
+    Prisma.sql`SELECT id FROM "trip_stops" WHERE id IN (${Prisma.join(found.map((s) => s.id))}) FOR UPDATE`
+  );
   const stops = await tx.tripStop.findMany({
-    where: { ...match, OR: [{ trip: { userId } }, { route: { userId } }] },
+    where: { ...scope, id: { in: found.map((s) => s.id) } },
     select: { id: true },
   });
   if (stops.length === 0) return;

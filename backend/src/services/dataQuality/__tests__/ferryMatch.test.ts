@@ -70,6 +70,12 @@ describe("findFerryMatches — ferry_match (spec C3)", () => {
     ).toEqual([]);
   });
 
+  it("asks nothing for a crossing whose arrival day lies before its departure day", () => {
+    expect(
+      run([ride({ id: "f1", firstDay: "2026-07-20", lastDay: "2026-07-05" })], [trip({ id: "t1" })])
+    ).toEqual([]);
+  });
+
   it("asks nothing when two trips hold the crossing — the choice is the user's", () => {
     expect(
       run([ride({ id: "f1" })], [trip({ id: "t1" }), trip({ id: "t2", startDay: "2026-07-04" })])

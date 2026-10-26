@@ -18,7 +18,9 @@ import { isSetAside } from "./setAside";
  *   must lie inside the trip's first and last day. A trip without both days
  *   is not a window.
  * - EXACTLY one trip may qualify. Two overlapping trips are a choice the
- *   check cannot make, so it asks nothing.
+ *   check cannot make, so it asks nothing. A trip created or stretched while
+ *   a `link` commits is not locked out on purpose: the result is the same as
+ *   linking a moment earlier, which the next run then sees as on a trip.
  * - A cancelled ride or trip is never asked about, nor a ride linked to a
  *   roadtrip leg — its trip follows the roadtrip.
  */
@@ -33,9 +35,11 @@ export function findFerryMatches(
     if (ride.tripId || ride.onRoadtrip || isSetAside(ride.status)) continue;
     const { firstDay, lastDay } = ride;
     if (!firstDay || !lastDay) continue;
-    const inside = windows.filter(
-      (t) => (t.startDay as string) <= firstDay && lastDay <= (t.endDay as string)
-    );
+    // A crossing that "arrives" before it departs names no span at all.
+    if (lastDay < firstDay) continue;
+    const within = (d: string, t: (typeof windows)[number]) =>
+      (t.startDay as string) <= d && d <= (t.endDay as string);
+    const inside = windows.filter((t) => within(firstDay, t) && within(lastDay, t));
     if (inside.length !== 1) continue;
     const [trip] = inside;
     out.push({

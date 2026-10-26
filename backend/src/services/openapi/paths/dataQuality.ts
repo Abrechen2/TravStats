@@ -122,8 +122,15 @@ const findingError = (codes: readonly string[]) => ({
   },
 });
 
+/** A malformed id or body: the error handler's generic validation answer. */
+const validationError = z.object({ error: z.string(), code: z.literal("VALIDATION_FAILED") });
+
 const answerResponses = (description: string) => ({
   200: { description, content: { "application/json": { schema: answered } } },
+  400: {
+    description: "`VALIDATION_FAILED` — a malformed id or body",
+    content: { "application/json": { schema: validationError } },
+  },
   403: { description: "Read-scoped token", content: errorContent },
   404: { description: "`notFound`", content: findingError(["notFound"]) },
 });
@@ -159,8 +166,16 @@ registry.registerPath({
     400: {
       description:
         "`invalidAction` — unknown, not offered, `keptId` outside the finding, " +
-        "or a merge that would lose a recording or a link",
-      content: findingError(["invalidAction"]),
+        "or a merge that would lose a recording or a link. A malformed id or " +
+        "body is the generic `VALIDATION_FAILED` error instead.",
+      content: {
+        "application/json": {
+          schema: z.union([
+            findingError(["invalidAction"])["application/json"].schema,
+            validationError,
+          ]),
+        },
+      },
     },
     409: {
       description: "`staleFinding` — the flag is not open, or the copies no longer match",
