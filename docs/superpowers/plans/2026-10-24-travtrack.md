@@ -543,6 +543,11 @@ benefit the owner asked for. Revisit only on the owner's wish.
 - [ ] **Step 5:** Device check on the iPhone (start and stop from a Shortcuts automation with the app closed), result in ADR 0017.
 - [ ] **Step 6:** Commit `feat(location): start and stop everyday recording from Shortcuts`.
 
+### After C9: capture scope (owner, 2026-10-26)
+
+Start simple: **record everything is the default.** No manual accuracy setting and no per-type profiles yet; they come once there is field experience. The later concept — all sources, triggers and per-type profiles (flight, cruise, ferry, rail, bus, roadtrip, workout, everyday) — is the board at https://claude.ai/artifact/FS93X8kqman2wrCDEwZuLC.
+Proposed for the RC (awaiting the owner): the app's location screen offers only **Aus | Alles** (today's everyday mode, which already raises the rate for flights and trips); „Flug & Reise" is no longer offered. Contract unchanged — `capture.modes` still lists `trips` and `everyday`; the app just stops offering `trips`.
+
 ### Phase 2 exit
 
 - [ ] Server gates (Build Checks) green on `dev/travtrack`; `npm run check:drift` green with the one TravTrack migration; Companion `tsc` + `npm test` + `test:time-zones` green.
