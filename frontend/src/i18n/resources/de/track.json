@@ -1,0 +1,606 @@
+{
+  "title": "Track",
+  "intro": "Dein eigener Standortverlauf aus TravTrack, Tag für Tag — nur für dich, nie geteilt.",
+  "day": {
+    "label": "Tag",
+    "previous": "Vorheriger Tag",
+    "next": "Nächster Tag",
+    "today": "Heute",
+    "loading": "Der Tag wird geladen …",
+    "empty": "An diesem Tag ist nichts aufgezeichnet.",
+    "points_one": "{{count}} Position",
+    "points_other": "{{count}} Positionen",
+    "truncated": "Dieser Tag hält mehr Positionen, als eine Ansicht zeigt — die Linie ist unvollständig.",
+    "map": "Karte des Tages"
+  },
+  "coverage": {
+    "title": "Was aufgezeichnet ist",
+    "recorded": "Aufgezeichnet",
+    "noData": "Keine Daten",
+    "deleted": "Gelöscht",
+    "phonePaused": "Telefon pausiert",
+    "piece": "{{state}}, {{from}}–{{to}}"
+  },
+  "timeline": {
+    "title": "Tagesablauf",
+    "none": "TravStats kennt an diesem Tag keinen Eintrag, keine Reise und keine Zeit zuhause.",
+    "flight": "Flug {{label}}",
+    "trip": "Reise „{{label}}“",
+    "home": "Zuhause ({{label}})",
+    "rail": "Bahnfahrt {{label}}",
+    "bus": "Busfahrt {{label}}",
+    "ferry": "Fähre {{label}}",
+    "cruise": "Kreuzfahrt {{label}}",
+    "rental": "Mietwagen {{label}}",
+    "roadtrip": "Roadtrip {{label}}",
+    "lodging": "Übernachtung {{label}}",
+    "poi": "Besuch {{label}}",
+    "entry": "Eintrag {{label}}",
+    "suggestion": {
+      "stay": "Vorschlag: Aufenthalt {{label}}",
+      "journey": "Vorschlag: Fahrt über {{label}} km"
+    },
+    "movement": "Unterwegs, ohne Eintrag",
+    "span": "{{from}}–{{to}}",
+    "at": "{{at}}",
+    "endOfDay": "24:00"
+  },
+  "actions": {
+    "export": "Exportieren",
+    "delete": "Zeitraum löschen"
+  },
+  "export": {
+    "title": "Verlauf exportieren",
+    "intro": "Lädt deine TravTrack-Positionen dieser Tage herunter, beide eingeschlossen, auf der Uhr deines Profils. Was eine Privatzone verdeckt, ist nicht in der Datei.",
+    "from": "Vom",
+    "to": "Bis",
+    "format": "Format",
+    "gpx": "GPX — für Karten- und Sportprogramme",
+    "json": "JSON — alles, mit Pausen und gelöschten Zeiträumen",
+    "do": "Herunterladen",
+    "done": "Die Datei wurde heruntergeladen.",
+    "truncated": "Der Zeitraum hält mehr Positionen, als eine Datei trägt. Teil {{part}} ist heruntergeladen — „Rest exportieren“ lädt den nächsten Teil.",
+    "rest": "Rest exportieren",
+    "doneParts": "Alle {{count}} Teile wurden heruntergeladen — zusammen der ganze Zeitraum.",
+    "truncatedNoRest": "Die Datei endet vorher, und der Server sagt nicht, wo der Rest beginnt. Exportiere einen kürzeren Zeitraum."
+  },
+  "delete": {
+    "title": "Zeitraum löschen",
+    "intro": "Löscht alle Positionen dieser Tage, beide eingeschlossen, auf der Uhr deines Profils. Der Zeitraum bleibt gelöscht: Auch ein Handy, das noch offline war, bringt sie nicht zurück. Flüge und Reisen bleiben stehen.",
+    "from": "Vom",
+    "to": "Bis",
+    "counting": "Gespeicherte Positionen werden gezählt …",
+    "preview_one": "{{count}} gespeicherte Position wird gelöscht.",
+    "preview_other": "{{count}} gespeicherte Positionen werden gelöscht.",
+    "previewNone": "In diesem Zeitraum ist nichts gespeichert.",
+    "do": "Positionen löschen",
+    "done_one": "{{count}} Position gelöscht.",
+    "done_other": "{{count}} Positionen gelöscht."
+  },
+  "errors": {
+    "disabled": "TravTrack ist auf diesem Server ausgeschaltet. Was gespeichert ist, kannst du unter Einstellungen → Standort exportieren und löschen.",
+    "exportTooLong": "Ein Export umfasst höchstens 366 Tage. Wähle einen kürzeren Zeitraum.",
+    "zoneLimit": "Du hast schon so viele Privatzonen, wie es geben kann.",
+    "network": "Der Server ist gerade nicht erreichbar. Versuche es gleich noch einmal.",
+    "generic": "Das hat nicht geklappt. Versuche es erneut.",
+    "rangeTooLong": "Ein Zeitraum auf der Karte umfasst höchstens 400 Tage. Wähle einen kürzeren.",
+    "pointGone": "Diese Position gibt es nicht mehr – sie wurde schon gelöscht."
+  },
+  "settings": {
+    "intro": "Die Positionen, die deine Companion für TravTrack aufzeichnet, liegen hier auf deinem Server – nur für dich, nie geteilt oder föderiert. Gespeichert bleibt alles, bis du es löschst.",
+    "off": "TravTrack ist auf diesem Server ausgeschaltet: Es wird nichts mehr aufgezeichnet. Was gespeichert ist, kannst du hier weiter exportieren und löschen.",
+    "loadFailed": "TravTrack konnte nicht geladen werden. Lade die Seite neu.",
+    "empty": "Noch keine Positionen gespeichert.",
+    "summary": "{{count}} Positionen gespeichert, vom {{from}} bis {{to}}, von {{devices}} Gerät(en).",
+    "tripsNoResidence": "Reisen erkennt TravTrack erst, wenn dein Wohnort bestätigt ist: Gemessen wird der Abstand zu deinem Zuhause. Bestätige ihn unter Einstellungen → Zuhause.",
+    "open": "Track öffnen",
+    "zones": {
+      "title": "Privatzonen",
+      "intro": "In einer Privatzone wird gar nichts aufgezeichnet: Die App sendet von dort keine Position, und der Server verwirft sie dort ebenfalls. Die Zonen gelten für alle deine Geräte.",
+      "none": "Noch keine Privatzone.",
+      "radius": "Umkreis {{metres}} m",
+      "radiusLabel": "Umkreis",
+      "name": "Name",
+      "namePlaceholder": "z. B. Zuhause",
+      "centre": "Mittelpunkt",
+      "centreHint": "Koordinaten oder ein Google-Maps-Link, z. B. 52.5200, 13.4050",
+      "centreInvalid": "Diese Koordinaten kann TravStats nicht lesen.",
+      "add": "Privatzone anlegen",
+      "added": "Privatzone angelegt.",
+      "addedDeleted": "Privatzone angelegt, {{count}} gespeicherte Positionen darin gelöscht.",
+      "confirmTitle": "Positionen in der Zone löschen?",
+      "confirmMessage": "In dieser Zone liegen schon {{count}} gespeicherte Positionen. Mit der Zone werden sie gelöscht – das lässt sich nicht rückgängig machen.",
+      "confirmDo": "Löschen und anlegen",
+      "notSaved": "Die Privatzone wurde nicht gespeichert. Versuche es erneut.",
+      "remove": "Entfernen",
+      "removeConfirm": "Privatzone „{{name}}“ entfernen? Dort wird dann wieder aufgezeichnet; was die Zone gelöscht hat, bleibt gelöscht.",
+      "notRemoved": "Die Privatzone wurde nicht entfernt. Versuche es erneut."
+    },
+    "delete": {
+      "title": "Zeitraum löschen",
+      "intro": "Löscht alle Positionen dieser Tage, beide eingeschlossen, auf der Uhr deines Profils. Der Zeitraum bleibt gelöscht: Auch ein Handy, das noch offline war, bringt sie nicht zurück.",
+      "from": "Vom",
+      "to": "Bis",
+      "do": "Positionen löschen",
+      "confirm": "Alle {{count}} Positionen vom {{from}} bis {{to}} löschen? Das lässt sich nicht rückgängig machen.",
+      "done": "{{count}} Positionen gelöscht.",
+      "notDone": "Die Positionen wurden nicht gelöscht. Versuche es erneut."
+    },
+    "cities": {
+      "title": "Städte in den Monatswerten",
+      "intro": "Nennt die Städte, in denen du dich mindestens 30 Minuten aufgehalten hast. Dafür schickt der Server gerundete Positionen (auf etwa 1 km) an den Geocoder dieses Servers – das kann ein öffentlicher Dienst wie Nominatim sein. Aufenthalte in Privatzonen werden nie nachgeschlagen.",
+      "label": "Städte ermitteln",
+      "loadFailed": "Die Einstellung konnte nicht geladen werden.",
+      "notSaved": "Die Einstellung wurde nicht gespeichert.",
+      "savedOn": "Städte werden beim nächsten Durchlauf ermittelt.",
+      "savedOff": "Städtesuche aus – bereits ermittelte Städte sind entfernt."
+    },
+    "importsMoved": "GPX-Importe, die Dawarich-Kopie und OwnTracks/Overland findest du jetzt unter Track › Importe."
+  },
+  "imports": {
+    "title": "GPX-Dateien",
+    "intro": "Eine GPX-Datei, etwa aus einer Sport-App oder einem älteren Tracker, kommt in deinen TravTrack-Verlauf. Positionen in einer Privatzone oder in einem gelöschten Zeitraum werden dabei verworfen, und was schon gespeichert ist, kommt nicht doppelt dazu. Ein Import löst keine Vorschläge aus.",
+    "choose": "GPX importieren",
+    "running": "{{name}} wird importiert …",
+    "cancelled": "Der Import wurde gelöscht, bevor er fertig war.",
+    "report": {
+      "stored_one": "{{count}} Position gespeichert",
+      "stored_other": "{{count}} Positionen gespeichert",
+      "duplicate_one": "{{count}} schon vorhanden",
+      "duplicate_other": "{{count}} schon vorhanden",
+      "zone_one": "{{count}} in einer Privatzone verworfen",
+      "zone_other": "{{count}} in einer Privatzone verworfen",
+      "deleted_one": "{{count}} in einem gelöschten Zeitraum verworfen",
+      "deleted_other": "{{count}} in einem gelöschten Zeitraum verworfen",
+      "invalid_one": "{{count}} unbrauchbar",
+      "invalid_other": "{{count}} unbrauchbar",
+      "withoutTime_one": "{{count}} ohne Zeit übersprungen",
+      "withoutTime_other": "{{count}} ohne Zeit übersprungen"
+    },
+    "points_one": "{{count}} Position",
+    "points_other": "{{count}} Positionen",
+    "span": "{{from}} – {{to}}",
+    "status": {
+      "running": "läuft",
+      "interrupted": "abgebrochen (Server neu gestartet) – importiere die Datei erneut",
+      "cancelled": "gelöscht",
+      "paused": "angehalten – unter „Dawarich-Verlauf übernehmen“ fortsetzen"
+    },
+    "delete": "Import löschen",
+    "deleteConfirm_one": "Den Import „{{name}}“ und seine {{count}} Position löschen? Positionen aus anderen Quellen bleiben.",
+    "deleteConfirm_other": "Den Import „{{name}}“ und seine {{count}} Positionen löschen? Positionen aus anderen Quellen bleiben.",
+    "deleted_one": "{{count}} Position gelöscht.",
+    "deleted_other": "{{count}} Positionen gelöscht.",
+    "errors": {
+      "noTimes": "Die Datei enthält keine Zeitangaben – ohne Zeit ist eine Position kein Verlauf. Exportiere sie als Aufzeichnung (Track), nicht als Route.",
+      "unreadable": "Die Datei ist keine lesbare GPX-Datei, oder sie ist zu umfangreich, um sie zu lesen.",
+      "running": "Es läuft schon ein Import. Warte, bis er fertig ist.",
+      "tooLarge": "Die Datei ist zu groß – höchstens 25 MB.",
+      "notFound": "Diesen Import gibt es nicht mehr.",
+      "rateLimited": "Zu viele Importe in kurzer Zeit. Versuche es in einer Viertelstunde noch einmal.",
+      "lost": "Ob der Import fertig wurde, ist nicht bekannt – der Server hat neu gestartet. Sieh in der Liste nach.",
+      "tooManyPoints": "Die Datei enthält mehr als 200.000 Positionen – mehr nimmt ein Import nicht. Teile sie auf, etwa nach Monaten."
+    }
+  },
+  "dawarichCopy": {
+    "title": "Dawarich-Verlauf übernehmen",
+    "intro": "Kopiert deinen Standortverlauf aus deinem eigenen Dawarich nach TravTrack – den ganzen oder einen Zeitraum. Dawarich wird dabei nur gelesen: Dort wird nichts geändert oder gelöscht, und deine Standortquelle bleibt, wie sie ist. Positionen in einer Privatzone oder in einem gelöschten Zeitraum werden verworfen, und was schon gespeichert ist, kommt nicht doppelt dazu. Die Kopie löst keine Vorschläge aus; löschen lässt sie sich wie ein Import.",
+    "connection": {
+      "none": "Verbinde zuerst dein eigenes Dawarich (Einstellungen → Dawarich). Erst dann lässt sich der Verlauf übernehmen.",
+      "shared": "Auf diesem Server ist nur ein gemeinsames Dawarich eingerichtet. Eine Kopie liest ausschließlich aus deinem eigenen – trage dafür deine eigene Verbindung ein."
+    },
+    "whole": "Ganzer Verlauf (bis gestern)",
+    "span": "Zeitraum",
+    "from": "Vom (UTC)",
+    "until": "Bis (UTC)",
+    "start": "Dawarich-Verlauf übernehmen",
+    "stop": "Anhalten",
+    "resume": "Fortsetzen",
+    "range": "{{from}} – {{until}}",
+    "status": {
+      "running": "Wird übernommen: Tag {{done}} von {{total}}",
+      "paused": "Angehalten, weiter ab {{day}}",
+      "interrupted": "Unterbrochen (Server neu gestartet), weiter ab {{day}}",
+      "failed": "Abgebrochen bei {{day}}",
+      "complete": "Vollständig übernommen",
+      "incomplete": "Übernommen, aber unvollständig – was fehlt, steht unten",
+      "cancelled": "Gelöscht"
+    },
+    "reason": {
+      "unreachable": "Dawarich war nicht erreichbar",
+      "auth": "Dawarich hat den API-Schlüssel abgelehnt",
+      "notFound": "Dawarich kennt den Pfad nicht – prüfe die Adresse",
+      "protocol": "Dawarich hat unerwartet geantwortet",
+      "invalidUrl": "Die Dawarich-Adresse ist ungültig",
+      "disabled": "TravTrack wurde ausgeschaltet",
+      "notConfigured": "Die eigene Dawarich-Verbindung fehlt",
+      "internal": "Ein Fehler auf dem Server"
+    },
+    "report": {
+      "read_one": "{{count}} Position gelesen",
+      "read_other": "{{count}} Positionen gelesen",
+      "stored_one": "{{count}} gespeichert",
+      "stored_other": "{{count}} gespeichert",
+      "duplicate_one": "{{count}} schon vorhanden",
+      "duplicate_other": "{{count}} schon vorhanden",
+      "zone_one": "{{count}} in einer Privatzone verworfen",
+      "zone_other": "{{count}} in einer Privatzone verworfen",
+      "deleted_one": "{{count}} in einem gelöschten Zeitraum verworfen",
+      "deleted_other": "{{count}} in einem gelöschten Zeitraum verworfen",
+      "invalid_one": "{{count}} unbrauchbar",
+      "invalid_other": "{{count}} unbrauchbar"
+    },
+    "gaps": {
+      "title": "Was fehlt",
+      "hours_one": "{{count}} Stunde nur teilweise: {{list}}",
+      "hours_other": "{{count}} Stunden nur teilweise: {{list}}",
+      "days_one": "{{count}} Tag ohne Antwort: {{list}}",
+      "days_other": "{{count}} Tage ohne Antwort: {{list}}"
+    },
+    "errors": {
+      "notConfigured": "Dafür braucht es deine eigene Dawarich-Verbindung (Einstellungen → Dawarich).",
+      "running": "Es läuft schon ein Import oder eine Kopie. Warte, bis er fertig ist, oder halte die Kopie an.",
+      "notRunning": "Die Kopie läuft gerade nicht.",
+      "notResumable": "Diese Kopie lässt sich nicht fortsetzen – starte eine neue.",
+      "range": "Der Zeitraum geht nicht: Er braucht Anfang und Ende, liegt nicht in der Zukunft und höchstens zwanzig Jahre zurück.",
+      "rateLimited": "Zu viele Starts in kurzer Zeit. Versuche es in einer Viertelstunde noch einmal.",
+      "paused": "Setze die pausierte Übernahme fort oder lösche sie zuerst."
+    }
+  },
+  "sources": {
+    "title": "Weitere Quellen",
+    "intro": "OwnTracks (Android, iOS) und Overland (iOS) können Positionen direkt an TravTrack schicken. Jedes Gerät bekommt einen eigenen Schlüssel, der nur Positionen abliefern kann und sonst nichts – er liest nichts und öffnet keine andere Seite.",
+    "privacy": "Anders als die Companion-App können diese Apps deine Privatzonen nicht kennen: Positionen in einer Privatzone erreichen den Server und werden erst dort verworfen.",
+    "kind": "App",
+    "kinds": {
+      "owntracks": "OwnTracks",
+      "overland": "Overland"
+    },
+    "label": "Gerät",
+    "labelPlaceholder": "z. B. Pixel 9",
+    "create": "Schlüssel erstellen",
+    "shownOnce": "Der Schlüssel wird nur jetzt angezeigt. Trage ihn in der App ein; danach ist er hier nicht mehr zu sehen.",
+    "owntracks": {
+      "howTo": "In OwnTracks: Einstellungen → Verbindung → Modus „HTTP“. URL eintragen, Authentifizierung einschalten, als Benutzer einen beliebigen Namen und als Passwort den Schlüssel.",
+      "url": "URL",
+      "password": "Passwort"
+    },
+    "overland": {
+      "howTo": "In Overland: Settings → „Receiver Endpoint“ ist die URL, „Access Token“ der Schlüssel. Overland schickt ihn im Authorization-Header.",
+      "url": "Receiver Endpoint",
+      "token": "Access Token"
+    },
+    "done": "Fertig",
+    "lastUsed": "zuletzt {{at}}",
+    "neverUsed": "noch nicht benutzt",
+    "revoke": "Widerrufen",
+    "revokeConfirm": "Den Schlüssel „{{name}}“ widerrufen? Das Gerät kann danach nichts mehr schicken; was es geschickt hat, bleibt.",
+    "revoked": "„{{name}}“ ist widerrufen.",
+    "errors": {
+      "notActive": "Weitere Quellen gibt es nur, wenn TravTrack deine Standortquelle ist (Einstellungen → Standort).",
+      "limit": "Du hast schon so viele Schlüssel, wie es geben kann. Widerrufe zuerst einen.",
+      "notFound": "Diesen Schlüssel gibt es nicht mehr.",
+      "rateLimited": "Gerade wurden zu viele Schlüssel erstellt. Versuche es in einer Viertelstunde erneut."
+    }
+  },
+  "tabs": {
+    "label": "Ansicht",
+    "day": "Tag",
+    "explored": "Erkundet",
+    "months": "Monate"
+  },
+  "explored": {
+    "map": "Karte der erkundeten Gegenden",
+    "legend": "Jedes Feld ist etwa 1–2 km groß: ein Ort, an dem dein Verlauf mindestens eine Position am Boden hat.",
+    "zones": "Privatzonen werden als erkundet gezeigt.",
+    "zoomIn": "Hier liegen zu viele erkundete Felder für eine Ansicht. Zoom näher heran.",
+    "unavailable": "Die Erkundet-Karte ist für so große Privatzonen nicht verfügbar.",
+    "preparing": "Die Erkundet-Karte wird gerade vorbereitet. Schau in ein paar Minuten wieder vorbei."
+  },
+  "months": {
+    "previous": "Vorjahr",
+    "next": "Folgejahr",
+    "loading": "Monate werden geladen …",
+    "empty": "In {{year}} hat dein Verlauf keine Positionen.",
+    "table": "Monatswerte {{year}}",
+    "month": "Monat",
+    "km": "Am Boden",
+    "countries": "Länder",
+    "cities": "Städte",
+    "days": "Tage mit Daten",
+    "pausedCount": "{{count}} pausiert",
+    "noCountries": "Keine Länder ermittelt",
+    "citiesUnknown": "Städte nicht ermittelt",
+    "citiesNone": "Keine Stadt",
+    "pending": "Wird gerade neu berechnet – die Werte können sich noch ändern.",
+    "pendingMonth": "wird berechnet",
+    "legend": "Kilometer am Boden zählen nur die sichtbare Linie: nichts in der Luft, nichts schneller als 500 km/h, nichts, was eine Privatzone verbirgt. Monate ohne Positionen fehlen.",
+    "citiesOff": "Städte nennt die Übersicht erst, wenn du die Städtesuche in den Einstellungen einschaltest.",
+    "utc": "Monate nach UTC: Ein Tag zählt zu dem Monat, in den er nach UTC fällt – was um Mitternacht Ortszeit geschieht, kann im Nachbarmonat stehen.",
+    "chartTitle": "Strecke am Boden pro Monat ({{unit}})",
+    "chartNote": "Monate ohne Positionen und Monate in Berechnung haben keinen Balken."
+  },
+  "lastSeen": {
+    "label": "Zuletzt gesehen",
+    "line": "Zuletzt gesehen {{age}} · {{device}}",
+    "unknownDevice": "Unbekanntes Gerät",
+    "none": "Noch keine Position aufgezeichnet.",
+    "open": "Diesen Tag ansehen"
+  },
+  "menu": {
+    "map": "Karte",
+    "explored": "Erkundet",
+    "stats": "Statistik",
+    "stays": "Aufenthalte",
+    "imports": "Importe"
+  },
+  "map": {
+    "panel": "Ebenen und Darstellung",
+    "zonesNeverDrawn": "Private Zonen sind ausgespart und nie eingezeichnet",
+    "dayFailed": "{{day}} konnte nicht geladen werden: {{reason}}",
+    "retry": "Erneut laden",
+    "rangeEmpty": "In diesen Tagen ist nichts aufgezeichnet.",
+    "fogLoading": "Erkundete Gegenden werden geladen …",
+    "range": {
+      "previous": "Zeitraum zurück",
+      "next": "Zeitraum vor",
+      "today": "Heute, {{day}}",
+      "yesterday": "Gestern, {{day}}",
+      "span": "{{from}} – {{to}}",
+      "preset": {
+        "today": "Heute",
+        "yesterday": "Gestern",
+        "week": "7 Tage",
+        "month": "Monat",
+        "year": "Jahr",
+        "custom": "Zeitraum …"
+      },
+      "from": "Zeitraum von",
+      "to": "Zeitraum bis",
+      "apply": "Anzeigen"
+    },
+    "live": {
+      "off": "Live folgen",
+      "on": "● Live folgt",
+      "failed": "Live folgen klappt gerade nicht: {{reason}}"
+    },
+    "layers": {
+      "title": "Ebenen",
+      "routes": "Strecken",
+      "routesHint": "Linien zwischen den Punkten",
+      "points": "Punkte",
+      "pointsHint": "Jede Position, anklickbar",
+      "heat": "Heatmap",
+      "heatHint": "Wo du dich oft aufhältst",
+      "fog": "Erkundet-Nebel",
+      "fogHint": "Unbekanntes abgedunkelt",
+      "visits": "Aufenthalte und Orte",
+      "visitsHint": "Zuhause, Unterkünfte, Orte, erkannte Aufenthalte",
+      "entries": "Logbuch-Einträge",
+      "entriesHint": "Flüge, Fahrten, Reisen",
+      "photos": "Fotos",
+      "photosHint": "Aus Immich, auf der Strecke eingeordnet",
+      "dayOnly": "Nur in der Tages- und 7-Tage-Ansicht",
+      "countries": "Länder",
+      "countriesHint": "Besuchte Länder der Monate, die der Zeitraum berührt"
+    },
+    "route": {
+      "title": "Strecken",
+      "color": "Farbe",
+      "speed": "Nach Tempo",
+      "plain": "Einfarbig",
+      "kmhMax": "{{kmh}}+ km/h",
+      "opacity": "Deckkraft",
+      "split": "Strecke trennen nach Pause ab",
+      "splitNone": "Nur wo der Server trennt",
+      "splitMinutes_one": "{{count}} Minute",
+      "splitMinutes_other": "{{count}} Minuten",
+      "splitHours_one": "{{count}} Stunde",
+      "splitHours_other": "{{count}} Stunden",
+      "alwaysCut": "Private Zonen, gelöschte Zeiträume, Pausen und Flugmodus-Lücken trennen immer, egal was hier steht. Hier lässt sich nur weiter trennen, nie verbinden."
+    },
+    "replay": {
+      "play": "Wiedergabe starten",
+      "pause": "Wiedergabe anhalten",
+      "scrub": "Wiedergabe-Zeitpunkt",
+      "rate": "Tempo der Wiedergabe",
+      "reset": "Ganze Strecke zeigen",
+      "gaps": "Springt über Lücken, nichts wird dazuerfunden",
+      "limit": "Die Wiedergabe gibt es für Zeiträume bis {{days}} Tage – wähle einen kürzeren, um sie abzuspielen."
+    },
+    "point": {
+      "title": "Position",
+      "accuracy": "Genauigkeit ±{{m}} m",
+      "accuracyUnknown": "Genauigkeit unbekannt",
+      "close": "Schließen",
+      "delete": "Punkt löschen",
+      "deleting": "Wird gelöscht …",
+      "deleteConfirm": "Diese eine Position endgültig löschen? Auch ein erneuter Import derselben Datei bringt sie nicht zurück.",
+      "deleted": "Die Position ist gelöscht."
+    },
+    "totals": {
+      "title": "Zusammenfassung",
+      "distance": "Strecke",
+      "moving": "Unterwegs",
+      "avgSpeed": "Ø Tempo",
+      "points": "Punkte",
+      "coverage": "Abdeckung",
+      "km": "{{km}} km",
+      "kmh": "{{kmh}} km/h",
+      "minutes": "{{m}} min",
+      "hours": "{{h}} h {{m}} min",
+      "note": "Gezählt wird nur innerhalb einer Strecke — nie über eine Lücke, Zone oder Pause hinweg. Unterwegs heißt: schneller als 3 km/h."
+    },
+    "quietDays": "Ohne Aufzeichnung und ohne Eintrag: {{days}}",
+    "rangeLoading": "Wird in Teilen geladen … {{parts}} Teile, {{percent}} %",
+    "rangeProgress": "Ladefortschritt",
+    "rangePartFailed": "Nach {{percent}} % ist ein Teil nicht angekommen: {{reason}} Was schon da ist, bleibt sichtbar.",
+    "rangeResume": "Weiterladen",
+    "rangeSimplified": "Für diesen Zeitraum ist die Linie vereinfacht; die Strecke ist deshalb etwas kürzer als gemessen.",
+    "rangeOmitted_one": "{{count}} kurzes Stück passte nicht mehr in die Ansicht und fehlt.",
+    "rangeOmitted_other": "{{count}} kurze Stücke passten nicht mehr in die Ansicht und fehlen.",
+    "rangeNoTimeline": "Für Monat, Jahr und Zeitraum zeigt die Karte die Linie allein. Tagesablauf, Aufenthalte und Logbuch-Einträge stehen in der Tages- und 7-Tage-Ansicht.",
+    "countries": {
+      "loading": "Länder werden geladen …",
+      "none": "In den berührten Monaten ist kein Land ermittelt.",
+      "list_one": "{{count}} Land: {{names}}",
+      "list_other": "{{count}} Länder: {{names}}",
+      "note": "Eingefärbt sind die Länder der Monatswerte aller Monate, die der Zeitraum berührt (Monate nach UTC) – bei einem einzelnen Tag also die seines Monats.",
+      "pending": "Einige dieser Monate werden gerade neu berechnet; die Länder können sich noch ändern.",
+      "shapesFailed": "Die Ländergrenzen konnten nicht geladen werden."
+    }
+  },
+  "photos": {
+    "title": "Foto",
+    "loading": "Fotos werden geladen …",
+    "alt": "Foto von {{time}}",
+    "thumbFailed": "Nicht geladen",
+    "truncated": "Nicht alle Fotos dieses Zeitraums konnten berücksichtigt werden. Ein kürzerer Zeitraum zeigt den Rest.",
+    "needsShorter": "Fotos gibt es für Zeiträume bis 7 Tage. Wähle einen kürzeren Zeitraum.",
+    "connect": "Immich in den Einstellungen verbinden",
+    "failure": {
+      "notConfigured": "Fotos kommen aus Immich, und Immich ist noch nicht verbunden.",
+      "unreachable": "Immich ist gerade nicht erreichbar.",
+      "auth": "Immich hat den Zugang abgelehnt – prüfe den API-Schlüssel.",
+      "notFound": "Immich kennt diese Fotos nicht mehr.",
+      "protocol": "Immich hat unerwartet geantwortet – vielleicht passt die Version nicht.",
+      "invalidUrl": "Die Immich-Adresse ist ungültig – prüfe sie in den Einstellungen."
+    }
+  },
+  "flight": {
+    "show": "Flugdaten",
+    "title": "Flug {{label}}",
+    "open": "Flug im Logbuch öffnen",
+    "loading": "Flugdaten werden geladen …",
+    "notFound": "Diesen Flug gibt es nicht mehr.",
+    "figure": {
+      "altitude": "Reiseflughöhe",
+      "speed": "Höchstes Tempo",
+      "climb": "Steigflug bis Reiseflug",
+      "photos": "Fotos an Bord"
+    },
+    "altitudeValue": "FL{{fl}} · {{m}} m",
+    "kmh": "{{kmh}} km/h",
+    "minutes": "{{m}} min",
+    "profile": "Höhenprofil",
+    "profileHint": "Die Linie läuft mit der Wiedergabe mit",
+    "openProfile": "Höhenprofil ansehen",
+    "takeoff": "Start",
+    "landing": "Landung",
+    "noRecordingBand": "keine Aufzeichnung",
+    "profileSummary": "Höhenprofil von {{from}} bis {{to}}, höchster Punkt {{top}} m. Mit den Pfeiltasten durch die Messpunkte gehen.",
+    "mapFailed": "Der ganze Flug konnte nicht auf die Karte geladen werden: {{reason}}",
+    "mapPartial": "Die Karte zeigt nicht den ganzen Flug, die Aufzeichnung ist zu lang für eine Ansicht.",
+    "noRecording": "Für diesen Flug gibt es keine Aufzeichnung – weder mit ihm verknüpft noch während der Flugzeit.",
+    "windowBasis": "Aus den Positionen während der Flugzeit – diese Aufzeichnung war nicht mit dem Flug verknüpft (z. B. ein Import).",
+    "truncated": "Dieser Flug hält mehr Positionen, als eine Ansicht zeigt – das Profil ist unvollständig.",
+    "photosTitle": "Fotos während des Flugs",
+    "noPhotos": "Keine Fotos während des Flugs.",
+    "allPhotos": "Alle Fotos",
+    "photosNote": "Aus Immich, wenn verbunden. Die Foto-Position kommt aus der Flugspur, nicht aus dem Foto; Fotos in privaten Zonen erscheinen nicht."
+  },
+  "stays": {
+    "title": "Aufenthalte",
+    "intro": "Aufenthalte, die TravTrack erkannt hat. Bestätigt wird im Posteingang; bestätigte landen als Ort oder Unterkunft im Logbuch.",
+    "loading": "Aufenthalte werden geladen …",
+    "empty": "Für diese Auswahl gibt es keine Aufenthalte.",
+    "more": "Weitere laden",
+    "unnamed": "Unbenannter Ort",
+    "when": "{{date}}, {{from}}–{{to}}",
+    "inZone": "In einer Privatzone – ohne Karte",
+    "review": "Im Posteingang prüfen",
+    "openPlace": "Ort öffnen",
+    "openTrip": "Reise öffnen",
+    "onMap": "Auf der Karte",
+    "state": {
+      "pending": "Offen",
+      "accepted": "Bestätigt",
+      "rejected": "Abgelehnt"
+    },
+    "filter": {
+      "status": "Status",
+      "from": "Von",
+      "to": "Bis",
+      "apply": "Anwenden",
+      "noStatus": "Wähle mindestens einen Status.",
+      "badSpan": "Gib beide Tage an, den ersten zuerst."
+    }
+  },
+  "importsTab": {
+    "title": "Importe",
+    "intro": "Alles, was Positionen in deinen Verlauf bringt: GPX-Dateien, die Kopie aus Dawarich und OwnTracks/Overland.",
+    "loading": "Wird geladen …"
+  },
+  "calendar": {
+    "title": "Kalender {{year}}",
+    "intro": "Jeder Tag ein Kästchen, Farbe nach Strecke; ein Klick öffnet den Tag auf der Karte.",
+    "loading": "Der Kalender wird geladen …",
+    "cellKm": "{{day}}: {{km}}",
+    "cell": {
+      "none": "{{day}}: nichts aufgezeichnet",
+      "pending": "{{day}}: wird vorbereitet",
+      "unavailable": "{{day}}: nicht bekannt",
+      "future": "{{day}}"
+    },
+    "month": {
+      "pending": "wird vorbereitet",
+      "unavailable": "Tageswerte nicht bekannt"
+    },
+    "legendLess": "wenig",
+    "legendMore": "viel",
+    "legendStep": "≥{{km}}",
+    "legendNone": "leer = nichts aufgezeichnet, schraffiert = noch nicht bekannt",
+    "utc": "Tage nach UTC, wie die Monatswerte."
+  },
+  "inbox": {
+    "mapLabel": "Kartenausschnitt mit dem Abschnitt deiner Aufzeichnung zu dieser Frage",
+    "openOnMap": "Auf der Track-Karte öffnen",
+    "loading": "Abschnitt der Aufzeichnung wird geladen …",
+    "empty": "Für diesen Abschnitt gibt es keine Aufzeichnung mehr.",
+    "zonesNeverDrawn": "Privatzonen und gelöschte Abschnitte bleiben ausgeschnitten.",
+    "dayBar": "Tag in Ortszeit, markiert ist der Abschnitt",
+    "whyLabel": "Warum gefragt:",
+    "more": "Mehr anzeigen",
+    "less": "Weniger anzeigen",
+    "fact": {
+      "span": "Von – bis",
+      "duration": "Dauer",
+      "distance": "Strecke",
+      "speed": "Tempo",
+      "points": "Positionen",
+      "matches": "Passt zu"
+    },
+    "value": {
+      "none": "—",
+      "sameDay": "{{day}}, {{from}} – {{until}}",
+      "days": "{{fromDay}} {{from}} – {{untilDay}} {{until}}",
+      "wholeDay": "{{day}}, ganzer Tag",
+      "wholeDays": "{{fromDay}} – {{untilDay}}",
+      "minutes": "{{m}} min",
+      "hours": "{{h}} h {{m}} min",
+      "daysHours": "{{d}} T {{h}} h",
+      "km": "{{km}} km",
+      "speed": "Ø {{avg}}, max {{max}} km/h",
+      "speedAvg": "Ø {{avg}} km/h"
+    },
+    "detail": {
+      "truncated": "Nicht der ganze Abschnitt passte in eine Ansicht – die Karte zeigt den Anfang. Auf der Track-Karte siehst du alles.",
+      "coverageTruncated": "Die Auswertung hinter dieser Frage las nicht den ganzen Verlauf; sie kann unvollständig sein.",
+      "coverageUnreachable": "Die Quelle war bei der Auswertung nicht erreichbar; die Frage stützt sich nur auf das, was da war.",
+      "cuts_one": "Aufzeichnung lückenhaft: {{count}} Unterbrechung im Abschnitt. Die Karte verbindet sie nicht.",
+      "cuts_other": "Aufzeichnung lückenhaft: {{count}} Unterbrechungen im Abschnitt. Die Karte verbindet sie nicht.",
+      "noCuts": "Durchgehend aufgezeichnet, ohne Unterbrechung.",
+      "points_one": "{{count}} Position im Abschnitt.",
+      "points_other": "{{count}} Positionen im Abschnitt."
+    },
+    "why": {
+      "stay": "Du warst längere Zeit am selben Ort, und dein Logbuch hat dort noch keinen Besuch.",
+      "market": "Du warst eine Weile auf einem bekannten Marktgelände, und dein Logbuch hat dort noch keinen Besuch.",
+      "venue": "Du warst eine Weile auf einem bekannten Gelände, und dein Logbuch hat dort noch keinen Besuch.",
+      "country": "TravTrack sah dich am Boden in {{country}}, dein Pass zählt das Land für diese Tage noch nicht.",
+      "journey": "Tempo und Strecke sehen nach einer Fahrt aus, und im Logbuch steht für diese Zeit kein Eintrag.",
+      "tripAway": "Du warst mehrere Tage weit weg von zu Hause, und keine Reise im Logbuch deckt diese Tage.",
+      "tripExtend": "Du warst direkt vor oder nach deiner Reise {{trip}} weiter unterwegs; die Reise deckt diese Tage noch nicht."
+    }
+  }
+}

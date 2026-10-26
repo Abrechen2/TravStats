@@ -14,16 +14,16 @@
         "body": "Every statistic says how it is counted. Tapping a figure opens the entries behind it, for flights, cruises, stays and places. What cannot be assigned is named instead of left out. Cruise kilometres are now measured along the sea route, so they usually go up."
       },
       "documents": {
-        "title": "Documents and templates",
-        "body": "Boarding passes, invoices and booking confirmations are attached as documents to their entry; you can take over price, currency and booking number if you like. How a provider's email or PDF is read lives in public templates rather than in the server. The papers of a package tour are read in as a trip, after you have seen a preview."
-      },
-      "entryHelp": {
-        "title": "Help while entering, deadlines in view",
-        "body": "Forms suggest what you entered before. The inbox asks when data does not fit together: duplicates, wrong order, a missing flight number, an unknown airport. For flights and stays you can record deadlines, such as free cancellation, payment or online check-in."
+        "title": "Documents, templates and help while entering",
+        "body": "Boarding passes, invoices and confirmations are attached as documents to their entry; how a provider's email is read lives in public templates. Forms suggest what you entered before and know deadlines such as free cancellation. The inbox asks when data does not fit together and merges duplicates if you want."
       },
       "placesPhotos": {
-        "title": "Places, passport and photos",
-        "body": "Places are an area of their own with lists, checklists and import, including a Google Takeout. The passport shows the evidence for every country. Photos can be attached to places too, and HEIC pictures from an iPhone are accepted. The nightly photo scan (switch it on in the settings; needs Immich) suggests trips, places and stays, and you review several at once."
+        "title": "Places, stays, passport and photos",
+        "body": "Places are an area of their own with lists, checklists and import; their visits are grouped by year, planned ones on top. TravStats can complete a stay's house from OpenStreetMap with stars, website and chain. The passport shows the evidence for every country; the nightly photo scan (needs Immich) suggests trips, places and stays."
+      },
+      "transport": {
+        "title": "Rental cars, coaches and ferries",
+        "body": "Rental cars, coach rides and ferry crossings are areas of their own that you switch on in the settings: with pick-up and return in station time, lines, ports, costs and statistics. Tram and metro rides now run on their own tracks instead of the main line; a wrongly drawn route can be routed again."
       },
       "sharing": {
         "title": "Sharing trips and notes",
@@ -34,8 +34,8 @@
         "body": "You pair the Companion app with your server by QR code. Once paired, the server sends flight changes and departure reminders to your phone as push messages (an admin switches the relay on) and syncs entries without silently overwriting a newer version. Pairing, push and sync are built, but like the app itself still under review."
       },
       "beta": {
-        "title": "Roadtrips, rental cars, coaches and more",
-        "body": "Roadtrips and tours with trip costs, rental cars, coach rides, ferry crossings, cruise tracks, flight tracks, hotel enrichment, friend comparisons, encrypted sharing, trip sharing across servers and the calendar subscription are in review. An admin enables them with the beta switch; the demo account does so itself. Alpha experiment: the TravPlan planner, also behind it."
+        "title": "Roadtrips, TravTrack and more in beta",
+        "body": "Roadtrips and tours, cruise tracks, flight tracks, friend comparisons, encrypted sharing, trip sharing across servers (with a setup checklist) and the calendar subscription with local times are in review. An admin enables them with the beta switch. New and also in beta: TravPlan for planning and TravTrack, your location history with privacy zones."
       }
     },
     "v260": {

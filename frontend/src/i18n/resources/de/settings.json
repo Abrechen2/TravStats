@@ -849,7 +849,9 @@
     "confirmRegenerate": "Der bisherige Link funktioniert danach nicht mehr – jedes Abo damit bleibt stehen, bis du den neuen Link einträgst. Neuen Link erzeugen?",
     "confirmRevoke": "Der Link funktioniert danach nicht mehr, und Kalender-Apps können deine Reisen nicht mehr abrufen. Widerrufen?",
     "urlLabel": "Dein Kalender-Link",
-    "shownOnce": "Der Link wird nur jetzt angezeigt. Wer ihn kennt, sieht deine Reisen – teile ihn nicht. Geht er verloren, erzeuge einen neuen.",
+    "keepSecret": "Wer den Link kennt, sieht deine Reisen – teile ihn nicht. Gerät er in falsche Hände, erzeuge einen neuen.",
+    "unreachable": "Google Kalender kann diese Adresse nicht erreichen – trage unter Admin → Instanz eine öffentliche Adresse ein.",
+    "notRecoverable": "Dieser Link stammt aus einer älteren Version und lässt sich nicht mehr anzeigen. Er funktioniert weiter; brauchst du ihn erneut, erzeuge einen neuen.",
     "copy": "Link kopieren",
     "copied": "Kopiert.",
     "copyFailed": "Kopieren ging nicht – markiere den Link im Feld und kopiere ihn von Hand.",
@@ -1057,16 +1059,19 @@
       "shareLinks": "Öffentlicher Link, Freigabe, teilen, Link",
       "calendarFeed": "Kalender, iCal, ICS, Abo, Kalenderabo",
       "dawarich": "Dawarich, Standortverlauf, Standortquelle, Positionen, Verbindung",
+      "locationProvider": "Standortquelle, Standort, Positionen, TravTrack, Dawarich, Keine, Quelle wechseln, Aufzeichnung",
       "tripRecording": "Aufzeichnung, Positionen, App, Track, Reise aufzeichnen",
-      "stayScan": "Aufenthalte, Aufenthalt erkennen, Radius, Mindestdauer, Märkte, Orte als Fläche, neu auswerten",
-      "companions": "Mitreisende, Begleitpersonen, Personen, Umbenennen, Zusammenführen, Doppelt, Duplikat, Löschen, Namen"
+      "stayScan": "Aufenthalte, Aufenthalt erkennen, Radius, Mindestdauer, Orte automatisch erkennen, Orte erkennen, Orte als Fläche, Gelände, neu auswerten",
+      "companions": "Mitreisende, Begleitpersonen, Personen, Umbenennen, Zusammenführen, Doppelt, Duplikat, Löschen, Namen",
+      "travTrack": "TravTrack, Standortverlauf, Verlauf, Positionen, Privatzonen, Zone, Zeitraum löschen, Export, GPX"
     },
     "expertKeywords": {
       "suggestions": "Immich-Belege, Fotos als Beleg, Ortstyp, KI-Klassifizierung",
       "autoupdate": "Abfrageintervall, Intervall, Freigabe, Ablauf, nur während des Flugs",
       "backup": "Instanz-Backup, letzte Sicherung, WebDAV, Nextcloud, Abgleich, Sync",
       "externalServices": "eigener Schlüssel, eigener API-Schlüssel, API-Schlüssel, Kontingent, Quote, AirLabs-Schlüssel, Aviationstack-Schlüssel, AeroDataBox-Schlüssel, AeroAPI-Schlüssel, OpenSky-Zugang, GraphHopper-Schlüssel, OpenRouteService-Schlüssel",
-      "features": "Sitzplatz-Statistik, Sitzplätze, Fensterplatz, Gangplatz"
+      "features": "Sitzplatz-Statistik, Sitzplätze, Fensterplatz, Gangplatz",
+      "stayScan": "Märkte, Marktgelände, Einkaufszentren, Parks, Zoos, Freizeitparks, Museen"
     }
   },
   "railProviders": {
@@ -1090,11 +1095,31 @@
     "testButton": "Verbindung testen",
     "test": {
       "ok": "Verbunden. Profil {{profile}}, Kartenstand {{date}}.",
+      "dateUnknown": "unbekannt",
       "notConfigured": "Es ist keine Adresse eingetragen.",
       "unreachable": "Unter dieser Adresse antwortet kein Dienst.",
       "notOpenRailRouting": "Der Dienst antwortet, ist aber kein OpenRailRouting.",
-      "profileMissing": "Dieses OpenRailRouting hat kein Profil „all_tracks“ – ohne das kann TravStats keine Strecken berechnen.",
-      "requestFailed": "Der Test konnte nicht ausgeführt werden."
+      "profileMissing": "Dieses OpenRailRouting hat kein Profil „all_tracks“ – ohne das kann TravStats keine Zugstrecken berechnen.",
+      "requestFailed": "Der Test konnte nicht ausgeführt werden.",
+      "modeProfiles": {
+        "both": "Profile „tram“ und „subway“ vorhanden: Straßenbahn- und U-Bahn-Fahrten werden nur über ihr eigenes Gleisnetz berechnet.",
+        "missing": "Kein eigenes Profil für {{modes}}. Solche Fahrten werden dann nur berechnet, wenn diese Instanz Anfragen mit eigenem Modell (ch.disable) annimmt – sonst bleiben sie bei der Luftlinie, nie auf dem Eisenbahnnetz. Wie man die Profile ergänzt, steht in der Anleitung „rail-routing“.",
+        "tram": "Straßenbahn („tram“)",
+        "subway": "U-Bahn („subway“)",
+        "and": " und "
+      }
+    },
+    "reroute": {
+      "hint": "Bis Oktober 2026 wurden Straßenbahn- und U-Bahn-Fahrten wie Züge über das Eisenbahnnetz berechnet und können falsch liegen. Das berechnet alle schon gerouteten Straßenbahn- und U-Bahn-Fahrten dieser Instanz neu; eine Linie, die ihr eigenes Netz nicht bestätigt, wird zur Luftlinie.",
+      "action": "Straßenbahn- und U-Bahn-Fahrten neu berechnen",
+      "running": "Wird neu berechnet …",
+      "progress": "Wird neu berechnet … {{done}} von {{total}}",
+      "done": "Fertig: {{routed}} neu berechnet, {{straight}} auf die Luftlinie zurückgesetzt, {{kept}} unverändert behalten, {{skipped}} übersprungen (von {{total}}).",
+      "stopped": "Abgebrochen, weil der Streckenrouter nicht mehr antwortet – {{remaining}} Fahrten sind noch offen. Später erneut starten.",
+      "notConfigured": "Erst eine Adresse speichern – ohne Streckenrouter gibt es nichts neu zu berechnen.",
+      "alreadyRunning": "Eine andere Administratorin oder ein anderer Administrator lässt die Neuberechnung gerade laufen. Bitte warten, bis sie fertig ist.",
+      "failed": "Die Neuberechnung ist fehlgeschlagen.",
+      "lost": "Ob die Neuberechnung fertig wurde, ist unbekannt – der Server hat den Auftrag nicht mehr. Einfach erneut starten."
     }
   },
   "profileZone": {
@@ -1148,7 +1173,8 @@
     "reveal": "Einblenden",
     "showInExpert": "In Experte zeigen",
     "pageMore_one": "1 weitere Einstellung auf dieser Seite ist nur in der Ansicht „Experte“ zu sehen.",
-    "pageMore_other": "{{count}} weitere Einstellungen auf dieser Seite sind nur in der Ansicht „Experte“ zu sehen."
+    "pageMore_other": "{{count}} weitere Einstellungen auf dieser Seite sind nur in der Ansicht „Experte“ zu sehen.",
+    "hint": "„Experte“ zeigt zusätzlich Feineinstellungen, eigene API-Schlüssel und technische Optionen."
   },
   "sectionChips": "Abschnitte auf dieser Seite",
   "pagePicker": "Seite",
@@ -1279,5 +1305,61 @@
       "invalidInput": "Eine Eingabe ist ungültig.",
       "unknown": "Der Abgleich ist fehlgeschlagen."
     }
+  },
+  "locationProvider": {
+    "title": "Standortquelle",
+    "description": "Woher TravStats Positionen liest, um dir Ländertage, Aufenthalte und Strecken vorzuschlagen, und wofür die Companion aufzeichnet.",
+    "legend": "Standortquelle wählen",
+    "loadError": "Die Standortquelle konnte nicht geladen werden.",
+    "meaning": "Was das bedeutet",
+    "nothingMoves": "Ein Wechsel ändert nur, was ab jetzt aufgezeichnet und gelesen wird. Es wird nichts verschoben, kopiert oder gelöscht.",
+    "connectDawarich": "Erst Dawarich verbinden",
+    "status": {
+      "notConfigured": "Dawarich ist als Standortquelle gewählt, aber deine eigene Dawarich-Verbindung fehlt oder funktioniert nicht mehr. Bis du sie wieder einträgst, liest TravStats nichts aus Dawarich.",
+      "unavailable": "TravTrack ist als Standortquelle gewählt, auf diesem Server aber gerade nicht verfügbar. Bis dahin wird darüber nichts aufgezeichnet oder gelesen."
+    },
+    "options": {
+      "none": {
+        "label": "Keine",
+        "sub": "TravStats liest keine Positionen.",
+        "points": {
+          "manual": "Keine automatischen Vorschläge aus Positionen: Ländertage und Aufenthalte trägst du selbst ein.",
+          "noHistory": "Die Companion bietet keinen Standortverlauf an.",
+          "ownRecording": "Flüge und Reisen zeichnet die Companion selbst auf. Die Strecke gehört zum Eintrag und liegt hier auf dem Server."
+        }
+      },
+      "travtrack": {
+        "label": "TravTrack",
+        "sub": "Der Standortverlauf hier auf deinem Server.",
+        "points": {
+          "records": "Die Companion zeichnet über TravTrack auf, Alltag, Flug und Reise; die Punkte liegen auf diesem Server und sind Teil der Sicherung.",
+          "segment": "Die Strecke eines Flugs oder einer Reise ist ein Abschnitt in TravTrack, verknüpft mit dem Eintrag.",
+          "inbox": "TravTrack schickt Vorschläge in den Posteingang: Ländertage, Aufenthalte, fehlende Fahrten.",
+          "zones": "Privatzonen und Löschen verwaltest du in TravTrack."
+        }
+      },
+      "dawarich": {
+        "label": "Dawarich",
+        "sub": "Dein eigenes Dawarich, nur gelesen.",
+        "points": {
+          "readOnly": "TravStats liest aus deinem Dawarich, wie bisher. Es schreibt dort nichts und löscht dort nichts.",
+          "suggestions": "TravStats zählt daraus Ländertage und schlägt Aufenthalte im Posteingang vor.",
+          "recording": "Flüge und Reisen zeichnet die Companion vorerst weiter selbst auf."
+        }
+      }
+    },
+    "errors": {
+      "dawarichNotConfigured": "Dawarich lässt sich erst als Standortquelle wählen, wenn du unter „Dawarich-Verbindung“ deine eigene Verbindung eingetragen hast.",
+      "travtrackUnavailable": "TravTrack ist auf diesem Server nicht verfügbar.",
+      "saveFailed": "Die Standortquelle konnte nicht gespeichert werden. Bitte versuche es noch einmal."
+    },
+    "dawarichHint": {
+      "text": "Dawarich ist verbunden. Als Standortquelle verwenden?",
+      "use": "Als Standortquelle verwenden",
+      "done": "Dawarich ist jetzt deine Standortquelle."
+    }
+  },
+  "travTrack": {
+    "title": "TravTrack"
   }
 }

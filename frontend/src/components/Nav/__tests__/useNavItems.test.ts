@@ -11,6 +11,16 @@ vi.mock("../../../store/authStore", () => ({
   useAuthStore: (sel?: (s: typeof authState) => unknown) => (sel ? sel(authState) : authState),
 }));
 
+const travTrack = vi.hoisted(() => ({ visible: false }));
+vi.mock("../../../hooks/useTravTrackVisible", () => ({
+  useTravTrackVisible: () => travTrack.visible,
+}));
+
+const travPlan = vi.hoisted(() => ({ visible: false }));
+vi.mock("../../../hooks/useTravPlanVisible", () => ({
+  useTravPlanVisible: () => travPlan.visible,
+}));
+
 vi.unmock("../../../store/settingsStore");
 
 import {
@@ -91,7 +101,43 @@ describe("useNavItems — Mehr › Sammlungen", () => {
     expect(section(more, "collections").map((i) => i.path)).toContain("/achievements");
   });
 
-  // forgejo#137: a note needs no domain, so the entry does not either.
+  // Phase 5 (header variant B): Track is a word in the logo, so it left "Mehr".
+  it("never offers Track in Mehr, whether or not TravTrack is offered", () => {
+    for (const visible of [false, true]) {
+      travTrack.visible = visible;
+      const paths = run().more.flatMap((s) => s.items.map((i) => i.path));
+      expect(paths).not.toContain("/track");
+    }
+    travTrack.visible = false;
+  });
+
+  // Phase 5: the "Plan" word of the logo replaces the "Mehr › Planung" entry.
+  it("never offers TravPlan in Mehr, whether or not TravPlan is offered", () => {
+    for (const visible of [false, true]) {
+      travPlan.visible = visible;
+      const { more } = run();
+      expect(more.flatMap((s) => s.items.map((i) => i.path))).not.toContain("/plan");
+      expect(more.map((s) => s.id)).not.toContain("planning");
+    }
+    travPlan.visible = false;
+  });
+
+  it("names the areas the logo spells, in order, from the two visibility rules", () => {
+    const cases: [boolean, boolean, string[]][] = [
+      [false, false, ["stats"]],
+      [true, false, ["stats", "plan"]],
+      [false, true, ["stats", "track"]],
+      [true, true, ["stats", "plan", "track"]],
+    ];
+    for (const [plan, track, areas] of cases) {
+      travPlan.visible = plan;
+      travTrack.visible = track;
+      expect(run().areas).toEqual(areas);
+    }
+    travPlan.visible = false;
+    travTrack.visible = false;
+  });
+
   it("offers Notizen without flights", () => {
     useSettingsStore.setState({ enabledDomains: ["cruise"] });
     expect(section(run().more, "collections").map((i) => i.path)).toContain("/notes");

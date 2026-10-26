@@ -154,21 +154,9 @@
             "name": "Roadtrips und Touren",
             "what": "Die Domäne „Roadtrips“ (mehrtägige Touren mit Stationen an deinen Unterkünften) und alle Touren: die Touren-Seite und der Editor, der Touren-Reiter im Dashboard und in einer Reise, die Touren auf der Übersichtskarte sowie die Karten für Routing-Anbieter und Strava."
           },
-          "lodgingEnrichment": {
-            "name": "Unterkünfte aus OpenStreetMap ergänzen",
-            "what": "Der Knopf „Aus OpenStreetMap ergänzen“ auf der Seite einer Unterkunft: Er trägt Sterne, Webseite, Kette und die Wikipedia-Verknüpfung in leere Felder ein. Braucht zusätzlich den Schalter für offene Datendienste."
-          },
-          "rentalDomain": {
-            "name": "Mietwagen",
-            "what": "Der Bereich „Mietwagen“: ein Fahrtenbuch für Mietwagen mit Abholung und Rückgabe in Ortszeit der Station, Fahrzeuggruppe, Preis und den Kilometern aus der Schlussrechnung."
-          },
           "travPlan": {
             "name": "TravPlan (Alpha)",
             "what": "Der Planungsmodus für eine Reise, die noch bevorsteht: Tagesplan, Ideen, Buchungsimport, Transfers, Packliste, Budget und die Übergabe an das Reisetagebuch. Alpha-Versuch: kann sich noch grundlegend ändern."
-          },
-          "busDomain": {
-            "name": "Bus",
-            "what": "Der Bereich „Bus“: ein Fahrtenbuch für Fernbus-, Intercity- und Shuttlefahrten mit Abfahrt und Ankunft in Ortszeit des Terminals, Linie, Platz und Preis. Kein Stadtverkehr."
           },
           "cruiseTracks": {
             "name": "Aufgezeichnete Spuren bei Kreuzfahrten",
@@ -177,10 +165,6 @@
           "flightTrackUpload": {
             "name": "Aufgezeichnete Flugspuren",
             "what": "Eine Flugaufzeichnung als Datei (GPX, KML, KMZ, TCX, FIT oder die CSV-Datei von Flightradar24) auf der Seite eines Flugs hochladen, ersetzen oder entfernen. Die Karte und der Globus zeichnen den Flug dann entlang der Aufzeichnung statt auf dem Großkreis; die Flugseite stellt die gemessene Strecke dem Großkreis gegenüber."
-          },
-          "ferryDomain": {
-            "name": "Fähren",
-            "what": "Überfahrten mit Häfen, Ortszeiten, Fahrzeug, Tickets und Roadtrip-Verknüpfung."
           },
           "comparison": {
             "name": "Freundesvergleiche",
@@ -197,6 +181,10 @@
           "federatedTripSharing": {
             "name": "Reisen über Server teilen",
             "what": "Mitreisende auf anderen TravStats-Servern per Einladungscode verbinden, unter Einstellungen → Reisen; dazu kommt ein eigener Schalter unter Server-Verbindungen. Noch geht keine Reise über die Leitung. Mit ausgeschaltetem Schalter antwortet dieser Server anderen Servern dafür gar nicht."
+          },
+          "travTrack": {
+            "name": "TravTrack (eigener Standortverlauf)",
+            "what": "Ein eigener Standortverlauf auf diesem Server: Die Companion-App zeichnet Positionen auf, Flüge und Reisen eingeschlossen, mit Privatzonen und Löschen nach Zeitraum. Braucht zusätzlich den TravTrack-Schalter unter Instanz."
           }
         }
       },
@@ -1151,6 +1139,39 @@
       "COMPARISON_CONNECTION_FILE_KEY": "Der Schlüssel in der Datei ist kein öffentlicher Ed25519-Schlüssel.",
       "COMPARISON_CONNECTION_FILE_FINGERPRINT": "Der Fingerabdruck in der Datei passt nicht zu ihrem Schlüssel. Die Datei ist beschädigt oder verändert – lass sie dir neu schicken.",
       "COMPARISON_CONNECTION_FILE_SELF": "Das ist die Verbindungsdatei dieses Servers selbst. Lies die Datei des anderen Servers ein."
+    },
+    "checklist": {
+      "title": "Einrichtung: Reisen mit anderen Servern teilen",
+      "done": "Erledigt",
+      "open": "Offen",
+      "fix": "Hierhin",
+      "copyOrigin": "Adresse kopieren",
+      "copyFingerprint": "Fingerabdruck kopieren",
+      "copyFailed": "Kopieren hat nicht geklappt. Bitte von Hand markieren.",
+      "identity": {
+        "title": "Öffentliche https-Adresse ohne Port und Serverschlüssel",
+        "noOrigin": "Es fehlt die öffentliche Adresse dieses Servers, z. B. https://travstats.example.org.",
+        "noKey": "Es fehlt der Serverschlüssel. Erzeuge ihn unten.",
+        "federationOff": "Server-Verbindungen sind ausgeschaltet. Schalte sie unten ein.",
+        "invalidOrigin": "Die Adresse wird nicht angenommen: Gültig ist nur https:// ohne Port und ohne Pfad."
+      },
+      "switch": {
+        "title": "Schalter „Reisen mit anderen Servern teilen“ ist an",
+        "off": "Der Schalter ist aus. Solange er aus ist, erreicht dieser Server niemand für geteilte Reisen.",
+        "afterIdentity": "Geht erst, wenn Schritt 1 erledigt ist."
+      },
+      "switchOn": "Einschalten",
+      "peers": {
+        "title": "Mindestens ein anderer Server ist zugelassen und erreichbar"
+      },
+      "peersHint": "Der Admin des anderen Servers muss dasselbe auf seiner Seite tun; vergleicht eure Fingerabdrücke dabei per Telefon oder Chat.",
+      "peerReached": "Zuletzt per Ping erreicht: {{date}}",
+      "peerUnreached": "Noch nie per Ping erreicht",
+      "peerSuspended": "Gesperrt",
+      "ping": "Ping senden",
+      "addPeer": "Server hinzufügen",
+      "usersTitle": "Danach: so teilen die Nutzer",
+      "users": "Auf einer Reise unter „Teilen“ einen Einladungscode erzeugen; er gilt 72 Stunden und nur einmal. Die andere Person löst ihn auf ihrem eigenen Server unter Einstellungen → Reisen teilen ein."
     }
   },
   "importMode": {
@@ -1249,7 +1270,9 @@
       "airportsMasterData": "Flughäfen, Airports, Stammdaten, IATA",
       "shipsMasterData": "Schiffe, Stammdaten, IMO",
       "portsMasterData": "Häfen, Stammdaten, UN/LOCODE",
-      "lodgingChainsMasterData": "Hotelketten, Ketten, Stammdaten, Hotels, Unterkünfte, zusammenführen"
+      "lodgingChainsMasterData": "Hotelketten, Ketten, Stammdaten, Hotels, Unterkünfte, zusammenführen",
+      "travTrack": "TravTrack, Standortverlauf, Standort, Aufzeichnung, Companion",
+      "travPlan": "TravPlan, Planung, Reiseplanung, Planungsmodus, Plan"
     },
     "expertKeywords": {
       "instance": "Heimnetz-Adresse, LAN, Passkey, rpId, Origins, Beta-Schalter",
@@ -1306,6 +1329,30 @@
       "mergeIntoItself": "Eine Kette lässt sich nicht mit sich selbst zusammenführen.",
       "invalidInput": "Eine Eingabe ist ungültig — die Markenfarbe als #rrggbb.",
       "unknown": "Das hat nicht geklappt."
+    }
+  },
+  "travTrack": {
+    "title": "TravTrack",
+    "description": "Der eigene Standortverlauf: Die Companion-App zeichnet Positionen auf diesem Server auf. Ausschalten löscht nichts — Konten mit Daten behalten Übersicht, Export und Löschen.",
+    "needsBeta": "TravTrack ist eine Beta-Funktion. Schalte zuerst die Beta-Funktionen dieser Instanz ein.",
+    "switch": "TravTrack auf diesem Server anbieten",
+    "switchSub": "Konten können TravTrack dann als Standortquelle wählen.",
+    "errors": {
+      "loadFailed": "Der TravTrack-Schalter konnte nicht geladen werden.",
+      "saveFailed": "Der TravTrack-Schalter konnte nicht gespeichert werden.",
+      "disabled": "TravTrack ist auf diesem Server ausgeschaltet. Schalte zuerst die Beta-Funktionen ein."
+    }
+  },
+  "travPlan": {
+    "title": "TravPlan",
+    "description": "Der Planungsmodus: Reisen vorab planen, unterwegs abgleichen. Ausschalten löscht keine Pläne — sie bleiben gespeichert und erscheinen wieder, sobald TravPlan eingeschaltet ist.",
+    "switch": "TravPlan auf diesem Server anbieten",
+    "switchSub": "Alle Konten sehen den Planungsmodus dann in der Navigation.",
+    "moreLink": "Tageslimits für KI und Wetter in der TravPlan-Konfiguration",
+    "errors": {
+      "loadFailed": "Der TravPlan-Schalter konnte nicht geladen werden.",
+      "saveFailed": "Der TravPlan-Schalter konnte nicht gespeichert werden.",
+      "disabled": "TravPlan ist auf diesem Server ausgeschaltet. Schalte zuerst die Beta-Funktionen ein."
     }
   }
 }

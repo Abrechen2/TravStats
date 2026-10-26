@@ -232,6 +232,35 @@ export const NON_TRAVEL_RELATIONS = [
   // Where a merged-away trip went (forgejo#316): server bookkeeping for the
   // Companion's uploads, not travel data.
   "mergedTripRedirects",
+  // TravTrack, the own location history (TravTrack plan, phase 2): private to its
+  // owner like the trip recording — never part of a comparison or a federation
+  // publication. A shared trip carries at most the owner's route snapshot (T7).
+  "travTrackPoints",
+  "travTrackPointLinks",
+  "travTrackUploads",
+  "travTrackDeletedRanges",
+  "travTrackDeletedPoints",
+  "travTrackPrivacyZones",
+  "travTrackZoneTombstones",
+  "travTrackGaps",
+  "travTrackShareSnapshots",
+  // TravTrack's derived findings and their machinery (TravTrack plan, phase 3,
+  // E1): location suggestions carry server-keyed point digests and are
+  // re-derived from the owner's private history; the rest is derivation and
+  // import bookkeeping, and ingest tokens are credentials. None of it travels.
+  "locationSuggestions",
+  "travTrackDirtyDays",
+  "travTrackDerivationState",
+  "travTrackImports",
+  "travTrackIngestTokens",
+  // TravTrack phase 4 (plan L1, L3, L6): the explored map's cells and zone
+  // raster, the monthly values and the Dawarich copy's progress — projections
+  // of the private history and import bookkeeping. Never part of a comparison
+  // or a federation publication (review focus 26–30).
+  "travTrackExploredCells",
+  "travTrackZoneCells",
+  "travTrackMonthValues",
+  "travTrackDawarichImport",
   // The account's WebDAV export target (forgejo#321): a URL, a username and an
   // encrypted password. A credential, so it never travels.
   "webdavSync",

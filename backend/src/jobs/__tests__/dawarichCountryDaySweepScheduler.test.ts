@@ -27,6 +27,9 @@ jest.mock("../../db", () => ({
         findManyArgs.push(args);
         return findMany(args);
       },
+      // Every listed account is still a Dawarich account when its turn comes;
+      // a switch mid-night is `dawarichProviderGate.test.ts` business.
+      count: async () => 1,
     },
   },
 }));
@@ -145,6 +148,17 @@ describe("runDawarichCountryDaySweep", () => {
       dawarichBaseUrl: { not: null },
       dawarichApiKey: { not: null },
     });
+  });
+
+  /**
+   * TravTrack plan S3: the sweep follows the chosen location provider, in the
+   * query — an account with its own connection but provider `none` is never
+   * enumerated. `dawarichProviderGate.test.ts` drives it against the database.
+   */
+  it("asks the database only for accounts whose location provider is dawarich", async () => {
+    await runDawarichCountryDaySweep({ createClient });
+
+    expect(findManyArgs[0].where).toMatchObject({ locationProvider: "dawarich" });
   });
 
   it("keeps going when one account's walk throws", async () => {

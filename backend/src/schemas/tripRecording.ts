@@ -45,6 +45,10 @@ export const tripRecordingQuerySchema = z.object({
     .refine(isLocalDate, "A calendar day, YYYY-MM-DD")
     .optional()
     .describe("Only this day, on the trip's clock (`YYYY-MM-DD`); all days when absent"),
+  source: z
+    .enum(["travstats", "travtrack", "dawarich"])
+    .optional()
+    .describe("Show this source explicitly (TravTrack plan T5); the default otherwise"),
 });
 
 /** The account switch, nested in `GET`/`PUT /settings` as `tripRecording`. */

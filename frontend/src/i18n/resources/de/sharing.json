@@ -138,7 +138,14 @@
     "button": "Teilen",
     "companions": "Mit Mitreisenden (eigene Kopie)",
     "link": "Öffentlicher Link",
-    "loading": "Wird geladen …"
+    "loading": "Wird geladen …",
+    "route": "Route mitteilen (TravTrack)",
+    "remoteBlocked": {
+      "noAddress": "Mit Leuten auf anderen Servern teilen geht hier noch nicht: Diese Instanz hat keine öffentliche https-Adresse. Frag deinen Admin.",
+      "switchOff": "Mit Leuten auf anderen Servern teilen geht hier noch nicht: Der Admin hat es nicht eingeschaltet.",
+      "noPeer": "Mit Leuten auf anderen Servern teilen geht hier noch nicht: Der Admin hat noch keinen anderen Server zugelassen.",
+      "loadFailed": "Ob du mit Leuten auf anderen Servern teilen kannst, konnte nicht geladen werden."
+    }
   },
   "trip": {
     "leaveConfirm": "Geteilte Reise verlassen? Deine Kopie bleibt als eigene Reise erhalten; die anderen werden benachrichtigt.",
@@ -737,6 +744,25 @@
         "acceptFailed": "Die Reise konnte nicht übernommen werden.",
         "declineFailed": "Das Angebot konnte nicht abgelehnt werden."
       }
+    }
+  },
+  "route": {
+    "title": "Route mitteilen",
+    "intro": "Wer diese Reise mit dir teilt, sieht die Linie, die TravTrack auf ihr aufgezeichnet hat — nur die Linie: keine Zeiten, nichts in deinen Privatzonen und nichts im Umkreis von einem Kilometer um dein Zuhause. Was du danach aufzeichnest, kommt erst mit „Neu erstellen“ dazu.",
+    "loading": "Wird geladen …",
+    "notShared": "Die Route dieser Reise wird nicht mitgeteilt.",
+    "shared": "Die Route wird mitgeteilt ({{count}} Punkte auf der Linie).",
+    "share": "Route mitteilen",
+    "refresh": "Neu erstellen",
+    "revoke": "Nicht mehr mitteilen",
+    "errors": {
+      "empty": "Von dieser Reise ist nichts zu zeigen: TravTrack hält für ihre Tage keine Linie außerhalb deiner Privatzonen und deines Zuhauses.",
+      "disabled": "TravTrack ist auf diesem Server ausgeschaltet. Eine Route kann gerade nicht mitgeteilt werden.",
+      "generic": "Die Route konnte nicht mitgeteilt werden.",
+      "rateLimited": "Die Route wurde gerade sehr oft neu mitgeteilt. Warte ein paar Minuten und versuch es dann noch einmal.",
+      "busy": "Die Route wird gerade schon von einer anderen Anfrage mitgeteilt. Versuch es gleich noch einmal.",
+      "revoked": "Während die Route erstellt wurde, wurde das Mitteilen beendet. Es wird nichts mitgeteilt.",
+      "network": "Der Server ist nicht erreichbar. Versuch es gleich noch einmal."
     }
   }
 }

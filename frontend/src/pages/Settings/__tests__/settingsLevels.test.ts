@@ -10,7 +10,7 @@ import { pageLevel, sectionsOf, type PageDef } from "../surface";
  * layout change.
  */
 const EXPERT_SECTIONS = {
-  settings: ["apitokens", "countryCounting", "stayScan", "defaults", "enrichment"],
+  settings: ["apitokens", "countryCounting", "defaults", "enrichment"],
   admin: [
     // "geocoder" left this list as a section, not as a level: its two
     // addresses are expert rows of Externe Dienste › Karten & Ortssuche now
@@ -68,7 +68,9 @@ describe("the standard/expert classification", () => {
     ["account", ["profile", "security", "devices", "notifications"]],
     ["display", ["display", "units", "domains"]],
     ["trips", ["trips", "suggestions", "sharing", "shareLinks"]],
-    ["location", ["dawarich", "tripRecording"]],
+    // The stay scan is standard; detecting places as areas just runs, and its
+    // two switches are expert rows inside it (forgejo#318).
+    ["location", ["dawarich", "tripRecording", "stayScan"]],
     ["loyalty", ["loyalty"]],
     ["flight", ["homeAirport", "autoupdate", "features"]],
     ["cruise", ["cruisePreferences"]],
@@ -79,7 +81,10 @@ describe("the standard/expert classification", () => {
   });
 
   it.each([
-    ["instance", ["instance", "shareLinks", "importMode", "usageStats", "about"]],
+    [
+      "instance",
+      ["instance", "travTrack", "travPlan", "shareLinks", "importMode", "usageStats", "about"],
+    ],
     ["users", ["users"]],
     ["invitations", ["invitations"]],
     ["externalServices", ["externalServices"]],
@@ -127,5 +132,21 @@ describe("level filtering", () => {
       sectionsOf(account, { level: "expert", isGateOpen: () => false, isAdmin: false, deepLinked });
     expect(closed(null).shown).not.toContain("devices");
     expect(closed("devices").shown).toContain("devices");
+  });
+
+  it("shows TravTrack's section only while its server condition holds, and no link lifts it", () => {
+    const location = findPage("location")!;
+    const at = (held: boolean | undefined, deepLinked: string | null = null) =>
+      sectionsOf(location, {
+        level: "standard",
+        isGateOpen: () => true,
+        isAdmin: false,
+        deepLinked,
+        conditions: held === undefined ? undefined : { travTrackHeld: held },
+      }).shown;
+    expect(at(true)).toContain("travTrack");
+    expect(at(false)).not.toContain("travTrack");
+    expect(at(undefined)).not.toContain("travTrack");
+    expect(at(false, "travTrack")).not.toContain("travTrack");
   });
 });

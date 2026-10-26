@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { planMarketTiles, marketTileQuery, type MarketTile } from "./tiles";
 import { parseMarketCatalog, type MarketCatalog } from "./osm";
-import type { DawarichPoint } from "../dawarichClient";
+import type { StayPoint } from "../stays/detect";
 export const CATALOG_TTL_MS = 14 * 86400000;
 export const CATALOG_STALE_MS = 90 * 86400000;
 export const MAX_CATALOG_BYTES = 4_000_000;
@@ -113,7 +113,7 @@ export async function fetchMarketTile(
 }
 /** Public cached tiles, bounded sequential requests; no raw track is sent upstream. */
 export async function discoverMarketAreas(
-  points: readonly DawarichPoint[],
+  points: readonly StayPoint[],
   options: {
     store: CatalogStore;
     isAllowed: () => Promise<boolean>;

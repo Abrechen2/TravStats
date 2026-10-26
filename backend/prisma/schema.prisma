@@ -166,6 +166,26 @@ model User {
   trackJitterRemeasures TrackJitterRemeasure[]
   mergedTripRedirects   MergedTripRedirect[]
 
+  travTrackPoints         TravTrackPoint[]
+  travTrackPointLinks     TravTrackPointLink[]
+  travTrackUploads        TravTrackUpload[]
+  travTrackDeletedRanges  TravTrackDeletedRange[]
+  travTrackPrivacyZones   TravTrackPrivacyZone[]
+  travTrackZoneTombstones TravTrackZoneTombstone[]
+  travTrackDeletedPoints  TravTrackDeletedPoint[]
+  travTrackGaps           TravTrackGap[]
+  travTrackShareSnapshots TravTrackShareSnapshot[]
+
+  locationSuggestions      LocationSuggestion[]
+  travTrackDirtyDays       TravTrackDirtyDay[]
+  travTrackExploredCells   TravTrackExploredCell[]
+  travTrackMonthValues     TravTrackMonthValue[]
+  travTrackZoneCells       TravTrackZoneCell[]
+  travTrackDerivationState TravTrackDerivationState?
+  travTrackImports         TravTrackImport[]
+  travTrackDawarichImport  TravTrackDawarichImport?
+  travTrackIngestTokens    TravTrackIngestToken[]
+
   @@map("users")
 }
 
@@ -243,7 +263,10 @@ model ApiToken {
   // row so the token table stays an auth table; a revoked token's push row is
   // deleted by the revoke paths (revocation is soft, so the cascade below only
   // covers a hard delete).
-  devicePush DevicePush?
+  devicePush    DevicePush?
+  /// A calendar feed this (device) token issued. It ends with the token: a
+  /// revoked or expired one is checked at read time, a deleted one cascades.
+  calendarFeeds CalendarFeed[]
 
   @@index([userId])
   @@index([userId, deviceId])
@@ -353,12 +376,17 @@ model PairingCode {
 /// Deleted with the user and on every backup restore (a dump taken before a
 /// revoke must not bring the revoked URL back).
 model CalendarFeed {
-  id         String    @id @default(uuid())
-  userId     String    @unique @map("user_id")
-  tokenHash  String    @unique @map("token_hash")
+  id                 String    @id @default(uuid())
+  userId             String    @unique @map("user_id")
+  tokenHash          String    @unique @map("token_hash")
+  /// The token itself, AES-GCM encrypted like the API keys (`encryptApiKey`), so the URL can be listed again. Null for a URL issued before it was kept: that one still works, it just cannot be shown.
+  tokenEncrypted     String?   @map("token_encrypted")
+  /// The paired device's API token that issued this feed; null for one issued from a browser session.
+  issuedByApiTokenId String?   @map("issued_by_api_token_id")
+  issuedByApiToken   ApiToken? @relation(fields: [issuedByApiTokenId], references: [id], onDelete: Cascade)
   /// When a calendar app last read the feed — so the owner can tell a URL in use from a forgotten one.
-  lastUsedAt DateTime? @map("last_used_at")
-  createdAt  DateTime  @default(now()) @map("created_at")
+  lastUsedAt         DateTime? @map("last_used_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -888,6 +916,30 @@ model UserSettings {
   // reusing `apiKeyResolver.ts`'s single-value-per-provider pattern.
   dawarichBaseUrl String? @map("dawarich_base_url")
   dawarichApiKey  String? @map("dawarich_api_key")
+
+  /// Where NEW recordings go and where automatic reads come from (TravTrack
+  /// plan 2026-10-24, rule 2): `none` | `travtrack` | `dawarich`, held by a
+  /// CHECK constraint. Switching moves, copies and deletes nothing.
+  /// `services/locationProvider/provider.ts` is the only writer.
+  locationProvider    String    @default("none") @map("location_provider")
+  /// Raised on every switch, so a client can tell a stale answer from a fresh one.
+  locationProviderRev Int       @default(0) @map("location_provider_rev")
+  /// When the provider last changed away from `travtrack`; null while it is
+  /// `travtrack` or never was. OwnTracks/Overland points recorded before it are
+  /// still TravTrack's, later ones are refused (TravTrack plan E9).
+  travtrackLeftAt     DateTime? @map("travtrack_left_at")
+  /// Whether TravTrack's monthly values name the cities stayed in (TravTrack
+  /// plan L3). Off by default: the lookup sends rounded positions (0.01°) to
+  /// the instance's reverse geocoder, which may be a public Nominatim.
+  travtrackCityLookup Boolean   @default(false) @map("travtrack_city_lookup")
+
+  /// „Heimatort" (Companion audit 2026-10-23): where the traveller lives,
+  /// `{name, lat, lon, zone}` — the Companion's "leave" reminder reads it. Was
+  /// device-only (Companion decision D-home); the server is the record now.
+  homePlace      Json?     @map("home_place")
+  /// The passport's expiry, a calendar day (was device-only, Companion D13).
+  /// Private: never in a share, a public link, a comparison or a log line.
+  passportExpiry DateTime? @map("passport_expiry") @db.Date
 
   /// Strava connection (2.7, design 2026-09-24 §5). OAuth tokens, both
   /// encrypted at rest; the athlete id identifies the account for the UI.
@@ -1585,6 +1637,19 @@ model DataQualityFlag {
   details    Json
   createdAt  DateTime  @default(now()) @map("created_at")
   resolvedAt DateTime? @map("resolved_at")
+  /// Until when the last answer can be taken back (`POST /:id/undo`, spec
+  /// 2026-10-25 C3). Null when there is nothing to undo — an open flag, an
+  /// answer older than the window, or a `merge`, which has no server undo.
+  undoUntil  DateTime? @map("undo_until")
+  /// What the last answer did, so `undo` can put it back: the action, the
+  /// status before it, and per action what it changed (a sibling flag it
+  /// answered too, the trip a `link` set). Null on an open flag.
+  resolution Json?
+  /// Bumped by every write to the flag — a run refreshing its evidence,
+  /// re-opening or resolving it, an answer, an undo. An answer or a run
+  /// writes only against the revision it read, so a write that lost a race
+  /// changes nothing (`staleFinding` for an answer, a skip for a run).
+  revision   Int       @default(0)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1904,10 +1969,12 @@ model Trip {
   publicShareLinks PublicShareLink[]
   tripShareInvites TripShareInvite[]
   recordingBatches TripRecordingBatch[]
+  packingList      TripPackingList?
   mergedFrom       MergedTripRedirect[]
 
-  documents  Document[]
-  travelPlan TravelPlan?
+  documents              Document[]
+  travelPlan             TravelPlan?
+  travTrackShareSnapshot TravTrackShareSnapshot?
 
   @@index([userId])
   @@index([userId, status])
@@ -3425,6 +3492,11 @@ model PlaceVisit {
 
   notes  String?
   rating Int?
+
+  /// The evidence key of the location finding whose acceptance made this
+  /// visit (TravTrack plan E1/E4), so the finding never counts its own visit
+  /// as cover or support. Null for every visit written any other way.
+  suggestionRef String? @map("suggestion_ref")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -5218,42 +5290,59 @@ model DawarichStayScan {
   windowEnd     DateTime? @map("window_end")
   pointCount    Int       @default(0) @map("point_count")
   createdCount  Int       @default(0) @map("created_count")
+  /// The source of the last scan, `dawarich | travtrack` (CHECK); null before
+  /// TravTrack could be one. The row stays the one consent and lease per account.
+  provider      String?
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("dawarich_stay_scans")
 }
 
 model DawarichStay {
-  id            String      @id @default(uuid())
-  userId        String      @map("user_id")
-  fingerprint   String
-  sourceStartAt DateTime    @map("source_start_at")
-  sourceEndAt   DateTime    @map("source_end_at")
-  sourceLat     Float       @map("source_lat")
-  sourceLon     Float       @map("source_lon")
-  status        String      @default("pending")
-  startAt       DateTime    @map("start_at")
-  endAt         DateTime    @map("end_at")
-  lat           Float
-  lon           Float
-  zone          String
-  pointCount    Int         @map("point_count")
-  evidence      Json
-  placeId       String?     @map("place_id")
-  tripId        String?     @map("trip_id")
-  name          String?
-  visitId       String?     @map("visit_id")
-  detectedAt    DateTime    @default(now()) @map("detected_at")
-  resolvedAt    DateTime?   @map("resolved_at")
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  visit         PlaceVisit? @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  id               String      @id @default(uuid())
+  userId           String      @map("user_id")
+  fingerprint      String
+  sourceStartAt    DateTime    @map("source_start_at")
+  sourceEndAt      DateTime    @map("source_end_at")
+  sourceLat        Float       @map("source_lat")
+  sourceLon        Float       @map("source_lon")
+  status           String      @default("pending")
+  startAt          DateTime    @map("start_at")
+  endAt            DateTime    @map("end_at")
+  lat              Float
+  lon              Float
+  zone             String
+  pointCount       Int         @map("point_count")
+  evidence         Json
+  placeId          String?     @map("place_id")
+  tripId           String?     @map("trip_id")
+  name             String?
+  visitId          String?     @map("visit_id")
+  detectedAt       DateTime    @default(now()) @map("detected_at")
+  resolvedAt       DateTime?   @map("resolved_at")
+  /// Where the finding's points came from, `dawarich | travtrack` (CHECK).
+  /// Every row from before TravTrack is Dawarich's (TravTrack plan E1).
+  provider         String      @default("dawarich")
+  /// The account's provider revision when the finding was made.
+  providerRev      Int         @default(0) @map("provider_rev")
+  /// 0 = made before detectors were versioned (every legacy Dawarich row).
+  algorithmVersion Int         @default(0) @map("algorithm_version")
+  /// The provider-neutral key of the stop (`locationEvidence/key.ts`).
+  /// Server-side only; `fingerprint` stays as each provider wrote it.
+  evidenceKey      String?     @map("evidence_key")
+  /// The accept protocol's claim (E4): who holds `accepting`, since when.
+  claimToken       String?     @map("claim_token")
+  claimedAt        DateTime?   @map("claimed_at")
+  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  visit            PlaceVisit? @relation(fields: [visitId], references: [id], onDelete: SetNull)
   /// A finding outlives the place or trip it named: it keeps its evidence and
   /// loses only the link (a merge repoints it first, `placeMerge.ts`).
-  place         Place?      @relation(fields: [placeId], references: [id], onDelete: SetNull)
-  trip          Trip?       @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  place            Place?      @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  trip             Trip?       @relation(fields: [tripId], references: [id], onDelete: SetNull)
 
   @@unique([userId, fingerprint])
   @@index([userId, status, startAt])
+  @@index([userId, provider, status])
   @@index([visitId])
   @@index([placeId])
   @@index([tripId])
@@ -5566,6 +5655,352 @@ model TravelPlanConfig {
   @@map("travel_plan_config")
 }
 
+/// TravTrack's instance switch (TravTrack plan, task T1): the admin turns the
+/// own location history on for this server. Effective only while the beta
+/// switch is on too (`services/travtrack/availability.ts`). One row, `default`;
+/// without it the `TRAVTRACK_ENABLED` env var decides.
+model TravTrackConfig {
+  id        String   @id @default("default")
+  enabled   Boolean  @default(false)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("travtrack_config")
+}
+
+/// One position of an account's TravTrack history. Raw and immutable: what
+/// the phone measured, never thinned or rewritten here. The same position
+/// twice is one row — Dawarich's key `(user, whole second, lon, lat)`, plus
+/// the origin's own id so a retry is recognised even when a client
+/// re-serialises a coordinate. Which flights and trips it belongs to lives in
+/// `travtrack_point_links`, never on the row.
+model TravTrackPoint {
+  id        String   @id @default(uuid())
+  /// A stable number for the point: reads page and tie-break on `(t, seq)`.
+  seq       BigInt   @unique @default(autoincrement())
+  userId    String   @map("user_id")
+  /// The instant, to the millisecond as sent.
+  t         DateTime
+  /// `t` in whole Unix seconds — the dedup key, as in Dawarich.
+  tS        Int      @map("t_s")
+  lat       Float
+  lon       Float
+  accuracyM Float?   @map("accuracy_m")
+  altitudeM Float?   @map("altitude_m")
+  speedMps  Float?   @map("speed_mps")
+  /// Degrees from north, as the device reported it.
+  course    Float?
+  /// What the phone said about movement (stationary, walking, automotive, …).
+  motion    String?
+  /// Where the point came from: `companion:<deviceId>`.
+  origin    String
+  /// The origin's own id for this point (the phone's fix id `atMs:lat:lon`).
+  originRef String   @map("origin_ref")
+  /// The paired device that sent it (`ApiToken.deviceId`).
+  deviceId  String?  @map("device_id")
+  /// What the phone was recording for when it took the fix:
+  /// `everyday | flight | trip` (CHECK constraint). Informational.
+  purpose   String   @default("everyday")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  links TravTrackPointLink[]
+
+  @@unique([userId, tS, lon, lat])
+  @@unique([userId, origin, originRef])
+  @@index([userId, t, seq])
+  @@map("travtrack_points")
+}
+
+/// A point belongs to a flight or a trip (one fix may belong to both). The
+/// entry id has no foreign key — it names one of two tables — so a link to a
+/// deleted entry is harmless by construction (every read joins the entry and
+/// its owner) and a nightly sweep removes it. The point always stays.
+model TravTrackPointLink {
+  userId    String   @map("user_id")
+  pointId   String   @map("point_id")
+  /// `flight | trip` (CHECK constraint).
+  entryKind String   @map("entry_kind")
+  entryId   String   @map("entry_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  point TravTrackPoint @relation(fields: [pointId], references: [id], onDelete: Cascade)
+
+  @@id([pointId, entryKind, entryId])
+  @@index([userId, entryKind, entryId])
+  @@map("travtrack_point_links")
+}
+
+/// The receipt of one `POST /travtrack/points`: a retry with the same uploadId
+/// and the same content gets the stored answer back; the same id with other
+/// content is refused. Kept 30 days.
+model TravTrackUpload {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  uploadId    String   @map("upload_id")
+  /// sha256 of the points and gaps as received, canonicalised.
+  payloadHash String   @map("payload_hash")
+  /// The answer given, replayed verbatim.
+  result      Json
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, uploadId])
+  @@index([createdAt])
+  @@map("travtrack_uploads")
+}
+
+/// A span the user deleted: points inside it are dropped on ingest and a gap
+/// reported into it is clipped away, so an offline phone cannot bring the
+/// span back.
+model TravTrackDeletedRange {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  fromAt    DateTime @map("from_at")
+  /// Exclusive.
+  toAt      DateTime @map("to_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, fromAt])
+  @@map("travtrack_deleted_ranges")
+}
+
+/// One point the user deleted by itself (the map's point inspector, TravTrack
+/// plan T5.3): ingest drops a fix with this identity from every source, so a
+/// repeated GPX file, a Dawarich copy or a late phone upload cannot bring it
+/// back. The identity is the ingest's own cross-source duplicate key
+/// (`positionKey`: whole second, lon, lat), kept only as a digest salted with
+/// the account — the coordinates of a deleted point are not stored again.
+/// Other fixes of the same second, at another position, are not touched.
+model TravTrackDeletedPoint {
+  userId    String   @map("user_id")
+  /// sha256 of the account and the position key (`deletedPoints.ts`).
+  digest    String
+  /// The point's whole Unix second: what a batch narrows the lookup by.
+  tS        Int      @map("t_s")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, digest])
+  @@index([userId, tS])
+  @@map("travtrack_deleted_points")
+}
+
+/// A circle where the user is never tracked: the phone drops a fix inside it,
+/// ingest drops it again, and creating or enlarging a zone deletes the points
+/// already stored inside it once the user agreed.
+model TravTrackPrivacyZone {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  lat       Float
+  lon       Float
+  radiusM   Int      @map("radius_m")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("travtrack_privacy_zones")
+}
+
+/// A privacy zone's circle after it stopped being in force — the zone was
+/// removed, moved or shrunk. Every fix inside it from before `untilAt` stays
+/// dropped on ingest, so an old fix the zone protected cannot come back under
+/// a fresh uploadId; a fix recorded there afterwards is taken. The zone also
+/// cleared every stored point inside it when it was made, so there is no
+/// lower bound.
+model TravTrackZoneTombstone {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  lat       Float
+  lon       Float
+  radiusM   Int      @map("radius_m")
+  /// Exclusive: fixes from this instant on are not covered.
+  untilAt   DateTime @map("until_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, untilAt])
+  @@map("travtrack_zone_tombstones")
+}
+
+/// What the phone reports it could not record: a span held for want of a zone
+/// list, a recorder that fell silent, a missing „Immer" permission. Never a
+/// privacy-zone gap — a zone must not be visible as one.
+model TravTrackGap {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  deviceId  String   @map("device_id")
+  fromAt    DateTime @map("from_at")
+  /// Exclusive.
+  toAt      DateTime @map("to_at")
+  /// `zonesUnknown | recorderSilent | permission` (CHECK constraint).
+  reason    String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceId, fromAt, reason])
+  @@index([userId, fromAt])
+  @@map("travtrack_gaps")
+}
+
+/// The route of a shared trip as its recipients may see it: geometry only, no
+/// timestamps, privacy-cut on its final shape. Exists only once the owner
+/// shares the route; rebuilt by every range delete and zone change.
+model TravTrackShareSnapshot {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  tripId      String    @unique @map("trip_id")
+  version     Int       @default(1)
+  /// `[lon, lat][][]`, one array per line.
+  geometry    Json
+  pointCount  Int       @map("point_count")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  /// The time window the owner shared, `[sharedFrom, sharedUntil)`: the trip's
+  /// days at the owner's last build. An automatic rebuild or a read uses its
+  /// overlap with the trip's current days and every span recorded since
+  /// (`TravTrackSharePastSpan`) — it may narrow, never widen.
+  sharedFrom  DateTime? @map("shared_from")
+  sharedUntil DateTime? @map("shared_until")
+  /// Every home circle in force since the owner's last build, `[{lat, lon,
+  /// radiusM}]`: a moved home keeps its former place hidden too.
+  homeCircles Json      @default("[]") @map("home_circles")
+  /// The first share that committed this row while it is pending (`version`
+  /// 0): a build that fails removes the pending row only if it carries its
+  /// own token, and only under the TravTrack lock, so it never takes the row
+  /// another build is relying on (Codex review, fourth round). Null once a
+  /// build has stored a route.
+  buildToken  String?   @map("build_token")
+
+  user        User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip        Trip                       @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  pastSpans   TravTrackSharePastSpan[]
+  pastFlights TravTrackSharePastFlight[]
+  pastHomes   TravTrackSharePastHome[]
+
+  @@map("travtrack_share_snapshots")
+}
+
+/// What restricted a shared route since the owner's last share, recorded by
+/// database triggers in the transaction of the change itself, whatever path
+/// it took (migration `travtrack_share_restrictions`): every read and every
+/// narrowing applies them on top of the rules in force, so widening a trip's
+/// days, removing a flight or clearing the home never brings back what they
+/// hid. Only the owner's own share clears them. Columns mirror the source rows.
+///
+/// A trip's days as they were before a change: the route keeps to the
+/// intersection of every span the trip has had.
+model TravTrackSharePastSpan {
+  id          String    @id @default(uuid())
+  snapshotId  String    @map("snapshot_id")
+  startDate   DateTime? @map("start_date")
+  endDate     DateTime? @map("end_date")
+  startDay    DateTime? @map("start_day") @db.Date
+  endDay      DateTime? @map("end_day") @db.Date
+  startZone   String?   @map("start_zone")
+  endZone     String?   @map("end_zone")
+  /// The profile zone in force when the span was recorded, as stored in
+  /// `user_settings.data.display.timezone` (null: no settings row or none set,
+  /// which reads as UTC). A span without a zone of its own is read in THIS
+  /// zone, never in today's — and a profile-zone change records the trip's
+  /// span in the zone it leaves (Codex review, third round).
+  profileZone String?   @map("profile_zone")
+  /// What makes this restriction what it is (an md5 of the values that
+  /// decide it, set by the trigger): one row per distinct restriction, a
+  /// repeat lands on the same row. Rows from before it carry their id.
+  dedupeKey   String    @map("dedupe_key")
+  /// When this restriction was last recorded: a number from the one sequence
+  /// `travtrack_share_restriction_seq`, set by the trigger on insert and drawn
+  /// anew when a repeat lands on this row (`ON CONFLICT DO UPDATE`). The
+  /// owner's build captures each row's id with its number and clears only rows
+  /// whose number is still the captured one, so a repeat recorded after the
+  /// build read its inputs survives it (Codex review, fourth round).
+  recordedSeq BigInt    @map("recorded_seq")
+  capturedAt  DateTime  @default(now()) @map("captured_at")
+
+  snapshot TravTrackShareSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@unique([snapshotId, dedupeKey])
+  @@index([snapshotId])
+  @@map("travtrack_share_past_spans")
+}
+
+/// A flight of the trip as it was before it was changed, moved, cancelled or
+/// deleted: its recorder window stays cut out of the route.
+model TravTrackSharePastFlight {
+  id                   String    @id @default(uuid())
+  snapshotId           String    @map("snapshot_id")
+  departureTime        DateTime? @map("departure_time")
+  arrivalTime          DateTime? @map("arrival_time")
+  depTimeSemantics     String    @map("dep_time_semantics")
+  arrTimeSemantics     String    @map("arr_time_semantics")
+  depTimezone          String?   @map("dep_timezone")
+  arrTimezone          String?   @map("arr_timezone")
+  depPrecision         String?   @map("dep_precision")
+  arrPrecision         String?   @map("arr_precision")
+  actualDeparture      DateTime? @map("actual_departure")
+  actualArrival        DateTime? @map("actual_arrival")
+  runwayDepartureTime  DateTime? @map("runway_departure_time")
+  runwayArrivalTime    DateTime? @map("runway_arrival_time")
+  onlineCheckInOpensAt DateTime? @map("online_check_in_opens_at")
+  onlineCheckInZone    String?   @map("online_check_in_zone")
+  depIata              String?   @map("dep_iata")
+  depIcao              String?   @map("dep_icao")
+  arrIata              String?   @map("arr_iata")
+  arrIcao              String?   @map("arr_icao")
+  /// What makes this restriction what it is (an md5 of the values that
+  /// decide it, set by the trigger): one row per distinct restriction, a
+  /// repeat lands on the same row. Rows from before it carry their id.
+  dedupeKey            String    @map("dedupe_key")
+  /// When this restriction was last recorded: a number from the one sequence
+  /// `travtrack_share_restriction_seq`, set by the trigger on insert and drawn
+  /// anew when a repeat lands on this row (`ON CONFLICT DO UPDATE`). The
+  /// owner's build captures each row's id with its number and clears only rows
+  /// whose number is still the captured one, so a repeat recorded after the
+  /// build read its inputs survives it (Codex review, fourth round).
+  recordedSeq          BigInt    @map("recorded_seq")
+  capturedAt           DateTime  @default(now()) @map("captured_at")
+
+  snapshot TravTrackShareSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@unique([snapshotId, dedupeKey])
+  @@index([snapshotId])
+  @@map("travtrack_share_past_flights")
+}
+
+/// A home the owner had before a change: the route keeps away from it too.
+model TravTrackSharePastHome {
+  id          String   @id @default(uuid())
+  snapshotId  String   @map("snapshot_id")
+  homePlace   Json     @map("home_place")
+  /// What makes this restriction what it is (an md5 of the values that
+  /// decide it, set by the trigger): one row per distinct restriction, a
+  /// repeat lands on the same row. Rows from before it carry their id.
+  dedupeKey   String   @map("dedupe_key")
+  /// When this restriction was last recorded: a number from the one sequence
+  /// `travtrack_share_restriction_seq`, set by the trigger on insert and drawn
+  /// anew when a repeat lands on this row (`ON CONFLICT DO UPDATE`). The
+  /// owner's build captures each row's id with its number and clears only rows
+  /// whose number is still the captured one, so a repeat recorded after the
+  /// build read its inputs survives it (Codex review, fourth round).
+  recordedSeq BigInt   @map("recorded_seq")
+  capturedAt  DateTime @default(now()) @map("captured_at")
+
+  snapshot TravTrackShareSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@unique([snapshotId, dedupeKey])
+  @@index([snapshotId])
+  @@map("travtrack_share_past_homes")
+}
+
 model TravelPlanUsage {
   id     String   @id @default(uuid())
   userId String   @map("user_id")
@@ -5620,4 +6055,273 @@ model UserWebdavSync {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_webdav_syncs")
+}
+
+/// A trip's packing list (Companion audit 2026-10-23; was device-only, D12).
+/// One row per trip, the items as one JSON array: the list is small (≤ 200
+/// items) and is always read and written whole. `rev` is raised on every
+/// write; a writer names the `rev` it started from, so two devices never
+/// overwrite each other unseen (409 `PACKING_LIST_STALE`). `lastMutationId`
+/// lets a client resend a write whose answer it lost without a false conflict.
+model TripPackingList {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  tripId         String   @unique @map("trip_id")
+  /// `[{id, label, done}]`, in the list's order.
+  items          Json
+  rev            Int      @default(1)
+  lastMutationId String?  @map("last_mutation_id")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("trip_packing_lists")
+}
+
+/// A question location history raises for TravStats to decide (TravTrack plan
+/// E1): a country day or a journey the logbook does not hold. Stays keep their
+/// own table (`dawarich_stays`). The finding is a suggestion until the user
+/// answers it; TravTrack never writes the entry itself.
+model LocationSuggestion {
+  id                String    @id @default(uuid())
+  userId            String    @map("user_id")
+  /// `country | journey | trip` (CHECK).
+  kind              String
+  /// `dawarich | travtrack` (CHECK).
+  provider          String
+  providerRev       Int       @map("provider_rev")
+  /// The detector's version.
+  algorithm         Int
+  /// Provider-neutral and server-side only; one finding per key and kind.
+  evidenceKey       String    @map("evidence_key")
+  windowFrom        DateTime  @map("window_from")
+  /// Exclusive.
+  windowUntil       DateTime  @map("window_until")
+  /// `pending | accepting | accepted | rejected | invalidated` (CHECK).
+  status            String    @default("pending")
+  claimToken        String?   @map("claim_token")
+  claimedAt         DateTime? @map("claimed_at")
+  /// `{ code, params }` — a stable code and scalar params, never prose and
+  /// never a coordinate.
+  explanation       Json
+  evidence          Json
+  /// The entry an acceptance made. No foreign key: it names one of several tables.
+  acceptedEntryKind String?   @map("accepted_entry_kind")
+  acceptedEntryId   String?   @map("accepted_entry_id")
+  detectedAt        DateTime  @default(now()) @map("detected_at")
+  resolvedAt        DateTime? @map("resolved_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, evidenceKey])
+  @@index([userId, status, windowFrom])
+  @@map("location_suggestions")
+}
+
+/// A UTC day of TravTrack history whose projections must run again (E6):
+/// `version` is raised on every re-mark, `done` holds a bit per projection that
+/// ran on that version (1 country days).
+model TravTrackDirtyDay {
+  userId  String   @map("user_id")
+  day     DateTime @db.Date
+  version BigInt
+  done    Int      @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, day])
+  @@map("travtrack_dirty_days")
+}
+
+/// The explored map (TravTrack plan L1): the Web-Mercator tiles at zoom 14 an
+/// account's ground points fell in, per UTC day, so a removed day's cells go
+/// with it and the rest stay exact. Derived from `travtrack_points` by the
+/// dirty-day projection; holds tiles and days, never a position or a time of day.
+model TravTrackExploredCell {
+  userId String   @map("user_id")
+  day    DateTime @db.Date
+  x      Int
+  y      Int
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, day, x, y])
+  @@index([userId, x, y])
+  @@map("travtrack_explored_cells")
+}
+
+/// TravTrack's monthly values (TravTrack plan L3): ground kilometres from the
+/// privacy-safe line, the countries of the month's `travtrack` country days and,
+/// only when the account switched the lookup on, the cities stayed in. One row
+/// per account and UTC month, derived by the dirty-day projection (done bit 4);
+/// a month without points has no row — absent, never zero.
+model TravTrackMonthValue {
+  userId       String   @map("user_id")
+  /// The first day of the UTC month.
+  month        DateTime @db.Date
+  kmGround     Float    @map("km_ground")
+  countries    String[]
+  /// `[{ name, countryCode }]`; null when the lookup is off or not complete.
+  cities       Json?
+  daysWithData Int      @map("days_with_data")
+  daysPaused   Int      @map("days_paused")
+  /// Per UTC day of the month with a privacy-safe vertex, `{ "YYYY-MM-DD": km }`
+  /// on the ground (TravTrack plan T5.3, the Statistik calendar); null on a row
+  /// written before the calendar existed, until the month is recomputed.
+  dayValues    Json?    @map("day_values")
+  algorithm    Int
+  computedAt   DateTime @default(now()) @map("computed_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, month])
+  @@map("travtrack_month_values")
+}
+
+/// Reverse-geocoded cities by rounded cell (lat/lon to 0.01°, `"52.52,13.41"`),
+/// shared by every account (TravTrack plan L3; precedent `market_catalog_tiles`).
+/// No user id, no time, no track: a cell names a place, never who was there.
+/// `name` null: the geocoder answered and there is no settlement.
+model GeoCityCache {
+  cell        String   @id
+  name        String?
+  countryCode String?  @map("country_code")
+  fetchedAt   DateTime @default(now()) @map("fetched_at")
+
+  @@map("geo_city_cache")
+}
+
+/// The explored map's zone raster (TravTrack plan L1, Codex review of
+/// a3353f2a7): the zoom-14 tiles every privacy zone in force and the newest
+/// former zones' circles touch, each with its edge-connected component.
+/// Rebuilt in the transaction of every zone change, so a request reads a few
+/// rows instead of rasterising every circle the account ever had.
+model TravTrackZoneCell {
+  userId    String @map("user_id")
+  x         Int
+  y         Int
+  component Int
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, x, y])
+  @@index([userId, component])
+  @@map("travtrack_zone_cells")
+}
+
+/// Per account: the history generation every TravTrack removal raises (E5's
+/// fence) and the derivations' own bookkeeping. 0 = never ran.
+model TravTrackDerivationState {
+  userId                String    @id @map("user_id")
+  historyGeneration     BigInt    @default(0) @map("history_generation")
+  countryReducerVersion Int       @default(0) @map("country_reducer_version")
+  stayAlgorithm         Int       @default(0) @map("stay_algorithm")
+  journeyAlgorithm      Int       @default(0) @map("journey_algorithm")
+  lastRunAt             DateTime? @map("last_run_at")
+  /// A closed vocabulary (E6), never a message: `disabled | database |
+  /// reducer` or null (CHECK, migration travtrack_derivation_error_kind_check).
+  lastErrorKind         String?   @map("last_error_kind")
+  /// Country questions still owed (E6): set after a projection changed
+  /// rows or a run deferred questions past its cap; cleared by a question
+  /// run that finished with nothing deferred. Keeps the account scheduled.
+  countryQuestionsDue   Boolean   @default(false) @map("country_questions_due")
+  /// Consecutive failed projection runs; the backoff below grows with it.
+  failureCount          Int       @default(0) @map("failure_count")
+  /// Not scheduled again before this instant after a failure (backoff).
+  retryAfter            DateTime? @map("retry_after")
+  /// Consecutive failed city lookups of the monthly values (L3); the
+  /// geocoder's own backoff below grows with it, a lookup that answers resets it.
+  cityLookupFailures    Int       @default(0) @map("city_lookup_failures")
+  /// No city is sent to the geocoder for this account before this instant.
+  cityLookupRetryAfter  DateTime? @map("city_lookup_retry_after")
+  /// The explored map's zone raster version this account was built with
+  /// (L1); 0 = never built, so the first request builds it.
+  zoneCellsVersion      Int       @default(0) @map("zone_cells_version")
+  /// The zone raster outgrew its cap (L1): the explored map then refuses
+  /// whole (409 TRAVTRACK_EXPLORED_UNAVAILABLE) rather than draw any part.
+  zoneCellsOverflow     Boolean   @default(false) @map("zone_cells_overflow")
+  /// The background build of the raster (L1): the last former-zone id it
+  /// added; null = not started. Never read by a map request.
+  zoneCellsBuildCursor  String?   @map("zone_cells_build_cursor")
+  /// When the nightly trip sweep last took this account (L4): the least
+  /// recently taken go first, so a capped run still comes round to everyone.
+  tripScannedAt         DateTime? @map("trip_scanned_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("travtrack_derivation_state")
+}
+
+/// A file imported into TravTrack (E8).
+model TravTrackImport {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  /// `gpx | dawarich` (CHECK).
+  kind       String
+  fileName   String    @map("file_name") @db.VarChar(200)
+  /// `running | succeeded | failed | interrupted | cancelled` (CHECK).
+  status     String
+  report     Json?
+  fromAt     DateTime? @map("from_at")
+  toAt       DateTime? @map("to_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  finishedAt DateTime? @map("finished_at")
+
+  user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dawarichImport TravTrackDawarichImport?
+
+  @@index([userId, createdAt])
+  @@map("travtrack_imports")
+}
+
+/// The copy of an account's own Dawarich history into TravTrack (TravTrack
+/// plan L6): one row per account, the durable checkpoint of the copy. In the
+/// database, not in the job: `jobRegistry` is in memory, so the job is only
+/// the handle for the click. Dawarich is only ever read.
+model TravTrackDawarichImport {
+  userId        String    @id @map("user_id")
+  importId      String    @unique @map("import_id")
+  /// `running | paused | interrupted | complete | incomplete | failed | cancelled` (CHECK).
+  status        String
+  /// The run that owns the row while `running`; a day's fence compares it.
+  runId         String?   @map("run_id")
+  fromDay       DateTime  @map("from_day") @db.Date
+  untilDay      DateTime  @map("until_day") @db.Date
+  /// The first day not yet copied: the durable checkpoint.
+  nextDay       DateTime  @map("next_day") @db.Date
+  daysDone      Int       @default(0) @map("days_done")
+  /// Per month `{ read, stored, duplicate, dropped, truncatedHours, unreachableDays, daysWithPoints }`.
+  report        Json      @default("{}")
+  lastErrorKind String?   @map("last_error_kind")
+  heartbeatAt   DateTime? @map("heartbeat_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  finishedAt    DateTime? @map("finished_at")
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  travTrackImport TravTrackImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  @@map("travtrack_dawarich_imports")
+}
+
+/// A per-device token OwnTracks or Overland posts positions with (E9). Not an
+/// `ApiToken`: it posts points for its owner and does nothing else.
+model TravTrackIngestToken {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  /// `owntracks | overland` (CHECK).
+  kind       String
+  label      String    @db.VarChar(60)
+  /// HMAC-SHA256 of the token under an instance-derived key, for the O(1) lookup.
+  lookupHash String    @unique @map("lookup_hash")
+  /// HMAC-SHA256 of the token under a second instance-derived key, compared in constant time.
+  hash       String
+  createdAt  DateTime  @default(now()) @map("created_at")
+  lastUsedAt DateTime? @map("last_used_at")
+  revokedAt  DateTime? @map("revoked_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("travtrack_ingest_tokens")
 }

@@ -507,6 +507,7 @@
   "newDialog": {
     "title": "New roadtrip",
     "intro": "Only the name is required. Everything else can wait.",
+    "journeyStations": "The roadtrip gets these stations from the recorded journey – you can change names and dates afterwards:",
     "name": "Name",
     "vehicle": "Travelling in?",
     "railHint": "Going by train? Train journeys get a section of their own.",

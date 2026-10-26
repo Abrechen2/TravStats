@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
-import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { useTranslation } from "../../hooks/useTranslation";
 import { openDataApi, openDataUpstreamFailure, type NearbyLodging } from "../../lib/api/openData";
 import { logger } from "../../lib/logger";
@@ -30,21 +29,19 @@ interface LodgingOsmNearbyProps {
  * fields from the pick, so this is also how an unsaved lodging is completed from
  * OSM — the enrich button on the detail page needs a saved record.
  *
- * Behind the same two switches as that button (beta `lodgingEnrichment` and the
- * instance's open data switch): both write OSM's stars and website into the
- * user's record, and that is what the beta is holding back. Asked only on a
- * click — every pin move would otherwise be a request to Overpass.
+ * Behind the instance's open data switch, like that button (out of beta since
+ * 2026-10-26). Asked only on a click — every pin move would otherwise be a
+ * request to Overpass.
  */
 export function LodgingOsmNearby({ lat, lon, onPick }: LodgingOsmNearbyProps): JSX.Element | null {
   const { t } = useTranslation(["openData", "lodging"]);
-  const { isFeatureVisible } = useBetaFeatures();
   const openData = useSettingsStore((s) => s.openDataEnabled) === true;
   const [lookup, setLookup] = useState<Lookup>({ state: "idle" });
 
   // A list for the old pin would offer the wrong street's houses.
   useEffect(() => setLookup({ state: "idle" }), [lat, lon]);
 
-  if (!openData || !isFeatureVisible("lodgingEnrichment")) return null;
+  if (!openData) return null;
 
   const search = async (): Promise<void> => {
     setLookup({ state: "loading" });

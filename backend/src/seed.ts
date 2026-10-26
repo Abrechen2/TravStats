@@ -1,8 +1,7 @@
-import { createPrismaClient } from "./prismaClient";
+import { prisma } from "./db";
+import { seedLoginUser } from "./seedLoginUser";
 import { hashPassword } from "./utils/password";
 import { fillSeededTimeColumns } from "./services/timeModel/seedTimeColumns";
-
-const prisma = createPrismaClient();
 
 const airports = [
   { icao: "EDDF", iata: "FRA", name: "Frankfurt Airport", lat: 50.0379, lon: 8.5622 },
@@ -27,14 +26,8 @@ async function main() {
 
   // Create demo user
   const passwordHash = await hashPassword("demo123");
-  const user = await prisma.user.upsert({
-    where: { username: "demo" },
-    update: {},
-    create: {
-      username: "demo",
-      passwordHash,
-    },
-  });
+  // The built-in demo login: flagged as such, so it stays on no location provider (plan T8).
+  const user = await seedLoginUser(prisma, { username: "demo", passwordHash });
 
   console.log(`✅ Created user: ${user.username}`);
 

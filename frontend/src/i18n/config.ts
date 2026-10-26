@@ -39,6 +39,7 @@ import enUsageStats from "./resources/en/usageStats.json";
 import enPushRelay from "./resources/en/pushRelay.json";
 import enLodging from "./resources/en/lodging.json";
 import enLocation from "./resources/en/location.json";
+import enTrack from "./resources/en/track.json";
 import enCompanions from "./resources/en/companions.json";
 import enPlaces from "./resources/en/places.json";
 import enXlsx from "./resources/en/xlsx.json";
@@ -83,6 +84,7 @@ import deUsageStats from "./resources/de/usageStats.json";
 import dePushRelay from "./resources/de/pushRelay.json";
 import deLodging from "./resources/de/lodging.json";
 import deLocation from "./resources/de/location.json";
+import deTrack from "./resources/de/track.json";
 import deCompanions from "./resources/de/companions.json";
 import dePlaces from "./resources/de/places.json";
 import deXlsx from "./resources/de/xlsx.json";
@@ -149,6 +151,7 @@ const resources = {
     pushRelay: enPushRelay,
     lodging: enLodging,
     location: enLocation,
+    track: enTrack,
     companions: enCompanions,
     places: enPlaces,
     xlsx: enXlsx,
@@ -196,6 +199,7 @@ const resources = {
     pushRelay: dePushRelay,
     lodging: deLodging,
     location: deLocation,
+    track: deTrack,
     companions: deCompanions,
     places: dePlaces,
     xlsx: deXlsx,
@@ -252,6 +256,7 @@ i18n.use(initReactI18next).init({
     "pushRelay",
     "lodging",
     "location",
+    "track",
     "companions",
     "places",
     "xlsx",

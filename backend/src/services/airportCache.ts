@@ -4,7 +4,7 @@
  */
 
 import NodeCache from "node-cache";
-import { prisma } from "../db";
+import { prisma, type DbTransaction } from "../db";
 import logger from "../utils/logger";
 import type { AirportData } from "./airportLookup";
 
@@ -111,7 +111,11 @@ export async function getCachedAirport(code: string): Promise<AirportData | null
  * @param codes Array of IATA or ICAO codes
  * @returns Map of code -> AirportData
  */
-export async function getCachedAirports(codes: string[]): Promise<Map<string, AirportData>> {
+export async function getCachedAirports(
+  codes: string[],
+  /** A transaction's client when called inside one — never a second pool connection. */
+  db: Pick<DbTransaction, "airport"> = prisma
+): Promise<Map<string, AirportData>> {
   const result = new Map<string, AirportData>();
   const codesToFetch: string[] = [];
 
@@ -136,7 +140,7 @@ export async function getCachedAirports(codes: string[]): Promise<Map<string, Ai
       context: { count: codesToFetch.length },
     });
 
-    const airports = await prisma.airport.findMany({
+    const airports = await db.airport.findMany({
       where: {
         OR: [{ iata: { in: codesToFetch } }, { icao: { in: codesToFetch } }],
       },

@@ -1,4 +1,7 @@
 import { prisma } from "../../db";
+import { buildTravTrackDataExport } from "../travtrack/accountExport";
+import { withZoneCutRecordings } from "./zoneCutRecordings";
+import { PUBLIC_STAY_SELECT, publicEvidence } from "../dawarich/stays/publicStay";
 
 /**
  * What `GET /admin/export/all-data` carries per user — kept here so the route
@@ -48,6 +51,8 @@ export const USER_EXPORT_SELECT = {
       // Which Immich albums a trip links, and in which mode. The album's
       // images live on the user's Immich; the link is what exists only here.
       immichAlbums: true,
+      // The packing list the Companion used to keep on the phone only.
+      packingList: { select: { items: true, rev: true, updatedAt: true } },
       // The saved plan and proposals are user content. Mutation receipts and
       // creation/replay keys are transport bookkeeping, not portable records.
       travelPlan: {
@@ -159,8 +164,10 @@ export const USER_EXPORT_SELECT = {
   // journeys the photo inbox proposed from it: evidence the passport reads.
   countryDays: true,
   photoJourneys: true,
-  // Includes review decisions and edited evidence, not just regenerable suggestions.
-  dawarichStays: true,
+  // Includes review decisions and edited evidence, not just regenerable
+  // suggestions. Named columns only: the evidence key and the claim stay
+  // server-side, and the evidence leaves through `withPublicStays`.
+  dawarichStays: { select: PUBLIC_STAY_SELECT },
   // The answers to trip suggestions: without them a restored account would be
   // asked again every question it already dismissed. The suggestions
   // themselves are derived and never stored.
@@ -178,6 +185,9 @@ export const USER_EXPORT_SELECT = {
       appPrefs: true,
       autoCreateTrips: true,
       homeCountry: true,
+      // Personal facts the Companion used to keep on the phone only.
+      homePlace: true,
+      passportExpiry: true,
       preferredVisionParser: true,
       preferredTextParser: true,
       immichDefaultMode: true,
@@ -224,6 +234,37 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   analyticsEvents: "anonymous usage telemetry, not the user's travel data",
   trackJitterRemeasures:
     "the jitter re-measure job's bookkeeping (forgejo#319); the tracks themselves are exported",
+  // TravTrack, the own location history (beta, TravTrack plan). Not read through
+  // USER_EXPORT_SELECT: an account can hold a million points. The `travtrack`
+  // section beside each user record carries them, read in pages
+  // (`services/travtrack/accountExport.ts`, plan T7).
+  travTrackPoints: "TravTrack history (beta): the paged `travtrack` section, accountExport.ts",
+  travTrackPointLinks: "TravTrack history (beta): carried with their points in `travtrack`",
+  travTrackDeletedRanges: "TravTrack history (beta): the `travtrack` section, accountExport.ts",
+  travTrackDeletedPoints:
+    "TravTrack history (beta): the `travtrack` section (second only, no position), accountExport.ts",
+  travTrackPrivacyZones: "TravTrack history (beta): the `travtrack` section, accountExport.ts",
+  travTrackGaps: "TravTrack history (beta): the `travtrack` section, accountExport.ts",
+  travTrackZoneTombstones:
+    "TravTrack history (beta): former privacy-zone circles, the `travtrack` section",
+  travTrackUploads:
+    "transport bookkeeping: upload receipts that answer a retry, pruned after 30 days",
+  travTrackShareSnapshots:
+    "selected from the points on the owner's request, then only narrowed; recipient-facing only",
+  // TravTrack phase 3 (plan E1). A suggestion is derived from the history and
+  // carries server-keyed point digests, which never leave the server; it is
+  // derived again after a restore. The rest is bookkeeping and credentials.
+  locationSuggestions:
+    "derived from the TravTrack history and carrying server-keyed point digests; derived again after restore",
+  travTrackDirtyDays: "derivation bookkeeping: days waiting to be re-derived",
+  // TravTrack phase 4 (plan L1, L3): projections of the history, rebuilt from
+  // the restored points by the projection scheduler.
+  travTrackExploredCells:
+    "projection of the TravTrack history: the explored map's cells, re-derived",
+  travTrackZoneCells: "projection of the privacy zones: the explored map's zone raster, rebuilt",
+  travTrackMonthValues: "projection of the TravTrack history: monthly values, re-derived",
+  travTrackImports: "import job bookkeeping: status and per-run reports of a file import",
+  travTrackIngestTokens: "credential material",
   trainingData: "parser training corpus of raw source text, operational",
   parseLogs: "parser training log, operational",
   travelPlanUsage: "operational daily AI/weather quota counters, not travel-plan content",
@@ -276,6 +317,21 @@ export async function loadUserAddedCatalogue(): Promise<{
 }
 
 /**
+ * A user record read with `USER_EXPORT_SELECT`, its stays' evidence without
+ * the server-only point digests. Every path that writes the export out — the
+ * admin download and the per-account export the WebDAV sync uploads — passes
+ * its records through here.
+ */
+export function withPublicStays<T extends { dawarichStays: Array<{ evidence: unknown }> }>(
+  user: T
+): T {
+  return {
+    ...user,
+    dawarichStays: user.dawarichStays.map((s) => ({ ...s, evidence: publicEvidence(s.evidence) })),
+  };
+}
+
+/**
  * One account's share of the export above — what a per-account WebDAV sync
  * uploads (forgejo#321). The same selection, so a table added to the export
  * reaches the sync with it; photo and document bytes stay out, as they do in
@@ -291,6 +347,7 @@ export async function buildAccountExport(
     format: "travstats-account-export/1",
     exportedAt: new Date().toISOString(),
     instanceName,
-    user,
+    user: await withZoneCutRecordings(userId, withPublicStays(user)),
+    travtrack: await buildTravTrackDataExport(userId),
   };
 }

@@ -163,9 +163,10 @@ describe("GET /trips and /trips/:id — the trip's cost", () => {
   /**
    * Review I1/I2 (controller ruling 2026-10-09): the trips page and the
    * statistics' travel account read ONE source set. With the beta switch off,
-   * the rental and the roadtrip's fuel are out of BOTH — the card and the stats
-   * row — and with it on, in both. The night train is in both either way: rail
-   * left beta in 2.7.0-rc.20.
+   * the roadtrip's fuel is out of BOTH — the card and the stats row — and with
+   * it on, in both. The night train and the rental are in both either way (rail
+   * left beta in 2.7.0-rc.20, rental on 2026-10-26); the rental leaves both
+   * only when the user switches the domain off.
    */
   it("prices a trip the same on /trips and /stats/travel-account, hidden domains out of both", async () => {
     const trip = await prisma.trip.create({ data: { userId, name: "Mixed", status: "completed" } });
@@ -217,10 +218,13 @@ describe("GET /trips and /trips/:id — the trip's cost", () => {
     };
 
     await updateInstanceSettings({ betaFeaturesEnabled: false });
-    expect(await surfaces()).toEqual({ card: { EUR: 94 }, stats: { EUR: 94 }, railNights: 1 });
+    expect(await surfaces()).toEqual({ card: { EUR: 304 }, stats: { EUR: 304 }, railNights: 1 });
 
     await updateInstanceSettings({ betaFeaturesEnabled: true });
     expect(await surfaces()).toEqual({ card: { EUR: 334 }, stats: { EUR: 334 }, railNights: 1 });
+
+    await enableDomains(["flight", "rail", "roadtrip"]);
+    expect(await surfaces()).toEqual({ card: { EUR: 124 }, stats: { EUR: 124 }, railNights: 1 });
   }, 30_000);
 
   /**

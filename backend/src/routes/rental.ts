@@ -31,7 +31,7 @@ import { rentalListSummary } from "../shared/listSummary";
  * Car rentals — one row per rental contract (spec
  * docs/superpowers/specs/2026-10-01-rental-domain-design.md). Enveloped family,
  * as ADR 0001 asks of a new domain. The endpoints stay reachable whatever the
- * instance beta switch says; the switch hides the UI, it is not an
+ * user's domain toggle says; the toggle hides the UI, it is not an
  * authorisation boundary (as rail).
  */
 

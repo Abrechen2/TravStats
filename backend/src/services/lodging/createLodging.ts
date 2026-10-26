@@ -12,7 +12,7 @@
  * coordinates are filled later by the throttled background pass.
  */
 
-import { prisma } from "../../db";
+import { prisma, type DbTransaction } from "../../db";
 import type { Prisma } from "../../prisma";
 import type { LodgingInput } from "../../schemas/lodging";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
@@ -31,7 +31,13 @@ export interface LodgingLocationPatch {
 export async function createLodgingRecord<I extends Prisma.LodgingInclude>(
   userId: string,
   input: LodgingInput & { visited?: boolean },
-  opts: { dataSource: string; location?: LodgingLocationPatch; include?: I }
+  opts: {
+    dataSource: string;
+    location?: LodgingLocationPatch;
+    include?: I;
+    /** The route's client-ref claim (forgejo#283), committed with the row. */
+    claim?: (tx: DbTransaction, lodgingId: string) => Promise<void>;
+  }
 ): Promise<Prisma.LodgingGetPayload<{ include: I }>> {
   // Typed as the plain args, not through the generic `I`: with the 2.7 schema
   // TypeScript gives up comparing the generic include ("excessive stack
@@ -40,10 +46,17 @@ export async function createLodgingRecord<I extends Prisma.LodgingInclude>(
     data: await buildLodgingCreateData(userId, input, opts),
     include: opts.include,
   };
-  // share-exempt: a new house has no stay yet
-  return prisma.lodging.create(args) as unknown as Promise<
-    Prisma.LodgingGetPayload<{ include: I }>
-  >;
+  const { claim } = opts;
+  const created = claim
+    ? prisma.$transaction(async (tx) => {
+        // share-exempt: a new house has no stay yet
+        const row = await tx.lodging.create(args);
+        await claim(tx, row.id);
+        return row;
+      })
+    : // share-exempt: a new house has no stay yet
+      prisma.lodging.create(args);
+  return created as unknown as Promise<Prisma.LodgingGetPayload<{ include: I }>>;
 }
 
 /**

@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
+import { initialLocationProvider } from "../services/locationProvider/initialProvider";
 import type { Prisma } from "../prisma";
 import { appVersion } from "../utils/version";
 import { z } from "zod";
@@ -118,13 +119,17 @@ router.post("/initialize", authLimiter, async (req: Request, res: Response, next
         throw new AppError("Setup already completed - admin user exists", 400);
       }
 
-      return tx.user.create({
+      const admin = await tx.user.create({
         data: {
           username,
           passwordHash,
           isAdmin: true,
         },
       });
+      // TravTrack where it is on, else nothing (TravTrack plan T8). On a fresh
+      // install the beta switch is off, so the first admin starts on `none`.
+      await initialLocationProvider(tx, admin.id);
+      return admin;
     });
 
     // Persist the admin's domain selection so the UI filters modules

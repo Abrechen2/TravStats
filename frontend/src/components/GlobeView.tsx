@@ -34,12 +34,8 @@ import { useMapLabelsModeStore } from "../store/mapLabelsModeStore";
 const GLOBE_MARKER_BASE_PX = 5;
 import { nightCells as computeNightCells } from "./Globe/sunPosition";
 import { HoverTooltip, type HoverTooltipApi } from "./map/cards/HoverTooltip";
-import {
-  airportHoverHtml,
-  arcHoverHtml,
-  cruiseHoverHtml,
-  portHoverHtml,
-} from "./map/cards/hoverCardHtml";
+import { airportHoverHtml, arcHoverHtml, portHoverHtml } from "./map/cards/hoverCardHtml";
+import * as cruiseLegs from "./map/cards/journeys/cruiseLegJourneys";
 import { GlobeLabelsOverlay } from "./Globe/GlobeLabelsOverlay";
 import { usePinnedAnchor } from "./Globe/usePinnedAnchor";
 import { occludeExtraLayers } from "./Globe/occludeExtraLayers";
@@ -755,6 +751,7 @@ export default function GlobeView({
       // every mode. There is no override path: the user's config is the only
       // input (the old `cruiseRouteColor ?? …` override IS the "solid" mode now).
       const color = resolveCruiseArcColor(cruise, cruiseColorConfig);
+      const base = { cruiseId: cruise.id, cruiseLabel: label, status: cruise.status, color };
       // Index legs by "from:to" so we can pair geometry to date in O(1).
       const dateByPair = new Map<string, CruiseLegDates>();
       for (const ld of legDates) dateByPair.set(`${ld.fromPortId}:${ld.toPortId}`, ld);
@@ -762,6 +759,8 @@ export default function GlobeView({
       for (const feature of fc.features) {
         const path = feature.geometry.coordinates as [number, number][];
         if (path.length < 2) continue;
+        const { fromPortId, toPortId } = feature.properties;
+        const leg = (p: [number, number][]) => ({ ...base, path: p, fromPortId, toPortId });
 
         if (sliderMode === "live" && sliderCurrent) {
           const ld = dateByPair.get(
@@ -778,13 +777,7 @@ export default function GlobeView({
               const partialSwapped = truncatePolyline(swapped, p);
               if (partialSwapped.length < 2) continue;
               const partial = partialSwapped.map(([lat, lng]) => [lng, lat] as [number, number]);
-              out.push({
-                path: partial,
-                cruiseId: cruise.id,
-                cruiseLabel: label,
-                status: cruise.status,
-                color,
-              });
+              out.push(leg(partial));
               continue;
             }
             // p >= 1: full leg falls through to push-full below
@@ -798,10 +791,10 @@ export default function GlobeView({
           if (ld && !legVisibleFilter(ld, sliderFilterStart, sliderFilterEnd)) continue;
         }
 
-        out.push({ path, cruiseId: cruise.id, cruiseLabel: label, status: cruise.status, color });
+        out.push(leg(path));
       }
     }
-    return out;
+    return cruiseLegs.withCruiseLegHover(out, cruiseLegs.indexCruiseLegs(cruises));
   }, [
     cruises,
     cruiseGeometry,
@@ -1032,17 +1025,20 @@ export default function GlobeView({
     [t, locale]
   );
 
-  const onCruisePathHover = useCallback((info: PickingInfo<CruisePathDatum>): void => {
-    if (info.object && info.x != null && info.y != null) {
-      tooltipRef.current?.show({
-        html: cruiseHoverHtml(info.object.cruiseLabel),
-        x: info.x,
-        y: info.y,
-      });
-    } else {
-      tooltipRef.current?.hide();
-    }
-  }, []);
+  const onCruisePathHover = useCallback(
+    (info: PickingInfo<CruisePathDatum>): void => {
+      if (info.object && info.x != null && info.y != null) {
+        tooltipRef.current?.show({
+          html: cruiseLegs.cruiseLegHoverHtml(info.object, info.object.cruiseLabel, t),
+          x: info.x,
+          y: info.y,
+        });
+      } else {
+        tooltipRef.current?.hide();
+      }
+    },
+    [t]
+  );
 
   // Hover on a lodging or place pin goes through the flat map's own tooltip
   // renderer, which already keys on the layer id (markerTooltip.ts) — a second

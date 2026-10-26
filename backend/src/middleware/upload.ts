@@ -30,7 +30,7 @@ import { HEIF_MIME_TYPES, removeDisplayRendition } from "../services/photos/disp
  */
 export class UnsupportedUploadTypeError extends AppError {
   constructor(message: string) {
-    super(message, 400);
+    super(message, 400, "UNSUPPORTED_UPLOAD_TYPE");
     this.name = "UnsupportedUploadTypeError";
   }
 }

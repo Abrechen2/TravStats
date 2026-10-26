@@ -58,3 +58,45 @@ export const BRAND_TOKENS: ReadonlySet<string> = new Set([
   "kempinski",
   "leonardo",
 ]);
+
+/**
+ * What a house looks at, or how it sells itself — words its neighbours carry
+ * too. Beside a pin they never identify on their own: the OSM audit of
+ * 2026-10-26 matched "PANORAMA view pyramids" to "Pyramids View Inn" 44 m
+ * away, a different house. Used only where coordinates already proved the
+ * neighbourhood (`nearby`), so an import's name matching is unchanged.
+ */
+export const LANDMARK_TOKENS: ReadonlySet<string> = new Set([
+  "pyramid",
+  "pyramids",
+  "view",
+  "views",
+  "panorama",
+  "panoramic",
+  "beach",
+  "sea",
+  "lake",
+  "river",
+  "harbour",
+  "harbor",
+  "marina",
+  "old",
+  "town",
+  "plaza",
+  "square",
+  "terminal",
+  "grand",
+  "royal",
+  "boutique",
+  "luxury",
+  "inn",
+  "suites",
+  "apartments",
+  "residence",
+  "residences",
+  "lodge",
+  "guesthouse",
+  "homestay",
+  "jugendherberge",
+  "youth",
+]);

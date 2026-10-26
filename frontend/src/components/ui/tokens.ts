@@ -46,6 +46,14 @@ export const STATUS_TOKEN: Record<string, string> = {
  */
 export const DASHED_STATUSES = new Set(["pending", "guess"]);
 
+/**
+ * The colour of an area of the app — Stats, Plan, Track (TravTrack plan,
+ * phase 5). Defined once in `index.css` as `--area-*`.
+ */
+export function areaColor(area: "stats" | "plan" | "track"): string {
+  return `var(--area-${area})`;
+}
+
 export const DOMAIN_TOKEN: Record<DomainKey | "tour", string> = {
   flight: "domain-flight",
   cruise: "domain-cruise",

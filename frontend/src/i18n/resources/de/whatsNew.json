@@ -14,16 +14,16 @@
         "body": "Bei jeder Statistik steht, wie gezählt wird. Ein Tipp auf eine Zahl öffnet die Einträge dahinter – bei Flügen, Kreuzfahrten, Aufenthalten und Orten. Was sich nicht zuordnen lässt, wird benannt statt weggelassen. Kreuzfahrt-Kilometer misst TravStats jetzt entlang der Seeroute, deshalb steigen sie meist."
       },
       "documents": {
-        "title": "Dokumente und Vorlagen",
-        "body": "Bordkarten, Rechnungen und Buchungsbestätigungen hängen als Dokument an ihrem Eintrag; Preis, Währung und Buchungsnummer übernimmst du auf Wunsch. Wie die Mail oder das PDF eines Anbieters gelesen wird, steht in öffentlichen Vorlagen statt im Server. Die Unterlagen einer Pauschalreise werden als Reise eingelesen, erst nach deiner Vorschau."
-      },
-      "entryHelp": {
-        "title": "Hilfe beim Eintragen, Fristen im Blick",
-        "body": "Formulare schlagen vor, was du schon einmal eingetragen hast. Der Posteingang fragt nach, wenn Daten nicht zusammenpassen: Dubletten, falsche Reihenfolge, fehlende Flugnummer, unbekannter Flughafen. Bei Flug und Aufenthalt trägst du Fristen ein, etwa kostenlose Stornierung, Zahlung oder Online-Check-in."
+        "title": "Dokumente, Vorlagen und Hilfe beim Eintragen",
+        "body": "Bordkarten, Rechnungen und Bestätigungen hängen als Dokument an ihrem Eintrag; wie die Mail eines Anbieters gelesen wird, steht in öffentlichen Vorlagen. Formulare schlagen Bekanntes vor und kennen Fristen wie kostenlose Stornierung. Der Posteingang fragt nach, wenn Daten nicht zusammenpassen, und führt Dubletten auf Wunsch zusammen."
       },
       "placesPhotos": {
-        "title": "Orte, Reisepass und Fotos",
-        "body": "Orte sind ein eigener Bereich mit Listen, Checklisten und Import, auch aus einem Google-Takeout. Der Reisepass zeigt zu jedem Land seine Belege. Fotos hängen auch an Orten, HEIC-Bilder vom iPhone werden angenommen. Die nächtliche Foto-Suche (in den Einstellungen einzuschalten, braucht Immich) schlägt Reisen, Orte und Aufenthalte vor; du prüfst mehrere auf einmal."
+        "title": "Orte, Unterkünfte, Reisepass und Fotos",
+        "body": "Orte sind ein eigener Bereich mit Listen, Checklisten und Import, ihre Besuche stehen nach Jahren, Geplantes oben. Unterkünfte ergänzt TravStats auf Wunsch aus OpenStreetMap um Sterne, Webseite und Kette. Der Reisepass zeigt zu jedem Land seine Belege; die nächtliche Foto-Suche (braucht Immich) schlägt Reisen, Orte und Aufenthalte vor."
+      },
+      "transport": {
+        "title": "Mietwagen, Fernbus und Fähren",
+        "body": "Mietwagen, Fernbus und Fähren sind eigene Bereiche, die du in den Einstellungen einschaltest: mit Abholung und Rückgabe in Ortszeit, Linien, Häfen, Kosten und Statistik. Tram- und U-Bahn-Fahrten laufen jetzt auf ihren eigenen Gleisen statt über die Fernbahn; falsch berechnete Strecken lassen sich neu berechnen."
       },
       "sharing": {
         "title": "Reisen und Notizen teilen",
@@ -34,8 +34,8 @@
         "body": "Die Companion-App koppelst du per QR-Code mit deinem Server. Gekoppelt meldet er Flugänderungen und Abflug-Erinnerungen als Push aufs Handy (ein Admin schaltet das Relay ein) und gleicht Einträge ab, ohne eine neuere Fassung still zu überschreiben. Kopplung, Push und Abgleich sind gebaut, wie die App selbst noch in Prüfung."
       },
       "beta": {
-        "title": "Roadtrips, Mietwagen, Bus und mehr",
-        "body": "Roadtrips und Touren mit Reisekosten, Mietwagen, Fernbus, Fähren, Kreuzfahrt-Spuren, Flugspuren, Hotel-Anreicherung, Freundesvergleiche, verschlüsseltes Teilen, Reisen über Server teilen und das Kalender-Abo sind noch in Prüfung. Ein Admin schaltet sie mit dem Beta-Schalter frei; das Demo-Konto tut das selbst. Alpha-Versuch: die Reiseplanung TravPlan, ebenso dahinter."
+        "title": "Roadtrips, TravTrack und mehr in Beta",
+        "body": "Roadtrips und Touren, Kreuzfahrt-Spuren, Flugspuren, Freundesvergleiche, verschlüsseltes Teilen, Reisen über Server teilen (mit Checkliste zum Einrichten) und das Kalender-Abo mit Ortszeiten sind noch in Prüfung. Ein Admin schaltet sie mit dem Beta-Schalter frei. Neu und ebenfalls Beta: TravPlan zum Planen und TravTrack, dein Standortverlauf mit Privatzonen."
       }
     },
     "v260": {

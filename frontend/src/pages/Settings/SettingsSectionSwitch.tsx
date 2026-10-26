@@ -35,6 +35,8 @@ import ModuleSection from "../../components/Settings/ModuleSection";
 import ServicesSection from "../../components/Settings/ServicesSection";
 import DawarichStayScanCard from "../../components/Settings/DawarichStayScanCard";
 import DawarichConnectionCard from "../../components/Settings/DawarichConnectionCard";
+import LocationProviderSection from "../../components/Settings/LocationProviderSection";
+import TravTrackSection from "../../components/Settings/TravTrackSection";
 
 type SettingsPageState = ReturnType<typeof useSettingsPage>;
 
@@ -142,6 +144,12 @@ export default function SettingsSectionSwitch({
       return <CalendarFeedSection />;
     case "dawarich":
       return <DawarichConnectionCard />;
+    case "locationProvider":
+      // Where recordings go and positions are read from (TravTrack plan S5).
+      return <LocationProviderSection />;
+    case "travTrack":
+      // TravTrack's own history: summary, export, zones, delete (plan T6).
+      return <TravTrackSection />;
     case "tripRecording":
       // Whether the app's trip positions are stored here (forgejo#316).
       return <TripRecordingSection />;

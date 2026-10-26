@@ -36,6 +36,14 @@
  * somebody else's server, and a restart loop would turn into a request loop
  * against a machine TravStats does not own.
  *
+ * ## Only where Dawarich is the chosen location source
+ *
+ * An own connection is no longer enough on its own (TravTrack plan S3): the
+ * account's location provider must be `dawarich`. The migration that added the
+ * provider made every account with an own connection a `dawarich` one, so the
+ * set of swept accounts did not change that day. The admin's "sweep now"
+ * (`routes/admin/dawarich.ts`) is this job run early and follows the same rule.
+ *
  * ## An account without a Dawarich connection costs nothing
  *
  * Most instances have none, so eligibility is one indexed query over
@@ -55,6 +63,7 @@ import { getCountryResolver } from "../services/geo/countryFromCoordinates";
 import { createDawarichClient, type DawarichClient } from "../services/dawarich/dawarichClient";
 import { buildUserDawarichConnection } from "../services/dawarich/dawarichResolver";
 import { sweepUserCountryDays } from "../services/dawarich/countryDaySweep";
+import { DAWARICH_PROVIDER_WHERE } from "../services/locationProvider/kinds";
 import type { DawarichConnection } from "../services/dawarich/errors";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
@@ -119,6 +128,8 @@ async function eligibleAccounts(userId?: string): Promise<EligibleAccount[]> {
       ...(userId ? { userId } : {}),
       dawarichBaseUrl: { not: null },
       dawarichApiKey: { not: null },
+      // Only where Dawarich is the chosen location source (TravTrack plan S3).
+      ...DAWARICH_PROVIDER_WHERE,
     },
     select: { userId: true, dawarichBaseUrl: true, dawarichApiKey: true },
     orderBy: { userId: "asc" },
@@ -130,6 +141,31 @@ async function eligibleAccounts(userId?: string): Promise<EligibleAccount[]> {
     if (connection) accounts.push({ userId: row.userId, connection });
   }
   return accounts;
+}
+
+/** Thrown by the guarded client once an account's provider is no longer Dawarich. */
+class ProviderSwitchedAway extends Error {}
+
+async function stillDawarichProvider(userId: string): Promise<boolean> {
+  return (await prisma.userSettings.count({ where: { userId, ...DAWARICH_PROVIDER_WHERE } })) > 0;
+}
+
+/**
+ * The account's client, asking before every request whether Dawarich is still
+ * its location provider. The account list is read once at the start of the
+ * night; a switch while earlier accounts run — or during this account's own
+ * walk — must stop the requests and writes that follow (Codex review of S3),
+ * not wait for tomorrow. Months already written stay, like any other
+ * interrupted walk.
+ */
+function providerGuardedClient(client: DawarichClient, userId: string): DawarichClient {
+  return {
+    checkHealth: () => client.checkHealth(),
+    getPoints: async (window) => {
+      if (!(await stillDawarichProvider(userId))) throw new ProviderSwitchedAway();
+      return client.getPoints(window);
+    },
+  };
 }
 
 /**
@@ -171,6 +207,10 @@ export async function runDawarichCountryDaySweep(
 
   for (const account of accounts) {
     try {
+      if (!(await stillDawarichProvider(account.userId))) {
+        logSwitchedAway(account.userId);
+        continue;
+      }
       /**
        * The §8.2 signal, rebuilt for each account and never shared between
        * them: "an airport somebody flew through" is true of one traveller and
@@ -187,7 +227,7 @@ export async function runDawarichCountryDaySweep(
         options.inFlight ?? (await buildFlightAirTimeTest(account.userId, countryAt));
 
       const outcome = await sweepUserCountryDays(account.userId, {
-        client: createClient(account.connection),
+        client: providerGuardedClient(createClient(account.connection), account.userId),
         countryAt,
         atKnownAirport,
         inFlight,
@@ -203,6 +243,10 @@ export async function runDawarichCountryDaySweep(
       result.partialDays += outcome.partialDays;
       if (outcome.errorKind) result.degraded += 1;
     } catch (error) {
+      if (error instanceof ProviderSwitchedAway) {
+        logSwitchedAway(account.userId);
+        continue;
+      }
       result.failed += 1;
       logger.warn(
         {
@@ -250,4 +294,12 @@ export function startDawarichCountryDaySweepScheduler(): void {
 export function stopDawarichCountryDaySweepScheduler(): void {
   schedulerTask?.stop();
   schedulerTask = null;
+}
+
+/** Not a failure: the person chose another source tonight. */
+function logSwitchedAway(userId: string): void {
+  logger.info(
+    { operation: "dawarich_country_day_sweep_provider_switched", userId },
+    "Dawarich is no longer this account's location source — its sweep stops"
+  );
 }

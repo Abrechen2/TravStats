@@ -468,7 +468,8 @@
       "untracedShape": "Transitous kennt für diesen Zug nur gerade Linien zwischen den Halten",
       "railRoutingUnavailable": "der Streckenrouter (OpenRailRouting) dieser Instanz hat nicht geantwortet",
       "railRoutingNoRoute": "der Streckenrouter (OpenRailRouting) kennt keine Gleisverbindung zwischen diesen Bahnhöfen",
-      "railRoutingNotConfigured": "kein Bahn-Routingdienst eingerichtet ist"
+      "railRoutingNotConfigured": "kein Bahn-Routingdienst eingerichtet ist",
+      "railRoutingModeUnsupported": "der Streckenrouter dieser Instanz kann Straßenbahn- und U-Bahn-Fahrten nicht über ihr eigenes Netz berechnen"
     }
   },
   "import": {

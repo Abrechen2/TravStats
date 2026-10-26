@@ -96,8 +96,8 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     routePrefix: "/rail",
   },
   // Car rentals (spec 2026-10-01-rental-domain-design). Available, so shared
-  // code iterating AVAILABLE_DOMAINS sees it; the UI hides it behind the
-  // `rentalDomain` beta gate. The colour is PROVISIONAL (owner, 2026-10-01):
+  // code iterating AVAILABLE_DOMAINS sees it; out of beta since 2026-10-26.
+  // The colour is PROVISIONAL (owner, 2026-10-01):
   // the domain colour table belongs to the Companion / Claude Design, who have
   // not chosen yet — the spec's candidate dusty rose stands in until they do
   // (`domainColor.rental` in design/tokens.json says the same).
@@ -110,8 +110,8 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     routePrefix: "/rentals",
   },
   // Long-distance coach rides (spec 2026-10-07-bus-domain-design). Available,
-  // so shared code iterating AVAILABLE_DOMAINS sees it; the UI hides it behind
-  // the `busDomain` beta gate. Not city transit (owner, 2026-10-07): a ticketed
+  // so shared code iterating AVAILABLE_DOMAINS sees it; out of beta since
+  // 2026-10-26. Not city transit (owner, 2026-10-07): a ticketed
   // ride between two terminals. The colour is PROVISIONAL (spec D7) — the
   // domain colour table belongs to the Companion / Claude Design.
   bus: {

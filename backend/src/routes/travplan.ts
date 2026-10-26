@@ -28,6 +28,8 @@ import { recheckAchievementsAfterWrite } from "../middleware/recheckAchievements
 import { planningImportPolicy } from "./travplan/importPolicy";
 import routeEndpoints from "./travplan/routeEndpoints";
 import { assertTravPlanOffered, travPlanOffered } from "../services/travplan/availability";
+import { planVersusActual } from "../services/travplan/actual/planActual";
+import { planActualLimiter } from "../middleware/planActualLimit";
 const router = Router();
 const uuid = z.string().uuid();
 const writeGuard = [authenticate, requireWriteScope, rejectDemo];
@@ -74,13 +76,18 @@ router.patch(
   ...writeGuard,
   requireAdmin,
   route(async (req, res) => {
+    // Any subset: Admin → Instanz → TravPlan saves `{enabled}` alone, so it never writes back
+    // limits it loaded minutes ago; `/plan/admin` still sends all three. Fields left out keep
+    // their stored value, or the column default on the first write.
     const data = z
       .object({
         enabled: z.boolean(),
         aiDailyLimit: z.number().int().min(0).max(100),
         weatherDailyLimit: z.number().int().min(0).max(200),
       })
+      .partial()
       .strict()
+      .refine((d) => Object.keys(d).length > 0, "Nothing to change")
       .parse(req.body);
     res.json(
       await prisma.travelPlanConfig.upsert({
@@ -124,6 +131,15 @@ router.post(
   },
   route(async (req, res) => {
     res.json(await writePlan(req.userId!, tripId(req), writeSchema.parse(req.body)));
+  })
+);
+// Plan versus actual (TravTrack plan L5): a read of the plan and the trip's track, never a write.
+router.get(
+  "/trips/:tripId/plan/actual",
+  authenticate,
+  planActualLimiter,
+  route(async (req, res) => {
+    res.json(await planVersusActual(req.userId!, tripId(req)));
   })
 );
 router.get(

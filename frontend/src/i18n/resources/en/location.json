@@ -28,5 +28,34 @@
   },
   "outOfRange": "Latitude must be between −90 and 90, longitude between −180 and 180.",
   "latOutOfRange": "Latitude must be between −90 and 90.",
-  "lonOutOfRange": "Longitude must be between −180 and 180."
+  "lonOutOfRange": "Longitude must be between −180 and 180.",
+  "trackOrigin": {
+    "label": {
+      "travstats": "TravStats recording",
+      "travtrack": "from TravTrack",
+      "dawarich": "from Dawarich"
+    },
+    "coverage": {
+      "truncated": "Dawarich holds more points than one read returns — the line is incomplete.",
+      "unreachable": "Dawarich could not be reached — this line is missing for now."
+    },
+    "switch": "Other source:",
+    "show": {
+      "travstats": "Show the TravStats recording",
+      "travtrack": "Show TravTrack",
+      "dawarich": "Show Dawarich"
+    },
+    "check": {
+      "travstats": "Look for a TravStats recording (not checked yet)",
+      "travtrack": "Look in TravTrack (not checked yet)",
+      "dawarich": "Look in Dawarich (not checked yet)"
+    },
+    "notAvailable": {
+      "travstats": "This entry has no TravStats recording.",
+      "travtrack": "TravTrack holds no points for this period.",
+      "dawarich": "Dawarich holds no points for this period."
+    },
+    "failed": "This source could not be loaded just now.",
+    "back": "Back to your own recording"
+  }
 }

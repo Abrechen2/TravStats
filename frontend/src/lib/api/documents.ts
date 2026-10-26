@@ -232,12 +232,16 @@ export const documentsApi = {
     // No explicit `format`: the server decides from the BYTES and treats a
     // declaration as a hint, so sending our guess could only ever disagree.
     //
-    // No Content-Type either. A multipart type without a boundary is an
-    // unparsable request; the platform writes the real one, and axios scrubs
-    // anything we put there first (helpers/resolveConfig.js) — so a hand-set
-    // header is either ignored or wrong, never right.
+    // The multipart type is named on purpose. The shared axios instance sets
+    // `application/json` for every request, so leaving the header alone sent
+    // this FormData under a JSON header and the route answered "No file
+    // uploaded" — every web document upload failed (beta.28 UAT, broken since
+    // 2026-09-19). Naming `multipart/form-data` lets axios recognise the
+    // FormData and write the boundary itself, as the photo uploaders do
+    // (`uploadLodgingPhotos` in lodging.ts says why).
     const { data } = await api.post<Envelope<TravelDocument>>("/documents", form, {
       timeout: DOCUMENT_UPLOAD_TIMEOUT_MS,
+      headers: { "Content-Type": "multipart/form-data" },
     });
     return data.data;
   },

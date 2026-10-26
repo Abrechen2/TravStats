@@ -676,9 +676,19 @@
     "nextScan": "Nächste automatische Auswertung",
     "noPoints": "Für diesen Zeitraum wurden keine Positionspunkte geliefert. Daraus lassen sich keine Aufenthalte ableiten.",
     "staleData": "Die zuletzt gelieferten Positionsdaten sind mehr als 24 Stunden alt. Prüfe die Synchronisierung mit Dawarich; ein erfolgreicher Abruf bedeutet nicht, dass aktuelle Punkte vorliegen.",
+    "travtrack": {
+      "title": "Aufenthalte aus TravTrack",
+      "source": "Aus deinem TravTrack-Verlauf",
+      "description": "Aus deinem TravTrack-Verlauf werden alle sechs Stunden mögliche Aufenthalte der letzten sieben Tage erkannt. Es entstehen nur Vorschläge: Ein Besuch wird erst nach deiner Bestätigung eingetragen. Dies aktiviert weder den Immich-Scan noch die Ländererkennung.",
+      "off": "TravTrack ist auf diesem Server gerade ausgeschaltet. Es werden keine neuen Aufenthalte erkannt; du kannst die Erkennung aber jederzeit ausschalten.",
+      "staleData": "Die neuesten Positionsdaten in TravTrack sind mehr als 24 Stunden alt. Prüfe, ob dein Telefon noch aufzeichnet und hochlädt."
+    },
+    "areas": {
+      "title": "Orte automatisch erkennen",
+      "description": "Märkte, Einkaufszentren, Parks, Zoos, Freizeitparks und Museen werden als ganzes Gelände vorgeschlagen statt als einzelne Aufenthalte – das läuft mit der Aufenthaltserkennung mit. Dafür werden ungefähre Regionen (etwa 5-km-Raster) bei OpenStreetMap/Overpass abgefragt; deine Positionsfolgen, Zeiten und Punkt-IDs werden nicht übertragen. Besuche werden erst nach deiner Bestätigung eingetragen."
+    },
     "markets": {
-      "enable": "Marktbesuche automatisch vorschlagen",
-      "privacy": "Für die Flächenerkennung werden ungefähre Regionen (etwa 5-km-Raster) bei OpenStreetMap/Overpass abgefragt. Deine Positionsfolgen, Zeiten und Punkt-IDs werden nicht übertragen. Besuche werden erst nach deiner Bestätigung eingetragen.",
+      "enable": "Märkte als ganzes Gelände erkennen",
       "coverage": "Geprüfte Regionen: {{tiles}} von {{total}}",
       "missing": "Bei {{count}} Karteneinträgen fehlt eine nutzbare Marktfläche. Das bedeutet nicht, dass du dort nicht warst.",
       "stale": "Ein Teil der Kartendaten ist älter. Bitte prüfe die Zuordnung besonders sorgfältig.",
@@ -734,14 +744,38 @@
       "succeeded": "Auswertung abgeschlossen",
       "partial": "Auswertung teilweise – bitte die Datenlücken beachten",
       "failed": "Auswertung fehlgeschlagen",
-      "interrupted": "Auswertung unterbrochen; bitte erneut starten"
+      "interrupted": "Auswertung unterbrochen; bitte erneut starten",
+      "stale": "Auswertung abgebrochen – der Standortverlauf wurde währenddessen gelöscht; die nächste Auswertung liest ihn neu"
     },
     "status": {
       "pending": "Zu prüfen",
       "accepted": "Übernommen",
       "rejected": "Verworfen",
-      "covered": "Bereits erfasst"
+      "covered": "Bereits erfasst",
+      "accepting": "Wird übernommen",
+      "invalidated": "Die Belege dafür gelten nicht mehr"
     },
+    "source": {
+      "travtrack": "Aus TravTrack"
+    },
+    "beforeSourceSwitch": "Vor dem Quellwechsel erkannt",
+    "explanation": {
+      "stay": {
+        "dwell": "{{points}} Positionen innerhalb von {{radiusM}} m über {{minutes}} Minuten (längste Lücke {{maxGapMinutes}} Minuten)"
+      },
+      "market": {
+        "visit": "{{points}} Positionen über {{minutes}} Minuten auf dem Marktgelände"
+      },
+      "venue": {
+        "visit": "{{points}} Positionen über {{minutes}} Minuten auf dem Gelände"
+      }
+    },
+    "evidenceInvalidated": "Nicht übernommen: Der Standortverlauf zu diesem Vorschlag wurde inzwischen gelöscht oder hat sich geändert.",
+    "suggestionGone": "Diesen Vorschlag gibt es nicht mehr – der Standortverlauf dazu wurde inzwischen gelöscht.",
+    "evidenceUnverifiable": "Die Belege für diesen Vorschlag lassen sich gerade nicht prüfen, weil die Kartendaten dazu fehlen. Der Vorschlag bleibt erhalten; versuche es nach der nächsten Auswertung erneut.",
+    "travTrackDisabled": "TravTrack ist auf diesem Server gerade ausgeschaltet. Der Vorschlag bleibt erhalten und kann später übernommen oder jetzt verworfen werden.",
+    "acceptInProgress": "Dieser Vorschlag wird gerade an anderer Stelle übernommen. Bitte versuche es gleich noch einmal.",
+    "historyChanged": "Der Standortverlauf hat sich während der Übernahme mehrfach geändert. Der Vorschlag bleibt erhalten; bitte versuche es gleich noch einmal.",
     "coveredBy": {
       "visit": "Bereits erfasst als Besuch: {{name}}",
       "lodging": "Bereits erfasst als Unterkunft: {{name}}"
@@ -765,7 +799,7 @@
     },
     "existingVisit": "Für diesen Zeitraum wurde bereits ein Besuch gefunden. Bei der Übernahme wird geprüft, ob dein Vorschlag damit verknüpft werden kann.",
     "venues": {
-      "enable": "Weitere Orte als gesamtes Gelände vorschlagen",
+      "enable": "Weitere Orte als ganzes Gelände erkennen",
       "description": "Einkaufszentren, Parks, Zoos, Freizeitparks und Museen anhand ihrer OSM-Flächen erkennen. Parks benötigen mindestens 15 Minuten, die übrigen Orte 10 Minuten Aufenthalt. Eigenständige Orte innerhalb größerer Gelände bleiben prüfbar. Es entstehen nur Vorschläge.",
       "missing": "Bei {{count}} Karteneinträgen fehlt eine nutzbare Ortsfläche. Das bedeutet nicht, dass du dort nicht warst.",
       "counts": "Neue Flächen-Vorschläge: {{created}} · Bereits erfasst: {{known}}",
@@ -884,5 +918,10 @@
     "loadError": "Die Aufzeichnung dieser Reise konnte nicht geladen werden.",
     "downloadError": "Die GPX-Datei konnte nicht heruntergeladen werden.",
     "deleteError": "Die Aufzeichnung konnte nicht gelöscht werden."
+  },
+  "sharedRoute": {
+    "title": "Mitgeteilte Routen",
+    "legend": "Route von {{name}} – mitgeteilt, nur zum Ansehen",
+    "loadError": "Die mitgeteilte Route dieser Reise konnte nicht geladen werden."
   }
 }

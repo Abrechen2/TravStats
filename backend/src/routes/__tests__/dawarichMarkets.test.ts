@@ -400,7 +400,30 @@ describe("Automatic market suggestions", () => {
       wikidataId: "Q5678",
     });
   });
-  it("asks for map consent again after the scan was switched off", async () => {
+  // forgejo#318: detecting places as whole areas is on by default (owner,
+  // 2026-10-20). The stay scan's own switch is the consent, so switching it on
+  // brings area detection with it; the two area switches are expert tuning.
+  it("switches area detection on together with the stay scan", async () => {
+    await prisma.userSettings.update({
+      where: { userId },
+      data: {
+        dawarichBaseUrl: "https://dawarich.example.test",
+        dawarichApiKey: encryptApiKey("synthetic-key"),
+      },
+    });
+    await prisma.dawarichStayScan.delete({ where: { userId } });
+    const first = await api()
+      .patch("/api/v1/dawarich-stays/settings")
+      .set("Cookie", cookie)
+      .send({ enabled: true });
+    expect(first.status).toBe(200);
+    expect(first.body.data).toMatchObject({
+      enabled: true,
+      marketEnabled: true,
+      venueEnabled: true,
+    });
+  });
+  it("withdraws area detection with the scan and restores its default on switch-on", async () => {
     await prisma.userSettings.update({
       where: { userId },
       data: {
@@ -422,11 +445,35 @@ describe("Automatic market suggestions", () => {
       .patch("/api/v1/dawarich-stays/settings")
       .set("Cookie", cookie)
       .send({ enabled: true });
-    expect(on.body.data).toMatchObject({
-      enabled: true,
-      marketEnabled: false,
-      venueEnabled: false,
+    expect(on.body.data).toMatchObject({ enabled: true, marketEnabled: true, venueEnabled: true });
+  });
+  it("keeps an area switch an expert turned off while the scan stays on", async () => {
+    await prisma.userSettings.update({
+      where: { userId },
+      data: {
+        dawarichBaseUrl: "https://dawarich.example.test",
+        dawarichApiKey: encryptApiKey("synthetic-key"),
+      },
     });
+    await prisma.dawarichStayScan.update({
+      where: { userId },
+      data: { marketEnabled: false, venueEnabled: true },
+    });
+    const again = await api()
+      .patch("/api/v1/dawarich-stays/settings")
+      .set("Cookie", cookie)
+      .send({ enabled: true });
+    expect(again.body.data).toMatchObject({ marketEnabled: false, venueEnabled: true });
+    const offOnSwitchOn = await api()
+      .patch("/api/v1/dawarich-stays/settings")
+      .set("Cookie", cookie)
+      .send({ enabled: false });
+    expect(offOnSwitchOn.status).toBe(200);
+    const explicit = await api()
+      .patch("/api/v1/dawarich-stays/settings")
+      .set("Cookie", cookie)
+      .send({ enabled: true, venueEnabled: false });
+    expect(explicit.body.data).toMatchObject({ marketEnabled: true, venueEnabled: false });
   });
   it("does not broaden market consent into other venue types", async () => {
     await prisma.dawarichStayScan.update({ where: { userId }, data: { marketEnabled: true } });

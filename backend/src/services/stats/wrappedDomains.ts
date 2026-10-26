@@ -52,8 +52,8 @@ import {
  *  - bus: completed rides, the year they left (`busCounting`), with the nights
  *    a night bus ran through (`busRideKinds`);
  *  - ferry: completed crossings, the year they left on the departure port's
- *    calendar (`ferryCounting`). While ferry sits behind the beta switch, a
- *    user without it has no ferry chapter at all.
+ *    calendar (`ferryCounting`). A user with the ferry domain off has no
+ *    ferry chapter at all.
  */
 export async function loadWrappedDomains(userId: string): Promise<{
   /** `null` = hidden for this user (switched off, or behind the beta switch). */

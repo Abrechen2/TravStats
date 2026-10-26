@@ -5,6 +5,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { profileDateTime } from "../../lib/profileInstant";
 import { SectionCard } from "./SettingsShared";
+import { useExpertRows } from "./frame/useExpertRows";
 
 export default function DawarichStayScanCard({
   onScanned,
@@ -13,6 +14,10 @@ export default function DawarichStayScanCard({
 }): JSX.Element {
   const { t } = useTranslation("trips");
   const demo = useIsDemoAccount();
+  // Places are detected as whole areas by default (forgejo#318): the standard
+  // level names the detection and says what it sends; the market and venue
+  // switches are tuning, so only the expert level draws them.
+  const expert = useExpertRows(2);
   const [state, setState] = useState<StayScanState | null>(null);
   const [lookbackDays, setLookbackDays] = useState(7);
   const [busy, setBusy] = useState(false);
@@ -54,6 +59,11 @@ export default function DawarichStayScanCard({
   const stale =
     !!state?.dataThrough && Date.now() - Date.parse(state.dataThrough) > 24 * 60 * 60_000;
   const text = (key: string) => t(`trips:dawarichStays.${key}`);
+  // A TravTrack account reads its own history: the copy names that source and
+  // never a Dawarich connection it does not need (TravTrack plan E3).
+  const travtrack = state?.source === "travtrack";
+  const sourceText = (key: "title" | "description" | "staleData") =>
+    text(travtrack ? `travtrack.${key}` : key);
   const errorKey =
     state?.error &&
     ["auth", "unreachable", "protocol", "notFound", "invalidUrl"].includes(state.error)
@@ -61,8 +71,9 @@ export default function DawarichStayScanCard({
       : null;
   return (
     <SectionCard>
-      <h3 className="t-heading-sm">{text("title")}</h3>
-      <p className="t-body mt-2">{text("description")}</p>
+      <h3 className="t-heading-sm">{sourceText("title")}</h3>
+      <p className="t-body mt-2">{sourceText("description")}</p>
+      {travtrack && <p className="t-caption mt-1">{text("travtrack.source")}</p>}
       <label className="flex items-center gap-3 my-4">
         <input
           type="checkbox"
@@ -74,36 +85,41 @@ export default function DawarichStayScanCard({
         />
         {text("enable")}
       </label>
-      <label className="flex items-center gap-3 my-4">
-        <input
-          type="checkbox"
-          checked={state?.marketEnabled ?? false}
-          disabled={
-            demo ||
-            busy ||
-            !state ||
-            (!state.marketEnabled && (!state.enabled || !state.connected || placesPaused))
-          }
-          onChange={(e) => void action(() => dawarichStaysApi.enableMarkets(e.target.checked))}
-        />
-        {text("markets.enable")}
-      </label>
-      <p className="t-caption mb-4">{text("markets.privacy")}</p>
-      <label className="flex items-center gap-3 my-4">
-        <input
-          type="checkbox"
-          checked={state?.venueEnabled ?? false}
-          disabled={
-            demo ||
-            busy ||
-            !state ||
-            (!state.venueEnabled && (!state.enabled || !state.connected || placesPaused))
-          }
-          onChange={(e) => void action(() => dawarichStaysApi.enableVenues(e.target.checked))}
-        />
-        {text("venues.enable")}
-      </label>
-      <p className="t-caption mb-4">{text("venues.description")}</p>
+      <h4 className="t-body font-semibold mt-4">{text("areas.title")}</h4>
+      <p className="t-caption mb-4">{text("areas.description")}</p>
+      {expert && (
+        <>
+          <label className="flex items-center gap-3 my-4">
+            <input
+              type="checkbox"
+              checked={state?.marketEnabled ?? false}
+              disabled={
+                demo ||
+                busy ||
+                !state ||
+                (!state.marketEnabled && (!state.enabled || !state.connected || placesPaused))
+              }
+              onChange={(e) => void action(() => dawarichStaysApi.enableMarkets(e.target.checked))}
+            />
+            {text("markets.enable")}
+          </label>
+          <label className="flex items-center gap-3 my-4">
+            <input
+              type="checkbox"
+              checked={state?.venueEnabled ?? false}
+              disabled={
+                demo ||
+                busy ||
+                !state ||
+                (!state.venueEnabled && (!state.enabled || !state.connected || placesPaused))
+              }
+              onChange={(e) => void action(() => dawarichStaysApi.enableVenues(e.target.checked))}
+            />
+            {text("venues.enable")}
+          </label>
+          <p className="t-caption mb-4">{text("venues.description")}</p>
+        </>
+      )}
       {state?.marketResult && (
         <div className="my-3" role="status">
           <p>{text(`${coverageScope}.status.${state.marketResult.status}`)}</p>
@@ -129,7 +145,7 @@ export default function DawarichStayScanCard({
           </p>
         </div>
       )}
-      {state && !state.connected && <p>{text("ownConnection")}</p>}
+      {state && !state.connected && <p>{text(travtrack ? "travtrack.off" : "ownConnection")}</p>}
       {suggestionsPaused && <p className="my-3">{text("suggestionsPaused")}</p>}
       {placesPaused && <p className="my-3">{text("placesPaused")}</p>}
       {state && !state.enabled && <p className="my-3">{text("disabled")}</p>}
@@ -197,7 +213,7 @@ export default function DawarichStayScanCard({
       {state?.finishedAt &&
         ["succeeded", "partial"].includes(state.result ?? "") &&
         !state.dataThrough && <p>{text("noPoints")}</p>}
-      {stale && <p>{text("staleData")}</p>}
+      {stale && <p>{sourceText("staleData")}</p>}
       {(error || loadError || (state?.error && !state.pausedReason)) && (
         <p role="alert" className="mt-3">
           {errorKey ? t(errorKey) : text("error")}

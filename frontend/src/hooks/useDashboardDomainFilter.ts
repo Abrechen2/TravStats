@@ -43,13 +43,13 @@ export interface DashboardDomainFilterResult {
 
 /**
  * The rows still carrying a beta label: `tour` and `roadtrip` behind the
- * `roadtrips` key, and bus, ferry and rental behind their own keys
- * (`config/betaFeatures.ts`). flight/cruise/lodging/poi/rail carry no beta
- * entry at all — rail left beta in 2.7.0-rc.20. A row only reaches `rows` once
+ * `roadtrips` key (`config/betaFeatures.ts`). Every other row carries no beta
+ * entry at all — rail left beta in 2.7.0-rc.20, bus, ferry and rental on
+ * 2026-10-26. A row only reaches `rows` once
  * its own gate is open, so this flag is purely informational — "still
  * labelled beta on this instance", not a second gate.
  */
-const BETA_ROWS = new Set<FilterDomainKey>(["tour", "roadtrip", "bus", "ferry", "rental"]);
+const BETA_ROWS = new Set<FilterDomainKey>(["tour", "roadtrip"]);
 
 /**
  * Rows with no single-domain dashboard view (yet): selected alone, they stay

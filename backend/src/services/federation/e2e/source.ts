@@ -7,6 +7,8 @@ import { localWallClockOf, type FlightTimeSemantics } from "../../../utils/timez
 import { TRAVEL_GRAPH, type NodeSpec } from "./graph";
 import inventory from "./fieldInventory.json";
 import { rowAssets, type AssetRef } from "./assets";
+import { viewableFlightTrack } from "../../travtrack/flightTrackView";
+import { publicEvidence } from "../../dawarich/stays/publicStay";
 
 type Scope = ReturnType<typeof storedScope>;
 type Row = Record<string, unknown>;
@@ -78,7 +80,22 @@ export async function projectRow(
 ): Promise<Row | null> {
   if (row.userId && row.userId !== userId) return null;
   if (spec.category && !scope[spec.category]) return null;
+  // A recorded line leaves only through the privacy cut (TravTrack plan T5).
+  if (spec.model === "FlightTrack" && row.startedAt instanceof Date) {
+    const cut = await viewableFlightTrack(
+      userId,
+      row as Row & { startedAt: Date; geometry: unknown; segmentStarts: unknown }
+    );
+    // A cut end has no time: it would date a point the recipient may not see.
+    row = {
+      ...cut.track,
+      ...(cut.startCut ? { startedAt: null } : {}),
+      ...(cut.endCut ? { endedAt: null } : {}),
+    };
+  }
   if (Object.entries(spec.only ?? {}).some(([k, v]) => row[k] !== v)) return null;
+  // A stay's point digests are server-keyed and never published (TravTrack E1).
+  if (spec.model === "DawarichStay") row = { ...row, evidence: publicEvidence(row.evidence) };
   const fields = FIELD_INVENTORY[spec.model];
   const allowed = [
     ...words(fields.details),

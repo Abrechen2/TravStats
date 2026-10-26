@@ -16,7 +16,10 @@ import {
 import { daysBetween } from "../../shared/time/localDate";
 import { calculateDistance } from "../../utils/geo";
 import { tripPageCost } from "../trip/tripCostSuperlative";
-import { withTripTimes } from "../trips/timesDto";
+import { tripTimes, withTripTimes } from "../trips/timesDto";
+import { segmentTripSpan } from "../timeModel/tripColumns";
+import { RAIL_CLOCK_SELECT } from "../../shared/railClock";
+import type { LocalDateValue } from "../../shared/time/wire";
 import { toNoteDto } from "../notes/noteService";
 import { notesInSpan, tripDaySpan } from "../notes/tripNotes";
 import { buildItinerary } from "./itineraryView";
@@ -101,6 +104,51 @@ async function loadLegs(tripId: string) {
   return { flights, rail, bus, cruises };
 }
 type Legs = Awaited<ReturnType<typeof loadLegs>>;
+
+const RIDE_END_SELECT = {
+  ...RAIL_CLOCK_SELECT,
+  depLat: true,
+  depLon: true,
+  arrLat: true,
+  arrLon: true,
+} as const;
+
+/**
+ * The trip's last day for an itinerary link (forgejo#317): its own end, else
+ * the end its entries date — by the same rule that fills an auto-created
+ * trip's dates (`segmentTripSpan`), over the entries the itinerary shows, so
+ * a cancelled leg cannot hold a link open. A trip whose dates were never
+ * filled (`MUC ↺ KOA · Mar 2013`) otherwise kept its link open past the trip.
+ * Null when neither names a day: the owner's own expiry is then the only end.
+ */
+export async function tripLastDay(trip: TripRow): Promise<LocalDateValue | null> {
+  const own = tripTimes(trip).end;
+  if (own) return own;
+  const [flights, rail, bus, ferry, cruises] = await Promise.all([
+    prisma.flight.findMany({
+      where: { tripId: trip.id, ...NOT_CANCELLED },
+      select: RIDE_END_SELECT,
+    }),
+    prisma.railJourney.findMany({
+      where: { tripId: trip.id, ...NOT_CANCELLED },
+      select: RIDE_END_SELECT,
+    }),
+    prisma.busJourney.findMany({
+      where: { tripId: trip.id, ...NOT_CANCELLED },
+      select: RIDE_END_SELECT,
+    }),
+    prisma.ferryJourney.findMany({
+      where: { tripId: trip.id, ...NOT_CANCELLED },
+      select: RIDE_END_SELECT,
+    }),
+    prisma.cruise.findMany({
+      where: { tripId: trip.id, ...NOT_CANCELLED },
+      select: { startDate: true, endDate: true },
+    }),
+  ]);
+  const span = segmentTripSpan([...flights, ...rail, ...bus, ...ferry], cruises);
+  return span ? tripTimes({ ...trip, ...span }).end : null;
+}
 
 async function countriesOf(trip: TripRow, legs: Legs): Promise<string[]> {
   const [facts, cruise, lodging, roadtrip, ride] = await Promise.all([

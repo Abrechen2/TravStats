@@ -9,6 +9,7 @@ import {
   type FlaggedRecord,
 } from "../../schemas/dataQualityFlag";
 import logger from "../../utils/logger";
+import { evidenceOf, findingActionsOf } from "./findingEvidence";
 import { resolveTimeSubjects } from "./timeSubjects";
 
 /**
@@ -29,12 +30,18 @@ interface StoredFlag {
   details: unknown;
   createdAt: Date;
   resolvedAt: Date | null;
+  undoUntil?: Date | null;
+  revision?: number;
+  /** The stored answer; a `merge` names the copies it removed. */
+  resolution?: unknown;
 }
 
 export interface ListFlagsFilters {
   /** `all` returns every status; anything else filters to that one. */
   status?: DataQualityFlagStatus | "all";
   kind?: DataQualityFlagKind;
+  /** One flag — how an answer reads back the flag it answered. */
+  id?: string;
 }
 
 /**
@@ -86,32 +93,44 @@ async function resolveSubjects(
 }
 
 /**
- * Names for bus rides a record check flagged (forgejo#282). A bus ride is its
- * own page, so it carries no parent; `tripId` lets the inbox say which trip.
+ * Names for bus rides a record check flagged (forgejo#282) and ferry rides the
+ * ferry match flagged (spec C3). A ride is its own page, so it carries no
+ * parent; `tripId` lets the inbox say which trip.
  */
-async function resolveBusSubjects(
+async function resolveRideSubjects(
   userId: string,
   flags: readonly StoredFlag[]
 ): Promise<Map<string, DataQualityFlagSubject>> {
-  const ids = flags.filter((f) => f.entityType === "bus_journey").map((f) => f.entityId);
-  if (ids.length === 0) return new Map();
-  const rides = await prisma.busJourney.findMany({
-    where: { userId, id: { in: ids } },
-    select: { id: true, tripId: true, depStationName: true, arrStationName: true },
-  });
-  return new Map(
-    rides.map((ride) => [
-      `bus_journey ${ride.id}`,
-      {
-        entityType: "bus_journey" as const,
-        entityId: ride.id,
-        label: `${ride.depStationName} → ${ride.arrStationName}`,
-        parentId: null,
-        parentType: null,
-        tripId: ride.tripId,
-      },
-    ])
-  );
+  const idsOf = (type: string) => flags.filter((f) => f.entityType === type).map((f) => f.entityId);
+  const busIds = idsOf("bus_journey");
+  const ferryIds = idsOf("ferry_journey");
+  const select = { id: true, tripId: true, depStationName: true, arrStationName: true } as const;
+  const [buses, ferries] = await Promise.all([
+    busIds.length > 0
+      ? prisma.busJourney.findMany({ where: { userId, id: { in: busIds } }, select })
+      : Promise.resolve([]),
+    ferryIds.length > 0
+      ? prisma.ferryJourney.findMany({ where: { userId, id: { in: ferryIds } }, select })
+      : Promise.resolve([]),
+  ]);
+  const subject = (
+    entityType: "bus_journey" | "ferry_journey",
+    ride: (typeof buses)[number]
+  ): [string, DataQualityFlagSubject] => [
+    `${entityType} ${ride.id}`,
+    {
+      entityType,
+      entityId: ride.id,
+      label: `${ride.depStationName} → ${ride.arrStationName}`,
+      parentId: null,
+      parentType: null,
+      tripId: ride.tripId,
+    },
+  ];
+  return new Map([
+    ...buses.map((ride) => subject("bus_journey", ride)),
+    ...ferries.map((ride) => subject("ferry_journey", ride)),
+  ]);
 }
 
 /**
@@ -144,8 +163,11 @@ function toView(
     return null;
   }
 
+  // `evidence` is computed from the same payload the pairing check just
+  // passed, so it is the kind's evidence shape by construction.
   return {
     ...payload.data,
+    evidence: evidenceOf(payload.data, flag.entityType, flag.entityId, flag.resolution),
     id: flag.id,
     entityType: flag.entityType as DataQualityEntityType,
     entityId: flag.entityId,
@@ -153,7 +175,10 @@ function toView(
     subject,
     createdAt: flag.createdAt.toISOString(),
     resolvedAt: flag.resolvedAt ? flag.resolvedAt.toISOString() : null,
-  };
+    undoUntil: flag.undoUntil ? flag.undoUntil.toISOString() : null,
+    actions: findingActionsOf(flag.kind, flag.entityType),
+    revision: flag.revision ?? 0,
+  } as DataQualityFlagView;
 }
 
 export async function listFlags(
@@ -166,13 +191,14 @@ export async function listFlags(
       userId,
       ...(status === "all" ? {} : { status }),
       ...(filters.kind ? { kind: filters.kind } : {}),
+      ...(filters.id ? { id: filters.id } : {}),
     },
     orderBy: [{ createdAt: "desc" }, { id: "asc" }],
   });
 
   const subjects = await resolveSubjects(userId, flags);
   const timeSubjects = await resolveTimeSubjects(userId, flags);
-  const busSubjects = await resolveBusSubjects(userId, flags);
+  const rideSubjects = await resolveRideSubjects(userId, flags);
 
   const views: DataQualityFlagView[] = [];
   for (const flag of flags) {
@@ -187,39 +213,15 @@ export async function listFlags(
           ? { entityType: "home", entityId: flag.entityId }
           : (subjects.get(`${flag.entityType} ${flag.entityId}`) ??
             timeSubjects.get(`${flag.entityType} ${flag.entityId}`) ??
-            busSubjects.get(`${flag.entityType} ${flag.entityId}`));
+            rideSubjects.get(`${flag.entityType} ${flag.entityId}`));
     const view = toView(flag, subject);
     if (view) views.push(view);
   }
   return views;
 }
 
-/**
- * "I have corrected the data."
- *
- * Deliberately not the same answer as `dismiss`: the next run re-opens this if
- * the contradiction is still there, so the button cannot become a way of hiding
- * a fault. See `runner.ts` for the full table.
- */
-export async function resolveFlag(id: string, userId: string, now: Date = new Date()) {
-  const updated = await prisma.dataQualityFlag.updateMany({
-    where: { id, userId },
-    data: { status: "resolved", resolvedAt: now },
-  });
-  return updated.count > 0;
-}
-
-/**
- * "This is not wrong, stop asking."
- *
- * Never re-opened. This is what makes a check's known false positive — an
- * address ending in a subdivision that shares a country's name, say — cost the
- * user one click for good rather than one click per run.
- */
-export async function dismissFlag(id: string, userId: string, now: Date = new Date()) {
-  const updated = await prisma.dataQualityFlag.updateMany({
-    where: { id, userId },
-    data: { status: "dismissed", resolvedAt: now },
-  });
-  return updated.count > 0;
+/** One flag as the API returns it, or null when it is not this user's or cannot be shown. */
+export async function getFlagView(id: string, userId: string): Promise<DataQualityFlagView | null> {
+  const [view] = await listFlags(userId, { status: "all", id });
+  return view ?? null;
 }

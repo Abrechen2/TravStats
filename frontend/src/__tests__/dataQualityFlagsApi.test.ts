@@ -45,6 +45,23 @@ describe("dataQualityFlagsApi", () => {
     expect(post).toHaveBeenCalledWith("/data-quality-flags/abc/dismiss");
   });
 
+  it("posts a kind-specific answer to /resolve with its action", async () => {
+    await dataQualityFlagsApi.resolve("abc", { action: "keep" });
+    expect(post).toHaveBeenCalledWith("/data-quality-flags/abc/resolve", { action: "keep" });
+  });
+
+  it("sends the served revision with dismiss and undo when given", async () => {
+    await dataQualityFlagsApi.dismiss("abc", 4);
+    expect(post).toHaveBeenCalledWith("/data-quality-flags/abc/dismiss", { revision: 4 });
+    await dataQualityFlagsApi.undo("abc", 5);
+    expect(post).toHaveBeenCalledWith("/data-quality-flags/abc/undo", { revision: 5 });
+  });
+
+  it("takes an answer back via /undo", async () => {
+    await dataQualityFlagsApi.undo("abc");
+    expect(post).toHaveBeenCalledWith("/data-quality-flags/abc/undo");
+  });
+
   it("re-runs the checks via /run", async () => {
     post.mockResolvedValue({
       data: { opened: 0, reopened: 0, updated: 0, autoResolved: 0, open: 0 },

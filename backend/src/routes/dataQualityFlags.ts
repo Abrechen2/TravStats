@@ -1,13 +1,21 @@
 import { Router, Response, NextFunction } from "express";
 
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
-import { AppError } from "../middleware/errorHandler";
 import { statsLimiter } from "../middleware/rateLimit";
 import {
   dataQualityFlagIdParamSchema,
   listDataQualityFlagsQuerySchema,
 } from "../schemas/dataQualityFlag";
-import { dismissFlag, listFlags, resolveFlag, runDataQualityChecks } from "../services/dataQuality";
+import { answerGuardBodySchema, resolveFindingBodySchema } from "../schemas/dataQualityFindings";
+import {
+  dismissFinding,
+  FindingActionError,
+  getFlagView,
+  listFlags,
+  resolveFinding,
+  runDataQualityChecks,
+  undoFinding,
+} from "../services/dataQuality";
 import logger from "../utils/logger";
 
 /**
@@ -86,49 +94,70 @@ router.post("/run", statsLimiter, async (req: AuthRequest, res: Response, next: 
 });
 
 /**
- * "I have corrected the data."
- *
- * A later run re-opens this if the contradiction is still there — see
- * `services/dataQuality/runner.ts`.
+ * Every answer replies with the finding as it now stands (spec C3), in this
+ * router's `{success, data}` family. `data` is null only when the record the
+ * finding is about no longer exists. A refusal carries the contract's stable
+ * code in `error` (`notFound`, `invalidAction`, `undoExpired`, `staleFinding`)
+ * and, for `invalidAction`, a `reason`.
  */
-router.post("/:id/resolve", async (req: AuthRequest, res: Response, next: NextFunction) => {
+async function answer(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+  act: (id: string, userId: string) => Promise<void>
+): Promise<void> {
   try {
     const userId = req.userId!;
     const { id } = dataQualityFlagIdParamSchema.parse(req.params);
-
-    // updateMany with userId in the WHERE is the ownership check: a flag that
-    // is not yours matches nothing and is indistinguishable from one that does
-    // not exist, which is what it should be.
-    if (!(await resolveFlag(id, userId))) {
-      throw new AppError("Data quality flag not found", 404);
-    }
-
-    res.json({ success: true });
+    await act(id, userId);
+    res.json({ success: true, data: await getFlagView(id, userId) });
   } catch (error) {
+    if (error instanceof FindingActionError) {
+      res
+        .status(error.status)
+        .json({ error: error.code, ...(error.reason ? { reason: error.reason } : {}) });
+      return;
+    }
     next(error);
   }
-});
+}
+
+/**
+ * Without a body: "I have corrected the data" — a later run re-opens this if
+ * the contradiction is still there (`services/dataQuality/runner.ts`). With
+ * `{ action }`: a kind-specific answer the flag lists in `actions` — `keep` or
+ * `merge` for a duplicate. See `services/dataQuality/findingActions.ts`.
+ *
+ * Ownership is in every WHERE: a flag that is not yours is `notFound`,
+ * indistinguishable from one that does not exist.
+ */
+router.post("/:id/resolve", (req: AuthRequest, res: Response, next: NextFunction) =>
+  answer(req, res, next, (id, userId) =>
+    resolveFinding(id, userId, resolveFindingBodySchema.parse(req.body ?? {}))
+  )
+);
 
 /**
  * "This is not wrong, stop asking."
  *
- * Never re-opened. A check can be right that two sources disagree and wrong
- * about which one to believe, and a third party's geocoder does not get a veto
- * over the user's own data — this is where the user says so.
+ * Never re-opened by a run. A check can be right that two sources disagree and
+ * wrong about which one to believe, and a third party's geocoder does not get a
+ * veto over the user's own data — this is where the user says so.
  */
-router.post("/:id/dismiss", async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.userId!;
-    const { id } = dataQualityFlagIdParamSchema.parse(req.params);
+router.post("/:id/dismiss", (req: AuthRequest, res: Response, next: NextFunction) =>
+  answer(req, res, next, (id, userId) =>
+    dismissFinding(id, userId, answerGuardBodySchema.parse(req.body ?? {}))
+  )
+);
 
-    if (!(await dismissFlag(id, userId))) {
-      throw new AppError("Data quality flag not found", 404);
-    }
-
-    res.json({ success: true });
-  } catch (error) {
-    next(error);
-  }
-});
+/**
+ * Take the last answer back within `undoUntil` (10 minutes) — `dismiss`,
+ * `keep`, a plain `resolve`. A `merge` has no server undo (owner, 2026-10-25).
+ */
+router.post("/:id/undo", (req: AuthRequest, res: Response, next: NextFunction) =>
+  answer(req, res, next, (id, userId) =>
+    undoFinding(id, userId, answerGuardBodySchema.parse(req.body ?? {}))
+  )
+);
 
 export default router;

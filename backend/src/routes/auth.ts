@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
+import { initialLocationProvider } from "../services/locationProvider/initialProvider";
 import type { User } from "../prisma";
 import { takeUserCountLock } from "../utils/userCountLock";
 import crypto from "crypto";
@@ -152,6 +153,8 @@ router.post("/register", authLimiter, async (req: Request, res: Response, next: 
 
           // Nothing is "new" to an account created a moment ago — see whatsNewStamp.
           await stampWhatsNewSeen(tx, created.id);
+          // TravTrack where it is on, else nothing (TravTrack plan T8).
+          await initialLocationProvider(tx, created.id);
 
           // Mark invitation as used within the same transaction
           if (invitationToken) {

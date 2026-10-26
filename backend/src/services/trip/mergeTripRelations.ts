@@ -1,4 +1,6 @@
 import type { DbTransaction } from "../../db";
+import type { Prisma } from "../../prisma";
+import type { PackingItem } from "../../schemas/companionData";
 
 /**
  * Everything hanging off a trip has to survive that trip being merged away.
@@ -183,4 +185,65 @@ export function retargetCoverUrl(
   const [, tripId, photoId] = match;
   if (!sourceIds.includes(tripId)) return url;
   return `/api/v1/trips/${targetId}/photos/${survivorFor.get(photoId) ?? photoId}/file`;
+}
+
+/**
+ * Fold the source trips' packing lists into the target's (Companion audit
+ * 2026-10-23). `TripPackingList` is unique per trip and cascades with it, so a
+ * source list left behind is deleted with its trip. Nothing is dropped: the
+ * target's items keep their order and every source item follows, with its
+ * `done` — two "Pass" rows are the user's to tidy, not the merge's to guess.
+ * An item id two lists share is made unique. The rows are locked first, so a
+ * phone's PUT waits for the merge and then meets the raised rev (409).
+ */
+/**
+ * A replacement for an item id another list already uses: the id's start, the
+ * source list's and a counter, kept within the 64 characters an item id may
+ * have, and tried until it is free — two ids alike in their first characters
+ * must not end up as one.
+ */
+function uniqueItemId(id: string, sourceId: string, taken: ReadonlySet<string>): string {
+  for (let n = 1; ; n += 1) {
+    const suffix = `-${sourceId.slice(0, 8)}${n === 1 ? "" : `-${n}`}`;
+    const candidate = `${id.slice(0, 64 - suffix.length)}${suffix}`;
+    if (!taken.has(candidate)) return candidate;
+  }
+}
+
+export async function mergePackingLists(
+  tx: TripTx,
+  sourceIds: readonly string[],
+  targetId: string
+): Promise<void> {
+  const tripIds = [targetId, ...sourceIds];
+  await tx.$queryRaw`SELECT id FROM trip_packing_lists WHERE trip_id = ANY(${tripIds}) FOR UPDATE`;
+  const sources = await tx.tripPackingList.findMany({
+    where: { tripId: { in: [...sourceIds] } },
+    select: { id: true, userId: true, items: true },
+  });
+  if (sources.length === 0) return;
+  const target = await tx.tripPackingList.findUnique({
+    where: { tripId: targetId },
+    select: { items: true },
+  });
+
+  const merged: PackingItem[] = [
+    ...((target?.items as unknown as PackingItem[] | undefined) ?? []),
+  ];
+  const ids = new Set(merged.map((item) => item.id));
+  for (const source of sources) {
+    for (const item of source.items as unknown as PackingItem[]) {
+      const id = ids.has(item.id) ? uniqueItemId(item.id, source.id, ids) : item.id;
+      merged.push({ ...item, id });
+      ids.add(id);
+    }
+  }
+
+  const items = merged as unknown as Prisma.InputJsonValue;
+  await tx.tripPackingList.upsert({
+    where: { tripId: targetId },
+    create: { userId: sources[0].userId, tripId: targetId, items, rev: 1 },
+    update: { items, rev: { increment: 1 }, lastMutationId: null },
+  });
+  await tx.tripPackingList.deleteMany({ where: { tripId: { in: [...sourceIds] } } });
 }

@@ -15,13 +15,21 @@ import type { FlightTrackPoint } from "../../schemas/flightDevice";
  */
 export const FLIGHT_TRACK_GAP_KM = 50;
 
-/** The phone's points as the shared track pipeline reads them. */
-export function pointsToParsedTrack(points: readonly FlightTrackPoint[]): ParsedTrack {
+/**
+ * The phone's points as the shared track pipeline reads them. `segmentStarts`
+ * are the pieces the phone sent apart (indices into `points`); the pipeline
+ * keeps every boundary — jitter, holes, distance and simplification never
+ * join two pieces.
+ */
+export function pointsToParsedTrack(
+  points: readonly FlightTrackPoint[],
+  segmentStarts: readonly number[] = [0]
+): ParsedTrack {
   const hasAltitude = points.some((p) => p.alt !== undefined);
   const hasAccuracy = points.some((p) => p.accuracy !== undefined);
   return {
     points: points.map((p): [number, number] => [p.lon, p.lat]),
-    segmentStarts: [0],
+    segmentStarts: [...segmentStarts],
     startedAt: new Date(points[0].t),
     endedAt: new Date(points[points.length - 1].t),
     name: null,
@@ -38,8 +46,11 @@ export function pointsToParsedTrack(points: readonly FlightTrackPoint[]): Parsed
  * on the flight. Null when the points cannot make a line (fewer than two
  * distinct positions after validation).
  */
-export function flightTrackColumns(points: readonly FlightTrackPoint[]) {
-  return flightTrackColumnsFromParsed(pointsToParsedTrack(points));
+export function flightTrackColumns(
+  points: readonly FlightTrackPoint[],
+  segmentStarts: readonly number[] = [0]
+) {
+  return flightTrackColumnsFromParsed(pointsToParsedTrack(points, segmentStarts));
 }
 
 /**

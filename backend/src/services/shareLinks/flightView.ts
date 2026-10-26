@@ -8,6 +8,7 @@ import {
 } from "../../schemas/shareLinks";
 import { enrichFlightsForClients } from "../flightAirportFacts";
 import type { FlightTimes } from "../../schemas/times";
+import { lastViewablePosition } from "../travtrack/flightTrackView";
 
 /**
  * The public view of one flight — the family flight link (companion#40).
@@ -64,6 +65,7 @@ export async function loadOwnedFlightTimes(
 }
 
 type FlightRow = {
+  userId: string;
   status: string;
   airline: string | null;
   flightNumber: string | null;
@@ -125,19 +127,6 @@ export function flightProgress(
   return { phase: "inFlight", fraction, eta, basis };
 }
 
-async function lastPosition(flightId: string): Promise<FlightView["lastPosition"]> {
-  const track = await prisma.flightTrack.findUnique({
-    where: { flightId },
-    select: { geometry: true, endedAt: true },
-  });
-  const coords = Array.isArray(track?.geometry) ? (track.geometry as unknown[]) : [];
-  const last = coords[coords.length - 1];
-  if (!track || !Array.isArray(last) || last.length < 2) return null;
-  const [lon, lat] = last as [unknown, unknown];
-  if (typeof lat !== "number" || typeof lon !== "number") return null;
-  return { lat, lon, recordedAt: track.endedAt.toISOString() };
-}
-
 export async function buildFlightView(
   flightId: string,
   loaded: { flight: FlightRow; times: FlightTimes },
@@ -161,6 +150,10 @@ export async function buildFlightView(
   }
   if (fields.has("progress")) view.progress = flightProgress(flight.status, times, now());
   if (fields.has("aircraft")) view.aircraft = flight.aircraft;
-  if (fields.has("lastPosition")) view.lastPosition = await lastPosition(flightId);
+  // Through the privacy cut like every other read of a recording (TravTrack
+  // plan T5): a position inside one of the owner's zones is never shown.
+  if (fields.has("lastPosition")) {
+    view.lastPosition = await lastViewablePosition(flight.userId, flightId);
+  }
   return view;
 }

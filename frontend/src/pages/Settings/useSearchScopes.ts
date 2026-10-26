@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useSectionConditions } from "./useSectionConditions";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { SETTINGS_PAGES } from "./settingsModel";
@@ -12,8 +13,9 @@ import type { SettingsSearchScope } from "./SettingsSearch";
  * Sections with rows only the expert level draws, so their words are searched
  * as expert hits (`<ns>:search.expertKeywords.<id>`).
  */
-const WITH_EXPERT_ROWS: ReadonlySet<string> = new Set([
+export const WITH_EXPERT_ROWS: ReadonlySet<string> = new Set([
   "settings:suggestions",
+  "settings:stayScan",
   "settings:autoupdate",
   "settings:backup",
   "settings:externalServices",
@@ -41,6 +43,7 @@ export function useSearchScopes(isAdmin: boolean): SettingsSearchScope[] {
   const { t } = useTranslation(["settings", "admin"]);
   const { isEnabled } = useEnabledDomains();
   const { isFeatureVisible } = useBetaFeatures();
+  const travTrackHeld = useSectionConditions().travTrackHeld === true;
 
   return useMemo(() => {
     const scopesOf = (pages: readonly PageDef[], base: string, ns: "settings" | "admin") =>
@@ -51,7 +54,12 @@ export function useSearchScopes(isAdmin: boolean): SettingsSearchScope[] {
           label: t(p.labelKey),
           surfaceLabel: t(SURFACE_LABEL_KEY[ns]),
           sections: p.sections
-            .filter((s) => (!s.gate || isFeatureVisible(s.gate)) && (!s.adminOnly || isAdmin))
+            .filter(
+              (s) =>
+                (!s.gate || isFeatureVisible(s.gate)) &&
+                (!s.adminOnly || isAdmin) &&
+                (!s.when || (s.when === "travTrackHeld" && travTrackHeld))
+            )
             .map((s) => ({
               id: s.id,
               labelKey: s.labelKey,
@@ -67,5 +75,5 @@ export function useSearchScopes(isAdmin: boolean): SettingsSearchScope[] {
       ...scopesOf(SETTINGS_PAGES, "/settings", "settings"),
       ...(isAdmin ? scopesOf(ADMIN_PAGES, "/admin", "admin") : []),
     ];
-  }, [t, isEnabled, isFeatureVisible, isAdmin]);
+  }, [t, isEnabled, isFeatureVisible, travTrackHeld, isAdmin]);
 }

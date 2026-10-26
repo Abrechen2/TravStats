@@ -33,15 +33,12 @@ const KEYWORDS: Record<keyof typeof BETA_FEATURES, [RegExp, RegExp]> = {
   encryptedShare: [/verschlüsseltes Teilen/i, /encrypted sharing/i],
   devicePairing: [/koppel/i, /\bpair/i],
   roadtrips: [/Roadtrip|Touren/, /Roadtrip|\btours\b/i],
-  lodgingEnrichment: [/Anreicherung/, /enrichment/i],
-  rentalDomain: [/Mietwagen/, /rental car/i],
-  ferryDomain: [/fähre/i, /ferry/i],
-  busDomain: [/Fernbus/, /coach/i],
   cruiseTracks: [/Kreuzfahrt-Spuren/, /cruise tracks/i],
   flightTrackUpload: [/Flugspuren/, /flight tracks/i],
   travPlan: [/TravPlan/, /TravPlan/],
   calendarFeed: [/Kalender-Abo/, /calendar subscription/i],
   federatedTripSharing: [/Reisen über Server|anderen Servern teilen/i, /across servers/i],
+  travTrack: [/TravTrack/, /TravTrack/],
 };
 const keys = Object.keys(KEYWORDS) as (keyof typeof BETA_FEATURES)[];
 

@@ -67,4 +67,64 @@ describe("findOsmLodging", () => {
     expect(result).toMatchObject({ name: "Novotel Basel City" });
     expect((result as { name: string }).name).not.toBe("Hotel Krafft Basel");
   });
+
+  const tagged = (elements: ReadonlyArray<Record<string, string>>) => ({
+    elements: elements.map((tags, i) => ({
+      type: "node",
+      id: 2000 + i,
+      lat: PIN.lat,
+      lon: PIN.lon,
+      tags: { tourism: "hotel", ...tags },
+    })),
+  });
+
+  it("finds a house whose OSM name is in another script through its name:en", async () => {
+    // Audit 2026-10-26: seven misses had a non-Latin `name` only.
+    fetches = mockFetch([
+      [/overpass-api\.de/, tagged([{ name: "ივერია ინნ", "name:en": "Iveria Inn" }])],
+    ]);
+    const result = await findOsmLodging(PIN.lat, PIN.lon, "Hotel Iveria Inn", ["Tbilisi"]);
+    expect(result).toMatchObject({ name: "ივერია ინნ", osmRef: "osm:node/2000" });
+  });
+
+  it("reads name:de, int_name and every alt_name as well", async () => {
+    fetches = mockFetch([
+      [
+        /overpass-api\.de/,
+        tagged([
+          { name: "فندق أتلانتس", "name:de": "Hotel Atlantis" },
+          { name: "登り坂ホテル", int_name: "Noborisaka Hotel" },
+          { name: "X", alt_name: "Old Name;Haus Kiekenstein" },
+        ]),
+      ],
+    ]);
+    expect(await findOsmLodging(PIN.lat, PIN.lon, "Atlantis The Palm")).toMatchObject({
+      osmRef: "osm:node/2000",
+    });
+    expect(await findOsmLodging(PIN.lat, PIN.lon, "THE NOBORISAKA HOTEL")).toMatchObject({
+      osmRef: "osm:node/2001",
+    });
+    expect(await findOsmLodging(PIN.lat, PIN.lon, "Kiekenstein")).toMatchObject({
+      osmRef: "osm:node/2002",
+    });
+  });
+
+  it("does not take the town's other hotel, even when only OSM names the town", async () => {
+    // Audit case 3: the lodging's own record carries no city here, but the
+    // neighbour's addr:city says "Zürich" — a town word on every house.
+    fetches = mockFetch([
+      [/overpass-api\.de/, tagged([{ name: "Moxy Zürich", "addr:city": "Zürich" }])],
+    ]);
+    expect(await findOsmLodging(PIN.lat, PIN.lon, "H+ Hotel Zürich")).toBeNull();
+  });
+
+  it("does not let a landmark name:en carry the match (audit case 2)", async () => {
+    fetches = mockFetch([
+      [
+        /overpass-api\.de/,
+        tagged([{ name: "Great Pyramids Inn", "name:en": "Pyramids View Inn" }]),
+      ],
+    ]);
+    expect(await findOsmLodging(PIN.lat, PIN.lon, "PANORAMA view pyramids", ["Giza"])).toBeNull();
+  });
 });

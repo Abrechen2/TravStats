@@ -129,11 +129,20 @@ describe("trip recording — private to its owner", () => {
       "routes/trips/tripRecording.ts",
       "services/tripRecording/bounds.ts",
       "services/export/allDataExport.ts",
+      // The account export's privacy cut of the same rows (owner, 2026-10-26).
+      "services/export/zoneCutRecordings.ts",
       // Merge moves a source trip's recording to the target (same owner, never
       // propagated); cleanup keeps a recorded trip from being dissolved.
       "services/tripCleanupService.ts",
       // Classifies the User relation as never published (NON_TRAVEL_RELATIONS).
       "services/federation/e2e/graph.ts",
+      // The trip recording's own read path since TravTrack plan T5: it chooses
+      // between the own recording and the provider for the same owner's router.
+      "services/locationProvider/entryTrack.ts",
+      // TravPlan's plan-vs-actual cache key (plan L5): the count and newest
+      // batch time of the owner's own trip, so a new batch reads the track
+      // again. No position leaves it; the track itself comes from entryTrack.
+      "services/travplan/actual/trackCache.ts",
     ]);
     const files = (dir: string): string[] =>
       readdirSync(dir).flatMap((name) => {

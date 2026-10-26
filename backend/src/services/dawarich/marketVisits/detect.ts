@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
-import type { DawarichPoint } from "../dawarichClient";
-import { meters } from "../stays/detect";
+import { meters, type PointId, type StayPoint } from "../stays/detect";
 import { contains, distanceToArea, type MarketArea } from "./geometry";
 import { boundsOf, pointGrid } from "./pointGrid";
 
@@ -30,28 +29,35 @@ export interface MarketVisit {
   overlappingMarketIds: string[];
   startAt: Date;
   endAt: Date;
-  pointIds: number[];
+  pointIds: PointId[];
   interiorPointCount: number;
   maxGapMinutes: number;
   uncertainties: string[];
 }
 interface Hit {
-  point: DawarichPoint;
+  point: StayPoint;
   interior: boolean;
   speedUnknown: boolean;
 }
 
+/** A Dawarich id is a finite number (as always); a TravTrack digest a non-empty string. */
+const validId = (id: PointId): boolean =>
+  typeof id === "number" ? Number.isFinite(id) : id.length > 0;
+/** The lower id wins a tie; ids of one source only ever meet each other. */
+const idBefore = (a: PointId, b: PointId): boolean =>
+  typeof a === "number" && typeof b === "number" ? a < b : String(a) < String(b);
+
 /** Pure preview: no fetching, database, visit creation or AI. */
 export function detectMarketVisits(
-  input: readonly DawarichPoint[],
+  input: readonly StayPoint[],
   areas: readonly MarketArea[]
 ): MarketVisit[] {
   const prepared = prepareMarketAreas(areas);
-  const byTime = new Map<number, DawarichPoint>();
+  const byTime = new Map<number, StayPoint>();
   for (const p of input) {
     if (
       !Number.isFinite(p.timestampMs) ||
-      !Number.isFinite(p.id) ||
+      !validId(p.id) ||
       !Number.isFinite(p.latitude) ||
       !Number.isFinite(p.longitude) ||
       Math.abs(p.latitude) > 90 ||
@@ -67,7 +73,7 @@ export function detectMarketVisits(
     if (
       !old ||
       (p.accuracy ?? Infinity) < (old.accuracy ?? Infinity) ||
-      ((p.accuracy ?? Infinity) === (old.accuracy ?? Infinity) && p.id < old.id)
+      ((p.accuracy ?? Infinity) === (old.accuracy ?? Infinity) && idBefore(p.id, old.id))
     )
       byTime.set(p.timestampMs, p);
   }

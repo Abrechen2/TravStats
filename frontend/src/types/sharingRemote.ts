@@ -5,6 +5,8 @@ export interface RemoteSharingStatus {
   available: boolean;
   reason: "beta-off" | "switch-off" | "no-identity" | null;
   origin: string | null;
+  /** At least one other server is admitted: enabled, and a ping reached it. */
+  peerAdmitted: boolean;
 }
 
 export interface RemoteInvite {

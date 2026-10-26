@@ -28,7 +28,8 @@
     "ai": "Planning help",
     "packing": "Preparation",
     "budget": "Budget & tasks",
-    "handover": "Ready to travel"
+    "handover": "Ready to travel",
+    "actual": "Plan vs. actual"
   },
   "fields": {
     "name": "Trip name",
@@ -139,7 +140,8 @@
     "PLAN_INVALID_NIGHT": "This kind of night does not fit how you arrive.",
     "PLAN_SHAPE_IN_USE": "The plan has stations; remove them before it becomes a single-destination plan again.",
     "PLAN_STAGE_CHANGED": "The stage changed in the meantime. Please calculate the route again.",
-    "PLAN_VARIANT_LIMIT": "More than three variants are not possible."
+    "PLAN_VARIANT_LIMIT": "More than three variants are not possible.",
+    "RATE_LIMITED": "Too many comparisons in a short time. Please try again in a minute."
   },
   "enabled": "Enable TravPlan on this server",
   "config": "TravPlan settings",
@@ -262,5 +264,49 @@
   "excludeBooking": "Exclude from itinerary",
   "restoreBooking": "Restore to itinerary",
   "knownTotal": "Known costs so far",
-  "unknownValue": "Not yet known"
+  "unknownValue": "Not yet known",
+  "actual": {
+    "intro": "Your plan beside what your recording and your stays say about the trip. The plan is not changed.",
+    "noRoute": "This plan has no route with stations",
+    "noRouteHint": "Plan and reality can only be compared for a route with stations.",
+    "failed": "I could not load the comparison just now",
+    "noTrack": "There is no recording for this trip. Without a track every station stays open – nothing is counted as skipped.",
+    "truncated": "The track is incomplete: the source held more points than were read. No station is counted as skipped because of it.",
+    "unreachable": "The location source could not be reached. The comparison shows only what is known without it.",
+    "origin": {
+      "travstats": "Source: TravStats recording",
+      "travtrack": "Source: TravTrack",
+      "dawarich": "Source: Dawarich"
+    },
+    "sketchLabel": "Sketch: planned route and actual track",
+    "sketchLegend": "Dashed: planned route. Solid: actual track.",
+    "stations": "Stations",
+    "planned": "Planned",
+    "there": "There",
+    "later_one": "{{count}} day later",
+    "later_other": "{{count}} days later",
+    "earlier_one": "{{count}} day earlier",
+    "earlier_other": "{{count}} days earlier",
+    "status": {
+      "visited": "Visited",
+      "shifted": "Shifted",
+      "skipped": "Skipped",
+      "unknown": "Unknown"
+    },
+    "stages": "Stages",
+    "plannedKm": "Planned {{km}} km",
+    "actualKm": "Driven {{km}} km",
+    "actualKmUnknown": "Distance driven unknown",
+    "unplanned": "Unplanned stays",
+    "stayKind": {
+      "lodging": "Lodging",
+      "place": "Place"
+    },
+    "readOnly": "A comparison only: nothing here changes your plan.",
+    "refresh": "Reload"
+  },
+  "menu": {
+    "plans": "Plans",
+    "config": "Settings"
+  }
 }

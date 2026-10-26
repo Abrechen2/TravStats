@@ -42,7 +42,7 @@ interface Props {
  * records (`RentalStatsDetails`). A failed load says so; a figure nobody
  * knows reads "–", never 0.
  *
- * Mounted only behind the `rentalDomain` beta gate — the page decides that
+ * Mounted only while the user has the rental domain on — the page decides that
  * through `resolveStatsTab`; this component does not ask again.
  */
 export default function RentalStatsSection({

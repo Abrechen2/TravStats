@@ -1,0 +1,606 @@
+{
+  "title": "Track",
+  "intro": "Your own location history from TravTrack, day by day — for you only, never shared.",
+  "day": {
+    "label": "Day",
+    "previous": "Previous day",
+    "next": "Next day",
+    "today": "Today",
+    "loading": "Loading the day …",
+    "empty": "Nothing was recorded on this day.",
+    "points_one": "{{count}} position",
+    "points_other": "{{count}} positions",
+    "truncated": "This day holds more positions than one view shows — the line is incomplete.",
+    "map": "Map of the day"
+  },
+  "coverage": {
+    "title": "What is recorded",
+    "recorded": "Recorded",
+    "noData": "No data",
+    "deleted": "Deleted",
+    "phonePaused": "Phone paused",
+    "piece": "{{state}}, {{from}}–{{to}}"
+  },
+  "timeline": {
+    "title": "The day",
+    "none": "TravStats knows of no entry, no trip and no time at home on this day.",
+    "flight": "Flight {{label}}",
+    "trip": "Trip “{{label}}”",
+    "home": "Home ({{label}})",
+    "rail": "Train {{label}}",
+    "bus": "Bus {{label}}",
+    "ferry": "Ferry {{label}}",
+    "cruise": "Cruise {{label}}",
+    "rental": "Rental car {{label}}",
+    "roadtrip": "Roadtrip {{label}}",
+    "lodging": "Night {{label}}",
+    "poi": "Visit {{label}}",
+    "entry": "Entry {{label}}",
+    "suggestion": {
+      "stay": "Suggestion: stay {{label}}",
+      "journey": "Suggestion: journey of {{label}} km"
+    },
+    "movement": "On the move, no entry",
+    "span": "{{from}}–{{to}}",
+    "at": "{{at}}",
+    "endOfDay": "24:00"
+  },
+  "actions": {
+    "export": "Export",
+    "delete": "Delete a span"
+  },
+  "export": {
+    "title": "Export the history",
+    "intro": "Downloads your TravTrack positions of these days, both included, on your profile's clock. What a privacy zone hides is not in the file.",
+    "from": "From",
+    "to": "To",
+    "format": "Format",
+    "gpx": "GPX — for map and sports apps",
+    "json": "JSON — everything, with pauses and deleted spans",
+    "do": "Download",
+    "done": "The file was downloaded.",
+    "truncated": "This span holds more positions than one file carries. Part {{part}} is downloaded — “Export the rest” downloads the next part.",
+    "rest": "Export the rest",
+    "doneParts": "All {{count}} parts were downloaded — together, the whole span.",
+    "truncatedNoRest": "The file ends early, and the server does not say where the rest begins. Export a shorter span."
+  },
+  "delete": {
+    "title": "Delete a span",
+    "intro": "Deletes every position of these days, both included, on your profile's clock. The span stays deleted: not even a phone that was still offline brings them back. Flights and trips stay.",
+    "from": "From",
+    "to": "To",
+    "counting": "Counting the stored positions …",
+    "preview_one": "{{count}} stored position will be deleted.",
+    "preview_other": "{{count}} stored positions will be deleted.",
+    "previewNone": "Nothing is stored in this span.",
+    "do": "Delete positions",
+    "done_one": "{{count}} position deleted.",
+    "done_other": "{{count}} positions deleted."
+  },
+  "errors": {
+    "disabled": "TravTrack is switched off on this server. What is stored can still be exported and deleted under Settings → Location.",
+    "exportTooLong": "An export covers at most 366 days. Pick a shorter span.",
+    "zoneLimit": "You already have as many privacy zones as there can be.",
+    "network": "The server cannot be reached right now. Try again in a moment.",
+    "generic": "That did not work. Try again.",
+    "rangeTooLong": "A range on the map covers at most 400 days. Pick a shorter one.",
+    "pointGone": "This position no longer exists – it has already been deleted."
+  },
+  "settings": {
+    "intro": "The positions your Companion records for TravTrack live here on your server – for you only, never shared or federated. They stay until you delete them.",
+    "off": "TravTrack is switched off on this server: nothing more is recorded. What is stored you can still export and delete here.",
+    "loadFailed": "TravTrack could not be loaded. Reload the page.",
+    "empty": "No positions stored yet.",
+    "summary": "{{count}} positions stored, from {{from}} to {{to}}, from {{devices}} device(s).",
+    "tripsNoResidence": "TravTrack recognises trips only once your home is confirmed: it measures the distance from where you live. Confirm it under Settings → Home.",
+    "open": "Open Track",
+    "zones": {
+      "title": "Privacy zones",
+      "intro": "Inside a privacy zone nothing is recorded at all: the app sends no position from there, and the server drops it there too. The zones apply to all your devices.",
+      "none": "No privacy zone yet.",
+      "radius": "Radius {{metres}} m",
+      "radiusLabel": "Radius",
+      "name": "Name",
+      "namePlaceholder": "e.g. Home",
+      "centre": "Centre",
+      "centreHint": "Coordinates or a Google Maps link, e.g. 52.5200, 13.4050",
+      "centreInvalid": "TravStats cannot read these coordinates.",
+      "add": "Add privacy zone",
+      "added": "Privacy zone added.",
+      "addedDeleted": "Privacy zone added, {{count}} stored positions inside it deleted.",
+      "confirmTitle": "Delete the positions inside the zone?",
+      "confirmMessage": "{{count}} stored positions already lie inside this zone. Adding the zone deletes them – this cannot be undone.",
+      "confirmDo": "Delete and add",
+      "notSaved": "The privacy zone was not saved. Try again.",
+      "remove": "Remove",
+      "removeConfirm": "Remove the privacy zone “{{name}}”? Recording resumes there; what the zone deleted stays deleted.",
+      "notRemoved": "The privacy zone was not removed. Try again."
+    },
+    "delete": {
+      "title": "Delete a span",
+      "intro": "Deletes every position of these days, both included, on your profile's clock. The span stays deleted: not even a phone that was still offline brings them back.",
+      "from": "From",
+      "to": "To",
+      "do": "Delete positions",
+      "confirm": "Delete all {{count}} positions from {{from}} to {{to}}? This cannot be undone.",
+      "done": "{{count}} positions deleted.",
+      "notDone": "The positions were not deleted. Try again."
+    },
+    "cities": {
+      "title": "Cities in the monthly values",
+      "intro": "Names the cities you stayed in for at least 30 minutes. To do so the server sends rounded positions (to about 1 km) to this server's geocoder – which may be a public service such as Nominatim. Stays inside privacy zones are never looked up.",
+      "label": "Determine cities",
+      "loadFailed": "The setting could not be loaded.",
+      "notSaved": "The setting was not saved.",
+      "savedOn": "Cities are determined on the next run.",
+      "savedOff": "City lookup off – cities already determined are removed."
+    },
+    "importsMoved": "GPX imports, the Dawarich copy and OwnTracks/Overland now live under Track › Imports."
+  },
+  "imports": {
+    "title": "GPX files",
+    "intro": "A GPX file, say from a sports app or an older tracker, goes into your TravTrack history. Positions inside a privacy zone or a deleted span are discarded, and what is stored already is not added twice. An import starts no suggestions.",
+    "choose": "Import GPX",
+    "running": "Importing {{name}} …",
+    "cancelled": "The import was deleted before it finished.",
+    "report": {
+      "stored_one": "{{count}} position stored",
+      "stored_other": "{{count}} positions stored",
+      "duplicate_one": "{{count}} already there",
+      "duplicate_other": "{{count}} already there",
+      "zone_one": "{{count}} discarded in a privacy zone",
+      "zone_other": "{{count}} discarded in a privacy zone",
+      "deleted_one": "{{count}} discarded in a deleted span",
+      "deleted_other": "{{count}} discarded in a deleted span",
+      "invalid_one": "{{count}} unusable",
+      "invalid_other": "{{count}} unusable",
+      "withoutTime_one": "{{count}} without a time skipped",
+      "withoutTime_other": "{{count}} without a time skipped"
+    },
+    "points_one": "{{count}} position",
+    "points_other": "{{count}} positions",
+    "span": "{{from}} – {{to}}",
+    "status": {
+      "running": "running",
+      "interrupted": "interrupted (the server restarted) – import the file again",
+      "cancelled": "deleted",
+      "paused": "paused – resume it under “Copy your Dawarich history”"
+    },
+    "delete": "Delete import",
+    "deleteConfirm_one": "Delete the import “{{name}}” and its {{count}} position? Positions from other sources stay.",
+    "deleteConfirm_other": "Delete the import “{{name}}” and its {{count}} positions? Positions from other sources stay.",
+    "deleted_one": "{{count}} position deleted.",
+    "deleted_other": "{{count}} positions deleted.",
+    "errors": {
+      "noTimes": "The file holds no times – without a time a position is no history. Export it as a recording (track), not as a route.",
+      "unreadable": "The file is not a readable GPX file, or too large to read.",
+      "running": "An import is running already. Wait until it has finished.",
+      "tooLarge": "The file is too large – 25 MB at most.",
+      "notFound": "This import no longer exists.",
+      "rateLimited": "Too many imports in a short time. Try again in a quarter of an hour.",
+      "lost": "Whether the import finished is not known – the server restarted. Check the list.",
+      "tooManyPoints": "The file holds more than 200,000 positions – more than one import takes. Split it, say by month."
+    }
+  },
+  "dawarichCopy": {
+    "title": "Copy your Dawarich history",
+    "intro": "Copies your location history from your own Dawarich into TravTrack – all of it or a span of days. Dawarich is only read: nothing there is changed or deleted, and your location source stays as it is. Positions inside a privacy zone or a deleted span are discarded, and what is stored already is not added twice. The copy starts no suggestions; you delete it like an import.",
+    "connection": {
+      "none": "Connect your own Dawarich first (Settings → Dawarich). Only then can the history be copied.",
+      "shared": "This server only has a shared Dawarich set up. A copy reads from your own only – enter your own connection for it."
+    },
+    "whole": "Whole history (up to yesterday)",
+    "span": "Span of days",
+    "from": "From (UTC)",
+    "until": "Until (UTC)",
+    "start": "Copy your Dawarich history",
+    "stop": "Pause",
+    "resume": "Resume",
+    "range": "{{from}} – {{until}}",
+    "status": {
+      "running": "Copying: day {{done}} of {{total}}",
+      "paused": "Paused, goes on from {{day}}",
+      "interrupted": "Interrupted (the server restarted), goes on from {{day}}",
+      "failed": "Stopped at {{day}}",
+      "complete": "Copied completely",
+      "incomplete": "Copied, but incomplete – what is missing is listed below",
+      "cancelled": "Deleted"
+    },
+    "reason": {
+      "unreachable": "Dawarich could not be reached",
+      "auth": "Dawarich refused the API key",
+      "notFound": "Dawarich does not know the path – check the address",
+      "protocol": "Dawarich answered unexpectedly",
+      "invalidUrl": "The Dawarich address is invalid",
+      "disabled": "TravTrack was switched off",
+      "notConfigured": "Your own Dawarich connection is missing",
+      "internal": "An error on the server"
+    },
+    "report": {
+      "read_one": "{{count}} position read",
+      "read_other": "{{count}} positions read",
+      "stored_one": "{{count}} stored",
+      "stored_other": "{{count}} stored",
+      "duplicate_one": "{{count}} already there",
+      "duplicate_other": "{{count}} already there",
+      "zone_one": "{{count}} discarded in a privacy zone",
+      "zone_other": "{{count}} discarded in a privacy zone",
+      "deleted_one": "{{count}} discarded in a deleted span",
+      "deleted_other": "{{count}} discarded in a deleted span",
+      "invalid_one": "{{count}} unusable",
+      "invalid_other": "{{count}} unusable"
+    },
+    "gaps": {
+      "title": "What is missing",
+      "hours_one": "{{count}} hour only in part: {{list}}",
+      "hours_other": "{{count}} hours only in part: {{list}}",
+      "days_one": "{{count}} day without an answer: {{list}}",
+      "days_other": "{{count}} days without an answer: {{list}}"
+    },
+    "errors": {
+      "notConfigured": "This needs your own Dawarich connection (Settings → Dawarich).",
+      "running": "An import or a copy is running already. Wait until it is done, or pause the copy.",
+      "notRunning": "The copy is not running.",
+      "notResumable": "This copy cannot be resumed – start a new one.",
+      "range": "That span does not work: it needs a start and an end, cannot lie in the future, and reaches back twenty years at most.",
+      "rateLimited": "Too many starts in a short time. Try again in a quarter of an hour.",
+      "paused": "Resume the paused copy or delete it first."
+    }
+  },
+  "sources": {
+    "title": "Further sources",
+    "intro": "OwnTracks (Android, iOS) and Overland (iOS) can send positions straight to TravTrack. Each device gets its own key, which can deliver positions and nothing else – it reads nothing and opens no other page.",
+    "privacy": "Unlike the Companion app, these apps cannot know your privacy zones: positions inside a privacy zone reach the server and are only discarded there.",
+    "kind": "App",
+    "kinds": {
+      "owntracks": "OwnTracks",
+      "overland": "Overland"
+    },
+    "label": "Device",
+    "labelPlaceholder": "e.g. Pixel 9",
+    "create": "Create key",
+    "shownOnce": "The key is shown only now. Enter it in the app; afterwards it cannot be seen here again.",
+    "owntracks": {
+      "howTo": "In OwnTracks: Settings → Connection → mode \"HTTP\". Enter the URL, switch authentication on, use any name as the user and the key as the password.",
+      "url": "URL",
+      "password": "Password"
+    },
+    "overland": {
+      "howTo": "In Overland: Settings → \"Receiver Endpoint\" is the URL, \"Access Token\" the key. Overland sends it in the Authorization header.",
+      "url": "Receiver Endpoint",
+      "token": "Access Token"
+    },
+    "done": "Done",
+    "lastUsed": "last {{at}}",
+    "neverUsed": "not used yet",
+    "revoke": "Revoke",
+    "revokeConfirm": "Revoke the key \"{{name}}\"? The device can send nothing afterwards; what it sent stays.",
+    "revoked": "\"{{name}}\" is revoked.",
+    "errors": {
+      "notActive": "Further sources are only available while TravTrack is your location source (Settings → Location).",
+      "limit": "You already hold as many keys as there may be. Revoke one first.",
+      "notFound": "This key no longer exists.",
+      "rateLimited": "Too many keys were created just now. Try again in a quarter of an hour."
+    }
+  },
+  "tabs": {
+    "label": "View",
+    "day": "Day",
+    "explored": "Explored",
+    "months": "Months"
+  },
+  "explored": {
+    "map": "Map of the explored areas",
+    "legend": "Each square is about 1–2 km across: a place where your history holds at least one position on the ground.",
+    "zones": "Privacy zones are shown as explored.",
+    "zoomIn": "There are too many explored squares here for one view. Zoom in closer.",
+    "unavailable": "The explored map is not available for privacy zones this large.",
+    "preparing": "The explored map is being prepared. Check back in a few minutes."
+  },
+  "months": {
+    "previous": "Previous year",
+    "next": "Next year",
+    "loading": "Loading months …",
+    "empty": "Your history holds no positions in {{year}}.",
+    "table": "Monthly values {{year}}",
+    "month": "Month",
+    "km": "On the ground",
+    "countries": "Countries",
+    "cities": "Cities",
+    "days": "Days with data",
+    "pausedCount": "{{count}} paused",
+    "noCountries": "No countries determined",
+    "citiesUnknown": "Cities not determined",
+    "citiesNone": "No city",
+    "pending": "Being recomputed right now – the values may still change.",
+    "pendingMonth": "being computed",
+    "legend": "Kilometres on the ground count only the visible line: nothing in the air, nothing faster than 500 km/h, nothing a privacy zone hides. Months without positions are left out.",
+    "citiesOff": "The overview names cities only once you switch on the city lookup in the settings.",
+    "utc": "Months in UTC: a day counts in the month it falls in by UTC – what happens around local midnight may appear in the neighbouring month.",
+    "chartTitle": "Distance on the ground per month ({{unit}})",
+    "chartNote": "Months without positions and months being computed have no bar."
+  },
+  "lastSeen": {
+    "label": "Last seen",
+    "line": "Last seen {{age}} · {{device}}",
+    "unknownDevice": "Unknown device",
+    "none": "No position recorded yet.",
+    "open": "View this day"
+  },
+  "menu": {
+    "map": "Map",
+    "explored": "Explored",
+    "stats": "Statistics",
+    "stays": "Stays",
+    "imports": "Imports"
+  },
+  "map": {
+    "panel": "Layers and appearance",
+    "zonesNeverDrawn": "Private zones are left out and never drawn",
+    "dayFailed": "{{day}} could not be loaded: {{reason}}",
+    "retry": "Load again",
+    "rangeEmpty": "Nothing was recorded on these days.",
+    "fogLoading": "Loading explored areas …",
+    "range": {
+      "previous": "Previous range",
+      "next": "Next range",
+      "today": "Today, {{day}}",
+      "yesterday": "Yesterday, {{day}}",
+      "span": "{{from}} – {{to}}",
+      "preset": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "week": "7 days",
+        "month": "Month",
+        "year": "Year",
+        "custom": "Range …"
+      },
+      "from": "Range from",
+      "to": "Range to",
+      "apply": "Show"
+    },
+    "live": {
+      "off": "Follow live",
+      "on": "● Following live",
+      "failed": "Following live is not working right now: {{reason}}"
+    },
+    "layers": {
+      "title": "Layers",
+      "routes": "Routes",
+      "routesHint": "Lines between the points",
+      "points": "Points",
+      "pointsHint": "Every position, clickable",
+      "heat": "Heatmap",
+      "heatHint": "Where you spend a lot of time",
+      "fog": "Explored fog",
+      "fogHint": "Unknown ground darkened",
+      "visits": "Stays and places",
+      "visitsHint": "Home, lodging, places, detected stays",
+      "entries": "Logbook entries",
+      "entriesHint": "Flights, rides, trips",
+      "photos": "Photos",
+      "photosHint": "From Immich, placed on the track",
+      "dayOnly": "Only in the day and 7-day views",
+      "countries": "Countries",
+      "countriesHint": "Visited countries of the months the range touches"
+    },
+    "route": {
+      "title": "Routes",
+      "color": "Colour",
+      "speed": "By speed",
+      "plain": "Single colour",
+      "kmhMax": "{{kmh}}+ km/h",
+      "opacity": "Opacity",
+      "split": "Split a route after a pause of",
+      "splitNone": "Only where the server splits",
+      "splitMinutes_one": "{{count}} minute",
+      "splitMinutes_other": "{{count}} minutes",
+      "splitHours_one": "{{count}} hour",
+      "splitHours_other": "{{count}} hours",
+      "alwaysCut": "Private zones, deleted spans, pauses and flight-mode gaps always split, whatever is set here. This can only split further, never join."
+    },
+    "replay": {
+      "play": "Start replay",
+      "pause": "Pause replay",
+      "scrub": "Replay position",
+      "rate": "Replay speed",
+      "reset": "Show the whole route",
+      "gaps": "Jumps over gaps, nothing is made up",
+      "limit": "Replay is available for ranges of up to {{days}} days – pick a shorter one to play it."
+    },
+    "point": {
+      "title": "Position",
+      "accuracy": "Accuracy ±{{m}} m",
+      "accuracyUnknown": "Accuracy unknown",
+      "close": "Close",
+      "delete": "Delete point",
+      "deleting": "Deleting …",
+      "deleteConfirm": "Delete this one position for good? Importing the same file again will not bring it back.",
+      "deleted": "The position is deleted."
+    },
+    "totals": {
+      "title": "Summary",
+      "distance": "Distance",
+      "moving": "Moving",
+      "avgSpeed": "Avg. speed",
+      "points": "Points",
+      "coverage": "Coverage",
+      "km": "{{km}} km",
+      "kmh": "{{kmh}} km/h",
+      "minutes": "{{m}} min",
+      "hours": "{{h}} h {{m}} min",
+      "note": "Counted within a route only — never across a gap, zone or pause. Moving means faster than 3 km/h."
+    },
+    "quietDays": "Nothing recorded and no entry: {{days}}",
+    "rangeLoading": "Loading in parts … {{parts}} parts, {{percent}} %",
+    "rangeProgress": "Loading progress",
+    "rangePartFailed": "After {{percent}} % a part did not arrive: {{reason}} What is already here stays visible.",
+    "rangeResume": "Continue loading",
+    "rangeSimplified": "For this range the line is simplified, so the distance is a little shorter than measured.",
+    "rangeOmitted_one": "{{count}} short piece no longer fitted into the view and is missing.",
+    "rangeOmitted_other": "{{count}} short pieces no longer fitted into the view and are missing.",
+    "rangeNoTimeline": "For month, year and range the map shows the line alone. The day's timeline, stays and logbook entries are in the day and 7-day views.",
+    "countries": {
+      "loading": "Loading countries …",
+      "none": "No country was determined in the months touched.",
+      "list_one": "{{count}} country: {{names}}",
+      "list_other": "{{count}} countries: {{names}}",
+      "note": "Coloured are the countries of the monthly values of every month the range touches (months in UTC) – for a single day, those of its month.",
+      "pending": "Some of these months are being recomputed; the countries may still change.",
+      "shapesFailed": "The country borders could not be loaded."
+    }
+  },
+  "photos": {
+    "title": "Photo",
+    "loading": "Loading photos …",
+    "alt": "Photo from {{time}}",
+    "thumbFailed": "Not loaded",
+    "truncated": "Not every photo of this range could be considered. A shorter range shows the rest.",
+    "needsShorter": "Photos are available for ranges of up to 7 days. Pick a shorter range.",
+    "connect": "Connect Immich in the settings",
+    "failure": {
+      "notConfigured": "Photos come from Immich, and Immich is not connected yet.",
+      "unreachable": "Immich cannot be reached right now.",
+      "auth": "Immich refused access – check the API key.",
+      "notFound": "Immich no longer knows these photos.",
+      "protocol": "Immich answered unexpectedly – perhaps the version does not match.",
+      "invalidUrl": "The Immich address is invalid – check it in the settings."
+    }
+  },
+  "flight": {
+    "show": "Flight data",
+    "title": "Flight {{label}}",
+    "open": "Open flight in the logbook",
+    "loading": "Loading flight data …",
+    "notFound": "This flight no longer exists.",
+    "figure": {
+      "altitude": "Cruising altitude",
+      "speed": "Top speed",
+      "climb": "Climb to cruise",
+      "photos": "Photos on board"
+    },
+    "altitudeValue": "FL{{fl}} · {{m}} m",
+    "kmh": "{{kmh}} km/h",
+    "minutes": "{{m}} min",
+    "profile": "Altitude profile",
+    "profileHint": "The line follows the replay",
+    "openProfile": "View altitude profile",
+    "takeoff": "Take-off",
+    "landing": "Landing",
+    "noRecordingBand": "no recording",
+    "profileSummary": "Altitude profile from {{from}} to {{to}}, highest point {{top}} m. Use the arrow keys to step through the samples.",
+    "mapFailed": "The whole flight could not be loaded onto the map: {{reason}}",
+    "mapPartial": "The map does not show the whole flight; the recording is too long for one view.",
+    "noRecording": "There is no recording for this flight — none linked to it and none during its time.",
+    "windowBasis": "From the positions during the flight's time — this recording was not linked to the flight (an import, for example).",
+    "truncated": "This flight holds more positions than one view shows – the profile is incomplete.",
+    "photosTitle": "Photos during the flight",
+    "noPhotos": "No photos during the flight.",
+    "allPhotos": "All photos",
+    "photosNote": "From Immich, when connected. A photo's position comes from the flight track, not from the photo; photos in private zones do not appear."
+  },
+  "stays": {
+    "title": "Stays",
+    "intro": "Stays TravTrack detected. They are confirmed in the inbox; confirmed ones become a place or lodging in the logbook.",
+    "loading": "Loading stays …",
+    "empty": "There are no stays for this selection.",
+    "more": "Load more",
+    "unnamed": "Unnamed place",
+    "when": "{{date}}, {{from}}–{{to}}",
+    "inZone": "In a privacy zone – no map",
+    "review": "Review in the inbox",
+    "openPlace": "Open place",
+    "openTrip": "Open trip",
+    "onMap": "On the map",
+    "state": {
+      "pending": "Open",
+      "accepted": "Confirmed",
+      "rejected": "Declined"
+    },
+    "filter": {
+      "status": "Status",
+      "from": "From",
+      "to": "To",
+      "apply": "Apply",
+      "noStatus": "Pick at least one status.",
+      "badSpan": "Enter both days, the first one first."
+    }
+  },
+  "importsTab": {
+    "title": "Imports",
+    "intro": "Everything that brings positions into your history: GPX files, the copy from Dawarich and OwnTracks/Overland.",
+    "loading": "Loading …"
+  },
+  "calendar": {
+    "title": "Calendar {{year}}",
+    "intro": "One box per day, coloured by distance; a click opens the day on the map.",
+    "loading": "Loading the calendar …",
+    "cellKm": "{{day}}: {{km}}",
+    "cell": {
+      "none": "{{day}}: nothing recorded",
+      "pending": "{{day}}: being prepared",
+      "unavailable": "{{day}}: not known",
+      "future": "{{day}}"
+    },
+    "month": {
+      "pending": "being prepared",
+      "unavailable": "day values not known"
+    },
+    "legendLess": "less",
+    "legendMore": "more",
+    "legendStep": "≥{{km}}",
+    "legendNone": "empty = nothing recorded, hatched = not known yet",
+    "utc": "Days in UTC, like the monthly values."
+  },
+  "inbox": {
+    "mapLabel": "Map of the part of your recording this question is about",
+    "openOnMap": "Open on the Track map",
+    "loading": "Loading this part of your recording …",
+    "empty": "There is no recording left for this part.",
+    "zonesNeverDrawn": "Privacy zones and deleted parts stay cut out.",
+    "dayBar": "Day in local time, the part marked",
+    "whyLabel": "Why this is asked:",
+    "more": "Show more",
+    "less": "Show less",
+    "fact": {
+      "span": "From – to",
+      "duration": "Duration",
+      "distance": "Distance",
+      "speed": "Speed",
+      "points": "Positions",
+      "matches": "Matches"
+    },
+    "value": {
+      "none": "—",
+      "sameDay": "{{day}}, {{from}} – {{until}}",
+      "days": "{{fromDay}} {{from}} – {{untilDay}} {{until}}",
+      "wholeDay": "{{day}}, whole day",
+      "wholeDays": "{{fromDay}} – {{untilDay}}",
+      "minutes": "{{m}} min",
+      "hours": "{{h}} h {{m}} min",
+      "daysHours": "{{d}} d {{h}} h",
+      "km": "{{km}} km",
+      "speed": "avg {{avg}}, max {{max}} km/h",
+      "speedAvg": "avg {{avg}} km/h"
+    },
+    "detail": {
+      "truncated": "Not the whole part fitted into one view – the map shows its beginning. The Track map shows all of it.",
+      "coverageTruncated": "The analysis behind this question did not read the whole history; it may be incomplete.",
+      "coverageUnreachable": "The source could not be reached during the analysis; the question rests only on what was there.",
+      "cuts_one": "Recording has gaps: {{count}} break in this part. The map does not join it.",
+      "cuts_other": "Recording has gaps: {{count}} breaks in this part. The map does not join them.",
+      "noCuts": "Recorded throughout, without a break.",
+      "points_one": "{{count}} position in this part.",
+      "points_other": "{{count}} positions in this part."
+    },
+    "why": {
+      "stay": "You stayed in one place for a while, and your logbook has no visit there yet.",
+      "market": "You spent a while on a known market site, and your logbook has no visit there yet.",
+      "venue": "You spent a while on a known site, and your logbook has no visit there yet.",
+      "country": "TravTrack saw you on the ground in {{country}}; your passport does not count the country for these days yet.",
+      "journey": "Speed and route look like a journey, and your logbook has no entry for this time.",
+      "tripAway": "You were far from home for several days, and no trip in your logbook covers them.",
+      "tripExtend": "You kept travelling right before or after your trip {{trip}}; the trip does not cover these days yet."
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import LodgingEnrichButton from "../LodgingEnrichButton";
 import { openDataApi, type LodgingEnrichmentPreview } from "../../../lib/api/openData";
@@ -51,7 +51,10 @@ function clickEnrich(): void {
   fireEvent.click(screen.getByRole("button", { name: "openData:lodging.enrich" }));
 }
 
-/** Beta `lodgingEnrichment`: behind the beta switch AND the open data switch. */
+/**
+ * Out of beta since 2026-10-26 (OSM audit of 200 real lodgings): only the
+ * instance's open data switch decides, the beta switch no longer does.
+ */
 describe("LodgingEnrichButton", () => {
   const addToast = vi.fn();
   beforeEach(() => {
@@ -61,13 +64,16 @@ describe("LodgingEnrichButton", () => {
     useToastStore.setState({ addToast });
   });
 
-  it("is not there without both switches", () => {
+  it("is not there without the open data switch", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: true, openDataEnabled: false });
     const { container } = render(<LodgingEnrichButton lodgingId="l1" onDone={vi.fn()} />);
     expect(container).toBeEmptyDOMElement();
-    act(() => useSettingsStore.setState({ betaFeaturesEnabled: false, openDataEnabled: true }));
-    const second = render(<LodgingEnrichButton lodgingId="l1" onDone={vi.fn()} />);
-    expect(second.container).toBeEmptyDOMElement();
+  });
+
+  it("is there with open data on and the beta switch off", () => {
+    useSettingsStore.setState({ betaFeaturesEnabled: false, openDataEnabled: true });
+    render(<LodgingEnrichButton lodgingId="l1" onDone={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "openData:lodging.enrich" })).toBeInTheDocument();
   });
 });
 

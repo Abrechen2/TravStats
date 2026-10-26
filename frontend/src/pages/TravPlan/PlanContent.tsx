@@ -15,6 +15,7 @@ import { ImportSection } from "./sections/ImportSection";
 import { TransferSection } from "./sections/TransferSection";
 import { PackingSection } from "./sections/PackingSection";
 import { BudgetSection } from "./sections/BudgetSection";
+import { PlanActualPanel } from "./sections/PlanActualPanel";
 import PlanAI from "./PlanAI";
 import { PlanHandover } from "./PlanHandover";
 
@@ -27,6 +28,7 @@ export const PLAN_SECTIONS = [
   "packing",
   "budget",
   "handover",
+  "actual",
 ];
 
 export default function PlanContent({ tripId, section }: { tripId: string; section: string }) {
@@ -192,6 +194,7 @@ export default function PlanContent({ tripId, section }: { tripId: string; secti
       {section === "packing" && <PackingSection ctx={ctx} />}
       {section === "budget" && <BudgetSection ctx={ctx} />}
       {section === "handover" && <PlanHandover plan={plan} busy={busy} mutate={mutate} />}
+      {section === "actual" && <PlanActualPanel ctx={ctx} />}
       {editor && (
         <PlanEditor
           key={editor.value.id ? String(editor.value.id) : "settings"}

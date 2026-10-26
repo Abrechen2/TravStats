@@ -28,6 +28,8 @@ describe("findDuplicateCandidates — the same entry twice, asked on the newer c
       details: {
         matchedOn: ["departureDay", "flightNumber", "route"],
         dataSource: "email_import",
+        // The inbox groups the question under the copy's own travel day.
+        day: "2026-03-10",
         copies: [{ entityType: "flight", entityId: "typed", dataSource: "manual", parentId: null }],
       },
     });

@@ -13,8 +13,11 @@ import type { SharePerson, TripPerson } from "../../types/sharing";
 import ShareLinkDialog from "../shareLinks/ShareLinkDialog";
 import { Button } from "../ui";
 import ShareTripDialog from "./ShareTripDialog";
+import ShareRouteDialog from "./ShareRouteDialog";
+import { useTravTrackVisible } from "../../hooks/useTravTrackVisible";
+import { useRemoteShareBlock } from "./useRemoteShareBlock";
 
-const ITEMS = ["companions", "link"] as const;
+const ITEMS = ["companions", "link", "route"] as const;
 type MenuItem = (typeof ITEMS)[number];
 
 /** Menu width, the gap to the trigger and the margin kept to the viewport edge. */
@@ -53,7 +56,9 @@ export function placeMenu(
  * The trip head's "Teilen" (spec 2026-10-16, D10): one entry point, two kinds
  * of sharing kept apart in words (D11) — "Mit Mitreisenden (eigene Kopie)"
  * copies the trip into a companion's account, "Öffentlicher Link" is the
- * public, expiring link of forgejo#281. Not for the shared demo account,
+ * public, expiring link of forgejo#281. Where TravTrack is offered, a third
+ * entry shares the trip's recorded route as a snapshot (TravTrack plan T7,
+ * `ShareRouteDialog`). Not for the shared demo account,
  * which is every visitor at once.
  *
  * The panel is portaled to the body: the head's hero card clips its overflow
@@ -79,7 +84,12 @@ export default function TripShareMenu({
   const isSharedDemo = useIsDemoAccount();
   const addToast = useToastStore((s) => s.addToast);
   const bump = useTripSharingStore((s) => s.bump);
+  // The route entry only where TravTrack is offered to this account.
+  const travTrack = useTravTrackVisible();
+  const items = ITEMS.filter((which) => which !== "route" || travTrack);
   const [open, setOpen] = useState(false);
+  // Why someone on another server cannot be offered this trip here, if they cannot.
+  const remoteBlock = useRemoteShareBlock(tripId, open);
   const [dialog, setDialog] = useState<MenuItem | null>(null);
   // Tagged with its trip, so a trip change never offers the previous trip's people.
   const [loaded, setLoaded] = useState<{
@@ -203,7 +213,7 @@ export default function TripShareMenu({
     e.preventDefault();
     const at = itemRefs.current.findIndex((el) => el === document.activeElement);
     const step = e.key === "ArrowDown" ? 1 : -1;
-    itemRefs.current[(at + step + ITEMS.length) % ITEMS.length]?.focus();
+    itemRefs.current[(at + step + items.length) % items.length]?.focus();
   };
 
   const current = loaded?.tripId === tripId ? loaded : null;
@@ -238,7 +248,7 @@ export default function TripShareMenu({
               border: "1px solid var(--ts-border)",
             }}
           >
-            {ITEMS.map((which, i) => (
+            {items.map((which, i) => (
               <button
                 key={which}
                 ref={(el) => {
@@ -253,9 +263,21 @@ export default function TripShareMenu({
                 {t(`sharing:menu.${which}`)}
               </button>
             ))}
+            {remoteBlock && (
+              <p
+                data-testid="remote-share-blocked"
+                className="t-caption px-2.5 pt-2"
+                style={{ borderTop: "1px solid var(--ts-border)" }}
+              >
+                {t(`sharing:menu.remoteBlocked.${remoteBlock}`)}
+              </p>
+            )}
           </div>,
           document.body
         )}
+      {dialog === "route" && (
+        <ShareRouteDialog open onClose={() => setDialog(null)} tripId={tripId} />
+      )}
       {dialog === "link" && (
         <ShareLinkDialog open onClose={() => setDialog(null)} kind="trip" targetId={tripId} />
       )}

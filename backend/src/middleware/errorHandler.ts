@@ -1,7 +1,9 @@
 import type { RemoteShareApiErrorCode } from "./remoteShareErrorCodes";
 import type { FlightTrackFileApiErrorCode } from "./flightTrackFileErrorCodes";
 import type { CompanionApiErrorCode } from "./companionErrorCodes";
+import type { CompanionAppApiErrorCode } from "./companionAppErrorCodes";
 import type { ConnectionFileApiErrorCode } from "./connectionFileErrorCodes";
+import type { LocationProviderApiErrorCode } from "./locationProviderErrorCodes";
 import { Request, Response, NextFunction } from "express";
 import { MulterError } from "multer";
 import { ZodError } from "zod";
@@ -284,18 +286,16 @@ export type ApiErrorCode =
   | "TRACK_ALREADY_RECORDED"
   /** Flight recording: the body is over its size limit (413). */
   | "TRACK_BODY_TOO_LARGE"
-  /** Flight recording: its time span is nowhere near the flight's schedule —
-   *  a recording filed under the wrong flight (422). */
+  /** Flight recording: its span is nowhere near the schedule — filed under the wrong flight (422). */
   | "TRACK_OUTSIDE_FLIGHT"
   | "FLIGHT_TRACKING_DISABLED" // flight recording: live tracking off, nothing stored (409)
-  /** Trip recording (forgejo#316): the account switch is off — nothing stored (409). */
-  | "TRIP_RECORDING_DISABLED"
-  /** Trip recording: a point with a coordinate outside lat ±90 / lon ±180 (400). */
-  | "RECORDING_INVALID_POINT"
-  /** Trip recording: the trip has no first or last day to bound the points by (422). */
-  | "TRIP_RECORDING_NO_SPAN"
-  /** Trip recording: this uploadId is already stored under another trip (409). */
-  | "RECORDING_UPLOAD_ID_REUSED"
+  | "TRIP_RECORDING_DISABLED" // trip recording (forgejo#316): the account switch is off — nothing stored (409)
+  | "RECORDING_INVALID_POINT" // trip recording: a coordinate outside lat ±90 / lon ±180 (400)
+  | "TRIP_RECORDING_NO_SPAN" // trip recording: the trip has no first or last day to bound the points (422)
+  | "RECORDING_UPLOAD_ID_REUSED" // trip recording: uploadId already stored under another trip (409)
+  | "UNSUPPORTED_UPLOAD_TYPE" // a file type the upload route does not take (400)
+  | CompanionAppApiErrorCode // packing lists and personal settings (companionAppErrorCodes.ts)
+  | LocationProviderApiErrorCode // choosing the location provider (locationProviderErrorCodes.ts)
   /** Observed takeoff/landing (forgejo#194): a time in the future (400). */
   | "OBSERVED_TIME_IN_FUTURE"
   /** Observed takeoff/landing: more than 12 h from the schedule (422). */
@@ -461,11 +461,11 @@ export type ApiErrorCode =
   | "SHARE_LINK_LIMIT"
   /** An expiry in the past or beyond the maximum (400). */
   | "SHARE_LINK_EXPIRY_INVALID"
-  /** Calendar feed (forgejo#310): every public failure — malformed, unknown,
-   *  revoked, beta switch off — is this one 404, as for share links. */
+  /** Calendar feed (forgejo#310): every public failure is this one 404, as for share links. */
   | "CALENDAR_FEED_NOT_FOUND"
-  /** No calendar URL is issued while the instance's beta switch is off (409). */
+  /** 409: no URL while the beta switch is off; a device asked while one is live, unrotated. */
   | "CALENDAR_FEED_DISABLED"
+  | "CALENDAR_FEED_EXISTS"
   /** Undo refused: the copy changed since the notice; `extra.fields` names
    *  the facts that differ (409). */
   | "SHARE_UNDO_STALE"

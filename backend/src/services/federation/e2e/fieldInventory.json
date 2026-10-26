@@ -237,7 +237,7 @@
     "personal": "notes rating",
     "photos": "",
     "documents": "",
-    "excluded": "userId"
+    "excluded": "userId suggestionRef"
   },
   "PlaceVisitPhoto": {
     "details": "",
@@ -413,7 +413,7 @@
     "personal": "",
     "photos": "",
     "documents": "",
-    "excluded": "userId fingerprint"
+    "excluded": "userId fingerprint provider providerRev algorithmVersion evidenceKey claimToken claimedAt"
   },
   "UserAchievement": {
     "details": "id updatedAt achievementId unlockedAt progress",

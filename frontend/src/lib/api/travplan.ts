@@ -1,5 +1,6 @@
 import { newPlanId } from "../travplanId";
 import { api, parserApi } from "./client";
+import { apiErrorMachineCode } from "../apiError";
 import type {
   PlanView,
   PlanSummary,
@@ -21,6 +22,35 @@ export interface PlanConfig {
   aiDailyLimit: number;
   weatherDailyLimit: number;
 }
+/** `GET /trips/:tripId/plan/actual` — plan versus actual (TravTrack plan L5). Read-only. */
+export type PlanStationStatus = "visited" | "shifted" | "skipped" | "unknown";
+export interface PlanActual {
+  plan: { revision: number };
+  actual: {
+    origin: "travstats" | "travtrack" | "dawarich";
+    coverage: "complete" | "truncated" | "unreachable" | null;
+    days: { day: string; state: "recorded" | "noData" }[];
+    segments: [number, number][][];
+  } | null;
+  stations: {
+    stationId: string;
+    title: string;
+    plannedFrom: string | null;
+    plannedUntil: string | null;
+    status: PlanStationStatus;
+    deltaDays: number | null;
+    actualFrom: string | null;
+    actualUntil: string | null;
+  }[];
+  stages: {
+    stageId: string;
+    fromStationId: string;
+    toStationId: string;
+    plannedKm: number | null;
+    actualKm: number | null;
+  }[];
+  unplanned: { kind: "lodging" | "place"; day: string; lat: number; lon: number; label: string }[];
+}
 export const travplanApi = {
   locations: async (q: string, language: "de" | "en") =>
     (
@@ -37,7 +67,8 @@ export const travplanApi = {
     ).data.locations,
   capabilities: async () => (await api.get<PlanCapabilities>("/travplan/capabilities")).data,
   config: async () => (await api.get<PlanConfig>("/travplan/config")).data,
-  setConfig: async (config: PlanConfig) =>
+  /** Any subset: the admin switch saves `{enabled}` alone and keeps the limits. */
+  setConfig: async (config: Partial<PlanConfig>) =>
     (await api.patch<PlanConfig>("/travplan/config", config)).data,
   list: async () => (await api.get<{ plans: PlanSummary[] }>("/travplan/plans")).data.plans,
   create: async (
@@ -69,7 +100,19 @@ export const travplanApi = {
         clientRef: newPlanId(),
       })
     ).data,
+  actual: async (id: string) => (await api.get<PlanActual>("/trips/" + id + "/plan/actual")).data,
   packingSuggestions: async (id: string) =>
     (await api.get<{ suggestions: string[] }>("/trips/" + id + "/plan/packing-suggestions")).data
       .suggestions,
 };
+
+/**
+ * The admin switch's error copy (Admin → Instanz → TravPlan): `PLAN_DISABLED`
+ * is the server's answer while the instance's beta switch is off, everything
+ * else is a plain failed save.
+ */
+export function travPlanErrorKey(err: unknown): string {
+  return apiErrorMachineCode(err) === "PLAN_DISABLED"
+    ? "admin:travPlan.errors.disabled"
+    : "admin:travPlan.errors.saveFailed";
+}

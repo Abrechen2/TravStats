@@ -13,6 +13,7 @@ import { isValidRpId, passkeyUnavailableReason } from "../../services/webauthn/r
 import { COUNTRY_TIERS } from "../../shared/countryEvidence";
 import { railRoutingUrlField } from "../../schemas/rail";
 import { probeRailRouting } from "../../services/rail/openRailRouting";
+import { startLocalTransitReroute } from "../../services/rail/railRerouteLocalTransit";
 
 const router = Router();
 
@@ -96,8 +97,8 @@ const instancePatchSchema = z.object({
   /** May the rail lookup ask Transitous / db-rest (both on by default). */
   railTransitousEnabled: z.boolean().optional(),
   railDbRestEnabled: z.boolean().optional(),
-  /** A self-hosted OpenRailRouting for rail lines; "" switches it off. */
-  railRoutingUrl: railRoutingUrlField.optional(),
+  /** A self-hosted OpenRailRouting for rail lines; "" or null switches it off. */
+  railRoutingUrl: railRoutingUrlField.nullable().optional(),
 });
 
 /**
@@ -210,6 +211,34 @@ router.post(
         return;
       }
       res.json(await probeRailRouting(baseUrl));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * The one-off repair for tram and U-Bahn rides routed as trains before they
+ * had a network of their own: starts a background job (kind
+ * `rail.rerouteLocalTransit`, poll `GET /jobs/:id`) and answers 202
+ * `{ jobId }`; while it runs, asking again answers the same job. 409 with
+ * code `notConfigured` without a router, `alreadyRunning` while another
+ * admin's pass runs (docs/features/rail-routing.md).
+ */
+router.post(
+  "/instance-settings/rail-routing/reroute-local-transit",
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const start = await startLocalTransitReroute(req.userId!);
+      if (start.kind === "started") {
+        res.status(202).json({ jobId: start.job.id });
+        return;
+      }
+      const error =
+        start.kind === "notConfigured"
+          ? "No rail router is configured"
+          : "Another administrator's pass is running";
+      res.status(409).json({ error, code: start.kind });
     } catch (error) {
       next(error);
     }

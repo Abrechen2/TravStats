@@ -8,6 +8,6 @@ export async function resolveTrip(userId: string, tripId: string): Promise<{ id:
     where: { id: tripId, userId },
     select: { id: true },
   });
-  if (!trip) throw new AppError("Trip not found", 404);
+  if (!trip) throw new AppError("Trip not found", 404, "TRIP_NOT_FOUND");
   return trip;
 }

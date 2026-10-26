@@ -24,6 +24,8 @@ import { placeImportCommitSchema, placeImportPreviewSchema } from "../../../sche
 import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { documentIdsBodySchema } from "../../../schemas/document";
+import { clientRefBodySchema } from "../../../schemas/clientRef";
+import { clientRefResponses } from "./clientRef";
 import { createPlaceSchema, createVisitSchema, updatePlaceSchema } from "../../../schemas/place";
 import { errorContent, timeRefused } from "./shared";
 import { photoFileQuerySchema } from "../../../schemas/photoVariant";
@@ -79,6 +81,11 @@ const placeVisit = registry.register(
         ),
       times: visitTimesSchema,
       photos: z.array(visitPhoto).optional().describe("The visit's photos; GET /places/{id} only"),
+      documentCount: z
+        .number()
+        .int()
+        .optional()
+        .describe("How many documents are filed against the visit; GET /places/{id} only"),
     })
     .openapi("PlaceVisit")
 );
@@ -223,9 +230,14 @@ registry.registerPath({
     "its owner can neither read nor search. Send a picker hit's `localName` with it; " +
     'without one, a name glued from both scripts ("Seoul Station 서울역") is stored split.',
   tags: placesTag,
-  request: { body: { content: { "application/json": { schema: createPlaceSchema } } } },
+  request: {
+    body: {
+      content: { "application/json": { schema: createPlaceSchema.and(clientRefBodySchema) } },
+    },
+  },
   responses: {
     201: { description: "Created", content: { "application/json": { schema: place } } },
+    ...clientRefResponses({ "application/json": { schema: place } }),
     400: badInput,
   },
 });
@@ -263,6 +275,10 @@ registry.registerPath({
   responses: { 204: deleted, 404: notFound },
 });
 
+const visitCreated = {
+  "application/json": { schema: z.object({ success: z.literal(true), data: placeVisit }) },
+};
+
 registry.registerPath({
   method: "post",
   path: "/places/{id}/visits",
@@ -277,18 +293,18 @@ registry.registerPath({
     params: z.object({ id: uuid }),
     body: {
       content: {
-        "application/json": { schema: createVisitSchema.extend(documentIdsBodySchema.shape) },
+        "application/json": {
+          schema: createVisitSchema
+            .extend(documentIdsBodySchema.shape)
+            .extend(clientRefBodySchema.shape),
+        },
       },
     },
   },
   responses: {
     422: timeRefused,
-    201: {
-      description: "Created",
-      content: {
-        "application/json": { schema: z.object({ success: z.literal(true), data: placeVisit }) },
-      },
-    },
+    201: { description: "Created", content: visitCreated },
+    ...clientRefResponses(visitCreated),
     400: badInput,
     404: notFound,
   },

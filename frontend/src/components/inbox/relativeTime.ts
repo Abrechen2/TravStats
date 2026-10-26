@@ -27,22 +27,31 @@ const UNITS: ReadonlyArray<[Intl.RelativeTimeFormatUnit, number]> = [
  * username, and losing the whole inbox block over a language tag would be a
  * bad trade.
  */
-function formatterFor(locale: string): Intl.RelativeTimeFormat {
+function formatterFor(
+  locale: string,
+  style: Intl.RelativeTimeFormatStyle
+): Intl.RelativeTimeFormat {
   try {
-    return new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+    return new Intl.RelativeTimeFormat(locale, { numeric: "auto", style });
   } catch {
-    return new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+    return new Intl.RelativeTimeFormat("en", { numeric: "auto", style });
   }
 }
 
-export function relativeTimeFromNow(iso: string, locale: string, now: Date = new Date()): string {
+/** `style: "short"` gives "vor 12 Min." for a card where the long form does not fit. */
+export function relativeTimeFromNow(
+  iso: string,
+  locale: string,
+  now: Date = new Date(),
+  { style = "long" }: { style?: Intl.RelativeTimeFormatStyle } = {}
+): string {
   const then = new Date(iso).getTime();
   // An unparseable timestamp is not a reason to break the row it belongs to;
   // the row's point is the username, and the raw string still says something.
   if (Number.isNaN(then)) return iso;
 
   const diff = then - now.getTime();
-  const format = formatterFor(locale);
+  const format = formatterFor(locale, style);
 
   for (const [unit, ms] of UNITS) {
     if (Math.abs(diff) >= ms) return format.format(Math.round(diff / ms), unit);

@@ -161,9 +161,9 @@ export type PassportLoaderFlight = Prisma.FlightGetPayload<{
  */
 export interface PassportSources {
   rail?: boolean;
-  /** Omitted: read while the user sees the bus domain (its beta switch included). */
+  /** Omitted: read while the user sees the bus domain */
   bus?: boolean;
-  /** Omitted: read while the user sees the ferry domain (its beta switch included). */
+  /** Omitted: read while the user sees the ferry domain */
   ferry?: boolean;
   roadtrip?: boolean;
   place?: boolean;
@@ -361,6 +361,8 @@ export async function loadPassport(
             pointCount: true,
             airportPointCount: true,
             partialWindow: true,
+            // Dawarich's and TravTrack's observations are listed apart (plan E6).
+            source: true,
           },
         })
       : [],
@@ -439,6 +441,7 @@ export async function loadPassport(
       pointCount: row.pointCount,
       airportPointCount: row.airportPointCount,
       partialWindow: row.partialWindow,
+      source: row.source,
     })),
     roadtripStations,
     railEnds,

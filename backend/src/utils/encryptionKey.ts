@@ -147,3 +147,24 @@ export function initializeEncryptionKey(): string {
 
   return newKey;
 }
+
+let instanceKeyHex: string | null = null;
+
+/**
+ * A secret for one purpose, derived from the instance key with HKDF-SHA256
+ * under `label` — never the instance key itself, so a leaked subkey opens
+ * nothing else. Deterministic per instance and label: a value keyed with it
+ * stays comparable across restarts. Never log or return what this gives.
+ */
+export function deriveInstanceSecret(label: string, length = 32): Buffer {
+  instanceKeyHex ??= initializeEncryptionKey();
+  return deriveSecretFrom(instanceKeyHex, label, length);
+}
+
+/** `deriveInstanceSecret` for a given instance key (64 hex characters). */
+export function deriveSecretFrom(keyHex: string, label: string, length = 32): Buffer {
+  if (!/^[0-9a-fA-F]{64}$/.test(keyHex)) throw new Error("instance key must be 64 hex characters");
+  return Buffer.from(
+    crypto.hkdfSync("sha256", Buffer.from(keyHex, "hex"), Buffer.alloc(0), label, length)
+  );
+}

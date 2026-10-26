@@ -11,7 +11,7 @@
  * terminals' calendars.
  *
  * Only completed crossings (`shared/ferryCounting.ts`). Behind the ferry
- * beta switch: the loaders read these only while the user sees the domain.
+ * domain toggle: the loaders read these only while the user sees the domain.
  */
 
 import { prisma } from "../../db";

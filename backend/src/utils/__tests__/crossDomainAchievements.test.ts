@@ -88,9 +88,15 @@ describe("three modes on one trip", () => {
   });
 
   it("lets no beta domain that is switched off feed the badge", () => {
-    const t = trip({ flights: done, railJourneys: ride, busJourneys: ride });
+    const t = trip({ flights: done, railJourneys: ride, routes: roadtrip });
     expect(foldCrossDomainAchievementStats([t], ALL_VISIBLE, NOW).tripsThreeModes).toBe(1);
     expect(foldCrossDomainAchievementStats([t], BETA_OFF, NOW).tripsThreeModes).toBe(0);
+  });
+
+  // Bus left beta on 2026-10-26 (owner): like rail, it counts with the switch off.
+  it("counts a coach ride with the beta switch off", () => {
+    const t = trip({ flights: done, railJourneys: ride, busJourneys: ride });
+    expect(foldCrossDomainAchievementStats([t], BETA_OFF, NOW).tripsThreeModes).toBe(1);
   });
 });
 
@@ -140,8 +146,10 @@ describe("the fully documented trip", () => {
   });
 
   it("does not count a trip whose only movement is hidden, nor one without photos", () => {
-    const byCoach = trip({ ...documented, busJourneys: ride });
-    expect(foldCrossDomainAchievementStats([byCoach], BETA_OFF, NOW).tripsFullyDocumented).toBe(0);
+    const byRoadtrip = trip({ ...documented, routes: roadtrip });
+    expect(foldCrossDomainAchievementStats([byRoadtrip], BETA_OFF, NOW).tripsFullyDocumented).toBe(
+      0
+    );
     const noPhotos = trip({
       ...documented,
       flights: done,
@@ -153,7 +161,20 @@ describe("the fully documented trip", () => {
   });
 });
 
-// Rail left beta in 2.7.0-rc.20 (owner, 2026-10-22): it counts like flights.
+// Rail left beta in 2.7.0-rc.20 (owner, 2026-10-22), bus on 2026-10-26: both
+// count like flights.
+it.each([["railJourneys"], ["busJourneys"]] as const)(
+  "counts a %s trip with the beta switch off",
+  (key) => {
+    const byGround = trip({
+      [key]: ride,
+      lodgingStays: stayed,
+      _count: { journalEntries: 1, photos: 1 },
+    });
+    expect(foldCrossDomainAchievementStats([byGround], BETA_OFF, NOW).tripsFullyDocumented).toBe(1);
+  }
+);
+
 it("counts a train trip with the beta switch off", () => {
   const byTrain = trip({
     railJourneys: ride,

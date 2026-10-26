@@ -404,7 +404,9 @@ describe("Recorded flight lines for the map — GET /flights/track-lines", () =>
     const res = await request(app).get("/api/v1/flights/track-lines").set("Cookie", cookie);
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
-      lines: [{ flightId: mine.id, geometry: row.geometry, segmentStarts: [0, 2] }],
+      lines: [
+        { flightId: mine.id, geometry: row.geometry, segmentStarts: [0, 2], origin: "travstats" },
+      ],
     });
     expect(JSON.stringify(res.body)).not.toContain(bare.id);
   });

@@ -100,7 +100,20 @@ const corsOrigin =
   (process.env.NODE_ENV !== "production" ? "http://localhost:3000" : undefined);
 
 if (corsOrigin) {
-  const corsMiddleware = cors({ origin: corsOriginCheck(corsOrigin), credentials: true });
+  const corsMiddleware = cors({
+    origin: corsOriginCheck(corsOrigin),
+    credentials: true,
+    // A file's name and a TravTrack export's continuation are read from
+    // headers; across origins a browser hides them unless they are exposed.
+    exposedHeaders: [
+      "Content-Disposition",
+      "X-TravTrack-Origin",
+      "X-TravTrack-Coverage",
+      "X-TravTrack-Next",
+      "X-TravTrack-Until",
+      "X-TravTrack-Cursor",
+    ],
+  });
   // The public share-link endpoints (forgejo#281) are asked by the /share page
   // this server itself serves, with no credentials. A browser sends an Origin
   // on that same-origin POST, and an instance whose CORS_ORIGIN does not name
@@ -120,6 +133,7 @@ if (corsOrigin) {
 
 import { RATE_LIMITS, FILE_LIMITS } from "./config/constants";
 import { skipGlobalRateLimit } from "./middleware/rateLimit";
+import { ingestRawBody, TRAVTRACK_INGEST_PATH } from "./middleware/ingestBody";
 
 // Rate limiting. `skipGlobalRateLimit` (middleware/rateLimit.ts) says who is
 // let through uncounted, and why it is nobody in production.
@@ -134,6 +148,10 @@ const limiter = rateLimit({
   skip: (req) => skipGlobalRateLimit(req.ip),
 });
 app.use("/api/", limiter);
+
+// OwnTracks and Overland bodies are read by their own capped reader first
+// (middleware/ingestBody.ts), so the 10 MB parser below never sees them.
+app.use(TRAVTRACK_INGEST_PATH, ingestRawBody);
 
 // Body parsing with increased limits for email imports
 app.use(express.json({ limit: FILE_LIMITS.JSON_BODY_MAX_SIZE }));
@@ -648,124 +666,8 @@ if (process.env.NODE_ENV !== "test") {
       });
     }
 
-    // The cron jobs. Each starts on its own: one that fails to start is logged
-    // and stops neither the others nor the server. Their UTC slots, and why,
-    // are in each module's header (the table is in dataQualitySweepScheduler.ts).
-    const jobs: Array<[name: string, start: () => Promise<void>]> = [
-      // Every 5 minutes; each flight's nextApiCheckAt decides the actual timing.
-      [
-        "flight_update",
-        async () => (await import("./jobs/flightUpdateScheduler")).startFlightUpdateScheduler(5),
-      ],
-      [
-        "historical_enrichment",
-        async () =>
-          (
-            await import("./jobs/historicalEnrichmentScheduler")
-          ).startHistoricalEnrichmentScheduler(),
-      ],
-      [
-        "airline_logo_refresh",
-        async () =>
-          (await import("./jobs/airlineLogoRefreshScheduler")).startAirlineLogoRefreshScheduler(),
-      ],
-      [
-        "status_sweep",
-        async () => (await import("./jobs/statusSweepScheduler")).startStatusSweepScheduler(),
-      ],
-      [
-        "place_address_backfill",
-        async () =>
-          (
-            await import("./jobs/placeAddressBackfillScheduler")
-          ).startPlaceAddressBackfillScheduler(),
-      ],
-      // Once per boot: recordings stored before the jitter filter (forgejo#319).
-      [
-        "track_jitter_remeasure",
-        async () =>
-          (
-            await import("./jobs/trackJitterRemeasureScheduler")
-          ).startTrackJitterRemeasureScheduler(),
-      ],
-      // Once per boot: crossings still stored as a straight line (owner, 2026-10-21).
-      [
-        "ferry_route_backfill",
-        async () =>
-          (await import("./jobs/ferryRouteBackfillScheduler")).startFerryRouteBackfillScheduler(),
-      ],
-      [
-        "stay_fx_backfill",
-        async () => (await import("./jobs/stayFxBackfillScheduler")).startStayFxBackfillScheduler(),
-      ],
-      [
-        "data_quality_sweep",
-        async () =>
-          (await import("./jobs/dataQualitySweepScheduler")).startDataQualitySweepScheduler(),
-      ],
-      [
-        "dawarich_country_day_sweep",
-        async () =>
-          (
-            await import("./jobs/dawarichCountryDaySweepScheduler")
-          ).startDawarichCountryDaySweepScheduler(),
-      ],
-      // Kept originals (forgejo#116), hourly at :25.
-      [
-        "document_sweep",
-        async () => (await import("./jobs/documentSweepScheduler")).startDocumentSweepScheduler(),
-      ],
-      // Opt-in nightly Foto-Spürhund (forgejo#94), 04:55.
-      [
-        "photo_journey_scan",
-        async () =>
-          (await import("./jobs/photoJourneyScanScheduler")).startPhotoJourneyScanScheduler(),
-      ],
-      [
-        "dawarich_stay_scan",
-        async () => (await import("./jobs/dawarichStayScheduler")).startDawarichStayScheduler(),
-      ],
-      // Log retention, daily 03:45 and once now.
-      [
-        "log_retention",
-        async () => (await import("./jobs/logRetentionScheduler")).startLogRetentionScheduler(),
-      ],
-      // Sync tombstone retention (forgejo#141), daily 03:50 and once now.
-      [
-        "sync_retention",
-        async () => (await import("./jobs/syncRetentionScheduler")).startSyncRetentionScheduler(),
-      ],
-      // Per-account WebDAV sync of the account's export, daily 05:15 (forgejo#321).
-      [
-        "webdav_sync",
-        async () => (await import("./jobs/webdavSyncScheduler")).startWebdavSyncScheduler(),
-      ],
-      // Trip sharing across servers: the outbox, every 30 s and when nudged (forgejo#301).
-      [
-        "trip_share_delivery",
-        async () =>
-          (await import("./jobs/tripShareDeliveryScheduler")).startTripShareDeliveryScheduler(),
-      ],
-      [
-        "reminder",
-        async () => (await import("./services/reminderScheduler")).startReminderScheduler(),
-      ],
-    ];
-    for (const [name, start] of jobs) {
-      try {
-        await start();
-        logger.info({
-          operation: `server_start_${name}_scheduler`,
-          message: `${name} scheduler started`,
-        });
-      } catch (error) {
-        logger.warn({
-          operation: `server_start_${name}_scheduler_error`,
-          message: `Failed to start ${name} scheduler`,
-          error: { message: error instanceof Error ? error.message : "Unknown error" },
-        });
-      }
-    }
+    // The cron jobs, each started on its own (`jobs/cronJobs.ts`).
+    await (await import("./jobs/cronJobs")).startCronJobs();
 
     // Start usage-stats scheduler (jittered daily ping — no-op unless the
     // admin has granted consent and TRAVSTATS_STATS_ENDPOINT is configured)

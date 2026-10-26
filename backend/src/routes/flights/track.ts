@@ -9,6 +9,7 @@ import { flightDeviceDataLimiter } from "../../middleware/rateLimit";
 import {
   FLIGHT_TRACK_MAX_BODY_BYTES,
   flightTrackFileFieldsSchema,
+  flightTrackUploadPieces,
   flightTrackUploadSchema,
   type FlightTrackSource,
 } from "../../schemas/flightDevice";
@@ -26,9 +27,12 @@ import {
 } from "../../services/flightDevice/flightTrackFile";
 import { handleGpxUpload } from "../trips/tourTracks";
 import { overlapsSchedule, scheduledInstants } from "../../services/flightDevice/flightWindow";
+import { FLIGHT_WINDOW_SELECT } from "../../services/tripRecording/bounds";
 import { trackTimes, type TrackZoneColumns } from "../../services/flightDevice/trackTimes";
 import { flightLiveTrackingEnabled } from "../../services/settings/accountPrefs";
 import logger from "../../utils/logger";
+import { providerFlightTrack, trackSourceQuerySchema } from "./trackSource";
+import { viewableFlightTrack, type ViewableTrack } from "../../services/travtrack/flightTrackView";
 
 /**
  * The phone's recording of a flight (forgejo#193) — `GET`/`POST`/`DELETE
@@ -66,19 +70,8 @@ type TrackMeta = Prisma.FlightTrackGetPayload<{ select: typeof TRACK_META_SELECT
 async function loadOwnedFlight(flightId: string, userId: string) {
   const flight = await prisma.flight.findFirst({
     where: { id: flightId, userId },
-    select: {
-      id: true,
-      departureTime: true,
-      arrivalTime: true,
-      depTimeSemantics: true,
-      arrTimeSemantics: true,
-      depTimezone: true,
-      arrTimezone: true,
-      depIata: true,
-      depIcao: true,
-      arrIata: true,
-      arrIcao: true,
-    },
+    // The window columns: a provider track is read in the precision-aware recorder window.
+    select: { id: true, ...FLIGHT_WINDOW_SELECT },
   });
   if (!flight) throw new AppError("Flight not found", 404, "FLIGHT_NOT_FOUND");
   return flight;
@@ -97,6 +90,26 @@ async function present<T extends { startedAt: Date; endedAt: Date }>(
 ) {
   const { startedAt, endedAt, ...rest } = track;
   return { ...rest, times: await trackTimes({ startedAt, endedAt }, flight) };
+}
+
+/**
+ * A privacy-cut line as a client reads it: an end the cut removed has no time
+ * (the line holds no per-vertex times), and the running distance it was
+ * measured with stays on the server, as it always has.
+ */
+async function presentCut<T extends { startedAt: Date; endedAt: Date; cumulativeKm?: unknown }>(
+  viewable: ViewableTrack<T>,
+  flight: TrackZoneColumns
+) {
+  const { cumulativeKm: _cumulativeKm, ...track } = viewable.track;
+  const shown = await present(track, flight);
+  return {
+    ...shown,
+    times: {
+      startedAt: viewable.startCut ? null : shown.times.startedAt,
+      endedAt: viewable.endCut ? null : shown.times.endedAt,
+    },
+  };
 }
 
 const alreadyRecorded = () =>
@@ -153,12 +166,34 @@ async function writeTrack(
  */
 router.get("/:id/track", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const flight = await loadOwnedFlight(req.params.id, req.userId!);
-    const track = await prisma.flightTrack.findUnique({
+    const userId = req.userId!;
+    const flight = await loadOwnedFlight(req.params.id, userId);
+    const { source } = trackSourceQuerySchema.parse(req.query);
+    // Where the line comes from (TravTrack plan T5): the own recording by
+    // default, else the chosen provider; `?source=` shows another explicitly.
+    const { entry, track: fromProvider } = await providerFlightTrack(userId, flight, source);
+    const meta = {
+      origin: entry.origin,
+      coverage: entry.coverage,
+      alternatives: entry.alternatives,
+      unchecked: entry.unchecked,
+    };
+    if (entry.origin !== "travstats") {
+      res.json({ track: fromProvider ? await presentCut(fromProvider, flight) : null, ...meta });
+      return;
+    }
+    const stored = await prisma.flightTrack.findUnique({
       where: { flightId: flight.id },
-      select: { ...TRACK_META_SELECT, geometry: true, segmentStarts: true, elevations: true },
+      select: {
+        ...TRACK_META_SELECT,
+        geometry: true,
+        segmentStarts: true,
+        elevations: true,
+        cumulativeKm: true,
+      },
     });
-    res.json({ track: track ? await present(track, flight) : null });
+    const track = stored ? await viewableFlightTrack(userId, stored) : null;
+    res.json({ track: track ? await presentCut(track, flight) : null, ...meta });
   } catch (err) {
     next(err);
   }
@@ -166,7 +201,9 @@ router.get("/:id/track", async (req: AuthRequest, res: Response, next: NextFunct
 
 /**
  * POST /flights/:id/track — JSON `{ uploadId, replace?, points: [{t, lat, lon,
- * alt?, speed?}] }`.
+ * alt?, speed?}] }`, or `segments: [[{…}, …], …]` in place of `points`: the
+ * recording in pieces that are never joined (advertised as
+ * `uploads.flightTrackSegments` in GET /location/capabilities).
  *
  *   - same `uploadId` as the stored recording → 200 with it, `replayed: true`
  *     (an outbox retry; nothing is written)
@@ -206,8 +243,9 @@ router.post(
       }
       if (existing && !body.replace) throw alreadyRecorded();
 
-      const first = body.points[0].t;
-      const last = body.points[body.points.length - 1].t;
+      const { points, segmentStarts } = flightTrackUploadPieces(body);
+      const first = points[0].t;
+      const last = points[points.length - 1].t;
       if (!overlapsSchedule(first, last, await scheduledInstants(flight))) {
         throw new AppError(
           "The recording does not overlap this flight's schedule",
@@ -216,7 +254,7 @@ router.post(
         );
       }
 
-      const columns = flightTrackColumns(body.points);
+      const columns = flightTrackColumns(points, segmentStarts);
       if (!columns) {
         throw new AppError("Too few distinct points to draw a line", 400, "VALIDATION_FAILED");
       }

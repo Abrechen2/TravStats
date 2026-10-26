@@ -8,6 +8,7 @@ import type { RailRoutingTestResult } from "../../lib/api/admin";
 import { logger } from "../../lib/logger";
 import Button from "../ui/Button";
 import { Field, Input } from "../ui/Field";
+import RailLocalTransitReroute from "./RailLocalTransitReroute";
 
 type SaveState = { kind: "idle" } | { kind: "saved" } | { kind: "error"; key: string };
 type TestState =
@@ -75,13 +76,17 @@ export default function RailRoutingUrlSetting({
             ok: true,
             text: t("settings:railRouting.test.ok", {
               profile: test.result.profile,
-              date: test.result.dataDate ?? "—",
+              date: test.result.dataDate ?? t("settings:railRouting.test.dateUnknown"),
             }),
           }
         : { ok: false, text: t(`settings:railRouting.test.${test.result.code}`) }
       : test.kind === "failed"
         ? { ok: false, text: t("settings:railRouting.test.requestFailed") }
         : null;
+  const modeLine =
+    test.kind === "done" && test.result.ok && test.result.modeProfiles
+      ? modeProfilesText(test.result.modeProfiles, t)
+      : null;
 
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
@@ -126,6 +131,31 @@ export default function RailRoutingUrlSetting({
           {testLine.text}
         </p>
       )}
+      {modeLine && (
+        <p className="t-caption" role="status" data-testid="rail-routing-mode-profiles">
+          {modeLine}
+        </p>
+      )}
+      {savedUrl && <RailLocalTransitReroute />}
     </div>
   );
+}
+
+/**
+ * What the dedicated tram / U-Bahn profiles mean for those rides: with them a
+ * ride is routed over its own network only; without, only where the instance
+ * takes the restricted fallback request, and otherwise it stays straight.
+ */
+function modeProfilesText(
+  profiles: { tram: boolean; subway: boolean },
+  t: (key: string, options?: Record<string, unknown>) => string
+): string {
+  if (profiles.tram && profiles.subway) return t("settings:railRouting.test.modeProfiles.both");
+  const missing = [
+    !profiles.tram && t("settings:railRouting.test.modeProfiles.tram"),
+    !profiles.subway && t("settings:railRouting.test.modeProfiles.subway"),
+  ].filter(Boolean);
+  return t("settings:railRouting.test.modeProfiles.missing", {
+    modes: missing.join(t("settings:railRouting.test.modeProfiles.and")),
+  });
 }

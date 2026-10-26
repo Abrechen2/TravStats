@@ -26,7 +26,7 @@
 ```text
 TravStats is a self-hosted travel logbook for small households and groups (1–10 users). Log every flight you take (cruises landing in v2), visualise your routes on interactive 2D and 3D maps, collect 58 achievements, and import flights from boarding passes (QR / PDF417 / OCR) and confirmation emails — all on your own Unraid box, no cloud, no telemetry.
 
-It's a logbook, not a live tracker — you record trips manually, scan a boarding pass, or import a confirmation email, and TravStats turns them into history, stats and maps.
+A logbook first — you record trips by hand, scan a boarding pass, or import a confirmation email, and TravStats turns them into history, stats and maps. Recording is optional and opt-in: the TravStats Companion app (in beta) can record your own flights and trips on your phone and upload them to your own server. TravTrack, an opt-in location history with privacy zones, is in development. TravStats does not follow other aircraft or people, and nobody sees where you are unless you create a share link yourself.
 
 
 Links
@@ -117,7 +117,7 @@ If you prefer to paste HTML directly: click `…` in the toolbar to look for a "
 
 ```html
 <p><strong>TravStats</strong> is a self-hosted travel logbook for small households and groups (1–10 users). Log every flight you take (cruises landing in v2), visualise your routes on interactive 2D and 3D maps, collect 58 achievements, and import flights from boarding passes (QR / PDF417 / OCR) and confirmation emails — all on your own Unraid box, no cloud, no telemetry.</p>
-<p>It's a logbook, not a live tracker — you record trips manually, scan a boarding pass, or import a confirmation email, and TravStats turns them into history, stats and maps.</p>
+<p>A logbook first — you record trips by hand, scan a boarding pass, or import a confirmation email, and TravStats turns them into history, stats and maps. Recording is optional and opt-in: the TravStats Companion app (in beta) can record your own flights and trips on your phone and upload them to your own server. TravTrack, an opt-in location history with privacy zones, is in development. TravStats does not follow other aircraft or people, and nobody sees where you are unless you create a share link yourself.</p>
 <h3>Links</h3>
 <ul>
   <li><strong>Project + issues:</strong> <a href="https://github.com/Abrechen2/TravStats">github.com/Abrechen2/TravStats</a></li>

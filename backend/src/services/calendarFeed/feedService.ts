@@ -1,7 +1,9 @@
 import { prisma } from "../../db";
+import { Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import type { DomainKey } from "../../shared/domains";
 import { now } from "../../shared/time/clock";
+import { decryptApiKey, encryptApiKey } from "../../utils/encryption";
 import { loadVisibleDomains } from "../domainVisibility";
 import { getInstanceSettings } from "../instanceSettingsService";
 import type { FeedContext } from "./feedEvent";
@@ -60,26 +62,89 @@ export async function calendarFeedEnabled(): Promise<boolean> {
   return (await getInstanceSettings()).betaFeaturesEnabled;
 }
 
+const feedExists = () =>
+  new AppError(
+    "A calendar URL is already active; send rotate: true to replace it",
+    409,
+    "CALENDAR_FEED_EXISTS"
+  );
+
+/**
+ * A feed issued by a paired device lives exactly as long as the token that
+ * issued it: a stolen device token must not mint a link that outlives the
+ * token's revocation or the device's unpairing. A deleted token cascades; a
+ * revoked or expired one (revocation is soft) is checked here, at every read,
+ * and the feed is deleted on the spot. A browser-issued feed has no issuer.
+ */
+const ISSUER_SELECT = {
+  issuedByApiTokenId: true,
+  issuedByApiToken: { select: { revokedAt: true, expiresAt: true } },
+} as const;
+
+interface IssuerFields {
+  issuedByApiTokenId: string | null;
+  issuedByApiToken: { revokedAt: Date | null; expiresAt: Date | null } | null;
+}
+
+function issuerAlive(feed: IssuerFields): boolean {
+  if (!feed.issuedByApiTokenId) return true;
+  const token = feed.issuedByApiToken;
+  return !!token && !token.revokedAt && !(token.expiresAt && token.expiresAt <= now());
+}
+
+/** The revocation a device token's end implies. `deleteMany`: a concurrent read may have done it already. */
+const dropFeed = async (id: string): Promise<void> => {
+  await prisma.calendarFeed.deleteMany({ where: { id } });
+};
+
 export interface CalendarFeedStatus {
   enabled: boolean;
   active: boolean;
   createdAt: string | null;
   lastUsedAt: string | null;
+  /** The current URL, when it can be recovered; null without one, or for a URL issued before tokens were kept. */
+  url: string | null;
+  webcalUrl: string | null;
 }
 
-export async function feedStatus(userId: string): Promise<CalendarFeedStatus> {
+/**
+ * The plaintext token of a feed row, or null. Checked against the stored
+ * hash, so a ciphertext from another key (a restored backup) or a damaged
+ * value yields no URL rather than a wrong one.
+ */
+function recoverToken(feed: { tokenHash: string; tokenEncrypted: string | null }): string | null {
+  const token = decryptApiKey(feed.tokenEncrypted);
+  if (!token || !looksLikeCalendarToken(token)) return null;
+  return calendarTokenHash(token) === feed.tokenHash ? token : null;
+}
+
+export async function feedStatus(userId: string, baseUrl: string): Promise<CalendarFeedStatus> {
   const [enabled, feed] = await Promise.all([
     calendarFeedEnabled(),
     prisma.calendarFeed.findUnique({
       where: { userId },
-      select: { createdAt: true, lastUsedAt: true },
+      select: {
+        id: true,
+        createdAt: true,
+        lastUsedAt: true,
+        tokenHash: true,
+        tokenEncrypted: true,
+        ...ISSUER_SELECT,
+      },
     }),
   ]);
+  if (feed && !issuerAlive(feed)) {
+    await dropFeed(feed.id);
+    return feedStatus(userId, baseUrl);
+  }
+  const token = feed ? recoverToken(feed) : null;
+  const urls = token ? feedUrls(baseUrl, token) : { url: null, webcalUrl: null };
   return {
     enabled,
     active: feed !== null,
     createdAt: feed?.createdAt.toISOString() ?? null,
     lastUsedAt: feed?.lastUsedAt?.toISOString() ?? null,
+    ...urls,
   };
 }
 
@@ -95,19 +160,60 @@ export function feedUrls(baseUrl: string, token: string): { url: string; webcalU
   return { url, webcalUrl: url.replace(/^https?:\/\//i, "webcal://") };
 }
 
+/** Who asks for a URL from a paired device, and whether they confirmed replacing a live one. */
+export interface DeviceIssuer {
+  apiTokenId: string;
+  rotate: boolean;
+}
+
 /**
  * A new URL for the user — the first one, or a replacement. The previous token
- * stops working in the same write: one row per user, its hash replaced.
+ * stops working in the same write: one row per user, its hash replaced. The
+ * hash is what a read looks up; the ciphertext beside it only lets the owner's
+ * own session (or paired Companion) list the URL again without replacing it,
+ * which would cut off every calendar already subscribed.
+ *
+ * From a browser session a POST always replaces. From a paired device it
+ * replaces only with `rotate: true` (the app asks the user first); otherwise a
+ * live URL answers 409 `CALENDAR_FEED_EXISTS`. A device-issued URL is bound to
+ * the issuing token (`issuerAlive`).
  */
-export async function issueFeed(userId: string, baseUrl: string): Promise<IssuedCalendarFeed> {
+export async function issueFeed(
+  userId: string,
+  baseUrl: string,
+  device: DeviceIssuer | null = null
+): Promise<IssuedCalendarFeed> {
   if (!(await calendarFeedEnabled())) throw feedDisabled();
   const { token, tokenHash } = generateCalendarToken();
+  const tokenEncrypted = encryptApiKey(token);
   const createdAt = now();
-  await prisma.calendarFeed.upsert({
-    where: { userId },
-    create: { userId, tokenHash, createdAt },
-    update: { tokenHash, createdAt, lastUsedAt: null },
-  });
+  const issuedByApiTokenId = device?.apiTokenId ?? null;
+  const fields = { tokenHash, tokenEncrypted, createdAt, issuedByApiTokenId };
+
+  if (device && !device.rotate) {
+    const existing = await prisma.calendarFeed.findUnique({
+      where: { userId },
+      select: { id: true, ...ISSUER_SELECT },
+    });
+    if (existing && issuerAlive(existing)) throw feedExists();
+    if (existing) await dropFeed(existing.id);
+    try {
+      // `create`, not `upsert`: a second device request racing this one hits
+      // the unique user id and is told the URL exists, instead of replacing it.
+      await prisma.calendarFeed.create({ data: { userId, ...fields } });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw feedExists();
+      }
+      throw error;
+    }
+  } else {
+    await prisma.calendarFeed.upsert({
+      where: { userId },
+      create: { userId, ...fields },
+      update: { ...fields, lastUsedAt: null },
+    });
+  }
   return { ...feedUrls(baseUrl, token), createdAt: createdAt.toISOString() };
 }
 
@@ -127,9 +233,13 @@ export async function resolveFeedOwner(token: string): Promise<string | null> {
   if (!(await calendarFeedEnabled())) return null;
   const feed = await prisma.calendarFeed.findUnique({
     where: { tokenHash: calendarTokenHash(token) },
-    select: { id: true, userId: true },
+    select: { id: true, userId: true, ...ISSUER_SELECT },
   });
   if (!feed) return null;
+  if (!issuerAlive(feed)) {
+    await dropFeed(feed.id);
+    return null;
+  }
   await prisma.calendarFeed.update({ where: { id: feed.id }, data: { lastUsedAt: now() } });
   return feed.userId;
 }

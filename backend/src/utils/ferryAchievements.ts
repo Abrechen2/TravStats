@@ -13,7 +13,7 @@ import { isNightBusRide, terminalsOf } from "../shared/busRideKinds";
  * kilometres is one port), so a ferry badge and the bus badges cannot count
  * the same kind of thing differently.
  *
- * Hidden with the `ferryDomain` beta gate off: `services/achievementVisibility`
+ * Hidden while the user has the ferry domain off: `services/achievementVisibility`
  * drops every `domain: "ferry"` badge from lists, counts and points then.
  */
 

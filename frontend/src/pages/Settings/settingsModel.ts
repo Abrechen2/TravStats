@@ -45,6 +45,8 @@ export type SettingsSectionId =
   | "shareLinks"
   | "calendarFeed"
   | "dawarich"
+  | "locationProvider"
+  | "travTrack"
   | "tripRecording"
   | "stayScan"
   | "loyalty"
@@ -116,15 +118,21 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
     sections: [section("companions")],
   },
   {
-    // What exists today: the Dawarich source, the app's trip recording and the
-    // stay scan. The native location history is a branch of its own.
+    // The location source (TravTrack plan S5) first — it decides what the
+    // rest of the page does — then TravTrack's own history (plan T6, shown
+    // while the account holds data or the instance shows TravTrack), the
+    // Dawarich connection, the app's trip recording and the stay scan. The
+    // stay scan is standard; only its two area switches are expert rows
+    // (forgejo#318).
     id: "location",
     labelKey: "settings:groups.location",
     icon: "map-pin",
     sections: [
+      section("locationProvider"),
+      section("travTrack", "standard", { when: "travTrackHeld" }),
       section("dawarich"),
       section("tripRecording"),
-      section("stayScan", "expert", { settings: 4 }),
+      section("stayScan"),
     ],
   },
   {

@@ -49,7 +49,7 @@ export function AddDomainPicker({ enabled, onPick }: AddDomainPickerProps): JSX.
   // `enabled.rail` is the user's domain choice — see DashboardLayout's
   // `addableDomains`.
   if (enabled.rail) options.push({ key: "rail", label: t("dashboard:addPicker.rail") });
-  // The same combined rule for rentals (beta switch AND domain).
+  // The same rule for rentals: the user's domain choice.
   if (enabled.rental) options.push({ key: "rental", label: t("dashboard:addPicker.rental") });
   // And for bus rides: no import behind it, the pick opens the ride form.
   if (enabled.bus) options.push({ key: "bus", label: t("dashboard:addPicker.bus") });

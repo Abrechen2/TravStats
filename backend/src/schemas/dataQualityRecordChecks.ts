@@ -1,4 +1,5 @@
 import { z } from "./zod";
+import { timeValueSchema } from "../shared/time/wire";
 
 /**
  * The `details` of the record checks (forgejo#282): duplicates, chronology,
@@ -72,6 +73,12 @@ export const duplicateCandidateDetailsSchema = z.object({
   ),
   /** This row's own source, for the same comparison. */
   dataSource: z.string().nullable(),
+  /**
+   * The flagged row's first calendar day on its own clock (`YYYY-MM-DD`), so
+   * the inbox files the question under that travel day. Optional: flags
+   * written before it existed carry none.
+   */
+  day: z.string().nullable().optional(),
 });
 
 /**
@@ -90,6 +97,12 @@ export const chronologyConflictDetailsSchema = z.object({
   otherEnd: z.string(),
   overlapMinutes: z.number().int().nullable(),
   overlapNights: z.number().int().nullable(),
+  /**
+   * The flagged row's first calendar day on its own clock (`YYYY-MM-DD`) — for
+   * a flight the local departure day, which `thisStart` (an instant) is not.
+   * Optional: flags written before it existed carry none.
+   */
+  day: z.string().nullable().optional(),
 });
 
 /** The carrier the flight names — the reason a number is expected. */
@@ -135,4 +148,32 @@ export const tripEntriesOutsideDetailsSchema = z.object({
       lastDay: z.string(),
     })
   ),
+});
+
+/** Why a ferry ride is offered to a trip. One rule today. */
+export const FERRY_MATCH_REASONS = [
+  /** The crossing's days lie inside exactly one trip's days, and it is on no trip. */
+  "insideTripWindow",
+] as const;
+
+/**
+ * A ferry ride on no trip, whose crossing lies inside one trip's days (spec
+ * 2026-10-25 C3, `ferryMatch`). Answered with `link`, which puts the ride on
+ * `candidateTripId`. Trip suggestions do not cover ferries, so this is the
+ * only place the question is asked.
+ */
+export const ferryMatchDetailsSchema = z.object({
+  ferryId: z.string(),
+  candidateTripId: z.string(),
+  /** The trip's own name, so the question can say which trip. */
+  candidateTripName: z.string(),
+  departurePort: z.string().nullable(),
+  arrivalPort: z.string().nullable(),
+  /**
+   * The departure on the port's own clock, as a `TimeValue` — the time
+   * model's wire shape (ADR 0002), not a bare instant a client would have to
+   * guess a zone for.
+   */
+  departureTime: timeValueSchema,
+  reason: z.enum(FERRY_MATCH_REASONS),
 });

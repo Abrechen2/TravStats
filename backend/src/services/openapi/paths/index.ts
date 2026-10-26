@@ -26,6 +26,8 @@ import "./tourIndex";
 import "./roadtrips";
 import "./tripExpenses";
 import "./tripRecording";
+import "./companionData";
+import "./locationProvider";
 import "./strava";
 import "./openData";
 import "./operators";
@@ -91,8 +93,18 @@ import "./sync";
 
 import "./dawarichStays";
 import "./dawarichStayIdentity";
+import "./locationSuggestions";
 
 import "./travplan";
+import "./travtrack";
+import "./travtrackDay";
+import "./travtrackExplored";
+import "./travtrackMonths";
+import "./travtrackImports";
+import "./travtrackDawarichCopy";
+import "./travtrackSources";
+import "./travtrackShare";
+import "./travtrackViews";
 
 import "./geoServer";
 import "./mapConfig";

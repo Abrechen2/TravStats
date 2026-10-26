@@ -58,6 +58,9 @@ const BOOKKEEPING_INSTANTS = new Set([
   // account and when it runs next (forgejo#94) — a server slot, no place's.
   "ranAt",
   "nextRunAt",
+  // An inbox answer's take-back deadline (spec 2026-10-25 C3): the server's
+  // own ten-minute window, measured on no traveller's clock.
+  "undoUntil",
   // Public share links (forgejo#281): when a link stops answering and when it
   // was last opened — the server's own clock, no place's; and when the phone
   // recorded the flight's last position, an instant shown on the visitor's

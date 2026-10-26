@@ -21,7 +21,7 @@
 
 **Description:**
 
-Self-hosted travel logbook for small households (1–10 users). Solves the "I want my travel history without handing it to FlightDiary/MFR24/Flighty" problem. It's a logbook, not a live tracker — you log flights manually, scan a boarding pass, or import a confirmation email; cruises landing in v2.
+Self-hosted travel logbook for small households (1–10 users). Solves the "I want my travel history without handing it to FlightDiary/MFR24/Flighty" problem. It's a logbook first — you log flights manually, scan a boarding pass, or import a confirmation email; the optional Companion app (in beta) can record your own trips on your phone and upload them to your server. It does not follow other aircraft or people. Cruises landing in v2.
 
 Features:
 - Log flights with categories, tags, up to 50 companions, cost + currency

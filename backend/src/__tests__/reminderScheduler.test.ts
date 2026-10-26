@@ -21,10 +21,6 @@ jest.mock("../db", () => ({
     busJourney: { findMany: mockBusJourneyFindMany },
   },
 }));
-// Ferry and bus read the instance's beta switch before their query.
-jest.mock("../services/instanceSettingsService", () => ({
-  getInstanceSettings: jest.fn(async () => ({ betaFeaturesEnabled: true })),
-}));
 
 const mockSendFlightReminder =
   jest.fn<typeof import("../services/emailService").sendFlightReminder>();

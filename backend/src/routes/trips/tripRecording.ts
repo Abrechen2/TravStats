@@ -32,6 +32,10 @@ import {
 import { gpxFileName } from "../../services/tour/tracks/gpxArchive";
 import { serializeTime } from "../../shared/time/wire";
 import logger from "../../utils/logger";
+import { tripEntryTrack, type TrackOrigin } from "../../services/locationProvider/entryTrack";
+import { privacyCirclesFor } from "../../services/travtrack/privacyCircles";
+import { privacyCut, privacyCutBy } from "../../services/travtrack/privacyCut";
+import { devicesOnDay, privacySafeDevices } from "../../services/tripRecording/privacySafe";
 
 /**
  * The Companion's trip recording (forgejo#316) — `POST`/`GET`/`DELETE
@@ -239,16 +243,43 @@ router.post(
   }
 );
 
-async function loadDevices(userId: string, trip: RecordingTrip, day: string | undefined) {
-  const [batches, zone] = await Promise.all([
-    prisma.tripRecordingBatch.findMany({
-      where: { tripId: trip.id, userId },
-      orderBy: [{ startedAt: "asc" }, { id: "asc" }],
-      select: { deviceId: true, points: true },
-    }),
+/**
+ * The trip's points per device (TravTrack plan T5): its own recording by
+ * default, else the account's provider; `?source=` shows another explicitly.
+ * The shape stays the batches' own, so the day filter, the jitter filter, the
+ * map and the GPX read every origin alike — and two phones stay two lines.
+ *
+ * Privacy-safe from here on: whatever a zone hides is gone before anything is
+ * counted, so the summary describes only what the map may show (`all` for the
+ * recorded days and devices, `devices` narrowed to `day`).
+ */
+async function loadDevices(
+  userId: string,
+  trip: RecordingTrip,
+  day: string | undefined,
+  source: TrackOrigin | undefined
+) {
+  const [entry, zone] = await Promise.all([
+    tripEntryTrack(userId, trip, { source }),
     tripClockZone(userId, trip),
   ]);
-  return { batches, zone, devices: pointsByDevice(batches, zone, day) };
+  const raw = pointsByDevice(entry.batches, zone);
+  const circles = await circlesFor(userId, raw);
+  const all = privacySafeDevices(raw, circles);
+  const devices = day === undefined ? all : devicesOnDay(all, zone, day);
+  const meta = {
+    origin: entry.origin,
+    coverage: entry.coverage,
+    alternatives: entry.alternatives,
+    unchecked: entry.unchecked,
+  };
+  return { zone, all, devices, circles, meta };
+}
+
+/** The circles the trip's lines must not show, scoped to the trip's first point. */
+async function circlesFor(userId: string, devices: ReadonlyArray<{ points: StoredPoint[] }>) {
+  const first = Math.min(...devices.map((d) => d.points[0]?.[0] ?? Infinity));
+  return privacyCirclesFor(userId, Number.isFinite(first) ? first : 0);
 }
 
 /**
@@ -260,12 +291,8 @@ router.get("/trips/:id/recording", async (req: AuthRequest, res: Response, next:
   try {
     const userId = req.userId!;
     const trip = await loadOwnedTrip(req.params.id, userId);
-    const { day } = tripRecordingQuerySchema.parse(req.query);
-    const { batches, zone, devices } = await loadDevices(userId, trip, day);
-    // Unfiltered, `devices` already holds every point; gather again only for a day's view.
-    const all = (day === undefined ? devices : pointsByDevice(batches, zone)).flatMap(
-      (d) => d.points
-    );
+    const { day, source } = tripRecordingQuerySchema.parse(req.query);
+    const { zone, all, devices, circles, meta } = await loadDevices(userId, trip, day, source);
     const shown = devices.flatMap((d) => d.points).sort((a, b) => a[0] - b[0]);
     const first = shown[0];
     const last = shown[shown.length - 1];
@@ -277,12 +304,24 @@ router.get("/trips/:id/recording", async (req: AuthRequest, res: Response, next:
         jitterDropped: clean.dropped,
         firstAt: first ? serializeTime(new Date(first[0]), zone) : null,
         lastAt: last ? serializeTime(new Date(last[0]), zone) : null,
-        devices: [...new Set(batches.flatMap((b) => (b.deviceId ? [b.deviceId] : [])))].sort(),
-        // An upload without a paired device (the web) is named, not counted as zero devices.
-        uploadedWithoutDevice: batches.some((b) => !b.deviceId),
-        days: recordingDays(all, zone).map((date) => ({ date, zone, precision: "day" as const })),
+        devices: [...new Set(all.flatMap((d) => (d.deviceId ? [d.deviceId] : [])))].sort(),
+        // An upload without a paired device (the web) is named, not counted as zero
+        // devices. Only for the own recording: Dawarich names no device at all.
+        uploadedWithoutDevice: meta.origin === "travstats" && all.some((d) => !d.deviceId),
+        days: recordingDays(
+          all.flatMap((d) => d.points),
+          zone
+        ).map((date) => ({ date, zone, precision: "day" as const })),
+        ...meta,
       },
-      segments: displaySegments(clean.segments),
+      // Privacy-cut again on the way out (plan T5): a jitter stay's synthetic
+      // point, and every chord simplification makes, is checked as it leaves.
+      segments: privacyCut(
+        displaySegments(
+          privacyCutBy(clean.segments, circles, (p): [number, number] => [p[2], p[1]])
+        ),
+        circles
+      ),
     });
   } catch (err) {
     next(err);
@@ -296,8 +335,12 @@ router.get(
     try {
       const userId = req.userId!;
       const trip = await loadOwnedTrip(req.params.id, userId);
-      const { devices } = await loadDevices(userId, trip, undefined);
-      const segments = rawSegments(devices);
+      const { source } = tripRecordingQuerySchema.parse(req.query);
+      const { devices, circles } = await loadDevices(userId, trip, undefined, source);
+      const segments = privacyCutBy(rawSegments(devices), circles, (p): [number, number] => [
+        p[2],
+        p[1],
+      ]);
       const first = segments[0]?.[0];
       res.setHeader("Content-Type", "application/gpx+xml; charset=utf-8");
       res.setHeader(

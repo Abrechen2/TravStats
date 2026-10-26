@@ -10,6 +10,18 @@ const { getSettings, updateSettings, testConnection } = vi.hoisted(() => ({
   testConnection: vi.fn(),
 }));
 
+const { getProvider, setProvider } = vi.hoisted(() => ({
+  getProvider: vi.fn(),
+  setProvider: vi.fn(),
+}));
+
+// The provider offer after a save (TravTrack plan S3). The error-key mapping
+// stays real, so a 409 is checked against the copy it actually resolves to.
+vi.mock("../../../lib/api/locationProvider", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/api/locationProvider")>()),
+  locationProviderApi: { get: getProvider, set: setProvider },
+}));
+
 const { mockTranslateFn } = vi.hoisted(() => ({
   mockTranslateFn: vi.fn((key: string) => key),
 }));
@@ -45,6 +57,7 @@ vi.mock("../../../hooks/useTranslation", () => ({
 }));
 
 import DawarichConnectionCard from "../DawarichConnectionCard";
+import { useLocationProviderStore } from "../../../store/locationProviderStore";
 
 const CONFIGURED = {
   baseUrl: "https://dawarich.lan",
@@ -54,10 +67,32 @@ const CONFIGURED = {
   hasAccess: true,
 };
 
+const providerState = (kind: "none" | "dawarich") => ({
+  kind,
+  rev: kind === "none" ? 0 : 1,
+  status: "ok" as const,
+  choices: { none: true as const, travtrack: false, dawarich: true },
+});
+
+const HINT = "settings:locationProvider.dawarichHint.text";
+const USE = "settings:locationProvider.dawarichHint.use";
+
+async function saveConnection(): Promise<ReturnType<typeof userEvent.setup>> {
+  const user = userEvent.setup();
+  render(<DawarichConnectionCard />);
+  await waitFor(() => expect(getSettings).toHaveBeenCalled());
+  await user.type(screen.getByLabelText("trips:tours.dawarichSettings.apiKey"), "new-key");
+  await user.click(screen.getByRole("button", { name: "trips:tours.dawarichSettings.save" }));
+  return user;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
+  useLocationProviderStore.getState().reset();
   mockTranslateFn.mockImplementation((key: string) => key);
   getSettings.mockResolvedValue(CONFIGURED);
+  getProvider.mockResolvedValue(providerState("dawarich"));
+  setProvider.mockResolvedValue(providerState("dawarich"));
   updateSettings.mockResolvedValue(CONFIGURED);
   testConnection.mockResolvedValue({
     success: true,
@@ -279,5 +314,52 @@ describe("DawarichConnectionCard", () => {
     await waitFor(() =>
       expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ baseUrl: "" }))
     );
+  });
+
+  describe("offering Dawarich as the location source after a save", () => {
+    it("asks after a save while the provider is none, and switches on the button", async () => {
+      getProvider.mockResolvedValue(providerState("none"));
+      const user = await saveConnection();
+
+      expect(await screen.findByText(HINT)).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: USE }));
+
+      await waitFor(() => expect(setProvider).toHaveBeenCalledWith("dawarich"));
+      expect(
+        await screen.findByText("settings:locationProvider.dawarichHint.done")
+      ).toBeInTheDocument();
+      expect(screen.queryByText(HINT)).not.toBeInTheDocument();
+    });
+
+    it("does not ask when Dawarich already is the provider", async () => {
+      await saveConnection();
+      await waitFor(() => expect(getProvider).toHaveBeenCalled());
+      expect(screen.queryByText(HINT)).not.toBeInTheDocument();
+    });
+
+    it("does not ask before anything was saved", async () => {
+      getProvider.mockResolvedValue(providerState("none"));
+      render(<DawarichConnectionCard />);
+      await waitFor(() => expect(getSettings).toHaveBeenCalled());
+      expect(getProvider).not.toHaveBeenCalled();
+      expect(screen.queryByText(HINT)).not.toBeInTheDocument();
+    });
+
+    it("shows the mapped copy when the switch is refused with 409", async () => {
+      getProvider.mockResolvedValue(providerState("none"));
+      setProvider.mockRejectedValue({
+        response: {
+          status: 409,
+          data: { error: "Dawarich needs your own connection", code: "DAWARICH_NOT_CONFIGURED" },
+        },
+      });
+      const user = await saveConnection();
+      await user.click(await screen.findByRole("button", { name: USE }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "settings:locationProvider.errors.dawarichNotConfigured"
+      );
+      expect(screen.queryByText(/Dawarich needs your own connection/)).not.toBeInTheDocument();
+    });
   });
 });

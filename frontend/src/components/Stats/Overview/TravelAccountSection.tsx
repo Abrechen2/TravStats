@@ -44,7 +44,7 @@ export default function TravelAccountSection(): JSX.Element | null {
   // domain's nights out (forgejo#274 review I2); the legend and the help line
   // must not name it either.
   const railVisible = useDomainVisible("rail");
-  // Bus likewise (forgejo#263): its own beta switch, its own bucket.
+  // Bus likewise (forgejo#263): the user's bus domain, its own bucket.
   const busVisible = useDomainVisible("bus");
   const buckets = BUCKETS.filter(
     (b) => (b.key !== "railNights" || railVisible) && (b.key !== "busNights" || busVisible)

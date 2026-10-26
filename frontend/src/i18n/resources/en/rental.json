@@ -1,7 +1,6 @@
 {
   "title": "Rental cars",
   "subtitle": "Every rental with its station, period and car.",
-  "betaNote": "This area is in beta.",
   "add": "Add a rental",
   "search": "Provider, station, booking number …",
   "empty": "No rental cars yet.",

@@ -109,41 +109,6 @@ export const BETA_FEATURES = Object.freeze({
       "The owner and the tester have used roadtrips on real trips, the automatic classification of existing sections has been reviewed on the RC's copy of production, and the owner accepts the domain for release.",
     reason: "beta",
   }),
-  /**
-   * "Complete from OpenStreetMap" on a lodging's page: stars, website, the
-   * house's Wikidata item and a known chain, written only into empty fields.
-   * Also needs the instance's open data switch; the button asks both.
-   */
-  lodgingEnrichment: Object.freeze({
-    why: "Owner ruling 2026-09-24: the OpenStreetMap enrichment of hotels goes in behind the beta switch. It matches a house by its pin and its name within 150 m, and that match has not yet been checked against real lodgings — a wrong match would write a stranger's stars and website into the user's record.",
-    returnsWhen:
-      "The enrichment has been run over the owner's real lodgings on the RC's copy of production, its wrong matches counted and found acceptable, and the owner accepts it for release.",
-    reason: "beta",
-  }),
-
-  /**
-   * Car rentals (spec 2026-10-01-rental-domain-design). Like every domain
-   * switch here, gated through `config/domainBetaGates.ts`: this flag AND the
-   * user's own domain choice.
-   */
-  rentalDomain: Object.freeze({
-    why: "Car rentals (spec 2026-10-01-rental-domain-design) are built and have been in every 2.7.0 release candidate since rc.1; the Companion reads, imports and creates them too. What is missing is the owner's acceptance. Known gap: a rental document is read only by a template — Sixt's confirmation and invoice from the template repository, or one the user made in the workshop — and never by the AI model (by design: a parking booking looks the same), so any other provider is typed in by hand.",
-    returnsWhen:
-      "The owner explicitly takes rental out of beta. Packages being done is not that event.",
-    reason: "beta",
-  }),
-
-  ferryDomain: Object.freeze({
-    why: "Ferry crossings (forgejo#293) await acceptance with real tickets on RC.",
-    returnsWhen: "The owner accepts ferry crossings for release after RC verification.",
-    reason: "beta",
-  }),
-  busDomain: Object.freeze({
-    why: "Long-distance coach rides (spec 2026-10-07-bus-domain-design) are built and have been in every release candidate since 2.7.0-rc.11; the Companion records and syncs them too. What is missing is the owner's acceptance. Known gap: a coach ticket is read only by a bus template from the workshop or the template repository, never by the AI model, so a ticket no template knows is typed in by hand.",
-    returnsWhen:
-      "The owner explicitly takes bus out of beta. Packages being done is not that event.",
-    reason: "beta",
-  }),
 
   /**
    * TravPlan, the planning mode for a trip that has not happened yet (`/plan*`).
@@ -222,6 +187,23 @@ export const BETA_FEATURES = Object.freeze({
     returnsWhen:
       "The owner has shared a trip between two real servers on the RC (both directions, an edit on each side, a leave or a revoke, a restore or re-pin confirmed again) and accepts it for release (spec O10).",
     issue: "forgejo#301",
+    reason: "beta",
+  }),
+
+  /**
+   * TravTrack, the own location history (TravTrack plan 2026-10-24, phase 2):
+   * an optional area in which the Companion records positions into this
+   * server. Gated at the TravTrack card of `LocationProviderSection` (beside
+   * the server's `choices.travtrack`; a stored choice still shows its card
+   * with the warning) and at TravTrack's switch in Admin → Instanz. Like
+   * `travPlan`, the SERVER asks too: every `/travtrack/*` path but the
+   * capabilities refuses with `TRAVTRACK_DISABLED` while the beta switch is
+   * off, because a phone keeps sending long after anybody looks at the page.
+   */
+  travTrack: Object.freeze({
+    why: "TravTrack, the own location history, is new and only the Companion records into it; everyday recording has not passed the field test (plan C8).",
+    returnsWhen:
+      "The C8 field test on Android and iPhone passed and the owner accepts /track in a browser review.",
     reason: "beta",
   }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);

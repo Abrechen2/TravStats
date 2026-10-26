@@ -33,6 +33,8 @@ import flightBookingRoutes from "./flights/booking";
 import flightBulkEditRoutes from "./flights/bulkEdit";
 import upcomingRoutes from "./upcoming";
 import dawarichStayRoutes from "./dawarichStays";
+import locationSuggestionRoutes from "./locationSuggestions";
+import locationCapabilitiesRoutes from "./locationCapabilities";
 import photoJourneyRoutes from "./photoJourneys";
 import tripSuggestionRoutes from "./tripSuggestions";
 import flightLookupRoutes from "./flightLookup";
@@ -68,6 +70,7 @@ import parserTemplatesRoutes from "./parserTemplates";
 import trainingRoutes from "./training";
 import tripsRoutes from "./trips";
 import travplanRoutes from "./travplan";
+import travtrackRoutes from "./travtrack";
 import tripBookingRoutes from "./trips/tripBookings";
 import tripPackageRoutes from "./trips/tripPackage";
 import tripExchangeRoutes from "./trips/tripExchange";
@@ -84,6 +87,7 @@ import tourPointRoutes from "./trips/tourPoints";
 import tourKindRoutes from "./trips/tourKind";
 import roadtripRoutes from "./roadtrips";
 import tripExpenseRoutes from "./trips/tripExpenses";
+import tripPackingRoutes from "./trips/tripPacking";
 import tripRecordingRoutes from "./trips/tripRecording";
 import stravaRoutes from "./integrations/strava";
 import openDataRoutes from "./openData";
@@ -164,6 +168,7 @@ import documentRoutes from "./documents";
 import tripPhotoWindowRoutes from "./tripPhotoWindows";
 import syncRoutes from "./sync";
 import syncPreconditionRoutes from "./syncPreconditions";
+import dataQualityAfterCreateRoutes from "./dataQualityAfterCreate";
 
 export interface ApiMount {
   /** Mount path, always absolute and always under /api/v1. */
@@ -189,12 +194,27 @@ export const apiMounts: ApiMount[] = [
   // Trip sharing across servers (spec 2026-10-20): signed server-to-server messages, 404 when off.
   { id: "trip-share-peer", base: "/api/v1/trip-share-peer", router: tripSharePeerRoutes },
   { id: "travplan", base: "/api/v1", router: travplanRoutes },
+  // TravTrack, the own location history (TravTrack plan, phase 2): every path is
+  // `/travtrack/...`, each route carries its own authentication and gate tier.
+  { id: "travtrack", base: "/api/v1", router: travtrackRoutes },
   // OpenAPI spec + Swagger UI mounted FIRST so /api/v1/docs and
   // /api/v1/openapi.json don't fall through into authenticated routers.
   { id: "openapi", base: "/api/v1", router: openapiRoutes },
   // Public and unauthenticated, like the spec: the About section reads it before login.
   { id: "version", base: "/api/v1", router: versionRoutes },
   { id: "dawarichStays", base: "/api/v1/dawarich-stays", router: dawarichStayRoutes },
+  // What location history asks the user: country (E6) and journey (E7) questions.
+  {
+    id: "locationSuggestions",
+    base: "/api/v1/location-suggestions",
+    router: locationSuggestionRoutes,
+  },
+  // What the Companion should record (TravTrack plan S4); answers every session.
+  {
+    id: "locationCapabilities",
+    base: "/api/v1/location",
+    router: locationCapabilitiesRoutes,
+  },
   { id: "setup", base: "/api/v1/setup", router: setupRoutes },
   { id: "admin", base: "/api/v1/admin", router: adminRoutes },
   // Mounted BEFORE the generic /api/v1/auth routers so a future catch-all there
@@ -208,6 +228,10 @@ export const apiMounts: ApiMount[] = [
   // cruises, lodging, trips, tours, places; a request without a base version
   // passes through it untouched.
   { id: "syncPreconditions", base: "/api/v1", router: syncPreconditionRoutes },
+  // Queues the inbox checks after a flight, ride, cruise, lodging or stay is
+  // created (spec 2026-10-25 C3). Answers nothing — it listens for the
+  // create's response — so it sits before the routers it watches.
+  { id: "dataQualityAfterCreate", base: "/api/v1", router: dataQualityAfterCreateRoutes },
   // The incremental change feed, forgejo#141. Its only path is `/sync/...`.
   { id: "sync", base: "/api/v1", router: syncRoutes },
   // Kept originals (forgejo#116). At /api/v1 because the per-entry lists span
@@ -370,6 +394,9 @@ export const apiMounts: ApiMount[] = [
   // Expenses (forgejo#140) on a trip, a roadtrip or any section. Every path
   // ends in `/expenses` or `/expenses/:expenseId`, so they shadow nothing above.
   { id: "tripExpenses", base: "/api/v1", router: tripExpenseRoutes },
+  // A trip's packing list (Companion audit 2026-10-23). Its paths end in
+  // `/packing`, so they shadow nothing above.
+  { id: "tripPacking", base: "/api/v1", router: tripPackingRoutes },
   // Strava (2.7): the OAuth round trip, the activity list and the imports.
   // Its `/tours/...` paths end in `/strava`, so they shadow nothing above.
   { id: "strava", base: "/api/v1", router: stravaRoutes },
@@ -413,7 +440,7 @@ export const apiMounts: ApiMount[] = [
     router: railRoadtripConversionRouter,
   },
   { id: "rail", base: "/api/v1/rail", router: railRouter },
-  // Bus rides (spec 2026-10-07-bus-domain-design). Behind the beta switch in the UI only.
+  // Bus rides (spec 2026-10-07-bus-domain-design).
   // Mounts FIRST on its prefix: the bus router's '/:id' would answer it as a 404.
   {
     id: "bus.entrySuggestions",
@@ -424,8 +451,7 @@ export const apiMounts: ApiMount[] = [
   { id: "bus", base: "/api/v1/bus", router: busRouter },
   { id: "ferry.roadtrip", base: "/api/v1/ferry", router: ferryRoadtripRouter },
   { id: "ferry", base: "/api/v1/ferry", router: ferryRouter },
-  // Car rentals (spec 2026-10-01-rental-domain-design). Behind the beta switch in
-  // the UI only. Sub-routers mount FIRST: '/:id' would answer them as a 404.
+  // Car rentals (spec 2026-10-01-rental-domain-design). Sub-routers mount FIRST: '/:id' would answer them as a 404.
   { id: "rental.stations", base: "/api/v1/rentals/stations", router: rentalStationsRouter },
   { id: "rental.providers", base: "/api/v1/rentals/providers", router: rentalProvidersRouter },
   { id: "rental.import", base: "/api/v1/rentals/import", router: rentalImportRouter },

@@ -77,4 +77,29 @@ describe("enrichLodgingFromOsm — a save that lands while Overpass is asked", (
     expect([...result.filled].sort()).toEqual(["stars", "wikidataId"]);
     expect(result.referenceStored).toBe(false);
   });
+
+  it("tells the matcher the lodging's town and country, which never identify a house", async () => {
+    // OSM audit 2026-10-26: "Lestar Hotel Hanoi" took "Hanoi Grandeur Hotel"
+    // 41 m away, because the town was the only word the matcher was told about.
+    const lodging = await prisma.lodging.create({
+      data: {
+        userId,
+        type: "hotel",
+        name: "Lestar Hotel Hanoi",
+        lat: 21.03,
+        lon: 105.85,
+        city: "Hanoi",
+        country: "Vietnam",
+        isoCountryCode: "VN",
+      },
+    });
+    lookup.mockResolvedValueOnce(null);
+
+    await enrichLodgingFromOsm(userId, lodging.id);
+
+    const places = lookup.mock.calls.at(-1)?.[3] ?? [];
+    // City, the stored country text, and the country's English and German names.
+    expect(places).toEqual(expect.arrayContaining(["Hanoi", "Vietnam"]));
+    expect(places).toHaveLength(4);
+  });
 });

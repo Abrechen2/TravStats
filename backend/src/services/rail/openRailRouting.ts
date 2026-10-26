@@ -6,6 +6,7 @@ import { getInstanceSettings } from "../instanceSettingsService";
 import { simplifyDegrees } from "../schematicRouter";
 import logger from "../../utils/logger";
 import { railUserAgent } from "./lookup/railHttp";
+import type { RailTransitMode } from "../../shared/railCounting";
 import { densifyLine, isTracedShape, isValidLonLat, type LonLat } from "./railGeometryMath";
 
 /**
@@ -21,11 +22,47 @@ import { densifyLine, isTracedShape, isValidLonLat, type LonLat } from "./railGe
  */
 
 /**
- * The profile asked for. OpenRailRouting's default configuration and the
- * public instance both carry `all_tracks` (every standard, narrow and broad
- * gauge track); the admin test says so when an instance lacks it.
+ * The profile a train is routed with. OpenRailRouting's default configuration
+ * and the public instance both carry `all_tracks` (every standard, narrow and
+ * broad gauge track); the admin test says so when an instance lacks it.
  */
 export const RAIL_ROUTING_PROFILE = "all_tracks";
+
+/** A ride's `transitMode`; absent means a train. */
+export type RailRoutingMode = RailTransitMode;
+
+interface ModeRouting {
+  /** The profile asked for first, and the cache key's profile part. */
+  profile: string;
+  /** OpenRailRouting `railway_class` values a line of this mode may run on. */
+  classes: readonly string[];
+}
+
+/**
+ * Which tracks a ride of each mode may be drawn over (tester report
+ * 2026-10-25: a tram or U-Bahn ride routed over `all_tracks` came back over
+ * mainline track, or not at all). A tram or U-Bahn ride asks a profile of its
+ * own, which an admin adds to the instance's config.yml
+ * (docs/features/rail-routing.md); light rail belongs to both, as
+ * OpenRailRouting's own `tramtrain` model counts it.
+ */
+export const RAIL_MODE_ROUTING: Readonly<Record<RailRoutingMode, ModeRouting>> = {
+  // Narrow gauge is a train too (RhB, Harz): RAIL alone left those rides
+  // without a route. Light rail and tram stay out — the reason main restricted
+  // trains at all is that a plain all_tracks route can run over them.
+  rail: { profile: RAIL_ROUTING_PROFILE, classes: ["RAIL", "NARROW_GAUGE"] },
+  tram: { profile: "tram", classes: ["TRAM", "LIGHT_RAIL"] },
+  metro: { profile: "subway", classes: ["SUBWAY", "LIGHT_RAIL"] },
+};
+
+/** The request custom model that keeps a route on `classes` (non-CH only). */
+function classOnlyModel(classes: readonly string[]) {
+  const condition =
+    classes.length === 1
+      ? `railway_class != ${classes[0]}`
+      : `!(${classes.map((c) => `railway_class == ${c}`).join(" || ")})`;
+  return { priority: [{ if: condition, multiply_by: "0" }] };
+}
 
 /**
  * A save waits for this at most. The request is part of a user's save, so it
@@ -45,7 +82,12 @@ const SIMPLIFY_TOLERANCE_DEG = 0.0002;
  */
 const MAX_STORED_SEGMENT_KM = 10;
 
-export type RailRoutingFailure = "unavailable" | "noRoute";
+/**
+ * `modeUnsupported`: a tram or U-Bahn ride on an instance that has neither the
+ * mode's profile nor accepts the restricted fallback request — it cannot draw
+ * such a ride without putting it on the wrong tracks, so it draws none.
+ */
+export type RailRoutingFailure = "unavailable" | "noRoute" | "modeUnsupported";
 
 export type RailRoutingResult =
   { ok: true; line: LonLat[] } | { ok: false; reason: RailRoutingFailure };
@@ -63,11 +105,7 @@ const routeAnswerSchema = z.object({
         details: z.object({
           railway_class: z
             .array(
-              z.tuple([
-                z.number().int().nonnegative(),
-                z.number().int().nonnegative(),
-                z.literal("rail"),
-              ])
+              z.tuple([z.number().int().nonnegative(), z.number().int().nonnegative(), z.string()])
             )
             .min(1),
         }),
@@ -107,60 +145,139 @@ async function getJson(
   }
 }
 
-/**
- * The line over the tracks through `points` (the two stations, and any stop
- * between them in order). `noRoute` = the instance answered and knows no
- * connection (a station off its extract, or no tracks between); anything else
- * that is not a usable line is `unavailable`.
- */
-async function fetchRailLine(
+type RouteAnswer =
+  | { kind: "answer"; body: unknown }
+  | { kind: "refused"; status: number; message: string }
+  | { kind: "failed" };
+
+/** One POST /route; a 4xx carries GraphHopper's message for the caller to judge. */
+async function requestRoute(
   baseUrl: string,
-  points: readonly LonLat[]
-): Promise<RailRoutingResult> {
-  const signal = AbortSignal.timeout(RAIL_ROUTING_TIMEOUT_MS);
-  // Request the railway network from the start. An all_tracks success can
-  // otherwise include tram/subway tracks, not merely fail to connect.
+  body: Record<string, unknown>,
+  signal: AbortSignal
+): Promise<RouteAnswer> {
   const answer = await getJson(
     `${baseUrl}/route`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        profile: RAIL_ROUTING_PROFILE,
         // Stations can be underground or on bridges. GraphHopper's road-oriented
         // defaults otherwise snap Munich Airport to the tunnel portal, 750 m away.
-        // Keep the RAIL-only model and the 500 m snap validation below.
+        // Keep the class-restricted model and the 500 m snap validation below.
         snap_preventions: [],
-        points,
         points_encoded: false,
         instructions: false,
         calc_points: true,
         details: ["railway_class"],
-        "ch.disable": true,
-        custom_model: { priority: [{ if: "railway_class != RAIL", multiply_by: "0" }] },
+        ...body,
       }),
     },
     signal
   );
   if (answer.status === null) {
     logger.warn({ operation: "rail_routing_request", reason: "no_answer", error: answer.error });
-    return { ok: false, reason: "unavailable" };
+    return { kind: "failed" };
   }
-  // GraphHopper answers 400 for "Cannot find point" and "Connection between
-  // locations not found" — the instance works, the question has no answer.
-  if (answer.status === 400) {
-    logger.info({ operation: "rail_routing_request", reason: "no_route" });
-    return { ok: false, reason: "noRoute" };
+  if (answer.status >= 400 && answer.status < 500) {
+    const parsed = z.object({ message: z.string() }).safeParse(answer.body);
+    return {
+      kind: "refused",
+      status: answer.status,
+      message: parsed.success ? parsed.data.message : "",
+    };
   }
   if (answer.status < 200 || answer.status >= 300) {
     logger.warn({ operation: "rail_routing_request", status: answer.status });
-    return { ok: false, reason: "unavailable" };
+    return { kind: "failed" };
   }
-  const parsed = routeAnswerSchema.safeParse(answer.body);
+  return { kind: "answer", body: answer.body };
+}
+
+/**
+ * GraphHopper answers 400 both for "Cannot find point" / "Connection between
+ * locations not found" (the instance works, the question has no answer) and
+ * for a request it will not take (an unknown profile, a custom model on a
+ * CH-only instance). Only the first two are a missing route.
+ */
+const NO_ROUTE_MESSAGE = /connection between locations not found|cannot find point/i;
+const UNKNOWN_PROFILE_MESSAGE = /profile '[^']*' does not exist/i;
+
+/**
+ * The line over the tracks through `points` (the two stations, and any stop
+ * between them in order). `noRoute` = the instance answered and knows no
+ * connection (a station off its extract, or no tracks between); anything else
+ * that is not a usable line is `unavailable`.
+ *
+ * A train asks `all_tracks` restricted to RAIL and NARROW_GAUGE. A tram or U-Bahn ride asks its
+ * own profile; where the instance has none, `all_tracks` restricted to the
+ * mode's classes (a request custom model, which needs `ch.disable`). An
+ * instance that refuses that too is `modeUnsupported` — never a plain
+ * `all_tracks` route, which puts a tram on the mainline.
+ */
+async function fetchRailLine(
+  baseUrl: string,
+  points: readonly LonLat[],
+  mode: RailRoutingMode
+): Promise<RailRoutingResult> {
+  const routing = RAIL_MODE_ROUTING[mode];
+  // One deadline for the whole answer, fallback included: a save waits for it.
+  const signal = AbortSignal.timeout(RAIL_ROUTING_TIMEOUT_MS);
+  const restricted = {
+    profile: RAIL_ROUTING_PROFILE,
+    points,
+    "ch.disable": true,
+    custom_model: classOnlyModel(routing.classes),
+  };
+  let answer: RouteAnswer;
+  if (mode === "rail") {
+    answer = await requestRoute(baseUrl, restricted, signal);
+    if (answer.kind === "refused") {
+      if (answer.status !== 400) {
+        logger.warn({ operation: "rail_routing_request", status: answer.status });
+        return { ok: false, reason: "unavailable" };
+      }
+      logger.info({ operation: "rail_routing_request", reason: "no_route" });
+      return { ok: false, reason: "noRoute" };
+    }
+  } else {
+    answer = await requestRoute(baseUrl, { profile: routing.profile, points }, signal);
+    if (answer.kind === "refused" && UNKNOWN_PROFILE_MESSAGE.test(answer.message)) {
+      answer = await requestRoute(baseUrl, restricted, signal);
+      // Only GraphHopper's own 400 is a statement about what the instance can
+      // do; a 401/403/429 from it or a proxy is a router that is not answering
+      // now, and must not get a stored line dropped (route-again).
+      if (
+        answer.kind === "refused" &&
+        answer.status === 400 &&
+        !NO_ROUTE_MESSAGE.test(answer.message)
+      ) {
+        logger.info({ operation: "rail_routing_request", reason: "mode_unsupported", mode });
+        return { ok: false, reason: "modeUnsupported" };
+      }
+    }
+    if (answer.kind === "refused") {
+      if (NO_ROUTE_MESSAGE.test(answer.message)) return { ok: false, reason: "noRoute" };
+      logger.warn({ operation: "rail_routing_request", reason: "refused", mode });
+      return { ok: false, reason: "unavailable" };
+    }
+  }
+  if (answer.kind === "failed") return { ok: false, reason: "unavailable" };
+  return lineOf(answer.body, points, routing.classes);
+}
+
+/** A /route answer checked to be a usable line over `classes` only, through `points`. */
+function lineOf(
+  body: unknown,
+  points: readonly LonLat[],
+  classes: readonly string[]
+): RailRoutingResult {
+  const parsed = routeAnswerSchema.safeParse(body);
   if (!parsed.success) {
     logger.warn({ operation: "rail_routing_request", reason: "unexpected_shape" });
     return { ok: false, reason: "unavailable" };
   }
+  const allowed = new Set(classes.map((c) => c.toLowerCase()));
   const route = parsed.data.paths[0];
   const snapped = route.snapped_waypoints.coordinates;
   const raw = route.points.coordinates.map(([lon, lat]) => [lon, lat] as LonLat);
@@ -178,8 +295,8 @@ async function fetchRailLine(
   )
     return { ok: false, reason: "unavailable" };
   let covered = 0;
-  for (const [from, to] of route.details.railway_class) {
-    if (from !== covered || to <= from || to >= raw.length)
+  for (const [from, to, railwayClass] of route.details.railway_class) {
+    if (from !== covered || to <= from || to >= raw.length || !allowed.has(railwayClass))
       return { ok: false, reason: "unavailable" };
     covered = to;
   }
@@ -198,11 +315,14 @@ const inFlight = new Map<
 export async function routeRailLine(
   baseUrl: string,
   points: readonly LonLat[],
-  options: { refresh?: boolean } = {}
+  options: { refresh?: boolean; mode?: RailRoutingMode } = {}
 ): Promise<RailRoutingResult> {
   if (points.length < 2 || !points.every(isValidLonLat)) return { ok: false, reason: "noRoute" };
   baseUrl = baseUrl.replace(/\/+$/, "");
-  const key = railRouteCacheKey(baseUrl, RAIL_ROUTING_PROFILE, points);
+  const mode = options.mode ?? "rail";
+  // Keyed by the mode's profile: a tram never reuses a train's line between
+  // the same stations, and train entries keep the key they always had.
+  const key = railRouteCacheKey(baseUrl, RAIL_MODE_ROUTING[mode].profile, points);
   const existing = inFlight.get(key);
   if (existing) {
     if (!options.refresh || existing.refresh) return structuredClone(await existing.promise);
@@ -216,7 +336,7 @@ export async function routeRailLine(
     if (cached) return { ok: true, line: cached };
     const entry = inFlight.get(key);
     if (entry) entry.network = true;
-    const result = await fetchRailLine(baseUrl, points);
+    const result = await fetchRailLine(baseUrl, points, mode);
     if (result.ok) await railRouteCache.put(key, result.line);
     return result;
   })();
@@ -233,13 +353,34 @@ export async function routeRailLine(
 }
 
 export type RailRoutingProbe =
-  | { ok: true; profile: string; dataDate: string | null }
+  | {
+      ok: true;
+      profile: string;
+      dataDate: string | null;
+      /**
+       * Whether the instance carries the dedicated `tram` / `subway` profile.
+       * Without it such rides route only through the restricted fallback, on
+       * an instance that accepts it, and stay straight otherwise.
+       */
+      modeProfiles: { tram: boolean; subway: boolean };
+    }
   | { ok: false; code: "unreachable" | "notOpenRailRouting" | "profileMissing" };
 
 const infoSchema = z.object({
   profiles: z.array(z.object({ name: z.string() })),
   data_date: z.string().optional(),
 });
+
+/**
+ * GraphHopper reports the OSM extract's timestamp, and an extract without one
+ * as epoch 0 — which the test line showed as "1970-01-01". Neither that nor an
+ * unreadable value is a map date; null says "unknown".
+ */
+function knownDataDate(raw: string | undefined): string | null {
+  if (!raw) return null;
+  const ms = Date.parse(raw);
+  return Number.isFinite(ms) && ms > 0 ? raw : null;
+}
 
 /**
  * The admin's test button: does this URL answer like an OpenRailRouting with
@@ -252,8 +393,15 @@ export async function probeRailRouting(baseUrl: string): Promise<RailRoutingProb
   if (answer.status < 200 || answer.status >= 300) return { ok: false, code: "unreachable" };
   const parsed = infoSchema.safeParse(answer.body);
   if (!parsed.success) return { ok: false, code: "notOpenRailRouting" };
-  if (!parsed.data.profiles.some((p) => p.name === RAIL_ROUTING_PROFILE)) {
-    return { ok: false, code: "profileMissing" };
-  }
-  return { ok: true, profile: RAIL_ROUTING_PROFILE, dataDate: parsed.data.data_date ?? null };
+  const names = new Set(parsed.data.profiles.map((p) => p.name));
+  if (!names.has(RAIL_ROUTING_PROFILE)) return { ok: false, code: "profileMissing" };
+  return {
+    ok: true,
+    profile: RAIL_ROUTING_PROFILE,
+    dataDate: knownDataDate(parsed.data.data_date),
+    modeProfiles: {
+      tram: names.has(RAIL_MODE_ROUTING.tram.profile),
+      subway: names.has(RAIL_MODE_ROUTING.metro.profile),
+    },
+  };
 }

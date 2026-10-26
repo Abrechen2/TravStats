@@ -137,7 +137,14 @@
     "tools": "Werkzeuge",
     "destinations": "Ziele",
     "placeLists": "Ortslisten",
-    "main": "Hauptnavigation"
+    "main": "Hauptnavigation",
+    "menu": "Menü",
+    "areas": {
+      "label": "Bereich",
+      "stats": "Stats",
+      "plan": "Plan",
+      "track": "Track"
+    }
   },
   "welcome": "Willkommen, {{username}}!",
   "pendingUpdates": "Ausstehende Updates",

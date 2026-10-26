@@ -1,5 +1,6 @@
 import type {
   DataQualityFlag,
+  FindingAction,
   DataQualityFlagKind,
   DataQualityFlagStatus,
   DataQualityRunSummary,
@@ -17,6 +18,12 @@ import { api } from "./client";
  * `resolve` and `dismiss` are two endpoints because they are two answers, not
  * two spellings of "done" — see `types/dataQuality.ts`.
  */
+/** Every answer replies with the finding as it now stands; null once its record is gone. */
+export interface FindingAnswer {
+  success: boolean;
+  data?: DataQualityFlag | null;
+}
+
 export const dataQualityFlagsApi = {
   /** `status` defaults to `open` server-side, because an inbox is open questions. */
   getAll: async (filters?: {
@@ -30,15 +37,40 @@ export const dataQualityFlagsApi = {
     return data;
   },
 
-  /** "I have corrected the data." A re-run re-opens this if it did not stick. */
-  resolve: async (id: string): Promise<{ success: boolean }> => {
-    const { data } = await api.post<{ success: boolean }>(`/data-quality-flags/${id}/resolve`);
+  /**
+   * "I have corrected the data." A re-run re-opens this if it did not stick.
+   * With an `action` (one of the flag's `actions`), a kind-specific answer.
+   */
+  resolve: async (
+    id: string,
+    answer?: { action?: FindingAction; keptId?: string; revision?: number }
+  ): Promise<FindingAnswer> => {
+    const { data } = answer
+      ? await api.post<FindingAnswer>(`/data-quality-flags/${id}/resolve`, answer)
+      : await api.post<FindingAnswer>(`/data-quality-flags/${id}/resolve`);
     return data;
   },
 
-  /** "This is not wrong, stop asking." Never re-opened. */
-  dismiss: async (id: string): Promise<{ success: boolean }> => {
-    const { data } = await api.post<{ success: boolean }>(`/data-quality-flags/${id}/dismiss`);
+  /**
+   * "This is not wrong, stop asking." Never re-opened. With the `revision`
+   * the card showed, refused (`staleFinding`) if the finding moved since.
+   */
+  dismiss: async (id: string, revision?: number): Promise<FindingAnswer> => {
+    const url = `/data-quality-flags/${id}/dismiss`;
+    const { data } =
+      revision === undefined
+        ? await api.post<FindingAnswer>(url)
+        : await api.post<FindingAnswer>(url, { revision });
+    return data;
+  },
+
+  /** Take the last answer back while `undoUntil` lies ahead (spec C3). */
+  undo: async (id: string, revision?: number): Promise<FindingAnswer> => {
+    const url = `/data-quality-flags/${id}/undo`;
+    const { data } =
+      revision === undefined
+        ? await api.post<FindingAnswer>(url)
+        : await api.post<FindingAnswer>(url, { revision });
     return data;
   },
 

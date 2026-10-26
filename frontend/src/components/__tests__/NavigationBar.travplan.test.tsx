@@ -23,6 +23,18 @@ vi.mock("../../lib/api/sharing", () => ({
 vi.mock("../../lib/api/travplan", () => ({
   travplanApi: { capabilities: mocks.capabilities },
 }));
+// TravTrack asks its own capabilities; it has no part in this suite (closed).
+vi.mock("../../lib/api/travtrack", () => ({
+  travTrackApi: {
+    capabilities: vi.fn().mockResolvedValue({
+      version: 1,
+      offered: false,
+      enabled: false,
+      active: false,
+      hasData: false,
+    }),
+  },
+}));
 vi.mock("../UpdateBadge", () => ({ default: () => null }));
 vi.mock("../Nav/UserMenu", () => ({ default: () => null }));
 vi.mock("../Nav/MoreMenu", () => ({
@@ -88,11 +100,14 @@ describe("NavigationBar on a TravPlan route", () => {
     await waitFor(() => expect(mocks.capabilities).toHaveBeenCalled());
   });
 
-  it("offers TravPlan as one entry in Mehr while it is visible", async () => {
+  // Phase 5: the "Plan" word of the logo leads to TravPlan; "Mehr" no longer repeats it.
+  it("never offers TravPlan in Mehr, even while it is visible", async () => {
     renderAt("/dashboard");
-    await waitFor(() =>
-      expect(within(screen.getAllByTestId("more")[0]).getByText("/plan")).toBeInTheDocument()
-    );
+    await waitFor(() => expect(mocks.capabilities).toHaveBeenCalled());
+    await act(async () => undefined);
+    for (const more of screen.getAllByTestId("more")) {
+      expect(within(more).queryByText("/plan")).toBeNull();
+    }
   });
 
   it("drops the entry while the beta switch is off", async () => {
@@ -104,5 +119,21 @@ describe("NavigationBar on a TravPlan route", () => {
       expect(within(more).queryByText("/plan")).toBeNull();
     }
     expect(mocks.capabilities).not.toHaveBeenCalled();
+  });
+
+  it("D5: with several area words the inline destinations wait for lg, so 820 px stays one row", async () => {
+    renderAt("/dashboard");
+    await waitFor(() => expect(mocks.capabilities).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByTestId("primary-nav").className).toContain("lg:flex"));
+    expect(screen.getByTestId("primary-nav").className).not.toContain("md:flex");
+    expect(screen.getByTestId("nav-fold").className).toBe("lg:hidden");
+  });
+
+  it("D5: with Stats alone the row keeps its md breakpoint", async () => {
+    useSettingsStore.setState({ betaFeaturesEnabled: false });
+    renderAt("/dashboard");
+    await act(async () => undefined);
+    expect(screen.getByTestId("primary-nav").className).toContain("md:flex");
+    expect(screen.getByTestId("nav-fold").className).toBe("md:hidden");
   });
 });

@@ -154,21 +154,9 @@
             "name": "Roadtrips and tours",
             "what": "The “Roadtrips” domain (multi-day trips with stations at your stays) and all tours: the tours page and editor, the tour tab on the dashboard and on a trip, the tours on the overview map, and the routing provider and Strava cards."
           },
-          "lodgingEnrichment": {
-            "name": "Complete lodgings from OpenStreetMap",
-            "what": "The “Complete from OpenStreetMap” button on a lodging’s page: it writes stars, website, chain and the Wikipedia link into empty fields. Also needs the open data services switch."
-          },
-          "rentalDomain": {
-            "name": "Rental cars",
-            "what": "The Rental cars area: a logbook for car rentals with pickup and return in station local time, car group, price and the kilometres from the final invoice."
-          },
           "travPlan": {
             "name": "TravPlan (alpha)",
             "what": "The planning mode for a trip still ahead: day plan, ideas, booking import, transfers, packing list, budget and the handover to the travel log. Alpha experiment: may still change fundamentally."
-          },
-          "busDomain": {
-            "name": "Bus",
-            "what": "The Bus area: a logbook for coach, intercity and shuttle rides with departure and arrival in the terminal's local time, line, seat and price. Not city transit."
           },
           "cruiseTracks": {
             "name": "Recorded tracks on cruises",
@@ -177,10 +165,6 @@
           "flightTrackUpload": {
             "name": "Recorded flight tracks",
             "what": "Upload, replace or remove a flight recording as a file (GPX, KML, KMZ, TCX, FIT or Flightradar24’s CSV file) on a flight’s page. The map and the globe then draw the flight along the recording instead of the great circle; the flight page sets the measured distance against the great circle."
-          },
-          "ferryDomain": {
-            "name": "Ferries",
-            "what": "Crossings with ports, local times, vehicle details, tickets and roadtrip links."
           },
           "comparison": {
             "name": "Friend comparisons",
@@ -197,6 +181,10 @@
           "federatedTripSharing": {
             "name": "Trip sharing across servers",
             "what": "Connect with companions on other TravStats servers by invitation code, under Settings → Trips; it has its own switch under server connections as well. No trip crosses yet. With the switch off, this server does not answer other servers for it at all."
+          },
+          "travTrack": {
+            "name": "TravTrack (own location history)",
+            "what": "An own location history on this server: the Companion app records positions, flights and trips included, with privacy zones and delete by time span. Also needs the TravTrack switch under Instance."
           }
         }
       },
@@ -1151,6 +1139,39 @@
       "COMPARISON_CONNECTION_FILE_KEY": "The key in the file is not an Ed25519 public key.",
       "COMPARISON_CONNECTION_FILE_FINGERPRINT": "The fingerprint in the file does not match its key. The file is damaged or altered – ask for it again.",
       "COMPARISON_CONNECTION_FILE_SELF": "This is this server's own connection file. Import the other server's file."
+    },
+    "checklist": {
+      "title": "Setup: share trips with other servers",
+      "done": "Done",
+      "open": "Open",
+      "fix": "Go there",
+      "copyOrigin": "Copy address",
+      "copyFingerprint": "Copy fingerprint",
+      "copyFailed": "Copying failed. Please select it by hand.",
+      "identity": {
+        "title": "Public https address without a port, and a server key",
+        "noOrigin": "This server's public address is missing, e.g. https://travstats.example.org.",
+        "noKey": "The server key is missing. Generate it below.",
+        "federationOff": "Server connections are switched off. Switch them on below.",
+        "invalidOrigin": "The address is not accepted: it must start with https:// and have no port and no path."
+      },
+      "switch": {
+        "title": "The switch \"Share trips with other servers\" is on",
+        "off": "The switch is off. While it is off, nobody reaches this server for shared trips.",
+        "afterIdentity": "Possible once step 1 is done."
+      },
+      "switchOn": "Switch on",
+      "peers": {
+        "title": "At least one other server is admitted and reachable"
+      },
+      "peersHint": "The other server's admin must do the same on their side; compare your fingerprints by phone or chat while you do.",
+      "peerReached": "Last reached by ping: {{date}}",
+      "peerUnreached": "Never reached by ping yet",
+      "peerSuspended": "Suspended",
+      "ping": "Send ping",
+      "addPeer": "Add a server",
+      "usersTitle": "Then: how users share",
+      "users": "On a trip, under \"Share\", create an invitation code; it is valid for 72 hours and works once. The other person redeems it on their own server under Settings → Share trips."
     }
   },
   "importMode": {
@@ -1249,7 +1270,9 @@
       "airportsMasterData": "Airports, master data, IATA",
       "shipsMasterData": "Ships, master data, IMO",
       "portsMasterData": "Ports, master data, UN/LOCODE",
-      "lodgingChainsMasterData": "Hotel chains, chains, master data, hotels, lodging, merge"
+      "lodgingChainsMasterData": "Hotel chains, chains, master data, hotels, lodging, merge",
+      "travTrack": "TravTrack, location history, location, recording, Companion",
+      "travPlan": "TravPlan, planning, trip planning, planning mode, plan"
     },
     "expertKeywords": {
       "instance": "Home network address, LAN, passkey, rpId, origins, beta switch",
@@ -1306,6 +1329,30 @@
       "mergeIntoItself": "A chain cannot be merged into itself.",
       "invalidInput": "An input is invalid — the brand colour as #rrggbb.",
       "unknown": "That did not work."
+    }
+  },
+  "travTrack": {
+    "title": "TravTrack",
+    "description": "The own location history: the Companion app records positions on this server. Switching it off deletes nothing — accounts holding data keep their summary, export and delete.",
+    "needsBeta": "TravTrack is a beta feature. Switch on this instance's beta features first.",
+    "switch": "Offer TravTrack on this server",
+    "switchSub": "Accounts can then choose TravTrack as their location source.",
+    "errors": {
+      "loadFailed": "The TravTrack switch could not be loaded.",
+      "saveFailed": "The TravTrack switch could not be saved.",
+      "disabled": "TravTrack is switched off on this server. Switch on the beta features first."
+    }
+  },
+  "travPlan": {
+    "title": "TravPlan",
+    "description": "The planning mode: plan trips ahead and compare them on the way. Switching it off deletes no plans — they stay stored and reappear once TravPlan is switched on.",
+    "switch": "Offer TravPlan on this server",
+    "switchSub": "Every account then sees the planning mode in the navigation.",
+    "moreLink": "Daily limits for AI and weather in the TravPlan configuration",
+    "errors": {
+      "loadFailed": "The TravPlan switch could not be loaded.",
+      "saveFailed": "The TravPlan switch could not be saved.",
+      "disabled": "TravPlan is switched off on this server. Switch on the beta features first."
     }
   }
 }

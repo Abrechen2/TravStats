@@ -1,0 +1,106 @@
+import { z } from "zod";
+
+import {
+  flightEntryTrack,
+  TRACK_ORIGINS,
+  type EntryTrackDevice,
+  type TrackOrigin,
+} from "../../services/locationProvider/entryTrack";
+import type { FlightWindowColumns } from "../../services/tripRecording/bounds";
+import type { ZoneCircle } from "../../services/travtrack/classify";
+import { viewableFlightTrack } from "../../services/travtrack/flightTrackView";
+import { privacyCirclesFor } from "../../services/travtrack/privacyCircles";
+import { zoneSafeFlightColumns } from "../../services/travtrack/providerFlightColumns";
+import { travTrackBreakSet } from "../../services/travtrack/readSafe";
+import { extentOf } from "../../utils/extrema";
+import type { RecordingBreak } from "../../services/tripRecording/segments";
+
+/**
+ * Where `GET /flights/:id/track` takes its line from (TravTrack plan T5): the
+ * stored recording, or — without one, or on `?source=` — TravTrack's or
+ * Dawarich's points for the flight, run through the SAME pipeline a phone's
+ * upload goes through (jitter out, holes marked, measured, simplified). The
+ * answer keeps the `track` shape and says where it came from.
+ *
+ * A flight is one aircraft's path, so of several phones the one with the most
+ * fixes draws it. Every line, whatever its origin, leaves through `privacyCut`.
+ */
+
+export const trackSourceQuerySchema = z.object({
+  source: z.enum(TRACK_ORIGINS).optional().describe("Show this source explicitly"),
+});
+
+/** The track shape from provider points, or null when they make no line. */
+function trackOf(
+  flightId: string,
+  origin: Exclude<TrackOrigin, "travstats">,
+  device: EntryTrackDevice | undefined,
+  circles: readonly ZoneCircle[],
+  breaks: readonly RecordingBreak[]
+) {
+  if (!device || device.points.length < 2) return null;
+  // Cut on the fixes, before anything is measured (Codex review of T5).
+  const columns = zoneSafeFlightColumns(
+    device.points.map((p) => ({
+      t: p.atMs,
+      lat: p.lat,
+      lon: p.lon,
+      ...(p.altitudeM !== null ? { alt: p.altitudeM } : {}),
+      ...(p.accuracyM !== null ? { accuracy: p.accuracyM } : {}),
+    })),
+    circles,
+    breaks
+  );
+  if (!columns) return null;
+  return {
+    id: flightId,
+    flightId,
+    source: origin,
+    uploadId: "",
+    deviceId: device.deviceId,
+    startedAt: columns.startedAt,
+    endedAt: columns.endedAt,
+    pointCount: columns.pointCount,
+    jitterDropped: columns.jitterDropped,
+    distanceKm: columns.distanceKm,
+    geometry: columns.geometry as unknown,
+    segmentStarts: columns.segmentStarts as unknown,
+    cumulativeKm: columns.cumulativeKm as unknown,
+    elevations: columns.elevations as unknown,
+    createdAt: columns.endedAt,
+    updatedAt: columns.endedAt,
+  };
+}
+
+export type ProviderFlightTrack = NonNullable<ReturnType<typeof trackOf>>;
+
+async function travTrackBreaksOf(userId: string, device: EntryTrackDevice) {
+  // Iteratively: a long recording spread into Math.min/max overflows the call.
+  const span = extentOf(device.points.map((p) => p.atMs));
+  if (!span) return [];
+  const set = await travTrackBreakSet(userId, { fromMs: span.min, untilMs: span.max + 1 });
+  return set(device.deviceId);
+}
+
+export async function providerFlightTrack(
+  userId: string,
+  flight: FlightWindowColumns & { id: string },
+  source: TrackOrigin | undefined
+) {
+  const entry = await flightEntryTrack(userId, flight, { source });
+  const device = [...entry.devices].sort((a, b) => b.points.length - a.points.length)[0];
+  const built =
+    (entry.origin === "travtrack" || entry.origin === "dawarich") && device
+      ? trackOf(
+          flight.id,
+          entry.origin,
+          device,
+          await privacyCirclesFor(userId, device.points[0]?.atMs ?? 0),
+          // TravTrack's own deleted spans and reported pauses break its line;
+          // they say nothing about another provider's history.
+          entry.origin === "travtrack" ? await travTrackBreaksOf(userId, device) : []
+        )
+      : null;
+  const track = built ? await viewableFlightTrack(userId, built) : null;
+  return { entry, track };
+}

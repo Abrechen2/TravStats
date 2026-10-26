@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import type { Prisma } from "../../prisma";
 import { toInstant } from "../../shared/time/instant";
 import { fromDbDate, toDbDate } from "../../shared/time/localDate";
 import { profileZoneOf } from "../../shared/time/profileZone";
@@ -69,15 +70,28 @@ export async function tripSpanInstants(
   userId: string,
   trip: TripTimeColumns
 ): Promise<Pick<TripRecordingBounds, "fromMs" | "untilMs" | "zone"> | null> {
+  const profile = trip.startZone && trip.endZone ? "UTC" : (await profileZoneOf(userId)).zone;
+  return tripSpanInstantsIn(trip, profile);
+}
+
+/**
+ * The trip's span as instants with `profileZone` answering for a missing trip
+ * zone — for a span recorded in the past, read in the profile zone in force
+ * then, not today's (TravTrack T7). Null when the trip has no first or no
+ * last day.
+ */
+export function tripSpanInstantsIn(
+  trip: TripTimeColumns,
+  profileZone: string
+): Pick<TripRecordingBounds, "fromMs" | "untilMs" | "zone"> | null {
   const span = tripDaySpan(trip);
   if (!span) return null;
-  const profile = trip.startZone && trip.endZone ? null : (await profileZoneOf(userId)).zone;
-  const startZone = trip.startZone ?? profile ?? "UTC";
-  const endZone = trip.endZone ?? profile ?? "UTC";
+  const startZone = trip.startZone ?? profileZone;
+  const endZone = trip.endZone ?? profileZone;
   return {
     fromMs: midnight(span.start, startZone),
     untilMs: midnight(nextDay(span.end), endZone),
-    zone: trip.startZone ?? trip.endZone ?? profile ?? "UTC",
+    zone: trip.startZone ?? trip.endZone ?? profileZone,
   };
 }
 
@@ -90,53 +104,67 @@ export async function tripSpanInstants(
 const minuteInstant = (value: TimeValue | null): Date | null =>
   value && value.precision === "minute" ? new Date(value.utc) : null;
 
+/** The columns a flight's recorder window is placed by. */
+export const FLIGHT_WINDOW_SELECT = {
+  departureTime: true,
+  arrivalTime: true,
+  depTimeSemantics: true,
+  arrTimeSemantics: true,
+  depTimezone: true,
+  arrTimezone: true,
+  depPrecision: true,
+  arrPrecision: true,
+  actualDeparture: true,
+  actualArrival: true,
+  runwayDepartureTime: true,
+  runwayArrivalTime: true,
+  onlineCheckInOpensAt: true,
+  onlineCheckInZone: true,
+  depIata: true,
+  depIcao: true,
+  arrIata: true,
+  arrIcao: true,
+} as const;
+
+export type FlightWindowColumns = Prisma.FlightGetPayload<{ select: typeof FLIGHT_WINDOW_SELECT }>;
+
 /**
- * The recorder windows of the trip's flights; a cancelled flight armed
- * nothing, and neither does one without a real clock on either end. The
- * clocks are read through `flightTimes()`, the project's one reader of a
- * flight's times (ADR 0002).
+ * One flight's recorder window, or null when it armed none — no real clock
+ * on either end. The clocks are read through `flightTimes()`, the project's
+ * one reader of a flight's times (ADR 0002).
  */
+export async function flightRecorderWindow(
+  f: FlightWindowColumns
+): Promise<[number, number] | null> {
+  const [dep, arr] = await Promise.all([
+    getAirportTimezone(f.depIata ?? f.depIcao),
+    getAirportTimezone(f.arrIata ?? f.arrIcao),
+  ]);
+  const times = flightTimes(f, { dep, arr });
+  return recorderWindow({
+    departure: minuteInstant(times.departure),
+    arrival: minuteInstant(times.arrival),
+  });
+}
+
+/** The recorder windows of these flights; those that armed nothing are left out. */
+export async function flightRecorderWindows(
+  flights: readonly FlightWindowColumns[]
+): Promise<Array<[number, number]>> {
+  const windows = await Promise.all(flights.map(flightRecorderWindow));
+  return windows.filter((w): w is [number, number] => w !== null);
+}
+
+/** The recorder windows of the trip's flights; a cancelled flight armed nothing. */
 export async function tripFlightWindows(
   userId: string,
   tripId: string
 ): Promise<Array<[number, number]>> {
   const flights = await prisma.flight.findMany({
     where: { tripId, userId, status: { not: "cancelled" } },
-    select: {
-      departureTime: true,
-      arrivalTime: true,
-      depTimeSemantics: true,
-      arrTimeSemantics: true,
-      depTimezone: true,
-      arrTimezone: true,
-      depPrecision: true,
-      arrPrecision: true,
-      actualDeparture: true,
-      actualArrival: true,
-      runwayDepartureTime: true,
-      runwayArrivalTime: true,
-      onlineCheckInOpensAt: true,
-      onlineCheckInZone: true,
-      depIata: true,
-      depIcao: true,
-      arrIata: true,
-      arrIcao: true,
-    },
+    select: FLIGHT_WINDOW_SELECT,
   });
-  const windows = await Promise.all(
-    flights.map(async (f) => {
-      const [dep, arr] = await Promise.all([
-        getAirportTimezone(f.depIata ?? f.depIcao),
-        getAirportTimezone(f.arrIata ?? f.arrIcao),
-      ]);
-      const times = flightTimes(f, { dep, arr });
-      return recorderWindow({
-        departure: minuteInstant(times.departure),
-        arrival: minuteInstant(times.arrival),
-      });
-    })
-  );
-  return windows.filter((w): w is [number, number] => w !== null);
+  return flightRecorderWindows(flights);
 }
 
 export async function tripRecordingBounds(

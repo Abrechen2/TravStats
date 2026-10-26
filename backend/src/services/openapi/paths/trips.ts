@@ -478,7 +478,9 @@ registry.registerPath({
     "where it carries them (forgejo#192). The optional text fields of the same names " +
     "(companion#59) fill only what the file's EXIF did not say — EXIF wins — and are " +
     "accepted with exactly ONE file; beside several files, or with an offset-less " +
-    "`takenAt`, the request is a 400 and nothing is stored.",
+    "`takenAt`, the request is a 400 and nothing is stored. With `clientRef` (one file only) a " +
+    "resend of the same photo answers 200 with the photo the first send made; the same key " +
+    "with another photo is 409 `CLIENT_REF_REUSED`, a deleted one 410 `CLIENT_REF_TARGET_GONE`.",
   tags: ["Trips"],
   request: {
     params: tripId,
@@ -487,12 +489,22 @@ registry.registerPath({
         "multipart/form-data": {
           schema: tripPhotoUploadFieldsSchema.merge(captureFieldsSchema).extend({
             photos: z.array(z.string().openapi({ format: "binary" })),
+            clientRef: z
+              .string()
+              .optional()
+              .describe("The client's key for this upload (one file)"),
           }),
         },
       },
     },
   },
   responses: {
+    200: {
+      description: "A resend with the same clientRef: the photo the first send made",
+      content: {
+        "application/json": { schema: z.object({ photos: z.array(tripPhotoResponse) }) },
+      },
+    },
     201: {
       description: "Uploaded",
       content: {

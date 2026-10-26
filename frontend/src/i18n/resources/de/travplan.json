@@ -28,7 +28,8 @@
     "ai": "Planungshilfe",
     "packing": "Vorbereitung",
     "budget": "Budget & Aufgaben",
-    "handover": "Reisebereit"
+    "handover": "Reisebereit",
+    "actual": "Plan & Wirklichkeit"
   },
   "fields": {
     "name": "Reisename",
@@ -139,7 +140,8 @@
     "PLAN_INVALID_NIGHT": "Diese Übernachtungsart passt nicht zur Anreise.",
     "PLAN_SHAPE_IN_USE": "Der Plan hat Stationen; entferne sie, bevor er wieder ein Ziel-Plan wird.",
     "PLAN_STAGE_CHANGED": "Die Etappe wurde inzwischen geändert. Bitte die Strecke neu berechnen.",
-    "PLAN_VARIANT_LIMIT": "Mehr als drei Varianten sind nicht möglich."
+    "PLAN_VARIANT_LIMIT": "Mehr als drei Varianten sind nicht möglich.",
+    "RATE_LIMITED": "Zu viele Vergleiche in kurzer Zeit. Bitte in einer Minute erneut versuchen."
   },
   "enabled": "TravPlan auf diesem Server aktivieren",
   "config": "TravPlan-Einstellungen",
@@ -262,5 +264,49 @@
   "excludeBooking": "Aus dem Reiseplan nehmen",
   "restoreBooking": "Wieder im Reiseplan verwenden",
   "knownTotal": "Bisher bekannte Kosten",
-  "unknownValue": "Noch unbekannt"
+  "unknownValue": "Noch unbekannt",
+  "actual": {
+    "intro": "Hier steht dein Plan neben dem, was deine Aufzeichnung und deine Unterkünfte über die Reise sagen. Der Plan wird dabei nicht verändert.",
+    "noRoute": "Dieser Plan hat keine Route mit Stationen",
+    "noRouteHint": "Plan und Wirklichkeit lassen sich nur für eine Route mit Stationen vergleichen.",
+    "failed": "Ich konnte den Vergleich gerade nicht laden",
+    "noTrack": "Für diese Reise gibt es keine Aufzeichnung. Ohne Spur bleibt jede Station offen – nichts wird als ausgelassen gezählt.",
+    "truncated": "Die Spur ist unvollständig: Die Quelle hielt mehr Punkte, als gelesen wurden. Keine Station wird deshalb als ausgelassen gewertet.",
+    "unreachable": "Die Standortquelle war nicht erreichbar. Der Vergleich zeigt nur, was ohne sie bekannt ist.",
+    "origin": {
+      "travstats": "Quelle: TravStats-Aufzeichnung",
+      "travtrack": "Quelle: TravTrack",
+      "dawarich": "Quelle: Dawarich"
+    },
+    "sketchLabel": "Skizze: geplante Route und tatsächliche Spur",
+    "sketchLegend": "Gestrichelt: geplante Route. Durchgezogen: tatsächliche Spur.",
+    "stations": "Stationen",
+    "planned": "Geplant",
+    "there": "Dort",
+    "later_one": "{{count}} Tag später",
+    "later_other": "{{count}} Tage später",
+    "earlier_one": "{{count}} Tag früher",
+    "earlier_other": "{{count}} Tage früher",
+    "status": {
+      "visited": "Besucht",
+      "shifted": "Verschoben",
+      "skipped": "Ausgelassen",
+      "unknown": "Unbekannt"
+    },
+    "stages": "Etappen",
+    "plannedKm": "Geplant {{km}} km",
+    "actualKm": "Gefahren {{km}} km",
+    "actualKmUnknown": "Gefahrene Strecke unbekannt",
+    "unplanned": "Nicht geplante Aufenthalte",
+    "stayKind": {
+      "lodging": "Unterkunft",
+      "place": "Ort"
+    },
+    "readOnly": "Nur ein Vergleich: Nichts hier ändert deinen Plan.",
+    "refresh": "Neu laden"
+  },
+  "menu": {
+    "plans": "Pläne",
+    "config": "Einstellungen"
+  }
 }

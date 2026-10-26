@@ -113,7 +113,9 @@
   "unconfirmed": {
     "title": "Unconfirmed location days",
     "explanation": "These Dawarich locations do not prove ground presence. They may come from overflights or inaccurate positions and do not add to country counts or days present. Confirmed place visits and travel records are counted independently.",
-    "observation": "Dawarich · Location days: {{days}} · Points: {{points}}"
+    "explanationLocation": "These locations from your location history do not prove ground presence. They may come from overflights or inaccurate positions and do not add to country counts or days present. Confirmed place visits and travel records are counted independently.",
+    "observation": "Dawarich · Location days: {{days}} · Points: {{points}}",
+    "observationTravTrack": "TravTrack · Location days: {{days}} · Points: {{points}}"
   },
   "countingRule": "Ground presence includes connections and transit. Visits require a recorded stay beyond transit locations or an identifiable return flight chain. Nights and location points alone do not prove a visit.",
   "overrides": {

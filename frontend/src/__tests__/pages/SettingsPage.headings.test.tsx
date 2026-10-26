@@ -90,6 +90,19 @@ vi.mock("@/lib/api/notifications", async (importOriginal) => {
     },
   };
 });
+// The location source (TravTrack plan S5) asks the server on mount.
+vi.mock("@/lib/api/locationProvider", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/locationProvider")>()),
+  locationProviderApi: {
+    get: vi.fn().mockResolvedValue({
+      kind: "none",
+      rev: 0,
+      status: "ok",
+      choices: { none: true, travtrack: false, dawarich: false },
+    }),
+    set: vi.fn(),
+  },
+}));
 vi.mock("@/lib/api/immich", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/immich")>();
   return {

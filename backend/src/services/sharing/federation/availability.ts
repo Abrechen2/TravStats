@@ -27,3 +27,15 @@ export async function tripFederationAvailability(): Promise<TripFederationAvaila
     throw error;
   }
 }
+
+/**
+ * Whether any server is admitted: pinned, not suspended, and reached by a ping (spec §10). Not a
+ * gate — a code can be issued without one — but the setup checklist's third step, and the reason
+ * "Teilen" names when nobody on another server could redeem a code.
+ */
+export async function hasAdmittedPeer(): Promise<boolean> {
+  const admitted = await prisma.comparisonPeer.count({
+    where: { enabled: true, verifiedAt: { not: null } },
+  });
+  return admitted > 0;
+}

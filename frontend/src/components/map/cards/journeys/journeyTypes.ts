@@ -10,8 +10,8 @@
 import type { Rgb } from "../../../../lib/domainColor";
 import type { TimeValue } from "../../../../shared/time";
 
-/** The domains whose journeys run between two named places. */
-export type JourneyDomain = "flight" | "rail" | "bus" | "ferry" | "rental";
+/** The domains whose journeys run between two named places (a cruise: one leg, port to port). */
+export type JourneyDomain = "flight" | "rail" | "bus" | "ferry" | "rental" | "cruise";
 
 /** One end of a journey: a station, terminal, port, rental branch or airport. */
 export interface JourneyEnd {

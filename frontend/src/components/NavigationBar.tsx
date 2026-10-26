@@ -9,17 +9,33 @@ import { sharingApi } from "../lib/api/sharing";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
 import DiagnosticExportModal from "./DiagnosticExportModal";
-import { LogoMark, LogoWordmark } from "./Brand/Logo";
 import UpdateBadge from "./UpdateBadge";
 import NavDropdown from "./Nav/NavDropdown";
 import MoreMenu from "./Nav/MoreMenu";
 import UserMenu from "./Nav/UserMenu";
 import { Icon } from "./ui/Icon";
 import { useSettingsStore } from "../store/settingsStore";
-import { useNavItems, isPathActive, type NavLeaf } from "./Nav/useNavItems";
+import {
+  useNavItems,
+  isLeafActive,
+  isPathActive,
+  type NavLeaf,
+  type NavNode,
+} from "./Nav/useNavItems";
+import AreaLogo from "./Nav/AreaLogo";
+import { effectiveArea, planMenu, trackMenu, type AreaId } from "./Nav/areas";
+import { areaColor } from "./ui/tokens";
 
-function PrimaryLink({ node, pathname }: { node: NavLeaf; pathname: string }): JSX.Element {
-  const active = isPathActive(node.path, pathname);
+function PrimaryLink({
+  node,
+  pathname,
+  area,
+}: {
+  node: NavLeaf;
+  pathname: string;
+  area: AreaId;
+}): JSX.Element {
+  const active = isLeafActive(node, pathname);
   return (
     <Link
       to={node.path}
@@ -29,8 +45,9 @@ function PrimaryLink({ node, pathname }: { node: NavLeaf; pathname: string }): J
         height: "var(--ts-size-web-header)",
         fontWeight: active ? 700 : 500,
         color: active ? "var(--ts-text-bright)" : "var(--ts-muted)",
-        // The round-4 marker: an accent bar on the header's bottom edge.
-        boxShadow: `inset 0 -2px 0 ${active ? "var(--ts-accent)" : "transparent"}`,
+        // The round-4 marker, in the area's colour since phase 5: a bar on the
+        // header's bottom edge.
+        boxShadow: `inset 0 -2px 0 ${active ? areaColor(area) : "transparent"}`,
         borderRadius: 0,
       }}
     >
@@ -44,13 +61,20 @@ function PrimaryLink({ node, pathname }: { node: NavLeaf; pathname: string }): J
  *
  * Wordmark and, beside it, the four primary destinations and "Mehr"; the
  * Posteingang icon and the account menu right. Below `md` the destinations
- * fold into "Mehr" as a first section — the phone row keeps logo, Mehr, inbox
+ * fold into "Mehr" as a first section (below `lg` once the logo carries area words) — the phone row keeps logo, Mehr, inbox
  * and avatar, and nothing scrolls sideways.
  *
  * Gone from the row: the Bug button and the Support chip (both in the account
  * menu now) and the System chip (Einstellungen behind the avatar, Posteingang
  * and Admin under Mehr › Werkzeuge). The hamburger drawer went with them; it
  * duplicated the same entries in a second layout that had to be kept in step.
+ *
+ * Phase 5 of the TravTrack plan (header variant B): where TravPlan or
+ * TravTrack is offered, the logo spells the areas — "Trav" + Stats · Plan ·
+ * Track — and a divider leads into the ACTIVE area's menu. The area follows
+ * the route (`effectiveArea`). Stats keeps the model above; Plan and Track
+ * show their own entries, and on a phone those fold into a "Menü" button the
+ * way Stats folds into "Mehr". Still one row: it wraps, it never adds a second.
  */
 export default function NavigationBar(): JSX.Element {
   const { user, logout } = useAuthStore();
@@ -59,7 +83,7 @@ export default function NavigationBar(): JSX.Element {
   const profilePicture = useSettingsStore((state) => state.profile.profilePicture);
   const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useTranslation(["dashboard", "common", "dataQuality"]);
+  const { t } = useTranslation(["dashboard", "common", "dataQuality", "track", "travplan"]);
   // Four sources, one badge — the Posteingang is one page (see useNavItems).
   const [pendingUpdatesCount, setPendingUpdatesCount] = useState(0);
   const [openFlagCount, setOpenFlagCount] = useState(0);
@@ -110,10 +134,24 @@ export default function NavigationBar(): JSX.Element {
   };
 
   const inboxCount = pendingUpdatesCount + openFlagCount + tripSuggestionCount + sharingCount;
-  const { primary, more } = useNavItems();
+  const { primary, more, areas } = useNavItems();
+  const area = effectiveArea(location.pathname, areas);
+  // Stats keeps the round-4 model; Plan and Track show their own menu and no
+  // "Mehr" — the way back to the rest is the Stats word in the logo.
+  const areaItems: NavLeaf[] | null =
+    area === "track" ? trackMenu(t) : area === "plan" ? planMenu(t, isAdmin) : null;
+  const row: NavNode[] = areaItems ?? primary;
+  const areaTitle = area === "track" ? t("track:title") : t("travplan:title");
   const inboxActive = isPathActive("/pending-updates", location.pathname);
   const inboxLabel =
     inboxCount > 0 ? `${t("dataQuality:inbox.nav")} (${inboxCount})` : t("dataQuality:inbox.nav");
+
+  // The area words make the logo wider (header B, phase 5): with them, the
+  // row holds the inline destinations only from `lg`. At 820 px (iPad
+  // portrait) logo, destinations, inbox and avatar did not fit, and the inbox
+  // and the account menu fell to a second row on every page (UAT beta.28, D5).
+  // Below that the destinations fold into the menu, as on a phone.
+  const wide = areas.length > 1;
 
   return (
     <>
@@ -122,46 +160,59 @@ export default function NavigationBar(): JSX.Element {
         style={{ background: "var(--ts-bg)", borderBottom: "1px solid var(--ts-border)" }}
       >
         <div
-          className="flex items-center justify-between gap-2 px-4 sm:px-6"
+          className="flex flex-wrap items-center justify-between gap-x-2 px-4 sm:px-6"
           // The height other surfaces offset by (sticky settings index): one
-          // token, so the two cannot drift.
-          style={{ height: "var(--ts-size-web-header)" }}
+          // token, so the two cannot drift. A minimum, not a height: a phone
+          // row that cannot hold three area words wraps instead of scrolling.
+          style={{ minHeight: "var(--ts-size-web-header)" }}
         >
           {/* `min-w-0`: the wordmark is the one thing that can lose width
               without losing meaning (measured at 390px on 2026-09-15). */}
           <div className="flex min-w-0 items-center gap-3">
-            <Link
-              to="/dashboard"
-              className="flex min-w-0 items-center gap-2.5 no-underline"
-              aria-label={t("common:accessibility.home")}
-            >
-              <span aria-hidden="true" className="flex min-w-0 items-center gap-2.5">
-                <LogoMark size={26} />
-                <span className="hidden min-[400px]:flex">
-                  <LogoWordmark size={16} />
-                </span>
-              </span>
-            </Link>
+            <AreaLogo areas={areas} active={area} />
             <UpdateBadge />
             <nav
               aria-label={t("dashboard:nav.main")}
-              className="ml-4 hidden md:flex items-center gap-1"
+              data-testid="primary-nav"
+              className={`ml-4 hidden items-center gap-1 ${wide ? "lg:flex" : "md:flex"}`}
               style={{ height: "var(--ts-size-web-header)" }}
             >
-              {primary.map((node) =>
+              {areas.length > 1 && (
+                <span
+                  aria-hidden="true"
+                  data-testid="area-divider"
+                  className="mr-2"
+                  style={{ width: 1, height: 32, background: "var(--ts-border)" }}
+                />
+              )}
+              {row.map((node) =>
                 node.kind === "group" ? (
                   <NavDropdown key={node.id} group={node} />
                 ) : (
-                  <PrimaryLink key={node.id} node={node} pathname={location.pathname} />
+                  <PrimaryLink key={node.id} node={node} pathname={location.pathname} area={area} />
                 )
               )}
-              {more.length > 0 && <MoreMenu sections={more} />}
+              {!areaItems && more.length > 0 && <MoreMenu sections={more} />}
             </nav>
           </div>
 
           <div className="flex shrink-0 items-center gap-1">
-            <div className="md:hidden">
-              <MoreMenu sections={more} primary={primary} align="right" />
+            <div className={wide ? "lg:hidden" : "md:hidden"} data-testid="nav-fold">
+              {areaItems ? (
+                <MoreMenu
+                  sections={[
+                    {
+                      id: `area-${area}`,
+                      label: areaTitle,
+                      items: areaItems,
+                    },
+                  ]}
+                  align="right"
+                  label={t("dashboard:nav.menu")}
+                />
+              ) : (
+                <MoreMenu sections={more} primary={primary} align="right" />
+              )}
             </div>
             {/* Always reachable (owner rule 2026-09-05); the dot says whether
                 something is waiting, the label says how much. */}

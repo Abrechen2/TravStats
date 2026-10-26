@@ -8,6 +8,9 @@ import { DELETE_BUTTON_CLASS } from "../../../lib/deleteConfirm";
 import { downloadBlob } from "../../../lib/export";
 import { formatDayLong } from "../../../shared/time/calendar";
 import { formatTimeValue } from "../../../shared/time/wire";
+import TrackOriginNote from "../../tracks/TrackOriginNote";
+import TrackSourceError from "../../tracks/TrackSourceError";
+import { originInfoOf, type TrackOrigin } from "../../../lib/api/trackOrigin";
 
 const CONTROL =
   "rounded-sm border border-(--color-border) px-3 py-1.5 text-xs hover:bg-(--bg-surface) disabled:opacity-40";
@@ -22,9 +25,14 @@ interface Props {
   tripId: string;
   view: TripRecordingView | null;
   failed: boolean;
+  /** The failed answer's machine code, if any. */
+  failedCode?: string | null;
   /** `YYYY-MM-DD` on the trip's clock, or null for every day. */
   day: string | null;
   onDayChange: (day: string | null) => void;
+  /** The source shown on request (TravTrack plan T5); null is the default. */
+  source?: TrackOrigin | null;
+  onSourceChange?: (source: TrackOrigin | null) => void;
   /** The recording was deleted — the map re-reads it. */
   onDeleted: () => void;
 }
@@ -39,8 +47,11 @@ export default function TripRecordingPanel({
   tripId,
   view,
   failed,
+  failedCode = null,
   day,
   onDayChange,
+  source = null,
+  onSourceChange,
   onDeleted,
 }: Props): JSX.Element | null {
   const { t, i18n } = useTranslation(["trips", "common"]);
@@ -52,6 +63,14 @@ export default function TripRecordingPanel({
   const coarse = useCoarsePointer();
   const touch = coarse ? { minHeight: "var(--ts-size-touch-min)" } : undefined;
 
+  // A source picked on request failed: say why, and keep the way back.
+  if (failed && source !== null && onSourceChange) {
+    return (
+      <section className="mb-2 text-sm" data-testid="trip-recording-panel">
+        <TrackSourceError source={source} code={failedCode} onBack={() => onSourceChange(null)} />
+      </section>
+    );
+  }
   if (failed) {
     return (
       <p role="status" className="mb-2 text-sm text-(--text-muted)">
@@ -59,14 +78,29 @@ export default function TripRecordingPanel({
       </p>
     );
   }
-  if (!view || view.summary.days.length === 0) return null;
+  if (!view) return null;
   const { summary } = view;
+  const info = originInfoOf(summary);
+  const pick = onSourceChange
+    ? (next: TrackOrigin) => onSourceChange(next === info.origin ? null : next)
+    : undefined;
+  // Nothing recorded and nothing elsewhere: no panel. With another source
+  // holding something, the switch to it stays reachable.
+  if (summary.days.length === 0) {
+    return info.alternatives.length > 0 || info.coverage === "unreachable" ? (
+      <section className="mb-2 text-sm" data-testid="trip-recording-panel">
+        <TrackOriginNote info={info} onPick={pick} />
+      </section>
+    ) : null;
+  }
+  // Only the own recording is stored here; a provider's line is shown, never deleted from it.
+  const deletable = info.origin === null || info.origin === "travstats";
 
   const download = async (): Promise<void> => {
     setBusy(true);
     setError(null);
     try {
-      const file = await tripRecordingApi.downloadGpx(tripId);
+      const file = await tripRecordingApi.downloadGpx(tripId, source);
       downloadBlob(file.blob, file.filename);
     } catch {
       setError(t("trips:recording.downloadError"));
@@ -129,16 +163,19 @@ export default function TripRecordingPanel({
         >
           {t("trips:recording.downloadGpx")}
         </button>
-        <button
-          type="button"
-          className={CONTROL}
-          style={touch}
-          disabled={busy}
-          onClick={() => setConfirming(true)}
-        >
-          {t("trips:recording.delete")}
-        </button>
+        {deletable && (
+          <button
+            type="button"
+            className={CONTROL}
+            style={touch}
+            disabled={busy}
+            onClick={() => setConfirming(true)}
+          >
+            {t("trips:recording.delete")}
+          </button>
+        )}
       </div>
+      <TrackOriginNote info={info} onPick={pick} />
       <p className="t-caption" data-testid="trip-recording-summary">
         {[
           t("trips:recording.points", { count: summary.pointCount }),

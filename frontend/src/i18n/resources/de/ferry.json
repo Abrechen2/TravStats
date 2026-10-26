@@ -120,7 +120,7 @@
   "delete": "Überfahrt löschen",
   "loadError": "Überfahrten konnten nicht geladen werden.",
   "subtitle": "Überfahrten zwischen zwei Häfen.",
-  "betaNote": "Als Beta verfügbar. Tickets können als Dokument angehängt werden.",
+  "pageNote": "Tickets können als Dokument angehängt werden.",
   "sections": {
     "route": "Häfen und Zeiten",
     "booking": "Buchung und Unterkunft",

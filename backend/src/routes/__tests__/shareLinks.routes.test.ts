@@ -521,6 +521,56 @@ describe("flight links", () => {
     expect(plain).not.toHaveProperty("lastPosition");
     expect(JSON.stringify(plain)).not.toContain("55.25");
   });
+
+  // Security review of TravTrack T5: the last position leaves through the
+  // owner's privacy cut like every other read of a recording.
+  it("never reveals a position inside one of the owner's privacy zones", async () => {
+    const flight = await makeFlight(anna.id);
+    const link = await tokenFor(anna, {
+      kind: "flight",
+      targetId: flight.id,
+      fields: ["lastPosition"],
+    });
+    await prisma.flightTrack.create({
+      data: {
+        flightId: flight.id,
+        source: "companion",
+        uploadId: "sharelink-zone-upload",
+        startedAt: new Date("2030-06-01T12:05:00Z"),
+        endedAt: new Date("2030-06-01T13:30:00Z"),
+        geometry: [
+          [8.56, 50.03],
+          [8.6, 50.05],
+          [13.4, 52.52],
+        ],
+        segmentStarts: [0],
+        cumulativeKm: [0, 4, 430],
+        pointCount: 3,
+        distanceKm: 430,
+      },
+    });
+    await prisma.travTrackPrivacyZone.create({
+      data: { userId: anna.id, name: "Zuhause", lat: 52.52, lon: 13.4, radiusM: 500 },
+    });
+    try {
+      // The last vertex lies in the zone; the last one left is the one before the
+      // chord, and the recording's end time belongs to the hidden fix: no time.
+      expect((await view(link.token)).body.data.view.flight.lastPosition).toEqual({
+        lat: 50.05,
+        lon: 8.6,
+        recordedAt: null,
+      });
+      await prisma.travTrackPrivacyZone.create({
+        data: { userId: anna.id, name: "Abflug", lat: 50.04, lon: 8.58, radiusM: 5000 },
+      });
+      // Nothing left of the line: no position at all.
+      const body = (await view(link.token)).body.data.view.flight;
+      expect(body.lastPosition).toBeNull();
+      expect(JSON.stringify(body)).not.toContain("52.52");
+    } finally {
+      await prisma.travTrackPrivacyZone.deleteMany({ where: { userId: anna.id } });
+    }
+  });
 });
 
 describe("the field allow-list decides the payload", () => {
@@ -1016,11 +1066,83 @@ describe("trip itinerary (forgejo#302)", () => {
     expect(plain.status).toBe(201);
   });
 
-  it("a trip with no last day keeps the owner's own expiry", async () => {
-    const { trip } = await makeItineraryTrip(anna.id);
-    await prisma.trip.update({ where: { id: trip.id }, data: { endDay: null, endDate: null } });
-    const res = await create(anna, { kind: "trip", targetId: trip.id, fields: ["itinerary"] });
-    expect(res.status).toBe(201);
-    expect(res.body.data.effectiveExpiresAt).toBe(IN_A_WEEK);
+  describe("a trip without dates of its own (forgejo#317)", () => {
+    const undated = { startDay: null, endDay: null, startDate: null, endDate: null };
+
+    it("ends a day after its entries' last local day", async () => {
+      const trip = await prisma.trip.create({ data: { userId: anna.id, name: "Undated" } });
+      await makeFlight(anna.id, trip.id); // lands 1 June 20:00Z, 16:00 in New York
+      const res = await create(anna, {
+        kind: "trip",
+        targetId: trip.id,
+        fields: ["itinerary"],
+        expiresAt: "2030-06-20T00:00:00Z",
+      });
+      expect(res.status).toBe(201);
+      // 1 June in New York ends at 2 June 04:00Z; plus 24 hours.
+      expect(res.body.data.effectiveExpiresAt).toBe("2030-06-03T04:00:00.000Z");
+    });
+
+    it("refuses an itinerary when every entry lies in the past", async () => {
+      const { trip } = await makeItineraryTrip(anna.id);
+      await prisma.trip.update({ where: { id: trip.id }, data: undated });
+      setClockForTests("2031-01-01T00:00:00Z");
+      const res = await create(anna, {
+        kind: "trip",
+        targetId: trip.id,
+        fields: ["itinerary"],
+        expiresAt: "2031-01-08T00:00:00Z",
+      });
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe("SHARE_LINK_TRIP_ENDED");
+    });
+
+    it("ends a link made before the fix once it is next read", async () => {
+      const { trip } = await makeItineraryTrip(anna.id);
+      await prisma.trip.update({ where: { id: trip.id }, data: undated });
+      const { token, id } = await tokenFor(anna, {
+        kind: "trip",
+        targetId: trip.id,
+        fields: ["itinerary"],
+        expiresAt: "2030-08-01T00:00:00Z",
+      });
+      // What the old rule stored: the owner's own expiry, open past the trip.
+      await prisma.publicShareLink.update({
+        where: { id },
+        data: { effectiveExpiresAt: new Date("2030-08-01T00:00:00Z") },
+      });
+      setClockForTests("2030-07-01T00:00:00Z");
+      expect((await view(token)).status).toBe(404);
+    });
+
+    it("ignores a cancelled entry when finding the last day", async () => {
+      const trip = await prisma.trip.create({ data: { userId: anna.id, name: "Undated" } });
+      await makeFlight(anna.id, trip.id);
+      const late = await makeFlight(anna.id, trip.id);
+      await prisma.flight.update({
+        where: { id: late.id },
+        data: {
+          status: "cancelled",
+          departureTime: new Date("2030-06-15T12:00:00Z"),
+          arrivalTime: new Date("2030-06-15T20:00:00Z"),
+        },
+      });
+      const res = await create(anna, {
+        kind: "trip",
+        targetId: trip.id,
+        fields: ["itinerary"],
+        expiresAt: "2030-06-20T00:00:00Z",
+      });
+      expect(res.body.data.effectiveExpiresAt).toBe("2030-06-03T04:00:00.000Z");
+    });
+
+    it("with no dated entry either, keeps the owner's own expiry", async () => {
+      // Nothing on the trip names a day, so there is no end to derive: the
+      // link stays open until the owner's chosen expiry (abstention, not a guess).
+      const trip = await prisma.trip.create({ data: { userId: anna.id, name: "Empty" } });
+      const res = await create(anna, { kind: "trip", targetId: trip.id, fields: ["itinerary"] });
+      expect(res.status).toBe(201);
+      expect(res.body.data.effectiveExpiresAt).toBe(IN_A_WEEK);
+    });
   });
 });

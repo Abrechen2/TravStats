@@ -155,6 +155,9 @@ describe("dataQualityFlagSchema — the whole flag as it goes over the wire", ()
     subject: { entityType: "lodging", entityId: "l1", label: "Hotel Sport" },
     createdAt: "2026-09-02T10:00:00.000Z",
     resolvedAt: null,
+    undoUntil: null,
+    actions: [],
+    revision: 0,
   };
 
   it("accepts a flag whose details match its kind", () => {
@@ -163,6 +166,8 @@ describe("dataQualityFlagSchema — the whole flag as it goes over the wire", ()
         ...flagBase,
         kind: "address_country_mismatch",
         details: addressMismatchDetails,
+        // The contract's name for `details` (spec 2026-10-25 C3).
+        evidence: addressMismatchDetails,
       }).success
     ).toBe(true);
   });

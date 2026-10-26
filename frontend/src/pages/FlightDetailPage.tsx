@@ -9,7 +9,7 @@ import PeopleList from "../components/ui/PeopleList";
 import FlightRouteHero from "../components/flightsTable/FlightRouteHero";
 import { resolveAirlineIata } from "../lib/airlineUtils";
 import { formatTimeValueShown } from "../lib/displayFormat";
-import { flightDeparture } from "../lib/entityTimes";
+import { flightArrival, flightDeparture } from "../lib/entityTimes";
 import Button from "../components/ui/Button";
 import ShareLinkButton from "../components/shareLinks/ShareLinkButton";
 import SpecialTypeBadge from "../components/specialFlights/SpecialTypeBadge";
@@ -47,6 +47,7 @@ import FlightPlanActual from "../components/flightDetail/FlightPlanActual";
 import FlightDayCard, { dayCardShown } from "../components/flightDetail/FlightDayCard";
 import BookingItinerary from "../components/flightDetail/BookingItinerary";
 import BookingPrice from "../components/flightDetail/BookingPrice";
+import FlightProfileLink from "../components/flightDetail/FlightProfileLink";
 import { useFlightBooking } from "../components/flightDetail/useFlightBooking";
 
 /**
@@ -408,7 +409,9 @@ export default function FlightDetailPage(): JSX.Element {
             flightId={flight.id}
             departure={{ lat: flight.depLat, lon: flight.depLon }}
             arrival={{ lat: flight.arrLat, lon: flight.arrLon }}
+            scheduled={{ departure, arrival: flightArrival(flight) }}
           />
+          <FlightProfileLink flightId={flight.id} departure={departure} />
 
           <DetailSection
             title={t("flights:form.aircraft")}

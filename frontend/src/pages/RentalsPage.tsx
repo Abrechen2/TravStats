@@ -76,8 +76,8 @@ interface Options {
  * The rental logbook — package R1 of
  * docs/superpowers/specs/2026-10-01-rental-domain-design.md, in the layout
  * every logbook shares since forgejo#197: title and the add button, the
- * summary strip, the filter bar, a server-paged table. Gated twice (beta
- * switch + domain choice) in App.tsx.
+ * summary strip, the filter bar, a server-paged table. Gated by the user's
+ * domain choice in App.tsx.
  */
 export default function RentalsPage(): JSX.Element {
   const { t } = useTranslation(["rental", "common"]);
@@ -267,9 +267,7 @@ export default function RentalsPage(): JSX.Element {
           filteredLabel={t("common:filters.filtered")}
           unknown={loading || loadFailed || summary === null}
         />
-        <p className="mb-4 text-xs text-(--text-muted)">
-          {t("rental:subtitle")} {t("rental:betaNote")}
-        </p>
+        <p className="mb-4 text-xs text-(--text-muted)">{t("rental:subtitle")}</p>
 
         <ListFilterBar
           search={{ value: search, onChange: setSearch, placeholder: t("rental:search") }}

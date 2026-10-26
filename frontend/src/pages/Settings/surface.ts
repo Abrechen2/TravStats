@@ -32,6 +32,13 @@ export interface SectionDef<S extends string = string> {
   /** Only an admin sees it; unlike a gate, no URL lifts this. */
   adminOnly?: boolean;
   /**
+   * A condition a server answer decides, not a beta key: TravTrack's section
+   * shows while the account holds TravTrack data or the instance shows it
+   * (plan T6, review focus 14) — data held stays reachable whatever the beta
+   * switch says. Closed until the caller says it is met; no URL lifts it.
+   */
+  when?: SectionCondition;
+  /**
    * How many settings the section holds, for the "n weitere Einstellungen"
    * note when the standard level hides it whole (forgejo#321 prototype counts
    * settings, not sections). Read off the section's component; 1 if absent.
@@ -61,9 +68,14 @@ export function pageLevel(page: PageDef): SettingsLevel {
   return page.sections.every((s) => s.level === "expert") ? "expert" : "standard";
 }
 
+/** The server-decided conditions a section may wait for (`SectionDef.when`). */
+export type SectionCondition = "travTrackHeld";
+
 export interface SectionVisibilityInput {
   level: SettingsLevel;
   isGateOpen: (gate: BetaFeatureKey) => boolean;
+  /** Which `when` conditions are met; an absent one is closed. */
+  conditions?: Partial<Record<SectionCondition, boolean>>;
   isAdmin: boolean;
   /** The section a URL named, if any. */
   deepLinked: string | null;
@@ -100,6 +112,7 @@ export function sectionsOf<S extends string>(
   for (const section of page.sections) {
     const named = input.deepLinked === section.id;
     if (section.adminOnly && !input.isAdmin) continue;
+    if (section.when && !input.conditions?.[section.when]) continue;
     if (section.gate && !input.isGateOpen(section.gate) && !(named && section.gateYieldsToLink)) {
       continue;
     }

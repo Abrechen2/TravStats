@@ -1,6 +1,8 @@
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
+import { takeTravTrackLock } from "../services/travtrack/lock";
+import { narrowShareSnapshots } from "../services/travtrack/shareNarrow";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { rejectDemo } from "../middleware/demoGuard";
 import { AppError } from "../middleware/errorHandler";
@@ -476,56 +478,67 @@ router.patch(
         resolvedCompanionsForUpdate = await resolveCompanions(userId, body.companions);
       }
 
-      const trip = await prisma.$transaction(async (tx) => {
-        if (resolvedCompanionsForUpdate !== undefined) {
-          await tx.tripCompanion.deleteMany({ where: { tripId: existing.id } });
-          if (resolvedCompanionsForUpdate.length > 0) {
-            await tx.tripCompanion.createMany({
-              data: linkRowsFor(resolvedCompanionsForUpdate.map((c) => c.id)).map((row) => ({
-                ...row,
-                tripId: existing.id,
-              })),
-              skipDuplicates: true,
-            });
+      const daysChanged = Object.keys(days).length > 0;
+      const trip = await prisma.$transaction(
+        async (tx) => {
+          // A shared route narrows to the trip's new days in this transaction,
+          // never widens (TravTrack plan T7): the former days are recorded by a
+          // trigger on the row, and a failed narrowing fails the edit.
+          if (daysChanged) await takeTravTrackLock(tx, userId);
+          if (resolvedCompanionsForUpdate !== undefined) {
+            await tx.tripCompanion.deleteMany({ where: { tripId: existing.id } });
+            if (resolvedCompanionsForUpdate.length > 0) {
+              await tx.tripCompanion.createMany({
+                data: linkRowsFor(resolvedCompanionsForUpdate.map((c) => c.id)).map((row) => ({
+                  ...row,
+                  tripId: existing.id,
+                })),
+                skipDuplicates: true,
+              });
+            }
           }
-        }
 
-        return tx.trip.update({
-          where: { id: req.params.id },
-          data: {
-            ...(body.name !== undefined && { name: body.name }),
-            ...(body.description !== undefined && {
-              description: body.description,
-            }),
-            ...(body.color !== undefined && { color: body.color }),
-            ...days,
-            ...(body.category !== undefined && { category: body.category }),
-            ...(body.tags !== undefined && { tags: body.tags }),
-            ...(resolvedCompanionsForUpdate !== undefined && {
-              companions: resolvedCompanionsForUpdate.map((c) => c.displayName),
-            }),
-            ...(body.notes !== undefined && { notes: body.notes }),
-            ...(body.summary !== undefined && { summary: body.summary }),
-            ...provenanceForWrite(body.summary, existing.summary),
-            ...(body.originLabel !== undefined && {
-              originLabel: body.originLabel,
-            }),
-            ...(body.destinationLabel !== undefined && {
-              destinationLabel: body.destinationLabel,
-            }),
-            ...(body.coverImageUrl !== undefined && {
-              coverImageUrl: body.coverImageUrl,
-            }),
-            ...(body.icon !== undefined && { icon: body.icon }),
-            ...(body.countries !== undefined && { countries: body.countries }),
-          },
-        });
-      });
+          const updated = await tx.trip.update({
+            where: { id: req.params.id },
+            data: {
+              ...(body.name !== undefined && { name: body.name }),
+              ...(body.description !== undefined && {
+                description: body.description,
+              }),
+              ...(body.color !== undefined && { color: body.color }),
+              ...days,
+              ...(body.category !== undefined && { category: body.category }),
+              ...(body.tags !== undefined && { tags: body.tags }),
+              ...(resolvedCompanionsForUpdate !== undefined && {
+                companions: resolvedCompanionsForUpdate.map((c) => c.displayName),
+              }),
+              ...(body.notes !== undefined && { notes: body.notes }),
+              ...(body.summary !== undefined && { summary: body.summary }),
+              ...provenanceForWrite(body.summary, existing.summary),
+              ...(body.originLabel !== undefined && {
+                originLabel: body.originLabel,
+              }),
+              ...(body.destinationLabel !== undefined && {
+                destinationLabel: body.destinationLabel,
+              }),
+              ...(body.coverImageUrl !== undefined && {
+                coverImageUrl: body.coverImageUrl,
+              }),
+              ...(body.icon !== undefined && { icon: body.icon }),
+              ...(body.countries !== undefined && { countries: body.countries }),
+            },
+          });
+          if (daysChanged) await narrowShareSnapshots(tx, userId, { tripId: updated.id });
+          return updated;
+        },
+        { timeout: 60_000 }
+      );
 
       // Moving a trip's own dates moves its status, and this handler never
       // recomputed at all (AUD-024). After the transaction, like every other
       // caller: the derivation reads the row it is about to judge.
-      res.json({ trip: withTripTimes(await restatusIfDatesMoved(trip, days)) });
+      const shown = withTripTimes(await restatusIfDatesMoved(trip, days));
+      res.json({ trip: shown });
     } catch (error) {
       next(error);
     }

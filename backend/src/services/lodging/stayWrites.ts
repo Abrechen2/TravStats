@@ -15,7 +15,7 @@
  */
 
 import { propagateWrite, shareSnapshot, SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
-import { prisma } from "../../db";
+import { prisma, type DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import type { Prisma } from "../../prisma";
 import type { createStaySchema, updateStaySchema } from "../../schemas/lodging";
@@ -58,7 +58,9 @@ export async function createStayRecord(
   userId: string,
   lodgingId: string,
   data: CreateStayData,
-  provenance: StayProvenance = {}
+  provenance: StayProvenance = {},
+  /** Runs in the creating transaction: the route's client-ref claim and receipts (forgejo#283). */
+  inTx?: (tx: DbTransaction, stayId: string) => Promise<void>
 ): Promise<StoredStay> {
   // Prisma only enforces that the trip, booking and membership EXIST — not
   // whose they are. Without this, a stay could be filed under a stranger's
@@ -76,6 +78,7 @@ export async function createStayRecord(
     async (tx) => {
       const created = await tx.lodgingStay.create({ data: { ...columns, lodgingId, userId } });
       await propagateWrite(tx, userId, "lodgingStay", created.id);
+      await inTx?.(tx, created.id);
       return created;
     },
     { timeout: SHARE_TX_TIMEOUT_MS }

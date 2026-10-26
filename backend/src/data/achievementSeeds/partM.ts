@@ -2,8 +2,8 @@ import type { AchievementDefinition } from "../achievements";
 
 /**
  * Ferry badges, measured by `utils/ferryAchievements.ts` and handed to the
- * planner by `utils/domainAchievementChecks.ts`. Hidden while the ferry beta
- * switch is off (`services/achievementVisibility.ts`).
+ * planner by `utils/domainAchievementChecks.ts`. Hidden while the user has
+ * the ferry domain off (`services/achievementVisibility.ts`).
  *
  * The thresholds mirror the bus badges' first rungs; the owner has not
  * confirmed them yet.

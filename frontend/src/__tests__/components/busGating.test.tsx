@@ -17,46 +17,31 @@ import LogbookTabs from "../../components/table/LogbookTabs";
 import { useSettingsStore } from "../../store/settingsStore";
 
 /**
- * Bus sits behind the instance beta switch (`busDomain`) on top of the
- * user's domain choice (spec 2026-10-07-bus-domain-design). Where the domain is
- * switched ON, the flag alone decides; everywhere else, both.
+ * Bus left beta on 2026-10-26 (owner): the instance's beta switch no longer
+ * decides anything about it. The module switch and the setup picker offer it
+ * whatever the flag says, and the logbook tab follows the user's domain alone.
  */
 describe("bus gating", () => {
   beforeEach(() => {
-    useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
+    useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: false });
   });
 
   describe("module switch", () => {
-    it("offers bus on a beta instance, before the user has it on", () => {
-      render(<ModuleSection />);
-      expect(screen.getByText("domain.bus")).toBeInTheDocument();
-    });
-
     it.each([
+      ["on", true],
       ["off", false],
       ["unknown (not loaded yet)", null],
-    ])("hides bus while the beta flag is %s", (_label, flag) => {
+    ])("offers bus while the beta flag is %s", (_label, flag) => {
       useSettingsStore.setState({ betaFeaturesEnabled: flag });
-      render(<ModuleSection />);
-      expect(screen.queryByText("domain.bus")).toBeNull();
-      expect(screen.getByText("domain.flight")).toBeInTheDocument();
-    });
-
-    it("keeps an enabled bus listed after the flag goes off, so it can be switched off", () => {
-      useSettingsStore.setState({ enabledDomains: ["flight", "bus"], betaFeaturesEnabled: false });
       render(<ModuleSection />);
       expect(screen.getByText("domain.bus")).toBeInTheDocument();
     });
   });
 
   describe("setup domain picker", () => {
-    it("offers bus only on a beta instance", () => {
-      const { unmount } = render(<DomainPickerStep value={["flight"]} onChange={vi.fn()} />);
-      expect(screen.getByTestId("domain-card-bus")).toBeInTheDocument();
-      unmount();
-      useSettingsStore.setState({ betaFeaturesEnabled: null });
+    it("offers bus with the beta flag off", () => {
       render(<DomainPickerStep value={["flight"]} onChange={vi.fn()} />);
-      expect(screen.queryByTestId("domain-card-bus")).toBeNull();
+      expect(screen.getByTestId("domain-card-bus")).toBeInTheDocument();
     });
   });
 
@@ -69,16 +54,16 @@ describe("bus gating", () => {
       );
     };
 
-    it("draws the bus tab with the flag on and the domain on", () => {
+    it("draws the bus tab with the flag off and the domain on", () => {
       useSettingsStore.setState({ enabledDomains: ["flight", "bus"] });
       renderTabs();
       expect(screen.getByRole("link", { name: /domain\.bus/ })).toHaveAttribute("href", "/bus");
     });
 
-    it("draws no bus tab while the flag is off, even with the domain on", () => {
+    it("draws no bus tab while the user has the domain off", () => {
       useSettingsStore.setState({
-        enabledDomains: ["flight", "cruise", "bus"],
-        betaFeaturesEnabled: false,
+        enabledDomains: ["flight", "cruise"],
+        betaFeaturesEnabled: true,
       });
       renderTabs();
       expect(screen.queryByRole("link", { name: /domain\.bus/ })).toBeNull();

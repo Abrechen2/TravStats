@@ -2,7 +2,12 @@ import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { act, cleanup, render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 vi.mock("../../../hooks/useTranslation", () => ({
-  useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" }, ready: true }),
+  useTranslation: () => ({
+    // Interpolated values are appended, so a test can see what was filled in.
+    t: (k: string, o?: Record<string, unknown>) => (o ? `${k} ${Object.values(o).join(" ")}` : k),
+    i18n: { language: "de" },
+    ready: true,
+  }),
 }));
 vi.mock("../../../lib/logger", () => ({
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
@@ -134,6 +139,49 @@ describe("RailProvidersCard", () => {
       fireEvent.click(screen.getByRole("button", { name: "settings:railRouting.testButton" }));
       expect(await screen.findByRole("status")).toHaveTextContent("settings:railRouting.test.ok");
       expect(testRailRouting).toHaveBeenCalledWith("http://orr.lan");
+    });
+
+    it("says the map date is unknown when the instance names none", async () => {
+      getInstanceSettings.mockResolvedValue(settings({ railRoutingUrl: "http://orr.lan" }));
+      testRailRouting.mockResolvedValue({ ok: true, profile: "all_tracks", dataDate: null });
+      render(<RailProvidersCard isAdmin />);
+      await field();
+      fireEvent.click(screen.getByRole("button", { name: "settings:railRouting.testButton" }));
+      expect(await screen.findByRole("status")).toHaveTextContent(
+        "settings:railRouting.test.dateUnknown"
+      );
+    });
+
+    it("says which tram / U-Bahn profile is missing and what that means", async () => {
+      getInstanceSettings.mockResolvedValue(settings({ railRoutingUrl: "http://orr.lan" }));
+      testRailRouting.mockResolvedValue({
+        ok: true,
+        profile: "all_tracks",
+        dataDate: "2026-10-09",
+        modeProfiles: { tram: false, subway: true },
+      });
+      render(<RailProvidersCard isAdmin />);
+      await field();
+      fireEvent.click(screen.getByRole("button", { name: "settings:railRouting.testButton" }));
+      expect(await screen.findByTestId("rail-routing-mode-profiles")).toHaveTextContent(
+        "settings:railRouting.test.modeProfiles.missing"
+      );
+    });
+
+    it("offers the tram / U-Bahn repair only once an address is saved", async () => {
+      getInstanceSettings.mockResolvedValue(settings({ railRoutingUrl: "http://orr.lan" }));
+      render(<RailProvidersCard isAdmin />);
+      await field();
+      expect(
+        screen.getByRole("button", { name: "settings:railRouting.reroute.action" })
+      ).toBeTruthy();
+      cleanup();
+      getInstanceSettings.mockResolvedValue(settings());
+      render(<RailProvidersCard isAdmin />);
+      await field();
+      expect(
+        screen.queryByRole("button", { name: "settings:railRouting.reroute.action" })
+      ).toBeNull();
     });
   });
 

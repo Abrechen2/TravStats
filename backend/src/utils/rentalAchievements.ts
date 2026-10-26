@@ -16,7 +16,7 @@ import { isOneWay } from "../services/rental/rentalWrite";
  * known and the car did not run backwards (`odometerDistanceKm`), never on
  * an invoice figure or an estimate.
  *
- * Hidden with the `rentalDomain` beta gate off: `services/achievementVisibility`
+ * Hidden while the user has the rental domain off: `services/achievementVisibility`
  * drops every `domain: "rental"` badge from lists, counts and points then.
  */
 

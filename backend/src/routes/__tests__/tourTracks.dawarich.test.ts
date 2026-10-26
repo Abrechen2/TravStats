@@ -188,6 +188,24 @@ describe("Tour tracks — pull a Dawarich window", () => {
     expect(calledUrl.searchParams.get("end_at")).toBe("2026-06-01T06:10:00.000Z");
   });
 
+  // TravTrack plan T4: an explicit pull reads the connection it is asked to,
+  // whatever the account's location provider — like a GPX upload.
+  it("pull from Dawarich works for a provider-travtrack user with an own connection", async () => {
+    await seedUserConnection();
+    await prisma.userSettings.update({
+      where: { userId },
+      data: { locationProvider: "travtrack" },
+    });
+    (global.fetch as jest.Mock<typeof fetch>).mockResolvedValueOnce(
+      fakeOkResponse(NEWEST_FIRST_POINTS)
+    );
+
+    const res = await pull();
+
+    expect(res.status).toBe(201);
+    expect(res.body.track).toMatchObject({ source: "dawarich", pointCount: 3 });
+  });
+
   // A one-day tour with day-only stops asked Dawarich for 00:00Z–00:00Z —
   // an empty window — and the user was told there was no location data.
   it("pulls the whole local day of a one-day tour with day-only stops", async () => {

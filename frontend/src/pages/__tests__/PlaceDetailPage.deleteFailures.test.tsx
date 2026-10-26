@@ -74,7 +74,7 @@ async function openVisitDelete(): Promise<void> {
       </Routes>
     </MemoryRouter>
   );
-  fireEvent.click(await screen.findByRole("button", { name: "Löschen" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Besuch vom 14.08.2019 löschen" }));
   const dialog = await screen.findByTestId("confirm-modal");
   await act(async () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Löschen" }));

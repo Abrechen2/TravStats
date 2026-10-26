@@ -468,7 +468,8 @@
       "untracedShape": "Transitous only has straight lines between this train's stops",
       "railRoutingUnavailable": "this instance's rail router (OpenRailRouting) did not answer",
       "railRoutingNoRoute": "the rail router (OpenRailRouting) knows no track connection between these stations",
-      "railRoutingNotConfigured": "no rail routing service is configured"
+      "railRoutingNotConfigured": "no rail routing service is configured",
+      "railRoutingModeUnsupported": "this instance's rail router cannot route tram and U-Bahn rides over their own network"
     }
   },
   "import": {

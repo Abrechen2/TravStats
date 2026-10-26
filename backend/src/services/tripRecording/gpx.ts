@@ -16,7 +16,11 @@ function escapeXml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-export function recordingToGpx(name: string, segments: readonly StoredPoint[][]): string {
+export function recordingToGpx(
+  name: string,
+  segments: readonly StoredPoint[][],
+  opts: { desc?: string } = {}
+): string {
   const first = segments[0]?.[0];
   const body = segments.map((segment) => {
     const points = segment.map(
@@ -30,6 +34,7 @@ export function recordingToGpx(name: string, segments: readonly StoredPoint[][])
     `<gpx version="1.1" creator="TravStats" xmlns="http://www.topografix.com/GPX/1/1">`,
     `  <metadata>`,
     `    <name>${escapeXml(name)}</name>`,
+    ...(opts.desc ? [`    <desc>${escapeXml(opts.desc)}</desc>`] : []),
     ...(first ? [`    <time>${new Date(first[0]).toISOString()}</time>`] : []),
     `  </metadata>`,
     `  <trk>`,

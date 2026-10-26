@@ -79,6 +79,9 @@ beforeEach(async () => {
       data: {},
       dawarichBaseUrl: DAWARICH_URL,
       dawarichApiKey: encryptApiKey("synthetic-dawarich-test-key"),
+      // Dawarich is the chosen source, so only the switch can be what skips
+      // the scheduled sweep below (TravTrack plan S3).
+      locationProvider: "dawarich",
     },
     update: { enabledDomains: ["poi"], staySuggestionsEnabled: true },
   });

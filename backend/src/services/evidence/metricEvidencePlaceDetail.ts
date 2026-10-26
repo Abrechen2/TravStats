@@ -9,6 +9,7 @@ import { loadPlaceInsightPlaces } from "../stats/insights/placeInsightData";
 import { prepareVisits } from "../../utils/placeInsights/prepare";
 import { computeDiversity } from "../../utils/placeInsights/blocks";
 import { loadScoped, type PlaceRow } from "./metricEvidencePlaces";
+import { maxOf, minOf } from "../../utils/extrema";
 
 /**
  * The evidence behind the places tab's rhythm, quality and fun-fact cards
@@ -144,7 +145,7 @@ export const resolvePlaceFirstVisit: Resolver = async (userId, scope, page) => {
   const key = "placeFirstVisit";
   const { visited } = await loadScoped(userId, scope, key);
   const dated = datedVisits(visited);
-  const first = Math.min(...dated.map((d) => d.at.getTime()));
+  const first = minOf(dated.map((d) => d.at.getTime()));
   const entries = dated.filter((d) => d.at.getTime() === first).map(one);
   return domainSumEvidence({ key, unit: "visits", scope, page, entries, value: entries.length });
 };
@@ -189,7 +190,7 @@ function newest(place: PlaceRow): Date | null {
 }
 
 /** The place(s) at the extreme latitude — usually one; every place on that exact latitude. */
-function extremeLatitude(key: string, pick: (lats: number[]) => number): Resolver {
+function extremeLatitude(key: string, pick: (lats: number[]) => number | null): Resolver {
   return async (userId, scope, page) => {
     const { visited } = await loadScoped(userId, scope, key);
     const target = visited.length > 0 ? pick(visited.map((p) => p.lat)) : null;
@@ -205,12 +206,8 @@ function extremeLatitude(key: string, pick: (lats: number[]) => number): Resolve
   };
 }
 
-export const resolvePlaceNorthernmost = extremeLatitude("placeNorthernmost", (lats) =>
-  Math.max(...lats)
-);
-export const resolvePlaceSouthernmost = extremeLatitude("placeSouthernmost", (lats) =>
-  Math.min(...lats)
-);
+export const resolvePlaceNorthernmost = extremeLatitude("placeNorthernmost", (lats) => maxOf(lats));
+export const resolvePlaceSouthernmost = extremeLatitude("placeSouthernmost", (lats) => minOf(lats));
 
 /** Visits filed on a trip, out of the counted visits — a visit, not a place, belongs to a trip. */
 export const resolvePlaceVisitsOnTripsCount: Resolver = async (userId, scope, page) => {

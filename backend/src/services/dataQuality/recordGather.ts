@@ -1,9 +1,15 @@
-import { prisma } from "../../db";
+import { prisma, type DbTransaction } from "../../db";
 import { endHasClock } from "../../shared/railClock";
 import { isPlaceholderPrecision } from "../../shared/time/legacyValues";
 import { localDay } from "../../shared/time/instant";
 import { fromDbDate } from "../../shared/time/localDate";
 import { isValidZone } from "../../shared/time/zonedParts";
+import {
+  serializeTime,
+  TIME_PRECISIONS,
+  type TimePrecision,
+  type TimeValue,
+} from "../../shared/time/wire";
 import {
   localWallClockOf,
   normalizeFlightTimeUtc,
@@ -90,8 +96,24 @@ export interface VisitRecord {
   day: string | null;
 }
 
+/** A ferry ride, for the ferry match (spec 2026-10-25 C3). */
+export interface FerryRecord {
+  id: string;
+  status: string;
+  tripId: string | null;
+  /** Linked to a roadtrip leg: its trip is the roadtrip's business, never asked. */
+  onRoadtrip: boolean;
+  depName: string;
+  arrName: string;
+  /** The departure on the port's own clock — the time model's wire shape. */
+  departure: TimeValue;
+  firstDay: string | null;
+  lastDay: string | null;
+}
+
 export interface TripRecord {
   id: string;
+  name: string;
   status: string;
   startDay: string | null;
   endDay: string | null;
@@ -101,6 +123,7 @@ export interface RecordSnapshot {
   flights: FlightRecord[];
   railJourneys: GroundRecord[];
   busJourneys: GroundRecord[];
+  ferryJourneys: FerryRecord[];
   cruises: CruiseRecord[];
   stays: StayRecord[];
   trips: TripRecord[];
@@ -154,8 +177,29 @@ function certainFlightInstant(
 
 const NOT_DAY_PRECISE = new Set(["year", "month"]);
 
-async function loadFlights(userId: string) {
-  return prisma.flight.findMany({
+const isTimePrecision = (value: string | null): value is TimePrecision =>
+  (TIME_PRECISIONS as readonly (string | null)[]).includes(value);
+
+/**
+ * The client the snapshot reads through. The global one by default; an answer
+ * that re-validates inside its transaction passes the transaction, so it never
+ * asks the pool for a second connection while holding row locks.
+ */
+export type RecordDb = Pick<
+  DbTransaction,
+  | "flight"
+  | "railJourney"
+  | "busJourney"
+  | "cruise"
+  | "lodgingStay"
+  | "trip"
+  | "airport"
+  | "placeVisit"
+  | "ferryJourney"
+>;
+
+async function loadFlights(userId: string, db: RecordDb) {
+  return db.flight.findMany({
     where: { userId },
     orderBy: { id: "asc" },
     select: {
@@ -299,93 +343,111 @@ const GROUND_SELECT = {
   arrPrecision: true,
 } as const;
 
-export async function loadRecordSnapshot(userId: string): Promise<RecordSnapshot> {
-  const [flightRows, railRows, busRows, cruiseRows, stayRows, tripRows, anyAirport, visitRows] =
-    await Promise.all([
-      loadFlights(userId),
-      prisma.railJourney.findMany({
-        where: { userId },
-        orderBy: { id: "asc" },
-        select: {
-          ...GROUND_SELECT,
-          trainCategory: true,
-          trainNumber: true,
-          depStationId: true,
-          depStationCode: true,
-          arrStationId: true,
-          arrStationCode: true,
-        },
-      }),
-      prisma.busJourney.findMany({
-        where: { userId },
-        orderBy: { id: "asc" },
-        select: { ...GROUND_SELECT, lineName: true },
-      }),
-      prisma.cruise.findMany({
-        where: { userId },
-        orderBy: { id: "asc" },
-        select: {
-          id: true,
-          createdAt: true,
-          dataSource: true,
-          status: true,
-          tripId: true,
-          shipId: true,
-          shipNameOverride: true,
-          cruiseLine: true,
-          routeName: true,
-          startDay: true,
-          endDay: true,
-          startDate: true,
-          endDate: true,
-          ship: { select: { name: true } },
-        },
-      }),
-      prisma.lodgingStay.findMany({
-        where: { userId },
-        orderBy: { id: "asc" },
-        select: {
-          id: true,
-          lodgingId: true,
-          createdAt: true,
-          dataSource: true,
-          status: true,
-          tripId: true,
-          datePrecision: true,
-          checkIn: true,
-          checkOut: true,
-          checkInDate: true,
-          checkOutDate: true,
-          lodging: { select: { name: true } },
-        },
-      }),
-      prisma.trip.findMany({
-        where: { userId },
-        orderBy: { id: "asc" },
-        select: {
-          id: true,
-          status: true,
-          startDay: true,
-          endDay: true,
-          startDate: true,
-          endDate: true,
-        },
-      }),
-      prisma.airport.findFirst({ select: { id: true } }),
-      prisma.placeVisit.findMany({
-        where: { userId, tripId: { not: null } },
-        orderBy: { id: "asc" },
-        select: {
-          id: true,
-          placeId: true,
-          tripId: true,
-          visitedAtUtc: true,
-          visitedZone: true,
-          visitedPrecision: true,
-          place: { select: { name: true } },
-        },
-      }),
-    ]);
+export async function loadRecordSnapshot(
+  userId: string,
+  db: RecordDb = prisma
+): Promise<RecordSnapshot> {
+  const [
+    flightRows,
+    railRows,
+    busRows,
+    cruiseRows,
+    stayRows,
+    tripRows,
+    anyAirport,
+    visitRows,
+    ferryRows,
+  ] = await Promise.all([
+    loadFlights(userId, db),
+    db.railJourney.findMany({
+      where: { userId },
+      orderBy: { id: "asc" },
+      select: {
+        ...GROUND_SELECT,
+        trainCategory: true,
+        trainNumber: true,
+        depStationId: true,
+        depStationCode: true,
+        arrStationId: true,
+        arrStationCode: true,
+      },
+    }),
+    db.busJourney.findMany({
+      where: { userId },
+      orderBy: { id: "asc" },
+      select: { ...GROUND_SELECT, lineName: true },
+    }),
+    db.cruise.findMany({
+      where: { userId },
+      orderBy: { id: "asc" },
+      select: {
+        id: true,
+        createdAt: true,
+        dataSource: true,
+        status: true,
+        tripId: true,
+        shipId: true,
+        shipNameOverride: true,
+        cruiseLine: true,
+        routeName: true,
+        startDay: true,
+        endDay: true,
+        startDate: true,
+        endDate: true,
+        ship: { select: { name: true } },
+      },
+    }),
+    db.lodgingStay.findMany({
+      where: { userId },
+      orderBy: { id: "asc" },
+      select: {
+        id: true,
+        lodgingId: true,
+        createdAt: true,
+        dataSource: true,
+        status: true,
+        tripId: true,
+        datePrecision: true,
+        checkIn: true,
+        checkOut: true,
+        checkInDate: true,
+        checkOutDate: true,
+        lodging: { select: { name: true } },
+      },
+    }),
+    db.trip.findMany({
+      where: { userId },
+      orderBy: { id: "asc" },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        startDay: true,
+        endDay: true,
+        startDate: true,
+        endDate: true,
+      },
+    }),
+    db.airport.findFirst({ select: { id: true } }),
+    db.placeVisit.findMany({
+      where: { userId, tripId: { not: null } },
+      orderBy: { id: "asc" },
+      select: {
+        id: true,
+        placeId: true,
+        tripId: true,
+        visitedAtUtc: true,
+        visitedZone: true,
+        visitedPrecision: true,
+        place: { select: { name: true } },
+      },
+    }),
+    db.ferryJourney.findMany({
+      where: { userId },
+      orderBy: { id: "asc" },
+      select: { ...GROUND_SELECT, roadtripLegId: true },
+    }),
+  ]);
 
   const codes = [
     ...new Set(
@@ -395,7 +457,7 @@ export async function loadRecordSnapshot(userId: string): Promise<RecordSnapshot
         .filter((c): c is string => c !== null)
     ),
   ];
-  const airports = codes.length > 0 ? await getCachedAirports(codes) : new Map();
+  const airports = codes.length > 0 ? await getCachedAirports(codes, db) : new Map();
   const tzMap = tzMapFromAirports(airports);
 
   return {
@@ -460,8 +522,31 @@ export async function loadRecordSnapshot(userId: string): Promise<RecordSnapshot
         lastDay: lastDay ?? firstDay,
       };
     }),
+    ferryJourneys: ferryRows.map((row) => {
+      const ground = toGroundRecord(row, null, "", "", null);
+      return {
+        id: row.id,
+        status: row.status,
+        tripId: row.tripId,
+        onRoadtrip: row.roadtripLegId !== null,
+        depName: row.depStationName,
+        arrName: row.arrStationName,
+        departure: serializeTime(
+          row.departureTime,
+          isValidZone(row.depTimezone) ? row.depTimezone : null,
+          isTimePrecision(row.depPrecision) ? row.depPrecision : "minute"
+        ),
+        firstDay: ground.firstDay,
+        // Its own arrival day, or null: `toGroundRecord` falls back to the
+        // departure day, and the ferry match must not offer a crossing on an
+        // arrival day nobody recorded.
+        lastDay:
+          row.arrivalTime && !NOT_DAY_PRECISE.has(row.arrPrecision ?? "") ? ground.lastDay : null,
+      };
+    }),
     trips: tripRows.map((row) => ({
       id: row.id,
+      name: row.name,
       status: row.status,
       startDay: dayOf(row.startDay, row.startDate),
       endDay: dayOf(row.endDay, row.endDate),

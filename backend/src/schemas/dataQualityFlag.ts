@@ -12,10 +12,12 @@ import {
   airportUnknownDetailsSchema,
   chronologyConflictDetailsSchema,
   duplicateCandidateDetailsSchema,
+  ferryMatchDetailsSchema,
   flightNumberMissingDetailsSchema,
   tripEndMissingDetailsSchema,
   tripEntriesOutsideDetailsSchema,
 } from "./dataQualityRecordChecks";
+import { duplicateEvidenceSchema, findingActionSchema } from "./dataQualityFindings";
 
 /**
  * The vocabulary of the data-quality inbox.
@@ -62,6 +64,8 @@ export const DATA_QUALITY_ENTITY_TYPES = [
    * time list because the time-model backfill never looked at buses.
    */
   "bus_journey",
+  /** A ferry ride — the ferry match (spec 2026-10-25 C3) sits on it. */
+  "ferry_journey",
 ] as const;
 
 /** The one `entityId` a `home` flag carries — one question per account, not per period. */
@@ -117,6 +121,11 @@ export const DATA_QUALITY_FLAG_KINDS = [
   "trip_end_missing",
   /** Records: entries linked to a trip that fall outside the trip's days. */
   "trip_entries_outside",
+  /**
+   * A ferry ride on no trip, inside one trip's days (spec 2026-10-25 C3, the
+   * contract's `ferryMatch`). Answered with `link`.
+   */
+  "ferry_match",
 ] as const;
 export const dataQualityFlagKindSchema = z.enum(DATA_QUALITY_FLAG_KINDS);
 export type DataQualityFlagKind = (typeof DATA_QUALITY_FLAG_KINDS)[number];
@@ -208,6 +217,15 @@ export const dataQualityFlagSubjectSchema = z.discriminatedUnion("entityType", [
   /** A bus ride (record checks only) — the same row shape, its own page. */
   z.object({
     entityType: z.literal("bus_journey"),
+    entityId: z.string(),
+    label: z.string(),
+    parentId: z.string().nullable(),
+    parentType: timeParentTypeSchema.nullable(),
+    tripId: z.string().nullable(),
+  }),
+  /** A ferry ride (ferry match only) — the same row shape, its own page. */
+  z.object({
+    entityType: z.literal("ferry_journey"),
     entityId: z.string(),
     label: z.string(),
     parentId: z.string().nullable(),
@@ -370,6 +388,10 @@ const tripEntriesOutsidePayload = z.object({
   kind: z.literal("trip_entries_outside"),
   details: tripEntriesOutsideDetailsSchema,
 });
+const ferryMatchPayload = z.object({
+  kind: z.literal("ferry_match"),
+  details: ferryMatchDetailsSchema,
+});
 
 /**
  * A `kind` with the `details` that kind implies, and nothing else.
@@ -393,6 +415,7 @@ export const dataQualityFlagPayloadSchema = z.discriminatedUnion("kind", [
   airportUnknownPayload,
   tripEndMissingPayload,
   tripEntriesOutsidePayload,
+  ferryMatchPayload,
 ]);
 export type DataQualityFlagPayload = z.infer<typeof dataQualityFlagPayloadSchema>;
 
@@ -439,24 +462,48 @@ const dataQualityFlagBase = z.object({
   subject: dataQualityFlagSubjectSchema,
   createdAt: z.string().datetime(),
   resolvedAt: z.string().datetime().nullable(),
+  /**
+   * Until when `POST /:id/undo` can take the last answer back (spec C3);
+   * null when nothing can be undone — an open flag, an expired window, a merge.
+   */
+  undoUntil: z.string().datetime().nullable(),
+  /** The kind-specific answers `POST /:id/resolve` takes for THIS flag. */
+  actions: z.array(findingActionSchema),
+  /**
+   * Bumped by every write to the flag (evidence refreshed, answered, undone).
+   * Send it back as `revision` with an answer to have it refused with
+   * `staleFinding` if the finding moved since it was shown.
+   */
+  revision: z.number().int(),
 });
+
+/**
+ * One kind's view: its payload, the shared fields, and `evidence` — the
+ * contract's name for `details` (spec C3), an additive alias. For every kind
+ * but `duplicate_candidate` it IS `details`.
+ */
+const view = <T extends z.ZodRawShape, E extends z.ZodTypeAny>(
+  payload: z.ZodObject<T>,
+  evidence: E
+) => payload.merge(dataQualityFlagBase).extend({ evidence });
 
 /** One flag as the API returns it. */
 export const dataQualityFlagSchema = z.discriminatedUnion("kind", [
-  addressCountryMismatchPayload.merge(dataQualityFlagBase),
-  undatedCountryEvidencePayload.merge(dataQualityFlagBase),
-  stayDatesReversedPayload.merge(dataQualityFlagBase),
-  coordinatesOutsideCountryPayload.merge(dataQualityFlagBase),
-  timeZoneUnresolvedPayload.merge(dataQualityFlagBase),
-  timePrecisionUnknownPayload.merge(dataQualityFlagBase),
-  timeDayAmbiguousPayload.merge(dataQualityFlagBase),
-  homeResidenceUnconfirmedPayload.merge(dataQualityFlagBase),
-  duplicateCandidatePayload.merge(dataQualityFlagBase),
-  chronologyConflictPayload.merge(dataQualityFlagBase),
-  flightNumberMissingPayload.merge(dataQualityFlagBase),
-  airportUnknownPayload.merge(dataQualityFlagBase),
-  tripEndMissingPayload.merge(dataQualityFlagBase),
-  tripEntriesOutsidePayload.merge(dataQualityFlagBase),
+  view(addressCountryMismatchPayload, addressCountryMismatchDetailsSchema),
+  view(undatedCountryEvidencePayload, undatedCountryEvidenceDetailsSchema),
+  view(stayDatesReversedPayload, stayDatesReversedDetailsSchema),
+  view(coordinatesOutsideCountryPayload, coordinatesOutsideCountryDetailsSchema),
+  view(timeZoneUnresolvedPayload, timeQuestionDetailsSchema),
+  view(timePrecisionUnknownPayload, timeQuestionDetailsSchema),
+  view(timeDayAmbiguousPayload, timeQuestionDetailsSchema),
+  view(homeResidenceUnconfirmedPayload, homeResidenceUnconfirmedDetailsSchema),
+  view(duplicateCandidatePayload, duplicateEvidenceSchema),
+  view(chronologyConflictPayload, chronologyConflictDetailsSchema),
+  view(flightNumberMissingPayload, flightNumberMissingDetailsSchema),
+  view(airportUnknownPayload, airportUnknownDetailsSchema),
+  view(tripEndMissingPayload, tripEndMissingDetailsSchema),
+  view(tripEntriesOutsidePayload, tripEntriesOutsideDetailsSchema),
+  view(ferryMatchPayload, ferryMatchDetailsSchema),
 ]);
 export type DataQualityFlagView = z.infer<typeof dataQualityFlagSchema>;
 

@@ -8,6 +8,7 @@ import type { OpenDataFailure } from "./http";
 import { findOsmLodging, type NearbyLodging, type OsmLodging } from "./openStreetMap";
 import { starsFromOsm, websiteFromOsm } from "./osmValues";
 import { isWikidataId } from "./wikipedia";
+import { countryName } from "../../shared/geo/countryCode";
 
 // Re-exported: the enrichment tests name this module for them.
 export { starsFromOsm, websiteFromOsm };
@@ -109,7 +110,15 @@ async function propose(userId: string, lodgingId: string): Promise<Lookup> {
   if (lodging.lat === null || lodging.lon === null) {
     return { found: false, reason: "noCoordinates" };
   }
-  const hit = await findOsmLodging(lodging.lat, lodging.lon, lodging.name);
+  // The town and country are never the only word a match may share.
+  const places = [
+    lodging.city,
+    lodging.country,
+    ...(lodging.isoCountryCode
+      ? [countryName(lodging.isoCountryCode, "en"), countryName(lodging.isoCountryCode, "de")]
+      : []),
+  ];
+  const hit = await findOsmLodging(lodging.lat, lodging.lon, lodging.name, places);
   if (!hit) return { found: false, reason: "notFound" };
   if ("failure" in hit) return { found: false, reason: hit.failure };
 
@@ -160,8 +169,7 @@ export async function previewLodgingEnrichment(
 }
 
 /**
- * Fill a lodging's empty fields from its OpenStreetMap entry (beta,
- * `lodgingEnrichment`). Never overwrites: a value the user typed, or that an
+ * Fill a lodging's empty fields from its OpenStreetMap entry. Never overwrites: a value the user typed, or that an
  * import brought, is theirs. A chain is only linked when the catalogue already
  * knows the brand — an unknown one is an offer elsewhere, never a silent
  * create (same rule as the import preview).

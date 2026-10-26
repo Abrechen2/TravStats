@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 // Mock the lib/api module: keep everything real except for the endpoints
@@ -75,6 +75,16 @@ vi.mock("@/lib/api/sharing", () => ({
   },
 }));
 
+// The two area rules (phase 5): each hook is the one home of its rule and is
+// tested there; here they are switches. Off by default, as on most instances.
+const areaVisible = vi.hoisted(() => ({ plan: false, track: false }));
+vi.mock("../../hooks/useTravPlanVisible", () => ({
+  useTravPlanVisible: () => areaVisible.plan,
+}));
+vi.mock("../../hooks/useTravTrackVisible", () => ({
+  useTravTrackVisible: () => areaVisible.track,
+}));
+
 // Use the real settingsStore so useEnabledDomains reads actual state.
 vi.unmock("../../store/settingsStore");
 
@@ -96,6 +106,8 @@ describe("NavigationBar — round-4 header", () => {
     tripSuggestionCount.value = 0;
     sharingCount.value = 0;
     sharingCount.fail = false;
+    areaVisible.plan = false;
+    areaVisible.track = false;
   });
 
   function renderNav(path = "/dashboard") {
@@ -188,5 +200,120 @@ describe("NavigationBar — round-4 header", () => {
     fireEvent.click(screen.getByRole("button", { name: /userMenu\.label/ }));
     expect(screen.getByRole("menuitem", { name: /dashboard:settings/ })).toBeTruthy();
     expect(screen.queryByRole("menuitem", { name: /diagnostic\.reportBug/ })).toBeNull();
+  });
+});
+
+// TravTrack plan, phase 5 — header variant B: "Trav" + the area words, a
+// divider, and the ACTIVE area's menu. Labels are raw keys (see the note above).
+describe("NavigationBar — area switch (variant B)", () => {
+  beforeEach(() => {
+    authState.isAdmin = false;
+    useSettingsStore.setState({ enabledDomains: ["flight", "cruise"] });
+    areaVisible.plan = true;
+    areaVisible.track = true;
+  });
+
+  function renderAt(path: string) {
+    return render(
+      <MemoryRouter initialEntries={[path]}>
+        <NavigationBar />
+      </MemoryRouter>
+    );
+  }
+
+  const areaNav = () => screen.getByRole("navigation", { name: /nav\.areas\.label/ });
+  const word = (area: string) =>
+    within(areaNav()).getByRole("link", { name: new RegExp(`areas\\.${area}`) });
+  const mainNav = () => screen.getByRole("navigation", { name: /nav\.main/ });
+
+  it("spells the logo as the words of the visible areas, each leading to its area", () => {
+    renderAt("/dashboard");
+    expect(
+      within(areaNav())
+        .getAllByRole("link")
+        .map((a) => a.getAttribute("href"))
+    ).toEqual(["/dashboard", "/plan", "/track"]);
+  });
+
+  it.each([
+    ["/dashboard", "stats"],
+    ["/trips", "stats"],
+    ["/plan", "plan"],
+    ["/plan/abc/budget", "plan"],
+    ["/track", "track"],
+    ["/track/explored", "track"],
+  ])("on %s the %s word is the active one, in its area colour", (path, area) => {
+    renderAt(path);
+    for (const id of ["stats", "plan", "track"]) {
+      const link = word(id);
+      if (id === area) {
+        expect(link.getAttribute("aria-current")).toBe("true");
+        expect(link.style.color).toBe(`var(--area-${id})`);
+        expect(link.style.borderBottom).toContain(`var(--area-${id})`);
+      } else {
+        expect(link.getAttribute("aria-current")).toBeNull();
+      }
+    }
+  });
+
+  it("hides the word of an area that is not visible", () => {
+    areaVisible.plan = false;
+    renderAt("/dashboard");
+    expect(within(areaNav()).queryByRole("link", { name: /areas\.plan/ })).toBeNull();
+    expect(word("track")).toBeTruthy();
+  });
+
+  it("reads TravStats as before, with no words or divider, when neither area is visible", () => {
+    areaVisible.plan = false;
+    areaVisible.track = false;
+    renderAt("/dashboard");
+    expect(screen.queryByRole("navigation", { name: /nav\.areas\.label/ })).toBeNull();
+    expect(screen.queryByTestId("area-divider")).toBeNull();
+    expect(screen.getByRole("link", { name: /accessibility\.home/ }).textContent).toContain("TRAV");
+  });
+
+  it("shows Track's own menu on /track, without Mehr or the Stats entries", () => {
+    renderAt("/track/explored");
+    const nav = mainNav();
+    expect(
+      within(nav)
+        .getAllByRole("link")
+        .map((a) => a.getAttribute("href"))
+    ).toEqual(["/track", "/track/explored", "/track/months", "/track/stays", "/track/imports"]);
+    expect(within(nav).queryByRole("button", { name: /nav\.more/ })).toBeNull();
+    const current = within(nav).getByRole("link", { name: /track:menu\.explored/ });
+    expect(current.getAttribute("aria-current")).toBe("page");
+    expect(current.style.boxShadow).toContain("var(--area-track)");
+    expect(screen.getByTestId("area-divider")).toBeTruthy();
+  });
+
+  it("marks Karte on a day of the track", () => {
+    renderAt("/track/2026-10-12");
+    const map = within(mainNav()).getByRole("link", { name: /track:menu\.map/ });
+    expect(map.getAttribute("aria-current")).toBe("page");
+  });
+
+  it("shows Plan's menu on /plan, the configuration for admins only", () => {
+    renderAt("/plan");
+    expect(
+      within(mainNav())
+        .getAllByRole("link")
+        .map((a) => a.getAttribute("href"))
+    ).toEqual(["/plan"]);
+  });
+
+  it("keeps today's menu on Stats, and Track is no longer under Mehr", () => {
+    renderAt("/dashboard");
+    const nav = mainNav();
+    expect(within(nav).getByRole("link", { name: /dashboard:title/ })).toBeTruthy();
+    fireEvent.click(within(nav).getByRole("button", { name: /nav\.more/ }));
+    expect(screen.queryByRole("menuitem", { name: /track:title/ })).toBeNull();
+  });
+
+  it("folds the area's menu into the phone menu button", () => {
+    renderAt("/track");
+    fireEvent.click(screen.getByRole("button", { name: /nav\.menu/ }));
+    expect(screen.getByRole("menuitem", { name: /track:menu\.imports/ })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: /achievements/ })).toBeNull();
   });
 });

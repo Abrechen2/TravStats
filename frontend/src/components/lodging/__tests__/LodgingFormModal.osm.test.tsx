@@ -117,7 +117,8 @@ describe("LodgingFormModal — lodgings nearby from OpenStreetMap", () => {
     vi.mocked(openDataApi.nearbyLodgings).mockResolvedValue([ADLON, CAMPING]);
   });
 
-  it("is not offered while either switch is off, nor before a pin exists", async () => {
+  // Out of beta since 2026-10-26: only the open data switch decides.
+  it("is offered by the open data switch alone, and never before a pin exists", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: true, openDataEnabled: false });
     const { unmount } = render(
       <LodgingFormModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />
@@ -128,8 +129,9 @@ describe("LodgingFormModal — lodgings nearby from OpenStreetMap", () => {
 
     useSettingsStore.setState({ betaFeaturesEnabled: false, openDataEnabled: true });
     render(<LodgingFormModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
-    await userEvent.click(screen.getByText("mock-select-location"));
     expect(screen.queryByText(SEARCH)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByText("mock-select-location"));
+    expect(screen.getByText(SEARCH)).toBeInTheDocument();
   });
 
   it("fills only the empty fields from the picked house, and keeps the user's name", async () => {

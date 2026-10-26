@@ -31,7 +31,7 @@ import { resolveTrip } from "./trips/resolveTrip";
 /**
  * Open data (2026-09-24): the day's weather for a journal entry, the
  * elevation profile of a planned tour, a Wikipedia summary for a place or a
- * house, and a house's facts from OpenStreetMap (beta `lodgingEnrichment`).
+ * house, and a house's facts from OpenStreetMap.
  *
  * Every endpoint answers 409 `{ error: "openDataDisabled" }` while the
  * instance switch is off — the request is fine, the instance is not set up to
@@ -253,7 +253,7 @@ async function ownLodgingId(req: AuthRequest): Promise<string> {
 
 /**
  * GET /lodging/:id/enrich — what the enrichment WOULD fill, and from which
- * OpenStreetMap house, without writing (beta). The match is shown so a wrong
+ * OpenStreetMap house, without writing. The match is shown so a wrong
  * house is caught before its stars land in the user's record.
  */
 router.get(
@@ -276,7 +276,7 @@ const enrichBody = z.object({
   expectedOsmRef: z.string().regex(OSM_REF_PATTERN).optional(),
 });
 
-/** POST /lodging/:id/enrich — fill the house's empty fields from OpenStreetMap (beta). */
+/** POST /lodging/:id/enrich — fill the house's empty fields from OpenStreetMap. */
 router.post(
   "/lodging/:id/enrich",
   authenticate,

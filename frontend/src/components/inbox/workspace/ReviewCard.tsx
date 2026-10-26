@@ -27,11 +27,28 @@ import { W } from "./model";
  *   again — the escape hatch for a check that is right about the disagreement
  *   and wrong about the conclusion ("…, Atlanta, Georgia").
  * - The quick editors and "Angaben erneut prüfen" let the check itself decide.
+ * - **"Zur Reise hinzufügen"** (`link`, spec 2026-10-25 C3) appears only where
+ *   the server offers it in `actions` — today the ferry match.
  *
  * Each carries its consequence as a permanent hint, because the difference only
  * matters at the moment of clicking. A question already answered (the history
  * view) shows its answer and offers none.
  */
+/**
+ * "Das stimmt so". For a duplicate the server offers `keep`, which answers
+ * every flag over the same copies; a plain dismiss would leave the sibling
+ * question of a three-copy group open. Other kinds — and an older server
+ * that sends no `actions` — get the dismiss they always got.
+ */
+function answerThisIsRight(flag: DataQualityFlag) {
+  if (flag.actions?.includes("keep")) {
+    return dataQualityFlagsApi.resolve(flag.id, { action: "keep", revision: flag.revision });
+  }
+  return flag.revision === undefined
+    ? dataQualityFlagsApi.dismiss(flag.id)
+    : dataQualityFlagsApi.dismiss(flag.id, flag.revision);
+}
+
 export default function ReviewCard({
   flag,
   busy,
@@ -77,6 +94,28 @@ export default function ReviewCard({
         <fieldset disabled={busy} className="min-w-0 space-y-4">
           <legend className="t-label-mono mb-2">{t(`${W}.yourAnswer`)}</legend>
           <FlagQuickEditor flag={flag} busy={busy} act={act} />
+          {flag.actions?.includes("link") && (
+            <div>
+              <Button
+                variant="primary"
+                disabled={busy}
+                onClick={() =>
+                  void act(
+                    () =>
+                      dataQualityFlagsApi.resolve(flag.id, {
+                        action: "link",
+                        revision: flag.revision,
+                      }),
+                    false,
+                    t("dataQuality:inbox.messages.linked")
+                  )
+                }
+              >
+                {t("dataQuality:flag.actions.link.label")}
+              </Button>
+              <p className="t-caption mt-1">{t("dataQuality:flag.actions.link.hint")}</p>
+            </div>
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Button
@@ -84,7 +123,10 @@ export default function ReviewCard({
                 disabled={busy}
                 onClick={() =>
                   void act(
-                    () => dataQualityFlagsApi.resolve(flag.id),
+                    () =>
+                      flag.revision === undefined
+                        ? dataQualityFlagsApi.resolve(flag.id)
+                        : dataQualityFlagsApi.resolve(flag.id, { revision: flag.revision }),
                     false,
                     t("dataQuality:inbox.messages.resolved")
                   )
@@ -99,7 +141,7 @@ export default function ReviewCard({
                 disabled={busy}
                 onClick={() =>
                   void act(
-                    () => dataQualityFlagsApi.dismiss(flag.id),
+                    () => answerThisIsRight(flag),
                     false,
                     t("dataQuality:inbox.messages.dismissed")
                   )

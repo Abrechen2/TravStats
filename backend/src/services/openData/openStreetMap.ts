@@ -60,6 +60,22 @@ export interface OsmLodging {
   distanceM: number;
 }
 
+/** The keys an OSM house's name may stand under. A Seoul hotel's `name` is in
+ *  Hangul and its `name:en` in Latin — the audit of 2026-10-26 missed seven
+ *  houses that way. */
+const OSM_NAME_KEYS = ["name", "name:en", "name:de", "int_name", "alt_name"] as const;
+
+function osmNamesOf(tags: Record<string, string>): string[] {
+  return OSM_NAME_KEYS.flatMap((key) => (tags[key] ?? "").split(";"))
+    .map((n) => n.trim())
+    .filter((n) => n !== "");
+}
+
+/** The town words a house's address writes — for every house in the street. */
+function osmPlacesOf(tags: Record<string, string>): string[] {
+  return ["addr:city", "addr:suburb", "addr:place"].flatMap((key) => tags[key] ?? []);
+}
+
 /**
  * The OpenStreetMap entry of a house: a lodging-type feature within
  * `SEARCH_RADIUS_M` of its pin whose name could be the same house.
@@ -75,7 +91,9 @@ export interface OsmLodging {
 export async function findOsmLodging(
   lat: number,
   lon: number,
-  name: string
+  name: string,
+  /** The lodging's town (and country names): never the only shared word. */
+  places: ReadonlyArray<string | null | undefined> = []
 ): Promise<OsmLodging | null | { failure: OpenDataFailure }> {
   const query =
     `[out:json][timeout:15];` +
@@ -89,12 +107,21 @@ export async function findOsmLodging(
   const parsed = overpassSchema.safeParse(answer.body);
   if (!parsed.success) return { failure: "unavailable" };
 
+  // Every town an address within the radius names is a place word too: the
+  // lodging's own record often has no city, the houses around it do.
+  const neighbourhood = [
+    ...places,
+    ...parsed.data.elements.flatMap((el) => osmPlacesOf(el.tags ?? {})),
+  ];
   const candidates = parsed.data.elements.flatMap((el) => {
     const at =
       el.center ?? (el.lat != null && el.lon != null ? { lat: el.lat, lon: el.lon } : null);
     const osmName = el.tags?.name;
     // The search runs around this hotel's own pin, so the place is proven.
-    if (!at || !osmName || !namesCouldBeOneHouse(name, osmName, true, { nearby: true })) return [];
+    const agrees = osmNamesOf(el.tags ?? {}).some((n) =>
+      namesCouldBeOneHouse(name, n, true, { nearby: true, places: neighbourhood })
+    );
+    if (!at || !osmName || !agrees) return [];
     return [
       {
         osmRef: `osm:${el.type}/${el.id}`,

@@ -46,7 +46,7 @@ export function parseStatsTab(tab: string | null): StatsTab {
  * `usePlacesAccess`. Pending keeps the tab (the app does not know yet);
  * denied removes it.
  *
- * The beta switches of rental, bus, ferry and roadtrip are already
+ * The roadtrip beta switch is already
  * applied to `enabledDomains` (`useEnabledDomains`), so a gated domain has no
  * tab and no deep link here without being asked again.
  */

@@ -1,7 +1,7 @@
 {
   "title": "Bus",
   "subtitle": "Fernbus-, Intercity- und Shuttlefahrten — Terminal zu Terminal",
-  "betaNote": "Beta: Busfahrten werden von Hand eingetragen („{{add}}“). Kein Stadtverkehr — eine Fahrt ist ein Ticket zwischen zwei Terminals.",
+  "pageNote": "Busfahrten werden über „{{add}}“ eingetragen. Kein Stadtverkehr — eine Fahrt ist ein Ticket zwischen zwei Terminals.",
   "add": "Fahrt hinzufügen",
   "empty": "Noch keine Busfahrten. Die erste Fahrt kommt über „{{add}}“.",
   "loadError": "Die Busfahrten konnten nicht geladen werden.",

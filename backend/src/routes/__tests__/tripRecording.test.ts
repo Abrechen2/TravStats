@@ -455,6 +455,11 @@ describe("Trip recording — /trips/:id/recording", () => {
           devices: [],
           uploadedWithoutDevice: false,
           days: [],
+          // TravTrack plan T5: no recording, and no provider to read one from.
+          origin: null,
+          coverage: null,
+          alternatives: [],
+          unchecked: [],
         },
         segments: [],
       });

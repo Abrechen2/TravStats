@@ -44,19 +44,44 @@ export function storedPoints(value: Prisma.JsonValue): StoredPoint[] {
   return Array.isArray(value) ? value.filter(isPoint) : [];
 }
 
+/**
+ * An explicit boundary `[fromMs, untilMs]`: two consecutive points on either
+ * side of it are two stretches, however close they lie. Points were taken out
+ * there — a flight's recorder window, a privacy zone — and a line joining the
+ * two that are left would draw the excluded span as travelled.
+ */
+export type RecordingBreak = readonly [number, number];
+
+/** Whether an explicit boundary lies between the consecutive points `a` and `b`. */
+export function crossesBreak(
+  a: StoredPoint,
+  b: StoredPoint,
+  breaks: readonly RecordingBreak[]
+): boolean {
+  return breaks.some(([from, until]) => a[0] < until && b[0] > from);
+}
+
 /** Whether `b` starts a new stretch after `a`. */
-export function isGap(a: StoredPoint, b: StoredPoint): boolean {
+export function isGap(
+  a: StoredPoint,
+  b: StoredPoint,
+  breaks: readonly RecordingBreak[] = []
+): boolean {
   if (b[0] - a[0] > RECORDING_GAP_MS) return true;
+  if (crossesBreak(a, b, breaks)) return true;
   return haversineKm({ lat: a[1], lon: a[2] }, { lat: b[1], lon: b[2] }) > RECORDING_GAP_KM;
 }
 
-/** Time-ordered points cut at every gap. Never an empty stretch. */
-export function splitAtGaps(points: readonly StoredPoint[]): StoredPoint[][] {
+/** Time-ordered points cut at every gap and every explicit break. Never an empty stretch. */
+export function splitAtGaps(
+  points: readonly StoredPoint[],
+  breaks: readonly RecordingBreak[] = []
+): StoredPoint[][] {
   const out: StoredPoint[][] = [];
   let current: StoredPoint[] = [];
   for (const point of points) {
     const last = current[current.length - 1];
-    if (last && isGap(last, point)) {
+    if (last && isGap(last, point, breaks)) {
       out.push(current);
       current = [];
     }
@@ -69,7 +94,16 @@ export function splitAtGaps(points: readonly StoredPoint[]): StoredPoint[][] {
 export interface RecordingBatchRow {
   deviceId: string | null;
   points: Prisma.JsonValue;
+  /** Boundaries the device's line must not be joined across (read, never stored). */
+  breaks?: readonly RecordingBreak[];
 }
+
+/** One device's points in time order and the boundaries its line keeps. */
+export type DevicePoints = {
+  deviceId: string | null;
+  points: StoredPoint[];
+  breaks?: readonly RecordingBreak[];
+};
 
 /**
  * Each device's points in time order, optionally only those of `day` on the
@@ -80,8 +114,9 @@ export function pointsByDevice(
   batches: readonly RecordingBatchRow[],
   zone: string,
   day?: string
-): Array<{ deviceId: string | null; points: StoredPoint[] }> {
+): DevicePoints[] {
   const byDevice = new Map<string | null, StoredPoint[]>();
+  const breaksOf = new Map<string | null, RecordingBreak[]>();
   const dayOf = localDayReader(zone);
   // Appended in place, not copied per batch: a recording arrives in many
   // small batches, and copying the growing list for each one is quadratic.
@@ -91,6 +126,9 @@ export function pointsByDevice(
       list = [];
       byDevice.set(batch.deviceId, list);
     }
+    if (batch.breaks && batch.breaks.length > 0) {
+      breaksOf.set(batch.deviceId, [...(breaksOf.get(batch.deviceId) ?? []), ...batch.breaks]);
+    }
     for (const p of storedPoints(batch.points)) {
       if (day === undefined || dayOf(p[0]) === day) list.push(p);
     }
@@ -99,6 +137,7 @@ export function pointsByDevice(
     .map(([deviceId, points]) => ({
       deviceId,
       points: points.sort((a, b) => a[0] - b[0]),
+      ...(breaksOf.has(deviceId) ? { breaks: breaksOf.get(deviceId) } : {}),
     }))
     .filter((d) => d.points.length > 0)
     .sort((a, b) =>
@@ -113,8 +152,10 @@ export function pointsByDevice(
 }
 
 /** Every stretch of every device, `[tMs…]` raw — the GPX's `<trkseg>`s. */
-export function rawSegments(devices: ReadonlyArray<{ points: StoredPoint[] }>): StoredPoint[][] {
-  return devices.flatMap((d) => splitAtGaps(d.points));
+export function rawSegments(
+  devices: ReadonlyArray<Pick<DevicePoints, "points" | "breaks">>
+): StoredPoint[][] {
+  return devices.flatMap((d) => splitAtGaps(d.points, d.breaks));
 }
 
 /** The stretches as `[lon, lat]` lines for the map, each simplified on its own. */
@@ -155,7 +196,9 @@ export function recordingDays(points: readonly StoredPoint[], zone: string): str
  * hands the event loop back every few milliseconds (`pacing.ts`) instead of
  * holding every other request for the length of the recording.
  */
-export async function withoutJitter(devices: ReadonlyArray<{ points: StoredPoint[] }>): Promise<{
+export async function withoutJitter(
+  devices: ReadonlyArray<Pick<DevicePoints, "points" | "breaks">>
+): Promise<{
   segments: StoredPoint[][];
   dropped: number;
 }> {
@@ -168,9 +211,13 @@ export async function withoutJitter(devices: ReadonlyArray<{ points: StoredPoint
       t,
       accuracyM,
     }));
-    const starts = device.points.flatMap((p, i) =>
-      i > 0 && p[0] - device.points[i - 1][0] > RECORDING_GAP_MS ? [i] : []
-    );
+    // An explicit break is kept like the clock half: on the raw points.
+    const breaks = device.breaks ?? [];
+    const starts = device.points.flatMap((p, i) => {
+      if (i === 0) return [];
+      const prev = device.points[i - 1];
+      return p[0] - prev[0] > RECORDING_GAP_MS || crossesBreak(prev, p, breaks) ? [i] : [];
+    });
     const result = await filterJitterYielding(fixes, starts, JITTER_PROFILES.mixed);
     dropped += result.dropped;
     const points = result.fixes.map((f): StoredPoint => [f.t ?? 0, f.lat, f.lon, f.accuracyM]);

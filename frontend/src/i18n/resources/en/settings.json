@@ -849,7 +849,9 @@
     "confirmRegenerate": "The current link stops working – every subscription to it stalls until you add the new one. Create a new link?",
     "confirmRevoke": "The link stops working, and calendar apps can no longer read your trips. Revoke it?",
     "urlLabel": "Your calendar link",
-    "shownOnce": "The link is shown only now. Anyone who has it sees your trips – do not share it. If you lose it, create a new one.",
+    "keepSecret": "Anyone who has the link sees your trips – do not share it. If it gets into the wrong hands, create a new one.",
+    "unreachable": "Google Calendar cannot reach this address — set a public address under Admin → Instance.",
+    "notRecoverable": "This link comes from an older version and can no longer be shown. It keeps working; if you need it again, create a new one.",
     "copy": "Copy link",
     "copied": "Copied.",
     "copyFailed": "Copying did not work – select the link in the field and copy it by hand.",
@@ -1057,16 +1059,19 @@
       "shareLinks": "Public link, share, link",
       "calendarFeed": "Calendar, iCal, ICS, subscription, calendar feed",
       "dawarich": "Dawarich, location history, location source, positions, connection",
+      "locationProvider": "Location source, location, positions, TravTrack, Dawarich, none, switch source, recording",
       "tripRecording": "Recording, positions, app, track, record trip",
-      "stayScan": "Stays, detect stays, radius, minimum duration, markets, places as areas, re-evaluate",
-      "companions": "Companions, travel companions, people, rename, merge, duplicate, delete, names"
+      "stayScan": "Stays, detect stays, radius, minimum duration, detect places automatically, detect places, places as areas, venues, re-evaluate",
+      "companions": "Companions, travel companions, people, rename, merge, duplicate, delete, names",
+      "travTrack": "TravTrack, location history, history, positions, privacy zones, zone, delete span, export, GPX"
     },
     "expertKeywords": {
       "suggestions": "Immich evidence, photos as evidence, place type, AI classification",
       "autoupdate": "Check interval, interval, approval, expiry, only during flight",
       "backup": "Instance backup, last backup, WebDAV, Nextcloud, sync",
       "externalServices": "own key, own API key, API key, quota, AirLabs key, Aviationstack key, AeroDataBox key, AeroAPI key, OpenSky credentials, GraphHopper key, OpenRouteService key",
-      "features": "seat statistics, seats, window seat, aisle seat"
+      "features": "seat statistics, seats, window seat, aisle seat",
+      "stayScan": "markets, market grounds, shopping malls, parks, zoos, theme parks, museums"
     }
   },
   "railProviders": {
@@ -1090,11 +1095,31 @@
     "testButton": "Test connection",
     "test": {
       "ok": "Connected. Profile {{profile}}, map data of {{date}}.",
+      "dateUnknown": "unknown",
       "notConfigured": "No address has been entered.",
       "unreachable": "No service answers at this address.",
       "notOpenRailRouting": "The service answers, but it is not an OpenRailRouting.",
-      "profileMissing": "This OpenRailRouting has no \"all_tracks\" profile – TravStats cannot route without it.",
-      "requestFailed": "The test could not be run."
+      "profileMissing": "This OpenRailRouting has no \"all_tracks\" profile – TravStats cannot route trains without it.",
+      "requestFailed": "The test could not be run.",
+      "modeProfiles": {
+        "both": "Profiles \"tram\" and \"subway\" present: tram and U-Bahn rides are routed over their own track network only.",
+        "missing": "No dedicated profile for {{modes}}. Such rides are then routed only if this instance accepts requests with their own model (ch.disable) – otherwise they stay a straight line, never on the railway network. The \"rail-routing\" guide explains how to add the profiles.",
+        "tram": "tram (\"tram\")",
+        "subway": "U-Bahn (\"subway\")",
+        "and": " and "
+      }
+    },
+    "reroute": {
+      "hint": "Until October 2026 tram and U-Bahn rides were routed like trains over the railway network and may be wrong. This routes every already-routed tram and U-Bahn ride of this instance again; a line its own network does not confirm becomes a straight line.",
+      "action": "Route tram and U-Bahn rides again",
+      "running": "Routing again …",
+      "progress": "Routing again … {{done}} of {{total}}",
+      "done": "Done: {{routed}} routed again, {{straight}} reset to a straight line, {{kept}} kept unchanged, {{skipped}} skipped (of {{total}}).",
+      "stopped": "Stopped because the rail router no longer answers – {{remaining}} rides are still open. Start it again later.",
+      "notConfigured": "Save an address first – without a rail router there is nothing to route again.",
+      "alreadyRunning": "Another administrator is running this pass right now. Please wait until it has finished.",
+      "failed": "Routing again failed.",
+      "lost": "Whether it finished is unknown – the server no longer has the job. Just start it again."
     }
   },
   "profileZone": {
@@ -1148,7 +1173,8 @@
     "reveal": "Show",
     "showInExpert": "Show in Expert",
     "pageMore_one": "1 more setting on this page is only shown in the Expert view.",
-    "pageMore_other": "{{count}} more settings on this page are only shown in the Expert view."
+    "pageMore_other": "{{count}} more settings on this page are only shown in the Expert view.",
+    "hint": "Expert also shows fine-tuning, your own API keys and technical options."
   },
   "sectionChips": "Sections on this page",
   "pagePicker": "Page",
@@ -1279,5 +1305,61 @@
       "invalidInput": "An input is invalid.",
       "unknown": "The sync failed."
     }
+  },
+  "locationProvider": {
+    "title": "Location source",
+    "description": "Where TravStats reads positions from to suggest country days, stays and routes, and what the Companion records for.",
+    "legend": "Choose a location source",
+    "loadError": "The location source could not be loaded.",
+    "meaning": "What this means",
+    "nothingMoves": "Switching only changes what is recorded and read from now on. Nothing is moved, copied or deleted.",
+    "connectDawarich": "Connect Dawarich first",
+    "status": {
+      "notConfigured": "Dawarich is your chosen location source, but your own Dawarich connection is missing or no longer works. Until you enter it again, TravStats reads nothing from Dawarich.",
+      "unavailable": "TravTrack is your chosen location source but is not available on this server right now. Until it is, nothing is recorded or read through it."
+    },
+    "options": {
+      "none": {
+        "label": "None",
+        "sub": "TravStats reads no positions.",
+        "points": {
+          "manual": "No automatic suggestions from positions: you enter country days and stays yourself.",
+          "noHistory": "The Companion offers no location history.",
+          "ownRecording": "The Companion records flights and trips itself. The track belongs to the entry and is stored here on the server."
+        }
+      },
+      "travtrack": {
+        "label": "TravTrack",
+        "sub": "The location history here on your server.",
+        "points": {
+          "records": "The Companion records through TravTrack, everyday, flight and trip; the points are stored on this server and are part of the backup.",
+          "segment": "The track of a flight or trip is a segment in TravTrack, linked to the entry.",
+          "inbox": "TravTrack sends suggestions to the inbox: country days, stays, missing journeys.",
+          "zones": "You manage privacy zones and deletion in TravTrack."
+        }
+      },
+      "dawarich": {
+        "label": "Dawarich",
+        "sub": "Your own Dawarich, read only.",
+        "points": {
+          "readOnly": "TravStats reads from your Dawarich, as before. It writes nothing there and deletes nothing there.",
+          "suggestions": "TravStats counts country days from it and suggests stays in the inbox.",
+          "recording": "For now the Companion keeps recording flights and trips itself."
+        }
+      }
+    },
+    "errors": {
+      "dawarichNotConfigured": "Dawarich can be your location source once you have entered your own connection under “Dawarich connection”.",
+      "travtrackUnavailable": "TravTrack is not available on this server.",
+      "saveFailed": "The location source could not be saved. Please try again."
+    },
+    "dawarichHint": {
+      "text": "Dawarich is connected. Use it as your location source?",
+      "use": "Use as location source",
+      "done": "Dawarich is now your location source."
+    }
+  },
+  "travTrack": {
+    "title": "TravTrack"
   }
 }

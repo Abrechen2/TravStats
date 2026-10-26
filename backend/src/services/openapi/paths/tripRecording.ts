@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
+import { sourceNotAvailable, trackOriginFields, trackSourceQuery } from "./trackOrigin";
 import { errorContent, errorResponse, jitterDroppedField } from "./shared";
 import { localDateValueSchema, timeValueSchema } from "../../../shared/time/wire";
 import {
@@ -108,12 +109,14 @@ const recordingView = z.object({
     days: z
       .array(localDateValueSchema)
       .describe("Every day with points on the trip's clock, whatever `day` filters to"),
+    ...trackOriginFields,
   }),
   segments: z
     .array(z.array(z.tuple([z.number(), z.number()])))
     .describe(
       "[lon, lat] lines per device, jitter removed, cut where two fixes are > 2 h or > 50 km " +
-        "apart (a gap is never joined), simplified for display"
+        "apart (a gap is never joined), simplified for display, then privacy-cut: nothing " +
+        "inside a privacy zone and no chord through one"
     ),
 });
 
@@ -131,8 +134,11 @@ registry.registerPath({
       description: "The recording",
       content: { "application/json": { schema: recordingView } },
     },
-    400: { description: "Invalid day (VALIDATION_FAILED)", content: errorContent },
-    404: { description: "Trip not found — `code: TRIP_NOT_FOUND`", content: errorContent },
+    400: { description: "Invalid day or source (VALIDATION_FAILED)", content: errorContent },
+    404: {
+      description: `Trip not found — \`code: TRIP_NOT_FOUND\`; or ${sourceNotAvailable}`,
+      content: errorContent,
+    },
   },
 });
 
@@ -140,9 +146,11 @@ registry.registerPath({
   method: "get",
   path: "/trips/{id}/recording/gpx",
   summary: "The trip's recording as a GPX file",
-  description: "Every raw point with its time, one `<trkseg>` per stretch between gaps.",
+  description:
+    "Every raw point with its time, one `<trkseg>` per stretch between gaps, privacy-cut. " +
+    "`?source=` as on the recording.",
   tags: ["Trips"],
-  request: { params: tripParams },
+  request: { params: tripParams, query: trackSourceQuery },
   responses: {
     200: {
       description: "GPX 1.1 document, as an attachment",

@@ -4,14 +4,17 @@ import { AVAILABLE_DOMAINS, type DomainKey } from "../../shared/domains";
 import { BETA_GATED_DOMAINS, visibleDomainKeys } from "../domainVisibility";
 
 describe("visibleDomainKeys", () => {
-  it("hides bus while the instance's beta switch is off, and shows it when on", () => {
-    const enabled = ["flight", "bus"];
+  it("hides roadtrips while the instance's beta switch is off, and shows them when on", () => {
+    const enabled = ["flight", "roadtrip"];
     expect(visibleDomainKeys(enabled, false)).toEqual(["flight"]);
-    expect(visibleDomainKeys(enabled, true)).toEqual(["flight", "bus"]);
+    expect(visibleDomainKeys(enabled, true)).toEqual(["flight", "roadtrip"]);
   });
 
   it("keeps an ungated domain visible with the switch off", () => {
-    expect(visibleDomainKeys(["flight", "cruise", "bus"], false)).toEqual(["flight", "cruise"]);
+    expect(visibleDomainKeys(["flight", "cruise", "roadtrip"], false)).toEqual([
+      "flight",
+      "cruise",
+    ]);
   });
 
   // Rail left beta in 2.7.0-rc.20 (owner, 2026-10-22): like cruises, the
@@ -20,6 +23,17 @@ describe("visibleDomainKeys", () => {
     expect(visibleDomainKeys(["flight", "rail"], false)).toEqual(["flight", "rail"]);
     expect(BETA_GATED_DOMAINS.rail).toBeUndefined();
   });
+
+  // Rental, bus and ferry left beta on 2026-10-26 (owner): the user's domain
+  // choice alone decides, on with the switch off and hidden once switched off.
+  it.each(["rental", "bus", "ferry"] as const)(
+    "shows %s with the beta switch off once the user has it on, and hides it when off",
+    (domain) => {
+      expect(visibleDomainKeys(["flight", domain], false)).toEqual(["flight", domain]);
+      expect(visibleDomainKeys(["flight"], false)).toEqual(["flight"]);
+      expect(BETA_GATED_DOMAINS[domain]).toBeUndefined();
+    }
+  );
 });
 
 /**
@@ -40,9 +54,7 @@ describe("BETA_GATED_DOMAINS", () => {
   );
 
   it("finds the domain gates in the registry (the scan itself works)", () => {
-    expect(domainGateKeys).toEqual(
-      expect.arrayContaining(["rentalDomain", "busDomain", "ferryDomain", "roadtrips"])
-    );
+    expect(domainGateKeys).toEqual(expect.arrayContaining(["roadtrips"]));
   });
 
   it("has an entry, on a real domain, for every domain gate in the registry", () => {

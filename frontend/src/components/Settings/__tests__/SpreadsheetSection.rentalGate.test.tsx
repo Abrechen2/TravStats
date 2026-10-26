@@ -18,9 +18,9 @@ import { exportWorkbook } from "../../../lib/xlsx/exportAll";
 import { useSettingsStore } from "../../../store/settingsStore";
 
 /**
- * forgejo#267: rentals stay behind the `rentalDomain` beta switch AND the
- * user's domain choice — with either off the export neither asks for them
- * nor writes their sheet; with both on it carries them.
+ * forgejo#267: rentals left beta on 2026-10-26 (owner) and follow the
+ * user's domain choice alone: with it off the export neither asks for them
+ * nor writes their sheet; with it on it carries them, beta switch or not.
  */
 describe("Excel export — rental domain", () => {
   beforeEach(() => {
@@ -34,11 +34,10 @@ describe("Excel export — rental domain", () => {
     await waitFor(() => expect(exportWorkbook).toHaveBeenCalled());
   };
 
-  it("leaves rentals out while the beta switch is off", async () => {
+  it("exports rentals with the beta switch off once the user has the domain on", async () => {
     useSettingsStore.setState({ enabledDomains: ["flight", "rental"], betaFeaturesEnabled: false });
     await exportOnce();
-    expect(rentalApi.listAll).not.toHaveBeenCalled();
-    expect(vi.mocked(exportWorkbook).mock.calls[0][1].rentals).toEqual([]);
+    expect(rentalApi.listAll).toHaveBeenCalledTimes(1);
   });
 
   it("leaves rentals out for a user who switched the domain off", async () => {
@@ -47,7 +46,7 @@ describe("Excel export — rental domain", () => {
     expect(rentalApi.listAll).not.toHaveBeenCalled();
   });
 
-  it("exports the rentals once both allow it, and says which file is not a backup", async () => {
+  it("exports the rentals once the domain is on, and says which file is not a backup", async () => {
     useSettingsStore.setState({ enabledDomains: ["flight", "rental"], betaFeaturesEnabled: true });
     await exportOnce();
     expect(rentalApi.listAll).toHaveBeenCalledTimes(1);

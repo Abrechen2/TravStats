@@ -14,6 +14,7 @@ import { Button, Field, Input, Switch, ListRow, SectionLabel } from "../ui";
 import { SectionCard, SectionTitle } from "../Settings/SettingsShared";
 import { ConnectionFileDownload } from "./FederationConnectionFile";
 import FederationPeerForm, { type PeerValues } from "./FederationPeerForm";
+import FederationSetupChecklist from "./FederationSetupChecklist";
 
 const NS = "federation";
 
@@ -100,6 +101,15 @@ export default function FederationSettings(): JSX.Element {
   return (
     <SectionCard>
       <SectionTitle title={t(`${NS}.title`)} description={t(`${NS}.description`)} />
+      {state && isFeatureVisible("federatedTripSharing") && (
+        <FederationSetupChecklist
+          state={state}
+          busy={busy}
+          onSwitchOn={() => void run(() => federationAdminApi.setTripSharing(true))}
+          onPing={(peer) => void run(() => federationAdminApi.verifyPeer(peer))}
+          onError={setErrorKey}
+        />
+      )}
       {state && readOnly && <p className="t-caption">{t(`${NS}.envNote`)}</p>}
       {state && !readOnly && (
         <>
@@ -124,7 +134,12 @@ export default function FederationSettings(): JSX.Element {
               }
             />
           </Field>
-          <Button variant="secondary" disabled={busy} onClick={() => void generateKey()}>
+          <Button
+            id="federation-generate-key"
+            variant="secondary"
+            disabled={busy}
+            onClick={() => void generateKey()}
+          >
             {t(`${NS}.generateKey`)}
           </Button>
           {state.hasKey && <p className="t-caption">{t(`${NS}.rotateWarning`)}</p>}

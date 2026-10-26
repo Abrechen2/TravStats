@@ -9,18 +9,20 @@ import { photoJourneyLabel } from "../photoJourneyLabel";
 import { suggestedTripName } from "../tripSuggestionCopy";
 
 import type { DawarichStay } from "../../../lib/api/dawarichStays";
+import { suggestionDays, type LocationSuggestion } from "../../../lib/api/locationSuggestions";
 import { localDay } from "../../../shared/time";
 
 export const W = "dataQuality:inbox.workspace";
 export type Translate = (key: string, options?: Record<string, unknown>) => string;
-export type InboxSource = "review" | "trips" | "updates" | "photos" | "dawarich";
+export type InboxSource = "review" | "trips" | "updates" | "photos" | "dawarich" | "location";
 export type InboxView = "cards" | "list" | "journey";
 export type InboxRecord =
   | { source: "review"; data: DataQualityFlag }
   | { source: "trips"; data: TripSuggestion }
   | { source: "updates"; data: PendingUpdate }
   | { source: "photos"; data: PhotoJourney }
-  | { source: "dawarich"; data: DawarichStay };
+  | { source: "dawarich"; data: DawarichStay }
+  | { source: "location"; data: LocationSuggestion };
 export type InboxItem = InboxRecord & {
   key: string;
   title: string;
@@ -48,7 +50,16 @@ export function flagDay(flag: DataQualityFlag): string | null {
     case "trip_entries_outside":
       return flag.details.startDay;
     case "chronology_conflict":
-      return flag.details.domain === "lodging_stay" ? flag.details.thisStart.slice(0, 10) : null;
+      // A flight's `thisStart` is an instant, not a day: only the server's
+      // local `day` names it. A stay's start already is a calendar day.
+      return flag.details.domain === "lodging_stay"
+        ? flag.details.thisStart.slice(0, 10)
+        : (flag.details.day ?? null);
+    case "duplicate_candidate":
+      return flag.details.day ?? null;
+    case "ferry_match":
+      // The wall clock at the port, never the UTC instant's date.
+      return flag.details.departureTime.local.slice(0, 10);
     case "stay_dates_reversed":
       return flag.details.stays[0]?.checkIn.slice(0, 10) ?? null;
     default:
@@ -118,6 +129,36 @@ export function buildInboxItems(
         subject = stay.name ?? t("trips:dawarichStays.unnamed");
         day = localDay(stay.startAt, stay.zone);
         tripId = stay.tripId;
+        break;
+      }
+      case "location": {
+        const s = record.data;
+        if (s.kind === "trip") {
+          // A TravTrack trip question (plan L4): about a span of local days.
+          title = t(`${W}.tripAway.cardTitle`);
+          if (s.aggregate) {
+            subject = t(`${W}.tripAway.more`, { count: s.aggregate.length });
+          } else {
+            subject = s.trip?.tripName ?? t(`${W}.tripAway.subject`, { count: s.trip?.days ?? 0 });
+            tripId = s.trip?.tripId ?? null;
+            knownName = s.trip?.tripName ?? null;
+          }
+          day = s.trip?.fromDay ?? null;
+        } else if (s.kind === "journey") {
+          // A TravTrack journey question (plan E7): about a local day.
+          title = t(`${W}.journey.cardTitle`);
+          subject = t(`${W}.journey.subject`, {
+            count: Number(s.explanation.params.runs ?? 0),
+            km: s.explanation.params.km ?? 0,
+          });
+          day = s.journey?.day ?? null;
+        } else {
+          // A TravTrack country question (plan E6): about a country, on UTC days.
+          const code = String(s.explanation.params.country ?? "");
+          title = t(`${W}.location.cardTitle`);
+          subject = countryName(code, language) || code;
+          day = suggestionDays(s).first;
+        }
         break;
       }
       case "photos": {

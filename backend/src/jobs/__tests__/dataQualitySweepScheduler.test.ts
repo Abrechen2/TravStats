@@ -24,6 +24,8 @@ const groupBy = {
   lodging: jest.fn<() => Promise<UserGroup>>(),
   place: jest.fn<() => Promise<UserGroup>>(),
   flag: jest.fn<() => Promise<UserGroup>>(),
+  /** Every travel table the record checks read (forgejo#282, spec C3). */
+  records: jest.fn<() => Promise<UserGroup>>(),
 };
 
 const runDataQualityChecks = jest.fn<(userId: string) => Promise<RunSummary>>();
@@ -33,6 +35,11 @@ jest.mock("../../db", () => ({
     lodging: { groupBy: () => groupBy.lodging() },
     place: { groupBy: () => groupBy.place() },
     dataQualityFlag: { groupBy: () => groupBy.flag() },
+    flight: { groupBy: () => groupBy.records() },
+    railJourney: { groupBy: () => groupBy.records() },
+    busJourney: { groupBy: () => groupBy.records() },
+    ferryJourney: { groupBy: () => groupBy.records() },
+    cruise: { groupBy: () => groupBy.records() },
   },
 }));
 
@@ -52,6 +59,7 @@ beforeEach(() => {
   groupBy.lodging.mockResolvedValue([]);
   groupBy.place.mockResolvedValue([]);
   groupBy.flag.mockResolvedValue([]);
+  groupBy.records.mockResolvedValue([]);
   runDataQualityChecks.mockReset();
   runDataQualityChecks.mockResolvedValue(nothingFound);
 });
@@ -66,6 +74,20 @@ describe("runDataQualitySweep", () => {
     expect(runDataQualityChecks.mock.calls.map(([id]) => id)).toEqual(["a", "b", "c"]);
     expect(result.users).toBe(3);
     expect(result.failed).toBe(0);
+  });
+
+  /**
+   * The record checks (duplicates, overlaps, ferry matches) read flights and
+   * rides, not just lodgings and places. An account with nothing but flights
+   * was never swept, so its duplicate flights were never asked about.
+   */
+  it("visits an account that holds only flights or rides", async () => {
+    groupBy.records.mockResolvedValue([{ userId: "flyer" }]);
+
+    const result = await runDataQualitySweep();
+
+    expect(runDataQualityChecks.mock.calls.map(([id]) => id)).toEqual(["flyer"]);
+    expect(result.users).toBe(1);
   });
 
   /**

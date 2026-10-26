@@ -10,6 +10,10 @@ import ReviewCard from "./ReviewCard";
 import TripProposalCard from "./TripProposalCard";
 import FlightUpdateCard from "./FlightUpdateCard";
 import PhotoProposalCard from "./PhotoProposalCard";
+import CountrySuggestionCard from "./CountrySuggestionCard";
+import JourneySuggestionCard from "./JourneySuggestionCard";
+import TripSuggestionCard from "./TripSuggestionCard";
+import TripAggregateCard from "./TripAggregateCard";
 import VisitSuggestionCard from "../visitReview/VisitSuggestionCard";
 import type { VisitReviewState } from "../visitReview/useVisitReview";
 import { photoJourneyLabel } from "../photoJourneyLabel";
@@ -112,6 +116,23 @@ export default function InboxCard({
           <StayReviewCard row={item.data} choices={stayChoices} onDone={() => void reload()} />
         </fieldset>
       )}
+      {item.source === "location" && item.data.kind === "country" && (
+        <CountrySuggestionCard suggestion={item.data} disabled={disabled} reload={reload} />
+      )}
+      {item.source === "location" && item.data.kind === "journey" && (
+        <JourneySuggestionCard suggestion={item.data} disabled={disabled} reload={reload} />
+      )}
+      {item.source === "location" &&
+        item.data.kind === "trip" &&
+        (item.data.aggregate ? (
+          <TripAggregateCard
+            suggestions={item.data.aggregate}
+            disabled={disabled}
+            reload={reload}
+          />
+        ) : (
+          <TripSuggestionCard suggestion={item.data} disabled={disabled} reload={reload} />
+        ))}
       {busy && (
         <p role="status" className="mt-3 t-caption">
           {t(`${W}.working`)}

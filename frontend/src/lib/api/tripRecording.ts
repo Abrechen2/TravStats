@@ -1,6 +1,7 @@
 import { api } from "./client";
 import type { DownloadedFile } from "./trackArchive";
 import type { LocalDateValue, TimeValue } from "../../shared/time/wire";
+import type { TrackOrigin, TrackOriginInfo } from "./trackOrigin";
 
 /**
  * The Companion's trip recording (forgejo#316), `routes/trips/tripRecording.ts`.
@@ -25,7 +26,7 @@ export interface TripRecordingView {
     uploadedWithoutDevice?: boolean;
     /** Every recorded day on the trip's clock, whatever `day` filtered to. */
     days: LocalDateValue[];
-  };
+  } & Partial<TrackOriginInfo>;
   /** `[lon, lat]` lines, already cut at every gap — never join two. */
   segments: Array<Array<[number, number]>>;
 }
@@ -37,15 +38,27 @@ function filenameFrom(disposition: unknown, fallback: string): string {
 
 export const tripRecordingApi = {
   /** `day` (`YYYY-MM-DD` on the trip's clock) narrows the line and the summary; null shows all. */
-  get: async (tripId: string, day: string | null): Promise<TripRecordingView> => {
+  /** `source` shows another origin explicitly (TravTrack plan T5); null is the default. */
+  get: async (
+    tripId: string,
+    day: string | null,
+    source: TrackOrigin | null = null
+  ): Promise<TripRecordingView> => {
+    const params = { ...(day ? { day } : {}), ...(source ? { source } : {}) };
     const { data } = await api.get<TripRecordingView>(`/trips/${tripId}/recording`, {
-      params: day ? { day } : undefined,
+      params: Object.keys(params).length > 0 ? params : undefined,
     });
     return data;
   },
 
-  downloadGpx: async (tripId: string): Promise<DownloadedFile> => {
-    const res = await api.get<Blob>(`/trips/${tripId}/recording/gpx`, { responseType: "blob" });
+  downloadGpx: async (
+    tripId: string,
+    source: TrackOrigin | null = null
+  ): Promise<DownloadedFile> => {
+    const res = await api.get<Blob>(`/trips/${tripId}/recording/gpx`, {
+      responseType: "blob",
+      ...(source ? { params: { source } } : {}),
+    });
     return {
       blob: res.data,
       filename: filenameFrom(res.headers["content-disposition"], "aufzeichnung.gpx"),

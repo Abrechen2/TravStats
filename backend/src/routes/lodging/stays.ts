@@ -16,7 +16,8 @@ import { Router, Response, NextFunction } from "express";
 import { prisma } from "../../db";
 import { AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
-import { linkDocuments, takeDocumentIds } from "../../services/documents/documentService";
+import { fileReceipts, takeDocumentIds } from "../../services/documents/documentService";
+import { createOnce, takeClientRef } from "../../services/sync/clientRef";
 import { recheckAchievements } from "../../utils/achievements";
 import { createStaySchema, updateStaySchema } from "../../schemas/lodging";
 import logger from "../../utils/logger";
@@ -34,26 +35,48 @@ router.post("/:id/stays", async (req: AuthRequest, res: Response, next: NextFunc
     const lodging = await prisma.lodging.findFirst({ where: { id: req.params.id, userId } });
     if (!lodging) throw new AppError("Lodging not found", 404);
 
-    const parsed = createStaySchema.safeParse(req.body);
-    // The ZodError itself (-> `code: VALIDATION_FAILED`), not its JSON
-    // `.message`, which the stay editor used to print verbatim.
-    if (!parsed.success) throw parsed.error;
-    const documentIds = await takeDocumentIds(userId, req.body);
-    // The whole write — references, price, FX, derived status/rating — lives
-    // in `services/lodging/stayWrites.ts`, shared with the spreadsheet import.
-    const stay = await createStayRecord(userId, lodging.id, parsed.data, {
-      viaToken: Boolean(req.apiToken),
+    // An outbox replay carries the key it minted (forgejo#283); the lodging
+    // is part of what makes two writes "the same".
+    const { clientRef, rest: body } = takeClientRef(req.body);
+    const { created, result: stay } = await createOnce({
+      userId,
+      clientRef,
+      kind: "lodgingStay",
+      payload: { lodgingId: lodging.id, body },
+      create: async (claim) => {
+        const parsed = createStaySchema.safeParse(body);
+        // The ZodError itself (-> `code: VALIDATION_FAILED`), not its JSON
+        // `.message`, which the stay editor used to print verbatim.
+        if (!parsed.success) throw parsed.error;
+        const documentIds = await takeDocumentIds(userId, body);
+        // The whole write — references, price, FX, derived status/rating — lives
+        // in `services/lodging/stayWrites.ts`, shared with the spreadsheet import.
+        // The key and the documents commit with the stay.
+        return createStayRecord(
+          userId,
+          lodging.id,
+          parsed.data,
+          { viaToken: Boolean(req.apiToken) },
+          async (tx, id) => {
+            await claim(tx, id);
+            await fileReceipts(tx, userId, documentIds, { type: "lodgingStay", id });
+          }
+        );
+      },
+      replay: (id) =>
+        prisma.lodgingStay.findFirst({ where: { id, userId, lodgingId: lodging.id } }),
     });
 
-    await linkDocuments(userId, documentIds, { type: "lodgingStay", id: stay.id });
-    await recheckAchievements(userId, "lodging");
-    logger.info({
-      operation: "lodging_stay_create",
-      stayId: stay.id,
-      lodgingId: lodging.id,
-      userId,
-    });
-    res.status(201).json({ success: true, data: withStayTimes(stay) });
+    if (created) {
+      await recheckAchievements(userId, "lodging");
+      logger.info({
+        operation: "lodging_stay_create",
+        stayId: stay.id,
+        lodgingId: lodging.id,
+        userId,
+      });
+    }
+    res.status(created ? 201 : 200).json({ success: true, data: withStayTimes(stay) });
   } catch (err) {
     next(err);
   }

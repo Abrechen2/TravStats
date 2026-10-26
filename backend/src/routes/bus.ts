@@ -49,7 +49,7 @@ import { railListSummary } from "../shared/listSummary";
  * Bus rides — one row per coach ride (spec
  * docs/superpowers/specs/2026-10-07-bus-domain-design.md). Enveloped family, as
  * ADR 0001 asks of a new domain. The endpoints stay reachable whatever the
- * instance beta switch says; the switch hides the UI, it is not a boundary.
+ * user's domain toggle says; the toggle hides the UI, it is not a boundary.
  */
 
 export const BUS_INCLUDE = {

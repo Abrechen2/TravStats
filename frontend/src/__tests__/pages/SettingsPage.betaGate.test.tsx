@@ -66,7 +66,12 @@ vi.mock("@/lib/api/tokens", async (importOriginal) => {
 // server whether the feature is on.
 vi.mock("@/lib/api/sharingRemote", () => ({
   sharingRemoteApi: {
-    status: vi.fn().mockResolvedValue({ available: false, reason: "switch-off", origin: null }),
+    status: vi.fn().mockResolvedValue({
+      available: false,
+      reason: "switch-off",
+      origin: null,
+      peerAdmitted: true,
+    }),
     listInvites: vi.fn(),
     createInvite: vi.fn(),
     revokeInvite: vi.fn(),
@@ -102,6 +107,19 @@ vi.mock("@/lib/api/notifications", async (importOriginal) => {
     },
   };
 });
+// The location source (TravTrack plan S5) asks the server on mount.
+vi.mock("@/lib/api/locationProvider", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/locationProvider")>()),
+  locationProviderApi: {
+    get: vi.fn().mockResolvedValue({
+      kind: "none",
+      rev: 0,
+      status: "ok",
+      choices: { none: true, travtrack: false, dawarich: false },
+    }),
+    set: vi.fn(),
+  },
+}));
 vi.mock("@/lib/api/immich", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/immich")>();
   return {

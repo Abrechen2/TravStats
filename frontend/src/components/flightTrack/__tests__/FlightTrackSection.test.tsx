@@ -13,6 +13,21 @@ const deleteMock = vi.fn();
 vi.mock("../../../lib/api", () => ({
   flightsApi: {
     getTrack: (...args: unknown[]) => getTrackMock(...args),
+    // The section reads the track with its origin (TravTrack plan T5).
+    getTrackView: async (...args: unknown[]) => {
+      const answer = (await getTrackMock(...(args[1] ? args : [args[0]]))) as
+        FlightTrack | null | { track: FlightTrack | null; info: unknown };
+      return answer && "info" in answer
+        ? answer
+        : {
+            track: answer,
+            info: {
+              origin: answer ? "travstats" : null,
+              coverage: answer ? "complete" : null,
+              alternatives: [],
+            },
+          };
+    },
     uploadTrackFile: (...args: unknown[]) => uploadMock(...args),
     deleteTrack: (...args: unknown[]) => deleteMock(...args),
   },
@@ -40,6 +55,7 @@ vi.mock("../FlightTrackMap", () => ({
 }));
 
 import FlightTrackSection from "../FlightTrackSection";
+import { formatTimeValueShown } from "../../../lib/displayFormat";
 
 const MUC = { lat: 48.3538, lon: 11.7861 };
 const ICN = { lat: 37.4602, lon: 126.4407 };
@@ -238,6 +254,108 @@ describe("FlightTrackSection", () => {
       render(<FlightTrackSection flightId="f1" departure={MUC} arrival={ICN} />);
       await screen.findByTestId("flight-track-caption");
       expect(screen.queryByTestId("flight-track-comparison")).toBeNull();
+    });
+  });
+
+  describe("where the line came from (TravTrack plan T5)", () => {
+    const view = (track: FlightTrack | null, info: object) => ({ track, info });
+
+    it("labels a TravTrack line and offers no upload controls for it", async () => {
+      betaOn = true;
+      getTrackMock.mockResolvedValue(
+        view(
+          { ...makeTrack(), source: "travtrack" },
+          { origin: "travtrack", coverage: "complete", alternatives: [] }
+        )
+      );
+      render(<FlightTrackSection flightId="f1" />);
+      expect(await screen.findByText("location:trackOrigin.label.travtrack")).toBeInTheDocument();
+      expect(screen.queryByRole("group")).not.toBeInTheDocument();
+    });
+
+    it("says Dawarich was unreachable instead of showing nothing", async () => {
+      getTrackMock.mockResolvedValue(
+        view(null, { origin: "dawarich", coverage: "unreachable", alternatives: [] })
+      );
+      render(<FlightTrackSection flightId="f1" />);
+      expect(
+        await screen.findByText("location:trackOrigin.coverage.unreachable")
+      ).toBeInTheDocument();
+    });
+
+    it("offers the other source only when one holds something, and asks for it", async () => {
+      getTrackMock.mockResolvedValue(
+        view(makeTrack(), { origin: "travstats", coverage: "complete", alternatives: ["dawarich"] })
+      );
+      render(<FlightTrackSection flightId="f1" />);
+      fireEvent.click(await screen.findByText("location:trackOrigin.show.dawarich"));
+      await waitFor(() => expect(getTrackMock).toHaveBeenLastCalledWith("f1", "dawarich"));
+    });
+
+    it("names an unread Dawarich as not checked yet, never as holding a line", async () => {
+      getTrackMock.mockResolvedValue(
+        view(makeTrack(), {
+          origin: "travstats",
+          coverage: "complete",
+          alternatives: ["dawarich"],
+          unchecked: ["dawarich"],
+        })
+      );
+      render(<FlightTrackSection flightId="f1" />);
+      expect(await screen.findByText("location:trackOrigin.check.dawarich")).toBeInTheDocument();
+      expect(screen.queryByText("location:trackOrigin.show.dawarich")).not.toBeInTheDocument();
+    });
+
+    it("keeps the way back when the picked source holds nothing", async () => {
+      getTrackMock.mockImplementation(async (_id: string, source?: string) => {
+        if (source === "dawarich") {
+          throw { response: { status: 404, data: { code: "TRACK_SOURCE_NOT_AVAILABLE" } } };
+        }
+        return view(makeTrack(), {
+          origin: "travstats",
+          coverage: "complete",
+          alternatives: ["dawarich"],
+          unchecked: ["dawarich"],
+        });
+      });
+      render(<FlightTrackSection flightId="f1" />);
+      fireEvent.click(await screen.findByText("location:trackOrigin.check.dawarich"));
+      expect(
+        await screen.findByText("location:trackOrigin.notAvailable.dawarich")
+      ).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "location:trackOrigin.back" }));
+      expect(await screen.findByText("location:trackOrigin.label.travstats")).toBeInTheDocument();
+      expect(getTrackMock).toHaveBeenLastCalledWith("f1");
+    });
+  });
+  describe("when the recording ran", () => {
+    const departure = at("2026-10-03T07:40:00Z", "Europe/Berlin");
+    const arrival = at("2026-10-03T19:20:00Z", "Asia/Seoul");
+    const scheduled = { departure, arrival };
+
+    it("names the recording's own start and end", async () => {
+      getTrackMock.mockResolvedValue(makeTrack());
+      render(<FlightTrackSection flightId="f1" scheduled={scheduled} />);
+      const span = (await screen.findByTestId("flight-track-span")).textContent ?? "";
+      expect(span).toContain(formatTimeValueShown(at("2026-10-03T08:00:00Z", "Europe/Berlin")));
+      expect(span).toContain(formatTimeValueShown(at("2026-10-03T19:00:00Z", "Asia/Seoul")));
+    });
+
+    it("shows the flight's own times where a zone hid an end, and says nothing of it", async () => {
+      getTrackMock.mockResolvedValue(makeTrack({ times: { startedAt: null, endedAt: null } }));
+      render(<FlightTrackSection flightId="f1" scheduled={scheduled} />);
+      const span = (await screen.findByTestId("flight-track-span")).textContent ?? "";
+      expect(span).toContain(formatTimeValueShown(departure));
+      expect(span).toContain(formatTimeValueShown(arrival));
+      const section = document.body.textContent ?? "";
+      expect(section).not.toMatch(/zone|hidden|privacy|verborgen/i);
+    });
+
+    it("shows no span when neither the recording nor the flight names a time", async () => {
+      getTrackMock.mockResolvedValue(makeTrack({ times: { startedAt: null, endedAt: null } }));
+      render(<FlightTrackSection flightId="f1" />);
+      await screen.findByTestId("flight-track-map-stub");
+      expect(screen.queryByTestId("flight-track-span")).toBeNull();
     });
   });
 });

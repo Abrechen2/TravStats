@@ -16,15 +16,22 @@ export function SettingsLevelSwitch(): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const level = useEffectiveSettingsLevel();
   const setLevel = useSettingsLevelStore((s) => s.setLevel);
+  // One sentence says what "Experte" adds (forgejo#318), so the choice is
+  // not a guess; small, under the pills, at the page's top right.
   return (
-    <Segmented<SettingsLevel>
-      label={t("settings:level.label")}
-      value={level}
-      onChange={setLevel}
-      options={[
-        { value: "standard", label: t("settings:level.standard") },
-        { value: "expert", label: t("settings:level.expert") },
-      ]}
-    />
+    <div className="flex flex-col items-end" style={{ gap: "var(--ts-space-xs)" }}>
+      <Segmented<SettingsLevel>
+        label={t("settings:level.label")}
+        value={level}
+        onChange={setLevel}
+        options={[
+          { value: "standard", label: t("settings:level.standard") },
+          { value: "expert", label: t("settings:level.expert") },
+        ]}
+      />
+      <p className="t-caption text-right" style={{ color: "var(--ts-muted)", maxWidth: "22rem" }}>
+        {t("settings:level.hint")}
+      </p>
+    </div>
   );
 }

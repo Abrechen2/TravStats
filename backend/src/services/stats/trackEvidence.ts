@@ -9,6 +9,7 @@
  * deleting stored country-days would only hide the problem until the next sync.
  */
 import { toCountryCode } from "../../shared/countryEvidence";
+import { parseCountryDaySource, type CountryDaySource } from "../countryDays/countryDaySource";
 
 /** A stored CountryDay. Airport counts and completeness are not ground proof. */
 export interface CountryDayRow {
@@ -17,11 +18,18 @@ export interface CountryDayRow {
   pointCount: number;
   airportPointCount: number;
   partialWindow: boolean;
+  /**
+   * The pipeline that wrote the row, as stored; absent means Dawarich's, as
+   * every row was before TravTrack. A value outside `COUNTRY_DAY_SOURCES` is
+   * dropped, never guessed into one.
+   */
+  source?: string;
 }
 
 export interface UnconfirmedTrackCountry {
   code: string;
-  source: "dawarich";
+  /** The pipeline that observed it. One entry per country AND source: the two are never merged. */
+  source: CountryDaySource;
   reason: "ground-unconfirmed";
   observedDays: number;
   pointCount: number;
@@ -35,12 +43,17 @@ export function unconfirmedTrackCountries(
   now: Date
 ): UnconfirmedTrackCountry[] {
   const today = now.toISOString().slice(0, 10);
-  const byCountry = new Map<string, { days: Set<string>; points: number }>();
+  const byCountry = new Map<
+    string,
+    { code: string; source: CountryDaySource; days: Set<string>; points: number }
+  >();
   for (const row of rows) {
     const code = toCountryCode(row.countryCode);
+    const source = row.source === undefined ? "dawarich" : parseCountryDaySource(row.source);
     const instant = Date.parse(`${row.date}T00:00:00Z`);
     if (
       !code ||
+      !source ||
       !/^\d{4}-\d{2}-\d{2}$/.test(row.date) ||
       !Number.isFinite(instant) ||
       new Date(instant).toISOString().slice(0, 10) !== row.date ||
@@ -49,17 +62,18 @@ export function unconfirmedTrackCountries(
       row.pointCount <= 0
     )
       continue;
-    const track = byCountry.get(code) ?? { days: new Set<string>(), points: 0 };
+    const key = `${code} ${source}`;
+    const track = byCountry.get(key) ?? { code, source, days: new Set<string>(), points: 0 };
     track.days.add(row.date);
     track.points += row.pointCount;
-    byCountry.set(code, track);
+    byCountry.set(key, track);
   }
-  return [...byCountry]
-    .map(([code, track]): UnconfirmedTrackCountry => {
+  return [...byCountry.values()]
+    .map((track): UnconfirmedTrackCountry => {
       const days = [...track.days].sort();
       return {
-        code,
-        source: "dawarich",
+        code: track.code,
+        source: track.source,
         reason: "ground-unconfirmed",
         observedDays: days.length,
         pointCount: track.points,
@@ -67,5 +81,5 @@ export function unconfirmedTrackCountries(
         lastDate: days[days.length - 1],
       };
     })
-    .sort((a, b) => a.code.localeCompare(b.code));
+    .sort((a, b) => a.code.localeCompare(b.code) || a.source.localeCompare(b.source));
 }

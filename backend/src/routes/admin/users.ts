@@ -1,4 +1,5 @@
 import { Router, Response, NextFunction } from "express";
+import { initialLocationProvider } from "../../services/locationProvider/initialProvider";
 import crypto from "crypto";
 import { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../db";
@@ -49,7 +50,7 @@ router.post("/users", async (req: AuthRequest, res: Response, next: NextFunction
       const userCount = await tx.user.count();
       if (userCount >= maxUsers) throw new AppError("User limit reached", 409);
 
-      return tx.user.create({
+      const user = await tx.user.create({
         data: {
           username: payload.username,
           passwordHash,
@@ -59,6 +60,9 @@ router.post("/users", async (req: AuthRequest, res: Response, next: NextFunction
         },
         select: { id: true, username: true, isAdmin: true, isActive: true, createdAt: true },
       });
+      // TravTrack where it is on, else nothing (TravTrack plan T8).
+      await initialLocationProvider(tx, user.id);
+      return user;
     });
 
     // Nothing is "new" to an account created a moment ago — see whatsNewStamp.

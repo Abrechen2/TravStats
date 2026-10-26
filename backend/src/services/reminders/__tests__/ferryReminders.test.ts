@@ -157,25 +157,15 @@ describe("checkFerryReminders", () => {
     expect(mockSendFerryReminder).not.toHaveBeenCalled();
   });
 
-  it("sends nothing, and asks for nothing, on an instance that hides the beta domains", async () => {
+  // Out of beta on 2026-10-26: the instance's switch no longer holds a mail back.
+  it("sends with the instance's beta switch off, the user's domain on", async () => {
     mockGetInstanceSettings.mockResolvedValue({ betaFeaturesEnabled: false });
     serve([makeCrossing()]);
 
     const { checkFerryReminders } = await import("../ferryReminders");
     await checkFerryReminders(new Date());
 
-    expect(mockFindMany).not.toHaveBeenCalled();
-    expect(mockSendFerryReminder).not.toHaveBeenCalled();
-  });
-
-  it("sends nothing when the instance's beta switch cannot be read", async () => {
-    mockGetInstanceSettings.mockRejectedValue(new Error("DB hiccup"));
-    serve([makeCrossing()]);
-
-    const { checkFerryReminders } = await import("../ferryReminders");
-    await checkFerryReminders(new Date());
-
-    expect(mockSendFerryReminder).not.toHaveBeenCalled();
+    expect(mockSendFerryReminder).toHaveBeenCalledTimes(1);
   });
 
   it("skips a crossing whose user has no notificationEmail", async () => {

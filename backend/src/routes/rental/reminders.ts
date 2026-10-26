@@ -16,7 +16,7 @@ import { serializeTime } from "../../shared/time/wire";
  * odometer readings (`rentalDrivenKm`, forgejo#206).
  *
  * The signal is per rental, not a counter, so a client can say WHICH rental
- * it is about. The rental domain's beta switch is the client's to apply, as
+ * it is about. The user's rental domain toggle is the client's to apply, as
  * for every rental endpoint.
  */
 export const REMINDER_WINDOW_DAYS = 60;
