@@ -71,8 +71,8 @@ describe("TravTrack — flight panel", () => {
     await prisma.$disconnect();
   });
 
-  it("answers the series and derives the climb from a near-ground start", async () => {
-    await fix(0, 100, 70);
+  it("answers the series and counts the climb from the take-off", async () => {
+    await fix(0, 100, 20);
     await fix(5, 5000, 180);
     await fix(10, 10000, 230);
     await fix(15, 10500, 240);
@@ -83,10 +83,14 @@ describe("TravTrack — flight panel", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       flightId,
+      label: "KE1201 ICN–CJU",
+      departureZone: "Asia/Seoul",
       basis: "linked",
+      takeoffMs: T + 5 * MIN,
+      landingMs: null,
       series: [
         [
-          [T, 100, 70],
+          [T, 100, 20],
           [T + 5 * MIN, 5000, 180],
           [T + 10 * MIN, 10000, 230],
           [T + 15 * MIN, 10500, 240],
@@ -95,7 +99,7 @@ describe("TravTrack — flight panel", () => {
       ],
       pointCount: 5,
       truncated: false,
-      summary: { maxAltitudeM: 10500, maxSpeedMps: 240, climbToCruiseMinutes: 10 },
+      summary: { maxAltitudeM: 10500, maxSpeedMps: 240, climbToCruiseMinutes: 5 },
     });
   });
 
@@ -277,6 +281,22 @@ describe("TravTrack — flight panel", () => {
     } finally {
       spy.mockRestore();
     }
+  });
+
+  it("reads past one page: the apex of a recording longer than a page survives", async () => {
+    // Page of 2, total cap 10: the apex sits in the third page.
+    for (let m = 0; m < 6; m++) await fix(m, m === 4 ? 12562 : 1000 + m * 100, 200);
+    const res = await travTrackFlightPanel(userId, flightId, { total: 10, page: 2 });
+    expect(res.truncated).toBe(false);
+    expect(res.pointCount).toBe(6);
+    expect(res.summary.maxAltitudeM).toBe(12562);
+  });
+
+  it("the total cap is the bound: past it the answer says truncated", async () => {
+    for (let m = 0; m < 6; m++) await fix(m, 1000 + m * 100, 200);
+    const res = await travTrackFlightPanel(userId, flightId, { total: 4, page: 2 });
+    expect(res.truncated).toBe(true);
+    expect(res.pointCount).toBeLessThanOrEqual(4);
   });
 
   it("TravTrack off → 403", async () => {
