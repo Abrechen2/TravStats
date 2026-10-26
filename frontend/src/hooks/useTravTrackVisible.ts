@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useBetaFeatures } from "./useBetaFeatures";
+import { useBetaFeatureAccess, useBetaFeatures } from "./useBetaFeatures";
 import { useAuthStore } from "../store/authStore";
 import { travTrackApi, type TravTrackCapabilities } from "../lib/api/travtrack";
 import { logger } from "../lib/logger";
@@ -52,15 +52,20 @@ export type TravTrackAccess = "pending" | "visible" | "hidden";
  * Whether `/track` and its menu entry are offered (TravTrack plan T6) — the
  * one home of the rule: the `travTrack` beta key, the instance showing
  * TravTrack (`enabled`), and this account either recording into it (`active`)
- * or holding data. Fails closed: pending or failed reads as not offered.
+ * or holding data. A failed read is not offered; a read still pending is
+ * `pending`, and so is the beta key while `GET /settings` has not answered —
+ * a direct link to `/track` opened in a new tab must wait for it, not bounce
+ * to the dashboard (the /places bug `useBetaFeatureAccess` names; Codex VM
+ * test 2026-10-26, F2). `useTravTrackVisible`, the chrome, still fails closed.
  *
  * TravTrack switched off hides the page even for an account holding data;
  * Settings keeps that account's summary, export and delete (`TravTrackSection`).
  */
 export function useTravTrackAccess(): TravTrackAccess {
-  const { isFeatureVisible } = useBetaFeatures();
-  const keyOpen = isFeatureVisible("travTrack");
+  const key = useBetaFeatureAccess("travTrack");
+  const keyOpen = key === "allowed";
   const { caps, settled } = useCapabilitiesRead(keyOpen);
+  if (key === "pending") return "pending";
   if (!keyOpen) return "hidden";
   if (!settled) return "pending";
   if (!caps) return "hidden";

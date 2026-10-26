@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 
 const mocks = vi.hoisted(() => ({ capabilities: vi.fn() }));
 vi.mock("../../lib/api/travtrack", () => ({
@@ -15,7 +15,11 @@ vi.mock("../../store/authStore", () => ({
 
 vi.unmock("../../store/settingsStore");
 
-import { travTrackSettingsVisible, useTravTrackVisible } from "../useTravTrackVisible";
+import {
+  travTrackSettingsVisible,
+  useTravTrackAccess,
+  useTravTrackVisible,
+} from "../useTravTrackVisible";
 import { useSettingsStore } from "../../store/settingsStore";
 
 /**
@@ -79,6 +83,23 @@ describe("useTravTrackVisible", () => {
     expect(result.current).toBe(false);
     await waitFor(() => expect(mocks.capabilities).toHaveBeenCalled());
     expect(result.current).toBe(false);
+  });
+
+  it("a cold link waits for the settings: the page is pending, not hidden, until GET /settings answers", async () => {
+    useSettingsStore.setState({ betaFeaturesEnabled: null });
+    mocks.capabilities.mockResolvedValue(caps({ active: true }));
+    const { result, rerender } = renderHook(() => useTravTrackAccess());
+    expect(result.current).toBe("pending");
+    expect(mocks.capabilities).not.toHaveBeenCalled();
+
+    act(() => useSettingsStore.setState({ betaFeaturesEnabled: true }));
+    rerender();
+    await waitFor(() => expect(result.current).toBe("visible"));
+  });
+
+  it("the menu entry still fails closed while the settings are unknown", () => {
+    useSettingsStore.setState({ betaFeaturesEnabled: null });
+    expect(renderHook(() => useTravTrackVisible()).result.current).toBe(false);
   });
 
   it("Settings shows TravTrack whenever data is held or the instance shows it", () => {
