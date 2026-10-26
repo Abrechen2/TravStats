@@ -186,6 +186,20 @@ describe("TravTrack — flight panel", () => {
     ]);
   });
 
+  it("the window's main source is counted over the whole window, not over a capped read", async () => {
+    // phone-1 leads the first fixes, the tablet holds most of the window.
+    await fix(0, 100, 70, false, "phone-1");
+    await fix(1, 200, 80, false, "phone-1");
+    for (let m = 2; m < 7; m++) await fix(m, 1000 * m, 200, false, "tablet");
+
+    const res = await travTrackFlightPanel(userId, flightId, 3);
+
+    expect(res.basis).toBe("window");
+    expect(res.truncated).toBe(true);
+    expect(res.series.flat().length).toBeGreaterThan(0);
+    expect(res.series.flat().every(([, altitude]) => (altitude ?? 0) >= 1000)).toBe(true);
+  });
+
   it("linked points win: the window's other fixes are not added", async () => {
     await fix(0, 100, 70);
     await fix(10, 10000, 230);

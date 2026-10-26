@@ -192,32 +192,38 @@ async function linkedPanel(
   );
 }
 
-/** The one source (device, else origin) holding most of the read's fixes. */
+/** A stored point's source: its device, else its origin (an import names no device). */
 const sourceOf = (row: SafePointRow): string => row.deviceId ?? row.origin;
+
+/**
+ * The source holding most fixes in the WHOLE window, counted in the database
+ * before any cap: picking it from a capped read would let the first 20 000
+ * fixes outvote the rest. The count only chooses; what is shown still comes
+ * from the privacy-safe read.
+ */
+async function mainSourceIn(
+  userId: string,
+  [fromMs, toMs]: [number, number]
+): Promise<string | null> {
+  const [top] = await prisma.$queryRaw<{ source: string }[]>`
+    SELECT COALESCE(device_id, origin) AS source
+      FROM travtrack_points
+     WHERE user_id = ${userId} AND t >= ${new Date(fromMs)} AND t <= ${new Date(toMs)}
+     GROUP BY 1
+     ORDER BY count(*) DESC, 1
+     LIMIT 1`;
+  return top?.source ?? null;
+}
 
 async function windowPanel(
   userId: string,
   flightId: string,
-  [fromMs, toMs]: [number, number],
+  window: [number, number],
   cap: number
 ): Promise<FlightPanel> {
-  const read = await readSafeTravTrack(userId, { fromMs, untilMs: toMs + 1 }, cap);
-  const counts = new Map<string, number>();
-  for (const stretch of read.segments) {
-    for (const p of stretch as StoredPoint[]) {
-      const row = read.rowOf(p);
-      if (row) counts.set(sourceOf(row), (counts.get(sourceOf(row)) ?? 0) + 1);
-    }
-  }
-  let main: string | null = null;
-  let most = 0;
-  for (const [source, n] of counts) {
-    if (n > most) {
-      main = source;
-      most = n;
-    }
-  }
-  if (main === null) return { ...emptyPanel(flightId), truncated: read.next !== null };
+  const main = await mainSourceIn(userId, window);
+  if (main === null) return emptyPanel(flightId);
+  const read = await readSafeTravTrack(userId, { fromMs: window[0], untilMs: window[1] + 1 }, cap);
   return panelOf(
     flightId,
     "window",
