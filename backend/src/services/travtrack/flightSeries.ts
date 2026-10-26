@@ -179,7 +179,12 @@ export function downsample(
   }
   const ends = series.map((run) => (run.length > 2 ? [run[0], run[run.length - 1]] : [...run]));
   if (sampleCount(ends) <= max) return ends;
-  // Thousands of breaks: one sample per stretch, evenly chosen, still within the bound.
-  const step = series.length / max;
-  return Array.from({ length: max }, (_, i) => [series[Math.floor(i * step)][0]]);
+  // Thousands of breaks: one sample per stretch, evenly chosen, still within
+  // the bound — and the very last sample, which bounds the map's read.
+  const lastRun = series[series.length - 1];
+  const step = series.length / (max - 1);
+  return [
+    ...Array.from({ length: max - 1 }, (_, i) => [series[Math.floor(i * step)][0]]),
+    [lastRun[lastRun.length - 1]],
+  ];
 }

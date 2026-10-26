@@ -120,6 +120,8 @@ describe("downsample", () => {
       [i * 1000, 100, 5],
       [i * 1000 + 10, 120, 6],
     ]);
-    expect(downsample(many).flat().length).toBeLessThanOrEqual(2000);
+    const out = downsample(many).flat();
+    expect(out.length).toBeLessThanOrEqual(2000);
+    expect(out[out.length - 1]).toEqual(many[many.length - 1][1]);
   });
 });
