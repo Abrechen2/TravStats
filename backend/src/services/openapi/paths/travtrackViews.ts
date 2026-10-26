@@ -100,6 +100,13 @@ registry.registerPath({
 
 const panel = z.object({
   flightId: z.string(),
+  basis: z
+    .enum(["linked", "window"])
+    .nullable()
+    .describe(
+      "`linked`: the points linked to the flight; `window`: none are, so the fixes of the " +
+        "flight's recorder window from the one source holding most of them; null when empty"
+    ),
   series: z
     .array(
       z.array(
@@ -127,7 +134,7 @@ const panel = z.object({
 registry.registerPath({
   method: "get",
   path: "/travtrack/flights/{id}/panel",
-  summary: "A flight's altitude and speed from its linked TravTrack points",
+  summary: "A flight's altitude and speed from its TravTrack points (linked, else its time window)",
   tags: ["TravTrack"],
   request: { params: z.object({ id: z.string().uuid() }) },
   responses: {

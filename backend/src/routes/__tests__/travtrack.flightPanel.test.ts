@@ -38,12 +38,14 @@ describe("TravTrack — flight panel", () => {
     minute: number,
     altitudeM: number | null,
     speedMps: number | null,
-    link = true
+    link = true,
+    device?: string
   ) {
     const id = await storePoint(userId, {
       t: T + minute * MIN,
       lat: 37.4 - minute * 0.02,
       lon: 126.45,
+      device,
       links: link ? [{ kind: "flight", id: flightId }] : [],
     });
     await prisma.travTrackPoint.update({ where: { id }, data: { altitudeM, speedMps } });
@@ -81,6 +83,7 @@ describe("TravTrack — flight panel", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       flightId,
+      basis: "linked",
       series: [
         [
           [T, 100, 70],
@@ -144,10 +147,89 @@ describe("TravTrack — flight panel", () => {
     expect(res.body.summary.maxAltitudeM).toBe(5000);
   });
 
+  it("nothing linked: the fixes inside the flight's recorder window make the series (an import)", async () => {
+    // The fixture flight departs at T and lands at T + 60 min; the window adds 30 min each side.
+    await fix(-35, 10, 0, false); // before departure − 30 min: not this flight's
+    await fix(-25, 50, 5, false);
+    await fix(-20, 900, 90, false);
+    await fix(-15, 9000, 220, false);
+
+    const res = await panel();
+
+    expect(res.status).toBe(200);
+    expect(res.body.basis).toBe("window");
+    expect(res.body.series).toEqual([
+      [
+        [T - 25 * MIN, 50, 5],
+        [T - 20 * MIN, 900, 90],
+        [T - 15 * MIN, 9000, 220],
+      ],
+    ]);
+    expect(res.body.summary.maxAltitudeM).toBe(9000);
+  });
+
+  it("the window takes one source: another device's fixes in the same hours are left out, never zigzagged in", async () => {
+    await fix(0, 100, 70, false, "phone-1");
+    await fix(5, 5000, 180, false, "tablet");
+    await fix(10, 10000, 230, false, "phone-1");
+    await fix(15, 10500, 240, false, "phone-1");
+
+    const res = await panel();
+
+    expect(res.body.basis).toBe("window");
+    expect(res.body.series).toEqual([
+      [
+        [T, 100, 70],
+        [T + 10 * MIN, 10000, 230],
+        [T + 15 * MIN, 10500, 240],
+      ],
+    ]);
+  });
+
+  it("linked points win: the window's other fixes are not added", async () => {
+    await fix(0, 100, 70);
+    await fix(10, 10000, 230);
+    await fix(20, 9999, 999, false);
+
+    const res = await panel();
+
+    expect(res.body.basis).toBe("linked");
+    expect((res.body.series as number[][][]).flat().map((s) => s[0])).toEqual([T, T + 10 * MIN]);
+  });
+
+  it("the window keeps the privacy cut: a fix inside a zone is not in the series", async () => {
+    await fix(0, 100, 70, false);
+    await fix(5, 5000, 180, false);
+    await fix(10, 10000, 230, false);
+    await prisma.travTrackPrivacyZone.create({
+      data: { userId, name: "Zone", lat: 37.4 - 10 * 0.02, lon: 126.45, radiusM: 500 },
+    });
+
+    const res = await panel();
+
+    const times = (res.body.series as number[][][]).flat().map((s) => s[0]);
+    expect(times).not.toContain(T + 10 * MIN);
+    expect(res.body.summary.maxAltitudeM).toBe(5000);
+  });
+
+  it("a date-only flight arms no window: unlinked fixes on that day stay out", async () => {
+    await prisma.flight.update({
+      where: { id: flightId },
+      data: { depPrecision: "day", arrPrecision: "day" },
+    });
+    await fix(0, 100, 70, false);
+    await fix(10, 10000, 230, false);
+
+    const res = await panel();
+
+    expect(res.body).toMatchObject({ basis: null, series: [], pointCount: 0 });
+  });
+
   it("a flight without linked points answers an empty series, not zeros", async () => {
     const res = await panel();
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
+      basis: null,
       series: [],
       pointCount: 0,
       summary: { maxAltitudeM: null, maxSpeedMps: null, climbToCruiseMinutes: null },

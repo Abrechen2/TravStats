@@ -494,6 +494,8 @@ Repo `/home/claude/projekte/TravStatsCompanion`, branch `feat/travtrack-p2` off 
 
 Before everyday recording is advertised or `travTrack` leaves the beta registry. Build a beta APK + TestFlight from `feat/travtrack-p2` against the Beta server (CT 106) with TravTrack switched on.
 
+**Status 2026-10-26:** builds out (owner OK) — TestFlight build 61 (0.1.0, internal group only) and a release APK on the owner's Xiaomi, both from `feat/travtrack-p2` @ 839d98a5 against CT 106. The field day itself runs on the owner's time.
+
 - [ ] **Step 1:** Android (the Xiaomi from P0) and iPhone, one ordinary day on **Alltag** with a short trip and a flight-mode simulation: one notification at a time; the rate rises and falls in place.
 - [ ] **Step 2:** The P0 failure modes on purpose: swipe away, `adb shell am crash`, reboot, permission downgrade to „Beim Verwenden". Expected: each silence ends at the next app start or background task (watchdog), and each one appears on `/track` as „Telefon pausiert" — never as recorded, never unexplained.
 - [ ] **Step 3:** Measure battery per hour unplugged, fixes per hour, share ≤ 20 m, upload delay; a privacy zone at home: no fix inside it on the server, no gap shown for it.

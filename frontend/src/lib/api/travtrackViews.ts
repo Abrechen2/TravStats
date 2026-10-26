@@ -31,6 +31,8 @@ export type FlightSample = [number, number | null, number | null];
 
 export interface TravTrackFlightPanel {
   flightId: string;
+  /** `window`: nothing was linked, so the fixes of the flight's time window (an import). */
+  basis: "linked" | "window" | null;
   /** Stretches of samples; never join two. */
   series: FlightSample[][];
   pointCount: number;

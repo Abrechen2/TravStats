@@ -128,6 +128,11 @@ export default function TrackFlightPanel({
               onPhoto={setPicked}
             />
           )}
+          {panel.basis === "window" && (
+            <p className="t-caption" data-testid="track-flight-window-basis">
+              {t("track:flight.windowBasis")}
+            </p>
+          )}
           {panel.truncated && (
             <p className="t-caption" role="status" style={{ color: token("warn") }}>
               {t("track:flight.truncated")}

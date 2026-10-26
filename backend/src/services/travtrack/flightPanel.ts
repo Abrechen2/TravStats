@@ -1,7 +1,8 @@
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
+import { FLIGHT_WINDOW_SELECT, flightRecorderWindow } from "../tripRecording/bounds";
 import type { StoredPoint } from "../tripRecording/segments";
-import { readSafeTravTrack } from "./readSafe";
+import { readSafeTravTrack, type SafePointRow } from "./readSafe";
 
 /**
  * A flight's altitude and speed over time from the account's own TravTrack
@@ -11,6 +12,15 @@ import { readSafeTravTrack } from "./readSafe";
  * them) and privacy zone, and restricted to the linked points: another
  * device's fix in the same hours is not this flight's, and where one sits
  * between two linked points the series breaks there instead of joining them.
+ *
+ * A flight nothing is linked to — an imported history (the Dawarich copy, GPX,
+ * OwnTracks) links nothing, and neither does a phone that was not armed for
+ * it — falls back to the fixes inside its recorder window
+ * (`flightRecorderWindow`, the window the entry track reads too), and only
+ * those of the one source holding most of them there, so two devices in the
+ * same hours never zigzag into one profile. `basis` says which of the two the
+ * answer is. A flight whose times are a placeholder (date-only) arms no window
+ * and stays empty: abstention, not invention.
  *
  * Summary figures abstain rather than guess (null, never 0):
  *   - `maxAltitudeM` / `maxSpeedMps` — null without a single recorded value;
@@ -29,8 +39,12 @@ const CRUISE_SHARE = 0.9;
 /** `[tMs, altitudeM, speedMps]` of one shown vertex. */
 export type FlightSample = [number, number | null, number | null];
 
+export type FlightPanelBasis = "linked" | "window";
+
 export type FlightPanel = {
   flightId: string;
+  /** Where the samples come from: points linked to the flight, or its time window; null when empty. */
+  basis: FlightPanelBasis | null;
   /** Stretches of samples, oldest first; never joined across a cut. */
   series: FlightSample[][];
   pointCount: number;
@@ -77,26 +91,85 @@ export async function travTrackFlightPanel(
 ): Promise<FlightPanel> {
   const flight = await prisma.flight.findFirst({
     where: { id: flightId, userId },
-    select: { id: true },
+    select: { id: true, ...FLIGHT_WINDOW_SELECT },
   });
   if (!flight) throw notFound();
-  const empty: FlightPanel = {
+  const [extent] = await prisma.$queryRaw<{ from_t: Date | null; to_t: Date | null }[]>`
+    SELECT min(p.t) AS from_t, max(p.t) AS to_t
+      FROM travtrack_point_links l JOIN travtrack_points p ON p.id = l.point_id
+     WHERE l.user_id = ${userId} AND l.entry_kind = 'flight' AND l.entry_id = ${flightId}`;
+  if (extent?.from_t && extent.to_t) {
+    return linkedPanel(userId, flightId, [extent.from_t.getTime(), extent.to_t.getTime()], cap);
+  }
+  const window = await flightRecorderWindow(flight);
+  if (!window) return emptyPanel(flightId);
+  return windowPanel(userId, flightId, window, cap);
+}
+
+function emptyPanel(flightId: string): FlightPanel {
+  return {
     flightId,
+    basis: null,
     series: [],
     pointCount: 0,
     truncated: false,
     summary: { maxAltitudeM: null, maxSpeedMps: null, climbToCruiseMinutes: null },
   };
-  const [extent] = await prisma.$queryRaw<{ from_t: Date | null; to_t: Date | null }[]>`
-    SELECT min(p.t) AS from_t, max(p.t) AS to_t
-      FROM travtrack_point_links l JOIN travtrack_points p ON p.id = l.point_id
-     WHERE l.user_id = ${userId} AND l.entry_kind = 'flight' AND l.entry_id = ${flightId}`;
-  if (!extent?.from_t || !extent.to_t) return empty;
-  const read = await readSafeTravTrack(
-    userId,
-    { fromMs: extent.from_t.getTime(), untilMs: extent.to_t.getTime() + 1 },
-    cap
-  );
+}
+
+type SafeRead = Awaited<ReturnType<typeof readSafeTravTrack>>;
+
+/** The read's stretches, keeping only members; a non-member breaks the stretch. */
+function seriesOf(read: SafeRead, member: (row: SafePointRow) => boolean): FlightSample[][] {
+  const series: FlightSample[][] = [];
+  for (const stretch of read.segments) {
+    let run: FlightSample[] = [];
+    const flush = () => {
+      if (run.length > 0) series.push(run);
+      run = [];
+    };
+    for (const p of stretch as StoredPoint[]) {
+      const row = read.rowOf(p);
+      if (!row || !member(row)) {
+        flush();
+        continue;
+      }
+      run.push([p[0], row.altitudeM, row.speedMps]);
+    }
+    flush();
+  }
+  return series;
+}
+
+function panelOf(
+  flightId: string,
+  basis: FlightPanelBasis,
+  series: FlightSample[][],
+  truncated: boolean
+): FlightPanel {
+  if (series.length === 0) return { ...emptyPanel(flightId), truncated };
+  const samples = series.flat();
+  return {
+    flightId,
+    basis,
+    series,
+    pointCount: samples.length,
+    truncated,
+    summary: {
+      maxAltitudeM: maxOf(samples.map((s) => s[1])),
+      maxSpeedMps: maxOf(samples.map((s) => s[2])),
+      climbToCruiseMinutes: climbToCruiseMinutes(series),
+    },
+  };
+}
+
+async function linkedPanel(
+  userId: string,
+  flightId: string,
+  [fromMs, toMs]: [number, number],
+  cap: number
+): Promise<FlightPanel> {
+  const read = await readSafeTravTrack(userId, { fromMs, untilMs: toMs + 1 }, cap);
   const readIds = read.segments.flatMap((stretch) =>
     (stretch as StoredPoint[]).flatMap((p) => {
       const row = read.rowOf(p);
@@ -111,33 +184,44 @@ export async function travTrackFlightPanel(
           select: { pointId: true },
         });
   const linked = new Set(links.map((l) => l.pointId));
-  const series: FlightSample[][] = [];
+  return panelOf(
+    flightId,
+    "linked",
+    seriesOf(read, (row) => linked.has(row.id)),
+    read.next !== null
+  );
+}
+
+/** The one source (device, else origin) holding most of the read's fixes. */
+const sourceOf = (row: SafePointRow): string => row.deviceId ?? row.origin;
+
+async function windowPanel(
+  userId: string,
+  flightId: string,
+  [fromMs, toMs]: [number, number],
+  cap: number
+): Promise<FlightPanel> {
+  const read = await readSafeTravTrack(userId, { fromMs, untilMs: toMs + 1 }, cap);
+  const counts = new Map<string, number>();
   for (const stretch of read.segments) {
-    let run: FlightSample[] = [];
-    const flush = () => {
-      if (run.length > 0) series.push(run);
-      run = [];
-    };
     for (const p of stretch as StoredPoint[]) {
       const row = read.rowOf(p);
-      if (!row || !linked.has(row.id)) {
-        flush();
-        continue;
-      }
-      run.push([p[0], row.altitudeM, row.speedMps]);
+      if (row) counts.set(sourceOf(row), (counts.get(sourceOf(row)) ?? 0) + 1);
     }
-    flush();
   }
-  const samples = series.flat();
-  return {
+  let main: string | null = null;
+  let most = 0;
+  for (const [source, n] of counts) {
+    if (n > most) {
+      main = source;
+      most = n;
+    }
+  }
+  if (main === null) return { ...emptyPanel(flightId), truncated: read.next !== null };
+  return panelOf(
     flightId,
-    series,
-    pointCount: samples.length,
-    truncated: read.next !== null,
-    summary: {
-      maxAltitudeM: maxOf(samples.map((s) => s[1])),
-      maxSpeedMps: maxOf(samples.map((s) => s[2])),
-      climbToCruiseMinutes: climbToCruiseMinutes(series),
-    },
-  };
+    "window",
+    seriesOf(read, (row) => sourceOf(row) === main),
+    read.next !== null
+  );
 }
