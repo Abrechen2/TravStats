@@ -302,6 +302,9 @@ describe("answering findings (spec C3)", () => {
       undoUntil: null,
       actions: ["keep", "merge"],
     });
+    // The flag moved onto the kept copy: each copy is named once, the removed
+    // one included (UAT beta.29 listed the kept id twice).
+    expect(merged.body.data.evidence).toMatchObject({ ids: [typed.id, mail.id], keptId: typed.id });
 
     expect(await prisma.flight.findUnique({ where: { id: mail.id } })).toBeNull();
     const kept = await prisma.flight.findUniqueOrThrow({ where: { id: typed.id } });

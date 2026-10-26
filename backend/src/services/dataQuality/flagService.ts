@@ -32,6 +32,8 @@ interface StoredFlag {
   resolvedAt: Date | null;
   undoUntil?: Date | null;
   revision?: number;
+  /** The stored answer; a `merge` names the copies it removed. */
+  resolution?: unknown;
 }
 
 export interface ListFlagsFilters {
@@ -165,7 +167,7 @@ function toView(
   // passed, so it is the kind's evidence shape by construction.
   return {
     ...payload.data,
-    evidence: evidenceOf(payload.data, flag.entityType, flag.entityId),
+    evidence: evidenceOf(payload.data, flag.entityType, flag.entityId, flag.resolution),
     id: flag.id,
     entityType: flag.entityType as DataQualityEntityType,
     entityId: flag.entityId,

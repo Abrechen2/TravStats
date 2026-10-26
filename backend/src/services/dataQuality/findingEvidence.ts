@@ -36,7 +36,8 @@ export function findingActionsOf(kind: string, entityType: string): FindingActio
 export function duplicateEvidence(
   entityType: RecordCheckDomain,
   entityId: string,
-  details: Extract<DataQualityFlagPayload, { kind: "duplicate_candidate" }>["details"]
+  details: Extract<DataQualityFlagPayload, { kind: "duplicate_candidate" }>["details"],
+  mergedAway: readonly string[] = []
 ): DuplicateEvidence {
   const oldest = [...details.copies].sort(
     (a, b) => a.createdAt.localeCompare(b.createdAt) || a.entityId.localeCompare(b.entityId)
@@ -44,7 +45,10 @@ export function duplicateEvidence(
   return {
     ...details,
     entityType,
-    ids: [entityId, ...details.copies.map((copy) => copy.entityId)],
+    // Once only each: a merge moves the flag onto the kept copy, which its
+    // `copies` already name, and the copies it removed live on only in the
+    // resolution.
+    ids: [...new Set([entityId, ...details.copies.map((copy) => copy.entityId), ...mergedAway])],
     keptId: oldest?.entityId ?? entityId,
     keptReason: "oldest",
     matchedFields: details.matchedOn,
@@ -55,10 +59,24 @@ export function duplicateEvidence(
 export function evidenceOf(
   payload: DataQualityFlagPayload,
   entityType: string,
-  entityId: string
+  entityId: string,
+  resolution: unknown = null
 ): unknown {
   if (payload.kind === "duplicate_candidate") {
-    return duplicateEvidence(entityType as RecordCheckDomain, entityId, payload.details);
+    return duplicateEvidence(
+      entityType as RecordCheckDomain,
+      entityId,
+      payload.details,
+      mergedAwayOf(resolution)
+    );
   }
   return payload.details;
+}
+
+/** The copies a `merge` answer deleted, read from the stored resolution. */
+function mergedAwayOf(resolution: unknown): string[] {
+  if (typeof resolution !== "object" || resolution === null) return [];
+  const merged = (resolution as { merged?: { removedIds?: unknown } }).merged;
+  const removed = merged?.removedIds;
+  return Array.isArray(removed) ? removed.filter((id): id is string => typeof id === "string") : [];
 }
