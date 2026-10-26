@@ -49,8 +49,8 @@ S = server (travstats-server), T = TravTrack session, A = app.
 
 | Issue | Who | Plan |
 |---|---|---|
-| forgejo#316 trip recordings on the server | T | covered by TravTrack trip sink (C6); verify on Beta, close with evidence |
-| forgejo#319 stationary GPS jitter | T | jitter filter exists on `dev/travtrack`; verify on the flight panel, close or finish |
+| forgejo#316 trip recordings on the server | T | verified end-to-end on beta.27, closed; real-phone proof stays under C8 / companion#73 |
+| forgejo#319 stationary GPS jitter | T | filter on main since rc.19 for entry recordings, verified, closed; follow-up after C8: filter TravTrack's drawn line and totals (not the point layer) |
 | forgejo#317 share link of an undated trip never ends | S | fix |
 | forgejo#320 station labels on the map | S | build |
 | forgejo#322 "a logbook, not a live tracker" text | S | rewrite README / Docker Hub / llms.txt copy |
