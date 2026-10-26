@@ -291,7 +291,8 @@ export type RailGeometryFallback =
   | "untracedShape"
   | "railRoutingUnavailable"
   | "railRoutingNoRoute"
-  | "railRoutingNotConfigured";
+  | "railRoutingNotConfigured"
+  | "railRoutingModeUnsupported";
 
 /**
  * `meta.geometry` of a save: what it did to the frozen line. `kept` = a

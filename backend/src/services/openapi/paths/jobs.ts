@@ -26,6 +26,7 @@ export const jobSchema = z.object({
     "timeZones.reResolveApply",
     "placeImport.resolve",
     "bus.routeStraight",
+    "rail.rerouteLocalTransit",
     "webdavSync.run",
     "travtrack.fileImport",
     "travtrack.dawarichImport",

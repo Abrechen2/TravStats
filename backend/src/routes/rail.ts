@@ -25,14 +25,12 @@ import {
 } from "../services/rail/railJourneyWrite";
 import {
   readStoredLine,
-  refetchJourneyGeometry,
   resolveEditedGeometry,
   resolveJourneyGeometry,
   tracedLengthKm,
-  type GeometryEdit,
-  type GeometryFallbackReason,
   type JourneyGeometry,
 } from "../services/rail/railGeometry";
+import { editReport, reportOf, routeRailJourneyAgain } from "../services/rail/railRouteAgain";
 import { resolveStationInput, withStationShortCodes } from "../services/rail/railStations";
 import { bindConnection } from "../services/rail/railConnection";
 import { restatusTrips } from "../services/trip/restatusTrips";
@@ -346,42 +344,6 @@ function geometryColumns(
   };
 }
 
-/**
- * What a save did to the line, in `meta.geometry` beside the row (review
- * 2026-09-26, finding 4): a Transitous match saved as a straight line used to
- * be indistinguishable from a good save, so the form said "saved" and the map
- * quietly drew the chord. `fallback` names why; `kept` means a re-fetch did
- * not deliver and the frozen line stayed.
- */
-interface GeometryReport {
-  outcome: "unchanged" | "traced" | "routed" | "straight" | "kept";
-  geometrySource: string;
-  fallback: GeometryFallbackReason | null;
-}
-
-function reportOf(geo: JourneyGeometry): GeometryReport {
-  return {
-    outcome:
-      geo.geometrySource === "straight"
-        ? "straight"
-        : geo.geometrySource === "openrailrouting"
-          ? "routed"
-          : "traced",
-    geometrySource: geo.geometrySource,
-    fallback: geo.fallback,
-  };
-}
-
-function editReport(edit: GeometryEdit, storedSource: string): GeometryReport {
-  if (edit.kind === "unchanged") {
-    return { outcome: "unchanged", geometrySource: storedSource, fallback: null };
-  }
-  if (edit.kind === "kept") {
-    return { outcome: "kept", geometrySource: edit.geometrySource, fallback: edit.fallback };
-  }
-  return reportOf(edit.geo);
-}
-
 router.post(
   "/",
   railCreationLimiter,
@@ -422,6 +384,7 @@ async function createRailRide(userId: string, body: unknown, claim: ClaimClientR
     lookupRef: lookup.ref,
     dep: { lat: merged.depLat, lon: merged.depLon },
     arr: { lat: merged.arrLat, lon: merged.arrLon },
+    transitMode: input.transitMode,
   });
   const state = withTracedDistance(merged, geo.geometry && tracedLengthKm(geo.geometry));
   const companions = await resolveCompanions(userId, input.companions ?? []);
@@ -502,37 +465,16 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const userId = requireUser(req);
-      const existing = await prisma.railJourney.findFirst({ where: { id: req.params.id, userId } });
-      if (!existing) throw new AppError("Rail journey not found", 404);
-      const edit = await refetchJourneyGeometry(existing);
-      const journey = await prisma.$transaction(async (tx) => {
-        const before = await shareSnapshot(tx, "rail", existing.id);
-        const changed = edit.kind === "refetched" && edit.geo.geometry !== null;
-        if (changed) {
-          const result = await tx.railJourney.updateMany({
-            where: { id: existing.id, userId, updatedAt: existing.updatedAt },
-            data: {
-              geometry: edit.geo.geometry as unknown as Prisma.InputJsonValue,
-              geometrySource: edit.geo.geometrySource,
-              ...(existing.distanceSource !== "user" && {
-                distanceKm: tracedLengthKm(edit.geo.geometry!),
-                distanceSource: "route",
-              }),
-            },
-          });
-          if (result.count !== 1)
-            throw new AppError("Journey changed while routing; reload and try again", 409);
-          await propagateWrite(tx, userId, "rail", existing.id, before);
-        }
-        return tx.railJourney.findFirstOrThrow({
-          where: { id: existing.id, userId },
-          include: RAIL_INCLUDE,
-        });
+      const routed = await routeRailJourneyAgain(userId, req.params.id);
+      if (!routed) throw new AppError("Rail journey not found", 404);
+      const journey = await prisma.railJourney.findFirstOrThrow({
+        where: { id: routed.id, userId },
+        include: RAIL_INCLUDE,
       });
       res.json({
         success: true,
         data: withRailSource(withStationShortCodes(withRailTimes(journey))),
-        meta: { geometry: editReport(edit, existing.geometrySource) },
+        meta: { geometry: routed.report },
       });
     } catch (err) {
       next(err);
@@ -567,6 +509,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       lookup,
       dep: { lat: merged.depLat, lon: merged.depLon },
       arr: { lat: merged.arrLat, lon: merged.arrLon },
+      transitMode: input.transitMode ?? existing.transitMode,
     });
     const written =
       edit.kind === "unchanged"

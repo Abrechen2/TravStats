@@ -1095,8 +1095,27 @@
       "notConfigured": "Es ist keine Adresse eingetragen.",
       "unreachable": "Unter dieser Adresse antwortet kein Dienst.",
       "notOpenRailRouting": "Der Dienst antwortet, ist aber kein OpenRailRouting.",
-      "profileMissing": "Dieses OpenRailRouting hat kein Profil „all_tracks“ – ohne das kann TravStats keine Strecken berechnen.",
-      "requestFailed": "Der Test konnte nicht ausgeführt werden."
+      "profileMissing": "Dieses OpenRailRouting hat kein Profil „all_tracks“ – ohne das kann TravStats keine Zugstrecken berechnen.",
+      "requestFailed": "Der Test konnte nicht ausgeführt werden.",
+      "modeProfiles": {
+        "both": "Profile „tram“ und „subway“ vorhanden: Straßenbahn- und U-Bahn-Fahrten werden nur über ihr eigenes Gleisnetz berechnet.",
+        "missing": "Kein eigenes Profil für {{modes}}. Solche Fahrten werden dann nur berechnet, wenn diese Instanz Anfragen mit eigenem Modell (ch.disable) annimmt – sonst bleiben sie bei der Luftlinie, nie auf dem Eisenbahnnetz. Wie man die Profile ergänzt, steht in der Anleitung „rail-routing“.",
+        "tram": "Straßenbahn („tram“)",
+        "subway": "U-Bahn („subway“)",
+        "and": " und "
+      }
+    },
+    "reroute": {
+      "hint": "Bis Oktober 2026 wurden Straßenbahn- und U-Bahn-Fahrten wie Züge über das Eisenbahnnetz berechnet und können falsch liegen. Das berechnet alle schon gerouteten Straßenbahn- und U-Bahn-Fahrten dieser Instanz neu; eine Linie, die ihr eigenes Netz nicht bestätigt, wird zur Luftlinie.",
+      "action": "Straßenbahn- und U-Bahn-Fahrten neu berechnen",
+      "running": "Wird neu berechnet …",
+      "progress": "Wird neu berechnet … {{done}} von {{total}}",
+      "done": "Fertig: {{routed}} neu berechnet, {{straight}} auf die Luftlinie zurückgesetzt, {{kept}} unverändert behalten, {{skipped}} übersprungen (von {{total}}).",
+      "stopped": "Abgebrochen, weil der Streckenrouter nicht mehr antwortet – {{remaining}} Fahrten sind noch offen. Später erneut starten.",
+      "notConfigured": "Erst eine Adresse speichern – ohne Streckenrouter gibt es nichts neu zu berechnen.",
+      "alreadyRunning": "Eine andere Administratorin oder ein anderer Administrator lässt die Neuberechnung gerade laufen. Bitte warten, bis sie fertig ist.",
+      "failed": "Die Neuberechnung ist fehlgeschlagen.",
+      "lost": "Ob die Neuberechnung fertig wurde, ist unbekannt – der Server hat den Auftrag nicht mehr. Einfach erneut starten."
     }
   },
   "profileZone": {

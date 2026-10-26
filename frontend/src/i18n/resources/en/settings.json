@@ -1095,8 +1095,27 @@
       "notConfigured": "No address has been entered.",
       "unreachable": "No service answers at this address.",
       "notOpenRailRouting": "The service answers, but it is not an OpenRailRouting.",
-      "profileMissing": "This OpenRailRouting has no \"all_tracks\" profile – TravStats cannot route without it.",
-      "requestFailed": "The test could not be run."
+      "profileMissing": "This OpenRailRouting has no \"all_tracks\" profile – TravStats cannot route trains without it.",
+      "requestFailed": "The test could not be run.",
+      "modeProfiles": {
+        "both": "Profiles \"tram\" and \"subway\" present: tram and U-Bahn rides are routed over their own track network only.",
+        "missing": "No dedicated profile for {{modes}}. Such rides are then routed only if this instance accepts requests with their own model (ch.disable) – otherwise they stay a straight line, never on the railway network. The \"rail-routing\" guide explains how to add the profiles.",
+        "tram": "tram (\"tram\")",
+        "subway": "U-Bahn (\"subway\")",
+        "and": " and "
+      }
+    },
+    "reroute": {
+      "hint": "Until October 2026 tram and U-Bahn rides were routed like trains over the railway network and may be wrong. This routes every already-routed tram and U-Bahn ride of this instance again; a line its own network does not confirm becomes a straight line.",
+      "action": "Route tram and U-Bahn rides again",
+      "running": "Routing again …",
+      "progress": "Routing again … {{done}} of {{total}}",
+      "done": "Done: {{routed}} routed again, {{straight}} reset to a straight line, {{kept}} kept unchanged, {{skipped}} skipped (of {{total}}).",
+      "stopped": "Stopped because the rail router no longer answers – {{remaining}} rides are still open. Start it again later.",
+      "notConfigured": "Save an address first – without a rail router there is nothing to route again.",
+      "alreadyRunning": "Another administrator is running this pass right now. Please wait until it has finished.",
+      "failed": "Routing again failed.",
+      "lost": "Whether it finished is unknown – the server no longer has the job. Just start it again."
     }
   },
   "profileZone": {

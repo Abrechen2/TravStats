@@ -53,6 +53,7 @@ export const RAIL_GEOMETRY_FALLBACK_REASONS = [
   "railRoutingUnavailable",
   "railRoutingNoRoute",
   "railRoutingNotConfigured",
+  "railRoutingModeUnsupported",
 ] as const;
 export const RAIL_SORT_FIELDS = ["departure", "distance", "created"] as const;
 

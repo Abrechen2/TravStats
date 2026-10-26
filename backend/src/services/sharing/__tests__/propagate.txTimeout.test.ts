@@ -29,7 +29,7 @@ const FROZEN: Record<string, number> = {
   "routes/flightsBatch.ts": 1,
   "routes/lodging/stays.ts": 1,
   "routes/lodging.ts": 1,
-  "routes/rail.ts": 4,
+  "routes/rail.ts": 3,
   "routes/rental.ts": 1,
   "routes/trips/tourRoutes.ts": 1,
   "routes/trips/tripBookings.ts": 1,
