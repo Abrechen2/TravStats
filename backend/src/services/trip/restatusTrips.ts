@@ -12,7 +12,7 @@ import { recomputeTripStatus } from "../tripStatusService";
  */
 export async function restatusTrips(
   tripIds: ReadonlyArray<string | null | undefined>,
-  db: Pick<DbTransaction, "trip"> = prisma
+  db: Pick<DbTransaction, "trip" | "userSettings"> = prisma
 ): Promise<void> {
   for (const id of new Set(tripIds.filter((t): t is string => Boolean(t)))) {
     await recomputeTripStatus(id, db);

@@ -12,6 +12,12 @@ import { prisma } from "../../../db";
 import { runDataQualityChecks } from "../runner";
 import { listFlags } from "../flagService";
 import { resolveFinding } from "../findingActions";
+import { shareTrip } from "../../sharing/shareTrip";
+import {
+  linkWithConsent,
+  makeAccount,
+  wipeShareTestAccounts,
+} from "../../../routes/__tests__/sharingFixtures";
 
 const NOW = new Date("2026-10-10T12:00:00Z");
 const day = (d: string) => new Date(`${d}T00:00:00Z`);
@@ -99,5 +105,49 @@ describe("answers on a pool of one connection", () => {
     expect((await prisma.ferryJourney.findUniqueOrThrow({ where: { id: ride.id } })).tripId).toBe(
       trip.id
     );
+  }, 45_000);
+
+  it("links a crossing on a trip shared with a member, whose copy is derived in the transaction", async () => {
+    await wipeShareTestAccounts();
+    const anna = await makeAccount("anna");
+    const ben = await makeAccount("ben");
+    try {
+      const trip = await prisma.trip.create({
+        data: {
+          userId: anna.id,
+          name: "Kykladen",
+          status: "completed",
+          startDay: day("2026-07-01"),
+          endDay: day("2026-07-14"),
+          startDate: day("2026-07-01"),
+          endDate: day("2026-07-14"),
+        },
+      });
+      await prisma.ferryJourney.create({
+        data: {
+          userId: anna.id,
+          depStationName: "Piraeus",
+          depLat: 37.94,
+          depLon: 23.64,
+          depTimezone: "Europe/Athens",
+          arrStationName: "Naxos",
+          arrLat: 37.1,
+          arrLon: 25.37,
+          arrTimezone: "Europe/Athens",
+          departureTime: new Date("2026-07-05T07:00:00Z"),
+          arrivalTime: new Date("2026-07-05T12:30:00Z"),
+          status: "completed",
+        },
+      });
+      const companion = await linkWithConsent(anna, ben);
+      await shareTrip(anna.id, trip.id, companion.id);
+      await runDataQualityChecks(anna.id, NOW);
+      const [flag] = await listFlags(anna.id, { kind: "ferry_match" });
+
+      await resolveFinding(flag.id, anna.id, { action: "link" });
+      expect(await prisma.ferryJourney.count({ where: { userId: ben.id } })).toBe(1);
+    } finally {
+      await wipeShareTestAccounts();
+    }
   }, 45_000);
 });
