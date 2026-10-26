@@ -50,7 +50,16 @@ export function flagDay(flag: DataQualityFlag): string | null {
     case "trip_entries_outside":
       return flag.details.startDay;
     case "chronology_conflict":
-      return flag.details.domain === "lodging_stay" ? flag.details.thisStart.slice(0, 10) : null;
+      // A flight's `thisStart` is an instant, not a day: only the server's
+      // local `day` names it. A stay's start already is a calendar day.
+      return flag.details.domain === "lodging_stay"
+        ? flag.details.thisStart.slice(0, 10)
+        : (flag.details.day ?? null);
+    case "duplicate_candidate":
+      return flag.details.day ?? null;
+    case "ferry_match":
+      // The wall clock at the port, never the UTC instant's date.
+      return flag.details.departureTime.local.slice(0, 10);
     case "stay_dates_reversed":
       return flag.details.stays[0]?.checkIn.slice(0, 10) ?? null;
     default:

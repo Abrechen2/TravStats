@@ -178,6 +178,8 @@ export interface DuplicateCandidateDetails {
   matchedOn: string[];
   copies: (RelatedRecord & { dataSource: string | null; createdAt: string })[];
   dataSource: string | null;
+  /** The flagged row's first local day; absent on flags written before it existed. */
+  day?: string | null;
 }
 
 /** Two entries one traveller cannot both have made. Instants for flights, days for stays. */
@@ -190,6 +192,8 @@ export interface ChronologyConflictDetails {
   otherEnd: string;
   overlapMinutes: number | null;
   overlapNights: number | null;
+  /** The flagged row's first local day; absent on flags written before it existed. */
+  day?: string | null;
 }
 
 export interface FlightNumberMissingDetails {

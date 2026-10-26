@@ -60,6 +60,7 @@ interface Candidate {
   createdAt: Date;
   dataSource: string | null;
   parentId: string | null;
+  firstDay: string | null;
 }
 
 type MatchField = DataQualityFinding & { kind: "duplicate_candidate" };
@@ -172,6 +173,7 @@ function findings(
         details: {
           matchedOn: group.matchedOn,
           dataSource: member.dataSource,
+          day: member.firstDay,
           copies: members
             .filter((other) => other.id !== member.id)
             .map((other) => ({
@@ -194,6 +196,7 @@ const candidateOf = (row: {
   label: string;
   createdAt: Date;
   dataSource: string | null;
+  firstDay: string | null;
 }): Candidate => ({ ...row, parentId: null });
 
 function flightDuplicates(flights: readonly FlightRecord[]): DataQualityFinding[] {

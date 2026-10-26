@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { germanT } from "../../../../__tests__/helpers/germanT";
-import { buildInboxItems, orderByJourney } from "../model";
+import type { DataQualityFlag } from "../../../../types/dataQuality";
+import { buildInboxItems, flagDay, orderByJourney } from "../model";
 import { flag, photo, suggestion, trip, update } from "./fixtures";
 
 describe("inbox journey grouping", () => {
@@ -55,5 +56,63 @@ describe("inbox journey grouping", () => {
     expect(new Set(items.map((i) => i.groupKey)).size).toBe(3);
     expect(items[2].day).toBeNull();
     expect(orderByJourney(items)[items.length - 1]?.groupKey).toBe("unassigned");
+  });
+});
+
+describe("flagDay — a dated finding is filed under its travel day", () => {
+  const base = { ...flag, entityType: "flight" as const, entityId: "f1", subject: null };
+  it("dates a ferry match by the crossing's local departure day", () => {
+    const ferry = {
+      ...base,
+      kind: "ferry_match",
+      details: {
+        ferryId: "ferry1",
+        candidateTripId: "trip1",
+        candidateTripName: "Dänemark",
+        departurePort: "Puttgarden",
+        arrivalPort: "Rødby",
+        departureTime: {
+          utc: "2025-06-02T22:30:00Z",
+          zone: "Europe/Berlin",
+          offset: "+02:00",
+          local: "2025-06-03T00:30:00",
+          precision: "minute",
+        },
+        reason: "insideTripWindow",
+      },
+    } as DataQualityFlag;
+    expect(flagDay(ferry)).toBe("2025-06-03");
+  });
+  it("dates a duplicate and a flight overlap by the row's own day", () => {
+    const dup = {
+      ...base,
+      kind: "duplicate_candidate",
+      details: { matchedOn: ["route"], copies: [], dataSource: null, day: "2025-06-04" },
+    } as DataQualityFlag;
+    const overlap = {
+      ...base,
+      kind: "chronology_conflict",
+      details: {
+        domain: "flight",
+        conflictWith: { entityType: "flight", entityId: "f0", label: "x", parentId: null },
+        thisStart: "2025-06-03T23:30:00Z",
+        thisEnd: "2025-06-04T02:00:00Z",
+        otherStart: "2025-06-03T22:00:00Z",
+        otherEnd: "2025-06-04T01:00:00Z",
+        overlapMinutes: 90,
+        overlapNights: null,
+        day: "2025-06-04",
+      },
+    } as DataQualityFlag;
+    expect(flagDay(dup)).toBe("2025-06-04");
+    expect(flagDay(overlap)).toBe("2025-06-04");
+  });
+  it("still says unknown for a flag written before the day was sent", () => {
+    const old = {
+      ...base,
+      kind: "duplicate_candidate",
+      details: { matchedOn: ["route"], copies: [], dataSource: null },
+    } as DataQualityFlag;
+    expect(flagDay(old)).toBeNull();
   });
 });

@@ -73,6 +73,12 @@ export const duplicateCandidateDetailsSchema = z.object({
   ),
   /** This row's own source, for the same comparison. */
   dataSource: z.string().nullable(),
+  /**
+   * The flagged row's first calendar day on its own clock (`YYYY-MM-DD`), so
+   * the inbox files the question under that travel day. Optional: flags
+   * written before it existed carry none.
+   */
+  day: z.string().nullable().optional(),
 });
 
 /**
@@ -91,6 +97,12 @@ export const chronologyConflictDetailsSchema = z.object({
   otherEnd: z.string(),
   overlapMinutes: z.number().int().nullable(),
   overlapNights: z.number().int().nullable(),
+  /**
+   * The flagged row's first calendar day on its own clock (`YYYY-MM-DD`) — for
+   * a flight the local departure day, which `thisStart` (an instant) is not.
+   * Optional: flags written before it existed carry none.
+   */
+  day: z.string().nullable().optional(),
 });
 
 /** The carrier the flight names — the reason a number is expected. */

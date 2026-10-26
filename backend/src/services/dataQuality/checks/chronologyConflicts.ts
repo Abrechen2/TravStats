@@ -86,6 +86,7 @@ function flightConflicts(
           otherEnd: new Date(clash.arr).toISOString(),
           overlapMinutes: Math.round((Math.min(clash.arr, current.arr) - current.dep) / 60_000),
           overlapNights: null,
+          day: current.record.firstDay,
         },
       });
     }
@@ -141,6 +142,7 @@ function stayConflicts(
           otherEnd: clash.checkOut,
           overlapMinutes: null,
           overlapNights: daysBetween(current.checkIn, lastShared),
+          day: current.checkIn,
         },
       });
     }

@@ -19,6 +19,7 @@ describe("findChronologyConflicts — flights", () => {
           flight({
             id: "next",
             flightNumber: "UA1",
+            firstDay: "2026-03-11",
             departureAt: at("2026-03-10T13:00:00Z"),
             arrivalAt: at("2026-03-10T15:00:00Z"),
           }),
@@ -35,6 +36,8 @@ describe("findChronologyConflicts — flights", () => {
         conflictWith: { entityType: "flight", entityId: "out" },
         overlapMinutes: 120,
         overlapNights: null,
+        // The inbox groups the question under the flight's own local day.
+        day: "2026-03-11",
       },
     });
     expect(dataQualityFlagPayloadSchema.safeParse(findings[0]).success).toBe(true);
