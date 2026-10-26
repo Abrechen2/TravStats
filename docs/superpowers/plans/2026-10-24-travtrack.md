@@ -499,11 +499,49 @@ Before everyday recording is advertised or `travTrack` leaves the beta registry.
 - [ ] **Step 3:** Measure battery per hour unplugged, fixes per hour, share ≤ 20 m, upload delay; a privacy zone at home: no fix inside it on the server, no gap shown for it.
 - [ ] **Step 4:** Record numbers and verdict in ADR 0016. Owner decides whether `travTrack`'s `returnsWhen` is met.
 
+### Task C9: Companion — start and stop Alltag from Shortcuts (owner, 2026-10-26)
+
+The owner's Dawarich routine, carried over: an iOS Shortcuts automation STARTS
+recording when he leaves home and STOPS it when he arrives, and points go up on
+an interval. TravTrack has to work the same way.
+
+**Order (binding):** (1) a test build of `feat/travtrack-p2` against the Beta
+(CT 106, `2.7.0-beta.26`, TravTrack on), (2) C8 on that build, (3) C9 on top of
+`feat/travtrack-p2` as `feat/travtrack-shortcuts`. Until (1) the owner's phone
+records nothing into TravTrack, so it comes first. Every build that leaves
+lisbeth — APK for testers, TestFlight, store — only with the owner's OK.
+
+**Contract: unchanged.** `POST /travtrack/points` (points, gaps), `/travtrack/zones`,
+`/location/capabilities` as in phase 2; no server work. A deliberate stop sends
+**no gap**: the span reads as "keine Daten" on `/track`, which is what it is, and
+for the stretch at home it is also the more private answer. A dedicated gap
+reason (`stopped`) was considered and not added — the server rejects an unknown
+reason with 400, so the phone would need a capability check for it, for no
+benefit the owner asked for. Revisit only on the owner's wish.
+
+**Files (Companion):**
+- Create: an App Intents target (`StartTravTrackIntent`, `StopTravTrackIntent`, `openAppWhenRun = false` where the device check allows it) via a config plugin, `app/src/lib/location/shortcut-control.ts` (the one entry both the intents and the URL take), `adrs/0017-travtrack-shortcuts.md`
+- Modify: `app/src/app/+native-intent.ts` (`travstats://travtrack/start`, `travstats://travtrack/stop`), `app/src/lib/location/coordinator.ts` + `capture-plan.ts` (a deliberate stop), the watchdog, `app/src/lib/location/upload.ts` (interval setting, flush), `app/src/app/settings/location.tsx`, `app/src/components/location/copy.ts` (DE + EN)
+
+**Interfaces:**
+- `startEveryday()` / `stopEveryday()` in `shortcut-control.ts` set `STORE_KEYS.everydayCapture` and run `syncCapture`. Each returns one result the action shows: `running` „läuft" / "running", `stopped` „gestoppt" / "stopped", `travTrackOff` „TravTrack am Server aus" / "TravTrack is off on the server", `permission` „Immer-Berechtigung fehlt" / "'Always' permission missing", `notPaired` „nicht gekoppelt" / "not paired". Start checks pairing, `captureDecision(caps, 'everyday')` and the „Immer" grant before it reports `running`.
+- **Device check first:** whether iOS lets an intent start location updates with the app in the background. If not, the intent opens the app briefly (`openAppWhenRun = true`) and ADR 0017 says so with the measured behaviour.
+- **A stop is deliberate:** the watchdog does not revive a purpose stopped by the user, and no `recorderSilent` gap is written for that span. Flight and trip purposes are untouched by start/stop — an armed flight keeps recording through a stop (precedence of C7 unchanged).
+- **Upload interval:** `RECORDER_SEND_EVERY_MS` becomes the setting `STORE_KEYS.travTrackSendEveryMs`, one of 5 / 15 / 30 / 60 min, default 15. The last send time is persisted (`STORE_KEYS.travTrackLastSentAt`), so the interval survives a restart. A stop sends the open queue at once (the envelope protocol and its frozen `uploadId` as before).
+- **Settings, under Alltag:** „Per Kurzbefehl steuerbar" / "Can be controlled by Shortcuts" with a short guide (the two actions, a Home automation as the example), the interval picker and „Zuletzt gesendet" / "Last sent".
+- **Android, if the effort stays small:** the same two actions as an exported intent for Tasker/MacroDroid, with the same results; otherwise a line in ADR 0017 and nothing built.
+- **Not built (owner decision first):** the same without Shortcuts, through an in-app geofence around `user_settings.home_place`.
+
+- [ ] **Step 1: Failing tests** — "the start intent and the start URL both switch Alltag on and answer running"; "stop switches only Alltag off and answers stopped"; "after a stop the watchdog does not revive Alltag and no recorderSilent gap is queued"; "a stop sends the open queue at once"; "the interval setting and the last send time survive a restart"; "an armed flight keeps recording through a stop"; "unpaired answers notPaired, TravTrack off answers travTrackOff, a missing Immer answers permission — and nothing starts".
+- [ ] **Step 2–4:** FAIL → implement → PASS; `npx tsc --noEmit`, `npm run test:time-zones`.
+- [ ] **Step 5:** Device check on the iPhone (start and stop from a Shortcuts automation with the app closed), result in ADR 0017.
+- [ ] **Step 6:** Commit `feat(location): start and stop everyday recording from Shortcuts`.
+
 ### Phase 2 exit
 
 - [ ] Server gates (Build Checks) green on `dev/travtrack`; `npm run check:drift` green with the one TravTrack migration; Companion `tsc` + `npm test` + `test:time-zones` green.
 - [ ] Codex review of both diffs since phase 1; findings fixed.
-- [ ] Browser look at `/track` and the flight/trip origin labels; C8 recorded.
+- [ ] Browser look at `/track` and the flight/trip origin labels; C8 recorded; C9's device check recorded in ADR 0017.
 - [ ] Ask the owner, as a single question, whether phase 2 goes to `main` / an RC (still behind `travTrack`).
 
 ## Phase 3 — TravTrack helps TravStats
