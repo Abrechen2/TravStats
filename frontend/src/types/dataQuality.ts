@@ -249,7 +249,18 @@ interface DataQualityFlagBase {
   subject?: DataQualityFlagSubject | null;
   createdAt: string;
   resolvedAt: string | null;
+  /**
+   * Spec 2026-10-25 C3, all additive (an older server sends none of them):
+   * until when `undo` can take the last answer back, the kind-specific answers
+   * `resolve` takes, and `evidence` — `details` under the contract's name.
+   */
+  undoUntil?: string | null;
+  actions?: FindingAction[];
+  evidence?: unknown;
 }
+
+/** The kind-specific answers `POST /:id/resolve` takes (`{ action }`). */
+export type FindingAction = "keep" | "merge" | "link";
 
 /**
  * One flag as the API returns it, with `kind` and `details` tied together.

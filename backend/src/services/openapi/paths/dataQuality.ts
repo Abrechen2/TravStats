@@ -18,11 +18,14 @@ import {
   dataQualityFlagSchema,
   listDataQualityFlagsQuerySchema,
 } from "../../../schemas/dataQualityFlag";
+import {
+  INVALID_ACTION_REASONS,
+  resolveFindingBodySchema,
+} from "../../../schemas/dataQualityFindings";
 import { registry } from "../registry";
 import { errorContent } from "./shared";
 
 const tags = ["Data quality"];
-const notFound = { description: "Not found", content: errorContent };
 const uuid = z.string().uuid();
 
 const dataQualityFlag = registry.register(
@@ -101,40 +104,95 @@ registry.registerPath({
   },
 });
 
+const answered = z.object({
+  success: z.literal(true),
+  data: dataQualityFlag
+    .nullable()
+    .describe("The finding as it now stands; null once its record no longer exists."),
+});
+
+/** The contract's stable codes (spec 2026-10-25 C3), in `error`. */
+const findingError = (codes: readonly string[]) => ({
+  "application/json": {
+    schema: z.object({
+      error: z.enum(codes as [string, ...string[]]),
+      reason: z.enum(INVALID_ACTION_REASONS).optional(),
+    }),
+  },
+});
+
+const answerResponses = (description: string) => ({
+  200: { description, content: { "application/json": { schema: answered } } },
+  403: { description: "Read-scoped token", content: errorContent },
+  404: { description: "`notFound`", content: findingError(["notFound"]) },
+});
+
 registry.registerPath({
   method: "post",
   path: "/data-quality-flags/{id}/resolve",
-  summary: "Answer a flag: the data has been corrected",
+  summary: "Answer a finding",
   description:
-    "Does not edit the record — correct it through its own endpoint first. A " +
-    "later run re-opens the flag if the contradiction is still there.",
+    "Without a body: the data has been corrected. This does not edit the record — " +
+    "correct it through its own endpoint first; a later run re-opens the flag if " +
+    "the contradiction is still there. With `{ action }`: one of the flag's " +
+    "`actions` — for `duplicate_candidate`, `keep` (these are separate entries; " +
+    "answers every flag over the same copies, status `dismissed`, never asked " +
+    "again) or `merge` (flights and stays only: keeps `keptId` — the body's, else " +
+    "`evidence.keptId` — moves documents, companions, recording, share links, " +
+    "roadtrip stations and the trip/booking link onto it, and deletes the other " +
+    "copies through their own delete path; no server undo). Applying the change " +
+    "and answering the flag happen in one transaction. Sets `undoUntil` (10 " +
+    "minutes) except after a merge.",
   tags,
-  request: { params: z.object({ id: uuid }) },
+  request: {
+    params: z.object({ id: uuid }),
+    body: { content: { "application/json": { schema: resolveFindingBodySchema } } },
+  },
   responses: {
-    200: {
-      description: "Resolved",
-      content: { "application/json": { schema: z.object({ success: z.boolean() }) } },
+    ...answerResponses("Answered"),
+    400: {
+      description: "`invalidAction` — unknown, not offered, or `keptId` outside the finding",
+      content: findingError(["invalidAction"]),
     },
-    403: { description: "Read-scoped token", content: errorContent },
-    404: notFound,
+    409: {
+      description: "`staleFinding` — the flag is not open, or the copies no longer match",
+      content: findingError(["staleFinding"]),
+    },
   },
 });
 
 registry.registerPath({
   method: "post",
   path: "/data-quality-flags/{id}/dismiss",
-  summary: "Answer a flag: this is not wrong",
+  summary: "Answer a finding: this is not wrong",
   description:
-    "Permanent — no later run re-opens it. The escape hatch for a check that is " +
-    "right that two sources disagree and wrong about which to believe.",
+    "No later run re-opens it. The escape hatch for a check that is right that " +
+    "two sources disagree and wrong about which to believe. Sets `undoUntil`.",
   tags,
   request: { params: z.object({ id: uuid }) },
   responses: {
-    200: {
-      description: "Dismissed",
-      content: { "application/json": { schema: z.object({ success: z.boolean() }) } },
+    ...answerResponses("Dismissed"),
+    409: { description: "`staleFinding`", content: findingError(["staleFinding"]) },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/data-quality-flags/{id}/undo",
+  summary: "Take the last answer back",
+  description:
+    "While `now < undoUntil` (10 minutes after the answer): restores the status " +
+    "the flag had before — usually `open` — and reverts what the answer changed " +
+    "(the other flags a `keep` answered). A `merge` cannot be undone here.",
+  tags,
+  request: { params: z.object({ id: uuid }) },
+  responses: {
+    ...answerResponses("Taken back"),
+    409: {
+      description:
+        "`undoExpired` — the window passed or the answer has no undo; " +
+        "`staleFinding` — the flag is open again or changed meanwhile",
+      content: findingError(["undoExpired", "staleFinding"]),
     },
-    403: { description: "Read-scoped token", content: errorContent },
-    404: notFound,
   },
 });

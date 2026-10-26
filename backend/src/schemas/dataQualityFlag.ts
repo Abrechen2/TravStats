@@ -16,6 +16,7 @@ import {
   tripEndMissingDetailsSchema,
   tripEntriesOutsideDetailsSchema,
 } from "./dataQualityRecordChecks";
+import { duplicateEvidenceSchema, findingActionSchema } from "./dataQualityFindings";
 
 /**
  * The vocabulary of the data-quality inbox.
@@ -439,24 +440,41 @@ const dataQualityFlagBase = z.object({
   subject: dataQualityFlagSubjectSchema,
   createdAt: z.string().datetime(),
   resolvedAt: z.string().datetime().nullable(),
+  /**
+   * Until when `POST /:id/undo` can take the last answer back (spec C3);
+   * null when nothing can be undone — an open flag, an expired window, a merge.
+   */
+  undoUntil: z.string().datetime().nullable(),
+  /** The kind-specific answers `POST /:id/resolve` takes for THIS flag. */
+  actions: z.array(findingActionSchema),
 });
+
+/**
+ * One kind's view: its payload, the shared fields, and `evidence` — the
+ * contract's name for `details` (spec C3), an additive alias. For every kind
+ * but `duplicate_candidate` it IS `details`.
+ */
+const view = <T extends z.ZodRawShape, E extends z.ZodTypeAny>(
+  payload: z.ZodObject<T>,
+  evidence: E
+) => payload.merge(dataQualityFlagBase).extend({ evidence });
 
 /** One flag as the API returns it. */
 export const dataQualityFlagSchema = z.discriminatedUnion("kind", [
-  addressCountryMismatchPayload.merge(dataQualityFlagBase),
-  undatedCountryEvidencePayload.merge(dataQualityFlagBase),
-  stayDatesReversedPayload.merge(dataQualityFlagBase),
-  coordinatesOutsideCountryPayload.merge(dataQualityFlagBase),
-  timeZoneUnresolvedPayload.merge(dataQualityFlagBase),
-  timePrecisionUnknownPayload.merge(dataQualityFlagBase),
-  timeDayAmbiguousPayload.merge(dataQualityFlagBase),
-  homeResidenceUnconfirmedPayload.merge(dataQualityFlagBase),
-  duplicateCandidatePayload.merge(dataQualityFlagBase),
-  chronologyConflictPayload.merge(dataQualityFlagBase),
-  flightNumberMissingPayload.merge(dataQualityFlagBase),
-  airportUnknownPayload.merge(dataQualityFlagBase),
-  tripEndMissingPayload.merge(dataQualityFlagBase),
-  tripEntriesOutsidePayload.merge(dataQualityFlagBase),
+  view(addressCountryMismatchPayload, addressCountryMismatchDetailsSchema),
+  view(undatedCountryEvidencePayload, undatedCountryEvidenceDetailsSchema),
+  view(stayDatesReversedPayload, stayDatesReversedDetailsSchema),
+  view(coordinatesOutsideCountryPayload, coordinatesOutsideCountryDetailsSchema),
+  view(timeZoneUnresolvedPayload, timeQuestionDetailsSchema),
+  view(timePrecisionUnknownPayload, timeQuestionDetailsSchema),
+  view(timeDayAmbiguousPayload, timeQuestionDetailsSchema),
+  view(homeResidenceUnconfirmedPayload, homeResidenceUnconfirmedDetailsSchema),
+  view(duplicateCandidatePayload, duplicateEvidenceSchema),
+  view(chronologyConflictPayload, chronologyConflictDetailsSchema),
+  view(flightNumberMissingPayload, flightNumberMissingDetailsSchema),
+  view(airportUnknownPayload, airportUnknownDetailsSchema),
+  view(tripEndMissingPayload, tripEndMissingDetailsSchema),
+  view(tripEntriesOutsidePayload, tripEntriesOutsideDetailsSchema),
 ]);
 export type DataQualityFlagView = z.infer<typeof dataQualityFlagSchema>;
 

@@ -1,4 +1,4 @@
-import type { DataQualityFlag, Prisma } from "../../prisma";
+import { Prisma, type DataQualityFlag } from "../../prisma";
 
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
@@ -234,7 +234,14 @@ async function reconcileExisting(
   if (current.status === "resolved" || askedAnew) {
     await prisma.dataQualityFlag.update({
       where: { id: current.id },
-      data: { status: "open", resolvedAt: null, details: asJson(finding.details) },
+      // A re-opened question has no answer left to take back.
+      data: {
+        status: "open",
+        resolvedAt: null,
+        details: asJson(finding.details),
+        undoUntil: null,
+        resolution: Prisma.DbNull,
+      },
     });
     return "reopened";
   }

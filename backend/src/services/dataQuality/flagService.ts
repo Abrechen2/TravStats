@@ -9,6 +9,7 @@ import {
   type FlaggedRecord,
 } from "../../schemas/dataQualityFlag";
 import logger from "../../utils/logger";
+import { evidenceOf, findingActionsOf } from "./findingEvidence";
 import { resolveTimeSubjects } from "./timeSubjects";
 
 /**
@@ -29,12 +30,15 @@ interface StoredFlag {
   details: unknown;
   createdAt: Date;
   resolvedAt: Date | null;
+  undoUntil?: Date | null;
 }
 
 export interface ListFlagsFilters {
   /** `all` returns every status; anything else filters to that one. */
   status?: DataQualityFlagStatus | "all";
   kind?: DataQualityFlagKind;
+  /** One flag — how an answer reads back the flag it answered. */
+  id?: string;
 }
 
 /**
@@ -144,8 +148,11 @@ function toView(
     return null;
   }
 
+  // `evidence` is computed from the same payload the pairing check just
+  // passed, so it is the kind's evidence shape by construction.
   return {
     ...payload.data,
+    evidence: evidenceOf(payload.data, flag.entityType, flag.entityId),
     id: flag.id,
     entityType: flag.entityType as DataQualityEntityType,
     entityId: flag.entityId,
@@ -153,7 +160,9 @@ function toView(
     subject,
     createdAt: flag.createdAt.toISOString(),
     resolvedAt: flag.resolvedAt ? flag.resolvedAt.toISOString() : null,
-  };
+    undoUntil: flag.undoUntil ? flag.undoUntil.toISOString() : null,
+    actions: findingActionsOf(flag.kind, flag.entityType),
+  } as DataQualityFlagView;
 }
 
 export async function listFlags(
@@ -166,6 +175,7 @@ export async function listFlags(
       userId,
       ...(status === "all" ? {} : { status }),
       ...(filters.kind ? { kind: filters.kind } : {}),
+      ...(filters.id ? { id: filters.id } : {}),
     },
     orderBy: [{ createdAt: "desc" }, { id: "asc" }],
   });
@@ -194,32 +204,8 @@ export async function listFlags(
   return views;
 }
 
-/**
- * "I have corrected the data."
- *
- * Deliberately not the same answer as `dismiss`: the next run re-opens this if
- * the contradiction is still there, so the button cannot become a way of hiding
- * a fault. See `runner.ts` for the full table.
- */
-export async function resolveFlag(id: string, userId: string, now: Date = new Date()) {
-  const updated = await prisma.dataQualityFlag.updateMany({
-    where: { id, userId },
-    data: { status: "resolved", resolvedAt: now },
-  });
-  return updated.count > 0;
-}
-
-/**
- * "This is not wrong, stop asking."
- *
- * Never re-opened. This is what makes a check's known false positive — an
- * address ending in a subdivision that shares a country's name, say — cost the
- * user one click for good rather than one click per run.
- */
-export async function dismissFlag(id: string, userId: string, now: Date = new Date()) {
-  const updated = await prisma.dataQualityFlag.updateMany({
-    where: { id, userId },
-    data: { status: "dismissed", resolvedAt: now },
-  });
-  return updated.count > 0;
+/** One flag as the API returns it, or null when it is not this user's or cannot be shown. */
+export async function getFlagView(id: string, userId: string): Promise<DataQualityFlagView | null> {
+  const [view] = await listFlags(userId, { status: "all", id });
+  return view ?? null;
 }
