@@ -12,6 +12,7 @@ import { duplicateEvidence, findingActionsOf } from "./findingEvidence";
 import { mergeDuplicates } from "./duplicateMerge";
 import { applyFerryLink, undoFerryLink } from "./ferryLink";
 import { FindingActionError } from "./findingErrors";
+import { lockDuplicateAnswers } from "./duplicateAnswers";
 import { SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
 import { restatusTrips } from "../trip/restatusTrips";
 
@@ -131,6 +132,9 @@ async function keep(flag: DataQualityFlag, now: Date): Promise<void> {
   const { ids, entityType } = duplicateOf(flag);
   const idSet = new Set(ids);
   await prisma.$transaction(async (tx) => {
+    // Serialised with the runner's create of a duplicate flag — see
+    // `duplicateAnswers.ts`: a sibling is either seen here or born answered.
+    await lockDuplicateAnswers(tx, flag.userId);
     const siblings = await tx.dataQualityFlag.findMany({
       where: {
         userId: flag.userId,

@@ -17,6 +17,7 @@ import { findFerryMatches } from "./checks/ferryMatch";
 import { loadAccountSnapshot } from "./gather";
 import { findingKey, type DataQualityFinding } from "./types";
 import { outgrowsDismissal } from "./dismissalScope";
+import { answeredByDismissal, duplicateIdSet, lockDuplicateAnswers } from "./duplicateAnswers";
 
 /**
  * Run every check for one account and reconcile the inbox with the answer.
@@ -187,8 +188,31 @@ function isUniqueViolation(error: unknown): boolean {
 async function createOrAdopt(
   userId: string,
   finding: DataQualityFinding
-): Promise<{ created: true } | { created: false; row: DataQualityFlag | null }> {
+): Promise<{ created: true; open: boolean } | { created: false; row: DataQualityFlag | null }> {
   try {
+    if (finding.kind === "duplicate_candidate") {
+      // Under the lock `keep` takes: a copy group the user has already kept
+      // gets this flag born answered, never as a fresh question.
+      const open = await prisma.$transaction(async (tx) => {
+        await lockDuplicateAnswers(tx, userId);
+        const ids = duplicateIdSet(finding.entityId, finding.details);
+        const answered =
+          ids !== null && (await answeredByDismissal(tx, userId, finding.entityType, ids));
+        await tx.dataQualityFlag.create({
+          data: {
+            userId,
+            entityType: finding.entityType,
+            entityId: finding.entityId,
+            kind: finding.kind,
+            status: answered ? "dismissed" : "open",
+            resolvedAt: answered ? new Date() : null,
+            details: asJson(finding.details),
+          },
+        });
+        return !answered;
+      });
+      return { created: true, open };
+    }
     await prisma.dataQualityFlag.create({
       data: {
         userId,
@@ -199,7 +223,7 @@ async function createOrAdopt(
         details: asJson(finding.details),
       },
     });
-    return { created: true };
+    return { created: true, open: true };
   } catch (error) {
     if (!isUniqueViolation(error)) throw error;
     const row = await prisma.dataQualityFlag.findUnique({
@@ -301,7 +325,7 @@ export async function runDataQualityChecks(
     if (!current) {
       const attempt = await createOrAdopt(userId, finding);
       if (attempt.created) {
-        summary.opened += 1;
+        if (attempt.open) summary.opened += 1;
         continue;
       }
       if (!attempt.row) {
