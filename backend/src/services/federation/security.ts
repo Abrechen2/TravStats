@@ -15,7 +15,7 @@ import {
   type EnvelopePurpose,
 } from "./envelope";
 
-import { refused, hash } from "./refusal";
+import { refused, hash, PeerRefusal } from "./refusal";
 export { refused, hash, PeerRefusal, type PeerRefusalKind } from "./refusal";
 import { loadIdentity, type Identity } from "./identity";
 export { loadIdentity } from "./identity";
@@ -118,26 +118,82 @@ export async function exchange(
   });
   if (!answers.length || !answers.every((a) => publicAddress(a.address)))
     throw refused("private-address");
-  const selected = answers[0];
   const outgoing = envelope(body, remoteOrigin, local, undefined, transport.sendPurpose);
   const bytes = Buffer.from(JSON.stringify(outgoing));
   if (bytes.length > transport.maxRequest) throw refused("packet-too-large");
-  const raw = await new Promise<Buffer>((resolve, reject) => {
+  const raw = await postToFirstReachable(url.hostname, ipv4First(answers), bytes, transport);
+  const received = verifyEnvelope(
+    JSON.parse(raw.toString()),
+    peer.publicKey,
+    local.origin,
+    Date.now(),
+    transport.accepts
+  );
+  if (received.origin !== remoteOrigin || received.nonce !== outgoing.nonce) throw refused();
+  return JSON.parse(received.body) as unknown;
+}
+/** One overall budget for every address tried, so a dead first answer cannot double the wait. */
+const EXCHANGE_BUDGET_MS = 10_000;
+
+/**
+ * IPv4 first, the rest in resolver order. A Cloudflare name answers A and AAAA, and a container
+ * without an IPv6 route fails the AAAA one outright (2.7.0-rc.24 on prod, 2026-10-26).
+ */
+export function ipv4First<T extends { family: number }>(answers: readonly T[]): T[] {
+  return [...answers.filter((a) => a.family === 4), ...answers.filter((a) => a.family !== 4)];
+}
+
+/**
+ * Tries each vetted address in turn, never re-resolving. Only a connection that never came up
+ * moves on to the next address; a reply, a refusal or the spent budget ends the exchange.
+ */
+async function postToFirstReachable(
+  hostname: string,
+  addresses: readonly { address: string; family: number }[],
+  bytes: Buffer,
+  transport: PeerTransport
+): Promise<Buffer> {
+  const deadline = Date.now() + EXCHANGE_BUDGET_MS;
+  for (const pinned of addresses) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) break;
+    try {
+      return await postPinned(hostname, pinned, bytes, transport, remaining);
+    } catch (error) {
+      // Anything but a PeerRefusal is a connection that never came up; the next address may answer.
+      if (error instanceof PeerRefusal) throw error;
+    }
+  }
+  throw refused("unreachable");
+}
+
+function postPinned(
+  hostname: string,
+  pinned: { address: string; family: number },
+  bytes: Buffer,
+  transport: PeerTransport,
+  budgetMs: number
+): Promise<Buffer> {
+  return new Promise<Buffer>((resolve, reject) => {
+    let connected = false;
     const options: https.RequestOptions & { autoSelectFamily: boolean } = {
-      hostname: url.hostname,
-      servername: url.hostname,
+      hostname,
+      servername: hostname,
       port: 443,
       path: transport.path,
       method: "POST",
       agent: false,
       // A single vetted address is pinned; Node 22 otherwise asks lookup for an array.
       autoSelectFamily: false,
-      family: selected.family,
+      family: pinned.family,
+      // Answer on the next tick, never synchronously. A synchronous answer lets the connect fail
+      // inside `tls.connect` before the request has attached its socket error listener: the
+      // ENETUNREACH was then emitted with no listener and took the process down (rc.24).
       lookup: ((
         _host: string,
         _options: unknown,
         cb: (err: null, address: string, family: number) => void
-      ) => cb(null, selected.address, selected.family)) as never,
+      ) => process.nextTick(cb, null, pinned.address, pinned.family)) as never,
       headers: { "Content-Type": "application/json", "Content-Length": bytes.length },
     };
     const request = https.request(options, (response) => {
@@ -158,21 +214,13 @@ export async function exchange(
       response.on("end", () => resolve(Buffer.concat(chunks)));
       response.on("error", () => reject(refused("unreachable")));
     });
-    const deadline = setTimeout(() => request.destroy(), 10_000);
+    request.on("socket", (socket) => socket.once("connect", () => (connected = true)));
+    const deadline = setTimeout(() => request.destroy(), budgetMs);
     request.on("close", () => clearTimeout(deadline));
-    request.setTimeout(10_000, () => request.destroy());
-    request.on("error", () => reject(refused("unreachable")));
+    request.setTimeout(budgetMs, () => request.destroy());
+    request.on("error", (error) => reject(connected ? refused("unreachable") : error));
     request.end(bytes);
   });
-  const received = verifyEnvelope(
-    JSON.parse(raw.toString()),
-    peer.publicKey,
-    local.origin,
-    Date.now(),
-    transport.accepts
-  );
-  if (received.origin !== remoteOrigin || received.nonce !== outgoing.nonce) throw refused();
-  return JSON.parse(received.body) as unknown;
 }
 /** Signature and admission only. The nonce is consumed separately, once the peer may act. */
 export async function authenticatePeer(
