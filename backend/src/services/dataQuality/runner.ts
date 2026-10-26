@@ -267,33 +267,45 @@ type ReconcileOutcome = "untouched" | "reopened" | "updated";
  * its undo; a conditional one matches nothing, and the pass leaves the row to
  * the answer (the next run reconciles against the new state).
  */
-/** `untouched` when the flag joined a kept group (or lost a race), null when no keep covers it. */
-async function joinKeptGroup(
+/**
+ * A resolved duplicate flag found again: it joins a `keep` over the same
+ * copies, or re-opens — decided AND written under the lock `keep` takes, so
+ * a keep given in between cannot be overtaken by the re-open.
+ */
+async function reconcileResolvedDuplicate(
   current: DataQualityFlag,
   finding: DataQualityFinding
-): Promise<ReconcileOutcome | null> {
+): Promise<ReconcileOutcome> {
   const ids = duplicateIdSet(finding.entityId, finding.details);
-  if (ids === null) return null;
   return prisma.$transaction(async (tx) => {
     await lockDuplicateAnswers(tx, current.userId);
-    const answeredBy = await answeredByDismissal(tx, current.userId, finding.entityType, ids);
-    if (answeredBy === null) return null;
-    await tx.dataQualityFlag.updateMany({
+    const answeredBy =
+      ids === null ? null : await answeredByDismissal(tx, current.userId, finding.entityType, ids);
+    const written = await tx.dataQualityFlag.updateMany({
       where: { id: current.id, revision: current.revision },
-      data: {
-        status: "dismissed",
-        details: asJson(finding.details),
-        undoUntil: null,
-        resolution: {
-          action: "keep",
-          previousStatus: "open",
-          previousResolvedAt: null,
-          inheritedFrom: answeredBy,
-        },
-        revision: { increment: 1 },
-      },
+      data: answeredBy
+        ? {
+            status: "dismissed",
+            details: asJson(finding.details),
+            undoUntil: null,
+            resolution: {
+              action: "keep",
+              previousStatus: "open",
+              previousResolvedAt: null,
+              inheritedFrom: answeredBy,
+            },
+            revision: { increment: 1 },
+          }
+        : {
+            status: "open",
+            resolvedAt: null,
+            details: asJson(finding.details),
+            undoUntil: null,
+            resolution: Prisma.DbNull,
+            revision: { increment: 1 },
+          },
     });
-    return "untouched" as const;
+    return written.count > 0 && !answeredBy ? "reopened" : "untouched";
   });
 }
 
@@ -309,8 +321,7 @@ export async function reconcileExisting(
   // answered: a copy flag resolved earlier joins that answer instead of
   // coming back, under the lock `keep` takes, and undoing the keep re-opens it.
   if (current.status === "resolved" && current.kind === "duplicate_candidate") {
-    const joined = await joinKeptGroup(current, finding);
-    if (joined !== null) return joined;
+    return reconcileResolvedDuplicate(current, finding);
   }
 
   if (current.status === "resolved" || askedAnew) {

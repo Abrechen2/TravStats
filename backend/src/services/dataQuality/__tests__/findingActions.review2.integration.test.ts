@@ -872,4 +872,57 @@ describe("C3 review findings, round two", () => {
     }
     expect(order[0]).toBe("lock");
   });
+
+  it("a run re-opening a resolved copy and a keep of its group cannot interleave", async () => {
+    const FLIGHT = {
+      airline: "Lufthansa",
+      flightNumber: "LH400",
+      depIata: "FRA",
+      depLat: 50.03,
+      depLon: 8.57,
+      arrIata: "JFK",
+      arrLat: 40.64,
+      arrLon: -73.78,
+      status: "flown",
+      depTimeSemantics: "UTC",
+      arrTimeSemantics: "UTC",
+      depTimezone: "Europe/Berlin",
+      arrTimezone: "America/New_York",
+      departureTime: new Date("2026-03-10T08:00:00Z"),
+      arrivalTime: new Date("2026-03-10T16:00:00Z"),
+    };
+    for (const d of ["01", "02", "03"]) {
+      await prisma.flight.create({
+        data: { ...FLIGHT, userId: anna.id, createdAt: new Date(`2026-03-${d}T00:00:00Z`) },
+      });
+    }
+    await runDataQualityChecks(anna.id, NOW);
+    const [one, other] = await listFlags(anna.id, { kind: "duplicate_candidate" });
+    await resolveFinding(other.id, anna.id, {});
+
+    // The user keeps the group the moment the run's first transaction (the
+    // look for a covering keep) has finished.
+    const original = prisma.$transaction.bind(prisma);
+    let kept = false;
+    const spy = jest.spyOn(prisma, "$transaction").mockImplementation((async (
+      ...args: unknown[]
+    ) => {
+      const result = await (original as (...a: unknown[]) => Promise<unknown>)(...args);
+      if (!kept) {
+        kept = true;
+        await resolveFinding(one.id, anna.id, { action: "keep" });
+      }
+      return result;
+    }) as never);
+    try {
+      await runDataQualityChecks(anna.id, NOW);
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(kept).toBe(true);
+    expect(
+      (await prisma.dataQualityFlag.findUniqueOrThrow({ where: { id: other.id } })).status
+    ).toBe("dismissed");
+  });
 });
