@@ -496,6 +496,13 @@ Before everyday recording is advertised or `travTrack` leaves the beta registry.
 
 **Status 2026-10-26:** builds out (owner OK) — TestFlight build 61 (0.1.0, internal group only) and a release APK on the owner's Xiaomi, both from `feat/travtrack-p2` @ 839d98a5 against CT 106. The field day itself runs on the owner's time.
 
+**Prod, 2026-10-26 (owner OK):** the owner's account on prod has the privacy zone „Zuhause" (250 m, as on the beta), and his Dawarich history 2006-10-01…2026-10-26 was copied into TravTrack (391,075 + 9,042 points stored, 825 dropped by the zone, 0 errors). Since then his iPhone records with TravTrack (build 66) and Dawarich side by side. Two binding consequences:
+
+- **No Dawarich copy runs for any day from 2026-10-26 on.** Those days already arrive through TravTrack; a copy would store every way twice.
+- **Battery per hour does not count on those days** — two recorders run at once.
+
+The iOS reference comparison (TravTrack vs Dawarich for 2026-10-26 and 2026-10-27, from both APIs) is done by the Companion session on 2026-10-28 and recorded under Step 4.
+
 - [ ] **Step 1:** Android (the Xiaomi from P0) and iPhone, one ordinary day on **Alltag** with a short trip and a flight-mode simulation: one notification at a time; the rate rises and falls in place.
 - [ ] **Step 2:** The P0 failure modes on purpose: swipe away, `adb shell am crash`, reboot, permission downgrade to „Beim Verwenden". Expected: each silence ends at the next app start or background task (watchdog), and each one appears on `/track` as „Telefon pausiert" — never as recorded, never unexplained.
 - [ ] **Step 3:** Measure battery per hour unplugged, fixes per hour, share ≤ 20 m, upload delay; a privacy zone at home: no fix inside it on the server, no gap shown for it.
