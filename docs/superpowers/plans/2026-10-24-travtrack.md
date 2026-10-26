@@ -546,7 +546,9 @@ benefit the owner asked for. Revisit only on the owner's wish.
 ### After C9: capture scope (owner, 2026-10-26)
 
 Start simple: **record everything is the default.** No manual accuracy setting and no per-type profiles yet; they come once there is field experience. The later concept — all sources, triggers and per-type profiles (flight, cruise, ferry, rail, bus, roadtrip, workout, everyday) — is the board at https://claude.ai/artifact/FS93X8kqman2wrCDEwZuLC.
-Proposed for the RC (awaiting the owner): the app's location screen offers only **Aus | Alles** (today's everyday mode, which already raises the rate for flights and trips); „Flug & Reise" is no longer offered. Contract unchanged — `capture.modes` still lists `trips` and `everyday`; the app just stops offering `trips`.
+Decided for the RC (owner, 2026-10-26; app `rc/companion-2026-10-26` @ eb7ab784, ADR 0016 amended): the app's location screen offers only **Aus | Alles** (today's everyday mode, which already raises the rate for flights and trips); „Flug & Reise" is no longer offered. Contract unchanged — `capture.modes` still lists `trips` and `everyday`; the app just stops offering `trips`.
+
+**iOS needs the Shortcuts (owner, 2026-10-26):** under „Alles" the iPhone screen shows „Kurzbefehle – auf dem iPhone nötig" with the two automation steps (leave home → start, arrive → stop) and the last run; ADR 0017 records it.
 
 ### Phase 2 exit
 
