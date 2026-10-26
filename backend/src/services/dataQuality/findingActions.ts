@@ -180,7 +180,19 @@ async function keep(flag: DataQualityFlag, now: Date): Promise<void> {
     for (const sibling of siblings) {
       const answered = await tx.dataQualityFlag.updateMany({
         where: { id: sibling.id, revision: sibling.revision, status: "open" },
-        data: { status: "dismissed", resolvedAt: now, ...NEXT_REVISION },
+        data: {
+          status: "dismissed",
+          resolvedAt: now,
+          // Stamped with the answer it was given under, so a flag born
+          // later inherits that answer — never this sibling (`runner.ts`).
+          resolution: asJson({
+            action: "keep",
+            previousStatus: "open",
+            previousResolvedAt: null,
+            inheritedFrom: flag.id,
+          }),
+          ...NEXT_REVISION,
+        },
       });
       if (answered.count === 0) throw new FindingActionError("staleFinding");
     }
@@ -340,6 +352,7 @@ export async function undoFinding(
           data: {
             status: sibling.status,
             resolvedAt: sibling.resolvedAt ? new Date(sibling.resolvedAt) : null,
+            resolution: Prisma.DbNull,
             ...NEXT_REVISION,
           },
         });

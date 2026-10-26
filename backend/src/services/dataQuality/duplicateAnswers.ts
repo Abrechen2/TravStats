@@ -47,11 +47,15 @@ export async function answeredByDismissal(
       entityId: { in: [...ids] },
       status: "dismissed",
     },
-    select: { id: true, entityId: true, details: true },
+    select: { id: true, entityId: true, details: true, resolution: true },
   });
   const match = dismissed.find((flag) => {
     const theirs = duplicateIdSet(flag.entityId, flag.details);
     return theirs !== null && sameSet(theirs, ids);
   });
-  return match?.id ?? null;
+  if (!match) return null;
+  // The ANSWER, not whichever flag of it was met first: a sibling dismissed
+  // by a keep names that keep's flag, and so does the newcomer.
+  const root = (match.resolution as { inheritedFrom?: unknown } | null)?.inheritedFrom;
+  return typeof root === "string" ? root : match.id;
 }

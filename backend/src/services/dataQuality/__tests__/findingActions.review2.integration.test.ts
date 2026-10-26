@@ -602,4 +602,58 @@ describe("C3 review findings, round two", () => {
     });
     expect(flags.map((f) => f.status)).toEqual(["open", "open"]);
   });
+
+  it("with four copies, a late sibling inherits the answer itself, not another sibling", async () => {
+    const FLIGHT = {
+      airline: "Lufthansa",
+      flightNumber: "LH400",
+      depIata: "FRA",
+      depLat: 50.03,
+      depLon: 8.57,
+      arrIata: "JFK",
+      arrLat: 40.64,
+      arrLon: -73.78,
+      status: "flown",
+      depTimeSemantics: "UTC",
+      arrTimeSemantics: "UTC",
+      depTimezone: "Europe/Berlin",
+      arrTimezone: "America/New_York",
+      departureTime: new Date("2026-03-10T08:00:00Z"),
+      arrivalTime: new Date("2026-03-10T16:00:00Z"),
+    };
+    const rows = [];
+    for (const d of ["01", "02", "03", "04"]) {
+      rows.push(
+        await prisma.flight.create({
+          data: { ...FLIGHT, userId: anna.id, createdAt: new Date(`2026-03-${d}T00:00:00Z`) },
+        })
+      );
+    }
+    await runDataQualityChecks(anna.id, NOW);
+    const byEntity = new Map(
+      (await prisma.dataQualityFlag.findMany({ where: { userId: anna.id } })).map((f) => [
+        f.entityId,
+        f,
+      ])
+    );
+    const [, b, c, d] = rows.map((r) => byEntity.get(r.id));
+    // D's flag is still being created when the user keeps C.
+    await prisma.dataQualityFlag.delete({ where: { id: d!.id } });
+    await resolveFinding(c!.id, anna.id, { action: "keep" });
+    expect((await prisma.dataQualityFlag.findUniqueOrThrow({ where: { id: b!.id } })).status).toBe(
+      "dismissed"
+    );
+    // Which dismissed flag a lookup meets first is the table's physical
+    // order; move C's row behind B's so the sibling is met first.
+    await prisma.$executeRaw`UPDATE data_quality_flags SET kind = kind WHERE id = ${c!.id}`;
+    await runDataQualityChecks(anna.id, NOW);
+
+    await undoFinding(c!.id, anna.id);
+
+    const flags = await prisma.dataQualityFlag.findMany({
+      where: { userId: anna.id, kind: "duplicate_candidate" },
+    });
+    expect(flags).toHaveLength(3);
+    expect(flags.every((f) => f.status === "open")).toBe(true);
+  });
 });
