@@ -222,18 +222,23 @@ router.post(
  * had a network of their own: starts a background job (kind
  * `rail.rerouteLocalTransit`, poll `GET /jobs/:id`) and answers 202
  * `{ jobId }`; while it runs, asking again answers the same job. 409 with
- * code `notConfigured` without a router (docs/features/rail-routing.md).
+ * code `notConfigured` without a router, `alreadyRunning` while another
+ * admin's pass runs (docs/features/rail-routing.md).
  */
 router.post(
   "/instance-settings/rail-routing/reroute-local-transit",
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const job = await startLocalTransitReroute(req.userId!);
-      if (!job) {
-        res.status(409).json({ error: "No rail router is configured", code: "notConfigured" });
+      const start = await startLocalTransitReroute(req.userId!);
+      if (start.kind === "started") {
+        res.status(202).json({ jobId: start.job.id });
         return;
       }
-      res.status(202).json({ jobId: job.id });
+      const error =
+        start.kind === "notConfigured"
+          ? "No rail router is configured"
+          : "Another administrator's pass is running";
+      res.status(409).json({ error, code: start.kind });
     } catch (error) {
       next(error);
     }

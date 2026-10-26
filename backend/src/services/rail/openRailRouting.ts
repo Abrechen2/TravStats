@@ -244,7 +244,14 @@ async function fetchRailLine(
     answer = await requestRoute(baseUrl, { profile: routing.profile, points }, signal);
     if (answer.kind === "refused" && UNKNOWN_PROFILE_MESSAGE.test(answer.message)) {
       answer = await requestRoute(baseUrl, restricted, signal);
-      if (answer.kind === "refused" && !NO_ROUTE_MESSAGE.test(answer.message)) {
+      // Only GraphHopper's own 400 is a statement about what the instance can
+      // do; a 401/403/429 from it or a proxy is a router that is not answering
+      // now, and must not get a stored line dropped (route-again).
+      if (
+        answer.kind === "refused" &&
+        answer.status === 400 &&
+        !NO_ROUTE_MESSAGE.test(answer.message)
+      ) {
         logger.info({ operation: "rail_routing_request", reason: "mode_unsupported", mode });
         return { ok: false, reason: "modeUnsupported" };
       }

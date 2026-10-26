@@ -1111,6 +1111,7 @@
       "done": "Done: {{routed}} routed again, {{straight}} reset to a straight line, {{kept}} kept unchanged, {{skipped}} skipped (of {{total}}).",
       "stopped": "Stopped because the rail router no longer answers – {{remaining}} rides are still open. Start it again later.",
       "notConfigured": "Save an address first – without a rail router there is nothing to route again.",
+      "alreadyRunning": "Another administrator is running this pass right now. Please wait until it has finished.",
       "failed": "Routing again failed.",
       "lost": "Whether it finished is unknown – the server no longer has the job. Just start it again."
     }

@@ -35,11 +35,12 @@ export default function RailLocalTransitReroute(): JSX.Element {
       setState({ kind: "done", result });
     } catch (err) {
       logger.warn("Re-routing tram and U-Bahn rides failed", err);
+      const code = jobErrorCode(err);
       const key =
         err instanceof JobLostError
           ? "lost"
-          : jobErrorCode(err) === "notConfigured"
-            ? "notConfigured"
+          : code === "notConfigured" || code === "alreadyRunning"
+            ? code
             : "failed";
       setState({ kind: "error", key: `settings:railRouting.reroute.${key}` });
     }

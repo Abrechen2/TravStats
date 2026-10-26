@@ -96,7 +96,7 @@ describe("Tram and U-Bahn rides and the instance's OpenRailRouting", () => {
 
   beforeAll(async () => {
     await prisma.user.deleteMany({
-      where: { username: { in: ["railtram", "railtram2", "railtramadmin"] } },
+      where: { username: { in: ["railtram", "railtram2", "railtramadmin", "railtramadmin2"] } },
     });
     const make = async (username: string, isAdmin = false) =>
       prisma.user.create({
@@ -288,6 +288,31 @@ describe("Tram and U-Bahn rides and the instance's OpenRailRouting", () => {
       expect(byId.get(metro.id)?.geometrySource).toBe("straight");
       expect(byId.get(train.id)?.geometry).toEqual(train.geometry);
       expect(requests.every((r) => r.profile !== "all_tracks" || r.custom_model)).toBe(true);
+    });
+
+    it("tells a second admin that a pass is already running, instead of a job they cannot read", async () => {
+      await routedAsTrain("tram");
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => (release = resolve));
+      jest.spyOn(global, "fetch").mockImplementation(async () => {
+        await held;
+        return new Response(JSON.stringify({ message: "down" }), { status: 503 });
+      });
+      const first = await start();
+      expect(first.status).toBe(202);
+      expect((await start()).body.jobId).toBe(first.body.jobId);
+      const other = await prisma.user.create({
+        data: { username: "railtramadmin2", passwordHash: "x", isAdmin: true },
+      });
+      try {
+        const second = await start(`auth_token=${generateToken(other.id)}`);
+        expect(second.status).toBe(409);
+        expect(second.body.code).toBe("alreadyRunning");
+      } finally {
+        release();
+        await settleAllJobs();
+        await prisma.user.delete({ where: { id: other.id } });
+      }
     });
 
     it("is an admin's only, and refuses without a router", async () => {

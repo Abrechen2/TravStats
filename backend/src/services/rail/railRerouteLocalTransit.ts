@@ -1,6 +1,6 @@
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
-import { findRunningJob, startJob, type JobView } from "../jobs/jobRegistry";
+import { findRunningJob, getJob, startJob, type JobView } from "../jobs/jobRegistry";
 import { railRoutingBaseUrl } from "./openRailRouting";
 import { routeRailJourneyAgain } from "./railRouteAgain";
 
@@ -76,10 +76,31 @@ async function rerouteAll(
   return result;
 }
 
-/** Start the pass, or answer the one already running; null without a rail router. */
-export async function startLocalTransitReroute(adminId: string): Promise<JobView | null> {
+export type LocalTransitRerouteStart =
+  | { kind: "started"; job: JobView }
+  | { kind: "notConfigured" }
+  /** Another admin's pass runs; its job is theirs to read (`GET /jobs/:id`). */
+  | { kind: "alreadyRunning" };
+
+/** A pass this admin may read, the refusal of a second one, or none without a router. */
+function runningFor(adminId: string): LocalTransitRerouteStart | null {
   const running = findRunningJob(["rail.rerouteLocalTransit"]);
-  if (running) return running;
-  if (!(await railRoutingBaseUrl())) return null;
-  return startJob("rail.rerouteLocalTransit", adminId, rerouteAll);
+  if (!running) return null;
+  const own = getJob(running.id, adminId);
+  return own ? { kind: "started", job: own } : { kind: "alreadyRunning" };
+}
+
+/** Start the pass, or answer the one already running. */
+export async function startLocalTransitReroute(adminId: string): Promise<LocalTransitRerouteStart> {
+  const before = runningFor(adminId);
+  if (before) return before;
+  if (!(await railRoutingBaseUrl())) return { kind: "notConfigured" };
+  // Checked again after the await: two starts arriving together must not
+  // both pass and run two instance-wide passes over the same rides.
+  return (
+    runningFor(adminId) ?? {
+      kind: "started",
+      job: startJob("rail.rerouteLocalTransit", adminId, rerouteAll),
+    }
+  );
 }

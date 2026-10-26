@@ -48,6 +48,10 @@ describe("RailLocalTransitReroute", () => {
   it.each([
     ["notConfigured", () => new JobFailedError("notConfigured", 409)],
     ["lost", () => new JobLostError()],
+    [
+      "alreadyRunning",
+      () => Object.assign(new Error("409"), { response: { data: { code: "alreadyRunning" } } }),
+    ],
     ["failed", () => new Error("Network Error")],
   ])("names a failure in words (%s)", async (key, error) => {
     answer = async () => {

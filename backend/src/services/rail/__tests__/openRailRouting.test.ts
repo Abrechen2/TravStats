@@ -252,6 +252,19 @@ describe("a tram or U-Bahn ride (tester report 2026-10-25)", () => {
       if (body.profile === "all_tracks") expect(body.custom_model).toBeDefined();
   });
 
+  it.each([401, 403, 429])(
+    "treats a fallback refused with HTTP %s as the router being unavailable, not as unsupported",
+    async (status) => {
+      fetchMock
+        .mockResolvedValueOnce(missingProfile("tram"))
+        .mockResolvedValueOnce(response({ message: "slow down" }, status));
+      expect(await routeRailLine("https://routing.test", points, { mode: "tram" })).toEqual({
+        ok: false,
+        reason: "unavailable",
+      });
+    }
+  );
+
   it("keeps a missing connection on the tram network a missing connection", async () => {
     fetchMock
       .mockResolvedValueOnce(missingProfile("tram"))

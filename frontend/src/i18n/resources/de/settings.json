@@ -1111,6 +1111,7 @@
       "done": "Fertig: {{routed}} neu berechnet, {{straight}} auf die Luftlinie zurückgesetzt, {{kept}} unverändert behalten, {{skipped}} übersprungen (von {{total}}).",
       "stopped": "Abgebrochen, weil der Streckenrouter nicht mehr antwortet – {{remaining}} Fahrten sind noch offen. Später erneut starten.",
       "notConfigured": "Erst eine Adresse speichern – ohne Streckenrouter gibt es nichts neu zu berechnen.",
+      "alreadyRunning": "Eine andere Administratorin oder ein anderer Administrator lässt die Neuberechnung gerade laufen. Bitte warten, bis sie fertig ist.",
       "failed": "Die Neuberechnung ist fehlgeschlagen.",
       "lost": "Ob die Neuberechnung fertig wurde, ist unbekannt – der Server hat den Auftrag nicht mehr. Einfach erneut starten."
     }

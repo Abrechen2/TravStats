@@ -12,11 +12,11 @@ routed keeps the straight line, labelled as such, with the reason beside it.
 Every ride carries a transit mode, and each mode is routed over its own
 tracks only:
 
-| Ride | Profile asked | Tracks (`railway_class`) |
-|---|---|---|
-| Train (`rail`, the default) | `all_tracks`, restricted by a request custom model | RAIL, NARROW_GAUGE |
-| Tram | `tram` | TRAM, LIGHT_RAIL |
-| U-Bahn (`metro`) | `subway` | SUBWAY, LIGHT_RAIL |
+| Ride                        | Profile asked                                      | Tracks (`railway_class`) |
+| --------------------------- | -------------------------------------------------- | ------------------------ |
+| Train (`rail`, the default) | `all_tracks`, restricted by a request custom model | RAIL, NARROW_GAUGE       |
+| Tram                        | `tram`                                             | TRAM, LIGHT_RAIL         |
+| U-Bahn (`metro`)            | `subway`                                           | SUBWAY, LIGHT_RAIL       |
 
 Every answer is checked against those classes; a line that runs over anything
 else is refused rather than stored.
@@ -31,7 +31,11 @@ TravStats then asks `all_tracks` with `"ch.disable": true` and a request custom
 model that keeps the route on the mode's classes, e.g. for a tram:
 
 ```json
-{ "priority": [{ "if": "!(railway_class == TRAM || railway_class == LIGHT_RAIL)", "multiply_by": "0" }] }
+{
+  "priority": [
+    { "if": "!(railway_class == TRAM || railway_class == LIGHT_RAIL)", "multiply_by": "0" }
+  ]
+}
 ```
 
 That works on an instance that accepts non-CH requests (trains are routed the
@@ -52,47 +56,47 @@ the instance accepting request custom models.
    models are inline, so no extra JSON files are needed:
 
    ```yaml
-       - name: tram
-         turn_costs:
-           vehicle_types: [tram, light_rail]
-           u_turn_costs: 180
-           enable_uturn_times: true
-         custom_model:
-           distance_influence: 0
-           priority:
-             - if: "!rail_access"
-               multiply_by: "0"
-             - else_if: "railway_class == TRAM || railway_class == LIGHT_RAIL"
-               multiply_by: "1"
-             - else: ""
-               multiply_by: "0"
-           speed:
-             - if: "true"
-               limit_to: "rail_average_speed"
-       - name: subway
-         turn_costs:
-           vehicle_types: [subway, light_rail]
-           u_turn_costs: 180
-           enable_uturn_times: true
-         custom_model:
-           distance_influence: 0
-           priority:
-             - if: "!rail_access"
-               multiply_by: "0"
-             - else_if: "railway_class == SUBWAY || railway_class == LIGHT_RAIL"
-               multiply_by: "1"
-             - else: ""
-               multiply_by: "0"
-           speed:
-             - if: "true"
-               limit_to: "rail_average_speed"
+   - name: tram
+     turn_costs:
+       vehicle_types: [tram, light_rail]
+       u_turn_costs: 180
+       enable_uturn_times: true
+     custom_model:
+       distance_influence: 0
+       priority:
+         - if: "!rail_access"
+           multiply_by: "0"
+         - else_if: "railway_class == TRAM || railway_class == LIGHT_RAIL"
+           multiply_by: "1"
+         - else: ""
+           multiply_by: "0"
+       speed:
+         - if: "true"
+           limit_to: "rail_average_speed"
+   - name: subway
+     turn_costs:
+       vehicle_types: [subway, light_rail]
+       u_turn_costs: 180
+       enable_uturn_times: true
+     custom_model:
+       distance_influence: 0
+       priority:
+         - if: "!rail_access"
+           multiply_by: "0"
+         - else_if: "railway_class == SUBWAY || railway_class == LIGHT_RAIL"
+           multiply_by: "1"
+         - else: ""
+           multiply_by: "0"
+       speed:
+         - if: "true"
+           limit_to: "rail_average_speed"
    ```
 
 2. List both under `graphhopper.profiles_ch`, so they are fast:
 
    ```yaml
-       - profile: tram
-       - profile: subway
+   - profile: tram
+   - profile: subway
    ```
 
 3. Delete the graph cache and re-import: GraphHopper refuses to load a graph
@@ -120,6 +124,7 @@ fix keep their mainline line until they are routed again:
   answering; starting it again is safe. The same job can be started with
   `POST /api/v1/admin/instance-settings/rail-routing/reroute-local-transit`
   (admin session; answers `202 { "jobId" }`, poll `GET /api/v1/jobs/{jobId}`;
-  `409` with code `notConfigured` without a router).
+  `409` with code `notConfigured` without a router, `alreadyRunning` while
+  another administrator's pass runs).
 
 Run the instance-wide pass once after adding the profiles.
