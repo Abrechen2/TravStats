@@ -13,8 +13,9 @@ import type { SettingsSearchScope } from "./SettingsSearch";
  * Sections with rows only the expert level draws, so their words are searched
  * as expert hits (`<ns>:search.expertKeywords.<id>`).
  */
-const WITH_EXPERT_ROWS: ReadonlySet<string> = new Set([
+export const WITH_EXPERT_ROWS: ReadonlySet<string> = new Set([
   "settings:suggestions",
+  "settings:stayScan",
   "settings:autoupdate",
   "settings:backup",
   "settings:externalServices",

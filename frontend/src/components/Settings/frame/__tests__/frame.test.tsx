@@ -147,6 +147,13 @@ describe("the level switch", () => {
       expect.any(String)
     );
   });
+
+  // forgejo#318: one sentence beside the switch says what "Experte" adds.
+  it("says in one sentence what the expert view shows", () => {
+    useSettingsLevelStore.setState({ level: "standard" });
+    render(<SettingsLevelSwitch />);
+    expect(screen.getByText("settings:level.hint")).toBeInTheDocument();
+  });
 });
 
 describe("ExpertNote — touch size follows the pointer (forgejo#321, iPad look)", () => {

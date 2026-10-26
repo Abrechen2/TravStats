@@ -476,6 +476,12 @@ describe("Dawarich optional features and consent lifecycle", () => {
     const state = await prisma.dawarichStayScan.findUniqueOrThrow({ where: { userId } });
     expect(state.enabled).toBe(true);
     expect(state.leaseUntil).toBeNull();
+    // Switching on brings area detection with it (forgejo#318); this test is
+    // about stay findings, and no test reaches Overpass.
+    await prisma.dawarichStayScan.update({
+      where: { userId },
+      data: { marketEnabled: false, venueEnabled: false },
+    });
     await scan();
     expect(await prisma.dawarichStay.count({ where: { userId } })).toBe(1);
   });

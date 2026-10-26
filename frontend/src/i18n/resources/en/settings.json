@@ -1059,7 +1059,7 @@
       "dawarich": "Dawarich, location history, location source, positions, connection",
       "locationProvider": "Location source, location, positions, TravTrack, Dawarich, none, switch source, recording",
       "tripRecording": "Recording, positions, app, track, record trip",
-      "stayScan": "Stays, detect stays, radius, minimum duration, markets, places as areas, re-evaluate",
+      "stayScan": "Stays, detect stays, radius, minimum duration, detect places automatically, detect places, places as areas, venues, re-evaluate",
       "companions": "Companions, travel companions, people, rename, merge, duplicate, delete, names",
       "travTrack": "TravTrack, location history, history, positions, privacy zones, zone, delete span, export, GPX"
     },
@@ -1068,7 +1068,8 @@
       "autoupdate": "Check interval, interval, approval, expiry, only during flight",
       "backup": "Instance backup, last backup, WebDAV, Nextcloud, sync",
       "externalServices": "own key, own API key, API key, quota, AirLabs key, Aviationstack key, AeroDataBox key, AeroAPI key, OpenSky credentials, GraphHopper key, OpenRouteService key",
-      "features": "seat statistics, seats, window seat, aisle seat"
+      "features": "seat statistics, seats, window seat, aisle seat",
+      "stayScan": "markets, market grounds, shopping malls, parks, zoos, theme parks, museums"
     }
   },
   "railProviders": {
@@ -1169,7 +1170,8 @@
     "reveal": "Show",
     "showInExpert": "Show in Expert",
     "pageMore_one": "1 more setting on this page is only shown in the Expert view.",
-    "pageMore_other": "{{count}} more settings on this page are only shown in the Expert view."
+    "pageMore_other": "{{count}} more settings on this page are only shown in the Expert view.",
+    "hint": "Expert also shows fine-tuning, your own API keys and technical options."
   },
   "sectionChips": "Sections on this page",
   "pagePicker": "Page",

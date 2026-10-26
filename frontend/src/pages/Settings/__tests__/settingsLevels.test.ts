@@ -10,7 +10,7 @@ import { pageLevel, sectionsOf, type PageDef } from "../surface";
  * layout change.
  */
 const EXPERT_SECTIONS = {
-  settings: ["apitokens", "countryCounting", "stayScan", "defaults", "enrichment"],
+  settings: ["apitokens", "countryCounting", "defaults", "enrichment"],
   admin: [
     // "geocoder" left this list as a section, not as a level: its two
     // addresses are expert rows of Externe Dienste › Karten & Ortssuche now
@@ -68,7 +68,9 @@ describe("the standard/expert classification", () => {
     ["account", ["profile", "security", "devices", "notifications"]],
     ["display", ["display", "units", "domains"]],
     ["trips", ["trips", "suggestions", "sharing", "shareLinks"]],
-    ["location", ["dawarich", "tripRecording"]],
+    // The stay scan is standard; detecting places as areas just runs, and its
+    // two switches are expert rows inside it (forgejo#318).
+    ["location", ["dawarich", "tripRecording", "stayScan"]],
     ["loyalty", ["loyalty"]],
     ["flight", ["homeAirport", "autoupdate", "features"]],
     ["cruise", ["cruisePreferences"]],
