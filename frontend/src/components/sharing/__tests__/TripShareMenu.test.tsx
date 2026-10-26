@@ -44,6 +44,15 @@ vi.mock("../../../hooks/useTravTrackVisible", () => ({
 vi.mock("../ShareRouteDialog", () => ({
   default: ({ tripId }: { tripId: string }) => <div>route-dialog {tripId}</div>,
 }));
+const remoteBeta = vi.hoisted(() => ({ value: false }));
+vi.mock("../../../hooks/useBetaFeatures", () => ({
+  useBetaFeatures: () => ({
+    betaFeaturesEnabled: remoteBeta.value,
+    isFeatureVisible: (key: string) => remoteBeta.value && key === "federatedTripSharing",
+  }),
+}));
+const remoteStatus = vi.hoisted(() => vi.fn());
+vi.mock("../../../lib/api/sharingRemote", () => ({ sharingRemoteApi: { status: remoteStatus } }));
 const api = vi.mocked(sharingApi);
 
 describe("TripShareMenu", () => {
@@ -51,6 +60,7 @@ describe("TripShareMenu", () => {
     vi.clearAllMocks();
     demo.value = false;
     travTrack.value = false;
+    remoteBeta.value = false;
     api.tripSharing.mockResolvedValue({
       groupId: null,
       bookingTotals: [],
@@ -297,5 +307,86 @@ describe("placeMenu", () => {
   it("narrows on a very narrow viewport", () => {
     const p = placeMenu({ top: 0, bottom: 40, right: 300 }, 100, { width: 200, height: 700 });
     expect(p.width).toBe(168);
+  });
+});
+
+/**
+ * Setup checklist (owner 2026-10-26): where sharing with another server cannot work, "Teilen"
+ * names the missing step — no public address, the admin's switch off, or no server admitted —
+ * instead of leaving the user to guess why there is no such entry.
+ */
+describe("TripShareMenu — why sharing with other servers is unavailable", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    demo.value = false;
+    remoteBeta.value = true;
+  });
+
+  const openMenu = async () => {
+    render(<TripShareMenu tripId="t1" />);
+    await userEvent.click(screen.getByRole("button", { name: "sharing:menu.button" }));
+  };
+
+  it.each([
+    [
+      {
+        available: false,
+        reason: "no-identity",
+        origin: null,
+        peerAdmitted: true,
+      },
+      "noAddress",
+    ],
+    [
+      {
+        available: false,
+        reason: "switch-off",
+        origin: null,
+        peerAdmitted: true,
+      },
+      "switchOff",
+    ],
+    [
+      {
+        available: true,
+        reason: null,
+        origin: "https://me.example",
+        peerAdmitted: false,
+      },
+      "noPeer",
+    ],
+  ] as const)("names the missing step %#", async (status, key) => {
+    remoteStatus.mockResolvedValue(status);
+    await openMenu();
+    expect(await screen.findByTestId("remote-share-blocked")).toHaveTextContent(
+      `sharing:menu.remoteBlocked.${key}`
+    );
+  });
+
+  it("says nothing once everything is in place", async () => {
+    remoteStatus.mockResolvedValue({
+      available: true,
+      reason: null,
+      origin: "https://me.example",
+      peerAdmitted: true,
+    });
+    await openMenu();
+    await waitFor(() => expect(remoteStatus).toHaveBeenCalled());
+    expect(screen.queryByTestId("remote-share-blocked")).toBeNull();
+  });
+
+  it("says that the status could not be loaded", async () => {
+    remoteStatus.mockRejectedValue(new Error("offline"));
+    await openMenu();
+    expect(await screen.findByTestId("remote-share-blocked")).toHaveTextContent(
+      "sharing:menu.remoteBlocked.loadFailed"
+    );
+  });
+
+  it("asks nothing behind the beta key", async () => {
+    remoteBeta.value = false;
+    await openMenu();
+    expect(remoteStatus).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("remote-share-blocked")).toBeNull();
   });
 });

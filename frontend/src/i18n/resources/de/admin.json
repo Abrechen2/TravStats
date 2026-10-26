@@ -1155,6 +1155,39 @@
       "COMPARISON_CONNECTION_FILE_KEY": "Der Schlüssel in der Datei ist kein öffentlicher Ed25519-Schlüssel.",
       "COMPARISON_CONNECTION_FILE_FINGERPRINT": "Der Fingerabdruck in der Datei passt nicht zu ihrem Schlüssel. Die Datei ist beschädigt oder verändert – lass sie dir neu schicken.",
       "COMPARISON_CONNECTION_FILE_SELF": "Das ist die Verbindungsdatei dieses Servers selbst. Lies die Datei des anderen Servers ein."
+    },
+    "checklist": {
+      "title": "Einrichtung: Reisen mit anderen Servern teilen",
+      "done": "Erledigt",
+      "open": "Offen",
+      "fix": "Hierhin",
+      "copyOrigin": "Adresse kopieren",
+      "copyFingerprint": "Fingerabdruck kopieren",
+      "copyFailed": "Kopieren hat nicht geklappt. Bitte von Hand markieren.",
+      "identity": {
+        "title": "Öffentliche https-Adresse ohne Port und Serverschlüssel",
+        "noOrigin": "Es fehlt die öffentliche Adresse dieses Servers, z. B. https://travstats.example.org.",
+        "noKey": "Es fehlt der Serverschlüssel. Erzeuge ihn unten.",
+        "federationOff": "Server-Verbindungen sind ausgeschaltet. Schalte sie unten ein.",
+        "invalidOrigin": "Die Adresse wird nicht angenommen: Gültig ist nur https:// ohne Port und ohne Pfad."
+      },
+      "switch": {
+        "title": "Schalter „Reisen mit anderen Servern teilen“ ist an",
+        "off": "Der Schalter ist aus. Solange er aus ist, erreicht dieser Server niemand für geteilte Reisen.",
+        "afterIdentity": "Geht erst, wenn Schritt 1 erledigt ist."
+      },
+      "switchOn": "Einschalten",
+      "peers": {
+        "title": "Mindestens ein anderer Server ist zugelassen und erreichbar"
+      },
+      "peersHint": "Der Admin des anderen Servers muss dasselbe auf seiner Seite tun; vergleicht eure Fingerabdrücke dabei per Telefon oder Chat.",
+      "peerReached": "Zuletzt per Ping erreicht: {{date}}",
+      "peerUnreached": "Noch nie per Ping erreicht",
+      "peerSuspended": "Gesperrt",
+      "ping": "Ping senden",
+      "addPeer": "Server hinzufügen",
+      "usersTitle": "Danach: so teilen die Nutzer",
+      "users": "Auf einer Reise unter „Teilen“ einen Einladungscode erzeugen; er gilt 72 Stunden und nur einmal. Die andere Person löst ihn auf ihrem eigenen Server unter Einstellungen → Reisen teilen ein."
     }
   },
   "importMode": {

@@ -139,7 +139,13 @@
     "companions": "With travel companions (own copy)",
     "link": "Public link",
     "loading": "Loading …",
-    "route": "Share the route (TravTrack)"
+    "route": "Share the route (TravTrack)",
+    "remoteBlocked": {
+      "noAddress": "Sharing with people on other servers is not possible here yet: this instance has no public https address. Ask your admin.",
+      "switchOff": "Sharing with people on other servers is not possible here yet: the admin has not switched it on.",
+      "noPeer": "Sharing with people on other servers is not possible here yet: the admin has not admitted any other server.",
+      "loadFailed": "Whether you can share with people on other servers could not be loaded."
+    }
   },
   "trip": {
     "leaveConfirm": "Leave the shared trip? Your copy stays as your own trip; the others are notified.",
