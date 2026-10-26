@@ -18,7 +18,7 @@
  * country — before treating them as one.
  */
 
-import { BRAND_TOKENS, LOCATION_TOKENS } from "./nameTokens";
+import { BRAND_TOKENS, LANDMARK_TOKENS, LOCATION_TOKENS } from "./nameTokens";
 
 /**
  * Words that decorate a hotel name rather than identify it, plus the company
@@ -137,14 +137,46 @@ export function sharedSignificantTokens(nameA: string, nameB: string): string[] 
 
 /** What the caller knows beyond the two names. */
 export interface SameHouseContext {
-  /** City names known for either record. In the same city they prove nothing. */
+  /**
+   * City names known for either record (and, for the OSM enrichment, the
+   * country). In the same city they prove nothing.
+   */
   places?: ReadonlyArray<string | null | undefined>;
   /**
    * Coordinates already put both within a short radius (the OSM enrichment
-   * searches around the hotel's own pin). The place is proven, so brand and
-   * place words count as they always did.
+   * searches around the hotel's own pin). A brand counts then — two Novotels
+   * do not stand 40 m apart — but a place, location or landmark word is never
+   * the ONLY shared word: the street's every hotel carries the town's name.
    */
   nearby?: boolean;
+}
+
+/** "Huế" and "Hue" are one town; both spellings count as its place words. */
+function placeWords(place: string): string[] {
+  return strictTokens(place).flatMap((t) => {
+    const bare = t.normalize("NFD").replace(/\p{M}+/gu, "");
+    return bare === t ? [t] : [t, bare];
+  });
+}
+
+/**
+ * Beside a pin: one shared word that says WHICH house, or one name wholly
+ * inside the other ("Hotel Fohnsdorf" is the house of that town's name).
+ * Measured on 200 real lodgings (2026-10-26): all six wrong or doubtful
+ * matches shared a single town or landmark word and nothing else.
+ */
+function nearbyCouldBeOneHouse(
+  nameA: string,
+  nameB: string,
+  placeTokens: ReadonlySet<string>
+): boolean {
+  const weak = (t: string): boolean =>
+    placeTokens.has(t) || LOCATION_TOKENS.has(t) || LANDMARK_TOKENS.has(t);
+  if (sharedSignificantTokens(nameA, nameB).some((t) => !weak(t))) return true;
+  const a = strictTokens(nameA);
+  const b = strictTokens(nameB);
+  const [shorter, longer] = a.length <= b.length ? [a, new Set(b)] : [b, new Set(a)];
+  return shorter.length >= 1 && shorter.every((t) => longer.has(t));
 }
 
 /**
@@ -165,8 +197,9 @@ export interface SameHouseContext {
  *   inside the longer one and at least two of them ("Krafft Basel" ⊂ "Hotel
  *   Krafft Basel"). One word alone is not identity without a place.
  * - Place words (same city only), location decoration and brands are removed
- *   before counting (`nameTokens.ts`), unless `nearby` says coordinates
- *   already proved the place.
+ *   before counting (`nameTokens.ts`). With `nearby` (coordinates proved the
+ *   place) brands count, but place and landmark words still cannot carry a
+ *   match alone — see `nearbyCouldBeOneHouse`.
  */
 export function namesCouldBeOneHouse(
   nameA: string,
@@ -184,8 +217,10 @@ export function namesCouldBeOneHouse(
   if (wholeA !== "" && wholeA === tokenize(nameB).join(" ")) return true;
 
   const placeTokens = new Set(
-    sameCity === true ? (context.places ?? []).flatMap((p) => (p ? strictTokens(p) : [])) : []
+    sameCity === true ? (context.places ?? []).flatMap((p) => (p ? placeWords(p) : [])) : []
   );
+  if (context.nearby && sameCity === true) return nearbyCouldBeOneHouse(nameA, nameB, placeTokens);
+
   const identity = (tokens: string[]): string[] =>
     context.nearby
       ? tokens
