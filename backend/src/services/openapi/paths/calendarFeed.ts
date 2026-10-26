@@ -75,9 +75,29 @@ registry.registerPath({
   description:
     "Returns the URL as `https:` and as `webcal:`. The link is built on the first of " +
     "the public URL, the frontend URL and the request host that has a DNS name; with none, on " +
-    "the first of them. A previous URL of the caller stops " +
-    "answering in the same write. Limited to 20 an hour per user.",
+    "the first of them. From a browser session a previous URL of the caller stops " +
+    "answering in the same write. A paired device (the Companion) replaces a live URL only " +
+    "with `rotate: true`, and a URL it issues ends with its token (revoked, expired, deleted " +
+    "or unpaired). Limited to 20 an hour per user.",
   tags,
+  request: {
+    body: {
+      required: false,
+      content: {
+        "application/json": {
+          schema: z.object({
+            rotate: z
+              .boolean()
+              .optional()
+              .describe(
+                "Paired device only: replace a live URL (after the user confirmed). Ignored " +
+                  "from a browser session, which always replaces"
+              ),
+          }),
+        },
+      },
+    },
+  },
   responses: {
     201: ok(
       "The new URL",
@@ -94,7 +114,11 @@ registry.registerPath({
       })
     ),
     403: sessionOrCompanion,
-    409: err("`CALENDAR_FEED_DISABLED`: the instance's beta switch is off"),
+    400: err("`VALIDATION_FAILED`: `rotate` is not a boolean"),
+    409: err(
+      "`CALENDAR_FEED_DISABLED`: the instance's beta switch is off; or `CALENDAR_FEED_EXISTS`: " +
+        "a paired device asked while a URL is live, without `rotate: true`"
+    ),
     429: err("Too many new URLs this hour"),
   },
 });

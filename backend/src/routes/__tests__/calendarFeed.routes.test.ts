@@ -408,11 +408,15 @@ describe("calendar feed", () => {
     expect((await request(app).get(feedPath(url))).status).toBe(200);
   });
 
-  const bearer = async (scope: string, deviceId: string | null): Promise<string> => {
+  const bearer = async (
+    scope: string,
+    deviceId: string | null,
+    user: Account = owner
+  ): Promise<string> => {
     const tok = await generateApiToken();
     await prisma.apiToken.create({
       data: {
-        userId: owner.id,
+        userId: user.id,
         label: `${PREFIX}pat`,
         lookupHash: tok.lookupHash,
         hash: tok.hash,
@@ -431,16 +435,94 @@ describe("calendar feed", () => {
     }
   });
 
+  const revokeAll = () => request(app).delete("/api/v1/calendar-feed").set("Cookie", owner.cookie);
+
   it("lets the paired Companion read and issue the URL, but not revoke it", async () => {
+    await revokeAll();
     const auth = await bearer("write", "device-calfeed-1");
     const state = await request(app).get("/api/v1/calendar-feed").set("Authorization", auth);
     expect(state.status).toBe(200);
-    expect(state.body.data).toMatchObject({ enabled: true });
+    expect(state.body.data).toMatchObject({ enabled: true, active: false });
     const issued = await request(app).post("/api/v1/calendar-feed").set("Authorization", auth);
     expect(issued.status).toBe(201);
     expect(issued.body.data.url).toMatch(/\/api\/v1\/calendar\/ts_cal_/);
     const revoke = await request(app).delete("/api/v1/calendar-feed").set("Authorization", auth);
     expect(revoke.status).toBe(403);
+  });
+
+  describe("issued from a paired device", () => {
+    // Its own account: the issue limiter allows 20 new URLs an hour per user.
+    let phone: Account;
+    beforeAll(async () => {
+      phone = await account("phone", ["flight"]);
+    });
+
+    it("never rotates a live URL from a device unless asked to", async () => {
+      const auth = await bearer("write", "device-calfeed-3", phone);
+      const first = await request(app).post("/api/v1/calendar-feed").set("Authorization", auth);
+      expect(first.status).toBe(201);
+
+      const again = await request(app).post("/api/v1/calendar-feed").set("Authorization", auth);
+      expect(again.status).toBe(409);
+      expect(again.body.code).toBe("CALENDAR_FEED_EXISTS");
+      expect((await request(app).get(feedPath(first.body.data.url))).status).toBe(200);
+
+      const rotated = await request(app)
+        .post("/api/v1/calendar-feed")
+        .set("Authorization", auth)
+        .send({ rotate: true });
+      expect(rotated.status).toBe(201);
+      expect(rotated.body.data.url).not.toBe(first.body.data.url);
+      expect((await request(app).get(feedPath(first.body.data.url))).status).toBe(404);
+
+      // A browser session keeps replacing it without being asked.
+      expect(
+        (await request(app).post("/api/v1/calendar-feed").set("Cookie", phone.cookie)).status
+      ).toBe(201);
+    });
+
+    it("ends a device-issued URL with the token that issued it — revoked or deleted", async () => {
+      await request(app).delete("/api/v1/calendar-feed").set("Cookie", phone.cookie);
+      const tok = await generateApiToken();
+      const row = await prisma.apiToken.create({
+        data: {
+          userId: phone.id,
+          label: `${PREFIX}pat`,
+          lookupHash: tok.lookupHash,
+          hash: tok.hash,
+          scope: "write",
+          deviceId: "device-calfeed-4",
+        },
+      });
+      const issued = await request(app)
+        .post("/api/v1/calendar-feed")
+        .set("Authorization", `Bearer ${tok.plaintext}`);
+      expect(issued.status).toBe(201);
+      expect((await request(app).get(feedPath(issued.body.data.url))).status).toBe(200);
+
+      // Unpairing revokes the device's token (soft, `revokedAt`).
+      await prisma.apiToken.update({ where: { id: row.id }, data: { revokedAt: new Date(NOW) } });
+      expect((await request(app).get(feedPath(issued.body.data.url))).status).toBe(404);
+      const state = await request(app).get("/api/v1/calendar-feed").set("Cookie", phone.cookie);
+      expect(state.body.data).toMatchObject({ active: false, url: null });
+
+      // A hard-deleted token takes its feed with it.
+      const auth = await bearer("write", "device-calfeed-5", phone);
+      const second = await request(app).post("/api/v1/calendar-feed").set("Authorization", auth);
+      expect(second.status).toBe(201);
+      await prisma.apiToken.deleteMany({ where: { deviceId: "device-calfeed-5" } });
+      expect(await prisma.calendarFeed.count({ where: { userId: phone.id } })).toBe(0);
+    });
+
+    it("leaves a browser-issued URL alone when a device token is revoked", async () => {
+      const issued = await request(app).post("/api/v1/calendar-feed").set("Cookie", phone.cookie);
+      expect(issued.status).toBe(201);
+      await prisma.apiToken.updateMany({
+        where: { userId: phone.id, deviceId: { not: null } },
+        data: { revokedAt: new Date(NOW) },
+      });
+      expect((await request(app).get(feedPath(issued.body.data.url))).status).toBe(200);
+    });
   });
 
   it("refuses a paired device's read-only token", async () => {

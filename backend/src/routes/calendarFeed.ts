@@ -1,4 +1,5 @@
 import { Router, type NextFunction, type Response } from "express";
+import { z } from "zod";
 
 import { authenticate, requireWriteScope, type AuthRequest } from "../middleware/auth";
 import { calendarFeedIssueLimiter } from "../middleware/calendarFeedRateLimit";
@@ -54,6 +55,9 @@ async function feedBaseUrl(req: AuthRequest): Promise<FeedBaseUrl> {
   return chooseFeedBaseUrl({ publicUrl, frontendUrl, requestUrl: `${req.protocol}://${host}` });
 }
 
+/** `rotate: true` — the Companion's confirmed "replace the live URL". Ignored from a browser. */
+const issueBody = z.object({ rotate: z.boolean().optional() });
+
 type Handler = (req: AuthRequest, res: Response) => Promise<void>;
 const handle =
   (fn: Handler) =>
@@ -79,7 +83,13 @@ router.post(
   calendarFeedIssueLimiter,
   handle(async (req, res) => {
     const { baseUrl, reachableFromInternet } = await feedBaseUrl(req);
-    const issued = await issueFeed(req.userId!, baseUrl);
+    const body = issueBody.safeParse(req.body ?? {});
+    if (!body.success) throw new AppError("Invalid request body", 400, "VALIDATION_FAILED");
+    // A paired device never replaces a live URL unasked (`feedService.issueFeed`).
+    const device = req.apiToken?.deviceId
+      ? { apiTokenId: req.apiToken.id, rotate: body.data.rotate === true }
+      : null;
+    const issued = await issueFeed(req.userId!, baseUrl, device);
     res.status(201).json({ success: true, data: { ...issued, reachableFromInternet } });
   })
 );

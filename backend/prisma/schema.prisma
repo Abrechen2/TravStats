@@ -263,7 +263,10 @@ model ApiToken {
   // row so the token table stays an auth table; a revoked token's push row is
   // deleted by the revoke paths (revocation is soft, so the cascade below only
   // covers a hard delete).
-  devicePush DevicePush?
+  devicePush    DevicePush?
+  /// A calendar feed this (device) token issued. It ends with the token: a
+  /// revoked or expired one is checked at read time, a deleted one cascades.
+  calendarFeeds CalendarFeed[]
 
   @@index([userId])
   @@index([userId, deviceId])
@@ -373,14 +376,17 @@ model PairingCode {
 /// Deleted with the user and on every backup restore (a dump taken before a
 /// revoke must not bring the revoked URL back).
 model CalendarFeed {
-  id         String    @id @default(uuid())
-  userId     String    @unique @map("user_id")
-  tokenHash  String    @unique @map("token_hash")
+  id                 String    @id @default(uuid())
+  userId             String    @unique @map("user_id")
+  tokenHash          String    @unique @map("token_hash")
   /// The token itself, AES-GCM encrypted like the API keys (`encryptApiKey`), so the URL can be listed again. Null for a URL issued before it was kept: that one still works, it just cannot be shown.
-  tokenEncrypted String? @map("token_encrypted")
+  tokenEncrypted     String?   @map("token_encrypted")
+  /// The paired device's API token that issued this feed; null for one issued from a browser session.
+  issuedByApiTokenId String?   @map("issued_by_api_token_id")
+  issuedByApiToken   ApiToken? @relation(fields: [issuedByApiTokenId], references: [id], onDelete: Cascade)
   /// When a calendar app last read the feed — so the owner can tell a URL in use from a forgotten one.
-  lastUsedAt DateTime? @map("last_used_at")
-  createdAt  DateTime  @default(now()) @map("created_at")
+  lastUsedAt         DateTime? @map("last_used_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

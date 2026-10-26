@@ -466,6 +466,8 @@ export type ApiErrorCode =
   | "CALENDAR_FEED_NOT_FOUND"
   /** No calendar URL is issued while the instance's beta switch is off (409). */
   | "CALENDAR_FEED_DISABLED"
+  /** A paired device asked for a URL while one is live, without `rotate: true` (409). */
+  | "CALENDAR_FEED_EXISTS"
   /** Undo refused: the copy changed since the notice; `extra.fields` names
    *  the facts that differ (409). */
   | "SHARE_UNDO_STALE"
