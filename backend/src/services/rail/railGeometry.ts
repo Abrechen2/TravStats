@@ -1,7 +1,13 @@
 import { RAIL_GEOMETRY_FALLBACK_REASONS } from "../../schemas/rail";
 import { railProviderSwitches } from "./lookup";
 import { fetchTransitousLine } from "./lookup/transitous";
-import { railRoutingBaseUrl, routeRailLine } from "./openRailRouting";
+import {
+  railRoutingBaseUrl,
+  routeRailLine,
+  type RailRoutingFailure,
+  type RailRoutingMode,
+} from "./openRailRouting";
+import { RAIL_TRANSIT_MODES } from "../../shared/railCounting";
 import {
   isTracedShape,
   isValidLonLat,
@@ -67,14 +73,29 @@ async function transitousGeometry(input: {
   return { geometry: slice, geometrySource: "transitous", fallback: null };
 }
 
+/** A stored `transitMode` as the router reads it; anything unknown is a train. */
+export function routingModeOf(transitMode: string | null | undefined): RailRoutingMode {
+  return (RAIL_TRANSIT_MODES as readonly string[]).includes(transitMode ?? "")
+    ? (transitMode as RailRoutingMode)
+    : "rail";
+}
+
+const ROUTING_FALLBACK: Record<RailRoutingFailure, GeometryFallbackReason> = {
+  noRoute: "railRoutingNoRoute",
+  unavailable: "railRoutingUnavailable",
+  modeUnsupported: "railRoutingModeUnsupported",
+};
+
 /**
  * Which line a journey is saved with. The train's own Transitous trace first;
  * without one, and only where the admin configured an OpenRailRouting, the
  * line over the tracks between the stations (and the stops between them, in
- * order, when known). Successful rail-only routes are cached across saves.
+ * order, when known), over the network of the ride's own mode — a tram over
+ * tram tracks, never the mainline. Successful routes are cached across saves.
  * Explicit refresh bypasses cached answers. Failure is reported as
- * `railRoutingUnavailable` / `railRoutingNoRoute` and the journey keeps the
- * straight line under the name `straight`, never a chord presented as routed.
+ * `railRoutingUnavailable` / `railRoutingNoRoute` /
+ * `railRoutingModeUnsupported` and the journey keeps the straight line under
+ * the name `straight`, never a chord presented as routed.
  */
 export async function resolveJourneyGeometry(input: {
   lookupProvider: string | null;
@@ -83,16 +104,18 @@ export async function resolveJourneyGeometry(input: {
   arr: { lat: number; lon: number };
   via?: ReadonlyArray<{ lat: number; lon: number }>;
   refresh?: boolean;
+  transitMode?: string | null;
 }): Promise<JourneyGeometry> {
   const traced = await transitousGeometry(input);
   if (traced.geometrySource !== "straight") return traced;
   const baseUrl = await railRoutingBaseUrl();
   if (!baseUrl) return traced;
   const points: LonLat[] = [input.dep, ...(input.via ?? []), input.arr].map((p) => [p.lon, p.lat]);
-  const routed = await routeRailLine(baseUrl, points, { refresh: input.refresh });
-  if (!routed.ok) {
-    return straight(routed.reason === "noRoute" ? "railRoutingNoRoute" : "railRoutingUnavailable");
-  }
+  const routed = await routeRailLine(baseUrl, points, {
+    refresh: input.refresh,
+    mode: routingModeOf(input.transitMode),
+  });
+  if (!routed.ok) return straight(ROUTING_FALLBACK[routed.reason]);
   // The routed line ends at the rail network's nearest node; the stations'
   // own positions are its ends, as a Transitous slice has them.
   const line: LonLat[] = [points[0], ...routed.line.slice(1, -1), points[points.length - 1]];
@@ -121,6 +144,7 @@ export interface StoredJourneyLine {
   lookupRef: string | null;
   geometry: unknown;
   geometrySource: string;
+  transitMode: string;
 }
 
 /**
@@ -175,6 +199,7 @@ export async function resolveEditedGeometry(
     lookup: { provider: string | null; ref: string | null };
     dep: { lat: number; lon: number };
     arr: { lat: number; lon: number };
+    transitMode: string;
   }
 ): Promise<GeometryEdit> {
   const lookupChanged = !sameLookup(next.lookup, {
@@ -186,18 +211,25 @@ export async function resolveEditedGeometry(
     next.dep.lon !== existing.depLon ||
     next.arr.lat !== existing.arrLat ||
     next.arr.lon !== existing.arrLon;
-  if (!lookupChanged && !stationsMoved) return { kind: "unchanged" };
+  const modeChanged = routingModeOf(next.transitMode) !== routingModeOf(existing.transitMode);
+  if (!lookupChanged && !stationsMoved && !modeChanged) return { kind: "unchanged" };
 
   const geo = await resolveJourneyGeometry({
     lookupProvider: next.lookup.provider,
     lookupRef: next.lookup.ref,
     dep: next.dep,
     arr: next.arr,
+    transitMode: next.transitMode,
   });
   if (geo.geometrySource === "transitous") return { kind: "refetched", geo };
 
   const failed = geo.fallback !== null;
-  const stored = existing.geometrySource === "straight" ? null : readStoredLine(existing.geometry);
+  // A line routed over one mode's network is no line for another mode.
+  const wrongNetwork = modeChanged && existing.geometrySource === "openrailrouting";
+  const stored =
+    existing.geometrySource === "straight" || wrongNetwork
+      ? null
+      : readStoredLine(existing.geometry);
   // A line routed over the tracks is the next best thing to a trace, not its
   // equal: a stored trace whose re-fetch failed is not swapped for it.
   const storedAtLeastAsGood = lineRank(existing.geometrySource) >= lineRank(geo.geometrySource);
@@ -215,6 +247,22 @@ export async function resolveEditedGeometry(
   return { kind: "refetched", geo };
 }
 
+/**
+ * Until 2026-10-26 every ride was routed as a train, so a tram or U-Bahn
+ * ride's routed line runs over mainline track. When its own network now
+ * answers that there is no such route (or the instance cannot route the mode
+ * at all), that line is known wrong and gives way to the honest straight one
+ * (tester report 2026-10-25). A router that is merely down proves nothing.
+ */
+function routedOnWrongNetwork(existing: StoredJourneyLine, geo: JourneyGeometry): boolean {
+  return (
+    routingModeOf(existing.transitMode) !== "rail" &&
+    existing.geometrySource === "openrailrouting" &&
+    geo.geometrySource === "straight" &&
+    (geo.fallback === "railRoutingNoRoute" || geo.fallback === "railRoutingModeUnsupported")
+  );
+}
+
 /** Explicit refresh replaces automatic lines of equal quality; preserves manual lines and falls back safely. */
 export async function refetchJourneyGeometry(existing: StoredJourneyLine): Promise<GeometryEdit> {
   const stored = readStoredLine(existing.geometry);
@@ -226,9 +274,11 @@ export async function refetchJourneyGeometry(existing: StoredJourneyLine): Promi
     refresh: true,
     dep: { lat: existing.depLat, lon: existing.depLon },
     arr: { lat: existing.arrLat, lon: existing.arrLon },
+    transitMode: existing.transitMode,
   });
   if (geo.geometrySource === "straight" && geo.fallback === null)
     geo.fallback = "railRoutingNotConfigured";
+  if (routedOnWrongNetwork(existing, geo)) return { kind: "refetched", geo };
   if (
     stored &&
     (geo.geometry === null || lineRank(existing.geometrySource) > lineRank(geo.geometrySource))

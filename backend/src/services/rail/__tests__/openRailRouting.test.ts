@@ -1,4 +1,4 @@
-import { routeRailLine } from "../openRailRouting";
+import { probeRailRouting, routeRailLine } from "../openRailRouting";
 import { railRouteCache } from "../railRouteCache";
 import type { LonLat } from "../railGeometryMath";
 
@@ -142,4 +142,135 @@ it("does not cache failures and retries on the next save", async () => {
   expect((await routeRailLine("https://routing.test", points)).ok).toBe(false);
   expect((await routeRailLine("https://routing.test", points)).ok).toBe(true);
   expect(fetchMock).toHaveBeenCalledTimes(2);
+});
+
+describe("a tram or U-Bahn ride (tester report 2026-10-25)", () => {
+  const answerOf = (railwayClass: string) => {
+    const body = answer();
+    body.paths[0].details.railway_class[0][2] = railwayClass as "rail";
+    return body;
+  };
+  const bodies = () => fetchMock.mock.calls.map((call) => JSON.parse(call[1].body));
+  const missingProfile = (name: string) =>
+    response(
+      {
+        message: `The requested profile '${name}' does not exist.\nAvailable profiles: [all_tracks]`,
+      },
+      400
+    );
+
+  it.each([
+    ["tram", "tram", "tram"],
+    ["metro", "subway", "subway"],
+    ["metro", "subway", "light_rail"],
+  ] as const)("routes a %s ride with the %s profile", async (mode, profile, railwayClass) => {
+    fetchMock.mockResolvedValue(response(answerOf(railwayClass)));
+    expect((await routeRailLine("https://routing.test", points, { mode })).ok).toBe(true);
+    expect(bodies()).toHaveLength(1);
+    expect(bodies()[0].profile).toBe(profile);
+    expect(bodies()[0]).not.toHaveProperty("custom_model");
+  });
+
+  it.each([undefined, "rail"] as const)(
+    "routes mode %s over all_tracks, rail only",
+    async (mode) => {
+      fetchMock.mockResolvedValue(response(answer()));
+      expect((await routeRailLine("https://routing.test", points, { mode })).ok).toBe(true);
+      expect(bodies()[0]).toMatchObject({
+        profile: "all_tracks",
+        custom_model: { priority: [{ if: "railway_class != RAIL", multiply_by: "0" }] },
+      });
+    }
+  );
+
+  it("refuses a tram profile's answer that runs over mainline track", async () => {
+    fetchMock.mockResolvedValue(response(answerOf("rail")));
+    expect((await routeRailLine("https://routing.test", points, { mode: "tram" })).ok).toBe(false);
+    expect(railRouteCache.put).not.toHaveBeenCalled();
+  });
+
+  it("falls back to all_tracks restricted to the tram network when the profile is missing", async () => {
+    fetchMock
+      .mockResolvedValueOnce(missingProfile("tram"))
+      .mockResolvedValueOnce(response(answerOf("light_rail")));
+    expect((await routeRailLine("https://routing.test", points, { mode: "tram" })).ok).toBe(true);
+    expect(bodies()).toHaveLength(2);
+    expect(bodies()[1]).toMatchObject({
+      profile: "all_tracks",
+      "ch.disable": true,
+      custom_model: {
+        priority: [
+          {
+            if: "!(railway_class == TRAM || railway_class == LIGHT_RAIL)",
+            multiply_by: "0",
+          },
+        ],
+      },
+    });
+  });
+
+  it("restricts the U-Bahn fallback to subway and light rail", async () => {
+    fetchMock
+      .mockResolvedValueOnce(missingProfile("subway"))
+      .mockResolvedValueOnce(response(answerOf("subway")));
+    expect((await routeRailLine("https://routing.test", points, { mode: "metro" })).ok).toBe(true);
+    expect(bodies()[1].custom_model.priority[0].if).toBe(
+      "!(railway_class == SUBWAY || railway_class == LIGHT_RAIL)"
+    );
+  });
+
+  it("names an instance that refuses the fallback, and never asks plain all_tracks", async () => {
+    fetchMock.mockResolvedValueOnce(missingProfile("tram")).mockResolvedValueOnce(
+      response(
+        {
+          message:
+            "The 'custom_model' parameter is currently not supported for speed mode, you need to disable speed mode with `ch.disable=true`.",
+        },
+        400
+      )
+    );
+    expect(await routeRailLine("https://routing.test", points, { mode: "tram" })).toEqual({
+      ok: false,
+      reason: "modeUnsupported",
+    });
+    for (const body of bodies())
+      if (body.profile === "all_tracks") expect(body.custom_model).toBeDefined();
+  });
+
+  it("keeps a missing connection on the tram network a missing connection", async () => {
+    fetchMock
+      .mockResolvedValueOnce(missingProfile("tram"))
+      .mockResolvedValueOnce(response({ message: "Connection between locations not found" }, 400));
+    expect(await routeRailLine("https://routing.test", points, { mode: "tram" })).toEqual({
+      ok: false,
+      reason: "noRoute",
+    });
+  });
+
+  it("caches a tram line apart from a train line between the same stations", async () => {
+    fetchMock.mockImplementation(async (_url, init) =>
+      response(answerOf(JSON.parse(init.body).profile === "tram" ? "tram" : "rail"))
+    );
+    await routeRailLine("https://routing.test", points);
+    await routeRailLine("https://routing.test", points, { mode: "tram" });
+    await routeRailLine("https://routing.test", points, { mode: "metro" });
+    const keys = jest.mocked(railRouteCache.get).mock.calls.map(([key]) => key);
+    expect(new Set(keys).size).toBe(3);
+  });
+});
+
+it.each([
+  [["all_tracks", "tram", "subway"], { tram: true, subway: true }],
+  [["all_tracks", "tramtrain"], { tram: false, subway: false }],
+  [["all_tracks", "subway"], { tram: false, subway: true }],
+])("the probe says which local-transit profiles %j carries", async (names, modeProfiles) => {
+  fetchMock.mockResolvedValue(
+    response({ profiles: names.map((name) => ({ name })), data_date: "2026-10-09" })
+  );
+  expect(await probeRailRouting("https://routing.test")).toEqual({
+    ok: true,
+    profile: "all_tracks",
+    dataDate: "2026-10-09",
+    modeProfiles,
+  });
 });

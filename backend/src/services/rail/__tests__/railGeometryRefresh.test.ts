@@ -28,6 +28,7 @@ const stored: StoredJourneyLine = {
   lookupRef: null,
   geometry: oldLine,
   geometrySource: "openrailrouting",
+  transitMode: "rail",
 };
 beforeEach(() => {
   jest.clearAllMocks();
@@ -46,7 +47,7 @@ it("replaces an automatic line of equal quality on explicit refresh", async () =
       [8, 50],
       [8.01, 50],
     ],
-    { refresh: true }
+    { refresh: true, mode: "rail" }
   );
 });
 it("keeps the previous line when the provider fails", async () => {
@@ -94,4 +95,45 @@ it.each([NaN, Infinity, 181])("refuses stored invalid longitude %s", (value) => 
       [value, 50],
     ])
   ).toBeNull();
+});
+
+describe("a tram or U-Bahn ride", () => {
+  const tram: StoredJourneyLine = { ...stored, transitMode: "tram" };
+  it("is routed as its own mode", async () => {
+    await refetchJourneyGeometry({ ...stored, transitMode: "metro" });
+    expect(routeRailLine).toHaveBeenCalledWith("https://routing.test", expect.any(Array), {
+      refresh: true,
+      mode: "metro",
+    });
+  });
+  it.each(["modeUnsupported", "noRoute"] as const)(
+    "drops a line routed before modes counted when its own network says %s",
+    async (reason) => {
+      jest.mocked(routeRailLine).mockResolvedValue({ ok: false, reason });
+      expect(await refetchJourneyGeometry(tram)).toMatchObject({
+        kind: "refetched",
+        geo: {
+          geometry: null,
+          geometrySource: "straight",
+          fallback: reason === "noRoute" ? "railRoutingNoRoute" : "railRoutingModeUnsupported",
+        },
+      });
+    }
+  );
+  it("keeps the line while the router is merely down", async () => {
+    jest.mocked(routeRailLine).mockResolvedValue({ ok: false, reason: "unavailable" });
+    expect(await refetchJourneyGeometry(tram)).toMatchObject({ kind: "kept", line: oldLine });
+  });
+  it("keeps a timetable trace whatever the router says", async () => {
+    jest.mocked(routeRailLine).mockResolvedValue({ ok: false, reason: "modeUnsupported" });
+    jest.mocked(fetchTransitousLine).mockResolvedValue(null);
+    expect(
+      await refetchJourneyGeometry({
+        ...tram,
+        lookupProvider: "transitous",
+        lookupRef: "trip-1",
+        geometrySource: "transitous",
+      })
+    ).toMatchObject({ kind: "kept", line: oldLine });
+  });
 });
