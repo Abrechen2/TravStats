@@ -14,7 +14,7 @@ tracks only:
 
 | Ride | Profile asked | Tracks (`railway_class`) |
 |---|---|---|
-| Train (`rail`, the default) | `all_tracks`, restricted to RAIL by a request custom model | RAIL |
+| Train (`rail`, the default) | `all_tracks`, restricted by a request custom model | RAIL, NARROW_GAUGE |
 | Tram | `tram` | TRAM, LIGHT_RAIL |
 | U-Bahn (`metro`) | `subway` | SUBWAY, LIGHT_RAIL |
 
@@ -48,61 +48,56 @@ The connection test in the admin card says whether `tram` and `subway` exist.
 Dedicated profiles are faster (they can be CH-prepared) and do not depend on
 the instance accepting request custom models.
 
-1. Put the two custom models next to the ones OpenRailRouting ships (the
-   directory named by `custom_models.directory` in `config.yml`):
-
-   `tram.json`
-
-   ```json
-   {
-     "distance_influence": 0,
-     "priority": [
-       { "if": "!rail_access", "multiply_by": "0" },
-       { "else_if": "railway_class == TRAM || railway_class == LIGHT_RAIL", "multiply_by": "1" },
-       { "else": "", "multiply_by": "0" }
-     ],
-     "speed": [{ "if": "true", "limit_to": "rail_average_speed" }]
-   }
-   ```
-
-   `subway.json`
-
-   ```json
-   {
-     "distance_influence": 0,
-     "priority": [
-       { "if": "!rail_access", "multiply_by": "0" },
-       { "else_if": "railway_class == SUBWAY || railway_class == LIGHT_RAIL", "multiply_by": "1" },
-       { "else": "", "multiply_by": "0" }
-     ],
-     "speed": [{ "if": "true", "limit_to": "rail_average_speed" }]
-   }
-   ```
-
-2. Add the profiles to `config.yml` under `graphhopper.profiles`, in the same
-   shape as the existing `all_tracks` / `tramtrain` entries of your file:
+1. Add both profiles to `config.yml` under `graphhopper.profiles`. The custom
+   models are inline, so no extra JSON files are needed:
 
    ```yaml
        - name: tram
          turn_costs:
-           vehicle_types: [tram]
-         custom_model_files: [tram.json]
+           vehicle_types: [tram, light_rail]
+           u_turn_costs: 180
+           enable_uturn_times: true
+         custom_model:
+           distance_influence: 0
+           priority:
+             - if: "!rail_access"
+               multiply_by: "0"
+             - else_if: "railway_class == TRAM || railway_class == LIGHT_RAIL"
+               multiply_by: "1"
+             - else: ""
+               multiply_by: "0"
+           speed:
+             - if: "true"
+               limit_to: "rail_average_speed"
        - name: subway
          turn_costs:
-           vehicle_types: [subway]
-         custom_model_files: [subway.json]
+           vehicle_types: [subway, light_rail]
+           u_turn_costs: 180
+           enable_uturn_times: true
+         custom_model:
+           distance_influence: 0
+           priority:
+             - if: "!rail_access"
+               multiply_by: "0"
+             - else_if: "railway_class == SUBWAY || railway_class == LIGHT_RAIL"
+               multiply_by: "1"
+             - else: ""
+               multiply_by: "0"
+           speed:
+             - if: "true"
+               limit_to: "rail_average_speed"
    ```
 
-   and, to keep them fast, under `graphhopper.profiles_ch`:
+2. List both under `graphhopper.profiles_ch`, so they are fast:
 
    ```yaml
        - profile: tram
        - profile: subway
    ```
 
-3. Re-import the graph (GraphHopper refuses to load a graph cache built for a
-   different set of profiles): stop the service, remove the graph-cache
-   directory, start it again and let the import finish.
+3. Delete the graph cache and re-import: GraphHopper refuses to load a graph
+   cache built for a different set of profiles. Stop the service, remove the
+   graph-cache directory, start it again and let the import finish.
 
 4. In TravStats, press **Test connection**. It names the `all_tracks` profile
    and says that `tram` and `subway` are present.
