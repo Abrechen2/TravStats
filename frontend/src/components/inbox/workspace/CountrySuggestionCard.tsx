@@ -10,6 +10,8 @@ import {
 } from "../../../lib/api/locationSuggestions";
 import { countryName } from "../../../shared/geo/countryCode";
 import Button from "../../ui/Button";
+import TrackSectionPanel from "../track/TrackSectionPanel";
+import { countrySectionProps } from "../track/sectionProps";
 import { W } from "./model";
 
 const L = `${W}.location`;
@@ -122,6 +124,7 @@ export default function CountrySuggestionCard({
         })}
       </p>
       {suggestion.coverage === "truncated" && <p className="t-caption">{t(`${L}.partial`)}</p>}
+      <TrackSectionPanel {...countrySectionProps(suggestion, country)} />
       <p className="t-caption">{t(`${L}.effect`)}</p>
       <div className="flex flex-wrap gap-2">
         <Button variant="primary" disabled={working} onClick={() => void accept("visited")}>

@@ -9,6 +9,8 @@ import {
 } from "../../../lib/api/locationSuggestions";
 import { countryName } from "../../../shared/geo/countryCode";
 import Button from "../../ui/Button";
+import TrackSectionPanel from "../track/TrackSectionPanel";
+import { tripSectionProps } from "../track/sectionProps";
 import { Field, Input } from "../../ui/Field";
 import { W } from "./model";
 
@@ -137,6 +139,7 @@ export default function TripSuggestionCard({
         <p className="text-sm">{t(`${T}.countries`, { list: countries.join(", ") })}</p>
       )}
       {suggestion.coverage === "truncated" && <p className="t-caption">{t(`${T}.partial`)}</p>}
+      <TrackSectionPanel {...tripSectionProps(suggestion, tripName)} />
       <p className="t-caption">{t(extending ? `${T}.effectExtend` : `${T}.effect`)}</p>
       {extending ? (
         <div className="flex flex-wrap gap-2">

@@ -544,5 +544,54 @@
     "legendStep": "≥{{km}}",
     "legendNone": "leer = nichts aufgezeichnet, schraffiert = noch nicht bekannt",
     "utc": "Tage nach UTC, wie die Monatswerte."
+  },
+  "inbox": {
+    "mapLabel": "Kartenausschnitt mit dem Abschnitt deiner Aufzeichnung zu dieser Frage",
+    "openOnMap": "Auf der Track-Karte öffnen",
+    "loading": "Abschnitt der Aufzeichnung wird geladen …",
+    "empty": "Für diesen Abschnitt gibt es keine Aufzeichnung mehr.",
+    "zonesNeverDrawn": "Privatzonen und gelöschte Abschnitte bleiben ausgeschnitten.",
+    "dayBar": "Tag in Ortszeit, markiert ist der Abschnitt",
+    "whyLabel": "Warum gefragt:",
+    "more": "Mehr anzeigen",
+    "less": "Weniger anzeigen",
+    "fact": {
+      "span": "Von – bis",
+      "duration": "Dauer",
+      "distance": "Strecke",
+      "speed": "Tempo",
+      "points": "Positionen",
+      "matches": "Passt zu"
+    },
+    "value": {
+      "none": "—",
+      "sameDay": "{{day}}, {{from}} – {{until}}",
+      "days": "{{fromDay}} {{from}} – {{untilDay}} {{until}}",
+      "minutes": "{{m}} min",
+      "hours": "{{h}} h {{m}} min",
+      "daysHours": "{{d}} T {{h}} h",
+      "km": "{{km}} km",
+      "speed": "Ø {{avg}}, max {{max}} km/h",
+      "speedAvg": "Ø {{avg}} km/h"
+    },
+    "detail": {
+      "truncated": "Nicht der ganze Abschnitt passte in eine Ansicht – die Karte zeigt den Anfang. Auf der Track-Karte siehst du alles.",
+      "coverageTruncated": "Die Auswertung hinter dieser Frage las nicht den ganzen Verlauf; sie kann unvollständig sein.",
+      "coverageUnreachable": "Die Quelle war bei der Auswertung nicht erreichbar; die Frage stützt sich nur auf das, was da war.",
+      "cuts_one": "Aufzeichnung lückenhaft: {{count}} Unterbrechung im Abschnitt. Die Karte verbindet sie nicht.",
+      "cuts_other": "Aufzeichnung lückenhaft: {{count}} Unterbrechungen im Abschnitt. Die Karte verbindet sie nicht.",
+      "noCuts": "Durchgehend aufgezeichnet, ohne Unterbrechung.",
+      "points_one": "{{count}} Position im Abschnitt.",
+      "points_other": "{{count}} Positionen im Abschnitt."
+    },
+    "why": {
+      "stay": "Du warst längere Zeit am selben Ort, und dein Logbuch hat dort noch keinen Besuch.",
+      "market": "Du warst eine Weile auf einem bekannten Marktgelände, und dein Logbuch hat dort noch keinen Besuch.",
+      "venue": "Du warst eine Weile auf einem bekannten Gelände, und dein Logbuch hat dort noch keinen Besuch.",
+      "country": "TravTrack sah dich am Boden in {{country}}, dein Pass zählt das Land für diese Tage noch nicht.",
+      "journey": "Tempo und Strecke sehen nach einer Fahrt aus, und im Logbuch steht für diese Zeit kein Eintrag.",
+      "tripAway": "Du warst mehrere Tage weit weg von zu Hause, und keine Reise im Logbuch deckt diese Tage.",
+      "tripExtend": "Du warst direkt vor oder nach deiner Reise {{trip}} weiter unterwegs; die Reise deckt diese Tage noch nicht."
+    }
   }
 }

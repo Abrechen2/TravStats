@@ -30,6 +30,9 @@ vi.mock("../../../rail/RailFormModal", () => ({
   },
 }));
 vi.mock("../../../bus/BusFormModal", () => ({ BusFormModal: () => null }));
+// The section panel has its own tests (inbox/track); here only which window each run asks for.
+const section = vi.hoisted(() => vi.fn((_props: unknown) => null));
+vi.mock("../../track/TrackSectionPanel", () => ({ default: section }));
 const roadtripDialog = vi.hoisted(() => ({ props: null as Record<string, unknown> | null }));
 vi.mock("../../../Roadtrips/NewRoadtripDialog", () => ({
   default: (
@@ -136,6 +139,19 @@ describe("JourneySuggestionCard", () => {
       expect(screen.getByRole("alert")).toHaveTextContent(`${J}.errors.disabled`)
     );
     expect(reload).not.toHaveBeenCalled();
+  });
+
+  it("each run shows its own section of the track, on the run's start clock", () => {
+    section.mockClear();
+    render(<JourneySuggestionCard suggestion={suggestion} disabled={false} reload={reload} />);
+    expect(section).toHaveBeenCalledWith(
+      expect.objectContaining({
+        window: { fromMs: run.fromMs, untilMs: run.untilMs },
+        zone: "Europe/Berlin",
+        why: { key: "track:inbox.why.journey" },
+      }),
+      undefined
+    );
   });
 
   it("no entry needed closes the run", async () => {
