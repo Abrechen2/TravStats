@@ -9,6 +9,7 @@ import type { JourneyDomain, MapJourney } from "./journeyTypes";
 
 const KEYS: Record<JourneyDomain, Record<string, string>> = {
   flight: {},
+  cruise: {},
   rail: {
     great_circle: "rail:stats.sourceStraight",
     route: "rail:stats.sourceTraced",

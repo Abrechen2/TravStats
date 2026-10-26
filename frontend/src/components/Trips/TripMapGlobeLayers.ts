@@ -53,6 +53,7 @@ import { resolveLodgingColor, type LodgingColorConfig } from "../../lib/lodgingC
 
 /** Which projection the trip map is currently drawing in. */
 import type { TripStopCardDatum } from "../map/cards/journeys/journeyTypes";
+import type { JourneyRouteHover } from "../map/cards/journeys/journeyLayerCards";
 
 export type TripProjection = "mercator" | "globe";
 
@@ -70,6 +71,10 @@ export interface TripCruisePath {
   path: [number, number][];
   label: string;
   color: [number, number, number];
+  /** The leg's ports, and the journey hover read off them (forgejo#323). */
+  fromPortId?: number;
+  toPortId?: number;
+  journeyRoute?: JourneyRouteHover;
 }
 
 export interface TripPointDatum {

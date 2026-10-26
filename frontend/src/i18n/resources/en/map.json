@@ -313,20 +313,23 @@
       "rail": "Train ride",
       "bus": "Coach ride",
       "ferry": "Ferry",
-      "rental": "Rental car"
+      "rental": "Rental car",
+      "cruise": "Cruise"
     },
     "times": {
       "rail": "{{count}}× travelled",
       "bus": "{{count}}× travelled",
       "ferry": "{{count}}× crossed",
-      "rental": "{{count}}× rented"
+      "rental": "{{count}}× rented",
+      "cruise": "{{count}}× sailed"
     },
     "stop": {
       "flight": "Airport",
       "rail": "Station",
       "bus": "Coach station",
       "ferry": "Ferry port",
-      "rental": "Rental branch"
+      "rental": "Rental branch",
+      "cruise": "Cruise port"
     },
     "tourKind": {
       "tour": "Day tour",
@@ -410,7 +413,9 @@
       "rental_one": "{{count}} pick-up",
       "rental_other": "{{count}} pick-ups",
       "flight_one": "{{count}} departure",
-      "flight_other": "{{count}} departures"
+      "flight_other": "{{count}} departures",
+      "cruise_one": "{{count}} departure",
+      "cruise_other": "{{count}} departures"
     },
     "picture": "Picture",
     "pictureUnavailable": "Picture currently unavailable."
