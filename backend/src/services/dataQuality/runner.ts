@@ -273,10 +273,14 @@ export async function runDataQualityChecks(
   userId: string,
   now: Date = new Date()
 ): Promise<DataQualityRunSummary> {
+  // The flags FIRST, then the records. An answer that commits while the
+  // records are gathered (a link, say) bumps its flag's revision past the one
+  // read here, so every write below — conditional on that revision — leaves
+  // it alone. Read the other way round, the pass would hold the answer's new
+  // revision and stale records, and re-open what the user just answered.
+  const existing = await prisma.dataQualityFlag.findMany({ where: { userId } });
   const snapshot = await loadAccountSnapshot(userId, now);
   const findings = collectFindings(snapshot, now);
-
-  const existing = await prisma.dataQualityFlag.findMany({ where: { userId } });
   const byKey = new Map(existing.map((flag) => [findingKey(flag), flag]));
 
   const summary: DataQualityRunSummary = {

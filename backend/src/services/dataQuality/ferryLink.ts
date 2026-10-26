@@ -62,10 +62,11 @@ export async function undoFerryLink(
   link: { id: string; tripId: string }
 ): Promise<void> {
   const before = await shareSnapshot(tx, "ferry", link.id);
-  // Only while the ride is still on the trip the link put it on: a ride the
-  // user has moved since keeps the user's choice.
+  // Only while the ride is still on the trip the link put it on, and on no
+  // roadtrip leg: a ride the user has moved or attached to a leg since keeps
+  // the user's choice (a leg's ride must stay on the leg's trip).
   const unlinked = await tx.ferryJourney.updateMany({
-    where: { id: link.id, userId, tripId: link.tripId },
+    where: { id: link.id, userId, tripId: link.tripId, roadtripLegId: null },
     data: { tripId: null },
   });
   if (unlinked.count === 0) throw new FindingActionError("staleFinding");

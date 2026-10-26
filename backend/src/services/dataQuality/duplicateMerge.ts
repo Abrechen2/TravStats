@@ -98,6 +98,27 @@ async function lockCopies(
   if (locked.length !== ids.length) throw new FindingActionError("staleFinding");
 }
 
+/**
+ * Point this account's stops (on its trips or its tours) that reference a
+ * removed copy at the kept one, propagated like any stop edit.
+ */
+async function repointStops(
+  tx: DbTransaction,
+  userId: string,
+  match: Prisma.TripStopWhereInput,
+  data: { lodgingStayId: string } | { sourceId: string }
+): Promise<void> {
+  const stops = await tx.tripStop.findMany({
+    where: { ...match, OR: [{ trip: { userId } }, { route: { userId } }] },
+    select: { id: true },
+  });
+  if (stops.length === 0) return;
+  const ids = stops.map((s) => s.id);
+  const before = await shareSnapshots(tx, "stop", ids);
+  await tx.tripStop.updateMany({ where: { id: { in: ids } }, data });
+  await propagateWrites(tx, userId, "stop", ids, before);
+}
+
 async function mergeFlights(
   tx: DbTransaction,
   userId: string,
@@ -151,6 +172,8 @@ async function mergeFlights(
     await tx.flight.update({ where: { id: keptId }, data: { tripId, bookingId } });
     await propagateWrite(tx, userId, "flight", keptId, before);
   }
+  // A timeline stop that wraps a removed copy wraps the kept one now.
+  await repointStops(tx, userId, { sourceId: { in: [...removedIds] } }, { sourceId: keptId });
 
   const gone = await shareSnapshots(tx, "flight", [...removedIds]);
   await tx.flight.deleteMany({ where: { userId, id: { in: [...removedIds] } } });
@@ -176,17 +199,6 @@ async function mergeStays(
     where: { userId, lodgingStayId: { in: [...removedIds] } },
     data: { lodgingStayId: keptId },
   });
-  const stations = await tx.tripStop.findMany({
-    where: { lodgingStayId: { in: [...removedIds] } },
-    select: { id: true },
-  });
-  if (stations.length > 0) {
-    const ids = stations.map((s) => s.id);
-    const before = await shareSnapshots(tx, "stop", ids);
-    await tx.tripStop.updateMany({ where: { id: { in: ids } }, data: { lodgingStayId: keptId } });
-    await propagateWrites(tx, userId, "stop", ids, before);
-  }
-
   const pick = <K extends "tripId" | "bookingId" | "membershipId">(key: K) =>
     kept[key] ?? removed.find((r) => r[key])?.[key] ?? null;
   const links = {
@@ -203,6 +215,19 @@ async function mergeStays(
     await tx.lodgingStay.update({ where: { id: keptId }, data: links });
     await propagateWrite(tx, userId, "lodgingStay", keptId, before);
   }
+
+  // AFTER the kept stay is on the (possibly shared) trip: a station's copy in
+  // a member's account resolves its stay by the stay's share key, which the
+  // kept copy only has once it has joined the trip.
+  await repointStops(
+    tx,
+    userId,
+    { lodgingStayId: { in: [...removedIds] } },
+    {
+      lodgingStayId: keptId,
+    }
+  );
+  await repointStops(tx, userId, { sourceId: { in: [...removedIds] } }, { sourceId: keptId });
 
   const gone = await shareSnapshots(tx, "lodgingStay", [...removedIds]);
   await tx.lodgingStay.deleteMany({ where: { userId, id: { in: [...removedIds] } } });

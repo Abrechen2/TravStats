@@ -1,0 +1,203 @@
+/**
+ * The second Codex round on C3 (2026-10-26): a run that gathered before a
+ * link must not undo it, an undo must not tear a ride off a roadtrip leg, and
+ * a merge must carry timeline stops — and a shared trip's stations — over to
+ * the kept copy.
+ */
+import { describe, it, expect, beforeEach, afterAll, jest } from "@jest/globals";
+
+let afterGather: (() => Promise<void>) | null = null;
+jest.mock("../gather", () => {
+  const actual = jest.requireActual<typeof import("../gather")>("../gather");
+  return {
+    ...actual,
+    loadAccountSnapshot: async (...args: Parameters<typeof actual.loadAccountSnapshot>) => {
+      const snapshot = await actual.loadAccountSnapshot(...args);
+      // The window: the run has its records, an answer commits now.
+      const hook = afterGather;
+      afterGather = null;
+      if (hook) await hook();
+      return snapshot;
+    },
+  };
+});
+
+import { prisma } from "../../../db";
+import { runDataQualityChecks } from "../runner";
+import { listFlags } from "../flagService";
+import { resolveFinding, undoFinding } from "../findingActions";
+import { shareTrip } from "../../sharing/shareTrip";
+import {
+  linkWithConsent,
+  makeAccount,
+  makeFullTrip,
+  wipeShareTestAccounts,
+  type TestAccount,
+} from "../../../routes/__tests__/sharingFixtures";
+
+const NOW = new Date("2026-10-10T12:00:00Z");
+const day = (d: string) => new Date(`${d}T00:00:00Z`);
+
+async function ferrySetup(userId: string) {
+  const trip = await prisma.trip.create({
+    data: {
+      userId,
+      name: "Kykladen",
+      status: "completed",
+      startDay: day("2026-07-01"),
+      endDay: day("2026-07-14"),
+    },
+  });
+  const ride = await prisma.ferryJourney.create({
+    data: {
+      userId,
+      depStationName: "Piraeus",
+      depLat: 37.94,
+      depLon: 23.64,
+      depTimezone: "Europe/Athens",
+      arrStationName: "Naxos",
+      arrLat: 37.1,
+      arrLon: 25.37,
+      arrTimezone: "Europe/Athens",
+      departureTime: new Date("2026-07-05T07:00:00Z"),
+      arrivalTime: new Date("2026-07-05T12:30:00Z"),
+      status: "completed",
+    },
+  });
+  await runDataQualityChecks(userId, NOW);
+  const [flag] = await listFlags(userId, { kind: "ferry_match" });
+  if (!flag) throw new Error("expected a ferry match");
+  return { trip, ride, flag };
+}
+
+describe("C3 review findings, round two", () => {
+  let anna: TestAccount;
+
+  beforeEach(async () => {
+    await wipeShareTestAccounts();
+    anna = await makeAccount("anna");
+  });
+
+  afterAll(async () => {
+    await wipeShareTestAccounts();
+    await prisma.$disconnect();
+  });
+
+  it("a run that gathered before a link does not re-open it or clear its undo", async () => {
+    const { flag } = await ferrySetup(anna.id);
+    afterGather = () => resolveFinding(flag.id, anna.id, { action: "link" });
+
+    await runDataQualityChecks(anna.id, NOW);
+
+    const row = await prisma.dataQualityFlag.findUniqueOrThrow({ where: { id: flag.id } });
+    expect(row.status).toBe("resolved");
+    expect(row.undoUntil).not.toBeNull();
+  });
+
+  it("an undo leaves a ride that was put on a roadtrip leg since", async () => {
+    const { trip, ride, flag } = await ferrySetup(anna.id);
+    await resolveFinding(flag.id, anna.id, { action: "link" });
+    const route = await prisma.tripRoute.create({
+      data: { userId: anna.id, tripId: trip.id, name: "Inseln", mode: "drive" },
+    });
+    const [from, to] = await Promise.all(
+      [0, 1].map((i) =>
+        prisma.tripStop.create({
+          data: { tripId: trip.id, routeId: route.id, routeOrderIdx: i, title: `S${i}` },
+        })
+      )
+    );
+    const leg = await prisma.tripRouteLeg.create({
+      data: {
+        routeId: route.id,
+        fromStopId: from.id,
+        toStopId: to.id,
+        distanceKm: 1,
+        source: "straight",
+        mode: "ferry",
+      },
+    });
+    await prisma.ferryJourney.update({ where: { id: ride.id }, data: { roadtripLegId: leg.id } });
+
+    await expect(undoFinding(flag.id, anna.id)).rejects.toMatchObject({ code: "staleFinding" });
+    const after = await prisma.ferryJourney.findUniqueOrThrow({ where: { id: ride.id } });
+    expect(after.tripId).toBe(trip.id);
+    expect(after.roadtripLegId).toBe(leg.id);
+  });
+
+  it("a merge points a timeline stop that wrapped a removed flight at the kept one", async () => {
+    const full = await makeFullTrip(anna);
+    // An older copy of the trip's flight, typed in by hand, on no trip.
+    const {
+      id: _id,
+      tripId: _trip,
+      createdAt: _c,
+      updatedAt: _u,
+      durationMinutes: _d,
+      ...rest
+    } = full.flight;
+    const older = await prisma.flight.create({
+      data: {
+        ...(rest as unknown as Parameters<typeof prisma.flight.create>[0]["data"]),
+        createdAt: new Date("2024-01-01T00:00:00Z"),
+        shareKey: null,
+      },
+    });
+    await runDataQualityChecks(anna.id, NOW);
+    const [flag] = await listFlags(anna.id, { kind: "duplicate_candidate" });
+    expect(flag.evidence).toMatchObject({ keptId: older.id });
+
+    await resolveFinding(flag.id, anna.id, { action: "merge" });
+
+    const stop = await prisma.tripStop.findUniqueOrThrow({ where: { id: full.stops[0].id } });
+    expect(stop.sourceId).toBe(older.id);
+  });
+
+  it("a stay merge on a shared trip keeps the member's station on the stay", async () => {
+    const ben = await makeAccount("ben");
+    const full = await makeFullTrip(anna);
+    const station = await prisma.tripStop.create({
+      data: {
+        tripId: full.trip.id,
+        orderIdx: 5,
+        title: "Night in Lisbon",
+        lodgingStayId: full.stay.id,
+      },
+    });
+    // An older copy of the stay, on no trip.
+    const older = await prisma.lodgingStay.create({
+      data: {
+        userId: anna.id,
+        lodgingId: full.lodging.id,
+        createdAt: new Date("2024-01-01T00:00:00Z"),
+        checkIn: day("2025-05-01"),
+        checkOut: day("2025-05-04"),
+        checkInDate: day("2025-05-01"),
+        checkOutDate: day("2025-05-04"),
+        stayZone: "Europe/Lisbon",
+        status: "completed",
+      },
+    });
+    const companion = await linkWithConsent(anna, ben);
+    await shareTrip(anna.id, full.trip.id, companion.id);
+    await runDataQualityChecks(anna.id, NOW);
+    const flag = (await listFlags(anna.id, { kind: "duplicate_candidate" })).find(
+      (f) => f.entityType === "lodging_stay"
+    );
+    if (!flag) throw new Error("expected the stay question");
+    const bensBefore = await prisma.tripStop.findFirstOrThrow({
+      where: { trip: { userId: ben.id }, title: "Night in Lisbon" },
+    });
+    expect(bensBefore.lodgingStayId).not.toBeNull();
+
+    await resolveFinding(flag.id, anna.id, { action: "merge", keptId: older.id });
+
+    expect(
+      (await prisma.tripStop.findUniqueOrThrow({ where: { id: station.id } })).lodgingStayId
+    ).toBe(older.id);
+    const bensStation = await prisma.tripStop.findFirstOrThrow({
+      where: { trip: { userId: ben.id }, title: "Night in Lisbon" },
+    });
+    expect(bensStation.lodgingStayId).not.toBeNull();
+  });
+});
