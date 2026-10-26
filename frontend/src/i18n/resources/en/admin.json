@@ -1143,6 +1143,39 @@
       "COMPARISON_CONNECTION_FILE_KEY": "The key in the file is not an Ed25519 public key.",
       "COMPARISON_CONNECTION_FILE_FINGERPRINT": "The fingerprint in the file does not match its key. The file is damaged or altered – ask for it again.",
       "COMPARISON_CONNECTION_FILE_SELF": "This is this server's own connection file. Import the other server's file."
+    },
+    "checklist": {
+      "title": "Setup: share trips with other servers",
+      "done": "Done",
+      "open": "Open",
+      "fix": "Go there",
+      "copyOrigin": "Copy address",
+      "copyFingerprint": "Copy fingerprint",
+      "copyFailed": "Copying failed. Please select it by hand.",
+      "identity": {
+        "title": "Public https address without a port, and a server key",
+        "noOrigin": "This server's public address is missing, e.g. https://travstats.example.org.",
+        "noKey": "The server key is missing. Generate it below.",
+        "federationOff": "Server connections are switched off. Switch them on below.",
+        "invalidOrigin": "The address is not accepted: it must start with https:// and have no port and no path."
+      },
+      "switch": {
+        "title": "The switch \"Share trips with other servers\" is on",
+        "off": "The switch is off. While it is off, nobody reaches this server for shared trips.",
+        "afterIdentity": "Possible once step 1 is done."
+      },
+      "switchOn": "Switch on",
+      "peers": {
+        "title": "At least one other server is admitted and reachable"
+      },
+      "peersHint": "The other server's admin must do the same on their side; compare your fingerprints by phone or chat while you do.",
+      "peerReached": "Last reached by ping: {{date}}",
+      "peerUnreached": "Never reached by ping yet",
+      "peerSuspended": "Suspended",
+      "ping": "Send ping",
+      "addPeer": "Add a server",
+      "usersTitle": "Then: how users share",
+      "users": "On a trip, under \"Share\", create an invitation code; it is valid for 72 hours and works once. The other person redeems it on their own server under Settings → Share trips."
     }
   },
   "importMode": {

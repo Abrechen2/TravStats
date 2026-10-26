@@ -4,7 +4,10 @@ import type { Request } from "express";
 
 import { authenticate, requireWriteScope, type AuthRequest } from "../middleware/auth";
 import { rejectDemoWrites } from "../middleware/demoGuard";
-import { tripFederationAvailability } from "../services/sharing/federation/availability";
+import {
+  hasAdmittedPeer,
+  tripFederationAvailability,
+} from "../services/sharing/federation/availability";
 import { claimTripInvite } from "../services/sharing/federation/claim";
 import { requireTripFederation } from "../services/sharing/federation/access";
 import {
@@ -88,11 +91,12 @@ router.get(
   "/status",
   handle(async (_req, res) => {
     const state = await tripFederationAvailability();
+    const peerAdmitted = await hasAdmittedPeer();
     res.json({
       success: true,
       data: state.available
-        ? { available: true, reason: null, origin: state.identity.origin }
-        : { available: false, reason: state.reason, origin: null },
+        ? { available: true, reason: null, origin: state.identity.origin, peerAdmitted }
+        : { available: false, reason: state.reason, origin: null, peerAdmitted },
     });
   })
 );

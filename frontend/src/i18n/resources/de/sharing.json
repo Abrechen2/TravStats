@@ -139,7 +139,13 @@
     "companions": "Mit Mitreisenden (eigene Kopie)",
     "link": "Öffentlicher Link",
     "loading": "Wird geladen …",
-    "route": "Route mitteilen (TravTrack)"
+    "route": "Route mitteilen (TravTrack)",
+    "remoteBlocked": {
+      "noAddress": "Mit Leuten auf anderen Servern teilen geht hier noch nicht: Diese Instanz hat keine öffentliche https-Adresse. Frag deinen Admin.",
+      "switchOff": "Mit Leuten auf anderen Servern teilen geht hier noch nicht: Der Admin hat es nicht eingeschaltet.",
+      "noPeer": "Mit Leuten auf anderen Servern teilen geht hier noch nicht: Der Admin hat noch keinen anderen Server zugelassen.",
+      "loadFailed": "Ob du mit Leuten auf anderen Servern teilen kannst, konnte nicht geladen werden."
+    }
   },
   "trip": {
     "leaveConfirm": "Geteilte Reise verlassen? Deine Kopie bleibt als eigene Reise erhalten; die anderen werden benachrichtigt.",

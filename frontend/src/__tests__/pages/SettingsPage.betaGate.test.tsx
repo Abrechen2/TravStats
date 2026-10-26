@@ -66,7 +66,12 @@ vi.mock("@/lib/api/tokens", async (importOriginal) => {
 // server whether the feature is on.
 vi.mock("@/lib/api/sharingRemote", () => ({
   sharingRemoteApi: {
-    status: vi.fn().mockResolvedValue({ available: false, reason: "switch-off", origin: null }),
+    status: vi.fn().mockResolvedValue({
+      available: false,
+      reason: "switch-off",
+      origin: null,
+      peerAdmitted: true,
+    }),
     listInvites: vi.fn(),
     createInvite: vi.fn(),
     revokeInvite: vi.fn(),

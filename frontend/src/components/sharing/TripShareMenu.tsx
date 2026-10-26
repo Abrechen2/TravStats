@@ -15,6 +15,7 @@ import { Button } from "../ui";
 import ShareTripDialog from "./ShareTripDialog";
 import ShareRouteDialog from "./ShareRouteDialog";
 import { useTravTrackVisible } from "../../hooks/useTravTrackVisible";
+import { useRemoteShareBlock } from "./useRemoteShareBlock";
 
 const ITEMS = ["companions", "link", "route"] as const;
 type MenuItem = (typeof ITEMS)[number];
@@ -87,6 +88,8 @@ export default function TripShareMenu({
   const travTrack = useTravTrackVisible();
   const items = ITEMS.filter((which) => which !== "route" || travTrack);
   const [open, setOpen] = useState(false);
+  // Why someone on another server cannot be offered this trip here, if they cannot.
+  const remoteBlock = useRemoteShareBlock(tripId, open);
   const [dialog, setDialog] = useState<MenuItem | null>(null);
   // Tagged with its trip, so a trip change never offers the previous trip's people.
   const [loaded, setLoaded] = useState<{
@@ -260,6 +263,15 @@ export default function TripShareMenu({
                 {t(`sharing:menu.${which}`)}
               </button>
             ))}
+            {remoteBlock && (
+              <p
+                data-testid="remote-share-blocked"
+                className="t-caption px-2.5 pt-2"
+                style={{ borderTop: "1px solid var(--ts-border)" }}
+              >
+                {t(`sharing:menu.remoteBlocked.${remoteBlock}`)}
+              </p>
+            )}
           </div>,
           document.body
         )}
