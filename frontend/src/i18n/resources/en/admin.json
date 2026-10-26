@@ -1254,7 +1254,8 @@
       "shipsMasterData": "Ships, master data, IMO",
       "portsMasterData": "Ports, master data, UN/LOCODE",
       "lodgingChainsMasterData": "Hotel chains, chains, master data, hotels, lodging, merge",
-      "travTrack": "TravTrack, location history, location, recording, Companion"
+      "travTrack": "TravTrack, location history, location, recording, Companion",
+      "travPlan": "TravPlan, planning, trip planning, planning mode, plan"
     },
     "expertKeywords": {
       "instance": "Home network address, LAN, passkey, rpId, origins, beta switch",
@@ -1323,6 +1324,18 @@
       "loadFailed": "The TravTrack switch could not be loaded.",
       "saveFailed": "The TravTrack switch could not be saved.",
       "disabled": "TravTrack is switched off on this server. Switch on the beta features first."
+    }
+  },
+  "travPlan": {
+    "title": "TravPlan",
+    "description": "The planning mode: plan trips ahead and compare them on the way. Switching it off deletes no plans — they stay stored and reappear once TravPlan is switched on.",
+    "switch": "Offer TravPlan on this server",
+    "switchSub": "Every account then sees the planning mode in the navigation.",
+    "moreLink": "Daily limits for AI and weather in the TravPlan configuration",
+    "errors": {
+      "loadFailed": "The TravPlan switch could not be loaded.",
+      "saveFailed": "The TravPlan switch could not be saved.",
+      "disabled": "TravPlan is switched off on this server. Switch on the beta features first."
     }
   }
 }

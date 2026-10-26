@@ -1254,7 +1254,8 @@
       "shipsMasterData": "Schiffe, Stammdaten, IMO",
       "portsMasterData": "Häfen, Stammdaten, UN/LOCODE",
       "lodgingChainsMasterData": "Hotelketten, Ketten, Stammdaten, Hotels, Unterkünfte, zusammenführen",
-      "travTrack": "TravTrack, Standortverlauf, Standort, Aufzeichnung, Companion"
+      "travTrack": "TravTrack, Standortverlauf, Standort, Aufzeichnung, Companion",
+      "travPlan": "TravPlan, Planung, Reiseplanung, Planungsmodus, Plan"
     },
     "expertKeywords": {
       "instance": "Heimnetz-Adresse, LAN, Passkey, rpId, Origins, Beta-Schalter",
@@ -1323,6 +1324,18 @@
       "loadFailed": "Der TravTrack-Schalter konnte nicht geladen werden.",
       "saveFailed": "Der TravTrack-Schalter konnte nicht gespeichert werden.",
       "disabled": "TravTrack ist auf diesem Server ausgeschaltet. Schalte zuerst die Beta-Funktionen ein."
+    }
+  },
+  "travPlan": {
+    "title": "TravPlan",
+    "description": "Der Planungsmodus: Reisen vorab planen, unterwegs abgleichen. Ausschalten löscht keine Pläne — sie bleiben gespeichert und erscheinen wieder, sobald TravPlan eingeschaltet ist.",
+    "switch": "TravPlan auf diesem Server anbieten",
+    "switchSub": "Alle Konten sehen den Planungsmodus dann in der Navigation.",
+    "moreLink": "Tageslimits für KI und Wetter in der TravPlan-Konfiguration",
+    "errors": {
+      "loadFailed": "Der TravPlan-Schalter konnte nicht geladen werden.",
+      "saveFailed": "Der TravPlan-Schalter konnte nicht gespeichert werden.",
+      "disabled": "TravPlan ist auf diesem Server ausgeschaltet. Schalte zuerst die Beta-Funktionen ein."
     }
   }
 }

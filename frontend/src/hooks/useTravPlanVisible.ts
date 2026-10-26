@@ -18,10 +18,11 @@ export function useTravPlanOffered(): boolean {
  * the one home of the rule.
  *
  * TWO conditions: the instance beta switch (`travPlan`), and the server-side
- * `travel_plan_config.enabled`, read through `/travplan/capabilities`. An
- * admin sees the entry whatever the server switch says, because `/plan/admin`
- * is the only place that switch can be turned on — hiding the way in from the
- * one person who may open it would make it unreachable.
+ * `travel_plan_config.enabled`, read through `/travplan/capabilities` — for
+ * admins too. Until 2026-10-26 an admin saw the entry whatever the server
+ * switch said, because `/plan/admin` was the only place to turn it on; the
+ * switch now lives in Admin → Instanz → TravPlan as well, and `/plan/admin`
+ * stays reachable by URL and from that section's link.
  *
  * Chrome fails closed: while the answer is pending, or when the request
  * fails, the entry stays hidden rather than flashing into view.
@@ -29,9 +30,8 @@ export function useTravPlanOffered(): boolean {
 export function useTravPlanVisible(): boolean {
   const offered = useTravPlanOffered();
   const userId = useAuthStore((s) => s.user?.id);
-  const isAdmin = useAuthStore((s) => s.user?.isAdmin ?? false);
   const [serverEnabled, setServerEnabled] = useState<boolean | null>(null);
-  const mustAsk = offered && Boolean(userId) && !isAdmin;
+  const mustAsk = offered && Boolean(userId);
 
   useEffect(() => {
     setServerEnabled(null);
@@ -52,5 +52,5 @@ export function useTravPlanVisible(): boolean {
   }, [mustAsk, userId]);
 
   if (!offered || !userId) return false;
-  return isAdmin || serverEnabled === true;
+  return serverEnabled === true;
 }
