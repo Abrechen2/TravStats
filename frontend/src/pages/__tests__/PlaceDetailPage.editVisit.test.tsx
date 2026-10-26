@@ -168,7 +168,9 @@ describe("PlaceDetailPage — editing a visit", () => {
   it("the row's edit button opens the same form", async () => {
     const user = userEvent.setup();
     renderAt("/places/p1");
-    await user.click(await screen.findByRole("button", { name: "Besuch bearbeiten" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Besuch vom 02.05.2024 bearbeiten" })
+    );
 
     expect(screen.getByRole("dialog", { name: "Besuch bearbeiten" })).toBeInTheDocument();
     expect(screen.getByDisplayValue("Lutherstube")).toBeInTheDocument();

@@ -47,6 +47,7 @@ const requireUser = (req: AuthRequest): string => {
 };
 
 import { visitTime, withVisitTimes } from "../services/places/timesDto";
+import { visitDocumentCounts } from "../services/places/visitDocumentCounts";
 import type { PlaceTimes, VisitTimes } from "../schemas/times";
 
 type PlaceVisit = PlaceRow["visits"][number];
@@ -310,11 +311,19 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     });
     if (!place) throw new AppError("Place not found", 404);
     const decorated = decorate(place);
+    const documentCounts = await visitDocumentCounts(
+      userId,
+      decorated.visits.map((v) => v.id)
+    );
     res.json({
       success: true,
       data: {
         ...decorated,
-        visits: decorated.visits.map((v) => ({ ...v, photos: v.photos.map(toPhotoDto) })),
+        visits: decorated.visits.map((v) => ({
+          ...v,
+          photos: v.photos.map(toPhotoDto),
+          documentCount: documentCounts.get(v.id) ?? 0,
+        })),
       },
     });
   } catch (error) {
