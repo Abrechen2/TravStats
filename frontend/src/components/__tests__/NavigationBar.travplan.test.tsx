@@ -120,4 +120,20 @@ describe("NavigationBar on a TravPlan route", () => {
     }
     expect(mocks.capabilities).not.toHaveBeenCalled();
   });
+
+  it("D5: with several area words the inline destinations wait for lg, so 820 px stays one row", async () => {
+    renderAt("/dashboard");
+    await waitFor(() => expect(mocks.capabilities).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByTestId("primary-nav").className).toContain("lg:flex"));
+    expect(screen.getByTestId("primary-nav").className).not.toContain("md:flex");
+    expect(screen.getByTestId("nav-fold").className).toBe("lg:hidden");
+  });
+
+  it("D5: with Stats alone the row keeps its md breakpoint", async () => {
+    useSettingsStore.setState({ betaFeaturesEnabled: false });
+    renderAt("/dashboard");
+    await act(async () => undefined);
+    expect(screen.getByTestId("primary-nav").className).toContain("md:flex");
+    expect(screen.getByTestId("nav-fold").className).toBe("md:hidden");
+  });
 });

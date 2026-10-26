@@ -61,7 +61,7 @@ function PrimaryLink({
  *
  * Wordmark and, beside it, the four primary destinations and "Mehr"; the
  * Posteingang icon and the account menu right. Below `md` the destinations
- * fold into "Mehr" as a first section — the phone row keeps logo, Mehr, inbox
+ * fold into "Mehr" as a first section (below `lg` once the logo carries area words) — the phone row keeps logo, Mehr, inbox
  * and avatar, and nothing scrolls sideways.
  *
  * Gone from the row: the Bug button and the Support chip (both in the account
@@ -146,6 +146,13 @@ export default function NavigationBar(): JSX.Element {
   const inboxLabel =
     inboxCount > 0 ? `${t("dataQuality:inbox.nav")} (${inboxCount})` : t("dataQuality:inbox.nav");
 
+  // The area words make the logo wider (header B, phase 5): with them, the
+  // row holds the inline destinations only from `lg`. At 820 px (iPad
+  // portrait) logo, destinations, inbox and avatar did not fit, and the inbox
+  // and the account menu fell to a second row on every page (UAT beta.28, D5).
+  // Below that the destinations fold into the menu, as on a phone.
+  const wide = areas.length > 1;
+
   return (
     <>
       <header
@@ -166,7 +173,8 @@ export default function NavigationBar(): JSX.Element {
             <UpdateBadge />
             <nav
               aria-label={t("dashboard:nav.main")}
-              className="ml-4 hidden md:flex items-center gap-1"
+              data-testid="primary-nav"
+              className={`ml-4 hidden items-center gap-1 ${wide ? "lg:flex" : "md:flex"}`}
               style={{ height: "var(--ts-size-web-header)" }}
             >
               {areas.length > 1 && (
@@ -189,7 +197,7 @@ export default function NavigationBar(): JSX.Element {
           </div>
 
           <div className="flex shrink-0 items-center gap-1">
-            <div className="md:hidden">
+            <div className={wide ? "lg:hidden" : "md:hidden"} data-testid="nav-fold">
               {areaItems ? (
                 <MoreMenu
                   sections={[

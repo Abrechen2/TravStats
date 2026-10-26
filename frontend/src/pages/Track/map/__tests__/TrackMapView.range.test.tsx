@@ -26,6 +26,8 @@ const views = vi.hoisted(() => ({
   photoUrl: vi.fn(() => "/thumb"),
   flightPanel: vi.fn(),
 }));
+const immich = vi.hoisted(() => ({ getSettings: vi.fn() }));
+vi.mock("../../../../lib/api/immich", () => ({ immichApi: immich }));
 vi.mock("../../../../lib/api/travtrackViews", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../../lib/api/travtrackViews")>()),
   travTrackViewsApi: views,
@@ -133,6 +135,7 @@ function deferred<T>() {
 
 describe("TrackMapView — long spans", () => {
   beforeEach(() => {
+    immich.getSettings.mockReset().mockResolvedValue({ hasAccess: true });
     setClockForTests("2026-10-25T12:00:00Z");
     Object.values(api).forEach((fn) => fn.mockReset());
     Object.values(views).forEach((fn) => fn.mockReset());
@@ -261,6 +264,35 @@ describe("TrackMapView — long spans", () => {
     const inspector = screen.getByTestId("track-point-inspector");
     expect(await within(inspector).findByRole("alert")).toHaveTextContent("track:errors.pointGone");
     expect(api.day).toHaveBeenCalledTimes(1);
+  });
+
+  it("no Immich connection: asks no photo list (no 409 in the console), points to Settings, logs nothing", async () => {
+    window.localStorage.setItem(PREFS_KEY, JSON.stringify({ layers: { photos: true } }));
+    immich.getSettings.mockResolvedValue({ hasAccess: false });
+    const warn = vi.spyOn(console, "warn");
+    const error = vi.spyOn(console, "error");
+    renderAt("/track");
+    await screen.findByTestId("map-stub");
+    expect(await screen.findByRole("link", { name: "track:photos.connect" })).toBeInTheDocument();
+    expect(views.photos).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalledWith(
+      "TravTrack photos could not be loaded",
+      expect.anything()
+    );
+    expect(error).not.toHaveBeenCalled();
+    warn.mockRestore();
+    error.mockRestore();
+  });
+
+  it("a connection saved meanwhile counts at once: the next photo read asks the status again", async () => {
+    window.localStorage.setItem(PREFS_KEY, JSON.stringify({ layers: { photos: true } }));
+    immich.getSettings.mockResolvedValueOnce({ hasAccess: false });
+    const first = renderAt("/track");
+    await screen.findByRole("link", { name: "track:photos.connect" });
+    first.unmount();
+    immich.getSettings.mockResolvedValue({ hasAccess: true });
+    renderAt("/track");
+    await waitFor(() => expect(views.photos).toHaveBeenCalled());
   });
 
   it("photos come from the server's list; a missing Immich points to Settings", async () => {

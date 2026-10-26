@@ -27,14 +27,39 @@ export function sameLocalDay(w: SectionWindow, zone: string): boolean {
   return localDay(w.fromMs, zone) === localDay(lastInside(w), zone);
 }
 
+/**
+ * The window `[from, until)` in words. The end is exclusive, so a section
+ * ending at local midnight ends ON that midnight, not on the day before at
+ * its clock (UAT beta.28, D3: "24.09. 00:00 – 26.09. 00:00" beside "3 T 0 h"
+ * for a window that ends 27.09. 00:00):
+ *   - whole local days (both ends at midnight) read as days, both inclusive:
+ *     "24.09. – 26.09.", or one day alone;
+ *   - within one day, an end at the next midnight reads "24:00";
+ *   - otherwise each end is its own day and clock.
+ */
 export function formatSpan(w: SectionWindow, zone: string, t: Translate): string {
   const fromDay = localDay(w.fromMs, zone);
-  const untilDay = localDay(lastInside(w), zone);
   const from = clockOf(w.fromMs, zone);
   const until = clockOf(w.untilMs, zone);
-  return fromDay === untilDay
-    ? t(`${K}.sameDay`, { day: shortDay(fromDay), from, until })
-    : t(`${K}.days`, { fromDay: shortDay(fromDay), from, untilDay: shortDay(untilDay), until });
+  if (w.untilMs > w.fromMs && from === "00:00" && until === "00:00") {
+    const lastDay = localDay(lastInside(w), zone);
+    return fromDay === lastDay
+      ? t(`${K}.wholeDay`, { day: shortDay(fromDay) })
+      : t(`${K}.wholeDays`, { fromDay: shortDay(fromDay), untilDay: shortDay(lastDay) });
+  }
+  if (sameLocalDay(w, zone)) {
+    return t(`${K}.sameDay`, {
+      day: shortDay(fromDay),
+      from,
+      until: until === "00:00" && w.untilMs > w.fromMs ? "24:00" : until,
+    });
+  }
+  return t(`${K}.days`, {
+    fromDay: shortDay(fromDay),
+    from,
+    untilDay: shortDay(localDay(w.untilMs, zone)),
+    until,
+  });
 }
 
 export function formatDuration(ms: number, t: Translate): string {
