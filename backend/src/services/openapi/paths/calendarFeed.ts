@@ -58,7 +58,9 @@ registry.registerPath({
   path: "/calendar-feed",
   summary: "Issue a new calendar subscription URL",
   description:
-    "Returns the URL ONCE, as `https:` and as `webcal:`. A previous URL of the caller stops " +
+    "Returns the URL ONCE, as `https:` and as `webcal:`. The link is built on the first of " +
+    "the public URL, the frontend URL and the request host that has a DNS name; with none, on " +
+    "the first of them. A previous URL of the caller stops " +
     "answering in the same write. Limited to 20 an hour per user.",
   tags,
   responses: {
@@ -68,6 +70,12 @@ registry.registerPath({
         url: z.string().describe("`<public base>/api/v1/calendar/<token>.ics` — shown once"),
         webcalUrl: z.string().describe("The same address under `webcal://`"),
         createdAt: z.string().datetime(),
+        reachableFromInternet: z
+          .boolean()
+          .describe(
+            "False when the link's host is a private/loopback IP or `localhost` — a calendar " +
+              "service on the internet cannot fetch it"
+          ),
       })
     ),
     403: sessionOnly,

@@ -333,6 +333,30 @@ describe("calendar feed", () => {
     expect(res.body.code).toBe("CALENDAR_FEED_NOT_FOUND");
   });
 
+  it("builds the link on a known name rather than an IP, and flags an address the internet cannot reach", async () => {
+    // The stored row, not the ENV-merged view, so the restore writes back what was there.
+    const before = await prisma.adminSettings.findFirstOrThrow({ orderBy: { id: "asc" } });
+    try {
+      await updateInstanceSettings({
+        publicUrl: "http://192.168.178.120:3010",
+        frontendUrl: "https://trav.example.org",
+      });
+      const named = await request(app).post("/api/v1/calendar-feed").set("Cookie", owner.cookie);
+      expect(named.body.data.url).toMatch(/^https:\/\/trav\.example\.org\/api\/v1\/calendar\//);
+      expect(named.body.data.reachableFromInternet).toBe(true);
+
+      await updateInstanceSettings({ publicUrl: "http://192.168.178.120:3010", frontendUrl: null });
+      const ip = await request(app)
+        .post("/api/v1/calendar-feed")
+        .set("Cookie", owner.cookie)
+        .set("Host", "10.0.0.7:8000");
+      expect(ip.body.data.url).toMatch(/^http:\/\/192\.168\.178\.120:3010\//);
+      expect(ip.body.data.reachableFromInternet).toBe(false);
+    } finally {
+      await updateInstanceSettings({ publicUrl: before.publicUrl, frontendUrl: before.frontendUrl });
+    }
+  });
+
   it("is off with the instance's beta switch: no URL issued, none answered", async () => {
     const { url } = await issue(owner);
     await updateInstanceSettings({ betaFeaturesEnabled: false });
