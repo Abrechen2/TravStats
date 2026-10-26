@@ -75,7 +75,12 @@ describe("RemoteTripPeople", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     beta.on = true;
-    api.status.mockResolvedValue({ available: true, reason: null, origin: "https://me.example" });
+    api.status.mockResolvedValue({
+      available: true,
+      reason: null,
+      origin: "https://me.example",
+      peerAdmitted: true,
+    });
     api.tripSharing.mockResolvedValue(view());
   });
 
@@ -87,7 +92,12 @@ describe("RemoteTripPeople", () => {
   });
 
   it("draws nothing while the server has the feature off", async () => {
-    api.status.mockResolvedValue({ available: false, reason: "switch-off", origin: null });
+    api.status.mockResolvedValue({
+      available: false,
+      reason: "switch-off",
+      origin: null,
+      peerAdmitted: true,
+    });
     const { container } = render(<RemoteTripPeople tripId="t1" />);
     await waitFor(() => expect(api.status).toHaveBeenCalled());
     expect(container).toBeEmptyDOMElement();

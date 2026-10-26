@@ -56,14 +56,24 @@ async function claimWith(code: string) {
 describe("RemoteSharingSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    api.status.mockResolvedValue({ available: true, reason: null, origin: "https://me.example" });
+    api.status.mockResolvedValue({
+      available: true,
+      reason: null,
+      origin: "https://me.example",
+      peerAdmitted: true,
+    });
     api.listInvites.mockResolvedValue([]);
     api.listPeople.mockResolvedValue([]);
     api.listOffers.mockResolvedValue([]);
   });
 
   it("draws nothing while the server has the feature off", async () => {
-    api.status.mockResolvedValue({ available: false, reason: "switch-off", origin: null });
+    api.status.mockResolvedValue({
+      available: false,
+      reason: "switch-off",
+      origin: null,
+      peerAdmitted: true,
+    });
     const { container } = render(<RemoteSharingSection />);
     await waitFor(() => expect(api.status).toHaveBeenCalled());
     expect(container).toBeEmptyDOMElement();

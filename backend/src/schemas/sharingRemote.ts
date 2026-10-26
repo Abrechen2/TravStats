@@ -19,6 +19,11 @@ export const remoteStatusSchema = z.strictObject({
   reason: z.enum(["beta-off", "switch-off", "no-identity"]).nullable(),
   /** This server's origin while available — the part before `#` in the codes it issues. */
   origin: z.string().nullable(),
+  /**
+   * At least one peer is admitted: enabled, and a ping reached it (spec §10). Without one a code
+   * can be issued but nobody can redeem it, so "Teilen" says so instead of offering nothing.
+   */
+  peerAdmitted: z.boolean(),
 });
 export const remoteInviteSchema = z.strictObject({
   id: z.string().uuid(),

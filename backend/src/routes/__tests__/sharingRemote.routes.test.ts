@@ -58,7 +58,59 @@ afterAll(async () => {
 it("reports availability and this server's origin", async () => {
   const res = await request(app).get("/api/v1/sharing/remote/status").set(as(anna));
   expect(res.status).toBe(200);
-  expect(res.body).toEqual({ success: true, data: { available: true, reason: null, origin: ME } });
+  expect(res.body).toEqual({
+    success: true,
+    data: { available: true, reason: null, origin: ME, peerAdmitted: expect.any(Boolean) },
+  });
+});
+
+/**
+ * Setup checklist (owner 2026-10-26): "Teilen" names the missing step, and "no server admitted"
+ * is one of them — a peer counts only while it is enabled and a ping reached it.
+ */
+describe("peerAdmitted", () => {
+  const FAR_PEER = "https://admitted.sharing-remote-route.test";
+  let held: string[] = [];
+  beforeEach(async () => {
+    const admitted = await prisma.comparisonPeer.findMany({
+      where: { enabled: true, verifiedAt: { not: null } },
+      select: { origin: true },
+    });
+    held = admitted.map((p) => p.origin);
+    await prisma.comparisonPeer.updateMany({
+      where: { origin: { in: held } },
+      data: { enabled: false },
+    });
+  });
+  afterEach(async () => {
+    await prisma.comparisonPeer.deleteMany({ where: { origin: FAR_PEER } });
+    await prisma.comparisonPeer.updateMany({
+      where: { origin: { in: held } },
+      data: { enabled: true },
+    });
+  });
+  const admitted = async (): Promise<boolean> =>
+    (await request(app).get("/api/v1/sharing/remote/status").set(as(anna))).body.data.peerAdmitted;
+
+  it("is false without a peer, with an unpinged one and with a suspended one", async () => {
+    expect(await admitted()).toBe(false);
+    await prisma.comparisonPeer.create({
+      data: { origin: FAR_PEER, publicKey: "test-only", enabled: true },
+    });
+    expect(await admitted()).toBe(false);
+    await prisma.comparisonPeer.update({
+      where: { origin: FAR_PEER },
+      data: { enabled: false, verifiedAt: new Date() },
+    });
+    expect(await admitted()).toBe(false);
+  });
+
+  it("is true once an enabled peer answered a ping", async () => {
+    await prisma.comparisonPeer.create({
+      data: { origin: FAR_PEER, publicKey: "test-only", enabled: true, verifiedAt: new Date() },
+    });
+    expect(await admitted()).toBe(true);
+  });
 });
 
 it("issues, lists and revokes a code, enveloped, never listing the code again", async () => {
@@ -153,7 +205,12 @@ describe("while the feature is off", () => {
 
   it("still answers /status, with the reason", async () => {
     const res = await request(app).get("/api/v1/sharing/remote/status").set(as(anna));
-    expect(res.body.data).toEqual({ available: false, reason: "switch-off", origin: null });
+    expect(res.body.data).toEqual({
+      available: false,
+      reason: "switch-off",
+      origin: null,
+      peerAdmitted: expect.any(Boolean),
+    });
   });
 
   it.each([
