@@ -368,7 +368,12 @@ describe("Rail journeys and the instance's OpenRailRouting", () => {
       ]);
       const res = await test({ url: "http://typed.lan/" });
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ ok: true, profile: "all_tracks", dataDate: "2026-09-10" });
+      expect(res.body).toEqual({
+        ok: true,
+        profile: "all_tracks",
+        dataDate: "2026-09-10",
+        modeProfiles: { tram: false, subway: false },
+      });
       expect(m.calls).toEqual(["http://typed.lan/info"]);
     });
 

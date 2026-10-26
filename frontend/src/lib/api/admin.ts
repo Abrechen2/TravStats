@@ -57,7 +57,13 @@ export interface InstanceSettings {
  * a stable code on failure, which the card maps to DE/EN copy.
  */
 export type RailRoutingTestResult =
-  | { ok: true; profile: string; dataDate: string | null }
+  | {
+      ok: true;
+      profile: string;
+      dataDate: string | null;
+      /** The dedicated tram / U-Bahn profiles (absent before 2026-10-26). */
+      modeProfiles?: { tram: boolean; subway: boolean };
+    }
   | { ok: false; code: "notConfigured" | "unreachable" | "notOpenRailRouting" | "profileMissing" };
 
 /**

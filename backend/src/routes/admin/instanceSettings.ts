@@ -13,6 +13,7 @@ import { isValidRpId, passkeyUnavailableReason } from "../../services/webauthn/r
 import { COUNTRY_TIERS } from "../../shared/countryEvidence";
 import { railRoutingUrlField } from "../../schemas/rail";
 import { probeRailRouting } from "../../services/rail/openRailRouting";
+import { startLocalTransitReroute } from "../../services/rail/railRerouteLocalTransit";
 
 const router = Router();
 
@@ -210,6 +211,29 @@ router.post(
         return;
       }
       res.json(await probeRailRouting(baseUrl));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * The one-off repair for tram and U-Bahn rides routed as trains before they
+ * had a network of their own: starts a background job (kind
+ * `rail.rerouteLocalTransit`, poll `GET /jobs/:id`) and answers 202
+ * `{ jobId }`; while it runs, asking again answers the same job. 409 with
+ * code `notConfigured` without a router (docs/features/rail-routing.md).
+ */
+router.post(
+  "/instance-settings/rail-routing/reroute-local-transit",
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const job = await startLocalTransitReroute(req.userId!);
+      if (!job) {
+        res.status(409).json({ error: "No rail router is configured", code: "notConfigured" });
+        return;
+      }
+      res.status(202).json({ jobId: job.id });
     } catch (error) {
       next(error);
     }

@@ -135,6 +135,38 @@ describe("RailProvidersCard", () => {
       expect(await screen.findByRole("status")).toHaveTextContent("settings:railRouting.test.ok");
       expect(testRailRouting).toHaveBeenCalledWith("http://orr.lan");
     });
+
+    it("says which tram / U-Bahn profile is missing and what that means", async () => {
+      getInstanceSettings.mockResolvedValue(settings({ railRoutingUrl: "http://orr.lan" }));
+      testRailRouting.mockResolvedValue({
+        ok: true,
+        profile: "all_tracks",
+        dataDate: "2026-10-09",
+        modeProfiles: { tram: false, subway: true },
+      });
+      render(<RailProvidersCard isAdmin />);
+      await field();
+      fireEvent.click(screen.getByRole("button", { name: "settings:railRouting.testButton" }));
+      expect(await screen.findByTestId("rail-routing-mode-profiles")).toHaveTextContent(
+        "settings:railRouting.test.modeProfiles.missing"
+      );
+    });
+
+    it("offers the tram / U-Bahn repair only once an address is saved", async () => {
+      getInstanceSettings.mockResolvedValue(settings({ railRoutingUrl: "http://orr.lan" }));
+      render(<RailProvidersCard isAdmin />);
+      await field();
+      expect(
+        screen.getByRole("button", { name: "settings:railRouting.reroute.action" })
+      ).toBeTruthy();
+      cleanup();
+      getInstanceSettings.mockResolvedValue(settings());
+      render(<RailProvidersCard isAdmin />);
+      await field();
+      expect(
+        screen.queryByRole("button", { name: "settings:railRouting.reroute.action" })
+      ).toBeNull();
+    });
   });
 
   // forgejo#321: the provider switches are the standard decision; the routing
