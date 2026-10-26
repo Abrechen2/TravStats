@@ -12,6 +12,7 @@ import {
   airportUnknownDetailsSchema,
   chronologyConflictDetailsSchema,
   duplicateCandidateDetailsSchema,
+  ferryMatchDetailsSchema,
   flightNumberMissingDetailsSchema,
   tripEndMissingDetailsSchema,
   tripEntriesOutsideDetailsSchema,
@@ -63,6 +64,8 @@ export const DATA_QUALITY_ENTITY_TYPES = [
    * time list because the time-model backfill never looked at buses.
    */
   "bus_journey",
+  /** A ferry ride — the ferry match (spec 2026-10-25 C3) sits on it. */
+  "ferry_journey",
 ] as const;
 
 /** The one `entityId` a `home` flag carries — one question per account, not per period. */
@@ -118,6 +121,11 @@ export const DATA_QUALITY_FLAG_KINDS = [
   "trip_end_missing",
   /** Records: entries linked to a trip that fall outside the trip's days. */
   "trip_entries_outside",
+  /**
+   * A ferry ride on no trip, inside one trip's days (spec 2026-10-25 C3, the
+   * contract's `ferryMatch`). Answered with `link`.
+   */
+  "ferry_match",
 ] as const;
 export const dataQualityFlagKindSchema = z.enum(DATA_QUALITY_FLAG_KINDS);
 export type DataQualityFlagKind = (typeof DATA_QUALITY_FLAG_KINDS)[number];
@@ -209,6 +217,15 @@ export const dataQualityFlagSubjectSchema = z.discriminatedUnion("entityType", [
   /** A bus ride (record checks only) — the same row shape, its own page. */
   z.object({
     entityType: z.literal("bus_journey"),
+    entityId: z.string(),
+    label: z.string(),
+    parentId: z.string().nullable(),
+    parentType: timeParentTypeSchema.nullable(),
+    tripId: z.string().nullable(),
+  }),
+  /** A ferry ride (ferry match only) — the same row shape, its own page. */
+  z.object({
+    entityType: z.literal("ferry_journey"),
     entityId: z.string(),
     label: z.string(),
     parentId: z.string().nullable(),
@@ -371,6 +388,10 @@ const tripEntriesOutsidePayload = z.object({
   kind: z.literal("trip_entries_outside"),
   details: tripEntriesOutsideDetailsSchema,
 });
+const ferryMatchPayload = z.object({
+  kind: z.literal("ferry_match"),
+  details: ferryMatchDetailsSchema,
+});
 
 /**
  * A `kind` with the `details` that kind implies, and nothing else.
@@ -394,6 +415,7 @@ export const dataQualityFlagPayloadSchema = z.discriminatedUnion("kind", [
   airportUnknownPayload,
   tripEndMissingPayload,
   tripEntriesOutsidePayload,
+  ferryMatchPayload,
 ]);
 export type DataQualityFlagPayload = z.infer<typeof dataQualityFlagPayloadSchema>;
 
@@ -475,6 +497,7 @@ export const dataQualityFlagSchema = z.discriminatedUnion("kind", [
   view(airportUnknownPayload, airportUnknownDetailsSchema),
   view(tripEndMissingPayload, tripEndMissingDetailsSchema),
   view(tripEntriesOutsidePayload, tripEntriesOutsideDetailsSchema),
+  view(ferryMatchPayload, ferryMatchDetailsSchema),
 ]);
 export type DataQualityFlagView = z.infer<typeof dataQualityFlagSchema>;
 

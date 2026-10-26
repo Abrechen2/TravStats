@@ -12,8 +12,9 @@ import {
  *
  * - **flight_number_missing / airport_unknown / trip_end_missing** open the
  *   editor (`?edit=1`): the answer is a value in that form.
- * - **duplicate_candidate / chronology_conflict / trip_entries_outside** open
- *   the page: the user compares, then edits or deletes there. A duplicate is
+ * - **duplicate_candidate / chronology_conflict / trip_entries_outside /
+ *   ferry_match** open the page: the user compares, then edits or deletes
+ *   there (a ferry match is also answered in place, with "add to the trip"). A duplicate is
  *   never deleted from the inbox — deleting is the one irreversible answer,
  *   and it belongs on the record the user is looking at.
  *
@@ -31,7 +32,7 @@ const EDITS_IN_FORM = new Set<RecordCheckKind>([
 ]);
 
 type Linkable = Pick<RelatedRecord, "entityId" | "parentId"> & {
-  entityType: RelatedRecord["entityType"] | "trip" | "place_visit";
+  entityType: RelatedRecord["entityType"] | "trip" | "place_visit" | "ferry_journey";
 };
 
 export function recordPath(record: Linkable, edit = false): string | null {
@@ -43,6 +44,8 @@ export function recordPath(record: Linkable, edit = false): string | null {
       return `/rail/${record.entityId}${suffix}`;
     case "bus_journey":
       return `/bus/${record.entityId}${suffix}`;
+    case "ferry_journey":
+      return `/ferry/${record.entityId}${suffix}`;
     case "cruise":
       return `/cruises/${record.entityId}${suffix}`;
     case "trip":
@@ -63,6 +66,7 @@ const LINKABLE = new Set([
   "flight",
   "rail_journey",
   "bus_journey",
+  "ferry_journey",
   "cruise",
   "trip",
   "lodging_stay",

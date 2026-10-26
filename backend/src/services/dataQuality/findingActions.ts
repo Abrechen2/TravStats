@@ -10,7 +10,9 @@ import {
 import { duplicateCandidateDetailsSchema } from "../../schemas/dataQualityRecordChecks";
 import { duplicateEvidence, findingActionsOf } from "./findingEvidence";
 import { mergeDuplicates, assertStillDuplicates } from "./duplicateMerge";
+import { applyFerryLink, undoFerryLink } from "./ferryLink";
 import { FindingActionError } from "./findingErrors";
+import { SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
 
 export { FindingActionError };
 
@@ -23,7 +25,7 @@ export { FindingActionError };
  * | `dismiss` | dismissed | no | yes |
  * | `keep` (duplicate) | dismissed, with the other flags of the same copies | no | yes |
  * | `merge` (duplicate) | resolved | moves attachments, deletes the other copies | **no** — the app delays the call |
- * | `link` (ferry match) | resolved | puts the ride on the trip | yes, while it is still on that trip |
+ * | `link` (`ferry_match`) | resolved | puts the ride on the trip | yes, while it is still on that trip |
  *
  * `keep` lands on `dismissed`, not `resolved`: the runner re-opens a resolved
  * flag whose finding still holds, and "these are two entries" is exactly a
@@ -205,8 +207,24 @@ export async function resolveFinding(
   if (action === "keep") return keep(flag, now);
   if (action === "merge") return merge(flag, body.keptId, now);
 
-  // No kind offers any other action yet.
-  throw new FindingActionError("invalidAction", "notOffered");
+  // `link` — the only other action: put the ride on the trip, in the same
+  // transaction as the answer.
+  await prisma.$transaction(
+    async (tx) => {
+      const link = await applyFerryLink(tx, flag);
+      const updated = await tx.dataQualityFlag.updateMany({
+        where: asRead(flag),
+        data: {
+          status: "resolved",
+          resolvedAt: now,
+          undoUntil: undoUntil(now),
+          resolution: asJson({ action: "link", ...previousOf(flag), link }),
+        },
+      });
+      if (updated.count === 0) throw new FindingActionError("staleFinding");
+    },
+    { timeout: SHARE_TX_TIMEOUT_MS }
+  );
 }
 
 /**
@@ -226,6 +244,9 @@ export async function undoFinding(id: string, userId: string, now = new Date()):
   const resolution = parsed.data;
 
   await prisma.$transaction(async (tx) => {
+    if (resolution.action === "link" && resolution.link) {
+      await undoFerryLink(tx, userId, resolution.link);
+    }
     const updated = await tx.dataQualityFlag.updateMany({
       where: { ...asRead(flag), undoUntil: flag.undoUntil },
       data: {

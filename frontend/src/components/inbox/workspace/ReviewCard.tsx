@@ -27,6 +27,8 @@ import { W } from "./model";
  *   again — the escape hatch for a check that is right about the disagreement
  *   and wrong about the conclusion ("…, Atlanta, Georgia").
  * - The quick editors and "Angaben erneut prüfen" let the check itself decide.
+ * - **"Zur Reise hinzufügen"** (`link`, spec 2026-10-25 C3) appears only where
+ *   the server offers it in `actions` — today the ferry match.
  *
  * Each carries its consequence as a permanent hint, because the difference only
  * matters at the moment of clicking. A question already answered (the history
@@ -77,6 +79,24 @@ export default function ReviewCard({
         <fieldset disabled={busy} className="min-w-0 space-y-4">
           <legend className="t-label-mono mb-2">{t(`${W}.yourAnswer`)}</legend>
           <FlagQuickEditor flag={flag} busy={busy} act={act} />
+          {flag.actions?.includes("link") && (
+            <div>
+              <Button
+                variant="primary"
+                disabled={busy}
+                onClick={() =>
+                  void act(
+                    () => dataQualityFlagsApi.resolve(flag.id, { action: "link" }),
+                    false,
+                    t("dataQuality:inbox.messages.linked")
+                  )
+                }
+              >
+                {t("dataQuality:flag.actions.link.label")}
+              </Button>
+              <p className="t-caption mt-1">{t("dataQuality:flag.actions.link.hint")}</p>
+            </div>
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Button

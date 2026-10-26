@@ -159,7 +159,8 @@
     "messages": {
       "resolved": "Danke – wir prüfen den Eintrag beim nächsten Durchlauf erneut.",
       "dismissed": "Verstanden. Diese Frage wird nicht mehr gestellt.",
-      "checked": "Prüfung abgeschlossen: {{open}} offene Frage(n)."
+      "checked": "Prüfung abgeschlossen: {{open}} offene Frage(n).",
+      "linked": "Zur Reise hinzugefügt."
     },
     "errors": {
       "loadFailed": "Die offenen Fragen konnten nicht geladen werden.",
@@ -398,7 +399,8 @@
       "lodging_stay": "Aufenthalt",
       "profile": "Profil",
       "home": "Zuhause",
-      "bus_journey": "Busfahrt"
+      "bus_journey": "Busfahrt",
+      "ferry_journey": "Fährfahrt"
     },
     "status": {
       "open": "Offen",
@@ -413,6 +415,10 @@
       "dismiss": {
         "label": "Das stimmt so",
         "hint": "Am Eintrag ist nichts zu ändern. Diese Frage wird nie wieder gestellt."
+      },
+      "link": {
+        "label": "Zur Reise hinzufügen",
+        "hint": "Die Überfahrt wird der Reise zugeordnet. Zehn Minuten lang lässt sich das zurücknehmen."
       }
     },
     "timeUnchanged": "Am Eintrag wurde nichts geändert. Die Zeit steht, wie sie gespeichert war, bis du sie ergänzt.",
@@ -528,6 +534,12 @@
       "title": "Einträge außerhalb der Reise",
       "question": "Diese Einträge gehören zur Reise ({{span}}), liegen aber außerhalb ihrer Tage. Stimmen die Reisedaten – oder gehört der Eintrag zu einer anderen Reise?",
       "safePath": "Passe die Reisedaten an oder ordne den Eintrag einer anderen Reise zu."
+    },
+    "ferry_match": {
+      "title": "Fährfahrt ohne Reise",
+      "question": "Diese Überfahrt ({{route}}, {{date}}) gehört zu keiner Reise, liegt aber in den Tagen von „{{trip}}“. Gehört sie dazu?",
+      "tripLink": "Reise ansehen:",
+      "safePath": "Wenn ja: Tippe „Zur Reise hinzufügen“ – das lässt sich zehn Minuten lang zurücknehmen. Gehört sie nicht dazu, tippe „Das stimmt so“."
     }
   },
   "passwordResets": {

@@ -90,32 +90,44 @@ async function resolveSubjects(
 }
 
 /**
- * Names for bus rides a record check flagged (forgejo#282). A bus ride is its
- * own page, so it carries no parent; `tripId` lets the inbox say which trip.
+ * Names for bus rides a record check flagged (forgejo#282) and ferry rides the
+ * ferry match flagged (spec C3). A ride is its own page, so it carries no
+ * parent; `tripId` lets the inbox say which trip.
  */
-async function resolveBusSubjects(
+async function resolveRideSubjects(
   userId: string,
   flags: readonly StoredFlag[]
 ): Promise<Map<string, DataQualityFlagSubject>> {
-  const ids = flags.filter((f) => f.entityType === "bus_journey").map((f) => f.entityId);
-  if (ids.length === 0) return new Map();
-  const rides = await prisma.busJourney.findMany({
-    where: { userId, id: { in: ids } },
-    select: { id: true, tripId: true, depStationName: true, arrStationName: true },
-  });
-  return new Map(
-    rides.map((ride) => [
-      `bus_journey ${ride.id}`,
-      {
-        entityType: "bus_journey" as const,
-        entityId: ride.id,
-        label: `${ride.depStationName} → ${ride.arrStationName}`,
-        parentId: null,
-        parentType: null,
-        tripId: ride.tripId,
-      },
-    ])
-  );
+  const idsOf = (type: string) => flags.filter((f) => f.entityType === type).map((f) => f.entityId);
+  const busIds = idsOf("bus_journey");
+  const ferryIds = idsOf("ferry_journey");
+  const select = { id: true, tripId: true, depStationName: true, arrStationName: true } as const;
+  const [buses, ferries] = await Promise.all([
+    busIds.length > 0
+      ? prisma.busJourney.findMany({ where: { userId, id: { in: busIds } }, select })
+      : Promise.resolve([]),
+    ferryIds.length > 0
+      ? prisma.ferryJourney.findMany({ where: { userId, id: { in: ferryIds } }, select })
+      : Promise.resolve([]),
+  ]);
+  const subject = (
+    entityType: "bus_journey" | "ferry_journey",
+    ride: (typeof buses)[number]
+  ): [string, DataQualityFlagSubject] => [
+    `${entityType} ${ride.id}`,
+    {
+      entityType,
+      entityId: ride.id,
+      label: `${ride.depStationName} → ${ride.arrStationName}`,
+      parentId: null,
+      parentType: null,
+      tripId: ride.tripId,
+    },
+  ];
+  return new Map([
+    ...buses.map((ride) => subject("bus_journey", ride)),
+    ...ferries.map((ride) => subject("ferry_journey", ride)),
+  ]);
 }
 
 /**
@@ -182,7 +194,7 @@ export async function listFlags(
 
   const subjects = await resolveSubjects(userId, flags);
   const timeSubjects = await resolveTimeSubjects(userId, flags);
-  const busSubjects = await resolveBusSubjects(userId, flags);
+  const rideSubjects = await resolveRideSubjects(userId, flags);
 
   const views: DataQualityFlagView[] = [];
   for (const flag of flags) {
@@ -197,7 +209,7 @@ export async function listFlags(
           ? { entityType: "home", entityId: flag.entityId }
           : (subjects.get(`${flag.entityType} ${flag.entityId}`) ??
             timeSubjects.get(`${flag.entityType} ${flag.entityId}`) ??
-            busSubjects.get(`${flag.entityType} ${flag.entityId}`));
+            rideSubjects.get(`${flag.entityType} ${flag.entityId}`));
     const view = toView(flag, subject);
     if (view) views.push(view);
   }

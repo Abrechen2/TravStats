@@ -110,6 +110,7 @@ const noCoordinates = () => ({
     flights: [],
     railJourneys: [],
     busJourneys: [],
+    ferryJourneys: [],
     cruises: [],
     stays: [],
     trips: [],
