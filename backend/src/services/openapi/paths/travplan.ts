@@ -101,10 +101,19 @@ function register(
 register(
   "get",
   "/travplan/capabilities",
-  "Planning contract and server feature flag.",
+  "Planning contract and feature flags. `enabled` is true only when the instance offers " +
+    "planning AND this account switched it on; every other plan path but `/travplan/config` " +
+    "is refused with 403 `PLAN_DISABLED` (instance off) or `PLAN_USER_DISABLED` (account off, " +
+    "switched on through PUT /settings `travPlan.enabled`). Plans are never deleted by either.",
   z.object({
     version: z.literal(1),
     enabled: z.boolean(),
+    instanceEnabled: z
+      .boolean()
+      .describe("The instance half: the beta switch and `travel_plan_config.enabled`."),
+    userEnabled: z
+      .boolean()
+      .describe("The account half: `travPlan.enabled` in the user's settings. Default off."),
     offlineWrites: z.boolean(),
     ai: z.boolean(),
     forecast: z.boolean(),

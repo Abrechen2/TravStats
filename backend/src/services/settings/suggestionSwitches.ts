@@ -21,6 +21,10 @@ import { prisma } from "../../db";
  * `tripRecording.enabled` (forgejo#316) rides along in the same plumbing: not
  * an inbox switch, but the same kind of thing — off stops the work (an upload
  * is refused, nothing stored) and keeps what is already there.
+ *
+ * `travPlan.enabled` (owner, 2026-10-27) too: TravPlan for this account, switched
+ * like a domain. Off refuses the planning paths (`services/travplan/availability.ts`)
+ * and keeps every plan. Default off, like every domain but flights.
  */
 
 export const tripSuggestionsSettingsSchema = z.object({ enabled: z.boolean() }).partial().strict();
@@ -45,6 +49,7 @@ export const staySuggestionsSettingsSchema = z
   .strict();
 
 export { tripRecordingSettingsSchema } from "../../schemas/tripRecording";
+export const travPlanSettingsSchema = z.object({ enabled: z.boolean() }).partial().strict();
 type TripRecordingPatch = { enabled?: boolean };
 type TripSuggestionsPatch = z.infer<typeof tripSuggestionsSettingsSchema>;
 type StaySuggestionsPatch = z.infer<typeof staySuggestionsSettingsSchema>;
@@ -56,6 +61,7 @@ export const SUGGESTION_SWITCH_SELECT = {
   staySuggestionsImmichEvidence: true,
   staySuggestionsLlmPlaceClassification: true,
   tripRecordingEnabled: true,
+  travPlanEnabled: true,
 } as const;
 
 export interface SuggestionSwitchColumns {
@@ -64,6 +70,7 @@ export interface SuggestionSwitchColumns {
   staySuggestionsImmichEvidence: boolean;
   staySuggestionsLlmPlaceClassification: boolean;
   tripRecordingEnabled: boolean;
+  travPlanEnabled: boolean;
 }
 
 /** The column defaults — what an account without a settings row is answered with. */
@@ -73,6 +80,7 @@ export const SUGGESTION_SWITCH_DEFAULTS: SuggestionSwitchColumns = {
   staySuggestionsImmichEvidence: true,
   staySuggestionsLlmPlaceClassification: false,
   tripRecordingEnabled: true,
+  travPlanEnabled: false,
 };
 
 export interface SuggestionSwitchesView {
@@ -80,6 +88,8 @@ export interface SuggestionSwitchesView {
   staySuggestions: { enabled: boolean; immichEvidence: boolean; llmPlaceClassification: boolean };
   /** Whether the server stores the Companion's trip positions (forgejo#316). */
   tripRecording: { enabled: boolean };
+  /** Whether this account uses TravPlan (owner, 2026-10-27). */
+  travPlan: { enabled: boolean };
 }
 
 export function suggestionSwitchesView(record: SuggestionSwitchColumns): SuggestionSwitchesView {
@@ -91,6 +101,7 @@ export function suggestionSwitchesView(record: SuggestionSwitchColumns): Suggest
       llmPlaceClassification: record.staySuggestionsLlmPlaceClassification,
     },
     tripRecording: { enabled: record.tripRecordingEnabled },
+    travPlan: { enabled: record.travPlanEnabled },
   };
 }
 
@@ -98,9 +109,11 @@ export function suggestionSwitchesView(record: SuggestionSwitchColumns): Suggest
 export function suggestionSwitchesUpdate(
   trip: TripSuggestionsPatch | undefined,
   stay: StaySuggestionsPatch | undefined,
-  recording?: TripRecordingPatch
+  recording?: TripRecordingPatch,
+  travPlan?: TripRecordingPatch
 ): Partial<SuggestionSwitchColumns> {
   return {
+    ...(travPlan?.enabled !== undefined ? { travPlanEnabled: travPlan.enabled } : {}),
     ...(recording?.enabled !== undefined ? { tripRecordingEnabled: recording.enabled } : {}),
     ...(trip?.enabled !== undefined ? { tripSuggestionsEnabled: trip.enabled } : {}),
     ...(stay?.enabled !== undefined ? { staySuggestionsEnabled: stay.enabled } : {}),

@@ -45,6 +45,8 @@ beforeAll(async () => {
       },
     })
   ).id;
+  // The account's own switch (owner, 2026-10-27) — on, so the instance switch is what is tested.
+  await prisma.userSettings.create({ data: { userId: admin, data: {}, travPlanEnabled: true } });
   await prisma.travelPlanConfig.upsert({
     where: { id: "default" },
     create: { enabled: true },
@@ -60,6 +62,7 @@ beforeAll(async () => {
   tripId = created.body.tripId;
 });
 afterAll(async () => {
+  await prisma.userSettings.deleteMany({ where: { userId: admin } });
   await prisma.trip.deleteMany({ where: { userId: admin } });
   await prisma.user.delete({ where: { id: admin } });
   await prisma.$disconnect();
@@ -122,9 +125,9 @@ describe("TravPlan behind the instance beta switch", () => {
   describe("switch on", () => {
     beforeEach(() => mockBeta.mockReturnValue(true));
 
-    it("reports planning as enabled", async () => {
+    it("reports planning as enabled, for the instance and the account", async () => {
       const r = await get("/travplan/capabilities");
-      expect(r.body.enabled).toBe(true);
+      expect(r.body).toMatchObject({ enabled: true, instanceEnabled: true, userEnabled: true });
     });
 
     it.each(planPaths().map(([m, p, b]) => [m + " " + p.replace(tripId, ":tripId"), m, p, b]))(
@@ -140,5 +143,75 @@ describe("TravPlan behind the instance beta switch", () => {
       expect(r.status).toBe(200);
       expect(r.body.tripId).toBe(tripId);
     });
+  });
+});
+
+// Owner, 2026-10-27: TravPlan is switched on and off per account, like a domain.
+describe("TravPlan behind the account's own switch", () => {
+  const setUserSwitch = (travPlanEnabled: boolean) =>
+    prisma.userSettings.update({ where: { userId: admin }, data: { travPlanEnabled } });
+  beforeEach(() => mockBeta.mockReturnValue(true));
+  afterAll(() => setUserSwitch(true));
+
+  describe("switched off by the account", () => {
+    beforeEach(() => setUserSwitch(false));
+
+    it("answers capabilities with enabled false, and says which half is off", async () => {
+      const r = await get("/travplan/capabilities");
+      expect(r.status).toBe(200);
+      expect(r.body).toMatchObject({ enabled: false, instanceEnabled: true, userEnabled: false });
+    });
+
+    it.each(
+      planPaths()
+        .filter(([, p]) => p !== "/travplan/config")
+        .map(([m, p, b]) => [m + " " + p.replace(tripId, ":tripId"), m, p, b])
+    )("refuses %s with PLAN_USER_DISABLED", async (_name, method, path, body) => {
+      const r = method === "GET" ? await get(path) : await post(path, body ?? {});
+      expect(r.status).toBe(403);
+      expect(r.body.code).toBe("PLAN_USER_DISABLED");
+    });
+
+    it("refuses creating a plan", async () => {
+      const r = await post("/travplan/plans", { name: "x", clientRef: randomUUID(), settings: {} });
+      expect(r.status).toBe(403);
+      expect(r.body.code).toBe("PLAN_USER_DISABLED");
+    });
+
+    it("refuses a planning import that names a trip", async () => {
+      const r = await request(app)
+        .post("/api/v1/parse-email")
+        .set("Cookie", cookie())
+        .set("X-TravPlan-Trip", tripId)
+        .send({ text: "x" });
+      expect(r.status).toBe(403);
+      expect(r.body.code).toBe("PLAN_USER_DISABLED");
+    });
+
+    it("leaves the admin's instance configuration reachable", async () => {
+      const r = await get("/travplan/config");
+      expect(r.status).toBe(200);
+    });
+
+    it("keeps the plan, which is served again once switched back on", async () => {
+      expect(await prisma.travelPlan.count({ where: { tripId } })).toBe(1);
+      await setUserSwitch(true);
+      const r = await get("/trips/" + tripId + "/plan");
+      expect(r.status).toBe(200);
+      expect(r.body.tripId).toBe(tripId);
+    });
+  });
+
+  it("counts an account without a settings row as switched off", async () => {
+    await prisma.userSettings.delete({ where: { userId: admin } });
+    try {
+      const r = await get("/travplan/capabilities");
+      expect(r.body).toMatchObject({ enabled: false, userEnabled: false });
+      expect((await get("/travplan/plans")).body.code).toBe("PLAN_USER_DISABLED");
+    } finally {
+      await prisma.userSettings.create({
+        data: { userId: admin, data: {}, travPlanEnabled: true },
+      });
+    }
   });
 });

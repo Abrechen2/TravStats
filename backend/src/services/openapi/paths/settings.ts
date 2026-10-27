@@ -101,8 +101,17 @@ const accountPrefsFields = {
     ),
 };
 
+const travPlanField = z
+  .object({ enabled: z.boolean() })
+  .describe(
+    "Whether this account uses TravPlan, the planning area (owner, 2026-10-27). Default off; " +
+      "accounts that held a plan when it arrived were switched on. Off refuses the plan paths " +
+      "with 403 PLAN_USER_DISABLED and keeps every plan. Offered only while GET " +
+      "/travplan/capabilities answers `instanceEnabled: true`."
+  );
+
 const settingsResponseSchema = z
-  .object({ settingsLevel: settingsLevelField, ...accountPrefsFields })
+  .object({ settingsLevel: settingsLevelField, ...accountPrefsFields, travPlan: travPlanField })
   .passthrough()
   .describe("The user's settings. Only the listed fields are typed in this spec so far.");
 const settingsOk = (description: string) => ({
@@ -116,6 +125,7 @@ const settingsUpdateBodySchema = z
     cruiseSeaDays: cruiseSeaDaysSettingsSchema.optional(),
     liveTracking: liveTrackingSettingsSchema.optional(),
     railImport: railImportSettingsSchema.optional(),
+    travPlan: travPlanField.partial().optional(),
   })
   .passthrough()
   .describe("Every block is optional; an omitted key leaves the stored value alone.");
