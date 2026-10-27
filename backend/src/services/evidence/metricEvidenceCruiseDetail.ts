@@ -21,11 +21,10 @@ import { domainSumEvidence, readYearScope } from "./domainMeasureResponse";
  * the per-cruise numbers come from `shared/cruiseRowFacts.ts`, the module the
  * tab's own fold (`lib/stats/cruiseStatsDetail.ts`) reads.
  *
- * THE POPULATION IS THE CRUISE LIST, not the rollup's sailed cruises: the tab
- * folds these blocks over `cruiseApi.list()`, which applies no status filter,
- * so a booked and a cancelled cruise are in them too. The panel lists the
- * same rows — `loadCruiseStatsData(…, "every")`, as `cruiseCompanionCount`
- * does for the same reason — and the counting help says so.
+ * THE POPULATION IS THE SAILED CRUISES (owner, forgejo#280 point 13): a
+ * cancelled cruise never counts, a booked one only once it has ended —
+ * `shared/cruiseCounting.ts`, the rule the rollup and the tab's own fold
+ * (`deriveCruiseStats`) read too. The cruise list still shows the others.
  */
 
 async function loadRows(
@@ -34,7 +33,7 @@ async function loadRows(
   key: string
 ): Promise<CruiseStatsRow[]> {
   const year = readYearScope(scope, key);
-  return (await loadCruiseStatsData(userId, year, "every")).rows;
+  return (await loadCruiseStatsData(userId, year)).rows;
 }
 
 function entryOf(

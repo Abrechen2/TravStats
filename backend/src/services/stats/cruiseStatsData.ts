@@ -54,41 +54,26 @@ export interface CruiseStatsData {
 }
 
 /**
- * Which cruises a caller is asking about.
+ * The SAILED cruises of `year` (or of all time when it is undefined) — the
+ * one population every cruise figure reads, spelled with
+ * `countableCruiseWhere()` (`shared/cruiseCounting.ts`): a cancelled cruise
+ * never counts, a booked one only once it has ended.
  *
- * `sailed` is `GET /stats/cruise`'s own population and the default: a
- * merely-booked voyage must not inflate "gefahren" figures. `every` is
- * `GET /cruises`, which applies no status filter at all — the cruise LIST is
- * what the tab's row-level blocks (the calendar, the money, the companions)
- * are folded from, and they show a booked cruise because the list does.
- *
- * The two populations really do differ, and the difference is visible on the
- * tab: the hero grid counts sailed cruises while the companion bars below it
- * include next year's booking. Naming both here is what keeps a resolver from
- * silently picking the wrong one.
- */
-export type CruiseStatusScope = "sailed" | "every";
-
-/**
- * The cruises of `year` (or of all time when it is undefined), under the
- * requested status scope.
- *
- * `sailed` spells the predicate with `countableCruiseWhere()` — this router
- * spelled the same two statuses with the FLIGHT helper, which is the drift
- * `shared/cruiseCounting.ts` exists to end. Both lists are
- * the same list, so the extraction changed no row.
+ * There used to be a second scope, `every`, for the tab's row-level blocks
+ * (rhythm, fun, companions), which counted booked and cancelled cruises too.
+ * The owner ruled them out (forgejo#280 point 13), so the scope went with it:
+ * a parameter that can pick a second population is how one gets picked.
  */
 export async function loadCruiseStatsData(
   userId: string,
-  year: number | undefined,
-  statuses: CruiseStatusScope = "sailed"
+  year: number | undefined
 ): Promise<CruiseStatsData> {
   const [user, cruises, countSeaDays] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { birthdate: true, birthDay: true } }),
     prisma.cruise.findMany({
       where: {
         userId,
-        ...(statuses === "sailed" ? countableCruiseWhere() : {}),
+        ...countableCruiseWhere(),
         ...startedIn("startDate", year),
       },
       include: {

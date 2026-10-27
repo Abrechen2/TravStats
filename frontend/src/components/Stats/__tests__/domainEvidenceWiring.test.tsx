@@ -491,8 +491,9 @@ describe("the cruise rhythm and fun tiles open their populations", () => {
     cruise({ id: "x", status: "cancelled", startDate: null, endDate: null }),
   ]);
 
-  it("names what the fold keeps that has not sailed", () => {
-    expect([detail.bookedCount, detail.cancelledCount, detail.undatedCount]).toEqual([1, 1, 1]);
+  it("names what the fold leaves out because it has not sailed (forgejo#280 point 13)", () => {
+    // The undated cruise is the cancelled one, so no SAILED cruise lacks a date.
+    expect([detail.bookedCount, detail.cancelledCount, detail.undatedCount]).toEqual([1, 1, 0]);
   });
 
   it("wires the four rhythm tiles and the four fun cards", async () => {

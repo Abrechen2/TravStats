@@ -24,9 +24,16 @@
  * Every cruise that has a duration is counted for it; a cruise with no dates
  * contributes to the counts and to nothing that needs a day. Same rule the
  * places page follows for an undated visit, for the same reason.
+ *
+ * ONLY SAILED CRUISES ARE FOLDED (owner, forgejo#280 point 13): a cancelled
+ * cruise never counts, a booked one only once it has ended — the rule of
+ * `shared/cruiseCounting.ts`, which the rollup and the evidence panels read
+ * too. The others are counted (`bookedCount`, `cancelledCount`) so the
+ * counting help can name them; the cruise list still shows them.
  */
 
 import type { Cruise } from "../../types/cruise";
+import { isCountableCruise } from "../../shared/cruiseCounting";
 import { isAmountRecorded } from "../../shared/flightPricing";
 import { cruiseNights, cruiseStartMonth, listedPortCalls } from "../../shared/cruiseRowFacts";
 
@@ -69,10 +76,9 @@ export interface CruiseStatsDetail {
   onTrips: number;
 
   /**
-   * How many of the folded cruises have not sailed: booked or running, and
-   * cancelled. The fold keeps them (it is the logbook, not money spent), so
-   * the counting help names them — a booking must stay distinguishable from
-   * a voyage that happened.
+   * How many of the given cruises have not sailed and were left out: booked
+   * or running, and cancelled. The counting help names them, so a reader
+   * whose booking is missing from a figure learns why.
    */
   bookedCount: number;
   cancelledCount: number;
@@ -122,7 +128,15 @@ export function deriveCruiseStats(cruises: readonly Cruise[]): CruiseStatsDetail
   let nightsSum = 0;
   let nightsCount = 0;
 
+  let sailedCount = 0;
+
   for (const cruise of cruises) {
+    if (!isCountableCruise(cruise)) {
+      if (cruise.status === "cancelled") cancelledCount += 1;
+      else bookedCount += 1;
+      continue;
+    }
+    sailedCount += 1;
     const month = cruiseStartMonth(cruise.startDate);
     if (month === null) {
       undatedCount += 1;
@@ -169,8 +183,6 @@ export function deriveCruiseStats(cruises: readonly Cruise[]): CruiseStatsDetail
       companions.set(name, (companions.get(name) ?? 0) + 1);
     }
     if (cruise.tripId) onTrips += 1;
-    if (cruise.status === "scheduled" || cruise.status === "in_progress") bookedCount += 1;
-    if (cruise.status === "cancelled") cancelledCount += 1;
   }
 
   dated.sort((a, b) => Date.parse(a.startDate ?? "") - Date.parse(b.startDate ?? ""));
@@ -192,7 +204,7 @@ export function deriveCruiseStats(cruises: readonly Cruise[]): CruiseStatsDetail
 
     spendByCurrency: [...spend.values()].sort((a, b) => b.total - a.total),
     pricedCruises,
-    unpricedCruises: cruises.length - pricedCruises,
+    unpricedCruises: sailedCount - pricedCruises,
 
     cabinTypes,
     highestDeck,

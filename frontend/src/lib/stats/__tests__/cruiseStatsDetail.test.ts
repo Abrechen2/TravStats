@@ -142,3 +142,62 @@ describe("nightsBetween", () => {
     expect(nightsBetween("2023-04-01", "2023-04-01")).toBe(0);
   });
 });
+
+/**
+ * forgejo#280 point 13 (owner, 2026-10-27): the lodging rule for cruises — a
+ * cancelled cruise never counts, a booked one only once it has ended — in
+ * "Rhythmus", "Kurioses" and the companions. Until then the fold took the
+ * whole list, and the help said "enthält N gebuchte und M stornierte".
+ */
+describe("deriveCruiseStats counts sailed cruises only", () => {
+  const mix = [
+    cruise({
+      id: "sailed",
+      status: "completed",
+      companions: ["Anna"],
+      deck: 7,
+      cabinType: "balcony",
+    }),
+    cruise({ id: "old", status: "historical", startDate: "2019-06-01", endDate: "2019-06-04" }),
+    cruise({
+      id: "booked",
+      status: "scheduled",
+      startDate: "2027-06-01",
+      endDate: "2027-06-15",
+      companions: ["Chris"],
+      deck: 12,
+      cabinType: "suite",
+      tripId: "t1",
+      stops: [stop(false), stop(false), stop(false)] as unknown as Cruise["stops"],
+    }),
+    cruise({
+      id: "running",
+      status: "in_progress",
+      startDate: "2018-01-01",
+      endDate: "2018-01-30",
+    }),
+    cruise({ id: "gone", status: "cancelled", startDate: "2017-01-01", endDate: "2017-01-20" }),
+  ];
+
+  it("leaves booked, running and cancelled cruises out of every figure", () => {
+    const d = deriveCruiseStats(mix);
+    expect(d.dated.map((c) => c.id)).toEqual(["old", "sailed"]);
+    expect(d.byYear).toEqual([
+      { year: 2019, cruises: 1 },
+      { year: 2023, cruises: 1 },
+    ]);
+    expect(d.first?.id).toBe("old");
+    expect(d.longest?.cruise.id).toBe("sailed");
+    expect(d.highestDeck?.deck).toBe(7);
+    expect([...d.cabinTypes.keys()]).toEqual(["balcony"]);
+    expect([...d.companions.keys()]).toEqual(["Anna"]);
+    expect(d.onTrips).toBe(0);
+    expect(d.mostPorts).toBeNull();
+  });
+
+  it("still names what it left out, for the counting help", () => {
+    const d = deriveCruiseStats(mix);
+    expect(d.bookedCount).toBe(2);
+    expect(d.cancelledCount).toBe(1);
+  });
+});

@@ -119,7 +119,7 @@ export function cruiseInsightRowOf(
 }
 
 export async function loadCruiseInsightData(userId: string): Promise<CruiseInsightData> {
-  const { rows, userBirthday } = await loadCruiseStatsData(userId, undefined, "sailed");
+  const { rows, userBirthday } = await loadCruiseStatsData(userId, undefined);
   if (rows.length === 0) return { rows: [], userBirthday };
   const stops = await prisma.cruiseStop.findMany({
     where: { cruiseId: { in: rows.map((r) => r.id) } },

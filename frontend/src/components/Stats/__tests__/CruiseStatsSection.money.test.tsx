@@ -189,14 +189,15 @@ describe("CruiseStatsSection money block population", () => {
   });
 
   /**
-   * The filter is the MONEY block's, not the tab's. A booked cruise is still
-   * part of the logbook — the calendar counts it, and moving the filter up
-   * would quietly redefine every other figure on this tab.
+   * The filter is the TAB's since forgejo#280 point 13 (owner): a booked
+   * cruise counts only once it has ended, in the calendar too. Before, the
+   * calendar counted the booking while the money block beside it did not.
    */
-  it("leaves the calendar counting the booked cruise", async () => {
+  it("leaves the booked cruise out of the calendar too", async () => {
     await renderTab();
     expect(screen.getByText(/cruise:stats\.rhythm\.seasonDesc.*"count":1/)).toBeInTheDocument();
-    // Two dated cruises went into the year chart, one of them the booking.
-    expect(screen.getByTitle("2024: 2")).toBeInTheDocument();
+    // One dated cruise went into the year chart: the one that sailed.
+    expect(screen.getByTitle("2024: 1")).toBeInTheDocument();
+    expect(screen.queryByTitle("2024: 2")).not.toBeInTheDocument();
   });
 });

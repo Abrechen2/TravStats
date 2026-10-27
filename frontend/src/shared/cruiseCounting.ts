@@ -12,6 +12,12 @@
  * before anything on this side asked the question, and an unused mirror is a
  * mirror nobody notices has drifted — so a second consumer is welcome, and a
  * copy of `["flown", "historical"]` anywhere in this tree is not.
+ *
+ * The rule for EVERY cruise figure (owner, forgejo#280 point 13): a cancelled
+ * cruise never counts, a booked one only once it has ended — the lodging rule
+ * for cruises. Since then `lib/stats/cruiseStatsDetail.ts` folds the rhythm,
+ * fun and companion blocks through it too; the cruise list still shows every
+ * cruise. See the backend file for why the status alone answers it.
  */
 
 /** The statuses that mean "this cruise actually sailed". */
