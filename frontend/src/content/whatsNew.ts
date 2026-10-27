@@ -35,6 +35,20 @@ export interface WhatsNewEntry {
    * 2026-09-05. More than that is a changelog, not a modal.
    */
   highlights: WhatsNewItem[];
+  /**
+   * A short note from the developer, shown as a page of its own after the
+   * highlights (owner, 2026-10-27: 2.7 says where TravStats is going). Optional;
+   * most releases carry none.
+   */
+  developerNote?: WhatsNewDeveloperNote;
+}
+
+export interface WhatsNewDeveloperNote {
+  titleKey: string;
+  /** One key per paragraph, in order. */
+  paragraphKeys: string[];
+  /** The sign-off line, e.g. the developer's name. */
+  signatureKey: string;
 }
 
 export const WHATS_NEW_ENTRIES: WhatsNewEntry[] = [
@@ -84,6 +98,16 @@ export const WHATS_NEW_ENTRIES: WhatsNewEntry[] = [
         beta: true,
       },
     ],
+    developerNote: {
+      titleKey: "entries.v270.note.title",
+      paragraphKeys: [
+        "entries.v270.note.p1",
+        "entries.v270.note.p2",
+        "entries.v270.note.p3",
+        "entries.v270.note.p4",
+      ],
+      signatureKey: "entries.v270.note.signature",
+    },
   },
   {
     version: "2.6.0",

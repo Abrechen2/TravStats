@@ -2,6 +2,7 @@
   "title": "New in TravStats {{version}}",
   "subtitle": "A short overview of the most important changes. “Beta” marks what is still under review and only appears with your admin's beta switch.",
   "dismiss": "Got it",
+  "next": "Next",
   "betaBadge": "Beta",
   "entries": {
     "v270": {
@@ -36,6 +37,14 @@
       "beta": {
         "title": "Roadtrips, TravTrack and more in beta",
         "body": "Roadtrips and tours, cruise tracks, flight tracks, friend comparisons, encrypted sharing, trip sharing across servers (with a setup checklist) and the calendar subscription with local times are in review. An admin enables them with the beta switch. New and also in beta: TravPlan for planning and TravTrack, your location history with privacy zones."
+      },
+      "note": {
+        "title": "Where the journey goes",
+        "p1": "TravStats started as a flight logbook. With 2.7 it has become a travel journal for flights, cruises, stays, places, rail, coach, ferry and rental cars. That stays the core – from now on it is called Stats.",
+        "p2": "Next, two new areas join it: Plan, for planning upcoming trips, and Track, a location history of your own right inside TravStats. Both are still beta.",
+        "p3": "What matters to me: you don't have to use any of it. Plan and Track are switched on one by one, just like the domains. Every external service that enriches your entries – flight data, photos from Immich, locations from Dawarich, routes – is optional too, and only active once you set it up. If you only want to count your flights, you only see flights.",
+        "p4": "The server stays the memory of everything, the Companion app is the companion on the road, and it all stays self-hosted with you. Thanks for testing and reporting – feedback is always welcome on Discord.",
+        "signature": "Dennis"
       }
     },
     "v260": {

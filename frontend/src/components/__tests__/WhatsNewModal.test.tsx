@@ -5,7 +5,7 @@ import WhatsNewModal from "../WhatsNewModal";
 import type { WhatsNewEntry } from "../../content/whatsNew";
 
 vi.mock("../../hooks/useTranslation", () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
+  useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
 }));
 
 const entry: WhatsNewEntry = {
@@ -77,6 +77,59 @@ describe("WhatsNewModal", () => {
     expect(
       screen.getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? b.textContent)
     ).toEqual(["common:buttons.close", "whatsNew:dismiss"]);
+  });
+
+  /**
+   * Owner, 2026-10-27: 2.7 ends with a note from the developer on where
+   * TravStats is going. It is a page of its own after the highlights, so a
+   * reflexive "Got it" on the highlights does not skip it unseen.
+   */
+  describe("with a developer note", () => {
+    const withNote: WhatsNewEntry = {
+      ...entry,
+      developerNote: {
+        titleKey: "entries.v240.note.title",
+        paragraphKeys: ["entries.v240.note.p1", "entries.v240.note.p2"],
+        signatureKey: "entries.v240.note.signature",
+      },
+    };
+
+    it("shows the highlights first and offers the note instead of dismissing", async () => {
+      const onClose = vi.fn();
+      render(<WhatsNewModal isOpen entry={withNote} onClose={onClose} />);
+      expect(screen.getByText("whatsNew:entries.v240.stats.title")).toBeInTheDocument();
+      expect(screen.queryByText("whatsNew:entries.v240.note.p1")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "whatsNew:dismiss" })).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: "whatsNew:next" }));
+
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.queryByText("whatsNew:entries.v240.stats.title")).not.toBeInTheDocument();
+      expect(screen.getByText("whatsNew:entries.v240.note.title")).toBeInTheDocument();
+      expect(screen.getByText("whatsNew:entries.v240.note.p1")).toBeInTheDocument();
+      expect(screen.getByText("whatsNew:entries.v240.note.p2")).toBeInTheDocument();
+      expect(screen.getByText("whatsNew:entries.v240.note.signature")).toBeInTheDocument();
+      // The maker credit, linking to the brand site.
+      expect(screen.getByRole("link")).toHaveAttribute(
+        "href",
+        expect.stringContaining("abrechen2.de")
+      );
+    });
+
+    it("closes from the note's dismiss button", async () => {
+      const onClose = vi.fn();
+      render(<WhatsNewModal isOpen entry={withNote} onClose={onClose} />);
+      await userEvent.click(screen.getByRole("button", { name: "whatsNew:next" }));
+      await userEvent.click(screen.getByRole("button", { name: "whatsNew:dismiss" }));
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("can still be closed from the highlights by the header ×", async () => {
+      const onClose = vi.fn();
+      render(<WhatsNewModal isOpen entry={withNote} onClose={onClose} />);
+      await userEvent.click(screen.getByRole("button", { name: "common:buttons.close" }));
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("calls onClose from the dismiss button", async () => {
