@@ -233,6 +233,13 @@ export interface PrismaErrorWithCode extends Error {
   code?: string;
 }
 
+/**
+ * The e-mail address older default blobs carried, and migration
+ * 20261020171000 wrote into every account that had no settings row. It is
+ * masked on read rather than rewritten: it means "no address", nothing else.
+ */
+export const PLACEHOLDER_PROFILE_EMAIL = "traveler@example.com";
+
 // Shared default settings used across sub-routers.
 //
 // `display.language`, `display.timezone`, and `display.dateFormat` are
@@ -244,10 +251,14 @@ export interface PrismaErrorWithCode extends Error {
 // login. The frontend Zustand store still has its own browser-detected
 // fallback for these three fields, so omitting them here means the
 // backend response merges in without overwriting them.
+//
+// `profile` carries no `username` and no `email`: the username is the `User`
+// row's, and an address nobody entered is unknown, not "traveler@example.com".
+// Both used to be placeholders here, which every client then showed as the
+// account's own data (audit F-002). Rows written before that still hold them —
+// see `PLACEHOLDER_PROFILE_EMAIL` and buildSettingsResponse.
 export const defaultSettings = {
   profile: {
-    username: "Traveler",
-    email: "traveler@example.com",
     profilePicture: null,
   },
   display: { theme: "light", timeFormat: "24h" },

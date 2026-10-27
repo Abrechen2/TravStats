@@ -129,7 +129,8 @@ registry.registerPath({
     "beta-gated domains still require `betaFeaturesEnabled`. " +
     "Carries read-only instance flags beside the user's own settings: `betaFeaturesEnabled`, " +
     "`openDataEnabled` and `shareLinksEnabled` (public share links, forgejo#281 — offer " +
-    "'share as link' only while it is on).",
+    "'share as link' only while it is on). `profile.username` is the account's " +
+    "username; `profile.email` is absent when no address was entered.",
   tags: settingsTag,
   responses: { 200: settingsOk("Settings") },
 });
