@@ -118,6 +118,23 @@ describe("sharing — a shared trip's period", () => {
     expect(day((await trip(pair.memberTrip.id)).endDay)).toBe("2025-05-14");
   });
 
+  it("undo refuses a restore that would end the trip before it begins", async () => {
+    // Anna moves the start earlier; then the end is moved before the old start.
+    // Restoring only the start would leave 1 May – 28 April on every trip.
+    await patchTrip(anna, pair.full.trip.id, { startDate: "2025-04-25" }).expect(200);
+    const [notice] = await notices(ben);
+    await patchTrip(ben, pair.memberTrip.id, { endDate: "2025-04-28" }).expect(200);
+
+    const res = await request(app)
+      .post(`/api/v1/sharing/notices/${notice.id}/undo`)
+      .set("Cookie", ben.cookie)
+      .send({})
+      .expect(409);
+    expect(res.body.code).toBe("SHARE_UNDO_STALE");
+    const bens = await trip(pair.memberTrip.id);
+    expect([day(bens.startDay), day(bens.endDay)]).toEqual(["2025-04-25", "2025-04-28"]);
+  });
+
   it("does not reach a member whose consent is withdrawn", async () => {
     await prisma.shareConsent.updateMany({
       where: { requesterId: anna.id, targetId: ben.id },

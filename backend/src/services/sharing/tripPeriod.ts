@@ -172,9 +172,45 @@ export async function undoTripPeriod(
     );
   }
   const next = { ...current, ...pickKeys(restored, keys) };
+  // A notice records only the fields it changed, so restoring them beside a
+  // later edit of the other end can turn the period inside out. Refuse that
+  // as stale instead of writing — and propagating — an impossible trip.
+  const inverted = endsBeforeItBegins(next);
+  if (inverted.length > 0) {
+    throw new AppError(
+      `Undo would end the trip before it begins: ${inverted.join(", ")}`,
+      409,
+      "SHARE_UNDO_STALE",
+      undefined,
+      { fields: inverted.join(",") }
+    );
+  }
   await writePeriod(tx, { id: own.id, userId }, next);
   await propagateTripPeriod(tx, userId, own.id, own);
   return { tripId: own.id };
+}
+
+const timeOf = (value: unknown): number | null => {
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "string") {
+    const t = Date.parse(value);
+    return Number.isNaN(t) ? null : t;
+  }
+  return null;
+};
+
+/** The start fields of each pair that would lie after its end. */
+function endsBeforeItBegins(period: FactRecord): string[] {
+  return (
+    [
+      ["startDay", "endDay"],
+      ["startDate", "endDate"],
+    ] as const
+  ).flatMap(([from, to]) => {
+    const a = timeOf(period[from]);
+    const b = timeOf(period[to]);
+    return a !== null && b !== null && a > b ? [from, to] : [];
+  });
 }
 
 function factsOf(side: Prisma.JsonValue): Prisma.JsonValue | null {
