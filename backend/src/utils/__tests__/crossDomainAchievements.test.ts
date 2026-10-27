@@ -163,7 +163,7 @@ describe("the fully documented trip", () => {
 
 // Rail left beta in 2.7.0-rc.20 (owner, 2026-10-22), bus on 2026-10-26: both
 // count like flights.
-it.each([["railJourneys"], ["busJourneys"]] as const)(
+it.each<["railJourneys" | "busJourneys"]>([["railJourneys"], ["busJourneys"]])(
   "counts a %s trip with the beta switch off",
   (key) => {
     const byGround = trip({
