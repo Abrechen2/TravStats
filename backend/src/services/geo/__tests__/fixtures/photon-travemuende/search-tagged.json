@@ -1,0 +1,63 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 33212063,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "Travemünde Priwallfähre",
+        "street": "Vorderreihe",
+        "district": "Travemünde",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "postcode": "23570",
+        "countrycode": "DE"
+      },
+      "geometry": { "type": "Point", "coordinates": [10.8673912, 53.9556732] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 1328454171,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "Travemünde Priwallfähre",
+        "street": "Vorderreihe",
+        "district": "Travemünde",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "postcode": "23570",
+        "countrycode": "DE"
+      },
+      "geometry": { "type": "Point", "coordinates": [10.8672798, 53.9555043] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 1416013478,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "Finnlines Helsinki-Travemünde",
+        "street": "Auringonnousunranta",
+        "locality": "Niinisaari",
+        "district": "Vuosaari",
+        "city": "Helsinki",
+        "state": "Uusimaa",
+        "country": "Suomi",
+        "postcode": "01100",
+        "countrycode": "FI"
+      },
+      "geometry": { "type": "Point", "coordinates": [25.1965582, 60.2200367] }
+    }
+  ]
+}

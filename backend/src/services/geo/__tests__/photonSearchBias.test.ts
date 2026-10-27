@@ -59,10 +59,13 @@ describe("Photon search location bias", () => {
       return url.searchParams.has("lang") ? jsonResponse({}, 400) : jsonResponse({ features: [] });
     }) as unknown as typeof fetch;
     await searchPlacesDetailed("Bari", { kind: "ferry_terminal", lang: "pt" });
-    expect(urls).toHaveLength(2);
-    expect(urls.every((url) => url.searchParams.get("osm_tag") === "amenity:ferry_terminal")).toBe(
-      true
-    );
+    // Each attempt is the tagged name search plus a place search (photonFerryPorts.test.ts).
+    const tagged = urls.filter((url) => url.searchParams.get("osm_tag") !== "place");
+    expect(tagged).toHaveLength(2);
+    expect(
+      tagged.every((url) => url.searchParams.getAll("osm_tag")[0] === "amenity:ferry_terminal")
+    ).toBe(true);
+    expect(tagged[1].searchParams.has("lang")).toBe(false);
     urls.length = 0;
     await searchPlacesDetailed("Bari");
     expect(urls[0].searchParams.has("osm_tag")).toBe(false);

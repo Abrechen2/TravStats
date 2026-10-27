@@ -1,0 +1,42 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "R",
+        "osm_id": 367843,
+        "osm_key": "place",
+        "osm_value": "suburb",
+        "type": "district",
+        "name": "Travemünde",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "countrycode": "DE",
+        "extra": { "admin_level": "10" },
+        "extent": [10.8214611, 53.9798746, 10.8860823, 53.945443]
+      },
+      "geometry": { "type": "Point", "coordinates": [10.8759851, 53.9626895] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 1241953231,
+        "osm_key": "place",
+        "osm_value": "locality",
+        "type": "locality",
+        "name": "Trasmunde",
+        "district": "Freixido",
+        "city": "Larouco",
+        "county": "Valdeorras",
+        "state": "Galicia",
+        "country": "España",
+        "postcode": "27390",
+        "countrycode": "ES"
+      },
+      "geometry": { "type": "Point", "coordinates": [-7.1921224, 42.3592308] }
+    }
+  ]
+}
