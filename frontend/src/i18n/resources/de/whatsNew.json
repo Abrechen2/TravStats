@@ -2,6 +2,7 @@
   "title": "Neu in TravStats {{version}}",
   "subtitle": "Ein kurzer Überblick über die wichtigsten Änderungen. Mit „Beta“ ist markiert, was noch in Prüfung ist und nur mit dem Beta-Schalter deines Admins erscheint.",
   "dismiss": "Verstanden",
+  "next": "Weiter",
   "betaBadge": "Beta",
   "entries": {
     "v270": {
@@ -36,6 +37,14 @@
       "beta": {
         "title": "Roadtrips, TravTrack und mehr in Beta",
         "body": "Roadtrips und Touren, Kreuzfahrt-Spuren, Flugspuren, Freundesvergleiche, verschlüsseltes Teilen, Reisen über Server teilen (mit Checkliste zum Einrichten) und das Kalender-Abo mit Ortszeiten sind noch in Prüfung. Ein Admin schaltet sie mit dem Beta-Schalter frei. Neu und ebenfalls Beta: TravPlan zum Planen und TravTrack, dein Standortverlauf mit Privatzonen."
+      },
+      "note": {
+        "title": "Wohin die Reise geht",
+        "p1": "TravStats hat als Flug-Logbuch angefangen. Mit 2.7 ist daraus ein Reisetagebuch für Flüge, Kreuzfahrten, Unterkünfte, Orte, Bahn, Bus, Fähre und Mietwagen geworden. Das bleibt der Kern – ab jetzt heißt er Stats.",
+        "p2": "Als Nächstes kommen zwei neue Bereiche dazu: Plan, um kommende Reisen zu planen, und Track, ein eigener Standortverlauf direkt in TravStats. Beide sind noch Beta.",
+        "p3": "Wichtig ist mir: Nichts davon musst du nutzen. Plan und Track werden einzeln eingeschaltet, so wie die Bereiche. Auch jeder externe Dienst, der deine Einträge ergänzt – Flugdaten, Fotos aus Immich, Standort aus Dawarich, Routen –, ist optional und erst aktiv, wenn du ihn einrichtest. Wer nur seine Flüge zählen will, sieht nur Flüge.",
+        "p4": "Der Server bleibt das Gedächtnis von allem, die Companion-App ist der Begleiter unterwegs, und alles bleibt bei dir selbst gehostet. Danke fürs Testen und Melden – Rückmeldungen sind auf Discord jederzeit willkommen.",
+        "signature": "Dennis"
       }
     },
     "v260": {
