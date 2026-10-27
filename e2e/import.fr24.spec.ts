@@ -11,7 +11,7 @@
  *
  * Selector strategy (adapted from actual component source):
  *  - Login uses input#username (type="text") + input#password — NOT type="email"
- *  - Settings sidebar nav: button with exact text "Import" (EN i18n label)
+ *  - Import is a section of the Daten page: /settings/data?section=import
  *  - FR24 tile file input is wrapped inside a <label> — use setInputFiles on
  *    'label:has-text("Choose FR24 CSV") input[type="file"]'
  *  - PreviewModal title is i18n'd (settings:import.preview.title → "Preview import" in EN)
@@ -43,11 +43,12 @@ async function loginAsAdmin(page: import("@playwright/test").Page): Promise<void
   await expect(page).not.toHaveURL(/\/login/);
 }
 
-// Navigate to Settings → Import section via sidebar button
+// Navigate to Settings → Daten → Import by its address
 async function gotoImportSection(page: import("@playwright/test").Page): Promise<void> {
-  await page.goto("/settings");
-  // The sidebar renders a <button> for each section; "Import" is the EN label
-  await page.click('button:has-text("Import")');
+  // Settings are one route per group since 2.7: Import is a section of the
+  // "Daten" page, and the sidebar lists pages as links, not a <button> per
+  // section — so the old `button:has-text("Import")` waited for nothing.
+  await page.goto("/settings/data?section=import");
   // Wait for at least the FR24 tile heading to confirm we're in the right section
   // Both locales. The config runs de-DE, so an English-only matcher never
   // found this tile and the case failed on the UI's language rather than on

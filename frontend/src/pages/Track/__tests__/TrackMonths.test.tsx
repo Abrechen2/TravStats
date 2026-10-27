@@ -139,8 +139,12 @@ describe("TrackMonths", () => {
   it("steps back a year, and not past this one", async () => {
     show();
     await screen.findByTestId("track-month-2026-10");
-    expect(screen.getByRole("button", { name: "track:months.next" })).toBeDisabled();
-    fireEvent.click(screen.getByRole("button", { name: "track:months.previous" }));
+    // Ask the year stepper, not the whole page: the year calendar below draws a
+    // button per day, and a page-wide getByRole computing 367 accessible names
+    // took 0.75 s here and timed this test out on a loaded CI runner.
+    const stepper = within(screen.getByTestId("track-months-year").parentElement!);
+    expect(stepper.getByRole("button", { name: "track:months.next" })).toBeDisabled();
+    fireEvent.click(stepper.getByRole("button", { name: "track:months.previous" }));
     expect(api.months).toHaveBeenLastCalledWith(2025);
     expect(await screen.findByTestId("track-months-year")).toHaveTextContent("2025");
     await screen.findByTestId("track-month-2026-10");

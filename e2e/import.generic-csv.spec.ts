@@ -82,8 +82,8 @@ test("Generic-CSV importer — wizard maps custom columns", async ({ page }) => 
   await loginAsAdmin(page);
   await removeFixtureFlights(page);
   await loginAsAdmin(page);
-  await page.goto("/settings");
-  await page.click('button:has-text("Import")');
+  // Import is a section of the Daten page — see the note in import.fr24.spec.ts.
+  await page.goto("/settings/data?section=import");
   // Confirm Import section is shown
   // Both locales — see the note in import.fr24.spec.ts.
   await expect(

@@ -342,7 +342,13 @@ describe("runDataQualityChecks — what a dismissal covers", () => {
   });
 
   it("asks again when a trip gains another entry outside its days", async () => {
-    const trip = { id: "t1", status: "completed", startDay: "2026-03-09", endDay: "2026-03-15" };
+    const trip = {
+      id: "t1",
+      name: "Lisbon",
+      status: "completed",
+      startDay: "2026-03-09",
+      endDay: "2026-03-15",
+    };
     const away = (id: string, day: string) =>
       flight({
         id,
