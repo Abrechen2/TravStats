@@ -145,4 +145,30 @@ describe("countries badge evidence reads the badge's own sources", () => {
     expect(res.entries.map((e) => e.credits).sort()).toEqual([["Africa"], ["Europe"]]);
     expect(res.unattributed).toEqual([]);
   });
+
+  it("credits each house in a transcontinental country with its own continent", async () => {
+    await prisma.lodging.createMany({
+      data: [
+        { userId, name: "Moskau", isoCountryCode: "RU", lat: 55.75, lon: 37.62, visited: true },
+        {
+          userId,
+          name: "Wladiwostok",
+          isoCountryCode: "RU",
+          lat: 43.12,
+          lon: 131.9,
+          visited: true,
+        },
+      ],
+    });
+
+    const res = await resolveMetricEvidence(userId, badgeProofKey("continents"), ALL, PAGE);
+    if (!res) throw new Error("continents badge evidence is not served");
+
+    expect(res.measure.value).toBe(2);
+    expect(res.entries.map((e) => [e.title?.text, e.credits]).sort()).toEqual([
+      ["Moskau", ["Europe"]],
+      ["Wladiwostok", ["Asia"]],
+    ]);
+    expect(res.unattributed).toEqual([]);
+  });
 });

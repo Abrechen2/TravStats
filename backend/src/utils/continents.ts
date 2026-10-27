@@ -647,6 +647,11 @@ export function knownCountryCodes(): string[] {
   return [...new Set([...Object.keys(BY_ISO), ...Object.keys(TRANSCONTINENTAL)])].sort();
 }
 
+/** Whether a country spans two continents, so only coordinates can place a record in it. */
+export function isTranscontinental(code: string): boolean {
+  return code.toUpperCase() in TRANSCONTINENTAL;
+}
+
 /**
  * Resolve an ISO alpha-2 code or an English country name to a continent.
  *

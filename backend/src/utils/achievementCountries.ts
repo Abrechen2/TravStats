@@ -1,5 +1,6 @@
 import { loadVisibleDomains } from "../services/domainVisibility";
 import { loadPassport, type PassportSources } from "../services/stats/passportLoader";
+import { groundContinents } from "./achievementContinents";
 
 /**
  * The sources the country badges read — exported so the badge's EVIDENCE
@@ -36,16 +37,17 @@ export interface AchievementGeography {
  * never a row (`track: false` here, and the passport refuses it as proof
  * anyway), so the single Syria point earns no country and no continent.
  *
- * A row carries ONE continent, so a transcontinental country counts the
- * continent its row is filed under — a flight to Vladivostok after one to
- * Moscow no longer adds Asia, which the airport-by-airport rule did.
+ * Continents are placed per piece of ground evidence, not per row
+ * (`groundContinents`): Vladivostok after Moscow keeps Asia, and a flown
+ * airport the catalogue has no country for still proves its continent.
  */
 export async function achievementGeography(userId: string): Promise<AchievementGeography> {
-  const passport = await loadPassport(userId, undefined, await badgePassportSources(userId));
+  const sources = await badgePassportSources(userId);
+  const passport = await loadPassport(userId, undefined, sources);
   const ground = passport.countries.filter((c) => c.groundPresence);
   return {
     countries: new Set(ground.map((c) => c.code)),
-    continents: new Set(ground.flatMap((c) => (c.continent ? [c.continent as string] : []))),
+    continents: await groundContinents(userId, ground, sources),
   };
 }
 

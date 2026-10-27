@@ -246,6 +246,72 @@ describe("achievementCountries — the passport's evidence, the gates' visibilit
     expect([...geography.continents].sort()).toEqual(["Asia", "Europe"]);
   });
 
+  /** Flown legs between catalogue airports, at the airports' own coordinates. */
+  const fly = async (legs: Array<[string, string, string]>) => {
+    const codes = [...new Set(legs.flatMap(([dep, arr]) => [dep, arr]))];
+    const airports = await prisma.airport.findMany({
+      where: { iata: { in: codes }, isClosed: false },
+      select: { iata: true, lat: true, lon: true },
+    });
+    const at = new Map(airports.map((a) => [a.iata, a]));
+    expect([...at.keys()].sort()).toEqual([...codes].sort());
+    for (const [dep, arr, when] of legs) {
+      await prisma.flight.create({
+        data: {
+          userId,
+          depIata: dep,
+          depLat: at.get(dep)!.lat,
+          depLon: at.get(dep)!.lon,
+          arrIata: arr,
+          arrLat: at.get(arr)!.lat,
+          arrLon: at.get(arr)!.lon,
+          departureTime: new Date(when),
+          status: "flown",
+        },
+      });
+    }
+  };
+
+  it("keeps Asia for a flight to Vladivostok after one to Moscow (one country, two continents)", async () => {
+    await fly([
+      ["MUC", "SVO", "2024-03-01T06:00:00Z"],
+      ["SVO", "VVO", "2024-03-03T06:00:00Z"],
+    ]);
+
+    const geography = await achievementGeography(userId);
+    expect([...geography.countries].sort()).toEqual(["DE", "RU"]);
+    expect([...geography.continents].sort()).toEqual(["Asia", "Europe"]);
+  });
+
+  it("files a stay in Sharm el-Sheikh under Asia and one in Hurghada under Africa", async () => {
+    await prisma.lodging.create({
+      data: { userId, name: "Sinai", isoCountryCode: "EG", lat: 27.98, lon: 34.39, visited: true },
+    });
+    expect([...(await achievementGeography(userId)).continents]).toEqual(["Asia"]);
+
+    await prisma.lodging.create({
+      data: { userId, name: "Red Sea", isoCountryCode: "EG", lat: 27.18, lon: 33.8, visited: true },
+    });
+    expect([...(await achievementGeography(userId)).continents].sort()).toEqual(["Africa", "Asia"]);
+  });
+
+  it("keeps the continent of an airport whose country the catalogue does not know", async () => {
+    await prisma.airport.deleteMany({ where: { iata: "QZX" } });
+    await prisma.airport.create({
+      data: { iata: "QZX", name: "Unplaced strip", country: null, lat: -15.8, lon: -47.9 },
+    });
+    try {
+      await fly([["MUC", "QZX", "2024-03-01T06:00:00Z"]]);
+
+      const geography = await achievementGeography(userId);
+      // No country is invented for it; its continent is still ground contact.
+      expect([...geography.countries]).toEqual(["DE"]);
+      expect([...geography.continents].sort()).toEqual(["Europe", "South America"]);
+    } finally {
+      await prisma.airport.deleteMany({ where: { iata: "QZX" } });
+    }
+  });
+
   it("earns a continent badge from a house on a third continent, not from a stray point", async () => {
     await connectThroughDoha();
     await trackDays("BR", "2024-03-05", "2024-03-06");

@@ -56,7 +56,7 @@ function detailFor(code: string, inputs: CountryDetailInputs): CountryDetail | n
 }
 
 /** A record, gathered across every country whose drill-down lists it. */
-interface PassportRecord {
+export interface PassportRecord {
   entry: EvidenceEntry;
   /** Every passport country this record proves — the drill-down's answer. */
   countries: Set<string>;
@@ -211,6 +211,40 @@ const SOURCE_OF_ROW: Partial<Record<CountryTimelineEntry["kind"], keyof Passport
   track: "track",
 };
 
+/** Whether a timeline row's domain is one the given sources read. */
+function readsRowOf(sources: PassportSources): (row: CountryTimelineEntry) => boolean {
+  return (row) => {
+    const source = SOURCE_OF_ROW[row.kind];
+    return source === undefined || sources[source] !== false;
+  };
+}
+
+/**
+ * The evidence rows behind the given countries, read from the given sources —
+ * the drill-down `loadPassportEvidenceIndex` lists, for a few codes only.
+ * `utils/achievementContinents.ts` reads it to place each piece of evidence
+ * of a transcontinental country on its own continent.
+ */
+export async function loadGroundTimelines(
+  userId: string,
+  sources: PassportSources,
+  codes: readonly string[]
+): Promise<Map<string, { airports: string[]; rows: CountryTimelineEntry[] }>> {
+  const out = new Map<string, { airports: string[]; rows: CountryTimelineEntry[] }>();
+  if (codes.length === 0) return out;
+  const inputs = await loadCountryDetailInputs(userId);
+  const readsRow = readsRowOf(sources);
+  for (const code of codes) {
+    const detail = detailFor(code, inputs);
+    if (!detail) continue;
+    out.set(code, {
+      airports: detail.airports.map((a) => a.iata),
+      rows: detail.timeline.filter(readsRow),
+    });
+  }
+  return out;
+}
+
 /**
  * @param sources the passport's source gating. The country BADGES pass their
  *   own (`badgePassportSources`); without it their evidence listed rides and
@@ -224,10 +258,7 @@ export async function loadPassportEvidenceIndex(
     loadPassport(userId, undefined, sources),
     loadCountryDetailInputs(userId),
   ]);
-  const readsRow = (row: CountryTimelineEntry): boolean => {
-    const source = SOURCE_OF_ROW[row.kind];
-    return source === undefined || sources[source] !== false;
-  };
+  const readsRow = readsRowOf(sources);
 
   const details = passport.countries
     .map((row) => ({ code: row.code, detail: detailFor(row.code, inputs) }))
