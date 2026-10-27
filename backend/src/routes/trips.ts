@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../db";
 import { takeTravTrackLock } from "../services/travtrack/lock";
 import { narrowShareSnapshots } from "../services/travtrack/shareNarrow";
+import { propagateTripPeriod } from "../services/sharing/tripPeriod";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { rejectDemo } from "../middleware/demoGuard";
 import { AppError } from "../middleware/errorHandler";
@@ -528,7 +529,11 @@ router.patch(
               ...(body.countries !== undefined && { countries: body.countries }),
             },
           });
-          if (daysChanged) await narrowShareSnapshots(tx, userId, { tripId: updated.id });
+          if (daysChanged) {
+            await narrowShareSnapshots(tx, userId, { tripId: updated.id });
+            // The period is a fact of a shared trip; the name is not (forgejo#280 point 4).
+            await propagateTripPeriod(tx, userId, updated.id, existing);
+          }
           return updated;
         },
         { timeout: 60_000 }

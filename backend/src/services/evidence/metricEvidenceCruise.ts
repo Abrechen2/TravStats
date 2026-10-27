@@ -288,15 +288,11 @@ export function resolveCruiseCountriesCount(
 /**
  * Companions, summed across the cruises they came on.
  *
- * THE ONE MEASURE HERE THAT IGNORES `countableCruiseWhere()`, and it has to.
- * Its calculator is not the rollup: `CruiseStatsSection` folds
- * `deriveCruiseStats` over `cruiseApi.list()`, and `GET /cruises` applies no
- * status filter at all (`routes/cruises.ts`'s `buildWhere` narrows only on an
- * explicit query param). So the ranked companion list on that tab shows the
- * people on a cruise that is merely BOOKED, beside a hero grid that counts
- * only the ones that sailed. Filtering here would have made the panel name
- * fewer companions than the bars it explains — which is exactly the
- * disagreement the panel exists to make impossible.
+ * The sailed cruises only, like every other measure here (owner, forgejo#280
+ * point 13): a cancelled cruise never counts, a booked one only once it has
+ * ended. `CruiseStatsSection` folds `deriveCruiseStats`, which applies the
+ * same `shared/cruiseCounting.ts` rule, so the panel names the people the
+ * bars show. Until then both counted the people on a merely BOOKED cruise.
  *
  * The YEAR window still applies: the tab cuts its rows with
  * `cruisesStartedIn` before folding, so a cruise belongs to the year it began
@@ -315,7 +311,7 @@ export async function resolveCruiseCompanionCount(
 ): Promise<EvidenceResponse> {
   const key = "cruiseCompanionCount";
   const year = readYearScope(scope, key);
-  const { rows } = await loadCruiseStatsData(userId, year, "every");
+  const { rows } = await loadCruiseStatsData(userId, year);
   const entries = rows.map((row) => entryOf(row, { credits: [...new Set(row.companions)] }));
   return domainDistinctEvidence({ key, unit: "companions", scope, page, entries });
 }

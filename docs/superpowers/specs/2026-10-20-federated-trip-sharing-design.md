@@ -65,7 +65,7 @@ a conflict rule for two databases that no longer serialise each other's writes.
 Non-goals: E2E encryption of trip facts (see Owner decision O1 — the receiving server must
 read them to keep the trip); sharing with someone who has no TravStats account anywhere;
 roadtrips, tours, places, notes, photos, journal, documents, expenses (owner decision 2);
-trip-level facts (still open from S2, same as locally); the Companion talking to a foreign
+trip-level facts (locally the period syncs since forgejo#280 point 4; across servers still open); the Companion talking to a foreign
 server.
 
 ## 3. Decisions proposed

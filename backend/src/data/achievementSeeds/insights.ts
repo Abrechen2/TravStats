@@ -3,8 +3,9 @@ import type { AchievementDefinition } from "../achievements";
 /**
  * Badges of the 2026-10 statistics expansion (forgejo#256 flights, #257
  * cruises), measured by `utils/insightAchievements.ts` over the same folds the
- * statistics page draws. Every threshold below is a PRODUCT PROPOSAL from the
- * audit issues and is marked as such until the owner confirms it.
+ * statistics page draws. The thresholds came from the audit issues and are
+ * the rule: the owner ruled on NEW_GROUND_YEAR and PORT_REUNION_3 on
+ * 2026-10-09 and approved the rest as proposed on 2026-10-27 (forgejo#280).
  *
  * Compared with the catalogue before adding (forgejo#256): no badge measures
  * airports per year, the pause between two visits, or one airport across a
@@ -32,7 +33,7 @@ export const seedsInsights: AchievementDefinition[] = [
     icon: "🧭",
     tier: "silver",
     // The first recorded year does not count (owner ruling 2026-10-09).
-    requirement: 5, // threshold: proposal forgejo#256, owner to confirm
+    requirement: 5, // threshold: forgejo#256, confirmed by the owner 2026-10-27 (forgejo#280)
     requirementType: "flight_new_airports_year",
     points: 50,
   },
@@ -44,7 +45,7 @@ export const seedsInsights: AchievementDefinition[] = [
     domain: "flight",
     icon: "🕰️",
     tier: "gold",
-    requirement: 10, // threshold: proposal forgejo#256, owner to confirm
+    requirement: 10, // threshold: forgejo#256, confirmed by the owner 2026-10-27 (forgejo#280)
     requirementType: "flight_airport_reunion_years",
     points: 80,
   },
@@ -56,7 +57,7 @@ export const seedsInsights: AchievementDefinition[] = [
     domain: "flight",
     icon: "🗓️",
     tier: "silver",
-    requirement: 4, // threshold: proposal forgejo#256, owner to confirm
+    requirement: 4, // threshold: forgejo#256, confirmed by the owner 2026-10-27 (forgejo#280)
     requirementType: "flight_airport_all_quarters",
     points: 50,
   },
@@ -71,7 +72,7 @@ export const seedsInsights: AchievementDefinition[] = [
     tier: "silver",
     // Port calls only — embarkation and disembarkation ports do not count
     // (owner ruling 2026-10-09), or a home port would earn it.
-    requirement: 3, // threshold: proposal forgejo#257, owner to confirm
+    requirement: 3, // threshold: forgejo#257, confirmed by the owner 2026-10-27 (forgejo#280)
     requirementType: "cruise_port_cruises",
     points: 40,
   },
@@ -83,7 +84,7 @@ export const seedsInsights: AchievementDefinition[] = [
     domain: "cruise",
     icon: "🥾",
     tier: "silver",
-    requirement: 5, // threshold: proposal forgejo#257, owner to confirm
+    requirement: 5, // threshold: forgejo#257, confirmed by the owner 2026-10-27 (forgejo#280)
     requirementType: "cruise_excursion_ports",
     points: 50,
   },
@@ -95,7 +96,7 @@ export const seedsInsights: AchievementDefinition[] = [
     domain: "cruise",
     icon: "🔄",
     tier: "silver",
-    requirement: 2, // threshold: proposal forgejo#257, owner to confirm
+    requirement: 2, // threshold: forgejo#257, confirmed by the owner 2026-10-27 (forgejo#280)
     requirementType: "cruise_repeated_itinerary",
     points: 40,
   },

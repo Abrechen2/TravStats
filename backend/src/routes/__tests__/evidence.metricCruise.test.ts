@@ -43,8 +43,8 @@ import {
  *     500 USD with NO snapshot — real money nothing can convert. One
  *     companion, who also came on the first.
  *   - COSTA FORTUNA, booked for June 2027 and still `scheduled`, with one
- *     companion. It appears in nothing EXCEPT `cruiseCompanionCount`, whose
- *     calculator is the cruise LIST rather than the rollup — see that test.
+ *     companion. It appears in nothing, `cruiseCompanionCount` included: a
+ *     booked cruise counts only once it has ended (owner, forgejo#280 point 13).
  */
 describe("GET /api/v1/evidence/metric/... — the cruise tab", () => {
   let userId: string;
@@ -397,14 +397,14 @@ describe("GET /api/v1/evidence/metric/... — the cruise tab", () => {
    * how many people you sailed with, not how many seats they filled. Until
    * then it summed per cruise and read 4 here.
    */
-  it("cruiseCompanionCount: Anna, Ben and Chris — three people, Anna counted once", () => {
+  it("cruiseCompanionCount: Anna and Ben — two people, Anna counted once, the booking out", () => {
     const res = answer("cruiseCompanionCount");
     expect(res.measure.aggregation).toBe("distinct");
-    expect(res.measure.value).toBe(3);
+    expect(res.measure.value).toBe(2);
     expect(res.entries.find((e) => e.id === cruise2024)!.credits).toEqual(["Anna", "Ben"]);
     expect(res.entries.find((e) => e.id === cruise2025)!.credits).toEqual(["Anna"]);
-    expect(res.entries.find((e) => e.id === cruiseBooked)!.credits).toEqual(["Chris"]);
-    // The same fixture is invisible to every OTHER measure in this suite.
+    // Chris is only on the booked cruise, which has not sailed (forgejo#280 point 13).
+    expect(res.entries.map((e) => e.id)).not.toContain(cruiseBooked);
     expect(answer("cruiseCount").entries.map((e) => e.id)).not.toContain(cruiseBooked);
     assertDistinctInvariant(res);
   });

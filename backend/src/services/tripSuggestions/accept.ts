@@ -1,4 +1,5 @@
 import { prisma, type DbTransaction } from "../../db";
+import { propagateTripPeriod, TRIP_PERIOD_SELECT } from "../sharing/tripPeriod";
 import { propagateWrites } from "../sharing/propagate";
 import { AppError } from "../../middleware/errorHandler";
 import { newTripColor } from "../trip/newTripColor";
@@ -165,7 +166,7 @@ async function acceptTrip(
   } else {
     const trip = await tx.trip.findFirst({
       where: { id: proposal.trip?.id, userId },
-      select: { id: true, startDate: true, endDate: true },
+      select: { id: true, ...TRIP_PERIOD_SELECT },
     });
     if (!trip) throw staleError();
     tripId = trip.id;
@@ -178,6 +179,8 @@ async function acceptTrip(
           ...typedTripDays({ startDate: dayDate(startDay), endDate: dayDate(endDay) }),
         },
       });
+      // A shared trip's period is a fact for every member (forgejo#280 point 4).
+      await propagateTripPeriod(tx, userId, trip.id, trip);
     }
   }
   const linked = await linkMembers(tx, userId, tripId, members);

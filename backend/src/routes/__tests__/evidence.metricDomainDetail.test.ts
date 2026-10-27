@@ -17,9 +17,10 @@ import { assertSumInvariant } from "../../services/evidence/__tests__/invariants
  *   - "Nordland", sailed, 1–5 March 2024, deck 9, on a trip, three listed
  *     port calls and one sea day.
  *   - "Ostsee kurz", sailed, 10–12 January 2025, no deck, two port calls.
- *   - "Costa Fortuna", BOOKED for June 2027 — on the cruise list, so in
- *     these blocks, though in no rollup figure.
- *   - "Ohne Datum", cancelled and undated: in the list, in no dated figure.
+ *   - "Costa Fortuna", BOOKED for June 2027 — on the cruise list, but in
+ *     none of these blocks: a booked cruise counts once it has ended
+ *     (owner, forgejo#280 point 13).
+ *   - "Ohne Datum", cancelled and undated: in the list, in no figure.
  *
  * Stays (2024): Rheinblick (chain "Rhein Hotels", 3 nights, 300 EUR, four
  * ratings, located), Rheinblick again (award night, chain), Sakura Inn (no
@@ -216,15 +217,15 @@ describe("GET /api/v1/evidence/metric/... — the populations behind averages an
   });
 
   describe("cruise list (rhythm and fun)", () => {
-    it("dated cruises: every cruise on the list with a start date, booked ones too", async () => {
+    it("dated cruises: every sailed cruise with a start date, the booked one out", async () => {
       const body = await get("cruiseDatedCount");
-      expect(split(body)).toEqual({ [ids.nordland]: 1, [ids.ostsee]: 1, [ids.booked]: 1 });
-      expect(body.measure).toMatchObject({ value: 3, unit: "cruises", aggregation: "sum" });
+      expect(split(body)).toEqual({ [ids.nordland]: 1, [ids.ostsee]: 1 });
+      expect(body.measure).toMatchObject({ value: 2, unit: "cruises", aggregation: "sum" });
     });
 
     it("nights per cruise with both dates — the average, longest and shortest", async () => {
       const body = await get("cruiseNightsTotal");
-      expect(split(body)).toEqual({ [ids.nordland]: 4, [ids.ostsee]: 2, [ids.booked]: 7 });
+      expect(split(body)).toEqual({ [ids.nordland]: 4, [ids.ostsee]: 2 });
     });
 
     it("listed port calls: sea days out, an unresolved call in, empty itineraries absent", async () => {
@@ -232,9 +233,9 @@ describe("GET /api/v1/evidence/metric/... — the populations behind averages an
       expect(split(body)).toEqual({ [ids.nordland]: 3, [ids.ostsee]: 2 });
     });
 
-    it("a recorded deck names itself", async () => {
+    it("a recorded deck names itself; the booked cruise's deck is not one sailed on", async () => {
       const body = await get("cruiseDeckRecordedCount");
-      expect(split(body)).toEqual({ [ids.nordland]: 1, [ids.booked]: 1 });
+      expect(split(body)).toEqual({ [ids.nordland]: 1 });
       const nordland = body.entries.find((e) => e.id === ids.nordland)!;
       expect(nordland.subtitle).toEqual({ key: "evidence.subtitle.deck", values: { deck: 9 } });
     });

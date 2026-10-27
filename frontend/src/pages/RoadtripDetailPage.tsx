@@ -22,6 +22,7 @@ import StationEditor, {
 import EditorSaveStatus from "../components/Roadtrips/EditorSaveStatus";
 import StationDraftBanner from "../components/Roadtrips/StationDraftBanner";
 import DraftFirstDialog from "../components/Roadtrips/DraftFirstDialog";
+import OdometerDialog from "../components/Roadtrips/OdometerDialog";
 import StationTimeline from "../components/Roadtrips/StationTimeline";
 import RoadtripDayView from "../components/Roadtrips/RoadtripDayView";
 import { stationHighlightLayer } from "../components/Roadtrips/stationHighlightLayer";
@@ -107,6 +108,7 @@ export default function RoadtripDetailPage(): JSX.Element {
   const draftChecked = useRef(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [costsBlock, setCostsBlock] = useState<number | null>(null);
+  const [odometerOpen, setOdometerOpen] = useState(false);
 
   const mountedRef = useRef(true);
   useEffect(() => {
@@ -346,6 +348,7 @@ export default function RoadtripDetailPage(): JSX.Element {
   ) : (
     <div className="flex flex-wrap" style={{ gap: 8 }}>
       <Button onClick={() => navigate(`/tours/${id}`)}>{t("roadtrips:editLegs")}</Button>
+      <Button onClick={() => setOdometerOpen(true)}>{t("roadtrips:odometerDialog.open")}</Button>
       {/* Secondary and without an icon, like "Bearbeiten" on rail, ferry, bus
           and rentals: a primary button is taller and stood out (forgejo#307). */}
       <Button
@@ -531,6 +534,19 @@ export default function RoadtripDetailPage(): JSX.Element {
           onChanged={() => void load()}
           onSaved={() => {
             setLegEdit(null);
+            void load();
+          }}
+        />
+      )}
+
+      {odometerOpen && (
+        <OdometerDialog
+          routeId={id}
+          startOdometerKm={r.startOdometerKm}
+          endOdometerKm={r.endOdometerKm}
+          onClose={() => setOdometerOpen(false)}
+          onSaved={() => {
+            setOdometerOpen(false);
             void load();
           }}
         />

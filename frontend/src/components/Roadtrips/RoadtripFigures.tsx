@@ -37,9 +37,10 @@ export default function RoadtripFigures({
 
   // The km figure is the length of ALL road legs, whatever their date. What
   // of it is driven comes from the server's timeline rule (`progress`), and
-  // "Gefahren" needs a recorded track behind every km (forgejo#179: "Gefahren
-  // 254 km" on day 1 of 3, with the only leg still ahead).
-  const distance = distanceFigure(r.drivenKm, detail.progress);
+  // "Gefahren" needs a recorded track behind every km or both odometer
+  // readings (forgejo#179: "Gefahren 254 km" on day 1 of 3, with the only leg
+  // still ahead; forgejo#280 point 1).
+  const distance = distanceFigure(r.drivenKm, detail.progress, r);
   const ferryNote =
     r.drivenKm !== r.distanceKm
       ? t("roadtrips:detail.figDrivenSub", { km: nf.format(r.distanceKm) })
@@ -62,7 +63,12 @@ export default function RoadtripFigures({
   // the plan still lies ahead; nothing is called driven.
   const overByDates = days !== null && ahead === null;
   const fallbackNote = overByDates ? undefined : t("roadtrips:detail.figRoutePlanned");
-  const stateNote = splitNote ?? (detail.progress ? basisParts || undefined : fallbackNote);
+  const measuredNote = detail.progress ? basisParts || undefined : fallbackNote;
+  const odometerNote =
+    distance.evidence === "odometer"
+      ? [t("roadtrips:detail.figByOdometer"), basisParts].filter(Boolean).join(" · ")
+      : undefined;
+  const stateNote = splitNote ?? odometerNote ?? measuredNote;
 
   const figures: Figure[] = [
     {
@@ -71,7 +77,7 @@ export default function RoadtripFigures({
         distance.label === "driven"
           ? t("roadtrips:detail.figDriven")
           : t("roadtrips:detail.figRoute"),
-      value: `${nf.format(r.drivenKm)} km`,
+      value: `${nf.format(distance.km)} km`,
       sub: [stateNote, ferryNote].filter(Boolean).join(" · ") || undefined,
     },
     ...(days !== null

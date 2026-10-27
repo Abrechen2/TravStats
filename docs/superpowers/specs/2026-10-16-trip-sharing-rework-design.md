@@ -100,7 +100,7 @@ with the writer (`receivingMembers`).
 ## 4. Non-goals
 
 - Server-to-server sharing, sharing with someone without an account, the phone app.
-- Propagating trip-level facts (name, dates) — still open from S2.
+- Propagating trip-level facts — the period syncs since forgejo#280 point 4 (locally); the name stays each member's own.
 - Sharing roadtrips, tours, place visits, notes, photos, journal, documents, expenses (owner
   decision 2: private). Ferry's link to a roadtrip leg (`roadtripLegId`,
   `roadtripLegBefore`) is part of the roadtrip and stays private.

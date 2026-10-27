@@ -9,6 +9,7 @@ import { revivedRecord, sameFact } from "./factValues";
 import { keyedDelegate } from "./keyOps";
 import { reopenSuperseded } from "./pendingSupersede";
 import { propagateDelete, propagateWrite, shareSnapshot, SHARE_TX_TIMEOUT_MS } from "./propagate";
+import { undoTripPeriod } from "./tripPeriod";
 
 /**
  * Acting on a notice (design 2026-10-09, decision 3): undo a change another
@@ -84,6 +85,8 @@ export async function undoNotice(userId: string, noticeId: string): Promise<Undo
     throw new AppError("This change was already undone", 409, "SHARE_UNDO_UNAVAILABLE");
   }
   if (movedFrom) return undoMoveIn(userId, notice, movedFrom);
+  // A shared trip's period (forgejo#280 point 4): the caller's own trip, not an entry.
+  if (notice.entityType === "trip") return undoTripPeriodNotice(userId, notice);
   const entity = entityOf(notice.entityType);
   const after = revivedRecord(factsOf(notice.after));
   const before = revivedRecord(factsOf(notice.before));
@@ -115,6 +118,23 @@ export async function undoNotice(userId: string, noticeId: string): Promise<Undo
       });
       await propagateWrite(tx, userId, entity, own.id, snapshot);
       return { undone: true as const, entryId: own.id };
+    },
+    { timeout: SHARE_TX_TIMEOUT_MS }
+  );
+}
+
+async function undoTripPeriodNotice(
+  userId: string,
+  notice: Awaited<ReturnType<typeof ownNotice>>
+): Promise<UndoResult> {
+  return prisma.$transaction(
+    async (tx) => {
+      const { tripId } = await undoTripPeriod(tx, userId, notice);
+      await tx.shareNotice.update({
+        where: { id: notice.id },
+        data: { undoneAt: new Date(), readAt: notice.readAt ?? new Date() },
+      });
+      return { undone: true as const, entryId: tripId };
     },
     { timeout: SHARE_TX_TIMEOUT_MS }
   );

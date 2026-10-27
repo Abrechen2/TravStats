@@ -24,6 +24,7 @@
  * again.
  */
 import { prisma, type DbTransaction } from "../../../db";
+import { propagateTripPeriod, TRIP_PERIOD_SELECT } from "../../sharing/tripPeriod";
 import { AppError } from "../../../middleware/errorHandler";
 import { z } from "../../../schemas/zod";
 import { typedTripDays } from "../../timeModel/tripColumns";
@@ -75,7 +76,7 @@ const storedDay = (day: Date | null, anchor: Date | null) =>
 async function widen(tx: DbTransaction, userId: string, tripId: string, run: TripEvidence) {
   const trip = await tx.trip.findFirst({
     where: { id: tripId, userId },
-    select: { id: true, startDay: true, endDay: true, startDate: true, endDate: true },
+    select: { id: true, ...TRIP_PERIOD_SELECT },
   });
   if (!trip) throw tripNotFound();
   const from = storedDay(trip.startDay, trip.startDate);
@@ -91,6 +92,8 @@ async function widen(tx: DbTransaction, userId: string, tripId: string, run: Tri
         ...typedTripDays({ startDate, endDate }),
       },
     });
+    // A shared trip's period is a fact for every member (forgejo#280 point 4).
+    await propagateTripPeriod(tx, userId, trip.id, trip);
   }
   return trip.id;
 }

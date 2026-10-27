@@ -21,7 +21,13 @@
  * converges it still counts as the voyage it is.
  *
  * The others do not: `scheduled` has not happened yet and `cancelled` never
- * will. Unlike flights there is no `duplicated` here — `CRUISE_PASSTHROUGH`
+ * will. That is the lodging rule (`lodgingCounting.ts`) for cruises, and the
+ * owner made it the rule for EVERY cruise figure (forgejo#280 point 13): a
+ * cancelled cruise never counts, a booked one only once it has ended — the
+ * rhythm and fun blocks and the companions included, which until then folded
+ * the whole list. The cruise list still shows every cruise. A booked cruise
+ * becomes `completed` once it is over: on every write (`deriveCruiseStatus`)
+ * and through the hourly sweep, which is why reading the status suffices. Unlike flights there is no `duplicated` here — `CRUISE_PASSTHROUGH`
  * does not carry it, so the open question that file documents has no twin.
  *
  * MIRRORED in `frontend/src/shared/cruiseCounting.ts`. Change both together.

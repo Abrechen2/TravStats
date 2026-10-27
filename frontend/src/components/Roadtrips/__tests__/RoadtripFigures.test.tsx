@@ -125,4 +125,40 @@ describe("RoadtripFigures distance figure (forgejo#179)", () => {
     expect(screen.queryByText("Gefahren")).not.toBeInTheDocument();
     expect(screen.getByText("Strecke")).toBeInTheDocument();
   });
+
+  /**
+   * forgejo#280 point 1 (owner, 2026-10-27): an entered odometer pair is
+   * evidence of the drive, just as a GPS track is; a planned route never is.
+   */
+  function withOdometer(
+    phase: RoadtripProgress["phase"],
+    start: number | null,
+    end: number | null
+  ): RoadtripDetail {
+    const d = withProgress(phase, phase === "past" ? 254 : 0, "routed");
+    return { ...d, roadtrip: { ...d.roadtrip, startOdometerKm: start, endOdometerKm: end } };
+  }
+
+  it("calls a finished roadtrip driven by its odometer readings, with their km", () => {
+    render(<RoadtripFigures detail={withOdometer("past", 10_000, 10_300)} today="2026-10-09" />);
+    expect(screen.getByText("Gefahren")).toBeInTheDocument();
+    expect(screen.getByText("300 km")).toBeInTheDocument();
+    expect(screen.getByText(/laut Kilometerstand · 254 km Route/)).toBeInTheDocument();
+  });
+
+  it("does not call it driven on one reading alone", () => {
+    render(<RoadtripFigures detail={withOdometer("past", 10_000, null)} today="2026-10-09" />);
+    expect(screen.queryByText("Gefahren")).not.toBeInTheDocument();
+    expect(screen.getByText("254 km")).toBeInTheDocument();
+  });
+
+  it("does not call it driven while under way, whatever the odometer says", () => {
+    render(<RoadtripFigures detail={withOdometer("current", 10_000, 10_300)} today="2026-10-03" />);
+    expect(screen.queryByText("Gefahren")).not.toBeInTheDocument();
+  });
+
+  it("does not trust a pair that runs backwards", () => {
+    render(<RoadtripFigures detail={withOdometer("past", 10_300, 10_000)} today="2026-10-09" />);
+    expect(screen.queryByText("Gefahren")).not.toBeInTheDocument();
+  });
 });
