@@ -210,7 +210,7 @@ values through the time helpers), Rückgängig / Bei mir auch löschen / Gelesen
 on the notice in its own words. The trip panel shows the members' booking totals.
 
 **Open for later**
-- Trip-level facts (name, dates) are not propagated; only the entry types (six, plus bus rides since forgejo#288).
+- Trip-level facts: the period syncs since forgejo#280 point 4, the name does not (see "Trip period" below).
 - Roadtrip stations, tour points and route membership stay unshared (S1 scope).
 - Writes without a transaction around them (stay create/update, accepted pending updates, the
   booking/assign routes) propagate in a transaction of their own right after the write; a
@@ -266,3 +266,25 @@ crossings are the eighth shareable type. Copy path, derivation, the per-call
 write-path guard, the vocabulary CHECKs, the superseded pending update and the
 trip page's single "Reisende" section are described in
 `2026-10-16-trip-sharing-rework-design.md`. Decisions 1–7 above stand unchanged.
+
+## Trip period (forgejo#280 point 4, owner 2026-10-27)
+
+The date range of a shared trip is a fact and syncs; the name does not — each member names
+their trip. `services/sharing/tripPeriod.ts`:
+
+- **What**: `startDate`, `endDate`, `startDay`, `endDay`, `startZone`, `endZone`, copied as
+  stored and applied as ONE set, so a member never ends up with a trip that ends before it
+  begins.
+- **Who writes it**: `PATCH /trips/:id` when the days changed, an accepted "extend the trip"
+  suggestion, and an accepted TravTrack trip question that widens a trip. Each calls
+  `propagateTripPeriod` inside its transaction.
+- **Who receives it**: `receivingMembers` — the same consent rule as entries. Each member's trip
+  takes the period (TravTrack lock and route narrowing as on an own edit, status re-derived) and
+  gets an `updated` notice of entity type `trip`, keyed by their own trip id, with `before` and
+  `after` facts; the inbox shows the changed days.
+- **Undo**: `POST /sharing/notices/:id/undo` restores the member's period while it still holds
+  what the change wrote (else 409 `SHARE_UNDO_STALE`), and propagates as their change.
+- **Not yet**: people on other servers — the federation messages carry no trip-level fact.
+  Automatic writers (an undated trip's span filled from its entries, TravPlan's mirror of an
+  empty plan) do not propagate; each account derives those from its own synced entries.
+
