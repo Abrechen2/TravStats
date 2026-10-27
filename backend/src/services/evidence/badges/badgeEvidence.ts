@@ -1,8 +1,7 @@
 import type { EvidenceScope } from "../../../shared/evidence";
 import type { EvidenceResponse } from "../../../schemas/evidence";
 import { BADGE_PROOF_TYPES, badgeProofKey } from "../../../shared/badgeEvidence";
-import { achievementCountries, badgePassportSources } from "../../../utils/achievementCountries";
-import { computeCoreStats, loadCoreInputs } from "../../../utils/achievementInputs";
+import { badgePassportSources } from "../../../utils/achievementCountries";
 import type { PagingParams } from "../paging";
 import { domainSumEvidence, requireLifetime } from "../domainMeasureResponse";
 import { distinctResponse, loadPassportEvidenceIndex, residual } from "../metricEvidencePassport";
@@ -59,37 +58,39 @@ async function resolveProof(
 }
 
 /**
- * The country badges count like the passport (`achievementCountries`), so
- * their evidence is the passport's records — every record that proves one of
- * the BADGE's countries, read from the badge's own sources (no track, no hidden
- * domain; a confirmed place counts since forgejo#299).
+ * The country and continent badges read the passport's ground-contact set
+ * (`achievementGeography`, forgejo#299), so their evidence is the passport's
+ * records — every record that proves one of the BADGE's countries, read from
+ * the badge's own sources (no track, no hidden domain), credited with the
+ * country or with that country's continent.
  */
-async function resolveCountries(
+async function resolveGeography(
+  type: "countries" | "continents",
   userId: string,
   scope: EvidenceScope,
   page: PagingParams
 ): Promise<EvidenceResponse> {
-  const key = badgeProofKey("countries");
+  const key = badgeProofKey(type);
   requireLifetime(scope, key);
-  const [inputs, index] = await Promise.all([
-    loadCoreInputs(userId),
-    badgePassportSources(userId).then((sources) => loadPassportEvidenceIndex(userId, sources)),
-  ]);
-  // The country set is the only measure read here; the trip count is not.
-  const { stats } = await computeCoreStats(inputs, {
-    countries: (floor) => achievementCountries(userId, floor),
-    tripsFullyDocumented: 0,
-  });
-  const counted = stats.countries;
-  // The index already reads the badge's own sources — no track, no hidden
-  // rail/roadtrip/bus — so every record here could have counted.
+  const sources = await badgePassportSources(userId);
+  const index = await loadPassportEvidenceIndex(userId, sources);
+  // The index carries the badge's passport: the same load, the same rows.
+  const ground = index.passport.countries.filter((c) => c.groundPresence);
+  const continentOf = new Map(ground.map((c) => [c.code, c.continent as string | null]));
+  const creditOf = (code: string): string[] => {
+    if (!continentOf.has(code)) return [];
+    if (type === "countries") return [code];
+    const continent = continentOf.get(code);
+    return continent ? [continent] : [];
+  };
+  const counted = new Set(ground.flatMap((c) => creditOf(c.code)));
   const entries = index.records
-    .map((r) => ({ ...r.entry, credits: [...r.countries].filter((c) => counted.has(c)).sort() }))
+    .map((r) => ({ ...r.entry, credits: [...new Set([...r.countries].flatMap(creditOf))].sort() }))
     .filter((e) => e.credits.length > 0);
   const credited = new Set(entries.flatMap((e) => e.credits));
   const response = distinctResponse(
     key,
-    "countries",
+    type,
     counted.size,
     scope,
     page,
@@ -109,8 +110,8 @@ type Resolver = (
 export const BADGE_RESOLVERS: Record<string, Resolver> = Object.fromEntries(
   BADGE_PROOF_TYPES.map((type): [string, Resolver] => [
     badgeProofKey(type),
-    type === "countries"
-      ? resolveCountries
+    type === "countries" || type === "continents"
+      ? (userId, scope, page) => resolveGeography(type, userId, scope, page)
       : (userId, scope, page) => resolveProof(type, userId, scope, page),
   ])
 );

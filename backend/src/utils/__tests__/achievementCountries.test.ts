@@ -6,10 +6,15 @@ import {
   updateInstanceSettings,
 } from "../../services/instanceSettingsService";
 import { loadPassport } from "../../services/stats/passportLoader";
-import { achievementCountries } from "../achievementCountries";
+import { achievementCountries, achievementGeography } from "../achievementCountries";
 import { checkAndUpdateAchievements } from "../achievements";
 
-/** Country badges share the passport visit rule, including confirmed places. */
+/**
+ * Country and continent badges read the passport's GROUND-CONTACT set
+ * (forgejo#299; owner ruling 2026-08-09, "count every country set foot in"):
+ * every passport row, connections and open chain ends included. Raw location
+ * history is never a row, so a single stray point earns nothing.
+ */
 
 const USER = "achievement-countries-evidence";
 const d = (day: string): Date => new Date(`${day}T00:00:00Z`);
@@ -133,9 +138,9 @@ describe("achievementCountries — the passport's evidence, the gates' visibilit
     await prisma.user.deleteMany({ where: { id: userId } });
   });
 
-  it("does not infer a visit from a one-way train ride (an open chain)", async () => {
+  it("counts both ends of a one-way train ride as ground contact", async () => {
     await ride("DE", "CH", "2025-03-01");
-    expect([...(await achievementCountries(userId, new Set()))].sort()).toEqual([]);
+    expect([...(await achievementCountries(userId, new Set()))].sort()).toEqual(["CH", "DE"]);
   });
 
   it("counts a country reached only on a roadtrip", async () => {
@@ -143,11 +148,12 @@ describe("achievementCountries — the passport's evidence, the gates' visibilit
     expect([...(await achievementCountries(userId, new Set()))]).toEqual(["NO"]);
   });
 
-  it("leaves rail and roadtrip evidence out while the instance's beta switch is off", async () => {
+  it("leaves roadtrip evidence out while the instance's beta switch is off", async () => {
+    // Rail left the beta registry; the roadtrip domain is still behind it.
     await ride("DE", "CH", "2025-03-01");
     await roadtripToNorway();
     await updateInstanceSettings({ betaFeaturesEnabled: false });
-    expect([...(await achievementCountries(userId, new Set()))]).toEqual([]);
+    expect([...(await achievementCountries(userId, new Set()))].sort()).toEqual(["CH", "DE"]);
   });
 
   it("leaves a domain out that the user switched off", async () => {
@@ -157,35 +163,27 @@ describe("achievementCountries — the passport's evidence, the gates' visibilit
     expect([...(await achievementCountries(userId, new Set()))]).toEqual(["NO"]);
   });
 
-  it("does not bypass visit evidence with a legacy union floor", async () => {
+  it("does not bypass ground evidence with a legacy union floor", async () => {
     expect([...(await achievementCountries(userId, new Set(["PT"])))]).toEqual([]);
   });
 
-  it("requires recorded visits for a country badge and never takes an unlock back", async () => {
+  it("earns a country badge from ground contact alone and never takes an unlock back", async () => {
     await ride("DE", "CH", "2025-03-01");
     await ride("CH", "IT", "2025-03-03");
     await ride("IT", "FR", "2025-03-05");
     await ride("FR", "BE", "2025-03-07");
 
-    await updateInstanceSettings({ betaFeaturesEnabled: false });
+    await enable(["flight"]);
     const hidden = await checkAndUpdateAchievements(userId);
     expect(hidden.map((a) => a.achievement.code)).not.toContain("COUNTRIES_5");
 
-    await updateInstanceSettings({ betaFeaturesEnabled: true });
-    // Train endpoints alone are ground contact. Confirm actual stays before
-    // testing the independent monotonic-unlock contract.
-    await prisma.lodging.createMany({
-      data: ["DE", "CH", "IT", "FR", "BE"].map((isoCountryCode) => ({
-        userId,
-        name: isoCountryCode,
-        isoCountryCode,
-        visited: true,
-      })),
-    });
+    await enable(["flight", "rail", "roadtrip"]);
+    // Train endpoints are ground contact, and ground contact is what the
+    // country badge counts — no stay needed (forgejo#299).
     const shown = await checkAndUpdateAchievements(userId);
     expect(shown.map((a) => a.achievement.code)).toContain("COUNTRIES_5");
 
-    await updateInstanceSettings({ betaFeaturesEnabled: false });
+    await enable(["flight"]);
     await checkAndUpdateAchievements(userId);
     const kept = await prisma.userAchievement.findFirst({
       where: { userId, achievement: { code: "COUNTRIES_5" } },
@@ -207,15 +205,14 @@ describe("achievementCountries — the passport's evidence, the gates' visibilit
     expect((await loadPassport(userId)).unconfirmedCountries.map((c) => c.code)).toContain("EE");
   });
 
-  it("does not let a track lift a flight connection over a threshold that excludes it", async () => {
+  it("counts a flight connection as ground contact, though not as a visit", async () => {
     await connectThroughDoha();
-    await trackDays("QA", "2024-03-01", "2024-03-02");
 
     const qaOnPassport = (await loadPassport(userId)).countries.find((c) => c.code === "QA");
     expect(qaOnPassport).toMatchObject({ tier: "connection", counted: false });
 
     const badges = await achievementCountries(userId, new Set());
-    expect([...badges].sort()).toEqual([]);
+    expect([...badges].sort()).toEqual(["DE", "QA", "SG"]);
   });
 
   it("counts a confirmed city visit during a stopover", async () => {
@@ -231,13 +228,37 @@ describe("achievementCountries — the passport's evidence, the gates' visibilit
       },
     });
 
-    expect([...(await achievementCountries(userId, new Set()))].sort()).toEqual(["QA"]);
+    expect([...(await achievementCountries(userId, new Set()))].sort()).toEqual(["DE", "QA", "SG"]);
   });
 
-  it("does not infer a visit from an incomplete flight chain", async () => {
+  it("lets no location-history country into the set, however many days it has", async () => {
     await connectThroughDoha();
-    await trackDays("SG", "2024-03-01", "2024-03-02");
+    await trackDays("SY", "2024-03-01", "2024-03-02");
 
-    expect([...(await achievementCountries(userId, new Set()))].sort()).toEqual([]);
+    expect([...(await achievementCountries(userId, new Set()))]).not.toContain("SY");
+  });
+
+  it("reads the continents of the ground-contact rows", async () => {
+    await connectThroughDoha();
+    await trackDays("KE", "2024-03-01", "2024-03-02");
+
+    const geography = await achievementGeography(userId);
+    expect([...geography.continents].sort()).toEqual(["Asia", "Europe"]);
+  });
+
+  it("earns a continent badge from a house on a third continent, not from a stray point", async () => {
+    await connectThroughDoha();
+    await trackDays("BR", "2024-03-05", "2024-03-06");
+    expect((await checkAndUpdateAchievements(userId)).map((a) => a.achievement.code)).not.toContain(
+      "CONTINENTS_3"
+    );
+
+    // A night in Nairobi is ground contact in Africa. The continent badge used
+    // to read airports and ports only, so a house never moved it.
+    await prisma.lodging.create({
+      data: { userId, name: "Nairobi", isoCountryCode: "KE", visited: true },
+    });
+    const unlocked = await checkAndUpdateAchievements(userId);
+    expect(unlocked.map((a) => a.achievement.code)).toContain("CONTINENTS_3");
   });
 });

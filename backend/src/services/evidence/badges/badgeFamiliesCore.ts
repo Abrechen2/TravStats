@@ -185,10 +185,10 @@ export function coreArraysFor(requirementType: string): CoreArray[] | null {
   if (CRUISE_RULES.includes(requirementType)) return ["cruises"];
   if (LODGING_RULES.includes(requirementType)) return ["lodgingStays"];
   if (PLACE_RULES.includes(requirementType)) return ["places"];
-  // Continents join airports and ports; the ±7-day badge a flight and a cruise.
-  if (requirementType === "continents" || requirementType === "fly_and_sail_7d") {
-    return ["flights", "cruises"];
-  }
+  // The ±7-day badge joins a flight and a cruise. `continents` is not here:
+  // it reads the passport's ground-contact set and has its own evidence
+  // (`badgeEvidence.ts`), like `countries` (forgejo#299).
+  if (requirementType === "fly_and_sail_7d") return ["flights", "cruises"];
   if (requirementType === "fly_and_stay" || requirementType === "grand_tour") return ["trips"];
   return null;
 }
@@ -200,7 +200,6 @@ export const CORE_REQUIREMENT_TYPES: readonly string[] = [
   ...CRUISE_RULES,
   ...LODGING_RULES,
   ...PLACE_RULES,
-  "continents",
   "fly_and_sail_7d",
   "fly_and_stay",
   "grand_tour",

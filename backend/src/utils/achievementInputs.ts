@@ -175,6 +175,12 @@ export type CoreInputs = Awaited<ReturnType<typeof loadCoreInputs>>;
 export interface CoreDeps {
   /** The badge country set over the union floor — `achievementCountries` in the live check. */
   countries: (unionFloor: ReadonlySet<string>) => Promise<Set<string>>;
+  /**
+   * The badge continent set — the passport's ground-contact continents in the
+   * live check (`achievementGeography`). Absent, the airport-and-port union is
+   * used: the evidence families pass no passport and measure other badges.
+   */
+  continents?: (unionFloor: ReadonlySet<string>) => Promise<Set<string>>;
   /** The cross-domain fully documented trips (`crossDomainAchievements.ts`). */
   tripsFullyDocumented: number;
   /** "Now" in ms, for the planner measures; defaults to the clock. */
@@ -464,6 +470,9 @@ export async function computeCoreStats(
   // The badge set counts like the passport (`achievementCountries` in the
   // live check); the union above is its floor.
   const finalCountries = await deps.countries(unionedCountries);
+  const finalContinents = deps.continents
+    ? await deps.continents(combinedContinents)
+    : combinedContinents;
 
   const augmentedStats: UserStats = {
     ...stats,
@@ -476,7 +485,7 @@ export async function computeCoreStats(
     scheduled30d,
     // Countries + continents now include cruise ports + lodging stays for shared achievements
     countries: finalCountries,
-    continents: combinedContinents,
+    continents: finalContinents,
     // Cruise stats
     cruisesCount: cruiseStats.cruisesCount,
     cruisePortsUnique: cruiseStats.cruisePortsUnique,

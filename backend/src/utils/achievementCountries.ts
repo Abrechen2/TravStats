@@ -19,16 +19,40 @@ export async function badgePassportSources(userId: string): Promise<PassportSour
   };
 }
 
+/** The ground-contact set the country and continent badges count. */
+export interface AchievementGeography {
+  countries: Set<string>;
+  continents: Set<string>;
+}
+
 /**
- * Country badges use the passport's confirmed visits (forgejo#299).
- * A confirmed place counts; a transit or raw location observation does not.
- * Legacy union-only countries cannot bypass this evidence requirement.
- * Optional beta domains still respect their visibility gates.
+ * Country and continent badges read the passport's GROUND-CONTACT set
+ * (forgejo#299; owner ruling 2026-08-09, "count every country set foot in"):
+ * every passport row — connections, drive-throughs and open chain ends
+ * included, the user's overrides applied. "Land besucht" is the passport's
+ * stricter headline and is not what a badge counts.
+ *
+ * What keeps a phantom out is the passport itself: raw location history is
+ * never a row (`track: false` here, and the passport refuses it as proof
+ * anyway), so the single Syria point earns no country and no continent.
+ *
+ * A row carries ONE continent, so a transcontinental country counts the
+ * continent its row is filed under — a flight to Vladivostok after one to
+ * Moscow no longer adds Asia, which the airport-by-airport rule did.
  */
+export async function achievementGeography(userId: string): Promise<AchievementGeography> {
+  const passport = await loadPassport(userId, undefined, await badgePassportSources(userId));
+  const ground = passport.countries.filter((c) => c.groundPresence);
+  return {
+    countries: new Set(ground.map((c) => c.code)),
+    continents: new Set(ground.flatMap((c) => (c.continent ? [c.continent as string] : []))),
+  };
+}
+
+/** The badge country set — `achievementGeography(...).countries`. The floor is not read. */
 export async function achievementCountries(
   userId: string,
   _unionFloor: ReadonlySet<string>
 ): Promise<Set<string>> {
-  const passport = await loadPassport(userId, undefined, await badgePassportSources(userId));
-  return new Set(passport.countries.filter((c) => c.counted).map((c) => c.code));
+  return (await achievementGeography(userId)).countries;
 }

@@ -70,7 +70,7 @@ export const seedsPartH: AchievementDefinition[] = [
   {
     code: "PLACE_CONTINENTS_3",
     name: "Drei Kontinente",
-    description: "Orte auf 3 Kontinenten besucht",
+    description: "Orte auf 3 Kontinenten",
     category: "explorer",
     domain: "poi",
     icon: "🌍",
@@ -82,7 +82,7 @@ export const seedsPartH: AchievementDefinition[] = [
   {
     code: "PLACE_CONTINENTS_5",
     name: "Fünf Kontinente",
-    description: "Orte auf 5 Kontinenten besucht",
+    description: "Orte auf 5 Kontinenten",
     category: "explorer",
     domain: "poi",
     icon: "🌏",
@@ -94,7 +94,7 @@ export const seedsPartH: AchievementDefinition[] = [
   {
     code: "PLACE_CONTINENTS_7",
     name: "Alle Kontinente",
-    description: "Orte auf allen 7 Kontinenten besucht — Antarktis eingeschlossen",
+    description: "Orte auf allen 7 Kontinenten — Antarktis eingeschlossen",
     category: "elite",
     domain: "poi",
     icon: "🗺",
@@ -236,7 +236,7 @@ export const seedsPartH: AchievementDefinition[] = [
   {
     code: "PLACE_COUNTRIES_YEAR_5",
     name: "Fünf Länder in einem Jahr",
-    description: "In einem Kalenderjahr Orte in 5 Ländern besucht",
+    description: "Orte in 5 Ländern innerhalb eines Kalenderjahres",
     category: "explorer",
     domain: "poi",
     icon: "🛂",

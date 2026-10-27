@@ -112,4 +112,37 @@ describe("countries badge evidence reads the badge's own sources", () => {
     ]);
     expect(res.unattributed).toEqual([]);
   });
+
+  it("lists a rest-stop place as ground contact for the badge (forgejo#299)", async () => {
+    // A service area is ground contact, not a visit: the passport keeps it out
+    // of "Land besucht", the badge, which counts ground contact, keeps it in.
+    await prisma.place.create({
+      data: {
+        userId,
+        name: "Raststätte Irschenberg",
+        category: "service_area",
+        lat: 47.83,
+        lon: 11.92,
+        isoCountryCode: "AT",
+        visited: true,
+      },
+    });
+
+    const res = await evidence();
+
+    expect(res.measure.value).toBe(1);
+    expect(res.entries.map((e) => [e.domain, e.credits])).toEqual([["place", ["AT"]]]);
+  });
+
+  it("lists the continent of every ground-contact record for the continent badge", async () => {
+    await houseIn("DE");
+    await houseIn("KE");
+
+    const res = await resolveMetricEvidence(userId, badgeProofKey("continents"), ALL, PAGE);
+    if (!res) throw new Error("continents badge evidence is not served");
+
+    expect(res.measure).toMatchObject({ aggregation: "distinct", unit: "continents", value: 2 });
+    expect(res.entries.map((e) => e.credits).sort()).toEqual([["Africa"], ["Europe"]]);
+    expect(res.unattributed).toEqual([]);
+  });
 });

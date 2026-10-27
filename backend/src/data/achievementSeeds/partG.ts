@@ -58,7 +58,7 @@ export const seedsPartG: AchievementDefinition[] = [
   {
     code: "PLACE_COUNTRIES_10",
     name: "Zehn Länder, zehn Orte",
-    description: "Besuchte Orte in 10 verschiedenen Ländern",
+    description: "Orte in 10 verschiedenen Ländern",
     category: "explorer",
     domain: "poi",
     icon: "🌐",
@@ -70,7 +70,7 @@ export const seedsPartG: AchievementDefinition[] = [
   {
     code: "PLACE_COUNTRIES_25",
     name: "Überall ein Lieblingsplatz",
-    description: "Besuchte Orte in 25 verschiedenen Ländern",
+    description: "Orte in 25 verschiedenen Ländern",
     category: "explorer",
     domain: "poi",
     icon: "🧭",
