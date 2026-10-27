@@ -33,7 +33,7 @@ import type { CruiseCall, CruiseInsightRow } from "./rows";
 import type { TourFacts } from "../../../utils/tourInsights/tourFacts";
 
 /** How far from the port a tour may start and still be that call's excursion. */
-export const EXCURSION_LINK_KM = 100; // threshold: proposal forgejo#257, owner to confirm
+export const EXCURSION_LINK_KM = 100; // threshold: forgejo#257, confirmed by the owner 2026-10-27 (forgejo#280)
 
 /** Activities measured on foot — the "walking distance" of the issue. */
 const ON_FOOT = new Set(["hike", "walk", "run", "climb"]);

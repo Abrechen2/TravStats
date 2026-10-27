@@ -27,8 +27,8 @@ import { isSeaDay } from "../../../shared/cruiseKind";
 import type { CruiseInsightRow } from "./rows";
 import { daysBetween } from "./rows";
 
-export const SEA_HEAVY_SHARE = 0.5; // threshold: proposal forgejo#257, owner to confirm
-export const PORT_INTENSIVE_SHARE = 0.2; // threshold: proposal forgejo#257, owner to confirm
+export const SEA_HEAVY_SHARE = 0.5; // threshold: forgejo#257, confirmed by the owner 2026-10-27 (forgejo#280)
+export const PORT_INTENSIVE_SHARE = 0.2; // threshold: forgejo#257, confirmed by the owner 2026-10-27 (forgejo#280)
 export const MIN_CLASSIFIED_DAYS = 2;
 
 export type CruiseType = "seaHeavy" | "balanced" | "portIntensive";

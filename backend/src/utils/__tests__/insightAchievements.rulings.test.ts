@@ -6,7 +6,8 @@ import { row } from "../../services/stats/flightInsights/__tests__/fixtures";
 import { call, cruise } from "../../services/stats/cruiseInsights/__tests__/fixtures";
 
 /**
- * Owner rulings of 2026-10-09 on two of the proposal badges (forgejo#256/#257).
+ * Owner rulings of 2026-10-09 on two of the statistics-expansion badges
+ * (forgejo#256/#257); the rest were approved as proposed on 2026-10-27 (forgejo#280).
  */
 describe("NEW_GROUND_YEAR leaves the first recorded year out", () => {
   it("does not count the year where every airport is new by definition", () => {

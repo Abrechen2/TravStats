@@ -6,8 +6,10 @@ import type { AchievementDefinition } from "../achievements";
  * the same computation the statistics tab draws (`services/stats/insights`),
  * so a badge and the figure beside it can never disagree.
  *
- * EVERY THRESHOLD HERE IS A PRODUCT PROPOSAL from the 2026-10-08 audit and is
- * marked so; the owner confirms or changes them. Each was compared with the
+ * The thresholds come from the 2026-10-08 audit. Those of forgejo#258 and
+ * forgejo#259 are the rule (owner, 2026-10-27, forgejo#280); those of
+ * forgejo#260 and forgejo#264 are still proposals and marked so, until the
+ * owner confirms them. Each was compared with the
  * existing catalogue first: none duplicates a rule — the nearest ones
  * (LODGING_TYPES_*, RETURNER_*, PLACE_CATEGORIES_*) count over a lifetime or
  * count stays, where these count within one trip, across calendar years, or
@@ -27,7 +29,7 @@ export const seedsPartK: AchievementDefinition[] = [
     domain: "lodging",
     icon: "🛏️",
     tier: "silver",
-    // threshold: proposal forgejo#258, owner to confirm
+    // threshold: forgejo#258, confirmed by the owner 2026-10-27 (forgejo#280)
     requirement: 4,
     requirementType: "lodging_trip_types_max",
     points: 60,
@@ -40,7 +42,7 @@ export const seedsPartK: AchievementDefinition[] = [
     domain: "lodging",
     icon: "🗝️",
     tier: "gold",
-    // threshold: proposal forgejo#258, owner to confirm
+    // threshold: forgejo#258, confirmed by the owner 2026-10-27 (forgejo#280)
     requirement: 5,
     requirementType: "lodging_same_house_years",
     points: 100,
@@ -53,7 +55,7 @@ export const seedsPartK: AchievementDefinition[] = [
     domain: "lodging",
     icon: "🗓️",
     tier: "gold",
-    // threshold: proposal forgejo#258, owner to confirm
+    // threshold: forgejo#258, confirmed by the owner 2026-10-27 (forgejo#280)
     requirement: 12,
     requirementType: "lodging_months_in_year",
     points: 120,
@@ -66,7 +68,7 @@ export const seedsPartK: AchievementDefinition[] = [
     domain: "poi",
     icon: "🔁",
     tier: "silver",
-    // threshold: proposal forgejo#259, owner to confirm
+    // threshold: forgejo#259, confirmed by the owner 2026-10-27 (forgejo#280)
     requirement: 5,
     requirementType: "place_revisit_gap_years",
     points: 60,
@@ -79,7 +81,7 @@ export const seedsPartK: AchievementDefinition[] = [
     domain: "poi",
     icon: "🎨",
     tier: "silver",
-    // threshold: proposal forgejo#259, owner to confirm
+    // threshold: forgejo#259, confirmed by the owner 2026-10-27 (forgejo#280)
     requirement: 5,
     requirementType: "place_trip_categories_max",
     points: 60,
@@ -92,7 +94,7 @@ export const seedsPartK: AchievementDefinition[] = [
     domain: "poi",
     icon: "📓",
     tier: "bronze",
-    // threshold: proposal forgejo#259, owner to confirm
+    // threshold: forgejo#259, confirmed by the owner 2026-10-27 (forgejo#280)
     requirement: 10,
     requirementType: "place_documented_visits",
     points: 30,

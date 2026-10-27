@@ -28,9 +28,9 @@ import type { ConnectionFlight, YearConnections } from "./connections";
 import type { YearTransfers } from "./transfers";
 
 /** A return counts as the year's curiosity from one whole year away. */
-export const STORY_REUNION_MIN_YEARS = 1; // threshold: proposal forgejo#256, owner to confirm
+export const STORY_REUNION_MIN_YEARS = 1; // threshold: forgejo#256, confirmed by the owner 2026-10-27 (forgejo#280)
 /** A connection counts as the year's curiosity from three flights on it. */
-export const STORY_CONNECTION_MIN_FLIGHTS = 3; // threshold: proposal forgejo#256, owner to confirm
+export const STORY_CONNECTION_MIN_FLIGHTS = 3; // threshold: forgejo#256, confirmed by the owner 2026-10-27 (forgejo#280)
 
 export interface YearFigures {
   year: number;
