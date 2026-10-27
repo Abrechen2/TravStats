@@ -49,7 +49,13 @@ describe("every badge rule names its evidence", () => {
   });
 
   it("measures every proof in a family of the badge's own fold", () => {
-    const answered = new Set([...CORE_REQUIREMENT_TYPES, ...DOMAIN_REQUIREMENT_TYPES, "countries"]);
+    // `countries` and `continents` read the passport and have their own evidence.
+    const answered = new Set([
+      ...CORE_REQUIREMENT_TYPES,
+      ...DOMAIN_REQUIREMENT_TYPES,
+      "countries",
+      "continents",
+    ]);
     expect(
       BADGE_PROOF_TYPES.filter(
         (type) => !answered.has(type) && !type.startsWith("curated_list_ticked:")

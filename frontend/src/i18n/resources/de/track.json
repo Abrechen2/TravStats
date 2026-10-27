@@ -382,7 +382,7 @@
       "photosHint": "Aus Immich, auf der Strecke eingeordnet",
       "dayOnly": "Nur in der Tages- und 7-Tage-Ansicht",
       "countries": "Länder",
-      "countriesHint": "Besuchte Länder der Monate, die der Zeitraum berührt"
+      "countriesHint": "Länder mit Standortpunkten in den Monaten, die der Zeitraum berührt – kein Beleg für einen Besuch"
     },
     "route": {
       "title": "Strecken",

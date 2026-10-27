@@ -9,7 +9,7 @@ import {
   type UserAchievementWithRelation,
 } from "./achievementWrites";
 import type { FlightData } from "./achievementStats";
-import { achievementCountries } from "./achievementCountries";
+import { achievementGeography, type AchievementGeography } from "./achievementCountries";
 // Loading and folding the core measures live in `achievementInputs.ts`, so the
 // badge evidence can fold subsets of the same rows (forgejo#265).
 import { computeCoreStats, loadCoreInputs } from "./achievementInputs";
@@ -141,6 +141,8 @@ async function runAchievementCheck(
 
     const inputs = await loadCoreInputs(userId);
     const { flights, cruises } = inputs;
+    let geographyLoad: Promise<AchievementGeography> | null = null;
+    const geography = () => (geographyLoad ??= achievementGeography(userId));
     // Rental, bus and the cross-domain trip badges (forgejo#262/#263/#265).
     const domainBadges = await loadDomainAchievementChecks(userId);
     const {
@@ -148,9 +150,11 @@ async function runAchievementCheck(
       cruiseStatsInput,
       userBirthday,
     } = await computeCoreStats(inputs, {
-      // The badge set counts like the passport — `achievementCountries` holds
-      // the rule and says why; the union is its floor.
-      countries: (unionFloor) => achievementCountries(userId, unionFloor),
+      // Country and continent badges read the passport's ground-contact set —
+      // `achievementGeography` holds the rule and says why. One passport load
+      // serves both.
+      countries: () => geography().then((g) => g.countries),
+      continents: () => geography().then((g) => g.continents),
       tripsFullyDocumented: domainBadges.crossDomain?.tripsFullyDocumented ?? 0,
     });
 

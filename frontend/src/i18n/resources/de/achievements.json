@@ -128,11 +128,11 @@
     },
     "PLACE_COUNTRIES_10": {
       "name": "Zehn Länder, zehn Orte",
-      "description": "Besuchte Orte in 10 verschiedenen Ländern"
+      "description": "Orte in 10 verschiedenen Ländern"
     },
     "PLACE_COUNTRIES_25": {
       "name": "Überall ein Lieblingsplatz",
-      "description": "Besuchte Orte in 25 verschiedenen Ländern"
+      "description": "Orte in 25 verschiedenen Ländern"
     },
     "PLACE_VISITS_100": {
       "name": "Stammgast",
@@ -212,23 +212,23 @@
     },
     "COUNTRIES_5": {
       "name": "Reisepass-Starter",
-      "description": "Besuche 5 verschiedene Länder"
+      "description": "In 5 verschiedenen Ländern am Boden gewesen"
     },
     "COUNTRIES_10": {
       "name": "Internationaler Reisender",
-      "description": "Besuche 10 verschiedene Länder"
+      "description": "In 10 verschiedenen Ländern am Boden gewesen"
     },
     "COUNTRIES_25": {
       "name": "Weltentdecker",
-      "description": "Besuche 25 verschiedene Länder"
+      "description": "In 25 verschiedenen Ländern am Boden gewesen"
     },
     "COUNTRIES_50": {
       "name": "Weltbürger",
-      "description": "Besuche 50 verschiedene Länder"
+      "description": "In 50 verschiedenen Ländern am Boden gewesen"
     },
     "COUNTRIES_100": {
       "name": "Meister der Nationen",
-      "description": "Besuche 100 verschiedene Länder"
+      "description": "In 100 verschiedenen Ländern am Boden gewesen"
     },
     "AIRLINES_5": {
       "name": "Airline-Tester",
@@ -268,15 +268,15 @@
     },
     "CONTINENTS_3": {
       "name": "Drei-Kontinente-Reisender",
-      "description": "Besuche Flughäfen auf 3 verschiedenen Kontinenten"
+      "description": "Auf 3 verschiedenen Kontinenten am Boden gewesen"
     },
     "CONTINENTS_5": {
       "name": "Fünf-Kontinente-Club",
-      "description": "Besuche Flughäfen auf 5 verschiedenen Kontinenten"
+      "description": "Auf 5 verschiedenen Kontinenten am Boden gewesen"
     },
     "CONTINENTS_7": {
       "name": "Sieben-Kontinente-Meister",
-      "description": "Besuche Flughäfen auf allen 7 Kontinenten"
+      "description": "Auf allen 7 Kontinenten am Boden gewesen"
     },
     "AIRCRAFT_5": {
       "name": "Flugzeug-Enthusiast",
@@ -1116,15 +1116,15 @@
     },
     "PLACE_CONTINENTS_3": {
       "name": "Drei Kontinente",
-      "description": "Orte auf 3 Kontinenten besucht"
+      "description": "Orte auf 3 Kontinenten"
     },
     "PLACE_CONTINENTS_5": {
       "name": "Fünf Kontinente",
-      "description": "Orte auf 5 Kontinenten besucht"
+      "description": "Orte auf 5 Kontinenten"
     },
     "PLACE_CONTINENTS_7": {
       "name": "Alle Kontinente",
-      "description": "Orte auf allen 7 Kontinenten besucht — Antarktis eingeschlossen"
+      "description": "Orte auf allen 7 Kontinenten — Antarktis eingeschlossen"
     },
     "PLACE_CATEGORIES_4": {
       "name": "Vielseitig",
@@ -1168,7 +1168,7 @@
     },
     "PLACE_COUNTRIES_YEAR_5": {
       "name": "Fünf Länder in einem Jahr",
-      "description": "In einem Kalenderjahr Orte in 5 Ländern besucht"
+      "description": "Orte in 5 Ländern innerhalb eines Kalenderjahres"
     },
     "PLACE_RATED_10": {
       "name": "Kritiker",

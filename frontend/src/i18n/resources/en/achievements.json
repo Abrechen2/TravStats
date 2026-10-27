@@ -128,11 +128,11 @@
     },
     "PLACE_COUNTRIES_10": {
       "name": "Ten Countries, Ten Places",
-      "description": "Visited places in 10 different countries"
+      "description": "Places in 10 different countries"
     },
     "PLACE_COUNTRIES_25": {
       "name": "A Favourite Spot Everywhere",
-      "description": "Visited places in 25 different countries"
+      "description": "Places in 25 different countries"
     },
     "PLACE_VISITS_100": {
       "name": "Regular",
@@ -212,23 +212,23 @@
     },
     "COUNTRIES_5": {
       "name": "Passport Starter",
-      "description": "Visit 5 different countries"
+      "description": "Set foot in 5 different countries"
     },
     "COUNTRIES_10": {
       "name": "International Traveler",
-      "description": "Visit 10 different countries"
+      "description": "Set foot in 10 different countries"
     },
     "COUNTRIES_25": {
       "name": "World Explorer",
-      "description": "Visit 25 different countries"
+      "description": "Set foot in 25 different countries"
     },
     "COUNTRIES_50": {
       "name": "Global Citizen",
-      "description": "Visit 50 different countries"
+      "description": "Set foot in 50 different countries"
     },
     "COUNTRIES_100": {
       "name": "Master of Nations",
-      "description": "Visit 100 different countries"
+      "description": "Set foot in 100 different countries"
     },
     "AIRLINES_5": {
       "name": "Airline Sampler",
@@ -268,15 +268,15 @@
     },
     "CONTINENTS_3": {
       "name": "Tri-Continental",
-      "description": "Visit airports on 3 different continents"
+      "description": "Set foot on 3 different continents"
     },
     "CONTINENTS_5": {
       "name": "Five Continents Club",
-      "description": "Visit airports on 5 different continents"
+      "description": "Set foot on 5 different continents"
     },
     "CONTINENTS_7": {
       "name": "Seven Continents Master",
-      "description": "Visit airports on all 7 continents"
+      "description": "Set foot on all 7 continents"
     },
     "AIRCRAFT_5": {
       "name": "Aircraft Enthusiast",
@@ -1116,15 +1116,15 @@
     },
     "PLACE_CONTINENTS_3": {
       "name": "Three continents",
-      "description": "Visited places on 3 continents"
+      "description": "Places on 3 continents"
     },
     "PLACE_CONTINENTS_5": {
       "name": "Five continents",
-      "description": "Visited places on 5 continents"
+      "description": "Places on 5 continents"
     },
     "PLACE_CONTINENTS_7": {
       "name": "Every continent",
-      "description": "Visited places on all 7 continents — Antarctica included"
+      "description": "Places on all 7 continents — Antarctica included"
     },
     "PLACE_CATEGORIES_4": {
       "name": "Well rounded",
@@ -1168,7 +1168,7 @@
     },
     "PLACE_COUNTRIES_YEAR_5": {
       "name": "Five countries in a year",
-      "description": "Visited places in 5 countries within one calendar year"
+      "description": "Places in 5 countries within one calendar year"
     },
     "PLACE_RATED_10": {
       "name": "Critic",

@@ -303,7 +303,7 @@ export async function loadPassport(
     readPlace
       ? prisma.place.findMany({
           where: { userId, visited: true, isoCountryCode: { not: null } },
-          select: { countryVisitKind: true, isoCountryCode: true, visits: { select: { visitedAt: true, visitedAtUtc: true, visitedZone: true } } },
+          select: { countryVisitKind: true, category: true, isoCountryCode: true, visits: { select: { visitedAt: true, visitedAtUtc: true, visitedZone: true } } },
         })
       : [],
     /**
@@ -420,12 +420,14 @@ export async function loadPassport(
         ? happened.map((v) => ({
             isoCountryCode: place.isoCountryCode,
             countryVisitKind: place.countryVisitKind,
+            category: place.category,
             at: placeVisitAt(v),
           }))
         : [
             {
               isoCountryCode: place.isoCountryCode,
               countryVisitKind: place.countryVisitKind,
+              category: place.category,
               at: null,
             },
           ];

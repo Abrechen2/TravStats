@@ -382,7 +382,7 @@
       "photosHint": "From Immich, placed on the track",
       "dayOnly": "Only in the day and 7-day views",
       "countries": "Countries",
-      "countriesHint": "Visited countries of the months the range touches"
+      "countriesHint": "Countries with location points in the months the range touches – no proof of a visit"
     },
     "route": {
       "title": "Routes",

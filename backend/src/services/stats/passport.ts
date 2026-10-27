@@ -16,6 +16,7 @@ import {
   type Continent,
 } from "../../utils/continents";
 import { CONTINENT_GROUPS } from "../../shared/passportContinents";
+import { placeCountsAsTransit } from "../../shared/placeCategories";
 import {
   DEFAULT_COUNTRY_TIER,
   countCountries,
@@ -80,6 +81,8 @@ export interface PassportPortCall {
 /** A place the user recorded visiting, with its country already resolved. */
 export interface PassportPlaceVisit {
   countryVisitKind?: string;
+  /** The place's category; a transit category (`placeCountsAsTransit`) is ground contact only. */
+  category?: string | null;
   isoCountryCode: string | null;
   at: Date | null;
 }
@@ -639,7 +642,7 @@ export function buildPassport(
     ...placeVisits.map((visit): EvidenceInput => ({
       country: visit.isoCountryCode,
       kind: "place",
-      tier: visit.countryVisitKind === "transit" ? "transited" : "visited",
+      tier: placeCountsAsTransit(visit) ? "transited" : "visited",
       at: visit.at,
     })),
     ...lodgingInputs,

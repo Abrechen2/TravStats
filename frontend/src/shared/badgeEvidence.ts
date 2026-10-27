@@ -30,7 +30,9 @@ export const BADGE_MEASURE_KEYS: Record<string, string> = {
   distance_km: "distanceKmTotal",
   airlines: "airlineCount",
   airports: "airportsVisitedCount",
-  continents: "continentsVisitedCount",
+  // `continents` is ABSENT since forgejo#299: the badge reads the passport's
+  // ground-contact continents, which no flight measure lists. It opens its
+  // own proof, like `countries` below.
   // `countries` is ABSENT, and that is the second condition above doing its
   // job. The rule folds each airport's country through `toCountryCode` and
   // drops the catalogue's placeholder codes ("ZZ", "XZ" -- they name no
@@ -113,6 +115,7 @@ export const BADGE_PROOF_TYPES: readonly string[] = [
   "cancelled_count",
   "carnival_brands_all",
   "consecutive_months",
+  "continents",
   "countries",
   "cruise_birthday_at_sea",
   "cruise_cabin_balcony",

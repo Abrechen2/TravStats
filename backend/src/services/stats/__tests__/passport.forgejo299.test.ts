@@ -124,6 +124,17 @@ describe("forgejo#299 acceptance: ground presence vs. visit", () => {
     expect(row(p, "CH")).toMatchObject({ groundPresence: true, visited: false });
   });
 
+  it("a place in the service-area category is ground presence only, without the manual flag", () => {
+    // Criterion 9: the kind of place decides. A restaurant at a motorway
+    // service area is not a visit of the country, so the category carries
+    // the transit verdict on its own.
+    const p = passport({
+      places: [{ isoCountryCode: "AT", at: new Date("2026-08-01"), category: "service_area" }],
+    });
+
+    expect(row(p, "AT")).toMatchObject({ groundPresence: true, visited: false });
+  });
+
   it("a confirmed place visit is a visit", () => {
     const p = passport({ places: [{ isoCountryCode: "ES", at: new Date("2024-05-01") }] });
 

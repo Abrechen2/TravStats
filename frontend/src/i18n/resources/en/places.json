@@ -7,6 +7,7 @@
     "entertainment": "Entertainment",
     "shopping": "Shopping",
     "viewpoint": "Viewpoint",
+    "service_area": "Service area / fuel station",
     "other": "Other"
   },
   "list": {
@@ -98,7 +99,8 @@
     "countryVisitKind": "Stay purpose for country counts",
     "countryVisit": "Visit beyond a transit stop",
     "countryTransit": "Transit / airport / rest area only",
-    "countryVisitHint": "A transit stop counts as ground presence, even overnight. The place name does not determine this."
+    "countryVisitHint": "A transit stop counts as ground presence, even overnight. The place name does not determine this.",
+    "countryTransitByCategory": "A service area or fuel station always counts as ground presence, never as a visit of the country. If you really visited something there, change the category."
   },
   "detail": {
     "backToList": "Back to the list",

@@ -16,6 +16,7 @@
  * silently placing them on a day would invent a fact.
  */
 
+import { isCollectiblePlaceCategory } from "../../shared/placeCategories";
 import { classifyPlace, classifyVisit } from "../../shared/placeCounting";
 import { busiestDay as pickBusiestDay, longestRun } from "../../shared/placeRhythm";
 import type { Place, PlaceVisit } from "../../types/place";
@@ -134,7 +135,8 @@ export function derivePoiStats(
     const country = place.isoCountryCode?.toUpperCase();
     if (country) bump(countries, country);
     if (place.city) bump(cities, place.city);
-    bump(categories, place.category);
+    // A transit category is no category collected (forgejo#299), as in the badge.
+    if (isCollectiblePlaceCategory(place.category)) bump(categories, place.category);
 
     if (northernmost === null || place.lat > northernmost.lat) northernmost = place;
     if (southernmost === null || place.lat < southernmost.lat) southernmost = place;

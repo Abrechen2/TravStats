@@ -133,6 +133,43 @@ describe("Photon place search", () => {
     expect(categoryFromOsmValue(results[0].type)).toBe("landmark");
   });
 
+  // forgejo#299 criterion 9: a service area or a fuel station is a stop, not a
+  // visit, and the category is what carries that verdict into the passport.
+  it("categorises motorway services, rest areas and fuel stations as a service area", async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse(
+        featureCollection([
+          {
+            properties: {
+              name: "Raststätte Irschenberg",
+              osm_key: "highway",
+              osm_value: "services",
+            },
+            geometry: { coordinates: [11.92, 47.83] },
+          },
+          {
+            properties: {
+              name: "Rastplatz Holzkirchen",
+              osm_key: "highway",
+              osm_value: "rest_area",
+            },
+            geometry: { coordinates: [11.7, 47.88] },
+          },
+          {
+            properties: { name: "Aral", osm_key: "amenity", osm_value: "fuel" },
+            geometry: { coordinates: [11.5, 48.1] },
+          },
+        ])
+      )
+    );
+    const results = await searchPlaces("Irschenberg");
+    expect(results.map((r) => categoryFromOsmValue(r.type))).toEqual([
+      "service_area",
+      "service_area",
+      "service_area",
+    ]);
+  });
+
   it("lists a place once when the geocoder returns it twice", async () => {
     const sagrada = (lon: number) => ({
       properties: {

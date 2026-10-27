@@ -52,7 +52,7 @@ describe("badge proofs on the demo account", () => {
       const reference = stored.get(type) ?? { progress: 0, requirement: Infinity };
       const res = await resolveMetricEvidence(userId, badgeProofKey(type), ALL, PAGE);
       if (!res) throw new Error(`${type} is not served`);
-      if (type === "countries") assertDistinctInvariant(res);
+      if (type === "countries" || type === "continents") assertDistinctInvariant(res);
       else assertSumInvariant(res, Math.round);
       const value = res.measure.value ?? 0;
       const held = reference.progress >= reference.requirement;
@@ -76,7 +76,8 @@ describe("badge proofs on the demo account", () => {
   // family that declares per-row shares must have them add up.
   it("folds without a single query, and declared shares add up to the progress", async () => {
     const queries: string[] = [];
-    for (const type of BADGE_PROOF_TYPES.filter((t) => t !== "countries")) {
+    // The passport-read proofs have no fold of their own (forgejo#299).
+    for (const type of BADGE_PROOF_TYPES.filter((t) => t !== "countries" && t !== "continents")) {
       const rule = { requirementType: type, requirement: 1 };
       const family = await loadBadgeFamily(userId, rule, coreArraysFor(type));
       if (!family) throw new Error(`${type} has no family`);

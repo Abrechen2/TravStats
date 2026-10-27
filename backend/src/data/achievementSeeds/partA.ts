@@ -174,7 +174,7 @@ export const seedsPartA: AchievementDefinition[] = [
   {
     code: "COUNTRIES_5",
     name: "Passport Starter",
-    description: "Visit 5 different countries",
+    description: "Set foot in 5 different countries",
     category: "collector",
     domain: "shared",
     icon: "🗺️",
@@ -186,7 +186,7 @@ export const seedsPartA: AchievementDefinition[] = [
   {
     code: "COUNTRIES_10",
     name: "International Traveler",
-    description: "Visit 10 different countries",
+    description: "Set foot in 10 different countries",
     category: "collector",
     domain: "shared",
     icon: "🌐",
@@ -198,7 +198,7 @@ export const seedsPartA: AchievementDefinition[] = [
   {
     code: "COUNTRIES_25",
     name: "World Explorer",
-    description: "Visit 25 different countries",
+    description: "Set foot in 25 different countries",
     category: "collector",
     domain: "shared",
     icon: "🗺️",
@@ -210,7 +210,7 @@ export const seedsPartA: AchievementDefinition[] = [
   {
     code: "COUNTRIES_50",
     name: "Global Citizen",
-    description: "Visit 50 different countries",
+    description: "Set foot in 50 different countries",
     category: "collector",
     domain: "shared",
     icon: "🌍",
@@ -222,7 +222,7 @@ export const seedsPartA: AchievementDefinition[] = [
   {
     code: "COUNTRIES_100",
     name: "Master of Nations",
-    description: "Visit 100 different countries",
+    description: "Set foot in 100 different countries",
     category: "collector",
     domain: "shared",
     icon: "👑",
@@ -348,7 +348,7 @@ export const seedsPartA: AchievementDefinition[] = [
   {
     code: "CONTINENTS_3",
     name: "Tri-Continental",
-    description: "Visit airports on 3 different continents",
+    description: "Set foot on 3 different continents",
     category: "collector",
     domain: "shared",
     icon: "🌏",
@@ -360,7 +360,7 @@ export const seedsPartA: AchievementDefinition[] = [
   {
     code: "CONTINENTS_5",
     name: "Five Continents Club",
-    description: "Visit airports on 5 different continents",
+    description: "Set foot on 5 different continents",
     category: "collector",
     domain: "shared",
     icon: "🌍",
@@ -372,7 +372,7 @@ export const seedsPartA: AchievementDefinition[] = [
   {
     code: "CONTINENTS_7",
     name: "Seven Continents Master",
-    description: "Visit airports on all 7 continents",
+    description: "Set foot on all 7 continents",
     category: "collector",
     domain: "shared",
     icon: "🌎",

@@ -111,7 +111,8 @@ describe("loaders: home country and port calls (forgejo#299)", () => {
       unclearCountries: 2,
     });
     expect(await loadCountryDetail(userId, "DE")).toMatchObject({ visited: true });
-    expect([...(await achievementCountries(userId, new Set()))]).toEqual(["DE"]);
+    // The badge counts ground contact (forgejo#299): the unclear ends too.
+    expect([...(await achievementCountries(userId, new Set()))].sort()).toEqual(["DE", "KH", "TH"]);
   });
 
   it("does not lift the home country for a home period that has not begun", async () => {
@@ -199,7 +200,8 @@ describe("loaders: home country and port calls (forgejo#299)", () => {
         evidence: "ferry",
         ferryCrossings: 2,
       });
-      expect([...(await achievementCountries(userId, new Set()))]).toEqual(["SE"]);
+      // Ground contact: the home end of the crossing counts for the badge too.
+      expect([...(await achievementCountries(userId, new Set()))].sort()).toEqual(["DE", "SE"]);
 
       // Hidden: the crossings prove nothing anywhere.
       await prisma.userSettings.update({

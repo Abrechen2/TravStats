@@ -18,6 +18,7 @@ import {
   PLACE_CATEGORIES,
   PLACE_CATEGORY_ICONS,
   categoryFromOsmValue,
+  placeCountsAsTransit,
   type PlaceCategory,
 } from "../../shared/placeCategories";
 import type { Place } from "../../types/place";
@@ -107,6 +108,7 @@ export function PlaceFormModal({
   const [countryVisitKind, setCountryVisitKind] = useState<"visit" | "transit">(
     initial.countryVisitKind ?? "visit"
   );
+  const transitByCategory = placeCountsAsTransit({ category });
   /**
    * Provenance, never user-editable: it is the dedup key the server matches on,
    * so letting it be typed would let a user collide with their own row. It is
@@ -482,15 +484,25 @@ export function PlaceFormModal({
 
           <label className="flex flex-col gap-1 text-sm text-[var(--text-muted)] sm:col-span-2">
             {t("places:form.countryVisitKind")}
+            {/* A transit category decides on its own (`placeCountsAsTransit`):
+                the select shows the verdict instead of a choice the passport
+                would overrule. The stored flag stays the user's. */}
             <select
-              value={countryVisitKind}
+              value={transitByCategory ? "transit" : countryVisitKind}
               onChange={(e) => setCountryVisitKind(e.target.value as "visit" | "transit")}
+              disabled={transitByCategory}
               className={INPUT_CLASS}
             >
               <option value="visit">{t("places:form.countryVisit")}</option>
               <option value="transit">{t("places:form.countryTransit")}</option>
             </select>
-            <span className="text-xs">{t("places:form.countryVisitHint")}</span>
+            <span className="text-xs">
+              {t(
+                transitByCategory
+                  ? "places:form.countryTransitByCategory"
+                  : "places:form.countryVisitHint"
+              )}
+            </span>
           </label>
           <ChipGroup label={t("places:form.status")} hintId="place-form-status-hint">
             {([true, false] as const).map((v) => (

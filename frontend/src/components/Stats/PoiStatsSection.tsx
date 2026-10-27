@@ -6,7 +6,7 @@ import { listPlaces } from "../../lib/api/places";
 import { listPlaceLists, listCuratedChecklists } from "../../lib/api/placeLists";
 import { adaptPoi } from "../../lib/stats/domain-stats/poiStatsAdapter";
 import { derivePoiStats } from "../../lib/stats/poiStatsDetail";
-import { PLACE_CATEGORIES } from "../../shared/placeCategories";
+import { COLLECTIBLE_PLACE_CATEGORIES } from "../../shared/placeCategories";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { logger } from "../../lib/logger";
@@ -106,13 +106,13 @@ export default function PoiStatsSection({
   // One derivation for the whole page, tested on its own. Nothing below counts
   // rows itself — that is how two figures on one screen come to disagree.
   const detail = useMemo(
-    () => (scoped ? derivePoiStats(scoped, PLACE_CATEGORIES.length) : null),
+    () => (scoped ? derivePoiStats(scoped, COLLECTIBLE_PLACE_CATEGORIES.length) : null),
     [scoped]
   );
   const previous = useMemo(
     () =>
       places && compareYear !== null
-        ? derivePoiStats(placesVisitedIn(places, compareYear), PLACE_CATEGORIES.length)
+        ? derivePoiStats(placesVisitedIn(places, compareYear), COLLECTIBLE_PLACE_CATEGORIES.length)
         : null,
     [places, compareYear]
   );

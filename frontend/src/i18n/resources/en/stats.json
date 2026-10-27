@@ -722,7 +722,7 @@
     "dateLineCrossings": "Date Line Crossings",
     "dateLineCrossingsDesc": "Crossed the International Date Line {{count}}×",
     "continentalExplorer": "Continental Explorer",
-    "continentalExplorerDesc": "Visited {{count}} different continents",
+    "continentalExplorerDesc": "Flew to {{count}} different continents",
     "continents": "Continents",
     "tropicsTraveler": "Tropics Traveler",
     "tropicsTravelerDesc": "{{count}} flights within the tropics",

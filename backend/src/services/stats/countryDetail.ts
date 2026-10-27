@@ -108,6 +108,8 @@ export interface CountryDetailPortCall {
 /** A place the user recorded visiting, with its country already resolved. */
 export interface CountryDetailPlaceVisit {
   countryVisitKind?: string;
+  /** Read by the passport fold (`placeCountsAsTransit`), not by this page. */
+  category?: string | null;
   placeId: string;
   name: string;
   isoCountryCode: string | null;

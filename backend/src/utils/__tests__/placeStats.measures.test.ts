@@ -193,6 +193,22 @@ describe("calculatePlaceStats — the Part H measures", () => {
     expect(stats.placesInCategoryMax).toBe(2);
   });
 
+  it("leaves a service area out of the categories collected (forgejo#299)", () => {
+    // A fuel stop is no kind of sight: "Aus jeder der acht Kategorien" must not
+    // become eight of nine, nor ten fuel stops "places in one category".
+    const stats = calculatePlaceStats(
+      [
+        place({ category: "museum" }),
+        place({ category: "service_area" }),
+        place({ category: "service_area" }),
+      ],
+      NOW
+    );
+
+    expect(stats.placeCategoriesUnique).toBe(1);
+    expect(stats.placesInCategoryMax).toBe(1);
+  });
+
   it("returns zeroes rather than -Infinity for an empty logbook", () => {
     // Math.max of nothing is -Infinity, which would render as a badge at
     // minus infinity per cent.
