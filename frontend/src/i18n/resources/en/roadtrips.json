@@ -528,6 +528,7 @@
     "figDriven": "Driven",
     "figDrivenSub": "without ferries · {{km}} km in total",
     "figRoute": "Distance",
+    "figByOdometer": "by the odometer",
     "figRoutePlanned": "planned",
     "figSoFar": "{{driven}} km driven so far · {{ahead}} km planned",
     "distanceSourceKm": "{{km}} km {{source}}",
@@ -537,7 +538,7 @@
       "drawn": "drawn",
       "straight": "straight line"
     },
-    "distanceRule": "Distance measured: {{parts}}. A straight line joins the stations directly, a route follows the roads of the routing provider, a GPS track is a recorded drive. A leg counts as driven once its destination was reached before today; “Driven” appears only when a GPS track covers every kilometre.",
+    "distanceRule": "Distance measured: {{parts}}. A straight line joins the stations directly, a route follows the roads of the routing provider, a GPS track is a recorded drive. A leg counts as driven once its destination was reached before today; “Driven” appears only when a GPS track covers every kilometre or both odometer readings are entered; then their difference counts.",
     "figDays": "Days",
     "figDaysAhead_one": "one still ahead",
     "figDaysAhead_other": "{{count}} still ahead",
@@ -987,5 +988,15 @@
     "stayOn_one": "Then {{count}} more day in {{place}}",
     "stayOn_other": "Then {{count}} more days in {{place}}",
     "drivingEntered": "Driving time {{h}} h {{m}} (entered)"
+  },
+  "odometerDialog": {
+    "title": "Odometer",
+    "intro": "Enter the reading at the start and at the end. With both, the roadtrip counts as driven once it is over — with their difference as the kilometres. An empty field means unknown.",
+    "start": "Odometer at the start",
+    "end": "Odometer at the end",
+    "backwards": "The end reading is below the start reading.",
+    "save": "Save",
+    "error": "The odometer readings could not be saved.",
+    "open": "Odometer"
   }
 }
