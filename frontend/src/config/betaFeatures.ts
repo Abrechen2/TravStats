@@ -119,7 +119,9 @@ export const BETA_FEATURES = Object.freeze({
    * switch is off every plan endpoint answers `PLAN_DISABLED` and
    * `/travplan/capabilities` says `enabled: false`. The instance's own
    * `travel_plan_config.enabled` is a second, server-side condition the hook
-   * also asks — this key decides whether the mode exists at all.
+   * also asks — this key decides whether the mode exists at all. Since
+   * 2026-10-27 each account switches it too (Einstellungen → Bereiche,
+   * `TravPlanModuleRow`); off answers `PLAN_USER_DISABLED` and keeps the plans.
    */
   travPlan: Object.freeze({
     why: "An alpha experiment (owner, 2026-10-16). The planning mode arrived on 2026-10-14 open to every logged-in user with no gate, drawn with its own theme and its own navigation outside the design system. It is unfinished: its screens were rebuilt on the primitives on 2026-10-16, and nobody has walked the planning flow in a browser since. The v2 route plan (stations, stages, routed legs) is in the server without any screen; most of its plan is not built yet.",

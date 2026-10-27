@@ -26,9 +26,8 @@ export interface ApiError extends Error {
  * two lists against each other across the wire, so the compiler holding this
  * side is the half that can be held.
  *
- * Add a member here before using it, and keep it SCREAMING_SNAKE. Not in this
- * union: `DEMO_ACCOUNT_FORBIDDEN`, which by an older convention travels in the
- * `error` field rather than in `code`.
+ * Add a member here before using it, and keep it SCREAMING_SNAKE. Not in this union:
+ * `DEMO_ACCOUNT_FORBIDDEN`, which by an older convention travels in `error`, not `code`.
  */
 export type ApiErrorCode =
   | "LLM_REQUEST_POLICY"

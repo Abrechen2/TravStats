@@ -106,6 +106,7 @@
   "errors": {
     "unknown": "That did not work. Your inputs are preserved. Please try again.",
     "PLAN_DISABLED": "Planning is disabled on this server.",
+    "PLAN_USER_DISABLED": "You switched the planner off for your account. Switch it back on under Settings → Appearance → Domains & colours; your plans are kept.",
     "PLAN_NOT_FOUND": "There is no plan for this trip yet.",
     "PLAN_REVISION_CONFLICT": "The plan has changed. The current version is loaded; review your inputs again.",
     "PLAN_PROTECTED": "This fixed entry is protected. Edit its booking instead.",

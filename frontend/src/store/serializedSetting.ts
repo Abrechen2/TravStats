@@ -22,8 +22,10 @@ export function serializedSetting<T>(options: {
   current: () => T;
   apply: (value: T) => void;
   what: string;
+  /** After the server confirmed the latest flip, e.g. to have dependent reads ask again. */
+  saved?: () => void;
 }): (value: T) => void {
-  const { payload, current, apply, what } = options;
+  const { payload, current, apply, what, saved } = options;
   let confirmed: T;
   let inFlight = false;
   let queued: { value: T } | null = null;
@@ -35,6 +37,7 @@ export function serializedSetting<T>(options: {
       .then(
         () => {
           confirmed = value;
+          if (!queued) saved?.();
         },
         (error: unknown) => {
           logger.warn(`Failed to save ${what}`, error);

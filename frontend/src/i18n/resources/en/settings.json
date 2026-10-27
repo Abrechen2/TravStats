@@ -1053,7 +1053,7 @@
       "enrichment": "Enrichment, fill in flight data, delay, historical data, aircraft",
       "autoupdate": "Automatic updates, flight status, refresh, gate, departure time",
       "cruisePreferences": "Cruise, cruise line, ship, cabin, sea days, travel days",
-      "domains": "Domains, modules, flights, cruises, lodging, places, roadtrips, rail, bus, ferry, rental car, switch on and off, colour, colours, map colour, line colour",
+      "domains": "Domains, modules, flights, cruises, lodging, places, roadtrips, rail, bus, ferry, rental car, plan, plan trips, TravPlan, switch on and off, colour, colours, map colour, line colour",
       "suggestions": "Suggestions, inbox, trip suggestions, suggest stays",
       "sharing": "Sharing, companions, consent, shared trip, travel companion",
       "shareLinks": "Public link, share, link",
@@ -1148,6 +1148,10 @@
     "title": "Trip recording",
     "label": "Store positions from the app",
     "description": "The positions the TravStats app records during a trip are stored on this server and shown on the trip map. Switched off, the server accepts no new ones; what is stored stays until you delete it."
+  },
+  "travPlan": {
+    "label": "Plan – plan trips",
+    "description": "The planning area: plan trips ahead, with stages, packing list and weather. Switched off, it leaves the menu; your plans are kept and come back as soon as you switch it on."
   },
   "menu": {
     "domains": "Domains",

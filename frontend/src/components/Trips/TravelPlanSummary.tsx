@@ -1,19 +1,20 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useTravPlanOffered } from "../../hooks/useTravPlanVisible";
+import { useTravPlanVisible } from "../../hooks/useTravPlanVisible";
 import { travplanApi, type PlanView } from "../../lib/api/travplan";
 import { logger } from "../../lib/logger";
 import { Card } from "../ui/Card";
 import { StatusPill } from "../ui/Pill";
 
 /**
- * The trip page's way into its plan. Behind the `travPlan` beta switch like
- * the routes it links to — a link into a gated route would only bounce.
+ * The trip page's way into its plan. Behind the same gate as the navigation
+ * entry — the beta switch, the instance switch and the account's own — since a
+ * link into planning the server refuses would only bounce.
  */
 export function TravelPlanSummary({ tripId }: { tripId: string }) {
   const { t } = useTranslation("travplan"),
-    offered = useTravPlanOffered(),
+    offered = useTravPlanVisible(),
     [plan, setPlan] = useState<PlanView | null>(null);
   useEffect(() => {
     setPlan(null);

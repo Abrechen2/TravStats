@@ -15,7 +15,11 @@ vi.mock("../../store/authStore", () => ({
 
 vi.unmock("../../store/settingsStore");
 
-import { useTravPlanOffered, useTravPlanVisible } from "../useTravPlanVisible";
+import {
+  useTravPlanInstanceOn,
+  useTravPlanOffered,
+  useTravPlanVisible,
+} from "../useTravPlanVisible";
 import { useSettingsStore } from "../../store/settingsStore";
 
 /**
@@ -80,5 +84,35 @@ describe("useTravPlanVisible", () => {
   it("shows nothing without a session", () => {
     authState.user = null;
     expect(renderHook(() => useTravPlanVisible()).result.current).toBe(false);
+  });
+
+  // Owner, 2026-10-27: TravPlan is switched per account, like a domain.
+  it("hides it while the account has TravPlan off, though the instance offers it", async () => {
+    mocks.capabilities.mockResolvedValue({
+      enabled: false,
+      instanceEnabled: true,
+      userEnabled: false,
+    });
+    const visible = renderHook(() => useTravPlanVisible());
+    const instance = renderHook(() => useTravPlanInstanceOn());
+    await waitFor(() => expect(instance.result.current).toBe(true));
+    expect(visible.result.current).toBe(false);
+  });
+
+  it("does not offer the account switch while the instance is off", async () => {
+    mocks.capabilities.mockResolvedValue({
+      enabled: false,
+      instanceEnabled: false,
+      userEnabled: true,
+    });
+    const { result } = renderHook(() => useTravPlanInstanceOn());
+    await waitFor(() => expect(mocks.capabilities).toHaveBeenCalled());
+    expect(result.current).toBe(false);
+  });
+
+  it("reads an older server without the two halves from `enabled`", async () => {
+    mocks.capabilities.mockResolvedValue({ enabled: true });
+    const { result } = renderHook(() => useTravPlanInstanceOn());
+    await waitFor(() => expect(result.current).toBe(true));
   });
 });
