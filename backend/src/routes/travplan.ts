@@ -27,7 +27,12 @@ import { packingSuggestions } from "../services/travplan/rules";
 import { recheckAchievementsAfterWrite } from "../middleware/recheckAchievementsAfterWrite";
 import { planningImportPolicy } from "./travplan/importPolicy";
 import routeEndpoints from "./travplan/routeEndpoints";
-import { assertTravPlanOffered, travPlanOffered } from "../services/travplan/availability";
+import {
+  assertTravPlanForUser,
+  assertTravPlanOffered,
+  travPlanOffered,
+  travPlanUserEnabled,
+} from "../services/travplan/availability";
 import { planVersusActual } from "../services/travplan/actual/planActual";
 import { planActualLimiter } from "../middleware/planActualLimit";
 const router = Router();
@@ -39,16 +44,24 @@ function route(fn: (req: AuthRequest, res: Response) => Promise<void>) {
   };
 }
 router.use(planningImportPolicy);
-// Answers whatever the beta switch says: it is how a client learns that planning is off, and
+// Answers whatever the switches say: it is how a client learns that planning is off, and
 // the Companion stops at `enabled: false` instead of meeting a refusal on every call.
+// `enabled` is both halves; `instanceEnabled`/`userEnabled` (2026-10-27) say which is off.
 router.get(
   "/travplan/capabilities",
   authenticate,
-  route(async (_req, res) => {
-    const [config, offered] = await Promise.all([configuration(), travPlanOffered()]);
+  route(async (req, res) => {
+    const [config, offered, userEnabled] = await Promise.all([
+      configuration(),
+      travPlanOffered(),
+      travPlanUserEnabled(req.userId!),
+    ]);
+    const instanceEnabled = config.enabled && offered;
     res.json({
       version: 1,
-      enabled: config.enabled && offered,
+      enabled: instanceEnabled && userEnabled,
+      instanceEnabled,
+      userEnabled,
       offlineWrites: true,
       ai: true,
       forecast: true,
@@ -61,6 +74,20 @@ router.get(
 router.use(["/travplan", "/trips/:tripId/plan"], (_req, _res, next) => {
   assertTravPlanOffered().then(() => next(), next);
 });
+// And every plan path but the admin's instance configuration is refused while the ACCOUNT has
+// TravPlan switched off (owner, 2026-10-27). The admin's own switch must not lock them out of
+// the instance's. Authenticates here because the gate needs the account.
+const userGate = (req: AuthRequest, res: Response, next: NextFunction) => {
+  void authenticate(req, res, (error?: unknown) => {
+    if (error) return next(error);
+    assertTravPlanForUser(req.userId!).then(() => next(), next);
+  });
+};
+router.use("/travplan", (req: AuthRequest, res, next) => {
+  if (req.path === "/config") return next();
+  userGate(req, res, next);
+});
+router.use("/trips/:tripId/plan", userGate);
 router.use(routeEndpoints);
 const tripId = (req: AuthRequest) => uuid.parse(req.params.tripId);
 router.get(

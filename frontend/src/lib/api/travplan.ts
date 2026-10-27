@@ -11,7 +11,12 @@ import type {
 export type * from "../../types/travplan";
 export interface PlanCapabilities {
   version: number;
+  /** Instance AND account: what the navigation shows. */
   enabled: boolean;
+  /** The instance half (since 2026-10-27); absent on an older server. */
+  instanceEnabled?: boolean;
+  /** The account's own switch (since 2026-10-27); absent on an older server. */
+  userEnabled?: boolean;
   offlineWrites: boolean;
   ai: boolean;
   forecast: boolean;

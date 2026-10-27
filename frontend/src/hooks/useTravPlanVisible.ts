@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useBetaFeatures } from "./useBetaFeatures";
 import { useAuthStore } from "../store/authStore";
-import { travplanApi } from "../lib/api/travplan";
+import { travplanApi, type PlanCapabilities } from "../lib/api/travplan";
 import { logger } from "../lib/logger";
 import { useCapabilitiesEpochStore } from "../store/capabilitiesEpochStore";
 
@@ -15,45 +15,65 @@ export function useTravPlanOffered(): boolean {
 }
 
 /**
- * Whether the planning mode is offered as a destination in the navigation —
- * the one home of the rule.
- *
- * TWO conditions: the instance beta switch (`travPlan`), and the server-side
- * `travel_plan_config.enabled`, read through `/travplan/capabilities` — for
- * admins too. Until 2026-10-26 an admin saw the entry whatever the server
- * switch said, because `/plan/admin` was the only place to turn it on; the
- * switch now lives in Admin → Instanz → TravPlan as well, and `/plan/admin`
- * stays reachable by URL and from that section's link.
- *
- * Chrome fails closed: while the answer is pending, or when the request
- * fails, the entry stays hidden rather than flashing into view.
+ * What `/travplan/capabilities` answered for this session: `undefined` while
+ * the answer is pending, `null` when it failed or was not asked because the
+ * instance does not offer TravPlan. Re-asked whenever a switch it depends on
+ * is saved (the capabilities epoch).
  */
-export function useTravPlanVisible(): boolean {
+export function useTravPlanCapabilities(): PlanCapabilities | null | undefined {
   const offered = useTravPlanOffered();
   const userId = useAuthStore((s) => s.user?.id);
-  // Bumped when Admin → Instanz → TravPlan saves, so the entry follows at once.
+  // Bumped when Admin → Instanz → TravPlan or the account's own switch saves,
+  // so the entry follows at once.
   const epoch = useCapabilitiesEpochStore((s) => s.epoch.travPlan);
-  const [serverEnabled, setServerEnabled] = useState<boolean | null>(null);
+  const [caps, setCaps] = useState<PlanCapabilities | null | undefined>(undefined);
   const mustAsk = offered && Boolean(userId);
 
   useEffect(() => {
-    setServerEnabled(null);
+    setCaps(undefined);
     if (!mustAsk) return;
     let live = true;
     travplanApi
       .capabilities()
-      .then((caps) => {
-        if (live) setServerEnabled(caps.enabled);
+      .then((answer) => {
+        if (live) setCaps(answer);
       })
       .catch((cause: unknown) => {
         logger.warn("Failed to load TravPlan capabilities", cause);
-        if (live) setServerEnabled(false);
+        if (live) setCaps(null);
       });
     return () => {
       live = false;
     };
   }, [mustAsk, userId, epoch]);
 
-  if (!offered || !userId) return false;
-  return serverEnabled === true;
+  return mustAsk ? caps : null;
+}
+
+/**
+ * Whether the planning mode is offered as a destination in the navigation —
+ * the one home of the rule.
+ *
+ * THREE conditions: the instance beta switch (`travPlan`), the server-side
+ * `travel_plan_config.enabled`, and since 2026-10-27 the account's own switch
+ * (Einstellungen → Bereiche, owner: "alles einzeln aktivierbar so wie die
+ * Domains"). The server folds the last two into `/travplan/capabilities`'
+ * `enabled`, for admins too — the instance switch lives in Admin → Instanz →
+ * TravPlan, and `/plan/admin` stays reachable by URL and from that section.
+ *
+ * Chrome fails closed: while the answer is pending, or when the request
+ * fails, the entry stays hidden rather than flashing into view.
+ */
+export function useTravPlanVisible(): boolean {
+  return useTravPlanCapabilities()?.enabled === true;
+}
+
+/**
+ * Whether the instance offers TravPlan, whatever this account chose — the
+ * condition for showing the account's switch at all. A server from before
+ * 2026-10-27 has no `instanceEnabled`; its `enabled` is the instance half.
+ */
+export function useTravPlanInstanceOn(): boolean {
+  const caps = useTravPlanCapabilities();
+  return caps ? (caps.instanceEnabled ?? caps.enabled) : false;
 }

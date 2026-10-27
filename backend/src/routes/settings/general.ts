@@ -29,6 +29,7 @@ import {
   staySuggestionsSettingsSchema,
   suggestionSwitchesUpdate,
   suggestionSwitchesView,
+  travPlanSettingsSchema,
   tripRecordingSettingsSchema,
   tripSuggestionsSettingsSchema,
   type SuggestionSwitchColumns,
@@ -221,6 +222,7 @@ const settingsSchema = z
     staySuggestions: staySuggestionsSettingsSchema.optional(),
     // Whether the Companion's trip positions are stored (forgejo#316).
     tripRecording: tripRecordingSettingsSchema.optional(),
+    travPlan: travPlanSettingsSchema.optional(), // TravPlan for this account (2026-10-27)
     // Settings prototype rows (forgejo#321), column-backed like the switches above.
     tripDefaults: tripDefaultsSettingsSchema.optional(),
     cruiseSeaDays: cruiseSeaDaysSettingsSchema.optional(),
@@ -542,6 +544,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       tripSuggestions,
       staySuggestions,
       tripRecording,
+      travPlan,
       tripDefaults,
       cruiseSeaDays,
       liveTracking,
@@ -552,7 +555,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       ...rest
     } = payload;
     const switches = {
-      ...suggestionSwitchesUpdate(tripSuggestions, staySuggestions, tripRecording),
+      ...suggestionSwitchesUpdate(tripSuggestions, staySuggestions, tripRecording, travPlan),
       ...accountPrefsUpdate(tripDefaults, cruiseSeaDays, liveTracking, railImport),
     };
     const {

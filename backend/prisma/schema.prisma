@@ -878,6 +878,12 @@ model UserSettings {
   enabledDomains String[] @default(["flight"]) @map("enabled_domains")
   data           Json     @map("data")
 
+  /// TravPlan, the planning area, for THIS account (owner, 2026-10-27): switched
+  /// on and off like a domain, and only offered while the instance offers TravPlan.
+  /// Off by default like every domain but flights; the migration switched it on
+  /// for every account that already held a plan. Off hides and refuses, never deletes.
+  travPlanEnabled Boolean @default(false) @map("trav_plan_enabled")
+
   // Parser preferences
   preferredVisionParser String? @default("auto") @map("preferred_vision_parser")
   preferredTextParser   String? @default("auto") @map("preferred_text_parser")

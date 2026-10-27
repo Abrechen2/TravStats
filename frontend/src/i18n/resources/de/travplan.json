@@ -106,6 +106,7 @@
   "errors": {
     "unknown": "Das hat gerade nicht geklappt. Deine Eingaben bleiben erhalten. Bitte erneut versuchen.",
     "PLAN_DISABLED": "Der Planer ist auf diesem Server ausgeschaltet.",
+    "PLAN_USER_DISABLED": "Du hast den Planer für dein Konto ausgeschaltet. Schalte ihn unter Einstellungen → Darstellung → Bereiche & Farben wieder ein; deine Pläne sind erhalten.",
     "PLAN_NOT_FOUND": "Für diese Reise gibt es noch keinen Plan.",
     "PLAN_REVISION_CONFLICT": "Der Plan wurde inzwischen geändert. Der aktuelle Stand ist geladen; prüfe deine Eingaben erneut.",
     "PLAN_PROTECTED": "Dieser feste Eintrag ist geschützt. Bearbeite die zugehörige Buchung.",

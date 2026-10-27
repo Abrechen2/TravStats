@@ -29,6 +29,8 @@ jest.mock("../availability", () => {
     assertTravPlanOffered: async () => {
       if (!mockOffered()) throw new AppError("off", 403, "PLAN_DISABLED");
     },
+    travPlanUserEnabled: async () => true,
+    assertTravPlanForUser: async () => undefined,
   };
 });
 

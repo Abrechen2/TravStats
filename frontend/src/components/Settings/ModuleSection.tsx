@@ -11,6 +11,7 @@ import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { isBrandDefault, needsOutline } from "../../lib/domainColor";
 import { Switch } from "../ui/Field";
 import { SettingRows } from "../ui/SettingRow";
+import TravPlanModuleRow from "./TravPlanModuleRow";
 
 /**
  * "Bereiche & Farben": one row per domain — the switch that turns it on and
@@ -107,6 +108,8 @@ export default function ModuleSection(): JSX.Element {
             </div>
           );
         })}
+        {/* Not a domain, switched like one (owner, 2026-10-27). */}
+        <TravPlanModuleRow />
       </SettingRows>
 
       {/* A colour close to the app's own ground is a legitimate choice, and it

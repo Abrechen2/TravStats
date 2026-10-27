@@ -144,4 +144,35 @@ describe("the /plan route", () => {
       expect(screen.queryByTestId("dashboard-stub")).toBeNull();
     }
   );
+
+  // Owner, 2026-10-27: an account that switched TravPlan off is sent to where
+  // it switches it on, instead of meeting PLAN_USER_DISABLED on every request.
+  it(
+    "sends an account with TravPlan off to the switch, without asking for plans",
+    { timeout: 10000 },
+    async () => {
+      remoteBeta.value = true;
+      capabilities.mockResolvedValue({ enabled: false, instanceEnabled: true, userEnabled: false });
+      window.history.pushState({}, "", "/plan");
+      render(<App />);
+      await waitFor(() => expect(window.location.pathname).toBe("/settings/display"), {
+        timeout: 8000,
+      });
+      expect(listPlans).not.toHaveBeenCalled();
+    }
+  );
+
+  it(
+    "still opens the configuration for an admin who switched it off for themselves",
+    { timeout: 10000 },
+    async () => {
+      remoteBeta.value = true;
+      authState.user = { id: "a1", username: "root", isAdmin: true };
+      capabilities.mockResolvedValue({ enabled: false, instanceEnabled: true, userEnabled: false });
+      window.history.pushState({}, "", "/plan/admin");
+      render(<App />);
+      await waitFor(() => expect(planConfig).toHaveBeenCalled(), { timeout: 8000 });
+      expect(window.location.pathname).toBe("/plan/admin");
+    }
+  );
 });

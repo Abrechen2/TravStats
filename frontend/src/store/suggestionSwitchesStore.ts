@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { serializedSetting } from "./serializedSetting";
+import { useCapabilitiesEpochStore } from "./capabilitiesEpochStore";
 
 /**
  * The account's inbox suggestion switches (forgejo#306): whether the
@@ -22,7 +23,8 @@ import { serializedSetting } from "./serializedSetting";
  * `settingsStore` has no room for it. So do the settings prototype rows of
  * forgejo#321 — the new-trip colour, whether sea days count, live tracking —
  * for the same two reasons, and the rail import's two remembered defaults
- * for local-transit legs (2026-10-23).
+ * for local-transit legs (2026-10-23). And the account's TravPlan switch
+ * (2026-10-27), which also has the navigation re-read capabilities once saved.
  */
 interface SuggestionSwitchesState {
   trips: boolean;
@@ -43,6 +45,8 @@ interface SuggestionSwitchesState {
   railImportLocalTransit: RailImportLocalTransit;
   /** What a bahn.de import starts bus legs as; server default `skip`. */
   railImportBus: RailImportBus;
+  /** Whether this account uses TravPlan (owner, 2026-10-27); server default off. */
+  travPlan: boolean;
   /** What `GET /settings` said; anything that is not a boolean keeps the default. */
   noteRemote: (remote: unknown) => void;
   setTrips: (enabled: boolean) => void;
@@ -55,6 +59,7 @@ interface SuggestionSwitchesState {
   setLiveTracking: (enabled: boolean) => void;
   setRailImportLocalTransit: (value: RailImportLocalTransit) => void;
   setRailImportBus: (value: RailImportBus) => void;
+  setTravPlan: (enabled: boolean) => void;
 }
 
 export type RailImportLocalTransit = "skip" | "rail";
@@ -95,6 +100,7 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
   liveTracking: true,
   railImportLocalTransit: "skip",
   railImportBus: "skip",
+  travPlan: false,
   noteRemote: (remote) => {
     const body = remote as {
       tripSuggestions?: unknown;
@@ -104,6 +110,7 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
       cruiseSeaDays?: unknown;
       liveTracking?: unknown;
       railImport?: unknown;
+      travPlan?: unknown;
     } | null;
     const stay = body?.staySuggestions;
     // `null` is an answer (automatic), not an absence: only `undefined` keeps
@@ -124,6 +131,7 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
         get().railImportLocalTransit,
       railImportBus:
         wordIn(body?.railImport, "bus", ["skip", "bus"] as const) ?? get().railImportBus,
+      travPlan: enabledIn(body?.travPlan) ?? get().travPlan,
     });
   },
   setTrips: serializedSetting({
@@ -185,5 +193,12 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
     current: () => get().railImportBus,
     apply: (railImportBus) => set({ railImportBus }),
     what: "rail import bus default",
+  }),
+  setTravPlan: serializedSetting({
+    payload: (enabled: boolean) => ({ travPlan: { enabled } }),
+    current: () => get().travPlan,
+    apply: (travPlan) => set({ travPlan }),
+    what: "TravPlan switch",
+    saved: () => useCapabilitiesEpochStore.getState().bump("travPlan"),
   }),
 }));

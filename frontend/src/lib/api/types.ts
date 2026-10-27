@@ -160,6 +160,8 @@ export interface UserSettings {
   };
   /** Whether the server stores the app's trip positions (forgejo#316). */
   tripRecording?: { enabled?: boolean };
+  /** The account's TravPlan switch (owner, 2026-10-27). */
+  travPlan?: { enabled?: boolean };
   /** The colour of a new trip; null = automatic (forgejo#321). */
   tripDefaults?: { color?: string | null };
   /** Whether sea days count in the cruise day total (forgejo#321). */

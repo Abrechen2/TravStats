@@ -14,6 +14,8 @@ import { errorHandler } from "../../../middleware/errorHandler";
 jest.mock("../availability", () => ({
   travPlanOffered: async () => true,
   assertTravPlanOffered: async () => undefined,
+  travPlanUserEnabled: async () => true,
+  assertTravPlanForUser: async () => undefined,
 }));
 import { emptyState, bookingSchema, itemSchema } from "../schema";
 import { hash } from "../store";

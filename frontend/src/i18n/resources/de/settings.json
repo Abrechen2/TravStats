@@ -1053,7 +1053,7 @@
       "enrichment": "Anreicherung, Flugdaten nachtragen, Verspätung, historische Daten, Flugzeug",
       "autoupdate": "Automatische Updates, Flugstatus, Aktualisierung, Gate, Abflugzeit",
       "cruisePreferences": "Kreuzfahrt, Reederei, Schiff, Kabine, Seetage, Reisetage",
-      "domains": "Bereiche, Module, Flüge, Kreuzfahrten, Unterkünfte, Orte, Roadtrips, Bahn, Bus, Fähre, Mietwagen, ein- und ausschalten, Farbe, Farben, Kartenfarbe, Linienfarbe",
+      "domains": "Bereiche, Module, Flüge, Kreuzfahrten, Unterkünfte, Orte, Roadtrips, Bahn, Bus, Fähre, Mietwagen, Plan, Reisen planen, TravPlan, ein- und ausschalten, Farbe, Farben, Kartenfarbe, Linienfarbe",
       "suggestions": "Vorschläge, Posteingang, Reisevorschläge, Aufenthalte vorschlagen",
       "sharing": "Teilen, Mitreisende, Einwilligung, geteilte Reise, Begleiter",
       "shareLinks": "Öffentlicher Link, Freigabe, teilen, Link",
@@ -1148,6 +1148,10 @@
     "title": "Reise-Aufzeichnung",
     "label": "Positionen aus der App speichern",
     "description": "Die Positionen, die die TravStats-App während einer Reise aufzeichnet, werden auf diesem Server gespeichert und auf der Reisekarte gezeigt. Ausgeschaltet nimmt der Server keine neuen an; Gespeichertes bleibt, bis du es löschst."
+  },
+  "travPlan": {
+    "label": "Plan – Reisen planen",
+    "description": "Der Planungsbereich: Reisen vorab planen, mit Etappen, Packliste und Wetter. Ausgeschaltet verschwindet er aus dem Menü; deine Pläne bleiben erhalten und sind wieder da, sobald du ihn einschaltest."
   },
   "menu": {
     "domains": "Bereiche",
