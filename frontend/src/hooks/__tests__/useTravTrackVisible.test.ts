@@ -57,11 +57,10 @@ describe("useTravTrackVisible", () => {
     await waitFor(() => expect(result.current).toBe(true));
   });
 
-  it("not for an account that neither records into TravTrack nor holds data", async () => {
+  it("also for an account that neither records into TravTrack nor holds data, once the instance is on (owner 2026-10-26)", async () => {
     mocks.capabilities.mockResolvedValue(caps({}));
     const { result } = renderHook(() => useTravTrackVisible());
-    await waitFor(() => expect(mocks.capabilities).toHaveBeenCalled());
-    expect(result.current).toBe(false);
+    await waitFor(() => expect(result.current).toBe(true));
   });
 
   it("the menu entry is hidden with TravTrack off, even with data", async () => {

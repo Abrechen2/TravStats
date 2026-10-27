@@ -16,8 +16,17 @@ vi.mock("../../../lib/api/travtrack", async (importOriginal) => ({
   travTrackApi: api,
 }));
 const access = vi.hoisted(() => ({ value: "visible" as "visible" | "hidden" | "pending" }));
+const capsState = vi.hoisted(() => ({
+  value: { version: 1, offered: true, enabled: true, active: true, hasData: true },
+}));
+const tokens = vi.hoisted(() => ({ list: vi.fn() }));
+vi.mock("../../../lib/api/tokens", () => ({ apiTokensApi: tokens }));
 vi.mock("../../../hooks/useTravTrackVisible", () => ({
   useTravTrackAccess: () => access.value,
+  useTravTrackState: () => ({
+    access: access.value,
+    caps: access.value === "visible" ? capsState.value : null,
+  }),
   useTravTrackVisible: () => access.value === "visible",
 }));
 vi.mock("../../../hooks/useTodayZone", () => ({ useTodayZone: () => "Asia/Seoul" }));
@@ -123,10 +132,46 @@ const renderAt = (path = "/track/2026-10-12") =>
 describe("TrackPage", () => {
   beforeEach(() => {
     access.value = "visible";
+    capsState.value = { version: 1, offered: true, enabled: true, active: true, hasData: true };
+    tokens.list.mockReset();
+    tokens.list.mockResolvedValue([]);
     Object.values(api).forEach((fn) => fn.mockReset());
     api.day.mockResolvedValue(DAY);
     api.zones.mockResolvedValue([]);
     api.lastSeen.mockResolvedValue(null);
+  });
+
+  it("switched on with no data yet: the page shows how data comes in, not an empty map (owner 2026-10-26)", async () => {
+    capsState.value = { version: 1, offered: true, enabled: true, active: false, hasData: false };
+    renderAt("/track");
+    const start = await screen.findByTestId("track-getting-started");
+    expect(screen.queryByTestId("track-day-map-stub")).toBeNull();
+    expect(
+      within(start).getByRole("link", { name: "track:start.companion.action" })
+    ).toHaveAttribute("href", "/settings/location?section=locationProvider");
+    expect(
+      within(start).getByRole("link", { name: "track:start.dawarich.action" })
+    ).toHaveAttribute("href", "/track/imports");
+    expect(within(start).getByRole("link", { name: "track:start.gpx.action" })).toBeInTheDocument();
+    // No paired Companion: one line says how to pair it.
+    expect(await screen.findByTestId("track-start-pairing")).toBeInTheDocument();
+  });
+
+  it("already recording into TravTrack, the first step is a note; a paired device needs no pairing line", async () => {
+    capsState.value = { version: 1, offered: true, enabled: true, active: true, hasData: false };
+    tokens.list.mockResolvedValue([{ id: "t", deviceId: "phone", revokedAt: null }]);
+    renderAt("/track");
+    const start = await screen.findByTestId("track-getting-started");
+    expect(within(start).getByText("track:start.companion.done")).toBeInTheDocument();
+    expect(within(start).queryByRole("link", { name: "track:start.companion.action" })).toBeNull();
+    await waitFor(() => expect(tokens.list).toHaveBeenCalled());
+    expect(screen.queryByTestId("track-start-pairing")).toBeNull();
+  });
+
+  it("the imports tab stays reachable for an account with no data", async () => {
+    capsState.value = { version: 1, offered: true, enabled: true, active: false, hasData: false };
+    renderAt("/track/imports");
+    expect(await screen.findByTestId("track-imports-stub")).toBeInTheDocument();
   });
 
   it("the header says where the history last placed the account", async () => {
