@@ -81,7 +81,11 @@ export const COLLECTIBLE_PLACE_CATEGORIES: readonly PlaceCategory[] = PLACE_CATE
 );
 
 export function isCollectiblePlaceCategory(value: unknown): boolean {
-  return isPlaceCategory(value) && !TRANSIT_PLACE_CATEGORIES.has(value);
+  // Any category a place carries counts — an imported place keeps a label of
+  // its own (a Takeout place's "food") and was counted before forgejo#299; only
+  // the transit kind is left out.
+  if (typeof value !== "string" || value === "") return false;
+  return !(isPlaceCategory(value) && TRANSIT_PLACE_CATEGORIES.has(value));
 }
 
 /**
