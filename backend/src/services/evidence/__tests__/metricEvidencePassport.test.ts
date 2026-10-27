@@ -113,6 +113,26 @@ describe("passport evidence", () => {
         arrivalTime: new Date("2021-08-01T09:00:00Z"),
       },
     });
+    // A ferry crossing: the drill-down must list it like a rail ride (it once
+    // dropped the bus and ferry ends, so the per-country sums fell short).
+    await prisma.ferryJourney.create({
+      data: {
+        userId,
+        status: "completed",
+        depStationName: "Puttgarden",
+        depLat: 54.5,
+        depLon: 11.23,
+        depCountry: "DE",
+        depTimezone: "Europe/Berlin",
+        arrStationName: "Rødby",
+        arrLat: 54.66,
+        arrLon: 11.35,
+        arrCountry: "DK",
+        arrTimezone: "Europe/Copenhagen",
+        departureTime: new Date("2021-08-03T07:00:00Z"),
+        arrivalTime: new Date("2021-08-03T07:45:00Z"),
+      },
+    });
     // Two nights of location history in Norway and nothing else there.
     await prisma.countryDay.createMany({
       data: ["2024-07-13", "2024-07-14"].map((day) => ({

@@ -39,7 +39,8 @@ import { pageDistinctEntries, pageSumEntries } from "./entryMappersDomains";
 const EVERY_TIMELINE_ROW = Number.POSITIVE_INFINITY;
 
 function detailFor(code: string, inputs: CountryDetailInputs): CountryDetail | null {
-  const [flights, airports, homes, ports, places, lodgings, track, , stations, rail] = inputs;
+  const [flights, airports, homes, ports, places, lodgings, track, , stations, rail, bus, ferry] =
+    inputs;
   return buildCountryDetail(
     code,
     flights,
@@ -51,7 +52,9 @@ function detailFor(code: string, inputs: CountryDetailInputs): CountryDetail | n
     track,
     EVERY_TIMELINE_ROW,
     stations,
-    rail
+    rail,
+    bus,
+    ferry
   );
 }
 

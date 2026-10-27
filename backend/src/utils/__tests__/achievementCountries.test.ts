@@ -295,6 +295,31 @@ describe("achievementCountries — the passport's evidence, the gates' visibilit
     expect([...(await achievementGeography(userId)).continents].sort()).toEqual(["Africa", "Asia"]);
   });
 
+  it("places each end of a ferry crossing in a two-continent country on its own continent", async () => {
+    // Kadıköy (Asian Istanbul) to Karaköy (European Istanbul) across the Bosporus: the
+    // crossing is the only evidence, so its two ports must place both continents.
+    await enable(["flight", "ferry"]);
+    await prisma.ferryJourney.create({
+      data: {
+        userId,
+        status: "completed",
+        depStationName: "Kadıköy",
+        depLat: 40.99,
+        depLon: 29.02,
+        depCountry: "TR",
+        depTimezone: "Europe/Istanbul",
+        arrStationName: "Karaköy",
+        arrLat: 41.02,
+        arrLon: 28.97,
+        arrCountry: "TR",
+        arrTimezone: "Europe/Istanbul",
+        departureTime: new Date("2024-05-01T06:00:00Z"),
+        arrivalTime: new Date("2024-05-01T06:25:00Z"),
+      },
+    });
+    expect([...(await achievementGeography(userId)).continents].sort()).toEqual(["Asia", "Europe"]);
+  });
+
   it("keeps the continent of an airport whose country the catalogue does not know", async () => {
     await prisma.airport.deleteMany({ where: { iata: "QZX" } });
     await prisma.airport.create({
