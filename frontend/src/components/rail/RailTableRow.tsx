@@ -18,7 +18,7 @@ import TripPill from "../Trips/TripPill";
 import { TableRow, type TableColumn } from "../ui/Table";
 import { StationShortCode } from "./StationShortCode";
 import { trainLabel } from "./trainLabel";
-import { bareTrainName } from "../../lib/rail/trainName";
+import { bareTrainName, trainName } from "../../lib/rail/trainName";
 import { dateLocaleForLanguage } from "../../lib/units";
 
 export type RailColumnId =
@@ -39,7 +39,10 @@ export const RAIL_COLUMN_LAYOUT: Record<
   // "Mi., 01.07.26 08:15 – 12:09" plus a "+1" for an overnight ride.
   // 236 and 112: measured in a browser (2026-10-04) — at 196 / 84, "13.11.2026,
   // 07:37 – 10:58" and "10 h 53 min" broke onto a second line.
-  time: { min: 236, mono: true, onNarrow: "subtitle" },
+  // On a phone the time travels in the row's narrow subtitle, together with
+  // each leg's mode and line (audit 2026-10-26, F-003): with the time alone a
+  // train, a U-Bahn and a tram on one route at one time read identically.
+  time: { min: 236, mono: true, onNarrow: "hide" },
   train: { min: 120, grow: 1, priority: 2 },
   duration: { min: 112, align: "end", mono: true, priority: 2 },
   distance: { min: 112, align: "end", mono: true, priority: 3 },
@@ -121,6 +124,27 @@ export function RailTableRow({ connection, columns, onOpen, actions }: Props): J
     </span>
   );
 
+  const timeText = span ? formatRailSpan(span, locale) : "—";
+  // Every leg says its mode and line here, a train included — on a phone this
+  // is the only place the row can tell a U-Bahn from a tram from a train.
+  const narrowSubtitle = (
+    <span className="flex flex-col">
+      <span style={{ fontFamily: "var(--ts-font-mono)" }}>{timeText}</span>
+      <span data-testid="rail-narrow-mode" className="truncate">
+        {legs
+          .map((leg) =>
+            [
+              t(`rail:transitMode.${leg.transitMode}`),
+              trainName(leg.trainCategory, leg.trainNumber, bareTrainName(t)),
+            ]
+              .filter(Boolean)
+              .join(" ")
+          )
+          .join(" → ")}
+      </span>
+    </span>
+  );
+
   const cell: Record<RailColumnId, ReactNode> = {
     operator: (
       <OperatorTile
@@ -134,7 +158,7 @@ export function RailTableRow({ connection, columns, onOpen, actions }: Props): J
       />
     ),
     route: single ? <StationPair journey={single} /> : connectionStations(legs).join(" → "),
-    time: span ? formatRailSpan(span, locale) : "—",
+    time: timeText,
     train,
     duration: duration !== null ? formatRailDuration(duration, t) : "—",
     distance,
@@ -157,6 +181,7 @@ export function RailTableRow({ connection, columns, onOpen, actions }: Props): J
     <TableRow
       columns={columns}
       onClick={onOpen}
+      narrowSubtitle={narrowSubtitle}
       testId={single ? `rail-row-${single.id}` : `rail-connection-row-${connection.id}`}
       cells={columns.map((column) => cell[column.key as RailColumnId])}
     />

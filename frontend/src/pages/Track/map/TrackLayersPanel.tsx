@@ -27,18 +27,21 @@ export default function TrackLayersPanel({
   prefs,
   onChange,
   long = false,
+  fill = false,
 }: {
   prefs: TrackMapPrefs;
   onChange: (patch: Partial<TrackMapPrefs>) => void;
   /** A month, a year or a Zeitraum: the day-only layers are not available. */
   long?: boolean;
+  /** Folded under the map on a phone: the full width, not a 300px column. */
+  fill?: boolean;
 }): JSX.Element {
   const { t } = useTranslation(["track"]);
   return (
     <aside
       aria-label={t("track:map.panel")}
       className="flex flex-col gap-3"
-      style={{ flex: "1 1 240px", maxWidth: 300 }}
+      style={fill ? undefined : { flex: "1 1 240px", maxWidth: 300 }}
     >
       <fieldset className="flex flex-col gap-1" style={panelStyle}>
         <legend className="t-card-title" style={{ float: "left", marginBottom: 6 }}>

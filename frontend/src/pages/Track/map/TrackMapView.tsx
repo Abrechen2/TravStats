@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { token } from "../../../components/ui/tokens";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { useIsPhoneViewport } from "../../../hooks/useIsPhoneViewport";
 import { useTodayZone } from "../../../hooks/useTodayZone";
 import type { Feature, Geometry } from "geojson";
 import type { TrackPoint } from "../../../lib/api/travtrack";
@@ -78,6 +79,7 @@ const toLines = (segments: readonly TrackPoint[][]) =>
  */
 export default function TrackMapView(): JSX.Element {
   const { t } = useTranslation(["track"]);
+  const phone = useIsPhoneViewport();
   const navigate = useNavigate();
   const params = useParams<{ date?: string }>();
   const [search, setSearch] = useSearchParams();
@@ -242,7 +244,7 @@ export default function TrackMapView(): JSX.Element {
       {loading && !long && <p className="t-caption">{t("track:day.loading")}</p>}
 
       <div className="flex flex-wrap gap-4">
-        <TrackLayersPanel prefs={prefs} onChange={setPrefs} long={long} />
+        {!phone && <TrackLayersPanel prefs={prefs} onChange={setPrefs} long={long} />}
 
         <section className="flex min-w-0 flex-col gap-3" style={{ flex: "999 1 480px" }}>
           {empty && (
@@ -346,6 +348,26 @@ export default function TrackMapView(): JSX.Element {
             </p>
           )}
         </section>
+
+        {/* On a phone the map comes straight after the range control and the
+            layer and route settings fold away under it (audit 2026-10-26,
+            F-005: at 390 px the map started at y≈1281, below this panel). */}
+        {phone && (
+          <details className="w-full" data-testid="track-layers-fold">
+            <summary
+              className="t-card-title flex cursor-pointer items-center"
+              style={{ ...panelStyle, minHeight: 44, padding: "8px 16px" }}
+            >
+              {t("track:map.panel")}
+              <span aria-hidden className="ml-auto">
+                ▾
+              </span>
+            </summary>
+            <div className="mt-3">
+              <TrackLayersPanel prefs={prefs} onChange={setPrefs} long={long} fill />
+            </div>
+          </details>
+        )}
 
         <TrackMapAside
           span={span}

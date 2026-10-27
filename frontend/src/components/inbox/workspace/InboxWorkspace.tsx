@@ -143,6 +143,16 @@ export default function InboxWorkspace({
     !failedSources.includes(source) &&
     !items.some((item) => item.source === source);
 
+  // Nothing at all to do, measured (audit 2026-10-26, U3): no search, filter or
+  // view has anything to act on, so the page is one message and one action.
+  const nothingAtAll =
+    data.loaded &&
+    items.length === 0 &&
+    data.failed.length === 0 &&
+    source === "all" &&
+    query === "" &&
+    !showDeferred;
+
   // The page's tab label: null until measured, never a 0 nobody counted.
   const total = data.loaded ? items.length : null;
   const complete = failedSources.length === 0;
@@ -202,30 +212,35 @@ export default function InboxWorkspace({
           <h2 className="text-xl font-semibold">{t(`${W}.heading`)}</h2>
           <p className="t-caption mt-1">{t(`${W}.intro`)}</p>
         </div>
-        <Segmented
-          label={t(`${W}.viewLabel`)}
-          value={view}
-          options={VIEWS.map((mode) => ({ value: mode, label: t(`${W}.views.${mode}`) }))}
-          onChange={(mode) => setParam("view", mode)}
-        />
+        {!nothingAtAll && (
+          <Segmented
+            label={t(`${W}.viewLabel`)}
+            value={view}
+            options={VIEWS.map((mode) => ({ value: mode, label: t(`${W}.views.${mode}`) }))}
+            onChange={(mode) => setParam("view", mode)}
+          />
+        )}
       </div>
-      <div className={view === "list" && mobileDetail ? "hidden lg:block" : undefined}>
-        <WorkspaceToolbar
-          query={query}
-          onQuery={setQuery}
-          sources={sources}
-          source={source}
-          onSource={(kind) => setParam("tab", kind === "all" ? null : kind)}
-          counts={counts}
-          laterCount={items.filter((item) => deferred.has(item.key)).length}
-          showDeferred={showDeferred}
-          onShowDeferred={setShowDeferred}
-          loading={data.loading}
-          checking={checking}
-          onReload={() => void data.reload()}
-          onRecheck={() => void recheck()}
-        />
-      </div>
+      {/* Empty, the toolbar is not drawn: nothing to search, filter or reload. */}
+      {!nothingAtAll && (
+        <div className={view === "list" && mobileDetail ? "hidden lg:block" : undefined}>
+          <WorkspaceToolbar
+            query={query}
+            onQuery={setQuery}
+            sources={sources}
+            source={source}
+            onSource={(kind) => setParam("tab", kind === "all" ? null : kind)}
+            counts={counts}
+            laterCount={items.filter((item) => deferred.has(item.key)).length}
+            showDeferred={showDeferred}
+            onShowDeferred={setShowDeferred}
+            loading={data.loading}
+            checking={checking}
+            onReload={() => void data.reload()}
+            onRecheck={() => void recheck()}
+          />
+        </div>
+      )}
       {data.failed.length > 0 && (
         <div role="alert" className="rounded-lg border border-(--ts-warn) p-4 text-sm">
           {t(`${W}.loadFailed`)} {data.failed.map((s) => t(`${W}.sources.${s}`)).join(", ")}.{" "}
@@ -249,15 +264,32 @@ export default function InboxWorkspace({
           {showHistory && <InboxHistory source={historySource} />}
         </div>
       )}
-      <p role="status" className="t-caption">
-        {data.loading ? t(`${W}.loading`) : t(`${W}.shown`, { count: visible.length })}
-      </p>
+      {nothingAtAll ? (
+        <Card flush>
+          <div data-testid="inbox-empty">
+            <EmptyState
+              kind="nothing"
+              title={t(`${W}.empty`)}
+              description={t(`${W}.recheckHint`)}
+              action={
+                <Button variant="primary" disabled={checking} onClick={() => void recheck()}>
+                  {t(`${W}.recheckAll`)}
+                </Button>
+              }
+            />
+          </div>
+        </Card>
+      ) : (
+        <p role="status" className="t-caption">
+          {data.loading ? t(`${W}.loading`) : t(`${W}.shown`, { count: visible.length })}
+        </p>
+      )}
       {!data.loaded && (
         <div className="flex justify-center py-8">
           <GlobeLoader size={120} label={t(`${W}.loading`)} />
         </div>
       )}
-      {data.loaded && visible.length === 0 && !sourceEmpty && (
+      {data.loaded && visible.length === 0 && !sourceEmpty && !nothingAtAll && (
         <Card flush>
           <EmptyState
             kind={failedSources.length ? "degraded" : "pending"}
