@@ -180,7 +180,7 @@
           },
           "federatedTripSharing": {
             "name": "Reisen über Server teilen",
-            "what": "Mitreisende auf anderen TravStats-Servern per Einladungscode verbinden, unter Einstellungen → Reisen; dazu kommt ein eigener Schalter unter Server-Verbindungen. Noch geht keine Reise über die Leitung. Mit ausgeschaltetem Schalter antwortet dieser Server anderen Servern dafür gar nicht."
+            "what": "Mitreisende auf anderen TravStats-Servern per Einladungscode verbinden, unter Einstellungen → Reisen; dazu kommt ein eigener Schalter unter Server-Verbindungen. Geteilte Reisen gehen signiert an den Server der Mitreisenden. Mit ausgeschaltetem Schalter antwortet dieser Server anderen Servern dafür gar nicht."
           },
           "travTrack": {
             "name": "TravTrack (eigener Standortverlauf)",

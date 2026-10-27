@@ -180,7 +180,7 @@
           },
           "federatedTripSharing": {
             "name": "Trip sharing across servers",
-            "what": "Connect with companions on other TravStats servers by invitation code, under Settings → Trips; it has its own switch under server connections as well. No trip crosses yet. With the switch off, this server does not answer other servers for it at all."
+            "what": "Connect with companions on other TravStats servers by invitation code, under Settings → Trips; it has its own switch under server connections as well. Shared trips travel signed to the companion's server. With the switch off, this server does not answer other servers for it at all."
           },
           "travTrack": {
             "name": "TravTrack (own location history)",
