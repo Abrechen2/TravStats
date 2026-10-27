@@ -165,7 +165,11 @@ describe("countries badge evidence reads the badge's own sources", () => {
     if (!res) throw new Error("continents badge evidence is not served");
 
     expect(res.measure.value).toBe(2);
-    expect(res.entries.map((e) => [e.title?.text, e.credits]).sort()).toEqual([
+    expect(
+      res.entries
+        .map((e) => [e.title && "text" in e.title ? e.title.text : undefined, e.credits])
+        .sort()
+    ).toEqual([
       ["Moskau", ["Europe"]],
       ["Wladiwostok", ["Asia"]],
     ]);
