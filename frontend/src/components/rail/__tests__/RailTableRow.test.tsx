@@ -49,6 +49,53 @@ describe("RailTableRow transit mode", () => {
   });
 });
 
+/** The cell only the narrow (phone) layout shows. */
+const narrowOf = (row: HTMLElement): HTMLElement =>
+  row.querySelector('[data-narrow-only="yes"]') as HTMLElement;
+
+// Audit 2026-10-26 (F-003): the narrow row showed stations and times only, so a
+// train, a U-Bahn and a tram on the same route and time looked identical.
+describe("RailTableRow narrow row", () => {
+  it("names a train's mode and line", () => {
+    const narrow = narrowOf(renderRow([base]));
+    expect(narrow).not.toBeNull();
+    expect(within(narrow).getByTestId("rail-narrow-mode")).toHaveTextContent(
+      "rail:transitMode.rail"
+    );
+    expect(narrow).toHaveTextContent("ICE 696");
+  });
+
+  it("tells a U-Bahn from a tram on the same route", () => {
+    const metro = narrowOf(
+      renderRow([{ ...base, transitMode: "metro", trainCategory: "U", trainNumber: "2" }])
+    );
+    expect(within(metro).getByTestId("rail-narrow-mode")).toHaveTextContent(
+      "rail:transitMode.metro"
+    );
+    expect(metro).toHaveTextContent("U 2");
+  });
+
+  it("names every mode of a connection that changes from tram to train", () => {
+    const narrow = narrowOf(
+      renderRow([
+        { ...base, transitMode: "tram", trainCategory: "STR", trainNumber: "12" },
+        { ...base, id: "j2" },
+      ])
+    );
+    expect(within(narrow).getByTestId("rail-narrow-mode")).toHaveTextContent(
+      "rail:transitMode.tram"
+    );
+    expect(narrow).toHaveTextContent("rail:transitMode.rail");
+    expect(narrow).toHaveTextContent("STR 12");
+    expect(narrow).toHaveTextContent("ICE 696");
+  });
+
+  it("keeps the time in the narrow row once the time column steps aside", () => {
+    expect(RAIL_COLUMN_LAYOUT.time.onNarrow).toBe("hide");
+    expect(narrowOf(renderRow([base])).textContent).toMatch(/\d{2}:\d{2}/);
+  });
+});
+
 describe("RailTableRow distance label", () => {
   it("says a distance runs along the traced line", () => {
     const row = renderRow([base]);
