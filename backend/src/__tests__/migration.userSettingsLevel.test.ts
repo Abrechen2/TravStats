@@ -77,7 +77,14 @@ describe("migration 20261020170000 — settings level", () => {
         `SELECT data FROM user_settings WHERE user_id = 'u4'`
       );
     });
-    expect(row.data).toEqual(JSON.parse(JSON.stringify(defaultSettings)));
+    // The migration froze the defaults of 2026-10-20, placeholder profile
+    // included. Today's defaults carry no placeholder (F-002, 27.10.); the
+    // settings route masks the frozen one on read instead of rewriting rows.
+    const defaults = JSON.parse(JSON.stringify(defaultSettings));
+    expect(row.data).toEqual({
+      ...defaults,
+      profile: { ...defaults.profile, username: "Traveler", email: "traveler@example.com" },
+    });
   });
 
   afterAll(async () => {

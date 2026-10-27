@@ -152,7 +152,10 @@ describe("GET /api/v1/stats/passport — legacy thresholds change nothing (forge
     }
   });
 
-  it("counts the countries badge from the same visited set, the place included", async () => {
+  // Since 2026-10-27 (forgejo#299, owner ruling "count every country set foot
+  // in") the countries badge counts the passport's ground-contact set; the
+  // visited set stays the smaller figure beside it.
+  it("counts the countries badge from the ground-contact set, the place included", async () => {
     for (const tier of ["connection", "slept"] as const) {
       await setUser(tier);
 
@@ -164,8 +167,10 @@ describe("GET /api/v1/stats/passport — legacy thresholds change nothing (forge
 
       // `requirementType: 'countries'` stores the size of the counted set as
       // its progress, so this IS the badge figure.
-      expect(badge?.progress).toBe(2);
-      expect((await passport()).summary.visitedCountries).toBe(2);
+      const { summary } = await passport();
+      expect(badge?.progress).toBe(summary.groundCountries);
+      expect(summary.groundCountries).toBe(4);
+      expect(summary.visitedCountries).toBe(2);
     }
   });
 });
