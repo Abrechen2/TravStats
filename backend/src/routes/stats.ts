@@ -30,7 +30,7 @@ import { calculateLodgingStats } from "../utils/lodgingStats";
 import logger from "../utils/logger";
 import { userToday } from "../services/stats/userToday";
 import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "../services/stats/departureClock";
-import { buildWhere, computeSummary } from "../services/stats/summary";
+import { buildWhere, computeSummary, countableFlightsWhere } from "../services/stats/summary";
 import { loadDaysAway } from "../services/stats/daysAwayLoader";
 import { loadWrapped } from "../services/stats/wrappedLoad";
 import { fetchFlightDatedRows, fetchCruiseDatedRows } from "../services/stats/timeseriesRows";
@@ -189,10 +189,10 @@ router.get(
       }
       const limit = parsed.data.limit ?? 10;
 
-      // Routes are time-insensitive (airport-pair grouping + great-circle distance),
-      // so historical flights are included.
+      // Historical flights count; `year` places a flight by its LOCAL departure day,
+      // as /summary does (audit F-004).
       const flights = await prisma.flight.findMany({
-        where: { userId, ...countableFlightWhere() },
+        where: await countableFlightsWhere(userId, parsed.data.year),
         select: {
           depIata: true,
           depIcao: true,
@@ -301,12 +301,11 @@ router.get(
   "/network",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = req.userId!;
-
-      // Same done-predicate as every other aggregate in this file. A booked
-      // flight is not a line on a map.
+      const year = readYearQuery(req.query, res);
+      if (year === null) return;
+      // Countable flights only (a booked flight is no line on a map), in `year` by local day.
       const flights = await prisma.flight.findMany({
-        where: { userId, ...countableFlightWhere() },
+        where: await countableFlightsWhere(req.userId!, year),
         select: {
           depIata: true,
           depIcao: true,

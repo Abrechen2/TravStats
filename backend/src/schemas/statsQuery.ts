@@ -58,8 +58,10 @@ export const TimeseriesQuerySchema = z.object({
 });
 
 // Schema for routes query parameters
+// `year` is the local calendar year of departure, as for /stats/summary (audit F-004).
 export const RoutesQuerySchema = z.object({
   limit: z.coerce.number().int().positive().optional(),
+  year: z.coerce.number().int().min(1900).max(2100).optional(),
 });
 
 /**

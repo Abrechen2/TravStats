@@ -38,7 +38,7 @@ import {
 
 import { registry } from "../registry";
 import { COUNTRY_DAY_SOURCES } from "../../countryDays/countryDaySource";
-import { TimeseriesQuerySchema } from "../../../schemas/statsQuery";
+import { RoutesQuerySchema, TimeseriesQuerySchema } from "../../../schemas/statsQuery";
 import {
   statsScopeSchema,
   summaryCompareResponse,
@@ -189,8 +189,10 @@ registry.registerPath({
     "FRA-WAW and WAW-FRA are one entry with a count of two, matching how " +
     "/stats/routes groups. Deliberately unbounded and un-paginated: a " +
     "truncated network draws a wrong map, not a smaller one. Airports " +
-    "without usable coordinates are omitted, as are routes touching them.",
+    "without usable coordinates are omitted, as are routes touching them. " +
+    "With `year`, only flights departing in that local calendar year.",
   tags: ["Stats"],
+  request: { query: yearQuery },
   responses: {
     200: {
       description: "Flight network",
@@ -600,8 +602,10 @@ registry.registerPath({
   summary: "Most-flown routes",
   description:
     "A pair of airports is ONE route whichever way it was flown, so the two " +
-    "ends are simply the ends and the distance is the same either way.",
+    "ends are simply the ends and the distance is the same either way. " +
+    "With `year`, only flights departing in that local calendar year.",
   tags: statsTag,
+  request: { query: RoutesQuerySchema },
   responses: {
     200: {
       description: "Routes, most-flown first",

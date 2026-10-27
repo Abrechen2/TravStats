@@ -189,6 +189,18 @@ export async function buildWhere(
   return where;
 }
 
+/**
+ * The countable flights of an account, in `year` by local departure day when
+ * one is given — the population /stats/routes and /stats/network draw, on the
+ * same year rule as the summary (audit F-004).
+ */
+export async function countableFlightsWhere(
+  userId: string,
+  year: number | undefined
+): Promise<Prisma.FlightWhereInput> {
+  return { ...(await buildWhere(userId, undefined, undefined, year)), ...countableFlightWhere() };
+}
+
 export async function computeSummary(
   where: Prisma.FlightWhereInput,
   baseCurrency: string
