@@ -18,6 +18,12 @@ import { resolveGeocoderUrls, DEFAULT_PHOTON_URL } from "../instanceSettingsServ
 import logger from "../../utils/logger";
 import { mergePlaceNames, needsLatinNames } from "./placeNames";
 import { placeImportance } from "./placeImportance";
+import {
+  FERRY_PORT_RADIUS_KM,
+  FERRY_PORT_TAGS,
+  placeNamedBy,
+  rankFerryPorts,
+} from "./ferryPortRanking";
 
 const DEFAULT_LIMIT = 6;
 
@@ -438,8 +444,14 @@ export async function searchPlacesDetailed(
     params.set("lat", String(options.near.lat));
     params.set("lon", String(options.near.lon));
   }
-  // osm_tag remains supported by older self-hosted Photon installations.
-  if (options?.kind === "ferry_terminal") params.set("osm_tag", "amenity:ferry_terminal");
+  if (options?.kind === "ferry_terminal") {
+    const ferry = await searchFerryPorts(baseUrl, params, trimmed, limit);
+    if (!ferry.degraded || !options.lang) return ferry;
+    // The same once-without-`lang` retry as below: the public Photon refuses
+    // languages it does not support with an HTTP error.
+    params.delete("lang");
+    return searchFerryPorts(baseUrl, params, trimmed, limit);
+  }
   const url = `${baseUrl}/api/?${params.toString()}`;
 
   const first = await fetchPhoton(url, limit);
@@ -462,6 +474,64 @@ export async function searchPlacesDetailed(
   }
 
   return { results: [], degraded: true };
+}
+
+/**
+ * The ferry form's port search — see `ferryPortRanking.ts` for what Photon
+ * holds and why a name search alone misses the port. Three requests: the
+ * tagged name search and an exact place match run together; when the query
+ * names a place, a tagged `/reverse` around it finds the harbour and berths
+ * whose names never mention the town. `osm_tag` (repeatable, OR-ed) is
+ * understood by old self-hosted Photon installations too.
+ *
+ * Any failed request makes the whole answer `degraded`: a port that is
+ * missing because a lookup failed must read as "search unavailable", not as
+ * "this town has no port" (CLAUDE.md, a failure reaches the user as itself).
+ */
+async function searchFerryPorts(
+  baseUrl: string,
+  params: URLSearchParams,
+  query: string,
+  limit: number
+): Promise<PlaceSearchOutcome> {
+  const tagged = new URLSearchParams(params);
+  for (const tag of FERRY_PORT_TAGS) tagged.append("osm_tag", tag);
+  const places = new URLSearchParams(params);
+  places.set("osm_tag", "place");
+  places.set("limit", "3");
+
+  const [byName, placeHits] = await Promise.all([
+    fetchPhoton(`${baseUrl}/api/?${tagged.toString()}`, limit),
+    fetchPhoton(`${baseUrl}/api/?${places.toString()}`, 3),
+  ]);
+  const place = placeHits.ok ? placeNamedBy(query, placeHits.results) : null;
+
+  let nearby: FetchOutcome = { ok: true, results: [] };
+  if (place) {
+    const around = new URLSearchParams({
+      lat: String(place.lat),
+      lon: String(place.lon),
+      radius: String(FERRY_PORT_RADIUS_KM),
+      limit: String(REVERSE_CANDIDATE_POOL),
+    });
+    const lang = params.get("lang");
+    if (lang) around.set("lang", lang);
+    for (const tag of FERRY_PORT_TAGS) around.append("osm_tag", tag);
+    nearby = await fetchPhoton(`${baseUrl}/reverse?${around.toString()}`, REVERSE_CANDIDATE_POOL);
+  }
+
+  const ranked = rankFerryPorts(
+    query,
+    byName.ok ? byName.results : [],
+    nearby.ok ? nearby.results : [],
+    place,
+    limit
+  );
+  const degraded = !byName.ok || !placeHits.ok || !nearby.ok;
+  return {
+    results: await withReadableNames(ranked, `${baseUrl}/api/`, tagged, limit),
+    degraded,
+  };
 }
 
 /**

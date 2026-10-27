@@ -1,0 +1,385 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 12816740401,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "HANSE CAT",
+        "street": "Überseebrücke 2",
+        "district": "Travemünde",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "postcode": "23570",
+        "countrycode": "DE"
+      },
+      "geometry": { "type": "Point", "coordinates": [10.876719, 53.9590846] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 5186381110,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "Hansefahrt, HANSE CAT",
+        "street": "Kaiserbrücke",
+        "district": "Travemünde",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "postcode": "23570",
+        "countrycode": "DE"
+      },
+      "geometry": { "type": "Point", "coordinates": [10.8743748, 53.9585488] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "W",
+        "osm_id": 138339313,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "Kreuzfahrtterminal",
+        "street": "Vorderreihe",
+        "district": "Travemünde",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "postcode": "23570",
+        "countrycode": "DE",
+        "extent": [10.8706402, 53.9576681, 10.8713531, 53.9572157]
+      },
+      "geometry": { "type": "Point", "coordinates": [10.8709977, 53.957443] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 1454517115,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "Priwall Priwallfähre",
+        "street": "Mecklenburger Landstraße",
+        "district": "Priwall",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "postcode": "23570",
+        "countrycode": "DE"
+      },
+      "geometry": { "type": "Point", "coordinates": [10.8706965, 53.9549413] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 1454517104,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "Priwall Priwallfähre",
+        "street": "Mecklenburger Landstraße",
+        "district": "Priwall",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "postcode": "23570",
+        "countrycode": "DE"
+      },
+      "geometry": { "type": "Point", "coordinates": [10.8704348, 53.9548084] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 33212063,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "Travemünde Priwallfähre",
+        "street": "Vorderreihe",
+        "district": "Travemünde",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "postcode": "23570",
+        "countrycode": "DE"
+      },
+      "geometry": { "type": "Point", "coordinates": [10.8673912, 53.9556732] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 1328454171,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "Travemünde Priwallfähre",
+        "street": "Vorderreihe",
+        "district": "Travemünde",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "postcode": "23570",
+        "countrycode": "DE"
+      },
+      "geometry": { "type": "Point", "coordinates": [10.8672798, 53.9555043] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 13575953975,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "Anleger 3",
+        "street": "Travemünder Landstraße",
+        "district": "Travemünde",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "postcode": "23570",
+        "countrycode": "DE"
+      },
+      "geometry": { "type": "Point", "coordinates": [10.8581446, 53.9493227] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 13575953978,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "Anleger 4",
+        "street": "Travemünder Landstraße",
+        "district": "Travemünde",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "postcode": "23570",
+        "countrycode": "DE"
+      },
+      "geometry": { "type": "Point", "coordinates": [10.8585907, 53.9485763] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 1415894515,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "Anleger 5",
+        "street": "Travemünder Landstraße",
+        "district": "Ivendorf",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "postcode": "23570",
+        "countrycode": "DE"
+      },
+      "geometry": { "type": "Point", "coordinates": [10.8597448, 53.9437551] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 1415854311,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "Anleger 5a",
+        "street": "Travemünder Landstraße",
+        "district": "Ivendorf",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "postcode": "23570",
+        "countrycode": "DE"
+      },
+      "geometry": { "type": "Point", "coordinates": [10.8598047, 53.9421217] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 1360276249,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "Anleger 6",
+        "street": "Travemünder Landstraße",
+        "district": "Ivendorf",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "postcode": "23570",
+        "countrycode": "DE"
+      },
+      "geometry": { "type": "Point", "coordinates": [10.8604819, 53.9414183] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 1360276252,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "Anleger 6a",
+        "street": "Travemünder Landstraße",
+        "district": "Ivendorf",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "postcode": "23570",
+        "countrycode": "DE"
+      },
+      "geometry": { "type": "Point", "coordinates": [10.8621895, 53.9404905] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 12542894271,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "Anleger 6a",
+        "street": "Travemünder Landstraße",
+        "district": "Ivendorf",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "postcode": "23570",
+        "countrycode": "DE"
+      },
+      "geometry": { "type": "Point", "coordinates": [10.8619951, 53.9404895] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "W",
+        "osm_id": 138339328,
+        "osm_key": "landuse",
+        "osm_value": "harbour",
+        "type": "other",
+        "name": "Skandinavienkai",
+        "district": "Travemünde",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "countrycode": "DE",
+        "extent": [10.8495852, 53.9515683, 10.8631432, 53.932185]
+      },
+      "geometry": { "type": "Point", "coordinates": [10.8567598, 53.9417323] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 1360276254,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "Anleger 7",
+        "street": "Travemünder Landstraße",
+        "district": "Ivendorf",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "postcode": "23570",
+        "countrycode": "DE"
+      },
+      "geometry": { "type": "Point", "coordinates": [10.8609761, 53.9383356] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 13584991306,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "Anleger 7a",
+        "street": "Travemünder Landstraße",
+        "district": "Ivendorf",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "postcode": "23570",
+        "countrycode": "DE"
+      },
+      "geometry": { "type": "Point", "coordinates": [10.8608736, 53.9378779] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 13577725048,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "Anleger 8",
+        "district": "Ivendorf",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "postcode": "23570",
+        "countrycode": "DE"
+      },
+      "geometry": { "type": "Point", "coordinates": [10.8603178, 53.937177] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 13359234771,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "HANSE CAT",
+        "street": "Strandzugang 17",
+        "district": "Timmendorfer Strand",
+        "city": "Timmendorfer Strand",
+        "county": "Ostholstein",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "postcode": "23669",
+        "countrycode": "DE"
+      },
+      "geometry": { "type": "Point", "coordinates": [10.7848938, 54.0015657] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 12618921693,
+        "osm_key": "amenity",
+        "osm_value": "ferry_terminal",
+        "type": "house",
+        "name": "Feuerwehr / Liegeplatz Löschboot Senator Emil Peters",
+        "street": "Fabrikstraße",
+        "district": "Schlutup",
+        "city": "Lübeck",
+        "state": "Schleswig-Holstein",
+        "country": "Deutschland",
+        "postcode": "23568",
+        "countrycode": "DE"
+      },
+      "geometry": { "type": "Point", "coordinates": [10.8006841, 53.894045] }
+    }
+  ]
+}

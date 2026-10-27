@@ -10,6 +10,7 @@ import {
   SettingsResponse,
   UserSettingsUpdateData,
   defaultSettings,
+  PLACEHOLDER_PROFILE_EMAIL,
 } from "./types";
 import { AVAILABLE_DOMAINS, DOMAIN_KEYS, type DomainKey } from "../../shared/domains";
 import { ECB_CURRENCIES } from "../../shared/currencies";
@@ -251,6 +252,22 @@ const settingsSchema = z
 export const settingsUpdateSchema = settingsSchema;
 
 /**
+ * The stored profile block with its identity answered from the account: the
+ * username is the `User` row's (it cannot be renamed, AUD-025), and the
+ * placeholder address older rows hold is dropped — an unknown e-mail is
+ * absent, never a made-up one (audit F-002).
+ */
+function profileIdentity(
+  stored: SettingsDataJson["profile"],
+  username: string | null
+): NonNullable<SettingsDataJson["profile"]> {
+  const { email, username: storedUsername, ...rest } = stored ?? {};
+  const realEmail = email && email !== PLACEHOLDER_PROFILE_EMAIL ? { email } : {};
+  const name = username ?? storedUsername;
+  return { ...rest, ...(name ? { username: name } : {}), ...realEmail };
+}
+
+/**
  * Build a SettingsResponse from a Prisma userSettings record.
  *
  * `betaFeaturesEnabled` is instance-level (AdminSettings), not user-level —
@@ -277,6 +294,7 @@ function buildSettingsResponse(
     hasCountryTracks: boolean;
   },
   name: {
+    username: string | null;
     firstName: string | null;
     lastName: string | null;
   },
@@ -313,7 +331,7 @@ function buildSettingsResponse(
     // The name is not in the blob — it is read from the user row and merged in
     // here, so the settings page and the header cannot drift apart (#241).
     profile: {
-      ...(baseData.profile ?? {}),
+      ...profileIdentity(baseData.profile, name.username),
       // A stored avatar URL in the legacy `<name>.jpg` form is answered in its
       // extension-less form, so clients never request the cacheable one
       // (forgejo#284). The blob is not rewritten; the old URL still redirects.
@@ -398,9 +416,13 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     });
     const nameRow = await prisma.user.findUnique({
       where: { id: userId },
-      select: { firstName: true, lastName: true },
+      select: { username: true, firstName: true, lastName: true },
     });
-    const name = { firstName: nameRow?.firstName ?? null, lastName: nameRow?.lastName ?? null };
+    const name = {
+      username: nameRow?.username ?? null,
+      firstName: nameRow?.firstName ?? null,
+      lastName: nameRow?.lastName ?? null,
+    };
 
     if (!existing) {
       const created = await prisma.userSettings.create({
@@ -732,11 +754,15 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     // Return response with autoUpdate and historicalEnrichment settings included
     const savedName = await prisma.user.findUnique({
       where: { id: userId },
-      select: { firstName: true, lastName: true },
+      select: { username: true, firstName: true, lastName: true },
     });
     const response = buildSettingsResponse(
       extra,
-      { firstName: savedName?.firstName ?? null, lastName: savedName?.lastName ?? null },
+      {
+        username: savedName?.username ?? null,
+        firstName: savedName?.firstName ?? null,
+        lastName: savedName?.lastName ?? null,
+      },
       await homeSettingsView(saved.data),
       saved
     );
