@@ -52,10 +52,10 @@ export default function WorkspaceToolbar({
             placeholder={t(`${W}.searchHint`)}
           />
         </label>
-        <Button disabled={loading} onClick={onReload}>
+        <Button disabled={loading} onClick={onReload} title={t(`${W}.refreshHint`)}>
           {t(`${W}.refresh`)}
         </Button>
-        <Button disabled={checking} onClick={onRecheck}>
+        <Button disabled={checking} onClick={onRecheck} title={t(`${W}.recheckHint`)}>
           {t(`${W}.recheckAll`)}
         </Button>
       </div>

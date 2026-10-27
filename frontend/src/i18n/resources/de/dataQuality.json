@@ -471,6 +471,8 @@
       "stay": "Aufenthalt",
       "gpsProposal": "Möglichen Aufenthalt aus GPS-Daten ergänzen",
       "recheckAll": "Erneut prüfen",
+      "recheckHint": "„Erneut prüfen“ sucht in deinen vorhandenen Daten noch einmal nach offenen Fragen, etwa fehlenden Angaben oder Widersprüchen, und lädt den Posteingang danach neu.",
+      "refreshHint": "Lädt die Liste neu, ohne deine Daten erneut zu prüfen.",
       "shown_one": "1 Eintrag angezeigt",
       "shown_other": "{{count}} Einträge angezeigt",
       "groupCount_one": "1 offener Eintrag",

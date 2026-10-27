@@ -471,6 +471,8 @@
       "stay": "Stay",
       "gpsProposal": "Add a possible stay from GPS data",
       "recheckAll": "Recheck",
+      "recheckHint": "“Recheck” looks through your existing data again for open questions, such as missing details or contradictions, and then reloads the inbox.",
+      "refreshHint": "Reloads the list without checking your data again.",
       "shown_one": "Showing 1 item",
       "shown_other": "Showing {{count}} items",
       "groupCount_one": "1 open item",

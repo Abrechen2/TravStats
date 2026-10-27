@@ -9,7 +9,7 @@ import { pendingUpdatesApi } from "../../../../lib/api/pendingUpdates";
 import { tripsApi } from "../../../../lib/api/trips";
 import { dawarichStaysApi } from "../../../../lib/api/dawarichStays";
 import { useSuggestionSwitchesStore } from "../../../../store/suggestionSwitchesStore";
-import { suggestion } from "./fixtures";
+import { flag, suggestion } from "./fixtures";
 
 /**
  * The account's suggestion switches in the inbox (forgejo#306): a switched-off
@@ -82,6 +82,9 @@ describe("inbox suggestion switches", () => {
 
   it("trips off: no trips section and no request for them", async () => {
     useSuggestionSwitchesStore.setState({ trips: false });
+    // One open question keeps the inbox non-empty, so its filters are drawn
+    // (an inbox with nothing at all shows one message, not the filters).
+    vi.mocked(dataQualityFlagsApi.getAll).mockResolvedValue({ flags: [flag], count: 1 });
     await mount();
     expect(hasFilter("trips")).toBe(false);
     expect(hasFilter("dawarich")).toBe(true);
