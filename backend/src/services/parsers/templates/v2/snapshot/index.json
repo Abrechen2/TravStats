@@ -100,13 +100,13 @@
     {
       "id": "rental:sixt-confirmation",
       "domain": "rental",
-      "version": "2026.10.9",
+      "version": "2026.10.27",
       "path": "rental/sixt-confirmation.json"
     },
     {
       "id": "rental:sixt-invoice",
       "domain": "rental",
-      "version": "2026.10.10",
+      "version": "2026.10.27",
       "path": "rental/sixt-invoice.json"
     },
     {

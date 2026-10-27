@@ -1,7 +1,7 @@
 {
   "id": "rental:sixt-invoice",
   "domain": "rental",
-  "version": "2026.10.10",
+  "version": "2026.10.27",
   "issuer": {
     "name": "Sixt",
     "kind": "other",
@@ -9,7 +9,7 @@
       "senderDomains": ["sixt.com"]
     }
   },
-  "markets": ["DE", "FR", "NL", "BE"],
+  "markets": ["DE", "FR", "NL", "BE", "LU"],
   "match": {
     "markers": [],
     "anchors": ["rental_inv"],
@@ -112,7 +112,7 @@
       },
       "fees": {
         "mode": "matchAll",
-        "pattern": "^(?<label>(?:Tankfüllung|Nachtanken|Betankungsservice|Refuelling(?: charge| service)?|Refueling(?: charge| service)?|Carburant|Brandstof|Sonderreinigung|Reinigung|Cleaning(?: fee)?|Nettoyage|Schoonmaak|Mautgebühren|Mautgebühr|Toll charges?|Péage|Tolkosten|Bearbeitungsgebühr|Verwaltungsgebühr|Administration fee|Frais administratifs|Administratiekosten|Zusatzfahrer|Additional driver|Conducteur additionnel|Extra bestuurder|Einweggebühr|Einwegmiete|One[- ]way fee|Frais d'abandon|Flughafengebühr|Flughafenzuschlag|Airport (?:fee|surcharge)|Surcharge aéroport|Luchthaventoeslag|Mehrkilometer|Extra (?:km|kilometres|kilometers)|Kilomètres supplémentaires|Schadensbearbeitung|Damage handling(?: fee)?|Frais de dossier sinistre|Verspätete Rückgabe|Late return(?: fee)?|Retour tardif|Te late inlevering)[^\\n€\\d]{0,40}?)(?:[ \\t]+\\d{1,3})?[ \\t]+(?<amount>\\d{1,3}(?:\\.\\d{3})*,\\d{2})[ \\t]*€[ \\t]*$",
+        "pattern": "^(?<label>(?:Tankfüllung|Nachtanken|Betankungsservice|Refuelling(?: charge| service)?|Refueling(?: charge| service)?|Carburant|Brandstof|Sonderreinigung|Reinigung|Cleaning(?: fee)?|Nettoyage|Schoonmaak|Mautgebühren|Mautgebühr|Toll charges?|Péage|Tolkosten|Bearbeitungsgebühr|Verwaltungsgebühr|Administration fee|Frais administratifs|Administratiekosten|Zusatzfahrer|Additional driver|Conducteur additionnel|Extra bestuurder|Einweggebühr|Einwegmiete|One[- ]way fee|Frais d'abandon|Flughafengebühr|Flughafenzuschlag|Airport (?:fee|surcharge)|Surcharge aéroport|Luchthaventoeslag|Locatietoeslag|Schade- en diefstaldekking|Mehrkilometer|Extra (?:km|kilometres|kilometers)|Kilomètres supplémentaires|Schadensbearbeitung|Damage handling(?: fee)?|Frais de dossier sinistre|Verspätete Rückgabe|Late return(?: fee)?|Retour tardif|Te late inlevering)[^\\n€\\d]{0,40}?)(?:[ \\t]+\\d{1,3})?[ \\t]+(?<amount>\\d{1,3}(?:\\.\\d{3})*,\\d{2})[ \\t]*€(?:[ \\t]+\\d{1,3}(?:\\.\\d{3})*,\\d{2}[ \\t]*€[ \\t]+[A-Z]\\d{1,2}[ \\t]+\\d{1,3})?[ \\t]*$",
         "flags": "gim",
         "fields": {
           "label": {
@@ -192,6 +192,48 @@
           }
         ]
       }
+    },
+    {
+      "name": "Dutch invoice: the line total, then the unit price, VAT code and quantity; the rental days are no fee",
+      "input": {
+        "subject": "Ihre Rechnung 9000000000000001 für die Miete 2222222222",
+        "text": "Pagina1 van 2\t\nRENTAL_INV\nSixt B.V.\nAmsterdam,\nFactuurnr.:\n01.03.2026\n9000000000000001\nFactuur\nNaam\nbestuurder: Max Mustermann\nVoertuigcategorie: EDMR\nRes. nr.: 1111111111\nContractnr.: 2222222222\nDebiteurnr.: 3333333333\nBetalingswijze: VISA\nOphaaldatum\nStation: Voorbeeldstad Flughafen\nInlevering\nStation: Voorbeeldstad Flughafen\n26.02.2026 10:15\n01.03.2026 18:40\nOmschrijving\nvan de service Aantal Netto-\neenheidsprijs Netto-\nbedrag BTW\ncode\nHuurdagen 150,00 €\t50,00 € A1\t3\nSchade- en diefstaldekking 21,00 €\t7,00 € A1\t3\nLocatietoeslag 40,00 €\t40,00 € A1\t1\n211,00 €\tTotaal nettobedrag\nTotaal brutobedrag 255,31 €\nOpenstaand bedrag 0,00 €\n-- 1 of 2 --\nPagina2 van 2\nRENTAL_INV\nTeruggave-\nstation Teruggave-\ndatum Teruggave-\ntijd KM\nuit KM\nin KM\ngereden Nummer-\nplaat Bruto-\nadviesprijs*\nVoertuig CO2*\nVoertuiginformatie\nVoorbeeldstad\nFlughafen 01.03.2026 1000 1250 250 XX-00-Y Peugeot 208 102 30.000,00 €\t18:40\nHuurbedrag Vooruitbetaalde bedrag 1 Factuurbedrag\nNettobedrag 211,00 € -211,00 € 0,00 €\nA1 Umsatzsteuer 21.00% 44,31 € -44,31 € 0,00 €\n255,31 € -255,31 € 0,00 €\tBrutobedrag\n1 Vooruitbetaald met factuur 9000000000000000 gedateerd 26.02.2026\nAfgeboekt totaalbedrag 255,31 €"
+      },
+      "expect": "match",
+      "expected": {
+        "confirmationNumber": "1111111111",
+        "agreementNumber": "2222222222",
+        "invoiceNumber": "9000000000000001",
+        "actualPickupLocal": "2026-02-26T10:15",
+        "actualReturnLocal": "2026-03-01T18:40",
+        "finalAmount": 255.31,
+        "vehicles": [
+          {
+            "odometerOut": 1000,
+            "odometerIn": 1250,
+            "driven": 250,
+            "model": "Peugeot 208"
+          }
+        ],
+        "fees": [
+          {
+            "label": "Schade- en diefstaldekking",
+            "amount": 21
+          },
+          {
+            "label": "Locatietoeslag",
+            "amount": 40
+          }
+        ]
+      }
+    },
+    {
+      "name": "a cancellation-fee invoice (PREPAID_INV_V2) is no final invoice",
+      "input": {
+        "subject": "Ihre Rechnung",
+        "text": "Page 1 sur 2\t\nPREPAID_INV_V2\nFacture\nRes. no. : 4444444444\nCL No. :\nRetrait\n10.05.2026 / 08:00 Station : Exempleville Aéroport\nRetour attendu\n12.05.2026 / 17:00 Station : Exempleville Aéroport\nFrais d'annulation de réservation 50,00 €\t1 50,00 € A1\n50,00 €\tMontant total net\nA1 Umsatzsteuer 17.00% 8,50 €\nMontant total brut 58,50 €"
+      },
+      "expect": "decline"
     },
     {
       "name": "a Sixt mail without the invoice PDF is no invoice",
