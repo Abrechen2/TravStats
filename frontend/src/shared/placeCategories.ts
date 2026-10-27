@@ -23,6 +23,7 @@ export const PLACE_CATEGORIES = [
   "entertainment",
   "shopping",
   "viewpoint",
+  "service_area",
   "other",
 ] as const;
 
@@ -38,11 +39,49 @@ export const PLACE_CATEGORY_ICONS: Record<PlaceCategory, string> = {
   entertainment: "🎭",
   shopping: "🛍",
   viewpoint: "🔭",
+  service_area: "⛽",
   other: "📍",
 };
 
 export function isPlaceCategory(value: unknown): value is PlaceCategory {
   return typeof value === "string" && (PLACE_CATEGORIES as readonly string[]).includes(value);
+}
+
+/**
+ * Categories whose places are a stop on the way, never a visit of the country
+ * (forgejo#299, criterion 9): a motorway service area, a rest area, a fuel
+ * station. The issue's own example is the restaurant at a service area — on
+ * the ground, yes; a visit, no. The user changes the category to change the
+ * verdict. A NAME never decides it: "Airport Hotel" is a hotel.
+ */
+export const TRANSIT_PLACE_CATEGORIES: ReadonlySet<PlaceCategory> = new Set(["service_area"]);
+
+/**
+ * Whether a place proves only ground contact with its country. The manual
+ * "nur Durchreise" flag (`countryVisitKind: "transit"`) covers every other
+ * kind of place; a transit category needs no flag. This is the one home of
+ * the rule — the passport reads it, the place form explains it.
+ */
+export function placeCountsAsTransit(place: {
+  category?: string | null;
+  countryVisitKind?: string | null;
+}): boolean {
+  if (place.countryVisitKind === "transit") return true;
+  return isPlaceCategory(place.category) && TRANSIT_PLACE_CATEGORIES.has(place.category);
+}
+
+/**
+ * The categories the "every category" badge and the category coverage figure
+ * collect. A transit category is left out: a fuel stop is not a kind of
+ * sight, and counting it would have quietly turned "Aus jeder der acht
+ * Kategorien" into eight of nine.
+ */
+export const COLLECTIBLE_PLACE_CATEGORIES: readonly PlaceCategory[] = PLACE_CATEGORIES.filter(
+  (category) => !TRANSIT_PLACE_CATEGORIES.has(category)
+);
+
+export function isCollectiblePlaceCategory(value: unknown): boolean {
+  return isPlaceCategory(value) && !TRANSIT_PLACE_CATEGORIES.has(value);
 }
 
 /**
@@ -133,6 +172,10 @@ const OSM_VALUE_TO_CATEGORY: Record<string, PlaceCategory> = {
   department_store: "shopping",
   market: "shopping",
   viewpoint: "viewpoint",
+  // forgejo#299 criterion 9: highway=services, highway=rest_area, amenity=fuel.
+  services: "service_area",
+  rest_area: "service_area",
+  fuel: "service_area",
   // OSM CLASSES (Photon's `osm_key`), read only when a hit's value names no
   // category — see `categorisingOsmValue`. `historic` is both, above.
   // `tourism` is not among them: it holds hotels and campsites as well as sights.

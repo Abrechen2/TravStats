@@ -7,6 +7,7 @@
     "entertainment": "Unterhaltung",
     "shopping": "Einkaufen",
     "viewpoint": "Aussichtspunkt",
+    "service_area": "Raststätte/Tankstelle",
     "other": "Sonstiges"
   },
   "list": {
@@ -98,7 +99,8 @@
     "countryVisitKind": "Aufenthaltsart für die Länderzählung",
     "countryVisit": "Besuch außerhalb eines reinen Zwischenstopps",
     "countryTransit": "Nur Transit / Flughafen / Raststätte",
-    "countryVisitHint": "Ein reiner Zwischenstopp zählt als Bodenkontakt, auch mit Übernachtung. Der Name des Ortes entscheidet nicht."
+    "countryVisitHint": "Ein reiner Zwischenstopp zählt als Bodenkontakt, auch mit Übernachtung. Der Name des Ortes entscheidet nicht.",
+    "countryTransitByCategory": "Eine Raststätte oder Tankstelle zählt immer als Bodenkontakt, nie als Besuch des Landes. Wer dort wirklich etwas besucht hat, ändert die Kategorie."
   },
   "detail": {
     "backToList": "Zurück zur Übersicht",

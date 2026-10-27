@@ -1,3 +1,4 @@
+import { isCollectiblePlaceCategory } from "../../shared/placeCategories";
 import type { EvidenceScope } from "../../shared/evidence";
 import type { EvidenceEntry, EvidenceResponse } from "../../schemas/evidence";
 import { busiestDay, busiestIndex, longestRun } from "../../shared/placeRhythm";
@@ -172,12 +173,15 @@ export const resolvePlaceFavouriteVisits: Resolver = async (userId, scope, page)
 export const resolvePlaceCategoriesUsedCount: Resolver = async (userId, scope, page) => {
   const key = "placeCategoriesUsedCount";
   const { visited } = await loadScoped(userId, scope, key);
-  const entries = visited.map((place) =>
-    placeEvidenceEntry(
-      { id: place.id, placeId: place.id, placeName: place.name, visitedAt: newest(place) },
-      { credits: [place.category], subtitle: null }
-    )
-  );
+  // A transit category is no category collected (forgejo#299), as in `placeStats`.
+  const entries = visited
+    .filter((place) => isCollectiblePlaceCategory(place.category))
+    .map((place) =>
+      placeEvidenceEntry(
+        { id: place.id, placeId: place.id, placeName: place.name, visitedAt: newest(place) },
+        { credits: [place.category], subtitle: null }
+      )
+    );
   return domainDistinctEvidence({ key, unit: "categories", scope, page, entries });
 };
 

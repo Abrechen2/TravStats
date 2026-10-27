@@ -1,3 +1,4 @@
+import { isCollectiblePlaceCategory } from "../shared/placeCategories";
 import { classifyPlace, classifyVisit } from "../shared/placeCounting";
 import { getContinent } from "./continents";
 
@@ -144,7 +145,11 @@ export function calculatePlaceStats(
       stats.placeSouthernLat = place.lat;
     }
 
-    byCategory.set(place.category, (byCategory.get(place.category) ?? 0) + 1);
+    // A transit category is not a kind of sight (forgejo#299): it counts as a
+    // place, but it is no category collected.
+    if (isCollectiblePlaceCategory(place.category)) {
+      byCategory.set(place.category, (byCategory.get(place.category) ?? 0) + 1);
+    }
 
     let visitsHere = 0;
     for (const visit of place.visits) {

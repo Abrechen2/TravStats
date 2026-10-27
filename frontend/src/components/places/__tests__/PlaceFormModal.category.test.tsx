@@ -80,4 +80,22 @@ describe("PlaceFormModal — category guess from a search hit", () => {
       });
     }
   );
+
+  // forgejo#299 criterion 9: a fuel station is a stop, not a visit. The form
+  // says so instead of offering a "visit" the passport would not count.
+  it("files a fuel station as a service area and shows it counting as transit", async () => {
+    hit.type = "fuel";
+    const user = userEvent.setup();
+    render(<PlaceFormModal place={null} onClose={() => {}} onSaved={() => {}} />);
+
+    await user.click(screen.getByTestId("pick-location"));
+
+    const category = screen.getByDisplayValue(
+      /places:categories\.service_area/
+    ) as HTMLSelectElement;
+    expect(category.value).toBe("service_area");
+    const kind = screen.getByDisplayValue("places:form.countryTransit") as HTMLSelectElement;
+    expect(kind).toBeDisabled();
+    expect(screen.getByText("places:form.countryTransitByCategory")).toBeInTheDocument();
+  });
 });

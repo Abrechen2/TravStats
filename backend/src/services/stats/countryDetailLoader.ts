@@ -259,6 +259,7 @@ export async function loadCountryDetailInputs(userId: string): Promise<CountryDe
         name: true,
         isoCountryCode: true,
         countryVisitKind: true,
+        category: true,
         visits: { select: { visitedAt: true, visitedAtUtc: true, visitedZone: true } },
       },
     }),
@@ -340,6 +341,7 @@ export async function loadCountryDetailInputs(userId: string): Promise<CountryDe
             name: place.name,
             isoCountryCode: place.isoCountryCode,
             countryVisitKind: place.countryVisitKind,
+            category: place.category,
             at: placeVisitAt(v),
           }))
         : [
@@ -348,6 +350,7 @@ export async function loadCountryDetailInputs(userId: string): Promise<CountryDe
               name: place.name,
               isoCountryCode: place.isoCountryCode,
               countryVisitKind: place.countryVisitKind,
+              category: place.category,
               at: null,
             },
           ];

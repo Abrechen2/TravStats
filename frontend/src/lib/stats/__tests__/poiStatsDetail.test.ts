@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import { derivePoiStats, longestRunOfDays } from "../poiStatsDetail";
-import { PLACE_CATEGORIES } from "../../../shared/placeCategories";
+import { COLLECTIBLE_PLACE_CATEGORIES, PLACE_CATEGORIES } from "../../../shared/placeCategories";
 import type { Place, PlaceVisit } from "../../../types/place";
 
 const NOW = new Date("2026-08-29T00:00:00Z");
@@ -215,6 +215,23 @@ describe("derivePoiStats", () => {
     );
 
     expect(d.categoryCoverage).toEqual({ used: 2, total: PLACE_CATEGORIES.length });
+  });
+
+  it("does not collect a service area as a category (forgejo#299)", () => {
+    const d = derivePoiStats(
+      [
+        place({
+          id: "p1",
+          name: "Raststätte",
+          category: "service_area",
+          visits: [visit({ visitedAt: "2023-01-01" })],
+        }),
+      ],
+      COLLECTIBLE_PLACE_CATEGORIES.length,
+      NOW
+    );
+
+    expect(d.categoryCoverage).toEqual({ used: 0, total: PLACE_CATEGORIES.length - 1 });
   });
 
   it("survives a place with no visits at all", () => {
