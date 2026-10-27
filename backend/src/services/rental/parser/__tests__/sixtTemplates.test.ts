@@ -1,10 +1,19 @@
-import { looksLikeParking, parseCancellation } from "../rentalBookingParser";
+import { snapshotTemplates } from "../../../parsers/templates/v2/__tests__/snapshotTemplates";
+import {
+  looksLikeParking,
+  parseCancellation,
+  parseRentalBookingText,
+} from "../rentalBookingParser";
 import { CONFIRMATION_READERS, INVOICE_READERS, v2Invoice } from "./readers";
 import {
+  SIXT_CANCELLATION_FEE_MAIL,
+  SIXT_CANCELLATION_FEE_PDF,
+  SIXT_INVOICE_NL,
   SIXT_INVOICE_ONE_CAR,
   SIXT_INVOICE_SWAP,
   SIXT_LAYOUT_A,
   SIXT_LAYOUT_B,
+  SIXT_LAYOUT_B_LU,
 } from "./sixtFixtures";
 
 /**
@@ -49,6 +58,21 @@ describe.each(CONFIRMATION_READERS)("Sixt confirmation (%s)", (_name, parseSixtC
       placeHints: { country: "DE", airportWords: [] },
     });
     expect(r?.inclusions.sort()).toEqual(["cdw", "roadside", "tp"]);
+  });
+
+  it("reads a Luxembourg station's mail past its protection upsell and deposit", () => {
+    expect(parseSixtConfirmation(SIXT_LAYOUT_B_LU, "reservation@e.sixt.com")).toMatchObject({
+      confirmationNumber: "7777777777",
+      pickup: { stationName: "Exempleville Flughafen", local: "2026-05-13T08:45" },
+      return: { stationName: "Exempleville Flughafen", local: "2026-05-15T19:15" },
+      vehicleExample: "Probeauto C",
+      paymentTiming: "prepaid",
+      price: 150,
+      currency: "EUR",
+      mileagePolicy: "unlimited",
+      inclusions: ["roadside", "cdw", "tp"],
+      placeHints: { country: "LU" },
+    });
   });
 
   it("declines a Sixt mail that is not a confirmation", () => {
@@ -129,6 +153,35 @@ describe("Sixt invoice fee lines (v2 template)", () => {
   });
 });
 
+// forgejo#280: the Dutch PDF prints the line total first, then the unit
+// price, the VAT code and the quantity. Before, no fee line was read at all.
+describe("Sixt invoice, Dutch layout (v2 template)", () => {
+  it("reads numbers, times, km, car and the gross total", () => {
+    expect(
+      v2Invoice(SIXT_INVOICE_NL, "Ihre Rechnung 9000000000000001 für die Miete 2222222222")
+    ).toMatchObject({
+      confirmationNumber: "1111111111",
+      agreementNumber: "2222222222",
+      invoiceNumber: "9000000000000001",
+      actualPickupLocal: "2026-02-26T10:15",
+      actualReturnLocal: "2026-03-01T18:40",
+      odometerOutKm: 1000,
+      odometerInKm: 1250,
+      distanceKm: 250,
+      vehicleDriven: "Peugeot 208",
+      finalAmount: 255.31,
+      finalCurrency: "EUR",
+    });
+  });
+
+  it("takes each fee line's total, not its unit price, and leaves the rental days out", () => {
+    expect(v2Invoice(SIXT_INVOICE_NL)?.fees).toEqual([
+      { label: "Schade- en diefstaldekking", amount: 21, currency: "EUR" },
+      { label: "Locatietoeslag", amount: 40, currency: "EUR" },
+    ]);
+  });
+});
+
 describe("declines", () => {
   it("files an airport-parking booking as parking, not a rental", () => {
     const parking =
@@ -146,5 +199,29 @@ describe("declines", () => {
       confirmationNumber: "1234567890",
     });
     expect(parseCancellation(text, "someone@example.invalid")).toBeNull();
+  });
+
+  it("files a cancellation-fee invoice (PREPAID_INV_V2) as a cancellation with its gross fee", async () => {
+    const result = await parseRentalBookingText(SIXT_CANCELLATION_FEE_MAIL, {
+      from: "noreply@sixt.com",
+      subject: "Ihre Rechnung",
+      attachments: [],
+      templates: snapshotTemplates("rental"),
+    });
+    // The PDF text reaches the readers the way the attachment would; here it
+    // rides in the body so the test needs no PDF.
+    const withPdf = await parseRentalBookingText(
+      `${SIXT_CANCELLATION_FEE_MAIL}\n\n${SIXT_CANCELLATION_FEE_PDF}`,
+      { from: "noreply@sixt.com", subject: "Ihre Rechnung", templates: snapshotTemplates("rental") }
+    );
+    for (const r of [result, withPdf]) {
+      expect(r.document).toEqual({
+        kind: "cancellation",
+        source: "sixt-confirmation",
+        provider: "Sixt",
+        confirmationNumber: "4444444444",
+        fee: { amount: 58.5, currency: "EUR" },
+      });
+    }
   });
 });

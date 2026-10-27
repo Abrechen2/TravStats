@@ -1,7 +1,7 @@
 {
   "id": "rental:sixt-confirmation",
   "domain": "rental",
-  "version": "2026.10.9",
+  "version": "2026.10.27",
   "issuer": {
     "name": "Sixt",
     "kind": "other",
@@ -9,7 +9,7 @@
       "senderDomains": ["sixt.com", "e.sixt.com"]
     }
   },
-  "markets": ["DE"],
+  "markets": ["DE", "LU"],
   "match": {
     "markers": [],
     "anchors": [],
@@ -49,7 +49,10 @@
         "value": "Sixt"
       },
       "confirmationNumber": {
-        "patterns": ["^Buchung(?:snummer)?:[ \\t]*(\\d{10})\\b", "#\\s*(\\d{10})\\b"]
+        "patterns": [
+          "^Buchung(?:snummer)?:[ \\t]*(\\d{10})\\b",
+          "#\\s*(\\d{10})\\b"
+        ]
       },
       "pickupStation": {
         "patterns": ["^Abholung:[ \\t]+(.+)$", "^Abholung in[ \\t]+(.+)$"],
@@ -80,7 +83,9 @@
         "transform": "dateTime"
       },
       "vehicleExample": {
-        "patterns": ["^(?:Fahrzeugkategorie|Fahrzeuggruppe)\\n(.+?)[ \\t]+oder ähnlich$"],
+        "patterns": [
+          "^(?:Fahrzeugkategorie|Fahrzeuggruppe)\\n(.+?)[ \\t]+oder ähnlich$"
+        ],
         "transform": "trim"
       },
       "paymentTiming": {
@@ -196,6 +201,35 @@
         "price": 388,
         "placeCountry": "DE",
         "inclusions": [
+          {
+            "code": "cdw,tp"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a Luxembourg station's German mail: the protection upsell and the deposit are not the booking",
+      "input": {
+        "from": "reservation@e.sixt.com",
+        "subject": "Ihre Buchung bei SIXT Exempleville Flughafen ist bestätigt: #7777777777",
+        "text": "Buchung verwalten\nIhre Buchung ist bestätigt!\nWir freuen uns darauf, Sie begrüßen zu dürfen, Erika.\nIhre Reise \t\nBuchung: ‌7777777777‌ \t\nMittwoch, 13. Mai, 2026 um 08:45 \t\nAbholung in Exempleville Flughafen \t\nFreitag, 15. Mai, 2026 um 19:15 \t\nRückgabe in Exempleville Flughafen \t\nFahrzeuggruppe \t\nProbeauto C oder ähnlich \t\nAutomatik \t\nIhr aktueller Schutz \t\nIhr Schutz deckt nur Schäden und Diebstahl mit einer Selbstbeteiligung von 1.000€ ab. \t\nEmpfohlener Fahrzeugschutz in Exempleville \t\nFahren Sie sorgenfrei mit einer Selbstbeteiligung von 0 €. \t\n0 € Selbstbeteiligung \t\nSchutz bei Ansprüchen Dritter \t\n24/7 Pannenhilfe \t\nUpgrade \t\nEmpfohlen für Ihre Anmietung in Exempleville \t\nZusatzfahrer \t\nHinzufügen \t\nExtras, die bereits in Ihrer Buchung enthalten sind \t\n‌24/7 Pannenhilfe‌ \t\n‌Haftpflichtversicherung‌ \t\n‌Unbegrenzte Kilometer‌ \t\n‌Selbstbeteiligung bis 1000 EUR bei Unfall oder Diebstahl‌ \t\nWeitere Extras entdecken \t\nInformationen zur Zahlung \t\nMietpreis im Voraus bezahlt \t150,00 € \t\nBei der Abholung wird eine zusätzliche Kaution in Höhe von 300,00 € auf Ihrer Karte reserviert. \t\nSIXT Exempleville Flughafen Team \t\n|country:LU|language:de|name:Erika|emailName:confirm|"
+      },
+      "expect": "match",
+      "expected": {
+        "confirmationNumber": "7777777777",
+        "pickupStation": "Exempleville Flughafen",
+        "pickupLocal": "2026-05-13T08:45",
+        "returnStation": "Exempleville Flughafen",
+        "returnLocal": "2026-05-15T19:15",
+        "vehicleExample": "Probeauto C",
+        "paymentTiming": "prepaid",
+        "price": 150,
+        "mileagePolicy": "unlimited",
+        "placeCountry": "LU",
+        "inclusions": [
+          {
+            "code": "roadside"
+          },
           {
             "code": "cdw,tp"
           }
