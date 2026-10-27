@@ -222,7 +222,8 @@
     "roadtrip": "Roadtrip",
     "rail": "Zugfahrt",
     "rental": "Mietwagen",
-    "bus": "Busfahrt"
+    "bus": "Busfahrt",
+    "ferry": "Fährfahrt"
   },
   "controls": {
     "mode": "Modus",

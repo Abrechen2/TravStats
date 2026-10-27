@@ -83,6 +83,15 @@ vi.mock("../../bus/BusFormModal", () => ({
   ),
 }));
 
+// The real form pulls in the port search; a stub that can report a save is enough.
+vi.mock("../../ferry/FerryFormModal", () => ({
+  FerryFormModal: ({ onSaved }: { onSaved: () => void }) => (
+    <button type="button" data-testid="ferry-form-modal" onClick={onSaved}>
+      save-ferry
+    </button>
+  ),
+}));
+
 // Imported after the mocks above so the module graph picks them up.
 import { DashboardLayout } from "../DashboardLayout";
 
@@ -174,6 +183,26 @@ describe("DashboardLayout: adding a bus ride from the map", () => {
 
     fireEvent.click(screen.getByTestId("bus-form-modal"));
     expect(screen.queryByTestId("bus-form-modal")).not.toBeInTheDocument();
+    expect(onDataChanged).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * Tester report 2026-10-27: the map's add menu offered rail, rental and bus but
+ * no ferry. A ferry has no import either, so the pick opens the ride form.
+ */
+describe("DashboardLayout: adding a ferry ride from the map", () => {
+  it("opens the ride form from the add menu, and closes and refreshes on save", () => {
+    const onDataChanged = vi.fn();
+    renderAt("all", vi.fn(), onDataChanged);
+    expect(screen.queryByTestId("ferry-form-modal")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /addPicker\.button/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /addPicker\.ferry/i }));
+    expect(screen.getByTestId("ferry-form-modal")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("ferry-form-modal"));
+    expect(screen.queryByTestId("ferry-form-modal")).not.toBeInTheDocument();
     expect(onDataChanged).toHaveBeenCalledTimes(1);
   });
 });

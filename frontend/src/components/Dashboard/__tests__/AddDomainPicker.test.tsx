@@ -30,6 +30,7 @@ describe("AddDomainPicker", () => {
           rail: false,
           rental: false,
           bus: false,
+          ferry: false,
           tour: false,
         }}
         onPick={() => {}}
@@ -50,6 +51,7 @@ describe("AddDomainPicker", () => {
           rail: false,
           rental: false,
           bus: false,
+          ferry: false,
           tour: false,
         }}
         onPick={() => {}}
@@ -76,6 +78,7 @@ describe("AddDomainPicker", () => {
           rail: false,
           rental: false,
           bus: false,
+          ferry: false,
           tour: false,
         }}
         onPick={() => {}}
@@ -98,6 +101,7 @@ describe("AddDomainPicker", () => {
           rail: false,
           rental: false,
           bus: false,
+          ferry: false,
           tour: false,
         }}
         onPick={onPick}
@@ -123,6 +127,7 @@ describe("AddDomainPicker", () => {
             rail: false,
             rental: false,
             bus: false,
+            ferry: false,
             tour: false,
           }}
           onPick={onPick}
@@ -147,6 +152,7 @@ describe("AddDomainPicker", () => {
       roadtrip: false,
       rail: false,
       rental: false,
+      ferry: false,
       tour: false,
     };
     const { unmount } = render(
@@ -160,5 +166,33 @@ describe("AddDomainPicker", () => {
     fireEvent.click(screen.getByRole("button", { name: /hinzufügen/i }));
     fireEvent.click(screen.getByRole("menuitem", { name: /addPicker\.bus/ }));
     expect(onPick).toHaveBeenCalledWith("bus");
+  });
+});
+
+describe("AddDomainPicker ferry", () => {
+  it("lists ferry rides only where the user's domain says so, and passes the pick on", () => {
+    const onPick = vi.fn();
+    const enabled = {
+      flight: true,
+      cruise: false,
+      lodging: false,
+      poi: false,
+      roadtrip: false,
+      rail: false,
+      rental: false,
+      bus: false,
+      tour: false,
+    };
+    const { unmount } = render(
+      <AddDomainPicker enabled={{ ...enabled, ferry: false }} onPick={onPick} />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /hinzufügen/i }));
+    expect(screen.queryByRole("menuitem", { name: /addPicker\.ferry/ })).toBeNull();
+    unmount();
+
+    render(<AddDomainPicker enabled={{ ...enabled, ferry: true }} onPick={onPick} />);
+    fireEvent.click(screen.getByRole("button", { name: /hinzufügen/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /addPicker\.ferry/ }));
+    expect(onPick).toHaveBeenCalledWith("ferry");
   });
 });

@@ -222,7 +222,8 @@
     "roadtrip": "Roadtrip",
     "rail": "Train journey",
     "rental": "Rental car",
-    "bus": "Bus ride"
+    "bus": "Bus ride",
+    "ferry": "Ferry crossing"
   },
   "controls": {
     "mode": "Mode",

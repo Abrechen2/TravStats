@@ -10,6 +10,7 @@ import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { useRailImportAdapter } from "../import/adapters/railAdapter";
 import { useRentalImportAdapter } from "../import/adapters/rentalAdapter";
 import { BusFormModal } from "../bus/BusFormModal";
+import { FerryFormModal } from "../ferry/FerryFormModal";
 import { flightsApi } from "../../lib/api/flights";
 import { getUpcoming, type UpcomingEntry } from "../../lib/api/upcoming";
 import { useToastStore } from "../../store/toastStore";
@@ -164,6 +165,7 @@ export function DashboardLayout({
     rail: isEnabled("rail"),
     rental: isEnabled("rental"),
     bus: isEnabled("bus"),
+    ferry: isEnabled("ferry"),
   };
 
   // What the "+" menu offers. One entry differs from `enabledDomains`, on
@@ -398,6 +400,17 @@ export function DashboardLayout({
           The form's button stays disabled after a save, so closing is ours. */}
       {addingDomain === "bus" && (
         <BusFormModal
+          journey={null}
+          onClose={() => setAddingDomain(null)}
+          onSaved={() => {
+            setAddingDomain(null);
+            onDataChanged?.();
+          }}
+        />
+      )}
+      {/* Ferries likewise: no import from here, the pick opens the ride form. */}
+      {addingDomain === "ferry" && (
+        <FerryFormModal
           journey={null}
           onClose={() => setAddingDomain(null)}
           onSaved={() => {
