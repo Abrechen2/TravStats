@@ -23,7 +23,7 @@
     "@deck.gl/layers": "~9.4.0",
     "@deck.gl/react": "~9.4.0",
     "@hookform/resolvers": "^5.9.1",
-    "@simplewebauthn/browser": "^13.3.0",
+    "@simplewebauthn/browser": "^14.0.0",
     "@turf/turf": "^6.5.0",
     "@zxing/browser": "^0.2.1",
     "@zxing/library": "^0.23.0",
