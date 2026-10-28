@@ -58,7 +58,19 @@ setup("authenticate", async ({ page }) => {
   // "Verstanden, los geht's" button too, and an unanchored match clicked THAT
   // — sometimes while the usage-statistics dialog below already covered it,
   // which timed the whole setup out on an intercepted click.
-  const dismiss = page.getByRole("dialog").getByRole("button", { name: /^(Verstanden|Got it)$/ });
+  // Since the developer's note (eb600b662) the dialog can have a second page:
+  // the first one then offers "Weiter", not "Verstanden", and waiting for the
+  // latter left the dialog open over the profile-zone step behind it.
+  const dialog = page.getByRole("dialog");
+  const dismiss = dialog.getByRole("button", { name: /^(Verstanden|Got it)$/ });
+  const next = dialog.getByRole("button", { name: /^(Weiter|Next)$/ });
+  const firstPage = await dismiss
+    .or(next)
+    .first()
+    .waitFor({ state: "visible", timeout: 10_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (firstPage && (await next.isVisible())) await next.click();
   const appeared = await dismiss
     .waitFor({ state: "visible", timeout: 10_000 })
     .then(() => true)
