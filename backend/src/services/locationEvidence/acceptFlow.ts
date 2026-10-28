@@ -210,11 +210,22 @@ async function publish<Row extends ClaimState, Entry>(
         { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted, timeout: 30_000 }
       );
     } catch (error) {
-      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2034")
-        throw error;
+      if (!isRetryable(error)) throw error;
     }
   }
   throw inProgress();
+}
+
+/**
+ * A conflict the next attempt may not meet: a serialization failure, or a
+ * deadlock. Widening a shared trip locks the other members' accounts while
+ * this account's lock (1) is held, so it can meet a member's own period save
+ * in the opposite order; Postgres aborts one side whole, and it is retried.
+ */
+function isRetryable(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+  if (error.code === "P2034") return true;
+  return error.code === "P2010" && (error.meta as { code?: string } | undefined)?.code === "40P01";
 }
 
 export async function acceptFlow<Row extends ClaimState & { id: string }, Entry>(opts: {

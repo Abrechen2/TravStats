@@ -118,6 +118,27 @@ describe("sharing — a shared trip's period", () => {
     expect(day((await trip(pair.memberTrip.id)).endDay)).toBe("2025-05-14");
   });
 
+  // Codex review before 2.7.0-rc.27: undo read the period before taking the
+  // lock, so a save landing in between was overwritten with the old values.
+  it("an undo racing the member's own save never overwrites that save", async () => {
+    for (let round = 0; round < 5; round += 1) {
+      await patchTrip(anna, pair.full.trip.id, { endDate: `2025-05-1${round}` }).expect(200);
+      const [notice] = await notices(ben);
+      const saved = `2025-05-2${round}`;
+      const [patched] = await Promise.all([
+        patchTrip(ben, pair.memberTrip.id, { endDate: saved }),
+        request(app)
+          .post(`/api/v1/sharing/notices/${notice.id}/undo`)
+          .set("Cookie", ben.cookie)
+          .send({}),
+      ]);
+      expect(patched.status).toBe(200);
+      // Either the undo ran first and the save followed it, or it saw the save
+      // and refused as stale — in both cases the save is what remains.
+      expect(day((await trip(pair.memberTrip.id)).endDay)).toBe(saved);
+    }
+  });
+
   it("undo refuses a restore that would end the trip before it begins", async () => {
     // Anna moves the start earlier; then the end is moved before the old start.
     // Restoring only the start would leave 1 May – 28 April on every trip.
@@ -163,5 +184,29 @@ describe("sharing — a shared trip's period", () => {
     await acceptSuggestion(anna.id, proposal, {});
     expect(day((await trip(pair.memberTrip.id)).endDay)).toBe("2025-05-11");
     expect((await notices(ben))[0]).toMatchObject({ kind: "updated", entityType: "trip" });
+  });
+  // Codex review before 2.7.0-rc.27: each save locked its own account, then the
+  // other member's while propagating — two members moving the period at once
+  // locked in opposite order, and Postgres aborted one save as a deadlock.
+  it("two members moving the period at the same moment both save", async () => {
+    for (let round = 0; round < 5; round += 1) {
+      const [a, b] = await Promise.all([
+        patchTrip(anna, pair.full.trip.id, {
+          startDate: `2025-06-0${round + 1}`,
+          endDate: "2025-06-20",
+        }),
+        patchTrip(ben, pair.memberTrip.id, {
+          startDate: `2025-07-0${round + 1}`,
+          endDate: "2025-07-20",
+        }),
+      ]);
+      expect([a.status, b.status]).toEqual([200, 200]);
+    }
+    // Whoever saved last wins, and both trips agree on it.
+    const [mine, theirs] = await Promise.all([trip(pair.full.trip.id), trip(pair.memberTrip.id)]);
+    expect([day(mine.startDay), day(mine.endDay)]).toEqual([
+      day(theirs.startDay),
+      day(theirs.endDay),
+    ]);
   });
 });

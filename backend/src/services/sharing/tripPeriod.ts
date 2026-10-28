@@ -58,6 +58,34 @@ const zonesOf = (p: FactRecord): Prisma.InputJsonObject => ({
   endDay: (p.endZone as string | null) ?? null,
 });
 
+/**
+ * Take the TravTrack lock of every account on the trip's group, in id order,
+ * before anything else in the transaction. A period write locks the writer and
+ * then each receiving member (`writePeriod`), so two members saving at once
+ * locked in opposite order and Postgres aborted one as a deadlock (Codex
+ * review before 2.7.0-rc.27). One global order makes that cycle impossible;
+ * the later locks in `writePeriod` are then re-entrant. A trip in no group
+ * takes only its owner's lock, as before.
+ */
+export async function lockTripPeriodAccounts(
+  tx: DbTransaction,
+  userId: string,
+  tripId: string
+): Promise<void> {
+  const trip = await tx.trip.findFirst({
+    where: { id: tripId, userId },
+    select: { shareGroupId: true },
+  });
+  const members = trip?.shareGroupId
+    ? await tx.trip.findMany({
+        where: { shareGroupId: trip.shareGroupId },
+        select: { userId: true },
+      })
+    : [];
+  const accounts = [...new Set([userId, ...members.map((m) => m.userId)])].sort();
+  for (const account of accounts) await takeTravTrackLock(tx, account);
+}
+
 /** Write a period onto a member's trip, as their trip: lock, narrow their shared routes, restatus. */
 async function writePeriod(
   tx: DbTransaction,
@@ -145,6 +173,9 @@ export async function undoTripPeriod(
     after: Prisma.JsonValue;
   }
 ): Promise<{ tripId: string }> {
+  // Locked before the read: a period saved meanwhile must be seen as a change
+  // since this notice (SHARE_UNDO_STALE), not overwritten with the old values.
+  if (notice.entityKey) await lockTripPeriodAccounts(tx, userId, notice.entityKey);
   const own = notice.entityKey
     ? await tx.trip.findFirst({
         where: { id: notice.entityKey, userId, shareGroupId: notice.groupId ?? undefined },

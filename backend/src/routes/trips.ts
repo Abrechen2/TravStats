@@ -1,9 +1,8 @@
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
-import { takeTravTrackLock } from "../services/travtrack/lock";
 import { narrowShareSnapshots } from "../services/travtrack/shareNarrow";
-import { propagateTripPeriod } from "../services/sharing/tripPeriod";
+import { lockTripPeriodAccounts, propagateTripPeriod } from "../services/sharing/tripPeriod";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { rejectDemo } from "../middleware/demoGuard";
 import { AppError } from "../middleware/errorHandler";
@@ -485,7 +484,7 @@ router.patch(
           // A shared route narrows to the trip's new days in this transaction,
           // never widens (TravTrack plan T7): the former days are recorded by a
           // trigger on the row, and a failed narrowing fails the edit.
-          if (daysChanged) await takeTravTrackLock(tx, userId);
+          if (daysChanged) await lockTripPeriodAccounts(tx, userId, existing.id);
           if (resolvedCompanionsForUpdate !== undefined) {
             await tx.tripCompanion.deleteMany({ where: { tripId: existing.id } });
             if (resolvedCompanionsForUpdate.length > 0) {

@@ -1,5 +1,9 @@
 import { prisma, type DbTransaction } from "../../db";
-import { propagateTripPeriod, TRIP_PERIOD_SELECT } from "../sharing/tripPeriod";
+import {
+  lockTripPeriodAccounts,
+  propagateTripPeriod,
+  TRIP_PERIOD_SELECT,
+} from "../sharing/tripPeriod";
 import { propagateWrites } from "../sharing/propagate";
 import { AppError } from "../../middleware/errorHandler";
 import { newTripColor } from "../trip/newTripColor";
@@ -164,6 +168,9 @@ async function acceptTrip(
     });
     tripId = trip.id;
   } else {
+    if (proposal.kind === "extend" && proposal.trip?.id) {
+      await lockTripPeriodAccounts(tx, userId, proposal.trip.id);
+    }
     const trip = await tx.trip.findFirst({
       where: { id: proposal.trip?.id, userId },
       select: { id: true, ...TRIP_PERIOD_SELECT },
