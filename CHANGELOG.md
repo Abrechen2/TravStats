@@ -6,6 +6,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Before upgrading to 2.7.0-rc.27:** take a backup. One new migration since rc.26: every account gets its own TravPlan switch; accounts that already hold a plan keep it on.
+
 **Before upgrading to 2.7.0-rc.26:** take a backup. 27 new migrations since rc.25, almost all for TravTrack (new tables, nothing existing is rewritten), plus the inbox finding undo/revision columns and the encrypted calendar-feed token. TravTrack stays off until an admin enables it and its beta key is open.
 
 **Before upgrading to 2.7.0-rc.25:** take a backup. One new migration since rc.24: every stored rail ride is marked as a train, and the two new rail import settings start at "skip". Coming from 2.7.0-rc.19: 5 migrations; from 2.7.0-rc.18: 26 migrations, and stored straight ferry crossings are re-routed once in the background.
@@ -14,6 +16,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Added
 
+- **A shared trip's dates sync to every member; its name does not.** Moving a shared trip's period moves it for everyone on the trip, each member gets an inbox notice they can undo, and each member keeps their own name for the trip.
+- **TravPlan is switched on and off per account,** beside the domains in your settings, like any other area. Accounts that already plan with it keep it on.
+- **Country and continent badges count ground contact.** A bus or ferry end, a service area or a fuel station places you in a country and on a continent, each piece of evidence on its own continent; a service area or fuel station counts as ground contact only, never as a visit.
+- **Both odometer readings prove a finished roadtrip driven.**
+- **TravTrack shows as soon as an admin switches it on,** and says how data comes in.
+- **The "what's new" dialog ends with a note from the developer** after the 2.7 highlights.
 - **TravTrack (beta): your own location history on your server.** The Companion records into it; a map of days and ranges, explored areas, monthly values, stays, a flight panel with the altitude profile and the photos taken on board, imports from GPX and a Dawarich copy, privacy zones that delete and never draw what lies inside them. Behind its own instance switch and the beta key.
 - **Inbox questions from TravTrack show their stretch of track:** a small map, from–to, duration, distance and why the question was asked.
 - **Duplicates are merged from the inbox, with undo.** Keep both, merge into one (refused with a reason when the copies carry different recordings or trips), and a ferry crossing inside a trip is offered to that trip. Dismiss, keep and link can be undone for ten minutes.
@@ -148,6 +156,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Changed
 
+- **The production dependencies carry no known vulnerability:** DOMPurify (critical, used for PDF export), postal-mime 4.1 (.eml previews), body-parser, multer, fast-uri and zod are updated.
 - **Rental cars, coach rides and ferry crossings are out of beta.** They show whenever you enable the area in your settings.
 - **Completing a stay from OpenStreetMap is out of beta,** with a stricter name rule: a town or landmark word alone no longer matches a house, and English and German names are compared too. Measured on 200 real stays: 1 wrong match in 156 (was 2 in 152).
 - **Detect places automatically** is on by default with the stay scan; its two area switches are expert settings.
@@ -183,6 +192,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Fixed
 
+- **Two members moving a shared trip's dates at the same moment both save.** One of the two saves used to fail; and an undo that raced a member's own save could overwrite it with the old dates.
+- **A replace import from a spreadsheet no longer starts a backup for the demo account or beside a backup already running.**
+- **Places count in every category they carry** except the transit kind (forgejo#299).
+- A booked or cancelled cruise counts in no cruise figure.
+- The Dutch Sixt invoice's fee lines are read (forgejo#280, forgejo#237).
+- The ferry port search finds the port of the town you typed.
+- The year filter applies to the route network and the route list in the statistics.
+- The profile shows your real username and no placeholder e-mail address.
+- Ferry crossings are offered in the map's add menu; the narrow rail list names each ride's mode and line; on a phone the TravTrack map sits right under the range control; an empty inbox shows one message with one action; flight-track gaps are drawn dashed.
 - **Uploading a document from the web works again.** Every web upload had failed with "No file uploaded" since September.
 - **A server no longer crashes when another server cannot be reached over IPv6** while checking it; addresses are tried IPv4 first.
 - A share link of a trip without dates ends after the trip's last entry.
