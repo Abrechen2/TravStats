@@ -24,6 +24,9 @@ set -euo pipefail
 
 PVE_NODE="${PVE_NODE:?set PVE_NODE to the Proxmox node hosting the prod and RC containers -- the concrete addresses live in CLAUDE.local.md, deliberately not in this public repo}"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_ed25519}"
+# HA moves containers between nodes without notice, so prod and the RC need not
+# share one: PROD_NODE names prod's node when it differs (default: PVE_NODE).
+PROD_NODE="${PROD_NODE:-$PVE_NODE}"
 CT_PROD="${CT_PROD:-100}"
 CT_RC="${CT_RC:-107}"
 DB_PROD_CONTAINER="${DB_PROD_CONTAINER:-travstats-db}"
@@ -37,6 +40,7 @@ DUMP="/tmp/travstats-prod-stage.dump"
 CT_BETA="${CT_BETA:-106}"
 
 ssh_node() { ssh -i "$SSH_KEY" -o ConnectTimeout=10 -o StrictHostKeyChecking=no "root@$PVE_NODE" "$@"; }
+ssh_prod() { ssh -i "$SSH_KEY" -o ConnectTimeout=10 -o StrictHostKeyChecking=no "root@$PROD_NODE" "$@"; }
 
 # --- Target guard: refuse before anything is dumped, moved or dropped --------
 # A wrong default was the original bug; a wrong ARGUMENT is just as destructive,
@@ -83,10 +87,15 @@ if [ "${FORCE:-0}" != "1" ]; then
 fi
 
 echo "==> [1/6] Dump Prod DB inside CT$CT_PROD (custom format)"
-ssh_node "pct exec $CT_PROD -- sh -c 'docker exec $DB_PROD_CONTAINER pg_dump -U $DB_USER -Fc $DB_NAME > $DUMP'"
+ssh_prod "pct exec $CT_PROD -- sh -c 'docker exec $DB_PROD_CONTAINER pg_dump -U $DB_USER -Fc $DB_NAME > $DUMP'"
 
-echo "==> [2/6] Move dump CT$CT_PROD -> pve node -> CT$CT_RC"
-ssh_node "pct pull $CT_PROD $DUMP $DUMP && pct push $CT_RC $DUMP $DUMP"
+echo "==> [2/6] Move dump CT$CT_PROD -> pve node(s) -> CT$CT_RC"
+ssh_prod "pct pull $CT_PROD $DUMP $DUMP"
+if [ "$PROD_NODE" != "$PVE_NODE" ]; then
+  ssh_prod "cat $DUMP" | ssh_node "cat > $DUMP"
+  ssh_prod "rm -f $DUMP"
+fi
+ssh_node "pct push $CT_RC $DUMP $DUMP"
 
 # --- Keep the RC's OWN credentials across the clone --------------------------
 # Forgejo #32. The clone carries the database and NOT `/app/data/secrets/`, so
@@ -233,7 +242,8 @@ if [ -z "${KEEP_INHERITED_KEYS:-}" ] && [ "${SAVED:-0}" != "0" ]; then
 fi
 
 echo "==> [6/6] Cleanup dump files"
-ssh_node "pct exec $CT_PROD -- sh -c 'rm -f $DUMP' ; pct exec $CT_RC -- sh -c 'docker exec $DB_RC_CONTAINER rm -f $DUMP $KEY_SQL $GEN_SQL; rm -f $DUMP $KEY_SQL $GEN_SQL' ; rm -f $DUMP" || true
+ssh_prod "pct exec $CT_PROD -- sh -c 'rm -f $DUMP'; rm -f $DUMP" || true
+ssh_node "pct exec $CT_RC -- sh -c 'docker exec $DB_RC_CONTAINER rm -f $DUMP $KEY_SQL $GEN_SQL; rm -f $DUMP $KEY_SQL $GEN_SQL' ; rm -f $DUMP" || true
 
 echo
 echo "Done. The RC Server now holds a copy of Prod data (migrated up by the app entrypoint)."
