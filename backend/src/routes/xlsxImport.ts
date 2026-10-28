@@ -15,6 +15,9 @@
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
+import { rejectDemoWrites } from "../middleware/demoGuard";
+import { xlsxImportLimiter } from "../middleware/rateLimit";
+import { prisma } from "../db";
 import { AppError } from "../middleware/errorHandler";
 import logger from "../utils/logger";
 import { createBackup } from "../services/backupService";
@@ -60,6 +63,10 @@ router.post(
   "/",
   authenticate,
   requireWriteScope,
+  // A replace takes a full instance backup: the shared demo account must not
+  // be able to start one, and nobody may start them back to back.
+  rejectDemoWrites,
+  xlsxImportLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const userId = req.userId;
@@ -99,6 +106,11 @@ async function runImport(
   // what decides this.
   let backupId: string | null = null;
   if (mode === "replace" && !dryRun) {
+    // The backup is instance-wide; one is enough at a time (the admin route's
+    // own guard, `routes/backup.ts`, holds the same line).
+    if (await prisma.backup.findFirst({ where: { status: "running" }, select: { id: true } })) {
+      throw new AppError("A backup is already running", 409, "BACKUP_RUNNING");
+    }
     try {
       backupId = await createBackup();
       logger.info(

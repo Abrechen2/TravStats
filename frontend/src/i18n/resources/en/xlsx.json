@@ -328,6 +328,7 @@
     "confirmReplace": "I understand that {{count}} entries will be deleted",
     "backupTaken": "Backup taken first: {{id}}",
     "backupFailed": "The safety backup failed — nothing was changed.",
+    "backupRunning": "A backup is already running. Please wait until it has finished, then start the import again – nothing was changed.",
     "emptySheetNote": "An empty sheet deletes nothing. To empty a domain, remove its rows one by one.",
     "transferNote": "The spreadsheet carries entries, not photos, documents or receipts. Trips are not a sheet of their own: an entry is linked to the trip of the same name in the target account, otherwise it stays without a trip. Moving a whole installation, photos and documents included, to another server is what the backup is for; it cannot move a single account into another account.",
     "rowsToggle": "Rows in detail",

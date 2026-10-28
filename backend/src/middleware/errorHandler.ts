@@ -362,8 +362,7 @@ export type ApiErrorCode =
   | "ROADTRIP_HAS_TRIP_PHOTOS"
   /** A roadtrip station with a night was sent as a route correction. */
   | "VIA_POINT_HAS_NIGHT"
-  /** Backup / restore job failures — see `services/backup/backupFailure.ts`.
-   *  A tool (pg_dump, psql, tar) is not installed where the server runs. */
+  /** Backup/restore failures (`backup/backupFailure.ts`): pg_dump, psql or tar missing. */
   | "BACKUP_TOOL_MISSING"
   /** The backup volume ran out of space. */
   | "BACKUP_DISK_FULL"
@@ -375,6 +374,7 @@ export type ApiErrorCode =
   | "BACKUP_TOOL_VERSION_MISMATCH"
   /** A backup failed for a cause not recognised above; detail in the log. */
   | "BACKUP_FAILED"
+  | "BACKUP_RUNNING"
   /** A backup the server was stopped or restored in the middle of (stored on the row). */
   | "BACKUP_INTERRUPTED"
   /** A restore failed for a cause not recognised above; detail in the log. */

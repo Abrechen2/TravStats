@@ -108,6 +108,21 @@ describe("SpreadsheetSection — the import is a job", () => {
     await waitFor(() => expect(screen.getByText("xlsx:import.backupFailed")).toBeTruthy());
   });
 
+  it("a backup that is already running reads as that, and asks to try again later", async () => {
+    vi.spyOn(api, "post").mockResolvedValue({
+      data: { success: true, data: { jobId: "job-1" } },
+    } as never);
+    jobAnswers([
+      { status: "succeeded", result: OUTCOME },
+      { status: "failed", error: { code: "BACKUP_RUNNING", status: 409 } },
+    ]);
+
+    await choose();
+    fireEvent.click(await screen.findByText("xlsx:import.apply"));
+
+    await waitFor(() => expect(screen.getByText("xlsx:import.backupRunning")).toBeTruthy());
+  });
+
   it("an outcome the server no longer reports is said to be unknown, never 'failed'", async () => {
     vi.spyOn(api, "post").mockResolvedValue({
       data: { success: true, data: { jobId: "job-1" } },

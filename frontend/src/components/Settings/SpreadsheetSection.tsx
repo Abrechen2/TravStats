@@ -101,6 +101,7 @@ type ImportStatus =
   | "applied"
   | "failed"
   | "backupFailed"
+  | "backupRunning"
   | "outcomeUnknown"
   | "nothing";
 
@@ -458,6 +459,11 @@ export default function SpreadsheetSection(): JSX.Element {
         {importStatus === "backupFailed" && (
           <p className="mt-2 text-xs" style={{ color: "var(--danger, #f87171)" }}>
             {t("xlsx:import.backupFailed")}
+          </p>
+        )}
+        {importStatus === "backupRunning" && (
+          <p className="mt-2 text-xs" style={{ color: "var(--danger, #f87171)" }}>
+            {t("xlsx:import.backupRunning")}
           </p>
         )}
         {importStatus === "outcomeUnknown" && (

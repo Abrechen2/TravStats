@@ -149,7 +149,9 @@ export async function readWorkbookForImport(
  * server's backup storage — which is exactly what happened in the rc.18 UAT.
  */
 export class ImportRefused extends Error {
-  constructor(public readonly kind: "backupFailed" | "outcomeUnknown" | "unknown") {
+  constructor(
+    public readonly kind: "backupFailed" | "backupRunning" | "outcomeUnknown" | "unknown"
+  ) {
     super(kind);
     this.name = "ImportRefused";
   }
@@ -178,6 +180,11 @@ export async function sendImport(
   } catch (err) {
     if (err instanceof JobFailedError && err.code === "backup_failed") {
       throw new ImportRefused("backupFailed");
+    }
+    // A replace waits for a backup that is already running instead of
+    // starting a second instance-wide one.
+    if (err instanceof JobFailedError && err.code === "BACKUP_RUNNING") {
+      throw new ImportRefused("backupRunning");
     }
     // The server stopped reporting: rows may or may not have been written,
     // and "failed" would invite a second run over a first that succeeded.

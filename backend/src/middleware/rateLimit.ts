@@ -244,8 +244,7 @@ export const lodgingImportLimiter = importLimit({
   keyGenerator: userOrIpKey,
 });
 
-/** Per-user limits for the ZIP routes (`/track-archive`, the `.travstats` trip file): 30 per
- *  15 min covers trying, previewing and applying several times over. One bucket each. */
+/** Per user, 30 per 15 min: try, preview, apply several times over. One bucket per route. */
 const archiveLimiter = (what: string) =>
   importLimit({
     windowMs: 15 * 60 * 1000,
@@ -257,6 +256,7 @@ const archiveLimiter = (what: string) =>
   });
 export const trackArchiveLimiter = archiveLimiter("recording archive");
 export const tripFileLimiter = archiveLimiter("trip file");
+export const xlsxImportLimiter = archiveLimiter("spreadsheet import"); // a replace = full backup
 
 /** Flight creation, per user (`FLIGHT_CREATION_MAX` an hour); every request counts. */
 export const flightCreationLimiter = importLimit({

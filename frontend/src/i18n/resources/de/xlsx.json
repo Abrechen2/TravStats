@@ -328,6 +328,7 @@
     "confirmReplace": "Ich habe verstanden, dass {{count}} Einträge gelöscht werden",
     "backupTaken": "Backup vorher angelegt: {{id}}",
     "backupFailed": "Das Sicherheits-Backup ist fehlgeschlagen — es wurde nichts geändert.",
+    "backupRunning": "Gerade läuft schon ein Backup. Bitte warte, bis es fertig ist, und starte den Import dann noch einmal – es wurde nichts geändert.",
     "emptySheetNote": "Ein leeres Blatt löscht nichts. Zum Leeren müssen die Zeilen einzeln entfernt werden.",
     "transferNote": "Die Tabelle überträgt Einträge, keine Fotos, Dokumente oder Belege. Reisen sind kein eigenes Blatt: ein Eintrag wird mit der gleichnamigen Reise im Zielkonto verknüpft, sonst bleibt er ohne Reise. Eine ganze Installation samt Fotos und Dokumenten auf einen anderen Server umziehen – dafür ist das Backup da; ein einzelnes Konto in ein anderes Konto verschieben kann es nicht.",
     "rowsToggle": "Zeilen im Einzelnen",
