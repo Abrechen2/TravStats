@@ -138,6 +138,10 @@ describe("TravTrack gate", () => {
       "get /travtrack/flights/:id/panel": "on",
       "get /travtrack/stays": "on",
       "get /travtrack/calendar": "on",
+      "post /travtrack/diagnostics": "on",
+      "get /travtrack/diagnostics/day": "held",
+      "get /travtrack/diagnostics/export": "held",
+      "delete /travtrack/diagnostics": "held",
       "get /travtrack/photos": "on",
       "get /travtrack/photos/:assetId/file": "on",
     });
@@ -153,6 +157,7 @@ describe("TravTrack gate", () => {
       active: false,
       hasData: false,
       sources: ["companion", "gpx", "owntracks", "overland"],
+      diagnostics: true,
     });
     const read = await call("get", "/api/v1/travtrack/capabilities", readOnly);
     expect(read.status).toBe(200);

@@ -11,6 +11,8 @@ import { patAwareMax, userOrIpKey } from "./rateLimit";
  *   - `travTrackPhotoSearchLimiter` — each window is one Immich search: 30 a minute.
  *   - `travTrackPointDeleteLimiter` — one point at a time from the inspector:
  *     60 a minute, so a script cannot replace a range delete by a stream of these.
+ *   - `travTrackDiagnosticsLimiter` — the phone's diagnostics log uploads: 30 in
+ *     15 minutes, a bucket of their own so a chatty log never eats the points'.
  */
 
 const perMinute = (max: number) =>
@@ -25,3 +27,12 @@ const perMinute = (max: number) =>
 export const travTrackViewLimiter = perMinute(120);
 export const travTrackPhotoSearchLimiter = perMinute(30);
 export const travTrackPointDeleteLimiter = perMinute(60);
+
+export const travTrackDiagnosticsLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  max: patAwareMax(30),
+  keyGenerator: userOrIpKey,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many diagnostics uploads, please try again later" },
+});

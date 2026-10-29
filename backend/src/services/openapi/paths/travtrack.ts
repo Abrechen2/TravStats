@@ -31,6 +31,9 @@ const capabilities = z.object({
   sources: z
     .array(z.enum(["companion", "gpx", "owntracks", "overland"]))
     .describe("Where this server takes TravTrack positions from"),
+  diagnostics: z
+    .boolean()
+    .describe("The server takes the phone's diagnostics log (`POST /travtrack/diagnostics`)"),
 });
 
 registry.registerPath({

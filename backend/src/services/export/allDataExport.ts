@@ -265,6 +265,9 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   travTrackMonthValues: "projection of the TravTrack history: monthly values, re-derived",
   travTrackImports: "import job bookkeeping: status and per-run reports of a file import",
   travTrackIngestTokens: "credential material",
+  travTrackDiagnosticEvents:
+    "TravTrack diagnostics log: a 14-day diagnostic with its own export (spec 2026-10-29)",
+  travTrackDiagnosticUploads: "receipts of the diagnostics log's uploads",
   trainingData: "parser training corpus of raw source text, operational",
   parseLogs: "parser training log, operational",
   travelPlanUsage: "operational daily AI/weather quota counters, not travel-plan content",

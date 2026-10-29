@@ -17,6 +17,7 @@ import {
 import { setTravTrackConfig, travTrackConfig } from "../services/travtrack/config";
 import { travTrackTier } from "./travtrack/gate";
 import dayRoutes from "./travtrack/day";
+import diagnosticsRoutes from "./travtrack/diagnostics";
 import exploredRoutes from "./travtrack/explored";
 import exportRoutes from "./travtrack/export";
 import importRoutes from "./travtrack/imports";
@@ -57,6 +58,8 @@ function route(fn: (req: AuthRequest, res: Response) => Promise<void>) {
  * works. `hasData`: this account holds TravTrack data, so summary, export and
  * delete stay reachable even while TravTrack is off. `sources`: what this
  * server takes positions from (plan E9; additive, the version stays 1).
+ * `diagnostics`: the server takes the phone's diagnostics log (spec
+ * 2026-10-29-travtrack-diagnostics; additive).
  */
 router.get(
   "/travtrack/capabilities",
@@ -77,6 +80,7 @@ router.get(
       active: provider.kind === "travtrack" && provider.status === "ok",
       hasData,
       sources: TRAVTRACK_SOURCES,
+      diagnostics: true,
     });
   })
 );
@@ -117,5 +121,6 @@ router.use(ingestSourceRoutes);
 router.use(shareSnapshotRoutes);
 router.use(viewRoutes);
 router.use(photoRoutes);
+router.use(diagnosticsRoutes);
 
 export default router;

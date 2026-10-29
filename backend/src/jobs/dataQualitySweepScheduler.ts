@@ -23,6 +23,7 @@
  * | 03:00–03:59 | usage-stats ping (jittered across the hour) |
  * | 03:20 | place address backfill |
  * | 03:30 | lodging FX backfill (stayFxBackfillScheduler.ts) |
+ * | 03:40 | TravTrack diagnostics retention (travTrackDiagnosticsRetentionScheduler.ts) |
  * | 03:45 | log retention (logRetentionScheduler.ts) |
  * | 03:50 | sync change-feed retention (syncRetentionScheduler.ts) |
  * | 03:55 | TravTrack orphan-link sweep (travTrackOrphanLinkScheduler.ts) |

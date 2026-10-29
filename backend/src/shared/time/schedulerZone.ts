@@ -32,6 +32,7 @@ export type SchedulerJob =
   | "placeAddressBackfill"
   | "statusSweep"
   | "syncRetention"
+  | "travTrackDiagnosticsRetention"
   | "travTrackOrphanLinks"
   | "travTrackProjections"
   | "travTrackTrips"

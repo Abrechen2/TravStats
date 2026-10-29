@@ -21,6 +21,7 @@ vi.mock("../../../hooks/useBetaFeatures", () => ({
 }));
 // The trip note reads the home periods on its own; covered by TravTrackTripNote.test.tsx.
 vi.mock("../TravTrackTripNote", () => ({ default: () => null }));
+vi.mock("../TravTrackDiagnostics", () => ({ default: () => null }));
 vi.mock("../../../hooks/useTodayZone", () => ({
   useTodayZone: () => "UTC",
   todayZoneNow: () => "UTC",

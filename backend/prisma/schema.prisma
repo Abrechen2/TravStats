@@ -166,15 +166,17 @@ model User {
   trackJitterRemeasures TrackJitterRemeasure[]
   mergedTripRedirects   MergedTripRedirect[]
 
-  travTrackPoints         TravTrackPoint[]
-  travTrackPointLinks     TravTrackPointLink[]
-  travTrackUploads        TravTrackUpload[]
-  travTrackDeletedRanges  TravTrackDeletedRange[]
-  travTrackPrivacyZones   TravTrackPrivacyZone[]
-  travTrackZoneTombstones TravTrackZoneTombstone[]
-  travTrackDeletedPoints  TravTrackDeletedPoint[]
-  travTrackGaps           TravTrackGap[]
-  travTrackShareSnapshots TravTrackShareSnapshot[]
+  travTrackPoints            TravTrackPoint[]
+  travTrackPointLinks        TravTrackPointLink[]
+  travTrackUploads           TravTrackUpload[]
+  travTrackDeletedRanges     TravTrackDeletedRange[]
+  travTrackPrivacyZones      TravTrackPrivacyZone[]
+  travTrackZoneTombstones    TravTrackZoneTombstone[]
+  travTrackDeletedPoints     TravTrackDeletedPoint[]
+  travTrackGaps              TravTrackGap[]
+  travTrackDiagnosticEvents  TravTrackDiagnosticEvent[]
+  travTrackDiagnosticUploads TravTrackDiagnosticUpload[]
+  travTrackShareSnapshots    TravTrackShareSnapshot[]
 
   locationSuggestions      LocationSuggestion[]
   travTrackDirtyDays       TravTrackDirtyDay[]
@@ -5856,6 +5858,46 @@ model TravTrackGap {
   @@unique([userId, deviceId, fromAt, reason])
   @@index([userId, fromAt])
   @@map("travtrack_gaps")
+}
+
+/// One entry of a phone's TravTrack diagnostics log (spec
+/// 2026-10-29-travtrack-diagnostics): what the recorder, the uploader and the
+/// app lifecycle did, never a position. Kept 14 days, owner only.
+model TravTrackDiagnosticEvent {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  deviceId  String   @map("device_id")
+  t         DateTime
+  kind      String
+  data      Json
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, t])
+  @@index([t])
+  @@map("travtrack_diagnostic_events")
+}
+
+/// The receipt of one diagnostics upload, so a retry is answered, not stored twice.
+model TravTrackDiagnosticUpload {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  deviceId    String   @map("device_id")
+  uploadId    String   @map("upload_id")
+  /// sha256 of device and events as received, canonicalised.
+  payloadHash String   @map("payload_hash")
+  /// The phone's self-description at upload time (model, os, app version, zone).
+  device      Json
+  /// The answer given, replayed verbatim.
+  result      Json
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceId, uploadId])
+  @@index([createdAt])
+  @@map("travtrack_diagnostic_uploads")
 }
 
 /// The route of a shared trip as its recipients may see it: geometry only, no

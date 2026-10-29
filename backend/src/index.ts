@@ -277,6 +277,9 @@ const shutdown = (signal: string) => async (): Promise<void> => {
   (await import("./jobs/dawarichStayScheduler")).stopDawarichStayScheduler();
   (await import("./jobs/logRetentionScheduler")).stopLogRetentionScheduler();
   (await import("./jobs/syncRetentionScheduler")).stopSyncRetentionScheduler();
+  (
+    await import("./jobs/travTrackDiagnosticsRetentionScheduler")
+  ).stopTravTrackDiagnosticsRetentionScheduler();
   (await import("./jobs/webdavSyncScheduler")).stopWebdavSyncScheduler();
   (await import("./jobs/tripShareDeliveryScheduler")).stopTripShareDeliveryScheduler();
   await prisma.$disconnect();

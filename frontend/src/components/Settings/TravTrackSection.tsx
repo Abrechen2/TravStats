@@ -29,6 +29,7 @@ import TravTrackDawarichCopy from "./TravTrackDawarichCopy";
 import TravTrackImports from "./TravTrackImports";
 import TravTrackSources from "./TravTrackSources";
 import TravTrackTripNote from "./TravTrackTripNote";
+import TravTrackDiagnostics from "./TravTrackDiagnostics";
 import { hasPushSources } from "./travTrackPushSources";
 
 /** The circles offered, metres: a flat to a small town (the server takes 50–5000). */
@@ -359,6 +360,8 @@ export default function TravTrackSection(): JSX.Element | null {
           </div>
         </>
       )}
+
+      <TravTrackDiagnostics today={today} canDelete={!isDemo} />
 
       {status && (
         <p

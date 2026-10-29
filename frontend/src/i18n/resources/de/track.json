@@ -135,7 +135,56 @@
       "savedOn": "Städte werden beim nächsten Durchlauf ermittelt.",
       "savedOff": "Städtesuche aus – bereits ermittelte Städte sind entfernt."
     },
-    "importsMoved": "GPX-Importe, die Dawarich-Kopie und OwnTracks/Overland findest du jetzt unter Track › Importe."
+    "importsMoved": "GPX-Importe, die Dawarich-Kopie und OwnTracks/Overland findest du jetzt unter Track › Importe.",
+    "diagnostics": {
+      "title": "Diagnose",
+      "intro": "Warum fehlen Positionen? Wenn das Diagnoseprotokoll in der Companion eingeschaltet ist (Einstellungen → Standort), schreibt das Telefon mit, was der Rekorder, der Upload und iOS getan haben – ohne Positionen. Hier steht es neben den gespeicherten Punkten. Das Protokoll bleibt 14 Tage.",
+      "day": "Tag",
+      "device": "Gerät",
+      "download": "Protokoll herunterladen (JSON)",
+      "delete": "Protokoll löschen",
+      "deleteConfirm": "Das ganze Diagnoseprotokoll aller Geräte löschen? Gespeicherte Positionen bleiben.",
+      "noLog": "Für diesen Tag hat das Telefon kein Diagnoseprotokoll geschickt. Schalte es in der Companion unter Einstellungen → Standort ein.",
+      "noGaps": "An diesem Tag fehlt nichts: keine Lücke von 10 Minuten oder mehr.",
+      "truncated": "Das Protokoll dieses Tages ist länger als die Liste. Die Lücken sind trotzdem aus dem ganzen Protokoll bestimmt; alles steht im Download.",
+      "barsLabel": "Gespeicherte Positionen und vom Telefon gemeldete Fixes pro Stunde",
+      "barTitle": "{{hour}} Uhr: {{points}} gespeichert, {{fixes}} Fixes",
+      "legend": "Türkis: gespeicherte Positionen · Grau: Fixes, die das Telefon von iOS bekam",
+      "minutes_one": "{{count}} Minute",
+      "minutes_other": "{{count}} Minuten",
+      "cause": {
+        "reportedGap": "Das Telefon hat diese Lücke selbst gemeldet.",
+        "permission": "Standortzugriff war nicht auf „Immer“ gestellt.",
+        "recorderPaused": "Die Aufzeichnung war angehalten.",
+        "lostAfterUpload": "Das Telefon hat Positionen aufgezeichnet und hochgeladen, der Server hat sie aber nicht gespeichert (z. B. verworfen oder in einer Privatzone).",
+        "uploadFailed": "Das Telefon hat Positionen aufgezeichnet, aber der Upload ist fehlgeschlagen.",
+        "notUploaded": "Das Telefon hat Positionen aufgezeichnet, aber noch nicht hochgeladen.",
+        "droppedOnPhone": "iOS hat Fixes geliefert, aber das Telefon hat sie verworfen.",
+        "appNotRunning": "Die App war beendet.",
+        "noLog": "Kein Diagnoseprotokoll für diese Zeit.",
+        "unexplained": "Das Telefon hat keinen Fix bekommen, und das Protokoll zeigt keinen Grund (iOS hat die App vermutlich angehalten oder nichts geliefert)."
+      },
+      "evidence": {
+        "fixes": "{{received}} Fixes, {{kept}} behalten",
+        "dropped": "verworfen: {{list}}",
+        "upload": "Upload: {{status}}",
+        "network": "kein Netz",
+        "permission": "Standortzugriff: {{status}}"
+      },
+      "dropReason": {
+        "interval": "Intervall",
+        "accuracy": "Genauigkeit",
+        "zonesUnknown": "Zonen unbekannt",
+        "privacyZone": "Privatzone",
+        "captureOff": "Aufzeichnung aus",
+        "notQueued": "nicht gespeichert"
+      },
+      "reported": {
+        "zonesUnknown": "Privatzonen waren noch nicht geladen",
+        "recorderSilent": "Der Rekorder war still",
+        "permission": "Standortzugriff fehlte"
+      }
+    }
   },
   "imports": {
     "title": "GPX-Dateien",

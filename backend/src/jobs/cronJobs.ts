@@ -84,6 +84,14 @@ export async function startCronJobs(): Promise<void> {
       "sync_retention",
       async () => (await import("./syncRetentionScheduler")).startSyncRetentionScheduler(),
     ],
+    // TravTrack diagnostics log retention, daily 03:40 and once now.
+    [
+      "travtrack_diagnostics_retention",
+      async () =>
+        (
+          await import("./travTrackDiagnosticsRetentionScheduler")
+        ).startTravTrackDiagnosticsRetentionScheduler(),
+    ],
     // TravTrack links whose flight or trip is gone, daily 03:55 (TravTrack plan T2).
     [
       "travtrack_orphan_links",
