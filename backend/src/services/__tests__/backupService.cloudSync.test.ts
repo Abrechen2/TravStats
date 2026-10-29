@@ -66,6 +66,7 @@ jest.mock("../backup/backupDatabase", () => ({
 const mockArchiveUploads = jest.fn<() => Promise<void>>();
 jest.mock("../backup/backupFiles", () => ({
   archiveUploads: mockArchiveUploads,
+  writeFinalArchive: jest.fn(async () => undefined),
   getMetadata: jest.fn(async () => ({ userCount: 1 })),
 }));
 
