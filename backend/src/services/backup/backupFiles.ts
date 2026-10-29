@@ -51,6 +51,7 @@ export async function archiveUploads(outputPath: string): Promise<number> {
     // A write failure (ENOSPC, EIO) is an 'error' on the file stream, not on
     // the archive; unhandled it is an uncaught exception that exits the server.
     output.on("error", (err: Error) => {
+      archive.abort();
       logger.error({
         operation: "backup_files_error",
         message: "File archive could not be written",
@@ -94,7 +95,10 @@ export function writeFinalArchive(
 
     archive.on("error", reject);
     // ENOSPC lands here; without it the process dies instead of the backup failing.
-    output.on("error", reject);
+    output.on("error", (err) => {
+      archive.abort(); // stop reading the inputs; nothing consumes the archive any more
+      reject(err);
+    });
     output.on("close", resolve);
     archive.finalize();
   });
