@@ -16,6 +16,8 @@ function renderSection(): void {
       <EnrichmentSection
         historicalEnrichmentSettings={SETTINGS}
         loadingHistoricalEnrichmentSettings={false}
+        loadState="loaded"
+        onRetryLoad={vi.fn()}
         onSetHistoricalEnrichmentSettings={vi.fn()}
         onSave={vi.fn()}
       />

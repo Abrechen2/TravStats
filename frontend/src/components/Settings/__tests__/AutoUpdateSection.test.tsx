@@ -22,6 +22,8 @@ function renderSection(onSave = vi.fn(), onSet = vi.fn()) {
       <AutoUpdateSection
         autoUpdateSettings={SETTINGS}
         loadingAutoUpdateSettings={false}
+        loadState="loaded"
+        onRetryLoad={vi.fn()}
         onSetAutoUpdateSettings={onSet}
         onSave={onSave}
       />

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { SectionCard, SectionTitle } from "./SettingsShared";
+import { SectionCard, SectionTitle, LoadGuardNotice } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
 import { Switch } from "../ui/Field";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
@@ -17,6 +17,9 @@ interface AutoUpdateSettings {
 interface AutoUpdateSectionProps {
   autoUpdateSettings: AutoUpdateSettings;
   loadingAutoUpdateSettings: boolean;
+  /** Whether the values come from the server; anything but "loaded" locks the section. */
+  loadState: "loading" | "loaded" | "failed";
+  onRetryLoad: () => void;
   onSetAutoUpdateSettings: (settings: AutoUpdateSettings) => void;
   /** Writes the given value. Switches call it at once, number fields on leaving. */
   onSave: (settings: AutoUpdateSettings) => void;
@@ -25,6 +28,8 @@ interface AutoUpdateSectionProps {
 export default function AutoUpdateSection({
   autoUpdateSettings: settings,
   loadingAutoUpdateSettings,
+  loadState,
+  onRetryLoad,
   onSetAutoUpdateSettings,
   onSave,
 }: AutoUpdateSectionProps): JSX.Element {
@@ -85,51 +90,59 @@ export default function AutoUpdateSection({
           </Link>
         }
       />
-      <SettingRows>
-        <Switch
-          id="autoupdate-enabled"
-          checked={settings.enabled}
-          disabled={loadingAutoUpdateSettings}
-          onChange={(on) => onSave({ ...settings, enabled: on })}
-          label={t("settings:autoUpdate.enabled")}
+      {loadState !== "loaded" ? (
+        <LoadGuardNotice
+          failed={loadState === "failed"}
+          message={t("settings:autoUpdate.loadFailed")}
+          onRetry={onRetryLoad}
         />
-        {tuning && (
+      ) : (
+        <SettingRows>
           <Switch
-            expert
-            id="autoupdate-require-approval"
-            checked={settings.requireApproval}
-            onChange={(on) => onSave({ ...settings, requireApproval: on })}
-            label={t("settings:autoUpdate.requireApproval")}
+            id="autoupdate-enabled"
+            checked={settings.enabled}
+            disabled={loadingAutoUpdateSettings}
+            onChange={(on) => onSave({ ...settings, enabled: on })}
+            label={t("settings:autoUpdate.enabled")}
           />
-        )}
-        {tuning && (
-          <Switch
-            expert
-            id="autoupdate-only-during-flight"
-            checked={settings.onlyDuringFlight}
-            onChange={(on) => onSave({ ...settings, onlyDuringFlight: on })}
-            label={t("settings:autoUpdate.onlyDuringFlight")}
-          />
-        )}
-        {tuning && (
-          <SettingRow
-            expert
-            title={t("settings:autoUpdate.checkInterval")}
-            sub={t("settings:autoUpdate.checkIntervalDescription")}
-            htmlFor="autoupdate-check-interval"
-            control={numberField("autoupdate-check-interval", "checkInterval", 5, 1440)}
-          />
-        )}
-        {tuning && (
-          <SettingRow
-            expert
-            title={t("settings:autoUpdate.expiryHours")}
-            sub={t("settings:autoUpdate.expiryHoursDescription")}
-            htmlFor="autoupdate-expiry-hours"
-            control={numberField("autoupdate-expiry-hours", "expiryHours", 1, 168)}
-          />
-        )}
-      </SettingRows>
+          {tuning && (
+            <Switch
+              expert
+              id="autoupdate-require-approval"
+              checked={settings.requireApproval}
+              onChange={(on) => onSave({ ...settings, requireApproval: on })}
+              label={t("settings:autoUpdate.requireApproval")}
+            />
+          )}
+          {tuning && (
+            <Switch
+              expert
+              id="autoupdate-only-during-flight"
+              checked={settings.onlyDuringFlight}
+              onChange={(on) => onSave({ ...settings, onlyDuringFlight: on })}
+              label={t("settings:autoUpdate.onlyDuringFlight")}
+            />
+          )}
+          {tuning && (
+            <SettingRow
+              expert
+              title={t("settings:autoUpdate.checkInterval")}
+              sub={t("settings:autoUpdate.checkIntervalDescription")}
+              htmlFor="autoupdate-check-interval"
+              control={numberField("autoupdate-check-interval", "checkInterval", 5, 1440)}
+            />
+          )}
+          {tuning && (
+            <SettingRow
+              expert
+              title={t("settings:autoUpdate.expiryHours")}
+              sub={t("settings:autoUpdate.expiryHoursDescription")}
+              htmlFor="autoupdate-expiry-hours"
+              control={numberField("autoupdate-expiry-hours", "expiryHours", 1, 168)}
+            />
+          )}
+        </SettingRows>
+      )}
     </SectionCard>
   );
 }

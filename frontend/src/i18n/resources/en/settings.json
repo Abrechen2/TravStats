@@ -470,7 +470,8 @@
     "expiryHours": "Expiry Time (hours)",
     "expiryHoursDescription": "How long pending updates remain available before expiring",
     "saved": "Auto-update settings saved successfully",
-    "saveFailed": "Failed to save auto-update settings"
+    "saveFailed": "Failed to save auto-update settings",
+    "loadFailed": "The settings could not be loaded. Changes are disabled so defaults are not saved over your real values."
   },
   "historicalEnrichment": {
     "title": "Historical Enrichment",
@@ -481,7 +482,8 @@
     "maxPerDay": "Max. per Day",
     "maxPerDayDescription": "Maximum number of new suggestions per night",
     "saved": "Enrichment settings saved successfully",
-    "saveFailed": "Failed to save enrichment settings"
+    "saveFailed": "Failed to save enrichment settings",
+    "loadFailed": "The settings could not be loaded. Changes are disabled so defaults are not saved over your real values."
   },
   "externalServices": {
     "title": "My external services"

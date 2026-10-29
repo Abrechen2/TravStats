@@ -1,4 +1,4 @@
-import { SectionCard, SectionTitle } from "./SettingsShared";
+import { SectionCard, SectionTitle, LoadGuardNotice } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
 import { Switch } from "../ui/Field";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
@@ -12,6 +12,9 @@ interface HistoricalEnrichmentSettings {
 interface EnrichmentSectionProps {
   historicalEnrichmentSettings: HistoricalEnrichmentSettings;
   loadingHistoricalEnrichmentSettings: boolean;
+  /** Whether the values come from the server; anything but "loaded" locks the section. */
+  loadState: "loading" | "loaded" | "failed";
+  onRetryLoad: () => void;
   onSetHistoricalEnrichmentSettings: (settings: HistoricalEnrichmentSettings) => void;
   /** Writes the given value. Switches call it at once, number fields on leaving. */
   onSave: (settings: HistoricalEnrichmentSettings) => void;
@@ -20,6 +23,8 @@ interface EnrichmentSectionProps {
 export default function EnrichmentSection({
   historicalEnrichmentSettings: settings,
   loadingHistoricalEnrichmentSettings,
+  loadState,
+  onRetryLoad,
   onSetHistoricalEnrichmentSettings,
   onSave,
 }: EnrichmentSectionProps): JSX.Element {
@@ -63,31 +68,39 @@ export default function EnrichmentSection({
         title={t("settings:historicalEnrichment.title")}
         description={t("settings:historicalEnrichment.description")}
       />
-      <SettingRows>
-        <Switch
-          id="enrichment-enabled"
-          checked={settings.enabled}
-          disabled={loadingHistoricalEnrichmentSettings}
-          onChange={(on) => onSave({ ...settings, enabled: on })}
-          label={t("settings:historicalEnrichment.enabled")}
+      {loadState !== "loaded" ? (
+        <LoadGuardNotice
+          failed={loadState === "failed"}
+          message={t("settings:historicalEnrichment.loadFailed")}
+          onRetry={onRetryLoad}
         />
-        {settings.enabled && (
-          <SettingRow
-            title={t("settings:historicalEnrichment.minConfidence")}
-            sub={t("settings:historicalEnrichment.minConfidenceDescription")}
-            htmlFor="enrichment-min-confidence"
-            control={numberField("enrichment-min-confidence", "minConfidence", 0, 100)}
+      ) : (
+        <SettingRows>
+          <Switch
+            id="enrichment-enabled"
+            checked={settings.enabled}
+            disabled={loadingHistoricalEnrichmentSettings}
+            onChange={(on) => onSave({ ...settings, enabled: on })}
+            label={t("settings:historicalEnrichment.enabled")}
           />
-        )}
-        {settings.enabled && (
-          <SettingRow
-            title={t("settings:historicalEnrichment.maxPerDay")}
-            sub={t("settings:historicalEnrichment.maxPerDayDescription")}
-            htmlFor="enrichment-max-per-day"
-            control={numberField("enrichment-max-per-day", "maxPerDay", 1, 1000)}
-          />
-        )}
-      </SettingRows>
+          {settings.enabled && (
+            <SettingRow
+              title={t("settings:historicalEnrichment.minConfidence")}
+              sub={t("settings:historicalEnrichment.minConfidenceDescription")}
+              htmlFor="enrichment-min-confidence"
+              control={numberField("enrichment-min-confidence", "minConfidence", 0, 100)}
+            />
+          )}
+          {settings.enabled && (
+            <SettingRow
+              title={t("settings:historicalEnrichment.maxPerDay")}
+              sub={t("settings:historicalEnrichment.maxPerDayDescription")}
+              htmlFor="enrichment-max-per-day"
+              control={numberField("enrichment-max-per-day", "maxPerDay", 1, 1000)}
+            />
+          )}
+        </SettingRows>
+      )}
     </SectionCard>
   );
 }

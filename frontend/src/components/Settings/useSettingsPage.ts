@@ -98,6 +98,13 @@ export function useSettingsPage() {
   });
   const [loadingAutoUpdateSettings, setLoadingAutoUpdateSettings] = useState(false);
 
+  // Whether autoUpdate / historicalEnrichment hold the server's values. They
+  // start as placeholders, and every toggle PUTs the whole object, so saving
+  // before a successful load would reset the untouched fields (forgejo#373).
+  const [serverSettingsLoad, setServerSettingsLoad] = useState<"loading" | "loaded" | "failed">(
+    "loading"
+  );
+
   // Enrichment
   const [historicalEnrichmentSettings, setHistoricalEnrichmentSettings] =
     useState<HistoricalEnrichmentSettings>({
@@ -130,28 +137,32 @@ export function useSettingsPage() {
 
   // ---- Effects ---------------------------------------------------------------
 
+  const loadServerSettings = async () => {
+    setServerSettingsLoad("loading");
+    try {
+      const settings = await settingsApi.get();
+      logger.info("Loaded settings from server:", settings);
+      setAutoUpdateSettings({
+        enabled: settings.autoUpdate?.enabled ?? false,
+        requireApproval: settings.autoUpdate?.requireApproval ?? true,
+        checkInterval: settings.autoUpdate?.checkInterval ?? 15,
+        onlyDuringFlight: settings.autoUpdate?.onlyDuringFlight ?? true,
+        expiryHours: settings.autoUpdate?.expiryHours ?? 24,
+      });
+      setHistoricalEnrichmentSettings({
+        enabled: settings.historicalEnrichment?.enabled ?? false,
+        minConfidence: settings.historicalEnrichment?.minConfidence ?? 60,
+        maxPerDay: settings.historicalEnrichment?.maxPerDay ?? 50,
+      });
+      setServerSettingsLoad("loaded");
+    } catch (error) {
+      logger.error("Failed to load settings:", error);
+      setServerSettingsLoad("failed");
+    }
+  };
+
   useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const settings = await settingsApi.get();
-        logger.info("Loaded settings from server:", settings);
-        setAutoUpdateSettings({
-          enabled: settings.autoUpdate?.enabled ?? false,
-          requireApproval: settings.autoUpdate?.requireApproval ?? true,
-          checkInterval: settings.autoUpdate?.checkInterval ?? 15,
-          onlyDuringFlight: settings.autoUpdate?.onlyDuringFlight ?? true,
-          expiryHours: settings.autoUpdate?.expiryHours ?? 24,
-        });
-        setHistoricalEnrichmentSettings({
-          enabled: settings.historicalEnrichment?.enabled ?? false,
-          minConfidence: settings.historicalEnrichment?.minConfidence ?? 60,
-          maxPerDay: settings.historicalEnrichment?.maxPerDay ?? 50,
-        });
-      } catch (error) {
-        logger.error("Failed to load settings:", error);
-      }
-    };
-    loadSettings();
+    void loadServerSettings();
 
     const loadApiKeysStatus = async () => {
       try {
@@ -342,6 +353,7 @@ export function useSettingsPage() {
   // says nothing — the switch already shows it; a failure says so and puts the
   // server's value back, so the screen never shows a state that is not stored.
   const saveAutoUpdateSettings = async (next: AutoUpdateSettings = autoUpdateSettings) => {
+    if (serverSettingsLoad !== "loaded") return;
     try {
       setLoadingAutoUpdateSettings(true);
       setAutoUpdateSettings(next);
@@ -359,6 +371,7 @@ export function useSettingsPage() {
   const saveHistoricalEnrichmentSettings = async (
     next: HistoricalEnrichmentSettings = historicalEnrichmentSettings
   ) => {
+    if (serverSettingsLoad !== "loaded") return;
     try {
       setLoadingHistoricalEnrichmentSettings(true);
       setHistoricalEnrichmentSettings(next);
@@ -449,6 +462,8 @@ export function useSettingsPage() {
     autoUpdateSettings,
     setAutoUpdateSettings,
     loadingAutoUpdateSettings,
+    serverSettingsLoad,
+    reloadServerSettings: loadServerSettings,
     saveAutoUpdateSettings,
     // Enrichment
     historicalEnrichmentSettings,
