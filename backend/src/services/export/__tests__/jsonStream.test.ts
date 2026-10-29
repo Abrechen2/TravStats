@@ -2,6 +2,7 @@ import { PassThrough } from "stream";
 
 import { describe, it, expect } from "@jest/globals";
 
+import { withoutShareKeys } from "../../sharing/wireGuard";
 import { jsonChunks, jsonReadable, LazyArray, pipeJsonToResponse } from "../jsonStream";
 
 async function collect(value: unknown): Promise<string> {
@@ -28,6 +29,20 @@ describe("streamed export JSON (forgejo#355)", () => {
     const streamed = await collect(shape(new LazyArray(() => gen(points))));
     expect(streamed).toBe(JSON.stringify(shape(points)));
     expect(JSON.parse(streamed).travtrack.points).toHaveLength(2);
+  });
+
+  it("drops shareKey wherever it sits, exactly like res.json's replacer (security)", async () => {
+    const doc = {
+      shareKey: "top",
+      trips: new LazyArray(() =>
+        gen([{ id: 1, shareKey: "k", nested: [{ shareKey: "z", ok: 1 }] }])
+      ),
+    };
+    const out = await collect(doc);
+    expect(out).not.toContain("shareKey");
+    expect(out).toBe('{"trips":[{"id":1,"nested":[{"ok":1}]}]}');
+    const plain = { a: [{ shareKey: "k", b: 2 }], shareKey: "x" };
+    expect(await collect(plain)).toBe(JSON.stringify(plain, withoutShareKeys));
   });
 
   it("writes an empty lazy array as []", async () => {

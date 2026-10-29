@@ -116,6 +116,19 @@ afterAll(async () => {
 describe("runWebdavSync", () => {
   it("uploads the account's own export, gzipped, under a new name, with the stored password", async () => {
     const userId = await makeUser();
+    // A flight's share key is a credential: the streamed file must drop it like res.json does.
+    await prisma.flight.create({
+      data: {
+        userId,
+        depLat: 50.03,
+        depLon: 8.56,
+        arrLat: 51.47,
+        arrLon: -0.45,
+        departureTime: new Date("2025-02-10T08:00:00Z"),
+        status: "flown",
+        shareKey: "SYNC-SECRET-SHARE-KEY",
+      },
+    });
     // The upload is a stream with a length (forgejo#355), consumed while the
     // share "receives" it - the temp file is gone once the run returns.
     let received: Buffer = Buffer.alloc(0);
@@ -145,7 +158,10 @@ describe("runWebdavSync", () => {
     expect(options.headers["Content-Length"]).toBe(String(body.length));
     expect(remote).toMatch(/^\/TravStats\/travstats-export-[0-9a-f]{12}-\d{8}T\d{6}Z\.json\.gz$/);
     expect(options.overwrite).toBe(false);
-    const json = JSON.parse(gunzipSync(body).toString("utf8")) as {
+    const rawText = gunzipSync(body).toString("utf8");
+    expect(rawText).not.toContain("SYNC-SECRET-SHARE-KEY");
+    expect(rawText).not.toContain("shareKey");
+    const json = JSON.parse(rawText) as {
       format: string;
       user: { id: string; trips: Array<{ name: string }>; passwordHash?: string };
     };

@@ -3,6 +3,8 @@ import { Readable, type Writable } from "stream";
 import { pipeline } from "stream/promises";
 import { createGzip } from "zlib";
 
+import { withoutShareKeys } from "../sharing/wireGuard";
+
 /**
  * Streaming JSON for exports (forgejo#355). A large account holds more points
  * than V8 can stringify (~512 MB) and `gzipSync` on 100-300 MB blocks the event
@@ -24,39 +26,64 @@ export class LazyArray<T> {
   }
 }
 
-const isPlainObject = (v: unknown): v is Record<string, unknown> =>
-  typeof v === "object" &&
-  v !== null &&
-  !Array.isArray(v) &&
-  typeof (v as { toJSON?: unknown }).toJSON !== "function";
+export type JsonReplacer = (key: string, value: unknown) => unknown;
 
-/** JSON text of `value` in chunks; mirrors JSON.stringify's rules for undefined/functions. */
-export async function* jsonChunks(value: unknown): AsyncGenerator<string> {
+/**
+ * `toJSON` then the replacer, in JSON.stringify's order. The default replacer is
+ * the app-wide one `res.json` applies (`index.ts`): a streamed export bypasses
+ * `res.json`, so without it every `shareKey` would leave the server.
+ */
+function prepare(key: string, raw: unknown, replacer: JsonReplacer): unknown {
+  let value = raw;
+  if (
+    !(value instanceof LazyArray) &&
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { toJSON?: unknown }).toJSON === "function"
+  ) {
+    value = (value as { toJSON: (k: string) => unknown }).toJSON(key);
+  }
+  return replacer(key, value);
+}
+
+const dropped = (v: unknown) => v === undefined || typeof v === "function" || typeof v === "symbol";
+
+/** JSON text of `value` in chunks; mirrors JSON.stringify (with replacer) for undefined/functions/toJSON. */
+export async function* jsonChunks(
+  input: unknown,
+  replacer: JsonReplacer = withoutShareKeys
+): AsyncGenerator<string> {
+  yield* serialise(prepare("", input, replacer), replacer);
+}
+
+async function* serialise(value: unknown, replacer: JsonReplacer): AsyncGenerator<string> {
   if (value instanceof LazyArray) {
     yield "[";
-    let first = true;
+    let index = 0;
     for await (const item of value.source()) {
-      if (!first) yield ",";
-      first = false;
-      yield* jsonChunks(item === undefined ? null : item);
+      if (index > 0) yield ",";
+      const prepared = prepare(String(index), item, replacer);
+      yield* dropped(prepared) ? ["null"] : serialise(prepared, replacer);
+      index++;
     }
     yield "]";
   } else if (Array.isArray(value)) {
     yield "[";
     for (let i = 0; i < value.length; i++) {
       if (i > 0) yield ",";
-      const item = value[i];
-      yield* jsonChunks(item === undefined || typeof item === "function" ? null : item);
+      const prepared = prepare(String(i), value[i], replacer);
+      yield* dropped(prepared) ? ["null"] : serialise(prepared, replacer);
     }
     yield "]";
-  } else if (isPlainObject(value)) {
+  } else if (typeof value === "object" && value !== null) {
     yield "{";
     let first = true;
     for (const [key, item] of Object.entries(value)) {
-      if (item === undefined || typeof item === "function" || typeof item === "symbol") continue;
+      const prepared = prepare(key, item, replacer);
+      if (dropped(prepared)) continue;
       yield `${first ? "" : ","}${JSON.stringify(key)}:`;
       first = false;
-      yield* jsonChunks(item);
+      yield* serialise(prepared, replacer);
     }
     yield "}";
   } else {
