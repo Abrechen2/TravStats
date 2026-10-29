@@ -19,7 +19,7 @@ import { getApiKey, getOpenSkyCredentials } from "./apiKeyResolver";
 import { lookupFlightAerodatabox } from "./aerodataboxLookup";
 import { lookupFlightAeroapi } from "./aeroapiLookup";
 import { flightLookupResultToFlightData } from "./flightLookup/toFlightData";
-import { fillFromAdsb, lookupAdsbIfToday, lookupAfterAirlabsMiss } from "./flightLookup/adsbChain";
+import { fillFromAdsb, isAdsb, lookupAdsbIfToday, lookupAfterMiss } from "./flightLookup/adsbChain";
 import { flightProviderAvailability } from "./flightLookup/providerAvailability";
 import {
   classifyAirlabsBodyError,
@@ -726,16 +726,9 @@ export async function lookupFlightDetails(
   // key exists, to no key at all and a null result (AUD-100).
   const flights = await lookupFlightByNumber(trimmedNumber, fallbackDate, userId, outcomes);
 
-  // ADS-B community providers (forgejo#408): today only, off unless enabled.
   const adsb = await lookupAdsbIfToday(trimmedNumber, date, userId, outcomes);
   if (!flights.length) {
-    return lookupAfterAirlabsMiss({
-      flightNumber: trimmedNumber,
-      date,
-      openSkyCredentials,
-      adsb,
-      outcomes,
-    });
+    return lookupAfterMiss(trimmedNumber, date, openSkyCredentials, adsb, outcomes);
   }
 
   const first = flights[0];
@@ -990,6 +983,9 @@ export async function lookupFlightWithHistorical(
   //  2. Smoking gun — returned date is today (we already know the user did
   //     not ask for today because we're inside isOutsideLiveWindow). Covers
   //     the off-by-one case like "yesterday" / "tomorrow" -> today.
+  if (isOutsideLiveWindow && isAdsb(result.source)) {
+    return { flights: [], unavailableReason: "no_match_api_gap" };
+  }
   if (isOutsideLiveWindow && dateStr && result.departureTime) {
     const returnedCode = result.departure?.iata ?? result.departure?.icao ?? undefined;
     const returnedTz = (await getAirportTimezone(returnedCode)) ?? todayZone;

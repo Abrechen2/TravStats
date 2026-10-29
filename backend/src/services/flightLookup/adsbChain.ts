@@ -73,6 +73,8 @@ export async function lookupAdsbIfToday(
   return null;
 }
 
+export const isAdsb = (source?: string): boolean => source === "adsbx" || source === "adsblol";
+
 const FILLED_FIELDS = ["aircraftRegistration", "aircraft", "aircraftModeS", "callsign"] as const;
 
 /** `base` with the aircraft fields it lacks taken from `adsb`. Never overwrites. */
@@ -93,14 +95,13 @@ export function fillFromAdsb(
  * exist), enriched by an ADS-B hit; otherwise the ADS-B hit alone, which carries
  * the aircraft but no route.
  */
-export async function lookupAfterAirlabsMiss(args: {
-  flightNumber: string;
-  date?: string;
-  openSkyCredentials: OpenSkyCredentials | null;
-  adsb: FlightLookupResult | null;
-  outcomes?: LookupOutcomeLog;
-}): Promise<FlightLookupResult | null> {
-  const { flightNumber, date, openSkyCredentials, adsb, outcomes } = args;
+export async function lookupAfterMiss(
+  flightNumber: string,
+  date: string | undefined,
+  openSkyCredentials: OpenSkyCredentials | null,
+  adsb: FlightLookupResult | null,
+  outcomes?: LookupOutcomeLog
+): Promise<FlightLookupResult | null> {
   if (openSkyCredentials) {
     logger.info({ api: "opensky", operation: "fallback_opensky" }, "Falling back to OpenSky");
     const openSkyAuth = await getOpenSkyAuthHeaders(openSkyCredentials);

@@ -181,7 +181,9 @@ function pickAircraft(body: unknown): AdsbAircraft | null {
   const list = (body as { ac?: unknown } | null | undefined)?.ac;
   if (!Array.isArray(list)) throw new Error("readsb v2 body without an `ac` array");
   const fresh = list
-    .map((entry) => mapReadsbAircraft(entry as ReadsbAircraft))
+    .map((entry) => mapReadsbAircraft((entry ?? {}) as ReadsbAircraft))
+    // An entry that names no aircraft at all is a malformed body, not a hit.
+    .filter((a) => a.icao24 || a.callsign || a.registration)
     .filter((a) => (a.position.seenSeconds ?? 0) <= STALE_AFTER_SECONDS)
     .sort((a, b) => (a.position.seenSeconds ?? 0) - (b.position.seenSeconds ?? 0));
   return fresh[0] ?? null;

@@ -224,10 +224,17 @@ describe("opt-in — off unless configured", () => {
     expect(lol).toMatchObject({ provider: "adsblol", headers: { "api-auth": "lol-key" } });
   });
 
-  it("neither provider makes flightProviderAvailability().byDate true", async () => {
+  it("an enabled ADS-B provider counts as configured, but never as answering by date", async () => {
     keys.adsbx = "rapid-key";
     keys.adsblol = "lol-key";
-    expect(await flightProviderAvailability()).toEqual({ any: false, byDate: false });
+    expect(await flightProviderAvailability()).toEqual({ any: true, byDate: false });
+  });
+
+  it("an entry that names no aircraft is a no_match, not a successful empty aircraft", async () => {
+    mockedAxios.get.mockResolvedValueOnce({ data: { ac: [{}] } });
+    expect((await lookupAdsbV2(LOL, { kind: "callsign", value: "EMPTY1" })).status).toBe(
+      "no_match"
+    );
   });
 });
 
@@ -370,5 +377,25 @@ describe("chain: lookupFlightDetails", () => {
       aircraft: "A359",
     });
     expect(result?.departure).toBeUndefined();
+  });
+});
+
+describe("wrapper: an ADS-B answer is never today's aircraft for another day", () => {
+  it("lookupFlightWithHistorical reports no_match_api_gap for a non-live day", async () => {
+    const { lookupFlightWithHistorical } = await import("../services/flightLookup");
+    keys.adsblol = "lol-key";
+    // Local 'tomorrow' that happens to be the UTC day of the ADS-B request.
+    mockedAxios.get.mockImplementation(async (url: string) =>
+      url.includes("adsb.lol") ? { data: { ac: [plane] } } : { data: { response: [] } }
+    );
+    keys.aviationstack = "av"; // something that answers by date, so the wrapper reaches the cascade
+    // A zone where the UTC day of "now" is the user's tomorrow (or yesterday).
+    const clientTimezone =
+      new Date().getUTCHours() >= 10 ? "Pacific/Kiritimati" : "Pacific/Pago_Pago";
+    const out = await lookupFlightWithHistorical("LH499", new Date(), undefined, undefined, {
+      clientTimezone,
+    });
+    expect(out.flights).toEqual([]);
+    expect(out.unavailableReason).toBe("no_match_api_gap");
   });
 });
