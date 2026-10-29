@@ -6,13 +6,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-**Before upgrading to 2.7.0-rc.27:** take a backup. One new migration since rc.26: every account gets its own TravPlan switch; accounts that already hold a plan keep it on.
+## [2.7.0] - 2026-10-29
 
-**Before upgrading to 2.7.0-rc.26:** take a backup. 27 new migrations since rc.25, almost all for TravTrack (new tables, nothing existing is rewritten), plus the inbox finding undo/revision columns and the encrypted calendar-feed token. TravTrack stays off until an admin enables it and its beta key is open.
+TravStats 2.7.0 is the largest release since lodging became a domain. Web and
+app now share one look; every figure in the statistics can show the entries it
+is made of; documents and receipts live on the entry they belong to; forms
+suggest what you entered before; places, photos and the passport grew up; rail, bus,
+rental cars and ferries are their own domains; and TravPlan, which plans a
+trip ahead, and TravTrack, your own location history on your server, wait
+behind the beta switch together with roadtrips and tours. The forty audit
+fixes first written for the never-promoted 2.6.3-rc.1 ship here too, further
+down this entry.
 
-**Before upgrading to 2.7.0-rc.25:** take a backup. One new migration since rc.24: every stored rail ride is marked as a train, and the two new rail import settings start at "skip". Coming from 2.7.0-rc.19: 5 migrations; from 2.7.0-rc.18: 26 migrations, and stored straight ferry crossings are re-routed once in the background.
-
-- Full data export includes saved TravPlan content and proposals; daily quota counters are explicitly excluded.
+**Before upgrading:** take a backup. Coming from 2.6.3, the first start runs
+166 migrations, one of which rewrites stored cruise statuses from `flown` to
+`completed`; it also recalculates stored cruise legs along the sea route and
+re-routes stored straight ferry crossings once in the background, which can
+take a minute on a large logbook. A database restored from before the update
+is the way back; the previous image alone does not know the new columns.
+From 2.7.0-rc.27 nothing changes: 2.7.0 is that release candidate, retagged.
 
 ### Added
 
@@ -153,145 +165,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
   agreed but is not yet on the trip can be added from the share dialog.
 - **One "Teilen" button** in the trip head for a companion's copy or a public
   link.
-
-### Changed
-
-- **The production dependencies carry no known vulnerability:** DOMPurify (critical, used for PDF export), postal-mime 4.1 (.eml previews), body-parser, multer, fast-uri and zod are updated.
-- **Rental cars, coach rides and ferry crossings are out of beta.** They show whenever you enable the area in your settings.
-- **Completing a stay from OpenStreetMap is out of beta,** with a stricter name rule: a town or landmark word alone no longer matches a house, and English and German names are compared too. Measured on 200 real stays: 1 wrong match in 156 (was 2 in 152).
-- **Detect places automatically** is on by default with the stay scan; its two area switches are expert settings.
-- **The export cuts privacy zones out of older recordings** (trip recordings and flight tracks from before TravTrack). Stored data and the admin backup stay complete.
-- The README and store texts describe TravStats as a logbook first, with optional recording through the Companion.
-- **The lodging import preview says what each row will do.** The action reads "Aufenthalt hinzufügen", "Hotel und Aufenthalt anlegen", "Weiteren Aufenthalt anlegen" or "Aufenthalt aktualisieren" instead of a bare "Anlegen"; a matched hotel is shown with its stored name and city as plain text, with the import's spelling beside it where it differs; the summary counts what will be added, skipped and still needs a decision, and the reminder to decide only shows while something is undecided. A guessed match says what it rests on (name and city, name only, a similar name, the same place) instead of a green "Passendes Hotel gefunden"; several possible hotels offer a choice; "Keine Koordinaten" is gone from rows that join a stored hotel. "Anderes Hotel? Zuordnung aufheben" replaces "Nicht dasselbe Hotel — neu anlegen", which never created anything.
-- **Recorded flight paths are off on the dashboard by default.** The map
-  shows routes; a recording belongs to one flight. A new map option
-  "Aufgezeichnete Flugwege zeigen (wo vorhanden)" draws them as thin lines on
-  top of the routes, which stay visible even when every flight on a route was
-  recorded. On the flight page the recording is shown over the
-  dashed great circle.
-- Ferry crossings stored as a straight line are re-routed along the sea once,
-  in the background, after the update.
-- An invitation code that is retried after it already connected reads as
-  "already connected".
-- The end-to-end encrypted transfer moved to its own page,
-  `/encrypted-share`, behind its own beta switch.
-- A shared trip is copied for each person on their own calendar: a copy's
-  status (planned, under way, done) follows the recipient's time zone.
-- If the recipient already logged the same flight or crossing on another of
-  their trips, sharing moves that entry into the shared trip and links it
-  instead of creating a duplicate; the notice says so and can be undone.
-- A provider change that reaches every member through the shared trip makes
-  one inbox item, not one per person.
-- Ferry edits and deletes accept an optional read version. Conflicting writes
-  return HTTP 409; edits claim the version atomically in their transaction.
-  Older clients can continue to write without a version precondition.
-- Settings expose supported travel domains independently of enabled domains,
-  allowing compatible clients to offer a disabled domain again.
-- TravPlan uses shared theme tokens and the selected application locale for
-  number formatting.
-
-### Fixed
-
-- **Two members moving a shared trip's dates at the same moment both save.** One of the two saves used to fail; and an undo that raced a member's own save could overwrite it with the old dates.
-- **A replace import from a spreadsheet no longer starts a backup for the demo account or beside a backup already running.**
-- **Places count in every category they carry** except the transit kind (forgejo#299).
-- A booked or cancelled cruise counts in no cruise figure.
-- The Dutch Sixt invoice's fee lines are read (forgejo#280, forgejo#237).
-- The ferry port search finds the port of the town you typed.
-- The year filter applies to the route network and the route list in the statistics.
-- The profile shows your real username and no placeholder e-mail address.
-- Ferry crossings are offered in the map's add menu; the narrow rail list names each ride's mode and line; on a phone the TravTrack map sits right under the range control; an empty inbox shows one message with one action; flight-track gaps are drawn dashed.
-- **Uploading a document from the web works again.** Every web upload had failed with "No file uploaded" since September.
-- **A server no longer crashes when another server cannot be reached over IPv6** while checking it; addresses are tried IPv4 first.
-- A share link of a trip without dates ends after the trip's last entry.
-- Saving part of the display settings over the API no longer clears the time zone.
-- Station names of rail, bus and ferry on the trip map no longer print over each other; a cruise leg's hover shows its ports and sailings.
-- **A skipped row no longer fails the whole lodging import.** A skipped row with a cleared date or name made the server refuse every row; skipped rows are now sent without their fields.
-- **"Auswahl importieren" is only enabled for a preview the server will accept.** Names and cities over 200 characters, negative prices and stays over ten years are flagged on the row instead of failing the import, a price without a currency is flagged on updates as well, and a row set to add a stay with both dates cleared is flagged instead of creating nothing.
-- **Picking one of several possible hotels checks that hotel's stays for the same check-in,** and an update shows every changed field, an edited price or currency included.
-- **Importing the same bahn.de connection twice no longer saves its rides twice.** The repeat was looked up by the printed stop name, while the first import had stored the catalogue's name.
-- **Two buses or trains leaving the same stop in the same minute are no longer taken for one ride.** A ride counts as already logged only when its destination and its line or train number agree too; where one side names no line, the leg is kept ticked and marked "möglicherweise schon erfasst".
-- **A ticket with a booking number finds a ride saved earlier from a bahn.de connection without one,** and a busy day no longer hides the ride sought behind older rides at the same stop.
-- **A recorded flight is drawn whole.** Sparse fixes from a phone in the
-  cabin were dropped as single points, so LH719 Seoul-Munich showed only its
-  last third. Every fix is kept; recorded stretches are solid and the holes
-  between them dashed.
-- A recording with holes no longer sets its distance against the great
-  circle ("−60 %"), since it measures only its recorded stretches.
-- The start of a recorded flight is no longer hidden under the map
-  attribution on the flight page.
-- TravPlan is refused by the server while the beta switch is off; before, its
-  endpoints answered any signed-in client.
-- The import card promises AI reading only for the kinds of booking that
-  have it.
-- The empty tours view no longer covers the list button.
-- A large KML file is read in linear time instead of blocking the server for
-  seconds, and a very large one no longer crashes the reader.
-- Lodging enrichment never overwrites a value saved while OpenStreetMap was
-  being asked.
-- **A Deutsche Bahn share link no longer reads as a failed import.** Such a
-  link carries no booking reference, price or seat, so the review dialog now
-  says so in one line instead of flagging every empty field as "not found in
-  the document".
-- **A train bahn.de names by number alone reads "Zug 57031"** (EN "Train
-  57031") on map cards, in the trip overview, the review and the ride
-  pickers, instead of a bare number. The number is
-  stored as the train number; a category is kept only where bahn.de states
-  one. Rides imported from a share link in rc.20 read the same way.
-- Bus lines are drawn on the globe.
-- A Wikimedia Commons photo on a map card carries its author and licence
-  where Commons provides them; a non-free local photo is not shown.
-- "Last here" handles date-only rides, and no longer names an older visit as
-  the latest when a newer arrival's date is unknown.
-- Close and toggle buttons on iPad map cards are 44 px; the AI trip-summary
-  offer wraps on narrow screens.
-- Deleting an account also deletes its pending sync changes.
-- **A global API key is no longer shown to every user.** The key-status
-  answer carried stored values; it now carries only whether a key is set. A
-  key the instance cannot decrypt no longer counts as "active for everyone".
-- The trip overview lists ferry crossings, and the trip map draws rail, ferry
-  and rental — on the globe as well.
-- Overnight journeys show their arrival day on cards and tooltips.
-- A date-only journey no longer gets an invented duration.
-- The "far from your destinations" hotel warning considers arrivals by rail,
-  bus and ferry, not only flights.
-- Map labels no longer print over each other in "All" and "Important", on the
-  globe (where they also keep clear of the time control) and on the trip map.
-- A failed route or rental load on a map says so and can be retried instead of
-  looking like no data.
-- iPad touch targets in the menu, the recording panel and settings follow the
-  pointer, not the width.
-- The statistics breakdown names ferries in both languages.
-- A settings search result opens its folded group.
-- Sharing records an entry's author only where it is known and checks a
-  received change's author.
-- Public-link lifetimes are calculated from the server clock, preventing a fast
-  browser clock from rejecting “Until landing (+2 hours)” or “90 days”.
-  Explicit expiry timestamps remain supported for existing API clients.
-- Public-link permission is now under Administration → Instance. Personal
-  settings retain link management and point admins to the instance switch.
-
-
-## [2.7.0] - 2026-10-03
-
-TravStats 2.7.0 is the largest release since lodging became a domain. Web and
-app now share one look; every figure in the statistics can show the entries it
-is made of; documents and receipts live on the entry they belong to; forms
-suggest what you entered before; places, photos and the passport grew up; and a
-whole line of new domains — roadtrips and tours, rail, rental cars, recorded
-cruise tracks — is built and waiting behind the beta switch. The forty audit
-fixes first written for the never-promoted 2.6.3-rc.1 ship here too, further
-down this entry.
-
-**Before upgrading:** take a backup. The first start after the update runs the
-new migrations — 26 of them since 2.7.0-rc.10, one of which rewrites stored
-cruise statuses from `flown` to `completed` — and recalculates stored cruise
-legs along the sea route (see below), which can take a minute on a large
-logbook. A database restored from before the update is the way back; the
-previous image alone does not know `completed`.
-
-### Added
-
 - **Dawarich can suggest whole venues beyond markets.** A separate opt-in adds shopping malls, parks, zoos, theme parks and museum grounds. Independent overlapping venues stay reviewable, and visits are recorded only after confirmation.
 
 - **Markets are suggested as whole venues.** With separate consent, Dawarich
@@ -516,6 +389,40 @@ previous image alone does not know `completed`.
 
 ### Changed
 
+- **The production dependencies carry no known vulnerability:** DOMPurify (critical, used for PDF export), postal-mime 4.1 (.eml previews), body-parser, multer, fast-uri and zod are updated.
+- **Rental cars, coach rides and ferry crossings are out of beta.** They show whenever you enable the area in your settings.
+- **Completing a stay from OpenStreetMap is out of beta,** with a stricter name rule: a town or landmark word alone no longer matches a house, and English and German names are compared too. Measured on 200 real stays: 1 wrong match in 156 (was 2 in 152).
+- **Detect places automatically** is on by default with the stay scan; its two area switches are expert settings.
+- **The export cuts privacy zones out of older recordings** (trip recordings and flight tracks from before TravTrack). Stored data and the admin backup stay complete.
+- The README and store texts describe TravStats as a logbook first, with optional recording through the Companion.
+- **The lodging import preview says what each row will do.** The action reads "Aufenthalt hinzufügen", "Hotel und Aufenthalt anlegen", "Weiteren Aufenthalt anlegen" or "Aufenthalt aktualisieren" instead of a bare "Anlegen"; a matched hotel is shown with its stored name and city as plain text, with the import's spelling beside it where it differs; the summary counts what will be added, skipped and still needs a decision, and the reminder to decide only shows while something is undecided. A guessed match says what it rests on (name and city, name only, a similar name, the same place) instead of a green "Passendes Hotel gefunden"; several possible hotels offer a choice; "Keine Koordinaten" is gone from rows that join a stored hotel. "Anderes Hotel? Zuordnung aufheben" replaces "Nicht dasselbe Hotel — neu anlegen", which never created anything.
+- **Recorded flight paths are off on the dashboard by default.** The map
+  shows routes; a recording belongs to one flight. A new map option
+  "Aufgezeichnete Flugwege zeigen (wo vorhanden)" draws them as thin lines on
+  top of the routes, which stay visible even when every flight on a route was
+  recorded. On the flight page the recording is shown over the
+  dashed great circle.
+- Ferry crossings stored as a straight line are re-routed along the sea once,
+  in the background, after the update.
+- An invitation code that is retried after it already connected reads as
+  "already connected".
+- The end-to-end encrypted transfer moved to its own page,
+  `/encrypted-share`, behind its own beta switch.
+- A shared trip is copied for each person on their own calendar: a copy's
+  status (planned, under way, done) follows the recipient's time zone.
+- If the recipient already logged the same flight or crossing on another of
+  their trips, sharing moves that entry into the shared trip and links it
+  instead of creating a duplicate; the notice says so and can be undone.
+- A provider change that reaches every member through the shared trip makes
+  one inbox item, not one per person.
+- Ferry edits and deletes accept an optional read version. Conflicting writes
+  return HTTP 409; edits claim the version atomically in their transaction.
+  Older clients can continue to write without a version precondition.
+- Settings expose supported travel domains independently of enabled domains,
+  allowing compatible clients to offer a disabled domain again.
+- TravPlan uses shared theme tokens and the selected application locale for
+  number formatting.
+- Full data export includes saved TravPlan content and proposals; daily quota counters are explicitly excluded.
 - **A sailed cruise is `completed`, not `flown`.** The flight word leaked into
   cruises; `flown` is still accepted on write and read as `completed`, and
   stored rows were migrated.
@@ -540,6 +447,84 @@ previous image alone does not know `completed`.
 
 ### Fixed
 
+- **Two members moving a shared trip's dates at the same moment both save.** One of the two saves used to fail; and an undo that raced a member's own save could overwrite it with the old dates.
+- **A replace import from a spreadsheet no longer starts a backup for the demo account or beside a backup already running.**
+- **Places count in every category they carry** except the transit kind (forgejo#299).
+- A booked or cancelled cruise counts in no cruise figure.
+- The Dutch Sixt invoice's fee lines are read (forgejo#280, forgejo#237).
+- The ferry port search finds the port of the town you typed.
+- The year filter applies to the route network and the route list in the statistics.
+- The profile shows your real username and no placeholder e-mail address.
+- Ferry crossings are offered in the map's add menu; the narrow rail list names each ride's mode and line; on a phone the TravTrack map sits right under the range control; an empty inbox shows one message with one action; flight-track gaps are drawn dashed.
+- **Uploading a document from the web works again.** Every web upload had failed with "No file uploaded" since September.
+- **A server no longer crashes when another server cannot be reached over IPv6** while checking it; addresses are tried IPv4 first.
+- A share link of a trip without dates ends after the trip's last entry.
+- Saving part of the display settings over the API no longer clears the time zone.
+- Station names of rail, bus and ferry on the trip map no longer print over each other; a cruise leg's hover shows its ports and sailings.
+- **A skipped row no longer fails the whole lodging import.** A skipped row with a cleared date or name made the server refuse every row; skipped rows are now sent without their fields.
+- **"Auswahl importieren" is only enabled for a preview the server will accept.** Names and cities over 200 characters, negative prices and stays over ten years are flagged on the row instead of failing the import, a price without a currency is flagged on updates as well, and a row set to add a stay with both dates cleared is flagged instead of creating nothing.
+- **Picking one of several possible hotels checks that hotel's stays for the same check-in,** and an update shows every changed field, an edited price or currency included.
+- **Importing the same bahn.de connection twice no longer saves its rides twice.** The repeat was looked up by the printed stop name, while the first import had stored the catalogue's name.
+- **Two buses or trains leaving the same stop in the same minute are no longer taken for one ride.** A ride counts as already logged only when its destination and its line or train number agree too; where one side names no line, the leg is kept ticked and marked "möglicherweise schon erfasst".
+- **A ticket with a booking number finds a ride saved earlier from a bahn.de connection without one,** and a busy day no longer hides the ride sought behind older rides at the same stop.
+- **A recorded flight is drawn whole.** Sparse fixes from a phone in the
+  cabin were dropped as single points, so LH719 Seoul-Munich showed only its
+  last third. Every fix is kept; recorded stretches are solid and the holes
+  between them dashed.
+- A recording with holes no longer sets its distance against the great
+  circle ("−60 %"), since it measures only its recorded stretches.
+- The start of a recorded flight is no longer hidden under the map
+  attribution on the flight page.
+- TravPlan is refused by the server while the beta switch is off; before, its
+  endpoints answered any signed-in client.
+- The import card promises AI reading only for the kinds of booking that
+  have it.
+- The empty tours view no longer covers the list button.
+- A large KML file is read in linear time instead of blocking the server for
+  seconds, and a very large one no longer crashes the reader.
+- Lodging enrichment never overwrites a value saved while OpenStreetMap was
+  being asked.
+- **A Deutsche Bahn share link no longer reads as a failed import.** Such a
+  link carries no booking reference, price or seat, so the review dialog now
+  says so in one line instead of flagging every empty field as "not found in
+  the document".
+- **A train bahn.de names by number alone reads "Zug 57031"** (EN "Train
+  57031") on map cards, in the trip overview, the review and the ride
+  pickers, instead of a bare number. The number is
+  stored as the train number; a category is kept only where bahn.de states
+  one. Rides imported from a share link in rc.20 read the same way.
+- Bus lines are drawn on the globe.
+- A Wikimedia Commons photo on a map card carries its author and licence
+  where Commons provides them; a non-free local photo is not shown.
+- "Last here" handles date-only rides, and no longer names an older visit as
+  the latest when a newer arrival's date is unknown.
+- Close and toggle buttons on iPad map cards are 44 px; the AI trip-summary
+  offer wraps on narrow screens.
+- Deleting an account also deletes its pending sync changes.
+- **A global API key is no longer shown to every user.** The key-status
+  answer carried stored values; it now carries only whether a key is set. A
+  key the instance cannot decrypt no longer counts as "active for everyone".
+- The trip overview lists ferry crossings, and the trip map draws rail, ferry
+  and rental — on the globe as well.
+- Overnight journeys show their arrival day on cards and tooltips.
+- A date-only journey no longer gets an invented duration.
+- The "far from your destinations" hotel warning considers arrivals by rail,
+  bus and ferry, not only flights.
+- Map labels no longer print over each other in "All" and "Important", on the
+  globe (where they also keep clear of the time control) and on the trip map.
+- A failed route or rental load on a map says so and can be retried instead of
+  looking like no data.
+- iPad touch targets in the menu, the recording panel and settings follow the
+  pointer, not the width.
+- The statistics breakdown names ferries in both languages.
+- A settings search result opens its folded group.
+- Sharing records an entry's author only where it is known and checks a
+  received change's author.
+- Public-link lifetimes are calculated from the server clock, preventing a fast
+  browser clock from rejecting “Until landing (+2 hours)” or “90 days”.
+  Explicit expiry timestamps remain supported for existing API clients.
+- Public-link permission is now under Administration → Instance. Personal
+  settings retain link management and point admins to the instance switch.
 - **Backup retention keeps what it should, and a remote copy is deleted only
   when you say so.** Old backups were pruned by the wrong identity. A WebDAV
   delete that fails with 401, 423 or 500 now keeps both copies and the
