@@ -24,4 +24,8 @@ export type FlightTrackFileApiErrorCode =
   /** A CSV without Flightradar24's Timestamp/UTC and Position columns. */
   | "TRACK_CSV_COLUMNS"
   /** Flightradar24 CSV with fewer than two rows carrying a time and a position. */
-  | "TRACK_CSV_NO_POSITIONS";
+  | "TRACK_CSV_NO_POSITIONS"
+  /** The admin chose AeroAPI's custom tier without a monthly budget above zero
+   *  (forgejo#409, `routes/admin/aeroapi.ts`) — parked here for the same
+   *  reason as the codes above: `errorHandler.ts` is at its size limit. */
+  | "AEROAPI_BUDGET_REQUIRED";

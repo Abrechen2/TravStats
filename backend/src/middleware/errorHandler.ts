@@ -395,7 +395,6 @@ export type ApiErrorCode =
    *  malformed / not http(s) / carrying credentials, or plain http to a host
    *  outside the local network — the `llm/llmEndpoint.ts` rule. */
   | "TEMPLATE_REPO_URL_INVALID"
-  | "AEROAPI_BUDGET_REQUIRED"
   | "TEMPLATE_REPO_URL_HTTPS_REQUIRED"
   /** Exporting a workshop template for the community (forgejo#309,
    *  `parserTemplates.ts`): it holds a value of the user's own document where
