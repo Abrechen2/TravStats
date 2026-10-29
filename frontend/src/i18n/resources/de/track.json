@@ -148,7 +148,6 @@
       "noGaps": "An diesem Tag fehlt nichts: keine Lücke von 10 Minuten oder mehr.",
       "truncated": "Das Protokoll dieses Tages ist länger als die Liste. Die Lücken sind trotzdem aus dem ganzen Protokoll bestimmt; alles steht im Download.",
       "barsLabel": "Gespeicherte Positionen und vom Telefon gemeldete Fixes pro Stunde",
-      "barTitle": "{{time}}: {{points}} gespeichert, {{fixes}} Fixes",
       "legend": "Türkis: gespeicherte Positionen · Grau: Fixes, die das Telefon von iOS bekam",
       "minutes_one": "{{count}} Minute",
       "minutes_other": "{{count}} Minuten",

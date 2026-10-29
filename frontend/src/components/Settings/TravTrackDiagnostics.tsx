@@ -228,7 +228,6 @@ export default function TravTrackDiagnostics({
                 key={b.at}
                 className="flex items-end"
                 style={{ flex: 1, gap: 1, height: "100%" }}
-                title={t(`${NS}.barTitle`, { time: time(b.at), points: b.points, fixes: b.fixes })}
               >
                 <div
                   style={{
@@ -246,6 +245,12 @@ export default function TravTrackDiagnostics({
                 />
               </div>
             ))}
+          </div>
+          {/* The axis names real instants: a clock-change day has 23 or 25 bars. */}
+          <div className="flex justify-between t-caption" aria-hidden="true">
+            <span>{time(bars[0].at)}</span>
+            <span>{time(bars[Math.floor(bars.length / 2)].at)}</span>
+            <span>{time(day.until)}</span>
           </div>
           <p className="t-caption">{t(`${NS}.legend`)}</p>
         </>

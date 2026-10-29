@@ -148,7 +148,6 @@
       "noGaps": "Nothing is missing this day: no gap of 10 minutes or more.",
       "truncated": "This day's log is longer than the list. The gaps are still worked out from the whole log; everything is in the download.",
       "barsLabel": "Stored positions and fixes the phone reported, per hour",
-      "barTitle": "{{time}}: {{points}} stored, {{fixes}} fixes",
       "legend": "Teal: stored positions · Grey: fixes the phone received from iOS",
       "minutes_one": "{{count}} minute",
       "minutes_other": "{{count}} minutes",
