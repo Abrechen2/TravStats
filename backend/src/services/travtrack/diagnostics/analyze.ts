@@ -12,6 +12,7 @@
 
 export const GAP_MIN_MS = 10 * 60_000;
 const PART_MIN_MS = 2 * 60_000;
+const MINUTE_MS = 60_000;
 const NO_LOG_LOOKBACK_MS = 30 * 60_000;
 
 export type GapCause =
@@ -76,7 +77,8 @@ export interface GapEvidence {
   reportedReason: string | null;
   /**
    * Whether the recorder in force had iOS's automatic pause on (`pausesAuto`
-   * of the latest `recorder` event before the part ends), null when unknown.
+   * of the latest `recorder` event before the part starts), null when unknown
+   * or when no recorder had started yet.
    * expo-location reports no pause, so an auto-paused stretch can only read
    * `unexplained` — this says whether that pause was possible at all.
    */
@@ -175,7 +177,15 @@ function classify(part: Span, input: AnalysisInput): { cause: GapCause; evidence
   const recorder = stateAt(events, "recorder", "event", part.fromMs, carried.recorder);
   const lifecycle = stateAt(events, "lifecycle", "event", part.fromMs, carried.lifecycle);
 
-  const buckets = input.fixes.filter((f) => f.tMs >= part.fromMs && f.tMs < part.toMs);
+  // A boundary that is a stored point shares its minute with the fix that
+  // became that point: count only the whole minutes inside, or the edge
+  // bucket's kept fix reads as one that never arrived (live check, D3).
+  const minute = (ms: number) => Math.floor(ms / MINUTE_MS) * MINUTE_MS;
+  const lower = input.pointTimes.includes(part.fromMs)
+    ? minute(part.fromMs) + MINUTE_MS
+    : part.fromMs;
+  const upper = input.pointTimes.includes(part.toMs) ? minute(part.toMs) : part.toMs;
+  const buckets = input.fixes.filter((f) => f.tMs >= lower && f.tMs < upper);
   const dropped: Record<string, number> = {};
   for (const b of buckets) {
     for (const [reason, n] of Object.entries(b.dropped))
@@ -209,7 +219,7 @@ function classify(part: Span, input: AnalysisInput): { cause: GapCause; evidence
     recorder,
     lifecycle,
     reportedReason: null,
-    autoPause: autoPauseAt(events, part.toMs),
+    autoPause: recorder === null ? null : autoPauseAt(events, part.fromMs),
   };
 
   const notAlways = (s: string | null) => s !== null && s !== "always";

@@ -96,6 +96,25 @@ describe("analyseGaps", () => {
     expect(theGap(base()).evidence.autoPause).toBeNull();
   });
 
+  it("does not count the edge minute of the point that ends the gap", () => {
+    // The fix kept at 09:00 is the point at 09:00; it was uploaded and stored.
+    const fixes = [{ tMs: DAY + 9 * H, received: 1, kept: 1, dropped: {} }];
+    const upload = ev(DAY + 9 * H + M, "upload", {
+      uploadId: "u1",
+      status: 201,
+      fromT: DAY + 9 * H,
+      toT: DAY + 9 * H,
+    });
+    const gap = theGap(base({ fixes, events: [upload] }));
+    expect(gap.evidence.fixesKept).toBe(0);
+    expect(gap.cause).not.toBe("notUploaded");
+  });
+
+  it("reads autoPause from the recorder in force at the gap's start", () => {
+    const later = [ev(DAY + 8 * H, "recorder", { event: "start", pausesAuto: true })];
+    expect(theGap(base({ events: later })).evidence.autoPause).toBeNull();
+  });
+
   it("names a terminate with no wake before the gap ends", () => {
     const ended = [ev(DAY + 7 * H + M, "lifecycle", { event: "terminate" })];
     expect(theGap(base({ events: ended })).cause).toBe("appNotRunning");
