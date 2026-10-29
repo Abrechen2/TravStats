@@ -51,7 +51,8 @@ Server version: the version that ships this plan. No installed app breaks: nothi
 - Budget: `aeroapi_usage` (month `YYYY-MM` UTC, whole milli-dollars). A call reserves its cost in ONE conditional
   upsert BEFORE the request; an HTTP error answer (nothing billed) refunds it, a timeout stays counted.
   Costs: status query 5, track 10 milli-dollars (`AEROAPI_COST_MILLI_USD`; unverified until an invoice is compared).
-  The budget applies to every AeroAPI call of the instance, including calls made with a user's own key.
+  The budget models the INSTANCE's FlightAware account: a call made with a user's own key reserves and counts
+  nothing and is never refused by it (it bills that user's account); only the 10/min rate limit applies, per key.
 - Rate: 10 result sets / minute, in memory (a lookup waits at most 2 s for a slot, the sweep up to 65 s).
 - Tracks: hourly sweep (`jobs/aeroapiTrackScheduler.ts`, minute 17), off until `aeroapiTracksEnabled`. Candidates:
   past arrival + 1 h, departed within 10 days, real (non-placeholder) times, not cancelled, no track, no final answer

@@ -60,6 +60,7 @@ jest.mock("../db", () => ({
 // The budget guard has its own suite (aeroapiBudget.test.ts, real database);
 // here it is the gate in front of the request.
 const gateMock = {
+  usesOwnAeroapiKey: jest.fn(async (_userId?: string) => false),
   requestAeroapiCall: jest.fn(async (_kind: string, _options?: object) => ({
     ok: true as boolean,
     cost: 5,
@@ -304,6 +305,32 @@ describe("lookupFlightAeroapi — the budget guard (forgejo#409)", () => {
     expect(result).toBeNull();
     expect(mockedAxios.get).not.toHaveBeenCalled();
     expect(outcomes.all()).toEqual([{ provider: "aeroapi", outcome: "quota" }]);
+  });
+
+  it("charges a user's own key to no instance budget: the gate is told whose key it is", async () => {
+    onlyAeroapiKey();
+    gateMock.usesOwnAeroapiKey.mockResolvedValueOnce(true);
+    respondWith([]);
+
+    await lookupFlightAeroapi("LH400", "2026-10-05", "user-1");
+
+    expect(gateMock.requestAeroapiCall).toHaveBeenCalledWith(
+      "flights",
+      expect.objectContaining({ ownKeyOfUser: "user-1" })
+    );
+    expect(mockedAxios.get).toHaveBeenCalledTimes(1);
+  });
+
+  it("charges the instance key's calls to the instance budget", async () => {
+    onlyAeroapiKey();
+    respondWith([]);
+
+    await lookupFlightAeroapi("LH400", "2026-10-05", "user-1");
+
+    expect(gateMock.requestAeroapiCall).toHaveBeenCalledWith(
+      "flights",
+      expect.objectContaining({ ownKeyOfUser: undefined })
+    );
   });
 
   it("lets lookupFlightDetails fall through when AeroAPI is out of budget", async () => {

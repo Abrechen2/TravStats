@@ -153,3 +153,39 @@ describe("AeroAPI rate limit", () => {
     expect(await waiting).toBe(true);
   });
 });
+
+describe("AeroAPI budget guard — a user's own key", () => {
+  beforeEach(async () => {
+    await prisma.aeroapiUsage.deleteMany();
+    __resetAeroapiRateForTests();
+    await prisma.adminSettings.update({
+      where: { id: await ensureAdminSettingsRow() },
+      data: { aeroapiTier: "custom", aeroapiCustomBudgetUsd: 0.001 },
+    });
+  });
+  afterAll(async () => {
+    await prisma.adminSettings.update({
+      where: { id: await ensureAdminSettingsRow() },
+      data: { aeroapiTier: "personal", aeroapiCustomBudgetUsd: null },
+    });
+  });
+
+  it("is neither refused by nor counted against the instance budget", async () => {
+    // The instance has no budget left for even one call...
+    expect((await requestAeroapiCall("flights", { now: MAY })).ok).toBe(false);
+
+    const gate = await requestAeroapiCall("flights", { now: MAY, ownKeyOfUser: "u1" });
+
+    expect(gate.ok).toBe(true);
+    expect((await getAeroapiUsage(MAY)).calls).toBe(0);
+    expect((await getAeroapiUsage(MAY)).spentUsd).toBe(0);
+  });
+
+  it("keeps a separate rate limit per key", async () => {
+    for (let i = 0; i < AEROAPI_RATE_LIMIT_PER_MINUTE; i++) {
+      expect((await requestAeroapiCall("flights", { ownKeyOfUser: "u1" })).ok).toBe(true);
+    }
+    expect((await requestAeroapiCall("flights", { ownKeyOfUser: "u1" })).ok).toBe(false);
+    expect((await requestAeroapiCall("flights", { ownKeyOfUser: "u2" })).ok).toBe(true);
+  });
+});

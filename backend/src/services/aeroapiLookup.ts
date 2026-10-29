@@ -24,7 +24,7 @@ import NodeCache from "node-cache";
 import { findOrCreateAirport } from "./airportLookup";
 import { getApiKey } from "./apiKeyResolver";
 import { recordObservedQuota } from "./apiQuota";
-import { requestAeroapiCall } from "./aeroapiBudget";
+import { requestAeroapiCall, usesOwnAeroapiKey } from "./aeroapiBudget";
 import logger from "../utils/logger";
 import type { FlightLookupResult } from "./flightLookup";
 import { classifyProviderError, type LookupOutcomeLog } from "./flightLookup/providerOutcome";
@@ -256,7 +256,10 @@ export async function lookupFlightAeroapi(
   // The budget and the minute's rate limit, BEFORE the request. Waiting up to
   // two seconds for a slot is a lookup's patience; beyond that the chain moves
   // on to the next provider and the outcome says why (forgejo#409).
-  const gate = await requestAeroapiCall("flights", { maxWaitMs: LOOKUP_RATE_WAIT_MS });
+  const gate = await requestAeroapiCall("flights", {
+    maxWaitMs: LOOKUP_RATE_WAIT_MS,
+    ownKeyOfUser: (await usesOwnAeroapiKey(userId)) ? userId : undefined,
+  });
   if (!gate.ok) {
     outcomes?.record("aeroapi", "quota");
     return null;

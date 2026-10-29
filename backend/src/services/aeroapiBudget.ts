@@ -15,6 +15,7 @@
  */
 
 import { prisma } from "../db";
+import { decryptApiKey } from "../utils/encryption";
 import logger from "../utils/logger";
 
 export const AEROAPI_TIERS = ["personal", "personal_feeder", "custom"] as const;
@@ -82,7 +83,9 @@ export async function readBudgetSettings(): Promise<AeroapiBudgetSettings> {
 
 // ---- rate limit ------------------------------------------------------------
 
-const recentCalls: number[] = [];
+/** One window per FlightAware account: the instance's, and each user's own key. */
+const INSTANCE_BUCKET = "instance";
+const recentCallsByBucket = new Map<string, number[]>();
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /**
@@ -90,8 +93,13 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
  * takes no longer than `maxWaitMs`; otherwise answers false at once — a user
  * waiting on a lookup must not be held for a minute, the chain falls through.
  */
-export async function acquireRateSlot(maxWaitMs: number): Promise<boolean> {
+export async function acquireRateSlot(
+  maxWaitMs: number,
+  bucket: string = INSTANCE_BUCKET
+): Promise<boolean> {
   const deadline = Date.now() + maxWaitMs;
+  const recentCalls = recentCallsByBucket.get(bucket) ?? [];
+  recentCallsByBucket.set(bucket, recentCalls);
   for (;;) {
     const now = Date.now();
     while (recentCalls.length > 0 && now - recentCalls[0] >= RATE_WINDOW_MS) recentCalls.shift();
@@ -103,6 +111,16 @@ export async function acquireRateSlot(maxWaitMs: number): Promise<boolean> {
     if (now + wait > deadline) return false;
     await sleep(wait);
   }
+}
+
+/** Does this user's own AeroAPI key (not the instance's) serve their calls? Mirrors `getApiKey`'s order. */
+export async function usesOwnAeroapiKey(userId?: string): Promise<boolean> {
+  if (!userId) return false;
+  const row = await prisma.userSettings.findUnique({
+    where: { userId },
+    select: { aeroapiApiKey: true },
+  });
+  return !!decryptApiKey(row?.aeroapiApiKey ?? null);
 }
 
 // ---- budget ----------------------------------------------------------------
@@ -138,8 +156,23 @@ async function refund(month: string, cost: number): Promise<void> {
  */
 export async function requestAeroapiCall(
   kind: AeroapiCallKind,
-  options: { maxWaitMs?: number; now?: Date } = {}
+  options: {
+    maxWaitMs?: number;
+    now?: Date;
+    /**
+     * The user whose OWN key makes this call. That bills the user's FlightAware
+     * account, not the instance's: nothing is reserved or counted and the
+     * instance budget never refuses it; only the per-key rate limit applies.
+     */
+    ownKeyOfUser?: string;
+  } = {}
 ): Promise<AeroapiGate> {
+  if (options.ownKeyOfUser) {
+    const ok = await acquireRateSlot(options.maxWaitMs ?? 0, `user:${options.ownKeyOfUser}`);
+    return ok
+      ? { ok: true, cost: 0, release: async () => undefined }
+      : { ok: false, reason: "rate_limit" };
+  }
   const cost = AEROAPI_COST_MILLI_USD[kind];
   const month = utcMonthKey(options.now ?? new Date());
   const budget = budgetMilliUsd(await readBudgetSettings());
@@ -187,5 +220,5 @@ export async function getAeroapiUsage(now: Date = new Date()): Promise<AeroapiUs
 
 /** Test helper. */
 export function __resetAeroapiRateForTests(): void {
-  recentCalls.length = 0;
+  recentCallsByBucket.clear();
 }
