@@ -289,6 +289,8 @@ async function send(
     {
       overwrite: false,
       contentLength: sizeBytes,
+      // webdav sends no Content-Length for a Readable body, so say it explicitly.
+      headers: { "Content-Length": String(sizeBytes) },
       signal: requestSignal(deadline, UPLOAD_TIMEOUT_MS),
     }
   );

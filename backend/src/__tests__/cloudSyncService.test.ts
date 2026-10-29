@@ -273,6 +273,9 @@ describe("cloudSyncService", () => {
       expect(Buffer.isBuffer(body)).toBe(false);
       expect(body).toEqual({ stub: "read-stream" });
       expect(options.contentLength).toBe(15);
+      expect((options as { headers?: Record<string, string> }).headers).toEqual({
+        "Content-Length": "15",
+      });
 
       expect(mockBackupUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -501,7 +504,10 @@ describe("cloudSyncService", () => {
       );
       expect(mockClient.getFileContents).not.toHaveBeenCalled();
       expect(Buffer.concat(downloadedChunks).toString()).toBe("archive-bytes");
-      expect(mockRenameSync).toHaveBeenCalledWith("/tmp/out.tar.gz.part", "/tmp/out.tar.gz");
+      expect(mockRenameSync).toHaveBeenCalledWith(
+        expect.stringMatching(/^\/tmp\/out\.tar\.gz\.[0-9a-f]+\.part$/),
+        "/tmp/out.tar.gz"
+      );
     });
 
     it("rethrows a download that dies mid-stream and leaves no partial archive behind (forgejo#354)", async () => {
@@ -521,7 +527,7 @@ describe("cloudSyncService", () => {
         /connection reset|upstream/i
       );
       expect(mockRenameSync).not.toHaveBeenCalled();
-      expect(mockRmSync).toHaveBeenCalledWith("/tmp/out.tar.gz.part", { force: true });
+      expect(mockRmSync).toHaveBeenCalledWith(expect.stringMatching(/\.part$/), { force: true });
     });
   });
 });

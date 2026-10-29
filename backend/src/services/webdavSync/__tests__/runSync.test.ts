@@ -139,9 +139,10 @@ describe("runWebdavSync", () => {
     const [remote, , options] = share.putFileContents.mock.calls[0] as [
       string,
       unknown,
-      { overwrite: boolean; contentLength: number },
+      { overwrite: boolean; contentLength: number; headers: Record<string, string> },
     ];
     expect(options.contentLength).toBe(body.length);
+    expect(options.headers["Content-Length"]).toBe(String(body.length));
     expect(remote).toMatch(/^\/TravStats\/travstats-export-[0-9a-f]{12}-\d{8}T\d{6}Z\.json\.gz$/);
     expect(options.overwrite).toBe(false);
     const json = JSON.parse(gunzipSync(body).toString("utf8")) as {

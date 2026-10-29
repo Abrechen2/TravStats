@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import { createClient } from "webdav";
 import * as fs from "fs";
 import * as path from "path";
@@ -138,6 +138,10 @@ export async function syncToCloud(backupId: string): Promise<void> {
     await client.putFileContents(remotePath, fs.createReadStream(backup.backupPath), {
       overwrite: true,
       contentLength: size,
+      // webdav sends no Content-Length for a Readable body (it ignores the
+      // option above), so the header is set explicitly: servers that refuse
+      // chunked uploads keep working.
+      headers: { "Content-Length": String(size) },
     });
 
     await prisma.backup.update({
@@ -295,6 +299,9 @@ export async function listCloudBackups(): Promise<
   }
 }
 
+/** Longest silence tolerated while a backup streams down from the share. */
+const DOWNLOAD_STALL_MS = 60_000;
+
 /** Download a backup file from the remote WebDAV share to local disk. */
 export async function downloadFromCloud(backupName: string, localPath: string): Promise<void> {
   const { client, backupPath } = await getWebDAVClient();
@@ -311,13 +318,30 @@ export async function downloadFromCloud(backupName: string, localPath: string): 
 
     // Stream into a side file and rename on success, so a dropped connection
     // never leaves a truncated archive under the real name (forgejo#354).
-    const partPath = `${localPath}.part`;
+    // Unique per call: two parallel downloads of one name must not share it.
+    const partPath = `${localPath}.${randomBytes(6).toString("hex")}.part`;
+    const source = client.createReadStream(remotePath);
+    // webdav pipes the HTTP body into this stream without forwarding its
+    // errors, so a connection that dies mid-body would hang forever: a stall
+    // watchdog turns silence into a failure.
+    let stall: NodeJS.Timeout | undefined;
+    const arm = () => {
+      clearTimeout(stall);
+      stall = setTimeout(
+        () => source.destroy(new Error("download stalled: no data received")),
+        DOWNLOAD_STALL_MS
+      );
+    };
+    arm();
+    source.on("data", arm);
     try {
-      await pipeline(client.createReadStream(remotePath), fs.createWriteStream(partPath));
+      await pipeline(source, fs.createWriteStream(partPath));
       fs.renameSync(partPath, localPath);
     } catch (streamError) {
       fs.rmSync(partPath, { force: true });
       throw streamError;
+    } finally {
+      clearTimeout(stall);
     }
 
     logger.info({
