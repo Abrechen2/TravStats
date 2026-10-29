@@ -28,11 +28,21 @@ export interface OpenSkyCredentials {
   password?: string;
 }
 
-/**
- * Get API key for a provider with priority resolution
- * Priority: User Key > Global Key > ENV Variable
- */
-export async function getApiKey(provider: ApiProvider, userId?: string): Promise<string | null> {
+/** Where a resolved key came from — decides whose FlightAware account a call bills. */
+export type ApiKeySource = "user" | "global" | "env";
+export interface ResolvedApiKey {
+  key: string | null;
+  source: ApiKeySource | null;
+}
+const NO_KEY: ResolvedApiKey = { key: null, source: null };
+const envKey = (value: string | undefined): ResolvedApiKey =>
+  value ? { key: value, source: "env" } : NO_KEY;
+
+/** Resolve a provider key with its source. Priority: User Key > Global Key > ENV Variable. */
+export async function resolveApiKey(
+  provider: ApiProvider,
+  userId?: string
+): Promise<ResolvedApiKey> {
   try {
     // 1. Try user-specific key
     if (userId) {
@@ -83,7 +93,7 @@ export async function getApiKey(provider: ApiProvider, userId?: string): Promise
         if (userKey) {
           const decrypted = decryptApiKey(userKey);
           if (decrypted) {
-            return decrypted;
+            return { key: decrypted, source: "user" };
           }
         }
       }
@@ -134,7 +144,7 @@ export async function getApiKey(provider: ApiProvider, userId?: string): Promise
       if (globalKey) {
         const decrypted = decryptApiKey(globalKey);
         if (decrypted) {
-          return decrypted;
+          return { key: decrypted, source: "global" };
         }
       }
     }
@@ -142,27 +152,27 @@ export async function getApiKey(provider: ApiProvider, userId?: string): Promise
     // 3. Fallback to ENV variable
     switch (provider) {
       case "openai":
-        return process.env.OPENAI_API_KEY || null;
+        return envKey(process.env.OPENAI_API_KEY);
       case "claude":
-        return process.env.CLAUDE_API_KEY || null;
+        return envKey(process.env.CLAUDE_API_KEY);
       case "airlabs":
-        return process.env.AIRLABS_API_KEY || null;
+        return envKey(process.env.AIRLABS_API_KEY);
       case "aviationstack":
-        return process.env.AVIATIONSTACK_API_KEY || null;
+        return envKey(process.env.AVIATIONSTACK_API_KEY);
       case "aerodatabox":
-        return process.env.AERODATABOX_API_KEY || null;
+        return envKey(process.env.AERODATABOX_API_KEY);
       case "aeroapi":
-        return process.env.AEROAPI_API_KEY || null;
+        return envKey(process.env.AEROAPI_API_KEY);
       case "logostream":
-        return process.env.LOGOSTREAM_API_KEY || null;
+        return envKey(process.env.LOGOSTREAM_API_KEY);
       case "googlePlaces":
-        return process.env.GOOGLE_PLACES_API_KEY || null;
+        return envKey(process.env.GOOGLE_PLACES_API_KEY);
       case "openrouteservice":
-        return process.env.OPENROUTESERVICE_API_KEY || null;
+        return envKey(process.env.OPENROUTESERVICE_API_KEY);
       case "graphhopper":
-        return process.env.GRAPHHOPPER_API_KEY || null;
+        return envKey(process.env.GRAPHHOPPER_API_KEY);
       default:
-        return null;
+        return NO_KEY;
     }
   } catch (error) {
     logger.error({
@@ -174,8 +184,18 @@ export async function getApiKey(provider: ApiProvider, userId?: string): Promise
         error: error instanceof Error ? error.message : "Unknown error",
       },
     });
-    return null;
+    return NO_KEY;
   }
+}
+
+/**
+ * The key for a provider, as a string. Priority: User Key > Global Key > ENV.
+ * A caller that must act on WHERE the key came from uses `resolveApiKey` and
+ * the key and its source from that ONE resolution — a second read could see
+ * a different key.
+ */
+export async function getApiKey(provider: ApiProvider, userId?: string): Promise<string | null> {
+  return (await resolveApiKey(provider, userId)).key;
 }
 
 /**

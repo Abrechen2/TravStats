@@ -22,9 +22,9 @@
 import axios from "axios";
 import NodeCache from "node-cache";
 import { findOrCreateAirport } from "./airportLookup";
-import { getApiKey } from "./apiKeyResolver";
+import { resolveApiKey } from "./apiKeyResolver";
 import { recordObservedQuota } from "./apiQuota";
-import { requestAeroapiCall, usesOwnAeroapiKey } from "./aeroapiBudget";
+import { requestAeroapiCall } from "./aeroapiBudget";
 import logger from "../utils/logger";
 import type { FlightLookupResult } from "./flightLookup";
 import { classifyProviderError, type LookupOutcomeLog } from "./flightLookup/providerOutcome";
@@ -226,7 +226,10 @@ export async function lookupFlightAeroapi(
   const trimmed = flightNumber.trim();
   if (!trimmed) return null;
 
-  const apiKey = await getApiKey("aeroapi", userId);
+  // ONE resolution supplies both the key that is sent and whose account it
+  // bills: a second read could see a changed key and bill the instance's key
+  // as the user's own.
+  const { key: apiKey, source: keySource } = await resolveApiKey("aeroapi", userId);
   if (!apiKey) return null;
 
   const nowMs = Date.now();
@@ -258,7 +261,7 @@ export async function lookupFlightAeroapi(
   // on to the next provider and the outcome says why (forgejo#409).
   const gate = await requestAeroapiCall("flights", {
     maxWaitMs: LOOKUP_RATE_WAIT_MS,
-    ownKeyOfUser: (await usesOwnAeroapiKey(userId)) ? userId : undefined,
+    ownKeyOfUser: keySource === "user" ? userId : undefined,
   });
   if (!gate.ok) {
     outcomes?.record("aeroapi", "quota");

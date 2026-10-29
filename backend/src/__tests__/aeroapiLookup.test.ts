@@ -28,8 +28,18 @@ jest.mock("../services/airportLookup", () => ({
   enrichAirportMetadata: jest.fn(async () => false),
 }));
 
+const keySourceMock = { value: "global" as "user" | "global" | "env" };
 const apiKeyResolverMock = {
   getApiKey: jest.fn(async (_provider: string, _userId?: string) => null as string | null),
+  // The lookup resolves key AND source in one read; the mock serves the key from getApiKey.
+  resolveApiKey: async (provider: string, userId?: string) => ({
+    key: await (
+      jest.requireMock("../services/apiKeyResolver") as {
+        getApiKey: (p: string, u?: string) => Promise<string | null>;
+      }
+    ).getApiKey(provider, userId),
+    source: keySourceMock.value,
+  }),
   getOpenSkyCredentials: jest.fn(async () => null as { user?: string; pass?: string } | null),
 };
 jest.mock("../services/apiKeyResolver", () => apiKeyResolverMock);
@@ -60,7 +70,6 @@ jest.mock("../db", () => ({
 // The budget guard has its own suite (aeroapiBudget.test.ts, real database);
 // here it is the gate in front of the request.
 const gateMock = {
-  usesOwnAeroapiKey: jest.fn(async (_userId?: string) => false),
   requestAeroapiCall: jest.fn(async (_kind: string, _options?: object) => ({
     ok: true as boolean,
     cost: 5,
@@ -112,6 +121,7 @@ beforeEach(() => {
   __resetAerodataboxCacheForTests();
   __resetAviationstackBudgetForTests();
   apiKeyResolverMock.getApiKey.mockImplementation(async () => null);
+  keySourceMock.value = "global";
   gateMock.requestAeroapiCall.mockImplementation(async () => ({
     ok: true,
     cost: 5,
@@ -307,31 +317,32 @@ describe("lookupFlightAeroapi — the budget guard (forgejo#409)", () => {
     expect(outcomes.all()).toEqual([{ provider: "aeroapi", outcome: "quota" }]);
   });
 
-  it("charges a user's own key to no instance budget: the gate is told whose key it is", async () => {
-    onlyAeroapiKey();
-    gateMock.usesOwnAeroapiKey.mockResolvedValueOnce(true);
-    respondWith([]);
+  it.each([
+    ["user", "user-1"],
+    ["global", undefined],
+    ["env", undefined],
+  ] as const)(
+    "bills by the source of the very key it sends: %s key → ownKeyOfUser %s",
+    async (source, expectedOwner) => {
+      onlyAeroapiKey();
+      keySourceMock.value = source;
+      respondWith([]);
 
-    await lookupFlightAeroapi("LH400", "2026-10-05", "user-1");
+      await lookupFlightAeroapi("LH400", "2026-10-05", "user-1");
 
-    expect(gateMock.requestAeroapiCall).toHaveBeenCalledWith(
-      "flights",
-      expect.objectContaining({ ownKeyOfUser: "user-1" })
-    );
-    expect(mockedAxios.get).toHaveBeenCalledTimes(1);
-  });
-
-  it("charges the instance key's calls to the instance budget", async () => {
-    onlyAeroapiKey();
-    respondWith([]);
-
-    await lookupFlightAeroapi("LH400", "2026-10-05", "user-1");
-
-    expect(gateMock.requestAeroapiCall).toHaveBeenCalledWith(
-      "flights",
-      expect.objectContaining({ ownKeyOfUser: undefined })
-    );
-  });
+      expect(gateMock.requestAeroapiCall).toHaveBeenCalledWith(
+        "flights",
+        expect.objectContaining({ ownKeyOfUser: expectedOwner })
+      );
+      const [, config] = mockedAxios.get.mock.calls[0] as [
+        string,
+        { headers: Record<string, string> },
+      ];
+      expect(config.headers["x-apikey"]).toBe("aeroapi-secret");
+      // One resolution, not two: the key store is read once per lookup.
+      expect(apiKeyResolverMock.getApiKey).toHaveBeenCalledTimes(1);
+    }
+  );
 
   it("lets lookupFlightDetails fall through when AeroAPI is out of budget", async () => {
     onlyAeroapiKey();

@@ -33,6 +33,15 @@ jest.mock("../services/airportLookup", () => ({
 
 const apiKeyResolverMock = {
   getApiKey: jest.fn(async (_provider: string, _userId?: string) => null as string | null),
+  // The lookup resolves key AND source in one read; the mock serves the key from getApiKey.
+  resolveApiKey: async (provider: string, userId?: string) => ({
+    key: await (
+      jest.requireMock("../services/apiKeyResolver") as {
+        getApiKey: (p: string, u?: string) => Promise<string | null>;
+      }
+    ).getApiKey(provider, userId),
+    source: "global" as const,
+  }),
   getOpenSkyCredentials: jest.fn(async () => null as { user?: string; pass?: string } | null),
 };
 jest.mock("../services/apiKeyResolver", () => apiKeyResolverMock);

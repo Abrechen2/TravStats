@@ -15,7 +15,6 @@
  */
 
 import { prisma } from "../db";
-import { decryptApiKey } from "../utils/encryption";
 import logger from "../utils/logger";
 
 export const AEROAPI_TIERS = ["personal", "personal_feeder", "custom"] as const;
@@ -111,16 +110,6 @@ export async function acquireRateSlot(
     if (now + wait > deadline) return false;
     await sleep(wait);
   }
-}
-
-/** Does this user's own AeroAPI key (not the instance's) serve their calls? Mirrors `getApiKey`'s order. */
-export async function usesOwnAeroapiKey(userId?: string): Promise<boolean> {
-  if (!userId) return false;
-  const row = await prisma.userSettings.findUnique({
-    where: { userId },
-    select: { aeroapiApiKey: true },
-  });
-  return !!decryptApiKey(row?.aeroapiApiKey ?? null);
 }
 
 // ---- budget ----------------------------------------------------------------
