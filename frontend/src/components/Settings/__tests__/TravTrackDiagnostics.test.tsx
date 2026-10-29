@@ -52,6 +52,7 @@ describe("TravTrackDiagnostics", () => {
               recorder: null,
               lifecycle: null,
               reportedReason: null,
+              autoPause: null,
             },
           },
         ],

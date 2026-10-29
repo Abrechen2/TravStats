@@ -42,6 +42,8 @@ export interface DiagnosticsGap {
     recorder: string | null;
     lifecycle: string | null;
     reportedReason: string | null;
+    /** The recorder in force had iOS's automatic pause on; null when unknown. */
+    autoPause: boolean | null;
   };
 }
 

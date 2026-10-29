@@ -169,7 +169,8 @@
         "dropped": "dropped: {{list}}",
         "upload": "upload: {{status}}",
         "network": "no network",
-        "permission": "location access: {{status}}"
+        "permission": "location access: {{status}}",
+        "autoPause": "iOS was allowed to pause recording automatically (auto-pause) – the likeliest cause here, but the app is not told when it happens"
       },
       "dropReason": {
         "interval": "interval",

@@ -74,6 +74,13 @@ export interface GapEvidence {
   recorder: string | null;
   lifecycle: string | null;
   reportedReason: string | null;
+  /**
+   * Whether the recorder in force had iOS's automatic pause on (`pausesAuto`
+   * of the latest `recorder` event before the part ends), null when unknown.
+   * expo-location reports no pause, so an auto-paused stretch can only read
+   * `unexplained` — this says whether that pause was possible at all.
+   */
+  autoPause: boolean | null;
 }
 
 export interface AnalysedGap {
@@ -148,6 +155,16 @@ function inside(events: readonly LogEvent[], kind: string, part: Span): LogEvent
   return events.filter((e) => e.kind === kind && e.tMs >= part.fromMs && e.tMs < part.toMs);
 }
 
+/** `pausesAuto` of the latest recorder event before an instant that names it. */
+function autoPauseAt(events: readonly LogEvent[], atMs: number): boolean | null {
+  let value: boolean | null = null;
+  for (const e of events) {
+    if (e.tMs >= atMs) break;
+    if (e.kind === "recorder" && typeof e.data.pausesAuto === "boolean") value = e.data.pausesAuto;
+  }
+  return value;
+}
+
 const RESUMED = new Set(["start", "resume"]);
 const WOKE = new Set(["launch", "backgroundLaunch", "significantWake"]);
 const ok = (status: number | null): boolean => status !== null && status >= 200 && status < 300;
@@ -192,6 +209,7 @@ function classify(part: Span, input: AnalysisInput): { cause: GapCause; evidence
     recorder,
     lifecycle,
     reportedReason: null,
+    autoPause: autoPauseAt(events, part.toMs),
   };
 
   const notAlways = (s: string | null) => s !== null && s !== "always";

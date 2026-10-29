@@ -141,6 +141,9 @@ export default function TravTrackDiagnostics({
     if (e.reportedReason) {
       parts.push(t(`${NS}.reported.${e.reportedReason}`, { defaultValue: e.reportedReason }));
     }
+    if (gap.cause === "unexplained" && e.autoPause === true) {
+      parts.push(t(`${NS}.evidence.autoPause`));
+    }
     if (e.permission && e.permission !== "always") {
       parts.push(t(`${NS}.evidence.permission`, { status: e.permission }));
     }

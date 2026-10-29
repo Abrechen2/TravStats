@@ -27,7 +27,7 @@ ended or relaunched the app. That timeline is what this feature adds.
 |---|---|---|---|
 | D1 | server | tables, ingest, day analysis, export, delete, retention, capability | done, `feat/travtrack-diagnostics` 45f01e458 (Codex review: 1 × P1, 7 × P2 fixed) |
 | D2 | web | Settings → TravTrack → Diagnose: day timeline per device, gaps with cause, JSON download, delete | done, same branch |
-| D3 | Companion | ring buffer, recorder/uploader/lifecycle hooks, opt-in switch, "Jetzt senden" | handed to `travstats-companion` 2026-10-29 |
+| D3 | Companion | ring buffer, recorder/uploader/lifecycle hooks, opt-in switch, "Jetzt senden" | built, Companion `feat/travtrack-diagnostics` 78f316a3 (not yet tried against this branch) |
 | D4 | both | reproduce a gap like 2026-10-28 with the log switched on, and read its cause. The 28th itself cannot be explained afterwards: its timeline was never recorded. | owner's phone |
 
 Codex reviewed the first draft (5 × P1, 7 × P2); every finding is folded in
@@ -207,6 +207,35 @@ daily sweep at 03:40 UTC beside the other retention jobs, and once at start.
   permission and power at launch and on change.
 - Report back what of the list the native modules cannot see.
 
-## Open for Companion
+## As built in the Companion (78f316a3) — accepted differences
 
-- (none yet)
+- The app now reads `GET /travtrack/capabilities` (cached 6 h) before sending.
+- A `400` or `409` drops the batch for good; it is not re-sent under a new id,
+  so no minute's fixes can be counted twice.
+- `recorder` also sends `event: update`, and every `start` carries
+  `reason` (`start | restart | revive | orphan`) and `pausesAuto`. The server
+  turns `pausesAuto` into the gap evidence `autoPause`, and the web adds "iOS
+  was allowed to pause recording automatically" to an `unexplained` gap.
+- A new kind `gap` mirrors what the phone reports to `/points`; stored, shown raw.
+- Fixes held for unknown zones count as `dropped.zonesUnknown` although they
+  are sent later. They become points, so they open no gap; only the per-minute
+  drop count overstates.
+- A fix that a flight and a trip both take counts `kept` twice. That only
+  matters for `kept > 0`, so no cause changes.
+- `power` carries no battery level or low-power mode (`expo-battery` is not
+  installed).
+
+## Open for Companion — what the native layer cannot see
+
+- **iOS auto-pause.** Everyday recording sets `pausesUpdatesAutomatically:
+  true`, and expo-location has no pause/resume callback, so a paused stretch
+  reads `unexplained` (with `autoPause: true`). It is the likeliest source of
+  the gaps against Dawarich. Seeing it needs a native callback
+  (`locationManagerDidPauseLocationUpdates`), or turning the auto-pause off
+  costs battery: an owner decision.
+- **Swipe-kill or termination.** No JS runs, so there is no `terminate`; the
+  next `launch` and the `recorderSilent` gap show it after the fact.
+- **OS-deferred delivery** is invisible.
+- **Android Doze / App Standby:** no callback, only `received` missing.
+- iOS `restricted` arrives as `denied`; the significant-change wake is not
+  visible.

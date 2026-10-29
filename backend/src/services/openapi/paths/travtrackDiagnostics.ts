@@ -144,6 +144,10 @@ const gap = z.object({
     recorder: z.string().nullable(),
     lifecycle: z.string().nullable(),
     reportedReason: z.string().nullable(),
+    autoPause: z
+      .boolean()
+      .nullable()
+      .describe("The recorder in force had iOS's automatic pause on; null when unknown"),
   }),
 });
 

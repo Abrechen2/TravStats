@@ -87,6 +87,15 @@ describe("analyseGaps", () => {
     expect(theGap(base({ events })).cause).toBe("unexplained");
   });
 
+  it("says whether iOS's automatic pause was on for an unexplained gap", () => {
+    const events = [
+      ev(DAY + 5 * H, "recorder", { event: "start", pausesAuto: true }),
+      ev(DAY + 7 * H + M, "lifecycle", { event: "background" }),
+    ];
+    expect(theGap(base({ events })).evidence.autoPause).toBe(true);
+    expect(theGap(base()).evidence.autoPause).toBeNull();
+  });
+
   it("names a terminate with no wake before the gap ends", () => {
     const ended = [ev(DAY + 7 * H + M, "lifecycle", { event: "terminate" })];
     expect(theGap(base({ events: ended })).cause).toBe("appNotRunning");

@@ -169,7 +169,8 @@
         "dropped": "verworfen: {{list}}",
         "upload": "Upload: {{status}}",
         "network": "kein Netz",
-        "permission": "Standortzugriff: {{status}}"
+        "permission": "Standortzugriff: {{status}}",
+        "autoPause": "iOS durfte die Aufzeichnung automatisch anhalten (Auto-Pause) – das ist hier die wahrscheinlichste Ursache, die App erfährt davon aber nichts"
       },
       "dropReason": {
         "interval": "Intervall",
