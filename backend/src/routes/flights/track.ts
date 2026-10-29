@@ -115,6 +115,13 @@ async function presentCut<T extends { startedAt: Date; endedAt: Date; cumulative
 const alreadyRecorded = () =>
   new AppError("This flight already has a recording", 409, "TRACK_ALREADY_RECORDED");
 
+/**
+ * The server's own fetch (`aeroapi`, forgejo#409) fills a gap and yields to
+ * the passenger's recording without being asked to be replaced — the phone's
+ * upload has no way to know a line it never saw is there.
+ */
+const yieldsToUpload = (existing: { source: string }) => existing.source === "aeroapi";
+
 function isUniqueViolation(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }
@@ -241,7 +248,7 @@ router.post(
         res.json({ track: await present(existing, flight), replayed: true });
         return;
       }
-      if (existing && !body.replace) throw alreadyRecorded();
+      if (existing && !yieldsToUpload(existing) && !body.replace) throw alreadyRecorded();
 
       const { points, segmentStarts } = flightTrackUploadPieces(body);
       const first = points[0].t;
@@ -318,7 +325,7 @@ router.post(
         res.json({ track: await present(existing, flight), replayed: true });
         return;
       }
-      if (existing && !fields.data.replace) throw alreadyRecorded();
+      if (existing && !yieldsToUpload(existing) && !fields.data.replace) throw alreadyRecorded();
 
       const scheduled = await scheduledInstants(flight);
       const placed = placeUntimedTrack(withoutEmptyElevations(file.track), scheduled, {

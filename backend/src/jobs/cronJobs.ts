@@ -20,6 +20,10 @@ export async function startCronJobs(): Promise<void> {
         (await import("./historicalEnrichmentScheduler")).startHistoricalEnrichmentScheduler(),
     ],
     [
+      "aeroapi_tracks",
+      async () => (await import("./aeroapiTrackScheduler")).startAeroapiTrackScheduler(),
+    ],
+    [
       "airline_logo_refresh",
       async () =>
         (await import("./airlineLogoRefreshScheduler")).startAirlineLogoRefreshScheduler(),

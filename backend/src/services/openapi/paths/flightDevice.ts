@@ -27,6 +27,7 @@ const trackMeta = z.object({
     .enum([...FLIGHT_TRACK_SOURCES, "travtrack", "dawarich"])
     .describe(
       "`companion` from the phone; the file format for an uploaded file (forgejo#312); " +
+        "`aeroapi` for the line FlightAware recorded, fetched by the server (forgejo#409; an upload replaces it without `replace`); " +
         "`travtrack` / `dawarich` for a line drawn from that provider's points (not stored)"
     ),
   uploadId: z

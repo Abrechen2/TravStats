@@ -78,8 +78,10 @@ const observed = new Map<string, Map<ApiProvider, ObservedQuota>>();
  */
 const STATIC_QUOTA_SHAPE: Record<ApiProvider, ProviderQuota> = {
   aerodatabox: { kind: "observed", limit: null, remaining: null, observedAt: "" },
-  // Billed per query, no monthly cap to count down; limits surface as 429s.
-  // Replaced by an observation should a response ever carry the headers.
+  // Billed per result set and sends no quota headers. The monthly USD budget
+  // is counted by the instance itself (`aeroapiBudget.ts`, forgejo#409) and
+  // shown in the admin card; it is in dollars, not calls, so it is not
+  // forced into this call-count shape.
   aeroapi: { kind: "not_reported" },
   airlabs: { kind: "not_reported", knownLimitHint: 1000 },
   aviationstack: { kind: "not_reported", knownLimitHint: 100 },
