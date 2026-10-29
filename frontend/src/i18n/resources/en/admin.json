@@ -1354,5 +1354,42 @@
       "saveFailed": "The TravPlan switch could not be saved.",
       "disabled": "TravPlan is switched off on this server. Switch on the beta features first."
     }
+  },
+  "aeroapi": {
+    "title": "FlightAware AeroAPI: plan and monthly budget",
+    "description": "AeroAPI bills per result set. TravStats counts every call in the UTC calendar month and sends nothing once the budget is reached — never a surprise bill. The per-call costs are estimates until they are compared with a real invoice.",
+    "tier": "Plan",
+    "tiers": {
+      "personal": "Personal ($5 credit)",
+      "personal_feeder": "Personal with feeder ($10 credit)",
+      "custom": "Custom budget"
+    },
+    "customBudget": "Monthly budget in US dollars",
+    "spent": "This month ({{month}}): {{spent}} of {{budget}} used, {{calls}} calls",
+    "exhausted": "The budget is reached. AeroAPI is not asked again until next month; the other providers take over.",
+    "cost": "Assumed cost per call: flight status {{flights}}, flight track {{track}} (unverified).",
+    "rateLimit": "At most 10 result sets per minute; beyond that TravStats waits or falls back to other providers.",
+    "tracksTitle": "Fetch real flight tracks",
+    "tracksSub": "After landing, fetches the track FlightAware recorded once and stores it when the flight has no recording of its own. Every fetch spends budget. Off until you switch it on.",
+    "sweep": {
+      "label": "Last run ({{at}})",
+      "status": {
+        "disabled": "switched off",
+        "no_key": "no AeroAPI key stored for the instance",
+        "nothing_to_do": "nothing to fetch",
+        "done": "finished",
+        "stopped_budget": "stopped: monthly budget reached",
+        "stopped_rate_limit": "stopped: AeroAPI rate limit",
+        "stopped_auth": "stopped: AeroAPI rejected the key",
+        "already_running": "already running"
+      },
+      "counts": "Stored: {{stored}}, already had one: {{has_track}}, unknown to FlightAware: {{no_match}}, no track: {{no_track}}, errors: {{error}}"
+    },
+    "save": "Save",
+    "saving": "Saving …",
+    "saved": "Saved.",
+    "loadFailed": "The AeroAPI settings could not be loaded.",
+    "saveFailed": "The AeroAPI settings could not be saved.",
+    "budgetRequired": "A custom budget needs an amount above 0."
   }
 }

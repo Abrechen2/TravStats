@@ -7,6 +7,7 @@ vi.mock("../../../lib/api", () => ({
   settingsApi: { testApiKey: vi.fn(), getApiKeyQuotas: vi.fn().mockResolvedValue({}) },
 }));
 vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => false }));
+vi.mock("../AeroapiBudgetCard", () => ({ default: () => null }));
 vi.mock("../ImmichGlobalSettings", () => ({ default: () => null }));
 vi.mock("../../Settings/OperatorLogosCard", () => ({ default: () => null }));
 const llm = vi.hoisted(() => ({ value: null as boolean | "disabled" | null }));

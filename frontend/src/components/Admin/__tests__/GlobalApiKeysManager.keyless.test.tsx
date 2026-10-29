@@ -28,6 +28,7 @@ vi.mock("../../../hooks/useTranslation", () => ({
 }));
 vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => false }));
 vi.mock("../../../hooks/useDomainVisible", () => ({ useDomainOffered: () => true }));
+vi.mock("../AeroapiBudgetCard", () => ({ default: () => null }));
 vi.mock("../ImmichGlobalSettings", () => ({ default: () => null }));
 vi.mock("../../Settings/OperatorLogosCard", () => ({ default: () => null }));
 

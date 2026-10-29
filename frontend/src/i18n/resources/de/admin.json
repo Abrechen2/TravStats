@@ -1354,5 +1354,42 @@
       "saveFailed": "Der TravPlan-Schalter konnte nicht gespeichert werden.",
       "disabled": "TravPlan ist auf diesem Server ausgeschaltet. Schalte zuerst die Beta-Funktionen ein."
     }
+  },
+  "aeroapi": {
+    "title": "FlightAware AeroAPI: Tarif und Monatsbudget",
+    "description": "AeroAPI rechnet pro Ergebnissatz ab. TravStats zählt jeden Aufruf im Kalendermonat (UTC) und sendet nichts mehr, sobald das Budget erreicht ist — nie eine Überraschungsrechnung. Die Kosten je Aufruf sind Richtwerte, bis sie mit einer echten Rechnung abgeglichen sind.",
+    "tier": "Tarif",
+    "tiers": {
+      "personal": "Personal (5 $ Guthaben)",
+      "personal_feeder": "Personal mit Feeder (10 $ Guthaben)",
+      "custom": "Eigenes Budget"
+    },
+    "customBudget": "Monatsbudget in US-Dollar",
+    "spent": "Diesen Monat ({{month}}): {{spent}} von {{budget}} verbraucht, {{calls}} Aufrufe",
+    "exhausted": "Das Budget ist erreicht. AeroAPI wird bis zum nächsten Monat nicht mehr gefragt; die übrigen Anbieter übernehmen.",
+    "cost": "Angenommene Kosten je Aufruf: Flugstatus {{flights}}, Flugspur {{track}} (ungeprüft).",
+    "rateLimit": "Höchstens 10 Ergebnissätze pro Minute; darüber wartet TravStats oder weicht auf andere Anbieter aus.",
+    "tracksTitle": "Echte Flugspuren abrufen",
+    "tracksSub": "Holt nach der Landung einmal die von FlightAware aufgezeichnete Spur und speichert sie, wenn der Flug keine eigene Aufzeichnung hat. Jeder Abruf kostet Budget. Aus, bis du es einschaltest.",
+    "sweep": {
+      "label": "Letzter Lauf ({{at}})",
+      "status": {
+        "disabled": "ausgeschaltet",
+        "no_key": "kein AeroAPI-Schlüssel für die Instanz hinterlegt",
+        "nothing_to_do": "nichts zu holen",
+        "done": "abgeschlossen",
+        "stopped_budget": "abgebrochen: Monatsbudget erreicht",
+        "stopped_rate_limit": "abgebrochen: Mengenbegrenzung von AeroAPI",
+        "stopped_auth": "abgebrochen: AeroAPI hat den Schlüssel abgelehnt",
+        "already_running": "läuft bereits"
+      },
+      "counts": "Gespeichert: {{stored}}, schon vorhanden: {{has_track}}, unbekannt bei FlightAware: {{no_match}}, ohne Spur: {{no_track}}, Fehler: {{error}}"
+    },
+    "save": "Speichern",
+    "saving": "Speichere …",
+    "saved": "Gespeichert.",
+    "loadFailed": "Die AeroAPI-Einstellungen konnten nicht geladen werden.",
+    "saveFailed": "Die AeroAPI-Einstellungen konnten nicht gespeichert werden.",
+    "budgetRequired": "Für ein eigenes Budget ist ein Betrag über 0 nötig."
   }
 }
