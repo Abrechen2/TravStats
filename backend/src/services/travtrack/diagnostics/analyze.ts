@@ -57,6 +57,12 @@ export interface AnalysisInput {
   reported: readonly { fromMs: number; toMs: number; reason: string }[];
   /** Points upload ids the server holds a receipt for. */
   receipts: ReadonlySet<string>;
+  /**
+   * Whether the device logged anything within the day itself. Events before
+   * the day (the 30-minute lookback) and uploads after it do not make the
+   * day's edges a gap.
+   */
+  hasLog: boolean;
 }
 
 export interface GapEvidence {
@@ -227,9 +233,8 @@ function classify(part: Span, input: AnalysisInput): { cause: GapCause; evidence
 }
 
 export function analyseGaps(input: AnalysisInput): AnalysedGap[] {
-  const hasLog = input.events.length > 0 || input.fixes.length > 0;
   const gaps: AnalysedGap[] = [];
-  for (const stretch of pointFreeStretches(input, hasLog)) {
+  for (const stretch of pointFreeStretches(input, input.hasLog)) {
     for (const part of splitAtReported(stretch, input.reported)) {
       if (part.reason !== null) {
         const { evidence } = classify(part, input);

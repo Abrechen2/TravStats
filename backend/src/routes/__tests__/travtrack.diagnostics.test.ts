@@ -171,6 +171,32 @@ describe("TravTrack — /travtrack/diagnostics", () => {
     ]);
   });
 
+  it("reads the 30 minutes before midnight, so an early gap is not 'no log'", async () => {
+    await storePoints("phone-1", at(0, 20), 40);
+    await post({
+      uploadId: "u5",
+      events: [
+        { t: iso(at(0) - 10 * MIN), kind: "power", data: { battery: 0.8 } },
+        { t: iso(at(3)), kind: "note", data: { code: "sendNow" } },
+      ],
+    });
+    const read = await request(app)
+      .get(`/api/v1/travtrack/diagnostics/day?date=${day}`)
+      .set("Cookie", cookie);
+    expect(read.body.gaps[0]).toMatchObject({ from: iso(at(0)), cause: "unexplained" });
+  });
+
+  it("keeps a log readable and deletable while TravTrack is off", async () => {
+    await post({ uploadId: "u6", events: [{ t: iso(at(8)), kind: "note", data: { code: "a" } }] });
+    await switches.set({ beta: true, config: false });
+    const read = await request(app)
+      .get(`/api/v1/travtrack/diagnostics/day?date=${day}`)
+      .set("Cookie", cookie);
+    expect(read.status).toBe(200);
+    const gone = await request(app).delete("/api/v1/travtrack/diagnostics").set("Cookie", cookie);
+    expect(gone.body).toEqual({ deleted: 1 });
+  });
+
   it("exports the raw log as a file and deletes it on request", async () => {
     await post({
       uploadId: "u3",

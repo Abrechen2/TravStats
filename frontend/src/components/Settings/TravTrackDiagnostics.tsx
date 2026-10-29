@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import Button from "../ui/Button";
 import { Field, Input, Select } from "../ui/Field";
@@ -19,10 +19,16 @@ const NS = "track:settings.diagnostics";
 const HOUR = 3_600_000;
 
 /** Stored points and logged fixes per hour of the day read. */
-export function hourBars(day: DiagnosticsDay): { points: number; fixes: number }[] {
+export function hourBars(day: DiagnosticsDay): { at: string; points: number; fixes: number }[] {
   const from = Date.parse(day.from);
   const hours = Math.max(1, Math.ceil((Date.parse(day.until) - from) / HOUR));
-  const bars = Array.from({ length: hours }, () => ({ points: 0, fixes: 0 }));
+  // Each bar is a real hour from the day's start, labelled by its own instant:
+  // a day with a clock change has 23 or 25 of them.
+  const bars = Array.from({ length: hours }, (_, i) => ({
+    at: new Date(from + i * HOUR).toISOString(),
+    points: 0,
+    fixes: 0,
+  }));
   const at = (iso: string) => Math.floor((Date.parse(iso) - from) / HOUR);
   for (const p of day.pointsPerMinute) {
     const i = at(p.t);
@@ -57,11 +63,18 @@ export default function TravTrackDiagnostics({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Each read carries its number: an answer to an older date or device that
+  // arrives late must not show its causes under the newer choice.
+  const latest = useRef(0);
   const load = useCallback(async () => {
+    const mine = ++latest.current;
     try {
-      setDay(await travTrackDiagnosticsApi.day(date, deviceId));
+      const read = await travTrackDiagnosticsApi.day(date, deviceId);
+      if (mine !== latest.current) return;
+      setDay(read);
       setError(null);
     } catch (err) {
+      if (mine !== latest.current) return;
       logger.warn("TravTrack diagnostics: day not loaded", err);
       setDay(null);
       setError(t(trackErrorKey(err)));
@@ -152,24 +165,31 @@ export default function TravTrackDiagnostics({
             type="date"
             value={date}
             max={today}
-            onChange={(e) => e.target.value && setDate(e.target.value)}
+            onChange={(e) => {
+              if (!e.target.value) return;
+              // Another day may hold another phone: start from that day's busiest.
+              setDeviceId(undefined);
+              setDate(e.target.value);
+            }}
           />
         </Field>
-        {day && day.devices.length > 1 && (
-          <Field label={t(`${NS}.device`)} htmlFor="travtrack-diag-device">
-            <Select
-              id="travtrack-diag-device"
-              value={day.deviceId ?? ""}
-              onChange={(e) => setDeviceId(e.target.value)}
-            >
-              {day.devices.map((d) => (
-                <option key={d.deviceId} value={d.deviceId}>
-                  {d.label ?? d.model ?? d.deviceId}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        )}
+        {day &&
+          (day.devices.length > 1 ||
+            (day.deviceId !== null && !day.devices.some((d) => d.deviceId === day.deviceId))) && (
+            <Field label={t(`${NS}.device`)} htmlFor="travtrack-diag-device">
+              <Select
+                id="travtrack-diag-device"
+                value={day.deviceId ?? ""}
+                onChange={(e) => setDeviceId(e.target.value)}
+              >
+                {day.devices.map((d) => (
+                  <option key={d.deviceId} value={d.deviceId}>
+                    {d.label ?? d.model ?? d.deviceId}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
         <Button disabled={busy || !day?.hasLog} onClick={() => void download()}>
           {t(`${NS}.download`)}
         </Button>
@@ -200,12 +220,12 @@ export default function TravTrackDiagnostics({
             className="flex items-end"
             style={{ gap: 2, height: 64 }}
           >
-            {bars.map((b, i) => (
+            {bars.map((b) => (
               <div
-                key={i}
+                key={b.at}
                 className="flex items-end"
                 style={{ flex: 1, gap: 1, height: "100%" }}
-                title={t(`${NS}.barTitle`, { hour: i, points: b.points, fixes: b.fixes })}
+                title={t(`${NS}.barTitle`, { time: time(b.at), points: b.points, fixes: b.fixes })}
               >
                 <div
                   style={{

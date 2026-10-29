@@ -79,6 +79,7 @@ export async function holdsTravTrackData(userId: string): Promise<boolean> {
     UNION ALL SELECT 1 FROM travtrack_deleted_points WHERE user_id = ${userId}
     UNION ALL SELECT 1 FROM travtrack_imports WHERE user_id = ${userId}
     UNION ALL SELECT 1 FROM travtrack_ingest_tokens WHERE user_id = ${userId} AND revoked_at IS NULL
+    UNION ALL SELECT 1 FROM travtrack_diagnostic_events WHERE user_id = ${userId}
     LIMIT 1`;
   return rows.length > 0;
 }

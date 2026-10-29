@@ -73,6 +73,14 @@ function judgeData(raw: unknown): Record<string, DiagnosticValue> | RejectReason
   if (Buffer.byteLength(JSON.stringify(raw)) > MAX_DATA_BYTES) return "data";
   for (const [key, value] of entries) {
     if (COORDINATE_KEYS.has(key.toLowerCase())) return "coordinates";
+    // The counts' keys too: `{ dropped: { latitude: 48 } }` is a position as well.
+    if (
+      typeof value === "object" &&
+      value !== null &&
+      Object.keys(value).some((k) => COORDINATE_KEYS.has(k.toLowerCase()))
+    ) {
+      return "coordinates";
+    }
     if (!KEY.test(key)) return "data";
     if (!scalar(value) && !counts(value)) return "data";
   }

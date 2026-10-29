@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 
 const api = vi.hoisted(() => ({ day: vi.fn(), exportBlob: vi.fn(), deleteAll: vi.fn() }));
 vi.mock("../../../lib/api/travtrackDiagnostics", () => ({ travTrackDiagnosticsApi: api }));
@@ -81,9 +81,24 @@ describe("TravTrackDiagnostics", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("track:errors.network");
   });
 
+  it("shows the newest choice's answer, not a late older one", async () => {
+    let answerOld: (d: DiagnosticsDay) => void = () => undefined;
+    api.day
+      .mockImplementationOnce(() => new Promise((resolve) => (answerOld = resolve)))
+      .mockResolvedValueOnce(day({ date: "2026-10-27", hasLog: false, fixesPerMinute: [] }));
+    render(<TravTrackDiagnostics today="2026-10-29" canDelete />);
+    const input = screen.getByLabelText("track:settings.diagnostics.day");
+    fireEvent.change(input, { target: { value: "2026-10-27" } });
+    expect(await screen.findByTestId("travtrack-diag-nolog")).toBeInTheDocument();
+    await act(async () => answerOld(day({ gaps: [] })));
+    expect(screen.getByTestId("travtrack-diag-nolog")).toBeInTheDocument();
+    expect(screen.queryByText("track:settings.diagnostics.noGaps")).toBeNull();
+    expect(api.day).toHaveBeenLastCalledWith("2026-10-27", undefined);
+  });
+
   it("buckets points and fixes into the hours of the day", () => {
     const bars = hourBars(day());
     expect(bars).toHaveLength(24);
-    expect(bars[6]).toEqual({ points: 3, fixes: 5 });
+    expect(bars[6]).toEqual({ at: "2026-10-28T06:00:00.000Z", points: 3, fixes: 5 });
   });
 });

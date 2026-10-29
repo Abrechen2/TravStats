@@ -23,6 +23,8 @@ export const DAY_EVENTS_RETURNED = 2000;
 /** A points upload can leave the phone long after its fixes: look this far past the day. */
 const UPLOAD_LOOKAHEAD_MS = 3 * 86_400_000;
 const MINUTE = 60_000;
+/** As far back as the analysis' no-log rule looks (`analyze.ts`). */
+const LOOKBACK_MS = 30 * MINUTE;
 
 export interface DiagnosticsDevice {
   deviceId: string;
@@ -192,7 +194,7 @@ export async function diagnosticsDay(
   if (deviceId === null || untilMs <= fromMs) return empty;
 
   const window = { gte: new Date(fromMs), lt: new Date(untilMs) };
-  const [points, fixRows, eventRows, laterUploads, reported, carried] = await Promise.all([
+  const [points, fixRows, eventRows, earlier, laterUploads, reported, carried] = await Promise.all([
     prisma.travTrackPoint.findMany({
       where: { userId, deviceId, t: window },
       orderBy: { t: "asc" },
@@ -206,6 +208,17 @@ export async function diagnosticsDay(
       where: { userId, deviceId, kind: { not: "fixes" }, t: window },
       orderBy: [{ t: "asc" }, { id: "asc" }],
       select: { id: true, t: true, kind: true, data: true },
+    }),
+    // The no-log rule looks 30 minutes back: an early gap may have been
+    // spoken for before midnight.
+    prisma.travTrackDiagnosticEvent.findMany({
+      where: {
+        userId,
+        deviceId,
+        t: { gte: new Date(fromMs - LOOKBACK_MS), lt: new Date(fromMs) },
+      },
+      orderBy: { t: "asc" },
+      select: { t: true, kind: true, data: true },
     }),
     prisma.travTrackDiagnosticEvent.findMany({
       where: {
@@ -230,7 +243,12 @@ export async function diagnosticsDay(
   ]);
 
   const fixes = sumFixes(fixRows);
-  const events: LogEvent[] = [...eventRows, ...laterUploads].map((e) => ({
+  const earlierFixes = sumFixes(earlier.filter((e) => e.kind === "fixes"));
+  const events: LogEvent[] = [
+    ...earlier.filter((e) => e.kind !== "fixes"),
+    ...eventRows,
+    ...laterUploads,
+  ].map((e) => ({
     tMs: e.t.getTime(),
     kind: e.kind,
     data: asData(e.data),
@@ -250,7 +268,7 @@ export async function diagnosticsDay(
     fromMs,
     untilMs,
     pointTimes,
-    fixes,
+    fixes: [...earlierFixes, ...fixes],
     events,
     carried,
     reported: reported.map((r) => ({
@@ -259,6 +277,7 @@ export async function diagnosticsDay(
       reason: r.reason,
     })),
     receipts: new Set(receipts.map((r) => r.uploadId)),
+    hasLog: fixRows.length > 0 || eventRows.length > 0,
   });
 
   const perMinute = new Map<number, number>();

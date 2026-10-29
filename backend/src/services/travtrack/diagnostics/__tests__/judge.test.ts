@@ -38,6 +38,10 @@ describe("judgeEvent", () => {
     expect(at(data)).toBe("data");
   });
 
+  it("refuses a position key inside the counts", () => {
+    expect(at({ dropped: { latitude: 48, longitude: 11 } })).toBe("coordinates");
+  });
+
   it.each(["lat", "Longitude", "fixId", "originRef", "location"])(
     "refuses the position key %s",
     (key) => {

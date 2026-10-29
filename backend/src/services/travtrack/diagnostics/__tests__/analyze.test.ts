@@ -26,6 +26,7 @@ const base = (over: Partial<AnalysisInput> = {}): AnalysisInput => ({
   carried: {},
   reported: [],
   receipts: new Set(),
+  hasLog: (over.events?.length ?? 0) > 0 || (over.fixes?.length ?? 0) > 0,
   ...over,
 });
 
@@ -103,6 +104,11 @@ describe("analyseGaps", () => {
     expect(gaps.map((g) => g.cause)).toEqual(["reportedGap", "unexplained"]);
     expect(gaps[0].evidence.reportedReason).toBe("zonesUnknown");
     expect(gaps[1].fromMs).toBe(DAY + 7 * H + 20 * M);
+  });
+
+  it("does not open the day's edges for an upload logged after the day", () => {
+    const later = [ev(DAY + 30 * H, "upload", { uploadId: "u9", status: 201, fromT: 0, toT: 1 })];
+    expect(analyseGaps(base({ events: later, hasLog: false }))).toHaveLength(1);
   });
 
   it("adds the day's edges only where the log speaks", () => {
