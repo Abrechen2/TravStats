@@ -268,6 +268,58 @@ describe("AeroAPI track sweep", () => {
     mockedAxios.get.mockClear();
     expect((await sweepAeroapiTracks(NOW)).status).toBe("nothing_to_do");
   });
+
+  describe("which flight, which queue", () => {
+    it("never stores another airport pair's line against the flight (a neighbouring rotation)", async () => {
+      const flight = await makeFlight();
+      serve({
+        flights: [
+          instance({ origin: { code_iata: "MUC" }, destination: { code_iata: "FRA" } }),
+          instance({ origin: { code_iata: "FRA" }, destination: { code_iata: "MUC" } }),
+        ],
+      });
+
+      const summary = await sweepAeroapiTracks(NOW);
+
+      expect(summary.counts).toEqual({ no_match: 1 });
+      expect(trackCalls()).toBe(0);
+      expect(await prisma.flightTrack.count({ where: { flightId: flight.id } })).toBe(0);
+    });
+
+    it("does not use up a flight's retries on a budget refusal, so it is fetched once the budget allows", async () => {
+      const flight = await makeFlight();
+      await setSettings({ aeroapiCustomBudgetUsd: 0.001 });
+      serve();
+      for (let i = 0; i < AEROAPI_TRACK_MAX_ATTEMPTS + 1; i++) {
+        expect((await sweepAeroapiTracks(NOW)).status).toBe("stopped_budget");
+      }
+
+      await setSettings({ aeroapiCustomBudgetUsd: 100 });
+      const summary = await sweepAeroapiTracks(NOW);
+
+      expect(summary.counts).toEqual({ stored: 1 });
+      expect(await prisma.flightTrack.count({ where: { flightId: flight.id } })).toBe(1);
+    });
+
+    it("is not starved by flights that can never qualify", async () => {
+      // Older arrivals sort first; sixty of them have a placeholder clock.
+      for (let i = 0; i < 60; i++) {
+        await makeFlight({
+          flightNumber: `LH${800 + i}`,
+          depTimeSemantics: "DATE_ONLY",
+          departureTime: new Date(DEPARTURE - 3 * HOUR),
+          arrivalTime: new Date(DEPARTURE + 8 * HOUR),
+        });
+      }
+      const eligible = await makeFlight();
+      serve();
+
+      const summary = await sweepAeroapiTracks(NOW);
+
+      expect(summary.counts).toEqual({ stored: 1 });
+      expect(await prisma.flightTrack.count({ where: { flightId: eligible.id } })).toBe(1);
+    });
+  });
 });
 
 describe("positionsToPoints", () => {

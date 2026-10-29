@@ -141,10 +141,27 @@ async function writeTrack(
   flight: OwnedFlight,
   columns: FlightTrackColumns,
   origin: TrackOrigin,
-  existing: TrackMeta | null
+  existing: TrackMeta | null,
+  /** The client asked to replace. Without it, only the server's own `aeroapi` line may yield. */
+  explicitReplace: boolean
 ): Promise<{ track: TrackMeta; replayed: boolean }> {
   const data = { ...columns, ...origin };
   try {
+    if (existing && !explicitReplace) {
+      // Yielding is conditional on the row STILL being the server's fetch: two
+      // uploads racing over it must not both pass the check above and the
+      // second silently overwrite the first passenger recording.
+      const { count } = await prisma.flightTrack.updateMany({
+        where: { flightId: flight.id, source: "aeroapi" },
+        data,
+      });
+      if (count === 0) throw alreadyRecorded();
+      const track = await prisma.flightTrack.findUniqueOrThrow({
+        where: { flightId: flight.id },
+        select: TRACK_META_SELECT,
+      });
+      return { track, replayed: false };
+    }
     const track = existing
       ? await prisma.flightTrack.update({
           where: { flightId: flight.id },
@@ -269,7 +286,8 @@ router.post(
         flight,
         columns,
         { source: "companion", uploadId: body.uploadId, deviceId: req.apiToken?.deviceId ?? null },
-        existing
+        existing,
+        body.replace === true
       );
       logger.info({
         operation: existing ? "flight.track.replace" : "flight.track.create",
@@ -359,7 +377,8 @@ router.post(
         flight,
         columns,
         { source: file.format, uploadId, deviceId: null },
-        existing
+        existing,
+        fields.data.replace === true
       );
       logger.info({
         operation: existing ? "flight.track.file.replace" : "flight.track.file.create",

@@ -27,7 +27,7 @@ Ledger: 2.8.0 RC line if the owner wants it in rc.2, else 2.9.0.
 | 0 | Spec | done | a58deb3e8 |
 | 1 | Schema + budget/rate guard + lookup integration | done | 735c415e8 |
 | 2 | Admin API + card (tier, spent/budget, tracks switch) | done | 735c415e8 (API), 848047d71 (card) |
-| 3 | Track fetch, storage and hourly sweep | done | 735c415e8 |
+| 3 | Track fetch, storage and hourly sweep | done | 735c415e8; review fixes (race-safe yield, per-airport match, retry accounting) in the next commit |
 
 ## Contract (additive only)
 

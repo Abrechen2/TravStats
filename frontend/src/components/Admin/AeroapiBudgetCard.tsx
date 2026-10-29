@@ -27,8 +27,9 @@ export default function AeroapiBudgetCard(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const adopt = (next: AeroapiSettings): void => {
+  const adopt = (next: AeroapiSettings, keepDraft = false): void => {
     setState(next);
+    if (keepDraft) return;
     setTier(next.tier);
     setCustom(next.customBudgetUsd === null ? "" : String(next.customBudgetUsd));
   };
@@ -52,12 +53,15 @@ export default function AeroapiBudgetCard(): JSX.Element {
   const usd = (value: number): string =>
     new Intl.NumberFormat(i18n.language, { style: "currency", currency: "USD" }).format(value);
 
-  const send = async (body: Parameters<typeof aeroapiApi.update>[0]): Promise<void> => {
+  const send = async (
+    body: Parameters<typeof aeroapiApi.update>[0],
+    keepDraft = false
+  ): Promise<void> => {
     setBusy(true);
     setError(null);
     setSaved(false);
     try {
-      adopt(await aeroapiApi.update(body));
+      adopt(await aeroapiApi.update(body), keepDraft);
       setSaved(true);
     } catch (err) {
       logger.error("Saving the AeroAPI settings failed:", err);
@@ -146,7 +150,8 @@ export default function AeroapiBudgetCard(): JSX.Element {
             id="aeroapi-tracks"
             checked={state.tracksEnabled}
             disabled={busy}
-            onChange={(on) => void send({ tracksEnabled: on })}
+            // Only the switch is saved; an unsaved tier or budget edit stays as typed.
+            onChange={(on) => void send({ tracksEnabled: on }, true)}
             label={t(`${NS}.tracksTitle`)}
             sub={t(`${NS}.tracksSub`)}
           />

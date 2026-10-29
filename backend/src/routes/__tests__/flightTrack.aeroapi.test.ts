@@ -86,6 +86,21 @@ describe("Flight recordings over a FlightAware track", () => {
     expect(second.body.code).toBe("TRACK_ALREADY_RECORDED");
   });
 
+  it("lets only one of two racing uploads take the place of the FlightAware line", async () => {
+    const send = (uploadId: string) =>
+      request(app)
+        .post(`/api/v1/flights/${flightId}/track`)
+        .set("Cookie", cookie)
+        .send({ uploadId, points: points(40) });
+
+    const [a, b] = await Promise.all([send("phone-a"), send("phone-b")]);
+
+    expect([a.status, b.status].sort()).toEqual([201, 409]);
+    const stored = await prisma.flightTrack.findUniqueOrThrow({ where: { flightId } });
+    expect(stored.source).toBe("companion");
+    expect(stored.uploadId).toBe(a.status === 201 ? "phone-a" : "phone-b");
+  });
+
   it("is replaced by an uploaded file without asking for replace", async () => {
     const gpx = `<?xml version="1.0"?><gpx version="1.1" creator="t" xmlns="http://www.topografix.com/GPX/1/1"><trk><trkseg>${points(
       20

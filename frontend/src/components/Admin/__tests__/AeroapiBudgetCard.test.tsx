@@ -73,6 +73,18 @@ describe("AeroapiBudgetCard", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("admin:aeroapi.budgetRequired");
   });
 
+  it("keeps an unsaved tier edit when only the tracks switch is saved", async () => {
+    mocks.update.mockResolvedValue(settings({ tracksEnabled: true }));
+    render(<AeroapiBudgetCard />);
+    const select = await screen.findByLabelText("admin:aeroapi.tier");
+    fireEvent.change(select, { target: { value: "personal_feeder" } });
+    fireEvent.click(screen.getByRole("switch"));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledWith({ tracksEnabled: true }));
+    expect((screen.getByLabelText("admin:aeroapi.tier") as HTMLSelectElement).value).toBe(
+      "personal_feeder"
+    );
+  });
+
   it("switches the track fetch on and shows why the last sweep stopped", async () => {
     mocks.get.mockResolvedValue(
       settings({

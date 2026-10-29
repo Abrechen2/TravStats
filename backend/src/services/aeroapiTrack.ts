@@ -32,7 +32,7 @@ import { toProviderFlightNumber } from "../schemas/flight";
 import type { FlightTrackPoint } from "../schemas/flightDevice";
 import { getApiKey } from "./apiKeyResolver";
 import { requestAeroapiCall, type AeroapiGate } from "./aeroapiBudget";
-import { pickInstance, preferOrigin, type AeroapiFlight } from "./aeroapiLookup";
+import { pickInstance, type AeroapiFlight } from "./aeroapiLookup";
 import { flightTrackColumns } from "./flightDevice/flightTrackIngest";
 import { classifyProviderError, type ProviderFailureKind } from "./flightLookup/providerOutcome";
 
@@ -95,6 +95,8 @@ type SweepFlight = Pick<
   | "flightNumber"
   | "depIata"
   | "depIcao"
+  | "arrIata"
+  | "arrIcao"
   | "departureTime"
   | "arrivalTime"
   | "depTimeSemantics"
@@ -167,6 +169,20 @@ async function gatedGet<T>(
   }
 }
 
+/** Unknown on either side is no evidence against; a known pair that differs is. */
+function sameAirport(
+  ref: AeroapiFlight["origin"],
+  iata: string | null,
+  icao: string | null
+): boolean {
+  const theirs = [ref?.code_iata, ref?.code_icao, ref?.code]
+    .filter((c): c is string => !!c)
+    .map((c) => c.toUpperCase());
+  const ours = [iata, icao].filter((c): c is string => !!c).map((c) => c.toUpperCase());
+  if (theirs.length === 0 || ours.length === 0) return true;
+  return ours.some((c) => theirs.includes(c));
+}
+
 async function findInstance(apiKey: string, flight: SweepFlight): Promise<AeroapiFlight | null> {
   const departure = flight.departureTime!.getTime();
   const iso = (ms: number) => new Date(ms).toISOString().replace(/\.\d{3}Z$/, "Z");
@@ -182,14 +198,18 @@ async function findInstance(apiKey: string, flight: SweepFlight): Promise<Aeroap
     }
   );
   if (!Array.isArray(data?.flights)) throw new StepFailure("error", "provider_error");
+  // Stricter than the lookup, which prefers our airport but may fall back: a
+  // stored track must be THIS flight's line, not a neighbouring rotation of
+  // the same number, so a known airport that does not match rules the instance out.
   const near = data.flights.filter((f) => {
     const out = Date.parse(f.scheduled_out ?? "");
-    return Number.isNaN(out) || Math.abs(out - departure) <= 6 * HOUR_MS;
+    return (
+      (Number.isNaN(out) || Math.abs(out - departure) <= 6 * HOUR_MS) &&
+      sameAirport(f.origin, flight.depIata, flight.depIcao) &&
+      sameAirport(f.destination, flight.arrIata, flight.arrIcao)
+    );
   });
-  return (
-    pickInstance(preferOrigin(near, flight.depIata ?? flight.depIcao ?? undefined), departure) ??
-    null
-  );
+  return pickInstance(near, departure) ?? null;
 }
 
 /** Fetch and convert one flight's AeroAPI track; throws `StepFailure` with the reason. */
@@ -210,14 +230,17 @@ async function fetchTrackFor(apiKey: string, flight: SweepFlight) {
   return { faFlightId: instance.fa_flight_id, columns };
 }
 
+const COUNTED_OUTCOMES: ReadonlySet<TrackAttemptOutcome> = new Set(["error", "not_arrived"]);
+
 async function recordAttempt(flightId: string, outcome: TrackAttemptOutcome): Promise<void> {
-  const transient = (TRANSIENT_OUTCOMES as readonly string[]).includes(outcome);
   await prisma.aeroapiTrackAttempt.upsert({
     where: { flightId },
     create: { flightId, outcome },
     update: {
       outcome,
-      attempts: transient ? { increment: 1 } : undefined,
+      // A refusal before any request (budget, rate limit) is not an attempt:
+      // counting it would shut a flight out for good after three empty hours.
+      attempts: COUNTED_OUTCOMES.has(outcome) ? { increment: 1 } : undefined,
       attemptedAt: new Date(),
     },
   });
@@ -310,6 +333,10 @@ export async function sweepAeroapiTracks(now: Date = new Date()): Promise<SweepS
           track: { is: null },
           status: { not: "cancelled" },
           flightNumber: { not: null },
+          // In SQL, not only in `isTrackCandidate`: the batch is bounded, and
+          // flights that can never qualify must not fill it.
+          depTimeSemantics: { notIn: [...PLACEHOLDER_SEMANTICS] },
+          arrTimeSemantics: { notIn: [...PLACEHOLDER_SEMANTICS] },
           arrivalTime: { lte: new Date(now.getTime() - ARRIVAL_SETTLE_MS) },
           departureTime: { gte: new Date(now.getTime() - WINDOW_MS) },
           OR: [
