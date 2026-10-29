@@ -51,7 +51,7 @@ router.post(
       const documentIds = await takeDocumentIds(userId, req.body);
       const result =
         body.kind === "confirmation"
-          ? await applyConfirmation(userId, body.input, sentAt)
+          ? await applyConfirmation(userId, body.input, sentAt, documentIds)
           : body.kind === "cancellation"
             ? await applyCancellation(
                 userId,
@@ -68,7 +68,10 @@ router.post(
                 body.adopt ?? {}
               );
       // The mail or invoice the row came from is kept with it (§4.5).
-      await linkDocuments(userId, documentIds, { type: "rentalBooking", id: result.row.id });
+      // A created row was filed inside its own transaction; a stored one is linked now.
+      if (result.outcome !== "created") {
+        await linkDocuments(userId, documentIds, { type: "rentalBooking", id: result.row.id });
+      }
       logger.info({
         operation: "rental_import",
         outcome: result.outcome,

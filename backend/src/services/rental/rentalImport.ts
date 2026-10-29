@@ -184,7 +184,8 @@ function deadlineHeld(existing: Stored, key: string): boolean {
 export async function applyConfirmation(
   userId: string,
   input: CreateRentalInput,
-  sentAt: Date | null = null
+  sentAt: Date | null = null,
+  documentIds: readonly string[] = []
 ): Promise<{ outcome: ImportOutcome; row: RentalRow; filledDeadlines?: DeadlineField[] }> {
   const existing = input.confirmationNumber
     ? await findBooking(userId, input.provider, { confirmation: input.confirmationNumber })
@@ -199,6 +200,7 @@ export async function applyConfirmation(
         manual: false,
         externalRef,
         mailSentAt: sentAt,
+        documentIds,
       }),
     };
   }
