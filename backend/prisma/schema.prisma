@@ -901,6 +901,8 @@ model UserSettings {
   aviationstackApiKey String? @map("aviationstack_api_key")
   aerodataboxApiKey   String? @map("aerodatabox_api_key")
   aeroapiApiKey       String? @map("aeroapi_api_key")
+  adsbxApiKey         String? @map("adsbx_api_key")
+  adsblolApiKey       String? @map("adsblol_api_key")
   openskyClientId     String? @map("opensky_client_id")
   openskyClientSecret String? @map("opensky_client_secret")
   openskyUsername     String? @map("opensky_username")
@@ -1143,6 +1145,12 @@ model AdminSettings {
   globalAviationstackApiKey String?   @map("global_aviationstack_api_key")
   globalAerodataboxApiKey   String?   @map("global_aerodatabox_api_key")
   globalAeroapiApiKey       String?   @map("global_aeroapi_api_key")
+  globalAdsbxApiKey         String?   @map("global_adsbx_api_key")
+  globalAdsblolApiKey       String?   @map("global_adsblol_api_key")
+  /// adsb.lol works keyless, so "configured" cannot mean "has a key": an explicit
+  /// admin switch, OFF by default (forgejo#392 rule, forgejo#408). A saved adsb.lol
+  /// key counts as enabled.
+  adsbLolEnabled            Boolean   @default(false) @map("adsb_lol_enabled")
   /// Push to the Companion app (TravStats#156). OFF until this server's admin
   /// agrees (owner decision 2026-10-01): with it off the server never
   /// contacts the relay, not even to register.

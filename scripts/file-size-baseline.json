@@ -6,7 +6,7 @@
     "backend/src/services/schematicRouter.ts": 1100,
     "backend/src/routes/stats.ts": 1093,
     "frontend/src/pages/TripDetailPage.tsx": 1037,
-    "backend/src/services/flightLookup.ts": 1020,
+    "backend/src/services/flightLookup.ts": 1016,
     "frontend/src/components/Cruise/CruiseRouteMap.tsx": 999,
     "backend/src/routes/flights.ts": 996,
     "frontend/src/components/DeckGLMap.tsx": 996,

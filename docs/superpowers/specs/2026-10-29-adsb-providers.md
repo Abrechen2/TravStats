@@ -34,7 +34,7 @@ terms and storage need their own decision (see Open).
 3. Opt-in (forgejo#392 rule: every external service OFF by default):
    - ADS-B Exchange: a key in the existing api-key system (user → admin global → ENV
      `ADSBX_RAPIDAPI_KEY`), resolver kind `adsbx`. No key = off.
-   - adsb.lol: keyless, so an explicit admin switch `adsbLolEnabled` (admin_settings,
+   - adsb.lol: keyless (an optional key slot exists, see Open), so an explicit admin switch `adsbLolEnabled` (admin_settings,
      default `false`) — **schema change foreseen**: one migration adding the column.
    Both appear in Admin → API-Schlüssel with a DE/EN line saying what they unlock
    („nur Flüge, die gerade in der Luft sind“).
@@ -54,7 +54,7 @@ string).
 
 | Phase | Side | State |
 |---|---|---|
-| 1 adapter + chain + opt-in | server | building (feat/adsb-providers) |
+| 1 adapter + chain + opt-in | server + admin UI | built (feat/adsb-providers, PHASE1_SHA) |
 | 2 live position for the cockpit (app) | server + Companion | later — needs the cockpit's current source checked |
 | 3 historical tracks from community dumps | server | later — own decision on size/terms |
 
@@ -63,5 +63,12 @@ string).
 - ADS-B Exchange: which API access the owner's feeder account grants and whether its terms allow
   use in a self-hosted app. Built as a bring-your-own-key provider, so nothing is used until a
   key is entered.
-- adsb.lol announced that the API may require a feeder key in the future; the adapter keeps an
-  optional key header slot so that is a config change, not a code change.
+- adsb.lol key (owner has one): resolver kind `adsblol` (user → admin global → ENV `ADSBLOL_API_KEY`),
+  optional. With a key it is sent on every request and counts as enabling adsb.lol; without one the
+  `adsbLolEnabled` admin switch is still needed. **Header name `api-auth` is unverified** (no adsb.lol
+  docs offline) - check against adsb.lol's API docs before relying on the key; it is one constant
+  (`ADSBLOL_KEY_HEADER` in `flightLookup/adsbV2.ts`).
+- Per-user key cards for ADS-B Exchange / adsb.lol in Settings → Dienste are not built; the server
+  accepts the user keys (`adsbxApiKey`, `adsblolApiKey`), only the admin UI exists.
+- A lookup with ADS-B hit but no AirLabs/OpenSky route returns the aircraft only (no airports); the
+  flight form fills registration and type and leaves the route to the user.

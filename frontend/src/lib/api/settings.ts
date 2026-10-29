@@ -226,6 +226,8 @@ export const settingsApi = {
     aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     aerodatabox: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     aeroapi: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    adsbx: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    adsblol: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     // Tour routing provider keys (Phase 3) — a user's own key takes
     // precedence over the admin's global one; see `apiKeyResolver.getApiKey`.
@@ -237,6 +239,8 @@ export const settingsApi = {
       aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       aerodatabox: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       aeroapi: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+      adsbx: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+      adsblol: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       openrouteservice: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       graphhopper: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
@@ -252,6 +256,8 @@ export const settingsApi = {
     aviationstackApiKey?: string | null;
     aerodataboxApiKey?: string | null;
     aeroapiApiKey?: string | null;
+    adsbxApiKey?: string | null;
+    adsblolApiKey?: string | null;
     openskyClientId?: string | null;
     openskyClientSecret?: string | null;
     openskyUsername?: string | null;
@@ -268,6 +274,8 @@ export const settingsApi = {
       | "aviationstack"
       | "aerodatabox"
       | "aeroapi"
+      | "adsbx"
+      | "adsblol"
       | "opensky"
       | "openrouteservice"
       | "graphhopper",

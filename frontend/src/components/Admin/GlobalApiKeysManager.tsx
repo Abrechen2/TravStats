@@ -31,6 +31,10 @@ export interface GlobalApiKeys {
   globalAviationstackApiKey?: string;
   globalAerodataboxApiKey?: string;
   globalAeroapiApiKey?: string;
+  globalAdsbxApiKey?: string;
+  globalAdsblolApiKey?: string;
+  /** adsb.lol works keyless; this admin switch turns it on (default off). */
+  adsbLolEnabled?: boolean;
   globalLogostreamApiKey?: string;
   globalGooglePlacesApiKey?: string;
   globalOpenskyClientId?: string;
@@ -60,6 +64,8 @@ type KeyField =
   | "globalAviationstackApiKey"
   | "globalAerodataboxApiKey"
   | "globalAeroapiApiKey"
+  | "globalAdsbxApiKey"
+  | "globalAdsblolApiKey"
   | "globalLogostreamApiKey"
   | "globalGooglePlacesApiKey";
 
@@ -94,6 +100,12 @@ const FLIGHT_KEYS: readonly KeyProvider[] = [
     name: "FlightAware AeroAPI",
     field: "globalAeroapiApiKey",
     url: "https://www.flightaware.com/aeroapi/portal/",
+  },
+  {
+    provider: "adsbx",
+    name: "ADS-B Exchange",
+    field: "globalAdsbxApiKey",
+    url: "https://rapidapi.com/adsbx/api/adsbexchange-com1",
   },
 ];
 
@@ -210,6 +222,40 @@ export default function GlobalApiKeysManager({
     ) : null,
   };
 
+  // adsb.lol is keyless: the switch is what turns it on, a saved key counts as on.
+  const adsbLol: ServiceItem = {
+    id: "adsblol",
+    name: "adsb.lol",
+    what: t("settings:services.what.adsblol"),
+    state: keys ? (keys.adsbLolEnabled || keys.globalAdsblolApiKey ? "admin" : "none") : null,
+    notice: undecryptableNotice("globalAdsblolApiKey"),
+    body: keys ? (
+      <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
+        <SettingRows>
+          <Switch
+            id="adsblol-enabled"
+            checked={keys.adsbLolEnabled ?? false}
+            onChange={(on) => onGlobalApiKeysChange({ ...keys, adsbLolEnabled: on })}
+            label={t("admin:globalApiKeys.adsblol.enabled")}
+            sub={t("admin:globalApiKeys.adsblol.enabledDescription")}
+          />
+        </SettingRows>
+        <ApiKeyCard
+          provider="adsblol"
+          label={t("admin:globalApiKeys.adsblol.label")}
+          description={t("admin:globalApiKeys.adsblol.description")}
+          getKeyUrl="https://adsb.lol/"
+          isShared={false}
+          hasAccess={!!keys.globalAdsblolApiKey}
+          value={keys.globalAdsblolApiKey || ""}
+          onChange={(value) => onGlobalApiKeysChange({ ...keys, globalAdsblolApiKey: value })}
+          onClear={() => onGlobalApiKeysChange({ ...keys, globalAdsblolApiKey: "" })}
+          isAdmin
+        />
+      </div>
+    ) : null,
+  };
+
   const groups: ServiceGroup[] = [
     {
       id: "cross",
@@ -258,7 +304,7 @@ export default function GlobalApiKeysManager({
       id: "flight",
       label: t("common:domain.flight"),
       color: colorOf("flight"),
-      items: [...FLIGHT_KEYS.map(keyItem), opensky],
+      items: [...FLIGHT_KEYS.map(keyItem), adsbLol, opensky],
     },
     {
       id: "rail",

@@ -15,6 +15,8 @@ export type ApiProvider =
   | "aviationstack"
   | "aerodatabox"
   | "aeroapi"
+  | "adsbx"
+  | "adsblol"
   | "opensky"
   | "logostream"
   | "googlePlaces"
@@ -45,6 +47,8 @@ export async function getApiKey(provider: ApiProvider, userId?: string): Promise
           aviationstackApiKey: true,
           aerodataboxApiKey: true,
           aeroapiApiKey: true,
+          adsbxApiKey: true,
+          adsblolApiKey: true,
           openrouteserviceApiKey: true,
           graphhopperApiKey: true,
         },
@@ -71,6 +75,12 @@ export async function getApiKey(provider: ApiProvider, userId?: string): Promise
             break;
           case "aeroapi":
             userKey = userSettings.aeroapiApiKey;
+            break;
+          case "adsbx":
+            userKey = userSettings.adsbxApiKey;
+            break;
+          case "adsblol":
+            userKey = userSettings.adsblolApiKey;
             break;
           case "openrouteservice":
             userKey = userSettings.openrouteserviceApiKey;
@@ -113,6 +123,12 @@ export async function getApiKey(provider: ApiProvider, userId?: string): Promise
         case "aeroapi":
           globalKey = adminSettings.globalAeroapiApiKey;
           break;
+        case "adsbx":
+          globalKey = adminSettings.globalAdsbxApiKey;
+          break;
+        case "adsblol":
+          globalKey = adminSettings.globalAdsblolApiKey;
+          break;
         // No user-level key for logostream — logos are instance-wide assets,
         // so resolution is global → env only.
         case "logostream":
@@ -153,6 +169,10 @@ export async function getApiKey(provider: ApiProvider, userId?: string): Promise
         return process.env.AERODATABOX_API_KEY || null;
       case "aeroapi":
         return process.env.AEROAPI_API_KEY || null;
+      case "adsbx":
+        return process.env.ADSBX_RAPIDAPI_KEY || null;
+      case "adsblol":
+        return process.env.ADSBLOL_API_KEY || null;
       case "logostream":
         return process.env.LOGOSTREAM_API_KEY || null;
       case "googlePlaces":
@@ -306,6 +326,8 @@ export async function hasApiKeyAccess(
           aviationstackApiKey: true,
           aerodataboxApiKey: true,
           aeroapiApiKey: true,
+          adsbxApiKey: true,
+          adsblolApiKey: true,
           openrouteserviceApiKey: true,
           graphhopperApiKey: true,
         },
@@ -331,6 +353,12 @@ export async function hasApiKeyAccess(
             break;
           case "aeroapi":
             hasUserKey = !!decryptApiKey(userSettings.aeroapiApiKey);
+            break;
+          case "adsbx":
+            hasUserKey = !!decryptApiKey(userSettings.adsbxApiKey);
+            break;
+          case "adsblol":
+            hasUserKey = !!decryptApiKey(userSettings.adsblolApiKey);
             break;
           case "openrouteservice":
             hasUserKey = !!decryptApiKey(userSettings.openrouteserviceApiKey);
@@ -371,6 +399,12 @@ export async function hasApiKeyAccess(
             break;
           case "aeroapi":
             hasGlobalKey = !!decryptApiKey(adminSettings.globalAeroapiApiKey);
+            break;
+          case "adsbx":
+            hasGlobalKey = !!decryptApiKey(adminSettings.globalAdsbxApiKey);
+            break;
+          case "adsblol":
+            hasGlobalKey = !!decryptApiKey(adminSettings.globalAdsblolApiKey);
             break;
           case "openrouteservice":
             hasGlobalKey = !!decryptApiKey(adminSettings.globalOpenrouteserviceApiKey);
@@ -414,6 +448,12 @@ export async function hasApiKeyAccess(
         break;
       case "aeroapi":
         hasEnvKey = !!process.env.AEROAPI_API_KEY;
+        break;
+      case "adsbx":
+        hasEnvKey = !!process.env.ADSBX_RAPIDAPI_KEY;
+        break;
+      case "adsblol":
+        hasEnvKey = !!process.env.ADSBLOL_API_KEY;
         break;
       case "openrouteservice":
         hasEnvKey = !!process.env.OPENROUTESERVICE_API_KEY;

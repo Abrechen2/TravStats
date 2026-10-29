@@ -19,12 +19,13 @@ import { getApiKey, getOpenSkyCredentials } from "./apiKeyResolver";
 import { lookupFlightAerodatabox } from "./aerodataboxLookup";
 import { lookupFlightAeroapi } from "./aeroapiLookup";
 import { flightLookupResultToFlightData } from "./flightLookup/toFlightData";
-import { getOpenSkyAuthHeaders, lookupOpenSkyFlight } from "./flightLookup/openSky";
+import { fillFromAdsb, lookupAdsbIfToday, lookupAfterAirlabsMiss } from "./flightLookup/adsbChain";
 import { flightProviderAvailability } from "./flightLookup/providerAvailability";
 import {
   classifyAirlabsBodyError,
   classifyProviderError,
   LookupOutcomeLog,
+  type FlightDataProvider,
   type ProviderFailure,
 } from "./flightLookup/providerOutcome";
 import {
@@ -329,8 +330,7 @@ export async function lookupFlightByNumber(
 }
 
 /** Provider that actually served a lookup result. */
-export type FlightLookupSource =
-  "aeroapi" | "aviationstack" | "aerodatabox" | "airlabs" | "opensky";
+export type FlightLookupSource = FlightDataProvider;
 
 /**
  * Aviationstack + enrichment (preferred when key is set), AirLabs fallback.
@@ -726,21 +726,16 @@ export async function lookupFlightDetails(
   // key exists, to no key at all and a null result (AUD-100).
   const flights = await lookupFlightByNumber(trimmedNumber, fallbackDate, userId, outcomes);
 
+  // ADS-B community providers (forgejo#408): today only, off unless enabled.
+  const adsb = await lookupAdsbIfToday(trimmedNumber, date, userId, outcomes);
   if (!flights.length) {
-    // Try OpenSky as last resort (requires credentials)
-    if (openSkyCredentials) {
-      logger.info({ api: "opensky", operation: "fallback_opensky" }, "Falling back to OpenSky");
-      const openSkyAuth = await getOpenSkyAuthHeaders(openSkyCredentials);
-      const openSky = await lookupOpenSkyFlight(
-        trimmedNumber,
-        date,
-        openSkyAuth ?? undefined,
-        outcomes
-      );
-      if (openSky) return { ...openSky, source: "opensky" };
-    }
-    logger.info({ operation: "lookup_no_result" }, "No data found from any API");
-    return null;
+    return lookupAfterAirlabsMiss({
+      flightNumber: trimmedNumber,
+      date,
+      openSkyCredentials,
+      adsb,
+      outcomes,
+    });
   }
 
   const first = flights[0];
@@ -799,7 +794,7 @@ export async function lookupFlightDetails(
       }
     : undefined;
 
-  return {
+  const airlabsResult: FlightLookupResult = {
     source: "airlabs",
     airline:
       first.airline ||
@@ -814,6 +809,7 @@ export async function lookupFlightDetails(
     actualDeparture: actualDepartureUtc || undefined,
     actualArrival: actualArrivalUtc || undefined,
   };
+  return fillFromAdsb(airlabsResult, adsb);
 }
 
 export interface LookupWithHistoricalResult {

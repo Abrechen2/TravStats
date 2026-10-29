@@ -12,6 +12,7 @@ import {
   testGraphHopperKey,
 } from "../../services/apiKeyTester";
 import { testAeroapiKey } from "../../services/apiKeyTesterAeroapi";
+import { testAdsbLolKey, testAdsbxKey } from "../../services/apiKeyTesterAdsbx";
 import { getApiKey, getOpenSkyCredentials } from "../../services/apiKeyResolver";
 import { getAllProviderQuotas } from "../../services/apiQuota";
 import logger from "../../utils/logger";
@@ -30,6 +31,8 @@ const apiKeysSchema = z
     aviationstackApiKey: z.string().optional().nullable(),
     aerodataboxApiKey: z.string().optional().nullable(),
     aeroapiApiKey: z.string().optional().nullable(),
+    adsbxApiKey: z.string().optional().nullable(),
+    adsblolApiKey: z.string().optional().nullable(),
     openskyClientId: z.string().optional().nullable(),
     openskyClientSecret: z.string().optional().nullable(),
     openskyUsername: z.string().optional().nullable(),
@@ -70,6 +73,8 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       | "aviationstackApiKey"
       | "aerodataboxApiKey"
       | "aeroapiApiKey"
+      | "adsbxApiKey"
+      | "adsblolApiKey"
       | "openskyClientId"
       | "openskyClientSecret"
       | "openskyUsername"
@@ -85,6 +90,8 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
           aviationstackApiKey: true,
           aerodataboxApiKey: true,
           aeroapiApiKey: true,
+          adsbxApiKey: true,
+          adsblolApiKey: true,
           openskyClientId: true,
           openskyClientSecret: true,
           openskyUsername: true,
@@ -120,6 +127,8 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     let aviationstackAccess = { hasAccess: false, isShared: false };
     let aerodataboxAccess = { hasAccess: false, isShared: false };
     let aeroapiAccess = { hasAccess: false, isShared: false };
+    let adsbxAccess = { hasAccess: false, isShared: false };
+    let adsblolAccess = { hasAccess: false, isShared: false };
     let openrouteserviceAccess = { hasAccess: false, isShared: false };
     let graphhopperAccess = { hasAccess: false, isShared: false };
 
@@ -130,6 +139,8 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
         aviationstackAccess,
         aerodataboxAccess,
         aeroapiAccess,
+        adsbxAccess,
+        adsblolAccess,
         openrouteserviceAccess,
         graphhopperAccess,
       ] = await Promise.all([
@@ -137,6 +148,8 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
         hasApiKeyAccess("aviationstack", userId),
         hasApiKeyAccess("aerodatabox", userId),
         hasApiKeyAccess("aeroapi", userId),
+        hasApiKeyAccess("adsbx", userId),
+        hasApiKeyAccess("adsblol", userId),
         hasApiKeyAccess("openrouteservice", userId),
         hasApiKeyAccess("graphhopper", userId),
       ]);
@@ -178,6 +191,16 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
         hasKey: !!settings?.aeroapiApiKey,
         isShared: aeroapiAccess.isShared,
         hasAccess: aeroapiAccess.hasAccess,
+      },
+      adsbx: {
+        hasKey: !!settings?.adsbxApiKey,
+        isShared: adsbxAccess.isShared,
+        hasAccess: adsbxAccess.hasAccess,
+      },
+      adsblol: {
+        hasKey: !!settings?.adsblolApiKey,
+        isShared: adsblolAccess.isShared,
+        hasAccess: adsblolAccess.hasAccess,
       },
       openrouteservice: {
         hasKey: !!settings?.openrouteserviceApiKey,
@@ -251,6 +274,20 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       }
       updateData.aeroapiApiKey = encryptApiKey(payload.aeroapiApiKey);
     }
+    if (payload.adsbxApiKey !== undefined) {
+      if (!allowUserFlightApiKeys) {
+        res.status(403).json({ error: "User flight API keys are not allowed by administrator" });
+        return;
+      }
+      updateData.adsbxApiKey = encryptApiKey(payload.adsbxApiKey);
+    }
+    if (payload.adsblolApiKey !== undefined) {
+      if (!allowUserFlightApiKeys) {
+        res.status(403).json({ error: "User flight API keys are not allowed by administrator" });
+        return;
+      }
+      updateData.adsblolApiKey = encryptApiKey(payload.adsblolApiKey);
+    }
     if (payload.openskyClientId !== undefined) {
       if (!allowUserFlightApiKeys) {
         res.status(403).json({ error: "User flight API keys are not allowed by administrator" });
@@ -295,6 +332,8 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       aviationstackAccess,
       aerodataboxAccess,
       aeroapiAccess,
+      adsbxAccess,
+      adsblolAccess,
       openrouteserviceAccess,
       graphhopperAccess,
     ] = await Promise.all([
@@ -302,6 +341,8 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       hasApiKeyAccess("aviationstack", userId),
       hasApiKeyAccess("aerodatabox", userId),
       hasApiKeyAccess("aeroapi", userId),
+      hasApiKeyAccess("adsbx", userId),
+      hasApiKeyAccess("adsblol", userId),
       hasApiKeyAccess("openrouteservice", userId),
       hasApiKeyAccess("graphhopper", userId),
     ]);
@@ -335,6 +376,14 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
         aeroapi: {
           hasKey: !!updateData.aeroapiApiKey || aeroapiAccess.hasAccess,
           isShared: aeroapiAccess.isShared,
+        },
+        adsbx: {
+          hasKey: !!updateData.adsbxApiKey || adsbxAccess.hasAccess,
+          isShared: adsbxAccess.isShared,
+        },
+        adsblol: {
+          hasKey: !!updateData.adsblolApiKey || adsblolAccess.hasAccess,
+          isShared: adsblolAccess.isShared,
         },
         openrouteservice: {
           hasKey: !!updateData.openrouteserviceApiKey || openrouteserviceAccess.hasAccess,
@@ -443,6 +492,54 @@ router.post(
         return;
       }
       const result = await testAeroapiKey(effective, req.userId!);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// POST /test/adsbx
+router.post(
+  "/test/adsbx",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { apiKey } = testApiKeySchema.parse(req.body);
+      const effective = looksMasked(apiKey)
+        ? ((await getApiKey("adsbx", req.userId!)) ?? "")
+        : apiKey!;
+      if (!effective) {
+        res.status(400).json({
+          success: false,
+          message: "No ADS-B Exchange key configured to test. Save one first.",
+        });
+        return;
+      }
+      const result = await testAdsbxKey(effective, req.userId!);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// POST /test/adsblol
+router.post(
+  "/test/adsblol",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { apiKey } = testApiKeySchema.parse(req.body);
+      const effective = looksMasked(apiKey)
+        ? ((await getApiKey("adsblol", req.userId!)) ?? "")
+        : apiKey!;
+      if (!effective) {
+        res.status(400).json({
+          success: false,
+          message: "No adsb.lol key configured to test. Save one first.",
+        });
+        return;
+      }
+      const result = await testAdsbLolKey(effective, req.userId!);
       res.json(result);
     } catch (error) {
       next(error);

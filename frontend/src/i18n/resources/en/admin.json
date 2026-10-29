@@ -871,6 +871,16 @@
       "label": "FlightAware AeroAPI",
       "description": "Free personal tier: $5 of credit per month covers a household's flight-status lookups."
     },
+    "adsbx": {
+      "label": "ADS-B Exchange API key",
+      "description": "Optional, via RapidAPI. Adds registration and aircraft type, but only for flights in the air right now - not for past or future days."
+    },
+    "adsblol": {
+      "label": "adsb.lol API key (optional)",
+      "description": "Optional. Adds registration and aircraft type, but only for flights in the air right now - not for past or future days. A saved key counts as switching adsb.lol on.",
+      "enabled": "Use adsb.lol",
+      "enabledDescription": "Asks adsb.lol without a key (off until you switch it on). Covers only flights in the air right now."
+    },
     "opensky": {
       "label": "OpenSky Network",
       "description": "Free service. Requires registration. Shared with all users for flight data lookup.",

@@ -1207,6 +1207,8 @@
       "aviationstack": "Flight search by number",
       "aerodatabox": "Historical flight data",
       "aeroapi": "Flight status and historical flights",
+      "adsbx": "Registration and type, only for flights in the air",
+      "adsblol": "Registration and type, only for flights in the air",
       "opensky": "Flight tracks",
       "openrouteservice": "Road routes instead of straight lines",
       "graphhopper": "Road routes instead of straight lines",

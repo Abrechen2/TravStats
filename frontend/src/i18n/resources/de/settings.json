@@ -1207,6 +1207,8 @@
       "aviationstack": "Flugsuche nach Nummer",
       "aerodatabox": "Historische Flugdaten",
       "aeroapi": "Flugstatus und historische Flüge",
+      "adsbx": "Kennzeichen und Typ, nur für Flüge in der Luft",
+      "adsblol": "Kennzeichen und Typ, nur für Flüge in der Luft",
       "opensky": "Flugspuren",
       "openrouteservice": "Straßenrouten statt Luftlinie",
       "graphhopper": "Straßenrouten statt Luftlinie",

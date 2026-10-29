@@ -871,6 +871,16 @@
       "label": "FlightAware AeroAPI",
       "description": "Kostenloser Privat-Tarif: 5 $ Guthaben pro Monat reichen für die Flugstatus-Abfragen eines Haushalts."
     },
+    "adsbx": {
+      "label": "ADS-B Exchange API-Schlüssel",
+      "description": "Optional, über RapidAPI. Ergänzt Kennzeichen und Flugzeugtyp, aber nur für Flüge, die gerade in der Luft sind – nicht für vergangene oder künftige Tage."
+    },
+    "adsblol": {
+      "label": "adsb.lol API-Schlüssel (optional)",
+      "description": "Optional. Ergänzt Kennzeichen und Flugzeugtyp, aber nur für Flüge, die gerade in der Luft sind – nicht für vergangene oder künftige Tage. Mit gespeichertem Schlüssel gilt adsb.lol als eingeschaltet.",
+      "enabled": "adsb.lol verwenden",
+      "enabledDescription": "Fragt adsb.lol ohne Schlüssel ab (aus, solange du es nicht einschaltest). Gilt nur für Flüge, die gerade in der Luft sind."
+    },
     "opensky": {
       "label": "OpenSky Network",
       "description": "Kostenloser Service. Erfordert Registrierung. Wird mit allen Benutzern für Flugdaten-Abfrage geteilt.",
