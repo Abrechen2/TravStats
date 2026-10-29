@@ -25,9 +25,9 @@ ended or relaunched the app. That timeline is what this feature adds.
 
 | Phase | Side | What | Status |
 |---|---|---|---|
-| D1 | server | tables, ingest, day analysis, export, delete, retention, capability | `feat/travtrack-diagnostics` |
-| D2 | web | Settings → TravTrack → Diagnose: day timeline per device, gaps with cause, JSON download, delete | `feat/travtrack-diagnostics` |
-| D3 | Companion | ring buffer, recorder/uploader/lifecycle hooks, opt-in switch, "Jetzt senden" | `travstats-companion` |
+| D1 | server | tables, ingest, day analysis, export, delete, retention, capability | done, `feat/travtrack-diagnostics` 45f01e458 (Codex review: 1 × P1, 7 × P2 fixed) |
+| D2 | web | Settings → TravTrack → Diagnose: day timeline per device, gaps with cause, JSON download, delete | done, same branch |
+| D3 | Companion | ring buffer, recorder/uploader/lifecycle hooks, opt-in switch, "Jetzt senden" | handed to `travstats-companion` 2026-10-29 |
 | D4 | both | reproduce a gap like 2026-10-28 with the log switched on, and read its cause. The 28th itself cannot be explained afterwards: its timeline was never recorded. | owner's phone |
 
 Codex reviewed the first draft (5 × P1, 7 × P2); every finding is folded in
