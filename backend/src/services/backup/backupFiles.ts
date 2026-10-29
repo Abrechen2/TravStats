@@ -48,6 +48,17 @@ export async function archiveUploads(outputPath: string): Promise<number> {
       }
     });
 
+    // A write failure (ENOSPC, EIO) is an 'error' on the file stream, not on
+    // the archive; unhandled it is an uncaught exception that exits the server.
+    output.on("error", (err: Error) => {
+      logger.error({
+        operation: "backup_files_error",
+        message: "File archive could not be written",
+        error: err.message,
+      });
+      reject(err);
+    });
+
     archive.on("error", (err: Error) => {
       logger.error({
         operation: "backup_files_error",
@@ -61,6 +72,30 @@ export async function archiveUploads(outputPath: string): Promise<number> {
       resolve(archive.pointer());
     });
 
+    archive.finalize();
+  });
+}
+
+/** Bundles the dump, the uploads archive and the metadata into the final backup archive. */
+export function writeFinalArchive(
+  finalArchivePath: string,
+  dbBackupPath: string,
+  filesBackupPath: string,
+  metadata: Record<string, string | number>
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const archive = archiver("tar", { gzip: true });
+    const output = fs.createWriteStream(finalArchivePath);
+
+    archive.pipe(output);
+    archive.file(dbBackupPath, { name: "database.sql" });
+    archive.file(filesBackupPath, { name: "uploads.tar.gz" });
+    archive.append(JSON.stringify(metadata, null, 2), { name: "metadata.json" });
+
+    archive.on("error", reject);
+    // ENOSPC lands here; without it the process dies instead of the backup failing.
+    output.on("error", reject);
+    output.on("close", resolve);
     archive.finalize();
   });
 }

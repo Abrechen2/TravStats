@@ -22,7 +22,7 @@ import {
   updateRentalRow,
 } from "../services/rental/rentalRowWrite";
 import { rentalYear } from "../shared/rentalCounting";
-import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
+import { takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import logger from "../utils/logger";
 import { rentalListSummary } from "../shared/listSummary";
@@ -216,8 +216,8 @@ router.post(
       const rental = await createRentalRow(userId, input, {
         manual: true,
         viaToken: Boolean(req.apiToken),
+        documentIds,
       });
-      await linkDocuments(userId, documentIds, { type: "rentalBooking", id: rental.id });
       logger.info({ operation: "rental_create", rentalBookingId: rental.id, userId });
       res.status(201).json({ success: true, data: withRentalReadFields(rental) });
     } catch (err) {

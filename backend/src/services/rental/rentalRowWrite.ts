@@ -1,3 +1,4 @@
+import { fileReceipts } from "../documents/documentService";
 import { prisma } from "../../db";
 import { propagateWrite, shareSnapshot } from "../sharing/propagate";
 import { Prisma } from "../../prisma";
@@ -171,7 +172,11 @@ export async function restatusTrips(...tripIds: Array<string | null | undefined>
 export async function createRentalRow(
   userId: string,
   input: CreateRentalInput,
-  options: WriteOptions & { extra?: Partial<Prisma.RentalBookingUncheckedCreateInput> }
+  options: WriteOptions & {
+    extra?: Partial<Prisma.RentalBookingUncheckedCreateInput>;
+    /** Documents filed on the new row INSIDE its transaction: a failed link rolls the row back. */
+    documentIds?: readonly string[];
+  }
 ): Promise<RentalRow> {
   const state = mergeRental(null, input, await resolveStations(input));
   assertOdometerOrder(null, input);
@@ -229,6 +234,10 @@ export async function createRentalRow(
         skipDuplicates: true,
       });
     }
+    await fileReceipts(tx, userId, options.documentIds ?? [], {
+      type: "rentalBooking",
+      id: created.id,
+    });
     await propagateWrite(tx, userId, "rental", created.id);
     return tx.rentalBooking.findUniqueOrThrow({
       where: { id: created.id },

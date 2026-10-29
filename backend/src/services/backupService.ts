@@ -1,6 +1,5 @@
 import * as fs from "fs";
 import * as path from "path";
-import archiver from "archiver";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import { Backup } from "../prisma";
@@ -11,7 +10,7 @@ import {
   RestoreOptions,
 } from "./backup/backupConfig";
 import { createDatabaseDump } from "./backup/backupDatabase";
-import { archiveUploads, getMetadata } from "./backup/backupFiles";
+import { archiveUploads, getMetadata, writeFinalArchive } from "./backup/backupFiles";
 import { restoreBackup as restoreBackupImpl } from "./backup/backupRestore";
 import { syncToCloudIfEnabled, deleteCloudBackup } from "./cloudSyncService";
 import { AppError } from "../middleware/errorHandler";
@@ -205,19 +204,7 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
 
     // Step 4: Create final archive
     logger.info({ operation: "backup_archive_start", message: "Creating final archive" });
-    await new Promise<void>((resolve, reject) => {
-      const archive = archiver("tar", { gzip: true });
-      const output = fs.createWriteStream(finalArchivePath);
-
-      archive.pipe(output);
-      archive.file(dbBackupPath, { name: "database.sql" });
-      archive.file(filesBackupPath, { name: "uploads.tar.gz" });
-      archive.append(JSON.stringify(metadata, null, 2), { name: "metadata.json" });
-
-      archive.on("error", reject);
-      output.on("close", resolve);
-      archive.finalize();
-    });
+    await writeFinalArchive(finalArchivePath, dbBackupPath, filesBackupPath, metadata);
 
     const totalSize = fs.statSync(finalArchivePath).size;
 
