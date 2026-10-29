@@ -116,21 +116,52 @@ afterAll(async () => {
 describe("runWebdavSync", () => {
   it("uploads the account's own export, gzipped, under a new name, with the stored password", async () => {
     const userId = await makeUser();
+    // A flight's share key is a credential: the streamed file must drop it like res.json does.
+    await prisma.flight.create({
+      data: {
+        userId,
+        depLat: 50.03,
+        depLon: 8.56,
+        arrLat: 51.47,
+        arrLon: -0.45,
+        departureTime: new Date("2025-02-10T08:00:00Z"),
+        status: "flown",
+        shareKey: "SYNC-SECRET-SHARE-KEY",
+      },
+    });
+    // The upload is a stream with a length (forgejo#355), consumed while the
+    // share "receives" it - the temp file is gone once the run returns.
+    let received: Buffer = Buffer.alloc(0);
+    let bodyWasBuffer = true;
+    share.putFileContents.mockImplementation(async (...args: unknown[]) => {
+      bodyWasBuffer = Buffer.isBuffer(args[1]);
+      const chunks: Buffer[] = [];
+      for await (const c of args[1] as AsyncIterable<Buffer>) chunks.push(c);
+      received = Buffer.concat(chunks);
+      return true;
+    });
     const result = await runWebdavSync(userId);
 
     expect(result.status).toBe("ok");
+    expect(bodyWasBuffer).toBe(false);
     expect(createClient).toHaveBeenCalledWith(
       "https://cloud.example.com/remote.php/dav/files/me",
       expect.objectContaining({ username: "me", password: "s3cret" })
     );
-    const [remote, body, options] = share.putFileContents.mock.calls[0] as [
+    const body = received;
+    const [remote, , options] = share.putFileContents.mock.calls[0] as [
       string,
-      Buffer,
-      { overwrite: boolean },
+      unknown,
+      { overwrite: boolean; contentLength: number; headers: Record<string, string> },
     ];
+    expect(options.contentLength).toBe(body.length);
+    expect(options.headers["Content-Length"]).toBe(String(body.length));
     expect(remote).toMatch(/^\/TravStats\/travstats-export-[0-9a-f]{12}-\d{8}T\d{6}Z\.json\.gz$/);
     expect(options.overwrite).toBe(false);
-    const json = JSON.parse(gunzipSync(body).toString("utf8")) as {
+    const rawText = gunzipSync(body).toString("utf8");
+    expect(rawText).not.toContain("SYNC-SECRET-SHARE-KEY");
+    expect(rawText).not.toContain("shareKey");
+    const json = JSON.parse(rawText) as {
       format: string;
       user: { id: string; trips: Array<{ name: string }>; passwordHash?: string };
     };
@@ -145,6 +176,22 @@ describe("runWebdavSync", () => {
     expect(row.lastErrorCode).toBeNull();
     expect(row.lastSuccessAt).not.toBeNull();
     expect(row.lastSizeBytes).toBe(body.length);
+  });
+
+  it("marks the sync failed when reading the history dies mid-stream, and uploads nothing (forgejo#355)", async () => {
+    const userId = await makeUser();
+    const spy = jest
+      .spyOn(prisma.travTrackPoint, "findMany")
+      .mockRejectedValueOnce(new Error("db went away"));
+    try {
+      await expect(runWebdavSync(userId)).rejects.toBeDefined();
+    } finally {
+      spy.mockRestore();
+    }
+    expect(share.putFileContents).not.toHaveBeenCalled();
+    const row = await prisma.userWebdavSync.findUniqueOrThrow({ where: { userId } });
+    expect(row.lastStatus).toBe("failed");
+    expect(row.lastSuccessAt).toBeNull();
   });
 
   it("keeps the newest recorded exports, deletes the older recorded ones and nothing else", async () => {

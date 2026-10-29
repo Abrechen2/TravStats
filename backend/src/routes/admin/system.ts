@@ -13,6 +13,7 @@ import {
   withPublicStays,
 } from "../../services/export/allDataExport";
 import { withTravTrackSections } from "../../services/travtrack/accountExport";
+import { pipeJsonToResponse } from "../../services/export/jsonStream";
 
 const router = Router();
 
@@ -261,8 +262,16 @@ router.get(
         "Content-Disposition",
         `attachment; filename*=UTF-8''${encodeURIComponent(exportFilename)}`
       );
-      res.json(exportData);
+      // Streamed, not res.json: every user's history in one string fails at
+      // V8's limit (forgejo#355). Headers are out once the first byte goes, so
+      // a failure mid-way aborts the connection (the client sees a truncated
+      // download, never a "complete" file that is not) instead of reaching next().
+      await pipeJsonToResponse(exportData, res);
     } catch (error) {
+      if (res.headersSent) {
+        logger.error({ operation: "admin_export_stream_failed", error: String(error) });
+        return;
+      }
       next(error);
     }
   }

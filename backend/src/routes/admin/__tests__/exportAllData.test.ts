@@ -98,6 +98,39 @@ describe("GET /api/v1/admin/export/all-data", () => {
     await prisma.user.deleteMany({ where: { id: { in: createdUserIds } } });
   });
 
+  it("streams the document chunked instead of buffering it for res.json (forgejo#355)", async () => {
+    const userId = createdUserIds[0];
+    const flight = await prisma.flight.create({
+      data: {
+        userId,
+        depLat: 50.03,
+        depLon: 8.56,
+        arrLat: 51.47,
+        arrLon: -0.45,
+        departureTime: new Date("2025-02-10T08:00:00Z"),
+        status: "flown",
+        shareKey: "ADMIN-SECRET-SHARE-KEY",
+      },
+    });
+    let res;
+    try {
+      res = await request(app)
+        .get("/api/v1/admin/export/all-data")
+        .set("Cookie", adminCookie)
+        .expect(200);
+    } finally {
+      await prisma.flight.delete({ where: { id: flight.id } });
+    }
+    // res.json would set Content-Length; a stream has none and is chunked.
+    expect(res.headers["content-length"]).toBeUndefined();
+    expect(res.headers["transfer-encoding"]).toBe("chunked");
+    expect(res.headers["content-type"]).toMatch(/^application\/json/);
+    expect(Array.isArray(res.body.users)).toBe(true);
+    // The streamed path bypasses res.json, so it must apply the share-key replacer itself.
+    expect(res.text).not.toContain("ADMIN-SECRET-SHARE-KEY");
+    expect(res.text).not.toContain("shareKey");
+  });
+
   it("covers every domain the instance holds", async () => {
     const res = await request(app)
       .get("/api/v1/admin/export/all-data")
@@ -615,7 +648,7 @@ describe("GET /api/v1/admin/export/all-data", () => {
       });
     }
     const exported = await buildTravTrackDataExport(userId, 2);
-    expect(exported.points.map((p) => p.originRef)).toEqual(
+    expect((await exported.points.toArray()).map((p) => p.originRef)).toEqual(
       [0, 1, 2, 3, 4].map((i) => `page-${i}`)
     );
   });

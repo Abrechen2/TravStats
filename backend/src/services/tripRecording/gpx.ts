@@ -16,20 +16,18 @@ function escapeXml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-export function recordingToGpx(
+/**
+ * The GPX document as pieces whose concatenation is exactly `recordingToGpx`
+ * (forgejo#357): a route writes them to the response one by one instead of
+ * building a point array, a line array and one string of a 200,000-point file.
+ */
+export function* recordingToGpxChunks(
   name: string,
   segments: readonly StoredPoint[][],
   opts: { desc?: string } = {}
-): string {
+): Generator<string> {
   const first = segments[0]?.[0];
-  const body = segments.map((segment) => {
-    const points = segment.map(
-      ([t, lat, lon]) =>
-        `      <trkpt lat="${lat}" lon="${lon}"><time>${new Date(t).toISOString()}</time></trkpt>`
-    );
-    return `    <trkseg>\n${points.join("\n")}\n    </trkseg>`;
-  });
-  return [
+  yield [
     `<?xml version="1.0" encoding="UTF-8"?>`,
     `<gpx version="1.1" creator="TravStats" xmlns="http://www.topografix.com/GPX/1/1">`,
     `  <metadata>`,
@@ -39,8 +37,22 @@ export function recordingToGpx(
     `  </metadata>`,
     `  <trk>`,
     `    <name>${escapeXml(name)}</name>`,
-    ...body,
-    `  </trk>`,
-    `</gpx>`,
   ].join("\n");
+  for (const segment of segments) {
+    yield `\n    <trkseg>`;
+    if (segment.length === 0) yield "\n"; // the old join left a blank line here
+    for (const [t, lat, lon] of segment) {
+      yield `\n      <trkpt lat="${lat}" lon="${lon}"><time>${new Date(t).toISOString()}</time></trkpt>`;
+    }
+    yield `\n    </trkseg>`;
+  }
+  yield `\n  </trk>\n</gpx>`;
+}
+
+export function recordingToGpx(
+  name: string,
+  segments: readonly StoredPoint[][],
+  opts: { desc?: string } = {}
+): string {
+  return Array.from(recordingToGpxChunks(name, segments, opts)).join("");
 }

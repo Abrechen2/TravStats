@@ -1,12 +1,15 @@
 import { createHash } from "crypto";
 import path from "path";
-import { gzipSync } from "zlib";
+import { createReadStream } from "fs";
+import { mkdtemp, rm, stat } from "fs/promises";
+import { tmpdir } from "os";
 import { createClient } from "webdav";
 
 import { prisma } from "../../db";
 import { decryptApiKey, encryptionKeyFingerprint } from "../../utils/encryption";
 import logger from "../../utils/logger";
 import { buildAccountExport } from "../export/allDataExport";
+import { writeJsonGzipFile } from "../export/jsonStream";
 import { getInstanceSettings } from "../instanceSettingsService";
 import { classifyWebdavError, WebdavSyncError, type WebdavSyncErrorCode } from "./errors";
 import { pruneOwnExports, recordUpload } from "./retention";
@@ -250,7 +253,27 @@ async function upload(
   const { instanceName } = await getInstanceSettings();
   const data = await buildAccountExport(userId, instanceName);
   if (!data) throw new WebdavSyncError("notConfigured");
-  const body = gzipSync(Buffer.from(JSON.stringify(data), "utf8"));
+  // Gzipped to a temp file page by page: the document can exceed V8's string
+  // limit, and gzipSync would block the event loop (forgejo#355).
+  const tmpDir = await mkdtemp(path.join(tmpdir(), "travstats-sync-"));
+  const tmpFile = path.join(tmpDir, "export.json.gz");
+  try {
+    await writeJsonGzipFile(data, tmpFile);
+    const sizeBytes = (await stat(tmpFile)).size;
+    return await send(userId, target, at, deadline, tmpFile, sizeBytes);
+  } finally {
+    await rm(tmpDir, { recursive: true, force: true });
+  }
+}
+
+async function send(
+  userId: string,
+  target: ResolvedTarget,
+  at: Date,
+  deadline: AbortSignal,
+  tmpFile: string,
+  sizeBytes: number
+): Promise<StoredExport> {
   const tag = exportOwnerTag(userId);
   const fileName = exportFileName(at, tag);
 
@@ -260,16 +283,22 @@ async function upload(
     ...guardedAgents(target.policy),
   });
   await ensureFolder(client, target.remotePath, deadline);
-  const stored = await client.putFileContents(path.posix.join(target.remotePath, fileName), body, {
-    overwrite: false,
-    contentLength: body.length,
-    signal: requestSignal(deadline, UPLOAD_TIMEOUT_MS),
-  });
+  const stored = await client.putFileContents(
+    path.posix.join(target.remotePath, fileName),
+    createReadStream(tmpFile),
+    {
+      overwrite: false,
+      contentLength: sizeBytes,
+      // webdav sends no Content-Length for a Readable body, so say it explicitly.
+      headers: { "Content-Length": String(sizeBytes) },
+      signal: requestSignal(deadline, UPLOAD_TIMEOUT_MS),
+    }
+  );
   // With `overwrite: false` the client answers a 412 (the name is taken) with
   // `false` instead of throwing: nothing new is on the share, so this is no
   // success, and retention must not run on its strength (Codex review).
   if (stored !== true) throw new WebdavSyncError("protocol", "upload not accepted");
-  return { client, tag, fileName, sizeBytes: body.length };
+  return { client, tag, fileName, sizeBytes };
 }
 
 /**
