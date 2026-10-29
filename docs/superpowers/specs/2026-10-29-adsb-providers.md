@@ -54,7 +54,7 @@ string).
 
 | Phase | Side | State |
 |---|---|---|
-| 1 adapter + chain + opt-in | server + admin UI | built (feat/adsb-providers, PHASE1_SHA) |
+| 1 adapter + chain + opt-in | server + admin UI | built (feat/adsb-providers, efe789c41) |
 | 2 live position for the cockpit (app) | server + Companion | later — needs the cockpit's current source checked |
 | 3 historical tracks from community dumps | server | later — own decision on size/terms |
 
