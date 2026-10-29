@@ -98,6 +98,18 @@ describe("GET /api/v1/admin/export/all-data", () => {
     await prisma.user.deleteMany({ where: { id: { in: createdUserIds } } });
   });
 
+  it("streams the document chunked instead of buffering it for res.json (forgejo#355)", async () => {
+    const res = await request(app)
+      .get("/api/v1/admin/export/all-data")
+      .set("Cookie", adminCookie)
+      .expect(200);
+    // res.json would set Content-Length; a stream has none and is chunked.
+    expect(res.headers["content-length"]).toBeUndefined();
+    expect(res.headers["transfer-encoding"]).toBe("chunked");
+    expect(res.headers["content-type"]).toMatch(/^application\/json/);
+    expect(Array.isArray(res.body.users)).toBe(true);
+  });
+
   it("covers every domain the instance holds", async () => {
     const res = await request(app)
       .get("/api/v1/admin/export/all-data")
@@ -615,7 +627,7 @@ describe("GET /api/v1/admin/export/all-data", () => {
       });
     }
     const exported = await buildTravTrackDataExport(userId, 2);
-    expect(exported.points.map((p) => p.originRef)).toEqual(
+    expect((await exported.points.toArray()).map((p) => p.originRef)).toEqual(
       [0, 1, 2, 3, 4].map((i) => `page-${i}`)
     );
   });

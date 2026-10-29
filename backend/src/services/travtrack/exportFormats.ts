@@ -1,4 +1,5 @@
-import { recordingToGpx } from "../tripRecording/gpx";
+import { LazyArray } from "../export/jsonStream";
+import { recordingToGpxChunks } from "../tripRecording/gpx";
 import { formatSafeCursor, readSafeTravTrack, type SafeCursor, type Span } from "./readSafe";
 
 /**
@@ -33,20 +34,14 @@ export async function buildTravTrackExport(
   };
 }
 
+/** The JSON export as a structure whose `points` stream (forgejo#357): serialise it with `jsonChunks`. */
 export function travTrackExportJson(window: Span, built: TravTrackExport) {
   const { read } = built;
-  return {
-    version: 1 as const,
-    origin: "travtrack" as const,
-    from: new Date(window.fromMs).toISOString(),
-    to: new Date(window.untilMs).toISOString(),
-    coverage: built.coverage,
-    next: built.next,
-    cursor: built.cursor,
-    points: read.segments.flatMap((segment, index) =>
-      segment.map((p) => {
+  function* points() {
+    for (const [index, segment] of read.segments.entries()) {
+      for (const p of segment) {
         const row = read.rowOf(p);
-        return {
+        yield {
           t: new Date(p[0]).toISOString(),
           lat: p[1],
           lon: p[2],
@@ -59,8 +54,18 @@ export function travTrackExportJson(window: Span, built: TravTrackExport) {
           purpose: row?.purpose ?? "everyday",
           segment: index,
         };
-      })
-    ),
+      }
+    }
+  }
+  return {
+    version: 1 as const,
+    origin: "travtrack" as const,
+    from: new Date(window.fromMs).toISOString(),
+    to: new Date(window.untilMs).toISOString(),
+    coverage: built.coverage,
+    next: built.next,
+    cursor: built.cursor,
+    points: new LazyArray(points),
     gaps: read.paused.map((g) => ({
       from: new Date(g.fromMs).toISOString(),
       to: new Date(g.untilMs).toISOString(),
@@ -74,8 +79,8 @@ export function travTrackExportJson(window: Span, built: TravTrackExport) {
   };
 }
 
-export function travTrackExportGpx(name: string, built: TravTrackExport): string {
-  return recordingToGpx(name, built.read.segments, {
+export function travTrackExportGpx(name: string, built: TravTrackExport): Generator<string> {
+  return recordingToGpxChunks(name, built.read.segments, {
     desc: `origin=travtrack; coverage=${built.coverage}`,
   });
 }

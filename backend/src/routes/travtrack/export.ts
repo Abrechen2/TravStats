@@ -8,6 +8,7 @@ import {
   travTrackExportGpx,
   travTrackExportJson,
 } from "../../services/travtrack/exportFormats";
+import { pipeJsonToResponse, pipeTextToResponse } from "../../services/export/jsonStream";
 import { resolveSpan } from "../../services/travtrack/range";
 import { parseSafeCursor } from "../../services/travtrack/readSafe";
 import { travTrackTier } from "./gate";
@@ -59,13 +60,18 @@ router.get(
       if (q.format === "gpx") {
         res.setHeader("Content-Type", "application/gpx+xml; charset=utf-8");
         res.setHeader("Content-Disposition", `attachment; filename="${name}.gpx"`);
-        res.send(travTrackExportGpx(`TravTrack ${stamp(span.from)}`, built));
+        await pipeTextToResponse(travTrackExportGpx(`TravTrack ${stamp(span.from)}`, built), res);
         return;
       }
       res.setHeader("Content-Type", "application/json; charset=utf-8");
       res.setHeader("Content-Disposition", `attachment; filename="${name}.json"`);
-      res.send(JSON.stringify(travTrackExportJson(window, built)));
-    })().catch(next);
+      await pipeJsonToResponse(travTrackExportJson(window, built), res);
+    })().catch((error) => {
+      // Once the first byte is out the headers are gone: the stream helper has
+      // already aborted the connection, so there is no error page to send.
+      if (res.headersSent) return;
+      next(error);
+    });
   }
 );
 

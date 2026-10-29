@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { LazyArray } from "../export/jsonStream";
 
 /**
  * TravTrack's part of the account export (TravTrack plan T7): the owner's
@@ -34,11 +35,11 @@ const POINT_SELECT = {
   links: { select: { entryKind: true, entryId: true } },
 } as const;
 
-export async function buildTravTrackDataExport(
+/** The points page by page — never more than `page` rows in memory (forgejo#355). */
+async function* iterateTravTrackPoints(
   userId: string,
-  page: number = TRAVTRACK_EXPORT_PAGE
-) {
-  const points: Array<Record<string, unknown>> = [];
+  page: number
+): AsyncGenerator<Record<string, unknown>> {
   let after: bigint | null = null;
   for (;;) {
     const rows: Array<{ seq: bigint; links: Array<{ entryKind: string; entryId: string }> }> =
@@ -49,15 +50,27 @@ export async function buildTravTrackDataExport(
         select: POINT_SELECT,
       });
     for (const { seq, links, ...rest } of rows) {
-      points.push({
+      yield {
         ...rest,
         seq: seq.toString(),
         links: links.map((l) => ({ kind: l.entryKind, id: l.entryId })),
-      });
+      };
     }
     if (rows.length < page) break;
     after = rows[rows.length - 1].seq;
   }
+}
+
+/**
+ * `points` is a `LazyArray`: it reads from the database while the export is
+ * being written out (`services/export/jsonStream.ts`), so no caller ever holds
+ * the whole history. Serialised it is the same JSON array as before.
+ */
+export async function buildTravTrackDataExport(
+  userId: string,
+  page: number = TRAVTRACK_EXPORT_PAGE
+) {
+  const points = new LazyArray(() => iterateTravTrackPoints(userId, page));
   const where = { userId };
   const [zones, zoneTombstones, deletedRanges, deletedPoints, gaps] = await Promise.all([
     prisma.travTrackPrivacyZone.findMany({

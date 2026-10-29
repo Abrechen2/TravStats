@@ -47,12 +47,22 @@ jest.mock("../utils/logger", () => ({
 }));
 
 const mockExistsSync = jest.fn();
-const mockReadFileSync = jest.fn();
-const mockWriteFileSync = jest.fn();
+// Streams, not buffers (forgejo#354): the service must never read a whole
+// archive. readFileSync/writeFileSync are deliberately absent from the mock, so
+// a regression to buffering fails with "not a function".
+const mockCreateReadStream = jest.fn((_p: string) => ({ stub: "read-stream" }));
+const mockCreateWriteStream = jest.fn();
+const mockStatSync = jest.fn((_p: string) => ({ size: 15 }));
+const mockRenameSync = jest.fn();
+const mockRmSync = jest.fn();
+let downloadedChunks: Buffer[] = [];
 jest.mock("fs", () => ({
   existsSync: mockExistsSync,
-  readFileSync: mockReadFileSync,
-  writeFileSync: mockWriteFileSync,
+  statSync: mockStatSync,
+  createReadStream: mockCreateReadStream,
+  createWriteStream: mockCreateWriteStream,
+  renameSync: mockRenameSync,
+  rmSync: mockRmSync,
 }));
 
 type DirectoryEntry = Pick<import("webdav").FileStat, "type" | "basename" | "size" | "lastmod">;
@@ -63,6 +73,7 @@ const mockClient = {
   putFileContents:
     jest.fn<(path: string, contents: Buffer, options?: object) => Promise<boolean>>(),
   getFileContents: jest.fn<() => Promise<Buffer>>(),
+  createReadStream: jest.fn<(p: string) => import("stream").Readable>(),
 };
 const mockCreateClient = jest.fn(() => mockClient);
 jest.mock("webdav", () => ({
@@ -179,22 +190,28 @@ describe("cloudSyncService", () => {
 
     it("maps a 404 from the share to 404 and any other share failure to 502", async () => {
       const { downloadFromCloud } = await loadModule(true);
+      const { Readable, Writable } = await import("stream");
+      mockCreateWriteStream.mockImplementation(() => new Writable({ write: (_c, _e, cb) => cb() }));
+      const failWith = (err: Error) =>
+        mockClient.createReadStream.mockReturnValue(
+          new Readable({
+            read() {
+              this.destroy(err);
+            },
+          })
+        );
 
-      mockClient.getFileContents.mockRejectedValue(
-        Object.assign(new Error("Invalid response: 404 Not Found"), { status: 404 })
-      );
+      failWith(Object.assign(new Error("Invalid response: 404 Not Found"), { status: 404 }));
       await expect(downloadFromCloud("gone.tar.gz", "/tmp/gone")).rejects.toMatchObject({
         statusCode: 404,
       });
 
-      mockClient.getFileContents.mockRejectedValue(
-        Object.assign(new Error("Invalid response: 500"), { status: 500 })
-      );
+      failWith(Object.assign(new Error("Invalid response: 500"), { status: 500 }));
       await expect(downloadFromCloud("x.tar.gz", "/tmp/x")).rejects.toMatchObject({
         statusCode: 502,
       });
 
-      mockClient.getFileContents.mockRejectedValue(new Error("ECONNREFUSED"));
+      failWith(new Error("ECONNREFUSED"));
       await expect(downloadFromCloud("x.tar.gz", "/tmp/x")).rejects.toMatchObject({
         statusCode: 502,
       });
@@ -238,7 +255,6 @@ describe("cloudSyncService", () => {
       const { syncToCloud } = await loadModule(true);
       mockBackupFindUnique.mockResolvedValue(MOCK_BACKUP);
       mockExistsSync.mockReturnValue(true);
-      mockReadFileSync.mockReturnValue(Buffer.from("backup-contents"));
       mockClient.createDirectory.mockResolvedValue(undefined);
       mockClient.putFileContents.mockResolvedValue(true);
       mockBackupUpdate.mockResolvedValue({});
@@ -248,6 +264,15 @@ describe("cloudSyncService", () => {
       expect(mockClient.putFileContents).toHaveBeenCalledTimes(1);
       const [remotePath] = mockClient.putFileContents.mock.calls[0];
       expect(remotePath).toMatch(/archive\.tar\.gz$/);
+      // forgejo#354: the archive goes up as a stream with its length, never as a Buffer
+      const [, body, options] = mockClient.putFileContents.mock.calls[0] as unknown as [
+        string,
+        unknown,
+        { contentLength: number },
+      ];
+      expect(Buffer.isBuffer(body)).toBe(false);
+      expect(body).toEqual({ stub: "read-stream" });
+      expect(options.contentLength).toBe(15);
 
       expect(mockBackupUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -264,7 +289,6 @@ describe("cloudSyncService", () => {
       const { syncToCloud } = await loadModule(true);
       mockBackupFindUnique.mockResolvedValue(MOCK_BACKUP);
       mockExistsSync.mockReturnValue(true);
-      mockReadFileSync.mockReturnValue(Buffer.from("data"));
       mockClient.createDirectory.mockRejectedValue(new Error("405 Directory exists"));
       mockClient.putFileContents.mockResolvedValue(true);
       mockBackupUpdate.mockResolvedValue({});
@@ -277,7 +301,6 @@ describe("cloudSyncService", () => {
       const { syncToCloud } = await loadModule(true);
       mockBackupFindUnique.mockResolvedValue(MOCK_BACKUP);
       mockExistsSync.mockReturnValue(true);
-      mockReadFileSync.mockReturnValue(Buffer.from("data"));
       mockClient.createDirectory.mockResolvedValue(undefined);
       mockClient.putFileContents.mockRejectedValue(new Error("507 Insufficient Storage"));
 
@@ -292,7 +315,6 @@ describe("cloudSyncService", () => {
         cloudSyncError: "507 Insufficient Storage",
       });
       mockExistsSync.mockReturnValue(true);
-      mockReadFileSync.mockReturnValue(Buffer.from("data"));
       mockClient.createDirectory.mockResolvedValue(undefined);
       mockClient.putFileContents.mockResolvedValue(true);
       mockBackupUpdate.mockResolvedValue({});
@@ -330,7 +352,6 @@ describe("cloudSyncService", () => {
       const { syncToCloudIfEnabled } = await loadModule(true);
       mockBackupFindUnique.mockResolvedValue(MOCK_BACKUP);
       mockExistsSync.mockReturnValue(true);
-      mockReadFileSync.mockReturnValue(Buffer.from("data"));
       mockClient.createDirectory.mockResolvedValue(undefined);
       mockClient.putFileContents.mockResolvedValue(true);
       mockBackupUpdate.mockResolvedValue({});
@@ -344,7 +365,6 @@ describe("cloudSyncService", () => {
       const { syncToCloudIfEnabled } = await loadModule(true);
       mockBackupFindUnique.mockResolvedValue(MOCK_BACKUP);
       mockExistsSync.mockReturnValue(true);
-      mockReadFileSync.mockReturnValue(Buffer.from("data"));
       mockClient.createDirectory.mockResolvedValue(undefined);
       mockClient.putFileContents.mockRejectedValue(new Error("507 Insufficient Storage"));
       mockBackupUpdate.mockResolvedValue({});
@@ -392,7 +412,6 @@ describe("cloudSyncService", () => {
       const { syncToCloudIfEnabled } = await loadModule(true);
       mockBackupFindUnique.mockResolvedValue(MOCK_BACKUP);
       mockExistsSync.mockReturnValue(true);
-      mockReadFileSync.mockReturnValue(Buffer.from("data"));
       mockClient.createDirectory.mockResolvedValue(undefined);
       mockClient.putFileContents.mockRejectedValue(new Error("x".repeat(5000)));
       mockBackupUpdate.mockResolvedValue({});
@@ -460,25 +479,49 @@ describe("cloudSyncService", () => {
       );
     });
 
-    it("writes downloaded content to the local path", async () => {
+    it("streams the download into a side file and renames it on success (forgejo#354)", async () => {
+      const { Readable, Writable } = await import("stream");
       const { downloadFromCloud } = await loadModule(true);
-      mockClient.getFileContents.mockResolvedValue(Buffer.from("archive-bytes"));
+      downloadedChunks = [];
+      mockClient.createReadStream.mockReturnValue(Readable.from([Buffer.from("archive-bytes")]));
+      mockCreateWriteStream.mockImplementation(
+        () =>
+          new Writable({
+            write(chunk: Buffer, _enc, cb) {
+              downloadedChunks.push(chunk);
+              cb();
+            },
+          })
+      );
 
       await downloadFromCloud("backup-1.tar.gz", "/tmp/out.tar.gz");
 
-      expect(mockClient.getFileContents).toHaveBeenCalledWith(
-        expect.stringContaining("backup-1.tar.gz"),
-        { format: "binary" }
+      expect(mockClient.createReadStream).toHaveBeenCalledWith(
+        expect.stringContaining("backup-1.tar.gz")
       );
-      expect(mockWriteFileSync).toHaveBeenCalledWith("/tmp/out.tar.gz", expect.any(Buffer));
+      expect(mockClient.getFileContents).not.toHaveBeenCalled();
+      expect(Buffer.concat(downloadedChunks).toString()).toBe("archive-bytes");
+      expect(mockRenameSync).toHaveBeenCalledWith("/tmp/out.tar.gz.part", "/tmp/out.tar.gz");
     });
 
-    it("rethrows when download fails", async () => {
+    it("rethrows a download that dies mid-stream and leaves no partial archive behind (forgejo#354)", async () => {
+      const { Readable, Writable } = await import("stream");
       const { downloadFromCloud } = await loadModule(true);
-      mockClient.getFileContents.mockRejectedValue(new Error("404 Not Found"));
+      mockClient.createReadStream.mockReturnValue(
+        new Readable({
+          read() {
+            this.push(Buffer.from("half"));
+            this.destroy(new Error("connection reset"));
+          },
+        })
+      );
+      mockCreateWriteStream.mockImplementation(() => new Writable({ write: (_c, _e, cb) => cb() }));
 
-      await expect(downloadFromCloud("missing.tar.gz", "/tmp/out.tar.gz")).rejects.toThrow(/404/);
-      expect(mockWriteFileSync).not.toHaveBeenCalled();
+      await expect(downloadFromCloud("x.tar.gz", "/tmp/out.tar.gz")).rejects.toThrow(
+        /connection reset|upstream/i
+      );
+      expect(mockRenameSync).not.toHaveBeenCalled();
+      expect(mockRmSync).toHaveBeenCalledWith("/tmp/out.tar.gz.part", { force: true });
     });
   });
 });
@@ -492,7 +535,6 @@ describe("remote backup deletion identity", () => {
       backupPath: "/tmp/backup-2026.tar.gz",
     });
     mockExistsSync.mockReturnValue(true);
-    mockReadFileSync.mockReturnValue(Buffer.from("backup"));
     mockClient.putFileContents.mockResolvedValue(true);
     await syncToCloud("b");
     const written = mockBackupUpdate.mock.calls.at(-1)?.[0].data;

@@ -2,6 +2,7 @@ import { createHash } from "crypto";
 import { createClient } from "webdav";
 import * as fs from "fs";
 import * as path from "path";
+import { pipeline } from "stream/promises";
 import { prisma } from "../db";
 import { getWebDAVSettings } from "./instanceSettingsService";
 import { AppError } from "../middleware/errorHandler";
@@ -131,8 +132,13 @@ export async function syncToCloud(backupId: string): Promise<void> {
       remotePath,
     });
 
-    const fileBuffer = fs.readFileSync(backup.backupPath);
-    await client.putFileContents(remotePath, fileBuffer, { overwrite: true });
+    // Streamed with an explicit length: a backup with photos is several GB, and
+    // readFileSync throws ERR_FS_FILE_TOO_LARGE above 2 GiB (forgejo#354).
+    const { size } = fs.statSync(backup.backupPath);
+    await client.putFileContents(remotePath, fs.createReadStream(backup.backupPath), {
+      overwrite: true,
+      contentLength: size,
+    });
 
     await prisma.backup.update({
       where: { id: backupId },
@@ -303,8 +309,16 @@ export async function downloadFromCloud(backupName: string, localPath: string): 
       localPath,
     });
 
-    const fileBuffer = (await client.getFileContents(remotePath, { format: "binary" })) as Buffer;
-    fs.writeFileSync(localPath, fileBuffer);
+    // Stream into a side file and rename on success, so a dropped connection
+    // never leaves a truncated archive under the real name (forgejo#354).
+    const partPath = `${localPath}.part`;
+    try {
+      await pipeline(client.createReadStream(remotePath), fs.createWriteStream(partPath));
+      fs.renameSync(partPath, localPath);
+    } catch (streamError) {
+      fs.rmSync(partPath, { force: true });
+      throw streamError;
+    }
 
     logger.info({
       operation: "webdav_download_complete",
