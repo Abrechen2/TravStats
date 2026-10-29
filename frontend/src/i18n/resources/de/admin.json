@@ -760,7 +760,8 @@
       "retentionDays": "Aufbewahrung (Tage)",
       "zone": "Zeitzone der Backup-Uhrzeit",
       "zoneHost": "Zeitzone des Servers ({{zone}})",
-      "zoneEffective": "Backups laufen um 2:00 Uhr in {{zone}}."
+      "zoneEffective": "Backups laufen um 2:00 Uhr in {{zone}}.",
+      "loadFailed": "Die Backup-Einstellungen konnten nicht geladen werden. Speichern ist gesperrt, damit nichts überschrieben wird."
     },
     "toasts": {
       "loadFailed": "Fehler beim Laden der Backups",

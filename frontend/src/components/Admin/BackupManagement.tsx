@@ -45,6 +45,10 @@ export default function BackupManagement(): JSX.Element {
     backupRetentionDays: 30,
   });
   const [savingSettings, setSavingSettings] = useState(false);
+  // The schedule form starts from placeholder defaults. Only a successful GET
+  // makes it real: until then it is not shown and Save cannot go out, because
+  // saving the placeholders would switch scheduled backups off (forgejo#363).
+  const [settingsLoad, setSettingsLoad] = useState<"loading" | "loaded" | "failed">("loading");
 
   // showLoading is only set on the initial mount. The 5s poll and the
   // post-action refreshes (create/restore/delete) refresh silently — a
@@ -82,11 +86,22 @@ export default function BackupManagement(): JSX.Element {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
+  const loadBackupSettings = () => {
+    setSettingsLoad("loading");
     backupApi
       .getBackupSettings()
-      .then(setBackupSettings)
-      .catch((err: unknown) => logger.error("Failed to load backup settings", err));
+      .then((loaded) => {
+        setBackupSettings(loaded);
+        setSettingsLoad("loaded");
+      })
+      .catch((err: unknown) => {
+        logger.error("Failed to load backup settings", err);
+        setSettingsLoad("failed");
+      });
+  };
+
+  useEffect(() => {
+    loadBackupSettings();
   }, []);
 
   // Whether an upload is even possible here. Without this the retry button
@@ -128,6 +143,7 @@ export default function BackupManagement(): JSX.Element {
   };
 
   const handleSaveBackupSettings = async (): Promise<void> => {
+    if (settingsLoad !== "loaded") return;
     setSavingSettings(true);
     try {
       const {
@@ -375,7 +391,7 @@ export default function BackupManagement(): JSX.Element {
         aside={
           <button
             onClick={handleSaveBackupSettings}
-            disabled={savingSettings}
+            disabled={savingSettings || settingsLoad !== "loaded"}
             className="btn-primary px-4 py-2 font-medium text-sm disabled:opacity-50"
           >
             {savingSettings ? t("common:buttons.saving") : t("common:buttons.save")}
@@ -383,80 +399,93 @@ export default function BackupManagement(): JSX.Element {
         }
       >
         <p className="t-caption mb-4">{t("admin:backup.schedule.description")}</p>
-        <div className="space-y-4">
-          <label className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              checked={backupSettings.backupEnabled}
-              onChange={(e) =>
-                setBackupSettings({ ...backupSettings, backupEnabled: e.target.checked })
-              }
-              className="w-4 h-4 rounded-sm"
-            />
-            <span className="text-sm font-medium text-(--text-primary)">
-              {t("admin:backup.schedule.enableAutoBackup")}
-            </span>
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-(--text-primary) mb-1">
-                {t("admin:backup.schedule.interval")}
-              </label>
-              <select
-                value={backupSettings.backupInterval}
-                onChange={(e) =>
-                  setBackupSettings({
-                    ...backupSettings,
-                    backupInterval: e.target.value as BackupScheduleSettings["backupInterval"],
-                  })
-                }
-                disabled={!backupSettings.backupEnabled}
-                className="input w-full disabled:opacity-50"
-              >
-                <option value="daily">{t("settings:backup.intervals.daily")}</option>
-                <option value="weekly">{t("settings:backup.intervals.weekly")}</option>
-                <option value="monthly">{t("settings:backup.intervals.monthly")}</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-(--text-primary) mb-1">
-                {t("admin:backup.schedule.retentionDays")}
-              </label>
-              <input
-                type="number"
-                value={backupSettings.backupRetentionDays}
-                onChange={(e) =>
-                  setBackupSettings({
-                    ...backupSettings,
-                    backupRetentionDays: parseInt(e.target.value, 10) || 30,
-                  })
-                }
-                min="1"
-                max="365"
-                className="input w-full"
-              />
-            </div>
+        {settingsLoad === "loading" && (
+          <div className="text-sm text-muted">{t("common:loading.default")}</div>
+        )}
+        {settingsLoad === "failed" && (
+          <div role="alert" className="flex items-center gap-3 text-sm">
+            <span>{t("admin:backup.schedule.loadFailed")}</span>
+            <button type="button" onClick={loadBackupSettings} className="btn-secondary px-3 py-1">
+              {t("common:buttons.retry")}
+            </button>
           </div>
-          <label className="flex items-start gap-3 mt-3">
-            <input
-              type="checkbox"
-              checked={backupSettings.backupCloudRetention ?? false}
-              onChange={(e) =>
-                setBackupSettings({ ...backupSettings, backupCloudRetention: e.target.checked })
-              }
+        )}
+        {settingsLoad === "loaded" && (
+          <div className="space-y-4">
+            <label className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={backupSettings.backupEnabled}
+                onChange={(e) =>
+                  setBackupSettings({ ...backupSettings, backupEnabled: e.target.checked })
+                }
+                className="w-4 h-4 rounded-sm"
+              />
+              <span className="text-sm font-medium text-(--text-primary)">
+                {t("admin:backup.schedule.enableAutoBackup")}
+              </span>
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-(--text-primary) mb-1">
+                  {t("admin:backup.schedule.interval")}
+                </label>
+                <select
+                  value={backupSettings.backupInterval}
+                  onChange={(e) =>
+                    setBackupSettings({
+                      ...backupSettings,
+                      backupInterval: e.target.value as BackupScheduleSettings["backupInterval"],
+                    })
+                  }
+                  disabled={!backupSettings.backupEnabled}
+                  className="input w-full disabled:opacity-50"
+                >
+                  <option value="daily">{t("settings:backup.intervals.daily")}</option>
+                  <option value="weekly">{t("settings:backup.intervals.weekly")}</option>
+                  <option value="monthly">{t("settings:backup.intervals.monthly")}</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-(--text-primary) mb-1">
+                  {t("admin:backup.schedule.retentionDays")}
+                </label>
+                <input
+                  type="number"
+                  value={backupSettings.backupRetentionDays}
+                  onChange={(e) =>
+                    setBackupSettings({
+                      ...backupSettings,
+                      backupRetentionDays: parseInt(e.target.value, 10) || 30,
+                    })
+                  }
+                  min="1"
+                  max="365"
+                  className="input w-full"
+                />
+              </div>
+            </div>
+            <label className="flex items-start gap-3 mt-3">
+              <input
+                type="checkbox"
+                checked={backupSettings.backupCloudRetention ?? false}
+                onChange={(e) =>
+                  setBackupSettings({ ...backupSettings, backupCloudRetention: e.target.checked })
+                }
+              />
+              <span>{t("admin:backup.cloudRetention")}</span>
+            </label>
+            <p className="text-sm text-(--text-muted) mt-2">
+              {t("admin:backup.retentionProtection")}
+            </p>
+            <BackupZoneField
+              value={backupSettings.backupZone ?? null}
+              effective={backupSettings.backupZoneEffective ?? null}
+              hostZone={backupSettings.hostZone ?? null}
+              onChange={(zone) => setBackupSettings({ ...backupSettings, backupZone: zone })}
             />
-            <span>{t("admin:backup.cloudRetention")}</span>
-          </label>
-          <p className="text-sm text-(--text-muted) mt-2">
-            {t("admin:backup.retentionProtection")}
-          </p>
-          <BackupZoneField
-            value={backupSettings.backupZone ?? null}
-            effective={backupSettings.backupZoneEffective ?? null}
-            hostZone={backupSettings.hostZone ?? null}
-            onChange={(zone) => setBackupSettings({ ...backupSettings, backupZone: zone })}
-          />
-        </div>
+          </div>
+        )}
       </AdminSubBlock>
 
       {status?.running && status.currentBackup && (

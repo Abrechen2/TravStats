@@ -470,7 +470,8 @@
     "expiryHours": "Ablaufzeit (Stunden)",
     "expiryHoursDescription": "Wie lange ausstehende Updates verfügbar bleiben, bevor sie ablaufen",
     "saved": "Auto-Update-Einstellungen erfolgreich gespeichert",
-    "saveFailed": "Fehler beim Speichern der Auto-Update-Einstellungen"
+    "saveFailed": "Fehler beim Speichern der Auto-Update-Einstellungen",
+    "loadFailed": "Die Einstellungen konnten nicht geladen werden. Die Änderung ist gesperrt, damit keine Standardwerte gespeichert werden."
   },
   "historicalEnrichment": {
     "title": "Historische Anreicherung",
@@ -481,7 +482,8 @@
     "maxPerDay": "Max. pro Tag",
     "maxPerDayDescription": "Maximale Anzahl neuer Vorschläge pro Nacht",
     "saved": "Anreicherungs-Einstellungen gespeichert",
-    "saveFailed": "Fehler beim Speichern der Anreicherungs-Einstellungen"
+    "saveFailed": "Fehler beim Speichern der Anreicherungs-Einstellungen",
+    "loadFailed": "Die Einstellungen konnten nicht geladen werden. Die Änderung ist gesperrt, damit keine Standardwerte gespeichert werden."
   },
   "externalServices": {
     "title": "Meine externen Dienste"

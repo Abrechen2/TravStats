@@ -46,6 +46,8 @@ describe("standard level inside a section", () => {
       <AutoUpdateSection
         autoUpdateSettings={autoUpdate}
         loadingAutoUpdateSettings={false}
+        loadState="loaded"
+        onRetryLoad={vi.fn()}
         onSetAutoUpdateSettings={vi.fn()}
         onSave={vi.fn()}
       />
@@ -61,6 +63,8 @@ describe("standard level inside a section", () => {
       <AutoUpdateSection
         autoUpdateSettings={{ ...autoUpdate, enabled: false }}
         loadingAutoUpdateSettings={false}
+        loadState="loaded"
+        onRetryLoad={vi.fn()}
         onSetAutoUpdateSettings={vi.fn()}
         onSave={vi.fn()}
       />
@@ -74,6 +78,8 @@ describe("standard level inside a section", () => {
       <AutoUpdateSection
         autoUpdateSettings={autoUpdate}
         loadingAutoUpdateSettings={false}
+        loadState="loaded"
+        onRetryLoad={vi.fn()}
         onSetAutoUpdateSettings={vi.fn()}
         onSave={vi.fn()}
       />

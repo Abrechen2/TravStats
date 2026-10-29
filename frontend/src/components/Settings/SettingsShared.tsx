@@ -1,5 +1,6 @@
 import React, { createContext, useContext } from "react";
 
+import { useTranslation } from "../../hooks/useTranslation";
 import HelpIcon from "../Help/HelpIcon";
 import { ExpertPill } from "../ui/ExpertPill";
 
@@ -183,5 +184,31 @@ export function FieldLabel({
         />
       )}
     </span>
+  );
+}
+
+/**
+ * Stands in for a section whose values never arrived from the server. The
+ * section's controls are not drawn at all: a switch over placeholder defaults
+ * would PUT those defaults over the real values (forgejo#373).
+ */
+export function LoadGuardNotice({
+  failed,
+  message,
+  onRetry,
+}: {
+  failed: boolean;
+  message: string;
+  onRetry: () => void;
+}): JSX.Element {
+  const { t } = useTranslation(["common"]);
+  if (!failed) return <div className="text-sm text-muted">{t("common:loading.default")}</div>;
+  return (
+    <div role="alert" className="flex items-center gap-3 text-sm">
+      <span>{message}</span>
+      <button type="button" onClick={onRetry} className="btn-secondary px-3 py-1">
+        {t("common:buttons.retry")}
+      </button>
+    </div>
   );
 }

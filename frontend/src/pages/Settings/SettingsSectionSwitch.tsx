@@ -168,6 +168,8 @@ export default function SettingsSectionSwitch({
         <EnrichmentSection
           historicalEnrichmentSettings={page.historicalEnrichmentSettings}
           loadingHistoricalEnrichmentSettings={page.loadingHistoricalEnrichmentSettings}
+          loadState={page.serverSettingsLoad}
+          onRetryLoad={page.reloadServerSettings}
           onSetHistoricalEnrichmentSettings={page.setHistoricalEnrichmentSettings}
           onSave={page.saveHistoricalEnrichmentSettings}
         />
@@ -177,6 +179,8 @@ export default function SettingsSectionSwitch({
         <AutoUpdateSection
           autoUpdateSettings={page.autoUpdateSettings}
           loadingAutoUpdateSettings={page.loadingAutoUpdateSettings}
+          loadState={page.serverSettingsLoad}
+          onRetryLoad={page.reloadServerSettings}
           onSetAutoUpdateSettings={page.setAutoUpdateSettings}
           onSave={page.saveAutoUpdateSettings}
         />
