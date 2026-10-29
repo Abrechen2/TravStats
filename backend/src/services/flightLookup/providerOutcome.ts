@@ -14,7 +14,7 @@
  */
 
 export type FlightDataProvider =
-  "aeroapi" | "aviationstack" | "aerodatabox" | "airlabs" | "opensky";
+  "aeroapi" | "aviationstack" | "aerodatabox" | "airlabs" | "opensky" | "adsbx" | "adsblol";
 
 /** A provider that could not do its job. Stable codes — the UI maps them. */
 export type ProviderFailureKind =

@@ -208,6 +208,8 @@ export interface ApiKeysUpdateData {
   aviationstackApiKey?: string | null;
   aerodataboxApiKey?: string | null;
   aeroapiApiKey?: string | null;
+  adsbxApiKey?: string | null;
+  adsblolApiKey?: string | null;
   openskyClientId?: string | null;
   openskyClientSecret?: string | null;
   openskyUsername?: string | null;
@@ -221,6 +223,8 @@ export interface UserApiKeySettings {
   aviationstackApiKey: string | null;
   aerodataboxApiKey: string | null;
   aeroapiApiKey: string | null;
+  adsbxApiKey: string | null;
+  adsblolApiKey: string | null;
   openskyClientId: string | null;
   openskyClientSecret: string | null;
   openskyUsername: string | null;

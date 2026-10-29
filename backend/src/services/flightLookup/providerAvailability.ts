@@ -1,4 +1,5 @@
 import { getApiKey, getOpenSkyCredentials } from "../apiKeyResolver";
+import { resolveAdsbEndpoints } from "./adsbV2";
 
 /**
  * Which flight-data providers this user can reach, as the two questions a
@@ -19,13 +20,15 @@ import { getApiKey, getOpenSkyCredentials } from "../apiKeyResolver";
 export async function flightProviderAvailability(
   userId?: string
 ): Promise<{ any: boolean; byDate: boolean }> {
-  const [airlabs, aviationstack, aerodatabox, aeroapi, openSky] = await Promise.all([
+  const [airlabs, aviationstack, aerodatabox, aeroapi, openSky, adsb] = await Promise.all([
     getApiKey("airlabs", userId),
     getApiKey("aviationstack", userId),
     getApiKey("aerodatabox", userId),
     getApiKey("aeroapi", userId),
     getOpenSkyCredentials(userId),
+    resolveAdsbEndpoints(userId),
   ]);
   const byDate = Boolean(aviationstack || aerodatabox || aeroapi);
-  return { any: byDate || Boolean(airlabs || openSky), byDate };
+  // ADS-B providers count for `any` only: they answer today, never a date.
+  return { any: byDate || Boolean(airlabs || openSky) || adsb.length > 0, byDate };
 }

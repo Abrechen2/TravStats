@@ -16,6 +16,7 @@ import {
   testGraphHopperKey,
 } from "../../services/apiKeyTester";
 import { testAeroapiKey } from "../../services/apiKeyTesterAeroapi";
+import { testAdsbLolKey, testAdsbxKey } from "../../services/apiKeyTesterAdsbx";
 import { routingSettingsSchema } from "../../schemas/tour";
 import { ensureAdminSettingsRow } from "../../services/adminSettingsRow";
 
@@ -24,6 +25,9 @@ interface GlobalApiKeysUpdateData {
   globalAviationstackApiKey?: string | null;
   globalAerodataboxApiKey?: string | null;
   globalAeroapiApiKey?: string | null;
+  globalAdsbxApiKey?: string | null;
+  globalAdsblolApiKey?: string | null;
+  adsbLolEnabled?: boolean;
   globalLogostreamApiKey?: string | null;
   globalGooglePlacesApiKey?: string | null;
   globalOpenskyClientId?: string | null;
@@ -43,6 +47,9 @@ const globalApiKeysSchema = z
     globalAviationstackApiKey: z.string().optional().nullable(),
     globalAerodataboxApiKey: z.string().optional().nullable(),
     globalAeroapiApiKey: z.string().optional().nullable(),
+    globalAdsbxApiKey: z.string().optional().nullable(),
+    globalAdsblolApiKey: z.string().optional().nullable(),
+    adsbLolEnabled: z.boolean().optional(),
     // Encryption silently corrupts secrets shorter than 16 bytes (see
     // utils/encryption.ts). Allow the "no change" sentinels — empty string
     // (clear the key) and a masked echo of the GET response (unchanged) —
@@ -97,6 +104,8 @@ async function resolveAdminGlobalKey(
     | "globalAviationstackApiKey"
     | "globalAerodataboxApiKey"
     | "globalAeroapiApiKey"
+    | "globalAdsbxApiKey"
+    | "globalAdsblolApiKey"
     | "globalLogostreamApiKey"
     | "globalGooglePlacesApiKey"
     | "globalOpenskyClientId"
@@ -115,6 +124,8 @@ const STORED_KEY_COLUMNS = [
   "globalAviationstackApiKey",
   "globalAerodataboxApiKey",
   "globalAeroapiApiKey",
+  "globalAdsbxApiKey",
+  "globalAdsblolApiKey",
   "globalLogostreamApiKey",
   "globalGooglePlacesApiKey",
   "globalOpenskyClientId",
@@ -148,6 +159,9 @@ router.get("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
         globalAviationstackApiKey: undefined,
         globalAerodataboxApiKey: undefined,
         globalAeroapiApiKey: undefined,
+        globalAdsbxApiKey: undefined,
+        globalAdsblolApiKey: undefined,
+        adsbLolEnabled: false,
         globalLogostreamApiKey: undefined,
         globalGooglePlacesApiKey: undefined,
         globalOpenskyClientId: undefined,
@@ -168,6 +182,9 @@ router.get("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
       globalAviationstackApiKey: maskKey(adminSettings.globalAviationstackApiKey),
       globalAerodataboxApiKey: maskKey(adminSettings.globalAerodataboxApiKey),
       globalAeroapiApiKey: maskKey(adminSettings.globalAeroapiApiKey),
+      globalAdsbxApiKey: maskKey(adminSettings.globalAdsbxApiKey),
+      globalAdsblolApiKey: maskKey(adminSettings.globalAdsblolApiKey),
+      adsbLolEnabled: adminSettings.adsbLolEnabled ?? false,
       globalLogostreamApiKey: maskKey(adminSettings.globalLogostreamApiKey),
       globalGooglePlacesApiKey: maskKey(adminSettings.globalGooglePlacesApiKey),
       globalOpenskyClientId: maskKey(adminSettings.globalOpenskyClientId),
@@ -230,6 +247,21 @@ router.put("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
       if (encrypted !== undefined) {
         updateData.globalAeroapiApiKey = encrypted;
       }
+    }
+    if (payload.globalAdsbxApiKey !== undefined) {
+      const encrypted = encryptUnlessMasked(payload.globalAdsbxApiKey);
+      if (encrypted !== undefined) {
+        updateData.globalAdsbxApiKey = encrypted;
+      }
+    }
+    if (payload.globalAdsblolApiKey !== undefined) {
+      const encrypted = encryptUnlessMasked(payload.globalAdsblolApiKey);
+      if (encrypted !== undefined) {
+        updateData.globalAdsblolApiKey = encrypted;
+      }
+    }
+    if (payload.adsbLolEnabled !== undefined) {
+      updateData.adsbLolEnabled = payload.adsbLolEnabled;
     }
     if (payload.globalLogostreamApiKey !== undefined) {
       const encrypted = encryptUnlessMasked(payload.globalLogostreamApiKey);
@@ -303,6 +335,9 @@ router.put("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
         globalAviationstackApiKey: maskKey(adminSettings.globalAviationstackApiKey),
         globalAerodataboxApiKey: maskKey(adminSettings.globalAerodataboxApiKey),
         globalAeroapiApiKey: maskKey(adminSettings.globalAeroapiApiKey),
+        globalAdsbxApiKey: maskKey(adminSettings.globalAdsbxApiKey),
+        globalAdsblolApiKey: maskKey(adminSettings.globalAdsblolApiKey),
+        adsbLolEnabled: adminSettings.adsbLolEnabled,
         globalLogostreamApiKey: maskKey(adminSettings.globalLogostreamApiKey),
         globalOpenskyClientId: maskKey(adminSettings.globalOpenskyClientId),
         globalOpenskyClientSecret: maskKey(adminSettings.globalOpenskyClientSecret),
@@ -406,6 +441,49 @@ router.post(
         });
       }
       const result = await testAeroapiKey(effective);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post("/api-keys/test/adsbx", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { apiKey } = testApiKeySchema.parse(req.body);
+    const effective = looksMasked(apiKey)
+      ? ((await resolveAdminGlobalKey("globalAdsbxApiKey")) ?? "")
+      : apiKey!;
+    if (!effective) {
+      return res.status(400).json({
+        success: false,
+        message: "No ADS-B Exchange key configured to test. Save one first.",
+        messageKey: "notConfigured",
+      });
+    }
+    const result = await testAdsbxKey(effective);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post(
+  "/api-keys/test/adsblol",
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { apiKey } = testApiKeySchema.parse(req.body);
+      const effective = looksMasked(apiKey)
+        ? ((await resolveAdminGlobalKey("globalAdsblolApiKey")) ?? "")
+        : apiKey!;
+      if (!effective) {
+        return res.status(400).json({
+          success: false,
+          message: "No adsb.lol key configured to test. Save one first.",
+          messageKey: "notConfigured",
+        });
+      }
+      const result = await testAdsbLolKey(effective);
       res.json(result);
     } catch (error) {
       next(error);

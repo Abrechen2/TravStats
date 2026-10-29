@@ -27,6 +27,8 @@ export interface ApiKeyCardProps {
     | "aviationstack"
     | "aerodatabox"
     | "aeroapi"
+    | "adsbx"
+    | "adsblol"
     | "opensky"
     | "logostream"
     | "googlePlaces"

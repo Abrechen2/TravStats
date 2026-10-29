@@ -19,12 +19,13 @@ import { getApiKey, getOpenSkyCredentials } from "./apiKeyResolver";
 import { lookupFlightAerodatabox } from "./aerodataboxLookup";
 import { lookupFlightAeroapi } from "./aeroapiLookup";
 import { flightLookupResultToFlightData } from "./flightLookup/toFlightData";
-import { getOpenSkyAuthHeaders, lookupOpenSkyFlight } from "./flightLookup/openSky";
+import { fillFromAdsb, isAdsb, lookupAdsbIfToday, lookupAfterMiss } from "./flightLookup/adsbChain";
 import { flightProviderAvailability } from "./flightLookup/providerAvailability";
 import {
   classifyAirlabsBodyError,
   classifyProviderError,
   LookupOutcomeLog,
+  type FlightDataProvider,
   type ProviderFailure,
 } from "./flightLookup/providerOutcome";
 import {
@@ -329,8 +330,7 @@ export async function lookupFlightByNumber(
 }
 
 /** Provider that actually served a lookup result. */
-export type FlightLookupSource =
-  "aeroapi" | "aviationstack" | "aerodatabox" | "airlabs" | "opensky";
+export type FlightLookupSource = FlightDataProvider;
 
 /**
  * Aviationstack + enrichment (preferred when key is set), AirLabs fallback.
@@ -726,21 +726,9 @@ export async function lookupFlightDetails(
   // key exists, to no key at all and a null result (AUD-100).
   const flights = await lookupFlightByNumber(trimmedNumber, fallbackDate, userId, outcomes);
 
+  const adsb = await lookupAdsbIfToday(trimmedNumber, date, userId, outcomes);
   if (!flights.length) {
-    // Try OpenSky as last resort (requires credentials)
-    if (openSkyCredentials) {
-      logger.info({ api: "opensky", operation: "fallback_opensky" }, "Falling back to OpenSky");
-      const openSkyAuth = await getOpenSkyAuthHeaders(openSkyCredentials);
-      const openSky = await lookupOpenSkyFlight(
-        trimmedNumber,
-        date,
-        openSkyAuth ?? undefined,
-        outcomes
-      );
-      if (openSky) return { ...openSky, source: "opensky" };
-    }
-    logger.info({ operation: "lookup_no_result" }, "No data found from any API");
-    return null;
+    return lookupAfterMiss(trimmedNumber, date, openSkyCredentials, adsb, outcomes);
   }
 
   const first = flights[0];
@@ -799,7 +787,7 @@ export async function lookupFlightDetails(
       }
     : undefined;
 
-  return {
+  const airlabsResult: FlightLookupResult = {
     source: "airlabs",
     airline:
       first.airline ||
@@ -814,6 +802,7 @@ export async function lookupFlightDetails(
     actualDeparture: actualDepartureUtc || undefined,
     actualArrival: actualArrivalUtc || undefined,
   };
+  return fillFromAdsb(airlabsResult, adsb);
 }
 
 export interface LookupWithHistoricalResult {
@@ -994,6 +983,9 @@ export async function lookupFlightWithHistorical(
   //  2. Smoking gun — returned date is today (we already know the user did
   //     not ask for today because we're inside isOutsideLiveWindow). Covers
   //     the off-by-one case like "yesterday" / "tomorrow" -> today.
+  if (isOutsideLiveWindow && isAdsb(result.source)) {
+    return { flights: [], unavailableReason: "no_match_api_gap" };
+  }
   if (isOutsideLiveWindow && dateStr && result.departureTime) {
     const returnedCode = result.departure?.iata ?? result.departure?.icao ?? undefined;
     const returnedTz = (await getAirportTimezone(returnedCode)) ?? todayZone;
