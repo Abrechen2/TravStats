@@ -6,6 +6,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Before upgrading to 2.8.0-rc.1:** take a backup. One new migration since 2.7.0: two new tables for the TravTrack diagnostics log; nothing existing changes.
+
+### Added
+
+- **TravTrack (beta) explains its gaps.** With the diagnostics log switched on in the Companion (Settings → Location, off by default), the phone sends what its recorder, its uploads and iOS did — never a position. Settings → TravTrack → Diagnose lines one device's day up against its stored points and names, for every gap of ten minutes or more, the cause the log supports: location access not "Always", recording paused, fixes dropped on the phone and why, an upload failed or still waiting, the app terminated, or "unexplained" — with a note when iOS was allowed to pause recording on its own. The raw log downloads as JSON; it is kept 14 days and can be deleted at any time.
+
 ## [2.7.0] - 2026-10-29
 
 TravStats 2.7.0 is the largest release since lodging became a domain. Web and
