@@ -13,6 +13,7 @@ import {
   __resetNegativeCacheForTests,
 } from "../../services/airlineLogo/airlineLogoService";
 import { answerOperatorMark } from "../../services/operatorLogos/operatorMarkService";
+import { resolveRailLlmChain } from "../../services/rail/parser/railLlmParser";
 import { dueWebdavSyncs } from "../../jobs/webdavSyncScheduler";
 import { runWebdavSync } from "../../services/webdavSync/runSync";
 import { syncToCloudIfEnabled, testConnection } from "../../services/cloudSyncService";
@@ -71,6 +72,7 @@ describe("external services: off means off (selfHostedRouting, logos, webdav, al
         webdavUsername: "u",
         webdavPasswordEncrypted: encryptApiKey("pw-0123456789"),
         fxCdnFallbackEnabled: true,
+        openaiCompatBaseUrl: null,
       },
     });
     await prisma.userWebdavSync.deleteMany({ where: { userId } });
@@ -110,6 +112,18 @@ describe("external services: off means off (selfHostedRouting, logos, webdav, al
       await enable("selfHostedRouting");
       expect(await resolveRouteProvider(userId)).not.toBeNull();
       expect(await railRoutingBaseUrl()).toBe("https://rail.example.com");
+    });
+  });
+
+  describe("ollama", () => {
+    it("an admin 'off' leaves the rail parser no localhost fallback to probe", async () => {
+      await prisma.adminSettings.update({
+        where: { id: rowId },
+        data: { ollamaUrl: null, llmOllamaOptIn: false },
+      });
+      expect((await resolveRailLlmChain()).length).toBeGreaterThan(0); // on: the default
+      await disable("ollama");
+      expect(await resolveRailLlmChain()).toEqual([]);
     });
   });
 
@@ -211,6 +225,65 @@ describe("external services: off means off (selfHostedRouting, logos, webdav, al
       expect(row.fxCdnFallbackEnabled).toBe(false);
       const fx = await find("fx");
       expect(fx.enabled).toBe(true);
+    });
+  });
+
+  describe("account AI consent follows the destination", () => {
+    const seedConsent = () =>
+      prisma.userSettings.upsert({
+        where: { userId },
+        create: {
+          userId,
+          data: {},
+          externalServicePrefs: { disabled: [], aiConsent: { custom: "2026-10-30T10:00:00Z" } },
+        },
+        update: {
+          externalServicePrefs: { disabled: [], aiConsent: { custom: "2026-10-30T10:00:00Z" } },
+        },
+      });
+    const consented = async () =>
+      JSON.stringify(
+        (await prisma.userSettings.findUniqueOrThrow({ where: { userId } })).externalServicePrefs
+      ).includes('"custom"');
+
+    it("the legacy parser-settings route withdraws consent when the custom address changes", async () => {
+      await prisma.adminSettings.update({
+        where: { id: rowId },
+        data: { openaiCompatBaseUrl: "https://llm-old.example.com/v1" },
+      });
+      await seedConsent();
+      await request(app)
+        .put("/api/v1/admin/parser-settings")
+        .set("Cookie", adminCookie)
+        .send({ openaiCompatBaseUrl: "https://llm-new.example.com/v1" })
+        .expect(200);
+      expect(await consented()).toBe(false);
+    });
+
+    it("the same address saved again keeps the consent", async () => {
+      await prisma.adminSettings.update({
+        where: { id: rowId },
+        data: { openaiCompatBaseUrl: "https://llm-old.example.com/v1" },
+      });
+      await seedConsent();
+      await request(app)
+        .put("/api/v1/admin/parser-settings")
+        .set("Cookie", adminCookie)
+        .send({ openaiCompatBaseUrl: "https://llm-old.example.com/v1" })
+        .expect(200);
+      expect(await consented()).toBe(true);
+    });
+
+    it("the external-services façade withdraws consent when the custom address changes", async () => {
+      await prisma.adminSettings.update({
+        where: { id: rowId },
+        data: { openaiCompatBaseUrl: "https://llm-old.example.com/v1" },
+      });
+      await seedConsent();
+      await adminPut("customLlm", {
+        fields: { baseUrl: "https://llm-new.example.com/v1" },
+      }).expect(200);
+      expect(await consented()).toBe(false);
     });
   });
 });

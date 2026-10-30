@@ -49,10 +49,7 @@
         "value": "Sixt"
       },
       "confirmationNumber": {
-        "patterns": [
-          "^Buchung(?:snummer)?:[ \\t]*(\\d{10})\\b",
-          "#\\s*(\\d{10})\\b"
-        ]
+        "patterns": ["^Buchung(?:snummer)?:[ \\t]*(\\d{10})\\b", "#\\s*(\\d{10})\\b"]
       },
       "pickupStation": {
         "patterns": ["^Abholung:[ \\t]+(.+)$", "^Abholung in[ \\t]+(.+)$"],
@@ -83,9 +80,7 @@
         "transform": "dateTime"
       },
       "vehicleExample": {
-        "patterns": [
-          "^(?:Fahrzeugkategorie|Fahrzeuggruppe)\\n(.+?)[ \\t]+oder ähnlich$"
-        ],
+        "patterns": ["^(?:Fahrzeugkategorie|Fahrzeuggruppe)\\n(.+?)[ \\t]+oder ähnlich$"],
         "transform": "trim"
       },
       "paymentTiming": {

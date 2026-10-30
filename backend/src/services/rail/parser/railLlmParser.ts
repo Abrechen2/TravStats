@@ -4,6 +4,7 @@ import logger from "../../../utils/logger";
 import { llmParseTimeoutMs } from "../../http/llmTimeout";
 import { llmGenerate, ollamaTarget, resolveLlmChain, type LlmTarget } from "../../llm/llmProvider";
 import { foldStationName } from "../railStations";
+import { isServiceDisabledByAdmin } from "../../externalServices/policy";
 import {
   amountOf,
   cleanStationName,
@@ -201,7 +202,11 @@ export function bookingFromAnswer(
  */
 export async function resolveRailLlmChain(userId?: string): Promise<LlmTarget[]> {
   const chain = await resolveLlmChain({ withDefaults: true, ...(userId ? { userId } : {}) });
-  return chain.length > 0 ? chain : [ollamaTarget()];
+  if (chain.length > 0) return chain;
+  // "Off means off" (forgejo#392): an Ollama the admin switched off is not the
+  // localhost fallback either — no probe may reach it.
+  if (await isServiceDisabledByAdmin("ollama")) return [];
+  return [ollamaTarget()];
 }
 
 /**

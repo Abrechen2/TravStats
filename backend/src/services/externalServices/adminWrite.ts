@@ -128,16 +128,14 @@ export async function applyAdminUpdate(id: string, body: AdminUpdateBody): Promi
     }
   }
 
-  if (service.ai && (service.ai.kind === "custom" || service.ai.kind === "ollama")) {
-    await dropConsentsIfDestinationChanged(service.ai.kind, adminData, current);
-  }
   if (Object.keys(smtpPatch).length > 0) await applySmtp(smtpPatch);
   if (policyEdits.length > 0) await updatePolicy((p) => policyEdits.reduce((acc, e) => e(acc), p));
   if (Object.keys(adminData).length > 0) {
-    await prisma.adminSettings.update({
-      where: { id: await ensureAdminSettingsRow() },
-      data: adminData,
-    });
+    const id = await ensureAdminSettingsRow();
+    await prisma.$transaction([
+      prisma.adminSettings.update({ where: { id }, data: adminData }),
+      ...consentWithdrawalsForAddressChange(adminData, current),
+    ]);
   }
   if (service.id === "federation") resetIdentityCache();
   if (service.ai) {
@@ -216,13 +214,25 @@ export async function applyConnectionAllowed(id: string, allowed: boolean): Prom
  * endpoint the provider is whatever address the admin typed. A new address is a
  * new destination, so every account's consent for it is withdrawn and asked
  * again — documents never follow an address change silently.
+ *
+ * Returns the consent withdrawals as queries to run IN THE SAME TRANSACTION as
+ * the address write, after it: a consent granted in between would otherwise
+ * survive for the new address. Every write path of those two addresses
+ * (this façade and the legacy parser-settings route) uses it.
  */
-async function dropConsentsIfDestinationChanged(
-  kind: "custom" | "ollama",
+export function consentWithdrawalsForAddressChange(
   data: Record<string, unknown>,
   current: Record<string, unknown> | null
-): Promise<void> {
-  const column = kind === "custom" ? "openaiCompatBaseUrl" : "ollamaUrl";
-  if (data[column] === undefined || data[column] === (current?.[column] ?? null)) return;
-  await prisma.$executeRaw`UPDATE user_settings SET external_service_prefs = external_service_prefs #- ARRAY['aiConsent', ${kind}]::text[] WHERE external_service_prefs -> 'aiConsent' ? ${kind}`;
+): Array<ReturnType<typeof prisma.$executeRaw>> {
+  const withdrawals: Array<ReturnType<typeof prisma.$executeRaw>> = [];
+  for (const [kind, column] of [
+    ["custom", "openaiCompatBaseUrl"],
+    ["ollama", "ollamaUrl"],
+  ] as const) {
+    if (data[column] === undefined || data[column] === (current?.[column] ?? null)) continue;
+    withdrawals.push(
+      prisma.$executeRaw`UPDATE user_settings SET external_service_prefs = external_service_prefs #- ARRAY['aiConsent', ${kind}]::text[] WHERE external_service_prefs -> 'aiConsent' ? ${kind}`
+    );
+  }
+  return withdrawals;
 }

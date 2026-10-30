@@ -192,13 +192,37 @@ export class TemplateRegistry {
     return this.templates.size;
   }
 
+  /**
+   * "Off means off" (forgejo#392): the scheduled sync is a background call out,
+   * so the admin's update/templates switch stops it. A manual `syncNow()` is an
+   * explicit request and still runs.
+   */
+  private async scheduledSync(): Promise<void> {
+    try {
+      const row = await prisma.adminSettings.findFirst({
+        orderBy: { id: "asc" },
+        select: { updateCheckEnabled: true },
+      });
+      if (row && !row.updateCheckEnabled) {
+        logger.debug("template sync skipped: update checks are switched off");
+        return;
+      }
+    } catch (err) {
+      // Fail closed: with the switch unreadable this attempt makes no call out;
+      // the next interval tries again.
+      logger.warn({ err }, "update-check switch unreadable — template sync skipped this round");
+      return;
+    }
+    await this.syncFromGitHub();
+  }
+
   private scheduleSync(): void {
     setTimeout(() => {
-      void this.syncFromGitHub();
+      void this.scheduledSync();
     }, 5000);
     // Singleton registry — interval runs for process lifetime (intentional)
     setInterval(() => {
-      void this.syncFromGitHub();
+      void this.scheduledSync();
     }, SYNC_INTERVAL_MS);
   }
 
