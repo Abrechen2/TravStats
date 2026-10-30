@@ -5,6 +5,7 @@ import PhotoJourneyNightlyScanCard from "../Settings/PhotoJourneyNightlyScanCard
 import StravaConnectionCard from "../Settings/StravaConnectionCard";
 import { WebdavSyncPanel } from "../Settings/WebdavSyncRow";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useToursVisible } from "../../hooks/useToursVisible";
 import { useEffectiveSettingsLevel } from "../../store/settingsLevelStore";
 import type { AccountAiConsent, AccountService } from "../../lib/api/externalServices";
 import AccountConsentDialog from "./AccountConsentDialog";
@@ -68,6 +69,7 @@ export default function AccountExternalServices(): JSX.Element {
   const { t } = useTranslation(["externalServices"]);
   const expert = useEffectiveSettingsLevel() === "expert";
   const services = useAccountServices();
+  const toursVisible = useToursVisible();
   const [openId, setOpenId] = useState<string | null>(null);
   const [infoId, setInfoId] = useState<string | null>(null);
   const [consentFor, setConsentFor] = useState<AccountAiConsent | null>(null);
@@ -88,9 +90,17 @@ export default function AccountExternalServices(): JSX.Element {
   }
   if (!data) return <p className="t-caption">{t("externalServices:loading")}</p>;
 
+  // Tours (and so their routing keys and the Strava import) sit behind the
+  // `roadtrips` beta key, as the pre-forgejo#392 cards did. Admin view is ungated.
+  const TOURS_ONLY = ["openrouteservice", "graphhopper", "strava"];
+  const shown = <T extends { id: string }>(list: T[]): T[] =>
+    toursVisible ? list : list.filter((s) => !TOURS_ONLY.includes(s.id));
+  const connections = shown(data.connections);
+  const ownKeys = shown(data.ownKeys);
+
   const everyService: Array<{ id: string; recommended: AccountService["recommended"] }> = [
-    ...data.connections,
-    ...data.ownKeys,
+    ...connections,
+    ...ownKeys,
     ...data.aiConsents.map((c) => ({ id: c.id, recommended: null })),
   ];
   const info = everyService.find((s) => s.id === infoId);
@@ -199,23 +209,23 @@ export default function AccountExternalServices(): JSX.Element {
         </p>
       ) : null}
 
-      {data.connections.length > 0 ? (
+      {connections.length > 0 ? (
         <Section
           id="connections"
           title={t("externalServices:account.sections.connections")}
           hint={t("externalServices:account.hints.connections")}
         >
-          {data.connections.map((service) => rowFor(service, "connection"))}
+          {connections.map((service) => rowFor(service, "connection"))}
         </Section>
       ) : null}
 
-      {data.ownKeys.length > 0 ? (
+      {ownKeys.length > 0 ? (
         <Section
           id="ownKeys"
           title={t("externalServices:account.sections.ownKeys")}
           hint={t("externalServices:account.hints.ownKeys")}
         >
-          {data.ownKeys.map((service) => rowFor(service, "key"))}
+          {ownKeys.map((service) => rowFor(service, "key"))}
         </Section>
       ) : null}
 

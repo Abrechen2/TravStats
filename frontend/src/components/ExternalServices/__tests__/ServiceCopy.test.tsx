@@ -12,6 +12,7 @@ vi.mock("../SpecialisedControl", () => ({
   replacesGenericFields: () => false,
   SpecialisedControl: () => <div />,
 }));
+vi.mock("../../../hooks/useToursVisible", () => ({ useToursVisible: () => true }));
 vi.mock("../../Settings/PhotoJourneyNightlyScanCard", () => ({ default: () => <div /> }));
 vi.mock("../../Settings/StravaConnectionCard", () => ({ default: () => <div /> }));
 vi.mock("../../Settings/WebdavSyncRow", () => ({ WebdavSyncPanel: () => <div /> }));

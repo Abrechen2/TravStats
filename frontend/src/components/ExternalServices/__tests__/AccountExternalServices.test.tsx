@@ -7,6 +7,8 @@ vi.mock("../../../lib/api/externalServices", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../lib/api/externalServices")>()),
   externalServicesApi: mockedApi,
 }));
+const beta = vi.hoisted(() => ({ tours: true }));
+vi.mock("../../../hooks/useToursVisible", () => ({ useToursVisible: () => beta.tours }));
 vi.mock("../../Settings/PhotoJourneyNightlyScanCard", () => ({
   default: () => <div data-testid="nightly-scan" />,
 }));
@@ -31,10 +33,35 @@ const row = (id: string): HTMLElement =>
 describe("Einstellungen › Dienste", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    beta.tours = true;
     useSettingsLevelStore.setState({ level: "standard" });
     mockedApi.accountOverview.mockResolvedValue(accountOverview());
     mockedApi.accountUpdate.mockResolvedValue(undefined);
     mockedApi.accountSetAiConsent.mockResolvedValue(undefined);
+  });
+
+  it("hides the tour-only rows (strava, routing keys) without the beta switch and shows them with it", async () => {
+    const base = accountOverview();
+    const routingKey = { ...base.ownKeys[0], id: "openrouteservice" };
+    mockedApi.accountOverview.mockResolvedValue({
+      ...base,
+      ownKeys: [...base.ownKeys, routingKey],
+    });
+
+    beta.tours = false;
+    const off = render(<AccountExternalServices />);
+    await screen.findByText("externalServices:account.sections.connections");
+    expect(row("strava")).toBeNull();
+    expect(row("openrouteservice")).toBeNull();
+    expect(row("dawarich")).not.toBeNull();
+    expect(row("airlabs")).not.toBeNull();
+    off.unmount();
+
+    beta.tours = true;
+    render(<AccountExternalServices />);
+    await screen.findByText("externalServices:account.sections.connections");
+    expect(row("strava")).not.toBeNull();
+    expect(row("openrouteservice")).not.toBeNull();
   });
 
   it("lists connections, own keys and AI approvals with the status of this account", async () => {
