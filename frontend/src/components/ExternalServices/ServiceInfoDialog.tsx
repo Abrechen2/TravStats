@@ -15,6 +15,7 @@ export default function ServiceInfoDialog({
   recommended,
   scope,
   getKeyUrl = null,
+  alwaysOn = false,
   onClose,
 }: {
   serviceId: string;
@@ -24,6 +25,8 @@ export default function ServiceInfoDialog({
   scope: "admin" | "account";
   /** From the catalogue; used when the copy carries no link of its own. */
   getKeyUrl?: string | null;
+  /** A service without an off switch explains why. */
+  alwaysOn?: boolean;
   onClose: () => void;
 }): JSX.Element {
   const { t } = useTranslation(["externalServices"]);
@@ -49,6 +52,10 @@ export default function ServiceInfoDialog({
           [t("externalServices:info.quota"), serviceCopy(t, serviceId, "quota")],
           dataOut,
           [t("externalServices:info.who"), t(`externalServices:info.whoText.${level}`)],
+          [
+            t("externalServices:info.alwaysOn"),
+            alwaysOn ? serviceCopy(t, serviceId, "alwaysOnWhy") : "",
+          ],
         ]
       : [
           why,

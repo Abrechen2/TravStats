@@ -29,6 +29,7 @@ import fs from "fs/promises";
 import path from "path";
 import logger from "../../utils/logger";
 import { getInstanceSettings } from "../instanceSettingsService";
+import { isServiceDisabledByAdmin } from "../externalServices/policy";
 import {
   resolveCataloguedProviderLogo,
   resolveProviderLogo,
@@ -349,6 +350,8 @@ export async function answerOperatorMark(
   if (fromCatalogue) return { mark: fromCatalogue, pending: false };
   const { operatorLogosOpenDataEnabled } = await getInstanceSettings();
   if (!operatorLogosOpenDataEnabled) return { mark: null, pending: false };
+  // "Off means off" (forgejo#392): the Wikimedia lookup is the logos service too.
+  if (await isServiceDisabledByAdmin("logos")) return { mark: null, pending: false };
   return wikidataMark(trimmed, ctx);
 }
 

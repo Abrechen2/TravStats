@@ -69,6 +69,12 @@ export interface ServiceDef {
   recommended: Recommended;
   /** Works without any credential. */
   keyless: boolean;
+  /**
+   * No off switch: the service is core to the app and cannot be honoured as
+   * "off" without breaking it (forgejo#392, invariant 2). The page shows it as
+   * always on and says why; the write route refuses to switch it off.
+   */
+  alwaysOn: boolean;
   /** Where to get a key; null when there is nothing to get. */
   getKeyUrl: string | null;
   /** `apiKeyResolver` provider id, when the resolver serves this service. */

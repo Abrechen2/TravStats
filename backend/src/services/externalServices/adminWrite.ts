@@ -68,6 +68,15 @@ export async function applyAdminUpdate(id: string, body: AdminUpdateBody): Promi
     }));
   }
 
+  if (body.enabled === false && service.alwaysOn) {
+    throw new AppError(
+      "This service cannot be switched off: the app depends on it",
+      400,
+      "VALIDATION_FAILED",
+      "enabled"
+    );
+  }
+
   if (body.enabled !== undefined) {
     switch (service.enabled.kind) {
       case "policy":

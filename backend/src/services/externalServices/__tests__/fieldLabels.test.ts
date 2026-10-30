@@ -25,7 +25,8 @@ describe.each(["de", "en"] as const)("external services field labels (%s)", (lan
     const missing: string[] = [];
     for (const service of SERVICES) {
       for (const field of [...service.fields, ...service.accountFields]) {
-        const label = labels.fields?.[service.id]?.[field.key] ?? labels.fields?.common?.[field.key];
+        const label =
+          labels.fields?.[service.id]?.[field.key] ?? labels.fields?.common?.[field.key];
         if (!label) missing.push(`${service.id}.${field.key}`);
       }
     }

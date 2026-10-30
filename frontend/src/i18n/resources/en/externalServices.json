@@ -150,7 +150,8 @@
       "instance": "Setup: set up by an admin",
       "instanceAndAccount": "Setup: admin or own account",
       "account": "Setup: each account itself"
-    }
+    },
+    "alwaysOn": "Why always on?"
   },
   "consent": {
     "allow": "Allow …",
@@ -291,7 +292,9 @@
       "fromName": "Sender name",
       "relayUrl": "Relay URL",
       "origin": "Instance address",
-      "templateRepoUrl": "Template repository (URL)"
+      "templateRepoUrl": "Template repository (URL)",
+      "cdnFallback": "Fallback source for non-ECB currencies",
+      "backupSync": "Instance backups over WebDAV"
     }
   },
   "services": {
@@ -437,7 +440,8 @@
       "getKeyUrl": "https://operations.osmfoundation.org/policies/nominatim/",
       "getKeyLabel": "Nominatim usage policy",
       "order": "Photon → Nominatim → Google",
-      "quotaLine": "OSM usage policy"
+      "quotaLine": "OSM usage policy",
+      "alwaysOnWhy": "Place search, address entry and coordinates run on it; without it no form could find a place. To avoid the public servers, enter your own addresses under \"Expert\"."
     },
     "selfHostedRouting": {
       "name": "Self-hosted routing servers",
@@ -577,7 +581,8 @@
       "getKeyUrl": "https://frankfurter.dev/",
       "getKeyLabel": "Frankfurter",
       "order": "Frankfurter → currency-api",
-      "quotaLine": "–"
+      "quotaLine": "–",
+      "alwaysOnWhy": "Every conversion into your currency uses the ECB rates; only a currency and a date leave the server. Only the fallback source for currencies the ECB does not publish can be switched off."
     },
     "webdav": {
       "name": "WebDAV",
@@ -663,5 +668,8 @@
       "order": "Account only",
       "quotaLine": "your own server"
     }
+  },
+  "alwaysOn": {
+    "label": "Always on – this service cannot be switched off."
   }
 }

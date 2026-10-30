@@ -17,6 +17,8 @@ export interface AdminServiceView {
   level: ServiceDef["level"];
   credential: ServiceDef["credential"];
   keyless: boolean;
+  /** No off switch: core to the app (the page shows why). */
+  alwaysOn: boolean;
   getKeyUrl: string | null;
   recommended: ServiceDef["recommended"];
   enabled: boolean;
@@ -49,6 +51,8 @@ export async function loadAdminState(): Promise<AdminState> {
 
 /** The service's `enabled`, from the switch it is stored in. */
 export function isEnabled(service: ServiceDef, state: AdminState): boolean {
+  // An always-on service has no off switch; a stale policy entry cannot turn it off.
+  if (service.alwaysOn) return true;
   const b = service.enabled;
   switch (b.kind) {
     case "policy":
@@ -124,6 +128,7 @@ export async function buildAdminView(): Promise<{
       level: service.level,
       credential: service.credential,
       keyless: service.keyless,
+      alwaysOn: service.alwaysOn,
       getKeyUrl: service.getKeyUrl,
       recommended: service.recommended,
       enabled,

@@ -150,7 +150,8 @@
       "instance": "Einrichtung: Admin richtet ein",
       "instanceAndAccount": "Einrichtung: Admin oder eigenes Konto",
       "account": "Einrichtung: Jedes Konto selbst"
-    }
+    },
+    "alwaysOn": "Warum immer an?"
   },
   "consent": {
     "allow": "Freigeben …",
@@ -291,7 +292,9 @@
       "fromName": "Absender-Name",
       "relayUrl": "Relay-URL",
       "origin": "Adresse der Instanz",
-      "templateRepoUrl": "Vorlagen-Repository (URL)"
+      "templateRepoUrl": "Vorlagen-Repository (URL)",
+      "cdnFallback": "Ersatzquelle für Nicht-EZB-Währungen",
+      "backupSync": "Instanz-Sicherungen per WebDAV"
     }
   },
   "services": {
@@ -437,7 +440,8 @@
       "getKeyUrl": "https://operations.osmfoundation.org/policies/nominatim/",
       "getKeyLabel": "Nutzungsregeln Nominatim",
       "order": "Photon → Nominatim → Google",
-      "quotaLine": "Nutzungsregeln von OSM"
+      "quotaLine": "Nutzungsregeln von OSM",
+      "alwaysOnWhy": "Ortssuche, Adresseingabe und Koordinaten laufen darüber; ohne ihn fände kein Formular mehr einen Ort. Wer die öffentlichen Server nicht nutzen will, trägt unter „Experte“ eigene Adressen ein."
     },
     "selfHostedRouting": {
       "name": "Eigene Routing-Server",
@@ -577,7 +581,8 @@
       "getKeyUrl": "https://frankfurter.dev/",
       "getKeyLabel": "Frankfurter",
       "order": "Frankfurter → currency-api",
-      "quotaLine": "–"
+      "quotaLine": "–",
+      "alwaysOnWhy": "Jede Umrechnung in deine Währung läuft über die EZB-Kurse; es verlassen nur Währung und Datum den Server. Abschalten lässt sich nur die Ersatzquelle für Währungen, die die EZB nicht kennt."
     },
     "webdav": {
       "name": "WebDAV",
@@ -663,5 +668,8 @@
       "order": "nur Konto",
       "quotaLine": "eigener Server"
     }
+  },
+  "alwaysOn": {
+    "label": "Immer eingeschaltet – dieser Dienst lässt sich nicht abschalten."
   }
 }

@@ -21,6 +21,7 @@ import fs from "fs/promises";
 import path from "path";
 import logger from "../../utils/logger";
 import { getInstanceSettings } from "../instanceSettingsService";
+import { isServiceDisabledByAdmin } from "../externalServices/policy";
 import { normalizeProviderName } from "../rentalProviders/providerCatalog";
 import type { OperatorMarkImage } from "../operatorLogos/wikidataOperator";
 import {
@@ -223,6 +224,7 @@ export async function answerSubjectImage(
   if (subjectSearchName(kind, name) === "") return NONE;
   const { operatorLogosOpenDataEnabled } = await getInstanceSettings();
   if (!operatorLogosOpenDataEnabled) return DISABLED;
+  if (await isServiceDisabledByAdmin("logos")) return DISABLED;
   const key = subjectImageKey(kind, name);
   const cached = await readCache(key);
   if (cached) return { ...NONE, picture: cached };

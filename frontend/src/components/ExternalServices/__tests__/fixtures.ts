@@ -16,6 +16,7 @@ export function service(overrides: Partial<AdminService> & { id: string }): Admi
     category: "flight",
     credential: "key",
     keyless: false,
+    alwaysOn: false,
     getKeyUrl: null,
     level: "instanceAndAccount",
     recommended: null,

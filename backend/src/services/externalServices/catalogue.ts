@@ -50,6 +50,7 @@ function svc(
   return {
     recommended: null,
     keyless: false,
+    alwaysOn: false,
     getKeyUrl: null,
     env: [],
     enabled: POLICY,
@@ -255,6 +256,11 @@ export const SERVICES: readonly ServiceDef[] = [
     level: "instance",
     credential: "url",
     keyless: true,
+    // Every place and address entry, the lodging coordinates and the map pick run
+    // on it, through ~40 call sites that answer "no result" on failure. A silent
+    // "off" would read as "nothing found" everywhere. An admin who must not use
+    // the public servers points the two URLs at their own (expert fields).
+    alwaysOn: true,
     recommended: "free",
     env: ["PHOTON_URL", "NOMINATIM_URL"],
     fields: [
@@ -436,8 +442,13 @@ export const SERVICES: readonly ServiceDef[] = [
     level: "instance",
     credential: "none",
     keyless: true,
+    // The ECB lookup (Frankfurter) is what every stay and cost total converts
+    // through; only a currency code and a date leave the server. What an admin may
+    // decide is the public CDN fallback for currencies the ECB does not publish,
+    // and that stays its own switch (the Parser page's "fxCdnFallbackEnabled").
+    alwaysOn: true,
     recommended: "free",
-    enabled: { kind: "adminColumns", columns: ["fxCdnFallbackEnabled"] },
+    fields: [admin("cdnFallback", "switch", "fxCdnFallbackEnabled", true)],
   }),
 
   // ---- sync & mail -------------------------------------------------------------------
@@ -448,8 +459,10 @@ export const SERVICES: readonly ServiceDef[] = [
     credential: "urlKey",
     connection: true,
     env: ["WEBDAV_URL"],
-    enabled: { kind: "adminColumns", columns: ["webdavSyncEnabled"] },
+    // Off stops the account syncs AND the instance backups (the latter through
+    // `getWebDAVSettings().enabled`); the column below is only the instance backup switch.
     fields: [
+      admin("backupSync", "switch", "webdavSyncEnabled"),
       admin("url", "url", "webdavUrl"),
       admin("username", "text", "webdavUsername"),
       admin("password", "secret", "webdavPasswordEncrypted"),

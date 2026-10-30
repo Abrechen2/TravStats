@@ -242,7 +242,11 @@ function ExpandedBody({
         />
       ) : null}
       <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-md)" }}>
-        {cloud ? (
+        {service.alwaysOn ? (
+          <span className="t-caption" data-always-on>
+            {t("externalServices:alwaysOn.label")} {serviceCopy(t, service.id, "alwaysOnWhy")}
+          </span>
+        ) : cloud ? (
           <Button variant="secondary" disabled={busy} onClick={actions.onAskConsent}>
             {t(
               service.enabled

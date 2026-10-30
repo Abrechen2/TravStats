@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { adminOverview, apiError, mockedApi, networkError, t } from "./fixtures";
+import { adminOverview, service, apiError, mockedApi, networkError, t } from "./fixtures";
 
 vi.mock("../../../hooks/useTranslation", () => ({ useTranslation: () => ({ t }) }));
 vi.mock("../../../lib/api/externalServices", async (importOriginal) => ({
@@ -271,5 +271,27 @@ describe("Administration › Externe Dienste", () => {
       "href",
       "externalServices:services.airlabs.getKeyUrl"
     );
+  });
+
+  it("shows an always-on service without an off switch and says why", async () => {
+    mockedApi.adminOverview.mockResolvedValue({
+      categories: [
+        {
+          id: "mapsRoutes",
+          services: [
+            service({ id: "geocoder", alwaysOn: true, level: "instance", allowAccountKeys: null }),
+          ],
+        },
+      ],
+      accountConnections: [],
+    });
+    renderPage();
+    await screen.findByText("externalServices:services.geocoder.purpose");
+    fireEvent.click(
+      within(row("geocoder")).getByRole("button", { name: "externalServices:actions.expand" })
+    );
+    const note = row("geocoder").querySelector("[data-always-on]");
+    expect(note).toHaveTextContent("externalServices:services.geocoder.alwaysOnWhy");
+    expect(within(row("geocoder")).queryByText("externalServices:actions.turnOff")).toBeNull();
   });
 });

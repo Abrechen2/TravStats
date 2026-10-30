@@ -51,6 +51,8 @@ export interface AdminService {
   credential: ServiceCredential;
   /** Works without any credential. */
   keyless: boolean;
+  /** No off switch: core to the app; the row says why instead of offering one. */
+  alwaysOn: boolean;
   /** Where to get a key; null when there is nothing to get. */
   getKeyUrl: string | null;
   level: ServiceLevel;

@@ -3,6 +3,7 @@ import { calculateDistance } from "../../utils/geo";
 import { railRouteCache, railRouteCacheKey } from "./railRouteCache";
 
 import { getInstanceSettings } from "../instanceSettingsService";
+import { isServiceDisabledByAdmin } from "../externalServices/policy";
 import { simplifyDegrees } from "../schematicRouter";
 import logger from "../../utils/logger";
 import { railUserAgent } from "./lookup/railHttp";
@@ -123,6 +124,9 @@ const routeAnswerSchema = z.object({
 
 /** The configured base URL, or null when OpenRailRouting is off. */
 export async function railRoutingBaseUrl(): Promise<string | null> {
+  // "Off means off" (forgejo#392): an admin who switched self-hosted routing off
+  // reads, to every caller, as an instance with no router — not as a failing one.
+  if (await isServiceDisabledByAdmin("selfHostedRouting")) return null;
   const { railRoutingUrl } = await getInstanceSettings();
   return railRoutingUrl;
 }

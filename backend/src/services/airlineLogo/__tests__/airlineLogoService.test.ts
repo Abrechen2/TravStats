@@ -9,6 +9,7 @@ import {
 import * as cache from "../logoCache";
 import { getCachedLogoEntry, putCachedLogo, isStale, logoCacheDir } from "../logoCache";
 import * as resolver from "../../apiKeyResolver";
+import * as policy from "../../externalServices/policy";
 import logger from "../../../utils/logger";
 import crypto from "crypto";
 import fs from "fs";
@@ -23,6 +24,8 @@ const realFetch = global.fetch;
 beforeEach(() => {
   // Default: no key resolves anywhere (admin_settings nor env)
   jest.spyOn(resolver, "getApiKey").mockResolvedValue(null);
+  // The chain asks the external-services policy (admin "off", forgejo#392); these tests are about the tiers.
+  jest.spyOn(policy, "isServiceDisabledByAdmin").mockResolvedValue(false);
 });
 afterEach(() => {
   global.fetch = realFetch;
