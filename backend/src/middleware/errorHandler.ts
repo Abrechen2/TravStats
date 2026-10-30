@@ -457,6 +457,8 @@ export type ApiErrorCode =
   | "SHARE_LINK_FLIGHT_LANDED"
   /** A trip link with the itinerary for a trip whose last day is over (409, forgejo#302). */
   | "SHARE_LINK_TRIP_ENDED"
+  /** Airport lookup (forgejo#347): no source could be asked (timeout, network, HTTP error) — retry (503). */
+  | "AIRPORT_LOOKUP_UNAVAILABLE"
   /** The account already holds the maximum of active links (409). */
   | "SHARE_LINK_LIMIT"
   /** An expiry in the past or beyond the maximum (400). */
