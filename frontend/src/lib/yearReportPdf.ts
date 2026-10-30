@@ -1,5 +1,6 @@
 import type { Flight } from "../types";
 import { calculateDistance } from "./geo";
+import { getFlightDuration } from "./flightDuration";
 import { formatDate } from "./displayFormat";
 import { favoriteConnection } from "./stats/favoriteConnection";
 
@@ -58,6 +59,7 @@ export async function generateYearReportPdf(opts: YearReportOptions): Promise<vo
   let totalDistance = 0;
   let measuredFlights = 0;
   let totalFlightTimeMin = 0;
+  let timedFlights = 0;
   let totalCo2 = 0;
   const airlineCounts = new Map<string, number>();
 
@@ -67,9 +69,12 @@ export async function generateYearReportPdf(opts: YearReportOptions): Promise<vo
       totalDistance += dist;
       measuredFlights += 1;
     }
-    if (f.departureTime && f.arrivalTime) {
-      totalFlightTimeMin +=
-        (new Date(f.arrivalTime).getTime() - new Date(f.departureTime).getTime()) / 60000;
+    // The shared duration rule, as on the stats page: placeholder clocks and
+    // negative spans do not count (forgejo#377).
+    const duration = getFlightDuration(f);
+    if (duration) {
+      totalFlightTimeMin += duration.minutes;
+      timedFlights += 1;
     }
     if (f.co2Kg) totalCo2 += f.co2Kg;
     const airline = f.airline ?? "Unknown";
@@ -92,7 +97,8 @@ export async function generateYearReportPdf(opts: YearReportOptions): Promise<vo
         ? "-"
         : `${distDisplay.toLocaleString("en-US")} ${distUnit}`,
     ],
-    ["Total Flight Time", `${totalHours} h`],
+    // Nothing measurable is "-", not "0 h".
+    ["Total Flight Time", timedFlights === 0 ? "-" : `${totalHours} h`],
     ["Most Flown Airline", topAirline],
     ["Favourite Route", topRoute],
     ...(totalCo2 > 0 ? ([["Total CO2", `${Math.round(totalCo2)} kg`]] as [string, string][]) : []),

@@ -186,4 +186,37 @@ describe("generateYearReportPdf", () => {
       expect(offenders).toEqual([]);
     });
   });
+
+  // forgejo#377: arrival - departure was summed raw, so a date-only flight's
+  // placeholder clocks ("12:00 -> 20:00") printed as "8 h" of flying.
+  describe("total flight time", () => {
+    beforeEach(() => {
+      mockText.mockClear();
+    });
+
+    it("prints a dash, not a count of placeholder hours, when nothing was measured", async () => {
+      const dateOnly = {
+        ...mockFlight,
+        arrLat: null,
+        arrLon: null,
+        departureTime: "2026-01-15T12:00:00Z",
+        arrivalTime: "2026-01-15T20:00:00Z",
+        depTimeSemantics: "DATE_ONLY",
+      } as unknown as Flight;
+      await generateYearReportPdf({ year: 2026, flights: [dateOnly], userName: "D", units: "km" });
+      const drawn = mockText.mock.calls.map((call) => call[0]);
+      expect(drawn).not.toContain("8 h");
+      expect(drawn).not.toContain("0 h");
+    });
+
+    it("adds up real clocks", async () => {
+      await generateYearReportPdf({
+        year: 2026,
+        flights: [mockFlight],
+        userName: "D",
+        units: "km",
+      });
+      expect(mockText.mock.calls.map((call) => call[0])).toContain("3 h");
+    });
+  });
 });
