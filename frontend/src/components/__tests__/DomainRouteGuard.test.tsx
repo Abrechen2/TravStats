@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 
 vi.unmock("../../store/settingsStore");
@@ -49,7 +49,11 @@ function renderAt(path: string) {
 
 describe("DomainRouteGuard", () => {
   beforeEach(() => {
-    useSettingsStore.setState({ enabledDomains: ["flight"], enabledDomainsLoaded: false });
+    useSettingsStore.setState({
+      enabledDomains: ["flight"],
+      enabledDomainsLoaded: false,
+      remoteLoadFailed: false,
+    });
   });
 
   it("waits instead of redirecting while the domains are still loading", () => {
@@ -58,6 +62,18 @@ describe("DomainRouteGuard", () => {
     expect(screen.queryByTestId("dashboard")).toBeNull();
     expect(screen.queryByTestId("detail")).toBeNull();
     expect(screen.getByText("common:loading.default")).toBeTruthy();
+  });
+
+  it("offers a retry instead of spinning forever when the settings load failed (forgejo#372)", () => {
+    const loadRemoteSettings = vi.fn().mockResolvedValue(undefined);
+    useSettingsStore.setState({ remoteLoadFailed: true, loadRemoteSettings });
+
+    renderAt("/cruises/abc");
+
+    expect(screen.queryByText("common:loading.default")).toBeNull();
+    expect(screen.getByRole("alert")).toHaveTextContent("common:settingsLoadFailed.title");
+    fireEvent.click(screen.getByText("common:buttons.retry"));
+    expect(loadRemoteSettings).toHaveBeenCalledTimes(1);
   });
 
   it("shows the page once the server says the domain is on", () => {

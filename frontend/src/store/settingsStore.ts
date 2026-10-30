@@ -158,6 +158,13 @@ export interface SettingsState {
    */
   enabledDomainsLoaded: boolean;
   /**
+   * The last `loadRemoteSettings` could not read the server. Not persisted. It
+   * lets a guard that waits on `enabledDomainsLoaded` say so and offer a retry
+   * instead of spinning forever, and it is why no `remoteSnapshot` is stamped
+   * on failure (forgejo#372).
+   */
+  remoteLoadFailed: boolean;
+  /**
    * The user's currency — the ONE the app has. Every lodging stay is
    * converted into it at the ECB rate for its check-in day, and stats,
    * achievements and flight costs all report in it.
@@ -447,6 +454,7 @@ const defaultSettings: Omit<
   apiKeys: null,
   enabledDomains: ["flight"],
   enabledDomainsLoaded: false,
+  remoteLoadFailed: false,
   baseCurrency: "EUR",
   autoCreateTrips: true,
   // No choice yet, and no instance answer yet — both are the server's to fill.
@@ -525,6 +533,10 @@ export const useSettingsStore = create<SettingsState>()(
       resetSettings: () => set(defaultSettings),
       hasPendingChanges: () => {
         const state = get();
+        // The server could not be read, so the store holds local defaults, not
+        // the account's values: an auto-save now would write them over the
+        // real ones. Nothing is pending until a load has succeeded (forgejo#372).
+        if (state.remoteLoadFailed) return false;
         if (state.remoteSnapshot === null) return true;
         return snapshotOf(state) !== state.remoteSnapshot;
       },
@@ -663,12 +675,17 @@ export const useSettingsStore = create<SettingsState>()(
             });
           }
         } catch (error) {
-          logger.warn("Failed to load remote settings, using local defaults", error);
+          // The local defaults are NOT what the server holds, so no snapshot is
+          // recorded: stamping one made the next real edit send all eight
+          // groups from local state (forgejo#372).
+          logger.warn("Failed to load remote settings", error);
+          set({ remoteLoadFailed: true });
+          return;
         }
         // Record what the server is now known to hold, so the settings page's
         // debounced auto-save can tell a genuine user edit apart from the
         // hydration it just performed and skip echoing the value straight back.
-        set({ remoteSnapshot: snapshotOf(get()) });
+        set({ remoteSnapshot: snapshotOf(get()), remoteLoadFailed: false });
       },
       saveRemoteSettings: async () => {
         const previous = saveQueue;
@@ -776,6 +793,7 @@ export const useSettingsStore = create<SettingsState>()(
           hasCountryTracks: _hasTracks,
           remoteSnapshot: _snapshot,
           enabledDomainsLoaded: _domainsLoaded,
+          remoteLoadFailed: _loadFailed,
           ...rest
         } = state;
         return rest as unknown as Record<string, unknown>;

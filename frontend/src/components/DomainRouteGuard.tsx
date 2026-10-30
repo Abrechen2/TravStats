@@ -33,7 +33,32 @@ export function DomainRouteGuard({
 }): JSX.Element {
   const { isEnabled } = useEnabledDomains();
   const loaded = useSettingsStore((s) => s.enabledDomainsLoaded);
+  const loadFailed = useSettingsStore((s) => s.remoteLoadFailed);
+  const loadRemoteSettings = useSettingsStore((s) => s.loadRemoteSettings);
   const { t } = useTranslation(["common"]);
+
+  // One dropped request at login used to leave this spinner up until a hard
+  // reload; say so and offer the retry (forgejo#372).
+  if (!loaded && loadFailed) {
+    return (
+      <>
+        <NavigationBar />
+        <div
+          role="alert"
+          className="mx-auto max-w-3xl px-4 py-16 text-center text-[var(--text-muted)]"
+        >
+          <p>{t("common:settingsLoadFailed.title")}</p>
+          <button
+            type="button"
+            className="mt-4 underline"
+            onClick={() => void loadRemoteSettings()}
+          >
+            {t("common:buttons.retry")}
+          </button>
+        </div>
+      </>
+    );
+  }
 
   if (!loaded) {
     return (

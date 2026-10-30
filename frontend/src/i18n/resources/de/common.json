@@ -1,4 +1,7 @@
 {
+  "settingsLoadFailed": {
+    "title": "Deine Einstellungen konnten nicht vom Server geladen werden."
+  },
   "confirmDialog": {
     "title": "Bitte bestätigen"
   },
