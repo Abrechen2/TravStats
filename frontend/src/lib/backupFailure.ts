@@ -1,3 +1,4 @@
+import { apiErrorMachineCode } from "./apiError";
 import { jobErrorCode } from "./api/jobs";
 
 /**
@@ -31,4 +32,15 @@ export function backupRowFailureKey(code: string | null | undefined): string {
 export function backupFailureKey(err: unknown, fallbackKey: string): string {
   const code = jobErrorCode(err);
   return code && BACKUP_FAILURE_CODES.has(code) ? `admin:backup.failure.${code}` : fallbackKey;
+}
+
+/**
+ * The key for a failed cloud (WebDAV) backup download. A body cut short is its
+ * own sentence (`WEBDAV_DOWNLOAD_TRUNCATED`, 502): the archive on disk would
+ * have been unusable, and the retry is the only remedy.
+ */
+export function cloudDownloadFailureKey(err: unknown, fallbackKey: string): string {
+  return apiErrorMachineCode(err) === "WEBDAV_DOWNLOAD_TRUNCATED"
+    ? "admin:backup.toasts.downloadTruncated"
+    : fallbackKey;
 }

@@ -769,6 +769,7 @@
       "createFailed": "Fehler beim Erstellen des Backups",
       "downloading": "Backup wird heruntergeladen",
       "downloadFailed": "Fehler beim Herunterladen des Backups",
+      "downloadTruncated": "Der Download vom WebDAV-Server wurde vorzeitig beendet, das Backup ist unvollständig und wurde nicht übernommen. Bitte erneut versuchen.",
       "restoring": "Backup wird wiederhergestellt",
       "restoreFailed": "Fehler beim Wiederherstellen des Backups",
       "deleted": "Backup gelöscht",

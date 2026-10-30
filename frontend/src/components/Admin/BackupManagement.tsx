@@ -8,7 +8,11 @@ import { profileDateTime } from "../../lib/profileInstant";
 import { logger } from "../../lib/logger";
 import { apiErrorMachineCode, extractApiErrorMessage } from "../../lib/apiError";
 import { JobLostError, jobErrorCode, waitForJob } from "../../lib/api/jobs";
-import { backupFailureKey, backupRowFailureKey } from "../../lib/backupFailure";
+import {
+  cloudDownloadFailureKey,
+  backupFailureKey,
+  backupRowFailureKey,
+} from "../../lib/backupFailure";
 import { useTranslation } from "../../hooks/useTranslation";
 // The shared frame: role=dialog, aria-modal, Escape, focus in and back out,
 // and a panel that scrolls instead of running off a 320px screen (AUD-037).
@@ -184,7 +188,7 @@ export default function BackupManagement(): JSX.Element {
       addToast("success", t("admin:backup.toasts.downloading"));
     } catch (error) {
       logger.error("Failed to download backup:", error);
-      addToast("error", t("admin:backup.toasts.downloadFailed"));
+      addToast("error", t(cloudDownloadFailureKey(error, "admin:backup.toasts.downloadFailed")));
     }
   };
 

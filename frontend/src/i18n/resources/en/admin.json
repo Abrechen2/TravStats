@@ -769,6 +769,7 @@
       "createFailed": "Failed to create backup",
       "downloading": "Backup is being downloaded",
       "downloadFailed": "Failed to download backup",
+      "downloadTruncated": "The download from the WebDAV share ended early, so the backup is incomplete and was not kept. Please try again.",
       "restoring": "Backup is being restored",
       "restoreFailed": "Failed to restore backup",
       "deleted": "Backup deleted",
