@@ -233,6 +233,7 @@ export default function AdminExternalServices(): JSX.Element {
           level={infoService.level}
           recommended={infoService.recommended}
           scope="admin"
+          getKeyUrl={infoService.getKeyUrl}
           onClose={() => setInfoId(null)}
         />
       ) : null}

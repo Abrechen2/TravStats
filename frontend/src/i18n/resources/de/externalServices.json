@@ -125,7 +125,8 @@
     "CONSENT_REQUIRED": "Die Datenfreigabe fehlt – bitte bestätige sie.",
     "ACCOUNT_KEYS_NOT_ALLOWED": "Die Instanz erlaubt für diesen Dienst keine eigenen Schlüssel.",
     "CONNECTION_NOT_ALLOWED": "Die Instanz erlaubt diese Verbindung nicht.",
-    "VALIDATION_FAILED": "Die Eingabe ist ungültig."
+    "VALIDATION_FAILED": "Die Eingabe ist ungültig.",
+    "SERVICE_NOT_FOUND": "Diesen Dienst gibt es nicht."
   },
   "info": {
     "why": "Wozu braucht TravStats das?",
@@ -266,8 +267,6 @@
       "model": "Modell",
       "enabled": "Eingeschaltet",
       "tier": "Tarif",
-      "budgetUsd": "Monatslimit in $",
-      "customBudgetUsd": "Monatslimit in $",
       "tracksEnabled": "Flugspuren nach Landung",
       "photonUrl": "Photon-URL",
       "nominatimUrl": "Nominatim-URL",
@@ -277,7 +276,22 @@
       "dbRestEnabled": "db-rest",
       "logostreamApiKey": "logostream-Schlüssel (optional)",
       "operatorLogosEnabled": "Betreiber-Logos aus Wikimedia",
-      "fxCdnFallbackEnabled": "Ersatzquelle für Nicht-EZB-Währungen"
+      "fxCdnFallbackEnabled": "Ersatzquelle für Nicht-EZB-Währungen",
+      "dailyBudget": "Tageslimit (Anfragen)",
+      "monthlyLimitUsd": "Monatslimit in $",
+      "dbRest": "db-rest",
+      "transitous": "Transitous",
+      "visionModel": "Bild-Modell",
+      "remoteOptIn": "Entfernten Server als Cloud-Dienst freigeben",
+      "operatorLogos": "Betreiber-Logos aus Wikimedia",
+      "backupPath": "Sicherungspfad",
+      "port": "Port",
+      "secure": "Verschlüsselt (TLS)",
+      "fromEmail": "Absender-Adresse",
+      "fromName": "Absender-Name",
+      "relayUrl": "Relay-URL",
+      "origin": "Adresse der Instanz",
+      "templateRepoUrl": "Vorlagen-Repository (URL)"
     }
   },
   "services": {

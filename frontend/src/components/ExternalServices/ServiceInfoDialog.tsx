@@ -14,6 +14,7 @@ export default function ServiceInfoDialog({
   level,
   recommended,
   scope,
+  getKeyUrl = null,
   onClose,
 }: {
   serviceId: string;
@@ -21,6 +22,8 @@ export default function ServiceInfoDialog({
   recommended: ServiceRecommended;
   /** The account view omits the rows only an admin acts on. */
   scope: "admin" | "account";
+  /** From the catalogue; used when the copy carries no link of its own. */
+  getKeyUrl?: string | null;
   onClose: () => void;
 }): JSX.Element {
   const { t } = useTranslation(["externalServices"]);
@@ -53,7 +56,7 @@ export default function ServiceInfoDialog({
           dataOut,
           [t("externalServices:info.source"), serviceCopy(t, serviceId, "order")],
         ];
-  const url = serviceCopy(t, serviceId, "getKeyUrl");
+  const url = serviceCopy(t, serviceId, "getKeyUrl") || getKeyUrl || "";
   const linkLabel = serviceCopy(t, serviceId, "getKeyLabel");
   return (
     <Dialog

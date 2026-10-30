@@ -11,7 +11,15 @@ vi.mock("../../Settings/PhotoJourneyNightlyScanCard", () => ({
   default: () => <div data-testid="nightly-scan" />,
 }));
 vi.mock("../../Settings/StravaConnectionCard", () => ({
-  default: () => <div data-testid="strava-card" />,
+  default: ({ onStatus }: { onStatus?: (s: { connected: boolean }) => void }) => (
+    <div data-testid="strava-card">
+      <button onClick={() => onStatus?.({ connected: true })}>strava-connected</button>
+      <button onClick={() => onStatus?.({ connected: false })}>strava-disconnected</button>
+    </div>
+  ),
+}));
+vi.mock("../../Settings/WebdavSyncRow", () => ({
+  WebdavSyncPanel: () => <div data-testid="webdav-panel" />,
 }));
 
 import AccountExternalServices from "../AccountExternalServices";
@@ -164,14 +172,14 @@ describe("Einstellungen › Dienste", () => {
     );
     const key = screen.getByLabelText("externalServices:fields.dawarich.apiKey");
     expect(key).toHaveAttribute("type", "password");
-    fireEvent.change(screen.getByLabelText("externalServices:fields.dawarich.serverUrl"), {
+    fireEvent.change(screen.getByLabelText("externalServices:fields.dawarich.baseUrl"), {
       target: { value: "https://dawarich.example" },
     });
     fireEvent.change(key, { target: { value: "secret" } });
     fireEvent.click(screen.getByRole("button", { name: "externalServices:actions.saveAndTest" }));
     await waitFor(() =>
       expect(mockedApi.accountUpdate).toHaveBeenCalledWith("dawarich", {
-        fields: { serverUrl: "https://dawarich.example", apiKey: "secret" },
+        fields: { baseUrl: "https://dawarich.example", apiKey: "secret" },
       })
     );
     // The page does not claim success: the server's own test failed.
@@ -281,7 +289,7 @@ describe("Einstellungen › Dienste", () => {
       accountDisabled: false,
       configured: true,
       lastTest: null,
-      fields: [{ key: "serverUrl", kind: "url", value: "https://i.example", expert: false }],
+      fields: [{ key: "baseUrl", kind: "url", value: "https://i.example", expert: false }],
     });
     mockedApi.accountOverview.mockResolvedValue(data);
     render(<AccountExternalServices />);
@@ -344,5 +352,23 @@ describe("Einstellungen › Dienste", () => {
         })
       ).toBeEnabled()
     );
+  });
+
+  it("embeds the account's own WebDAV flow, not a field form the account PUT cannot write", async () => {
+    render(<AccountExternalServices />);
+    await screen.findByText("externalServices:account.sections.connections");
+    fireEvent.click(within(row("webdav")).getAllByRole("button")[0]);
+    expect(await screen.findByTestId("webdav-panel")).toBeInTheDocument();
+    expect(mockedApi.accountUpdate).not.toHaveBeenCalled();
+  });
+
+  it("refreshes the outer Strava row after a disconnect inside the embedded card", async () => {
+    render(<AccountExternalServices />);
+    await screen.findByText("externalServices:account.sections.connections");
+    fireEvent.click(within(row("strava")).getAllByRole("button")[0]);
+    fireEvent.click(await screen.findByText("strava-connected"));
+    const loads = mockedApi.accountOverview.mock.calls.length;
+    fireEvent.click(screen.getByText("strava-disconnected"));
+    await waitFor(() => expect(mockedApi.accountOverview.mock.calls.length).toBe(loads + 1));
   });
 });

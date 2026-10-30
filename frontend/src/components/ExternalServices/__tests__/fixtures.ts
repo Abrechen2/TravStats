@@ -13,6 +13,10 @@ export const t = (key: string, options?: Record<string, unknown>): string => {
 
 export function service(overrides: Partial<AdminService> & { id: string }): AdminService {
   return {
+    category: "flight",
+    credential: "key",
+    keyless: false,
+    getKeyUrl: null,
     level: "instanceAndAccount",
     recommended: null,
     enabled: true,
@@ -113,7 +117,7 @@ export function accountOverview(): AccountExternalServices {
         configured: false,
         lastTest: null,
         fields: [
-          { key: "serverUrl", kind: "url", value: "", expert: false },
+          { key: "baseUrl", kind: "url", value: "", expert: false },
           { key: "apiKey", kind: "secret", value: "", expert: false },
         ],
       },
@@ -124,10 +128,17 @@ export function accountOverview(): AccountExternalServices {
         accountDisabled: false,
         configured: true,
         lastTest: { at: "2026-10-30T12:14:00Z", ok: true, reason: null },
-        fields: [
-          { key: "url", kind: "url", value: "https://nas.example/dav", expert: false },
-          { key: "password", kind: "secret", value: "•••• 1234", masked: true, expert: false },
-        ],
+        // As built: the account's WebDAV and Strava have no writable fields on this route.
+        fields: [],
+      },
+      {
+        id: "strava",
+        recommended: null,
+        effectiveSource: "account",
+        accountDisabled: false,
+        configured: true,
+        lastTest: null,
+        fields: [],
       },
     ],
     ownKeys: [

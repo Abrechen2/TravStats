@@ -1,8 +1,9 @@
-import { useState, type JSX, type ReactNode } from "react";
+import { useRef, useState, type JSX, type ReactNode } from "react";
 import { Card } from "../ui/Card";
 import Button from "../ui/Button";
 import PhotoJourneyNightlyScanCard from "../Settings/PhotoJourneyNightlyScanCard";
 import StravaConnectionCard from "../Settings/StravaConnectionCard";
+import { WebdavSyncPanel } from "../Settings/WebdavSyncRow";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useEffectiveSettingsLevel } from "../../store/settingsLevelStore";
 import type { AccountAiConsent, AccountService } from "../../lib/api/externalServices";
@@ -13,6 +14,24 @@ import ServiceInfoDialog from "./ServiceInfoDialog";
 import { useAccountServices } from "./useAccountServices";
 import { accountStatus } from "./serviceStatus";
 import { serviceName } from "./serviceText";
+
+/**
+ * Strava has its own connect flow (OAuth), so the row embeds the card. The
+ * card knows first when the athlete is disconnected; the row's pill and line
+ * come from the page's own data, which is reloaded then.
+ */
+function StravaEmbedded({ onDisconnected }: { onDisconnected: () => void }): JSX.Element {
+  const wasConnected = useRef(false);
+  return (
+    <StravaConnectionCard
+      isAdmin={false}
+      onStatus={(status) => {
+        if (wasConnected.current && !status.connected) onDisconnected();
+        wasConnected.current = status.connected;
+      }}
+    />
+  );
+}
 
 function Section({
   id,
@@ -122,7 +141,10 @@ export default function AccountExternalServices(): JSX.Element {
         }}
         expanded={
           isStrava ? (
-            <StravaConnectionCard isAdmin={false} />
+            <StravaEmbedded onDisconnected={() => void services.reload()} />
+          ) : service.id === "webdav" ? (
+            // The account's WebDAV sync has its own endpoint; the account PUT cannot write it.
+            <WebdavSyncPanel />
           ) : (
             <div className="flex flex-col" style={{ gap: "var(--ts-space-xl)" }}>
               <AccountFieldsForm

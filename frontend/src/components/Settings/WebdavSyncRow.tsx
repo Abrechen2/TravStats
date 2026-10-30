@@ -43,7 +43,7 @@ export default function WebdavSyncRow(): JSX.Element | null {
   return expert ? <WebdavSyncPanel /> : null;
 }
 
-function WebdavSyncPanel(): JSX.Element {
+export function WebdavSyncPanel(): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const isDemo = useIsDemoAccount();
 

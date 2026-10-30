@@ -125,7 +125,8 @@
     "CONSENT_REQUIRED": "The data-sharing confirmation is missing – please confirm it.",
     "ACCOUNT_KEYS_NOT_ALLOWED": "The instance does not allow own keys for this service.",
     "CONNECTION_NOT_ALLOWED": "The instance does not allow this connection.",
-    "VALIDATION_FAILED": "The input is invalid."
+    "VALIDATION_FAILED": "The input is invalid.",
+    "SERVICE_NOT_FOUND": "This service does not exist."
   },
   "info": {
     "why": "Why does TravStats need it?",
@@ -266,8 +267,6 @@
       "model": "Model",
       "enabled": "Enabled",
       "tier": "Plan",
-      "budgetUsd": "Monthly limit in $",
-      "customBudgetUsd": "Monthly limit in $",
       "tracksEnabled": "Flight tracks after landing",
       "photonUrl": "Photon URL",
       "nominatimUrl": "Nominatim URL",
@@ -277,7 +276,22 @@
       "dbRestEnabled": "db-rest",
       "logostreamApiKey": "logostream key (optional)",
       "operatorLogosEnabled": "Operator logos from Wikimedia",
-      "fxCdnFallbackEnabled": "Fallback source for non-ECB currencies"
+      "fxCdnFallbackEnabled": "Fallback source for non-ECB currencies",
+      "dailyBudget": "Daily limit (requests)",
+      "monthlyLimitUsd": "Monthly limit in $",
+      "dbRest": "db-rest",
+      "transitous": "Transitous",
+      "visionModel": "Vision model",
+      "remoteOptIn": "Treat the remote server as a cloud service",
+      "operatorLogos": "Operator logos from Wikimedia",
+      "backupPath": "Backup path",
+      "port": "Port",
+      "secure": "Encrypted (TLS)",
+      "fromEmail": "Sender address",
+      "fromName": "Sender name",
+      "relayUrl": "Relay URL",
+      "origin": "Instance address",
+      "templateRepoUrl": "Template repository (URL)"
     }
   },
   "services": {

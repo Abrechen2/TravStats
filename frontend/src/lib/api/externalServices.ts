@@ -42,8 +42,17 @@ export interface ServiceQuota {
 
 export type InstanceSource = "instance" | "env" | "none";
 
+export type ServiceCredential = "key" | "oauthClient" | "urlKey" | "url" | "none" | "smtp";
+
 export interface AdminService {
   id: string;
+  /** Catalogue category id (the response also groups by it). */
+  category: string;
+  credential: ServiceCredential;
+  /** Works without any credential. */
+  keyless: boolean;
+  /** Where to get a key; null when there is nothing to get. */
+  getKeyUrl: string | null;
   level: ServiceLevel;
   recommended: ServiceRecommended;
   enabled: boolean;
@@ -130,6 +139,7 @@ export const EXTERNAL_SERVICE_ERROR_CODES = [
   "ACCOUNT_KEYS_NOT_ALLOWED",
   "CONNECTION_NOT_ALLOWED",
   "VALIDATION_FAILED",
+  "SERVICE_NOT_FOUND",
 ] as const;
 export type ExternalServiceErrorCode = (typeof EXTERNAL_SERVICE_ERROR_CODES)[number];
 
