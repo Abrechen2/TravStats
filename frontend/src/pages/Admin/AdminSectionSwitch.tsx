@@ -16,7 +16,8 @@ import InvitationManagement from "../../components/Admin/InvitationManagement";
 import CreateLinkInviteModal from "../../components/Admin/CreateLinkInviteModal";
 import CreateEmailInviteModal from "../../components/Admin/CreateEmailInviteModal";
 import InviteSuccessModal from "../../components/Admin/InviteSuccessModal";
-import GlobalApiKeysManager from "../../components/Admin/GlobalApiKeysManager";
+import ExternalServicesPointer from "../../components/ExternalServices/ExternalServicesPointer";
+import AdminExternalServices from "../../components/ExternalServices/AdminExternalServices";
 import AboutSection from "../../components/Settings/AboutSection";
 import ParserSettingsTab from "../../components/Admin/ParserSettings";
 import LoggingManager from "../../components/Admin/LoggingManager";
@@ -243,33 +244,23 @@ export default function AdminSectionSwitch(props: AdminSectionSwitchProps): JSX.
       );
 
     case "externalServices":
-      // Grouped by domain, as accordions (forgejo#321): the instance's keys,
-      // the routing provider, the shared Immich connection, the rail providers.
-      return (
-        <GlobalApiKeysManager
-          globalApiKeys={props.globalApiKeys}
-          parserSettings={
-            props.parserSettings
-              ? { allowUserApiKeys: props.parserSettings.allowUserApiKeys }
-              : null
-          }
-          saving={props.savingGlobalApiKeys || props.savingParsers}
-          onSave={props.onSaveGlobalApiKeys}
-          onGlobalApiKeysChange={props.onGlobalApiKeysChange}
-          onParserSettingsChange={props.onParserApiKeySettingsChange}
-        />
-      );
+      // One list of every external service (forgejo#392); the specialised
+      // controls of the old accordion live inside the expanded rows.
+      return <AdminExternalServices />;
 
     case "parsers":
       return props.parserSettings ? (
-        <ParserSettingsTab
-          parserSettings={props.parserSettings}
-          savingParsers={props.savingParsers}
-          onSave={props.onSaveParserSettings}
-          onParserSettingsChange={props.onParserSettingsChange}
-          onTestOllama={props.onTestOllama}
-          ollamaTestState={props.ollamaTestState}
-        />
+        <>
+          <ExternalServicesPointer />
+          <ParserSettingsTab
+            parserSettings={props.parserSettings}
+            savingParsers={props.savingParsers}
+            onSave={props.onSaveParserSettings}
+            onParserSettingsChange={props.onParserSettingsChange}
+            onTestOllama={props.onTestOllama}
+            ollamaTestState={props.ollamaTestState}
+          />
+        </>
       ) : null;
 
     case "templateRepo":
@@ -303,26 +294,51 @@ export default function AdminSectionSwitch(props: AdminSectionSwitchProps): JSX.
     case "importMode":
       return <ImportModeSettings />;
     case "usageStats":
-      return <UsageStatsSettings />;
+      return (
+        <>
+          <ExternalServicesPointer />
+          <UsageStatsSettings />
+        </>
+      );
     case "about":
       // Moved here from personal settings › Darstellung (tester, 2026-10-20);
       // every account still sees the version under the settings menu.
       return <AboutSection />;
     case "federation":
-      return <FederationSettings />;
+      return (
+        <>
+          <ExternalServicesPointer />
+          <FederationSettings />
+        </>
+      );
     case "push":
-      return <PushSettings />;
+      return (
+        <>
+          <ExternalServicesPointer />
+          <PushSettings />
+        </>
+      );
 
     case "backups":
       return <BackupManagement />;
     case "webdav":
-      return <WebDAVSettings />;
+      return (
+        <>
+          <ExternalServicesPointer />
+          <WebDAVSettings />
+        </>
+      );
 
     case "timeModel":
       return <TimeModelSection users={props.users} />;
 
     case "smtp":
-      return <SmtpManager />;
+      return (
+        <>
+          <ExternalServicesPointer />
+          <SmtpManager />
+        </>
+      );
 
     default:
       return null;
