@@ -520,3 +520,24 @@ describe("ImmichAlbumSection", () => {
     });
   });
 });
+
+describe("ImmichAlbumSection — a failing import poll (forgejo#375)", () => {
+  it("stops polling and shows the failure kind after repeated failed polls instead of syncing forever", async () => {
+    const user = userEvent.setup();
+    getImportJob.mockReset();
+    getImportJob.mockResolvedValueOnce({ job: { status: "completed" } });
+    getImportJob.mockRejectedValue({ response: { data: { error: "unreachable" } } });
+    render(<ImmichAlbumSection tripId="trip-1" album={IMPORT_ALBUM} onChanged={vi.fn()} />);
+    await waitFor(() => expect(getImportJob).toHaveBeenCalledTimes(1));
+
+    await user.click(screen.getByRole("button", { name: "albums.resync" }));
+
+    await waitFor(() => expect(screen.getByText("errors.unreachable")).toBeInTheDocument(), {
+      timeout: 6000,
+    });
+    expect(screen.queryByText("albums.resyncing")).not.toBeInTheDocument();
+    const calls = getImportJob.mock.calls.length;
+    await new Promise((r) => setTimeout(r, 1800));
+    expect(getImportJob.mock.calls.length).toBe(calls);
+  }, 15000);
+});

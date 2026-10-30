@@ -8,6 +8,8 @@ import type { ImmichGalleryAsset, ImportJob, LinkedAlbum } from "../../types/imm
 import PhotoLightbox, { type LightboxItem } from "./PhotoLightbox";
 
 const JOB_POLL_MS = 1500;
+/** Consecutive failed job polls after which polling stops and the failure is shown. */
+const MAX_POLL_FAILURES = 3;
 
 /** Viewing preference, not instance state — it belongs in the browser. */
 const GROUP_PREF_KEY = "travstats.gallery.groupByDay";
@@ -74,6 +76,7 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
   // simply became clickable again, whatever had happened.
   const [importOutcome, setImportOutcome] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollFailuresRef = useRef(0);
   // Guards every async continuation below: a poll tick or a load() that was
   // already in flight when the section unmounts (album swapped, tab closed)
   // must not call setState on a component React has already torn down.
@@ -114,7 +117,24 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
   // polling starts (so the UI reflects real progress right away instead of
   // waiting a full tick) and again on every subsequent interval.
   const pollOnce = useCallback(async (): Promise<void> => {
-    const { job } = await immichApi.getImportJob(tripId, album.id);
+    let job: Awaited<ReturnType<typeof immichApi.getImportJob>>["job"];
+    try {
+      ({ job } = await immichApi.getImportJob(tripId, album.id));
+      pollFailuresRef.current = 0;
+    } catch (error) {
+      if (!mountedRef.current) return;
+      // A single dropped poll is tolerated; a run of them means the progress
+      // will never arrive, so stop and say why instead of spinning forever
+      // (forgejo#375).
+      pollFailuresRef.current += 1;
+      if (pollFailuresRef.current >= MAX_POLL_FAILURES) {
+        stopPolling();
+        setSyncing(false);
+        setProgress(null);
+        setFailure(failureKey(immichFailureKind(error)));
+      }
+      return;
+    }
     if (!mountedRef.current || !job) return;
     setProgress({ done: job.processedAssets, total: job.totalAssets });
     if (job.status === "completed" || job.status === "failed") {
@@ -130,6 +150,7 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
   const startPolling = useCallback((): void => {
     setSyncing(true);
     stopPolling();
+    pollFailuresRef.current = 0;
     void pollOnce();
     pollRef.current = setInterval(() => void pollOnce(), JOB_POLL_MS);
   }, [stopPolling, pollOnce]);
