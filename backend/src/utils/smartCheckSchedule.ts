@@ -157,3 +157,31 @@ export function recalculateNextApiCheckAt(
     tracking
   );
 }
+
+/** How soon to look again when a provider could not answer (not "no data"). */
+export const PROVIDER_FAILURE_RETRY_MS = 15 * 60 * 1000;
+
+/**
+ * The slot to store after a lookup in which a provider FAILED (429, timeout,
+ * auth). The recalculated slot assumes the check happened; after the last
+ * checkpoint it is null, so one outage at the post-arrival check stopped
+ * tracking for good and `actualArrival` was never written. Retry soon instead,
+ * bounded: only until the same window that ends the arrival follow-up, after
+ * which the status sweep owns the flight. An earlier recalculated slot wins.
+ */
+export function slotAfterProviderFailure(
+  recalculated: Date | null,
+  arrivalTime: Date | string | null | undefined,
+  departureTime: Date | string | null | undefined,
+  now: Date = new Date()
+): Date | null {
+  const anchor = arrivalTime ?? departureTime;
+  if (!anchor) return recalculated;
+  const anchorMs = new Date(anchor).getTime();
+  const nowMs = now.getTime();
+  if (Number.isNaN(anchorMs) || nowMs >= anchorMs + ARRIVAL_FOLLOWUP_WINDOW_MS) {
+    return recalculated;
+  }
+  const retry = new Date(nowMs + PROVIDER_FAILURE_RETRY_MS);
+  return recalculated && recalculated.getTime() < retry.getTime() ? recalculated : retry;
+}

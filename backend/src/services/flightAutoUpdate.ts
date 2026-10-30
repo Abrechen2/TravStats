@@ -7,10 +7,11 @@
 
 import { PrismaClient, Flight, Prisma } from "../prisma";
 import { lookupFlightDetails, FlightLookupResult } from "./flightLookup";
+import { LookupOutcomeLog } from "./flightLookup/providerOutcome";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import { DEMO_USERNAME } from "../utils/sharedDemo";
-import { recalculateNextApiCheckAt } from "../utils/smartCheckSchedule";
+import { recalculateNextApiCheckAt, slotAfterProviderFailure } from "../utils/smartCheckSchedule";
 import { applyPendingUpdate } from "./pendingUpdateService";
 import { announceChange } from "./notifications/announceFlightChange";
 import type { FlightDataSnapshot } from "./pendingUpdateService";
@@ -488,6 +489,7 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
         logger.info({ flightId: flight.id, operation: "api_lookup_start" }, "Looking up flight");
         // Pass full departure/arrival times so lookupFlightDetails can gate
         // Aviationstack to the live window (±3h of departure / in-flight).
+        const outcomes = new LookupOutcomeLog();
         const apiData = await lookupFlightDetails(
           flight.flightNumber!,
           dateStr,
@@ -496,7 +498,8 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
           flight.arrivalTime,
           // A flight number can fly two legs on one day (FRA-MUC-JFK); without
           // the departure airport the lookup may answer with the other leg.
-          flight.depIata ?? flight.depIcao ?? undefined
+          flight.depIata ?? flight.depIcao ?? undefined,
+          outcomes
         );
 
         // Always recalculate nextApiCheckAt after a check attempt.
@@ -507,7 +510,7 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
         // is what ended polling before delayed flights had landed.
         const observedDeparture = apiData?.actualDeparture ?? flight.actualDeparture;
         const observedArrival = apiData?.actualArrival ?? flight.actualArrival;
-        const nextCheck = recalculateNextApiCheckAt(
+        const recalculated = recalculateNextApiCheckAt(
           flight.departureTime,
           flight.arrivalTime,
           flight.status,
@@ -517,6 +520,19 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
             hasActualArrival: Boolean(observedArrival),
           }
         );
+        // A provider that FAILED has not said "no data": retry soon rather than
+        // let the recalculated slot (null after the last checkpoint) end tracking.
+        const providerFailures = apiData ? [] : outcomes.failures();
+        const nextCheck =
+          providerFailures.length > 0
+            ? slotAfterProviderFailure(recalculated, flight.arrivalTime, flight.departureTime)
+            : recalculated;
+        if (providerFailures.length > 0) {
+          logger.warn(
+            { flightId: flight.id, providerFailures, operation: "api_provider_failed" },
+            "Flight lookup failed at the provider — retrying soon"
+          );
+        }
         await prismaClient.flight.update({
           where: { id: flight.id },
           data: { nextApiCheckAt: nextCheck },

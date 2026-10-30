@@ -170,3 +170,49 @@ describe("flightAutoUpdate — departure airport", () => {
     await prisma.user.delete({ where: { id: user.id } });
   });
 });
+
+describe("flightAutoUpdate — provider failure", () => {
+  it("retries soon when a provider failed after the last checkpoint instead of ending tracking", async () => {
+    const user = await prisma.user.create({
+      data: { username: `provfail${Date.now()}`, passwordHash: "testhash" },
+    });
+    await prisma.userSettings.create({
+      data: { userId: user.id, data: {}, autoUpdateEnabled: true, autoUpdateRequireApproval: true },
+    });
+    const now = Date.now();
+    const f = await prisma.flight.create({
+      data: {
+        userId: user.id,
+        airline: "Lufthansa",
+        flightNumber: "LH401",
+        depIata: "MUC",
+        arrIata: "JFK",
+        depLat: 48.35,
+        depLon: 11.78,
+        arrLat: 40.64,
+        arrLon: -73.78,
+        departureTime: new Date(now - 9 * 3_600_000),
+        arrivalTime: new Date(now - 1 * 3_600_000),
+        depTimeSemantics: "UTC",
+        arrTimeSemantics: "UTC",
+        status: "scheduled",
+        nextApiCheckAt: new Date(now - 60_000),
+      },
+    });
+    lookupMock.mockReset();
+    lookupMock.mockImplementation(async (...args) => {
+      (args[6] as { record: (p: string, o: string) => void }).record("aeroapi", "quota");
+      return null;
+    });
+
+    await checkAndUpdateFlightsForUser(user.id);
+
+    const after = await prisma.flight.findUniqueOrThrow({ where: { id: f.id } });
+    expect(after.nextApiCheckAt).not.toBeNull();
+    expect(after.nextApiCheckAt!.getTime()).toBeGreaterThan(now);
+    expect(after.nextApiCheckAt!.getTime()).toBeLessThanOrEqual(now + 20 * 60_000);
+    await prisma.flight.deleteMany({ where: { userId: user.id } });
+    await prisma.userSettings.deleteMany({ where: { userId: user.id } });
+    await prisma.user.delete({ where: { id: user.id } });
+  });
+});
