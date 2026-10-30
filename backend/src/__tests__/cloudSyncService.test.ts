@@ -73,7 +73,13 @@ const mockClient = {
   putFileContents:
     jest.fn<(path: string, contents: Buffer, options?: object) => Promise<boolean>>(),
   getFileContents: jest.fn<() => Promise<Buffer>>(),
-  createReadStream: jest.fn<(p: string) => import("stream").Readable>(),
+  createReadStream:
+    jest.fn<
+      (
+        p: string,
+        o?: { callback?: (r: { headers: Headers }) => void }
+      ) => import("stream").Readable
+    >(),
 };
 const mockCreateClient = jest.fn(() => mockClient);
 jest.mock("webdav", () => ({
@@ -500,7 +506,8 @@ describe("cloudSyncService", () => {
       await downloadFromCloud("backup-1.tar.gz", "/tmp/out.tar.gz");
 
       expect(mockClient.createReadStream).toHaveBeenCalledWith(
-        expect.stringContaining("backup-1.tar.gz")
+        expect.stringContaining("backup-1.tar.gz"),
+        expect.anything()
       );
       expect(mockClient.getFileContents).not.toHaveBeenCalled();
       expect(Buffer.concat(downloadedChunks).toString()).toBe("archive-bytes");
@@ -508,6 +515,45 @@ describe("cloudSyncService", () => {
         expect.stringMatching(/^\/tmp\/out\.tar\.gz\.[0-9a-f]+\.part$/),
         "/tmp/out.tar.gz"
       );
+    });
+
+    it("refuses a body shorter than its Content-Length instead of renaming it into an archive (webdav-download-truncation)", async () => {
+      const { Readable, Writable } = await import("stream");
+      const { downloadFromCloud } = await loadModule(true);
+      mockRenameSync.mockClear();
+      mockRmSync.mockClear();
+      mockClient.createReadStream.mockImplementation((_p, options) => {
+        options?.callback?.({ headers: new Headers({ "content-length": "100" }) });
+        return Readable.from([Buffer.from("only-13-bytes")]);
+      });
+      mockCreateWriteStream.mockImplementation(
+        () => new Writable({ write: (_c, _e, cb) => cb() })
+      );
+
+      await expect(downloadFromCloud("backup-1.tar.gz", "/tmp/out.tar.gz")).rejects.toMatchObject({
+        statusCode: 502,
+        code: "WEBDAV_DOWNLOAD_TRUNCATED",
+      });
+      expect(mockRenameSync).not.toHaveBeenCalled();
+      expect(mockRmSync).toHaveBeenCalledWith(
+        expect.stringMatching(/\.part$/),
+        expect.objectContaining({ force: true })
+      );
+    });
+
+    it("renames a body whose length matches its Content-Length", async () => {
+      const { Readable, Writable } = await import("stream");
+      const { downloadFromCloud } = await loadModule(true);
+      mockRenameSync.mockClear();
+      mockClient.createReadStream.mockImplementation((_p, options) => {
+        options?.callback?.({ headers: new Headers({ "content-length": "13" }) });
+        return Readable.from([Buffer.from("archive-bytes")]);
+      });
+      mockCreateWriteStream.mockImplementation(
+        () => new Writable({ write: (_c, _e, cb) => cb() })
+      );
+      await downloadFromCloud("backup-1.tar.gz", "/tmp/out.tar.gz");
+      expect(mockRenameSync).toHaveBeenCalled();
     });
 
     it("rethrows a download that dies mid-stream and leaves no partial archive behind (forgejo#354)", async () => {

@@ -299,6 +299,19 @@ export async function listCloudBackups(): Promise<
   }
 }
 
+/**
+ * The body length a response promised, or null when it promised none we can
+ * compare against: no header, an unparsable one, or a content-encoding (the
+ * client hands us decoded bytes, so the wire length no longer applies).
+ */
+export function declaredBodyLength(headers: { get(name: string): string | null }): number | null {
+  const encoding = headers.get("content-encoding");
+  if (encoding && encoding.toLowerCase() !== "identity") return null;
+  const raw = headers.get("content-length");
+  if (raw === null || !/^\d+$/.test(raw.trim())) return null;
+  return Number(raw.trim());
+}
+
 /** Longest silence tolerated while a backup streams down from the share. */
 const DOWNLOAD_STALL_MS = 60_000;
 
@@ -320,7 +333,19 @@ export async function downloadFromCloud(backupName: string, localPath: string): 
     // never leaves a truncated archive under the real name (forgejo#354).
     // Unique per call: two parallel downloads of one name must not share it.
     const partPath = `${localPath}.${randomBytes(6).toString("hex")}.part`;
-    const source = client.createReadStream(remotePath);
+    // The response headers arrive through the callback; Content-Length is the
+    // only completeness signal the body itself never gives (a body cut short
+    // by the peer ends the stream without an error).
+    let expectedBytes: number | null = null;
+    const source = client.createReadStream(remotePath, {
+      callback: (response) => {
+        expectedBytes = declaredBodyLength(response.headers);
+      },
+    });
+    let receivedBytes = 0;
+    source.on("data", (chunk: Buffer | string) => {
+      receivedBytes += Buffer.byteLength(chunk);
+    });
     // webdav pipes the HTTP body into this stream without forwarding its
     // errors, so a connection that dies mid-body would hang forever: a stall
     // watchdog turns silence into a failure.
@@ -336,6 +361,13 @@ export async function downloadFromCloud(backupName: string, localPath: string): 
     source.on("data", arm);
     try {
       await pipeline(source, fs.createWriteStream(partPath));
+      if (expectedBytes !== null && receivedBytes !== expectedBytes) {
+        throw new AppError(
+          `Backup download from the WebDAV share was cut short: received ${receivedBytes} of ${expectedBytes} bytes`,
+          502,
+          "WEBDAV_DOWNLOAD_TRUNCATED"
+        );
+      }
       fs.renameSync(partPath, localPath);
     } catch (streamError) {
       fs.rmSync(partPath, { force: true });
