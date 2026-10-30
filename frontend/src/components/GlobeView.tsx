@@ -57,7 +57,7 @@ import type { Lodging } from "../types/lodging";
 import type { Place } from "../types/place";
 import type { Rgb } from "../lib/cruiseColor";
 import type { PlaceLabelList, PlaceLabelSource } from "../lib/placeLabel";
-import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
+import { useCruiseGeometry } from "../hooks/useCruiseGeometry";
 import { resolveCruiseArcColor } from "../lib/cruiseColor";
 import { useCruiseColorStore } from "../store/cruiseColorStore";
 import { GLOBE_FOCUS, focusMarker, useMapSelectionCards } from "./map/cards/useMapSelectionCards";
@@ -705,39 +705,9 @@ export default function GlobeView({
     () => buildAirportPoints(filteredFlights),
     [filteredFlights]
   );
-  // FeatureCollection per cruise. Same source as the 2D map.
-  const [cruiseGeometry, setCruiseGeometry] = useState<Map<string, CruiseRouteFeatureCollection>>(
-    () => new Map()
-  );
-  const cruiseGeometryRef = useRef(cruiseGeometry);
-  useEffect(() => {
-    cruiseGeometryRef.current = cruiseGeometry;
-  }, [cruiseGeometry]);
-
-  useEffect(() => {
-    if (cruises.length === 0) return;
-    let cancelled = false;
-    const missingIds = cruises.map((c) => c.id).filter((id) => !cruiseGeometryRef.current.has(id));
-    if (missingIds.length === 0) return;
-    void (async (): Promise<void> => {
-      try {
-        const batch = await cruiseApi.getGeometryBatch(missingIds);
-        if (cancelled) return;
-        setCruiseGeometry((prev) => {
-          const next = new Map(prev);
-          for (const [id, fc] of batch.entries()) {
-            if (!next.has(id)) next.set(id, fc);
-          }
-          return next;
-        });
-      } catch (err: unknown) {
-        logger.error("GlobeView: cruise geometry batch fetch failed", err);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [cruises]);
+  // FeatureCollection per cruise. Same source as the 2D map: the shared hook
+  // chunks the batch, lifts the timeout and toasts a failure.
+  const cruiseGeometry = useCruiseGeometry(cruises);
 
   const cruisePaths = useMemo<CruisePathDatum[]>(() => {
     const out: CruisePathDatum[] = [];

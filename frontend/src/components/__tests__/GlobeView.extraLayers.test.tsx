@@ -133,7 +133,13 @@ vi.mock("../../hooks/useTranslation", () => ({
 }));
 
 // Imported after the mocks above so the module graph picks them up.
+const { getGeometryBatch } = vi.hoisted(() => ({ getGeometryBatch: vi.fn() }));
+vi.mock("../../lib/api/cruise", () => ({
+  cruiseApi: { getGeometryBatch },
+}));
+
 import GlobeView from "../GlobeView";
+import type { Cruise } from "../../types";
 
 // A REAL layer, not a stand-in object: since `occludeExtraLayers` the globe
 // clones what a caller passes to give it the earth-occlusion extension, and a
@@ -166,5 +172,24 @@ describe("GlobeView: extraLayers reach the deck.gl overlay", () => {
     await waitFor(() => expect(capturedOverlayProps.length).toBeGreaterThan(0));
     const lastLayers = capturedOverlayProps[capturedOverlayProps.length - 1].layers;
     expect(lastLayers.map((l) => l.id)).not.toContain(EXTRA_LAYER.id);
+  });
+});
+
+describe("GlobeView: cruise geometry (forgejo#362)", () => {
+  it("fetches 250 cruises in server-capped chunks with the long timeout, not one batch", async () => {
+    getGeometryBatch.mockReset();
+    getGeometryBatch.mockImplementation(async () => new Map());
+    const cruises = Array.from(
+      { length: 250 },
+      (_, i) => ({ id: `c${i}`, status: "completed", stops: [] }) as unknown as Cruise
+    );
+
+    render(<GlobeView flights={[]} cruises={cruises} />);
+
+    await waitFor(() => expect(getGeometryBatch).toHaveBeenCalledTimes(3));
+    for (const [ids, opts] of getGeometryBatch.mock.calls) {
+      expect(ids.length).toBeLessThanOrEqual(100);
+      expect(opts?.timeoutMs).toBeGreaterThan(10_000);
+    }
   });
 });
