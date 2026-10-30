@@ -114,54 +114,32 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       });
     }
 
-    let adminSettings: Awaited<ReturnType<typeof prisma.adminSettings.findFirst>> = null;
-    try {
-      adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
-    } catch (error: unknown) {
-      logger.warn({
-        operation: "get_api_keys_admin_settings_error",
-        message: "Failed to get admin settings",
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
+    // Neither the admin-settings read nor the access check is wrapped: a
+    // failure there reaches next(error). Swallowing it answered 200 with
+    // `hasAccess: false` for every provider, so users re-entered keys that were
+    // fine (forgejo#369).
+    const adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
 
-    let airlabsAccess = { hasAccess: false, isShared: false };
-    let aviationstackAccess = { hasAccess: false, isShared: false };
-    let aerodataboxAccess = { hasAccess: false, isShared: false };
-    let aeroapiAccess = { hasAccess: false, isShared: false };
-    let adsbxAccess = { hasAccess: false, isShared: false };
-    let adsblolAccess = { hasAccess: false, isShared: false };
-    let openrouteserviceAccess = { hasAccess: false, isShared: false };
-    let graphhopperAccess = { hasAccess: false, isShared: false };
-
-    try {
-      const { hasApiKeyAccess } = await import("../../services/apiKeyResolver");
-      [
-        airlabsAccess,
-        aviationstackAccess,
-        aerodataboxAccess,
-        aeroapiAccess,
-        adsbxAccess,
-        adsblolAccess,
-        openrouteserviceAccess,
-        graphhopperAccess,
-      ] = await Promise.all([
-        hasApiKeyAccess("airlabs", userId),
-        hasApiKeyAccess("aviationstack", userId),
-        hasApiKeyAccess("aerodatabox", userId),
-        hasApiKeyAccess("aeroapi", userId),
-        hasApiKeyAccess("adsbx", userId),
-        hasApiKeyAccess("adsblol", userId),
-        hasApiKeyAccess("openrouteservice", userId),
-        hasApiKeyAccess("graphhopper", userId),
-      ]);
-    } catch (error: unknown) {
-      logger.warn({
-        operation: "get_api_keys_access_check_error",
-        message: "Failed to check API key access",
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
+    const { hasApiKeyAccess } = await import("../../services/apiKeyResolver");
+    const [
+      airlabsAccess,
+      aviationstackAccess,
+      aerodataboxAccess,
+      aeroapiAccess,
+      adsbxAccess,
+      adsblolAccess,
+      openrouteserviceAccess,
+      graphhopperAccess,
+    ] = await Promise.all([
+      hasApiKeyAccess("airlabs", userId),
+      hasApiKeyAccess("aviationstack", userId),
+      hasApiKeyAccess("aerodatabox", userId),
+      hasApiKeyAccess("aeroapi", userId),
+      hasApiKeyAccess("adsbx", userId),
+      hasApiKeyAccess("adsblol", userId),
+      hasApiKeyAccess("openrouteservice", userId),
+      hasApiKeyAccess("graphhopper", userId),
+    ]);
 
     // Booleans, never the columns: `a || b` over stored values answers with the
     // stored (encrypted) credential itself, and this response goes to every user.
