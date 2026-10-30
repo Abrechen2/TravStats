@@ -700,10 +700,14 @@ check.
   shown raw in the German UI (send a stable code, map it to DE/EN copy), and
   local-calendar logic done in UTC. **The test for a picker, a form or an
   external call drives the failure path and asserts what the user sees.**
-- **Zod at every boundary; no `console.log`; `async/await`, never `.then()`;
-  spread instead of mutation; `strict: true`.** Real, and none of them
-  checked — `no-console` is explicitly `'off'` in the backend eslint config,
-  and nothing looks for an unvalidated `req.body`.
+- **Zod at every boundary; no `console.log`; `async/await` in new code, and a
+  `.then()` only with a failure path the user can see; spread instead of
+  mutation; `strict: true`.** Real, and none of them checked — `no-console` is
+  explicitly `'off'` in the backend eslint config, and nothing looks for an
+  unvalidated `req.body`. The `.then()` rule was narrowed on 2026-10-30
+  (forgejo#385): about 265 production `.then(` calls exist, and the bug is the
+  `.then(set).catch(log)` idiom that swallows a failure, not the syntax. No
+  mass rewrite; a touched handler converts to `try/await/catch` instead.
 
 ### Global rules this project deliberately does not follow
 

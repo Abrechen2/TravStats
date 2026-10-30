@@ -19,11 +19,13 @@ router.get(
   "/travtrack/day",
   authenticate,
   travTrackTier("on"),
-  (req: AuthRequest, res: Response, next: NextFunction) => {
-    const { date } = travTrackDayQuerySchema.parse(req.query);
-    travTrackDay(req.userId!, date)
-      .then((day) => res.json(day))
-      .catch(next);
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { date } = travTrackDayQuerySchema.parse(req.query);
+      res.json(await travTrackDay(req.userId!, date));
+    } catch (error) {
+      next(error);
+    }
   }
 );
 

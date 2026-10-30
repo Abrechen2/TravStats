@@ -19,11 +19,14 @@ router.get(
   "/travtrack/explored",
   authenticate,
   travTrackTier("on"),
-  (req: AuthRequest, res: Response, next: NextFunction) => {
-    const { bbox } = travTrackExploredQuerySchema.parse(req.query);
-    exploredAnswer(req.userId!, bbox)
-      .then(({ cells }) => res.json({ cells: cells.map((c) => [c.x, c.y]) }))
-      .catch(next);
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { bbox } = travTrackExploredQuerySchema.parse(req.query);
+      const { cells } = await exploredAnswer(req.userId!, bbox);
+      res.json({ cells: cells.map((c) => [c.x, c.y]) });
+    } catch (error) {
+      next(error);
+    }
   }
 );
 
