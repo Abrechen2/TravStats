@@ -15,7 +15,7 @@ import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/a
 import { AppError } from "../../middleware/errorHandler";
 import { resolveTrip } from "../trips";
 import { linkAlbumsSchema, unlinkQuerySchema } from "../../schemas/immich";
-import { createImmichClient } from "../../services/immich/immichClient";
+import { createImmichClient, type AlbumAssetList } from "../../services/immich/immichClient";
 import { getImmichConnection, getImmichDefaultMode } from "../../services/immich/immichResolver";
 import {
   getCachedAlbumAssets,
@@ -334,6 +334,9 @@ router.get(
       );
 
       res.json({
+        // True when the album is longer than the client could page through;
+        // the gallery then shows a prefix and must say so.
+        truncated: (assets as AlbumAssetList).truncated === true,
         assets: assets
           .filter((a: ImmichAsset) => a.type === "IMAGE")
           // Immich answers in its own order; the gallery reads chronologically.

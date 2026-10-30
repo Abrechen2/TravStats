@@ -470,6 +470,21 @@ describe("DELETE /trips/:id/immich/albums/:linkId", () => {
   });
 });
 
+describe("GET /trips/:id/immich/albums/:linkId/assets truncation (forgejo#385 RULE-27)", () => {
+  it("tells the gallery when Immich held more pages than the client reads", async () => {
+    findFirstLink.mockResolvedValue({
+      id: "link-9",
+      tripId: "trip-1",
+      immichAlbumId: "a-big",
+      mode: "link",
+    });
+    listAlbumAssets.mockResolvedValue(Object.assign([], { truncated: true }));
+    const res = await request(makeApp()).get("/api/v1/trips/trip-1/immich/albums/link-9/assets");
+    expect(res.status).toBe(200);
+    expect(res.body.truncated).toBe(true);
+  });
+});
+
 describe("GET /trips/:id/immich/albums/:linkId/assets", () => {
   it("returns proxy URLs for a link-mode album", async () => {
     findFirstLink.mockResolvedValue({

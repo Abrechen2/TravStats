@@ -225,6 +225,15 @@ describe("listAlbumAssets", () => {
     const assets = await createImmichClient(CONN).listAlbumAssets("album-1");
     expect(mockedAxios.post).toHaveBeenCalledTimes(50);
     expect(assets).toHaveLength(50);
+    expect(assets.truncated).toBe(true);
+  });
+
+  it("reports truncated=false for a complete album (forgejo#385 RULE-27)", async () => {
+    mockedAxios.post.mockResolvedValueOnce({
+      data: { assets: { items: [asset("p1")], nextPage: null } },
+    });
+    const assets = await createImmichClient(CONN).listAlbumAssets("album-1");
+    expect(assets.truncated).toBe(false);
   });
 
   it("logs a warning when MAX_PAGES truncates a large album", async () => {

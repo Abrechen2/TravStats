@@ -35,11 +35,18 @@ export interface ImmichIdentity {
   name: string;
 }
 
+/**
+ * An album's assets. `truncated` is true when Immich reported more pages than
+ * MAX_PAGES allows — the list is then a prefix, not the album. It rides on the
+ * array so the listing cache hands it to every caller unchanged.
+ */
+export type AlbumAssetList = ImmichAsset[] & { truncated?: boolean };
+
 export interface ImmichClient {
   getServerVersion(): Promise<string>;
   whoami(): Promise<ImmichIdentity>;
   listAlbums(): Promise<ImmichAlbum[]>;
-  listAlbumAssets(albumId: string): Promise<ImmichAsset[]>;
+  listAlbumAssets(albumId: string): Promise<AlbumAssetList>;
   /**
    * Every image in a date range, across the whole library.
    *
@@ -240,7 +247,7 @@ export function createImmichClient(conn: ImmichConnection): ImmichClient {
         }));
     },
 
-    async listAlbumAssets(albumId: string): Promise<ImmichAsset[]> {
+    async listAlbumAssets(albumId: string): Promise<AlbumAssetList> {
       const collected: ImmichAsset[] = [];
       let truncated = false;
 
@@ -279,7 +286,7 @@ export function createImmichClient(conn: ImmichConnection): ImmichClient {
         });
       }
 
-      return collected;
+      return Object.assign(collected, { truncated });
     },
 
     async findAssetIdByChecksum(checksum: string): Promise<string | null> {
