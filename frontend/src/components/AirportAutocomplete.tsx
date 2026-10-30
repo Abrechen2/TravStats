@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { airportsApi, Airport, setupApi } from "../lib/api";
 import { logger } from "../lib/logger";
+import { airportLookupUnavailableReason, type AirportLookupReason } from "../lib/airportResolve";
 import { useTranslation } from "../hooks/useTranslation";
 import { RequiredMark } from "./FlightForm/requiredFields";
 import { FieldError, fieldErrorProps } from "./form";
@@ -51,12 +52,13 @@ export default function AirportAutocomplete({
   id,
   error,
 }: AirportAutocompleteProps): JSX.Element {
-  const { t, i18n } = useTranslation(["flights", "common"]);
+  const { t, i18n } = useTranslation(["flights", "common", "errors"]);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Airport[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
+  const [lookupReason, setLookupReason] = useState<AirportLookupReason | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   const defaultPlaceholder = placeholder || t("flights:airportAutocomplete.placeholder");
@@ -135,6 +137,7 @@ export default function AirportAutocomplete({
     const timer = setTimeout(async () => {
       try {
         setLoading(true);
+        setLookupReason(null);
 
         // First try regular search
         const airports = await airportsApi.search(query);
@@ -148,6 +151,7 @@ export default function AirportAutocomplete({
             setResults([airport]);
           } catch (error) {
             logger.warn("Airport search failed", { error });
+            setLookupReason(airportLookupUnavailableReason(error));
             setResults([]);
           }
         } else {
@@ -243,9 +247,13 @@ export default function AirportAutocomplete({
               #10 comes back the moment someone clicks into a filled field. */}
           {!loading && results.length === 0 && query.length >= 2 && query !== selectedLabel && (
             <div className="px-4 py-3 text-sm" style={{ color: "var(--text-muted)" }}>
-              {/^[A-Z]{3,4}$/i.test(query.trim())
-                ? t("flights:airportAutocomplete.notFound", { code: query.toUpperCase() })
-                : t("flights:airportAutocomplete.noResults")}
+              {lookupReason
+                ? t(`errors:airportLookupUnavailable.${lookupReason}`, {
+                    code: query.trim().toUpperCase(),
+                  })
+                : /^[A-Z]{3,4}$/i.test(query.trim())
+                  ? t("flights:airportAutocomplete.notFound", { code: query.toUpperCase() })
+                  : t("flights:airportAutocomplete.noResults")}
             </div>
           )}
 

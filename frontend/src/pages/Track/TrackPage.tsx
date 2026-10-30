@@ -11,11 +11,16 @@ import TrackMonths from "./TrackMonths";
 import TrackStays from "./TrackStays";
 import TrackMapView from "./map/TrackMapView";
 import type { TrackTab } from "./trackViews";
+import WebGLGuard from "../../components/map/WebGLGuard";
 
 export type TrackView = "day" | TrackTab;
 
 const TAB_BODY: Record<TrackTab, () => JSX.Element> = {
-  explored: () => <TrackExploredMap />,
+  explored: () => (
+    <WebGLGuard>
+      <TrackExploredMap />
+    </WebGLGuard>
+  ),
   months: () => <TrackMonths />,
   stays: () => <TrackStays />,
   imports: () => <TrackImports />,

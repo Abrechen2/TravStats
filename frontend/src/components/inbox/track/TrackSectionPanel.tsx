@@ -21,6 +21,7 @@ import {
   zoneOrUtc,
 } from "./sectionFormat";
 import { useSectionTrack } from "./useSectionTrack";
+import WebGLGuard from "../../map/WebGLGuard";
 
 const SectionMap = lazy(() => import("./SectionMap"));
 
@@ -213,12 +214,14 @@ export default function TrackSectionPanel(props: TrackSectionPanelProps): JSX.El
           {state.kind === "loaded" &&
             (inView ? (
               <Suspense fallback={<div className="h-56" />}>
-                <SectionMap
-                  stretches={state.stretches}
-                  label={t("track:inbox.mapLabel")}
-                  ring={props.ring ?? null}
-                  country={country}
-                />
+                <WebGLGuard>
+                  <SectionMap
+                    stretches={state.stretches}
+                    label={t("track:inbox.mapLabel")}
+                    ring={props.ring ?? null}
+                    country={country}
+                  />
+                </WebGLGuard>
               </Suspense>
             ) : (
               <div className="h-56" aria-hidden="true" />

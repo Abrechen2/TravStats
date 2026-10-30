@@ -50,6 +50,7 @@ import { todayIn } from "../shared/time";
 import { useToastStore } from "../store/toastStore";
 import type { RoadtripDetail, RoadtripStation } from "../types/roadtrip";
 import type { TourGeometry, TourLeg } from "../types/tour";
+import WebGLGuard from "../components/map/WebGLGuard";
 
 type LegEdit = {
   leg: TourLeg;
@@ -498,7 +499,9 @@ export default function RoadtripDetailPage(): JSX.Element {
               minHeight: 380,
             }}
           >
-            <TripMap trip={mapContent} tourGeometries={mapGeometries} extraLayers={highlight} />
+            <WebGLGuard>
+              <TripMap trip={mapContent} tourGeometries={mapGeometries} extraLayers={highlight} />
+            </WebGLGuard>
           </div>
           {!editing && <span className="t-caption">{t("roadtrips:detail.mapHint")}</span>}
         </aside>

@@ -32,6 +32,7 @@ import { logger } from "../lib/logger";
 import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { useToastStore } from "../store/toastStore";
 import type { BusJourney } from "../types/bus";
+import WebGLGuard from "../components/map/WebGLGuard";
 
 /**
  * One bus ride (spec 2026-10-07-bus-domain-design §11). Every time is on its
@@ -307,7 +308,9 @@ export default function BusDetailPage(): JSX.Element {
           {ride.tripId && <TripPhotoWindowStrip entry="bus" id={ride.id} />}
 
           <DetailSection title={t("bus:detail.route")}>
-            <BusRouteMap ride={ride} />
+            <WebGLGuard>
+              <BusRouteMap ride={ride} />
+            </WebGLGuard>
           </DetailSection>
 
           {ride.companions.length > 0 && (

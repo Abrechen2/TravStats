@@ -46,6 +46,7 @@ import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { useToastStore } from "../store/toastStore";
 import type { RailJourney, RailJourneyDetail } from "../types/rail";
 import { StationShortCode } from "../components/rail/StationShortCode";
+import WebGLGuard from "../components/map/WebGLGuard";
 
 type Editing = { mode: "edit" } | { mode: "connection" } | null;
 
@@ -361,7 +362,9 @@ export default function RailDetailPage(): JSX.Element {
           {journey.tripId && <TripPhotoWindowStrip entry="rail" id={journey.id} />}
 
           <DetailSection title={t("rail:detail.route")}>
-            <RailRouteMap journey={journey} />
+            <WebGLGuard>
+              <RailRouteMap journey={journey} />
+            </WebGLGuard>
           </DetailSection>
 
           {journey.companions.length > 0 && (

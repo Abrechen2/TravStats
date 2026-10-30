@@ -16,6 +16,7 @@ import { useWebPrefsEpoch } from "../lib/webPrefs/prefEvents";
  */
 export type MapMode = "routes" | "heatmap" | "trips" | "globe";
 import { useTranslation } from "../hooks/useTranslation";
+import WebGLGuard from "./map/WebGLGuard";
 import { useThemeStore } from "../store/themeStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useRecordedFlightPaths } from "../hooks/useRecordedFlightPaths";
@@ -278,78 +279,80 @@ export default function MapContainer3D({
       style={{ touchAction: "pan-x pan-y pinch-zoom" }}
     >
       <div className="h-full w-full" style={{ touchAction: "pan-x pan-y pinch-zoom" }}>
-        {visMode === "globe" ? (
-          <Suspense
-            fallback={
-              <div className="flex items-center justify-center h-full">
-                <GlobeLoader size={180} label={t("map:loading3DGlobe")} />
-              </div>
-            }
-          >
-            <GlobeView
+        <WebGLGuard>
+          {visMode === "globe" ? (
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center h-full">
+                  <GlobeLoader size={180} label={t("map:loading3DGlobe")} />
+                </div>
+              }
+            >
+              <GlobeView
+                key={syncKey}
+                flights={drawnFlights}
+                // `showInternalCruises={false}` means the caller draws its own
+                // cruise lines (the journey view draws exactly one trip's). The
+                // flat map has always honoured it; the globe was handed the
+                // whole list regardless, which only became visible when the
+                // journey view could open on the globe at all.
+                cruises={showInternalCruises ? cruises : []}
+                // …but the CARD may still look one up: not drawing a cruise's
+                // line is not the same as the reader not being allowed to read
+                // it (the Reise view draws one trip's lines and lists them all).
+                cruisesForCard={cruises}
+                onFlightOpen={onFlightOpen ?? onFlightClick}
+                onCruiseOpen={onCruiseOpen}
+                onEdit={onEdit}
+                minRouteCount={minRouteCount}
+                appearanceDomains={appearanceDomains}
+                extraLayers={extraLayers}
+                lodgings={lodgingsOverride}
+                onLodgingOpen={onLodgingClick}
+                places={placesOverride}
+                onPlaceOpen={onPlaceClick}
+                placeListColors={placeListColors}
+                placeListLabels={placeListLabels}
+                lodgingMarkerSize={lodgingMarkerSize}
+                onLodgingMarkerSizeChange={setLodgingMarkerSize}
+                placeMarkerSize={placeMarkerSize}
+                onPlaceMarkerSizeChange={setPlaceMarkerSize}
+              />
+            </Suspense>
+          ) : (
+            <DeckGLMap
               key={syncKey}
               flights={drawnFlights}
-              // `showInternalCruises={false}` means the caller draws its own
-              // cruise lines (the journey view draws exactly one trip's). The
-              // flat map has always honoured it; the globe was handed the
-              // whole list regardless, which only became visible when the
-              // journey view could open on the globe at all.
-              cruises={showInternalCruises ? cruises : []}
-              // …but the CARD may still look one up: not drawing a cruise's
-              // line is not the same as the reader not being allowed to read
-              // it (the Reise view draws one trip's lines and lists them all).
-              cruisesForCard={cruises}
-              onFlightOpen={onFlightOpen ?? onFlightClick}
-              onCruiseOpen={onCruiseOpen}
+              flightList={flightList}
+              cruises={cruises}
+              onFlightClick={onFlightClick}
+              onRouteClick={onRouteClick}
               onEdit={onEdit}
-              minRouteCount={minRouteCount}
-              appearanceDomains={appearanceDomains}
-              extraLayers={extraLayers}
-              lodgings={lodgingsOverride}
+              onFlightOpen={onFlightOpen}
+              onCruiseOpen={onCruiseOpen}
+              // The card's "open" action ends where the globe's does — at the
+              // pin-click handler every tab already passes, rather than at a
+              // second prop pair meaning the same thing.
               onLodgingOpen={onLodgingClick}
-              places={placesOverride}
               onPlaceOpen={onPlaceClick}
-              placeListColors={placeListColors}
-              placeListLabels={placeListLabels}
+              visMode={visMode}
+              minRouteCount={minRouteCount}
+              onResetTrip={onResetTrip}
+              extraLayers={extraLayers}
+              appearanceDomains={appearanceDomains}
               lodgingMarkerSize={lodgingMarkerSize}
               onLodgingMarkerSizeChange={setLodgingMarkerSize}
+              lodgingsOverride={lodgingsOverride}
+              placesOverride={placesOverride}
+              onPlaceClick={onPlaceClick}
+              placeListColors={placeListColors}
+              placeListLabels={placeListLabels}
               placeMarkerSize={placeMarkerSize}
               onPlaceMarkerSizeChange={setPlaceMarkerSize}
+              onLodgingClick={onLodgingClick}
             />
-          </Suspense>
-        ) : (
-          <DeckGLMap
-            key={syncKey}
-            flights={drawnFlights}
-            flightList={flightList}
-            cruises={cruises}
-            onFlightClick={onFlightClick}
-            onRouteClick={onRouteClick}
-            onEdit={onEdit}
-            onFlightOpen={onFlightOpen}
-            onCruiseOpen={onCruiseOpen}
-            // The card's "open" action ends where the globe's does — at the
-            // pin-click handler every tab already passes, rather than at a
-            // second prop pair meaning the same thing.
-            onLodgingOpen={onLodgingClick}
-            onPlaceOpen={onPlaceClick}
-            visMode={visMode}
-            minRouteCount={minRouteCount}
-            onResetTrip={onResetTrip}
-            extraLayers={extraLayers}
-            appearanceDomains={appearanceDomains}
-            lodgingMarkerSize={lodgingMarkerSize}
-            onLodgingMarkerSizeChange={setLodgingMarkerSize}
-            lodgingsOverride={lodgingsOverride}
-            placesOverride={placesOverride}
-            onPlaceClick={onPlaceClick}
-            placeListColors={placeListColors}
-            placeListLabels={placeListLabels}
-            placeMarkerSize={placeMarkerSize}
-            onPlaceMarkerSizeChange={setPlaceMarkerSize}
-            onLodgingClick={onLodgingClick}
-          />
-        )}
+          )}
+        </WebGLGuard>
       </div>
 
       {/* Special-flight legend — routes mode only, only when we have

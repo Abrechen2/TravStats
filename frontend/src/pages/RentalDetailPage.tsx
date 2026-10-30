@@ -34,6 +34,7 @@ import { rentalDrivenKm } from "../shared/rentalCounting";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import type { RentalBooking } from "../types/rental";
+import WebGLGuard from "../components/map/WebGLGuard";
 
 const stationLabel = (name: string, iata: string | null): string =>
   iata ? `${name} (${iata})` : name;
@@ -358,7 +359,9 @@ export default function RentalDetailPage(): JSX.Element {
 
         <aside className="flex flex-col gap-6 md:col-span-2">
           <DetailSection title={t("rental:detail.map")}>
-            <RentalRouteMap rental={rental} />
+            <WebGLGuard>
+              <RentalRouteMap rental={rental} />
+            </WebGLGuard>
           </DetailSection>
           {rental.trip && (
             <DetailSection title={t("trips:tab")}>

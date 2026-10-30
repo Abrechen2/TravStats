@@ -38,5 +38,11 @@
   "lookupDemoForbidden": "Im Demo-Konto ist die Flugsuche abgeschaltet, um das API-Kontingent zu schonen. Bitte trage den Flug manuell ein.",
   "lookupFailed": "Die Flugsuche ist fehlgeschlagen. Bitte versuche es später erneut oder trage den Flug manuell ein.",
   "airportNotInCatalogue": "Flughafen {{code}} ist nicht im Katalog – bitte manuell auswählen.",
-  "airportLoadFailedCode": "Flughafen {{code}} konnte nicht geladen werden – bitte erneut versuchen oder manuell auswählen."
+  "airportLoadFailedCode": "Flughafen {{code}} konnte nicht geladen werden – bitte erneut versuchen oder manuell auswählen.",
+  "airportLookupUnavailable": {
+    "timeout": "Der Flughafen {{code}} ist nicht im Katalog, und die Online-Abfrage hat nicht rechtzeitig geantwortet. Bitte später erneut versuchen oder manuell auswählen.",
+    "network": "Der Flughafen {{code}} ist nicht im Katalog, und die Online-Abfrage ist vom Server aus nicht erreichbar. Bitte später erneut versuchen oder manuell auswählen.",
+    "http_error": "Der Flughafen {{code}} ist nicht im Katalog, und die Online-Abfrage hat einen Fehler gemeldet. Bitte später erneut versuchen oder manuell auswählen.",
+    "unknown": "Der Flughafen {{code}} ist nicht im Katalog, und die Online-Abfrage ist gerade nicht verfügbar. Bitte später erneut versuchen oder manuell auswählen."
+  }
 }

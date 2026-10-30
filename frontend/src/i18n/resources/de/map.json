@@ -1,4 +1,5 @@
 {
+  "webglUnavailable": "Dein Browser kann gerade keine 3D-Karte erzeugen. Prüfe die Hardwarebeschleunigung oder starte den Browser neu.",
   "loadFailed": {
     "rentals": "Die Mietwagen konnten nicht geladen werden.",
     "cruiseRoutes": "Die Kreuzfahrtrouten konnten nicht geladen werden.",

@@ -6,6 +6,14 @@ import * as matchers from "@testing-library/jest-dom/matchers";
 expect.extend(matchers);
 
 // Global react-i18next mock - t function returns the key
+// jsdom has no WebGL, so the live probe behind `WebGLGuard` would replace
+// every map a test renders with the "no 3D map" notice. Tests that need the
+// real probe call `vi.unmock("../../lib/webgl2")`.
+vi.mock("../lib/webgl2", async (importActual) => ({
+  ...(await importActual<typeof import("../lib/webgl2")>()),
+  probeWebGL2: () => true,
+}));
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
