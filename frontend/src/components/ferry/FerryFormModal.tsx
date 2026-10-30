@@ -5,7 +5,8 @@ import Modal from "../Modal";
 import RequiredLegend from "../form/RequiredLegend";
 import Button from "../ui/Button";
 import { useTranslation } from "../../hooks/useTranslation";
-import { ferryApi } from "../../lib/api/ferry";
+import { ferryApi, type FerryJourneyInput } from "../../lib/api/ferry";
+import { saveErrorKey } from "../../lib/saveErrorMessage";
 import { useToastStore } from "../../store/toastStore";
 import { tripsApi } from "../../lib/api";
 import { railArrival, railDeparture } from "../../lib/entityTimes";
@@ -55,6 +56,21 @@ function readNumbers(
     values[key] = n;
   }
   return { values };
+}
+/**
+ * Why a ferry save failed, in the reader's language: the shared reasons (a
+ * clock-change gap, a dropped connection, a rate limit, an unknown outcome on
+ * create) plus the two 409s only this editor meets (forgejo#376).
+ */
+function ferrySaveErrorKey(err: unknown, creating: boolean): string {
+  const key = saveErrorKey(
+    err,
+    "ferry:saveError",
+    { VERSION_CONFLICT: "ferry:versionConflict" },
+    { create: creating }
+  );
+  const status = (err as { response?: { status?: number } } | null)?.response?.status;
+  return key === "ferry:saveError" && status === 409 ? "ferry:legLinkedError" : key;
 }
 const INPUT =
   "mt-1 w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent)";
@@ -160,7 +176,7 @@ export function FerryFormModal({
     savingRef.current = true;
     setSaving(true);
     setError(null);
-    const input: Record<string, unknown> = {
+    const input: FerryJourneyInput = {
       ...(ticketDocumentId ? { documentIds: [ticketDocumentId] } : {}),
       departureStation: dep,
       arrivalStation: arr,
@@ -175,7 +191,8 @@ export function FerryFormModal({
     };
     for (const key of TEXT) input[key] = fields[key].trim() || null;
     Object.assign(input, numbers.values);
-    for (const key of ["departureFold", "arrivalFold"]) if (fields[key]) input[key] = fields[key];
+    for (const key of ["departureFold", "arrivalFold"] as const)
+      if (fields[key]) input[key] = fields[key];
     if (journey && JSON.stringify(dep) === JSON.stringify(port(journey, "dep")))
       delete input.departureStation;
     if (journey && JSON.stringify(arr) === JSON.stringify(port(journey, "arr")))
@@ -189,8 +206,8 @@ export function FerryFormModal({
       // No sea way at all ("straight") is an answer, not a failure.
       if (seaRoute === "failed") addToast("warning", t("ferry:routing.autoFailed"), 9000);
       onSaved(saved);
-    } catch {
-      setError(t("ferry:saveError"));
+    } catch (err: unknown) {
+      setError(t(ferrySaveErrorKey(err, journey === null)));
     } finally {
       savingRef.current = false;
       setSaving(false);

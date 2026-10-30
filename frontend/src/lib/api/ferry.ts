@@ -1,7 +1,8 @@
 import type { FerryAisResult } from "../../components/ferry/FerryLivePosition";
 import type { FerryTicketPreview } from "../../components/ferry/FerryTicketImport";
 import { api } from "./client";
-import type { FerryJourney } from "../../types/ferry";
+import type { FerryStationDraft } from "../../components/ferry/FerryStationField";
+import type { FerryJourney, FerryStatus } from "../../types/ferry";
 interface Envelope<T> {
   success: boolean;
   data: T;
@@ -38,6 +39,37 @@ export interface FerryListQuery {
   order?: "asc" | "desc";
   limit?: number;
   offset?: number;
+}
+
+/** The write body of POST/PATCH /ferry; a PATCH carries only what changed. */
+export interface FerryJourneyInput {
+  documentIds?: string[];
+  departureStation?: FerryStationDraft;
+  arrivalStation?: FerryStationDraft;
+  departureLocal?: string;
+  arrivalLocal?: string | null;
+  departureFold?: string;
+  arrivalFold?: string;
+  tripId?: string | null;
+  companions?: string[];
+  status?: FerryStatus;
+  operator?: string | null;
+  vesselName?: string | null;
+  vesselMmsi?: string | null;
+  bookingReference?: string | null;
+  ticketReference?: string | null;
+  vehicleType?: string | null;
+  vehicleRegistration?: string | null;
+  cabinType?: string | null;
+  seat?: string | null;
+  currency?: string | null;
+  notes?: string | null;
+  passengerCount?: number | null;
+  vehicleLengthM?: number | null;
+  vehicleWidthM?: number | null;
+  vehicleHeightM?: number | null;
+  price?: number | null;
+  distanceKm?: number | null;
 }
 
 export const ferryApi = {
@@ -101,13 +133,13 @@ export const ferryApi = {
   async get(id: string) {
     return (await api.get<Envelope<FerryJourney>>(`/ferry/${encodeURIComponent(id)}`)).data.data;
   },
-  async save(id: string | null, input: unknown) {
+  async save(id: string | null, input: FerryJourneyInput) {
     return (await ferryApi.saveReported(id, input)).ride;
   },
   /** A save, with what it did to the sea line (`meta.seaRoute`, forgejo#323). */
   async saveReported(
     id: string | null,
-    input: unknown
+    input: FerryJourneyInput
   ): Promise<{ ride: FerryJourney; seaRoute: FerrySeaRouteOutcome | null }> {
     type Saved = Envelope<FerryJourney> & { meta?: { seaRoute?: FerrySeaRouteOutcome } };
     const response = id

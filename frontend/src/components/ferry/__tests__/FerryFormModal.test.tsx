@@ -132,6 +132,33 @@ describe("Ferry editor", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("ferry:saveError");
     expect(onSaved).not.toHaveBeenCalled();
   });
+  it.each([
+    [
+      "a DST-gap time",
+      { response: { status: 400, data: { code: "LOCAL_TIME_NONEXISTENT" } } },
+      "common:saveErrors.localTimeNonexistent",
+    ],
+    [
+      "a linked roadtrip leg (409)",
+      { response: { status: 409, data: { error: "Unlink the roadtrip leg" } } },
+      "ferry:legLinkedError",
+    ],
+    [
+      "a version conflict",
+      { response: { status: 409, data: { code: "VERSION_CONFLICT" } } },
+      "ferry:versionConflict",
+    ],
+  ])(
+    "names the real reason for %s instead of one generic message (forgejo#376)",
+    async (_n, err, key) => {
+      mocks.save.mockRejectedValue(err);
+      render(<FerryFormModal journey={ride} onClose={vi.fn()} onSaved={vi.fn()} />);
+      fireEvent.click(screen.getByRole("button", { name: "ferry:save" }));
+      const alert = await screen.findByRole("alert");
+      expect(alert).toHaveTextContent(key);
+      expect(alert).not.toHaveTextContent("ferry:saveError");
+    }
+  );
   // `Number("39,90")` is NaN, which JSON sends as null: a German price, length
   // or distance was silently cleared on save.
   it.each([

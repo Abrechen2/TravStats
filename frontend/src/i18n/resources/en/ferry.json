@@ -25,6 +25,8 @@
   "invalidMmsi": "An MMSI has exactly 9 digits.",
   "invalidNumber": "Enter a valid number of 0 or more for “{{field}}” (e.g. 39.90).",
   "saveError": "Could not save. Please check the fields.",
+  "versionConflict": "This crossing was changed elsewhere in the meantime. Reopen it and save again.",
+  "legLinkedError": "This crossing belongs to a roadtrip leg. Unlink it first before changing the terminal or the trip.",
   "departure": "Departure port",
   "arrival": "Arrival port",
   "departureLocal": "Departure (local time)",

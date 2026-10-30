@@ -25,6 +25,8 @@
   "invalidMmsi": "Die MMSI hat genau 9 Ziffern.",
   "invalidNumber": "Bitte gib bei „{{field}}“ eine gültige Zahl ab 0 ein (z. B. 39,90).",
   "saveError": "Speichern fehlgeschlagen. Bitte Eingaben prüfen.",
+  "versionConflict": "Diese Überfahrt wurde inzwischen anderswo geändert. Bitte neu öffnen und erneut speichern.",
+  "legLinkedError": "Diese Überfahrt gehört zu einer Roadtrip-Etappe. Löse zuerst die Verknüpfung, bevor du Hafen oder Reise änderst.",
   "departure": "Abfahrtshafen",
   "arrival": "Ankunftshafen",
   "departureLocal": "Abfahrt (Ortszeit)",
