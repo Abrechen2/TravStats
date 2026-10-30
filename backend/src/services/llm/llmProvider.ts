@@ -455,6 +455,10 @@ async function assertMayAsk(
   if (!permitsLlmTarget(target))
     throw new AppError("Provider forbidden by request policy", 403, "LLM_REQUEST_POLICY");
   await assertLlmEnabled();
+  // Switched off on the external-services page: no fallback target gets past this.
+  if (kindOf(target) === "ollama" && (await loadPolicy()).disabled.includes("ollama")) {
+    throw new AppError("Ollama is switched off by the administrator", 503, "LLM_DISABLED");
+  }
   await assertLlmCloudConsent(
     {
       kind: kindOf(target),

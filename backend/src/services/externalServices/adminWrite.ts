@@ -119,6 +119,9 @@ export async function applyAdminUpdate(id: string, body: AdminUpdateBody): Promi
     }
   }
 
+  if (service.ai && (service.ai.kind === "custom" || service.ai.kind === "ollama")) {
+    await dropConsentsIfDestinationChanged(service.ai.kind, adminData, current);
+  }
   if (Object.keys(smtpPatch).length > 0) await applySmtp(smtpPatch);
   if (policyEdits.length > 0) await updatePolicy((p) => policyEdits.reduce((acc, e) => e(acc), p));
   if (Object.keys(adminData).length > 0) {
@@ -197,4 +200,20 @@ export async function applyConnectionAllowed(id: string, allowed: boolean): Prom
     ...policy,
     connectionsForbidden: withMember(policy.connectionsForbidden, id, !allowed),
   }));
+}
+
+/**
+ * An account's consent names a provider, and for a remote Ollama or the custom
+ * endpoint the provider is whatever address the admin typed. A new address is a
+ * new destination, so every account's consent for it is withdrawn and asked
+ * again — documents never follow an address change silently.
+ */
+async function dropConsentsIfDestinationChanged(
+  kind: "custom" | "ollama",
+  data: Record<string, unknown>,
+  current: Record<string, unknown> | null
+): Promise<void> {
+  const column = kind === "custom" ? "openaiCompatBaseUrl" : "ollamaUrl";
+  if (data[column] === undefined || data[column] === (current?.[column] ?? null)) return;
+  await prisma.$executeRaw`UPDATE user_settings SET external_service_prefs = external_service_prefs #- ARRAY['aiConsent', ${kind}]::text[] WHERE external_service_prefs -> 'aiConsent' ? ${kind}`;
 }

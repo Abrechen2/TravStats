@@ -92,7 +92,11 @@ function creds(
   const out: Record<string, string | null> = {};
   for (const f of defs) out[f.key] = plain(f, row);
   // Fall back to the environment as the runtime does, field by field.
-  if (envFallback) {
+  // The environment stands in for the WHOLE credential or not at all: a stored
+  // URL must never be paired with the ENV key, which would send that key to a
+  // different server.
+  const tierEmpty = service.requiredFields.every((k) => !out[k]);
+  if (envFallback && tierEmpty) {
     for (const [key, name] of Object.entries(ENV_BY_FIELD[service.id] ?? {})) {
       if (!out[key]) out[key] = process.env[name] ?? null;
     }

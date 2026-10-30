@@ -274,6 +274,49 @@ describe("external services policy on every path", () => {
       });
     });
 
+    it("changing the custom endpoint's address withdraws every account's consent for it", async () => {
+      await prisma.adminSettings.update({
+        where: { id: rowId },
+        data: {
+          openaiCompatBaseUrl: "https://llm-a.example.com/v1",
+          openaiCompatModel: "m",
+          llmCustomOptIn: true,
+        },
+      });
+      await prisma.userSettings.update({
+        where: { userId },
+        data: {
+          externalServicePrefs: {
+            disabled: [],
+            aiConsent: { custom: "2026-10-30T00:00:00.000Z", openai: "2026-10-30T00:00:00.000Z" },
+          },
+        },
+      });
+      await adminPut("customLlm", { fields: { baseUrl: "https://llm-b.example.com/v1" } }).expect(
+        200
+      );
+      const prefs = (await prisma.userSettings.findUniqueOrThrow({ where: { userId } }))
+        .externalServicePrefs as {
+        aiConsent: Record<string, string>;
+      };
+      expect(prefs.aiConsent.custom).toBeUndefined();
+      expect(prefs.aiConsent.openai).toBeDefined();
+      await prisma.adminSettings.update({
+        where: { id: rowId },
+        data: { openaiCompatBaseUrl: null, openaiCompatModel: null, llmCustomOptIn: false },
+      });
+    });
+
+    it("a switched-off Ollama is refused at the last line even as a fallback target", async () => {
+      await disable("ollama");
+      await expect(
+        llmGenerate(
+          { kind: "ollama", url: "http://localhost:11434", model: "m", isCloud: false },
+          { ...req, systemTask: true }
+        )
+      ).rejects.toMatchObject({ code: "LLM_DISABLED" });
+    });
+
     it("an explicit system task passes the gate", async () => {
       await expect(assertLlmCloudConsent(cloud, { systemTask: true })).resolves.toBeUndefined();
     });
