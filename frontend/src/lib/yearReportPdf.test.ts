@@ -209,6 +209,26 @@ describe("generateYearReportPdf", () => {
       expect(drawn).not.toContain("0 h");
     });
 
+    // forgejo#385: a coordinate estimate was summed as plain flight time.
+    it("labels a total that contains coordinate-estimated flights", async () => {
+      const dateOnly = {
+        ...mockFlight,
+        id: "2",
+        departureTime: "2026-02-15T12:00:00Z",
+        arrivalTime: "2026-02-15T20:00:00Z",
+        depTimeSemantics: "DATE_ONLY",
+      } as unknown as Flight;
+      await generateYearReportPdf({
+        year: 2026,
+        flights: [mockFlight, dateOnly],
+        userName: "D",
+        units: "km",
+      });
+      const drawn = mockText.mock.calls.map((call) => String(call[0]));
+      expect(drawn.some((text) => /^~\d+ h \(1 estimated\)$/.test(text))).toBe(true);
+      expect(drawn).not.toContain("3 h");
+    });
+
     it("adds up real clocks", async () => {
       await generateYearReportPdf({
         year: 2026,

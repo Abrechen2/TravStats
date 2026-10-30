@@ -60,6 +60,7 @@ export async function generateYearReportPdf(opts: YearReportOptions): Promise<vo
   let measuredFlights = 0;
   let totalFlightTimeMin = 0;
   let timedFlights = 0;
+  let estimatedFlights = 0;
   let totalCo2 = 0;
   const airlineCounts = new Map<string, number>();
 
@@ -75,6 +76,9 @@ export async function generateYearReportPdf(opts: YearReportOptions): Promise<vo
     if (duration) {
       totalFlightTimeMin += duration.minutes;
       timedFlights += 1;
+      // A coordinate-based estimate is not a measured flight time: it is
+      // counted, but the printed total says it contains estimates.
+      if (duration.estimated) estimatedFlights += 1;
     }
     if (f.co2Kg) totalCo2 += f.co2Kg;
     const airline = f.airline ?? "Unknown";
@@ -98,7 +102,14 @@ export async function generateYearReportPdf(opts: YearReportOptions): Promise<vo
         : `${distDisplay.toLocaleString("en-US")} ${distUnit}`,
     ],
     // Nothing measurable is "-", not "0 h".
-    ["Total Flight Time", timedFlights === 0 ? "-" : `${totalHours} h`],
+    [
+      "Total Flight Time",
+      timedFlights === 0
+        ? "-"
+        : estimatedFlights > 0
+          ? `~${totalHours} h (${estimatedFlights} estimated)`
+          : `${totalHours} h`,
+    ],
     ["Most Flown Airline", topAirline],
     ["Favourite Route", topRoute],
     ...(totalCo2 > 0 ? ([["Total CO2", `${Math.round(totalCo2)} kg`]] as [string, string][]) : []),
