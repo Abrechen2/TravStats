@@ -5,6 +5,7 @@
  */
 
 import { Router, Response, NextFunction } from "express";
+import { z } from "zod";
 import {
   lookupFlightByNumber,
   lookupFlightWithHistorical,
@@ -13,6 +14,12 @@ import {
 import { flightLookupLimiter } from "../middleware/rateLimit";
 import { authenticate, AuthRequest } from "../middleware/auth";
 import { rejectDemoQuota } from "../middleware/demoGuard";
+import { LookupOutcomeLog } from "../services/flightLookup/providerOutcome";
+
+const bulkLookupSchema = z.object({
+  flightNumbers: z.array(z.string().trim().min(1).max(20)).min(1).max(10),
+  date: z.string().max(40).optional(),
+});
 
 const router = Router();
 
@@ -156,21 +163,17 @@ router.post(
   flightLookupLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const { flightNumbers, date } = req.body;
-
-      if (!Array.isArray(flightNumbers) || flightNumbers.length === 0) {
+      const parsed = bulkLookupSchema.safeParse(req.body);
+      if (!parsed.success) {
+        const tooMany = parsed.error.issues.some((i) => i.code === "too_big");
         return res.status(400).json({
           success: false,
-          error: "flightNumbers array is required",
+          error: tooMany
+            ? "Maximum 10 flight numbers allowed per request"
+            : "flightNumbers array is required",
         });
       }
-
-      if (flightNumbers.length > 10) {
-        return res.status(400).json({
-          success: false,
-          error: "Maximum 10 flight numbers allowed per request",
-        });
-      }
+      const { flightNumbers, date } = parsed.data;
 
       // Parse optional date
       let searchDate: Date | undefined;
@@ -184,21 +187,39 @@ router.post(
         }
       }
 
-      // Lookup all flights
+      // Lookup all flights. The asker's id selects THEIR provider keys, and an
+      // outcome log tells "no such flight" from "a provider could not answer".
       const results = await Promise.all(
         flightNumbers.map(async (flightNumber) => {
+          const outcomes = new LookupOutcomeLog();
           try {
-            const flights = await lookupFlightByNumber(flightNumber, searchDate);
+            const flights = await lookupFlightByNumber(
+              flightNumber,
+              searchDate,
+              req.userId,
+              outcomes
+            );
+            const providerFailures = outcomes.failures();
+            if (flights.length === 0 && providerFailures.length > 0) {
+              return {
+                flightNumber,
+                success: false,
+                error: "LOOKUP_PROVIDER_FAILED",
+                providerFailures,
+              };
+            }
             return {
               flightNumber,
               success: true,
               flights,
+              providerFailures,
             };
           } catch (error: unknown) {
             return {
               flightNumber,
               success: false,
               error: error instanceof Error ? error.message : "Unknown error",
+              providerFailures: outcomes.failures(),
             };
           }
         })
