@@ -361,6 +361,10 @@ export async function downloadFromCloud(backupName: string, localPath: string): 
     source.on("data", arm);
     try {
       await pipeline(source, fs.createWriteStream(partPath));
+      // webdav delivers the headers callback through setTimeout(0), which can
+      // land after a short body has already ended. Timers fire in order, so one
+      // more tick guarantees the callback has run before the comparison.
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
       if (expectedBytes !== null && receivedBytes !== expectedBytes) {
         throw new AppError(
           `Backup download from the WebDAV share was cut short: received ${receivedBytes} of ${expectedBytes} bytes`,
