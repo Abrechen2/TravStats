@@ -36,6 +36,15 @@ const LOGOSTREAM_BASE = "https://airlines-api.logostream.dev";
 const DAISYCON_BASE = "https://images.daisycon.io/airline";
 const FETCH_TIMEOUT_MS = 5_000;
 const NEGATIVE_TTL_MS = 24 * 60 * 60 * 1000;
+// A tier that could not ANSWER (timeout, DNS, 5xx, 429) has not said "no image":
+// remembering that for a day left every airline asked during a short outage
+// without a logo until tomorrow (forgejo#379).
+const FAILURE_NEGATIVE_TTL_MS = 5 * 60 * 1000;
+
+/** Set by `fetchImage` when an upstream failed to answer rather than said no. */
+interface FetchTrace {
+  failed: boolean;
+}
 
 const KIWI_BASE = "https://images.kiwi.com/airlines";
 // kiwi offers 32/64/128 only (256+ is a 404). 128 is the largest, and the
@@ -66,10 +75,13 @@ function maskKey(url: string): string {
   return url.replace(/key=[^&]+/, "key=***");
 }
 
-async function fetchImage(url: string): Promise<CachedLogo | null> {
+async function fetchImage(url: string, trace?: FetchTrace): Promise<CachedLogo | null> {
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      if (trace && (res.status >= 500 || res.status === 429)) trace.failed = true;
+      return null;
+    }
     const contentType = res.headers.get("content-type") ?? "";
     if (!contentType.startsWith("image/")) return null;
     const body = Buffer.from(await res.arrayBuffer());
@@ -83,6 +95,7 @@ async function fetchImage(url: string): Promise<CachedLogo | null> {
       { operation: "logo_fetch_failed", url: maskKey(url), message },
       "airline logo fetch failed"
     );
+    if (trace) trace.failed = true;
     return null;
   }
 }
@@ -92,13 +105,17 @@ function buildLogostreamUrl(code: string, variant: LogoVariant, key: string): st
   return `${LOGOSTREAM_BASE}/airlines/${kind}/${code}?variant=${variant}&key=${encodeURIComponent(key)}`;
 }
 
-async function fromLogostream(code: string, variant: LogoVariant): Promise<CachedLogo | null> {
+async function fromLogostream(
+  code: string,
+  variant: LogoVariant,
+  trace?: FetchTrace
+): Promise<CachedLogo | null> {
   // Admin-global key (encrypted in admin_settings, set via the admin UI)
   // wins over the LOGOSTREAM_API_KEY env fallback — standard provider pattern.
   const key = await getApiKey("logostream");
   if (!key) return null;
 
-  const logo = await fetchImage(buildLogostreamUrl(code, variant, key));
+  const logo = await fetchImage(buildLogostreamUrl(code, variant, key), trace);
   // logostream never 404s for an unknown airline — it always answers 200
   // with a dynamically generated image/svg+xml placeholder instead. Real
   // logos are always image/png, so anything else is treated as a miss.
@@ -114,18 +131,18 @@ async function fromLogostream(code: string, variant: LogoVariant): Promise<Cache
  * IATA only: the endpoint takes a 2-letter code. A 3-letter ICAO is a miss here
  * and falls through, which is correct — Daisycon accepts ICAO.
  */
-async function fromKiwi(code: string): Promise<CachedLogo | null> {
+async function fromKiwi(code: string, trace?: FetchTrace): Promise<CachedLogo | null> {
   if (code.length !== 2) return null;
-  const logo = await fetchImage(`${KIWI_BASE}/${KIWI_SIZE}/${code}.png`);
+  const logo = await fetchImage(`${KIWI_BASE}/${KIWI_SIZE}/${code}.png`, trace);
   if (!logo) return null;
   if (KIWI_PLACEHOLDER_MD5S.has(md5(logo.body))) return null;
   return logo;
 }
 
-async function fromDaisycon(code: string): Promise<CachedLogo | null> {
+async function fromDaisycon(code: string, trace?: FetchTrace): Promise<CachedLogo | null> {
   // Daisycon only has the full wordmark logo; every variant maps onto it.
   const param = code.length === 3 ? "icao" : "iata";
-  const logo = await fetchImage(`${DAISYCON_BASE}?${param}=${code}&width=300&height=150`);
+  const logo = await fetchImage(`${DAISYCON_BASE}?${param}=${code}&width=300&height=150`, trace);
   if (logo && DAISYCON_PLACEHOLDER_MD5S.has(md5(logo.body))) return null;
   return logo;
 }
@@ -182,9 +199,10 @@ export function __resetInFlightForTests(): void {
 //   Daisycon   — the tail net for whatever even kiwi does not know.
 async function fetchFromChain(
   code: string,
-  variant: LogoVariant
+  variant: LogoVariant,
+  trace?: FetchTrace
 ): Promise<{ logo: CachedLogo; source: LogoSource } | null> {
-  const premium = await fromLogostream(code, variant);
+  const premium = await fromLogostream(code, variant, trace);
   if (premium) return { logo: premium, source: "logostream" };
   const vendored = getVendoredLogo(code, variant);
   if (vendored) return { logo: vendored, source: "vendored" };
@@ -192,9 +210,9 @@ async function fetchFromChain(
   // the keyless ones need no key an admin could have withdrawn. Cached bytes and
   // the vendored marks above stay: they leave nothing.
   if (await isServiceDisabledByAdmin("logos")) return null;
-  const kiwi = await fromKiwi(code);
+  const kiwi = await fromKiwi(code, trace);
   if (kiwi) return { logo: kiwi, source: "kiwi" };
-  const daisycon = await fromDaisycon(code);
+  const daisycon = await fromDaisycon(code, trace);
   if (daisycon) return { logo: daisycon, source: "daisycon" };
   return null;
 }
@@ -268,9 +286,13 @@ export async function resolveAirlineLogo(
   if (negativeUntil !== undefined && negativeUntil > Date.now()) return null;
   negativeCache.delete(cacheKey);
 
-  const found = await fetchFromChain(code, variant);
+  const trace: FetchTrace = { failed: false };
+  const found = await fetchFromChain(code, variant, trace);
   if (!found) {
-    negativeCache.set(cacheKey, Date.now() + NEGATIVE_TTL_MS);
+    negativeCache.set(
+      cacheKey,
+      Date.now() + (trace.failed ? FAILURE_NEGATIVE_TTL_MS : NEGATIVE_TTL_MS)
+    );
     return null;
   }
 

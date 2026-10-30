@@ -195,6 +195,31 @@ describe("resolveAirlineLogo", () => {
     expect(fn.mock.calls.length).toBe(calls); // no additional fetches
   });
 
+  it("a network outage is remembered for minutes, not a day, while a real miss stays a day", async () => {
+    jest.spyOn(cache, "getCachedLogoEntry").mockResolvedValue(null);
+    const t0 = Date.now();
+    const later = jest.spyOn(Date, "now");
+
+    // Outage: every tier rejects. After 6 minutes the airline is asked again.
+    const down = jest.fn().mockRejectedValue(new Error("getaddrinfo EAI_AGAIN"));
+    global.fetch = down as unknown as typeof fetch;
+    later.mockReturnValue(t0);
+    expect(await resolveAirlineLogo("QQ", "icon")).toBeNull();
+    const afterFirst = down.mock.calls.length;
+    later.mockReturnValue(t0 + 6 * 60 * 1000);
+    await resolveAirlineLogo("QQ", "icon");
+    expect(down.mock.calls.length).toBeGreaterThan(afterFirst);
+
+    // Real miss (404 everywhere): still negative-cached after 6 minutes.
+    const gone = mockFetchOnce(404, Buffer.alloc(0), "text/plain");
+    later.mockReturnValue(t0);
+    expect(await resolveAirlineLogo("RR", "icon")).toBeNull();
+    const afterMiss = gone.mock.calls.length;
+    later.mockReturnValue(t0 + 6 * 60 * 1000);
+    await resolveAirlineLogo("RR", "icon");
+    expect(gone.mock.calls.length).toBe(afterMiss);
+  });
+
   it("never logs the raw API key when a fetch fails", async () => {
     const FAKE_KEY = "FREE-TEST-KEY-000000";
     jest.spyOn(resolver, "getApiKey").mockResolvedValue(FAKE_KEY);
