@@ -13,9 +13,8 @@ import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 interface TripGalleryProps {
   tripId: string;
   photos: TripPhoto[];
-  /** True total when the server capped `photos` (forgejo#381). */
+  /** The true photo total; larger than `photos.length` when the server capped the list (forgejo#381). */
   photoCount?: number;
-  photosTruncated?: boolean;
   immichAlbums: LinkedAlbum[];
   onChange: () => void;
 }
@@ -41,10 +40,10 @@ export default function TripGallery({
   tripId,
   photos,
   photoCount,
-  photosTruncated = false,
   immichAlbums,
   onChange,
 }: TripGalleryProps): JSX.Element {
+  const photosTruncated = photoCount !== undefined && photoCount > photos.length;
   const { t } = useTranslation(["trips", "common", "immich"]);
   const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
   const addToast = useToastStore((s) => s.addToast);
@@ -147,10 +146,10 @@ export default function TripGallery({
           >
             {t("immich:gallery.uploaded")}{" "}
             <span className="text-xs font-normal" style={{ color: "var(--text-muted)" }}>
-              · {photosTruncated && photoCount !== undefined ? photoCount : photos.length}
+              · {photosTruncated ? photoCount : photos.length}
             </span>
           </h4>
-          {photosTruncated && photoCount !== undefined && (
+          {photosTruncated && (
             <p role="status" className="mb-2 text-xs" style={{ color: "var(--text-muted)" }}>
               {t("trips:gallery.truncated", { shown: photos.length, total: photoCount })}
             </p>

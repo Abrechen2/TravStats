@@ -129,7 +129,6 @@ describe("TripGallery photo cap (forgejo#381)", () => {
         tripId="trip-1"
         photos={[PHOTO]}
         photoCount={1500}
-        photosTruncated
         immichAlbums={[]}
         onChange={vi.fn()}
       />
@@ -143,7 +142,6 @@ describe("TripGallery photo cap (forgejo#381)", () => {
         tripId="trip-1"
         photos={[PHOTO]}
         photoCount={1}
-        photosTruncated={false}
         immichAlbums={[]}
         onChange={vi.fn()}
       />

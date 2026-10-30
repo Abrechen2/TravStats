@@ -210,7 +210,6 @@ export default function TripDetailPage(): JSX.Element {
             tripId={shownTrip.id}
             photos={shownTrip.photos ?? []}
             photoCount={shownTrip.photoCount}
-            photosTruncated={shownTrip.photosTruncated}
             immichAlbums={shownTrip.immichAlbums ?? []}
             onChange={() => void load()}
           />
@@ -319,8 +318,7 @@ interface TimelineTabProps {
 function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.Element {
   const addToast = useToastStore((s) => s.addToast);
   const { confirmDelete, confirmDialog } = useConfirmDialog();
-  // Both the user's domain choice and the instance beta flag, via the one
-  // hook that combines them — see hooks/usePlacesVisible.ts.
+  // The user's domain choice and the instance beta flag, combined in hooks/usePlacesVisible.ts.
   const poiEnabled = usePlacesVisible();
   const placeVisits = useTripPlaceVisits(trip.id, poiEnabled);
   const tripNotes = useTripNotes(trip.id);

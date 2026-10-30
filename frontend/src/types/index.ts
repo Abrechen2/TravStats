@@ -259,8 +259,7 @@ export interface Trip {
     bookingId?: string | null;
     distanceKm?: number;
     // Same story as the flight fields above: GET /trips/:id includes the ship,
-    // both ports and every stop (ordered by day), so the timeline entry can
-    // show the itinerary without a second request.
+    // both ports and every stop (by day): the timeline entry shows the itinerary without a second request.
     ship?: Ship | null;
     shipNameOverride?: string | null;
     routeName?: string | null;
@@ -273,10 +272,7 @@ export interface Trip {
   stops?: TripStop[];
   journalEntries?: TripJournalEntry[];
   photos?: TripPhoto[];
-  /** True number of uploaded photos; `photos` is capped by the server (forgejo#381). */
-  photoCount?: number;
-  /** `photos` holds fewer than `photoCount`. */
-  photosTruncated?: boolean;
+  photoCount?: number; // true total; `photos` is server-capped (forgejo#381)
   /** A stay linked to this trip via `LodgingStay.tripId` — always includes its `lodging` (GET /trips/:id). */
   lodgingStays?: (LodgingStay & { lodging: Lodging })[];
   /** Train rides (departure order) and car rentals (pickup order) linked to this trip. */
