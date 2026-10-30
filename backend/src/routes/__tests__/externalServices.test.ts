@@ -15,6 +15,7 @@ import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { encryptApiKey } from "../../utils/encryption";
 import { resolveApiKey, hasApiKeyAccess } from "../../services/apiKeyResolver";
+import { DEMO_USERNAME } from "../../utils/sharedDemo";
 import { getImmichConnection } from "../../services/immich/immichResolver";
 import { assertLlmCloudConsent, llmRefusalFor } from "../../services/llm/llmGate";
 import { getCachedLatestRelease, __resetUpdateCheckerCache } from "../../services/updateChecker";
@@ -233,6 +234,29 @@ describe("external services (forgejo#392)", () => {
       expect(await getImmichConnection(userA)).toBeNull();
     });
 
+    it("the shared demo account still resolves nothing when account connections are forbidden", async () => {
+      process.env.IMMICH_BASE_URL = "https://immich.example.com";
+      process.env.IMMICH_API_KEY = "env-immich-key";
+      const original = await prisma.user.findUniqueOrThrow({ where: { id: userB } });
+      await prisma.user.update({
+        where: { id: userB },
+        data: { isDemo: true, username: DEMO_USERNAME },
+      });
+      try {
+        await request(app)
+          .put("/api/v1/admin/external-services/connections/immich")
+          .set("Cookie", adminCookie)
+          .send({ allowed: false })
+          .expect(200);
+        expect(await getImmichConnection(userB)).toBeNull();
+      } finally {
+        await prisma.user.update({
+          where: { id: userB },
+          data: { isDemo: original.isDemo, username: original.username },
+        });
+      }
+    });
+
     it("the GitHub release check honours its admin switch and calls nothing when off", async () => {
       __resetUpdateCheckerCache();
       await prisma.adminSettings.update({
@@ -399,7 +423,7 @@ describe("external services (forgejo#392)", () => {
     it("the last line refuses a cloud request for an account that has not consented", async () => {
       await enableOpenai().expect(200);
       const target = { kind: "openai" as const, isCloud: true };
-      await expect(assertLlmCloudConsent(target, userA)).rejects.toMatchObject({
+      await expect(assertLlmCloudConsent(target, { userId: userA })).rejects.toMatchObject({
         code: "LLM_CLOUD_NOT_CONSENTED",
       });
       await request(app)
@@ -407,13 +431,13 @@ describe("external services (forgejo#392)", () => {
         .set("Cookie", cookieA)
         .send({ consent: true })
         .expect(200);
-      await expect(assertLlmCloudConsent(target, userA)).resolves.toBeUndefined();
+      await expect(assertLlmCloudConsent(target, { userId: userA })).resolves.toBeUndefined();
       await request(app)
         .put("/api/v1/settings/external-services/ai-consent/openai")
         .set("Cookie", cookieA)
         .send({ consent: false })
         .expect(200);
-      await expect(assertLlmCloudConsent(target, userA)).rejects.toMatchObject({
+      await expect(assertLlmCloudConsent(target, { userId: userA })).rejects.toMatchObject({
         code: "LLM_CLOUD_NOT_CONSENTED",
       });
     });

@@ -199,8 +199,8 @@ export function bookingFromAnswer(
  * (tester report, 2026-10-03). An instance with nothing configured still asks
  * the localhost default, as before.
  */
-export async function resolveRailLlmChain(): Promise<LlmTarget[]> {
-  const chain = await resolveLlmChain({ withDefaults: true });
+export async function resolveRailLlmChain(userId?: string): Promise<LlmTarget[]> {
+  const chain = await resolveLlmChain({ withDefaults: true, ...(userId ? { userId } : {}) });
   return chain.length > 0 ? chain : [ollamaTarget()];
 }
 
@@ -210,7 +210,8 @@ export async function resolveRailLlmChain(): Promise<LlmTarget[]> {
  */
 export async function parseRailWithLlm(
   text: string,
-  target: LlmTarget
+  target: LlmTarget,
+  userId?: string
 ): Promise<ParsedRailBooking | null> {
   const snippet = text.slice(0, LLM_TEXT_MAX_CHARS);
   if (text.length > LLM_TEXT_MAX_CHARS) {
@@ -221,6 +222,7 @@ export async function parseRailWithLlm(
   }
   const fields = promptFieldsFor(snippet);
   const response = await llmGenerate(target, {
+    ...(userId ? { userId } : {}),
     system: buildRailPrompt(fields),
     prompt: `Extract the train rides from this ticket.
 

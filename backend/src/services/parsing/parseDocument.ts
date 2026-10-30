@@ -258,11 +258,18 @@ export type ParsedDocumentBody = DomainBody & {
   llmProvider: LlmProviderInfo | null;
 };
 
-async function llmProviderFor(parserUsed: string): Promise<LlmProviderInfo | null> {
+async function llmProviderFor(
+  parserUsed: string,
+  userId?: string
+): Promise<LlmProviderInfo | null> {
   if (parserUsed !== "ollama") return null;
   // The slot that answered, as far as the probes know — not chain[0], which
   // may be the dead endpoint the parse walked past (`llm/reachableTarget.ts`).
-  const target = await resolveReachableLlmTarget({ withDefaults: true, wait: false });
+  const target = await resolveReachableLlmTarget({
+    withDefaults: true,
+    wait: false,
+    ...(userId !== undefined ? { userId } : {}),
+  });
   return target ? describeLlmTarget(target) : null;
 }
 
@@ -429,7 +436,7 @@ async function parseDocumentUnbudgeted(input: ParseDocumentInput): Promise<Parse
   const body = {
     ...domainBody,
     llmDisabledByAdmin: !(await isLlmEnabledByAdmin()),
-    llmProvider: await llmProviderFor(domainBody.parserUsed),
+    llmProvider: await llmProviderFor(domainBody.parserUsed, input.userId),
   };
 
   return {

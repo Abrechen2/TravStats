@@ -61,6 +61,18 @@ const METERED = new Set([
   "graphhopper",
 ]);
 
+const ENV_BY_FIELD: Record<string, Record<string, string>> = {
+  immich: { baseUrl: "IMMICH_BASE_URL", apiKey: "IMMICH_API_KEY" },
+  dawarich: { baseUrl: "DAWARICH_BASE_URL", apiKey: "DAWARICH_API_KEY" },
+  opensky: {
+    clientId: "OPENSKY_CLIENT_ID",
+    clientSecret: "OPENSKY_CLIENT_SECRET",
+    username: "OPENSKY_USERNAME",
+    password: "OPENSKY_PASSWORD",
+  },
+  ollama: { url: "OLLAMA_URL" },
+};
+
 type Row = Record<string, unknown> | null;
 
 /** The plain value of a field; a secret is decrypted, an empty one is null. */
@@ -79,9 +91,14 @@ function creds(
 ): Record<string, string | null> {
   const out: Record<string, string | null> = {};
   for (const f of defs) out[f.key] = plain(f, row);
-  // A key service falls back to its environment variable, as the resolver does.
-  if (envFallback && service.credential === "key" && !out.apiKey && service.env[0]) {
-    out.apiKey = process.env[service.env[0]] ?? null;
+  // Fall back to the environment as the runtime does, field by field.
+  if (envFallback) {
+    for (const [key, name] of Object.entries(ENV_BY_FIELD[service.id] ?? {})) {
+      if (!out[key]) out[key] = process.env[name] ?? null;
+    }
+    if (service.credential === "key" && !out.apiKey && service.env[0]) {
+      out.apiKey = process.env[service.env[0]] ?? null;
+    }
   }
   return out;
 }

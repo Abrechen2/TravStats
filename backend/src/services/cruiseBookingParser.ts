@@ -384,7 +384,7 @@ export class CruiseBookingParser {
     return probe.reachable;
   }
 
-  async parseText(text: string): Promise<ParsedCruise[]> {
+  async parseText(text: string, userId?: string): Promise<ParsedCruise[]> {
     // Cruise PDFs can be 5+ pages with full itineraries. Use a generous slice
     // but cap to keep token cost predictable on gemma3:12b.
     const snippet = text.slice(0, 12_000);
@@ -398,6 +398,7 @@ export class CruiseBookingParser {
     );
 
     const responseText = await llmGenerate(this.target, {
+      ...(userId !== undefined ? { userId } : {}),
       system: CRUISE_SYSTEM_PROMPT,
       prompt: `Extract every cruise from this booking confirmation text. Output JSON in the shape shown in the EXAMPLE OUTPUT block in the system prompt — a top-level object with a "cruises" array. If you cannot find a value, use null. Do NOT emit placeholder strings.
 
@@ -583,7 +584,7 @@ export async function parseCruiseBookingText(
     };
   }
 
-  const parser = getCruiseBookingParser(await resolveCruiseParserOptions(options));
+  const parser = getCruiseBookingParser(await resolveCruiseParserOptions(options, userId));
   // This probe IS the health probe `ollamaAvailable` reports on, so it is fed
   // back into the shared cache rather than measured twice per parse.
   const ollamaAvailable = await parser.checkAvailability();
@@ -606,7 +607,7 @@ export async function parseCruiseBookingText(
   }
   let cruises: ParsedCruise[];
   try {
-    cruises = await parser.parseText(text);
+    cruises = await parser.parseText(text, userId);
   } catch (err) {
     // A provider that answered the probe and then failed (timeout, HTTP 4xx/5xx,
     // an answer that is not a cruise) is a failure the user is told about, not
@@ -643,11 +644,13 @@ export async function parseCruiseBookingText(
  * one resolution every model caller shares (`llm/llmProvider.ts`).
  */
 async function resolveCruiseParserOptions(
-  options?: CruiseBookingParserOptions
+  options?: CruiseBookingParserOptions,
+  userId?: string
 ): Promise<CruiseBookingParserOptions> {
   if (options?.target) return options;
   // The first slot of the chain that answers (`llm/reachableTarget.ts`).
   const target = await resolveReachableLlmTarget({
+    ...(userId !== undefined ? { userId } : {}),
     ...(options?.url !== undefined ? { url: options.url } : {}),
     ...(options?.model !== undefined ? { model: options.model } : {}),
     withDefaults: true,

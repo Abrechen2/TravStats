@@ -214,6 +214,8 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   remoteShareAccounts:
     "trip-sharing pairings with people on other servers, bound to server keys; re-made by a new invitation",
   tripShareInvites: "single-use credentials",
+  externalServiceTests:
+    "last connection-test verdicts of this instance's services; re-measured by the next test",
   tripShareRosterConsents:
     "answers to people on other servers on a shared trip, bound to that group; asked again on the next share",
   tripShareWithheld:

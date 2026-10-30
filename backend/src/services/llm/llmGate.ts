@@ -297,7 +297,7 @@ export async function assertLlmCloudConsent(
     kind?: LlmProviderKind;
     isCloud?: boolean;
   },
-  userId?: string
+  who: { userId?: string; systemTask?: boolean } = {}
 ): Promise<void> {
   if (!target.isCloud) return;
   const settings = await getAdminParserSettings();
@@ -306,7 +306,13 @@ export async function assertLlmCloudConsent(
   }
   // The account's own consent (forgejo#392): a request made on behalf of an
   // account goes to a cloud provider only after THAT account allowed it.
-  if (userId !== undefined && !(await accountConsentedTo(userId, target.kind ?? "custom"))) {
+  // Fail closed: a request that names neither an account nor `systemTask: true`
+  // never reaches a cloud target — "no account" is not a licence.
+  if (who.userId !== undefined) {
+    if (!(await accountConsentedTo(who.userId, target.kind ?? "custom"))) {
+      throw new AppError(LLM_ACCOUNT_NOT_CONSENTED_REASON, 503, "LLM_CLOUD_NOT_CONSENTED");
+    }
+  } else if (who.systemTask !== true) {
     throw new AppError(LLM_ACCOUNT_NOT_CONSENTED_REASON, 503, "LLM_CLOUD_NOT_CONSENTED");
   }
 }

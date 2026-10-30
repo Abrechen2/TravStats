@@ -1,3 +1,4 @@
+import { assertAccountMayConnect } from "../../services/externalServices/guards";
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 
@@ -113,6 +114,7 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { redirectUri } = authorizeSchema.parse(req.body);
+      await assertAccountMayConnect(req.userId!, "strava");
       await assertOwnCallback(redirectUri, req.get("origin"));
       const client = await requireStravaClient();
       const params = new URLSearchParams({
@@ -146,6 +148,7 @@ router.post(
     try {
       const userId = req.userId!;
       const body = exchangeSchema.parse(req.body);
+      await assertAccountMayConnect(userId, "strava");
       if (!verifyOAuthState(body.state, userId)) {
         throw new AppError("This Strava sign-in has expired or belongs to someone else", 400);
       }

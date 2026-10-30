@@ -41,11 +41,30 @@ export async function loadPolicy(): Promise<ExternalServicePolicy> {
   return parsePolicy(row?.externalServicePolicy);
 }
 
-export async function savePolicy(policy: ExternalServicePolicy): Promise<void> {
-  await prisma.adminSettings.update({
-    where: { id: await ensureAdminSettingsRow() },
-    data: { externalServicePolicy: policy as unknown as object },
+/**
+ * Read-modify-write of the policy under a row lock, so two concurrent admin
+ * requests cannot overwrite each other's lists.
+ */
+export async function updatePolicy(
+  change: (current: ExternalServicePolicy) => ExternalServicePolicy
+): Promise<void> {
+  const id = await ensureAdminSettingsRow();
+  await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM admin_settings WHERE id = ${id} FOR UPDATE`;
+    const row = await tx.adminSettings.findUniqueOrThrow({
+      where: { id },
+      select: { externalServicePolicy: true },
+    });
+    const next = change(parsePolicy(row.externalServicePolicy));
+    await tx.adminSettings.update({
+      where: { id },
+      data: { externalServicePolicy: next as unknown as object },
+    });
   });
+}
+
+export async function savePolicy(policy: ExternalServicePolicy): Promise<void> {
+  await updatePolicy(() => policy);
 }
 
 export async function loadPrefs(userId: string): Promise<ExternalServicePrefs> {
@@ -56,11 +75,31 @@ export async function loadPrefs(userId: string): Promise<ExternalServicePrefs> {
   return parsePrefs(row?.externalServicePrefs);
 }
 
-export async function savePrefs(userId: string, prefs: ExternalServicePrefs): Promise<void> {
-  await prisma.userSettings.upsert({
-    where: { userId },
-    create: { userId, data: {}, externalServicePrefs: prefs as unknown as object },
-    update: { externalServicePrefs: prefs as unknown as object },
+/**
+ * Read-modify-write of one account's preferences under a row lock — a consent
+ * revoked in one request must not be restored by a concurrent save.
+ */
+export async function updatePrefs(
+  userId: string,
+  change: (current: ExternalServicePrefs) => ExternalServicePrefs
+): Promise<ExternalServicePrefs> {
+  return prisma.$transaction(async (tx) => {
+    await tx.userSettings.upsert({
+      where: { userId },
+      create: { userId, data: {} },
+      update: {},
+    });
+    await tx.$queryRaw`SELECT user_id FROM user_settings WHERE user_id = ${userId} FOR UPDATE`;
+    const row = await tx.userSettings.findUniqueOrThrow({
+      where: { userId },
+      select: { externalServicePrefs: true },
+    });
+    const next = change(parsePrefs(row.externalServicePrefs));
+    await tx.userSettings.update({
+      where: { userId },
+      data: { externalServicePrefs: next as unknown as object },
+    });
+    return next;
   });
 }
 
@@ -98,4 +137,21 @@ export async function connectionGate(
     return { off: "account", accountMayConnect: false };
   }
   return { off: null, accountMayConnect: !policy.connectionsForbidden.includes(id) };
+}
+
+/** The subset of `userIds` for whom connection `id` is neither switched off nor forbidden. */
+export async function filterConnectionAllowed(id: string, userIds: string[]): Promise<string[]> {
+  const policy = await loadPolicy();
+  if (policy.disabled.includes(id) || policy.connectionsForbidden.includes(id)) return [];
+  if (userIds.length === 0) return [];
+  const rows = await prisma.userSettings.findMany({
+    where: { userId: { in: userIds } },
+    select: { userId: true, externalServicePrefs: true },
+  });
+  const off = new Set(
+    rows
+      .filter((r) => parsePrefs(r.externalServicePrefs).disabled.includes(id))
+      .map((r) => r.userId)
+  );
+  return userIds.filter((u) => !off.has(u));
 }

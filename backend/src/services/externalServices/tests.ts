@@ -15,20 +15,22 @@ export async function recordTest(
   ok: boolean,
   reason: string | null
 ): Promise<LastTest> {
-  const existing = await prisma.externalServiceTest.findFirst({ where: { userId, serviceId } });
   const at = new Date();
-  const data = { ok, reason, at };
-  if (existing) {
-    await prisma.externalServiceTest.update({ where: { id: existing.id }, data });
-  } else {
-    await prisma.externalServiceTest.create({ data: { userId, serviceId, ...data } });
-  }
+  // Replace in one transaction: a concurrent first test cannot leave two rows
+  // (readers also take the newest, see `loadAllTests`).
+  await prisma.$transaction([
+    prisma.externalServiceTest.deleteMany({ where: { userId, serviceId } }),
+    prisma.externalServiceTest.create({ data: { userId, serviceId, ok, reason, at } }),
+  ]);
   return { at: at.toISOString(), ok, reason };
 }
 
 /** Every stored result of one scope, keyed by service id. */
 export async function loadAllTests(userId: string | null): Promise<Map<string, LastTest>> {
-  const rows = await prisma.externalServiceTest.findMany({ where: { userId } });
+  const rows = await prisma.externalServiceTest.findMany({
+    where: { userId },
+    orderBy: { at: "asc" },
+  });
   return new Map(
     rows.map((r) => [r.serviceId, { at: r.at.toISOString(), ok: r.ok, reason: r.reason }])
   );

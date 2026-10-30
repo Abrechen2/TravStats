@@ -52,7 +52,7 @@ export async function getImmichConnection(userId?: string): Promise<ImmichConnec
     // External-services policy (forgejo#392): off blocks every tier including ENV.
     const gate = await connectionGate("immich", userId);
     if (gate.off) return null;
-    if (userId && gate.accountMayConnect) {
+    if (userId) {
       /**
        * The SHARED demo account resolves nothing (independent review,
        * 2026-09-17, finding A2). The admin-global and ENV tiers below are the
@@ -84,7 +84,8 @@ export async function getImmichConnection(userId?: string): Promise<ImmichConnec
 
       const settings = caller?.settings;
       const user = buildConnection(settings?.immichBaseUrl, settings?.immichApiKey, "user", true);
-      if (user) return user;
+      // The admin may forbid accounts to bring their own connection (forgejo#392).
+      if (user && gate.accountMayConnect) return user;
     }
 
     const admin = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });

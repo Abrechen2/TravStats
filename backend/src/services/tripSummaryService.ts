@@ -38,9 +38,15 @@ export type OllamaTarget = LlmTarget;
  * parsers somewhere has pointed the summary there too, without a second
  * setting.
  */
-export async function resolveOllamaTarget(): Promise<LlmTarget> {
+export async function resolveOllamaTarget(userId?: string): Promise<LlmTarget> {
   // The first slot of the chain that answers (`llm/reachableTarget.ts`).
-  return (await resolveReachableLlmTarget({ withDefaults: true, wait: true })) ?? ollamaTarget();
+  return (
+    (await resolveReachableLlmTarget({
+      withDefaults: true,
+      wait: true,
+      ...(userId !== undefined ? { userId } : {}),
+    })) ?? ollamaTarget()
+  );
 }
 
 const DEFAULT_GENERATE_TIMEOUT_MS = 180_000;

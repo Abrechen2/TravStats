@@ -160,6 +160,8 @@ export interface ResolveLlmTargetOptions {
    * of the chain — forgejo#392. Absent = a system task with no account.
    */
   userId?: string;
+  /** A task with no account behind it (no document of anybody's). Without either, cloud targets are left out. */
+  systemTask?: true;
 }
 
 async function loadAdminSettings(): Promise<AdminParserSettings | null> {
@@ -266,6 +268,26 @@ export function serializeProviderOrder(order: readonly CloudProviderKind[]): str
 export const DEFAULT_PROVIDER_ORDER = CLOUD_PROVIDER_KINDS.join(",");
 
 /**
+ * Fail closed on the account (forgejo#392): a cloud target stays only for an
+ * account that consented to it, or for an explicit `systemTask`. A caller
+ * naming neither gets local targets only.
+ */
+async function filterForAccount(
+  targets: LlmTarget[],
+  who: { userId?: string; systemTask?: true }
+): Promise<LlmTarget[]> {
+  const kept: LlmTarget[] = [];
+  for (const target of targets) {
+    const cloud = target.isCloud ?? isCloudUrl(target.url);
+    if (!cloud || who.systemTask === true) kept.push(target);
+    else if (who.userId !== undefined && (await accountConsentedTo(who.userId, kindOf(target)))) {
+      kept.push(target);
+    }
+  }
+  return kept;
+}
+
+/**
  * The fallback chain, in the order it will be tried: Ollama first (when
  * eligible), then the enabled+consented cloud slots in the admin's priority.
  * An explicit `url`/`model` override (tests, legacy callers) bypasses the
@@ -275,12 +297,15 @@ export async function resolveLlmChain(options: ResolveLlmTargetOptions = {}): Pr
   const admin = await loadAdminSettings();
 
   if (options.url !== undefined || options.model !== undefined) {
-    return [
-      ollamaTarget(
-        options.url ?? admin?.ollamaUrl ?? undefined,
-        options.model ?? admin?.ollamaModel ?? undefined
-      ),
-    ].filter(permitsLlmTarget);
+    return filterForAccount(
+      [
+        ollamaTarget(
+          options.url ?? admin?.ollamaUrl ?? undefined,
+          options.model ?? admin?.ollamaModel ?? undefined
+        ),
+      ].filter(permitsLlmTarget),
+      options
+    );
   }
 
   const chain: LlmTarget[] = [];
@@ -304,15 +329,7 @@ export async function resolveLlmChain(options: ResolveLlmTargetOptions = {}): Pr
     chain.push(ollamaTarget());
   }
 
-  const permitted = chain.filter(permitsLlmTarget);
-  if (options.userId === undefined) return permitted;
-  const consented: LlmTarget[] = [];
-  for (const target of permitted) {
-    const cloud = target.isCloud ?? isCloudUrl(target.url);
-    if (!cloud || (await accountConsentedTo(options.userId, kindOf(target))))
-      consented.push(target);
-  }
-  return consented;
+  return filterForAccount(chain.filter(permitsLlmTarget), options);
 }
 
 /**
@@ -420,6 +437,8 @@ export interface LlmGenerateRequest {
    * account that has not consented to it (forgejo#392). Absent = no account.
    */
   userId?: string;
+  /** A task with no account behind it; without `userId` or this, a cloud target is refused. */
+  systemTask?: true;
 }
 
 /**
@@ -429,7 +448,10 @@ export interface LlmGenerateRequest {
  * (`llmGate.entryPoints.test.ts` holds that every model endpoint in the source
  * sits behind them).
  */
-async function assertMayAsk(target: LlmTarget, userId?: string): Promise<void> {
+async function assertMayAsk(
+  target: LlmTarget,
+  who: { userId?: string; systemTask?: true }
+): Promise<void> {
   if (!permitsLlmTarget(target))
     throw new AppError("Provider forbidden by request policy", 403, "LLM_REQUEST_POLICY");
   await assertLlmEnabled();
@@ -438,12 +460,12 @@ async function assertMayAsk(target: LlmTarget, userId?: string): Promise<void> {
       kind: kindOf(target),
       isCloud: target.isCloud ?? isCloudUrl(target.url),
     },
-    userId
+    who
   );
 }
 
 async function generateWithOllama(target: LlmTarget, req: LlmGenerateRequest): Promise<string> {
-  await assertMayAsk(target, req.userId);
+  await assertMayAsk(target, req);
   // `think: false` disables chain-of-thought on reasoning models like qwen3;
   // older Ollama versions ignore it.
   const body = JSON.stringify({
@@ -482,7 +504,7 @@ async function generateWithOpenAiShape(
   target: LlmTarget,
   req: LlmGenerateRequest
 ): Promise<string> {
-  await assertMayAsk(target, req.userId);
+  await assertMayAsk(target, req);
   const body = JSON.stringify({
     model: target.model,
     messages: [
@@ -530,7 +552,7 @@ async function generateWithOpenAiShape(
  * the request-shape assertion — not a failure — catches a regression here.
  */
 async function generateWithAnthropic(target: LlmTarget, req: LlmGenerateRequest): Promise<string> {
-  await assertMayAsk(target, req.userId);
+  await assertMayAsk(target, req);
   const body = JSON.stringify({
     model: target.model,
     max_tokens: ANTHROPIC_MAX_TOKENS,
@@ -600,7 +622,11 @@ export async function llmGenerateChain(
   req: LlmGenerateRequest,
   options: ResolveLlmTargetOptions = {}
 ): Promise<LlmGenerateChainResult> {
-  const chain = await resolveLlmChain(options);
+  const chain = await resolveLlmChain({
+    ...options,
+    ...(req.userId !== undefined ? { userId: req.userId } : {}),
+    ...(req.systemTask ? { systemTask: true as const } : {}),
+  });
   if (chain.length === 0) {
     throw new Error("No AI provider is configured");
   }

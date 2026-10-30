@@ -6,7 +6,7 @@ import {
   type DawarichClient,
   type DawarichPoint,
 } from "../../dawarich/dawarichClient";
-import { buildUserDawarichConnection } from "../../dawarich/dawarichResolver";
+import { ownDawarichConnectionFor } from "../../dawarich/dawarichResolver";
 import { DawarichError, type DawarichConnection } from "../../dawarich/errors";
 import { isSharedDemoUser } from "../../../utils/sharedDemo";
 import { travTrackInstanceOn, travTrackInstanceOnIn } from "../availability";
@@ -80,7 +80,7 @@ export async function ownDawarichConnection(userId: string): Promise<DawarichCon
     where: { userId },
     select: { dawarichBaseUrl: true, dawarichApiKey: true },
   });
-  return buildUserDawarichConnection(settings?.dawarichBaseUrl, settings?.dawarichApiKey);
+  return ownDawarichConnectionFor(userId, settings?.dawarichBaseUrl, settings?.dawarichApiKey);
 }
 
 /** An optional reading kept only inside the range ingest takes; else unknown, never the point dropped. */

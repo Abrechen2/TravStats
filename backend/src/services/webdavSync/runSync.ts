@@ -1,3 +1,4 @@
+import { connectionGate } from "../externalServices/policy";
 import { createHash } from "crypto";
 import path from "path";
 import { createReadStream } from "fs";
@@ -144,6 +145,11 @@ async function resolveTarget(userId: string): Promise<ResolvedTarget> {
   if (!row || !user || !row.enabled || !row.url || !row.username || !row.passwordEncrypted) {
     throw new WebdavSyncError("notConfigured");
   }
+  // Switched off by the admin, forbidden for accounts, or off for this account
+  // (external-services policy, forgejo#392): the sync does not run, however it
+  // was started — the scheduler and "Jetzt abgleichen" both land here.
+  const gate = await connectionGate("webdav", userId);
+  if (gate.off || !gate.accountMayConnect) throw new WebdavSyncError("notConfigured");
   const password = decryptApiKey(row.passwordEncrypted);
   if (!password) throw new WebdavSyncError("notConfigured");
   // Read now, not when the URL was saved: a demoted account loses a LAN target.

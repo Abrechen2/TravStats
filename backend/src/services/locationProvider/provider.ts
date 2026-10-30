@@ -20,7 +20,7 @@
 import { prisma } from "../../db";
 import { Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
-import { buildUserDawarichConnection } from "../dawarich/dawarichResolver";
+import { ownDawarichConnectionFor } from "../dawarich/dawarichResolver";
 import { travTrackAvailable } from "../travtrack/availability";
 
 import { LOCATION_PROVIDER_KINDS, type LocationProviderKind, type ProviderStatus } from "./kinds";
@@ -67,15 +67,15 @@ type ProviderRow = {
 const readRow = (userId: string): Promise<ProviderRow | null> =>
   prisma.userSettings.findUnique({ where: { userId }, select: SELECT });
 
-const hasOwnDawarich = (row: ProviderRow | null): boolean =>
-  buildUserDawarichConnection(row?.dawarichBaseUrl, row?.dawarichApiKey) !== null;
+const hasOwnDawarich = async (userId: string, row: ProviderRow | null): Promise<boolean> =>
+  (await ownDawarichConnectionFor(userId, row?.dawarichBaseUrl, row?.dawarichApiKey)) !== null;
 
 async function statusOf(
   userId: string,
   kind: LocationProviderKind,
   row: ProviderRow | null
 ): Promise<ProviderStatus> {
-  if (kind === "dawarich") return hasOwnDawarich(row) ? "ok" : "notConfigured";
+  if (kind === "dawarich") return (await hasOwnDawarich(userId, row)) ? "ok" : "notConfigured";
   if (kind === "travtrack") return (await travTrackAvailable(userId)) ? "ok" : "unavailable";
   return "ok";
 }
@@ -92,7 +92,7 @@ export async function getLocationProvider(userId: string): Promise<LocationProvi
 /** What this account may choose right now. `none` always. */
 export async function getLocationProviderChoices(userId: string): Promise<LocationProviderChoices> {
   const [row, travtrack] = await Promise.all([readRow(userId), travTrackAvailable(userId)]);
-  return { none: true, travtrack, dawarich: hasOwnDawarich(row) };
+  return { none: true, travtrack, dawarich: await hasOwnDawarich(userId, row) };
 }
 
 /** `kind` is chosen AND working. A broken provider is not "the" provider for its jobs. */
@@ -109,7 +109,7 @@ export async function setLocationProvider(
   userId: string,
   kind: LocationProviderKind
 ): Promise<{ kind: LocationProviderKind; rev: number }> {
-  if (kind === "dawarich" && !hasOwnDawarich(await readRow(userId))) {
+  if (kind === "dawarich" && !(await hasOwnDawarich(userId, await readRow(userId)))) {
     throw new AppError(
       "Dawarich needs your own connection before it can be your location source",
       409,

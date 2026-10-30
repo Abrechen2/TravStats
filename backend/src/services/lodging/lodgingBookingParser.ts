@@ -107,10 +107,14 @@ EXAMPLE OUTPUT:
  * (`llm/llmProvider.ts`). A fully-specified caller is never overridden by
  * whatever is in the database.
  */
-async function resolveTarget(options?: LodgingBookingParserOptions): Promise<LlmTarget> {
+async function resolveTarget(
+  options?: LodgingBookingParserOptions,
+  userId?: string
+): Promise<LlmTarget> {
   // The first slot of the chain that answers, not merely the first slot
   // (`llm/reachableTarget.ts`).
   const target = await resolveReachableLlmTarget({
+    ...(userId !== undefined ? { userId } : {}),
     ...(options?.url !== undefined ? { url: options.url } : {}),
     ...(options?.model !== undefined ? { model: options.model } : {}),
     withDefaults: true,
@@ -293,7 +297,11 @@ function unwrapBookings(parsed: unknown): unknown[] {
  */
 const LODGING_SNIPPET_MAX_CHARS = 12_000;
 
-async function parseWithModel(text: string, target: LlmTarget): Promise<ParsedLodgingBooking[]> {
+async function parseWithModel(
+  text: string,
+  target: LlmTarget,
+  userId?: string
+): Promise<ParsedLodgingBooking[]> {
   // Same window as the flight parser, and — like it since 2.5.2 — a truncation
   // is LOGGED. The lodging side cut silently, so a confirmation whose booking
   // table sat past the window came back as "no booking found" with nothing to
@@ -306,6 +314,7 @@ async function parseWithModel(text: string, target: LlmTarget): Promise<ParsedLo
     );
   }
   const responseText = await llmGenerate(target, {
+    ...(userId !== undefined ? { userId } : {}),
     system: LODGING_SYSTEM_PROMPT,
     prompt: `Extract every hotel booking from this confirmation. Output JSON in the shape shown in the EXAMPLE OUTPUT block. If you cannot find a value, use null.
 
@@ -465,7 +474,7 @@ export async function parseLodgingBookingText(
     };
   }
 
-  const target = await resolveTarget(options);
+  const target = await resolveTarget(options, userId);
   const { url, model } = target;
   // This probe IS the health probe `ollamaAvailable` reports on, so it is fed
   // back into the shared cache rather than measured twice per parse.
@@ -513,7 +522,7 @@ export async function parseLodgingBookingText(
     // `cleanEmailBody` is what the flight parser has always applied to its body;
     // this side only ever used `cleanText` on individual field VALUES. So this
     // is the flight parser's own treatment, not a new idea.
-    const bookings = await parseWithModel(cleanEmailBody(text), target);
+    const bookings = await parseWithModel(cleanEmailBody(text), target, userId);
     if (bookings.length === 0) {
       // Same rule as above: the model finding nothing is not a reason to
       // leave a template hit on the table.

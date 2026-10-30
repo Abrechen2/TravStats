@@ -9,8 +9,9 @@ import { isEnabledForConsent } from "./accountView";
 import { loadAdminState } from "./adminView";
 import { AI_SERVICES, getService } from "./catalogue";
 import { collectWrites } from "./fields";
-import { loadPrefs, savePrefs, withMember } from "./policy";
+import { updatePrefs, withMember } from "./policy";
 import { testAccountService } from "./testRunner";
+import { recordTest } from "./tests";
 import logger from "../../utils/logger";
 
 export interface AccountUpdateBody {
@@ -30,14 +31,16 @@ export async function applyAccountUpdate(
   const state = await loadAdminState();
   const fieldKeys = Object.keys(body.fields ?? {});
 
-  if (service.connection && state.policy.connectionsForbidden.includes(id)) {
+  const clearing =
+    fieldKeys.length > 0 && Object.values(body.fields ?? {}).every((v) => v === "" || v === null);
+  if (!clearing && service.connection && state.policy.connectionsForbidden.includes(id)) {
     throw new AppError(
       "The administrator does not allow this connection",
       403,
       "CONNECTION_NOT_ALLOWED"
     );
   }
-  if (fieldKeys.length > 0) {
+  if (fieldKeys.length > 0 && !clearing) {
     if (!service.connection && state.policy.accountKeysForbidden.includes(id)) {
       throw new AppError(
         "The administrator does not allow your own key for this service",
@@ -72,11 +75,11 @@ export async function applyAccountUpdate(
     });
   }
   if (body.accountDisabled !== undefined) {
-    const prefs = await loadPrefs(userId);
-    await savePrefs(userId, {
+    const off = body.accountDisabled;
+    await updatePrefs(userId, (prefs) => ({
       ...prefs,
-      disabled: withMember(prefs.disabled, id, body.accountDisabled),
-    });
+      disabled: withMember(prefs.disabled, id, off),
+    }));
   }
   await refreshTestAfterSave(userId, id, body.fields ?? {}, service.tester !== undefined);
 }
@@ -108,6 +111,8 @@ async function refreshTestAfterSave(
       { serviceId: id, error: error instanceof Error ? error.message : "unknown" },
       "account service test after save failed"
     );
+    // Never leave the previous verdict standing next to a credential it did not test.
+    await recordTest(userId, id, false, "unknown");
   }
 }
 
@@ -117,7 +122,6 @@ export async function setAiConsent(
   provider: LlmProviderKind,
   consent: boolean
 ): Promise<{ provider: string; consentedAt: string | null }> {
-  const prefs = await loadPrefs(userId);
   if (consent) {
     // Only a provider the admin allowed can be consented to — otherwise the
     // consent would be a promise about a destination nobody confirmed.
@@ -131,12 +135,11 @@ export async function setAiConsent(
       );
     }
   }
-  const { [provider]: _removed, ...rest } = prefs.aiConsent;
-  void _removed;
   const consentedAt = consent ? new Date().toISOString() : null;
-  await savePrefs(userId, {
-    ...prefs,
-    aiConsent: consentedAt ? { ...rest, [provider]: consentedAt } : rest,
+  await updatePrefs(userId, (prefs) => {
+    const { [provider]: _removed, ...rest } = prefs.aiConsent;
+    void _removed;
+    return { ...prefs, aiConsent: consentedAt ? { ...rest, [provider]: consentedAt } : rest };
   });
   return { provider, consentedAt };
 }

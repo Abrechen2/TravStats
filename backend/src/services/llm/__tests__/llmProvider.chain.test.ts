@@ -74,7 +74,7 @@ describe("resolveLlmChain: order, eligibility and skip-without-attempt", () => {
       llmOpenaiApiKey: "k2",
       llmOpenaiOptIn: true,
     });
-    const chain = await resolveLlmChain();
+    const chain = await resolveLlmChain({ systemTask: true });
     expect(chain.map((t) => t.kind)).toEqual(["ollama", "anthropic", "openai"]);
   });
 
@@ -86,7 +86,7 @@ describe("resolveLlmChain: order, eligibility and skip-without-attempt", () => {
       llmAnthropicApiKey: "k2",
       llmAnthropicOptIn: true,
     });
-    const chain = await resolveLlmChain();
+    const chain = await resolveLlmChain({ systemTask: true });
     expect(chain.map((t) => t.kind)).toEqual(["anthropic"]);
   });
 
@@ -98,7 +98,7 @@ describe("resolveLlmChain: order, eligibility and skip-without-attempt", () => {
       llmGoogleApiKey: "k2",
       llmGoogleOptIn: true,
     });
-    const orderedGoogleFirst = await resolveLlmChain();
+    const orderedGoogleFirst = await resolveLlmChain({ systemTask: true });
     expect(orderedGoogleFirst[0]?.kind).toBe("google");
 
     settings({
@@ -108,7 +108,7 @@ describe("resolveLlmChain: order, eligibility and skip-without-attempt", () => {
       llmGoogleApiKey: "k2",
       llmGoogleOptIn: true,
     });
-    const orderedOpenaiFirst = await resolveLlmChain();
+    const orderedOpenaiFirst = await resolveLlmChain({ systemTask: true });
     expect(orderedOpenaiFirst[0]?.kind).toBe("openai");
   });
 });

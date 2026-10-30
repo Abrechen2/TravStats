@@ -111,6 +111,7 @@ async function classify(userId: string, candidates: StayCandidate[]): Promise<St
   try {
     const { text, target } = await llmGenerateChain(
       {
+        userId,
         system: SYSTEM_PROMPT,
         prompt: promptOf(candidates),
         temperature: 0,

@@ -1,5 +1,5 @@
 import { prisma } from "../../db";
-import { buildUserDawarichConnection } from "../dawarich/dawarichResolver";
+import { ownDawarichConnectionFor } from "../dawarich/dawarichResolver";
 import { dawarichProvider } from "./dawarichProvider";
 import { getLocationProvider } from "./provider";
 import { travtrackProvider } from "./travtrackProvider";
@@ -25,6 +25,10 @@ export async function providerFor(userId: string): Promise<LocationProvider | nu
     where: { userId },
     select: { dawarichBaseUrl: true, dawarichApiKey: true },
   });
-  const connection = buildUserDawarichConnection(row?.dawarichBaseUrl, row?.dawarichApiKey);
+  const connection = await ownDawarichConnectionFor(
+    userId,
+    row?.dawarichBaseUrl,
+    row?.dawarichApiKey
+  );
   return connection ? dawarichProvider(connection) : null;
 }

@@ -168,6 +168,7 @@ export class OllamaTextParser implements ITextParser {
     );
 
     const responseText = await llmGenerate(this.target, {
+      ...(options?.userId ? { userId: options.userId } : {}),
       system: buildSystemPrompt(options?.referenceDate),
       prompt: userPrompt,
       temperature: 0.1,

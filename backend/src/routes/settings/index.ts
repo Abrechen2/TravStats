@@ -17,6 +17,7 @@ import webdavSyncRouter from "./webdavSync";
 import personalRouter from "./personal";
 import locationProviderRouter from "./locationProvider";
 import externalServicesRouter from "./externalServices";
+import { guardAccountKeyWrite, guardConnectionWrite } from "../../services/externalServices/guards";
 
 const router = Router();
 
@@ -67,6 +68,12 @@ router.use(
   ],
   rejectDemoWrites
 );
+
+// The admin's external-services policy on the legacy write routes (forgejo#392).
+router.use("/api-keys", guardAccountKeyWrite);
+router.use("/immich", guardConnectionWrite("immich"));
+router.use("/dawarich", guardConnectionWrite("dawarich"));
+router.use("/webdav-sync", guardConnectionWrite("webdav"));
 
 // Mount sub-routers
 router.use("/", generalRouter);

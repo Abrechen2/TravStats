@@ -704,10 +704,10 @@ router.post(
       await assertLlmEnabled();
       // The admin's provider (parser settings), then the environment — the
       // same resolution the parsers use, so one configured model serves both.
-      const target = await resolveOllamaTarget();
+      const target = await resolveOllamaTarget(userId);
       // A cloud provider without the admin's consent is refused before the
       // probe, with its own code — the brief is personal travel data.
-      await assertLlmCloudConsent(target, userId);
+      await assertLlmCloudConsent(target, { userId });
       const ollamaUp = await checkOllamaAvailable(target);
       if (!ollamaUp) {
         throw new AppError(

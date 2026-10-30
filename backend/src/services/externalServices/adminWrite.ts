@@ -16,8 +16,8 @@ import { clearAvailabilityCache } from "../parsers/config";
 import { clearLlmAvailabilityCache } from "../parsers/llmAvailability";
 import { CONNECTION_IDS, getService } from "./catalogue";
 import { collectWrites } from "./fields";
-import { loadPolicy, savePolicy, withMember } from "./policy";
-import type { ServiceDef } from "./types";
+import { updatePolicy, withMember } from "./policy";
+import type { ExternalServicePolicy, ServiceDef } from "./types";
 
 export interface AdminUpdateBody {
   enabled?: boolean;
@@ -51,8 +51,7 @@ export async function applyAdminUpdate(id: string, body: AdminUpdateBody): Promi
   const writes = collectWrites(service, service.fields, body.fields ?? {});
   const adminData: Record<string, unknown> = { ...writes.admin };
   const smtpPatch: Record<string, unknown> = { ...writes.smtp };
-  let policy = await loadPolicy();
-  let policyChanged = false;
+  const policyEdits: Array<(p: ExternalServicePolicy) => ExternalServicePolicy> = [];
   const current = (await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } })) as Record<
     string,
     unknown
@@ -62,18 +61,20 @@ export async function applyAdminUpdate(id: string, body: AdminUpdateBody): Promi
     if (service.level !== "instanceAndAccount" || service.connection) {
       throw new AppError("This service has no account keys", 400, "VALIDATION_FAILED");
     }
-    policy = {
-      ...policy,
-      accountKeysForbidden: withMember(policy.accountKeysForbidden, id, !body.allowAccountKeys),
-    };
-    policyChanged = true;
+    const allow = body.allowAccountKeys;
+    policyEdits.push((p) => ({
+      ...p,
+      accountKeysForbidden: withMember(p.accountKeysForbidden, id, !allow),
+    }));
   }
 
   if (body.enabled !== undefined) {
     switch (service.enabled.kind) {
       case "policy":
-        policy = { ...policy, disabled: withMember(policy.disabled, id, !body.enabled) };
-        policyChanged = true;
+        {
+          const on = body.enabled;
+          policyEdits.push((p) => ({ ...p, disabled: withMember(p.disabled, id, !on) }));
+        }
         break;
       case "adminColumns":
         for (const column of service.enabled.columns) adminData[column] = body.enabled;
@@ -119,7 +120,7 @@ export async function applyAdminUpdate(id: string, body: AdminUpdateBody): Promi
   }
 
   if (Object.keys(smtpPatch).length > 0) await applySmtp(smtpPatch);
-  if (policyChanged) await savePolicy(policy);
+  if (policyEdits.length > 0) await updatePolicy((p) => policyEdits.reduce((acc, e) => e(acc), p));
   if (Object.keys(adminData).length > 0) {
     await prisma.adminSettings.update({
       where: { id: await ensureAdminSettingsRow() },
@@ -192,9 +193,8 @@ export async function applyConnectionAllowed(id: string, allowed: boolean): Prom
   if (!(CONNECTION_IDS as readonly string[]).includes(id)) {
     throw new AppError("Unknown account connection", 404, "SERVICE_NOT_FOUND");
   }
-  const policy = await loadPolicy();
-  await savePolicy({
+  await updatePolicy((policy) => ({
     ...policy,
     connectionsForbidden: withMember(policy.connectionsForbidden, id, !allowed),
-  });
+  }));
 }
