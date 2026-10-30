@@ -4,6 +4,7 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import * as geo from "../../services/geo/nominatim";
+import * as sharing from "../../services/sharing/propagate";
 
 /**
  * `PATCH /lodging/:id { lat, lon }` is the whole of the "repair a missing
@@ -244,5 +245,33 @@ describe("PATCH /api/v1/lodging/:id - position only", () => {
       expect(cleared.status).toBe(200);
       expect(cleared.body.data.lat).toBeNull();
     });
+  });
+});
+
+describe("PATCH /api/v1/lodging/:id - atomic with its propagation (forgejo#385 RULE-30)", () => {
+  it("leaves the house unchanged when propagating the change fails", async () => {
+    const u = await prisma.user.create({
+      data: {
+        username: `lodging-atomic-${Date.now()}`,
+        passwordHash: await hashPassword("password123"),
+      },
+    });
+    const lodging = await prisma.lodging.create({
+      data: { userId: u.id, name: "Before", type: "hotel" },
+    });
+    jest.spyOn(sharing, "propagateWrites").mockRejectedValueOnce(new Error("propagation down"));
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await request(app)
+        .patch(`/api/v1/lodging/${lodging.id}`)
+        .set("Cookie", `auth_token=${generateToken(u.id)}`)
+        .send({ name: "After" });
+      expect(res.status).toBeGreaterThanOrEqual(500);
+      const row = await prisma.lodging.findUniqueOrThrow({ where: { id: lodging.id } });
+      expect(row.name).toBe("Before");
+    } finally {
+      jest.restoreAllMocks();
+      await prisma.user.deleteMany({ where: { id: u.id } });
+    }
   });
 });

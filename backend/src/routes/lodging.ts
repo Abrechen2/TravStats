@@ -1,5 +1,10 @@
 import { Router, Response, NextFunction } from "express";
-import { propagateDeletes, propagateWrites, shareSnapshots } from "../services/sharing/propagate";
+import {
+  propagateDeletes,
+  propagateWrites,
+  shareSnapshots,
+  SHARE_TX_TIMEOUT_MS,
+} from "../services/sharing/propagate";
 import { resolveCountryCode } from "../shared/geo/countryCode";
 import { Prisma } from "../prisma";
 import { z } from "zod";
@@ -313,25 +318,33 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     const patched = { ...input, ...location };
     // The house is a fact of every stay in it: its shared stays carry the
     // change to the other members' copies (design 2026-10-09, decision 2).
-    const stayIds = (
-      await prisma.lodgingStay.findMany({
-        where: { lodgingId: existing.id, userId, shareKey: { not: null } },
-        select: { id: true },
-      })
-    ).map((s) => s.id);
-    const before = await shareSnapshots(prisma, "lodgingStay", stayIds);
-    const lodging = await prisma.lodging.update({
-      where: { id: existing.id },
-      data: {
-        ...patched,
-        ...(patched.country !== undefined
-          ? { isoCountryCode: resolveCountryCode(patched.country) }
-          : {}),
-        ...(externalRef !== undefined && { externalRef }),
+    // One transaction: a propagation that fails must not leave the house
+    // changed while the other members' copies still carry the old facts.
+    const lodging = await prisma.$transaction(
+      async (tx) => {
+        const stayIds = (
+          await tx.lodgingStay.findMany({
+            where: { lodgingId: existing.id, userId, shareKey: { not: null } },
+            select: { id: true },
+          })
+        ).map((s) => s.id);
+        const before = await shareSnapshots(tx, "lodgingStay", stayIds);
+        const updated = await tx.lodging.update({
+          where: { id: existing.id },
+          data: {
+            ...patched,
+            ...(patched.country !== undefined
+              ? { isoCountryCode: resolveCountryCode(patched.country) }
+              : {}),
+            ...(externalRef !== undefined && { externalRef }),
+          },
+          include: LODGING_INCLUDE,
+        });
+        await propagateWrites(tx, userId, "lodgingStay", stayIds, before);
+        return updated;
       },
-      include: LODGING_INCLUDE,
-    });
-    await propagateWrites(prisma, userId, "lodgingStay", stayIds, before);
+      { timeout: SHARE_TX_TIMEOUT_MS }
+    );
     const baseCurrency = await getBaseCurrency(userId);
     res.json({
       success: true,
