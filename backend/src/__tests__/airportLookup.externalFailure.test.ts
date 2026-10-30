@@ -1,5 +1,9 @@
 import { prisma } from "../db";
-import { lookupOrCreateAirport, resetAirportLookupCaches } from "../services/airportLookup";
+import {
+  lookupOrCreateAirport,
+  missCacheSizeForTests,
+  resetAirportLookupCaches,
+} from "../services/airportLookup";
 
 const CSV = [
   "id,ident,type,name,latitude_deg,longitude_deg,elevation_ft,continent,iso_country,iso_region,municipality,scheduled_service,gps_code,iata_code,local_code",
@@ -89,4 +93,25 @@ describe("airport lookup against failing external sources (forgejo#347)", () => 
     expect(result.status).toBe("found");
     if (result.status === "found") expect(result.airport.name).toBe("Test, Field");
   });
+
+  it("answers a malformed code as not found with no upstream call and no cache entry", async () => {
+    const fn = jest.fn(async () => emptyApi());
+    global.fetch = fn as unknown as typeof fetch;
+    for (const bad of ["", "A", "TOOLONG", "ab cd", "../etc", "É12", "x".repeat(5000)]) {
+      expect(await lookupOrCreateAirport(bad)).toEqual({ status: "not_found" });
+    }
+    expect(fn).not.toHaveBeenCalled();
+    expect(missCacheSizeForTests()).toBe(0);
+  });
+
+  it("bounds the miss cache however many distinct codes miss", async () => {
+    global.fetch = jest.fn(async (url: unknown) =>
+      String(url).includes("airport-data") ? emptyApi() : new Response(CSV)
+    ) as unknown as typeof fetch;
+    const codes: string[] = [];
+    for (let i = 0; i < 1100; i++) codes.push(`Q${i.toString(36).toUpperCase().padStart(3, "0")}`);
+    for (const c of codes) await lookupOrCreateAirport(c);
+    expect(missCacheSizeForTests()).toBeLessThanOrEqual(1000);
+    expect(missCacheSizeForTests()).toBeGreaterThan(900);
+  }, 60_000);
 });

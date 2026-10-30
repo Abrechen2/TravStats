@@ -48,6 +48,30 @@ let csvIndex: { rows: Map<string, ExternalAirportData>; timestamp: number } | nu
 /** The download+parse in flight, shared by every concurrent miss. */
 let csvIndexLoading: Promise<Map<string, ExternalAirportData>> | null = null;
 const missCache = new Map<string, number>();
+/** Hard bound on remembered misses; the oldest entry goes first (Map keeps insertion order). */
+const MISS_CACHE_MAX = 1000;
+/** An IATA (3) or ICAO (4) code. Anything else cannot be an airport and never goes upstream. */
+const AIRPORT_CODE_SHAPE = /^[A-Z0-9]{3,4}$/;
+
+function rememberMiss(code: string): void {
+  const now = Date.now();
+  missCache.delete(code);
+  for (const [key, at] of missCache) {
+    if (now - at >= MISS_CACHE_TTL) missCache.delete(key);
+    else break; // insertion order is time order, so the rest are younger
+  }
+  while (missCache.size >= MISS_CACHE_MAX) {
+    const oldest = missCache.keys().next().value;
+    if (oldest === undefined) break;
+    missCache.delete(oldest);
+  }
+  missCache.set(code, now);
+}
+
+/** Test seam: how many misses are remembered. */
+export function missCacheSizeForTests(): number {
+  return missCache.size;
+}
 
 /** Why an external lookup could not give an answer (as opposed to "no such airport"). */
 export type AirportLookupFailureReason = "timeout" | "network" | "http_error";
@@ -63,7 +87,10 @@ type ExternalLookup =
   | { status: "unavailable"; reason: AirportLookupFailureReason };
 
 class ExternalFetchError extends Error {
-  constructor(readonly reason: AirportLookupFailureReason, message: string) {
+  constructor(
+    readonly reason: AirportLookupFailureReason,
+    message: string
+  ) {
     super(message);
   }
 }
@@ -196,6 +223,10 @@ export async function lookupOrCreateAirport(code: string): Promise<AirportLookup
     return { status: "found", airport: existingAirport };
   }
 
+  if (!AIRPORT_CODE_SHAPE.test(upperCode)) {
+    return { status: "not_found" };
+  }
+
   const missedAt = missCache.get(upperCode);
   if (missedAt !== undefined) {
     if (Date.now() - missedAt < MISS_CACHE_TTL) return { status: "not_found" };
@@ -215,7 +246,7 @@ export async function lookupOrCreateAirport(code: string): Promise<AirportLookup
     return external;
   }
   if (external.status === "not_found") {
-    missCache.set(upperCode, Date.now());
+    rememberMiss(upperCode);
     return external;
   }
   const externalData = external.data;

@@ -75,10 +75,7 @@ const mockClient = {
   getFileContents: jest.fn<() => Promise<Buffer>>(),
   createReadStream:
     jest.fn<
-      (
-        p: string,
-        o?: { callback?: (r: { headers: Headers }) => void }
-      ) => import("stream").Readable
+      (p: string, o?: { callback?: (r: { headers: Headers }) => void }) => import("stream").Readable
     >(),
 };
 const mockCreateClient = jest.fn(() => mockClient);
@@ -526,9 +523,7 @@ describe("cloudSyncService", () => {
         options?.callback?.({ headers: new Headers({ "content-length": "100" }) });
         return Readable.from([Buffer.from("only-13-bytes")]);
       });
-      mockCreateWriteStream.mockImplementation(
-        () => new Writable({ write: (_c, _e, cb) => cb() })
-      );
+      mockCreateWriteStream.mockImplementation(() => new Writable({ write: (_c, _e, cb) => cb() }));
 
       await expect(downloadFromCloud("backup-1.tar.gz", "/tmp/out.tar.gz")).rejects.toMatchObject({
         statusCode: 502,
@@ -549,9 +544,7 @@ describe("cloudSyncService", () => {
         options?.callback?.({ headers: new Headers({ "content-length": "13" }) });
         return Readable.from([Buffer.from("archive-bytes")]);
       });
-      mockCreateWriteStream.mockImplementation(
-        () => new Writable({ write: (_c, _e, cb) => cb() })
-      );
+      mockCreateWriteStream.mockImplementation(() => new Writable({ write: (_c, _e, cb) => cb() }));
       await downloadFromCloud("backup-1.tar.gz", "/tmp/out.tar.gz");
       expect(mockRenameSync).toHaveBeenCalled();
     });
