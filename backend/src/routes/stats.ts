@@ -399,40 +399,9 @@ router.get("/fun", async (req: AuthRequest, res: Response, next: NextFunction): 
       },
     });
 
-    // Calculate stats with error handling - continue even if airport data fails
-    let funStats;
-    try {
-      funStats = await calculateFunStats(await withDepartureClock(flights));
-    } catch (statsError) {
-      // If stats calculation fails (e.g., database issues), return partial stats
-      // This prevents the entire endpoint from failing
-      logger.error({
-        operation: "calculate_fun_stats_error",
-        message: "Failed to calculate fun stats, returning partial data",
-        error: statsError instanceof Error ? statsError.message : "Unknown error",
-      });
-      // Return a minimal response instead of failing completely
-      funStats = {
-        timezoneHopper: 0,
-        earlyBird: 0,
-        afternoon: 0,
-        nightOwl: 0,
-        weekendWarrior: 0,
-        weekendPercentage: 0,
-        loyaltyScore: 0,
-        mostUsedAirline: null,
-        shortHaulKing: 0,
-        longHaulPilot: 0,
-        fastestDay: null,
-        fastestDayFlights: 0,
-        co2FootprintKg: 0,
-        co2InElephants: 0,
-        milestoneYear: null,
-        milestoneYearFlights: 0,
-        routeMaster: null,
-        routeMasterCount: 0,
-      };
-    }
+    // A calculator failure is a failure, not a page of zeros: it reaches
+    // next(error) as a 5xx, the same answer /stats/page gives (forgejo#368).
+    const funStats = await calculateFunStats(await withDepartureClock(flights));
 
     res.json(funStats);
   } catch (error) {
@@ -505,35 +474,10 @@ router.get(
         },
       });
 
-      // Business stats don't require database lookups, so they should be safe
-      // But wrap in try-catch for safety
-      let businessStats;
-      try {
-        businessStats = calculateBusinessStats(
-          await withDepartureClock(flights),
-          await getBaseCurrency(userId)
-        );
-      } catch (statsError) {
-        logger.error({
-          operation: "calculate_business_stats_error",
-          message: "Failed to calculate business stats",
-          error: statsError instanceof Error ? statsError.message : "Unknown error",
-        });
-        // Return minimal response
-        businessStats = {
-          costPerKm: null,
-          costPerHour: null,
-          totalCost: null,
-          totalDistance: 0,
-          seatClassDistribution: {},
-          mostCommonCategory: null,
-          airportDiversity: 0,
-          avgFlightDuration: null,
-          busiestMonth: null,
-          busiestMonthFlights: 0,
-          categoryDistribution: {},
-        };
-      }
+      const businessStats = calculateBusinessStats(
+        await withDepartureClock(flights),
+        await getBaseCurrency(userId)
+      );
 
       res.json(businessStats);
     } catch (error) {
@@ -597,46 +541,10 @@ router.get(
       // Home by date, so layovers exclude returns to any home airport of that date.
       const homePeriods = await loadHomePeriods(userId);
 
-      // Calculate unique stats with error handling - continue even if airport data fails
-      let uniqueStats;
-      try {
-        uniqueStats = await calculateUniqueStats(await withDepartureClock(flights), homePeriods);
-      } catch (statsError) {
-        // If stats calculation fails (e.g., database issues), return partial stats
-        logger.error({
-          operation: "calculate_unique_stats_error",
-          message: "Failed to calculate unique stats, returning partial data",
-          error: statsError instanceof Error ? statsError.message : "Unknown error",
-        });
-        // Return a minimal response instead of failing completely
-        uniqueStats = {
-          timeTravelIndex: 0,
-          equatorCrossings: 0,
-          arcticFlights: 0,
-          oceanCrossings: 0,
-          highestAirport: null,
-          northernmost: null,
-          southernmost: null,
-          longestTravelChain: 0,
-          fastestRoute: null,
-          mostCountriesInDay: 0,
-          mostCountriesDate: null,
-          hemisphereHops: 0,
-          dateLineCrossings: 0,
-          continentalExplorer: 0,
-          continents: [],
-          tropicsTraveler: 0,
-          eastWestBalance: { eastward: 0, westward: 0, ratio: 0 },
-          sameDayReturns: 0,
-          midnightFlights: 0,
-          seasonalExplorer: false,
-          seasonsCount: 0,
-          internationalVsDomestic: { international: 0, domestic: 0, ratio: 0 },
-          longestLayover: null,
-          shortestLayover: null,
-          roundTripMaster: 0,
-        };
-      }
+      const uniqueStats = await calculateUniqueStats(
+        await withDepartureClock(flights),
+        homePeriods
+      );
 
       res.json(uniqueStats);
     } catch (error) {
@@ -924,20 +832,9 @@ router.get(
       const cruiseStatsInput: CruiseStatsInput[] = cruiseRows.map((r) => r.input);
       const baseCurrency = await getBaseCurrency(userId);
 
-      // Defensive parity with the flight stats endpoints: a calculation
-      // error on one malformed cruise must not 500 the whole tab — fall
-      // back to an empty stats object and log the cause.
-      let stats: ReturnType<typeof calculateCruiseStats>;
-      try {
-        stats = calculateCruiseStats(cruiseStatsInput, userBirthday);
-      } catch (calcError) {
-        logger.error({
-          operation: "cruise_stats_calculation_failed",
-          userId,
-          error: calcError instanceof Error ? calcError.message : calcError,
-        });
-        stats = calculateCruiseStats([], userBirthday);
-      }
+      // A calculation failure reaches next(error); an empty stats object would
+      // show a confident page of zeros (forgejo#368).
+      const stats = calculateCruiseStats(cruiseStatsInput, userBirthday);
 
       res.json({
         ...buildCruiseTabResponse(stats, cruiseRows, baseCurrency),
@@ -980,20 +877,9 @@ router.get(
         baseCurrency,
       } = await loadLodgingStatsData(userId, year);
 
-      // Defensive parity with the cruise/flight stats endpoints: a
-      // calculation error on one malformed stay must not 500 the whole
-      // tab — fall back to an empty stats object and log the cause.
-      let stats: ReturnType<typeof calculateLodgingStats>;
-      try {
-        stats = calculateLodgingStats(stayData, baseCurrency, lodgingRecords);
-      } catch (calcError) {
-        logger.error({
-          operation: "lodging_stats_calculation_failed",
-          userId,
-          error: calcError instanceof Error ? calcError.message : calcError,
-        });
-        stats = calculateLodgingStats([], baseCurrency, lodgingRecords);
-      }
+      // A calculation failure reaches next(error); an empty stats object would
+      // show a confident page of zeros (forgejo#368).
+      const stats = calculateLodgingStats(stayData, baseCurrency, lodgingRecords);
 
       res.json({
         success: true,
