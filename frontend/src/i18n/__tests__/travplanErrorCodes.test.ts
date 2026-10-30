@@ -11,7 +11,7 @@ import enTravplan from "../resources/en/travplan.json";
  * to retry an action that can never succeed. The vocabulary is the `PLAN_*`
  * members of the backend's error-code union.
  */
-const ERROR_HANDLER = path.resolve(__dirname, "../../../../backend/src/middleware/errorHandler.ts");
+const ERROR_HANDLER = path.resolve(__dirname, "../../../../backend/src/middleware/apiErrorCode.ts");
 const codes = [
   ...new Set(fs.readFileSync(ERROR_HANDLER, "utf8").match(/"PLAN_[A-Z_]+"/g) ?? []),
 ].map((c) => c.slice(1, -1));

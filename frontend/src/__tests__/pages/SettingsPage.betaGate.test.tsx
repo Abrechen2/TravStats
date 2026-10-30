@@ -161,6 +161,10 @@ vi.mock("../../components/Settings/DawarichConnectionCard", () => ({
 vi.mock("../../components/Settings/StravaConnectionCard", () => ({
   default: () => <div data-testid="strava-connection-card" />,
 }));
+// The account services page (forgejo#392) loads its catalogue from the server — not the subject here.
+vi.mock("../../components/ExternalServices/AccountExternalServices", () => ({
+  default: () => <div data-testid="account-external-services" />,
+}));
 vi.mock("../../components/Settings/ImmichConnectionCard", () => ({
   default: () => <div data-testid="immich-connection-card" />,
 }));
@@ -350,52 +354,5 @@ describe("SettingsPage — beta gate: the Dawarich connection card", () => {
     const { unmount } = renderSettings("/settings?section=dawarich");
     expect(await screen.findByTestId("dawarich-connection-card")).toBeTruthy();
     unmount();
-
-    renderSettings("/settings?section=externalServices");
-    expect(await screen.findByTestId("immich-connection-card")).toBeTruthy();
-  });
-});
-
-/**
- * Found during the merge review, 2026-08-30: `RoutingProviderSection` is the
- * Dawarich card's sibling and kept the very defect the block above records.
- * It configures a road router for TOUR legs and has no other consumer, so on a
- * production instance (beta OFF) an admin saw a routing card for a feature
- * hidden everywhere else. Gating it needed no test to change, which is how it
- * survived a whole phase — hence this one.
- * `ImmichConnectionCard` is again the control: no gate, always rendered.
- *
- * Since 2026-09-26 the personal page carries the ACCOUNT's own routing keys
- * (`PersonalRoutingKeysSection`), and the instance card is in Administration
- * → Externe Dienste (Alex: the personal page said the key applied "to
- * everyone"). The gate is the same; the instance card is never here.
- */
-describe("SettingsPage — the routing keys card", () => {
-  beforeEach(() => {
-    useSettingsStore.setState({ betaFeaturesEnabled: null, enabledDomains: ["flight"] });
-  });
-
-  // Released on 2026-09-18 with tours; back behind the switch on 2026-09-24
-  // (owner), with tours and roadtrips, its only consumers: on an instance with
-  // the switch off it would offer routing for a feature invisible elsewhere.
-  it.each([
-    ["OFF", false],
-    ["unknown", null],
-  ])("is not there when the flag is %s", async (_label, flag) => {
-    useSettingsStore.setState({ betaFeaturesEnabled: flag });
-    renderSettings("/settings?section=externalServices");
-    await screen.findByTestId("immich-connection-card");
-
-    expect(screen.queryByTestId("personal-routing-keys")).toBeNull();
-    expect(screen.queryByTestId("routing-provider-section")).toBeNull();
-  });
-
-  it("renders the personal keys, never the instance card, when the flag is ON", async () => {
-    useSettingsStore.setState({ betaFeaturesEnabled: true });
-    renderSettings("/settings?section=externalServices");
-    await screen.findByTestId("immich-connection-card");
-
-    expect(screen.getByTestId("personal-routing-keys")).toBeTruthy();
-    expect(screen.queryByTestId("routing-provider-section")).toBeNull();
   });
 });
