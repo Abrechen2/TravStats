@@ -110,6 +110,22 @@ export function FlightsTab(): JSX.Element {
     }
   }, []);
 
+  // Per-trip count and km over the full GeoJSON set; the panel's list is only
+  // the newest 500 (forgejo#364).
+  const tripTotals = useMemo(() => {
+    const totals = new Map<string, { count: number; totalKm: number }>();
+    for (const f of flights) {
+      const id = f.properties.tripId;
+      if (!id) continue;
+      const prev = totals.get(id) ?? { count: 0, totalKm: 0 };
+      totals.set(id, {
+        count: prev.count + 1,
+        totalKm: prev.totalKm + (f.properties.distance || 0),
+      });
+    }
+    return totals;
+  }, [flights]);
+
   const loadAll = useCallback(async (): Promise<boolean> => {
     const results = await Promise.all([loadGeoJSON(), loadStructured()]);
     const ok = results.every(Boolean);
@@ -318,6 +334,7 @@ export function FlightsTab(): JSX.Element {
         onDelete={(id) => setFlightToDelete(structuredFlights.find((f) => f.id === id) ?? null)}
         onAddFlight={handleAdd}
         allFlights={structuredFlights}
+        tripTotals={tripTotals}
       />
       {editingFlight && (
         <FlightEditModal
@@ -393,7 +410,11 @@ export function FlightsTab(): JSX.Element {
           }}
         >
           <span>{t("dashboard:errors.loadFlights")}</span>
-          <button type="button" onClick={() => void loadAll()} style={{ textDecoration: "underline" }}>
+          <button
+            type="button"
+            onClick={() => void loadAll()}
+            style={{ textDecoration: "underline" }}
+          >
             {t("dashboard:errors.retry")}
           </button>
         </div>

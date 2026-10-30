@@ -21,6 +21,15 @@ import { logger } from "../lib/logger";
 import ListLoadFailed, { loadFailureLog } from "./table/ListLoadFailed";
 
 type PanelTab = "flights" | "trips";
+// `firstDay`: the earliest departure's day AT ITS AIRPORT (ADR 0002) — the
+// trip's year is read from it, never from the reader's calendar.
+interface TripStat {
+  count: number;
+  minDate: number;
+  maxDate: number;
+  totalKm: number;
+  firstDay: string | null;
+}
 type SortMode = "date-desc" | "date-asc" | "route" | "airline" | "status";
 
 interface FlightPanelProps {
@@ -34,6 +43,12 @@ interface FlightPanelProps {
   onAddFlight: () => void;
   onTripSelect?: (tripId: string) => void;
   allFlights?: Flight[];
+  /**
+   * Per-trip flight count and km over EVERY flight (the dashboard's GeoJSON
+   * set). `flights` is only the newest page, so counting from it understates
+   * older trips (forgejo#364).
+   */
+  tripTotals?: ReadonlyMap<string, { count: number; totalKm: number }>;
 }
 
 export function FlightPanel({
@@ -47,6 +62,7 @@ export function FlightPanel({
   onAddFlight,
   onTripSelect,
   allFlights = [],
+  tripTotals,
 }: FlightPanelProps): JSX.Element {
   const { t } = useTranslation(["dashboard", "common", "trips"]);
   const locale = useLocale();
@@ -178,12 +194,7 @@ export function FlightPanel({
 
   // Per-trip stats derived from allFlights
   const tripStats = useMemo(() => {
-    const map = new Map<
-      string,
-      // `firstDay`: the earliest departure's day AT ITS AIRPORT (ADR 0002) —
-      // the trip's year is read from it, never from the reader's calendar.
-      { count: number; minDate: number; maxDate: number; totalKm: number; firstDay: string | null }
-    >();
+    const map = new Map<string, TripStat>();
     for (const f of allFlights) {
       if (!f.tripId) continue;
       const prev = map.get(f.tripId) ?? {
@@ -206,8 +217,23 @@ export function FlightPanel({
         firstDay: departure && !(t >= prev.minDate) ? dayOf(departure) : prev.firstDay,
       });
     }
-    return map;
-  }, [allFlights]);
+    if (!tripTotals) return map;
+    // The totals win for count and km. The year comes from the loaded page, so
+    // it is only trusted when that page holds the whole trip; otherwise it is
+    // left out rather than read off a partial set.
+    const merged = new Map<string, TripStat>();
+    for (const [tripId, totals] of tripTotals) {
+      const page = map.get(tripId);
+      merged.set(tripId, {
+        count: totals.count,
+        totalKm: totals.totalKm,
+        minDate: page?.minDate ?? Infinity,
+        maxDate: page?.maxDate ?? -Infinity,
+        firstDay: page && page.count === totals.count ? page.firstDay : null,
+      });
+    }
+    return merged;
+  }, [allFlights, tripTotals]);
 
   return (
     <AnimatePresence>
@@ -314,6 +340,15 @@ export function FlightPanel({
                     {opt.label}
                   </button>
                 ))}
+              </div>
+            )}
+
+            {tab === "flights" && flights.length < totalCount && (
+              <div
+                className="px-4 py-1 text-[10px] shrink-0"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {t("dashboard:partialList", { shown: flights.length, total: totalCount })}
               </div>
             )}
 

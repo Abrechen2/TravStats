@@ -190,3 +190,37 @@ describe("FlightPanel trips tab — load failure (forgejo#374)", () => {
     expect(screen.queryByText("dashboard:trips.noTrips")).toBeNull();
   });
 });
+
+describe("FlightPanel beyond the first page (forgejo#364)", () => {
+  const render2000 = async (): Promise<void> => {
+    const { tripsApi } = await import("@/lib/api/trips");
+    vi.mocked(tripsApi.getAll).mockResolvedValueOnce([
+      { id: "t1", name: "Old trip", color: "#fff", description: null } as never,
+    ]);
+    render(
+      <FlightPanel
+        flights={flights}
+        totalCount={2000}
+        isOpen
+        onClose={vi.fn()}
+        onEdit={vi.fn()}
+        onDuplicate={vi.fn()}
+        onDelete={vi.fn()}
+        onAddFlight={vi.fn()}
+        allFlights={flights}
+        tripTotals={new Map([["t1", { count: 7, totalKm: 12000 }]])}
+      />
+    );
+  };
+
+  it("labels a partial list instead of presenting 500 of 2000 as everything", async () => {
+    await render2000();
+    expect(screen.getByText("dashboard:partialList")).toBeInTheDocument();
+  });
+
+  it("counts an older trip's flights from the full totals, not from the loaded page", async () => {
+    await render2000();
+    await userEvent.click(screen.getByRole("button", { name: "dashboard:trips.label" }));
+    expect(await screen.findByText(/^7 dashboard:trips\.flights/)).toBeInTheDocument();
+  });
+});

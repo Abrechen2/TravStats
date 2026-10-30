@@ -161,6 +161,7 @@
     "totalFlights": "Total Flights:"
   },
   "allFlights": "All Flights",
+  "partialList": "Newest {{shown}} of {{total}} flights",
   "sort": "Sort",
   "sortDate": "Date",
   "sortRoute": "Route",
