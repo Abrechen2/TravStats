@@ -137,6 +137,20 @@ Stores `consentedAt` per provider on the account. `llmGate` refuses a cloud
 provider for an account without consent with the existing
 `cloud_not_consented` reason (now per account), which the import UI already maps.
 
+### Contract additions (2026-10-30, from ES2/ES3)
+
+1. `fields[].options?: string[]` for `kind: "select"`.
+2. `fields[].key` is a stable camelCase id per service (`apiKey`, `clientId`,
+   `clientSecret`, `baseUrl`, `model`, `tier`, `monthlyLimitUsd`,
+   `tracksEnabled`, `username`, `password`, …), listed in the catalogue; the web
+   labels them from i18n (`fields.<serviceId>.<key>` → `fields.common.<key>`).
+3. `lastTest.reason` is a stable code (`auth`, `quota`, `timeout`, `network`,
+   `http_error`, `not_found`, `disabled`, `unknown`), never prose.
+4. No account test route: `PUT /settings/external-services/:id` with fields
+   saves, runs the tester and persists the account's `lastTest`.
+5. Disconnect / remove own key = `fields: { <each key>: "" }`.
+6. `aiConsents[].provider` is the id used in `PUT …/ai-consent/:provider`.
+
 ### Errors
 
 `{ error, code }` as everywhere: `SERVICE_DISABLED`, `CONSENT_REQUIRED`,
@@ -162,7 +176,7 @@ forbidden account key is ignored; removing an account key falls to instance).
 | Phase | Side | What | State |
 |---|---|---|---|
 | ES1 | server | catalogue, policy columns, resolver rules, the five routes, per-account AI consent in llmGate, persisted tests, OpenAPI | open |
-| ES2 | web | Admin › Externe Dienste per mockup-admin (rows, info panel, recommended banner+filter, Standard/Expert, consent dialog, "Was Konten selbst verbinden dürfen"); existing cards move in, the scattered entries elsewhere (Parser FX switch, Instanz open data/push/federation/usage stats, Backups WebDAV, SMTP page) link here | open |
+| ES2 | web | Admin › Externe Dienste per mockup-admin (rows, info panel, recommended banner+filter, Standard/Expert, consent dialog, "Was Konten selbst verbinden dürfen"); existing cards move in, the scattered entries elsewhere (Parser FX switch, Instanz open data/push/federation/usage stats, Backups WebDAV, SMTP page) link here | built (feat/external-services-web @ d577b1963), browser look open |
 | ES3 | web | Einstellungen › Dienste per mockup-account | open |
 | ES4 | Companion | none required; the app reads nothing new. Later: show AI consent in the app's import | — |
 
