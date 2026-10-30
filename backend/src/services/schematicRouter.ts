@@ -786,6 +786,8 @@ function dropUTurnNodes(
   return current;
 }
 
+let marnetFailureLogged = false;
+
 async function computeMaritimeGraphRoute(
   dep: { lat: number; lon: number },
   arr: { lat: number; lon: number },
@@ -832,7 +834,16 @@ async function computeMaritimeGraphRoute(
       if (segmentMaxLandRun(fineBytes, lon0, lat0, lon1, lat1) >= 20) return null;
     }
     return repaired;
-  } catch {
+  } catch (error) {
+    // A marnet that cannot load makes every leg fall through to the coarse
+    // fallback; say so once per process, not once per leg.
+    if (!marnetFailureLogged) {
+      marnetFailureLogged = true;
+      logger.error({
+        message: "schematic_router_marnet_failed",
+        context: { reason: error instanceof Error ? error.message : String(error) },
+      });
+    }
     return null;
   }
 }

@@ -100,7 +100,7 @@ describe("processUserHistoricalEnrichment auto-apply branch", () => {
 
     const result = await processUserHistoricalEnrichment(USER_ID);
 
-    expect(result).toEqual({ processed: 2, created: 2, skipped: 0 });
+    expect(result).toEqual({ processed: 2, created: 2, skipped: 0, failed: 0 });
     expect(mockFlightFindMany).toHaveBeenCalledTimes(1);
     expect(mockFlightFindMany).toHaveBeenCalledWith({
       where: { userId: USER_ID, id: { in: ["f1", "f2"] } },
@@ -153,6 +153,21 @@ describe("processUserHistoricalEnrichment auto-apply branch", () => {
     expect(result.created).toBe(2);
     expect(mockApplyPendingUpdate).toHaveBeenCalledTimes(2);
   });
+  it("counts a thrown candidate as failed, not skipped (forgejo#385 RULE-35)", async () => {
+    mockUserSettingsFindUnique.mockResolvedValue({ autoUpdateRequireApproval: true });
+    mockFindEnrichmentCandidates.mockResolvedValue([mockCandidate("f1"), mockCandidate("f2")]);
+    mockFlightFindMany.mockResolvedValue([mockFlight("f1"), mockFlight("f2")]);
+    mockCreateHistoricalEnrichment
+      .mockRejectedValueOnce(new Error("provider down"))
+      .mockResolvedValueOnce("pu-f2");
+
+    expect(await processUserHistoricalEnrichment(USER_ID)).toMatchObject({
+      created: 1,
+      skipped: 0,
+      failed: 1,
+    });
+  });
+
   it("limits the batch before loading and skips missing or unnumbered flights", async () => {
     mockGetUserEnrichmentSettings.mockResolvedValue({
       enabled: true,
@@ -173,6 +188,7 @@ describe("processUserHistoricalEnrichment auto-apply branch", () => {
       processed: 3,
       created: 1,
       skipped: 2,
+      failed: 0,
     });
     expect(mockFlightFindMany).toHaveBeenCalledWith({
       where: { userId: USER_ID, id: { in: ["missing", "unnumbered", "ok"] } },
@@ -192,6 +208,7 @@ describe("processUserHistoricalEnrichment auto-apply branch", () => {
       processed: 0,
       created: 0,
       skipped: 0,
+      failed: 0,
     });
     expect(mockFlightFindMany).not.toHaveBeenCalled();
     expect(mockUserSettingsFindUnique).not.toHaveBeenCalled();

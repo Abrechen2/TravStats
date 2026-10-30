@@ -29,24 +29,26 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
   processed: number;
   created: number;
   skipped: number;
+  failed: number;
 }> {
   try {
     const settings = await getUserEnrichmentSettings(userId);
 
     if (!settings || !settings.enabled) {
-      return { processed: 0, created: 0, skipped: 0 };
+      return { processed: 0, created: 0, skipped: 0, failed: 0 };
     }
 
     // Find candidates
     const candidates = await findEnrichmentCandidates(userId, settings);
 
     if (candidates.length === 0) {
-      return { processed: 0, created: 0, skipped: 0 };
+      return { processed: 0, created: 0, skipped: 0, failed: 0 };
     }
 
     // Limit to maxPerDay
     const candidatesToProcess = candidates.slice(0, settings.maxPerDay);
-    if (candidatesToProcess.length === 0) return { processed: 0, created: 0, skipped: 0 };
+    if (candidatesToProcess.length === 0)
+      return { processed: 0, created: 0, skipped: 0, failed: 0 };
 
     // Load only the chosen candidates, scoped to their owner, in one round trip.
     const flights = await prisma.flight.findMany({
@@ -67,6 +69,7 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
 
     let created = 0;
     let skipped = 0;
+    let failed = 0;
 
     for (const candidate of candidatesToProcess) {
       try {
@@ -146,7 +149,7 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
             stack: error instanceof Error ? error.stack : undefined,
           },
         });
-        skipped++;
+        failed++;
       }
     }
 
@@ -158,6 +161,7 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
         processed: candidatesToProcess.length,
         created,
         skipped,
+        failed,
       },
     });
 
@@ -165,6 +169,7 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
       processed: candidatesToProcess.length,
       created,
       skipped,
+      failed,
     };
   } catch (error) {
     logger.error({
@@ -176,7 +181,7 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
-    return { processed: 0, created: 0, skipped: 0 };
+    return { processed: 0, created: 0, skipped: 0, failed: 0 };
   }
 }
 
@@ -214,6 +219,7 @@ export async function processAllUsersHistoricalEnrichment(): Promise<{
   totalProcessed: number;
   totalCreated: number;
   totalSkipped: number;
+  totalFailed: number;
 }> {
   try {
     const users = await findHistoricalEnrichmentEligibleUserIds();
@@ -221,12 +227,14 @@ export async function processAllUsersHistoricalEnrichment(): Promise<{
     let totalProcessed = 0;
     let totalCreated = 0;
     let totalSkipped = 0;
+    let totalFailed = 0;
 
     for (const userId of users) {
       const result = await processUserHistoricalEnrichment(userId);
       totalProcessed += result.processed;
       totalCreated += result.created;
       totalSkipped += result.skipped;
+      totalFailed += result.failed;
     }
 
     logger.info({
@@ -237,6 +245,7 @@ export async function processAllUsersHistoricalEnrichment(): Promise<{
         totalProcessed,
         totalCreated,
         totalSkipped,
+        totalFailed,
       },
     });
 
@@ -245,6 +254,7 @@ export async function processAllUsersHistoricalEnrichment(): Promise<{
       totalProcessed,
       totalCreated,
       totalSkipped,
+      totalFailed,
     };
   } catch (error) {
     logger.error({
@@ -260,6 +270,7 @@ export async function processAllUsersHistoricalEnrichment(): Promise<{
       totalProcessed: 0,
       totalCreated: 0,
       totalSkipped: 0,
+      totalFailed: 0,
     };
   }
 }
