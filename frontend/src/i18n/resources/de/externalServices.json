@@ -1,0 +1,653 @@
+{
+  "title": "Externe Dienste",
+  "intro": "Alles, was TravStats nicht selbst macht: Flugdaten, Karten, Fotos, KI, Sync und Mail. Hier legst du fest, was die Instanz nutzt und was Konten selbst einrichten dürfen. Neue Dienste sind aus, bis du sie einschaltest.",
+  "loading": "Lade Dienste …",
+  "noResults": "Kein Dienst passt zu Suche und Filter.",
+  "summary": {
+    "active": "Aktiv",
+    "attention": "Braucht Aufmerksamkeit",
+    "off": "Aus"
+  },
+  "banner": {
+    "title": "Bestes Erlebnis, ohne zu bezahlen",
+    "summary": "{{active}} von {{total}} empfohlenen Diensten sind eingerichtet. Alle sind kostenlos oder haben ein Gratis-Guthaben, das für ein privates Logbuch reicht.",
+    "show": "Empfohlene zeigen"
+  },
+  "search": {
+    "label": "Dienst suchen",
+    "placeholder": "Dienst suchen …"
+  },
+  "filter": {
+    "label": "Filter",
+    "all": "Alle",
+    "recommended": "Empfohlen",
+    "active": "Aktiv",
+    "attention": "Achtung",
+    "off": "Aus"
+  },
+  "categories": {
+    "flight": "Flugdaten",
+    "mapsRoutes": "Karten, Routen & Orte",
+    "photosLocation": "Fotos, Standort & Sport",
+    "ai": "KI",
+    "openData": "Offene Daten & Logos",
+    "syncMail": "Sync, Mail & Benachrichtigungen",
+    "instance": "Instanz & Verbund"
+  },
+  "categorySummary_one": "{{count}} Dienst · {{active}} aktiv",
+  "categorySummary_other": "{{count}} Dienste · {{active}} aktiv",
+  "level": {
+    "instance": "Admin richtet ein",
+    "instanceAndAccount": "Admin oder eigenes Konto",
+    "account": "Jedes Konto selbst"
+  },
+  "recommended": {
+    "free": "Empfohlen · gratis",
+    "freeCredit": "Empfohlen · Gratis-Guthaben"
+  },
+  "dataLeaves": "Daten verlassen den Server",
+  "status": {
+    "active": "Aktiv",
+    "off": "Aus",
+    "missing": "Schlüssel fehlt",
+    "error": "Fehler"
+  },
+  "accountStatus": {
+    "connected": "Verbunden",
+    "ownKey": "Eigener Schlüssel",
+    "viaInstance": "Über die Instanz",
+    "off": "Aus",
+    "notConnected": "Nicht verbunden",
+    "consented": "Zugestimmt",
+    "notConsented": "Keine Zustimmung"
+  },
+  "actions": {
+    "test": "Testen",
+    "info": "Info zu {{name}}",
+    "expand": "Aufklappen",
+    "collapse": "Zuklappen",
+    "saveAndTest": "Speichern & testen",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "retry": "Erneut versuchen",
+    "turnOn": "Einschalten",
+    "turnOff": "Ausschalten"
+  },
+  "fieldNotSet": "nicht gesetzt",
+  "expertHidden": "Adressen und Endpunkte stellst du in der Ansicht „Experte“ ein.",
+  "allowAccountKeys": "Konten dürfen eigene Schlüssel nutzen",
+  "allowAccountKeysOn": "Ein eigener Schlüssel geht vor; ohne ihn gilt der der Instanz.",
+  "allowAccountKeysOff": "Konten dürfen keinen eigenen Schlüssel nutzen – es gilt der der Instanz.",
+  "expert": {
+    "order": "Reihenfolge",
+    "quota": "Kontingent",
+    "env": "Server-Variable (ENV)",
+    "envText": "wird nur genutzt, wenn weder Konto noch Instanz einen Schlüssel haben"
+  },
+  "budget": "Budget: {{used}} von {{limit}} {{unit}} · stoppt vor dem Limit",
+  "source": {
+    "instance": "Wirksam: Instanz-Schlüssel hinterlegt",
+    "env": "Wirksam: Server-Variable (ENV)",
+    "keyless": "Ohne Schlüssel",
+    "none": "Kein Schlüssel – bleibt aus",
+    "off": "Aus – gilt für alle Konten, eigene Schlüssel und Hintergrund-Jobs"
+  },
+  "test": {
+    "never": "Noch nie getestet",
+    "ok": "Test ✓ {{when}}",
+    "failed": "Test ✗ {{when}} – {{reason}}",
+    "noReason": "ohne genannten Grund",
+    "offBlocks": "Ausgeschaltet – gesperrt für alle Konten, auch mit eigenem Schlüssel",
+    "missingKey": "Erst einen Schlüssel eintragen",
+    "resultOk": "Test ✓ gerade eben",
+    "resultOkQuota": "Test ✓ gerade eben (hat Kontingent verbraucht)",
+    "resultFailed": "Test ✗ – {{reason}}",
+    "disabledNoCall": "Ausgeschaltet – es wird nichts abgefragt, auch kein Test",
+    "reasons": {
+      "auth": "Anmeldung abgelehnt",
+      "unauthorized": "Anmeldung abgelehnt",
+      "rate_limited": "Ratenlimit erreicht",
+      "quota_exhausted": "Kontingent aufgebraucht",
+      "timeout": "keine Antwort in der Zeit",
+      "unreachable": "nicht erreichbar",
+      "not_configured": "nicht eingerichtet",
+      "budget_exhausted": "Monatsbudget aufgebraucht",
+      "disabled": "ausgeschaltet"
+    }
+  },
+  "errors": {
+    "generic": "Das hat nicht geklappt. Bitte versuche es erneut.",
+    "network": "Der Server ist nicht erreichbar.",
+    "loadFailed": "Die Dienste konnten nicht geladen werden.",
+    "saveFailed": "Speichern fehlgeschlagen.",
+    "testFailed": "Der Test konnte nicht ausgeführt werden.",
+    "SERVICE_DISABLED": "Der Dienst ist ausgeschaltet.",
+    "CONSENT_REQUIRED": "Die Datenfreigabe fehlt – bitte bestätige sie.",
+    "ACCOUNT_KEYS_NOT_ALLOWED": "Die Instanz erlaubt für diesen Dienst keine eigenen Schlüssel.",
+    "CONNECTION_NOT_ALLOWED": "Die Instanz erlaubt diese Verbindung nicht.",
+    "VALIDATION_FAILED": "Die Eingabe ist ungültig."
+  },
+  "info": {
+    "why": "Wozu braucht TravStats das?",
+    "recommendation": "Empfehlung",
+    "cost": "Kostet das etwas?",
+    "quota": "Wie viel ist frei?",
+    "dataOut": "Was verlässt den Server?",
+    "who": "Wer richtet es ein?",
+    "source": "Welche Quelle gilt?",
+    "recommendationText": {
+      "free": "Empfohlen: kostenlos und bringt viel für ein vollständiges Logbuch.",
+      "freeCredit": "Empfohlen: das monatliche Gratis-Guthaben reicht für die eigenen Flüge; TravStats stoppt vor dem Limit.",
+      "none": "Optional – nur wenn du es wirklich brauchst."
+    },
+    "whoText": {
+      "instance": "Nur Admins, gilt für alle Konten.",
+      "instanceAndAccount": "Admins für die Instanz; Konten mit eigenem Schlüssel, wenn erlaubt.",
+      "account": "Jedes Konto selbst."
+    },
+    "setup": {
+      "instance": "Einrichtung: Admin richtet ein",
+      "instanceAndAccount": "Einrichtung: Admin oder eigenes Konto",
+      "account": "Einrichtung: Jedes Konto selbst"
+    }
+  },
+  "consent": {
+    "allow": "Freigeben …",
+    "withdraw": "Freigabe zurückziehen",
+    "admin": {
+      "title": "{{name}} freigeben?",
+      "intro": "Wenn der lokale Parser nichts findet, schickt TravStats den Text eines Imports an diesen Anbieter. Erst lesen, dann bestätigen.",
+      "whatKey": "Was rausgeht",
+      "whatText": "Text aus E-Mails und PDFs, höchstens 12.000 Zeichen pro Import. Keine Fotos, keine Passwörter, keine anderen Einträge.",
+      "whereKey": "Wohin",
+      "whenKey": "Wann",
+      "whenText": "Nur beim Import, nur wenn der lokale Parser keine Antwort hat.",
+      "whoKey": "Wer entscheidet",
+      "whoText": "Du erlaubst den Anbieter für die Instanz. Jedes Konto bestätigt die Freigabe vor seinem ersten Import selbst.",
+      "costKey": "Kosten",
+      "checkbox": "Ich habe verstanden, welche Daten an {{name}} gehen, und erlaube den Anbieter für diese Instanz.",
+      "confirm": "Freigeben"
+    },
+    "account": {
+      "title": "Deine Importe an {{name}} schicken?",
+      "intro": "Deine Instanz erlaubt {{name}} als zweite Chance für Buchungen, die der lokale Parser nicht versteht. Ob deine Dokumente dorthin gehen, entscheidest du.",
+      "goes": "Was rausgeht: der Text der E-Mail oder des PDFs, höchstens 12.000 Zeichen.",
+      "stays": "Nicht rausgeht: Fotos, Passwörter, deine anderen Einträge.",
+      "when": "Wann: nur beim Import, nur wenn der lokale Parser nichts findet.",
+      "withdraw": "Zurücknehmen: jederzeit hier; ab dann geht nichts mehr an {{name}}.",
+      "checkbox": "Ich bin einverstanden, dass meine Importe in diesen Fällen an {{name}} gehen.",
+      "confirm": "Zustimmen"
+    }
+  },
+  "connections": {
+    "title": "Was Konten selbst verbinden dürfen",
+    "hint": "Diese Dienste richtet jedes Konto unter Einstellungen › Dienste mit eigenen Zugangsdaten ein. Du legst nur fest, ob das erlaubt ist.",
+    "usage_one": "{{count}} Konto verbunden",
+    "usage_other": "{{count}} Konten verbunden",
+    "dawarich": {
+      "name": "Dawarich",
+      "purpose": "Standortverlauf lesen"
+    },
+    "immich": {
+      "name": "Eigenes Immich",
+      "purpose": "Fotoalben an Reisen hängen"
+    },
+    "strava": {
+      "name": "Strava",
+      "purpose": "Aktivitäten als Touren (nutzt die Strava-App der Instanz)"
+    },
+    "webdav": {
+      "name": "Eigene WebDAV-Ziele",
+      "purpose": "Exporte auf den eigenen Speicher"
+    }
+  },
+  "pointer": {
+    "text": "Alle externen Dienste – Schalter, Schlüssel und Tests – findest du gesammelt unter",
+    "link": "Externe Dienste"
+  },
+  "account": {
+    "intro": "Deine Verbindungen zu Immich, Dawarich, Strava und deinem Speicher, eigene Schlüssel und deine KI-Freigaben. Was die Instanz für alle bereitstellt, steht unten.",
+    "sections": {
+      "connections": "Meine Verbindungen",
+      "ownKeys": "Eigene Schlüssel",
+      "ai": "KI-Freigaben"
+    },
+    "hints": {
+      "connections": "Dienste, die zu dir gehören. Nur du siehst diese Daten.",
+      "ownKeys": "Hier darfst du laut Admin eigene Schlüssel nutzen. Dein Schlüssel geht vor; ohne ihn gilt der der Instanz.",
+      "ai": "Was die Instanz erlaubt, gilt für deine Dokumente erst nach deiner Zustimmung."
+    },
+    "action": {
+      "connect": "Verbinden",
+      "setUp": "Einrichten",
+      "change": "Ändern",
+      "manage": "Verwalten",
+      "addOwn": "Eigenen eintragen",
+      "turnOn": "Wieder einschalten",
+      "consent": "Zustimmen …",
+      "withdraw": "Zurücknehmen"
+    },
+    "detail": {
+      "notConnected": "Noch nicht verbunden",
+      "viaInstance": "Die Instanz stellt einen Zugang · eigener möglich",
+      "disabledByMe": "Für dein Konto aus – TravStats fragt diesen Dienst für dich nicht ab",
+      "disabledByAdmin": "Von der Instanz ausgeschaltet",
+      "consented": "Zugestimmt · zurücknehmen jederzeit",
+      "notConsented": "Nichts aus deinen Importen geht an {{name}}, bis du zustimmst"
+    },
+    "removeKey": "Eigenen Schlüssel entfernen (dann gilt der der Instanz)",
+    "disableForMe": "Für mein Konto ausschalten",
+    "disconnect": "Verbindung trennen",
+    "secretNote": "Der Schlüssel wird verschlüsselt gespeichert und nie wieder ganz angezeigt.",
+    "savedAndTested": "Gespeichert und getestet ✓",
+    "savedUnverified": "Gespeichert – ob es funktioniert, konnte nicht geprüft werden.",
+    "savedButFailed": "Gespeichert, aber der Test ist fehlgeschlagen – {{reason}}"
+  },
+  "instance": {
+    "title": "Von der Instanz bereitgestellt",
+    "summary_one": "{{count}} Dienst · {{active}} aktiv · nur lesbar",
+    "summary_other": "{{count}} Dienste · {{active}} aktiv · nur lesbar",
+    "note": "Einschalten oder ändern kann das nur ein Admin unter Administration › Externe Dienste."
+  },
+  "fields": {
+    "common": {
+      "apiKey": "API-Schlüssel",
+      "key": "API-Schlüssel",
+      "clientId": "Client-ID",
+      "clientSecret": "Client-Secret",
+      "secret": "Geheimnis",
+      "url": "URL",
+      "baseUrl": "Basis-URL",
+      "serverUrl": "Server-URL",
+      "host": "Server",
+      "username": "Benutzer",
+      "user": "Benutzer",
+      "password": "Passwort",
+      "model": "Modell",
+      "enabled": "Eingeschaltet",
+      "tier": "Tarif",
+      "budgetUsd": "Monatslimit in $",
+      "customBudgetUsd": "Monatslimit in $",
+      "tracksEnabled": "Flugspuren nach Landung",
+      "photonUrl": "Photon-URL",
+      "nominatimUrl": "Nominatim-URL",
+      "osrmUrl": "OSRM-URL",
+      "railRoutingUrl": "OpenRailRouting-URL",
+      "transitousEnabled": "Transitous",
+      "dbRestEnabled": "db-rest",
+      "logostreamApiKey": "logostream-Schlüssel (optional)",
+      "operatorLogosEnabled": "Betreiber-Logos aus Wikimedia",
+      "fxCdnFallbackEnabled": "Ersatzquelle für Nicht-EZB-Währungen"
+    }
+  },
+  "services": {
+    "airlabs": {
+      "name": "AirLabs",
+      "purpose": "Flugstatus und Flugnummer-Suche",
+      "why": "Liefert Abflug, Ankunft, Flugzeug und Status, wenn du eine Flugnummer einträgst oder ein Flug aktualisiert wird.",
+      "cost": "Kostenloser Tarif reicht für private Logbücher; größere Tarife kosten monatlich.",
+      "quota": "1.000 Anfragen pro Monat im kostenlosen Tarif.",
+      "dataOut": "Flugnummer und Datum. Keine Namen, keine Buchungsdaten.",
+      "getKeyUrl": "https://airlabs.co/",
+      "getKeyLabel": "Schlüssel bei AirLabs holen",
+      "order": "Konto → Instanz → Server-ENV",
+      "quotaLine": "1.000 Anfragen / Monat frei"
+    },
+    "aviationstack": {
+      "name": "Aviationstack",
+      "purpose": "Flugsuche als zweite Quelle",
+      "why": "Springt ein, wenn AirLabs einen Flug nicht kennt.",
+      "cost": "Kostenloser Einstiegstarif, darüber monatlich.",
+      "quota": "[Freikontingent laut Anbieter]",
+      "dataOut": "Flugnummer und Datum.",
+      "getKeyUrl": "https://aviationstack.com/",
+      "getKeyLabel": "Schlüssel bei Aviationstack holen",
+      "order": "Konto → Instanz → Server-ENV",
+      "quotaLine": "[Freikontingent laut Anbieter]"
+    },
+    "aerodatabox": {
+      "name": "AeroDataBox",
+      "purpose": "Flüge bis ein Jahr zurück",
+      "why": "Findet vergangene Flüge, die die Live-Anbieter nicht mehr kennen.",
+      "cost": "Über RapidAPI; kostenloser Basistarif.",
+      "quota": "600 Einheiten pro Monat im Basistarif; TravStats liest den Stand mit.",
+      "dataOut": "Flugnummer und Datum.",
+      "getKeyUrl": "https://rapidapi.com/aedbx-aedbx/api/aerodatabox",
+      "getKeyLabel": "AeroDataBox bei RapidAPI",
+      "order": "Konto → Instanz → Server-ENV",
+      "quotaLine": "600 Einheiten / Monat frei · Stand laut RapidAPI"
+    },
+    "aeroapi": {
+      "name": "FlightAware AeroAPI",
+      "purpose": "Status, Verspätung, Gate; optional echte Flugspuren",
+      "why": "Genaue Zeiten, Verspätungen, Gates und Annullierungen deiner Flüge; auf Wunsch die echte Flugspur nach der Landung.",
+      "cost": "Bezahlt pro Abfrage. Personal-Tarif 5 $ Guthaben im Monat, mit eigenem ADS-B-Empfänger (Feeder) 10 $.",
+      "quota": "TravStats hält das Monatsbudget ein und stoppt vorher.",
+      "dataOut": "Flugnummer, Datum, Flughäfen.",
+      "getKeyUrl": "https://www.flightaware.com/aeroapi/",
+      "getKeyLabel": "AeroAPI bei FlightAware",
+      "order": "Instanz → Server-ENV",
+      "quotaLine": "10 $ / Monat · stoppt vor dem Limit"
+    },
+    "opensky": {
+      "name": "OpenSky Network",
+      "purpose": "ADS-B-Daten: Flugzeug und Strecke",
+      "why": "Erkennt Flugzeug und geflogene Strecke aus offenen ADS-B-Daten.",
+      "cost": "Kostenlos.",
+      "quota": "Ratenlimit pro Tag; wer selbst Daten einspeist, bekommt mehr.",
+      "dataOut": "Flugnummer bzw. Kennung des Flugzeugs und Zeitraum.",
+      "getKeyUrl": "https://opensky-network.org/",
+      "getKeyLabel": "Zugang bei OpenSky anlegen",
+      "order": "Konto → Instanz → Server-ENV",
+      "quotaLine": "nur Ratenlimit; Feeder höher"
+    },
+    "adsblol": {
+      "name": "adsb.lol",
+      "purpose": "Flugzeug eines Flugs, der gerade in der Luft ist",
+      "why": "Ergänzt Kennzeichen und Flugzeugtyp, solange der Flug fliegt.",
+      "cost": "Kostenlos, Gemeinschaftsdienst.",
+      "quota": "Kein festes Kontingent; TravStats fragt höchstens einmal pro Sekunde.",
+      "dataOut": "Flugnummer oder Kennung, nur für heutige Flüge.",
+      "getKeyUrl": "https://api.adsb.lol/",
+      "getKeyLabel": "adsb.lol",
+      "order": "Konto → Instanz-Schalter",
+      "quotaLine": "höflich: ≤ 1 Anfrage / Sekunde"
+    },
+    "adsbx": {
+      "name": "ADS-B Exchange",
+      "purpose": "Live-Flugzeugdaten über RapidAPI",
+      "why": "Zweite Live-Quelle neben adsb.lol, nur für Flüge in der Luft.",
+      "cost": "Kostenpflichtiger RapidAPI-Tarif. Eine Feeder-UUID ist kein API-Schlüssel.",
+      "quota": "Laut gebuchtem Tarif.",
+      "dataOut": "Flugnummer oder Kennung, nur für heutige Flüge.",
+      "getKeyUrl": "https://rapidapi.com/adsbx/api/adsbexchange-com1",
+      "getKeyLabel": "ADS-B Exchange bei RapidAPI",
+      "order": "Instanz → Server-ENV",
+      "quotaLine": "laut RapidAPI-Tarif"
+    },
+    "openrouteservice": {
+      "name": "OpenRouteService",
+      "purpose": "Straßenrouten für Roadtrips und Touren",
+      "why": "Berechnet die gefahrene Strecke zwischen Stationen.",
+      "cost": "Kostenlos bis zum Tageskontingent.",
+      "quota": "2.000 Anfragen pro Tag.",
+      "dataOut": "Koordinaten der Stationen.",
+      "getKeyUrl": "https://openrouteservice.org/dev/#/signup",
+      "getKeyLabel": "Schlüssel bei OpenRouteService",
+      "order": "Konto → Instanz → Server-ENV",
+      "quotaLine": "2.000 Anfragen / Tag frei"
+    },
+    "graphhopper": {
+      "name": "GraphHopper",
+      "purpose": "Alternative für Straßenrouten",
+      "why": "Ersatz, falls OpenRouteService nicht passt.",
+      "cost": "Kostenlos bis zum Tageskontingent.",
+      "quota": "500 Anfragen pro Tag.",
+      "dataOut": "Koordinaten der Stationen.",
+      "getKeyUrl": "https://www.graphhopper.com/",
+      "getKeyLabel": "Schlüssel bei GraphHopper",
+      "order": "Routing-Anbieter wählt die Instanz",
+      "quotaLine": "500 Anfragen / Tag frei"
+    },
+    "railTimetables": {
+      "name": "Bahn-Fahrpläne",
+      "purpose": "Transitous und db-rest für Zugfahrten",
+      "why": "Findet Zugverbindungen und Linienverläufe beim Eintragen einer Bahnfahrt.",
+      "cost": "Kostenlos, Gemeinschaftsdienste.",
+      "quota": "db-rest teilt sich etwa 100 Anfragen pro Minute mit allen Nutzern.",
+      "dataOut": "Bahnhöfe und Abfahrtszeit.",
+      "getKeyUrl": "https://transitous.org/",
+      "getKeyLabel": "Transitous",
+      "order": "Transitous → db-rest",
+      "quotaLine": "db-rest: ~100 Anfragen / Minute, geteilt"
+    },
+    "googlePlaces": {
+      "name": "Google Places",
+      "purpose": "Letzte Stufe der Ortssuche, Maps-Takeout",
+      "why": "Findet Orte, die die offenen Geocoder nicht kennen, und löst Google-Maps-Exporte auf.",
+      "cost": "Kostenpflichtig pro Anfrage nach Google-Preisliste; Google gewährt ein monatliches Guthaben.",
+      "quota": "Laut Google-Cloud-Konto.",
+      "dataOut": "Suchtext bzw. Ortskennung.",
+      "getKeyUrl": "https://console.cloud.google.com/",
+      "getKeyLabel": "Schlüssel in der Google Cloud Console",
+      "order": "Photon → Nominatim → Google",
+      "quotaLine": "kostenpflichtig pro Anfrage"
+    },
+    "geocoder": {
+      "name": "Photon & Nominatim",
+      "purpose": "Ortssuche und Adressen (OpenStreetMap)",
+      "why": "Sucht Orte und benennt Koordinaten.",
+      "cost": "Kostenlos; eigener Server möglich.",
+      "quota": "Nominatim: höchstens 1 Anfrage pro Sekunde.",
+      "dataOut": "Suchtext oder Koordinaten.",
+      "getKeyUrl": "https://operations.osmfoundation.org/policies/nominatim/",
+      "getKeyLabel": "Nutzungsregeln Nominatim",
+      "order": "Photon → Nominatim → Google",
+      "quotaLine": "Nutzungsregeln von OSM"
+    },
+    "selfHostedRouting": {
+      "name": "Eigene Routing-Server",
+      "purpose": "OSRM und OpenRailRouting selbst gehostet",
+      "why": "Routen ohne fremden Dienst, z. B. Bahnlinien aus eigenem OpenRailRouting.",
+      "cost": "Eigene Hardware.",
+      "quota": "Keins.",
+      "dataOut": "Bleibt in deinem Netz.",
+      "getKeyUrl": "https://github.com/geofabrik/OpenRailRouting",
+      "getKeyLabel": "OpenRailRouting",
+      "order": "vor den Cloud-Anbietern",
+      "quotaLine": "eigener Server"
+    },
+    "immich": {
+      "name": "Immich",
+      "purpose": "Fotoalben an Reisen hängen, Foto-Reise-Scan",
+      "why": "Zeigt Alben aus deinem Immich in Reisen oder importiert die Bilder.",
+      "cost": "Kostenlos, selbst gehostet.",
+      "quota": "Keins.",
+      "dataOut": "Bleibt zwischen TravStats und deinem Immich.",
+      "getKeyUrl": "https://immich.app/docs/features/command-line-interface#obtain-the-api-key",
+      "getKeyLabel": "API-Schlüssel in Immich anlegen",
+      "order": "Konto → Instanz → Server-ENV",
+      "quotaLine": "eigener Server"
+    },
+    "strava": {
+      "name": "Strava",
+      "purpose": "Aktivitäten als Touren importieren",
+      "why": "Holt Wanderungen und Radtouren als Touren.",
+      "cost": "Kostenlos.",
+      "quota": "Strava begrenzt Anfragen pro 15 Minuten und pro Tag für die ganze App.",
+      "dataOut": "Strava schickt Aktivitäten an TravStats, nicht umgekehrt.",
+      "getKeyUrl": "https://www.strava.com/settings/api",
+      "getKeyLabel": "Strava-App anlegen",
+      "order": "OAuth pro Konto",
+      "quotaLine": "Strava-Ratenlimits pro App"
+    },
+    "ollama": {
+      "name": "Ollama (lokal)",
+      "purpose": "Liest Buchungen aus E-Mails und PDFs – im eigenen Netz",
+      "why": "Versteht Buchungsbestätigungen, die keine Vorlage kennt.",
+      "cost": "Kostenlos, eigene Hardware.",
+      "quota": "Keins.",
+      "dataOut": "Bleibt in deinem Netz.",
+      "getKeyUrl": "https://ollama.com/",
+      "getKeyLabel": "Ollama",
+      "order": "Ollama → Cloud-Anbieter (nur mit Freigabe)",
+      "quotaLine": "eigene Hardware"
+    },
+    "openai": {
+      "name": "OpenAI",
+      "purpose": "Cloud-Parser, wenn Ollama nichts findet",
+      "why": "Zweite Chance für Buchungen, die der lokale Parser nicht versteht.",
+      "cost": "Bezahlt pro Token.",
+      "quota": "Laut OpenAI-Account.",
+      "dataOut": "Text des Imports, bis 12.000 Zeichen. Nur nach Freigabe.",
+      "getKeyUrl": "https://platform.openai.com/api-keys",
+      "getKeyLabel": "Schlüssel bei OpenAI",
+      "order": "nach Ollama",
+      "quotaLine": "Kosten pro Token",
+      "where": "OpenAI, api.openai.com (USA)",
+      "costShort": "Bezahlt pro Token über deinen OpenAI-Account."
+    },
+    "anthropic": {
+      "name": "Anthropic Claude",
+      "purpose": "Cloud-Parser, wenn Ollama nichts findet",
+      "why": "Zweite Chance für Buchungen, die der lokale Parser nicht versteht.",
+      "cost": "Bezahlt pro Token.",
+      "quota": "Laut Anthropic-Account.",
+      "dataOut": "Text des Imports, bis 12.000 Zeichen. Nur nach Freigabe.",
+      "getKeyUrl": "https://console.anthropic.com/",
+      "getKeyLabel": "Schlüssel bei Anthropic",
+      "order": "nach Ollama",
+      "quotaLine": "Kosten pro Token",
+      "where": "Anthropic, api.anthropic.com (USA)",
+      "costShort": "Bezahlt pro Token über deinen Anthropic-Account."
+    },
+    "gemini": {
+      "name": "Google Gemini",
+      "purpose": "Cloud-Parser, wenn Ollama nichts findet",
+      "why": "Zweite Chance für Buchungen, die der lokale Parser nicht versteht.",
+      "cost": "Freikontingent, danach pro Token.",
+      "quota": "Laut Google AI Studio.",
+      "dataOut": "Text des Imports, bis 12.000 Zeichen. Nur nach Freigabe.",
+      "getKeyUrl": "https://aistudio.google.com/apikey",
+      "getKeyLabel": "Schlüssel bei Google AI Studio",
+      "order": "nach Ollama",
+      "quotaLine": "laut Google AI Studio",
+      "where": "Google, generativelanguage.googleapis.com",
+      "costShort": "Freikontingent, danach pro Token."
+    },
+    "customLlm": {
+      "name": "Eigener KI-Endpunkt",
+      "purpose": "OpenAI-kompatibler Server (z. B. OpenRouter, vLLM)",
+      "why": "Für jeden Dienst, der die OpenAI-Schnittstelle spricht.",
+      "cost": "Je nach Anbieter.",
+      "quota": "Je nach Anbieter.",
+      "dataOut": "Text des Imports. Auch ein entfernter Server braucht die Freigabe.",
+      "getKeyUrl": "https://openrouter.ai/",
+      "getKeyLabel": "Beispiel: OpenRouter",
+      "order": "nach Ollama",
+      "quotaLine": "je nach Anbieter",
+      "where": "die eingetragene URL",
+      "costShort": "Je nach Anbieter."
+    },
+    "openData": {
+      "name": "Wetter, Höhe & Wikipedia",
+      "purpose": "Open-Meteo, Wikipedia, Wikimedia, Overpass",
+      "why": "Wetter zu Reisetagen, Höhenprofile, Infos und Bilder zu Orten.",
+      "cost": "Kostenlos (nicht-kommerziell).",
+      "quota": "Faire Nutzung; TravStats cacht die Antworten.",
+      "dataOut": "Koordinaten und Ortsnamen.",
+      "getKeyUrl": "https://open-meteo.com/",
+      "getKeyLabel": "Open-Meteo",
+      "order": "–",
+      "quotaLine": "faire Nutzung"
+    },
+    "logos": {
+      "name": "Airline- & Betreiber-Logos",
+      "purpose": "kiwi.com, Daisycon, Wikimedia; logostream optional",
+      "why": "Zeigt Logos von Airlines, Reedereien und Bahngesellschaften.",
+      "cost": "Freie Quellen kostenlos; logostream ist ein Bezahldienst.",
+      "quota": "–",
+      "dataOut": "Airline-Code.",
+      "getKeyUrl": "https://logostream.dev/",
+      "getKeyLabel": "logostream",
+      "order": "logostream → eigene → kiwi → Daisycon",
+      "quotaLine": "–"
+    },
+    "fx": {
+      "name": "Wechselkurse",
+      "purpose": "EZB-Kurse (Frankfurter) + Ersatzquelle",
+      "why": "Rechnet Preise in deine Währung um.",
+      "cost": "Kostenlos.",
+      "quota": "–",
+      "dataOut": "Währung und Datum.",
+      "getKeyUrl": "https://frankfurter.dev/",
+      "getKeyLabel": "Frankfurter",
+      "order": "Frankfurter → currency-api",
+      "quotaLine": "–"
+    },
+    "webdav": {
+      "name": "WebDAV",
+      "purpose": "Backups und Exporte auf eine Freigabe",
+      "why": "Legt Backups und Exporte auf deinem NAS oder in einer Cloud ab.",
+      "cost": "Je nach Speicher.",
+      "quota": "–",
+      "dataOut": "Das ganze Backup – verschlüsselt übertragen, Ziel muss vertrauenswürdig sein.",
+      "getKeyUrl": "https://travstats.de/docs/",
+      "getKeyLabel": "Anleitung",
+      "order": "Konto-Ziel zusätzlich",
+      "quotaLine": "–"
+    },
+    "smtp": {
+      "name": "E-Mail (SMTP)",
+      "purpose": "Einladungen, Passwort-Reset, Hinweise",
+      "why": "Ohne Mail gibt es keine Einladungen und keinen Passwort-Reset.",
+      "cost": "Je nach Mailanbieter.",
+      "quota": "Laut Mailanbieter.",
+      "dataOut": "Empfängeradresse und Mailtext.",
+      "getKeyUrl": "https://travstats.de/docs/",
+      "getKeyLabel": "Anleitung",
+      "order": "–",
+      "quotaLine": "laut Mailanbieter"
+    },
+    "push": {
+      "name": "Push-Relay",
+      "purpose": "Benachrichtigungen an gekoppelte Telefone",
+      "why": "Leitet Hinweise an die Companion-App weiter.",
+      "cost": "Kostenlos.",
+      "quota": "–",
+      "dataOut": "Geräte-Token und Hinweistext.",
+      "getKeyUrl": "https://travstats.de/docs/",
+      "getKeyLabel": "Anleitung",
+      "order": "–",
+      "quotaLine": "–"
+    },
+    "federation": {
+      "name": "Föderation",
+      "purpose": "Reisen und Bestenliste mit anderen TravStats-Servern",
+      "why": "Teilt Reisen und Vergleichswerte mit Freunden auf anderen Servern.",
+      "cost": "Kostenlos.",
+      "quota": "–",
+      "dataOut": "Nur was ein Konto ausdrücklich teilt; Bestenliste nur Summen.",
+      "getKeyUrl": "https://travstats.de/docs/",
+      "getKeyLabel": "Anleitung",
+      "order": "–",
+      "quotaLine": "–"
+    },
+    "usageStats": {
+      "name": "Nutzungsstatistik",
+      "purpose": "Anonyme Zahlen an stats.travstats.de",
+      "why": "Hilft zu sehen, welche Funktionen genutzt werden.",
+      "cost": "Kostenlos.",
+      "quota": "–",
+      "dataOut": "Anonyme Zähler, keine Reisen, keine Namen.",
+      "getKeyUrl": "https://www.abrechen2.de/travstats/datenschutz/",
+      "getKeyLabel": "Datenschutz",
+      "order": "–",
+      "quotaLine": "–"
+    },
+    "updatesTemplates": {
+      "name": "Update-Prüfung & Vorlagen",
+      "purpose": "GitHub: neue Versionen, Parser-Vorlagen",
+      "why": "Meldet neue TravStats-Versionen und lädt Vorlagen für Buchungsmails.",
+      "cost": "Kostenlos.",
+      "quota": "GitHub-Ratenlimit.",
+      "dataOut": "Nur die Abfrage selbst, keine Daten aus deinem Logbuch.",
+      "getKeyUrl": "https://github.com/Abrechen2/travstats-templates",
+      "getKeyLabel": "Vorlagen-Repo",
+      "order": "–",
+      "quotaLine": "GitHub-Ratenlimit"
+    },
+    "dawarich": {
+      "name": "Dawarich",
+      "purpose": "Standortverlauf lesen, Aufenthalte vorschlagen",
+      "why": "Liest deinen Standortverlauf, um Aufenthalte und Reisen vorzuschlagen.",
+      "cost": "Kostenlos, selbst gehostet.",
+      "quota": "Keins.",
+      "dataOut": "Bleibt zwischen TravStats und Dawarich.",
+      "getKeyUrl": "https://dawarich.app/",
+      "getKeyLabel": "Dawarich",
+      "order": "nur Konto",
+      "quotaLine": "eigener Server"
+    }
+  }
+}

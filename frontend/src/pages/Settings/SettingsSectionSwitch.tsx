@@ -32,7 +32,7 @@ import FeaturesSection from "../../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../../components/Settings/CruisePreferencesSection";
 import LoyaltySection from "../../components/Settings/LoyaltySection";
 import ModuleSection from "../../components/Settings/ModuleSection";
-import ServicesSection from "../../components/Settings/ServicesSection";
+import AccountExternalServices from "../../components/ExternalServices/AccountExternalServices";
 import DawarichStayScanCard from "../../components/Settings/DawarichStayScanCard";
 import DawarichConnectionCard from "../../components/Settings/DawarichConnectionCard";
 import LocationProviderSection from "../../components/Settings/LocationProviderSection";
@@ -156,7 +156,7 @@ export default function SettingsSectionSwitch({
     case "stayScan":
       return <DawarichStayScanCard />;
     case "externalServices":
-      return <ServicesSection page={page} />;
+      return <AccountExternalServices />;
     case "homeAirport":
       return <HomeAirportSection />;
     case "defaults":
