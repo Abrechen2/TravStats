@@ -121,3 +121,33 @@ describe("TripGallery — a photo over the size limit (forgejo#88 acceptance)", 
     expect(tripsApi.uploadPhotos).not.toHaveBeenCalled();
   });
 });
+
+describe("TripGallery photo cap (forgejo#381)", () => {
+  it("says how many of the trip's photos are not shown when the server capped the list", () => {
+    render(
+      <TripGallery
+        tripId="trip-1"
+        photos={[PHOTO]}
+        photoCount={1500}
+        photosTruncated
+        immichAlbums={[]}
+        onChange={vi.fn()}
+      />
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("trips:gallery.truncated");
+  });
+
+  it("shows no notice when every photo is loaded", () => {
+    render(
+      <TripGallery
+        tripId="trip-1"
+        photos={[PHOTO]}
+        photoCount={1}
+        photosTruncated={false}
+        immichAlbums={[]}
+        onChange={vi.fn()}
+      />
+    );
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+});

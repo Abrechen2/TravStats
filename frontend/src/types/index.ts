@@ -273,6 +273,10 @@ export interface Trip {
   stops?: TripStop[];
   journalEntries?: TripJournalEntry[];
   photos?: TripPhoto[];
+  /** True number of uploaded photos; `photos` is capped by the server (forgejo#381). */
+  photoCount?: number;
+  /** `photos` holds fewer than `photoCount`. */
+  photosTruncated?: boolean;
   /** A stay linked to this trip via `LodgingStay.tripId` — always includes its `lodging` (GET /trips/:id). */
   lodgingStays?: (LodgingStay & { lodging: Lodging })[];
   /** Train rides (departure order) and car rentals (pickup order) linked to this trip. */

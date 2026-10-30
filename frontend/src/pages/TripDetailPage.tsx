@@ -209,6 +209,8 @@ export default function TripDetailPage(): JSX.Element {
           <TripGallery
             tripId={shownTrip.id}
             photos={shownTrip.photos ?? []}
+            photoCount={shownTrip.photoCount}
+            photosTruncated={shownTrip.photosTruncated}
             immichAlbums={shownTrip.immichAlbums ?? []}
             onChange={() => void load()}
           />

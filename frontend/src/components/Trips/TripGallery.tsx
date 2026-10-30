@@ -13,6 +13,9 @@ import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 interface TripGalleryProps {
   tripId: string;
   photos: TripPhoto[];
+  /** True total when the server capped `photos` (forgejo#381). */
+  photoCount?: number;
+  photosTruncated?: boolean;
   immichAlbums: LinkedAlbum[];
   onChange: () => void;
 }
@@ -37,6 +40,8 @@ const TRIP_PHOTO_MAX_MB = TRIP_PHOTO_MAX_BYTES / (1024 * 1024);
 export default function TripGallery({
   tripId,
   photos,
+  photoCount,
+  photosTruncated = false,
   immichAlbums,
   onChange,
 }: TripGalleryProps): JSX.Element {
@@ -142,9 +147,14 @@ export default function TripGallery({
           >
             {t("immich:gallery.uploaded")}{" "}
             <span className="text-xs font-normal" style={{ color: "var(--text-muted)" }}>
-              · {photos.length}
+              · {photosTruncated && photoCount !== undefined ? photoCount : photos.length}
             </span>
           </h4>
+          {photosTruncated && photoCount !== undefined && (
+            <p role="status" className="mb-2 text-xs" style={{ color: "var(--text-muted)" }}>
+              {t("trips:gallery.truncated", { shown: photos.length, total: photoCount })}
+            </p>
+          )}
 
           {photos.length === 0 ? (
             <div

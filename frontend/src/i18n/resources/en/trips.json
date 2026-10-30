@@ -409,6 +409,7 @@
     "cloudNotConsented": "The AI provider is outside the network, and the administrator has not agreed to sending trip data there."
   },
   "gallery": {
+    "truncated": "Showing the first {{shown}} of {{total}} photos.",
     "title": "Gallery",
     "uploadButton": "📷 Upload",
     "uploaded_one": "{{count}} photo uploaded",

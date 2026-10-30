@@ -409,6 +409,7 @@
     "cloudNotConsented": "Der KI-Anbieter liegt außerhalb des Netzwerks, und der Administrator hat dem Senden von Reisedaten dorthin nicht zugestimmt."
   },
   "gallery": {
+    "truncated": "Es werden die ersten {{shown}} von {{total}} Fotos angezeigt.",
     "title": "Galerie",
     "uploadButton": "📷 Hochladen",
     "uploaded_one": "{{count}} Foto hochgeladen",
