@@ -34,14 +34,82 @@ interface ExternalAirportData {
   altitude?: number;
 }
 
-// In-memory cache for OurAirports CSV data (24 hour TTL)
-interface CsvCache {
-  data: string | null;
-  timestamp: number;
+/** How long a downloaded OurAirports index stays valid. */
+const CSV_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+/** How long a code that no source knew is remembered (a typo is retried rarely, not never). */
+const MISS_CACHE_TTL = 10 * 60 * 1000;
+/** Upper bound for any single outbound request of the lookup. */
+const EXTERNAL_FETCH_TIMEOUT_MS = 8_000;
+/** The CSV is ~12 MB, so it gets more room than a one-record API call. */
+const CSV_FETCH_TIMEOUT_MS = 30_000;
+
+/** OurAirports rows by upper-cased IATA and ICAO code, parsed once per download. */
+let csvIndex: { rows: Map<string, ExternalAirportData>; timestamp: number } | null = null;
+/** The download+parse in flight, shared by every concurrent miss. */
+let csvIndexLoading: Promise<Map<string, ExternalAirportData>> | null = null;
+const missCache = new Map<string, number>();
+/** Hard bound on remembered misses; the oldest entry goes first (Map keeps insertion order). */
+const MISS_CACHE_MAX = 1000;
+/** An IATA (3) or ICAO (4) code. Anything else cannot be an airport and never goes upstream. */
+const AIRPORT_CODE_SHAPE = /^[A-Z0-9]{3,4}$/;
+
+function rememberMiss(code: string): void {
+  const now = Date.now();
+  missCache.delete(code);
+  for (const [key, at] of missCache) {
+    if (now - at >= MISS_CACHE_TTL) missCache.delete(key);
+    else break; // insertion order is time order, so the rest are younger
+  }
+  while (missCache.size >= MISS_CACHE_MAX) {
+    const oldest = missCache.keys().next().value;
+    if (oldest === undefined) break;
+    missCache.delete(oldest);
+  }
+  missCache.set(code, now);
 }
 
-const CSV_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
-let csvCache: CsvCache = { data: null, timestamp: 0 };
+/** Test seam: how many misses are remembered. */
+export function missCacheSizeForTests(): number {
+  return missCache.size;
+}
+
+/** Why an external lookup could not give an answer (as opposed to "no such airport"). */
+export type AirportLookupFailureReason = "timeout" | "network" | "http_error";
+
+export type AirportLookupResult =
+  | { status: "found"; airport: AirportData }
+  | { status: "not_found" }
+  | { status: "unavailable"; reason: AirportLookupFailureReason };
+
+type ExternalLookup =
+  | { status: "found"; data: ExternalAirportData }
+  | { status: "not_found" }
+  | { status: "unavailable"; reason: AirportLookupFailureReason };
+
+class ExternalFetchError extends Error {
+  constructor(
+    readonly reason: AirportLookupFailureReason,
+    message: string
+  ) {
+    super(message);
+  }
+}
+
+function failureReason(error: unknown): AirportLookupFailureReason {
+  if (error instanceof ExternalFetchError) return error.reason;
+  // By name, not instanceof: a DOMException from AbortSignal.timeout is not
+  // always an `Error` of this realm.
+  const name = (error as { name?: unknown } | null)?.name;
+  if (name === "TimeoutError" || name === "AbortError") return "timeout";
+  return "network";
+}
+
+/** Test seam: forget every cached download, parse and miss. */
+export function resetAirportLookupCaches(): void {
+  csvIndex = null;
+  csvIndexLoading = null;
+  missCache.clear();
+}
 
 /**
  * Parse a CSV line handling quoted fields that may contain commas
@@ -135,6 +203,16 @@ export async function findExistingAirport(code: string): Promise<AirportData | n
  * Sucht einen Flughafen in der lokalen DB oder lädt ihn von externen Quellen
  */
 export async function findOrCreateAirport(code: string): Promise<AirportData | null> {
+  const result = await lookupOrCreateAirport(code);
+  return result.status === "found" ? result.airport : null;
+}
+
+/**
+ * `findOrCreateAirport` with the reason a miss happened. "No source knows this
+ * code" and "the sources could not be asked" are different answers — the
+ * second is worth a retry and must not read as a 404 to the user.
+ */
+export async function lookupOrCreateAirport(code: string): Promise<AirportLookupResult> {
   const upperCode = code.toUpperCase();
 
   // 1. Cache, then the table — see `findExistingAirport` for why the second
@@ -142,7 +220,17 @@ export async function findOrCreateAirport(code: string): Promise<AirportData | n
   const existingAirport = await findExistingAirport(upperCode);
 
   if (existingAirport) {
-    return existingAirport;
+    return { status: "found", airport: existingAirport };
+  }
+
+  if (!AIRPORT_CODE_SHAPE.test(upperCode)) {
+    return { status: "not_found" };
+  }
+
+  const missedAt = missCache.get(upperCode);
+  if (missedAt !== undefined) {
+    if (Date.now() - missedAt < MISS_CACHE_TTL) return { status: "not_found" };
+    missCache.delete(upperCode);
   }
 
   logger.debug({
@@ -152,11 +240,16 @@ export async function findOrCreateAirport(code: string): Promise<AirportData | n
   });
 
   // 2. Von externer API laden
-  const externalData = await fetchFromExternalAPI(upperCode);
+  const external = await fetchFromExternalAPI(upperCode);
 
-  if (!externalData) {
-    return null;
+  if (external.status === "unavailable") {
+    return external;
   }
+  if (external.status === "not_found") {
+    rememberMiss(upperCode);
+    return external;
+  }
+  const externalData = external.data;
 
   // 3. In DB speichern
   // Derive timezone from coordinates using geo-tz
@@ -201,7 +294,7 @@ export async function findOrCreateAirport(code: string): Promise<AirportData | n
       message: `Another request stored ${upperCode} first; using that row`,
       context: { code: upperCode, airportName: raced.name },
     });
-    return raced;
+    return { status: "found", airport: raced };
   }
 
   // Invalidate cache so new airport is cached on next lookup
@@ -212,7 +305,7 @@ export async function findOrCreateAirport(code: string): Promise<AirportData | n
     invalidateAirportCache(newAirport.icao);
   }
 
-  return newAirport;
+  return { status: "found", airport: newAirport };
 }
 
 /**
@@ -262,29 +355,111 @@ export async function enrichAirportMetadata(
 }
 
 /**
+ * Parse the OurAirports CSV once into a code -> row map. Rows without usable
+ * coordinates are left out, so a code resolves to the first row that has some.
+ */
+function buildCsvIndex(csvText: string): Map<string, ExternalAirportData> {
+  const rows = new Map<string, ExternalAirportData>();
+  const lines = csvText.split("\n");
+  // OurAirports CSV format:
+  // 0: id, 1: ident (ICAO), 2: type, 3: name, 4: latitude_deg, 5: longitude_deg,
+  // 6: elevation_ft, 7: continent, 8: iso_country, 9: iso_region, 10: municipality,
+  // 11: scheduled_service, 12: gps_code (ICAO backup), 13: iata_code, 14: local_code
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) continue;
+    const parts = parseCSVLine(line);
+    const iataCode = parts[13]?.trim() || "";
+    const icaoCode = parts[1]?.trim() || parts[12]?.trim() || "";
+    if (!iataCode && !icaoCode) continue;
+    const lat = parseFloat(parts[4]);
+    const lon = parseFloat(parts[5]);
+    if (isNaN(lat) || isNaN(lon)) continue;
+    const entry: ExternalAirportData = {
+      iata: iataCode || undefined,
+      icao: icaoCode || undefined,
+      name: parts[3]?.trim() || iataCode || icaoCode,
+      city: parts[10]?.trim() || undefined,
+      country: parts[8]?.trim() || undefined,
+      lat,
+      lon,
+      altitude: parts[6] ? Math.round(parseFloat(parts[6]) * 0.3048) : undefined,
+    };
+    for (const key of [iataCode.toUpperCase(), icaoCode.toUpperCase()]) {
+      if (key && !rows.has(key)) rows.set(key, entry);
+    }
+  }
+  return rows;
+}
+
+async function downloadCsvIndex(): Promise<Map<string, ExternalAirportData>> {
+  logger.info({
+    operation: "airport_lookup_csv_download",
+    message: "Downloading OurAirports CSV data",
+  });
+  const response = await fetch(`https://davidmegginson.github.io/ourairports-data/airports.csv`, {
+    signal: AbortSignal.timeout(CSV_FETCH_TIMEOUT_MS),
+  });
+  if (!response.ok) {
+    throw new ExternalFetchError("http_error", `HTTP ${response.status}`);
+  }
+  const csvText = await response.text();
+  const rows = buildCsvIndex(csvText);
+  csvIndex = { rows, timestamp: Date.now() };
+  logger.info({
+    operation: "airport_lookup_csv_cached",
+    message: `CSV data indexed (${rows.size} codes)`,
+    context: { codes: rows.size },
+  });
+  return rows;
+}
+
+/** The parsed index: cached for a day, and one download+parse however many callers miss at once. */
+function loadCsvIndex(): Promise<Map<string, ExternalAirportData>> {
+  if (csvIndex && Date.now() - csvIndex.timestamp < CSV_CACHE_TTL) {
+    return Promise.resolve(csvIndex.rows);
+  }
+  if (!csvIndexLoading) {
+    csvIndexLoading = downloadCsvIndex().finally(() => {
+      csvIndexLoading = null;
+    });
+  }
+  return csvIndexLoading;
+}
+
+/**
  * Lädt Flughafendaten von externen APIs
  * Verwendet mehrere Fallback-Quellen
+ *
+ * "Not found" is only answered when a source actually said so. When every
+ * source failed (timeout, network, HTTP error) the result is `unavailable`
+ * with the reason, so the caller can tell the user to retry.
  */
-async function fetchFromExternalAPI(code: string): Promise<ExternalAirportData | null> {
+async function fetchFromExternalAPI(code: string): Promise<ExternalLookup> {
   // Versuche zuerst die kostenlose Airport-Codes API
   try {
-    const response = await fetch(`https://www.airport-data.com/api/ap_info.json?iata=${code}`);
+    const response = await fetch(`https://www.airport-data.com/api/ap_info.json?iata=${code}`, {
+      signal: AbortSignal.timeout(EXTERNAL_FETCH_TIMEOUT_MS),
+    });
 
     if (response.ok) {
       const data = (await response.json()) as Record<string, unknown>;
 
       if (data && data.latitude && data.longitude) {
         return {
-          iata: (typeof data.iata === "string" ? data.iata : code) || code,
-          icao: typeof data.icao === "string" ? data.icao : undefined,
-          name: typeof data.name === "string" ? data.name : code,
-          city: typeof data.location === "string" ? data.location : undefined,
-          country: typeof data.country === "string" ? data.country : undefined,
-          lat: parseFloat(String(data.latitude)),
-          lon: parseFloat(String(data.longitude)),
-          altitude: data.elevation_ft
-            ? Math.round(parseFloat(String(data.elevation_ft)) * 0.3048)
-            : undefined,
+          status: "found",
+          data: {
+            iata: (typeof data.iata === "string" ? data.iata : code) || code,
+            icao: typeof data.icao === "string" ? data.icao : undefined,
+            name: typeof data.name === "string" ? data.name : code,
+            city: typeof data.location === "string" ? data.location : undefined,
+            country: typeof data.country === "string" ? data.country : undefined,
+            lat: parseFloat(String(data.latitude)),
+            lon: parseFloat(String(data.longitude)),
+            altitude: data.elevation_ft
+              ? Math.round(parseFloat(String(data.elevation_ft)) * 0.3048)
+              : undefined,
+          },
         };
       }
     }
@@ -292,149 +467,34 @@ async function fetchFromExternalAPI(code: string): Promise<ExternalAirportData |
     logger.debug({
       operation: "airport_lookup_api_failed",
       message: `Airport-data.com API failed for ${code}`,
-      context: { code },
+      context: { code, reason: failureReason(error) },
       error: {
         message: error instanceof Error ? error.message : "Unknown error",
       },
     });
   }
 
-  // Fallback: Versuche OurAirports direkten Lookup mit Cache
+  // Fallback: OurAirports, parsed once into a map
   try {
-    let csvText: string;
-    const now = Date.now();
-
-    // Check if cache is valid
-    if (csvCache.data && now - csvCache.timestamp < CSV_CACHE_TTL) {
-      const cacheAge = Math.round((now - csvCache.timestamp) / 1000 / 60);
-      logger.debug({
-        operation: "airport_lookup_csv_cache",
-        message: `Using cached OurAirports data (age: ${cacheAge}min)`,
-        context: { cacheAgeMinutes: cacheAge },
-      });
-      csvText = csvCache.data;
-    } else {
-      logger.info({
-        operation: "airport_lookup_csv_download",
-        message: "Downloading OurAirports CSV data",
-      });
-      const response = await fetch(
-        `https://davidmegginson.github.io/ourairports-data/airports.csv`
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      csvText = await response.text();
-
-      // Update cache
-      csvCache = {
-        data: csvText,
-        timestamp: now,
-      };
-      const csvSizeMB = (csvText.length / 1024 / 1024).toFixed(2);
-      logger.info({
-        operation: "airport_lookup_csv_cached",
-        message: `CSV data cached (${csvSizeMB}MB)`,
-        context: { sizeMB: parseFloat(csvSizeMB) },
-      });
-    }
-
-    const lines = csvText.split("\n");
-    logger.debug({
-      operation: "airport_lookup_csv_search",
-      message: `Searching ${lines.length} airports for code: ${code}`,
-      context: { code, lineCount: lines.length },
-    });
-
-    // Finde die Zeile mit dem gesuchten Code
-    let foundLine = 0;
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-
-      // Skip header line
-      if (i === 0 || !line.trim()) continue;
-
-      // Proper CSV parsing: handle quoted fields that may contain commas
-      const parts = parseCSVLine(line);
-
-      // OurAirports CSV format:
-      // 0: id, 1: ident (ICAO), 2: type, 3: name, 4: latitude_deg, 5: longitude_deg,
-      // 6: elevation_ft, 7: continent, 8: iso_country, 9: iso_region, 10: municipality,
-      // 11: scheduled_service, 12: gps_code (ICAO backup), 13: iata_code, 14: local_code
-
-      const iataCode = parts[13]?.trim() || "";
-      const icaoCode = parts[1]?.trim() || parts[12]?.trim() || "";
-
-      // Case-insensitive comparison
-      if (iataCode.toUpperCase() === code || icaoCode.toUpperCase() === code) {
-        foundLine = i + 1;
-        logger.debug({
-          operation: "airport_lookup_csv_found",
-          message: `Found airport in CSV (line ${foundLine})`,
-          context: {
-            code,
-            line: foundLine,
-            iata: iataCode,
-            icao: icaoCode,
-            name: parts[3],
-            city: parts[10],
-            country: parts[8],
-            coordinates: `${parts[4]}, ${parts[5]}`,
-          },
-        });
-
-        const lat = parseFloat(parts[4]);
-        const lon = parseFloat(parts[5]);
-
-        if (isNaN(lat) || isNaN(lon)) {
-          logger.warn({
-            operation: "airport_lookup_csv_invalid_coords",
-            message: `Invalid coordinates for ${code}, skipping`,
-            context: { code, lat: parts[4], lon: parts[5] },
-          });
-          continue;
-        }
-
-        return {
-          iata: iataCode || undefined,
-          icao: icaoCode || undefined,
-          name: parts[3]?.trim() || code,
-          city: parts[10]?.trim() || undefined,
-          country: parts[8]?.trim() || undefined,
-          lat,
-          lon,
-          altitude: parts[6] ? Math.round(parseFloat(parts[6]) * 0.3048) : undefined,
-        };
-      }
-    }
-
-    if (foundLine === 0) {
-      logger.debug({
-        operation: "airport_lookup_csv_not_found",
-        message: `Code ${code} not found in CSV`,
-        context: { code, linesChecked: lines.length },
-      });
-    }
+    const rows = await loadCsvIndex();
+    const hit = rows.get(code);
+    if (hit) return { status: "found", data: hit };
+    return { status: "not_found" };
   } catch (error) {
+    const reason = failureReason(error);
     logger.error({
       operation: "airport_lookup_csv_error",
       message: `OurAirports CSV lookup failed for ${code}`,
-      context: { code },
+      context: { code, reason },
       error: {
         message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
+    // The CSV could not be read, so even if the first API answered without a
+    // record the question is unanswered, not a miss.
+    return { status: "unavailable", reason };
   }
-
-  logger.debug({
-    operation: "airport_lookup_no_match",
-    message: `No external match for ${code}`,
-    context: { code },
-  });
-  return null;
 }
 
 /**

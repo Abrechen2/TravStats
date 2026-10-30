@@ -60,7 +60,7 @@ describe("Airport Lookup", () => {
         .fn()
         .mockRejectedValue(new Error("network disabled in test")) as unknown as typeof fetch;
       try {
-        const airport = await findOrCreateAirport("XXX999");
+        const airport = await findOrCreateAirport("XX9");
 
         expect(global.fetch).toHaveBeenCalled();
         expect(airport).toBeNull();

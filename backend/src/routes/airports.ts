@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../db";
 import {
   findExistingAirport,
-  findOrCreateAirport,
+  lookupOrCreateAirport,
   findNearestAirport,
   enrichAirportData,
 } from "../services/airportLookup";
@@ -179,13 +179,22 @@ router.get(
       }
 
       // Try to find in DB, or fetch from external API and save
-      const airport = await findOrCreateAirport(code);
+      const result = await lookupOrCreateAirport(code);
 
-      if (!airport) {
+      if (result.status === "unavailable") {
+        throw new AppError(
+          "Airport lookup is temporarily unavailable",
+          503,
+          "AIRPORT_LOOKUP_UNAVAILABLE",
+          undefined,
+          { reason: result.reason }
+        );
+      }
+      if (result.status === "not_found") {
         return res.status(404).json({ error: "Airport not found" });
       }
 
-      res.json(airport);
+      res.json(result.airport);
     } catch (error) {
       next(error);
     }
