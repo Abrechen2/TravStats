@@ -14,11 +14,11 @@ this contract changes the server.
 | Phase | Side | What | Server endpoints | State |
 |---|---|---|---|---|
 | T1 Day | Companion | one day: track, coverage, stays, unlabelled movement | `GET /travtrack/day?date=`, `GET /travtrack/stays?fromDay=&toDay=` (+ summary, capabilities) | app built (build 72, feat/track-day @ d02b01a7), device test open |
-| T2 Calendar | Companion | year grid with km per day | `GET /travtrack/calendar?year=` | server ready; app open |
-| T3 Months + explored | Companion | month summaries, explored-area map | `GET /travtrack/months?year=`, `GET /travtrack/explored?bbox=w,s,e,n` | server ready; app open |
-| T4 Export | Companion | GPX / JSON download | `GET /travtrack/export?format=gpx\|json` | server ready; app open |
+| T2 Calendar | Companion | year grid with km per day | `GET /travtrack/calendar?year=` | app built (build 74, feat/track-rest @ 64545a41), device test open |
+| T3 Months + explored | Companion | month summaries, explored-area map | `GET /travtrack/months?year=`, `GET /travtrack/explored?bbox=w,s,e,n` | app built (build 74, feat/track-rest @ 64545a41), device test open |
+| T4 Export | Companion | GPX / JSON download | `GET /travtrack/export?format=gpx\|json` | app built (build 74, feat/track-rest @ 64545a41), device test open |
 | S-T1 Moves | server | "moves" between stays: mode of travel + km | — (not built) | gap — needs a plan entry and owner scheduling |
-| S-T2 Calendar flags | server | per-day trip / flight flags in the calendar | — (not built) | gap — additive fields on `/travtrack/calendar` |
+| S-T2 Calendar flags | server | per-day trip / flight flags in the calendar | — (not built) | gap — additive fields on `/travtrack/calendar`; until then the app draws trip/flight dots on local days against a UTC calendar (off by one around midnight) |
 
 Until S-T1/S-T2 exist the app shows stays without moves (unlabelled movement
 comes only from `/day` `context[]` with `kind: "movement"`, no mode) and a
