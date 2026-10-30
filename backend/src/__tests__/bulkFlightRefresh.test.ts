@@ -67,7 +67,12 @@ jest.mock("../utils/logger", () => ({
 }));
 
 // ─── Import after mocks ─────────────────────────────────────────────────────
-import { hasHistoricalProvider, runBulkRefresh } from "../services/bulkFlightRefresh";
+import {
+  countBulkRefreshCandidates,
+  findBulkRefreshCandidates,
+  hasHistoricalProvider,
+  runBulkRefresh,
+} from "../services/bulkFlightRefresh";
 
 const USER_ID = "user-1";
 
@@ -244,6 +249,26 @@ describe("runBulkRefresh", () => {
 
     const where = prismaMock.flight.findMany.mock.calls[0][0].where;
     expect(where!.OR).toEqual(expect.arrayContaining([{ aircraft: null }, { aircraft: "" }]));
+  });
+
+  it("counts the same flights it lists: the count asks for the empty aircraft too", async () => {
+    prismaMock.flight.findMany.mockResolvedValue([]);
+    prismaMock.flight.count.mockResolvedValue(0);
+
+    await findBulkRefreshCandidates(USER_ID);
+    await countBulkRefreshCandidates(USER_ID);
+
+    const listWhere = prismaMock.flight.findMany.mock.calls[0][0].where as {
+      departureTime: { gte: Date; lte: Date };
+    };
+    const countWhere = prismaMock.flight.count.mock.calls[0][0].where as typeof listWhere;
+    expect(countWhere).toEqual({
+      ...listWhere,
+      departureTime: expect.objectContaining({}),
+    });
+    expect((countWhere as { OR: unknown[] }).OR).toEqual(
+      expect.arrayContaining([{ aircraft: null }, { aircraft: "" }])
+    );
   });
 
   it("counts provider 'no_provider' / empty result as no_data and writes nothing", async () => {

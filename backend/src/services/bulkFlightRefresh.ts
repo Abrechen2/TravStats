@@ -30,6 +30,7 @@
  *     the user already typed (or that came from another provider) are never
  *     overwritten.
  */
+import type { Prisma } from "../prisma";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import { lookupFlightWithHistorical } from "./flightLookup";
@@ -122,45 +123,53 @@ export interface BulkRefreshCandidate {
   depIcao: string | null;
 }
 
+/**
+ * The ONE rule for "this flight can still be backfilled", shared by the list
+ * and the count. They used to carry two copies and the count lacked the
+ * `aircraft` pair, so the card said "up to date" and hid Refresh while flights
+ * still lacked an aircraft (35 rows on the measured account).
+ */
+export function bulkRefreshWhere(userId: string, now: Date = new Date()): Prisma.FlightWhereInput {
+  const earliest = new Date(now.getTime() - HISTORICAL_WINDOW_DAYS * DAY_MS);
+  return {
+    userId,
+    flightNumber: { not: null },
+    departureTime: { gte: earliest, lte: now },
+    // OR across the new fields — a flight is a candidate if ANY of them
+    // is empty. Using `equals: null` rather than `is: null` because Prisma
+    // treats them subtly differently for nullable scalar columns.
+    //
+    // `aircraft` joined this list on 2026-09-03, and it had to: the three
+    // fields below fill on the FIRST successful pass, and a flight whose
+    // registration, Mode-S and codeshare flag are all set is never a
+    // candidate again. So a run that fetched the aircraft type but did not
+    // store it — which is what happened until today — locked the flight out
+    // of the only route that could ever fetch it again. Adding the write
+    // without adding this line would have fixed nothing for any flight that
+    // had already been refreshed once.
+    OR: [
+      { aircraftRegistration: null },
+      { aircraftModeS: null },
+      { isCodeshare: null },
+      // Both spellings of empty, and the pair is not padding. `aircraft`
+      // predates the three fields above and reaches the database through the
+      // flight form and the parsers, where Prisma's default writes "" rather
+      // than NULL. Measured on a real account: 125 rows NULL, 35 rows "" —
+      // and the three flights that prompted this fix were all in the 35. A
+      // `{ aircraft: null }` on its own would have missed every one of them
+      // and looked like a fix while changing nothing.
+      { aircraft: null },
+      { aircraft: "" },
+    ],
+  };
+}
+
 export async function findBulkRefreshCandidates(
   userId: string,
   limit: number = MAX_PER_CALL
 ): Promise<BulkRefreshCandidate[]> {
-  const now = new Date();
-  const earliest = new Date(now.getTime() - HISTORICAL_WINDOW_DAYS * DAY_MS);
-
   const flights = await prisma.flight.findMany({
-    where: {
-      userId,
-      flightNumber: { not: null },
-      departureTime: { gte: earliest, lte: now },
-      // OR across the new fields — a flight is a candidate if ANY of them
-      // is empty. Using `equals: null` rather than `is: null` because Prisma
-      // treats them subtly differently for nullable scalar columns.
-      //
-      // `aircraft` joined this list on 2026-09-03, and it had to: the three
-      // fields below fill on the FIRST successful pass, and a flight whose
-      // registration, Mode-S and codeshare flag are all set is never a
-      // candidate again. So a run that fetched the aircraft type but did not
-      // store it — which is what happened until today — locked the flight out
-      // of the only route that could ever fetch it again. Adding the write
-      // without adding this line would have fixed nothing for any flight that
-      // had already been refreshed once.
-      OR: [
-        { aircraftRegistration: null },
-        { aircraftModeS: null },
-        { isCodeshare: null },
-        // Both spellings of empty, and the pair is not padding. `aircraft`
-        // predates the three fields above and reaches the database through the
-        // flight form and the parsers, where Prisma's default writes "" rather
-        // than NULL. Measured on a real account: 125 rows NULL, 35 rows "" —
-        // and the three flights that prompted this fix were all in the 35. A
-        // `{ aircraft: null }` on its own would have missed every one of them
-        // and looked like a fix while changing nothing.
-        { aircraft: null },
-        { aircraft: "" },
-      ],
-    },
+    where: bulkRefreshWhere(userId),
     select: {
       id: true,
       flightNumber: true,
@@ -199,17 +208,7 @@ export async function hasHistoricalProvider(userId: string): Promise<boolean> {
  * `findMany` is `take`-limited to the page we're processing.
  */
 export async function countBulkRefreshCandidates(userId: string): Promise<number> {
-  const now = new Date();
-  const earliest = new Date(now.getTime() - HISTORICAL_WINDOW_DAYS * DAY_MS);
-
-  return prisma.flight.count({
-    where: {
-      userId,
-      flightNumber: { not: null },
-      departureTime: { gte: earliest, lte: now },
-      OR: [{ aircraftRegistration: null }, { aircraftModeS: null }, { isCodeshare: null }],
-    },
-  });
+  return prisma.flight.count({ where: bulkRefreshWhere(userId) });
 }
 
 /**
