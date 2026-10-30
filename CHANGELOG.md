@@ -6,11 +6,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-**Before upgrading to 2.8.0-rc.1:** take a backup. One new migration since 2.7.0: two new tables for the TravTrack diagnostics log; nothing existing changes.
+**Before upgrading to 2.8.0-rc.2:** take a backup. Three new migrations since 2.7.0: two tables for the TravTrack diagnostics log, new columns on the admin and user settings for the ADS-B providers and the AeroAPI plan, and two tables that count AeroAPI calls and track fetches; nothing existing changes.
 
 ### Added
 
+- **adsb.lol and ADS-B Exchange can name the aircraft of a flight in the air right now.** Both are off until an admin switches them on under Administration → External services (adsb.lol by a switch, ADS-B Exchange with its own key). They answer only for today's flights, fill registration and type, and never overwrite what another provider supplied.
+- **FlightAware AeroAPI knows its plan and its budget.** Admins pick Personal, Personal with feeder credit or a custom monthly budget; the instance key stops before the month's budget is spent and is rate-limited, while a user's own key never counts against it. Real flight tracks from AeroAPI after arrival are built in but stay off until the admin switches them on.
 - **TravTrack (beta) explains its gaps.** With the diagnostics log switched on in the Companion (Settings → Location, off by default), the phone sends what its recorder, its uploads and iOS did — never a position. Settings → TravTrack → Diagnose lines one device's day up against its stored points and names, for every gap of ten minutes or more, the cause the log supports: location access not "Always", recording paused, fixes dropped on the phone and why, an upload failed or still waiting, the app terminated, or "unexplained" — with a note when iOS was allowed to pause recording on its own. The raw log downloads as JSON; it is kept 14 days and can be deleted at any time.
+
+### Fixed
+
+- **A failed settings load no longer saves the defaults over your real settings.** The web page used to write its empty defaults back when the first load failed.
+- **A backup no longer finishes as "successful" after a write error,** and an archive whose output stream fails is aborted instead of left half-written. A rental's receipts are filed in the same transaction that creates the rental.
+- **Large backups and exports stream instead of being held in memory,** so they no longer exhaust the server on a big logbook. WebDAV uploads send an explicit length, a download gets its own side file, and a stalled transfer is stopped by a watchdog.
+- **Streamed exports strip private share keys** the way every other API response already did.
 
 ## [2.7.0] - 2026-10-29
 
