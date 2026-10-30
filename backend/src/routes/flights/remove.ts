@@ -3,6 +3,8 @@ import type { NextFunction, Response } from "express";
 import { prisma } from "../../db";
 import type { AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
+import { recheckAchievements } from "../../utils/achievements";
+import { restatusTrips } from "../../services/trip/restatusTrips";
 import { propagateDelete, shareSnapshot } from "../../services/sharing/propagate";
 
 /**
@@ -27,6 +29,10 @@ export async function deleteFlightHandler(
       await tx.flight.delete({ where: { id, userId } });
       await propagateDelete(tx, userId, gone);
     });
+    // The flight stretched its trip's span and counted toward badges; both
+    // are re-derived once it is gone (forgejo#385), as rail/bus/ferry do.
+    await restatusTrips([existingFlight.tripId]);
+    await recheckAchievements(userId, "flight delete");
     res.status(204).send();
   } catch (error) {
     next(error);

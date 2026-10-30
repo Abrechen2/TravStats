@@ -12,7 +12,8 @@ import { CRUISE_INCLUDE } from "./cruises/include";
 import { createCruiseRecord } from "../services/cruise/createCruise";
 import { cruiseListHandler } from "./cruises/list";
 import { cruiseFacetsHandler } from "./cruises/facets";
-import { checkAndUpdateAchievements } from "../utils/achievements";
+import { checkAndUpdateAchievements, recheckAchievements } from "../utils/achievements";
+import { restatusTrips } from "../services/trip/restatusTrips";
 import {
   buildCruiseGeometry,
   CRUISE_GEOMETRY_INCLUDE,
@@ -584,6 +585,10 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
       await tx.cruise.delete({ where: { id: existing.id } });
       await propagateDelete(tx, userId, gone);
     });
+    // The cruise stretched its trip's span and counted toward badges; both
+    // are re-derived once it is gone (forgejo#385), as rail/bus/ferry do.
+    await restatusTrips([existing.tripId]);
+    await recheckAchievements(userId, "cruise delete");
     res.status(204).send();
   } catch (err) {
     next(err);
