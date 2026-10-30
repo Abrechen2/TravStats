@@ -13,7 +13,10 @@ describe("achievements ?limit", () => {
   let cookie: string;
   beforeAll(async () => {
     const u = await prisma.user.create({
-      data: { username: `ach-limit-${Date.now()}`, passwordHash: await hashPassword("password123") },
+      data: {
+        username: `ach-limit-${Date.now()}`,
+        passwordHash: await hashPassword("password123"),
+      },
     });
     userId = u.id;
     cookie = `auth_token=${generateToken(u.id)}`;
@@ -22,19 +25,25 @@ describe("achievements ?limit", () => {
     await prisma.user.deleteMany({ where: { id: userId } });
   });
 
-  it.each(["/recent", "/leaderboard"])("%s rejects limit below 1 and non-integers", async (path) => {
-    for (const bad of ["-1", "0", "abc", "2.5", "101"]) {
-      const res = await request(app)
-        .get(`/api/v1/achievements${path}`)
-        .query({ limit: bad })
-        .set("Cookie", cookie);
-      expect(res.status).toBe(400);
+  it.each(["/recent", "/leaderboard"])(
+    "%s rejects limit below 1 and non-integers",
+    async (path) => {
+      for (const bad of ["-1", "0", "abc", "2.5", "101"]) {
+        const res = await request(app)
+          .get(`/api/v1/achievements${path}`)
+          .query({ limit: bad })
+          .set("Cookie", cookie);
+        expect(res.status).toBe(400);
+      }
     }
-  });
+  );
 
   it.each(["/recent", "/leaderboard"])("%s accepts a valid and an absent limit", async (path) => {
     for (const q of [{}, { limit: "5" }, { limit: "100" }]) {
-      const res = await request(app).get(`/api/v1/achievements${path}`).query(q).set("Cookie", cookie);
+      const res = await request(app)
+        .get(`/api/v1/achievements${path}`)
+        .query(q)
+        .set("Cookie", cookie);
       expect(res.status).toBe(200);
     }
   });

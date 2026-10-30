@@ -210,3 +210,20 @@ export { setMarnetGraphForTesting, buildMarnetGraphForTesting } from "./marnetGr
 export function debugCheckHaversineKm(a: LatLon, b: LatLon): number {
   return haversineKm(a, b);
 }
+
+let marnetFailureLogged = false;
+
+/**
+ * A marnet that cannot load makes every leg fall through to the coarse
+ * fallback; say so once per process, not once per leg (forgejo#385).
+ */
+export function logMarnetFailureOnce(error: unknown): null {
+  if (!marnetFailureLogged) {
+    marnetFailureLogged = true;
+    logger.error({
+      message: "schematic_router_marnet_failed",
+      context: { reason: error instanceof Error ? error.message : String(error) },
+    });
+  }
+  return null;
+}

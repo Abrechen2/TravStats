@@ -147,7 +147,9 @@ router.get(
       // The cap is silent otherwise: a client could not tell 500 trips from
       // "the first 500 of 612". Only counted when the page came back full.
       const total =
-        listed.length < TRIPS_LIST_CAP ? listed.length : await prisma.trip.count({ where: { userId } });
+        listed.length < TRIPS_LIST_CAP
+          ? listed.length
+          : await prisma.trip.count({ where: { userId } });
       const trips = await withRoadtripCounts(listed);
       // One batched airport lookup across EVERY trip's flights, not one per
       // trip: the cards need the same country derivation the detail page does,

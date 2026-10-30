@@ -36,7 +36,10 @@ describe("POST /flight-lookup/bulk", () => {
   beforeEach(() => lookupMock.mockReset());
 
   const post = (body: unknown) =>
-    request(app).post("/api/v1/flight-lookup/bulk").set("Cookie", cookie).send(body as object);
+    request(app)
+      .post("/api/v1/flight-lookup/bulk")
+      .set("Cookie", cookie)
+      .send(body as object);
 
   it("rejects a body that is not { flightNumbers: string[] }", async () => {
     expect((await post({ flightNumbers: [1, 2] })).status).toBe(400);

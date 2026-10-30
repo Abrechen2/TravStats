@@ -46,7 +46,7 @@ import {
   latToRow,
   lonToCol,
 } from "../shared/geo/landMaskGrid";
-import { routeMarnet } from "./marnet/marnetRouter";
+import { logMarnetFailureOnce, routeMarnet } from "./marnet/marnetRouter";
 
 /** Look up whether a lat/lon is water on the FINE 0.1° mask. Used
  * only by the coast-buffer post-pass — A* itself runs on the coarse
@@ -786,8 +786,6 @@ function dropUTurnNodes(
   return current;
 }
 
-let marnetFailureLogged = false;
-
 async function computeMaritimeGraphRoute(
   dep: { lat: number; lon: number },
   arr: { lat: number; lon: number },
@@ -835,16 +833,7 @@ async function computeMaritimeGraphRoute(
     }
     return repaired;
   } catch (error) {
-    // A marnet that cannot load makes every leg fall through to the coarse
-    // fallback; say so once per process, not once per leg.
-    if (!marnetFailureLogged) {
-      marnetFailureLogged = true;
-      logger.error({
-        message: "schematic_router_marnet_failed",
-        context: { reason: error instanceof Error ? error.message : String(error) },
-      });
-    }
-    return null;
+    return logMarnetFailureOnce(error);
   }
 }
 
