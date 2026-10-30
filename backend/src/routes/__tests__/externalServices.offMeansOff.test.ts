@@ -235,10 +235,20 @@ describe("external services: off means off (selfHostedRouting, logos, webdav, al
         create: {
           userId,
           data: {},
-          externalServicePrefs: { disabled: [], aiConsent: { custom: "2026-10-30T10:00:00Z" } },
+          externalServicePrefs: {
+            disabled: [],
+            aiConsent: {
+              custom: { at: "2026-10-30T10:00:00Z", destination: "https://llm-old.example.com/v1" },
+            },
+          },
         },
         update: {
-          externalServicePrefs: { disabled: [], aiConsent: { custom: "2026-10-30T10:00:00Z" } },
+          externalServicePrefs: {
+            disabled: [],
+            aiConsent: {
+              custom: { at: "2026-10-30T10:00:00Z", destination: "https://llm-old.example.com/v1" },
+            },
+          },
         },
       });
     const consented = async () =>

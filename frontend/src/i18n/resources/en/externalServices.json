@@ -123,6 +123,8 @@
     "testFailed": "The test could not be run.",
     "SERVICE_DISABLED": "The service is switched off.",
     "CONSENT_REQUIRED": "The data-sharing confirmation is missing – please confirm it.",
+    "NOT_CONFIGURED": "No address is set up for this AI provider yet.",
+    "DESTINATION_CHANGED": "The provider's address has changed. Please review it and consent again.",
     "ACCOUNT_KEYS_NOT_ALLOWED": "The instance does not allow own keys for this service.",
     "CONNECTION_NOT_ALLOWED": "The instance does not allow this connection.",
     "VALIDATION_FAILED": "The input is invalid.",

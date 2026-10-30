@@ -288,7 +288,13 @@ describe("external services policy on every path", () => {
         data: {
           externalServicePrefs: {
             disabled: [],
-            aiConsent: { custom: "2026-10-30T00:00:00.000Z", openai: "2026-10-30T00:00:00.000Z" },
+            aiConsent: {
+              custom: {
+                at: "2026-10-30T00:00:00.000Z",
+                destination: "https://llm-a.example.com/v1",
+              },
+              openai: { at: "2026-10-30T00:00:00.000Z", destination: "https://api.openai.com" },
+            },
           },
         },
       });
@@ -297,7 +303,7 @@ describe("external services policy on every path", () => {
       );
       const prefs = (await prisma.userSettings.findUniqueOrThrow({ where: { userId } }))
         .externalServicePrefs as {
-        aiConsent: Record<string, string>;
+        aiConsent: Record<string, unknown>;
       };
       expect(prefs.aiConsent.custom).toBeUndefined();
       expect(prefs.aiConsent.openai).toBeDefined();
@@ -330,7 +336,12 @@ describe("external services policy on every path", () => {
       await prisma.userSettings.update({
         where: { userId },
         data: {
-          externalServicePrefs: { disabled: [], aiConsent: { openai: new Date().toISOString() } },
+          externalServicePrefs: {
+            disabled: [],
+            aiConsent: {
+              openai: { at: new Date().toISOString(), destination: "https://api.openai.com" },
+            },
+          },
         },
       });
       expect(await kinds({ userId })).toContain("openai");

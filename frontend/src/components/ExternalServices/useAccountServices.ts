@@ -108,13 +108,13 @@ export function useAccountServices(): AccountServices {
   };
 
   const setConsent = async (
-    service: { id: string; provider: string },
+    service: { id: string; provider: string; destination?: string },
     consent: boolean
   ): Promise<string | null> => {
     begin(service.id);
     note(service.id, null);
     try {
-      await externalServicesApi.accountSetAiConsent(service.provider, consent);
+      await externalServicesApi.accountSetAiConsent(service.provider, consent, service.destination);
       await reload();
       return null;
     } catch (err) {

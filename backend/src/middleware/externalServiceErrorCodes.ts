@@ -13,4 +13,8 @@ export type ExternalServiceApiErrorCode =
   /** The admin forbade accounts to bring their own key for this service (403). */
   | "ACCOUNT_KEYS_NOT_ALLOWED"
   /** The admin forbade accounts to connect this service (403). */
-  | "CONNECTION_NOT_ALLOWED";
+  | "CONNECTION_NOT_ALLOWED"
+  /** The AI provider has no endpoint to consent to (409). */
+  | "NOT_CONFIGURED"
+  /** The address changed since the account saw it; consent again (409). */
+  | "DESTINATION_CHANGED";

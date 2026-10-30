@@ -106,7 +106,8 @@ export interface ExternalServicePolicy {
 /** Persisted per-account preferences. */
 export interface ExternalServicePrefs {
   disabled: string[];
-  aiConsent: Record<string, string>;
+  /** Per provider: when consent was given and the endpoint it was given for. */
+  aiConsent: Record<string, { at: string; destination: string }>;
 }
 
 export interface LastTest {

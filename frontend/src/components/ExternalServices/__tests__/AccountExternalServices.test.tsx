@@ -75,7 +75,9 @@ describe("Einstellungen › Dienste", () => {
     expect(mockedApi.accountSetAiConsent).not.toHaveBeenCalled();
     fireEvent.click(within(dialog).getByRole("checkbox"));
     fireEvent.click(confirm);
-    await waitFor(() => expect(mockedApi.accountSetAiConsent).toHaveBeenCalledWith("openai", true));
+    await waitFor(() =>
+      expect(mockedApi.accountSetAiConsent).toHaveBeenCalledWith("openai", true, expect.any(String))
+    );
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
@@ -107,7 +109,11 @@ describe("Einstellungen › Dienste", () => {
       })
     );
     await waitFor(() =>
-      expect(mockedApi.accountSetAiConsent).toHaveBeenCalledWith("anthropic", false)
+      expect(mockedApi.accountSetAiConsent).toHaveBeenCalledWith(
+        "anthropic",
+        false,
+        expect.any(String)
+      )
     );
   });
 

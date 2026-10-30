@@ -5,6 +5,7 @@
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import type { LlmProviderKind } from "../llm/llmEndpoint";
+import { currentConsentDestination } from "./consentBinding";
 import { isEnabledForConsent } from "./accountView";
 import { loadAdminState } from "./adminView";
 import { AI_SERVICES, getService } from "./catalogue";
@@ -116,12 +117,20 @@ async function refreshTestAfterSave(
   }
 }
 
-/** Grant or withdraw the account's consent to send documents to one cloud AI provider. */
+/**
+ * Grant or withdraw the account's consent to send documents to one cloud AI
+ * provider. A grant is bound to the endpoint the provider resolves to when it
+ * is written (invariant 2): if the admin moves the address afterwards, the
+ * consent no longer counts. `shownDestination` is the host the account saw; a
+ * grant for an address that has since changed is refused instead of bound.
+ */
 export async function setAiConsent(
   userId: string,
   provider: LlmProviderKind,
-  consent: boolean
+  consent: boolean,
+  shownDestination?: string
 ): Promise<{ provider: string; consentedAt: string | null }> {
+  let destination: string | null = null;
   if (consent) {
     // Only a provider the admin allowed can be consented to — otherwise the
     // consent would be a promise about a destination nobody confirmed.
@@ -134,12 +143,37 @@ export async function setAiConsent(
         "SERVICE_DISABLED"
       );
     }
+    destination = currentConsentDestination(state.admin, provider);
+    if (destination === null) {
+      throw new AppError("This AI provider has no endpoint configured", 409, "NOT_CONFIGURED");
+    }
+    if (shownDestination !== undefined && hostOfDestination(destination) !== shownDestination) {
+      throw new AppError(
+        "The provider's address changed — review it and consent again",
+        409,
+        "DESTINATION_CHANGED"
+      );
+    }
   }
   const consentedAt = consent ? new Date().toISOString() : null;
   await updatePrefs(userId, (prefs) => {
     const { [provider]: _removed, ...rest } = prefs.aiConsent;
     void _removed;
-    return { ...prefs, aiConsent: consentedAt ? { ...rest, [provider]: consentedAt } : rest };
+    return {
+      ...prefs,
+      aiConsent:
+        consentedAt && destination
+          ? { ...rest, [provider]: { at: consentedAt, destination } }
+          : rest,
+    };
   });
   return { provider, consentedAt };
+}
+
+function hostOfDestination(destination: string): string {
+  try {
+    return new URL(destination).hostname;
+  } catch {
+    return destination;
+  }
 }

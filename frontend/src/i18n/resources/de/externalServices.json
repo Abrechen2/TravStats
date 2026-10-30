@@ -123,6 +123,8 @@
     "testFailed": "Der Test konnte nicht ausgeführt werden.",
     "SERVICE_DISABLED": "Der Dienst ist ausgeschaltet.",
     "CONSENT_REQUIRED": "Die Datenfreigabe fehlt – bitte bestätige sie.",
+    "NOT_CONFIGURED": "Für diesen KI-Anbieter ist noch keine Adresse eingerichtet.",
+    "DESTINATION_CHANGED": "Die Adresse des Anbieters hat sich geändert. Bitte prüfe sie und stimme erneut zu.",
     "ACCOUNT_KEYS_NOT_ALLOWED": "Die Instanz erlaubt für diesen Dienst keine eigenen Schlüssel.",
     "CONNECTION_NOT_ALLOWED": "Die Instanz erlaubt diese Verbindung nicht.",
     "VALIDATION_FAILED": "Die Eingabe ist ungültig.",

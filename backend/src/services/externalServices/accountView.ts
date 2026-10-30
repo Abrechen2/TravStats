@@ -9,6 +9,7 @@ import { AI_SERVICES, CONNECTION_IDS, SERVICES, getService } from "./catalogue";
 import { envPresent, isEnabled, loadAdminState, type AdminState } from "./adminView";
 import { hasValue, viewField, type FieldSource, type FieldView } from "./fields";
 import { parsePrefs } from "./policy";
+import { currentConsentDestination } from "./consentBinding";
 import { quotaFor, type QuotaView } from "./quota";
 import { loadAllTests, type LastTest } from "./tests";
 import type { Recommended, ServiceDef } from "./types";
@@ -155,9 +156,11 @@ export async function buildAccountView(userId: string): Promise<{
     if (!destination || ((kind === "custom" || kind === "ollama") && isLocalLlmHost(destination))) {
       return [];
     }
-    return [
-      { id: service.id, provider: kind, destination, consentedAt: prefs.aiConsent[kind] ?? null },
-    ];
+    // Consent counts only for the address it was given for (invariant 2).
+    const stored = prefs.aiConsent[kind];
+    const bound = currentConsentDestination(state.admin, kind);
+    const consentedAt = stored && bound !== null && stored.destination === bound ? stored.at : null;
+    return [{ id: service.id, provider: kind, destination, consentedAt }];
   });
 
   const instanceProvided = SERVICES.filter(

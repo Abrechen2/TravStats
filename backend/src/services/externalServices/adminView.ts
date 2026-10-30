@@ -9,6 +9,8 @@ import { hasValue, viewField, type FieldSource, type FieldView } from "./fields"
 import { loadAllTests, type LastTest } from "./tests";
 import { quotaFor, type QuotaView } from "./quota";
 import { parsePolicy, parsePrefs } from "./policy";
+import { currentConsentDestination } from "./consentBinding";
+import { isLlmProviderKind } from "../llm/llmEndpoint";
 import { CATEGORY_ORDER, type ExternalServicePolicy, type ServiceDef } from "./types";
 
 export interface AdminServiceView {
@@ -88,10 +90,17 @@ function sourceOf(service: ServiceDef, src: FieldSource): "instance" | "env" | "
   return envPresent(service) ? "env" : "none";
 }
 
-function consentCounts(rows: Array<{ externalServicePrefs: unknown }>): Map<string, number> {
+/** Accounts whose consent still matches the provider's current address. */
+function consentCounts(
+  rows: Array<{ externalServicePrefs: unknown }>,
+  admin: AdminState["admin"]
+): Map<string, number> {
   const counts = new Map<string, number>();
   for (const row of rows) {
-    for (const kind of Object.keys(parsePrefs(row.externalServicePrefs).aiConsent)) {
+    for (const [kind, entry] of Object.entries(parsePrefs(row.externalServicePrefs).aiConsent)) {
+      if (!isLlmProviderKind(kind)) continue;
+      const bound = currentConsentDestination(admin, kind);
+      if (bound === null || entry.destination !== bound) continue;
       counts.set(kind, (counts.get(kind) ?? 0) + 1);
     }
   }
@@ -116,7 +125,7 @@ export async function buildAdminView(): Promise<{
     }),
     countConnections(),
   ]);
-  const consents = consentCounts(prefRows);
+  const consents = consentCounts(prefRows, state.admin);
 
   const services: AdminServiceView[] = [];
   for (const service of SERVICES) {

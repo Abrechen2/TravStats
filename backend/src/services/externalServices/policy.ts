@@ -24,10 +24,16 @@ export function parsePolicy(raw: unknown): ExternalServicePolicy {
 
 export function parsePrefs(raw: unknown): ExternalServicePrefs {
   const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
-  const consent: Record<string, string> = {};
+  const consent: Record<string, { at: string; destination: string }> = {};
   if (o.aiConsent && typeof o.aiConsent === "object") {
     for (const [k, v] of Object.entries(o.aiConsent as Record<string, unknown>)) {
-      if (typeof v === "string") consent[k] = v;
+      // A bare date (the shape before consent was bound to its destination)
+      // names no endpoint, so it proves consent to none: invalid.
+      if (!v || typeof v !== "object") continue;
+      const { at, destination } = v as Record<string, unknown>;
+      if (typeof at === "string" && typeof destination === "string" && destination) {
+        consent[k] = { at, destination };
+      }
     }
   }
   return { disabled: strings(o.disabled), aiConsent: consent };

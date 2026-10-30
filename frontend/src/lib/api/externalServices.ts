@@ -142,6 +142,8 @@ export const EXTERNAL_SERVICE_ERROR_CODES = [
   "CONNECTION_NOT_ALLOWED",
   "VALIDATION_FAILED",
   "SERVICE_NOT_FOUND",
+  "NOT_CONFIGURED",
+  "DESTINATION_CHANGED",
 ] as const;
 export type ExternalServiceErrorCode = (typeof EXTERNAL_SERVICE_ERROR_CODES)[number];
 
@@ -176,7 +178,15 @@ export const externalServicesApi = {
   async accountUpdate(id: string, body: AccountServiceUpdate): Promise<void> {
     await api.put(`${account}/${encodeURIComponent(id)}`, body);
   },
-  async accountSetAiConsent(provider: string, consent: boolean): Promise<void> {
-    await api.put(`${account}/ai-consent/${encodeURIComponent(provider)}`, { consent });
+  /** `destination` is the host the account was shown; the server refuses a grant for an address that has moved. */
+  async accountSetAiConsent(
+    provider: string,
+    consent: boolean,
+    destination?: string
+  ): Promise<void> {
+    await api.put(`${account}/ai-consent/${encodeURIComponent(provider)}`, {
+      consent,
+      ...(consent && destination ? { destination } : {}),
+    });
   },
 };

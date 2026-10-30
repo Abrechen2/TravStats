@@ -66,6 +66,7 @@ describe("resolveReachableLlmTarget", () => {
       ollamaModel: "gemma3:12b",
       openaiCompatBaseUrl: provider.baseUrl,
       openaiCompatModel: "cloud-model",
+      llmCustomOptIn: true,
     });
 
   it("walks past a dead first slot to the provider that answers", async () => {
@@ -98,6 +99,7 @@ describe("resolveReachableLlmTarget", () => {
       ollamaModel: "gemma3:12b",
       openaiCompatBaseUrl: "http://127.0.0.1:9/v1",
       openaiCompatModel: "cloud-model",
+      llmCustomOptIn: true,
     });
     const target = await resolveReachableLlmTarget({ withDefaults: true, wait: true });
     expect(target?.kind).toBe("ollama");
@@ -105,7 +107,11 @@ describe("resolveReachableLlmTarget", () => {
   });
 
   it("does not probe a lone slot — there is nothing to choose between", async () => {
-    settings({ openaiCompatBaseUrl: provider.baseUrl, openaiCompatModel: "cloud-model" });
+    settings({
+      openaiCompatBaseUrl: provider.baseUrl,
+      openaiCompatModel: "cloud-model",
+      llmCustomOptIn: true,
+    });
     const target = await resolveReachableLlmTarget({ wait: true });
     expect(target?.kind).toBe("custom");
     expect(provider.probes).toBe(0);

@@ -206,7 +206,10 @@ export async function resolveRailLlmChain(userId?: string): Promise<LlmTarget[]>
   // "Off means off" (forgejo#392): an Ollama the admin switched off is not the
   // localhost fallback either — no probe may reach it.
   if (await isServiceDisabledByAdmin("ollama")) return [];
-  return [ollamaTarget()];
+  // Fail closed in the chain itself (invariant 2): when the resolver left a
+  // remote OLLAMA_URL out for want of consent, the default must not rebuild it.
+  const fallback = ollamaTarget();
+  return fallback.isCloud ? [] : [fallback];
 }
 
 /**

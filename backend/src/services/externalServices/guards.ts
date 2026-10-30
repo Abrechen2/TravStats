@@ -9,6 +9,8 @@
 import type { NextFunction, RequestHandler, Response } from "express";
 import type { AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
+import { isEnabled, loadAdminState } from "./adminView";
+import { getService } from "./catalogue";
 import { connectionGate, loadPolicy, loadPrefs } from "./policy";
 
 /** Every value empties something: null, "" or false. */
@@ -85,3 +87,33 @@ export const guardAccountKeyWrite: RequestHandler = (req: AuthRequest, _res, nex
     }
   })().then(() => next(), next);
 };
+
+/** Route name of a legacy `…/test/<name>` endpoint → catalogue service id, where they differ. */
+const TEST_ROUTE_SERVICE: Record<string, string> = { logostream: "logos" };
+
+/**
+ * Express guard for the legacy `POST …/test/<service>` routes (forgejo#392,
+ * off means off): a test spends a real provider call, so a service the admin
+ * switched off (or, on the account route, the account did) answers 409
+ * SERVICE_DISABLED before anything is called.
+ */
+export function guardServiceTest(scope: "admin" | "account"): RequestHandler {
+  return (req: AuthRequest, _res: Response, next: NextFunction): void => {
+    if (req.method !== "POST") return next();
+    const name = String(req.params.service ?? "");
+    const service = getService(TEST_ROUTE_SERVICE[name] ?? name);
+    if (!service) return next();
+    (async () => {
+      if (!isEnabled(service, await loadAdminState())) {
+        throw new AppError(
+          "This service is switched off by the administrator",
+          409,
+          "SERVICE_DISABLED"
+        );
+      }
+      if (scope === "account" && (await loadPrefs(req.userId!)).disabled.includes(service.id)) {
+        throw new AppError("This service is switched off", 409, "SERVICE_DISABLED");
+      }
+    })().then(() => next(), next);
+  };
+}

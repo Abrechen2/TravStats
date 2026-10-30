@@ -58,6 +58,7 @@ import { accountConsentedTo, assertLlmCloudConsent, assertLlmEnabled } from "./l
 import { loadPolicy } from "../externalServices/policy";
 import {
   checkLlmBaseUrl,
+  consentDestination,
   isLocalLlmHost,
   llmHostOf,
   CLOUD_PROVIDER_KINDS,
@@ -239,7 +240,10 @@ function customChainTarget(admin: AdminParserSettings | null): LlmTarget | null 
   const check = admin?.openaiCompatBaseUrl ? checkLlmBaseUrl(admin.openaiCompatBaseUrl) : null;
   if (!check?.ok || !admin?.openaiCompatModel) return null;
   const isCloud = !check.isLocal;
-  if (isCloud && !(admin?.llmCustomOptIn ?? false)) return null;
+  // The slot's switch is the switch, local endpoint or not (forgejo#392: off
+  // means off). Instances that relied on a local endpoint without it were
+  // switched on by migration 20261030160000.
+  if (!(admin?.llmCustomOptIn ?? false)) return null;
   return {
     kind: "custom",
     url: check.url,
@@ -280,7 +284,14 @@ async function filterForAccount(
   for (const target of targets) {
     const cloud = target.isCloud ?? isCloudUrl(target.url);
     if (!cloud || who.systemTask === true) kept.push(target);
-    else if (who.userId !== undefined && (await accountConsentedTo(who.userId, kindOf(target)))) {
+    else if (
+      who.userId !== undefined &&
+      (await accountConsentedTo(
+        who.userId,
+        kindOf(target),
+        consentDestination(kindOf(target), target.url)
+      ))
+    ) {
       kept.push(target);
     }
   }
@@ -462,6 +473,7 @@ async function assertMayAsk(
   await assertLlmCloudConsent(
     {
       kind: kindOf(target),
+      url: target.url,
       isCloud: target.isCloud ?? isCloudUrl(target.url),
     },
     who

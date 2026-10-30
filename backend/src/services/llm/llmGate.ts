@@ -52,7 +52,12 @@
 import { AppError } from "../../middleware/errorHandler";
 import { getAdminParserSettings, type AdminParserSettings } from "../parserSettings";
 import { isSharedDemoUser } from "../../utils/sharedDemo";
-import { checkLlmBaseUrl, isLocalLlmHost, type LlmProviderKind } from "./llmEndpoint";
+import {
+  checkLlmBaseUrl,
+  consentDestination,
+  isLocalLlmHost,
+  type LlmProviderKind,
+} from "./llmEndpoint";
 import { loadPolicy, loadPrefs } from "../externalServices/policy";
 
 /** Why a model was not asked. Distinct kinds, because the UI says different things. */
@@ -114,9 +119,7 @@ function customSlotConfigured(settings: AdminParserSettings | null): boolean {
 
 function customSlotEligible(settings: AdminParserSettings | null): boolean {
   if (!customSlotConfigured(settings)) return false;
-  const check = checkLlmBaseUrl(settings!.openaiCompatBaseUrl!);
-  if (!check.ok) return false;
-  return check.isLocal || (settings?.llmCustomOptIn ?? false);
+  return settings?.llmCustomOptIn ?? false; // the slot's switch, local endpoint or not
 }
 
 /** Any of the three fixed-endpoint cloud slots that carries a key. */
@@ -179,9 +182,18 @@ function providerRefusal(
 export const LLM_ACCOUNT_NOT_CONSENTED_REASON =
   "This account has not allowed sending documents to the configured AI provider yet — only the built-in templates were tried.";
 
-/** Whether this account consented (Einstellungen › Dienste) to documents going to `kind`. */
-export async function accountConsentedTo(userId: string, kind: LlmProviderKind): Promise<boolean> {
-  return typeof (await loadPrefs(userId)).aiConsent[kind] === "string";
+/**
+ * Whether this account consented (Einstellungen › Dienste) to documents going
+ * to `kind` AT `destination` (see `consentDestination`). A consent given for
+ * another address — or none resolvable now — is no consent (invariant 2).
+ */
+export async function accountConsentedTo(
+  userId: string,
+  kind: LlmProviderKind,
+  destination: string | null
+): Promise<boolean> {
+  if (destination === null) return false;
+  return (await loadPrefs(userId)).aiConsent[kind]?.destination === destination;
 }
 
 /**
@@ -200,11 +212,11 @@ async function accountConsentRefusal(
   const ollamaOff = (await loadPolicy()).disabled.includes("ollama");
   const url = ollamaConfiguredUrl(settings);
   let ollamaLocal = false;
-  const cloud: LlmProviderKind[] = [];
+  const cloud: Array<{ kind: LlmProviderKind; destination: string | null }> = [];
   if (url && ollamaEligible(settings, ollamaOff)) {
     try {
       if (isLocalLlmHost(new URL(url).hostname)) ollamaLocal = true;
-      else cloud.push("ollama");
+      else cloud.push({ kind: "ollama", destination: consentDestination("ollama", url) });
     } catch {
       /* unparsable URL is not eligible — ollamaEligible already said so */
     }
@@ -213,14 +225,32 @@ async function accountConsentRefusal(
   if (customSlotEligible(settings)) {
     const custom = checkLlmBaseUrl(settings!.openaiCompatBaseUrl!);
     if (custom.ok && custom.isLocal) return false; // a local endpoint needs no cloud consent
-    cloud.push("custom");
+    cloud.push({
+      kind: "custom",
+      destination: consentDestination("custom", settings!.openaiCompatBaseUrl),
+    });
   }
-  if (settings?.llmOpenaiApiKey && settings.llmOpenaiOptIn) cloud.push("openai");
-  if (settings?.llmAnthropicApiKey && settings.llmAnthropicOptIn) cloud.push("anthropic");
-  if (settings?.llmGoogleApiKey && settings.llmGoogleOptIn) cloud.push("google");
+  for (const kind of ["openai", "anthropic", "google"] as const) {
+    const key = {
+      openai: "llmOpenaiApiKey",
+      anthropic: "llmAnthropicApiKey",
+      google: "llmGoogleApiKey",
+    }[kind] as "llmOpenaiApiKey";
+    const optIn = {
+      openai: "llmOpenaiOptIn",
+      anthropic: "llmAnthropicOptIn",
+      google: "llmGoogleOptIn",
+    }[kind] as "llmOpenaiOptIn";
+    if (settings?.[key] && settings[optIn]) {
+      cloud.push({ kind, destination: consentDestination(kind, null) });
+    }
+  }
   if (cloud.length === 0) return false;
   const prefs = await loadPrefs(userId);
-  return !cloud.some((kind) => typeof prefs.aiConsent[kind] === "string");
+  return !cloud.some(
+    ({ kind, destination }) =>
+      destination !== null && prefs.aiConsent[kind]?.destination === destination
+  );
 }
 
 /**
@@ -295,6 +325,7 @@ function consentGranted(settings: AdminParserSettings | null, kind: LlmProviderK
 export async function assertLlmCloudConsent(
   target: {
     kind?: LlmProviderKind;
+    url?: string;
     isCloud?: boolean;
   },
   who: { userId?: string; systemTask?: boolean } = {}
@@ -309,7 +340,8 @@ export async function assertLlmCloudConsent(
   // Fail closed: a request that names neither an account nor `systemTask: true`
   // never reaches a cloud target — "no account" is not a licence.
   if (who.userId !== undefined) {
-    if (!(await accountConsentedTo(who.userId, target.kind ?? "custom"))) {
+    const kind = target.kind ?? "custom";
+    if (!(await accountConsentedTo(who.userId, kind, consentDestination(kind, target.url)))) {
       throw new AppError(LLM_ACCOUNT_NOT_CONSENTED_REASON, 503, "LLM_CLOUD_NOT_CONSENTED");
     }
   } else if (who.systemTask !== true) {

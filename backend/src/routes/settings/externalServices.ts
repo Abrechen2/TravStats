@@ -29,8 +29,8 @@ router.put(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { provider } = aiConsentParamsSchema.parse(req.params);
-      const { consent } = aiConsentBodySchema.parse(req.body);
-      res.json(await setAiConsent(req.userId!, provider, consent));
+      const { consent, destination } = aiConsentBodySchema.parse(req.body);
+      res.json(await setAiConsent(req.userId!, provider, consent, destination));
     } catch (error) {
       next(error);
     }

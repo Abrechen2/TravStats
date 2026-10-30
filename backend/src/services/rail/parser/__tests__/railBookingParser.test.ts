@@ -150,6 +150,7 @@ describe("parseRailBookingText", () => {
       ollamaModel: "test-model",
       openaiCompatBaseUrl: second.baseUrl,
       openaiCompatModel: "cloud-model",
+      llmCustomOptIn: true,
     });
     try {
       const result = await parseRailBookingText(FOREIGN_TICKET_THIN, [], "user-1");

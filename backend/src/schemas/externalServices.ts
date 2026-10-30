@@ -25,7 +25,11 @@ export const accountServiceUpdateSchema = z.strictObject({
 export const aiConsentParamsSchema = z.strictObject({
   provider: z.enum(["ollama", "openai", "anthropic", "google", "custom"]),
 });
-export const aiConsentBodySchema = z.strictObject({ consent: z.boolean() });
+export const aiConsentBodySchema = z.strictObject({
+  consent: z.boolean(),
+  /** The host the account was shown; a grant for an address that has since changed is refused. */
+  destination: z.string().optional(),
+});
 
 const lastTest = z
   .object({ at: z.string(), ok: z.boolean(), reason: z.string().nullable() })

@@ -161,7 +161,7 @@ beforeEach(async () => {
     openaiCompatBaseUrl: base,
     openaiCompatModel: "gpt-test",
     openaiCompatApiKey: encryptApiKey(SECRET_KEY),
-    llmCustomOptIn: false,
+    llmCustomOptIn: true,
   });
 });
 
@@ -281,6 +281,7 @@ describe("admin settings for the provider", () => {
   });
 
   it("reports a cloud endpoint as cloud, so the page can show the warning", async () => {
+    await configure({ llmCustomOptIn: false });
     await request(app)
       .put("/api/v1/admin/parser-settings")
       .set("Cookie", adminCookie)
