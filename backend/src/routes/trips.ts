@@ -31,6 +31,7 @@ import { assertLlmCloudConsent, assertLlmEnabled } from "../services/llm/llmGate
 import { tripPageCost, tripsPageCosts } from "../services/trip/tripCostSuperlative";
 import {
   TRIPS_LIST_INCLUDE,
+  TRIPS_LIST_CAP,
   TRIP_BUS_SELECT,
   TRIP_RAIL_SELECT,
 } from "../services/trip/tripsListInclude";
@@ -140,9 +141,13 @@ router.get(
       const listed = await prisma.trip.findMany({
         where: { userId },
         orderBy: { createdAt: "desc" },
-        take: 500, // safety cap — users are unlikely to have more than 500 trips
+        take: TRIPS_LIST_CAP,
         include: TRIPS_LIST_INCLUDE,
       });
+      // The cap is silent otherwise: a client could not tell 500 trips from
+      // "the first 500 of 612". Only counted when the page came back full.
+      const total =
+        listed.length < TRIPS_LIST_CAP ? listed.length : await prisma.trip.count({ where: { userId } });
       const trips = await withRoadtripCounts(listed);
       // One batched airport lookup across EVERY trip's flights, not one per
       // trip: the cards need the same country derivation the detail page does,
@@ -174,6 +179,9 @@ router.get(
       res.json({
         trips: trips.map((t) => ({
           ...withTripTimes(t),
+          // `flights` is capped per trip (TRIPS_LIST_INCLUDE); say so, so the
+          // card does not present a partial list as the whole trip.
+          flightsTruncated: t._count.flights > t.flights.length,
           cruises: t.cruises.map((c) => ({
             ...c,
             distanceKm: Math.round(distanceByCruise.get(c.id) ?? 0),
@@ -189,6 +197,8 @@ router.get(
           ),
           ...(insights && { cost: insights.tripCosts[t.id] }),
         })),
+        total,
+        truncated: total > listed.length,
         ...(insights && { mostExpensiveTrip: insights.mostExpensiveTrip }),
       });
     } catch (error) {

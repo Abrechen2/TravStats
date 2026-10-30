@@ -155,6 +155,9 @@ export const TRIP_DETAIL_RENTALS = {
   orderBy: { pickupTime: "asc" },
 } satisfies Prisma.Trip$rentalBookingsArgs;
 
+/** Trips one `GET /trips` answers with; the response says when it stopped here. */
+export const TRIPS_LIST_CAP = 500;
+
 export const TRIPS_LIST_INCLUDE = {
   _count: {
     select: {
