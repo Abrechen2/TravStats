@@ -15,6 +15,7 @@ import { type FlightTimeSemantics } from "../../utils/timezone";
 import { measuredDurationMinutes } from "../../utils/flightDurationColumn";
 import { resolveFlightDuration } from "../../shared/flightDuration";
 import { countableFlightWhere } from "../../shared/flightCounting";
+import { countableCruiseWhere } from "../../shared/cruiseCounting";
 import type { DatedRow } from "../../utils/stats/timeseries";
 import {
   FLIGHT_CLOCK_SELECT,
@@ -117,7 +118,7 @@ export async function fetchCruiseDatedRows(
     // flight series), which is exactly how it survived the fix next door.
     where: {
       userId,
-      ...countableFlightWhere(),
+      ...countableCruiseWhere(),
       startDate: { gte: from, lt: to },
     },
     select: { startDate: true, legs: { select: { distanceKm: true } } },
