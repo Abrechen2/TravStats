@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useRemoteSettingsStatus } from "../../store/remoteSettingsStatus";
 import { useSettingsStore, snapshotOf } from "../../store/settingsStore";
 import { useAuthStore } from "../../store/authStore";
 import { settingsApi, authApi, backupApi } from "../../lib/api";
@@ -201,7 +202,7 @@ export function useSettingsPage() {
       isInitialSave.current = false;
       return;
     }
-    if (!hasPendingChanges()) return;
+    if (!hasPendingChanges() || useRemoteSettingsStatus.getState().failed) return;
     setAutoSaveState("pending");
     const saveSettings = async () => {
       // Re-check at FIRE time, not just schedule time. Hydration
@@ -212,7 +213,7 @@ export function useSettingsPage() {
       // follow-up re-render; React 19's effect timing does not, which re-exposed
       // the issue-#186 hydration echo. A genuine edit still differs from the
       // (now-settled) snapshot, so it still saves.
-      if (!hasPendingChanges()) {
+      if (!hasPendingChanges() || useRemoteSettingsStatus.getState().failed) {
         setAutoSaveState("idle");
         return;
       }

@@ -9,6 +9,7 @@ vi.unmock("../../store/settingsStore");
 
 import { DomainRouteGuard } from "../DomainRouteGuard";
 import { useSettingsStore } from "../../store/settingsStore";
+import { useRemoteSettingsStatus } from "../../store/remoteSettingsStatus";
 
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -52,8 +53,8 @@ describe("DomainRouteGuard", () => {
     useSettingsStore.setState({
       enabledDomains: ["flight"],
       enabledDomainsLoaded: false,
-      remoteLoadFailed: false,
     });
+    useRemoteSettingsStatus.setState({ failed: false });
   });
 
   it("waits instead of redirecting while the domains are still loading", () => {
@@ -66,7 +67,8 @@ describe("DomainRouteGuard", () => {
 
   it("offers a retry instead of spinning forever when the settings load failed (forgejo#372)", () => {
     const loadRemoteSettings = vi.fn().mockResolvedValue(undefined);
-    useSettingsStore.setState({ remoteLoadFailed: true, loadRemoteSettings });
+    useRemoteSettingsStatus.setState({ failed: true });
+    useSettingsStore.setState({ loadRemoteSettings });
 
     renderAt("/cruises/abc");
 

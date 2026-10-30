@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { useRemoteSettingsStatus } from "./remoteSettingsStatus";
 import { persist } from "zustand/middleware";
 import { settingsApi } from "../lib/api";
 import { logger } from "../lib/logger";
@@ -157,13 +158,6 @@ export interface SettingsState {
    * wait for its own answer.
    */
   enabledDomainsLoaded: boolean;
-  /**
-   * The last `loadRemoteSettings` could not read the server. Not persisted. It
-   * lets a guard that waits on `enabledDomainsLoaded` say so and offer a retry
-   * instead of spinning forever, and it is why no `remoteSnapshot` is stamped
-   * on failure (forgejo#372).
-   */
-  remoteLoadFailed: boolean;
   /**
    * The user's currency — the ONE the app has. Every lodging stay is
    * converted into it at the ECB rate for its check-in day, and stats,
@@ -454,7 +448,6 @@ const defaultSettings: Omit<
   apiKeys: null,
   enabledDomains: ["flight"],
   enabledDomainsLoaded: false,
-  remoteLoadFailed: false,
   baseCurrency: "EUR",
   autoCreateTrips: true,
   // No choice yet, and no instance answer yet — both are the server's to fill.
@@ -533,17 +526,12 @@ export const useSettingsStore = create<SettingsState>()(
       resetSettings: () => set(defaultSettings),
       hasPendingChanges: () => {
         const state = get();
-        // The server could not be read, so the store holds local defaults, not
-        // the account's values: an auto-save now would write them over the
-        // real ones. Nothing is pending until a load has succeeded (forgejo#372).
-        if (state.remoteLoadFailed) return false;
         if (state.remoteSnapshot === null) return true;
         return snapshotOf(state) !== state.remoteSnapshot;
       },
       loadRemoteSettings: async () => {
-        // birthdate lives on the User row, not in UserSettings JSON — so
-        // it rides on a parallel request. Failure here is non-fatal:
-        // the rest of the profile still loads.
+        // birthdate lives on the User row, not in UserSettings JSON, so it rides
+        // on a parallel request; failure here is non-fatal.
         try {
           const { birthdate } = await settingsApi.getProfile();
           set((state) => ({
@@ -675,17 +663,12 @@ export const useSettingsStore = create<SettingsState>()(
             });
           }
         } catch (error) {
-          // The local defaults are NOT what the server holds, so no snapshot is
-          // recorded: stamping one made the next real edit send all eight
-          // groups from local state (forgejo#372).
           logger.warn("Failed to load remote settings", error);
-          set({ remoteLoadFailed: true });
-          return;
+          return void useRemoteSettingsStatus.getState().setFailed(true); // no snapshot (forgejo#372)
         }
-        // Record what the server is now known to hold, so the settings page's
-        // debounced auto-save can tell a genuine user edit apart from the
-        // hydration it just performed and skip echoing the value straight back.
-        set({ remoteSnapshot: snapshotOf(get()), remoteLoadFailed: false });
+        // What the server is known to hold: lets auto-save tell an edit from hydration.
+        useRemoteSettingsStatus.getState().setFailed(false);
+        set({ remoteSnapshot: snapshotOf(get()) });
       },
       saveRemoteSettings: async () => {
         const previous = saveQueue;
@@ -793,7 +776,6 @@ export const useSettingsStore = create<SettingsState>()(
           hasCountryTracks: _hasTracks,
           remoteSnapshot: _snapshot,
           enabledDomainsLoaded: _domainsLoaded,
-          remoteLoadFailed: _loadFailed,
           ...rest
         } = state;
         return rest as unknown as Record<string, unknown>;

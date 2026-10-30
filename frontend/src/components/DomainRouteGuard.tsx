@@ -2,6 +2,7 @@ import type { JSX, ReactNode } from "react";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
+import { useRemoteSettingsStatus } from "../store/remoteSettingsStatus";
 import type { DomainKey } from "../shared/domains";
 import NavigationBar from "./NavigationBar";
 import { DomainDisabledNotice } from "./Dashboard/tabs/DomainDisabledNotice";
@@ -33,7 +34,7 @@ export function DomainRouteGuard({
 }): JSX.Element {
   const { isEnabled } = useEnabledDomains();
   const loaded = useSettingsStore((s) => s.enabledDomainsLoaded);
-  const loadFailed = useSettingsStore((s) => s.remoteLoadFailed);
+  const loadFailed = useRemoteSettingsStatus((s) => s.failed);
   const loadRemoteSettings = useSettingsStore((s) => s.loadRemoteSettings);
   const { t } = useTranslation(["common"]);
 

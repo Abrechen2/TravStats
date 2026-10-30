@@ -3,14 +3,15 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 vi.unmock("../settingsStore");
 
 import { useSettingsStore } from "../settingsStore";
+import { useRemoteSettingsStatus } from "../remoteSettingsStatus";
 import { settingsApi } from "../../lib/api";
 
 describe("settingsStore.loadRemoteSettings — a failed read (forgejo#372)", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    useRemoteSettingsStatus.setState({ failed: false });
     useSettingsStore.setState({
       remoteSnapshot: null,
-      remoteLoadFailed: false,
       enabledDomainsLoaded: false,
     });
     vi.spyOn(settingsApi, "getProfile").mockResolvedValue({ birthdate: null } as never);
@@ -22,11 +23,9 @@ describe("settingsStore.loadRemoteSettings — a failed read (forgejo#372)", () 
     await useSettingsStore.getState().loadRemoteSettings();
 
     const state = useSettingsStore.getState();
-    expect(state.remoteLoadFailed).toBe(true);
+    expect(useRemoteSettingsStatus.getState().failed).toBe(true);
     expect(state.remoteSnapshot).toBeNull();
     expect(state.enabledDomainsLoaded).toBe(false);
-    // Local defaults are not the account's values: nothing may auto-save them.
-    expect(state.hasPendingChanges()).toBe(false);
   });
 
   it("clears the failure and records the snapshot when a retry succeeds", async () => {
@@ -39,7 +38,7 @@ describe("settingsStore.loadRemoteSettings — a failed read (forgejo#372)", () 
     await useSettingsStore.getState().loadRemoteSettings();
 
     const state = useSettingsStore.getState();
-    expect(state.remoteLoadFailed).toBe(false);
+    expect(useRemoteSettingsStatus.getState().failed).toBe(false);
     expect(state.enabledDomainsLoaded).toBe(true);
     expect(state.remoteSnapshot).not.toBeNull();
   });
