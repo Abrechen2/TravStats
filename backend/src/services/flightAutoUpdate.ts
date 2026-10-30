@@ -496,8 +496,7 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
           flight.userId,
           flight.departureTime,
           flight.arrivalTime,
-          // A flight number can fly two legs on one day (FRA-MUC-JFK); without
-          // the departure airport the lookup may answer with the other leg.
+          // Two legs on one day (FRA-MUC-JFK) share a number: name the leg.
           flight.depIata ?? flight.depIcao ?? undefined,
           outcomes
         );
@@ -520,19 +519,11 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
             hasActualArrival: Boolean(observedArrival),
           }
         );
-        // A provider that FAILED has not said "no data": retry soon rather than
-        // let the recalculated slot (null after the last checkpoint) end tracking.
-        const providerFailures = apiData ? [] : outcomes.failures();
-        const nextCheck =
-          providerFailures.length > 0
-            ? slotAfterProviderFailure(recalculated, flight.arrivalTime, flight.departureTime)
-            : recalculated;
-        if (providerFailures.length > 0) {
-          logger.warn(
-            { flightId: flight.id, providerFailures, operation: "api_provider_failed" },
-            "Flight lookup failed at the provider — retrying soon"
-          );
-        }
+        // A provider that FAILED has not said "no data": retry soon (forgejo#365).
+        const providerFailed = !apiData && outcomes.failures().length > 0;
+        const nextCheck = providerFailed
+          ? slotAfterProviderFailure(recalculated, flight.arrivalTime, flight.departureTime)
+          : recalculated;
         await prismaClient.flight.update({
           where: { id: flight.id },
           data: { nextApiCheckAt: nextCheck },
@@ -541,6 +532,7 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
           {
             flightId: flight.id,
             nextCheck: nextCheck?.toISOString(),
+            providerFailed,
             operation: "next_check_scheduled",
           },
           "Next API check scheduled"
