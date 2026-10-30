@@ -168,6 +168,16 @@ describe("external services: consent binding and off-means-off follow-ups", () =
       expect(testAirlabsKey).not.toHaveBeenCalled();
     });
 
+    it("the guard cannot be skipped by writing the route in another case", async () => {
+      await setAdmin({ externalServicePolicy: { disabled: ["airlabs"] } });
+      const res = await request(app)
+        .post("/api/v1/admin/api-keys/test/AIRLABS")
+        .set("Cookie", adminCookie)
+        .send({ apiKey: "some-new-key-0123456789" });
+      expect(res.status).toBe(409);
+      expect(testAirlabsKey).not.toHaveBeenCalled();
+    });
+
     it("the account route answers 409 SERVICE_DISABLED when the account switched the service off", async () => {
       await prisma.userSettings.update({
         where: { userId },

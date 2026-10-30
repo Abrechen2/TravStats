@@ -89,7 +89,10 @@ export const guardAccountKeyWrite: RequestHandler = (req: AuthRequest, _res, nex
 };
 
 /** Route name of a legacy `…/test/<name>` endpoint → catalogue service id, where they differ. */
-const TEST_ROUTE_SERVICE: Record<string, string> = { logostream: "logos" };
+const TEST_ROUTE_SERVICE: Record<string, string> = {
+  logostream: "logos",
+  googleplaces: "googlePlaces",
+};
 
 /**
  * Express guard for the legacy `POST …/test/<service>` routes (forgejo#392,
@@ -100,7 +103,8 @@ const TEST_ROUTE_SERVICE: Record<string, string> = { logostream: "logos" };
 export function guardServiceTest(scope: "admin" | "account"): RequestHandler {
   return (req: AuthRequest, _res: Response, next: NextFunction): void => {
     if (req.method !== "POST") return next();
-    const name = String(req.params.service ?? "");
+    // Express matches route paths case-insensitively, so the name must be too.
+    const name = String(req.params.service ?? "").toLowerCase();
     const service = getService(TEST_ROUTE_SERVICE[name] ?? name);
     if (!service) return next();
     (async () => {

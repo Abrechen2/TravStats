@@ -139,11 +139,12 @@ const FIXED_CONSENT_DESTINATION: Record<"openai" | "anthropic" | "google", strin
   google: "https://generativelanguage.googleapis.com",
 };
 
-/** Scheme + host (+ port) + path of an endpoint, lower-cased and without a trailing slash. */
+/** Scheme + host (+ port) + path of an endpoint, without a trailing slash. */
 export function normalizeDestination(url: string): string | null {
   try {
     const u = new URL(url);
-    return `${u.protocol}//${u.host}${u.pathname.replace(/\/+$/, "")}`.toLowerCase();
+    // URL already lower-cases scheme and host; the path is case-sensitive and stays as typed.
+    return `${u.protocol}//${u.host}${u.pathname.replace(/\/+$/, "")}`;
   } catch {
     return null;
   }
