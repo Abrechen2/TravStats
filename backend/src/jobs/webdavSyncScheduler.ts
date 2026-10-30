@@ -12,6 +12,7 @@
  * the settings page.
  */
 
+import { filterConnectionAllowed } from "../services/externalServices/policy";
 import cron from "node-cron";
 import type { ScheduledTask } from "node-cron";
 
@@ -38,7 +39,14 @@ export async function dueWebdavSyncs(now: Date): Promise<string[]> {
     where: { enabled: true },
     select: { userId: true, schedule: true, lastAttemptAt: true },
   });
+  const allowed = new Set(
+    await filterConnectionAllowed(
+      "webdav",
+      rows.map((r) => r.userId)
+    )
+  );
   return rows
+    .filter((r) => allowed.has(r.userId))
     .filter((r) => {
       if (!r.lastAttemptAt) return true;
       const gap = DUE_AFTER_MS[r.schedule] ?? DUE_AFTER_MS.daily;

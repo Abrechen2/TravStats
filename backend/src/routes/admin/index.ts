@@ -22,6 +22,7 @@ import federationAdminRouter from "./federation";
 import importModeRouter from "./importMode";
 import templateRepoRouter from "./templateRepo";
 import lodgingChainsAdminRouter from "./lodgingChains";
+import externalServicesAdminRouter from "./externalServices";
 
 const router = Router();
 
@@ -67,5 +68,6 @@ router.use("/federation", federationAdminRouter);
 router.use("/", importModeRouter);
 router.use("/", templateRepoRouter);
 router.use("/", lodgingChainsAdminRouter);
+router.use("/external-services", externalServicesAdminRouter);
 
 export default router;

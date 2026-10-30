@@ -1,6 +1,7 @@
 import { prisma } from "../../../db";
 import logger from "../../../utils/logger";
 import { getApiKey } from "../../apiKeyResolver";
+import { isServiceDisabledByAdmin } from "../../externalServices/policy";
 import { createOpenRouteService } from "./openRouteService";
 import { createGraphHopper } from "./graphHopper";
 import { createCustomOsrm } from "./customOsrm";
@@ -45,6 +46,8 @@ export async function resolveRouteProvider(userId?: string): Promise<RouteProvid
   }
 
   if (selected === "custom") {
+    // "Off means off" (forgejo#392): the admin switched self-hosted routing off.
+    if (await isServiceDisabledByAdmin("selfHostedRouting")) return null;
     return resolveCustomProvider(adminSettings?.routingCustomUrl ?? null);
   }
 

@@ -48,7 +48,7 @@ describe("resolveLlmChain builds each fixed-endpoint slot correctly", () => {
       llmOpenaiModel: "gpt-4o",
       llmOpenaiOptIn: true,
     });
-    const chain = await resolveLlmChain();
+    const chain = await resolveLlmChain({ systemTask: true });
     expect(chain).toEqual([
       {
         kind: "openai",
@@ -62,7 +62,7 @@ describe("resolveLlmChain builds each fixed-endpoint slot correctly", () => {
 
   it("openai: an empty model field falls back to the documented default", async () => {
     settings({ llmOpenaiApiKey: "sk-openai-test", llmOpenaiOptIn: true });
-    const chain = await resolveLlmChain();
+    const chain = await resolveLlmChain({ systemTask: true });
     expect(chain[0]?.model).toBe(DEFAULT_OPENAI_MODEL);
   });
 
@@ -72,7 +72,7 @@ describe("resolveLlmChain builds each fixed-endpoint slot correctly", () => {
       llmAnthropicModel: "claude-opus-4",
       llmAnthropicOptIn: true,
     });
-    const chain = await resolveLlmChain();
+    const chain = await resolveLlmChain({ systemTask: true });
     expect(chain).toEqual([
       {
         kind: "anthropic",
@@ -86,7 +86,7 @@ describe("resolveLlmChain builds each fixed-endpoint slot correctly", () => {
 
   it("anthropic: defaults to the documented alias model when none is set", async () => {
     settings({ llmAnthropicApiKey: "sk-ant-test", llmAnthropicOptIn: true });
-    const chain = await resolveLlmChain();
+    const chain = await resolveLlmChain({ systemTask: true });
     expect(chain[0]?.model).toBe(DEFAULT_ANTHROPIC_MODEL);
   });
 
@@ -96,7 +96,7 @@ describe("resolveLlmChain builds each fixed-endpoint slot correctly", () => {
       llmGoogleModel: "gemini-1.5-pro",
       llmGoogleOptIn: true,
     });
-    const chain = await resolveLlmChain();
+    const chain = await resolveLlmChain({ systemTask: true });
     expect(chain).toEqual([
       {
         kind: "google",
@@ -110,18 +110,18 @@ describe("resolveLlmChain builds each fixed-endpoint slot correctly", () => {
 
   it("google: defaults to the documented model when none is set", async () => {
     settings({ llmGoogleApiKey: "AIza-test", llmGoogleOptIn: true });
-    const chain = await resolveLlmChain();
+    const chain = await resolveLlmChain({ systemTask: true });
     expect(chain[0]?.model).toBe(DEFAULT_GOOGLE_MODEL);
   });
 
   it("a configured slot without consent never enters the chain at all", async () => {
     settings({ llmOpenaiApiKey: "sk-openai-test", llmOpenaiOptIn: false });
-    await expect(resolveLlmChain()).resolves.toEqual([]);
+    await expect(resolveLlmChain({ systemTask: true })).resolves.toEqual([]);
   });
 
   it("a key-less slot never enters the chain even with consent", async () => {
     settings({ llmOpenaiOptIn: true });
-    await expect(resolveLlmChain()).resolves.toEqual([]);
+    await expect(resolveLlmChain({ systemTask: true })).resolves.toEqual([]);
   });
 });
 
@@ -190,7 +190,7 @@ describe("each protocol's real request shape, against a recording loopback serve
       apiKey: "sk-ant-test",
       isCloud: true,
     };
-    const text = await llmGenerate(target, req);
+    const text = await llmGenerate(target, { ...req, systemTask: true });
     expect(text).toBe('{"ok":true}');
 
     expect(seen).toHaveLength(1);
@@ -239,7 +239,7 @@ describe("each protocol's real request shape, against a recording loopback serve
       apiKey: "k",
       isCloud: true,
     };
-    const text = await llmGenerate(target, req);
+    const text = await llmGenerate(target, { ...req, systemTask: true });
     expect(text).toBe('{"a":1,"b":2}');
   });
 
@@ -253,7 +253,9 @@ describe("each protocol's real request shape, against a recording loopback serve
       isCloud: true,
     };
     // Same shape every protocol already throws: "<label> returned HTTP <code>".
-    await expect(llmGenerate(target, req)).rejects.toThrow("Anthropic request returned HTTP 429");
+    await expect(llmGenerate(target, { ...req, systemTask: true })).rejects.toThrow(
+      "Anthropic request returned HTTP 429"
+    );
   });
 
   it.each([
@@ -268,7 +270,7 @@ describe("each protocol's real request shape, against a recording loopback serve
         body: { choices: [{ message: { role: "assistant", content: '{"ok":true}' } }] },
       };
       const target: LlmTarget = { kind, url: base, model, apiKey: "the-key", isCloud: true };
-      const text = await llmGenerate(target, req);
+      const text = await llmGenerate(target, { ...req, systemTask: true });
       expect(text).toBe('{"ok":true}');
 
       expect(seen).toHaveLength(1);
@@ -307,7 +309,7 @@ describe("each protocol's real request shape, against a recording loopback serve
       apiKey: "k",
       isCloud: true,
     };
-    await expect(llmGenerate(target, req)).rejects.toMatchObject({
+    await expect(llmGenerate(target, { ...req, systemTask: true })).rejects.toMatchObject({
       code: "LLM_CLOUD_NOT_CONSENTED",
     });
     expect(seen).toEqual([]);

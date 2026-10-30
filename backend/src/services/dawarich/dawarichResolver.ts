@@ -10,6 +10,7 @@
  * failing the request — otherwise a stray user URL would shadow a working
  * global setup.
  */
+import { connectionGate } from "../externalServices/policy";
 import { prisma } from "../../db";
 import { decryptApiKey } from "../../utils/encryption";
 import { isSharedDemoUser } from "../../utils/sharedDemo";
@@ -74,8 +75,29 @@ export function buildUserDawarichConnection(
   return buildConnection(baseUrl, encryptedApiKey, "user", true);
 }
 
+/**
+ * `buildUserDawarichConnection` behind the external-services policy
+ * (forgejo#392): nothing when the admin switched Dawarich off, forbade
+ * accounts to connect, or this account switched it off. Every path that builds
+ * the account's own connection — the nightly sweep, the stay scan, the track
+ * pull, the location provider — asks here, so the gate cannot be skipped by
+ * the path that happens not to go through `getDawarichConnection`.
+ */
+export async function ownDawarichConnectionFor(
+  userId: string,
+  baseUrl: string | null | undefined,
+  encryptedApiKey: string | null | undefined
+): Promise<DawarichConnection | null> {
+  const gate = await connectionGate("dawarich", userId);
+  if (gate.off || !gate.accountMayConnect) return null;
+  return buildUserDawarichConnection(baseUrl, encryptedApiKey);
+}
+
 export async function getDawarichConnection(userId?: string): Promise<DawarichConnection | null> {
   try {
+    // External-services policy (forgejo#392): off blocks every tier including ENV.
+    const gate = await connectionGate("dawarich", userId);
+    if (gate.off) return null;
     if (userId) {
       /**
        * The SHARED demo account resolves nothing (independent review,
@@ -101,7 +123,8 @@ export async function getDawarichConnection(userId?: string): Promise<DawarichCo
         "user",
         true
       );
-      if (user) return user;
+      // The admin may forbid accounts to bring their own connection (forgejo#392).
+      if (user && gate.accountMayConnect) return user;
     }
 
     const admin = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });

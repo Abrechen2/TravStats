@@ -132,3 +132,36 @@ export function llmHostOf(url: string): string {
     return "";
   }
 }
+
+const FIXED_CONSENT_DESTINATION: Record<"openai" | "anthropic" | "google", string> = {
+  openai: "https://api.openai.com",
+  anthropic: "https://api.anthropic.com",
+  google: "https://generativelanguage.googleapis.com",
+};
+
+/** Scheme + host (+ port) + path of an endpoint, without a trailing slash. */
+export function normalizeDestination(url: string): string | null {
+  try {
+    const u = new URL(url);
+    // URL already lower-cases scheme and host; the path is case-sensitive and stays as typed.
+    return `${u.protocol}//${u.host}${u.pathname.replace(/\/+$/, "")}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The destination an account's AI consent is bound to (forgejo#392,
+ * invariant 2): the endpoint the provider resolves to RIGHT NOW. A consent
+ * counts only while the address it was given for is still the address — so an
+ * admin changing the URL between the account's click and its write cannot
+ * carry the consent to a host the account never saw. `url` is the Ollama URL
+ * or the custom base URL; fixed providers ignore it.
+ */
+export function consentDestination(
+  kind: LlmProviderKind,
+  url: string | null | undefined
+): string | null {
+  if (kind === "ollama" || kind === "custom") return url ? normalizeDestination(url) : null;
+  return FIXED_CONSENT_DESTINATION[kind];
+}

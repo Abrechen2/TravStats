@@ -64,6 +64,11 @@ jest.mock("../../services/countryDays/flightAirTime", () => ({
 jest.mock("../../services/dawarich/dawarichResolver", () => ({
   buildUserDawarichConnection: (baseUrl: string | null, apiKey: string | null) =>
     baseUrl && apiKey ? { baseUrl, apiKey, source: "user" } : null,
+  ownDawarichConnectionFor: async (
+    _userId: string,
+    baseUrl: string | null,
+    apiKey: string | null
+  ) => (baseUrl && apiKey ? { baseUrl, apiKey, source: "user" } : null),
 }));
 
 interface SweepOutcomeShape {

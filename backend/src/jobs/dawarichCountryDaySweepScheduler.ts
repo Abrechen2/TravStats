@@ -61,7 +61,7 @@ import { buildFlightAirTimeTest } from "../services/countryDays/flightAirTime";
 import { buildKnownAirportTest } from "../services/countryDays/knownAirports";
 import { getCountryResolver } from "../services/geo/countryFromCoordinates";
 import { createDawarichClient, type DawarichClient } from "../services/dawarich/dawarichClient";
-import { buildUserDawarichConnection } from "../services/dawarich/dawarichResolver";
+import { ownDawarichConnectionFor } from "../services/dawarich/dawarichResolver";
 import { sweepUserCountryDays } from "../services/dawarich/countryDaySweep";
 import { DAWARICH_PROVIDER_WHERE } from "../services/locationProvider/kinds";
 import type { DawarichConnection } from "../services/dawarich/errors";
@@ -137,7 +137,11 @@ async function eligibleAccounts(userId?: string): Promise<EligibleAccount[]> {
 
   const accounts: EligibleAccount[] = [];
   for (const row of rows) {
-    const connection = buildUserDawarichConnection(row.dawarichBaseUrl, row.dawarichApiKey);
+    const connection = await ownDawarichConnectionFor(
+      row.userId,
+      row.dawarichBaseUrl,
+      row.dawarichApiKey
+    );
     if (connection) accounts.push({ userId: row.userId, connection });
   }
   return accounts;

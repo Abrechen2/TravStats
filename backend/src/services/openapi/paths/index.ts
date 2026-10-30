@@ -80,6 +80,7 @@ import "./catalog";
 import "./misc";
 import "./countryFlags";
 import "./loginBackgrounds";
+import "./externalServices";
 import "./xlsxImport";
 import "./settingsRouting";
 import "./documents";

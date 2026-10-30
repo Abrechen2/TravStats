@@ -7,6 +7,8 @@
 import { prisma } from "../db";
 import { decryptApiKey } from "../utils/encryption";
 import logger from "../utils/logger";
+import { serviceForResolverProvider, getService } from "./externalServices/catalogue";
+import { loadPolicy, loadPrefs, type OffReason } from "./externalServices/policy";
 
 export type ApiProvider =
   | "openai"
@@ -35,8 +37,29 @@ export type ApiKeySource = "user" | "global" | "env";
 export interface ResolvedApiKey {
   key: string | null;
   source: ApiKeySource | null;
+  /** Set when the service is switched off (admin for everyone, or this account) — forgejo#392. */
+  off?: OffReason;
 }
 const NO_KEY: ResolvedApiKey = { key: null, source: null };
+
+/**
+ * The external-services policy for one lookup (forgejo#392): is the service
+ * off for this caller, and may the caller's own key be used at all? "Off" is
+ * decided BEFORE any source is read, so it blocks the account key and the
+ * ENV fallback alike — an admin who switches a service off means it.
+ */
+async function policyFor(
+  serviceId: string | undefined,
+  userId?: string
+): Promise<{ off: OffReason | null; accountKeysAllowed: boolean }> {
+  if (!serviceId) return { off: null, accountKeysAllowed: true };
+  const policy = await loadPolicy();
+  if (policy.disabled.includes(serviceId)) return { off: "admin", accountKeysAllowed: false };
+  if (userId && (await loadPrefs(userId)).disabled.includes(serviceId)) {
+    return { off: "account", accountKeysAllowed: false };
+  }
+  return { off: null, accountKeysAllowed: !policy.accountKeysForbidden.includes(serviceId) };
+}
 const envKey = (value: string | undefined): ResolvedApiKey =>
   value ? { key: value, source: "env" } : NO_KEY;
 
@@ -46,8 +69,11 @@ export async function resolveApiKey(
   userId?: string
 ): Promise<ResolvedApiKey> {
   try {
-    // 1. Try user-specific key
-    if (userId) {
+    const gate = await policyFor(serviceForResolverProvider(provider)?.id, userId);
+    if (gate.off) return { ...NO_KEY, off: gate.off };
+
+    // 1. Try user-specific key (unless the admin forbade account keys for this service)
+    if (userId && gate.accountKeysAllowed) {
       const userSettings = await prisma.userSettings.findUnique({
         where: { userId },
         select: {
@@ -224,8 +250,11 @@ export async function getApiKey(provider: ApiProvider, userId?: string): Promise
  */
 export async function getOpenSkyCredentials(userId?: string): Promise<OpenSkyCredentials | null> {
   try {
-    // 1. Try user-specific credentials
-    if (userId) {
+    const gate = await policyFor(getService("opensky")?.id, userId);
+    if (gate.off) return null;
+
+    // 1. Try user-specific credentials (unless the admin forbade account keys)
+    if (userId && gate.accountKeysAllowed) {
       const userSettings = await prisma.userSettings.findUnique({
         where: { userId },
         select: {
@@ -335,8 +364,11 @@ export async function hasApiKeyAccess(
   userId?: string
 ): Promise<{ hasAccess: boolean; isShared: boolean }> {
   try {
+    const gate = await policyFor(serviceForResolverProvider(provider)?.id, userId);
+    if (gate.off) return { hasAccess: false, isShared: false };
+
     // Check user key
-    if (userId) {
+    if (userId && gate.accountKeysAllowed) {
       const userSettings = await prisma.userSettings.findUnique({
         where: { userId },
         select: {

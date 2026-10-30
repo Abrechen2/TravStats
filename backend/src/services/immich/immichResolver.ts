@@ -6,6 +6,7 @@
  * key. A half-configured tier falls through to the next one instead of failing
  * the request — otherwise a stray user URL would shadow a working global setup.
  */
+import { connectionGate } from "../externalServices/policy";
 import { prisma } from "../../db";
 import { decryptApiKey } from "../../utils/encryption";
 import { isSharedDemoAccount } from "../../utils/sharedDemo";
@@ -48,6 +49,9 @@ function buildConnection(
 
 export async function getImmichConnection(userId?: string): Promise<ImmichConnection | null> {
   try {
+    // External-services policy (forgejo#392): off blocks every tier including ENV.
+    const gate = await connectionGate("immich", userId);
+    if (gate.off) return null;
     if (userId) {
       /**
        * The SHARED demo account resolves nothing (independent review,
@@ -80,7 +84,8 @@ export async function getImmichConnection(userId?: string): Promise<ImmichConnec
 
       const settings = caller?.settings;
       const user = buildConnection(settings?.immichBaseUrl, settings?.immichApiKey, "user", true);
-      if (user) return user;
+      // The admin may forbid accounts to bring their own connection (forgejo#392).
+      if (user && gate.accountMayConnect) return user;
     }
 
     const admin = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });

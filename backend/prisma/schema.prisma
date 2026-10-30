@@ -102,6 +102,7 @@ model User {
   receiptUploads            ReceiptUpload[]
   userAchievements          UserAchievement[]
   settings                  UserSettings?
+  externalServiceTests      ExternalServiceTest[]
   webdavSync                UserWebdavSync?
   analyticsEvents           AnalyticsEvent[]
   createdInvitations        Invitation[]             @relation("CreatedInvitations")
@@ -1084,6 +1085,12 @@ model UserSettings {
   /// them — template engine v2, plan 2026-10-09 P5. Zod holds the shape.
   homeCountry String? @map("home_country")
 
+  /// External-services preferences (forgejo#392): `{ disabled: string[],
+  /// aiConsent: Record<provider, ISO date> }`. `disabled` switches a service
+  /// off for this account; `aiConsent` is the account's own, revocable
+  /// consent to send documents to a cloud AI provider.
+  externalServicePrefs Json @default("{}") @map("external_service_prefs")
+
   updatedAt DateTime @updatedAt @map("updated_at")
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -1483,6 +1490,15 @@ model AdminSettings {
   // The one account it applies to; null = every account (never the shared demo).
   // No foreign key: a deleted account simply matches nobody until the end.
   importModeUserId String?   @map("import_mode_user_id")
+
+  /// External-services policy (forgejo#392): `{ disabled, accountKeysForbidden,
+  /// connectionsForbidden }`, each a list of catalogue service ids. Absent =
+  /// enabled / allowed, so an existing instance keeps today's behaviour.
+  externalServicePolicy Json @default("{}") @map("external_service_policy")
+
+  /// Whether the server asks GitHub for new releases (forgejo#392). The check
+  /// had no switch before; on by default.
+  updateCheckEnabled Boolean @default(true) @map("update_check_enabled")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -6419,4 +6435,24 @@ model TravTrackIngestToken {
 
   @@index([userId])
   @@map("travtrack_ingest_tokens")
+}
+
+/// Last connection-test result of an external service (forgejo#392). `userId`
+/// null = the instance's own test; set = that account's test of its own
+/// credential. One row per (userId, serviceId), replaced on every test.
+model ExternalServiceTest {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  serviceId String   @map("service_id")
+  at        DateTime @default(now())
+  ok        Boolean
+  reason    String?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // One verdict per (account, service), and one per service for the instance
+  // (NULL user_id, which a plain unique treats as distinct — hence the partial one).
+  @@unique([userId, serviceId])
+  @@unique([serviceId], where: raw("user_id IS NULL"), map: "external_service_tests_instance_service_key")
+  @@map("external_service_tests")
 }

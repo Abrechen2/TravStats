@@ -15,7 +15,7 @@ import { prisma } from "../../../db";
 import { AppError } from "../../../middleware/errorHandler";
 import { getLocationProvider } from "../../locationProvider/provider";
 import { createDawarichClient, type DawarichClient } from "../dawarichClient";
-import { buildUserDawarichConnection } from "../dawarichResolver";
+import { ownDawarichConnectionFor } from "../dawarichResolver";
 import type { StaySourceKind } from "./availability";
 
 export type StaySourceChoice = { kind: StaySourceKind; rev: number };
@@ -28,7 +28,8 @@ export async function ownConnection(userId: string) {
     select: { dawarichBaseUrl: true, dawarichApiKey: true },
   });
   const connection =
-    settings && buildUserDawarichConnection(settings.dawarichBaseUrl, settings.dawarichApiKey);
+    settings &&
+    (await ownDawarichConnectionFor(userId, settings.dawarichBaseUrl, settings.dawarichApiKey));
   if (!connection)
     throw new AppError("Own Dawarich connection required", 409, "DAWARICH_OWN_CONNECTION_REQUIRED");
   return connection;

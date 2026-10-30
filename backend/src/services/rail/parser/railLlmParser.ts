@@ -4,6 +4,7 @@ import logger from "../../../utils/logger";
 import { llmParseTimeoutMs } from "../../http/llmTimeout";
 import { llmGenerate, ollamaTarget, resolveLlmChain, type LlmTarget } from "../../llm/llmProvider";
 import { foldStationName } from "../railStations";
+import { isServiceDisabledByAdmin } from "../../externalServices/policy";
 import {
   amountOf,
   cleanStationName,
@@ -199,9 +200,16 @@ export function bookingFromAnswer(
  * (tester report, 2026-10-03). An instance with nothing configured still asks
  * the localhost default, as before.
  */
-export async function resolveRailLlmChain(): Promise<LlmTarget[]> {
-  const chain = await resolveLlmChain({ withDefaults: true });
-  return chain.length > 0 ? chain : [ollamaTarget()];
+export async function resolveRailLlmChain(userId?: string): Promise<LlmTarget[]> {
+  const chain = await resolveLlmChain({ withDefaults: true, ...(userId ? { userId } : {}) });
+  if (chain.length > 0) return chain;
+  // "Off means off" (forgejo#392): an Ollama the admin switched off is not the
+  // localhost fallback either — no probe may reach it.
+  if (await isServiceDisabledByAdmin("ollama")) return [];
+  // Fail closed in the chain itself (invariant 2): when the resolver left a
+  // remote OLLAMA_URL out for want of consent, the default must not rebuild it.
+  const fallback = ollamaTarget();
+  return fallback.isCloud ? [] : [fallback];
 }
 
 /**
@@ -210,7 +218,8 @@ export async function resolveRailLlmChain(): Promise<LlmTarget[]> {
  */
 export async function parseRailWithLlm(
   text: string,
-  target: LlmTarget
+  target: LlmTarget,
+  userId?: string
 ): Promise<ParsedRailBooking | null> {
   const snippet = text.slice(0, LLM_TEXT_MAX_CHARS);
   if (text.length > LLM_TEXT_MAX_CHARS) {
@@ -221,6 +230,7 @@ export async function parseRailWithLlm(
   }
   const fields = promptFieldsFor(snippet);
   const response = await llmGenerate(target, {
+    ...(userId ? { userId } : {}),
     system: buildRailPrompt(fields),
     prompt: `Extract the train rides from this ticket.
 

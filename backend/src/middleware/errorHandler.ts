@@ -1,6 +1,7 @@
 import type { RemoteShareApiErrorCode } from "./remoteShareErrorCodes";
 import type { FlightTrackFileApiErrorCode } from "./flightTrackFileErrorCodes";
 import type { CompanionApiErrorCode } from "./companionErrorCodes";
+import type { ExternalServiceApiErrorCode } from "./externalServiceErrorCodes";
 import type { CompanionAppApiErrorCode } from "./companionAppErrorCodes";
 import type { ConnectionFileApiErrorCode } from "./connectionFileErrorCodes";
 import type { LocationProviderApiErrorCode } from "./locationProviderErrorCodes";
@@ -92,8 +93,7 @@ export type ApiErrorCode =
    *  of the list's kind (a hotel card on the flight list). The list says the
    *  programme is gone instead of showing an unfiltered or empty page. */
   | "LOYALTY_MEMBERSHIP_NOT_FOUND"
-  /** A workshop template was activated before its preview had run — the
-   *  parser page turns this into "run the preview", not a generic toast. */
+  /** A workshop template was activated before its preview had run (UI: "run the preview"). */
   | "PREVIEW_REQUIRED"
   /** A `visit` photo finding was accepted with no name for the place it would
    *  create (forgejo#211): the lookup named nothing and the body sent nothing.
@@ -243,14 +243,14 @@ export type ApiErrorCode =
   /** A HEIC/HEIF photo upload that could not be decoded (422, forgejo#192):
    *  the file is damaged or not what its type says. Nothing was stored. */
   | "PHOTO_UNREADABLE"
-  /** The HEIC/HEIF converter failed for a reason that is not the file's — a
-   *  timeout or a crashed worker (503). Nothing was stored; retry later. */
+  /** HEIC/HEIF converter failed for a reason that is not the file's (503). */
   | "PHOTO_CONVERSION_UNAVAILABLE"
   | "TRACK_FILE_TOO_LARGE" // tour track upload: the file is over the size limit
   | "TRACK_FILE_UNREADABLE" // tour track upload: not readable as GPX, TCX or FIT
   | FlightTrackFileApiErrorCode // a flight's track file upload, one per reason (forgejo#312)
   | "TRACK_FILE_MISSING" // flight track file upload (forgejo#312): the request carried no file
-  | CompanionApiErrorCode // managing companions: rename, merge, delete (one per refusal)
+  | CompanionApiErrorCode
+  | ExternalServiceApiErrorCode // companions: rename, merge, delete; external services
   /** Tour track upload: a recording without timestamps cannot be placed in time. */
   | "TRACK_NO_TIMESTAMPS"
   /** Tour track upload: this recording is already on the tour. */

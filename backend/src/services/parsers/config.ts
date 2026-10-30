@@ -84,7 +84,10 @@ export async function getParserConfig(
   // model, and `hasLlm`/`llmConfigured` must say so.
   // The first slot known to answer; never waits on the network here, because
   // this runs on every parse, template hits included (`llm/reachableTarget.ts`).
-  const target = await resolveReachableLlmTarget({ wait: false });
+  const target = await resolveReachableLlmTarget({
+    wait: false,
+    ...(userId !== undefined ? { userId } : {}),
+  });
 
   /**
    * A refused caller gets a config with no model in it — the admin switch

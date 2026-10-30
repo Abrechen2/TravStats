@@ -3,6 +3,7 @@ import https from "https";
 import http from "http";
 import { z } from "zod";
 import { AuthRequest } from "../../middleware/auth";
+import { consentWithdrawalsForAddressChange } from "../../services/externalServices/adminWrite";
 import { prisma } from "../../db";
 import { ensureAdminSettingsRow } from "../../services/adminSettingsRow";
 import { AppError } from "../../middleware/errorHandler";
@@ -301,10 +302,17 @@ router.put("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
     // Always an update against the one row. The create branch this replaces
     // dropped `updateData` on the floor, so a PUT that happened to be the
     // first write to a fresh instance saved nothing the admin had typed.
-    adminSettings = await prisma.adminSettings.update({
-      where: { id: await ensureAdminSettingsRow() },
-      data: updateData,
-    });
+    const settingsId = await ensureAdminSettingsRow();
+    const before = (await prisma.adminSettings.findUnique({
+      where: { id: settingsId },
+    })) as Record<string, unknown> | null;
+    // A new Ollama / custom address is a new destination: accounts' consent for
+    // the old one is withdrawn in the same transaction as the write (forgejo#392).
+    const [updated] = await prisma.$transaction([
+      prisma.adminSettings.update({ where: { id: settingsId }, data: updateData }),
+      ...consentWithdrawalsForAddressChange(updateData as Record<string, unknown>, before),
+    ]);
+    adminSettings = updated;
 
     // A provider switch must be felt by the very next parse, not after the
     // five-minute availability cache has run out on the old endpoint.

@@ -6,6 +6,7 @@ import { pipeline } from "stream/promises";
 import { prisma } from "../db";
 import { getWebDAVSettings } from "./instanceSettingsService";
 import { AppError } from "../middleware/errorHandler";
+import { isServiceDisabledByAdmin } from "./externalServices/policy";
 import logger from "../utils/logger";
 
 type WebDAVClient = ReturnType<typeof createClient>;
@@ -26,6 +27,16 @@ type WebDAVClient = ReturnType<typeof createClient>;
  */
 
 /**
+ * "Off means off" (forgejo#392): the admin's service-level switch stops the
+ * instance backups exactly as it stops the accounts' syncs (`connectionGate`).
+ */
+async function assertWebdavNotSwitchedOff(): Promise<void> {
+  if (await isServiceDisabledByAdmin("webdav")) {
+    throw new AppError("WebDAV is switched off by the administrator", 409, "SERVICE_DISABLED");
+  }
+}
+
+/**
  * Build a WebDAV client from current DB settings (with ENV fallback).
  * Throws 409 if sync is disabled or any required field is missing.
  */
@@ -38,6 +49,7 @@ async function getWebDAVClient(): Promise<{
   if (!enabled) {
     throw new AppError("WebDAV sync is not enabled", 409);
   }
+  await assertWebdavNotSwitchedOff();
   if (!url || !username || !password) {
     throw new AppError("WebDAV is not configured", 409);
   }
@@ -208,7 +220,7 @@ const MAX_SYNC_ERROR_LENGTH = 500;
 export async function syncToCloudIfEnabled(backupId: string): Promise<void> {
   try {
     const { enabled } = await getWebDAVSettings();
-    if (!enabled) {
+    if (!enabled || (await isServiceDisabledByAdmin("webdav"))) {
       logger.debug({
         operation: "webdav_autosync_skip",
         message: "WebDAV sync is not enabled, backup stays local",

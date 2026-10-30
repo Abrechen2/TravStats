@@ -54,9 +54,11 @@ import { requestTextWithDeadline } from "../http/boundedHttp";
 import { LLM_AVAILABILITY_TIMEOUT_MS, LLM_MAX_RESPONSE_BYTES } from "../http/llmTimeout";
 import { getAdminParserSettings, type AdminParserSettings } from "../parserSettings";
 import logger from "../../utils/logger";
-import { assertLlmCloudConsent, assertLlmEnabled } from "./llmGate";
+import { accountConsentedTo, assertLlmCloudConsent, assertLlmEnabled } from "./llmGate";
+import { loadPolicy } from "../externalServices/policy";
 import {
   checkLlmBaseUrl,
+  consentDestination,
   isLocalLlmHost,
   llmHostOf,
   CLOUD_PROVIDER_KINDS,
@@ -153,6 +155,14 @@ export interface ResolveLlmTargetOptions {
    * empty chain — "no model" — which is what `getParserConfig` needs to answer.
    */
   withDefaults?: boolean;
+  /**
+   * The account the targets are for. Cloud targets (remote Ollama and the
+   * custom endpoint included) the account has not consented to are left out
+   * of the chain — forgejo#392. Absent = a system task with no account.
+   */
+  userId?: string;
+  /** A task with no account behind it (no document of anybody's). Without either, cloud targets are left out. */
+  systemTask?: true;
 }
 
 async function loadAdminSettings(): Promise<AdminParserSettings | null> {
@@ -230,7 +240,10 @@ function customChainTarget(admin: AdminParserSettings | null): LlmTarget | null 
   const check = admin?.openaiCompatBaseUrl ? checkLlmBaseUrl(admin.openaiCompatBaseUrl) : null;
   if (!check?.ok || !admin?.openaiCompatModel) return null;
   const isCloud = !check.isLocal;
-  if (isCloud && !(admin?.llmCustomOptIn ?? false)) return null;
+  // The slot's switch is the switch, local endpoint or not (forgejo#392: off
+  // means off). Instances that relied on a local endpoint without it were
+  // switched on by migration 20261030160000.
+  if (!(admin?.llmCustomOptIn ?? false)) return null;
   return {
     kind: "custom",
     url: check.url,
@@ -259,6 +272,33 @@ export function serializeProviderOrder(order: readonly CloudProviderKind[]): str
 export const DEFAULT_PROVIDER_ORDER = CLOUD_PROVIDER_KINDS.join(",");
 
 /**
+ * Fail closed on the account (forgejo#392): a cloud target stays only for an
+ * account that consented to it, or for an explicit `systemTask`. A caller
+ * naming neither gets local targets only.
+ */
+async function filterForAccount(
+  targets: LlmTarget[],
+  who: { userId?: string; systemTask?: true }
+): Promise<LlmTarget[]> {
+  const kept: LlmTarget[] = [];
+  for (const target of targets) {
+    const cloud = target.isCloud ?? isCloudUrl(target.url);
+    if (!cloud || who.systemTask === true) kept.push(target);
+    else if (
+      who.userId !== undefined &&
+      (await accountConsentedTo(
+        who.userId,
+        kindOf(target),
+        consentDestination(kindOf(target), target.url)
+      ))
+    ) {
+      kept.push(target);
+    }
+  }
+  return kept;
+}
+
+/**
  * The fallback chain, in the order it will be tried: Ollama first (when
  * eligible), then the enabled+consented cloud slots in the admin's priority.
  * An explicit `url`/`model` override (tests, legacy callers) bypasses the
@@ -268,16 +308,20 @@ export async function resolveLlmChain(options: ResolveLlmTargetOptions = {}): Pr
   const admin = await loadAdminSettings();
 
   if (options.url !== undefined || options.model !== undefined) {
-    return [
-      ollamaTarget(
-        options.url ?? admin?.ollamaUrl ?? undefined,
-        options.model ?? admin?.ollamaModel ?? undefined
-      ),
-    ].filter(permitsLlmTarget);
+    return filterForAccount(
+      [
+        ollamaTarget(
+          options.url ?? admin?.ollamaUrl ?? undefined,
+          options.model ?? admin?.ollamaModel ?? undefined
+        ),
+      ].filter(permitsLlmTarget),
+      options
+    );
   }
 
   const chain: LlmTarget[] = [];
-  const ollama = ollamaChainTarget(admin);
+  const ollamaOff = (await loadPolicy()).disabled.includes("ollama");
+  const ollama = ollamaOff ? null : ollamaChainTarget(admin);
   if (ollama) chain.push(ollama);
 
   for (const kind of parseProviderOrder(admin?.llmProviderOrder)) {
@@ -292,11 +336,11 @@ export async function resolveLlmChain(options: ResolveLlmTargetOptions = {}): Pr
   // localhost Ollama" (`getParserConfig`, the domain parsers). This never
   // fires when a cloud slot IS configured and consented — that stays ahead of
   // a phantom localhost entry nobody asked for.
-  if (chain.length === 0 && options.withDefaults) {
+  if (chain.length === 0 && options.withDefaults && !ollamaOff) {
     chain.push(ollamaTarget());
   }
 
-  return chain.filter(permitsLlmTarget);
+  return filterForAccount(chain.filter(permitsLlmTarget), options);
 }
 
 /**
@@ -399,6 +443,13 @@ export interface LlmGenerateRequest {
   timeoutMs: number;
   /** Error-message label for Ollama; defaults to "Ollama request". */
   label?: string;
+  /**
+   * The account the request is made for. A cloud target is refused for an
+   * account that has not consented to it (forgejo#392). Absent = no account.
+   */
+  userId?: string;
+  /** A task with no account behind it; without `userId` or this, a cloud target is refused. */
+  systemTask?: true;
 }
 
 /**
@@ -408,18 +459,29 @@ export interface LlmGenerateRequest {
  * (`llmGate.entryPoints.test.ts` holds that every model endpoint in the source
  * sits behind them).
  */
-async function assertMayAsk(target: LlmTarget): Promise<void> {
+async function assertMayAsk(
+  target: LlmTarget,
+  who: { userId?: string; systemTask?: true }
+): Promise<void> {
   if (!permitsLlmTarget(target))
     throw new AppError("Provider forbidden by request policy", 403, "LLM_REQUEST_POLICY");
   await assertLlmEnabled();
-  await assertLlmCloudConsent({
-    kind: kindOf(target),
-    isCloud: target.isCloud ?? isCloudUrl(target.url),
-  });
+  // Switched off on the external-services page: no fallback target gets past this.
+  if (kindOf(target) === "ollama" && (await loadPolicy()).disabled.includes("ollama")) {
+    throw new AppError("Ollama is switched off by the administrator", 503, "LLM_DISABLED");
+  }
+  await assertLlmCloudConsent(
+    {
+      kind: kindOf(target),
+      url: target.url,
+      isCloud: target.isCloud ?? isCloudUrl(target.url),
+    },
+    who
+  );
 }
 
 async function generateWithOllama(target: LlmTarget, req: LlmGenerateRequest): Promise<string> {
-  await assertMayAsk(target);
+  await assertMayAsk(target, req);
   // `think: false` disables chain-of-thought on reasoning models like qwen3;
   // older Ollama versions ignore it.
   const body = JSON.stringify({
@@ -458,7 +520,7 @@ async function generateWithOpenAiShape(
   target: LlmTarget,
   req: LlmGenerateRequest
 ): Promise<string> {
-  await assertMayAsk(target);
+  await assertMayAsk(target, req);
   const body = JSON.stringify({
     model: target.model,
     messages: [
@@ -506,7 +568,7 @@ async function generateWithOpenAiShape(
  * the request-shape assertion — not a failure — catches a regression here.
  */
 async function generateWithAnthropic(target: LlmTarget, req: LlmGenerateRequest): Promise<string> {
-  await assertMayAsk(target);
+  await assertMayAsk(target, req);
   const body = JSON.stringify({
     model: target.model,
     max_tokens: ANTHROPIC_MAX_TOKENS,
@@ -576,7 +638,11 @@ export async function llmGenerateChain(
   req: LlmGenerateRequest,
   options: ResolveLlmTargetOptions = {}
 ): Promise<LlmGenerateChainResult> {
-  const chain = await resolveLlmChain(options);
+  const chain = await resolveLlmChain({
+    ...options,
+    ...(req.userId !== undefined ? { userId: req.userId } : {}),
+    ...(req.systemTask ? { systemTask: true as const } : {}),
+  });
   if (chain.length === 0) {
     throw new Error("No AI provider is configured");
   }

@@ -49,7 +49,6 @@ import { useSearchHighlight } from "./Settings/useSearchHighlight";
 
 import type { SystemInfoData, AdminUser } from "../components/Admin/SystemInfo";
 import type { Invitation } from "../components/Admin/InvitationManagement";
-import type { GlobalApiKeys, ParserApiKeySettings } from "../components/Admin/GlobalApiKeysManager";
 import type { ParserSettingsData } from "../components/Admin/ParserSettings";
 
 // ==================== Helpers ====================
@@ -141,8 +140,6 @@ export default function AdminPage(): JSX.Element {
     handleDeleteLogFile,
     handleCleanupLogs,
   } = useLoggingAdmin(t, addToast, askConfirm, i18n.language);
-  const [globalApiKeys, setGlobalApiKeys] = useState<GlobalApiKeys | null>(null);
-  const [savingGlobalApiKeys, setSavingGlobalApiKeys] = useState(false);
   const [ollamaTestState, setOllamaTestState] = useState<{
     status: "idle" | "loading" | "ok" | "error" | "warn";
     message?: string;
@@ -171,15 +168,6 @@ export default function AdminPage(): JSX.Element {
       logger.error("Failed to load admin data:", error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadGlobalApiKeys = async (): Promise<void> => {
-    try {
-      const data = await adminApi.getGlobalApiKeys();
-      setGlobalApiKeys(data);
-    } catch (error) {
-      logger.error("Failed to load global API keys:", error);
     }
   };
 
@@ -302,34 +290,6 @@ export default function AdminPage(): JSX.Element {
       URL.revokeObjectURL(url);
     } catch (error: unknown) {
       addToast("error", getErrorMessage(error, t("admin:toasts.exportFailed")));
-    }
-  };
-
-  const handleSaveGlobalApiKeys = async (): Promise<void> => {
-    setSavingGlobalApiKeys(true);
-    setSavingParsers(true);
-    try {
-      await Promise.all([
-        adminApi.updateGlobalApiKeys(globalApiKeys || {}),
-        adminApi.updateAdminParserSettings({
-          allowUserApiKeys: parserSettings?.allowUserApiKeys,
-        }),
-      ]);
-      addToast("success", t("admin:globalApiKeys.saved") || "API keys saved successfully");
-      await loadGlobalApiKeys();
-      if (parserSettings) {
-        const parserData = await adminApi.getAdminParserSettings();
-        setParserSettings(parserData);
-      }
-    } catch (error: unknown) {
-      logger.error("Failed to save API keys:", error);
-      addToast(
-        "error",
-        getErrorMessage(error, t("admin:globalApiKeys.saveFailed") || "Failed to save API keys")
-      );
-    } finally {
-      setSavingGlobalApiKeys(false);
-      setSavingParsers(false);
     }
   };
 
@@ -486,18 +446,6 @@ export default function AdminPage(): JSX.Element {
     inviteCreating,
     inviteSuccess,
     onCloseInviteSuccess: () => setInviteSuccess(null),
-    globalApiKeys,
-    onGlobalApiKeysChange: setGlobalApiKeys,
-    savingGlobalApiKeys,
-    onSaveGlobalApiKeys: handleSaveGlobalApiKeys,
-    onParserApiKeySettingsChange: (apiKeySettings: ParserApiKeySettings) => {
-      if (parserSettings) {
-        setParserSettings({
-          ...parserSettings,
-          allowUserApiKeys: apiKeySettings.allowUserApiKeys,
-        });
-      }
-    },
     parserSettings,
     savingParsers,
     onSaveParserSettings: handleSaveParserSettings,
@@ -522,10 +470,6 @@ export default function AdminPage(): JSX.Element {
   // fetch (see LAZY_ADMIN_SECTIONS).
   const sectionOnVisible: Partial<Record<ActiveSection, () => void>> = {
     logging: loadLoggingData,
-    externalServices: () => {
-      if (!globalApiKeys) loadGlobalApiKeys();
-      if (!parserSettings) loadData();
-    },
   };
 
   const inMenu = (p: AdminPageDef): boolean =>

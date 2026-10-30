@@ -1,6 +1,6 @@
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
-import { buildUserDawarichConnection } from "../dawarich/dawarichResolver";
+import { ownDawarichConnectionFor } from "../dawarich/dawarichResolver";
 import { travTrackInstanceOn } from "../travtrack/availability";
 import { travTrackBreakSet } from "../travtrack/readSafe";
 import { extentOf } from "../../utils/extrema";
@@ -75,7 +75,11 @@ async function chosenDawarich(userId: string): Promise<LocationProvider | null> 
     where: { userId },
     select: { dawarichBaseUrl: true, dawarichApiKey: true },
   });
-  const connection = buildUserDawarichConnection(row?.dawarichBaseUrl, row?.dawarichApiKey);
+  const connection = await ownDawarichConnectionFor(
+    userId,
+    row?.dawarichBaseUrl,
+    row?.dawarichApiKey
+  );
   return connection ? dawarichProvider(connection) : null;
 }
 

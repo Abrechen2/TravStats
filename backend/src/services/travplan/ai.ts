@@ -21,7 +21,7 @@ export async function generateProposal(
   if (!state.ai.enabled)
     throw new AppError("AI planning has not been enabled for this trip", 403, "PLAN_AI_CONSENT");
   await assertAnchorsCurrent(prisma, userId, tripId, state);
-  const allowed = (await resolveLlmChain()).filter(
+  const allowed = (await resolveLlmChain({ userId })).filter(
     (t) => state.ai.policy === "cloud_allowed" || t.isCloud === false
   );
   const target = allowed[0];
@@ -82,6 +82,7 @@ export async function generateProposal(
       : null,
   };
   const raw = await llmGenerate(target, {
+    userId,
     system,
     prompt: JSON.stringify(input),
     temperature: 0.2,

@@ -42,6 +42,8 @@ export interface TextParseOptions {
    * no year is read against this. Omitted means today.
    */
   referenceDate?: Date;
+  /** The account the mail belongs to — a cloud model needs its consent (forgejo#392). */
+  userId?: string;
 }
 
 /**

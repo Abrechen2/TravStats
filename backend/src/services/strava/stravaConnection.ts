@@ -1,3 +1,4 @@
+import { connectionGate, isServiceDisabledByAdmin } from "../externalServices/policy";
 import crypto from "crypto";
 
 import { prisma } from "../../db";
@@ -34,6 +35,10 @@ export async function getStravaClient(): Promise<StravaClientConfig | null> {
 }
 
 export async function requireStravaClient(): Promise<StravaClientConfig> {
+  // The admin switched Strava off (external-services policy, forgejo#392).
+  if (await isServiceDisabledByAdmin("strava")) {
+    throw new StravaError("notConfigured", "Strava is switched off by the administrator");
+  }
   const client = await getStravaClient();
   if (!client) throw new StravaError("notConfigured", "No Strava application is configured");
   return client;
@@ -136,6 +141,10 @@ const REFRESH_MARGIN_MS = 60_000;
 export async function getStravaAccessToken(userId: string): Promise<string> {
   if (await isSharedDemoUser(userId)) {
     throw new StravaError("notConfigured", "Strava is not available on the demo account");
+  }
+  const gate = await connectionGate("strava", userId);
+  if (gate.off || !gate.accountMayConnect) {
+    throw new StravaError("notConfigured", "Strava is not available for this account");
   }
   const settings = await prisma.userSettings.findUnique({
     where: { userId },

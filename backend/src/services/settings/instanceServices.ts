@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getInstanceSettings } from "../instanceSettingsService";
+import { railRoutingBaseUrl } from "../rail/openRailRouting";
 
 /**
  * Whether each keyless instance service is on, as an ordinary account may
@@ -26,6 +27,6 @@ export async function instanceServicesView(): Promise<InstanceServicesView> {
     dbRest: settings.railDbRestEnabled,
     // The router's own test (`railRoutingBaseUrl`): a URL set means on. The
     // URL itself is the admin's and stays here.
-    openRailRouting: settings.railRoutingUrl !== null,
+    openRailRouting: (await railRoutingBaseUrl()) !== null,
   });
 }

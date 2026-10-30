@@ -52,7 +52,13 @@
 import { AppError } from "../../middleware/errorHandler";
 import { getAdminParserSettings, type AdminParserSettings } from "../parserSettings";
 import { isSharedDemoUser } from "../../utils/sharedDemo";
-import { checkLlmBaseUrl, isLocalLlmHost, type LlmProviderKind } from "./llmEndpoint";
+import {
+  checkLlmBaseUrl,
+  consentDestination,
+  isLocalLlmHost,
+  type LlmProviderKind,
+} from "./llmEndpoint";
+import { loadPolicy, loadPrefs } from "../externalServices/policy";
 
 /** Why a model was not asked. Distinct kinds, because the UI says different things. */
 export type LlmRefusalKind =
@@ -92,7 +98,8 @@ function ollamaConfiguredUrl(settings: AdminParserSettings | null): string | nul
 }
 
 /** Ollama is eligible when it has an endpoint AND (local, or a remote one the admin allowed). */
-function ollamaEligible(settings: AdminParserSettings | null): boolean {
+function ollamaEligible(settings: AdminParserSettings | null, ollamaOff = false): boolean {
+  if (ollamaOff) return false;
   const url = ollamaConfiguredUrl(settings);
   if (!url) return false;
   let host: string;
@@ -112,9 +119,7 @@ function customSlotConfigured(settings: AdminParserSettings | null): boolean {
 
 function customSlotEligible(settings: AdminParserSettings | null): boolean {
   if (!customSlotConfigured(settings)) return false;
-  const check = checkLlmBaseUrl(settings!.openaiCompatBaseUrl!);
-  if (!check.ok) return false;
-  return check.isLocal || (settings?.llmCustomOptIn ?? false);
+  return settings?.llmCustomOptIn ?? false; // the slot's switch, local endpoint or not
 }
 
 /** Any of the three fixed-endpoint cloud slots that carries a key. */
@@ -157,9 +162,12 @@ function anythingConfigured(settings: AdminParserSettings | null): boolean {
  * network): is there anything in the fallback chain at all, and if there is,
  * has any of it been consented to?
  */
-function providerRefusal(settings: AdminParserSettings | null): LlmRefusal | null {
+function providerRefusal(
+  settings: AdminParserSettings | null,
+  ollamaOff = false
+): LlmRefusal | null {
   if (!anythingConfigured(settings)) return null;
-  if (ollamaEligible(settings)) return null;
+  if (ollamaEligible(settings, ollamaOff)) return null;
   if (customSlotEligible(settings) || anyFixedSlotEligible(settings)) return null;
 
   const configuredButUnconsented =
@@ -169,6 +177,80 @@ function providerRefusal(settings: AdminParserSettings | null): LlmRefusal | nul
   return configuredButUnconsented
     ? { kind: "cloud_not_consented", reason: LLM_CLOUD_NOT_CONSENTED_REASON }
     : { kind: "provider_incomplete", reason: LLM_PROVIDER_INCOMPLETE_REASON };
+}
+
+export const LLM_ACCOUNT_NOT_CONSENTED_REASON =
+  "This account has not allowed sending documents to the configured AI provider yet — only the built-in templates were tried.";
+
+/**
+ * Whether this account consented (Einstellungen › Dienste) to documents going
+ * to `kind` AT `destination` (see `consentDestination`). A consent given for
+ * another address — or none resolvable now — is no consent (invariant 2).
+ */
+export async function accountConsentedTo(
+  userId: string,
+  kind: LlmProviderKind,
+  destination: string | null
+): Promise<boolean> {
+  if (destination === null) return false;
+  return (await loadPrefs(userId)).aiConsent[kind]?.destination === destination;
+}
+
+/**
+ * Per-account consent (forgejo#392, invariant 4): the admin allowing a
+ * provider is half the answer. Documents of THIS account go to a cloud
+ * provider (remote Ollama and the custom endpoint count as cloud) only once
+ * the account consented to that provider. Refused when the chain has eligible
+ * cloud slots and the account consented to none of them, and no local Ollama
+ * can answer instead. A blank instance is not a refusal (see `anythingConfigured`).
+ */
+async function accountConsentRefusal(
+  settings: AdminParserSettings | null,
+  userId: string
+): Promise<boolean> {
+  if (!anythingConfigured(settings)) return false;
+  const ollamaOff = (await loadPolicy()).disabled.includes("ollama");
+  const url = ollamaConfiguredUrl(settings);
+  let ollamaLocal = false;
+  const cloud: Array<{ kind: LlmProviderKind; destination: string | null }> = [];
+  if (url && ollamaEligible(settings, ollamaOff)) {
+    try {
+      if (isLocalLlmHost(new URL(url).hostname)) ollamaLocal = true;
+      else cloud.push({ kind: "ollama", destination: consentDestination("ollama", url) });
+    } catch {
+      /* unparsable URL is not eligible — ollamaEligible already said so */
+    }
+  }
+  if (ollamaLocal) return false;
+  if (customSlotEligible(settings)) {
+    const custom = checkLlmBaseUrl(settings!.openaiCompatBaseUrl!);
+    if (custom.ok && custom.isLocal) return false; // a local endpoint needs no cloud consent
+    cloud.push({
+      kind: "custom",
+      destination: consentDestination("custom", settings!.openaiCompatBaseUrl),
+    });
+  }
+  for (const kind of ["openai", "anthropic", "google"] as const) {
+    const key = {
+      openai: "llmOpenaiApiKey",
+      anthropic: "llmAnthropicApiKey",
+      google: "llmGoogleApiKey",
+    }[kind] as "llmOpenaiApiKey";
+    const optIn = {
+      openai: "llmOpenaiOptIn",
+      anthropic: "llmAnthropicOptIn",
+      google: "llmGoogleOptIn",
+    }[kind] as "llmOpenaiOptIn";
+    if (settings?.[key] && settings[optIn]) {
+      cloud.push({ kind, destination: consentDestination(kind, null) });
+    }
+  }
+  if (cloud.length === 0) return false;
+  const prefs = await loadPrefs(userId);
+  return !cloud.some(
+    ({ kind, destination }) =>
+      destination !== null && prefs.aiConsent[kind]?.destination === destination
+  );
 }
 
 /**
@@ -191,8 +273,12 @@ export async function llmRefusalFor(userId?: string): Promise<LlmRefusal | null>
   if (!(settings?.llmEnabled ?? true)) {
     return { kind: "disabled_by_admin", reason: LLM_DISABLED_REASON };
   }
-  const provider = providerRefusal(settings);
+  const policy = await loadPolicy();
+  const provider = providerRefusal(settings, policy.disabled.includes("ollama"));
   if (provider) return provider;
+  if (userId !== undefined && (await accountConsentRefusal(settings, userId))) {
+    return { kind: "cloud_not_consented", reason: LLM_ACCOUNT_NOT_CONSENTED_REASON };
+  }
   if (userId !== undefined && (await isSharedDemoUser(userId))) {
     return { kind: "shared_demo", reason: DEMO_NO_LLM_REASON };
   }
@@ -236,13 +322,29 @@ function consentGranted(settings: AdminParserSettings | null, kind: LlmProviderK
  * a caller that resolved a target itself (an explicit override, a test) — not
  * the normal path.
  */
-export async function assertLlmCloudConsent(target: {
-  kind?: LlmProviderKind;
-  isCloud?: boolean;
-}): Promise<void> {
+export async function assertLlmCloudConsent(
+  target: {
+    kind?: LlmProviderKind;
+    url?: string;
+    isCloud?: boolean;
+  },
+  who: { userId?: string; systemTask?: boolean } = {}
+): Promise<void> {
   if (!target.isCloud) return;
   const settings = await getAdminParserSettings();
   if (!consentGranted(settings, target.kind ?? "custom")) {
     throw new AppError(LLM_CLOUD_NOT_CONSENTED_REASON, 503, "LLM_CLOUD_NOT_CONSENTED");
+  }
+  // The account's own consent (forgejo#392): a request made on behalf of an
+  // account goes to a cloud provider only after THAT account allowed it.
+  // Fail closed: a request that names neither an account nor `systemTask: true`
+  // never reaches a cloud target — "no account" is not a licence.
+  if (who.userId !== undefined) {
+    const kind = target.kind ?? "custom";
+    if (!(await accountConsentedTo(who.userId, kind, consentDestination(kind, target.url)))) {
+      throw new AppError(LLM_ACCOUNT_NOT_CONSENTED_REASON, 503, "LLM_CLOUD_NOT_CONSENTED");
+    }
+  } else if (who.systemTask !== true) {
+    throw new AppError(LLM_ACCOUNT_NOT_CONSENTED_REASON, 503, "LLM_CLOUD_NOT_CONSENTED");
   }
 }

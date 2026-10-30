@@ -1,5 +1,6 @@
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
+import { guardServiceTest } from "../../services/externalServices/guards";
 import { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../db";
 import { decryptApiKey, encryptApiKey } from "../../utils/encryption";
@@ -24,6 +25,7 @@ import {
 } from "./types";
 
 const router = Router();
+router.use("/test/:service", guardServiceTest("account"));
 
 const apiKeysSchema = z
   .object({

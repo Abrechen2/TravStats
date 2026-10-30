@@ -1,3 +1,4 @@
+import { guardServiceTest } from "../../services/externalServices/guards";
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { AuthRequest } from "../../middleware/auth";
@@ -118,6 +119,7 @@ async function resolveAdminGlobalKey(
 }
 
 const router = Router();
+router.use("/api-keys/test/:service", guardServiceTest("admin"));
 
 const STORED_KEY_COLUMNS = [
   "globalAirlabsApiKey",

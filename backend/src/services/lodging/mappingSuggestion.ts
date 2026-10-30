@@ -29,6 +29,8 @@ export type LodgingCsvField = (typeof LODGING_CSV_FIELDS)[number];
 export type LodgingCsvMapping = Partial<Record<LodgingCsvField, string>>;
 
 export interface MappingSuggestionOptions {
+  /** The account whose CSV this is — a cloud model needs its consent (forgejo#392). */
+  userId?: string;
   url?: string;
   model?: string;
 }
@@ -191,7 +193,7 @@ export async function suggestLodgingCsvMapping(
   // for "no suggestion", and the client's heuristic takes over from there.
   // A cloud provider without the admin's consent, or an incomplete one, is
   // the same "no suggestion" answer — and the rows never leave the instance.
-  if (await llmRefusalFor()) return {};
+  if (await llmRefusalFor(options?.userId)) return {};
   try {
     // `llmGenerateChain` tries Ollama first, then the enabled+consented cloud
     // slots in the admin's priority order — ONLY on a connectivity/protocol
@@ -201,6 +203,7 @@ export async function suggestLodgingCsvMapping(
     // fires once the WHOLE chain has failed.
     const { text } = await llmGenerateChain(
       {
+        ...(options?.userId !== undefined ? { userId: options.userId } : {}),
         system: SYSTEM_PROMPT,
         prompt: `CSV headers: ${JSON.stringify(headers)}
 Sample rows: ${JSON.stringify(sampleRows.slice(0, 3))}

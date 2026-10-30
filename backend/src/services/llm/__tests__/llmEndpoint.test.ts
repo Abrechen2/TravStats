@@ -98,10 +98,11 @@ describe("llmRefusalFor — the provider half", () => {
     await expect(llmRefusalFor()).resolves.toBeNull();
   });
 
-  it("needs no opt-in for a LAN endpoint", async () => {
+  it("needs no CLOUD opt-in for a LAN endpoint, only the slot being on", async () => {
     settings({
       openaiCompatBaseUrl: "http://192.168.178.155:8000/v1",
       openaiCompatModel: "qwen",
+      llmCustomOptIn: true,
     });
     await expect(llmRefusalFor()).resolves.toBeNull();
   });

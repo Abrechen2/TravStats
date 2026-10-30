@@ -16,6 +16,8 @@ import instanceServicesRouter from "./instanceServices";
 import webdavSyncRouter from "./webdavSync";
 import personalRouter from "./personal";
 import locationProviderRouter from "./locationProvider";
+import externalServicesRouter from "./externalServices";
+import { guardAccountKeyWrite, guardConnectionWrite } from "../../services/externalServices/guards";
 
 const router = Router();
 
@@ -61,9 +63,17 @@ router.use(
     "/personal",
     // Which source records and reads positions: one visitor's would be everyone's.
     "/location-provider",
+    // Keys, connections and the AI consent of the shared account would be everyone's.
+    "/external-services",
   ],
   rejectDemoWrites
 );
+
+// The admin's external-services policy on the legacy write routes (forgejo#392).
+router.use("/api-keys", guardAccountKeyWrite);
+router.use("/immich", guardConnectionWrite("immich"));
+router.use("/dawarich", guardConnectionWrite("dawarich"));
+router.use("/webdav-sync", guardConnectionWrite("webdav"));
 
 // Mount sub-routers
 router.use("/", generalRouter);
@@ -81,5 +91,6 @@ router.use("/instance-services", instanceServicesRouter);
 router.use("/webdav-sync", webdavSyncRouter);
 router.use("/personal", personalRouter);
 router.use("/location-provider", locationProviderRouter);
+router.use("/external-services", externalServicesRouter);
 
 export default router;

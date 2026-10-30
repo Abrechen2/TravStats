@@ -221,6 +221,7 @@ export async function parseEmail(
         logger.info("[Parser Factory] Ollama configured — trying LLM before templates");
         const ollamaFlights = await ollamaParser.parseEmail(subject, cleanedText, html, undefined, {
           referenceDate: config.referenceDate,
+          ...(config.userId ? { userId: config.userId } : {}),
         });
         if (ollamaFlights && ollamaFlights.length > 0) {
           const finalFlights = await applyEmailRegexPostProcessing(
@@ -325,6 +326,7 @@ export async function parseEmail(
 
       const flights = await parser.parseEmail(subject, cleanedText, html, undefined, {
         referenceDate: config.referenceDate,
+        ...(config.userId ? { userId: config.userId } : {}),
       });
       const parseDuration = Date.now() - parseStartTime;
 

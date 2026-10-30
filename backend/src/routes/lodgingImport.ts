@@ -156,12 +156,14 @@ router.post(
   rejectDemo,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      requireUser(req);
+      const userId = requireUser(req);
       const parsed = suggestMappingRequestSchema.safeParse(req.body);
       if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
       // Never throws — `{}` means "use your heuristic".
-      const mapping = await suggestLodgingCsvMapping(parsed.data.headers, parsed.data.sampleRows);
+      const mapping = await suggestLodgingCsvMapping(parsed.data.headers, parsed.data.sampleRows, {
+        userId,
+      });
       res.json({ success: true, data: { mapping } });
     } catch (err) {
       next(err);

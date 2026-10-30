@@ -33,7 +33,7 @@ import path from "path";
 
 const SRC_ROOT = path.resolve(__dirname, "../../..");
 const MODEL_ENDPOINT = /\/(?:api\/(?:generate|chat|embed(?:dings)?)|chat\/completions|messages)\b/g;
-const GUARD_CALL = /\bawait assertMayAsk\(target\)/g;
+const GUARD_CALL = /\bawait assertMayAsk\(target(?:, req)?\)/g;
 
 function sourceFiles(dir: string): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

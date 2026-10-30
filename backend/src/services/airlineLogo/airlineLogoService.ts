@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import logger from "../../utils/logger";
 import { getApiKey } from "../apiKeyResolver";
+import { isServiceDisabledByAdmin } from "../externalServices/policy";
 import {
   getCachedLogoEntry,
   putCachedLogo,
@@ -187,6 +188,10 @@ async function fetchFromChain(
   if (premium) return { logo: premium, source: "logostream" };
   const vendored = getVendoredLogo(code, variant);
   if (vendored) return { logo: vendored, source: "vendored" };
+  // "Off means off" (forgejo#392): the tiers below are third-party requests, and
+  // the keyless ones need no key an admin could have withdrawn. Cached bytes and
+  // the vendored marks above stay: they leave nothing.
+  if (await isServiceDisabledByAdmin("logos")) return null;
   const kiwi = await fromKiwi(code);
   if (kiwi) return { logo: kiwi, source: "kiwi" };
   const daisycon = await fromDaisycon(code);

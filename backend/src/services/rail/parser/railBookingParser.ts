@@ -322,7 +322,7 @@ export async function parseRailBookingText(
   // asked for a better-sounding one (`llmProvider.ts`, the chain's own rule).
   let unreachable: { target: LlmTarget; error?: string } | null = null;
   let failure: unknown = null;
-  for (const target of await resolveRailLlmChain()) {
+  for (const target of await resolveRailLlmChain(userId)) {
     const probe = await llmProbe(target);
     recordLlmProbe(target.url, probe.reachable);
     recordReachability(target, probe.reachable);
@@ -335,7 +335,7 @@ export async function parseRailBookingText(
       continue;
     }
     try {
-      const booking = await parseRailWithLlm(cleanEmailBody(text), target);
+      const booking = await parseRailWithLlm(cleanEmailBody(text), target, userId);
       if (booking && legsLookLikeFlights(booking.legs)) {
         return (
           fromTemplate(true) ?? {

@@ -49,6 +49,7 @@ import enEvidence from "./resources/en/evidence.json";
 import enDocuments from "./resources/en/documents.json";
 import enRoadtrips from "./resources/en/roadtrips.json";
 import enOpenData from "./resources/en/openData.json";
+import enExternalServices from "./resources/en/externalServices.json";
 import enLoyalty from "./resources/en/loyalty.json";
 import enTravplan from "./resources/en/travplan.json";
 import deTravplan from "./resources/de/travplan.json";
@@ -94,6 +95,7 @@ import deEvidence from "./resources/de/evidence.json";
 import deDocuments from "./resources/de/documents.json";
 import deRoadtrips from "./resources/de/roadtrips.json";
 import deOpenData from "./resources/de/openData.json";
+import deExternalServices from "./resources/de/externalServices.json";
 import deLoyalty from "./resources/de/loyalty.json";
 import deNotes from "./resources/de/notes.json";
 
@@ -161,6 +163,7 @@ const resources = {
     documents: enDocuments,
     roadtrips: enRoadtrips,
     openData: enOpenData,
+    externalServices: enExternalServices,
     loyalty: enLoyalty,
     notes: enNotes,
     comparison: enComparison,
@@ -209,6 +212,7 @@ const resources = {
     documents: deDocuments,
     roadtrips: deRoadtrips,
     openData: deOpenData,
+    externalServices: deExternalServices,
     loyalty: deLoyalty,
     notes: deNotes,
     comparison: deComparison,
@@ -266,6 +270,7 @@ i18n.use(initReactI18next).init({
     "documents",
     "roadtrips",
     "openData",
+    "externalServices",
     "loyalty",
     "notes",
   ],
