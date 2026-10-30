@@ -1,4 +1,5 @@
 /** Project existing records into read-only anchors without changing travel evidence. */
+import { isActualRecordDone } from "../../shared/actualRecordDone";
 import { bookingDuration } from "./temporal";
 import { randomUUID } from "node:crypto";
 import type { PlanTransaction } from "./execution";
@@ -75,7 +76,7 @@ export async function adoptExisting(
       );
       const bookingId = str(r.bookingId),
         group = groups.get(bookingId);
-      const completed = ["flown", "historical", "completed", "returned"].includes(str(r.status));
+      const completed = isActualRecordDone(str(r.status));
       const source = {
         kind: (completed ? "linkedActual:" : "existing:") + kind,
         id,

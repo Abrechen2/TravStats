@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from "react";
+import { isActualRecordDone } from "../../shared/actualRecordDone";
 import { tripsApi } from "../../lib/api";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { PlanItem } from "../../lib/api/travplan";
@@ -39,11 +40,7 @@ export function ActualRecordPicker({
         const options = values.flatMap((value: unknown) => {
           if (!value || typeof value !== "object") return [];
           const row = value as Record<string, unknown>;
-          if (
-            typeof row.id !== "string" ||
-            !["flown", "historical", "completed", "returned"].includes(String(row.status))
-          )
-            return [];
+          if (typeof row.id !== "string" || !isActualRecordDone(String(row.status))) return [];
           const label = String(
             row.flightNumber || row.title || row.name || row.bookingReference || row.id
           );

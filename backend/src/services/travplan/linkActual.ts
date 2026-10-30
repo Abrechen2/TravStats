@@ -1,4 +1,5 @@
 import { AppError } from "../../middleware/errorHandler";
+import { isActualRecordDone } from "../../shared/actualRecordDone";
 import type { PlanTransaction } from "./execution";
 import type { PlanState } from "./types";
 export async function linkActual(
@@ -65,7 +66,7 @@ export async function linkActual(
   if (next.items.some((i) => i.id !== item.id && i.kind === item.kind && i.source?.id === sourceId))
     throw new AppError("Actual record is already linked in this plan", 409, "PLAN_PROTECTED");
   if (!row) throw new AppError("Actual record not found on this trip", 404, "PLAN_ITEM_NOT_FOUND");
-  if (!["flown", "historical", "completed", "returned"].includes(row.status))
+  if (!isActualRecordDone(row.status))
     throw new AppError("The actual record has not been completed", 409, "PLAN_EXECUTION_LINK");
   item.source = {
     kind: "linkedActual:" + item.kind,
