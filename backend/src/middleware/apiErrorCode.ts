@@ -1,0 +1,513 @@
+import type { RemoteShareApiErrorCode } from "./remoteShareErrorCodes";
+import type { FlightTrackFileApiErrorCode } from "./flightTrackFileErrorCodes";
+import type { CompanionApiErrorCode } from "./companionErrorCodes";
+import type { ExternalServiceApiErrorCode } from "./externalServiceErrorCodes";
+import type { CompanionAppApiErrorCode } from "./companionAppErrorCodes";
+import type { ConnectionFileApiErrorCode } from "./connectionFileErrorCodes";
+import type { LocationProviderApiErrorCode } from "./locationProviderErrorCodes";
+
+/**
+ * Every machine-readable cause an `/api` error body may carry in `code`.
+ *
+ * A closed union rather than `string`, so a typo at a throw site is a `tsc`
+ * failure instead of a client branch that silently never matches — which is the
+ * exact failure mode the codes were introduced to END. The frontend's
+ * `lib/loginFailure.ts` compares against these spellings; nothing checks the
+ * two lists against each other across the wire, so the compiler holding this
+ * side is the half that can be held.
+ *
+ * Add a member here before using it, and keep it SCREAMING_SNAKE. Not in this union:
+ * `DEMO_ACCOUNT_FORBIDDEN`, which by an older convention travels in `error`, not `code`.
+ */
+export type ApiErrorCode =
+  | "LLM_REQUEST_POLICY"
+  | "PLAN_EXECUTION_FUTURE"
+  | "PLAN_EXECUTION_LINK"
+  | "PLAN_EXECUTION_DETAILS"
+  | "PLAN_ANCHOR_STALE"
+  | "PLAN_AI_CONSENT"
+  | "PLAN_AI_INVALID"
+  | "PLAN_AI_NO_ITEMS"
+  | "PLAN_AI_UNAVAILABLE"
+  | "PLAN_DAILY_LIMIT"
+  | "PLAN_DISABLED"
+  | "PLAN_DOCUMENT_NOT_FOUND"
+  | "PLAN_EXECUTION_DATE"
+  | "PLAN_EXECUTION_EDITED"
+  | "PLAN_IDEMPOTENCY_CONFLICT"
+  | "PLAN_INVALID_NIGHT"
+  | "PLAN_ITEM_NOT_FOUND"
+  | "PLAN_NOT_FOUND"
+  | "PLAN_PROPOSAL_CONFLICT"
+  | "PLAN_PROPOSAL_NOT_FOUND"
+  | "PLAN_PROPOSAL_STALE"
+  | "PLAN_PROTECTED"
+  | "PLAN_REVISION_CONFLICT"
+  | "PLAN_SHAPE_IN_USE"
+  | "PLAN_STAGE_CHANGED"
+  | "PLAN_TOO_LARGE"
+  | "PLAN_UNDO_STALE"
+  | "PLAN_USER_DISABLED"
+  | "PLAN_VARIANT_LIMIT"
+  | "PLAN_WEATHER_HORIZON"
+  | "PLAN_WEATHER_INVALID"
+  | "PLAN_WEATHER_LOCATION"
+  | "PLAN_WEATHER_PAST"
+  | "PLAN_WEATHER_UNAVAILABLE"
+  | "DAWARICH_OWN_CONNECTION_REQUIRED"
+  | "DAWARICH_SCAN_UNAVAILABLE"
+  | "DAWARICH_PLACES_DISABLED"
+  /** The account switched stay suggestions off (forgejo#306): no scan, no review. */
+  | "STAY_SUGGESTIONS_DISABLED"
+  | "DAWARICH_STAY_SCAN_FAILED"
+  | "DAWARICH_ALREADY_RESOLVED"
+  | "DAWARICH_INVALID_INTERVAL"
+  | "DAWARICH_VISIT_TRIP_CONFLICT"
+  /** An edit or delete named a base version (If-Match / baseVersion) the
+   *  record has moved past — forgejo#141, `services/sync/versionPrecondition.ts`.
+   *  The 409 carries the current record and the changed fields. */
+  | "VERSION_CONFLICT"
+  /** `GET /sync/changes` cannot continue this cursor (410): start a full read. */
+  | "SYNC_RESYNC_REQUIRED"
+  | "INVALID_CREDENTIALS"
+  | "ACCOUNT_DEACTIVATED"
+  | "RATE_LIMITED"
+  | "DB_UNAVAILABLE"
+  | "DUPLICATE"
+  /** Deleting a roadtrip or tour with no trip would delete its costs
+   *  (forgejo#140): refused until the caller sends `deleteExpenses=true`. The
+   *  body carries `expenseCount`. */
+  | "SECTION_HAS_EXPENSES"
+  /** A list filter named a loyalty card that is not this account's, or not
+   *  of the list's kind (a hotel card on the flight list). The list says the
+   *  programme is gone instead of showing an unfiltered or empty page. */
+  | "LOYALTY_MEMBERSHIP_NOT_FOUND"
+  /** A workshop template was activated before its preview had run (UI: "run the preview"). */
+  | "PREVIEW_REQUIRED"
+  /** A `visit` photo finding was accepted with no name for the place it would
+   *  create (forgejo#211): the lookup named nothing and the body sent nothing.
+   *  The card asks for one instead of minting "unknown". */
+  | "VISIT_NAME_REQUIRED"
+  /** A `visit` finding was accepted onto a place that is not the caller's
+   *  (forgejo#211, the batch review's "correct the place"): gone since the
+   *  list was read, or never theirs. */
+  | "VISIT_PLACE_NOT_FOUND"
+  /** A `visit` finding was accepted after it had been answered — dismissed, or
+   *  accepted by a request that won the race. Nothing is written. */
+  | "VISIT_ALREADY_ANSWERED"
+  /** A training annotation whose offsets do not cut their own value out of
+   *  the text being saved. The two used to be allowed to disagree, which
+   *  corrupted every derivation built on it in silence. */
+  | "ANNOTATION_TEXT_MISMATCH"
+  /** A workshop screenshot that is no image the OCR can read (forgejo#309). */
+  | "TRAINING_IMAGE_UNREADABLE"
+  /** A workshop screenshot the OCR read almost no text from — no sample is kept. */
+  | "TRAINING_IMAGE_NO_TEXT"
+  /** The requested username is reserved by the system — see
+   *  `schemas/auth.ts` `RESERVED_USERNAMES`. The register form turns this
+   *  into its own sentence, in the reader's language. */
+  | "USERNAME_RESERVED"
+  /** A restore was asked for a part the archive does not carry — a file
+   *  restore from an archive with no `uploads.tar.gz`, say. */
+  | "RESTORE_ARCHIVE_INCOMPLETE"
+  /** The archive carries the part but it cannot be read. Caught BEFORE the
+   *  restore writes anything, because half a restore is neither state. */
+  | "RESTORE_ARCHIVE_UNREADABLE"
+  /** The archive's encrypted values belong to another instance key. The
+   *  restore dialog turns this into the acknowledgement it needs. */
+  | "RESTORE_ENCRYPTION_KEY_MISMATCH"
+  /** An older archive's missing migration failed on its data (forgejo#157).
+   *  The restore is one transaction, so nothing was changed. */
+  | "RESTORE_MIGRATION_FAILED"
+  /** Restored, yet the database lacks a migration record or a sync trigger
+   *  this version expects (forgejo#157). Checked after commit. */
+  | "RESTORE_SCHEMA_INCOMPLETE"
+  /** The archive's database knows migrations this version does not: it was
+   *  written by a newer version and cannot be migrated down (forgejo#157). */
+  | "RESTORE_ARCHIVE_NEWER"
+  /** The archive's database carries no `_prisma_migrations` at all, so its
+   *  schema cannot be matched to any version (forgejo#157). */
+  | "RESTORE_ARCHIVE_UNVERSIONED"
+  /** The archive was taken while a migration had failed on its database
+   *  (Prisma's P3009 state); its schema is no version's (forgejo#157). */
+  | "RESTORE_ARCHIVE_FAILED_MIGRATION"
+  /** A backup's remote copy has no recorded target, or the target changed
+   *  since the upload: the object to delete cannot be named safely. */
+  | "REMOTE_TARGET_UNKNOWN"
+  /** A rail write body failed validation; `field` names the first field. */
+  | "RAIL_INVALID_INPUT"
+  /** A rail arrival instant before its departure — usually a night train
+   *  whose arrival kept the departure's date. `field` is `arrivalLocal`. */
+  | "RAIL_ARRIVAL_BEFORE_DEPARTURE"
+  /** A bus write body failed validation; `field` names the first field. */
+  | "FERRY_INVALID_INPUT"
+  | "FERRY_ARRIVAL_BEFORE_DEPARTURE"
+  | "BUS_INVALID_INPUT"
+  /** A bus arrival instant before its departure (spec 2026-10-07-bus-domain-design §3.2).
+   *  `field` is `arrivalLocal`. */
+  | "BUS_ARRIVAL_BEFORE_DEPARTURE"
+  | "BUS_NO_ROUTING_PROVIDER"
+  // Car rentals (spec 2026-10-01-rental-domain-design).
+  | "RENTAL_INVALID_INPUT"
+  | "RENTAL_INVALID_QUERY"
+  | "RENTAL_NOT_FOUND"
+  | "RENTAL_ROADTRIP_NOT_FOUND"
+  | "RENTAL_RETURN_BEFORE_PICKUP"
+  | "RENTAL_ACTUAL_RETURN_BEFORE_PICKUP"
+  | "RENTAL_DEPOSIT_RETURN_EXCEEDS"
+  | "RENTAL_DEPOSIT_RETURNED_BEFORE_PAID"
+  /** The return odometer below the pick-up one, on the merged row. `field` is `odometerInKm`. */
+  | "RENTAL_ODOMETER_REVERSED"
+  | "RENTAL_STATION_UNRESOLVED"
+  | "RENTAL_GEOCODER_UNAVAILABLE"
+  /** A cancellation or invoice for a booking this account does not hold — nothing was written. */
+  | "RENTAL_UNKNOWN_BOOKING"
+  /** An invoice's km beside a figure the user typed; the review shows both and asks. */
+  | "RENTAL_INVOICE_KM_CONFLICT"
+  | "RENTAL_INVOICE_FEE_UNKNOWN"
+  /** A parse needed the configured LLM and could not reach it — "try later", not "broken". */
+  | "LLM_UNREACHABLE"
+  /** A parse failed for any other reason; the cause is in the server log. */
+  | "PARSE_FAILED"
+  /** The upload is not a readable PDF. */
+  | "INVALID_PDF"
+  /** The PDF has no usable text layer (a scan) — the image route reads it. */
+  | "PDF_NO_TEXT"
+  /** A boarding pass was read but carried no flight data. */
+  | "NO_FLIGHT_DATA"
+  /** An outside service the request depends on (OpenStreetMap, Open-Meteo)
+   *  could not be asked: it timed out, refused more requests, or did not
+   *  answer. Kept apart from "nothing found", which the UI used to say. */
+  | "UPSTREAM_TIMEOUT"
+  | "UPSTREAM_RATE_LIMITED"
+  | "UPSTREAM_UNAVAILABLE"
+  /** A trip suggestion changed between being shown and being answered — an
+   *  entry moved onto a trip, the trip or place was deleted. Reload, not retry. */
+  | "TRIP_SUGGESTION_STALE"
+  /** An accepted trip suggestion named members it does not hold, none at all,
+   *  or an end before its start. */
+  | "TRIP_SUGGESTION_SELECTION_INVALID"
+  /** The account switched trip suggestions off (forgejo#306): nothing to answer. */
+  | "TRIP_SUGGESTIONS_DISABLED"
+  /** Package import (plan 2026-10-09 P3): the document holds no package
+   *  reading — it was parsed as something else, or not at all. */
+  | "PACKAGE_READING_MISSING"
+  /** The package reading does not satisfy the contract; `extra.issues` names it. */
+  | "PACKAGE_READING_INVALID"
+  /** One leg of the package cannot be written as a flight; `field` names it. */
+  | "PACKAGE_FLIGHT_INVALID"
+  /** Single-trip import (spec 2026-10-09 S3): the upload is not a readable
+   *  `.travstats` file — not a ZIP, no manifest/trip.json, or a schema
+   *  failure (`extra.issues` names the paths). */
+  | "TRIP_FILE_INVALID"
+  /** The `.travstats` file names a format version this server cannot read
+   *  (`extra.formatVersion`, `extra.supported`). */
+  | "TRIP_FILE_VERSION_UNSUPPORTED"
+  /** The `.travstats` file (or one entry in it) is past its size or entry cap (413). */
+  | "TRIP_FILE_TOO_LARGE"
+  /** An entry of the `.travstats` file names a path outside the archive. */
+  | "TRIP_FILE_UNSAFE_PATH"
+  /** A trip, booking or flight id the request named is not the caller's. */
+  | "TRIP_NOT_FOUND"
+  /** Trip recording (forgejo#316): the trip was merged away; `extra.mergedIntoTripId`
+   *  names the caller's trip that now holds it (404). */
+  | "TRIP_MERGED"
+  | "BOOKING_NOT_FOUND"
+  | "FLIGHT_NOT_FOUND"
+  /** A stay or cruise a booking was asked to cover is not the caller's (#356). */
+  | "STAY_NOT_FOUND"
+  | "CRUISE_NOT_FOUND"
+  /** Passport overrides (forgejo#308): a code that names no country this server knows. */
+  | "COUNTRY_UNKNOWN"
+  /** There is no override for that country to delete. */
+  | "COUNTRY_OVERRIDE_NOT_FOUND"
+  /** A request body failed its schema. Sent on every ZodError answer, so a
+   *  form shows its own sentence instead of zod's JSON issue dump. */
+  | "VALIDATION_FAILED"
+  /** Time-zone re-resolution (ADR 0002 D2): `apply` named a dry run that
+   *  does not exist or expired — run the dry run again. */
+  | "DRY_RUN_NOT_FOUND"
+  /** A re-resolution or the time-model backfill is already running. */
+  | "RE_RESOLVE_RUNNING"
+  /** A HEIC/HEIF photo upload that could not be decoded (422, forgejo#192):
+   *  the file is damaged or not what its type says. Nothing was stored. */
+  | "PHOTO_UNREADABLE"
+  /** HEIC/HEIF converter failed for a reason that is not the file's (503). */
+  | "PHOTO_CONVERSION_UNAVAILABLE"
+  | "TRACK_FILE_TOO_LARGE" // tour track upload: the file is over the size limit
+  | "TRACK_FILE_UNREADABLE" // tour track upload: not readable as GPX, TCX or FIT
+  | FlightTrackFileApiErrorCode // a flight's track file upload, one per reason (forgejo#312)
+  | "TRACK_FILE_MISSING" // flight track file upload (forgejo#312): the request carried no file
+  | CompanionApiErrorCode
+  | ExternalServiceApiErrorCode // companions: rename, merge, delete; external services
+  /** Tour track upload: a recording without timestamps cannot be placed in time. */
+  | "TRACK_NO_TIMESTAMPS"
+  /** Tour track upload: this recording is already on the tour. */
+  | "TRACK_ALREADY_IMPORTED"
+  /** The device routes (flight track, observed times): no flight of this
+   *  user under that id. A server older than 2.7.0-rc.7 answers the same path
+   *  with a code-less 404, so the code is what tells the Companion "this
+   *  flight is gone — stop retrying" from "this server has no route yet"
+   *  (forgejo#201). */
+  | "FLIGHT_NOT_FOUND"
+  /** Kept originals (forgejo#272): the entry a document is filed under or
+   *  listed for does not exist for this user. Distinct from a code-less 404,
+   *  which an older server — or one without the documents routes at all —
+   *  also answers; the Companion deletes a queued original only on this code,
+   *  so "the entry is gone" is never confused with "this server has no route"
+   *  (the prose "Entry not found" stays for clients that matched on it). */
+  | "DOCUMENT_ENTRY_NOT_FOUND"
+  /** A flight's booking split (forgejo#219): the flight is linked to no booking. */
+  | "BOOKING_NOT_FOUND"
+  /** Booking split: the booking has no total recorded, so there is nothing to split (409). */
+  | "BOOKING_PRICE_MISSING"
+  /** Booking split: the booking has one flight — its total is that flight's (409). */
+  | "BOOKING_SPLIT_SINGLE_SEGMENT"
+  /** Booking split: cruises, journeys or stays share the booking, so its total
+   *  is not the flights' alone and a flights-only split would misstate it (409). */
+  | "BOOKING_SPLIT_MIXED"
+  /** Booking split by distance: a segment has no known route distance (422). */
+  | "BOOKING_SPLIT_DISTANCE_UNKNOWN"
+  /** Bulk flight edit (forgejo#217): the trip named is not this account's — refused before any write. */
+  | "TRIP_NOT_FOUND"
+  /** Flight recording (forgejo#193): the flight already has a recording under
+   *  another upload id; resend with `replace: true` to swap it. */
+  | "TRACK_ALREADY_RECORDED"
+  /** Flight recording: the body is over its size limit (413). */
+  | "TRACK_BODY_TOO_LARGE"
+  /** Flight recording: its span is nowhere near the schedule — filed under the wrong flight (422). */
+  | "TRACK_OUTSIDE_FLIGHT"
+  | "FLIGHT_TRACKING_DISABLED" // flight recording: live tracking off, nothing stored (409)
+  | "TRIP_RECORDING_DISABLED" // trip recording (forgejo#316): the account switch is off — nothing stored (409)
+  | "RECORDING_INVALID_POINT" // trip recording: a coordinate outside lat ±90 / lon ±180 (400)
+  | "TRIP_RECORDING_NO_SPAN" // trip recording: the trip has no first or last day to bound the points (422)
+  | "RECORDING_UPLOAD_ID_REUSED" // trip recording: uploadId already stored under another trip (409)
+  | "UNSUPPORTED_UPLOAD_TYPE" // a file type the upload route does not take (400)
+  | CompanionAppApiErrorCode // packing lists and personal settings (companionAppErrorCodes.ts)
+  | LocationProviderApiErrorCode // choosing the location provider (locationProviderErrorCodes.ts)
+  /** Observed takeoff/landing (forgejo#194): a time in the future (400). */
+  | "OBSERVED_TIME_IN_FUTURE"
+  /** Observed takeoff/landing: more than 12 h from the schedule (422). */
+  | "OBSERVED_TIME_OUTSIDE_FLIGHT"
+  /** Observed takeoff/landing at an airport that is not the flight's own —
+   *  a diversion is the app's to report, never an arrival at the destination
+   *  (422). `field` names the end. */
+  | "OBSERVED_AIRPORT_MISMATCH"
+  /** Dawarich pull: the section has no dated stops to derive a window from. */
+  | "DAWARICH_NO_DATED_STOPS"
+  /** Dawarich pull: the resolved window ends before it starts. */
+  | "DAWARICH_WINDOW_INVALID"
+  /** Dawarich pull: Dawarich answered, with no points in the window. */
+  | "DAWARICH_WINDOW_EMPTY"
+  /** Dawarich pull: a single point in the window — too few for a track. */
+  | "DAWARICH_TOO_FEW_POINTS"
+  /** This place has no zone the resolver can name (422, ADR 0002 D2) — no
+   *  catalogue zone, no usable coordinates. A local time there cannot be
+   *  interpreted, so it is refused rather than stored as UTC — see
+   *  `shared/time/zoneOf.ts`. */
+  | "TZ_UNRESOLVED"
+  /** A wall clock typed by a person that its zone skips (spring-forward
+   *  gap) — see `shared/time/instant.ts`. Machine sources are never refused. */
+  | "LOCAL_TIME_NONEXISTENT"
+  /** A zone name the server's tzdata does not know (`shared/time/errors.ts`). */
+  | "ZONE_UNKNOWN"
+  /** The zone lookup itself could not run (503) — distinct from
+   *  `TZ_UNRESOLVED`, "this place has no zone" (422). */
+  | "TIMEZONE_LOOKUP_UNAVAILABLE"
+  /** A time sent in a shape the server may not interpret (ADR 0002 D3): an
+   *  offset-less datetime string, or — from a browser session — a bare ISO-Z
+   *  on a field that used to hold the place's wall clock as fake UTC (a web
+   *  bundle from before the deploy). `field` names it; the page should reload. */
+  | "TIME_SHAPE_REQUIRED"
+  /** A tour's points are its trip's timeline stops — assigned at the trip, not replaced. */
+  | "TOUR_POINTS_FROM_TRIP"
+  /** A trip's timeline stop was sent as a route correction (via point). */
+  | "VIA_POINT_ON_TIMELINE"
+  /** A full station list was written against a station set that has changed
+   *  since the writer read it (a station added or removed elsewhere — the
+   *  phone). Nothing was written; read the roadtrip again and merge. */
+  | "ROADTRIP_STATIONS_CHANGED"
+  /** A recording offered for a leg does not come near both of its stops (409). */
+  | "TRACK_DOES_NOT_COVER_LEG"
+  /** The recording stops and restarts between a leg's two stops (409). */
+  | "TRACK_GAP_IN_LEG"
+  /** Assigning stops to a route section (review M4): a stop that is not on
+   *  this trip/tour, one without a coordinate, one already in another
+   *  section, and one another request claimed meanwhile (409). */
+  | "ROUTE_STOP_NOT_OWNED"
+  | "ROUTE_STOP_NO_COORDINATE"
+  | "ROUTE_STOP_IN_OTHER_SECTION"
+  | "ROUTE_STOP_CLAIMED_MEANWHILE"
+  /** A trip photo was linked to a stop that is not on its trip — neither on
+   *  the trip's timeline nor a station of a roadtrip filed on it (forgejo#139).
+   *  Also answered for a stop that does not exist, so a probe learns nothing
+   *  about another account's stops. `field` is `stopId`. */
+  | "STOP_NOT_ON_TRIP"
+  /** A roadtrip whose stations hold photos of its trip cannot move to another
+   *  trip or off it: the photos stay with the trip, and their station links
+   *  would point across trips (forgejo#139). The body carries `stationPhotos`
+   *  (how many) and `optIn: "detachStationPhotos"` — resend the PATCH with
+   *  that set to take them off their stations and move anyway. */
+  | "ROADTRIP_HAS_TRIP_PHOTOS"
+  /** A roadtrip station with a night was sent as a route correction. */
+  | "VIA_POINT_HAS_NIGHT"
+  /** Backup/restore failures (`backup/backupFailure.ts`): pg_dump, psql or tar missing. */
+  | "BACKUP_TOOL_MISSING"
+  /** The backup volume ran out of space. */
+  | "BACKUP_DISK_FULL"
+  /** The server may not read or write the backup directory. */
+  | "BACKUP_PERMISSION_DENIED"
+  /** The database could not be reached by the dump/restore tool. */
+  | "BACKUP_DB_UNREACHABLE"
+  /** pg_dump is older than the database server it dumps. */
+  | "BACKUP_TOOL_VERSION_MISMATCH"
+  /** A backup failed for a cause not recognised above; detail in the log. */
+  | "BACKUP_FAILED"
+  | "BACKUP_RUNNING"
+  /** A backup the server was stopped or restored in the middle of (stored on the row). */
+  | "BACKUP_INTERRUPTED"
+  /** A restore failed for a cause not recognised above; detail in the log. */
+  | "RESTORE_FAILED"
+  /** An admin has turned the language model off (`services/llm/llmGate.ts`).
+   *  Kept apart from a plain 503 so the UI can say "switched off" rather than
+   *  send the reader to check whether Ollama is running. */
+  | "LLM_DISABLED"
+  /** The provider is outside the local network and the admin has not opted
+   *  in to sending documents there (`llmGate.assertLlmCloudConsent`). */
+  | "LLM_CLOUD_NOT_CONSENTED"
+  /** An AI provider base URL an admin typed is malformed / not http(s) /
+   *  carries credentials, or is plain http to a host outside the local
+   *  network (`llm/llmEndpoint.ts`). */
+  | "LLM_BASE_URL_INVALID"
+  | "LLM_BASE_URL_HTTPS_REQUIRED"
+  /** The admin's template repository URL (forgejo#309, `routes/admin/templateRepo.ts`):
+   *  malformed / not http(s) / carrying credentials, or plain http to a host
+   *  outside the local network — the `llm/llmEndpoint.ts` rule. */
+  | "TEMPLATE_REPO_URL_INVALID"
+  | "TEMPLATE_REPO_URL_HTTPS_REQUIRED"
+  /** Exporting a workshop template for the community (forgejo#309,
+   *  `parserTemplates.ts`): it holds a value of the user's own document where
+   *  it cannot be blanked (422, `extra.kinds`), it is not active yet (409), or
+   *  its kind is stored in a format the repository does not take (422), or
+   *  the sample whose marks the scan needs was deleted (422). */
+  | "TEMPLATE_EXPORT_PERSONAL_DATA"
+  | "TEMPLATE_EXPORT_NOT_ACTIVE"
+  | "TEMPLATE_EXPORT_UNSUPPORTED"
+  | "TEMPLATE_EXPORT_SOURCE_MISSING"
+  /** The admin log area (`routes/admin/logging.ts`): a name that fails the
+   *  traversal guard (400), a file that is not there (404), a file that could
+   *  not be read or decompressed (500). */
+  | "LOG_FILE_INVALID_NAME"
+  | "LOG_FILE_NOT_FOUND"
+  | "LOG_FILE_UNREADABLE"
+  /** The diagnostic export built a bundle that failed its own allowlist
+   *  schema and refused to send it (`services/diagnosticExport.ts`). */
+  | "DIAGNOSTIC_EXPORT_REJECTED"
+  /** Web display preferences (forgejo#200, `routes/settings/webPrefs.ts`):
+   *  a section's value has the wrong kind or breaks a depth/width bound (400),
+   *  or a section or the account's total is over its byte cap (413). The web
+   *  keeps its local value either way. */
+  | "WEB_PREFS_INVALID"
+  | "WEB_PREFS_TOO_LARGE"
+  /** Trip sharing (`routes/sharing.ts`, design 2026-10-09). No account of
+   *  that name on this server (404) — sharing never leaves the instance. */
+  | "SHARE_USER_NOT_FOUND"
+  /** A consent request addressed to the requester's own account (400). */
+  | "SHARE_SELF"
+  /** A consent between these two is already pending or accepted (409). */
+  | "SHARE_CONSENT_DUPLICATE"
+  /** No consent of this caller under that id (404) — also answered for
+   *  another pair's consent, so a probe learns nothing. */
+  | "SHARE_CONSENT_NOT_FOUND"
+  /** Accept/decline on a consent that is no longer pending (409). */
+  | "SHARE_CONSENT_NOT_PENDING"
+  /** Linking or sharing needs an accepted consent the other account gave to
+   *  the caller (403). */
+  | "SHARE_CONSENT_REQUIRED"
+  | "SHARE_GROUP_CONSENT_REQUIRED"
+  /** No companion of this caller under that id (404). */
+  | "COMPANION_NOT_FOUND"
+  /** Another of the caller's companions is already linked to that account (409). */
+  | "SHARE_COMPANION_ALREADY_LINKED"
+  /** Sharing with a companion that is not linked to an account (409). */
+  | "SHARE_COMPANION_NOT_LINKED"
+  /** Leaving a group with a trip that is in none (409). */
+  | "SHARE_TRIP_NOT_SHARED"
+  /** No share notice of this caller under that id (404). */
+  | "SHARE_NOTICE_NOT_FOUND"
+  /** Public share links (forgejo#281). Every public failure — unknown,
+   *  malformed, expired, revoked, switch off, target gone — is this one 404,
+   *  so a guesser cannot tell a dead link from one that never existed. Also
+   *  the owner's answer for a link id or a target that is not theirs. */
+  | "SHARE_LINK_NOT_FOUND"
+  /** The instance switch for public links is off (409). */
+  | "SHARE_LINKS_DISABLED"
+  /** A flight link for a flight that has already landed (409). */
+  | "SHARE_LINK_FLIGHT_LANDED"
+  /** A trip link with the itinerary for a trip whose last day is over (409, forgejo#302). */
+  | "SHARE_LINK_TRIP_ENDED"
+  /** WebDAV backup download: the body ended before the Content-Length it promised (502). */
+  | "WEBDAV_DOWNLOAD_TRUNCATED"
+  /** Airport lookup (forgejo#347): no source could be asked (timeout, network, HTTP error) — retry (503). */
+  | "AIRPORT_LOOKUP_UNAVAILABLE"
+  /** The account already holds the maximum of active links (409). */
+  | "SHARE_LINK_LIMIT"
+  /** An expiry in the past or beyond the maximum (400). */
+  | "SHARE_LINK_EXPIRY_INVALID"
+  /** Calendar feed (forgejo#310): every public failure is this one 404, as for share links. */
+  | "CALENDAR_FEED_NOT_FOUND"
+  /** 409: no URL while the beta switch is off; a device asked while one is live, unrotated. */
+  | "CALENDAR_FEED_DISABLED"
+  | "CALENDAR_FEED_EXISTS"
+  /** Undo refused: the copy changed since the notice; `extra.fields` names
+   *  the facts that differ (409). */
+  | "SHARE_UNDO_STALE"
+  /** The notice is not one that can be acted on that way (not a change, or
+   *  already undone) (409). */
+  | "SHARE_UNDO_UNAVAILABLE"
+  /** The caller's own copy of the entry is gone (deleted or moved away) (409). */
+  | "SHARE_COPY_NOT_FOUND"
+  | RemoteShareApiErrorCode // trip sharing across servers (spec 2026-10-20 §7)
+  /** Comparison (leaderboard) — rework 2026-10-16. The beta switch is off. */
+  | "COMPARISON_DISABLED"
+  /** A personal access token: the comparison is a browser-session feature. */
+  | "COMPARISON_TOKEN_REFUSED"
+  | "COMPARISON_USER_NOT_FOUND"
+  | "COMPARISON_SELF"
+  /** The caller already shares with that person. */
+  | "COMPARISON_DUPLICATE"
+  | "COMPARISON_NOT_FOUND"
+  | "COMPARISON_NOT_PENDING"
+  /** An invitation code that is malformed, unknown, used or expired. */
+  | "COMPARISON_INVITE_INVALID"
+  | "COMPARISON_INVITE_LIMIT"
+  | "COMPARISON_FEDERATION_OFF" // this server has no federation identity
+  /** The identity is set by environment variables and cannot be changed in the UI. */
+  | "COMPARISON_FEDERATION_ENV"
+  /** The admin has not pinned and verified that server. */
+  | "COMPARISON_PEER_UNKNOWN"
+  | "COMPARISON_PEER_UNREACHABLE"
+  | "COMPARISON_PEER_OUTDATED" // the other server predates the leaderboard protocol
+  | "COMPARISON_PEER_KEY_INVALID"
+  | ConnectionFileApiErrorCode // an uploaded server connection file, one per refusal
+  | "COMPARISON_BOARD_NOT_FOUND"
+  | "COMPARISON_BOARD_MEMBER_INVALID"
+  | "COMPARISON_BOARD_LIMIT"
+  /** The user already holds the maximum number of friendships with people on other servers. */
+  | "COMPARISON_REMOTE_LIMIT"
+  | "COMPARISON_YEAR_NOT_SHARED"
+  /** A rental evidence category on a document not filed with a rental (forgejo#239). */
+  | "DOCUMENT_CATEGORY_NOT_RENTAL"
+  /** Merging two places (forgejo#232, `services/places/placeMerge.ts`): a
+   *  place cannot be merged into itself (400), and two places that each
+   *  stand for a DIFFERENT checklist item cannot become one (409) — one
+   *  checklist's tick would be lost. */
+  | "PLACE_MERGE_SAME"
+  | "PLACE_MERGE_BOTH_CURATED"
+  /** A create's idempotency key (forgejo#283, `services/sync/clientRef.ts`)
+   *  was already spent on a different body or another route (409).
+   *  `extra.kind` and `extra.entityId` name the row it made. */
+  | "CLIENT_REF_REUSED"
+  /** A repeat create whose key made a row that has been deleted since (410):
+   *  nothing is re-created. `extra.kind`, `extra.entityId` name it. */
+  | "CLIENT_REF_TARGET_GONE";
