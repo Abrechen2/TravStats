@@ -29,12 +29,14 @@ export function ActualRecordPicker({
   const { t } = useTranslation("travplan"),
     [rows, setRows] = useState<{ id: string; title: string }[]>([]),
     [selected, setSelected] = useState(""),
+    [failed, setFailed] = useState(false),
     selectId = useId();
   useEffect(() => {
     let live = true;
-    tripsApi
-      .getById(tripId)
-      .then((data) => {
+    setFailed(false);
+    void (async () => {
+      try {
+        const data = await tripsApi.getById(tripId);
         const values = (data as unknown as Record<string, unknown>)[collections[item.kind]];
         if (!Array.isArray(values)) return;
         const options = values.flatMap((value: unknown) => {
@@ -50,13 +52,24 @@ export function ActualRecordPicker({
           setRows(options);
           setSelected(options[0]?.id || "");
         }
-      })
-      .catch((cause: unknown) => logger.warn("Failed to load the trip's records", cause));
+      } catch (cause) {
+        logger.warn("Failed to load the trip's records", cause);
+        // Say so: a picker that vanishes reads as "nothing to link".
+        if (live) setFailed(true);
+      }
+    })();
     return () => {
       live = false;
     };
   }, [tripId, item.kind]);
-  if (!collections[item.kind] || !rows.length) return null;
+  if (!collections[item.kind]) return null;
+  if (failed)
+    return (
+      <p role="alert" className="text-sm text-(--danger)">
+        {t("linkActualFailed")}
+      </p>
+    );
+  if (!rows.length) return null;
   return (
     <PlanActions>
       <Field label={t("linkActual")} htmlFor={selectId}>

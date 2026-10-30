@@ -92,11 +92,14 @@ export function DashboardLayout({
   const [showSpecialModal, setShowSpecialModal] = useState(false);
   const { isEnabled } = useEnabledDomains();
   const placesVisible = usePlacesVisible();
-  const { addToast } = useToastStore();
+  // A selector, not the whole store: the layout must not re-render on every toast.
+  const addToast = useToastStore((s) => s.addToast);
   // What is coming up, per domain. Fetched HERE rather than inside the strip so
   // it reloads with the same `onDataChanged` signal the counts do — adding a
   // flight must move this line, not leave it stale until the next full load.
   const [upcoming, setUpcoming] = useState<UpcomingEntry[]>([]);
+  // A failed read must not look like "nothing is coming up" (forgejo#385).
+  const [upcomingFailed, setUpcomingFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,9 +107,14 @@ export function DashboardLayout({
       .then((entries) => {
         // The server answers by the user's domains alone; the beta switches
         // are the client's to apply (owner rule 2026-09-25).
-        if (!cancelled) setUpcoming(entries.filter((e) => isEntryDomainShown(e.domain, isEnabled)));
+        if (cancelled) return;
+        setUpcomingFailed(false);
+        setUpcoming(entries.filter((e) => isEntryDomainShown(e.domain, isEnabled)));
       })
-      .catch((err: unknown) => logger.error("Failed to load the upcoming entries", err));
+      .catch((err: unknown) => {
+        logger.error("Failed to load the upcoming entries", err);
+        if (!cancelled) setUpcomingFailed(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -282,6 +290,11 @@ export function DashboardLayout({
           }}
         >
           {nextUp && <MapNextUpCard entry={nextUp} nowMs={nowMs} />}
+          {upcomingFailed && (
+            <p role="status" className="text-xs text-(--danger)">
+              {t("dashboard:upcomingFailed")}
+            </p>
+          )}
           <LastSeenCard />
         </div>
         {/* On a single-domain view the filter is the ONLY way back — the tab

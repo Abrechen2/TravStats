@@ -251,6 +251,7 @@
   "parseLocal": "Für die Dokumentanalyse ist ausschließlich ein lokaler Anbieter erlaubt.",
   "parseCloud": "Wenn du KI zum Auslesen aktivierst, sind auch bereits konfigurierte und freigegebene Cloudanbieter erlaubt.",
   "linkActual": "Tatsächlichen Eintrag verknüpfen",
+  "linkActualFailed": "Die Einträge dieser Reise konnten nicht geladen werden.",
   "weatherLocation": "Wetterort auswählen",
   "searchLocation": "Ort suchen",
   "choose": "Auswählen",

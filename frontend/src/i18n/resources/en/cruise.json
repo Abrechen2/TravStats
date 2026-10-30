@@ -218,6 +218,7 @@
     "removeHandle": "Remove waypoint",
     "editedBadge": "corrected by hand",
     "saveFailed": "Could not save. The line on the map is still yours — try again?",
+    "geometryFailed": "The route could not be loaded. The lines on the map are straight connections only.",
     "discardConfirm": "Discard the changes to this leg?",
     "tool": "Tool",
     "toolPan": "Move map",

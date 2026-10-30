@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api/client";
+import { logger } from "../lib/logger";
 
 /**
  * The currencies this account actually books in, most-used first.
@@ -21,7 +22,12 @@ async function load(): Promise<string[]> {
         cache = res.data.data?.codes ?? [];
         return cache;
       })
-      .catch(() => [])
+      .catch((err: unknown) => {
+        // Not cached, so the next mount retries. The pickers fall back to the
+        // ECB short list meanwhile; the failure is logged, never silent.
+        logger.warn("Failed to load the recent currencies", err);
+        return [];
+      })
       .finally(() => {
         inFlight = null;
       });

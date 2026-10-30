@@ -251,6 +251,7 @@
   "parseLocal": "Document analysis permits a local provider only.",
   "parseCloud": "If you enable AI reading, configured and consented cloud providers are also permitted.",
   "linkActual": "Link an actual record",
+  "linkActualFailed": "This trip's records could not be loaded.",
   "weatherLocation": "Choose weather location",
   "searchLocation": "Search location",
   "choose": "Choose",

@@ -94,6 +94,7 @@ vi.mock("../../ferry/FerryFormModal", () => ({
 
 // Imported after the mocks above so the module graph picks them up.
 import { DashboardLayout } from "../DashboardLayout";
+import { getUpcoming } from "../../../lib/api/upcoming";
 
 function renderAt(
   tab: string,
@@ -204,5 +205,24 @@ describe("DashboardLayout: adding a ferry ride from the map", () => {
     fireEvent.click(screen.getByTestId("ferry-form-modal"));
     expect(screen.queryByTestId("ferry-form-modal")).not.toBeInTheDocument();
     expect(onDataChanged).toHaveBeenCalledTimes(1);
+  });
+});
+
+/** forgejo#385 (RULE-36): a failed "up next" read made the card vanish as if nothing were due. */
+describe("DashboardLayout: a failed up-next read says so", () => {
+  it("shows the failure line instead of silently hiding the card", async () => {
+    vi.mocked(getUpcoming).mockRejectedValue(new Error("503"));
+    try {
+      renderAt("all");
+      expect(await screen.findByText(/upcomingFailed/)).toBeInTheDocument();
+    } finally {
+      vi.mocked(getUpcoming).mockResolvedValue([]);
+    }
+  });
+
+  it("shows no failure line when the read succeeds", async () => {
+    renderAt("all");
+    await Promise.resolve();
+    expect(screen.queryByText(/upcomingFailed/)).not.toBeInTheDocument();
   });
 });

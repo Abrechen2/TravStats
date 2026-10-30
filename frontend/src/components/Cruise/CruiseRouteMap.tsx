@@ -18,6 +18,7 @@ import { createCruisePortsLayer } from "../layers/cruisePortsLayer";
 import { DEFAULT_CRUISE_COLORS, type CruiseColorConfig } from "../../lib/cruiseColor";
 import { computeBbox } from "../../utils/mapAnimationHelpers";
 import { logger } from "../../lib/logger";
+import { useCruiseRouteGeometry } from "../../hooks/useCruiseRouteGeometry";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import { RouteEditorOverlay } from "./RouteEditorOverlay";
@@ -88,7 +89,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
   const locale = i18n.language || "de";
   const getTooltip = useMemo(() => createMarkerTooltip(t, locale), [t, locale]);
   const mapRef = useRef<MapRef | null>(null);
-  const [geometry, setGeometry] = useState<CruiseRouteFeatureCollection | null>(null);
+  const { geometry, setGeometry, failed: geometryFailed } = useCruiseRouteGeometry(cruise.id);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [zoom, setZoom] = useState<number>(INITIAL_VIEW.zoom ?? 3);
   const didFit = useRef(false);
@@ -137,21 +138,6 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
     didFit.current = false;
     setEditMode(toEditor);
   }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const fc = await cruiseApi.getGeometry(cruise.id);
-        if (!cancelled) setGeometry(fc);
-      } catch (err) {
-        logger.warn("CruiseRouteMap: failed to load geometry", err);
-      }
-    })();
-    return (): void => {
-      cancelled = true;
-    };
-  }, [cruise.id]);
 
   /**
    * The geometry the map draws. While editing, the edited leg's coordinates
@@ -938,6 +924,11 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
         )}
         {saveError && !editMode && (
           <span className="text-sm text-(--danger)">{t("cruise:routeEditor.saveFailed")}</span>
+        )}
+        {geometryFailed && !geometry && (
+          <span role="alert" className="text-sm text-(--danger)">
+            {t("cruise:routeEditor.geometryFailed")}
+          </span>
         )}
       </div>
 
