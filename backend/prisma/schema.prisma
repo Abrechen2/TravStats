@@ -6450,6 +6450,9 @@ model ExternalServiceTest {
 
   user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, serviceId])
+  // One verdict per (account, service), and one per service for the instance
+  // (NULL user_id, which a plain unique treats as distinct — hence the partial one).
+  @@unique([userId, serviceId])
+  @@unique([serviceId], where: raw("user_id IS NULL"), map: "external_service_tests_instance_service_key")
   @@map("external_service_tests")
 }
