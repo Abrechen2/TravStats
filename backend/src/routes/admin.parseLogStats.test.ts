@@ -6,6 +6,10 @@ const mockParseTrainingLogFindMany =
       args: import("../prisma").Prisma.ParseTrainingLogFindManyArgs
     ) => Promise<Partial<import("../generated/prisma/client").ParseTrainingLog>[]>
   >();
+const mockParseTrainingLogGroupBy =
+  jest.fn<
+    () => Promise<{ airline: string | null; templateHit: boolean; _count: { _all: number } }[]>
+  >();
 const mockParseTrainingLogCount =
   jest.fn<(args: import("../prisma").Prisma.ParseTrainingLogCountArgs) => Promise<number>>();
 
@@ -13,6 +17,7 @@ jest.mock("../db", () => ({
   prisma: {
     parseTrainingLog: {
       findMany: mockParseTrainingLogFindMany,
+      groupBy: mockParseTrainingLogGroupBy,
       count: mockParseTrainingLogCount,
     },
   },
@@ -85,11 +90,14 @@ describe("GET /api/v1/admin/parse-logs/stats", () => {
   });
 
   it("returns aggregate stats grouped by airline", async () => {
-    mockParseTrainingLogCount.mockResolvedValue(3);
+    mockParseTrainingLogGroupBy.mockResolvedValue([
+      { airline: "Lufthansa", templateHit: true, _count: { _all: 1 } },
+      { airline: "Lufthansa", templateHit: false, _count: { _all: 1 } },
+      { airline: "Ryanair", templateHit: true, _count: { _all: 1 } },
+    ]);
     mockParseTrainingLogFindMany.mockResolvedValue([
-      { airline: "Lufthansa", templateHit: true, missingFields: [] },
-      { airline: "Lufthansa", templateHit: false, missingFields: ["seatClass", "price"] },
-      { airline: "Ryanair", templateHit: true, missingFields: ["price"] },
+      { airline: "Lufthansa", missingFields: ["seatClass", "price"] },
+      { airline: "Ryanair", missingFields: ["price"] },
     ]);
 
     const res = await request(app).get("/api/v1/admin/parse-logs/stats");
@@ -104,8 +112,21 @@ describe("GET /api/v1/admin/parse-logs/stats", () => {
     expect(lh.commonMissingFields).toContain("seatClass");
   });
 
+  it("totalLogs counts every row, not the 10,000-row sample (forgejo#385 RULE-26)", async () => {
+    mockParseTrainingLogGroupBy.mockResolvedValue([
+      { airline: "Lufthansa", templateHit: true, _count: { _all: 15000 } },
+      { airline: "Lufthansa", templateHit: false, _count: { _all: 10000 } },
+    ]);
+    mockParseTrainingLogFindMany.mockResolvedValue([]);
+
+    const res = await request(app).get("/api/v1/admin/parse-logs/stats");
+    expect(res.body.totalLogs).toBe(25000);
+    expect(res.body.overallHitRate).toBe(60);
+  });
+
   it("returns overallHitRate of 0 when no logs exist", async () => {
     mockParseTrainingLogCount.mockResolvedValue(0);
+    mockParseTrainingLogGroupBy.mockResolvedValue([]);
     mockParseTrainingLogFindMany.mockResolvedValue([]);
 
     const res = await request(app).get("/api/v1/admin/parse-logs/stats");
@@ -153,5 +174,33 @@ describe("GET /api/v1/admin/parse-logs/export", () => {
     expect(parsed.userId).toBeUndefined();
     expect(parsed.airline).toBe("Lufthansa");
     expect(parsed.id).toBe("abc");
+  });
+
+  it("keeps the newest rows and flags X-Truncated when older ones are cut (forgejo#385 RULE-26)", async () => {
+    const row = (i: number) => ({
+      id: String(i),
+      airline: "Lufthansa",
+      templateUsed: null,
+      templateHit: true,
+      confidence: 90,
+      fieldCount: 8,
+      missingFields: [],
+      parserProvider: "ollama",
+      createdAt: new Date(),
+    });
+    mockParseTrainingLogFindMany.mockResolvedValue(Array.from({ length: 50001 }, (_, i) => row(i)));
+
+    const res = await request(app).get("/api/v1/admin/parse-logs/export");
+    expect(res.headers["x-truncated"]).toBe("true");
+    expect(res.text.trim().split("\n")).toHaveLength(50000);
+    expect(mockParseTrainingLogFindMany.mock.calls.at(-1)?.[0]).toMatchObject({
+      orderBy: { createdAt: "desc" },
+    });
+  });
+
+  it("says X-Truncated false when the export is complete", async () => {
+    mockParseTrainingLogFindMany.mockResolvedValue([]);
+    const res = await request(app).get("/api/v1/admin/parse-logs/export");
+    expect(res.headers["x-truncated"]).toBe("false");
   });
 });
