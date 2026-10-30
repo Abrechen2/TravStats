@@ -13,7 +13,7 @@ this contract changes the server.
 
 | Phase | Side | What | Server endpoints | State |
 |---|---|---|---|---|
-| T1 Day | Companion | one day: track, coverage, stays, unlabelled movement | `GET /travtrack/day?date=`, `GET /travtrack/stays?fromDay=&toDay=` | server ready; app open |
+| T1 Day | Companion | one day: track, coverage, stays, unlabelled movement | `GET /travtrack/day?date=`, `GET /travtrack/stays?fromDay=&toDay=` (+ summary, capabilities) | app built (build 72, feat/track-day @ d02b01a7), device test open |
 | T2 Calendar | Companion | year grid with km per day | `GET /travtrack/calendar?year=` | server ready; app open |
 | T3 Months + explored | Companion | month summaries, explored-area map | `GET /travtrack/months?year=`, `GET /travtrack/explored?bbox=w,s,e,n` | server ready; app open |
 | T4 Export | Companion | GPX / JSON download | `GET /travtrack/export?format=gpx\|json` | server ready; app open |
