@@ -584,10 +584,11 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
       const gone = await shareSnapshot(tx, "cruise", existing.id);
       await tx.cruise.delete({ where: { id: existing.id } });
       await propagateDelete(tx, userId, gone);
+      // The cruise stretched its trip's span; re-derived in the same
+      // transaction, so a failure cannot leave it deleted and the trip stale.
+      await restatusTrips([existing.tripId], tx);
     });
-    // The cruise stretched its trip's span and counted toward badges; both
-    // are re-derived once it is gone (forgejo#385), as rail/bus/ferry do.
-    await restatusTrips([existing.tripId]);
+    // Badges are rechecked after the commit; that check logs and swallows.
     await recheckAchievements(userId, "cruise delete");
     res.status(204).send();
   } catch (err) {

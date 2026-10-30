@@ -181,7 +181,8 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
-    return { processed: 0, created: 0, skipped: 0, failed: 0 };
+    // The whole run failed (settings, candidates or a read): one failure, never a quiet zero.
+    return { processed: 0, created: 0, skipped: 0, failed: 1 };
   }
 }
 

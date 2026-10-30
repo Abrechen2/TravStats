@@ -28,10 +28,11 @@ export async function deleteFlightHandler(
       const gone = await shareSnapshot(tx, "flight", id);
       await tx.flight.delete({ where: { id, userId } });
       await propagateDelete(tx, userId, gone);
+      // The flight stretched its trip's span; re-derived in the same
+      // transaction, so a failure cannot leave it deleted and the trip stale.
+      await restatusTrips([existingFlight.tripId], tx);
     });
-    // The flight stretched its trip's span and counted toward badges; both
-    // are re-derived once it is gone (forgejo#385), as rail/bus/ferry do.
-    await restatusTrips([existingFlight.tripId]);
+    // Badges are rechecked after the commit; that check logs and swallows.
     await recheckAchievements(userId, "flight delete");
     res.status(204).send();
   } catch (error) {

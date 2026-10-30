@@ -168,6 +168,16 @@ describe("processUserHistoricalEnrichment auto-apply branch", () => {
     });
   });
 
+  it("counts a whole-run failure as failed, not as an empty success (forgejo#385)", async () => {
+    mockGetUserEnrichmentSettings.mockRejectedValueOnce(new Error("db down"));
+    expect(await processUserHistoricalEnrichment(USER_ID)).toEqual({
+      processed: 0,
+      created: 0,
+      skipped: 0,
+      failed: 1,
+    });
+  });
+
   it("limits the batch before loading and skips missing or unnumbered flights", async () => {
     mockGetUserEnrichmentSettings.mockResolvedValue({
       enabled: true,
