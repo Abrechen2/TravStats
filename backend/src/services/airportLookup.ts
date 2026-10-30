@@ -516,12 +516,16 @@ export async function findNearestAirport(
 ): Promise<AirportData | null> {
   // Get all airports within rough bounding box (performance optimization)
   const latRange = maxDistance / 111; // ~111km per degree latitude
-  // Near a pole a degree of longitude shrinks to nothing, so the range would
-  // blow up past the whole globe: keep it a valid longitude span.
-  const lonRange = Math.min(
-    180,
-    maxDistance / (111 * Math.max(Math.cos((lat * Math.PI) / 180), 0.01))
-  );
+  // A degree of longitude shrinks towards a pole. Widen by the cosine of the
+  // window's highest latitude (a window at lat 89 still spans ~1.7 degrees of
+  // latitude); once the window reaches a pole every longitude is in range, so
+  // the longitude filter is dropped rather than capped (a capped range would
+  // exclude airports at a distant longitude).
+  const edgeLat = Math.min(89.999, Math.abs(lat) + latRange);
+  const reachesPole = Math.abs(lat) + latRange >= 90;
+  const lonRange = maxDistance / (111 * Math.cos((edgeLat * Math.PI) / 180));
+  const lonWindow =
+    reachesPole || lonRange >= 180 ? {} : { lon: { gte: lon - lonRange, lte: lon + lonRange } };
 
   const airports = await prisma.airport.findMany({
     where: {
@@ -530,10 +534,7 @@ export async function findNearestAirport(
         gte: lat - latRange,
         lte: lat + latRange,
       },
-      lon: {
-        gte: lon - lonRange,
-        lte: lon + lonRange,
-      },
+      ...lonWindow,
     },
   });
 

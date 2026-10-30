@@ -46,11 +46,12 @@ describe("GET /airports/coords/nearest validates and bounds its query", () => {
     expect(res.status).toBe(400);
   });
 
-  it("does not scan the catalogue unbounded near the pole", async () => {
+  it("drops the longitude filter at a pole instead of an unbounded or truncated range", async () => {
     const spy = jest.spyOn(prisma.airport, "findMany");
-    await get("lat=89.99&lon=0&maxDistance=500");
-    const where = spy.mock.calls[0][0]!.where as { lon: { gte: number; lte: number } };
-    expect(where.lon.lte - where.lon.gte).toBeLessThanOrEqual(360);
+    await get("lat=89.99&lon=100&maxDistance=500");
+    const where = spy.mock.calls[0][0]!.where as { lat: { gte: number }; lon?: unknown };
+    expect(where.lon).toBeUndefined();
+    expect(where.lat.gte).toBeGreaterThan(80);
     spy.mockRestore();
   });
 
