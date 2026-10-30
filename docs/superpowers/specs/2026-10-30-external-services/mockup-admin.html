@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Administration – Externe Dienste</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;700&amp;family=IBM+Plex+Mono:wght@500&amp;family=Newsreader:opsz,wght@6..72,500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0b0d10}
+a{color:#f0a947}a:hover{color:#f6bd66}
+input:focus,button:focus-visible{outline:2px solid #f0a947;outline-offset:2px}
+</style>
+</helmet>
+<div style="font-family: 'Hanken Grotesk', system-ui, sans-serif; color: #e7e3dc; background: #0b0d10; min-height: 100vh">
+  <div style="max-width: 1180px; margin: 0 auto; padding: 32px 24px 96px; display: flex; flex-direction: column; gap: 24px">
+
+    <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 6px; min-width: 280px; flex: 1 1 480px">
+        <div style="font-size: 13px; color: rgba(231,227,220,0.6)">Administration › Externe Dienste</div>
+        <h1 style="margin: 0; font-family: 'Newsreader', Georgia, serif; font-size: 36px; font-weight: 500; color: #f4ece0">Externe Dienste</h1>
+        <p style="margin: 0; font-size: 15px; color: rgba(231,227,220,0.68); max-width: 720px; line-height: 1.5">Alles, was TravStats nicht selbst macht: Flugdaten, Karten, Fotos, KI, Sync und Mail. Hier legst du fest, was die Instanz nutzt und was Konten selbst einrichten dürfen. Neue Dienste sind aus, bis du sie einschaltest.</p>
+      </div>
+      <div role="group" aria-label="Ansicht" style="display: flex; background: #101317; border-radius: 10px; padding: 4px; gap: 4px">
+        <button type="button" onClick="{{setStandard}}" style="{{standardBtnStyle}}">Standard</button>
+        <button type="button" onClick="{{setExpert}}" style="{{expertBtnStyle}}">Experte</button>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px">
+      <div style="background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px">
+        <div style="font-size: 13px; color: rgba(231,227,220,0.6)">Aktiv</div>
+        <div style="font-size: 28px; font-weight: 700; color: #5ec2b2">{{counts.on}}</div>
+      </div>
+      <div style="background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px">
+        <div style="font-size: 13px; color: rgba(231,227,220,0.6)">Braucht Aufmerksamkeit</div>
+        <div style="font-size: 28px; font-weight: 700; color: #d8952f">{{counts.attention}}</div>
+      </div>
+      <div style="background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px">
+        <div style="font-size: 13px; color: rgba(231,227,220,0.6)">Aus</div>
+        <div style="font-size: 28px; font-weight: 700; color: rgba(231,227,220,0.6)">{{counts.off}}</div>
+      </div>
+    </div>
+
+    <div style="background: rgba(94,194,178,0.08); border: 1px solid rgba(94,194,178,0.3); border-radius: 16px; padding: 16px 18px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between">
+      <div style="display: flex; flex-direction: column; gap: 4px; flex: 1 1 420px">
+        <div style="font-size: 16px; font-weight: 700; color: #f4ece0">Bestes Erlebnis, ohne zu bezahlen</div>
+        <div style="font-size: 14px; color: rgba(231,227,220,0.75); line-height: 1.5">{{recSummary}}</div>
+      </div>
+      <button type="button" onClick="{{showRec}}" style="height: 40px; padding: 0 16px; border-radius: 12px; border: 1px solid #5ec2b2; background: transparent; color: #5ec2b2; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer">Empfohlene zeigen</button>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center">
+      <label for="svc-search" style="position: absolute; left: -9999px">Dienst suchen</label>
+      <input id="svc-search" type="search" placeholder="Dienst suchen …" onInput="{{onSearch}}" style="flex: 1 1 280px; min-width: 0; height: 44px; box-sizing: border-box; padding: 0 14px; border: 1px solid rgba(231,227,220,0.18); border-radius: 10px; font: inherit; font-size: 15px; background: #14181d; color: #e7e3dc">
+      <div role="group" aria-label="Filter" style="display: flex; flex-wrap: wrap; gap: 8px">
+        <sc-for list="{{filters}}" as="f" hint-placeholder-count="4">
+          <button type="button" onClick="{{f.pick}}" style="{{f.style}}">{{f.label}}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <sc-for list="{{categories}}" as="cat" hint-placeholder-count="5">
+      <section style="display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 8px 4px 0">
+          <h2 style="margin: 0; font-size: 19px; font-weight: 700">{{cat.name}}</h2>
+          <span style="font-size: 13px; color: rgba(231,227,220,0.6)">{{cat.summary}}</span>
+        </div>
+        <div style="background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 16px; overflow: hidden">
+          <sc-for list="{{cat.items}}" as="s" hint-placeholder-count="3">
+            <div style="border-top: 1px solid rgba(231,227,220,0.08)">
+              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 14px 18px">
+                <div aria-hidden="true" style="width: 40px; height: 40px; flex: none; border-radius: 10px; background: #1a1f26; color: #e7e3dc; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 500">{{s.initials}}</div>
+                <div style="flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+                  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+                    <span style="font-size: 16px; font-weight: 700">{{s.name}}</span>
+                    <span style="font-size: 12px; padding: 2px 8px; border-radius: 999px; background: rgba(231,227,220,0.08); color: rgba(231,227,220,0.75); border: 1px solid rgba(231,227,220,0.12)">{{s.level}}</span>
+                    <sc-if value="{{s.isRec}}" hint-placeholder-val="{{false}}">
+                      <span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: rgba(94,194,178,0.15); color: #5ec2b2; border: 1px solid rgba(94,194,178,0.35)">{{s.recLabel}}</span>
+                    </sc-if>
+                    <sc-if value="{{s.isCloudAi}}" hint-placeholder-val="{{false}}">
+                      <span style="font-size: 12px; padding: 2px 8px; border-radius: 999px; background: rgba(240,169,71,0.14); color: #f0a947; border: 1px solid rgba(240,169,71,0.35)">Daten verlassen den Server</span>
+                    </sc-if>
+                  </div>
+                  <div style="font-size: 14px; color: rgba(231,227,220,0.68)">{{s.purpose}}</div>
+                  <div style="font-size: 12px; color: rgba(231,227,220,0.6)">{{s.testLine}}</div>
+                  <sc-if value="{{s.hasBudget}}" hint-placeholder-val="{{false}}">
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 6px; max-width: 420px">
+                      <div style="height: 6px; background: rgba(231,227,220,0.12); border-radius: 999px; overflow: hidden"><div style="{{s.budget.bar}}"></div></div>
+                      <div style="font-size: 12px; color: rgba(231,227,220,0.75)">{{s.budget.text}}</div>
+                    </div>
+                  </sc-if>
+                </div>
+                <span style="{{s.pillStyle}}">{{s.statusLabel}}</span>
+                <div style="display: flex; gap: 6px; align-items: center">
+                  <button type="button" onClick="{{s.test}}" style="height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid rgba(231,227,220,0.18); background: #14181d; font: inherit; font-size: 14px; color: #e7e3dc; cursor: pointer">Testen</button>
+                  <button type="button" aria-label="Info zu {{s.name}}" onClick="{{s.info}}" style="width: 36px; height: 36px; border-radius: 8px; border: 1px solid rgba(231,227,220,0.18); background: #14181d; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #f0a947">
+                    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6"></path><path d="M12 7.5v.01"></path></svg>
+                  </button>
+                  <button type="button" aria-label="{{s.toggleLabel}}" onClick="{{s.toggle}}" style="width: 36px; height: 36px; border-radius: 8px; border: 1px solid rgba(231,227,220,0.18); background: #14181d; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #e7e3dc">
+                    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="{{s.chevronStyle}}"><path d="M6 9l6 6 6-6"></path></svg>
+                  </button>
+                </div>
+              </div>
+              <sc-if value="{{s.isOpen}}" hint-placeholder-val="{{false}}">
+                <div style="padding: 4px 18px 18px 72px; display: flex; flex-direction: column; gap: 14px">
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px">
+                    <sc-for list="{{s.fields}}" as="fld" hint-placeholder-count="1">
+                      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: rgba(231,227,220,0.75)">{{fld.label}}
+                        <input type="{{fld.type}}" defaultValue="{{fld.value}}" placeholder="{{fld.placeholder}}" style="height: 40px; box-sizing: border-box; padding: 0 12px; border: 1px solid rgba(231,227,220,0.18); border-radius: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; background: #101317; color: #e7e3dc">
+                      </label>
+                    </sc-for>
+                  </div>
+                  <sc-if value="{{s.advancedHidden}}" hint-placeholder-val="{{false}}">
+                    <div style="font-size: 13px; color: rgba(231,227,220,0.68)">Adressen und Endpunkte stellst du in der Ansicht „Experte“ ein.</div>
+                  </sc-if>
+                  <sc-if value="{{s.hasKeyToggle}}" hint-placeholder-val="{{false}}">
+                    <button type="button" onClick="{{s.flipKeys}}" style="align-self: flex-start; display: flex; gap: 10px; align-items: center; height: 40px; padding: 0 14px; border-radius: 12px; border: 1px solid rgba(231,227,220,0.18); background: transparent; color: #e7e3dc; font: inherit; font-size: 14px; cursor: pointer"><span style="{{s.keyDot}}"></span>{{s.keyToggleLabel}}</button>
+                  </sc-if>
+                  <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
+                    <sc-if value="{{s.isCloudAi}}" hint-placeholder-val="{{false}}">
+                      <button type="button" onClick="{{s.askConsent}}" style="height: 40px; padding: 0 16px; border-radius: 12px; border: none; background: #f0a947; color: #0b0d10; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer">{{s.consentButton}}</button>
+                    </sc-if>
+                    <sc-if value="{{s.isPlain}}" hint-placeholder-val="{{true}}">
+                      <button type="button" onClick="{{s.flip}}" style="height: 40px; padding: 0 16px; border-radius: 12px; border: none; background: #f0a947; color: #0b0d10; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer">{{s.flipLabel}}</button>
+                    </sc-if>
+                    <button type="button" onClick="{{s.test}}" style="height: 40px; padding: 0 16px; border-radius: 12px; border: 1px solid rgba(231,227,220,0.18); background: transparent; color: #e7e3dc; font: inherit; font-size: 14px; cursor: pointer">Speichern &amp; testen</button>
+                    <span style="font-size: 13px; color: rgba(231,227,220,0.75)">{{s.source}}</span>
+                  </div>
+                  <sc-if value="{{expert}}" hint-placeholder-val="{{false}}">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; background: #101317; border: 1px dashed rgba(231,227,220,0.18); border-radius: 10px; padding: 12px 14px; font-size: 13px; color: rgba(231,227,220,0.75)">
+                      <div><strong style="font-weight: 700">Reihenfolge</strong><br>{{s.order}}</div>
+                      <div><strong style="font-weight: 700">Kontingent</strong><br>{{s.quota}}</div>
+                      <div><strong style="font-weight: 700">Server-Variable (ENV)</strong><br>wird nur genutzt, wenn weder Konto noch Instanz einen Schlüssel haben</div>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </sc-for>
+
+    <section style="display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; flex-direction: column; gap: 2px; padding: 8px 4px 0">
+        <h2 style="margin: 0; font-size: 19px; font-weight: 700">Was Konten selbst verbinden dürfen</h2>
+        <span style="font-size: 14px; color: rgba(231,227,220,0.68)">Diese Dienste richtet jedes Konto unter Einstellungen › Dienste mit eigenen Zugangsdaten ein. Du legst nur fest, ob das erlaubt ist.</span>
+      </div>
+      <div style="background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 16px; overflow: hidden">
+        <sc-for list="{{connAllow}}" as="c" hint-placeholder-count="4">
+          <div style="border-top: 1px solid rgba(231,227,220,0.08); display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 14px 18px">
+            <span style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 16px; font-weight: 700">{{c.name}}</span><span style="font-size: 14px; color: rgba(231,227,220,0.68)">{{c.purpose}}</span><span style="font-size: 12px; color: rgba(231,227,220,0.6)">{{c.usage}}</span></span>
+            <button type="button" onClick="{{c.flip}}" style="display: flex; gap: 10px; align-items: center; height: 40px; padding: 0 14px; border-radius: 12px; border: 1px solid rgba(231,227,220,0.18); background: transparent; color: #e7e3dc; font: inherit; font-size: 14px; cursor: pointer"><span style="{{c.dot}}"></span>{{c.label}}</button>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <sc-if value="{{noResults}}" hint-placeholder-val="{{false}}">
+      <div style="background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 14px; padding: 32px; text-align: center; color: rgba(231,227,220,0.68)">Kein Dienst passt zu Suche und Filter.</div>
+    </sc-if>
+
+    <sc-if value="{{hiddenExpertCount}}" hint-placeholder-val="{{true}}">
+      <div style="font-size: 13px; color: rgba(231,227,220,0.6); text-align: center">{{hiddenExpertText}}</div>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{infoOpen}}" hint-placeholder-val="{{false}}">
+    <div style="position: fixed; inset: 0; background: rgba(7,9,12,0.6); display: flex; justify-content: flex-end; z-index: 20">
+      <div role="dialog" aria-modal="true" aria-label="Info zu {{info.name}}" style="width: 440px; max-width: 100%; height: 100%; background: #14181d; box-sizing: border-box; padding: 28px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px">
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <div style="font-size: 13px; color: rgba(231,227,220,0.6)">{{info.level}}</div>
+            <h2 style="margin: 0; font-size: 22px; font-weight: 700">{{info.name}}</h2>
+          </div>
+          <button type="button" aria-label="Schließen" onClick="{{closeInfo}}" style="width: 40px; height: 40px; border-radius: 8px; border: 1px solid rgba(231,227,220,0.18); background: #14181d; cursor: pointer; font: inherit; font-size: 18px; color: #e7e3dc">×</button>
+        </div>
+        <sc-for list="{{info.rows}}" as="r" hint-placeholder-count="5">
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: rgba(231,227,220,0.6)">{{r.k}}</div>
+            <div style="font-size: 15px; line-height: 1.5; color: #e7e3dc">{{r.v}}</div>
+          </div>
+        </sc-for>
+        <a href="{{info.link}}" style="font-size: 15px; font-weight: 500">{{info.linkLabel}} ↗</a>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{consentOpen}}" hint-placeholder-val="{{false}}">
+    <div style="position: fixed; inset: 0; background: rgba(7,9,12,0.7); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 30">
+      <div role="dialog" aria-modal="true" aria-label="Datenfreigabe bestätigen" style="width: 560px; max-width: 100%; background: #14181d; border-radius: 16px; padding: 28px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px">
+        <h2 style="margin: 0; font-size: 22px; font-weight: 700">{{consent.title}}</h2>
+        <p style="margin: 0; font-size: 15px; line-height: 1.5; color: rgba(231,227,220,0.75)">Wenn der lokale Parser nichts findet, schickt TravStats den Text eines Imports an diesen Anbieter. Erst lesen, dann bestätigen.</p>
+        <div style="display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 8px 14px; font-size: 14px; line-height: 1.45">
+          <div style="color: rgba(231,227,220,0.6)">Was rausgeht</div><div>Text aus E-Mails und PDFs, höchstens 12.000 Zeichen pro Import. Keine Fotos, keine Passwörter, keine anderen Einträge.</div>
+          <div style="color: rgba(231,227,220,0.6)">Wohin</div><div>{{consent.where}}</div>
+          <div style="color: rgba(231,227,220,0.6)">Wann</div><div>Nur beim Import, nur wenn der lokale Parser keine Antwort hat.</div>
+          <div style="color: rgba(231,227,220,0.6)">Wer entscheidet</div><div>Du erlaubst den Anbieter für die Instanz. Jedes Konto bestätigt die Freigabe vor seinem ersten Import selbst.</div>
+          <div style="color: rgba(231,227,220,0.6)">Kosten</div><div>{{consent.cost}}</div>
+        </div>
+        <label style="display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.45; cursor: pointer">
+          <input type="checkbox" checked="{{consentChecked}}" onChange="{{toggleConsentCheck}}" style="width: 20px; height: 20px; margin: 1px 0 0; flex: none">
+          <span>Ich habe verstanden, welche Daten an {{consent.name}} gehen, und erlaube den Anbieter für diese Instanz.</span>
+        </label>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap">
+          <button type="button" onClick="{{closeConsent}}" style="height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid rgba(231,227,220,0.18); background: #14181d; font: inherit; font-size: 15px; color: #e7e3dc; cursor: pointer">Abbrechen</button>
+          <button type="button" onClick="{{confirmConsent}}" disabled="{{consentDisabled}}" style="{{confirmStyle}}">Freigeben</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { expert: false, filter: 'all', q: '', open: 'aeroapi', info: null, consent: null, consentChecked: false, enabled: { openai: true }, tested: {}, allowKeys: {}, allowConn: { dawarich: true, immich: true, webdav: true, strava: true } };
+  }
+  data() {
+    return [
+      { cat: 'Flugdaten', id: 'airlabs', rec: 'gratis', name: 'AirLabs', initials: 'AL', level: 'Instanz + Konto', status: 'on', purpose: 'Flugstatus und Flugnummer-Suche', test: 'Test ✓ heute 12:14', fields: [{ label: 'API-Schlüssel', value: '•••••••• 9c2e' }], source: 'Instanz-Schlüssel hinterlegt · gilt für Konten ohne eigenen', order: 'Konto → Instanz → Server-ENV', quota: '1.000 Anfragen / Monat frei', userKeys: 'erlaubt',
+        info: { why: 'Liefert Abflug, Ankunft, Flugzeug und Status, wenn du eine Flugnummer einträgst oder ein Flug aktualisiert wird.', cost: 'Kostenloser Tarif reicht für private Logbücher; größere Tarife kosten monatlich.', quota: '1.000 Anfragen pro Monat im kostenlosen Tarif.', data: 'Flugnummer und Datum. Keine Namen, keine Buchungsdaten.', link: 'https://airlabs.co/', linkLabel: 'Schlüssel bei AirLabs holen' } },
+      { cat: 'Flugdaten', id: 'aviationstack', name: 'Aviationstack', initials: 'AS', level: 'Instanz + Konto', status: 'on', purpose: 'Flugsuche als zweite Quelle', test: 'Test ✓ heute 12:14', fields: [{ label: 'API-Schlüssel', value: '•••••••• 41af' }], source: 'Instanz-Schlüssel hinterlegt · gilt für Konten ohne eigenen', order: 'Konto → Instanz → Server-ENV', quota: '[Freikontingent laut Anbieter]', userKeys: 'erlaubt',
+        info: { why: 'Springt ein, wenn AirLabs einen Flug nicht kennt.', cost: 'Kostenloser Einstiegstarif, darüber monatlich.', quota: '[Freikontingent laut Anbieter]', data: 'Flugnummer und Datum.', link: 'https://aviationstack.com/', linkLabel: 'Schlüssel bei Aviationstack holen' } },
+      { cat: 'Flugdaten', id: 'aerodatabox', rec: 'gratis', name: 'AeroDataBox', initials: 'AD', level: 'Instanz + Konto', status: 'on', purpose: 'Flüge bis ein Jahr zurück', test: 'Test ✓ heute 12:14', fields: [{ label: 'RapidAPI-Schlüssel', value: '•••••••• 7d10' }], source: 'Instanz-Schlüssel hinterlegt · gilt für Konten ohne eigenen', order: 'Konto → Instanz → Server-ENV', quota: '600 Einheiten / Monat frei · Stand laut RapidAPI', userKeys: 'erlaubt',
+        info: { why: 'Findet vergangene Flüge, die die Live-Anbieter nicht mehr kennen.', cost: 'Über RapidAPI; kostenloser Basistarif.', quota: '600 Einheiten pro Monat im Basistarif; TravStats liest den Stand mit.', data: 'Flugnummer und Datum.', link: 'https://rapidapi.com/aedbx-aedbx/api/aerodatabox', linkLabel: 'AeroDataBox bei RapidAPI' } },
+      { cat: 'Flugdaten', id: 'aeroapi', rec: 'guthaben', name: 'FlightAware AeroAPI', initials: 'FA', level: 'Instanz', status: 'on', budget: { spent: '0,00 $', limit: '10 $', month: 'Oktober', pct: 0, calls: 0 }, purpose: 'Status, Verspätung, Gate; optional echte Flugspuren', test: 'Test ✓ heute 12:20', fields: [{ label: 'API-Schlüssel', value: '•••••••• e801' }, { label: 'Tarif', value: 'Personal mit Feeder-Guthaben' }, { label: 'Monatslimit in $', value: '10' }, { label: 'Flugspuren nach Landung', value: 'aus' }], source: 'Wirksam: Instanz-Schlüssel · Budgetsperre aktiv', order: 'Instanz → Server-ENV', quota: '10 $ / Monat · stoppt vor dem Limit', userKeys: 'nein – das Budget gilt nur für den Instanz-Schlüssel', noUserKeys: true,
+        info: { why: 'Genaue Zeiten, Verspätungen, Gates und Annullierungen deiner Flüge; auf Wunsch die echte Flugspur nach der Landung.', cost: 'Bezahlt pro Abfrage. Personal-Tarif 5 $ Guthaben im Monat, mit eigenem ADS-B-Empfänger (Feeder) 10 $.', quota: 'TravStats hält das Monatsbudget ein und stoppt vorher.', data: 'Flugnummer, Datum, Flughäfen.', link: 'https://www.flightaware.com/aeroapi/', linkLabel: 'AeroAPI bei FlightAware' } },
+      { cat: 'Flugdaten', id: 'opensky', rec: 'gratis', name: 'OpenSky Network', initials: 'OS', level: 'Instanz + Konto', status: 'on', purpose: 'ADS-B-Daten: Flugzeug und Strecke', test: 'Test ✓ heute 12:14', fields: [{ label: 'Client-ID', value: 'dein-client' }, { label: 'Client-Secret', value: '•••••••• 0b3c' }], source: 'Instanz-Zugang hinterlegt · gilt für Konten ohne eigenen', order: 'Konto → Instanz → Server-ENV', quota: 'nur Ratenlimit; Feeder höher', userKeys: 'erlaubt',
+        info: { why: 'Erkennt Flugzeug und geflogene Strecke aus offenen ADS-B-Daten.', cost: 'Kostenlos.', quota: 'Ratenlimit pro Tag; wer selbst Daten einspeist, bekommt mehr.', data: 'Flugnummer bzw. Kennung des Flugzeugs und Zeitraum.', link: 'https://opensky-network.org/', linkLabel: 'Zugang bei OpenSky anlegen' } },
+      { cat: 'Flugdaten', id: 'adsblol', rec: 'gratis', name: 'adsb.lol', initials: 'AL', level: 'Instanz + Konto', status: 'on', purpose: 'Flugzeug eines Flugs, der gerade in der Luft ist', test: 'Test ✓ heute 12:14', fields: [{ label: 'Schlüssel (optional)', value: '•••••••• 5a77' }], source: 'Instanz-Schlüssel hinterlegt · gilt für Konten ohne eigenen', order: 'Konto → Instanz-Schalter', quota: 'höflich: ≤ 1 Anfrage / Sekunde', userKeys: 'erlaubt',
+        info: { why: 'Ergänzt Kennzeichen und Flugzeugtyp, solange der Flug fliegt.', cost: 'Kostenlos, Gemeinschaftsdienst.', quota: 'Kein festes Kontingent; TravStats fragt höchstens einmal pro Sekunde.', data: 'Flugnummer oder Kennung, nur für heutige Flüge.', link: 'https://api.adsb.lol/', linkLabel: 'adsb.lol' } },
+      { cat: 'Flugdaten', id: 'adsbx', name: 'ADS-B Exchange', initials: 'AX', level: 'Instanz', status: 'missing', purpose: 'Live-Flugzeugdaten über RapidAPI', test: 'Noch nie getestet', fields: [{ label: 'RapidAPI-Schlüssel', value: '' }], source: 'Kein Schlüssel – bleibt aus', order: 'Instanz → Server-ENV', quota: 'laut RapidAPI-Tarif', userKeys: 'nicht freigegeben',
+        info: { why: 'Zweite Live-Quelle neben adsb.lol, nur für Flüge in der Luft.', cost: 'Kostenpflichtiger RapidAPI-Tarif. Eine Feeder-UUID ist kein API-Schlüssel.', quota: 'Laut gebuchtem Tarif.', data: 'Flugnummer oder Kennung, nur für heutige Flüge.', link: 'https://rapidapi.com/adsbx/api/adsbexchange-com1', linkLabel: 'ADS-B Exchange bei RapidAPI' } },
+
+      { cat: 'Karten, Routen & Orte', id: 'ors', rec: 'gratis', name: 'OpenRouteService', initials: 'OR', level: 'Instanz + Konto', status: 'on', purpose: 'Straßenrouten für Roadtrips und Touren', test: 'Test ✓ heute 12:14', fields: [{ label: 'API-Schlüssel', value: '•••••••• 2219' }], source: 'Instanz-Schlüssel hinterlegt · gilt für Konten ohne eigenen', order: 'Konto → Instanz → Server-ENV', quota: '2.000 Anfragen / Tag frei', userKeys: 'erlaubt',
+        info: { why: 'Berechnet die gefahrene Strecke zwischen Stationen.', cost: 'Kostenlos bis zum Tageskontingent.', quota: '2.000 Anfragen pro Tag.', data: 'Koordinaten der Stationen.', link: 'https://openrouteservice.org/dev/#/signup', linkLabel: 'Schlüssel bei OpenRouteService' } },
+      { cat: 'Karten, Routen & Orte', id: 'graphhopper', name: 'GraphHopper', initials: 'GH', level: 'Instanz + Konto', status: 'off', purpose: 'Alternative für Straßenrouten', test: 'Aus', fields: [{ label: 'API-Schlüssel', value: '' }], source: 'Aus · Routing nutzt OpenRouteService', order: 'Routing-Anbieter wählt die Instanz', quota: '500 Anfragen / Tag frei', userKeys: 'erlaubt',
+        info: { why: 'Ersatz, falls OpenRouteService nicht passt.', cost: 'Kostenlos bis zum Tageskontingent.', quota: '500 Anfragen pro Tag.', data: 'Koordinaten der Stationen.', link: 'https://www.graphhopper.com/', linkLabel: 'Schlüssel bei GraphHopper' } },
+      { cat: 'Karten, Routen & Orte', id: 'rail', rec: 'gratis', name: 'Bahn-Fahrpläne', initials: 'DB', level: 'Instanz', status: 'on', purpose: 'Transitous und db-rest für Zugfahrten', test: 'Test ✓ gestern', fields: [{ label: 'Transitous', value: 'an' }, { label: 'db-rest', value: 'an' }], source: 'Ohne Schlüssel', order: 'Transitous → db-rest', quota: 'db-rest: ~100 Anfragen / Minute, geteilt', userKeys: '–',
+        info: { why: 'Findet Zugverbindungen und Linienverläufe beim Eintragen einer Bahnfahrt.', cost: 'Kostenlos, Gemeinschaftsdienste.', quota: 'db-rest teilt sich etwa 100 Anfragen pro Minute mit allen Nutzern.', data: 'Bahnhöfe und Abfahrtszeit.', link: 'https://transitous.org/', linkLabel: 'Transitous' } },
+      { cat: 'Karten, Routen & Orte', id: 'google', name: 'Google Places', initials: 'GP', level: 'Instanz', status: 'on', purpose: 'Letzte Stufe der Ortssuche, Maps-Takeout', test: 'Test ✓ 28.10.', fields: [{ label: 'API-Schlüssel', value: '•••••••• 66c1' }], source: 'Wirksam: Instanz-Schlüssel', order: 'Photon → Nominatim → Google', quota: 'kostenpflichtig pro Anfrage', userKeys: 'nicht vorgesehen',
+        info: { why: 'Findet Orte, die die offenen Geocoder nicht kennen, und löst Google-Maps-Exporte auf.', cost: 'Kostenpflichtig pro Anfrage nach Google-Preisliste; Google gewährt ein monatliches Guthaben.', quota: 'Laut Google-Cloud-Konto.', data: 'Suchtext bzw. Ortskennung.', link: 'https://console.cloud.google.com/', linkLabel: 'Schlüssel in der Google Cloud Console' } },
+      { cat: 'Karten, Routen & Orte', id: 'geocoder', rec: 'gratis', name: 'Photon & Nominatim', initials: 'GE', level: 'Instanz', status: 'on', purpose: 'Ortssuche und Adressen (OpenStreetMap)', test: 'Test ✓ heute', expertOnly: true, fields: [{ label: 'Photon-URL', value: 'https://photon.komoot.io' }, { label: 'Nominatim-URL', value: 'https://nominatim.openstreetmap.org' }], source: 'Öffentliche Server', order: 'Photon → Nominatim → Google', quota: 'Nutzungsregeln von OSM', userKeys: '–',
+        info: { why: 'Sucht Orte und benennt Koordinaten.', cost: 'Kostenlos; eigener Server möglich.', quota: 'Nominatim: höchstens 1 Anfrage pro Sekunde.', data: 'Suchtext oder Koordinaten.', link: 'https://operations.osmfoundation.org/policies/nominatim/', linkLabel: 'Nutzungsregeln Nominatim' } },
+      { cat: 'Karten, Routen & Orte', id: 'osrm', name: 'Eigene Routing-Server', initials: 'SR', level: 'Instanz', status: 'on', purpose: 'OSRM und OpenRailRouting selbst gehostet', test: 'Test ✓ heute', expertOnly: true, fields: [{ label: 'OSRM-URL', value: '' }, { label: 'OpenRailRouting-URL', value: 'http://[RAIL-HOST]:8989' }], source: 'Selbst gehostet', order: 'vor den Cloud-Anbietern', quota: 'eigener Server', userKeys: '–',
+        info: { why: 'Routen ohne fremden Dienst, z. B. Bahnlinien aus eigenem OpenRailRouting.', cost: 'Eigene Hardware.', quota: 'Keins.', data: 'Bleibt in deinem Netz.', link: 'https://github.com/geofabrik/OpenRailRouting', linkLabel: 'OpenRailRouting' } },
+
+      { cat: 'Fotos, Standort & Sport', id: 'immich', rec: 'gratis', name: 'Immich', initials: 'IM', level: 'Instanz + Konto', status: 'on', purpose: 'Fotoalben an Reisen hängen, Foto-Reise-Scan', test: 'Test ✓ heute', fields: [{ label: 'Server-URL', value: 'https://[IMMICH-HOST]' }, { label: 'API-Schlüssel', value: '•••••••• a0f4' }], source: 'Instanz-Verbindung für den nächtlichen Foto-Scan · Konten verbinden ihr eigenes Immich', order: 'Konto → Instanz → Server-ENV', quota: 'eigener Server', userKeys: 'erlaubt',
+        info: { why: 'Zeigt Alben aus deinem Immich in Reisen oder importiert die Bilder.', cost: 'Kostenlos, selbst gehostet.', quota: 'Keins.', data: 'Bleibt zwischen TravStats und deinem Immich.', link: 'https://immich.app/docs/features/command-line-interface#obtain-the-api-key', linkLabel: 'API-Schlüssel in Immich anlegen' } },
+      { cat: 'Fotos, Standort & Sport', id: 'strava', name: 'Strava', initials: 'ST', level: 'Instanz + Konto', status: 'on', purpose: 'Aktivitäten als Touren importieren', test: '2 Konten verbunden', fields: [{ label: 'Client-ID', value: '128455' }, { label: 'Client-Secret', value: '•••••••• 3e1d' }], source: 'Instanz stellt die Strava-App; jedes Konto verbindet sich selbst', order: 'OAuth pro Konto', quota: 'Strava-Ratenlimits pro App', userKeys: '–',
+        info: { why: 'Holt Wanderungen und Radtouren als Touren.', cost: 'Kostenlos.', quota: 'Strava begrenzt Anfragen pro 15 Minuten und pro Tag für die ganze App.', data: 'Strava schickt Aktivitäten an TravStats, nicht umgekehrt.', link: 'https://www.strava.com/settings/api', linkLabel: 'Strava-App anlegen' } },
+
+      { cat: 'KI', id: 'ollama', rec: 'gratis', name: 'Ollama (lokal)', initials: 'OL', level: 'Instanz', status: 'on', purpose: 'Liest Buchungen aus E-Mails und PDFs – im eigenen Netz', test: 'Test ✓ heute · gemma3:12b', fields: [{ label: 'Server-URL', value: 'http://[OLLAMA-HOST]:11434' }, { label: 'Modell', value: 'gemma3:12b' }], source: 'Erste Wahl, Daten bleiben im Netz', order: 'Ollama → Cloud-Anbieter (nur mit Freigabe)', quota: 'eigene Hardware', userKeys: '–',
+        info: { why: 'Versteht Buchungsbestätigungen, die keine Vorlage kennt.', cost: 'Kostenlos, eigene Hardware.', quota: 'Keins.', data: 'Bleibt in deinem Netz.', link: 'https://ollama.com/', linkLabel: 'Ollama' } },
+      { cat: 'KI', id: 'openai', name: 'OpenAI', initials: 'AI', level: 'Instanz', status: 'off', cloudAi: true, where: 'OpenAI, api.openai.com (USA)', cost: 'Bezahlt pro Token über deinen OpenAI-Account.', purpose: 'Cloud-Parser, wenn Ollama nichts findet', test: 'Freigegeben 28.10. · 3 Konten haben zugestimmt', fields: [{ label: 'API-Schlüssel', value: '•••••••• 19bb' }], source: 'Freigegeben', order: 'nach Ollama', quota: 'Kosten pro Token', userKeys: 'nicht vorgesehen',
+        info: { why: 'Zweite Chance für Buchungen, die der lokale Parser nicht versteht.', cost: 'Bezahlt pro Token.', quota: 'Laut OpenAI-Account.', data: 'Text des Imports, bis 12.000 Zeichen. Nur nach Freigabe.', link: 'https://platform.openai.com/api-keys', linkLabel: 'Schlüssel bei OpenAI' } },
+      { cat: 'KI', id: 'anthropic', name: 'Anthropic Claude', initials: 'AN', level: 'Instanz', status: 'off', cloudAi: true, where: 'Anthropic, api.anthropic.com (USA)', cost: 'Bezahlt pro Token über deinen Anthropic-Account.', purpose: 'Cloud-Parser, wenn Ollama nichts findet', test: 'Aus · kein Schlüssel', fields: [{ label: 'API-Schlüssel', value: '' }], source: 'Kein Schlüssel', order: 'nach Ollama', quota: 'Kosten pro Token', userKeys: 'nicht vorgesehen',
+        info: { why: 'Zweite Chance für Buchungen, die der lokale Parser nicht versteht.', cost: 'Bezahlt pro Token.', quota: 'Laut Anthropic-Account.', data: 'Text des Imports, bis 12.000 Zeichen. Nur nach Freigabe.', link: 'https://console.anthropic.com/', linkLabel: 'Schlüssel bei Anthropic' } },
+      { cat: 'KI', id: 'gemini', name: 'Google Gemini', initials: 'GM', level: 'Instanz', status: 'off', cloudAi: true, where: 'Google, generativelanguage.googleapis.com', cost: 'Freikontingent, danach pro Token.', purpose: 'Cloud-Parser, wenn Ollama nichts findet', test: 'Aus · kein Schlüssel', fields: [{ label: 'API-Schlüssel', value: '' }], source: 'Kein Schlüssel', order: 'nach Ollama', quota: 'laut Google AI Studio', userKeys: 'nicht vorgesehen',
+        info: { why: 'Zweite Chance für Buchungen, die der lokale Parser nicht versteht.', cost: 'Freikontingent, danach pro Token.', quota: 'Laut Google AI Studio.', data: 'Text des Imports, bis 12.000 Zeichen. Nur nach Freigabe.', link: 'https://aistudio.google.com/apikey', linkLabel: 'Schlüssel bei Google AI Studio' } },
+      { cat: 'KI', id: 'customllm', name: 'Eigener KI-Endpunkt', initials: 'EP', level: 'Instanz', status: 'off', cloudAi: true, expertOnly: true, where: 'die eingetragene URL', cost: 'Je nach Anbieter.', purpose: 'OpenAI-kompatibler Server (z. B. OpenRouter, vLLM)', test: 'Aus', fields: [{ label: 'Basis-URL', value: '' }, { label: 'API-Schlüssel', value: '' }], source: 'Nicht eingerichtet', order: 'nach Ollama', quota: 'je nach Anbieter', userKeys: 'nicht vorgesehen',
+        info: { why: 'Für jeden Dienst, der die OpenAI-Schnittstelle spricht.', cost: 'Je nach Anbieter.', quota: 'Je nach Anbieter.', data: 'Text des Imports. Auch ein entfernter Server braucht die Freigabe.', link: 'https://openrouter.ai/', linkLabel: 'Beispiel: OpenRouter' } },
+
+      { cat: 'Offene Daten & Logos', id: 'opendata', rec: 'gratis', name: 'Wetter, Höhe & Wikipedia', initials: 'OD', level: 'Instanz', status: 'off', purpose: 'Open-Meteo, Wikipedia, Wikimedia, Overpass', test: 'Aus', fields: [{ label: 'Offene Daten', value: 'aus' }], source: 'Aus – Reiseinfos ohne Wetter und Bilder', order: '–', quota: 'faire Nutzung', userKeys: '–',
+        info: { why: 'Wetter zu Reisetagen, Höhenprofile, Infos und Bilder zu Orten.', cost: 'Kostenlos (nicht-kommerziell).', quota: 'Faire Nutzung; TravStats cacht die Antworten.', data: 'Koordinaten und Ortsnamen.', link: 'https://open-meteo.com/', linkLabel: 'Open-Meteo' } },
+      { cat: 'Offene Daten & Logos', id: 'logos', rec: 'gratis', name: 'Airline- & Betreiber-Logos', initials: 'LG', level: 'Instanz', status: 'on', purpose: 'kiwi.com, Daisycon, Wikimedia; logostream optional', test: 'Letzte Aktualisierung heute 03:00', fields: [{ label: 'logostream-Schlüssel (optional)', value: '' }, { label: 'Betreiber-Logos aus Wikimedia', value: 'an' }], source: 'Ohne Schlüssel: freie Logo-Quellen', order: 'logostream → eigene → kiwi → Daisycon', quota: '–', userKeys: '–',
+        info: { why: 'Zeigt Logos von Airlines, Reedereien und Bahngesellschaften.', cost: 'Freie Quellen kostenlos; logostream ist ein Bezahldienst.', quota: '–', data: 'Airline-Code.', link: 'https://logostream.dev/', linkLabel: 'logostream' } },
+      { cat: 'Offene Daten & Logos', id: 'fx', rec: 'gratis', name: 'Wechselkurse', initials: 'FX', level: 'Instanz', status: 'on', purpose: 'EZB-Kurse (Frankfurter) + Ersatzquelle', test: 'Kurse von heute', fields: [{ label: 'Ersatzquelle für Nicht-EZB-Währungen', value: 'an' }], source: 'Ohne Schlüssel', order: 'Frankfurter → currency-api', quota: '–', userKeys: '–',
+        info: { why: 'Rechnet Preise in deine Währung um.', cost: 'Kostenlos.', quota: '–', data: 'Währung und Datum.', link: 'https://frankfurter.dev/', linkLabel: 'Frankfurter' } },
+
+      { cat: 'Sync, Mail & Benachrichtigungen', id: 'webdav', rec: 'gratis', name: 'WebDAV', initials: 'WD', level: 'Instanz + Konto', status: 'on', purpose: 'Backups und Exporte auf eine Freigabe', test: 'Letzte Sicherung heute 04:00 ✓', fields: [{ label: 'URL', value: 'https://[NAS]/remote.php/dav/…' }, { label: 'Benutzer', value: 'travstats' }, { label: 'Passwort', value: '••••••••' }], source: 'Instanz-Backup an; Konten dürfen eigene Ziele', order: 'Konto-Ziel zusätzlich', quota: '–', userKeys: 'erlaubt',
+        info: { why: 'Legt Backups und Exporte auf deinem NAS oder in einer Cloud ab.', cost: 'Je nach Speicher.', quota: '–', data: 'Das ganze Backup – verschlüsselt übertragen, Ziel muss vertrauenswürdig sein.', link: 'https://travstats.de/docs/', linkLabel: 'Anleitung' } },
+      { cat: 'Sync, Mail & Benachrichtigungen', id: 'smtp', rec: 'gratis', name: 'E-Mail (SMTP)', initials: 'SM', level: 'Instanz', status: 'error', purpose: 'Einladungen, Passwort-Reset, Hinweise', test: 'Test ✗ 29.10. – Anmeldung abgelehnt', fields: [{ label: 'Server', value: 'smtp.[PROVIDER]:587' }, { label: 'Benutzer', value: 'noreply@[DOMAIN]' }, { label: 'Passwort', value: '••••••••' }], source: 'Eingerichtet, letzte Zustellung fehlgeschlagen', order: '–', quota: 'laut Mailanbieter', userKeys: '–',
+        info: { why: 'Ohne Mail gibt es keine Einladungen und keinen Passwort-Reset.', cost: 'Je nach Mailanbieter.', quota: 'Laut Mailanbieter.', data: 'Empfängeradresse und Mailtext.', link: 'https://travstats.de/docs/', linkLabel: 'Anleitung' } },
+      { cat: 'Sync, Mail & Benachrichtigungen', id: 'push', name: 'Push-Relay', initials: 'PU', level: 'Instanz', status: 'off', expertOnly: true, purpose: 'Benachrichtigungen an gekoppelte Telefone', test: 'Aus', fields: [{ label: 'Relay-URL', value: 'https://push.travstats.de' }], source: 'Aus', order: '–', quota: '–', userKeys: '–',
+        info: { why: 'Leitet Hinweise an die Companion-App weiter.', cost: 'Kostenlos.', quota: '–', data: 'Geräte-Token und Hinweistext.', link: 'https://travstats.de/docs/', linkLabel: 'Anleitung' } },
+
+      { cat: 'Instanz & Verbund', id: 'federation', name: 'Föderation', initials: 'FE', level: 'Instanz', status: 'off', expertOnly: true, purpose: 'Reisen und Bestenliste mit anderen TravStats-Servern', test: 'Aus', fields: [{ label: 'Server-Identität', value: 'ed25519:…7f3a' }], source: 'Aus', order: '–', quota: '–', userKeys: '–',
+        info: { why: 'Teilt Reisen und Vergleichswerte mit Freunden auf anderen Servern.', cost: 'Kostenlos.', quota: '–', data: 'Nur was ein Konto ausdrücklich teilt; Bestenliste nur Summen.', link: 'https://travstats.de/docs/', linkLabel: 'Anleitung' } },
+      { cat: 'Instanz & Verbund', id: 'stats', name: 'Nutzungsstatistik', initials: 'NS', level: 'Instanz', status: 'off', purpose: 'Anonyme Zahlen an stats.travstats.de', test: 'Nicht zugestimmt', fields: [{ label: 'Zustimmung', value: 'offen' }], source: 'Erst nach Zustimmung', order: '–', quota: '–', userKeys: '–',
+        info: { why: 'Hilft zu sehen, welche Funktionen genutzt werden.', cost: 'Kostenlos.', quota: '–', data: 'Anonyme Zähler, keine Reisen, keine Namen.', link: 'https://www.abrechen2.de/travstats/datenschutz/', linkLabel: 'Datenschutz' } },
+      { cat: 'Instanz & Verbund', id: 'updates', name: 'Update-Prüfung & Vorlagen', initials: 'UP', level: 'Instanz', status: 'on', expertOnly: true, purpose: 'GitHub: neue Versionen, Parser-Vorlagen', test: 'Zuletzt geprüft heute', fields: [{ label: 'Vorlagen-Repo', value: 'Abrechen2/travstats-templates' }, { label: 'Update-Prüfung', value: 'an (neu: abschaltbar)' }], source: 'Ohne Schlüssel', order: '–', quota: 'GitHub-Ratenlimit', userKeys: '–',
+        info: { why: 'Meldet neue TravStats-Versionen und lädt Vorlagen für Buchungsmails.', cost: 'Kostenlos.', quota: 'GitHub-Ratenlimit.', data: 'Nur die Abfrage selbst, keine Daten aus deinem Logbuch.', link: 'https://github.com/Abrechen2/travstats-templates', linkLabel: 'Vorlagen-Repo' } }
+    ];
+  }
+  pill(status) {
+    const base = 'font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; white-space: nowrap;';
+    if (status === 'on') return base + 'background: rgba(94,194,178,0.15); color: #5ec2b2';
+    if (status === 'error') return base + 'background: rgba(230,90,79,0.15); color: #e65a4f';
+    if (status === 'missing' || status === 'attention') return base + 'background: rgba(216,149,47,0.15); color: #d8952f';
+    return base + 'background: rgba(231,227,220,0.08); color: rgba(231,227,220,0.7)';
+  }
+  label(status) {
+    return { on: 'Aktiv', off: 'Aus', missing: 'Schlüssel fehlt', attention: 'Nicht verbunden', error: 'Fehler' }[status];
+  }
+  renderVals() {
+    const s = this.state;
+    const seg = (on) => 'height: 36px; padding: 0 16px; border-radius: 8px; border: none; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; ' + (on ? 'background: #1a1f26; color: #f4ece0; box-shadow: none' : 'background: transparent; color: rgba(231,227,220,0.75)');
+    const all = this.data().map((d) => {
+      const needsKey = d.fields.some((x) => /Schlüssel|Secret|Passwort/.test(x.label) && !/optional/.test(x.label) && !x.value);
+      const st = s.enabled[d.id] === true ? (needsKey ? 'missing' : 'on') : (s.enabled[d.id] === false ? 'off' : d.status);
+      return Object.assign({}, d, { st: st });
+    });
+    const counts = { on: 0, attention: 0, off: 0 };
+    all.forEach((d) => { if (d.st === 'on') counts.on++; else if (d.st === 'off') counts.off++; else counts.attention++; });
+    const q = s.q.trim().toLowerCase();
+    let hidden = 0;
+    const visible = all.filter((d) => {
+      
+      if (q && (d.name + ' ' + d.purpose).toLowerCase().indexOf(q) < 0) return false;
+      if (s.filter === 'rec' && !d.rec) return false;
+      if (s.filter === 'on' && d.st !== 'on') return false;
+      if (s.filter === 'off' && d.st !== 'off') return false;
+      if (s.filter === 'attention' && (d.st === 'on' || d.st === 'off')) return false;
+      return true;
+    });
+    const cats = [];
+    visible.forEach((d) => {
+      let c = cats.find((x) => x.name === d.cat);
+      if (!c) { c = { name: d.cat, items: [] }; cats.push(c); }
+      const isOpen = s.open === d.id;
+      c.items.push({
+        id: d.id, name: d.name, initials: d.initials, level: ({ 'Instanz': 'Admin richtet ein', 'Instanz + Konto': 'Admin oder eigenes Konto', 'Konto': 'Jedes Konto selbst' })[d.level], purpose: d.purpose,
+        isCloudAi: !!d.cloudAi, isPlain: !d.cloudAi,
+        isRec: !!d.rec, recLabel: d.rec === 'guthaben' ? 'Empfohlen · Gratis-Guthaben' : 'Empfohlen · gratis',
+        hasKeyToggle: d.level === 'Instanz + Konto' && !d.noUserKeys,
+        keyToggleLabel: (s.allowKeys[d.id] === false ? 'Konten dürfen keinen eigenen Schlüssel nutzen' : 'Konten dürfen eigene Schlüssel nutzen'),
+        keyDot: 'width: 10px; height: 10px; border-radius: 999px; background: ' + (s.allowKeys[d.id] === false ? 'rgba(231,227,220,0.35)' : '#5ec2b2'),
+        flipKeys: () => this.setState({ allowKeys: Object.assign({}, s.allowKeys, { [d.id]: s.allowKeys[d.id] === false }) }),
+        hasBudget: !!d.budget,
+        budget: d.budget ? { text: 'Budget ' + d.budget.month + ': ' + d.budget.spent + ' von ' + d.budget.limit + ' · ' + d.budget.calls + ' Abfragen · stoppt vor dem Limit', bar: 'width: ' + Math.max(d.budget.pct, 1) + '%; height: 100%; background: #f0a947; border-radius: 999px' } : { text: '', bar: '' },
+        statusLabel: this.label(d.st), pillStyle: this.pill(d.st),
+        testLine: s.tested[d.id] ? (d.st === 'off' ? 'Ausgeschaltet – es wird nichts abgefragt, auch kein Test' : (d.st === 'missing' ? 'Test ✗ – erst einen Schlüssel eintragen' : 'Test ✓ gerade eben')) : (s.enabled[d.id] === undefined ? d.test : (d.cloudAi ? (s.enabled[d.id] ? 'Freigegeben gerade eben' : 'Freigabe zurückgezogen') : (s.enabled[d.id] ? 'Eingeschaltet gerade eben' : 'Ausgeschaltet – gesperrt für alle Konten, auch mit eigenem Schlüssel'))),
+        fields: (d.expertOnly && !s.expert) ? [] : d.fields.map((x) => Object.assign({ placeholder: x.value ? '' : 'nicht gesetzt', type: /Schlüssel|Secret|Passwort/.test(x.label) ? 'password' : 'text' }, x)),
+        advancedHidden: !!d.expertOnly && !s.expert, source: d.cloudAi && s.enabled[d.id] ? 'Freigegeben · Konten bestätigen vor dem ersten Import' : (s.enabled[d.id] === false ? 'Aus – gilt für alle Konten, eigene Schlüssel und Hintergrund-Jobs' : d.source),
+        order: d.order, quota: d.quota, userKeys: d.userKeys,
+        isOpen: isOpen, toggleLabel: isOpen ? 'Zuklappen' : 'Aufklappen',
+        chevronStyle: isOpen ? 'transform: rotate(180deg)' : '',
+        consentButton: s.enabled[d.id] === true ? 'Freigabe zurückziehen' : 'Freigeben …',
+        flipLabel: d.st === 'off' ? 'Einschalten' : 'Ausschalten',
+        toggle: () => this.setState({ open: isOpen ? null : d.id }),
+        info: () => this.setState({ info: d.id }),
+        test: () => this.setState({ tested: Object.assign({}, s.tested, { [d.id]: true }) }),
+        flip: () => this.setState({ enabled: Object.assign({}, s.enabled, { [d.id]: d.st === 'off' }) }),
+        askConsent: () => {
+          if (s.enabled[d.id] === true) this.setState({ enabled: Object.assign({}, s.enabled, { [d.id]: false }) });
+          else this.setState({ consent: d.id, consentChecked: false });
+        }
+      });
+    });
+    cats.forEach((c) => {
+      const on = c.items.filter((i) => i.statusLabel === 'Aktiv').length;
+      c.summary = c.items.length + (c.items.length === 1 ? ' Dienst' : ' Dienste') + ' · ' + on + ' aktiv';
+    });
+    const filterDefs = [['all', 'Alle'], ['rec', 'Empfohlen'], ['on', 'Aktiv'], ['attention', 'Achtung'], ['off', 'Aus']];
+    const filters = filterDefs.map(([k, l]) => ({
+      label: l,
+      pick: () => this.setState({ filter: k }),
+      style: 'height: 36px; padding: 0 14px; border-radius: 999px; font: inherit; font-size: 14px; cursor: pointer; ' + (s.filter === k ? 'background: #f0a947; color: #0b0d10; border: 1px solid #f0a947' : 'background: #14181d; color: #e7e3dc; border: 1px solid rgba(231,227,220,0.18)')
+    }));
+    const infoD = all.find((d) => d.id === s.info);
+    const consentD = all.find((d) => d.id === s.consent);
+    return {
+      expert: s.expert,
+      standardBtnStyle: seg(!s.expert), expertBtnStyle: seg(s.expert),
+      setStandard: () => this.setState({ expert: false }),
+      setExpert: () => this.setState({ expert: true }),
+      onSearch: (e) => this.setState({ q: e.target.value }),
+      counts: counts, filters: filters, categories: cats,
+      connAllow: [['dawarich', 'Dawarich', 'Standortverlauf lesen', '1 Konto verbunden'], ['immich', 'Eigenes Immich', 'Fotoalben an Reisen hängen', '2 Konten verbunden'], ['strava', 'Strava', 'Aktivitäten als Touren (nutzt die Strava-App der Instanz)', '2 Konten verbunden'], ['webdav', 'Eigene WebDAV-Ziele', 'Exporte auf den eigenen Speicher', '0 Konten']].map(([id, n, p, u]) => ({ name: n, purpose: p, usage: u,
+        label: s.allowConn[id] ? 'Erlaubt' : 'Nicht erlaubt',
+        dot: 'width: 10px; height: 10px; border-radius: 999px; background: ' + (s.allowConn[id] ? '#5ec2b2' : 'rgba(231,227,220,0.35)'),
+        flip: () => this.setState({ allowConn: Object.assign({}, s.allowConn, { [id]: !s.allowConn[id] }) }) })),
+      recSummary: (function () { const r = all.filter((d) => d.rec); const on = r.filter((d) => d.st === 'on').length; return on + ' von ' + r.length + ' empfohlenen Diensten sind eingerichtet. Alle sind kostenlos oder haben ein Gratis-Guthaben, das für ein privates Logbuch reicht.'; })(),
+      showRec: () => this.setState({ filter: 'rec', expert: true }),
+      noResults: cats.length === 0,
+      hiddenExpertCount: false,
+      hiddenExpertText: hidden + ' weitere Dienste (selbst gehostete Endpunkte, Föderation, Push, Vorlagen) siehst du in der Ansicht „Experte“.',
+      infoOpen: !!infoD,
+      info: infoD ? { name: infoD.name, level: 'Einrichtung: ' + infoD.level, link: infoD.info.link, linkLabel: infoD.info.linkLabel,
+        rows: [{ k: 'Wozu braucht TravStats das?', v: infoD.info.why }, { k: 'Empfehlung', v: infoD.rec === 'guthaben' ? 'Empfohlen: das monatliche Gratis-Guthaben reicht für die eigenen Flüge; TravStats stoppt vor dem Limit.' : (infoD.rec ? 'Empfohlen: kostenlos und bringt viel für ein vollständiges Logbuch.' : 'Optional – nur wenn du es wirklich brauchst.') }, { k: 'Kostet das etwas?', v: infoD.info.cost }, { k: 'Wie viel ist frei?', v: infoD.info.quota }, { k: 'Was verlässt den Server?', v: infoD.info.data }, { k: 'Wer richtet es ein?', v: infoD.level === 'Instanz' ? 'Nur Admins, gilt für alle Konten.' : (infoD.level === 'Konto' ? 'Jedes Konto selbst.' : 'Admins für die Instanz; Konten mit eigenem Schlüssel, wenn erlaubt.') }] } : { name: '', level: '', link: '#', linkLabel: '', rows: [] },
+      closeInfo: () => this.setState({ info: null }),
+      consentOpen: !!consentD,
+      consent: consentD ? { title: consentD.name + ' freigeben?', name: consentD.name, where: consentD.where, cost: consentD.cost } : { title: '', name: '', where: '', cost: '' },
+      consentChecked: s.consentChecked,
+      consentDisabled: !s.consentChecked,
+      toggleConsentCheck: () => this.setState({ consentChecked: !s.consentChecked }),
+      confirmStyle: 'height: 44px; padding: 0 18px; border-radius: 10px; border: none; font: inherit; font-size: 15px; font-weight: 500; ' + (s.consentChecked ? 'background: #f0a947; color: #0b0d10; cursor: pointer' : 'background: rgba(240,169,71,0.25); color: rgba(231,227,220,0.6); cursor: not-allowed'),
+      closeConsent: () => this.setState({ consent: null }),
+      confirmConsent: () => { if (s.consentChecked) this.setState({ enabled: Object.assign({}, s.enabled, { [s.consent]: true }), consent: null, open: s.consent }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

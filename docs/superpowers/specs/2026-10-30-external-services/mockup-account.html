@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Einstellungen – Dienste</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;700&amp;family=IBM+Plex+Mono:wght@500&amp;family=Newsreader:opsz,wght@6..72,500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0b0d10}
+a{color:#f0a947}a:hover{color:#f6bd66}
+input:focus,button:focus-visible{outline:2px solid #f0a947;outline-offset:2px}
+</style>
+</helmet>
+<div style="font-family: 'Hanken Grotesk', system-ui, sans-serif; color: #e7e3dc; background: #0b0d10; min-height: 100vh">
+  <div style="max-width: 1180px; margin: 0 auto; padding: 32px 24px 96px; display: flex; flex-direction: column; gap: 24px">
+
+    <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 6px; min-width: 280px; flex: 1 1 480px">
+        <div style="font-size: 13px; color: rgba(231,227,220,0.6)">Einstellungen › Dienste</div>
+        <h1 style="margin: 0; font-family: 'Newsreader', Georgia, serif; font-size: 36px; font-weight: 500; color: #f4ece0">Dienste</h1>
+        <p style="margin: 0; font-size: 15px; color: rgba(231,227,220,0.68); max-width: 720px; line-height: 1.5">Deine Verbindungen zu Immich, Dawarich, Strava und deinem Speicher, eigene Schlüssel und deine KI-Freigaben. Was die Instanz für alle bereitstellt, steht unten.</p>
+      </div>
+      <div role="group" aria-label="Ansicht" style="display: flex; background: #101317; border-radius: 10px; padding: 4px; gap: 4px">
+        <button type="button" onClick="{{setStandard}}" style="{{standardBtnStyle}}">Standard</button>
+        <button type="button" onClick="{{setExpert}}" style="{{expertBtnStyle}}">Experte</button>
+      </div>
+    </div>
+
+    <sc-for list="{{sections}}" as="sec" hint-placeholder-count="3">
+      <section style="display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; flex-direction: column; gap: 2px; padding: 8px 4px 0">
+          <h2 style="margin: 0; font-size: 19px; font-weight: 700">{{sec.name}}</h2>
+          <span style="font-size: 14px; color: rgba(231,227,220,0.68)">{{sec.hint}}</span>
+        </div>
+        <div style="background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 16px; overflow: hidden">
+          <sc-for list="{{sec.items}}" as="s" hint-placeholder-count="3">
+            <div style="border-top: 1px solid rgba(231,227,220,0.08); display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 14px 18px">
+              <div aria-hidden="true" style="width: 40px; height: 40px; flex: none; border-radius: 10px; background: #1a1f26; color: #e7e3dc; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 500">{{s.initials}}</div>
+              <div style="flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+                <span style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap"><span style="font-size: 16px; font-weight: 700">{{s.name}}</span><sc-if value="{{s.isRec}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: rgba(94,194,178,0.15); color: #5ec2b2; border: 1px solid rgba(94,194,178,0.35)">Empfohlen · gratis</span></sc-if></span>
+                <span style="font-size: 14px; color: rgba(231,227,220,0.68)">{{s.purpose}}</span>
+                <span style="font-size: 12px; color: rgba(231,227,220,0.6)">{{s.detail}}</span>
+                <sc-if value="{{expert}}" hint-placeholder-val="{{false}}">
+                  <span style="font-size: 12px; color: rgba(231,227,220,0.6); font-family: 'IBM Plex Mono', monospace">{{s.order}}</span>
+                </sc-if>
+              </div>
+              <span style="{{s.pillStyle}}">{{s.statusLabel}}</span>
+              <div style="display: flex; gap: 6px; align-items: center">
+                <sc-if value="{{s.hasAction}}" hint-placeholder-val="{{true}}">
+                  <button type="button" onClick="{{s.act}}" style="height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid #f0a947; background: transparent; font: inherit; font-size: 14px; font-weight: 500; color: #f0a947; cursor: pointer">{{s.actionLabel}}</button>
+                </sc-if>
+                <button type="button" aria-label="Info zu {{s.name}}" onClick="{{s.info}}" style="width: 36px; height: 36px; border-radius: 8px; border: 1px solid rgba(231,227,220,0.18); background: #14181d; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #f0a947">
+                  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6"></path><path d="M12 7.5v.01"></path></svg>
+                </button>
+              </div>
+            </div>
+            <sc-if value="{{s.isOpen}}" hint-placeholder-val="{{false}}">
+              <div style="padding: 4px 18px 18px 72px; display: flex; flex-direction: column; gap: 12px">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px">
+                  <sc-for list="{{s.fields}}" as="fld" hint-placeholder-count="2">
+                    <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: rgba(231,227,220,0.75)">{{fld.label}}
+                      <input type="{{fld.type}}" defaultValue="{{fld.value}}" placeholder="{{fld.ph}}" style="height: 44px; box-sizing: border-box; padding: 0 12px; border: 1px solid rgba(231,227,220,0.16); border-radius: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; background: #101317; color: #e7e3dc">
+                    </label>
+                  </sc-for>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
+                  <button type="button" onClick="{{s.save}}" style="height: 44px; padding: 0 18px; border-radius: 12px; border: none; background: #f0a947; color: #0b0d10; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer">Speichern &amp; testen</button>
+                  <button type="button" onClick="{{s.cancel}}" style="height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid rgba(231,227,220,0.18); background: transparent; color: #e7e3dc; font: inherit; font-size: 15px; cursor: pointer">Abbrechen</button>
+                  <sc-if value="{{s.isConn}}" hint-placeholder-val="{{true}}"><button type="button" onClick="{{s.remove}}" style="height: 44px; padding: 0 18px; border-radius: 12px; border: none; background: transparent; color: #e65a4f; font: inherit; font-size: 15px; cursor: pointer">Verbindung trennen</button></sc-if>
+                  <sc-if value="{{s.isKey}}" hint-placeholder-val="{{false}}"><button type="button" onClick="{{s.remove}}" style="height: 44px; padding: 0 18px; border-radius: 12px; border: none; background: transparent; color: #e7e3dc; font: inherit; font-size: 15px; cursor: pointer; text-decoration: underline">Eigenen Schlüssel entfernen (dann gilt der der Instanz)</button><button type="button" onClick="{{s.off}}" style="height: 44px; padding: 0 18px; border-radius: 12px; border: none; background: transparent; color: #e65a4f; font: inherit; font-size: 15px; cursor: pointer">Für mein Konto ausschalten</button></sc-if>
+                  <span style="font-size: 13px; color: rgba(231,227,220,0.6)">Der Schlüssel wird verschlüsselt gespeichert und nie wieder ganz angezeigt.</span>
+                </div>
+              </div>
+            </sc-if>
+          </sc-for>
+        </div>
+      </section>
+    </sc-for>
+
+    <section style="display: flex; flex-direction: column; gap: 10px">
+      <button type="button" onClick="{{toggleInstance}}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 14px; font: inherit; color: #e7e3dc; cursor: pointer; text-align: left">
+        <span style="display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 17px; font-weight: 700">Von der Instanz bereitgestellt</span>
+          <span style="font-size: 14px; color: rgba(231,227,220,0.68)">{{instanceSummary}}</span>
+        </span>
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="{{instanceChevron}}"><path d="M6 9l6 6 6-6"></path></svg>
+      </button>
+      <sc-if value="{{instanceOpen}}" hint-placeholder-val="{{false}}">
+        <div style="background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 16px; overflow: hidden">
+          <sc-for list="{{instanceItems}}" as="s" hint-placeholder-count="6">
+            <div style="border-top: 1px solid rgba(231,227,220,0.08); display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 12px 18px">
+              <span style="flex: 1 1 260px; font-size: 15px"><strong style="font-weight: 700">{{s.name}}</strong> <span style="color: rgba(231,227,220,0.68)">– {{s.purpose}}</span></span>
+              <span style="{{s.pillStyle}}">{{s.statusLabel}}</span>
+            </div>
+          </sc-for>
+          <div style="border-top: 1px solid rgba(231,227,220,0.08); padding: 12px 18px; font-size: 13px; color: rgba(231,227,220,0.6)">Einschalten oder ändern kann das nur ein Admin unter Administration › Externe Dienste.</div>
+        </div>
+      </sc-if>
+    </section>
+  </div>
+
+  <sc-if value="{{infoOpen}}" hint-placeholder-val="{{false}}">
+    <div style="position: fixed; inset: 0; background: rgba(7,9,12,0.6); display: flex; justify-content: flex-end; z-index: 20">
+      <div role="dialog" aria-modal="true" aria-label="Info zu {{info.name}}" style="width: 440px; max-width: 100%; height: 100%; background: #14181d; box-sizing: border-box; padding: 28px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px">
+          <h2 style="margin: 0; font-size: 22px; font-weight: 700">{{info.name}}</h2>
+          <button type="button" aria-label="Schließen" onClick="{{closeInfo}}" style="width: 40px; height: 40px; border-radius: 8px; border: 1px solid rgba(231,227,220,0.18); background: #14181d; cursor: pointer; font: inherit; font-size: 18px; color: #e7e3dc">×</button>
+        </div>
+        <sc-for list="{{info.rows}}" as="r" hint-placeholder-count="4">
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: rgba(231,227,220,0.6)">{{r.k}}</div>
+            <div style="font-size: 15px; line-height: 1.5">{{r.v}}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{consentOpen}}" hint-placeholder-val="{{false}}">
+    <div style="position: fixed; inset: 0; background: rgba(7,9,12,0.7); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 30">
+      <div role="dialog" aria-modal="true" aria-label="Datenfreigabe bestätigen" style="width: 540px; max-width: 100%; background: #14181d; border-radius: 16px; padding: 28px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px">
+        <h2 style="margin: 0; font-size: 22px; font-weight: 700">Deine Importe an {{consentName}} schicken?</h2>
+        <p style="margin: 0; font-size: 15px; line-height: 1.5; color: rgba(231,227,220,0.75)">Deine Instanz erlaubt {{consentName}} als zweite Chance für Buchungen, die der lokale Parser nicht versteht. Ob deine Dokumente dorthin gehen, entscheidest du.</p>
+        <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6; color: #e7e3dc">
+          <li>Was rausgeht: der Text der E-Mail oder des PDFs, höchstens 12.000 Zeichen.</li>
+          <li>Nicht rausgeht: Fotos, Passwörter, deine anderen Einträge.</li>
+          <li>Wann: nur beim Import, nur wenn der lokale Parser nichts findet.</li>
+          <li>Zurücknehmen: jederzeit hier; ab dann geht nichts mehr an {{consentName}}.</li>
+        </ul>
+        <label style="display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.45; cursor: pointer">
+          <input type="checkbox" checked="{{consentChecked}}" onChange="{{toggleConsentCheck}}" style="width: 20px; height: 20px; margin: 1px 0 0; flex: none">
+          <span>Ich bin einverstanden, dass meine Importe in diesen Fällen an {{consentName}} gehen.</span>
+        </label>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap">
+          <button type="button" onClick="{{closeConsent}}" style="height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid rgba(231,227,220,0.18); background: #14181d; font: inherit; font-size: 15px; color: #e7e3dc; cursor: pointer">Abbrechen</button>
+          <button type="button" onClick="{{confirmConsent}}" disabled="{{consentDisabled}}" style="{{confirmStyle}}">Zustimmen</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1700}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { removed: {}, acctOff: {}, open: 'dawarich', expert: false, instanceOpen: false, info: null, consent: null, consentChecked: false, done: {} };
+  }
+  pill(st) {
+    const base = 'font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; white-space: nowrap;';
+    if (st === 'on') return base + 'background: rgba(94,194,178,0.15); color: #5ec2b2';
+    if (st === 'instance') return base + 'background: rgba(111,160,214,0.15); color: #6fa0d6';
+    if (st === 'attention') return base + 'background: rgba(216,149,47,0.15); color: #d8952f';
+    return base + 'background: rgba(231,227,220,0.08); color: rgba(231,227,220,0.7)';
+  }
+  renderVals() {
+    const s = this.state;
+    const seg = (on) => 'height: 36px; padding: 0 16px; border-radius: 8px; border: none; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; ' + (on ? 'background: #1a1f26; color: #f4ece0; box-shadow: none' : 'background: transparent; color: rgba(231,227,220,0.75)');
+    const labels = { on: 'Verbunden', own: 'Eigener Schlüssel', instance: 'Über die Instanz', off: 'Aus', attention: 'Nicht verbunden', consented: 'Zugestimmt', notConsented: 'Keine Zustimmung' };
+    const raw = [
+      { sec: 'Meine Verbindungen', id: 'immich', rec: true, fields: [{ label: 'Server-URL', value: '', ph: 'https://immich.example.org' }, { label: 'API-Schlüssel', value: '', ph: 'in Immich › Konto › API-Schlüssel' }], name: 'Immich', initials: 'IM', purpose: 'Fotoalben an deine Reisen hängen', st: 'attention', detail: 'Noch nicht verbunden', action: 'Verbinden', doneSt: 'on', doneDetail: 'Dein Immich · https://[DEIN-IMMICH]', order: 'Konto → Instanz → Server-ENV', why: 'Zeigt Alben aus Immich in deinen Reisen oder importiert die Bilder.', cost: 'Kostenlos, selbst gehostet.', data: 'Bleibt zwischen TravStats und Immich.' },
+      { sec: 'Meine Verbindungen', id: 'dawarich', rec: true, fields: [{ label: 'Server-URL', value: '', ph: 'https://dawarich.example.org' }, { label: 'API-Schlüssel', value: '', ph: 'in Dawarich › Konto › API-Schlüssel' }], name: 'Dawarich', initials: 'DW', purpose: 'Standortverlauf lesen, Aufenthalte vorschlagen', st: 'attention', detail: 'Server-URL und API-Schlüssel deines Dawarich', action: 'Verbinden', doneSt: 'on', doneDetail: 'https://[DEIN-DAWARICH] · zuletzt gelesen gerade eben', order: 'nur Konto', why: 'Liest deinen Standortverlauf, um Aufenthalte und Reisen vorzuschlagen.', cost: 'Kostenlos, selbst gehostet.', data: 'Bleibt zwischen TravStats und Dawarich.' },
+      { sec: 'Meine Verbindungen', id: 'strava', fields: [], name: 'Strava', initials: 'ST', purpose: 'Aktivitäten als Touren importieren', st: 'on', detail: 'Verbunden als [STRAVA-NAME] · Zugriff: Aktivitäten lesen', action: 'Trennen', doneSt: 'off', doneDetail: 'Getrennt · bereits importierte Touren bleiben', order: 'OAuth über die Strava-App der Instanz', why: 'Holt Wanderungen und Radtouren als Touren.', cost: 'Kostenlos.', data: 'Strava schickt Aktivitäten an TravStats, nicht umgekehrt.' },
+      { sec: 'Meine Verbindungen', id: 'webdav', fields: [{ label: 'URL', value: '', ph: 'https://nas.example.org/remote.php/dav/files/du/' }, { label: 'Benutzer', value: '', ph: '' }, { label: 'Passwort', value: '', ph: '' }], name: 'WebDAV-Ziel', initials: 'WD', purpose: 'Deine Exporte zusätzlich auf deinen Speicher', st: 'off', detail: 'Optional · die Instanz sichert ohnehin alle Daten', action: 'Einrichten', doneSt: 'on', doneDetail: 'https://[DEIN-NAS]/… · letzter Export gerade eben', order: 'zusätzlich zum Instanz-Backup', why: 'Legt deine Exporte auf deinem NAS oder in deiner Cloud ab.', cost: 'Je nach Speicher.', data: 'Dein Export, verschlüsselt übertragen.' },
+
+      { sec: 'Eigene Schlüssel', id: 'airlabs', rec: true, fields: [{ label: 'API-Schlüssel', value: '•••••••• 9c2e', ph: '' }], name: 'AirLabs', initials: 'AL', purpose: 'Flugstatus und Flugnummer-Suche', st: 'own', detail: 'Eigener Schlüssel ✓ getestet heute · eigenes Kontingent', action: 'Ändern', order: 'Konto → Instanz → Server-ENV', why: 'Flugdaten beim Eintragen und Aktualisieren.', cost: 'Kostenloser Tarif reicht meist.', data: 'Flugnummer und Datum.' },
+      { sec: 'Eigene Schlüssel', id: 'aerodatabox', rec: true, fields: [{ label: 'RapidAPI-Schlüssel', value: '•••••••• 7d10', ph: '' }], name: 'AeroDataBox', initials: 'AD', purpose: 'Flüge bis ein Jahr zurück', st: 'own', detail: 'Eigener Schlüssel ✓ · 412 von 600 Einheiten übrig', action: 'Ändern', order: 'Konto → Instanz → Server-ENV', why: 'Findet vergangene Flüge.', cost: 'RapidAPI-Basistarif kostenlos.', data: 'Flugnummer und Datum.' },
+      { sec: 'Eigene Schlüssel', id: 'aviationstack', fields: [{ label: 'API-Schlüssel', value: '', ph: 'von aviationstack.com' }], name: 'Aviationstack', initials: 'AS', purpose: 'Flugsuche als zweite Quelle', st: 'instance', detail: 'Die Instanz stellt einen Schlüssel · eigener möglich', action: 'Eigenen eintragen', doneSt: 'own', doneDetail: 'Eigener Schlüssel ✓ getestet gerade eben', order: 'Konto → Instanz → Server-ENV', why: 'Springt ein, wenn AirLabs einen Flug nicht kennt.', cost: 'Kostenloser Einstiegstarif.', data: 'Flugnummer und Datum.' },
+      { sec: 'Eigene Schlüssel', id: 'adsblol', rec: true, fields: [{ label: 'Schlüssel (optional)', value: '•••••••• 5a77', ph: '' }], name: 'adsb.lol', initials: 'AL', purpose: 'Flugzeug eines Flugs, der gerade fliegt', st: 'own', detail: 'Eigener Schlüssel ✓ · ohne Schlüssel geht es auch', action: 'Ändern', order: 'Konto → Instanz-Schalter', why: 'Ergänzt Kennzeichen und Typ, solange der Flug in der Luft ist.', cost: 'Kostenlos.', data: 'Flugnummer, nur für heutige Flüge.' },
+      { sec: 'Eigene Schlüssel', id: 'opensky', rec: true, fields: [{ label: 'Client-ID', value: '', ph: 'aus deinem OpenSky-Konto' }, { label: 'Client-Secret', value: '', ph: '' }], name: 'OpenSky Network', initials: 'OS', purpose: 'ADS-B-Daten: Flugzeug und Strecke', st: 'instance', detail: 'Die Instanz stellt einen Zugang · eigener möglich', action: 'Eigenen eintragen', doneSt: 'own', doneDetail: 'Eigener Zugang ✓ getestet gerade eben', order: 'Konto → Instanz → Server-ENV', why: 'Erkennt Flugzeug und Strecke aus offenen ADS-B-Daten.', cost: 'Kostenlos.', data: 'Kennung und Zeitraum.' },
+      { sec: 'Eigene Schlüssel', id: 'ors', rec: true, fields: [{ label: 'API-Schlüssel', value: '', ph: 'von openrouteservice.org' }], name: 'OpenRouteService', initials: 'OR', purpose: 'Straßenrouten für Roadtrips und Touren', st: 'instance', detail: 'Die Instanz stellt einen Schlüssel · eigener möglich', action: 'Eigenen eintragen', doneSt: 'own', doneDetail: 'Eigener Schlüssel ✓ getestet gerade eben', order: 'Konto → Instanz → Server-ENV', why: 'Berechnet die gefahrene Strecke.', cost: 'Kostenlos bis 2.000 Anfragen pro Tag.', data: 'Koordinaten der Stationen.' },
+
+      { sec: 'KI-Freigaben', id: 'openai', fields: [], name: 'OpenAI', initials: 'AI', purpose: 'Cloud-Parser – von der Instanz erlaubt', st: 'notConsented', detail: 'Deine Importe bleiben lokal, bis du zustimmst', action: 'Zustimmen …', consent: true, order: 'Ollama (lokal) → OpenAI nur mit deiner Zustimmung', why: 'Zweite Chance für Buchungen, die der lokale Parser nicht versteht.', cost: 'Trägt die Instanz.', data: 'Text deines Imports, bis 12.000 Zeichen – nur mit deiner Zustimmung.' }
+    ];
+    const sectionHints = {
+      'Meine Verbindungen': 'Dienste, die zu dir gehören. Nur du siehst diese Daten.',
+      'Eigene Schlüssel': 'Hier darfst du laut Admin eigene Schlüssel nutzen. Dein Schlüssel geht vor; ohne ihn gilt der der Instanz.',
+      'KI-Freigaben': 'Was die Instanz erlaubt, gilt für deine Dokumente erst nach deiner Zustimmung.'
+    };
+    const sections = [];
+    raw.forEach((d) => {
+      const done = !!s.done[d.id];
+      let st = s.acctOff[d.id] ? 'off' : (s.removed[d.id] ? 'instance' : (done ? (d.consent ? 'consented' : (d.doneSt || d.st)) : d.st));
+      let sec = sections.find((x) => x.name === d.sec);
+      if (!sec) { sec = { name: d.sec, hint: sectionHints[d.sec], items: [] }; sections.push(sec); }
+      const pillKey = st === 'own' || st === 'consented' ? 'on' : (st === 'notConsented' ? 'off' : st);
+      sec.items.push({
+        isRec: !!d.rec, name: d.name, initials: d.initials, purpose: d.purpose, order: d.order,
+        detail: s.acctOff[d.id] ? 'Für dein Konto aus – TravStats fragt diesen Dienst für dich nicht ab' : s.removed[d.id] ? 'Eigener Schlüssel entfernt – es gilt der Schlüssel der Instanz' : done ? (d.consent ? 'Zugestimmt gerade eben · zurücknehmen jederzeit' : (d.doneDetail || 'Gespeichert und getestet gerade eben ✓')) : d.detail,
+        statusLabel: labels[st], pillStyle: this.pill(pillKey),
+        hasAction: true,
+        actionLabel: done ? (d.consent ? 'Zurücknehmen' : (d.id === 'strava' ? 'Mit Strava verbinden' : 'Ändern')) : (s.removed[d.id] ? 'Eigenen eintragen' : (s.acctOff[d.id] ? 'Wieder einschalten' : d.action)),
+        hasFields: d.fields.length > 0, isOpen: s.open === d.id,
+        fields: d.fields.map((x) => ({ label: x.label, value: x.value, ph: x.ph, type: /Schlüssel|Secret|Passwort/.test(x.label) ? 'password' : 'text' })),
+        save: () => this.setState({ done: Object.assign({}, s.done, { [d.id]: true }), removed: Object.assign({}, s.removed, { [d.id]: false }), acctOff: Object.assign({}, s.acctOff, { [d.id]: false }), open: null }),
+        isKey: d.sec === 'Eigene Schlüssel', isConn: d.sec !== 'Eigene Schlüssel',
+        off: () => this.setState({ acctOff: Object.assign({}, s.acctOff, { [d.id]: true }), open: null }),
+        cancel: () => this.setState({ open: null }),
+        remove: () => this.setState(d.sec === 'Eigene Schlüssel' ? { removed: Object.assign({}, s.removed, { [d.id]: true }), done: Object.assign({}, s.done, { [d.id]: false }), open: null } : { done: Object.assign({}, s.done, { [d.id]: false }), open: null }),
+        act: () => {
+          if (s.acctOff[d.id]) { this.setState({ acctOff: Object.assign({}, s.acctOff, { [d.id]: false }) }); return; }
+          if (d.fields.length > 0 && !d.consent && d.doneSt !== 'off') { this.setState({ open: s.open === d.id ? null : d.id }); return; }
+          if (d.consent && !done) this.setState({ consent: d.id, consentChecked: false });
+          else if (done && d.consent) this.setState({ done: Object.assign({}, s.done, { [d.id]: false }) });
+          else if (d.doneSt) this.setState({ done: Object.assign({}, s.done, { [d.id]: !done }) });
+        },
+        info: () => this.setState({ info: d.id })
+      });
+    });
+    const inst = [
+      ['AeroAPI', 'Status, Verspätung, Gate', 'on'], ['adsb.lol', 'Flugzeug eines Flugs in der Luft', 'on'],
+      ['Bahn-Fahrpläne', 'Transitous und db-rest', 'on'], ['Ortssuche', 'Photon, Nominatim, Google', 'on'],
+      ['Logos', 'Airlines, Reedereien, Bahnen', 'on'], ['Wechselkurse', 'EZB-Kurse', 'on'],
+      ['Wetter & Wikipedia', 'Offene Daten', 'off'], ['Ollama', 'Lokaler Buchungs-Parser', 'on']
+    ].map(([n, p, st]) => ({ name: n, purpose: p, statusLabel: st === 'on' ? 'Aktiv' : 'Aus', pillStyle: this.pill(st) }));
+    const onCount = inst.filter((i) => i.statusLabel === 'Aktiv').length;
+    const infoD = raw.find((d) => d.id === s.info);
+    const consentD = raw.find((d) => d.id === s.consent);
+    return {
+      expert: s.expert,
+      standardBtnStyle: seg(!s.expert), expertBtnStyle: seg(s.expert),
+      setStandard: () => this.setState({ expert: false }),
+      setExpert: () => this.setState({ expert: true }),
+      sections: sections,
+      instanceItems: inst,
+      instanceOpen: s.instanceOpen,
+      instanceSummary: inst.length + ' Dienste · ' + onCount + ' aktiv · nur lesbar',
+      instanceChevron: s.instanceOpen ? 'transform: rotate(180deg)' : '',
+      toggleInstance: () => this.setState({ instanceOpen: !s.instanceOpen }),
+      infoOpen: !!infoD,
+      info: infoD ? { name: infoD.name, rows: [{ k: 'Wozu braucht TravStats das?', v: infoD.why }, { k: 'Kostet das etwas?', v: infoD.cost }, { k: 'Was verlässt den Server?', v: infoD.data }, { k: 'Welche Quelle gilt?', v: infoD.order }] } : { name: '', rows: [] },
+      closeInfo: () => this.setState({ info: null }),
+      consentOpen: !!consentD,
+      consentName: consentD ? consentD.name : '',
+      consentChecked: s.consentChecked,
+      consentDisabled: !s.consentChecked,
+      toggleConsentCheck: () => this.setState({ consentChecked: !s.consentChecked }),
+      confirmStyle: 'height: 44px; padding: 0 18px; border-radius: 10px; border: none; font: inherit; font-size: 15px; font-weight: 500; ' + (s.consentChecked ? 'background: #f0a947; color: #0b0d10; cursor: pointer' : 'background: rgba(240,169,71,0.25); color: rgba(231,227,220,0.6); cursor: not-allowed'),
+      closeConsent: () => this.setState({ consent: null }),
+      confirmConsent: () => { if (s.consentChecked) this.setState({ done: Object.assign({}, s.done, { [s.consent]: true }), consent: null }); }
+    };
+  }
+}
+</script>
+</body>
+</html>
