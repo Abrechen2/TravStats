@@ -47,6 +47,15 @@ beforeEach(() => {
   findFirstAdminSettings.mockResolvedValue(null);
 });
 
+// The external-services gate (forgejo#392) reads the admin policy first; what these cases
+// pin is that the admin-GLOBAL Immich tier is never read.
+const expectGlobalTierUntouched = (): void => {
+  const globalReads = (findFirstAdminSettings.mock.calls as unknown as Array<[unknown]>).filter(
+    ([arg]) => JSON.stringify(arg).includes("globalImmich")
+  );
+  expect(globalReads).toHaveLength(0);
+};
+
 describe("getImmichConnection priority", () => {
   it("prefers the user tier and decrypts the key", async () => {
     userSettingsRow.mockResolvedValue({
@@ -146,8 +155,13 @@ describe("getImmichConnection priority", () => {
 
     await expect(getImmichConnection("u1")).resolves.toMatchObject({ source: "user" });
     expect(findUniqueUser).toHaveBeenCalledTimes(1);
-    expect(findUniqueUserSettings).not.toHaveBeenCalled();
-    expect(findFirstAdminSettings).not.toHaveBeenCalled();
+    // The only other read is the account's own off-switch (forgejo#392 connectionGate).
+    expect(findUniqueUserSettings).toHaveBeenCalledTimes(1);
+    expect(findUniqueUserSettings).toHaveBeenCalledWith({
+      where: { userId: "u1" },
+      select: { externalServicePrefs: true },
+    });
+    expectGlobalTierUntouched();
   });
 
   it("resolves nothing for the shared demo account, not even the global tier", async () => {
@@ -158,7 +172,7 @@ describe("getImmichConnection priority", () => {
     });
 
     await expect(getImmichConnection("demo-id")).resolves.toBeNull();
-    expect(findFirstAdminSettings).not.toHaveBeenCalled();
+    expectGlobalTierUntouched();
   });
 
   it("falls through to the global tier for an unknown user id", async () => {

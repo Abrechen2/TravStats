@@ -185,6 +185,8 @@ export const NON_TRAVEL_RELATIONS = [
   "travelPlanUsage",
   "twoFactorRecoveryCodes",
   "webauthnCredentials",
+  // Last connectivity verdict per external service (forgejo#392): bookkeeping, not travel data.
+  "externalServiceTests",
   "settings",
   "analyticsEvents",
   "createdInvitations",

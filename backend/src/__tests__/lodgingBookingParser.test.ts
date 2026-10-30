@@ -172,6 +172,7 @@ describe("parseLodgingBookingText", () => {
       ollamaModel: "gemma3:12b",
       openaiCompatBaseUrl: `http://127.0.0.1:${port}/v1`,
       openaiCompatModel: "cloud-model",
+      llmCustomOptIn: true, // the slot's own switch is required since forgejo#392
     } as never);
     mockGetAdminParserSettings.mockResolvedValue({
       llmEnabled: true,
@@ -179,6 +180,7 @@ describe("parseLodgingBookingText", () => {
       ollamaModel: "gemma3:12b",
       openaiCompatBaseUrl: `http://127.0.0.1:${port}/v1`,
       openaiCompatModel: "cloud-model",
+      llmCustomOptIn: true, // the slot's own switch is required since forgejo#392
     } as never);
     try {
       const result = await parseLodgingBookingText(
