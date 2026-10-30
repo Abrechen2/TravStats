@@ -170,6 +170,8 @@ router.post("/scan", rejectDemo, scanLimiter, async (req: AuthRequest, res, next
     next(e);
   }
 });
+/** Rows the inbox list answers with; `meta.truncated` says when it was cut. */
+const STAY_LIST_CAP = 200;
 router.get("/", async (req: AuthRequest, res, next) => {
   try {
     const userId = user(req);
@@ -190,7 +192,7 @@ router.get("/", async (req: AuthRequest, res, next) => {
     // is resolved either. The rows stay, and come back when it is switched on.
     // Answered rows remain readable — they are history, not suggestions.
     if (status === "pending" && !(await staySuggestionsEnabled(userId))) {
-      res.json({ success: true, data: [] });
+      res.json({ success: true, meta: { truncated: false }, data: [] });
       return;
     }
     // A visit logged after the last scan (live, on the phone) covers its
@@ -206,8 +208,8 @@ router.get("/", async (req: AuthRequest, res, next) => {
         ...(to ? { startAt: { lte: to } } : {}),
         ...(from ? { endAt: { gte: from } } : {}),
       },
-      orderBy: { startAt: "desc" },
-      take: 200,
+      orderBy: [{ startAt: "desc" }, { id: "asc" }],
+      take: STAY_LIST_CAP + 1,
       include: { visit: { select: { id: true, placeId: true } } },
     });
     // A TravTrack finding made under an earlier source choice says so (E4);
@@ -218,9 +220,11 @@ router.get("/", async (req: AuthRequest, res, next) => {
         select: { locationProviderRev: true },
       })
     )?.locationProviderRev;
+    const truncated = rows.length > STAY_LIST_CAP;
     res.json({
       success: true,
-      data: rows.map((row) => ({
+      meta: { truncated },
+      data: rows.slice(0, STAY_LIST_CAP).map((row) => ({
         ...withStayTimes(row),
         ...(row.provider === "travtrack" && rev !== undefined && row.providerRev < rev
           ? { beforeSourceSwitch: true as const }
