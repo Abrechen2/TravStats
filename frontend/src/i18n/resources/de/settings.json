@@ -12,6 +12,7 @@
   },
   "errors": {
     "saveFailed": "Einstellungen konnten nicht gespeichert werden",
+    "loadFailedNoSave": "Deine Einstellungen konnten nicht vom Server geladen werden, deshalb wird nichts gespeichert. Bitte lade die Seite neu.",
     "webPrefsRetrying": "Deine Darstellungseinstellungen konnten gerade nicht mit deinem Konto abgeglichen werden. Auf diesem Gerät bleiben sie erhalten; ein neuer Versuch läuft automatisch.",
     "webPrefsTooLarge": "Deine Darstellungseinstellungen sind zu umfangreich, um sie mit deinem Konto abzugleichen. Auf diesem Gerät gelten sie weiter, auf deinen anderen nicht.",
     "webPrefsRejected": "Der Server hat deine Darstellungseinstellungen nicht angenommen. Auf diesem Gerät gelten sie weiter, auf deinen anderen nicht."

@@ -12,6 +12,7 @@
   },
   "errors": {
     "saveFailed": "Failed to save settings",
+    "loadFailedNoSave": "Your settings could not be loaded from the server, so nothing is saved. Please reload the page.",
     "webPrefsRetrying": "Your display settings could not be synced with your account just now. They are kept on this device, and a retry runs automatically.",
     "webPrefsTooLarge": "Your display settings are too large to sync with your account. They still apply on this device, but not on your others.",
     "webPrefsRejected": "The server did not accept your display settings. They still apply on this device, but not on your others."

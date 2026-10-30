@@ -405,60 +405,71 @@ export function FlightPanel({
                   {t("dashboard:trips.noTrips")}
                 </div>
               ) : (
-                trips.map((trip) => {
-                  const stats = tripStats.get(trip.id);
-                  const year = stats?.firstDay ? Number(stats.firstDay.slice(0, 4)) : null;
-                  const km =
-                    stats && stats.totalKm > 0
-                      ? `${Math.round(stats.totalKm).toLocaleString(locale)} km`
-                      : null;
-                  return (
-                    <button
-                      key={trip.id}
-                      type="button"
-                      onClick={() => {
-                        onTripSelect?.(trip.id);
-                      }}
-                      className="w-full text-left px-4 py-3 transition-colors hover:bg-white/5 flex items-start gap-3"
-                      style={{ borderBottom: "1px solid var(--color-border)" }}
-                    >
-                      {/* Color dot */}
-                      <span
-                        className="mt-0.5 shrink-0 w-3 h-3 rounded-full"
-                        style={{ background: trip.color }}
+                <>
+                  {tripsLoadFailure && (
+                    <div className="p-3">
+                      <ListLoadFailed
+                        title={t("dashboard:trips.loadError")}
+                        onRetry={() => void reloadTrips()}
+                        log={tripsLoadFailure.log}
                       />
-                      <div className="flex-1 min-w-0">
-                        <div
-                          className="text-sm font-semibold truncate"
-                          style={{ color: trip.color }}
-                        >
-                          {trip.name}
-                        </div>
-                        <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-                          {stats
-                            ? `${stats.count} ${t("dashboard:trips.flights", { count: stats.count })}`
-                            : "–"}
-                          {year ? ` · ${year}` : ""}
-                          {km ? ` · ${km}` : ""}
-                        </div>
-                        {trip.description && (
-                          <div
-                            className="text-xs mt-0.5 truncate"
-                            style={{ color: "var(--text-muted)", opacity: 0.7 }}
-                          >
-                            {trip.description}
-                          </div>
-                        )}
-                      </div>
-                      <span
-                        className="text-xs shrink-0 mt-0.5"
-                        style={{ color: "var(--text-muted)" }}
+                    </div>
+                  )}
+                  {trips.map((trip) => {
+                    const stats = tripStats.get(trip.id);
+                    const year = stats?.firstDay ? Number(stats.firstDay.slice(0, 4)) : null;
+                    const km =
+                      stats && stats.totalKm > 0
+                        ? `${Math.round(stats.totalKm).toLocaleString(locale)} km`
+                        : null;
+                    return (
+                      <button
+                        key={trip.id}
+                        type="button"
+                        onClick={() => {
+                          onTripSelect?.(trip.id);
+                        }}
+                        className="w-full text-left px-4 py-3 transition-colors hover:bg-white/5 flex items-start gap-3"
+                        style={{ borderBottom: "1px solid var(--color-border)" }}
                       >
-                        ›
-                      </span>
-                    </button>
-                  );
-                })
+                        {/* Color dot */}
+                        <span
+                          className="mt-0.5 shrink-0 w-3 h-3 rounded-full"
+                          style={{ background: trip.color }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div
+                            className="text-sm font-semibold truncate"
+                            style={{ color: trip.color }}
+                          >
+                            {trip.name}
+                          </div>
+                          <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+                            {stats
+                              ? `${stats.count} ${t("dashboard:trips.flights", { count: stats.count })}`
+                              : "–"}
+                            {year ? ` · ${year}` : ""}
+                            {km ? ` · ${km}` : ""}
+                          </div>
+                          {trip.description && (
+                            <div
+                              className="text-xs mt-0.5 truncate"
+                              style={{ color: "var(--text-muted)", opacity: 0.7 }}
+                            >
+                              {trip.description}
+                            </div>
+                          )}
+                        </div>
+                        <span
+                          className="text-xs shrink-0 mt-0.5"
+                          style={{ color: "var(--text-muted)" }}
+                        >
+                          ›
+                        </span>
+                      </button>
+                    );
+                  })}
+                </>
               )}
             </div>
 

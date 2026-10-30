@@ -202,7 +202,14 @@ export function useSettingsPage() {
       isInitialSave.current = false;
       return;
     }
-    if (!hasPendingChanges() || useRemoteSettingsStatus.getState().failed) return;
+    // Settings that never loaded must not be written over the account's values;
+    // say so instead of dropping the edit without a word.
+    if (useRemoteSettingsStatus.getState().failed) {
+      setAutoSaveState("failed");
+      addToast("error", t("settings:errors.loadFailedNoSave"));
+      return;
+    }
+    if (!hasPendingChanges()) return;
     setAutoSaveState("pending");
     const saveSettings = async () => {
       // Re-check at FIRE time, not just schedule time. Hydration
