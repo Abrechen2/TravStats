@@ -138,6 +138,7 @@ export const SERVICES: readonly ServiceDef[] = [
     category: "flight",
     level: "instance",
     credential: "key",
+    recommended: "freeCredit",
     resolverProvider: "aeroapi",
     getKeyUrl: "https://www.flightaware.com/aeroapi/portal/",
     env: ["AEROAPI_API_KEY"],
@@ -220,8 +221,7 @@ export const SERVICES: readonly ServiceDef[] = [
     "globalGraphhopperApiKey",
     "graphhopperApiKey",
     "GRAPHHOPPER_API_KEY",
-    "https://www.graphhopper.com/dashboard/",
-    { recommended: "free" }
+    "https://www.graphhopper.com/dashboard/"
   ),
   svc({
     id: "railTimetables",
@@ -242,7 +242,6 @@ export const SERVICES: readonly ServiceDef[] = [
     category: "mapsRoutes",
     level: "instance",
     credential: "key",
-    recommended: "freeCredit",
     resolverProvider: "googlePlaces",
     getKeyUrl: "https://console.cloud.google.com/google/maps-apis",
     env: ["GOOGLE_PLACES_API_KEY"],
@@ -287,6 +286,7 @@ export const SERVICES: readonly ServiceDef[] = [
     level: "instanceAndAccount",
     credential: "urlKey",
     connection: true,
+    recommended: "free",
     env: ["IMMICH_BASE_URL", "IMMICH_API_KEY"],
     fields: [
       admin("baseUrl", "url", "globalImmichBaseUrl"),
@@ -305,6 +305,7 @@ export const SERVICES: readonly ServiceDef[] = [
     level: "instanceAndAccount",
     credential: "urlKey",
     connection: true,
+    adminRow: false,
     env: ["DAWARICH_BASE_URL", "DAWARICH_API_KEY"],
     fields: [
       admin("baseUrl", "url", "globalDawarichBaseUrl"),
@@ -385,7 +386,6 @@ export const SERVICES: readonly ServiceDef[] = [
     category: "ai",
     level: "instance",
     credential: "key",
-    recommended: "freeCredit",
     getKeyUrl: "https://aistudio.google.com/app/apikey",
     ai: { kind: "google" },
     enabled: { kind: "adminColumns", columns: ["llmGoogleOptIn"] },
@@ -428,6 +428,7 @@ export const SERVICES: readonly ServiceDef[] = [
     level: "instance",
     credential: "key",
     keyless: true,
+    recommended: "free",
     resolverProvider: "logostream",
     env: ["LOGOSTREAM_API_KEY"],
     fields: [
@@ -458,6 +459,7 @@ export const SERVICES: readonly ServiceDef[] = [
     level: "instanceAndAccount",
     credential: "urlKey",
     connection: true,
+    recommended: "free",
     env: ["WEBDAV_URL"],
     // Off stops the account syncs AND the instance backups (the latter through
     // `getWebDAVSettings().enabled`); the column below is only the instance backup switch.
@@ -476,6 +478,7 @@ export const SERVICES: readonly ServiceDef[] = [
     category: "syncMail",
     level: "instance",
     credential: "smtp",
+    recommended: "free",
     enabled: { kind: "smtp" },
     fields: [
       other("smtp", "host", "text", "host"),
@@ -522,7 +525,6 @@ export const SERVICES: readonly ServiceDef[] = [
     level: "instance",
     credential: "url",
     keyless: true,
-    recommended: "free",
     enabled: { kind: "adminColumns", columns: ["updateCheckEnabled"] },
     fields: [admin("templateRepoUrl", "url", "templateRepoBaseUrl", true)],
   }),

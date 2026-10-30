@@ -50,7 +50,8 @@
     "active": "Active",
     "off": "Off",
     "missing": "Key missing",
-    "error": "Error"
+    "error": "Error",
+    "missingUrl": "Address missing"
   },
   "accountStatus": {
     "connected": "Connected",
@@ -59,7 +60,8 @@
     "off": "Off",
     "notConnected": "Not connected",
     "consented": "Consented",
-    "notConsented": "No consent"
+    "notConsented": "No consent",
+    "noKey": "No key"
   },
   "actions": {
     "test": "Test",
@@ -90,7 +92,8 @@
     "env": "In effect: server variable (ENV)",
     "keyless": "No key needed",
     "none": "No key – stays off",
-    "off": "Off – applies to all accounts, own keys and background jobs"
+    "off": "Off – applies to all accounts, own keys and background jobs",
+    "offInstance": "Off – applies to all accounts and background jobs"
   },
   "test": {
     "never": "Never tested",
@@ -113,7 +116,9 @@
       "not_configured": "not set up",
       "budget_exhausted": "monthly budget used up",
       "disabled": "switched off"
-    }
+    },
+    "missingUrl": "Enter an address first",
+    "offPlain": "Switched off"
   },
   "errors": {
     "generic": "That did not work. Please try again.",
@@ -237,7 +242,8 @@
       "disabledByMe": "Off for your account – TravStats does not query this service for you",
       "disabledByAdmin": "Switched off by the instance",
       "consented": "Agreed · withdraw any time",
-      "notConsented": "Nothing from your imports goes to {{name}} until you agree"
+      "notConsented": "Nothing from your imports goes to {{name}} until you agree",
+      "noKey": "No own key – the instance key applies, if there is one"
     },
     "removeKey": "Remove own key (the instance's key applies then)",
     "disableForMe": "Turn off for my account",
@@ -467,7 +473,8 @@
       "getKeyUrl": "https://immich.app/docs/features/command-line-interface#obtain-the-api-key",
       "getKeyLabel": "Create an API key in Immich",
       "order": "Account → instance → server ENV",
-      "quotaLine": "your own server"
+      "quotaLine": "your own server",
+      "adminPurpose": "The instance's connection for the nightly photo scan; accounts connect their own Immich"
     },
     "strava": {
       "name": "Strava",
@@ -479,7 +486,8 @@
       "getKeyUrl": "https://www.strava.com/settings/api",
       "getKeyLabel": "Create a Strava app",
       "order": "OAuth per account",
-      "quotaLine": "Strava rate limits per app"
+      "quotaLine": "Strava rate limits per app",
+      "adminPurpose": "The instance's Strava app (client ID and secret); accounts connect their own Strava through it"
     },
     "ollama": {
       "name": "Ollama (local)",
@@ -596,7 +604,8 @@
       "getKeyUrl": "https://travstats.de/docs/",
       "getKeyLabel": "Guide",
       "order": "Account target in addition",
-      "quotaLine": "–"
+      "quotaLine": "–",
+      "adminPurpose": "The instance's backups and exports to a share; accounts may add their own targets"
     },
     "smtp": {
       "name": "E-mail (SMTP)",

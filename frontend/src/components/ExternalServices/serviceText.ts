@@ -13,6 +13,14 @@ export function serviceCopy(t: TFn, id: string, part: string, fallback = ""): st
   return t(`${NS}:services.${id}.${part}`, { defaultValue: fallback });
 }
 
+/** Services whose admin row is the instance part of something accounts also connect. */
+const ADMIN_PURPOSE_IDS: ReadonlySet<string> = new Set(["immich", "strava", "webdav"]);
+
+/** The admin row's purpose: the instance's part, where it differs from the account's. */
+export function adminPurpose(t: TFn, id: string): string {
+  return serviceCopy(t, id, ADMIN_PURPOSE_IDS.has(id) ? "adminPurpose" : "purpose");
+}
+
 export function serviceName(t: TFn, id: string): string {
   return serviceCopy(t, id, "name", id);
 }
@@ -40,14 +48,21 @@ export function lastTestLine(t: TFn, lastTest: ServiceLastTest | null): string {
 
 /** The line under a row's purpose: why it is off, or how the last test went. */
 export function adminTestLine(t: TFn, service: AdminService): string {
-  if (!service.enabled) return t(`${NS}:test.offBlocks`);
-  if (!service.configured) return t(`${NS}:test.missingKey`);
+  // "Blocked for accounts with their own key" only means something where accounts can have one.
+  if (!service.enabled) {
+    return t(`${NS}:test.${service.level === "instanceAndAccount" ? "offBlocks" : "offPlain"}`);
+  }
+  if (!service.configured) {
+    return t(`${NS}:test.${service.credential === "url" ? "missingUrl" : "missingKey"}`);
+  }
   return lastTestLine(t, service.lastTest);
 }
 
 /** Where the instance's credential comes from, as the row's footnote. */
 export function sourceLine(t: TFn, service: AdminService): string {
-  if (!service.enabled) return t(`${NS}:source.off`);
+  if (!service.enabled) {
+    return t(`${NS}:source.${service.level === "instanceAndAccount" ? "off" : "offInstance"}`);
+  }
   if (service.instanceSource === "instance") return t(`${NS}:source.instance`);
   if (service.instanceSource === "env") return t(`${NS}:source.env`);
   return service.configured ? t(`${NS}:source.keyless`) : t(`${NS}:source.none`);

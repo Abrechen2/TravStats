@@ -50,7 +50,8 @@
     "active": "Aktiv",
     "off": "Aus",
     "missing": "Schlüssel fehlt",
-    "error": "Fehler"
+    "error": "Fehler",
+    "missingUrl": "Adresse fehlt"
   },
   "accountStatus": {
     "connected": "Verbunden",
@@ -59,7 +60,8 @@
     "off": "Aus",
     "notConnected": "Nicht verbunden",
     "consented": "Zugestimmt",
-    "notConsented": "Keine Zustimmung"
+    "notConsented": "Keine Zustimmung",
+    "noKey": "Kein Schlüssel"
   },
   "actions": {
     "test": "Testen",
@@ -90,7 +92,8 @@
     "env": "Wirksam: Server-Variable (ENV)",
     "keyless": "Ohne Schlüssel",
     "none": "Kein Schlüssel – bleibt aus",
-    "off": "Aus – gilt für alle Konten, eigene Schlüssel und Hintergrund-Jobs"
+    "off": "Aus – gilt für alle Konten, eigene Schlüssel und Hintergrund-Jobs",
+    "offInstance": "Aus – gilt für alle Konten und Hintergrund-Jobs"
   },
   "test": {
     "never": "Noch nie getestet",
@@ -113,7 +116,9 @@
       "not_configured": "nicht eingerichtet",
       "budget_exhausted": "Monatsbudget aufgebraucht",
       "disabled": "ausgeschaltet"
-    }
+    },
+    "missingUrl": "Erst eine Adresse eintragen",
+    "offPlain": "Ausgeschaltet"
   },
   "errors": {
     "generic": "Das hat nicht geklappt. Bitte versuche es erneut.",
@@ -237,7 +242,8 @@
       "disabledByMe": "Für dein Konto aus – TravStats fragt diesen Dienst für dich nicht ab",
       "disabledByAdmin": "Von der Instanz ausgeschaltet",
       "consented": "Zugestimmt · zurücknehmen jederzeit",
-      "notConsented": "Nichts aus deinen Importen geht an {{name}}, bis du zustimmst"
+      "notConsented": "Nichts aus deinen Importen geht an {{name}}, bis du zustimmst",
+      "noKey": "Kein eigener Schlüssel – es gilt der der Instanz, falls vorhanden"
     },
     "removeKey": "Eigenen Schlüssel entfernen (dann gilt der der Instanz)",
     "disableForMe": "Für mein Konto ausschalten",
@@ -467,7 +473,8 @@
       "getKeyUrl": "https://immich.app/docs/features/command-line-interface#obtain-the-api-key",
       "getKeyLabel": "API-Schlüssel in Immich anlegen",
       "order": "Konto → Instanz → Server-ENV",
-      "quotaLine": "eigener Server"
+      "quotaLine": "eigener Server",
+      "adminPurpose": "Instanz-Verbindung für den nächtlichen Foto-Scan; Konten verbinden ihr eigenes Immich"
     },
     "strava": {
       "name": "Strava",
@@ -479,7 +486,8 @@
       "getKeyUrl": "https://www.strava.com/settings/api",
       "getKeyLabel": "Strava-App anlegen",
       "order": "OAuth pro Konto",
-      "quotaLine": "Strava-Ratenlimits pro App"
+      "quotaLine": "Strava-Ratenlimits pro App",
+      "adminPurpose": "Die Strava-App der Instanz (Client-ID und Secret); Konten verbinden ihr eigenes Strava damit"
     },
     "ollama": {
       "name": "Ollama (lokal)",
@@ -596,7 +604,8 @@
       "getKeyUrl": "https://travstats.de/docs/",
       "getKeyLabel": "Anleitung",
       "order": "Konto-Ziel zusätzlich",
-      "quotaLine": "–"
+      "quotaLine": "–",
+      "adminPurpose": "Backups und Exporte der Instanz auf eine Freigabe; Konten dürfen eigene Ziele"
     },
     "smtp": {
       "name": "E-Mail (SMTP)",

@@ -10,7 +10,7 @@ import { Monogram, ServiceTitle } from "./ServiceIdentity";
 import { ServiceFields, useFieldDrafts } from "./ServiceFields";
 import { SpecialisedControl, replacesGenericFields } from "./SpecialisedControl";
 import { adminStatus, budgetPercent, hasHiddenExpertFields, visibleFields } from "./serviceStatus";
-import { adminTestLine, serviceCopy, serviceName, sourceLine } from "./serviceText";
+import { adminPurpose, adminTestLine, serviceCopy, serviceName, sourceLine } from "./serviceText";
 
 export interface RowFeedback {
   kind: "ok" | "error" | "info";
@@ -117,7 +117,7 @@ export default function AdminServiceRow({
               ) : null
             }
           />
-          <span className="t-caption">{serviceCopy(t, service.id, "purpose")}</span>
+          <span className="t-caption">{adminPurpose(t, service.id)}</span>
           <span
             className="t-caption"
             style={{ color: feedback ? feedbackColor(feedback.kind) : undefined }}
@@ -127,7 +127,7 @@ export default function AdminServiceRow({
           </span>
           <Budget service={service} />
         </div>
-        <AdminStatusPill status={status} />
+        <AdminStatusPill status={status} credential={service.credential} />
         <div className="flex items-center" style={{ gap: "var(--ts-space-sm)" }}>
           <Button variant="secondary" disabled={busy} onClick={actions.onTest}>
             {t("externalServices:actions.test")}

@@ -84,7 +84,14 @@ export function hasHiddenExpertFields(fields: readonly ServiceField[], expert: b
 }
 
 export type AccountStatus =
-  "connected" | "ownKey" | "viaInstance" | "off" | "notConnected" | "consented" | "notConsented";
+  | "connected"
+  | "ownKey"
+  | "viaInstance"
+  | "off"
+  | "notConnected"
+  | "noKey"
+  | "consented"
+  | "notConsented";
 
 export function accountStatus(service: AccountService, kind: "connection" | "key"): AccountStatus {
   if (service.accountDisabled || service.effectiveSource === "off") return "off";
@@ -92,5 +99,6 @@ export function accountStatus(service: AccountService, kind: "connection" | "key
   if (service.effectiveSource === "instance" || service.effectiveSource === "env") {
     return "viaInstance";
   }
-  return "notConnected";
+  // An own-key row says where requests are served from; "no key" is that answer.
+  return kind === "key" ? "noKey" : "notConnected";
 }

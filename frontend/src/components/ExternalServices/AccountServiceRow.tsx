@@ -171,6 +171,7 @@ export function accountDetail(
   if (service.accountDisabled) return t("externalServices:account.detail.disabledByMe");
   if (status === "off") return t("externalServices:account.detail.disabledByAdmin");
   if (status === "viaInstance") return t("externalServices:account.detail.viaInstance");
+  if (status === "noKey") return t("externalServices:account.detail.noKey");
   if (status === "notConnected") return t("externalServices:account.detail.notConnected");
   return lastTestLine(t, service.lastTest);
 }

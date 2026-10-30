@@ -10,7 +10,7 @@ import { loadAllTests, type LastTest } from "./tests";
 import { quotaFor, type QuotaView } from "./quota";
 import { parsePolicy, parsePrefs } from "./policy";
 import { currentConsentDestination } from "./consentBinding";
-import { isLlmProviderKind } from "../llm/llmEndpoint";
+import { isLlmProviderKind, isLocalLlmHost } from "../llm/llmEndpoint";
 import { CATEGORY_ORDER, type ExternalServicePolicy, type ServiceDef } from "./types";
 
 export interface AdminServiceView {
@@ -72,6 +72,23 @@ export function isEnabled(service: ServiceDef, state: AdminState): boolean {
   }
 }
 
+/**
+ * Does this AI service send a document off the network? Every hosted provider
+ * does; Ollama only when its address is not a local one (a local Ollama keeps
+ * the data at home and has nothing to consent to).
+ */
+export function isCloudAi(service: ServiceDef, state: AdminState): boolean {
+  if (!service.ai) return false;
+  if (service.ai.kind !== "ollama") return true;
+  const raw = state.admin?.ollamaUrl ?? process.env.OLLAMA_URL;
+  if (typeof raw !== "string" || raw === "") return false;
+  try {
+    return !isLocalLlmHost(new URL(raw).hostname);
+  } catch {
+    return false;
+  }
+}
+
 /** Is a server environment variable standing in for the instance credential? */
 export function envPresent(service: ServiceDef): boolean {
   if (service.env.length === 0) return false;
@@ -129,6 +146,7 @@ export async function buildAdminView(): Promise<{
 
   const services: AdminServiceView[] = [];
   for (const service of SERVICES) {
+    if (service.adminRow === false) continue;
     const enabled = isEnabled(service, state);
     const source = sourceOf(service, src);
     const view: AdminServiceView = {
@@ -151,7 +169,7 @@ export async function buildAdminView(): Promise<{
       quota: await quotaFor(service),
       fields: service.fields.map((f) => viewField(f, src)),
     };
-    if (service.ai) {
+    if (service.ai && isCloudAi(service, state)) {
       view.consent = {
         allowedByAdmin: enabled,
         accountsConsented: consents.get(service.ai.kind) ?? 0,

@@ -94,6 +94,11 @@ export interface ServiceDef {
   quotaProvider?: "aerodatabox" | "airlabs" | "aviationstack" | "opensky" | "adsbx" | "adsblol";
   /** Account connection (Dawarich, Immich, Strava, WebDAV) rather than an own-key. */
   connection?: boolean;
+  /**
+   * False: no row in the admin list. Dawarich is something accounts connect
+   * themselves; the admin sees it only under "what accounts may connect".
+   */
+  adminRow?: boolean;
 }
 
 /** Persisted admin policy; every list holds catalogue service ids. */
