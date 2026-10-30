@@ -23,6 +23,9 @@ import { AppError } from "../../middleware/errorHandler";
  * must not learn which ids are someone else's.
  */
 
+/** A gallery this large is a library; one read shows the first thousand. */
+export const TRIP_PHOTO_LIST_CAP = 1000;
+
 /** The cover is a pseudo-photo row, never a gallery photo — every gallery read leaves it out. */
 export const NOT_A_COVER = {
   OR: [{ caption: null }, { caption: { not: "__cover__" } }],

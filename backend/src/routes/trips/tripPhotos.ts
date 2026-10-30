@@ -23,7 +23,11 @@ import {
   tripPhotoUploadFieldsSchema,
   updateTripPhotoSchema,
 } from "../../schemas/tripPhoto";
-import { NOT_A_COVER, assertStopOnTrip } from "../../services/trips/photoStation";
+import {
+  NOT_A_COVER,
+  TRIP_PHOTO_LIST_CAP,
+  assertStopOnTrip,
+} from "../../services/trips/photoStation";
 import { ingestUploadedPhotos } from "../../services/photos/ingestPhotos";
 import { parseCaptureFields, withCaptureFields } from "../../services/photos/captureFields";
 import {
@@ -44,9 +48,6 @@ import {
  */
 
 const router = Router();
-
-/** A gallery this large is a library; the picker shows the first thousand. */
-const TRIP_PHOTO_LIST_CAP = 1000;
 
 /* ─────────── Photos (iter 7) ─────────── */
 

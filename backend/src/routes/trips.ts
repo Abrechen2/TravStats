@@ -47,6 +47,7 @@ import {
 import { resolveTrip } from "./trips/resolveTrip";
 import { refusesCoverImage } from "./trips/refusesCoverImage";
 import { toPhotoDto } from "./trips/photoDto";
+import { NOT_A_COVER, TRIP_PHOTO_LIST_CAP } from "../services/trips/photoStation";
 import { provenanceForWrite } from "../services/tripSummaryProvenance";
 import { editedTripDays, typedTripDays } from "../services/timeModel/tripColumns";
 import { enrichFlightsForClients } from "../services/flightAirportFacts";
@@ -292,7 +293,14 @@ router.get(
             orderBy: { date: "asc" },
             include: { photos: { orderBy: { sortIdx: "asc" }, include: { tripPhoto: true } } },
           },
-          photos: { orderBy: [{ sortIdx: "asc" }, { createdAt: "asc" }] },
+          // Capped like GET /trips/:id/photos: an album of 5k photos was 5k rows
+          // on every trip open. `photoCount` carries the true total (forgejo#381).
+          photos: {
+            where: NOT_A_COVER,
+            orderBy: [{ sortIdx: "asc" }, { createdAt: "asc" }],
+            take: TRIP_PHOTO_LIST_CAP,
+          },
+          _count: { select: { photos: { where: NOT_A_COVER } } },
           immichAlbums: { orderBy: { sortIdx: "asc" } },
           // A LodgingStay linked to this trip (StayEditor's tripId picker) —
           // the spec requires it to surface as check-in/check-out entries on
@@ -311,6 +319,8 @@ router.get(
       // Map raw photo rows to DTOs (drops internal "__cover__" sentinel
       // photos so the gallery never shows the cover twice).
       const photos = trip.photos.filter((p) => p.caption !== "__cover__").map(toPhotoDto);
+      const { _count: counts, ...tripRow } = trip;
+      const photoCount = counts.photos;
       // One airport lookup serves two gaps the beta UAT found: the timeline
       // rendered each end in the VIEWER's clock (a JFK arrival read six hours
       // off), and the countries tile stayed at 0 because `trips.countries` is a
@@ -343,7 +353,16 @@ router.get(
         photos: links.map((link) => toPhotoDto(link.tripPhoto)),
       }));
       res.json({
-        trip: withTripDetailTimes({ ...trip, photos, flights, countries, journalEntries, cost }),
+        trip: withTripDetailTimes({
+          ...tripRow,
+          photos,
+          photoCount,
+          photosTruncated: photoCount > photos.length,
+          flights,
+          countries,
+          journalEntries,
+          cost,
+        }),
       });
     } catch (error) {
       next(error);
