@@ -31,11 +31,6 @@ const ALLOWED: Array<{ file: string; fragment: string; why: string }> = [
     why: "third person plural: the Dawarich locations, not the reader",
   },
   {
-    file: "admin.json",
-    fragment: "Ihre Schlüssel haben Vorrang vor globalen Schlüsseln.",
-    why: "third person: the USERS' keys, in a sentence about what users may enter",
-  },
-  {
     file: "immich.json",
     fragment: "Sie lassen sich erst bearbeiten, wenn sie geladen sind.",
     why: "third person plural: the SETTINGS, not the reader",

@@ -33,10 +33,6 @@ import type { ActiveSection } from "./adminSections";
 
 import type { SystemInfoData, AdminUser } from "../../components/Admin/SystemInfo";
 import type { Invitation } from "../../components/Admin/InvitationManagement";
-import type {
-  GlobalApiKeys,
-  ParserApiKeySettings,
-} from "../../components/Admin/GlobalApiKeysManager";
 import type { ParserSettingsData } from "../../components/Admin/ParserSettings";
 import type { LoggingConfig, LogFile, LogStats } from "../../components/Admin/LoggingManager";
 
@@ -92,13 +88,6 @@ export interface AdminSectionSwitchProps {
   inviteCreating: boolean;
   inviteSuccess: InviteSuccessState | null;
   onCloseInviteSuccess: () => void;
-
-  // externalServices
-  globalApiKeys: GlobalApiKeys | null;
-  onGlobalApiKeysChange: (keys: GlobalApiKeys) => void;
-  savingGlobalApiKeys: boolean;
-  onSaveGlobalApiKeys: () => void;
-  onParserApiKeySettingsChange: (settings: ParserApiKeySettings) => void;
 
   // parsers
   parserSettings: ParserSettingsData | null;

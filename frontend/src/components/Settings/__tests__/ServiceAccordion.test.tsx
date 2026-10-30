@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { ServiceAccordion, summarise, type ServiceGroup } from "../ServiceAccordion";
-import { keyState } from "../ServicesSection";
 
 /**
  * forgejo#321 (tester, Discord 2026-10-18): services grouped by domain as
@@ -149,21 +148,5 @@ describe("ServiceAccordion", () => {
   it("draws no group for a domain without services", () => {
     render(<ServiceAccordion groups={groups} />);
     expect(group("empty")).toBeNull();
-  });
-});
-
-describe("keyState", () => {
-  it.each([
-    [{ hasKey: true, isShared: true }, "adminOwn"],
-    [{ hasKey: true, isShared: false }, "own"],
-    [{ hasKey: false, isShared: true }, "admin"],
-    [{ hasKey: false, isShared: false }, "none"],
-    [{ hasKey: false, isShared: false, hasAccess: false }, "none"],
-    // A key from the server's environment: working for everyone, but neither
-    // the account's own nor stored by the admin (codex final review).
-    [{ hasKey: false, isShared: false, hasAccess: true }, "admin"],
-    [undefined, null],
-  ])("reads %j as %s", (status, state) => {
-    expect(keyState(status)).toBe(state);
   });
 });

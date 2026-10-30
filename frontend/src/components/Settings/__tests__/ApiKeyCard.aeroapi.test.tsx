@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // The services page asks the parser whether a model is there (forgejo#321);
 // not the subject here.
 vi.mock("../../../hooks/useHasLlm", () => ({ useHasLlm: () => null, resetHasLlmCache: () => {} }));
-import { render, screen, within, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 /**
@@ -39,8 +39,6 @@ vi.mock("../OperatorLogosCard", () => ({ default: () => null }));
 vi.mock("../RailProvidersCard", () => ({ default: () => null }));
 
 import ApiKeysSection from "../ApiKeysSection";
-import { MemoryRouter } from "react-router-dom";
-import GlobalApiKeysManager, { type GlobalApiKeys } from "../../Admin/GlobalApiKeysManager";
 
 const status = { hasKey: false, isShared: false, hasAccess: false };
 const apiKeys = {
@@ -113,48 +111,5 @@ describe("settings section — AeroAPI card", () => {
     await userEvent.click(test);
     await waitFor(() => expect(settingsTestApiKey).toHaveBeenCalledWith("aeroapi", "abc"));
     expect(adminTestApiKey).not.toHaveBeenCalled();
-  });
-});
-
-describe("admin manager — AeroAPI card", () => {
-  const globalKeys: GlobalApiKeys = {
-    allowUserFlightApiKeys: true,
-    globalAeroapiApiKey: "abcd****wxyz",
-  };
-
-  it("shows the masked global key and routes a change into globalAeroapiApiKey", async () => {
-    const onChange = vi.fn();
-    render(
-      <MemoryRouter>
-        <GlobalApiKeysManager
-          globalApiKeys={globalKeys}
-          parserSettings={{ allowUserApiKeys: true }}
-          saving={false}
-          onSave={() => {}}
-          onGlobalApiKeysChange={onChange}
-          onParserSettingsChange={() => {}}
-        />
-      </MemoryRouter>
-    );
-    // forgejo#321 prototype: one group open at a time, and a key's form opens
-    // with the row's action ("Bearbeiten" for a key that is set).
-    await userEvent.click(
-      within(document.querySelector('[data-service-group="flight"]') as HTMLElement).getAllByRole(
-        "button"
-      )[0]
-    );
-    await userEvent.click(
-      within(document.querySelector('[data-service="aeroapi"]') as HTMLElement).getByRole(
-        "button",
-        { name: "settings:services.action.edit" }
-      )
-    );
-    expect(screen.getByText("admin:globalApiKeys.aeroapi.label")).toBeVisible();
-    const input = await screen.findByLabelText("admin:globalApiKeys.aeroapi.label");
-    await userEvent.type(input, "Z");
-    expect(onChange).toHaveBeenLastCalledWith({
-      ...globalKeys,
-      globalAeroapiApiKey: "abcd****wxyzZ",
-    });
   });
 });
