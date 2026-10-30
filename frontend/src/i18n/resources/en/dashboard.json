@@ -49,6 +49,7 @@
     "importPartial": "{{success}} of {{total}} flights imported ({{errors}} errors)",
     "loadCruises": "Could not load cruises. Please try again later.",
     "retry": "Try again",
+    "domainsFailed": "Not loaded: {{domains}}. The map is not showing these domains right now.",
     "loadLodgings": "Could not load lodgings. Please try again later."
   },
   "flightTab": {

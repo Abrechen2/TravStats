@@ -49,6 +49,7 @@
     "importPartial": "{{success}} von {{total}} Flügen importiert ({{errors}} Fehler)",
     "loadCruises": "Kreuzfahrten konnten nicht geladen werden. Bitte später erneut versuchen.",
     "retry": "Erneut versuchen",
+    "domainsFailed": "Nicht geladen: {{domains}}. Die Karte zeigt diese Bereiche gerade nicht.",
     "loadLodgings": "Unterkünfte konnten nicht geladen werden. Bitte später erneut versuchen."
   },
   "flightTab": {

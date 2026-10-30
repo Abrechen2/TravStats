@@ -27,7 +27,7 @@ import {
 } from "./allTabLegendRows";
 import { useTransportOverlays } from "./allTabTransportOverlays";
 import { MAP_LAYER_COLORS } from "../../../types/mapTheme";
-import { logger } from "../../../lib/logger";
+import { useDomainLoad } from "../../../hooks/useDomainLoad";
 import { useCruiseColorStore } from "../../../store/cruiseColorStore";
 import { useThemeStore } from "../../../store/themeStore";
 import { useCruiseSelectionStore } from "../../../store/cruiseSelectionStore";
@@ -115,6 +115,7 @@ export function AllTab(): JSX.Element {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const { lookup, lookupMany } = useFlightLookup();
   const setSelection = useFlightSelectionStore((s) => s.setSelection);
   const setCruiseSelection = useCruiseSelectionStore((s) => s.setSelection);
@@ -339,102 +340,58 @@ export function AllTab(): JSX.Element {
   // Refresh GeoJSON so the map reflects the edit; full-flight lookup will
   // catch up on the next mount.
   const refreshFlightsAfterSave = useCallback((): void => {
-    flightsApi
-      .getAllGeoJSON()
-      .then((collection) => setFlights(collection.features))
-      .catch((err: unknown) => logger.warn({ err }, "AllTab: map refresh after edit failed"));
+    setReloadKey((k) => k + 1);
   }, []);
 
   // Domain-gating: a disabled domain's data is never fetched, not just
-  // hidden at render time.
-  useEffect(() => {
-    if (!isEnabled("flight")) return;
-    let cancelled = false;
-    flightsApi
-      .getAllGeoJSON()
-      .then((collection) => {
-        if (!cancelled) setFlights(collection.features);
-      })
-      .catch((err: unknown) => {
-        logger.error("AllTab: failed to load GeoJSON", err);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isEnabled]);
-
+  // hidden at render time. Each loader reports its own failure so the status
+  // line below can name the domain that is missing from the map (forgejo#371).
+  const flightsFailed = useDomainLoad(
+    "flights",
+    isEnabled("flight"),
+    () => flightsApi.getAllGeoJSON(),
+    (collection) => setFlights(collection.features),
+    reloadKey
+  );
   // Cruises are fetched so journey mode can group them with flights by tripId.
-  useEffect(() => {
-    if (!isEnabled("cruise")) return;
-    let cancelled = false;
-    cruiseApi
-      .list({})
-      .then((list) => {
-        if (!cancelled) setCruises(list);
-      })
-      .catch((err: unknown) => {
-        logger.error("AllTab: failed to load cruises", err);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isEnabled]);
-
-  // Lodgings — fetched only when the domain is enabled, same domain-gating
-  // contract as flights/cruises above (never fetched, not just hidden).
-  useEffect(() => {
-    if (!isEnabled("lodging")) return;
-    let cancelled = false;
-    listLodgings({})
-      .then((list) => {
-        if (!cancelled) setLodgings(list);
-      })
-      .catch((err: unknown) => {
-        logger.error("AllTab: failed to load lodgings", err);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isEnabled]);
-
+  const cruisesFailed = useDomainLoad(
+    "cruises",
+    isEnabled("cruise"),
+    () => cruiseApi.list({}),
+    setCruises,
+    reloadKey
+  );
+  // Lodgings share the same domain-gating contract (never fetched, not just hidden).
+  const lodgingsFailed = useDomainLoad(
+    "lodgings",
+    isEnabled("lodging"),
+    () => listLodgings({}),
+    setLodgings,
+    reloadKey
+  );
   // Places — gated on `placesAllowed` rather than `isEnabled("poi")`, because
   // the instance beta flag can hide the domain from a user who has it on.
-  // Never fetched while hidden, not merely not drawn.
-  useEffect(() => {
-    if (!placesAllowed) return;
-    let cancelled = false;
-    // Lists come WITH their entries, for the same reason the places tab asks
-    // for them: a pin's colour and its symbol both come from the list it is in,
-    // and membership is the only way to know which list that is.
-    Promise.all([listPlaces({}), listPlaceLists(true)])
-      .then(([list, lists]) => {
-        if (cancelled) return;
-        setPlaces(list);
-        setPlaceLists(lists);
-      })
-      .catch((err: unknown) => {
-        logger.error("AllTab: failed to load places", err);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [placesAllowed]);
-
+  // Lists come WITH their entries: a pin's colour and its symbol both come
+  // from the list it is in, and membership is the only way to know which.
+  const placesFailed = useDomainLoad(
+    "places",
+    placesAllowed,
+    () => Promise.all([listPlaces({}), listPlaceLists(true)]),
+    ([list, lists]) => {
+      setPlaces(list);
+      setPlaceLists(lists);
+    },
+    reloadKey
+  );
   // Trips power the journey-mode selector (label = trip name).
-  useEffect(() => {
-    let cancelled = false;
-    tripsApi
-      .getAll()
-      .then((list) => {
-        if (!cancelled) setTrips(list);
-      })
-      .catch((err: unknown) => {
-        logger.error("AllTab: failed to load trips", err);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const tripsFailed = useDomainLoad("trips", true, () => tripsApi.getAll(), setTrips, reloadKey);
+  const failedDomains = [
+    flightsFailed && t("dashboard:tabStrip.tabs.flight"),
+    cruisesFailed && t("dashboard:tabStrip.tabs.cruise"),
+    lodgingsFailed && t("dashboard:tabStrip.tabs.lodging"),
+    placesFailed && t("dashboard:tabStrip.tabs.poi"),
+    tripsFailed && t("dashboard:trips.label"),
+  ].filter((name): name is string => typeof name === "string");
 
   // Current dashboard mode narrowed to AllMode; fall back to "overview" if the
   // active mode is from a different tab (shouldn't happen in practice but keeps
@@ -753,6 +710,36 @@ export function AllTab(): JSX.Element {
 
   return (
     <div style={{ position: "absolute", inset: 0 }}>
+      {failedDomains.length > 0 && (
+        <div
+          role="alert"
+          style={{
+            position: "absolute",
+            top: 12,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 30,
+            padding: "8px 16px",
+            borderRadius: 10,
+            background: "rgba(60,20,20,0.92)",
+            color: "var(--danger)",
+            border: "1px solid var(--danger)",
+            fontSize: 13,
+            display: "flex",
+            gap: 12,
+            alignItems: "center",
+          }}
+        >
+          <span>{t("dashboard:errors.domainsFailed", { domains: failedDomains.join(", ") })}</span>
+          <button
+            type="button"
+            onClick={() => setReloadKey((k) => k + 1)}
+            style={{ textDecoration: "underline" }}
+          >
+            {t("dashboard:errors.retry")}
+          </button>
+        </div>
+      )}
       <MapContainer3D
         flights={visibleFlights}
         visMode={visMode}
