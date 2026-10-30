@@ -203,18 +203,38 @@ router.get(
 
 // GET /api/v1/airports/nearest?lat=50.033&lon=8.570&maxDistance=5
 // Find nearest airport by coordinates (requires authentication)
+// A blank or non-numeric value is rejected (z.coerce would read "" as 0), and
+// the radius is capped: an unbounded `maxDistance` or a pole latitude used to
+// load the whole airport catalogue into memory (forgejo#380).
+const MAX_NEAREST_DISTANCE_KM = 500;
+const queryNumber = (min: number, max: number) =>
+  z.preprocess(
+    (v) => (typeof v === "string" && v.trim() !== "" ? Number(v) : undefined),
+    z.number().finite().min(min).max(max)
+  );
+const nearestQuerySchema = z.object({
+  lat: queryNumber(-90, 90),
+  lon: queryNumber(-180, 180),
+  maxDistance: queryNumber(0.001, MAX_NEAREST_DISTANCE_KM).default(5),
+});
+
 router.get(
   "/coords/nearest",
   authenticate,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const lat = parseFloat(req.query.lat as string);
-      const lon = parseFloat(req.query.lon as string);
-      const maxDistance = req.query.maxDistance ? parseFloat(req.query.maxDistance as string) : 5;
-
-      if (isNaN(lat) || isNaN(lon)) {
-        return res.status(400).json({ error: "Invalid latitude or longitude" });
+      const parsed = nearestQuerySchema.safeParse({
+        lat: req.query.lat,
+        lon: req.query.lon,
+        maxDistance: req.query.maxDistance === undefined ? undefined : req.query.maxDistance,
+      });
+      if (!parsed.success) {
+        return res.status(400).json({
+          error: "Invalid latitude, longitude or maxDistance",
+          details: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
+        });
       }
+      const { lat, lon, maxDistance } = parsed.data;
 
       const airport = await findNearestAirport(lat, lon, maxDistance);
 

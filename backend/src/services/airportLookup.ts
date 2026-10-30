@@ -516,7 +516,12 @@ export async function findNearestAirport(
 ): Promise<AirportData | null> {
   // Get all airports within rough bounding box (performance optimization)
   const latRange = maxDistance / 111; // ~111km per degree latitude
-  const lonRange = maxDistance / (111 * Math.cos((lat * Math.PI) / 180));
+  // Near a pole a degree of longitude shrinks to nothing, so the range would
+  // blow up past the whole globe: keep it a valid longitude span.
+  const lonRange = Math.min(
+    180,
+    maxDistance / (111 * Math.max(Math.cos((lat * Math.PI) / 180), 0.01))
+  );
 
   const airports = await prisma.airport.findMany({
     where: {
