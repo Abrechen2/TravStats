@@ -12,7 +12,7 @@ import { failureText, testReasonText } from "./serviceText";
 export interface AccountServices {
   data: AccountExternalServices | null;
   loadError: string | null;
-  busyId: string | null;
+  isBusy: (id: string) => boolean;
   feedback: Record<string, RowFeedback>;
   reload: () => Promise<AccountExternalServices | null>;
   /** Saves, then says how the server's own test of the new credential went. */
@@ -37,7 +37,12 @@ export function useAccountServices(): AccountServices {
   const { t } = useTranslation(["externalServices"]);
   const [data, setData] = useState<AccountExternalServices | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [pending, setPending] = useState<Record<string, number>>({});
+  /** Per id: two rows may work at once, and one finishing must not unlock the other. */
+  const begin = (id: string): void => setPending((p) => ({ ...p, [id]: (p[id] ?? 0) + 1 }));
+  const end = (id: string): void =>
+    setPending((p) => ({ ...p, [id]: Math.max(0, (p[id] ?? 1) - 1) }));
+  const isBusy = (id: string): boolean => (pending[id] ?? 0) > 0;
   const [feedback, setFeedback] = useState<Record<string, RowFeedback>>({});
   const tRef = useRef(t);
   tRef.current = t;
@@ -70,28 +75,35 @@ export function useAccountServices(): AccountServices {
     body: AccountServiceUpdate,
     announceTest: boolean
   ): Promise<boolean> => {
-    setBusyId(id);
+    begin(id);
     note(id, null);
     try {
       await externalServicesApi.accountUpdate(id, body);
     } catch (err) {
       note(id, { kind: "error", text: failureText(t, err, "errors.saveFailed") });
-      setBusyId(null);
+      end(id);
       return false;
     }
     const fresh = await reload();
-    const test = announceTest ? findService(fresh, id)?.lastTest : null;
-    if (test && !test.ok) {
-      note(id, {
-        kind: "error",
-        text: t("externalServices:account.savedButFailed", {
-          reason: testReasonText(t, test.reason),
-        }),
-      });
-    } else if (announceTest) {
-      note(id, { kind: "ok", text: t("externalServices:account.savedAndTested") });
+    if (announceTest) {
+      // "Tested" is only said when the server's own test is in the answer; a
+      // reload that failed or a missing test result is not a success to claim.
+      const test = findService(fresh, id)?.lastTest ?? null;
+      note(
+        id,
+        !test
+          ? { kind: "info", text: t("externalServices:account.savedUnverified") }
+          : test.ok
+            ? { kind: "ok", text: t("externalServices:account.savedAndTested") }
+            : {
+                kind: "error",
+                text: t("externalServices:account.savedButFailed", {
+                  reason: testReasonText(t, test.reason),
+                }),
+              }
+      );
     }
-    setBusyId(null);
+    end(id);
     return true;
   };
 
@@ -99,7 +111,7 @@ export function useAccountServices(): AccountServices {
     service: { id: string; provider: string },
     consent: boolean
   ): Promise<string | null> => {
-    setBusyId(service.id);
+    begin(service.id);
     note(service.id, null);
     try {
       await externalServicesApi.accountSetAiConsent(service.provider, consent);
@@ -110,9 +122,9 @@ export function useAccountServices(): AccountServices {
       note(service.id, { kind: "error", text });
       return text;
     } finally {
-      setBusyId(null);
+      end(service.id);
     }
   };
 
-  return { data, loadError, busyId, feedback, reload, save, setConsent };
+  return { data, loadError, isBusy, feedback, reload, save, setConsent };
 }

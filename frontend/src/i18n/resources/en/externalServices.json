@@ -240,6 +240,7 @@
     "disconnect": "Disconnect",
     "secretNote": "The key is stored encrypted and never shown in full again.",
     "savedAndTested": "Saved and tested ✓",
+    "savedUnverified": "Saved – whether it works could not be checked.",
     "savedButFailed": "Saved, but the test failed – {{reason}}"
   },
   "instance": {

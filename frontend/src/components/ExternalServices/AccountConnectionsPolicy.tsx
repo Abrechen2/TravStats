@@ -11,12 +11,12 @@ import type { RowFeedback } from "./AdminServiceRow";
  */
 export default function AccountConnectionsPolicy({
   policies,
-  busyId,
+  isBusy,
   feedback,
   onChange,
 }: {
   policies: readonly AdminConnectionPolicy[];
-  busyId: string | null;
+  isBusy: (id: string) => boolean;
   feedback: Record<string, RowFeedback>;
   onChange: (id: ConnectionId, allowed: boolean) => void;
 }): JSX.Element {
@@ -50,7 +50,7 @@ export default function AccountConnectionsPolicy({
                   { count: policy.connectedAccounts }
                 )}`}
                 checked={policy.allowed}
-                disabled={busyId === `connection:${policy.id}`}
+                disabled={isBusy(`connection:${policy.id}`)}
                 onChange={(next) => onChange(policy.id, next)}
               />
               {note ? (

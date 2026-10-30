@@ -240,6 +240,7 @@
     "disconnect": "Verbindung trennen",
     "secretNote": "Der Schlüssel wird verschlüsselt gespeichert und nie wieder ganz angezeigt.",
     "savedAndTested": "Gespeichert und getestet ✓",
+    "savedUnverified": "Gespeichert – ob es funktioniert, konnte nicht geprüft werden.",
     "savedButFailed": "Gespeichert, aber der Test ist fehlgeschlagen – {{reason}}"
   },
   "instance": {

@@ -1,6 +1,7 @@
 import { useState, type JSX, type ReactNode } from "react";
 import { Card } from "../ui/Card";
 import Button from "../ui/Button";
+import PhotoJourneyNightlyScanCard from "../Settings/PhotoJourneyNightlyScanCard";
 import StravaConnectionCard from "../Settings/StravaConnectionCard";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useEffectiveSettingsLevel } from "../../store/settingsLevelStore";
@@ -81,7 +82,7 @@ export default function AccountExternalServices(): JSX.Element {
     const status = accountStatus(service, kind);
     const isStrava = service.id === "strava";
     const open = openId === service.id;
-    const busy = services.busyId === service.id;
+    const busy = services.isBusy(service.id);
     const own = service.effectiveSource === "account";
     const actionLabel =
       kind === "key" && service.accountDisabled
@@ -123,27 +124,31 @@ export default function AccountExternalServices(): JSX.Element {
           isStrava ? (
             <StravaConnectionCard isAdmin={false} />
           ) : (
-            <AccountFieldsForm
-              service={service}
-              kind={kind}
-              expert={expert}
-              busy={busy}
-              onCancel={close}
-              onSave={async (changes) => {
-                if (await services.save(service.id, { fields: changes }, true)) close();
-              }}
-              onRemove={async (clear) => {
-                if (await services.save(service.id, { fields: clear }, false)) close();
-              }}
-              onDisable={
-                kind === "key"
-                  ? async () => {
-                      if (await services.save(service.id, { accountDisabled: true }, false))
-                        close();
-                    }
-                  : undefined
-              }
-            />
+            <div className="flex flex-col" style={{ gap: "var(--ts-space-xl)" }}>
+              <AccountFieldsForm
+                service={service}
+                kind={kind}
+                expert={expert}
+                busy={busy}
+                onCancel={close}
+                onSave={async (changes) => {
+                  if (await services.save(service.id, { fields: changes }, true)) close();
+                }}
+                onRemove={async (clear) => {
+                  if (await services.save(service.id, { fields: clear }, false)) close();
+                }}
+                onDisable={
+                  kind === "key"
+                    ? async () => {
+                        if (await services.save(service.id, { accountDisabled: true }, false))
+                          close();
+                      }
+                    : undefined
+                }
+              />
+              {/* The nightly photo scan reads the connected library (forgejo#94). */}
+              {service.id === "immich" ? <PhotoJourneyNightlyScanCard /> : null}
+            </div>
           )
         }
       />
@@ -213,7 +218,7 @@ export default function AccountExternalServices(): JSX.Element {
                   { name: serviceName(t, consent.id), destination: consent.destination }
                 )}
                 feedback={services.feedback[consent.id] ?? null}
-                busy={services.busyId === consent.id}
+                busy={services.isBusy(consent.id)}
                 expert={expert}
                 actionLabel={t(
                   consented
@@ -245,7 +250,7 @@ export default function AccountExternalServices(): JSX.Element {
       {consentFor ? (
         <AccountConsentDialog
           name={serviceName(t, consentFor.id)}
-          busy={services.busyId === consentFor.id}
+          busy={services.isBusy(consentFor.id)}
           error={consentError}
           onConfirm={() => void confirmConsent()}
           onClose={() => {

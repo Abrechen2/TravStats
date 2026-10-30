@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { accountOverview, apiError, mockedApi, t } from "./fixtures";
 
 vi.mock("../../../hooks/useTranslation", () => ({ useTranslation: () => ({ t }) }));
 vi.mock("../../../lib/api/externalServices", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../lib/api/externalServices")>()),
   externalServicesApi: mockedApi,
+}));
+vi.mock("../../Settings/PhotoJourneyNightlyScanCard", () => ({
+  default: () => <div data-testid="nightly-scan" />,
 }));
 vi.mock("../../Settings/StravaConnectionCard", () => ({
   default: () => <div data-testid="strava-card" />,
@@ -227,5 +230,119 @@ describe("Einstellungen › Dienste", () => {
     );
     render(<AccountExternalServices />);
     expect(await screen.findByRole("alert")).toHaveTextContent("externalServices:errors.network");
+  });
+
+  it("never says 'tested' when the server's test result is missing from the answer", async () => {
+    // First answer: the page. Every later one has no lastTest for the service.
+    render(<AccountExternalServices />);
+    await screen.findByText("externalServices:account.sections.ownKeys");
+    fireEvent.click(
+      within(row("aviationstack")).getByRole("button", {
+        name: "externalServices:account.action.addOwn",
+      })
+    );
+    fireEvent.change(screen.getByLabelText("externalServices:fields.aviationstack.apiKey"), {
+      target: { value: "k" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "externalServices:actions.saveAndTest" }));
+    await waitFor(() => expect(mockedApi.accountUpdate).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(row("aviationstack")).toHaveTextContent("externalServices:account.savedUnverified")
+    );
+    expect(row("aviationstack")).not.toHaveTextContent("externalServices:account.savedAndTested");
+  });
+
+  it("does not say 'tested' when the reload after the save failed", async () => {
+    mockedApi.accountOverview
+      .mockResolvedValueOnce(accountOverview())
+      .mockRejectedValue(Object.assign(new Error("Network Error"), { isAxiosError: true }));
+    render(<AccountExternalServices />);
+    await screen.findByText("externalServices:account.sections.ownKeys");
+    fireEvent.click(
+      within(row("aviationstack")).getByRole("button", {
+        name: "externalServices:account.action.addOwn",
+      })
+    );
+    fireEvent.change(screen.getByLabelText("externalServices:fields.aviationstack.apiKey"), {
+      target: { value: "k" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "externalServices:actions.saveAndTest" }));
+    await waitFor(() =>
+      expect(row("aviationstack")).toHaveTextContent("externalServices:account.savedUnverified")
+    );
+  });
+
+  it("keeps the nightly photo scan reachable under the Immich connection", async () => {
+    const data = accountOverview();
+    data.connections.push({
+      id: "immich",
+      recommended: "free",
+      effectiveSource: "account",
+      accountDisabled: false,
+      configured: true,
+      lastTest: null,
+      fields: [{ key: "serverUrl", kind: "url", value: "https://i.example", expert: false }],
+    });
+    mockedApi.accountOverview.mockResolvedValue(data);
+    render(<AccountExternalServices />);
+    await screen.findByText("externalServices:account.sections.connections");
+    expect(screen.queryByTestId("nightly-scan")).toBeNull();
+    fireEvent.click(
+      within(row("immich")).getByRole("button", { name: "externalServices:account.action.change" })
+    );
+    expect(screen.getByTestId("nightly-scan")).toBeInTheDocument();
+  });
+
+  it("does not unlock a row that is still saving when another row finishes", async () => {
+    let releaseSlow: () => void = () => {};
+    mockedApi.accountUpdate.mockImplementation((id: string) =>
+      id === "airlabs"
+        ? new Promise<void>((resolve) => {
+            releaseSlow = resolve;
+          })
+        : Promise.resolve()
+    );
+    render(<AccountExternalServices />);
+    await screen.findByText("externalServices:account.sections.ownKeys");
+    fireEvent.click(
+      within(row("airlabs")).getByRole("button", { name: "externalServices:account.action.change" })
+    );
+    fireEvent.click(screen.getByRole("button", { name: "externalServices:account.disableForMe" }));
+    await waitFor(() =>
+      expect(
+        within(row("airlabs")).getByRole("button", {
+          name: "externalServices:account.action.change",
+        })
+      ).toBeDisabled()
+    );
+    // A second row saves and finishes meanwhile.
+    fireEvent.click(
+      within(row("aviationstack")).getByRole("button", {
+        name: "externalServices:account.action.addOwn",
+      })
+    );
+    fireEvent.change(screen.getByLabelText("externalServices:fields.aviationstack.apiKey"), {
+      target: { value: "k" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "externalServices:actions.saveAndTest" }));
+    await waitFor(() =>
+      expect(mockedApi.accountUpdate).toHaveBeenCalledWith("aviationstack", expect.anything())
+    );
+    await waitFor(() =>
+      expect(row("aviationstack")).toHaveTextContent("externalServices:account.savedUnverified")
+    );
+    expect(
+      within(row("airlabs")).getByRole("button", { name: "externalServices:account.action.change" })
+    ).toBeDisabled();
+    await act(async () => {
+      releaseSlow();
+    });
+    await waitFor(() =>
+      expect(
+        within(row("airlabs")).getByRole("button", {
+          name: "externalServices:account.action.change",
+        })
+      ).toBeEnabled()
+    );
   });
 });

@@ -12,7 +12,7 @@ import { failureText, isServiceDisabledError, testReasonText } from "./serviceTe
 export interface AdminServices {
   data: AdminExternalServices | null;
   loadError: string | null;
-  busyId: string | null;
+  isBusy: (id: string) => boolean;
   feedback: Record<string, RowFeedback>;
   reload: () => Promise<void>;
   test: (id: string) => Promise<void>;
@@ -37,7 +37,12 @@ export function useAdminServices(): AdminServices {
   const { t } = useTranslation(["externalServices"]);
   const [data, setData] = useState<AdminExternalServices | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [pending, setPending] = useState<Record<string, number>>({});
+  /** Per id: two rows may work at once, and one finishing must not unlock the other. */
+  const begin = (id: string): void => setPending((p) => ({ ...p, [id]: (p[id] ?? 0) + 1 }));
+  const end = (id: string): void =>
+    setPending((p) => ({ ...p, [id]: Math.max(0, (p[id] ?? 1) - 1) }));
+  const isBusy = (id: string): boolean => (pending[id] ?? 0) > 0;
   const [feedback, setFeedback] = useState<Record<string, RowFeedback>>({});
   const tRef = useRef(t);
   tRef.current = t;
@@ -63,11 +68,11 @@ export function useAdminServices(): AdminServices {
     });
 
   const withBusy = async (id: string, work: () => Promise<void>): Promise<void> => {
-    setBusyId(id);
+    begin(id);
     try {
       await work();
     } finally {
-      setBusyId(null);
+      end(id);
     }
   };
 
@@ -129,7 +134,7 @@ export function useAdminServices(): AdminServices {
     enabled: boolean,
     confirmDataSharing = false
   ): Promise<string | null> => {
-    setBusyId(id);
+    begin(id);
     note(id, null);
     const body: AdminServiceUpdate = confirmDataSharing
       ? { enabled, confirmDataSharing }
@@ -143,7 +148,7 @@ export function useAdminServices(): AdminServices {
       note(id, { kind: "error", text });
       return text;
     } finally {
-      setBusyId(null);
+      end(id);
     }
   };
 
@@ -172,7 +177,7 @@ export function useAdminServices(): AdminServices {
   return {
     data,
     loadError,
-    busyId,
+    isBusy,
     feedback,
     reload,
     test,

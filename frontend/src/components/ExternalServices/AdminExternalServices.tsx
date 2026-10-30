@@ -193,7 +193,7 @@ export default function AdminExternalServices(): JSX.Element {
                   service={service}
                   expert={expert}
                   open={openId === service.id}
-                  busy={services.busyId === service.id}
+                  busy={services.isBusy(service.id)}
                   feedback={services.feedback[service.id] ?? null}
                   actions={{
                     onToggleOpen: () => {
@@ -222,7 +222,7 @@ export default function AdminExternalServices(): JSX.Element {
 
       <AccountConnectionsPolicy
         policies={data.accountConnections}
-        busyId={services.busyId}
+        isBusy={services.isBusy}
         feedback={services.feedback}
         onChange={(id, allowed) => void services.setConnection(id, allowed)}
       />
@@ -239,7 +239,7 @@ export default function AdminExternalServices(): JSX.Element {
       {consentId ? (
         <AdminConsentDialog
           serviceId={consentId}
-          busy={services.busyId === consentId}
+          busy={services.isBusy(consentId)}
           error={consentError}
           onConfirm={() => void confirmConsent()}
           onClose={closeConsent}
