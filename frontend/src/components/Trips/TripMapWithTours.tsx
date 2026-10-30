@@ -17,6 +17,7 @@ import SharedRouteLegend from "./recording/SharedRouteLegend";
 import { buildSharedRouteLayers, sharedRoutePoints } from "./recording/sharedRouteLayers";
 import { useTripTransportLayers, type TripTransportContent } from "./tripTransportLayers";
 import type { TripProjection } from "./TripMapGlobeLayers";
+import WebGLGuard from "../map/WebGLGuard";
 
 /**
  * The trip detail page's "Karte" tab: the trip, and — while tours are visible
@@ -89,13 +90,15 @@ export default function TripMapWithTours({
         }}
         onDeleted={recording.reload}
       />
-      <TripMap
-        trip={trip}
-        tourGeometries={geometries}
-        extraLayers={extraLayers}
-        extraPoints={extraPoints}
-        onProjectionChange={setProjection}
-      />
+      <WebGLGuard>
+        <TripMap
+          trip={trip}
+          tourGeometries={geometries}
+          extraLayers={extraLayers}
+          extraPoints={extraPoints}
+          onProjectionChange={setProjection}
+        />
+      </WebGLGuard>
     </>
   );
 }

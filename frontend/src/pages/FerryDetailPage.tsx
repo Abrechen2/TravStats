@@ -28,6 +28,7 @@ import { railArrival, railDeparture } from "../lib/entityTimes";
 import { formatStationTime, railDurationMinutes } from "../lib/railTime";
 import type { FerryJourney } from "../types/ferry";
 import { dateLocaleForLanguage } from "../lib/units";
+import WebGLGuard from "../components/map/WebGLGuard";
 export default function FerryDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -243,7 +244,9 @@ export default function FerryDetailPage() {
           {/* The trip's photos taken on board, as a train ride shows them. */}
           {ride.tripId && <TripPhotoWindowStrip entry="ferry" id={ride.id} />}
           <DetailSection title={t("ferry:map.title")}>
-            <FerryRouteMap ride={ride} />
+            <WebGLGuard>
+              <FerryRouteMap ride={ride} />
+            </WebGLGuard>
           </DetailSection>
           {ride.companions.length > 0 && (
             <DetailSection title={t("ferry:companionNames")}>

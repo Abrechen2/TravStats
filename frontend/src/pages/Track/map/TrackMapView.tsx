@@ -45,6 +45,7 @@ import { useFlightTrack } from "./useFlightTrack";
 import { useLiveFollow } from "./useLiveFollow";
 import { useReplay } from "./useReplay";
 import { useTrackMapData } from "./useTrackMapData";
+import WebGLGuard from "../../../components/map/WebGLGuard";
 
 type Loaded = Extract<DayResult, { kind: "loaded" }>;
 
@@ -254,26 +255,28 @@ export default function TrackMapView(): JSX.Element {
           )}
           {(hasDrawing || highlight.length > 0) && (long || !loading) && (
             <div className="relative">
-              <TrackRangeMap
-                key={`${span.fromDay}|${span.toDay}|${loading ? "partial" : "whole"}`}
-                refit={highlight.length > 0 ? `flight:${flight?.id ?? ""}` : "day"}
-                layers={prefs.layers}
-                color={prefs.color}
-                opacity={prefs.opacity}
-                frameLines={framed}
-                highlight={highlight}
-                lines={lines}
-                segments={drawn}
-                points={points}
-                anchors={anchors}
-                replay={head}
-                onPoint={onPoint}
-                photos={photoList}
-                onPhoto={onPhoto}
-                countries={countryShapes}
-                follow={follow}
-                onFogStatus={setFog}
-              />
+              <WebGLGuard>
+                <TrackRangeMap
+                  key={`${span.fromDay}|${span.toDay}|${loading ? "partial" : "whole"}`}
+                  refit={highlight.length > 0 ? `flight:${flight?.id ?? ""}` : "day"}
+                  layers={prefs.layers}
+                  color={prefs.color}
+                  opacity={prefs.opacity}
+                  frameLines={framed}
+                  highlight={highlight}
+                  lines={lines}
+                  segments={drawn}
+                  points={points}
+                  anchors={anchors}
+                  replay={head}
+                  onPoint={onPoint}
+                  photos={photoList}
+                  onPhoto={onPhoto}
+                  countries={countryShapes}
+                  follow={follow}
+                  onFogStatus={setFog}
+                />
+              </WebGLGuard>
               {selected && (
                 <TrackPointInspector
                   point={selected}

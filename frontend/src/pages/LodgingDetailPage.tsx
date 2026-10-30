@@ -44,6 +44,7 @@ import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
 import type { Lodging, LodgingMembership, LodgingStay } from "../types/lodging";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
+import WebGLGuard from "../components/map/WebGLGuard";
 
 /** What a figure reads as when it cannot be stated. The same dash the spend
  *  card already prints for an unconvertible total. */
@@ -548,7 +549,9 @@ export default function LodgingDetailPage(): JSX.Element {
 
         <aside className="flex flex-col gap-6 md:col-span-2">
           <DetailSection title={t("lodging:detail.location")}>
-            <LodgingMiniMap lodging={lodging} onSetLocation={() => setRepairingLocation(true)} />
+            <WebGLGuard>
+              <LodgingMiniMap lodging={lodging} onSetLocation={() => setRepairingLocation(true)} />
+            </WebGLGuard>
           </DetailSection>
 
           <DetailSection title={t("lodging:detail.avgRating")}>

@@ -1,4 +1,5 @@
 {
+  "webglUnavailable": "Your browser cannot create a 3D map right now. Check hardware acceleration or restart the browser.",
   "loadFailed": {
     "rentals": "The rental cars could not be loaded.",
     "cruiseRoutes": "The cruise routes could not be loaded.",

@@ -18,6 +18,7 @@ import { apiErrorMachineCode } from "../../lib/apiError";
 import { NO_ORIGIN_INFO, type TrackOrigin, type TrackOriginInfo } from "../../lib/api/trackOrigin";
 import { formatTimeValueShown } from "../../lib/displayFormat";
 import type { TimeValue } from "../../shared/time";
+import WebGLGuard from "../map/WebGLGuard";
 
 type TrackState =
   | { kind: "loading" }
@@ -157,12 +158,14 @@ export default function FlightTrackSection({
   return (
     <DetailSection title={t("flights:track.title")}>
       <div className="flex flex-col gap-2">
-        <FlightTrackMap
-          geometry={track.geometry}
-          segmentStarts={track.segmentStarts}
-          departure={departure}
-          arrival={arrival}
-        />
+        <WebGLGuard>
+          <FlightTrackMap
+            geometry={track.geometry}
+            segmentStarts={track.segmentStarts}
+            departure={departure}
+            arrival={arrival}
+          />
+        </WebGLGuard>
         <p className="t-caption" data-testid="flight-track-caption">
           {t(captionKey, {
             distance: km(track.distanceKm),

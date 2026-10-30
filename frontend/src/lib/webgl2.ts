@@ -23,3 +23,35 @@ function hasWebGL2(): boolean {
 }
 
 export const webgl2Available = hasWebGL2();
+
+/**
+ * Whether a WebGL2 context can be created RIGHT NOW. `webgl2Available` is
+ * frozen at import; this asks again, because creation can fail later on a
+ * machine that managed it once (a driver reset, or the browser's budget of
+ * roughly 8-16 live contexts used up by other tabs and maps). The probe
+ * context is released at once so it does not count against that budget.
+ */
+export function probeWebGL2(): boolean {
+  try {
+    const canvas = document.createElement("canvas");
+    const gl = canvas.getContext("webgl2");
+    if (!gl) return false;
+    gl.getExtension("WEBGL_lose_context")?.loseContext();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * MapLibre throws `GPUInitializationError` ("WebGL2 is required to display
+ * this map.") when the context cannot be created. Matched by name AND
+ * message: a bundler can rename the class, the message text is MapLibre's.
+ */
+export function isWebGLInitError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return (
+    error.name === "GPUInitializationError" ||
+    /WebGL2? is required|Failed to initialize WebGL/i.test(error.message)
+  );
+}
