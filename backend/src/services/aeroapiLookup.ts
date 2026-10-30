@@ -22,8 +22,9 @@
 import axios from "axios";
 import NodeCache from "node-cache";
 import { findOrCreateAirport } from "./airportLookup";
-import { getApiKey } from "./apiKeyResolver";
+import { resolveApiKey } from "./apiKeyResolver";
 import { recordObservedQuota } from "./apiQuota";
+import { requestAeroapiCall } from "./aeroapiBudget";
 import logger from "../utils/logger";
 import type { FlightLookupResult } from "./flightLookup";
 import { classifyProviderError, type LookupOutcomeLog } from "./flightLookup/providerOutcome";
@@ -34,6 +35,8 @@ import { isValidZone } from "../shared/time/zonedParts";
 
 const BASE_URL = "https://aeroapi.flightaware.com/aeroapi";
 const REQUEST_TIMEOUT_MS = 8000;
+/** How long a lookup waits for one of the minute's ten result-set slots. */
+const LOOKUP_RATE_WAIT_MS = 2000;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** AeroAPI's documented window for /flights/{ident}: 10 days back, 2 ahead. */
@@ -146,7 +149,7 @@ export function aeroapiDepartsOnLocalDate(flight: AeroapiFlight, date: string): 
 }
 
 /** Preference for OUR departure airport, never a filter (see AeroDataBox). */
-function preferOrigin(flights: AeroapiFlight[], depAirportCode?: string): AeroapiFlight[] {
+export function preferOrigin(flights: AeroapiFlight[], depAirportCode?: string): AeroapiFlight[] {
   if (!depAirportCode) return flights;
   const wanted = depAirportCode.toUpperCase();
   const matching = flights.filter(
@@ -223,7 +226,10 @@ export async function lookupFlightAeroapi(
   const trimmed = flightNumber.trim();
   if (!trimmed) return null;
 
-  const apiKey = await getApiKey("aeroapi", userId);
+  // ONE resolution supplies both the key that is sent and whose account it
+  // bills: a second read could see a changed key and bill the instance's key
+  // as the user's own.
+  const { key: apiKey, source: keySource } = await resolveApiKey("aeroapi", userId);
   if (!apiKey) return null;
 
   const nowMs = Date.now();
@@ -248,6 +254,18 @@ export async function lookupFlightAeroapi(
     logger.info({ operation: "aeroapi_cache_hit" }, "AeroAPI cache hit");
     outcomes?.record("aeroapi", cached ? "ok" : "no_match");
     return cached;
+  }
+
+  // The budget and the minute's rate limit, BEFORE the request. Waiting up to
+  // two seconds for a slot is a lookup's patience; beyond that the chain moves
+  // on to the next provider and the outcome says why (forgejo#409).
+  const gate = await requestAeroapiCall("flights", {
+    maxWaitMs: LOOKUP_RATE_WAIT_MS,
+    ownKeyOfUser: keySource === "user" ? userId : undefined,
+  });
+  if (!gate.ok) {
+    outcomes?.record("aeroapi", "quota");
+    return null;
   }
 
   try {
@@ -322,6 +340,9 @@ export async function lookupFlightAeroapi(
     )?.response;
     const status = errResponse?.status;
     if (errResponse?.headers) captureRateLimit(errResponse.headers, userId);
+    // An HTTP error answer was not billed: give the reserved cost back. A
+    // timeout or network error might have been, so it stays counted.
+    if (status !== undefined) await gate.release().catch(() => undefined);
 
     if (status === 429) {
       logger.warn(

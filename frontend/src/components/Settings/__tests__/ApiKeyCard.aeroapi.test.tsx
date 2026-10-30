@@ -31,6 +31,7 @@ vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => fals
 // The services accordion (forgejo#321) also holds the shared Immich connection
 // and the operator-logo switch (forgejo#323), which load their own settings —
 // not the subject here.
+vi.mock("../../Admin/AeroapiBudgetCard", () => ({ default: () => null }));
 vi.mock("../../Admin/ImmichGlobalSettings", () => ({ default: () => null }));
 vi.mock("../OperatorLogosCard", () => ({ default: () => null }));
 // The rail group is drawn on every instance since rail left beta (2.7.0-rc.20);

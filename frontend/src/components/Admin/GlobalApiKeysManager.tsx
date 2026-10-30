@@ -1,5 +1,6 @@
 import { useState, type JSX } from "react";
 import { Link } from "react-router-dom";
+import AeroapiBudgetCard from "./AeroapiBudgetCard";
 import ApiKeyCard, { type ApiKeyCardProps } from "../Settings/ApiKeyCard";
 import ImmichGlobalSettings from "./ImmichGlobalSettings";
 import OpenDataCard from "../Settings/OpenDataCard";
@@ -305,6 +306,8 @@ export default function GlobalApiKeysManager({
       label: t("common:domain.flight"),
       color: colorOf("flight"),
       items: [...FLIGHT_KEYS.map(keyItem), adsbLol, opensky],
+      // Plan, monthly budget and the track switch for AeroAPI (forgejo#409).
+      footer: <AeroapiBudgetCard />,
     },
     {
       id: "rail",

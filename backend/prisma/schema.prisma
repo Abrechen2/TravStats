@@ -743,15 +743,16 @@ model Flight {
   /// Trip sharing: the same key on every member's copy of this entry. Null = never shared.
   shareKey      String? @map("share_key")
 
-  user             User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  importBatch      ImportBatch?          @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
-  trip             Trip?                 @relation(fields: [tripId], references: [id], onDelete: SetNull)
-  booking          Booking?              @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  pendingUpdates   PendingFlightUpdate[]
-  companionLinks   FlightCompanion[]
+  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  importBatch         ImportBatch?          @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  trip                Trip?                 @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  booking             Booking?              @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  pendingUpdates      PendingFlightUpdate[]
+  companionLinks      FlightCompanion[]
   /// The phone's own recording of this flight (forgejo#193) — see `FlightTrack`.
-  track            FlightTrack?
-  publicShareLinks PublicShareLink[]
+  track               FlightTrack?
+  aeroapiTrackAttempt AeroapiTrackAttempt?
+  publicShareLinks    PublicShareLink[]
 
   documents Document[]
 
@@ -1151,6 +1152,14 @@ model AdminSettings {
   /// admin switch, OFF by default (forgejo#392 rule, forgejo#408). A saved adsb.lol
   /// key counts as enabled.
   adsbLolEnabled            Boolean   @default(false) @map("adsb_lol_enabled")
+  /// FlightAware AeroAPI plan (forgejo#409): personal | personal_feeder | custom.
+  /// Decides the monthly USD budget the call guard enforces.
+  aeroapiTier               String    @default("personal") @map("aeroapi_tier")
+  /// The monthly budget in USD when the tier is `custom`; null otherwise.
+  aeroapiCustomBudgetUsd    Float?    @map("aeroapi_custom_budget_usd")
+  /// Fetch real flight tracks from AeroAPI after arrival. OFF until the admin
+  /// opts in (forgejo#392 rule): every fetch spends budget.
+  aeroapiTracksEnabled      Boolean   @default(false) @map("aeroapi_tracks_enabled")
   /// Push to the Companion app (TravStats#156). OFF until this server's admin
   /// agrees (owner decision 2026-10-01): with it off the server never
   /// contacts the relay, not even to register.
@@ -2868,6 +2877,36 @@ model FlightTrack {
   flight Flight @relation(fields: [flightId], references: [id], onDelete: Cascade)
 
   @@map("flight_tracks")
+}
+
+/// What AeroAPI has cost in one UTC calendar month (forgejo#409). The guard
+/// reserves a call's cost here BEFORE the request, in one conditional upsert,
+/// so a restart or two concurrent callers cannot spend past the budget.
+/// Whole milli-dollars: float sums drift, and $0.005 is 5.
+model AeroapiUsage {
+  /// `YYYY-MM`, UTC.
+  month         String   @id
+  spentMilliUsd Int      @default(0) @map("spent_milli_usd")
+  calls         Int      @default(0)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("aeroapi_usage")
+}
+
+/// One row per flight the AeroAPI track sweep has looked at, so a flight is
+/// fetched once and an answer of "no track" is not asked again (forgejo#409).
+/// `outcome` is terminal (`stored`, `no_match`, `no_track`, `has_track`) or
+/// transient (`budget`, `rate_limit`, `error`) — a transient one is retried,
+/// up to `AEROAPI_TRACK_MAX_ATTEMPTS` times.
+model AeroapiTrackAttempt {
+  flightId    String   @id @map("flight_id")
+  outcome     String
+  attempts    Int      @default(1)
+  attemptedAt DateTime @default(now()) @map("attempted_at")
+
+  flight Flight @relation(fields: [flightId], references: [id], onDelete: Cascade)
+
+  @@map("aeroapi_track_attempts")
 }
 
 /// One upload of the positions the Companion recorded during a trip

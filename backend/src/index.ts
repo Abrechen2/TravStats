@@ -265,6 +265,7 @@ const shutdown = (signal: string) => async (): Promise<void> => {
   (await import("./services/reminderScheduler")).stopReminderScheduler();
   (await import("./jobs/usageStatsScheduler")).stopUsageStatsScheduler();
   (await import("./jobs/airlineLogoRefreshScheduler")).stopAirlineLogoRefreshScheduler();
+  (await import("./jobs/aeroapiTrackScheduler")).stopAeroapiTrackScheduler();
   (await import("./jobs/statusSweepScheduler")).stopStatusSweepScheduler();
   (await import("./jobs/placeAddressBackfillScheduler")).stopPlaceAddressBackfillScheduler();
   (await import("./jobs/trackJitterRemeasureScheduler")).stopTrackJitterRemeasureScheduler();

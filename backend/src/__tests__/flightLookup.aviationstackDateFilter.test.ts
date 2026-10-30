@@ -40,6 +40,15 @@ jest.mock("../services/apiKeyResolver", () => ({
     if (provider === "airlabs") return "test-airlabs-key";
     return null;
   }),
+  // The lookup resolves key AND source in one read; the mock serves the key from getApiKey.
+  resolveApiKey: async (provider: string, userId?: string) => ({
+    key: await (
+      jest.requireMock("../services/apiKeyResolver") as {
+        getApiKey: (p: string, u?: string) => Promise<string | null>;
+      }
+    ).getApiKey(provider, userId),
+    source: "global" as const,
+  }),
   getOpenSkyCredentials: jest.fn(async () => null),
 }));
 

@@ -2,6 +2,7 @@
   "_comment": "Ratchet for docs/adr/0001-api-response-shape.md. A router is in exactly one family. `bare` routers answer with the resource itself and may carry `success: true` only as many times as `frozenEnvelopes` says (an entry may only shrink). `enveloped` routers answer `{success, data}` and must keep at least one. A new router file must be added here \u2014 that is the decision the ADR asks for.",
   "bare": [
     "achievements.ts",
+    "admin/aeroapi.ts",
     "admin/apiKeys.ts",
     "admin/backupSettings.ts",
     "admin/dawarich.ts",

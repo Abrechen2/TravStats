@@ -8,6 +8,8 @@ export type FlightTrackSource =
   | "tcx"
   | "fit"
   | "csv"
+  // The line FlightAware recorded, fetched by the server (forgejo#409).
+  | "aeroapi"
   // Drawn from the location provider's points, not stored (TravTrack plan T5).
   | "travtrack"
   | "dawarich";

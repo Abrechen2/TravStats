@@ -28,8 +28,18 @@ jest.mock("../services/airportLookup", () => ({
   enrichAirportMetadata: jest.fn(async () => false),
 }));
 
+const keySourceMock = { value: "global" as "user" | "global" | "env" };
 const apiKeyResolverMock = {
   getApiKey: jest.fn(async (_provider: string, _userId?: string) => null as string | null),
+  // The lookup resolves key AND source in one read; the mock serves the key from getApiKey.
+  resolveApiKey: async (provider: string, userId?: string) => ({
+    key: await (
+      jest.requireMock("../services/apiKeyResolver") as {
+        getApiKey: (p: string, u?: string) => Promise<string | null>;
+      }
+    ).getApiKey(provider, userId),
+    source: keySourceMock.value,
+  }),
   getOpenSkyCredentials: jest.fn(async () => null as { user?: string; pass?: string } | null),
 };
 jest.mock("../services/apiKeyResolver", () => apiKeyResolverMock);
@@ -56,6 +66,18 @@ jest.mock("../db", () => ({
     adminSettings: { findFirst: jest.fn(async () => null) },
   },
 }));
+
+// The budget guard has its own suite (aeroapiBudget.test.ts, real database);
+// here it is the gate in front of the request.
+const gateMock = {
+  requestAeroapiCall: jest.fn(async (_kind: string, _options?: object) => ({
+    ok: true as boolean,
+    cost: 5,
+    release: jest.fn(async () => undefined),
+    reason: undefined as string | undefined,
+  })),
+};
+jest.mock("../services/aeroapiBudget", () => gateMock);
 
 jest.mock("../utils/logger", () => ({
   __esModule: true,
@@ -99,6 +121,13 @@ beforeEach(() => {
   __resetAerodataboxCacheForTests();
   __resetAviationstackBudgetForTests();
   apiKeyResolverMock.getApiKey.mockImplementation(async () => null);
+  keySourceMock.value = "global";
+  gateMock.requestAeroapiCall.mockImplementation(async () => ({
+    ok: true,
+    cost: 5,
+    release: jest.fn(async () => undefined),
+    reason: undefined,
+  }));
   jest.spyOn(Date, "now").mockReturnValue(NOW);
 });
 
@@ -267,6 +296,107 @@ describe("lookupFlightAeroapi", () => {
       (logger.error as jest.Mock).mock.calls,
     ]);
     expect(logged).not.toContain("aeroapi-secret");
+  });
+});
+
+describe("lookupFlightAeroapi — the budget guard (forgejo#409)", () => {
+  it("sends no request and records quota when the monthly budget is reached", async () => {
+    onlyAeroapiKey();
+    gateMock.requestAeroapiCall.mockResolvedValueOnce({
+      ok: false,
+      cost: 0,
+      release: jest.fn(async () => undefined),
+      reason: "budget",
+    });
+    const outcomes = new LookupOutcomeLog();
+
+    const result = await lookupFlightAeroapi("LH400", "2026-10-05", undefined, undefined, outcomes);
+
+    expect(result).toBeNull();
+    expect(mockedAxios.get).not.toHaveBeenCalled();
+    expect(outcomes.all()).toEqual([{ provider: "aeroapi", outcome: "quota" }]);
+  });
+
+  it.each([
+    ["user", "user-1"],
+    ["global", undefined],
+    ["env", undefined],
+  ] as const)(
+    "bills by the source of the very key it sends: %s key → ownKeyOfUser %s",
+    async (source, expectedOwner) => {
+      onlyAeroapiKey();
+      keySourceMock.value = source;
+      respondWith([]);
+
+      await lookupFlightAeroapi("LH400", "2026-10-05", "user-1");
+
+      expect(gateMock.requestAeroapiCall).toHaveBeenCalledWith(
+        "flights",
+        expect.objectContaining({ ownKeyOfUser: expectedOwner })
+      );
+      const [, config] = mockedAxios.get.mock.calls[0] as [
+        string,
+        { headers: Record<string, string> },
+      ];
+      expect(config.headers["x-apikey"]).toBe("aeroapi-secret");
+      // One resolution, not two: the key store is read once per lookup.
+      expect(apiKeyResolverMock.getApiKey).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it("lets lookupFlightDetails fall through when AeroAPI is out of budget", async () => {
+    onlyAeroapiKey();
+    gateMock.requestAeroapiCall.mockResolvedValueOnce({
+      ok: false,
+      cost: 0,
+      release: jest.fn(async () => undefined),
+      reason: "rate_limit",
+    });
+    const outcomes = new LookupOutcomeLog();
+
+    await lookupFlightDetails(
+      "LH400",
+      "2026-10-05",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      outcomes
+    ).catch(() => undefined);
+
+    expect(outcomes.failures()).toContainEqual({ provider: "aeroapi", outcome: "quota" });
+  });
+
+  it("gives the reserved cost back when AeroAPI answers with an HTTP error", async () => {
+    onlyAeroapiKey();
+    const release = jest.fn(async () => undefined);
+    gateMock.requestAeroapiCall.mockResolvedValueOnce({
+      ok: true,
+      cost: 5,
+      release,
+      reason: undefined,
+    });
+    mockedAxios.get.mockRejectedValueOnce({ response: { status: 500, headers: {} } });
+
+    await lookupFlightAeroapi("LH400", "2026-10-05");
+
+    expect(release).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the cost counted when the request timed out (it may have been billed)", async () => {
+    onlyAeroapiKey();
+    const release = jest.fn(async () => undefined);
+    gateMock.requestAeroapiCall.mockResolvedValueOnce({
+      ok: true,
+      cost: 5,
+      release,
+      reason: undefined,
+    });
+    mockedAxios.get.mockRejectedValueOnce({ code: "ECONNABORTED", message: "timeout" });
+
+    await lookupFlightAeroapi("LH400", "2026-10-05");
+
+    expect(release).not.toHaveBeenCalled();
   });
 });
 
