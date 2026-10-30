@@ -22,6 +22,10 @@ jest.mock("../services/airportLookup", () => ({
 const keys: Record<string, string | null> = {};
 const apiKeyResolverMock = {
   getApiKey: jest.fn(async (provider: string) => keys[provider] ?? null),
+  resolveApiKey: jest.fn(async (provider: string) => {
+    const key = keys[provider] ?? null;
+    return { key, source: key ? ("env" as const) : null };
+  }),
   getOpenSkyCredentials: jest.fn(async () => null as Record<string, string> | null),
 };
 jest.mock("../services/apiKeyResolver", () => apiKeyResolverMock);

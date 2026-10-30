@@ -1,4 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
+// The AeroAPI budget footer (forgejo#409) fetches /admin/aeroapi; it has its own test.
+vi.mock("../AeroapiBudgetCard", () => ({ default: () => null }));
 vi.mock("../../../hooks/useHasLlm", () => ({ useHasLlm: () => null, resetHasLlmCache: () => {} }));
 vi.mock("../ImmichGlobalSettings", () => ({ default: () => null }));
 vi.mock("../../Settings/OperatorLogosCard", () => ({ default: () => null }));
