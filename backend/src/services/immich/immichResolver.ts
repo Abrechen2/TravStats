@@ -6,6 +6,7 @@
  * key. A half-configured tier falls through to the next one instead of failing
  * the request — otherwise a stray user URL would shadow a working global setup.
  */
+import { connectionGate } from "../externalServices/policy";
 import { prisma } from "../../db";
 import { decryptApiKey } from "../../utils/encryption";
 import { isSharedDemoAccount } from "../../utils/sharedDemo";
@@ -48,7 +49,10 @@ function buildConnection(
 
 export async function getImmichConnection(userId?: string): Promise<ImmichConnection | null> {
   try {
-    if (userId) {
+    // External-services policy (forgejo#392): off blocks every tier including ENV.
+    const gate = await connectionGate("immich", userId);
+    if (gate.off) return null;
+    if (userId && gate.accountMayConnect) {
       /**
        * The SHARED demo account resolves nothing (independent review,
        * 2026-09-17, finding A2). The admin-global and ENV tiers below are the

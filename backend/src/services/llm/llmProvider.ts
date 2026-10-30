@@ -54,7 +54,8 @@ import { requestTextWithDeadline } from "../http/boundedHttp";
 import { LLM_AVAILABILITY_TIMEOUT_MS, LLM_MAX_RESPONSE_BYTES } from "../http/llmTimeout";
 import { getAdminParserSettings, type AdminParserSettings } from "../parserSettings";
 import logger from "../../utils/logger";
-import { assertLlmCloudConsent, assertLlmEnabled } from "./llmGate";
+import { accountConsentedTo, assertLlmCloudConsent, assertLlmEnabled } from "./llmGate";
+import { loadPolicy } from "../externalServices/policy";
 import {
   checkLlmBaseUrl,
   isLocalLlmHost,
@@ -153,6 +154,12 @@ export interface ResolveLlmTargetOptions {
    * empty chain — "no model" — which is what `getParserConfig` needs to answer.
    */
   withDefaults?: boolean;
+  /**
+   * The account the targets are for. Cloud targets (remote Ollama and the
+   * custom endpoint included) the account has not consented to are left out
+   * of the chain — forgejo#392. Absent = a system task with no account.
+   */
+  userId?: string;
 }
 
 async function loadAdminSettings(): Promise<AdminParserSettings | null> {
@@ -277,7 +284,8 @@ export async function resolveLlmChain(options: ResolveLlmTargetOptions = {}): Pr
   }
 
   const chain: LlmTarget[] = [];
-  const ollama = ollamaChainTarget(admin);
+  const ollamaOff = (await loadPolicy()).disabled.includes("ollama");
+  const ollama = ollamaOff ? null : ollamaChainTarget(admin);
   if (ollama) chain.push(ollama);
 
   for (const kind of parseProviderOrder(admin?.llmProviderOrder)) {
@@ -292,11 +300,19 @@ export async function resolveLlmChain(options: ResolveLlmTargetOptions = {}): Pr
   // localhost Ollama" (`getParserConfig`, the domain parsers). This never
   // fires when a cloud slot IS configured and consented — that stays ahead of
   // a phantom localhost entry nobody asked for.
-  if (chain.length === 0 && options.withDefaults) {
+  if (chain.length === 0 && options.withDefaults && !ollamaOff) {
     chain.push(ollamaTarget());
   }
 
-  return chain.filter(permitsLlmTarget);
+  const permitted = chain.filter(permitsLlmTarget);
+  if (options.userId === undefined) return permitted;
+  const consented: LlmTarget[] = [];
+  for (const target of permitted) {
+    const cloud = target.isCloud ?? isCloudUrl(target.url);
+    if (!cloud || (await accountConsentedTo(options.userId, kindOf(target))))
+      consented.push(target);
+  }
+  return consented;
 }
 
 /**
@@ -399,6 +415,11 @@ export interface LlmGenerateRequest {
   timeoutMs: number;
   /** Error-message label for Ollama; defaults to "Ollama request". */
   label?: string;
+  /**
+   * The account the request is made for. A cloud target is refused for an
+   * account that has not consented to it (forgejo#392). Absent = no account.
+   */
+  userId?: string;
 }
 
 /**
@@ -408,18 +429,21 @@ export interface LlmGenerateRequest {
  * (`llmGate.entryPoints.test.ts` holds that every model endpoint in the source
  * sits behind them).
  */
-async function assertMayAsk(target: LlmTarget): Promise<void> {
+async function assertMayAsk(target: LlmTarget, userId?: string): Promise<void> {
   if (!permitsLlmTarget(target))
     throw new AppError("Provider forbidden by request policy", 403, "LLM_REQUEST_POLICY");
   await assertLlmEnabled();
-  await assertLlmCloudConsent({
-    kind: kindOf(target),
-    isCloud: target.isCloud ?? isCloudUrl(target.url),
-  });
+  await assertLlmCloudConsent(
+    {
+      kind: kindOf(target),
+      isCloud: target.isCloud ?? isCloudUrl(target.url),
+    },
+    userId
+  );
 }
 
 async function generateWithOllama(target: LlmTarget, req: LlmGenerateRequest): Promise<string> {
-  await assertMayAsk(target);
+  await assertMayAsk(target, req.userId);
   // `think: false` disables chain-of-thought on reasoning models like qwen3;
   // older Ollama versions ignore it.
   const body = JSON.stringify({
@@ -458,7 +482,7 @@ async function generateWithOpenAiShape(
   target: LlmTarget,
   req: LlmGenerateRequest
 ): Promise<string> {
-  await assertMayAsk(target);
+  await assertMayAsk(target, req.userId);
   const body = JSON.stringify({
     model: target.model,
     messages: [
@@ -506,7 +530,7 @@ async function generateWithOpenAiShape(
  * the request-shape assertion — not a failure — catches a regression here.
  */
 async function generateWithAnthropic(target: LlmTarget, req: LlmGenerateRequest): Promise<string> {
-  await assertMayAsk(target);
+  await assertMayAsk(target, req.userId);
   const body = JSON.stringify({
     model: target.model,
     max_tokens: ANTHROPIC_MAX_TOKENS,

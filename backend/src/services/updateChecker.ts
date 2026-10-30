@@ -11,6 +11,7 @@
  */
 
 import logger from "../utils/logger";
+import { prisma } from "../db";
 
 const GITHUB_REPO = "Abrechen2/TravStats";
 const REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
@@ -96,6 +97,12 @@ async function fetchLatestRelease(): Promise<UpdateInfo | null> {
 }
 
 export async function getCachedLatestRelease(): Promise<UpdateInfo | null> {
+  // The admin can switch the GitHub release check off (forgejo#392): no call out.
+  const row = await prisma.adminSettings.findFirst({
+    orderBy: { id: "asc" },
+    select: { updateCheckEnabled: true },
+  });
+  if (row && !row.updateCheckEnabled) return null;
   const now = Date.now();
   if (cache && now - cache.fetchedAt < REFRESH_INTERVAL_MS) {
     return cache.data;

@@ -16,6 +16,7 @@ import instanceServicesRouter from "./instanceServices";
 import webdavSyncRouter from "./webdavSync";
 import personalRouter from "./personal";
 import locationProviderRouter from "./locationProvider";
+import externalServicesRouter from "./externalServices";
 
 const router = Router();
 
@@ -61,6 +62,8 @@ router.use(
     "/personal",
     // Which source records and reads positions: one visitor's would be everyone's.
     "/location-provider",
+    // Keys, connections and the AI consent of the shared account would be everyone's.
+    "/external-services",
   ],
   rejectDemoWrites
 );
@@ -81,5 +84,6 @@ router.use("/instance-services", instanceServicesRouter);
 router.use("/webdav-sync", webdavSyncRouter);
 router.use("/personal", personalRouter);
 router.use("/location-provider", locationProviderRouter);
+router.use("/external-services", externalServicesRouter);
 
 export default router;

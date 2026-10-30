@@ -10,6 +10,7 @@
  * failing the request — otherwise a stray user URL would shadow a working
  * global setup.
  */
+import { connectionGate } from "../externalServices/policy";
 import { prisma } from "../../db";
 import { decryptApiKey } from "../../utils/encryption";
 import { isSharedDemoUser } from "../../utils/sharedDemo";
@@ -76,7 +77,10 @@ export function buildUserDawarichConnection(
 
 export async function getDawarichConnection(userId?: string): Promise<DawarichConnection | null> {
   try {
-    if (userId) {
+    // External-services policy (forgejo#392): off blocks every tier including ENV.
+    const gate = await connectionGate("dawarich", userId);
+    if (gate.off) return null;
+    if (userId && gate.accountMayConnect) {
       /**
        * The SHARED demo account resolves nothing (independent review,
        * 2026-09-17, finding A2) — the same trade as `immichResolver.ts`, and

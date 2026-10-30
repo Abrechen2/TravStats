@@ -523,6 +523,8 @@ export function cleanSummary(raw: string): string {
 export interface GenerateRequest {
   system: string;
   prompt: string;
+  /** The account the summary is for — a cloud provider needs its consent (forgejo#392). */
+  userId?: string;
 }
 
 /** One call to the model. Returns the answer text; throws on any failure. */
@@ -533,8 +535,9 @@ export type GenerateFn = (target: OllamaTarget, request: GenerateRequest) => Pro
  * context window as every other caller (`LLM_NUM_CTX`), so a summary never
  * forces Ollama to reload the model a parse just loaded.
  */
-export const ollamaGenerate: GenerateFn = async (target, { system, prompt }) => {
+export const ollamaGenerate: GenerateFn = async (target, { system, prompt, userId }) => {
   const text = await llmGenerate(target, {
+    ...(userId !== undefined ? { userId } : {}),
     system,
     prompt,
     temperature: 0.6,
@@ -621,6 +624,7 @@ export async function summariseTrip(
   const raw = await generate(target, {
     system: buildSystemPrompt(language, briefHasVoice(brief), briefEntityNouns(brief, language)),
     prompt: buildUserPrompt(language, briefJson),
+    userId,
   });
   const narrated = cleanSummary(raw);
   if (!narrated) throw new Error("Ollama returned empty summary");
