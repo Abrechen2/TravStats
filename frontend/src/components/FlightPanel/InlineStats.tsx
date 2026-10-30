@@ -1,4 +1,5 @@
-import { calculateDistance, calculateFlightDuration } from "../../lib/geo";
+import { calculateDistance } from "../../lib/geo";
+import { getFlightDuration } from "../../lib/flightDuration";
 import { formatDistance } from "../../lib/units";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -29,14 +30,14 @@ export function InlineStats({ flight }: InlineStatsProps): JSX.Element {
         ? Math.round(calculateDistance(flight.depLat, flight.depLon, flight.arrLat, flight.arrLon))
         : null;
 
-  const durationMin =
-    flight.departureTime && flight.arrivalTime
-      ? calculateFlightDuration(flight.departureTime, flight.arrivalTime)
-      : null;
+  // The one duration rule (placeholder clocks and negative spans are not
+  // evidence), so the panel and the table never disagree (forgejo#378).
+  const duration = getFlightDuration(flight);
 
   const stats: string[] = [];
   if (distanceKm !== null) stats.push(formatDistance(distanceKm, distanceUnit, t, lang));
-  if (durationMin !== null) stats.push(formatDuration(durationMin));
+  if (duration !== null)
+    stats.push(`${duration.estimated ? "~" : ""}${formatDuration(duration.minutes)}`);
   if (flight.seatClass) stats.push(flight.seatClass.replace("_", " "));
   if (flight.co2Kg != null)
     stats.push(
