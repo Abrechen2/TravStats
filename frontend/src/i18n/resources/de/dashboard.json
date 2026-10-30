@@ -48,6 +48,7 @@
     "importFailed": "Import fehlgeschlagen",
     "importPartial": "{{success}} von {{total}} Flügen importiert ({{errors}} Fehler)",
     "loadCruises": "Kreuzfahrten konnten nicht geladen werden. Bitte später erneut versuchen.",
+    "retry": "Erneut versuchen",
     "loadLodgings": "Unterkünfte konnten nicht geladen werden. Bitte später erneut versuchen."
   },
   "flightTab": {

@@ -58,6 +58,7 @@ export function FlightsTab(): JSX.Element {
   // Guards the empty state (#262): only shown once the first load settled,
   // never while the counts are still the initial zeros.
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
   // The panel's delete asks first (forgejo#250) — it deleted on the click.
@@ -84,42 +85,56 @@ export function FlightsTab(): JSX.Element {
     if (detailMode !== null) setSidebarOpen(true);
   }, [detailMode]);
 
-  const loadGeoJSON = useCallback(async (): Promise<void> => {
+  // Both loaders report whether they succeeded: a failed load must reach the
+  // user as a failure, never as the "add your first flight" empty state.
+  const loadGeoJSON = useCallback(async (): Promise<boolean> => {
     try {
       const collection = await flightsApi.getAllGeoJSON();
       setFlights(collection.features);
+      return true;
     } catch (err: unknown) {
       logger.error("FlightsTab: failed to load GeoJSON", err);
+      return false;
     }
   }, []);
 
-  const loadStructured = useCallback(async (): Promise<void> => {
+  const loadStructured = useCallback(async (): Promise<boolean> => {
     try {
       const result = await flightsApi.getAll({ limit: 500 });
       setStructuredFlights(result.flights);
       setStructuredTotal(result.total);
+      return true;
     } catch (err: unknown) {
       logger.error("FlightsTab: failed to load structured flights", err);
+      return false;
     }
   }, []);
+
+  const loadAll = useCallback(async (): Promise<boolean> => {
+    const results = await Promise.all([loadGeoJSON(), loadStructured()]);
+    const ok = results.every(Boolean);
+    setLoadError(!ok);
+    return ok;
+  }, [loadGeoJSON, loadStructured]);
 
   // Domain-gating: never fetch flight data while the domain is disabled —
   // the tab renders the DomainDisabledNotice stub instead (see below).
   useEffect(() => {
     if (!flightEnabled) return;
     let cancelled = false;
-    void Promise.all([loadGeoJSON(), loadStructured()]).then(() => {
+    void (async () => {
+      await loadAll();
       if (cancelled) return;
       setLoaded(true);
-    });
+    })();
     return () => {
       cancelled = true;
     };
-  }, [flightEnabled, loadGeoJSON, loadStructured]);
+  }, [flightEnabled, loadAll]);
 
   const refreshAll = useCallback(async (): Promise<void> => {
-    await Promise.all([loadGeoJSON(), loadStructured()]);
-  }, [loadGeoJSON, loadStructured]);
+    await loadAll();
+  }, [loadAll]);
 
   // Map click → selection store. DeckGLMap handles dim/highlight + tooltip.
   const handleFlightClick = useCallback(
@@ -357,7 +372,33 @@ export function FlightsTab(): JSX.Element {
           }}
         />
       )}
-      {loaded && structuredTotal === 0 && flights.length === 0 && (
+      {loaded && loadError && (
+        <div
+          role="alert"
+          style={{
+            position: "absolute",
+            top: 12,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 30,
+            padding: "8px 16px",
+            borderRadius: 10,
+            background: "rgba(60,20,20,0.92)",
+            color: "var(--danger)",
+            border: "1px solid var(--danger)",
+            fontSize: 13,
+            display: "flex",
+            gap: 12,
+            alignItems: "center",
+          }}
+        >
+          <span>{t("dashboard:errors.loadFlights")}</span>
+          <button type="button" onClick={() => void loadAll()} style={{ textDecoration: "underline" }}>
+            {t("dashboard:errors.retry")}
+          </button>
+        </div>
+      )}
+      {loaded && !loadError && structuredTotal === 0 && flights.length === 0 && (
         <MapEmptyOverlay
           emoji="✈️"
           title={t("dashboard:flightTab.emptyTitle")}

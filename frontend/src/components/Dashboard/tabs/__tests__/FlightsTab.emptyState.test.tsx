@@ -89,3 +89,28 @@ describe("FlightsTab — empty state (#262)", () => {
     expect(screen.queryByText("dashboard:flightTab.emptyTitle")).toBeNull();
   });
 });
+
+describe("FlightsTab — load failure (forgejo#361)", () => {
+  beforeEach(() => {
+    getAllGeoJSON.mockReset();
+    getAll.mockReset();
+  });
+
+  it("shows an error with retry, not the empty state, when the flight load fails", async () => {
+    getAllGeoJSON.mockRejectedValue(new Error("500"));
+    getAll.mockRejectedValue(new Error("500"));
+
+    render(<FlightsTab />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("dashboard:errors.loadFlights");
+    expect(screen.queryByText("dashboard:flightTab.emptyTitle")).toBeNull();
+
+    getAllGeoJSON.mockResolvedValue({ type: "FeatureCollection", features: [] });
+    getAll.mockResolvedValue({ flights: [], total: 0, page: 1, limit: 500 });
+    screen.getByText("dashboard:errors.retry").click();
+    await waitFor(() =>
+      expect(screen.getByText("dashboard:flightTab.emptyTitle")).toBeInTheDocument()
+    );
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
