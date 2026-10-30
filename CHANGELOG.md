@@ -6,16 +6,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-**Before upgrading to 2.8.0-rc.2:** take a backup. Three new migrations since 2.7.0: two tables for the TravTrack diagnostics log, new columns on the admin and user settings for the ADS-B providers and the AeroAPI plan, and two tables that count AeroAPI calls and track fetches; nothing existing changes.
+**Before upgrading to 2.8.0-rc.3:** take a backup. Six new migrations since 2.7.0: two tables for the TravTrack diagnostics log, new columns on the admin and user settings for the ADS-B providers and the AeroAPI plan, two tables that count AeroAPI calls and track fetches, and the external-services policy (a policy column on the admin and user settings, a table for stored test results, a switch for a local custom AI endpoint); nothing existing changes.
 
 ### Added
 
+- **External services live in one place.** Administration → External services and Settings → Services list everything TravStats does not do itself — flight data, maps and routing, photos and location, AI, open data, sync and mail — in one style. Each entry has an info panel (why TravStats needs it, what it costs, where to get a key, its quota, what leaves the server), a status that says whether it is switched on, set up and last tested OK, and which key actually answers: your own, the instance's or the server's. "Recommended" marks what gives the best experience for free. Standard hides only URLs and source order; Expert shows them. An admin "off" now stops a service for every account, including own keys, the server key and background jobs. AeroAPI's budget sits in its own row.
+- **Cloud AI needs each account's own consent.** An admin allows a provider for the instance; an account's documents go to it only after that account agreed, per provider and revocable. A remote Ollama and a custom endpoint count as cloud, and a changed address withdraws the consent.
 - **adsb.lol and ADS-B Exchange can name the aircraft of a flight in the air right now.** Both are off until an admin switches them on under Administration → External services (adsb.lol by a switch, ADS-B Exchange with its own key). They answer only for today's flights, fill registration and type, and never overwrite what another provider supplied.
 - **FlightAware AeroAPI knows its plan and its budget.** Admins pick Personal, Personal with feeder credit or a custom monthly budget; the instance key stops before the month's budget is spent and is rate-limited, while a user's own key never counts against it. Real flight tracks from AeroAPI after arrival are built in but stay off until the admin switches them on.
 - **TravTrack (beta) explains its gaps.** With the diagnostics log switched on in the Companion (Settings → Location, off by default), the phone sends what its recorder, its uploads and iOS did — never a position. Settings → TravTrack → Diagnose lines one device's day up against its stored points and names, for every gap of ten minutes or more, the cause the log supports: location access not "Always", recording paused, fixes dropped on the phone and why, an upload failed or still waiting, the app terminated, or "unexplained" — with a note when iOS was allowed to pause recording on its own. The raw log downloads as JSON; it is kept 14 days and can be deleted at any time.
 
 ### Fixed
 
+- **The airport lookup no longer hangs or hammers its source.** It times out, remembers misses and reports an unreachable source as such instead of "not found".
+- **A WebDAV backup that arrives cut short is refused** instead of being restored from a truncated file.
+- **A device without WebGL2 sees a message instead of a crashed map page.**
 - **A failed settings load no longer saves the defaults over your real settings.** The web page used to write its empty defaults back when the first load failed.
 - **A backup no longer finishes as "successful" after a write error,** and an archive whose output stream fails is aborted instead of left half-written. A rental's receipts are filed in the same transaction that creates the rental.
 - **Large backups and exports stream instead of being held in memory,** so they no longer exhaust the server on a big logbook. WebDAV uploads send an explicit length, a download gets its own side file, and a stalled transfer is stopped by a watchdog.
