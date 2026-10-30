@@ -1,4 +1,6 @@
 import { Router, Response, NextFunction } from "express";
+import { z } from "zod";
+import { AppError } from "../middleware/errorHandler";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { statsLimiter } from "../middleware/rateLimit";
@@ -15,6 +17,16 @@ import { visibleDomainKeys } from "../services/domainVisibility";
 import { getInstanceSettings } from "../services/instanceSettingsService";
 
 const router = Router();
+
+/** `?limit=` of the two ranked lists: 1–100, 10 when absent. */
+export const limitQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(10),
+});
+function parseLimit(query: unknown): number {
+  const parsed = limitQuerySchema.safeParse(query);
+  if (!parsed.success) throw new AppError("limit must be an integer from 1 to 100", 400);
+  return parsed.data.limit;
+}
 
 // Internal scaffolding seeded by regression tests
 // (`achievements.scheduledLeak.test.ts`) uses this prefix. These rows
@@ -143,8 +155,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
 router.get("/recent", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
-    const rawLimit = parseInt(req.query.limit as string, 10);
-    const limit = Number.isFinite(rawLimit) ? Math.min(rawLimit, 100) : 10;
+    const limit = parseLimit(req.query);
 
     const allRecent = await prisma.userAchievement.findMany({
       where: {
@@ -218,8 +229,7 @@ router.get(
   statsLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const rawLeaderboardLimit = parseInt(req.query.limit as string, 10);
-      const limit = Number.isFinite(rawLeaderboardLimit) ? Math.min(rawLeaderboardLimit, 100) : 10;
+      const limit = parseLimit(req.query);
 
       // Get user achievements with points and requirement for unlock check
       const userAchievements = await prisma.userAchievement.findMany({
