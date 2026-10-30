@@ -130,3 +130,43 @@ describe("flightAutoUpdate — local lookup date + rotation guard", () => {
     expect(updates).toHaveLength(1);
   });
 });
+
+describe("flightAutoUpdate — departure airport", () => {
+  it("passes the departure airport so a two-leg flight number cannot match the other leg", async () => {
+    const user = await prisma.user.create({
+      data: { username: `depap${Date.now()}`, passwordHash: "testhash" },
+    });
+    await prisma.userSettings.create({
+      data: { userId: user.id, data: {}, autoUpdateEnabled: true, autoUpdateRequireApproval: true },
+    });
+    await prisma.flight.create({
+      data: {
+        userId: user.id,
+        airline: "Lufthansa",
+        flightNumber: "LH400",
+        depIata: "MUC",
+        arrIata: "JFK",
+        depLat: 48.35,
+        depLon: 11.78,
+        arrLat: 40.64,
+        arrLon: -73.78,
+        departureTime: new Date("2026-08-10T10:00:00Z"),
+        arrivalTime: new Date("2026-08-10T18:00:00Z"),
+        depTimeSemantics: "UTC",
+        arrTimeSemantics: "UTC",
+        status: "scheduled",
+        nextApiCheckAt: new Date(Date.now() - 60_000),
+      },
+    });
+    lookupMock.mockReset();
+    lookupMock.mockResolvedValue(null);
+
+    await checkAndUpdateFlightsForUser(user.id);
+
+    expect(lookupMock).toHaveBeenCalledTimes(1);
+    expect(lookupMock.mock.calls[0][5]).toBe("MUC");
+    await prisma.flight.deleteMany({ where: { userId: user.id } });
+    await prisma.userSettings.deleteMany({ where: { userId: user.id } });
+    await prisma.user.delete({ where: { id: user.id } });
+  });
+});

@@ -493,7 +493,10 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
           dateStr,
           flight.userId,
           flight.departureTime,
-          flight.arrivalTime
+          flight.arrivalTime,
+          // A flight number can fly two legs on one day (FRA-MUC-JFK); without
+          // the departure airport the lookup may answer with the other leg.
+          flight.depIata ?? flight.depIcao ?? undefined
         );
 
         // Always recalculate nextApiCheckAt after a check attempt.
