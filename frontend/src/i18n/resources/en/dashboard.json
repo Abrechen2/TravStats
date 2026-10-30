@@ -171,6 +171,7 @@
   "unknownDate": "Unknown date",
   "trips": {
     "noTrips": "No trips yet",
+    "loadError": "Your trips could not be loaded.",
     "label": "Trips",
     "selectLabel": "Select trip",
     "flights_one": "flight",

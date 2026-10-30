@@ -168,3 +168,25 @@ describe("FlightPanel", () => {
     expect(container.firstChild).toBeNull();
   });
 });
+
+describe("FlightPanel trips tab — load failure (forgejo#374)", () => {
+  it("says the trips could not be loaded, with a retry, instead of 'no trips'", async () => {
+    const { tripsApi } = await import("@/lib/api/trips");
+    vi.mocked(tripsApi.getAll).mockRejectedValueOnce(new Error("Network Error"));
+    render(
+      <FlightPanel
+        flights={flights}
+        totalCount={1}
+        isOpen
+        onClose={vi.fn()}
+        onEdit={vi.fn()}
+        onDuplicate={vi.fn()}
+        onDelete={vi.fn()}
+        onAddFlight={vi.fn()}
+      />
+    );
+    await userEvent.click(screen.getByRole("button", { name: "dashboard:trips.label" }));
+    expect(await screen.findByText("dashboard:trips.loadError")).toBeInTheDocument();
+    expect(screen.queryByText("dashboard:trips.noTrips")).toBeNull();
+  });
+});

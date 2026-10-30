@@ -17,6 +17,8 @@ import { useFlightSelectionStore } from "../store/flightSelectionStore";
 import { useToastStore } from "../store/toastStore";
 import { flightDeparture } from "../lib/entityTimes";
 import { dayOf } from "../shared/time";
+import { logger } from "../lib/logger";
+import ListLoadFailed, { loadFailureLog } from "./table/ListLoadFailed";
 
 type PanelTab = "flights" | "trips";
 type SortMode = "date-desc" | "date-asc" | "route" | "airline" | "status";
@@ -106,16 +108,23 @@ export function FlightPanel({
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
   const [deleteTripTarget, setDeleteTripTarget] = useState<Trip | null>(null);
 
-  const reloadTrips = (): void => {
-    tripsApi
-      .getAll()
-      .then(setTrips)
-      .catch(() => {});
+  // A failed read keeps the trips already held and says so: "no trips" must
+  // never be the answer to a request that did not arrive (forgejo#374).
+  const [tripsLoadFailure, setTripsLoadFailure] = useState<{ log: string | null } | null>(null);
+
+  const reloadTrips = async (): Promise<void> => {
+    try {
+      setTrips(await tripsApi.getAll());
+      setTripsLoadFailure(null);
+    } catch (err: unknown) {
+      logger.error("FlightPanel: failed to load trips", err);
+      setTripsLoadFailure({ log: loadFailureLog(err) });
+    }
   };
 
   useEffect(() => {
     if (!isOpen) return;
-    reloadTrips();
+    void reloadTrips();
   }, [isOpen]);
 
   const detailTrip: Trip | null =
@@ -136,7 +145,7 @@ export function FlightPanel({
       addToast("success", t("trips:toasts.deleted"));
       setDeleteTripTarget(null);
       clearSelection();
-      reloadTrips();
+      void reloadTrips();
     } catch {
       addToast("error", t("trips:toasts.deleteError"));
       setDeleteTripTarget(null);
@@ -148,7 +157,7 @@ export function FlightPanel({
     try {
       await tripsApi.assignFlights(detailTrip.id, { flightIds: [flightId], action: "remove" });
       addToast("success", t("trips:toasts.flightRemoved"));
-      reloadTrips();
+      void reloadTrips();
       // Drop the unlinked flight from the current sidebar selection so the
       // user immediately sees the leg disappear without a full refresh.
       // Selection is the source of truth for what TripDetailsSidebar
@@ -345,6 +354,14 @@ export function FlightPanel({
                     />
                   )
                 )
+              ) : tripsLoadFailure && trips.length === 0 ? (
+                <div className="p-3">
+                  <ListLoadFailed
+                    title={t("dashboard:trips.loadError")}
+                    onRetry={() => void reloadTrips()}
+                    log={tripsLoadFailure.log}
+                  />
+                </div>
               ) : trips.length === 0 ? (
                 <div
                   className="px-4 py-8 text-center text-xs"
@@ -425,7 +442,7 @@ export function FlightPanel({
               onClose={() => setEditingTrip(null)}
               onSaved={() => {
                 setEditingTrip(null);
-                reloadTrips();
+                void reloadTrips();
               }}
             />
           )}
