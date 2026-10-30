@@ -385,11 +385,14 @@ export function AllTab(): JSX.Element {
   );
   // Trips power the journey-mode selector (label = trip name).
   const tripsFailed = useDomainLoad("trips", true, () => tripsApi.getAll(), setTrips, reloadKey);
+  // A domain switched off AFTER it failed is not "missing from the map" any
+  // more: the loader keeps its last failure flag, so gate each name on the
+  // same switch that gates the fetch.
   const failedDomains = [
-    flightsFailed && t("dashboard:tabStrip.tabs.flight"),
-    cruisesFailed && t("dashboard:tabStrip.tabs.cruise"),
-    lodgingsFailed && t("dashboard:tabStrip.tabs.lodging"),
-    placesFailed && t("dashboard:tabStrip.tabs.poi"),
+    flightsFailed && isEnabled("flight") && t("dashboard:tabStrip.tabs.flight"),
+    cruisesFailed && isEnabled("cruise") && t("dashboard:tabStrip.tabs.cruise"),
+    lodgingsFailed && isEnabled("lodging") && t("dashboard:tabStrip.tabs.lodging"),
+    placesFailed && placesAllowed && t("dashboard:tabStrip.tabs.poi"),
     tripsFailed && t("dashboard:trips.label"),
   ].filter((name): name is string => typeof name === "string");
 
