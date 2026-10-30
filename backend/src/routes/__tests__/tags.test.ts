@@ -147,6 +147,49 @@ describe("GET /api/v1/tags", () => {
     }
   });
 
+  // forgejo#385 (RULE-29): the UNION was a hand-kept list that missed these two.
+  it("offers the tags of ferry rides and rentals too", async () => {
+    const ferry = await prisma.ferryJourney.create({
+      data: {
+        userId: user.id,
+        depStationName: "Rostock",
+        arrStationName: "Trelleborg",
+        depLat: 54.1,
+        depLon: 12.1,
+        arrLat: 55.4,
+        arrLon: 13.1,
+        departureTime: new Date("2025-08-01T08:00:00Z"),
+        tags: ["Nachtfaehre"],
+      },
+    });
+    const rental = await prisma.rentalBooking.create({
+      data: {
+        userId: user.id,
+        provider: "Sixt",
+        pickupStationName: "Munich Airport",
+        pickupLat: 48.35,
+        pickupLon: 11.78,
+        pickupTimezone: "Europe/Berlin",
+        returnStationName: "Munich Airport",
+        returnLat: 48.35,
+        returnLon: 11.78,
+        returnTimezone: "Europe/Berlin",
+        pickupTime: new Date("2025-08-02T08:00:00Z"),
+        returnTime: new Date("2025-08-05T08:00:00Z"),
+        tags: ["Cabrio"],
+      },
+    });
+    try {
+      expect((await tags({ q: "nachtfaehre" })).body.tags).toEqual([
+        { name: "Nachtfaehre", usageCount: 1 },
+      ]);
+      expect((await tags({ q: "cabrio" })).body.tags).toEqual([{ name: "Cabrio", usageCount: 1 }]);
+    } finally {
+      await prisma.ferryJourney.delete({ where: { id: ferry.id } });
+      await prisma.rentalBooking.delete({ where: { id: rental.id } });
+    }
+  });
+
   it("requires authentication", async () => {
     expect((await request(app).get("/api/v1/tags")).status).toBe(401);
   });
