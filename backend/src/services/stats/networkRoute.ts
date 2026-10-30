@@ -15,6 +15,7 @@
  * under this pair, so `count` here is the number on the arc.
  */
 
+import { isCountableFlightStatus } from "../../shared/flightCounting";
 import type { AirlineResolvers } from "../../shared/airlineNormalize";
 import { groupAirlines } from "../../shared/airlineNormalize";
 import {
@@ -26,8 +27,6 @@ import {
 import type { NetworkRouteDetail, NetworkRouteFlight } from "../../schemas/statsNetworkRoute";
 import { localWallClockOf, type FlightTimeSemantics } from "../../utils/timezone";
 import { flightRoutePair, type AirportCatalogue, type RoutePairFlight } from "./network";
-
-const FLOWN = new Set(["flown", "historical"]);
 
 /** The columns the derivation reads. `depTimezone` comes from `withDepartureClock`. */
 export interface NetworkRouteRow extends RoutePairFlight {
@@ -59,7 +58,7 @@ export function buildNetworkRouteDetail(
   if (lo === hi) return null;
 
   const onRoute = rows.filter((row) => {
-    if (!FLOWN.has(row.status)) return false;
+    if (!isCountableFlightStatus(row.status)) return false;
     const pair = flightRoutePair(row, catalogue);
     return pair !== null && pair.a === lo && pair.b === hi;
   });

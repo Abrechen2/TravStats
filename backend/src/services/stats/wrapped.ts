@@ -43,8 +43,6 @@
  * here, and the continent totals are the mockup's, not a standard.
  */
 
-const FLOWN = new Set(["flown", "historical"]);
-
 /** Mean circumference. Only ever used for the "times around the Earth" figure. */
 const EARTH_CIRCUMFERENCE_KM = 40075;
 
@@ -106,6 +104,7 @@ export interface WrappedCountry {
 // Published by GET /stats/wrapped, so the shape is described once in
 // `schemas/statsWrapped.ts` and read here (forgejo#52).
 export type { WrappedRank, Wrapped } from "../../schemas/statsWrapped";
+import { isCountableFlightStatus } from "../../shared/flightCounting";
 import type { Wrapped } from "../../schemas/statsWrapped";
 import { isCountableCruise } from "../../shared/cruiseCounting";
 import { routePairKey } from "../../shared/routePair";
@@ -149,7 +148,7 @@ export function buildWrapped(
   // in the picker (forgejo#265) — the cut every other domain gets in its loader.
   const flightsVisible = chapterRows.flightsVisible ?? true;
   const flown = flightsVisible
-    ? flights.filter((f) => FLOWN.has(f.status) && f.departureTime !== null)
+    ? flights.filter((f) => isCountableFlightStatus(f.status) && f.departureTime !== null)
     : [];
   const sailed = (cruises ?? []).filter((c) => isCountableCruise(c) && c.startDate !== null);
 

@@ -26,6 +26,7 @@
  *    see `buildFlightNetwork`.
  */
 
+import { isCountableFlightStatus } from "../../shared/flightCounting";
 import { calculateDistance } from "../../utils/geo";
 
 /** The columns the derivation reads. Any flight row is a superset. */
@@ -88,8 +89,6 @@ export interface CatalogueAirport {
 }
 
 export type AirportCatalogue = ReadonlyMap<string, CatalogueAirport>;
-
-const FLOWN = new Set(["flown", "historical"]);
 
 /**
  * Coordinates that can actually be put on a globe.
@@ -229,7 +228,7 @@ export function buildFlightNetwork(
   };
 
   for (const flight of flights) {
-    if (!FLOWN.has(flight.status)) continue;
+    if (!isCountableFlightStatus(flight.status)) continue;
 
     const dep = endpointOf(flight.depIata, flight.depIcao, flight.depLat, flight.depLon, catalogue);
     const arr = endpointOf(flight.arrIata, flight.arrIcao, flight.arrLat, flight.arrLon, catalogue);

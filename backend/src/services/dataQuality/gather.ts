@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { countableFlightWhere } from "../../shared/flightCounting";
 import { lodgingEvidence } from "../../shared/countryEvidence";
 import { classifyPlace, classifyVisit } from "../../shared/placeCounting";
 import { getCachedAirports } from "../airportCache";
@@ -27,7 +28,6 @@ import { loadRecordSnapshot, type RecordSnapshot } from "./recordGather";
  */
 
 /** The flown statuses, matching what the passport counts. */
-const FLOWN = new Set(["flown", "historical"]);
 
 export interface AccountSnapshot {
   /** Lodgings and places, for the address check. */
@@ -132,7 +132,7 @@ export async function loadAccountSnapshot(
     // evidence the passport counts either, so counting it here would flag a
     // country nothing else lists.
     prisma.flight.findMany({
-      where: { userId, status: { in: [...FLOWN] }, departureTime: { not: null } },
+      where: { userId, ...countableFlightWhere(), departureTime: { not: null } },
       select: { depIata: true, arrIata: true, departureTime: true, arrivalTime: true },
     }),
     // Cruise stops reach the user through the cruise, which is why this is not

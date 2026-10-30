@@ -52,6 +52,7 @@
  * A country name is not here either, for rule 4: the client names the code.
  */
 
+import { isCountableFlightStatus } from "../../shared/flightCounting";
 import {
   continentForCountry,
   getContinent,
@@ -168,8 +169,6 @@ export type {
 } from "../../schemas/statsCountryDetail";
 import type { CountryTimelineEntry, CountryDetail } from "../../schemas/statsCountryDetail";
 
-const FLOWN = new Set(["flown", "historical"]);
-
 /**
  * How many timeline rows travel. Generous — a desktop table shows entries,
  * airports and port calls side by side without paging, which is the thing this
@@ -251,7 +250,7 @@ export function buildCountryDetail(
   };
 
   for (const flight of flights) {
-    if (!FLOWN.has(flight.status)) continue;
+    if (!isCountableFlightStatus(flight.status)) continue;
 
     const dep = flight.depIata ? flight.depIata.toUpperCase() : null;
     const arr = flight.arrIata ? flight.arrIata.toUpperCase() : null;

@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { isCountableFlightStatus } from "../../shared/flightCounting";
 import type { Prisma } from "../../prisma";
 import { haversineKm } from "../../shared/geo/haversine";
 import { busiestDayOf } from "../../shared/busiestDay";
@@ -36,8 +37,6 @@ import type { FlightTimeSemantics } from "../../utils/timezone";
  * "No delay recorded" and "on time" are different facts, and a shortest flight
  * of 0 km would win forever.
  */
-
-const FLOWN = new Set(["flown", "historical"]);
 
 export interface RecordFlightInput {
   id: string;
@@ -277,7 +276,7 @@ function longestStreak(days: readonly string[]): TravelRecord | null {
  * account gets a short list rather than a grid of dashes.
  */
 export function buildTravelRecords(flights: readonly RecordFlightInput[]): TravelRecord[] {
-  const counted = flights.filter((f) => FLOWN.has(f.status));
+  const counted = flights.filter((f) => isCountableFlightStatus(f.status));
 
   const byDay = new Map<string, RecordFlightInput[]>();
   for (const flight of counted) {
@@ -308,7 +307,7 @@ export function buildTravelRecords(flights: readonly RecordFlightInput[]): Trave
 export function travelRecordWitnesses(
   flights: readonly RecordFlightInput[]
 ): Partial<Record<TravelRecord["id"], string[]>> {
-  const counted = flights.filter((f) => FLOWN.has(f.status));
+  const counted = flights.filter((f) => isCountableFlightStatus(f.status));
   const out: Partial<Record<TravelRecord["id"], string[]>> = {};
   const idsWhere = (match: (f: RecordFlightInput) => boolean): string[] =>
     counted.filter(match).map((f) => f.id);

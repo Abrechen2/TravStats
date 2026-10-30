@@ -25,10 +25,11 @@
  * this file only feeds them the run's own ends.
  */
 
+import { COUNTABLE_FLIGHT_STATUSES, isCountableFlightStatus } from "../../shared/flightCounting";
 import type { JourneyEvidenceInput, JourneyLeg, VisitUnclearReason } from "./journeyEvidence";
 
 /** A flight is a stamp only once it has been flown. Rule 1 of the passport. */
-export const FLOWN = new Set(["flown", "historical"]);
+export const FLOWN: ReadonlySet<string> = new Set(COUNTABLE_FLIGHT_STATUSES);
 
 /** ISO day of an instant, or null when there is none. */
 export const isoDayOf = (at: Date | null | undefined): string | null =>
@@ -106,7 +107,7 @@ export function flightLegs(
   countryOf: (iata: string | null) => string | null
 ): JourneyLeg[] {
   return flights
-    .filter((f) => FLOWN.has(f.status))
+    .filter((f) => isCountableFlightStatus(f.status))
     .map((f) => {
       const day = flightDay(f);
       return {

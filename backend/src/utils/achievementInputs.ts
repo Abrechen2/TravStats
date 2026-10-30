@@ -1,4 +1,5 @@
 import { prisma } from "../db";
+import { isCountableFlightStatus } from "../shared/flightCounting";
 import { birthdayOf } from "../services/timeModel/readDay";
 import { departureClockOf } from "./timezone";
 import logger from "./logger";
@@ -43,7 +44,7 @@ import { calculatePlaceStats } from "./placeStats";
  */
 
 /** "Did this flight actually happen" for the per-trip flags — see `achievements.ts`. */
-const isDoneStatus = (status: string): boolean => status === "flown" || status === "historical";
+const isDoneStatus = isCountableFlightStatus;
 
 export async function loadCoreInputs(userId: string) {
   // Fetch user-level context we need for a few of the new achievements
