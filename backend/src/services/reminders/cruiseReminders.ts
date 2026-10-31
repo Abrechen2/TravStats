@@ -4,7 +4,10 @@ import { zoneOf } from "../../shared/time/zoneOf";
 import { serializeTime, type TimePrecision } from "../../shared/time/wire";
 import logger from "../../utils/logger";
 import { cruiseTimes } from "../cruise/timesDto";
-import { reminderDomainEnabled } from "./domainEnabled";
+import { entryReminderMessage } from "../notifications/messages";
+import { sendDueReminder } from "./dispatch";
+import { dueAnchorRange, isDue } from "./due";
+import { activeLeadHours, leadsFor, REMINDER_USER_SELECT } from "./prefs";
 
 /**
  * The cruise half of the departure-reminder scheduler. Same 24h/2h-before
@@ -24,21 +27,12 @@ import { reminderDomainEnabled } from "./domainEnabled";
  * the precise window compare.
  */
 
-const sentReminders = new Set<string>();
-
-const REMINDER_WINDOWS = [
-  { hoursAhead: 24, key: "24h" },
-  { hoursAhead: 2, key: "2h" },
-] as const;
-
 const isPrecision = (value: string | null): value is TimePrecision =>
   value !== null && ["minute", "day", "month", "year", "unknown"].includes(value);
 
 export async function checkCruiseReminders(now: Date): Promise<void> {
-  for (const { hoursAhead, key } of REMINDER_WINDOWS) {
-    const target = now.getTime() + hoursAhead * 60 * 60 * 1000;
-    const preciseStart = new Date(target - 15 * 60 * 1000);
-    const preciseEnd = new Date(target + 15 * 60 * 1000);
+  for (const hoursAhead of await activeLeadHours()) {
+    const { start: preciseStart, end: preciseEnd } = dueAnchorRange(hoursAhead, now);
 
     let stops;
     try {
@@ -74,14 +68,7 @@ export async function checkCruiseReminders(now: Date): Promise<void> {
               startZone: true,
               endZone: true,
               ship: { select: { name: true } },
-              user: {
-                select: {
-                  notificationEmail: true,
-                  notifyBefore24h: true,
-                  notifyBefore2h: true,
-                  settings: { select: { data: true, enabledDomains: true } },
-                },
-              },
+              user: REMINDER_USER_SELECT,
             },
           },
         },
@@ -98,57 +85,68 @@ export async function checkCruiseReminders(now: Date): Promise<void> {
 
     for (const stop of stops) {
       if (!stop.departureUtc) continue; // narrows for TS; the where clause already guarantees this
-      const reminderKey = `cruise:${stop.cruise.id}-${key}`;
-      if (sentReminders.has(reminderKey)) continue;
-
+      const departureUtc = stop.departureUtc;
       const { user } = stop.cruise;
-      const shouldSend =
-        user.notificationEmail !== null &&
-        reminderDomainEnabled(user.settings, "cruise") &&
-        ((key === "24h" && user.notifyBefore24h) || (key === "2h" && user.notifyBefore2h));
-      if (!shouldSend) continue;
+      if (!leadsFor(user, "cruise").includes(hoursAhead) || !isDue(departureUtc, hoursAhead, now))
+        continue;
 
-      try {
-        const zone =
-          stop.stopZone ??
-          (stop.port
-            ? zoneOf({ catalogueZone: stop.port.timezone, lat: stop.port.lat, lon: stop.port.lon })
-            : null);
-        const precision: TimePrecision = isPrecision(stop.timePrecision)
-          ? stop.timePrecision
-          : "minute";
-        const departure = serializeTime(stop.departureUtc, zone, precision);
+      const zone =
+        stop.stopZone ??
+        (stop.port
+          ? zoneOf({ catalogueZone: stop.port.timezone, lat: stop.port.lat, lon: stop.port.lon })
+          : null);
+      const precision: TimePrecision = isPrecision(stop.timePrecision)
+        ? stop.timePrecision
+        : "minute";
+      const departure = serializeTime(departureUtc, zone, precision);
+      const ship = stop.cruise.ship?.name ?? stop.cruise.shipNameOverride;
 
-        await sendCruiseReminder(
-          {
-            id: stop.cruise.id,
-            tripId: stop.cruise.tripId,
-            shipName: stop.cruise.ship?.name ?? stop.cruise.shipNameOverride,
-            cruiseLine: stop.cruise.cruiseLine,
-            portName: stop.port?.name ?? null,
-            portCity: stop.port?.city ?? null,
-            portCountry: stop.port?.country ?? null,
-            cabinType: stop.cruise.cabinType,
-            cabinNumber: stop.cruise.cabinNumber,
-            deck: stop.cruise.deck,
-            routeName: stop.cruise.routeName,
-            bookingReference: stop.cruise.bookingReference,
-            departure,
-            endDay: cruiseTimes(stop.cruise).end,
-          },
-          { notificationEmail: user.notificationEmail, settingsData: user.settings?.data ?? null },
-          hoursAhead
-        );
-        sentReminders.add(reminderKey);
-      } catch (error) {
-        logger.error({
-          operation: "reminder_scheduler_send_failed",
-          domain: "cruise",
-          cruiseId: stop.cruise.id,
-          hoursAhead,
-          error: { message: error instanceof Error ? error.message : "Unknown error" },
-        });
-      }
+      await sendDueReminder({
+        user,
+        domain: "cruise",
+        entryId: stop.cruise.id,
+        tripId: stop.cruise.tripId,
+        hours: hoursAhead,
+        anchorAt: departureUtc,
+        anchorKey: departureUtc.toISOString(),
+        now,
+        render: (locale) =>
+          entryReminderMessage(
+            "cruise",
+            {
+              label: ship ?? stop.cruise.cruiseLine ?? stop.cruise.routeName ?? "Cruise",
+              detail: stop.port?.name ?? null,
+              at: departureUtc,
+              zone,
+            },
+            hoursAhead,
+            locale
+          ),
+        sendMail: () =>
+          sendCruiseReminder(
+            {
+              id: stop.cruise.id,
+              tripId: stop.cruise.tripId,
+              shipName: ship,
+              cruiseLine: stop.cruise.cruiseLine,
+              portName: stop.port?.name ?? null,
+              portCity: stop.port?.city ?? null,
+              portCountry: stop.port?.country ?? null,
+              cabinType: stop.cruise.cabinType,
+              cabinNumber: stop.cruise.cabinNumber,
+              deck: stop.cruise.deck,
+              routeName: stop.cruise.routeName,
+              bookingReference: stop.cruise.bookingReference,
+              departure,
+              endDay: cruiseTimes(stop.cruise).end,
+            },
+            {
+              notificationEmail: user.notificationEmail as string,
+              settingsData: user.settings?.data ?? null,
+            },
+            hoursAhead
+          ),
+      });
     }
   }
 }

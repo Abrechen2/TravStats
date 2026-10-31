@@ -2,8 +2,10 @@ import { prisma } from "../../db";
 import type { Prisma } from "../../prisma";
 import { sendBusReminder } from "../emailService";
 import type { BusReminderData } from "../email/ferryBusReminderContent";
+import { entryReminderMessage } from "../notifications/messages";
 import { railTimes } from "../rail/timesDto";
-import { REMINDER_USER_SELECT, dueWhere, runSingleRideReminders } from "./singleRideReminders";
+import { REMINDER_USER_SELECT } from "./prefs";
+import { dueWhere, runSingleRideReminders } from "./singleRideReminders";
 
 /**
  * The bus half of the departure-reminder scheduler: rail's windows and
@@ -11,8 +13,6 @@ import { REMINDER_USER_SELECT, dueWhere, runSingleRideReminders } from "./single
  * terminal's zone, read through rail's `railTimes` (as `withBusTimes` does),
  * so the mail shows both ends on their terminal's own clock.
  */
-
-const sentReminders = new Set<string>();
 
 const RIDE_SELECT = {
   id: true,
@@ -59,9 +59,20 @@ export async function checkBusReminders(now: Date): Promise<void> {
   await runSingleRideReminders(
     {
       domain: "bus",
-      sent: sentReminders,
       due: (start, end) =>
         prisma.busJourney.findMany({ where: dueWhere(start, end), select: RIDE_SELECT }),
+      render: (row, hoursAhead, locale) =>
+        entryReminderMessage(
+          "bus",
+          {
+            label: `${row.depStationName} → ${row.arrStationName}`,
+            detail: row.operator ?? null,
+            at: row.departureTime,
+            zone: row.depTimezone,
+          },
+          hoursAhead,
+          locale
+        ),
       send: (row, user, hoursAhead) => sendBusReminder(toReminderRide(row), user, hoursAhead),
     },
     now

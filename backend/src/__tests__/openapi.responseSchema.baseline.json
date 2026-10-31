@@ -37,7 +37,6 @@
   "GET /settings/api-keys/quota",
   "GET /settings/dawarich",
   "GET /settings/immich",
-  "GET /settings/notifications",
   "GET /settings/parser",
   "GET /settings/profile",
   "GET /training/{id}",
@@ -104,7 +103,6 @@
   "PUT /settings/api-keys",
   "PUT /settings/dawarich",
   "PUT /settings/immich",
-  "PUT /settings/notifications",
   "PUT /settings/parser",
   "PUT /settings/profile"
 ]

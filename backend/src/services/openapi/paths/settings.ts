@@ -498,20 +498,59 @@ registry.registerPath({
   },
 });
 
+const domainPrefView = z.object({
+  enabled: z.boolean(),
+  leadHours: z.array(z.number().int()).describe("Presets 24 and 2 plus at most one custom 1-168"),
+  channel: z.enum(["app", "mail", "both"]),
+});
+const notificationSettingsResponse = z.object({
+  notificationEmail: z.string().nullable(),
+  notifyBefore24h: z.boolean().describe("Legacy; derived from the domain rows"),
+  notifyBefore2h: z.boolean().describe("Legacy; derived from the domain rows"),
+  domains: z.object({
+    flight: domainPrefView,
+    cruise: domainPrefView,
+    rail: domainPrefView,
+    bus: domainPrefView,
+    ferry: domainPrefView,
+    lodging: domainPrefView,
+  }),
+  mail: z.object({ available: z.boolean(), reason: z.enum(["no_email"]).nullable() }),
+  push: z
+    .object({
+      available: z.boolean(),
+      reason: z.enum(["no_relay", "no_device_token", "token_rejected"]).nullable(),
+    })
+    .describe("Whether the server can push to the CALLING device"),
+});
+
 registry.registerPath({
   method: "get",
   path: "/settings/notifications",
   summary: "Get notification settings",
   tags: settingsTag,
-  responses: { 200: { description: "Notification settings" } },
+  responses: {
+    200: {
+      description: "Notification settings",
+      content: { "application/json": { schema: notificationSettingsResponse } },
+    },
+  },
 });
 
 registry.registerPath({
   method: "put",
   path: "/settings/notifications",
   summary: "Update notification settings",
+  description:
+    "Legacy fields (notificationEmail, notifyBefore24h, notifyBefore2h) keep working and fan out to every domain. `domains` takes any subset of the six domains, each with any of enabled / leadHours / channel.",
   tags: settingsTag,
-  responses: { 200: { description: "Saved" }, 400: badInput },
+  responses: {
+    200: {
+      description: "Saved; the same body as GET",
+      content: { "application/json": { schema: notificationSettingsResponse } },
+    },
+    400: badInput,
+  },
 });
 
 registry.registerPath({

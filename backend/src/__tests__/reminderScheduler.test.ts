@@ -25,7 +25,29 @@ jest.mock("../db", () => ({
 const mockSendFlightReminder =
   jest.fn<typeof import("../services/emailService").sendFlightReminder>();
 jest.mock("../services/notifications/dispatcher", () => ({
-  notifyReminder: jest.fn(async () => undefined),
+  notifyEntryReminder: jest.fn(async () => undefined),
+}));
+// Durable claims and the last-moment recheck have their own suites.
+jest.mock("../services/reminders/claims", () => {
+  const claimed = new Set<string>();
+  return {
+    claimReminder: jest.fn(async (key: unknown) => {
+      const id = JSON.stringify(key);
+      if (claimed.has(id)) return null;
+      claimed.add(id);
+      return { id };
+    }),
+    markSent: jest.fn(async () => undefined),
+    releaseClaim: jest.fn(async (claim: { id: string }) => {
+      claimed.delete(claim.id);
+    }),
+  };
+});
+jest.mock("../services/reminders/eligibility", () => ({
+  ...jest.requireActual<typeof import("../services/reminders/eligibility")>(
+    "../services/reminders/eligibility"
+  ),
+  stillEligible: jest.fn(async () => true),
 }));
 const mockSendCruiseReminder =
   jest.fn<typeof import("../services/emailService").sendCruiseReminder>();

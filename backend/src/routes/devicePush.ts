@@ -60,10 +60,21 @@ router.put("/me/push", async (req: AuthRequest, res: Response, next: NextFunctio
       apnsEnvironment:
         parsed.data.platform === "ios" ? (parsed.data.apnsEnvironment ?? "production") : null,
     };
+    // A new token clears a rejection; re-sending the rejected one does not (the
+    // relay already named it dead, so the phone keeps scheduling its own).
+    const previous = await prisma.devicePush.findUnique({
+      where: { apiTokenId },
+      select: { token: true },
+    });
+    const tokenChanged = previous !== null && previous.token !== data.token;
     await prisma.devicePush.upsert({
       where: { apiTokenId },
       create: { apiTokenId, userId: req.userId!, ...data, mutedTripIds: muted ?? [] },
-      update: { ...data, ...(muted !== undefined && { mutedTripIds: muted }) },
+      update: {
+        ...data,
+        ...(tokenChanged && { tokenRejectedAt: null }),
+        ...(muted !== undefined && { mutedTripIds: muted }),
+      },
     });
     res.json({ registered: true, serverPushEnabled: await serverPushEnabled() });
   } catch (err) {

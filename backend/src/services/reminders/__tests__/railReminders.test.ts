@@ -20,6 +20,32 @@ jest.mock("../../../utils/logger", () => ({
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
 
+// The durable claim, the last-moment recheck and the push are covered by their
+// own suites; here every send is claimed, still eligible, and pushed nowhere.
+jest.mock("../claims", () => {
+  // In-memory twin of the durable claim: one owner per key, freed on release.
+  const claimed = new Set<string>();
+  return {
+    claimReminder: jest.fn(async (key: unknown) => {
+      const id = JSON.stringify(key);
+      if (claimed.has(id)) return null;
+      claimed.add(id);
+      return { id };
+    }),
+    markSent: jest.fn(async () => undefined),
+    releaseClaim: jest.fn(async (claim: { id: string }) => {
+      claimed.delete(claim.id);
+    }),
+  };
+});
+jest.mock("../eligibility", () => ({
+  ...jest.requireActual<typeof import("../eligibility")>("../eligibility"),
+  stillEligible: jest.fn(async () => true),
+}));
+jest.mock("../../notifications/dispatcher", () => ({
+  notifyEntryReminder: jest.fn(async () => undefined),
+}));
+
 interface JourneyFixture {
   bookingReference?: string | null;
   travelClass?: string | null;
@@ -382,7 +408,8 @@ describe("checkRailReminders — one reminder per ride (forgejo#210)", () => {
     serve([ICE_911, EC_115, other]);
     const { checkRailReminders } = await import("../railReminders");
 
-    await checkRailReminders(new Date(T0.getTime() - 24 * HOUR));
+    // Both rides are due by now (the second 5 minutes after the first).
+    await checkRailReminders(new Date(T0.getTime() - 24 * HOUR + 10 * MIN));
 
     expect(sentRides().map((ride) => ride.legs.map((l) => l.id))).toEqual([
       ["leg-ice", "leg-ec"],
