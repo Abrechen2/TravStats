@@ -928,5 +928,22 @@
     "loadError": "The route shared on this trip could not be loaded."
   },
   "loadMore": "Load more",
-  "listError": "Trips could not be loaded. Please try again."
+  "listError": "Trips could not be loaded. Please try again.",
+  "packing": {
+    "title": "Packing list",
+    "progress": "{{done}} of {{total}} packed",
+    "empty": "Nothing on the list yet. You share this packing list with the Companion app.",
+    "loadFailed": "The packing list could not be loaded.",
+    "retry": "Try again",
+    "remove": "Remove “{{label}}”",
+    "addLabel": "New item",
+    "addPlaceholder": "Pack something …",
+    "add": "Add",
+    "full": "The list is full (at most {{max}} items).",
+    "notice": {
+      "stale": "The list was changed on another device in the meantime and has been reloaded. Your change was not applied – please do it again.",
+      "staleReloadFailed": "The list was changed on another device in the meantime but could not be reloaded. Your change was not applied. Reload the page.",
+      "saveFailed": "Not saved. Please try again."
+    }
+  }
 }

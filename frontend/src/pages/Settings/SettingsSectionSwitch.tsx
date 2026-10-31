@@ -5,6 +5,7 @@ import type { SettingsSectionId } from "./settingsModel";
 import type { useSettingsPage } from "../../components/Settings/useSettingsPage";
 
 import ProfileSection from "../../components/Settings/ProfileSection";
+import PersonalFactsCard from "../../components/Settings/PersonalFactsCard";
 import HomeCountryCard from "../../components/Settings/HomeCountryCard";
 import HomeAirportSection from "../../components/Settings/HomeAirportSection";
 import DisplaySection from "../../components/Settings/DisplaySection";
@@ -76,6 +77,7 @@ export default function SettingsSectionSwitch({
           />
           {/* A personal fact like the name above; it orders booking templates. */}
           <HomeCountryCard />
+          <PersonalFactsCard />
         </div>
       );
     case "security":

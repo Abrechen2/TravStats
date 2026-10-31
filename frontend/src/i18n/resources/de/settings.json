@@ -312,6 +312,8 @@
     "mailCard": "Mail an",
     "appCard": "App",
     "carriedOver": "Deine bisherigen Einstellungen wurden übernommen.",
+    "domainOff": "„{{area}}“ ist ausgeschaltet, deshalb gibt es dazu keine Erinnerungen. Schalte den Bereich ein, um sie zu bekommen.",
+    "domainOffAction": "Zu Bereiche & Farben",
     "rowFailed": "Nicht gespeichert.",
     "retry": "Erneut versuchen",
     "rowSwitch": "Erinnerungen für {{area}}",
@@ -1504,6 +1506,24 @@
         "title": "Spalten und Seitengröße",
         "sub": "Die Flugliste ist der Einstieg; andere Bereiche haben ihre eigene Liste."
       }
+    }
+  },
+  "personalFacts": {
+    "loadFailed": "Deine persönlichen Angaben konnten nicht geladen werden.",
+    "notSet": "Nicht gesetzt",
+    "clear": "Entfernen",
+    "homePlace": {
+      "label": "Heimatort",
+      "description": "Wird auch von der Companion-App genutzt, zum Beispiel für die Erinnerung zum Losfahren.",
+      "search": "Ort suchen",
+      "searchAction": "Suchen",
+      "searchFailed": "Die Ortssuche hat nicht geantwortet. Bitte versuche es erneut.",
+      "searchDegraded": "Der Ortsdienst ist gerade nicht erreichbar. Das ist kein „kein Treffer“ – bitte später erneut suchen.",
+      "noResults": "Kein passender Ort gefunden."
+    },
+    "passport": {
+      "label": "Reisepass gültig bis",
+      "description": "Die Companion-App warnt sechs Monate vorher."
     }
   }
 }

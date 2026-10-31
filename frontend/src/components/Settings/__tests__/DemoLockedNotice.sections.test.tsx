@@ -140,7 +140,11 @@ describe("NotificationsSection on the demo account", () => {
   });
 
   it("explains instead of offering the address field", async () => {
-    render(<NotificationsSection />);
+    render(
+      <MemoryRouter>
+        <NotificationsSection />
+      </MemoryRouter>
+    );
     expect(await screen.findByText("settings:demoLocked")).toBeInTheDocument();
     expect(screen.queryByLabelText("settings:notifications.mailCard")).not.toBeInTheDocument();
     // Not merely hidden: the section must not fetch the shared account's
@@ -150,7 +154,11 @@ describe("NotificationsSection on the demo account", () => {
 
   it("offers the field for a normal account — the case above is not vacuous", async () => {
     isDemoMock.current = false;
-    render(<NotificationsSection />);
+    render(
+      <MemoryRouter>
+        <NotificationsSection />
+      </MemoryRouter>
+    );
     expect(await screen.findByLabelText("settings:notifications.mailCard")).toBeInTheDocument();
     expect(screen.queryByText("settings:demoLocked")).not.toBeInTheDocument();
   });

@@ -312,6 +312,8 @@
     "mailCard": "Mail to",
     "appCard": "App",
     "carriedOver": "Your existing choices were carried over.",
+    "domainOff": "“{{area}}” is switched off, so there are no reminders for it. Switch the area on to get them.",
+    "domainOffAction": "Go to Domains & colours",
     "rowFailed": "Not saved.",
     "retry": "Try again",
     "rowSwitch": "Reminders for {{area}}",
@@ -1504,6 +1506,24 @@
         "title": "Columns and page size",
         "sub": "The flight list is the entry point; other areas have their own list."
       }
+    }
+  },
+  "personalFacts": {
+    "loadFailed": "Your personal details could not be loaded.",
+    "notSet": "Not set",
+    "clear": "Remove",
+    "homePlace": {
+      "label": "Home place",
+      "description": "The Companion app uses it too, for example for the “time to leave” reminder.",
+      "search": "Search for a place",
+      "searchAction": "Search",
+      "searchFailed": "The place search did not answer. Please try again.",
+      "searchDegraded": "The place service is unreachable right now. That is not “no match” – please search again later.",
+      "noResults": "No matching place found."
+    },
+    "passport": {
+      "label": "Passport valid until",
+      "description": "The Companion app warns six months ahead."
     }
   }
 }

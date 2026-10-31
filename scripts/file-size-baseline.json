@@ -3,7 +3,7 @@
   "limit": 800,
   "files": {
     "frontend/src/components/GlobeView.tsx": 1317,
-    "backend/src/services/schematicRouter.ts": 1100,
+    "backend/src/services/schematicRouter.ts": 1064,
     "frontend/src/pages/TripDetailPage.tsx": 1037,
     "backend/src/services/flightLookup.ts": 1012,
     "backend/src/routes/flights.ts": 996,

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useId } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import {
   notificationsApi,
   type NotificationPreferences,
@@ -24,6 +25,7 @@ import { applyPatch, mergePatch } from "./reminderPrefs";
  */
 export default function NotificationPreferences(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
+  const { isEnabled } = useEnabledDomains();
   const addToast = useToastStore((state) => state.addToast);
   const mailReasonId = useId();
   const appReasonId = useId();
@@ -201,6 +203,7 @@ export default function NotificationPreferences(): JSX.Element {
         onRetry={retryDomain}
         mailReasonId={mailReasonId}
         appReasonId={appReasonId}
+        isDomainOn={(domain) => isEnabled(domain)}
       />
       <p className="t-caption">{t("settings:notifications.carriedOver")}</p>
     </div>
