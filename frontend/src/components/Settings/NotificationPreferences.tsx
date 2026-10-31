@@ -34,6 +34,7 @@ export default function NotificationPreferences(): JSX.Element {
   // when it settles, so the server hears them in the order they were made.
   const inFlight = useRef(false);
   const queued = useRef<Partial<NotificationPreferences> | null>(null);
+  const sending = useRef<Partial<NotificationPreferences>>({});
 
   const load = async (): Promise<void> => {
     setLoadState("loading");
@@ -56,6 +57,7 @@ export default function NotificationPreferences(): JSX.Element {
 
   const send = async (patch: Partial<NotificationPreferences>): Promise<void> => {
     inFlight.current = true;
+    sending.current = patch;
     try {
       const updated = await notificationsApi.updatePreferences(patch);
       confirmed.current = { ...confirmed.current, ...updated };
@@ -63,8 +65,10 @@ export default function NotificationPreferences(): JSX.Element {
       // otherwise flip the switch back until the next response lands.
       if (!queued.current) setPrefs(confirmed.current);
     } catch (error) {
-      // A newer edit is on its way and decides; otherwise show what is stored.
-      if (!queued.current) {
+      if (queued.current) {
+        // Fields the newer edit does not override ride along, so they are retried.
+        queued.current = { ...patch, ...queued.current };
+      } else {
         setPrefs(confirmed.current);
         addToast(
           "error",
@@ -73,6 +77,7 @@ export default function NotificationPreferences(): JSX.Element {
       }
     } finally {
       inFlight.current = false;
+      sending.current = {};
       const next = queued.current;
       queued.current = null;
       if (next) void send(next);
@@ -106,7 +111,8 @@ export default function NotificationPreferences(): JSX.Element {
   const email = (prefs.notificationEmail ?? "").trim();
   const commitEmail = (): void => {
     const value = email === "" ? null : email;
-    if (value === confirmed.current.notificationEmail && !queued.current) return;
+    const latest = { ...confirmed.current, ...sending.current, ...queued.current };
+    if (value === latest.notificationEmail) return;
     save({ notificationEmail: value });
   };
 

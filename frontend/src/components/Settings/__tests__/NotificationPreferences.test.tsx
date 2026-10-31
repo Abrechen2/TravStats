@@ -113,4 +113,28 @@ describe("NotificationPreferences", () => {
     await userEvent.setup().click(screen.getByRole("button"));
     expect(await screen.findByRole("switch", { name: /before2h/ })).toBeChecked();
   });
+
+  it("a failed write is retried with the next one when a newer toggle was queued behind it", async () => {
+    let failFirst!: (e: Error) => void;
+    updatePreferences
+      .mockImplementationOnce(
+        () =>
+          new Promise((_, reject) => {
+            failFirst = reject;
+          })
+      )
+      .mockImplementation(async (p: object) => ({ ...STORED, ...p }));
+    const user = userEvent.setup();
+    render(<NotificationPreferences />);
+
+    await user.click(await screen.findByRole("switch", { name: /before24h/ }));
+    await user.click(screen.getByRole("switch", { name: /before2h/ }));
+    failFirst(new Error("offline"));
+
+    await waitFor(() => expect(updatePreferences).toHaveBeenCalledTimes(2));
+    expect(updatePreferences.mock.calls[1][0]).toEqual({
+      notifyBefore24h: true,
+      notifyBefore2h: false,
+    });
+  });
 });
