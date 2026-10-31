@@ -6,10 +6,17 @@ import { photonSearchLimiter } from "../../middleware/rateLimit";
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import { aisConfigured, lookupVessel } from "../../services/ferry/aisStream";
+import { isServiceDisabledByAdmin } from "../../services/externalServices/policy";
 const router = Router();
 router.use(authenticate);
-router.get("/live-availability", (_req, res) =>
-  res.json({ success: true, data: { configured: aisConfigured(), provider: "AISStream" } })
+router.get("/live-availability", async (_req, res) =>
+  res.json({
+    success: true,
+    data: {
+      configured: aisConfigured() && !(await isServiceDisabledByAdmin("aisstream")),
+      provider: "AISStream",
+    },
+  })
 );
 router.get(
   "/:id/live-position",
@@ -50,7 +57,10 @@ router.get(
       if (mmsi === undefined) {
         throw new AppError("MMSI must contain nine digits", 400, "FERRY_INVALID_INPUT", "mmsi");
       }
-      const result = await lookupVessel(mmsi, userId);
+      // An admin who switched the service off means it: no socket, no request.
+      const result = (await isServiceDisabledByAdmin("aisstream"))
+        ? { status: "notConfigured" as const, position: null }
+        : await lookupVessel(mmsi, userId);
       if (result.status === "ok" && own.vesselMmsi === null) {
         // share-exempt: binds the vessel MMSI for the live position — private
         await prisma.ferryJourney.updateMany({

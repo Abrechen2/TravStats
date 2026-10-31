@@ -9,12 +9,15 @@ import { lookup } from "dns/promises";
 import { getDefaultAutoSelectFamily, setDefaultAutoSelectFamily } from "net";
 import { exchange, ipv4First, PeerRefusal } from "../security";
 import { prisma } from "../../../db";
-jest.mock("../../../db", () => ({ prisma: { comparisonPeer: { findUnique: jest.fn() } } }));
+import { encryptApiKey } from "../../../utils/encryption";
+import { resetIdentityCache } from "../identity";
+jest.mock("../../../db", () => ({
+  prisma: { comparisonPeer: { findUnique: jest.fn() }, adminSettings: { findFirst: jest.fn() } },
+}));
 jest.mock("dns/promises", () => ({ lookup: jest.fn() }));
 
 const CLOUDFLARE_V6 = "2606:4700:3035::6815:434f";
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "federation-tls-"));
-const originalEnv = { ...process.env };
 const previousAutoSelect = getDefaultAutoSelectFamily();
 const local = generateKeyPairSync("ed25519"),
   remote = generateKeyPairSync("ed25519");
@@ -48,9 +51,13 @@ beforeAll(async () => {
   fs.writeFileSync(`${dir}/peer.key`, local.privateKey.export({ type: "pkcs8", format: "pem" }), {
     mode: 0o600,
   });
-  process.env.FEDERATION_ENABLED = "1";
-  process.env.FEDERATION_PUBLIC_ORIGIN = "https://local.federation.test";
-  process.env.FEDERATION_KEY_FILE = `${dir}/peer.key`;
+  // The identity is read from the instance settings (the FEDERATION_* variables are gone).
+  jest.mocked(prisma.adminSettings.findFirst).mockResolvedValue({
+    federationEnabled: true,
+    federationOrigin: "https://local.federation.test",
+    federationPrivateKey: encryptApiKey(fs.readFileSync(`${dir}/peer.key`, "utf8")),
+  } as never);
+  resetIdentityCache();
   certificate = fs.readFileSync(`${dir}/tls.crt`);
   server = https.createServer(
     { key: fs.readFileSync(`${dir}/tls.key`), cert: certificate },
@@ -99,10 +106,6 @@ afterEach(() => jest.restoreAllMocks());
 afterAll(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
   setDefaultAutoSelectFamily(previousAutoSelect);
-  for (const key of ["FEDERATION_ENABLED", "FEDERATION_PUBLIC_ORIGIN", "FEDERATION_KEY_FILE"]) {
-    if (originalEnv[key] === undefined) delete process.env[key];
-    else process.env[key] = originalEnv[key];
-  }
   for (const name of ["tls.key", "tls.crt", "peer.key"])
     if (fs.existsSync(`${dir}/${name}`)) fs.unlinkSync(`${dir}/${name}`);
   fs.rmdirSync(dir);

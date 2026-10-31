@@ -4,6 +4,7 @@ jest.mock("../../../db", () => ({
   },
 }));
 
+import { resetInstanceTuning } from "../../instanceTuning";
 import { getConsent, setConsent, getOrCreateInstallId, getStatsBaseUrl } from "../consent";
 import { prisma } from "../../../db";
 
@@ -13,6 +14,7 @@ const mockPrisma = prisma as unknown as {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  resetInstanceTuning();
   delete process.env.TRAVSTATS_STATS_ENDPOINT;
 });
 
@@ -80,13 +82,8 @@ describe("getStatsBaseUrl", () => {
     expect(getStatsBaseUrl()).toBe("https://stats.travstats.de");
   });
 
-  it("returns an empty string when explicitly disabled", () => {
+  it("ignores TRAVSTATS_STATS_ENDPOINT: the endpoint comes from the instance settings only", () => {
     process.env.TRAVSTATS_STATS_ENDPOINT = "";
-    expect(getStatsBaseUrl()).toBe("");
-  });
-
-  it("strips a trailing slash so path joins stay clean", () => {
-    process.env.TRAVSTATS_STATS_ENDPOINT = "https://example.test/";
-    expect(getStatsBaseUrl()).toBe("https://example.test");
+    expect(getStatsBaseUrl()).toBe("https://stats.travstats.de");
   });
 });

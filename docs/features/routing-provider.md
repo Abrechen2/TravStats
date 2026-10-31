@@ -31,9 +31,8 @@ of:
 | GraphHopper | An API key from <https://www.graphhopper.com/> | Free tier is small; same behaviour at the quota. |
 | Custom OSRM | The base URL of your own OSRM server, e.g. `https://osrm.example.com` | Nothing leaves your network. OSRM needs a road extract that covers your rides (a Europe or planet extract for coach travel). |
 
-Save, and the next bus ride you create gets its road line. The key may be set
-in the admin settings or, per provider, in the environment
-(`OPENROUTESERVICE_API_KEY`, `GRAPHHOPPER_API_KEY`); a provider that is
+Save, and the next bus ride you create gets its road line. The key is set
+in the admin settings (Admin › External services); a provider that is
 selected but has no key counts as "not configured" and the form says so.
 
 ## What happens when a ride is saved

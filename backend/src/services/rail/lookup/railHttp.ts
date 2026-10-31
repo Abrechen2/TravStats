@@ -1,5 +1,6 @@
 import NodeCache from "node-cache";
 import type { z } from "zod";
+import { instanceTuning } from "../../instanceTuning";
 
 import logger from "../../../utils/logger";
 import type { RailDeadline } from "./types";
@@ -56,13 +57,12 @@ const PROJECT_URL = "https://github.com/Abrechen2/TravStats";
 
 /**
  * `TravStats (…; +project; contact)`. The contact is the instance operator's
- * (`RAIL_LOOKUP_CONTACT`, an e-mail or URL) — Transitous' terms ask for a way
+ * (the "contact" field of the rail service, an e-mail or URL) — Transitous' terms ask for a way
  * to reach whoever runs the client. Without it the project URL stands in,
- * which reaches the maintainer rather than the operator; the env var is
- * documented so an operator can do better.
+ * which reaches the maintainer rather than the operator; an operator can do better in the admin settings.
  */
 export function railUserAgent(): string {
-  const contact = process.env.RAIL_LOOKUP_CONTACT?.trim();
+  const contact = instanceTuning().railLookupContact?.trim();
   const reach = contact && contact.length <= 200 ? `; ${contact}` : "";
   return `TravStats (self-hosted travel logbook; +${PROJECT_URL}${reach})`;
 }

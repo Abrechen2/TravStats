@@ -312,6 +312,15 @@ if (process.env.NODE_ENV !== "test") {
         logger.warn({ operation: "server_start_country_index_warm_error", error })
       );
 
+    // Service credentials and addresses that used to come from the environment move
+    // into the instance settings once (forgejo#392); after that only the settings count.
+    try {
+      const { importServiceEnv } = await import("./services/envImport");
+      await importServiceEnv();
+    } catch (error) {
+      logger.error({ operation: "service_env_import_error", error });
+    }
+
     // The admin's logging settings — level, category files, HTTP/query logs —
     // are applied to the running loggers before anything else logs. They used
     // to be stored and never applied (audit 2026-09-26).

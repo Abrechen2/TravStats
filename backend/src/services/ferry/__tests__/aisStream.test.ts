@@ -1,3 +1,4 @@
+import { resetInstanceTuning, setInstanceTuning } from "../../instanceTuning";
 jest.mock("ws", () => {
   const { EventEmitter } = jest.requireActual("events");
   return class FakeSocket extends EventEmitter {
@@ -28,11 +29,11 @@ const frame = (mmsi = 211123456) => ({
   Message: { PositionReport: { UserID: mmsi, Valid: true, Sog: 12.3, Cog: 84 } },
 });
 afterEach(() => {
-  delete process.env.AISSTREAM_API_KEY;
+  resetInstanceTuning();
   jest.useRealTimers();
 });
 it("works without a key by returning notConfigured, never opening a socket", async () => {
-  delete process.env.AISSTREAM_API_KEY;
+  resetInstanceTuning();
   expect(await lookupVessel("211123456", "user-a")).toEqual({
     status: "notConfigured",
     position: null,
@@ -61,7 +62,7 @@ it("ignores other vessels, invalid coordinates and AIS sentinel speed/course", (
   });
 });
 it("coalesces requests, subscribes to one MMSI, closes after a valid report and caches it", async () => {
-  process.env.AISSTREAM_API_KEY = "test-only-key";
+  setInstanceTuning({ aisstreamApiKey: "test-only-key" });
   const a = lookupVessel("211123457", "user-a"),
     b = lookupVessel("211123457", "user-b");
   const socket = sockets().at(-1)!;
@@ -80,7 +81,7 @@ it("coalesces requests, subscribes to one MMSI, closes after a valid report and 
 });
 it("bounds wait time and rejects extra concurrent sockets", async () => {
   jest.useFakeTimers();
-  process.env.AISSTREAM_API_KEY = "test-only-key";
+  setInstanceTuning({ aisstreamApiKey: "test-only-key" });
   const a = lookupVessel("211123458", "user-a"),
     b = lookupVessel("211123459", "user-b");
   expect((await lookupVessel("211123460", "user-c")).status).toBe("busy");
@@ -89,7 +90,7 @@ it("bounds wait time and rejects extra concurrent sockets", async () => {
   expect((await b).status).toBe("noSignal");
 });
 it("does not return a provider error that could contain credentials", async () => {
-  process.env.AISSTREAM_API_KEY = "test-only-key";
+  setInstanceTuning({ aisstreamApiKey: "test-only-key" });
   const result = lookupVessel("211123461", "user-a");
   sockets()
     .at(-1)!
@@ -101,7 +102,7 @@ it("holds one user to one socket, so a single account cannot take both", async (
   // The two-socket cap was shared by everyone: one account looking up two
   // vessels left every other user "busy" for fifteen seconds.
   jest.useFakeTimers();
-  process.env.AISSTREAM_API_KEY = "test-only-key";
+  setInstanceTuning({ aisstreamApiKey: "test-only-key" });
   const before = sockets().length;
   const first = lookupVessel("211123470", "user-a");
   expect((await lookupVessel("211123471", "user-a")).status).toBe("busy");

@@ -64,7 +64,7 @@ export const adminServiceViewSchema = z.object({
   recommended: z.enum(["free", "freeCredit"]).nullable(),
   enabled: z.boolean(),
   configured: z.boolean(),
-  instanceSource: z.enum(["instance", "env", "none"]),
+  instanceSource: z.enum(["instance", "none"]),
   allowAccountKeys: z.boolean().nullable(),
   lastTest,
   quota,
@@ -88,7 +88,7 @@ export const adminExternalServicesResponseSchema = z.object({
 export const accountServiceViewSchema = z.object({
   id: z.string(),
   recommended: z.enum(["free", "freeCredit"]).nullable(),
-  effectiveSource: z.enum(["account", "instance", "env", "none", "off"]),
+  effectiveSource: z.enum(["account", "instance", "none", "off"]),
   accountDisabled: z.boolean(),
   configured: z.boolean(),
   lastTest,

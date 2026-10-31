@@ -50,7 +50,7 @@ services:
 
   # Ollama LLM server — optional, powers AI-backed email/PDF parsing.
   # Turn it off with the "KI-Parser" switch under Admin → Parser: that stops
-  # every model call even while OLLAMA_URL below is still set.
+  # every model call.
   ollama:
     image: ollama/ollama:latest
     container_name: travstats-ollama
@@ -121,7 +121,9 @@ services:
       # or all visitors share its address and one login rate limit.
       TRUST_PROXY: ${TRUST_PROXY:-}
 
-      # Default Ollama endpoint inside the stack. Admin can change the model,
+      # Default Ollama endpoint inside the stack. Copied into the instance
+      # settings once, on the first start, when no address is stored yet; after
+      # that only Admin > External services counts. Admin can change the model,
       # and switch the model off entirely, via the UI.
       OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
 

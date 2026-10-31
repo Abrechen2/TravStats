@@ -65,10 +65,7 @@ export function sourceLine(t: TFn, service: AdminService): string {
   if (!service.enabled) {
     return t(`${NS}:source.${service.level === "instanceAndAccount" ? "off" : "offInstance"}`);
   }
-  // A server-side variable reads like the instance's own key: the page does not speak of ENV.
-  if (service.instanceSource === "instance" || service.instanceSource === "env") {
-    return t(`${NS}:source.instance`);
-  }
+  if (service.instanceSource === "instance") return t(`${NS}:source.instance`);
   return service.configured ? t(`${NS}:source.keyless`) : t(`${NS}:source.none`);
 }
 

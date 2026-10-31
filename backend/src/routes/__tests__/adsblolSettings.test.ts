@@ -179,9 +179,9 @@ describe("adsb.lol key settings", () => {
   });
 
   describe("resolver order", () => {
-    it("prefers the user's key, then the admin's, then ADSBLOL_API_KEY", async () => {
+    it("prefers the user's key, then the admin's, and never ADSBLOL_API_KEY", async () => {
       process.env.ADSBLOL_API_KEY = "env-adsblol-key-123456";
-      expect(await getApiKey("adsblol", regularUser.id)).toBe("env-adsblol-key-123456");
+      expect(await getApiKey("adsblol", regularUser.id)).toBeNull();
 
       await prisma.adminSettings.updateMany({
         data: { globalAdsblolApiKey: encryptApiKey("global-adsblol-key-1234") },

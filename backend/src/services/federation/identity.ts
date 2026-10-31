@@ -1,13 +1,10 @@
 import { createPrivateKey, createPublicKey, type KeyObject } from "crypto";
-import fs from "fs";
-import { isAbsolute } from "path";
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
 import { decryptApiKey } from "../../utils/encryption";
-import { origin as originSchema } from "./contract";
 import { hash, refused } from "./refusal";
 
-export type IdentitySource = "env" | "settings";
+export type IdentitySource = "settings";
 export interface Identity {
   origin: string;
   key: KeyObject;
@@ -22,11 +19,6 @@ let cached: { config: string; value: Identity } | null = null;
 
 export function resetIdentityCache(): void {
   cached = null;
-}
-
-/** FEDERATION_ENABLED=1 keeps an install configured before 2026-10-16 exactly as it was. */
-export function envOverrideActive(): boolean {
-  return process.env.FEDERATION_ENABLED === "1";
 }
 
 function parse(origin: string, pem: string | Buffer, source: IdentitySource, config: string) {
@@ -47,15 +39,6 @@ function parse(origin: string, pem: string | Buffer, source: IdentitySource, con
 }
 
 export async function loadIdentity(): Promise<Identity> {
-  if (envOverrideActive()) {
-    const origin = originSchema.safeParse(process.env.FEDERATION_PUBLIC_ORIGIN);
-    const file = process.env.FEDERATION_KEY_FILE;
-    if (!origin.success || origin.data === "local" || !file || !isAbsolute(file))
-      throw refused("federation-off");
-    const config = `env|${origin.data}|${file}`;
-    if (cached?.config === config) return cached.value;
-    return parse(origin.data, fs.readFileSync(file), "env", config);
-  }
   const row = await prisma.adminSettings.findFirst({
     orderBy: { id: "asc" },
     select: { federationEnabled: true, federationOrigin: true, federationPrivateKey: true },

@@ -1,3 +1,4 @@
+import { resetInstanceTuning, setInstanceTuning } from "../../../instanceTuning";
 import { prisma } from "../../../../db";
 import { updateInstanceSettings } from "../../../instanceSettingsService";
 import { lookupTrain } from "..";
@@ -153,8 +154,7 @@ describe("lookupTrain", () => {
   });
 
   it("says who is asking: Transitous wants a User-Agent with contact details", async () => {
-    const previous = process.env.RAIL_LOOKUP_CONTACT;
-    process.env.RAIL_LOOKUP_CONTACT = "ops@example.org";
+    setInstanceTuning({ railLookupContact: "ops@example.org" });
     try {
       const m = mock([
         [/stoptimes/, stopTimesPage("2026-09-26")],
@@ -165,8 +165,7 @@ describe("lookupTrain", () => {
         /^TravStats .*github\.com\/Abrechen2\/TravStats; ops@example\.org\)$/
       );
     } finally {
-      if (previous === undefined) delete process.env.RAIL_LOOKUP_CONTACT;
-      else process.env.RAIL_LOOKUP_CONTACT = previous;
+      resetInstanceTuning();
     }
   });
 

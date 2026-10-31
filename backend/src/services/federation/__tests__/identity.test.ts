@@ -58,15 +58,12 @@ it("refuses with federation-off, not a raw error, when the stored key is not an 
   await expect(loadIdentity()).rejects.toMatchObject({ kind: "federation-off" });
 });
 
-it("lets the env override win, so existing installs keep their key", async () => {
+it("ignores the FEDERATION_* variables: only the instance settings hold the identity", async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "identity-"));
   fs.writeFileSync(path.join(dir, "k.pem"), pem());
   process.env.FEDERATION_ENABLED = "1";
   process.env.FEDERATION_PUBLIC_ORIGIN = "https://env.identity.test";
   process.env.FEDERATION_KEY_FILE = path.join(dir, "k.pem");
-  expect(await loadIdentity()).toMatchObject({
-    origin: "https://env.identity.test",
-    source: "env",
-  });
+  await expect(loadIdentity()).rejects.toMatchObject({ kind: "federation-off" });
   fs.rmSync(dir, { recursive: true, force: true });
 });

@@ -24,7 +24,7 @@ import * as parserSettings from "../parserSettings";
  * The model call is a seam (`generate`), so none of this needs one.
  */
 describe("tripSummaryService", () => {
-  describe("resolveOllamaTarget — the admin's Ollama first, then the environment", () => {
+  describe("resolveOllamaTarget — the admin's Ollama first, then the defaults", () => {
     const envUrl = process.env.OLLAMA_URL;
     const envModel = process.env.OLLAMA_MODEL;
     afterEach(() => {
@@ -50,13 +50,13 @@ describe("tripSummaryService", () => {
       });
     });
 
-    it("falls back to the environment, then to the defaults every Ollama caller here assumes", async () => {
+    it("falls back to the defaults every Ollama caller here assumes, never to the environment", async () => {
       jest.spyOn(parserSettings, "getAdminParserSettings").mockResolvedValue(null);
       process.env.OLLAMA_URL = "http://env:11434";
       delete process.env.OLLAMA_MODEL;
       await expect(resolveOllamaTarget()).resolves.toEqual({
         kind: "ollama",
-        url: "http://env:11434",
+        url: "http://localhost:11434",
         model: "gemma3:12b",
         isCloud: false,
       });

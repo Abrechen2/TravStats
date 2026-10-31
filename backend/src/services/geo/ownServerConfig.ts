@@ -1,3 +1,5 @@
+import { instanceTuning } from "../instanceTuning";
+
 /** Operator-controlled, instance-wide opt-in. Never accept this URL from a request. */
 export function parseOwnGeoUrl(value: string | undefined): string | null {
   if (value === undefined || value === "") return null;
@@ -17,11 +19,15 @@ export function parseOwnGeoUrl(value: string | undefined): string | null {
     return url.origin;
   } catch {
     throw new Error(
-      "TRAVSTATS_GEO_URL must be an HTTPS origin without credentials, path, query or fragment"
+      "The geo server address must be an HTTPS origin without credentials, path, query or fragment"
     );
   }
 }
 
 export function ownGeoUrl(): string | null {
-  return parseOwnGeoUrl(process.env.TRAVSTATS_GEO_URL);
+  try {
+    return parseOwnGeoUrl(instanceTuning().ownGeoUrl ?? undefined);
+  } catch {
+    return null;
+  }
 }

@@ -11,7 +11,8 @@ import { smtpConfigSchema, SMTP_CONFIG_ID } from "../../routes/admin/smtp";
 import { applyConsentChange } from "../../routes/admin/usageStats";
 import { federationSettingsSchema } from "../../schemas/federationAdmin";
 import { ensureAdminSettingsRow } from "../adminSettingsRow";
-import { envOverrideActive, resetIdentityCache } from "../federation/identity";
+import { resetIdentityCache } from "../federation/identity";
+import { refreshInstanceTuning } from "../instanceTuning";
 import { clearAvailabilityCache } from "../parsers/config";
 import { clearLlmAvailabilityCache } from "../parsers/llmAvailability";
 import { CONNECTION_IDS, getService } from "./catalogue";
@@ -95,13 +96,6 @@ export async function applyAdminUpdate(id: string, body: AdminUpdateBody): Promi
         applyPushEnabled(body.enabled, current, adminData);
         break;
       case "federation":
-        if (envOverrideActive()) {
-          throw new AppError(
-            "The server identity is set by FEDERATION_* environment variables",
-            400,
-            "VALIDATION_FAILED"
-          );
-        }
         adminData.federationEnabled = body.enabled;
         break;
       case "usageStats":
@@ -138,6 +132,7 @@ export async function applyAdminUpdate(id: string, body: AdminUpdateBody): Promi
     ]);
   }
   if (service.id === "federation") resetIdentityCache();
+  await refreshInstanceTuning();
   if (service.ai) {
     // A provider switch must be felt by the very next parse, not after the cache expires.
     clearAvailabilityCache();

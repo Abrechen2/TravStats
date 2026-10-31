@@ -29,7 +29,7 @@ AI uses the existing administrator-managed provider system and its global consen
 
 ## Activation
 
-On an existing instance, apply the additive migration through the normal release process. Enable **TravPlan** under `/plan/admin` (also reachable from the logo as an administrator). Existing instances start with planning disabled. `TRAVPLAN_ENABLED=true` is only an initial fallback while no saved configuration exists; a saved administrator choice takes precedence.
+On an existing instance, apply the additive migration through the normal release process. Enable **TravPlan** under `/plan/admin` (also reachable from the logo as an administrator). Existing instances start with planning disabled. `TRAVPLAN_ENABLED=true` (and `TRAVTRACK_ENABLED=true`) is no longer read; a start that still finds it copies it once into the saved configuration if none exists yet.
 
 The branch does not enable or deploy the feature on any existing instance. AI requires an already configured permitted provider; live model credentials are not supplied by this feature.
 

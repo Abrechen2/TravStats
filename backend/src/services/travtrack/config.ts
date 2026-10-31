@@ -23,7 +23,7 @@ export async function travTrackConfig(db: ConfigReader = prisma): Promise<TravTr
     where: { id: "default" },
     select: { enabled: true },
   });
-  return row ? { enabled: row.enabled } : { enabled: process.env.TRAVTRACK_ENABLED === "true" };
+  return row ? { enabled: row.enabled } : { enabled: false };
 }
 
 export async function setTravTrackConfig(config: TravTrackConfig): Promise<TravTrackConfig> {

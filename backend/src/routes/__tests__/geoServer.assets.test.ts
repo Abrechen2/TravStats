@@ -1,3 +1,4 @@
+import { resetInstanceTuning, setInstanceTuning } from "../../services/instanceTuning";
 import express from "express";
 import request from "supertest";
 import logger from "../../utils/logger";
@@ -13,14 +14,12 @@ app.use("/geo", geoServer);
 const STYLE = "/geo/assets/styles/dark/style.json";
 
 describe("own geo server asset proxy", () => {
-  const original = process.env.TRAVSTATS_GEO_URL;
   beforeEach(() => {
-    process.env.TRAVSTATS_GEO_URL = "https://geo.example";
+    setInstanceTuning({ ownGeoUrl: "https://geo.example" });
     jest.mocked(logger.warn).mockClear();
   });
   afterEach(() => {
-    if (original === undefined) delete process.env.TRAVSTATS_GEO_URL;
-    else process.env.TRAVSTATS_GEO_URL = original;
+    resetInstanceTuning();
     jest.restoreAllMocks();
   });
 

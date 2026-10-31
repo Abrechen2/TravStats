@@ -303,6 +303,15 @@
       "templateRepoUrl": "Vorlagen-Repository (URL)",
       "cdnFallback": "Ersatzquelle für Nicht-EZB-Währungen",
       "backupSync": "Instanz-Sicherungen per WebDAV"
+    },
+    "railTimetables": {
+      "contact": "Kontakt für die Bahn-Abfragen (E-Mail oder URL)"
+    },
+    "geocoder": {
+      "ownGeoUrl": "Eigener Geo-Server (https-Adresse)"
+    },
+    "openData": {
+      "marketOverpassUrl": "Overpass-Adresse für Märkte"
     }
   },
   "services": {
@@ -648,6 +657,17 @@
       "getKeyUrl": "https://dawarich.app/",
       "getKeyLabel": "Dawarich",
       "quotaLine": "eigener Server"
+    },
+    "aisstream": {
+      "name": "AISStream",
+      "purpose": "Live-Position einer Fähre oder eines Schiffs",
+      "why": "Zeigt bei einer Fährüberfahrt auf Abruf, wo das Schiff gerade ist. Ohne Schlüssel bleibt die Anzeige aus.",
+      "cost": "Kostenlos mit einem Konto bei AISStream.",
+      "quota": "Höchstens zwei gleichzeitige Verbindungen für die ganze Instanz.",
+      "dataOut": "Die Schiffskennung (MMSI), nur wenn jemand die Position abruft.",
+      "getKeyUrl": "https://aisstream.io/apikeys",
+      "getKeyLabel": "Schlüssel bei AISStream holen",
+      "quotaLine": "2 gleichzeitige Verbindungen"
     }
   },
   "alwaysOn": {

@@ -22,7 +22,7 @@ const mockPrisma = prisma as unknown as {
 const DEFAULT_PHOTON_URL = "https://photon.komoot.io";
 const DEFAULT_NOMINATIM_URL = "https://nominatim.openstreetmap.org";
 
-describe("geocoder URL resolution (DB > ENV > default)", () => {
+describe("geocoder URL resolution (DB > default; the environment is never read)", () => {
   const realEnv = { ...process.env };
 
   beforeEach(() => {
@@ -46,7 +46,7 @@ describe("geocoder URL resolution (DB > ENV > default)", () => {
     expect(settings.nominatimUrl).toBe(DEFAULT_NOMINATIM_URL);
   });
 
-  it("prefers ENV over the built-in default", async () => {
+  it("ignores PHOTON_URL and NOMINATIM_URL", async () => {
     process.env.PHOTON_URL = "https://photon.env.example";
     process.env.NOMINATIM_URL = "https://nominatim.env.example";
     mockPrisma.adminSettings.findFirst.mockResolvedValue({
@@ -55,8 +55,8 @@ describe("geocoder URL resolution (DB > ENV > default)", () => {
       nominatimUrl: null,
     });
     const settings = await getInstanceSettings();
-    expect(settings.photonUrl).toBe("https://photon.env.example");
-    expect(settings.nominatimUrl).toBe("https://nominatim.env.example");
+    expect(settings.photonUrl).toBe(DEFAULT_PHOTON_URL);
+    expect(settings.nominatimUrl).toBe(DEFAULT_NOMINATIM_URL);
   });
 
   it("prefers the DB value over ENV and the default", async () => {

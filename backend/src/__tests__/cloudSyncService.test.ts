@@ -15,7 +15,7 @@ const mockBackupUpdate =
     ) => Promise<Partial<import("../generated/prisma/client").Backup>>
   >();
 // Empty AdminSettings row — getWebDAVSettings / getInstanceSettings fall
-// through to the ENV fallback that the beforeEach in each describe sets.
+// through to the defaults; loadModule fills the WebDAV fields.
 const mockAdminFindFirst = jest
   .fn<() => Promise<Partial<import("../generated/prisma/client").AdminSettings>>>()
   .mockResolvedValue({});
@@ -41,6 +41,11 @@ jest.mock("../db", () => ({
   },
 }));
 
+// `fs` is mocked below, so the real key file cannot be read: a reversible stand-in.
+jest.mock("../utils/encryption", () => ({
+  encryptApiKey: (value: string) => `enc:${value}`,
+  decryptApiKey: (value: string) => value.replace(/^enc:/, ""),
+}));
 jest.mock("../utils/logger", () => ({
   __esModule: true,
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
@@ -93,24 +98,26 @@ const MOCK_BACKUP = {
 
 // ─── Helper: load module with WebDAV env configured ─────────────────────────
 
+import { encryptApiKey } from "../utils/encryption";
+
 type CloudSyncModule = typeof import("../services/cloudSyncService");
 
 async function loadModule(enabled: boolean): Promise<CloudSyncModule> {
   jest.resetModules();
   jest.clearAllMocks();
 
-  if (enabled) {
-    process.env.WEBDAV_SYNC_ENABLED = "true";
-    process.env.WEBDAV_URL = "https://webdav.test";
-    process.env.WEBDAV_USERNAME = "user";
-    process.env.WEBDAV_PASSWORD = "pass";
-    process.env.WEBDAV_BACKUP_PATH = "/TravStats/backups/";
-  } else {
-    process.env.WEBDAV_SYNC_ENABLED = "false";
-    delete process.env.WEBDAV_URL;
-    delete process.env.WEBDAV_USERNAME;
-    delete process.env.WEBDAV_PASSWORD;
-  }
+  // The WebDAV settings come from the instance row only (no environment fallback).
+  mockAdminFindFirst.mockResolvedValue(
+    enabled
+      ? {
+          webdavSyncEnabled: true,
+          webdavUrl: "https://webdav.test",
+          webdavUsername: "user",
+          webdavPasswordEncrypted: encryptApiKey("pass"),
+          webdavBackupPath: "/TravStats/backups/",
+        }
+      : { webdavSyncEnabled: false }
+  );
 
   return import("../services/cloudSyncService");
 }
@@ -125,7 +132,7 @@ describe("cloudSyncService", () => {
   });
 
   describe("testConnection", () => {
-    it("returns success=false when WEBDAV_SYNC_ENABLED is false", async () => {
+    it("returns success=false when WebDAV sync is switched off", async () => {
       const { testConnection } = await loadModule(false);
 
       const result = await testConnection();
@@ -398,7 +405,7 @@ describe("cloudSyncService", () => {
       // and left the URL blank meant to sync, and this sentence beside their
       // backup is what tells them why it did not happen.
       const { syncToCloudIfEnabled } = await loadModule(false);
-      process.env.WEBDAV_SYNC_ENABLED = "true";
+      mockAdminFindFirst.mockResolvedValue({ webdavSyncEnabled: true });
       mockBackupFindUnique.mockResolvedValue(MOCK_BACKUP);
       mockExistsSync.mockReturnValue(true);
       mockBackupUpdate.mockResolvedValue({});

@@ -303,6 +303,15 @@
       "templateRepoUrl": "Template repository (URL)",
       "cdnFallback": "Fallback source for non-ECB currencies",
       "backupSync": "Instance backups over WebDAV"
+    },
+    "railTimetables": {
+      "contact": "Contact for the rail lookups (e-mail or URL)"
+    },
+    "geocoder": {
+      "ownGeoUrl": "Own geo server (https address)"
+    },
+    "openData": {
+      "marketOverpassUrl": "Overpass address for markets"
     }
   },
   "services": {
@@ -648,6 +657,17 @@
       "getKeyUrl": "https://dawarich.app/",
       "getKeyLabel": "Dawarich",
       "quotaLine": "your own server"
+    },
+    "aisstream": {
+      "name": "AISStream",
+      "purpose": "Live position of a ferry or ship",
+      "why": "Shows where the ship is right now when someone asks, on a ferry crossing. Without a key the display stays off.",
+      "cost": "Free with an AISStream account.",
+      "quota": "At most two simultaneous connections for the whole instance.",
+      "dataOut": "The vessel identifier (MMSI), only when someone requests the position.",
+      "getKeyUrl": "https://aisstream.io/apikeys",
+      "getKeyLabel": "Get a key from AISStream",
+      "quotaLine": "2 simultaneous connections"
     }
   },
   "alwaysOn": {

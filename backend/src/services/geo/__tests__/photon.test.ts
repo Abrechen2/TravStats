@@ -263,7 +263,7 @@ describe("Photon place search", () => {
     expect(url).toMatch(/^https:\/\/photon\.komoot\.io\/api\/\?/);
   });
 
-  it("honors the PHOTON_URL env tier (not the public default) when resolveGeocoderUrls rejects", async () => {
+  it("uses the public default (never PHOTON_URL) when resolveGeocoderUrls rejects", async () => {
     const realEnv = process.env.PHOTON_URL;
     process.env.PHOTON_URL = "https://photon.env-configured.example";
     try {
@@ -275,7 +275,7 @@ describe("Photon place search", () => {
       const results = await searchPlaces("Berlin");
       expect(results).toHaveLength(1);
       const url = fetchMock.mock.calls[0][0] as string;
-      expect(url).toMatch(/^https:\/\/photon\.env-configured\.example\/api\/\?/);
+      expect(url).toMatch(/^https:\/\/photon\.komoot\.io\/api\/\?/);
     } finally {
       if (realEnv === undefined) delete process.env.PHOTON_URL;
       else process.env.PHOTON_URL = realEnv;

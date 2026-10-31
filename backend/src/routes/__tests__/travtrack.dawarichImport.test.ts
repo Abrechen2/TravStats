@@ -149,16 +149,21 @@ describe("TravTrack — /travtrack/imports/dawarich", () => {
   });
 
   it("refuses without an own connection, says which one there is, and never calls Dawarich", async () => {
-    process.env.DAWARICH_BASE_URL = "http://shared.test";
-    process.env.DAWARICH_API_KEY = "shared";
+    await prisma.adminSettings.updateMany({
+      data: {
+        globalDawarichBaseUrl: "http://shared.test",
+        globalDawarichApiKey: encryptApiKey("shared-dawarich-key-123"),
+      },
+    });
     try {
       const res = await start();
       expect(res.status).toBe(409);
       expect(res.body.code).toBe("DAWARICH_NOT_CONFIGURED");
       expect((await view()).body).toEqual({ connection: "shared", copy: null });
     } finally {
-      delete process.env.DAWARICH_BASE_URL;
-      delete process.env.DAWARICH_API_KEY;
+      await prisma.adminSettings.updateMany({
+        data: { globalDawarichBaseUrl: null, globalDawarichApiKey: null },
+      });
     }
     expect(fetchSpy).not.toHaveBeenCalled();
   });

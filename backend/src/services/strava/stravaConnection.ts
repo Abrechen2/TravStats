@@ -28,10 +28,7 @@ export async function getStravaClient(): Promise<StravaClientConfig | null> {
     select: { stravaClientId: true, stravaClientSecret: true },
   });
   const secret = admin?.stravaClientSecret ? decryptApiKey(admin.stravaClientSecret) : null;
-  if (admin?.stravaClientId && secret) return { id: admin.stravaClientId, secret };
-  const envId = process.env.STRAVA_CLIENT_ID;
-  const envSecret = process.env.STRAVA_CLIENT_SECRET;
-  return envId && envSecret ? { id: envId, secret: envSecret } : null;
+  return admin?.stravaClientId && secret ? { id: admin.stravaClientId, secret } : null;
 }
 
 export async function requireStravaClient(): Promise<StravaClientConfig> {

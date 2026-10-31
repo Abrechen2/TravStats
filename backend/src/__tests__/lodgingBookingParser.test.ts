@@ -304,7 +304,7 @@ describe("parseLodgingBookingText", () => {
     });
   });
 
-  describe("settings resolution order (options > admin_settings > env > default)", () => {
+  describe("settings resolution order (options > admin_settings > default)", () => {
     it("prefers explicit options over a healthy admin-configured endpoint", async () => {
       const healthyAdmin = await createMockOllamaServer((req, res) =>
         respondJson(res, HEALTHY_TAGS_RESPONSE)
@@ -367,7 +367,7 @@ describe("parseLodgingBookingText", () => {
       }
     });
 
-    it("falls back to the env var when admin_settings has nothing configured", async () => {
+    it("does not use OLLAMA_URL when admin_settings has nothing configured", async () => {
       const originalUrl = process.env.OLLAMA_URL;
       const originalModel = process.env.OLLAMA_MODEL;
       const healthyEnv = await createMockOllamaServer((req, res) => {
@@ -390,8 +390,8 @@ describe("parseLodgingBookingText", () => {
       mockGetAdminParserSettings.mockResolvedValue({ ollamaUrl: null, ollamaModel: null });
       try {
         const result = await parseLodgingBookingText("Buchungsnummer: 1\nAnreise\nAbreise");
-        expect(result.parserUsed).toBe("ollama");
-        expect(result.bookings[0]?.hotelName).toBe("Env Fallback Hotel");
+        expect(result.parserUsed).not.toBe("ollama");
+        expect(result.bookings.map((b) => b.hotelName)).not.toContain("Env Fallback Hotel");
       } finally {
         if (originalUrl === undefined) delete process.env.OLLAMA_URL;
         else process.env.OLLAMA_URL = originalUrl;

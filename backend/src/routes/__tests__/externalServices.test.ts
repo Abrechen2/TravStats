@@ -173,7 +173,7 @@ describe("external services (forgejo#392)", () => {
   });
 
   describe("resolver policy", () => {
-    it("off means off: an admin-disabled service blocks the account key, the instance key and ENV (invariant 2)", async () => {
+    it("off means off: an admin-disabled service blocks the account key and the instance key (invariant 2); ENV is never read", async () => {
       await setAccountKey(userA);
       process.env.AIRLABS_API_KEY = "env-airlabs-key-123456";
       await putAdmin("airlabs", { enabled: false }).expect(200);
@@ -210,10 +210,18 @@ describe("external services (forgejo#392)", () => {
       expect((await resolveApiKey("airlabs", userB)).source).toBe("global");
     });
 
-    it("Immich off blocks the ENV tier too, and a forbidden connection ignores the account's own", async () => {
-      process.env.IMMICH_BASE_URL = "https://immich.example.com";
+    it("Immich off blocks the instance tier too, and a forbidden connection ignores the account's own", async () => {
+      process.env.IMMICH_BASE_URL = "https://env.example.com";
       process.env.IMMICH_API_KEY = "env-immich-key";
-      expect((await getImmichConnection(userA))?.source).toBe("env");
+      expect(await getImmichConnection(userA)).toBeNull();
+      await prisma.adminSettings.update({
+        where: { id: rowId },
+        data: {
+          globalImmichBaseUrl: "https://immich.example.com",
+          globalImmichApiKey: encryptApiKey("instance-immich-key-1234"),
+        },
+      });
+      expect((await getImmichConnection(userA))?.source).toBe("global");
 
       await prisma.userSettings.update({
         where: { userId: userA },
@@ -228,10 +236,14 @@ describe("external services (forgejo#392)", () => {
         .set("Cookie", adminCookie)
         .send({ allowed: false })
         .expect(200);
-      expect((await getImmichConnection(userA))?.source).toBe("env");
+      expect((await getImmichConnection(userA))?.source).toBe("global");
 
       await putAdmin("immich", { enabled: false }).expect(200);
       expect(await getImmichConnection(userA)).toBeNull();
+      await prisma.adminSettings.update({
+        where: { id: rowId },
+        data: { globalImmichBaseUrl: null, globalImmichApiKey: null },
+      });
     });
 
     it("the shared demo account still resolves nothing when account connections are forbidden", async () => {
@@ -305,7 +317,7 @@ describe("external services (forgejo#392)", () => {
       expect(view.body.instanceProvided.map((s: { id: string }) => s.id)).toContain("aeroapi");
     });
 
-    it("the effective source is shown: account → instance → env → none (invariant 1)", async () => {
+    it("the effective source is shown: account → instance → none, never env (invariant 1)", async () => {
       const source = async () =>
         (
           await request(app).get("/api/v1/settings/external-services").set("Cookie", cookieA)
@@ -320,7 +332,7 @@ describe("external services (forgejo#392)", () => {
       await prisma.userSettings.update({ where: { userId: userA }, data: { airlabsApiKey: null } });
       expect(await source()).toBe("none");
       process.env.AIRLABS_API_KEY = "env-airlabs-key-123456";
-      expect(await source()).toBe("env");
+      expect(await source()).toBe("none");
       await putAcct("airlabs", { accountDisabled: true }).expect(200);
       expect(await source()).toBe("off");
     });

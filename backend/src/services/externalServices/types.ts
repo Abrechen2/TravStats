@@ -79,8 +79,6 @@ export interface ServiceDef {
   getKeyUrl: string | null;
   /** `apiKeyResolver` provider id, when the resolver serves this service. */
   resolverProvider?: string;
-  /** Server environment variables that can stand in for the instance credential. */
-  env: readonly string[];
   enabled: EnabledBinding;
   fields: readonly FieldDef[];
   /** Account-side fields (UserSettings columns) — only for instanceAndAccount / connections. */

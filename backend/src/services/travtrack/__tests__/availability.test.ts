@@ -65,12 +65,12 @@ describe("TravTrack availability", () => {
     expect(await travTrackAvailable(userId)).toBe(true);
   });
 
-  it("the env fallback applies only without a row", async () => {
+  it("TRAVTRACK_ENABLED is never read: without a row the switch is off", async () => {
     await switches.set({ beta: true, config: null });
     expect(await travTrackConfig()).toEqual({ enabled: false });
     process.env.TRAVTRACK_ENABLED = "true";
-    expect(await travTrackConfig()).toEqual({ enabled: true });
-    expect(await travTrackInstanceOn()).toBe(true);
+    expect(await travTrackConfig()).toEqual({ enabled: false });
+    expect(await travTrackInstanceOn()).toBe(false);
 
     await switches.set({ beta: true, config: false });
     expect(await travTrackConfig()).toEqual({ enabled: false });

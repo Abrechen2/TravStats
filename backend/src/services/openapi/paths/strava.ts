@@ -60,7 +60,6 @@ const activity = registry.register(
 const adminStrava = z.object({
   clientId: z.string().nullable(),
   secretSet: z.boolean().describe("The secret is write-only; this says only whether one is set"),
-  envConfigured: z.boolean(),
 });
 
 const importedTrack = z.object({

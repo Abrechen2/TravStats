@@ -134,14 +134,7 @@ export async function getDawarichConnection(userId?: string): Promise<DawarichCo
       "global",
       true
     );
-    if (global) return global;
-
-    return buildConnection(
-      process.env.DAWARICH_BASE_URL,
-      process.env.DAWARICH_API_KEY,
-      "env",
-      false
-    );
+    return global;
   } catch (error) {
     logger.error({
       message: "dawarich_connection_resolution_error",

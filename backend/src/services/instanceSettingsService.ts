@@ -144,8 +144,8 @@ export async function getInstanceSettings(): Promise<InstanceSettings> {
     lanUrl: row.lanUrl ?? process.env.LAN_URL ?? null,
     webauthnRpId: row.webauthnRpId ?? null,
     webauthnOrigins: row.webauthnOrigins ?? [],
-    photonUrl: row.photonUrl ?? process.env.PHOTON_URL ?? DEFAULT_PHOTON_URL,
-    nominatimUrl: row.nominatimUrl ?? process.env.NOMINATIM_URL ?? DEFAULT_NOMINATIM_URL,
+    photonUrl: row.photonUrl ?? DEFAULT_PHOTON_URL,
+    nominatimUrl: row.nominatimUrl ?? DEFAULT_NOMINATIM_URL,
     // Non-nullable column (default false) — no ENV fallback on purpose: an
     // instance is either flagged beta by an admin or it is not.
     betaFeaturesEnabled: row.betaFeaturesEnabled,
@@ -292,14 +292,12 @@ export async function getWebDAVSettings(): Promise<WebDAVSettings> {
   const dbPasswordEncrypted = row.webdavPasswordEncrypted;
   const dbPassword = dbPasswordEncrypted ? decryptApiKey(dbPasswordEncrypted) : null;
 
-  const envPassword = process.env.WEBDAV_PASSWORD || null;
-
   return {
-    enabled: row.webdavSyncEnabled ?? process.env.WEBDAV_SYNC_ENABLED === "true",
-    url: row.webdavUrl ?? process.env.WEBDAV_URL ?? null,
-    username: row.webdavUsername ?? process.env.WEBDAV_USERNAME ?? null,
-    password: dbPassword ?? envPassword,
-    backupPath: row.webdavBackupPath || process.env.WEBDAV_BACKUP_PATH || "/TravStats/backups/",
+    enabled: row.webdavSyncEnabled ?? false,
+    url: row.webdavUrl ?? null,
+    username: row.webdavUsername ?? null,
+    password: dbPassword,
+    backupPath: row.webdavBackupPath || "/TravStats/backups/",
   };
 }
 

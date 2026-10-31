@@ -83,15 +83,11 @@ describe("getDawarichConnection priority", () => {
     });
   });
 
-  it("falls through to ENV when neither DB tier is complete", async () => {
+  it("ignores DAWARICH_* variables: with neither DB tier complete there is no connection", async () => {
     process.env.DAWARICH_BASE_URL = "https://env.lan/";
     process.env.DAWARICH_API_KEY = "env-key";
 
-    await expect(getDawarichConnection("u1")).resolves.toEqual({
-      baseUrl: "https://env.lan",
-      apiKey: "env-key",
-      source: "env",
-    });
+    await expect(getDawarichConnection("u1")).resolves.toBeNull();
   });
 
   it("returns null when nothing is configured", async () => {
@@ -110,7 +106,7 @@ describe("getDawarichConnection priority", () => {
     process.env.DAWARICH_BASE_URL = "https://env.lan";
     process.env.DAWARICH_API_KEY = "env-key";
 
-    await expect(getDawarichConnection("u1")).resolves.toMatchObject({ source: "env" });
+    await expect(getDawarichConnection("u1")).resolves.toBeNull();
   });
 
   it("skips a tier whose base URL is unusable rather than throwing", async () => {
@@ -121,7 +117,7 @@ describe("getDawarichConnection priority", () => {
     process.env.DAWARICH_BASE_URL = "https://env.lan";
     process.env.DAWARICH_API_KEY = "env-key";
 
-    await expect(getDawarichConnection("u1")).resolves.toMatchObject({ source: "env" });
+    await expect(getDawarichConnection("u1")).resolves.toBeNull();
   });
 
   it("ignores the user tier entirely when no userId is given", async () => {

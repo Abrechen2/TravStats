@@ -67,7 +67,7 @@ export function view(
 export async function configuration() {
   return (
     (await prisma.travelPlanConfig.findUnique({ where: { id: "default" } })) ?? {
-      enabled: process.env.TRAVPLAN_ENABLED === "true",
+      enabled: false,
       aiDailyLimit: 10,
       weatherDailyLimit: 20,
     }

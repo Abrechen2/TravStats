@@ -179,9 +179,9 @@ describe("ADS-B Exchange key settings", () => {
   });
 
   describe("resolver order", () => {
-    it("prefers the user's key, then the admin's, then ADSBX_RAPIDAPI_KEY", async () => {
+    it("prefers the user's key, then the admin's, and never ADSBX_RAPIDAPI_KEY", async () => {
       process.env.ADSBX_RAPIDAPI_KEY = "env-adsbx-key-123456";
-      expect(await getApiKey("adsbx", regularUser.id)).toBe("env-adsbx-key-123456");
+      expect(await getApiKey("adsbx", regularUser.id)).toBeNull();
 
       await prisma.adminSettings.updateMany({
         data: { globalAdsbxApiKey: encryptApiKey("global-adsbx-key-1234") },

@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { prisma } from "../../db";
 import { ensureAdminSettingsRow } from "../adminSettingsRow";
+import { instanceTuning } from "../instanceTuning";
 
 export type ConsentState = "unset" | "granted" | "denied";
 
@@ -54,7 +55,7 @@ export async function getOrCreateInstallId(): Promise<string> {
  * regardless of consent — the self-hoster override and kill-switch.
  */
 export function getStatsBaseUrl(): string {
-  const raw = process.env.TRAVSTATS_STATS_ENDPOINT;
-  const value = raw === undefined ? DEFAULT_BASE_URL : raw;
+  const raw = instanceTuning().usageStatsEndpoint;
+  const value = raw === null ? DEFAULT_BASE_URL : raw;
   return value.replace(/\/+$/, "");
 }

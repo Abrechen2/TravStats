@@ -266,6 +266,15 @@ backup schedule, retention and WebDAV sync under
 
 ## Upgrades
 
+**Service credentials move out of the environment (2.8).** API keys and addresses
+of external services (flight data, routing, geocoder, AI providers, Immich,
+Dawarich, Strava, WebDAV, federation, ferry positions and the like) are no longer
+read from environment variables. The first start of this version copies each such
+variable that is still set into the instance settings (only where the setting is
+empty, secrets encrypted) and never reads it again — a variable set later is
+ignored. Afterwards manage them under Admin › External services and remove them
+from your compose file.
+
 Starting a version you have not run on this data before takes a database
 snapshot BEFORE any migration runs, into `/app/data/backups/` as
 `pre-v<version>-upgrade-<timestamp>.sql`. It happens on every version change,
@@ -524,7 +533,7 @@ attached to it. Cancelling leaves the original in the existing unfiled-document
 inbox, subject to its normal retention rules.
 
 Optional live vessel snapshots use [AISStream](https://aisstream.io/documentation).
-Set `AISSTREAM_API_KEY` on the backend through the normal secret configuration,
+Enter the AISStream key under Admin › External services,
 then enter the ship's nine-digit MMSI on a crossing's detail page and request a
 position. The first MMSI that answers is stored on the crossing (`vesselMmsi`)
 and later lookups read only that vessel; edit the crossing to change it. This is

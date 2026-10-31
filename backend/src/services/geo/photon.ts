@@ -422,14 +422,10 @@ export async function searchPlacesDetailed(
     photonUrl = settings.photonUrl;
   } catch (error) {
     // resolveGeocoderUrls() already applies DB > ENV > default internally,
-    // so a rejection means the DB read itself failed — but the ENV tier is
-    // still readable synchronously here. Honor it before falling all the way
-    // to the public default (matters for air-gapped self-hosters during a
-    // DB blip).
-    photonUrl = process.env.PHOTON_URL ?? DEFAULT_PHOTON_URL;
+    photonUrl = DEFAULT_PHOTON_URL;
     logger.warn(
       { error },
-      "[Photon] failed to resolve geocoder settings, falling back to ENV/default URL"
+      "[Photon] failed to resolve geocoder settings, falling back to the default URL"
     );
   }
 
@@ -594,10 +590,10 @@ export async function reversePlacesDetailed(
     const settings = await resolveGeocoderUrls();
     photonUrl = settings.photonUrl;
   } catch (error) {
-    photonUrl = process.env.PHOTON_URL ?? DEFAULT_PHOTON_URL;
+    photonUrl = DEFAULT_PHOTON_URL;
     logger.warn(
       { error },
-      "[Photon] failed to resolve geocoder settings, falling back to ENV/default URL"
+      "[Photon] failed to resolve geocoder settings, falling back to the default URL"
     );
   }
 
@@ -653,7 +649,7 @@ export async function photonRequest(
   try {
     photonUrl = (await resolveGeocoderUrls()).photonUrl;
   } catch {
-    photonUrl = process.env.PHOTON_URL ?? DEFAULT_PHOTON_URL;
+    photonUrl = DEFAULT_PHOTON_URL;
   }
   const baseUrl = photonUrl.replace(/\/+$/, "").replace(/\/api$/i, "");
   const query = new URLSearchParams({ ...params, limit: String(limit) });

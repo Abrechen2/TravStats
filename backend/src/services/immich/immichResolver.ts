@@ -95,9 +95,7 @@ export async function getImmichConnection(userId?: string): Promise<ImmichConnec
       "global",
       true
     );
-    if (global) return global;
-
-    return buildConnection(process.env.IMMICH_BASE_URL, process.env.IMMICH_API_KEY, "env", false);
+    return global;
   } catch (error) {
     logger.error({
       message: "immich_connection_resolution_error",

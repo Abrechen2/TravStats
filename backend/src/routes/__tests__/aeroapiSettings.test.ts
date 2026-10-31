@@ -179,9 +179,9 @@ describe("AeroAPI key settings", () => {
   });
 
   describe("resolver order", () => {
-    it("prefers the user's key, then the admin's, then AEROAPI_API_KEY", async () => {
+    it("prefers the user's key, then the admin's, and never AEROAPI_API_KEY", async () => {
       process.env.AEROAPI_API_KEY = "env-aeroapi-key-123456";
-      expect(await getApiKey("aeroapi", regularUser.id)).toBe("env-aeroapi-key-123456");
+      expect(await getApiKey("aeroapi", regularUser.id)).toBeNull();
 
       await prisma.adminSettings.updateMany({
         data: { globalAeroapiApiKey: encryptApiKey("global-aeroapi-key-1234") },

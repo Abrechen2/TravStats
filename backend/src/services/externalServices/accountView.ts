@@ -6,7 +6,7 @@
 import { prisma } from "../../db";
 import { isLocalLlmHost } from "../llm/llmEndpoint";
 import { AI_SERVICES, CONNECTION_IDS, SERVICES, getService } from "./catalogue";
-import { envPresent, isEnabled, loadAdminState, type AdminState } from "./adminView";
+import { isEnabled, loadAdminState, type AdminState } from "./adminView";
 import { hasValue, viewField, type FieldSource, type FieldView } from "./fields";
 import { parsePrefs } from "./policy";
 import { currentConsentDestination } from "./consentBinding";
@@ -14,7 +14,7 @@ import { quotaFor, type QuotaView } from "./quota";
 import { loadAllTests, type LastTest } from "./tests";
 import type { Recommended, ServiceDef } from "./types";
 
-export type EffectiveSource = "account" | "instance" | "env" | "none" | "off";
+export type EffectiveSource = "account" | "instance" | "none" | "off";
 
 export interface AccountServiceView {
   id: string;
@@ -52,7 +52,7 @@ function instanceHas(service: ServiceDef, src: FieldSource): boolean {
   );
 }
 
-/** Where a request of this account would be served from, account → instance → env → none. */
+/** Where a request of this account would be served from, account → instance → none. */
 export function effectiveSourceFor(
   service: ServiceDef,
   state: AdminState,
@@ -67,7 +67,7 @@ export function effectiveSourceFor(
     : !state.policy.accountKeysForbidden.includes(service.id);
   if (accountHas && accountMayBring) return "account";
   if (instanceHas(service, { admin: state.admin, smtp: state.smtp })) return "instance";
-  return envPresent(service) ? "env" : "none";
+  return "none";
 }
 
 async function accountHasCredential(
@@ -150,7 +150,7 @@ export async function buildAccountView(userId: string): Promise<{
       kind === "custom"
         ? hostOf(state.admin?.openaiCompatBaseUrl)
         : kind === "ollama"
-          ? hostOf(state.admin?.ollamaUrl ?? process.env.OLLAMA_URL)
+          ? hostOf(state.admin?.ollamaUrl)
           : FIXED_DESTINATION[kind];
     // A local endpoint is not "cloud": nothing leaves the network, so nothing to consent to.
     if (!destination || ((kind === "custom" || kind === "ollama") && isLocalLlmHost(destination))) {
@@ -167,7 +167,7 @@ export async function buildAccountView(userId: string): Promise<{
     (s) =>
       s.level === "instance" &&
       (s.category === "flight" || s.category === "mapsRoutes" || s.category === "openData") &&
-      (s.keyless || instanceHas(s, { admin: state.admin, smtp: state.smtp }) || envPresent(s))
+      (s.keyless || instanceHas(s, { admin: state.admin, smtp: state.smtp }))
   ).map((s) => ({ id: s.id, enabled: isEnabled(s, state), recommended: s.recommended }));
 
   return { connections, ownKeys, aiConsents, instanceProvided };

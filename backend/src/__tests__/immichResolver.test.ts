@@ -90,15 +90,11 @@ describe("getImmichConnection priority", () => {
     });
   });
 
-  it("falls through to ENV when neither DB tier is complete", async () => {
+  it("ignores IMMICH_* variables: with neither DB tier complete there is no connection", async () => {
     process.env.IMMICH_BASE_URL = "https://env.lan/";
     process.env.IMMICH_API_KEY = "env-key";
 
-    await expect(getImmichConnection("u1")).resolves.toEqual({
-      baseUrl: "https://env.lan",
-      apiKey: "env-key",
-      source: "env",
-    });
+    await expect(getImmichConnection("u1")).resolves.toBeNull();
   });
 
   it("returns null when nothing is configured", async () => {
@@ -117,7 +113,7 @@ describe("getImmichConnection priority", () => {
     process.env.IMMICH_BASE_URL = "https://env.lan";
     process.env.IMMICH_API_KEY = "env-key";
 
-    await expect(getImmichConnection("u1")).resolves.toMatchObject({ source: "env" });
+    await expect(getImmichConnection("u1")).resolves.toBeNull();
   });
 
   it("skips a tier whose base URL is unusable rather than throwing", async () => {
@@ -128,7 +124,7 @@ describe("getImmichConnection priority", () => {
     process.env.IMMICH_BASE_URL = "https://env.lan";
     process.env.IMMICH_API_KEY = "env-key";
 
-    await expect(getImmichConnection("u1")).resolves.toMatchObject({ source: "env" });
+    await expect(getImmichConnection("u1")).resolves.toBeNull();
   });
 
   it("ignores the user tier entirely when no userId is given", async () => {

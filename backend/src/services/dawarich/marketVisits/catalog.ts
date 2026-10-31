@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { instanceTuning } from "../../instanceTuning";
 import { planMarketTiles, marketTileQuery, type MarketTile } from "./tiles";
 import { parseMarketCatalog, type MarketCatalog } from "./osm";
 import type { StayPoint } from "../stays/detect";
@@ -126,7 +127,7 @@ export async function discoverMarketAreas(
   const clock = options.clock ?? (() => new Date());
   const endpoint =
     options.endpoint ??
-    process.env.MARKET_OVERPASS_URL ??
+    instanceTuning().marketOverpassUrl ??
     "https://overpass-api.de/api/interpreter";
   const prefix = createHash("sha256").update(endpoint).digest("hex").slice(0, 16);
   const plan = planMarketTiles(points);

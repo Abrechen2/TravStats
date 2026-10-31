@@ -7,7 +7,7 @@
  */
 
 /** Which settings tier supplied the connection. */
-export type DawarichConnectionSource = "user" | "global" | "env";
+export type DawarichConnectionSource = "user" | "global";
 
 export interface DawarichConnectionStatus {
   baseUrl: string | null;

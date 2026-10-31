@@ -1,12 +1,11 @@
+import { resetInstanceTuning, setInstanceTuning } from "../../instanceTuning";
 import { parseOwnGeoUrl } from "../ownServerConfig";
 import { allowedMapAsset, rewriteMapDocument } from "../ownMapAssets";
 import { ownGeoRequest } from "../ownServerTransport";
 
 describe("operator-owned map server", () => {
-  const original = process.env.TRAVSTATS_GEO_URL;
   afterEach(() => {
-    if (original === undefined) delete process.env.TRAVSTATS_GEO_URL;
-    else process.env.TRAVSTATS_GEO_URL = original;
+    resetInstanceTuning();
     jest.restoreAllMocks();
   });
   test("absent or empty ENV preserves legacy mode", () => {
@@ -21,7 +20,7 @@ describe("operator-owned map server", () => {
     " https://geo.example",
     "https://geo.example/#x",
   ])("rejects unsafe ENV %s", (value) => {
-    expect(() => parseOwnGeoUrl(value)).toThrow("TRAVSTATS_GEO_URL");
+    expect(() => parseOwnGeoUrl(value)).toThrow("geo server address");
   });
   test("canonicalizes a private HTTPS origin", () => {
     expect(parseOwnGeoUrl("https://geo.example:8443/")).toBe("https://geo.example:8443");
@@ -83,13 +82,13 @@ describe("operator-owned map server", () => {
     ).toThrow();
   });
   test("does not contact a provider without opt-in", async () => {
-    delete process.env.TRAVSTATS_GEO_URL;
+    resetInstanceTuning();
     const fetcher = jest.spyOn(globalThis, "fetch");
     await expect(ownGeoRequest("/healthz")).rejects.toThrow("disabled");
     expect(fetcher).not.toHaveBeenCalled();
   });
   test("sends no credentials and forbids redirects", async () => {
-    process.env.TRAVSTATS_GEO_URL = "https://geo.example";
+    setInstanceTuning({ ownGeoUrl: "https://geo.example" });
     const fetcher = jest
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(
@@ -102,12 +101,12 @@ describe("operator-owned map server", () => {
     );
   });
   test("caps streamed responses even without a content length", async () => {
-    process.env.TRAVSTATS_GEO_URL = "https://geo.example";
+    setInstanceTuning({ ownGeoUrl: "https://geo.example" });
     jest.spyOn(globalThis, "fetch").mockResolvedValue(new Response("123456"));
     await expect(ownGeoRequest("/healthz", { maxBytes: 4 })).rejects.toThrow("invalid_response");
   });
   test("upstream failure never triggers another provider", async () => {
-    process.env.TRAVSTATS_GEO_URL = "https://geo.example";
+    setInstanceTuning({ ownGeoUrl: "https://geo.example" });
     const fetcher = jest.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"));
     await expect(ownGeoRequest("/healthz")).rejects.toThrow("unavailable");
     expect(fetcher).toHaveBeenCalledTimes(1);

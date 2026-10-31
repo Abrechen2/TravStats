@@ -25,7 +25,7 @@ export interface AdminServiceView {
   recommended: ServiceDef["recommended"];
   enabled: boolean;
   configured: boolean;
-  instanceSource: "instance" | "env" | "none";
+  instanceSource: "instance" | "none";
   allowAccountKeys: boolean | null;
   lastTest: LastTest | null;
   quota: QuotaView | null;
@@ -80,7 +80,7 @@ export function isEnabled(service: ServiceDef, state: AdminState): boolean {
 export function isCloudAi(service: ServiceDef, state: AdminState): boolean {
   if (!service.ai) return false;
   if (service.ai.kind !== "ollama") return true;
-  const raw = state.admin?.ollamaUrl ?? process.env.OLLAMA_URL;
+  const raw = state.admin?.ollamaUrl;
   if (typeof raw !== "string" || raw === "") return false;
   try {
     return !isLocalLlmHost(new URL(raw).hostname);
@@ -89,14 +89,7 @@ export function isCloudAi(service: ServiceDef, state: AdminState): boolean {
   }
 }
 
-/** Is a server environment variable standing in for the instance credential? */
-export function envPresent(service: ServiceDef): boolean {
-  if (service.env.length === 0) return false;
-  const set = service.env.map((name) => !!process.env[name]);
-  return service.credential === "urlKey" ? set.every(Boolean) : set.some(Boolean);
-}
-
-function sourceOf(service: ServiceDef, src: FieldSource): "instance" | "env" | "none" {
+function sourceOf(service: ServiceDef, src: FieldSource): "instance" | "none" {
   const stored =
     service.requiredFields.length > 0 &&
     service.requiredFields.every((key) => {
@@ -104,7 +97,7 @@ function sourceOf(service: ServiceDef, src: FieldSource): "instance" | "env" | "
       return field ? hasValue(field, src) : false;
     });
   if (stored) return "instance";
-  return envPresent(service) ? "env" : "none";
+  return "none";
 }
 
 /** Accounts whose consent still matches the provider's current address. */

@@ -1,5 +1,7 @@
 import request from "supertest";
 import app from "../index";
+import { ensureAdminSettingsRow } from "../services/adminSettingsRow";
+import { encryptApiKey } from "../utils/encryption";
 import { prisma } from "../db";
 import { hashPassword } from "../utils/password";
 import { generateToken } from "../utils/jwt";
@@ -9,7 +11,7 @@ import { getDawarichConnection } from "../services/dawarich/dawarichResolver";
 /**
  * Finding A2 of the independent review on 2026-09-17.
  *
- * Both integrations resolve **user -> admin-global -> ENV**, so an operator who
+ * Both integrations resolve **user -> admin-global**, so an operator who
  * configured Immich or Dawarich for the instance handed that connection to
  * EVERY account — including the shared `demo` login, whose password is printed
  * on the login page of a public instance. A visitor could then browse the
@@ -27,12 +29,7 @@ describe("the shared demo account resolves no integration", () => {
   let demoCookie: string;
   let demoTripId: string;
   const ids: string[] = [];
-  const envBefore = {
-    immichBaseUrl: process.env.IMMICH_BASE_URL,
-    immichApiKey: process.env.IMMICH_API_KEY,
-    dawarichBaseUrl: process.env.DAWARICH_BASE_URL,
-    dawarichApiKey: process.env.DAWARICH_API_KEY,
-  };
+  let adminBefore: Record<string, unknown> | null = null;
 
   beforeAll(async () => {
     await prisma.user.deleteMany({ where: { username: { in: ["demo", "integrationUser"] } } });
@@ -59,24 +56,37 @@ describe("the shared demo account resolves no integration", () => {
     });
     demoTripId = trip.id;
 
-    // An ENV-configured instance is the case the finding is about.
-    process.env.IMMICH_BASE_URL = "http://immich.invalid";
-    process.env.IMMICH_API_KEY = "instance-immich-key";
-    process.env.DAWARICH_BASE_URL = "http://dawarich.invalid";
-    process.env.DAWARICH_API_KEY = "instance-dawarich-key";
+    // An instance-configured connection is the case the finding is about.
+    const rowId = await ensureAdminSettingsRow();
+    adminBefore = (await prisma.adminSettings.findUniqueOrThrow({
+      where: { id: rowId },
+      select: {
+        globalImmichBaseUrl: true,
+        globalImmichApiKey: true,
+        globalDawarichBaseUrl: true,
+        globalDawarichApiKey: true,
+      },
+    })) as Record<string, unknown>;
+    await prisma.adminSettings.update({
+      where: { id: rowId },
+      data: {
+        globalImmichBaseUrl: "http://immich.invalid",
+        globalImmichApiKey: encryptApiKey("instance-immich-key"),
+        globalDawarichBaseUrl: "http://dawarich.invalid",
+        globalDawarichApiKey: encryptApiKey("instance-dawarich-key"),
+      },
+    });
   });
 
   afterAll(async () => {
     await prisma.trip.deleteMany({ where: { userId: demoId } });
     await prisma.user.deleteMany({ where: { id: { in: ids } } });
-    const restore = (key: string, value: string | undefined): void => {
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
-    };
-    restore("IMMICH_BASE_URL", envBefore.immichBaseUrl);
-    restore("IMMICH_API_KEY", envBefore.immichApiKey);
-    restore("DAWARICH_BASE_URL", envBefore.dawarichBaseUrl);
-    restore("DAWARICH_API_KEY", envBefore.dawarichApiKey);
+    if (adminBefore) {
+      await prisma.adminSettings.update({
+        where: { id: await ensureAdminSettingsRow() },
+        data: adminBefore,
+      });
+    }
   });
 
   it("gives the shared demo account no Immich connection although the instance has one", async () => {
@@ -90,18 +100,18 @@ describe("the shared demo account resolves no integration", () => {
   it("still resolves the instance connection for every other account", async () => {
     await expect(getImmichConnection(userId)).resolves.toMatchObject({
       baseUrl: "http://immich.invalid",
-      source: "env",
+      source: "global",
     });
     await expect(getDawarichConnection(userId)).resolves.toMatchObject({
       baseUrl: "http://dawarich.invalid",
-      source: "env",
+      source: "global",
     });
   });
 
   it("still resolves the instance connection when no account is named", async () => {
     // Admin-side probes pass no user id at all; they must keep working.
-    await expect(getImmichConnection()).resolves.toMatchObject({ source: "env" });
-    await expect(getDawarichConnection()).resolves.toMatchObject({ source: "env" });
+    await expect(getImmichConnection()).resolves.toMatchObject({ source: "global" });
+    await expect(getDawarichConnection()).resolves.toMatchObject({ source: "global" });
   });
 
   /**
