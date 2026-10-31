@@ -6,9 +6,13 @@ import type { BackupScheduleSettings } from "../../lib/api/backup";
 import { useToastStore } from "../../store/toastStore";
 import { profileDateTime } from "../../lib/profileInstant";
 import { logger } from "../../lib/logger";
-import { apiErrorMachineCode, extractApiErrorMessage } from "../../lib/apiError";
+import { apiErrorMachineCode } from "../../lib/apiError";
 import { JobLostError, jobErrorCode, waitForJob } from "../../lib/api/jobs";
-import { backupFailureKey, backupRowFailureKey } from "../../lib/backupFailure";
+import {
+  backupFailureKey,
+  backupRowFailureKey,
+  cloudBackupFailureKey,
+} from "../../lib/backupFailure";
 import { useTranslation } from "../../hooks/useTranslation";
 // The shared frame: role=dialog, aria-modal, Escape, focus in and back out,
 // and a panel that scrolls instead of running off a 320px screen (AUD-037).
@@ -18,6 +22,7 @@ import type { Backup } from "./backupTypes";
 import BackupDeleteModal from "./BackupDeleteModal";
 import Toggletip from "../ui/Toggletip";
 import { AdminSubBlock } from "./AdminSubBlock";
+import CloudBackupList from "./CloudBackupList";
 
 export default function BackupManagement(): JSX.Element {
   const { t } = useTranslation(["admin", "common", "settings"]);
@@ -270,7 +275,14 @@ export default function BackupManagement(): JSX.Element {
       loadBackups();
     } catch (error) {
       logger.error("Failed to sync backup to cloud:", error);
-      addToast("error", extractApiErrorMessage(error, t("admin:backup.toasts.syncFailed")));
+      // A job's failure is a code worded in the admin's language; only a
+      // refusal without one falls back to the share's own words.
+      addToast(
+        "error",
+        error instanceof JobLostError
+          ? t("admin:backup.toasts.outcomeUnknown")
+          : t(cloudBackupFailureKey(error, "admin:backup.toasts.syncFailed"))
+      );
       // The row now carries a reason from the server — show it.
       loadBackups();
     } finally {
@@ -542,6 +554,14 @@ export default function BackupManagement(): JSX.Element {
                       <span className="text-sm font-medium" style={getStatusStyle(backup.status)}>
                         {getStatusText(backup.status)}
                       </span>
+                      {backup.metadata?.verification === "size" && (
+                        <p
+                          className="mt-1 max-w-xs whitespace-normal text-xs text-(--text-muted)"
+                          title={t("admin:backup.unverifiedHint")}
+                        >
+                          {t("admin:backup.unverified")}
+                        </p>
+                      )}
                       {backup.status === "failed" && (
                         <p className="mt-1 max-w-xs whitespace-normal text-xs text-(--text-muted)">
                           {t(backupRowFailureKey(backup.errorCode))}
@@ -647,6 +667,13 @@ export default function BackupManagement(): JSX.Element {
           </table>
         </div>
       </AdminSubBlock>
+
+      {webdavEnabled && (
+        <CloudBackupList
+          presentIds={new Set(backups.map((b) => b.id))}
+          onDownloaded={() => void loadBackups()}
+        />
+      )}
 
       {restoreModal && (
         <RestoreModal

@@ -159,10 +159,22 @@ registry.registerPath({
   tags: backupTag,
   request: { params: z.object({ id: z.string() }) },
   responses: {
-    202: { description: "Sync started" },
+    202: {
+      description:
+        "Upload started; poll GET /jobs/{jobId}. Job kind backup.cloudSync fails with a WEBDAV_BACKUP_* code (AUTH, QUOTA, TIMEOUT, UNREACHABLE, SHARE_ERROR).",
+      content: {
+        "application/json": {
+          schema: z.object({ success: z.boolean(), data: z.object({ jobId: z.string().uuid() }) }),
+        },
+      },
+    },
     400: { description: "Backup is not completed", content: errorContent },
     404: notFound,
-    409: { description: "WebDAV sync is not enabled", content: errorContent },
+    409: {
+      description:
+        "WebDAV sync is not enabled or configured (WEBDAV_NOT_ENABLED / WEBDAV_NOT_CONFIGURED), or an upload or download is already running (WEBDAV_BACKUP_BUSY)",
+      content: errorContent,
+    },
     502: { description: "The WebDAV share did not answer as expected", content: errorContent },
   },
 });
@@ -185,10 +197,22 @@ registry.registerPath({
   summary: "Fetch a backup back from the cloud target",
   tags: backupTag,
   responses: {
-    202: { description: "Download started" },
+    202: {
+      description:
+        "Download started; poll GET /jobs/{jobId}. Job kind backup.cloudDownload succeeds with {backupId, verified}: the backup is then in the backup list. verified=false means the archive predates checksums and was accepted on its size alone. Fails with WEBDAV_DOWNLOAD_TRUNCATED, WEBDAV_DOWNLOAD_CHECKSUM_MISMATCH (nothing is kept) or a WEBDAV_BACKUP_* code.",
+      content: {
+        "application/json": {
+          schema: z.object({ success: z.boolean(), data: z.object({ jobId: z.string().uuid() }) }),
+        },
+      },
+    },
     400: badInput,
     404: { description: "No such backup on the share", content: errorContent },
-    409: { description: "WebDAV sync is not enabled", content: errorContent },
+    409: {
+      description:
+        "WebDAV not enabled or configured, the name is already in the backup list (WEBDAV_BACKUP_EXISTS), or a transfer is already running (WEBDAV_BACKUP_BUSY)",
+      content: errorContent,
+    },
     502: { description: "The WebDAV share did not answer as expected", content: errorContent },
   },
 });

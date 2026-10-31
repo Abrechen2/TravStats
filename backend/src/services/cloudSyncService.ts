@@ -8,6 +8,8 @@ import { getWebDAVSettings } from "./instanceSettingsService";
 import { AppError } from "../middleware/errorHandler";
 import { isServiceDisabledByAdmin } from "./externalServices/policy";
 import logger from "../utils/logger";
+import type { ApiErrorCode } from "../middleware/apiErrorCode";
+import { classifyWebdavError, type WebdavSyncErrorCode } from "./webdavSync/errors";
 
 type WebDAVClient = ReturnType<typeof createClient>;
 
@@ -73,11 +75,61 @@ async function getWebDAVClient(): Promise<{
 function asUpstreamError(error: unknown): AppError {
   if (error instanceof AppError) return error;
   const status = (error as { status?: unknown }).status;
-  if (status === 404) return new AppError("Backup not found on the WebDAV share", 404);
+  if (status === 404) {
+    return new AppError("Backup not found on the WebDAV share", 404, "WEBDAV_BACKUP_NOT_ON_SHARE");
+  }
   // The share's own words stay in the message: "507 Insufficient Storage" is
   // what the admin has to act on, and the status alone would hide it.
   const reason = error instanceof Error ? error.message : "Unknown error";
-  return new AppError(`WebDAV share did not answer as expected: ${reason}`, 502);
+  return new AppError(
+    `WebDAV share did not answer as expected: ${reason}`,
+    502,
+    UPSTREAM_CODE[classifyWebdavError(error)] ?? "WEBDAV_BACKUP_SHARE_ERROR"
+  );
+}
+
+/** Which stable cause the admin page words, per kind of share failure. */
+const UPSTREAM_CODE: Partial<Record<WebdavSyncErrorCode, ApiErrorCode>> = {
+  auth: "WEBDAV_BACKUP_AUTH",
+  quota: "WEBDAV_BACKUP_QUOTA",
+  tooLarge: "WEBDAV_BACKUP_QUOTA",
+  timeout: "WEBDAV_BACKUP_TIMEOUT",
+  unreachable: "WEBDAV_BACKUP_UNREACHABLE",
+  tls: "WEBDAV_BACKUP_UNREACHABLE",
+};
+
+/**
+ * Refuse early, with the request, when the share cannot be used at all:
+ * switched off, or enabled with a field missing. Routes call it before they
+ * start a job so these two read as the 409 they are; inside a job the same
+ * refusal arrives through `asCloudJobError`.
+ */
+export async function assertWebdavReady(): Promise<void> {
+  try {
+    await getWebDAVClient();
+  } catch (error) {
+    throw asCloudJobError(error);
+  }
+}
+
+/**
+ * The error a cloud backup job ends with: every failure carries a stable code
+ * (never JOB_FAILED), because the page words each cause differently and the
+ * thrower's English prose must not reach a German screen.
+ */
+export function asCloudJobError(err: unknown): AppError {
+  if (err instanceof AppError && err.code) return err;
+  if (err instanceof AppError) {
+    if (err.statusCode === 409 && /not enabled/i.test(err.message)) {
+      return new AppError(err.message, 409, "WEBDAV_NOT_ENABLED");
+    }
+    if (err.statusCode === 409 && /not configured/i.test(err.message)) {
+      return new AppError(err.message, 409, "WEBDAV_NOT_CONFIGURED");
+    }
+    if (err.statusCode === 404) return new AppError(err.message, 404, "WEBDAV_BACKUP_FILE_MISSING");
+    return err;
+  }
+  return asUpstreamError(err);
 }
 
 /** Test WebDAV connection. */
@@ -105,6 +157,50 @@ export async function testConnection(): Promise<{ success: boolean; message: str
   }
 }
 
+/** SHA-256 of a file, streamed: an archive with photos is several GB. */
+export async function sha256OfFile(filePath: string): Promise<string> {
+  const hash = createHash("sha256");
+  for await (const chunk of fs.createReadStream(filePath)) hash.update(chunk as Buffer);
+  return hash.digest("hex");
+}
+
+/** The checksum file that travels beside an uploaded archive. */
+export const checksumPathOf = (remotePath: string): string => `${remotePath}.sha256`;
+
+/** `sha256sum` format, so the admin can check an archive by hand too. */
+const checksumFileBody = (sha256: string, filename: string): string => `${sha256}  ${filename}\n`;
+
+/**
+ * The SHA-256 stored beside a remote archive, or null when there is none (an
+ * archive uploaded before checksums existed, or whose checksum file did not
+ * make it). Absence is not an error; any other failure to READ it is, so a
+ * flaky share never downgrades a verifiable download to an unverified one.
+ */
+async function readRemoteChecksum(
+  client: WebDAVClient,
+  remotePath: string
+): Promise<string | null> {
+  let raw: unknown;
+  try {
+    raw = await client.getFileContents(checksumPathOf(remotePath), { format: "text" });
+  } catch (error) {
+    if ((error as { status?: unknown }).status === 404) return null;
+    throw error;
+  }
+  const text = typeof raw === "string" ? raw : Buffer.isBuffer(raw) ? raw.toString("utf8") : "";
+  const match = text.trim().match(/^([0-9a-f]{64})(\s|$)/i);
+  if (!match) {
+    logger.warn({
+      operation: "webdav_checksum_unreadable",
+      message:
+        "Checksum file beside the backup is not a SHA-256; treating the backup as unverified",
+      remotePath,
+    });
+    return null;
+  }
+  return match[1].toLowerCase();
+}
+
 /** Sync a completed backup to WebDAV. */
 export async function syncToCloud(backupId: string): Promise<void> {
   // The backup is looked up BEFORE the feature flag: "that backup does not
@@ -125,6 +221,9 @@ export async function syncToCloud(backupId: string): Promise<void> {
   }
 
   const { client, backupPath, target } = await getWebDAVClient();
+  // Hashed before the upload and outside its try: a local read failure is not
+  // the share's fault and must not be reported as a 502.
+  const sha256 = await sha256OfFile(backup.backupPath);
 
   try {
     // Ensure backup directory exists on WebDAV (ignore if it already does)
@@ -155,6 +254,23 @@ export async function syncToCloud(backupId: string): Promise<void> {
       // chunked uploads keep working.
       headers: { "Content-Length": String(size) },
     });
+
+    // The checksum goes up AFTER the archive: a download that finds one can
+    // trust that the archive it describes is complete. A failure here leaves a
+    // good upload that downloads as "unverified" — logged, not fatal.
+    try {
+      await client.putFileContents(checksumPathOf(remotePath), checksumFileBody(sha256, filename), {
+        overwrite: true,
+      });
+    } catch (checksumError) {
+      logger.warn({
+        operation: "webdav_checksum_upload_failed",
+        message: "Backup uploaded but its checksum file could not be written",
+        backupId,
+        remotePath,
+        error: checksumError instanceof Error ? checksumError.message : "Unknown error",
+      });
+    }
 
     await prisma.backup.update({
       where: { id: backupId },
@@ -327,12 +443,35 @@ export function declaredBodyLength(headers: { get(name: string): string | null }
 /** Longest silence tolerated while a backup streams down from the share. */
 const DOWNLOAD_STALL_MS = 60_000;
 
-/** Download a backup file from the remote WebDAV share to local disk. */
-export async function downloadFromCloud(backupName: string, localPath: string): Promise<void> {
-  const { client, backupPath } = await getWebDAVClient();
+/** What a finished download proved about the file it left on disk. */
+export interface CloudDownloadResult {
+  size: number;
+  sha256: string;
+  /** True when the bytes matched a checksum stored beside the upload; false
+   *  when the archive predates checksums and was accepted on its size alone. */
+  verified: boolean;
+  /** Hash of the share's endpoint, account and folder, as recorded at upload. */
+  target: string;
+  remotePath: string;
+}
+
+/**
+ * Download a backup file from the remote WebDAV share to local disk.
+ *
+ * The file only reaches `localPath` once it is complete (Content-Length) and,
+ * when the share holds a checksum for it, matches that checksum; otherwise the
+ * side file is deleted and the call throws.
+ */
+export async function downloadFromCloud(
+  backupName: string,
+  localPath: string,
+  onProgress?: (done: number, total: number) => void
+): Promise<CloudDownloadResult> {
+  const { client, backupPath, target } = await getWebDAVClient();
 
   try {
     const remotePath = path.join(backupPath, backupName).replace(/\\/g, "/");
+    const expectedSha = await readRemoteChecksum(client, remotePath);
 
     logger.info({
       operation: "webdav_download_start",
@@ -345,6 +484,7 @@ export async function downloadFromCloud(backupName: string, localPath: string): 
     // never leaves a truncated archive under the real name (forgejo#354).
     // Unique per call: two parallel downloads of one name must not share it.
     const partPath = `${localPath}.${randomBytes(6).toString("hex")}.part`;
+    let result: CloudDownloadResult;
     // The response headers arrive through the callback; Content-Length is the
     // only completeness signal the body itself never gives (a body cut short
     // by the peer ends the stream without an error).
@@ -355,8 +495,11 @@ export async function downloadFromCloud(backupName: string, localPath: string): 
       },
     });
     let receivedBytes = 0;
+    const hash = createHash("sha256");
     source.on("data", (chunk: Buffer | string) => {
       receivedBytes += Buffer.byteLength(chunk);
+      hash.update(chunk);
+      if (expectedBytes) onProgress?.(receivedBytes, expectedBytes);
     });
     // webdav pipes the HTTP body into this stream without forwarding its
     // errors, so a connection that dies mid-body would hang forever: a stall
@@ -384,7 +527,16 @@ export async function downloadFromCloud(backupName: string, localPath: string): 
           "WEBDAV_DOWNLOAD_TRUNCATED"
         );
       }
+      const sha256 = hash.digest("hex");
+      if (expectedSha !== null && sha256 !== expectedSha) {
+        throw new AppError(
+          "Backup downloaded from the WebDAV share does not match its stored checksum",
+          502,
+          "WEBDAV_DOWNLOAD_CHECKSUM_MISMATCH"
+        );
+      }
       fs.renameSync(partPath, localPath);
+      result = { size: receivedBytes, sha256, verified: expectedSha !== null, target, remotePath };
     } catch (streamError) {
       fs.rmSync(partPath, { force: true });
       throw streamError;
@@ -397,7 +549,9 @@ export async function downloadFromCloud(backupName: string, localPath: string): 
       message: "Backup downloaded from WebDAV successfully",
       remotePath,
       localPath,
+      verified: result.verified,
     });
+    return result;
   } catch (error) {
     logger.error({
       operation: "webdav_download_error",
@@ -436,6 +590,20 @@ export async function deleteCloudBackup(backup: {
     } catch (error) {
       // A retry after a lost DELETE response must still be able to finish.
       if ((error as { status?: number }).status !== 404) throw error;
+    }
+    // The checksum file goes with its archive; a leftover one is harmless, so
+    // its failure never blocks the delete the admin asked for.
+    try {
+      await client.deleteFile(checksumPathOf(remote));
+    } catch (error) {
+      if ((error as { status?: number }).status !== 404) {
+        logger.warn({
+          operation: "webdav_checksum_delete_failed",
+          message: "Backup deleted from the share but its checksum file could not be removed",
+          remote,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
     }
   } catch (error) {
     // A 409 here is also "WebDAV not enabled/configured": without settings the

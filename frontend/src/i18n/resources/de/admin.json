@@ -795,7 +795,37 @@
     "deleteRemote": "Auch die WebDAV-Kopie löschen",
     "deleteLocalOnly": "Die lokale Sicherung wird gelöscht. Eine vorhandene WebDAV-Kopie bleibt erhalten, sofern du sie nicht ausdrücklich auswählst.",
     "remoteDeleteFailed": "WebDAV-Löschung fehlgeschlagen. Die lokale Sicherung bleibt erhalten. Verbindung prüfen und erneut versuchen.",
-    "remoteTargetUnknown": "Das ursprüngliche WebDAV-Ziel ist unbekannt oder wurde geändert. Die Sicherung erneut hochladen, bevor du beide Kopien löschst, oder nur lokal löschen."
+    "remoteTargetUnknown": "Das ursprüngliche WebDAV-Ziel ist unbekannt oder wurde geändert. Die Sicherung erneut hochladen, bevor du beide Kopien löschst, oder nur lokal löschen.",
+    "cloudFailure": {
+      "WEBDAV_BACKUP_AUTH": "Der WebDAV-Server hat die Zugangsdaten abgelehnt. Benutzername und Passwort in den WebDAV-Einstellungen prüfen.",
+      "WEBDAV_BACKUP_QUOTA": "Auf dem WebDAV-Server ist nicht genug Speicherplatz frei oder die Datei ist zu groß (507/413). Platz schaffen und erneut versuchen.",
+      "WEBDAV_BACKUP_TIMEOUT": "Der WebDAV-Server hat nicht rechtzeitig geantwortet. Bitte später erneut versuchen.",
+      "WEBDAV_BACKUP_UNREACHABLE": "Der WebDAV-Server ist nicht erreichbar (Adresse, Netzwerk oder Zertifikat). Die Verbindung in den WebDAV-Einstellungen testen.",
+      "WEBDAV_BACKUP_SHARE_ERROR": "Der WebDAV-Server hat unerwartet geantwortet. Details stehen im Server-Log.",
+      "WEBDAV_BACKUP_NOT_ON_SHARE": "Diese Datei liegt nicht (mehr) auf dem WebDAV-Server.",
+      "WEBDAV_BACKUP_FILE_MISSING": "Die Backup-Datei fehlt auf diesem Server, es gibt nichts hochzuladen.",
+      "WEBDAV_NOT_ENABLED": "WebDAV ist nicht aktiviert.",
+      "WEBDAV_NOT_CONFIGURED": "WebDAV ist aktiviert, aber Adresse, Benutzername oder Passwort fehlen.",
+      "WEBDAV_BACKUP_BUSY": "Es läuft bereits ein WebDAV-Upload oder -Download. Bitte warten, bis er fertig ist.",
+      "WEBDAV_BACKUP_EXISTS": "Dieses Backup steht bereits in der Backup-Liste.",
+      "WEBDAV_DOWNLOAD_CHECKSUM_MISMATCH": "Die heruntergeladene Datei stimmt nicht mit ihrer Prüfsumme überein und wurde verworfen. Bitte erneut versuchen."
+    },
+    "unverified": "Nicht per Prüfsumme geprüft",
+    "unverifiedHint": "Dieses Backup wurde vor Einführung der Prüfsummen hochgeladen und nur an seiner Größe geprüft.",
+    "cloudList": {
+      "title": "Backups auf dem WebDAV-Server",
+      "description": "Hol ein Backup vom WebDAV-Server zurück in die Backup-Liste, z. B. nach einem Serverumzug. Danach lässt es sich wie jedes andere wiederherstellen.",
+      "load": "Liste laden",
+      "loading": "Lädt …",
+      "empty": "Auf dem WebDAV-Server liegen keine Backups.",
+      "loadFailed": "Die Liste vom WebDAV-Server konnte nicht geladen werden.",
+      "download": "Herunterladen",
+      "downloading": "Lädt {{percent}} %",
+      "downloadingUnknown": "Lädt …",
+      "inList": "Bereits in der Liste",
+      "done": "Backup in die Liste übernommen",
+      "doneUnverified": "Backup in die Liste übernommen — es hat keine Prüfsumme und wurde nur an seiner Größe geprüft."
+    }
   },
   "feedback": {
     "title": "Parser Feedback-Statistiken",

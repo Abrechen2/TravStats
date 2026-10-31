@@ -50,7 +50,12 @@ const mockExistsSync = jest.fn();
 // Streams, not buffers (forgejo#354): the service must never read a whole
 // archive. readFileSync/writeFileSync are deliberately absent from the mock, so
 // a regression to buffering fails with "not a function".
-const mockCreateReadStream = jest.fn((_p: string) => ({ stub: "read-stream" }));
+// A real Readable: the service now hashes the archive before it uploads it.
+const mockCreateReadStream = jest.fn((_p: string) =>
+  (jest.requireActual("stream") as typeof import("stream")).Readable.from([
+    Buffer.from("archive-bytes"),
+  ])
+);
 const mockCreateWriteStream = jest.fn();
 const mockStatSync = jest.fn((_p: string) => ({ size: 15 }));
 const mockRenameSync = jest.fn();
@@ -264,7 +269,8 @@ describe("cloudSyncService", () => {
 
       await syncToCloud("backup-1");
 
-      expect(mockClient.putFileContents).toHaveBeenCalledTimes(1);
+      // The archive, then the checksum file beside it.
+      expect(mockClient.putFileContents).toHaveBeenCalledTimes(2);
       const [remotePath] = mockClient.putFileContents.mock.calls[0];
       expect(remotePath).toMatch(/archive\.tar\.gz$/);
       // forgejo#354: the archive goes up as a stream with its length, never as a Buffer
@@ -274,7 +280,7 @@ describe("cloudSyncService", () => {
         { contentLength: number },
       ];
       expect(Buffer.isBuffer(body)).toBe(false);
-      expect(body).toEqual({ stub: "read-stream" });
+      expect(typeof (body as { pipe?: unknown }).pipe).toBe("function");
       expect(options.contentLength).toBe(15);
       expect((options as { headers?: Record<string, string> }).headers).toEqual({
         "Content-Length": "15",
@@ -364,7 +370,7 @@ describe("cloudSyncService", () => {
 
       await syncToCloudIfEnabled("backup-1");
 
-      expect(mockClient.putFileContents).toHaveBeenCalledTimes(1);
+      expect(mockClient.putFileContents).toHaveBeenCalledTimes(2);
     });
 
     it("records why a failed upload failed, and does not throw", async () => {
@@ -506,7 +512,11 @@ describe("cloudSyncService", () => {
         expect.stringContaining("backup-1.tar.gz"),
         expect.anything()
       );
-      expect(mockClient.getFileContents).not.toHaveBeenCalled();
+      // Only the small checksum file is read whole, never the archive.
+      expect(mockClient.getFileContents).not.toHaveBeenCalledWith(
+        expect.stringMatching(/backup-1\.tar\.gz$/),
+        expect.anything()
+      );
       expect(Buffer.concat(downloadedChunks).toString()).toBe("archive-bytes");
       expect(mockRenameSync).toHaveBeenCalledWith(
         expect.stringMatching(/^\/tmp\/out\.tar\.gz\.[0-9a-f]+\.part$/),
@@ -595,7 +605,11 @@ describe("remote backup deletion identity", () => {
     const backup = { id: "b", cloudTarget: written.cloudTarget, cloudPath: written.cloudPath };
     await deleteCloudBackup(backup);
     await deleteCloudBackup(backup);
-    expect(mockClient.deleteFile).toHaveBeenLastCalledWith("/TravStats/backups/backup-2026.tar.gz");
+    // The archive, and the checksum file that travels with it.
+    expect(mockClient.deleteFile).toHaveBeenCalledWith("/TravStats/backups/backup-2026.tar.gz");
+    expect(mockClient.deleteFile).toHaveBeenCalledWith(
+      "/TravStats/backups/backup-2026.tar.gz.sha256"
+    );
   });
 
   it("refuses legacy or changed targets and retains an actionable error", async () => {

@@ -34,13 +34,30 @@ export function backupFailureKey(err: unknown, fallbackKey: string): string {
   return code && BACKUP_FAILURE_CODES.has(code) ? `admin:backup.failure.${code}` : fallbackKey;
 }
 
+/** The causes a WebDAV backup upload or download job ends with, each with its own sentence. */
+const CLOUD_FAILURE_CODES: ReadonlySet<string> = new Set([
+  "WEBDAV_BACKUP_AUTH",
+  "WEBDAV_BACKUP_QUOTA",
+  "WEBDAV_BACKUP_TIMEOUT",
+  "WEBDAV_BACKUP_UNREACHABLE",
+  "WEBDAV_BACKUP_SHARE_ERROR",
+  "WEBDAV_BACKUP_NOT_ON_SHARE",
+  "WEBDAV_BACKUP_FILE_MISSING",
+  "WEBDAV_NOT_ENABLED",
+  "WEBDAV_NOT_CONFIGURED",
+  "WEBDAV_BACKUP_BUSY",
+  "WEBDAV_BACKUP_EXISTS",
+  "WEBDAV_DOWNLOAD_CHECKSUM_MISMATCH",
+]);
+
 /**
- * The key for a failed cloud (WebDAV) backup download. A body cut short is its
- * own sentence (`WEBDAV_DOWNLOAD_TRUNCATED`, 502): the archive on disk would
- * have been unusable, and the retry is the only remedy.
+ * The key for a failed WebDAV backup upload or download — from a job's error
+ * code or a synchronous refusal alike. A body cut short is its own sentence
+ * (`WEBDAV_DOWNLOAD_TRUNCATED`): the archive would have been unusable, and the
+ * retry is the only remedy. An unknown code reads as `fallbackKey`.
  */
-export function cloudDownloadFailureKey(err: unknown, fallbackKey: string): string {
-  return apiErrorMachineCode(err) === "WEBDAV_DOWNLOAD_TRUNCATED"
-    ? "admin:backup.toasts.downloadTruncated"
-    : fallbackKey;
+export function cloudBackupFailureKey(err: unknown, fallbackKey: string): string {
+  const code = jobErrorCode(err) ?? apiErrorMachineCode(err);
+  if (code === "WEBDAV_DOWNLOAD_TRUNCATED") return "admin:backup.toasts.downloadTruncated";
+  return code && CLOUD_FAILURE_CODES.has(code) ? `admin:backup.cloudFailure.${code}` : fallbackKey;
 }
