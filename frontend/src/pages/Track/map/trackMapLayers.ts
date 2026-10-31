@@ -143,6 +143,8 @@ function routeLayer(input: TrackLayerInput, alpha: number): Layer {
       data: speedPiecesOf(input.segments),
       getPath: (d) => d.path,
       getColor: (d) => [...speedColor(d.kmh), alpha],
+      // The accessor reads `alpha`, and the data is now stable across ticks.
+      updateTriggers: { getColor: [alpha] },
       getWidth: 4,
       widthUnits: "pixels",
       widthMinPixels: 2,

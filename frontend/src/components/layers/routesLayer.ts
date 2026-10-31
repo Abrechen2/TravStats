@@ -517,7 +517,9 @@ export function createRoutesLayers(
     updateTriggers: {
       getSourceColor: selectedIds,
       getTargetColor: selectedIds,
-      getWidth: selectedIds,
+      // The accessor also reads arcWidthScale; with stable data (forgejo#349) a
+      // width change must invalidate it explicitly.
+      getWidth: [selectedIds, arcWidthScale],
     },
   };
 

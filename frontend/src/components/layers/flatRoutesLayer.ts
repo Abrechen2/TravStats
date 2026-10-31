@@ -182,7 +182,7 @@ export function createFlatRoutesLayer(
       : undefined,
     updateTriggers: {
       getColor: selectedIds,
-      getWidth: selectedIds,
+      getWidth: [selectedIds, widthScale],
     },
   });
 }

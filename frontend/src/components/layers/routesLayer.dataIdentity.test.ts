@@ -74,3 +74,29 @@ describe("createRoutesLayers keeps layer data stable for an unchanged routeData"
     expect(second[FLAT_ROUTES_LAYER_ID]).toBe(first[FLAT_ROUTES_LAYER_ID]);
   });
 });
+
+describe("stable route data still follows a width change", () => {
+  const triggersOf = (shape: "arc" | "flat", scale: number): unknown[] => {
+    const layers = createRoutesLayers(
+      buildRouteData(flights, 1),
+      undefined,
+      undefined,
+      0.3,
+      [],
+      undefined,
+      4,
+      { routeShape: shape, arcWidthScale: scale }
+    );
+    const layer = layers.find(
+      (l) => l.id === (shape === "flat" ? FLAT_ROUTES_LAYER_ID : "routes-arc")
+    );
+    return (layer?.props as unknown as { updateTriggers: { getWidth: unknown[] } }).updateTriggers
+      .getWidth;
+  };
+
+  it("invalidates getWidth when the width scale changes, in both route shapes", () => {
+    for (const shape of ["arc", "flat"] as const) {
+      expect(triggersOf(shape, 1), shape).not.toEqual(triggersOf(shape, 2));
+    }
+  });
+});

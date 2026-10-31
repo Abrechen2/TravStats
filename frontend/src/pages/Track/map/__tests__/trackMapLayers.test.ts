@@ -193,3 +193,14 @@ describe("buildTrackLayers on a replay tick (forgejo#351)", () => {
     expect(b["track-replay-head"]).not.toBe(a["track-replay-head"]);
   });
 });
+
+describe("buildTrackLayers opacity with stable data (forgejo#351)", () => {
+  it("re-colours the speed route when the opacity changes", () => {
+    const triggers = (opacity: number): unknown =>
+      (
+        buildTrackLayers(input({ opacity })).find((l) => l.id === "track-route-speed")
+          ?.props as unknown as { updateTriggers: { getColor: unknown } }
+      ).updateTriggers.getColor;
+    expect(triggers(0.4)).not.toEqual(triggers(0.9));
+  });
+});
