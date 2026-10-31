@@ -732,7 +732,7 @@ export async function checkAndUpdateAllFlights(): Promise<number> {
     // wasted API calls on flights/cruises that already departed but are stuck
     // in "scheduled" (replaces the retired transitionZombieFlights /
     // transitionPastCruises one-way flips; see services/statusSweep.ts).
-    await sweepStatuses();
+    await sweepStatuses(undefined, "open");
 
     /**
      * The flights that sweep just flipped to `flown` WITHOUT an actual arrival

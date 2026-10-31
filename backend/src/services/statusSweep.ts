@@ -166,7 +166,18 @@ async function sweepDayStatuses(
   };
 }
 
-export async function sweepStatuses(now: Date = clockNow()): Promise<{
+/**
+ * `all` revisits every trip (the hourly slot). `open` skips trips already
+ * `completed`: the 5-minute flight-update tick would otherwise load the whole
+ * trips x segments graph of every user 288 times a day to look at trips that
+ * cannot change (forgejo#336); the hourly sweep still corrects those.
+ */
+export type TripSweepScope = "all" | "open";
+
+export async function sweepStatuses(
+  now: Date = clockNow(),
+  tripScope: TripSweepScope = "all"
+): Promise<{
   flights: number;
   cruises: number;
   lodging: number;
@@ -356,6 +367,8 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
   // days begin in its owner's profile zone (ADR 0002 D4, `tripStatusBounds`).
   const zoneOfUser = await profileZonesByUser();
   const trips = await prisma.trip.findMany({
+    where: tripScope === "open" ? { status: { not: "completed" } } : undefined,
+    orderBy: { id: "asc" },
     select: {
       id: true,
       userId: true,

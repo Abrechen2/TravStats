@@ -168,6 +168,22 @@ describe("sweepStatuses", () => {
     expect((await prisma.trip.findUnique({ where: { id: trip.id } }))?.status).toBe("in_progress");
   });
 
+  it("the open scope leaves a completed trip to the hourly sweep but still flips an open one (forgejo#336)", async () => {
+    const done = await prisma.trip.create({
+      data: { userId, name: "SweepDone", status: "completed" },
+    });
+    await flight({ tripId: done.id, departureTime: future(24), arrivalTime: future(26) });
+    const open = await prisma.trip.create({
+      data: { userId, name: "SweepOpen", status: "in_progress" },
+    });
+    await flight({ tripId: open.id, departureTime: past(24), arrivalTime: past(22) });
+    await sweepStatuses(undefined, "open");
+    expect((await prisma.trip.findUnique({ where: { id: done.id } }))?.status).toBe("completed");
+    expect((await prisma.trip.findUnique({ where: { id: open.id } }))?.status).toBe("completed");
+    await sweepStatuses();
+    expect((await prisma.trip.findUnique({ where: { id: done.id } }))?.status).toBe("planned");
+  });
+
   it("is idempotent — second run flips 0", async () => {
     const second = await sweepStatuses();
     // Our rows are converged; other dev-DB users' rows may flip on the first
