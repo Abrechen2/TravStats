@@ -15,6 +15,9 @@ async function resetRow(): Promise<void> {
       globalAviationstackApiKey: null,
       photonUrl: null,
       railLookupContact: null,
+      globalImmichBaseUrl: null,
+      globalImmichApiKey: null,
+      webdavPasswordEncrypted: null,
     },
   });
 }
@@ -26,6 +29,9 @@ describe("one-time import of the service environment variables", () => {
     delete process.env.AVIATIONSTACK_API_KEY;
     delete process.env.PHOTON_URL;
     delete process.env.RAIL_LOOKUP_CONTACT;
+    delete process.env.IMMICH_BASE_URL;
+    delete process.env.IMMICH_API_KEY;
+    delete process.env.WEBDAV_PASSWORD;
     jest.restoreAllMocks();
   });
   afterAll(async () => {
@@ -81,5 +87,25 @@ describe("one-time import of the service environment variables", () => {
     expect(logged).toContain("AIRLABS_API_KEY");
     expect(logged).not.toContain(SECRET);
     expect(logged).not.toContain("ops@example.org");
+  });
+
+  it("never pairs a stored address with an imported key (the key would go to another server)", async () => {
+    await prisma.adminSettings.updateMany({
+      data: { globalImmichBaseUrl: "https://stored.immich.example" },
+    });
+    process.env.IMMICH_BASE_URL = "https://env.immich.example";
+    process.env.IMMICH_API_KEY = SECRET;
+    const result = await importServiceEnv(process.env);
+    expect(result.skipped).toEqual(expect.arrayContaining(["IMMICH_BASE_URL", "IMMICH_API_KEY"]));
+    const row = await prisma.adminSettings.findFirstOrThrow({ orderBy: { id: "asc" } });
+    expect(row.globalImmichBaseUrl).toBe("https://stored.immich.example");
+    expect(row.globalImmichApiKey).toBeNull();
+  });
+
+  it("copies a secret exactly, keeping surrounding whitespace of a password", async () => {
+    process.env.WEBDAV_PASSWORD = "  pass with edges  ";
+    await importServiceEnv(process.env);
+    const row = await prisma.adminSettings.findFirstOrThrow({ orderBy: { id: "asc" } });
+    expect(decryptApiKey(row.webdavPasswordEncrypted as string)).toBe("  pass with edges  ");
   });
 });

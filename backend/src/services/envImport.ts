@@ -16,6 +16,8 @@ import { createPrivateKey } from "node:crypto";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import { encryptApiKey } from "../utils/encryption";
+
+const CIPHERTEXT_PREFIX = "tsenc:v1:";
 import { ensureAdminSettingsRow } from "./adminSettingsRow";
 import { parseOwnGeoUrl } from "./geo/ownServerConfig";
 import { refreshInstanceTuning } from "./instanceTuning";
@@ -30,6 +32,12 @@ interface Mapping {
   emptyValue?: string;
   /** Rejects a value the admin page would refuse too. */
   validate?: (value: string) => boolean;
+  /**
+   * Variables that only make sense together (an address and its key). The group is imported
+   * only when EVERY column of it is still empty: a stored address must never be paired with
+   * an imported key, which would send that key to a different server.
+   */
+  group?: string;
 }
 
 const https = (v: string): boolean => {
@@ -53,27 +61,32 @@ export const ENV_IMPORT_MAP: readonly Mapping[] = [
   { env: "GOOGLE_PLACES_API_KEY", column: "globalGooglePlacesApiKey", secret: true },
   { env: "OPENROUTESERVICE_API_KEY", column: "globalOpenrouteserviceApiKey", secret: true },
   { env: "GRAPHHOPPER_API_KEY", column: "globalGraphhopperApiKey", secret: true },
-  { env: "OPENSKY_CLIENT_ID", column: "globalOpenskyClientId", secret: true },
-  { env: "OPENSKY_CLIENT_SECRET", column: "globalOpenskyClientSecret", secret: true },
-  { env: "OPENSKY_USERNAME", column: "globalOpenskyUsername", secret: true },
-  { env: "OPENSKY_PASSWORD", column: "globalOpenskyPassword", secret: true },
+  { env: "OPENSKY_CLIENT_ID", column: "globalOpenskyClientId", group: "opensky", secret: true },
+  {
+    env: "OPENSKY_CLIENT_SECRET",
+    column: "globalOpenskyClientSecret",
+    group: "opensky",
+    secret: true,
+  },
+  { env: "OPENSKY_USERNAME", column: "globalOpenskyUsername", group: "opensky", secret: true },
+  { env: "OPENSKY_PASSWORD", column: "globalOpenskyPassword", group: "opensky", secret: true },
   { env: "AISSTREAM_API_KEY", column: "globalAisstreamApiKey", secret: true },
   { env: "PHOTON_URL", column: "photonUrl" },
   { env: "NOMINATIM_URL", column: "nominatimUrl" },
   { env: "TRAVSTATS_GEO_URL", column: "ownGeoUrl", validate: https },
   { env: "MARKET_OVERPASS_URL", column: "marketOverpassUrl" },
   { env: "RAIL_LOOKUP_CONTACT", column: "railLookupContact" },
-  { env: "OLLAMA_URL", column: "ollamaUrl" },
-  { env: "OLLAMA_MODEL", column: "ollamaModel" },
-  { env: "IMMICH_BASE_URL", column: "globalImmichBaseUrl" },
-  { env: "IMMICH_API_KEY", column: "globalImmichApiKey", secret: true },
-  { env: "DAWARICH_BASE_URL", column: "globalDawarichBaseUrl" },
-  { env: "DAWARICH_API_KEY", column: "globalDawarichApiKey", secret: true },
-  { env: "STRAVA_CLIENT_ID", column: "stravaClientId" },
-  { env: "STRAVA_CLIENT_SECRET", column: "stravaClientSecret", secret: true },
-  { env: "WEBDAV_URL", column: "webdavUrl" },
-  { env: "WEBDAV_USERNAME", column: "webdavUsername" },
-  { env: "WEBDAV_PASSWORD", column: "webdavPasswordEncrypted", secret: true },
+  { env: "OLLAMA_URL", column: "ollamaUrl", group: "ollama" },
+  { env: "OLLAMA_MODEL", column: "ollamaModel", group: "ollama" },
+  { env: "IMMICH_BASE_URL", column: "globalImmichBaseUrl", group: "immich" },
+  { env: "IMMICH_API_KEY", column: "globalImmichApiKey", group: "immich", secret: true },
+  { env: "DAWARICH_BASE_URL", column: "globalDawarichBaseUrl", group: "dawarich" },
+  { env: "DAWARICH_API_KEY", column: "globalDawarichApiKey", group: "dawarich", secret: true },
+  { env: "STRAVA_CLIENT_ID", column: "stravaClientId", group: "strava" },
+  { env: "STRAVA_CLIENT_SECRET", column: "stravaClientSecret", group: "strava", secret: true },
+  { env: "WEBDAV_URL", column: "webdavUrl", group: "webdav" },
+  { env: "WEBDAV_USERNAME", column: "webdavUsername", group: "webdav" },
+  { env: "WEBDAV_PASSWORD", column: "webdavPasswordEncrypted", group: "webdav", secret: true },
   { env: "WEBDAV_BACKUP_PATH", column: "webdavBackupPath", emptyValue: "/TravStats/backups/" },
   { env: "WEBDAV_SYNC_ENABLED", column: "webdavSyncEnabled", flag: true },
   { env: "TEMPLATE_REPO_BASE_URL", column: "templateRepoBaseUrl" },
@@ -121,73 +134,94 @@ function federationFromEnv(row: Row, env: NodeJS.ProcessEnv, data: Row, names: s
   }
 }
 
+const ADVISORY_LOCK_KEY = 7_392_011;
+
 /**
  * Copy the old environment variables into `admin_settings`, once. Idempotent:
  * a recorded import is a no-op, so a variable set after the first start (or a
- * second boot) changes nothing.
+ * second boot) changes nothing. Everything — the check, the copies, the two
+ * feature switches and the marker — happens in ONE transaction under an
+ * advisory lock, so two starts cannot both import and a crash leaves no marker
+ * behind a half-done import.
  */
 export async function importServiceEnv(
   env: NodeJS.ProcessEnv = process.env
 ): Promise<EnvImportResult> {
   const id = await ensureAdminSettingsRow();
-  const row = (await prisma.adminSettings.findUniqueOrThrow({ where: { id } })) as unknown as Row;
-  if (row.envImportedAt) {
-    await refreshInstanceTuning();
-    return { imported: [], skipped: [], alreadyDone: true };
-  }
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ADVISORY_LOCK_KEY})`;
+    const row = (await tx.adminSettings.findUniqueOrThrow({ where: { id } })) as unknown as Row;
+    if (row.envImportedAt) return { imported: [], skipped: [], alreadyDone: true };
 
-  const data: Row = {};
-  const imported: string[] = [];
-  const skipped: string[] = [];
+    const data: Row = {};
+    const imported: string[] = [];
+    const skipped: string[] = [];
+    const blockedGroups = new Set(
+      ENV_IMPORT_MAP.filter((m) => m.group && !isEmpty(row, m)).map((m) => m.group as string)
+    );
 
-  for (const m of ENV_IMPORT_MAP) {
-    const raw = env[m.env];
-    if (raw === undefined) continue;
-    const value = raw.trim();
-    // An empty stats endpoint is the old "never send" switch: keep it as the empty string.
-    if (value === "" && m.column !== "usageStatsEndpoint") continue;
-    if (!isEmpty(row, m) || (m.validate && !m.validate(value))) {
-      skipped.push(m.env);
-      continue;
+    for (const m of ENV_IMPORT_MAP) {
+      const raw = env[m.env];
+      if (raw === undefined) continue;
+      // A secret is copied exactly as given: trimming would change a password.
+      const value = m.secret ? raw : raw.trim();
+      if (value.trim() === "") continue;
+      if (
+        !isEmpty(row, m) ||
+        (m.group && blockedGroups.has(m.group)) ||
+        (m.validate && !m.validate(value)) ||
+        (m.secret && value.startsWith(CIPHERTEXT_PREFIX))
+      ) {
+        skipped.push(m.env);
+        continue;
+      }
+      if (m.flag) {
+        if (value !== "true") continue;
+        data[m.column] = true;
+      } else {
+        data[m.column] = m.secret ? encryptApiKey(value) : value;
+      }
+      imported.push(m.env);
     }
-    if (m.flag) {
-      if (value !== "true") continue;
-      data[m.column] = true;
-    } else {
-      data[m.column] = m.secret ? encryptApiKey(value) : value;
+
+    const fed: string[] = [];
+    federationFromEnv(row, env, data, fed);
+    for (const n of fed) (n.startsWith("skip:") ? skipped : imported).push(n.replace("skip:", ""));
+
+    // The two feature switches live in their own tables; a row that exists wins.
+    for (const [name, table] of [
+      ["TRAVPLAN_ENABLED", "travelPlanConfig"],
+      ["TRAVTRACK_ENABLED", "travTrackConfig"],
+    ] as const) {
+      if (env[name] !== "true") continue;
+      const model = tx[table] as unknown as {
+        findUnique: (a: unknown) => Promise<unknown>;
+        create: (a: unknown) => Promise<unknown>;
+      };
+      if (await model.findUnique({ where: { id: "default" } })) skipped.push(name);
+      else {
+        await model.create({ data: { id: "default", enabled: true } });
+        imported.push(name);
+      }
     }
-    imported.push(m.env);
+
+    data.envImportedAt = new Date();
+    await tx.adminSettings.update({ where: { id }, data });
+    return { imported, skipped, alreadyDone: false };
+  });
+
+  if (!result.alreadyDone) {
+    const dropped = ENV_DROPPED.filter((n) => env[n] !== undefined);
+    logger.info(
+      {
+        operation: "service_env_import",
+        imported: result.imported,
+        skipped: result.skipped,
+        ignored: dropped,
+      },
+      "Service environment variables imported into the instance settings; they are no longer read"
+    );
   }
-
-  const fed: string[] = [];
-  federationFromEnv(row, env, data, fed);
-  for (const n of fed) (n.startsWith("skip:") ? skipped : imported).push(n.replace("skip:", ""));
-
-  data.envImportedAt = new Date();
-  await prisma.adminSettings.update({ where: { id }, data });
-
-  // The two feature switches live in their own tables; a row that exists wins.
-  for (const [name, table] of [
-    ["TRAVPLAN_ENABLED", "travelPlanConfig"],
-    ["TRAVTRACK_ENABLED", "travTrackConfig"],
-  ] as const) {
-    if (env[name] !== "true") continue;
-    const model = prisma[table] as unknown as {
-      findUnique: (a: unknown) => Promise<unknown>;
-      create: (a: unknown) => Promise<unknown>;
-    };
-    if (await model.findUnique({ where: { id: "default" } })) skipped.push(name);
-    else {
-      await model.create({ data: { id: "default", enabled: true } });
-      imported.push(name);
-    }
-  }
-
-  const dropped = ENV_DROPPED.filter((n) => env[n] !== undefined);
-  logger.info(
-    { operation: "service_env_import", imported, skipped, ignored: dropped },
-    "Service environment variables imported into the instance settings; they are no longer read"
-  );
   await refreshInstanceTuning();
-  return { imported, skipped, alreadyDone: false };
+  return result;
 }
