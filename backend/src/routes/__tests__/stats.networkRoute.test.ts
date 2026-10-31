@@ -1,3 +1,4 @@
+import { jest } from "@jest/globals";
 import request from "supertest";
 import app from "../../index";
 import { prisma } from "../../db";
@@ -156,5 +157,39 @@ describe("GET /api/v1/stats/network/route/:a/:b", () => {
     expect((await get("/route/FRA/FRA")).status).toBe(404);
     expect((await get("/route/F!/WAW")).status).toBe(400);
     expect((await get("/route/FRA/WAW?limit=5000")).status).toBe(400);
+  });
+
+  it("reads only the flights that can be on the pair, not the whole account (forgejo#341)", async () => {
+    await prisma.flight.createMany({
+      data: [0, 1, 2].map((n) => ({
+        userId,
+        depIata: "MUC",
+        arrIata: "CPH",
+        depLat: 48.35,
+        depLon: 11.78,
+        arrLat: 55.62,
+        arrLon: 12.65,
+        status: "flown",
+        flightNumber: `SK${n}`,
+        departureTime: new Date(Date.UTC(2022, 0, 1 + n)),
+      })),
+    });
+    const original = prisma.flight.findMany.bind(prisma.flight);
+    let read = 0;
+    const spy = jest.spyOn(prisma.flight, "findMany").mockImplementation(((
+      args: Parameters<typeof original>[0]
+    ) =>
+      original(args).then((rows) => {
+        read += rows.length;
+        return rows;
+      })) as unknown as typeof prisma.flight.findMany);
+    try {
+      const res = await get("/route/FRA/WAW");
+      expect(res.status).toBe(200);
+      expect(res.body.count).toBe(4);
+      expect(read).toBe(4);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

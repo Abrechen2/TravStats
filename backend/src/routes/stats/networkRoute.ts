@@ -28,6 +28,24 @@ import { buildNetworkRouteDetail } from "../../services/stats/networkRoute";
 import { airlineResolvers } from "../../utils/airlineNormalize";
 import logger from "../../utils/logger";
 
+/**
+ * Every code one airport can appear under in a flight row: the code itself plus
+ * the IATA and ICAO of every catalogue airport that shares it (a closed
+ * predecessor keeps the IATA of its successor).
+ */
+async function airportCodeVariants(code: string): Promise<string[]> {
+  const rows = await prisma.airport.findMany({
+    where: { OR: [{ iata: code }, { icao: code }] },
+    select: { iata: true, icao: true },
+  });
+  const variants = new Set<string>([code]);
+  for (const r of rows) {
+    if (r.iata) variants.add(r.iata);
+    if (r.icao) variants.add(r.icao);
+  }
+  return [...variants];
+}
+
 const router = Router();
 router.use(authenticate);
 router.use(statsEtag);
@@ -44,8 +62,26 @@ router.get("/:a/:b", async (req: AuthRequest, res: Response, next: NextFunction)
       return;
     }
 
+    // Pre-filtered in SQL on every code either end of the pair can be filed
+    // under; the exact pairing in `buildNetworkRouteDetail` stays the final
+    // word (forgejo#341).
+    const [codesA, codesB] = await Promise.all([
+      airportCodeVariants(params.data.a),
+      airportCodeVariants(params.data.b),
+    ]);
+    const endsIn = (side: "dep" | "arr", codes: string[]) => ({
+      OR: [{ [`${side}Iata`]: { in: codes } }, { [`${side}Icao`]: { in: codes } }],
+    });
     const flights = await prisma.flight.findMany({
-      where: { userId: req.userId!, ...countableFlightWhere() },
+      where: {
+        userId: req.userId!,
+        ...countableFlightWhere(),
+        OR: [
+          { AND: [endsIn("dep", codesA), endsIn("arr", codesB)] },
+          { AND: [endsIn("dep", codesB), endsIn("arr", codesA)] },
+        ],
+      },
+      orderBy: { id: "asc" },
       select: {
         id: true,
         flightNumber: true,
