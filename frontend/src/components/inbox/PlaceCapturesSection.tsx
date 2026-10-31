@@ -76,6 +76,8 @@ export default function PlaceCapturesSection(): JSX.Element | null {
       setCaptures((rows) => rows.filter((row) => row.id !== capture.id));
       setNaming(null);
       addToast("success", t(done));
+      // The list is capped, so more captures may be waiting behind the answered one.
+      await load();
     } catch (err) {
       logger.warn("Answering a place capture failed:", err);
       await fail(capture.id, err);
@@ -169,7 +171,7 @@ export default function PlaceCapturesSection(): JSX.Element | null {
                 style={{ gap: "var(--ts-space-md)", marginTop: "var(--ts-space-md)" }}
                 onSubmit={(e) => {
                   e.preventDefault();
-                  if (!name.trim()) return;
+                  if (useExisting || busy || !name.trim()) return;
                   void answer(
                     capture,
                     () =>

@@ -77,6 +77,7 @@ describe("POST /places/:id/merge", () => {
     await prisma.document.deleteMany({ where });
     await prisma.photoJourney.deleteMany({ where });
     await prisma.placeList.deleteMany({ where });
+    await prisma.placeCapture.deleteMany({ where });
     await prisma.placeVisit.deleteMany({ where });
     await prisma.place.updateMany({ where: { ...where, name: FAIL_NAME }, data: { name: "x" } });
     await prisma.place.deleteMany({ where });
@@ -221,6 +222,26 @@ describe("POST /places/:id/merge", () => {
     expect((await prisma.photoJourney.findUnique({ where: { id: f.journey.id } }))?.placeId).toBe(
       f.target.id
     );
+  });
+
+  it("keeps a named capture pointing at the place that stays, not at nothing", async () => {
+    const f = await twoColosseums();
+    const capture = await prisma.placeCapture.create({
+      data: {
+        userId,
+        clientId: "00000000-0000-4000-8000-000000000001",
+        lat: 41.89,
+        lon: 12.49,
+        capturedAt: new Date("2025-04-02T10:00:00Z"),
+        status: "resolved",
+        placeId: f.source.id,
+        visitId: f.sourceVisit.id,
+      },
+    });
+    await merge(f.target.id, { sourceId: f.source.id, fields: ALL_TARGET }).expect(200);
+    const after = await prisma.placeCapture.findUniqueOrThrow({ where: { id: capture.id } });
+    expect(after.placeId).toBe(f.target.id);
+    expect(after.visitId).toBe(f.sourceVisit.id);
   });
 
   it("takes each master-data group from the side the user picked", async () => {

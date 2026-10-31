@@ -67,7 +67,9 @@ describe("PlaceCapturesSection", () => {
   });
 
   it("names a capture: sends the name and category, then the row is gone", async () => {
-    vi.mocked(placeCapturesApi.listOpen).mockResolvedValue([capture()]);
+    vi.mocked(placeCapturesApi.listOpen)
+      .mockResolvedValueOnce([capture()])
+      .mockResolvedValueOnce([]);
     vi.mocked(placeCapturesApi.resolve).mockResolvedValue(capture({ status: "resolved" }));
     render(<PlaceCapturesSection />);
     fireEvent.click(await screen.findByRole("button", { name: "dataQuality:placeCaptures.name" }));
@@ -94,7 +96,9 @@ describe("PlaceCapturesSection", () => {
   });
 
   it("dismisses a capture on the server and drops the row", async () => {
-    vi.mocked(placeCapturesApi.listOpen).mockResolvedValue([capture()]);
+    vi.mocked(placeCapturesApi.listOpen)
+      .mockResolvedValueOnce([capture()])
+      .mockResolvedValueOnce([]);
     vi.mocked(placeCapturesApi.dismiss).mockResolvedValue(capture({ status: "dismissed" }));
     render(<PlaceCapturesSection />);
     fireEvent.click(
