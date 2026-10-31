@@ -266,14 +266,34 @@ registry.registerPath({
   description:
     "Includes everything linked to it: flights, cruises with their ship, ports " +
     "and stops, lodging stays with their property, stops, diary entries and photos, " +
-    "and the trip's `cost` by the server's rule.",
+    "the trip's `cost` by the server's rule, and its distance: `totalDistanceKm` and " +
+    "`distanceByMode`, over the legs each domain's counting rule counts. Both are additive; " +
+    "a figure that cannot be derived is null, never 0.",
   tags: ["Trips"],
   request: { params: tripId },
   responses: {
     200: {
       description: "Trip",
       content: {
-        "application/json": { schema: tripResponse.extend({ cost: tripCost.nullable() }) },
+        "application/json": {
+          schema: tripResponse.extend({
+            cost: tripCost.nullable(),
+            totalDistanceKm: z
+              .number()
+              .nullable()
+              .describe("Sum of distanceByMode; null when no mode has a measured leg"),
+            distanceByMode: z
+              .object({
+                flight: z.number().nullable(),
+                rail: z.number().nullable(),
+                bus: z.number().nullable(),
+                ferry: z.number().nullable(),
+                cruise: z.number().nullable(),
+                roadtrip: z.number().nullable().describe("Road legs only"),
+              })
+              .describe("Whole km per mode; null when the mode has no measured leg"),
+          }),
+        },
       },
     },
     404: notFound,

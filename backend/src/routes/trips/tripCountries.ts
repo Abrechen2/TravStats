@@ -2,6 +2,9 @@ import { prisma } from "../../db";
 import { toCountryCode } from "../../shared/countryEvidence";
 import { getCountryResolver } from "../../services/geo/countryFromCoordinates";
 import { countedRailModeWhere } from "../../shared/railCounting";
+import { placeCountsAsTransit } from "../../shared/placeCategories";
+import { classifyPlace, classifyVisit } from "../../shared/placeCounting";
+import { now as clockNow } from "../../shared/time/clock";
 import { STATION_SELECT, stationCountries } from "../../services/roadtrip/roadtripSummary";
 
 /**
@@ -61,7 +64,8 @@ export function tripCountries(
   cruiseCountries: string[] = [],
   lodgingCountries: string[] = [],
   roadtripCountries: string[] = [],
-  rideCountries: string[] = []
+  rideCountries: string[] = [],
+  placeCountries: string[] = []
 ): string[] {
   // A list the user filled in themselves is theirs — returned untouched.
   if (stored.length) return stored;
@@ -84,6 +88,8 @@ export function tripCountries(
     // Train and bus rides: a rail- or coach-only trip crossed borders too
     // (forgejo#288 sweep) — the terminals' own countries, never guessed.
     ...rideCountries,
+    // Places visited on the trip (companion#85): see `placeCountriesByTrip`.
+    ...placeCountries,
   ];
 
   // The two catalogues speak different languages — airports store ISO alpha-2,
@@ -208,6 +214,41 @@ export async function rideCountriesByTrip(tripIds: string[]): Promise<Map<string
     const acc = out.get(ride.tripId) ?? [];
     for (const country of [ride.depCountry, ride.arrCountry]) if (country) acc.push(country);
     out.set(ride.tripId, acc);
+  }
+  return out;
+}
+
+/**
+ * Countries of the places visited on each trip, keyed by trip id.
+ *
+ * The same cut the passport makes (`passportLoader`), so a trip card never
+ * contradicts the passport: only a place that is `visited` (a wishlist entry
+ * counts nowhere), only a visit that has HAPPENED (`classifyVisit` — undated
+ * counts, a future date does not), only the place's resolved ISO code, and
+ * never a transit place (service area, "nur Durchreise"), which the passport
+ * files as a mere connection. The trip link is the visit's `tripId`.
+ */
+export async function placeCountriesByTrip(tripIds: string[]): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>();
+  if (tripIds.length === 0) return out;
+  const visits = await prisma.placeVisit.findMany({
+    where: { tripId: { in: tripIds }, place: { visited: true, isoCountryCode: { not: null } } },
+    select: {
+      tripId: true,
+      visitedAt: true,
+      visitedAtUtc: true,
+      visitedZone: true,
+      place: {
+        select: { visited: true, isoCountryCode: true, countryVisitKind: true, category: true },
+      },
+    },
+  });
+  const now = clockNow();
+  for (const v of visits) {
+    if (!v.tripId || !v.place.isoCountryCode) continue;
+    if (classifyPlace(v.place) !== "visited" || classifyVisit(v, now) !== "visited") continue;
+    if (placeCountsAsTransit(v.place)) continue;
+    out.set(v.tripId, [...(out.get(v.tripId) ?? []), v.place.isoCountryCode]);
   }
   return out;
 }

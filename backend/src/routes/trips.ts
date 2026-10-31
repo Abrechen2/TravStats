@@ -28,6 +28,7 @@ import {
 } from "../services/tripSummaryService";
 import { emailParseLimiter } from "../middleware/rateLimit";
 import { assertLlmCloudConsent, assertLlmEnabled } from "../services/llm/llmGate";
+import { loadTripDistance } from "../services/trip/tripDistance";
 import { tripPageCost, tripsPageCosts } from "../services/trip/tripCostSuperlative";
 import {
   TRIPS_LIST_INCLUDE,
@@ -43,6 +44,7 @@ import {
   cruiseCountriesByTrip,
   lodgingCountriesByTrip,
   roadtripCountriesByTrip,
+  placeCountriesByTrip,
   rideCountriesByTrip,
 } from "./trips/tripCountries";
 import { resolveTrip } from "./trips/resolveTrip";
@@ -158,21 +160,29 @@ router.get(
       // port-to-port hop. One grouped query over every cruise on the page keeps
       // this at a constant query count, like the airport lookup above.
       const cruiseIds = trips.flatMap((t) => t.cruises.map((c) => c.id));
-      const [facts, cruiseCountries, lodgingCountries, roadtripCountries, rideCountries, legSums] =
-        await Promise.all([
-          airportFactsFor(trips.flatMap((t) => t.flights)),
-          cruiseCountriesByTrip(trips.map((t) => t.id)),
-          lodgingCountriesByTrip(trips.map((t) => t.id)),
-          roadtripCountriesByTrip(trips.map((t) => t.id)),
-          rideCountriesByTrip(trips.map((t) => t.id)),
-          cruiseIds.length > 0
-            ? prisma.cruiseLeg.groupBy({
-                by: ["cruiseId"],
-                where: { cruiseId: { in: cruiseIds } },
-                _sum: { distanceKm: true },
-              })
-            : Promise.resolve([]),
-        ]);
+      const [
+        facts,
+        cruiseCountries,
+        lodgingCountries,
+        roadtripCountries,
+        rideCountries,
+        placeCountries,
+        legSums,
+      ] = await Promise.all([
+        airportFactsFor(trips.flatMap((t) => t.flights)),
+        cruiseCountriesByTrip(trips.map((t) => t.id)),
+        lodgingCountriesByTrip(trips.map((t) => t.id)),
+        roadtripCountriesByTrip(trips.map((t) => t.id)),
+        rideCountriesByTrip(trips.map((t) => t.id)),
+        placeCountriesByTrip(trips.map((t) => t.id)),
+        cruiseIds.length > 0
+          ? prisma.cruiseLeg.groupBy({
+              by: ["cruiseId"],
+              where: { cruiseId: { in: cruiseIds } },
+              _sum: { distanceKm: true },
+            })
+          : Promise.resolve([]),
+      ]);
       const distanceByCruise = new Map(
         legSums.map((row) => [row.cruiseId, row._sum.distanceKm ?? 0])
       );
@@ -195,7 +205,8 @@ router.get(
             cruiseCountries.get(t.id) ?? [],
             lodgingCountries.get(t.id) ?? [],
             roadtripCountries.get(t.id) ?? [],
-            rideCountries.get(t.id) ?? []
+            rideCountries.get(t.id) ?? [],
+            placeCountries.get(t.id) ?? []
           ),
           ...(insights && { cost: insights.tripCosts[t.id] }),
         })),
@@ -339,15 +350,25 @@ router.get(
       // stored column nobody derives and `overflownCountries` is empty for
       // manually created flights.
       // `cost`: the server's figure (forgejo#274), the page sums nothing itself.
-      const [facts, cruiseCountries, lodgingCountries, roadtripCountries, rideCountries, cost] =
-        await Promise.all([
-          airportFactsFor(trip.flights),
-          cruiseCountriesByTrip([trip.id]),
-          lodgingCountriesByTrip([trip.id]),
-          roadtripCountriesByTrip([trip.id]),
-          rideCountriesByTrip([trip.id]),
-          tripPageCost(userId, trip.id),
-        ]);
+      const [
+        facts,
+        cruiseCountries,
+        lodgingCountries,
+        roadtripCountries,
+        rideCountries,
+        placeCountries,
+        cost,
+        distance,
+      ] = await Promise.all([
+        airportFactsFor(trip.flights),
+        cruiseCountriesByTrip([trip.id]),
+        lodgingCountriesByTrip([trip.id]),
+        roadtripCountriesByTrip([trip.id]),
+        rideCountriesByTrip([trip.id]),
+        placeCountriesByTrip([trip.id]),
+        tripPageCost(userId, trip.id),
+        loadTripDistance(userId, trip.id),
+      ]);
       // The stored zone first, then the catalogue — with `times` (ADR 0002).
       const flights = await enrichFlightsForClients(trip.flights);
       const countries = tripCountries(
@@ -357,7 +378,8 @@ router.get(
         cruiseCountries.get(trip.id) ?? [],
         lodgingCountries.get(trip.id) ?? [],
         roadtripCountries.get(trip.id) ?? [],
-        rideCountries.get(trip.id) ?? []
+        rideCountries.get(trip.id) ?? [],
+        placeCountries.get(trip.id) ?? []
       );
       // Each entry carries the photos it shows, in the gallery's own shape.
       const journalEntries = trip.journalEntries.map(({ photos: links, ...entry }) => ({
@@ -374,6 +396,7 @@ router.get(
           countries,
           journalEntries,
           cost,
+          ...distance,
         }),
       });
     } catch (error) {

@@ -73,7 +73,12 @@ export const roadtripInsightsResponseSchema = z
       restDays: z.number().int(),
       fullyDatedTrips: z.number().int(),
     }),
-    totals: measureTotalsSchema,
+    totals: measureTotalsSchema.openapi({
+      description:
+        "Keyed by evidence measure, plus `roadtripsCount`: the roadtrips that have started, " +
+        "by the rule of the statistics tab's roadtrips tile (`roadtripCountsIn`) — lifetime, " +
+        "and per year of start; an undated roadtrip counts in the lifetime figure only.",
+    }),
   })
   .openapi({
     description:
