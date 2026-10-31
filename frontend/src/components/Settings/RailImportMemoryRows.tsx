@@ -23,10 +23,19 @@ export function RailImportMemoryRows(): JSX.Element {
   const bus = useSuggestionSwitchesStore((s) => s.railImportBus);
   const setLocalTransit = useSuggestionSwitchesStore((s) => s.setRailImportLocalTransit);
   const setBus = useSuggestionSwitchesStore((s) => s.setRailImportBus);
-  const saves = useSuggestionSwitchesStore((s) => s.railImportSaves);
-  const [clickedAt, setClickedAt] = useState<number | null>(null);
-  const confirmed = clickedAt !== null && saves > clickedAt;
+  const localSaves = useSuggestionSwitchesStore((s) => s.railImportSaves.localTransit);
+  const busSaves = useSuggestionSwitchesStore((s) => s.railImportSaves.bus);
+  // One click marker per default: each "Gespeichert" waits for ITS own save.
+  const [localClickedAt, setLocalClickedAt] = useState<number | null>(null);
+  const [busClickedAt, setBusClickedAt] = useState<number | null>(null);
+  const localConfirmed = localClickedAt !== null && localSaves > localClickedAt;
+  const busConfirmed = busClickedAt !== null && busSaves > busClickedAt;
   const key = "settings:import.railMemory";
+  const saved = (
+    <span role="status" className="t-caption">
+      {t(`${key}.saved`)}
+    </span>
+  );
 
   return (
     <div id="rail-import-memory" className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
@@ -35,18 +44,21 @@ export function RailImportMemoryRows(): JSX.Element {
           title={t(`${key}.localTransit.title`)}
           sub={t(`${key}.localTransit.sub`)}
           control={
-            <Segmented
-              label={t(`${key}.localTransit.title`)}
-              value={localTransit}
-              onChange={(value) => {
-                setClickedAt(saves);
-                setLocalTransit(value);
-              }}
-              options={[
-                { value: "skip", label: t(`${key}.localTransit.skip`) },
-                { value: "rail", label: t(`${key}.localTransit.rail`) },
-              ]}
-            />
+            <>
+              {localConfirmed && saved}
+              <Segmented
+                label={t(`${key}.localTransit.title`)}
+                value={localTransit}
+                onChange={(value) => {
+                  setLocalClickedAt(localSaves);
+                  setLocalTransit(value);
+                }}
+                options={[
+                  { value: "skip", label: t(`${key}.localTransit.skip`) },
+                  { value: "rail", label: t(`${key}.localTransit.rail`) },
+                ]}
+              />
+            </>
           }
         />
         {isEnabled("bus") && (
@@ -54,28 +66,26 @@ export function RailImportMemoryRows(): JSX.Element {
             title={t(`${key}.bus.title`)}
             sub={t(`${key}.bus.sub`)}
             control={
-              <Segmented
-                label={t(`${key}.bus.title`)}
-                value={bus}
-                onChange={(value) => {
-                  setClickedAt(saves);
-                  setBus(value);
-                }}
-                options={[
-                  { value: "skip", label: t(`${key}.bus.skip`) },
-                  { value: "bus", label: t(`${key}.bus.bus`) },
-                ]}
-              />
+              <>
+                {busConfirmed && saved}
+                <Segmented
+                  label={t(`${key}.bus.title`)}
+                  value={bus}
+                  onChange={(value) => {
+                    setBusClickedAt(busSaves);
+                    setBus(value);
+                  }}
+                  options={[
+                    { value: "skip", label: t(`${key}.bus.skip`) },
+                    { value: "bus", label: t(`${key}.bus.bus`) },
+                  ]}
+                />
+              </>
             }
           />
         )}
       </SettingRows>
       <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-md)" }}>
-        {confirmed && (
-          <span role="status" className="t-caption">
-            {t(`${key}.saved`)}
-          </span>
-        )}
         <Link to="/rail" className="t-caption" style={{ color: "var(--accent)" }}>
           {t(`${key}.openImport`)} →
         </Link>

@@ -1,4 +1,5 @@
 import { ContextLinksCard } from "../../components/Settings/ContextLinksCard";
+import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import type { SettingsSectionId } from "./settingsModel";
 import type { useSettingsPage } from "../../components/Settings/useSettingsPage";
 
@@ -57,6 +58,7 @@ export default function SettingsSectionSwitch({
 }: SettingsSectionSwitchProps): JSX.Element | null {
   const isAdmin = page.user?.isAdmin ?? false;
   const { isFeatureVisible } = useBetaFeatures();
+  const { isEnabled } = useEnabledDomains();
 
   switch (section) {
     case "profile":
@@ -195,7 +197,7 @@ export default function SettingsSectionSwitch({
         <ContextLinksCard
           scope="views.mapAppearance"
           links={[
-            { id: "routes", to: "/dashboard/flight" },
+            { id: "routes", to: "/dashboard" },
             { id: "layers", to: "/dashboard" },
           ]}
         />
@@ -211,7 +213,7 @@ export default function SettingsSectionSwitch({
       return (
         <ContextLinksCard
           scope="views.listAppearance"
-          links={[{ id: "columns", to: "/flights" }]}
+          links={[{ id: "columns", to: isEnabled("flight") ? "/flights" : "/dashboard" }]}
         />
       );
     case "comparisonConsent":

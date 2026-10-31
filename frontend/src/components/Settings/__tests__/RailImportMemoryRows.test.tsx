@@ -82,4 +82,23 @@ describe("RailImportMemoryRows — the remembered rail-import choices in Setting
     );
     expect(screen.queryByRole("status")).toBeNull();
   });
+
+  it("keeps one default's 'saved' from standing in for the other's failed save", async () => {
+    enabled.domains = ["flight", "rail", "bus"];
+    updateSettings
+      .mockReset()
+      .mockImplementation(async (patch: { railImport: { bus?: string } }) => {
+        if (patch.railImport.bus) throw new Error("down");
+        return {};
+      });
+    view();
+    fireEvent.click(
+      screen.getByRole("radio", { name: "settings:import.railMemory.localTransit.rail" })
+    );
+    expect(await screen.findAllByRole("status")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("radio", { name: "settings:import.railMemory.bus.bus" }));
+    await waitFor(() => expect(useSuggestionSwitchesStore.getState().railImportBus).toBe("skip"));
+    // Only the U-Bahn/tram row, which was saved, says so.
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+  });
 });

@@ -51,7 +51,7 @@ function RememberLine({
   );
   const setLocalTransit = useSuggestionSwitchesStore((s) => s.setRailImportLocalTransit);
   const setBus = useSuggestionSwitchesStore((s) => s.setRailImportBus);
-  const saves = useSuggestionSwitchesStore((s) => s.railImportSaves);
+  const saves = useSuggestionSwitchesStore((s) => s.railImportSaves[group]);
   // The click's save count: "remembered" shows once the server has confirmed a
   // save after it — the switch is optimistic, so a failed save must not read
   // as done.
