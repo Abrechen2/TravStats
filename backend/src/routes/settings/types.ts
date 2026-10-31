@@ -272,7 +272,7 @@ export const defaultSettings = {
     // "" = no default: the flight form must not classify an untouched
     // flight (#256). Mirrors frontend settingsStore.ts.
     seatClass: "",
-    favoriteAirline: "Lufthansa",
+    favoriteAirline: "",
     flightCategory: "",
   },
   map: {

@@ -114,7 +114,10 @@ export function CruiseEditModal({
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
 
   // ONE source for the starting values, read by the state AND the dirty guard.
-  const [initial] = useState<CruiseFormFields>(() => cruiseFormFields(cruise, baseCurrency));
+  const cruiseDefaults = useSettingsStore((s) => s.cruise);
+  const [initial] = useState<CruiseFormFields>(() =>
+    cruiseFormFields(cruise, baseCurrency, cruiseDefaults)
+  );
   const [draft, setDraft] = useState<CruiseFormFields>(initial);
   const set: SetCruiseField = useCallback(
     (key, value) => setDraft((prev) => ({ ...prev, [key]: value })),

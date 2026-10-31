@@ -41,7 +41,7 @@ const lastHidden = (report: ReturnType<typeof vi.fn>): number =>
 describe("standard level inside a section", () => {
   beforeEach(() => useSettingsLevelStore.setState({ level: "standard" }));
 
-  it("keeps the live-update switch with approval and flight-only, and hides the interval and expiry", () => {
+  it("keeps the live-update switch with approval, and hides the expiry", () => {
     const report = renderReporting(
       <AutoUpdateSection
         autoUpdateSettings={autoUpdate}
@@ -54,10 +54,9 @@ describe("standard level inside a section", () => {
     );
     expect(screen.getByLabelText("settings:autoUpdate.enabled")).toBeInTheDocument();
     expect(screen.getByLabelText("settings:autoUpdate.requireApproval")).toBeInTheDocument();
-    expect(screen.getByLabelText("settings:autoUpdate.onlyDuringFlight")).toBeInTheDocument();
-    expect(screen.queryByLabelText("settings:autoUpdate.checkInterval")).toBeNull();
+    expect(screen.queryByLabelText("settings:autoUpdate.onlyDuringFlight")).toBeNull();
     expect(screen.queryByLabelText("settings:autoUpdate.expiryHours")).toBeNull();
-    expect(lastHidden(report)).toBe(2);
+    expect(lastHidden(report)).toBe(1);
   });
 
   it("counts no hidden tuning while live updates are off — there is none to show", () => {
@@ -86,7 +85,7 @@ describe("standard level inside a section", () => {
         onSave={vi.fn()}
       />
     );
-    expect(screen.getByLabelText("settings:autoUpdate.checkInterval")).toBeInTheDocument();
+    expect(screen.getByLabelText("settings:autoUpdate.expiryHours")).toBeInTheDocument();
     expect(lastHidden(report)).toBe(0);
   });
 

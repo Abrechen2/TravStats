@@ -35,21 +35,18 @@ export default function AutoUpdateSection({
 }: AutoUpdateSectionProps): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
   const coarse = useCoarsePointer();
-  // Whether live updates run, whether they wait for approval and whether they
-  // run only during a flight are decisions about what the app does for the
-  // person, so they are standard (settings redesign, package 3). The polling
-  // interval and expiry are tuning, shown at the expert level. All four rows
-  // exist only while the switch is on.
-  const expert = useExpertRows(settings.enabled ? 2 : 0);
+  // Whether live updates run and whether they wait for approval are decisions
+  // about what the app does for the person, so they are standard (settings
+  // redesign, package 3). The expiry is tuning, shown at the
+  // expert level. The rows exist only while the switch is on. "Check interval"
+  // and "Only during flight" are gone (forgejo#389): checks follow the fixed
+  // per-flight schedule in utils/smartCheckSchedule.ts, which no setting
+  // reads. The API still carries both fields, unchanged, for older clients.
+  const expert = useExpertRows(settings.enabled ? 1 : 0);
   const decisions = settings.enabled;
   const tuning = settings.enabled && expert;
 
-  const numberField = (
-    id: string,
-    key: "checkInterval" | "expiryHours",
-    min: number,
-    max: number
-  ): JSX.Element => (
+  const numberField = (id: string, key: "expiryHours", min: number, max: number): JSX.Element => (
     <input
       id={id}
       type="number"
@@ -114,23 +111,6 @@ export default function AutoUpdateSection({
               checked={settings.requireApproval}
               onChange={(on) => onSave({ ...settings, requireApproval: on })}
               label={t("settings:autoUpdate.requireApproval")}
-            />
-          )}
-          {decisions && (
-            <Switch
-              id="autoupdate-only-during-flight"
-              checked={settings.onlyDuringFlight}
-              onChange={(on) => onSave({ ...settings, onlyDuringFlight: on })}
-              label={t("settings:autoUpdate.onlyDuringFlight")}
-            />
-          )}
-          {tuning && (
-            <SettingRow
-              expert
-              title={t("settings:autoUpdate.checkInterval")}
-              sub={t("settings:autoUpdate.checkIntervalDescription")}
-              htmlFor="autoupdate-check-interval"
-              control={numberField("autoupdate-check-interval", "checkInterval", 5, 1440)}
             />
           )}
           {tuning && (

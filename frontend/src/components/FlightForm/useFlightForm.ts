@@ -146,6 +146,10 @@ export function useFlightForm(
     if (baseCurrency) setCurrency(baseCurrency);
     if (defaults?.flightCategory) setCategory(defaults.flightCategory);
     if (defaults?.seatClass) setSeatClass(defaults.seatClass);
+    // Settings > Defaults > favourite airline (forgejo#389). This hook is the CREATE form only
+    // (editing uses editFormModel, which never reads defaults); a typed or
+    // loaded airline wins.
+    if (defaults?.favoriteAirline) setAirline((prev) => prev || defaults.favoriteAirline);
   }, [baseCurrency, defaults]);
 
   // Auto-set status based on date (skip when historical is active)

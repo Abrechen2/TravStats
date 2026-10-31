@@ -18,6 +18,8 @@ interface CruiseOverlayAppearance {
   portColor?: [number, number, number];
   portSizeScale: number;
   labelsMode: LabelsMode;
+  /** Settings > Cruises > "Show cruise routes"; ports stay either way. Default on. */
+  showArcs?: boolean;
 }
 
 /**
@@ -37,10 +39,10 @@ export function buildCruiseOverlays(
   onCruiseClick: (cruise: Cruise) => void,
   appearance: CruiseOverlayAppearance
 ): { below: Layer[]; above: Layer[] } {
-  const { portColor, portSizeScale, labelsMode, ...arcAppearance } = appearance;
-  const shared = withSharedArcs(cruises, geometry, arcAppearance);
+  const { portColor, portSizeScale, labelsMode, showArcs = true, ...arcAppearance } = appearance;
+  const shared = withSharedArcs(showArcs ? cruises : [], geometry, arcAppearance);
   const arcs = createCruiseArcsLayer(
-    cruises,
+    showArcs ? cruises : [],
     geometry,
     selectedCruiseId,
     (cruiseId: string) => {
@@ -49,7 +51,12 @@ export function buildCruiseOverlays(
     },
     shared
   );
-  const arrows = createCruiseArrowsLayer(cruises, geometry, selectedCruiseId, shared);
+  const arrows = createCruiseArrowsLayer(
+    showArcs ? cruises : [],
+    geometry,
+    selectedCruiseId,
+    shared
+  );
   const ports = createCruisePortsLayer(cruises, appearance.zoom, {
     portColor,
     portSizeScale,
