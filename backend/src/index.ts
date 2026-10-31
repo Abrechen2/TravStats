@@ -556,16 +556,25 @@ if (process.env.NODE_ENV !== "test") {
       const { normalizeAircraft } = await import("./utils/aircraftNormalize");
       const flightsWithAircraft = await prisma.flight.findMany({
         where: { aircraft: { not: null } },
-        select: { id: true, aircraft: true },
+        select: { aircraft: true },
+        distinct: ["aircraft"],
       });
-      let aircraftUpdated = 0;
+      // One updateMany per distinct raw value instead of one update per flight
+      // (forgejo#383, PERF-29).
+      const normalizedByRaw = new Map<string, string>();
       for (const f of flightsWithAircraft) {
         if (!f.aircraft) continue;
         const normalized = normalizeAircraft(f.aircraft);
-        if (normalized !== f.aircraft) {
-          await prisma.flight.update({ where: { id: f.id }, data: { aircraft: normalized } });
-          aircraftUpdated++;
-        }
+        if (normalized === f.aircraft) continue;
+        normalizedByRaw.set(f.aircraft, normalized);
+      }
+      let aircraftUpdated = 0;
+      for (const [raw, normalized] of normalizedByRaw) {
+        const { count } = await prisma.flight.updateMany({
+          where: { aircraft: raw },
+          data: { aircraft: normalized },
+        });
+        aircraftUpdated += count;
       }
       if (aircraftUpdated > 0) {
         logger.info({

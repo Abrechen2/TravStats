@@ -42,7 +42,27 @@ const LIST_INCLUDE = {
   },
 } satisfies Prisma.PlaceListInclude;
 
+/**
+ * The index without `withEntries` needs only what `summarise` reads — not the
+ * full Place row of every entry (forgejo#383, PERF-26).
+ */
+const LIST_SUMMARY_INCLUDE = {
+  entries: {
+    select: {
+      place: {
+        select: {
+          visited: true,
+          isoCountryCode: true,
+          visits: { select: { visitedAt: true } },
+        },
+      },
+    },
+    orderBy: { sortIdx: "asc" },
+  },
+} satisfies Prisma.PlaceListInclude;
+
 type ListRow = Prisma.PlaceListGetPayload<{ include: typeof LIST_INCLUDE }>;
+type SummaryRow = Prisma.PlaceListGetPayload<{ include: typeof LIST_SUMMARY_INCLUDE }>;
 
 interface ListSummary {
   placeCount: number;
@@ -56,7 +76,7 @@ interface ListSummary {
  * domain is: from data and dates, through `shared/placeCounting`. A list has no
  * status column and must never grow one.
  */
-function summarise(list: ListRow, now = new Date()): ListSummary {
+function summarise(list: ListRow | SummaryRow, now = new Date()): ListSummary {
   const countries = new Set<string>();
   let visitedCount = 0;
 
@@ -75,14 +95,17 @@ function summarise(list: ListRow, now = new Date()): ListSummary {
 }
 
 /** Strips the join rows the summary was derived from unless they were asked for. */
-function present(list: ListRow, withEntries: boolean, now = new Date()) {
+function present(list: ListRow | SummaryRow, withEntries: boolean, now = new Date()) {
   const summary = summarise(list, now);
   const { entries, ...rest } = list;
   return {
     ...rest,
     ...summary,
     entries: withEntries
-      ? entries.map((e) => ({ ...e, place: { ...e.place, visits: undefined } }))
+      ? (entries as ListRow["entries"]).map((e) => ({
+          ...e,
+          place: { ...e.place, visits: undefined },
+        }))
       : undefined,
   };
 }
@@ -122,7 +145,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
 
     const rows = await prisma.placeList.findMany({
       where: { userId },
-      include: LIST_INCLUDE,
+      include: parsed.data.withEntries ? LIST_INCLUDE : LIST_SUMMARY_INCLUDE,
       orderBy: [{ sortIdx: "asc" }, { name: "asc" }],
     });
 

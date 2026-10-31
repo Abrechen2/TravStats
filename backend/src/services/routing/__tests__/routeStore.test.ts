@@ -123,3 +123,12 @@ describe("pruning the durable route files", () => {
     ).resolves.toEqual({ removed: 0, bytes: 0 });
   });
 });
+
+it("keeps no more than maxHot results in memory when there is no directory (forgejo#384 MEM-8)", async () => {
+  const store = new RouteStore<number[]>(null, parse, 2);
+  const keys = [1, 2, 3].map((n) => routeKey(["hot", n]));
+  for (const [i, k] of keys.entries()) await store.put(k, [i]);
+  expect(await store.get(keys[0])).toBeNull(); // oldest evicted
+  expect(await store.get(keys[1])).toEqual([1]);
+  expect(await store.get(keys[2])).toEqual([2]);
+});

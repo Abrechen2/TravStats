@@ -1,5 +1,6 @@
 import { createSchematicRouteStore, schematicRouteVersion } from "./routing/schematicRouteStore";
 import { routeKey } from "./routing/routeStore";
+import { LruMap } from "../utils/lruMap";
 /**
  * Schematic cruise-route pipeline — coarse waypoints + spline approach.
  *
@@ -861,36 +862,17 @@ export interface SchematicRoute {
 /** Hot set backed by durable successful routes. The key carries the policy
  * and a hash of the maritime graph and masks (schematicRouteVersion). */
 let durableRoutes = createSchematicRouteStore();
-const ROUTE_CACHE_MAX = 5000;
-const routeCache = new Map<string, SchematicRoute>();
-let routeCacheHits = 0;
-let routeCacheMisses = 0;
 
 function routeCacheKey(dep: SchematicRoutePort, arr: SchematicRoutePort): string | null {
   if (dep.id === undefined || arr.id === undefined) return null;
   return routeKey([schematicRouteVersion(), dep, arr, getPortApproach(dep), getPortApproach(arr)]);
 }
 
-export function getSchematicRouteCacheStats(): {
-  size: number;
-  hits: number;
-  misses: number;
-  hitRate: number;
-} {
-  const total = routeCacheHits + routeCacheMisses;
-  return {
-    size: routeCache.size,
-    hits: routeCacheHits,
-    misses: routeCacheMisses,
-    hitRate: total === 0 ? 0 : routeCacheHits / total,
-  };
-}
+const fallbackRoutes = new LruMap<string, SchematicRoute>(500);
 
 export function clearSchematicRouteCache(): void {
-  routeCache.clear();
+  fallbackRoutes.clear();
   durableRoutes = createSchematicRouteStore();
-  routeCacheHits = 0;
-  routeCacheMisses = 0;
 }
 
 /**
@@ -906,37 +888,19 @@ export async function computeSchematicRoute(
   arr: SchematicRoutePort
 ): Promise<SchematicRoute> {
   const key = routeCacheKey(dep, arr);
-  if (key !== null) {
-    const cached = routeCache.get(key);
-    if (cached) {
-      // LRU bump: re-insert to mark as most-recently-used.
-      routeCache.delete(key);
-      routeCache.set(key, cached);
-      routeCacheHits++;
-      return structuredClone(cached);
-    }
-    routeCacheMisses++;
-  }
 
   const compute = async (): Promise<SchematicRoute> => {
     const raw = await computeSchematicRouteUncached(dep, arr);
     const smoothed = resampleNonCorridorMiddle(raw);
     return { ...raw, ...smoothed };
   };
-  const result =
-    key === null
-      ? await compute()
-      : await durableRoutes.resolve(key, compute, (route) => route.routed);
-
-  if (key !== null) {
-    if (routeCache.size >= ROUTE_CACHE_MAX) {
-      // Evict the oldest entry. Map preserves insertion order, so the
-      // first key in the iterator is the least-recently inserted/bumped.
-      const oldest = routeCache.keys().next().value;
-      if (oldest !== undefined) routeCache.delete(oldest);
-    }
-    routeCache.set(key, structuredClone(result));
-  }
+  if (key === null) return compute();
+  // RouteStore keeps only routed results; a straight-chord fallback would be
+  // recomputed (full A*) on every request, so those get a small bounded memo.
+  const fallback = fallbackRoutes.get(key);
+  if (fallback) return structuredClone(fallback);
+  const result = await durableRoutes.resolve(key, compute, (route) => route.routed);
+  if (!result.routed) fallbackRoutes.set(key, structuredClone(result));
   return result;
 }
 

@@ -276,12 +276,22 @@ async function authenticateWithApiToken(req: AuthRequest, plaintext: string): Pr
   // Bump last-used metadata fire-and-forget. A failure here MUST NOT
   // reject the request; this is just bookkeeping for the user's "are
   // any of my tokens stale?" UI.
-  void prisma.apiToken
-    .update({
-      where: { id: token.id },
-      data: { lastUsedAt: new Date(), lastUsedIp: req.ip ?? null },
-    })
-    .catch(() => undefined);
+  if (shouldTouchLastUsed(token.lastUsedAt)) {
+    void prisma.apiToken
+      .update({
+        where: { id: token.id },
+        data: { lastUsedAt: new Date(), lastUsedIp: req.ip ?? null },
+      })
+      .catch(() => undefined);
+  }
+}
+
+/** A PAT's last-used stamp is rewritten at most once a minute (forgejo#383, PERF-28). */
+const LAST_USED_THROTTLE_MS = 60_000;
+
+/** Exported for tests. A never-used token always gets stamped. */
+export function shouldTouchLastUsed(lastUsedAt: Date | null, now = Date.now()): boolean {
+  return lastUsedAt === null || now - lastUsedAt.getTime() >= LAST_USED_THROTTLE_MS;
 }
 
 /**
