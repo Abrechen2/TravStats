@@ -16,6 +16,8 @@ export interface DueReminder {
   user: PrefUser & { id: string };
   domain: ReminderDomain;
   entryId: string;
+  /** Lodging only: the stay's lodging id, carried into the push data (companion request). */
+  lodgingId?: string;
   tripId: string | null;
   hours: number;
   /** The entry's real instant (claims re-arm when it moves by more than 30 min). */
@@ -36,6 +38,7 @@ export async function sendDueReminder(due: DueReminder): Promise<void> {
       await notifyEntryReminder(user.id, {
         domain,
         entryId,
+        ...(due.lodgingId !== undefined && { lodgingId: due.lodgingId }),
         tripId: due.tripId,
         hours,
         anchorAt: due.anchorAt,

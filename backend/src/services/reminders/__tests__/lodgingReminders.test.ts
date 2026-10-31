@@ -151,6 +151,32 @@ describe("checkLodgingCheckInReminders", () => {
     expect(mockSendLodgingCheckInReminder).toHaveBeenCalledTimes(1);
   });
 
+  it("hands the stay's lodging id to the push, entry id stays the stay id", async () => {
+    const checkInDate = new Date("2026-09-27T00:00:00.000Z");
+    mockFindMany.mockResolvedValueOnce([
+      makeStay(
+        {
+          user: {
+            id: "u1",
+            notificationEmail: null,
+            notifyBefore24h: true,
+            notifyBefore2h: false,
+            devicePushes: [{ reminders: true }],
+            settings: { data: {}, enabledDomains: ENABLED },
+          },
+        } as Partial<StayFixture>,
+        checkInDate
+      ),
+    ]);
+    const { checkLodgingCheckInReminders } = await import("../lodgingReminders");
+    await checkLodgingCheckInReminders(dueInstant(checkInDate));
+    const { notifyEntryReminder } = await import("../../notifications/dispatcher");
+    expect(notifyEntryReminder).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ domain: "lodging", entryId: "stay-a", lodgingId: "lodging-a" })
+    );
+  });
+
   it("sends the reminder once, 24 h before the default 15:00 check-in in the property's zone", async () => {
     const checkInDate = new Date("2026-09-27T00:00:00.000Z");
     mockFindMany.mockResolvedValueOnce([makeStay({}, checkInDate)]);

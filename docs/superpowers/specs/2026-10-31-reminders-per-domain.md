@@ -51,7 +51,7 @@ GET body.
 ### Push payload (sealed for the device)
 
 `type` is `"<domain>.reminder"` (`flight.reminder` unchanged), plus `domain`,
-`entryId`, `id` (the claim id), `title`, `body`, `sentAt`; `flightId` only for flights.
+`entryId`, `id` (the claim id), `title`, `body`, `sentAt`; `flightId` only for flights; `lodgingId` (string, the stay's lodging id) only for lodging (added 31.10., additive, companion request).
 `collapseId` is `reminder:<entryId>`. A relay 410 `token-invalid` no longer deletes the
 device row: it sets `tokenRejectedAt`, the device is skipped, and a registration
 (`PUT /devices/me/push`) with a DIFFERENT token clears it.

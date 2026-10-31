@@ -119,6 +119,7 @@ export async function checkLodgingCheckInReminders(now: Date): Promise<void> {
           user,
           domain: "lodging",
           entryId: stay.id,
+          lodgingId: stay.lodgingId,
           tripId: stay.tripId,
           hours,
           anchorAt: anchor,
