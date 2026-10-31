@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
+import { describe, it, expect, beforeAll, afterAll, jest } from "@jest/globals";
 import request from "supertest";
 import app from "../../index";
 import { prisma } from "../../db";
@@ -155,6 +155,31 @@ describe("GET /api/v1/flights/facets", () => {
     const bySearch = await facets({ q: "austrian" });
     expect(bySearch.body.summary.flights).toBe(1);
     expect(bySearch.body.years).toEqual([{ value: 2024, count: 1 }]);
+  });
+
+  it("resolves a year filter once, inside a departure window, and answers the same (forgejo#337)", async () => {
+    const original = prisma.flight.findMany.bind(prisma.flight);
+    let rowsRead = 0;
+    const spy = jest.spyOn(prisma.flight, "findMany").mockImplementation(((
+      args: Parameters<typeof original>[0]
+    ) =>
+      original(args).then((rows) => {
+        rowsRead += rows.length;
+        return rows;
+      })) as unknown as typeof prisma.flight.findMany);
+    try {
+      const res = await facets({ year: 2023 });
+      expect(res.body.summary.flights).toBe(2);
+      expect(res.body.years).toEqual([
+        { value: 2024, count: 2 },
+        { value: 2023, count: 2 },
+      ]);
+      // The year list needs every dated flight once (4); the year filter is two
+      // windowed rows, once — it was three full scans before.
+      expect(rowsRead).toBeLessThanOrEqual(6);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("answers an empty account with empty lists, not with an error", async () => {

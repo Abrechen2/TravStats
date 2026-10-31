@@ -42,10 +42,14 @@ router.get(
           orderBy: { name: "asc" },
           select: { name: true },
         }),
-        prisma.flight.findMany({
-          where: { userId, airline: { not: null } },
-          select: { airline: true },
-          distinct: ["airline"],
+        // groupBy, not `distinct`: without the nativeDistinct preview Prisma
+        // fetches every row and de-duplicates in Node (forgejo#343).
+        prisma.flight.groupBy({
+          by: ["airline"],
+          where: {
+            userId,
+            airline: q ? { not: null, contains: q, mode: "insensitive" } : { not: null },
+          },
         }),
       ]);
 
@@ -90,10 +94,10 @@ router.get(
           orderBy: { name: "asc" },
           select: { name: true },
         }),
-        prisma.flight.findMany({
+        // `q` is matched on the NORMALISED name below, which SQL cannot see.
+        prisma.flight.groupBy({
+          by: ["aircraft"],
           where: { userId, aircraft: { not: null } },
-          select: { aircraft: true },
-          distinct: ["aircraft"],
         }),
       ]);
 

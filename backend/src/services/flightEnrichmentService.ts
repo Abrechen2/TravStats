@@ -9,6 +9,7 @@ import { PrismaClient, Flight, Prisma } from "../prisma";
 import { prisma } from "../db";
 import { calculateDistance } from "../utils/geo";
 import logger from "../utils/logger";
+import * as candidateQuery from "./flightEnrichmentCandidateQuery";
 
 const prismaClient = prisma as PrismaClient;
 
@@ -156,7 +157,10 @@ export async function findEnrichmentCandidates(
             },
           },
         },
+        AND: [candidateQuery.MISSING_ENRICHMENT_FIELD],
       },
+      select: candidateQuery.ENRICHMENT_CANDIDATE_SELECT,
+      orderBy: { id: "asc" },
     });
 
     const candidates: EnrichmentCandidate[] = [];
@@ -186,7 +190,7 @@ export async function findEnrichmentCandidates(
       const ageYears = ageMs / (1000 * 60 * 60 * 24 * 365.25);
 
       // Basic confidence calculation (will be refined during aggregation)
-      const confidence = calculateBasicConfidence(flight, missingFields);
+      const confidence = candidateQuery.calculateBasicConfidence(flight, missingFields);
 
       candidates.push({
         flightId: flight.id,
@@ -213,30 +217,9 @@ export async function findEnrichmentCandidates(
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
-    return [];
+    // Not `[]`: a database error must not reach the user as "nothing to enrich".
+    throw error;
   }
-}
-
-/**
- * Calculate basic confidence for a candidate (before aggregation)
- */
-function calculateBasicConfidence(flight: Flight, missingFields: string[]): number {
-  let confidence = 50; // Base confidence
-
-  // More confidence if flight number is present
-  if (flight.flightNumber) {
-    confidence += 20;
-  }
-
-  // Less confidence if many fields are missing
-  confidence -= missingFields.length * 5;
-
-  // More confidence if at least some data exists
-  if (flight.airline) confidence += 10;
-  if (flight.depIata || flight.depIcao) confidence += 10;
-  if (flight.arrIata || flight.arrIcao) confidence += 10;
-
-  return Math.max(0, Math.min(100, confidence));
 }
 
 /**

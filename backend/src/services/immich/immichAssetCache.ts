@@ -12,6 +12,12 @@
 import { ImmichAsset } from "./types";
 
 export const ASSET_CACHE_TTL_MS = 60_000;
+/**
+ * The most albums held at once (forgejo#358). A listing is 1-2 MB at 5k assets,
+ * and an entry used to stay until restart unless the same album was asked for
+ * again. The oldest entry goes first.
+ */
+export const ASSET_CACHE_MAX_ENTRIES = 100;
 
 interface CacheEntry {
   expiresAt: number;
@@ -21,14 +27,29 @@ interface CacheEntry {
 const entries = new Map<string, CacheEntry>();
 const inFlight = new Map<string, Promise<ImmichAsset[]>>();
 
-// Per-key generation counter. Bumped by `invalidateAlbumAssets` so that a
-// load already in flight when an invalidation happens can detect it was
-// superseded and skip writing its (now stale) result into `entries`.
-const generations = new Map<string, number>();
+// Invalidation clock. `invalidateAlbumAssets` stamps the key with a rising
+// number; a load remembers the clock when it STARTED and skips writing its
+// (now stale) result if the key was stamped after that. A stamp only matters
+// while a load that started before it is still running, so the map is emptied
+// whenever no load is in flight instead of growing with every album ever seen.
+let clock = 0;
+let activeLoads = 0;
+const invalidatedAt = new Map<string, number>();
 
 const keyOf = (userId: string, albumId: string): string => JSON.stringify([userId, albumId]);
 
-const generationOf = (key: string): number => generations.get(key) ?? 0;
+/** Store an entry; expired ones and, past the cap, the oldest ones are dropped. */
+function remember(key: string, assets: ImmichAsset[]): void {
+  const now = Date.now();
+  for (const [k, e] of entries) if (e.expiresAt <= now) entries.delete(k);
+  entries.delete(key);
+  entries.set(key, { assets, expiresAt: now + ASSET_CACHE_TTL_MS });
+  while (entries.size > ASSET_CACHE_MAX_ENTRIES) {
+    const oldest = entries.keys().next().value;
+    if (oldest === undefined) break;
+    entries.delete(oldest);
+  }
+}
 
 export async function getCachedAlbumAssets(
   userId: string,
@@ -41,11 +62,13 @@ export async function getCachedAlbumAssets(
   if (cached && cached.expiresAt > Date.now()) {
     return cached.assets;
   }
+  if (cached) entries.delete(key);
 
   const pending = inFlight.get(key);
   if (pending) return pending;
 
-  const generation = generationOf(key);
+  const startedAt = clock;
+  activeLoads++;
 
   // A failed load must not be cached — `finally` clears the in-flight slot so
   // the next caller retries upstream instead of adopting a rejected promise.
@@ -56,12 +79,14 @@ export async function getCachedAlbumAssets(
       // invalidation, silently serving it stale for up to a full TTL
       // window — the caller still gets `assets` below, only the cache
       // write is suppressed.
-      if (generationOf(key) === generation) {
-        entries.set(key, { assets, expiresAt: Date.now() + ASSET_CACHE_TTL_MS });
+      if ((invalidatedAt.get(key) ?? 0) <= startedAt) {
+        remember(key, assets);
       }
       return assets;
     })
     .finally(() => {
+      activeLoads--;
+      if (activeLoads === 0) invalidatedAt.clear();
       // Only retract our own registration. An invalidation may have replaced it
       // with a newer load, and deleting by key alone would orphan that load's
       // in-flight entry and cause a redundant upstream call.
@@ -84,12 +109,14 @@ export function peekCachedAlbumAssets(
   const key = keyOf(userId, albumId);
   const cached = entries.get(key);
   if (cached && cached.expiresAt > Date.now()) return Promise.resolve(cached.assets);
+  if (cached) entries.delete(key);
   return inFlight.get(key) ?? null;
 }
 
 export function invalidateAlbumAssets(userId: string, albumId: string): void {
   const key = keyOf(userId, albumId);
-  generations.set(key, generationOf(key) + 1);
+  // Only worth remembering while a load that started earlier can still finish.
+  if (activeLoads > 0) invalidatedAt.set(key, ++clock);
   entries.delete(key);
   inFlight.delete(key);
 }
@@ -98,7 +125,12 @@ export function invalidateAlbumAssets(userId: string, albumId: string): void {
 export function clearImmichAssetCache(): void {
   entries.clear();
   inFlight.clear();
-  generations.clear();
+  invalidatedAt.clear();
+}
+
+/** Test seam. Never called from production code. How many listings and invalidation stamps are held. */
+export function immichAssetCacheSizes(): { entries: number; invalidations: number } {
+  return { entries: entries.size, invalidations: invalidatedAt.size };
 }
 
 /** Test seam. Never called from production code. Returns the promise in inFlight for a key, or undefined. */

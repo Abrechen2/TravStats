@@ -27,7 +27,8 @@
  * derivation asks it before it reads and again before it publishes.
  */
 import { prisma } from "../../db";
-import { flightRecorderWindows, FLIGHT_WINDOW_SELECT } from "../tripRecording/bounds";
+import { flightRecorderWindows } from "../tripRecording/bounds";
+import { flightsNear } from "./flightsNear";
 import { TRAVTRACK_PAGE_CAP, travtrackProvider } from "../locationProvider/travtrackProvider";
 import type { Coverage, LocationObservation, ReadWindow } from "../locationProvider/types";
 import { anomalyMask, isBadFix, stableCut, type FlightWindow, type StableCut } from "./anomaly";
@@ -86,10 +87,8 @@ export type DerivationReadOptions = {
 
 /** The recorder windows of the account's flights that touch `window`, `[from, to]` inclusive. */
 export async function flightWindowsIn(userId: string, window: ReadWindow): Promise<FlightWindow[]> {
-  const flights = await prisma.flight.findMany({
-    where: { userId, status: { not: "cancelled" } },
-    select: FLIGHT_WINDOW_SELECT,
-  });
+  // Bounded in the database (forgejo#335): never the account's whole flight history.
+  const flights = await flightsNear(userId, window.fromMs, window.untilMs);
   const windows = await flightRecorderWindows(flights);
   return windows.filter(([from, to]) => from < window.untilMs && to >= window.fromMs);
 }

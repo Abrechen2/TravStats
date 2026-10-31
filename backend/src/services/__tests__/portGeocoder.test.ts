@@ -1,4 +1,5 @@
 import { geocodePort, resetPortGeocoderForTests } from "../portGeocoder";
+import * as instanceSettings from "../instanceSettingsService";
 
 /**
  * A Nominatim failure used to come back as an empty list — indistinguishable
@@ -60,6 +61,49 @@ describe("geocodePort — failures are reported, not folded into 'no match'", ()
     expect(second.failure).toBeNull();
     expect(second.ports).toHaveLength(1);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("geocodePort — one Nominatim client for the instance (forgejo#359)", () => {
+  const realFetch = global.fetch;
+  const fetchMock = jest.fn();
+  const body = [{ lat: "40.47", lon: "17.24", name: "Taranto", address: { country: "Italia" } }];
+
+  beforeEach(() => {
+    resetPortGeocoderForTests();
+    fetchMock.mockReset();
+    global.fetch = fetchMock as unknown as typeof fetch;
+  });
+  afterEach(() => jest.restoreAllMocks());
+  afterAll(() => {
+    global.fetch = realFetch;
+  });
+
+  it("asks the admin's configured Nominatim, not a hard-coded OSM", async () => {
+    jest.spyOn(instanceSettings, "resolveGeocoderUrls").mockResolvedValue({
+      photonUrl: "http://photon.lan",
+      nominatimUrl: "http://nominatim.lan:8080/",
+    });
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => body });
+    await geocodePort("Taranto");
+    expect(String(fetchMock.mock.calls[0][0])).toMatch(
+      /^http:\/\/nominatim\.lan:8080\/search\?q=Taranto/
+    );
+  });
+
+  it("never lets two concurrent lookups through inside the 1 req/s window", async () => {
+    jest
+      .spyOn(instanceSettings, "resolveGeocoderUrls")
+      .mockResolvedValue({ photonUrl: "x", nominatimUrl: "http://nominatim.lan" });
+    const starts: number[] = [];
+    fetchMock.mockImplementation(async () => {
+      starts.push(Date.now());
+      return { ok: true, status: 200, json: async () => body };
+    });
+    await Promise.all([geocodePort("Taranto"), geocodePort("Brindisi"), geocodePort("Bari")]);
+    expect(starts).toHaveLength(3);
+    expect(starts[1] - starts[0]).toBeGreaterThanOrEqual(950);
+    expect(starts[2] - starts[1]).toBeGreaterThanOrEqual(950);
   });
 });
 

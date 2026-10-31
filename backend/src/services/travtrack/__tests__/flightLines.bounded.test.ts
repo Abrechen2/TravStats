@@ -1,4 +1,4 @@
-import { prisma } from "../../../db";
+import { observeQueries, prisma } from "../../../db";
 import { FLIGHT_LINE_POINT_CAP, travTrackFlightLines } from "../flightLines";
 import { makeFlight, makeUser, wipeTravTrack } from "./fixtures";
 import { travTrackSwitches } from "./switches";
@@ -69,6 +69,58 @@ describe("travTrackFlightLines — bounded", () => {
       expect(last[1]).toBeCloseTo(fix(n - 1).lat, 4);
     } finally {
       spy.mockRestore();
+    }
+  });
+
+  it("runs no thinning query for flights outside the recorded extent that hold no link (forgejo#333)", async () => {
+    const user = await makeUser(`${PREFIX}b`);
+    try {
+      // Five flights of 2020, a recording of October 2026 only.
+      for (let i = 0; i < 5; i++) {
+        await prisma.flight.create({
+          data: {
+            userId: user,
+            depIata: "ICN",
+            arrIata: "CJU",
+            depLat: 37.469,
+            depLon: 126.451,
+            arrLat: 33.511,
+            arrLon: 126.493,
+            flightNumber: `KE${i}`,
+            departureTime: new Date(Date.parse("2020-03-01T10:00:00Z") + i * 86_400_000),
+            arrivalTime: new Date(Date.parse("2020-03-01T11:00:00Z") + i * 86_400_000),
+            status: "flown",
+          },
+        });
+      }
+      const flightId = await makeFlight(user);
+      await prisma.travTrackPoint.createMany({
+        data: [0, 1, 2].map((i) => ({
+          userId: user,
+          t: new Date(DEP + i * 600_000),
+          tS: Math.floor((DEP + i * 600_000) / 1000),
+          lat: 37.4 - i * 0.5,
+          lon: 126.4,
+          accuracyM: 5,
+          origin: "companion:phone-1",
+          originRef: `ext-${i}`,
+          deviceId: "phone-1",
+        })),
+      });
+      let raw = 0;
+      const stop = observeQueries(({ model, operation }) => {
+        if (model === undefined && /queryRaw/i.test(operation)) raw++;
+      });
+      try {
+        const lines = await travTrackFlightLines(user, () => []);
+        expect(lines.map((l) => l.flightId)).toEqual([flightId]);
+      } finally {
+        stop();
+      }
+      // One thinning query for the one flight inside the extent, none for 2020.
+      expect(raw).toBeLessThanOrEqual(1);
+    } finally {
+      await wipeTravTrack([user]);
     }
   });
 });

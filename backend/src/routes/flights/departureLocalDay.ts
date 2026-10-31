@@ -50,6 +50,8 @@ const DEPARTURE_CLOCK_SELECT = {
   ...FLIGHT_CLOCK_SELECT,
 } as const;
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 export interface LocalDeparture {
   id: string;
   /** Calendar year on the departure airport's clock. */
@@ -107,7 +109,24 @@ export async function flightIdsInLocalPeriod(
   where: Prisma.FlightWhereInput,
   period: LocalPeriod
 ): Promise<string[]> {
-  const departures = await loadLocalDepartures(where);
+  // A named year narrows the scan in the database: the stored instant and the
+  // airport's local day differ by at most 14 h, so one day either side holds
+  // every flight of that local year (forgejo#337, as stats/summary.ts does).
+  const windowed: Prisma.FlightWhereInput =
+    period.year === undefined
+      ? where
+      : {
+          AND: [
+            where,
+            {
+              departureTime: {
+                gte: new Date(Date.UTC(period.year, 0, 1) - DAY_MS),
+                lt: new Date(Date.UTC(period.year + 1, 0, 1) + DAY_MS),
+              },
+            },
+          ],
+        };
+  const departures = await loadLocalDepartures(windowed);
   return departures
     .filter(
       (d) =>

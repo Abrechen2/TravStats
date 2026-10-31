@@ -3,6 +3,7 @@ import logger from "../../utils/logger";
 import { formatStreetAddress } from "./streetAddress";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
 import { toCoordinates } from "../../shared/geo/coordinates";
+import { LruMap } from "../../utils/lruMap";
 
 // Nominatim's usage policy demands a descriptive UA and at most 1 req/s.
 // The contact URL matters (#263): a contactless UA identical across every
@@ -85,16 +86,19 @@ interface NominatimReverseRow {
 }
 
 // Geocoding results for a given normalized query are stable for the process
-// lifetime, so an unbounded cache is safe and small in practice. The key
+// lifetime, but the cache is capped (LRU, forgejo#384 MEM-7): reverse keys are
+// per point at ~11 m, so a long-running instance would otherwise grow without
+// end. The key
 // includes the resolved base URL so switching an instance's Nominatim
 // target (self-hosted vs. public) never serves a stale cross-instance
 // result out of the cache.
-const cache = new Map<string, Coordinates | null>();
+const GEOCODE_CACHE_MAX = 5_000;
+const cache = new LruMap<string, Coordinates | null>(GEOCODE_CACHE_MAX);
 
 // Same reasoning as `cache`, for the opposite direction. Kept separate rather
 // than sharing one map because the value shapes differ and a shared map would
 // need a discriminator for no benefit.
-const reverseCache = new Map<string, GeocodeParts | null>();
+const reverseCache = new LruMap<string, GeocodeParts | null>(GEOCODE_CACHE_MAX);
 
 // Serializes every outbound request onto a single chain so concurrent saves
 // cannot burst past Nominatim's 1 req/s limit — the throttle is process-wide,
@@ -153,6 +157,56 @@ export function retryAfterMs(header: string | null, nowMs = Date.now()): number 
 
 function isTransientStatus(status: number): boolean {
   return status >= 500 || status === 429 || status === 408;
+}
+
+/** The configured Nominatim base URL (DB > ENV > public default), no trailing slash. */
+async function resolveNominatimBase(): Promise<string> {
+  let nominatimUrl = DEFAULT_NOMINATIM_URL;
+  try {
+    const settings = await resolveGeocoderUrls();
+    nominatimUrl = settings.nominatimUrl;
+  } catch (error) {
+    nominatimUrl = DEFAULT_NOMINATIM_URL;
+    logger.warn({ error }, "failed to resolve geocoder settings, falling back to the default URL");
+  }
+  return nominatimUrl.replace(/\/+$/, "");
+}
+
+/** A non-OK answer from the search endpoint; the caller maps the status to its own vocabulary. */
+export class GeocoderHttpError extends Error {
+  constructor(readonly status: number) {
+    super(`geocoding provider returned ${status}`);
+  }
+}
+
+const PLACE_SEARCH_TIMEOUT_MS = 8000;
+
+/**
+ * Free-text place search (the port picker's fallback) through the SAME queue,
+ * throttle and configured base URL as every other Nominatim call, so the
+ * instance as a whole stays inside 1 req/s (forgejo#359). Returns the raw
+ * decoded JSON; throws `GeocoderHttpError` on a non-OK status and whatever
+ * fetch throws on a network failure or timeout.
+ */
+export async function searchPlaces(query: string, limit: number): Promise<unknown> {
+  const baseUrl = await resolveNominatimBase();
+  const task = queue.then(async () => {
+    await throttle();
+    const url = `${baseUrl}/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=${limit}`;
+    const res = await fetch(url, {
+      headers: { "User-Agent": USER_AGENT, "Accept-Language": GEOCODER_LANGUAGES },
+      signal: AbortSignal.timeout(PLACE_SEARCH_TIMEOUT_MS),
+    });
+    if (!res.ok) throw new GeocoderHttpError(res.status);
+    return (await res.json()) as unknown;
+  });
+  queue = task.catch(() => undefined);
+  return task;
+}
+
+/** Test seam: forget the throttle clock. */
+export function resetNominatimThrottleForTests(): void {
+  lastRequestAt = 0;
 }
 
 async function throttle(): Promise<void> {
@@ -280,17 +334,7 @@ export async function geocodeAddress(parts: GeocodeParts): Promise<Coordinates |
   const query = buildQuery(parts);
   if (!query) return null;
 
-  let nominatimUrl = DEFAULT_NOMINATIM_URL;
-  try {
-    const settings = await resolveGeocoderUrls();
-    nominatimUrl = settings.nominatimUrl;
-  } catch (error) {
-    // resolveGeocoderUrls() already applies DB > ENV > default internally,
-    nominatimUrl = DEFAULT_NOMINATIM_URL;
-    logger.warn({ error }, "failed to resolve geocoder settings, falling back to the default URL");
-  }
-
-  const baseUrl = nominatimUrl.replace(/\/+$/, "");
+  const baseUrl = await resolveNominatimBase();
   const key = `${baseUrl}|${query.toLowerCase()}`;
   const cached = cache.get(key);
   if (cached !== undefined) return cached;
@@ -427,16 +471,7 @@ export async function reverseGeocodeDetailed(
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return { parts: null, degraded: false };
   if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return { parts: null, degraded: false };
 
-  let nominatimUrl = DEFAULT_NOMINATIM_URL;
-  try {
-    const settings = await resolveGeocoderUrls();
-    nominatimUrl = settings.nominatimUrl;
-  } catch (error) {
-    nominatimUrl = DEFAULT_NOMINATIM_URL;
-    logger.warn({ error }, "failed to resolve geocoder settings, falling back to the default URL");
-  }
-
-  const baseUrl = nominatimUrl.replace(/\/+$/, "");
+  const baseUrl = await resolveNominatimBase();
   // Rounded to ~11 m: a pin nudged by a few metres is the same address, and
   // without rounding the cache would miss on every drag.
   const key = `${baseUrl}|${lat.toFixed(4)},${lon.toFixed(4)}`;

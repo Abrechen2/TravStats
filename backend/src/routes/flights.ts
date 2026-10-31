@@ -214,10 +214,10 @@ router.get("/geo", async (req: AuthRequest, res: Response, next: NextFunction) =
 
     const flights = await prisma.flight.findMany({
       where,
-      // Deterministic tie-breaker: departureTime is nullable and not unique, so
-      // paginating getAllGeoJSON on it alone would skip/duplicate rows at the
-      // 500-row page boundaries. The id keeps the total order stable, so every
-      // flight is plotted exactly once across all pages.
+      omit: { actualRoute: true, enrichmentHistory: true }, // heavy JSON the map never reads (forgejo#338)
+      // Tie-breaker: departureTime is nullable and not unique, so paging on it
+      // alone would skip/duplicate rows at the 500-row boundaries; the id keeps
+      // the order total, so every flight is plotted exactly once.
       orderBy: [{ departureTime: "desc" }, { id: "asc" }],
       skip: query.offset,
       take: query.limit,

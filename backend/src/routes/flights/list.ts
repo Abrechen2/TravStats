@@ -4,7 +4,7 @@ import { prisma } from "../../db";
 import type { AuthRequest } from "../../middleware/auth";
 import { flightQuerySchema } from "../../schemas/flight";
 import { enrichFlightsForClients } from "../../services/flightAirportFacts";
-import { buildFlightOrderBy } from "./listOrder";
+import { buildFlightOrderBy, HEAVY_FLIGHT_JSON } from "./listOrder";
 import { normalizeQueryParams, resolveFlightWhere, splitMultiValue } from "./queryFilters";
 
 /**
@@ -61,6 +61,7 @@ export const flightListHandler = async (
         orderBy: buildFlightOrderBy(query.sort, query.order),
         skip: query.offset,
         take,
+        ...(query.lean ? { omit: HEAVY_FLIGHT_JSON } : {}),
         include: {
           trip: { select: { id: true, name: true, color: true } },
         },

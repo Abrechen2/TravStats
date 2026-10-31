@@ -10,10 +10,13 @@
  * Backed by OpenStreetMap Nominatim (no API key). Nominatim is authoritative
  * for place names — Photon was evaluated but returned noise for ambiguous
  * names (a "Kusadasi" in France). Nominatim's usage policy requires a
- * descriptive User-Agent and ≤1 request/second, so this module throttles
- * globally and caches results in-memory.
+ * descriptive User-Agent and ≤1 request/second. The request itself goes through
+ * `geo/nominatim.ts` — the instance's configured Nominatim URL and its one
+ * shared 1 req/s queue (forgejo#359) — and results are cached in-memory, capped.
  */
 import logger from "../utils/logger";
+import { LruMap } from "../utils/lruMap";
+import { GeocoderHttpError, resetNominatimThrottleForTests, searchPlaces } from "./geo/nominatim";
 
 export interface GeocodedPort {
   name: string;
@@ -25,11 +28,8 @@ export interface GeocodedPort {
   source: "geocoder";
 }
 
-const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
-const USER_AGENT = "TravStats/2.0 (self-hosted travel logbook; +https://travstats.de)";
-const REQUEST_TIMEOUT_MS = 8000;
-const MIN_INTERVAL_MS = 1100; // honour Nominatim's ≤1 req/s policy
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // a place's coordinates don't move
+const CACHE_MAX_ENTRIES = 500;
 
 interface NominatimAddress {
   city?: string;
@@ -49,14 +49,7 @@ interface NominatimResult {
   address?: NominatimAddress;
 }
 
-const cache = new Map<string, { at: number; ports: GeocodedPort[] }>();
-let lastRequestAt = 0;
-
-async function throttle(): Promise<void> {
-  const wait = lastRequestAt + MIN_INTERVAL_MS - Date.now();
-  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-  lastRequestAt = Date.now();
-}
+const cache = new LruMap<string, { at: number; ports: GeocodedPort[] }>(CACHE_MAX_ENTRIES);
 
 function placeName(r: NominatimResult): string {
   const a = r.address ?? {};
@@ -119,24 +112,16 @@ export async function geocodePort(query: string, limit = 5): Promise<PortGeocode
     return { ports: cached.ports, failure: null };
 
   try {
-    await throttle();
-    const url = `${NOMINATIM_URL}?q=${encodeURIComponent(q)}&format=json&addressdetails=1&limit=${limit}`;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     let raw: unknown;
     try {
-      const res = await fetch(url, {
-        headers: { "User-Agent": USER_AGENT, "Accept-Language": "de,en" },
-        signal: controller.signal,
-      });
-      if (!res.ok) {
-        logger.warn({ status: res.status }, "[Port Geocoder] Nominatim non-OK response");
-        logger.debug({ status: res.status, q }, "[Port Geocoder] Nominatim non-OK response");
-        return { ports: [], failure: res.status === 429 ? "rate_limited" : "unavailable" };
+      raw = await searchPlaces(q, limit);
+    } catch (err) {
+      if (err instanceof GeocoderHttpError) {
+        logger.warn({ status: err.status }, "[Port Geocoder] Nominatim non-OK response");
+        logger.debug({ status: err.status, q }, "[Port Geocoder] Nominatim non-OK response");
+        return { ports: [], failure: err.status === 429 ? "rate_limited" : "unavailable" };
       }
-      raw = await res.json();
-    } finally {
-      clearTimeout(timer);
+      throw err;
     }
 
     if (!Array.isArray(raw)) {
@@ -169,5 +154,5 @@ export async function geocodePort(query: string, limit = 5): Promise<PortGeocode
 /** Test seam: forget cached lookups and the throttle clock. */
 export function resetPortGeocoderForTests(): void {
   cache.clear();
-  lastRequestAt = 0;
+  resetNominatimThrottleForTests();
 }

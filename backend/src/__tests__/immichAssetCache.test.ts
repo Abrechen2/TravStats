@@ -5,6 +5,8 @@ import {
   clearImmichAssetCache,
   ASSET_CACHE_TTL_MS,
   getInFlightPromise,
+  ASSET_CACHE_MAX_ENTRIES,
+  immichAssetCacheSizes,
 } from "../services/immich/immichAssetCache";
 import { ImmichAsset } from "../services/immich/types";
 
@@ -211,5 +213,43 @@ describe("invalidateAlbumAssets", () => {
     } else {
       throw new Error(`Unexpected result: ${JSON.stringify(callWResult)}`);
     }
+  });
+});
+
+describe("memory bound (forgejo#358)", () => {
+  it("never holds more than the cap and drops the oldest album first", async () => {
+    for (let i = 0; i < ASSET_CACHE_MAX_ENTRIES + 20; i++) {
+      await getCachedAlbumAssets("u1", `a${i}`, async () => [asset(`p${i}`)]);
+    }
+    expect(immichAssetCacheSizes().entries).toBe(ASSET_CACHE_MAX_ENTRIES);
+    const reload = jest.fn(async () => [asset("again")]);
+    await getCachedAlbumAssets("u1", "a0", reload);
+    expect(reload).toHaveBeenCalledTimes(1); // the oldest was evicted
+    const kept = jest.fn(async () => [asset("never")]);
+    await getCachedAlbumAssets("u1", `a${ASSET_CACHE_MAX_ENTRIES + 19}`, kept);
+    expect(kept).not.toHaveBeenCalled(); // the newest is still served
+  });
+
+  it("deletes an expired entry when it is read and when the next album is stored", async () => {
+    await getCachedAlbumAssets("u1", "old", async () => [asset("o")]);
+    jest.advanceTimersByTime(ASSET_CACHE_TTL_MS + 1);
+    await getCachedAlbumAssets("u1", "new", async () => [asset("n")]);
+    expect(immichAssetCacheSizes().entries).toBe(1);
+  });
+
+  it("keeps no invalidation stamps once no load is in flight, yet still drops a superseded load's result", async () => {
+    let release!: (a: ImmichAsset[]) => void;
+    const slow = getCachedAlbumAssets(
+      "u1",
+      "a1",
+      () => new Promise<ImmichAsset[]>((r) => (release = r))
+    );
+    invalidateAlbumAssets("u1", "a1");
+    expect(immichAssetCacheSizes().invalidations).toBe(1);
+    release([asset("stale")]);
+    await slow;
+    expect(immichAssetCacheSizes()).toEqual({ entries: 0, invalidations: 0 });
+    for (let i = 0; i < 50; i++) invalidateAlbumAssets("u1", `idle${i}`);
+    expect(immichAssetCacheSizes().invalidations).toBe(0);
   });
 });
