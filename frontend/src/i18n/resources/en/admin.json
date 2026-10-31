@@ -795,7 +795,37 @@
     "deleteRemote": "Also delete the WebDAV copy",
     "deleteLocalOnly": "The local backup will be deleted. A WebDAV copy is retained unless you explicitly select it.",
     "remoteDeleteFailed": "WebDAV deletion failed. The local backup is retained. Check the connection and try again.",
-    "remoteTargetUnknown": "The original WebDAV target is unknown or changed. Upload this backup again before deleting both copies, or delete locally only."
+    "remoteTargetUnknown": "The original WebDAV target is unknown or changed. Upload this backup again before deleting both copies, or delete locally only.",
+    "cloudFailure": {
+      "WEBDAV_BACKUP_AUTH": "The WebDAV server rejected the credentials. Check the user name and password in the WebDAV settings.",
+      "WEBDAV_BACKUP_QUOTA": "The WebDAV server is out of space or refused a file this large (507/413). Free some space and try again.",
+      "WEBDAV_BACKUP_TIMEOUT": "The WebDAV server did not answer in time. Please try again later.",
+      "WEBDAV_BACKUP_UNREACHABLE": "The WebDAV server cannot be reached (address, network or certificate). Test the connection in the WebDAV settings.",
+      "WEBDAV_BACKUP_SHARE_ERROR": "The WebDAV server answered unexpectedly. The server log has the details.",
+      "WEBDAV_BACKUP_NOT_ON_SHARE": "This file is no longer on the WebDAV server.",
+      "WEBDAV_BACKUP_FILE_MISSING": "The backup file is missing on this server, so there is nothing to upload.",
+      "WEBDAV_NOT_ENABLED": "WebDAV is not enabled.",
+      "WEBDAV_NOT_CONFIGURED": "WebDAV is enabled, but the address, user name or password is missing.",
+      "WEBDAV_BACKUP_BUSY": "A WebDAV upload or download is already running. Please wait until it has finished.",
+      "WEBDAV_BACKUP_EXISTS": "This backup is already in the backup list.",
+      "WEBDAV_DOWNLOAD_CHECKSUM_MISMATCH": "The downloaded file does not match its checksum and was discarded. Please try again."
+    },
+    "unverified": "Not checked by checksum",
+    "unverifiedHint": "This backup was uploaded before checksums existed and was checked by its size only.",
+    "cloudList": {
+      "title": "Backups on the WebDAV server",
+      "description": "Bring a backup back from the WebDAV server into the backup list, e.g. after moving servers. It can then be restored like any other.",
+      "load": "Load list",
+      "loading": "Loading …",
+      "empty": "There are no backups on the WebDAV server.",
+      "loadFailed": "The list from the WebDAV server could not be loaded.",
+      "download": "Download",
+      "downloading": "Downloading {{percent}} %",
+      "downloadingUnknown": "Downloading …",
+      "inList": "Already in the list",
+      "done": "Backup added to the list",
+      "doneUnverified": "Backup added to the list — it has no checksum and was checked by its size only."
+    }
   },
   "feedback": {
     "title": "Parser Feedback Statistics",

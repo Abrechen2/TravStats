@@ -448,6 +448,29 @@ export type ApiErrorCode =
   | "SHARE_LINK_TRIP_ENDED"
   /** WebDAV backup download: the body ended before the Content-Length it promised (502). */
   | "WEBDAV_DOWNLOAD_TRUNCATED"
+  /** WebDAV backup download: the bytes arrived but do not hash to the checksum stored beside the upload (502). */
+  | "WEBDAV_DOWNLOAD_CHECKSUM_MISMATCH"
+  /** An instance backup upload/download is already running (409). */
+  | "WEBDAV_BACKUP_BUSY"
+  /** The backup named on the share is already in the local backup list (409). */
+  | "WEBDAV_BACKUP_EXISTS"
+  /** Instance backup WebDAV is switched off (409) / enabled but incomplete (409). */
+  | "WEBDAV_NOT_ENABLED"
+  | "WEBDAV_NOT_CONFIGURED"
+  /** The share refused the credentials (401/403). */
+  | "WEBDAV_BACKUP_AUTH"
+  /** The share is full or refused the size (507/413). */
+  | "WEBDAV_BACKUP_QUOTA"
+  /** The share took too long. */
+  | "WEBDAV_BACKUP_TIMEOUT"
+  /** Nothing answered at the share's address, or TLS failed. */
+  | "WEBDAV_BACKUP_UNREACHABLE"
+  /** The backup's archive is gone from this server's disk (404), so there is nothing to upload. */
+  | "WEBDAV_BACKUP_FILE_MISSING"
+  /** The file is not on the share (404). */
+  | "WEBDAV_BACKUP_NOT_ON_SHARE"
+  /** The share answered, but not as expected (anything else). */
+  | "WEBDAV_BACKUP_SHARE_ERROR"
   /** Airport lookup (forgejo#347): no source could be asked (timeout, network, HTTP error) — retry (503). */
   | "AIRPORT_LOOKUP_UNAVAILABLE"
   /** The account already holds the maximum of active links (409). */

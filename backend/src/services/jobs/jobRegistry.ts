@@ -27,6 +27,8 @@ import logger from "../../utils/logger";
 export type JobKind =
   | "backup.create"
   | "backup.restore"
+  | "backup.cloudSync"
+  | "backup.cloudDownload"
   | "xlsx.import"
   | "photoJourneys.scan"
   | "dawarichStays.scan"

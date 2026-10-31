@@ -63,8 +63,37 @@ const UNSYNCED_BACKUP = {
   fileExists: true,
 };
 
+type JobBody = {
+  status: "running" | "succeeded" | "failed";
+  result?: unknown;
+  error?: { code: string; status: number } | null;
+  progress?: { done: number; total: number } | null;
+};
+const jobView = (job: JobBody) => ({
+  data: {
+    data: {
+      id: "j1",
+      kind: "backup.cloudSync",
+      startedAt: "2026-09-12T02:00:00.000Z",
+      finishedAt: null,
+      result: null,
+      error: null,
+      progress: null,
+      ...job,
+    },
+  },
+});
+/** Successive `GET /jobs/j1` answers; the last one repeats. */
+let jobAnswers: JobBody[] = [{ status: "succeeded" }];
+let cloudList: Array<{ name: string; size: number; lastModified: string }> = [];
+
 function mockGets(backups: unknown[], webdavEnabled = true) {
   return vi.spyOn(api, "get").mockImplementation(((url: string) => {
+    if (url === "/jobs/j1") {
+      const next = jobAnswers.length > 1 ? jobAnswers.shift()! : jobAnswers[0];
+      return Promise.resolve(jobView(next));
+    }
+    if (url === "/backup/cloud/list") return Promise.resolve({ data: { backups: cloudList } });
     if (url === "/backup") return Promise.resolve({ data: { backups } });
     if (url === "/backup/status")
       return Promise.resolve({ data: { running: false, currentBackup: null } });
@@ -86,6 +115,11 @@ function mockGets(backups: unknown[], webdavEnabled = true) {
   }) as never);
 }
 
+const startedJob = () =>
+  vi
+    .spyOn(api, "post")
+    .mockResolvedValue({ data: { success: true, data: { jobId: "j1" } } } as never);
+
 describe("uploading a backup by hand", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -94,7 +128,7 @@ describe("uploading a backup by hand", () => {
 
   it("offers an upload button for a completed backup that is not in the cloud", async () => {
     mockGets([UNSYNCED_BACKUP]);
-    const post = vi.spyOn(api, "post").mockResolvedValue({ data: { success: true } } as never);
+    const post = startedJob();
 
     render(<BackupManagement />);
 
@@ -137,19 +171,51 @@ describe("uploading a backup by hand", () => {
     expect(screen.queryByRole("button", { name: "Hochladen" })).toBeNull();
   });
 
-  it("shows the share's own words when the upload is refused", async () => {
+  it.each([
+    ["WEBDAV_BACKUP_QUOTA", adminDe.backup.cloudFailure.WEBDAV_BACKUP_QUOTA],
+    ["WEBDAV_BACKUP_AUTH", adminDe.backup.cloudFailure.WEBDAV_BACKUP_AUTH],
+    ["WEBDAV_BACKUP_TIMEOUT", adminDe.backup.cloudFailure.WEBDAV_BACKUP_TIMEOUT],
+    ["WEBDAV_BACKUP_UNREACHABLE", adminDe.backup.cloudFailure.WEBDAV_BACKUP_UNREACHABLE],
+    ["WEBDAV_BACKUP_BUSY", adminDe.backup.cloudFailure.WEBDAV_BACKUP_BUSY],
+  ])("says in German why the upload job failed (%s)", async (code, sentence) => {
     mockGets([UNSYNCED_BACKUP]);
-    // A generic "upload failed" would leave the admin exactly where the bug
-    // report started: a green connection test and an empty Nextcloud.
+    startedJob();
+    jobAnswers = [{ status: "failed", error: { code, status: 502 } }];
+
+    render(<BackupManagement />);
+    fireEvent.click(await screen.findByRole("button", { name: "Hochladen" }));
+
+    // A generic "upload failed" would leave the admin where the bug report
+    // started: a green connection test and an empty Nextcloud.
+    await waitFor(() => expect(addToast).toHaveBeenCalledWith("error", sentence));
+  });
+
+  it("does not report a still-running upload as failed: it waits for the job's outcome", async () => {
+    mockGets([UNSYNCED_BACKUP]);
+    startedJob();
+    jobAnswers = [{ status: "running" }, { status: "running" }, { status: "succeeded" }];
+
+    render(<BackupManagement />);
+    fireEvent.click(await screen.findByRole("button", { name: "Hochladen" }));
+
+    await waitFor(
+      () => expect(addToast).toHaveBeenCalledWith("success", adminDe.backup.toasts.synced),
+      { timeout: 6000 }
+    );
+    expect(addToast).not.toHaveBeenCalledWith("error", expect.anything());
+  }, 10000);
+
+  it("a refusal before any job starts is worded from its code too", async () => {
+    mockGets([UNSYNCED_BACKUP]);
     vi.spyOn(api, "post").mockRejectedValue({
-      response: { data: { message: "WebDAV share did not answer as expected: 507" } },
+      response: { status: 409, data: { error: "x", code: "WEBDAV_BACKUP_BUSY" } },
     } as never);
 
     render(<BackupManagement />);
     fireEvent.click(await screen.findByRole("button", { name: "Hochladen" }));
 
     await waitFor(() =>
-      expect(addToast).toHaveBeenCalledWith("error", expect.stringContaining("507"))
+      expect(addToast).toHaveBeenCalledWith("error", adminDe.backup.cloudFailure.WEBDAV_BACKUP_BUSY)
     );
   });
 
@@ -194,5 +260,93 @@ describe("a failed backup in the history", () => {
     mockGets([{ ...FAILED, errorCode: null }], false);
     render(<BackupManagement />);
     expect(await screen.findByText(adminDe.backup.failure.BACKUP_FAILED)).toBeInTheDocument();
+  });
+});
+
+describe("bringing a backup back from the share", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    addToast.mockClear();
+    cloudList = [];
+    jobAnswers = [{ status: "succeeded" }];
+  });
+
+  const REMOTE = { name: "backup-9.tar.gz", size: 100, lastModified: "2026-09-12T02:00:00Z" };
+
+  async function startDownload() {
+    cloudList = [REMOTE];
+    render(<BackupManagement />);
+    fireEvent.click(await screen.findByRole("button", { name: "Liste laden" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Herunterladen" }));
+  }
+
+  it("downloads as a job, shows progress, and reloads the backup list on success", async () => {
+    const get = mockGets([]);
+    const post = startedJob();
+    jobAnswers = [
+      { status: "running", progress: { done: 50, total: 100 } },
+      { status: "succeeded", result: { backupId: "backup-9", verified: true } },
+    ];
+
+    await startDownload();
+
+    expect(await screen.findByText("Lädt 50 %")).toBeInTheDocument();
+    await waitFor(
+      () => expect(addToast).toHaveBeenCalledWith("success", adminDe.backup.cloudList.done),
+      { timeout: 6000 }
+    );
+    expect(post).toHaveBeenCalledWith("/backup/cloud/download", { backupName: "backup-9.tar.gz" });
+    expect(get.mock.calls.filter(([url]) => url === "/backup").length).toBeGreaterThan(1);
+  }, 10000);
+
+  it("says plainly when the archive was accepted on its size alone", async () => {
+    mockGets([]);
+    startedJob();
+    jobAnswers = [{ status: "succeeded", result: { backupId: "backup-9", verified: false } }];
+
+    await startDownload();
+
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith("success", adminDe.backup.cloudList.doneUnverified)
+    );
+  });
+
+  it.each([
+    ["WEBDAV_DOWNLOAD_TRUNCATED", adminDe.backup.toasts.downloadTruncated],
+    [
+      "WEBDAV_DOWNLOAD_CHECKSUM_MISMATCH",
+      adminDe.backup.cloudFailure.WEBDAV_DOWNLOAD_CHECKSUM_MISMATCH,
+    ],
+    ["WEBDAV_BACKUP_NOT_ON_SHARE", adminDe.backup.cloudFailure.WEBDAV_BACKUP_NOT_ON_SHARE],
+  ])("tells the admin the download failed with %s", async (code, sentence) => {
+    mockGets([]);
+    startedJob();
+    jobAnswers = [{ status: "failed", error: { code, status: 502 } }];
+
+    await startDownload();
+
+    await waitFor(() => expect(addToast).toHaveBeenCalledWith("error", sentence));
+  });
+
+  it("marks a backup that was accepted on its size alone", async () => {
+    mockGets([
+      {
+        ...UNSYNCED_BACKUP,
+        syncedToCloud: true,
+        cloudTarget: "t",
+        metadata: { source: "webdav", verification: "size" },
+      },
+    ]);
+    render(<BackupManagement />);
+    expect(await screen.findByText(adminDe.backup.unverified)).toBeInTheDocument();
+  });
+
+  it("does not offer a file that is already in the backup list", async () => {
+    mockGets([{ ...UNSYNCED_BACKUP, id: "backup-9", syncedToCloud: true, cloudTarget: "t" }]);
+    cloudList = [REMOTE];
+    render(<BackupManagement />);
+    fireEvent.click(await screen.findByRole("button", { name: "Liste laden" }));
+    expect(await screen.findByText(adminDe.backup.cloudList.inList)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Herunterladen" })).toBeNull();
   });
 });

@@ -17,6 +17,8 @@ export const jobSchema = z.object({
   kind: z.enum([
     "backup.create",
     "backup.restore",
+    "backup.cloudSync",
+    "backup.cloudDownload",
     "xlsx.import",
     "photoJourneys.scan",
     "dawarichStays.scan",

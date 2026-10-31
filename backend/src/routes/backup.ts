@@ -18,9 +18,14 @@ import {
 import {
   syncToCloud,
   listCloudBackups,
-  downloadFromCloud,
+  assertWebdavReady,
+  asCloudJobError,
   testConnection,
 } from "../services/cloudSyncService";
+import {
+  assertCloudBackupNotPresent,
+  importBackupFromCloud,
+} from "../services/backup/cloudBackupImport";
 import { serializeBigInt } from "../utils/serializeBigInt";
 import { backupRestoreLimiter } from "../middleware/rateLimit";
 import { BACKUP_BASE_DIR } from "../services/backup/backupConfig";
@@ -28,6 +33,19 @@ import { findRunningJob, startJob, type JobKind } from "../services/jobs/jobRegi
 
 /** A backup and a restore must never overlap, whichever of the two started first. */
 const BACKUP_JOB_KINDS: readonly JobKind[] = ["backup.create", "backup.restore"];
+
+/** One upload or download against the share per instance at a time. */
+const CLOUD_JOB_KINDS: readonly JobKind[] = ["backup.cloudSync", "backup.cloudDownload"];
+
+function assertNoCloudJobRunning(): void {
+  if (findRunningJob(CLOUD_JOB_KINDS)) {
+    throw new AppError(
+      "A WebDAV backup upload or download is already running",
+      409,
+      "WEBDAV_BACKUP_BUSY"
+    );
+  }
+}
 
 const router = Router();
 
@@ -233,7 +251,10 @@ router.post("/cloud/download", async (req: AuthRequest, res: Response, next: Nex
         .string()
         .min(1)
         .max(255)
-        .regex(/^[a-zA-Z0-9._-]+\.tar\.gz$/, "backupName must be a .tar.gz filename"),
+        .regex(
+          /^backup-[a-zA-Z0-9._-]+\.tar\.gz$/,
+          "backupName must be a backup-*.tar.gz filename"
+        ),
     });
 
     const { backupName } = cloudDownloadSchema.parse(req.body);
@@ -242,22 +263,17 @@ router.post("/cloud/download", async (req: AuthRequest, res: Response, next: Nex
       throw new AppError("Invalid backupName", 400);
     }
 
-    // One definition of the backup directory, shared with the service — this
-    // copy used to lack the win32 branch its sibling below had.
-    const baseDirResolved = path.resolve(BACKUP_BASE_DIR);
-    const localPath = path.join(BACKUP_BASE_DIR, sanitized);
-    const localPathResolved = path.resolve(localPath);
-    if (!localPathResolved.startsWith(baseDirResolved + path.sep)) {
-      throw new AppError("Invalid backupName", 400);
-    }
-
-    await downloadFromCloud(sanitized, localPathResolved);
-
-    res.json({
-      success: true,
-      message: "Backup downloaded from cloud successfully",
-      localPath: localPathResolved,
-    });
+    // Refused as the request they are; the transfer itself is a job (a
+    // backup with photos takes longer than the browser waits).
+    await assertWebdavReady();
+    await assertCloudBackupNotPresent(sanitized);
+    assertNoCloudJobRunning();
+    const job = startJob("backup.cloudDownload", req.userId!, (reportProgress) =>
+      importBackupFromCloud(sanitized, reportProgress).catch((err: unknown) => {
+        throw asCloudJobError(err);
+      })
+    );
+    res.status(202).json({ success: true, data: { jobId: job.id } });
   } catch (error) {
     next(error);
   }
@@ -411,11 +427,21 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
 router.post("/:id/sync", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    await syncToCloud(id);
-    res.json({
-      success: true,
-      message: "Backup synced to cloud successfully",
-    });
+    // The cheap facts first, as the request: an unknown id is a 404 and an
+    // unfinished backup a 400 whether or not WebDAV is switched on.
+    const backup = await prisma.backup.findUnique({ where: { id } });
+    if (!backup) throw new AppError("Backup not found", 404);
+    if (backup.status !== "completed") throw new AppError("Backup is not completed", 400);
+    await assertWebdavReady();
+    // Directly before startJob, with no await between: two requests cannot
+    // both pass this check.
+    assertNoCloudJobRunning();
+    const job = startJob("backup.cloudSync", req.userId!, () =>
+      syncToCloud(id).catch((err: unknown) => {
+        throw asCloudJobError(err);
+      })
+    );
+    res.status(202).json({ success: true, data: { jobId: job.id } });
   } catch (error) {
     next(error);
   }

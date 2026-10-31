@@ -55,7 +55,12 @@ const mockExistsSync = jest.fn();
 // Streams, not buffers (forgejo#354): the service must never read a whole
 // archive. readFileSync/writeFileSync are deliberately absent from the mock, so
 // a regression to buffering fails with "not a function".
-const mockCreateReadStream = jest.fn((_p: string) => ({ stub: "read-stream" }));
+// A real Readable: the service now hashes the archive before it uploads it.
+const mockCreateReadStream = jest.fn((_p: string) =>
+  (jest.requireActual("stream") as typeof import("stream")).Readable.from([
+    Buffer.from("archive-bytes"),
+  ])
+);
 const mockCreateWriteStream = jest.fn();
 const mockStatSync = jest.fn((_p: string) => ({ size: 15 }));
 const mockRenameSync = jest.fn();
@@ -105,6 +110,10 @@ type CloudSyncModule = typeof import("../services/cloudSyncService");
 async function loadModule(enabled: boolean): Promise<CloudSyncModule> {
   jest.resetModules();
   jest.clearAllMocks();
+  // No checksum file on the share unless a test puts one there.
+  mockClient.getFileContents.mockRejectedValue(
+    Object.assign(new Error("404 Not Found"), { status: 404 })
+  );
 
   // The WebDAV settings come from the instance row only (no environment fallback).
   mockAdminFindFirst.mockResolvedValue(
@@ -229,6 +238,40 @@ describe("cloudSyncService", () => {
   });
 
   describe("syncToCloud", () => {
+    it("removes the previous checksum before overwriting an archive, so a stale one never sits beside new bytes", async () => {
+      const { syncToCloud } = await loadModule(true);
+      mockBackupFindUnique.mockResolvedValue(MOCK_BACKUP);
+      mockExistsSync.mockReturnValue(true);
+      mockClient.putFileContents.mockResolvedValue(true);
+      mockBackupUpdate.mockResolvedValue({});
+      const order: string[] = [];
+      mockClient.deleteFile.mockImplementation(async (p) => void order.push(`delete ${p}`));
+      mockClient.putFileContents.mockImplementation(async (p) => {
+        order.push(`put ${p}`);
+        return true;
+      });
+
+      await syncToCloud("backup-1");
+
+      expect(order).toEqual([
+        "delete /TravStats/backups/archive.tar.gz.sha256",
+        "put /TravStats/backups/archive.tar.gz",
+        "put /TravStats/backups/archive.tar.gz.sha256",
+      ]);
+    });
+
+    it("stops before uploading when the old checksum cannot be removed", async () => {
+      const { syncToCloud } = await loadModule(true);
+      mockBackupFindUnique.mockResolvedValue(MOCK_BACKUP);
+      mockExistsSync.mockReturnValue(true);
+      mockClient.putFileContents.mockClear();
+      mockClient.deleteFile.mockRejectedValue(Object.assign(new Error("403"), { status: 403 }));
+
+      await expect(syncToCloud("backup-1")).rejects.toMatchObject({ code: "WEBDAV_BACKUP_AUTH" });
+      expect(mockClient.putFileContents).not.toHaveBeenCalled();
+      mockClient.deleteFile.mockReset();
+    });
+
     it("throws when WebDAV sync is not enabled", async () => {
       const { syncToCloud } = await loadModule(false);
       // The backup is looked up first (forgejo#77) — give it one to find.
@@ -271,7 +314,8 @@ describe("cloudSyncService", () => {
 
       await syncToCloud("backup-1");
 
-      expect(mockClient.putFileContents).toHaveBeenCalledTimes(1);
+      // The archive, then the checksum file beside it.
+      expect(mockClient.putFileContents).toHaveBeenCalledTimes(2);
       const [remotePath] = mockClient.putFileContents.mock.calls[0];
       expect(remotePath).toMatch(/archive\.tar\.gz$/);
       // forgejo#354: the archive goes up as a stream with its length, never as a Buffer
@@ -281,7 +325,7 @@ describe("cloudSyncService", () => {
         { contentLength: number },
       ];
       expect(Buffer.isBuffer(body)).toBe(false);
-      expect(body).toEqual({ stub: "read-stream" });
+      expect(typeof (body as { pipe?: unknown }).pipe).toBe("function");
       expect(options.contentLength).toBe(15);
       expect((options as { headers?: Record<string, string> }).headers).toEqual({
         "Content-Length": "15",
@@ -371,7 +415,7 @@ describe("cloudSyncService", () => {
 
       await syncToCloudIfEnabled("backup-1");
 
-      expect(mockClient.putFileContents).toHaveBeenCalledTimes(1);
+      expect(mockClient.putFileContents).toHaveBeenCalledTimes(2);
     });
 
     it("records why a failed upload failed, and does not throw", async () => {
@@ -484,14 +528,6 @@ describe("cloudSyncService", () => {
   });
 
   describe("downloadFromCloud", () => {
-    it("throws when WebDAV sync is not enabled", async () => {
-      const { downloadFromCloud } = await loadModule(false);
-
-      await expect(downloadFromCloud("backup-1.tar.gz", "/tmp/out.tar.gz")).rejects.toThrow(
-        /not enabled/i
-      );
-    });
-
     it("streams the download into a side file and renames it on success (forgejo#354)", async () => {
       const { Readable, Writable } = await import("stream");
       const { downloadFromCloud } = await loadModule(true);
@@ -513,12 +549,30 @@ describe("cloudSyncService", () => {
         expect.stringContaining("backup-1.tar.gz"),
         expect.anything()
       );
-      expect(mockClient.getFileContents).not.toHaveBeenCalled();
+      // Only the small checksum file is read whole, never the archive.
+      expect(mockClient.getFileContents).not.toHaveBeenCalledWith(
+        expect.stringMatching(/backup-1\.tar\.gz$/),
+        expect.anything()
+      );
       expect(Buffer.concat(downloadedChunks).toString()).toBe("archive-bytes");
       expect(mockRenameSync).toHaveBeenCalledWith(
         expect.stringMatching(/^\/tmp\/out\.tar\.gz\.[0-9a-f]+\.part$/),
         "/tmp/out.tar.gz"
       );
+    });
+
+    it("refuses a checksum file that exists but is not a SHA-256, instead of downloading unverified", async () => {
+      const { Readable, Writable } = await import("stream");
+      const { downloadFromCloud } = await loadModule(true);
+      mockClient.getFileContents.mockResolvedValue("garbage" as never);
+      mockClient.createReadStream.mockReturnValue(Readable.from([Buffer.from("x")]));
+      mockCreateWriteStream.mockImplementation(() => new Writable({ write: (_c, _e, cb) => cb() }));
+      mockRenameSync.mockClear();
+
+      await expect(downloadFromCloud("backup-1.tar.gz", "/tmp/o.tar.gz")).rejects.toMatchObject({
+        code: "WEBDAV_DOWNLOAD_CHECKSUM_MISMATCH",
+      });
+      expect(mockRenameSync).not.toHaveBeenCalled();
     });
 
     it("refuses a body shorter than its Content-Length instead of renaming it into an archive (webdav-download-truncation)", async () => {
@@ -602,7 +656,11 @@ describe("remote backup deletion identity", () => {
     const backup = { id: "b", cloudTarget: written.cloudTarget, cloudPath: written.cloudPath };
     await deleteCloudBackup(backup);
     await deleteCloudBackup(backup);
-    expect(mockClient.deleteFile).toHaveBeenLastCalledWith("/TravStats/backups/backup-2026.tar.gz");
+    // The archive, and the checksum file that travels with it.
+    expect(mockClient.deleteFile).toHaveBeenCalledWith("/TravStats/backups/backup-2026.tar.gz");
+    expect(mockClient.deleteFile).toHaveBeenCalledWith(
+      "/TravStats/backups/backup-2026.tar.gz.sha256"
+    );
   });
 
   it("refuses legacy or changed targets and retains an actionable error", async () => {

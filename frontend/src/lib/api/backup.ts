@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { waitForJob } from "./jobs";
 import type { BackupEntry } from "./types";
 
 export interface BackupScheduleSettings {
@@ -137,17 +138,16 @@ export const backupApi = {
     return data;
   },
 
-  syncToCloud: async (
-    id: string
-  ): Promise<{
-    success: boolean;
-    message: string;
-  }> => {
-    const { data } = await api.post<{
-      success: boolean;
-      message: string;
-    }>(`/backup/${id}/sync`);
-    return data;
+  /**
+   * Upload one backup to the share. The upload outlives the browser's request
+   * timeout, so the server answers with a job and this waits for its outcome:
+   * a failed upload throws `JobFailedError` carrying the cause's code.
+   */
+  syncToCloud: async (id: string): Promise<void> => {
+    const { data } = await api.post<{ success: boolean; data: { jobId: string } }>(
+      `/backup/${id}/sync`
+    );
+    await waitForJob(data.data.jobId);
   },
 
   listCloudBackups: async (): Promise<{
@@ -178,18 +178,23 @@ export const backupApi = {
     return data;
   },
 
+  /**
+   * Fetch a backup from the share into the backup list (a job, like the
+   * upload). `onProgress` gets bytes received of bytes expected while it runs.
+   * `verified` is false for an archive that predates checksums.
+   */
   downloadFromCloud: async (
-    backupName: string
-  ): Promise<{
-    success: boolean;
-    message: string;
-    localPath: string;
-  }> => {
-    const { data } = await api.post<{
-      success: boolean;
-      message: string;
-      localPath: string;
-    }>("/backup/cloud/download", { backupName });
-    return data;
+    backupName: string,
+    onProgress?: (done: number, total: number) => void
+  ): Promise<{ backupId: string; verified: boolean }> => {
+    const { data } = await api.post<{ success: boolean; data: { jobId: string } }>(
+      "/backup/cloud/download",
+      { backupName }
+    );
+    return waitForJob<{ backupId: string; verified: boolean }>(data.data.jobId, {
+      onPoll: (job) => {
+        if (job.progress) onProgress?.(job.progress.done, job.progress.total);
+      },
+    });
   },
 };
