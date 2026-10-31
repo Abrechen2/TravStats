@@ -6,7 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-**Before upgrading to 2.8.0-rc.6:** take a backup. Nine new migrations since 2.7.0: two tables for the TravTrack diagnostics log, new columns on the admin and user settings for the ADS-B providers and the AeroAPI plan, two tables that count AeroAPI calls and track fetches, and the external-services policy (a policy column on the admin and user settings, a table for stored test results, a switch for a local custom AI endpoint), and the columns that receive the one-time copy of the service environment variables, a table for place captures from the Companion, and the per-area reminder preferences (filled once from each account's current reminder settings); nothing existing is removed.
+**Before upgrading to 2.8.0-rc.7:** take a backup. Ten new migrations since 2.7.0: two tables for the TravTrack diagnostics log, new columns on the admin and user settings for the ADS-B providers and the AeroAPI plan, two tables that count AeroAPI calls and track fetches, and the external-services policy (a policy column on the admin and user settings, a table for stored test results, a switch for a local custom AI endpoint), and the columns that receive the one-time copy of the service environment variables, a table for place captures from the Companion, the per-area reminder preferences (filled once from each account's current reminder settings), and one that clears the favourite airline "Lufthansa" that earlier versions stored as a shipped default (any other airline you chose stays); nothing existing is removed.
 
 **Upgrading to 2.8.0-rc.5 — external-service settings move out of the environment.** On its first start this version copies every external-service variable still set in the server environment (`AIRLABS_API_KEY`, `AVIATIONSTACK_API_KEY`, `OLLAMA_URL`, `OLLAMA_MODEL`, the Immich, Dawarich, Strava, WebDAV, federation and the other service variables) into the instance settings, encrypted, wherever the instance field is still empty, and then never reads them again. The log names the variables it copied, never their values. From then on these services are configured only under Administration → External services; database, secrets, ports, time zone, logging, backup paths and first-boot defaults stay environment variables. One new migration adds the columns the copy needs.
 
@@ -29,8 +29,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - **Settings in one consistent shape.** Every page uses the same row and save model, the Standard/Expert switch states what each level shows and what the defaults are, the search finds settings by what they do, and the external-service forms test and save the same way.
 - **The dashboard map can hide routes per area.** A "Routen" switch in the map panel keeps only the markers — for flights, only the airports. It is also listed under Settings → Ansichten.
 - **New stays start at 15:00 check-in and 11:00 check-out,** in the stay editor and in a stay created from a roadtrip station.
+- **Download your own data.** Settings → Backup → "Meine Daten herunterladen" saves everything the account holds as one export file, the same one an admin export produces, without asking an admin. At most three downloads per hour.
+- **Stored details now show on the detail pages.** A flight shows its check-in desk, baggage belt, runway times, taxi and air time; a ferry its fare class and delay; a rental its supplier, broker, booking and contract number; a cruise its ship's build year, size and capacity; a tour its route notes. Rail, bus, ferry and rental show the converted price with its exchange rate, as stays already did. Empty fields stay hidden.
+- **Settings that did nothing now act.** The auto-update expiry hours set how long a pending flight update stays open (it was always 24 h), the cruise default line and cabin type fill a new cruise, "show cruise routes" hides cruise lines on the flat map, and the favourite airline fills a new flight (never an edited one).
+- **A stay reminder carries the stay,** so the Companion opens the right stay from the notification.
 
 ### Fixed
+
+- **The dashboard map's route switch also hides the native route layer,** greys out the route-only controls while routes are hidden, and `/dashboard?panel=routes` opens the panel directly.
+- **Large logbooks draw the map with less memory and work:** the route cache is gone, the route store keeps a bounded hot set, and several per-frame recomputations were removed.
+- **Rental, bus and ferry no longer say "(Beta)",** and the TravTrack description names its real sources: Companion, GPX, OwnTracks, Overland and Dawarich.
+- **Settings without an effect are gone:** the live-tracking check interval and "only during flight" no longer appear (the API still accepts them).
 
 - **The airport lookup no longer hangs or hammers its source.** It times out, remembers misses and reports an unreachable source as such instead of "not found".
 - **A WebDAV backup that arrives cut short is refused** instead of being restored from a truncated file.
