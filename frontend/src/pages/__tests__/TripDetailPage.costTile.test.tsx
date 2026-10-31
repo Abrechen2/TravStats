@@ -18,6 +18,7 @@ const getByIdMock = vi.fn();
 // test that lets that request out (forgejo#110).
 // Shared trips (2026-10-09): the trip overview, the settings and the inbox
 // read the sharing API on mount; answered empty so no request escapes.
+vi.mock("../../components/Trips/TripPackingCard", () => ({ default: () => null }));
 vi.mock("@/lib/api/sharing", () => ({
   sharingApi: {
     tripSharing: vi.fn().mockResolvedValue({

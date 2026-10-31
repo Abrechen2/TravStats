@@ -928,5 +928,22 @@
     "loadError": "Die mitgeteilte Route dieser Reise konnte nicht geladen werden."
   },
   "loadMore": "Mehr laden",
-  "listError": "Die Reisen konnten nicht geladen werden. Bitte versuche es erneut."
+  "listError": "Die Reisen konnten nicht geladen werden. Bitte versuche es erneut.",
+  "packing": {
+    "title": "Packliste",
+    "progress": "{{done}} von {{total}} eingepackt",
+    "empty": "Noch nichts auf der Liste. Die Packliste teilst du dir mit der Companion-App.",
+    "loadFailed": "Die Packliste konnte nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "remove": "„{{label}}“ entfernen",
+    "addLabel": "Neuer Eintrag",
+    "addPlaceholder": "Etwas einpacken …",
+    "add": "Hinzufügen",
+    "full": "Die Liste ist voll (höchstens {{max}} Einträge).",
+    "notice": {
+      "stale": "Die Liste wurde inzwischen auf einem anderen Gerät geändert und neu geladen. Deine Änderung wurde nicht übernommen – bitte noch einmal ausführen.",
+      "staleReloadFailed": "Die Liste wurde inzwischen auf einem anderen Gerät geändert, konnte aber nicht neu geladen werden. Deine Änderung wurde nicht übernommen. Lade die Seite neu.",
+      "saveFailed": "Nicht gespeichert. Bitte versuche es erneut."
+    }
+  }
 }

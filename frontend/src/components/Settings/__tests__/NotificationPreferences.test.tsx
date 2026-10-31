@@ -1,9 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
+}));
+
+let enabledDomains: string[] = ["flight", "cruise", "rail", "bus", "ferry", "lodging"];
+vi.mock("../../../hooks/useEnabledDomains", () => ({
+  useEnabledDomains: () => ({
+    enabled: enabledDomains,
+    isEnabled: (d: string) => enabledDomains.includes(d),
+  }),
 }));
 
 const getPreferences = vi.fn();
@@ -66,6 +75,27 @@ describe("NotificationPreferences (reminders per domain)", () => {
     getPreferences.mockReset().mockResolvedValue(STORED);
     updatePreferences.mockReset().mockImplementation(async (p) => echo(p));
     addToast.mockReset();
+    enabledDomains = ["flight", "cruise", "rail", "bus", "ferry", "lodging"];
+  });
+
+  it("shows a switched-off area as off with a pointer to Bereiche & Farben, and no switch that can never fire", async () => {
+    enabledDomains = ["flight"];
+    render(
+      <MemoryRouter>
+        <NotificationPreferences />
+      </MemoryRouter>
+    );
+    await screen.findByTestId("reminders-table");
+    const cruise = domainRow("cruise");
+    expect(within(cruise).queryByRole("switch")).toBeNull();
+    expect(within(cruise).queryAllByRole("button")).toHaveLength(0);
+    expect(within(cruise).getByText("settings:notifications.domainOff")).toBeTruthy();
+    const link = within(cruise).getByRole("link", {
+      name: "settings:notifications.domainOffAction",
+    });
+    expect(link.getAttribute("href")).toBe("/settings/display?section=domains");
+    // an area that is on keeps its controls
+    expect(within(domainRow("flight")).getByRole("switch")).toBeTruthy();
   });
 
   it("renders every domain from the GET fixture, with its chips, switch and no save button", async () => {

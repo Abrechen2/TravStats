@@ -30,6 +30,7 @@ import TripDeleteConfirm from "../components/Trips/TripDeleteConfirm";
 import AppShell from "../components/ui/AppShell";
 import TripModal from "../components/Trips/TripModal";
 import { TravelPlanSummary } from "../components/Trips/TravelPlanSummary";
+import TripPackingCard from "../components/Trips/TripPackingCard";
 import TripHead from "../components/Trips/TripHead";
 import TripOverview from "../components/Trips/TripOverview";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
@@ -52,7 +53,6 @@ import NoteEditorDialog from "../components/notes/NoteEditorDialog";
 import type { Note } from "../lib/api/notes";
 import { PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
 import { placeSubtitle } from "../lib/placeNames";
-
 type TabKey = "overview" | "timeline" | "map" | "gallery" | "logistics" | "tours";
 const TABS: TabKey[] = ["overview", "timeline", "map", "gallery", "logistics", "tours"];
 
@@ -160,7 +160,7 @@ export default function TripDetailPage(): JSX.Element {
         onDelete={() => setConfirmDelete(true)}
         onChanged={() => void load()}
       />
-
+      <TripPackingCard tripId={trip.id} />
       <TabBar tab={tab} onChange={setTab} t={t} />
 
       <div className="py-6">

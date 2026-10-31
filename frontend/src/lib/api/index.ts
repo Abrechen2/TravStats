@@ -42,3 +42,4 @@ export type {
 } from "./trips";
 // UpdateBookingInput lives in ../../types (see the note above re: Booking).
 export * from "./federationAdmin";
+export * from "./companionData";

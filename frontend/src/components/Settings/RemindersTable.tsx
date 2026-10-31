@@ -1,5 +1,8 @@
 import type { CSSProperties, ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useCoarsePointer } from "../../hooks/useCoarsePointer";
+import { DOMAINS_SETTINGS_PATH } from "./frame/DomainOffNotice";
 import type {
   NotificationPreferences,
   ReminderChannel,
@@ -110,6 +113,11 @@ export interface RemindersTableProps {
   onRetry: (domain: ReminderDomain) => void;
   mailReasonId: string;
   appReasonId: string;
+  /**
+   * Whether the account has this area switched on (Bereiche & Farben). The
+   * server never announces an area that is off, so its row offers no switch.
+   */
+  isDomainOn: (domain: ReminderDomain) => boolean;
 }
 
 function channelWith(channel: ReminderChannel, part: "app" | "mail"): ReminderChannel | null {
@@ -122,8 +130,19 @@ function channelWith(channel: ReminderChannel, part: "app" | "mail"): ReminderCh
 }
 
 export default function RemindersTable(props: RemindersTableProps): JSX.Element {
-  const { prefs, drafts, failed, onChange, onDraft, onRetry, mailReasonId, appReasonId } = props;
+  const {
+    prefs,
+    drafts,
+    failed,
+    onChange,
+    onDraft,
+    onRetry,
+    mailReasonId,
+    appReasonId,
+    isDomainOn,
+  } = props;
   const { t } = useTranslation(["settings"]);
+  const coarse = useCoarsePointer();
   const appBlocked = !prefs.push.available && prefs.push.reason === "no_device_token";
   const mailBlocked = !prefs.mail.available;
 
@@ -187,6 +206,7 @@ export default function RemindersTable(props: RemindersTableProps): JSX.Element 
               const next = channelWith(row.channel, part);
               if (next) onChange(domain, { channel: next });
             };
+            const domainOn = isDomainOn(domain);
             return (
               <tr
                 key={domain}
@@ -222,99 +242,125 @@ export default function RemindersTable(props: RemindersTableProps): JSX.Element 
                     </span>
                   )}
                 </th>
-                <td className="@min-[700px]:table-cell" style={{ padding: 8 }}>
-                  <RowSwitch
-                    checked={row.enabled}
-                    label={t("settings:notifications.rowSwitch", { area: name })}
-                    onChange={(enabled) => onChange(domain, { enabled })}
-                  />
-                </td>
-                <td className="col-span-2 @min-[700px]:table-cell" style={{ padding: 8 }}>
-                  <span className="t-caption block @min-[700px]:hidden" aria-hidden="true">
-                    {t("settings:notifications.table.when")}
-                  </span>
-                  <div
-                    role="group"
-                    aria-label={t("settings:notifications.whenGroup", { area: name })}
-                    className="flex flex-wrap items-center"
-                    style={{ gap: 8 }}
+                {!domainOn ? (
+                  <td
+                    colSpan={3}
+                    className="col-span-2 @min-[700px]:table-cell"
+                    style={{ padding: 8 }}
+                    data-domain-off={domain}
                   >
-                    <Chip
-                      on={row.leadHours.includes(24)}
-                      disabled={!row.enabled}
-                      onClick={() => toggleLead(24)}
-                    >
-                      {t("settings:notifications.lead24")}
-                    </Chip>
-                    <Chip
-                      on={row.leadHours.includes(2)}
-                      disabled={!row.enabled}
-                      onClick={() => toggleLead(2)}
-                    >
-                      {t("settings:notifications.lead2")}
-                    </Chip>
-                    <Chip on={customOn} disabled={!row.enabled} onClick={toggleCustom}>
-                      {t("settings:notifications.leadCustom")}
-                    </Chip>
-                    {customOn && (
-                      <span className="inline-flex items-center" style={{ gap: 6 }}>
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          min={1}
-                          max={168}
-                          step={1}
-                          className="input"
-                          style={{ width: 84, minHeight: "var(--ts-size-touch-min)" }}
-                          aria-label={t("settings:notifications.customHours", { area: name })}
-                          aria-invalid={draftInvalid}
-                          aria-describedby={draftInvalid ? errorId : undefined}
-                          disabled={!row.enabled}
-                          value={draft ?? String(custom ?? "")}
-                          onChange={(e) => onDraft(domain, e.target.value)}
-                          onBlur={commitDraft}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") commitDraft();
-                          }}
-                        />
-                        <span className="t-caption">{t("settings:notifications.hoursBefore")}</span>
+                    <div className="flex flex-wrap items-center" style={{ gap: 8 }}>
+                      <span className="t-caption" role="status">
+                        {t("settings:notifications.domainOff", { area: name })}
                       </span>
-                    )}
-                  </div>
-                  {draftCheck && !draftCheck.ok && (
-                    <span id={errorId} role="alert" className="t-caption block">
-                      {t(`settings:notifications.customInvalid.${draftCheck.reason}`)}
-                    </span>
-                  )}
-                </td>
-                <td className="col-span-2 @min-[700px]:table-cell" style={{ padding: 8 }}>
-                  <span className="t-caption block @min-[700px]:hidden" aria-hidden="true">
-                    {t("settings:notifications.table.where")}
-                  </span>
-                  <div
-                    role="group"
-                    aria-label={t("settings:notifications.whereGroup", { area: name })}
-                    className="flex flex-wrap items-center"
-                    style={{ gap: 8 }}
-                  >
-                    <Chip
-                      on={row.channel !== "mail"}
-                      disabled={!row.enabled || (appBlocked && row.channel === "mail")}
-                      describedBy={appBlocked ? appReasonId : undefined}
-                      onClick={() => toggleChannel("app")}
-                    >
-                      {t("settings:notifications.channelApp")}
-                    </Chip>
-                    <Chip
-                      on={row.channel !== "app"}
-                      disabled={!row.enabled || (mailBlocked && row.channel === "app")}
-                      describedBy={mailBlocked ? mailReasonId : undefined}
-                      onClick={() => toggleChannel("mail")}
-                    >
-                      {t("settings:notifications.channelMail")}
-                    </Chip>
-                  </div>
-                </td>
+                      <Link
+                        to={DOMAINS_SETTINGS_PATH}
+                        className="btn-secondary inline-flex items-center"
+                        style={{ minHeight: coarse ? "var(--ts-size-touch-min)" : undefined }}
+                      >
+                        {t("settings:notifications.domainOffAction")}
+                      </Link>
+                    </div>
+                  </td>
+                ) : (
+                  <>
+                    <td className="@min-[700px]:table-cell" style={{ padding: 8 }}>
+                      <RowSwitch
+                        checked={row.enabled}
+                        label={t("settings:notifications.rowSwitch", { area: name })}
+                        onChange={(enabled) => onChange(domain, { enabled })}
+                      />
+                    </td>
+                    <td className="col-span-2 @min-[700px]:table-cell" style={{ padding: 8 }}>
+                      <span className="t-caption block @min-[700px]:hidden" aria-hidden="true">
+                        {t("settings:notifications.table.when")}
+                      </span>
+                      <div
+                        role="group"
+                        aria-label={t("settings:notifications.whenGroup", { area: name })}
+                        className="flex flex-wrap items-center"
+                        style={{ gap: 8 }}
+                      >
+                        <Chip
+                          on={row.leadHours.includes(24)}
+                          disabled={!row.enabled}
+                          onClick={() => toggleLead(24)}
+                        >
+                          {t("settings:notifications.lead24")}
+                        </Chip>
+                        <Chip
+                          on={row.leadHours.includes(2)}
+                          disabled={!row.enabled}
+                          onClick={() => toggleLead(2)}
+                        >
+                          {t("settings:notifications.lead2")}
+                        </Chip>
+                        <Chip on={customOn} disabled={!row.enabled} onClick={toggleCustom}>
+                          {t("settings:notifications.leadCustom")}
+                        </Chip>
+                        {customOn && (
+                          <span className="inline-flex items-center" style={{ gap: 6 }}>
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              min={1}
+                              max={168}
+                              step={1}
+                              className="input"
+                              style={{ width: 84, minHeight: "var(--ts-size-touch-min)" }}
+                              aria-label={t("settings:notifications.customHours", { area: name })}
+                              aria-invalid={draftInvalid}
+                              aria-describedby={draftInvalid ? errorId : undefined}
+                              disabled={!row.enabled}
+                              value={draft ?? String(custom ?? "")}
+                              onChange={(e) => onDraft(domain, e.target.value)}
+                              onBlur={commitDraft}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") commitDraft();
+                              }}
+                            />
+                            <span className="t-caption">
+                              {t("settings:notifications.hoursBefore")}
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                      {draftCheck && !draftCheck.ok && (
+                        <span id={errorId} role="alert" className="t-caption block">
+                          {t(`settings:notifications.customInvalid.${draftCheck.reason}`)}
+                        </span>
+                      )}
+                    </td>
+                    <td className="col-span-2 @min-[700px]:table-cell" style={{ padding: 8 }}>
+                      <span className="t-caption block @min-[700px]:hidden" aria-hidden="true">
+                        {t("settings:notifications.table.where")}
+                      </span>
+                      <div
+                        role="group"
+                        aria-label={t("settings:notifications.whereGroup", { area: name })}
+                        className="flex flex-wrap items-center"
+                        style={{ gap: 8 }}
+                      >
+                        <Chip
+                          on={row.channel !== "mail"}
+                          disabled={!row.enabled || (appBlocked && row.channel === "mail")}
+                          describedBy={appBlocked ? appReasonId : undefined}
+                          onClick={() => toggleChannel("app")}
+                        >
+                          {t("settings:notifications.channelApp")}
+                        </Chip>
+                        <Chip
+                          on={row.channel !== "app"}
+                          disabled={!row.enabled || (mailBlocked && row.channel === "app")}
+                          describedBy={mailBlocked ? mailReasonId : undefined}
+                          onClick={() => toggleChannel("mail")}
+                        >
+                          {t("settings:notifications.channelMail")}
+                        </Chip>
+                      </div>
+                    </td>
+                  </>
+                )}
               </tr>
             );
           })}
