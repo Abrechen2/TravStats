@@ -28,7 +28,10 @@ vi.mock("../../store/authStore", () => ({
 vi.mock("../../store/settingsStore", () => {
   const state = { features: { enableCostTracking: true }, baseCurrency: "EUR" };
   return {
-    useSettingsStore: Object.assign(() => state, { getState: () => state }),
+    useSettingsStore: Object.assign(
+      (selector?: (s: typeof state) => unknown) => (selector ? selector(state) : state),
+      { getState: () => state }
+    ),
   };
 });
 vi.mock("../../hooks/useTranslation", async () => {

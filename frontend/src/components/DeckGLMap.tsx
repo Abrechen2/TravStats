@@ -36,15 +36,10 @@ import { buildLodgingPins } from "./layers/lodgingPinsLayer";
 import { buildPlacePins } from "./layers/placePinsLayer";
 import type { PlaceLabelList, PlaceLabelSource } from "../lib/placeLabel";
 import { createHeatmapLayer } from "./layers/heatmapLayer";
-import { createTripsModeLayers, buildTripsData, getTimeRange } from "./layers/tripsLayer";
+import { withTripsLayers, buildTripsData, getTimeRange } from "./layers/tripsLayer";
 import { createSpecialFlightsLayers } from "./layers/specialFlightsLayer";
-import {
-  createCruiseArcsLayer,
-  createCruiseArrowsLayer,
-  type CruiseGeometryMap,
-} from "./layers/cruiseArcsLayer";
 import { useCruiseColorStore } from "../store/cruiseColorStore";
-import { createCruisePortsLayer } from "./layers/cruisePortsLayer";
+import { buildCruiseOverlays } from "./layers/cruiseOverlays";
 import { useCruiseGeometry } from "../hooks/useCruiseGeometry";
 import { TimeSlider } from "./TimeSlider";
 import { useThemeStore } from "../store/themeStore";
@@ -162,6 +157,9 @@ interface DeckGLMapProps {
   onPlaceMarkerSizeChange?: (s: number) => void;
 }
 
+// A `[]` default would be a new array every render (a layer-memo dependency).
+const NO_CRUISES: Cruise[] = [];
+
 export function DeckGLMap({
   flights,
   visMode,
@@ -175,7 +173,7 @@ export function DeckGLMap({
   onPlaceOpen,
   flightList,
   onResetTrip,
-  cruises = [],
+  cruises = NO_CRUISES,
   extraLayers,
   appearanceDomains = ["flight", "cruise"],
   lodgingMarkerSize = 1,
@@ -584,7 +582,11 @@ export function DeckGLMap({
     [flightList, handleFlightClick]
   );
 
-  const layers = useMemo((): Layer[] => {
+  // Everything except the trips animation: `currentTime` moves every frame, and
+  // keeping it out of this memo spares the splines, pins and label pass
+  // (forgejo#348). `tripsAt` is where the trips layers slot in (above the cruise
+  // paths, as before); the label pass keeps indices, so a splice is safe.
+  const composed = useMemo((): { layers: Layer[]; tripsAt: number } => {
     let base: Layer[];
     switch (visMode) {
       case "routes":
@@ -613,7 +615,8 @@ export function DeckGLMap({
         base = [createHeatmapLayer(flights)];
         break;
       case "trips":
-        base = createTripsModeLayers(trips, currentTime);
+        // Added per frame by `layers` below.
+        base = [];
         break;
       default:
         // "globe" is handled by MapContainer3D (GlobeView); DeckGLMap is not
@@ -621,50 +624,23 @@ export function DeckGLMap({
         base = [];
     }
 
-    // Cruise arcs + ports are supplemental overlays — always on when cruise
-    // data is present. Gated upstream by the cruise domain being enabled.
-    // The arcs layer splines the coarse waypoints from
-    // /cruises/:id/geometry into smooth curves; until the fetch resolves
-    // for a given cruise, each leg falls back to a 2-vertex direct chord.
-    const geometryMap: CruiseGeometryMap = cruiseGeometry;
-    const cruiseArcAppearance = {
-      zoom,
-      arcWidthScale: cruiseRouteWidth,
-      arrowSizeScale: cruiseArrowScale,
-      colorConfig: cruiseColorConfig,
-    };
-    const arcs = createCruiseArcsLayer(
+    // Cruise arcs + ports: supplemental overlays, always on when cruise data is
+    // present (gated upstream by the cruise domain).
+    const { below: cruisePathsBelow, above: cruisePortsAbove } = buildCruiseOverlays(
       cruises,
-      geometryMap,
+      cruiseGeometry,
       selectedCruiseId,
-      (cruiseId: string) => {
-        const cruise = cruises.find((c) => c.id === cruiseId);
-        if (cruise) setCruiseSelection(cruise);
-      },
-      cruiseArcAppearance
+      (cruise) => setCruiseSelection(cruise),
+      {
+        zoom,
+        arcWidthScale: cruiseRouteWidth,
+        arrowSizeScale: cruiseArrowScale,
+        colorConfig: cruiseColorConfig,
+        portColor: portColor ?? undefined,
+        portSizeScale: cruiseMarkerSize,
+        labelsMode,
+      }
     );
-    const arrows = createCruiseArrowsLayer(
-      cruises,
-      geometryMap,
-      selectedCruiseId,
-      cruiseArcAppearance
-    );
-    const ports = createCruisePortsLayer(cruises, zoom, {
-      portColor: portColor ?? undefined,
-      portSizeScale: cruiseMarkerSize,
-      labelsMode,
-    });
-
-    // Split cruise visuals into a "below" group (arcs/arrows render
-    // beneath flight arcs and airport markers) and an "above" group
-    // (port halo/dot/label sit on top of everything). Without this
-    // split cruise paths drew over airport dots at every crossing,
-    // visually clipping the dots.
-    const cruisePathsBelow: Layer[] = [
-      ...(arcs !== null ? [arcs] : []),
-      ...(arrows !== null ? [arrows] : []),
-    ];
-    const cruisePortsAbove: Layer[] = ports ?? [];
 
     // Lodging pins are flat-map only, additive on top of everything else —
     // built here (not by the caller) so the layer can read the SAME private
@@ -691,17 +667,18 @@ export function DeckGLMap({
 
     // Station names in `extraLayers` place around this map's own labels
     // (forgejo#320); in "all" the own labels first share one spreading pass.
-    return appendWithLabelObstacles(
-      [...cruisePathsBelow, ...base, ...cruisePortsAbove, ...lodgingLayers, ...placeLayers],
-      extraLayers ?? [],
-      { labelsMode, zoom: Math.round(zoom) }
-    );
+    return {
+      layers: appendWithLabelObstacles(
+        [...cruisePathsBelow, ...base, ...cruisePortsAbove, ...lodgingLayers, ...placeLayers],
+        extraLayers ?? [],
+        { labelsMode, zoom: Math.round(zoom) }
+      ),
+      tripsAt: cruisePathsBelow.length,
+    };
   }, [
     visMode,
     flights,
     routeData,
-    trips,
-    currentTime,
     handleFlightClick,
     handleAirportClick,
     themeColors,
@@ -736,6 +713,11 @@ export function DeckGLMap({
     placeLabelSource,
     handlePlaceClick,
   ]);
+
+  const layers = useMemo((): Layer[] => {
+    if (visMode !== "trips") return composed.layers;
+    return withTripsLayers(composed.layers, composed.tripsAt, trips, currentTime);
+  }, [composed, visMode, trips, currentTime]);
 
   // No 3D modes remain — an empty effect list for the DeckGLOverlay API.
   const effects: LightingEffect[] = [];

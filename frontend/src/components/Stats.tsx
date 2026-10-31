@@ -17,7 +17,8 @@ interface StatsProps {
 
 export default function Stats({ filters = {} }: StatsProps): JSX.Element {
   const { t, i18n } = useTranslation(["stats", "common"]);
-  const { units, baseCurrency } = useSettingsStore();
+  const units = useSettingsStore((s) => s.units);
+  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
   const lang = i18n.language;
   const [stats, setStats] = useState<StatsType | null>(null);
   const [routes, setRoutes] = useState<Route[]>([]);

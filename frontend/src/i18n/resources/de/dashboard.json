@@ -310,6 +310,7 @@
     "portsCount_other": "{{count}} Häfen",
     "emptyCruises": "Noch keine Kreuzfahrten.",
     "emptyActivity": "Noch keine Aktivität.",
+    "showMoreActivity": "{{n}} weitere anzeigen",
     "filters": {
       "all": "Alle",
       "flight": "Flüge",

@@ -309,6 +309,51 @@ export function buildRouteData(
   };
 }
 
+/**
+ * The three arc datasets and the flat paths derive from `routeData` alone, so
+ * they are computed once per `buildRouteData` result and handed back by
+ * identity afterwards. A zoom step or a selection click calls
+ * `createRoutesLayers` again with the SAME `routeData`; re-filtering the arcs
+ * gave three ArcLayers new `data` and flat mode re-tessellated every great
+ * circle each time (forgejo#349). Keyed weakly, so a replaced `routeData`
+ * takes its caches with it.
+ */
+interface ArcSplits {
+  regularArcs: ArcDatum[];
+  pureScheduledArcs: ArcDatum[];
+  mixedArcs: ArcDatum[];
+}
+const arcSplitCache = new WeakMap<RouteData, ArcSplits>();
+const flatRoutesCache = new WeakMap<
+  RouteData,
+  { colorConfig: FlightColorConfig; routes: ReturnType<typeof buildFlatRoutes> }
+>();
+
+function arcSplitsOf(routeData: RouteData): ArcSplits {
+  let splits = arcSplitCache.get(routeData);
+  if (!splits) {
+    const { arcs } = routeData;
+    splits = {
+      regularArcs: arcs.filter((a) => !a.hasUpcoming),
+      pureScheduledArcs: arcs.filter((a) => a.hasUpcoming && !a.hasPastFlown),
+      mixedArcs: arcs.filter((a) => a.hasUpcoming && a.hasPastFlown),
+    };
+    arcSplitCache.set(routeData, splits);
+  }
+  return splits;
+}
+
+function flatRoutesOf(
+  routeData: RouteData,
+  colorConfig: FlightColorConfig
+): ReturnType<typeof buildFlatRoutes> {
+  const hit = flatRoutesCache.get(routeData);
+  if (hit && hit.colorConfig === colorConfig) return hit.routes;
+  const routes = buildFlatRoutes(routeData.arcs, colorConfig);
+  flatRoutesCache.set(routeData, { colorConfig, routes });
+  return routes;
+}
+
 // Amber highlight color — stands out clearly against both dark and light map tiles
 const HIGHLIGHT_COLOR: [number, number, number, number] = [245, 158, 11, 255];
 // How many alpha units to keep for dimmed routes (out of 255)
@@ -357,7 +402,7 @@ export function createRoutesLayers(
    */
   colorConfig: FlightColorConfig = DEFAULT_FLIGHT_COLOR_CONFIG
 ): Layer[] {
-  const { arcs, points, recorded = [] } = routeData;
+  const { points, recorded = [] } = routeData;
   const {
     markerColor,
     markerSizeScale = 1,
@@ -411,9 +456,7 @@ export function createRoutesLayers(
   //   - mixed: upcoming AND has been flown — hardcoded red core through
   //     UpcomingArcLayer which fades blue at both ends.
   // Each route appears exactly once on screen (one line, no overlap).
-  const regularArcs = arcs.filter((a) => !a.hasUpcoming);
-  const pureScheduledArcs = arcs.filter((a) => a.hasUpcoming && !a.hasPastFlown);
-  const mixedArcs = arcs.filter((a) => a.hasUpcoming && a.hasPastFlown);
+  const { regularArcs, pureScheduledArcs, mixedArcs } = arcSplitsOf(routeData);
 
   // Shared arc props: width, source/target getters, click handler. Used by
   // both the regular and the upcoming layer.
@@ -474,7 +517,9 @@ export function createRoutesLayers(
     updateTriggers: {
       getSourceColor: selectedIds,
       getTargetColor: selectedIds,
-      getWidth: selectedIds,
+      // The accessor also reads arcWidthScale; with stable data (forgejo#349) a
+      // width change must invalidate it explicitly.
+      getWidth: [selectedIds, arcWidthScale],
     },
   };
 
@@ -489,7 +534,7 @@ export function createRoutesLayers(
   const routeLayers: Layer[] =
     routeShape === "flat"
       ? [
-          createFlatRoutesLayer(buildFlatRoutes(arcs, colorConfig), routeWidthPx, {
+          createFlatRoutesLayer(flatRoutesOf(routeData, colorConfig), routeWidthPx, {
             widthScale: arcWidthScale,
             selectedIds,
             highlightColor: HIGHLIGHT_COLOR,

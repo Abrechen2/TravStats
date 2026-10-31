@@ -31,10 +31,8 @@ vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" }, ready: true }),
 }));
 
-vi.mock("../../../store/settingsStore", () => ({
-  // The hook subscribes to `snapshotOf` as its auto-save dependency (#198).
-  snapshotOf: () => "",
-  useSettingsStore: () => ({
+vi.mock("../../../store/settingsStore", () => {
+  const state = {
     profile: { username: "u", email: "e@example.com" },
     display: {},
     units: {},
@@ -47,8 +45,14 @@ vi.mock("../../../store/settingsStore", () => ({
     setCruise: vi.fn(),
     saveRemoteSettings: vi.fn().mockResolvedValue(undefined),
     hasPendingChanges: () => false,
-  }),
-}));
+  };
+  return {
+    // The hook subscribes to `snapshotOf` as its auto-save dependency (#198).
+    snapshotOf: () => "",
+    useSettingsStore: (selector?: (s: typeof state) => unknown) =>
+      selector ? selector(state) : state,
+  };
+});
 
 import { useSettingsPage } from "../useSettingsPage";
 

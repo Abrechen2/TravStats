@@ -165,3 +165,42 @@ describe("parsePrefs", () => {
     expect(parsePrefs(JSON.stringify({ splitMinutes: 7 })).splitMinutes).toBeNull();
   });
 });
+
+describe("buildTrackLayers on a replay tick (forgejo#351)", () => {
+  it("keeps every static layer's data by reference when only the replay head moved", () => {
+    const base = input({
+      countries: [
+        { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [0, 0] } },
+      ],
+    });
+    const dataOf = (i: TrackLayerInput): Record<string, unknown> =>
+      Object.fromEntries(
+        buildTrackLayers(i).map((l) => [l.id, (l.props as { data?: unknown }).data])
+      );
+    const a = dataOf({ ...base, replay: [[13.4, 52.5]] });
+    const b = dataOf({ ...base, replay: [[13.41, 52.51]] });
+    for (const id of [
+      "track-countries",
+      "track-heat",
+      "track-route-speed",
+      "track-points",
+      "track-visits",
+      "track-entries",
+    ]) {
+      expect(a[id], id).toBeDefined();
+      expect(b[id], `${id} got new data on a replay tick`).toBe(a[id]);
+    }
+    expect(b["track-replay-head"]).not.toBe(a["track-replay-head"]);
+  });
+});
+
+describe("buildTrackLayers opacity with stable data (forgejo#351)", () => {
+  it("re-colours the speed route when the opacity changes", () => {
+    const triggers = (opacity: number): unknown =>
+      (
+        buildTrackLayers(input({ opacity })).find((l) => l.id === "track-route-speed")
+          ?.props as unknown as { updateTriggers: { getColor: unknown } }
+      ).updateTriggers.getColor;
+    expect(triggers(0.4)).not.toEqual(triggers(0.9));
+  });
+});

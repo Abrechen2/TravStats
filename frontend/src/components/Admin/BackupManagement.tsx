@@ -19,6 +19,11 @@ import BackupDeleteModal from "./BackupDeleteModal";
 import Toggletip from "../ui/Toggletip";
 import { AdminSubBlock } from "./AdminSubBlock";
 
+/** While a backup runs the table and the progress must follow it closely. */
+export const BACKUP_POLL_BUSY_MS = 5000;
+/** Nothing running: only a scheduled or foreign backup can change the list. */
+export const BACKUP_POLL_IDLE_MS = 30000;
+
 export default function BackupManagement(): JSX.Element {
   const { t } = useTranslation(["admin", "common", "settings"]);
   const addToast = useToastStore((state) => state.addToast);
@@ -79,12 +84,25 @@ export default function BackupManagement(): JSX.Element {
   useEffect(() => {
     loadBackups({ showLoading: true });
     loadStatus();
-    const interval = setInterval(() => {
+  }, []);
+
+  // Poll fast only while a backup is actually running (silent — no full-page
+  // loading flip), slowly otherwise, and not at all while the tab is hidden;
+  // a tab that becomes visible again refreshes at once (forgejo#383, PERF-32).
+  const busy = status?.running === true || creating || restoring;
+  useEffect(() => {
+    const refresh = (): void => {
+      if (document.visibilityState === "hidden") return;
       loadBackups();
       loadStatus();
-    }, 5000); // Refresh every 5 seconds (silent — no full-page loading flip)
-    return () => clearInterval(interval);
-  }, []);
+    };
+    const interval = setInterval(refresh, busy ? BACKUP_POLL_BUSY_MS : BACKUP_POLL_IDLE_MS);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [busy]);
 
   const loadBackupSettings = () => {
     setSettingsLoad("loading");

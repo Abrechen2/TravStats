@@ -20,6 +20,14 @@ import { Icon } from "../../ui/Icon";
 import Toggletip from "../../ui/Toggletip";
 import { MAP_CHROME } from "../../map/mapChrome";
 
+/**
+ * Rows mounted at once. Every flight, cruise, stay and place is a row of
+ * about eight nodes; an account with 10k+ entries mounted ~80k nodes when the
+ * panel opened and froze an iPad for hundreds of ms (forgejo#353). The rest
+ * follows on a "show more" button, a page at a time.
+ */
+export const ACTIVITY_PAGE_SIZE = 200;
+
 interface UnifiedActivityPanelProps {
   flights?: GeoJSONFeature[];
   cruises?: Cruise[];
@@ -85,6 +93,13 @@ export function UnifiedActivityPanel({
   );
 
   const effectiveFilter: "all" | ActivityKind = lockedKind ?? filter;
+  // How many pages are open. Keyed to the filter it was opened under, so a
+  // filter change starts at the first page again without an effect.
+  const [opened, setOpened] = useState<{ filter: "all" | ActivityKind; pages: number }>({
+    filter: "all",
+    pages: 1,
+  });
+  const pages = opened.filter === effectiveFilter ? opened.pages : 1;
 
   const visible = useMemo(
     () =>
@@ -214,7 +229,7 @@ export function UnifiedActivityPanel({
           {t("dashboard:sidebar.emptyActivity")}
         </p>
       ) : (
-        visible.map((item) => (
+        visible.slice(0, pages * ACTIVITY_PAGE_SIZE).map((item) => (
           <div
             key={item.id}
             role="button"
@@ -306,6 +321,29 @@ export function UnifiedActivityPanel({
             )}
           </div>
         ))
+      )}
+      {visible.length > pages * ACTIVITY_PAGE_SIZE && (
+        <button
+          type="button"
+          onClick={() => setOpened({ filter: effectiveFilter, pages: pages + 1 })}
+          className="activity-show-more"
+          style={{
+            display: "block",
+            width: "100%",
+            minHeight: 44,
+            padding: "10px 16px",
+            background: "none",
+            border: "none",
+            borderBottom: "1px solid var(--color-border)",
+            color: "var(--text-primary)",
+            cursor: "pointer",
+            fontSize: 13,
+          }}
+        >
+          {t("dashboard:sidebar.showMoreActivity", {
+            n: Math.min(ACTIVITY_PAGE_SIZE, visible.length - pages * ACTIVITY_PAGE_SIZE),
+          })}
+        </button>
       )}
     </div>
   );

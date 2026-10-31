@@ -29,7 +29,7 @@ import {
   endpointIdentity,
   getArcPeakAltitudeMeters,
   getArcSteps,
-  greatCircleWaypoints,
+  greatCircleWaypoints as computeGreatCircleWaypoints,
 } from "./arcUtils";
 import {
   calculateHeatmapThresholds,
@@ -37,6 +37,29 @@ import {
   getQuartile,
   type HeatmapThresholds,
 } from "./heatmapUtils";
+
+// Live playback rebuilds the arc data ten times a second, and the routes
+// barely change between two ticks. Tessellating every route's great circle
+// each time was the bulk of that work (forgejo#352), so a route's waypoints are
+// computed once and reused. Bounded, so a long session cannot grow it forever.
+const WAYPOINT_CACHE_MAX = 20_000;
+const waypointCache = new Map<string, [number, number, number][]>();
+
+function greatCircleWaypoints(
+  from: [number, number],
+  to: [number, number],
+  peakAltitudeM: number,
+  steps: number
+): [number, number, number][] {
+  const key = `${from[0]},${from[1]}|${to[0]},${to[1]}|${peakAltitudeM}|${steps}`;
+  let hit = waypointCache.get(key);
+  if (!hit) {
+    hit = computeGreatCircleWaypoints(from, to, peakAltitudeM, steps);
+    if (waypointCache.size >= WAYPOINT_CACHE_MAX) waypointCache.clear();
+    waypointCache.set(key, hit);
+  }
+  return hit;
+}
 
 export interface GlobeArcData {
   arcsData: ArcDatum[];

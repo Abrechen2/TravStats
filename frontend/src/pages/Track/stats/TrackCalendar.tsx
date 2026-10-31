@@ -45,7 +45,7 @@ const CELL = 14;
 export default function TrackCalendar({ year }: { year: number }): JSX.Element {
   const { t, i18n } = useTranslation(["track", "stats"]);
   const navigate = useNavigate();
-  const { units } = useSettingsStore();
+  const units = useSettingsStore((s) => s.units);
   const today = todayIn(useTodayZone());
   const [state, setState] = useState<State>({ kind: "loading" });
 

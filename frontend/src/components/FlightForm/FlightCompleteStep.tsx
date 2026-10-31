@@ -231,7 +231,7 @@ export default function FlightCompleteStep({
 }: FlightCompleteStepProps): JSX.Element {
   const { t } = useTranslation(["flights", "common"]);
   const addToast = useToastStore((s) => s.addToast);
-  const { features } = useSettingsStore();
+  const features = useSettingsStore((s) => s.features);
 
   const suggestions = useFlightEntrySuggestions({
     airline,

@@ -321,6 +321,21 @@ export function AllTab(): JSX.Element {
 
   // Lodging pin click → detail page, same route LodgingTab's map pins and
   // the lodging list rows already navigate to.
+  // Stable identities: an inline arrow here changed `handlePlaceClick` inside
+  // the map on every AllTab render and rebuilt every layer (forgejo#350).
+  const handlePlaceOpen = useCallback(
+    (placeId: string): void => {
+      void navigate(`/places/${placeId}`);
+    },
+    [navigate]
+  );
+  const handleCruiseOpen = useCallback(
+    (cruiseId: string): void => {
+      void navigate(`/cruises/${cruiseId}`);
+    },
+    [navigate]
+  );
+
   const handleLodgingClick = useCallback(
     (lodgingId: string): void => {
       navigate(`/lodging/${lodgingId}`);
@@ -692,11 +707,11 @@ export function AllTab(): JSX.Element {
           placesOverride={visiblePlaces}
           placeListColors={placeListContext.byPlaceId}
           placeListLabels={placeListContext.labelsByPlaceId}
-          onPlaceClick={(placeId) => navigate(`/places/${placeId}`)}
+          onPlaceClick={handlePlaceOpen}
           onFlightClick={handleFlightClick}
           onRouteClick={handleRouteClick}
           onFlightOpen={handleFlightOpen}
-          onCruiseOpen={(cruiseId) => navigate(`/cruises/${cruiseId}`)}
+          onCruiseOpen={handleCruiseOpen}
           cruisesOverride={visibleCruises}
           lodgingsOverride={visibleLodgings}
           onLodgingClick={handleLodgingClick}
@@ -751,11 +766,11 @@ export function AllTab(): JSX.Element {
         placesOverride={visiblePlaces}
         placeListColors={placeListContext.byPlaceId}
         placeListLabels={placeListContext.labelsByPlaceId}
-        onPlaceClick={(placeId) => navigate(`/places/${placeId}`)}
+        onPlaceClick={handlePlaceOpen}
         onFlightClick={handleFlightClick}
         onRouteClick={handleRouteClick}
         onFlightOpen={handleFlightOpen}
-        onCruiseOpen={(cruiseId) => navigate(`/cruises/${cruiseId}`)}
+        onCruiseOpen={handleCruiseOpen}
         cruisesOverride={visibleCruises}
         lodgingsOverride={visibleLodgings}
         onLodgingClick={handleLodgingClick}

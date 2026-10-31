@@ -37,7 +37,8 @@ export default function FlightYearSummaryCards({
   compareSummary,
 }: FlightYearSummaryCardsProps): JSX.Element {
   const { t, i18n } = useTranslation(["stats"]);
-  const { units, baseCurrency } = useSettingsStore();
+  const units = useSettingsStore((s) => s.units);
+  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
   const formatHours = (minutes: number): string => formatHoursValue(minutes / 60, i18n.language);
   // `year`-scoped measures need the year itself, not just the "year" period
   // kind — an evidence request without it is a request the resolver cannot

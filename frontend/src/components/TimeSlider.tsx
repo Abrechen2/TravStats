@@ -2,6 +2,12 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "../hooks/useTranslation";
 import { formatDate } from "../lib/displayFormat";
 
+const FRAME_MS = 1000 / 60;
+/** ~30 Hz: a commit rebuilds the trips layers. A frame slightly under 33 ms still commits. */
+const MIN_COMMIT_INTERVAL_MS = 30;
+/** A stalled tab must not leap across the whole range when it wakes. */
+const MAX_STEP_MS = 100;
+
 interface TimeSliderProps {
   min: number;
   max: number;
@@ -31,14 +37,26 @@ export function TimeSlider({
       return;
     }
 
-    const step = (max - min) / 3600;
+    // One full pass takes 3600 frames at 60 Hz, i.e. a minute. Commits are
+    // throttled to ~30 Hz (each one rebuilds the map's trips layers) and the
+    // step scales with the time since the last commit, so the speed is unchanged.
+    const stepPerMs = (max - min) / 3600 / FRAME_MS;
+    let lastCommit: number | null = null;
 
-    const tick = (): void => {
+    const tick = (now: number): void => {
+      rafRef.current = requestAnimationFrame(tick);
+      if (lastCommit === null) {
+        lastCommit = now;
+        return;
+      }
+      const elapsed = now - lastCommit;
+      if (elapsed < MIN_COMMIT_INTERVAL_MS) return;
+      lastCommit = now;
+      const step = stepPerMs * Math.min(elapsed, MAX_STEP_MS);
       onChange((prev) => {
         const next = prev + step;
         return next > max ? min : next;
       });
-      rafRef.current = requestAnimationFrame(tick);
     };
 
     rafRef.current = requestAnimationFrame(tick);
