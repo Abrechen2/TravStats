@@ -51,10 +51,10 @@ describe("AutoUpdateSection", () => {
 
   it("writes a number when its field is left, not on every keystroke", () => {
     const { onSave, onSet } = renderSection();
-    const field = screen.getByLabelText("settings:autoUpdate.checkInterval");
+    const field = screen.getByLabelText("settings:autoUpdate.expiryHours");
 
     fireEvent.change(field, { target: { value: "30" } });
-    expect(onSet).toHaveBeenCalledWith({ ...SETTINGS, checkInterval: 30 });
+    expect(onSet).toHaveBeenCalledWith({ ...SETTINGS, expiryHours: 30 });
     expect(onSave).not.toHaveBeenCalled();
 
     fireEvent.blur(field);
@@ -69,14 +69,14 @@ describe("AutoUpdateSection — standard level: decisions stay, tuning waits", (
     act(() => useSettingsLevelStore.setState({ level: null }));
   });
 
-  it("keeps approval and 'only during flight' at the standard level, and hides interval and expiry", () => {
+  it("keeps approval at the standard level, hides expiry, and offers no inert interval / only-during-flight control (forgejo#389)", () => {
     renderSection();
     expect(
       screen.getByRole("switch", { name: "settings:autoUpdate.requireApproval" })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("switch", { name: "settings:autoUpdate.onlyDuringFlight" })
-    ).toBeInTheDocument();
+      screen.queryByRole("switch", { name: "settings:autoUpdate.onlyDuringFlight" })
+    ).toBeNull();
     expect(screen.queryByLabelText("settings:autoUpdate.checkInterval")).toBeNull();
     expect(screen.queryByLabelText("settings:autoUpdate.expiryHours")).toBeNull();
   });

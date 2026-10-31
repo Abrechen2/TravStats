@@ -431,7 +431,9 @@ const defaultSettings: Omit<
     // No shipped classification defaults (#256): an untouched flight form
     // must not store a seat class or category the user never picked.
     seatClass: "",
-    favoriteAirline: "Lufthansa",
+    // Empty like the two above: the field now prefills the flight form, so a
+    // shipped airline would stamp itself on every new flight (forgejo#389).
+    favoriteAirline: "",
     flightCategory: "",
   },
   notifications: {

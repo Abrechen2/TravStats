@@ -146,6 +146,9 @@ export function useFlightForm(
     if (baseCurrency) setCurrency(baseCurrency);
     if (defaults?.flightCategory) setCategory(defaults.flightCategory);
     if (defaults?.seatClass) setSeatClass(defaults.seatClass);
+    // Settings > Defaults > favourite airline (forgejo#389). Never over a value
+    // already in the field: a typed or loaded airline wins.
+    if (defaults?.favoriteAirline) setAirline((prev) => prev || defaults.favoriteAirline);
   }, [baseCurrency, defaults]);
 
   // Auto-set status based on date (skip when historical is active)

@@ -38,6 +38,7 @@ import type { PlaceLabelList, PlaceLabelSource } from "../lib/placeLabel";
 import { createHeatmapLayer } from "./layers/heatmapLayer";
 import { withTripsLayers, buildTripsData, getTimeRange } from "./layers/tripsLayer";
 import { createSpecialFlightsLayers } from "./layers/specialFlightsLayer";
+import { useSettingsStore } from "../store/settingsStore";
 import { useCruiseColorStore } from "../store/cruiseColorStore";
 import { buildCruiseOverlays } from "./layers/cruiseOverlays";
 import { useCruiseGeometry } from "../hooks/useCruiseGeometry";
@@ -202,9 +203,7 @@ export function DeckGLMap({
   const flightColorConfig = useFlightColorStore((s) => s.config);
   const setFlightColorMode = useFlightColorStore((s) => s.setMode);
   const setFlightColor = useFlightColorStore((s) => s.setColor);
-  // Same deal for cruises: the mode + colours live in one store the globe, both
-  // panels and the dashboard legend read too. The mode used to be a hardcoded
-  // prop per dashboard tab — the user had no say and never saw "Pro Reise".
+  // Cruises too: mode + colours live in one store shared with globe, panels, legend.
   const cruiseColorConfig = useCruiseColorStore((s) => s.config);
   const lodgingColorConfig = useLodgingColorStore((s) => s.config);
   const setLodgingColorMode = useLodgingColorStore((s) => s.setMode);
@@ -255,8 +254,8 @@ export function DeckGLMap({
   const [flightMarkerSize, setFlightMarkerSize] = useState<number>(
     () => loadMapAppearance().flightMarkerSize ?? 1
   );
-  // Cruise-domain appearance. The route COLOUR lives in the cruise-colour store
-  // above (mode + colours); only width / marker / arrow settings are local.
+  // Cruise appearance: colour is in the store; the settings flag hides route lines (forgejo#389).
+  const showCruiseArcs = useSettingsStore((s) => s.cruise.showCruiseArcs);
   const [cruiseRouteWidth, setCruiseRouteWidth] = useState<number>(
     () => loadMapAppearance().cruiseRouteWidth ?? 1
   );
@@ -594,8 +593,7 @@ export function DeckGLMap({
         base = [];
     }
 
-    // Cruise arcs + ports: supplemental overlays, always on when cruise data is
-    // present (gated upstream by the cruise domain).
+    // Cruise arcs + ports: on whenever cruise data is present (gated upstream).
     const { below: cruisePathsBelow, above: cruisePortsAbove } = buildCruiseOverlays(
       cruises,
       cruiseGeometry,
@@ -609,6 +607,7 @@ export function DeckGLMap({
         portColor: portColor ?? undefined,
         portSizeScale: cruiseMarkerSize,
         labelsMode,
+        showArcs: showCruiseArcs,
       }
     );
 
@@ -675,6 +674,7 @@ export function DeckGLMap({
     flightRouteWidth,
     cruiseRouteWidth,
     cruiseArrowScale,
+    showCruiseArcs,
     labelsMode,
     cruiseColorConfig,
     flightColorConfig,

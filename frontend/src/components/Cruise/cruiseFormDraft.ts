@@ -77,11 +77,13 @@ export function stopInputsOf(stops: readonly CruiseStop[]): CruiseStopInput[] {
  */
 export function cruiseFormFields(
   cruise: Cruise | undefined,
-  baseCurrency: string | null | undefined
+  baseCurrency: string | null | undefined,
+  /** Settings > Cruises. Prefills a NEW cruise only; a stored one keeps its own values. */
+  defaults?: { defaultLine?: string; defaultCabinType?: CabinType | null }
 ): CruiseFormFields {
   return {
     ship: cruise?.ship ?? null,
-    cruiseLine: cruise?.cruiseLine ?? "",
+    cruiseLine: cruise ? (cruise.cruiseLine ?? "") : (defaults?.defaultLine ?? ""),
     routeName: cruise?.routeName ?? "",
     startDate: toDateInput(cruise?.startDate),
     endDate: toDateInput(cruise?.endDate),
@@ -92,7 +94,7 @@ export function cruiseFormFields(
     arrivalPort: cruise?.arrivalPort ?? null,
     stops: stopInputsOf(cruise?.stops ?? []),
     cabinNumber: cruise?.cabinNumber ?? "",
-    cabinType: cruise?.cabinType ?? "",
+    cabinType: cruise ? (cruise.cabinType ?? "") : (defaults?.defaultCabinType ?? ""),
     deck: cruise?.deck?.toString() ?? "",
     bookingReference: cruise?.bookingReference ?? "",
     price: cruise?.price?.toString() ?? "",

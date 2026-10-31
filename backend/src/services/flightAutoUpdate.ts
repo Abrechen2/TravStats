@@ -25,6 +25,7 @@ import {
 } from "../utils/timezone";
 import { markFlownOnReportedLanding } from "./flightLandedStatus";
 import { DEVICE_SOURCES, isDeviceSource } from "./flightDevice/deviceSource";
+import { pendingUpdateExpiryMs } from "./autoUpdateExpiry";
 
 const prismaClient = prisma as PrismaClient;
 
@@ -288,6 +289,7 @@ export async function createPendingUpdate(
     // observation (forgejo#194) and a provider's report are kept apart: folded
     // into one row, the later writer replaced the other's proposal and its
     // attribution, so a provider poll would erase what the phone saw.
+    const expiryMs = await pendingUpdateExpiryMs(flight.userId);
     const existing = await prismaClient.pendingFlightUpdate.findFirst({
       where: {
         flightId: flight.id,
@@ -306,13 +308,12 @@ export async function createPendingUpdate(
           apiSource,
           ...(metadata === undefined ? {} : { metadata }),
           fetchedAt: new Date(),
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+          expiresAt: new Date(Date.now() + expiryMs),
           updatedAt: new Date(),
         },
       });
       return updated.id;
     }
-
     // Create original data snapshot
     const originalData = {
       airline: flight.airline,
@@ -330,12 +331,11 @@ export async function createPendingUpdate(
       status: flight.status,
     };
 
-    // Calculate expiry (24 hours from now or after flight ends, whichever is later)
     const flightEnd = new Date(
       (flight.arrivalTime ? flight.arrivalTime.getTime() : Date.now()) +
         FLIGHT_ACTIVE_BUFFER_HOURS * 60 * 60 * 1000
     );
-    const expiresAt = new Date(Math.max(Date.now() + 24 * 60 * 60 * 1000, flightEnd.getTime()));
+    const expiresAt = new Date(Math.max(Date.now() + expiryMs, flightEnd.getTime()));
 
     // Calculate statistics impact
     let statisticsImpact: Prisma.InputJsonValue | null = null;
