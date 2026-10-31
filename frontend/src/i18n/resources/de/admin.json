@@ -184,7 +184,7 @@
           },
           "travTrack": {
             "name": "TravTrack (eigener Standortverlauf)",
-            "what": "Ein eigener Standortverlauf auf diesem Server: Die Companion-App zeichnet Positionen auf, Flüge und Reisen eingeschlossen, mit Privatzonen und Löschen nach Zeitraum. Braucht zusätzlich den TravTrack-Schalter unter Instanz."
+            "what": "Ein eigener Standortverlauf auf diesem Server: Positionen kommen von der Companion-App, aus GPX-Dateien, von OwnTracks und Overland sowie aus einem Dawarich-Import, Flüge und Reisen eingeschlossen, mit Privatzonen und Löschen nach Zeitraum. Braucht zusätzlich den TravTrack-Schalter unter Instanz."
           }
         }
       },
@@ -1325,7 +1325,7 @@
   },
   "travTrack": {
     "title": "TravTrack",
-    "description": "Der eigene Standortverlauf: Die Companion-App zeichnet Positionen auf diesem Server auf. Ausschalten löscht nichts — Konten mit Daten behalten Übersicht, Export und Löschen.",
+    "description": "Der eigene Standortverlauf: Positionen kommen von der Companion-App, aus GPX-Dateien, von OwnTracks und Overland sowie aus einem Dawarich-Import auf diesen Server. Ausschalten löscht nichts — Konten mit Daten behalten Übersicht, Export und Löschen.",
     "needsBeta": "TravTrack ist eine Beta-Funktion. Schalte zuerst die Beta-Funktionen dieser Instanz ein.",
     "switch": "TravTrack auf diesem Server anbieten",
     "switchSub": "Konten können TravTrack dann als Standortquelle wählen.",
