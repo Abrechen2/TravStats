@@ -289,7 +289,13 @@ export async function createPendingUpdate(
     // observation (forgejo#194) and a provider's report are kept apart: folded
     // into one row, the later writer replaced the other's proposal and its
     // attribution, so a provider poll would erase what the phone saw.
-    const expiryMs = await pendingUpdateExpiryMs(flight.userId);
+    // The user's window, but never before the flight has ended (forgejo#389).
+    const flightEndMs =
+      (flight.arrivalTime ? flight.arrivalTime.getTime() : Date.now()) +
+      FLIGHT_ACTIVE_BUFFER_HOURS * 60 * 60 * 1000;
+    const expiresAt = new Date(
+      Math.max(Date.now() + (await pendingUpdateExpiryMs(flight.userId)), flightEndMs)
+    );
     const existing = await prismaClient.pendingFlightUpdate.findFirst({
       where: {
         flightId: flight.id,
@@ -308,7 +314,7 @@ export async function createPendingUpdate(
           apiSource,
           ...(metadata === undefined ? {} : { metadata }),
           fetchedAt: new Date(),
-          expiresAt: new Date(Date.now() + expiryMs),
+          expiresAt,
           updatedAt: new Date(),
         },
       });
@@ -330,12 +336,6 @@ export async function createPendingUpdate(
       actualArrival: flight.actualArrival?.toISOString() ?? null,
       status: flight.status,
     };
-
-    const flightEnd = new Date(
-      (flight.arrivalTime ? flight.arrivalTime.getTime() : Date.now()) +
-        FLIGHT_ACTIVE_BUFFER_HOURS * 60 * 60 * 1000
-    );
-    const expiresAt = new Date(Math.max(Date.now() + expiryMs, flightEnd.getTime()));
 
     // Calculate statistics impact
     let statisticsImpact: Prisma.InputJsonValue | null = null;

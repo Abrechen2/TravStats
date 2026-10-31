@@ -65,4 +65,13 @@ describe("createPendingUpdate honours autoUpdateExpiryHours", () => {
     expect(hours).toBeGreaterThan(47.9);
     expect(hours).toBeLessThan(48.1);
   });
+
+  it("never expires a refreshed suggestion before the flight has ended", async () => {
+    await prisma.userSettings.update({ where: { userId }, data: { autoUpdateExpiryHours: 1 } });
+    const flight = await prisma.flight.findUniqueOrThrow({ where: { id: flightId } });
+    const id = await createPendingUpdate(flight, { gate: "D4" }, change, "airlabs");
+    const row = await prisma.pendingFlightUpdate.findUniqueOrThrow({ where: { id: id! } });
+    const hours = (row.expiresAt.getTime() - Date.now()) / HOUR;
+    expect(hours).toBeGreaterThan(20.9); // arrival in 19 h + 2 h buffer
+  });
 });
