@@ -261,7 +261,8 @@ export interface SettingsState {
   loadApiKeysStatus: () => Promise<void>;
   resetSettings: () => void;
   loadRemoteSettings: () => Promise<void>;
-  saveRemoteSettings: () => Promise<void>;
+  /** `keepalive`: the page is unloading, send with `fetch(..., {keepalive})`. */
+  saveRemoteSettings: (options?: { keepalive?: boolean }) => Promise<void>;
   /**
    * Serialized copy of the settings the server is known to hold, stamped after
    * every load and every successful save. The settings page's debounced
@@ -650,7 +651,11 @@ export const useSettingsStore = create<SettingsState>()(
         useRemoteSettingsStatus.getState().setFailed(false);
         set({ remoteSnapshot: snapshotOf(get()) });
       },
-      saveRemoteSettings: async () => {
+      saveRemoteSettings: async (options) => {
+        const putSettings = options?.keepalive ? settingsApi.updateKeepalive : settingsApi.update;
+        const putProfile = options?.keepalive
+          ? settingsApi.updateProfileKeepalive
+          : settingsApi.updateProfile;
         const previous = saveQueue;
         let release!: () => void;
         saveQueue = new Promise<void>((resolve) => {
@@ -682,7 +687,7 @@ export const useSettingsStore = create<SettingsState>()(
           // both up front and collecting results with allSettled means one
           // failing never blocks the other.
           const results = await Promise.allSettled([
-            settingsApi.update({
+            putSettings({
               profile,
               // Never the browser's guess as if the user had confirmed it.
               display: displayForSave(display),
@@ -697,7 +702,7 @@ export const useSettingsStore = create<SettingsState>()(
             // User row). Only PUT when the field was explicitly loaded or set
             // — undefined means "not touched this session, leave backend as-is".
             profile.birthdate !== undefined
-              ? settingsApi.updateProfile({ birthdate: profile.birthdate })
+              ? putProfile({ birthdate: profile.birthdate })
               : Promise.resolve(undefined),
           ]);
 

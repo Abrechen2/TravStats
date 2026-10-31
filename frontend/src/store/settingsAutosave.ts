@@ -65,7 +65,7 @@ function fail(reason: string): void {
   if (observers === 0) useToastStore.getState().addToast("error", reason);
 }
 
-async function run(): Promise<void> {
+async function run(keepalive = false): Promise<void> {
   timer = null;
   if (savedTimer) clearTimeout(savedTimer);
   const settings = useSettingsStore.getState();
@@ -76,7 +76,7 @@ async function run(): Promise<void> {
   set("saving");
   inFlight += 1;
   try {
-    await settings.saveRemoteSettings();
+    await settings.saveRemoteSettings({ keepalive });
     inFlight -= 1;
     // A newer edit waiting for its own debounce keeps the status on "pending".
     if (timer || inFlight > 0) return;
@@ -100,10 +100,10 @@ export function scheduleAutosave(): void {
 }
 
 /** Write a waiting edit now (unmount, navigation, `pagehide`). */
-export function flushAutosave(): void {
+export function flushAutosave(keepalive = false): void {
   if (!timer) return;
   clearTimeout(timer);
-  void run();
+  void run(keepalive);
 }
 
 /** The user's "Erneut versuchen". */
@@ -128,5 +128,6 @@ export function observeAutosave(): () => void {
 }
 
 if (typeof window !== "undefined") {
-  window.addEventListener("pagehide", flushAutosave);
+  // Only here is the page really going away; navigation inside the app uses axios.
+  window.addEventListener("pagehide", () => flushAutosave(true));
 }
