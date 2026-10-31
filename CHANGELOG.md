@@ -6,7 +6,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-**Before upgrading to 2.8.0-rc.4:** take a backup. Six new migrations since 2.7.0: two tables for the TravTrack diagnostics log, new columns on the admin and user settings for the ADS-B providers and the AeroAPI plan, two tables that count AeroAPI calls and track fetches, and the external-services policy (a policy column on the admin and user settings, a table for stored test results, a switch for a local custom AI endpoint); nothing existing changes.
+**Before upgrading to 2.8.0-rc.5:** take a backup. Seven new migrations since 2.7.0: two tables for the TravTrack diagnostics log, new columns on the admin and user settings for the ADS-B providers and the AeroAPI plan, two tables that count AeroAPI calls and track fetches, and the external-services policy (a policy column on the admin and user settings, a table for stored test results, a switch for a local custom AI endpoint), and the columns that receive the one-time copy of the service environment variables; nothing existing changes.
+
+**Upgrading to 2.8.0-rc.5 — external-service settings move out of the environment.** On its first start this version copies every external-service variable still set in the server environment (`AIRLABS_API_KEY`, `AVIATIONSTACK_API_KEY`, `OLLAMA_URL`, `OLLAMA_MODEL`, the Immich, Dawarich, Strava, WebDAV, federation and the other service variables) into the instance settings, encrypted, wherever the instance field is still empty, and then never reads them again. The log names the variables it copied, never their values. From then on these services are configured only under Administration → External services; database, secrets, ports, time zone, logging, backup paths and first-boot defaults stay environment variables. One new migration adds the columns the copy needs.
 
 ### Added
 
@@ -15,6 +17,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - **adsb.lol and ADS-B Exchange can name the aircraft of a flight in the air right now.** Both are off until an admin switches them on under Administration → External services (adsb.lol by a switch, ADS-B Exchange with its own key). They answer only for today's flights, fill registration and type, and never overwrite what another provider supplied.
 - **FlightAware AeroAPI knows its plan and its budget.** Admins pick Personal, Personal with feeder credit or a custom monthly budget; the instance key stops before the month's budget is spent and is rate-limited, while a user's own key never counts against it. Real flight tracks from AeroAPI after arrival are built in but stay off until the admin switches them on.
 - **TravTrack (beta) explains its gaps.** With the diagnostics log switched on in the Companion (Settings → Location, off by default), the phone sends what its recorder, its uploads and iOS did — never a position. Settings → TravTrack → Diagnose lines one device's day up against its stored points and names, for every gap of ten minutes or more, the cause the log supports: location access not "Always", recording paused, fixes dropped on the phone and why, an upload failed or still waiting, the app terminated, or "unexplained" — with a note when iOS was allowed to pause recording on its own. The raw log downloads as JSON; it is kept 14 days and can be deleted at any time.
+
+- **Setup can switch on the free services in one step.** The first-run page offers a switch that turns on the services that cost nothing and need no key — adsb.lol, rail timetables, open data (weather, elevation, Wikipedia) and airline logos — and says what leaves the server for each. The usage-statistics question stays its own question.
+- **A WebDAV backup can be restored from the share.** Administration → Backups lists the backups on the share; a downloaded one is checked against the checksum written at upload and then appears in the backup list like any other. Older backups without a checksum are accepted on size and marked as such.
+- **The server answers the Companion's new statistics:** ferry statistics, a trip's distance across every mode of transport, and the number of roadtrips. A trip's countries now include the places you visited on it, by the same rule as the passport.
 
 ### Fixed
 
@@ -37,6 +43,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - **Flight times in the year report and the map panel follow the shared duration rule,** and the report marks a total that contains estimated legs.
 - **A failing Immich import stops polling and names its failure;** the ferry editor shows why a save failed.
 - **Tag suggestions include ferry rides and rentals;** a bulk flight lookup validates its input, uses your own keys and reports provider failures.
+- **External services no longer mention server variables, and no field shows a raw label.** The source-order line and every reference to environment variables are gone from both pages; fields such as the Ollama address and model have their German and English labels, and a test now fails on any field without one. AISStream has its own row.
+- **WebDAV sync and download no longer fail in the browser while the server is still working.** Both run in the background; the page follows their progress and names the reason when one fails — sign-in, storage full, timeout, unreachable, cut short or checksum mismatch.
+- **Lists the server cuts short say so on the page:** the trip list, a trip card whose countries may be incomplete, the Dawarich stay inbox, an Immich album and the parse-log export.
+- **Large logbooks load faster.** Trip, flight and statistics queries read only the rows and columns they need, the airport, airline and aircraft searches filter in the database, and the geocoder caches are bounded. A finished trip is now marked completed within the hour rather than within five minutes.
+- **Maps and long lists stay smooth.** Map layers are no longer rebuilt on every animation frame, the live slider and replay redraw less often, and the activity list shows 200 entries with "show more".
+- **Setup no longer redirects past a failed step** when the page was left before its timer ran out.
 
 ## [2.7.0] - 2026-10-29
 
