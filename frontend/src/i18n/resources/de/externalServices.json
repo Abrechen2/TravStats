@@ -81,15 +81,11 @@
   "allowAccountKeysOn": "Ein eigener Schlüssel geht vor; ohne ihn gilt der der Instanz.",
   "allowAccountKeysOff": "Konten dürfen keinen eigenen Schlüssel nutzen – es gilt der der Instanz.",
   "expert": {
-    "order": "Reihenfolge",
-    "quota": "Kontingent",
-    "env": "Server-Variable (ENV)",
-    "envText": "wird nur genutzt, wenn weder Konto noch Instanz einen Schlüssel haben"
+    "quota": "Kontingent"
   },
   "budget": "Budget: {{used}} von {{limit}} {{unit}} · stoppt vor dem Limit",
   "source": {
     "instance": "Wirksam: Instanz-Schlüssel hinterlegt",
-    "env": "Wirksam: Server-Variable (ENV)",
     "keyless": "Ohne Schlüssel",
     "none": "Kein Schlüssel – bleibt aus",
     "off": "Aus – gilt für alle Konten, eigene Schlüssel und Hintergrund-Jobs",
@@ -115,7 +111,12 @@
       "unreachable": "nicht erreichbar",
       "not_configured": "nicht eingerichtet",
       "budget_exhausted": "Monatsbudget aufgebraucht",
-      "disabled": "ausgeschaltet"
+      "disabled": "ausgeschaltet",
+      "quota": "Kontingent erreicht",
+      "network": "Server nicht erreichbar",
+      "http_error": "Unerwartete Antwort des Dienstes",
+      "not_found": "Adresse oder Zugang nicht gefunden",
+      "unknown": "Unbekannter Fehler"
     },
     "missingUrl": "Erst eine Adresse eintragen",
     "offPlain": "Ausgeschaltet"
@@ -142,7 +143,6 @@
     "quota": "Wie viel ist frei?",
     "dataOut": "Was verlässt den Server?",
     "who": "Wer richtet es ein?",
-    "source": "Welche Quelle gilt?",
     "recommendationText": {
       "free": "Empfohlen: kostenlos und bringt viel für ein vollständiges Logbuch.",
       "freeCredit": "Empfohlen: das monatliche Gratis-Guthaben reicht für die eigenen Flüge; TravStats stoppt vor dem Limit.",
@@ -315,7 +315,6 @@
       "dataOut": "Flugnummer und Datum. Keine Namen, keine Buchungsdaten.",
       "getKeyUrl": "https://airlabs.co/",
       "getKeyLabel": "Schlüssel bei AirLabs holen",
-      "order": "Konto → Instanz → Server-ENV",
       "quotaLine": "1.000 Anfragen / Monat frei"
     },
     "aviationstack": {
@@ -327,7 +326,6 @@
       "dataOut": "Flugnummer und Datum.",
       "getKeyUrl": "https://aviationstack.com/",
       "getKeyLabel": "Schlüssel bei Aviationstack holen",
-      "order": "Konto → Instanz → Server-ENV",
       "quotaLine": "[Freikontingent laut Anbieter]"
     },
     "aerodatabox": {
@@ -339,7 +337,6 @@
       "dataOut": "Flugnummer und Datum.",
       "getKeyUrl": "https://rapidapi.com/aedbx-aedbx/api/aerodatabox",
       "getKeyLabel": "AeroDataBox bei RapidAPI",
-      "order": "Konto → Instanz → Server-ENV",
       "quotaLine": "600 Einheiten / Monat frei · Stand laut RapidAPI"
     },
     "aeroapi": {
@@ -351,7 +348,6 @@
       "dataOut": "Flugnummer, Datum, Flughäfen.",
       "getKeyUrl": "https://www.flightaware.com/aeroapi/",
       "getKeyLabel": "AeroAPI bei FlightAware",
-      "order": "Instanz → Server-ENV",
       "quotaLine": "10 $ / Monat · stoppt vor dem Limit"
     },
     "opensky": {
@@ -363,7 +359,6 @@
       "dataOut": "Flugnummer bzw. Kennung des Flugzeugs und Zeitraum.",
       "getKeyUrl": "https://opensky-network.org/",
       "getKeyLabel": "Zugang bei OpenSky anlegen",
-      "order": "Konto → Instanz → Server-ENV",
       "quotaLine": "nur Ratenlimit; Feeder höher"
     },
     "adsblol": {
@@ -375,7 +370,6 @@
       "dataOut": "Flugnummer oder Kennung, nur für heutige Flüge.",
       "getKeyUrl": "https://api.adsb.lol/",
       "getKeyLabel": "adsb.lol",
-      "order": "Konto → Instanz-Schalter",
       "quotaLine": "höflich: ≤ 1 Anfrage / Sekunde"
     },
     "adsbx": {
@@ -387,7 +381,6 @@
       "dataOut": "Flugnummer oder Kennung, nur für heutige Flüge.",
       "getKeyUrl": "https://rapidapi.com/adsbx/api/adsbexchange-com1",
       "getKeyLabel": "ADS-B Exchange bei RapidAPI",
-      "order": "Instanz → Server-ENV",
       "quotaLine": "laut RapidAPI-Tarif"
     },
     "openrouteservice": {
@@ -399,7 +392,6 @@
       "dataOut": "Koordinaten der Stationen.",
       "getKeyUrl": "https://openrouteservice.org/dev/#/signup",
       "getKeyLabel": "Schlüssel bei OpenRouteService",
-      "order": "Konto → Instanz → Server-ENV",
       "quotaLine": "2.000 Anfragen / Tag frei"
     },
     "graphhopper": {
@@ -411,7 +403,6 @@
       "dataOut": "Koordinaten der Stationen.",
       "getKeyUrl": "https://www.graphhopper.com/",
       "getKeyLabel": "Schlüssel bei GraphHopper",
-      "order": "Routing-Anbieter wählt die Instanz",
       "quotaLine": "500 Anfragen / Tag frei"
     },
     "railTimetables": {
@@ -423,7 +414,6 @@
       "dataOut": "Bahnhöfe und Abfahrtszeit.",
       "getKeyUrl": "https://transitous.org/",
       "getKeyLabel": "Transitous",
-      "order": "Transitous → db-rest",
       "quotaLine": "db-rest: ~100 Anfragen / Minute, geteilt"
     },
     "googlePlaces": {
@@ -435,7 +425,6 @@
       "dataOut": "Suchtext bzw. Ortskennung.",
       "getKeyUrl": "https://console.cloud.google.com/",
       "getKeyLabel": "Schlüssel in der Google Cloud Console",
-      "order": "Photon → Nominatim → Google",
       "quotaLine": "kostenpflichtig pro Anfrage"
     },
     "geocoder": {
@@ -447,7 +436,6 @@
       "dataOut": "Suchtext oder Koordinaten.",
       "getKeyUrl": "https://operations.osmfoundation.org/policies/nominatim/",
       "getKeyLabel": "Nutzungsregeln Nominatim",
-      "order": "Photon → Nominatim → Google",
       "quotaLine": "Nutzungsregeln von OSM",
       "alwaysOnWhy": "Ortssuche, Adresseingabe und Koordinaten laufen darüber; ohne ihn fände kein Formular mehr einen Ort. Wer die öffentlichen Server nicht nutzen will, trägt unter „Experte“ eigene Adressen ein."
     },
@@ -460,7 +448,6 @@
       "dataOut": "Bleibt in deinem Netz.",
       "getKeyUrl": "https://github.com/geofabrik/OpenRailRouting",
       "getKeyLabel": "OpenRailRouting",
-      "order": "vor den Cloud-Anbietern",
       "quotaLine": "eigener Server"
     },
     "immich": {
@@ -472,7 +459,6 @@
       "dataOut": "Bleibt zwischen TravStats und deinem Immich.",
       "getKeyUrl": "https://immich.app/docs/features/command-line-interface#obtain-the-api-key",
       "getKeyLabel": "API-Schlüssel in Immich anlegen",
-      "order": "Konto → Instanz → Server-ENV",
       "quotaLine": "eigener Server",
       "adminPurpose": "Instanz-Verbindung für den nächtlichen Foto-Scan; Konten verbinden ihr eigenes Immich"
     },
@@ -485,7 +471,6 @@
       "dataOut": "Strava schickt Aktivitäten an TravStats, nicht umgekehrt.",
       "getKeyUrl": "https://www.strava.com/settings/api",
       "getKeyLabel": "Strava-App anlegen",
-      "order": "OAuth pro Konto",
       "quotaLine": "Strava-Ratenlimits pro App",
       "adminPurpose": "Die Strava-App der Instanz (Client-ID und Secret); Konten verbinden ihr eigenes Strava damit"
     },
@@ -498,7 +483,6 @@
       "dataOut": "Bleibt in deinem Netz.",
       "getKeyUrl": "https://ollama.com/",
       "getKeyLabel": "Ollama",
-      "order": "Ollama → Cloud-Anbieter (nur mit Freigabe)",
       "quotaLine": "eigene Hardware"
     },
     "openai": {
@@ -510,7 +494,6 @@
       "dataOut": "Text des Imports, bis 12.000 Zeichen. Nur nach Freigabe.",
       "getKeyUrl": "https://platform.openai.com/api-keys",
       "getKeyLabel": "Schlüssel bei OpenAI",
-      "order": "nach Ollama",
       "quotaLine": "Kosten pro Token",
       "where": "OpenAI, api.openai.com (USA)",
       "costShort": "Bezahlt pro Token über deinen OpenAI-Account."
@@ -524,7 +507,6 @@
       "dataOut": "Text des Imports, bis 12.000 Zeichen. Nur nach Freigabe.",
       "getKeyUrl": "https://console.anthropic.com/",
       "getKeyLabel": "Schlüssel bei Anthropic",
-      "order": "nach Ollama",
       "quotaLine": "Kosten pro Token",
       "where": "Anthropic, api.anthropic.com (USA)",
       "costShort": "Bezahlt pro Token über deinen Anthropic-Account."
@@ -538,7 +520,6 @@
       "dataOut": "Text des Imports, bis 12.000 Zeichen. Nur nach Freigabe.",
       "getKeyUrl": "https://aistudio.google.com/apikey",
       "getKeyLabel": "Schlüssel bei Google AI Studio",
-      "order": "nach Ollama",
       "quotaLine": "laut Google AI Studio",
       "where": "Google, generativelanguage.googleapis.com",
       "costShort": "Freikontingent, danach pro Token."
@@ -552,7 +533,6 @@
       "dataOut": "Text des Imports. Auch ein entfernter Server braucht die Freigabe.",
       "getKeyUrl": "https://openrouter.ai/",
       "getKeyLabel": "Beispiel: OpenRouter",
-      "order": "nach Ollama",
       "quotaLine": "je nach Anbieter",
       "where": "die eingetragene URL",
       "costShort": "Je nach Anbieter."
@@ -566,7 +546,6 @@
       "dataOut": "Koordinaten und Ortsnamen.",
       "getKeyUrl": "https://open-meteo.com/",
       "getKeyLabel": "Open-Meteo",
-      "order": "–",
       "quotaLine": "faire Nutzung"
     },
     "logos": {
@@ -578,7 +557,6 @@
       "dataOut": "Airline-Code.",
       "getKeyUrl": "https://logostream.dev/",
       "getKeyLabel": "logostream",
-      "order": "logostream → eigene → kiwi → Daisycon",
       "quotaLine": "–"
     },
     "fx": {
@@ -590,7 +568,6 @@
       "dataOut": "Währung und Datum.",
       "getKeyUrl": "https://frankfurter.dev/",
       "getKeyLabel": "Frankfurter",
-      "order": "Frankfurter → currency-api",
       "quotaLine": "–",
       "alwaysOnWhy": "Jede Umrechnung in deine Währung läuft über die EZB-Kurse; es verlassen nur Währung und Datum den Server. Abschalten lässt sich nur die Ersatzquelle für Währungen, die die EZB nicht kennt."
     },
@@ -603,7 +580,6 @@
       "dataOut": "Das ganze Backup – verschlüsselt übertragen, Ziel muss vertrauenswürdig sein.",
       "getKeyUrl": "https://travstats.de/docs/",
       "getKeyLabel": "Anleitung",
-      "order": "Konto-Ziel zusätzlich",
       "quotaLine": "–",
       "adminPurpose": "Backups und Exporte der Instanz auf eine Freigabe; Konten dürfen eigene Ziele"
     },
@@ -616,7 +592,6 @@
       "dataOut": "Empfängeradresse und Mailtext.",
       "getKeyUrl": "https://travstats.de/docs/",
       "getKeyLabel": "Anleitung",
-      "order": "–",
       "quotaLine": "laut Mailanbieter"
     },
     "push": {
@@ -628,7 +603,6 @@
       "dataOut": "Geräte-Token und Hinweistext.",
       "getKeyUrl": "https://travstats.de/docs/",
       "getKeyLabel": "Anleitung",
-      "order": "–",
       "quotaLine": "–"
     },
     "federation": {
@@ -640,7 +614,6 @@
       "dataOut": "Nur was ein Konto ausdrücklich teilt; Bestenliste nur Summen.",
       "getKeyUrl": "https://travstats.de/docs/",
       "getKeyLabel": "Anleitung",
-      "order": "–",
       "quotaLine": "–"
     },
     "usageStats": {
@@ -652,7 +625,6 @@
       "dataOut": "Anonyme Zähler, keine Reisen, keine Namen.",
       "getKeyUrl": "https://www.abrechen2.de/travstats/datenschutz/",
       "getKeyLabel": "Datenschutz",
-      "order": "–",
       "quotaLine": "–"
     },
     "updatesTemplates": {
@@ -664,7 +636,6 @@
       "dataOut": "Nur die Abfrage selbst, keine Daten aus deinem Logbuch.",
       "getKeyUrl": "https://github.com/Abrechen2/travstats-templates",
       "getKeyLabel": "Vorlagen-Repo",
-      "order": "–",
       "quotaLine": "GitHub-Ratenlimit"
     },
     "dawarich": {
@@ -676,7 +647,6 @@
       "dataOut": "Bleibt zwischen TravStats und Dawarich.",
       "getKeyUrl": "https://dawarich.app/",
       "getKeyLabel": "Dawarich",
-      "order": "nur Konto",
       "quotaLine": "eigener Server"
     }
   },

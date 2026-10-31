@@ -19,7 +19,6 @@ export interface AccountRowProps {
   detail: string;
   feedback: RowFeedback | null;
   busy: boolean;
-  expert: boolean;
   /** The primary button of the row ("Verbinden", "Ändern", "Zustimmen …"). */
   actionLabel: string;
   onAction: () => void;
@@ -37,7 +36,6 @@ export function AccountRow({
   detail,
   feedback,
   busy,
-  expert,
   actionLabel,
   onAction,
   onInfo,
@@ -70,7 +68,6 @@ export function AccountRow({
           >
             {feedback ? feedback.text : detail}
           </span>
-          {expert ? <span className="t-caption">{serviceCopy(t, id, "order")}</span> : null}
         </div>
         <AccountStatusPill status={status} />
         <div className="flex items-center" style={{ gap: "var(--ts-space-sm)" }}>

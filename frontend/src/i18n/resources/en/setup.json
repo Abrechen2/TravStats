@@ -119,5 +119,14 @@
       "airportsCount": "{{processed}} / {{total}} airports",
       "understood": "Got it"
     }
+  },
+  "freeServices": {
+    "title": "Free services",
+    "description": "One click turns on the services that cost nothing and need neither a key nor an account. Anything that needs a key, cloud AI and connections such as Immich or Strava stay off – you set those later under Admin › External services.",
+    "leaves": "In return, the data listed leaves the server and goes to these public services. You can switch each one off again later.",
+    "cta": "Turn on free services",
+    "on": "Free services will be turned on ✓ (click again to undo)",
+    "partialFailed": "The account is created, but not every service could be turned on: {{reason}} You can turn them on under Admin › External services.",
+    "continue": "Continue"
   }
 }

@@ -170,7 +170,10 @@ describe("Administration › Externe Dienste", () => {
       within(row("geocoder")).getByRole("button", { name: "externalServices:actions.expand" })
     );
     expect(screen.getByLabelText("externalServices:fields.geocoder.photonUrl")).toBeInTheDocument();
-    expect(screen.getByText("externalServices:expert.order")).toBeInTheDocument();
+    // The source-order line and any ENV wording are gone from the page (owner feedback).
+    expect(screen.queryByText("externalServices:expert.order")).toBeNull();
+    expect(screen.queryByText("externalServices:expert.env")).toBeNull();
+    expect(screen.getByText("externalServices:expert.quota")).toBeInTheDocument();
   });
 
   it("draws secrets as password inputs and sends only the field that was changed", async () => {

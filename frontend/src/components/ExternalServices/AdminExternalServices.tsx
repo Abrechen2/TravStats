@@ -23,7 +23,7 @@ const FILTERS: readonly StatusFilter[] = ["all", "recommended", "active", "atten
  *
  * Standard and Expert are the settings level the whole page frame switches
  * (`settingsLevelStore`), not a second switch of this page: Standard shows every
- * service and hides only addresses, endpoints and the source order.
+ * service and hides only addresses and endpoints.
  */
 export default function AdminExternalServices(): JSX.Element {
   const { t } = useTranslation(["externalServices"]);

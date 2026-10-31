@@ -7,6 +7,7 @@ import { adminStatus } from "./serviceStatus";
 export type TFn = (key: string, options?: Record<string, unknown>) => string;
 
 const NS = "externalServices";
+const MISSING = "\u0000missing";
 
 /** Copy of one catalogue entry; a service the copy does not know yet reads as its id, never as a key. */
 export function serviceCopy(t: TFn, id: string, part: string, fallback = ""): string {
@@ -27,8 +28,9 @@ export function serviceName(t: TFn, id: string): string {
 
 /** A field's label: the service's own wording, then the common one, then the raw key. */
 export function fieldLabel(t: TFn, serviceId: string, field: Pick<ServiceField, "key">): string {
-  const own = t(`${NS}:fields.${serviceId}.${field.key}`, { defaultValue: "" });
-  if (own) return own;
+  // i18next answers an EMPTY defaultValue with the key itself, so a miss needs a sentinel to be told apart.
+  const own = t(`${NS}:fields.${serviceId}.${field.key}`, { defaultValue: MISSING });
+  if (own !== MISSING) return own;
   return t(`${NS}:fields.common.${field.key}`, { defaultValue: field.key });
 }
 
@@ -63,8 +65,10 @@ export function sourceLine(t: TFn, service: AdminService): string {
   if (!service.enabled) {
     return t(`${NS}:source.${service.level === "instanceAndAccount" ? "off" : "offInstance"}`);
   }
-  if (service.instanceSource === "instance") return t(`${NS}:source.instance`);
-  if (service.instanceSource === "env") return t(`${NS}:source.env`);
+  // A server-side variable reads like the instance's own key: the page does not speak of ENV.
+  if (service.instanceSource === "instance" || service.instanceSource === "env") {
+    return t(`${NS}:source.instance`);
+  }
   return service.configured ? t(`${NS}:source.keyless`) : t(`${NS}:source.none`);
 }
 

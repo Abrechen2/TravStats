@@ -138,7 +138,6 @@ export default function AccountExternalServices(): JSX.Element {
         detail={accountDetail(t, service, status)}
         feedback={services.feedback[service.id] ?? null}
         busy={busy}
-        expert={expert}
         actionLabel={actionLabel}
         open={open}
         onInfo={() => setInfoId(service.id)}
@@ -251,7 +250,6 @@ export default function AccountExternalServices(): JSX.Element {
                 )}
                 feedback={services.feedback[consent.id] ?? null}
                 busy={services.isBusy(consent.id)}
-                expert={expert}
                 actionLabel={t(
                   consented
                     ? "externalServices:account.action.withdraw"

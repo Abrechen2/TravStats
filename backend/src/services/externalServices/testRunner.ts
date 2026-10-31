@@ -108,8 +108,17 @@ function creds(
 }
 
 /** Stable cause codes for `lastTest.reason` (the page words them, never the server). */
-export type TestReason =
-  "auth" | "quota" | "timeout" | "network" | "http_error" | "not_found" | "disabled" | "unknown";
+export const TEST_REASONS = [
+  "auth",
+  "quota",
+  "timeout",
+  "network",
+  "http_error",
+  "not_found",
+  "disabled",
+  "unknown",
+] as const;
+export type TestReason = (typeof TEST_REASONS)[number];
 
 const REASON_BY_KEY: Record<string, TestReason> = {
   invalid: "auth",

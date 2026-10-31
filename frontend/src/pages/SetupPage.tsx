@@ -5,6 +5,9 @@ import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
 import DomainPickerStep from "../components/Setup/DomainPickerStep";
 import UsageStatsConsentCard from "../components/UsageStatsConsentCard";
+import FreeServicesStep from "../components/Setup/FreeServicesStep";
+import { enableFreeServices } from "../components/Setup/freeServices";
+import { failureText } from "../components/ExternalServices/serviceText";
 import type { DomainKey } from "../shared/domains";
 import { logger } from "../lib/logger";
 
@@ -14,7 +17,7 @@ const DEMO_PASSWORD = "demo123";
 
 export default function SetupPage(): JSX.Element {
   const navigate = useNavigate();
-  const { t } = useTranslation(["setup", "common"]);
+  const { t } = useTranslation(["setup", "common", "externalServices"]);
   const { setAuth } = useAuthStore();
   const [formData, setFormData] = useState({
     username: "",
@@ -25,6 +28,10 @@ export default function SetupPage(): JSX.Element {
   const [usageStatsConsent, setUsageStatsConsent] = useState<"granted" | "denied" | undefined>(
     undefined
   );
+  const [freeServices, setFreeServices] = useState(false);
+  // Why switching the free services on went wrong; the account exists by then, so
+  // the page waits for "Weiter" instead of redirecting past the reason.
+  const [servicesNotice, setServicesNotice] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -120,6 +127,21 @@ export default function SetupPage(): JSX.Element {
       setSuccess(true);
       setLoading(false);
 
+      // Needs the admin session `initialize` just opened, hence only now.
+      let notice = "";
+      if (freeServices) {
+        try {
+          const outcome = await enableFreeServices();
+          if (outcome.failed.length > 0) notice = failureText(t, outcome.failed[0].error);
+        } catch (servicesError) {
+          logger.debug("enabling free services during setup failed", servicesError);
+          notice = failureText(t, servicesError);
+        }
+      }
+      if (notice) {
+        setServicesNotice(notice);
+        return;
+      }
       setTimeout(() => {
         navigate("/");
       }, 2000);
@@ -196,9 +218,24 @@ export default function SetupPage(): JSX.Element {
                 <p className="mb-4" style={{ color: "var(--text-primary)" }}>
                   {t("setup:success.adminCreated", { username: formData.username })}
                 </p>
-                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  {t("setup:success.redirecting")}
-                </p>
+                {servicesNotice ? (
+                  <>
+                    <p className="text-sm mb-4" style={{ color: "var(--danger)" }} role="alert">
+                      {t("setup:freeServices.partialFailed", { reason: servicesNotice })}
+                    </p>
+                    <button
+                      type="button"
+                      className="btn-primary w-full py-2 text-sm font-medium"
+                      onClick={() => navigate("/")}
+                    >
+                      {t("setup:freeServices.continue")}
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                    {t("setup:success.redirecting")}
+                  </p>
+                )}
               </div>
             </div>
           ) : (
@@ -264,6 +301,10 @@ export default function SetupPage(): JSX.Element {
 
               <div className="pt-2">
                 <DomainPickerStep value={selectedDomains} onChange={setSelectedDomains} />
+              </div>
+
+              <div className="pt-2">
+                <FreeServicesStep value={freeServices} onChange={setFreeServices} />
               </div>
 
               <div className="pt-2">
