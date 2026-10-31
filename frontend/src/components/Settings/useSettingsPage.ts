@@ -1,13 +1,22 @@
 import { useState, useEffect, useRef } from "react";
 import { useRemoteSettingsStatus } from "../../store/remoteSettingsStatus";
 import { useSettingsStore, snapshotOf } from "../../store/settingsStore";
+import {
+  blockAutosave,
+  flushAutosave,
+  observeAutosave,
+  retryAutosave,
+  scheduleAutosave,
+  useSettingsAutosave,
+  type AutoSaveState,
+} from "../../store/settingsAutosave";
 import { useAuthStore } from "../../store/authStore";
 import { settingsApi, authApi, backupApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 
-export type AutoSaveState = "idle" | "pending" | "saving" | "saved" | "failed";
+export type { AutoSaveState };
 
 interface AutoUpdateSettings {
   enabled: boolean;
@@ -63,7 +72,9 @@ export function useSettingsPage() {
    * write landed, the write failed. "failed" stays until the next edit, so a
    * change that did not stick cannot scroll out of view as a vanished toast.
    */
-  const [autoSaveState, setAutoSaveState] = useState<AutoSaveState>("idle");
+  const autoSaveState = useSettingsAutosave((s) => s.phase);
+  const autoSaveReason = useSettingsAutosave((s) => s.reason);
+  const autoSaveRetryable = useSettingsAutosave((s) => s.retryable);
 
   // Profile
   const [uploadingProfilePicture, setUploadingProfilePicture] = useState(false);
@@ -203,51 +214,24 @@ export function useSettingsPage() {
     // Settings that never loaded must not be written over the account's values;
     // say so instead of dropping the edit without a word.
     if (useRemoteSettingsStatus.getState().failed) {
-      setAutoSaveState("failed");
-      addToast("error", t("settings:errors.loadFailedNoSave"));
+      blockAutosave();
       return;
     }
     if (!hasPendingChanges()) return;
-    setAutoSaveState("pending");
-    const saveSettings = async () => {
-      // Re-check at FIRE time, not just schedule time. Hydration
-      // (`loadRemoteSettings`) mutates the settings slices and updates the
-      // `remoteSnapshot` baseline in separate `set()` calls; a save scheduled
-      // in the transient window between them must not actually run once the
-      // baseline has caught up. React 18 happened to clear this timeout via a
-      // follow-up re-render; React 19's effect timing does not, which re-exposed
-      // the issue-#186 hydration echo. A genuine edit still differs from the
-      // (now-settled) snapshot, so it still saves.
-      if (!hasPendingChanges() || useRemoteSettingsStatus.getState().failed) {
-        setAutoSaveState("idle");
-        return;
-      }
-      setAutoSaveState("saving");
-      try {
-        await saveRemoteSettings();
-        setAutoSaveState("saved");
-      } catch (error) {
-        logger.error("Failed to save settings:", error);
-        setAutoSaveState("failed");
-        addToast("error", t("settings:errors.saveFailed") || "Failed to save settings");
-      }
-    };
-    const timeoutId = setTimeout(saveSettings, 500);
-    return () => clearTimeout(timeoutId);
-    // `t` and `addToast` are intentionally omitted: `t` is unstable across
-    // renders and would re-fire this effect on every render, which before the
-    // debounce was tripping the settings rate limit.
+    // The timer lives in `store/settingsAutosave.ts`, not here: it must outlive
+    // this page, or an edit followed by navigation is never written.
+    scheduleAutosave();
   }, [saveSnapshot, saveRemoteSettings, hasPendingChanges]);
 
-  // The "saved" confirmation is transient — it states that a write just landed,
-  // not that the page is generally auto-saving. Issue #198 also reported the
-  // banner as permanently green with a checkmark, which is why the loss of a
-  // flight default looked like a success.
+  // Leaving the page writes a waiting edit instead of dropping it, and the page
+  // owns the failure message while it is mounted (otherwise a toast does).
   useEffect(() => {
-    if (autoSaveState !== "saved") return;
-    const timeoutId = setTimeout(() => setAutoSaveState("idle"), 2500);
-    return () => clearTimeout(timeoutId);
-  }, [autoSaveState]);
+    const unobserve = observeAutosave();
+    return () => {
+      unobserve();
+      flushAutosave();
+    };
+  }, []);
 
   useEffect(() => {
     if (user?.isAdmin) {
@@ -439,6 +423,9 @@ export function useSettingsPage() {
     cruise,
     baseCurrency,
     autoSaveState,
+    autoSaveReason,
+    autoSaveRetryable,
+    retryAutosave,
     setProfile,
     setDisplay,
     setUnits,

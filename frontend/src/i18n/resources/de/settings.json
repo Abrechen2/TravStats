@@ -312,6 +312,7 @@
     "emailSub": "Wohin Erinnerungen gehen; leer = keine",
     "before24hSub": "Einen Tag vorher — für Flüge, Kreuzfahrten, Zug-, Fähr- und Busfahrten; am Morgen des Check-ins für Unterkünfte",
     "before2hSub": "Kurz vorher — für Flüge, Kreuzfahrten, Zug-, Fähr- und Busfahrten",
+    "loadError": "Benachrichtigungen konnten nicht geladen werden",
     "saveFailed": "Benachrichtigungen konnten nicht gespeichert werden"
   },
   "privacy": {
@@ -429,7 +430,8 @@
     "saving": "Wird gespeichert …",
     "saved": "Gespeichert",
     "pending": "Änderungen vorhanden",
-    "failed": "Speichern fehlgeschlagen"
+    "failed": "Speichern fehlgeschlagen",
+    "retry": "Erneut versuchen"
   },
   "scrollToTop": "Nach oben",
   "sectionPicker": "Bereich",

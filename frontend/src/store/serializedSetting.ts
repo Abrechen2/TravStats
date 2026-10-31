@@ -5,7 +5,7 @@ import { useToastStore } from "./toastStore";
 
 /**
  * A switch the user may flip several times before the server answers once
- * (forgejo#316: trip recording on, off, on again). `persistSetting` (./persistSetting.ts) sends
+ * (forgejo#316: trip recording on, off, on again). A fire-and-forget write sends
  * every flip at once and rolls each failure back to the value before IT, so
  * two writes could reach the server in the wrong order, and a superseded
  * write failing late put back a value the server no longer held — the switch
@@ -63,4 +63,23 @@ export function serializedSetting<T>(options: {
     }
     send(value);
   };
+}
+
+/**
+ * `serializedSetting` for a setting that lives under the same key in a
+ * Zustand store and in the settings payload (domains, currency, trip
+ * auto-creation, country threshold).
+ */
+export function serializedKey<S, K extends keyof S & string>(
+  key: K,
+  what: string,
+  get: () => S,
+  set: (partial: Pick<S, K>) => void
+): (value: S[K]) => void {
+  return serializedSetting<S[K]>({
+    payload: (value) => ({ [key]: value }) as Parameters<typeof settingsApi.update>[0],
+    current: () => get()[key],
+    apply: (value) => set({ [key]: value } as Pick<S, K>),
+    what,
+  });
 }

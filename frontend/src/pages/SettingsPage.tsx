@@ -210,7 +210,18 @@ export default function SettingsPage(): JSX.Element {
                 }}
               >
                 {t(`settings:autoSave.${page.autoSaveState}`)}
+                {page.autoSaveState === "failed" && page.autoSaveReason
+                  ? `: ${page.autoSaveReason}`
+                  : ""}
               </span>
+              {page.autoSaveState === "failed" && page.autoSaveRetryable && (
+                <>
+                  {" "}
+                  <button type="button" className="btn-secondary" onClick={page.retryAutosave}>
+                    {t("settings:autoSave.retry")}
+                  </button>
+                </>
+              )}
             </>
           )}
         </span>

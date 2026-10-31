@@ -2,8 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
-const persisted = vi.hoisted(() => vi.fn());
-vi.mock("../../../../store/persistSetting", () => ({ persistSetting: persisted }));
+const persisted = vi.hoisted(() => vi.fn().mockResolvedValue({}));
+vi.mock("../../../../lib/api", async (orig) => ({
+  ...(await orig<typeof import("../../../../lib/api")>()),
+  settingsApi: { update: persisted },
+}));
 
 import { SectionFrame } from "../SectionFrame";
 import { DeepLinkedExpertNote, ExpertPageNotice } from "../ExpertNote";
@@ -36,11 +39,7 @@ describe("SectionFrame and expert rows (forgejo#321)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "settings:level.reveal" }));
     expect(useSettingsLevelStore.getState().level).toBe("expert");
-    expect(persisted).toHaveBeenCalledWith(
-      { settingsLevel: "expert" },
-      expect.any(Function),
-      expect.any(String)
-    );
+    expect(persisted).toHaveBeenCalledWith({ settingsLevel: "expert" });
     expect(screen.getByText("rows-shown")).toBeInTheDocument();
     expect(document.querySelector("[data-expert-note]")).toBeNull();
   });
@@ -141,11 +140,7 @@ describe("the level switch", () => {
     expect(screen.getByRole("radio", { name: "settings:level.standard" })).toBeChecked();
     fireEvent.click(screen.getByRole("radio", { name: "settings:level.expert" }));
     expect(useSettingsLevelStore.getState().level).toBe("expert");
-    expect(persisted).toHaveBeenCalledWith(
-      { settingsLevel: "expert" },
-      expect.any(Function),
-      expect.any(String)
-    );
+    expect(persisted).toHaveBeenCalledWith({ settingsLevel: "expert" });
   });
 
   // forgejo#318: one sentence beside the switch says what "Experte" adds.

@@ -4,7 +4,10 @@ import { MemoryRouter } from "react-router-dom";
 
 import { SettingsSearch } from "./SettingsSearch";
 
-vi.mock("../../store/persistSetting", () => ({ persistSetting: vi.fn() }));
+vi.mock("../../lib/api", async (orig) => ({
+  ...(await orig<typeof import("../../lib/api")>()),
+  settingsApi: { update: vi.fn().mockResolvedValue({}) },
+}));
 
 const STRINGS: Record<string, string> = {
   "settings:externalServices.title": "Externe Dienste",

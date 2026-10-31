@@ -76,4 +76,27 @@ describe("settings that persist immediately roll back when the write fails", () 
     await vi.waitFor(() => expect(useSettingsStore.getState().countryThreshold).toBeNull());
     expect(useToastStore.getState().toasts).toHaveLength(1);
   });
+
+  it("rapid on/off/on with the older request failing ends on the last value", async () => {
+    let failFirst!: (e: Error) => void;
+    update
+      .mockImplementationOnce(
+        () =>
+          new Promise((_, reject) => {
+            failFirst = reject;
+          })
+      )
+      .mockResolvedValue({} as never);
+    const { setAutoCreateTrips } = useSettingsStore.getState();
+    setAutoCreateTrips(false);
+    setAutoCreateTrips(true);
+    setAutoCreateTrips(false);
+    failFirst(new Error("Network Error"));
+
+    await vi.waitFor(() => expect(update).toHaveBeenCalledTimes(2));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(update).toHaveBeenLastCalledWith({ autoCreateTrips: false });
+    expect(useSettingsStore.getState().autoCreateTrips).toBe(false);
+    expect(useToastStore.getState().toasts).toHaveLength(0);
+  });
 });

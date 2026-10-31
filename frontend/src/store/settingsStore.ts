@@ -10,7 +10,7 @@ import { displayForSave, useProfileZoneStore } from "./profileZoneStore";
 import { useSuggestionSwitchesStore } from "./suggestionSwitchesStore";
 import { useSettingsLevelStore } from "./settingsLevelStore";
 import { deviceZone } from "../shared/time";
-import { persistSetting } from "./persistSetting";
+import { serializedKey } from "./serializedSetting";
 import type { WeightUnit } from "../lib/baggageAllowance";
 
 /**
@@ -491,30 +491,10 @@ export const useSettingsStore = create<SettingsState>()(
         })),
       syncBetaFeaturesEnabled: (enabled) => set({ betaFeaturesEnabled: enabled }),
       syncOpenDataEnabled: (enabled) => set({ openDataEnabled: enabled }),
-      setEnabledDomains: (keys) => {
-        const prev = get().enabledDomains;
-        set({ enabledDomains: keys });
-        persistSetting({ enabledDomains: keys }, () => set({ enabledDomains: prev }), "domains");
-      },
-      setBaseCurrency: (currency) => {
-        const prev = get().baseCurrency;
-        set({ baseCurrency: currency });
-        persistSetting({ baseCurrency: currency }, () => set({ baseCurrency: prev }), "currency");
-      },
-      setAutoCreateTrips: (enabled) => {
-        const prev = get().autoCreateTrips;
-        set({ autoCreateTrips: enabled });
-        persistSetting({ autoCreateTrips: enabled }, () => set({ autoCreateTrips: prev }), "trips");
-      },
-      setCountryThreshold: (tier) => {
-        const prev = get().countryThreshold;
-        set({ countryThreshold: tier });
-        persistSetting(
-          { countryThreshold: tier },
-          () => set({ countryThreshold: prev }),
-          "threshold"
-        );
-      },
+      setEnabledDomains: serializedKey("enabledDomains", "domains", get, set),
+      setBaseCurrency: serializedKey("baseCurrency", "currency", get, set),
+      setAutoCreateTrips: serializedKey("autoCreateTrips", "trips", get, set),
+      setCountryThreshold: serializedKey("countryThreshold", "threshold", get, set),
       loadApiKeysStatus: async () => {
         try {
           const status = await settingsApi.getApiKeys();

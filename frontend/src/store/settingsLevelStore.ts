@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persistSetting } from "./persistSetting";
+import { serializedSetting } from "./serializedSetting";
 
 export const SETTINGS_LEVELS = ["standard", "expert"] as const;
 export type SettingsLevel = (typeof SETTINGS_LEVELS)[number];
@@ -37,11 +37,14 @@ export const useSettingsLevelStore = create<SettingsLevelState>((set, get) => ({
     const level = asSettingsLevel((remote as { settingsLevel?: unknown } | null)?.settingsLevel);
     if (level) set({ level });
   },
-  setLevel: (level) => {
-    const prev = get().level;
-    set({ level });
-    persistSetting({ settingsLevel: level }, () => set({ level: prev }), "settings level");
-  },
+  // Serialized like the other immediate switches: a superseded write failing
+  // late must not put back a level the server no longer holds.
+  setLevel: serializedSetting<SettingsLevel>({
+    payload: (level) => ({ settingsLevel: level }),
+    current: () => get().level ?? "expert",
+    apply: (level) => set({ level }),
+    what: "settings level",
+  }),
 }));
 
 /** The level in force: an unknown level reads as expert (see the store). */

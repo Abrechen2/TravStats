@@ -70,4 +70,47 @@ describe("NotificationPreferences", () => {
     await user.tab();
     expect(updatePreferences).toHaveBeenCalledWith({ notificationEmail: null });
   });
+
+  it("persists two quick toggles both, in the order they were made", async () => {
+    let releaseFirst!: (v: unknown) => void;
+    updatePreferences
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            releaseFirst = resolve;
+          })
+      )
+      .mockImplementation(async (p: object) => ({
+        ...STORED,
+        notifyBefore24h: true,
+        ...p,
+      }));
+    const user = userEvent.setup();
+    render(<NotificationPreferences />);
+
+    await user.click(await screen.findByRole("switch", { name: /before24h/ }));
+    await user.click(screen.getByRole("switch", { name: /before2h/ }));
+    // Only one write is on the wire while the first is unanswered.
+    expect(updatePreferences).toHaveBeenCalledTimes(1);
+    releaseFirst({ ...STORED, notifyBefore24h: true });
+
+    await waitFor(() => expect(updatePreferences).toHaveBeenCalledTimes(2));
+    expect(updatePreferences.mock.calls[0][0]).toEqual({ notifyBefore24h: true });
+    expect(updatePreferences.mock.calls[1][0]).toEqual({ notifyBefore2h: false });
+    await waitFor(() => expect(screen.getByRole("switch", { name: /before24h/ })).toBeChecked());
+    expect(screen.getByRole("switch", { name: /before2h/ })).not.toBeChecked();
+  });
+
+  it("a load failure is not shown as loaded defaults", async () => {
+    getPreferences.mockRejectedValue(new Error("down"));
+    render(<NotificationPreferences />);
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByRole("switch")).toBeNull();
+    expect(addToast).toHaveBeenCalledWith("error", "down");
+
+    getPreferences.mockResolvedValue(STORED);
+    await userEvent.setup().click(screen.getByRole("button"));
+    expect(await screen.findByRole("switch", { name: /before2h/ })).toBeChecked();
+  });
 });
