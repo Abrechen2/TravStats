@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
 import { companionsApi, type Companion } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
@@ -62,6 +62,18 @@ export default function CompanionPicker({ value, onChange }: Props): JSX.Element
     onChange(value.filter((v) => v !== name));
   };
 
+  // A typed name must survive the user clicking Save without pressing Enter:
+  // the click's mousedown blurs the input first, and the commit lands (a
+  // discrete event, flushed synchronously) before the click handler runs.
+  // A blur caused by picking a suggestion is skipped — the pick commits the
+  // full name itself, committing the half-typed query too would add a stray chip.
+  const listRef = useRef<HTMLUListElement>(null);
+  const handleBlur = (e: FocusEvent<HTMLInputElement>): void => {
+    const next = e.relatedTarget;
+    if (next instanceof Node && listRef.current?.contains(next)) return;
+    commit(query);
+  };
+
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -107,9 +119,16 @@ export default function CompanionPicker({ value, onChange }: Props): JSX.Element
         value={query}
         onChange={(e): void => setQuery(e.target.value)}
         onKeyDown={handleKeyDown}
+        onBlur={handleBlur}
       />
       {filtered.length > 0 && (
-        <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-(--bg-surface) shadow-lg">
+        <ul
+          ref={listRef}
+          className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-(--bg-surface) shadow-lg"
+          // Keep focus in the input while a suggestion is pressed, so no blur
+          // commit of the partial query happens.
+          onMouseDown={(e): void => e.preventDefault()}
+        >
           {filtered.map((companion) => (
             <li key={companion.id}>
               <button

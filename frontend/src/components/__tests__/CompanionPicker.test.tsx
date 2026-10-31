@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -55,5 +56,58 @@ describe("CompanionPicker", () => {
     render(<CompanionPicker value={[]} onChange={onChange} />);
     await userEvent.type(screen.getByRole("combobox"), "Anna{Enter}");
     expect(onChange).toHaveBeenCalledWith(["Anna"]);
+  });
+
+  // Every form (flight, rail, bus, ferry, rental, ...) hosts this controlled
+  // picker; a name only committed on Enter was silently lost on Save.
+  describe("pending text", () => {
+    function Form({ onSave }: { onSave: (v: string[]) => void }): JSX.Element {
+      const [names, setNames] = useState<string[]>([]);
+      return (
+        <form
+          onSubmit={(e): void => {
+            e.preventDefault();
+            onSave(names);
+          }}
+        >
+          <CompanionPicker value={names} onChange={setNames} />
+          <button type="submit">Save</button>
+        </form>
+      );
+    }
+
+    it("keeps a typed name when Save is clicked without pressing Enter", async () => {
+      const onSave = vi.fn();
+      render(<Form onSave={onSave} />);
+      await userEvent.type(screen.getByRole("combobox"), "Neue Person");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(onSave).toHaveBeenCalledWith(["Neue Person"]);
+    });
+
+    it("keeps a name containing a comma as one chip", async () => {
+      const onSave = vi.fn();
+      render(<Form onSave={onSave} />);
+      await userEvent.type(screen.getByRole("combobox"), "Meier, Anna");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(onSave).toHaveBeenCalledWith(["Meier, Anna"]);
+    });
+
+    it("does not add the half-typed query when a suggestion is clicked", async () => {
+      const onSave = vi.fn();
+      render(<Form onSave={onSave} />);
+      await waitFor(() => expect(mocks.list).toHaveBeenCalled());
+      await userEvent.type(screen.getByRole("combobox"), "An");
+      await userEvent.click(await screen.findByText("Anna"));
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(onSave).toHaveBeenCalledWith(["Anna"]);
+    });
+
+    it("does not add a duplicate when Enter is followed by blur", async () => {
+      const onSave = vi.fn();
+      render(<Form onSave={onSave} />);
+      await userEvent.type(screen.getByRole("combobox"), "Zoe{Enter}");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(onSave).toHaveBeenCalledWith(["Zoe"]);
+    });
   });
 });
