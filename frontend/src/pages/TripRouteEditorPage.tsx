@@ -6,6 +6,7 @@ import { ROUTE_STOP_ERROR_KEYS as STOP_KEYS } from "../lib/routeStopErrorKeys";
 import AppShell from "../components/ui/AppShell";
 import TripMap, { type TripMapContent } from "../components/Trips/TripMap";
 import TourRecordingSummary from "../components/Trips/TourRecordingSummary";
+import TourRouteNotes from "../components/Trips/TourRouteNotes";
 import PlannedProfileCard from "../components/Trips/PlannedProfileCard";
 import StravaImportDialog, { useStravaConnected } from "../components/Trips/StravaImportDialog";
 import { useDomainColors } from "../hooks/useDomainColors";
@@ -631,6 +632,8 @@ export default function TripRouteEditorPage(): JSX.Element {
           </p>
           <RouteEditorReportLine entry={reports.header} />
         </header>
+
+        <TourRouteNotes notes={route.notes} />
 
         {route.kind === "tour" && (
           <TourRecordingSummary

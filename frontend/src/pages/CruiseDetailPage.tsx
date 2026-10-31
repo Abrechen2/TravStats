@@ -363,6 +363,27 @@ export default function CruiseDetailPage(): JSX.Element {
           )}
           {cruise.tripId && <TripPhotoWindowStrip entry="cruises" id={cruise.id} />}
 
+          {/* The ship's own particulars; a catalogue gap shows nothing, never 0. */}
+          {cruise.ship && (
+            <DetailSection
+              title={t("detail.ship")}
+              columns={2}
+              facts={[
+                { label: t("detail.yearBuilt"), value: cruise.ship.yearBuilt, mono: true },
+                {
+                  label: t("detail.grossTonnage"),
+                  value: cruise.ship.grossTonnage?.toLocaleString(i18n.language) ?? null,
+                  mono: true,
+                },
+                {
+                  label: t("detail.capacity"),
+                  value: cruise.ship.capacity?.toLocaleString(i18n.language) ?? null,
+                  mono: true,
+                },
+              ]}
+            />
+          )}
+
           <DetailSection title={t("detail.route")}>
             <WebGLGuard>
               <CruiseRouteMap key={geometryVersion} cruise={cruise} />

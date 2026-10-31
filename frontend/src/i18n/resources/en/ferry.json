@@ -40,6 +40,7 @@
   "vehicleHeightM": "Height (m)",
   "passengerCount": "Passengers",
   "cabinType": "Cabin / accommodation",
+  "fareClass": "Fare class",
   "seat": "Seat",
   "bookingReference": "Booking reference",
   "ticketReference": "Ticket reference",
@@ -118,6 +119,7 @@
     "companions_other": "{{count}} travel companions"
   },
   "delay": "+{{minutes}} min",
+  "delayLabel": "Delay",
   "onTime": "on time",
   "delete": "Delete crossing",
   "loadError": "Could not load crossings.",

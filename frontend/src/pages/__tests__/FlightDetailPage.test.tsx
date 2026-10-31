@@ -376,3 +376,70 @@ describe("FlightDetailPage", () => {
     expect(dialog.textContent).not.toContain("documents:deleteCascadeNote");
   });
 });
+
+// forgejo#393: provider-reported day-of-travel data the page never showed.
+describe("FlightDetailPage — stored day-of-travel data", () => {
+  const tv = (utc: string) => ({
+    utc,
+    local: utc.slice(0, 19),
+    zone: "UTC",
+    offset: "+00:00",
+    precision: "minute" as const,
+  });
+
+  beforeEach(() => {
+    getByIdMock.mockReset();
+    getTrackMock.mockReset().mockResolvedValue(null);
+    getBookingMock.mockReset();
+    listForEntryMock.mockReset().mockResolvedValue([]);
+  });
+
+  it("shows the check-in desk, baggage belt, take-off, touch-down and the taxi and air spans", async () => {
+    getByIdMock.mockResolvedValue(
+      makeFlight({
+        checkInDesk: "Row 7",
+        baggageBelt: "Belt 12",
+        times: {
+          actualDeparture: tv("2026-12-21T18:10:00.000Z"),
+          runwayDeparture: tv("2026-12-21T18:25:00.000Z"),
+          runwayArrival: tv("2026-12-21T19:20:00.000Z"),
+          actualArrival: tv("2026-12-21T19:28:00.000Z"),
+        },
+      })
+    );
+    renderPage();
+    expect(await screen.findByText("Row 7")).toBeInTheDocument();
+    expect(screen.getByText("Belt 12")).toBeInTheDocument();
+    expect(screen.getByText("flights:detail.takeoff")).toBeInTheDocument();
+    expect(screen.getByText("flights:detail.touchdown")).toBeInTheDocument();
+    expect(screen.getByText("flights:detail.taxiOut")).toBeInTheDocument();
+    expect(screen.getByText("flights:detail.airTime")).toBeInTheDocument();
+    expect(screen.getByText("flights:detail.taxiIn")).toBeInTheDocument();
+  });
+
+  it("draws none of it for a flight with no provider data", async () => {
+    getByIdMock.mockResolvedValue(makeFlight({ checkInDesk: null, baggageBelt: null }));
+    renderPage();
+    await waitFor(() => expect(screen.getByText(/LH2462/)).toBeInTheDocument());
+    for (const key of ["takeoff", "touchdown", "taxiOut", "airTime", "taxiIn"]) {
+      expect(screen.queryByText(`flights:detail.${key}`)).toBeNull();
+    }
+    expect(screen.queryByText("flights:form.checkInDesk")).toBeNull();
+    expect(screen.queryByText("flights:form.baggageBelt")).toBeNull();
+  });
+
+  it("measures no span from a take-off that precedes the gate time", async () => {
+    getByIdMock.mockResolvedValue(
+      makeFlight({
+        times: {
+          actualDeparture: tv("2026-12-21T18:30:00.000Z"),
+          runwayDeparture: tv("2026-12-21T18:25:00.000Z"),
+        },
+      })
+    );
+    renderPage();
+    await screen.findByText("flights:detail.takeoff");
+    expect(screen.queryByText("flights:detail.taxiOut")).toBeNull();
+    expect(screen.queryByText("flights:detail.airTime")).toBeNull();
+  });
+});

@@ -65,7 +65,11 @@
     "priceKpi": "Preis",
     "day": "Tag",
     "unresolvedKpi_one": "{{count}} ungeklärt",
-    "unresolvedKpi_other": "{{count}} ungeklärt"
+    "unresolvedKpi_other": "{{count}} ungeklärt",
+    "ship": "Schiff",
+    "yearBuilt": "Baujahr",
+    "grossTonnage": "Bruttoraumzahl (BRZ)",
+    "capacity": "Passagierkapazität"
   },
   "field": {
     "ship": "Schiff",

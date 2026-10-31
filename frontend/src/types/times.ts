@@ -18,6 +18,9 @@ export interface FlightTimes {
   arrival?: TimeValue | null;
   actualDeparture?: TimeValue | null;
   actualArrival?: TimeValue | null;
+  /** Take-off and touch-down as a provider reported them (AeroDataBox, AeroAPI). */
+  runwayDeparture?: TimeValue | null;
+  runwayArrival?: TimeValue | null;
 }
 
 export interface RailTimes {

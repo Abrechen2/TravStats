@@ -27,6 +27,7 @@ import { rentalDeleteMessage } from "../lib/rental/rentalDeleteMessage";
 import { depositSummary } from "../lib/rental/rentalDeposit";
 import { formatDayLong } from "../shared/time";
 import { formatAmount, dateLocaleForLanguage } from "../lib/units";
+import { usePriceFxReadout } from "../hooks/usePriceFxReadout";
 import { deadlineFacts, hasDeadlines } from "../lib/deadlines";
 import { formatStationMoment } from "../lib/rentalTime";
 import type { TimeValue } from "../shared/time";
@@ -50,6 +51,7 @@ export default function RentalDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation(["rental", "common", "trips", "documents"]);
+  const fxReadout = usePriceFxReadout();
   const locale = dateLocaleForLanguage(i18n.language);
   const addToast = useToastStore((s) => s.addToast);
   const [rental, setRental] = useState<RentalBooking | null>(null);
@@ -261,6 +263,24 @@ export default function RentalDetailPage(): JSX.Element {
           {rental.oneWay ? <p className="t-caption">{t("rental:detail.oneWayNote")}</p> : null}
 
           <DetailSection
+            title={t("rental:detail.reference")}
+            facts={[
+              { label: t("rental:detail.operatedBy"), value: rental.operatedBy },
+              { label: t("rental:form.broker"), value: rental.broker },
+              {
+                label: t("rental:detail.brokerReference"),
+                value: rental.brokerReference,
+                mono: true,
+              },
+              {
+                label: t("rental:detail.agreementNumber"),
+                value: rental.agreementNumber,
+                mono: true,
+              },
+            ]}
+          />
+
+          <DetailSection
             title={t("rental:detail.vehicle")}
             facts={[
               {
@@ -330,6 +350,11 @@ export default function RentalDetailPage(): JSX.Element {
             title={t("rental:detail.price")}
             facts={[
               { label: t("rental:detail.priceBooked"), value: priceLine || null, mono: true },
+              {
+                label: t("common:fx.label"),
+                value: fxReadout(rental),
+                mono: true,
+              },
               // Held, never a cost (forgejo#238): where it stands, in its own currency.
               {
                 label: t("rental:detail.deposit"),

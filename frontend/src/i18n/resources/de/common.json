@@ -414,5 +414,12 @@
     "droppedLine_one": "{{count}} Position als GPS-Zittern nicht gezeichnet – gespeichert und im GPX bleibt jede",
     "droppedLine_other": "{{count}} Positionen als GPS-Zittern nicht gezeichnet – gespeichert und im GPX bleibt jede",
     "unchecked": "Nicht auf GPS-Zittern geprüft – vor der Prüfung gespeichert oder ohne Zeitstempel aufgezeichnet"
+  },
+  "fx": {
+    "ecb": "EZB",
+    "market": "Marktkurs",
+    "manual": "eigener Kurs",
+    "none": "kein Kurs",
+    "label": "Umrechnung"
   }
 }

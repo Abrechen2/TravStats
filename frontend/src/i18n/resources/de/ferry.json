@@ -40,6 +40,7 @@
   "vehicleHeightM": "Höhe (m)",
   "passengerCount": "Personenanzahl",
   "cabinType": "Kabine / Unterbringung",
+  "fareClass": "Tarif / Buchungsklasse",
   "seat": "Sitzplatz",
   "bookingReference": "Buchungsreferenz",
   "ticketReference": "Ticketreferenz",
@@ -118,6 +119,7 @@
     "companions_other": "{{count}} Mitreisende"
   },
   "delay": "+{{minutes}} min",
+  "delayLabel": "Verspätung",
   "onTime": "pünktlich",
   "delete": "Überfahrt löschen",
   "loadError": "Überfahrten konnten nicht geladen werden.",

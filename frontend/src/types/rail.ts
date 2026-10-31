@@ -72,6 +72,12 @@ export interface RailJourney {
   bookingReference: string | null;
   price: number | null;
   currency: string | null;
+  /** FX snapshot stored with the price (null when none was taken). */
+  priceBase?: number | null;
+  fxRate?: number | null;
+  fxRateDate?: string | null;
+  fxBaseCurrency?: string | null;
+  fxSource?: string | null;
   status: RailStatus;
   delayMinutes: number | null;
   /**

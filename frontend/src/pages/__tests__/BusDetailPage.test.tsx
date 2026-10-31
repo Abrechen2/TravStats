@@ -329,3 +329,34 @@ describe("BusDetailPage", () => {
     );
   });
 });
+
+// forgejo#393: the FX snapshot is stored with the price; the page now says how it was converted.
+describe("BusDetailPage — FX snapshot", () => {
+  beforeEach(() => {
+    getMock.mockReset();
+    routingMock.mockReset();
+    routingMock.mockResolvedValue({ configured: true, providerId: "graphhopper" });
+    documentCount.value = 0;
+  });
+
+  it("shows the conversion of a foreign-currency fare", async () => {
+    await renderPage({
+      ...rideFixture(),
+      price: 20000,
+      currency: "KRW",
+      priceBase: 14.5,
+      fxRate: 0.000725,
+      fxRateDate: "2026-03-12",
+      fxBaseCurrency: "EUR",
+      fxSource: "ecb",
+    });
+    expect(await screen.findByText("Umrechnung")).toBeInTheDocument();
+    expect(screen.getByText(/→.*EZB/)).toBeInTheDocument();
+  });
+
+  it("draws no conversion row for a fare with no price", async () => {
+    await renderPage({ ...rideFixture(), price: null });
+    await screen.findByTestId("bus-detail-status");
+    expect(screen.queryByText("Umrechnung")).toBeNull();
+  });
+});

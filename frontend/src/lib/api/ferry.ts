@@ -61,6 +61,7 @@ export interface FerryJourneyInput {
   vehicleType?: string | null;
   vehicleRegistration?: string | null;
   cabinType?: string | null;
+  fareClass?: string | null;
   seat?: string | null;
   currency?: string | null;
   notes?: string | null;

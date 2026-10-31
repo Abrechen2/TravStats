@@ -403,3 +403,33 @@ describe("RailDetailPage — ?edit=1 from the inbox", () => {
     expect(screen.queryByTestId("station-short-code")).toBeNull();
   });
 });
+
+// forgejo#393: the FX snapshot is stored with the price; the page now says how it was converted.
+describe("RailDetailPage — FX snapshot", () => {
+  beforeEach(() => {
+    getMock.mockReset();
+    getConnectionMock.mockReset().mockRejectedValue(new Error("not asked in this test"));
+    listForEntry.mockReset().mockResolvedValue([]);
+  });
+
+  it("shows the conversion of a foreign-currency fare", async () => {
+    await renderPage(
+      detail({
+        price: 40,
+        currency: "CHF",
+        priceBase: 42,
+        fxRate: 1.05,
+        fxRateDate: "2026-03-12",
+        fxBaseCurrency: "EUR",
+        fxSource: "ecb",
+      })
+    );
+    expect(screen.getByText("common:fx.label")).toBeInTheDocument();
+    expect(screen.getByText(/→.*common:fx\.ecb/)).toBeInTheDocument();
+  });
+
+  it("draws no conversion row for a fare with no price", async () => {
+    await renderPage(detail({ price: null }));
+    expect(screen.queryByText("common:fx.label")).toBeNull();
+  });
+});

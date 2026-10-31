@@ -25,6 +25,7 @@ import { busDeleteMessage } from "../lib/bus/busDeleteMessage";
 import { distanceSourceKey, fallbackReasonKey } from "../lib/bus/busRoutingWords";
 import { apiErrorMachineCode } from "../lib/apiError";
 import { formatAmount, dateLocaleForLanguage } from "../lib/units";
+import { usePriceFxReadout } from "../hooks/usePriceFxReadout";
 import { formatStationTime, railDurationMinutes } from "../lib/railTime";
 import { railArrival, railDeparture } from "../lib/entityTimes";
 import { formatRailDuration } from "../lib/rail/railDuration";
@@ -45,6 +46,7 @@ export default function BusDetailPage(): JSX.Element {
   const navigate = useNavigate();
   // `rail` carries the duration words `formatRailDuration` reads.
   const { t, i18n } = useTranslation(["bus", "rail", "common", "trips"]);
+  const fxReadout = usePriceFxReadout();
   const locale = dateLocaleForLanguage(i18n.language);
   const addToast = useToastStore((s) => s.addToast);
   const [ride, setRide] = useState<BusJourney | null>(null);
@@ -268,6 +270,7 @@ export default function BusDetailPage(): JSX.Element {
               { label: t("bus:detail.seat"), value: ride.seat, mono: true },
               { label: t("bus:detail.bookingReference"), value: ride.bookingReference, mono: true },
               { label: t("bus:detail.delay"), value: delayText },
+              { label: t("common:fx.label"), value: fxReadout(ride), mono: true },
             ]}
           />
 

@@ -190,7 +190,9 @@
     "errors": {
       "actualTimeMissing": "The actual date has no time – add it or clear the date.",
       "negativeAmount": "An amount cannot be negative."
-    }
+    },
+    "checkInDesk": "Check-in desk",
+    "baggageBelt": "Baggage belt"
   },
   "list": {
     "title": "Flights",
@@ -486,7 +488,12 @@
     "openTrip": "Open trip",
     "backToLogbook": "Logbook · Flights",
     "planned": "planned",
-    "flightTime": "Flight time"
+    "flightTime": "Flight time",
+    "takeoff": "Take-off",
+    "touchdown": "Touchdown",
+    "taxiOut": "Taxi out",
+    "airTime": "Time airborne",
+    "taxiIn": "Taxi in"
   },
   "price": {
     "package": "Package",

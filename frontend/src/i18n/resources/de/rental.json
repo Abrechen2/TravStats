@@ -249,7 +249,11 @@
       "cancellationFee": "Als Kosten zählt nur die Stornogebühr.",
       "none": "Noch kein Betrag bekannt – die Miete zählt in keiner Kostensumme."
     },
-    "feesFromInvoice": "Einzelposten aus der Rechnung — im Endbetrag enthalten, nicht zusätzlich gezählt:"
+    "feesFromInvoice": "Einzelposten aus der Rechnung — im Endbetrag enthalten, nicht zusätzlich gezählt:",
+    "reference": "Buchungsdaten",
+    "operatedBy": "Durchgeführt von",
+    "brokerReference": "Vermittler-Referenz",
+    "agreementNumber": "Mietvertragsnummer"
   },
   "import": {
     "panelTitle": "Mietwagen hinzufügen",

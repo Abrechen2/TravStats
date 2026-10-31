@@ -28,12 +28,14 @@ import { railArrival, railDeparture } from "../lib/entityTimes";
 import { formatStationTime, railDurationMinutes } from "../lib/railTime";
 import type { FerryJourney } from "../types/ferry";
 import { dateLocaleForLanguage } from "../lib/units";
+import { usePriceFxReadout } from "../hooks/usePriceFxReadout";
 import WebGLGuard from "../components/map/WebGLGuard";
 export default function FerryDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const toursVisible = useToursVisible();
   const { t, i18n } = useTranslation(["ferry", "common", "rail", "documents"]);
+  const fxReadout = usePriceFxReadout();
   const [ride, setRide] = useState<FerryJourney | null>(null);
   const [error, setError] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -201,6 +203,16 @@ export default function FerryDetailPage() {
                 value: arr ? formatStationTime(arr, locale) : null,
                 mono: true,
               },
+              {
+                label: t("ferry:delayLabel"),
+                // Abstention: an unrecorded delay shows nothing; 0 is "on time".
+                value:
+                  ride.delayMinutes === null
+                    ? null
+                    : ride.delayMinutes > 0
+                      ? t("ferry:delay", { minutes: ride.delayMinutes })
+                      : t("ferry:onTime"),
+              },
             ]}
           />
           <DetailSection
@@ -213,9 +225,12 @@ export default function FerryDetailPage() {
                 "ticketReference",
                 "passengerCount",
                 "cabinType",
+                "fareClass",
                 "seat",
               ] as const
-            ).map((key) => ({ label: t(`ferry:${key}`), value: ride[key] }))}
+            )
+              .map((key) => ({ label: t(`ferry:${key}`), value: ride[key] }))
+              .concat({ label: t("common:fx.label"), value: fxReadout(ride) })}
           />
           <DetailSection
             title={t("ferry:sections.vehicle")}
