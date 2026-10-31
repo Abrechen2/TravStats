@@ -38,6 +38,7 @@ export type {
   AssignFlightsInput,
   CreateBookingInput,
   TripCostSuperlative,
+  TripsListPage,
 } from "./trips";
 // UpdateBookingInput lives in ../../types (see the note above re: Booking).
 export * from "./federationAdmin";

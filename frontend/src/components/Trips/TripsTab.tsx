@@ -1,5 +1,5 @@
 import Modal from "../Modal";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Trip, TripCategory, TripStatus } from "../../types";
 import TripCard, { tripDays, tripSpan } from "./TripCard";
@@ -14,8 +14,29 @@ import { TRIP_GRID_CLASS } from "./tripGrid";
 import Button from "../ui/Button";
 import PageHeader from "../ui/PageHeader";
 
+/** What the list is narrowed to; the SERVER applies it, so a trip past the page cap is found. */
+export interface TripsFilters {
+  q: string;
+  status: StatusFilter;
+  category: CategoryFilter;
+}
+
+export const NO_TRIP_FILTERS: TripsFilters = { q: "", status: "all", category: "all" };
+
+/** Quiet time after the last keystroke before the search goes to the server. */
+export const TRIPS_SEARCH_DEBOUNCE_MS = 300;
+
 interface TripsTabProps {
   trips: Trip[];
+  filters: TripsFilters;
+  /** A patch: the tab names only what changed. */
+  onFiltersChange: (patch: Partial<TripsFilters>) => void;
+  /** Counts under the current search, from the server (the loaded rows are only a page). */
+  facets?: { status: Record<string, number>; category: Record<string, number> };
+  /** The list is shorter than the match count: offer the next page. */
+  loadMore?: { loading: boolean; error?: boolean; onLoad: () => void };
+  /** The last list request failed; shown instead of pretending the list is empty. */
+  listError?: boolean;
   onTripsChange: () => void;
   /**
    * The page title and meta line. The tab draws the header itself because
@@ -27,8 +48,8 @@ interface TripsTabProps {
   insights?: ReactNode;
 }
 
-type StatusFilter = "all" | TripStatus;
-type CategoryFilter = "all" | TripCategory;
+export type StatusFilter = "all" | TripStatus;
+export type CategoryFilter = "all" | TripCategory;
 
 const STATUS_OPTIONS: StatusFilter[] = ["all", "planned", "in_progress", "completed"];
 const CATEGORY_OPTIONS: CategoryFilter[] = [
@@ -40,8 +61,16 @@ const CATEGORY_OPTIONS: CategoryFilter[] = [
   "other",
 ];
 
+const sumOf = (counts: Record<string, number>): number =>
+  Object.values(counts).reduce((a, b) => a + b, 0);
+
 export default function TripsTab({
   trips,
+  filters,
+  onFiltersChange,
+  facets,
+  loadMore,
+  listError,
   onTripsChange,
   header,
   insights,
@@ -58,9 +87,15 @@ export default function TripsTab({
   const [mergeSelection, setMergeSelection] = useState<Set<string>>(new Set());
   const [showMergeConfirm, setShowMergeConfirm] = useState(false);
 
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
-  const [search, setSearch] = useState("");
+  const { status: statusFilter, category: categoryFilter } = filters;
+  const [search, setSearch] = useState(filters.q);
+
+  useEffect(() => {
+    const q = search.trim();
+    if (q === filters.q) return undefined;
+    const timer = setTimeout(() => onFiltersChange({ q }), TRIPS_SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [search, filters.q, onFiltersChange]);
 
   const handleOpen = (trip: Trip): void => {
     navigate(`/trips/${trip.id}`);
@@ -96,46 +131,38 @@ export default function TripsTab({
     }
   };
 
-  // Sort: planned first, then in_progress, then completed by start date desc.
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return trips
-      .filter((trip) => {
-        if (statusFilter !== "all" && trip.status !== statusFilter) return false;
-        if (categoryFilter !== "all" && trip.category !== categoryFilter) return false;
-        if (q.length === 0) return true;
-        const haystack = [
-          trip.name,
-          trip.destinationLabel ?? "",
-          trip.originLabel ?? "",
-          ...trip.tags,
-          ...trip.companions,
-          ...trip.countries,
-        ]
-          .join(" ")
-          .toLowerCase();
-        return haystack.includes(q);
-      })
-      .sort((a, b) => {
-        // Newest first; the grid groups by start year, so status no longer
-        // decides the order — a planned trip sits in its own year.
-        // Days at the places (`YYYY-MM-DD`) sort as strings; undated last.
+  // The server narrows the list; this only orders what it sent.
+  // Newest first; the grid groups by start year, so status no longer
+  // decides the order — a planned trip sits in its own year.
+  // Days at the places (`YYYY-MM-DD`) sort as strings; undated last.
+  const filtered = useMemo(
+    () =>
+      [...trips].sort((a, b) => {
         const at = tripSpan(a).start ?? "";
         const bt = tripSpan(b).start ?? "";
         return at === bt ? 0 : at < bt ? 1 : -1;
-      });
-  }, [trips, statusFilter, categoryFilter, search]);
+      }),
+    [trips]
+  );
 
-  const showFilters = trips.length >= 4;
+  const filtersActive = search.trim() !== "" || statusFilter !== "all" || categoryFilter !== "all";
+  const showFilters = trips.length >= 4 || filtersActive || (facets && sumOf(facets.status) >= 4);
 
   const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: trips.length };
-    for (const trip of trips) counts[trip.status] = (counts[trip.status] ?? 0) + 1;
-    for (const trip of trips) {
-      if (trip.category) counts[`cat:${trip.category}`] = (counts[`cat:${trip.category}`] ?? 0) + 1;
+    const counts: Record<string, number> = {
+      all: facets ? sumOf(facets.status) : trips.length,
+      ...(facets?.status ?? {}),
+    };
+    for (const [cat, n] of Object.entries(facets?.category ?? {})) counts[`cat:${cat}`] = n;
+    if (!facets) {
+      for (const trip of trips) counts[trip.status] = (counts[trip.status] ?? 0) + 1;
+      for (const trip of trips) {
+        if (trip.category)
+          counts[`cat:${trip.category}`] = (counts[`cat:${trip.category}`] ?? 0) + 1;
+      }
     }
     return counts;
-  }, [trips]);
+  }, [trips, facets]);
 
   /** Trips by start year, newest year first; undated ones last. */
   const groups = useMemo(() => {
@@ -210,28 +237,32 @@ export default function TripsTab({
         {showFilters && (
           <div className="mb-5 flex flex-wrap items-center gap-2">
             <div className="flex max-w-full gap-2 overflow-x-auto scrollbar-none">
-              {STATUS_OPTIONS.filter((opt) => opt === "all" || statusCounts[opt]).map((opt) => (
+              {STATUS_OPTIONS.filter(
+                (opt) => opt === "all" || statusCounts[opt] || statusFilter === opt
+              ).map((opt) => (
                 <FilterPill
                   key={opt}
                   active={statusFilter === opt}
                   count={statusCounts[opt] ?? 0}
-                  onClick={() => setStatusFilter(opt)}
+                  onClick={() => onFiltersChange({ status: opt })}
                 >
                   {opt === "all" ? t("trips:filterBar.allStatuses") : t(`trips:status.${opt}`)}
                 </FilterPill>
               ))}
-              {CATEGORY_OPTIONS.filter((opt) => opt !== "all" && statusCounts[`cat:${opt}`]).map(
-                (opt) => (
-                  <FilterPill
-                    key={opt}
-                    active={categoryFilter === opt}
-                    count={statusCounts[`cat:${opt}`] ?? 0}
-                    onClick={() => setCategoryFilter(categoryFilter === opt ? "all" : opt)}
-                  >
-                    {t(`trips:category.${opt}`)}
-                  </FilterPill>
-                )
-              )}
+              {CATEGORY_OPTIONS.filter(
+                (opt) => opt !== "all" && (statusCounts[`cat:${opt}`] || categoryFilter === opt)
+              ).map((opt) => (
+                <FilterPill
+                  key={opt}
+                  active={categoryFilter === opt}
+                  count={statusCounts[`cat:${opt}`] ?? 0}
+                  onClick={() =>
+                    onFiltersChange({ category: categoryFilter === opt ? "all" : opt })
+                  }
+                >
+                  {t(`trips:category.${opt}`)}
+                </FilterPill>
+              ))}
             </div>
             <input
               type="search"
@@ -249,7 +280,16 @@ export default function TripsTab({
           </div>
         )}
 
-        {trips.length === 0 ? (
+        {listError ? (
+          <p
+            role="alert"
+            className="text-center py-12 text-sm"
+            style={{ color: "var(--text-muted)" }}
+            data-testid="trips-list-error"
+          >
+            {t("trips:listError")}
+          </p>
+        ) : trips.length === 0 && !filtersActive ? (
           <div className="text-center py-16">
             <p className="text-2xl mb-2">🗺</p>
             <p className="font-medium" style={{ color: "var(--text-primary)" }}>
@@ -259,7 +299,7 @@ export default function TripsTab({
               {t("trips:noTripsDesc")}
             </p>
           </div>
-        ) : filtered.length === 0 ? (
+        ) : trips.length === 0 ? (
           <div
             className="text-center py-12 rounded-xl"
             style={{
@@ -314,6 +354,24 @@ export default function TripsTab({
                 </section>
               );
             })}
+          </div>
+        )}
+
+        {loadMore && !listError && (
+          <div className="mt-6 flex flex-col items-center gap-2">
+            {loadMore.error && (
+              <p role="alert" className="text-sm" data-testid="trips-more-error">
+                {t("trips:listError")}
+              </p>
+            )}
+            <Button
+              variant="secondary"
+              onClick={loadMore.onLoad}
+              disabled={loadMore.loading}
+              data-testid="trips-load-more"
+            >
+              {loadMore.loading ? t("common:loading.default") : t("trips:loadMore")}
+            </Button>
           </div>
         )}
       </div>

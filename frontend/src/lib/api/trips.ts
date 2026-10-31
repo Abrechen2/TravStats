@@ -115,6 +115,24 @@ export interface TripEntrySuggestions {
   destinations: string[];
 }
 
+export interface TripsListParams {
+  q?: string;
+  status?: Trip["status"];
+  category?: NonNullable<Trip["category"]>;
+  limit: number;
+  offset: number;
+}
+
+export interface TripsListPage {
+  trips: Trip[];
+  /** Trips matching the filters, across all pages. */
+  total: number;
+  /** More matching trips follow this page. */
+  truncated: boolean;
+  /** Counts per status / category under the text search, for the pills. */
+  facets?: { status: Record<string, number>; category: Record<string, number> };
+}
+
 export const tripsApi = {
   getEntrySuggestions: async (tripId?: string): Promise<TripEntrySuggestions> => {
     const { data } = await api.get<TripEntrySuggestions>("/trips/entry-suggestions", {
@@ -154,6 +172,23 @@ export const tripsApi = {
       total?: number;
       truncated?: boolean;
     }>("/trips", { params: { includeInsights: true } });
+    return data;
+  },
+
+  /**
+   * One page of the list, searched and filtered on the server. `getAll*` stops
+   * at the server's 500-row cap, so a trip beyond it could only be found here.
+   */
+  listPage: async (params: TripsListParams): Promise<TripsListPage> => {
+    const { data } = await api.get<TripsListPage>("/trips", {
+      params: {
+        ...(params.q ? { q: params.q } : {}),
+        ...(params.status ? { status: params.status } : {}),
+        ...(params.category ? { category: params.category } : {}),
+        limit: params.limit,
+        offset: params.offset,
+      },
+    });
     return data;
   },
 

@@ -43,30 +43,31 @@ function makeTrip(over: Partial<Trip> & { id: string; name: string }): Trip {
   } as Trip;
 }
 
-describe("TripsTab — status filter (#status-from-dates)", () => {
-  it('the "Aktuell"/in_progress filter chip matches trip.status === "in_progress"', () => {
-    useSettingsStore.setState({ enabledDomains: ["flight"] });
-    const trips = [
-      makeTrip({ id: "a", name: "Planned trip", status: "planned" }),
-      makeTrip({ id: "b", name: "Ongoing trip", status: "in_progress" }),
-      makeTrip({ id: "c", name: "Done trip", status: "completed" }),
-      makeTrip({ id: "d", name: "Second planned trip", status: "planned" }),
-    ];
+describe("TripsTab — filters are the server's job", () => {
+  const trips = [
+    makeTrip({ id: "a", name: "Planned trip", status: "planned" }),
+    makeTrip({ id: "b", name: "Ongoing trip", status: "in_progress" }),
+    makeTrip({ id: "c", name: "Done trip", status: "completed" }),
+    makeTrip({ id: "d", name: "Second planned trip", status: "planned" }),
+  ];
+  const filters = { q: "", status: "all", category: "all" } as const;
 
+  it("a status pill asks the parent to filter instead of hiding rows from the loaded page", () => {
+    useSettingsStore.setState({ enabledDomains: ["flight"] });
+    const onFiltersChange = vi.fn();
     render(
       <MemoryRouter>
-        <TripsTab trips={trips} onTripsChange={vi.fn()} />
+        <TripsTab
+          trips={trips}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+          onTripsChange={vi.fn()}
+        />
       </MemoryRouter>
     );
-
-    // The filter bar only renders once trips.length >= 4 (showFilters). The
-    // filter button and the "Ongoing trip" card's own status pill share the
-    // same i18n key text, so disambiguate by role.
     fireEvent.click(screen.getByRole("button", { name: /trips:status.in_progress/ }));
-
-    expect(screen.getByText("Ongoing trip")).toBeInTheDocument();
-    expect(screen.queryByText("Planned trip")).not.toBeInTheDocument();
-    expect(screen.queryByText("Done trip")).not.toBeInTheDocument();
-    expect(screen.queryByText("Second planned trip")).not.toBeInTheDocument();
+    expect(onFiltersChange).toHaveBeenCalledWith({ status: "in_progress" });
+    // Rows are whatever the server sent; the tab never drops one itself.
+    expect(screen.getByText("Planned trip")).toBeInTheDocument();
   });
 });

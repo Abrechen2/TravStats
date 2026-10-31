@@ -169,7 +169,11 @@ registry.registerPath({
   path: "/trips",
   summary: "List trips",
   description:
-    "Newest first, capped at 500. Each trip carries its bookings, up to 200 " +
+    "Newest first, capped at 500 unless `limit`/`offset` page through the rest. " +
+    "`q` (case-insensitive over name, labels, description, notes, tags, companions, " +
+    "countries), `status` and `category` filter on the server; any of them, `limit` " +
+    "or `offset` also adds `facets` (counts per status and category under `q`). " +
+    "A caller that sends none of these gets the list it always got. Each trip carries its bookings, up to 200 " +
     "flights, cruises and stays each, and `_count` with the size of every " +
     "linked collection including tour sections (`routes`) and photos (`photos`). " +
     "`includeInsights=true` additionally runs an UNCAPPED cost comparison over " +
@@ -185,6 +189,11 @@ registry.registerPath({
         .enum(["true", "false"])
         .optional()
         .describe("Adds `mostExpensiveTrip` and each trip's `cost`. Default false."),
+      q: z.string().max(200).optional().describe("Case-insensitive text search."),
+      status: z.enum(["planned", "in_progress", "completed"]).optional(),
+      category: z.enum(["vacation", "business", "weekend", "family", "other"]).optional(),
+      limit: z.string().optional().describe("Page size, 1..500. Default 500."),
+      offset: z.string().optional().describe("Rows to skip (newest first). Default 0."),
     }),
   },
   responses: {
@@ -194,6 +203,15 @@ registry.registerPath({
         "application/json": {
           schema: z.object({
             trips: z.array(tripListItem),
+            total: z.number().int().describe("Trips matching the filters, across all pages."),
+            truncated: z.boolean().describe("True when more matching trips follow this page."),
+            facets: z
+              .object({
+                status: z.record(z.string(), z.number().int()),
+                category: z.record(z.string(), z.number().int()),
+              })
+              .optional()
+              .describe("Present only when q/status/category/limit/offset was passed."),
             mostExpensiveTrip: tripCostSuperlative
               .nullable()
               .optional()
