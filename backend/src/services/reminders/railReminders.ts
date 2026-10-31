@@ -7,7 +7,10 @@ import type { RailReminderData } from "../email/reminderContent";
 import { RAIL_GROUPING_SELECT } from "../rail/railGroupingSelect";
 import { serializeTime, type TimePrecision } from "../../shared/time/wire";
 import logger from "../../utils/logger";
-import { reminderDomainEnabled } from "./domainEnabled";
+import { entryReminderMessage } from "../notifications/messages";
+import { sendDueReminder } from "./dispatch";
+import { dueAnchorRange, isDue } from "./due";
+import { activeLeadHours, leadsFor, REMINDER_USER_SELECT } from "./prefs";
 
 /**
  * The rail half of the departure-reminder scheduler. `RailJourney` stores a
@@ -22,13 +25,6 @@ import { reminderDomainEnabled } from "./domainEnabled";
  * windows key on its FIRST departure, and it is remembered by its first leg's
  * id, so no ride is announced twice and no later train of it on its own.
  */
-
-const sentReminders = new Set<string>();
-
-const REMINDER_WINDOWS = [
-  { hoursAhead: 24, key: "24h" },
-  { hoursAhead: 2, key: "2h" },
-] as const;
 
 const isPrecision = (value: string | null): value is TimePrecision =>
   value !== null && ["minute", "day", "month", "year", "unknown"].includes(value);
@@ -46,15 +42,6 @@ const LEG_SELECT = {
   bookingReference: true,
   depTimezone: true,
   arrTimezone: true,
-} as const;
-
-const USER_SELECT = {
-  select: {
-    notificationEmail: true,
-    notifyBefore24h: true,
-    notifyBefore2h: true,
-    settings: { select: { data: true, enabledDomains: true } },
-  },
 } as const;
 
 type ReminderLegRow = Prisma.RailJourneyGetPayload<{ select: typeof LEG_SELECT }>;
@@ -96,7 +83,7 @@ async function dueRides(start: Date, end: Date) {
       // 2 hours" would be a time nobody printed (forgejo#132 item 17).
       ...departureClockedWhere(),
     },
-    select: { ...LEG_SELECT, userId: true, user: USER_SELECT },
+    select: { ...LEG_SELECT, userId: true, user: REMINDER_USER_SELECT },
   });
   const candidates = new Map(inWindow.map((leg) => [leg.id, leg]));
   const bookingIds = [
@@ -123,12 +110,12 @@ async function dueRides(start: Date, end: Date) {
 }
 
 export async function checkRailReminders(now: Date): Promise<void> {
-  for (const { hoursAhead, key } of REMINDER_WINDOWS) {
-    const target = now.getTime() + hoursAhead * 60 * 60 * 1000;
+  for (const hoursAhead of await activeLeadHours()) {
+    const { start, end } = dueAnchorRange(hoursAhead, now);
 
     let rides;
     try {
-      rides = await dueRides(new Date(target - 15 * 60 * 1000), new Date(target + 15 * 60 * 1000));
+      rides = await dueRides(start, end);
     } catch (error) {
       logger.error({
         operation: "reminder_scheduler_query_failed",
@@ -140,32 +127,45 @@ export async function checkRailReminders(now: Date): Promise<void> {
     }
 
     for (const { legs, user } of rides) {
-      const reminderKey = `rail:${legs[0].id}-${key}`;
-      if (sentReminders.has(reminderKey)) continue;
+      const first = legs[0];
+      if (
+        !leadsFor(user, "rail").includes(hoursAhead) ||
+        !isDue(first.departureTime, hoursAhead, now)
+      )
+        continue;
 
-      const shouldSend =
-        user.notificationEmail !== null &&
-        reminderDomainEnabled(user.settings, "rail") &&
-        ((key === "24h" && user.notifyBefore24h) || (key === "2h" && user.notifyBefore2h));
-      if (!shouldSend) continue;
-
-      try {
-        await sendRailReminder(
-          legs.map(toReminderLeg),
-          { notificationEmail: user.notificationEmail, settingsData: user.settings?.data ?? null },
-          hoursAhead
-        );
-        sentReminders.add(reminderKey);
-      } catch (error) {
-        logger.error({
-          operation: "reminder_scheduler_send_failed",
-          domain: "rail",
-          journeyId: legs[0].id,
-          legCount: legs.length,
-          hoursAhead,
-          error: { message: error instanceof Error ? error.message : "Unknown error" },
-        });
-      }
+      const last = legs[legs.length - 1];
+      await sendDueReminder({
+        user,
+        domain: "rail",
+        entryId: first.id,
+        tripId: first.tripId,
+        hours: hoursAhead,
+        anchorAt: first.departureTime,
+        anchorKey: first.departureTime.toISOString(),
+        now,
+        render: (locale) =>
+          entryReminderMessage(
+            "rail",
+            {
+              label: `${first.depStationName} → ${last.arrStationName}`,
+              detail: [first.trainCategory, first.trainNumber].filter(Boolean).join(" ") || null,
+              at: first.departureTime,
+              zone: first.depTimezone,
+            },
+            hoursAhead,
+            locale
+          ),
+        sendMail: () =>
+          sendRailReminder(
+            legs.map(toReminderLeg),
+            {
+              notificationEmail: user.notificationEmail as string,
+              settingsData: user.settings?.data ?? null,
+            },
+            hoursAhead
+          ),
+      });
     }
   }
 }

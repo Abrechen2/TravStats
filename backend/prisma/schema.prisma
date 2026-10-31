@@ -41,6 +41,8 @@ model User {
   leaderboardBoards         LeaderboardBoard[]
   id                        String                   @id @default(uuid())
   devicePushes              DevicePush[]
+  reminderPreferences       ReminderPreference[]
+  reminderClaims            ReminderClaim[]
   clientWriteRefs           ClientWriteRef[]
   travelPlanUsage           TravelPlanUsage[]
   username                  String                   @unique
@@ -299,6 +301,10 @@ model DevicePush {
   mutedTripIds    String[] @default([]) @map("muted_trip_ids")
   /// "de" | "en" — the language the server writes this phone's texts in.
   locale          String   @default("de")
+  /// Set when the relay named this device token dead (410 token-invalid). The
+  /// row stays so the phone can be told ("token_rejected"); a registration with
+  /// a different token clears it.
+  tokenRejectedAt DateTime? @map("token_rejected_at")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -310,6 +316,49 @@ model DevicePush {
 
 /// One notification already sent to one phone. The unique pair is the
 /// dedupe: the 5-minute status job must never send the same change twice.
+/// One account's reminder setting for one domain (package 11): flight, cruise,
+/// rail, bus, ferry, lodging. `leadHours` holds the presets 24 and 2 plus at
+/// most one custom value 1-168; an empty list sends nothing. A user without a
+/// row is read from the legacy notify_before_* columns (reminders/prefs.ts).
+model ReminderPreference {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  domain    String
+  enabled   Boolean  @default(true)
+  leadHours Int[]    @default([24, 2]) @map("lead_hours")
+  /// "app" | "mail" | "both"
+  channel   String   @default("both")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, domain])
+  @@map("reminder_preferences")
+}
+
+/// The durable "this reminder went out" record. One row per account, domain,
+/// entry, lead and channel ("mail", or "push:<apiTokenId>" per device), so a
+/// restart or a second worker cannot send twice. `claimedAt` + null `sentAt` is
+/// a lease: a claim whose send never finished is reclaimed after 10 minutes.
+/// `anchorAt` is the departure/check-in instant the reminder was computed for;
+/// a later edit re-arms the row only when the anchor moved by more than 30 min.
+model ReminderClaim {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  domain    String
+  entryId   String    @map("entry_id")
+  leadHours Int       @map("lead_hours")
+  channel   String
+  anchorAt  DateTime  @map("anchor_at")
+  claimedAt DateTime  @default(now()) @map("claimed_at")
+  sentAt    DateTime? @map("sent_at")
+
+  @@unique([userId, domain, entryId, leadHours, channel])
+  @@index([anchorAt])
+  @@map("reminder_claims")
+}
+
 model PushDelivery {
   id         String     @id @default(uuid())
   apiTokenId String     @map("api_token_id")

@@ -12,10 +12,10 @@ jest.mock("../../emailService", () => ({
 
 jest.mock("../../airportCache", () => ({ getCachedAirport: jest.fn() }));
 
-const mockNotifyReminder =
-  jest.fn<typeof import("../../notifications/dispatcher").notifyReminder>();
+const mockNotifyEntryReminder =
+  jest.fn<typeof import("../../notifications/dispatcher").notifyEntryReminder>();
 jest.mock("../../notifications/dispatcher", () => ({
-  notifyReminder: mockNotifyReminder,
+  notifyEntryReminder: mockNotifyEntryReminder,
 }));
 
 const mockWarn = jest.fn();
@@ -24,7 +24,38 @@ jest.mock("../../../utils/logger", () => ({
   default: { info: jest.fn(), warn: mockWarn, error: jest.fn(), debug: jest.fn() },
 }));
 
+// The durable claim, the last-moment recheck and the push are covered by their
+// own suites; here every send is claimed, still eligible, and pushed nowhere.
+jest.mock("../claims", () => {
+  // In-memory twin of the durable claim: one owner per key, freed on release.
+  const claimed = new Set<string>();
+  return {
+    claimReminder: jest.fn(async (key: unknown) => {
+      const id = JSON.stringify(key);
+      if (claimed.has(id)) return null;
+      claimed.add(id);
+      return { id };
+    }),
+    markSent: jest.fn(async () => undefined),
+    releaseClaim: jest.fn(async (claim: { id: string }) => {
+      claimed.delete(claim.id);
+    }),
+  };
+});
+jest.mock("../eligibility", () => ({
+  ...jest.requireActual<typeof import("../eligibility")>("../eligibility"),
+  stillEligible: jest.fn(async () => true),
+}));
+
 type UserFixture = {
+  id: string;
+  reminderPreferences: Array<{
+    domain: string;
+    enabled: boolean;
+    leadHours: number[];
+    channel: string;
+  }>;
+  devicePushes: Array<{ reminders: boolean }>;
   notificationEmail: string | null;
   notifyBefore24h: boolean;
   notifyBefore2h: boolean;
@@ -72,10 +103,16 @@ function makeFlight(user: Partial<UserFixture> = {}, hoursAhead = 24, id = "flig
     runwayArrivalTime: null,
     userId: "user-1",
     user: {
+      id: "user-1",
       notificationEmail: "user@example.com",
       notifyBefore24h: true,
       notifyBefore2h: true,
-      settings: null,
+      // Flights are on by default; the channel is the test's choice.
+      settings: { data: {}, enabledDomains: ["flight"] },
+      reminderPreferences: [
+        { domain: "flight", enabled: true, leadHours: [24, 2], channel: "both" },
+      ],
+      devicePushes: [],
       ...user,
     },
   };
@@ -97,90 +134,116 @@ describe("checkFlightReminders - push", () => {
     jest.clearAllMocks();
     jest.resetModules();
     mockFindMany.mockResolvedValue([]);
-    mockNotifyReminder.mockResolvedValue(undefined);
+    mockNotifyEntryReminder.mockResolvedValue(undefined);
+    mockSendFlightReminder.mockResolvedValue(undefined);
+  });
+
+  const only = (channel: string, leadHours = [24, 2], enabled = true) => ({
+    reminderPreferences: [{ domain: "flight", enabled, leadHours, channel }],
   });
 
   it("pushes the 24h reminder for a user without notificationEmail, and sends no e-mail", async () => {
-    stage([makeFlight({ notificationEmail: null })]);
+    stage([makeFlight({ notificationEmail: null, ...only("app") })]);
     await run();
 
-    expect(mockNotifyReminder).toHaveBeenCalledTimes(1);
-    const [userId, flight, key] = mockNotifyReminder.mock.calls[0];
+    expect(mockNotifyEntryReminder).toHaveBeenCalledTimes(1);
+    const [userId, entry] = mockNotifyEntryReminder.mock.calls[0];
     expect(userId).toBe("user-1");
-    expect(flight.id).toBe("flight-a");
-    expect(key).toBe("24h");
+    expect(entry).toMatchObject({ domain: "flight", entryId: "flight-a", hours: 24 });
     expect(mockSendFlightReminder).not.toHaveBeenCalled();
   });
 
   it("hands the dispatcher the flight's trip, so a phone's per-trip mute can apply (forgejo#286)", async () => {
-    stage([{ ...makeFlight({ notificationEmail: null }), tripId: "trip-9" }]);
+    stage([{ ...makeFlight(only("app")), tripId: "trip-9" }]);
     await run();
 
-    expect(mockNotifyReminder.mock.calls[0][1].tripId).toBe("trip-9");
+    expect(mockNotifyEntryReminder.mock.calls[0][1].tripId).toBe("trip-9");
   });
 
-  it("pushes the 2h reminder with key 2h", async () => {
-    stage([], [makeFlight({ notificationEmail: null }, 2)]);
+  it("pushes the 2h reminder with hours 2", async () => {
+    stage([], [makeFlight(only("app"), 2)]);
     await run();
 
-    expect(mockNotifyReminder).toHaveBeenCalledTimes(1);
-    expect(mockNotifyReminder.mock.calls[0][2]).toBe("2h");
+    expect(mockNotifyEntryReminder).toHaveBeenCalledTimes(1);
+    expect(mockNotifyEntryReminder.mock.calls[0][1].hours).toBe(2);
   });
 
-  it("sends both e-mail and push when the user has both", async () => {
-    stage([makeFlight()]);
+  it("sends both e-mail and push on the channel 'both'", async () => {
+    stage([makeFlight(only("both"))]);
     await run();
 
     expect(mockSendFlightReminder).toHaveBeenCalledTimes(1);
-    expect(mockNotifyReminder).toHaveBeenCalledTimes(1);
+    expect(mockNotifyEntryReminder).toHaveBeenCalledTimes(1);
   });
 
-  it("pushes even when the e-mail switch for the window is off (the phone has its own switch)", async () => {
-    stage([makeFlight({ notifyBefore24h: false })]);
+  it("sends only the mail on the channel 'mail' and only the push on 'app'", async () => {
+    stage([makeFlight(only("mail"))]);
+    await run();
+    expect(mockSendFlightReminder).toHaveBeenCalledTimes(1);
+    expect(mockNotifyEntryReminder).not.toHaveBeenCalled();
+
+    jest.clearAllMocks();
+    stage([makeFlight(only("app"))]);
+    await run();
+    expect(mockSendFlightReminder).not.toHaveBeenCalled();
+    expect(mockNotifyEntryReminder).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends nothing at a lead the account did not choose, and nothing for a disabled domain", async () => {
+    stage([makeFlight(only("both", [2]))]); // 24 h window, only 2 h chosen
+    await run();
+    expect(mockSendFlightReminder).not.toHaveBeenCalled();
+    expect(mockNotifyEntryReminder).not.toHaveBeenCalled();
+
+    stage([makeFlight(only("both", [24, 2], false))]);
+    await run();
+    expect(mockSendFlightReminder).not.toHaveBeenCalled();
+    expect(mockNotifyEntryReminder).not.toHaveBeenCalled();
+  });
+
+  it("an account's custom lead hour is scheduled like the presets", async () => {
+    mockFindMany.mockImplementation(async () => []);
+    // activeLeadHours reads the custom values in use.
+    const leads = await import("../prefs");
+    jest.spyOn(leads, "activeLeadHours").mockResolvedValue([24, 6, 2]);
+    mockFindMany.mockResolvedValueOnce([]); // 24
+    mockFindMany.mockResolvedValueOnce([makeFlight(only("app", [24, 6, 2]), 6)]); // 6
+    mockFindMany.mockResolvedValueOnce([]); // 2
     await run();
 
-    expect(mockSendFlightReminder).not.toHaveBeenCalled();
-    expect(mockNotifyReminder).toHaveBeenCalledTimes(1);
+    expect(mockNotifyEntryReminder).toHaveBeenCalledTimes(1);
+    expect(mockNotifyEntryReminder.mock.calls[0][1].hours).toBe(6);
   });
 
   it("still e-mails (positive control) when the push notifier rejects, and logs a warning", async () => {
-    mockNotifyReminder.mockRejectedValue(new Error("relay down"));
-    stage([makeFlight()]);
-    await run();
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(mockSendFlightReminder).toHaveBeenCalledTimes(1);
-    expect(mockWarn).toHaveBeenCalledWith(
-      expect.objectContaining({ operation: "flight_reminder_push_failed", flightId: "flight-a" }),
-      expect.any(String)
-    );
-  });
-
-  it("survives a notifier that throws synchronously", async () => {
-    mockNotifyReminder.mockImplementation(() => {
-      throw new Error("boom");
-    });
-    stage([makeFlight()]);
+    mockNotifyEntryReminder.mockRejectedValue(new Error("relay down"));
+    stage([makeFlight(only("both"))]);
     await run();
 
     expect(mockSendFlightReminder).toHaveBeenCalledTimes(1);
     expect(mockWarn).toHaveBeenCalledWith(
-      expect.objectContaining({ operation: "flight_reminder_push_failed" }),
-      expect.any(String)
+      expect.objectContaining({ operation: "reminder_push_failed", entryId: "flight-a" })
     );
   });
 
-  it("does not push a flight outside the precise window (positive control: inside does)", async () => {
-    stage([makeFlight({}, 26), makeFlight({}, 24, "flight-b")]);
+  it("a failing mail does not skip the push (the channels are independent)", async () => {
+    mockSendFlightReminder.mockRejectedValue(new Error("smtp down"));
+    stage([makeFlight(only("both"))]);
     await run();
 
-    expect(mockNotifyReminder).toHaveBeenCalledTimes(1);
-    expect(mockNotifyReminder.mock.calls[0][1].id).toBe("flight-b");
+    expect(mockNotifyEntryReminder).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps trying the push on the next run (the dispatcher dedupes) but e-mails only once", async () => {
-    const flight = makeFlight();
+  it("does not remind about a flight that is not yet due (positive control: a due one does)", async () => {
+    stage([makeFlight(only("both"), 26), makeFlight(only("both"), 24, "flight-b")]);
+    await run();
+
+    expect(mockNotifyEntryReminder).toHaveBeenCalledTimes(1);
+    expect(mockNotifyEntryReminder.mock.calls[0][1].entryId).toBe("flight-b");
+  });
+
+  it("e-mails only once across runs (the durable claim)", async () => {
+    const flight = makeFlight(only("mail"));
     stage([flight]);
     await run();
     stage([flight]);
@@ -188,15 +251,14 @@ describe("checkFlightReminders - push", () => {
     await checkFlightReminders(new Date());
 
     expect(mockSendFlightReminder).toHaveBeenCalledTimes(1);
-    expect(mockNotifyReminder).toHaveBeenCalledTimes(2);
   });
 
-  it("sends no mail when the flight domain is switched off, and leaves the push to the phone's own switch", async () => {
+  it("sends nothing for a flight whose domain the account switched off", async () => {
     stage([makeFlight({ settings: { data: {}, enabledDomains: ["cruise"] } })]);
     await run();
 
     expect(mockSendFlightReminder).not.toHaveBeenCalled();
-    expect(mockNotifyReminder).toHaveBeenCalledTimes(1);
+    expect(mockNotifyEntryReminder).not.toHaveBeenCalled();
   });
 
   it("hands the mail terminal, gate, class and booking reference", async () => {

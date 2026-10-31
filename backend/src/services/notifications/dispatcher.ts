@@ -5,6 +5,9 @@ import type { FlightChange } from "../flightAutoUpdate";
 import { serverPushEnabled } from "../push/devices";
 import { sendToRelay, type RelayPush, type RelayOutcome } from "../push/relayClient";
 import { sealForDevice } from "../push/seal";
+import { claimReminder, markSent, releaseClaim } from "../reminders/claims";
+import { stillEligible } from "../reminders/eligibility";
+import type { ReminderDomain } from "../reminders/prefs";
 import {
   flightChangedMessage,
   reminderMessage,
@@ -83,6 +86,7 @@ async function deliver(
       userId,
       [switchField]: true,
       ...(mutedBy !== null && { NOT: { mutedTripIds: { has: mutedBy } } }),
+      tokenRejectedAt: null,
       user: { isActive: true },
       apiToken: { revokedAt: null, OR: [{ expiresAt: null }, { expiresAt: { gt: at } }] },
     },
@@ -132,12 +136,24 @@ async function deliver(
     }
 
     if (outcome === "token-invalid") {
-      await prisma.devicePush.deleteMany({ where: { apiTokenId: device.apiTokenId } });
+      await markTokenRejected(device.apiTokenId);
     } else if (outcome !== "sent") {
       // Not delivered: free the claim so the next run can try again.
       await prisma.pushDelivery.deleteMany({ where: { id: deliveryId } });
     }
   }
+}
+
+/**
+ * The relay named this phone's token dead. The row stays, marked, so the
+ * settings read can say "token_rejected" and the phone knows to schedule its
+ * own reminders; a registration with a different token clears the mark.
+ */
+async function markTokenRejected(apiTokenId: string): Promise<void> {
+  await prisma.devicePush.updateMany({
+    where: { apiTokenId },
+    data: { tokenRejectedAt: new Date() },
+  });
 }
 
 async function guarded(what: string, run: () => Promise<void>): Promise<void> {
@@ -172,27 +188,127 @@ export async function notifyFlightChanged(
   );
 }
 
+/** A reminder for one entry of any domain, as the dispatcher needs it. */
+export interface EntryReminder {
+  domain: ReminderDomain;
+  entryId: string;
+  /** A phone that muted this trip is skipped (forgejo#286). */
+  tripId: string | null;
+  hours: number;
+  /** The entry's time as the finder read it; the claim re-arms when it moves. */
+  anchorAt: Date;
+  /** See `stillEligible`: the entry must still carry this key right before the send. */
+  anchorKey: string;
+  render: (locale: Locale) => Message | null;
+}
+
 /**
- * The departure reminder (`key` 24h / 2h), once per flight and phone — except
- * to a phone that muted the flight's trip (forgejo#286). Flight-change notices
- * ignore that mute: they are not reminders.
+ * The reminder push: to EVERY paired phone with push on, once per phone.
+ * Dedupe is the durable claim `push:<device>` per account, domain, entry and
+ * lead (`reminder_claims`, lease and re-arm rules in `reminders/claims.ts`),
+ * so a restart or a second worker cannot send twice. The entry and the
+ * account's settings are re-read right before the send.
  */
+export async function notifyEntryReminder(
+  userId: string,
+  entry: EntryReminder,
+  deps: Deps = {}
+): Promise<void> {
+  await guarded(`${entry.domain}.reminder`, async () => {
+    if (!(await serverPushEnabled())) return;
+    const send = deps.send ?? sendToRelay;
+    const now = deps.now ?? (() => new Date());
+    const at = now();
+    const devices = await prisma.devicePush.findMany({
+      where: {
+        userId,
+        reminders: true,
+        tokenRejectedAt: null,
+        ...(entry.tripId !== null && { NOT: { mutedTripIds: { has: entry.tripId } } }),
+        user: { isActive: true },
+        apiToken: { revokedAt: null, OR: [{ expiresAt: null }, { expiresAt: { gt: at } }] },
+      },
+    });
+    if (devices.length === 0) return;
+    const eligible = await stillEligible({
+      userId,
+      domain: entry.domain,
+      entryId: entry.entryId,
+      hours: entry.hours,
+      channel: "app",
+      anchorKey: entry.anchorKey,
+    });
+    if (!eligible) return;
+
+    for (const device of devices) {
+      const locale: Locale = device.locale === "en" ? "en" : "de";
+      const message = entry.render(locale);
+      if (!message) continue;
+      const claim = await claimReminder(
+        {
+          userId,
+          domain: entry.domain,
+          entryId: entry.entryId,
+          leadHours: entry.hours,
+          channel: `push:${device.apiTokenId}`,
+        },
+        entry.anchorAt,
+        at
+      );
+      if (!claim) continue; // already told this phone (or another worker has it)
+
+      const plaintext = JSON.stringify({
+        v: 1,
+        type: `${entry.domain}.reminder`,
+        id: claim.id,
+        title: message.title,
+        body: message.body,
+        domain: entry.domain,
+        entryId: entry.entryId,
+        ...(entry.domain === "flight" && { flightId: entry.entryId }),
+        sentAt: at.toISOString(),
+      });
+      let outcome: RelayOutcome;
+      try {
+        outcome = await send({
+          platform: device.platform === "android" ? "android" : "ios",
+          token: device.token,
+          ...(device.apnsEnvironment ? { apnsEnvironment: device.apnsEnvironment } : {}),
+          ciphertext: sealForDevice(device.publicKey, plaintext),
+          collapseId: `reminder:${entry.entryId}`.slice(0, 64),
+          lang: locale,
+        });
+      } catch {
+        outcome = "failed";
+      }
+      if (outcome === "sent") {
+        await markSent(claim, now());
+      } else {
+        if (outcome === "token-invalid") await markTokenRejected(device.apiTokenId);
+        await releaseClaim(claim);
+      }
+    }
+  });
+}
+
+/** The flight departure reminder, `hours` before the departure. */
 export async function notifyReminder(
   userId: string,
   flight: FlightForMessage & { departureTime: Date; tripId?: string | null },
-  key: "24h" | "2h",
+  hours: number,
   deps: Deps = {}
 ): Promise<void> {
-  await guarded("flight.reminder", () =>
-    deliver(
-      userId,
-      "flight.reminder",
-      flight.id,
-      `reminder:${flight.id}:${key}`,
-      "reminders",
-      (locale) => reminderMessage(flight, key === "24h" ? 24 : 2, locale),
-      deps,
-      flight.tripId ?? null
-    )
+  await notifyEntryReminder(
+    userId,
+    {
+      domain: "flight",
+      entryId: flight.id,
+      tripId: flight.tripId ?? null,
+      hours,
+      anchorAt: flight.departureTime,
+      anchorKey: flight.departureTime.toISOString(),
+      render: (locale) => reminderMessage(flight, hours, locale),
+    },
+    deps
   );
 }
