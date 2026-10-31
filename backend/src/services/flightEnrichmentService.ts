@@ -118,6 +118,20 @@ export function getEnrichmentMode(departureTime: Date | null | undefined): Enric
   return ageYears < 1 ? "full" : "slim";
 }
 
+/** The columns the candidate test and the confidence read — nothing else. */
+const ENRICHMENT_CANDIDATE_SELECT = {
+  id: true,
+  flightNumber: true,
+  airline: true,
+  aircraft: true,
+  depIata: true,
+  depIcao: true,
+  arrIata: true,
+  arrIcao: true,
+  actualRoute: true,
+  departureTime: true,
+} as const;
+
 /**
  * Find flights that are candidates for historical enrichment
  */
@@ -156,7 +170,26 @@ export async function findEnrichmentCandidates(
             },
           },
         },
+        // A flight that lacks none of the five fields is never a candidate:
+        // say so in SQL instead of reading ten years of full rows (forgejo#339).
+        AND: [
+          {
+            OR: [
+              { aircraft: null },
+              { aircraft: "" },
+              { depIcao: null },
+              { depIcao: "" },
+              { arrIcao: null },
+              { arrIcao: "" },
+              { actualRoute: { equals: Prisma.DbNull } },
+              { actualRoute: { equals: Prisma.JsonNull } },
+              { actualRoute: { equals: [] } },
+            ],
+          },
+        ],
       },
+      select: ENRICHMENT_CANDIDATE_SELECT,
+      orderBy: { id: "asc" },
     });
 
     const candidates: EnrichmentCandidate[] = [];
@@ -213,14 +246,18 @@ export async function findEnrichmentCandidates(
         stack: error instanceof Error ? error.stack : undefined,
       },
     });
-    return [];
+    // Not `[]`: a database error must not reach the user as "nothing to enrich".
+    throw error;
   }
 }
 
 /**
  * Calculate basic confidence for a candidate (before aggregation)
  */
-function calculateBasicConfidence(flight: Flight, missingFields: string[]): number {
+function calculateBasicConfidence(
+  flight: Pick<Flight, "flightNumber" | "airline" | "depIata" | "depIcao" | "arrIata" | "arrIcao">,
+  missingFields: string[]
+): number {
   let confidence = 50; // Base confidence
 
   // More confidence if flight number is present
