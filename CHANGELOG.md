@@ -6,7 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-**Before upgrading to 2.8.0-rc.3:** take a backup. Six new migrations since 2.7.0: two tables for the TravTrack diagnostics log, new columns on the admin and user settings for the ADS-B providers and the AeroAPI plan, two tables that count AeroAPI calls and track fetches, and the external-services policy (a policy column on the admin and user settings, a table for stored test results, a switch for a local custom AI endpoint); nothing existing changes.
+**Before upgrading to 2.8.0-rc.4:** take a backup. Six new migrations since 2.7.0: two tables for the TravTrack diagnostics log, new columns on the admin and user settings for the ADS-B providers and the AeroAPI plan, two tables that count AeroAPI calls and track fetches, and the external-services policy (a policy column on the admin and user settings, a table for stored test results, a switch for a local custom AI endpoint); nothing existing changes.
 
 ### Added
 
@@ -25,6 +25,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - **A backup no longer finishes as "successful" after a write error,** and an archive whose output stream fails is aborted instead of left half-written. A rental's receipts are filed in the same transaction that creates the rental.
 - **Large backups and exports stream instead of being held in memory,** so they no longer exhaust the server on a big logbook. WebDAV uploads send an explicit length, a download gets its own side file, and a stalled transfer is stopped by a watchdog.
 - **Streamed exports strip private share keys** the way every other API response already did.
+- **A provider outage no longer ends a flight's live tracking.** The automatic update sweep treated a failed lookup as "flight finished"; it now retries, and it passes the departure airport so the right flight is found.
+- **Statistics no longer show a page of zeros when a calculation fails;** the page reports the error instead. The cruise series counts completed cruises, and eight separate copies of the "does this flight count" rule are now one.
+- **Admin settings no longer show every API key as "not configured" after a failed read.**
+- **Airline logos missing during a provider outage at start-up come back** instead of being remembered as "no logo" for a day.
+- **The nearest-airport search near a pole and with odd inputs** returns airports instead of nothing or an error.
+- **Lists the server cuts short now say so:** a trip's photo gallery shows "first N of M", and the trip list, Dawarich stays, Immich albums and the parse-log export report when they were truncated.
+- **Deleting a flight or cruise updates its trip's status and badges** in the same step.
+- **A failed load says so instead of looking empty:** the dashboard no longer offers "add your first flight" when flights failed to load, the all-domains map names the domain that failed, and the flight panel's trips tab, the cruise map, the up-next card and the settings page show an error with retry. A failed settings read no longer stores a false snapshot, and a blocked auto-save is reported.
+- **The globe draws every cruise,** also with more than 100.
+- **Flight times in the year report and the map panel follow the shared duration rule,** and the report marks a total that contains estimated legs.
+- **A failing Immich import stops polling and names its failure;** the ferry editor shows why a save failed.
+- **Tag suggestions include ferry rides and rentals;** a bulk flight lookup validates its input, uses your own keys and reports provider failures.
 
 ## [2.7.0] - 2026-10-29
 
