@@ -118,6 +118,27 @@ router.get(
   }
 );
 
+/** The columns the per-tail profile reads. */
+const AIRCRAFT_PROFILE_SELECT = {
+  id: true,
+  flightNumber: true,
+  airline: true,
+  aircraft: true,
+  aircraftModeS: true,
+  aircraftRegistration: true,
+  depIata: true,
+  arrIata: true,
+  depName: true,
+  arrName: true,
+  depLat: true,
+  depLon: true,
+  arrLat: true,
+  arrLon: true,
+  departureTime: true,
+  arrivalTime: true,
+  status: true,
+} as const;
+
 // GET /api/v1/stats/aircraft/:registration — per-tail profile.
 // Returns aggregate stats plus the user's flights on that hull, newest
 // first. 404 if the user has no flights with that registration.
@@ -142,15 +163,31 @@ router.get(
       // The ranking keys a hull by its normalised mark, so the page matches
       // every spelling of it (`shared/aircraftRegistration`, forgejo#256).
       const wanted = normalizeRegistration(registration);
+      // Narrowed in SQL on the same normal form (whitespace out, upper case) —
+      // the JS comparison below stays the final word (forgejo#340).
+      const candidateIds =
+        wanted === null
+          ? []
+          : (
+              await prisma.$queryRaw<{ id: string }[]>`
+                SELECT id FROM flights
+                 WHERE user_id = ${userId}
+                   AND aircraft_registration IS NOT NULL
+                   AND upper(regexp_replace(aircraft_registration, '\\s+', '', 'g')) = ${wanted}`
+            ).map((r) => r.id);
       const flights = (
-        await prisma.flight.findMany({
-          where: {
-            userId,
-            ...countableFlightWhere(),
-            aircraftRegistration: { not: null },
-          },
-          orderBy: { departureTime: "desc" },
-        })
+        candidateIds.length === 0
+          ? []
+          : await prisma.flight.findMany({
+              where: {
+                userId,
+                id: { in: candidateIds },
+                ...countableFlightWhere(),
+                aircraftRegistration: { not: null },
+              },
+              orderBy: [{ departureTime: "desc" }, { id: "asc" }],
+              select: AIRCRAFT_PROFILE_SELECT,
+            })
       ).filter((f) => wanted !== null && normalizeRegistration(f.aircraftRegistration) === wanted);
 
       if (flights.length === 0) {
