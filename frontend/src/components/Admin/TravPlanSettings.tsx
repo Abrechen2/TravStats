@@ -141,6 +141,7 @@ export default function TravPlanSettings(): JSX.Element {
                 <Input
                   id={`travplan-${key}`}
                   type="number"
+                  disabled={limitsBusy}
                   min={0}
                   max={LIMIT_MAX[key]}
                   value={Number.isNaN(limits[key]) ? "" : limits[key]}
