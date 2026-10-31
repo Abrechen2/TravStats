@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
+import { DEFAULT_CHECK_IN_TIME, DEFAULT_CHECK_OUT_TIME } from "../lodging/stayEditorDraft";
 import { createLodging, createStay, deleteLodging, listLodgings } from "../../lib/api/lodging";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { logger } from "../../lib/logger";
@@ -91,6 +92,9 @@ export default function StayPicker({
     checkIn: near.startDate,
     checkOut: near.endDate,
     datePrecision: near.startDate ? ("DAY" as const) : ("NONE" as const),
+    // Standard hotel hours on a new, dated stay (owner, 2026-10-31).
+    checkInTime: near.startDate ? DEFAULT_CHECK_IN_TIME : null,
+    checkOutTime: near.endDate ? DEFAULT_CHECK_OUT_TIME : null,
     tripId,
   };
 

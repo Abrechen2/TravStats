@@ -121,6 +121,8 @@ describe("StayPicker — every lodging, not only those with a stay", () => {
       checkIn: "2026-07-14",
       checkOut: "2026-07-16",
       datePrecision: "DAY",
+      checkInTime: "15:00",
+      checkOutTime: "11:00",
       tripId: "trip-1",
     });
     expect(createLodging).not.toHaveBeenCalled();
