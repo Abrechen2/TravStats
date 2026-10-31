@@ -6,9 +6,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-**Before upgrading to 2.8.0-rc.5:** take a backup. Seven new migrations since 2.7.0: two tables for the TravTrack diagnostics log, new columns on the admin and user settings for the ADS-B providers and the AeroAPI plan, two tables that count AeroAPI calls and track fetches, and the external-services policy (a policy column on the admin and user settings, a table for stored test results, a switch for a local custom AI endpoint), and the columns that receive the one-time copy of the service environment variables; nothing existing changes.
+**Before upgrading to 2.8.0-rc.6:** take a backup. Nine new migrations since 2.7.0: two tables for the TravTrack diagnostics log, new columns on the admin and user settings for the ADS-B providers and the AeroAPI plan, two tables that count AeroAPI calls and track fetches, and the external-services policy (a policy column on the admin and user settings, a table for stored test results, a switch for a local custom AI endpoint), and the columns that receive the one-time copy of the service environment variables, a table for place captures from the Companion, and the per-area reminder preferences (filled once from each account's current reminder settings); nothing existing is removed.
 
 **Upgrading to 2.8.0-rc.5 — external-service settings move out of the environment.** On its first start this version copies every external-service variable still set in the server environment (`AIRLABS_API_KEY`, `AVIATIONSTACK_API_KEY`, `OLLAMA_URL`, `OLLAMA_MODEL`, the Immich, Dawarich, Strava, WebDAV, federation and the other service variables) into the instance settings, encrypted, wherever the instance field is still empty, and then never reads them again. The log names the variables it copied, never their values. From then on these services are configured only under Administration → External services; database, secrets, ports, time zone, logging, backup paths and first-boot defaults stay environment variables. One new migration adds the columns the copy needs.
+
+**Upgrading to 2.8.0-rc.6 — check your reminders.** Reminders are now set per area (flight, stay, cruise, rail, bus, ferry) under Settings → Benachrichtigungen. The upgrade fills them once from what each account had: an area that sent e-mail or push keeps doing so. Each area now has one list of lead times, taken from the e-mail switches (24 h / 2 h) where e-mail was on: an account that e-mailed only the 24-hour reminder but also had the 2-hour push keeps 24 h on both channels and loses the 2-hour push until it is ticked again. Nothing that was off is switched on. A stay's reminder is now counted back from its check-in time (15:00 in the stay's time zone when none is set) instead of firing at 08:00 on the day.
 
 ### Added
 
@@ -21,6 +23,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - **Setup can switch on the free services in one step.** The first-run page offers a switch that turns on the services that cost nothing and need no key — adsb.lol, rail timetables, open data (weather, elevation, Wikipedia) and airline logos — and says what leaves the server for each. The usage-statistics question stays its own question.
 - **A WebDAV backup can be restored from the share.** Administration → Backups lists the backups on the share; a downloaded one is checked against the checksum written at upload and then appears in the backup list like any other. Older backups without a checksum are accepted on size and marked as such.
 - **The server answers the Companion's new statistics:** ferry statistics, a trip's distance across every mode of transport, and the number of roadtrips. A trip's countries now include the places you visited on it, by the same rule as the passport.
+
+- **Reminders per area, with your own lead time and channel.** Each area can be switched on or off, reminds 24 h, 2 h or at a custom time (1–168 h) before departure or check-in, and goes to the app, by e-mail or both. "App" is a push through the server; the page says when push is not available on a device and why, and the Companion then reminds locally.
+- **Unnamed "Ort jetzt" captures from the Companion arrive in the inbox,** where they can be named, linked to an existing place or attached to a visit.
+- **Settings in one consistent shape.** Every page uses the same row and save model, the Standard/Expert switch states what each level shows and what the defaults are, the search finds settings by what they do, and the external-service forms test and save the same way.
+- **The dashboard map can hide routes per area.** A "Routen" switch in the map panel keeps only the markers — for flights, only the airports. It is also listed under Settings → Ansichten.
+- **New stays start at 15:00 check-in and 11:00 check-out,** in the stay editor and in a stay created from a roadtrip station.
 
 ### Fixed
 
@@ -49,6 +57,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - **Large logbooks load faster.** Trip, flight and statistics queries read only the rows and columns they need, the airport, airline and aircraft searches filter in the database, and the geocoder caches are bounded. A finished trip is now marked completed within the hour rather than within five minutes.
 - **Maps and long lists stay smooth.** Map layers are no longer rebuilt on every animation frame, the live slider and replay redraw less often, and the activity list shows 200 entries with "show more".
 - **Setup no longer redirects past a failed step** when the page was left before its timer ran out.
+- **The trip list searches and filters on the server,** so a trip beyond the first 500 is found, and "mehr laden" loads the next trips in the order the list shows.
+- **A settings change made just before leaving the page is saved,** and two quick changes can no longer overwrite each other.
 
 ## [2.7.0] - 2026-10-29
 
