@@ -6,8 +6,15 @@ import type { ParserSettingsData } from "./ParserSettings";
  * keys, consent and switches belong to Externe Dienste; sending the page's
  * copy of them would overwrite an edit made there since this page loaded
  * (a stale URL, a stale masked key) without any message.
+ *
+ * The model is also edited in Externe Dienste, so it is sent only when the user
+ * changed it on this page, i.e. when it differs from the copy the page loaded
+ * (`loaded`). Without a baseline it is always sent.
  */
-export function parserOwnFields(settings: ParserSettingsData): {
+export function parserOwnFields(
+  settings: ParserSettingsData,
+  loaded?: ParserSettingsData | null
+): {
   parserOrder?: ParserSettingsData["parserOrder"];
   llmEnabled?: boolean;
   llmProviderOrder?: ParserSettingsData["llmProviderOrder"];
@@ -19,6 +26,8 @@ export function parserOwnFields(settings: ParserSettingsData): {
     ...(settings.llmProviderOrder !== undefined
       ? { llmProviderOrder: settings.llmProviderOrder }
       : {}),
-    ollamaModel: settings.ollamaModel,
+    ...(!loaded || settings.ollamaModel !== loaded.ollamaModel
+      ? { ollamaModel: settings.ollamaModel }
+      : {}),
   };
 }

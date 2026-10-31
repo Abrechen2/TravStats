@@ -82,6 +82,8 @@ export default function AdminPage(): JSX.Element {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [parserSettings, setParserSettings] = useState<ParserSettingsData | null>(null);
+  // What the server last told this page; the Parser save diffs against it.
+  const [parserLoaded, setParserLoaded] = useState<ParserSettingsData | null>(null);
   const [loading, setLoading] = useState(true);
   // One page per menu entry (forgejo#321). Every address goes through
   // `resolveAdminLink` first — `/admin?tab=general&section=logging` and the
@@ -165,6 +167,7 @@ export default function AdminPage(): JSX.Element {
       setUsers(usersData.users);
       setInvitations(invitationsData.invitations);
       setParserSettings(parserData);
+      setParserLoaded(parserData);
     } catch (error) {
       logger.error("Failed to load admin data:", error);
     } finally {
@@ -298,11 +301,13 @@ export default function AdminPage(): JSX.Element {
     if (!parserSettings) return;
     setSavingParsers(true);
     try {
-      await adminApi.updateAdminParserSettings(parserOwnFields(parserSettings));
+      await adminApi.updateAdminParserSettings(parserOwnFields(parserSettings, parserLoaded));
       addToast("success", t("admin:toasts.parserSettingsSaved"));
       // Re-read: the key comes back masked and "is this a cloud endpoint" is
       // the server's answer for what was actually stored.
-      setParserSettings(await adminApi.getAdminParserSettings());
+      const fresh = await adminApi.getAdminParserSettings();
+      setParserSettings(fresh);
+      setParserLoaded(fresh);
       // The KI-Parser row of Externe Dienste reads the parser's capabilities,
       // cached per tab; this save may have changed them.
       resetHasLlmCache();

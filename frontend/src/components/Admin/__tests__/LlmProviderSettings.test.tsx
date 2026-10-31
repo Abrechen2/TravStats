@@ -156,4 +156,20 @@ describe("Parser save — a save after an External-services edit leaves the serv
     });
     expect(Object.keys(parserOwnFields(stale))).not.toContain("ollamaUrl");
   });
+
+  it("an External-services model edit survives a Parser save the user did not touch the model on", () => {
+    const loaded: ParserSettingsData = {
+      ...base,
+      ollamaModel: "gemma3:12b",
+      parserOrder: "template_first",
+    };
+    // The page still holds the model it loaded; only the order was changed here.
+    const edited: ParserSettingsData = { ...loaded, parserOrder: "llm_first" };
+    expect(parserOwnFields(edited, loaded)).not.toHaveProperty("ollamaModel");
+    // A model picked on this page is sent.
+    expect(parserOwnFields({ ...loaded, ollamaModel: "llama3.1:8b" }, loaded)).toHaveProperty(
+      "ollamaModel",
+      "llama3.1:8b"
+    );
+  });
 });
