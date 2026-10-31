@@ -1,4 +1,4 @@
-import { useRef, useState, type JSX, type ReactNode } from "react";
+import { useEffect, useRef, useState, type JSX, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Card } from "../ui/Card";
 import Button from "../ui/Button";
@@ -73,7 +73,11 @@ export default function AccountExternalServices(): JSX.Element {
   const toursVisible = useToursVisible();
   // `?service=` opens that row (the old Dawarich page links here).
   const [searchParams] = useSearchParams();
-  const [openId, setOpenId] = useState<string | null>(searchParams.get("service"));
+  const linkedService = searchParams.get("service");
+  const [openId, setOpenId] = useState<string | null>(linkedService);
+  useEffect(() => {
+    if (linkedService) setOpenId(linkedService);
+  }, [linkedService]);
   const [infoId, setInfoId] = useState<string | null>(null);
   const [consentFor, setConsentFor] = useState<AccountAiConsent | null>(null);
   const [consentError, setConsentError] = useState<string | null>(null);

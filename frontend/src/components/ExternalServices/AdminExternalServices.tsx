@@ -39,6 +39,10 @@ export default function AdminExternalServices(): JSX.Element {
   const [infoId, setInfoId] = useState<string | null>(null);
   const [consentId, setConsentId] = useState<string | null>(null);
   const [consentError, setConsentError] = useState<string | null>(null);
+  const [pendingSave, setPendingSave] = useState<{
+    id: string;
+    changes: Record<string, unknown>;
+  } | null>(null);
 
   const { data } = services;
   const all = useMemo<AdminService[]>(
@@ -66,6 +70,10 @@ export default function AdminExternalServices(): JSX.Element {
     // `t` changes with the language, which changes the searchable names.
   }, [data, filter, q, t]);
 
+  useEffect(() => {
+    if (linkedService) setOpenId(linkedService);
+  }, [linkedService]);
+
   const linkedReady = Boolean(data) && linkedService !== null;
   useEffect(() => {
     if (!linkedReady) return;
@@ -91,11 +99,20 @@ export default function AdminExternalServices(): JSX.Element {
   const infoService = all.find((s) => s.id === infoId) ?? null;
 
   const closeConsent = (): void => {
+    setPendingSave(null);
     setConsentId(null);
     setConsentError(null);
   };
   const confirmConsent = async (): Promise<void> => {
     if (!consentId) return;
+    // A remote Ollama is approved as a field save, not as an on/off switch: the
+    // server wants the same explicit confirmation with it.
+    if (pendingSave && pendingSave.id === consentId) {
+      await services.save(pendingSave.id, pendingSave.changes, true);
+      setPendingSave(null);
+      closeConsent();
+      return;
+    }
     const failure = await services.setEnabled(consentId, true, true);
     if (failure) {
       setConsentError(failure);
@@ -216,7 +233,14 @@ export default function AdminExternalServices(): JSX.Element {
                     },
                     onInfo: () => setInfoId(service.id),
                     onTest: () => void services.test(service.id),
-                    onSave: (changes) => void services.save(service.id, changes),
+                    onSave: (changes) => {
+                      if (service.id === "ollama" && changes.remoteOptIn === true) {
+                        setPendingSave({ id: service.id, changes });
+                        setConsentId(service.id);
+                        return;
+                      }
+                      void services.save(service.id, changes);
+                    },
                     onFlip: () => void services.setEnabled(service.id, !service.enabled),
                     onAskConsent: () => {
                       if (service.enabled) void services.setEnabled(service.id, false);

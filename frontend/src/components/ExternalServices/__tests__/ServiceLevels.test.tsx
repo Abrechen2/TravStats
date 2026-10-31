@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { adminOverview, service, mockedApi, t } from "./fixtures";
 
@@ -147,6 +147,37 @@ describe("a legacy service page", () => {
     );
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "externalServices:legacy.loadFailed"
+    );
+  });
+});
+
+describe("a remote Ollama consent", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useSettingsLevelStore.setState({ level: "standard" });
+    mockedApi.adminOverview.mockResolvedValue(overviewWith(ollama));
+    mockedApi.adminUpdate.mockResolvedValue(undefined);
+    mockedApi.adminTest.mockResolvedValue({ ok: true, reason: null, usedQuota: false });
+  });
+
+  it("is saved with the data-sharing confirmation, never as a bare field the server refuses (CONSENT_REQUIRED)", async () => {
+    page("/admin/externalServices?service=ollama");
+    await screen.findByText("externalServices:services.ollama.purpose");
+    fireEvent.click(within(row("ollama")).getByLabelText(/remoteOptIn$/));
+    fireEvent.click(
+      within(row("ollama")).getByRole("button", { name: "externalServices:actions.saveAndTest" })
+    );
+    expect(mockedApi.adminUpdate).not.toHaveBeenCalled();
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("checkbox"));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "externalServices:consent.admin.confirm" })
+    );
+    await waitFor(() =>
+      expect(mockedApi.adminUpdate).toHaveBeenCalledWith("ollama", {
+        fields: { remoteOptIn: true },
+        confirmDataSharing: true,
+      })
     );
   });
 });
