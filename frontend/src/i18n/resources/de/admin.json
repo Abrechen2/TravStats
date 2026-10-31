@@ -1345,7 +1345,7 @@
       "saveFailed": "Der TravPlan-Schalter konnte nicht gespeichert werden.",
       "disabled": "TravPlan ist auf diesem Server ausgeschaltet. Schalte zuerst die Beta-Funktionen ein."
     },
-    "defaultsNote": "Bestehende Konten starten auf der Ebene Experte, neue Konten auf Standard. TravPlan bleibt für Konten eingeschaltet, die bereits Pläne hatten; für alle anderen ist es zunächst aus.",
+    "defaultsNote": "TravPlan bleibt für Konten eingeschaltet, die bereits Pläne hatten; für alle anderen ist es zunächst aus.",
     "limits": {
       "title": "Tageslimits je Konto",
       "help": "Anfragen, nicht Kosten: so viele KI- und Wetterabrufe darf ein Konto pro UTC-Tag auslösen.",

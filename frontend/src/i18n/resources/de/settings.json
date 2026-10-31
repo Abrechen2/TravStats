@@ -1254,6 +1254,7 @@
     "color": "Farbe"
   },
   "level": {
+    "defaultsNote": "Bestehende Konten starten auf der Ebene Experte, neue Konten auf Standard.",
     "label": "Ansicht",
     "standard": "Standard",
     "expert": "Experte",

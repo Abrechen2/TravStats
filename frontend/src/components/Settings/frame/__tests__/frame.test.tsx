@@ -153,6 +153,8 @@ describe("the level switch", () => {
     useSettingsLevelStore.setState({ level: "standard" });
     render(<SettingsLevelSwitch />);
     expect(screen.getByText("settings:level.hint")).toBeInTheDocument();
+    // Which level new and existing accounts start on lives with the toggle, not in TravPlan.
+    expect(screen.getByText("settings:level.defaultsNote")).toBeInTheDocument();
   });
 });
 

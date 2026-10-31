@@ -1254,6 +1254,7 @@
     "color": "Colour"
   },
   "level": {
+    "defaultsNote": "Existing accounts start on the Expert level, new accounts on Standard.",
     "label": "View",
     "standard": "Standard",
     "expert": "Expert",

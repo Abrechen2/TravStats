@@ -33,7 +33,7 @@ export function SettingsLevelSwitch(): JSX.Element {
         ]}
       />
       <p className="t-caption text-right" style={{ color: "var(--ts-muted)", maxWidth: "22rem" }}>
-        {t("settings:level.hint")}
+        <span>{t("settings:level.hint")}</span> <span>{t("settings:level.defaultsNote")}</span>
       </p>
     </div>
   );
