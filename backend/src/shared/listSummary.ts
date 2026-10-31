@@ -22,30 +22,39 @@ export interface RailListSummary {
   stations: number;
 }
 
-export function railListSummary(
-  legs: ReadonlyArray<{
-    operator: string | null;
-    depStationName: string | null;
-    arrStationName: string | null;
-  }>
+type RailLegNames = {
+  operator: string | null;
+  depStationName: string | null;
+  arrStationName: string | null;
+};
+
+/**
+ * The same figures from rows already grouped by (operator, dep, arr) with a
+ * count each — what a SQL `groupBy` returns. The folding is unchanged, so the
+ * result equals `railListSummary` over the expanded rows, but the work scales
+ * with the distinct combinations, not with the journeys (forgejo#383, PERF-25).
+ */
+export function railListSummaryFromGroups(
+  groups: ReadonlyArray<RailLegNames & { count: number }>
 ): RailListSummary {
   const operators = new Set<string>();
   const stations = new Set<string>();
   let withoutOperator = 0;
-  for (const leg of legs) {
+  let journeys = 0;
+  for (const leg of groups) {
+    journeys += leg.count;
     const operator = fold(leg.operator);
     if (operator) operators.add(operator);
-    else withoutOperator += 1;
+    else withoutOperator += leg.count;
     for (const name of [fold(leg.depStationName), fold(leg.arrStationName)]) {
       if (name) stations.add(name);
     }
   }
-  return {
-    journeys: legs.length,
-    operators: operators.size,
-    withoutOperator,
-    stations: stations.size,
-  };
+  return { journeys, operators: operators.size, withoutOperator, stations: stations.size };
+}
+
+export function railListSummary(legs: ReadonlyArray<RailLegNames>): RailListSummary {
+  return railListSummaryFromGroups(legs.map((leg) => ({ ...leg, count: 1 })));
 }
 
 export interface RentalListSummary {

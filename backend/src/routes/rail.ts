@@ -44,7 +44,7 @@ import logger from "../utils/logger";
 import { railIdsCoveredBy } from "../services/loyalty/listFilters";
 import { withRailDetailTimes, withRailTimes } from "../services/rail/timesDto";
 import { RAIL_SOURCE_INCLUDE, withRailSource } from "../services/rail/railSource";
-import { railListSummary } from "../shared/listSummary";
+import { railListSummaryFromGroups } from "../shared/listSummary";
 
 /**
  * Rail journeys — one row per train ride (spec
@@ -250,16 +250,26 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
         take: limit,
         skip: offset,
       }),
-      // The summary strip counts the whole filtered list, not this page.
-      prisma.railJourney.findMany({
+      // The summary strip counts the whole filtered list, not this page — grouped in
+      // SQL, so the work is the distinct (operator, stations) combinations.
+      prisma.railJourney.groupBy({
+        by: ["operator", "depStationName", "arrStationName"],
         where,
-        select: { operator: true, depStationName: true, arrStationName: true },
+        _count: { _all: true },
+        orderBy: [{ operator: "asc" }, { depStationName: "asc" }, { arrStationName: "asc" }],
       }),
     ]);
     res.json({
       success: true,
       data: data.map((j) => withRailSource(withStationShortCodes(withRailTimes(j)))),
-      meta: { total, limit, offset, summary: railListSummary(counted) },
+      meta: {
+        total,
+        limit,
+        offset,
+        summary: railListSummaryFromGroups(
+          counted.map(({ _count, ...names }) => ({ ...names, count: _count._all }))
+        ),
+      },
     });
   } catch (err) {
     next(err);

@@ -834,7 +834,6 @@ model Flight {
   @@index([userId, departureTime])
   // Kept although both composites above start with userId: dropping it is a
   // separate, measurable decision, not a side effect of this one.
-  @@index([userId])
   // Global time window, no user: services/reminderScheduler.ts and
   // services/statusSweep.ts sweep across all users.
   @@index([departureTime])
@@ -2081,7 +2080,6 @@ model Trip {
   travelPlan             TravelPlan?
   travTrackShareSnapshot TravTrackShareSnapshot?
 
-  @@index([userId])
   @@index([userId, status])
   @@index([shareGroupId])
   @@map("trips")
@@ -2354,7 +2352,6 @@ model TripRoute {
   /// Rental cars this roadtrip was driven in (rental spec §7.2).
   rentals    RentalBooking[]
 
-  @@index([userId])
   @@index([userId, kind])
   @@index([tripId])
   @@index([anchorStopId])
@@ -3183,7 +3180,6 @@ model Lodging {
   photos          LodgingPhoto[]
 
   @@unique([userId, externalRef])
-  @@index([userId])
   @@index([userId, type])
   @@index([chainId])
   @@index([batchId])
@@ -3554,7 +3550,6 @@ model Place {
 
   @@unique([userId, externalRef])
   @@unique([userId, curatedItemId])
-  @@index([userId])
   @@index([userId, category])
   @@index([userId, visited])
   @@map("places")
@@ -3685,7 +3680,6 @@ model PlaceVisit {
 
   documents Document[]
 
-  @@index([userId])
   @@index([placeId])
   @@index([tripId])
   @@index([userId, visitedAt])
@@ -3968,7 +3962,6 @@ model ImportBatch {
   places    Place[]
   tripStops TripStop[]
 
-  @@index([userId])
   @@index([userId, domain])
   @@map("import_batches")
 }
@@ -5880,6 +5873,7 @@ model TravTrackPoint {
   @@unique([userId, tS, lon, lat])
   @@unique([userId, origin, originRef])
   @@index([userId, t, seq])
+  @@index([userId, seq])
   @@map("travtrack_points")
 }
 

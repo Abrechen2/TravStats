@@ -41,7 +41,7 @@ import { assertReferencesOwned } from "../utils/ownedReferences";
 import logger from "../utils/logger";
 import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
 import { requestedBaseVersion, sendVersionConflict } from "../services/sync/versionPrecondition";
-import { railListSummary } from "../shared/listSummary";
+import { railListSummaryFromGroups } from "../shared/listSummary";
 
 export const FERRY_INCLUDE = {
   trip: { select: { id: true, name: true, color: true } },
@@ -194,16 +194,27 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
         take: limit,
         skip: offset,
       }),
-      prisma.ferryJourney.findMany({
+      // The summary strip counts the whole filtered list, not this page — grouped in
+      // SQL, so the work is the distinct (operator, stations) combinations.
+      prisma.ferryJourney.groupBy({
+        by: ["operator", "depStationName", "arrStationName"],
         where,
-        select: { operator: true, depStationName: true, arrStationName: true },
+        _count: { _all: true },
+        orderBy: [{ operator: "asc" }, { depStationName: "asc" }, { arrStationName: "asc" }],
       }),
     ]);
     res.json({
       success: true,
       data: data.map(withFerryTimes),
       // `railListSummary` reads operator and the two station names — the columns a ferry row shares.
-      meta: { total, limit, offset, summary: railListSummary(counted) },
+      meta: {
+        total,
+        limit,
+        offset,
+        summary: railListSummaryFromGroups(
+          counted.map(({ _count, ...names }) => ({ ...names, count: _count._all }))
+        ),
+      },
     });
   } catch (err) {
     next(err);
