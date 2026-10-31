@@ -106,4 +106,16 @@ describe("TripPackingCard (TripPackingList on the trip page)", () => {
     expect(put.mock.calls[0][2]).toBe(0);
     expect(await screen.findByText("Sunscreen")).toBeTruthy();
   });
+
+  it("resends a write whose answer was lost with the same mutation id", async () => {
+    put.mockRejectedValueOnce(new Error("Network Error"));
+    put.mockResolvedValueOnce(list(4, [["Passport", true]]));
+    render(<TripPackingCard tripId="t1" />);
+    await userEvent.click(await screen.findByRole("checkbox"));
+    await userEvent.click(await screen.findByText("trips:packing.retry"));
+    await waitFor(() => expect(put).toHaveBeenCalledTimes(2));
+    expect(put.mock.calls[1][3]).toBe(put.mock.calls[0][3]);
+    expect(put.mock.calls[1][2]).toBe(put.mock.calls[0][2]);
+    expect(put.mock.calls[1][1]).toEqual(put.mock.calls[0][1]);
+  });
 });

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent, type JSX } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
   PACKING_MAX_ITEMS,
@@ -10,6 +10,7 @@ import {
   type PackingList,
 } from "../../lib/api/companionData";
 import { logger } from "../../lib/logger";
+import axios from "axios";
 import { Card } from "../ui/Card";
 
 type Notice = "stale" | "staleReloadFailed" | "saveFailed" | null;
@@ -31,6 +32,14 @@ export default function TripPackingCard({ tripId }: { tripId: string }): JSX.Ele
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
   const [draft, setDraft] = useState("");
+  // A write whose answer never arrived may have been applied. Its retry reuses
+  // the mutation id, so the server answers "already applied" instead of 409.
+  const unanswered = useRef<{
+    items: PackingItem[];
+    baseRev: number;
+    mutationId: string;
+    fromDraft: boolean;
+  } | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
     setLoadFailed(false);
@@ -46,18 +55,31 @@ export default function TripPackingCard({ tripId }: { tripId: string }): JSX.Ele
     setList(null);
     setNotice(null);
     setDraft("");
+    unanswered.current = null;
     void load();
   }, [load]);
 
   /** Sends the whole list; true when the server took it. */
-  const send = async (items: PackingItem[]): Promise<boolean> => {
+  const send = async (
+    items: PackingItem[],
+    fromDraft = false,
+    resend = false
+  ): Promise<boolean> => {
     if (!list || busy) return false;
+    const write =
+      resend && unanswered.current
+        ? unanswered.current
+        : { items, baseRev: list.rev, mutationId: newMutationId(), fromDraft };
     setBusy(true);
     try {
-      setList(await packingApi.put(tripId, items, list.rev, newMutationId()));
+      setList(await packingApi.put(tripId, write.items, write.baseRev, write.mutationId));
+      unanswered.current = null;
       setNotice(null);
+      if (write.fromDraft) setDraft("");
       return true;
     } catch (error) {
+      const answered = axios.isAxiosError(error) && error.response !== undefined;
+      unanswered.current = answered ? null : write;
       if (isPackingStale(error)) {
         try {
           setList(await packingApi.get(tripId));
@@ -85,7 +107,7 @@ export default function TripPackingCard({ tripId }: { tripId: string }): JSX.Ele
     const label = draft.trim();
     if (!label || !list) return;
     const item: PackingItem = { id: newMutationId(), label, done: false };
-    if (await send([...list.items, item])) setDraft("");
+    await send([...list.items, item], true);
   };
 
   const items = list?.items ?? [];
@@ -114,6 +136,17 @@ export default function TripPackingCard({ tripId }: { tripId: string }): JSX.Ele
         {notice && (
           <p role="alert" className="t-caption" style={{ color: "var(--danger)" }}>
             {t(`trips:packing.notice.${notice}`)}
+            {notice === "saveFailed" && unanswered.current && (
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ marginLeft: 8 }}
+                disabled={busy}
+                onClick={() => void send([], false, true)}
+              >
+                {t("trips:packing.retry")}
+              </button>
+            )}
           </p>
         )}
         {list && (

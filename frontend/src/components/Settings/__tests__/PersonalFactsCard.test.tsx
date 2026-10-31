@@ -112,4 +112,19 @@ describe("PersonalFactsCard (home place, passport expiry)", () => {
     expect(await screen.findByText("settings:personalFacts.loadFailed")).toBeTruthy();
     expect(screen.queryByText("settings:personalFacts.notSet")).toBeNull();
   });
+
+  it("does not clear the stored passport expiry when the date field is left half-typed", async () => {
+    render(<PersonalFactsCard />);
+    await screen.findByText("Hamburg, Deutschland");
+    const input = screen.getByLabelText(
+      "settings:personalFacts.passport.label"
+    ) as HTMLInputElement;
+    await waitFor(() => expect(input.disabled).toBe(false));
+    Object.defineProperty(input, "validity", { value: { badInput: true } });
+    input.value = "";
+    input.focus();
+    input.blur();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(putFacts).not.toHaveBeenCalled();
+  });
 });

@@ -186,6 +186,8 @@ export default function PersonalFactsCard(): JSX.Element {
                 defaultValue={facts?.passportExpiry ?? ""}
                 disabled={!facts || saving}
                 onBlur={(e) => {
+                  // A half-typed date reads as "" too; that is not a request to clear.
+                  if (e.target.value === "" && e.target.validity.badInput) return;
                   const next = e.target.value === "" ? null : e.target.value;
                   if (next === (facts?.passportExpiry ?? null)) return;
                   void save({ passportExpiry: next }).then((ok) => {
