@@ -80,9 +80,12 @@ describe("migration 20261020170000 — settings level", () => {
     // The migration froze the defaults of 2026-10-20, placeholder profile
     // included. Today's defaults carry no placeholder (F-002, 27.10.); the
     // settings route masks the frozen one on read instead of rewriting rows.
+    // The favourite airline was "Lufthansa" then; 20261031130000 clears it
+    // later, and this replay stops before that migration (forgejo#389).
     const defaults = JSON.parse(JSON.stringify(defaultSettings));
     expect(row.data).toEqual({
       ...defaults,
+      defaults: { ...defaults.defaults, favoriteAirline: "Lufthansa" },
       profile: { ...defaults.profile, username: "Traveler", email: "traveler@example.com" },
     });
   });

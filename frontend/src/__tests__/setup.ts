@@ -43,6 +43,7 @@ vi.mock("../store/settingsStore", async () => {
       flightCategory: "business",
       seatClass: "economy",
     },
+    cruise: { showCruiseArcs: true },
   };
   const useSettingsStore = Object.assign(
     vi.fn((selector?: (state: Record<string, unknown>) => unknown) => {
