@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FerryFormModal } from "../FerryFormModal";
 import type { FerryJourney } from "../../../types/ferry";
@@ -128,8 +128,10 @@ describe("Ferry editor", () => {
       tags: ["harbour", "night"],
     });
   });
-  it("treats a changed companion list as an unsaved edit", () => {
-    render(<FerryFormModal journey={ride} onClose={vi.fn()} onSaved={vi.fn()} />);
+  it("treats a changed companion list as an unsaved edit", async () => {
+    await act(async () => {
+      render(<FerryFormModal journey={ride} onClose={vi.fn()} onSaved={vi.fn()} />);
+    });
     expect(screen.getByTestId("modal").dataset.dirty).toBe("false");
     fireEvent.change(screen.getByLabelText("picker.label"), { target: { value: "Sam" } });
     fireEvent.keyDown(screen.getByLabelText("picker.label"), { key: "Enter" });
