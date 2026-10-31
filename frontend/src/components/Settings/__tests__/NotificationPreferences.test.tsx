@@ -190,14 +190,14 @@ describe("NotificationPreferences (reminders per domain)", () => {
     ]) {
       expect(b).toBeDisabled();
     }
-    for (const b of where("flight").getAllByRole("button")) expect(b).toBeEnabled();
+    for (const b of where("cruise").getAllByRole("button")) expect(b).toBeEnabled();
   });
 
   it("mail chip is disabled with its reason when there is no address", async () => {
     getPreferences.mockResolvedValue(fixture({ mail: { available: false, reason: "no_email" } }));
     render(<NotificationPreferences />);
     await screen.findByTestId("reminders-table");
-    const chip = where("flight").getByRole("button", {
+    const chip = where("lodging").getByRole("button", {
       name: "settings:notifications.channelMail",
     });
     expect(chip).toBeDisabled();
@@ -210,7 +210,7 @@ describe("NotificationPreferences (reminders per domain)", () => {
     );
     const { unmount } = render(<NotificationPreferences />);
     await screen.findByTestId("reminders-table");
-    const chip = where("flight").getByRole("button", { name: "settings:notifications.channelApp" });
+    const chip = where("cruise").getByRole("button", { name: "settings:notifications.channelApp" });
     expect(chip).toBeDisabled();
     expect(chip).toHaveAccessibleDescription("settings:notifications.pushStatus.no_device_token");
     unmount();
@@ -222,6 +222,41 @@ describe("NotificationPreferences (reminders per domain)", () => {
       where("flight").getByRole("button", { name: "settings:notifications.channelApp" })
     ).toBeEnabled();
     expect(screen.getByText("settings:notifications.pushStatus.no_relay")).toBeInTheDocument();
+  });
+
+  it("an unavailable channel can still be switched off when it was selected, so a row never gets stuck on it", async () => {
+    getPreferences.mockResolvedValue(
+      fixture({ push: { available: false, reason: "no_device_token" } })
+    );
+    const user = userEvent.setup();
+    render(<NotificationPreferences />);
+    await screen.findByTestId("reminders-table");
+    await user.click(
+      where("flight").getByRole("button", { name: "settings:notifications.channelApp" })
+    );
+    expect(updatePreferences).toHaveBeenCalledWith({ domains: { flight: { channel: "mail" } } });
+  });
+
+  it("a server answer does not overwrite an address that is still being typed", async () => {
+    let release!: (v: unknown) => void;
+    updatePreferences.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        })
+    );
+    const user = userEvent.setup();
+    render(<NotificationPreferences />);
+    await screen.findByTestId("reminders-table");
+    await user.click(within(domainRow("bus")).getByRole("switch"));
+    const field = screen.getByLabelText("settings:notifications.mailCard");
+    await user.clear(field);
+    await user.type(field, "new@example.com");
+    release(echo({ domains: { bus: { enabled: false } } }));
+    await waitFor(() => expect(within(domainRow("bus")).getByRole("switch")).not.toBeChecked());
+    expect(field).toHaveValue("new@example.com");
+    await user.tab();
+    expect(updatePreferences).toHaveBeenLastCalledWith({ notificationEmail: "new@example.com" });
   });
 
   it("a failed write is shown on its row, the control returns to the stored state, and retry sends it again", async () => {

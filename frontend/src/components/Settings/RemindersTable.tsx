@@ -299,7 +299,7 @@ export default function RemindersTable(props: RemindersTableProps): JSX.Element 
                   >
                     <Chip
                       on={row.channel !== "mail"}
-                      disabled={!row.enabled || appBlocked}
+                      disabled={!row.enabled || (appBlocked && row.channel === "mail")}
                       describedBy={appBlocked ? appReasonId : undefined}
                       onClick={() => toggleChannel("app")}
                     >
@@ -307,7 +307,7 @@ export default function RemindersTable(props: RemindersTableProps): JSX.Element 
                     </Chip>
                     <Chip
                       on={row.channel !== "app"}
-                      disabled={!row.enabled || mailBlocked}
+                      disabled={!row.enabled || (mailBlocked && row.channel === "app")}
                       describedBy={mailBlocked ? mailReasonId : undefined}
                       onClick={() => toggleChannel("mail")}
                     >

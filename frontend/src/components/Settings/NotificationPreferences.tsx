@@ -31,6 +31,8 @@ export default function NotificationPreferences(): JSX.Element {
   const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "loaded" | "failed">("loading");
   const [drafts, setDrafts] = useState<Partial<Record<ReminderDomain, string>>>({});
+  // The address as typed, until the field is left. Server answers must not overwrite it.
+  const [emailDraft, setEmailDraft] = useState<string | null>(null);
   const [failed, setFailed] = useState<ReadonlySet<ReminderDomain>>(new Set());
 
   const confirmed = useRef<NotificationPreferences | null>(null);
@@ -139,9 +141,11 @@ export default function NotificationPreferences(): JSX.Element {
     return <p className="t-caption">{t("common:messages.loading")}</p>;
   }
 
-  const email = (prefs.notificationEmail ?? "").trim();
   const commitEmail = (): void => {
-    const value = email === "" ? null : email;
+    if (emailDraft === null) return;
+    const trimmed = emailDraft.trim();
+    const value = trimmed === "" ? null : trimmed;
+    setEmailDraft(null);
     const latest = { ...confirmed.current, ...sending.current, ...queued.current };
     if (value === latest.notificationEmail) return;
     save({ notificationEmail: value });
@@ -167,10 +171,8 @@ export default function NotificationPreferences(): JSX.Element {
             id="notification-email"
             type="email"
             className="input"
-            value={prefs.notificationEmail ?? ""}
-            onChange={(e) =>
-              setPrefs((prev) => (prev ? { ...prev, notificationEmail: e.target.value } : prev))
-            }
+            value={emailDraft ?? prefs.notificationEmail ?? ""}
+            onChange={(e) => setEmailDraft(e.target.value)}
             onBlur={commitEmail}
             onKeyDown={(e) => {
               if (e.key === "Enter") commitEmail();
