@@ -190,7 +190,9 @@
     "errors": {
       "actualTimeMissing": "Zum tatsächlichen Datum fehlt die Uhrzeit – ergänze sie oder leere das Datum.",
       "negativeAmount": "Ein Betrag kann nicht negativ sein."
-    }
+    },
+    "checkInDesk": "Check-in-Schalter",
+    "baggageBelt": "Gepäckband"
   },
   "list": {
     "title": "Flüge",
@@ -486,7 +488,12 @@
     "openTrip": "Reise öffnen",
     "backToLogbook": "Logbuch · Flüge",
     "planned": "plan",
-    "flightTime": "Flugzeit"
+    "flightTime": "Flugzeit",
+    "takeoff": "Abheben",
+    "touchdown": "Aufsetzen",
+    "taxiOut": "Rollen nach dem Pushback",
+    "airTime": "Zeit in der Luft",
+    "taxiIn": "Rollen bis zum Gate"
   },
   "price": {
     "package": "Pauschal",

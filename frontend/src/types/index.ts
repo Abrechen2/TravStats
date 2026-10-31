@@ -3,7 +3,7 @@ import type { TripRailJourney } from "./rail";
 import type { LinkedAlbum } from "./immich";
 import type { CabinType, CruiseStop, Port, Ship } from "./cruise";
 import type { CruiseTimes, FlightTimes, TripStopTimes, TripTimes } from "./times";
-
+import type { FlightProviderData } from "./flightProviderData";
 export type { ObservedWeather } from "./openData";
 export interface User {
   id: string;
@@ -29,7 +29,7 @@ export interface Airport {
   isClosed?: boolean;
 }
 
-export interface Flight {
+export interface Flight extends FlightProviderData {
   id: string;
   userId: string;
   airline: string;

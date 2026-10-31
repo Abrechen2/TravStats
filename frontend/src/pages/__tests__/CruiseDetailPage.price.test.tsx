@@ -113,3 +113,47 @@ describe("CruiseDetailPage price", () => {
     expect(row?.textContent).not.toMatch(/EUR|€/);
   });
 });
+
+// forgejo#393: the catalogue's ship particulars were stored and never shown.
+describe("CruiseDetailPage ship particulars", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const ship = {
+    id: 1,
+    name: "AIDAnova",
+    imo: "9781889",
+    cruiseLine: "AIDA",
+    yearBuilt: 2018,
+    grossTonnage: 183858,
+    capacity: 5200,
+    status: "active",
+    isUserAdded: false,
+  };
+
+  it("shows year built, gross tonnage and capacity", async () => {
+    await renderCruise(makeCruise({ shipId: 1, ship }));
+    expect(screen.getByText("detail.ship")).toBeInTheDocument();
+    expect(screen.getByText("2018")).toBeInTheDocument();
+    expect(screen.getByText(/183[.,]858/)).toBeInTheDocument();
+    expect(screen.getByText(/5[.,]200/)).toBeInTheDocument();
+  });
+
+  it("draws only what the catalogue knows, never a zero", async () => {
+    await renderCruise(
+      makeCruise({
+        shipId: 1,
+        ship: { ...ship, yearBuilt: 2018, grossTonnage: null, capacity: null },
+      })
+    );
+    expect(screen.getByText("detail.yearBuilt")).toBeInTheDocument();
+    expect(screen.queryByText("detail.grossTonnage")).toBeNull();
+    expect(screen.queryByText("detail.capacity")).toBeNull();
+  });
+
+  it("draws no ship box for a cruise with a free-text ship name", async () => {
+    await renderCruise(makeCruise({ ship: null }));
+    expect(screen.queryByText("detail.ship")).toBeNull();
+  });
+});

@@ -249,7 +249,11 @@
       "cancellationFee": "Only the cancellation fee counts as a cost.",
       "none": "No amount known yet – the rental is in no cost total."
     },
-    "feesFromInvoice": "Single items from the invoice — part of the final amount, not counted on top:"
+    "feesFromInvoice": "Single items from the invoice — part of the final amount, not counted on top:",
+    "reference": "Booking details",
+    "operatedBy": "Operated by",
+    "brokerReference": "Broker reference",
+    "agreementNumber": "Rental agreement number"
   },
   "import": {
     "panelTitle": "Add a rental car",

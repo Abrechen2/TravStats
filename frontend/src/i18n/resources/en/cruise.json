@@ -65,7 +65,11 @@
     "priceKpi": "Price",
     "day": "Day",
     "unresolvedKpi_one": "{{count}} unresolved",
-    "unresolvedKpi_other": "{{count}} unresolved"
+    "unresolvedKpi_other": "{{count}} unresolved",
+    "ship": "Ship",
+    "yearBuilt": "Year built",
+    "grossTonnage": "Gross tonnage (GT)",
+    "capacity": "Passenger capacity"
   },
   "field": {
     "ship": "Ship",

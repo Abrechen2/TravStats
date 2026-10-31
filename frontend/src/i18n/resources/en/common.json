@@ -414,5 +414,12 @@
     "droppedLine_one": "{{count}} fix not drawn as GPS jitter — every one stays stored and in the GPX",
     "droppedLine_other": "{{count}} fixes not drawn as GPS jitter — every one stays stored and in the GPX",
     "unchecked": "Not checked for GPS jitter — stored before the check, or recorded without times"
+  },
+  "fx": {
+    "ecb": "ECB",
+    "market": "Market rate",
+    "manual": "own rate",
+    "none": "no rate",
+    "label": "Conversion"
   }
 }

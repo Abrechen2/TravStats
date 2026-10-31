@@ -5,6 +5,8 @@ import AppShell from "../components/ui/AppShell";
 import DetailHeader from "../components/ui/DetailHeader";
 import DetailSection from "../components/ui/DetailSection";
 import { onlineCheckInFact } from "../lib/deadlines";
+import { runwayFacts } from "../lib/flights/runwayFacts";
+import { minutesText } from "../lib/flights/minutesText";
 import PeopleList from "../components/ui/PeopleList";
 import FlightRouteHero from "../components/flightsTable/FlightRouteHero";
 import { resolveAirlineIata } from "../lib/airlineUtils";
@@ -200,6 +202,24 @@ export default function FlightDetailPage(): JSX.Element {
   }
 
   const duration = getFlightDuration(flight);
+  const runway = runwayFacts(flight.times);
+  const spanText = (minutes: number | null): string | null =>
+    minutes === null ? null : minutesText(minutes, t);
+  const runwayFactRows = [
+    {
+      label: t("flights:detail.takeoff"),
+      value: runway.takeoff ? formatTimeValueShown(runway.takeoff) : null,
+      mono: true,
+    },
+    {
+      label: t("flights:detail.touchdown"),
+      value: runway.touchdown ? formatTimeValueShown(runway.touchdown) : null,
+      mono: true,
+    },
+    { label: t("flights:detail.taxiOut"), value: spanText(runway.taxiOutMinutes) },
+    { label: t("flights:detail.airTime"), value: spanText(runway.airMinutes) },
+    { label: t("flights:detail.taxiIn"), value: spanText(runway.taxiInMinutes) },
+  ];
   const money = (value: number | null | undefined): string | null =>
     value === null || value === undefined
       ? null
@@ -277,6 +297,7 @@ export default function FlightDetailPage(): JSX.Element {
                   : null,
                 mono: true,
               },
+              ...runwayFactRows,
               onlineCheckInFact(
                 flight.times?.onlineCheckInOpens,
                 t,
@@ -341,6 +362,8 @@ export default function FlightDetailPage(): JSX.Element {
               { label: t("flights:form.boardingGroup"), value: flight.boardingGroup },
               { label: t("flights:form.terminal"), value: flight.terminal },
               { label: t("flights:form.gate"), value: flight.gate, mono: true },
+              { label: t("flights:form.checkInDesk"), value: flight.checkInDesk, mono: true },
+              { label: t("flights:form.baggageBelt"), value: flight.baggageBelt, mono: true },
               {
                 label: t("flights:form.baggageAllowance"),
                 value: withDayCard

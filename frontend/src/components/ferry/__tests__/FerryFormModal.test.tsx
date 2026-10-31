@@ -103,6 +103,19 @@ describe("Ferry editor", () => {
     expect(input).not.toHaveProperty("departureLocal");
     expect(input).not.toHaveProperty("departureStation");
   });
+  // forgejo#393: fareClass was stored and sent by imports, but the form had no input for it.
+  it("lets the fare class be typed, kept and cleared", async () => {
+    mocks.save.mockResolvedValue(ride);
+    const onSaved = vi.fn();
+    const withFare = { ...ride, fareClass: "Flex" } as FerryJourney;
+    render(<FerryFormModal journey={withFare} onClose={vi.fn()} onSaved={onSaved} />);
+    const input = screen.getByLabelText("ferry:fareClass") as HTMLInputElement;
+    expect(input.value).toBe("Flex");
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "ferry:save" }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(mocks.save.mock.calls[0][1].fareClass).toBeNull();
+  });
   it("does not save a computed distance back as one the user typed", async () => {
     // An edit used to prefill the great-circle figure and send it back, which the
     // backend stores as distanceSource "user" — freezing a distance nobody typed.

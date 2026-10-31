@@ -31,6 +31,7 @@ import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { railDeleteMessage } from "../lib/rail/railDeleteMessage";
 import { navigateAfterSave } from "../components/form";
 import { formatAmount, dateLocaleForLanguage } from "../lib/units";
+import { usePriceFxReadout } from "../hooks/usePriceFxReadout";
 import { formatStationTime, railDurationMinutes } from "../lib/railTime";
 import {
   railActualArrival,
@@ -60,6 +61,7 @@ export default function RailDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation(["rail", "common", "trips", "documents"]);
+  const fxReadout = usePriceFxReadout();
   const viewerZone = useSettingsStore((s) => s.display?.timezone);
   const locale = dateLocaleForLanguage(i18n.language);
   const addToast = useToastStore((s) => s.addToast);
@@ -326,6 +328,7 @@ export default function RailDetailPage(): JSX.Element {
                 mono: true,
               },
               { label: t("rail:form.price"), value: price, mono: true },
+              { label: t("common:fx.label"), value: fxReadout(journey), mono: true },
             ]}
           />
 
