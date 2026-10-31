@@ -187,6 +187,65 @@ describe("GET /trips/:id distance", () => {
   });
 });
 
+describe("trip roadtrips (detail)", () => {
+  const roadtrip = async (
+    tripId: string,
+    name: string,
+    start: string,
+    legs: [string, number][]
+  ) => {
+    const route = await prisma.tripRoute.create({
+      data: { userId, tripId, name, mode: "road", kind: "roadtrip" },
+    });
+    const stops = [];
+    // Lisbon (PT), Madrid (ES), Paris (FR): the stations decide the countries.
+    for (const [i, [lat, lon]] of [
+      [38.72, -9.14],
+      [40.42, -3.7],
+      [48.85, 2.35],
+    ].entries()) {
+      stops.push(
+        await prisma.tripStop.create({
+          data: {
+            routeId: route.id,
+            routeOrderIdx: i,
+            title: `${name} ${i}`,
+            lat,
+            lon,
+            startDate: new Date(`${start}T00:00:00Z`),
+          } as never,
+        })
+      );
+    }
+    for (const [i, [mode, km]] of legs.entries()) {
+      await prisma.tripRouteLeg.create({
+        data: {
+          routeId: route.id,
+          fromStopId: stops[i].id,
+          toStopId: stops[i + 1].id,
+          distanceKm: km,
+          source: "straight",
+          mode,
+        },
+      });
+    }
+  };
+
+  it("counts a started roadtrip's road legs only and keeps a planned one out of the distance", async () => {
+    const trip = await prisma.trip.create({ data: { userId, name: "Road" } });
+    await roadtrip(trip.id, "Done", "2024-05-01", [
+      ["road", 600],
+      ["ferry", 300],
+    ]);
+    await roadtrip(trip.id, "Ahead", "2099-05-01", [["road", 5000]]);
+    const res = await request(app).get(`/api/v1/trips/${trip.id}`).set("Cookie", cookie);
+    expect(res.body.trip.distanceByMode.roadtrip).toBe(600);
+    expect(res.body.trip.totalDistanceKm).toBe(600);
+    // The stations' countries still reach the detail page, as they reach the list.
+    expect(res.body.trip.countries).toEqual(expect.arrayContaining(["ES", "FR", "PT"]));
+  });
+});
+
 describe("trip countries from place visits", () => {
   it("adds the country of a visited place visit and skips wishlist, future and transit places", async () => {
     const trip = await prisma.trip.create({ data: { userId, name: "Places" } });
@@ -244,9 +303,9 @@ describe("roadtripsCount in the roadtrip insights totals", () => {
     expect(total).toEqual({ allTime: 4, byYear: { "2024": 1, "2025": 2 } });
   });
 
-  it("is 0 allTime with no byYear key for a user without roadtrips, over HTTP", async () => {
+  it("reports the started roadtrips of the account over HTTP, the planned one not", async () => {
     const res = await request(app).get("/api/v1/stats/insights/roadtrips").set("Cookie", cookie);
     expect(res.status).toBe(200);
-    expect(res.body.totals.roadtripsCount).toEqual({ allTime: 0, byYear: {} });
+    expect(res.body.totals.roadtripsCount).toEqual({ allTime: 1, byYear: { "2024": 1 } });
   });
 });

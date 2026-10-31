@@ -5,6 +5,10 @@ import { countableFerryWhere } from "../../shared/ferryCounting";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { countableRailWhere } from "../../shared/railCounting";
 import { calculateDistance } from "../../utils/geo";
+import { now } from "../../shared/time/clock";
+import { roadtripCountsIn } from "../../shared/tour/roadtripListScope";
+import { ROADTRIP_LIST_SELECT } from "../roadtrip/roadtripList";
+import { spanOf } from "../roadtrip/roadtripSummary";
 import { drivenKm } from "../tour/tourDistance";
 
 /**
@@ -13,7 +17,7 @@ import { drivenKm } from "../tour/tourDistance";
  * Every mode counts the legs its domain's shared counting rule counts —
  * completed rides, flown flights, finished cruises — so the figure a trip
  * shows is a subset of what the domain statistics already add up, never a
- * second opinion. Roadtrips count their ROAD legs only (`drivenKm`): a ferry
+ * second opinion. Roadtrips count their ROAD legs only (`drivenKm`), and only once started: a ferry
  * or rail leg inside a roadtrip is, once linked, a ferry or rail journey of
  * the same trip and would otherwise be counted twice.
  *
@@ -55,7 +59,7 @@ export function composeTripDistance(byMode: Record<TripDistanceMode, number | nu
 
 export async function loadTripDistance(userId: string, tripId: string): Promise<TripDistance> {
   const scope = { userId, tripId };
-  const [flights, rail, bus, ferry, cruiseLegs, roadLegs] = await Promise.all([
+  const [flights, rail, bus, ferry, cruiseLegs, roadtrips] = await Promise.all([
     prisma.flight.findMany({
       where: { ...scope, ...countableFlightWhere() },
       select: { depLat: true, depLon: true, arrLat: true, arrLon: true },
@@ -76,9 +80,9 @@ export async function loadTripDistance(userId: string, tripId: string): Promise<
       where: { cruise: { ...scope, ...countableCruiseWhere() } },
       select: { distanceKm: true },
     }),
-    prisma.tripRouteLeg.findMany({
-      where: { route: { ...scope, kind: "roadtrip" } },
-      select: { mode: true, distanceKm: true },
+    prisma.tripRoute.findMany({
+      where: { ...scope, kind: "roadtrip" },
+      select: { legs: ROADTRIP_LIST_SELECT.legs, stops: ROADTRIP_LIST_SELECT.stops },
     }),
   ]);
   return composeTripDistance({
@@ -89,6 +93,12 @@ export async function loadTripDistance(userId: string, tripId: string): Promise<
     bus: measuredSum([bus._sum.distanceKm]),
     ferry: measuredSum([ferry._sum.distanceKm]),
     cruise: measuredSum(cruiseLegs.map((l) => l.distanceKm)),
-    roadtrip: measuredSum([drivenKm(roadLegs)]),
+    // A roadtrip that has not started is planned and counts nowhere
+    // (`roadtripCountsIn`, as the roadtrips tile does).
+    roadtrip: measuredSum(
+      roadtrips
+        .filter((r) => roadtripCountsIn(spanOf(r.stops).startDate, null, now()))
+        .map((r) => drivenKm(r.legs))
+    ),
   });
 }

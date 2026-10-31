@@ -363,9 +363,9 @@ router.get(
         airportFactsFor(trip.flights),
         cruiseCountriesByTrip([trip.id]),
         lodgingCountriesByTrip([trip.id]),
+        roadtripCountriesByTrip([trip.id]),
         rideCountriesByTrip([trip.id]),
         placeCountriesByTrip([trip.id]),
-        rideCountriesByTrip([trip.id]),
         tripPageCost(userId, trip.id),
         loadTripDistance(userId, trip.id),
       ]);
