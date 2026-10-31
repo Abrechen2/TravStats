@@ -166,6 +166,37 @@ describe("Bus rides API", () => {
     expect(filtered.body.meta.total).toBe(1);
   });
 
+  it("builds the summary strip from a grouped count, not by reading every ride (forgejo#383 PERF-25)", async () => {
+    for (let i = 0; i < 4; i += 1) {
+      await create({
+        ...base,
+        departureLocal: `2026-09-2${i}T09:00`,
+        arrivalLocal: `2026-09-2${i}T11:20`,
+      });
+    }
+    const findMany = jest.spyOn(prisma.busJourney, "findMany");
+    const groupBy = jest.spyOn(prisma.busJourney, "groupBy");
+    try {
+      const res = await request(app).get("/api/v1/bus?limit=2").set("Cookie", cookie);
+      expect(res.body.meta.summary).toEqual({
+        journeys: 4,
+        operators: 1,
+        withoutOperator: 0,
+        stations: 2,
+      });
+      // One grouped count - four identical rides are one group - and no
+      // read of the narrow operator/station columns for every ride.
+      const narrowReads = findMany.mock.calls.filter(
+        ([args]) => (args as { select?: { operator?: boolean } } | undefined)?.select?.operator
+      );
+      expect(narrowReads).toHaveLength(0);
+      expect(groupBy).toHaveBeenCalledTimes(1);
+    } finally {
+      findMany.mockRestore();
+      groupBy.mockRestore();
+    }
+  });
+
   it("filters by the year on the departure terminal's calendar", async () => {
     // 1 Jan 00:30 in Seoul is 31 Dec 15:30 UTC — a 2027 ride, not a 2026 one.
     await create({ ...base, departureLocal: "2027-01-01T00:30", arrivalLocal: "2027-01-01T03:00" });

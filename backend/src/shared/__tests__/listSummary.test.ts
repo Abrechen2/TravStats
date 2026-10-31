@@ -1,4 +1,4 @@
-import { railListSummary, rentalListSummary } from "../listSummary";
+import { railListSummary, railListSummaryFromGroups, rentalListSummary } from "../listSummary";
 
 /**
  * The strip figures over the whole filtered rail and rental lists. The cases
@@ -44,6 +44,27 @@ describe("railListSummary", () => {
       withoutOperator: 0,
       stations: 0,
     });
+  });
+});
+
+describe("railListSummaryFromGroups (forgejo#383 PERF-25)", () => {
+  it("equals the summary over the expanded rows, folding included", () => {
+    const rows = [
+      leg("DB", "Köln Hbf", "Bonn Hbf"),
+      leg("DB", "Köln Hbf", "Bonn Hbf"),
+      leg(" db ", "KÖLN HBF", "Bonn Hbf"),
+      leg(null, "A", null),
+      leg("  ", "A", "B"),
+      leg("  ", "A", "B"),
+    ];
+    const grouped = [
+      { ...leg("DB", "Köln Hbf", "Bonn Hbf"), count: 2 },
+      { ...leg(" db ", "KÖLN HBF", "Bonn Hbf"), count: 1 },
+      { ...leg(null, "A", null), count: 1 },
+      { ...leg("  ", "A", "B"), count: 2 },
+    ];
+    expect(railListSummaryFromGroups(grouped)).toEqual(railListSummary(rows));
+    expect(railListSummaryFromGroups(grouped)).toMatchObject({ journeys: 6, withoutOperator: 3 });
   });
 });
 

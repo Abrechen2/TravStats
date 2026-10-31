@@ -1,5 +1,5 @@
 import logger from "../../../utils/logger";
-import { extractTextFromPdf } from "../../pdfParser";
+import { extractAttachmentText } from "../../parsing/attachmentText";
 import { templateRegistry } from "../../parsers/templates/registry";
 import type { TemplateEnvelope } from "../../parsers/templates/v2/envelope";
 import { currencyOf, parseAmount } from "./textLines";
@@ -60,7 +60,7 @@ async function pdfTexts(attachments: readonly RentalAttachment[]): Promise<strin
   const texts: string[] = [];
   for (const attachment of attachments.filter(isPdf).slice(0, MAX_ATTACHMENTS)) {
     try {
-      texts.push(await extractTextFromPdf(attachment.content));
+      texts.push(await extractAttachmentText(attachment.content));
     } catch (error) {
       // An unreadable attachment is logged and skipped; the body is still read.
       logger.warn({ operation: "rental_pdf_unreadable", error }, "rental attachment unreadable");

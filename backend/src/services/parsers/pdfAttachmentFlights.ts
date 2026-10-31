@@ -1,5 +1,5 @@
 import type { ParsedBooking } from "../bookingParser";
-import { extractTextFromPdf } from "../pdfParser";
+import { extractAttachmentText } from "../parsing/attachmentText";
 import logger from "../../utils/logger";
 import { keepOnlyFlightsWithEvidence } from "./shared/evidence";
 import { TemplateParser } from "./text/templateParser";
@@ -52,7 +52,7 @@ export async function readFlightsFromPdfAttachments(
   for (const attachment of pdfAttachmentsToRead(attachments)) {
     let text: string;
     try {
-      text = await extractTextFromPdf(attachment.content);
+      text = await extractAttachmentText(attachment.content);
     } catch (err) {
       logger.warn(
         { file: attachment.filename, err: err instanceof Error ? err.message : String(err) },

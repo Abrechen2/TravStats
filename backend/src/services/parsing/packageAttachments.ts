@@ -11,7 +11,7 @@
  * package templates only, and the first attachment a template reads whole
  * wins. A PDF that cannot be opened is logged and skipped.
  */
-import { extractTextFromPdf } from "../pdfParser";
+import { extractAttachmentText } from "./attachmentText";
 import { pdfAttachmentsToRead, type MailAttachment } from "../parsers/pdfAttachmentFlights";
 import type { TemplateEnvelope } from "../parsers/templates/v2/envelope";
 import { parsePackageText, type PackageParseResult } from "../trip/package/parsePackage";
@@ -30,7 +30,7 @@ export async function pdfAttachmentTexts(
   const texts: AttachmentText[] = [];
   for (const attachment of pdfAttachmentsToRead(attachments)) {
     try {
-      texts.push({ attachment, text: await extractTextFromPdf(attachment.content) });
+      texts.push({ attachment, text: await extractAttachmentText(attachment.content) });
     } catch (err) {
       logger.warn(
         { file: attachment.filename, err: err instanceof Error ? err.message : String(err) },

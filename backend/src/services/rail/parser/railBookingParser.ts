@@ -3,7 +3,7 @@ import { llmRefusalFor, type LlmRefusalKind } from "../../llm/llmGate";
 import { getParserOrder } from "../../parserSettings";
 import { isLlmAvailable, recordLlmProbe } from "../../parsers/llmAvailability";
 import { cleanEmailBody } from "../../parsers/shared/utils";
-import { extractTextFromPdf } from "../../pdfParser";
+import { extractAttachmentText } from "../../parsing/attachmentText";
 import { templateRegistry } from "../../parsers/templates/registry";
 import type { TemplateEnvelope } from "../../parsers/templates/v2/envelope";
 import {
@@ -89,7 +89,7 @@ async function attachmentTexts(
       calendars.push(decodeCalendar(attachment.content));
     } else if (isPdf(attachment)) {
       try {
-        pdfs.push(await extractTextFromPdf(attachment.content));
+        pdfs.push(await extractAttachmentText(attachment.content));
       } catch (err) {
         // One unreadable attachment is not a reason to lose the others.
         logger.warn(

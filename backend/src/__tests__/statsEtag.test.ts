@@ -210,6 +210,22 @@ describe("statistics ETag", () => {
     expect((await get(before)).status).toBe(200);
   });
 
+  it("sees a trip-attached stop move and ignores another user's stops (trip_stops arm split, forgejo#383)", async () => {
+    const trip = await prisma.trip.create({ data: { userId, name: "Etag trip" } });
+    const stop = await prisma.tripStop.create({
+      data: { title: "Hamburg", lat: 53.55, lon: 9.99, tripId: trip.id },
+    });
+    const before = (await get()).headers.etag;
+    // A stop on someone else's trip must not move this user's fingerprint.
+    const foreignTrip = await prisma.trip.create({ data: { userId: otherId, name: "Foreign" } });
+    await prisma.tripStop.create({
+      data: { title: "Elsewhere", lat: 1, lon: 1, tripId: foreignTrip.id },
+    });
+    expect((await get(before)).status).toBe(304);
+    await prisma.tripStop.update({ where: { id: stop.id }, data: { lat: 53.56 } });
+    expect((await get(before)).status).toBe(200);
+  });
+
   it("sees a new and an EDITED expense (forgejo#140) — the travel account counts them", async () => {
     const route = await prisma.tripRoute.create({
       data: { userId, name: "Fähren", mode: "road", kind: "roadtrip" },

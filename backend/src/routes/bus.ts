@@ -43,7 +43,7 @@ import { assertReferencesOwned } from "../utils/ownedReferences";
 import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
 import logger from "../utils/logger";
 import ticketRoutes from "./bus/tickets";
-import { railListSummary } from "../shared/listSummary";
+import { railListSummaryFromGroups } from "../shared/listSummary";
 
 /**
  * Bus rides — one row per coach ride (spec
@@ -171,16 +171,27 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
         take: limit,
         skip: offset,
       }),
-      prisma.busJourney.findMany({
+      // The summary strip counts the whole filtered list, not this page — grouped in
+      // SQL, so the work is the distinct (operator, stations) combinations.
+      prisma.busJourney.groupBy({
+        by: ["operator", "depStationName", "arrStationName"],
         where,
-        select: { operator: true, depStationName: true, arrStationName: true },
+        _count: { _all: true },
+        orderBy: [{ operator: "asc" }, { depStationName: "asc" }, { arrStationName: "asc" }],
       }),
     ]);
     res.json({
       success: true,
       data: data.map(withBusTimes),
       // `railListSummary` reads operator and the two station names — the columns a bus row shares.
-      meta: { total, limit, offset, summary: railListSummary(counted) },
+      meta: {
+        total,
+        limit,
+        offset,
+        summary: railListSummaryFromGroups(
+          counted.map(({ _count, ...names }) => ({ ...names, count: _count._all }))
+        ),
+      },
     });
   } catch (err) {
     next(err);
