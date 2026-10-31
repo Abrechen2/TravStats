@@ -18,7 +18,10 @@ vi.mock("../../../lib/api", () => ({
   backupApi: { getInfo: vi.fn().mockResolvedValue(null) },
 }));
 vi.mock("../../../store/authStore", () => ({
-  useAuthStore: () => ({ user: { id: "u1", username: "admin", isAdmin: false } }),
+  useAuthStore: (
+    (state: Record<string, unknown>) => (select?: (s: Record<string, unknown>) => unknown) =>
+      select ? select(state) : state
+  )({ user: { id: "u1", username: "admin", isAdmin: false } }),
 }));
 vi.mock("../../../store/settingsStore", async () =>
   vi.importActual("../../../store/settingsStore")

@@ -771,7 +771,7 @@ export function DeckGLMap({
 
   // Interactive layer IDs for native fallback (enables cursor: pointer on hover)
   const nativeInteractiveIds = !webgl2Available
-    ? [NATIVE_ROUTE_LINE_ID, NATIVE_AIRPORT_CIRCLE_ID]
+    ? [...(routesVisible.flight ? [NATIVE_ROUTE_LINE_ID] : []), NATIVE_AIRPORT_CIRCLE_ID]
     : undefined;
 
   return (

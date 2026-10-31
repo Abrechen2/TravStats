@@ -32,6 +32,7 @@ import {
 } from "./controlPanelKit";
 import { useDomainVisible } from "../../hooks/useDomainVisible";
 import { RoutesSwitch } from "./RoutesSwitch";
+import { RouteOnlyControls } from "./RouteOnlyControls";
 
 type NumericKey = Exclude<keyof OverlayAppearance, "rentalShowLine">;
 
@@ -131,13 +132,17 @@ export function OverlayAppearanceSections({
       {shown.has("tour") && (
         <CollapsibleSection id="tour" title={t("map:globe.panel.domainTour")}>
           <RoutesSwitch domain="tour" />
-          <WidthSlider field="tourLineWidth" />
+          <RouteOnlyControls domain="tour">
+            <WidthSlider field="tourLineWidth" />
+          </RouteOnlyControls>
         </CollapsibleSection>
       )}
       {shown.has("roadtrip") && (
         <CollapsibleSection id="roadtrip" title={t("map:globe.panel.domainRoadtrip")}>
           <RoutesSwitch domain="roadtrip" />
-          <WidthSlider field="roadtripLineWidth" />
+          <RouteOnlyControls domain="roadtrip">
+            <WidthSlider field="roadtripLineWidth" />
+          </RouteOnlyControls>
           {appearanceDomains.includes("roadtripStations") && (
             <SizeSlider field="roadtripStationSize" label={t("map:globe.panel.stations")} />
           )}
@@ -146,7 +151,9 @@ export function OverlayAppearanceSections({
       {shown.has("rail") && (
         <CollapsibleSection id="rail" title={t("map:globe.panel.domainRail")}>
           <RoutesSwitch domain="rail" />
-          <WidthSlider field="railLineWidth" />
+          <RouteOnlyControls domain="rail">
+            <WidthSlider field="railLineWidth" />
+          </RouteOnlyControls>
           <SizeSlider field="railStationSize" label={t("map:globe.panel.stations")} />
         </CollapsibleSection>
       )}

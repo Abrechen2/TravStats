@@ -11,6 +11,7 @@ import { Source, Layer } from "react-map-gl/maplibre";
 import type { LineLayerSpecification, CircleLayerSpecification } from "maplibre-gl";
 import type { GeoJSONFeature } from "../types";
 import { canonicalRoutePair } from "../shared/routePair";
+import { useRoutesVisible } from "../store/mapRoutesStore";
 
 /** Layer IDs exported so DeckGLMap can register them as interactive */
 export const NATIVE_ROUTE_LINE_ID = "native-routes-line";
@@ -230,13 +231,17 @@ export function NativeRoutesLayer({
   minRouteCount,
   selectedIds,
 }: NativeRoutesLayerProps): JSX.Element {
+  const routesVisible = useRoutesVisible("flight");
   const { routeGeoJSON, airportGeoJSON } = useNativeRouteData(flights, minRouteCount, selectedIds);
 
   return (
     <>
-      <Source id="native-routes" type="geojson" data={routeGeoJSON}>
-        <Layer id={NATIVE_ROUTE_LINE_ID} type="line" paint={linePaint} layout={lineLayout} />
-      </Source>
+      {/* The per-domain "Routen" switch hides the lines here too; the airports stay. */}
+      {routesVisible && (
+        <Source id="native-routes" type="geojson" data={routeGeoJSON}>
+          <Layer id={NATIVE_ROUTE_LINE_ID} type="line" paint={linePaint} layout={lineLayout} />
+        </Source>
+      )}
       <Source id="native-airports" type="geojson" data={airportGeoJSON}>
         <Layer id={NATIVE_AIRPORT_CIRCLE_ID} type="circle" paint={circlePaint} />
         <Layer

@@ -26,7 +26,10 @@ vi.mock("../../components/ReceiptUpload", () => ({
   default: () => null,
 }));
 vi.mock("../../store/settingsStore", () => ({
-  useSettingsStore: () => ({
+  useSettingsStore: (
+    (state: Record<string, unknown>) => (select?: (s: Record<string, unknown>) => unknown) =>
+      select ? select(state) : state
+  )({
     features: { enableCostTracking: false },
     // The browser's own timezone. Deliberately distinct from both airports
     // below — a half-hydrated value is invisible whenever two of the three

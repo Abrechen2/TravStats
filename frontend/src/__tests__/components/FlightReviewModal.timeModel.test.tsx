@@ -30,7 +30,10 @@ vi.mock("../../components/AirportAutocomplete", () => ({
   default: ({ error }: { error?: string | null }) => (error ? <p>{error}</p> : null),
 }));
 vi.mock("../../store/authStore", () => ({
-  useAuthStore: () => ({ user: { id: "u1" } }),
+  useAuthStore: (
+    (state: Record<string, unknown>) => (select?: (s: Record<string, unknown>) => unknown) =>
+      select ? select(state) : state
+  )({ user: { id: "u1" } }),
 }));
 // CHF, not EUR: the old literal would pass an EUR assertion by accident.
 vi.mock("../../store/settingsStore", () => {

@@ -91,3 +91,20 @@ export function routesBlockedReason(
   if (tab === "tour") return "tour";
   return null;
 }
+
+/**
+ * Deep link into the map panel: `/dashboard?panel=routes` opens the panel with
+ * the per-domain "Routen" switches in view (Settings › Ansichten links here).
+ * Read when the panel mounts, never written back, so it opens once per visit.
+ */
+export const MAP_PANEL_PARAM = "panel";
+export const MAP_PANEL_ROUTES = "routes";
+
+export function mapPanelRoutesRequested(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return new URLSearchParams(window.location.search).get(MAP_PANEL_PARAM) === MAP_PANEL_ROUTES;
+  } catch {
+    return false;
+  }
+}

@@ -1,4 +1,5 @@
 import { ContextLinksCard } from "../../components/Settings/ContextLinksCard";
+import { MAP_PANEL_PARAM, MAP_PANEL_ROUTES } from "../../lib/mapRoutes";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import type { SettingsSectionId } from "./settingsModel";
 import type { useSettingsPage } from "../../components/Settings/useSettingsPage";
@@ -198,7 +199,7 @@ export default function SettingsSectionSwitch({
         <ContextLinksCard
           scope="views.mapAppearance"
           links={[
-            { id: "routes", to: "/dashboard" },
+            { id: "routes", to: `/dashboard?${MAP_PANEL_PARAM}=${MAP_PANEL_ROUTES}` },
             { id: "lines", to: "/dashboard" },
             { id: "layers", to: "/dashboard" },
           ]}

@@ -11,7 +11,10 @@ vi.mock("../../../hooks/useTranslation", () => ({
   }),
 }));
 vi.mock("../../../store/settingsStore", () => ({
-  useSettingsStore: () => ({
+  useSettingsStore: (
+    (state: Record<string, unknown>) => (select?: (s: Record<string, unknown>) => unknown) =>
+      select ? select(state) : state
+  )({
     units: { distanceUnit: "km", temperatureUnit: "c" },
     baseCurrency: "EUR",
   }),

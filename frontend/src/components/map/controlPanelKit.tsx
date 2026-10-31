@@ -11,6 +11,7 @@ import type { JSX } from "react";
 import { useCallback, useId, useState } from "react";
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { loadMapAppearance, saveMapAppearance } from "./mapAppearance";
+import { mapPanelRoutesRequested, ROUTE_DOMAINS, type RouteDomain } from "../../lib/mapRoutes";
 import { type Rgb } from "../../lib/cruiseColor";
 import { rgbCss } from "../../lib/flightColor";
 import { Icon } from "../ui/Icon";
@@ -57,7 +58,9 @@ export const PANEL_OPTION_STYLE = { background: "#0d1117", color: "#f1f5f9" } as
  * for everyone who ever loaded the app.
  */
 export function usePanelExpanded(): [boolean, () => void] {
-  const [expanded, setExpanded] = useState(() => loadMapAppearance().panelExpanded ?? false);
+  const [expanded, setExpanded] = useState(
+    () => mapPanelRoutesRequested() || (loadMapAppearance().panelExpanded ?? false)
+  );
   const toggle = useCallback(() => {
     const next = !expanded;
     saveMapAppearance({ panelExpanded: next });
@@ -123,7 +126,9 @@ export function PanelHeader({
  */
 export function useSectionExpanded(id: string, defaultOpen: boolean): [boolean, () => void] {
   const [expanded, setExpanded] = useState(
-    () => loadMapAppearance().panelSections?.[id] ?? defaultOpen
+    () =>
+      (mapPanelRoutesRequested() && ROUTE_DOMAINS.includes(id as RouteDomain)) ||
+      (loadMapAppearance().panelSections?.[id] ?? defaultOpen)
   );
   const toggle = useCallback(() => {
     const next = !expanded;

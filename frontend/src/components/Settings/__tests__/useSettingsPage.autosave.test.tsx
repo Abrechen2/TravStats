@@ -19,7 +19,10 @@ vi.mock("../../../lib/api", () => ({
 }));
 
 vi.mock("../../../store/authStore", () => ({
-  useAuthStore: () => ({ user: { id: "u1", username: "admin", isAdmin: false } }),
+  useAuthStore: (
+    (state: Record<string, unknown>) => (select?: (s: Record<string, unknown>) => unknown) =>
+      select ? select(state) : state
+  )({ user: { id: "u1", username: "admin", isAdmin: false } }),
 }));
 
 // setup.ts globally stubs `useSettingsStore` down to a selector-only mock. This

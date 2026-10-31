@@ -34,7 +34,10 @@ vi.mock("../../hooks/useSuggestions", () => ({
   useSuggestions: () => ({ airlines: [], aircraft: [] }),
 }));
 vi.mock("../../store/settingsStore", () => ({
-  useSettingsStore: () => ({ features: { enableCostTracking: false } }),
+  useSettingsStore: (
+    (state: Record<string, unknown>) => (select?: (s: Record<string, unknown>) => unknown) =>
+      select ? select(state) : state
+  )({ features: { enableCostTracking: false } }),
 }));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: vi.fn(() => vi.fn()),

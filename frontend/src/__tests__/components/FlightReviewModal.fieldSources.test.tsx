@@ -31,10 +31,16 @@ vi.mock("../../lib/api", () => ({
   setupApi: { getAirportSeedingStatus: vi.fn().mockResolvedValue({ status: "completed" }) },
 }));
 vi.mock("../../store/authStore", () => ({
-  useAuthStore: () => ({ user: { id: "u1" } }),
+  useAuthStore: (
+    (state: Record<string, unknown>) => (select?: (s: Record<string, unknown>) => unknown) =>
+      select ? select(state) : state
+  )({ user: { id: "u1" } }),
 }));
 vi.mock("../../store/settingsStore", () => ({
-  useSettingsStore: () => ({ features: { enableCostTracking: false } }),
+  useSettingsStore: (
+    (state: Record<string, unknown>) => (select?: (s: Record<string, unknown>) => unknown) =>
+      select ? select(state) : state
+  )({ features: { enableCostTracking: false } }),
 }));
 vi.mock("@/hooks/useRecentCurrencies", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/hooks/useRecentCurrencies")>();

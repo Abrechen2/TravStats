@@ -23,7 +23,10 @@ vi.mock("../../hooks/useTranslation", () => ({
 }));
 vi.mock("../../components/ReceiptUpload", () => ({ default: () => null }));
 vi.mock("../../store/settingsStore", () => ({
-  useSettingsStore: () => ({
+  useSettingsStore: (
+    (state: Record<string, unknown>) => (select?: (s: Record<string, unknown>) => unknown) =>
+      select ? select(state) : state
+  )({
     features: { enableCostTracking: false },
     display: { timezone: "Europe/Berlin", language: "de" },
   }),
