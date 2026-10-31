@@ -62,6 +62,7 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
   const addToast = useToastStore((s) => s.addToast);
 
   const [assets, setAssets] = useState<ImmichGalleryAsset[]>([]);
+  const [albumTruncated, setAlbumTruncated] = useState(false);
   // Resolved i18n key (e.g. "errors.auth"), not the bare failure kind — so an
   // unrecognised kind resolves to "errors.unknown" via failureKey() at the
   // point of capture rather than being force-fit into "unreachable" here.
@@ -98,6 +99,7 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
       const data = await immichApi.getAlbumAssets(tripId, album.id);
       if (!mountedRef.current) return;
       setAssets(data.assets);
+      setAlbumTruncated(data.truncated === true);
     } catch (error) {
       if (!mountedRef.current) return;
       setFailure(failureKey(immichFailureKind(error)));
@@ -340,6 +342,12 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
             {t("albums.unlinkDeleteCopies")}
           </button>
         </div>
+      )}
+
+      {albumTruncated && !failure && (
+        <p role="status" data-testid="album-truncated" className="mb-2 text-xs text-slate-400">
+          {t("albums.truncated", { shown: assets.length })}
+        </p>
       )}
 
       {failure ? (

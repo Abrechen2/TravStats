@@ -44,7 +44,8 @@ export const trainingApi = {
     const { data } = await api.get<ParseLogStats>("/admin/parse-logs/stats");
     return data;
   },
-  exportParseLogs: async (): Promise<void> => {
+  /** Resolves `truncated: true` when the server cut the export at its row limit. */
+  exportParseLogs: async (): Promise<{ truncated: boolean; limit: number | null }> => {
     const response = await api.get<Blob>("/admin/parse-logs/export", {
       responseType: "blob",
     });
@@ -54,6 +55,11 @@ export const trainingApi = {
     a.download = "parse-training-logs.jsonl";
     a.click();
     URL.revokeObjectURL(url);
+    const limit = Number(response.headers?.["x-row-limit"]);
+    return {
+      truncated: String(response.headers?.["x-truncated"]) === "true",
+      limit: Number.isFinite(limit) && limit > 0 ? limit : null,
+    };
   },
   promoteCorrections: async (): Promise<PromoteCorrectionsResult> => {
     const { data } = await api.post<PromoteCorrectionsResult>("/admin/parse-logs/promote");

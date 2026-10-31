@@ -20,6 +20,7 @@
   "modeLinkHint": "Photos stay in Immich — no extra storage.",
   "modeImportHint": "Photos are copied and included in backups.",
   "albums": {
+    "truncated": "Showing the first {{shown}} photos – the album is longer and is not fully loaded here. Open it in Immich for all photos.",
     "link": "Link Immich album",
     "pickerTitle": "Select albums",
     "alreadyLinked": "Already linked",

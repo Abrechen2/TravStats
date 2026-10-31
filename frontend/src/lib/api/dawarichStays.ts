@@ -201,6 +201,11 @@ export const dawarichStaysApi = {
   },
   list: async (status: string): Promise<DawarichStay[]> =>
     (await api.get(base, { params: { status } })).data.data,
+  /** Same list plus `meta.truncated`: the server cuts it at 200 rows. */
+  listPage: async (status: string): Promise<{ rows: DawarichStay[]; truncated: boolean }> => {
+    const body = (await api.get(base, { params: { status } })).data;
+    return { rows: body.data, truncated: body.meta?.truncated === true };
+  },
   choices: async (): Promise<StayChoices> => (await api.get(`${base}/choices`)).data.data,
   accept: async (id: string, input: StayReviewInput): Promise<void> => {
     await api.post(`${base}/${id}/accept`, input);

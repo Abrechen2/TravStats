@@ -540,4 +540,18 @@ describe("ImmichAlbumSection — a failing import poll (forgejo#375)", () => {
     await new Promise((r) => setTimeout(r, 1800));
     expect(getImportJob.mock.calls.length).toBe(calls);
   }, 15000);
+
+  it("says the gallery shows only a prefix when the album outgrew the paging cap", async () => {
+    getAlbumAssets.mockResolvedValue({ assets: ASSETS, truncated: true });
+    render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
+    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(2));
+    expect(screen.getByTestId("album-truncated")).toHaveTextContent("albums.truncated");
+  });
+
+  it("shows no truncation notice for a complete album", async () => {
+    getAlbumAssets.mockResolvedValue({ assets: ASSETS, truncated: false });
+    render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
+    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(2));
+    expect(screen.queryByTestId("album-truncated")).not.toBeInTheDocument();
+  });
 });

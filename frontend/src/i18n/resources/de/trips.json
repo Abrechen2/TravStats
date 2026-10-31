@@ -104,6 +104,7 @@
     "noResults": "Keine Reise gefunden",
     "undated": "Ohne Datum"
   },
+  "listTruncated": "Zeigt {{shown}} von {{total}} Reisen – die übrigen werden hier nicht geladen. Öffne eine Reise direkt oder grenze sie über Suche und Filter ein.",
   "cleanup": {
     "button": "🧹 Aufräumen",
     "title": "Mikro-Reisen auflösen",
@@ -637,7 +638,8 @@
     "countries_one": "Land",
     "countries_other": "Länder",
     "entries_one": "Eintrag",
-    "entries_other": "Einträge"
+    "entries_other": "Einträge",
+    "countriesIncomplete": "Länder evtl. unvollständig – die Reise hat mehr Flüge, als hier ausgewertet werden. Öffne die Reise für die vollständige Liste."
   },
   "list": {
     "undated": "Ohne Datum"

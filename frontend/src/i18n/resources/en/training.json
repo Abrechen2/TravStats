@@ -238,6 +238,7 @@
     "promoteBtn": "Promote Corrections",
     "promoting": "Promoting...",
     "promoteSuccess": "{{count}} correction(s) promoted",
+    "exportTruncated": "Export cut short: it holds only the newest {{limit}} entries, older ones are missing. Promote or clean up, then export again.",
     "promoteNone": "No new corrections found",
     "noData": "No parse logs yet",
     "loading": "Loading statistics..."

@@ -32,7 +32,7 @@ vi.mock("../../../../lib/api/photoJourneys", () => ({
 }));
 vi.mock("../../../../lib/api/trips", () => ({ tripsApi: { getAll: vi.fn() } }));
 vi.mock("../../../../lib/api/dawarichStays", () => ({
-  dawarichStaysApi: { list: vi.fn(), choices: vi.fn() },
+  dawarichStaysApi: { list: vi.fn(), listPage: vi.fn(), choices: vi.fn() },
 }));
 vi.mock("../../../Settings/DawarichStayScanCard", () => ({
   default: () => <p>gps-scan-card</p>,
@@ -69,6 +69,7 @@ describe("inbox suggestion switches", () => {
     vi.mocked(pendingUpdatesApi.getAll).mockResolvedValue({ updates: [], count: 0 });
     vi.mocked(tripsApi.getAll).mockResolvedValue([]);
     vi.mocked(dawarichStaysApi.list).mockResolvedValue([]);
+    vi.mocked(dawarichStaysApi.listPage).mockResolvedValue({ rows: [], truncated: false });
     useSuggestionSwitchesStore.setState({ trips: true, stays: true });
   });
 
@@ -77,7 +78,7 @@ describe("inbox suggestion switches", () => {
     expect(hasFilter("trips")).toBe(true);
     expect(hasFilter("dawarich")).toBe(true);
     expect(tripSuggestionsApi.list).toHaveBeenCalled();
-    expect(dawarichStaysApi.list).toHaveBeenCalled();
+    expect(dawarichStaysApi.listPage).toHaveBeenCalled();
   });
 
   it("trips off: no trips section and no request for them", async () => {
@@ -97,7 +98,7 @@ describe("inbox suggestion switches", () => {
     await mount();
     expect(hasFilter("dawarich")).toBe(false);
     expect(hasFilter("trips")).toBe(true);
-    expect(dawarichStaysApi.list).not.toHaveBeenCalled();
+    expect(dawarichStaysApi.listPage).not.toHaveBeenCalled();
   });
 
   it("a flip while the inbox is open drops the kind without a reload", async () => {
@@ -105,5 +106,17 @@ describe("inbox suggestion switches", () => {
     expect(hasFilter("trips")).toBe(true);
     act(() => useSuggestionSwitchesStore.setState({ trips: false }));
     await waitFor(() => expect(hasFilter("trips")).toBe(false));
+  });
+
+  it("says the stay list was cut at the server's cap, and nothing when it was not", async () => {
+    vi.mocked(dawarichStaysApi.listPage).mockResolvedValue({ rows: [], truncated: true });
+    await mount();
+    expect(await screen.findByTestId("stays-truncated")).toHaveTextContent("staysTruncated");
+  });
+
+  it("shows no stay truncation notice when the list was complete", async () => {
+    await mount();
+    await waitFor(() => expect(dawarichStaysApi.listPage).toHaveBeenCalled());
+    expect(screen.queryByTestId("stays-truncated")).toBeNull();
   });
 });

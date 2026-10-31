@@ -249,6 +249,11 @@ export default function InboxWorkspace({
           </Button>
         </div>
       )}
+      {data.staysTruncated && (
+        <p role="status" data-testid="stays-truncated" className="text-sm">
+          {t(`${W}.staysTruncated`)}
+        </p>
+      )}
       {checkFailed && <p role="alert">{t(`${W}.checkFailed`)}</p>}
       <SourcePanel
         source={source}

@@ -40,7 +40,7 @@ vi.mock("../../../../lib/api/photoJourneys", () => ({
 }));
 vi.mock("../../../../lib/api/trips", () => ({ tripsApi: { getAll: vi.fn() } }));
 vi.mock("../../../../lib/api/dawarichStays", () => ({
-  dawarichStaysApi: { list: vi.fn(), choices: vi.fn() },
+  dawarichStaysApi: { list: vi.fn(), listPage: vi.fn(), choices: vi.fn() },
 }));
 vi.mock("../../../Settings/DawarichStayScanCard", () => ({
   default: () => <p>gps-scan-card</p>,
@@ -88,6 +88,7 @@ describe("the inbox's sections", () => {
     vi.mocked(pendingUpdatesApi.getAll).mockResolvedValue({ updates: [], count: 0 });
     vi.mocked(tripsApi.getAll).mockResolvedValue([]);
     vi.mocked(dawarichStaysApi.list).mockResolvedValue([]);
+    vi.mocked(dawarichStaysApi.listPage).mockResolvedValue({ rows: [], truncated: false });
   });
 
   it("reports no count until it has measured one, then the measured count", async () => {

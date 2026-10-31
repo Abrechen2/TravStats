@@ -112,7 +112,10 @@ export const immichApi = {
     await api.delete(`/trips/${tripId}/immich/albums/${linkId}?deleteCopies=${deleteCopies}`);
   },
 
-  async getAlbumAssets(tripId: string, linkId: string): Promise<{ assets: ImmichGalleryAsset[] }> {
+  async getAlbumAssets(
+    tripId: string,
+    linkId: string
+  ): Promise<{ assets: ImmichGalleryAsset[]; truncated?: boolean }> {
     const { data } = await api.get(`/trips/${tripId}/immich/albums/${linkId}/assets`);
     return data;
   },

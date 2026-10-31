@@ -44,6 +44,7 @@ export function useInboxData(visible: InboxVisibility, active = true) {
   const [records, setRecords] = useState<InboxRecord[]>([]);
   const [stayChoices, setStayChoices] = useState<StayChoices>({ places: [], trips: [] });
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [staysTruncated, setStaysTruncated] = useState(false);
   const [proposalInfo, setProposalInfo] = useState<TripSuggestionList | null>(null);
   const [failed, setFailed] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,11 +63,12 @@ export function useInboxData(visible: InboxVisibility, active = true) {
       photosVisible ? photoJourneysApi.list("pending") : Promise.resolve([]),
       tripsApi.getAll(),
       staysVisible
-        ? dawarichStaysApi.list("pending").then(async (rows) => ({
+        ? dawarichStaysApi.listPage("pending").then(async ({ rows, truncated }) => ({
             rows,
+            truncated,
             choices: rows.length ? await dawarichStaysApi.choices() : { places: [], trips: [] },
           }))
-        : Promise.resolve({ rows: [], choices: { places: [], trips: [] } }),
+        : Promise.resolve({ rows: [], truncated: false, choices: { places: [], trips: [] } }),
       locationVisible ? locationSuggestionsApi.list("pending") : Promise.resolve([]),
     ] as const;
     const [flags, suggestions, updates, edited, photos, tripList, stays, location] =
@@ -98,6 +100,7 @@ export function useInboxData(visible: InboxVisibility, active = true) {
       collapseTripAggregate(value).map((data) => ({ source: "location", data }))
     );
     if (stays.status === "fulfilled") setStayChoices(stays.value.choices);
+    setStaysTruncated(stays.status === "fulfilled" && stays.value.truncated);
     if (tripList.status === "fulfilled") setTrips(tripList.value);
     else errors.push("tripContext");
     setProposalInfo(suggestions.status === "fulfilled" ? suggestions.value : null);
@@ -128,5 +131,15 @@ export function useInboxData(visible: InboxVisibility, active = true) {
     };
   }, [reload, active]);
 
-  return { records, trips, stayChoices, proposalInfo, failed, loading, loaded, reload };
+  return {
+    records,
+    trips,
+    stayChoices,
+    staysTruncated,
+    proposalInfo,
+    failed,
+    loading,
+    loaded,
+    reload,
+  };
 }

@@ -189,6 +189,11 @@ export default function TripCard({ trip, onOpen }: TripCardProps): JSX.Element {
             <span style={figure}>{entries}</span> {t("trips:card.entries", { count: entries })}
           </span>
         </p>
+        {trip.flightsTruncated && (
+          <p className="t-caption" data-testid="trip-card-countries-incomplete">
+            {t("trips:card.countriesIncomplete")}
+          </p>
+        )}
         <p className="t-caption flex flex-wrap gap-x-3" style={mono}>
           <span>
             <span style={figure}>{distanceKm > 0 ? formatDistance(distanceKm) : "—"}</span> km

@@ -279,6 +279,7 @@
       "laterHint": "Diese Einträge sind nur für diesen Besuch zurückgestellt. Es wurden keine Daten geändert.",
       "loadFailed": "Nicht alle Bereiche konnten geladen werden:",
       "retry": "Erneut versuchen",
+      "staysTruncated": "Es werden nur die ersten 200 Aufenthalte gezeigt. Nimm diese zuerst an oder lehne sie ab, dann erscheinen die weiteren.",
       "checkFailed": "Die Prüfung ist fehlgeschlagen. Bitte erneut versuchen.",
       "loading": "Posteingang wird geladen …",
       "shown": "{{count}} Einträge angezeigt",
