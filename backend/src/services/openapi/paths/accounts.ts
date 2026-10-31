@@ -370,3 +370,34 @@ registry.registerPath({
     403: { description: "Read-scoped token", content: errorContent },
   },
 });
+
+registry.registerPath({
+  method: "get",
+  path: "/me/export",
+  summary: "Download the signed-in account's own data (forgejo#391)",
+  description:
+    "One account's records as a JSON attachment (`travstats-my-data-<date>.json`): the same " +
+    "document the WebDAV sync uploads. Only the caller's data; no password hash, two-factor or " +
+    "passkey material, API tokens or stored provider keys. Session cookie or API token. " +
+    "Limited to 3 per hour per account (429).",
+  tags: ["Account"],
+  security: [{ BearerAuth: [] }],
+  responses: {
+    200: {
+      description: "The account export",
+      content: {
+        "application/json": {
+          schema: z.object({
+            format: z.literal("travstats-account-export/1"),
+            exportedAt: z.string(),
+            instanceName: z.string(),
+            user: z.record(z.string(), z.unknown()).describe("The account and its records"),
+            travtrack: z.unknown().describe("TravTrack history, when the account has any"),
+          }),
+        },
+      },
+    },
+    401: { description: "Not signed in", content: errorContent },
+    429: { description: "Too many downloads", content: errorContent },
+  },
+});

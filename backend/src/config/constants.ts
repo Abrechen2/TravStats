@@ -136,6 +136,10 @@ export const RATE_LIMITS = {
   ADMIN_EXPORT_WINDOW_MS: 60 * 60 * 1000, // 1 hour
   ADMIN_EXPORT_MAX: 5, // 5 exports per hour
 
+  // Self-service "download my data" (one account's records, forgejo#391)
+  ME_EXPORT_WINDOW_MS: 60 * 60 * 1000, // 1 hour
+  ME_EXPORT_MAX: 3, // 3 downloads per hour
+
   // Admin airport reseed rate limits (18k row upsert, expensive)
   ADMIN_RESEED_WINDOW_MS: 60 * 60 * 1000, // 1 hour
   ADMIN_RESEED_MAX: 3, // 3 reseeds per hour per admin (DoS guard)
