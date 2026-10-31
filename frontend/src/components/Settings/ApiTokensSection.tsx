@@ -63,6 +63,12 @@ export default function ApiTokensSection(): JSX.Element {
   const [justCreated, setJustCreated] = useState<CreatedApiToken | null>(null);
   const [copyOk, setCopyOk] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The raw reason, kept apart from the sentence so it can sit behind a disclosure.
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
+  const fail = (message: string, err: unknown): void => {
+    setError(message);
+    setErrorDetail(err instanceof Error ? err.message : String(err));
+  };
 
   // Empty dep array on purpose: this only ever runs on mount and after
   // explicit user actions. Using `[t]` here caused an infinite re-render
@@ -76,7 +82,7 @@ export default function ApiTokensSection(): JSX.Element {
       setTokens(await apiTokensApi.list());
     } catch (err) {
       logger.error("Failed to load API tokens", err);
-      setError("Failed to load tokens");
+      fail(t("settings:apiTokens.errors.load"), err);
     } finally {
       setLoading(false);
     }
@@ -88,6 +94,7 @@ export default function ApiTokensSection(): JSX.Element {
 
   const handleCreate = async (): Promise<void> => {
     setError(null);
+    setErrorDetail(null);
     if (!newLabel.trim()) {
       setError(t("settings:apiTokens.errors.labelRequired"));
       return;
@@ -102,7 +109,7 @@ export default function ApiTokensSection(): JSX.Element {
       void reload();
     } catch (err) {
       logger.error("Failed to create API token", err);
-      setError(t("settings:apiTokens.errors.create"));
+      fail(t("settings:apiTokens.errors.create"), err);
     } finally {
       setCreating(false);
     }
@@ -116,7 +123,7 @@ export default function ApiTokensSection(): JSX.Element {
       void reload();
     } catch (err) {
       logger.error("Failed to revoke API token", err);
-      setError(t("settings:apiTokens.errors.revoke"));
+      fail(t("settings:apiTokens.errors.revoke"), err);
     }
   };
 
@@ -236,6 +243,7 @@ export default function ApiTokensSection(): JSX.Element {
                 onClick={() => {
                   setFormOpen(false);
                   setError(null);
+                  setErrorDetail(null);
                 }}
               >
                 {t("common:buttons.cancel")}
@@ -269,6 +277,12 @@ export default function ApiTokensSection(): JSX.Element {
       {error && (
         <p role="alert" className="t-caption" style={{ color: "var(--ts-bad)" }}>
           {error}
+          {errorDetail && (
+            <details>
+              <summary>{t("settings:apiTokens.errors.technicalDetail")}</summary>
+              <code>{errorDetail}</code>
+            </details>
+          )}
         </p>
       )}
 

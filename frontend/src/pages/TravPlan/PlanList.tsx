@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useAuthStore } from "../../store/authStore";
@@ -9,17 +9,13 @@ import {
   Button,
   Card,
   EmptyState,
-  Field,
   HeroCard,
-  Input,
   PageHeader,
   SectionLabel,
   StatusPill,
-  Switch,
 } from "../../components/ui";
-import { PlanActions, PlanGrid, PlanLink, PlanNotice, PlanStack } from "./planLayout";
+import { PlanGrid, PlanLink, PlanNotice, PlanStack } from "./planLayout";
 
-const LIMIT_MAX = { aiDailyLimit: 100, weatherDailyLimit: 200 } as const;
 export function PlanList() {
   const { t } = useTranslation("travplan"),
     navigate = useNavigate(),
@@ -137,81 +133,16 @@ export function PlanList() {
 }
 export function PlanAdmin() {
   const { t } = useTranslation("travplan"),
-    isAdmin = useAuthStore((s) => s.user?.isAdmin),
-    [config, setConfig] = useState({ enabled: false, aiDailyLimit: 10, weatherDailyLimit: 20 }),
-    [loaded, setLoaded] = useState(false),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    uid = useId();
-  useEffect(() => {
-    let live = true;
-    if (isAdmin)
-      travplanApi
-        .config()
-        .then((c) => {
-          if (live) {
-            setConfig(c);
-            setLoaded(true);
-          }
-        })
-        .catch(() => {
-          if (live) setError(t("errors.unknown"));
-        });
-    return () => {
-      live = false;
-    };
-  }, [isAdmin, t]);
+    isAdmin = useAuthStore((s) => s.user?.isAdmin);
   if (!isAdmin) return <PlanNotice tone="bad">{t("disabled")}</PlanNotice>;
+  // One canonical instance form, in Administration (settings redesign, rule 4):
+  // this route stays so old bookmarks and the "off for me" redirect still land,
+  // but it holds no second editor.
   return (
     <>
-      <PageHeader title={t("config")} meta={t("configHelp")} />
-      {error && <PlanNotice tone="bad">{error}</PlanNotice>}
+      <PageHeader title={t("config")} meta={t("configMoved")} />
       <Card>
-        <form
-          className="flex flex-col"
-          style={{ gap: "var(--ts-space-lg)" }}
-          onSubmit={(e) => {
-            e.preventDefault();
-            setBusy(true);
-            void travplanApi
-              .setConfig(config)
-              .then(() => {
-                window.location.assign("/plan");
-              })
-              .catch(() => setError(t("errors.unknown")))
-              .finally(() => setBusy(false));
-          }}
-        >
-          <Switch
-            checked={config.enabled}
-            label={t("enabled")}
-            onChange={(enabled) => setConfig({ ...config, enabled })}
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: "var(--ts-space-lg)" }}>
-            {(["aiDailyLimit", "weatherDailyLimit"] as const).map((key) => (
-              <Field
-                key={key}
-                label={t(key === "aiDailyLimit" ? "aiLimit" : "weatherLimit")}
-                htmlFor={uid + key}
-              >
-                <Input
-                  id={uid + key}
-                  type="number"
-                  min={0}
-                  max={LIMIT_MAX[key]}
-                  required
-                  value={config[key]}
-                  onChange={(e) => setConfig({ ...config, [key]: Number(e.target.value) })}
-                />
-              </Field>
-            ))}
-          </div>
-          <PlanActions>
-            <Button type="submit" variant="primary" disabled={!loaded || busy}>
-              {t("save")}
-            </Button>
-          </PlanActions>
-        </form>
+        <PlanLink to="/admin/instance?section=travPlan&expert=1">{t("configOpenAdmin")}</PlanLink>
       </Card>
     </>
   );

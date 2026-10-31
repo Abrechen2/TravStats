@@ -104,7 +104,9 @@ describe("SmtpManager — deleting the credentials (#255)", () => {
     await user.click(await screen.findByRole("button", { name: DELETE_BUTTON }));
     await user.click(await screen.findByRole("button", { name: CONFIRM_BUTTON }));
 
-    await waitFor(() => expect(addToast).toHaveBeenCalledWith("error", "boom"));
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith("error", "settings:notifications.smtpDeleteFailed")
+    );
     expect(screen.getByDisplayValue("smtp.example.com")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: DELETE_BUTTON })).toBeInTheDocument();
   });
@@ -133,5 +135,21 @@ describe("SmtpManager — every field is named by its label", () => {
 
     await userEvent.click(screen.getAllByRole("button", { name: "help.about" })[0]);
     expect(screen.getByRole("dialog")).toHaveTextContent("settings:notifications.smtpHelp.ports");
+  });
+});
+
+describe("SmtpManager — failures reach the user in the UI language", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("shows a translated, actionable message when saving fails, never the raw English error", async () => {
+    const user = userEvent.setup();
+    getSmtpConfig.mockResolvedValue(CONFIGURED);
+    saveSmtpConfig.mockRejectedValue(new Error("Request failed with status code 500"));
+    render(<SmtpManager />);
+    await user.click(await screen.findByRole("button", { name: "settings:notifications.save" }));
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith("error", "settings:notifications.smtpSaveFailed")
+    );
+    expect(addToast).not.toHaveBeenCalledWith("error", "Request failed with status code 500");
   });
 });

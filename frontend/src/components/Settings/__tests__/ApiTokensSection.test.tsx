@@ -98,4 +98,15 @@ describe("ApiTokensSection", () => {
       screen.getByRole("radio", { name: "settings:apiTokens.scopes.admin" })
     ).toBeInTheDocument();
   });
+
+  it("explains a failed load in words and keeps the raw reason behind a disclosure", async () => {
+    api.list.mockRejectedValue(new Error("Request failed with status code 502"));
+    render(<ApiTokensSection />);
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("settings:apiTokens.errors.load");
+    expect(alert).not.toHaveTextContent(/^Failed to load tokens/);
+    const detail = screen.getByText("Request failed with status code 502");
+    expect(detail.closest("details")).not.toHaveAttribute("open");
+    expect(screen.getByText("settings:apiTokens.errors.technicalDetail")).toBeInTheDocument();
+  });
 });

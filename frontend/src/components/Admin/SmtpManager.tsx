@@ -56,11 +56,8 @@ export default function SmtpManager({ expert = true }: { expert?: boolean }): JS
             enabled: data.enabled ?? false,
           });
         }
-      } catch (err) {
-        addToast(
-          "error",
-          err instanceof Error ? err.message : t("settings:notifications.loadError")
-        );
+      } catch {
+        addToast("error", t("settings:notifications.loadError"));
       } finally {
         setLoading(false);
       }
@@ -85,8 +82,8 @@ export default function SmtpManager({ expert = true }: { expert?: boolean }): JS
       setPasswordChanged(false);
       setConfigured(true);
       addToast("success", t("settings:notifications.saved"));
-    } catch (error) {
-      addToast("error", error instanceof Error ? error.message : "Failed to save SMTP config");
+    } catch {
+      addToast("error", t("settings:notifications.smtpSaveFailed"));
     } finally {
       setSaving(false);
     }
@@ -100,11 +97,8 @@ export default function SmtpManager({ expert = true }: { expert?: boolean }): JS
       setPasswordChanged(false);
       setConfigured(false);
       addToast("success", t("settings:notifications.smtpDeleted"));
-    } catch (error) {
-      addToast(
-        "error",
-        error instanceof Error ? error.message : t("settings:notifications.smtpDeleteFailed")
-      );
+    } catch {
+      addToast("error", t("settings:notifications.smtpDeleteFailed"));
     } finally {
       setDeleting(false);
     }
@@ -119,14 +113,16 @@ export default function SmtpManager({ expert = true }: { expert?: boolean }): JS
       } else {
         addToast(
           "error",
-          t("settings:notifications.testFailed", { error: result.error ?? "Unknown error" })
+          t("settings:notifications.testFailed", {
+            error: result.error ?? t("settings:notifications.unknownError"),
+          })
         );
       }
     } catch (error) {
       addToast(
         "error",
         t("settings:notifications.testFailed", {
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: error instanceof Error ? error.message : t("settings:notifications.unknownError"),
         })
       );
     } finally {

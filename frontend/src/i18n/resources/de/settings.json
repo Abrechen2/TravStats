@@ -368,7 +368,9 @@
         "name": "Unterkunft",
         "what": "Check-in, Adresse, Nächte"
       }
-    }
+    },
+    "smtpSaveFailed": "Die SMTP-Einstellungen konnten nicht gespeichert werden. Prüfe Host, Port und Zugangsdaten und versuche es erneut.",
+    "unknownError": "Unbekannter Fehler"
   },
   "privacy": {
     "comparisonConsent": {
@@ -1036,10 +1038,11 @@
     "copied": "Kopiert!",
     "dismiss": "Verstanden",
     "errors": {
-      "load": "Tokens konnten nicht geladen werden",
-      "create": "Token konnte nicht erstellt werden",
-      "revoke": "Token konnte nicht widerrufen werden",
-      "labelRequired": "Beschreibung ist erforderlich"
+      "load": "Die Tokens konnten nicht geladen werden. Lade die Seite neu oder versuche es später erneut.",
+      "create": "Der Token konnte nicht erstellt werden. Versuche es erneut.",
+      "revoke": "Der Token konnte nicht widerrufen werden. Versuche es erneut.",
+      "labelRequired": "Beschreibung ist erforderlich",
+      "technicalDetail": "Technische Details"
     },
     "scopesShort": {
       "read": "Lesen",

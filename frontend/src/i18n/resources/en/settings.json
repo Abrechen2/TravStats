@@ -368,7 +368,9 @@
         "name": "Lodging",
         "what": "Check-in, address, nights"
       }
-    }
+    },
+    "smtpSaveFailed": "The SMTP settings could not be saved. Check host, port and credentials and try again.",
+    "unknownError": "Unknown error"
   },
   "privacy": {
     "comparisonConsent": {
@@ -1036,10 +1038,11 @@
     "copied": "Copied!",
     "dismiss": "Got it",
     "errors": {
-      "load": "Failed to load tokens",
-      "create": "Failed to create token",
-      "revoke": "Failed to revoke token",
-      "labelRequired": "Label is required"
+      "load": "The tokens could not be loaded. Reload the page or try again later.",
+      "create": "The token could not be created. Please try again.",
+      "revoke": "The token could not be revoked. Please try again.",
+      "labelRequired": "Label is required",
+      "technicalDetail": "Technical details"
     },
     "scopesShort": {
       "read": "Read",

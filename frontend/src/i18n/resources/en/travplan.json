@@ -310,5 +310,7 @@
   "menu": {
     "plans": "Plans",
     "config": "Settings"
-  }
+  },
+  "configMoved": "TravPlan's configuration now lives in one place: in Administration under Instance.",
+  "configOpenAdmin": "Open TravPlan in Administration"
 }

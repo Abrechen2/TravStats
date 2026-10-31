@@ -140,7 +140,9 @@ describe("the /plan route", () => {
       capabilities.mockResolvedValue({ enabled: false });
       window.history.pushState({}, "", "/plan/admin");
       render(<App />);
-      await waitFor(() => expect(planConfig).toHaveBeenCalled(), { timeout: 8000 });
+      expect(
+        await screen.findByRole("link", { name: /configOpenAdmin/ }, { timeout: 8000 })
+      ).toHaveAttribute("href", "/admin/instance?section=travPlan&expert=1");
       expect(screen.queryByTestId("dashboard-stub")).toBeNull();
     }
   );
@@ -171,7 +173,9 @@ describe("the /plan route", () => {
       capabilities.mockResolvedValue({ enabled: false, instanceEnabled: true, userEnabled: false });
       window.history.pushState({}, "", "/plan/admin");
       render(<App />);
-      await waitFor(() => expect(planConfig).toHaveBeenCalled(), { timeout: 8000 });
+      expect(
+        await screen.findByRole("link", { name: /configOpenAdmin/ }, { timeout: 8000 })
+      ).toHaveAttribute("href", "/admin/instance?section=travPlan&expert=1");
       expect(window.location.pathname).toBe("/plan/admin");
     }
   );
