@@ -67,6 +67,7 @@ import "./settings";
 import "./places";
 import "./placePhotos";
 import "./placeRelations";
+import "./placeCaptures";
 import "./operations";
 import "./dataQuality";
 import "./accounts";

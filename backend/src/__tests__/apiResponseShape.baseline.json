@@ -222,6 +222,7 @@
     "places.ts",
     "places/merge.ts",
     "places/placeCover.ts",
+    "places/captures.ts",
     "places/relations.ts",
     "places/visitDateSuggestions.ts",
     "places/visitPhotoSuggestions.ts",

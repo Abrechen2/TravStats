@@ -111,6 +111,9 @@ export const USER_EXPORT_SELECT = {
   // (forgejo#232): without them a re-import of the export's source would
   // bring the merged duplicate back.
   placeExternalRefs: true,
+  // Positions the Companion captured without a name (companion#90), open ones
+  // included: the server is their only copy once the phone has uploaded them.
+  placeCaptures: true,
   placeVisits: { include: { photos: true } },
   placeLists: { include: { entries: true } },
   // Rail (spec 2026-09-25-rail-domain): the rides with their companion links,

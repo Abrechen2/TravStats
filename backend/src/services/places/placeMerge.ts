@@ -101,6 +101,12 @@ export async function mergePlaces(
       data: { placeId: target.id },
     });
 
+    // A capture named onto the folded place follows its visit (companion#90).
+    await tx.placeCapture.updateMany({
+      where: { placeId: source.id, userId },
+      data: { placeId: target.id },
+    });
+
     const sourceEntries = await tx.placeListEntry.findMany({ where: { placeId: source.id } });
     const targetLists = new Set(
       (

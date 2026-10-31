@@ -689,5 +689,26 @@
       "lodging_stay": "Edit stay",
       "profile": "Edit profile"
     }
+  },
+  "placeCaptures": {
+    "title": "Unnamed places",
+    "description": "You saved these positions with “Place now” in the app. Name them to create the place and visit — or dismiss them.",
+    "unnamed": "Unnamed place",
+    "accuracy": "± {{meters}} m",
+    "name": "Name it",
+    "dismiss": "Dismiss",
+    "nameLabel": "Place name",
+    "categoryLabel": "Category",
+    "save": "Create place",
+    "existingPlace": "Pick an existing place",
+    "newPlace": "Create a new place",
+    "resolved": "Place and visit created.",
+    "dismissed": "Position dismissed.",
+    "loadError": "The unnamed places could not be loaded.",
+    "errors": {
+      "generic": "That did not work. Please try again.",
+      "alreadyResolved": "This position was already named or dismissed. The list has been reloaded.",
+      "notFound": "This position no longer exists. The list has been reloaded."
+    }
   }
 }
