@@ -44,4 +44,14 @@ describe("route switches are persisted in the account-synced mapAppearance blob"
     section.apply({});
     expect(useMapRoutesStore.getState().visible.flight).toBe(true);
   });
+
+  it("a mode that cannot do without its routes ignores a stored 'off' until it is left", async () => {
+    const { useMapRoutesStore, effectiveRoutes } = await fresh();
+    useMapRoutesStore.getState().setVisible("tour", false);
+    expect(effectiveRoutes(useMapRoutesStore.getState()).tour).toBe(false);
+    useMapRoutesStore.getState().setBlocked(true);
+    expect(effectiveRoutes(useMapRoutesStore.getState()).tour).toBe(true);
+    useMapRoutesStore.getState().setBlocked(false);
+    expect(effectiveRoutes(useMapRoutesStore.getState()).tour).toBe(false);
+  });
 });

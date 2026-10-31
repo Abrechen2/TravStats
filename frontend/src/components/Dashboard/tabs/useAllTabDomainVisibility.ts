@@ -1,4 +1,4 @@
-import { useMapRoutesStore } from "../../../store/mapRoutesStore";
+import { effectiveRoutes, useMapRoutesStore } from "../../../store/mapRoutesStore";
 import { useMemo } from "react";
 import {
   useDashboardDomainFilter,
@@ -86,7 +86,7 @@ export function useAllTabDomainVisibility(tours: readonly TourSummary[]): AllTab
   const has = (key: "flight" | "cruise" | "lodging" | "roadtrip"): boolean =>
     isEnabled(key) && domainFilter.isVisible(key);
 
-  const routes = useMapRoutesStore((s) => s.visible);
+  const routes = useMapRoutesStore(effectiveRoutes);
   const visible = {
     flight: has("flight"),
     cruise: has("cruise"),

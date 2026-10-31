@@ -147,6 +147,20 @@ describe("route switches: each domain's switch removes only its own line layers"
     ).toEqual(ids(layers));
   });
 
+  it("flight off also drops special-flight arcs and the globe's highlighted route, keeping their markers", () => {
+    const layers = [
+      "special-flights-arc",
+      "special-flights-loop",
+      "special-flights-marker",
+      "globe-flight-head",
+      "globe-flight-head-marker",
+    ].map(fake);
+    expect(ids(withoutHiddenRoutes(layers, off("flight")))).toEqual([
+      "special-flights-marker",
+      "globe-flight-head-marker",
+    ]);
+  });
+
   it("classifies a tour path as nobody's: tours and roadtrips are split by datum, not id", () => {
     expect(routeDomainOfLayerId("dashboard-tour-paths")).toBeNull();
   });

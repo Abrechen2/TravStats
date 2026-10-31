@@ -1,4 +1,4 @@
-import { useMapRoutesStore } from "../../../store/mapRoutesStore";
+import { effectiveRoutes, useMapRoutesStore } from "../../../store/mapRoutesStore";
 import { useMemo, useState } from "react";
 import { formatNumber } from "../../../lib/units";
 import type { JSX } from "react";
@@ -134,7 +134,7 @@ export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Eleme
   // shared in `./allTabLegendRows.tsx` since the fix-round review
   // (2026-08-30) found this tab had grown its own byte-identical copy.
   // Called with the default "line" shape (its only use here).
-  const routesVisible = useMapRoutesStore((s) => s.visible);
+  const routesVisible = useMapRoutesStore(effectiveRoutes);
   const tourLegend = buildTourLegendRows(
     true,
     dashboardTours,

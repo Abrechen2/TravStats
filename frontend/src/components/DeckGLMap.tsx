@@ -48,7 +48,7 @@ import { useFlightSelectionStore } from "../store/flightSelectionStore";
 import { useCruiseSelectionStore } from "../store/cruiseSelectionStore";
 import { useLodgingSelectionStore } from "../store/lodgingSelectionStore";
 import { usePlaceSelectionStore } from "../store/placeSelectionStore";
-import { useMapRoutesStore } from "../store/mapRoutesStore";
+import { effectiveRoutes, useMapRoutesStore } from "../store/mapRoutesStore";
 import { withoutHiddenRoutes } from "../lib/mapRoutes";
 import { computeBbox } from "../utils/mapAnimationHelpers";
 import { usePlaneAnimation } from "../hooks/usePlaneAnimation";
@@ -531,7 +531,7 @@ export function DeckGLMap({
   // (which only need to re-style the existing arcs) don't re-aggregate
   // flights into routes. Deps are deliberately limited to fields that
   // actually affect arc/point geometry + base color.
-  const routesVisible = useMapRoutesStore((s) => s.visible);
+  const routesVisible = useMapRoutesStore(effectiveRoutes);
   const routeData = useMemo(
     () => buildRouteData(flights, minRouteCount, flightColorConfig),
     [flights, minRouteCount, flightColorConfig]

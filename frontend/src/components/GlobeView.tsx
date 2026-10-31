@@ -27,7 +27,7 @@ import { loadGlobeChrome, saveGlobeChrome } from "./map/globeChrome";
 import { useFlightColorStore } from "../store/flightColorStore";
 import { useLodgingColorStore } from "../store/lodgingColorStore";
 import { usePlaceColorStore } from "../store/placeColorStore";
-import { useMapRoutesStore } from "../store/mapRoutesStore";
+import { effectiveRoutes, useMapRoutesStore } from "../store/mapRoutesStore";
 import { withoutHiddenRoutes } from "../lib/mapRoutes";
 import { useMapCameraStore } from "../store/mapCameraStore";
 import { useMapLabelsModeStore } from "../store/mapLabelsModeStore";
@@ -1133,7 +1133,7 @@ export default function GlobeView({
     ]
   );
   // The lines of every domain the user switched off go; markers and labels stay.
-  const routesVisible = useMapRoutesStore((s) => s.visible);
+  const routesVisible = useMapRoutesStore(effectiveRoutes);
   const layers = useMemo(
     () => withoutHiddenRoutes(drawnLayers, routesVisible),
     [drawnLayers, routesVisible]

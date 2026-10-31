@@ -15,13 +15,13 @@
   --ts-surface: #14181d;
   --ts-surface2: #101317;
   --ts-tile: #1a1f26;
-  --ts-hero-gradient: linear-gradient(160deg,#171c22,#12161b);
-  --ts-tabbar-bg: rgba(16,20,24,0.96);
-  --ts-border: rgba(231,227,220,0.12);
+  --ts-hero-gradient: linear-gradient(160deg, #171c22, #12161b);
+  --ts-tabbar-bg: rgba(16, 20, 24, 0.96);
+  --ts-border: rgba(231, 227, 220, 0.12);
   --ts-text: #e7e3dc;
   --ts-text-bright: #f4ece0;
-  --ts-muted: rgba(231,227,220,0.6);
-  --ts-faint: rgba(231,227,220,0.45);
+  --ts-muted: rgba(231, 227, 220, 0.6);
+  --ts-faint: rgba(231, 227, 220, 0.45);
   --ts-accent: #f0a947;
   --ts-accent-text: #0b0d10;
   --ts-accent-hover: #f6bd66;
@@ -34,13 +34,13 @@
   --ts-paper: #f5f1e8;
   --ts-paper-text: #2a2419;
   --ts-paper-accent: #8a5213;
-  --ts-pro-bg: rgba(240,169,71,0.15);
+  --ts-pro-bg: rgba(240, 169, 71, 0.15);
   --ts-pro-text: #f0a947;
 
   /* Web-only, DESIGN_SYSTEM.md §2.1 — the same ink at other opacities, never a new grey */
-  --ts-border-input: rgba(231,227,220,0.16);
-  --ts-border-button: rgba(231,227,220,0.18);
-  --ts-row-hover: rgba(231,227,220,0.04);
+  --ts-border-input: rgba(231, 227, 220, 0.16);
+  --ts-border-button: rgba(231, 227, 220, 0.18);
+  --ts-row-hover: rgba(231, 227, 220, 0.04);
   --ts-scrim: rgba(7, 9, 12, 0.6);
 
   /* Domain colour — one hue per domain, tours included since 0.8.0 */
@@ -60,7 +60,7 @@
   --ts-status-scheduled: #6fa0d6;
   --ts-status-flown: #5ec2b2;
   --ts-status-cancelled: #e65a4f;
-  --ts-status-historical: rgba(231,227,220,0.62);
+  --ts-status-historical: rgba(231, 227, 220, 0.62);
   --ts-status-duplicated: #d8952f;
   --ts-status-guess: #d8952f;
   --ts-status-review: #d8952f;
@@ -71,7 +71,7 @@
 
   /* Tier, chart, list */
   --ts-tier-bronze: #f59e0b;
-  --ts-tier-silver: rgba(231,227,220,0.62);
+  --ts-tier-silver: rgba(231, 227, 220, 0.62);
   --ts-tier-gold: #f0a947;
   --ts-tier-platinum: #22d3ee;
   --ts-tier-diamond: #a855f7;
@@ -125,11 +125,11 @@
   --ts-radius-pill: 999px;
 
   /* Shadow — four, sparingly. A card has none; it has a hairline. */
-  --ts-shadow-fab: 0 6px 16px rgba(240,169,71,0.35);
-  --ts-shadow-sheet: 0 -14px 30px rgba(0,0,0,0.5);
-  --ts-shadow-paper-card: 0 14px 30px rgba(0,0,0,0.55);
-  --ts-shadow-focus-ring: 0 0 0 3px rgba(240,169,71,0.18);
-  --ts-shadow-dialog: 0 14px 30px rgba(0,0,0,0.5);
+  --ts-shadow-fab: 0 6px 16px rgba(240, 169, 71, 0.35);
+  --ts-shadow-sheet: 0 -14px 30px rgba(0, 0, 0, 0.5);
+  --ts-shadow-paper-card: 0 14px 30px rgba(0, 0, 0, 0.55);
+  --ts-shadow-focus-ring: 0 0 0 3px rgba(240, 169, 71, 0.18);
+  --ts-shadow-dialog: 0 14px 30px rgba(0, 0, 0, 0.5);
 
   /* Size — 44 is the minimum hit area for every pointer target */
   --ts-size-touch-min: 44px;
@@ -145,8 +145,8 @@
   --ts-motion-base: 200ms;
   --ts-motion-enter: 260ms;
   --ts-motion-skeleton-pulse: 1200ms;
-  --ts-ease-standard: cubic-bezier(0.4,0,0.2,1);
-  --ts-ease-enter: cubic-bezier(0,0,0.2,1);
+  --ts-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ts-ease-enter: cubic-bezier(0, 0, 0.2, 1);
 
   /* Icons — Lucide, 24 grid (DESIGN_SYSTEM.md §7) */
   --ts-icon-stroke: 1.8;

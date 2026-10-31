@@ -48,7 +48,12 @@ export function routesVisibleFromStored(stored: unknown): RoutesVisible {
  * and its markers otherwise (`…-stations`, `…-terminals`, `routes-dot`).
  */
 export function routeDomainOfLayerId(id: string): RouteDomain | null {
-  if (/^routes-(arc|path|recorded)/.test(id) || /^globe-flight-arcs/.test(id)) return "flight";
+  if (
+    /^routes-(arc|path|recorded)/.test(id) ||
+    /^globe-flight-(arcs|head$)/.test(id) ||
+    /^special-flights-(arc|loop)/.test(id)
+  )
+    return "flight";
   if (/^cruise-arc/.test(id) || id === "globe-cruise-paths") return "cruise";
   if (id === "dashboard-tour-paths") return null; // split by datum, see `useTourDeckLayers`
   if (/-paths$/.test(id)) {
