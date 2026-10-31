@@ -46,6 +46,9 @@ vi.mock("../../../store/toastStore", () => ({
 vi.mock("../../../hooks/useRecentCurrencies", () => ({ useRecentCurrencies: () => [] }));
 vi.mock("../EmailImportTab", () => ({ default: () => null }));
 vi.mock("../../location/LocationInput", () => ({ LocationInput: () => null }));
+// Network-backed pickers (forgejo#396): not under test here.
+vi.mock("../../CompanionPicker", () => ({ default: () => null }));
+vi.mock("../../TagInput", () => ({ default: () => null }));
 
 function Host({ reload }: { reload: () => Promise<void> }): React.JSX.Element {
   const adapter = useRentalImportAdapter();
