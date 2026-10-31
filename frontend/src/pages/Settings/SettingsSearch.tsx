@@ -7,6 +7,7 @@ import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { useEffectiveSettingsLevel, useSettingsLevelStore } from "../../store/settingsLevelStore";
 import {
   searchSettings,
+  optionalCopy,
   splitKeywords,
   type SettingsSearchCandidate,
   type SettingsSearchHit,
@@ -74,9 +75,9 @@ export function SettingsSearch({ scopes }: Props): JSX.Element {
           // which one it is on (forgejo#321 prototype).
           groupLabel: scope.surfaceLabel ? `${scope.surfaceLabel} › ${scope.label}` : scope.label,
           href: hrefOf(scope.path, section.id, false),
-          keywords: splitKeywords(t(section.keywordsKey, { defaultValue: "" })),
+          keywords: splitKeywords(optionalCopy(t, section.keywordsKey)),
           expertKeywords: section.expertKeywordsKey
-            ? splitKeywords(t(section.expertKeywordsKey, { defaultValue: "" }))
+            ? splitKeywords(optionalCopy(t, section.expertKeywordsKey))
             : [],
           expert: section.expert,
           foldsRows: section.foldsRows,

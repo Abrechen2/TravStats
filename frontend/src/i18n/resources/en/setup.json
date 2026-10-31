@@ -4,7 +4,7 @@
   "privacy": {
     "title": "Privacy & Security",
     "items": {
-      "dataStays": "All data stays on your server - nothing is sent to external services",
+      "dataStays": "Your data stays on your server. External services are only used once you switch them on – here or later in the admin area.",
       "firstUserAdmin": "The first user you create will be the administrator",
       "inviteLater": "You can invite family and friends later via the Admin Panel",
       "designedFor": "Designed for small groups (1-10 accounts)"
@@ -127,6 +127,7 @@
     "cta": "Turn on free services",
     "on": "Free services will be turned on ✓ (click again to undo)",
     "partialFailed": "The account is created, but not every service could be turned on: {{reason}} You can turn them on under Admin › External services.",
-    "continue": "Continue"
+    "continue": "Continue",
+    "alreadyOn": "Even without this switch, rail timetables (Transitous, db-rest) and operator logos from Wikimedia are already on; the geocoder and exchange rates always run. The switch only adds the services listed above."
   }
 }

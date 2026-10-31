@@ -37,7 +37,8 @@ export default function FreeServicesStep({ value, onChange }: FreeServicesStepPr
           </li>
         ))}
       </ul>
-      <p className="text-xs text-(--text-muted) mb-3">{t("setup:freeServices.leaves")}</p>
+      <p className="text-xs text-(--text-muted) mb-2">{t("setup:freeServices.leaves")}</p>
+      <p className="text-xs text-(--text-muted) mb-3">{t("setup:freeServices.alreadyOn")}</p>
       <button
         type="button"
         aria-pressed={value}

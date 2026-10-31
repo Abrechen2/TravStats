@@ -194,7 +194,7 @@ export const SERVICES: readonly ServiceDef[] = [
   }),
   svc({
     id: "aisstream",
-    category: "flight",
+    category: "mapsRoutes",
     level: "instance",
     credential: "key",
     getKeyUrl: "https://aisstream.io/apikeys",

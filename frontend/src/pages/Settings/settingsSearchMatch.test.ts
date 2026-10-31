@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   foldForSearch,
   searchSettings,
+  optionalCopy,
   splitKeywords,
   type SettingsSearchCandidate,
 } from "./settingsSearchMatch";
@@ -117,5 +118,22 @@ describe("settings search — the shipped keyword lists", () => {
       const shared = splitKeywords(expert).filter((k) => ordinary.has(foldForSearch(k)));
       expect(shared, `${lang} ${section}`).toEqual([]);
     }
+  });
+});
+
+describe("optionalCopy", () => {
+  it("is empty, not the key, for copy that does not exist (real i18next, returnEmptyString off)", async () => {
+    const { default: i18next } = await import("i18next");
+    const instance = i18next.createInstance();
+    await instance.init({
+      lng: "de",
+      resources: { de: { settings: { present: "a, b" } } },
+      returnEmptyString: false,
+    });
+    const t = (key: string, options?: Record<string, unknown>) =>
+      instance.t(key, options) as string;
+    expect(optionalCopy(t, "settings:present")).toBe("a, b");
+    expect(optionalCopy(t, "settings:search.keywords.nope")).toBe("");
+    expect(splitKeywords(optionalCopy(t, "settings:search.keywords.nope"))).toEqual([]);
   });
 });
