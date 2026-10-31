@@ -96,7 +96,7 @@ export type AccountStatus =
 export function accountStatus(service: AccountService, kind: "connection" | "key"): AccountStatus {
   if (service.accountDisabled || service.effectiveSource === "off") return "off";
   if (service.effectiveSource === "account") return kind === "connection" ? "connected" : "ownKey";
-  if (service.effectiveSource === "instance" || service.effectiveSource === "env") {
+  if (service.effectiveSource === "instance") {
     return "viaInstance";
   }
   // An own-key row says where requests are served from; "no key" is that answer.

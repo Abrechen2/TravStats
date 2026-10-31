@@ -141,12 +141,19 @@ describe("external services: consent binding and off-means-off follow-ups", () =
   });
 
   describe("invariant 4: the rail chain fails closed itself", () => {
-    it("does not rebuild a remote OLLAMA_URL the resolver rejected for missing consent", async () => {
-      await setAdmin({ openaiCompatBaseUrl: null, openaiCompatModel: null, llmCustomOptIn: false });
-      process.env.OLLAMA_URL = "https://ollama.remote.example.com";
-      process.env.OLLAMA_MODEL = "m";
-      expect(await resolveRailLlmChain(userId)).toEqual([]);
-      delete process.env.OLLAMA_MODEL;
+    it("does not rebuild a remote Ollama the resolver rejected for missing consent", async () => {
+      await setAdmin({
+        openaiCompatBaseUrl: null,
+        openaiCompatModel: null,
+        llmCustomOptIn: false,
+        ollamaUrl: "https://ollama.remote.example.com",
+        ollamaModel: "m",
+        llmOllamaOptIn: false,
+      });
+      // The unconsented remote address never comes back; only the local default may serve.
+      const chain = await resolveRailLlmChain(userId);
+      expect(chain.some((t) => t.url.includes("ollama.remote.example.com"))).toBe(false);
+      expect(chain.every((t) => !t.isCloud)).toBe(true);
     });
 
     it("still falls back to a LOCAL default when nothing is configured", async () => {

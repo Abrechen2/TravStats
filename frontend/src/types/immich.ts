@@ -1,6 +1,6 @@
 export type ImmichMode = "link" | "import";
 
-export type ImmichConnectionSource = "user" | "global" | "env";
+export type ImmichConnectionSource = "user" | "global";
 
 export interface ImmichConnectionStatus {
   baseUrl: string | null;

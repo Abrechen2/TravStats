@@ -4,7 +4,7 @@
   "privacy": {
     "title": "Datenschutz & Sicherheit",
     "items": {
-      "dataStays": "Alle Daten bleiben auf deinem Server - nichts wird an externe Dienste gesendet",
+      "dataStays": "Deine Daten bleiben auf deinem Server. Externe Dienste werden erst genutzt, wenn du sie einschaltest – hier oder später im Admin-Bereich.",
       "firstUserAdmin": "Der erste Benutzer, den du erstellst, wird der Administrator sein",
       "inviteLater": "Du kannst später Familie und Freunde über das Admin-Panel einladen",
       "designedFor": "Entworfen für kleine Gruppen (1-10 Konten)"
@@ -119,5 +119,15 @@
       "airportsCount": "{{processed}} / {{total}} Flughäfen",
       "understood": "Verstanden"
     }
+  },
+  "freeServices": {
+    "title": "Kostenlose Dienste",
+    "description": "Mit einem Klick schaltest du die Dienste ein, die nichts kosten und weder Schlüssel noch Konto brauchen. Alles, was einen Schlüssel braucht, Cloud-KI und Verbindungen wie Immich oder Strava bleibt aus – das stellst du später im Admin-Bereich unter „Externe Dienste“ ein.",
+    "leaves": "Dafür verlassen die genannten Angaben den Server und gehen an diese öffentlichen Dienste. Du kannst jeden Dienst später einzeln ausschalten.",
+    "cta": "Kostenlose Dienste einschalten",
+    "on": "Kostenlose Dienste werden eingeschaltet ✓ (zum Zurücknehmen erneut klicken)",
+    "partialFailed": "Das Konto ist angelegt, aber nicht alle Dienste ließen sich einschalten: {{reason}} Du kannst sie unter Admin › Externe Dienste einschalten.",
+    "continue": "Weiter",
+    "alreadyOn": "Schon ohne diesen Schalter an sind Bahn-Fahrpläne (Transitous, db-rest) und Betreiber-Logos aus Wikimedia eingeschaltet; Geocoder und Wechselkurse laufen immer. Der Schalter ergänzt nur die Liste oben."
   }
 }

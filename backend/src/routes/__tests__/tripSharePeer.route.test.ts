@@ -1,3 +1,7 @@
+import {
+  pauseFederation,
+  setFederationIdentity,
+} from "../../services/federation/__tests__/identityFixture";
 /**
  * The trip-share peer route (spec 2026-10-20, phase F-S4a): off is absent, it reads only envelope
  * version 2 with purpose `trip-share/1`, and the comparison route refuses that purpose in turn.
@@ -62,14 +66,13 @@ const nonceRow = (m: { nonce: string }) =>
 let flagsBefore: Awaited<ReturnType<typeof setTripFlags>>;
 let warn: jest.SpyInstance;
 
+let restoreIdentity: () => Promise<void> = async () => undefined;
 beforeAll(async () => {
   fs.writeFileSync(
     path.join(dir, "local.key"),
     local.privateKey.export({ type: "pkcs8", format: "pem" })
   );
-  process.env.FEDERATION_ENABLED = "1";
-  process.env.FEDERATION_PUBLIC_ORIGIN = LOCAL;
-  process.env.FEDERATION_KEY_FILE = path.join(dir, "local.key");
+  restoreIdentity = await setFederationIdentity(LOCAL, path.join(dir, "local.key"));
   resetIdentityCache();
   await prisma.comparisonPeer.upsert({
     where: { origin: REMOTE },
@@ -90,8 +93,7 @@ afterEach(() => warn.mockRestore());
 afterAll(async () => {
   await setTripFlags(flagsBefore);
   await prisma.comparisonPeer.delete({ where: { origin: REMOTE } });
-  for (const key of ["FEDERATION_ENABLED", "FEDERATION_PUBLIC_ORIGIN", "FEDERATION_KEY_FILE"])
-    delete process.env[key];
+  await restoreIdentity();
   resetIdentityCache();
   fs.rmSync(dir, { recursive: true, force: true });
   await prisma.$disconnect();
@@ -117,16 +119,14 @@ describe("off is absent", () => {
   });
 
   it("answers 404 when the server has no identity", async () => {
-    delete process.env.FEDERATION_ENABLED;
-    resetIdentityCache();
+    const resume = await pauseFederation();
     try {
       const res = await request(app)
         .post("/api/v1/trip-share-peer")
         .send(signed(ping(), "trip-share/1"));
       expect(res.status).toBe(404);
     } finally {
-      process.env.FEDERATION_ENABLED = "1";
-      resetIdentityCache();
+      await resume();
     }
   });
 });

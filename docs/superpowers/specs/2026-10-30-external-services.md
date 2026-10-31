@@ -19,7 +19,7 @@ for free. Approved as drawn ("so kannst du es bauen").
 ## Invariants
 
 1. **The effective source is shown.** Every service says which credential
-   actually serves a request: account → instance → server env (ENV) → none.
+   actually serves a request: account → instance → none. Server environment variables are not a source (owner, 2026-10-31); see "ENV removal".
    Admin view shows the instance side; the account view shows the account's.
 2. **Off means off.** An admin "off" blocks the service for every account,
    including accounts with their own key, the ENV fallback and background jobs.
@@ -68,6 +68,23 @@ add when it gets a UI).
 
 ## Contract (additive; no endpoint removed)
 
+### ENV removal (owner decision 2026-10-31)
+
+Contract change: `instanceSource` and `effectiveSource` lose the value `"env"` (a variable that
+stood in for a key now reads `"none"` until the one-time import has copied it into the instance).
+`GET /admin/strava` loses `envConfigured`. The Companion reads none of these routes (grep of
+`TravStatsCompanion`, 2026-10-31: no reference to `external-services`, `instanceSource` or
+`effectiveSource`).
+
+Service credentials and addresses are read only from `admin_settings`/`user_settings`. On the first
+start of this version `importServiceEnv()` (services/envImport.ts) copies every old variable that
+is still set into its instance field when that field is empty (secrets encrypted with the admin
+page's helper), writes `admin_settings.env_imported_at`, and never reads the environment for these
+again. Variable names are logged, never values. New columns: `own_geo_url`, `market_overpass_url`,
+`rail_lookup_contact`, `usage_stats_endpoint`, `global_aisstream_api_key`, `env_imported_at`.
+New catalogue row `aisstream` (key). `CLAUDE_MODEL`, `CLAUDE_VISION_MODEL` and `USE_LLM_PARSER`
+have no instance field and are ignored.
+
 ### `GET /api/v1/admin/external-services` (admin)
 
 ```ts
@@ -80,7 +97,7 @@ type AdminService = {
   recommended: "free" | "freeCredit" | null;
   enabled: boolean;                 // admin switch; for key-only services: true unless switched off
   configured: boolean;              // instance credential present (or keyless)
-  instanceSource: "instance" | "env" | "none";
+  instanceSource: "instance" | "none";
   allowAccountKeys: boolean | null; // null when level !== instanceAndAccount
   lastTest: { at: string; ok: boolean; reason: string | null } | null;
   quota: { kind: "budget" | "monthly" | "daily" | "rateLimit" | "none"; used?: number; limit?: number; unit?: string; resetsAt?: string } | null;
@@ -118,7 +135,7 @@ the tester already does; the response says whether quota was used
 }
 type AccountService = {
   id: string; recommended: "free" | "freeCredit" | null;
-  effectiveSource: "account" | "instance" | "env" | "none" | "off";
+  effectiveSource: "account" | "instance" | "none" | "off";
   accountDisabled: boolean;        // "Für mein Konto ausschalten"
   configured: boolean; lastTest: {...} | null;
   fields: Array<{ key: string; kind: ...; value: ...; masked?: boolean; expert: boolean }>;

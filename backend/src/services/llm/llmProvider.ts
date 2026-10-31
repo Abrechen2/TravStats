@@ -134,13 +134,13 @@ function isCloudUrl(url: string): boolean {
   }
 }
 
-/** An Ollama target from explicit values, falling back to the environment and the defaults. */
+/** An Ollama target from explicit values, falling back to the defaults. */
 export function ollamaTarget(url?: string, model?: string): LlmTarget {
-  const resolvedUrl = url ?? process.env.OLLAMA_URL ?? DEFAULT_OLLAMA_URL;
+  const resolvedUrl = url ?? DEFAULT_OLLAMA_URL;
   return {
     kind: "ollama",
     url: resolvedUrl,
-    model: model ?? process.env.OLLAMA_MODEL ?? DEFAULT_OLLAMA_MODEL,
+    model: model ?? DEFAULT_OLLAMA_MODEL,
     isCloud: isCloudUrl(resolvedUrl),
   };
 }
@@ -179,7 +179,7 @@ async function loadAdminSettings(): Promise<AdminParserSettings | null> {
 
 /**
  * Ollama's chain slot: eligible when it has an EXPLICITLY configured endpoint
- * (admin settings or `OLLAMA_URL`/`OLLAMA_MODEL`) and (is local, or the admin
+ * (admin settings) and (is local, or the admin
  * allowed a remote one). Deliberately never falls back to the bare
  * `localhost:11434`/`gemma3:12b` defaults here — those are a last resort for
  * an entirely empty chain (`resolveLlmChain`'s `withDefaults` branch), not a
@@ -187,8 +187,8 @@ async function loadAdminSettings(): Promise<AdminParserSettings | null> {
  * consented cloud slot just because nobody typed an Ollama URL.
  */
 function ollamaChainTarget(admin: AdminParserSettings | null): LlmTarget | null {
-  const url = admin?.ollamaUrl ?? process.env.OLLAMA_URL ?? undefined;
-  const model = admin?.ollamaModel ?? process.env.OLLAMA_MODEL ?? undefined;
+  const url = admin?.ollamaUrl ?? undefined;
+  const model = admin?.ollamaModel ?? undefined;
   if (!url || !model) return null;
   const target = ollamaTarget(url, model);
   if (target.isCloud && !(admin?.llmOllamaOptIn ?? false)) return null;

@@ -5,14 +5,9 @@ import { isPlausibleLegArrival } from "./legTiming";
 
 /**
  * Get all available Claude models for text parsing, ordered by preference (newest first)
- * Returns the model from CLAUDE_MODEL env var if set, otherwise returns list of available models
+ * Returns the list of available models
  */
 export function getClaudeTextModels(): string[] {
-  // If explicitly set, use only that model
-  if (process.env.CLAUDE_MODEL) {
-    return [process.env.CLAUDE_MODEL];
-  }
-
   // List of Claude models ordered by release date (newest first)
   // These are the most common models for text parsing
   // Update this list when new models are released
@@ -40,14 +35,9 @@ export function getLatestClaudeTextModel(): string {
 
 /**
  * Get all available Claude models for vision parsing, ordered by preference (newest first)
- * Returns the model from CLAUDE_VISION_MODEL env var if set, otherwise returns list of available models
+ * Returns the list of available models
  */
 export function getClaudeVisionModels(): string[] {
-  // If explicitly set, use only that model
-  if (process.env.CLAUDE_VISION_MODEL) {
-    return [process.env.CLAUDE_VISION_MODEL];
-  }
-
   // List of Claude models with vision capabilities ordered by release date (newest first)
   // Update this list when new models are released
   return [

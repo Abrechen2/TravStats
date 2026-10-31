@@ -35,7 +35,6 @@ export interface StravaActivity {
 export interface StravaAdminSettings {
   clientId: string | null;
   secretSet: boolean;
-  envConfigured: boolean;
 }
 
 /** The instance's own callback page — the only redirect the server accepts. */

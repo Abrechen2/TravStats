@@ -43,9 +43,8 @@ For each new container set:
 ```text
 FEDERATION_SANDBOX=1
 NODE_ENV=test
-FEDERATION_ENABLED=1
-FEDERATION_PUBLIC_ORIGIN=https://alpha.federation.test  # beta in the second process
-FEDERATION_KEY_FILE=/qa/alpha/peer.key
+SANDBOX_PUBLIC_ORIGIN=https://alpha.federation.test    # beta in the second process
+SANDBOX_KEY_FILE=/qa/alpha/peer.key                    # written into the sandbox DB's instance settings
 QA_KEYS=/qa/alpha                                      # contains tls.key and tls.crt
 NODE_EXTRA_CA_CERTS=/qa/ca.crt
 DATABASE_URL=<dedicated sandbox database URL>

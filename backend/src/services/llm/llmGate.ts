@@ -92,9 +92,9 @@ export const LLM_CLOUD_NOT_CONSENTED_REASON =
 export const LLM_PROVIDER_INCOMPLETE_REASON =
   "No AI provider is fully configured (Ollama, or a cloud provider's key and model) — only the built-in templates were tried.";
 
-/** Whether the admin-set Ollama URL/env fallback is on the local network at all. */
+/** The admin-set Ollama URL, if any. */
 function ollamaConfiguredUrl(settings: AdminParserSettings | null): string | null {
-  return settings?.ollamaUrl ?? process.env.OLLAMA_URL ?? null;
+  return settings?.ollamaUrl ?? null;
 }
 
 /** Ollama is eligible when it has an endpoint AND (local, or a remote one the admin allowed). */

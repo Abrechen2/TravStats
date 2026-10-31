@@ -15,14 +15,9 @@ First create a device key and save its encrypted backup and recovery code separa
 
 Cross-instance communication needs a server identity. Since 2026-10-16 an admin sets it in
 **Admin → Instanz → Server-Verbindungen** (origin, key generated in the UI, peers pinned there).
-`FEDERATION_ENABLED=1` with the variables below still overrides the UI, so existing installs keep
-their key:
-
-```dotenv
-FEDERATION_ENABLED=1
-FEDERATION_PUBLIC_ORIGIN=https://travstats.example.org
-FEDERATION_KEY_FILE=/secure/travstats/federation-ed25519.pem
-```
+The `FEDERATION_*` environment variables are no longer read. An install that still carries
+them has them copied into these settings once, on the first start of this version (only where
+the settings are still empty).
 
 Generate the server's Ed25519 private key on the target host with `openssl genpkey -algorithm
 ED25519`, writing it to the absolute configured path with mode 0600, outside uploads/database

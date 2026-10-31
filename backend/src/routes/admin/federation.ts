@@ -17,7 +17,6 @@ import logger from "../../utils/logger";
 import { encryptApiKey } from "../../utils/encryption";
 import { ensureAdminSettingsRow } from "../../services/adminSettingsRow";
 import {
-  envOverrideActive,
   loadIdentity,
   resetIdentityCache,
   type Identity,
@@ -71,11 +70,11 @@ async function state(): Promise<FederationState> {
   const peers = await prisma.comparisonPeer.findMany({ orderBy: { origin: "asc" } });
   return {
     source: local?.source ?? null,
-    enabled: envOverrideActive() || row.federationEnabled,
+    enabled: row.federationEnabled,
     origin: local?.origin ?? row.federationOrigin,
     publicKey: local?.publicKey ?? null,
     fingerprint: local?.fingerprint ?? null,
-    hasKey: envOverrideActive() ? local !== null : Boolean(row.federationPrivateKey),
+    hasKey: Boolean(row.federationPrivateKey),
     tripSharingEnabled: row.tripFederationEnabled,
     peers: peers.map((p) => ({
       origin: p.origin,
@@ -92,13 +91,6 @@ async function requirePeer(origin: string): Promise<void> {
     throw comparisonError("COMPARISON_PEER_UNKNOWN", 404, "No such peer is pinned", { origin });
 }
 
-const envHoldsIdentity = () =>
-  comparisonError(
-    "COMPARISON_FEDERATION_ENV",
-    409,
-    "The server identity is set by FEDERATION_* environment variables"
-  );
-
 router.get(
   "/",
   handle(async (_req, res) => {
@@ -109,7 +101,6 @@ router.get(
 router.put(
   "/",
   handle(async (req, res) => {
-    if (envOverrideActive()) throw envHoldsIdentity();
     const body = federationSettingsSchema.parse(req.body);
     await prisma.adminSettings.update({
       where: { id: await ensureAdminSettingsRow() },
@@ -122,7 +113,7 @@ router.put(
 
 /**
  * Trip sharing across servers on or off (spec 2026-10-20 F8). Its own endpoint, not a field of
- * `PUT /`: it is settable while FEDERATION_* env vars hold the identity, which `PUT /` refuses.
+ * `PUT /`: it is settable on its own, independent of `PUT /`.
  */
 router.put(
   "/trip-sharing",
@@ -143,7 +134,6 @@ router.put(
 router.post(
   "/key",
   handle(async (req, res) => {
-    if (envOverrideActive()) throw envHoldsIdentity();
     const pem = generateKeyPairSync("ed25519")
       .privateKey.export({ type: "pkcs8", format: "pem" })
       .toString();

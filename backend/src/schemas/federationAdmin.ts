@@ -33,7 +33,7 @@ export const pingReplySchema = z.object({
 });
 
 export interface FederationState {
-  source: "env" | "settings" | null;
+  source: "settings" | null;
   enabled: boolean;
   origin: string | null;
   publicKey: string | null;

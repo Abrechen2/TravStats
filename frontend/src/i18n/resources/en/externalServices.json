@@ -81,15 +81,11 @@
   "allowAccountKeysOn": "An own key takes precedence; without one the instance's key applies.",
   "allowAccountKeysOff": "Accounts may not use their own key – the instance's key applies.",
   "expert": {
-    "order": "Order",
-    "quota": "Quota",
-    "env": "Server variable (ENV)",
-    "envText": "only used when neither the account nor the instance has a key"
+    "quota": "Quota"
   },
   "budget": "Budget: {{used}} of {{limit}} {{unit}} · stops before the limit",
   "source": {
     "instance": "In effect: instance key stored",
-    "env": "In effect: server variable (ENV)",
     "keyless": "No key needed",
     "none": "No key – stays off",
     "off": "Off – applies to all accounts, own keys and background jobs",
@@ -115,7 +111,12 @@
       "unreachable": "not reachable",
       "not_configured": "not set up",
       "budget_exhausted": "monthly budget used up",
-      "disabled": "switched off"
+      "disabled": "switched off",
+      "quota": "Quota reached",
+      "network": "Service not reachable",
+      "http_error": "Unexpected response from the service",
+      "not_found": "Address or credentials not found",
+      "unknown": "Unknown error"
     },
     "missingUrl": "Enter an address first",
     "offPlain": "Switched off"
@@ -142,7 +143,6 @@
     "quota": "How much is free?",
     "dataOut": "What leaves the server?",
     "who": "Who sets it up?",
-    "source": "Which source applies?",
     "recommendationText": {
       "free": "Recommended: free and adds a lot to a complete logbook.",
       "freeCredit": "Recommended: the monthly free credit covers your own flights; TravStats stops before the limit.",
@@ -303,6 +303,15 @@
       "templateRepoUrl": "Template repository (URL)",
       "cdnFallback": "Fallback source for non-ECB currencies",
       "backupSync": "Instance backups over WebDAV"
+    },
+    "railTimetables": {
+      "contact": "Contact for the rail lookups (e-mail or URL)"
+    },
+    "geocoder": {
+      "ownGeoUrl": "Own geo server (https address)"
+    },
+    "openData": {
+      "marketOverpassUrl": "Overpass address for markets"
     }
   },
   "services": {
@@ -315,7 +324,6 @@
       "dataOut": "Flight number and date. No names, no booking data.",
       "getKeyUrl": "https://airlabs.co/",
       "getKeyLabel": "Get a key from AirLabs",
-      "order": "Account → instance → server ENV",
       "quotaLine": "1,000 requests / month free"
     },
     "aviationstack": {
@@ -327,7 +335,6 @@
       "dataOut": "Flight number and date.",
       "getKeyUrl": "https://aviationstack.com/",
       "getKeyLabel": "Get a key from Aviationstack",
-      "order": "Account → instance → server ENV",
       "quotaLine": "[Free allowance according to the provider]"
     },
     "aerodatabox": {
@@ -339,7 +346,6 @@
       "dataOut": "Flight number and date.",
       "getKeyUrl": "https://rapidapi.com/aedbx-aedbx/api/aerodatabox",
       "getKeyLabel": "AeroDataBox on RapidAPI",
-      "order": "Account → instance → server ENV",
       "quotaLine": "600 units / month free · balance according to RapidAPI"
     },
     "aeroapi": {
@@ -351,7 +357,6 @@
       "dataOut": "Flight number, date, airports.",
       "getKeyUrl": "https://www.flightaware.com/aeroapi/",
       "getKeyLabel": "AeroAPI at FlightAware",
-      "order": "Instance → server ENV",
       "quotaLine": "10 USD / month · stops before the limit"
     },
     "opensky": {
@@ -363,7 +368,6 @@
       "dataOut": "Flight number or aircraft identifier and period.",
       "getKeyUrl": "https://opensky-network.org/",
       "getKeyLabel": "Create an OpenSky account",
-      "order": "Account → instance → server ENV",
       "quotaLine": "rate limit only; feeders higher"
     },
     "adsblol": {
@@ -375,7 +379,6 @@
       "dataOut": "Flight number or identifier, today's flights only.",
       "getKeyUrl": "https://api.adsb.lol/",
       "getKeyLabel": "adsb.lol",
-      "order": "Account → instance switch",
       "quotaLine": "polite: at most 1 request / second"
     },
     "adsbx": {
@@ -387,7 +390,6 @@
       "dataOut": "Flight number or identifier, today's flights only.",
       "getKeyUrl": "https://rapidapi.com/adsbx/api/adsbexchange-com1",
       "getKeyLabel": "ADS-B Exchange on RapidAPI",
-      "order": "Instance → server ENV",
       "quotaLine": "according to the RapidAPI plan"
     },
     "openrouteservice": {
@@ -399,7 +401,6 @@
       "dataOut": "Coordinates of the stops.",
       "getKeyUrl": "https://openrouteservice.org/dev/#/signup",
       "getKeyLabel": "Key from OpenRouteService",
-      "order": "Account → instance → server ENV",
       "quotaLine": "2,000 requests / day free"
     },
     "graphhopper": {
@@ -411,7 +412,6 @@
       "dataOut": "Coordinates of the stops.",
       "getKeyUrl": "https://www.graphhopper.com/",
       "getKeyLabel": "Key from GraphHopper",
-      "order": "The instance chooses the routing provider",
       "quotaLine": "500 requests / day free"
     },
     "railTimetables": {
@@ -423,7 +423,6 @@
       "dataOut": "Stations and departure time.",
       "getKeyUrl": "https://transitous.org/",
       "getKeyLabel": "Transitous",
-      "order": "Transitous → db-rest",
       "quotaLine": "db-rest: ~100 requests / minute, shared"
     },
     "googlePlaces": {
@@ -435,7 +434,6 @@
       "dataOut": "Search text or place identifier.",
       "getKeyUrl": "https://console.cloud.google.com/",
       "getKeyLabel": "Key in the Google Cloud Console",
-      "order": "Photon → Nominatim → Google",
       "quotaLine": "billed per request"
     },
     "geocoder": {
@@ -447,7 +445,6 @@
       "dataOut": "Search text or coordinates.",
       "getKeyUrl": "https://operations.osmfoundation.org/policies/nominatim/",
       "getKeyLabel": "Nominatim usage policy",
-      "order": "Photon → Nominatim → Google",
       "quotaLine": "OSM usage policy",
       "alwaysOnWhy": "Place search, address entry and coordinates run on it; without it no form could find a place. To avoid the public servers, enter your own addresses under \"Expert\"."
     },
@@ -460,7 +457,6 @@
       "dataOut": "Stays in your network.",
       "getKeyUrl": "https://github.com/geofabrik/OpenRailRouting",
       "getKeyLabel": "OpenRailRouting",
-      "order": "Before the cloud providers",
       "quotaLine": "your own server"
     },
     "immich": {
@@ -472,7 +468,6 @@
       "dataOut": "Stays between TravStats and your Immich.",
       "getKeyUrl": "https://immich.app/docs/features/command-line-interface#obtain-the-api-key",
       "getKeyLabel": "Create an API key in Immich",
-      "order": "Account → instance → server ENV",
       "quotaLine": "your own server",
       "adminPurpose": "The instance's connection for the nightly photo scan; accounts connect their own Immich"
     },
@@ -485,7 +480,6 @@
       "dataOut": "Strava sends activities to TravStats, not the other way round.",
       "getKeyUrl": "https://www.strava.com/settings/api",
       "getKeyLabel": "Create a Strava app",
-      "order": "OAuth per account",
       "quotaLine": "Strava rate limits per app",
       "adminPurpose": "The instance's Strava app (client ID and secret); accounts connect their own Strava through it"
     },
@@ -498,7 +492,6 @@
       "dataOut": "Stays in your network.",
       "getKeyUrl": "https://ollama.com/",
       "getKeyLabel": "Ollama",
-      "order": "Ollama → cloud providers (only with consent)",
       "quotaLine": "your own hardware"
     },
     "openai": {
@@ -510,7 +503,6 @@
       "dataOut": "Text of the import, up to 12,000 characters. Only after consent.",
       "getKeyUrl": "https://platform.openai.com/api-keys",
       "getKeyLabel": "Key from OpenAI",
-      "order": "After Ollama",
       "quotaLine": "cost per token",
       "where": "OpenAI, api.openai.com (USA)",
       "costShort": "Paid per token through your OpenAI account."
@@ -524,7 +516,6 @@
       "dataOut": "Text of the import, up to 12,000 characters. Only after consent.",
       "getKeyUrl": "https://console.anthropic.com/",
       "getKeyLabel": "Key from Anthropic",
-      "order": "After Ollama",
       "quotaLine": "cost per token",
       "where": "Anthropic, api.anthropic.com (USA)",
       "costShort": "Paid per token through your Anthropic account."
@@ -538,7 +529,6 @@
       "dataOut": "Text of the import, up to 12,000 characters. Only after consent.",
       "getKeyUrl": "https://aistudio.google.com/apikey",
       "getKeyLabel": "Key from Google AI Studio",
-      "order": "After Ollama",
       "quotaLine": "according to Google AI Studio",
       "where": "Google, generativelanguage.googleapis.com",
       "costShort": "Free allowance, then per token."
@@ -552,7 +542,6 @@
       "dataOut": "Text of the import. A remote server needs consent as well.",
       "getKeyUrl": "https://openrouter.ai/",
       "getKeyLabel": "Example: OpenRouter",
-      "order": "After Ollama",
       "quotaLine": "depends on the provider",
       "where": "the URL you entered",
       "costShort": "Depends on the provider."
@@ -566,7 +555,6 @@
       "dataOut": "Coordinates and place names.",
       "getKeyUrl": "https://open-meteo.com/",
       "getKeyLabel": "Open-Meteo",
-      "order": "–",
       "quotaLine": "fair use"
     },
     "logos": {
@@ -578,7 +566,6 @@
       "dataOut": "Airline code.",
       "getKeyUrl": "https://logostream.dev/",
       "getKeyLabel": "logostream",
-      "order": "logostream → own → kiwi → Daisycon",
       "quotaLine": "–"
     },
     "fx": {
@@ -590,7 +577,6 @@
       "dataOut": "Currency and date.",
       "getKeyUrl": "https://frankfurter.dev/",
       "getKeyLabel": "Frankfurter",
-      "order": "Frankfurter → currency-api",
       "quotaLine": "–",
       "alwaysOnWhy": "Every conversion into your currency uses the ECB rates; only a currency and a date leave the server. Only the fallback source for currencies the ECB does not publish can be switched off."
     },
@@ -603,7 +589,6 @@
       "dataOut": "The whole backup, transferred encrypted; the target must be trustworthy.",
       "getKeyUrl": "https://travstats.de/docs/",
       "getKeyLabel": "Guide",
-      "order": "Account target in addition",
       "quotaLine": "–",
       "adminPurpose": "The instance's backups and exports to a share; accounts may add their own targets"
     },
@@ -616,7 +601,6 @@
       "dataOut": "Recipient address and mail text.",
       "getKeyUrl": "https://travstats.de/docs/",
       "getKeyLabel": "Guide",
-      "order": "–",
       "quotaLine": "according to the mail provider"
     },
     "push": {
@@ -628,7 +612,6 @@
       "dataOut": "Device token and notice text.",
       "getKeyUrl": "https://travstats.de/docs/",
       "getKeyLabel": "Guide",
-      "order": "–",
       "quotaLine": "–"
     },
     "federation": {
@@ -640,7 +623,6 @@
       "dataOut": "Only what an account explicitly shares; the leaderboard carries totals only.",
       "getKeyUrl": "https://travstats.de/docs/",
       "getKeyLabel": "Guide",
-      "order": "–",
       "quotaLine": "–"
     },
     "usageStats": {
@@ -652,7 +634,6 @@
       "dataOut": "Anonymous counters, no trips, no names.",
       "getKeyUrl": "https://www.abrechen2.de/travstats/datenschutz/",
       "getKeyLabel": "Privacy policy",
-      "order": "–",
       "quotaLine": "–"
     },
     "updatesTemplates": {
@@ -664,7 +645,6 @@
       "dataOut": "Only the request itself, no data from your logbook.",
       "getKeyUrl": "https://github.com/Abrechen2/travstats-templates",
       "getKeyLabel": "Templates repository",
-      "order": "–",
       "quotaLine": "GitHub rate limit"
     },
     "dawarich": {
@@ -676,8 +656,18 @@
       "dataOut": "Stays between TravStats and Dawarich.",
       "getKeyUrl": "https://dawarich.app/",
       "getKeyLabel": "Dawarich",
-      "order": "Account only",
       "quotaLine": "your own server"
+    },
+    "aisstream": {
+      "name": "AISStream",
+      "purpose": "Live position of a ferry or ship",
+      "why": "Shows where the ship is right now when someone asks, on a ferry crossing. Without a key the display stays off.",
+      "cost": "Free with an AISStream account.",
+      "quota": "At most two simultaneous connections for the whole instance.",
+      "dataOut": "The vessel identifier (MMSI), only when someone requests the position.",
+      "getKeyUrl": "https://aisstream.io/apikeys",
+      "getKeyLabel": "Get a key from AISStream",
+      "quotaLine": "2 simultaneous connections"
     }
   },
   "alwaysOn": {

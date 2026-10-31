@@ -508,11 +508,21 @@ describe("TravTrack — copying the Dawarich history", () => {
 
   it("refuses an admin-global or ENV connection: only the account's own", async () => {
     await prisma.userSettings.deleteMany({ where: { userId } });
-    process.env.DAWARICH_BASE_URL = "http://shared-dawarich.test";
-    process.env.DAWARICH_API_KEY = "shared";
-    expect(await codeOf(startDawarichCopy(userId, range))).toBe("DAWARICH_NOT_CONFIGURED");
-    expect(await prisma.travTrackImport.count({ where: { userId } })).toBe(0);
-    expect((await getDawarichCopy(userId)).connection).toBe("shared");
+    await prisma.adminSettings.updateMany({
+      data: {
+        globalDawarichBaseUrl: "http://shared-dawarich.test",
+        globalDawarichApiKey: encryptApiKey("shared-dawarich-key-123"),
+      },
+    });
+    try {
+      expect(await codeOf(startDawarichCopy(userId, range))).toBe("DAWARICH_NOT_CONFIGURED");
+      expect(await prisma.travTrackImport.count({ where: { userId } })).toBe(0);
+      expect((await getDawarichCopy(userId)).connection).toBe("shared");
+    } finally {
+      await prisma.adminSettings.updateMany({
+        data: { globalDawarichBaseUrl: null, globalDawarichApiKey: null },
+      });
+    }
   });
 
   it("refuses a second copy while one runs, and a range it cannot read", async () => {

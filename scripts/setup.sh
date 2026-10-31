@@ -70,8 +70,6 @@ PORT=8000
 CORS_ORIGIN=http://localhost:3000
 FRONTEND_URL=http://localhost:3000
 
-# Optional APIs (leave empty if not needed)
-AIRLABS_API_KEY=
 EOF
 
 # Create frontend .env file

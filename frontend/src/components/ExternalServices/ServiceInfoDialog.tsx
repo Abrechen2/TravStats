@@ -57,12 +57,7 @@ export default function ServiceInfoDialog({
             alwaysOn ? serviceCopy(t, serviceId, "alwaysOnWhy") : "",
           ],
         ]
-      : [
-          why,
-          cost,
-          dataOut,
-          [t("externalServices:info.source"), serviceCopy(t, serviceId, "order")],
-        ];
+      : [why, cost, dataOut];
   const url = serviceCopy(t, serviceId, "getKeyUrl") || getKeyUrl || "";
   const linkLabel = serviceCopy(t, serviceId, "getKeyLabel");
   return (

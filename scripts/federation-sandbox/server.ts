@@ -277,6 +277,17 @@ async function main() {
   const { updateInstanceSettings } =
     await import("../../backend/src/services/instanceSettingsService");
   await updateInstanceSettings({ betaFeaturesEnabled: true });
+  // The server identity lives in the instance settings (FEDERATION_* are no longer read).
+  const { ensureAdminSettingsRow } = await import("../../backend/src/services/adminSettingsRow");
+  const { encryptApiKey } = await import("../../backend/src/utils/encryption");
+  await prisma.adminSettings.update({
+    where: { id: await ensureAdminSettingsRow() },
+    data: {
+      federationEnabled: true,
+      federationOrigin: process.env.SANDBOX_PUBLIC_ORIGIN!,
+      federationPrivateKey: encryptApiKey(fs.readFileSync(process.env.SANDBOX_KEY_FILE!, "utf8")),
+    },
+  });
   device = await generateDevice("Sandbox device");
   await registerDevice(user, device.device.public);
   server.listen(443, "0.0.0.0");

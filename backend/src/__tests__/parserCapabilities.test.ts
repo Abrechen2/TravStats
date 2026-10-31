@@ -43,7 +43,7 @@ describe("GET /parser-capabilities", () => {
     else process.env.OLLAMA_MODEL = savedModel;
   });
 
-  it("reports an LLM that is configured through the environment", async () => {
+  it("ignores OLLAMA_URL/OLLAMA_MODEL: only the admin settings configure the LLM", async () => {
     await clearAdminOllama();
     // A LAN address: since beta.17 a model outside the local network (192.0.2.x
     // is public TEST-NET) needs the admin's cloud consent first — that case is
@@ -52,7 +52,19 @@ describe("GET /parser-capabilities", () => {
     process.env.OLLAMA_MODEL = "gemma3:12b";
 
     const res = await request(app).get("/api/v1/parser-capabilities").expect(200);
-    expect(res.body.hasLlm).toBe(true);
+    expect(res.body.hasLlm).toBe(false);
+  });
+
+  it("reports an LLM that the admin settings name", async () => {
+    await prisma.adminSettings.updateMany({
+      data: { ollamaUrl: "http://192.168.0.10:11434", ollamaModel: "gemma3:12b" },
+    });
+    try {
+      const res = await request(app).get("/api/v1/parser-capabilities").expect(200);
+      expect(res.body.hasLlm).toBe(true);
+    } finally {
+      await clearAdminOllama();
+    }
   });
 
   it("reports none when neither the admin settings nor the environment name one", async () => {

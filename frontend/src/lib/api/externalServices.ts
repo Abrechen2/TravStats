@@ -40,7 +40,7 @@ export interface ServiceQuota {
   resetsAt?: string;
 }
 
-export type InstanceSource = "instance" | "env" | "none";
+export type InstanceSource = "instance" | "none";
 
 export type ServiceCredential = "key" | "oauthClient" | "urlKey" | "url" | "none" | "smtp";
 
@@ -97,7 +97,7 @@ export interface ServiceTestResult {
   usedQuota: boolean;
 }
 
-export type EffectiveSource = "account" | "instance" | "env" | "none" | "off";
+export type EffectiveSource = "account" | "instance" | "none" | "off";
 
 export interface AccountService {
   id: string;

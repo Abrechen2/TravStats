@@ -207,7 +207,7 @@ export async function resolveRailLlmChain(userId?: string): Promise<LlmTarget[]>
   // localhost fallback either — no probe may reach it.
   if (await isServiceDisabledByAdmin("ollama")) return [];
   // Fail closed in the chain itself (invariant 2): when the resolver left a
-  // remote OLLAMA_URL out for want of consent, the default must not rebuild it.
+  // remote Ollama out for want of consent, the default must not rebuild it.
   const fallback = ollamaTarget();
   return fallback.isCloud ? [] : [fallback];
 }

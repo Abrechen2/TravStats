@@ -110,3 +110,17 @@ function matchKeyword(
   const contains = folded.find((k) => k.folded.includes(needle));
   return contains ? { raw: contains.raw, starts: false } : null;
 }
+
+/**
+ * Copy that may be absent, as "" — never as its key. i18next answers an EMPTY
+ * defaultValue with the key itself (returnEmptyString is off), which would then
+ * be split into "keywords" and searched; a sentinel tells a miss apart.
+ */
+export function optionalCopy(
+  t: (key: string, options?: Record<string, unknown>) => string,
+  key: string
+): string {
+  const MISSING = "\u0000missing";
+  const value = t(key, { defaultValue: MISSING });
+  return value === MISSING ? "" : value;
+}

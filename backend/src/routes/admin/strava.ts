@@ -37,7 +37,6 @@ router.get("/", async (_req: AuthRequest, res: Response, next: NextFunction): Pr
     res.json({
       clientId: row?.stravaClientId ?? null,
       secretSet: Boolean(row?.stravaClientSecret),
-      envConfigured: Boolean(process.env.STRAVA_CLIENT_ID && process.env.STRAVA_CLIENT_SECRET),
     });
   } catch (error) {
     next(error);
@@ -64,7 +63,6 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     res.json({
       clientId: row.stravaClientId,
       secretSet: Boolean(row.stravaClientSecret),
-      envConfigured: Boolean(process.env.STRAVA_CLIENT_ID && process.env.STRAVA_CLIENT_SECRET),
     });
   } catch (error) {
     next(error);

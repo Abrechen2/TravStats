@@ -1,7 +1,7 @@
 /**
  * API Key Resolver Service
  *
- * Resolves API keys with priority: User Key > Global Key > ENV Variable
+ * Resolves API keys with priority: User Key > Global Key
  */
 
 import { prisma } from "../db";
@@ -33,7 +33,7 @@ export interface OpenSkyCredentials {
 }
 
 /** Where a resolved key came from — decides whose FlightAware account a call bills. */
-export type ApiKeySource = "user" | "global" | "env";
+export type ApiKeySource = "user" | "global";
 export interface ResolvedApiKey {
   key: string | null;
   source: ApiKeySource | null;
@@ -46,7 +46,7 @@ const NO_KEY: ResolvedApiKey = { key: null, source: null };
  * The external-services policy for one lookup (forgejo#392): is the service
  * off for this caller, and may the caller's own key be used at all? "Off" is
  * decided BEFORE any source is read, so it blocks the account key and the
- * ENV fallback alike — an admin who switches a service off means it.
+ * fallbacks alike — an admin who switches a service off means it.
  */
 async function policyFor(
   serviceId: string | undefined,
@@ -60,10 +60,8 @@ async function policyFor(
   }
   return { off: null, accountKeysAllowed: !policy.accountKeysForbidden.includes(serviceId) };
 }
-const envKey = (value: string | undefined): ResolvedApiKey =>
-  value ? { key: value, source: "env" } : NO_KEY;
 
-/** Resolve a provider key with its source. Priority: User Key > Global Key > ENV Variable. */
+/** Resolve a provider key with its source. Priority: User Key > Global Key. */
 export async function resolveApiKey(
   provider: ApiProvider,
   userId?: string
@@ -166,7 +164,7 @@ export async function resolveApiKey(
           globalKey = adminSettings.globalAdsblolApiKey;
           break;
         // No user-level key for logostream — logos are instance-wide assets,
-        // so resolution is global → env only.
+        // so resolution is global only.
         case "logostream":
           globalKey = adminSettings.globalLogostreamApiKey;
           break;
@@ -191,35 +189,7 @@ export async function resolveApiKey(
       }
     }
 
-    // 3. Fallback to ENV variable
-    switch (provider) {
-      case "openai":
-        return envKey(process.env.OPENAI_API_KEY);
-      case "claude":
-        return envKey(process.env.CLAUDE_API_KEY);
-      case "airlabs":
-        return envKey(process.env.AIRLABS_API_KEY);
-      case "aviationstack":
-        return envKey(process.env.AVIATIONSTACK_API_KEY);
-      case "aerodatabox":
-        return envKey(process.env.AERODATABOX_API_KEY);
-      case "aeroapi":
-        return envKey(process.env.AEROAPI_API_KEY);
-      case "adsbx":
-        return envKey(process.env.ADSBX_RAPIDAPI_KEY);
-      case "adsblol":
-        return envKey(process.env.ADSBLOL_API_KEY);
-      case "logostream":
-        return envKey(process.env.LOGOSTREAM_API_KEY);
-      case "googlePlaces":
-        return envKey(process.env.GOOGLE_PLACES_API_KEY);
-      case "openrouteservice":
-        return envKey(process.env.OPENROUTESERVICE_API_KEY);
-      case "graphhopper":
-        return envKey(process.env.GRAPHHOPPER_API_KEY);
-      default:
-        return NO_KEY;
-    }
+    return NO_KEY;
   } catch (error) {
     logger.error({
       operation: "api_key_resolution_error",
@@ -235,7 +205,7 @@ export async function resolveApiKey(
 }
 
 /**
- * The key for a provider, as a string. Priority: User Key > Global Key > ENV.
+ * The key for a provider, as a string. Priority: User Key > Global Key.
  * A caller that must act on WHERE the key came from uses `resolveApiKey` and
  * the key and its source from that ONE resolution — a second read could see
  * a different key.
@@ -246,7 +216,7 @@ export async function getApiKey(provider: ApiProvider, userId?: string): Promise
 
 /**
  * Get OpenSky credentials with priority resolution
- * Priority: User Credentials > Global Credentials > ENV Variables
+ * Priority: User Credentials > Global Credentials
  */
 export async function getOpenSkyCredentials(userId?: string): Promise<OpenSkyCredentials | null> {
   try {
@@ -325,21 +295,6 @@ export async function getOpenSkyCredentials(userId?: string): Promise<OpenSkyCre
         }
         return creds;
       }
-    }
-
-    // 3. Fallback to ENV variables
-    const envClientId = process.env.OPENSKY_CLIENT_ID;
-    const envClientSecret = process.env.OPENSKY_CLIENT_SECRET;
-    const envUsername = process.env.OPENSKY_USERNAME;
-    const envPassword = process.env.OPENSKY_PASSWORD;
-
-    if (envClientId || envUsername) {
-      return {
-        clientId: envClientId || undefined,
-        clientSecret: envClientSecret || undefined,
-        username: envUsername || undefined,
-        password: envPassword || undefined,
-      };
     }
 
     return null;
@@ -480,42 +435,7 @@ export async function hasApiKeyAccess(
       }
     }
 
-    // Check ENV variable
-    let hasEnvKey = false;
-    switch (provider) {
-      case "openai":
-        hasEnvKey = !!process.env.OPENAI_API_KEY;
-        break;
-      case "claude":
-        hasEnvKey = !!process.env.CLAUDE_API_KEY;
-        break;
-      case "airlabs":
-        hasEnvKey = !!process.env.AIRLABS_API_KEY;
-        break;
-      case "aviationstack":
-        hasEnvKey = !!process.env.AVIATIONSTACK_API_KEY;
-        break;
-      case "aerodatabox":
-        hasEnvKey = !!process.env.AERODATABOX_API_KEY;
-        break;
-      case "aeroapi":
-        hasEnvKey = !!process.env.AEROAPI_API_KEY;
-        break;
-      case "adsbx":
-        hasEnvKey = !!process.env.ADSBX_RAPIDAPI_KEY;
-        break;
-      case "adsblol":
-        hasEnvKey = !!process.env.ADSBLOL_API_KEY;
-        break;
-      case "openrouteservice":
-        hasEnvKey = !!process.env.OPENROUTESERVICE_API_KEY;
-        break;
-      case "graphhopper":
-        hasEnvKey = !!process.env.GRAPHHOPPER_API_KEY;
-        break;
-    }
-
-    return { hasAccess: hasEnvKey, isShared: false };
+    return { hasAccess: false, isShared: false };
   } catch (error) {
     logger.error({
       operation: "api_key_access_check_error",

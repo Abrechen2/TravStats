@@ -9,6 +9,7 @@
 import { AppError } from "../../middleware/errorHandler";
 import { decryptApiKey } from "../../utils/encryption";
 import { encryptUnlessMasked } from "../../utils/maskedKey";
+import { parseOwnGeoUrl } from "../geo/ownServerConfig";
 import { checkLlmBaseUrl } from "../llm/llmEndpoint";
 import { normalizeDawarichBaseUrl } from "../dawarich/errors";
 import { normalizeImmichBaseUrl } from "../immich/types";
@@ -103,6 +104,13 @@ function normalizeUrl(service: ServiceDef, field: FieldDef, raw: string): string
     const relay = normalizeRelayUrl(raw);
     if (!relay) throw bad("Must be an https URL (plain http only for localhost)", field.key);
     return relay;
+  }
+  if (field.column === "ownGeoUrl") {
+    try {
+      return parseOwnGeoUrl(raw) ?? raw;
+    } catch {
+      throw bad("Must be an https address without a path", field.key);
+    }
   }
   if (service.id === "customLlm") {
     const check = checkLlmBaseUrl(raw);

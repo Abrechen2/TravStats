@@ -195,10 +195,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       opensky: {
         hasKey: hasUserOpensky,
         isShared: openskyShared,
-        hasAccess:
-          hasUserOpensky ||
-          hasGlobalOpensky ||
-          !!(process.env.OPENSKY_CLIENT_ID || process.env.OPENSKY_USERNAME),
+        hasAccess: hasUserOpensky || hasGlobalOpensky,
       },
     });
   } catch (error) {

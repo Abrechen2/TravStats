@@ -286,12 +286,8 @@ export async function geocodeAddress(parts: GeocodeParts): Promise<Coordinates |
     nominatimUrl = settings.nominatimUrl;
   } catch (error) {
     // resolveGeocoderUrls() already applies DB > ENV > default internally,
-    // so a rejection means the DB read itself failed — but the ENV tier is
-    // still readable synchronously here. Honor it before falling all the way
-    // to the public default (matters for air-gapped self-hosters during a
-    // DB blip).
-    nominatimUrl = process.env.NOMINATIM_URL ?? DEFAULT_NOMINATIM_URL;
-    logger.warn({ error }, "failed to resolve geocoder settings, falling back to ENV/default URL");
+    nominatimUrl = DEFAULT_NOMINATIM_URL;
+    logger.warn({ error }, "failed to resolve geocoder settings, falling back to the default URL");
   }
 
   const baseUrl = nominatimUrl.replace(/\/+$/, "");
@@ -436,8 +432,8 @@ export async function reverseGeocodeDetailed(
     const settings = await resolveGeocoderUrls();
     nominatimUrl = settings.nominatimUrl;
   } catch (error) {
-    nominatimUrl = process.env.NOMINATIM_URL ?? DEFAULT_NOMINATIM_URL;
-    logger.warn({ error }, "failed to resolve geocoder settings, falling back to ENV/default URL");
+    nominatimUrl = DEFAULT_NOMINATIM_URL;
+    logger.warn({ error }, "failed to resolve geocoder settings, falling back to the default URL");
   }
 
   const baseUrl = nominatimUrl.replace(/\/+$/, "");

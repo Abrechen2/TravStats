@@ -1,3 +1,4 @@
+import { setFederationIdentity } from "../../federation/__tests__/identityFixture";
 import express from "express";
 import request from "supertest";
 import fs from "fs";
@@ -72,14 +73,13 @@ async function share(channel: string, scope: unknown, status = "accepted") {
 }
 const ferryScope = (year: number | null) => ({ groups: ["trips"], domains: ["ferry"], year });
 
+let restoreIdentity: () => Promise<void> = async () => undefined;
 beforeAll(async () => {
   fs.writeFileSync(
     path.join(dir, "local.key"),
     keys.local.privateKey.export({ type: "pkcs8", format: "pem" })
   );
-  process.env.FEDERATION_ENABLED = "1";
-  process.env.FEDERATION_PUBLIC_ORIGIN = LOCAL;
-  process.env.FEDERATION_KEY_FILE = path.join(dir, "local.key");
+  restoreIdentity = await setFederationIdentity(LOCAL, path.join(dir, "local.key"));
   resetIdentityCache();
   for (const [origin, pair] of [
     [REMOTE, keys.remote],
@@ -111,8 +111,7 @@ afterEach(() => warn.mockRestore());
 afterAll(async () => {
   await prisma.comparisonPeer.deleteMany({ where: { origin: { in: [REMOTE, OTHER] } } });
   await prisma.user.delete({ where: { id: ownerId } });
-  for (const key of ["FEDERATION_ENABLED", "FEDERATION_PUBLIC_ORIGIN", "FEDERATION_KEY_FILE"])
-    delete process.env[key];
+  await restoreIdentity();
   fs.rmSync(dir, { recursive: true, force: true });
   await prisma.$disconnect();
 });

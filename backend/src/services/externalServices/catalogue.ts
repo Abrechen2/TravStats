@@ -52,7 +52,6 @@ function svc(
     keyless: false,
     alwaysOn: false,
     getKeyUrl: null,
-    env: [],
     enabled: POLICY,
     fields: [],
     accountFields: [],
@@ -76,7 +75,6 @@ function keyService(
   provider: string,
   adminColumn: string,
   userColumn: string,
-  envName: string,
   getKeyUrl: string,
   extra: Partial<ServiceDef> = {}
 ): ServiceDef {
@@ -88,7 +86,6 @@ function keyService(
     credential: "key",
     resolverProvider: provider,
     getKeyUrl,
-    env: [envName],
     fields: [admin("apiKey", "secret", adminColumn), ...extraFields],
     accountFields: [user("apiKey", "secret", userColumn)],
     requiredFields: ["apiKey"],
@@ -105,7 +102,6 @@ export const SERVICES: readonly ServiceDef[] = [
     "airlabs",
     "globalAirlabsApiKey",
     "airlabsApiKey",
-    "AIRLABS_API_KEY",
     "https://airlabs.co/",
     { recommended: "free", quotaProvider: "airlabs" }
   ),
@@ -115,7 +111,6 @@ export const SERVICES: readonly ServiceDef[] = [
     "aviationstack",
     "globalAviationstackApiKey",
     "aviationstackApiKey",
-    "AVIATIONSTACK_API_KEY",
     "https://aviationstack.com/",
     {
       quotaProvider: "aviationstack",
@@ -128,7 +123,6 @@ export const SERVICES: readonly ServiceDef[] = [
     "aerodatabox",
     "globalAerodataboxApiKey",
     "aerodataboxApiKey",
-    "AERODATABOX_API_KEY",
     "https://rapidapi.com/aedbx-aedbx/api/aerodatabox",
     { recommended: "free", quotaProvider: "aerodatabox" }
   ),
@@ -141,7 +135,6 @@ export const SERVICES: readonly ServiceDef[] = [
     recommended: "freeCredit",
     resolverProvider: "aeroapi",
     getKeyUrl: "https://www.flightaware.com/aeroapi/portal/",
-    env: ["AEROAPI_API_KEY"],
     fields: [
       admin("apiKey", "secret", "globalAeroapiApiKey"),
       admin("tier", "select", "aeroapiTier", false, ["personal", "personal_feeder", "custom"]),
@@ -158,7 +151,6 @@ export const SERVICES: readonly ServiceDef[] = [
     credential: "oauthClient",
     recommended: "free",
     getKeyUrl: "https://opensky-network.org/",
-    env: ["OPENSKY_CLIENT_ID", "OPENSKY_CLIENT_SECRET", "OPENSKY_USERNAME", "OPENSKY_PASSWORD"],
     fields: [
       admin("clientId", "secret", "globalOpenskyClientId"),
       admin("clientSecret", "secret", "globalOpenskyClientSecret"),
@@ -183,7 +175,6 @@ export const SERVICES: readonly ServiceDef[] = [
     keyless: true,
     recommended: "free",
     resolverProvider: "adsblol",
-    env: ["ADSBLOL_API_KEY"],
     enabled: { kind: "adminColumns", columns: ["adsbLolEnabled"] },
     fields: [admin("apiKey", "secret", "globalAdsblolApiKey", true)],
     tester: "adsblol",
@@ -196,11 +187,19 @@ export const SERVICES: readonly ServiceDef[] = [
     credential: "key",
     resolverProvider: "adsbx",
     getKeyUrl: "https://rapidapi.com/adsbx/api/adsbexchange-com1",
-    env: ["ADSBX_RAPIDAPI_KEY"],
     fields: [admin("apiKey", "secret", "globalAdsbxApiKey")],
     requiredFields: ["apiKey"],
     tester: "adsbx",
     quotaProvider: "adsbx",
+  }),
+  svc({
+    id: "aisstream",
+    category: "mapsRoutes",
+    level: "instance",
+    credential: "key",
+    getKeyUrl: "https://aisstream.io/apikeys",
+    fields: [admin("apiKey", "secret", "globalAisstreamApiKey")],
+    requiredFields: ["apiKey"],
   }),
 
   // ---- maps & routes -------------------------------------------------------
@@ -210,7 +209,6 @@ export const SERVICES: readonly ServiceDef[] = [
     "openrouteservice",
     "globalOpenrouteserviceApiKey",
     "openrouteserviceApiKey",
-    "OPENROUTESERVICE_API_KEY",
     "https://openrouteservice.org/dev/#/signup",
     { recommended: "free" }
   ),
@@ -220,7 +218,6 @@ export const SERVICES: readonly ServiceDef[] = [
     "graphhopper",
     "globalGraphhopperApiKey",
     "graphhopperApiKey",
-    "GRAPHHOPPER_API_KEY",
     "https://www.graphhopper.com/dashboard/"
   ),
   svc({
@@ -230,11 +227,11 @@ export const SERVICES: readonly ServiceDef[] = [
     credential: "none",
     keyless: true,
     recommended: "free",
-    env: ["RAIL_LOOKUP_CONTACT"],
     enabled: { kind: "adminColumns", columns: ["railTransitousEnabled", "railDbRestEnabled"] },
     fields: [
       admin("transitous", "switch", "railTransitousEnabled"),
       admin("dbRest", "switch", "railDbRestEnabled"),
+      admin("contact", "text", "railLookupContact", true),
     ],
   }),
   svc({
@@ -244,7 +241,6 @@ export const SERVICES: readonly ServiceDef[] = [
     credential: "key",
     resolverProvider: "googlePlaces",
     getKeyUrl: "https://console.cloud.google.com/google/maps-apis",
-    env: ["GOOGLE_PLACES_API_KEY"],
     fields: [admin("apiKey", "secret", "globalGooglePlacesApiKey")],
     requiredFields: ["apiKey"],
     tester: "googlePlaces",
@@ -261,10 +257,10 @@ export const SERVICES: readonly ServiceDef[] = [
     // the public servers points the two URLs at their own (expert fields).
     alwaysOn: true,
     recommended: "free",
-    env: ["PHOTON_URL", "NOMINATIM_URL"],
     fields: [
       admin("photonUrl", "url", "photonUrl", true),
       admin("nominatimUrl", "url", "nominatimUrl", true),
+      admin("ownGeoUrl", "url", "ownGeoUrl", true),
     ],
   }),
   svc({
@@ -287,7 +283,6 @@ export const SERVICES: readonly ServiceDef[] = [
     credential: "urlKey",
     connection: true,
     recommended: "free",
-    env: ["IMMICH_BASE_URL", "IMMICH_API_KEY"],
     fields: [
       admin("baseUrl", "url", "globalImmichBaseUrl"),
       admin("apiKey", "secret", "globalImmichApiKey"),
@@ -306,7 +301,6 @@ export const SERVICES: readonly ServiceDef[] = [
     credential: "urlKey",
     connection: true,
     adminRow: false,
-    env: ["DAWARICH_BASE_URL", "DAWARICH_API_KEY"],
     fields: [
       admin("baseUrl", "url", "globalDawarichBaseUrl"),
       admin("apiKey", "secret", "globalDawarichApiKey"),
@@ -325,7 +319,6 @@ export const SERVICES: readonly ServiceDef[] = [
     credential: "oauthClient",
     connection: true,
     getKeyUrl: "https://www.strava.com/settings/api",
-    env: ["STRAVA_CLIENT_ID", "STRAVA_CLIENT_SECRET"],
     fields: [
       admin("clientId", "text", "stravaClientId"),
       admin("clientSecret", "secret", "stravaClientSecret"),
@@ -340,7 +333,6 @@ export const SERVICES: readonly ServiceDef[] = [
     level: "instance",
     credential: "url",
     recommended: "free",
-    env: ["OLLAMA_URL"],
     ai: { kind: "ollama" },
     fields: [
       admin("url", "url", "ollamaUrl"),
@@ -421,6 +413,7 @@ export const SERVICES: readonly ServiceDef[] = [
     keyless: true,
     recommended: "free",
     enabled: { kind: "adminColumns", columns: ["openDataEnabled"] },
+    fields: [admin("marketOverpassUrl", "url", "marketOverpassUrl", true)],
   }),
   svc({
     id: "logos",
@@ -430,7 +423,6 @@ export const SERVICES: readonly ServiceDef[] = [
     keyless: true,
     recommended: "free",
     resolverProvider: "logostream",
-    env: ["LOGOSTREAM_API_KEY"],
     fields: [
       admin("apiKey", "secret", "globalLogostreamApiKey", true),
       admin("operatorLogos", "switch", "operatorLogosOpenDataEnabled", true),
@@ -460,7 +452,6 @@ export const SERVICES: readonly ServiceDef[] = [
     credential: "urlKey",
     connection: true,
     recommended: "free",
-    env: ["WEBDAV_URL"],
     // Off stops the account syncs AND the instance backups (the latter through
     // `getWebDAVSettings().enabled`); the column below is only the instance backup switch.
     fields: [

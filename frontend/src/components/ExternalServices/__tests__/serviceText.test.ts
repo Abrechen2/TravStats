@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import i18next from "i18next";
 import de from "../../../i18n/resources/de/externalServices.json";
 import en from "../../../i18n/resources/en/externalServices.json";
 import { failureText, fieldLabel, testReasonText } from "../serviceText";
@@ -41,5 +42,25 @@ describe("service copy and failure text", () => {
       }
     }
     expect(Object.keys(en.services).sort()).toEqual(Object.keys(de.services).sort());
+  });
+});
+
+describe("field labels through the real i18next", () => {
+  it("does not print fields.ollama.url: an empty defaultValue makes i18next answer the key", async () => {
+    const instance = i18next.createInstance();
+    await instance.init({
+      lng: "de",
+      resources: { de: { externalServices: de }, en: { externalServices: en } },
+      returnEmptyString: false,
+      interpolation: { escapeValue: false },
+    });
+    const real = (key: string, options?: Record<string, unknown>) =>
+      instance.t(key, options) as string;
+    for (const key of ["url", "model", "visionModel"]) {
+      const label = fieldLabel(real, "ollama", { key });
+      expect(label, key).not.toContain("fields.");
+      expect(label, key).toBe((de.fields.common as Record<string, string>)[key]);
+    }
+    expect(fieldLabel(real, "ollama", { key: "notAKey" })).toBe("notAKey");
   });
 });

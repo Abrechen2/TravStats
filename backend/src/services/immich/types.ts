@@ -16,7 +16,7 @@ export type ImmichMode = "link" | "import";
 export type ImmichAssetSize = "thumbnail" | "preview" | "original";
 
 /** Which settings tier supplied the connection. */
-export type ImmichConnectionSource = "user" | "global" | "env";
+export type ImmichConnectionSource = "user" | "global";
 
 export interface ImmichConnection {
   /** Normalised, no trailing slash, no credentials. */

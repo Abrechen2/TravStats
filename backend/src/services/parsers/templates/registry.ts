@@ -64,7 +64,7 @@ export class TemplateRegistry {
     this.fixedRepository = options.baseUrl !== undefined;
     this.repository = options.baseUrl
       ? { url: options.baseUrl, origin: "env" }
-      : effectiveTemplateRepo(null, process.env.TEMPLATE_REPO_BASE_URL);
+      : effectiveTemplateRepo(null, undefined);
     const baseUrl = this.repository.url;
     this.fetchJson = options.fetchJson ?? httpsFetchJson;
     this.v1Base = `${baseUrl}/templates`;
@@ -125,13 +125,12 @@ export class TemplateRegistry {
   }
 
   /**
-   * Point every later sync at the repository the admin set (null: the env
-   * var, then the official one). Nothing is fetched here and nothing active
+   * Point every later sync at the repository the admin set (null: the official one). Nothing is fetched here and nothing active
    * changes — the caller syncs, and a failing new repository leaves the last
    * good set serving, exactly as a failing sync always has.
    */
   useRepository(adminUrl: string | null): { url: string; origin: TemplateRepoOrigin } {
-    this.repository = effectiveTemplateRepo(adminUrl, process.env.TEMPLATE_REPO_BASE_URL);
+    this.repository = effectiveTemplateRepo(adminUrl, undefined);
     this.v1Base = `${this.repository.url}/templates`;
     this.v2.setBaseUrl(this.repository.url);
     return this.repository;

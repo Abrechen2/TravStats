@@ -65,13 +65,6 @@ it("reports a stored key while federation is off, when no fingerprint can be sho
   expect((await request(app).get("/api/v1/admin/federation")).body.hasKey).toBe(false);
 });
 
-it("refuses changes while the env override holds the identity", async () => {
-  process.env.FEDERATION_ENABLED = "1";
-  const res = await request(app).post("/api/v1/admin/federation/key").send({});
-  expect(res.status).toBe(409);
-  expect(res.body.code).toBe("COMPARISON_FEDERATION_ENV");
-});
-
 it("pins a peer only when its fingerprint matches its key", async () => {
   const pem = generateKeyPairSync("ed25519")
     .publicKey.export({ type: "spki", format: "pem" })

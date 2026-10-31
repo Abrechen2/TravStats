@@ -1481,6 +1481,20 @@ model AdminSettings {
   // derived from IP, hostname, MAC, or paths.
   usageStatsConsent   String  @default("unset") @map("usage_stats_consent")
   usageStatsInstallId String? @map("usage_stats_install_id")
+  /// Stats service base URL: null = the official one, "" = never send (the kill-switch).
+  usageStatsEndpoint  String? @map("usage_stats_endpoint")
+
+  // === INSTANCE SERVICE SETTINGS THAT USED TO COME FROM ENV (forgejo#392) ===
+  /// A self-run geo server origin (https, no path). Null = the public providers.
+  ownGeoUrl          String? @map("own_geo_url")
+  /// Overpass endpoint for the market-visit catalogue. Null = overpass-api.de.
+  marketOverpassUrl  String? @map("market_overpass_url")
+  /// An e-mail or URL put into the rail lookup's User-Agent, so Transitous can reach the operator.
+  railLookupContact  String? @map("rail_lookup_contact")
+  /// AISStream key (encrypted), the ferry live position.
+  globalAisstreamApiKey String? @map("global_aisstream_api_key")
+  /// When the one-time import of the old service ENV variables ran; never read again after.
+  envImportedAt      DateTime? @map("env_imported_at")
 
   // === IMPORT MODE (forgejo#304) ===
   // Lifts the upload and import rate limits until this instant, so a first

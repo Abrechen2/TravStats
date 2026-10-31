@@ -33,9 +33,9 @@ describe("getApiKey('logostream')", () => {
     expect(await getApiKey("logostream")).toBe("global-logostream-key");
   });
 
-  it("falls back to env when no global key is set", async () => {
+  it("ignores LOGOSTREAM_API_KEY: the environment is never a source", async () => {
     process.env.LOGOSTREAM_API_KEY = "env-logostream-key";
-    expect(await getApiKey("logostream")).toBe("env-logostream-key");
+    expect(await getApiKey("logostream")).toBeNull();
   });
 
   it("returns null when neither exists", async () => {

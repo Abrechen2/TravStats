@@ -61,18 +61,6 @@ const METERED = new Set([
   "graphhopper",
 ]);
 
-const ENV_BY_FIELD: Record<string, Record<string, string>> = {
-  immich: { baseUrl: "IMMICH_BASE_URL", apiKey: "IMMICH_API_KEY" },
-  dawarich: { baseUrl: "DAWARICH_BASE_URL", apiKey: "DAWARICH_API_KEY" },
-  opensky: {
-    clientId: "OPENSKY_CLIENT_ID",
-    clientSecret: "OPENSKY_CLIENT_SECRET",
-    username: "OPENSKY_USERNAME",
-    password: "OPENSKY_PASSWORD",
-  },
-  ollama: { url: "OLLAMA_URL" },
-};
-
 type Row = Record<string, unknown> | null;
 
 /** The plain value of a field; a secret is decrypted, an empty one is null. */
@@ -83,33 +71,24 @@ function plain(field: FieldDef | undefined, row: Row): string | null {
   return field.kind === "secret" ? decryptApiKey(raw) : raw;
 }
 
-function creds(
-  defs: readonly FieldDef[],
-  row: Row,
-  envFallback: boolean,
-  service: ServiceDef
-): Record<string, string | null> {
+function creds(defs: readonly FieldDef[], row: Row): Record<string, string | null> {
   const out: Record<string, string | null> = {};
   for (const f of defs) out[f.key] = plain(f, row);
-  // Fall back to the environment as the runtime does, field by field.
-  // The environment stands in for the WHOLE credential or not at all: a stored
-  // URL must never be paired with the ENV key, which would send that key to a
-  // different server.
-  const tierEmpty = service.requiredFields.every((k) => !out[k]);
-  if (envFallback && tierEmpty) {
-    for (const [key, name] of Object.entries(ENV_BY_FIELD[service.id] ?? {})) {
-      if (!out[key]) out[key] = process.env[name] ?? null;
-    }
-    if (service.credential === "key" && !out.apiKey && service.env[0]) {
-      out.apiKey = process.env[service.env[0]] ?? null;
-    }
-  }
   return out;
 }
 
 /** Stable cause codes for `lastTest.reason` (the page words them, never the server). */
-export type TestReason =
-  "auth" | "quota" | "timeout" | "network" | "http_error" | "not_found" | "disabled" | "unknown";
+export const TEST_REASONS = [
+  "auth",
+  "quota",
+  "timeout",
+  "network",
+  "http_error",
+  "not_found",
+  "disabled",
+  "unknown",
+] as const;
+export type TestReason = (typeof TEST_REASONS)[number];
 
 const REASON_BY_KEY: Record<string, TestReason> = {
   invalid: "auth",
@@ -249,7 +228,7 @@ export async function testInstanceService(id: string): Promise<TestOutcome> {
   if (state.policy.disabled.includes(id)) throw disabled();
 
   if (!service.tester) return { ok: false, reason: "unknown", usedQuota: false, lastTest: null };
-  const outcome = await run(service, creds(service.fields, state.admin, true, service));
+  const outcome = await run(service, creds(service.fields, state.admin));
   const lastTest = await recordTest(null, id, outcome.ok, outcome.reason);
   return { ...outcome, usedQuota: METERED.has(service.tester), lastTest };
 }
@@ -263,7 +242,7 @@ export async function testAccountService(id: string, userId: string): Promise<Te
   if (await offReasonFor(id, userId)) throw disabled();
   const row = (await prisma.userSettings.findUnique({ where: { userId } })) as Row;
   if (!service.tester) return { ok: false, reason: "unknown", usedQuota: false, lastTest: null };
-  const outcome = await run(service, creds(service.accountFields, row, false, service), userId);
+  const outcome = await run(service, creds(service.accountFields, row), userId);
   const lastTest = await recordTest(userId, id, outcome.ok, outcome.reason);
   return { ...outcome, usedQuota: METERED.has(service.tester), lastTest };
 }

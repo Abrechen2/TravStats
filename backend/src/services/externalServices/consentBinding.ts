@@ -7,7 +7,7 @@ export function currentConsentDestination(
 ): string | null {
   const url =
     provider === "ollama"
-      ? (admin?.ollamaUrl ?? process.env.OLLAMA_URL)
+      ? admin?.ollamaUrl
       : provider === "custom"
         ? admin?.openaiCompatBaseUrl
         : null;

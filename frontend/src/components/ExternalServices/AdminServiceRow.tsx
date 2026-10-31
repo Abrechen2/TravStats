@@ -194,14 +194,8 @@ function ExpandedBody({
           gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
         }}
       >
-        <ExpertFact title={t("externalServices:expert.order")}>
-          {serviceCopy(t, service.id, "order", "–")}
-        </ExpertFact>
         <ExpertFact title={t("externalServices:expert.quota")}>
           {serviceCopy(t, service.id, "quotaLine", "–")}
-        </ExpertFact>
-        <ExpertFact title={t("externalServices:expert.env")}>
-          {t("externalServices:expert.envText")}
         </ExpertFact>
       </div>
     );

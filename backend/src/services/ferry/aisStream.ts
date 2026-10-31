@@ -1,5 +1,6 @@
 import WebSocket from "ws";
 import { z } from "zod";
+import { instanceTuning } from "../instanceTuning";
 
 const ENDPOINT = "wss://stream.aisstream.io/v0/stream";
 const WAIT_MS = 15000;
@@ -73,7 +74,7 @@ export function decodePosition(
     observedAt: Number.isFinite(observed) ? new Date(observed).toISOString() : null,
   };
 }
-export const aisConfigured = () => Boolean(process.env.AISSTREAM_API_KEY?.trim());
+export const aisConfigured = () => Boolean(instanceTuning().aisstreamApiKey?.trim());
 const pending = new Map<string, Promise<AisResult>>();
 const cache = new Map<string, { until: number; result: AisResult }>();
 /** Sockets the whole instance holds open at once — the provider's key is shared. */
@@ -90,7 +91,7 @@ const openFor = new Set<string>();
  */
 export async function lookupVessel(mmsi: string, userId: string): Promise<AisResult> {
   if (!/^\d{9}$/.test(mmsi)) return { status: "unavailable", position: null };
-  const key = process.env.AISSTREAM_API_KEY?.trim();
+  const key = instanceTuning().aisstreamApiKey?.trim();
   if (!key) return { status: "notConfigured", position: null };
   const cached = cache.get(mmsi);
   if (cached && cached.until > Date.now()) return cached.result;

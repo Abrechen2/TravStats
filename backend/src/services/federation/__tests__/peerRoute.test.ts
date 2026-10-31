@@ -1,3 +1,4 @@
+import { setFederationIdentity } from "./identityFixture";
 import express from "express";
 import request from "supertest";
 import fs from "fs";
@@ -39,14 +40,13 @@ function signed(body: string) {
 const nonceRow = (m: { nonce: string }) =>
   prisma.comparisonNonce.findUnique({ where: { id: hash(REMOTE + m.nonce) } });
 
+let restoreIdentity: () => Promise<void> = async () => undefined;
 beforeAll(async () => {
   fs.writeFileSync(
     path.join(dir, "local.key"),
     local.privateKey.export({ type: "pkcs8", format: "pem" })
   );
-  process.env.FEDERATION_ENABLED = "1";
-  process.env.FEDERATION_PUBLIC_ORIGIN = LOCAL;
-  process.env.FEDERATION_KEY_FILE = path.join(dir, "local.key");
+  restoreIdentity = await setFederationIdentity(LOCAL, path.join(dir, "local.key"));
   await prisma.comparisonPeer.upsert({
     where: { origin: REMOTE },
     create: {
@@ -62,8 +62,7 @@ beforeEach(() => {
 });
 afterAll(async () => {
   await prisma.comparisonPeer.delete({ where: { origin: REMOTE } });
-  for (const key of ["FEDERATION_ENABLED", "FEDERATION_PUBLIC_ORIGIN", "FEDERATION_KEY_FILE"])
-    delete process.env[key];
+  await restoreIdentity();
   fs.rmSync(dir, { recursive: true, force: true });
   await prisma.$disconnect();
 });
