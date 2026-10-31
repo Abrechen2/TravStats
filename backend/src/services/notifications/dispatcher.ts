@@ -194,6 +194,8 @@ export async function notifyFlightChanged(
 export interface EntryReminder {
   domain: ReminderDomain;
   entryId: string;
+  /** Lodging only: put into the push data as `lodgingId` when set. */
+  lodgingId?: string;
   /** A phone that muted this trip is skipped (forgejo#286). */
   tripId: string | null;
   hours: number;
@@ -288,6 +290,7 @@ export async function notifyEntryReminder(
         domain: entry.domain,
         entryId: entry.entryId,
         ...(entry.domain === "flight" && { flightId: entry.entryId }),
+        ...(entry.lodgingId !== undefined && { lodgingId: entry.lodgingId }),
         sentAt: at.toISOString(),
       });
       let outcome: RelayOutcome;

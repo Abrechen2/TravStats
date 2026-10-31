@@ -425,5 +425,27 @@ describe("notifyReminder", () => {
     const plain = JSON.parse(openOnPhone(p.keys.priv, p.keys.pub, r.pushes[0].ciphertext));
     expect(plain).toMatchObject({ type: "rail.reminder", domain: "rail", entryId: "rail-1" });
     expect(plain.flightId).toBeUndefined();
+    expect(plain.lodgingId).toBeUndefined();
+  });
+
+  it("a lodging reminder's push data carries lodgingId next to the stay id", async () => {
+    const p = await phone();
+    const r = recorder();
+    await notifyEntryReminder(
+      userId,
+      {
+        domain: "lodging",
+        entryId: "stay-1",
+        lodgingId: "lodging-1",
+        tripId: null,
+        hours: 24,
+        anchorAt: new Date("2026-10-14T11:25:00.000Z"),
+        anchorKey: "k",
+        render: () => ({ title: "Check-in in 24 Stunden", body: "Hotel" }),
+      },
+      { send: r.send }
+    );
+    const plain = JSON.parse(openOnPhone(p.keys.priv, p.keys.pub, r.pushes[0].ciphertext));
+    expect(plain).toMatchObject({ domain: "lodging", entryId: "stay-1", lodgingId: "lodging-1" });
   });
 });
