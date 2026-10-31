@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { companionsApi, type Companion } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
@@ -65,12 +65,10 @@ export default function CompanionPicker({ value, onChange }: Props): JSX.Element
   // A typed name must survive the user clicking Save without pressing Enter:
   // the click's mousedown blurs the input first, and the commit lands (a
   // discrete event, flushed synchronously) before the click handler runs.
-  // A blur caused by picking a suggestion is skipped — the pick commits the
-  // full name itself, committing the half-typed query too would add a stray chip.
-  const listRef = useRef<HTMLUListElement>(null);
-  const handleBlur = (e: FocusEvent<HTMLInputElement>): void => {
-    const next = e.relatedTarget;
-    if (next instanceof Node && listRef.current?.contains(next)) return;
+  // Pressing a suggestion must not blur the input (mousedown is prevented on the
+  // list, and the buttons are not tabbable), or the half-typed query would be
+  // committed as a stray chip next to the picked name.
+  const handleBlur = (): void => {
     commit(query);
   };
 
@@ -123,7 +121,6 @@ export default function CompanionPicker({ value, onChange }: Props): JSX.Element
       />
       {filtered.length > 0 && (
         <ul
-          ref={listRef}
           className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-(--bg-surface) shadow-lg"
           // Keep focus in the input while a suggestion is pressed, so no blur
           // commit of the partial query happens.
@@ -133,6 +130,7 @@ export default function CompanionPicker({ value, onChange }: Props): JSX.Element
             <li key={companion.id}>
               <button
                 type="button"
+                tabIndex={-1}
                 className="w-full px-3 py-2 text-left text-sm text-(--text-primary) hover:bg-(--bg-elevated)"
                 onClick={(): void => commit(companion.name)}
               >
