@@ -175,6 +175,9 @@ export const USER_EXPORT_SELECT = {
   // asked again every question it already dismissed. The suggestions
   // themselves are derived and never stored.
   tripSuggestionAnswers: true,
+  // Which reminders the user switched on or off, and how far ahead: a
+  // restored account would otherwise go back to the defaults.
+  reminderPreferences: true,
   // Visit photo suggestions the user refused ("Nicht diese", forgejo#132
   // item 13): the same reason — a restored account must not be offered them again.
   visitPhotoRefusals: true,
@@ -219,6 +222,8 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   tripShareInvites: "single-use credentials",
   externalServiceTests:
     "last connection-test verdicts of this instance's services; re-measured by the next test",
+  reminderClaims:
+    "delivery bookkeeping (which reminder already went out); a restored account re-derives it from its entries",
   tripShareRosterConsents:
     "answers to people on other servers on a shared trip, bound to that group; asked again on the next share",
   tripShareWithheld:

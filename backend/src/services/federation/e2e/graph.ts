@@ -189,6 +189,9 @@ export const NON_TRAVEL_RELATIONS = [
   "webauthnCredentials",
   // Last connectivity verdict per external service (forgejo#392): bookkeeping, not travel data.
   "externalServiceTests",
+  // Reminder settings and the sent-ledger: notification bookkeeping, never shared travel data.
+  "reminderPreferences",
+  "reminderClaims",
   "settings",
   "analyticsEvents",
   "createdInvitations",

@@ -47,9 +47,17 @@ function sourceFiles(dir: string): string[] {
   });
 }
 
-/** Comments may name an endpoint (`llmTimeout.ts` explains a hung one). */
+/**
+ * Comments may name an endpoint (`llmTimeout.ts` explains a hung one), and a
+ * module specifier is a path, not a request: `from "../notifications/messages"`
+ * is the push texts module, not Anthropic's `/messages`.
+ */
 function withoutComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "")
+    .replace(/\bfrom\s+(["'])[^"'\n]*\1/g, "from $1$1")
+    .replace(/^\s*import\s+(["'])[^"'\n]*\1/gm, "import $1$1");
 }
 
 const files = sourceFiles(SRC_ROOT).map((file) => ({
@@ -61,9 +69,6 @@ const files = sourceFiles(SRC_ROOT).map((file) => ({
 const NO_DOCUMENT_CALLERS = new Set([
   // Key check for the legacy per-user OpenAI key: sends the literal "test".
   "services/apiKeyTester.ts",
-  // False positive: `from "./messages"` (the push message texts module) matches the
-  // Anthropic `/messages` pattern. The dispatcher calls no model and sends no document.
-  "services/notifications/dispatcher.ts",
 ]);
 
 const callers = files
@@ -88,6 +93,14 @@ const MODEL_CALLERS = [
 describe("every language-model request passes the admin switch and the cloud consent", () => {
   it("finds the model endpoints only in the provider module — no parallel code path", () => {
     expect(callers.map((c) => c.file)).toEqual(["services/llm/llmProvider.ts"]);
+  });
+
+  it('does not read an import path as an endpoint — `from "../notifications/messages"` is not /messages', () => {
+    const code = withoutComments(
+      'import { a } from "../notifications/messages";\nimport type { B } from \'./messages\';\nimport "./chat/completions";\n'
+    );
+    expect(code.match(MODEL_ENDPOINT)).toBeNull();
+    expect(withoutComments("fetch(`${base}/v1/messages`)").match(MODEL_ENDPOINT)).toHaveLength(1);
   });
 
   it("names all three protocols' generate endpoints there — the scan is not vacuous", () => {

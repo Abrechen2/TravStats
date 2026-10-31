@@ -246,7 +246,29 @@ describe("StayEditor", () => {
     expect(payload.checkOutTime).toBe("11:00");
   });
 
-  it("sends null times when no time is entered (a date alone stays a date)", async () => {
+  it("pre-fills 15:00 / 11:00 on a new stay and sends them as entered", async () => {
+    vi.mocked(createStay).mockResolvedValue({ ...baseStay, id: "new-stay" });
+
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    expect(screen.getByLabelText(/^lodging:field\.checkInTime\b/)).toHaveValue("15:00");
+    expect(screen.getByLabelText(/^lodging:field\.checkOutTime\b/)).toHaveValue("11:00");
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
+      target: { value: "2026-07-11" },
+    });
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkOut\b/), {
+      target: { value: "2026-07-12" },
+    });
+
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    await waitFor(() => expect(createStay).toHaveBeenCalled());
+    const [, payload] = vi.mocked(createStay).mock.calls[0];
+    expect(payload.checkInTime).toBe("15:00");
+    expect(payload.checkOutTime).toBe("11:00");
+  });
+
+  it("sends null times when the pre-filled times are cleared (a date alone stays a date)", async () => {
     vi.mocked(createStay).mockResolvedValue({ ...baseStay, id: "new-stay" });
 
     render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
@@ -256,6 +278,12 @@ describe("StayEditor", () => {
     });
     fireEvent.change(screen.getByLabelText(/^lodging:field\.checkOut\b/), {
       target: { value: "2026-07-12" },
+    });
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkInTime\b/), {
+      target: { value: "" },
+    });
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkOutTime\b/), {
+      target: { value: "" },
     });
 
     await userEvent.click(screen.getByTestId("stay-editor-save"));

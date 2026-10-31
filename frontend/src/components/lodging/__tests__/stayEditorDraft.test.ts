@@ -27,3 +27,33 @@ describe("stayDraftFields - the days", () => {
     expect(stayDraftFields(null, "EUR")).toMatchObject({ checkIn: "", checkOut: "" });
   });
 });
+
+describe("stayDraftFields - the hotel hours", () => {
+  it("pre-fills check-in 15:00 and check-out 11:00 on a NEW stay", () => {
+    expect(stayDraftFields(null, "EUR")).toMatchObject({
+      checkInTime: "15:00",
+      checkOutTime: "11:00",
+    });
+    expect(stayDraftFields(undefined, "EUR")).toMatchObject({
+      checkInTime: "15:00",
+      checkOutTime: "11:00",
+    });
+  });
+
+  it("leaves an existing stay untouched, with or without times", () => {
+    const untimed = {
+      checkIn: "2026-07-11T00:00:00.000Z",
+      checkOut: null,
+    } as unknown as LodgingStay;
+    expect(stayDraftFields(untimed, "EUR")).toMatchObject({ checkInTime: "", checkOutTime: "" });
+    const timed = {
+      ...untimed,
+      checkInTime: "13:30",
+      checkOutTime: "10:00",
+    } as unknown as LodgingStay;
+    expect(stayDraftFields(timed, "EUR")).toMatchObject({
+      checkInTime: "13:30",
+      checkOutTime: "10:00",
+    });
+  });
+});

@@ -61,11 +61,26 @@ function emlWithCalendar(): Buffer {
 describe("rail through the parse routes", () => {
   let userId: string;
   let cookie: string;
-  const previousOllama = process.env.OLLAMA_URL;
+  let previousOllamaUrl: string | null = null;
+  let adminRowId: number | null = null;
 
   beforeAll(async () => {
     // A configured model that does not answer: the failure path is the point.
-    process.env.OLLAMA_URL = "http://127.0.0.1:9";
+    // The endpoint is an instance setting (the environment is no longer read);
+    // without it the chain is "nothing configured" and says llmProviderIncomplete.
+    const existing = await prisma.adminSettings.findFirst();
+    if (existing) {
+      adminRowId = null;
+      previousOllamaUrl = existing.ollamaUrl;
+      await prisma.adminSettings.update({
+        where: { id: existing.id },
+        data: { ollamaUrl: "http://127.0.0.1:9" },
+      });
+    } else {
+      adminRowId = (
+        await prisma.adminSettings.create({ data: { ollamaUrl: "http://127.0.0.1:9" } })
+      ).id;
+    }
     userId = (
       await prisma.user.create({
         data: {
@@ -94,7 +109,11 @@ describe("rail through the parse routes", () => {
   });
 
   afterAll(async () => {
-    process.env.OLLAMA_URL = previousOllama;
+    if (adminRowId !== null) {
+      await prisma.adminSettings.delete({ where: { id: adminRowId } }).catch(() => undefined);
+    } else {
+      await prisma.adminSettings.updateMany({ data: { ollamaUrl: previousOllamaUrl } });
+    }
     await prisma.railStation.deleteMany({ where: { sourceId: { startsWith: PREFIX } } });
     await prisma.user.delete({ where: { id: userId } }).catch(() => undefined);
   });

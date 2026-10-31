@@ -47,6 +47,10 @@ export interface StayDraftFields {
 export const toDateInput = (iso: string | null | undefined): string =>
   iso ? iso.slice(0, 10) : "";
 
+/** Typical hotel hours, pre-filled on a NEW stay (owner, 2026-10-31); editable, and never applied to a stored stay. */
+export const DEFAULT_CHECK_IN_TIME = "15:00";
+export const DEFAULT_CHECK_OUT_TIME = "11:00";
+
 /**
  * What the form starts with: the stored stay, or - for a NEW stay - nothing
  * but the currency the bill is most likely written in. A new stay deliberately
@@ -62,8 +66,9 @@ export function stayDraftFields(
     // and the lists read - and the legacy anchor only where `times` is absent.
     checkIn: (stay && stayCheckIn(stay)?.date) || toDateInput(stay?.checkIn),
     checkOut: (stay && stayCheckOut(stay)?.date) || toDateInput(stay?.checkOut),
-    checkInTime: stay?.checkInTime ?? "",
-    checkOutTime: stay?.checkOutTime ?? "",
+    // A stored stay keeps exactly what it has (empty stays empty); only a new one is pre-filled.
+    checkInTime: stay ? (stay.checkInTime ?? "") : DEFAULT_CHECK_IN_TIME,
+    checkOutTime: stay ? (stay.checkOutTime ?? "") : DEFAULT_CHECK_OUT_TIME,
     datePrecision: stay?.datePrecision ?? "DAY",
     nightsText: stay?.nights != null ? String(stay.nights) : "",
     isCancelled: stay?.status === "cancelled",
