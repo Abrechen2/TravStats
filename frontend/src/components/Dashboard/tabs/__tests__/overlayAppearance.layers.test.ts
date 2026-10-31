@@ -243,6 +243,8 @@ describe("allTabAppearanceDomains", () => {
       "tour",
       "roadtrip",
       "rail",
+      "bus",
+      "ferry",
       "rental",
     ]);
     expect(allTabAppearanceDomains(false)).toEqual(["flight", "cruise", "lodging", "poi"]);

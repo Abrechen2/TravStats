@@ -1,4 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("../../hooks/useDashboardRoute", () => ({
+  useDashboardRoute: () => ({ tab: "flight", mode: "routes" }),
+}));
+
 import { fireEvent, render, screen } from "@testing-library/react";
 import { OverlayAppearanceSections } from "./OverlayAppearanceSections";
 import { FlatMapControlPanel } from "./FlatMapControlPanel";

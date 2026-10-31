@@ -1,3 +1,4 @@
+import { useRoutesVisible } from "../../../store/mapRoutesStore";
 import { useMemo } from "react";
 import type { JSX } from "react";
 import { PathLayer } from "@deck.gl/layers";
@@ -76,7 +77,9 @@ export function buildTourLegendRows(
   t: (key: string) => string,
   legendRow: (background: string, label: string, key: string) => JSX.Element,
   /** Roadtrips (2.7) draw in their own hue, so they get their own row. */
-  roadtrip?: { color: string; label: string }
+  roadtrip?: { color: string; label: string },
+  /** The panel's "Routen" switches: a hidden kind of line leaves the key. */
+  lines: { tour: boolean; roadtrip: boolean } = { tour: true, roadtrip: true }
 ): TourLegendState {
   const hasData =
     showTours && !fetch.toursLoading && !fetch.toursLoadError && fetch.tours.length > 0;
@@ -92,7 +95,7 @@ export function buildTourLegendRows(
   const tourWord = t("dashboard:legend.tour");
   const rows = [
     ...buildTourLegend()
-      .filter((row) => shownModes.has(row.mode))
+      .filter((row) => lines.tour && shownModes.has(row.mode))
       .map((row) =>
         legendRow(
           rgbCss(row.color),
@@ -100,7 +103,9 @@ export function buildTourLegendRows(
           `tour-${row.mode}`
         )
       ),
-    ...(hasRoadtrips && roadtrip ? [legendRow(roadtrip.color, roadtrip.label, "roadtrip")] : []),
+    ...(lines.roadtrip && hasRoadtrips && roadtrip
+      ? [legendRow(roadtrip.color, roadtrip.label, "roadtrip")]
+      : []),
   ];
   return { hasData, rows };
 }
@@ -224,16 +229,21 @@ export function useTourDeckLayers(
   tours: readonly TourSummary[] = NO_TOURS
 ): Layer[] {
   const { tourLineWidth, roadtripLineWidth } = useOverlayAppearance();
+  const showTour = useRoutesVisible("tour");
+  const showRoadtrip = useRoutesVisible("roadtrip");
   return useMemo(
     () =>
       withTourCards(
-        buildTourDeckLayers(pathData, onGlobe ? TOUR_PATH_GLOBE_ALTITUDE_M : 0, {
-          tour: tourLineWidth,
-          roadtrip: roadtripLineWidth,
-        }),
+        buildTourDeckLayers(
+          // The panel's "Routen" switches: a tour and a roadtrip are two
+          // domains drawn by one layer, so the kind is told apart per leg.
+          pathData.filter((d) => (d.isRoadtrip ? showRoadtrip : showTour)),
+          onGlobe ? TOUR_PATH_GLOBE_ALTITUDE_M : 0,
+          { tour: tourLineWidth, roadtrip: roadtripLineWidth }
+        ),
         tours
       ),
-    [pathData, onGlobe, tourLineWidth, roadtripLineWidth, tours]
+    [pathData, onGlobe, tourLineWidth, roadtripLineWidth, tours, showTour, showRoadtrip]
   );
 }
 

@@ -66,6 +66,7 @@ import {
   loadShowRecordedFlightPaths,
   useRecordedFlightPathsStore,
 } from "../../store/recordedFlightPathsStore";
+import { loadRoutesVisible, useMapRoutesStore } from "../../store/mapRoutesStore";
 import { usePlaceColorStore } from "../../store/placeColorStore";
 import { useStatsCompareStore } from "../../store/statsCompareStore";
 import { useThemeStore } from "../../store/themeStore";
@@ -187,6 +188,7 @@ const mapAppearance: WebPrefSectionDef = {
     useOverlayAppearanceStore.setState({ appearance: loadOverlayAppearance() });
     useMapLabelsModeStore.setState({ mode: loadLabelsMode() });
     useRecordedFlightPathsStore.setState({ show: loadShowRecordedFlightPaths() });
+    useMapRoutesStore.setState({ visible: loadRoutesVisible() });
     // The maps copied it into component state at mount — they remount on this.
     bump("mapAppearance");
   },

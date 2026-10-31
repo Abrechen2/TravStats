@@ -31,6 +31,7 @@ import {
   MUTED_TEXT,
 } from "./controlPanelKit";
 import { useDomainVisible } from "../../hooks/useDomainVisible";
+import { RoutesSwitch } from "./RoutesSwitch";
 
 type NumericKey = Exclude<keyof OverlayAppearance, "rentalShowLine">;
 
@@ -98,12 +99,16 @@ function useShownOverlayDomains(domains: readonly AppearanceDomain[]): Set<Appea
   const toursVisible = useToursVisible();
   const railVisible = useDomainVisible("rail");
   const rentalVisible = useDomainVisible("rental");
+  const busVisible = useDomainVisible("bus");
+  const ferryVisible = useDomainVisible("ferry");
   const { isEnabled } = useEnabledDomains();
   const allowed: Partial<Record<AppearanceDomain, boolean>> = {
     tour: toursVisible,
     roadtrip: isEnabled("roadtrip"),
     rail: railVisible,
     rental: rentalVisible,
+    bus: busVisible,
+    ferry: ferryVisible,
   };
   return new Set(domains.filter((d) => allowed[d] === true));
 }
@@ -125,11 +130,13 @@ export function OverlayAppearanceSections({
     <>
       {shown.has("tour") && (
         <CollapsibleSection id="tour" title={t("map:globe.panel.domainTour")}>
+          <RoutesSwitch domain="tour" />
           <WidthSlider field="tourLineWidth" />
         </CollapsibleSection>
       )}
       {shown.has("roadtrip") && (
         <CollapsibleSection id="roadtrip" title={t("map:globe.panel.domainRoadtrip")}>
+          <RoutesSwitch domain="roadtrip" />
           <WidthSlider field="roadtripLineWidth" />
           {appearanceDomains.includes("roadtripStations") && (
             <SizeSlider field="roadtripStationSize" label={t("map:globe.panel.stations")} />
@@ -138,8 +145,19 @@ export function OverlayAppearanceSections({
       )}
       {shown.has("rail") && (
         <CollapsibleSection id="rail" title={t("map:globe.panel.domainRail")}>
+          <RoutesSwitch domain="rail" />
           <WidthSlider field="railLineWidth" />
           <SizeSlider field="railStationSize" label={t("map:globe.panel.stations")} />
+        </CollapsibleSection>
+      )}
+      {shown.has("bus") && (
+        <CollapsibleSection id="bus" title={t("map:globe.panel.domainBus")}>
+          <RoutesSwitch domain="bus" />
+        </CollapsibleSection>
+      )}
+      {shown.has("ferry") && (
+        <CollapsibleSection id="ferry" title={t("map:globe.panel.domainFerry")}>
+          <RoutesSwitch domain="ferry" />
         </CollapsibleSection>
       )}
       {shown.has("rental") && (

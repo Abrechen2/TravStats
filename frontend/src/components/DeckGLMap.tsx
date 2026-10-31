@@ -12,7 +12,7 @@ import { FLAT_FOCUS, focusMarker, useMapSelectionCards } from "./map/cards/useMa
 import { LightingEffect } from "@deck.gl/core";
 import { useDeckHoverCursor } from "../hooks/useDeckHoverCursor";
 import { useTranslation } from "../hooks/useTranslation";
-import { applyMapOverlays } from "./Globe/mapOverlays";
+import { useMapStyleOverlays } from "./map/useMapStyleOverlays";
 import { FlatMapControlPanel } from "./map/FlatMapControlPanel";
 import { type AppearanceDomain } from "./map/controlPanelKit";
 import { loadFlightRouteShape, loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
@@ -48,6 +48,8 @@ import { useFlightSelectionStore } from "../store/flightSelectionStore";
 import { useCruiseSelectionStore } from "../store/cruiseSelectionStore";
 import { useLodgingSelectionStore } from "../store/lodgingSelectionStore";
 import { usePlaceSelectionStore } from "../store/placeSelectionStore";
+import { effectiveRoutes, useMapRoutesStore } from "../store/mapRoutesStore";
+import { withoutHiddenRoutes } from "../lib/mapRoutes";
 import { computeBbox } from "../utils/mapAnimationHelpers";
 import { usePlaneAnimation } from "../hooks/usePlaneAnimation";
 import { usePulseAnimation } from "../hooks/usePulseAnimation";
@@ -307,40 +309,7 @@ export function DeckGLMap({
     showPlaceLabels,
     placeLabelSource,
   ]);
-  // Apply the style-level overlays (relief hillshade + basemap place
-  // names) once the map is loaded and whenever a toggle flips. Same
-  // generic MapLibre helper the globe uses.
-  useEffect(() => {
-    const map = mapRef.current?.getMap();
-    if (!map || !mapLoaded) return;
-    applyMapOverlays(map, { showTerrain, showPlaceLabels });
-  }, [mapLoaded, showTerrain, showPlaceLabels]);
-  // Mirror the toggles into refs so the once-mounted style.load handler
-  // below reads current values after a basemap swap wipes the overlays.
-  const showTerrainRef = useRef(showTerrain);
-  const showPlaceLabelsRef = useRef(showPlaceLabels);
-  useEffect(() => {
-    showTerrainRef.current = showTerrain;
-  }, [showTerrain]);
-  useEffect(() => {
-    showPlaceLabelsRef.current = showPlaceLabels;
-  }, [showPlaceLabels]);
-  // A basemap swap (styleId change) reloads the MapLibre style, wiping the
-  // hillshade source/layer and resetting symbol visibility — re-apply on
-  // every style.load from the latest toggle values.
-  useEffect(() => {
-    const map = mapRef.current?.getMap();
-    if (!map || !mapLoaded) return;
-    const reapply = (): void =>
-      applyMapOverlays(map, {
-        showTerrain: showTerrainRef.current,
-        showPlaceLabels: showPlaceLabelsRef.current,
-      });
-    map.on("style.load", reapply);
-    return () => {
-      map.off("style.load", reapply);
-    };
-  }, [mapLoaded]);
+  useMapStyleOverlays(mapRef, mapLoaded, showTerrain, showPlaceLabels);
   // Zoom from the move handler, so layers can hide labels at low zoom.
   const [zoom, setZoom] = useState<number>(initialViewState.zoom ?? 2);
   const [currentTime, setCurrentTime] = useState<number>(0);
@@ -562,6 +531,7 @@ export function DeckGLMap({
   // (which only need to re-style the existing arcs) don't re-aggregate
   // flights into routes. Deps are deliberately limited to fields that
   // actually affect arc/point geometry + base color.
+  const routesVisible = useMapRoutesStore(effectiveRoutes);
   const routeData = useMemo(
     () => buildRouteData(flights, minRouteCount, flightColorConfig),
     [flights, minRouteCount, flightColorConfig]
@@ -667,13 +637,20 @@ export function DeckGLMap({
 
     // Station names in `extraLayers` place around this map's own labels
     // (forgejo#320); in "all" the own labels first share one spreading pass.
+    // The lines of every domain the user switched off go; markers and labels stay.
+    const drawn = [
+      ...cruisePathsBelow,
+      ...base,
+      ...cruisePortsAbove,
+      ...lodgingLayers,
+      ...placeLayers,
+    ];
     return {
-      layers: appendWithLabelObstacles(
-        [...cruisePathsBelow, ...base, ...cruisePortsAbove, ...lodgingLayers, ...placeLayers],
-        extraLayers ?? [],
-        { labelsMode, zoom: Math.round(zoom) }
+      layers: withoutHiddenRoutes(
+        appendWithLabelObstacles(drawn, extraLayers ?? [], { labelsMode, zoom: Math.round(zoom) }),
+        routesVisible
       ),
-      tripsAt: cruisePathsBelow.length,
+      tripsAt: routesVisible.cruise ? cruisePathsBelow.length : 0,
     };
   }, [
     visMode,
@@ -712,6 +689,7 @@ export function DeckGLMap({
     placeListLabels,
     placeLabelSource,
     handlePlaceClick,
+    routesVisible,
   ]);
 
   const layers = useMemo((): Layer[] => {

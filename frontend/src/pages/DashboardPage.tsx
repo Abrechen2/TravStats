@@ -4,6 +4,7 @@ import { Navigate } from "react-router-dom";
 import type { JSX } from "react";
 import { DashboardLayout } from "../components/Dashboard/DashboardLayout";
 import { useDashboardRoute } from "../hooks/useDashboardRoute";
+import { usePublishRoutesBlocked } from "../hooks/usePublishRoutesBlocked";
 import { useClearMapSelectionsOnTabChange } from "../hooks/useClearMapSelectionsOnTabChange";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { usePlacesAccess, usePlacesVisible } from "../hooks/usePlacesVisible";
@@ -29,6 +30,7 @@ import { useDomainVisible } from "../hooks/useDomainVisible";
 
 export default function DashboardPage(): JSX.Element {
   const { tab } = useDashboardRoute();
+  usePublishRoutesBlocked();
   // #257: a selected flight/cruise (popup + rings) must not survive into
   // another domain's map.
   useClearMapSelectionsOnTabChange(tab);

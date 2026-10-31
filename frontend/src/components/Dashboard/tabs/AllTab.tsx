@@ -164,7 +164,9 @@ export function AllTab(): JSX.Element {
   const toursVisible = useToursVisible();
   const dashboardTours = useDashboardTours(toursVisible);
   // The "Alle" tab's domain-filter (decision 2026-09-27; `rail` joined 2026-09-28).
-  const { domainFilter, dayTourCount, visible } = useAllTabDomainVisibility(dashboardTours.tours);
+  const { domainFilter, dayTourCount, visible, lines } = useAllTabDomainVisibility(
+    dashboardTours.tours
+  );
   const [domainFilterOpen, setDomainFilterOpen] = useState(false);
   // Keyed on the hook's stable arrays, not its result object, which is new
   // on every render and would rebuild the tour paths each time.
@@ -514,10 +516,8 @@ export function AllTab(): JSX.Element {
 
   // See `buildTourLegendRows` (`./tourMapOverlay.tsx`) for why "empty"
   // shows no row here — `tourStatusOverlay` below carries loading/error.
-  const tourLegend = buildTourLegendRows(showTours, shownTours, t, legendRow, {
-    color: colorOfDomain("roadtrip"),
-    label: t("roadtrips:kind.roadtrip"),
-  });
+  const roadtripKey = { color: colorOfDomain("roadtrip"), label: t("roadtrips:kind.roadtrip") };
+  const tourLegend = buildTourLegendRows(showTours, shownTours, t, legendRow, roadtripKey, lines);
   const tourHasData = tourLegend.hasData;
 
   // Colour key as a compact table pinned bottom-right — out of the top band
@@ -532,8 +532,8 @@ export function AllTab(): JSX.Element {
   // not a cosmetic one. The other three map overlays in this app sit
   // bottom-LEFT and are unaffected.
   const legendRows = [
-    ...(visible.flight ? flightLegendRows : []),
-    ...(visible.cruise ? cruiseLegendRows : []),
+    ...(lines.flight ? flightLegendRows : []),
+    ...(lines.cruise ? cruiseLegendRows : []),
     ...(visible.lodging ? lodgingLegendRows : []),
     ...(visible.poi ? poiLegendRows : []),
     ...placeLegendRows,

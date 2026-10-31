@@ -37,6 +37,7 @@ import {
 } from "../../lib/placeColor";
 import { flightRouteShapeFromStored, type FlightRouteShape } from "../../lib/flightRouteShape";
 import { overlayAppearanceFromStored, type OverlayAppearance } from "../../lib/overlayAppearance";
+import type { RouteDomain } from "../../lib/mapRoutes";
 import { emitLocalPrefWrite } from "../../lib/webPrefs/prefEvents";
 
 /** The 6 tokenless basemaps — same id set on the globe and the flat map. */
@@ -150,6 +151,9 @@ export interface MapAppearance {
   /** Draw recorded flight paths beside the route arcs (forgejo#312). Owned by
    *  `store/recordedFlightPathsStore.ts`; absent = off. */
   showRecordedFlightPaths?: boolean;
+  /** Per-domain "draw the routes" switches (`lib/mapRoutes.ts`). Owned by
+   *  `store/mapRoutesStore.ts`; absent or a missing domain = drawn. */
+  routesVisible?: Partial<Record<RouteDomain, boolean>>;
   // Chrome
   /** Whether the control panel is expanded (#194). One value for both maps —
    *  it is the same panel to the user. Absent = expanded (the default). */

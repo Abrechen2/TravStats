@@ -1,3 +1,4 @@
+import { RoutesSwitch } from "./RoutesSwitch";
 import type { JSX } from "react";
 /**
  * The per-domain appearance sections of the map control panels.
@@ -127,6 +128,7 @@ export function FlightAppearanceSection({
 
   return (
     <CollapsibleSection id="flight" title={title}>
+      <RoutesSwitch domain="flight" />
       {/* Route shape — 3D arcs or flat on the map surface (#183). Only the flat
           map wires this; on the globe the props are absent and the picker is
           simply not there. */}
@@ -312,6 +314,7 @@ export function CruiseAppearanceSection({
 
   return (
     <CollapsibleSection id="cruise" title={title}>
+      <RoutesSwitch domain="cruise" />
       {/* Colour mode — the explicit choice that replaces the per-tab hardcoded
           mode + the silent single-colour override. */}
       <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>

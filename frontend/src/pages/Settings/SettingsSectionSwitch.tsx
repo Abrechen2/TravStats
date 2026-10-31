@@ -199,6 +199,7 @@ export default function SettingsSectionSwitch({
           scope="views.mapAppearance"
           links={[
             { id: "routes", to: "/dashboard" },
+            { id: "lines", to: "/dashboard" },
             { id: "layers", to: "/dashboard" },
           ]}
         />
