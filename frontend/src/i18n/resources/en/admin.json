@@ -184,7 +184,7 @@
           },
           "travTrack": {
             "name": "TravTrack (own location history)",
-            "what": "An own location history on this server: the Companion app records positions, flights and trips included, with privacy zones and delete by time span. Also needs the TravTrack switch under Instance."
+            "what": "An own location history on this server: positions come from the Companion app, GPX files, OwnTracks, Overland and a Dawarich import, flights and trips included, with privacy zones and delete by time span. Also needs the TravTrack switch under Instance."
           }
         }
       },
@@ -1325,7 +1325,7 @@
   },
   "travTrack": {
     "title": "TravTrack",
-    "description": "The own location history: the Companion app records positions on this server. Switching it off deletes nothing — accounts holding data keep their summary, export and delete.",
+    "description": "The own location history: positions reach this server from the Companion app, GPX files, OwnTracks, Overland and a Dawarich import. Switching it off deletes nothing — accounts holding data keep their summary, export and delete.",
     "needsBeta": "TravTrack is a beta feature. Switch on this instance's beta features first.",
     "switch": "Offer TravTrack on this server",
     "switchSub": "Accounts can then choose TravTrack as their location source.",

@@ -207,11 +207,11 @@
     "rail": "Rail",
     "rail_desc": "Train journeys like flights: stations, train number, class, seat, kilometres.",
     "rental": "Rental cars",
-    "rental_desc": "Rental cars with station, period, car and the kilometres from the invoice. (Beta)",
+    "rental_desc": "Rental cars with station, period, car and the kilometres from the invoice.",
     "bus": "Bus",
-    "bus_desc": "Coach, intercity and shuttle rides: terminals, line, seat, kilometres. Not city transit. (Beta)",
+    "bus_desc": "Coach, intercity and shuttle rides: terminals, line, seat, kilometres. Not city transit.",
     "ferry": "Ferries",
-    "ferry_desc": "Ferry crossings like flights: ports, operator, vessel, vehicle on board, cabin, kilometres. (Beta)"
+    "ferry_desc": "Ferry crossings like flights: ports, operator, vessel, vehicle on board, cabin, kilometres."
   },
   "settings": {
     "modules": {
@@ -225,8 +225,8 @@
         "poi": "Places, visits and place lists",
         "roadtrip": "Stations, nights, map",
         "rail": "A logbook for train journeys",
-        "rental": "Beta: a logbook for rental cars",
-        "bus": "Beta: logbook for bus rides",
+        "rental": "A logbook for rental cars",
+        "bus": "Logbook for bus rides",
         "ferry": "Crossings, vehicle and tickets"
       }
     }
