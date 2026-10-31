@@ -6,7 +6,12 @@ import { flightQuerySchema } from "../../schemas/flight";
 import { groupAirlines } from "../../shared/airlineNormalize";
 import { airlineResolvers } from "../../utils/airlineNormalize";
 import { localDepartureYearCounts } from "./departureLocalDay";
-import { normalizeQueryParams, resolveFlightWhere, splitMultiValue } from "./queryFilters";
+import {
+  normalizeQueryParams,
+  resolveFlightWhere,
+  splitMultiValue,
+  type PeriodIdMemo,
+} from "./queryFilters";
 
 /**
  * `GET /flights/facets` — the option lists and the headline figures the
@@ -71,8 +76,10 @@ export const flightFacetsHandler = async (
       tags: splitMultiValue(parsed.tags as string | string[] | undefined),
     };
 
+    // The year/month ids are resolved once per request, not once per variant.
+    const periodIds: PeriodIdMemo = new Map();
     const build = (overrides: Partial<typeof query>) =>
-      resolveFlightWhere({ ...query, ...overrides }, userId);
+      resolveFlightWhere({ ...query, ...overrides }, userId, periodIds);
 
     const [all, withoutYear, withoutAirlineFilter] = await Promise.all([
       build({}),

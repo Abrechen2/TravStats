@@ -187,13 +187,17 @@ export const buildFlightWhere = (query: FlightQueryInput & { tags?: string[] }, 
  * through `buildFlightWhere` directly, so the list, the facets and the map
  * cannot answer the question three ways.
  */
+/** One request's resolved local-period ids, shared by several `resolveFlightWhere` calls. */
+export type PeriodIdMemo = Map<string, Promise<string[]>>;
+
 export const resolveFlightWhere = async (
   query: FlightQueryInput & { tags?: string[] },
-  userId: string
+  userId: string,
+  memo?: PeriodIdMemo
 ): Promise<{ where: Prisma.FlightWhereInput; noResults: boolean }> => {
   const base = buildFlightWhere(query, userId);
   if (base.noResults) return base;
-  const periodWhere = await restrictToLocalPeriod(base.where, query);
+  const periodWhere = await restrictToLocalPeriod(base.where, query, userId, memo);
   if (periodWhere === null) return { where: base.where, noResults: true };
   if (query.membershipId === undefined) return { where: periodWhere, noResults: false };
 
@@ -212,10 +216,26 @@ export const resolveFlightWhere = async (
  */
 async function restrictToLocalPeriod(
   where: Prisma.FlightWhereInput,
-  query: FlightQueryInput
+  query: FlightQueryInput,
+  userId: string,
+  memo?: PeriodIdMemo
 ): Promise<Prisma.FlightWhereInput | null> {
   if (query.year === undefined && query.month === undefined) return where;
-  const ids = await flightIdsInLocalPeriod(where, { year: query.year, month: query.month });
+  const period = { year: query.year, month: query.month };
+  let ids: string[];
+  if (memo) {
+    // The local period depends on the flight alone, so the ids of the whole
+    // account are a superset that the caller's own `where` narrows again.
+    const key = `${period.year ?? ""}|${period.month ?? ""}`;
+    let pending = memo.get(key);
+    if (!pending) {
+      pending = flightIdsInLocalPeriod({ userId }, period);
+      memo.set(key, pending);
+    }
+    ids = await pending;
+  } else {
+    ids = await flightIdsInLocalPeriod(where, period);
+  }
   if (ids.length === 0) return null;
   return { AND: [where, { id: { in: ids } }] };
 }
