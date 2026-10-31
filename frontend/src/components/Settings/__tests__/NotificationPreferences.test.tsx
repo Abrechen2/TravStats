@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -22,99 +22,229 @@ vi.mock("../../../store/toastStore", () => ({
 
 import NotificationPreferences from "../NotificationPreferences";
 
-const STORED = { notificationEmail: "a@example.com", notifyBefore24h: false, notifyBefore2h: true };
+type Row = { enabled: boolean; leadHours: number[]; channel: "app" | "mail" | "both" };
+const row = (over: Partial<Row> = {}): Row => ({
+  enabled: true,
+  leadHours: [24, 2],
+  channel: "both",
+  ...over,
+});
+const fixture = (over: Record<string, unknown> = {}) => ({
+  notificationEmail: "a@example.com",
+  notifyBefore24h: true,
+  notifyBefore2h: true,
+  domains: {
+    flight: row(),
+    cruise: row({ leadHours: [24], channel: "mail" }),
+    rail: row({ enabled: false, leadHours: [], channel: "app" }),
+    bus: row(),
+    ferry: row(),
+    lodging: row({ leadHours: [48, 24], channel: "app" }),
+  },
+  mail: { available: true, reason: null },
+  push: { available: true, reason: null },
+  ...over,
+});
+const STORED = fixture();
 
-describe("NotificationPreferences", () => {
+const domainRow = (d: string): HTMLElement =>
+  document.querySelector(`tr[data-domain="${d}"]`) as HTMLElement;
+const when = (d: string) =>
+  within(within(domainRow(d)).getByRole("group", { name: "settings:notifications.whenGroup" }));
+const where = (d: string) =>
+  within(within(domainRow(d)).getByRole("group", { name: "settings:notifications.whereGroup" }));
+const echo = (patch: { domains?: Record<string, object> }) => {
+  const next = structuredClone(STORED) as typeof STORED & { domains: Record<string, object> };
+  for (const [d, change] of Object.entries(patch.domains ?? {})) {
+    next.domains[d] = { ...next.domains[d], ...change };
+  }
+  return next;
+};
+
+describe("NotificationPreferences (reminders per domain)", () => {
   beforeEach(() => {
     getPreferences.mockReset().mockResolvedValue(STORED);
-    updatePreferences.mockReset();
+    updatePreferences.mockReset().mockImplementation(async (p) => echo(p));
     addToast.mockReset();
   });
 
-  it("has no save button: a switch writes the moment it changes", async () => {
-    updatePreferences.mockResolvedValue({ ...STORED, notifyBefore24h: true });
-    const user = userEvent.setup();
+  it("renders every domain from the GET fixture, with its chips, switch and no save button", async () => {
     render(<NotificationPreferences />);
-
-    const toggle = await screen.findByRole("switch", { name: /before24h/ });
+    await screen.findByTestId("reminders-table");
     expect(screen.queryByRole("button", { name: /save/i })).toBeNull();
-    await user.click(toggle);
-
-    expect(updatePreferences).toHaveBeenCalledWith({ notifyBefore24h: true });
-    await waitFor(() => expect(toggle).toBeChecked());
+    expect(document.querySelectorAll("tr[data-domain]")).toHaveLength(6);
+    expect(within(domainRow("flight")).getByRole("switch")).toBeChecked();
+    expect(within(domainRow("rail")).getByRole("switch")).not.toBeChecked();
+    expect(
+      when("flight").getByRole("button", { name: "settings:notifications.lead24" })
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      when("cruise").getByRole("button", { name: "settings:notifications.lead2" })
+    ).toHaveAttribute("aria-pressed", "false");
+    // channel "both" presses both chips, "mail" only the mail chip
+    expect(
+      where("flight").getByRole("button", { name: "settings:notifications.channelApp" })
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      where("cruise").getByRole("button", { name: "settings:notifications.channelApp" })
+    ).toHaveAttribute("aria-pressed", "false");
+    expect(
+      where("cruise").getByRole("button", { name: "settings:notifications.channelMail" })
+    ).toHaveAttribute("aria-pressed", "true");
+    // lodging carries a custom 48 h: Eigene is on and shows it
+    expect(when("lodging").getByRole("spinbutton")).toHaveValue(48);
   });
 
-  it("puts the switch back when the write fails, so the screen never shows an unsaved state", async () => {
-    updatePreferences.mockRejectedValue(new Error("nope"));
+  it("the switch sends only that domain's enabled flag", async () => {
     const user = userEvent.setup();
     render(<NotificationPreferences />);
-
-    const toggle = await screen.findByRole("switch", { name: /before2h/ });
-    await user.click(toggle);
-
-    await waitFor(() => expect(toggle).toBeChecked());
-    expect(addToast).toHaveBeenCalledWith("error", "nope");
+    await user.click(await within(await waitDomain("rail")).findByRole("switch"));
+    expect(updatePreferences).toHaveBeenCalledWith({ domains: { rail: { enabled: true } } });
   });
 
-  it("writes the address when the field is left, and only if it changed", async () => {
-    updatePreferences.mockResolvedValue({ ...STORED, notificationEmail: null });
+  it("a preset chip sends the new lead list, sorted descending", async () => {
     const user = userEvent.setup();
     render(<NotificationPreferences />);
+    await screen.findByTestId("reminders-table");
+    await user.click(when("cruise").getByRole("button", { name: "settings:notifications.lead2" }));
+    expect(updatePreferences).toHaveBeenCalledWith({ domains: { cruise: { leadHours: [24, 2] } } });
+    await waitFor(() => expect(updatePreferences).toHaveBeenCalledTimes(1));
+    await user.click(when("flight").getByRole("button", { name: "settings:notifications.lead24" }));
+    expect(updatePreferences).toHaveBeenLastCalledWith({ domains: { flight: { leadHours: [2] } } });
+  });
 
-    const field = await screen.findByLabelText("settings:notifications.email");
-    await user.click(field);
-    await user.tab();
+  it("the channel chips send app, mail or both, and the last active chip cannot be switched off", async () => {
+    const user = userEvent.setup();
+    render(<NotificationPreferences />);
+    await screen.findByTestId("reminders-table");
+    await user.click(
+      where("flight").getByRole("button", { name: "settings:notifications.channelMail" })
+    );
+    expect(updatePreferences).toHaveBeenLastCalledWith({ domains: { flight: { channel: "app" } } });
+    await waitFor(() => expect(updatePreferences).toHaveBeenCalledTimes(1));
+    await user.click(
+      where("cruise").getByRole("button", { name: "settings:notifications.channelApp" })
+    );
+    expect(updatePreferences).toHaveBeenLastCalledWith({
+      domains: { cruise: { channel: "both" } },
+    });
+    await waitFor(() => expect(updatePreferences).toHaveBeenCalledTimes(2));
+    await user.click(
+      where("lodging").getByRole("button", { name: "settings:notifications.channelApp" })
+    );
+    expect(updatePreferences).toHaveBeenCalledTimes(2);
+  });
+
+  it("Eigene opens a number field; only 1-168 is sent, 24 and 2 are refused, and only one custom lead exists", async () => {
+    const user = userEvent.setup();
+    render(<NotificationPreferences />);
+    await screen.findByTestId("reminders-table");
+    await user.click(
+      when("flight").getByRole("button", { name: "settings:notifications.leadCustom" })
+    );
+    const field = when("flight").getByRole("spinbutton");
     expect(updatePreferences).not.toHaveBeenCalled();
 
+    for (const bad of ["0", "169", "24", "2", ""]) {
+      await user.clear(field);
+      if (bad) await user.type(field, bad);
+      await user.tab();
+      expect(updatePreferences).not.toHaveBeenCalled();
+      expect(within(domainRow("flight")).getByRole("alert")).toBeInTheDocument();
+    }
+
     await user.clear(field);
+    await user.type(field, "12");
     await user.tab();
-    expect(updatePreferences).toHaveBeenCalledWith({ notificationEmail: null });
+    expect(updatePreferences).toHaveBeenCalledWith({
+      domains: { flight: { leadHours: [24, 12, 2] } },
+    });
   });
 
-  it("persists two quick toggles both, in the order they were made", async () => {
-    let releaseFirst!: (v: unknown) => void;
-    updatePreferences
-      .mockImplementationOnce(
-        () =>
-          new Promise((resolve) => {
-            releaseFirst = resolve;
-          })
-      )
-      .mockImplementation(async (p: object) => ({
-        ...STORED,
-        notifyBefore24h: true,
-        ...p,
-      }));
+  it("changing an existing custom lead replaces it instead of adding a second one; Eigene off drops it", async () => {
     const user = userEvent.setup();
     render(<NotificationPreferences />);
-
-    await user.click(await screen.findByRole("switch", { name: /before24h/ }));
-    await user.click(screen.getByRole("switch", { name: /before2h/ }));
-    // Only one write is on the wire while the first is unanswered.
-    expect(updatePreferences).toHaveBeenCalledTimes(1);
-    releaseFirst({ ...STORED, notifyBefore24h: true });
-
-    await waitFor(() => expect(updatePreferences).toHaveBeenCalledTimes(2));
-    expect(updatePreferences.mock.calls[0][0]).toEqual({ notifyBefore24h: true });
-    expect(updatePreferences.mock.calls[1][0]).toEqual({ notifyBefore2h: false });
-    await waitFor(() => expect(screen.getByRole("switch", { name: /before24h/ })).toBeChecked());
-    expect(screen.getByRole("switch", { name: /before2h/ })).not.toBeChecked();
+    await screen.findByTestId("reminders-table");
+    const field = when("lodging").getByRole("spinbutton");
+    await user.clear(field);
+    await user.type(field, "72");
+    await user.tab();
+    expect(updatePreferences).toHaveBeenLastCalledWith({
+      domains: { lodging: { leadHours: [72, 24] } },
+    });
+    await waitFor(() => expect(updatePreferences).toHaveBeenCalledTimes(1));
+    await user.click(
+      when("lodging").getByRole("button", { name: "settings:notifications.leadCustom" })
+    );
+    expect(updatePreferences).toHaveBeenLastCalledWith({
+      domains: { lodging: { leadHours: [24] } },
+    });
   });
 
-  it("a load failure is not shown as loaded defaults", async () => {
-    getPreferences.mockRejectedValue(new Error("down"));
+  it("an off domain greys its chips and the custom field", async () => {
     render(<NotificationPreferences />);
-
-    expect(await screen.findByRole("alert")).toBeInTheDocument();
-    expect(screen.queryByRole("switch")).toBeNull();
-    expect(addToast).toHaveBeenCalledWith("error", "down");
-
-    getPreferences.mockResolvedValue(STORED);
-    await userEvent.setup().click(screen.getByRole("button"));
-    expect(await screen.findByRole("switch", { name: /before2h/ })).toBeChecked();
+    await screen.findByTestId("reminders-table");
+    for (const b of [
+      ...when("rail").getAllByRole("button"),
+      ...where("rail").getAllByRole("button"),
+    ]) {
+      expect(b).toBeDisabled();
+    }
+    for (const b of where("flight").getAllByRole("button")) expect(b).toBeEnabled();
   });
 
-  it("a failed write is retried with the next one when a newer toggle was queued behind it", async () => {
+  it("mail chip is disabled with its reason when there is no address", async () => {
+    getPreferences.mockResolvedValue(fixture({ mail: { available: false, reason: "no_email" } }));
+    render(<NotificationPreferences />);
+    await screen.findByTestId("reminders-table");
+    const chip = where("flight").getByRole("button", {
+      name: "settings:notifications.channelMail",
+    });
+    expect(chip).toBeDisabled();
+    expect(chip).toHaveAccessibleDescription("settings:notifications.mailReason.no_email");
+  });
+
+  it("app chip is disabled with its reason when no device is paired; a missing relay keeps it usable", async () => {
+    getPreferences.mockResolvedValue(
+      fixture({ push: { available: false, reason: "no_device_token" } })
+    );
+    const { unmount } = render(<NotificationPreferences />);
+    await screen.findByTestId("reminders-table");
+    const chip = where("flight").getByRole("button", { name: "settings:notifications.channelApp" });
+    expect(chip).toBeDisabled();
+    expect(chip).toHaveAccessibleDescription("settings:notifications.pushStatus.no_device_token");
+    unmount();
+
+    getPreferences.mockResolvedValue(fixture({ push: { available: false, reason: "no_relay" } }));
+    render(<NotificationPreferences />);
+    await screen.findByTestId("reminders-table");
+    expect(
+      where("flight").getByRole("button", { name: "settings:notifications.channelApp" })
+    ).toBeEnabled();
+    expect(screen.getByText("settings:notifications.pushStatus.no_relay")).toBeInTheDocument();
+  });
+
+  it("a failed write is shown on its row, the control returns to the stored state, and retry sends it again", async () => {
+    updatePreferences.mockRejectedValueOnce(new Error("nope"));
+    const user = userEvent.setup();
+    render(<NotificationPreferences />);
+    await screen.findByTestId("reminders-table");
+    const sw = within(domainRow("flight")).getByRole("switch");
+    await user.click(sw);
+
+    const alert = await within(domainRow("flight")).findByRole("alert");
+    expect(alert).toHaveTextContent("settings:notifications.rowFailed");
+    expect(sw).toBeChecked();
+    expect(addToast).toHaveBeenCalledWith("error", "nope");
+    expect(within(domainRow("bus")).queryByRole("alert")).toBeNull();
+
+    await user.click(within(alert).getByRole("button"));
+    expect(updatePreferences).toHaveBeenLastCalledWith({ domains: { flight: { enabled: false } } });
+    await waitFor(() => expect(within(domainRow("flight")).queryByRole("alert")).toBeNull());
+    await waitFor(() => expect(updatePreferences).toHaveBeenCalledTimes(2));
+  });
+
+  it("two quick edits go out one at a time, in order, and a failed first one rides with the second", async () => {
     let failFirst!: (e: Error) => void;
     updatePreferences
       .mockImplementationOnce(
@@ -123,18 +253,51 @@ describe("NotificationPreferences", () => {
             failFirst = reject;
           })
       )
-      .mockImplementation(async (p: object) => ({ ...STORED, ...p }));
+      .mockImplementation(async (p) => echo(p));
     const user = userEvent.setup();
     render(<NotificationPreferences />);
-
-    await user.click(await screen.findByRole("switch", { name: /before24h/ }));
-    await user.click(screen.getByRole("switch", { name: /before2h/ }));
+    await screen.findByTestId("reminders-table");
+    await user.click(within(domainRow("flight")).getByRole("switch"));
+    await user.click(when("cruise").getByRole("button", { name: "settings:notifications.lead2" }));
+    await user.click(within(domainRow("bus")).getByRole("switch"));
+    expect(updatePreferences).toHaveBeenCalledTimes(1);
     failFirst(new Error("offline"));
-
     await waitFor(() => expect(updatePreferences).toHaveBeenCalledTimes(2));
     expect(updatePreferences.mock.calls[1][0]).toEqual({
-      notifyBefore24h: true,
-      notifyBefore2h: false,
+      domains: {
+        flight: { enabled: false },
+        cruise: { leadHours: [24, 2] },
+        bus: { enabled: false },
+      },
     });
   });
+
+  it("writes the address when the field is left, and only if it changed", async () => {
+    updatePreferences.mockResolvedValue({ ...STORED, notificationEmail: null });
+    const user = userEvent.setup();
+    render(<NotificationPreferences />);
+    const field = await screen.findByLabelText("settings:notifications.mailCard");
+    await user.click(field);
+    await user.tab();
+    expect(updatePreferences).not.toHaveBeenCalled();
+    await user.clear(field);
+    await user.tab();
+    expect(updatePreferences).toHaveBeenCalledWith({ notificationEmail: null });
+  });
+
+  it("a load failure is not shown as loaded defaults", async () => {
+    getPreferences.mockRejectedValue(new Error("down"));
+    render(<NotificationPreferences />);
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByRole("switch")).toBeNull();
+    expect(addToast).toHaveBeenCalledWith("error", "down");
+    getPreferences.mockResolvedValue(STORED);
+    await userEvent.setup().click(screen.getByRole("button"));
+    await screen.findByTestId("reminders-table");
+  });
 });
+
+async function waitDomain(d: string): Promise<HTMLElement> {
+  await screen.findByTestId("reminders-table");
+  return domainRow(d);
+}

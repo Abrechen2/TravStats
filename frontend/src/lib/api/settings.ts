@@ -3,6 +3,7 @@ import type {
   ApiKeyTestResponse,
   MessageResponse,
   NotificationPreferences,
+  NotificationPreferencesPatch,
   SmtpConfigInput,
   SmtpConfigResponse,
   UserSettings,
@@ -318,7 +319,7 @@ export const settingsApi = {
     return data;
   },
   updateNotificationPreferences: async (
-    prefs: Partial<NotificationPreferences>
+    prefs: NotificationPreferencesPatch
   ): Promise<NotificationPreferences> => {
     const { data } = await api.put<NotificationPreferences>("/settings/notifications", prefs);
     return data;

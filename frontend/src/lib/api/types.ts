@@ -413,10 +413,33 @@ export interface SmtpConfigResponse {
   enabled?: boolean;
 }
 
+export type ReminderDomain = "flight" | "cruise" | "rail" | "bus" | "ferry" | "lodging";
+export type ReminderChannel = "app" | "mail" | "both";
+
+export interface ReminderDomainPrefs {
+  enabled: boolean;
+  /** Integers 1-168, sorted descending; the presets 24 and 2 plus at most one custom value. */
+  leadHours: number[];
+  channel: ReminderChannel;
+}
+
 export interface NotificationPreferences {
   notificationEmail: string | null;
+  /** Legacy, derived by the server from `domains`; the page never writes them. */
   notifyBefore24h: boolean;
   notifyBefore2h: boolean;
+  domains: Record<ReminderDomain, ReminderDomainPrefs>;
+  mail: { available: boolean; reason: "no_email" | null };
+  push: {
+    available: boolean;
+    reason: "no_relay" | "no_device_token" | "token_rejected" | null;
+  };
+}
+
+/** What a PUT accepts: any subset of the six domains, each with any subset of its fields. */
+export interface NotificationPreferencesPatch {
+  notificationEmail?: string | null;
+  domains?: Partial<Record<ReminderDomain, Partial<ReminderDomainPrefs>>>;
 }
 
 // ==================== Stats-specific Types ====================

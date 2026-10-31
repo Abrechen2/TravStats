@@ -268,7 +268,7 @@
   },
   "notifications": {
     "title": "Notifications",
-    "description": "What you want to be emailed about. Without SMTP configured in the admin area these switches do nothing, even when they are on — and the email address in your profile has to be confirmed.",
+    "description": "Applies to your account. For each area: whether, when and where.",
     "emailNotifications": "Enable email notifications",
     "flightReminder": "Flight Reminder",
     "checkInReminder": "Check-in Reminder",
@@ -279,8 +279,6 @@
       "48h": "48h before"
     },
     "email": "Notification email",
-    "before24h": "24h before",
-    "before2h": "2h before",
     "save": "Save",
     "saved": "Saved!",
     "smtpTitle": "SMTP Configuration",
@@ -303,17 +301,74 @@
       "message": "Host, username and password are removed from this instance. TravStats will then send no e-mail at all — no reminders, no invitations, no password resets. You can enter them again at any time.",
       "confirm": "Delete permanently"
     },
-    "loadError": "Failed to load configuration",
+    "loadError": "Notification settings could not be loaded",
     "smtpHelp": {
       "ports": "587 + STARTTLS (standard, leave \"Secure (TLS)\" off), 465 + implicit TLS (turn \"Secure (TLS)\" on), 25 only for local unauthenticated relays.",
       "credentials": "Gmail/Outlook require app passwords instead of the account password (2FA is a prerequisite). Self-hosted Postfix servers typically allow SMTP-AUTH with a system user.",
       "sender": "The From email should match the SMTP server's domain — otherwise mails are frequently flagged as spam. SPF/DKIM DNS records improve deliverability."
     },
     "emailSub": "Where reminders go; empty = none",
-    "before24hSub": "One day before — for flights, cruises, train, ferry and bus journeys; the morning of check-in for lodging",
-    "before2hSub": "Shortly before — for flights, cruises, train, ferry and bus journeys",
-    "loadError": "Notification settings could not be loaded",
-    "saveFailed": "Notification preferences could not be saved"
+    "saveFailed": "Notification preferences could not be saved",
+    "mailCard": "Mail to",
+    "appCard": "App",
+    "carriedOver": "Your existing choices were carried over.",
+    "rowFailed": "Not saved.",
+    "retry": "Try again",
+    "rowSwitch": "Reminders for {{area}}",
+    "whenGroup": "{{area}}: when",
+    "whereGroup": "{{area}}: where",
+    "lead24": "24 h",
+    "lead2": "2 h",
+    "leadCustom": "Custom",
+    "customHours": "Custom lead time for {{area}} in hours",
+    "hoursBefore": "h before",
+    "customInvalid": {
+      "range": "Whole hours from 1 to 168.",
+      "preset": "24 h and 2 h already have their own choice."
+    },
+    "channelApp": "App",
+    "channelMail": "Mail",
+    "table": {
+      "area": "Area",
+      "on": "On",
+      "when": "When",
+      "where": "Where"
+    },
+    "mailReason": {
+      "no_email": "No e-mail address saved – mail cannot be chosen."
+    },
+    "pushStatus": {
+      "ok": "Paired device: push is active.",
+      "no_relay": "No push relay set up – the app then reminds on its own.",
+      "no_device_token": "No device paired – the app cannot be chosen.",
+      "token_rejected": "The paired device rejected push – sign in again in the app."
+    },
+    "domains": {
+      "flight": {
+        "name": "Flight",
+        "what": "Departure, with terminal, gate, seat"
+      },
+      "cruise": {
+        "name": "Cruise",
+        "what": "Embarkation"
+      },
+      "rail": {
+        "name": "Rail",
+        "what": "Departure, one per journey"
+      },
+      "bus": {
+        "name": "Bus",
+        "what": "Departure"
+      },
+      "ferry": {
+        "name": "Ferry",
+        "what": "Departure"
+      },
+      "lodging": {
+        "name": "Lodging",
+        "what": "Check-in, address, nights"
+      }
+    }
   },
   "privacy": {
     "title": "Privacy & Security",
