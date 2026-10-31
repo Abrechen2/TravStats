@@ -13,6 +13,7 @@ import { loadInsightRoadtrips } from "./roadtripInsightData";
 import { loadInsightTours } from "./tourInsightData";
 import type { LodgingInsightsResponse } from "../../../schemas/statsInsights/lodging";
 import { loadLodgingInsightStays } from "./lodgingInsightData";
+import { loadRoadtripsCount } from "./roadtripsCount";
 import { totalsOf, type MeasureItems } from "./measureItems";
 
 /**
@@ -65,14 +66,19 @@ export async function roadtripInsights(
   items: MeasureItems;
   awards: RoadtripInsights["awards"];
 }> {
-  const [roadtrips, tours, resolver] = await Promise.all([
+  const [roadtrips, tours, resolver, roadtripsCount] = await Promise.all([
     loadInsightRoadtrips(userId),
     preloaded.tours ?? loadTourFacts(userId, at),
     getCountryResolver(),
+    loadRoadtripsCount(userId, at),
   ]);
   const { insights, items } = computeRoadtripInsights(roadtrips, tours, resolver, at);
   const { awards, ...view } = insights;
-  return { response: { ...view, totals: totalsOf(items) }, items, awards };
+  return {
+    response: { ...view, totals: { ...totalsOf(items), roadtripsCount } },
+    items,
+    awards,
+  };
 }
 
 export async function tourInsights(

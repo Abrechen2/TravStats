@@ -54,6 +54,7 @@ import "./railEntrySuggestions";
 import "./railRoadtripConversion";
 import "./bus";
 import "./ferry";
+import "./ferryStats";
 import "./busEntrySuggestions";
 import "./rental";
 import "./cruiseTracks";

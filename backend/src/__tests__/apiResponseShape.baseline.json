@@ -194,6 +194,7 @@
     "ferry/live.ts",
     "ferry/roadtrip.ts",
     "ferry/routing.ts",
+    "ferry/stats.ts",
     "ferry/tickets.ts",
     "geo.ts",
     "importBatches.ts",
