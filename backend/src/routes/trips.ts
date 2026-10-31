@@ -136,7 +136,7 @@ router.get(
       const { includeInsights } = query;
       const limit = query.limit ?? TRIPS_LIST_CAP;
       const offset = query.offset ?? 0;
-      const where = tripsListWhere(userId, query);
+      const where = await tripsListWhere(userId, query);
       const listed = await prisma.trip.findMany({
         where,
         // `id` breaks ties: createdAt is not unique, so paging on it alone

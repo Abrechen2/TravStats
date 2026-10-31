@@ -31,6 +31,8 @@ describe("GET /api/v1/trips search and paging", () => {
         notes: i === 1 ? "found via the notes" : null,
         status: i % 2 === 0 ? "completed" : "planned",
         category: i === 0 ? "business" : null,
+        companions: i === 2 ? ["Alice Smith"] : [],
+        countries: i === 3 ? ["PT"] : [],
         createdAt: new Date(base + i * 1000),
       })),
     });
@@ -62,6 +64,11 @@ describe("GET /api/v1/trips search and paging", () => {
   it("searches the notes too", async () => {
     const res = await get("?q=VIA%20THE%20NOTES");
     expect(res.body.trips).toHaveLength(1);
+  });
+
+  it("matches companions and countries as case-insensitive substrings, as the page always did", async () => {
+    expect((await get("?q=alice")).body.trips).toHaveLength(1);
+    expect((await get("?q=pt")).body.total).toBe(1);
   });
 
   it("pages past the cap with offset and repeats no row", async () => {

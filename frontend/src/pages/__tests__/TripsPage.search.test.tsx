@@ -90,6 +90,18 @@ describe("TripsPage server-side search", () => {
     expect(screen.queryByTestId("trips-load-more")).toBeNull();
   });
 
+  it("cannot load more of the old list while a new search replaces it", async () => {
+    listPage.mockResolvedValueOnce(
+      page([trip("a", "A"), trip("b", "B"), trip("c", "C"), trip("d", "D")], 6)
+    );
+    renderPage();
+    await screen.findByText("A");
+    listPage.mockReturnValueOnce(new Promise(() => {}));
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "x" } });
+    await waitFor(() => expect(listPage).toHaveBeenCalledTimes(2));
+    expect(screen.getByTestId("trips-load-more")).toBeDisabled();
+  });
+
   it("shows an error, not an empty list, when the server request fails", async () => {
     listPage.mockRejectedValue(new Error("boom"));
     renderPage();

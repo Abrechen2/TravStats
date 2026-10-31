@@ -43,10 +43,23 @@ export function isPagedQuery(query: TripsListQuery): boolean {
   );
 }
 
-/** The text clause alone; the status and category pills' counts are taken under it. */
-export function searchWhere(userId: string, q: string | undefined): Prisma.TripWhereInput {
+/**
+ * The text clause alone; the status and category pills' counts are taken under it.
+ * Tags, companions and countries are array columns, which Prisma can only match
+ * whole and case-sensitively; the page always matched them as substrings, so
+ * their ids come from one case-insensitive query on the joined text.
+ */
+export async function searchWhere(
+  userId: string,
+  q: string | undefined
+): Promise<Prisma.TripWhereInput> {
   const needle = q?.trim();
   if (!needle) return { userId };
+  const pattern = `%${needle.replace(/[\\%_]/g, "\\$&")}%`;
+  const arrayHits = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT id FROM trips
+    WHERE user_id = ${userId}
+      AND array_to_string(tags || companions || countries, ' ') ILIKE ${pattern}`;
   const contains = { contains: needle, mode: "insensitive" as const };
   return {
     userId,
@@ -56,17 +69,17 @@ export function searchWhere(userId: string, q: string | undefined): Prisma.TripW
       { originLabel: contains },
       { description: contains },
       { notes: contains },
-      // Array columns can only be matched whole; the case is the user's own.
-      { tags: { has: needle } },
-      { companions: { has: needle } },
-      { countries: { has: needle.toUpperCase() } },
+      { id: { in: arrayHits.map((r) => r.id) } },
     ],
   };
 }
 
-export function tripsListWhere(userId: string, query: TripsListQuery): Prisma.TripWhereInput {
+export async function tripsListWhere(
+  userId: string,
+  query: TripsListQuery
+): Promise<Prisma.TripWhereInput> {
   return {
-    ...searchWhere(userId, query.q),
+    ...(await searchWhere(userId, query.q)),
     ...(query.status && { status: query.status }),
     ...(query.category && { category: query.category }),
   };
@@ -77,7 +90,7 @@ export async function tripsListFacets(
   userId: string,
   q: string | undefined
 ): Promise<{ status: Record<string, number>; category: Record<string, number> }> {
-  const where = searchWhere(userId, q);
+  const where = await searchWhere(userId, q);
   const [byStatus, byCategory] = await Promise.all([
     prisma.trip.groupBy({ by: ["status"], where, _count: { _all: true } }),
     prisma.trip.groupBy({ by: ["category"], where, _count: { _all: true } }),

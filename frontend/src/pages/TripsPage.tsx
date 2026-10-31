@@ -26,6 +26,7 @@ export default function TripsPage(): JSX.Element {
   const [total, setTotal] = useState<number | null>(null);
   const [facets, setFacets] = useState<TripsListPage["facets"]>();
   const [listError, setListError] = useState(false);
+  const [replacing, setReplacing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreError, setMoreError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -53,6 +54,7 @@ export default function TripsPage(): JSX.Element {
 
   useEffect(() => {
     const id = ++requestId.current;
+    setReplacing(true);
     void (async () => {
       try {
         const page = await tripsApi.listPage({
@@ -72,6 +74,8 @@ export default function TripsPage(): JSX.Element {
         if (id !== requestId.current) return;
         logger.warn("Failed to load trips", err);
         setListError(true);
+      } finally {
+        if (id === requestId.current) setReplacing(false);
       }
     })();
   }, [filters, reloadKey]);
@@ -117,7 +121,7 @@ export default function TripsPage(): JSX.Element {
         listError={listError}
         loadMore={
           hasMore
-            ? { loading: loadingMore, error: moreError, onLoad: () => void loadMore() }
+            ? { loading: loadingMore || replacing, error: moreError, onLoad: () => void loadMore() }
             : undefined
         }
         onTripsChange={() => setReloadKey((k) => k + 1)}
