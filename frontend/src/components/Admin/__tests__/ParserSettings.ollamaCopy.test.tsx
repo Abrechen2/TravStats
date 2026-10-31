@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import adminDe from "../../../i18n/resources/de/admin.json";
 
@@ -17,6 +18,8 @@ vi.mock("../../../hooks/useTranslation", () => ({
     },
   }),
 }));
+// The cloud chain loads the services' status; it has its own tests.
+vi.mock("../LlmProviderSettings", () => ({ default: () => null }));
 vi.mock("../../Settings/frame/useExpertRows", () => ({ useExpertRows: () => true }));
 const api = vi.hoisted(() => ({ listOllamaModels: vi.fn(), pullOllamaModel: vi.fn() }));
 vi.mock("../../../lib/api", () => ({ adminApi: api }));
@@ -41,7 +44,8 @@ const renderParser = () =>
       onParserSettingsChange={vi.fn()}
       onTestOllama={vi.fn()}
       ollamaTestState={{ status: "idle" }}
-    />
+    />,
+    { wrapper: MemoryRouter }
   );
 
 describe("ParserSettings — Ollama model copy", () => {

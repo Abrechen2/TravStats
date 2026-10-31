@@ -49,6 +49,10 @@ vi.mock("../../components/NavigationBar", () => ({
 vi.mock("../../components/inbox/UnfiledDocumentsSection", () => ({
   default: () => <div data-testid="unfiled-documents-stub" />,
 }));
+// Place captures load their own list on mount; they have their own tests.
+vi.mock("../../components/inbox/PlaceCapturesSection", () => ({
+  default: () => <div data-testid="place-captures-stub" />,
+}));
 vi.mock("../../components/GlobeLoader", () => ({ GlobeLoader: () => null }));
 vi.mock("../../lib/api/dataQualityFlags", () => ({
   dataQualityFlagsApi: { getAll: vi.fn(), run: vi.fn(), dismiss: vi.fn(), resolve: vi.fn() },

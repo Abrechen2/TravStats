@@ -209,7 +209,7 @@ export default function RemindersTable(props: RemindersTableProps): JSX.Element 
                     <span
                       role="alert"
                       className="t-caption flex flex-wrap items-center"
-                      style={{ gap: 8, color: "var(--ts-danger, #c0392b)" }}
+                      style={{ gap: 8, color: "var(--danger)" }}
                     >
                       {t("settings:notifications.rowFailed")}
                       <button

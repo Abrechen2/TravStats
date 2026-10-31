@@ -15,7 +15,6 @@ const read = (name: string): string => readFileSync(resolve(dir, `${name}.tsx`),
 const CARDS = [
   "ImmichConnectionCard",
   "PhotoJourneyNightlyScanCard",
-  "DawarichConnectionCard",
   "StravaConnectionCard",
   "RailProvidersCard",
   "OpenDataCard",

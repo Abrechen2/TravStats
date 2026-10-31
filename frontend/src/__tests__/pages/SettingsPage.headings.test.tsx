@@ -86,6 +86,14 @@ vi.mock("@/lib/api/notifications", async (importOriginal) => {
         notificationEmail: null,
         notifyBefore24h: false,
         notifyBefore2h: false,
+        domains: Object.fromEntries(
+          ["flight", "cruise", "rail", "bus", "ferry", "lodging"].map((d) => [
+            d,
+            { enabled: false, leadHours: [24], channel: "app" },
+          ])
+        ),
+        mail: { available: false, reason: "no_email" },
+        push: { available: false, reason: "no_relay" },
       }),
     },
   };
