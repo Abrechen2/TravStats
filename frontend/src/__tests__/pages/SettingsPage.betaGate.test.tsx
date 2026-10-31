@@ -160,6 +160,7 @@ vi.mock("../../components/Settings/DevicesSection", () => ({
 // DevicesSection is above — its own fetches on mount are irrelevant to
 // whether the beta gate mounts it at all.
 // Fetches the user's settings on mount (P5 home country) — not the subject here.
+vi.mock("../../components/Settings/PersonalFactsCard", () => ({ default: () => null }));
 vi.mock("../../components/Settings/HomeCountryCard", () => ({
   default: () => <div data-testid="home-country-card" />,
 }));
