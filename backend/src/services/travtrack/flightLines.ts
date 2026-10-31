@@ -78,10 +78,29 @@ export async function travTrackFlightLines(
     select: FLIGHT_SELECT,
   });
   if (flights.length === 0) return [];
+  // The account's TravTrack extent and its flight links, read once: a flight
+  // outside the extent with no link holds nothing and costs no query at all
+  // (forgejo#333 — it was one thinning query per flight of ten years).
+  const [extent, linked] = await Promise.all([
+    prisma.travTrackPoint.aggregate({ where: { userId }, _min: { t: true }, _max: { t: true } }),
+    prisma.travTrackPointLink.findMany({
+      where: { userId, entryKind: "flight" },
+      distinct: ["entryId"],
+      select: { entryId: true },
+      orderBy: { entryId: "asc" },
+    }),
+  ]);
+  const minMs = extent._min.t?.getTime() ?? null;
+  const maxMs = extent._max.t?.getTime() ?? null;
+  if (minMs === null || maxMs === null) return [];
+  const linkedIds = new Set(linked.map((l) => l.entryId));
   // Only flights that hold anything: a window with points, or a link.
   const windows: FlightWindow[] = [];
   for (const f of flights) {
     const w = await flightRecorderWindow(f);
+    const hasLink = linkedIds.has(f.id);
+    const overlaps = w !== null && w[0] <= maxMs && w[1] >= minMs;
+    if (!hasLink && !overlaps) continue;
     windows.push(
       w ? { flightId: f.id, fromMs: w[0], toMs: w[1] } : { flightId: f.id, fromMs: 0, toMs: null }
     );
