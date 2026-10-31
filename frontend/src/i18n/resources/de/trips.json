@@ -104,7 +104,7 @@
     "noResults": "Keine Reise gefunden",
     "undated": "Ohne Datum"
   },
-  "listTruncated": "Zeigt {{shown}} von {{total}} Reisen – die übrigen werden hier nicht geladen. Öffne eine Reise direkt oder grenze sie über Suche und Filter ein.",
+  "listTruncated": "Zeigt {{shown}} von {{total}} Reisen – die übrigen werden hier nicht geladen. Reisen lassen sich weiterhin direkt per Link öffnen.",
   "cleanup": {
     "button": "🧹 Aufräumen",
     "title": "Mikro-Reisen auflösen",

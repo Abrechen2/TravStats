@@ -104,7 +104,7 @@
     "noResults": "No journeys found",
     "undated": "Undated"
   },
-  "listTruncated": "Showing {{shown}} of {{total}} trips – the rest are not loaded here. Open a trip directly or narrow the list with search and filters.",
+  "listTruncated": "Showing {{shown}} of {{total}} trips – the rest are not loaded here. Trips can still be opened directly by link.",
   "cleanup": {
     "button": "🧹 Clean up",
     "title": "Dissolve micro-journeys",
