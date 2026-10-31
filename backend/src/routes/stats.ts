@@ -191,22 +191,24 @@ router.get(
 
       // Historical flights count; `year` places a flight by its LOCAL departure day,
       // as /summary does (audit F-004).
-      const flights = await prisma.flight.findMany({
+      // Grouped in SQL: one row per distinct airport spelling, not per flight (PERF-22).
+      const flights = await prisma.flight.groupBy({
+        by: [
+          "depIata",
+          "depIcao",
+          "depName",
+          "depLat",
+          "depLon",
+          "arrIata",
+          "arrIcao",
+          "arrName",
+          "arrLat",
+          "arrLon",
+        ],
         where: await countableFlightsWhere(userId, parsed.data.year),
-        select: {
-          depIata: true,
-          depIcao: true,
-          depName: true,
-          depLat: true,
-          depLon: true,
-          arrIata: true,
-          arrIcao: true,
-          arrName: true,
-          arrLat: true,
-          arrLon: true,
-        },
+        _count: { _all: true },
+        orderBy: [{ depIata: "asc" }, { arrIata: "asc" }],
       });
-
       /**
        * Grouped by the PAIR, not the direction — Forgejo #42, owner's decision
        * 2026-08-31.
@@ -238,17 +240,16 @@ router.get(
       >();
 
       flights.forEach((flight) => {
-        // Unordered pair (`shared/routePair`, forgejo#254); no airport, no route.
         const depCode = flight.depIata || flight.depIcao;
         const arrCode = flight.arrIata || flight.arrIcao;
         const routeKey = routePairKey(depCode, arrCode);
         if (routeKey === null) return;
 
         if (routeMap.has(routeKey)) {
-          routeMap.get(routeKey)!.count++;
+          routeMap.get(routeKey)!.count += flight._count._all;
         } else {
           routeMap.set(routeKey, {
-            count: 1,
+            count: flight._count._all,
             departure: {
               iata: flight.depIata || undefined,
               name: flight.depName || undefined,
@@ -266,7 +267,6 @@ router.get(
         }
       });
 
-      // Convert to array and sort by count
       const routes = Array.from(routeMap.entries())
         .map(([route, data]) => ({
           route,

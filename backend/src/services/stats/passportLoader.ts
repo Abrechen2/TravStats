@@ -20,6 +20,7 @@ import { getCachedAirports } from "../airportCache";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { allHomeAirports } from "../../utils/homeAirport";
 import { loadHomePeriods } from "../home/homeStore";
+import type { HomePeriod } from "../../utils/homeAirport";
 import { normalizeFlightTimeUtc, type FlightTimeSemantics } from "../../utils/timezone";
 import { departureDayOf } from "../../utils/stats/departureClock";
 import { profileZoneOf } from "../../shared/time/profileZone";
@@ -90,8 +91,11 @@ export async function loadAirportCountries(codes: string[]): Promise<Map<string,
 }
 
 /** Every home airport the user ever had, newest period first — membership, not just the primary. */
-export async function loadHomeIatas(userId: string): Promise<string[]> {
-  return allHomeAirports(await loadHomePeriods(userId));
+export async function loadHomeIatas(
+  userId: string,
+  periods?: Promise<HomePeriod[]>
+): Promise<string[]> {
+  return allHomeAirports(await (periods ?? loadHomePeriods(userId)));
 }
 
 /**
@@ -100,8 +104,12 @@ export async function loadHomeIatas(userId: string): Promise<string[]> {
  * by `today`. A period that starts later is a plan, and a plan proves nothing.
  * Read from the airports because the residence carries coordinates only.
  */
-export async function loadHomeCountries(userId: string, today: string): Promise<string[]> {
-  const begun = (await loadHomePeriods(userId)).filter((p) => p.fromDate <= today);
+export async function loadHomeCountries(
+  userId: string,
+  today: string,
+  periods?: Promise<HomePeriod[]>
+): Promise<string[]> {
+  const begun = (await (periods ?? loadHomePeriods(userId))).filter((p) => p.fromDate <= today);
   const countries = await loadAirportCountries(allHomeAirports(begun));
   return [...new Set([...countries.values()].filter((c): c is string => Boolean(c)))];
 }
@@ -285,6 +293,9 @@ export async function loadPassport(
    * flights, and a place joins on its resolved `isoCountryCode` because
    * "Deutschland" and "Germany" are one country and only the code knows that.
    */
+  // One read of the settings row for both the home airports and the home
+  // countries (forgejo#383, PERF-27).
+  const homePeriods = loadHomePeriods(userId);
   // prettier-ignore
   const [airportCountries, portCalls, placeVisits, lodgings, homeIatas, countryDays, threshold, roadtripStations, railEnds, busEnds, homeCountries, ferryEnds, overrides] = await Promise.all([
     loadAirportCountries(passportAirportCodes(flights)),
@@ -336,7 +347,7 @@ export async function loadPassport(
         },
       },
     }),
-    loadHomeIatas(userId),
+    loadHomeIatas(userId, homePeriods),
     /**
      * Measured presence — spec §8. The country-days a background sweep already
      * reduced from this account's location history, which is the only evidence
@@ -384,7 +395,7 @@ export async function loadPassport(
     // until 2.7 by nothing here.
     readRail ? loadRailEnds(userId) : [],
     readBus ? loadBusEnds(userId) : [],
-    loadHomeCountries(userId, now.toISOString().slice(0, 10)),
+    loadHomeCountries(userId, now.toISOString().slice(0, 10), homePeriods),
     readFerry ? loadFerryEnds(userId) : [],
     // The user's own verdicts (forgejo#308), applied below to the finished
     // fold — here, so no consumer of the passport can read it without them.

@@ -182,16 +182,24 @@ export async function scanPhotoJourneys(
   let updated = 0;
   let lookups = 0;
 
+  // One read for every fingerprint instead of one findUnique per finding
+  // (forgejo#383, PERF-31).
+  const existingRows = await prisma.photoJourney.findMany({
+    where: {
+      userId,
+      fingerprint: { in: findings.map((f) => journeyFingerprint(f.cluster)) },
+    },
+    select: { id: true, status: true, fingerprint: true },
+  });
+  const existingByFingerprint = new Map(existingRows.map((r) => [r.fingerprint, r]));
+
   for (const finding of findings) {
     const { cluster, located } = finding;
     // The fingerprint stays on the MEDIAN position it has always used, not on
     // the displayed coordinate: a key that moved with the rule would re-ask
     // every question the user has already dismissed.
     const fingerprint = journeyFingerprint(cluster);
-    const existing = await prisma.photoJourney.findUnique({
-      where: { userId_fingerprint: { userId, fingerprint } },
-      select: { id: true, status: true },
-    });
+    const existing = existingByFingerprint.get(fingerprint) ?? null;
 
     // Already answered. Re-asking a dismissed question every night is
     // how a helpful feature becomes one people turn off.

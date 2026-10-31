@@ -14,11 +14,19 @@ const schema = z.object({
   routed: z.literal(true),
   method: z.enum(["short_hop", "maritime_graph", "coarse_a_star", "direct"]),
 });
+const SCHEMATIC_HOT_ROUTES = 5_000;
 export function createSchematicRouteStore(): RouteStore<SchematicRoute> {
-  return new RouteStore<SchematicRoute>(routeDirectory("sea"), (value) => {
-    const parsed = schema.safeParse(value);
-    return parsed.success ? parsed.data : null;
-  });
+  // The store's hot set is the only in-memory route cache (the 5,000-entry LRU
+  // that used to sit in front of it was dropped, forgejo#384 MEM-8), so it
+  // carries that capacity.
+  return new RouteStore<SchematicRoute>(
+    routeDirectory("sea"),
+    (value) => {
+      const parsed = schema.safeParse(value);
+      return parsed.success ? parsed.data : null;
+    },
+    SCHEMATIC_HOT_ROUTES
+  );
 }
 
 /** Bump when the routing algorithm changes; data changes are hashed below. */

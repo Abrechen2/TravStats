@@ -420,7 +420,9 @@ enforced, and merely practised** below.
 - **Cruise sea-routes** — `backend/src/services/schematicRouter.ts`: coarse
   1° A* water path → Douglas-Peucker to 3–8 waypoints; raw port coords are
   always first/last; a disconnected sea yields a straight `[dep, arr]` chord.
-  There is no route cache. The frontend fetches waypoints per leg via
+  Successful routes live in `RouteStore` (`services/routing/routeStore.ts`:
+  hot in-memory set plus one file per route on disk) — there is no second
+  cache in front of it. The frontend fetches waypoints per leg via
   `GET /api/v1/cruises/:id/geometry` and runs a Catmull-Rom spline through
   them; with no geometry, `buildCruiseArcs` (`components/layers/cruiseArcsLayer.ts`)
   draws a straight chord. `tools/sea-route-lab/` is a browser-only prototype
