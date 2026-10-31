@@ -1,5 +1,11 @@
+import { MemoryRouter } from "react-router-dom";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+
+// The cloud chain loads the services' status; it has its own tests.
+vi.mock("../LlmProviderSettings", () => ({
+  default: () => <div data-testid="llm-provider-settings" />,
+}));
 
 import ParserSettings, { type ParserSettingsData } from "../ParserSettings";
 
@@ -28,7 +34,8 @@ function renderWith(settings: ParserSettingsData, onChange = vi.fn()) {
       onParserSettingsChange={onChange}
       onTestOllama={vi.fn()}
       ollamaTestState={{ status: "idle" }}
-    />
+    />,
+    { wrapper: MemoryRouter }
   );
   return onChange;
 }

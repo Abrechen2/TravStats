@@ -114,7 +114,7 @@ export const SERVICES: readonly ServiceDef[] = [
     "https://aviationstack.com/",
     {
       quotaProvider: "aviationstack",
-      fields: [admin("dailyBudget", "number", "aviationstackDailyBudget", true)],
+      fields: [admin("dailyBudget", "number", "aviationstackDailyBudget")],
     }
   ),
   keyService(
@@ -138,8 +138,8 @@ export const SERVICES: readonly ServiceDef[] = [
     fields: [
       admin("apiKey", "secret", "globalAeroapiApiKey"),
       admin("tier", "select", "aeroapiTier", false, ["personal", "personal_feeder", "custom"]),
-      admin("monthlyLimitUsd", "number", "aeroapiCustomBudgetUsd", true),
-      admin("tracksEnabled", "switch", "aeroapiTracksEnabled", true),
+      admin("monthlyLimitUsd", "number", "aeroapiCustomBudgetUsd"),
+      admin("tracksEnabled", "switch", "aeroapiTracksEnabled"),
     ],
     requiredFields: ["apiKey"],
     tester: "aeroapi",
@@ -176,7 +176,7 @@ export const SERVICES: readonly ServiceDef[] = [
     recommended: "free",
     resolverProvider: "adsblol",
     enabled: { kind: "adminColumns", columns: ["adsbLolEnabled"] },
-    fields: [admin("apiKey", "secret", "globalAdsblolApiKey", true)],
+    fields: [admin("apiKey", "secret", "globalAdsblolApiKey")],
     tester: "adsblol",
     quotaProvider: "adsblol",
   }),
@@ -335,10 +335,10 @@ export const SERVICES: readonly ServiceDef[] = [
     recommended: "free",
     ai: { kind: "ollama" },
     fields: [
-      admin("url", "url", "ollamaUrl"),
-      admin("model", "text", "ollamaModel"),
+      admin("url", "url", "ollamaUrl", true),
+      admin("model", "text", "ollamaModel", true),
       admin("visionModel", "text", "ollamaVisionModel", true),
-      admin("remoteOptIn", "switch", "llmOllamaOptIn", true),
+      admin("remoteOptIn", "switch", "llmOllamaOptIn"),
     ],
     requiredFields: ["url"],
     tester: "ollama",
@@ -396,8 +396,8 @@ export const SERVICES: readonly ServiceDef[] = [
     ai: { kind: "custom" },
     enabled: { kind: "adminColumns", columns: ["llmCustomOptIn"] },
     fields: [
-      admin("baseUrl", "url", "openaiCompatBaseUrl"),
-      admin("model", "text", "openaiCompatModel"),
+      admin("baseUrl", "url", "openaiCompatBaseUrl", true),
+      admin("model", "text", "openaiCompatModel", true),
       admin("apiKey", "secret", "openaiCompatApiKey"),
     ],
     requiredFields: ["baseUrl", "model"],
@@ -424,8 +424,8 @@ export const SERVICES: readonly ServiceDef[] = [
     recommended: "free",
     resolverProvider: "logostream",
     fields: [
-      admin("apiKey", "secret", "globalLogostreamApiKey", true),
-      admin("operatorLogos", "switch", "operatorLogosOpenDataEnabled", true),
+      admin("apiKey", "secret", "globalLogostreamApiKey"),
+      admin("operatorLogos", "switch", "operatorLogosOpenDataEnabled"),
     ],
     tester: "logostream",
   }),
@@ -441,7 +441,7 @@ export const SERVICES: readonly ServiceDef[] = [
     // and that stays its own switch (the Parser page's "fxCdnFallbackEnabled").
     alwaysOn: true,
     recommended: "free",
-    fields: [admin("cdnFallback", "switch", "fxCdnFallbackEnabled", true)],
+    fields: [admin("cdnFallback", "switch", "fxCdnFallbackEnabled")],
   }),
 
   // ---- sync & mail -------------------------------------------------------------------

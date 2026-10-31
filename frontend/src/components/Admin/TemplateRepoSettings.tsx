@@ -29,7 +29,12 @@ function saveErrorKey(error: unknown): string {
  * how it went; "Save" stores the URL and re-syncs at once — and when the new
  * index cannot be read, says that the last good set is still in use.
  */
-export default function TemplateRepoSettings(): JSX.Element {
+export default function TemplateRepoSettings({
+  expert = true,
+}: {
+  /** The settings level in force: the repository address and its test are Expert. */
+  expert?: boolean;
+}): JSX.Element {
   const { t } = useTranslation(["admin"]);
   const [state, setState] = useState<TemplateRepoState | null>(null);
   const [value, setValue] = useState("");
@@ -97,37 +102,43 @@ export default function TemplateRepoSettings(): JSX.Element {
       <SectionTitle title={t(`${NS}.title`)} description={t(`${NS}.description`)} />
       {state && (
         <div className="space-y-3">
-          <Field
-            label={t(`${NS}.url`)}
-            htmlFor="template-repo-url"
-            hint={t(`${NS}.urlHint`, { defaultUrl: state.defaultUrl })}
-          >
-            <Input
-              id="template-repo-url"
-              type="url"
-              value={value}
-              placeholder={state.defaultUrl}
-              disabled={busy}
-              onChange={(e) => {
-                setValue(e.target.value);
-                setTest(null);
-              }}
-            />
-          </Field>
+          {expert && (
+            <Field
+              label={t(`${NS}.url`)}
+              htmlFor="template-repo-url"
+              hint={t(`${NS}.urlHint`, { defaultUrl: state.defaultUrl })}
+            >
+              <Input
+                id="template-repo-url"
+                type="url"
+                value={value}
+                placeholder={state.defaultUrl}
+                disabled={busy}
+                onChange={(e) => {
+                  setValue(e.target.value);
+                  setTest(null);
+                }}
+              />
+            </Field>
+          )}
           <p className="t-caption" data-testid="template-repo-effective">
             {t(`${NS}.readsFrom.${state.origin}`, { url: state.effectiveUrl })}
           </p>
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" disabled={busy} onClick={() => void runTest()}>
-              {t(`${NS}.test`)}
-            </Button>
-            <Button
-              variant="primary"
-              disabled={busy || (value.trim() || null) === state.url}
-              onClick={() => void save(value.trim() || null)}
-            >
-              {t(busy ? `${NS}.working` : `${NS}.save`)}
-            </Button>
+            {expert && (
+              <>
+                <Button variant="secondary" disabled={busy} onClick={() => void runTest()}>
+                  {t(`${NS}.test`)}
+                </Button>
+                <Button
+                  variant="primary"
+                  disabled={busy || (value.trim() || null) === state.url}
+                  onClick={() => void save(value.trim() || null)}
+                >
+                  {t(busy ? `${NS}.working` : `${NS}.save`)}
+                </Button>
+              </>
+            )}
             {state.url !== null && (
               <Button variant="secondary" disabled={busy} onClick={() => void save(null)}>
                 {t(`${NS}.reset`)}

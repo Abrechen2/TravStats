@@ -2,14 +2,9 @@ import type { JSX } from "react";
 import BackupManagement from "../../components/Admin/BackupManagement";
 import ShareLinksSettings from "../../components/Admin/ShareLinksSettings";
 import ImportModeSettings from "../../components/Admin/ImportModeSettings";
-import TemplateRepoSettings from "../../components/Admin/TemplateRepoSettings";
-import FederationSettings from "../../components/Admin/FederationSettings";
 import TravTrackSettings from "../../components/Admin/TravTrackSettings";
 import TravPlanSettings from "../../components/Admin/TravPlanSettings";
 import InstanceSettings from "../../components/Admin/InstanceSettings";
-import UsageStatsSettings from "../../components/Admin/UsageStatsSettings";
-import PushSettings from "../../components/Admin/PushSettings";
-import WebDAVSettings from "../../components/Admin/WebDAVSettings";
 import SystemInfoTab from "../../components/Admin/SystemInfo";
 import UserManagement from "../../components/Admin/UserManagement";
 import InvitationManagement from "../../components/Admin/InvitationManagement";
@@ -17,11 +12,11 @@ import CreateLinkInviteModal from "../../components/Admin/CreateLinkInviteModal"
 import CreateEmailInviteModal from "../../components/Admin/CreateEmailInviteModal";
 import InviteSuccessModal from "../../components/Admin/InviteSuccessModal";
 import ExternalServicesPointer from "../../components/ExternalServices/ExternalServicesPointer";
+import LegacyServiceSummary from "../../components/ExternalServices/LegacyServiceSummary";
 import AdminExternalServices from "../../components/ExternalServices/AdminExternalServices";
 import AboutSection from "../../components/Settings/AboutSection";
 import ParserSettingsTab from "../../components/Admin/ParserSettings";
 import LoggingManager from "../../components/Admin/LoggingManager";
-import SmtpManager from "../../components/Admin/SmtpManager";
 import ShipsSection from "../../components/Admin/masterData/ShipsSection";
 import PortsSection from "../../components/Admin/masterData/PortsSection";
 import AirlinesSection from "../../components/Admin/masterData/AirlinesSection";
@@ -123,13 +118,13 @@ export const ADMIN_SECTION_FRAME: Record<ActiveSection, "own" | "card"> = {
   importMode: "own",
   usageStats: "card",
   about: "own",
-  federation: "own",
+  federation: "card",
   push: "card",
   users: "card",
   invitations: "card",
   externalServices: "own",
   parsers: "card",
-  templateRepo: "own",
+  templateRepo: "card",
   smtp: "card",
   backups: "card",
   webdav: "card",
@@ -253,8 +248,8 @@ export default function AdminSectionSwitch(props: AdminSectionSwitchProps): JSX.
       ) : null;
 
     case "templateRepo":
-      // Where the templates come from (forgejo#309) — loads its own data.
-      return <TemplateRepoSettings />;
+      // Where the templates come from (forgejo#309): edited under Externe Dienste.
+      return <LegacyServiceSummary serviceId="updatesTemplates" />;
 
     case "logging":
       return props.loggingConfig ? (
@@ -283,51 +278,26 @@ export default function AdminSectionSwitch(props: AdminSectionSwitchProps): JSX.
     case "importMode":
       return <ImportModeSettings />;
     case "usageStats":
-      return (
-        <>
-          <ExternalServicesPointer />
-          <UsageStatsSettings />
-        </>
-      );
+      return <LegacyServiceSummary serviceId="usageStats" />;
     case "about":
       // Moved here from personal settings › Darstellung (tester, 2026-10-20);
       // every account still sees the version under the settings menu.
       return <AboutSection />;
     case "federation":
-      return (
-        <>
-          <ExternalServicesPointer />
-          <FederationSettings />
-        </>
-      );
+      return <LegacyServiceSummary serviceId="federation" />;
     case "push":
-      return (
-        <>
-          <ExternalServicesPointer />
-          <PushSettings />
-        </>
-      );
+      return <LegacyServiceSummary serviceId="push" />;
 
     case "backups":
       return <BackupManagement />;
     case "webdav":
-      return (
-        <>
-          <ExternalServicesPointer />
-          <WebDAVSettings />
-        </>
-      );
+      return <LegacyServiceSummary serviceId="webdav" />;
 
     case "timeModel":
       return <TimeModelSection users={props.users} />;
 
     case "smtp":
-      return (
-        <>
-          <ExternalServicesPointer />
-          <SmtpManager />
-        </>
-      );
+      return <LegacyServiceSummary serviceId="smtp" />;
 
     default:
       return null;

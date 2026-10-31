@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -35,29 +36,12 @@ vi.mock("../../../lib/api/locationProvider", async (importOriginal) => ({
   locationProviderApi: { get: getProvider, set: setProvider },
 }));
 
-const { getSettings, updateSettings } = vi.hoisted(() => ({
-  getSettings: vi.fn(),
-  updateSettings: vi.fn(),
-}));
-vi.mock("../../../lib/api/dawarich", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../../lib/api/dawarich")>()),
-  dawarichApi: { getSettings, updateSettings, testConnection: vi.fn() },
-}));
-
 import LocationProviderSection from "../LocationProviderSection";
-import DawarichConnectionCard from "../DawarichConnectionCard";
+import DawarichProviderHint from "../DawarichProviderHint";
 import { useLocationProviderStore } from "../../../store/locationProviderStore";
 
 const NONE = /settings:locationProvider\.options\.none\.label/;
 const DAWARICH = /settings:locationProvider\.options\.dawarich\.label/;
-
-const connection = () => ({
-  baseUrl: server.connected ? "https://dawarich.lan" : null,
-  hasKey: server.connected,
-  source: server.connected ? ("user" as const) : null,
-  isShared: false,
-  hasAccess: server.connected,
-});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -68,18 +52,32 @@ beforeEach(() => {
     if (server.kind !== kind) Object.assign(server, { kind, rev: server.rev + 1 });
     return view();
   });
-  getSettings.mockImplementation(async () => connection());
-  updateSettings.mockImplementation(async () => {
-    server.connected = true;
-    return connection();
-  });
 });
+
+/** Stands for the Dawarich row of Dienste: its save raises `check`, the hint asks again. */
+function ConnectedRow(): JSX.Element {
+  const [saved, setSaved] = useState(0);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          server.connected = true;
+          setSaved((n) => n + 1);
+        }}
+      >
+        connect
+      </button>
+      <DawarichProviderHint check={saved} />
+    </>
+  );
+}
 
 const page = () =>
   render(
     <MemoryRouter>
       <LocationProviderSection />
-      <DawarichConnectionCard />
+      <ConnectedRow />
     </MemoryRouter>
   );
 
@@ -89,13 +87,7 @@ describe("Standortquelle and the Dawarich connection on one page", () => {
     page();
     expect(await screen.findByRole("radio", { name: DAWARICH })).toBeDisabled();
 
-    await user.type(
-      screen.getByLabelText("trips:tours.dawarichSettings.baseUrl"),
-      "https://dawarich.lan"
-    );
-    await user.type(screen.getByLabelText("trips:tours.dawarichSettings.apiKey"), "key");
-    await user.click(screen.getByRole("button", { name: "trips:tours.dawarichSettings.save" }));
-
+    await user.click(screen.getByRole("button", { name: "connect" }));
     await waitFor(() => expect(screen.getByRole("radio", { name: DAWARICH })).toBeEnabled());
 
     await user.click(

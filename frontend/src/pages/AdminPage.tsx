@@ -1,3 +1,4 @@
+import { parserOwnFields } from "../components/Admin/parserOwnFields";
 import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { Navigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { useToastStore } from "../store/toastStore";
@@ -297,7 +298,7 @@ export default function AdminPage(): JSX.Element {
     if (!parserSettings) return;
     setSavingParsers(true);
     try {
-      await adminApi.updateAdminParserSettings(parserSettings);
+      await adminApi.updateAdminParserSettings(parserOwnFields(parserSettings));
       addToast("success", t("admin:toasts.parserSettingsSaved"));
       // Re-read: the key comes back masked and "is this a cloud endpoint" is
       // the server's answer for what was actually stored.

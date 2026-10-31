@@ -73,7 +73,9 @@
     "close": "Close",
     "retry": "Try again",
     "turnOn": "Turn on",
-    "turnOff": "Turn off"
+    "turnOff": "Turn off",
+    "setUp": "Set up",
+    "openInServices": "Open in External services"
   },
   "fieldNotSet": "not set",
   "expertHidden": "You set addresses and endpoints in the “Expert” view.",
@@ -672,5 +674,28 @@
   },
   "alwaysOn": {
     "label": "Always on – this service cannot be switched off."
+  },
+  "setUpHint": "Connecting needs the address – “Set up” shows it here.",
+  "fieldOptions": {
+    "aeroapi": {
+      "tier": {
+        "personal": "Personal",
+        "personal_feeder": "Personal with feeder",
+        "custom": "Custom budget"
+      }
+    }
+  },
+  "legacy": {
+    "title": "Managed under External services",
+    "body": "Switch, credentials and tests for {{name}} now live in one place: the list of external services.",
+    "statusLabel": "Status",
+    "status": {
+      "active": "Active",
+      "attention": "Needs attention",
+      "off": "Off",
+      "unknown": "Status unavailable"
+    },
+    "loadFailed": "The status could not be loaded.",
+    "parserNote": "How imported bookings are processed is still set here."
   }
 }

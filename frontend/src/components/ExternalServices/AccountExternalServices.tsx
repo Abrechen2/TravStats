@@ -1,7 +1,9 @@
-import { useRef, useState, type JSX, type ReactNode } from "react";
+import { useEffect, useRef, useState, type JSX, type ReactNode } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card } from "../ui/Card";
 import Button from "../ui/Button";
 import PhotoJourneyNightlyScanCard from "../Settings/PhotoJourneyNightlyScanCard";
+import DawarichProviderHint from "../Settings/DawarichProviderHint";
 import StravaConnectionCard from "../Settings/StravaConnectionCard";
 import { WebdavSyncPanel } from "../Settings/WebdavSyncRow";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -70,7 +72,15 @@ export default function AccountExternalServices(): JSX.Element {
   const expert = useEffectiveSettingsLevel() === "expert";
   const services = useAccountServices();
   const toursVisible = useToursVisible();
-  const [openId, setOpenId] = useState<string | null>(null);
+  // `?service=` opens that row (the old Dawarich page links here).
+  const [searchParams] = useSearchParams();
+  const linkedService = searchParams.get("service");
+  const [openId, setOpenId] = useState<string | null>(linkedService);
+  useEffect(() => {
+    if (linkedService) setOpenId(linkedService);
+  }, [linkedService]);
+  // Raised after each saved Dawarich connection: the offer below asks the server again.
+  const [dawarichSaved, setDawarichSaved] = useState(0);
   const [infoId, setInfoId] = useState<string | null>(null);
   const [consentFor, setConsentFor] = useState<AccountAiConsent | null>(null);
   const [consentError, setConsentError] = useState<string | null>(null);
@@ -163,7 +173,11 @@ export default function AccountExternalServices(): JSX.Element {
                 busy={busy}
                 onCancel={close}
                 onSave={async (changes) => {
-                  if (await services.save(service.id, { fields: changes }, true)) close();
+                  if (await services.save(service.id, { fields: changes }, true)) {
+                    // Dawarich stays open: the offer to use it as the location source follows the save.
+                    if (service.id === "dawarich") setDawarichSaved((n) => n + 1);
+                    else close();
+                  }
                 }}
                 onRemove={async (clear) => {
                   if (await services.save(service.id, { fields: clear }, false)) close();
@@ -177,6 +191,7 @@ export default function AccountExternalServices(): JSX.Element {
                     : undefined
                 }
               />
+              {service.id === "dawarich" ? <DawarichProviderHint check={dawarichSaved} /> : null}
               {/* The nightly photo scan reads the connected library (forgejo#94). */}
               {service.id === "immich" ? <PhotoJourneyNightlyScanCard /> : null}
             </div>

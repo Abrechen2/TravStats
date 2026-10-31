@@ -119,7 +119,7 @@ describe("Einstellungen › Dienste: own-key rows name their source", () => {
         },
       ],
     });
-    render(<AccountExternalServices />);
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
     await screen.findByText("externalServices:account.sections.ownKeys");
     const ors = acctRow("openrouteservice");
     expect(within(ors).getByText("externalServices:accountStatus.noKey")).toBeInTheDocument();
@@ -138,7 +138,7 @@ describe("Einstellungen › Dienste: own-key rows name their source", () => {
       ...overview,
       ownKeys: [{ ...overview.ownKeys[1], effectiveSource: "off" }],
     });
-    render(<AccountExternalServices />);
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
     await screen.findByText("externalServices:account.sections.ownKeys");
     expect(
       within(acctRow("aviationstack")).getByText("externalServices:accountStatus.off")

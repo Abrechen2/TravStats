@@ -13,7 +13,8 @@ function formatTime(iso: string): string {
   return new Date(iso).toLocaleString(appLocale(), { timeZone: todayZoneNow() });
 }
 
-export default function PushSettings(): JSX.Element {
+/** `expert` is the settings level in force: the relay address is an Expert field. */
+export default function PushSettings({ expert = true }: { expert?: boolean }): JSX.Element {
   const { t } = useTranslation(["pushRelay", "common"]);
   const addToast = useToastStore((s) => s.addToast);
   const [state, setState] = useState<PushRelayState | null>(null);
@@ -88,7 +89,7 @@ export default function PushSettings(): JSX.Element {
         <p>{t("pushRelay:explanation.receives")}</p>
         <p>{t("pushRelay:explanation.stores")}</p>
         <p>{t("pushRelay:defaultOff")}</p>
-        <p>{t("pushRelay:ownRelay")}</p>
+        {expert && <p>{t("pushRelay:ownRelay")}</p>}
         <p className="flex flex-wrap gap-4">
           <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer" className="underline">
             {t("pushRelay:privacyLink")}
@@ -99,44 +100,46 @@ export default function PushSettings(): JSX.Element {
         )}
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label
-          htmlFor="push-relay-url"
-          className="text-sm font-medium"
-          style={{ color: "var(--text-primary)" }}
-        >
-          {t("pushRelay:relayUrl")}
-        </label>
-        <div className="flex flex-wrap gap-2">
-          <input
-            id="push-relay-url"
-            type="url"
-            value={url}
-            disabled={busy}
-            onChange={(e) => setUrl(e.target.value)}
-            className="min-w-48 flex-1 rounded-sm border px-2 py-1 text-sm"
-            style={{ borderColor: "var(--border)", background: "transparent" }}
-          />
-          <button
-            type="button"
-            disabled={busy || url === state.pushRelayUrl}
-            onClick={() =>
-              void run(
-                () => pushRelayApi.update({ pushRelayUrl: url }),
-                "pushRelay:saved",
-                "pushRelay:invalidUrl"
-              )
-            }
-            className="shrink-0 rounded-sm border px-3 py-1 text-sm"
-            style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}
+      {expert && (
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor="push-relay-url"
+            className="text-sm font-medium"
+            style={{ color: "var(--text-primary)" }}
           >
-            {t("pushRelay:saveUrl")}
-          </button>
+            {t("pushRelay:relayUrl")}
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <input
+              id="push-relay-url"
+              type="url"
+              value={url}
+              disabled={busy}
+              onChange={(e) => setUrl(e.target.value)}
+              className="min-w-48 flex-1 rounded-sm border px-2 py-1 text-sm"
+              style={{ borderColor: "var(--border)", background: "transparent" }}
+            />
+            <button
+              type="button"
+              disabled={busy || url === state.pushRelayUrl}
+              onClick={() =>
+                void run(
+                  () => pushRelayApi.update({ pushRelayUrl: url }),
+                  "pushRelay:saved",
+                  "pushRelay:invalidUrl"
+                )
+              }
+              className="shrink-0 rounded-sm border px-3 py-1 text-sm"
+              style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}
+            >
+              {t("pushRelay:saveUrl")}
+            </button>
+          </div>
+          <span className="text-xs" style={muted}>
+            {t("pushRelay:relayUrlHint")}
+          </span>
         </div>
-        <span className="text-xs" style={muted}>
-          {t("pushRelay:relayUrlHint")}
-        </span>
-      </div>
+      )}
 
       <div className="flex flex-col gap-1 text-sm">
         <span className="font-medium" style={{ color: "var(--text-primary)" }}>

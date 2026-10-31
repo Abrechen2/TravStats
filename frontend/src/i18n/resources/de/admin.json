@@ -597,7 +597,8 @@
       "modelNotFound": "Modell nicht gefunden",
       "modelsAvailable": "Verfügbare Modelle",
       "connectionSuccess": "Ollama erreichbar",
-      "connectionFailed": "Verbindung fehlgeschlagen"
+      "connectionFailed": "Verbindung fehlgeschlagen",
+      "addressMoved": "Adresse und Zustimmung für einen entfernten Ollama stellst du unter Externe Dienste ein; Modell und Test bleiben hier."
     },
     "order": {
       "label": "Wer liest zuerst?",
@@ -611,7 +612,7 @@
     },
     "provider": {
       "title": "KI-Anbieter",
-      "description": "Wer liest die Buchungen, die keine Vorlage kennt? Ollama läuft immer zuerst, wenn es konfiguriert ist — lokal oder im Netzwerk, ohne eigene Zustimmung (außer bei einer Adresse außerhalb deines Netzwerks). Antwortet Ollama nicht, fragt TravStats der Reihe nach die freigegebenen Cloud-Anbieter unten. Jeder Cloud-Anbieter braucht seinen EIGENEN Schlüssel und seine EIGENE Zustimmung — eine Freigabe für OpenAI gilt nicht für Anthropic oder Google.",
+      "description": "Wer liest die Buchungen, die keine Vorlage kennt? Ollama läuft immer zuerst, wenn es konfiguriert ist. Antwortet es nicht, fragt TravStats der Reihe nach die eingeschalteten Cloud-Anbieter unten. Einschalten, Schlüssel, Modell und Zustimmung stellst du unter Externe Dienste ein; hier legst du nur die Reihenfolge fest.",
       "chain": {
         "title": "Rangfolge der Cloud-Anbieter",
         "hint": "Antwortet Ollama nicht (nicht konfiguriert oder nicht erreichbar), versucht TravStats diese Anbieter der Reihe nach — aber nur, wenn Schlüssel UND Zustimmung vorliegen. Ein Anbieter ohne beides wird übersprungen, nie versucht. Ein Anbieter, der antwortet, beendet die Kette — auch bei einer mageren Antwort.",
@@ -687,8 +688,18 @@
             "inactive": "Der gespeicherte Anbieter liegt außerhalb deines Netzwerks. Solange du nicht zustimmst, bleibt dieser Anbieter außen vor."
           }
         }
+      },
+      "loading": "Status der Anbieter wird geladen …",
+      "loadFailed": "Der Status der Anbieter konnte nicht geladen werden.",
+      "noneEnabled": "Kein Cloud-Anbieter ist eingeschaltet.",
+      "enableInServices": "In Externe Dienste einschalten",
+      "openInServices": "In Externe Dienste öffnen",
+      "status": {
+        "active": "Bereit",
+        "missing": "Schlüssel fehlt"
       }
-    }
+    },
+    "accountKeysFxMoved": "Schlüssel-Erlaubnis für Konten und der Wechselkurs-Ausweichdienst gehören zu den Diensten und stehen unter Externe Dienste."
   },
   "backup": {
     "title": "Backup-Verwaltung",

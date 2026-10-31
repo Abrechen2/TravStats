@@ -73,7 +73,9 @@
     "close": "Schließen",
     "retry": "Erneut versuchen",
     "turnOn": "Einschalten",
-    "turnOff": "Ausschalten"
+    "turnOff": "Ausschalten",
+    "setUp": "Einrichten",
+    "openInServices": "In Externe Dienste öffnen"
   },
   "fieldNotSet": "nicht gesetzt",
   "expertHidden": "Adressen und Endpunkte stellst du in der Ansicht „Experte“ ein.",
@@ -672,5 +674,28 @@
   },
   "alwaysOn": {
     "label": "Immer eingeschaltet – dieser Dienst lässt sich nicht abschalten."
+  },
+  "setUpHint": "Zum Verbinden brauchst du die Adresse – „Einrichten“ blendet sie hier ein.",
+  "fieldOptions": {
+    "aeroapi": {
+      "tier": {
+        "personal": "Personal",
+        "personal_feeder": "Personal mit Feeder",
+        "custom": "Eigenes Budget"
+      }
+    }
+  },
+  "legacy": {
+    "title": "Verwaltet unter Externe Dienste",
+    "body": "Schalter, Zugangsdaten und Tests von {{name}} liegen jetzt an einer Stelle: in der Liste der externen Dienste.",
+    "statusLabel": "Status",
+    "status": {
+      "active": "Aktiv",
+      "attention": "Braucht Aufmerksamkeit",
+      "off": "Aus",
+      "unknown": "Status nicht verfügbar"
+    },
+    "loadFailed": "Der Status konnte nicht geladen werden.",
+    "parserNote": "Wie importierte Buchungen verarbeitet werden, stellst du weiterhin hier ein."
   }
 }

@@ -11,9 +11,10 @@ vi.mock("../../../lib/api/externalServices", async (importOriginal) => ({
 // The embedded legacy controls load their own data and have their own tests.
 vi.mock("../SpecialisedControl", () => ({
   replacesGenericFields: (id: string) => id === "smtp",
-  SpecialisedControl: ({ serviceId }: { serviceId: string }) => (
-    <div data-testid={`legacy-${serviceId}`} />
-  ),
+  SpecialisedControl: ({ serviceId, expert }: { serviceId: string; expert: boolean }) =>
+    serviceId === "smtp" ? (
+      <div data-testid={`legacy-${serviceId}`} data-expert={String(expert)} />
+    ) : null,
 }));
 
 import AdminExternalServices from "../AdminExternalServices";

@@ -16,7 +16,11 @@ export interface AdminServices {
   feedback: Record<string, RowFeedback>;
   reload: () => Promise<void>;
   test: (id: string) => Promise<void>;
-  save: (id: string, changes: Record<string, unknown>) => Promise<void>;
+  save: (
+    id: string,
+    changes: Record<string, unknown>,
+    confirmDataSharing?: boolean
+  ) => Promise<void>;
   setEnabled: (
     id: string,
     enabled: boolean,
@@ -114,12 +118,19 @@ export function useAdminServices(): AdminServices {
       await reload();
     });
 
-  const save = (id: string, changes: Record<string, unknown>): Promise<void> =>
+  const save = (
+    id: string,
+    changes: Record<string, unknown>,
+    confirmDataSharing = false
+  ): Promise<void> =>
     withBusy(id, async () => {
       note(id, null);
       if (Object.keys(changes).length > 0) {
         try {
-          await externalServicesApi.adminUpdate(id, { fields: changes });
+          await externalServicesApi.adminUpdate(
+            id,
+            confirmDataSharing ? { fields: changes, confirmDataSharing } : { fields: changes }
+          );
         } catch (err) {
           note(id, { kind: "error", text: failureText(t, err, "errors.saveFailed") });
           return;
