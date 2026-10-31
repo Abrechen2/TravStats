@@ -5,7 +5,8 @@ import { prisma } from "../../db";
  * reminder settings so the Companion knows whether to schedule its own
  * reminders (it does only while `available` is false).
  *
- * - `no_relay`: the admin has not switched push on, or no relay address is set.
+ * - `no_relay`: the admin has not switched push on, no relay address is set, or the relay
+ *   has paused this instance (daily limit).
  * - `no_device_token`: the caller has no registered push token (a paired
  *   device that never registered one, a revoked pairing, a browser session
  *   with no phone at all).
@@ -24,9 +25,11 @@ export interface PushStatus {
 export async function relayConfigured(): Promise<boolean> {
   const settings = await prisma.adminSettings.findFirst({
     orderBy: { id: "asc" },
-    select: { pushEnabled: true, pushRelayUrl: true },
+    select: { pushEnabled: true, pushRelayUrl: true, pushPausedUntil: true },
   });
-  return settings?.pushEnabled === true && !!settings.pushRelayUrl;
+  // A relay pause (its daily limit, up to 24 h) means nothing is delivered either.
+  const paused = !!settings?.pushPausedUntil && settings.pushPausedUntil > new Date();
+  return settings?.pushEnabled === true && !!settings.pushRelayUrl && !paused;
 }
 
 export async function pushStatusFor(

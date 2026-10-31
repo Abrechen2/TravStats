@@ -88,7 +88,19 @@ export async function applySettings(
           if (on === undefined) continue;
           leads = on ? [...new Set([...leads, hour])] : leads.filter((h) => h !== hour);
         }
-        await tx.reminderPreference.update({ where: { id: row.id }, data: { leadHours: leads } });
+        // Switching a lead ON through the old API means "mail me": the row is enabled and an
+        // app-only channel gains the mail.
+        const turnedOn = fan.some(([, on]) => on === true);
+        await tx.reminderPreference.update({
+          where: { id: row.id },
+          data: {
+            leadHours: leads,
+            ...(turnedOn && {
+              enabled: true,
+              channel: row.channel === "app" ? "both" : row.channel,
+            }),
+          },
+        });
       }
     }
 

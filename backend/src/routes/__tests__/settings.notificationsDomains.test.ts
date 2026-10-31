@@ -107,6 +107,26 @@ describe("settings/notifications per domain", () => {
     expect(res.body.domains.lodging.leadHours).toEqual([2]);
   });
 
+  it("an old client switching a lead on re-enables a disabled, app-only domain with mail", async () => {
+    await request(app)
+      .put(URL)
+      .set("Cookie", cookie)
+      .send({ domains: { bus: { enabled: false, channel: "app", leadHours: [] } } });
+    const res = await request(app).put(URL).set("Cookie", cookie).send({ notifyBefore24h: true });
+    expect(res.body.domains.bus).toEqual({ enabled: true, leadHours: [24], channel: "both" });
+  });
+
+  it("no_relay while the relay has paused this instance", async () => {
+    const dev = await pairedDevice(userId, "d7");
+    await dev.register();
+    await prisma.adminSettings.updateMany({
+      data: { pushPausedUntil: new Date(Date.now() + 3_600_000) },
+    });
+    const res = await request(app).get(URL).set(dev.auth);
+    await prisma.adminSettings.updateMany({ data: { pushPausedUntil: null } });
+    expect(res.body.push).toEqual({ available: false, reason: "no_relay" });
+  });
+
   it("stores a domain's enabled / leadHours / channel and derives the legacy switches", async () => {
     const res = await request(app)
       .put(URL)

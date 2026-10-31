@@ -122,7 +122,7 @@ export async function checkLodgingCheckInReminders(now: Date): Promise<void> {
           tripId: stay.tripId,
           hours,
           anchorAt: anchor,
-          anchorKey: lodgingKey(stay),
+          anchorKey: lodgingKey(stay, accountZone),
           now,
           render: (locale) =>
             entryReminderMessage(

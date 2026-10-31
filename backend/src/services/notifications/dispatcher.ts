@@ -136,7 +136,7 @@ async function deliver(
     }
 
     if (outcome === "token-invalid") {
-      await markTokenRejected(device.apiTokenId);
+      await markTokenRejected(device.apiTokenId, device.token);
     } else if (outcome !== "sent") {
       // Not delivered: free the claim so the next run can try again.
       await prisma.pushDelivery.deleteMany({ where: { id: deliveryId } });
@@ -149,9 +149,11 @@ async function deliver(
  * settings read can say "token_rejected" and the phone knows to schedule its
  * own reminders; a registration with a different token clears the mark.
  */
-async function markTokenRejected(apiTokenId: string): Promise<void> {
+async function markTokenRejected(apiTokenId: string, token: string): Promise<void> {
+  // Matched on the token too: a registration that replaced it while the send was in flight
+  // must not inherit the old token's rejection.
   await prisma.devicePush.updateMany({
-    where: { apiTokenId },
+    where: { apiTokenId, token },
     data: { tokenRejectedAt: new Date() },
   });
 }
@@ -284,7 +286,7 @@ export async function notifyEntryReminder(
       if (outcome === "sent") {
         await markSent(claim, now());
       } else {
-        if (outcome === "token-invalid") await markTokenRejected(device.apiTokenId);
+        if (outcome === "token-invalid") await markTokenRejected(device.apiTokenId, device.token);
         await releaseClaim(claim);
       }
     }

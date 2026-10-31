@@ -23,7 +23,8 @@ export interface ClaimKey {
   channel: string;
 }
 
-export type Claim = { id: string } | null;
+/** `claimedAt` is the lease generation: only the holder of it may finish or free the claim. */
+export type Claim = { id: string; claimedAt: Date } | null;
 
 const where = (k: ClaimKey) => ({
   userId_domain_entryId_leadHours_channel: {
@@ -44,7 +45,7 @@ export async function claimReminder(
     const created = await expectingUniqueConflict("ReminderClaim", () =>
       prisma.reminderClaim.create({ data: { ...key, anchorAt, claimedAt: now } })
     );
-    return { id: created.id };
+    return { id: created.id, claimedAt: created.claimedAt };
   } catch (err) {
     if (!(err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002")) throw err;
   }
@@ -59,17 +60,24 @@ export async function claimReminder(
     where: { id: row.id, claimedAt: row.claimedAt, anchorAt: row.anchorAt },
     data: { claimedAt: now, anchorAt, sentAt: null },
   });
-  return won.count === 1 ? { id: row.id } : null;
+  return won.count === 1 ? { id: row.id, claimedAt: now } : null;
 }
 
-export async function markSent(claim: { id: string }, now: Date = new Date()): Promise<void> {
-  await prisma.reminderClaim.update({ where: { id: claim.id }, data: { sentAt: now } });
+export async function markSent(
+  claim: { id: string; claimedAt: Date },
+  now: Date = new Date()
+): Promise<void> {
+  // Fenced on the lease generation: a worker whose lease was taken over cannot mark the new one.
+  await prisma.reminderClaim.updateMany({
+    where: { id: claim.id, claimedAt: claim.claimedAt },
+    data: { sentAt: now },
+  });
 }
 
 /** The send failed: make the claim takeable at once so the next run retries (within the lateness bound). */
-export async function releaseClaim(claim: { id: string }): Promise<void> {
+export async function releaseClaim(claim: { id: string; claimedAt: Date }): Promise<void> {
   await prisma.reminderClaim.updateMany({
-    where: { id: claim.id, sentAt: null },
+    where: { id: claim.id, claimedAt: claim.claimedAt, sentAt: null },
     data: { claimedAt: new Date(0) },
   });
 }

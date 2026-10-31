@@ -50,7 +50,7 @@ function due(domain: ReminderDomain, channel: ReminderChannel, extra: object = {
 beforeEach(() => {
   jest.clearAllMocks();
   mockNotify.mockResolvedValue(undefined);
-  mockClaim.mockResolvedValue({ id: "c1" });
+  mockClaim.mockResolvedValue({ id: "c1", claimedAt: new Date(0) });
   mockSent.mockResolvedValue(undefined);
   mockRelease.mockResolvedValue(undefined);
   mockEligible.mockResolvedValue(true);
@@ -108,7 +108,7 @@ describe("sendDueReminder", () => {
     sendMail.mockRejectedValue(new Error("smtp down"));
     await sendDueReminder(args);
     expect(mockNotify).toHaveBeenCalledTimes(1);
-    expect(mockRelease).toHaveBeenCalledWith({ id: "c1" });
+    expect(mockRelease).toHaveBeenCalledWith({ id: "c1", claimedAt: new Date(0) });
     expect(mockSent).not.toHaveBeenCalled();
   });
 

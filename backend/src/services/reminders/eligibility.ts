@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { profileZoneFromSettings } from "../../shared/time/profileZone";
 import { REMINDER_USER_SELECT, wantsApp, wantsMail, type ReminderDomain } from "./prefs";
 
 /**
@@ -13,7 +14,12 @@ import { REMINDER_USER_SELECT, wantsApp, wantsMail, type ReminderDomain } from "
  */
 export const isoOf = (d: Date | null | undefined): string => (d ? d.toISOString() : "");
 
-async function currentKey(domain: ReminderDomain, entryId: string, userId: string) {
+async function currentKey(
+  domain: ReminderDomain,
+  entryId: string,
+  userId: string,
+  accountZone: string
+) {
   switch (domain) {
     case "flight": {
       const row = await prisma.flight.findFirst({
@@ -53,18 +59,37 @@ async function currentKey(domain: ReminderDomain, entryId: string, userId: strin
     case "lodging": {
       const row = await prisma.lodgingStay.findFirst({
         where: { id: entryId, userId, status: "scheduled" },
-        select: { checkInDate: true, checkInAt: true, stayZone: true },
+        select: {
+          checkIn: true,
+          checkInDate: true,
+          checkInAt: true,
+          stayZone: true,
+          datePrecision: true,
+        },
       });
-      return row ? lodgingKey(row) : null;
+      return row ? lodgingKey(row, accountZone) : null;
     }
   }
 }
 
-export const lodgingKey = (s: {
-  checkInDate: Date | null;
-  checkInAt: Date | null;
-  stayZone: string | null;
-}): string => `${isoOf(s.checkInDate)}|${isoOf(s.checkInAt)}|${s.stayZone ?? ""}`;
+/** Everything the lodging anchor is computed from, so a change to any of it re-keys the stay. */
+export const lodgingKey = (
+  s: {
+    checkIn: Date | null;
+    checkInDate: Date | null;
+    checkInAt: Date | null;
+    stayZone: string | null;
+    datePrecision: string;
+  },
+  accountZone: string
+): string =>
+  [
+    isoOf(s.checkIn),
+    isoOf(s.checkInDate),
+    isoOf(s.checkInAt),
+    s.stayZone ?? `account:${accountZone}`,
+    s.datePrecision,
+  ].join("|");
 
 export type Channel = "mail" | "app";
 
@@ -86,5 +111,12 @@ export async function stillEligible(args: {
       ? wantsMail(user, args.domain, args.hours)
       : wantsApp(user, args.domain, args.hours);
   if (!wanted) return false;
-  return (await currentKey(args.domain, args.entryId, args.userId)) === args.anchorKey;
+  return (
+    (await currentKey(
+      args.domain,
+      args.entryId,
+      args.userId,
+      profileZoneFromSettings(user.settings?.data).zone
+    )) === args.anchorKey
+  );
 }

@@ -75,4 +75,16 @@ describe("durable reminder claims", () => {
     // ...and the re-armed reminder is itself sent only once.
     expect(await claimReminder(key(), big, t0)).toBeNull();
   });
+
+  it("a worker whose lease was taken over cannot finish or free the new owner's claim", async () => {
+    const first = await claimReminder(key(), anchor, t0);
+    const later = new Date(t0.getTime() + LEASE_MS + MIN);
+    const second = await claimReminder(key(), anchor, later);
+    expect(second).not.toBeNull();
+    await markSent(first!, later); // stale: ignored
+    await releaseClaim(first!); // stale: ignored
+    const row = await prisma.reminderClaim.findUniqueOrThrow({ where: { id: second!.id } });
+    expect(row.sentAt).toBeNull();
+    expect(row.claimedAt).toEqual(later);
+  });
 });
