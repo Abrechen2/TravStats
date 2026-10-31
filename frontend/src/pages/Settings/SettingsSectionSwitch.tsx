@@ -34,7 +34,7 @@ import LoyaltySection from "../../components/Settings/LoyaltySection";
 import ModuleSection from "../../components/Settings/ModuleSection";
 import AccountExternalServices from "../../components/ExternalServices/AccountExternalServices";
 import DawarichStayScanCard from "../../components/Settings/DawarichStayScanCard";
-import DawarichConnectionCard from "../../components/Settings/DawarichConnectionCard";
+import LegacyServiceSummary from "../../components/ExternalServices/LegacyServiceSummary";
 import LocationProviderSection from "../../components/Settings/LocationProviderSection";
 import TravTrackSection from "../../components/Settings/TravTrackSection";
 
@@ -143,7 +143,8 @@ export default function SettingsSectionSwitch({
       // The calendar subscription (forgejo#310), behind its beta key.
       return <CalendarFeedSection />;
     case "dawarich":
-      return <DawarichConnectionCard />;
+      // The connection itself is edited under Dienste (settings redesign, package 5).
+      return <LegacyServiceSummary serviceId="dawarich" scope="account" />;
     case "locationProvider":
       // Where recordings go and positions are read from (TravTrack plan S5).
       return <LocationProviderSection />;

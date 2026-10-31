@@ -1,3 +1,4 @@
+import { MemoryRouter } from "react-router-dom";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 
@@ -33,7 +34,8 @@ function renderAt(level: "standard" | "expert") {
         onTestOllama={vi.fn()}
         ollamaTestState={{ status: "idle" }}
       />
-    </HiddenRowsContext.Provider>
+    </HiddenRowsContext.Provider>,
+    { wrapper: MemoryRouter }
   );
   return spy;
 }
@@ -63,18 +65,25 @@ describe("ParserSettings — standard and expert rows", () => {
       screen.queryByLabelText("admin:parserSettings.userPermissions.allowUserApiKeys")
     ).toBeNull();
     expect(screen.queryByLabelText("admin:fxCdn.label")).not.toBeInTheDocument();
-    expect(spy).toHaveBeenCalledWith(expect.any(String), 5);
+    expect(screen.queryByTestId("service-moved-note")).toBeNull();
+    expect(spy).toHaveBeenCalledWith(expect.any(String), 2);
   });
 
-  it("draws the Ollama, permission and FX blocks at the expert level", () => {
+  it("draws the Ollama model card and links the moved service settings at the expert level", () => {
     const spy = renderAt("expert");
 
     expect(screen.getByText("admin:parserSettings.ollama.title")).toBeInTheDocument();
-    expect(screen.getByTestId("llm-ollama-remote-opt-in")).toBeInTheDocument();
+    // The address, the remote consent, the key permission and the FX fallback are
+    // edited in Externe Dienste: a link stands where each form was (package 5).
+    expect(screen.queryByTestId("llm-ollama-remote-opt-in")).toBeNull();
     expect(
-      screen.getByLabelText("admin:parserSettings.userPermissions.allowUserApiKeys")
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText("admin:fxCdn.label")).toBeInTheDocument();
+      screen.queryByLabelText("admin:parserSettings.userPermissions.allowUserApiKeys")
+    ).toBeNull();
+    expect(screen.queryByLabelText("admin:fxCdn.label")).toBeNull();
+    const links = screen
+      .getAllByTestId("service-moved-note")
+      .map((n) => n.getAttribute("data-service"));
+    expect(links).toEqual(["ollama", "fx"]);
     expect(spy).toHaveBeenCalledWith(expect.any(String), 0);
   });
 });

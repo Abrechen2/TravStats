@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { accountOverview, apiError, mockedApi, t } from "./fixtures";
 
 vi.mock("../../../hooks/useTranslation", () => ({ useTranslation: () => ({ t }) }));
@@ -49,7 +50,7 @@ describe("Einstellungen › Dienste", () => {
     });
 
     beta.tours = false;
-    const off = render(<AccountExternalServices />);
+    const off = render(<AccountExternalServices />, { wrapper: MemoryRouter });
     await screen.findByText("externalServices:account.sections.connections");
     expect(row("strava")).toBeNull();
     expect(row("openrouteservice")).toBeNull();
@@ -58,14 +59,14 @@ describe("Einstellungen › Dienste", () => {
     off.unmount();
 
     beta.tours = true;
-    render(<AccountExternalServices />);
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
     await screen.findByText("externalServices:account.sections.connections");
     expect(row("strava")).not.toBeNull();
     expect(row("openrouteservice")).not.toBeNull();
   });
 
   it("lists connections, own keys and AI approvals with the status of this account", async () => {
-    render(<AccountExternalServices />);
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
     await screen.findByText("externalServices:account.sections.connections");
     expect(
       within(row("dawarich")).getByText("externalServices:accountStatus.notConnected")
@@ -88,7 +89,7 @@ describe("Einstellungen › Dienste", () => {
   });
 
   it("sends no consent until this account ticks the box, then sends it for that provider only", async () => {
-    render(<AccountExternalServices />);
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
     await screen.findByText("externalServices:account.sections.ai");
     fireEvent.click(
       within(row("openai")).getByRole("button", { name: "externalServices:account.action.consent" })
@@ -110,7 +111,7 @@ describe("Einstellungen › Dienste", () => {
 
   it("keeps the dialog open and says why when the consent could not be stored", async () => {
     mockedApi.accountSetAiConsent.mockRejectedValue(apiError(403, "CONNECTION_NOT_ALLOWED"));
-    render(<AccountExternalServices />);
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
     await screen.findByText("externalServices:account.sections.ai");
     fireEvent.click(
       within(row("openai")).getByRole("button", { name: "externalServices:account.action.consent" })
@@ -126,7 +127,7 @@ describe("Einstellungen › Dienste", () => {
   });
 
   it("withdraws a consent in one click and names the provider in the not-consented line", async () => {
-    render(<AccountExternalServices />);
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
     await screen.findByText("externalServices:account.sections.ai");
     // Withdrawal copy names the provider (spec invariant 4), never 'all local'.
     expect(row("openai")).toHaveTextContent('"name":"externalServices:services.openai.name"');
@@ -145,7 +146,7 @@ describe("Einstellungen › Dienste", () => {
   });
 
   it("removes only the own key, so the instance's key applies again", async () => {
-    render(<AccountExternalServices />);
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
     await screen.findByText("externalServices:account.sections.ownKeys");
     fireEvent.click(
       within(row("airlabs")).getByRole("button", { name: "externalServices:account.action.change" })
@@ -157,7 +158,7 @@ describe("Einstellungen › Dienste", () => {
   });
 
   it("turns a service off for this account only, and back on again", async () => {
-    render(<AccountExternalServices />);
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
     await screen.findByText("externalServices:account.sections.ownKeys");
     fireEvent.click(
       within(row("airlabs")).getByRole("button", { name: "externalServices:account.action.change" })
@@ -172,7 +173,7 @@ describe("Einstellungen › Dienste", () => {
     const data = accountOverview();
     data.ownKeys[0] = { ...data.ownKeys[0], accountDisabled: true, effectiveSource: "off" };
     mockedApi.accountOverview.mockResolvedValue(data);
-    render(<AccountExternalServices />);
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
     await screen.findByText("externalServices:account.sections.ownKeys");
     expect(row("airlabs")).toHaveTextContent("externalServices:account.detail.disabledByMe");
     fireEvent.click(
@@ -196,7 +197,7 @@ describe("Einstellungen › Dienste", () => {
         accountOverview().connections[1],
       ],
     });
-    render(<AccountExternalServices />);
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
     await screen.findByText("externalServices:account.sections.connections");
     fireEvent.click(
       within(row("dawarich")).getByRole("button", {
@@ -223,7 +224,7 @@ describe("Einstellungen › Dienste", () => {
 
   it("keeps the form and shows the refusal when the instance does not allow own keys", async () => {
     mockedApi.accountUpdate.mockRejectedValue(apiError(403, "ACCOUNT_KEYS_NOT_ALLOWED"));
-    render(<AccountExternalServices />);
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
     await screen.findByText("externalServices:account.sections.ownKeys");
     fireEvent.click(
       within(row("aviationstack")).getByRole("button", {
@@ -243,7 +244,7 @@ describe("Einstellungen › Dienste", () => {
   });
 
   it("keeps the instance's services collapsed and read-only", async () => {
-    render(<AccountExternalServices />);
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
     const block = await screen.findByTestId("instance-provided");
     expect(within(block).queryByText("externalServices:services.aeroapi.name")).toBeNull();
     fireEvent.click(within(block).getByRole("button", { name: /externalServices:instance.title/ }));
@@ -259,7 +260,7 @@ describe("Einstellungen › Dienste", () => {
       aiConsents: [],
       instanceProvided: [],
     });
-    render(<AccountExternalServices />);
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
     await screen.findByText("externalServices:account.intro");
     expect(screen.queryByText("externalServices:account.sections.connections")).toBeNull();
     expect(screen.queryByText("externalServices:account.sections.ai")).toBeNull();
@@ -269,13 +270,13 @@ describe("Einstellungen › Dienste", () => {
     mockedApi.accountOverview.mockRejectedValue(
       Object.assign(new Error("Network Error"), { isAxiosError: true })
     );
-    render(<AccountExternalServices />);
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
     expect(await screen.findByRole("alert")).toHaveTextContent("externalServices:errors.network");
   });
 
   it("never says 'tested' when the server's test result is missing from the answer", async () => {
     // First answer: the page. Every later one has no lastTest for the service.
-    render(<AccountExternalServices />);
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
     await screen.findByText("externalServices:account.sections.ownKeys");
     fireEvent.click(
       within(row("aviationstack")).getByRole("button", {
@@ -297,7 +298,7 @@ describe("Einstellungen › Dienste", () => {
     mockedApi.accountOverview
       .mockResolvedValueOnce(accountOverview())
       .mockRejectedValue(Object.assign(new Error("Network Error"), { isAxiosError: true }));
-    render(<AccountExternalServices />);
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
     await screen.findByText("externalServices:account.sections.ownKeys");
     fireEvent.click(
       within(row("aviationstack")).getByRole("button", {
@@ -325,7 +326,7 @@ describe("Einstellungen › Dienste", () => {
       fields: [{ key: "baseUrl", kind: "url", value: "https://i.example", expert: false }],
     });
     mockedApi.accountOverview.mockResolvedValue(data);
-    render(<AccountExternalServices />);
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
     await screen.findByText("externalServices:account.sections.connections");
     expect(screen.queryByTestId("nightly-scan")).toBeNull();
     fireEvent.click(
@@ -343,7 +344,7 @@ describe("Einstellungen › Dienste", () => {
           })
         : Promise.resolve()
     );
-    render(<AccountExternalServices />);
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
     await screen.findByText("externalServices:account.sections.ownKeys");
     fireEvent.click(
       within(row("airlabs")).getByRole("button", { name: "externalServices:account.action.change" })
@@ -388,7 +389,7 @@ describe("Einstellungen › Dienste", () => {
   });
 
   it("embeds the account's own WebDAV flow, not a field form the account PUT cannot write", async () => {
-    render(<AccountExternalServices />);
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
     await screen.findByText("externalServices:account.sections.connections");
     fireEvent.click(within(row("webdav")).getAllByRole("button")[0]);
     expect(await screen.findByTestId("webdav-panel")).toBeInTheDocument();
@@ -396,7 +397,7 @@ describe("Einstellungen › Dienste", () => {
   });
 
   it("refreshes the outer Strava row after a disconnect inside the embedded card", async () => {
-    render(<AccountExternalServices />);
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
     await screen.findByText("externalServices:account.sections.connections");
     fireEvent.click(within(row("strava")).getAllByRole("button")[0]);
     fireEvent.click(await screen.findByText("strava-connected"));

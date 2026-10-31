@@ -19,7 +19,12 @@ import FederationSetupChecklist from "./FederationSetupChecklist";
 const NS = "federation";
 
 /** Admin → Instanz: this server's identity and the servers it trusts (comparison rework 2026-10-16). */
-export default function FederationSettings(): JSX.Element {
+export default function FederationSettings({
+  expert = true,
+}: {
+  /** The settings level in force; the address is an Expert field once it is set. */
+  expert?: boolean;
+}): JSX.Element {
   const { t } = useTranslation(["admin"]);
   const fmt = useDisplayFormat();
   const { isFeatureVisible } = useBetaFeatures();
@@ -121,19 +126,27 @@ export default function FederationSettings(): JSX.Element {
             label={t(`${NS}.enabled`)}
             sub={t(`${NS}.enabledSub`)}
           />
-          <Field label={t(`${NS}.origin`)} htmlFor="federation-origin" hint={t(`${NS}.originHint`)}>
-            <Input
-              id="federation-origin"
-              value={origin}
-              placeholder="https://travstats.example.org"
-              onChange={(e) => setOrigin(e.target.value)}
-              onBlur={() =>
-                origin &&
-                origin !== state.origin &&
-                void run(() => federationAdminApi.update({ enabled: state.enabled, origin }))
-              }
-            />
-          </Field>
+          {/* The address is what the switch above needs: Standard shows it until it is
+              set (otherwise the switch would be dead with nothing to fill in), Expert always. */}
+          {(expert || !state.origin) && (
+            <Field
+              label={t(`${NS}.origin`)}
+              htmlFor="federation-origin"
+              hint={t(`${NS}.originHint`)}
+            >
+              <Input
+                id="federation-origin"
+                value={origin}
+                placeholder="https://travstats.example.org"
+                onChange={(e) => setOrigin(e.target.value)}
+                onBlur={() =>
+                  origin &&
+                  origin !== state.origin &&
+                  void run(() => federationAdminApi.update({ enabled: state.enabled, origin }))
+                }
+              />
+            </Field>
+          )}
           <Button
             id="federation-generate-key"
             variant="secondary"

@@ -2,7 +2,7 @@ import { useId, useState, type JSX } from "react";
 import { Field, Input, Select, Switch } from "../ui/Field";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { ServiceField } from "../../lib/api/externalServices";
-import { fieldLabel } from "./serviceText";
+import { fieldLabel, optionLabel } from "./serviceText";
 
 type Draft = string | boolean;
 
@@ -97,7 +97,7 @@ export function ServiceFields({
               >
                 {field.options.map((option) => (
                   <option key={option} value={option}>
-                    {option}
+                    {optionLabel(t, serviceId, field.key, option)}
                   </option>
                 ))}
               </Select>

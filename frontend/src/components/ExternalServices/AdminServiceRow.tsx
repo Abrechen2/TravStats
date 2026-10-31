@@ -1,4 +1,4 @@
-import type { JSX, ReactNode } from "react";
+import { useState, type JSX, type ReactNode } from "react";
 import Button from "../ui/Button";
 import IconButton from "../ui/IconButton";
 import { Icon } from "../ui/Icon";
@@ -182,8 +182,18 @@ function ExpandedBody({
 }): JSX.Element {
   const { t } = useTranslation(["externalServices"]);
   const { drafts, setDraft, changes } = useFieldDrafts(service.fields);
+  // Standard hides addresses, yet a service that needs one to connect at all
+  // would be a dead end: "Einrichten" reveals them for this row only.
+  const [revealed, setRevealed] = useState(false);
+  const needsSetup =
+    !expert &&
+    !revealed &&
+    !service.configured &&
+    (service.credential === "url" || service.credential === "urlKey") &&
+    hasHiddenExpertFields(service.fields, expert);
+  const fieldsShown = revealed ? service.fields : shown;
   const off = !service.enabled;
-  const dirty = Object.keys(changes).some((key) => shown.some((f) => f.key === key));
+  const dirty = Object.keys(changes).some((key) => fieldsShown.some((f) => f.key === key));
   let extras: ReactNode = null;
   if (expert) {
     extras = (
@@ -211,15 +221,21 @@ function ExpandedBody({
       {generic ? (
         <ServiceFields
           serviceId={service.id}
-          fields={shown}
+          fields={fieldsShown}
           drafts={drafts}
           disabled={busy}
           onChange={setDraft}
         />
-      ) : (
-        <SpecialisedControl serviceId={service.id} />
-      )}
-      {generic && hasHiddenExpertFields(service.fields, expert) ? (
+      ) : null}
+      <SpecialisedControl serviceId={service.id} expert={expert || revealed} />
+      {needsSetup ? (
+        <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-md)" }}>
+          <Button variant="secondary" disabled={busy} onClick={() => setRevealed(true)}>
+            {t("externalServices:actions.setUp")}
+          </Button>
+          <span className="t-caption">{t("externalServices:setUpHint")}</span>
+        </div>
+      ) : generic && !revealed && hasHiddenExpertFields(service.fields, expert) ? (
         <p className="t-caption">{t("externalServices:expertHidden")}</p>
       ) : null}
       {service.allowAccountKeys !== null ? (
@@ -253,7 +269,7 @@ function ExpandedBody({
             {t(off ? "externalServices:actions.turnOn" : "externalServices:actions.turnOff")}
           </Button>
         )}
-        {generic && shown.length > 0 ? (
+        {generic && fieldsShown.length > 0 ? (
           <Button
             variant="primary"
             disabled={busy || (!dirty && off)}

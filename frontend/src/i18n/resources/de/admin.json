@@ -597,7 +597,8 @@
       "modelNotFound": "Modell nicht gefunden",
       "modelsAvailable": "Verfügbare Modelle",
       "connectionSuccess": "Ollama erreichbar",
-      "connectionFailed": "Verbindung fehlgeschlagen"
+      "connectionFailed": "Verbindung fehlgeschlagen",
+      "addressMoved": "Adresse und Zustimmung für einen entfernten Ollama stellst du unter Externe Dienste ein; Modell und Test bleiben hier."
     },
     "order": {
       "label": "Wer liest zuerst?",
@@ -688,7 +689,8 @@
           }
         }
       }
-    }
+    },
+    "accountKeysFxMoved": "Schlüssel-Erlaubnis für Konten und der Wechselkurs-Ausweichdienst gehören zu den Diensten und stehen unter Externe Dienste."
   },
   "backup": {
     "title": "Backup-Verwaltung",

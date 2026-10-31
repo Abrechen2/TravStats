@@ -19,7 +19,8 @@ interface State {
  */
 type Saved = Pick<State, "enabled" | "url" | "username" | "backupPath">;
 
-export default function WebDAVSettings(): JSX.Element {
+/** `expert` is the settings level in force: the backup path is an Expert field. */
+export default function WebDAVSettings({ expert = true }: { expert?: boolean }): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
   const addToast = useToastStore((s) => s.addToast);
 
@@ -227,25 +228,27 @@ export default function WebDAVSettings(): JSX.Element {
           </div>
         </div>
 
-        <div>
-          <label
-            htmlFor="webdav-backupPath"
-            className="mb-1 block text-sm font-medium text-(--text-primary)"
-          >
-            {t("admin:webdav.fields.backupPath.label")}
-          </label>
-          <input
-            id="webdav-backupPath"
-            type="text"
-            maxLength={200}
-            value={form.backupPath}
-            onChange={(e) => setForm({ ...form, backupPath: e.target.value })}
-            className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
-          />
-          <p className="mt-1 text-xs text-(--text-muted)">
-            {t("admin:webdav.fields.backupPath.help")}
-          </p>
-        </div>
+        {expert && (
+          <div>
+            <label
+              htmlFor="webdav-backupPath"
+              className="mb-1 block text-sm font-medium text-(--text-primary)"
+            >
+              {t("admin:webdav.fields.backupPath.label")}
+            </label>
+            <input
+              id="webdav-backupPath"
+              type="text"
+              maxLength={200}
+              value={form.backupPath}
+              onChange={(e) => setForm({ ...form, backupPath: e.target.value })}
+              className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
+            />
+            <p className="mt-1 text-xs text-(--text-muted)">
+              {t("admin:webdav.fields.backupPath.help")}
+            </p>
+          </div>
+        )}
       </fieldset>
 
       <div className="flex flex-wrap gap-2 pt-2">

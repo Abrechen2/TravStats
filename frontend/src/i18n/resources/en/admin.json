@@ -597,7 +597,8 @@
       "modelNotFound": "Model not found",
       "modelsAvailable": "Available models",
       "connectionSuccess": "Ollama reachable",
-      "connectionFailed": "Connection failed"
+      "connectionFailed": "Connection failed",
+      "addressMoved": "The address and consent for a remote Ollama are set under External services; the model and test stay here."
     },
     "order": {
       "label": "Who reads first?",
@@ -688,7 +689,8 @@
           }
         }
       }
-    }
+    },
+    "accountKeysFxMoved": "Whether accounts may bring their own keys, and the exchange-rate fallback, are service settings and live under External services."
   },
   "backup": {
     "title": "Backup Management",

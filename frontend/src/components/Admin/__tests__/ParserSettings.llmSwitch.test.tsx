@@ -1,3 +1,4 @@
+import { MemoryRouter } from "react-router-dom";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 
@@ -28,7 +29,8 @@ function renderWith(settings: ParserSettingsData, onChange = vi.fn()) {
       onParserSettingsChange={onChange}
       onTestOllama={vi.fn()}
       ollamaTestState={{ status: "idle" }}
-    />
+    />,
+    { wrapper: MemoryRouter }
   );
   return onChange;
 }

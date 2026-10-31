@@ -1,4 +1,5 @@
 import { useRef, useState, type JSX, type ReactNode } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card } from "../ui/Card";
 import Button from "../ui/Button";
 import PhotoJourneyNightlyScanCard from "../Settings/PhotoJourneyNightlyScanCard";
@@ -70,7 +71,9 @@ export default function AccountExternalServices(): JSX.Element {
   const expert = useEffectiveSettingsLevel() === "expert";
   const services = useAccountServices();
   const toursVisible = useToursVisible();
-  const [openId, setOpenId] = useState<string | null>(null);
+  // `?service=` opens that row (the old Dawarich page links here).
+  const [searchParams] = useSearchParams();
+  const [openId, setOpenId] = useState<string | null>(searchParams.get("service"));
   const [infoId, setInfoId] = useState<string | null>(null);
   const [consentFor, setConsentFor] = useState<AccountAiConsent | null>(null);
   const [consentError, setConsentError] = useState<string | null>(null);

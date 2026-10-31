@@ -1,4 +1,5 @@
-import { useMemo, useState, type JSX } from "react";
+import { useEffect, useMemo, useState, type JSX } from "react";
+import { useSearchParams } from "react-router-dom";
 import Button from "../ui/Button";
 import Chip from "../ui/Chip";
 import { Card } from "../ui/Card";
@@ -31,7 +32,10 @@ export default function AdminExternalServices(): JSX.Element {
   const services = useAdminServices();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<StatusFilter>("all");
-  const [openId, setOpenId] = useState<string | null>(null);
+  // `?service=` is the old service pages' way here: it opens that row.
+  const [searchParams] = useSearchParams();
+  const linkedService = searchParams.get("service");
+  const [openId, setOpenId] = useState<string | null>(linkedService);
   const [infoId, setInfoId] = useState<string | null>(null);
   const [consentId, setConsentId] = useState<string | null>(null);
   const [consentError, setConsentError] = useState<string | null>(null);
@@ -61,6 +65,14 @@ export default function AdminExternalServices(): JSX.Element {
       .filter((category) => category.services.length > 0);
     // `t` changes with the language, which changes the searchable names.
   }, [data, filter, q, t]);
+
+  const linkedReady = Boolean(data) && linkedService !== null;
+  useEffect(() => {
+    if (!linkedReady) return;
+    document
+      .querySelector(`[data-service-row="${CSS.escape(linkedService ?? "")}"]`)
+      ?.scrollIntoView?.({ block: "center" });
+  }, [linkedReady, linkedService]);
 
   if (services.loadError && !data) {
     return (

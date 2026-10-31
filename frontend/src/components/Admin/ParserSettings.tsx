@@ -3,6 +3,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { adminApi } from "../../lib/api";
 import type { CloudProviderKind, ParserOrder } from "../../lib/api/admin";
 import LlmProviderSettings from "./LlmProviderSettings";
+import { ServiceMovedNote } from "../ExternalServices/LegacyServiceSummary";
 import { AdminSubBlock } from "./AdminSubBlock";
 import { useExpertRows } from "../Settings/frame/useExpertRows";
 
@@ -60,12 +61,12 @@ interface ParserSettingsProps {
 }
 
 /**
- * Ollama URL, remote opt-in and model, the user API-key permission, the FX
- * CDN fallback. Who reads a booking (the order, the model switch, the cloud
+ * The Ollama model card and the pointer to the exchange-rate fallback (the
+ * address, consent and key permission moved to Externe Dienste). Who reads a booking (the order, the model switch, the cloud
  * chain) stays standard: that is the decision an admin makes once; the rest
  * is plumbing behind it.
  */
-const EXPERT_ONLY_SETTINGS = 5;
+const EXPERT_ONLY_SETTINGS = 2;
 
 function formatSize(bytes: number): string {
   if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`;
@@ -241,6 +242,8 @@ export default function ParserSettings({
         </p>
       </AdminSubBlock>
 
+      {/* The cloud chain stays: its ORDER (who is asked first) is parser behaviour.
+          Its keys and consent are the same ones Externe Dienste shows. */}
       <LlmProviderSettings
         parserSettings={parserSettings}
         onParserSettingsChange={onParserSettingsChange}
@@ -291,36 +294,11 @@ export default function ParserSettings({
             {t("admin:parserSettings.ollama.description")}
           </p>
           <div className="space-y-3">
-            {/* URL input */}
-            <div>
-              <label className="block text-xs font-medium text-(--text-muted) mb-1">
-                {t("admin:parserSettings.ollama.urlLabel")}
-              </label>
-              <input
-                type="url"
-                value={parserSettings.ollamaUrl ?? ""}
-                onChange={(e) =>
-                  onParserSettingsChange({ ...parserSettings, ollamaUrl: e.target.value || null })
-                }
-                placeholder={t("admin:parserSettings.ollama.urlPlaceholder")}
-                className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-
-            {/* Only matters for an Ollama OUTSIDE the local network — the
-                normal local/LAN case never asks for this. */}
-            <label className="flex items-start gap-2 text-xs text-(--text-muted)">
-              <input
-                type="checkbox"
-                data-testid="llm-ollama-remote-opt-in"
-                checked={parserSettings.llmOllamaOptIn === true}
-                onChange={(e) =>
-                  onParserSettingsChange({ ...parserSettings, llmOllamaOptIn: e.target.checked })
-                }
-                className="mt-0.5 w-4 h-4 rounded-sm border-border"
-              />
-              {t("admin:parserSettings.ollama.remoteOptIn.label")}
-            </label>
+            {/* The address and the remote consent are edited under Externe Dienste. */}
+            <ServiceMovedNote
+              serviceId="ollama"
+              text={t("admin:parserSettings.ollama.addressMoved")}
+            />
 
             {/* Model selector — dropdown of available models */}
             <div>
@@ -423,50 +401,9 @@ export default function ParserSettings({
         </AdminSubBlock>
       )}
 
-      {/* User API Key Permissions */}
+      {/* Account keys and the exchange-rate fallback are service settings too. */}
       {expert && (
-        <AdminSubBlock expert title={t("admin:parserSettings.userPermissions.title")}>
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="allowUserApiKeys"
-              checked={parserSettings.allowUserApiKeys}
-              onChange={(e) =>
-                onParserSettingsChange({ ...parserSettings, allowUserApiKeys: e.target.checked })
-              }
-              className="w-4 h-4 rounded-sm border-border"
-            />
-            <label htmlFor="allowUserApiKeys" className="text-sm text-(--text-primary)">
-              {t("admin:parserSettings.userPermissions.allowUserApiKeys")}
-            </label>
-          </div>
-        </AdminSubBlock>
-      )}
-
-      {/* Which outside service this instance may reach for exchange rates —
-          the same kind of decision as the Ollama URL above, which is why it
-          sits here rather than in a user's own settings. */}
-      {expert && (
-        <AdminSubBlock expert title={t("admin:fxCdn.title")}>
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="fxCdnFallbackEnabled"
-              checked={parserSettings.fxCdnFallbackEnabled}
-              onChange={(e) =>
-                onParserSettingsChange({
-                  ...parserSettings,
-                  fxCdnFallbackEnabled: e.target.checked,
-                })
-              }
-              className="w-4 h-4 rounded-sm border-border"
-            />
-            <label htmlFor="fxCdnFallbackEnabled" className="text-sm text-(--text-primary)">
-              {t("admin:fxCdn.label")}
-            </label>
-          </div>
-          <p className="mt-2 text-xs text-(--text-muted)">{t("admin:fxCdn.description")}</p>
-        </AdminSubBlock>
+        <ServiceMovedNote serviceId="fx" text={t("admin:parserSettings.accountKeysFxMoved")} />
       )}
     </div>
   );

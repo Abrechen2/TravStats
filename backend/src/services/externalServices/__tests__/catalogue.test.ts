@@ -82,4 +82,37 @@ describe("external services catalogue", () => {
   it("aeroapi is instance-only (invariant 7)", () => {
     expect(SERVICES.find((s) => s.id === "aeroapi")?.level).toBe("instance");
   });
+
+  // Settings redesign, rule 4: Standard decides (on/off, keys, budgets, consent),
+  // Expert tunes (addresses, models, ports, paths).
+  it("puts keys, budgets, consent and switches in Standard and addresses, models, ports and paths in Expert", () => {
+    const expertOf = (id: string, key: string): boolean | undefined =>
+      SERVICES.find((s) => s.id === id)?.fields.find((f) => f.key === key)?.expert;
+    const standard: Array<[string, string]> = [
+      ["aviationstack", "dailyBudget"],
+      ["aeroapi", "monthlyLimitUsd"],
+      ["aeroapi", "tracksEnabled"],
+      ["adsblol", "apiKey"],
+      ["logos", "apiKey"],
+      ["logos", "operatorLogos"],
+      ["fx", "cdnFallback"],
+      ["ollama", "remoteOptIn"],
+      ["customLlm", "apiKey"],
+    ];
+    const expert: Array<[string, string]> = [
+      ["ollama", "url"],
+      ["ollama", "model"],
+      ["customLlm", "baseUrl"],
+      ["customLlm", "model"],
+      ["smtp", "port"],
+      ["webdav", "backupPath"],
+      ["push", "relayUrl"],
+      ["federation", "origin"],
+      ["updatesTemplates", "templateRepoUrl"],
+      ["openData", "marketOverpassUrl"],
+    ];
+    for (const [id, key] of standard)
+      expect([id, key, expertOf(id, key)]).toEqual([id, key, false]);
+    for (const [id, key] of expert) expect([id, key, expertOf(id, key)]).toEqual([id, key, true]);
+  });
 });

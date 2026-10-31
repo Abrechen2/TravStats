@@ -34,6 +34,11 @@ export function fieldLabel(t: TFn, serviceId: string, field: Pick<ServiceField, 
   return t(`${NS}:fields.common.${field.key}`, { defaultValue: field.key });
 }
 
+/** A select option's label; an option the copy does not know shows as the stored value. */
+export function optionLabel(t: TFn, serviceId: string, fieldKey: string, option: string): string {
+  return t(`${NS}:fieldOptions.${serviceId}.${fieldKey}.${option}`, { defaultValue: option });
+}
+
 /** The reason a test failed, in words: a known code is translated, anything else is shown as sent. */
 export function testReasonText(t: TFn, reason: string | null): string {
   if (!reason) return t(`${NS}:test.noReason`);

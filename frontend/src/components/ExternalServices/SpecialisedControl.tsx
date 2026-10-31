@@ -14,22 +14,40 @@ import OpenDataCard from "../Settings/OpenDataCard";
  * a consent dialog of their own). The page embeds it instead of re-writing it,
  * so the form and its save path exist once.
  */
-const SPECIALISED: Record<string, () => JSX.Element> = {
-  smtp: () => <SmtpManager />,
-  webdav: () => <WebDAVSettings />,
-  push: () => <PushSettings />,
-  federation: () => <FederationSettings />,
+const SPECIALISED: Record<string, (expert: boolean) => JSX.Element> = {
+  smtp: (expert) => <SmtpManager expert={expert} />,
+  webdav: (expert) => <WebDAVSettings expert={expert} />,
+  push: (expert) => <PushSettings expert={expert} />,
+  federation: (expert) => <FederationSettings expert={expert} />,
   usageStats: () => <UsageStatsSettings />,
-  updatesTemplates: () => <TemplateRepoSettings />,
+  updatesTemplates: (expert) => <TemplateRepoSettings expert={expert} />,
   immich: () => <ImmichGlobalSettings />,
   openData: () => <OpenDataCard isAdmin />,
 };
 
-export function replacesGenericFields(serviceId: string): boolean {
+/**
+ * Specialised controls that carry only the on/off switch and leave the
+ * catalogue's fields to the generic form beside them (open data: the
+ * Overpass address was reachable nowhere while the card replaced the form).
+ */
+const ALONGSIDE_GENERIC_FIELDS = new Set(["openData"]);
+
+export function hasSpecialisedControl(serviceId: string): boolean {
   return serviceId in SPECIALISED;
 }
 
-export function SpecialisedControl({ serviceId }: { serviceId: string }): JSX.Element | null {
+export function replacesGenericFields(serviceId: string): boolean {
+  return serviceId in SPECIALISED && !ALONGSIDE_GENERIC_FIELDS.has(serviceId);
+}
+
+/** `expert` is the settings level in force; the form hides what only Expert tunes. */
+export function SpecialisedControl({
+  serviceId,
+  expert,
+}: {
+  serviceId: string;
+  expert: boolean;
+}): JSX.Element | null {
   const render = SPECIALISED[serviceId];
-  return render ? render() : null;
+  return render ? render(expert) : null;
 }

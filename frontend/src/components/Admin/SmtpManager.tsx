@@ -16,7 +16,12 @@ const DEFAULT_CONFIG: SmtpConfigInput = {
   enabled: false,
 };
 
-export default function SmtpManager(): JSX.Element {
+/**
+ * `expert` is the settings level in force: Standard keeps host, login, sender
+ * and the on/off switch; the port, the TLS mode and the sender name are
+ * Expert fields, and a hidden field keeps the value the server holds.
+ */
+export default function SmtpManager({ expert = true }: { expert?: boolean }): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
   // Every label names its field (forgejo#249): none of these were associated,
   // so a screen reader heard "edit text" six times over.
@@ -169,27 +174,29 @@ export default function SmtpManager(): JSX.Element {
         </div>
 
         {/* Port */}
-        <div>
-          <div className="flex items-center gap-1.5">
-            <label className="label" htmlFor={`${fid}-Port`}>
-              {t("settings:notifications.smtpPort")}
-            </label>
-            <HelpIcon
-              content={t("settings:notifications.smtpHelp.ports")}
-              position="top"
-              subject={t("settings:notifications.smtpPort")}
+        {expert && (
+          <div>
+            <div className="flex items-center gap-1.5">
+              <label className="label" htmlFor={`${fid}-Port`}>
+                {t("settings:notifications.smtpPort")}
+              </label>
+              <HelpIcon
+                content={t("settings:notifications.smtpHelp.ports")}
+                position="top"
+                subject={t("settings:notifications.smtpPort")}
+              />
+            </div>
+            <input
+              id={`${fid}-Port`}
+              type="number"
+              className="input"
+              value={config.port}
+              min={1}
+              max={65535}
+              onChange={(e) => handleChange("port", parseInt(e.target.value, 10) || 587)}
             />
           </div>
-          <input
-            id={`${fid}-Port`}
-            type="number"
-            className="input"
-            value={config.port}
-            min={1}
-            max={65535}
-            onChange={(e) => handleChange("port", parseInt(e.target.value, 10) || 587)}
-          />
-        </div>
+        )}
 
         {/* Username */}
         <div>
@@ -252,32 +259,36 @@ export default function SmtpManager(): JSX.Element {
         </div>
 
         {/* From Name */}
-        <div>
-          <label className="label" htmlFor={`${fid}-FromName`}>
-            {t("settings:notifications.smtpFromName")}
-          </label>
-          <input
-            id={`${fid}-FromName`}
-            type="text"
-            className="input"
-            value={config.fromName}
-            onChange={(e) => handleChange("fromName", e.target.value)}
-          />
-        </div>
+        {expert && (
+          <div>
+            <label className="label" htmlFor={`${fid}-FromName`}>
+              {t("settings:notifications.smtpFromName")}
+            </label>
+            <input
+              id={`${fid}-FromName`}
+              type="text"
+              className="input"
+              value={config.fromName}
+              onChange={(e) => handleChange("fromName", e.target.value)}
+            />
+          </div>
+        )}
       </div>
 
       {/* Secure TLS */}
-      <label className="flex items-center gap-3">
-        <input
-          type="checkbox"
-          checked={config.secure}
-          onChange={(e) => handleChange("secure", e.target.checked)}
-          className="w-4 h-4"
-        />
-        <span style={{ color: "var(--text-primary)" }}>
-          {t("settings:notifications.smtpSecure")}
-        </span>
-      </label>
+      {expert && (
+        <label className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={config.secure}
+            onChange={(e) => handleChange("secure", e.target.checked)}
+            className="w-4 h-4"
+          />
+          <span style={{ color: "var(--text-primary)" }}>
+            {t("settings:notifications.smtpSecure")}
+          </span>
+        </label>
+      )}
 
       {/* Actions */}
       <div className="flex flex-wrap gap-3 pt-2">

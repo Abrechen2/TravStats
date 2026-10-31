@@ -175,7 +175,7 @@ vi.unmock("../../store/settingsStore");
 vi.mock("../../components/Settings/HomeCountryCard", () => ({
   default: () => <div data-testid="home-country-card" />,
 }));
-vi.mock("../../components/Settings/DawarichConnectionCard", () => ({
+vi.mock("../../components/ExternalServices/LegacyServiceSummary", () => ({
   default: () => <div data-testid="dawarich-connection-card" />,
 }));
 vi.mock("../../components/Settings/StravaConnectionCard", () => ({
