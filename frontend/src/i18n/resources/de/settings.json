@@ -425,7 +425,7 @@
   },
   "meExport": {
     "title": "Meine Daten herunterladen",
-    "description": "Alles, was zu deinem Konto gehört, als eine JSON-Datei — nur deine Daten, ohne Passwörter, Tokens und gespeicherte Schlüssel.",
+    "description": "Deine Reisedaten und Einträge als eine JSON-Datei — nur deine Daten, ohne Passwörter, Tokens und gespeicherte Schlüssel. Fotos, Dokumente und Belege sind nur als Verzeichnis enthalten, nicht als Dateien.",
     "button": "Herunterladen",
     "running": "Wird vorbereitet …",
     "done": "Die Datei wurde heruntergeladen.",

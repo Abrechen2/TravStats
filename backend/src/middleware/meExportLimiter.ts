@@ -13,5 +13,7 @@ export const meExportLimiter = rateLimit({
   message: { error: "Too many export requests, please try again later", code: "rate_limited" },
   standardHeaders: true,
   legacyHeaders: false,
+  // A gateway hiccup (the web client retries GETs) must not burn the allowance.
+  skipFailedRequests: true,
   keyGenerator: userOrIpKey,
 });

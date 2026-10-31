@@ -425,7 +425,7 @@
   },
   "meExport": {
     "title": "Download my data",
-    "description": "Everything that belongs to your account as one JSON file — only your data, without passwords, tokens or stored keys.",
+    "description": "Your travel data and entries as one JSON file — only your data, without passwords, tokens or stored keys. Photos, documents and receipts are listed, not included as files.",
     "button": "Download",
     "running": "Preparing …",
     "done": "The file was downloaded.",
