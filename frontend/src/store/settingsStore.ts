@@ -656,12 +656,17 @@ export const useSettingsStore = create<SettingsState>()(
         const putProfile = options?.keepalive
           ? settingsApi.updateProfileKeepalive
           : settingsApi.updateProfile;
-        const previous = saveQueue;
-        let release!: () => void;
-        saveQueue = new Promise<void>((resolve) => {
-          release = resolve;
-        });
-        await previous;
+        // A keepalive save belongs to an unloading page: it must leave NOW, not queue behind a
+        // request the unload may cancel. Safe out of order because the PUT is a full snapshot
+        // taken at send time (last write wins) and this one carries the newest values.
+        let release: () => void = () => undefined;
+        if (!options?.keepalive) {
+          const previous = saveQueue;
+          saveQueue = new Promise<void>((resolve) => {
+            release = resolve;
+          });
+          await previous;
+        }
         try {
           const {
             profile,

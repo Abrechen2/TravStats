@@ -70,6 +70,10 @@ export async function applySettings(
   domains: DomainsInput | undefined
 ): Promise<void> {
   await prisma.$transaction(async (tx) => {
+    // One writer per user at a time: a PUT reads the current rows and derives the legacy
+    // switches from them, so two concurrent PUTs (phone + browser) must not read the same
+    // snapshot. Released at commit.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('reminder_prefs'), hashtext(${userId}))`;
     const data: LegacyWrite = {};
     if (legacy.notificationEmail !== undefined) data.notificationEmail = legacy.notificationEmail;
     if (legacy.notifyBefore24h !== undefined) data.notifyBefore24h = legacy.notifyBefore24h;
@@ -110,18 +114,34 @@ export async function applySettings(
       select: REMINDER_USER_SELECT.select,
     });
     const view = domainsView(user);
+    // Only the supplied domains are rewritten; a domain without a row gets one from its
+    // resolved defaults (create-only, so a row written meanwhere is never overwritten).
+    const existing = new Set(
+      (await tx.reminderPreference.findMany({ where: { userId }, select: { domain: true } })).map(
+        (r) => r.domain
+      )
+    );
     for (const domain of REMINDER_DOMAINS) {
-      const merged = { ...view[domain], ...(domains[domain] ?? {}) };
+      const supplied = domains[domain];
+      if (!supplied && existing.has(domain)) continue;
+      const merged = { ...view[domain], ...(supplied ?? {}) };
       const fields = {
         enabled: merged.enabled,
         leadHours: sortedLeads(merged.leadHours),
         channel: merged.channel,
       };
-      await tx.reminderPreference.upsert({
-        where: { userId_domain: { userId, domain } },
-        create: { userId, domain, ...fields },
-        update: fields,
-      });
+      if (supplied) {
+        await tx.reminderPreference.upsert({
+          where: { userId_domain: { userId, domain } },
+          create: { userId, domain, ...fields },
+          update: fields,
+        });
+      } else {
+        await tx.reminderPreference.createMany({
+          data: [{ userId, domain, ...fields }],
+          skipDuplicates: true,
+        });
+      }
       view[domain] = { ...merged, leadHours: fields.leadHours };
     }
     const used = (hour: number) =>

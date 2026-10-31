@@ -246,6 +246,26 @@ export async function notifyEntryReminder(
       const locale: Locale = device.locale === "en" ? "en" : "de";
       const message = entry.render(locale);
       if (!message) continue;
+      // Transition: before the claim table, flight reminders were deduped on
+      // push_deliveries (`reminder:<flightId>:24h|2h`, deleted again when a send failed, so a
+      // row means "sent"). A reminder pushed before the deploy must not go out again inside
+      // the new due window. Looked up rather than backfilled: no migration over a table of
+      // unbounded size, and the rows age out with their flights.
+      if (entry.domain === "flight" && (entry.hours === 24 || entry.hours === 2)) {
+        // Anchor-aware: only a delivery that falls in THIS anchor's due window counts. One sent
+        // for an earlier departure time (the flight was moved since) must not mute the new one,
+        // as the claim's re-arm would not.
+        const windowStart = new Date(entry.anchorAt.getTime() - (entry.hours + 2) * 3_600_000);
+        const legacy = await prisma.pushDelivery.findFirst({
+          where: {
+            apiTokenId: device.apiTokenId,
+            eventKey: `reminder:${entry.entryId}:${entry.hours}h`,
+            sentAt: { gte: windowStart },
+          },
+          select: { id: true },
+        });
+        if (legacy) continue;
+      }
       const claim = await claimReminder(
         {
           userId,

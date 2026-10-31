@@ -275,6 +275,41 @@ describe("notifyReminder", () => {
     });
   });
 
+  it("does not repeat a flight reminder already pushed before the claim table (legacy push_deliveries)", async () => {
+    const old = await phone();
+    const fresh = await phone();
+    await prisma.pushDelivery.create({
+      data: { apiTokenId: old.tokenId, eventKey: `reminder:${flight.id}:24h` },
+    });
+    const r = recorder();
+    const f = { ...flight, departureTime: new Date("2026-10-14T11:25:00.000Z") };
+    await notifyReminder(userId, f, 24, { send: r.send });
+    // Only the phone without a legacy delivery gets it; the other lead is unaffected.
+    expect(r.pushes).toHaveLength(1);
+    await notifyReminder(userId, f, 2, { send: r.send });
+    expect(r.pushes).toHaveLength(3);
+    expect(fresh.tokenId).not.toBe(old.tokenId);
+  });
+
+  it("a legacy delivery for an earlier departure does not mute a rescheduled flight", async () => {
+    const p = await phone();
+    await prisma.pushDelivery.create({
+      data: {
+        apiTokenId: p.tokenId,
+        eventKey: `reminder:${flight.id}:24h`,
+        sentAt: new Date("2026-10-10T00:00:00.000Z"),
+      },
+    });
+    const r = recorder();
+    await notifyReminder(
+      userId,
+      { ...flight, departureTime: new Date("2026-10-14T11:25:00.000Z") },
+      24,
+      { send: r.send, now: () => new Date("2026-10-13T11:30:00.000Z") }
+    );
+    expect(r.pushes).toHaveLength(1);
+  });
+
   // forgejo#286: the trip page's "Erinnerungen für diese Reise" reaches the
   // server push. A muted trip's reminder stays home; another trip's goes; a
   // flight-change notice is not a reminder and ignores the mute.

@@ -217,4 +217,25 @@ describe("settings/notifications per domain", () => {
       expect(some.body.push.available).toBe(true);
     });
   });
+
+  it("two concurrent PUTs touching different domains both persist (no lost update)", async () => {
+    const rounds = 6;
+    for (let n = 0; n < rounds; n++) {
+      await prisma.reminderPreference.deleteMany({ where: { userId } });
+      const [a, b] = await Promise.all([
+        request(app)
+          .put(URL)
+          .set("Cookie", cookie)
+          .send({ domains: { rail: { enabled: false, leadHours: [5] } } }),
+        request(app)
+          .put(URL)
+          .set("Cookie", cookie)
+          .send({ domains: { flight: { channel: "both", leadHours: [24, 2] } } }),
+      ]);
+      expect([a.status, b.status]).toEqual([200, 200]);
+      const res = await request(app).get(URL).set("Cookie", cookie);
+      expect(res.body.domains.rail).toMatchObject({ enabled: false, leadHours: [5] });
+      expect(res.body.domains.flight).toMatchObject({ channel: "both", leadHours: [24, 2] });
+    }
+  });
 });

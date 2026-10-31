@@ -99,10 +99,14 @@ export function scheduleAutosave(): void {
   timer = setTimeout(() => void run(), DEBOUNCE_MS);
 }
 
-/** Write a waiting edit now (unmount, navigation, `pagehide`). */
+/**
+ * Write a waiting edit now (unmount, navigation, `pagehide`). On `pagehide` (keepalive) a save
+ * still in flight counts too: the unload may cancel that request, so the latest snapshot is sent
+ * again without waiting for it.
+ */
 export function flushAutosave(keepalive = false): void {
-  if (!timer) return;
-  clearTimeout(timer);
+  if (!timer && !(keepalive && inFlight > 0)) return;
+  if (timer) clearTimeout(timer);
   void run(keepalive);
 }
 
