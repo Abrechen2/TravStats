@@ -35,13 +35,13 @@ vi.mock("../../lib/logger", () => ({
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }));
 
+// The hook reads per-field selectors, so the mock must apply the selector to
+// state whose members keep their identity across renders — a fresh `defaults`
+// per call re-ran the defaults effect on every render and exhausted the heap.
+const STABLE_FEATURES = {};
 vi.mock("../../store/settingsStore", () => ({
-  useSettingsStore: () => ({
-    units: { currency: "EUR" },
-    defaults: mocks.settingsDefaults,
-    display: { timezone: "Europe/Berlin" },
-    features: {},
-  }),
+  useSettingsStore: <T>(select: (s: unknown) => T): T =>
+    select({ baseCurrency: "EUR", defaults: mocks.settingsDefaults, features: STABLE_FEATURES }),
 }));
 
 vi.mock("../../store/toastStore", () => ({
