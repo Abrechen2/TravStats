@@ -1,5 +1,5 @@
 import { api } from "./client";
-import type { NotificationPreferences } from "./types";
+import type { NotificationPreferences, NotificationPreferencesPatch } from "./types";
 
 // Notification preferences API
 export const notificationsApi = {
@@ -9,7 +9,7 @@ export const notificationsApi = {
   },
 
   updatePreferences: async (
-    prefs: Partial<NotificationPreferences>
+    prefs: NotificationPreferencesPatch
   ): Promise<NotificationPreferences> => {
     const { data } = await api.put<NotificationPreferences>("/settings/notifications", prefs);
     return data;

@@ -268,7 +268,7 @@
   },
   "notifications": {
     "title": "Benachrichtigungen",
-    "description": "Worüber du per E-Mail benachrichtigt werden willst. Ohne SMTP-Einrichtung im Admin-Bereich bleiben diese Schalter wirkungslos, auch wenn sie an sind — und die E-Mail-Adresse im Profil muss bestätigt sein.",
+    "description": "Gilt für dein Konto. Für jeden Bereich: ob, wann und wohin.",
     "emailNotifications": "E-Mail-Benachrichtigungen aktivieren",
     "flightReminder": "Flug-Erinnerung",
     "checkInReminder": "Check-in Reminder",
@@ -279,8 +279,6 @@
       "48h": "48h vorher"
     },
     "email": "Benachrichtigungs-E-Mail",
-    "before24h": "24h vorher",
-    "before2h": "2h vorher",
     "save": "Speichern",
     "saved": "Gespeichert!",
     "smtpTitle": "SMTP-Konfiguration",
@@ -303,17 +301,74 @@
       "message": "Host, Benutzername und Passwort werden von dieser Instanz entfernt. Danach verschickt TravStats keine E-Mails mehr — keine Erinnerungen, keine Einladungen, keine Passwort-Zurücksetzung. Du kannst die Daten jederzeit neu eintragen.",
       "confirm": "Endgültig löschen"
     },
-    "loadError": "Konfiguration konnte nicht geladen werden",
+    "loadError": "Benachrichtigungen konnten nicht geladen werden",
     "smtpHelp": {
       "ports": "587 + STARTTLS (Standard, \"Sicher (TLS)\" aus), 465 + implizites TLS (\"Sicher (TLS)\" an), 25 nur ohne Auth und lokal.",
       "credentials": "Gmail/Outlook verlangen App-Passwörter statt des Kontopassworts (2FA vorausgesetzt). Self-hosted Postfix-Server erlauben meist SMTP-AUTH mit Systemnutzer.",
       "sender": "Die Absender-E-Mail sollte zur Domain des SMTP-Servers passen — sonst werden Mails häufig als Spam markiert. SPF/DKIM-Einträge im DNS erhöhen die Zustellbarkeit."
     },
     "emailSub": "Wohin Erinnerungen gehen; leer = keine",
-    "before24hSub": "Einen Tag vorher — für Flüge, Kreuzfahrten, Zug-, Fähr- und Busfahrten; am Morgen des Check-ins für Unterkünfte",
-    "before2hSub": "Kurz vorher — für Flüge, Kreuzfahrten, Zug-, Fähr- und Busfahrten",
-    "loadError": "Benachrichtigungen konnten nicht geladen werden",
-    "saveFailed": "Benachrichtigungen konnten nicht gespeichert werden"
+    "saveFailed": "Benachrichtigungen konnten nicht gespeichert werden",
+    "mailCard": "Mail an",
+    "appCard": "App",
+    "carriedOver": "Deine bisherigen Einstellungen wurden übernommen.",
+    "rowFailed": "Nicht gespeichert.",
+    "retry": "Erneut versuchen",
+    "rowSwitch": "Erinnerungen für {{area}}",
+    "whenGroup": "{{area}}: wann",
+    "whereGroup": "{{area}}: wohin",
+    "lead24": "24 h",
+    "lead2": "2 h",
+    "leadCustom": "Eigene",
+    "customHours": "Eigene Vorlaufzeit für {{area}} in Stunden",
+    "hoursBefore": "h vorher",
+    "customInvalid": {
+      "range": "Ganze Stunden von 1 bis 168.",
+      "preset": "24 h und 2 h gibt es schon als eigene Auswahl."
+    },
+    "channelApp": "App",
+    "channelMail": "Mail",
+    "table": {
+      "area": "Bereich",
+      "on": "An",
+      "when": "Wann",
+      "where": "Wohin"
+    },
+    "mailReason": {
+      "no_email": "Keine Mail-Adresse hinterlegt – Mail ist deshalb nicht wählbar."
+    },
+    "pushStatus": {
+      "ok": "Gekoppeltes Gerät: Push ist aktiv.",
+      "no_relay": "Kein Push-Relay eingerichtet – die App erinnert dann selbst.",
+      "no_device_token": "Kein Gerät gekoppelt – App ist deshalb nicht wählbar.",
+      "token_rejected": "Das gekoppelte Gerät hat Push abgelehnt – in der App neu anmelden."
+    },
+    "domains": {
+      "flight": {
+        "name": "Flug",
+        "what": "Abflug, mit Terminal, Gate, Sitz"
+      },
+      "cruise": {
+        "name": "Kreuzfahrt",
+        "what": "Einschiffung"
+      },
+      "rail": {
+        "name": "Bahn",
+        "what": "Abfahrt, eine pro Fahrt"
+      },
+      "bus": {
+        "name": "Bus",
+        "what": "Abfahrt"
+      },
+      "ferry": {
+        "name": "Fähre",
+        "what": "Abfahrt"
+      },
+      "lodging": {
+        "name": "Unterkunft",
+        "what": "Check-in, Adresse, Nächte"
+      }
+    }
   },
   "privacy": {
     "title": "Datenschutz & Sicherheit",

@@ -69,6 +69,14 @@ describe("settings sections on the demo account", () => {
       notificationEmail: null,
       notifyBefore24h: false,
       notifyBefore2h: false,
+      domains: Object.fromEntries(
+        ["flight", "cruise", "rail", "bus", "ferry", "lodging"].map((d) => [
+          d,
+          { enabled: false, leadHours: [], channel: "both" },
+        ])
+      ),
+      mail: { available: true, reason: null },
+      push: { available: true, reason: null },
     });
     notificationsApiMock.updatePreferences.mockReset();
   });
@@ -119,6 +127,14 @@ describe("NotificationsSection on the demo account", () => {
       notificationEmail: null,
       notifyBefore24h: false,
       notifyBefore2h: false,
+      domains: Object.fromEntries(
+        ["flight", "cruise", "rail", "bus", "ferry", "lodging"].map((d) => [
+          d,
+          { enabled: false, leadHours: [], channel: "both" },
+        ])
+      ),
+      mail: { available: true, reason: null },
+      push: { available: true, reason: null },
     });
     notificationsApiMock.updatePreferences.mockReset();
   });
@@ -126,7 +142,7 @@ describe("NotificationsSection on the demo account", () => {
   it("explains instead of offering the address field", async () => {
     render(<NotificationsSection />);
     expect(await screen.findByText("settings:demoLocked")).toBeInTheDocument();
-    expect(screen.queryByLabelText("settings:notifications.email")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("settings:notifications.mailCard")).not.toBeInTheDocument();
     // Not merely hidden: the section must not fetch the shared account's
     // address either.
     expect(notificationsApiMock.getPreferences).not.toHaveBeenCalled();
@@ -135,7 +151,7 @@ describe("NotificationsSection on the demo account", () => {
   it("offers the field for a normal account — the case above is not vacuous", async () => {
     isDemoMock.current = false;
     render(<NotificationsSection />);
-    expect(await screen.findByLabelText("settings:notifications.email")).toBeInTheDocument();
+    expect(await screen.findByLabelText("settings:notifications.mailCard")).toBeInTheDocument();
     expect(screen.queryByText("settings:demoLocked")).not.toBeInTheDocument();
   });
 });
