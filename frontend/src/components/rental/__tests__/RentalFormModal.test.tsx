@@ -9,6 +9,9 @@ vi.mock("../../../lib/logger", () => ({
 }));
 vi.mock("../../../hooks/useRecentCurrencies", () => ({ useRecentCurrencies: () => [] }));
 vi.mock("../../location/LocationInput", () => ({ LocationInput: () => null }));
+// Network-backed pickers (forgejo#396): not under test here.
+vi.mock("../../CompanionPicker", () => ({ default: () => null }));
+vi.mock("../../TagInput", () => ({ default: () => null }));
 
 const create = vi.fn();
 const update = vi.fn();

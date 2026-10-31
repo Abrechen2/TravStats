@@ -1,5 +1,7 @@
 import type { JSX } from "react";
 import CurrencySelect from "../common/CurrencySelect";
+import CompanionPicker from "../CompanionPicker";
+import TagInput from "../TagInput";
 import { DeadlineFields } from "../deadlines/DeadlineFields";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -291,6 +293,24 @@ export function RentalBookingStep(props: RentalStepProps): JSX.Element {
           />
         )}
       </Labelled>
+      <div>
+        <span className="block text-sm">{t("rental:form.tags")}</span>
+        <div className="mt-1">
+          <TagInput
+            ariaLabel={t("rental:form.tags")}
+            className={INPUT_CLASS}
+            value={draft.tags}
+            onChange={(next): void => set("tags", next)}
+          />
+        </div>
+      </div>
+      <div>
+        <span className="block text-sm">{t("rental:form.companions")}</span>
+        <CompanionPicker
+          value={draft.companions}
+          onChange={(next): void => set("companions", next)}
+        />
+      </div>
       <label className={CHECK_ROW}>
         <input
           type="checkbox"

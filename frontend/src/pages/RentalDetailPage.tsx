@@ -5,6 +5,7 @@ import AppShell from "../components/ui/AppShell";
 import DetailHeader from "../components/ui/DetailHeader";
 import DetailKpis, { type DetailKpi } from "../components/ui/DetailKpis";
 import DetailSection from "../components/ui/DetailSection";
+import TagChips from "../components/common/TagChips";
 import PeopleList from "../components/ui/PeopleList";
 import Button from "../components/ui/Button";
 import { Icon } from "../components/ui/Icon";
@@ -405,6 +406,11 @@ export default function RentalDetailPage(): JSX.Element {
           {rental.companions.length > 0 && (
             <DetailSection title={t("rental:detail.companions")}>
               <PeopleList names={rental.companions} />
+            </DetailSection>
+          )}
+          {rental.tags.length > 0 && (
+            <DetailSection title={t("rental:form.tags")}>
+              <TagChips tags={rental.tags} />
             </DetailSection>
           )}
           {rental.notes ? (

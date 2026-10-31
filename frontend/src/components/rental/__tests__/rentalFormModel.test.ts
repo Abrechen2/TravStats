@@ -44,6 +44,17 @@ describe("rentalFormModel", () => {
     expect(body.returnStation).toBeNull();
   });
 
+  it("round-trips a rental's tags and companions through the draft (forgejo#396)", () => {
+    const stored = makeRental({ tags: ["work"], companions: ["Alex"] });
+    const draft = draftFromRental(stored);
+    expect(draft).toMatchObject({ tags: ["work"], companions: ["Alex"] });
+    const edited = { ...placed, ...draft, companions: [...draft.companions, "Sam"] };
+    expect(rentalInputFromDraft(edited)).toMatchObject({
+      tags: ["work"],
+      companions: ["Alex", "Sam"],
+    });
+  });
+
   it("sends an emptied price as null, never 0, and no currency without a price", () => {
     const body = rentalInputFromDraft({
       ...placed,

@@ -165,6 +165,8 @@
     "arrivalFlightNumber": "Arriving flight",
     "fuelPolicy": "Fuel policy",
     "notesHint": "Your own notes – they also appear on the return card.",
+    "tags": "Tags",
+    "companions": "Fellow travellers",
     "invoice": "Invoice",
     "finalAmount": "Final amount on the invoice",
     "finalCurrency": "Currency of the final amount",

@@ -165,6 +165,8 @@
     "arrivalFlightNumber": "Ankunftsflug",
     "fuelPolicy": "Tankregel",
     "notesHint": "Eigene Hinweise – sie erscheinen auch auf der Rückgabekarte.",
+    "tags": "Tags",
+    "companions": "Mitfahrer",
     "invoice": "Rechnung",
     "finalAmount": "Endbetrag laut Rechnung",
     "finalCurrency": "Währung des Endbetrags",

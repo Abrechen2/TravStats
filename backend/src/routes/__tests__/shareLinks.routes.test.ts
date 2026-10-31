@@ -636,6 +636,61 @@ describe("the field allow-list decides the payload", () => {
     }
   );
 
+  it("counts a trip's ferry crossings and rentals in the public totals and route, cancelled ones not (forgejo#396)", async () => {
+    const trip = await makeTrip(anna.id);
+    const ferry = (status: string, name: string, at: string) => ({
+      userId: anna.id,
+      tripId: trip.id,
+      depStationName: `${name} A`,
+      depLat: 54,
+      depLon: 10,
+      arrStationName: `${name} B`,
+      arrLat: 59,
+      arrLon: 10,
+      departureTime: new Date(at),
+      status,
+    });
+    await prisma.ferryJourney.create({
+      data: ferry("completed", "Ferry kept", "2030-06-03T09:00:00Z"),
+    });
+    await prisma.ferryJourney.create({
+      data: ferry("cancelled", "Ferry gone", "2030-06-03T10:00:00Z"),
+    });
+    const rental = (status: string, name: string, at: string) => ({
+      userId: anna.id,
+      tripId: trip.id,
+      provider: "Hertz",
+      pickupStationName: `${name} pick`,
+      pickupLat: 59,
+      pickupLon: 10,
+      pickupTimezone: "Europe/Oslo",
+      returnStationName: `${name} drop`,
+      returnLat: 59,
+      returnLon: 10,
+      returnTimezone: "Europe/Oslo",
+      pickupTime: new Date(at),
+      returnTime: new Date("2030-06-09T12:00:00Z"),
+      status,
+    });
+    await prisma.rentalBooking.create({
+      data: rental("completed", "Car kept", "2030-06-04T09:00:00Z"),
+    });
+    await prisma.rentalBooking.create({
+      data: rental("cancelled", "Car gone", "2030-06-04T10:00:00Z"),
+    });
+    const { token } = await tokenFor(anna, {
+      kind: "trip",
+      targetId: trip.id,
+      fields: ["totals", "route"],
+    });
+    const { trip: shown } = (await view(token).expect(200)).body.data.view;
+    expect(shown.totals).toMatchObject({ ferryCrossings: 1, rentals: 1 });
+    expect(shown.route).toEqual([
+      { mode: "ferry", from: "Ferry kept A", to: "Ferry kept B" },
+      { mode: "rental", from: "Car kept pick", to: "Car kept drop" },
+    ]);
+  });
+
   it("counts no cancelled rail ride, bus ride or cruise in the totals or the route", async () => {
     const trip = await makeTrip(anna.id);
     const ride = (status: string, name: string) => ({

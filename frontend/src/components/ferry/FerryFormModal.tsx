@@ -2,6 +2,8 @@ import { parseDecimalInput } from "../../lib/decimalInput";
 import { useEffect, useId, useRef, useState } from "react";
 import { FerryTicketImport } from "./FerryTicketImport";
 import Modal from "../Modal";
+import CompanionPicker from "../CompanionPicker";
+import TagInput from "../TagInput";
 import RequiredLegend from "../form/RequiredLegend";
 import Button from "../ui/Button";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -95,7 +97,6 @@ function initial(ride: FerryJourney | null) {
   if (ride?.distanceSource !== "user") fields.distanceKm = "";
   fields.departureLocal = ride ? (railDeparture(ride)?.local.slice(0, 16) ?? "") : "";
   fields.arrivalLocal = ride ? (railArrival(ride)?.local.slice(0, 16) ?? "") : "";
-  fields.companions = ride?.companions.join(", ") ?? "";
   fields.tripId = ride?.tripId ?? "";
   fields.departureFold = "";
   fields.arrivalFold = "";
@@ -114,6 +115,9 @@ export function FerryFormModal({
   const formId = useId();
   const [opened] = useState(() => initial(journey));
   const [fields, setFields] = useState(opened);
+  // Names and tags are lists, not text: a comma typed into a name is part of it.
+  const [companions, setCompanions] = useState<string[]>(() => journey?.companions ?? []);
+  const [tags, setTags] = useState<string[]>(() => journey?.tags ?? []);
   const [dep, setDep] = useState(() => port(journey, "dep"));
   const [arr, setArr] = useState(() => port(journey, "arr"));
   const [ticketDocumentId, setTicketDocumentId] = useState<string | null>(null);
@@ -184,10 +188,8 @@ export function FerryFormModal({
       departureLocal: fields.departureLocal,
       arrivalLocal: fields.arrivalLocal || null,
       tripId: fields.tripId || null,
-      companions: fields.companions
-        .split(",")
-        .map((name) => name.trim())
-        .filter(Boolean),
+      companions,
+      tags,
       status: cancelled ? "cancelled" : "scheduled",
     };
     for (const key of TEXT) input[key] = fields[key].trim() || null;
@@ -411,7 +413,21 @@ export function FerryFormModal({
             </select>
           </label>
           {journey?.roadtripLegId && <p className="t-caption">{t("ferry:roadtrip.tripLocked")}</p>}
-          {field("companions")}
+          <div>
+            <span className="block text-sm">{t("ferry:tags")}</span>
+            <div className="mt-1">
+              <TagInput
+                ariaLabel={t("ferry:tags")}
+                className={INPUT}
+                value={tags}
+                onChange={setTags}
+              />
+            </div>
+          </div>
+          <div>
+            <span className="block text-sm">{t("ferry:companionNames")}</span>
+            <CompanionPicker value={companions} onChange={setCompanions} />
+          </div>
           {field("notes")}
           <label className="flex items-center gap-2 text-sm pointer-coarse:min-h-(--ts-size-touch-min)">
             <input

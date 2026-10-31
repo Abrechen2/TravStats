@@ -143,6 +143,9 @@ export interface RentalDraft {
   storedDistanceSource: string | null;
   arrivalFlightNumber: string;
   notes: string;
+  /** Lists, not text: a comma in a name is part of it. */
+  tags: string[];
+  companions: string[];
   cancelled: boolean;
 }
 
@@ -190,6 +193,8 @@ export const EMPTY_RENTAL_DRAFT: RentalDraft = {
   storedDistanceSource: null,
   arrivalFlightNumber: "",
   notes: "",
+  tags: [],
+  companions: [],
   cancelled: false,
 };
 
@@ -298,6 +303,8 @@ export function draftFromRental(r: RentalBooking): RentalDraft {
     storedDistanceSource: r.distanceSource,
     arrivalFlightNumber: r.arrivalFlightNumber ?? "",
     notes: r.notes ?? "",
+    tags: [...r.tags],
+    companions: [...r.companions],
     cancelled: r.status === "cancelled",
   };
 }
@@ -544,6 +551,8 @@ export function rentalInputFromDraft(d: RentalDraft): RentalInput {
     odometerInKm: parseKmReading(d.odometerInKm),
     arrivalFlightNumber: text(d.arrivalFlightNumber),
     notes: text(d.notes),
+    tags: d.tags,
+    companions: d.companions,
     status: d.cancelled ? "cancelled" : "scheduled",
   };
 }

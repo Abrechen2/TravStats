@@ -47,7 +47,7 @@
   "price": "Preis",
   "currency": "Währung",
   "distanceKm": "Strecke laut Ticket (km)",
-  "companions": "Mitreisende (durch Komma getrennt)",
+  "tags": "Tags",
   "notes": "Notizen",
   "trip": "Reise",
   "noTrip": "Keine Reise",

@@ -113,7 +113,7 @@ ${SHARE_PAGE_ITINERARY_JS}
         scheduled: "Geplant", inFlight: "In der Luft", landed: "Gelandet", cancelled: "Annulliert", unknown: "Status unbekannt",
         reported: "nach gemeldeten Zeiten", schedule: "nach Flugplan", aircraft: "Flugzeug",
         position: "Letzte Position", noPosition: "Noch keine Position gesendet.", map: "Karte",
-        flights: "Flüge", km: "km Flug", cruises: "Kreuzfahrten", rail: "Zugfahrten", bus: "Busfahrten", countries: "Länder", days: "Tage",
+        flights: "Flüge", km: "km Flug", cruises: "Kreuzfahrten", rail: "Zugfahrten", bus: "Busfahrten", ferry: "Fährfahrten", rentals: "Mietwagen", countries: "Länder", days: "Tage",
         route: "Route", costs: "Kosten", incomplete: "(nicht alle Einträge mit Preis)", companions: "Mitreisende", photos: "Fotos", notes: "Notizen", moreNotes: "Weitere Notizen nicht gezeigt.",
         distance: "km", earth: "× um die Erde", newCountries: "neue Länder", topAirline: "Meistgeflogene Airline", topRoute: "Häufigste Strecke",
         sharedBy: "Geteilt von"
@@ -126,7 +126,7 @@ ${SHARE_PAGE_ITINERARY_JS}
         scheduled: "Scheduled", inFlight: "In the air", landed: "Landed", cancelled: "Cancelled", unknown: "Status unknown",
         reported: "from reported times", schedule: "from the schedule", aircraft: "Aircraft",
         position: "Last position", noPosition: "No position sent yet.", map: "Map",
-        flights: "Flights", km: "km flown", cruises: "Cruises", rail: "Train rides", bus: "Bus rides", countries: "Countries", days: "Days",
+        flights: "Flights", km: "km flown", cruises: "Cruises", rail: "Train rides", bus: "Bus rides", ferry: "Ferry crossings", rentals: "Car rentals", countries: "Countries", days: "Days",
         route: "Route", costs: "Costs", incomplete: "(not every entry has a price)", companions: "Companions", photos: "Photos", notes: "Notes", moreNotes: "More notes not shown.",
         distance: "km", earth: "× around the Earth", newCountries: "new countries", topAirline: "Most-flown airline", topRoute: "Most-flown route",
         sharedBy: "Shared by"
@@ -226,6 +226,8 @@ ${SHARE_PAGE_ITINERARY_JS}
       if (t.totals.cruises) row(c, T.cruises, t.totals.cruises);
       if (t.totals.railRides) row(c, T.rail, t.totals.railRides);
       if (t.totals.busRides) row(c, T.bus, t.totals.busRides);
+      if (t.totals.ferryCrossings) row(c, T.ferry, t.totals.ferryCrossings);
+      if (t.totals.rentals) row(c, T.rentals, t.totals.rentals);
       row(c, T.countries, t.totals.countries);
       if (t.totals.days !== null) row(c, T.days, t.totals.days);
       root.appendChild(c);

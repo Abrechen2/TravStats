@@ -52,6 +52,7 @@ export interface FerryJourneyInput {
   arrivalFold?: string;
   tripId?: string | null;
   companions?: string[];
+  tags?: string[];
   status?: FerryStatus;
   operator?: string | null;
   vesselName?: string | null;
