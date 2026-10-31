@@ -47,7 +47,7 @@
   "price": "Price",
   "currency": "Currency",
   "distanceKm": "Ticket distance (km)",
-  "companions": "Companions (comma separated)",
+  "tags": "Tags",
   "notes": "Notes",
   "trip": "Trip",
   "noTrip": "No trip",

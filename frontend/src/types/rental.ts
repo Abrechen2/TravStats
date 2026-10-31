@@ -191,6 +191,8 @@ export interface RentalInput {
   arrivalFlightNumber?: string | null;
   status?: "scheduled" | "cancelled";
   notes?: string | null;
+  tags?: string[];
+  companions?: string[];
   tripId?: string | null;
   routeId?: string | null;
 }

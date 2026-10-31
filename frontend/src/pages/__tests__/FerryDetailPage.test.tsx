@@ -61,4 +61,12 @@ describe("FerryDetailPage — map and photos", () => {
     await waitFor(() => expect(screen.getByTestId("ferry-map-stub")).toBeInTheDocument());
     expect(screen.queryByTestId("photo-strip-stub")).toBeNull();
   });
+
+  // forgejo#396: tags were stored for a crossing and never shown.
+  it("shows the crossing's tags", async () => {
+    get.mockResolvedValue(ferryFixture({ id: "f1", tags: ["night", "harbour"] }));
+    draw();
+    expect(await screen.findByText("#night")).toBeInTheDocument();
+    expect(screen.getByText("#harbour")).toBeInTheDocument();
+  });
 });

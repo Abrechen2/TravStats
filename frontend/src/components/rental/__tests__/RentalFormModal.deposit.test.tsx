@@ -11,6 +11,9 @@ vi.mock("../../../lib/logger", () => ({
 }));
 vi.mock("../../../hooks/useRecentCurrencies", () => ({ useRecentCurrencies: () => [] }));
 vi.mock("../../location/LocationInput", () => ({ LocationInput: () => null }));
+// Network-backed pickers (forgejo#396): not under test here.
+vi.mock("../../CompanionPicker", () => ({ default: () => null }));
+vi.mock("../../TagInput", () => ({ default: () => null }));
 // Kept fast under a loaded host (re-review, fix round 3): the real currency
 // select lists every ISO code, three times over with all steps mounted, and
 // every keystroke re-renders them. What this suite checks is the deposit's

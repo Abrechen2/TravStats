@@ -5,6 +5,7 @@ import DetailHeader from "../components/ui/DetailHeader";
 import DetailSection from "../components/ui/DetailSection";
 import DetailKpis from "../components/ui/DetailKpis";
 import PeopleList from "../components/ui/PeopleList";
+import TagChips from "../components/common/TagChips";
 import TripPill from "../components/Trips/TripPill";
 import { Icon } from "../components/ui/Icon";
 import { statusPillProps } from "../components/table/statusPillStyle";
@@ -266,6 +267,11 @@ export default function FerryDetailPage() {
           {ride.companions.length > 0 && (
             <DetailSection title={t("ferry:companionNames")}>
               <PeopleList names={ride.companions} />
+            </DetailSection>
+          )}
+          {ride.tags.length > 0 && (
+            <DetailSection title={t("ferry:tags")}>
+              <TagChips tags={ride.tags} />
             </DetailSection>
           )}
           {ride.notes && (

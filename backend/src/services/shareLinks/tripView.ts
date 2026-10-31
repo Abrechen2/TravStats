@@ -60,7 +60,7 @@ type TripRow = NonNullable<Awaited<ReturnType<typeof loadOwnedTrip>>>;
 const NOT_CANCELLED = { status: { not: "cancelled" } } as const;
 
 async function loadLegs(tripId: string) {
-  const [flights, rail, bus, cruises] = await Promise.all([
+  const [flights, rail, bus, ferry, rentals, cruises] = await Promise.all([
     prisma.flight.findMany({
       where: { tripId, ...NOT_CANCELLED },
       select: {
@@ -91,6 +91,16 @@ async function loadLegs(tripId: string) {
       select: { depStationName: true, arrStationName: true, departureTime: true },
       orderBy: { departureTime: "asc" },
     }),
+    prisma.ferryJourney.findMany({
+      where: { tripId, ...NOT_CANCELLED },
+      select: { depStationName: true, arrStationName: true, departureTime: true },
+      orderBy: { departureTime: "asc" },
+    }),
+    prisma.rentalBooking.findMany({
+      where: { tripId, ...NOT_CANCELLED },
+      select: { pickupStationName: true, returnStationName: true, pickupTime: true },
+      orderBy: { pickupTime: "asc" },
+    }),
     prisma.cruise.findMany({
       where: { tripId, ...NOT_CANCELLED },
       select: {
@@ -101,7 +111,7 @@ async function loadLegs(tripId: string) {
       orderBy: { startDate: "asc" },
     }),
   ]);
-  return { flights, rail, bus, cruises };
+  return { flights, rail, bus, ferry, rentals, cruises };
 }
 type Legs = Awaited<ReturnType<typeof loadLegs>>;
 
@@ -185,6 +195,14 @@ function routeOf(legs: Legs): NonNullable<TripView["route"]> {
       t: at(r.departureTime),
       leg: { mode: "bus" as const, from: r.depStationName, to: r.arrStationName },
     })),
+    ...legs.ferry.map((r) => ({
+      t: at(r.departureTime),
+      leg: { mode: "ferry" as const, from: r.depStationName, to: r.arrStationName },
+    })),
+    ...legs.rentals.map((r) => ({
+      t: at(r.pickupTime),
+      leg: { mode: "rental" as const, from: r.pickupStationName, to: r.returnStationName },
+    })),
     ...legs.cruises.map((c) => ({
       t: at(c.startDate),
       leg: {
@@ -267,6 +285,8 @@ export async function buildTripView(
       // A U-Bahn or tram ride is on the route, but no train ride (`railCounting`).
       railRides: legs.rail.filter(isCountedRailMode).length,
       busRides: legs.bus.length,
+      ferryCrossings: legs.ferry.length,
+      rentals: legs.rentals.length,
       countries: countries.length,
       days: times.start && times.end ? daysBetween(times.start.date, times.end.date) + 1 : null,
     };

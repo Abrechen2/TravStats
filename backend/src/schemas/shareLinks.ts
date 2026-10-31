@@ -183,7 +183,7 @@ const flightView = z.strictObject({
 });
 
 const tripLeg = z.strictObject({
-  mode: z.enum(["flight", "rail", "bus", "cruise"]),
+  mode: z.enum(["flight", "rail", "bus", "ferry", "rental", "cruise"]),
   from: z.string().nullable(),
   to: z.string().nullable(),
 });
@@ -201,6 +201,8 @@ const tripView = z.strictObject({
       cruises: z.number().int(),
       railRides: z.number().int(),
       busRides: z.number().int().describe("Bus rides on the trip (forgejo#288 sweep)"),
+      ferryCrossings: z.number().int().describe("Ferry crossings on the trip (forgejo#396)"),
+      rentals: z.number().int().describe("Rentals on the trip (forgejo#396)"),
       countries: z.number().int(),
       days: z.number().int().nullable().describe("Null when the trip has no first or last day"),
     })

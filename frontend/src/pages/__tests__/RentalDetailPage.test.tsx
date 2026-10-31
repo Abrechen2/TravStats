@@ -53,6 +53,14 @@ const renderPage = (): void => {
 describe("RentalDetailPage", () => {
   beforeEach(() => get.mockReset());
 
+  // forgejo#396: tags were stored for a rental and never shown.
+  it("shows the rental's tags", async () => {
+    get.mockResolvedValue(makeRental({ id: "r1", tags: ["work", "oneway"] }));
+    renderPage();
+    expect(await screen.findByText("#work")).toBeInTheDocument();
+    expect(screen.getByText("#oneway")).toBeInTheDocument();
+  });
+
   // forgejo#240
   it("shows the return card while the car is out, and opens the form at its return step", async () => {
     get.mockResolvedValue(makeRental({ id: "r1", status: "in_progress" }));

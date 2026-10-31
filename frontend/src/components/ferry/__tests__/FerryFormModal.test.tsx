@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FerryFormModal } from "../FerryFormModal";
 import type { FerryJourney } from "../../../types/ferry";
@@ -15,17 +15,23 @@ vi.mock("../../../lib/api/ferry", () => ({
       Promise.resolve(mocks.save(...args)).then((ride) => ({ ride, seaRoute: mocks.seaRoute })),
   },
 }));
-vi.mock("../../../lib/api", () => ({ tripsApi: { getAll: mocks.trips } }));
+vi.mock("../../../lib/api", () => ({
+  tripsApi: { getAll: mocks.trips },
+  companionsApi: { list: () => Promise.resolve([]) },
+}));
+vi.mock("../../../hooks/useTagSuggestions", () => ({ useTagSuggestions: () => [] }));
 vi.mock("../../../hooks/useTranslation", () => ({ useTranslation: () => ({ t: mocks.t }) }));
 vi.mock("../../Modal", () => ({
   default: ({
     children,
     footer,
+    dirty,
   }: {
+    dirty?: boolean;
     children: React.ReactNode;
     footer: (close: () => void) => React.ReactNode;
   }) => (
-    <div>
+    <div data-testid="modal" data-dirty={String(!!dirty)}>
       {children}
       {footer(() => {})}
     </div>
@@ -102,6 +108,34 @@ describe("Ferry editor", () => {
     });
     expect(input).not.toHaveProperty("departureLocal");
     expect(input).not.toHaveProperty("departureStation");
+  });
+  // forgejo#396: companions were a comma-separated text box and tags had no input at all.
+  it("edits companions through the picker and tags through the tag input, keeping the stored ones", async () => {
+    mocks.save.mockResolvedValue(ride);
+    const withTags = { ...ride, tags: ["harbour"], companions: ["Alex, Jr."] } as FerryJourney;
+    render(<FerryFormModal journey={withTags} onClose={vi.fn()} onSaved={vi.fn()} />);
+    // A stored name containing a comma is one chip, not two.
+    expect(screen.getByText("Alex, Jr.")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("picker.label"), { target: { value: "Sam" } });
+    fireEvent.keyDown(screen.getByLabelText("picker.label"), { key: "Enter" });
+    const tagBox = screen.getByLabelText("ferry:tags");
+    fireEvent.change(tagBox, { target: { value: "night" } });
+    fireEvent.keyDown(tagBox, { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: "ferry:save" }));
+    await waitFor(() => expect(mocks.save).toHaveBeenCalled());
+    expect(mocks.save.mock.calls[0][1]).toMatchObject({
+      companions: ["Alex, Jr.", "Sam"],
+      tags: ["harbour", "night"],
+    });
+  });
+  it("treats a changed companion list as an unsaved edit", async () => {
+    await act(async () => {
+      render(<FerryFormModal journey={ride} onClose={vi.fn()} onSaved={vi.fn()} />);
+    });
+    expect(screen.getByTestId("modal").dataset.dirty).toBe("false");
+    fireEvent.change(screen.getByLabelText("picker.label"), { target: { value: "Sam" } });
+    fireEvent.keyDown(screen.getByLabelText("picker.label"), { key: "Enter" });
+    expect(screen.getByTestId("modal").dataset.dirty).toBe("true");
   });
   // forgejo#393: fareClass was stored and sent by imports, but the form had no input for it.
   it("lets the fare class be typed, kept and cleared", async () => {
