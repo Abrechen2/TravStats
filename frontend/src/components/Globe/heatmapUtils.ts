@@ -63,3 +63,13 @@ export const getQuartile = (count: number, t: HeatmapThresholds): Quartile => {
   if (count > t.q25) return 2;
   return 1;
 };
+
+/** The heat legend's four rows: the quartile, its colour and its count range. */
+export const heatLegendRanges = (
+  t: HeatmapThresholds
+): Array<{ q: Quartile; color: string; label: string }> => [
+  { q: 1, color: HEAT_HEX.q1, label: `1–${Math.max(t.q25, 1)}×` },
+  { q: 2, color: HEAT_HEX.q2, label: `${t.q25 + 1}–${t.q50}×` },
+  { q: 3, color: HEAT_HEX.q3, label: `${t.q50 + 1}–${t.q75}×` },
+  { q: 4, color: HEAT_HEX.q4, label: `${t.q75 + 1}+ (max ${t.max}×)` },
+];

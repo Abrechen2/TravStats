@@ -1,4 +1,8 @@
 import { render, screen, fireEvent, renderHook, act } from "@testing-library/react";
+vi.mock("../../hooks/useDashboardRoute", () => ({
+  useDashboardRoute: () => ({ tab: "flight", mode: "routes" }),
+}));
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   PanelHeader,
@@ -173,7 +177,8 @@ describe("CruiseAppearanceSection", () => {
       />
     );
     expect(screen.queryByText("map:globe.panel.cruiseColorMode.swatchSailed")).toBeNull();
-    expect(screen.getByText("map:globe.panel.routes")).toBeTruthy();
+    // the colour label of the one solid slot sits beside the "Routen" switch row
+    expect(screen.getAllByText("map:globe.panel.routes")).toHaveLength(2);
 
     // perCruise has no colour to set — the colours come from the cruises.
     rerender(
@@ -183,7 +188,8 @@ describe("CruiseAppearanceSection", () => {
       />
     );
     expect(screen.queryByText("map:globe.panel.cruiseColorMode.swatchSailed")).toBeNull();
-    expect(screen.queryByText("map:globe.panel.routes")).toBeNull();
+    // only the "Routen" switch row is left; the colour row is gone
+    expect(screen.getAllByText("map:globe.panel.routes")).toHaveLength(1);
     // …but it does warn that per-cruise hues compete with the flight colours
     // in the "Alle" view.
     expect(screen.getByText("map:globe.panel.cruiseColorMode.perCruise.hint")).toBeTruthy();
@@ -276,7 +282,8 @@ describe("FlightAppearanceSection", () => {
       />
     );
     expect(screen.queryByText("map:globe.panel.colorMode.swatchFlown")).toBeNull();
-    expect(screen.getByText("map:globe.panel.routes")).toBeTruthy();
+    // the colour label of the one solid slot sits beside the "Routen" switch row
+    expect(screen.getAllByText("map:globe.panel.routes")).toHaveLength(2);
   });
 
   it("emits the slot that the active mode actually uses", () => {

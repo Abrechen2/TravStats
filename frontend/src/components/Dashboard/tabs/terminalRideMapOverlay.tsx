@@ -1,3 +1,4 @@
+import { useRoutesVisible } from "../../../store/mapRoutesStore";
 import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
@@ -225,6 +226,7 @@ export function useTerminalRideOverlay<R extends TerminalRideLine & StationLabel
   const rides = useDashboardRides(show, year, spec.load, spec.domain);
   const { colorOf } = useDomainColors();
   const color = colorOf(spec.domain);
+  const linesShown = useRoutesVisible(spec.domain);
   const drawn = show ? rides : EMPTY;
   // The station names are left to the map's single pass across all three
   // ground domains (`useTransportOverlays`), so they are not drawn here.
@@ -235,7 +237,9 @@ export function useTerminalRideOverlay<R extends TerminalRideLine & StationLabel
   const stations = useMemo(() => ({ rides: drawn, color: hexToRgb(color) }), [drawn, color]);
   return {
     layers,
-    legendRows: buildTerminalRideLegendRows(drawn, color, t, legendRow, spec.legend),
+    legendRows: linesShown
+      ? buildTerminalRideLegendRows(drawn, color, t, legendRow, spec.legend)
+      : [],
     stations,
   };
 }

@@ -1,3 +1,4 @@
+import { useMapRoutesStore } from "../../../store/mapRoutesStore";
 import { useMemo } from "react";
 import {
   useDashboardDomainFilter,
@@ -14,6 +15,8 @@ const OVERLAY_DOMAINS: readonly AppearanceDomain[] = [
   "tour",
   "roadtrip",
   "rail",
+  "bus",
+  "ferry",
   "rental",
 ];
 
@@ -43,6 +46,11 @@ export interface AllTabDomainVisibility {
     roadtrip: boolean;
     tour: boolean;
   };
+  /**
+   * The domains whose LINES are on the map: `visible` AND the panel's
+   * "Routen" switch. Markers follow `visible`; route legend rows follow this.
+   */
+  lines: { flight: boolean; cruise: boolean; roadtrip: boolean; tour: boolean };
 }
 
 /**
@@ -78,18 +86,22 @@ export function useAllTabDomainVisibility(tours: readonly TourSummary[]): AllTab
   const has = (key: "flight" | "cruise" | "lodging" | "roadtrip"): boolean =>
     isEnabled(key) && domainFilter.isVisible(key);
 
-  return {
-    domainFilter,
-    dayTourCount,
-    visible: {
-      flight: has("flight"),
-      cruise: has("cruise"),
-      lodging: has("lodging"),
-      poi: placesAllowed && domainFilter.isVisible("poi"),
-      // A roadtrip IS a domain: it answers to the user's own switch like a
-      // cruise does. A day tour is not a domain, so it has only the filter row.
-      roadtrip: has("roadtrip"),
-      tour: domainFilter.isVisible("tour"),
-    },
+  const routes = useMapRoutesStore((s) => s.visible);
+  const visible = {
+    flight: has("flight"),
+    cruise: has("cruise"),
+    lodging: has("lodging"),
+    poi: placesAllowed && domainFilter.isVisible("poi"),
+    // A roadtrip IS a domain: it answers to the user's own switch like a
+    // cruise does. A day tour is not a domain, so it has only the filter row.
+    roadtrip: has("roadtrip"),
+    tour: domainFilter.isVisible("tour"),
   };
+  const lines = {
+    flight: visible.flight && routes.flight,
+    cruise: visible.cruise && routes.cruise,
+    roadtrip: visible.roadtrip && routes.roadtrip,
+    tour: visible.tour && routes.tour,
+  };
+  return { domainFilter, dayTourCount, visible, lines };
 }

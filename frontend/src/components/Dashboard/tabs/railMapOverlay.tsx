@@ -1,3 +1,4 @@
+import { useRoutesVisible } from "../../../store/mapRoutesStore";
 import { useMemo } from "react";
 import type { JSX } from "react";
 import type { Layer } from "@deck.gl/core";
@@ -143,6 +144,7 @@ export function useRailOverlay(show: boolean, onGlobe: boolean, t: Translate): R
   const { colorOf } = useDomainColors();
   const color = colorOf("rail");
   const style = useRailMapStyle();
+  const linesShown = useRoutesVisible("rail");
   const drawn = show ? journeys : EMPTY;
   // The station names are left to the map's single pass across all three
   // ground domains (`useTransportOverlays`), so they are not drawn here.
@@ -151,7 +153,11 @@ export function useRailOverlay(show: boolean, onGlobe: boolean, t: Translate): R
     [drawn, color, onGlobe, style]
   );
   const stations = useMemo(() => ({ rides: drawn, color: hexToRgb(color) }), [drawn, color]);
-  return { layers, legendRows: buildRailLegendRows(drawn, color, t, legendRow), stations };
+  return {
+    layers,
+    legendRows: linesShown ? buildRailLegendRows(drawn, color, t, legendRow) : [],
+    stations,
+  };
 }
 
 const EMPTY: readonly RailPathSource[] = [];

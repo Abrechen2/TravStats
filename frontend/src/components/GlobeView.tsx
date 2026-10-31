@@ -14,7 +14,7 @@ import {
   getArcSteps,
   greatCircleWaypoints,
 } from "./Globe/arcUtils";
-import { HEAT_HEX, getQuartile, type Quartile } from "./Globe/heatmapUtils";
+import { getQuartile, heatLegendRanges, type Quartile } from "./Globe/heatmapUtils";
 import {
   buildGlobeLayers,
   DEFAULT_AIRPORT_COLOR,
@@ -27,6 +27,8 @@ import { loadGlobeChrome, saveGlobeChrome } from "./map/globeChrome";
 import { useFlightColorStore } from "../store/flightColorStore";
 import { useLodgingColorStore } from "../store/lodgingColorStore";
 import { usePlaceColorStore } from "../store/placeColorStore";
+import { useMapRoutesStore } from "../store/mapRoutesStore";
+import { withoutHiddenRoutes } from "../lib/mapRoutes";
 import { useMapCameraStore } from "../store/mapCameraStore";
 import { useMapLabelsModeStore } from "../store/mapLabelsModeStore";
 
@@ -1051,7 +1053,7 @@ export default function GlobeView({
     ]
   );
 
-  const layers = useMemo<Layer[]>(
+  const drawnLayers = useMemo<Layer[]>(
     () => [
       ...buildGlobeLayers({
         arcsData,
@@ -1130,28 +1132,14 @@ export default function GlobeView({
       showNight,
     ]
   );
-
-  const legendRanges = useMemo<Array<{ q: Quartile; color: string; label: string }>>(
-    () => [
-      { q: 1, color: HEAT_HEX.q1, label: `1–${Math.max(heatmapThresholds.q25, 1)}×` },
-      {
-        q: 2,
-        color: HEAT_HEX.q2,
-        label: `${heatmapThresholds.q25 + 1}–${heatmapThresholds.q50}×`,
-      },
-      {
-        q: 3,
-        color: HEAT_HEX.q3,
-        label: `${heatmapThresholds.q50 + 1}–${heatmapThresholds.q75}×`,
-      },
-      {
-        q: 4,
-        color: HEAT_HEX.q4,
-        label: `${heatmapThresholds.q75 + 1}+ (max ${heatmapThresholds.max}×)`,
-      },
-    ],
-    [heatmapThresholds]
+  // The lines of every domain the user switched off go; markers and labels stay.
+  const routesVisible = useMapRoutesStore((s) => s.visible);
+  const layers = useMemo(
+    () => withoutHiddenRoutes(drawnLayers, routesVisible),
+    [drawnLayers, routesVisible]
   );
+
+  const legendRanges = useMemo(() => heatLegendRanges(heatmapThresholds), [heatmapThresholds]);
 
   return (
     <div

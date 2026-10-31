@@ -1153,7 +1153,7 @@
       "stayScan": "Stays, detect stays, radius, minimum duration, detect places automatically, detect places, places as areas, venues, re-evaluate, markets, market grounds, shopping malls, parks, zoos, theme parks, museums",
       "companions": "Companions, travel companions, people, rename, merge, duplicate, delete, names",
       "travTrack": "TravTrack, location history, history, positions, privacy zones, zone, delete span, export, GPX",
-      "mapAppearance": "map, map appearance, colours, route colour, palette, lines, layers, labels, map mode, flight colour, cruise colour",
+      "mapAppearance": "map, map appearance, colours, route colour, palette, lines, layers, labels, map mode, flight colour, cruise colour, hide routes, show routes, hide lines, airports only, ports only, markers only, without flight routes, flight routes, cruise routes, rail lines",
       "dashboardAppearance": "dashboard, areas, map mode, view, start page",
       "listAppearance": "list, lists, columns, sorting, page size, rows",
       "comparisonConsent": "comparison, friends, leaderboard, consent, totals, ranking",
@@ -1470,6 +1470,10 @@
       "routes": {
         "title": "Route colours and palettes",
         "sub": "Colour flight and cruise routes by mode."
+      },
+      "lines": {
+        "title": "Show and hide routes on the map",
+        "sub": "Leave out the lines per area and show only airports, ports, stations and stops. The map panel saves it for your account."
       },
       "layers": {
         "title": "Layers and labels",

@@ -517,6 +517,8 @@ export type AppearanceDomain =
   | "roadtrip"
   | "roadtripStations"
   | "rail"
+  | "bus"
+  | "ferry"
   | "rental";
 
 // ── Colour-mode sections ─────────────────────────────────────────────

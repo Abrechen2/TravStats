@@ -1,3 +1,4 @@
+import { useRoutesVisible } from "../../../store/mapRoutesStore";
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
@@ -54,7 +55,8 @@ export function RailTab(): JSX.Element {
     () => buildRailMapLayers(journeys, color, visMode === "globe", "dashboard-rail", style),
     [journeys, color, visMode, style]
   );
-  const legend = buildRailLegendRows(journeys, color, t, legendRow);
+  const linesShown = useRoutesVisible("rail");
+  const legend = linesShown ? buildRailLegendRows(journeys, color, t, legendRow) : [];
   const isEmpty = !loading && !loadError && journeys.length === 0;
 
   return (

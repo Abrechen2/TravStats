@@ -1153,7 +1153,7 @@
       "stayScan": "Aufenthalte, Aufenthalt erkennen, Radius, Mindestdauer, Orte automatisch erkennen, Orte erkennen, Orte als Fläche, Gelände, neu auswerten, Märkte, Marktgelände, Einkaufszentren, Parks, Zoos, Freizeitparks, Museen",
       "companions": "Mitreisende, Begleitpersonen, Personen, Umbenennen, Zusammenführen, Doppelt, Duplikat, Löschen, Namen",
       "travTrack": "TravTrack, Standortverlauf, Verlauf, Positionen, Privatzonen, Zone, Zeitraum löschen, Export, GPX",
-      "mapAppearance": "Karte, Kartenaussehen, Farben, Routenfarbe, Palette, Linien, Ebenen, Beschriftung, Kartenmodus, Flugfarbe, Kreuzfahrtfarbe",
+      "mapAppearance": "Karte, Kartenaussehen, Farben, Routenfarbe, Palette, Linien, Ebenen, Beschriftung, Kartenmodus, Flugfarbe, Kreuzfahrtfarbe, Routen ausblenden, Routen einblenden, Linien ausblenden, nur Flughäfen, nur Häfen, nur Marker, ohne Flugrouten, Flugrouten, Kreuzfahrtrouten, Bahnlinien",
       "dashboardAppearance": "Dashboard, Bereiche, Kartenmodus, Ansicht, Startseite",
       "listAppearance": "Liste, Listen, Spalten, Sortierung, Seitengröße, Zeilen",
       "comparisonConsent": "Vergleich, Freunde, Bestenliste, Einwilligung, Summen, Rangliste",
@@ -1470,6 +1470,10 @@
       "routes": {
         "title": "Routenfarben und Paletten",
         "sub": "Flug- und Kreuzfahrtrouten nach Modus einfärben."
+      },
+      "lines": {
+        "title": "Routen auf der Karte ein- und ausblenden",
+        "sub": "Pro Bereich die Linien weglassen und nur Flughäfen, Häfen, Bahnhöfe und Haltestellen zeigen. Das Bedienfeld der Karte speichert es für dein Konto."
       },
       "layers": {
         "title": "Ebenen und Beschriftungen",

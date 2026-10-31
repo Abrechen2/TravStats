@@ -137,3 +137,24 @@ describe("optionalCopy", () => {
     expect(splitKeywords(optionalCopy(t, "settings:search.keywords.nope"))).toEqual([]);
   });
 });
+
+describe("settings search — routes on the map (Ansichten)", () => {
+  it.each([
+    ["de", "nur Flughäfen"],
+    ["de", "Routen ausblenden"],
+    ["en", "airports only"],
+    ["en", "hide routes"],
+  ])("finds the map-appearance section for %s “%s”", async (lang, query) => {
+    const { default: copy } = await import(`../../i18n/resources/${lang}/settings.json`);
+    const candidate: SettingsSearchCandidate = {
+      section: "mapAppearance",
+      label: copy.views.mapAppearance.title,
+      groupLabel: "Ansichten",
+      href: "/settings/views?section=mapAppearance",
+      keywords: splitKeywords(copy.search.keywords.mapAppearance),
+    };
+    const [hit] = searchSettings(query, [candidate]);
+    expect(hit?.section).toBe("mapAppearance");
+    expect(hit.expertOnly).toBe(false);
+  });
+});
