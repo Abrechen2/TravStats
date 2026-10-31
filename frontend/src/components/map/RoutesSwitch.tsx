@@ -1,7 +1,11 @@
-import type { JSX } from "react";
+import { useEffect, useRef, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDashboardRoute } from "../../hooks/useDashboardRoute";
-import { routesBlockedReason, type RouteDomain } from "../../lib/mapRoutes";
+import {
+  mapPanelRoutesRequested,
+  routesBlockedReason,
+  type RouteDomain,
+} from "../../lib/mapRoutes";
 import { useMapRoutesStore } from "../../store/mapRoutesStore";
 import { Toggle } from "./controlPanelKit";
 
@@ -21,8 +25,13 @@ export function RoutesSwitch({ domain }: { domain: RouteDomain }): JSX.Element {
   const checked = useMapRoutesStore((s) => s.visible[domain]);
   const setVisible = useMapRoutesStore((s) => s.setVisible);
   const blocked = routesBlockedReason(tab, mode);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // Arrived through the Settings deep link: bring the switch into view.
+    if (mapPanelRoutesRequested()) ref.current?.scrollIntoView?.({ block: "nearest" });
+  }, []);
   return (
-    <div className="-mx-1 mb-1.5" data-testid={`routes-switch-${domain}`}>
+    <div ref={ref} className="-mx-1 mb-1.5" data-testid={`routes-switch-${domain}`}>
       <Toggle
         checked={blocked ? true : checked}
         onChange={(v) => setVisible(domain, v)}

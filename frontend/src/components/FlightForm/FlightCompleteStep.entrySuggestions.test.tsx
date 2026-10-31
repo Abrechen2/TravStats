@@ -25,7 +25,10 @@ vi.mock("../../hooks/useTranslation", () => ({
   }),
 }));
 vi.mock("../../store/settingsStore", () => ({
-  useSettingsStore: () => ({ features: { enableCostTracking: false } }),
+  useSettingsStore: (
+    (state: Record<string, unknown>) => (select?: (s: Record<string, unknown>) => unknown) =>
+      select ? select(state) : state
+  )({ features: { enableCostTracking: false } }),
 }));
 vi.mock("../../store/toastStore", () => ({ useToastStore: vi.fn(() => vi.fn()) }));
 vi.mock("../../lib/geo", () => ({ calculateDistance: vi.fn(() => 1000) }));

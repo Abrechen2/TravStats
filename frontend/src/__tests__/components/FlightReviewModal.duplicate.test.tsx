@@ -23,7 +23,10 @@ vi.mock("../../lib/api", () => ({
 }));
 vi.mock("../../components/AirportAutocomplete", () => ({ default: () => null }));
 vi.mock("../../store/authStore", () => ({
-  useAuthStore: () => ({ user: { id: "u1" } }),
+  useAuthStore: (
+    (state: Record<string, unknown>) => (select?: (s: Record<string, unknown>) => unknown) =>
+      select ? select(state) : state
+  )({ user: { id: "u1" } }),
 }));
 vi.mock("../../store/settingsStore", () => {
   const state = { features: { enableCostTracking: false }, baseCurrency: "EUR" };

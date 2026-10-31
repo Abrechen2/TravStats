@@ -19,7 +19,12 @@ vi.mock("../../components/AirportAutocomplete", () => ({
     </>
   ),
 }));
-vi.mock("../../store/authStore", () => ({ useAuthStore: () => ({ user: { id: "u1" } }) }));
+vi.mock("../../store/authStore", () => ({
+  useAuthStore: (
+    (state: Record<string, unknown>) => (select?: (s: Record<string, unknown>) => unknown) =>
+      select ? select(state) : state
+  )({ user: { id: "u1" } }),
+}));
 vi.mock("../../store/settingsStore", () => {
   const state = { features: { enableCostTracking: false }, baseCurrency: "EUR" };
   return { useSettingsStore: Object.assign(() => state, { getState: () => state }) };

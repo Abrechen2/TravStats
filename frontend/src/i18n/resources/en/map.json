@@ -80,6 +80,7 @@
       "rentalShowLine": "Connecting line",
       "rentalShowLineHint": "Off: only the pick-up and return stations, no line between them.",
       "routesHint": "Off: the lines go, markers and labels stay.",
+      "routeControlsOff": "Lines only: no effect while “Routes” is off.",
       "routesBlocked": {
         "journey": "The journey view is the route itself.",
         "trips": "This mode animates the flights.",

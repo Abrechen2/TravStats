@@ -34,7 +34,10 @@ vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
 }));
 vi.mock("../../store/settingsStore", () => ({
-  useSettingsStore: () => ({ features: { enableCostTracking: false } }),
+  useSettingsStore: (
+    (state: Record<string, unknown>) => (select?: (s: Record<string, unknown>) => unknown) =>
+      select ? select(state) : state
+  )({ features: { enableCostTracking: false } }),
 }));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: vi.fn(() => vi.fn()),

@@ -80,6 +80,7 @@
       "rentalShowLine": "Verbindungslinie",
       "rentalShowLineHint": "Aus: nur die Abhol- und Rückgabestationen, ohne Linie dazwischen.",
       "routesHint": "Aus: die Linien verschwinden, Marker und Beschriftungen bleiben.",
+      "routeControlsOff": "Nur für Linien: wirkungslos, solange „Routen“ aus ist.",
       "routesBlocked": {
         "journey": "Die Reiseansicht besteht aus der Route.",
         "trips": "Dieser Modus animiert die Flüge.",

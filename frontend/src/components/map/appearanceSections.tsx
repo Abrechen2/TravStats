@@ -1,4 +1,5 @@
 import { RoutesSwitch } from "./RoutesSwitch";
+import { RouteOnlyControls } from "./RouteOnlyControls";
 import type { JSX } from "react";
 /**
  * The per-domain appearance sections of the map control panels.
@@ -129,86 +130,88 @@ export function FlightAppearanceSection({
   return (
     <CollapsibleSection id="flight" title={title}>
       <RoutesSwitch domain="flight" />
-      {/* Route shape — 3D arcs or flat on the map surface (#183). Only the flat
+      <RouteOnlyControls domain="flight">
+        {/* Route shape — 3D arcs or flat on the map surface (#183). Only the flat
           map wires this; on the globe the props are absent and the picker is
           simply not there. */}
-      {routeShape && onRouteShapeChange && (
-        <>
-          <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
-            {t("map:globe.panel.routeShape.label")}
-          </div>
-          <SegControl<FlightRouteShape>
-            value={routeShape}
-            onChange={onRouteShapeChange}
-            options={shapeOptions}
-          />
-          <div className="mb-2 mt-1 text-[10px] leading-snug" style={{ color: MUTED_TEXT }}>
-            {t(`map:globe.panel.routeShape.${routeShape}.hint`)}
-          </div>
-        </>
-      )}
+        {routeShape && onRouteShapeChange && (
+          <>
+            <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
+              {t("map:globe.panel.routeShape.label")}
+            </div>
+            <SegControl<FlightRouteShape>
+              value={routeShape}
+              onChange={onRouteShapeChange}
+              options={shapeOptions}
+            />
+            <div className="mb-2 mt-1 text-[10px] leading-snug" style={{ color: MUTED_TEXT }}>
+              {t(`map:globe.panel.routeShape.${routeShape}.hint`)}
+            </div>
+          </>
+        )}
 
-      {/* Colour mode — the explicit choice that replaces the old
+        {/* Colour mode — the explicit choice that replaces the old
           "Frequenz" pill + hidden status override. */}
-      <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
-        {t("map:globe.panel.colorMode.label")}
-      </div>
-      <SegControl<FlightColorMode>
-        value={mode}
-        onChange={onColorModeChange}
-        options={modeOptions}
-      />
-      <div className="mt-1 text-[10px] leading-snug" style={{ color: MUTED_TEXT }}>
-        {t(`map:globe.panel.colorMode.${mode}.hint`)}
-      </div>
+        <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
+          {t("map:globe.panel.colorMode.label")}
+        </div>
+        <SegControl<FlightColorMode>
+          value={mode}
+          onChange={onColorModeChange}
+          options={modeOptions}
+        />
+        <div className="mt-1 text-[10px] leading-snug" style={{ color: MUTED_TEXT }}>
+          {t(`map:globe.panel.colorMode.${mode}.hint`)}
+        </div>
 
-      {/* The colours the ACTIVE mode uses — nothing else, so the panel can
+        {/* The colours the ACTIVE mode uses — nothing else, so the panel can
           never show a control that has no effect on the map. */}
-      {mode === "status" && (
-        <>
+        {mode === "status" && (
+          <>
+            <ColorRow
+              caption={t("map:globe.panel.colorMode.swatchFlown")}
+              value={colors.past}
+              presets={FLIGHT_COLOR_PRESETS}
+              onChange={(c) => onColorChange("past", c)}
+            />
+            <ColorRow
+              caption={t("map:globe.panel.colorMode.swatchPlanned")}
+              value={colors.upcoming}
+              presets={FLIGHT_COLOR_PRESETS}
+              onChange={(c) => onColorChange("upcoming", c)}
+            />
+          </>
+        )}
+        {mode === "frequency" && (
           <ColorRow
-            caption={t("map:globe.panel.colorMode.swatchFlown")}
-            value={colors.past}
+            caption={t("map:globe.panel.routes")}
+            value={colors.frequency}
             presets={FLIGHT_COLOR_PRESETS}
-            onChange={(c) => onColorChange("past", c)}
+            onChange={(c) => onColorChange("frequency", c)}
           />
+        )}
+        {mode === "solid" && (
           <ColorRow
-            caption={t("map:globe.panel.colorMode.swatchPlanned")}
-            value={colors.upcoming}
+            caption={t("map:globe.panel.routes")}
+            value={colors.solid}
             presets={FLIGHT_COLOR_PRESETS}
-            onChange={(c) => onColorChange("upcoming", c)}
+            onChange={(c) => onColorChange("solid", c)}
           />
-        </>
-      )}
-      {mode === "frequency" && (
-        <ColorRow
-          caption={t("map:globe.panel.routes")}
-          value={colors.frequency}
-          presets={FLIGHT_COLOR_PRESETS}
-          onChange={(c) => onColorChange("frequency", c)}
-        />
-      )}
-      {mode === "solid" && (
-        <ColorRow
-          caption={t("map:globe.panel.routes")}
-          value={colors.solid}
-          presets={FLIGHT_COLOR_PRESETS}
-          onChange={(c) => onColorChange("solid", c)}
-        />
-      )}
+        )}
 
-      {/* Recorded flights beside the arcs (forgejo#312) — off by default. */}
-      <RecordedFlightPathsToggle />
+        {/* Recorded flights beside the arcs (forgejo#312) — off by default. */}
+        <RecordedFlightPathsToggle />
 
-      {/* Route width slider */}
-      <Slider
-        label={widthLabel}
-        value={routeWidth}
-        min={0.3}
-        max={2}
-        step={0.1}
-        onChange={onRouteWidthChange}
-      />
+        {/* Route width slider */}
+        <Slider
+          label={widthLabel}
+          value={routeWidth}
+          min={0.3}
+          max={2}
+          step={0.1}
+          onChange={onRouteWidthChange}
+        />
+      </RouteOnlyControls>
 
       {/* Airport-marker colour + Auto reset */}
       <div className="mt-2 flex items-center justify-between gap-2 py-0.5">
@@ -315,57 +318,59 @@ export function CruiseAppearanceSection({
   return (
     <CollapsibleSection id="cruise" title={title}>
       <RoutesSwitch domain="cruise" />
-      {/* Colour mode — the explicit choice that replaces the per-tab hardcoded
+      <RouteOnlyControls domain="cruise">
+        {/* Colour mode — the explicit choice that replaces the per-tab hardcoded
           mode + the silent single-colour override. */}
-      <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
-        {t("map:globe.panel.cruiseColorMode.label")}
-      </div>
-      <SegControl<CruiseColorMode>
-        value={mode}
-        onChange={onColorModeChange}
-        options={modeOptions}
-      />
-      <div className="mt-1 text-[10px] leading-snug" style={{ color: MUTED_TEXT }}>
-        {t(`map:globe.panel.cruiseColorMode.${mode}.hint`)}
-      </div>
+        <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
+          {t("map:globe.panel.cruiseColorMode.label")}
+        </div>
+        <SegControl<CruiseColorMode>
+          value={mode}
+          onChange={onColorModeChange}
+          options={modeOptions}
+        />
+        <div className="mt-1 text-[10px] leading-snug" style={{ color: MUTED_TEXT }}>
+          {t(`map:globe.panel.cruiseColorMode.${mode}.hint`)}
+        </div>
 
-      {/* The colours the ACTIVE mode uses — nothing else, so the panel can
+        {/* The colours the ACTIVE mode uses — nothing else, so the panel can
           never show a control that has no effect on the map. "perCruise" has
           no colour field at all: the colours come from the cruises. */}
-      {mode === "status" && (
-        <>
+        {mode === "status" && (
+          <>
+            <ColorRow
+              caption={t("map:globe.panel.cruiseColorMode.swatchSailed")}
+              value={colors.past}
+              presets={CRUISE_COLOR_PRESETS}
+              onChange={(c) => onColorChange("past", c)}
+            />
+            <ColorRow
+              caption={t("map:globe.panel.cruiseColorMode.swatchPlanned")}
+              value={colors.planned}
+              presets={CRUISE_COLOR_PRESETS}
+              onChange={(c) => onColorChange("planned", c)}
+            />
+          </>
+        )}
+        {mode === "solid" && (
           <ColorRow
-            caption={t("map:globe.panel.cruiseColorMode.swatchSailed")}
-            value={colors.past}
+            caption={t("map:globe.panel.routes")}
+            value={colors.solid}
             presets={CRUISE_COLOR_PRESETS}
-            onChange={(c) => onColorChange("past", c)}
+            onChange={(c) => onColorChange("solid", c)}
           />
-          <ColorRow
-            caption={t("map:globe.panel.cruiseColorMode.swatchPlanned")}
-            value={colors.planned}
-            presets={CRUISE_COLOR_PRESETS}
-            onChange={(c) => onColorChange("planned", c)}
-          />
-        </>
-      )}
-      {mode === "solid" && (
-        <ColorRow
-          caption={t("map:globe.panel.routes")}
-          value={colors.solid}
-          presets={CRUISE_COLOR_PRESETS}
-          onChange={(c) => onColorChange("solid", c)}
-        />
-      )}
+        )}
 
-      {/* Route width slider */}
-      <Slider
-        label={widthLabel}
-        value={routeWidth}
-        min={0.3}
-        max={2}
-        step={0.1}
-        onChange={onRouteWidthChange}
-      />
+        {/* Route width slider */}
+        <Slider
+          label={widthLabel}
+          value={routeWidth}
+          min={0.3}
+          max={2}
+          step={0.1}
+          onChange={onRouteWidthChange}
+        />
+      </RouteOnlyControls>
 
       {/* Port-marker colour + Auto reset */}
       <div className="mt-2 flex items-center justify-between gap-2 py-0.5">

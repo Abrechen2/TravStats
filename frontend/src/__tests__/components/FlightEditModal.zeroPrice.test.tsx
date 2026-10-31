@@ -30,7 +30,10 @@ vi.mock("@/hooks/useFlightEntrySuggestions", () => ({
 }));
 vi.mock("@/hooks/useRecentCurrencies", () => ({ useRecentCurrencies: () => [] }));
 vi.mock("../../store/settingsStore", () => ({
-  useSettingsStore: () => ({ features: { enableCostTracking: true } }),
+  useSettingsStore: (
+    (state: Record<string, unknown>) => (select?: (s: Record<string, unknown>) => unknown) =>
+      select ? select(state) : state
+  )({ features: { enableCostTracking: true } }),
 }));
 vi.mock("../../lib/api/catalogue", () => ({
   airlinesApi: {
