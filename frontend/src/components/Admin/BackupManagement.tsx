@@ -573,11 +573,12 @@ export default function BackupManagement(): JSX.Element {
                         {getStatusText(backup.status)}
                       </span>
                       {backup.metadata?.verification === "size" && (
-                        <p
-                          className="mt-1 max-w-xs whitespace-normal text-xs text-(--text-muted)"
-                          title={t("admin:backup.unverifiedHint")}
-                        >
-                          {t("admin:backup.unverified")}
+                        <p className="mt-1 max-w-xs whitespace-normal text-xs text-(--text-muted)">
+                          {t("admin:backup.unverified")}{" "}
+                          <Toggletip
+                            content={t("admin:backup.unverifiedHint")}
+                            subject={t("admin:backup.unverified")}
+                          />
                         </p>
                       )}
                       {backup.status === "failed" && (

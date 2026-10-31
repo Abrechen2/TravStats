@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authApi, settingsApi, setupApi, versionApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
@@ -17,6 +17,10 @@ const DEMO_PASSWORD = "demo123";
 
 export default function SetupPage(): JSX.Element {
   const navigate = useNavigate();
+  // The success redirect timer: cleared on unmount so a page that was left (or a
+  // test that finished) is never navigated by a timer it started.
+  const redirectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(redirectTimer.current), []);
   const { t } = useTranslation(["setup", "common", "externalServices"]);
   const { setAuth } = useAuthStore();
   const [formData, setFormData] = useState({
@@ -142,7 +146,7 @@ export default function SetupPage(): JSX.Element {
         setServicesNotice(notice);
         return;
       }
-      setTimeout(() => {
+      redirectTimer.current = setTimeout(() => {
         navigate("/");
       }, 2000);
     } catch (err: unknown) {

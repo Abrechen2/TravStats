@@ -142,4 +142,23 @@ describe("SetupPage — turn on the free services", () => {
     await user.click(screen.getByRole("button", { name: "setup:freeServices.continue" }));
     expect(mocks.navigate).toHaveBeenCalledWith("/");
   });
+
+  it(
+    "does not navigate from the success timer after the page was left (leaked redirect timer)",
+    { timeout: 10000 },
+    async () => {
+      const user = userEvent.setup();
+      const { unmount } = render(
+        <MemoryRouter>
+          <SetupPage />
+        </MemoryRouter>
+      );
+      await fillAndSubmit(user);
+      await waitFor(() => expect(mocks.initialize).toHaveBeenCalled());
+      await screen.findByText("setup:success.title");
+      unmount();
+      await new Promise((r) => setTimeout(r, 2300));
+      expect(mocks.navigate).not.toHaveBeenCalled();
+    }
+  );
 });
