@@ -22,6 +22,11 @@ vi.mock("../../../lib/api", () => ({
   adminApi: { listOllamaModels: vi.fn().mockResolvedValue({ success: true, models: [] }) },
 }));
 
+// The cloud chain loads the services' status; it has its own tests.
+vi.mock("../LlmProviderSettings", () => ({
+  default: () => <div data-testid="llm-provider-settings" />,
+}));
+
 import ParserSettings from "../ParserSettings";
 
 /**

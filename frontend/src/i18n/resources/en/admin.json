@@ -612,7 +612,7 @@
     },
     "provider": {
       "title": "AI provider",
-      "description": "Who reads the bookings no template knows? Ollama is always tried first when it is configured — local or on your network, no consent of its own needed (except for an address outside your network). If Ollama does not answer, TravStats asks the enabled cloud providers below, in order. Every cloud provider needs its OWN key and its OWN consent — allowing OpenAI does not allow Anthropic or Google.",
+      "description": "Who reads the bookings no template knows? Ollama always goes first when it is configured. If it does not answer, TravStats asks the cloud providers that are switched on below, in order. Switching on, key, model and consent are set under External services; only the order is set here.",
       "chain": {
         "title": "Cloud provider priority",
         "hint": "If Ollama does not answer (not configured, or not reachable), TravStats tries these providers in order — but only the ones with BOTH a key AND consent. A provider missing either is skipped, never tried. A provider that answers ends the chain — even with a thin answer.",
@@ -688,6 +688,15 @@
             "inactive": "The saved provider is outside your network. Until you agree, this provider stays out of the chain."
           }
         }
+      },
+      "loading": "Loading provider status …",
+      "loadFailed": "The provider status could not be loaded.",
+      "noneEnabled": "No cloud provider is switched on.",
+      "enableInServices": "Switch on in External services",
+      "openInServices": "Open in External services",
+      "status": {
+        "active": "Ready",
+        "missing": "Key missing"
       }
     },
     "accountKeysFxMoved": "Whether accounts may bring their own keys, and the exchange-rate fallback, are service settings and live under External services."

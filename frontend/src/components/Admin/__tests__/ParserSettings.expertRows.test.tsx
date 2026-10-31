@@ -2,6 +2,11 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 
+// The cloud chain loads the services' status; it has its own tests.
+vi.mock("../LlmProviderSettings", () => ({
+  default: () => <div data-testid="llm-provider-settings" />,
+}));
+
 import ParserSettings, { type ParserSettingsData } from "../ParserSettings";
 import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
 import { HiddenRowsContext } from "../../Settings/frame/useExpertRows";

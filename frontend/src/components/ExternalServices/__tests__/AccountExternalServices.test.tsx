@@ -21,6 +21,9 @@ vi.mock("../../Settings/StravaConnectionCard", () => ({
     </div>
   ),
 }));
+vi.mock("../../Settings/DawarichProviderHint", () => ({
+  default: ({ check }: { check: number }) => <div data-testid="dawarich-hint" data-check={check} />,
+}));
 vi.mock("../../Settings/WebdavSyncRow", () => ({
   WebdavSyncPanel: () => <div data-testid="webdav-panel" />,
 }));
@@ -219,6 +222,29 @@ describe("Einstellungen › Dienste", () => {
     // The page does not claim success: the server's own test failed.
     expect(await within(row("dawarich")).findByRole("alert")).toHaveTextContent(
       "externalServices:test.reasons.unreachable"
+    );
+  });
+
+  it("offers 'use as location source' after a Dawarich connection was saved, in the row that stays open", async () => {
+    mockedApi.accountUpdate.mockResolvedValue(undefined);
+    mockedApi.accountOverview.mockResolvedValue(accountOverview());
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
+    await screen.findByText("externalServices:account.sections.connections");
+    fireEvent.click(
+      within(row("dawarich")).getByRole("button", {
+        name: "externalServices:account.action.connect",
+      })
+    );
+    expect(screen.getByTestId("dawarich-hint")).toHaveAttribute("data-check", "0");
+    fireEvent.change(screen.getByLabelText("externalServices:fields.dawarich.baseUrl"), {
+      target: { value: "https://dawarich.example" },
+    });
+    fireEvent.change(screen.getByLabelText("externalServices:fields.dawarich.apiKey"), {
+      target: { value: "secret" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "externalServices:actions.saveAndTest" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("dawarich-hint")).toHaveAttribute("data-check", "1")
     );
   });
 
