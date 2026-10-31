@@ -1,5 +1,6 @@
 import { createSchematicRouteStore, schematicRouteVersion } from "./routing/schematicRouteStore";
 import { routeKey } from "./routing/routeStore";
+import { LruMap } from "../utils/lruMap";
 /**
  * Schematic cruise-route pipeline — coarse waypoints + spline approach.
  *
@@ -867,7 +868,10 @@ function routeCacheKey(dep: SchematicRoutePort, arr: SchematicRoutePort): string
   return routeKey([schematicRouteVersion(), dep, arr, getPortApproach(dep), getPortApproach(arr)]);
 }
 
+const fallbackRoutes = new LruMap<string, SchematicRoute>(500);
+
 export function clearSchematicRouteCache(): void {
+  fallbackRoutes.clear();
   durableRoutes = createSchematicRouteStore();
 }
 
@@ -890,11 +894,13 @@ export async function computeSchematicRoute(
     const smoothed = resampleNonCorridorMiddle(raw);
     return { ...raw, ...smoothed };
   };
-  const result =
-    key === null
-      ? await compute()
-      : await durableRoutes.resolve(key, compute, (route) => route.routed);
-
+  if (key === null) return compute();
+  // RouteStore keeps only routed results; a straight-chord fallback would be
+  // recomputed (full A*) on every request, so those get a small bounded memo.
+  const fallback = fallbackRoutes.get(key);
+  if (fallback) return structuredClone(fallback);
+  const result = await durableRoutes.resolve(key, compute, (route) => route.routed);
+  if (!result.routed) fallbackRoutes.set(key, structuredClone(result));
   return result;
 }
 
