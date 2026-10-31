@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   PanelHeader,
   Slider,
+  Toggle,
   CruiseAppearanceSection,
   FlightAppearanceSection,
   LodgingAppearanceSection,
@@ -411,5 +412,54 @@ describe("CollapsibleSection", () => {
     // opened them.
     const stored = JSON.parse(window.localStorage.getItem("mapAppearance.v2") ?? "{}");
     expect(stored.panelSections).toEqual({ poi: true });
+  });
+});
+
+describe("map panel rows (switch semantics, touch size)", () => {
+  const coarse = (on: boolean) =>
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      writable: true,
+      value: (q: string) => ({
+        matches: on && q.includes("coarse"),
+        media: q,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        addListener: () => {},
+        removeListener: () => {},
+      }),
+    });
+
+  it("Toggle is a role=switch with aria-checked, not a bare button", () => {
+    const onChange = vi.fn();
+    render(<Toggle checked={false} onChange={onChange} icon="✈" label="Flüge" />);
+    const sw = screen.getByRole("switch", { name: "Flüge" });
+    expect(sw).toHaveAttribute("aria-checked", "false");
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    fireEvent.click(sw);
+    expect(onChange).toHaveBeenCalledWith(true);
+  });
+
+  it("a disabled Toggle does not fire", () => {
+    const onChange = vi.fn();
+    render(<Toggle checked disabled onChange={onChange} label="Flüge" />);
+    fireEvent.click(screen.getByRole("switch"));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("rows keep their compact height on a mouse and reach 44 px on a coarse pointer", () => {
+    coarse(false);
+    const { container, unmount } = render(<Toggle checked onChange={() => {}} label="Flüge" />);
+    expect((container.querySelector("label") as HTMLElement).style.minHeight).toBe("");
+    unmount();
+    coarse(true);
+    const touch = render(<Toggle checked onChange={() => {}} label="Flüge" />);
+    expect((touch.container.querySelector("label") as HTMLElement).style.minHeight).toBe("44px");
+    touch.unmount();
+    const slider = render(
+      <Slider label="Breite" value={1} min={0} max={2} step={0.1} onChange={() => {}} />
+    );
+    expect((slider.container.firstChild as HTMLElement).style.minHeight).toBe("44px");
+    coarse(false);
   });
 });

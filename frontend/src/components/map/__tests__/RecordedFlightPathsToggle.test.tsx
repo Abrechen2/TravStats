@@ -24,7 +24,7 @@ describe("RecordedFlightPathsToggle", () => {
 
   it("switches the option on and back off", () => {
     render(<RecordedFlightPathsToggle />);
-    const button = screen.getByRole("button", {
+    const button = screen.getByRole("switch", {
       name: /recordedFlightPaths|Flugwege|flight paths/i,
     });
     fireEvent.click(button);

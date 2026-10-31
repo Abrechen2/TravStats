@@ -446,6 +446,7 @@
       "splitMinutes_other": "{{count}} Minuten",
       "splitHours_one": "{{count}} Stunde",
       "splitHours_other": "{{count}} Stunden",
+      "notRemembered": "Konnte diese Wahl nicht merken – sie gilt nur, bis du die Seite verlässt.",
       "alwaysCut": "Private Zonen, gelöschte Zeiträume, Pausen und Flugmodus-Lücken trennen immer, egal was hier steht. Hier lässt sich nur weiter trennen, nie verbinden."
     },
     "replay": {

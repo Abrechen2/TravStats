@@ -14,9 +14,9 @@ export const panelStyle: CSSProperties = {
   padding: 16,
 };
 
-export function pillStyle(on: boolean): CSSProperties {
+export function pillStyle(on: boolean, minHeight = 40): CSSProperties {
   return {
-    minHeight: 40,
+    minHeight,
     padding: "0 12px",
     borderRadius: 8,
     cursor: "pointer",

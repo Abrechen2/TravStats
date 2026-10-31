@@ -125,7 +125,7 @@ describe("TrackMapView", () => {
   it("a layer switch reaches the map and is remembered", async () => {
     renderAt("/track");
     await screen.findByTestId("map-stub");
-    const heat = screen.getByRole("checkbox", { name: /track:map.layers.heat\b/ });
+    const heat = screen.getByRole("switch", { name: /track:map.layers.heat\b/ });
     expect(heat).not.toBeChecked();
     fireEvent.click(heat);
     expect((mapProps.last?.layers as Record<string, boolean>).heat).toBe(true);

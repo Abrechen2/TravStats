@@ -45,6 +45,7 @@ describe("web prefs registry", () => {
       "statsCompare",
       "statsHiddenSections",
       "tablePrefs",
+      "trackMap",
     ];
     for (const name of names) expect(section(name)).toBeDefined();
     const { WEB_PREF_SECTIONS } = await import("../registry");

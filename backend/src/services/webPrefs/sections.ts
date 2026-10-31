@@ -37,6 +37,8 @@ export const WEB_PREF_SECTIONS = {
   statsHiddenSections: "object",
   /** `travstats:table-hidden-columns:*` and `travstats:table-sort:*`. */
   tablePrefs: "object",
+  /** `travstats.track.mapPrefs.v2` — the Track map's layers, route colour, opacity, pause split. */
+  trackMap: "object",
 } as const;
 
 export type WebPrefSection = keyof typeof WEB_PREF_SECTIONS;
