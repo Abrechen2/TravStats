@@ -52,3 +52,6 @@ export function buildFlightOrderBy(
       ];
   }
 }
+
+/** The two heavy JSON columns of a flight row: the provider route and the enrichment trail. */
+export const HEAVY_FLIGHT_JSON = { actualRoute: true, enrichmentHistory: true } as const;

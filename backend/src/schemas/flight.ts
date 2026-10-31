@@ -620,6 +620,12 @@ export const flightQuerySchema = z.object({
     .string()
     .optional()
     .transform((v) => v === "true"),
+  // Opt-in: leave the provider route and the enrichment history out of each
+  // row (forgejo#338). Off by default — the Companion reads the full row.
+  lean: z
+    .string()
+    .optional()
+    .transform((v) => v === "1" || v === "true"),
 });
 
 export type CreateFlightInput = z.infer<typeof createFlightSchema>;
