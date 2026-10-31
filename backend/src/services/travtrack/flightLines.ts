@@ -83,11 +83,10 @@ export async function travTrackFlightLines(
   // (forgejo#333 — it was one thinning query per flight of ten years).
   const [extent, linked] = await Promise.all([
     prisma.travTrackPoint.aggregate({ where: { userId }, _min: { t: true }, _max: { t: true } }),
-    prisma.travTrackPointLink.findMany({
+    // groupBy: Prisma's `distinct` de-duplicates in Node without nativeDistinct.
+    prisma.travTrackPointLink.groupBy({
+      by: ["entryId"],
       where: { userId, entryKind: "flight" },
-      distinct: ["entryId"],
-      select: { entryId: true },
-      orderBy: { entryId: "asc" },
     }),
   ]);
   const minMs = extent._min.t?.getTime() ?? null;

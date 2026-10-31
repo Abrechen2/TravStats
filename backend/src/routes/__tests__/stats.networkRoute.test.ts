@@ -159,6 +159,26 @@ describe("GET /api/v1/stats/network/route/:a/:b", () => {
     expect((await get("/route/FRA/WAW?limit=5000")).status).toBe(400);
   });
 
+  it("finds a flight whose stored code differs only in case (the pairing normalises it)", async () => {
+    await prisma.flight.create({
+      data: {
+        userId,
+        depIata: "fra",
+        arrIata: "waw",
+        depLat: FRA.lat,
+        depLon: FRA.lon,
+        arrLat: WAW.lat,
+        arrLon: WAW.lon,
+        status: "flown",
+        flightNumber: "LC1",
+        departureTime: new Date("2021-01-01T08:00:00Z"),
+      },
+    });
+    const res = await get("/route/FRA/WAW");
+    expect(res.body.count).toBe(5);
+    await prisma.flight.deleteMany({ where: { userId, flightNumber: "LC1" } });
+  });
+
   it("reads only the flights that can be on the pair, not the whole account (forgejo#341)", async () => {
     await prisma.flight.createMany({
       data: [0, 1, 2].map((n) => ({

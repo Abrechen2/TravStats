@@ -69,8 +69,12 @@ router.get("/:a/:b", async (req: AuthRequest, res: Response, next: NextFunction)
       airportCodeVariants(params.data.a),
       airportCodeVariants(params.data.b),
     ]);
+    // Case-insensitive: the exact pairing normalises case, so the pre-filter must too.
     const endsIn = (side: "dep" | "arr", codes: string[]) => ({
-      OR: [{ [`${side}Iata`]: { in: codes } }, { [`${side}Icao`]: { in: codes } }],
+      OR: codes.flatMap((code) => [
+        { [`${side}Iata`]: { equals: code, mode: "insensitive" as const } },
+        { [`${side}Icao`]: { equals: code, mode: "insensitive" as const } },
+      ]),
     });
     const flights = await prisma.flight.findMany({
       where: {
