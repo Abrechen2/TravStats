@@ -315,14 +315,22 @@
     "saveFailed": "Benachrichtigungen konnten nicht gespeichert werden"
   },
   "privacy": {
-    "title": "Datenschutz & Sicherheit",
-    "description": "Verwalte Login-Schutz und Datenanfragen.",
-    "twoFactorAuth": "Zwei-Faktor-Authentifizierung aktivieren",
-    "loginAlerts": "Login-Historie & Alarm-E-Mails",
-    "dataExport": "Daten-Export anfordern",
-    "dataExportRequested": "Anfrage vorgemerkt",
-    "accountDeletion": "Account-Löschung",
-    "analyticsOptIn": "Analytics Opt-in (anonymisiert)"
+    "comparisonConsent": {
+      "title": "Vergleich mit Freunden",
+      "description": "Wem du deine Summen zeigst, legst du pro Person im Vergleich fest. Es gibt keine Voreinstellung für alle.",
+      "consent": {
+        "title": "Einwilligungen für den Vergleich",
+        "sub": "Nur Summen, nie einzelne Einträge; jederzeit widerrufbar."
+      }
+    },
+    "encryptedGrants": {
+      "title": "Verschlüsselte Freigaben",
+      "description": "Vollständige Einträge gehen nur über die geräteverschlüsselte Übertragung. Empfänger, Umfang und Kategorien wählst du je Freigabe.",
+      "grants": {
+        "title": "Freigaben verwalten",
+        "sub": "Wer was bekommt, und wie lange."
+      }
+    }
   },
   "backup": {
     "title": "Meine Daten & Sync",
@@ -810,6 +818,22 @@
       "malformedEntry": "konnte nicht gelesen werden",
       "entry": "Eintrag {{entry}}: {{reason}}",
       "tooLarge": "Die Datei ist zu groß ({{size}} MB, höchstens {{max}} MB). Bitte in kleineren Teilen exportieren."
+    },
+    "railMemory": {
+      "localTransit": {
+        "title": "U-Bahn und Tram beim Bahn-Import",
+        "sub": "Womit ein bahn.de-Import diese Abschnitte vorbelegt. Beim Import kannst du jederzeit anders wählen.",
+        "skip": "Überspringen",
+        "rail": "Als Bahnfahrt"
+      },
+      "bus": {
+        "title": "Busse beim Bahn-Import",
+        "sub": "Womit ein bahn.de-Import Busabschnitte vorbelegt.",
+        "skip": "Überspringen",
+        "bus": "Als Busfahrt"
+      },
+      "saved": "Gespeichert.",
+      "openImport": "Zum Bahn-Import"
     }
   },
   "trips": {
@@ -1026,7 +1050,9 @@
     "data": "Daten",
     "services": "Dienste",
     "location": "Standortverlauf",
-    "companions": "Mitreisende"
+    "companions": "Mitreisende",
+    "views": "Ansichten",
+    "privacy": "Privatsphäre & Teilen"
   },
   "deepLink": {
     "adminOnlySection": "Der in der Adresse genannte Abschnitt ist der Administration dieser Instanz vorbehalten und wird dir deshalb nicht angezeigt. Die übrigen Einstellungen auf dieser Seite gehören dir."
@@ -1047,34 +1073,36 @@
       "trips": "Reise, Reisen, automatisch, Buchungsnummer, Gruppieren, Reise anlegen, Reisen erkennen, Reisefarbe, Farbe",
       "loyalty": "Bonusprogramm, Mitgliedschaft, Mitgliedsnummer, Status, Hotelprogramm, Vielflieger, Meilen, Miles & More, Reederei, Punkte, Treueprogramm",
       "backup": "Backup, Sicherung, Export, Exportieren, Wiederherstellen, Download, Excel, Tabelle, JSON, Daten",
-      "import": "Import, Importieren, CSV, Flightradar24, Logbuch, Hochladen",
+      "import": "Import, Importieren, CSV, Flightradar24, Logbuch, Hochladen, Bahn-Import merken, U-Bahn überspringen, Tram, Bus, bahn.de, Standard merken",
       "notifications": "Benachrichtigung, E-Mail, SMTP, Mailserver, Erinnerung",
       "externalServices": "AirLabs, Aviationstack, AeroDataBox, OpenSky, OpenAI, Claude, KI, Immich, Fotos, Dawarich, Standortverlauf, Routing, Navi, Straßenroute, OpenRouteService, GraphHopper, OSRM, Strava, KI-Parser, Bahn, Transitous, db-rest, OpenRailRouting, Karten, Ortssuche, Photon, Nominatim",
       "homeAirport": "Zuhause, Wohnort, Heimatflughafen, Flughafen, Umzug",
       "defaults": "Standard, Vorgabe, Buchungsklasse, Sitzplatz, Fluggesellschaft, Airline",
-      "features": "Funktionen, Parser, Bordkarte, E-Mail-Parser, Bordkarten-Scan, Live-Verfolgung, Live-Tracking, Position, Flugspur",
+      "features": "Funktionen, Parser, Bordkarte, E-Mail-Parser, Bordkarten-Scan, Live-Verfolgung, Live-Tracking, Position, Flugspur, Sitzplatz-Statistik, Sitzplätze, Fensterplatz, Gangplatz",
       "enrichment": "Anreicherung, Flugdaten nachtragen, Verspätung, historische Daten, Flugzeug",
-      "autoupdate": "Automatische Updates, Flugstatus, Aktualisierung, Gate, Abflugzeit",
+      "autoupdate": "Automatische Updates, Flugstatus, Aktualisierung, Gate, Abflugzeit, Freigabe, nur während des Flugs",
       "cruisePreferences": "Kreuzfahrt, Reederei, Schiff, Kabine, Seetage, Reisetage",
       "domains": "Bereiche, Module, Flüge, Kreuzfahrten, Unterkünfte, Orte, Roadtrips, Bahn, Bus, Fähre, Mietwagen, Plan, Reisen planen, TravPlan, ein- und ausschalten, Farbe, Farben, Kartenfarbe, Linienfarbe",
-      "suggestions": "Vorschläge, Posteingang, Reisevorschläge, Aufenthalte vorschlagen",
+      "suggestions": "Vorschläge, Posteingang, Reisevorschläge, Aufenthalte vorschlagen, Immich-Belege, Fotos als Beleg, Ortstyp, KI-Klassifizierung",
       "sharing": "Teilen, Mitreisende, Einwilligung, geteilte Reise, Begleiter",
       "shareLinks": "Öffentlicher Link, Freigabe, teilen, Link",
       "calendarFeed": "Kalender, iCal, ICS, Abo, Kalenderabo",
       "dawarich": "Dawarich, Standortverlauf, Standortquelle, Positionen, Verbindung",
       "locationProvider": "Standortquelle, Standort, Positionen, TravTrack, Dawarich, Keine, Quelle wechseln, Aufzeichnung",
       "tripRecording": "Aufzeichnung, Positionen, App, Track, Reise aufzeichnen",
-      "stayScan": "Aufenthalte, Aufenthalt erkennen, Radius, Mindestdauer, Orte automatisch erkennen, Orte erkennen, Orte als Fläche, Gelände, neu auswerten",
+      "stayScan": "Aufenthalte, Aufenthalt erkennen, Radius, Mindestdauer, Orte automatisch erkennen, Orte erkennen, Orte als Fläche, Gelände, neu auswerten, Märkte, Marktgelände, Einkaufszentren, Parks, Zoos, Freizeitparks, Museen",
       "companions": "Mitreisende, Begleitpersonen, Personen, Umbenennen, Zusammenführen, Doppelt, Duplikat, Löschen, Namen",
-      "travTrack": "TravTrack, Standortverlauf, Verlauf, Positionen, Privatzonen, Zone, Zeitraum löschen, Export, GPX"
+      "travTrack": "TravTrack, Standortverlauf, Verlauf, Positionen, Privatzonen, Zone, Zeitraum löschen, Export, GPX",
+      "mapAppearance": "Karte, Kartenaussehen, Farben, Routenfarbe, Palette, Linien, Ebenen, Beschriftung, Kartenmodus, Flugfarbe, Kreuzfahrtfarbe",
+      "dashboardAppearance": "Dashboard, Bereiche, Kartenmodus, Ansicht, Startseite",
+      "listAppearance": "Liste, Listen, Spalten, Sortierung, Seitengröße, Zeilen",
+      "comparisonConsent": "Vergleich, Freunde, Bestenliste, Einwilligung, Summen, Rangliste",
+      "encryptedGrants": "Verschlüsselte Freigabe, Ende-zu-Ende, Gerät, Übertragung, Empfänger, Kategorien"
     },
     "expertKeywords": {
-      "suggestions": "Immich-Belege, Fotos als Beleg, Ortstyp, KI-Klassifizierung",
-      "autoupdate": "Abfrageintervall, Intervall, Freigabe, Ablauf, nur während des Flugs",
+      "autoupdate": "Abfrageintervall, Intervall, Ablauf",
       "backup": "Instanz-Backup, letzte Sicherung, WebDAV, Nextcloud, Abgleich, Sync",
-      "externalServices": "eigener Schlüssel, eigener API-Schlüssel, API-Schlüssel, Kontingent, Quote, AirLabs-Schlüssel, Aviationstack-Schlüssel, AeroDataBox-Schlüssel, AeroAPI-Schlüssel, OpenSky-Zugang, GraphHopper-Schlüssel, OpenRouteService-Schlüssel",
-      "features": "Sitzplatz-Statistik, Sitzplätze, Fensterplatz, Gangplatz",
-      "stayScan": "Märkte, Marktgelände, Einkaufszentren, Parks, Zoos, Freizeitparks, Museen"
+      "externalServices": "eigener Schlüssel, eigener API-Schlüssel, API-Schlüssel, Kontingent, Quote, AirLabs-Schlüssel, Aviationstack-Schlüssel, AeroDataBox-Schlüssel, AeroAPI-Schlüssel, OpenSky-Zugang, GraphHopper-Schlüssel, OpenRouteService-Schlüssel"
     }
   },
   "railProviders": {
@@ -1370,5 +1398,38 @@
   },
   "travTrack": {
     "title": "TravTrack"
+  },
+  "contextLinks": {
+    "open": "Öffnen"
+  },
+  "views": {
+    "mapAppearance": {
+      "title": "Kartenaussehen",
+      "description": "Farben, Paletten, Ebenen und Beschriftungen stellst du dort ein, wo du sie siehst: im Bedienfeld der Karte. Von hier springst du hin.",
+      "routes": {
+        "title": "Routenfarben und Paletten",
+        "sub": "Flug- und Kreuzfahrtrouten nach Modus einfärben."
+      },
+      "layers": {
+        "title": "Ebenen und Beschriftungen",
+        "sub": "Welche Kartenebenen und Beschriftungen sichtbar sind."
+      }
+    },
+    "dashboardAppearance": {
+      "title": "Dashboard",
+      "description": "Welche Bereiche das Dashboard zeigt und in welchem Kartenmodus, wählst du auf dem Dashboard selbst.",
+      "sections": {
+        "title": "Bereiche und Kartenmodus",
+        "sub": "Pro Bereich eigener Modus; er wird für dein Konto gemerkt."
+      }
+    },
+    "listAppearance": {
+      "title": "Listen",
+      "description": "Spalten, Sortierung und Seitengröße der Listen stellst du in der Liste selbst ein.",
+      "columns": {
+        "title": "Spalten und Seitengröße",
+        "sub": "Die Flugliste ist der Einstieg; andere Bereiche haben ihre eigene Liste."
+      }
+    }
   }
 }

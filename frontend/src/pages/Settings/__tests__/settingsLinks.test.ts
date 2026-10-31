@@ -273,3 +273,28 @@ describe("old admin links", () => {
     );
   });
 });
+
+describe("package 7 — discovery groups, old ids kept", () => {
+  it("sends the old shareLinks address to its new home under Privatsphäre & Teilen", () => {
+    expect(settings({ page: "trips", section: "shareLinks" })).toBe(
+      "/settings/privacy?section=shareLinks"
+    );
+    expect(settings({ section: "shareLinks" })).toBe("/settings/privacy?section=shareLinks");
+  });
+
+  it.each([
+    ["mapAppearance", "views"],
+    ["dashboardAppearance", "views"],
+    ["listAppearance", "views"],
+    ["comparisonConsent", "privacy"],
+    ["encryptedGrants", "privacy"],
+  ])("resolves the deep link to %s on the %s page", (section, page) => {
+    expect(settings({ section })).toBe(`/settings/${page}?section=${section}`);
+  });
+
+  it("still routes every old page id", () => {
+    for (const page of OLD_GROUPS.filter((p) => p !== "lodging")) {
+      expect(settings({ page })).toBe(`/settings/${page}`);
+    }
+  });
+});

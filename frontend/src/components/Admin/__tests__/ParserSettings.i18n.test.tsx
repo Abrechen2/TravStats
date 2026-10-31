@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import adminDe from "../../../i18n/resources/de/admin.json";
 
 function resolve(bundle: unknown, dottedKey: string): unknown {
@@ -22,6 +22,7 @@ vi.mock("../../../lib/api", () => ({
 }));
 
 import ParserSettings from "../ParserSettings";
+import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
 
 /**
  * Acceptance 2026-09-26: the admin page, in German, said "User Permissions"
@@ -29,6 +30,13 @@ import ParserSettings from "../ParserSettings";
  * of ParserSettings that never went through the translation.
  */
 describe("ParserSettings — user permission block", () => {
+  // The permission block is an expert row of the parser settings.
+  beforeEach(() => useSettingsLevelStore.setState({ level: "expert" }));
+  afterEach(() => {
+    cleanup();
+    act(() => useSettingsLevelStore.setState({ level: null }));
+  });
+
   it("speaks German in the German UI", () => {
     render(
       <ParserSettings

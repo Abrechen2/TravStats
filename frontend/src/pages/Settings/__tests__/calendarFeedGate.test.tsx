@@ -20,7 +20,7 @@ const shown = (open: boolean, deepLinked: string | null = null): string[] =>
 
 describe("calendar feed card gate", () => {
   it("is absent from the trips page while the beta switch is off", () => {
-    expect(shown(false)).toContain("shareLinks");
+    expect(shown(false)).toContain("sharing");
     expect(shown(false)).not.toContain("calendarFeed");
   });
 

@@ -5,7 +5,7 @@ import enTrips from "../resources/en/trips.json";
 import deSettings from "../resources/de/settings.json";
 import enSettings from "../resources/en/settings.json";
 import { searchSettings, splitKeywords } from "../../pages/Settings/settingsSearchMatch";
-import { WITH_EXPERT_ROWS } from "../../pages/Settings/useSearchScopes";
+import { findPage } from "../../pages/Settings/settingsModel";
 
 /**
  * forgejo#318: the detection is named for what it does, not for markets
@@ -30,10 +30,9 @@ describe("detecting places automatically — the wording", () => {
 });
 
 /**
- * The search finds an expert setting at every level and marks the hit
- * „· Experte“ (forgejo#321's model): the area switches are expert rows of the
- * stay scan, so their words are expert keywords, and the section's own
- * words are not.
+ * The market and venue switches are standard rows of the stay scan since the
+ * settings redesign (package 3): they choose which content is examined. Their
+ * words are ordinary keywords, and the section no longer claims expert rows.
  */
 describe("searching for the detection's switches", () => {
   const candidate = (s: typeof deSettings) => ({
@@ -47,16 +46,17 @@ describe("searching for the detection's switches", () => {
     ),
   });
 
-  it("searches the stay scan's expert words at all", () => {
-    expect(WITH_EXPERT_ROWS?.has("settings:stayScan")).toBe(true);
+  it("the stay scan has no expert rows left", () => {
+    const def = findPage("location")!.sections.find((x) => x.id === "stayScan")!;
+    expect(def.expertRows).toBeFalsy();
   });
 
   it.each([
     ["de", deSettings, "Märkte"],
     ["en", enSettings, "markets"],
-  ] as const)("%s: a word for a switch is an expert hit", (_l, s, word) => {
+  ] as const)("%s: a word for a switch is an ordinary hit", (_l, s, word) => {
     const [hit] = searchSettings(word, [candidate(s)]);
-    expect(hit?.expertOnly).toBe(true);
+    expect(hit?.expertOnly).toBe(false);
   });
 
   it.each([

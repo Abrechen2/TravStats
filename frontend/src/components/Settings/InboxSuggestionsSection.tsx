@@ -4,7 +4,6 @@ import { SectionCard, SectionTitle } from "./SettingsShared";
 import { Switch } from "../ui/Field";
 import { SettingRows } from "../ui/SettingRow";
 import { useSuggestionSwitchesStore } from "../../store/suggestionSwitchesStore";
-import { useExpertRows } from "./frame/useExpertRows";
 
 /**
  * Whether the Posteingang offers trip and stay suggestions at all (forgejo#306).
@@ -28,8 +27,6 @@ export default function InboxSuggestionsSection(): JSX.Element {
   const setImmichEvidence = useSuggestionSwitchesStore((s) => s.setStayImmichEvidence);
   const setPlaceClassification = useSuggestionSwitchesStore((s) => s.setStayLlmPlaceClassification);
   const key = "settings:inboxSuggestions";
-  // The two stay refinements are fine-tuning (forgejo#321): expert.
-  const expert = useExpertRows(2);
 
   return (
     <SectionCard>
@@ -49,28 +46,22 @@ export default function InboxSuggestionsSection(): JSX.Element {
           label={t(`${key}.stays.label`)}
           sub={t(`${key}.stays.description`)}
         />
-        {expert && (
-          <>
-            <Switch
-              id="inbox-suggestions-stays-immich"
-              checked={immichEvidence}
-              disabled={!stays}
-              onChange={setImmichEvidence}
-              expert
-              label={t(`${key}.immichEvidence.label`)}
-              sub={t(`${key}.immichEvidence.description`)}
-            />
-            <Switch
-              id="inbox-suggestions-stays-llm"
-              checked={placeClassification}
-              disabled={!stays}
-              onChange={setPlaceClassification}
-              expert
-              label={t(`${key}.llmPlaceClassification.label`)}
-              sub={t(`${key}.llmPlaceClassification.description`)}
-            />
-          </>
-        )}
+        <Switch
+          id="inbox-suggestions-stays-immich"
+          checked={immichEvidence}
+          disabled={!stays}
+          onChange={setImmichEvidence}
+          label={t(`${key}.immichEvidence.label`)}
+          sub={t(`${key}.immichEvidence.description`)}
+        />
+        <Switch
+          id="inbox-suggestions-stays-llm"
+          checked={placeClassification}
+          disabled={!stays}
+          onChange={setPlaceClassification}
+          label={t(`${key}.llmPlaceClassification.label`)}
+          sub={t(`${key}.llmPlaceClassification.description`)}
+        />
       </SettingRows>
     </SectionCard>
   );

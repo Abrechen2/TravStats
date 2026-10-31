@@ -45,15 +45,20 @@ describe("SectionFrame and expert rows (forgejo#321)", () => {
     expect(document.querySelector("[data-expert-note]")).toBeNull();
   });
 
-  it("treats a level the server has not answered yet as expert — nothing vanishes on load", () => {
+  it("reads a level the server has not answered yet as the neutral standard view, not as Expert", () => {
     useSettingsLevelStore.setState({ level: null });
     render(
       <SectionFrame anchorId="settings-x" label="X">
         <TwoExpertRows />
       </SectionFrame>
     );
-    expect(screen.getByText("rows-shown")).toBeInTheDocument();
-    expect(document.querySelector("[data-expert-note]")).toBeNull();
+    expect(screen.queryByText("rows-shown")).toBeNull();
+  });
+
+  it("disables the level switch while the level is unknown, so a guess is never saved", () => {
+    useSettingsLevelStore.setState({ level: null });
+    render(<SettingsLevelSwitch />);
+    for (const radio of screen.getAllByRole("radio")) expect(radio).toBeDisabled();
   });
 
   it("is a landmark named after its heading, with the anchor id links target", () => {

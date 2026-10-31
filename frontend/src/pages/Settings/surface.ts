@@ -39,6 +39,15 @@ export interface SectionDef<S extends string = string> {
    */
   when?: SectionCondition;
   /**
+   * The section draws rows only the expert level shows (a standard section
+   * with a tuning row inside). Search reads this to know the section has
+   * expert words (`<ns>:search.expertKeywords.<id>`) — the one place that says
+   * so, instead of a second list beside the rendering.
+   */
+  expertRows?: boolean;
+  /** The section folds its rows into collapsed groups (the services accordion). */
+  foldsRows?: boolean;
+  /**
    * How many settings the section holds, for the "n weitere Einstellungen"
    * note when the standard level hides it whole (forgejo#321 prototype counts
    * settings, not sections). Read off the section's component; 1 if absent.

@@ -3,6 +3,7 @@ import { Segmented } from "../../ui/Segmented";
 import { useTranslation } from "../../../hooks/useTranslation";
 import {
   useEffectiveSettingsLevel,
+  useSettingsLevelKnown,
   useSettingsLevelStore,
   type SettingsLevel,
 } from "../../../store/settingsLevelStore";
@@ -15,6 +16,7 @@ import {
 export function SettingsLevelSwitch(): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const level = useEffectiveSettingsLevel();
+  const known = useSettingsLevelKnown();
   const setLevel = useSettingsLevelStore((s) => s.setLevel);
   // One sentence says what "Experte" adds (forgejo#318), so the choice is
   // not a guess; small, under the pills, at the page's top right.
@@ -23,6 +25,7 @@ export function SettingsLevelSwitch(): JSX.Element {
       <Segmented<SettingsLevel>
         label={t("settings:level.label")}
         value={level}
+        disabled={!known}
         onChange={setLevel}
         options={[
           { value: "standard", label: t("settings:level.standard") },

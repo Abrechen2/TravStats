@@ -1,3 +1,4 @@
+import { ContextLinksCard } from "../../components/Settings/ContextLinksCard";
 import type { SettingsSectionId } from "./settingsModel";
 import type { useSettingsPage } from "../../components/Settings/useSettingsPage";
 
@@ -189,6 +190,44 @@ export default function SettingsSectionSwitch({
       return <CruisePreferencesSection cruise={page.cruise} onSetCruise={page.setCruise} />;
     case "loyalty":
       return <LoyaltySection />;
+    case "mapAppearance":
+      return (
+        <ContextLinksCard
+          scope="views.mapAppearance"
+          links={[
+            { id: "routes", to: "/dashboard/flight" },
+            { id: "layers", to: "/dashboard" },
+          ]}
+        />
+      );
+    case "dashboardAppearance":
+      return (
+        <ContextLinksCard
+          scope="views.dashboardAppearance"
+          links={[{ id: "sections", to: "/dashboard" }]}
+        />
+      );
+    case "listAppearance":
+      return (
+        <ContextLinksCard
+          scope="views.listAppearance"
+          links={[{ id: "columns", to: "/flights" }]}
+        />
+      );
+    case "comparisonConsent":
+      return (
+        <ContextLinksCard
+          scope="privacy.comparisonConsent"
+          links={[{ id: "consent", to: "/compare" }]}
+        />
+      );
+    case "encryptedGrants":
+      return (
+        <ContextLinksCard
+          scope="privacy.encryptedGrants"
+          links={[{ id: "grants", to: "/encrypted-share" }]}
+        />
+      );
     default:
       return null;
   }

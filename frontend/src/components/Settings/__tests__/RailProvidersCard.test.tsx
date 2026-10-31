@@ -72,6 +72,11 @@ describe("RailProvidersCard", () => {
     expect(getInstanceSettings).not.toHaveBeenCalled();
   });
   describe("the OpenRailRouting address", () => {
+    beforeEach(() => useSettingsLevelStore.setState({ level: "expert" }));
+    afterEach(() => {
+      cleanup();
+      act(() => useSettingsLevelStore.setState({ level: null }));
+    });
     const field = () => screen.findByLabelText("settings:railRouting.label");
 
     it("shows the saved address and saves an edit", async () => {

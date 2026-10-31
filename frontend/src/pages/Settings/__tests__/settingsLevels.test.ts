@@ -10,7 +10,9 @@ import { pageLevel, sectionsOf, type PageDef } from "../surface";
  * layout change.
  */
 const EXPERT_SECTIONS = {
-  settings: ["apitokens", "countryCounting", "defaults", "enrichment"],
+  // Country counting and the flight form defaults are ordinary choices and
+  // moved to standard (settings redesign, package 3).
+  settings: ["apitokens", "enrichment"],
   admin: [
     // "geocoder" left this list as a section, not as a level: its two
     // addresses are expert rows of Externe Dienste › Karten & Ortssuche now
@@ -66,13 +68,15 @@ describe("the standard/expert classification", () => {
   // "Standard never hides a setting a flow needs to finish."
   it.each([
     ["account", ["profile", "security", "devices", "notifications"]],
-    ["display", ["display", "units", "domains"]],
-    ["trips", ["trips", "suggestions", "sharing", "shareLinks"]],
+    ["display", ["display", "units", "domains", "countryCounting"]],
+    ["trips", ["trips", "suggestions", "sharing"]],
+    ["views", ["mapAppearance", "dashboardAppearance", "listAppearance"]],
+    ["privacy", ["shareLinks", "comparisonConsent", "encryptedGrants"]],
     // The stay scan is standard; detecting places as areas just runs, and its
     // two switches are expert rows inside it (forgejo#318).
     ["location", ["dawarich", "tripRecording", "stayScan"]],
     ["loyalty", ["loyalty"]],
-    ["flight", ["homeAirport", "autoupdate", "features"]],
+    ["flight", ["homeAirport", "autoupdate", "features", "defaults"]],
     ["cruise", ["cruisePreferences"]],
     ["data", ["backup", "import"]],
     ["services", ["externalServices"]],
@@ -109,7 +113,7 @@ describe("level filtering", () => {
 
   // forgejo#321 prototype: the note counts settings, not sections.
   it("counts the settings the hidden expert sections hold", () => {
-    expect(shownAt(findPage("flight")!, "standard").hiddenExpertSettings).toBe(4 + 3);
+    expect(shownAt(findPage("flight")!, "standard").hiddenExpertSettings).toBe(3);
     expect(shownAt(instance, "standard").hiddenExpertSettings).toBe(3 + 1);
     expect(shownAt(instance, "expert").hiddenExpertSettings).toBe(0);
   });
@@ -148,5 +152,20 @@ describe("level filtering", () => {
     expect(at(false)).not.toContain("travTrack");
     expect(at(undefined)).not.toContain("travTrack");
     expect(at(false, "travTrack")).not.toContain("travTrack");
+  });
+});
+
+describe("package 3 — ordinary decisions are standard rows", () => {
+  it.each([
+    ["display", "countryCounting"],
+    ["flight", "defaults"],
+  ])("shows %s › %s at the standard level", (pageId, section) => {
+    expect(shownAt(findPage(pageId)!, "standard").shown).toContain(section);
+  });
+
+  it("keeps polling, expiry and enrichment limits expert: the sections that hold them say so", () => {
+    const flight = findPage("flight")!;
+    expect(flight.sections.find((s) => s.id === "autoupdate")?.expertRows).toBe(true);
+    expect(flight.sections.find((s) => s.id === "enrichment")?.level).toBe("expert");
   });
 });

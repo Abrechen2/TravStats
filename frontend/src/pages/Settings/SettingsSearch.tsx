@@ -4,7 +4,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { Input } from "../../components/ui/Field";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
-import { useEffectiveSettingsLevel, useSettingsLevelStore } from "../../store/settingsLevelStore";
 import {
   searchSettings,
   optionalCopy,
@@ -59,8 +58,6 @@ function hrefOf(path: string, section: string, expertRows: boolean): string {
 export function SettingsSearch({ scopes }: Props): JSX.Element {
   const { t } = useTranslation(["settings", "admin"]);
   const navigate = useNavigate();
-  const level = useEffectiveSettingsLevel();
-  const setLevel = useSettingsLevelStore((s) => s.setLevel);
   const coarse = useCoarsePointer();
   const [query, setQuery] = useState("");
   const listId = useId();
@@ -107,13 +104,12 @@ export function SettingsSearch({ scopes }: Props): JSX.Element {
   const searching = query.trim().length >= 2;
 
   /**
-   * Opening an expert hit switches to the expert view, as the prototype does
-   * (forgejo#321): landing on a page that still hides what was found, behind a
-   * second button, sent testers looking for it. The page marks the section the
-   * hit names for a moment (`highlight`), so the eye finds it after the jump.
+   * Opening an expert hit leaves the account's saved level alone (audit rc.5):
+   * the link names the section, or carries `&expert=1` for an expert row of a
+   * standard section, and the destination reveals just that for this visit.
+   * The page marks the section the hit names for a moment (`highlight`).
    */
   const open = (hit: SettingsSearchHit): void => {
-    if (hit.expertOnly && level === "standard") setLevel("expert");
     navigate(hit.href, { state: { highlight: hit.section } });
     setQuery("");
   };

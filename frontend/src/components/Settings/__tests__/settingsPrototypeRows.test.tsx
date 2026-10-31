@@ -106,11 +106,8 @@ describe("settings prototype rows", () => {
     expect(toast).toHaveBeenCalledWith("error", expect.any(String));
   });
 
-  it("seat statistics: expert only, and it is the statistics tab's own section switch", async () => {
-    render(<FeaturesSection />);
-    expect(screen.queryByRole("switch", { name: /seatStatistics$/ })).toBeNull();
-    cleanup();
-    useSettingsLevelStore.setState({ level: "expert" });
+  it("seat statistics: a standard switch, and it is the statistics tab's own section switch", async () => {
+    useSettingsLevelStore.setState({ level: "standard" });
     render(<FeaturesSection />);
     const sw = screen.getByRole("switch", { name: /settings:features\.seatStatistics$/ });
     expect(sw).toBeChecked();

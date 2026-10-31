@@ -41,7 +41,7 @@ const lastHidden = (report: ReturnType<typeof vi.fn>): number =>
 describe("standard level inside a section", () => {
   beforeEach(() => useSettingsLevelStore.setState({ level: "standard" }));
 
-  it("keeps the live-update switch and hides its four tuning rows", () => {
+  it("keeps the live-update switch with approval and flight-only, and hides the interval and expiry", () => {
     const report = renderReporting(
       <AutoUpdateSection
         autoUpdateSettings={autoUpdate}
@@ -53,9 +53,11 @@ describe("standard level inside a section", () => {
       />
     );
     expect(screen.getByLabelText("settings:autoUpdate.enabled")).toBeInTheDocument();
-    expect(screen.queryByLabelText("settings:autoUpdate.requireApproval")).toBeNull();
+    expect(screen.getByLabelText("settings:autoUpdate.requireApproval")).toBeInTheDocument();
+    expect(screen.getByLabelText("settings:autoUpdate.onlyDuringFlight")).toBeInTheDocument();
     expect(screen.queryByLabelText("settings:autoUpdate.checkInterval")).toBeNull();
-    expect(lastHidden(report)).toBe(4);
+    expect(screen.queryByLabelText("settings:autoUpdate.expiryHours")).toBeNull();
+    expect(lastHidden(report)).toBe(2);
   });
 
   it("counts no hidden tuning while live updates are off — there is none to show", () => {
@@ -88,12 +90,18 @@ describe("standard level inside a section", () => {
     expect(lastHidden(report)).toBe(0);
   });
 
-  it("keeps the trip and stay switches, and hides the two stay refinements", () => {
+  it("keeps the trip and stay switches and the two stay refinements — they are consent decisions", () => {
     const report = renderReporting(<InboxSuggestionsSection />);
     expect(screen.getByLabelText("settings:inboxSuggestions.trips.label")).toBeInTheDocument();
     expect(screen.getByLabelText("settings:inboxSuggestions.stays.label")).toBeInTheDocument();
-    expect(screen.queryByLabelText("settings:inboxSuggestions.immichEvidence.label")).toBeNull();
-    expect(lastHidden(report)).toBe(2);
+    expect(
+      screen.getByLabelText("settings:inboxSuggestions.immichEvidence.label")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("settings:inboxSuggestions.llmPlaceClassification.label")
+    ).toBeInTheDocument();
+    // Nothing in this section is left to the expert level: it reports none.
+    expect(lastHidden(report)).toBe(-1);
   });
 
   it("keeps the export and hides the instance backup's last run", () => {

@@ -51,7 +51,12 @@ function RememberLine({
   );
   const setLocalTransit = useSuggestionSwitchesStore((s) => s.setRailImportLocalTransit);
   const setBus = useSuggestionSwitchesStore((s) => s.setRailImportBus);
-  const [remembered, setRemembered] = useState(false);
+  const saves = useSuggestionSwitchesStore((s) => s.railImportSaves);
+  // The click's save count: "remembered" shows once the server has confirmed a
+  // save after it — the switch is optimistic, so a failed save must not read
+  // as done.
+  const [clickedAt, setClickedAt] = useState<number | null>(null);
+  const remembered = clickedAt !== null && saves > clickedAt;
   const choice = groupChoice(rows, group);
   const current = choice !== null && choice === stored;
 
@@ -59,7 +64,7 @@ function RememberLine({
     if (choice === null) return;
     if (group === "bus") setBus(choice === "bus" ? "bus" : "skip");
     else setLocalTransit(choice === "rail" ? "rail" : "skip");
-    setRemembered(true);
+    setClickedAt(saves);
   };
 
   const status =
