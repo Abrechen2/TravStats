@@ -60,15 +60,15 @@ function parseOrigins(text: string): string[] {
     .filter((line) => line.length > 0);
 }
 
-/** lanUrl, webauthnRpId, webauthnOrigins, betaFeaturesEnabled. */
-const EXPERT_ONLY_SETTINGS = 4;
+/** lanUrl, webauthnRpId, webauthnOrigins. */
+const EXPERT_ONLY_SETTINGS = 3;
 
 export default function InstanceSettings(): JSX.Element {
   const { t } = useTranslation(["admin", "common", "passport"]);
   const addToast = useToastStore((s) => s.addToast);
   const syncBetaFeaturesEnabled = useSettingsStore((s) => s.syncBetaFeaturesEnabled);
-  // LAN address, the passkey pair (rpId + origins) and the beta switch are
-  // plumbing a first setup never needs. Hidden rows stay in `form`, so a save
+  // LAN address and the passkey pair (rpId + origins) are plumbing a first
+  // setup never needs; the beta switch is an ordinary opt-in and stays standard. Hidden rows stay in `form`, so a save
   // at the standard level sends them back unchanged instead of blanking them.
   const expert = useExpertRows(EXPERT_ONLY_SETTINGS);
 
@@ -354,27 +354,23 @@ export default function InstanceSettings(): JSX.Element {
 
         {expert && <p className="text-sm text-(--text-muted)">{t("passport:countingRule")}</p>}
 
-        {expert && (
-          <label className="flex items-start gap-3 text-sm text-(--text-primary)">
-            <input
-              type="checkbox"
-              checked={form.betaFeaturesEnabled}
-              onChange={(e) => setForm({ ...form, betaFeaturesEnabled: e.target.checked })}
-              className="mt-1 h-4 w-4 rounded-sm border-(--border)"
-            />
-            <span>
-              <span className="font-medium">
-                {t("admin:instance.fields.betaFeatures.label")} <ExpertPill />
-              </span>
-              <span className="block text-xs text-(--text-muted)">
-                {t("admin:instance.fields.betaFeatures.help")}
-              </span>
-              {/* Derived from the registry, so it cannot drift from what the
-              switch actually gates — see BetaFeatureList.tsx. */}
-              <BetaFeatureList />
+        <label className="flex items-start gap-3 text-sm text-(--text-primary)">
+          <input
+            type="checkbox"
+            checked={form.betaFeaturesEnabled}
+            onChange={(e) => setForm({ ...form, betaFeaturesEnabled: e.target.checked })}
+            className="mt-1 h-4 w-4 rounded-sm border-(--border)"
+          />
+          <span>
+            <span className="font-medium">{t("admin:instance.fields.betaFeatures.label")}</span>
+            <span className="block text-xs text-(--text-muted)">
+              {t("admin:instance.fields.betaFeatures.help")}
             </span>
-          </label>
-        )}
+            {/* Derived from the registry, so it cannot drift from what the
+              switch actually gates — see BetaFeatureList.tsx. */}
+            <BetaFeatureList />
+          </span>
+        </label>
 
         <div className="pt-2">
           <button

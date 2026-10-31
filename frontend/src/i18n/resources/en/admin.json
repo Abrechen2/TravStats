@@ -1243,7 +1243,7 @@
       "travPlan": "TravPlan, planning, trip planning, planning mode, plan"
     },
     "expertKeywords": {
-      "instance": "Home network address, LAN, passkey, rpId, origins, beta switch",
+      "instance": "Home network address, LAN, passkey, rpId, origins",
       "parsers": "Ollama URL, pull model, model, quota, exchange-rate source",
       "externalServices": "allow own keys, permissions, Photon address, Nominatim address, OpenRailRouting address"
     }

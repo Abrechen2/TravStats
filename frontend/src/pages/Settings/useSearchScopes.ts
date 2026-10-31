@@ -10,27 +10,6 @@ import { SURFACE_LABEL_KEY } from "../../components/Settings/frame/SurfaceTabs";
 import type { SettingsSearchScope } from "./SettingsSearch";
 
 /**
- * Sections with rows only the expert level draws, so their words are searched
- * as expert hits (`<ns>:search.expertKeywords.<id>`).
- */
-export const WITH_EXPERT_ROWS: ReadonlySet<string> = new Set([
-  "settings:suggestions",
-  "settings:stayScan",
-  "settings:autoupdate",
-  "settings:backup",
-  "settings:externalServices",
-  "admin:instance",
-  "admin:parsers",
-  "admin:externalServices",
-]);
-
-/** Sections that fold their rows into collapsed groups (the services accordion). */
-const FOLDS_ROWS: ReadonlySet<string> = new Set([
-  "settings:externalServices",
-  "admin:externalServices",
-]);
-
-/**
  * What the settings search looks through: every page this account can reach,
  * personal and — for an admin — administration, with every section that may
  * show there AT ANY LEVEL. The level is the search's to explain, not to
@@ -64,11 +43,9 @@ export function useSearchScopes(isAdmin: boolean): SettingsSearchScope[] {
               id: s.id,
               labelKey: s.labelKey,
               keywordsKey: `${ns}:search.keywords.${s.id}`,
-              expertKeywordsKey: WITH_EXPERT_ROWS.has(`${ns}:${s.id}`)
-                ? `${ns}:search.expertKeywords.${s.id}`
-                : undefined,
+              expertKeywordsKey: s.expertRows ? `${ns}:search.expertKeywords.${s.id}` : undefined,
               expert: s.level === "expert",
-              foldsRows: FOLDS_ROWS.has(`${ns}:${s.id}`),
+              foldsRows: s.foldsRows === true,
             })),
         }));
     return [

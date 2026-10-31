@@ -214,7 +214,20 @@ describe("RailImportPreviewModal — U-Bahn, tram and bus legs of a bahn.de conn
       expect(updateSettings).toHaveBeenCalledWith({ railImport: { localTransit: "rail" } })
     );
     expect(useSuggestionSwitchesStore.getState().railImportLocalTransit).toBe("rail");
-    expect(screen.getByText("rail:import.remember.done")).toBeInTheDocument();
+    expect(await screen.findByText("rail:import.remember.done")).toBeInTheDocument();
+  });
+
+  it("does not say 'remembered' when the save failed — only a confirmed save reads as done", async () => {
+    updateSettings.mockReset().mockRejectedValue(new Error("down"));
+    render(<RailImportPreviewModal booking={connection()} onCancel={vi.fn()} onSaved={vi.fn()} />);
+    fireEvent.click(box(1));
+    fireEvent.click(screen.getByTestId("rail-import-remember-localTransit"));
+    await waitFor(() => expect(updateSettings).toHaveBeenCalled());
+    // The failed write rolls the stored default back to what the server holds.
+    await waitFor(() =>
+      expect(useSuggestionSwitchesStore.getState().railImportLocalTransit).toBe("skip")
+    );
+    expect(screen.queryByText("rail:import.remember.done")).toBeNull();
   });
 
   it("leaves a document's legs — which carry no mode — exactly as before", () => {

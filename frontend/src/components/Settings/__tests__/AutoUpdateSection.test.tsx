@@ -1,5 +1,5 @@
-import { afterEach, describe, it, expect, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -7,6 +7,7 @@ vi.mock("../../../hooks/useTranslation", () => ({
 }));
 
 import AutoUpdateSection from "../AutoUpdateSection";
+import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
 
 const SETTINGS = {
   enabled: true,
@@ -33,6 +34,12 @@ function renderSection(onSave = vi.fn(), onSet = vi.fn()) {
 }
 
 describe("AutoUpdateSection", () => {
+  beforeEach(() => useSettingsLevelStore.setState({ level: "expert" }));
+  afterEach(() => {
+    cleanup();
+    act(() => useSettingsLevelStore.setState({ level: null }));
+  });
+
   it("has no save button: a switch writes the value it just set", () => {
     const { onSave } = renderSection();
     expect(screen.queryByRole("button", { name: /save/i })).toBeNull();
@@ -52,6 +59,26 @@ describe("AutoUpdateSection", () => {
 
     fireEvent.blur(field);
     expect(onSave).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("AutoUpdateSection — standard level: decisions stay, tuning waits", () => {
+  beforeEach(() => useSettingsLevelStore.setState({ level: "standard" }));
+  afterEach(() => {
+    cleanup();
+    act(() => useSettingsLevelStore.setState({ level: null }));
+  });
+
+  it("keeps approval and 'only during flight' at the standard level, and hides interval and expiry", () => {
+    renderSection();
+    expect(
+      screen.getByRole("switch", { name: "settings:autoUpdate.requireApproval" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("switch", { name: "settings:autoUpdate.onlyDuringFlight" })
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("settings:autoUpdate.checkInterval")).toBeNull();
+    expect(screen.queryByLabelText("settings:autoUpdate.expiryHours")).toBeNull();
   });
 });
 

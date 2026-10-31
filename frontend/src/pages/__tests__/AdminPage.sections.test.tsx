@@ -118,6 +118,12 @@ describe("AdminPage — one page per menu entry, its sections as anchors", () =>
     // jsdom has no scrollIntoView at all; SettingsPage guards for its
     // absence at runtime, but pinning the deep-link behaviour needs a spy.
     Element.prototype.scrollIntoView = vi.fn();
+    // These tests walk every section, expert ones included.
+    useSettingsLevelStore.setState({ level: "expert" });
+  });
+  afterEach(() => {
+    cleanup();
+    useSettingsLevelStore.setState({ level: null });
   });
 
   it("renders every section of the page at once, not only one picked section", async () => {

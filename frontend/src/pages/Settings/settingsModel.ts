@@ -18,10 +18,12 @@ import type { SettingsLevel } from "../../store/settingsLevelStore";
 export type SettingsPageId =
   | "account"
   | "display"
+  | "views"
   | "trips"
   | "companions"
   | "location"
   | "loyalty"
+  | "privacy"
   | "flight"
   | "cruise"
   | "data"
@@ -58,7 +60,12 @@ export type SettingsSectionId =
   | "cruisePreferences"
   | "backup"
   | "import"
-  | "externalServices";
+  | "externalServices"
+  | "mapAppearance"
+  | "dashboardAppearance"
+  | "listAppearance"
+  | "comparisonConsent"
+  | "encryptedGrants";
 
 export type SettingsSectionDef = SectionDef<SettingsSectionId>;
 export type SettingsPageDef = PageDef<SettingsPageId, SettingsSectionId>;
@@ -92,8 +99,17 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
       section("display"),
       section("units"),
       section("domains"),
-      section("countryCounting", "expert", { settings: 1 }),
+      section("countryCounting"),
     ],
+  },
+  {
+    // Where the map, the dashboard and the lists are set is on the map, the
+    // dashboard and the lists (rule 1 of the settings redesign); this page
+    // makes them findable and jumps there.
+    id: "views",
+    labelKey: "settings:groups.views",
+    icon: "layers",
+    sections: [section("mapAppearance"), section("dashboardAppearance"), section("listAppearance")],
   },
   {
     // Trips are no domain, so this page never hides (owner, 2026-08-23).
@@ -104,7 +120,6 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
       section("trips"),
       section("suggestions"),
       section("sharing"),
-      section("shareLinks"),
       section("calendarFeed", "standard", { gate: "calendarFeed" }),
     ],
   },
@@ -143,15 +158,27 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
     sections: [section("loyalty")],
   },
   {
+    // Who can see what: public links, the comparison's consents and the
+    // encrypted grants — three audiences, three editors, one place to find them.
+    id: "privacy",
+    labelKey: "settings:groups.privacy",
+    icon: "shield",
+    sections: [
+      section("shareLinks"),
+      section("comparisonConsent", "standard", { gate: "comparison" }),
+      section("encryptedGrants", "standard", { gate: "encryptedShare" }),
+    ],
+  },
+  {
     id: "flight",
     labelKey: "settings:tabs.flight",
     icon: "plane",
     domain: "flight",
     sections: [
       section("homeAirport"),
-      section("autoupdate"),
+      section("autoupdate", "standard", { expertRows: true }),
       section("features"),
-      section("defaults", "expert", { settings: 4 }),
+      section("defaults"),
       section("enrichment", "expert", { settings: 3 }),
     ],
   },
@@ -166,13 +193,13 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
     id: "data",
     labelKey: "settings:groups.data",
     icon: "database",
-    sections: [section("backup"), section("import")],
+    sections: [section("backup", "standard", { expertRows: true }), section("import")],
   },
   {
     id: "services",
     labelKey: "settings:groups.services",
     icon: "globe",
-    sections: [section("externalServices")],
+    sections: [section("externalServices", "standard", { expertRows: true, foldsRows: true })],
   },
 ];
 
@@ -181,7 +208,7 @@ export const SETTINGS_MENU: readonly MenuGroupDef<SettingsPageId>[] = [
   {
     id: "general",
     labelKey: null,
-    pages: ["account", "display", "trips", "companions", "location", "loyalty"],
+    pages: ["account", "display", "views", "trips", "companions", "location", "loyalty", "privacy"],
   },
   { id: "domains", labelKey: "settings:menu.domains", pages: ["flight", "cruise"] },
   { id: "data", labelKey: null, pages: ["data", "services"] },

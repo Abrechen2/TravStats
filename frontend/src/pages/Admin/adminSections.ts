@@ -124,7 +124,7 @@ export const ADMIN_PAGES: readonly AdminPageDef[] = [
     labelKey: "admin:pages.instance",
     icon: "settings",
     sections: [
-      section("instance"),
+      { ...section("instance"), expertRows: true },
       section("travTrack"),
       // TravPlan's server switch (owner, 2026-10-26): shown only while its beta
       // key is open — the server refuses every plan path otherwise.
@@ -139,12 +139,17 @@ export const ADMIN_PAGES: readonly AdminPageDef[] = [
   },
   single("users", "user"),
   single("invitations", "mail"),
-  single("externalServices", "key-round"),
+  {
+    id: "externalServices",
+    labelKey: "admin:pages.externalServices",
+    icon: "key-round",
+    sections: [{ ...section("externalServices"), expertRows: true, foldsRows: true }],
+  },
   {
     id: "parsers",
     labelKey: "admin:pages.parsers",
     icon: "sparkles",
-    sections: [section("parsers"), section("templateRepo", "expert", 1)],
+    sections: [{ ...section("parsers"), expertRows: true }, section("templateRepo", "expert", 1)],
   },
   single("smtp", "mail"),
   {

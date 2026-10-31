@@ -35,10 +35,13 @@ export default function AutoUpdateSection({
 }: AutoUpdateSectionProps): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
   const coarse = useCoarsePointer();
-  // The switch is the standard setting (live updates on or off); how they run
-  // — approval, flight window, polling interval, expiry — is tuning, shown at
-  // the expert level (forgejo#321). The four rows exist only while it is on.
-  const expert = useExpertRows(settings.enabled ? 4 : 0);
+  // Whether live updates run, whether they wait for approval and whether they
+  // run only during a flight are decisions about what the app does for the
+  // person, so they are standard (settings redesign, package 3). The polling
+  // interval and expiry are tuning, shown at the expert level. All four rows
+  // exist only while the switch is on.
+  const expert = useExpertRows(settings.enabled ? 2 : 0);
+  const decisions = settings.enabled;
   const tuning = settings.enabled && expert;
 
   const numberField = (
@@ -105,18 +108,16 @@ export default function AutoUpdateSection({
             onChange={(on) => onSave({ ...settings, enabled: on })}
             label={t("settings:autoUpdate.enabled")}
           />
-          {tuning && (
+          {decisions && (
             <Switch
-              expert
               id="autoupdate-require-approval"
               checked={settings.requireApproval}
               onChange={(on) => onSave({ ...settings, requireApproval: on })}
               label={t("settings:autoUpdate.requireApproval")}
             />
           )}
-          {tuning && (
+          {decisions && (
             <Switch
-              expert
               id="autoupdate-only-during-flight"
               checked={settings.onlyDuringFlight}
               onChange={(on) => onSave({ ...settings, onlyDuringFlight: on })}

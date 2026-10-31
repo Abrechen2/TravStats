@@ -19,11 +19,12 @@ export function asSettingsLevel(value: unknown): SettingsLevel | null {
  * Its own store, like `suggestionSwitchesStore`, because `settingsStore` sits
  * at the 800-line limit; `loadRemoteSettings` hands it the same response.
  *
- * `null` until the server has answered, and every reader treats `null` as
- * expert: hiding a setting because a request has not landed yet would make a
- * control vanish and reappear, and a slow connection is no reason to take
- * something away. New accounts are standard on the server, existing ones were
- * migrated to expert, so the server's answer is the only one that counts.
+ * `null` until the server has answered. While it is unknown readers use the
+ * neutral standard view and the switch is disabled: an unknown level is not an
+ * Expert account (new accounts are standard on the server, existing ones were
+ * migrated to expert), so the server's answer is the only one that counts and
+ * nothing is saved, switched or searched against a guess (settings redesign,
+ * package 3). A named expert section or row still opens by link.
  */
 interface SettingsLevelState {
   level: SettingsLevel | null;
@@ -47,7 +48,12 @@ export const useSettingsLevelStore = create<SettingsLevelState>((set, get) => ({
   }),
 }));
 
-/** The level in force: an unknown level reads as expert (see the store). */
+/** The level in force: an unknown level reads as the neutral standard view (see the store). */
 export function useEffectiveSettingsLevel(): SettingsLevel {
-  return useSettingsLevelStore((s) => s.level) ?? "expert";
+  return useSettingsLevelStore((s) => s.level) ?? "standard";
+}
+
+/** Whether the server has told us the account's level yet. */
+export function useSettingsLevelKnown(): boolean {
+  return useSettingsLevelStore((s) => s.level) !== null;
 }

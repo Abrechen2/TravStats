@@ -45,6 +45,13 @@ interface SuggestionSwitchesState {
   railImportLocalTransit: RailImportLocalTransit;
   /** What a bahn.de import starts bus legs as; server default `skip`. */
   railImportBus: RailImportBus;
+  /**
+   * How many rail-import defaults the server has CONFIRMED this session, per
+   * default, so one group's failed save cannot borrow the other's confirmation. A
+   * "remembered" line waits for this to advance past the count at the click,
+   * because the switch itself is optimistic and a failed save rolls it back.
+   */
+  railImportSaves: { localTransit: number; bus: number };
   /** Whether this account uses TravPlan (owner, 2026-10-27); server default off. */
   travPlan: boolean;
   /** What `GET /settings` said; anything that is not a boolean keeps the default. */
@@ -100,6 +107,7 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
   liveTracking: true,
   railImportLocalTransit: "skip",
   railImportBus: "skip",
+  railImportSaves: { localTransit: 0, bus: 0 },
   travPlan: false,
   noteRemote: (remote) => {
     const body = remote as {
@@ -187,12 +195,21 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
     current: () => get().railImportLocalTransit,
     apply: (railImportLocalTransit) => set({ railImportLocalTransit }),
     what: "rail import U-Bahn/tram default",
+    saved: () =>
+      set({
+        railImportSaves: {
+          ...get().railImportSaves,
+          localTransit: get().railImportSaves.localTransit + 1,
+        },
+      }),
   }),
   setRailImportBus: serializedSetting({
     payload: (bus: RailImportBus) => ({ railImport: { bus } }),
     current: () => get().railImportBus,
     apply: (railImportBus) => set({ railImportBus }),
     what: "rail import bus default",
+    saved: () =>
+      set({ railImportSaves: { ...get().railImportSaves, bus: get().railImportSaves.bus + 1 } }),
   }),
   setTravPlan: serializedSetting({
     payload: (enabled: boolean) => ({ travPlan: { enabled } }),

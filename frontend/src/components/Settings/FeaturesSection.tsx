@@ -3,7 +3,6 @@ import { useSettingsStore } from "../../store/settingsStore";
 import { useSuggestionSwitchesStore } from "../../store/suggestionSwitchesStore";
 import { useSectionVisibility } from "../../hooks/useSectionVisibility";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useExpertRows } from "./frame/useExpertRows";
 import { Switch } from "../ui/Field";
 import { SettingRows } from "../ui/SettingRow";
 
@@ -22,7 +21,6 @@ export default function FeaturesSection(): JSX.Element {
   // one stored answer, synced per account, so the switch here and the menu
   // there can never disagree.
   const flightSections = useSectionVisibility("flight");
-  const expert = useExpertRows(1);
 
   return (
     <SectionCard>
@@ -52,19 +50,15 @@ export default function FeaturesSection(): JSX.Element {
           label={t("settings:features.trackAircraft")}
           sub={t("settings:features.trackAircraftDesc")}
         />
-        {expert && (
-          <Switch
-            id="feature-seat-statistics"
-            expert
-            checked={flightSections.isVisible(SEAT_SECTION)}
-            onChange={(on) => {
-              if (on !== flightSections.isVisible(SEAT_SECTION))
-                flightSections.toggle(SEAT_SECTION);
-            }}
-            label={t("settings:features.seatStatistics")}
-            sub={t("settings:features.seatStatisticsDesc")}
-          />
-        )}
+        <Switch
+          id="feature-seat-statistics"
+          checked={flightSections.isVisible(SEAT_SECTION)}
+          onChange={(on) => {
+            if (on !== flightSections.isVisible(SEAT_SECTION)) flightSections.toggle(SEAT_SECTION);
+          }}
+          label={t("settings:features.seatStatistics")}
+          sub={t("settings:features.seatStatisticsDesc")}
+        />
       </SettingRows>
     </SectionCard>
   );

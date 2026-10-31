@@ -371,14 +371,22 @@
     }
   },
   "privacy": {
-    "title": "Privacy & Security",
-    "description": "Manage login protection and data requests.",
-    "twoFactorAuth": "Enable two-factor authentication",
-    "loginAlerts": "Login history & alert emails",
-    "dataExport": "Request data export",
-    "dataExportRequested": "Request pending",
-    "accountDeletion": "Account Deletion",
-    "analyticsOptIn": "Analytics opt-in (anonymous)"
+    "comparisonConsent": {
+      "title": "Comparison with friends",
+      "description": "Who sees your totals is decided per person in the comparison. There is no preset for everyone.",
+      "consent": {
+        "title": "Comparison consents",
+        "sub": "Totals only, never single entries; revocable at any time."
+      }
+    },
+    "encryptedGrants": {
+      "title": "Encrypted grants",
+      "description": "Full records travel only through the device-encrypted transfer. You choose recipient, scope and categories per grant.",
+      "grants": {
+        "title": "Manage grants",
+        "sub": "Who gets what, and for how long."
+      }
+    }
   },
   "backup": {
     "title": "My data & sync",
@@ -867,6 +875,22 @@
       "malformedEntry": "could not be read",
       "entry": "Entry {{entry}}: {{reason}}",
       "tooLarge": "The file is too large ({{size}} MB, at most {{max}} MB). Please export it in smaller parts."
+    },
+    "railMemory": {
+      "localTransit": {
+        "title": "U-Bahn and tram in the rail import",
+        "sub": "What a bahn.de import preselects for these legs. You can always choose differently during the import.",
+        "skip": "Skip",
+        "rail": "As rail journey"
+      },
+      "bus": {
+        "title": "Buses in the rail import",
+        "sub": "What a bahn.de import preselects for bus legs.",
+        "skip": "Skip",
+        "bus": "As bus ride"
+      },
+      "saved": "Saved.",
+      "openImport": "Go to rail import"
     }
   },
   "trips": {
@@ -1083,7 +1107,9 @@
     "data": "Data",
     "services": "Services",
     "location": "Location history",
-    "companions": "Travel companions"
+    "companions": "Travel companions",
+    "views": "Views",
+    "privacy": "Privacy & sharing"
   },
   "deepLink": {
     "adminOnlySection": "The section named in the address is reserved for whoever administers this instance, so it is not shown to you. The rest of the settings on this page are yours."
@@ -1104,34 +1130,36 @@
       "trips": "trip, trips, automatic, booking reference, group, create trip, detect trips, trip colour, colour",
       "loyalty": "Loyalty programme, membership, membership number, status, tier, hotel programme, frequent flyer, miles, cruise line, points, rewards",
       "backup": "Backup, export, restore, download, Excel, spreadsheet, JSON, data",
-      "import": "Import, CSV, Flightradar24, logbook, upload",
+      "import": "Import, CSV, Flightradar24, logbook, upload, remember rail import, skip U-Bahn, tram, bus, bahn.de, remember default",
       "notifications": "Notification, email, SMTP, mail server, reminder",
       "externalServices": "AirLabs, Aviationstack, AeroDataBox, OpenSky, OpenAI, Claude, AI, Immich, photos, Dawarich, location history, routing, satnav, road route, OpenRouteService, GraphHopper, OSRM, Strava, AI parser, rail, Transitous, db-rest, OpenRailRouting, maps, place search, Photon, Nominatim",
       "homeAirport": "home, residence, home airport, airport, move",
       "defaults": "Default, preset, booking class, seat, airline, carrier",
-      "features": "Features, parser, boarding pass, email parser, boarding pass scan, live tracking, position, flight path",
+      "features": "Features, parser, boarding pass, email parser, boarding pass scan, live tracking, position, flight path, seat statistics, seats, window seat, aisle seat",
       "enrichment": "Enrichment, fill in flight data, delay, historical data, aircraft",
-      "autoupdate": "Automatic updates, flight status, refresh, gate, departure time",
+      "autoupdate": "Automatic updates, flight status, refresh, gate, departure time, approval, only during flight",
       "cruisePreferences": "Cruise, cruise line, ship, cabin, sea days, travel days",
       "domains": "Domains, modules, flights, cruises, lodging, places, roadtrips, rail, bus, ferry, rental car, plan, plan trips, TravPlan, switch on and off, colour, colours, map colour, line colour",
-      "suggestions": "Suggestions, inbox, trip suggestions, suggest stays",
+      "suggestions": "Suggestions, inbox, trip suggestions, suggest stays, Immich evidence, photos as evidence, place type, AI classification",
       "sharing": "Sharing, companions, consent, shared trip, travel companion",
       "shareLinks": "Public link, share, link",
       "calendarFeed": "Calendar, iCal, ICS, subscription, calendar feed",
       "dawarich": "Dawarich, location history, location source, positions, connection",
       "locationProvider": "Location source, location, positions, TravTrack, Dawarich, none, switch source, recording",
       "tripRecording": "Recording, positions, app, track, record trip",
-      "stayScan": "Stays, detect stays, radius, minimum duration, detect places automatically, detect places, places as areas, venues, re-evaluate",
+      "stayScan": "Stays, detect stays, radius, minimum duration, detect places automatically, detect places, places as areas, venues, re-evaluate, markets, market grounds, shopping malls, parks, zoos, theme parks, museums",
       "companions": "Companions, travel companions, people, rename, merge, duplicate, delete, names",
-      "travTrack": "TravTrack, location history, history, positions, privacy zones, zone, delete span, export, GPX"
+      "travTrack": "TravTrack, location history, history, positions, privacy zones, zone, delete span, export, GPX",
+      "mapAppearance": "map, map appearance, colours, route colour, palette, lines, layers, labels, map mode, flight colour, cruise colour",
+      "dashboardAppearance": "dashboard, areas, map mode, view, start page",
+      "listAppearance": "list, lists, columns, sorting, page size, rows",
+      "comparisonConsent": "comparison, friends, leaderboard, consent, totals, ranking",
+      "encryptedGrants": "encrypted grant, end-to-end, device, transfer, recipient, categories"
     },
     "expertKeywords": {
-      "suggestions": "Immich evidence, photos as evidence, place type, AI classification",
-      "autoupdate": "Check interval, interval, approval, expiry, only during flight",
+      "autoupdate": "Check interval, interval, expiry",
       "backup": "Instance backup, last backup, WebDAV, Nextcloud, sync",
-      "externalServices": "own key, own API key, API key, quota, AirLabs key, Aviationstack key, AeroDataBox key, AeroAPI key, OpenSky credentials, GraphHopper key, OpenRouteService key",
-      "features": "seat statistics, seats, window seat, aisle seat",
-      "stayScan": "markets, market grounds, shopping malls, parks, zoos, theme parks, museums"
+      "externalServices": "own key, own API key, API key, quota, AirLabs key, Aviationstack key, AeroDataBox key, AeroAPI key, OpenSky credentials, GraphHopper key, OpenRouteService key"
     }
   },
   "railProviders": {
@@ -1427,5 +1455,38 @@
   },
   "travTrack": {
     "title": "TravTrack"
+  },
+  "contextLinks": {
+    "open": "Open"
+  },
+  "views": {
+    "mapAppearance": {
+      "title": "Map appearance",
+      "description": "Colours, palettes, layers and labels are set where you see them: in the map panel. Jump there from here.",
+      "routes": {
+        "title": "Route colours and palettes",
+        "sub": "Colour flight and cruise routes by mode."
+      },
+      "layers": {
+        "title": "Layers and labels",
+        "sub": "Which map layers and labels are visible."
+      }
+    },
+    "dashboardAppearance": {
+      "title": "Dashboard",
+      "description": "Which areas the dashboard shows and in which map mode is chosen on the dashboard itself.",
+      "sections": {
+        "title": "Areas and map mode",
+        "sub": "Each area has its own mode; it is remembered for your account."
+      }
+    },
+    "listAppearance": {
+      "title": "Lists",
+      "description": "Columns, sorting and page size of the lists are set in the list itself.",
+      "columns": {
+        "title": "Columns and page size",
+        "sub": "The flight list is the entry point; other areas have their own list."
+      }
+    }
   }
 }

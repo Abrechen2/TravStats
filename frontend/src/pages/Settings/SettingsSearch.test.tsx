@@ -122,9 +122,9 @@ describe("SettingsSearch", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Nichts gefunden.");
   });
 
-  // forgejo#321: search always finds what the standard level hides, says so,
-  // and opening such a hit switches to the expert view (prototype behaviour).
-  it("switches to the expert view when an expert hit is opened, and marks the section", () => {
+  // Search always finds what the standard level hides and says so; opening
+  // such a hit reveals it for the visit and never changes the saved level.
+  it("opening an expert hit does not change the account's saved level, and marks the section", () => {
     useSettingsLevelStore.setState({ level: "standard" });
     renderSearch();
     fireEvent.change(box(), { target: { value: "buchungskl" } });
@@ -134,13 +134,13 @@ describe("SettingsSearch", () => {
     expect(hit).toHaveAttribute("href", "/settings/flight?section=defaults");
     fireEvent.click(hit);
 
-    expect(useSettingsLevelStore.getState().level).toBe("expert");
-    expect(persisted).toHaveBeenCalledWith({ settingsLevel: "expert" });
+    expect(useSettingsLevelStore.getState().level).toBe("standard");
+    expect(persisted).not.toHaveBeenCalled();
     expect(screen.getByTestId("where")).toHaveTextContent("/settings/flight?section=defaults");
     expect(screen.getByTestId("where")).toHaveAttribute("data-highlight", "defaults");
   });
 
-  it("switches on Enter too, for a hit on an expert row inside a standard section", () => {
+  it("Enter does not change the saved level either, for a hit on an expert row inside a standard section", () => {
     useSettingsLevelStore.setState({ level: "standard" });
     renderSearch();
     fireEvent.change(box(), { target: { value: "abfrage" } });
@@ -151,7 +151,8 @@ describe("SettingsSearch", () => {
     expect(screen.getByTestId("where")).toHaveTextContent(
       "/settings/flight?section=autoupdate&expert=1"
     );
-    expect(useSettingsLevelStore.getState().level).toBe("expert");
+    expect(useSettingsLevelStore.getState().level).toBe("standard");
+    expect(persisted).not.toHaveBeenCalled();
   });
 
   it("leaves the level alone for an ordinary hit", () => {

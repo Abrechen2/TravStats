@@ -80,7 +80,7 @@ describe("InstanceSettings — standard and expert rows", () => {
     act(() => useSettingsLevelStore.setState({ level: null }));
   });
 
-  it("hides the LAN address, the passkey fields and the beta switch at the standard level", async () => {
+  it("hides the LAN address and the passkey fields, but keeps the beta switch, at the standard level", async () => {
     useSettingsLevelStore.setState({ level: "standard" });
     const spy = renderWithSpy();
 
@@ -90,8 +90,9 @@ describe("InstanceSettings — standard and expert rows", () => {
     expect(
       screen.queryByLabelText("admin:instance.passkeys.origins.label")
     ).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/betaFeatures/)).not.toBeInTheDocument();
-    expect(spy).toHaveBeenCalledWith(expect.any(String), 4);
+    // Beta enablement is an ordinary opt-in (settings redesign, package 3).
+    expect(screen.getByLabelText(/betaFeatures/)).toBeInTheDocument();
+    expect(spy).toHaveBeenCalledWith(expect.any(String), 3);
   });
 
   it("draws every row and hides nothing at the expert level", async () => {
@@ -103,7 +104,7 @@ describe("InstanceSettings — standard and expert rows", () => {
     expect(screen.getByLabelText("admin:instance.passkeys.origins.label")).toBeInTheDocument();
     expect(screen.getByLabelText(/betaFeatures/)).toBeInTheDocument();
     expect(spy).toHaveBeenCalledWith(expect.any(String), 0);
-    expect(spy).not.toHaveBeenCalledWith(expect.any(String), 4);
+    expect(spy).not.toHaveBeenCalledWith(expect.any(String), 3);
   });
 
   it("sends the hidden settings back unchanged when saved at the standard level", async () => {

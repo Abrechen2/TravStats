@@ -12,10 +12,12 @@ describe("settings menu order", () => {
     expect(SETTINGS_MENU.flatMap((g) => g.pages)).toEqual([
       "account",
       "display",
+      "views",
       "trips",
       "companions",
       "location",
       "loyalty",
+      "privacy",
       "flight",
       "cruise",
       "data",

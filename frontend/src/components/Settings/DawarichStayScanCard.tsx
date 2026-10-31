@@ -5,7 +5,6 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { profileDateTime } from "../../lib/profileInstant";
 import { SectionCard } from "./SettingsShared";
-import { useExpertRows } from "./frame/useExpertRows";
 
 export default function DawarichStayScanCard({
   onScanned,
@@ -16,8 +15,8 @@ export default function DawarichStayScanCard({
   const demo = useIsDemoAccount();
   // Places are detected as whole areas by default (forgejo#318): the standard
   // level names the detection and says what it sends; the market and venue
-  // switches are tuning, so only the expert level draws them.
-  const expert = useExpertRows(2);
+  // switches choose which content is examined, so they are standard too
+  // (settings redesign, package 3).
   const [state, setState] = useState<StayScanState | null>(null);
   const [lookbackDays, setLookbackDays] = useState(7);
   const [busy, setBusy] = useState(false);
@@ -87,39 +86,37 @@ export default function DawarichStayScanCard({
       </label>
       <h4 className="t-body font-semibold mt-4">{text("areas.title")}</h4>
       <p className="t-caption mb-4">{text("areas.description")}</p>
-      {expert && (
-        <>
-          <label className="flex items-center gap-3 my-4">
-            <input
-              type="checkbox"
-              checked={state?.marketEnabled ?? false}
-              disabled={
-                demo ||
-                busy ||
-                !state ||
-                (!state.marketEnabled && (!state.enabled || !state.connected || placesPaused))
-              }
-              onChange={(e) => void action(() => dawarichStaysApi.enableMarkets(e.target.checked))}
-            />
-            {text("markets.enable")}
-          </label>
-          <label className="flex items-center gap-3 my-4">
-            <input
-              type="checkbox"
-              checked={state?.venueEnabled ?? false}
-              disabled={
-                demo ||
-                busy ||
-                !state ||
-                (!state.venueEnabled && (!state.enabled || !state.connected || placesPaused))
-              }
-              onChange={(e) => void action(() => dawarichStaysApi.enableVenues(e.target.checked))}
-            />
-            {text("venues.enable")}
-          </label>
-          <p className="t-caption mb-4">{text("venues.description")}</p>
-        </>
-      )}
+      <>
+        <label className="flex items-center gap-3 my-4">
+          <input
+            type="checkbox"
+            checked={state?.marketEnabled ?? false}
+            disabled={
+              demo ||
+              busy ||
+              !state ||
+              (!state.marketEnabled && (!state.enabled || !state.connected || placesPaused))
+            }
+            onChange={(e) => void action(() => dawarichStaysApi.enableMarkets(e.target.checked))}
+          />
+          {text("markets.enable")}
+        </label>
+        <label className="flex items-center gap-3 my-4">
+          <input
+            type="checkbox"
+            checked={state?.venueEnabled ?? false}
+            disabled={
+              demo ||
+              busy ||
+              !state ||
+              (!state.venueEnabled && (!state.enabled || !state.connected || placesPaused))
+            }
+            onChange={(e) => void action(() => dawarichStaysApi.enableVenues(e.target.checked))}
+          />
+          {text("venues.enable")}
+        </label>
+        <p className="t-caption mb-4">{text("venues.description")}</p>
+      </>
       {state?.marketResult && (
         <div className="my-3" role="status">
           <p>{text(`${coverageScope}.status.${state.marketResult.status}`)}</p>

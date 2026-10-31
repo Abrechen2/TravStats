@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
+import { act, cleanup, render, screen, fireEvent, waitFor } from "@testing-library/react";
 import InstanceSettings from "../../../components/Admin/InstanceSettings";
+import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
 
 // The instance page also carries the sign-in-background card, which fetches
 // its list on mount. Mocked away: a real request would fail the render before
@@ -46,7 +47,13 @@ const base = {
 };
 
 describe("InstanceSettings — passkey relying party", () => {
+  // The passkey fields are expert rows.
+  afterEach(() => {
+    cleanup();
+    act(() => useSettingsLevelStore.setState({ level: null }));
+  });
   beforeEach(() => {
+    useSettingsLevelStore.setState({ level: "expert" });
     vi.clearAllMocks();
     getInstanceSettings.mockResolvedValue({
       settings: base,

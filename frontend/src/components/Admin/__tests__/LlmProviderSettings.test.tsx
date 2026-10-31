@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, act, waitFor, within } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { cleanup, render, screen, fireEvent, act, waitFor, within } from "@testing-library/react";
 
 import ParserSettings, { type ParserSettingsData } from "../ParserSettings";
+import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
 import deAdmin from "../../../i18n/resources/de/admin.json";
 import enAdmin from "../../../i18n/resources/en/admin.json";
 
@@ -52,8 +53,14 @@ function renderWith(settings: ParserSettingsData, onChange = vi.fn()) {
 }
 
 describe("LlmProviderSettings — the cloud-slot chain", () => {
+  // The provider chain is an expert row of the parser settings.
   beforeEach(() => {
     api.testLlmProvider.mockClear();
+    useSettingsLevelStore.setState({ level: "expert" });
+  });
+  afterEach(() => {
+    cleanup();
+    act(() => useSettingsLevelStore.setState({ level: null }));
   });
 
   it("Ollama's own card is always visible — it is implicit in the chain, never a picked choice", () => {
