@@ -53,7 +53,7 @@ export default function FlightScorecardBlock({
   selectedYear,
 }: FlightScorecardBlockProps): JSX.Element {
   const { t, i18n } = useTranslation(["stats"]);
-  const { units } = useSettingsStore();
+  const units = useSettingsStore((s) => s.units);
 
   const takeaway =
     rangeWindow === "rolling12m"

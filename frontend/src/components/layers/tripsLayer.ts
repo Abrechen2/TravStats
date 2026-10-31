@@ -255,3 +255,17 @@ export function createPlaneLayer(trips: TripDatum[], currentTime: number): Layer
 export function createTripsModeLayers(trips: TripDatum[], currentTime: number): Layer[] {
   return [createTripsLayer(trips, currentTime), createPlaneLayer(trips, currentTime)];
 }
+
+/** `layers` with the trips layers spliced in at `at`: only they change per animation frame. */
+export function withTripsLayers(
+  layers: Layer[],
+  at: number,
+  trips: TripDatum[],
+  currentTime: number
+): Layer[] {
+  return [
+    ...layers.slice(0, at),
+    ...createTripsModeLayers(trips, currentTime),
+    ...layers.slice(at),
+  ];
+}

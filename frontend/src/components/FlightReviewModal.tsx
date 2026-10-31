@@ -67,10 +67,10 @@ export default function FlightReviewModal({
   // Every label names its control (forgejo#159 browser check: none did).
   const fieldId = useId();
   const fid = (n: number): string => `${fieldId}-${n}`;
-  const { features, baseCurrency } = useSettingsStore();
+  const features = useSettingsStore((s) => s.features);
+  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
   const recentCurrencies = useRecentCurrencies();
   const { airlines: airlineSuggestions, aircraft: aircraftSuggestions } = useSuggestions();
-  // Form state
   const [flightNumber, setFlightNumber] = useState("");
   const [airline, setAirline] = useState("");
   const [departureCode, setDepartureCode] = useState("");

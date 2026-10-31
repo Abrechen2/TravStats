@@ -85,7 +85,8 @@ function departureDay(flight: Flight): string | null {
 
 export default function AdvancedStatsPage(): JSX.Element {
   const { t } = useTranslation(["stats", "common"]);
-  const { units, features } = useSettingsStore();
+  const units = useSettingsStore((s) => s.units);
+  const features = useSettingsStore((s) => s.features);
   const { user } = useAuthStore();
   const addToast = useToastStore((state) => state.addToast);
   const [flights, setFlights] = useState<Flight[]>([]);

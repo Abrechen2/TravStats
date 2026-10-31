@@ -46,7 +46,7 @@ export function monthRows(data: TravTrackMonths): Row[] {
  */
 export default function TrackMonths(): JSX.Element {
   const { t, i18n } = useTranslation(["track", "stats"]);
-  const { units } = useSettingsStore();
+  const units = useSettingsStore((s) => s.units);
   const thisYear = Number(todayIn(useTodayZone()).slice(0, 4));
   const [year, setYear] = useState(thisYear);
   const [state, setState] = useState<State>({ kind: "loading" });

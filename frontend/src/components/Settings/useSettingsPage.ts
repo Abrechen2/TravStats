@@ -35,22 +35,20 @@ interface ApiKeysFormState {
 export function useSettingsPage() {
   const { t } = useTranslation(["settings", "common"]);
   const { user } = useAuthStore();
-  const {
-    profile,
-    display,
-    units,
-    defaults,
-    cruise,
-    baseCurrency,
-    setProfile,
-    setDisplay,
-    setUnits,
-    setDefaults,
-    setCruise,
-    setBaseCurrency,
-    saveRemoteSettings,
-    hasPendingChanges,
-  } = useSettingsStore();
+  const profile = useSettingsStore((s) => s.profile);
+  const display = useSettingsStore((s) => s.display);
+  const units = useSettingsStore((s) => s.units);
+  const defaults = useSettingsStore((s) => s.defaults);
+  const cruise = useSettingsStore((s) => s.cruise);
+  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
+  const setProfile = useSettingsStore((s) => s.setProfile);
+  const setDisplay = useSettingsStore((s) => s.setDisplay);
+  const setUnits = useSettingsStore((s) => s.setUnits);
+  const setDefaults = useSettingsStore((s) => s.setDefaults);
+  const setCruise = useSettingsStore((s) => s.setCruise);
+  const setBaseCurrency = useSettingsStore((s) => s.setBaseCurrency);
+  const saveRemoteSettings = useSettingsStore((s) => s.saveRemoteSettings);
+  const hasPendingChanges = useSettingsStore((s) => s.hasPendingChanges);
 
   // Serialization of exactly the slices the save path transmits. Used as the
   // auto-save effect's dependency so no slice can be silently left unwatched —

@@ -106,11 +106,41 @@ export const tooltipOf = (info: PickingInfo): string | null => {
   return typeof object?.text === "string" ? object.text : null;
 };
 
+/**
+ * Derived layer data, computed once per input array. The replay rebuilds the
+ * layer list ten times a second; a derived array built afresh each time hands
+ * deck.gl new `data`, which re-aggregates the heat, re-uploads the scatter and
+ * re-tessellates the countries (forgejo#351). Keyed weakly on the input array.
+ */
+function byRef<K extends object, V>(derive: (key: K) => V): (key: K) => V {
+  const cache = new WeakMap<K, V>();
+  return (key) => {
+    let hit = cache.get(key);
+    if (hit === undefined) {
+      hit = derive(key);
+      cache.set(key, hit);
+    }
+    return hit;
+  };
+}
+
+const speedPiecesOf = byRef((segments: readonly TrackPoint[][]) => speedPieces(segments));
+const countriesDataOf = byRef((countries: readonly Feature<Geometry>[]) => ({
+  type: "FeatureCollection" as const,
+  features: countries as Feature<Geometry>[],
+}));
+const visitAnchorsOf = byRef((anchors: readonly MapAnchor[]) =>
+  anchors.filter((a) => a.group === "visits")
+);
+const entryAnchorsOf = byRef((anchors: readonly MapAnchor[]) =>
+  anchors.filter((a) => a.group === "entries")
+);
+
 function routeLayer(input: TrackLayerInput, alpha: number): Layer {
   if (input.color === "speed") {
     return new PathLayer<SpeedPiece>({
       id: "track-route-speed",
-      data: speedPieces(input.segments),
+      data: speedPiecesOf(input.segments),
       getPath: (d) => d.path,
       getColor: (d) => [...speedColor(d.kmh), alpha],
       getWidth: 4,
@@ -122,7 +152,7 @@ function routeLayer(input: TrackLayerInput, alpha: number): Layer {
   }
   return new PathLayer<LonLat[]>({
     id: "track-route-plain",
-    data: [...input.lines],
+    data: input.lines as LonLat[][],
     getPath: (d) => d,
     getColor: [...TRACK_RGB, alpha],
     getWidth: 4,
@@ -137,7 +167,7 @@ function routeLayer(input: TrackLayerInput, alpha: number): Layer {
 function anchorLayer(id: string, anchors: readonly MapAnchor[]): Layer {
   return new ScatterplotLayer<MapAnchor>({
     id,
-    data: [...anchors],
+    data: anchors as MapAnchor[],
     getPosition: (a) => [a.lon, a.lat],
     getRadius: 7,
     radiusUnits: "pixels",
@@ -160,7 +190,7 @@ export function buildTrackLayers(input: TrackLayerInput): Layer[] {
     out.push(
       new GeoJsonLayer({
         id: "track-countries",
-        data: { type: "FeatureCollection", features: [...input.countries] },
+        data: countriesDataOf(input.countries),
         filled: true,
         stroked: true,
         getFillColor: [...TRACK_RGB, 60],
@@ -175,7 +205,7 @@ export function buildTrackLayers(input: TrackLayerInput): Layer[] {
     out.push(
       new HeatmapLayer<MapPoint>({
         id: "track-heat",
-        data: [...input.points],
+        data: input.points as MapPoint[],
         getPosition: (d) => lonLat(d.point),
         getWeight: 1,
         radiusPixels: 40,
@@ -189,7 +219,7 @@ export function buildTrackLayers(input: TrackLayerInput): Layer[] {
     out.push(
       new PathLayer<LonLat[]>({
         id: "track-flight",
-        data: [...input.highlight],
+        data: input.highlight as LonLat[][],
         getPath: (d) => d,
         getColor: [...HIGHLIGHT_RGB, 255],
         getWidth: 4,
@@ -204,7 +234,7 @@ export function buildTrackLayers(input: TrackLayerInput): Layer[] {
     out.push(
       new ScatterplotLayer<MapPoint>({
         id: "track-points",
-        data: [...input.points],
+        data: input.points as MapPoint[],
         getPosition: (d) => lonLat(d.point),
         getRadius: 4,
         radiusUnits: "pixels",
@@ -223,26 +253,16 @@ export function buildTrackLayers(input: TrackLayerInput): Layer[] {
     );
   }
   if (on.visits) {
-    out.push(
-      anchorLayer(
-        "track-visits",
-        input.anchors.filter((a) => a.group === "visits")
-      )
-    );
+    out.push(anchorLayer("track-visits", visitAnchorsOf(input.anchors)));
   }
   if (on.entries) {
-    out.push(
-      anchorLayer(
-        "track-entries",
-        input.anchors.filter((a) => a.group === "entries")
-      )
-    );
+    out.push(anchorLayer("track-entries", entryAnchorsOf(input.anchors)));
   }
   if (on.photos && input.photos.length > 0) {
     out.push(
       new ScatterplotLayer<TravTrackPhoto>({
         id: "track-photos",
-        data: [...input.photos],
+        data: input.photos as TravTrackPhoto[],
         getPosition: (p) => [p.lon, p.lat],
         getRadius: 7,
         radiusUnits: "pixels",

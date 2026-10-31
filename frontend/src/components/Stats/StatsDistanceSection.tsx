@@ -27,7 +27,7 @@ export default function StatsDistanceSection({
   shortestDistance,
 }: StatsDistanceSectionProps): JSX.Element {
   const { t, i18n } = useTranslation(["stats"]);
-  const { units } = useSettingsStore();
+  const units = useSettingsStore((s) => s.units);
   const lang = i18n.language;
 
   const earthCircumference = 40075; // km

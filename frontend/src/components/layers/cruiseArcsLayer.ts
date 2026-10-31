@@ -71,6 +71,12 @@ interface CruiseArcBuildOptions {
    * layer — the dashboard's journey view — do the same.
    */
   altitudeM?: number;
+  /**
+   * Arcs already built by `buildCruiseArcs` with these same options. The arc
+   * and arrow layers share them, so a caller that builds both passes this and
+   * the splines are computed once, not twice (forgejo#383, PERF-23).
+   */
+  arcs?: ArcDatum[];
 }
 
 // The selected-cruise highlight stays amber, whatever the colour mode —
@@ -175,6 +181,15 @@ export function buildCruiseArcs(
   );
 }
 
+/** `options` plus the arcs, built once for the arc layer and the arrow layer to share. */
+export function withSharedArcs(
+  cruises: Cruise[],
+  geometryByCruise: CruiseGeometryMap,
+  options: CruiseArcBuildOptions
+): CruiseArcBuildOptions {
+  return { ...options, arcs: buildCruiseArcs(cruises, geometryByCruise, options) };
+}
+
 export function createCruiseArcsLayer(
   cruises: Cruise[],
   geometryByCruise: CruiseGeometryMap = new Map(),
@@ -191,7 +206,7 @@ export function createCruiseArcsLayer(
   // how often the leg was sailed (forgejo#323), in the leg's own colour.
   const arcs = withCruiseLegHover(
     groupMapData(
-      buildCruiseArcs(cruises, geometryByCruise, options),
+      options.arcs ?? buildCruiseArcs(cruises, geometryByCruise, options),
       (a) => JSON.stringify([a.color, a.planned, pathIdentity(a.path)]),
       (a) => a.cruiseId
     ),
@@ -266,7 +281,7 @@ export function createCruiseArrowsLayer(
   selectedCruiseId: string | null = null,
   options: CruiseArcBuildOptions = {}
 ): Layer | null {
-  const arcs = buildCruiseArcs(cruises, geometryByCruise, options);
+  const arcs = options.arcs ?? buildCruiseArcs(cruises, geometryByCruise, options);
   // Out-and-back detection: when the SAME port pair is sailed in both
   // directions (one cruise's return leg, or two cruises passing each other),
   // both legs share one path and their midpoint arrows would stack into an

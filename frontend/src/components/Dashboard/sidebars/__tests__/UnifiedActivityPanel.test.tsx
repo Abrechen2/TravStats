@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { UnifiedActivityPanel } from "../UnifiedActivityPanel";
+import { ACTIVITY_PAGE_SIZE, UnifiedActivityPanel } from "../UnifiedActivityPanel";
 import type { Lodging } from "../../../../types/lodging";
 
 const lodging = (over: Partial<Lodging> = {}): Lodging =>
@@ -141,5 +141,44 @@ describe("UnifiedActivityPanel", () => {
     );
     await userEvent.keyboard("{Escape}");
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  // forgejo#353: every entry was its own DOM row, so 10k+ entries mounted ~80k
+  // nodes when the panel opened and froze an iPad.
+  it("mounts one page of rows and the rest on demand, not the whole list at once", async () => {
+    const many = Array.from({ length: 450 }, (_, i) =>
+      lodging({ id: `l${i}`, name: `Hotel ${i}` })
+    );
+    render(
+      <UnifiedActivityPanel
+        lodgings={many}
+        lockedKind="lodging"
+        isOpen
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+        onDetails={vi.fn()}
+      />
+    );
+    const rows = (): number => document.querySelectorAll(".activity-row").length;
+    expect(rows()).toBe(ACTIVITY_PAGE_SIZE);
+    await userEvent.click(document.querySelector(".activity-show-more") as HTMLElement);
+    expect(rows()).toBe(ACTIVITY_PAGE_SIZE * 2);
+    await userEvent.click(document.querySelector(".activity-show-more") as HTMLElement);
+    expect(rows()).toBe(450);
+    expect(document.querySelector(".activity-show-more")).toBeNull();
+  });
+
+  it("offers no show-more button when everything fits on the first page", () => {
+    render(
+      <UnifiedActivityPanel
+        lodgings={[lodging()]}
+        lockedKind="lodging"
+        isOpen
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+        onDetails={vi.fn()}
+      />
+    );
+    expect(document.querySelector(".activity-show-more")).toBeNull();
   });
 });

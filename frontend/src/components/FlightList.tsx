@@ -78,7 +78,7 @@ export default function FlightList({
     );
   };
 
-  const { baseCurrency } = useSettingsStore();
+  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
 
   const formatCurrency = (value?: number, currency?: string): string => {
     if (value === undefined || value === null) return "";

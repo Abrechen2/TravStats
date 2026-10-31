@@ -44,7 +44,11 @@ export function useFlightForm(
    */
 ) {
   const { t } = useTranslation(["flights", "errors"]);
-  const settings = useSettingsStore();
+  // Per-field selectors: the whole store would re-render the form on every
+  // settings write, and re-run the defaults effect below with it.
+  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
+  const defaults = useSettingsStore((s) => s.defaults);
+  const features = useSettingsStore((s) => s.features);
 
   // UI State
   const [loading, setLoading] = useState(false);
@@ -139,10 +143,10 @@ export function useFlightForm(
 
     // The one currency the app has (see UnitsSection). Was
     // `units.currency`, which governed flights alone.
-    if (settings?.baseCurrency) setCurrency(settings.baseCurrency);
-    if (settings?.defaults?.flightCategory) setCategory(settings.defaults.flightCategory);
-    if (settings?.defaults?.seatClass) setSeatClass(settings.defaults.seatClass);
-  }, [settings]);
+    if (baseCurrency) setCurrency(baseCurrency);
+    if (defaults?.flightCategory) setCategory(defaults.flightCategory);
+    if (defaults?.seatClass) setSeatClass(defaults.seatClass);
+  }, [baseCurrency, defaults]);
 
   // Auto-set status based on date (skip when historical is active)
   useEffect(() => {
@@ -363,7 +367,7 @@ export function useFlightForm(
   // Honour the user's "track aircraft registrations" opt-out: when off,
   // the lookup-derived tail number / Mode-S are dropped before submit so
   // the column stays NULL on the row. Default is ON.
-  const trackAircraft = settings?.features?.trackAircraftRegistration !== false;
+  const trackAircraft = features?.trackAircraftRegistration !== false;
 
   const buildFlightPayload = (): FlightInput =>
     buildFlightPayloadFrom({

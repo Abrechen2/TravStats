@@ -49,4 +49,34 @@ describe("TimeSlider", () => {
     fireEvent.change(screen.getByRole("slider"), { target: { value: "750" } });
     expect(onChange).toHaveBeenCalledWith(750);
   });
+
+  // forgejo#348: a commit rebuilds the map's trips layers, and rAF fires at
+  // 60 Hz. Commits are throttled to ~30 Hz; playback speed stays the same.
+  describe("playback", () => {
+    it("commits at most ~30 times a second and keeps the same speed", () => {
+      const frames: ((t: number) => void)[] = [];
+      vi.spyOn(globalThis, "requestAnimationFrame").mockImplementation((cb) => {
+        frames.push(cb);
+        return frames.length;
+      });
+      vi.spyOn(globalThis, "cancelAnimationFrame").mockImplementation(() => {});
+      const updaters: ((prev: number) => number)[] = [];
+      const onChange = vi.fn((v: number | ((prev: number) => number)) => {
+        if (typeof v === "function") updaters.push(v);
+      });
+      render(<TimeSlider {...defaultProps} max={3600} onChange={onChange} playing />);
+      // One second of 60 Hz frames.
+      for (let i = 0; i <= 60; i++) {
+        const cb = frames.shift();
+        cb?.(i * (1000 / 60));
+      }
+      expect(onChange.mock.calls.length).toBeGreaterThan(20);
+      expect(onChange.mock.calls.length).toBeLessThanOrEqual(31);
+      // 3600 units over 3600 frames: one second of playback moves ~60 units.
+      const moved = updaters.reduce((v, u) => u(v), 0);
+      expect(moved).toBeGreaterThan(55);
+      expect(moved).toBeLessThan(65);
+      vi.restoreAllMocks();
+    });
+  });
 });

@@ -47,7 +47,7 @@ export default function TrackKmChart({
   year: number;
 }): JSX.Element {
   const { t, i18n } = useTranslation(["track", "stats"]);
-  const { units } = useSettingsStore();
+  const units = useSettingsStore((s) => s.units);
   const short = new Intl.DateTimeFormat(appLocale(i18n.language), {
     month: "short",
     timeZone: "UTC",

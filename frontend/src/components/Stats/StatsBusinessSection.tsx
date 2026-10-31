@@ -29,7 +29,8 @@ export default function StatsBusinessSection({
   businessStats,
 }: StatsBusinessSectionProps): JSX.Element {
   const { t, i18n } = useTranslation(["stats"]);
-  const { units, baseCurrency } = useSettingsStore();
+  const units = useSettingsStore((s) => s.units);
+  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
   const lang = i18n.language;
   // The server names the month in English ("Mar"); the reader's language does.
   const monthIndex = businessStats.busiestMonth

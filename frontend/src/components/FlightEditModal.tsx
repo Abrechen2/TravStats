@@ -81,7 +81,7 @@ export default function FlightEditModal({
   onAfterSave,
 }: FlightEditModalProps): JSX.Element | null {
   const { t } = useTranslation(["flights", "common", "errors"]);
-  const { features } = useSettingsStore();
+  const features = useSettingsStore((s) => s.features);
 
   const [formData, setFormData] = useState(() => buildEditFormData(flight));
   // Q5: the occurrence of a repeated hour the flight was stored with, re-sent unless changed.

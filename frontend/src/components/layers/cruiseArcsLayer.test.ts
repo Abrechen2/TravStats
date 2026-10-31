@@ -686,3 +686,26 @@ describe("a night in port is no leg (Nile cruise, prod 2026-10-16)", () => {
     ]);
   });
 });
+
+describe("prebuilt arcs are shared by the arc and the arrow layer (forgejo#383, PERF-23)", () => {
+  const cruise = makeCruise([
+    makeStop(1, 1, { id: 1, lat: 41.38, lon: 2.17 }),
+    makeStop(2, 2, { id: 2, lat: 42.1, lon: 11.8 }),
+  ]);
+
+  it("does not build the arcs again when the caller hands them in", () => {
+    // An empty list stands in for 'already built': nothing is left to draw. A
+    // layer that rebuilt would still find the cruise's leg.
+    expect(createCruiseArcsLayer([cruise], new Map(), null, undefined, { arcs: [] })).toBeNull();
+    expect(createCruiseArrowsLayer([cruise], new Map(), null, { arcs: [] })).toBeNull();
+  });
+
+  it("draws the same legs from handed-in arcs as from its own build", () => {
+    const arcs = buildCruiseArcs([cruise]);
+    const own = createCruiseArrowsLayer([cruise]) as { props: { data: unknown } };
+    const shared = createCruiseArrowsLayer([cruise], new Map(), null, { arcs }) as {
+      props: { data: unknown };
+    };
+    expect(shared.props.data).toEqual(own.props.data);
+  });
+});

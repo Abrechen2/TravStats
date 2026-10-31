@@ -30,7 +30,10 @@ vi.mock("../../hooks/useTranslation", () => ({
 // Breakdown ON in this file — the other FlightCompleteStep suites mock it
 // off. The price pins below don't depend on the flag either way.
 vi.mock("../../store/settingsStore", () => ({
-  useSettingsStore: () => ({ features: { enableCostTracking: true } }),
+  useSettingsStore: (selector?: (s: { features: { enableCostTracking: boolean } }) => unknown) => {
+    const state = { features: { enableCostTracking: true } };
+    return selector ? selector(state) : state;
+  },
 }));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: vi.fn(() => vi.fn()),

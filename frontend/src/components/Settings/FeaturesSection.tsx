@@ -12,7 +12,8 @@ const SEAT_SECTION = "seats";
 
 export default function FeaturesSection(): JSX.Element {
   const { t } = useTranslation(["settings"]);
-  const { features, setFeatures } = useSettingsStore();
+  const features = useSettingsStore((s) => s.features);
+  const setFeatures = useSettingsStore((s) => s.setFeatures);
   // Live tracking is the server's switch: it refuses the app's flight
   // recording while it is off (forgejo#321), so it saves at once.
   const liveTracking = useSuggestionSwitchesStore((s) => s.liveTracking);
