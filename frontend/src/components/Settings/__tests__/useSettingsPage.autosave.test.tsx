@@ -223,3 +223,50 @@ describe("useSettingsPage — every transmitted slice auto-saves (#198)", () => 
     );
   });
 });
+
+describe("useSettingsPage — the save outlives the page", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.update.mockResolvedValue({});
+  });
+
+  it("edit then navigate away inside the debounce: the PUT still happens", async () => {
+    const { result, unmount } = renderHook(() => useSettingsPage());
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 700));
+    });
+    mocks.update.mockClear();
+
+    act(() => {
+      result.current.setDefaults({ seatClass: "first" });
+    });
+    unmount(); // navigation: well inside the 500 ms debounce
+
+    await waitFor(() =>
+      expect(mocks.update).toHaveBeenCalledWith(
+        expect.objectContaining({ defaults: expect.objectContaining({ seatClass: "first" }) })
+      )
+    );
+  });
+
+  it("a failed save shows its reason on the page and can be retried", async () => {
+    const { result } = renderHook(() => useSettingsPage());
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 700));
+    });
+    mocks.updateProfile.mockRejectedValueOnce({
+      response: { data: { error: "Quota exceeded" } },
+    });
+
+    act(() => {
+      result.current.setProfile({ birthdate: "1990-01-01" });
+    });
+    await waitFor(() => expect(result.current.autoSaveState).toBe("failed"), { timeout: 2000 });
+    expect(result.current.autoSaveReason).toBe("Quota exceeded");
+
+    expect(result.current.autoSaveRetryable).toBe(true);
+    mocks.updateProfile.mockClear();
+    act(() => result.current.retryAutosave());
+    await waitFor(() => expect(mocks.updateProfile).toHaveBeenCalled());
+  });
+});

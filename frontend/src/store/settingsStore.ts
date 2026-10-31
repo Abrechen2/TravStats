@@ -10,7 +10,7 @@ import { displayForSave, useProfileZoneStore } from "./profileZoneStore";
 import { useSuggestionSwitchesStore } from "./suggestionSwitchesStore";
 import { useSettingsLevelStore } from "./settingsLevelStore";
 import { deviceZone } from "../shared/time";
-import { persistSetting } from "./persistSetting";
+import { serializedKey } from "./serializedSetting";
 import type { WeightUnit } from "../lib/baggageAllowance";
 
 /**
@@ -261,7 +261,8 @@ export interface SettingsState {
   loadApiKeysStatus: () => Promise<void>;
   resetSettings: () => void;
   loadRemoteSettings: () => Promise<void>;
-  saveRemoteSettings: () => Promise<void>;
+  /** `keepalive`: the page is unloading, send with `fetch(..., {keepalive})`. */
+  saveRemoteSettings: (options?: { keepalive?: boolean }) => Promise<void>;
   /**
    * Serialized copy of the settings the server is known to hold, stamped after
    * every load and every successful save. The settings page's debounced
@@ -491,30 +492,10 @@ export const useSettingsStore = create<SettingsState>()(
         })),
       syncBetaFeaturesEnabled: (enabled) => set({ betaFeaturesEnabled: enabled }),
       syncOpenDataEnabled: (enabled) => set({ openDataEnabled: enabled }),
-      setEnabledDomains: (keys) => {
-        const prev = get().enabledDomains;
-        set({ enabledDomains: keys });
-        persistSetting({ enabledDomains: keys }, () => set({ enabledDomains: prev }), "domains");
-      },
-      setBaseCurrency: (currency) => {
-        const prev = get().baseCurrency;
-        set({ baseCurrency: currency });
-        persistSetting({ baseCurrency: currency }, () => set({ baseCurrency: prev }), "currency");
-      },
-      setAutoCreateTrips: (enabled) => {
-        const prev = get().autoCreateTrips;
-        set({ autoCreateTrips: enabled });
-        persistSetting({ autoCreateTrips: enabled }, () => set({ autoCreateTrips: prev }), "trips");
-      },
-      setCountryThreshold: (tier) => {
-        const prev = get().countryThreshold;
-        set({ countryThreshold: tier });
-        persistSetting(
-          { countryThreshold: tier },
-          () => set({ countryThreshold: prev }),
-          "threshold"
-        );
-      },
+      setEnabledDomains: serializedKey("enabledDomains", "domains", get, set),
+      setBaseCurrency: serializedKey("baseCurrency", "currency", get, set),
+      setAutoCreateTrips: serializedKey("autoCreateTrips", "trips", get, set),
+      setCountryThreshold: serializedKey("countryThreshold", "threshold", get, set),
       loadApiKeysStatus: async () => {
         try {
           const status = await settingsApi.getApiKeys();
@@ -670,7 +651,11 @@ export const useSettingsStore = create<SettingsState>()(
         useRemoteSettingsStatus.getState().setFailed(false);
         set({ remoteSnapshot: snapshotOf(get()) });
       },
-      saveRemoteSettings: async () => {
+      saveRemoteSettings: async (options) => {
+        const putSettings = options?.keepalive ? settingsApi.updateKeepalive : settingsApi.update;
+        const putProfile = options?.keepalive
+          ? settingsApi.updateProfileKeepalive
+          : settingsApi.updateProfile;
         const previous = saveQueue;
         let release!: () => void;
         saveQueue = new Promise<void>((resolve) => {
@@ -702,7 +687,7 @@ export const useSettingsStore = create<SettingsState>()(
           // both up front and collecting results with allSettled means one
           // failing never blocks the other.
           const results = await Promise.allSettled([
-            settingsApi.update({
+            putSettings({
               profile,
               // Never the browser's guess as if the user had confirmed it.
               display: displayForSave(display),
@@ -717,7 +702,7 @@ export const useSettingsStore = create<SettingsState>()(
             // User row). Only PUT when the field was explicitly loaded or set
             // — undefined means "not touched this session, leave backend as-is".
             profile.birthdate !== undefined
-              ? settingsApi.updateProfile({ birthdate: profile.birthdate })
+              ? putProfile({ birthdate: profile.birthdate })
               : Promise.resolve(undefined),
           ]);
 

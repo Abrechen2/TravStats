@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { notificationsApi, type NotificationPreferences } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
@@ -25,52 +25,95 @@ export default function NotificationPreferences(): JSX.Element {
   const addToast = useToastStore((state) => state.addToast);
 
   const [prefs, setPrefs] = useState<NotificationPreferences>(DEFAULT_PREFS);
-  const [saved, setSaved] = useState<NotificationPreferences>(DEFAULT_PREFS);
-  const [loading, setLoading] = useState(true);
+  const [loadState, setLoadState] = useState<"loading" | "loaded" | "failed">("loading");
 
-  useEffect(() => {
-    const load = async (): Promise<void> => {
-      try {
-        const data = await notificationsApi.getPreferences();
-        setPrefs(data);
-        setSaved(data);
-      } catch (err) {
-        addToast(
-          "error",
-          err instanceof Error ? err.message : t("settings:notifications.loadError")
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-    void load();
-  }, []);
+  // The last snapshot the server confirmed — rollback target and baseline for
+  // the address field. A ref, because the writes below settle after renders.
+  const confirmed = useRef<NotificationPreferences>(DEFAULT_PREFS);
+  // One write in flight; edits made meanwhile merge into `queued` and go out
+  // when it settles, so the server hears them in the order they were made.
+  const inFlight = useRef(false);
+  const queued = useRef<Partial<NotificationPreferences> | null>(null);
+  const sending = useRef<Partial<NotificationPreferences>>({});
 
-  const save = async (patch: Partial<NotificationPreferences>): Promise<void> => {
-    const next = { ...prefs, ...patch };
-    setPrefs(next);
+  const load = async (): Promise<void> => {
+    setLoadState("loading");
     try {
-      const updated = await notificationsApi.updatePreferences(patch);
-      setPrefs((current) => ({ ...current, ...updated }));
-      setSaved(updated);
-    } catch (error) {
-      setPrefs(saved);
-      addToast(
-        "error",
-        error instanceof Error ? error.message : t("settings:notifications.saveFailed")
-      );
+      const data = await notificationsApi.getPreferences();
+      confirmed.current = data;
+      setPrefs(data);
+      setLoadState("loaded");
+    } catch (err) {
+      // Not the defaults: showing "off" for switches that may be on, and then
+      // saving over them, is the lie this state exists to avoid.
+      setLoadState("failed");
+      addToast("error", err instanceof Error ? err.message : t("settings:notifications.loadError"));
     }
   };
 
-  if (loading) {
+  useEffect(() => {
+    void load();
+  }, []);
+
+  const send = async (patch: Partial<NotificationPreferences>): Promise<void> => {
+    inFlight.current = true;
+    sending.current = patch;
+    try {
+      const updated = await notificationsApi.updatePreferences(patch);
+      confirmed.current = { ...confirmed.current, ...updated };
+      // Only adopt the response when no newer edit is waiting: it would
+      // otherwise flip the switch back until the next response lands.
+      if (!queued.current) setPrefs(confirmed.current);
+    } catch (error) {
+      if (queued.current) {
+        // Fields the newer edit does not override ride along, so they are retried.
+        queued.current = { ...patch, ...queued.current };
+      } else {
+        setPrefs(confirmed.current);
+        addToast(
+          "error",
+          error instanceof Error ? error.message : t("settings:notifications.saveFailed")
+        );
+      }
+    } finally {
+      inFlight.current = false;
+      sending.current = {};
+      const next = queued.current;
+      queued.current = null;
+      if (next) void send(next);
+    }
+  };
+
+  const save = (patch: Partial<NotificationPreferences>): void => {
+    setPrefs((current) => ({ ...current, ...patch }));
+    if (inFlight.current) {
+      queued.current = { ...queued.current, ...patch };
+      return;
+    }
+    void send(patch);
+  };
+
+  if (loadState === "loading") {
     return <p className="t-caption">{t("common:messages.loading")}</p>;
+  }
+
+  if (loadState === "failed") {
+    return (
+      <div role="alert">
+        <p className="t-caption">{t("settings:notifications.loadError")}</p>
+        <button type="button" className="btn-secondary" onClick={() => void load()}>
+          {t("common:buttons.retry")}
+        </button>
+      </div>
+    );
   }
 
   const email = (prefs.notificationEmail ?? "").trim();
   const commitEmail = (): void => {
     const value = email === "" ? null : email;
-    if (value === saved.notificationEmail) return;
-    void save({ notificationEmail: value });
+    const latest = { ...confirmed.current, ...sending.current, ...queued.current };
+    if (value === latest.notificationEmail) return;
+    save({ notificationEmail: value });
   };
 
   return (
@@ -98,14 +141,14 @@ export default function NotificationPreferences(): JSX.Element {
       <Switch
         id="notify-24h"
         checked={prefs.notifyBefore24h}
-        onChange={(on) => void save({ notifyBefore24h: on })}
+        onChange={(on) => save({ notifyBefore24h: on })}
         label={t("settings:notifications.before24h")}
         sub={t("settings:notifications.before24hSub")}
       />
       <Switch
         id="notify-2h"
         checked={prefs.notifyBefore2h}
-        onChange={(on) => void save({ notifyBefore2h: on })}
+        onChange={(on) => save({ notifyBefore2h: on })}
         label={t("settings:notifications.before2h")}
         sub={t("settings:notifications.before2hSub")}
       />

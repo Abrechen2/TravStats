@@ -21,7 +21,7 @@ const NONE = "";
  * reads the value; only the server's template engine does.
  *
  * A failed write puts the previous value back and says so, like
- * `persistSetting` does for the store-backed switches.
+ * `serializedSetting` does for the store-backed switches.
  */
 export default function HomeCountryCard(): JSX.Element {
   const { t, i18n } = useTranslation(["settings"]);

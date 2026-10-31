@@ -5,8 +5,11 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { SettingsSearch, type SearchableSection } from "./SettingsSearch";
 import { useSettingsLevelStore } from "../../store/settingsLevelStore";
 
-const persisted = vi.hoisted(() => vi.fn());
-vi.mock("../../store/persistSetting", () => ({ persistSetting: persisted }));
+const persisted = vi.hoisted(() => vi.fn().mockResolvedValue({}));
+vi.mock("../../lib/api", async (orig) => ({
+  ...(await orig<typeof import("../../lib/api")>()),
+  settingsApi: { update: persisted },
+}));
 
 const section = (id: string, labelKey: string, expert = false): SearchableSection => ({
   id,
@@ -132,11 +135,7 @@ describe("SettingsSearch", () => {
     fireEvent.click(hit);
 
     expect(useSettingsLevelStore.getState().level).toBe("expert");
-    expect(persisted).toHaveBeenCalledWith(
-      { settingsLevel: "expert" },
-      expect.any(Function),
-      expect.any(String)
-    );
+    expect(persisted).toHaveBeenCalledWith({ settingsLevel: "expert" });
     expect(screen.getByTestId("where")).toHaveTextContent("/settings/flight?section=defaults");
     expect(screen.getByTestId("where")).toHaveAttribute("data-highlight", "defaults");
   });

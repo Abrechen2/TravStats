@@ -312,6 +312,7 @@
     "emailSub": "Where reminders go; empty = none",
     "before24hSub": "One day before — for flights, cruises, train, ferry and bus journeys; the morning of check-in for lodging",
     "before2hSub": "Shortly before — for flights, cruises, train, ferry and bus journeys",
+    "loadError": "Notification settings could not be loaded",
     "saveFailed": "Notification preferences could not be saved"
   },
   "privacy": {
@@ -429,7 +430,8 @@
     "saving": "Saving …",
     "saved": "Saved",
     "pending": "Unsaved changes",
-    "failed": "Saving failed"
+    "failed": "Saving failed",
+    "retry": "Try again"
   },
   "scrollToTop": "Scroll to top",
   "sectionPicker": "Section",

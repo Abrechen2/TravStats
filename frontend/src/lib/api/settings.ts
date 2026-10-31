@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, API_URL } from "./client";
 import type {
   ApiKeyTestResponse,
   MessageResponse,
@@ -103,6 +103,18 @@ export interface InstanceServices {
 }
 
 // Settings API
+async function keepalivePut(path: string, payload: unknown): Promise<unknown> {
+  const response = await fetch(`${API_URL ? `${API_URL}/api/v1` : "/api/v1"}${path}`, {
+    method: "PUT",
+    keepalive: true,
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(`PUT ${path} failed: ${response.status}`);
+  return response;
+}
+
 export const settingsApi = {
   get: async (): Promise<UserSettings> => {
     const { data } = await api.get<UserSettings>("/settings");
@@ -112,6 +124,15 @@ export const settingsApi = {
     const { data } = await api.put<UserSettings>("/settings", payload);
     return data;
   },
+  /**
+   * `update` for the moment the page is going away (`pagehide`): axios'
+   * XHR is cancelled with the document, a `keepalive` fetch is not. Settings
+   * are far below the 64 KB keepalive body limit. Resolves on 2xx, else throws.
+   */
+  updateKeepalive: (payload: Partial<UserSettings>): Promise<unknown> =>
+    keepalivePut("/settings", payload),
+  updateProfileKeepalive: (payload: { birthdate: string | null }): Promise<unknown> =>
+    keepalivePut("/settings/profile", payload),
   /**
    * Which keyless services the instance runs for every account — booleans
    * only, never an address (forgejo#321). Feeds the personal Dienste badges.
