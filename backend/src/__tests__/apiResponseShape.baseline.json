@@ -78,6 +78,7 @@
     "lodgingGeocode.ts",
     "loginBackgrounds.ts",
     "mapConfig.ts",
+    "meExport.ts",
     "mounts.ts",
     "openData.ts",
     "openapi.ts",

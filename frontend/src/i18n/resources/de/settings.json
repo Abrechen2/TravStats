@@ -423,6 +423,19 @@
     },
     "lastInstanceBackup": "Letztes Instanz-Backup"
   },
+  "meExport": {
+    "title": "Meine Daten herunterladen",
+    "description": "Deine Reisedaten und Einträge als eine JSON-Datei — nur deine Daten, ohne Passwörter, Tokens und gespeicherte Schlüssel. Fotos, Dokumente und Belege sind nur als Verzeichnis enthalten, nicht als Dateien.",
+    "button": "Herunterladen",
+    "running": "Wird vorbereitet …",
+    "done": "Die Datei wurde heruntergeladen.",
+    "failed": {
+      "rateLimited": "Zu viele Downloads in kurzer Zeit. Bitte versuche es in einer Stunde erneut.",
+      "unauthorized": "Du bist nicht mehr angemeldet. Bitte melde dich neu an.",
+      "network": "Der Server ist nicht erreichbar. Prüfe die Verbindung und versuche es erneut.",
+      "server": "Der Download ist fehlgeschlagen (Serverfehler). Bitte versuche es später erneut."
+    }
+  },
   "password": {
     "title": "Passwort ändern",
     "oldPassword": "Aktuelles Passwort",

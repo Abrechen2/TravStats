@@ -13,6 +13,7 @@ import CountryCountingCard from "../../components/Settings/CountryCountingCard";
 import DefaultsSection from "../../components/Settings/DefaultsSection";
 import NotificationsSection from "../../components/Settings/NotificationsSection";
 import BackupSection from "../../components/Settings/BackupSection";
+import MeExportRow from "../../components/Settings/MeExportRow";
 import SpreadsheetSection from "../../components/Settings/SpreadsheetSection";
 import TrackArchiveSection from "../../components/Settings/TrackArchiveSection";
 import WebdavSyncRow from "../../components/Settings/WebdavSyncRow";
@@ -113,6 +114,7 @@ export default function SettingsSectionSwitch({
           {/* In the same card as the backup, because both answer "get my data
               out" — but they are not the same thing: a backup restores an
               instance, the spreadsheet is for reading and editing. */}
+          <MeExportRow />
           <SpreadsheetSection />
           {/* The recordings the spreadsheet cannot carry. */}
           <TrackArchiveSection />

@@ -423,6 +423,19 @@
     },
     "lastInstanceBackup": "Last instance backup"
   },
+  "meExport": {
+    "title": "Download my data",
+    "description": "Your travel data and entries as one JSON file — only your data, without passwords, tokens or stored keys. Photos, documents and receipts are listed, not included as files.",
+    "button": "Download",
+    "running": "Preparing …",
+    "done": "The file was downloaded.",
+    "failed": {
+      "rateLimited": "Too many downloads in a short time. Please try again in an hour.",
+      "unauthorized": "You are no longer signed in. Please sign in again.",
+      "network": "The server cannot be reached. Check your connection and try again.",
+      "server": "The download failed (server error). Please try again later."
+    }
+  },
   "password": {
     "title": "Change Password",
     "oldPassword": "Current Password",
