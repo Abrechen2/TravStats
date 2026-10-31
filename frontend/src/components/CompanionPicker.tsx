@@ -62,6 +62,16 @@ export default function CompanionPicker({ value, onChange }: Props): JSX.Element
     onChange(value.filter((v) => v !== name));
   };
 
+  // A typed name must survive the user clicking Save without pressing Enter:
+  // the click's mousedown blurs the input first, and the commit lands (a
+  // discrete event, flushed synchronously) before the click handler runs.
+  // Pressing a suggestion must not blur the input (mousedown is prevented on the
+  // list, and the buttons are not tabbable), or the half-typed query would be
+  // committed as a stray chip next to the picked name.
+  const handleBlur = (): void => {
+    commit(query);
+  };
+
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -107,13 +117,20 @@ export default function CompanionPicker({ value, onChange }: Props): JSX.Element
         value={query}
         onChange={(e): void => setQuery(e.target.value)}
         onKeyDown={handleKeyDown}
+        onBlur={handleBlur}
       />
       {filtered.length > 0 && (
-        <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-(--bg-surface) shadow-lg">
+        <ul
+          className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-(--bg-surface) shadow-lg"
+          // Keep focus in the input while a suggestion is pressed, so no blur
+          // commit of the partial query happens.
+          onMouseDown={(e): void => e.preventDefault()}
+        >
           {filtered.map((companion) => (
             <li key={companion.id}>
               <button
                 type="button"
+                tabIndex={-1}
                 className="w-full px-3 py-2 text-left text-sm text-(--text-primary) hover:bg-(--bg-elevated)"
                 onClick={(): void => commit(companion.name)}
               >
