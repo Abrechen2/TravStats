@@ -39,6 +39,12 @@ import {
 import { withRoadtripCounts } from "../services/trip/tripRoadtripCounts";
 import { TRIP_DETAIL_RENTALS } from "../services/trip/tripsListInclude";
 import {
+  isPagedQuery,
+  tripsListFacets,
+  tripsListQuerySchema,
+  tripsListWhere,
+} from "../services/trip/tripsListQuery";
+import {
   airportFactsFor,
   tripCountries,
   cruiseCountriesByTrip,
@@ -68,19 +74,6 @@ import { newTripColor } from "../services/trip/newTripColor";
 export { resolveTrip };
 
 const router = Router();
-
-/**
- * `GET /trips?includeInsights=true` — see the comment at its only reader.
- * NOT `z.coerce.boolean()`: that coerces via `Boolean(str)`, under which the
- * literal string "false" is truthy — `?includeInsights=false` would turn the
- * flag ON.
- */
-const tripsListQuerySchema = z.object({
-  includeInsights: z
-    .string()
-    .optional()
-    .transform((v) => v === "true"),
-});
 
 export const reviewProposalSchema = z.object({
   flightIds: z.array(z.string().uuid()).min(2),
@@ -139,19 +132,33 @@ router.get(
       const userId = req.userId!;
       // Opt-in: the costs below run their own UNCAPPED query (never the
       // `take`s here); the many other callers of this list never show them.
-      const { includeInsights } = tripsListQuerySchema.parse(req.query);
+      const query = tripsListQuerySchema.parse(req.query);
+      const { includeInsights } = query;
+      const limit = query.limit ?? TRIPS_LIST_CAP;
+      const offset = query.offset ?? 0;
+      const where = await tripsListWhere(userId, query);
       const listed = await prisma.trip.findMany({
-        where: { userId },
-        orderBy: { createdAt: "desc" },
-        take: TRIPS_LIST_CAP,
+        where,
+        // The page's display order (newest start first, undated last), so
+        // "mehr laden" only appends. `startDay` is the stored local day the
+        // card shows; a trip with no own dates is dated by its first flight on
+        // the page, which is derived and cannot be pushed into the query, so
+        // such trips sort as undated here. `id` breaks ties: neither column is
+        // unique, so paging on them alone would skip or repeat rows.
+        orderBy: [
+          { startDay: { sort: "desc", nulls: "last" } },
+          { startDate: { sort: "desc", nulls: "last" } },
+          { id: "desc" },
+        ],
+        skip: offset,
+        take: limit,
         include: TRIPS_LIST_INCLUDE,
       });
       // The cap is silent otherwise: a client could not tell 500 trips from
       // "the first 500 of 612". Only counted when the page came back full.
       const total =
-        listed.length < TRIPS_LIST_CAP
-          ? listed.length
-          : await prisma.trip.count({ where: { userId } });
+        offset === 0 && listed.length < limit ? listed.length : await prisma.trip.count({ where });
+      const facets = isPagedQuery(query) ? await tripsListFacets(userId, query.q) : undefined;
       const trips = await withRoadtripCounts(listed);
       // One batched airport lookup across EVERY trip's flights, not one per
       // trip: the cards need the same country derivation the detail page does,
@@ -211,7 +218,8 @@ router.get(
           ...(insights && { cost: insights.tripCosts[t.id] }),
         })),
         total,
-        truncated: total > listed.length,
+        truncated: total > offset + listed.length,
+        ...(facets && { facets }),
         ...(insights && { mostExpensiveTrip: insights.mostExpensiveTrip }),
       });
     } catch (error) {

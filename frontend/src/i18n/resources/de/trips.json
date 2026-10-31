@@ -104,7 +104,7 @@
     "noResults": "Keine Reise gefunden",
     "undated": "Ohne Datum"
   },
-  "listTruncated": "Zeigt {{shown}} von {{total}} Reisen – die übrigen werden hier nicht geladen. Reisen lassen sich weiterhin direkt per Link öffnen.",
+  "listTruncated": "Zeigt {{shown}} von {{total}} Reisen.",
   "cleanup": {
     "button": "🧹 Aufräumen",
     "title": "Mikro-Reisen auflösen",
@@ -926,5 +926,7 @@
     "title": "Mitgeteilte Routen",
     "legend": "Route von {{name}} – mitgeteilt, nur zum Ansehen",
     "loadError": "Die mitgeteilte Route dieser Reise konnte nicht geladen werden."
-  }
+  },
+  "loadMore": "Mehr laden",
+  "listError": "Die Reisen konnten nicht geladen werden. Bitte versuche es erneut."
 }

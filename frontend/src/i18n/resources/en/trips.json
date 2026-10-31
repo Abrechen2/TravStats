@@ -104,7 +104,7 @@
     "noResults": "No journeys found",
     "undated": "Undated"
   },
-  "listTruncated": "Showing {{shown}} of {{total}} trips – the rest are not loaded here. Trips can still be opened directly by link.",
+  "listTruncated": "Showing {{shown}} of {{total}} trips.",
   "cleanup": {
     "button": "🧹 Clean up",
     "title": "Dissolve micro-journeys",
@@ -926,5 +926,7 @@
     "title": "Shared routes",
     "legend": "Route by {{name}} – shared with you, view only",
     "loadError": "The route shared on this trip could not be loaded."
-  }
+  },
+  "loadMore": "Load more",
+  "listError": "Trips could not be loaded. Please try again."
 }
