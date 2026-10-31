@@ -9,7 +9,11 @@ import {
 } from "../../../../lib/webPrefs/webPrefsSync";
 import TrackLayersPanel from "../TrackLayersPanel";
 import { DEFAULT_PREFS, PREFS_KEY, useTrackMapPrefs } from "../trackMapPrefs";
-import { LEGACY_PREFS_KEY, migrateLegacyTrackPrefs } from "../../../../lib/webPrefs/trackMap";
+import {
+  LEGACY_PREFS_KEY,
+  loadTrackPrefs,
+  migrateLegacyTrackPrefs,
+} from "../../../../lib/webPrefs/trackMap";
 
 vi.mock("../../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -74,6 +78,8 @@ describe("Track map appearance follows the account", () => {
       throw new Error("quota");
     });
     migrateLegacyTrackPrefs();
+    // Still shown while the write is refused, not silently reset to defaults.
+    expect(loadTrackPrefs().color).toBe("plain");
     setItem.mockRestore();
     expect(stored(LEGACY_PREFS_KEY)).not.toBeNull();
     migrateLegacyTrackPrefs();

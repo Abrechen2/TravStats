@@ -98,7 +98,9 @@ export function parsePrefs(raw: string | null): TrackMapPrefs {
  * wins when both exist (a second run, or a second tab, never overwrites a
  * choice made since); the old key is removed only after the new one is
  * written, so a blocked storage loses nothing and the next run tries again.
- * The write is announced, so the sync uploads it as this device's seed.
+ * Not announced as an edit: the sync reads this section at start and decides
+ * by account ownership whether it seeds the account (a shared browser's old
+ * document must not be uploaded as the next account's choice).
  */
 export function migrateLegacyTrackPrefs(): void {
   try {
@@ -106,7 +108,6 @@ export function migrateLegacyTrackPrefs(): void {
     if (legacy === null) return;
     if (window.localStorage.getItem(PREFS_KEY) === null) {
       window.localStorage.setItem(PREFS_KEY, JSON.stringify(parsePrefs(legacy)));
-      emitLocalPrefWrite(PREFS_KEY);
     }
     window.localStorage.removeItem(LEGACY_PREFS_KEY);
   } catch {
@@ -117,7 +118,10 @@ export function migrateLegacyTrackPrefs(): void {
 export function loadTrackPrefs(): TrackMapPrefs {
   migrateLegacyTrackPrefs();
   try {
-    return parsePrefs(window.localStorage.getItem(PREFS_KEY));
+    // A refused migration write leaves the old document; keep reading it.
+    return parsePrefs(
+      window.localStorage.getItem(PREFS_KEY) ?? window.localStorage.getItem(LEGACY_PREFS_KEY)
+    );
   } catch {
     return DEFAULT_PREFS;
   }
