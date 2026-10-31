@@ -60,7 +60,13 @@ export default function ConsentDialog({
   const startScope = (): LeaderboardScope =>
     initialScope
       ? { ...initialScope, domains: initialScope.domains.filter((d) => enabled.includes(d)) }
-      : { groups: [...METRIC_GROUPS], domains: [...enabled], year: null };
+      : // Nothing is pre-selected: a consent is built up, or widened on purpose with "share everything".
+        { groups: [], domains: [], year: null };
+  const everything = (): LeaderboardScope => ({
+    groups: [...METRIC_GROUPS],
+    domains: [...enabled],
+    year: null,
+  });
   const [scope, setScope] = useState<LeaderboardScope>(startScope);
   const [wasOpen, setWasOpen] = useState(open);
   // The component outlives a closed dialog; reopening starts the question afresh.
@@ -78,6 +84,10 @@ export default function ConsentDialog({
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const isEverything =
+    scope.year === null &&
+    METRIC_GROUPS.every((g) => scope.groups.includes(g)) &&
+    enabled.every((d) => scope.domains.includes(d));
   const valid = scope.groups.length > 0 && scope.domains.length > 0;
   const tr = (key: string, options?: Record<string, unknown>): string =>
     String(t(key, options ?? {}));
@@ -150,6 +160,15 @@ export default function ConsentDialog({
       }
     >
       <div className="flex flex-col" style={gap("lg")}>
+        <div>
+          <Button
+            variant="secondary"
+            disabled={isEverything}
+            onClick={() => setScope(everything())}
+          >
+            {tr("consent.shareAll")}
+          </Button>
+        </div>
         <div
           role="group"
           aria-label={tr("group.label")}

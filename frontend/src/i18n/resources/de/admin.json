@@ -597,7 +597,20 @@
       "modelNotFound": "Modell nicht gefunden",
       "modelsAvailable": "Verfügbare Modelle",
       "connectionSuccess": "Ollama erreichbar",
-      "connectionFailed": "Verbindung fehlgeschlagen"
+      "connectionFailed": "Verbindung fehlgeschlagen",
+      "pull": {
+        "title": "Modell herunterladen",
+        "placeholder": "z. B. gemma3:12b, llama3.1:8b",
+        "action": "Herunterladen",
+        "running": "Lädt herunter …",
+        "done": "{{model}} wurde heruntergeladen.",
+        "failed": "Das Modell konnte nicht heruntergeladen werden. Prüfe den Namen und ob Ollama erreichbar ist.",
+        "connectionFailed": "Keine Verbindung zu Ollama. Prüfe die Adresse und ob der Dienst läuft."
+      },
+      "modelsLoadingPlaceholder": "Modelle werden geladen …",
+      "noModelsPlaceholder": "Keine Modelle gefunden — Namen eintragen oder unten herunterladen",
+      "modelsLoading": "Verfügbare Modelle werden geladen …",
+      "selectModel": "-- Modell wählen --"
     },
     "order": {
       "label": "Wer liest zuerst?",
@@ -1316,11 +1329,20 @@
     "description": "Der Planungsmodus: Reisen vorab planen, unterwegs abgleichen. Ausschalten löscht keine Pläne — sie bleiben gespeichert und erscheinen wieder, sobald TravPlan eingeschaltet ist.",
     "switch": "TravPlan auf diesem Server anbieten",
     "switchSub": "Alle Konten sehen den Planungsmodus dann in der Navigation.",
-    "moreLink": "Tageslimits für KI und Wetter in der TravPlan-Konfiguration",
     "errors": {
       "loadFailed": "Der TravPlan-Schalter konnte nicht geladen werden.",
       "saveFailed": "Der TravPlan-Schalter konnte nicht gespeichert werden.",
       "disabled": "TravPlan ist auf diesem Server ausgeschaltet. Schalte zuerst die Beta-Funktionen ein."
+    },
+    "defaultsNote": "Bestehende Konten starten auf der Ebene Experte, neue Konten auf Standard. TravPlan bleibt für Konten eingeschaltet, die bereits Pläne hatten; für alle anderen ist es zunächst aus.",
+    "limits": {
+      "title": "Tageslimits je Konto",
+      "help": "Anfragen, nicht Kosten: so viele KI- und Wetterabrufe darf ein Konto pro UTC-Tag auslösen.",
+      "aiDailyLimit": "KI-Anfragen je Konto und UTC-Tag",
+      "weatherDailyLimit": "Wetterabrufe je Konto und UTC-Tag",
+      "tooHigh": "Höchstens {{max}}.",
+      "save": "Limits speichern",
+      "retry": "Erneut versuchen"
     }
   },
   "aeroapi": {

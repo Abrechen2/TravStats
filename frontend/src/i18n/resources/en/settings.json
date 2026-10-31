@@ -312,7 +312,9 @@
     "emailSub": "Where reminders go; empty = none",
     "before24hSub": "One day before — for flights, cruises, train, ferry and bus journeys; the morning of check-in for lodging",
     "before2hSub": "Shortly before — for flights, cruises, train, ferry and bus journeys",
-    "saveFailed": "Notification preferences could not be saved"
+    "saveFailed": "Notification preferences could not be saved",
+    "smtpSaveFailed": "The SMTP settings could not be saved. Check host, port and credentials and try again.",
+    "unknownError": "Unknown error"
   },
   "privacy": {
     "title": "Privacy & Security",
@@ -955,10 +957,11 @@
     "copied": "Copied!",
     "dismiss": "Got it",
     "errors": {
-      "load": "Failed to load tokens",
-      "create": "Failed to create token",
-      "revoke": "Failed to revoke token",
-      "labelRequired": "Label is required"
+      "load": "The tokens could not be loaded. Reload the page or try again later.",
+      "create": "The token could not be created. Please try again.",
+      "revoke": "The token could not be revoked. Please try again.",
+      "labelRequired": "Label is required",
+      "technicalDetail": "Technical details"
     },
     "scopesShort": {
       "read": "Read",

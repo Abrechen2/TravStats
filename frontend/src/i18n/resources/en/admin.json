@@ -597,7 +597,20 @@
       "modelNotFound": "Model not found",
       "modelsAvailable": "Available models",
       "connectionSuccess": "Ollama reachable",
-      "connectionFailed": "Connection failed"
+      "connectionFailed": "Connection failed",
+      "pull": {
+        "title": "Download a model",
+        "placeholder": "e.g. gemma3:12b, llama3.1:8b",
+        "action": "Download",
+        "running": "Downloading …",
+        "done": "{{model}} was downloaded.",
+        "failed": "The model could not be downloaded. Check the name and that Ollama is reachable.",
+        "connectionFailed": "No connection to Ollama. Check the address and that the service is running."
+      },
+      "modelsLoadingPlaceholder": "Loading models …",
+      "noModelsPlaceholder": "No models found — enter a name or download one below",
+      "modelsLoading": "Loading available models …",
+      "selectModel": "-- Select model --"
     },
     "order": {
       "label": "Who reads first?",
@@ -1316,11 +1329,20 @@
     "description": "The planning mode: plan trips ahead and compare them on the way. Switching it off deletes no plans — they stay stored and reappear once TravPlan is switched on.",
     "switch": "Offer TravPlan on this server",
     "switchSub": "Every account then sees the planning mode in the navigation.",
-    "moreLink": "Daily limits for AI and weather in the TravPlan configuration",
     "errors": {
       "loadFailed": "The TravPlan switch could not be loaded.",
       "saveFailed": "The TravPlan switch could not be saved.",
       "disabled": "TravPlan is switched off on this server. Switch on the beta features first."
+    },
+    "defaultsNote": "Existing accounts start on the Expert level, new accounts on Standard. TravPlan stays on for accounts that already had plans; for everyone else it starts off.",
+    "limits": {
+      "title": "Daily limits per account",
+      "help": "Requests, not cost: how many AI and weather lookups one account may trigger per UTC day.",
+      "aiDailyLimit": "AI requests per account and UTC day",
+      "weatherDailyLimit": "Weather lookups per account and UTC day",
+      "tooHigh": "At most {{max}}.",
+      "save": "Save limits",
+      "retry": "Try again"
     }
   },
   "aeroapi": {

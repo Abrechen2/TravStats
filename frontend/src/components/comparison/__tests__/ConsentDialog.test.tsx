@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { render as rtlRender, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { AxiosError, type AxiosResponse } from "axios";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -35,6 +35,15 @@ const snapshot: LeaderboardSnapshot = {
   partial: [],
 };
 const person = { displayName: "Ben", origin: null };
+
+/** A dialog that started empty (the default) and was widened the way a user does it. */
+const render = (...args: Parameters<typeof rtlRender>): ReturnType<typeof rtlRender> => {
+  const [ui, options] = args;
+  const result = rtlRender(ui, options);
+  fireEvent.click(screen.getByRole("button", { name: "consent.shareAll" }));
+  return result;
+};
+const renderEmpty = rtlRender;
 
 describe("ConsentDialog", () => {
   beforeEach(() => {
@@ -181,7 +190,7 @@ describe("ConsentDialog", () => {
 
   it("offers no chip for a domain that is not enabled and never sends it", async () => {
     const onConfirm = vi.fn().mockResolvedValue(undefined);
-    render(
+    renderEmpty(
       <ConsentDialog
         open
         mode="ask"
@@ -200,7 +209,7 @@ describe("ConsentDialog", () => {
   });
 
   it("lists an initial year that is outside the recent years", async () => {
-    render(
+    renderEmpty(
       <ConsentDialog
         open
         mode="ask"
@@ -247,7 +256,6 @@ describe("ConsentDialog", () => {
     const { rerender } = render(
       <ConsentDialog open mode="ask" person={person} onClose={() => {}} onConfirm={vi.fn()} />
     );
-    fireEvent.click(screen.getByRole("button", { name: "group.time" }));
     await screen.findByText("metric.flights");
     rerender(
       <ConsentDialog
@@ -263,8 +271,51 @@ describe("ConsentDialog", () => {
     );
     expect(screen.getByRole("button", { name: "group.time" })).toHaveAttribute(
       "aria-pressed",
-      "true"
+      "false"
     );
+  });
+
+  it("starts with nothing selected and cannot share until the user chooses (comparison consent default)", async () => {
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    renderEmpty(
+      <ConsentDialog open mode="ask" person={person} onClose={() => {}} onConfirm={onConfirm} />
+    );
+    for (const group of ["distance", "trips", "time", "places"])
+      expect(screen.getByRole("button", { name: `group.${group}` })).toHaveAttribute(
+        "aria-pressed",
+        "false"
+      );
+    expect(screen.getByRole("button", { name: "common:domain.flight" })).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+    expect(screen.getByText("consent.nothingChosen")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "consent.share" })).toBeDisabled();
+    expect(comparisonApi.preview).not.toHaveBeenCalled();
+  });
+
+  it("offers an explicit 'share everything' that selects all groups, all domains and all years", async () => {
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    renderEmpty(
+      <ConsentDialog
+        open
+        mode="ask"
+        person={person}
+        onClose={() => {}}
+        onConfirm={onConfirm}
+        initialScope={{ groups: ["trips"], domains: ["flight"], year: 2024 }}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "consent.shareAll" }));
+    expect(screen.getByRole("button", { name: "consent.shareAll" })).toBeDisabled();
     await screen.findByText("metric.flights");
+    fireEvent.click(screen.getByRole("button", { name: "consent.share" }));
+    await waitFor(() =>
+      expect(onConfirm).toHaveBeenCalledWith({
+        groups: ["distance", "trips", "time", "places"],
+        domains: ["flight", "ferry"],
+        year: null,
+      })
+    );
   });
 });

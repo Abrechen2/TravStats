@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
@@ -66,12 +66,35 @@ describe("TravPlanSettings", () => {
     expect(screen.queryByRole("switch")).not.toBeInTheDocument();
   });
 
-  it("links to TravPlan's own configuration for the daily limits", async () => {
+  it("shows the daily limits as the expert half of the one canonical form, and saves them alone", async () => {
+    setConfig.mockResolvedValue({ ...LOADED, aiDailyLimit: 12 });
+    renderSettings();
+    const ai = await screen.findByLabelText("admin:travPlan.limits.aiDailyLimit");
+    expect(ai).toHaveValue(7);
+    await userEvent.clear(ai);
+    await userEvent.type(ai, "12");
+    await userEvent.click(screen.getByRole("button", { name: "admin:travPlan.limits.save" }));
+    expect(setConfig).toHaveBeenCalledWith({ aiDailyLimit: 12, weatherDailyLimit: 15 });
+  });
+
+  it("keeps a failed limits save visible with a retry, instead of leaving the page", async () => {
+    setConfig.mockRejectedValueOnce(new Error("offline"));
+    renderSettings();
+    const ai = await screen.findByLabelText("admin:travPlan.limits.aiDailyLimit");
+    await userEvent.clear(ai);
+    await userEvent.type(ai, "9");
+    await userEvent.click(screen.getByRole("button", { name: "admin:travPlan.limits.save" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("admin:travPlan.errors.saveFailed");
+    setConfig.mockResolvedValue({ ...LOADED, aiDailyLimit: 9 });
+    await userEvent.click(screen.getByRole("button", { name: "admin:travPlan.limits.retry" }));
+    expect(setConfig).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+  });
+
+  it("no longer links to a second editor, and explains the account defaults", async () => {
     renderSettings();
     await screen.findByRole("switch");
-    expect(screen.getByRole("link", { name: "admin:travPlan.moreLink" })).toHaveAttribute(
-      "href",
-      "/plan/admin"
-    );
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.getByText("admin:travPlan.defaultsNote")).toBeInTheDocument();
   });
 });

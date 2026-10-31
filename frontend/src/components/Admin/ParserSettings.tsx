@@ -123,14 +123,20 @@ export default function ParserSettings({
     try {
       const result = await adminApi.pullOllamaModel(parserSettings.ollamaUrl, pullModel.trim());
       if (result.success) {
-        setPullStatus({ ok: true, message: `${pullModel.trim()} downloaded` });
+        setPullStatus({
+          ok: true,
+          message: t("admin:parserSettings.ollama.pull.done", { model: pullModel.trim() }),
+        });
         setPullModel("");
         loadModels();
       } else {
-        setPullStatus({ ok: false, message: result.error ?? "Pull failed" });
+        setPullStatus({
+          ok: false,
+          message: result.error ?? t("admin:parserSettings.ollama.pull.failed"),
+        });
       }
     } catch {
-      setPullStatus({ ok: false, message: "Connection failed" });
+      setPullStatus({ ok: false, message: t("admin:parserSettings.ollama.pull.connectionFailed") });
     } finally {
       setPulling(false);
     }
@@ -338,7 +344,7 @@ export default function ParserSettings({
                   }
                   className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:ring-1 focus:ring-blue-500"
                 >
-                  <option value="">-- Select model --</option>
+                  <option value="">{t("admin:parserSettings.ollama.selectModel")}</option>
                   {models.map((m) => (
                     <option key={m.name} value={m.name}>
                       {m.name} ({formatSize(m.size)})
@@ -357,16 +363,18 @@ export default function ParserSettings({
                   }
                   placeholder={
                     modelsLoading
-                      ? "Loading models..."
+                      ? t("admin:parserSettings.ollama.modelsLoadingPlaceholder")
                       : parserSettings.ollamaUrl
-                        ? "No models found — enter name or pull below"
+                        ? t("admin:parserSettings.ollama.noModelsPlaceholder")
                         : t("admin:parserSettings.ollama.modelPlaceholder")
                   }
                   className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:ring-1 focus:ring-blue-500"
                 />
               )}
               {modelsLoading && (
-                <p className="text-xs text-(--text-muted) mt-1">Loading available models...</p>
+                <p className="text-xs text-(--text-muted) mt-1">
+                  {t("admin:parserSettings.ollama.modelsLoading")}
+                </p>
               )}
             </div>
 
@@ -374,14 +382,14 @@ export default function ParserSettings({
             {parserSettings.ollamaUrl && (
               <div className="border border-dashed border-border rounded-lg p-3">
                 <label className="block text-xs font-medium text-(--text-muted) mb-1">
-                  Download a model
+                  {t("admin:parserSettings.ollama.pull.title")}
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={pullModel}
                     onChange={(e) => setPullModel(e.target.value)}
-                    placeholder="e.g. gemma3:12b, llama3.1:8b"
+                    placeholder={t("admin:parserSettings.ollama.pull.placeholder")}
                     className="flex-1 px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:ring-1 focus:ring-blue-500"
                     disabled={pulling}
                   />
@@ -390,7 +398,9 @@ export default function ParserSettings({
                     disabled={pulling || !pullModel.trim()}
                     className="px-4 py-2 text-sm bg-amber-600 hover:bg-amber-700 disabled:bg-gray-400 text-white rounded-lg transition whitespace-nowrap"
                   >
-                    {pulling ? "Pulling..." : "Pull"}
+                    {pulling
+                      ? t("admin:parserSettings.ollama.pull.running")
+                      : t("admin:parserSettings.ollama.pull.action")}
                   </button>
                 </div>
                 {pullStatus && (
