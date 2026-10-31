@@ -139,9 +139,17 @@ router.get(
       const where = await tripsListWhere(userId, query);
       const listed = await prisma.trip.findMany({
         where,
-        // `id` breaks ties: createdAt is not unique, so paging on it alone
-        // would skip or repeat rows at a page boundary.
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        // The page's display order (newest start first, undated last), so
+        // "mehr laden" only appends. `startDay` is the stored local day the
+        // card shows; a trip with no own dates is dated by its first flight on
+        // the page, which is derived and cannot be pushed into the query, so
+        // such trips sort as undated here. `id` breaks ties: neither column is
+        // unique, so paging on them alone would skip or repeat rows.
+        orderBy: [
+          { startDay: { sort: "desc", nulls: "last" } },
+          { startDate: { sort: "desc", nulls: "last" } },
+          { id: "desc" },
+        ],
         skip: offset,
         take: limit,
         include: TRIPS_LIST_INCLUDE,

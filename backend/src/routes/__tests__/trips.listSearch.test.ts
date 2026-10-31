@@ -26,6 +26,8 @@ describe("GET /api/v1/trips search and paging", () => {
     // Oldest row (past the 500 cap in createdAt-desc order) is the needle.
     await prisma.trip.createMany({
       data: Array.from({ length: TOTAL }, (_, i) => ({
+        // Fixed ids: the needle (undated, lowest id) is the very last row of the order.
+        id: `00000000-0000-4000-8000-${i.toString(16).padStart(12, "0")}`,
         userId,
         name: i === 0 ? "Lissabon Needle" : `Trip ${i}`,
         notes: i === 1 ? "found via the notes" : null,
@@ -34,6 +36,8 @@ describe("GET /api/v1/trips search and paging", () => {
         companions: i === 2 ? ["Alice Smith"] : [],
         countries: i === 3 ? ["PT"] : [],
         createdAt: new Date(base + i * 1000),
+        // Every third trip undated; the rest spread over days, with ties.
+        startDay: i % 3 === 0 ? null : new Date(Date.UTC(2021, 0, 1 + (i % 40))),
       })),
     });
   }, 60_000);
@@ -82,6 +86,22 @@ describe("GET /api/v1/trips search and paging", () => {
     expect(second.body.trips.some((t: { name: string }) => t.name === "Lissabon Needle")).toBe(
       true
     );
+  });
+
+  it("orders by start day, newest first, undated last, so page 2 sorts entirely after page 1", async () => {
+    const first = await get("?limit=200&offset=0");
+    const second = await get("?limit=200&offset=200");
+    type Row = { id: string; startDay: string | null };
+    const key = (t: Row) => t.startDay ?? "";
+    const all: Row[] = [...first.body.trips, ...second.body.trips];
+    for (let i = 1; i < all.length; i++) {
+      expect(key(all[i - 1]) >= key(all[i])).toBe(true);
+    }
+    const lastOfFirst = first.body.trips[first.body.trips.length - 1] as Row;
+    expect(second.body.trips.every((t: Row) => key(t) <= key(lastOfFirst))).toBe(true);
+    expect(new Set(all.map((t) => t.id)).size).toBe(400);
+    // Guard against a vacuous pass: the day must really be in the payload.
+    expect(all.some((t) => t.startDay !== null)).toBe(true);
   });
 
   it("filters by status and category on the server and counts the pills under the search", async () => {
