@@ -9,6 +9,7 @@ import { PrismaClient, Flight, Prisma } from "../prisma";
 import { prisma } from "../db";
 import { calculateDistance } from "../utils/geo";
 import logger from "../utils/logger";
+import * as candidateQuery from "./flightEnrichmentCandidateQuery";
 
 const prismaClient = prisma as PrismaClient;
 
@@ -118,20 +119,6 @@ export function getEnrichmentMode(departureTime: Date | null | undefined): Enric
   return ageYears < 1 ? "full" : "slim";
 }
 
-/** The columns the candidate test and the confidence read — nothing else. */
-const ENRICHMENT_CANDIDATE_SELECT = {
-  id: true,
-  flightNumber: true,
-  airline: true,
-  aircraft: true,
-  depIata: true,
-  depIcao: true,
-  arrIata: true,
-  arrIcao: true,
-  actualRoute: true,
-  departureTime: true,
-} as const;
-
 /**
  * Find flights that are candidates for historical enrichment
  */
@@ -170,25 +157,9 @@ export async function findEnrichmentCandidates(
             },
           },
         },
-        // A flight that lacks none of the five fields is never a candidate:
-        // say so in SQL instead of reading ten years of full rows (forgejo#339).
-        AND: [
-          {
-            OR: [
-              { aircraft: null },
-              { aircraft: "" },
-              { depIcao: null },
-              { depIcao: "" },
-              { arrIcao: null },
-              { arrIcao: "" },
-              { actualRoute: { equals: Prisma.DbNull } },
-              { actualRoute: { equals: Prisma.JsonNull } },
-              { actualRoute: { equals: [] } },
-            ],
-          },
-        ],
+        AND: [candidateQuery.MISSING_ENRICHMENT_FIELD],
       },
-      select: ENRICHMENT_CANDIDATE_SELECT,
+      select: candidateQuery.ENRICHMENT_CANDIDATE_SELECT,
       orderBy: { id: "asc" },
     });
 
@@ -219,7 +190,7 @@ export async function findEnrichmentCandidates(
       const ageYears = ageMs / (1000 * 60 * 60 * 24 * 365.25);
 
       // Basic confidence calculation (will be refined during aggregation)
-      const confidence = calculateBasicConfidence(flight, missingFields);
+      const confidence = candidateQuery.calculateBasicConfidence(flight, missingFields);
 
       candidates.push({
         flightId: flight.id,
@@ -249,31 +220,6 @@ export async function findEnrichmentCandidates(
     // Not `[]`: a database error must not reach the user as "nothing to enrich".
     throw error;
   }
-}
-
-/**
- * Calculate basic confidence for a candidate (before aggregation)
- */
-function calculateBasicConfidence(
-  flight: Pick<Flight, "flightNumber" | "airline" | "depIata" | "depIcao" | "arrIata" | "arrIcao">,
-  missingFields: string[]
-): number {
-  let confidence = 50; // Base confidence
-
-  // More confidence if flight number is present
-  if (flight.flightNumber) {
-    confidence += 20;
-  }
-
-  // Less confidence if many fields are missing
-  confidence -= missingFields.length * 5;
-
-  // More confidence if at least some data exists
-  if (flight.airline) confidence += 10;
-  if (flight.depIata || flight.depIcao) confidence += 10;
-  if (flight.arrIata || flight.arrIcao) confidence += 10;
-
-  return Math.max(0, Math.min(100, confidence));
 }
 
 /**

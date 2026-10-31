@@ -11,7 +11,7 @@
     "frontend/src/components/Cruise/CruiseRouteMap.tsx": 990,
     "backend/src/routes/stats.ts": 979,
     "frontend/src/components/Training/BoardingPassAnnotation.tsx": 963,
-    "backend/src/services/flightEnrichmentService.ts": 919,
+    "backend/src/services/flightEnrichmentService.ts": 902,
     "frontend/src/components/FlightCertificate.tsx": 883,
     "backend/src/utils/achievementChecks.ts": 861
   }

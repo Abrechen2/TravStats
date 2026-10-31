@@ -4,7 +4,6 @@ import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { rejectDemoQuota } from "../middleware/demoGuard";
 import { normalizeQueryParams, resolveFlightWhere, splitMultiValue } from "./flights/queryFilters";
-import { HEAVY_FLIGHT_JSON } from "./flights/listOrder";
 import { flightListHandler } from "./flights/list";
 import { flightFacetsHandler } from "./flights/facets";
 import { nextFlightHandler } from "./flights/next";
@@ -215,13 +214,10 @@ router.get("/geo", async (req: AuthRequest, res: Response, next: NextFunction) =
 
     const flights = await prisma.flight.findMany({
       where,
-      // The GeoJSON reads scalar columns only; the provider route and the
-      // enrichment history are the heavy JSON (forgejo#338).
-      omit: HEAVY_FLIGHT_JSON,
-      // Deterministic tie-breaker: departureTime is nullable and not unique, so
-      // paginating getAllGeoJSON on it alone would skip/duplicate rows at the
-      // 500-row page boundaries. The id keeps the total order stable, so every
-      // flight is plotted exactly once across all pages.
+      omit: { actualRoute: true, enrichmentHistory: true }, // heavy JSON the map never reads (forgejo#338)
+      // Tie-breaker: departureTime is nullable and not unique, so paging on it
+      // alone would skip/duplicate rows at the 500-row boundaries; the id keeps
+      // the order total, so every flight is plotted exactly once.
       orderBy: [{ departureTime: "desc" }, { id: "asc" }],
       skip: query.offset,
       take: query.limit,

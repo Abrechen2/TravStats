@@ -80,12 +80,10 @@ describe("geocodePort — one Nominatim client for the instance (forgejo#359)", 
   });
 
   it("asks the admin's configured Nominatim, not a hard-coded OSM", async () => {
-    jest
-      .spyOn(instanceSettings, "resolveGeocoderUrls")
-      .mockResolvedValue({
-        photonUrl: "http://photon.lan",
-        nominatimUrl: "http://nominatim.lan:8080/",
-      });
+    jest.spyOn(instanceSettings, "resolveGeocoderUrls").mockResolvedValue({
+      photonUrl: "http://photon.lan",
+      nominatimUrl: "http://nominatim.lan:8080/",
+    });
     fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => body });
     await geocodePort("Taranto");
     expect(String(fetchMock.mock.calls[0][0])).toMatch(
