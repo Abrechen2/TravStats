@@ -28,9 +28,9 @@ vi.mock("../../hooks/useTranslation", () => ({
   }),
 }));
 
+const addToast = vi.hoisted(() => vi.fn());
 vi.mock("../../store/toastStore", () => ({
-  useToastStore: (selector: (state: { addToast: unknown }) => unknown) =>
-    selector({ addToast: vi.fn() }),
+  useToastStore: (selector: (state: { addToast: unknown }) => unknown) => selector({ addToast }),
 }));
 
 vi.mock("../../lib/logger", () => ({
@@ -59,6 +59,28 @@ describe("ParseLogStats", () => {
     const exportBtn = screen.getByTestId("export-parse-logs-btn");
     await userEvent.click(exportBtn);
     expect(trainingApi.exportParseLogs).toHaveBeenCalled();
+  });
+
+  it("warns that an export cut at the row limit is missing the older entries", async () => {
+    const { trainingApi } = await import("../../lib/api");
+    vi.mocked(trainingApi.exportParseLogs).mockResolvedValueOnce({ truncated: true, limit: 50000 });
+    render(<ParseLogStats />);
+    await waitFor(() => screen.getByText("42"));
+    await userEvent.click(screen.getByTestId("export-parse-logs-btn"));
+    await waitFor(() => expect(addToast).toHaveBeenCalledWith("warning", expect.any(String)));
+  });
+
+  it("says nothing about truncation when the export was complete", async () => {
+    const { trainingApi } = await import("../../lib/api");
+    vi.mocked(trainingApi.exportParseLogs).mockResolvedValueOnce({
+      truncated: false,
+      limit: 50000,
+    });
+    render(<ParseLogStats />);
+    await waitFor(() => screen.getByText("42"));
+    await userEvent.click(screen.getByTestId("export-parse-logs-btn"));
+    await waitFor(() => expect(trainingApi.exportParseLogs).toHaveBeenCalled());
+    expect(addToast).not.toHaveBeenCalled();
   });
 
   it("calls promoteCorrections when promote button clicked", async () => {

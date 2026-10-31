@@ -279,6 +279,7 @@
       "laterHint": "These items are deferred for this visit only. No data has been changed.",
       "loadFailed": "Some sections could not be loaded:",
       "retry": "Retry",
+      "staysTruncated": "Only the first 200 stays are shown. Accept or reject these first and the rest will appear.",
       "checkFailed": "The check failed. Please try again.",
       "loading": "Loading inbox …",
       "shown": "Showing {{count}} items",

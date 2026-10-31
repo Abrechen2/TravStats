@@ -12,7 +12,11 @@ import { tripsApi } from "../../../../lib/api/trips";
 import { flag, trip } from "./fixtures";
 
 vi.mock("../../../../lib/api/dawarichStays", () => ({
-  dawarichStaysApi: { list: vi.fn(async () => []), choices: vi.fn() },
+  dawarichStaysApi: {
+    list: vi.fn(async () => []),
+    listPage: vi.fn(async () => ({ rows: [], truncated: false })),
+    choices: vi.fn(),
+  },
 }));
 vi.mock("../../../../hooks/useTranslation", () => ({
   useTranslation: () => germanUseTranslation(),

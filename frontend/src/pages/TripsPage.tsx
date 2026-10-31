@@ -19,6 +19,7 @@ export default function TripsPage(): JSX.Element {
   const { t } = useTranslation(["trips"]);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [mostExpensiveTrip, setMostExpensiveTrip] = useState<TripCostSuperlative | null>(null);
+  const [total, setTotal] = useState<number | null>(null);
 
   // `getAllWithInsights`, not `getAll` — this is the ONE screen that shows
   // the cross-trip cost superlative, and it must come from the backend's
@@ -29,6 +30,7 @@ export default function TripsPage(): JSX.Element {
       const data = await tripsApi.getAllWithInsights();
       setTrips(data.trips);
       setMostExpensiveTrip(data.mostExpensiveTrip);
+      setTotal(data.truncated ? (data.total ?? null) : null);
     } catch (err) {
       logger.warn("Failed to load trips", err);
     }
@@ -44,7 +46,16 @@ export default function TripsPage(): JSX.Element {
         trips={trips}
         onTripsChange={() => void loadTrips()}
         header={{ title: t("trips:tab"), meta: t("trips:count", { count: trips.length }) }}
-        insights={<TripInsightsBar trips={trips} mostExpensiveTrip={mostExpensiveTrip} />}
+        insights={
+          <>
+            {total !== null && (
+              <p role="status" className="t-caption mb-3" data-testid="trips-truncated">
+                {t("trips:listTruncated", { shown: trips.length, total })}
+              </p>
+            )}
+            <TripInsightsBar trips={trips} mostExpensiveTrip={mostExpensiveTrip} />
+          </>
+        }
       />
     </AppShell>
   );

@@ -104,6 +104,7 @@
     "noResults": "No journeys found",
     "undated": "Undated"
   },
+  "listTruncated": "Showing {{shown}} of {{total}} trips – the rest are not loaded here. Trips can still be opened directly by link.",
   "cleanup": {
     "button": "🧹 Clean up",
     "title": "Dissolve micro-journeys",
@@ -637,7 +638,8 @@
     "countries_one": "country",
     "countries_other": "countries",
     "entries_one": "entry",
-    "entries_other": "entries"
+    "entries_other": "entries",
+    "countriesIncomplete": "Countries may be incomplete – this trip has more flights than are evaluated here. Open the trip for the full list."
   },
   "list": {
     "undated": "Undated"

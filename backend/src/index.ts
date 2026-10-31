@@ -112,6 +112,9 @@ if (corsOrigin) {
       "X-TravTrack-Next",
       "X-TravTrack-Until",
       "X-TravTrack-Cursor",
+      // The parse-log export says it was cut at its row limit in these.
+      "X-Truncated",
+      "X-Row-Limit",
     ],
   });
   // The public share-link endpoints (forgejo#281) are asked by the /share page

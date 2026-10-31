@@ -30,7 +30,10 @@ export default function ParseLogStats(): JSX.Element {
 
   const handleExport = async (): Promise<void> => {
     try {
-      await trainingApi.exportParseLogs();
+      const result = await trainingApi.exportParseLogs();
+      if (result?.truncated) {
+        addToast("warning", t("training:parseLogs.exportTruncated", { limit: result.limit ?? "" }));
+      }
     } catch (err) {
       logger.error("Export failed:", err);
       addToast("error", String(err));

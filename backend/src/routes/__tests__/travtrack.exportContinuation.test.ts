@@ -138,5 +138,8 @@ describe("TravTrack — an export in parts", () => {
     expect(exposed).toContain("X-TravTrack-Next");
     expect(exposed).toContain("X-TravTrack-Until");
     expect(exposed).toContain("X-TravTrack-Cursor");
+    // The admin parse-log export's cut flag, read by the web across origins.
+    expect(exposed).toContain("X-Truncated");
+    expect(exposed).toContain("X-Row-Limit");
   });
 });

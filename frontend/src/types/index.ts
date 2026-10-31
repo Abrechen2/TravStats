@@ -203,8 +203,8 @@ export interface Trip {
   coverImageUrl: string | null;
   icon: string | null;
   countries: string[];
+  flightsTruncated?: boolean; // GET /trips: `countries` came from capped flights, may be incomplete
   times?: TripTimes;
-
   _count?: import("./tripCounts").TripCounts;
   /** Sent by `GET /trips/:id`, and by `GET /trips` with `includeInsights`. */
   cost?: import("./tripCost").TripCost | null;

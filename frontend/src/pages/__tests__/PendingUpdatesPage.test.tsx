@@ -65,7 +65,11 @@ vi.mock("../../lib/api/photoJourneys", () => ({
 }));
 vi.mock("../../lib/api/trips", () => ({ tripsApi: { getAll: vi.fn() } }));
 vi.mock("../../lib/api/dawarichStays", () => ({
-  dawarichStaysApi: { list: vi.fn(async () => []), choices: vi.fn() },
+  dawarichStaysApi: {
+    list: vi.fn(async () => []),
+    listPage: vi.fn(async () => ({ rows: [], truncated: false })),
+    choices: vi.fn(),
+  },
 }));
 vi.mock("../../lib/api/immich", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/api/immich")>()),

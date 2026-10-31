@@ -144,10 +144,15 @@ export const tripsApi = {
   getAllWithInsights: async (): Promise<{
     trips: Trip[];
     mostExpensiveTrip: TripCostSuperlative | null;
+    /** Trips the user has in all; `truncated` says the list above is shorter. */
+    total?: number;
+    truncated?: boolean;
   }> => {
     const { data } = await api.get<{
       trips: Trip[];
       mostExpensiveTrip: TripCostSuperlative | null;
+      total?: number;
+      truncated?: boolean;
     }>("/trips", { params: { includeInsights: true } });
     return data;
   },

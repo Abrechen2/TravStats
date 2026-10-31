@@ -238,6 +238,7 @@
     "promoteBtn": "Korrekturen hochstufen",
     "promoting": "Hochstufen...",
     "promoteSuccess": "{{count}} Korrekturen hochgestuft",
+    "exportTruncated": "Export gekürzt: Er enthält nur die neuesten {{limit}} Einträge, ältere fehlen. Hochstufen oder bereinigen, dann erneut exportieren.",
     "promoteNone": "Keine neuen Korrekturen gefunden",
     "noData": "Noch keine Parse-Logs vorhanden",
     "loading": "Statistiken laden..."
