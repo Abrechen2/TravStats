@@ -1,35 +1,51 @@
 import { prisma } from "../../db";
 import { sendLodgingCheckInReminder } from "../emailService";
 import { stayTimes } from "../lodging/timesDto";
-import { localDay, toLocal } from "../../shared/time/instant";
+import { profileZoneFromSettings } from "../../shared/time/profileZone";
 import { daysBetween } from "../../shared/time/localDate";
 import logger from "../../utils/logger";
-import { reminderDomainEnabled } from "./domainEnabled";
+import { entryReminderMessage } from "../notifications/messages";
+import { lodgingKey } from "./eligibility";
+import { sendDueReminder } from "./dispatch";
+import { anchorFromLocal, isDue } from "./due";
+import { activeLeadHours, leadsFor, REMINDER_USER_SELECT } from "./prefs";
 
 /**
- * The lodging half of the reminder scheduler — deliberately NOT an
- * "hours before" reminder (2026-09-27 redesign, decision 4): a check-in DAY
- * has no single departure instant to count hours from, so this fires once,
- * on the calendar day of check-in, at a fixed morning hour in the
- * PROPERTY'S OWN zone (never the server's or a guessed one).
+ * The lodging half of the reminder scheduler. A stay's anchor is its CHECK-IN
+ * instant, and a reminder is `lead` hours before it like every other domain:
  *
- * A stay abstains (no reminder at all) when its check-in has no DAY
- * precision or no resolved zone — the same "no zone, no wall-clock claim"
- * rule every other reminder in this module follows. Most manually-entered
- * stays carry only a date, not a time-of-day, so this reads the check-in
- * DAY (`stayTimes().checkIn`), not the optional `checkInAt` instant.
+ *   1. the stay stores a check-in time and a zone -> that instant;
+ *   2. a check-in day without a time              -> 15:00 in the STAY's zone;
+ *   3. a stay without a zone                      -> 15:00 in the ACCOUNT's zone
+ *      (the profile zone, UTC when the user never set one).
+ *
+ * (Until package 11 this fired once at 08:00 on the check-in day in the
+ * property's zone. The new rule replaces it.) A stay with no check-in DAY
+ * (month/year precision, no date) abstains: no day, no anchor. The local time
+ * is resolved in the IANA zone and the lead is subtracted in UTC, so a DST
+ * change between the reminder and the check-in does not shift it.
  */
 
-const sentReminders = new Set<string>();
-
-/** 08:00–08:59 local, in the property's own zone — dedup keeps it to one send. */
-const MORNING_LOCAL_HOUR = 8;
+const DEFAULT_CHECK_IN_TIME = "15:00";
 
 const PRE_FILTER_PADDING_MS = 2 * 24 * 60 * 60 * 1000;
 
+/** The check-in instant of a stay, per the rule above; null when the stay has no check-in day. */
+export function lodgingAnchor(
+  stay: Parameters<typeof stayTimes>[0],
+  accountZone: string
+): { anchor: Date; zone: string } | null {
+  const checkIn = stayTimes(stay).checkIn;
+  if (!checkIn || checkIn.precision !== "day") return null;
+  if (stay.checkInAt && stay.stayZone) return { anchor: stay.checkInAt, zone: stay.stayZone };
+  const zone = stay.stayZone ?? accountZone;
+  return { anchor: anchorFromLocal(checkIn.date, DEFAULT_CHECK_IN_TIME, zone), zone };
+}
+
 export async function checkLodgingCheckInReminders(now: Date): Promise<void> {
+  const maxLead = Math.max(...(await activeLeadHours()));
   const preFilterStart = new Date(now.getTime() - PRE_FILTER_PADDING_MS);
-  const preFilterEnd = new Date(now.getTime() + PRE_FILTER_PADDING_MS);
+  const preFilterEnd = new Date(now.getTime() + maxLead * 3_600_000 + PRE_FILTER_PADDING_MS);
 
   let stays;
   try {
@@ -64,14 +80,7 @@ export async function checkLodgingCheckInReminders(now: Date): Promise<void> {
         bookingReference: true,
         lodgingId: true,
         lodging: { select: { name: true, address: true, city: true, country: true } },
-        user: {
-          select: {
-            notificationEmail: true,
-            notifyBefore24h: true,
-            notifyBefore2h: true,
-            settings: { select: { data: true, enabledDomains: true } },
-          },
-        },
+        user: REMINDER_USER_SELECT,
       },
     });
   } catch (error) {
@@ -84,60 +93,77 @@ export async function checkLodgingCheckInReminders(now: Date): Promise<void> {
   }
 
   for (const stay of stays) {
-    const reminderKey = `lodging:${stay.id}-checkin`;
-    if (sentReminders.has(reminderKey)) continue;
-
     const { user } = stay;
-    // No lodging-specific notify flag exists yet (report); reuses the
-    // "24h before" toggle, the closer fit of the two existing ones.
-    const shouldSend =
-      user.notificationEmail !== null &&
-      user.notifyBefore24h &&
-      reminderDomainEnabled(user.settings, "lodging");
-    if (!shouldSend) continue;
+    const leads = leadsFor(user, "lodging");
+    if (leads.length === 0) continue;
 
     // Everything from here reads row data that should be well-formed but is
     // not guaranteed to be (a malformed DATE value, a DTO edge case) — try/
-    // catch the whole per-stay body, like the other three checkers do around
-    // their own DTO + send calls, so one bad row cannot stop the batch.
+    // catch the whole per-stay body so one bad row cannot stop the batch.
     try {
+      const accountZone = profileZoneFromSettings(user.settings?.data).zone;
+      const resolved = lodgingAnchor(stay, accountZone);
+      if (!resolved) continue;
+      const { anchor, zone } = resolved;
       const times = stayTimes(stay);
-      const checkIn = times.checkIn;
-      if (!checkIn || checkIn.precision !== "day" || !checkIn.zone) continue;
-
-      const todayThere = localDay(now, checkIn.zone);
-      if (todayThere !== checkIn.date) continue;
-
-      const localHour = Number(toLocal(now, checkIn.zone).local.slice(11, 13));
-      if (localHour !== MORNING_LOCAL_HOUR) continue;
+      const checkIn = times.checkIn!;
 
       // The dates win wherever they can answer; the stored figure covers a
       // stay whose check-out day is not known. Null stays null — never 0.
       const checkOut = times.checkOut?.precision === "day" ? times.checkOut : null;
       const nights = checkOut ? daysBetween(checkIn.date, checkOut.date) : stay.nights;
 
-      await sendLodgingCheckInReminder(
-        {
-          id: stay.id,
-          lodgingId: stay.lodgingId,
+      for (const hours of leads) {
+        if (!isDue(anchor, hours, now)) continue;
+        await sendDueReminder({
+          user,
+          domain: "lodging",
+          entryId: stay.id,
           tripId: stay.tripId,
-          lodgingName: stay.lodging.name,
-          address: stay.lodging.address,
-          city: stay.lodging.city,
-          country: stay.lodging.country,
-          roomNumber: stay.roomNumber,
-          roomCategory: stay.roomCategory,
-          board: stay.board,
-          guests: stay.guests,
-          nights,
-          bookingReference: stay.bookingReference,
-          checkInAt: times.checkInAt,
-          checkInDay: checkIn,
-          checkOutDay: checkOut,
-        },
-        { notificationEmail: user.notificationEmail, settingsData: user.settings?.data ?? null }
-      );
-      sentReminders.add(reminderKey);
+          hours,
+          anchorAt: anchor,
+          anchorKey: lodgingKey(stay, accountZone),
+          now,
+          render: (locale) =>
+            entryReminderMessage(
+              "lodging",
+              {
+                label: stay.lodging.name,
+                detail:
+                  [stay.lodging.address, stay.lodging.city].filter(Boolean).join(", ") || null,
+                at: anchor,
+                zone,
+              },
+              hours,
+              locale
+            ),
+          sendMail: () =>
+            sendLodgingCheckInReminder(
+              {
+                id: stay.id,
+                lodgingId: stay.lodgingId,
+                tripId: stay.tripId,
+                lodgingName: stay.lodging.name,
+                address: stay.lodging.address,
+                city: stay.lodging.city,
+                country: stay.lodging.country,
+                roomNumber: stay.roomNumber,
+                roomCategory: stay.roomCategory,
+                board: stay.board,
+                guests: stay.guests,
+                nights,
+                bookingReference: stay.bookingReference,
+                checkInAt: times.checkInAt,
+                checkInDay: checkIn,
+                checkOutDay: checkOut,
+              },
+              {
+                notificationEmail: user.notificationEmail as string,
+                settingsData: user.settings?.data ?? null,
+              }
+            ),
+        });
+      }
     } catch (error) {
       logger.error({
         operation: "reminder_scheduler_send_failed",

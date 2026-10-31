@@ -2,6 +2,9 @@ import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../db";
+import { REMINDER_USER_SELECT } from "../../services/reminders/prefs";
+import { applySettings, domainsInput, domainsView } from "../../services/reminders/settingsApi";
+import { pushStatusFor } from "../../services/push/deviceStatus";
 
 const router = Router();
 
@@ -9,7 +12,32 @@ const notificationPrefsSchema = z.object({
   notificationEmail: z.string().email().optional().nullable(),
   notifyBefore24h: z.boolean().optional(),
   notifyBefore2h: z.boolean().optional(),
+  domains: domainsInput.optional(),
 });
+
+/**
+ * The legacy fields (`notificationEmail`, `notifyBefore24h`, `notifyBefore2h`)
+ * stay exactly as old clients know them; `domains`, `mail` and `push` are
+ * additive. `push` describes the CALLING device (see services/push/deviceStatus).
+ */
+async function view(req: AuthRequest, userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: REMINDER_USER_SELECT.select,
+  });
+  if (!user) return null;
+  return {
+    notificationEmail: user.notificationEmail,
+    notifyBefore24h: user.notifyBefore24h,
+    notifyBefore2h: user.notifyBefore2h,
+    domains: domainsView(user),
+    mail:
+      user.notificationEmail !== null
+        ? { available: true, reason: null }
+        : { available: false, reason: "no_email" },
+    push: await pushStatusFor(userId, req.apiToken?.id),
+  };
+}
 
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -18,22 +46,12 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       res.status(401).json({ error: "Unauthorized" });
       return;
     }
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        notificationEmail: true,
-        notifyBefore24h: true,
-        notifyBefore2h: true,
-      },
-    });
-
-    if (!user) {
+    const body = await view(req, userId);
+    if (!body) {
       res.status(404).json({ error: "User not found" });
       return;
     }
-
-    res.json(user);
+    res.json(body);
   } catch (error) {
     next(error);
   }
@@ -46,36 +64,14 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       res.status(401).json({ error: "Unauthorized" });
       return;
     }
-
-    const data = notificationPrefsSchema.parse(req.body);
-
-    const updateData: {
-      notificationEmail?: string | null;
-      notifyBefore24h?: boolean;
-      notifyBefore2h?: boolean;
-    } = {};
-
-    if (data.notificationEmail !== undefined) {
-      updateData.notificationEmail = data.notificationEmail;
+    const { domains, ...legacy } = notificationPrefsSchema.parse(req.body);
+    await applySettings(userId, legacy, domains);
+    const body = await view(req, userId);
+    if (!body) {
+      res.status(404).json({ error: "User not found" });
+      return;
     }
-    if (data.notifyBefore24h !== undefined) {
-      updateData.notifyBefore24h = data.notifyBefore24h;
-    }
-    if (data.notifyBefore2h !== undefined) {
-      updateData.notifyBefore2h = data.notifyBefore2h;
-    }
-
-    const user = await prisma.user.update({
-      where: { id: userId },
-      data: updateData,
-      select: {
-        notificationEmail: true,
-        notifyBefore24h: true,
-        notifyBefore2h: true,
-      },
-    });
-
-    res.json(user);
+    res.json(body);
   } catch (error) {
     next(error);
   }

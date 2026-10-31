@@ -5,7 +5,16 @@ import { generateApiToken } from "../../../utils/apiTokens";
 import { ensureAdminSettingsRow } from "../../adminSettingsRow";
 import type { RelayOutcome, RelayPush } from "../../push/relayClient";
 import { openOnPhone, phoneKeys } from "../../push/__tests__/phone";
-import { notifyFlightChanged, notifyReminder } from "../dispatcher";
+import { notifyEntryReminder, notifyFlightChanged, notifyReminder } from "../dispatcher";
+
+// The recheck right before a send has its own suite (reminders/eligibility); here the
+// flight is a fixture with no row behind it.
+jest.mock("../../reminders/eligibility", () => ({
+  ...jest.requireActual<typeof import("../../reminders/eligibility")>(
+    "../../reminders/eligibility"
+  ),
+  stillEligible: jest.fn(async () => true),
+}));
 import type { FlightForMessage } from "../messages";
 
 /**
@@ -87,6 +96,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  await prisma.reminderClaim.deleteMany({ where: { userId } });
   await prisma.devicePush.deleteMany({ where: { userId } });
   await prisma.apiToken.deleteMany({ where: { userId } });
   await prisma.adminSettings.update({ where: { id: adminId }, data: { pushEnabled: true } });
@@ -205,7 +215,7 @@ describe("notifyFlightChanged", () => {
     expect(r.send).not.toHaveBeenCalled();
   });
 
-  it("forgets a phone whose token the provider calls dead", async () => {
+  it("marks a phone whose token the provider calls dead, and stops sending to it", async () => {
     const p = await phone();
     await notifyFlightChanged(
       userId,
@@ -214,7 +224,11 @@ describe("notifyFlightChanged", () => {
       { pending: false },
       { send: recorder("token-invalid").send }
     );
-    expect(await prisma.devicePush.findUnique({ where: { apiTokenId: p.tokenId } })).toBeNull();
+    const row = await prisma.devicePush.findUnique({ where: { apiTokenId: p.tokenId } });
+    expect(row?.tokenRejectedAt).not.toBeNull();
+    const again = recorder();
+    await notifyFlightChanged(userId, flight, gate, { pending: false }, { send: again.send });
+    expect(again.send).not.toHaveBeenCalled();
   });
 
   it("frees the change for a later run when the relay failed", async () => {
@@ -248,8 +262,8 @@ describe("notifyReminder", () => {
     await phone({ reminders: false });
     const r = recorder();
     const f = { ...flight, departureTime: new Date("2026-10-14T11:25:00.000Z") };
-    await notifyReminder(userId, f, "24h", { send: r.send });
-    await notifyReminder(userId, f, "24h", { send: r.send });
+    await notifyReminder(userId, f, 24, { send: r.send });
+    await notifyReminder(userId, f, 24, { send: r.send });
     expect(r.pushes).toHaveLength(1);
     // Its own collapse id: a reminder must not replace an unread change on the phone.
     expect(r.pushes[0].collapseId).toBe("reminder:flight-1");
@@ -272,7 +286,7 @@ describe("notifyReminder", () => {
     await notifyReminder(
       userId,
       { ...flight, departureTime: departure, tripId: "trip-muted" },
-      "24h",
+      24,
       { send: r.send }
     );
     expect(r.pushes).toHaveLength(0);
@@ -281,7 +295,7 @@ describe("notifyReminder", () => {
     await notifyReminder(
       userId,
       { ...flight, id: "flight-2", departureTime: departure, tripId: "trip-other" },
-      "24h",
+      24,
       { send: r.send }
     );
     expect(r.pushes).toHaveLength(1);
@@ -305,10 +319,76 @@ describe("notifyReminder", () => {
     await notifyReminder(
       userId,
       { ...flight, departureTime: new Date("2026-10-14T11:25:00.000Z"), tripId: "trip-muted" },
-      "2h",
+      2,
       { send: r.send }
     );
     expect(r.pushes).toHaveLength(1);
     expect(r.pushes[0].token).toBe(`apns-${other.tokenId.replace(/-/g, "")}`);
+  });
+
+  it("pushes to EVERY paired phone once each, and a restart does not repeat it", async () => {
+    const a = await phone();
+    const b = await phone();
+    const r = recorder();
+    const f = { ...flight, departureTime: new Date("2026-10-14T11:25:00.000Z") };
+    await notifyReminder(userId, f, 24, { send: r.send });
+    expect(r.pushes.map((p) => p.token).sort()).toEqual(
+      [a, b].map((p) => `apns-${p.tokenId.replace(/-/g, "")}`).sort()
+    );
+    await notifyReminder(userId, f, 24, { send: r.send });
+    expect(r.pushes).toHaveLength(2);
+  });
+
+  it("a relay rejection marks THAT phone's token and spares the other phone", async () => {
+    const dead = await phone();
+    const live = await phone();
+    const deadToken = `apns-${dead.tokenId.replace(/-/g, "")}`;
+    const send = jest.fn(async (p: RelayPush): Promise<RelayOutcome> =>
+      p.token === deadToken ? "token-invalid" : "sent"
+    );
+    const f = { ...flight, departureTime: new Date("2026-10-14T11:25:00.000Z") };
+    await notifyReminder(userId, f, 24, { send });
+    expect(
+      (await prisma.devicePush.findUnique({ where: { apiTokenId: dead.tokenId } }))?.tokenRejectedAt
+    ).not.toBeNull();
+    expect(
+      (await prisma.devicePush.findUnique({ where: { apiTokenId: live.tokenId } }))?.tokenRejectedAt
+    ).toBeNull();
+    // The rejected claim is freed, not kept as "sent".
+    expect(
+      await prisma.reminderClaim.count({
+        where: { userId, channel: `push:${dead.tokenId}`, sentAt: { not: null } },
+      })
+    ).toBe(0);
+  });
+
+  it("a failed push frees the claim so the next run retries (within the lateness bound)", async () => {
+    await phone();
+    const f = { ...flight, departureTime: new Date("2026-10-14T11:25:00.000Z") };
+    await notifyReminder(userId, f, 2, { send: recorder("failed").send });
+    const r = recorder();
+    await notifyReminder(userId, f, 2, { send: r.send });
+    expect(r.pushes).toHaveLength(1);
+  });
+
+  it("carries the domain and entry id in the sealed payload for non-flight entries", async () => {
+    const p = await phone();
+    const r = recorder();
+    await notifyEntryReminder(
+      userId,
+      {
+        domain: "rail",
+        entryId: "rail-1",
+        tripId: null,
+        hours: 24,
+        anchorAt: new Date("2026-10-14T11:25:00.000Z"),
+        anchorKey: "k",
+        render: () => ({ title: "Berlin → Hamburg: Abfahrt in 24 Stunden", body: "ICE 1" }),
+      },
+      { send: r.send }
+    );
+    const plain = JSON.parse(openOnPhone(p.keys.priv, p.keys.pub, r.pushes[0].ciphertext));
+    expect(plain).toMatchObject({ type: "rail.reminder", domain: "rail", entryId: "rail-1" });
+    expect(plain.flightId).toBeUndefined();
   });
 });

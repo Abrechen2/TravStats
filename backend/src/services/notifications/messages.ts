@@ -206,7 +206,7 @@ export function flightChangedMessage(
 /** The departure reminder, 24 h or 2 h before. */
 export function reminderMessage(
   flight: FlightForMessage & { departureTime: Date },
-  hoursAhead: 24 | 2,
+  hoursAhead: number,
   locale: Locale
 ): Message {
   const c = COPY[locale];
@@ -214,4 +214,56 @@ export function reminderMessage(
   const route = `${flight.depIata ?? "?"} → ${flight.arrIata ?? "?"}`;
   const when = at ? ` · ${at.time} ${at.zone === "UTC" ? "UTC" : c.local}` : "";
   return { title: `${label(flight)}: ${c.reminder(hoursAhead)}`, body: route + when };
+}
+
+/** The reminder titles for the domains other than flight (flights keep `reminderMessage`). */
+const ENTRY_COPY = {
+  de: {
+    local: "Ortszeit",
+    cruise: (h: number) => `Einschiffung in ${h} Stunden`,
+    rail: (h: number) => `Abfahrt in ${h} Stunden`,
+    bus: (h: number) => `Abfahrt in ${h} Stunden`,
+    ferry: (h: number) => `Abfahrt in ${h} Stunden`,
+    lodging: (h: number) => `Check-in in ${h} Stunden`,
+    flight: (h: number) => `Abflug in ${h} Stunden`,
+  },
+  en: {
+    local: "local time",
+    cruise: (h: number) => `boarding in ${h} hours`,
+    rail: (h: number) => `departs in ${h} hours`,
+    bus: (h: number) => `departs in ${h} hours`,
+    ferry: (h: number) => `departs in ${h} hours`,
+    lodging: (h: number) => `check-in in ${h} hours`,
+    flight: (h: number) => `departs in ${h} hours`,
+  },
+} as const;
+
+/**
+ * "Augsburg → Salzburg: Abfahrt in 24 Stunden" / "<detail> · 14:05 Ortszeit".
+ * The time is shown in the entry's own zone; with no zone it says UTC rather
+ * than guessing one (ADR 0002). `at` null (a stay without a time) shows none.
+ */
+export function entryReminderMessage(
+  domain: "cruise" | "rail" | "bus" | "ferry" | "lodging",
+  entry: { label: string; detail: string | null; at: Date | null; zone: string | null },
+  hours: number,
+  locale: Locale
+): Message {
+  const c = ENTRY_COPY[locale];
+  let when = "";
+  if (entry.at) {
+    try {
+      const time = new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+        timeZone: entry.zone ?? "UTC",
+      }).format(entry.at);
+      when = `${time} ${entry.zone ? c.local : "UTC"}`;
+    } catch {
+      when = "";
+    }
+  }
+  const body = [entry.detail, when].filter((part) => part).join(" · ");
+  return { title: `${entry.label}: ${c[domain](hours)}`, body };
 }

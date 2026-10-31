@@ -2,8 +2,10 @@ import { prisma } from "../../db";
 import type { Prisma } from "../../prisma";
 import { sendFerryReminder } from "../emailService";
 import type { FerryReminderData } from "../email/ferryBusReminderContent";
+import { entryReminderMessage } from "../notifications/messages";
 import { railTimes } from "../rail/timesDto";
-import { REMINDER_USER_SELECT, dueWhere, runSingleRideReminders } from "./singleRideReminders";
+import { REMINDER_USER_SELECT } from "./prefs";
+import { dueWhere, runSingleRideReminders } from "./singleRideReminders";
 
 /**
  * The ferry half of the departure-reminder scheduler (dennis/TravStats
@@ -11,8 +13,6 @@ import { REMINDER_USER_SELECT, dueWhere, runSingleRideReminders } from "./single
  * crossing stores real UTC instants and each port's zone, read through rail's
  * `railTimes`, so the mail shows both ends on their port's own clock.
  */
-
-const sentReminders = new Set<string>();
 
 const CROSSING_SELECT = {
   id: true,
@@ -67,9 +67,20 @@ export async function checkFerryReminders(now: Date): Promise<void> {
   await runSingleRideReminders(
     {
       domain: "ferry",
-      sent: sentReminders,
       due: (start, end) =>
         prisma.ferryJourney.findMany({ where: dueWhere(start, end), select: CROSSING_SELECT }),
+      render: (row, hoursAhead, locale) =>
+        entryReminderMessage(
+          "ferry",
+          {
+            label: `${row.depStationName} → ${row.arrStationName}`,
+            detail: row.operator ?? null,
+            at: row.departureTime,
+            zone: row.depTimezone,
+          },
+          hoursAhead,
+          locale
+        ),
       send: (row, user, hoursAhead) => sendFerryReminder(toReminderCrossing(row), user, hoursAhead),
     },
     now
